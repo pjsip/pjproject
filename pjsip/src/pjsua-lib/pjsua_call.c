@@ -158,12 +158,9 @@ static void reset_call(pjsua_call_id id)
     unsigned i;
 
     if (call->incoming_data) {
-        if (call->incoming_data->rdata) {
-            pjsip_rx_data_free_cloned(call->incoming_data->rdata);
-            call->incoming_data->rdata = NULL;
-        }
-        call->incoming_data->hash_key = 0;
-    }    
+        pjsip_rx_data_free_cloned(call->incoming_data);
+        call->incoming_data = NULL;
+    }
     pj_bzero(call, sizeof(*call));
     call->index = id;
     call->last_text.ptr = call->last_text_buf_;
@@ -1456,6 +1453,155 @@ on_incoming_call_med_tp_complete(pjsua_call_id call_id,
     return on_incoming_call_med_tp_complete2(call_id, info, NULL, NULL, NULL);
 }
 
+static void rejected_incoming_call_cb(pjsip_rx_data *rdata, pjsip_tx_data *tdata, 
+                                      int st_code)
+{
+    /* Call on_rejected_incoming_call() only if to-tag is not set. */
+    if ((rdata->msg_info.to->tag.slen == 0) &&
+        pjsua_var.ua_cfg.cb.on_rejected_incoming_call)
+    {
+        pjsip_from_hdr* from_hdr;
+        pjsip_to_hdr* to_hdr;
+        pjsip_sip_uri* uri;
+        pjsua_on_rejected_incoming_call_param param;
+
+        pj_bzero(&param, sizeof(pjsua_on_rejected_incoming_call_param));
+        if (st_code == 0)
+            st_code = tdata->msg->line.status.code;
+
+        param.rdata = rdata;
+        param.tdata = tdata;
+        param.code = st_code;
+
+        from_hdr = rdata->msg_info.from;
+        if (from_hdr) {
+            param.remote_info.ptr = param.buf_.remote_info;
+            uri = (pjsip_sip_uri*)pjsip_uri_get_uri(from_hdr->uri);
+            param.remote_info.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+                uri,
+                param.buf_.remote_info,
+                sizeof(param.buf_.remote_info));
+        }
+
+        to_hdr = rdata->msg_info.to;
+        if (to_hdr) {
+            param.local_info.ptr = param.buf_.local_info;
+            uri = (pjsip_sip_uri*)pjsip_uri_get_uri(to_hdr->uri);
+            param.local_info.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+                uri,
+                param.buf_.local_info,
+                sizeof(param.buf_.local_info));
+        }
+
+        pjsua_var.ua_cfg.cb.on_rejected_incoming_call(&param);
+    }
+}
+
+static pj_status_t reject_incoming_call(pj_bool_t is_stateless,
+                                        pjsip_dialog *dlg,
+                                        pjsip_rx_data *rdata,
+                                        int st_code,
+                                        const pj_str_t *st_text,
+                                        const pjsip_hdr *hdr_list,
+                                        const pjsip_msg_body *body)
+{
+    pj_status_t status = PJ_SUCCESS;
+    pjsip_tx_data *tdata = NULL;
+    pjsip_transaction *tsx;
+
+    /* Validate arguments. */
+    PJ_ASSERT_RETURN(rdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG,
+                     PJSIP_ENOTREQUESTMSG);
+
+    if (is_stateless) {
+        /* Check that no UAS transaction has been created for this request.
+         * If UAS transaction has been created for this request and its state
+         * is not TERMINATED/DESTROYED, application MUST send the response
+         * statefully using that transaction.
+         */
+        tsx = pjsip_rdata_get_tsx(rdata);
+        if (tsx && tsx->state < PJSIP_TSX_STATE_TERMINATED)
+            return PJ_EINVALIDOP;
+    } else {
+        if (dlg) {
+            /* The transaction must belong to this dialog.  */
+            PJ_ASSERT_RETURN(pjsip_rdata_get_tsx(rdata) &&
+                             pjsip_rdata_get_tsx(rdata)->mod_data[dlg->ua->id] == dlg,
+                             PJ_EINVALIDOP);
+
+            /* Create the response. */
+            status = pjsip_dlg_create_response(dlg, rdata, st_code, st_text, &tdata);
+            if (status != PJ_SUCCESS)
+                return status;
+        }
+    }
+
+    if (!tdata) {
+        /* Create response message */
+        status = pjsip_endpt_create_response(pjsua_var.endpt, rdata, st_code, st_text,
+                                             &tdata);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
+    /* Add the message headers, if any */
+    if (hdr_list) {
+        const pjsip_hdr* hdr = hdr_list->next;
+        while (hdr != hdr_list) {
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)pjsip_hdr_clone(tdata->pool, hdr));
+            hdr = hdr->next;
+        }
+    }
+
+    /* Add the message body, if any. */
+    if (body) {
+        tdata->msg->body = pjsip_msg_body_clone(tdata->pool, body);
+        if (tdata->msg->body == NULL) {
+            pjsip_tx_data_dec_ref(tdata);
+            return status;
+        }
+    }
+
+    rejected_incoming_call_cb(rdata, tdata, st_code);
+
+    if (is_stateless) {
+        pjsip_response_addr res_addr;
+        /* Get where to send request. */
+        status = pjsip_get_response_addr(tdata->pool, rdata, &res_addr);
+        if (status != PJ_SUCCESS) {
+            pjsip_tx_data_dec_ref(tdata);
+            return status;
+        }
+
+        /* Send! */
+        status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, tdata, NULL, NULL);
+        if (status != PJ_SUCCESS) {
+            pjsip_tx_data_dec_ref(tdata);
+        }
+    } else {
+        if (dlg) {
+            status = pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata), tdata);
+        } else {
+            /* Create UAS transaction. */
+            status = pjsip_tsx_create_uas(NULL, rdata, &tsx);
+            if (status != PJ_SUCCESS) {
+                pjsip_tx_data_dec_ref(tdata);
+                return status;
+            }
+            /* Feed the request to the transaction. */
+            pjsip_tsx_recv_msg(tsx, rdata);
+
+            /* Send the message. */
+            status = pjsip_tsx_send_msg(tsx, tdata);
+            if (status != PJ_SUCCESS) {
+                pjsip_tx_data_dec_ref(tdata);
+            }
+        }
+    }
+
+    return status;
+}
 
 /**
  * Handle incoming INVITE request.
@@ -1469,7 +1615,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pjsip_transaction *tsx = pjsip_rdata_get_tsx(rdata);
     pjsip_msg *msg = rdata->msg_info.msg;
     pjsip_tx_data *response = NULL;
-    pjsua_inv_rdata *inv_rdata = NULL;
     unsigned options = 0;
     pjsip_inv_session *inv = NULL;
     int acc_id;
@@ -1479,8 +1624,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pjmedia_sdp_session *offer=NULL;
     pj_bool_t should_dec_dlg = PJ_FALSE;
     pjsip_tpselector tp_sel;
-    pj_str_t key;
-    int max_rdata_size = PJ_ARRAY_SIZE(pjsua_var.incoming_call_rdata);
     pj_status_t status;
 
     /* Don't want to handle anything but INVITE */
@@ -1506,49 +1649,12 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     PJSUA_LOCK();
 
-    status = pjsip_tsx_create_key(rdata->tp_info.pool, &key, PJSIP_ROLE_UAS,
-                                  &rdata->msg_info.cseq->method, rdata);
-    if (status == PJ_SUCCESS) {
-        int i = 0;
-        pj_uint32_t hash_key = pj_hash_calc_tolower(0, NULL, &key);
-
-        for (; i < max_rdata_size; ++i) {
-            pjsua_inv_rdata *inv_data = &pjsua_var.incoming_call_rdata[i];
-            if (inv_data->hash_key == hash_key) {
-                break;
-            }
-        }
-        if (i == max_rdata_size) {
-            /* New incoming INVITE */
-            for (i = 0; i < max_rdata_size; ++i) {
-                pjsua_inv_rdata *inv_data = &pjsua_var.incoming_call_rdata[i];
-                if (inv_data->hash_key == 0) {
-                    break;
-                }
-            }
-            if (i < max_rdata_size) {
-                /* Clone rdata. */
-                inv_rdata = &pjsua_var.incoming_call_rdata[i];
-                pjsip_rx_data_clone(rdata, 0, &inv_rdata->rdata);
-                inv_rdata->hash_key = hash_key;
-            } else {
-                PJ_LOG(2, (THIS_FILE, "Cannot save new incoming call rdata "\
-                                        "(too many data)"));
-            }
-        } else {
-            inv_rdata = &pjsua_var.incoming_call_rdata[i];
-            PJ_LOG(2, (THIS_FILE, "Incoming call rdata with key 0x%x, already saved",
-                       hash_key));
-        }
-    }
-
     /* Find free call slot. */
     call_id = alloc_call_id();
 
-    if (call_id == PJSUA_INVALID_ID) {
-        pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
-                                      PJSIP_SC_BUSY_HERE, NULL,
-                                      NULL, NULL);
+    //if (call_id == PJSUA_INVALID_ID) {
+    if (1) {
+        reject_incoming_call(PJ_TRUE, NULL, rdata, PJSIP_SC_BUSY_HERE, NULL, NULL, NULL);
         PJ_LOG(2,(THIS_FILE,
                   "Unable to accept incoming call (too many calls)"));
         goto on_return;
@@ -1577,15 +1683,15 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         if (response) {
             pjsip_response_addr res_addr;
 
+            rejected_incoming_call_cb(rdata, response, 0);
             pjsip_get_response_addr(response->pool, rdata, &res_addr);
             status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, response,
-                                      NULL, NULL);
+                                               NULL, NULL);
             if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(response);
         } else {
 
             /* Respond with 500 (Internal Server Error) */
-            pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
-                                          NULL, NULL);
+            reject_incoming_call(PJ_TRUE, NULL, rdata, 500, NULL, NULL, NULL);
         }
 
         goto on_return;
@@ -1637,8 +1743,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
             if (st_text.slen == 2)
                 st_text = *pjsip_get_status_text(st_code);
 
-            pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
-                                st_code, &st_text, NULL, NULL, NULL);
+            reject_incoming_call(PJ_FALSE, NULL, rdata, st_code, &st_text, NULL, NULL);
             goto on_return;
         }
 
@@ -1651,7 +1756,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     if (!replaced_dlg) {
         /* Clone rdata. */
-        call->incoming_data = inv_rdata;
+        pjsip_rx_data_clone(rdata, 0, &call->incoming_data);
     }
 
     /*
@@ -1667,9 +1772,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     } else {
         acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
         if (acc_id == PJSUA_INVALID_ID) {
-            pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
-                                          PJSIP_SC_TEMPORARILY_UNAVAILABLE,
-                                          NULL, NULL, NULL);
+            reject_incoming_call(PJ_TRUE, NULL, rdata, PJSIP_SC_TEMPORARILY_UNAVAILABLE, 
+                                 NULL, NULL, NULL);
 
             PJ_LOG(2,(THIS_FILE,
                       "Unable to accept incoming call (no available account)"));
@@ -1724,9 +1828,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                 pj_list_init(&hdr_list);
                 pj_list_push_back(&hdr_list, acc);
 
-                pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 
-                                    PJSIP_SC_UNSUPPORTED_MEDIA_TYPE,
-                                    NULL, &hdr_list, NULL, NULL);
+                reject_incoming_call(PJ_FALSE, NULL, rdata, 
+                                     PJSIP_SC_UNSUPPORTED_MEDIA_TYPE, NULL, 
+                                     &hdr_list, NULL);
             } else {
                 const pj_str_t reason = pj_str("Bad SDP");
                 pjsip_warning_hdr *w;
@@ -1740,8 +1844,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                 pj_list_init(&hdr_list);
                 pj_list_push_back(&hdr_list, w);
 
-                pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 400,
-                                    &reason, &hdr_list, NULL, NULL);
+                reject_incoming_call(PJ_FALSE, NULL, rdata, 400, &reason, &hdr_list, 
+                                     NULL);
             }
             goto on_return;
         }
@@ -1751,8 +1855,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
          */
         if ((offer) && (offer->media_count==0)) {
             const pj_str_t reason = pj_str("Missing media in SDP");
-            pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 400, &reason,
-                                NULL, NULL, NULL);
+            reject_incoming_call(PJ_FALSE, NULL, rdata, 400, &reason, NULL, NULL);
             goto on_return;
         }
 
@@ -1788,15 +1891,15 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         if (response) {
             pjsip_response_addr res_addr;
 
+            rejected_incoming_call_cb(rdata, response, 0);
             pjsip_get_response_addr(response->pool, rdata, &res_addr);
             status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, response,
-                                                           NULL, NULL);
+                                               NULL, NULL);
             if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(response);
 
         } else {
             /* Respond with 500 (Internal Server Error) */
-            pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 500, NULL,
-                                NULL, NULL, NULL);
+            reject_incoming_call(PJ_FALSE, NULL, rdata, 500, NULL, NULL, NULL);
         }
 
         goto on_return;
@@ -1811,8 +1914,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Unable to generate Contact header",
                          status);
-            pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
-                                          NULL, NULL);
+            reject_incoming_call(PJ_TRUE, NULL, rdata, 500, NULL, NULL, NULL);
             goto on_return;
         }
     }
@@ -1821,8 +1923,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     status = pjsip_dlg_create_uas_and_inc_lock( pjsip_ua_instance(), rdata,
                                                 &contact, &dlg);
     if (status != PJ_SUCCESS) {
-        pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
-                                      NULL, NULL);
+        reject_incoming_call(PJ_TRUE, NULL, rdata, 500, NULL, NULL, NULL);
         goto on_return;
     }
 
@@ -1902,7 +2003,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         pj_list_init(&hdr_list);
         pj_list_push_back(&hdr_list, w);
 
-        pjsip_dlg_respond(dlg, rdata, 500, NULL, &hdr_list, NULL);
+        reject_incoming_call(PJ_FALSE, dlg, rdata, 500, NULL, &hdr_list, NULL);
 
         /* Can't terminate dialog because transaction is in progress.
         pjsip_dlg_terminate(dlg);
@@ -1943,9 +2044,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
             pjsip_dlg_inc_lock(dlg);
 
             if (response) {
+                rejected_incoming_call_cb(rdata, response, 0);
                 pjsip_dlg_send_response(dlg, call->inv->invite_tsx, response);
             } else {
-                pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
+                reject_incoming_call(PJ_FALSE, dlg, rdata, sip_err_code, NULL, 
+                                     NULL, NULL);
             }
                 
             if (call->inv->dlg) {
@@ -1986,13 +2089,14 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                 pjsip_dlg_inc_lock(dlg);
 
                 if (response) {
+                    rejected_incoming_call_cb(rdata, response, 0);
                     pjsip_dlg_send_response(dlg, call->inv->invite_tsx, 
                                             response);
 
                 } else {
-                    pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, 
-                                      NULL);
-                }               
+                    reject_incoming_call(PJ_FALSE, dlg, rdata, sip_err_code, NULL,
+                                         NULL, NULL);
+                }
 
                 if (call->inv->dlg) {
                     pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
@@ -2007,7 +2111,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
             pjsua_perror(THIS_FILE, "Error initializing media channel", status);
             
             pjsip_dlg_inc_lock(dlg);
-            pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
+            reject_incoming_call(PJ_FALSE, dlg, rdata, sip_err_code, NULL,
+                                 NULL, NULL);
             if (call->inv->dlg) {
                 pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
             }
@@ -2036,7 +2141,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                                     &pjsua_var.acc[acc_id].cfg.timer_setting);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Session Timer init failed", status);
-        pjsip_dlg_respond(dlg, rdata, PJSIP_SC_INTERNAL_SERVER_ERROR, NULL, NULL, NULL);
+        reject_incoming_call(PJ_FALSE, dlg, rdata, PJSIP_SC_INTERNAL_SERVER_ERROR, NULL,
+                             NULL, NULL);
         pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR, PJ_FALSE);
 
         pjsua_media_channel_deinit(call->index);
@@ -2072,9 +2178,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         if (response == NULL) {
             pjsua_perror(THIS_FILE, "Unable to send answer to incoming INVITE",
                          status);
-            pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
+            reject_incoming_call(PJ_FALSE, dlg, rdata, 500, NULL,
+                                 NULL, NULL);
             pjsip_inv_terminate(inv, 500, PJ_FALSE);
         } else {
+            rejected_incoming_call_cb(rdata, response, 0);
             pjsip_inv_send_msg(inv, response);
             pjsip_inv_terminate(inv, response->msg->line.status.code,
                                 PJ_FALSE);
@@ -2160,128 +2268,16 @@ on_return:
         pjsip_dlg_dec_lock(dlg);
     }
 
+    if (call && call->incoming_data) {
+        pjsip_rx_data_free_cloned(call->incoming_data);
+        call->incoming_data = NULL;
+    }
+    
     pj_log_pop_indent();
     PJSUA_UNLOCK();
     return PJ_TRUE;
 }
 
-
-void pjsua_call_on_rejected_incoming_call(pjsip_tx_data *tdata)
-{
-    pjsip_msg *msg = tdata->msg;
-    pjsip_cseq_hdr *cseq;
-    int max_rdata_size = PJ_ARRAY_SIZE(pjsua_var.incoming_call_rdata);
-    pjsip_rx_data *rdata = NULL;
-    pjsip_dialog *dlg = NULL;
-    pjsua_inv_rdata *inv_rdata = NULL;
-    pjsua_call *call = NULL;
-    int status;
-
-    if (msg->type != PJSIP_RESPONSE_MSG)
-        return;
-
-    status = msg->line.status.code / 100;
-    if (status == 1 || status == 2)
-        return;
-
-    cseq = PJSIP_MSG_CSEQ_HDR(msg);
-    if (!cseq)
-        return;
-
-    if (cseq->method.id != PJSIP_INVITE_METHOD)
-        return;
-
-    dlg = pjsip_tdata_get_dlg(tdata);
-    if (!dlg) {
-        pj_str_t key;
-        pjsip_rx_data tmp_rdata;
-
-        /* Find rdata. */
-        tmp_rdata.msg_info.msg = msg;
-        tmp_rdata.msg_info.via = (pjsip_via_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_VIA, 
-                                                                    NULL);
-        tmp_rdata.msg_info.from = PJSIP_MSG_FROM_HDR(msg);
-        tmp_rdata.msg_info.cseq = cseq;
-        tmp_rdata.msg_info.cid = PJSIP_MSG_CID_HDR(msg);
-
-        status = pjsip_tsx_create_key(tdata->pool, &key, PJSIP_ROLE_UAS, &cseq->method, 
-                                      &tmp_rdata);
-        if (status == PJ_SUCCESS) {
-            int i = 0;
-            pj_uint32_t hash_key = pj_hash_calc_tolower(0, NULL, &key);
-
-            for (; i < max_rdata_size; ++i) {
-                inv_rdata = &pjsua_var.incoming_call_rdata[i];
-                if (inv_rdata->hash_key == hash_key) {
-                    break;
-                }
-            }
-            if (i != max_rdata_size) {
-                rdata = inv_rdata->rdata;
-            } else {
-                inv_rdata = NULL;
-            }
-        }
-    } else {
-        call = dlg->mod_data[pjsua_var.mod.id];
-        if (call && call->incoming_data) {
-            inv_rdata = call->incoming_data;
-            rdata = inv_rdata->rdata;
-        }
-    }
-
-    if (!rdata)
-        return;
-
-    if (rdata->msg_info.to->tag.slen != 0)
-        goto on_return;
-
-    if (pjsua_var.ua_cfg.cb.on_rejected_incoming_call) {
-        pjsip_from_hdr *from_hdr;
-        pjsip_to_hdr *to_hdr;
-        pjsip_sip_uri *uri;
-        pjsua_on_rejected_incoming_call_param param;
-
-        pj_bzero(&param, sizeof(pjsua_on_rejected_incoming_call_param));
-        param.rdata = rdata;
-        param.tdata = tdata;
-        param.code = msg->line.status.code;
-
-        from_hdr = rdata->msg_info.from;
-        if (from_hdr) {
-            param.remote_info.ptr = param.buf_.remote_info;
-            uri = (pjsip_sip_uri*)pjsip_uri_get_uri(from_hdr->uri);
-            param.remote_info.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
-                                                     uri,
-                                                     param.buf_.remote_info,
-                                                     sizeof(param.buf_.remote_info));
-        }
-
-        to_hdr = rdata->msg_info.to;
-        if (to_hdr) {
-            param.local_info.ptr = param.buf_.local_info;
-            uri = (pjsip_sip_uri*)pjsip_uri_get_uri(to_hdr->uri);
-            param.local_info.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
-                                                     uri,
-                                                     param.buf_.local_info,
-                                                     sizeof(param.buf_.local_info));
-        }
-
-        pjsua_var.ua_cfg.cb.on_rejected_incoming_call(&param);
-    }
-
-on_return:
-    if (inv_rdata) {
-        if (inv_rdata->rdata) {
-            pjsip_rx_data_free_cloned(inv_rdata->rdata);
-            inv_rdata->rdata = NULL;
-        }
-        inv_rdata->hash_key = 0;
-        if (call && call->incoming_data) {
-            call->incoming_data = NULL;
-        }
-    }
-}
 
 
 /*

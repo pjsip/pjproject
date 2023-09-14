@@ -2020,11 +2020,11 @@ typedef struct pjsua_callback
      * This callback is called when an incoming call is rejected.
      * In addition to being declined explicitly using the #pjsua_call_answer() method,
      * the library may also automatically reject the incoming call due 
-     * to different scenarios:
+     * to different scenarios, e.g:
+     * - no available call slot.
+     * - no available account to handle the call.
      * - when an incoming INVITE is received with, for instance, a message 
      *   containing invalid SDP.
-     * - when issues occur during the #pjsua_call_answer() process, 
-     *   such as a failure to initialize call media.
      * 
      * See also #pjsua_on_rejected_incoming_call_cb.
      */

@@ -1522,9 +1522,6 @@ PJ_DEF(pj_status_t) pjsip_dlg_modify_response(  pjsip_dialog *dlg,
     /* Lock and increment session */
     pjsip_dlg_inc_lock(dlg);
 
-    /* Put this dialog in tdata's mod_data */
-    tdata->mod_data[dlg->ua->id] = dlg;
-
     /* Replace status code and reason */
     tdata->msg->line.status.code = st_code;
     if (st_text) {

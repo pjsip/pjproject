@@ -32,8 +32,6 @@ typedef struct pjsua_call pjsua_call;
 /** Forward decl of pjsua call media */
 typedef struct pjsua_call_media pjsua_call_media;
 
-/** Forward decl of pjsua invite rdata */
-typedef struct pjsua_inv_rdata pjsua_inv_rdata;
 
 /**
  * Call's media stream.
@@ -220,13 +218,13 @@ struct pjsua_call
     pj_timer_entry       reinv_timer;  /**< Reinvite retry timer.           */
     pj_bool_t            reinv_pending;/**< Pending until CONFIRMED state.  */
     pj_bool_t            reinv_ice_sent;/**< Has reinvite for ICE upd sent? */
-    pj_bool_t            incoming_call_cb_called; /**< On pjsua2, when handling incoming 
-                                                       call, onCreateMediaTransport() 
-                                                       will not be called since the call 
-                                                       isn't created yet. This 
-                                                       variable is used to handle such 
-                                                       case               >*/
-    pjsua_inv_rdata     *incoming_data; /**< Cloned incoming call rdata.    */
+    pjsip_rx_data       *incoming_data;/**< Cloned incoming call rdata.
+                                            On pjsua2, when handling incoming 
+                                            call, onCreateMediaTransport() will
+                                            not be called since the call isn't
+                                            created yet. This temporary 
+                                            variable is used to handle such 
+                                            case, see ticket #1916.         */
 
     struct {
         pj_bool_t        enabled;
@@ -474,12 +472,6 @@ typedef struct pjsua_event_list
 } pjsua_event_list;
 
 
-struct pjsua_inv_rdata
-{
-    pjsip_rx_data      *rdata;
-    pj_uint32_t         hash_key;
-};
-
 /**
  * Global pjsua application data.
  */
@@ -600,9 +592,6 @@ struct pjsua_data
     pjsua_timer_list     timer_list;
     pjsua_event_list     event_list;
     pj_mutex_t          *timer_mutex;
-
-    /* Incoming call rdata list */
-    pjsua_inv_rdata      incoming_call_rdata[PJSUA_MAX_CALLS*2];
 };
 
 
@@ -749,11 +738,6 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
  * Handle incoming invite request.
  */
 pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata);
-
-/**
- * Handle rejected incoming call.
- */
-void pjsua_call_on_rejected_incoming_call(pjsip_tx_data *tdata);
 
 /*
  * Media channel.
