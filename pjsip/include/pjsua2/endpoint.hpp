@@ -454,17 +454,17 @@ struct OnRejectedIncomingCallParam
     /**
      * Rejection code.
      */
-    int             code;
+    int             stCode;
 
     /**
-     * Original INVITE message.
+     * Rejection text.
+     */
+    std::string     stText;
+
+    /**
+     * The original INVITE message.
      */
     SipRxData       rdata;
-
-    /**
-     * The rejection message.
-     */
-    SipTxData       tdata;
 };
 
 /**

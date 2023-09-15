@@ -1097,17 +1097,17 @@ typedef struct pjsua_on_rejected_incoming_call_param {
     /** 
      * Rejection code.
      */
-    int             code;
+    int             st_code;
 
     /**
-     * Original INVITE message.
+     * Rejection text.
      */
-    pjsip_rx_data *rdata;
+    pj_str_t        st_text;
 
     /** 
-     * The rejection message.
+     * The original INVITE message.
      */
-    pjsip_tx_data *tdata;
+    pjsip_rx_data  *rdata;
     
     /** 
      * Internal.

@@ -2690,14 +2690,14 @@ pj_status_t Endpoint::on_auth_create_aka_response_callback(pj_pool_t *pool,
 }
 
 void Endpoint::on_rejected_incoming_call(
-                                       const pjsua_on_rejected_incoming_call_param *param)
+                            const pjsua_on_rejected_incoming_call_param *param)
 {
     OnRejectedIncomingCallParam prm;
     prm.localInfo = pj2Str(param->local_info);
     prm.remoteInfo = pj2Str(param->remote_info);
-    prm.code = param->code;
+    prm.stCode = param->st_code;
+    prm.stText = pj2Str(param->st_text);
     prm.rdata.fromPj(*param->rdata);
-    prm.tdata.fromPj(*param->tdata);
 
     Endpoint::instance().onRejectedIncomingCall(prm);
 }
