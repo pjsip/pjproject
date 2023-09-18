@@ -343,6 +343,8 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         remoteRtcpAddress = straddr;
         txPt = info.info.aud.tx_pt;
         rxPt = info.info.aud.rx_pt;
+        audTxEventPt = info.info.aud.tx_event_pt;
+        audRxEventPt = info.info.aud.rx_event_pt;
         codecName = pj2Str(info.info.aud.fmt.encoding_name);
         codecClockRate = info.info.aud.fmt.clock_rate;
         audCodecParam.fromPj(*info.info.aud.param);

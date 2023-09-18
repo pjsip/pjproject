@@ -1240,6 +1240,7 @@ void Endpoint::on_stream_precreate(pjsua_call_id call_id,
         param->stream_info.info.aud.use_ka = prm.streamInfo.useKa;
 #endif
         param->stream_info.info.aud.rtcp_sdes_bye_disabled = prm.streamInfo.rtcpSdesByeDisabled;
+        param->stream_info.info.aud.rx_event_pt = prm.streamInfo.audRxEventPt;
     } else if (param->stream_info.type == PJMEDIA_TYPE_VIDEO) {
         param->stream_info.info.vid.jb_init = prm.streamInfo.jbInit;
         param->stream_info.info.vid.jb_min_pre = prm.streamInfo.jbMinPre;

@@ -753,6 +753,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
             si->use_ka = prm.stream_info.info.aud.use_ka;
 #endif
             si->rtcp_sdes_bye_disabled = prm.stream_info.info.aud.rtcp_sdes_bye_disabled;
+            si->rx_event_pt = prm.stream_info.info.aud.rx_event_pt;
         }
 
         /* Create session based on session info. */
