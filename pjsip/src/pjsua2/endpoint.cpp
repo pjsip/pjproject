@@ -2695,8 +2695,8 @@ void Endpoint::on_rejected_incoming_call(
     OnRejectedIncomingCallParam prm;
     prm.localInfo = pj2Str(param->local_info);
     prm.remoteInfo = pj2Str(param->remote_info);
-    prm.stCode = param->st_code;
-    prm.stText = pj2Str(param->st_text);
+    prm.statusCode = param->st_code;
+    prm.reason = pj2Str(param->st_text);
     prm.rdata.fromPj(*param->rdata);
 
     Endpoint::instance().onRejectedIncomingCall(prm);

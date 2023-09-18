@@ -1081,7 +1081,8 @@ typedef struct pjsua_call_setting
 
 
 /**
- * This will contain the information of the callback \a on_rejected_incoming_call.
+ * This will contain the information passed from the callback 
+ * \a pjsua_on_rejected_incoming_call_cb.
  */
 typedef struct pjsua_on_rejected_incoming_call_param {
     /** 
@@ -1126,7 +1127,7 @@ typedef struct pjsua_on_rejected_incoming_call_param {
   *
   */
 typedef void (*pjsua_on_rejected_incoming_call_cb)(
-                                      const pjsua_on_rejected_incoming_call_param *param);
+                           const pjsua_on_rejected_incoming_call_param *param);
 
 
 /**
@@ -2018,7 +2019,8 @@ typedef struct pjsua_callback
 
     /**
      * This callback is called when an incoming call is rejected.
-     * In addition to being declined explicitly using the #pjsua_call_answer() method,
+     * In addition to being declined explicitly using the 
+     * #pjsua_call_answer()/#pjsua_call_answer2() method,
      * the library may also automatically reject the incoming call due 
      * to different scenarios, e.g:
      * - no available call slot.

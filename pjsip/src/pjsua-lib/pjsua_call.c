@@ -1456,10 +1456,7 @@ on_incoming_call_med_tp_complete(pjsua_call_id call_id,
 static void rejected_incoming_call_cb(pjsip_rx_data *rdata, int st_code, 
                                       pj_str_t *st_text)
 {
-    /* Call on_rejected_incoming_call() only if to-tag is not set. */
-    if ((rdata->msg_info.to->tag.slen == 0) &&
-        pjsua_var.ua_cfg.cb.on_rejected_incoming_call)
-    {
+    if (pjsua_var.ua_cfg.cb.on_rejected_incoming_call) {
         pjsip_from_hdr *from_hdr;
         pjsip_to_hdr *to_hdr;
         pjsip_sip_uri *uri;
@@ -1519,8 +1516,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pjmedia_sdp_session *offer=NULL;
     pj_bool_t should_dec_dlg = PJ_FALSE;
     pjsip_tpselector tp_sel;
-    char reason_buf[32] = {0};
-    pj_str_t st_reason;
+    pj_str_t st_reason = pj_str("");
     int st_code = 200;
     pj_status_t status;
 
@@ -1547,7 +1543,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     PJSUA_LOCK();
 
-    st_reason = pj_str(reason_buf);
     /* Find free call slot. */
     call_id = alloc_call_id();
 

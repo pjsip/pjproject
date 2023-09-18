@@ -454,12 +454,12 @@ struct OnRejectedIncomingCallParam
     /**
      * Rejection code.
      */
-    int             stCode;
+    int             statusCode;
 
     /**
      * Rejection text.
      */
-    std::string     stText;
+    std::string     reason;
 
     /**
      * The original INVITE message.
@@ -1930,11 +1930,18 @@ public:
     virtual pj_status_t onCredAuth(OnCredAuthParam &prm);
 
     /**
-     * Callback when an incoming call is rejected.
+     * This callback is called when an incoming call is rejected.
+     * In addition to being declined explicitly using the Call::answer()
+     * method, the library may also automatically reject the incoming call
+     * due to different scenarios, e.g:
+     * - no available call slot.
+     * - no available account to handle the call.
+     * - when an incoming INVITE is received with, for instance, a message
+     *   containing invalid SDP.
      *
      * @param prm       Callback parameters.
      */
-    virtual void onRejectedIncomingCall(OnRejectedIncomingCallParam& prm)
+    virtual void onRejectedIncomingCall(OnRejectedIncomingCallParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
 private:
