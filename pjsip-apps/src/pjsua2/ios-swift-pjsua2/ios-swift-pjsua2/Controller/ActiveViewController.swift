@@ -19,7 +19,6 @@
 
 import UIKit
 
-
 class ActiveViewController: UIViewController {
 
     var activeCallId : String = ""
@@ -27,6 +26,8 @@ class ActiveViewController: UIViewController {
     
     var holdFlag : Bool = false
     @IBOutlet weak var activeCallTitle: UILabel!
+
+    @IBOutlet weak var videoView: UIView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -34,8 +35,14 @@ class ActiveViewController: UIViewController {
     }
     
     override func viewDidDisappear(_ animated: Bool) {
-        CPPWrapper().hangupCall();
-        call_status_listener_swift(call_answer_code: 1);
+    }
+    
+    func updateVideo(vid_win: UIView!) {
+        videoView.addSubview(vid_win);
+        vid_win.center = videoView.center;
+        vid_win.frame = videoView.bounds;
+        vid_win.contentMode = .scaleAspectFit;
+
     }
     
     @IBAction func hangupClick(_ sender: UIButton) {
@@ -57,6 +64,5 @@ class ActiveViewController: UIViewController {
         holdFlag = !holdFlag
     
     }
-    
  
 }

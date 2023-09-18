@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3AEC29312995BF1400F59EA0 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AEC29302995BF1400F59EA0 /* VideoToolbox.framework */; };
+		3AEC29332995BF4C00F59EA0 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AEC29322995BF4C00F59EA0 /* CoreMedia.framework */; };
 		C337417325BADEEE007785D7 /* Model.swift in Sources */ = {isa = PBXBuildFile; fileRef = C337417225BADEEE007785D7 /* Model.swift */; };
 		C351398125A5F70D00A090AA /* libg7221codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8521F25A5EC380037A8AB /* libg7221codec.a */; };
 		C351398225A5F70D00A090AA /* libgsmcodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8521A25A5EC380037A8AB /* libgsmcodec.a */; };
@@ -37,7 +39,6 @@
 		C3B8520325A5EA6C0037A8AB /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B8520225A5EA6C0037A8AB /* ViewController.swift */; };
 		C3B8520625A5EA6C0037A8AB /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C3B8520425A5EA6C0037A8AB /* Main.storyboard */; };
 		C3B8520825A5EA6D0037A8AB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C3B8520725A5EA6D0037A8AB /* Assets.xcassets */; };
-		C3B8520B25A5EA6D0037A8AB /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C3B8520925A5EA6D0037A8AB /* LaunchScreen.storyboard */; };
 		C3B8524325A5EC940037A8AB /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8524125A5EC940037A8AB /* AVFoundation.framework */; };
 		C3B8524425A5EC940037A8AB /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8524225A5EC940037A8AB /* Foundation.framework */; };
 		C3B8524725A5ED6D0037A8AB /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8524625A5ED6D0037A8AB /* AudioToolbox.framework */; };
@@ -45,6 +46,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3AEC29302995BF1400F59EA0 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
+		3AEC29322995BF4C00F59EA0 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		C337417225BADEEE007785D7 /* Model.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model.swift; sourceTree = "<group>"; };
 		C374860725B84FA100FBE972 /* OutgoingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutgoingViewController.swift; sourceTree = "<group>"; };
 		C399A57025AF2721000F742A /* IncomingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingViewController.swift; sourceTree = "<group>"; };
@@ -58,7 +61,6 @@
 		C3B8520225A5EA6C0037A8AB /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		C3B8520525A5EA6C0037A8AB /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		C3B8520725A5EA6D0037A8AB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		C3B8520A25A5EA6D0037A8AB /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C3B8520C25A5EA6D0037A8AB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C3B8521325A5EBF00037A8AB /* ios-swift-pjsua2-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ios-swift-pjsua2-Bridging-Header.h"; sourceTree = "<group>"; };
 		C3B8521825A5EC380037A8AB /* libpjmedia-videodev.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libpjmedia-videodev.a"; path = "../PJSip-Build/pjproject/pjmedia/lib/libpjmedia-videodev.a"; sourceTree = "<group>"; };
@@ -100,11 +102,13 @@
 				C351398625A5F70D00A090AA /* libpjmedia-audiodev.a in Frameworks */,
 				C351398725A5F70D00A090AA /* libpjmedia-codec.a in Frameworks */,
 				C351398825A5F70D00A090AA /* libpjmedia-videodev.a in Frameworks */,
+				3AEC29312995BF1400F59EA0 /* VideoToolbox.framework in Frameworks */,
 				C351398925A5F70D00A090AA /* libpjmedia.a in Frameworks */,
 				C351398A25A5F70D00A090AA /* libpjnath.a in Frameworks */,
 				C351398B25A5F70D00A090AA /* libpjsip-simple.a in Frameworks */,
 				C351398C25A5F70D00A090AA /* libpjsip-ua.a in Frameworks */,
 				C351398D25A5F70D00A090AA /* libpjsip.a in Frameworks */,
+				3AEC29332995BF4C00F59EA0 /* CoreMedia.framework in Frameworks */,
 				C351398E25A5F70D00A090AA /* libpjsua.a in Frameworks */,
 				C351398F25A5F70D00A090AA /* libpjsua2.a in Frameworks */,
 				C351399025A5F70D00A090AA /* libresample.a in Frameworks */,
@@ -144,7 +148,6 @@
 			isa = PBXGroup;
 			children = (
 				C3B8520425A5EA6C0037A8AB /* Main.storyboard */,
-				C3B8520925A5EA6D0037A8AB /* LaunchScreen.storyboard */,
 			);
 			path = View;
 			sourceTree = "<group>";
@@ -185,6 +188,8 @@
 		C3B8521725A5EC380037A8AB /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				3AEC29322995BF4C00F59EA0 /* CoreMedia.framework */,
+				3AEC29302995BF1400F59EA0 /* VideoToolbox.framework */,
 				C3B8524625A5ED6D0037A8AB /* AudioToolbox.framework */,
 				C3B8524125A5EC940037A8AB /* AVFoundation.framework */,
 				C3B8524225A5EC940037A8AB /* Foundation.framework */,
@@ -281,7 +286,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C3B8520B25A5EA6D0037A8AB /* LaunchScreen.storyboard in Resources */,
 				C3B8520825A5EA6D0037A8AB /* Assets.xcassets in Resources */,
 				C3B8520625A5EA6C0037A8AB /* Main.storyboard in Resources */,
 			);
@@ -315,14 +319,6 @@
 				C3B8520525A5EA6C0037A8AB /* Base */,
 			);
 			name = Main.storyboard;
-			sourceTree = "<group>";
-		};
-		C3B8520925A5EA6D0037A8AB /* LaunchScreen.storyboard */ = {
-			isa = PBXVariantGroup;
-			children = (
-				C3B8520A25A5EA6D0037A8AB /* Base */,
-			);
-			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
 		};
 /* End PBXVariantGroup section */
