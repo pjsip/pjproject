@@ -342,9 +342,11 @@ static void set_ssock_param(pj_ssl_sock_param *ssock_param,
     ssock_param->enable_renegotiation =
                                     listener->tls_setting.enable_renegotiation;
     /* Copy the sockopt */
-    pj_memcpy(&ssock_param->sockopt_params,
-              &listener->tls_setting.sockopt_params,
-              sizeof(listener->tls_setting.sockopt_params));
+    if (listener->tls_setting.sockopt_params.cnt > 0) {
+        pj_memcpy(&ssock_param->sockopt_params, 
+                  &listener->tls_setting.sockopt_params,
+                  sizeof(listener->tls_setting.sockopt_params));
+    }
 
     sip_ssl_method = listener->tls_setting.method;
     sip_ssl_proto = listener->tls_setting.proto;
@@ -1233,9 +1235,11 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     ssock_param.enable_renegotiation = listener->tls_setting.enable_renegotiation;
     /* Copy the sockopt */
-    pj_memcpy(&ssock_param.sockopt_params, 
-              &listener->tls_setting.sockopt_params,
-              sizeof(listener->tls_setting.sockopt_params));
+    if (listener->tls_setting.sockopt_params.cnt > 0) {
+        pj_memcpy(&ssock_param.sockopt_params, 
+                  &listener->tls_setting.sockopt_params,
+                  sizeof(listener->tls_setting.sockopt_params));
+    }
 
     sip_ssl_method = listener->tls_setting.method;
     sip_ssl_proto = listener->tls_setting.proto;
