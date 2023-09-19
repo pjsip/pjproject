@@ -359,7 +359,8 @@ typedef struct pjsip_tls_setting
     /**
      * Specify options to be set on the transport. 
      *
-     * By default there is no options.
+     * By default, this is unset, which means that the underlying sockopt
+     * params as returned by #pj_ssl_sock_param_default() will be used.
      * 
      */
     pj_sockopt_params sockopt_params;
