@@ -1134,7 +1134,6 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
                                                    ssock->param.grp_lock);
         if (status != PJ_SUCCESS) {
             ssock->timer.id = TIMER_NONE;
-            status = PJ_SUCCESS;
         }
     }
 
