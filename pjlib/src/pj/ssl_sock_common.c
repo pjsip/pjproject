@@ -35,7 +35,12 @@ PJ_DEF(void) pj_ssl_sock_param_default(pj_ssl_sock_param *param)
     param->concurrency = -1;
     param->whole_data = PJ_TRUE;
 
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_GNUTLS)
+    /* GnuTLS is allowed to send bigger chunks.*/
+    param->send_buffer_size = 65536;
+
     {
+        /* For GnuTLS, TCP_NODELAY is needed to avoid polling delay. */
         static pj_int32_t val = 1;
         param->sockopt_params.cnt = 1;
         param->sockopt_params.options[0].level = pj_SOL_TCP();
@@ -43,10 +48,6 @@ PJ_DEF(void) pj_ssl_sock_param_default(pj_ssl_sock_param *param)
         param->sockopt_params.options[0].optval = &val;
         param->sockopt_params.options[0].optlen = sizeof(pj_int32_t);
     }
-
-#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_GNUTLS)
-    /* GnuTLS is allowed to send bigger chunks.*/
-    param->send_buffer_size = 65536;
 
 #else
     param->send_buffer_size = 8192;
