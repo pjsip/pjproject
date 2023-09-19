@@ -599,6 +599,16 @@ struct StreamInfo
      * Incoming codec payload type.
      */
     unsigned            rxPt;
+
+    /**
+     * Outgoing pt for audio telephone-events.
+     */
+    int                 audTxEventPt;
+
+    /**
+     * Incoming pt for audio telephone-events.
+     */
+    int                 audRxEventPt;
     
     /**
      * Codec name.
