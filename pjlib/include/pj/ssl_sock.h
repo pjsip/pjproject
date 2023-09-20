@@ -1078,7 +1078,8 @@ typedef struct pj_ssl_sock_param
     /**
      * Specify options to be set on the transport. 
      *
-     * By default there is no options.
+     * For GnuTLS backend, by default TCP_NODELAY will be set. For other
+     * SSL backends, the default is no options.
      * 
      */
     pj_sockopt_params sockopt_params;
