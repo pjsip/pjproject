@@ -1728,6 +1728,11 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     if (pjsip_rdata_get_tsx(rdata) == NULL &&
         rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD)
     {
+        /* Create tsx lock first so we can lock it before creating
+         * the transaction. This is to avoid deadlock by preventing
+         * the newly created transaction to process messages before
+         * this function returns.
+         */
         status = pj_grp_lock_create(dlg->pool, NULL, &tsx_lock);
         if (status == PJ_SUCCESS) {
             pj_grp_lock_add_ref(tsx_lock);
