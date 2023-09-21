@@ -1679,6 +1679,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 {
     pj_status_t status;
     pjsip_transaction *tsx = NULL;
+    pj_grp_lock_t *tsx_lock = NULL;
     pj_bool_t processed = PJ_FALSE;
     unsigned i;
 
@@ -1727,7 +1728,13 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     if (pjsip_rdata_get_tsx(rdata) == NULL &&
         rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD)
     {
-        status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
+        status = pj_grp_lock_create(dlg->pool, NULL, &tsx_lock);
+        if (status == PJ_SUCCESS) {
+            pj_grp_lock_add_ref(tsx_lock);
+            pj_grp_lock_acquire(tsx_lock);
+            status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
+        }
+
         if (status != PJ_SUCCESS) {
             /* Once case for this is when re-INVITE contains same
              * Via branch value as previous INVITE (ticket #965).
@@ -1808,6 +1815,10 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     }
 
 on_return:
+    if (tsx_lock) {
+        pj_grp_lock_release(tsx_lock);
+        pj_grp_lock_dec_ref(tsx_lock);
+    }
     /* Unlock dialog and dec session, may destroy dialog. */
     pjsip_dlg_dec_lock(dlg);
     pj_log_pop_indent();
