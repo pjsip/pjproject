@@ -268,6 +268,7 @@ AudioMedia* AudioMedia::typecastFromMedia(Media *media)
 AudioMediaPort::AudioMediaPort()
 : pool(NULL)
 {
+    pj_bzero(&port, sizeof(port));
 }
 
 AudioMediaPort::~AudioMediaPort()

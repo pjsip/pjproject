@@ -402,10 +402,6 @@ static int compliance_test_0(const pj_ioqueue_cfg *cfg)
                 return -52;
             }
             pending_op -= status;
-
-            if (pending_op == 0) {
-                status = 0;
-            }
         }
     }
 

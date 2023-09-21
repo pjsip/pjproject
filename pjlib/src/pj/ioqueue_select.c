@@ -769,12 +769,12 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
     /* Can only replace UDP socket */
     pj_assert(h->fd_type == pj_SOCK_DGRAM());
 
-    PJ_LOG(4,(THIS_FILE, "Attempting to replace UDP socket %d", old_sock));
+    PJ_LOG(4,(THIS_FILE, "Attempting to replace UDP socket %ld", old_sock));
 
     for (msec=20; (msec<1000 && status != PJ_SUCCESS); msec=msec*2)
     {
         if (msec > 20) {
-            PJ_LOG(4,(THIS_FILE, "Retry to replace UDP socket %d", h->fd));
+            PJ_LOG(4,(THIS_FILE, "Retry to replace UDP socket %ld", h->fd));
             pj_thread_sleep(msec);
         }
         
@@ -920,7 +920,7 @@ on_error:
     }
 
     h->fd = PJ_INVALID_SOCKET;
-    PJ_PERROR(1,(THIS_FILE, status, "Error replacing socket %d", old_sock));
+    PJ_PERROR(1,(THIS_FILE, status, "Error replacing socket %ld", old_sock));
     pj_lock_release(h->ioqueue->lock);
     return PJ_ESOCKETSTOP;
 }
