@@ -462,7 +462,7 @@ struct OnRejectedIncomingCallParam
     std::string     reason;
 
     /**
-     * The original INVITE message.
+     * The original INVITE message, on some cases it is not available.
      */
     SipRxData       rdata;
 };

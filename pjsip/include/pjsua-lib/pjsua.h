@@ -1106,7 +1106,8 @@ typedef struct pjsua_on_rejected_incoming_call_param {
     pj_str_t        st_text;
 
     /** 
-     * The original INVITE message.
+     * The original INVITE message, if it's not available this will be set
+     * to NULL.
      */
     pjsip_rx_data  *rdata;
     
