@@ -1598,7 +1598,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                                                response, NULL, NULL);
             if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(response);
         } else {
-            ret_st_code = 500;
+            ret_st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
             /* Respond with 500 (Internal Server Error) */
             pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, ret_st_code, 
                                           NULL, NULL, NULL);
@@ -1745,8 +1745,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                 pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, ret_st_code, 
                                     NULL, &hdr_list, NULL, NULL);
             } else {
-                st_reason = pj_str("Bad SDP");
                 pjsip_warning_hdr *w;
+                st_reason = pj_str("Bad SDP");
 
                 pjsua_perror(THIS_FILE, "Bad SDP in incoming INVITE",
                              status);
@@ -1756,7 +1756,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                                               status);
                 pj_list_init(&hdr_list);
                 pj_list_push_back(&hdr_list, w);
-                ret_st_code = 400;
+                ret_st_code = PJSIP_SC_BAD_REQUEST;
 
                 pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, ret_st_code,
                                     &st_reason, &hdr_list, NULL, NULL);
@@ -1769,7 +1769,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
          */
         if ((offer) && (offer->media_count==0)) {
             st_reason = pj_str("Missing media in SDP");
-            ret_st_code = 400;
+            ret_st_code = PJSIP_SC_BAD_REQUEST;
 
             pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, ret_st_code, 
                                 &st_reason, NULL, NULL, NULL);
@@ -1816,7 +1816,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
         } else {
             /* Respond with 500 (Internal Server Error) */
-            ret_st_code = 500;
+            ret_st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
             pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, ret_st_code, 
                                 NULL, NULL, NULL, NULL);
         }
@@ -1831,7 +1831,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,
                                               acc_id, rdata);
         if (status != PJ_SUCCESS) {
-            ret_st_code = 500;
+            ret_st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
             pjsua_perror(THIS_FILE, "Unable to generate Contact header",
                          status);
             pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, ret_st_code, 
@@ -1844,7 +1844,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     status = pjsip_dlg_create_uas_and_inc_lock( pjsip_ua_instance(), rdata,
                                                 &contact, &dlg);
     if (status != PJ_SUCCESS) {
-        ret_st_code = 500;
+        ret_st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
         pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, ret_st_code, 
                                       NULL, NULL, NULL);
         goto on_return;
@@ -1925,7 +1925,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                                                  status);
         pj_list_init(&hdr_list);
         pj_list_push_back(&hdr_list, w);
-        ret_st_code = 500;
+        ret_st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
         pjsip_dlg_respond(dlg, rdata, ret_st_code, NULL, &hdr_list, NULL);
 
         /* Can't terminate dialog because transaction is in progress.
@@ -2106,7 +2106,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         if (response == NULL) {
             pjsua_perror(THIS_FILE, "Unable to send answer to incoming INVITE",
                          status);
-            ret_st_code = 500;
+            ret_st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
             pjsip_dlg_respond(dlg, rdata, ret_st_code, NULL, NULL, NULL);
             pjsip_inv_terminate(inv, ret_st_code, PJ_FALSE);
         } else {
