@@ -362,6 +362,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     pjsip_contact_hdr *contact_hdr;
     pjsip_rr_hdr *rr;
     pjsip_transaction *tsx = NULL;
+    pj_grp_lock_t *tsx_lock = NULL;
     pj_str_t tmp;
     enum { TMP_LEN=PJSIP_MAX_URL_SIZE };
     pj_ssize_t len;
@@ -561,8 +562,20 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
         lock_incremented = PJ_TRUE;
     }
 
+    /* Create tsx lock first so we can lock it before creating
+     * the transaction. This is to avoid deadlock by preventing
+     * the newly created transaction to process messages before
+     * this function returns.
+     */
+    status = pj_grp_lock_create(dlg->pool, NULL, &tsx_lock);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+
+    pj_grp_lock_add_ref(tsx_lock);
+    pj_grp_lock_acquire(tsx_lock);
+
     /* Create UAS transaction for this request. */
-    status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
+    status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -591,12 +604,20 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     /* Feed the first request to the transaction. */
     pjsip_tsx_recv_msg(tsx, rdata);
 
+    pj_grp_lock_release(tsx_lock);
+    pj_grp_lock_dec_ref(tsx_lock);
+
     /* Done. */
     *p_dlg = dlg;
     PJ_LOG(5,(dlg->obj_name, "UAS dialog created"));
     return PJ_SUCCESS;
 
 on_error:
+    if (tsx_lock) {
+        pj_grp_lock_release(tsx_lock);
+        pj_grp_lock_dec_ref(tsx_lock);
+    }
+
     if (tsx) {
         pjsip_tsx_terminate(tsx, 500);
         pj_assert(dlg->tsx_count>0);
