@@ -2019,7 +2019,9 @@ typedef struct pjsua_callback
     void (*on_media_event)(pjmedia_event *event);
 
     /**
-     * This callback is called when an incoming call is rejected.
+     * This callback will be invoked when the library implicitly rejects
+     * an incoming call.
+     * 
      * In addition to being declined explicitly using the 
      * #pjsua_call_answer()/#pjsua_call_answer2() method,
      * the library may also automatically reject the incoming call due 
@@ -2028,7 +2030,7 @@ typedef struct pjsua_callback
      * - no available account to handle the call.
      * - when an incoming INVITE is received with, for instance, a message 
      *   containing invalid SDP.
-     * 
+     *
      * See also #pjsua_on_rejected_incoming_call_cb.
      */
     pjsua_on_rejected_incoming_call_cb on_rejected_incoming_call;

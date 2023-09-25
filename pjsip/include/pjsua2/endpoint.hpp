@@ -1930,7 +1930,9 @@ public:
     virtual pj_status_t onCredAuth(OnCredAuthParam &prm);
 
     /**
-     * This callback is called when an incoming call is rejected.
+     * This callback will be invoked when the library implicitly rejects
+     * an incoming call.
+     * 
      * In addition to being declined explicitly using the Call::answer()
      * method, the library may also automatically reject the incoming call
      * due to different scenarios, e.g:
