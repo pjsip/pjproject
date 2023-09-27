@@ -539,6 +539,7 @@ PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt)
         if (err != srtp_err_status_ok) {
             PJ_LOG(4, (THIS_FILE, "Failed to initialize libsrtp: %s",
                        get_libsrtp_errstr(err)));
+            pjmedia_srtp_deinit_lib(endpt);
             return PJMEDIA_ERRNO_FROM_LIBSRTP(err);
         }
     }
