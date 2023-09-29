@@ -310,6 +310,11 @@ PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
         return PJ_ETOOSMALL;
     }
 
+    if (is_negative && retval == PJ_MAXLONG + 1UL) {
+        *value = PJ_MINLONG;
+        return PJ_SUCCESS;
+    }
+
     *value = is_negative ? -(long)retval : retval;
 
     return PJ_SUCCESS;
