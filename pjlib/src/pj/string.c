@@ -259,7 +259,7 @@ PJ_DEF(long) pj_strtol(const pj_str_t *str)
         uval = pj_strtoul(str);
 
     if (is_negative)
-        val = uval > PJ_MAXLONG ? PJ_MINLONG : -uval;
+        val = uval > PJ_MAXLONG ? PJ_MINLONG : -(long)uval;
     else
         val = uval > PJ_MAXLONG ? PJ_MAXLONG : uval;
 
@@ -310,7 +310,7 @@ PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
         return PJ_ETOOSMALL;
     }
 
-    *value = is_negative ? -retval : retval;
+    *value = is_negative ? -(long)retval : retval;
 
     return PJ_SUCCESS;
 }

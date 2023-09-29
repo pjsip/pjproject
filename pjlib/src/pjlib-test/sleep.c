@@ -93,7 +93,7 @@ static int simple_sleep_test(void)
 static int sleep_duration_test(void)
 {
     const unsigned MAX_SLIP = param_ci_mode? 200 : 20;
-    unsigned duration[] = { 2000, 1000, 500, 200, 100 };
+    long duration[] = { 2000, 1000, 500, 200, 100 };
     unsigned i;
     unsigned avg_diff, max_diff;
     pj_status_t rc;
@@ -103,7 +103,7 @@ static int sleep_duration_test(void)
     /* Test pj_thread_sleep() and pj_gettimeofday() */
     for (i=0, avg_diff=0, max_diff=0; i<PJ_ARRAY_SIZE(duration); ++i) {
         pj_time_val start, stop;
-        pj_uint32_t msec;
+        long msec;
         unsigned diff;
 
         /* Mark start of test. */
@@ -153,7 +153,7 @@ static int sleep_duration_test(void)
     for (i=0, avg_diff=0, max_diff=0; i<PJ_ARRAY_SIZE(duration); ++i) {
         pj_time_val t1, t2;
         pj_timestamp start, stop;
-        pj_uint32_t msec;
+        long msec;
         unsigned diff;
 
         pj_thread_sleep(0);

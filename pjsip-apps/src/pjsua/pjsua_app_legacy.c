@@ -712,7 +712,7 @@ static void ui_make_new_call()
                 loop = PJ_TRUE;
                 result.nb_result = 1;
             }
-            if (result.nb_result > pjsua_get_buddy_count()) break;
+            if (result.nb_result > (int)pjsua_get_buddy_count()) break;
 
             if (result.nb_result == 0) {
                 puts("You can't do that with make call!");
