@@ -139,7 +139,7 @@ static int sleep_duration_test(void)
         max_diff = diff>max_diff ? diff : max_diff;
         if (diff > MAX_SLIP) {
             PJ_LOG(3,(THIS_FILE, 
-                      "...error: slept for %d ms instead of %d ms "
+                      "...error: slept for %ld ms instead of %ld ms "
                       "(outside %d msec tolerance)",
                       msec, duration[i], MAX_SLIP));
         }
@@ -196,7 +196,7 @@ static int sleep_duration_test(void)
         max_diff = diff>max_diff ? diff : max_diff;
         if (diff > MAX_SLIP) {
             PJ_LOG(3,(THIS_FILE, 
-                      "...error: slept for %d ms instead of %d ms "
+                      "...error: slept for %ld ms instead of %ld ms "
                       "(outside %d msec tolerance)",
                       msec, duration[i], MAX_SLIP));
             PJ_TIME_VAL_SUB(t2, t1);
