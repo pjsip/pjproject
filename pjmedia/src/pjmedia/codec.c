@@ -366,7 +366,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_unregister_factory(
                 pj_bool_t found;
                 pj_str_t codec_str = pj_str(mgr->codec_desc[i].id);
 
-                codec_idx = pjmedia_codec_mgr_find_codec(mgr->dyn_codecs,
+                codec_idx = (pj_int8_t)pjmedia_codec_mgr_find_codec(
+                                                         mgr->dyn_codecs,
                                                          mgr->dyn_codecs_cnt,
                                                          &codec_str,
                                                          &found);
@@ -815,8 +816,8 @@ pj_status_t pjmedia_codec_mgr_get_dyn_codecs(pjmedia_codec_mgr* mgr,
 
     pj_mutex_lock(mgr->mutex);
 
-    if (mgr->dyn_codecs_cnt < *count)
-        *count = mgr->dyn_codecs_cnt;
+    if (mgr->dyn_codecs_cnt < (unsigned)*count)
+        *count = (pj_int8_t)mgr->dyn_codecs_cnt;
 
     pj_memcpy(dyn_codecs, mgr->dyn_codecs, *count * sizeof(pj_str_t));
 

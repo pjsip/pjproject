@@ -1945,9 +1945,9 @@ pjmedia_codec_param CodecParam::toPj() const
     param.info.max_bps= (pj_uint32_t)info.maxBps;
     param.info.max_rx_frame_size = info.maxRxFrameSize;
     param.info.frm_ptime = (pj_uint16_t)info.frameLen;
-    param.info.frm_ptime_denum = (pj_uint16_t)info.frameLenDenum;
+    param.info.frm_ptime_denum = (pj_uint8_t)info.frameLenDenum;
     param.info.enc_ptime = (pj_uint16_t)info.encFrameLen;
-    param.info.enc_ptime_denum = (pj_uint16_t)info.encFrameLenDenum;
+    param.info.enc_ptime_denum = (pj_uint8_t)info.encFrameLenDenum;
     param.info.pcm_bits_per_sample = (pj_uint8_t)info.pcmBitsPerSample;
     param.info.pt = (pj_uint8_t)info.pt;
     param.info.fmt_id = info.fmtId;

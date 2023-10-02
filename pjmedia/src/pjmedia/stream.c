@@ -2656,14 +2656,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
         ptime = afd->frame_time_usec;
 
-        if (stream->codec_param.info.enc_ptime * 1000 >
+        if (stream->codec_param.info.enc_ptime * (unsigned)1000 >
             ptime * stream->codec_param.info.enc_ptime_denum)
         {
             ptime = stream->codec_param.info.enc_ptime * 1000 /
                     stream->codec_param.info.enc_ptime_denum;
         }
 
-        if (stream->codec_param.info.frm_ptime * 1000 >
+        if (stream->codec_param.info.frm_ptime * (unsigned)1000 >
             ptime * stream->codec_param.info.frm_ptime_denum)
         {
             ptime = stream->codec_param.info.frm_ptime * 1000 /

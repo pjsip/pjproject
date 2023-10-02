@@ -1717,9 +1717,6 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
                                     unsigned flags,
                                     struct test_entry *te)
 {
-    PJ_UNUSED_ARG(srtp_enabled);
-    PJ_UNUSED_ARG(srtp_80);
-    PJ_UNUSED_ARG(srtp_auth);
     struct stream_port *sp;
     pj_str_t codec_id;
     pjmedia_port *port;
@@ -1728,6 +1725,12 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
     pjmedia_codec_param codec_param;
     pjmedia_stream_info si;
     pj_status_t status;
+
+#if !PJMEDIA_HAS_SRTP
+    PJ_UNUSED_ARG(srtp_enabled);
+    PJ_UNUSED_ARG(srtp_80);
+    PJ_UNUSED_ARG(srtp_auth);
+#endif
 
     PJ_UNUSED_ARG(flags);
 
