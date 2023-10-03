@@ -106,6 +106,9 @@ struct tp_adapter
 };
 
 
+static void adapter_on_destroy(void *arg);
+
+
 /*
  * Create the adapter.
  */
@@ -134,6 +137,15 @@ PJ_DEF(pj_status_t) pjmedia_tp_adapter_create( pjmedia_endpt *endpt,
     /* Save the transport as the slave transport */
     adapter->slave_tp = transport;
     adapter->del_base = del_base;
+
+    /* Setup group lock handler for destroy and callback synchronization */
+    if (transport && transport->grp_lock) {
+        pj_grp_lock_t *grp_lock = transport->grp_lock;
+
+        adapter->base.grp_lock = grp_lock;
+        pj_grp_lock_add_ref(grp_lock);
+        pj_grp_lock_add_handler(grp_lock, pool, adapter, &adapter_on_destroy);
+    }
 
     /* Done */
     *p_tp = &adapter->base;
@@ -421,6 +433,14 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
     return pjmedia_transport_simulate_lost(adapter->slave_tp, dir, pct_lost);
 }
 
+
+static void adapter_on_destroy(void *arg)
+{
+    struct tp_adapter *adapter = (struct tp_adapter*)arg;
+
+    pj_pool_release(adapter->pool);
+}
+
 /*
  * destroy() is called when the transport is no longer needed.
  */
@@ -433,8 +453,11 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
         pjmedia_transport_close(adapter->slave_tp);
     }
 
-    /* Self destruct.. */
-    pj_pool_release(adapter->pool);
+    if (adapter->base.grp_lock) {
+        pj_grp_lock_dec_ref(adapter->base.grp_lock);
+    } else {
+        adapter_on_destroy(tp);
+    }
 
     return PJ_SUCCESS;
 }

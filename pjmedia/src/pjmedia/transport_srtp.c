@@ -434,6 +434,8 @@ static pj_status_t create_srtp_ctx(transport_srtp *srtp,
 /* Destroy SRTP context */
 static void destroy_srtp_ctx(transport_srtp *p_srtp, srtp_context *ctx);
 
+/* SRTP destroy handler */
+static void srtp_on_destroy(void *arg);
 
 /* This function may also be used by other module, e.g: pjmedia/errno.c,
  * it should have C compatible declaration.
@@ -805,6 +807,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     /* Set underlying transport */
     srtp->member_tp = tp;
 
+    /* Setup group lock handler for destroy and callback synchronization */
+    if (tp && tp->grp_lock) {
+        srtp->base.grp_lock = tp->grp_lock;
+        pj_grp_lock_add_ref(tp->grp_lock);
+        pj_grp_lock_add_handler(tp->grp_lock, pool, srtp, &srtp_on_destroy);
+    }
+
     /* Initialize peer's SRTP usage mode. */
     srtp->peer_use = srtp->setting.use;
 
@@ -838,6 +847,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
 
     /* Done */
     *p_tp = &srtp->base;
+
+    PJ_LOG(4, (srtp->pool->obj_name, "SRTP transport created"));
 
     return PJ_SUCCESS;
 }
@@ -1459,6 +1470,19 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
     return pjmedia_transport_simulate_lost(srtp->member_tp, dir, pct_lost);
 }
 
+
+/* SRTP real destroy */
+static void srtp_on_destroy(void *arg)
+{
+    transport_srtp *srtp = (transport_srtp*)arg;
+
+    PJ_LOG(4, (srtp->pool->obj_name, "SRTP transport destroyed"));
+
+    pj_lock_destroy(srtp->mutex);
+    pj_pool_safe_release(&srtp->pool);
+}
+
+
 static pj_status_t transport_destroy  (pjmedia_transport *tp)
 {
     transport_srtp *srtp = (transport_srtp *) tp;
@@ -1466,6 +1490,8 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
     unsigned i;
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
+
+    PJ_LOG(4, (srtp->pool->obj_name, "Destroying SRTP transport"));
 
     /* Close all keying. Note that any keying should not be destroyed before
      * SRTP transport is destroyed as re-INVITE may initiate new keying method
@@ -1481,12 +1507,25 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
 
     status = pjmedia_transport_srtp_stop(tp);
 
-    /* In case mutex is being acquired by other thread */
-    pj_lock_acquire(srtp->mutex);
-    pj_lock_release(srtp->mutex);
+    if (srtp->base.grp_lock) {
+        pj_grp_lock_dec_ref(srtp->base.grp_lock);
+    } else {
+        /* Only get here when the underlying transport does not have
+         * a group lock, race condition with callbacks may occur.
+         * Currently UDP, ICE, and loop have a group lock already.
+         */
+        PJ_LOG(4,(srtp->pool->obj_name,
+                  "Warning: underlying transport does not have group lock"));
 
-    pj_lock_destroy(srtp->mutex);
-    pj_pool_release(srtp->pool);
+        /* In case mutex is being acquired by other thread.
+         * An effort to synchronize destroy() & callbacks when the underlying
+         * transport does not provide a group lock.
+         */
+        pj_lock_acquire(srtp->mutex);
+        pj_lock_release(srtp->mutex);
+
+        srtp_on_destroy(srtp);
+    }
 
     return status;
 }

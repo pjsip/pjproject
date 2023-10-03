@@ -513,6 +513,9 @@ struct pjmedia_transport
 
     /** Application/user data */
     void                    *user_data;
+
+    /** Group lock, for synchronization between destroy() & callbacks. */
+    pj_grp_lock_t           *grp_lock;
 };
 
 /**

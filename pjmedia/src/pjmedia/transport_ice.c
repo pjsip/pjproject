@@ -338,6 +338,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
         pj_grp_lock_t *grp_lock = pj_ice_strans_get_grp_lock(tp_ice->ice_st);
         pj_grp_lock_add_ref(grp_lock);
         pj_grp_lock_add_handler(grp_lock, pool, tp_ice, &tp_ice_on_destroy);
+        tp_ice->base.grp_lock = grp_lock;
     }
 
     /* Done */
@@ -2736,6 +2737,8 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
 static void tp_ice_on_destroy(void *arg)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)arg;
+
+    PJ_LOG(4, (tp_ice->base.name, "ICE transport destroyed"));
     pj_pool_safe_release(&tp_ice->pool);
 }
 
@@ -2745,6 +2748,8 @@ static void tp_ice_on_destroy(void *arg)
 static pj_status_t transport_destroy(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
+
+    PJ_LOG(4, (tp_ice->base.name, "Destroying ICE transport"));
 
     /* Reset callback and user data */
     pj_bzero(&tp_ice->cb, sizeof(tp_ice->cb));
