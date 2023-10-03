@@ -1085,6 +1085,12 @@ typedef struct pjsua_call_setting
  * \a pjsua_on_rejected_incoming_call_cb.
  */
 typedef struct pjsua_on_rejected_incoming_call_param {
+    /**
+     * The incoming call id. This will be set to PJSUA_INVALID_ID when there is
+     * no available call slot at the time.
+     */
+    pjsua_call_id   call_id;
+
     /** 
      * Local URI.
      */

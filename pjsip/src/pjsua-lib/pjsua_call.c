@@ -1352,7 +1352,8 @@ static pj_status_t verify_request(const pjsua_call *call,
     return status;
 }
 
-static void rejected_incoming_call_cb(pjsip_rx_data *rdata,
+static void rejected_incoming_call_cb(pjsua_call_id call_id,
+                                      pjsip_rx_data *rdata,
                                       pjsip_tx_data *tdata,
                                       int st_code,
                                       pj_str_t *st_text)
@@ -1366,6 +1367,7 @@ static void rejected_incoming_call_cb(pjsip_rx_data *rdata,
         return;
 
     pj_bzero(&param, sizeof(pjsua_on_rejected_incoming_call_param));
+    param.call_id = call_id;
     param.st_code = st_code;
     if (rdata) {
         param.rdata = rdata;
@@ -1469,7 +1471,8 @@ on_return:
                 status_ = pjsip_inv_send_msg(call->inv, response);
 
             if ((err_code / 100 != 1) && (err_code / 100 != 2)) {
-                rejected_incoming_call_cb(rdata, response, err_code, &reason);
+                rejected_incoming_call_cb(call->index, rdata, response, 
+                                          err_code, &reason);
             }
         }
         pjsua_media_channel_deinit(call->index);
@@ -1525,7 +1528,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pjsip_inv_session *inv = NULL;
     int acc_id;
     pjsua_call *call = NULL;
-    int call_id = -1;
+    int call_id = PJSUA_INVALID_ID;
     int sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
     pjmedia_sdp_session *offer=NULL;
     pj_bool_t should_dec_dlg = PJ_FALSE;
@@ -2204,7 +2207,8 @@ on_return:
     if ((ret_st_code != 0) && (ret_st_code / 100 != 1) && 
         (ret_st_code / 100 != 2)) 
     {
-        rejected_incoming_call_cb(rdata, NULL, ret_st_code, &st_reason);
+        rejected_incoming_call_cb(call_id, rdata, NULL, ret_st_code, 
+                                  &st_reason);
     }
     
     pj_log_pop_indent();

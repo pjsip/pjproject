@@ -2693,6 +2693,7 @@ void Endpoint::on_rejected_incoming_call(
                             const pjsua_on_rejected_incoming_call_param *param)
 {
     OnRejectedIncomingCallParam prm;
+    prm.callId = param->call_id;
     prm.localInfo = pj2Str(param->local_info);
     prm.remoteInfo = pj2Str(param->remote_info);
     prm.statusCode = param->st_code;

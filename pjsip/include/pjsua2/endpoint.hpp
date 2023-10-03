@@ -442,6 +442,12 @@ struct OnMediaEventParam
 struct OnRejectedIncomingCallParam
 {
     /**
+     * The incoming call id. This will be set to PJSUA_INVALID_ID when there is
+     * no available call slot at the time.
+     */
+    pjsua_call_id   callId;
+
+    /**
      * Local URI.
      */
     std::string     localInfo;
