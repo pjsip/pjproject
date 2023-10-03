@@ -1963,6 +1963,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_create_media_transport = &Endpoint::on_create_media_transport;
     ua_cfg.cb.on_stun_resolution_complete = 
         &Endpoint::stun_resolve_cb;
+    ua_cfg.cb.on_rejected_incoming_call = &Endpoint::on_rejected_incoming_call;
 
     /* Init! */
     PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );
@@ -2687,4 +2688,19 @@ pj_status_t Endpoint::on_auth_create_aka_response_callback(pj_pool_t *pool,
     }
 #endif
     return status;
+}
+
+void Endpoint::on_rejected_incoming_call(
+                            const pjsua_on_rejected_incoming_call_param *param)
+{
+    OnRejectedIncomingCallParam prm;
+    prm.callId = param->call_id;
+    prm.localInfo = pj2Str(param->local_info);
+    prm.remoteInfo = pj2Str(param->remote_info);
+    prm.statusCode = param->st_code;
+    prm.reason = pj2Str(param->st_text);
+    if (param->rdata)
+        prm.rdata.fromPj(*param->rdata);
+
+    Endpoint::instance().onRejectedIncomingCall(prm);
 }
