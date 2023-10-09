@@ -1465,6 +1465,7 @@ static void turn_on_state(pj_turn_session *sess,
          */
     }
 
+    pj_grp_lock_acquire(turn_sock->grp_lock);
     if (new_state >= PJ_TURN_STATE_DESTROYING && turn_sock->sess) {
         pj_time_val delay = {0, 0};
 
@@ -1478,6 +1479,7 @@ static void turn_on_state(pj_turn_session *sess,
                                           &delay, TIMER_DESTROY,
                                           turn_sock->grp_lock);
     }
+    pj_grp_lock_release(turn_sock->grp_lock);
 }
 
 
