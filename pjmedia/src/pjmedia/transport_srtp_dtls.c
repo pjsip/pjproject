@@ -1267,8 +1267,17 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
     /* Check remote address info, reattach member tp if changed */
     if (idx == RTP_CHANNEL && !ds->use_ice && !ds->nego_completed[idx]) {
         pjmedia_transport_info info;
+        pj_bool_t use_rtcp_mux;
+
         pjmedia_transport_get_info(ds->srtp->member_tp, &info);
-        if (pj_sockaddr_cmp(&ds->rem_addr, &info.src_rtp_name)) {
+        use_rtcp_mux = (pj_sockaddr_cmp(&info.sock_info.rtp_addr_name,
+                        &info.sock_info.rtcp_addr_name))? PJ_FALSE: PJ_TRUE;
+        if (pj_sockaddr_cmp(&ds->rem_addr, &info.src_rtp_name) ||
+            (!use_rtcp_mux &&
+             pj_sockaddr_has_addr(&info.src_rtcp_name) &&
+             (!pj_sockaddr_has_addr(&ds->rem_rtcp) ||
+              pj_sockaddr_cmp(&ds->rem_rtcp, &info.src_rtcp_name))))
+        {
             pjmedia_transport_attach_param ap;
             pj_status_t status;
 
@@ -1277,13 +1286,12 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
             pj_sockaddr_cp(&ds->rem_addr, &info.src_rtp_name);
             pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
             ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);
-            if (pj_sockaddr_cmp(&info.sock_info.rtp_addr_name,
-                                &info.sock_info.rtcp_addr_name) == 0)
-            {
+            if (use_rtcp_mux) {
                 /* Using RTP & RTCP multiplexing */
                 pj_sockaddr_cp(&ds->rem_rtcp, &ds->rem_addr);
                 pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
-            } else if (pj_sockaddr_has_addr(&ds->rem_rtcp)) {
+            } else if (pj_sockaddr_has_addr(&info.src_rtcp_name)) {
+                pj_sockaddr_cp(&ds->rem_rtcp, &info.src_rtcp_name);
                 pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
             } else {
                 pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_addr);
@@ -1300,11 +1308,15 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
 #if DTLS_DEBUG
             {
                 char addr[PJ_INET6_ADDRSTRLEN];
+                char addr2[PJ_INET6_ADDRSTRLEN];
                 PJ_LOG(2,(ds->base.name, "Re-attached transport to update "
-                          "remote addr=%s:%d",
+                          "remote addr=%s:%d remote rtcp=%s:%d",
                           pj_sockaddr_print(&ap.rem_addr, addr,
                                             sizeof(addr), 2),
-                          pj_sockaddr_get_port(&ap.rem_addr)));
+                          pj_sockaddr_get_port(&ap.rem_addr),
+                          pj_sockaddr_print(&ap.rem_rtcp, addr2,
+                                            sizeof(addr2), 2),
+                          pj_sockaddr_get_port(&ap.rem_rtcp)));
             }
 #endif
         }
