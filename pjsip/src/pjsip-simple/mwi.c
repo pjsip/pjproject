@@ -366,17 +366,11 @@ PJ_DEF(pj_status_t) pjsip_mwi_notify(  pjsip_evsub *sub,
     pj_status_t status;
     
     /* Check arguments. */
-    PJ_ASSERT_RETURN(sub && p_tdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sub && mime_type && body && p_tdata, PJ_EINVAL);
 
     /* Get the mwi object. */
     mwi = (pjsip_mwi*) pjsip_evsub_get_mod_data(sub, mod_mwi.id);
     PJ_ASSERT_RETURN(mwi != NULL, PJ_EINVALIDOP);
-
-    /* Make sure both mime_type & body are-being/have-been set. */
-    PJ_ASSERT_RETURN((mime_type && body) ||
-                     (!body &&
-                      mwi->mime_type.type.slen && mwi->body.slen),
-                     PJ_EINVAL);
 
     /* Lock object. */
     pjsip_dlg_inc_lock(mwi->dlg);
@@ -387,11 +381,12 @@ PJ_DEF(pj_status_t) pjsip_mwi_notify(  pjsip_evsub *sub,
         goto on_return;
 
     /* Update the cached message body */
-    if (mime_type && body) {
+    if (mime_type || body)
         pj_pool_reset(mwi->body_pool);
+    if (mime_type)
         pjsip_media_type_cp(mwi->body_pool, &mwi->mime_type, mime_type);
+    if (body)
         pj_strdup(mwi->body_pool, &mwi->body, body);
-    }
 
     /* Create message body */
     status = mwi_create_msg_body( mwi, tdata );
