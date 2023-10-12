@@ -1344,13 +1344,11 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
                 char addr[PJ_INET6_ADDRSTRLEN];
                 char addr2[PJ_INET6_ADDRSTRLEN];
                 PJ_LOG(2,(ds->base.name, "Re-attached transport to update "
-                          "remote addr=%s:%d remote rtcp=%s:%d",
+                          "remote addr=%s remote rtcp=%s",
                           pj_sockaddr_print(&ap.rem_addr, addr,
-                                            sizeof(addr), 2),
-                          pj_sockaddr_get_port(&ap.rem_addr),
+                                            sizeof(addr), 3),
                           pj_sockaddr_print(&ap.rem_rtcp, addr2,
-                                            sizeof(addr2), 2),
-                          pj_sockaddr_get_port(&ap.rem_rtcp)));
+                                            sizeof(addr2), 3)));
             }
 #endif
         }
@@ -1676,12 +1674,10 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
         {
             char addr[PJ_INET6_ADDRSTRLEN];
             char addr2[PJ_INET6_ADDRSTRLEN];
-            PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s:%d "
-                                     "remote rtcp=%s:%d",
-                      pj_sockaddr_print(&ap.rem_addr, addr, sizeof(addr), 2),
-                      pj_sockaddr_get_port(&ap.rem_addr),
-                      pj_sockaddr_print(&ap.rem_rtcp, addr2, sizeof(addr2), 2),
-                      pj_sockaddr_get_port(&ap.rem_rtcp)));
+            PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s "
+                                     "remote rtcp=%s",
+                      pj_sockaddr_print(&ap.rem_addr, addr2, sizeof(addr), 3),
+                      pj_sockaddr_print(&ap.rem_rtcp, addr, sizeof(addr), 3)));
         }
 #endif
     }
@@ -1863,13 +1859,11 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
                 char addr[PJ_INET6_ADDRSTRLEN];
                 char addr2[PJ_INET6_ADDRSTRLEN];
                 PJ_LOG(2,(ds->base.name, "Attached transport, "
-                          "remote addr=%s:%d remote rtcp=%s:%d",
+                          "remote addr=%s remote rtcp=%s",
                           pj_sockaddr_print(&ap.rem_addr, addr,
-                          sizeof(addr), 2),
-                          pj_sockaddr_get_port(&ap.rem_addr),
+                          sizeof(addr), 3),
                           pj_sockaddr_print(&ap.rem_rtcp, addr2,
-                          sizeof(addr), 2),
-                          pj_sockaddr_get_port(&ap.rem_rtcp)));
+                          sizeof(addr), 3)));
             }
 #endif
             
@@ -2028,9 +2022,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
 #if DTLS_DEBUG
     {
         char addr[PJ_INET6_ADDRSTRLEN];
-        PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s:%d",
-                  pj_sockaddr_print(&ap.rem_addr, addr, sizeof(addr), 2),
-                  pj_sockaddr_get_port(&ap.rem_addr)));
+        PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s",
+                  pj_sockaddr_print(&ap.rem_addr, addr, sizeof(addr), 3)));
     }
 #endif
 
