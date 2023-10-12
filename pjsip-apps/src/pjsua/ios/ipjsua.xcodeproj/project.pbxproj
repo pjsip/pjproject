@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 46;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -22,7 +22,6 @@
 		3AA3200018F3FB4C00112C3D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FF318F3FB4C00112C3D /* Foundation.framework */; };
 		3AA3200118F3FB4C00112C3D /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FF418F3FB4C00112C3D /* CoreGraphics.framework */; };
 		3AA3200218F3FB4C00112C3D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FF518F3FB4C00112C3D /* UIKit.framework */; };
-		3AD55D5B2AD6B67500F21D83 /* libpj.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AD55D5A2AD6B67500F21D83 /* libpj.xcframework */; };
 		3ADCCD171715338D0007BE8E /* pjsua.png in Resources */ = {isa = PBXBuildFile; fileRef = 3ADCCD161715338D0007BE8E /* pjsua.png */; };
 		3ADCCD2D172E40120007BE8E /* pjsua_app_cli.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD28172E40120007BE8E /* pjsua_app_cli.c */; };
 		3ADCCD2E172E40120007BE8E /* pjsua_app_common.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD29172E40120007BE8E /* pjsua_app_common.c */; };
@@ -45,6 +44,7 @@
 		E5E991E61B67A45500017E67 /* libg7221codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5E991D41B67A45500017E67 /* libg7221codec.a */; };
 		E5E991E71B67A45500017E67 /* libgsmcodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5E991D51B67A45500017E67 /* libgsmcodec.a */; };
 		E5E991E81B67A45500017E67 /* libilbccodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5E991D61B67A45500017E67 /* libilbccodec.a */; };
+		E5E991E91B67A45500017E67 /* libpj.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5E991D71B67A45500017E67 /* libpj.a */; };
 		E5E991EA1B67A45500017E67 /* libpjlib-util.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5E991D81B67A45500017E67 /* libpjlib-util.a */; };
 		E5E991EB1B67A45500017E67 /* libpjmedia-audiodev.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5E991D91B67A45500017E67 /* libpjmedia-audiodev.a */; };
 		E5E991EC1B67A45500017E67 /* libpjmedia-codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5E991DA1B67A45500017E67 /* libpjmedia-codec.a */; };
@@ -77,7 +77,6 @@
 		3AA31FF318F3FB4C00112C3D /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		3AA31FF418F3FB4C00112C3D /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		3AA31FF518F3FB4C00112C3D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
-		3AD55D5A2AD6B67500F21D83 /* libpj.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libpj.xcframework; path = ../../../../xcf/libpj.xcframework; sourceTree = "<group>"; };
 		3ADCCD161715338D0007BE8E /* pjsua.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = pjsua.png; sourceTree = "<group>"; };
 		3ADCCD28172E40120007BE8E /* pjsua_app_cli.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = pjsua_app_cli.c; path = ../../pjsua_app_cli.c; sourceTree = "<group>"; };
 		3ADCCD29172E40120007BE8E /* pjsua_app_common.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = pjsua_app_common.c; path = ../../pjsua_app_common.c; sourceTree = "<group>"; };
@@ -106,6 +105,7 @@
 		E5E991D41B67A45500017E67 /* libg7221codec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libg7221codec.a; sourceTree = "<group>"; };
 		E5E991D51B67A45500017E67 /* libgsmcodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libgsmcodec.a; sourceTree = "<group>"; };
 		E5E991D61B67A45500017E67 /* libilbccodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libilbccodec.a; sourceTree = "<group>"; };
+		E5E991D71B67A45500017E67 /* libpj.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libpj.a; sourceTree = "<group>"; };
 		E5E991D81B67A45500017E67 /* libpjlib-util.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libpjlib-util.a"; sourceTree = "<group>"; };
 		E5E991D91B67A45500017E67 /* libpjmedia-audiodev.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libpjmedia-audiodev.a"; sourceTree = "<group>"; };
 		E5E991DA1B67A45500017E67 /* libpjmedia-codec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libpjmedia-codec.a"; sourceTree = "<group>"; };
@@ -140,7 +140,6 @@
 				3AF253001EFBD15E00213893 /* libyuv.a in Frameworks */,
 				3AA31FF718F3FB4C00112C3D /* AVFoundation.framework in Frameworks */,
 				3AA31FFE18F3FB4C00112C3D /* OpenGLES.framework in Frameworks */,
-				3AD55D5B2AD6B67500F21D83 /* libpj.xcframework in Frameworks */,
 				3AA3200018F3FB4C00112C3D /* Foundation.framework in Frameworks */,
 				E5E991E71B67A45500017E67 /* libgsmcodec.a in Frameworks */,
 				E5E991F31B67A45500017E67 /* libpjsua.a in Frameworks */,
@@ -154,6 +153,7 @@
 				3AA3200218F3FB4C00112C3D /* UIKit.framework in Frameworks */,
 				3AA31FFA18F3FB4C00112C3D /* CoreFoundation.framework in Frameworks */,
 				E5E991F01B67A45500017E67 /* libpjsip-simple.a in Frameworks */,
+				E5E991E91B67A45500017E67 /* libpj.a in Frameworks */,
 				E5E991F71B67A45500017E67 /* libsrtp.a in Frameworks */,
 				3AA31FFC18F3FB4C00112C3D /* CoreMedia.framework in Frameworks */,
 				E5E991F21B67A45500017E67 /* libpjsip.a in Frameworks */,
@@ -202,7 +202,6 @@
 		3AF0580716F050770046B835 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				3AD55D5A2AD6B67500F21D83 /* libpj.xcframework */,
 				3A6FDEEF223B3BEC001726FD /* Security.framework */,
 				7485A6B01F09B2D500122F1A /* SystemConfiguration.framework */,
 				3AF253011EFBD36E00213893 /* VideoToolbox.framework */,
@@ -262,6 +261,7 @@
 				3A31F1B11DA4F568007C23A3 /* libwebrtc.a */,
 				E5E991D51B67A45500017E67 /* libgsmcodec.a */,
 				E5E991D61B67A45500017E67 /* libilbccodec.a */,
+				E5E991D71B67A45500017E67 /* libpj.a */,
 				E5E991D81B67A45500017E67 /* libpjlib-util.a */,
 				E5E991D91B67A45500017E67 /* libpjmedia-audiodev.a */,
 				E5E991DA1B67A45500017E67 /* libpjmedia-codec.a */,
@@ -310,6 +310,11 @@
 				CLASSPREFIX = ipjsua;
 				LastUpgradeCheck = 1400;
 				ORGANIZATIONNAME = Teluu;
+				TargetAttributes = {
+					3AF0580316F050770046B835 = {
+						DevelopmentTeam = 93NHJQ455P;
+					};
+				};
 			};
 			buildConfigurationList = 3AF057FE16F050770046B835 /* Build configuration list for PBXProject "ipjsua" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -496,7 +501,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 93NHJQ455P;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ipjsua/ipjsua-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -536,7 +540,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = 93NHJQ455P;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ipjsua/ipjsua-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
