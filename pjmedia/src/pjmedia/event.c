@@ -243,6 +243,8 @@ PJ_DEF(void) pjmedia_event_mgr_destroy(pjmedia_event_mgr *mgr)
         mgr->is_quitting = PJ_TRUE;
         pj_sem_post(mgr->sem);
         pj_thread_join(mgr->thread);
+        pj_thread_destroy(mgr->thread);
+        mgr->thread = NULL;
     }
 
     if (mgr->sem) {

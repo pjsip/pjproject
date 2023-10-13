@@ -3400,8 +3400,8 @@ static pj_bool_t is_ice_running(pjmedia_transport *tp)
 static void check_srtp_roc(pjsua_call *call,
                            unsigned med_idx,
                            const pjsua_stream_info *new_si_,
-                           const pjmedia_sdp_media *local_sdp,
-                           const pjmedia_sdp_media *remote_sdp)
+                           const pjmedia_sdp_session *local_sdp,
+                           const pjmedia_sdp_session *rem_sdp)
 {
     pjsua_call_media *call_med = &call->media[med_idx];
     pjmedia_transport_info tpinfo;
@@ -3528,11 +3528,19 @@ static void check_srtp_roc(pjsua_call *call,
         pjmedia_sdp_attr *attr;
 
         if (local_change) {
-            attr = pjmedia_sdp_attr_find(local_sdp->attr_count,
-                                         local_sdp->attr, &STR_ICE_UFRAG,
+            pjmedia_sdp_media *local_m = local_sdp->media[med_idx];
+
+            attr = pjmedia_sdp_attr_find(local_m->attr_count,
+                                         local_m->attr, &STR_ICE_UFRAG,
                                          NULL);
-            if (!pj_strcmp(&call_med->prev_ice_info.loc_ufrag,
-                           &attr->value))
+            if (attr == NULL) {
+                /* Find ice-ufrag attribute in session level */
+                attr = pjmedia_sdp_attr_find(local_sdp->attr_count,
+                                             local_sdp->attr, &STR_ICE_UFRAG,
+                                             NULL);
+            }
+            if (attr && !pj_strcmp(&call_med->prev_ice_info.loc_ufrag,
+                                   &attr->value))
             {
                 PJ_LOG(4, (THIS_FILE, "ICE unchanged, SRTP TX ROC "
                                       "maintained"));
@@ -3541,11 +3549,19 @@ static void check_srtp_roc(pjsua_call *call,
         }
 
         if (rem_change) {
-            attr = pjmedia_sdp_attr_find(remote_sdp->attr_count,
-                                         remote_sdp->attr, &STR_ICE_UFRAG,
+            pjmedia_sdp_media *rem_m = rem_sdp->media[med_idx];
+
+            attr = pjmedia_sdp_attr_find(rem_m->attr_count,
+                                         rem_m->attr, &STR_ICE_UFRAG,
                                          NULL);
-            if (!pj_strcmp(&call_med->prev_ice_info.rem_ufrag,
-                           &attr->value))
+            if (attr == NULL) {
+                /* Find ice-ufrag attribute in session level */
+                attr = pjmedia_sdp_attr_find(rem_sdp->attr_count,
+                                             rem_sdp->attr, &STR_ICE_UFRAG,
+                                             NULL);
+            }
+            if (attr && !pj_strcmp(&call_med->prev_ice_info.rem_ufrag,
+                                   &attr->value))
             {
                 PJ_LOG(4, (THIS_FILE, "ICE unchanged, SRTP RX ROC "
                                       "maintained"));
@@ -4003,8 +4019,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 #if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
             /* Check if we need to reset or maintain SRTP ROC */
-            check_srtp_roc(call, mi, &stream_info,
-                           local_sdp->media[mi], remote_sdp->media[mi]);
+            check_srtp_roc(call, mi, &stream_info, local_sdp, remote_sdp);
 #endif
 #endif
 
@@ -4260,8 +4275,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 #if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
             /* Check if we need to reset or maintain SRTP ROC */
-            check_srtp_roc(call, mi, &stream_info,
-                           local_sdp->media[mi], remote_sdp->media[mi]);
+            check_srtp_roc(call, mi, &stream_info, local_sdp, remote_sdp);
 #endif
 #endif
 
