@@ -1905,6 +1905,7 @@ static pj_status_t dtls_media_stop(pjmedia_transport *tp)
 static void dtls_destroy_channel(dtls_srtp *ds, unsigned idx)
 {
     if (ds->clock[idx]) {
+        ds->nego_completed[idx] = PJ_TRUE;
         pjmedia_clock_destroy(ds->clock[idx]);
         ds->clock[idx] = NULL;
     }
