@@ -293,7 +293,7 @@ static pj_status_t dtls_create(transport_srtp *srtp,
         pj_grp_lock_add_ref(grp_lock);
         pj_grp_lock_add_handler(grp_lock, pool, ds, &dtls_on_destroy);
     } else {
-        status = pj_lock_create_recursive_mutex(ds->pool, "dtls_ssl_lock%p",
+        status = pj_lock_create_simple_mutex(ds->pool, "dtls_ssl_lock%p",
                                              &ds->ossl_lock);
         if (status != PJ_SUCCESS)
             return status;
