@@ -293,7 +293,7 @@ static pj_status_t dtls_create(transport_srtp *srtp,
         pj_grp_lock_add_ref(grp_lock);
         pj_grp_lock_add_handler(grp_lock, pool, ds, &dtls_on_destroy);
     } else {
-        status = pj_lock_create_simple_mutex(ds->pool, "dtls_ssl_lock%p",
+        status = pj_lock_create_recursive_mutex(ds->pool, "dtls_ssl_lock%p",
                                              &ds->ossl_lock);
         if (status != PJ_SUCCESS)
             return status;
@@ -314,12 +314,6 @@ static void DTLS_LOCK(dtls_srtp *ds) {
         pj_lock_acquire(ds->ossl_lock);
 }
 
-static pj_status_t DTLS_TRY_LOCK(dtls_srtp *ds) {
-    if (ds->base.grp_lock)
-        return pj_grp_lock_tryacquire(ds->base.grp_lock);
-    else
-        return pj_lock_tryacquire(ds->ossl_lock);
-}
 
 static void DTLS_UNLOCK(dtls_srtp *ds) {
     if (ds->base.grp_lock)
@@ -900,27 +894,10 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
     dtls_srtp_channel *ds_ch = (dtls_srtp_channel*)user_data;
     dtls_srtp *ds = ds_ch->dtls_srtp;
     unsigned idx = ds_ch->channel;
-    pj_status_t status;
 
     PJ_UNUSED_ARG(ts);
 
-    while (1) {
-        /* Check if we should quit before trying to acquire the lock. */
-        if (ds->nego_completed[idx])
-            return;
-
-        /* To avoid deadlock, we must use TRY_LOCK here. */
-        status = DTLS_TRY_LOCK(ds);
-        if (status == PJ_SUCCESS)
-            break;
-
-        /* Acquiring lock failed, check if we have been signaled to quit. */
-        if (ds->nego_completed[idx])
-            return;
-
-        pj_thread_sleep(20);
-    }
-
+    DTLS_LOCK(ds);
 
     if (!ds->ossl_ssl[idx]) {
         DTLS_UNLOCK(ds);
@@ -1005,7 +982,6 @@ static pj_status_t ssl_handshake_channel(dtls_srtp *ds, unsigned idx)
 
 on_return:
     if (status != PJ_SUCCESS) {
-        ds->nego_completed[idx] = PJ_TRUE;
         if (ds->clock[idx])
             pjmedia_clock_stop(ds->clock[idx]);
     }
@@ -1289,50 +1265,32 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
      */
 
     /* Check remote address info, reattach member tp if changed */
-    if (!ds->use_ice && !ds->nego_completed[idx]) {
+    if (idx == RTP_CHANNEL && !ds->use_ice && !ds->nego_completed[idx]) {
         pjmedia_transport_info info;
-        pj_bool_t reattach_tp = PJ_FALSE;
-
         pjmedia_transport_get_info(ds->srtp->member_tp, &info);
-
-        if (idx == RTP_CHANNEL &&
-            pj_sockaddr_cmp(&ds->rem_addr, &info.src_rtp_name))
-        {
-            pj_sockaddr_cp(&ds->rem_addr, &info.src_rtp_name);
-            reattach_tp = PJ_TRUE;
-        } else if (idx == RTCP_CHANNEL && !ds->srtp->use_rtcp_mux &&
-                   pj_sockaddr_has_addr(&info.src_rtcp_name) &&
-                   pj_sockaddr_cmp(&ds->rem_rtcp, &info.src_rtcp_name))
-        {
-            pj_sockaddr_cp(&ds->rem_rtcp, &info.src_rtcp_name);
-            reattach_tp = PJ_TRUE;
-        }
-
-        if (reattach_tp) {
+        if (pj_sockaddr_cmp(&ds->rem_addr, &info.src_rtp_name)) {
             pjmedia_transport_attach_param ap;
             pj_status_t status;
 
-            /* Attach member transport */
             pj_bzero(&ap, sizeof(ap));
             ap.user_data = ds->srtp;
-            if (pj_sockaddr_has_addr(&ds->rem_addr)) {
-                pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
-            } else {
-                pj_sockaddr_init(pj_AF_INET(), &ap.rem_addr, 0, 0);
-            }
-            if (ds->srtp->use_rtcp_mux) {
+            pj_sockaddr_cp(&ds->rem_addr, &info.src_rtp_name);
+            pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
+            ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);
+            if (pj_sockaddr_cmp(&info.sock_info.rtp_addr_name,
+                                &info.sock_info.rtcp_addr_name) == 0)
+            {
                 /* Using RTP & RTCP multiplexing */
-                pj_sockaddr_cp(&ap.rem_rtcp, &ap.rem_addr);
+                pj_sockaddr_cp(&ds->rem_rtcp, &ds->rem_addr);
+                pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
             } else if (pj_sockaddr_has_addr(&ds->rem_rtcp)) {
                 pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
-            } else if (pj_sockaddr_has_addr(&ds->rem_addr)) {
+            } else {
                 pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_addr);
                 pj_sockaddr_set_port(&ap.rem_rtcp,
-                                     pj_sockaddr_get_port(&ap.rem_rtcp) + 1);
-            } else {
-                pj_sockaddr_init(pj_AF_INET(), &ap.rem_rtcp, 0, 0);
+                                     pj_sockaddr_get_port(&ds->rem_addr)+1);
             }
-            ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);
+
             status = pjmedia_transport_attach2(&ds->srtp->base, &ap);
             if (status != PJ_SUCCESS) {
                 DTLS_UNLOCK(ds);
@@ -1342,13 +1300,11 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
 #if DTLS_DEBUG
             {
                 char addr[PJ_INET6_ADDRSTRLEN];
-                char addr2[PJ_INET6_ADDRSTRLEN];
                 PJ_LOG(2,(ds->base.name, "Re-attached transport to update "
-                          "remote addr=%s remote rtcp=%s",
+                          "remote addr=%s:%d",
                           pj_sockaddr_print(&ap.rem_addr, addr,
-                                            sizeof(addr), 3),
-                          pj_sockaddr_print(&ap.rem_rtcp, addr2,
-                                            sizeof(addr2), 3)));
+                                            sizeof(addr), 2),
+                          pj_sockaddr_get_port(&ap.rem_addr)));
             }
 #endif
         }
@@ -1369,10 +1325,10 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
         }
     }
 
-    DTLS_UNLOCK(ds);
-
     /* Send it to OpenSSL */
     ssl_on_recv_packet(ds, idx, pkt, size);
+
+    DTLS_UNLOCK(ds);
 
     return PJ_SUCCESS;
 }
@@ -1472,7 +1428,6 @@ on_return:
 
 static void dtls_media_stop_channel(dtls_srtp *ds, unsigned idx)
 {
-    ds->nego_completed[idx] = PJ_TRUE;
     if (ds->clock[idx])
         pjmedia_clock_stop(ds->clock[idx]);
 
@@ -1673,11 +1628,9 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 #if DTLS_DEBUG
         {
             char addr[PJ_INET6_ADDRSTRLEN];
-            char addr2[PJ_INET6_ADDRSTRLEN];
-            PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s "
-                                     "remote rtcp=%s",
-                      pj_sockaddr_print(&ap.rem_addr, addr2, sizeof(addr2), 3),
-                      pj_sockaddr_print(&ap.rem_rtcp, addr, sizeof(addr), 3)));
+            PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s:%d",
+                      pj_sockaddr_print(&ap.rem_addr, addr, sizeof(addr), 2),
+                      pj_sockaddr_get_port(&ap.rem_addr)));
         }
 #endif
     }
@@ -1857,13 +1810,11 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 #if DTLS_DEBUG
             {
                 char addr[PJ_INET6_ADDRSTRLEN];
-                char addr2[PJ_INET6_ADDRSTRLEN];
                 PJ_LOG(2,(ds->base.name, "Attached transport, "
-                          "remote addr=%s remote rtcp=%s",
+                          "remote addr=%s:%d",
                           pj_sockaddr_print(&ap.rem_addr, addr,
-                          sizeof(addr), 3),
-                          pj_sockaddr_print(&ap.rem_rtcp, addr2,
-                          sizeof(addr2), 3)));
+                          sizeof(addr), 2),
+                          pj_sockaddr_get_port(&ap.rem_addr)));
             }
 #endif
             
@@ -1905,7 +1856,6 @@ static pj_status_t dtls_media_stop(pjmedia_transport *tp)
 static void dtls_destroy_channel(dtls_srtp *ds, unsigned idx)
 {
     if (ds->clock[idx]) {
-        ds->nego_completed[idx] = PJ_TRUE;
         pjmedia_clock_destroy(ds->clock[idx]);
         ds->clock[idx] = NULL;
     }
@@ -2023,11 +1973,9 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
 #if DTLS_DEBUG
     {
         char addr[PJ_INET6_ADDRSTRLEN];
-        char addr2[PJ_INET6_ADDRSTRLEN];
-        PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s "
-                                 "remote rtcp=%s",
-                  pj_sockaddr_print(&ap.rem_addr, addr, sizeof(addr), 3),
-                  pj_sockaddr_print(&ap.rem_addr, addr2, sizeof(addr2), 3)));
+        PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s:%d",
+                  pj_sockaddr_print(&ap.rem_addr, addr, sizeof(addr), 2),
+                  pj_sockaddr_get_port(&ap.rem_addr)));
     }
 #endif
 
