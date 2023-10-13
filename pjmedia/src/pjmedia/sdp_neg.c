@@ -1573,18 +1573,28 @@ static pj_status_t create_answer( pj_pool_t *pool,
         const pjmedia_sdp_media *om;    /* offer */
         const pjmedia_sdp_media *im;    /* initial media */
         pjmedia_sdp_media *am = NULL;   /* answer/result */
+        pj_uint32_t om_tp;
         unsigned j;
 
         om = offer->media[i];
+
+        om_tp = pjmedia_sdp_transport_get_proto(&om->desc.transport);
+        PJMEDIA_TP_PROTO_TRIM_FLAG(om_tp, PJMEDIA_TP_PROFILE_RTCP_FB);
 
         /* Find media description in our initial capability that matches
          * the media type and transport type of offer's media, has
          * matching codec, and has not been used to answer other offer.
          */
         for (im=NULL, j=0; j<initial->media_count; ++j) {
+            pj_uint32_t im_tp;
+
             im = initial->media[j];
+
+            im_tp = pjmedia_sdp_transport_get_proto(&im->desc.transport);
+            PJMEDIA_TP_PROTO_TRIM_FLAG(im_tp, PJMEDIA_TP_PROFILE_RTCP_FB);
+
             if (pj_strcmp(&om->desc.media, &im->desc.media)==0 &&
-                pj_strcmp(&om->desc.transport, &im->desc.transport)==0 &&
+                om_tp == im_tp &&
                 media_used[j] == 0)
             {
                 pj_status_t status2;
