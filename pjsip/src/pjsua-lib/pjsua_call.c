@@ -5552,6 +5552,9 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
                                               (pjsip_rx_data *)param->rdata,
                                               100, NULL, NULL, &response);
             if (status != PJ_SUCCESS) {
+                if (response) {
+                    pjsip_tx_data_dec_ref(response);
+                }
                 PJ_PERROR(3, (THIS_FILE, status,
                               "Failed to create initial answer"));
                 goto on_return;
