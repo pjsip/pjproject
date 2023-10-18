@@ -2664,10 +2664,11 @@ PJ_DEF(pj_status_t) pjsip_inv_initial_answer(   pjsip_inv_session *inv,
         pj_status_t status2;
 
         status2 = pjsip_dlg_modify_response(inv->dlg, tdata, st_code2, NULL);
-        pjsip_tx_data_dec_ref(tdata);
         if (status2 != PJ_SUCCESS) {
+            pjsip_tx_data_dec_ref(tdata);
             goto on_return;
         }
+        inv->last_answer = tdata;
         status2 = pjsip_timer_update_resp(inv, tdata);
         if (status2 == PJ_SUCCESS)
             *p_tdata = tdata;
