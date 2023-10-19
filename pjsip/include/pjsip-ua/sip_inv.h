@@ -808,8 +808,39 @@ PJ_DECL(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
 
 /**
  * Create the initial response message for the incoming INVITE request in
- * rdata with  status code st_code and optional status text st_text. Use
+ * rdata with status code st_code and optional status text st_text. Use
  * #pjsip_inv_answer() to create subsequent response message.
+ * 
+ * When this function returning non-PJ_SUCCESS, it may be caused by an 
+ * unacceptable INVITE request. In such cases the function will generate
+ * an appropriate answer in p_tdata, 
+ * e.g: when session timer header Session-Expires is too low, 
+ *      the generated answer will include Min-SE header. 
+ * If the generated answer is not sent, it must be destroyed.
+ * i.e: using #pjsip_tx_data_dec_ref(), to avoid resource leak.
+ *
+ * @param inv           The UAS invite session.
+ * @param rdata         The incoming request message.
+ * @param st_code       The st_code contains the status code to be sent,
+ *                      which may be a provisional or final response.
+ * @param st_text       If custom status text is desired, application can
+ *                      specify the text in st_text; otherwise if this
+ *                      argument is NULL, default status text will be used.
+ * @param sdp           If application has specified its media capability
+ *                      during creation of UAS invite session, the sdp
+ *                      argument MUST be NULL. This is because application
+ *                      can not perform more than one SDP offer/answer session
+ *                      in a single INVITE transaction.
+ *                      If application has not specified its media capability
+ *                      during creation of UAS invite session, it MAY or MUST
+ *                      specify its capability in sdp argument,
+ *                      depending whether st_code indicates a 2xx final
+ *                      response.
+ * @param p_tdata       Pointer to receive the response message created by
+ *                      this function.
+ *
+ * @return              PJ_SUCCESS if response message was created
+ *                      successfully.
  */
 PJ_DECL(pj_status_t) pjsip_inv_initial_answer(  pjsip_inv_session *inv,
                                                 pjsip_rx_data *rdata,

@@ -740,7 +740,8 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_response( pjsip_dialog *dlg,
  *
  * @param dlg               The dialog.
  * @param tdata             The transmit data buffer containing response
- *                          message to be modified.
+ *                          message to be modified. Upon successful return,
+ *                          the reference count will be incremented.
  * @param st_code           New status code to be set.
  * @param st_text           Optional string for custom status reason text.
  *
