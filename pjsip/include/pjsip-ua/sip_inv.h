@@ -810,6 +810,10 @@ PJ_DECL(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
  * Create the initial response message for the incoming INVITE request in
  * rdata with  status code st_code and optional status text st_text. Use
  * #pjsip_inv_answer() to create subsequent response message.
+ * Notes: 
+ * - Upon failure, p_tdata might still get set. To avoid leak,
+ *   it needs to be sent or otherwise decrement the reference count using 
+ *   #pjsip_tx_data_dec_ref().
  */
 PJ_DECL(pj_status_t) pjsip_inv_initial_answer(  pjsip_inv_session *inv,
                                                 pjsip_rx_data *rdata,

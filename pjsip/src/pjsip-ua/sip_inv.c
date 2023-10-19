@@ -2668,12 +2668,17 @@ PJ_DEF(pj_status_t) pjsip_inv_initial_answer(   pjsip_inv_session *inv,
             pjsip_tx_data_dec_ref(tdata);
             goto on_return;
         }
-        inv->last_answer = tdata;
         status2 = pjsip_timer_update_resp(inv, tdata);
-        if (status2 == PJ_SUCCESS)
+        if (status2 == PJ_SUCCESS) {
+            inv->last_answer = tdata;
             *p_tdata = tdata;
-        else
+        } else {
+            /* To avoid leak, we need to decrement 2 times since
+             * pjsip_dlg_modify_response() increment tdata ref count.
+             */
             pjsip_tx_data_dec_ref(tdata);
+            pjsip_tx_data_dec_ref(tdata);
+        }
 
         goto on_return;
     }
@@ -2756,6 +2761,10 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(   pjsip_inv_session *inv,
     /* Process SDP in answer */
     status = process_answer(inv, st_code, last_res, local_sdp);
     if (status != PJ_SUCCESS) {
+        /* To avoid leak, we need to decrement 2 times since 
+         * pjsip_dlg_modify_response() increment tdata ref count.
+         */
+        pjsip_tx_data_dec_ref(last_res);
         pjsip_tx_data_dec_ref(last_res);
         goto on_return;
     }
