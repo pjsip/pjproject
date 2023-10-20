@@ -1186,9 +1186,17 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
             if (tp->is_shutdown) {
                 delay.sec = delay.msec = 0;
             } else {
-                delay.sec = (tp->dir==PJSIP_TP_DIR_OUTGOING) ?
-                                PJSIP_TRANSPORT_IDLE_TIME :
-                                PJSIP_TRANSPORT_SERVER_IDLE_TIME;
+                if (tp->dir == PJSIP_TP_DIR_OUTGOING) {
+                    delay.sec = PJSIP_TRANSPORT_IDLE_TIME;
+                } else {
+                    if (tp->last_recv_ts.u64 == 0 && 
+                        PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST != 0) 
+                    {
+                        delay.sec = PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST;
+                    } else {
+                        delay.sec = PJSIP_TRANSPORT_SERVER_IDLE_TIME;
+                    }
+                }
                 delay.msec = 0;
             }
 
