@@ -677,16 +677,17 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
- * Initial timeout interval to be applied to incoming transports (i.e. server
- * side) when no data received after a successful connection for TLS. 
- * Value is in seconds. Disable the timeout by setting it to 0.
+ * Initial timeout interval to be applied to incoming TCP/TLS transports
+ * (i.e. server side) when no valid data received after a successful
+ * connection. Value is in seconds. Disable the timeout by setting it to 0.
  *
- * For TCP, refer to a\ PJSIP_TCP_INITIAL_TIMEOUT
- * 
  * Note that even when this is disable, the connection might still get closed
  * when it is idle or not referred anymore. Have a look at \a
- * PJSIP_TRANSPORT_SERVER_IDLE_TIME
+ * PJSIP_TRANSPORT_SERVER_IDLE_TIME.
  * 
+ * Notes:
+ * - keep-alive packet is not considered as a valid message.
+ *
  * Default: 0
 */
 #ifndef PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST
@@ -803,14 +804,19 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
- * Initial timeout interval to be applied to incoming transports (i.e. server
- * side) when no data received after a successful connection. Value is in
- * seconds. Disable the timeout by setting it to 0.
+ * Initial timeout interval to be applied to incoming TCP transports
+ * (i.e. server side) when no valid data received after a successful
+ * connection. Value is in seconds. Disable the timeout by setting it to 0.
  *
  * Note that even when this is disable, the connection might still get closed
  * when it is idle or not referred anymore. Have a look at \a
- * PJSIP_TRANSPORT_SERVER_IDLE_TIME
+ * PJSIP_TRANSPORT_SERVER_IDLE_TIME.
  *
+ * Notes:
+ * - keep-alive packet is not considered as a valid message.
+ * - This macro is exclusive to TCP usage. It will be prioritize over
+ *   a\ PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST if both are set.
+ * 
  * Default: 0 (disabled)
  */
 #ifndef PJSIP_TCP_INITIAL_TIMEOUT

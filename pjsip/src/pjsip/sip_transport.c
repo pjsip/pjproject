@@ -90,6 +90,12 @@ static const char* print_tpsel_info(const pjsip_tpselector *sel)
 #   define PJSIP_TRANSPORT_ENTRY_ALLOC_CNT  16
 #endif
 
+/* Enum for id idle_timer. */
+enum timer_id {
+    IDLE_TIMER_ID = 1,
+    INITIAL_IDLE_TIMER_ID
+};
+
 /* Prototype. */
 static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata);
 
@@ -1066,6 +1072,8 @@ static void transport_idle_callback(pj_timer_heap_t *timer_heap,
                                     struct pj_timer_entry *entry)
 {
     pjsip_transport *tp = (pjsip_transport*) entry->user_data;
+    int entry_id = entry->id;
+
     pj_assert(tp != NULL);
 
     PJ_UNUSED_ARG(timer_heap);
@@ -1079,8 +1087,21 @@ static void transport_idle_callback(pj_timer_heap_t *timer_heap,
      * race condition with pjsip_tpmgr_acquire_transport2().
      */
     pj_lock_acquire(tp->tpmgr->lock);
+
     if (pj_atomic_get(tp->ref_cnt) == 0) {
         tp->is_destroying = PJ_TRUE;
+
+        if (entry_id == INITIAL_IDLE_TIMER_ID) {
+            if (tp->last_recv_len > 0 && tp->tpmgr->tp_drop_data_cb) {
+                pjsip_tp_dropped_data dd;
+                pj_bzero(&dd, sizeof(dd));
+                dd.tp = tp;
+                dd.data = NULL;
+                dd.len = tp->last_recv_len;
+                dd.status = PJ_ESOCKETSTOP;
+                (*tp->tpmgr->tp_drop_data_cb)(&dd);
+            }
+        }
     } else {
         pj_lock_release(tp->tpmgr->lock);
         return;
@@ -1179,6 +1200,8 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
         {
             pj_time_val delay;
             
+            int timer_id = IDLE_TIMER_ID;
+
             /* If transport is in graceful shutdown, then this is the
              * last user who uses the transport. Schedule to destroy the
              * transport immediately. Otherwise schedule idle timer.
@@ -1189,12 +1212,10 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
                 if (tp->dir == PJSIP_TP_DIR_OUTGOING) {
                     delay.sec = PJSIP_TRANSPORT_IDLE_TIME;
                 } else {
-                    if (tp->last_recv_ts.u64 == 0 && 
-                        PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST != 0) 
-                    {
-                        delay.sec = PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST;
-                    } else {
-                        delay.sec = PJSIP_TRANSPORT_SERVER_IDLE_TIME;
+                    delay.sec = PJSIP_TRANSPORT_SERVER_IDLE_TIME;
+                    if (tp->last_recv_ts.u64 == 0 && tp->initial_timeout) {
+                        timer_id = INITIAL_IDLE_TIMER_ID;
+                        delay.sec = tp->initial_timeout;
                     }
                 }
                 delay.msec = 0;
@@ -1207,7 +1228,7 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
             pjsip_endpt_schedule_timer_w_grp_lock(tp->tpmgr->endpt,
                                                   &tp->idle_timer,
                                                   &delay,
-                                                  PJ_TRUE,
+                                                  timer_id,
                                                   tp->grp_lock);
         }
         pj_lock_release(tpmgr->lock);
@@ -2056,6 +2077,15 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
                         dd.status = PJSIP_ERXOVERFLOW;
                         (*mgr->tp_drop_data_cb)(&dd);
                     }
+
+                    if (rdata->tp_info.transport->idle_timer.id == 
+                                                         INITIAL_IDLE_TIMER_ID)
+                    {
+                        /* We are not getting the first valid data as expected,
+                         * close the transport.
+                         */
+                        pjsip_transport_shutdown(rdata->tp_info.transport);
+                    }
                     
                     /* Exhaust all data. */
                     return rdata->pkt_info.len;
@@ -2218,6 +2248,13 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
             }
         }
         */
+
+        /* We have a valid message, cancel the initial timer. */
+        if (rdata->tp_info.transport->idle_timer.id == INITIAL_IDLE_TIMER_ID) {
+            rdata->tp_info.transport->idle_timer.id = PJ_FALSE;
+            pjsip_endpt_cancel_timer(mgr->endpt,
+                                     &rdata->tp_info.transport->idle_timer);
+        }
 
         /* Call the transport manager's upstream message callback.
          */

@@ -870,6 +870,11 @@ struct pjsip_transport
     pj_size_t               last_recv_len;  /**< Last received data length. */
 
     void                   *data;           /**< Internal transport data.   */
+    unsigned                initial_timeout;/**< Initial timeout interval
+                                                 to be applied to incoming
+                                                 TCP/TLS transports when no
+                                                 valid data received after
+                                                 a successful connection.   */
 
     /**
      * Function to be called by transport manager to send SIP message.
