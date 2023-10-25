@@ -44,7 +44,7 @@ static const char base64url_char[] = {
     '8', '9', '-', '_' 
 };
 
-static int base256_char(char c)
+static int base256_char(char c, pj_bool_t url)
 {
     if (c >= 'A' && c <= 'Z')
         return (c - 'A');
@@ -52,9 +52,9 @@ static int base256_char(char c)
         return (c - 'a' + 26);
     else if (c >= '0' && c <= '9')
         return (c - '0' + 52);
-    else if (c == '+' || c == '-')
+    else if ((!url && c == '+') || (url && c == '-'))
         return (62);
-    else if (c == '/' || c == '_')
+    else if ((!url && c == '/') || (url && c == '_'))
         return (63);
     else {
         /* It *may* happen on bad input, so this is not a good idea.
@@ -132,7 +132,8 @@ static pj_status_t b64_encode(const pj_uint8_t *input, int in_len,
 }
 
 static pj_status_t b64_decode(const pj_str_t *input,
-                              pj_uint8_t *out, int *out_len)
+                              pj_uint8_t *out, int *out_len,
+                              pj_bool_t url)
 {
     const char *buf;
     int len;
@@ -153,7 +154,7 @@ static pj_status_t b64_decode(const pj_str_t *input,
         /* Fill up c, silently ignoring invalid characters */
         for (k=0; k<4 && i<len; ++k) {
             do {
-                c[k] = base256_char(buf[i++]);
+                c[k] = base256_char(buf[i++], url);
             } while (c[k]==INV && i<len);
         }
 
@@ -194,5 +195,11 @@ PJ_DEF(pj_status_t) pj_base64url_encode(const pj_uint8_t *input, int in_len,
 PJ_DEF(pj_status_t) pj_base64_decode(const pj_str_t *input,
                                      pj_uint8_t *out, int *out_len)
 {
-    return b64_decode(input, out, out_len);
+    return b64_decode(input, out, out_len, PJ_FALSE);
+}
+
+PJ_DEF(pj_status_t) pj_base64url_decode(const pj_str_t *input,
+                                        pj_uint8_t *out, int *out_len)
+{
+    return b64_decode(input, out, out_len, PJ_TRUE);
 }
