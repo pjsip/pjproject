@@ -414,8 +414,8 @@ static void end_session(nat_detect_session *sess,
     delay.sec = 0;
     delay.msec = 0;
 
-    sess->timer.id = TIMER_DESTROY;
-    pj_timer_heap_schedule(sess->timer_heap, &sess->timer, &delay);
+    pj_timer_heap_schedule_w_grp_lock(sess->timer_heap, &sess->timer, &delay,
+                                      TIMER_DESTROY, sess->grp_lock);
 }
 
 
@@ -934,7 +934,8 @@ static void on_sess_timer(pj_timer_heap_t *th,
 
         if (next_timer) {
             pj_time_val delay = {0, TEST_INTERVAL};
-            pj_timer_heap_schedule(th, te, &delay);
+            pj_timer_heap_schedule_w_grp_lock(th, te, &delay,
+                                              TIMER_TEST, sess->grp_lock);
         } else {
             te->id = 0;
         }
