@@ -727,9 +727,8 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     pj_ioqueue_op_key_init(&tcp->ka_op_key.key, sizeof(pj_ioqueue_op_key_t));
     pj_strdup(tcp->base.pool, &tcp->ka_pkt, &ka_pkt);
 
-    /* Initialize initial timer. */
     if (is_server && listener->initial_timeout) {
-        /* Initiate initial idle timer. */
+        /* Initialize initial timer. */
         pjsip_transport_add_ref(&tcp->base);
         pjsip_transport_dec_ref(&tcp->base);
     }

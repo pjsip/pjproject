@@ -1090,7 +1090,9 @@ static void transport_idle_callback(pj_timer_heap_t *timer_heap,
 
     if (pj_atomic_get(tp->ref_cnt) == 0) {
         tp->is_destroying = PJ_TRUE;
-
+        PJ_LOG(4, (THIS_FILE, "Transport %s is being destroyed "
+                  "due to timeout in %s timer", tp->obj_name, 
+                  (entry_id == IDLE_TIMER_ID)?"idle":"initial"));
         if (entry_id == INITIAL_IDLE_TIMER_ID) {
             if (tp->last_recv_len > 0 && tp->tpmgr->tp_drop_data_cb) {
                 pjsip_tp_dropped_data dd;
@@ -1214,6 +1216,9 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
                 } else {
                     delay.sec = PJSIP_TRANSPORT_SERVER_IDLE_TIME;
                     if (tp->last_recv_ts.u64 == 0 && tp->initial_timeout) {
+                        PJ_LOG(4, (THIS_FILE, 
+                                   "Starting transport %s initial timer",
+                                   tp->obj_name));
                         timer_id = INITIAL_IDLE_TIMER_ID;
                         delay.sec = tp->initial_timeout;
                     }
@@ -2081,9 +2086,14 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
                     if (rdata->tp_info.transport->idle_timer.id == 
                                                          INITIAL_IDLE_TIMER_ID)
                     {
-                        /* We are not getting the first valid data as expected,
-                         * close the transport.
+                        /* We are not getting the first valid SIP message 
+                         * as expected, close the transport.
                          */
+                        PJ_LOG(4, (THIS_FILE, "Unexpected data was received "\
+                            "while waiting for a valid initial SIP messages. "\
+                            "Shutting down transport %s",
+                            rdata->tp_info.transport->obj_name));
+
                         pjsip_transport_shutdown(rdata->tp_info.transport);
                     }
                     
@@ -2251,6 +2261,10 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 
         /* We have a valid message, cancel the initial timer. */
         if (rdata->tp_info.transport->idle_timer.id == INITIAL_IDLE_TIMER_ID) {
+            PJ_LOG(4, (THIS_FILE, "Receive initial valid message from %s, "\
+                                  "cancelling the initial timer",
+                                  rdata->tp_info.transport->obj_name));
+
             rdata->tp_info.transport->idle_timer.id = PJ_FALSE;
             pjsip_endpt_cancel_timer(mgr->endpt,
                                      &rdata->tp_info.transport->idle_timer);
