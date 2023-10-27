@@ -950,7 +950,7 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
                                            int src_addr_len,
                                            pj_status_t accept_status)
 {
-    pj_ssl_sock_t *ssock;
+    pj_ssl_sock_t *ssock = NULL;
 #ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
     pj_activesock_cb asock_cb;
     pj_activesock_cfg asock_cfg;
