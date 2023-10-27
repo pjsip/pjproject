@@ -3805,9 +3805,9 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
          * request.
          */
         cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
-        PJ_ASSERT_RETURN(cseq != NULL
+        PJ_ASSERT_ON_FAIL(cseq != NULL
                           && (inv->invite_tsx && cseq->cseq == inv->invite_tsx->cseq),
-                         PJ_EINVALIDOP);
+                          { pjsip_tx_data_dec_ref(tdata); return PJ_EINVALIDOP; });
 
         if (inv->options & PJSIP_INV_REQUIRE_100REL) {
             status = pjsip_100rel_tx_response(inv, tdata);
