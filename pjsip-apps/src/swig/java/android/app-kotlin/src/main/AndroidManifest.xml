@@ -15,6 +15,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Android">
         <activity android:name=".MainActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
