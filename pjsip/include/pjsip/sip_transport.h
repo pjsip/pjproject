@@ -1662,6 +1662,27 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_set_drop_data_cb(pjsip_tpmgr *mgr,
 
 
 /**
+ * Type of callback to custom parser.
+ *
+ * @param data          The dropped data.
+ */
+typedef pj_status_t (*pjsip_tp_on_custom_parser_cb)(pjsip_transport *tp, char *data, pj_size_t size, pj_size_t *fragment_size);
+
+
+/**
+ * Set callback for custom parser. The caller will be notified whenever any
+ * new received data are in the receive buffer
+ * This is useful for filter out custom massages before they are parsed in normal way
+ * 
+ * @param mgr       Transport manager.
+ * @param cb        The callback function, set to NULL to reset the callback.
+ *
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tpmgr_set_custom_parser_cb(pjsip_tpmgr *mgr,
+                                                  pjsip_tp_on_custom_parser_cb cb);
+
+/**
  * @}
  */
 
