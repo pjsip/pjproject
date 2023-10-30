@@ -1745,6 +1745,8 @@ static pj_status_t decode_h264(pjmedia_vid_codec *codec,
         buf_pos += frm_size;
     }
 
+    PJ_UNUSED_ARG(frm_cnt);
+
     return PJ_SUCCESS;
 }
 
