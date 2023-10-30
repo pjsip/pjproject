@@ -325,6 +325,15 @@ typedef struct pjsip_tls_setting
     pj_time_val timeout;
 
     /**
+     * Intial timeout interval to be applied to incoming transports
+     * (i.e. server side) when no valid data received after a successful
+     * connection.
+     *
+     * Default: PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST
+     */
+    unsigned    initial_timeout;
+
+    /**
      * Should SO_REUSEADDR be used for the listener socket.
      * Default value is PJSIP_TLS_TRANSPORT_REUSEADDR.
      */
@@ -437,6 +446,7 @@ PJ_INLINE(void) pjsip_tls_setting_default(pjsip_tls_setting *tls_opt)
     tls_opt->sockopt_ignore_error = PJ_TRUE;
     tls_opt->proto = PJSIP_SSL_DEFAULT_PROTO;
     tls_opt->enable_renegotiation = PJ_TRUE;
+    tls_opt->initial_timeout = PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST;
 }
 
 

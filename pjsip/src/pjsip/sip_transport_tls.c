@@ -907,6 +907,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls->base.do_shutdown = &tls_shutdown;
     tls->base.destroy = &tls_destroy_transport;
     tls->base.factory = &listener->factory;
+    tls->base.initial_timeout = listener->tls_setting.initial_timeout;
 
     tls->ssock = ssock;
     tls->on_verify_cb = listener->tls_setting.on_verify_cb;

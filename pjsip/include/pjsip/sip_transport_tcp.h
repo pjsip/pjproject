@@ -115,7 +115,8 @@ typedef struct pjsip_tcp_transport_cfg
 
     /**
      * Intial timeout interval to be applied to incoming transports 
-     * (i.e. server side) when no data received after a successful connection.
+     * (i.e. server side) when no valid data received after a successful
+     * connection.
      *
      * Default: PJSIP_TCP_INITIAL_TIMEOUT
      */
