@@ -61,6 +61,7 @@ class MyAudioMediaPort: public AudioMediaPort
 
     virtual void onFrameReceived(MediaFrame &frame)
     {
+        PJ_UNUSED_ARG(frame);
         // Process the incoming frame here
     }
 };
