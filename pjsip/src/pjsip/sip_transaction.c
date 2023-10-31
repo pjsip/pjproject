@@ -953,6 +953,18 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
         return PJ_FALSE;
     }
 
+    /* In the case of an INVITE transaction, if the response was a 2xx,
+     * the ACK is not considered part of the transaction.
+     * Let sip_dialog and sip_inv handle it instead.
+     */
+    if (rdata->msg_info.msg->line.req.method.id == PJSIP_ACK_METHOD &&
+        tsx->method.id == PJSIP_INVITE_METHOD &&
+        tsx->status_code/100 == 2)
+    {
+        pj_mutex_unlock( mod_tsx_layer.mutex);
+        return PJ_FALSE;
+    }
+
     /* Prevent the transaction to get deleted before we have chance to lock it
      * in pjsip_tsx_recv_msg().
      */
