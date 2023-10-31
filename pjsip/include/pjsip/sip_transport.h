@@ -1662,25 +1662,67 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_set_drop_data_cb(pjsip_tpmgr *mgr,
 
 
 /**
- * Type of callback to custom parser.
- *
- * @param data          The dropped data.
+ * Structure of received data that will be passed to data received
+ * notification callback.
  */
-typedef pj_status_t (*pjsip_tp_on_custom_parser_cb)(pjsip_transport *tp, char *data, pj_size_t size, pj_size_t *fragment_size);
+typedef struct pjsip_tp_rx_data
+{
+    /**
+     * The transport receiving the data.
+     */
+    pjsip_transport *tp;
+
+    /**
+     * The data.
+     */
+    void            *data;
+
+    /**
+     * The data length.
+     * If the status field below is set to PJ_SUCCESS, it means
+     * that application has done its own processing of the data and can set
+     * the len to the number of bytes that it has processed.
+     */
+    pj_size_t        len;
+
+    /**
+     * The status of the callback.
+     * On input, it will be set to PJ_EIGNORED, which means that application
+     * opts to ignore the data received and pass it back to PJSIP to
+     * be processed.
+     *
+     * Application can change the status to PJ_SUCCESS to indicate that it
+     * has performed its own processing of the data and does not wish for
+     * PJSIP to prosess it. In this case, application should set the field
+     * data length len above to the number of bytes of the data it has
+     * processed.
+     */
+    pj_status_t      status;
+
+} pjsip_tp_rx_data;
 
 
 /**
- * Set callback for custom parser. The caller will be notified whenever any
- * new received data are in the receive buffer
- * This is useful for filter out custom massages before they are parsed in normal way
+ * Type of callback to data received notifications.
+ *
+ * @param data          The received data.
+ */
+typedef pj_status_t (*pjsip_tp_on_rx_data_cb)(pjsip_tp_rx_data *data);
+
+
+/**
+ * Set callback to be called whenever any data is received by a stream
+ * oriented transport. This can be useful for application to do its own
+ * processing, parsing, filtering, or logging of potential malicious
+ * activities.
  * 
  * @param mgr       Transport manager.
  * @param cb        The callback function, set to NULL to reset the callback.
  *
  * @return          PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_tpmgr_set_custom_parser_cb(pjsip_tpmgr *mgr,
-                                                  pjsip_tp_on_custom_parser_cb cb);
+PJ_DECL(pj_status_t) pjsip_tpmgr_set_recv_data_cb(pjsip_tpmgr *mgr,
+                                                  pjsip_tp_on_rx_data_cb cb);
 
 /**
  * @}

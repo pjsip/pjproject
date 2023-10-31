@@ -142,9 +142,9 @@ struct pjsip_tpmgr
 #endif
     void           (*on_rx_msg)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
     pj_status_t    (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
-    pjsip_tp_state_callback tp_state_cb;
+    pjsip_tp_state_callback   tp_state_cb;
     pjsip_tp_on_rx_dropped_cb tp_drop_data_cb;
-    pjsip_tp_on_custom_parser_cb tp_custom_parser_cb;
+    pjsip_tp_on_rx_data_cb    tp_rx_data_cb;
 
     /* Transmit data list, for transmit data cleanup when transport manager
      * is destroyed.
@@ -2068,14 +2068,25 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
         if ((tr->flag & PJSIP_TRANSPORT_DATAGRAM) == 0) {
             pj_status_t msg_status;
 
-            if(mgr->tp_custom_parser_cb) {
-               if( PJ_SUCCESS == (*mgr->tp_custom_parser_cb)(tr, current_pkt, remaining_len, &msg_fragment_size)) {
-                    total_processed += msg_fragment_size;
-                    current_pkt += msg_fragment_size;
-                    remaining_len -= msg_fragment_size;
+            if (mgr->tp_rx_data_cb) {
+                pjsip_tp_rx_data rd;
+                pj_bzero(&rd, sizeof(rd));
+                rd.tp = tr;
+                rd.data = current_pkt;
+                rd.len = remaining_len;
+                rd.status = PJ_EIGNORED;
+
+                if ((*mgr->tp_rx_data_cb)(&rd) == PJ_SUCCESS) {
+                    /* Sanity check */
+                    if (rd.len > remaining_len)
+                        rd.len = remaining_len;
+                    total_processed += rd.len;
+                    current_pkt += rd.len;
+                    remaining_len -= rd.len;
                     continue;
-               }
+                }
             }
+
             msg_status = pjsip_find_msg(current_pkt, remaining_len, PJ_FALSE, 
                                         &msg_fragment_size);
             if (msg_status != PJ_SUCCESS) {
@@ -2853,12 +2864,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_set_drop_data_cb(pjsip_tpmgr *mgr,
  * Set callback for custom parser
  */
 
-PJ_DEF(pj_status_t) pjsip_tpmgr_set_custom_parser_cb(pjsip_tpmgr *mgr,
-                                                     pjsip_tp_on_custom_parser_cb cb)
+PJ_DEF(pj_status_t) pjsip_tpmgr_set_rx_data_cb(pjsip_tpmgr *mgr,
+                                               pjsip_tp_on_rx_data_cb cb)
 {
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
 
-    mgr->tp_custom_parser_cb = cb;
+    mgr->tp_rx_data_cb = cb;
 
     return PJ_SUCCESS;
 }
