@@ -277,11 +277,7 @@ PJ_DEF(void) pj_scan_get( pj_scanner *scanner,
 
     do {
         ++s;
-    } while (pj_cis_match(spec, *s));
-    /* No need to check EOF here (PJ_SCAN_CHECK_EOF(s)) because
-     * buffer is NULL terminated and pj_cis_match(spec,0) should be
-     * false.
-     */
+    } while (pj_cis_match(spec, *s) && !pj_scan_is_eof(scanner));
 
     pj_strset3(out, scanner->curptr, s);
 
