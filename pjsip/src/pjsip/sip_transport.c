@@ -2864,8 +2864,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_set_drop_data_cb(pjsip_tpmgr *mgr,
  * Set callback for custom parser
  */
 
-PJ_DEF(pj_status_t) pjsip_tpmgr_set_rx_data_cb(pjsip_tpmgr *mgr,
-                                               pjsip_tp_on_rx_data_cb cb)
+PJ_DEF(pj_status_t) pjsip_tpmgr_set_recv_data_cb(pjsip_tpmgr *mgr,
+                                                 pjsip_tp_on_rx_data_cb cb)
 {
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
 
