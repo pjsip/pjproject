@@ -932,6 +932,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 # endif
 #endif
 
+#ifndef PJSIP_BLF_DEFAULT_EXPIRES
+#   define PJSIP_BLF_DEFAULT_EXPIRES       600
+#endif
 
 /**
  * Specify the maximum number of timer entries initially allocated by
@@ -1415,6 +1418,11 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_PRES_BAD_CONTENT_RESPONSE
 #   define PJSIP_PRES_BAD_CONTENT_RESPONSE      488
+#endif
+
+
+#ifndef PJSIP_BLF_BAD_CONTENT_RESPONSE
+#   define PJSIP_BLF_BAD_CONTENT_RESPONSE  488
 #endif
 
 

@@ -190,22 +190,121 @@ struct pjsip_evsub_user
     void (*on_client_refresh)(pjsip_evsub *sub);
 
     /**
-     * This callback is called when server doesn't receive subscription 
+     * This callback is called when server doesn't receive subscription
      * refresh after the specified subscription interval.
      *
-     * This callback is OPTIONAL when PJSIP package such as presence or 
-     * refer is used; the event package send NOTIFY to terminate the 
+     * This callback is OPTIONAL when PJSIP package such as presence or
+     * refer is used; the event package send NOTIFY to terminate the
      * subscription.
      */
     void (*on_server_timeout)(pjsip_evsub *sub);
 
 };
 
+struct pjsip_evsub_blf_user
+{
+    /**
+     * This callback is called when subscription state has changed.
+     * Application MUST be prepared to receive NULL event and events with
+     * type other than PJSIP_EVENT_TSX_STATE
+     *
+     * This callback is OPTIONAL.
+     *
+     * @param sub   The subscription instance.
+     * @param event The event that has caused the state to change,
+     *          which may be NULL or may have type other than
+     *          PJSIP_EVENT_TSX_STATE.
+     */
+    void (*on_evsub_state)( pjsip_evsub *sub, pjsip_event *event);
+
+    /**
+     * This callback is called when transaction state has changed.
+     *
+     * @param sub   The subscription instance.
+     * @param tsx   Transaction.
+     * @param event The event.
+     */
+    void (*on_tsx_state)(pjsip_evsub *sub, pjsip_transaction *tsx,
+             pjsip_event *event);
+
+    /**
+     * This callback is called when incoming SUBSCRIBE (or any method that
+     * establishes the subscription in the first place) is received. It
+     * allows application to specify what response should be sent to
+     * remote, along with additional headers and message body to be put
+     * in the response.
+     *
+     * This callback is OPTIONAL.
+     *
+     * However, implementation MUST send NOTIFY request upon receiving this
+     * callback. The suggested behavior is to call
+     * #pjsip_evsub_current_notify(), since this function takes care
+     * about unsubscription request and calculates the appropriate expiration
+     * interval.
+     */
+    void (*on_rx_refresh)( pjsip_evsub *sub,
+               pjsip_rx_data *rdata,
+               int *p_st_code,
+               pj_str_t **p_st_text,
+               pjsip_hdr *res_hdr,
+               pjsip_msg_body **p_body);
+
+    /**
+     * This callback is called when client/subscriber received incoming
+     * NOTIFY request. It allows the application to specify what response
+     * should be sent to remote, along with additional headers and message
+     * body to be put in the response.
+     *
+     * This callback is OPTIONAL. When it is not implemented, the default
+     * behavior is to respond incoming NOTIFY request with 200 (OK).
+     *
+     * @param sub   The subscription instance.
+     * @param rdata The received NOTIFY request.
+     * @param p_st_code Application MUST set the value of this argument with
+     *          final status code (200-699) upon returning from the
+     *          callback.
+     * @param p_st_text Custom status text, if any.
+     * @param res_hdr   Upon return, application can put additional headers
+     *          to be sent in the response in this list.
+     * @param p_body    Application MAY specify message body to be sent in
+     *          the response.
+     */
+    void (*on_rx_notify)(pjsip_evsub *sub,
+             pjsip_rx_data *rdata,
+             int *p_st_code,
+             pj_str_t **p_st_text,
+             pjsip_hdr *res_hdr,
+             pjsip_msg_body **p_body);
+
+    /**
+     * This callback is called when it is time for the client to refresh
+     * the subscription.
+     *
+     * This callback is OPTIONAL when PJSIP package such as presence or
+     * refer is used; the event package will refresh subscription by sending
+     * SUBSCRIBE with the interval set to current/last interval.
+     *
+     * @param sub   The subscription instance.
+     */
+    void (*on_client_refresh)(pjsip_evsub *sub);
+
+    /**
+     * This callback is called when server doesn't receive subscription
+     * refresh after the specified subscription interval.
+     *
+     * This callback is OPTIONAL when PJSIP package such as presence or
+     * refer is used; the event package send NOTIFY to terminate the
+     * subscription.
+     */
+    void (*on_server_timeout)(pjsip_evsub *sub);
+
+};
 
 /**
  * @see pjsip_evsub_user
  */
 typedef struct pjsip_evsub_user pjsip_evsub_user;
+typedef struct pjsip_evsub_blf_user pjsip_evsub_blf_user;
 
 
 /**

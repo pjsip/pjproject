@@ -1634,6 +1634,7 @@ typedef struct pjsua_callback
      */
     void (*on_buddy_state)(pjsua_buddy_id buddy_id);
 
+    void (*on_buddy_blf_state)(pjsua_buddy_id buddy_id);
 
     /**
      * Notify application when the state of client subscription session
@@ -1648,6 +1649,10 @@ typedef struct pjsua_callback
     void (*on_buddy_evsub_state)(pjsua_buddy_id buddy_id,
                                  pjsip_evsub *sub,
                                  pjsip_event *event);
+
+    void (*on_buddy_evsub_blf_state)(pjsua_buddy_id buddy_id,
+                                     pjsip_evsub *sub,
+                                     pjsip_event *event);
 
     /**
      * Notify application on incoming pager (i.e. MESSAGE request).
@@ -6523,6 +6528,102 @@ typedef struct pjsua_buddy_info
 } pjsua_buddy_info;
 
 
+typedef struct pjsua_buddy_blf_info
+{
+    /**
+     * The buddy ID.
+     */
+    pjsua_buddy_id  id;
+
+    /**
+     * The full URI of the buddy, as specified in the configuration.
+     */
+    pj_str_t        uri;
+
+    /* BLF Dialog-Info id */
+    pj_str_t        dialog_id;
+
+    /* BLF Dialog-Info state */
+    pj_str_t        dialog_info_state;
+
+    /* BLF Dialog-Info entity */
+    pj_str_t        dialog_info_entity;
+
+    /* BLF Dialog call_id */
+    pj_str_t        dialog_call_id;
+
+    /* BLF Dialog remote_tag */
+    pj_str_t        dialog_remote_tag;
+
+    /* BLF Dialog local_tag */
+    pj_str_t        dialog_local_tag;
+
+    /* BLF Dialog direction */
+    pj_str_t        dialog_direction;
+
+    /* BLF dialog state */
+    pj_str_t        dialog_state;
+
+    /* BLF dialog duration */
+    pj_str_t        dialog_duration;
+
+    /* BLF local identity */
+    pj_str_t        local_identity;
+
+    /* BLF local identity_display */
+    pj_str_t        local_identity_display;
+
+    /* BLF local target uri */
+    pj_str_t        local_target_uri;
+
+
+    /* BLF remote identity */
+    pj_str_t        remote_identity;
+
+    /* BLF remote identity_display */
+    pj_str_t        remote_identity_display;
+
+    /* BLF remote target uri */
+    pj_str_t        remote_target_uri;
+
+
+    /**
+     * If \a monitor_pres is enabled, this specifies the last state of the
+     * presence subscription. If presence subscription session is currently
+     * active, the value will be PJSIP_EVSUB_STATE_ACTIVE. If presence
+     * subscription request has been rejected, the value will be
+     * PJSIP_EVSUB_STATE_TERMINATED, and the termination reason will be
+     * specified in \a sub_term_reason.
+     */
+    pjsip_evsub_state   sub_state;
+
+    /**
+     * String representation of subscription state.
+     */
+    const char         *sub_state_name;
+
+    /**
+     * Specifies the last presence subscription termination code. This would
+     * return the last status of the SUBSCRIBE request. If the subscription
+     * is terminated with NOTIFY by the server, this value will be set to
+     * 200, and subscription termination reason will be given in the
+     * \a sub_term_reason field.
+     */
+    unsigned        sub_term_code;
+
+    /**
+     * Specifies the last presence subscription termination reason. If
+     * presence subscription is currently active, the value will be empty.
+     */
+    pj_str_t        sub_term_reason;
+
+    /**
+     * Internal buffer.
+     */
+   char        buf_[512];
+
+} pjsua_buddy_blf_info;
+
 /**
  * Set default values to the buddy config.
  */
@@ -6583,6 +6684,9 @@ PJ_DECL(pjsua_buddy_id) pjsua_buddy_find(const pj_str_t *uri);
 PJ_DECL(pj_status_t) pjsua_buddy_get_info(pjsua_buddy_id buddy_id,
                                           pjsua_buddy_info *info);
 
+PJ_DECL(pj_status_t) pjsua_buddy_get_blf_info(pjsua_buddy_id buddy_id,
+                      pjsua_buddy_blf_info *info);
+
 /**
  * Set the user data associated with the buddy object.
  *
@@ -6621,6 +6725,19 @@ PJ_DECL(pj_status_t) pjsua_buddy_add(const pjsua_buddy_config *buddy_cfg,
 
 
 /**
+ * Add new buddy to the buddy list. If blf subscription is enabled
+ * for this buddy, this function will also start the blf subscription
+ * session immediately.
+ *
+ * @param buddy_cfg Buddy configuration.
+ * @param p_buddy_id    Pointer to receive buddy ID.
+ *
+ * @return      PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_buddy_add_blf(const pjsua_buddy_config *buddy_cfg,
+                     pjsua_buddy_id *p_buddy_id);
+
+/**
  * Delete the specified buddy from the buddy list. Any presence subscription
  * to this buddy will be terminated.
  *
@@ -6645,7 +6762,8 @@ PJ_DECL(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id);
 PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
                                                 pj_bool_t subscribe);
 
-
+PJ_DECL(pj_status_t) pjsua_buddy_subscribe_blf(pjsua_buddy_id buddy_id,
+                        pj_bool_t subscribe);
 /**
  * Update the presence information for the buddy. Although the library
  * periodically refreshes the presence subscription for all buddies, some
@@ -6668,6 +6786,7 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
  */
 PJ_DECL(pj_status_t) pjsua_buddy_update_pres(pjsua_buddy_id buddy_id);
 
+PJ_DECL(pj_status_t) pjsua_buddy_update_blf(pjsua_buddy_id buddy_id);
 
 /**
  * Send NOTIFY to inform account presence status or to terminate server

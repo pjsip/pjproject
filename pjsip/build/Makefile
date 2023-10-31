@@ -97,7 +97,7 @@ export PJSIP_UA_LDFLAGS += $(PJSIP_SIMPLE_LDLIB) \
 export PJSIP_SIMPLE_SRCDIR = ../src/pjsip-simple
 export PJSIP_SIMPLE_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			errno.o evsub.o evsub_msg.o iscomposing.o \
-			mwi.o pidf.o presence.o presence_body.o publishc.o \
+			mwi.o pidf.o dialog-info.o presence.o blf.o presence_body.o publishc.o \
 			rpid.o xpidf.o
 export PJSIP_SIMPLE_CFLAGS += $(_CFLAGS)
 export PJSIP_SIMPLE_CXXFLAGS += $(_CXXFLAGS)
