@@ -678,6 +678,8 @@ public:
       dir(PJMEDIA_DIR_NONE),
       txPt(0),
       rxPt(0),
+      audTxEventPt(0),
+      audRxEventPt(0),
       codecClockRate(0),
       jbInit(-1),
       jbMinPre(-1),

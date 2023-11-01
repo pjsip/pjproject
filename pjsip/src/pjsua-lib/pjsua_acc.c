@@ -3449,7 +3449,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
 
     /* If the URI uses sips scheme, make sure we use secure transport. */
     if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri)) {
-        unsigned flag, tp_flag;
+        unsigned tp_flag;
 
         tp_flag = PJSIP_TRANSPORT_SECURE;
         flag  = pjsip_transport_get_flag_from_type(tp_type);
@@ -3869,7 +3869,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 
     /* If the URI uses sips scheme, make sure we use secure transport. */
     if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri)) {
-        unsigned flag, tp_flag;
+        unsigned tp_flag;
 
         tp_flag = PJSIP_TRANSPORT_SECURE;
         flag  = pjsip_transport_get_flag_from_type(tp_type);
