@@ -139,6 +139,7 @@ static int max_retrans_count = -1;
 #define TIMEOUT_TIMER           2
 #define TRANSPORT_ERR_TIMER     3
 #define TRANSPORT_DISC_TIMER    4
+#define TERMINATE_TIMER         PJSIP_TSX_STATE_TERMINATED
 
 /* Flags for tsx_set_state() */
 enum
@@ -193,6 +194,10 @@ static int         tsx_send_msg( pjsip_transaction *tsx,
                                  pjsip_tx_data *tdata);
 static void        tsx_update_transport( pjsip_transaction *tsx, 
                                          pjsip_transport *tp);
+static pj_status_t tsx_schedule_timer(pjsip_transaction *tsx,
+                                      pj_timer_entry *entry,
+                                      const pj_time_val *delay,
+                                      int active_id);
 
 
 /* State handlers for UAC, indexed by state */
@@ -235,6 +240,17 @@ static int  (*tsx_state_handler_uas[PJSIP_TSX_STATE_MAX])(pjsip_transaction *,
 PJ_DEF(const char *) pjsip_tsx_state_str(pjsip_tsx_state_e state)
 {
     return state_str[state];
+}
+
+/*
+ * Schedule timer.
+ */
+PJ_DEF(pj_status_t) pjsip_tsx_schedule_timer( pjsip_transaction *tsx,
+                                              pj_timer_entry *entry,
+                                              const pj_time_val *delay,
+                                              int active_id)
+{
+    return tsx_schedule_timer(tsx, entry, delay, active_id);
 }
 
 /*
@@ -1265,7 +1281,13 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
         return;
     }
 
-    if (entry->id == TRANSPORT_ERR_TIMER || entry->id == TRANSPORT_DISC_TIMER)
+
+    if (entry->id == TERMINATE_TIMER) {
+        if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
+            pjsip_tsx_terminate(tsx, tsx->status_code);
+        }
+    } else if (entry->id == TRANSPORT_ERR_TIMER ||
+               entry->id == TRANSPORT_DISC_TIMER)
     {
         /* Posted transport error/disconnection event */
         pj_bool_t tp_disc = (entry->id == TRANSPORT_DISC_TIMER);

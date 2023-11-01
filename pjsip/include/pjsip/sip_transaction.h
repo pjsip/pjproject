@@ -530,6 +530,18 @@ PJ_DECL(void) pjsip_tsx_layer_dump(pj_bool_t detail);
 PJ_DECL(const char *) pjsip_tsx_state_str(pjsip_tsx_state_e state);
 
 /**
+ * Schedule tsx timer.
+ * @param tsx       The transaction
+ * @param entry     The timer entry
+ * @param delay     The timer delay
+ * @param active_id The timer id
+ */
+PJ_DECL(pj_status_t) pjsip_tsx_schedule_timer(pjsip_transaction *tsx,
+                                              pj_timer_entry *entry,
+                                              const pj_time_val *delay,
+                                              int active_id);
+
+/**
  * Get the role name.
  * @param role  Role.
  */

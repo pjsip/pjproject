@@ -678,6 +678,8 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 
         /* Terminate INVITE transaction, if it's still present. */
         if (inv->invite_tsx->state <= PJSIP_TSX_STATE_COMPLETED) {
+            pj_time_val timeout = { 0, 0 };
+
             /* Before we terminate INVITE transaction, process the SDP
              * in the ACK request, if any. 
              * Only do this when invite state is not already disconnected
@@ -697,16 +699,12 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
                 }
             }
 
-            /* Now we can terminate the INVITE transaction */
-
-            /* In the case of an INVITE transaction, if the response was not
-             * 2xx, the ACK is considered part of the transaction, so
-             * should be handled by the transaction.
+            /* Now we can terminate the INVITE transaction. Schedule it
+             * using a timer to avoid deadlock.
              */
-            if (inv->invite_tsx->status_code/100 == 2) {
-                pjsip_tsx_terminate(inv->invite_tsx,
-                                    inv->invite_tsx->status_code);
-            }
+            pjsip_tsx_schedule_timer(inv->invite_tsx,
+                                     &inv->invite_tsx->timeout_timer,
+                                     &timeout, PJSIP_TSX_STATE_TERMINATED);
             inv->invite_tsx = NULL;
 
             if (inv->last_answer) {
