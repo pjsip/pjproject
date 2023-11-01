@@ -142,12 +142,14 @@ PJ_DEF(void) pj_scan_skip_whitespace( pj_scanner *scanner )
 {
     register char *s = scanner->curptr;
 
-    while (PJ_SCAN_IS_SPACE(*s)) {
+    while (PJ_SCAN_CHECK_EOF(s) && PJ_SCAN_IS_SPACE(*s)) {
         ++s;
     }
 
-    if (PJ_SCAN_IS_NEWLINE(*s) && (scanner->skip_ws & PJ_SCAN_AUTOSKIP_NEWLINE)) {
-        for (;;) {
+    if (PJ_SCAN_CHECK_EOF(s) && PJ_SCAN_IS_NEWLINE(*s) &&
+        (scanner->skip_ws & PJ_SCAN_AUTOSKIP_NEWLINE))
+    {
+        for (; PJ_SCAN_CHECK_EOF(s); ) {
             if (*s == '\r') {
                 ++s;
                 if (*s == '\n') ++s;
@@ -167,23 +169,26 @@ PJ_DEF(void) pj_scan_skip_whitespace( pj_scanner *scanner )
         }
     }
 
-    if (PJ_SCAN_IS_NEWLINE(*s) && (scanner->skip_ws & PJ_SCAN_AUTOSKIP_WS_HEADER)==PJ_SCAN_AUTOSKIP_WS_HEADER) {
+    if (PJ_SCAN_CHECK_EOF(s) && PJ_SCAN_IS_NEWLINE(*s) &&
+        (scanner->skip_ws & PJ_SCAN_AUTOSKIP_WS_HEADER)==
+         PJ_SCAN_AUTOSKIP_WS_HEADER)
+    {
         /* Check for header continuation. */
         scanner->curptr = s;
 
         if (*s == '\r') {
             ++s;
         }
-        if (*s == '\n') {
+        if (PJ_SCAN_CHECK_EOF(s) && *s == '\n') {
             ++s;
         }
         scanner->start_line = s;
 
-        if (PJ_SCAN_IS_SPACE(*s)) {
+        if (PJ_SCAN_CHECK_EOF(s) && PJ_SCAN_IS_SPACE(*s)) {
             register char *t = s;
             do {
                 ++t;
-            } while (PJ_SCAN_IS_SPACE(*t));
+            } while (PJ_SCAN_CHECK_EOF(t) && PJ_SCAN_IS_SPACE(*t));
 
             ++scanner->line;
             scanner->curptr = t;
@@ -220,8 +225,7 @@ PJ_DEF(int) pj_scan_peek( pj_scanner *scanner,
         return -1;
     }
 
-    /* Don't need to check EOF with PJ_SCAN_CHECK_EOF(s) */
-    while (pj_cis_match(spec, *s))
+    while (PJ_SCAN_CHECK_EOF(s) && pj_cis_match(spec, *s))
         ++s;
 
     pj_strset3(out, scanner->curptr, s);
@@ -328,13 +332,13 @@ PJ_DEF(void) pj_scan_get_unescape( pj_scanner *scanner,
             char *start = s;
             do {
                 ++s;
-            } while (pj_cis_match(spec, *s));
+            } while (PJ_SCAN_CHECK_EOF(s) && pj_cis_match(spec, *s));
 
             if (dst != start) pj_memmove(dst, start, s-start);
             dst += (s-start);
         } 
         
-    } while (*s == '%');
+    } while (PJ_SCAN_CHECK_EOF(s) && (*s == '%'));
 
     scanner->curptr = s;
     out->slen = (dst - out->ptr);
