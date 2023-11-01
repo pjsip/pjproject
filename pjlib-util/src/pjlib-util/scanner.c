@@ -277,7 +277,7 @@ PJ_DEF(void) pj_scan_get( pj_scanner *scanner,
 
     do {
         ++s;
-    } while (pj_cis_match(spec, *s) && PJ_SCAN_CHECK_EOF(s));
+    } while (PJ_SCAN_CHECK_EOF(s) && pj_cis_match(spec, *s));
 
     pj_strset3(out, scanner->curptr, s);
 
