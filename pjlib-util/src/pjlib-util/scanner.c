@@ -277,13 +277,15 @@ PJ_DEF(void) pj_scan_get( pj_scanner *scanner,
 
     do {
         ++s;
-    } while (pj_cis_match(spec, *s) && !pj_scan_is_eof(scanner));
+    } while (pj_cis_match(spec, *s) && PJ_SCAN_CHECK_EOF(s));
 
     pj_strset3(out, scanner->curptr, s);
 
     scanner->curptr = s;
 
-    if (PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws) {
+    if (!pj_scan_is_eof(scanner) &&
+        PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws)
+    {
         pj_scan_skip_whitespace(scanner);    
     }
 }
@@ -337,7 +339,9 @@ PJ_DEF(void) pj_scan_get_unescape( pj_scanner *scanner,
     scanner->curptr = s;
     out->slen = (dst - out->ptr);
 
-    if (PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws) {
+    if (!pj_scan_is_eof(scanner) &&
+        PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws)
+    {
         pj_scan_skip_whitespace(scanner);    
     }
 }
@@ -418,7 +422,9 @@ PJ_DEF(void) pj_scan_get_quotes(pj_scanner *scanner,
 
     scanner->curptr = s;
 
-    if (PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws) {
+    if (!pj_scan_is_eof(scanner) &&
+        PJ_SCAN_IS_PROBABLY_SPACE(*s) && scanner->skip_ws)
+    {
         pj_scan_skip_whitespace(scanner);
     }
 }
