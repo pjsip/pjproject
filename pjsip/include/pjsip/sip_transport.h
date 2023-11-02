@@ -1682,6 +1682,10 @@ typedef struct pjsip_tp_rx_data
      * If application wishes to discard some data of len p, it can pass
      * the remaining data back to PJSIP to be processed by setting the len
      * to (len - p).
+     * If application wants to shutdown the transport from within the
+     * callback (for example after if finds out that the data is
+     * suspicious/garbage), app must set the len to zero to prevent
+     * further processing of the data.
      */
     pj_size_t        len;
 
