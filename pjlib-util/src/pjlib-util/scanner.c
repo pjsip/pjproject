@@ -152,6 +152,7 @@ PJ_DEF(void) pj_scan_skip_whitespace( pj_scanner *scanner )
         for (; PJ_SCAN_CHECK_EOF(s); ) {
             if (*s == '\r') {
                 ++s;
+                if (!PJ_SCAN_CHECK_EOF(s)) break;
                 if (*s == '\n') ++s;
                 ++scanner->line;
                 scanner->curptr = scanner->start_line = s;
@@ -162,7 +163,7 @@ PJ_DEF(void) pj_scan_skip_whitespace( pj_scanner *scanner )
             } else if (PJ_SCAN_IS_SPACE(*s)) {
                 do {
                     ++s;
-                } while (PJ_SCAN_IS_SPACE(*s));
+                } while (PJ_SCAN_CHECK_EOF(s) && PJ_SCAN_IS_SPACE(*s));
             } else {
                 break;
             }
