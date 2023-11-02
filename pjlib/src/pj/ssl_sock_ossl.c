@@ -159,10 +159,12 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
                               pj_ssl_cert_info *remote_cert_info,
                               pj_bool_t is_verify);
 
-#if !USING_LIBRESSL && OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #  define OPENSSL_NO_SSL2           /* seems to be removed in 1.1.0 */
+# if !USING_LIBRESSL
 #  define M_ASN1_STRING_data(x)     ASN1_STRING_get0_data(x)
 #  define M_ASN1_STRING_length(x)   ASN1_STRING_length(x)
+# endif
 #  if defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x10100000L || \
       defined(OPENSSL_NO_DEPRECATED)
 
@@ -179,7 +181,7 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 #    endif
 
 #  endif
-#elif !USING_LIBRESSL
+#else
 #  define SSL_CIPHER_get_id(c)      (c)->id
 #  define SSL_set_session(ssl, s)   (ssl)->session = (s)
 #  define X509_STORE_CTX_get0_cert(ctx) ((ctx)->cert)
