@@ -410,9 +410,24 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool,
  *
  * @param tsx       The transaction.
  * @param code      The status code to report.
+ *
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx,
                                           int code );
+
+
+/**
+ * Force terminate transaction asynchronously, using the transaction
+ * internal timer.
+ *
+ * @param tsx       The transaction.
+ * @param code      The status code to report.
+ *
+ * @return          PJ_SUCCESS or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
+                                               int code );
 
 
 /**
@@ -528,18 +543,6 @@ PJ_DECL(void) pjsip_tsx_layer_dump(pj_bool_t detail);
  * @param state State
  */
 PJ_DECL(const char *) pjsip_tsx_state_str(pjsip_tsx_state_e state);
-
-/**
- * Schedule tsx timer.
- * @param tsx       The transaction
- * @param entry     The timer entry
- * @param delay     The timer delay
- * @param active_id The timer id
- */
-PJ_DECL(pj_status_t) pjsip_tsx_schedule_timer(pjsip_transaction *tsx,
-                                              pj_timer_entry *entry,
-                                              const pj_time_val *delay,
-                                              int active_id);
 
 /**
  * Get the role name.

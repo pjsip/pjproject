@@ -139,7 +139,7 @@ static int max_retrans_count = -1;
 #define TIMEOUT_TIMER           2
 #define TRANSPORT_ERR_TIMER     3
 #define TRANSPORT_DISC_TIMER    4
-#define TERMINATE_TIMER         PJSIP_TSX_STATE_TERMINATED
+#define TERMINATE_TIMER         5
 
 /* Flags for tsx_set_state() */
 enum
@@ -194,12 +194,6 @@ static int         tsx_send_msg( pjsip_transaction *tsx,
                                  pjsip_tx_data *tdata);
 static void        tsx_update_transport( pjsip_transaction *tsx, 
                                          pjsip_transport *tp);
-static pj_status_t tsx_schedule_timer(pjsip_transaction *tsx,
-                                      pj_timer_entry *entry,
-                                      const pj_time_val *delay,
-                                      int active_id);
-static int         tsx_cancel_timer(pjsip_transaction *tsx,
-                                    pj_timer_entry *entry);
 
 
 /* State handlers for UAC, indexed by state */
@@ -242,19 +236,6 @@ static int  (*tsx_state_handler_uas[PJSIP_TSX_STATE_MAX])(pjsip_transaction *,
 PJ_DEF(const char *) pjsip_tsx_state_str(pjsip_tsx_state_e state)
 {
     return state_str[state];
-}
-
-/*
- * Schedule timer.
- */
-PJ_DEF(pj_status_t) pjsip_tsx_schedule_timer( pjsip_transaction *tsx,
-                                              pj_timer_entry *entry,
-                                              const pj_time_val *delay,
-                                              int active_id)
-{
-    tsx_cancel_timer(tsx, entry);
-
-    return tsx_schedule_timer(tsx, entry, delay, active_id);
 }
 
 /*
@@ -1901,6 +1882,30 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
     pj_grp_lock_release(tsx->grp_lock);
 
     pj_log_pop_indent();
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Force terminate transaction asynchronously, using the transaction
+ * internal timer.
+ */
+PJ_DEF(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
+                                              int code )
+{
+    pj_time_val delay = {0, 100};
+
+    PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
+
+    PJ_LOG(5,(tsx->obj_name, "Request to terminate transaction async"));
+
+    PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
+
+    lock_timer(tsx);
+    tsx_cancel_timer(tsx, &tsx->timeout_timer);
+    tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay, TERMINATE_TIMER);
+    unlock_timer(tsx);
 
     return PJ_SUCCESS;
 }

@@ -702,18 +702,15 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
                 pjsip_tsx_terminate(inv->invite_tsx,
                                     inv->invite_tsx->status_code);
             } else {
-                pj_time_val timeout = { 1, 0 };
-
                 /* If the response was not 2xx, the ACK is considered part of
                  * the INVITE transaction, so should have been handled by
                  * the transaction.
                  * But for best effort, we will also attempt to terminate
-                 * the tsx here. However, we need to schedule it using a timer
+                 * the tsx here. However, we need to do it asynchronously
                  * to avoid deadlock.
                  */
-                pjsip_tsx_schedule_timer(inv->invite_tsx,
-                                         &inv->invite_tsx->timeout_timer,
-                                         &timeout, PJSIP_TSX_STATE_TERMINATED);
+                pjsip_tsx_terminate_async(inv->invite_tsx,
+                                          inv->invite_tsx->status_code);
             }
             inv->invite_tsx = NULL;
 
