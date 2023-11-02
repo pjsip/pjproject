@@ -198,6 +198,8 @@ static pj_status_t tsx_schedule_timer(pjsip_transaction *tsx,
                                       pj_timer_entry *entry,
                                       const pj_time_val *delay,
                                       int active_id);
+static int         tsx_cancel_timer(pjsip_transaction *tsx,
+                                    pj_timer_entry *entry);
 
 
 /* State handlers for UAC, indexed by state */
@@ -250,6 +252,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_schedule_timer( pjsip_transaction *tsx,
                                               const pj_time_val *delay,
                                               int active_id)
 {
+    tsx_cancel_timer(tsx, entry);
+
     return tsx_schedule_timer(tsx, entry, delay, active_id);
 }
 
