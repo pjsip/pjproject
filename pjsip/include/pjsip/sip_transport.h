@@ -1679,25 +1679,11 @@ typedef struct pjsip_tp_rx_data
 
     /**
      * The data length.
-     * If the status field below is set to PJ_SUCCESS, it means
-     * that application has done its own processing of the data and can set
-     * the len to the number of bytes that it has processed.
+     * If application wishes to discard some data of len p, it can pass
+     * the remaining data back to PJSIP to be processed by setting the len
+     * to (len - p).
      */
     pj_size_t        len;
-
-    /**
-     * The status of the callback.
-     * On input, it will be set to PJ_EIGNORED, which means that application
-     * opts to ignore the data received and pass it back to PJSIP to
-     * be processed.
-     *
-     * Application can change the status to PJ_SUCCESS to indicate that it
-     * has performed its own processing of the data and does not wish for
-     * PJSIP to prosess it. In this case, application should set the field
-     * data length len above to the number of bytes of the data it has
-     * processed.
-     */
-    pj_status_t      status;
 
 } pjsip_tp_rx_data;
 
@@ -1705,7 +1691,7 @@ typedef struct pjsip_tp_rx_data
 /**
  * Type of callback to data received notifications.
  *
- * @param data          The received data.
+ * @param data      The received data.
  */
 typedef pj_status_t (*pjsip_tp_on_rx_data_cb)(pjsip_tp_rx_data *data);
 
@@ -1713,8 +1699,7 @@ typedef pj_status_t (*pjsip_tp_on_rx_data_cb)(pjsip_tp_rx_data *data);
 /**
  * Set callback to be called whenever any data is received by a stream
  * oriented transport. This can be useful for application to do its own
- * processing, parsing, filtering, or logging of potential malicious
- * activities.
+ * verification, filtering, or logging of potential malicious activities.
  * 
  * @param mgr       Transport manager.
  * @param cb        The callback function, set to NULL to reset the callback.

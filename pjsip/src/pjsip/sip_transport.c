@@ -2074,15 +2074,14 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
                 rd.tp = tr;
                 rd.data = current_pkt;
                 rd.len = remaining_len;
-                rd.status = PJ_EIGNORED;
 
-                if ((*mgr->tp_rx_data_cb)(&rd) == PJ_SUCCESS) {
-                    /* Sanity check */
-                    if (rd.len > remaining_len)
-                        rd.len = remaining_len;
-                    total_processed += rd.len;
-                    current_pkt += rd.len;
-                    remaining_len -= rd.len;
+                (*mgr->tp_rx_data_cb)(&rd);
+                if (rd.len < remaining_len) {
+                    remaining_len = rd.len;
+
+                    msg_fragment_size = remaining_len - rd.len;
+                    total_processed += msg_fragment_size;
+                    current_pkt += msg_fragment_size;
                     continue;
                 }
             }
