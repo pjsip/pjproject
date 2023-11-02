@@ -611,13 +611,13 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
     len = pj_ansi_snprintf(tempbuf, sizeof(tempbuf), 
                            "%.*s %.*s/%u%s%.*s",
                            (int)rtpmap->pt.slen,
-                           rtpmap->pt.ptr,
+                           rtpmap->pt.ptr ? rtpmap->pt.ptr : "(null)",
                            (int)rtpmap->enc_name.slen,
-                           rtpmap->enc_name.ptr,
+                           rtpmap->enc_name.ptr ? rtpmap->enc_name.ptr : "(null)",
                            rtpmap->clock_rate,
                            (rtpmap->param.slen ? "/" : ""),
                            (int)rtpmap->param.slen,
-                           rtpmap->param.ptr);
+                           rtpmap->param.ptr ? rtpmap->param.ptr : "(null)");
 
     if (len < 1 || len >= (int)sizeof(tempbuf))
         return PJMEDIA_SDP_ERTPMAPTOOLONG;
