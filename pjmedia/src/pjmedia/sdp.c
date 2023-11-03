@@ -597,8 +597,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && rtpmap && p_attr, PJ_EINVAL);
 
     /* Check that mandatory attributes are specified. */
-    PJ_ASSERT_RETURN(rtpmap->enc_name.slen && rtpmap->clock_rate,
-                     PJMEDIA_SDP_EINRTPMAP);
+    PJ_ASSERT_RETURN(rtpmap->pt.slen && rtpmap->enc_name.slen &&
+                     rtpmap->clock_rate, PJMEDIA_SDP_EINRTPMAP);
 
 
     attr = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_attr);
@@ -617,7 +617,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
                            rtpmap->clock_rate,
                            (rtpmap->param.slen ? "/" : ""),
                            (int)rtpmap->param.slen,
-                           rtpmap->param.ptr);
+                           rtpmap->param.slen ? rtpmap->param.ptr : "");
 
     if (len < 1 || len >= (int)sizeof(tempbuf))
         return PJMEDIA_SDP_ERTPMAPTOOLONG;
