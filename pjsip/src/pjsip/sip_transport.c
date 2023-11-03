@@ -2077,11 +2077,10 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 
                 (*mgr->tp_rx_data_cb)(&rd);
                 if (rd.len < remaining_len) {
-                    remaining_len = rd.len;
-
                     msg_fragment_size = remaining_len - rd.len;
                     total_processed += msg_fragment_size;
                     current_pkt += msg_fragment_size;
+                    remaining_len = rd.len;
                     continue;
                 }
             }
