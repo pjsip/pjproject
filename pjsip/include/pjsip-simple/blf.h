@@ -241,6 +241,9 @@ PJ_DECL(pj_status_t) pjsip_blf_parse_dialog_info(pjsip_rx_data *rdata,
                        pj_pool_t *pool,
                        pjsip_blf_status *blf_status);
 
+PJ_DECL(pj_status_t) pjsip_blf_parse_dialog_info2(char *body, unsigned body_len,
+                                                  pj_pool_t *pool,
+                                                  pjsip_blf_status *blf_status);
 /**
  * @}
  */
