@@ -4639,11 +4639,11 @@ unsigned int srtp_profile_get_master_salt_length(srtp_profile_t profile)
     }
 }
 
-srtp_err_status_t stream_get_protect_trailer_length(srtp_stream_ctx_t *stream,
-                                                    uint32_t is_rtp,
-                                                    uint32_t use_mki,
-                                                    uint32_t mki_index,
-                                                    uint32_t *length)
+static srtp_err_status_t stream_get_protect_trailer_length(srtp_stream_ctx_t *stream,
+                                                           uint32_t is_rtp,
+                                                           uint32_t use_mki,
+                                                           uint32_t mki_index,
+                                                           uint32_t *length)
 {
     srtp_session_keys_t *session_key;
 
@@ -4696,11 +4696,11 @@ static int get_protect_trailer_length_cb(srtp_stream_t stream, void *raw_data)
     return 0;
 }
 
-srtp_err_status_t get_protect_trailer_length(srtp_t session,
-                                             uint32_t is_rtp,
-                                             uint32_t use_mki,
-                                             uint32_t mki_index,
-                                             uint32_t *length)
+static srtp_err_status_t get_protect_trailer_length(srtp_t session,
+                                                    uint32_t is_rtp,
+                                                    uint32_t use_mki,
+                                                    uint32_t mki_index,
+                                                    uint32_t *length)
 {
     srtp_stream_ctx_t *stream;
     struct get_protect_trailer_length_data data = { 0, 0, is_rtp, use_mki,
