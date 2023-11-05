@@ -23,7 +23,6 @@
 
 struct pjdialog_info_op_desc pjdialog_info_op =
 {
-    {
     &pjdialog_info_dialog_info_construct,
     &pjdialog_info_dialog_info_get_state,
     &pjdialog_info_dialog_info_set_state,
@@ -33,8 +32,7 @@ struct pjdialog_info_op_desc pjdialog_info_op =
     &pjdialog_info_dialog_info_set_entity,
     &pjdialog_info_dialog_info_get_dialog,
     &pjdialog_info_dialog_info_add_dialog,
-    },
-    {
+    
     &pjdialog_info_dialog_construct,
     &pjdialog_info_dialog_get_id,
     &pjdialog_info_dialog_set_id,
@@ -54,17 +52,15 @@ struct pjdialog_info_op_desc pjdialog_info_op =
     &pjdialog_info_dialog_add_local,
     &pjdialog_info_dialog_get_remote,
     &pjdialog_info_dialog_add_remote,
-    },
-    {
+
     &pjdialog_info_local_construct,
     &pjdialog_info_local_get_identity,
     &pjdialog_info_local_add_identity,
     &pjdialog_info_local_get_identity_display,
     &pjdialog_info_local_set_identity_display,
     &pjdialog_info_local_get_target_uri,
-    &pjdialog_info_local_set_target_uri
-    },
-    {
+    &pjdialog_info_local_set_target_uri,
+
     &pjdialog_info_remote_construct,
     &pjdialog_info_remote_get_identity,
     &pjdialog_info_remote_add_identity,
@@ -72,7 +68,6 @@ struct pjdialog_info_op_desc pjdialog_info_op =
     &pjdialog_info_remote_set_identity_display,
     &pjdialog_info_remote_get_target_uri,
     &pjdialog_info_remote_set_target_uri
-    }
 };
 
 static pj_str_t DIALOG_INFO = { "dialog-info", 11 };
