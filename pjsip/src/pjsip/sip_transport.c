@@ -142,8 +142,9 @@ struct pjsip_tpmgr
 #endif
     void           (*on_rx_msg)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
     pj_status_t    (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
-    pjsip_tp_state_callback tp_state_cb;
+    pjsip_tp_state_callback   tp_state_cb;
     pjsip_tp_on_rx_dropped_cb tp_drop_data_cb;
+    pjsip_tp_on_rx_data_cb    tp_rx_data_cb;
 
     /* Transmit data list, for transmit data cleanup when transport manager
      * is destroyed.
@@ -2066,6 +2067,24 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
         /* For TCP transport, check if the whole message has been received. */
         if ((tr->flag & PJSIP_TRANSPORT_DATAGRAM) == 0) {
             pj_status_t msg_status;
+
+            if (mgr->tp_rx_data_cb) {
+                pjsip_tp_rx_data rd;
+                pj_bzero(&rd, sizeof(rd));
+                rd.tp = tr;
+                rd.data = current_pkt;
+                rd.len = remaining_len;
+
+                (*mgr->tp_rx_data_cb)(&rd);
+                if (rd.len < remaining_len) {
+                    msg_fragment_size = remaining_len - rd.len;
+                    total_processed += msg_fragment_size;
+                    current_pkt += msg_fragment_size;
+                    remaining_len = rd.len;
+                    continue;
+                }
+            }
+
             msg_status = pjsip_find_msg(current_pkt, remaining_len, PJ_FALSE, 
                                         &msg_fragment_size);
             if (msg_status != PJ_SUCCESS) {
@@ -2838,3 +2857,18 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_set_drop_data_cb(pjsip_tpmgr *mgr,
 
     return PJ_SUCCESS;
 }
+
+/*
+ * Set callback for custom parser
+ */
+
+PJ_DEF(pj_status_t) pjsip_tpmgr_set_recv_data_cb(pjsip_tpmgr *mgr,
+                                                 pjsip_tp_on_rx_data_cb cb)
+{
+    PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
+
+    mgr->tp_rx_data_cb = cb;
+
+    return PJ_SUCCESS;
+}
+

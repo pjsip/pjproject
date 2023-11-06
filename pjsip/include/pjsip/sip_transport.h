@@ -1662,6 +1662,58 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_set_drop_data_cb(pjsip_tpmgr *mgr,
 
 
 /**
+ * Structure of received data that will be passed to data received
+ * notification callback.
+ */
+typedef struct pjsip_tp_rx_data
+{
+    /**
+     * The transport receiving the data.
+     */
+    pjsip_transport *tp;
+
+    /**
+     * The data.
+     */
+    void            *data;
+
+    /**
+     * The data length.
+     * If application wishes to discard some data of len p, it can pass
+     * the remaining data back to PJSIP to be processed by setting the len
+     * to (len - p).
+     * If application wants to shutdown the transport from within the
+     * callback (for example after if finds out that the data is
+     * suspicious/garbage), app must set the len to zero to prevent
+     * further processing of the data.
+     */
+    pj_size_t        len;
+
+} pjsip_tp_rx_data;
+
+
+/**
+ * Type of callback to data received notifications.
+ *
+ * @param data      The received data.
+ */
+typedef pj_status_t (*pjsip_tp_on_rx_data_cb)(pjsip_tp_rx_data *data);
+
+
+/**
+ * Set callback to be called whenever any data is received by a stream
+ * oriented transport. This can be useful for application to do its own
+ * verification, filtering, or logging of potential malicious activities.
+ * 
+ * @param mgr       Transport manager.
+ * @param cb        The callback function, set to NULL to reset the callback.
+ *
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tpmgr_set_recv_data_cb(pjsip_tpmgr *mgr,
+                                                  pjsip_tp_on_rx_data_cb cb);
+
+/**
  * @}
  */
 
