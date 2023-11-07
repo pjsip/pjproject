@@ -2744,7 +2744,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         goto on_return;
 
-    if (call->inv->role == PJSIP_ROLE_UAC ||
+    if ((call->inv->role == PJSIP_ROLE_UAC && call->inv->state != PJSIP_INV_STATE_CONFIRMED) ||
         !call->inv->invite_tsx ||
         call->inv->invite_tsx->state >= PJSIP_TSX_STATE_COMPLETED)
     {
