@@ -1162,6 +1162,14 @@ struct EpConfig : public PersistentObject
 /* This represents posted job */
 struct PendingJob
 {
+    PendingJob():autoDelete(true){};
+
+    /**
+     * If this is set to true, the job will be automatically be deleted
+     * after the job is executed.
+     */
+    bool    autoDelete;
+
     /** Perform the job */
     virtual void execute(bool is_pending) = 0;
 

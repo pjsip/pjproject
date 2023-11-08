@@ -611,7 +611,11 @@ Endpoint& Endpoint::instance() PJSUA2_THROW(Error)
 Endpoint::~Endpoint()
 {
     while (!pendingJobs.empty()) {
-        delete pendingJobs.front();
+        PendingJob *job = NULL;
+        job = pendingJobs.front();
+        if (job->autoDelete)
+            delete job;
+
         pendingJobs.pop_front();
     }
 
@@ -642,7 +646,9 @@ void Endpoint::utilAddPendingJob(PendingJob *job)
     /* See if we can execute immediately */
     if (!mainThreadOnly || pj_thread_this()==mainThread) {
         job->execute(false);
-        delete job;
+        if (job->autoDelete)
+            delete job;
+
         return;
     }
 
@@ -651,7 +657,11 @@ void Endpoint::utilAddPendingJob(PendingJob *job)
 
         pj_enter_critical_section();
         for (unsigned i=0; i<NUMBER_TO_DISCARD; ++i) {
-            delete pendingJobs.back();
+            PendingJob *tmp_job = NULL;
+            tmp_job = pendingJobs.back();
+            if (tmp_job->autoDelete)
+                delete tmp_job;
+
             pendingJobs.pop_back();
         }
 
@@ -710,7 +720,8 @@ void Endpoint::performPendingJobs()
 
         if (job) {
             job->execute(true);
-            delete job;
+            if (job->autoDelete)
+                delete job;
         } else
             break;
     }
