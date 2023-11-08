@@ -121,6 +121,7 @@ using namespace pj;
 %feature("director") FindBuddyMatch;
 %feature("director") AudioMediaPlayer;
 %feature("director") AudioMediaPort;
+%feature("director") PendingJob;
 
 //
 // STL stuff.
