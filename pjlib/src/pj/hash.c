@@ -187,7 +187,7 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
 
         entry = PJ_POOL_ALLOC_T(pool, pj_hash_entry);
         PJ_LOG(6, ("hashtbl", 
-                   "%p: New p_entry %p created, pool used=%u, cap=%u", 
+                   "%p: New p_entry %p created, pool used=%lu, cap=%lu", 
                    ht, entry,  pj_pool_get_used_size(pool), 
                    pj_pool_get_capacity(pool)));
     }
