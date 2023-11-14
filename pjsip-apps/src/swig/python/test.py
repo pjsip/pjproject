@@ -2,6 +2,7 @@ import pjsua2 as pj
 import sys
 import time
 from collections import deque
+from random import randint
 import struct
 
 write=sys.stdout.write
@@ -210,6 +211,49 @@ def ua_tonegen_test():
 
     ep.libDestroy()
 
+class TestJob(pj.PendingJob):
+     def __init__(self, hub):
+        super().__init__(False)
+        self.__id__ = randint(0, 100000)
+        self.__hub__ = hub
+
+     def execute(self, is_pending):
+         print("executing job id: ", self.__id__)
+         self.__hub__.delJob(self.__id__)
+
+     def getId(self):
+         return self.__id__
+
+     def __del__(self):
+         print("Job deleted")
+
+class JobHub() :
+     def __init__(self, ep):
+         self.__jobList__ = {}
+         self.__ep__ = ep
+
+     def setNewJob(self):
+         job = TestJob(self)
+         self.__jobList__[job.getId()] = job
+         self.__ep__.utilAddPendingJob(job)
+
+     def delJob(self, id):
+         del self.__jobList__[id]
+
+def ua_pending_job_test():
+    jobs = {}
+    write("PendingJob test.." + "\r\n")
+    ep_cfg = pj.EpConfig()
+
+    ep = pj.Endpoint()
+    ep.libCreate()
+    ep.libInit(ep_cfg)
+    ep.libStart()
+
+    hub = JobHub(ep)
+    hub.setNewJob()
+    ep.libDestroy()
+
 #
 # main()
 #
@@ -219,6 +263,7 @@ if __name__ == "__main__":
     ua_run_log_test()
     ua_run_ua_test()
     ua_tonegen_test()
+    ua_pending_job_test()
     sys.exit(0)
 
 

@@ -612,8 +612,9 @@ Endpoint::~Endpoint()
 {
     while (!pendingJobs.empty()) {
         PendingJob *job = NULL;
+        bool autoDel = job->getAutoDelete();
         job = pendingJobs.front();
-        if (job->autoDelete)
+        if (autoDel)
             delete job;
 
         pendingJobs.pop_front();
@@ -645,9 +646,13 @@ void Endpoint::utilAddPendingJob(PendingJob *job)
 
     /* See if we can execute immediately */
     if (!mainThreadOnly || pj_thread_this()==mainThread) {
+        bool autoDel = job->getAutoDelete();
         job->execute(false);
-        if (job->autoDelete)
+        if (autoDel){
+            utilLogWrite(1, THIS_FILE,
+                     "Deleting job");
             delete job;
+        }
 
         return;
     }
@@ -659,7 +664,7 @@ void Endpoint::utilAddPendingJob(PendingJob *job)
         for (unsigned i=0; i<NUMBER_TO_DISCARD; ++i) {
             PendingJob *tmp_job = NULL;
             tmp_job = pendingJobs.back();
-            if (tmp_job->autoDelete)
+            if (tmp_job->getAutoDelete())
                 delete tmp_job;
 
             pendingJobs.pop_back();
@@ -719,8 +724,9 @@ void Endpoint::performPendingJobs()
         pj_leave_critical_section();
 
         if (job) {
+            bool autoDel = job->getAutoDelete();
             job->execute(true);
-            if (job->autoDelete)
+            if (autoDel)
                 delete job;
         } else
             break;

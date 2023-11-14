@@ -19,6 +19,9 @@
 package org.pjsip.pjsua2.app;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.pjsip.pjsua2.*;
 import org.pjsip.pjsua2.app.*;
 
@@ -86,6 +89,48 @@ class MyObserver implements MyAppObserver {
         public void notifyCallMediaEvent(MyCall call, OnCallMediaEventParam prm) {}
 }
 
+class MyJob extends PendingJob
+{
+    private MyJobHub hub;
+    public int id;
+
+    @Override
+    public void execute(boolean is_pending) {
+        System.out.println("Executing job id:" + id);
+        hub.delJob(this.id);
+    }
+
+    protected void finalize() {
+        System.out.println("Job deleted");
+    }
+
+    public MyJob(MyJobHub inHub) {
+        super(false);
+        hub = inHub;
+        id = ThreadLocalRandom.current().nextInt(1, 100000 + 1);
+    }
+}
+
+class MyJobHub
+{
+    Endpoint ep;
+    HashMap<Integer, MyJob> jobMap;
+    public MyJobHub(Endpoint inEp) {
+        ep = inEp;
+        jobMap = new HashMap();
+    }
+
+    public void setNewJob() {
+        MyJob job = new MyJob(this);
+        jobMap.put(job.id, job);
+        ep.utilAddPendingJob(job);
+    }
+
+    public void delJob(int id) {
+        jobMap.remove(id);
+    }
+}
+
 class MyShutdownHook extends Thread {
         Thread thread;
         MyShutdownHook(Thread thr) {
@@ -99,13 +144,14 @@ class MyShutdownHook extends Thread {
                         ;
                 }
         }
-}       
+}
 
 public class sample {
         private static MyApp app = new MyApp();
         private static MyObserver observer = new MyObserver();
         private static MyAccount account = null;
-        private static AccountConfig accCfg = null;             
+        private static AccountConfig accCfg = null;
+        private static MyJobHub jobHub = new MyJobHub(MyApp.ep);
 
         // Snippet code to set native window to output video 
         /*
@@ -135,16 +181,16 @@ public class sample {
                         account = app.addAcc(accCfg);
 
                         accCfg.setIdUri("sip:test@pjsip.org");
-                        AccountSipConfig sipCfg = accCfg.getSipConfig();                
+                        AccountSipConfig sipCfg = accCfg.getSipConfig();
                         AuthCredInfoVector ciVec = sipCfg.getAuthCreds();
-                        ciVec.add(new AuthCredInfo("Digest", 
+                        ciVec.add(new AuthCredInfo("Digest",
                                         "*",
                                         "test",
                                         0,
                                         "passwd"));
 
                         StringVector proxy = sipCfg.getProxies();
-                        proxy.add("sip:pjsip.org;transport=tcp");                                                       
+                        proxy.add("sip:pjsip.org;transport=tcp");
 
                         AccountRegConfig regCfg = accCfg.getRegConfig();
                         regCfg.setRegistrarUri("sip:pjsip.org");
@@ -152,11 +198,13 @@ public class sample {
                 } else {
                         account = app.accList.get(0);
                         accCfg = account.cfg;
-                }                               
+                }
 
                 try {
                         account.modify(accCfg);
-                } catch (Exception e) {}                                
+                } catch (Exception e) {}
+
+                jobHub.setNewJob();
 
                 while (!Thread.currentThread().isInterrupted()) {
                         // Handle events
