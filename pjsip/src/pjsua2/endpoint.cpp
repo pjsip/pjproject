@@ -230,6 +230,7 @@ pjsua_ip_change_param IpChangeParam::toPj() const
 
     param.restart_listener = restartListener;
     param.restart_lis_delay = restartLisDelay;
+    param.shutdown_transport = shutdownTransport;
 
     return param;
 }
@@ -239,6 +240,7 @@ void IpChangeParam::fromPj(const pjsua_ip_change_param &param)
 {
     restartListener = PJ2BOOL(param.restart_listener);
     restartLisDelay = param.restart_lis_delay;
+    shutdownTransport = PJ2BOOL(param.shutdown_transport);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

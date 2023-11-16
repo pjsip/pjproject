@@ -840,6 +840,11 @@ typedef enum pjsua_ip_change_op {
     /**
      * The restart listener process.
      */
+    PJSUA_IP_CHANGE_OP_SHUTDOWN_TP,
+
+    /**
+     * The restart listener process.
+     */
     PJSUA_IP_CHANGE_OP_RESTART_LIS,
 
     /**
@@ -2763,6 +2768,15 @@ typedef struct pjsua_ip_change_param
      * Default : PJSUA_TRANSPORT_RESTART_DELAY_TIME
      */
     unsigned        restart_lis_delay;
+
+    /**
+     * If set to PJ_TRUE, this will forcefully shutdown all transports.
+     * Note that this will shutdown TCP/TLS transports only, UDP transport
+     * should be restarted via restart_listener.
+     *
+     * Default : PJ_TRUE
+     */
+    pj_bool_t       shutdown_transport;
 
 } pjsua_ip_change_param;
 
@@ -7443,7 +7457,7 @@ typedef struct pjsua_snd_dev_param
      */
     unsigned            mode;
 
-    /*
+    /**
      * The library will maintain the global sound device settings set when
      * opening the sound device for the first time and later can be modified
      * using #pjsua_snd_set_setting(). These setings are then applied to any
