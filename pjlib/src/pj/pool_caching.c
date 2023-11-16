@@ -188,7 +188,7 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
             cp->capacity = 0;
         }
 
-        PJ_LOG(6, (pool->obj_name, "pool reused, size=%u", pool->capacity));
+        PJ_LOG(6, (pool->obj_name, "pool reused, size=%lu", pool->capacity));
     }
 
     /* Put in used list. */
@@ -245,7 +245,7 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
     }
 
     /* Reset pool. */
-    PJ_LOG(6, (pool->obj_name, "recycle(): cap=%d, used=%d(%d%%)", 
+    PJ_LOG(6, (pool->obj_name, "recycle(): cap=%ld, used=%ld(%ld%%)", 
                pool_capacity, pj_pool_get_used_size(pool), 
                pj_pool_get_used_size(pool)*100/pool_capacity));
     pj_pool_reset(pool);
