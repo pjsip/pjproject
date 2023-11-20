@@ -1601,7 +1601,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac2(pjsip_module *tsx_user,
     tsx->hashed_key = pj_hash_calc_tolower(0, NULL, &tsx->transaction_key);
 #endif
 
-    PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", tsx->transaction_key.slen,
+    PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", (int)tsx->transaction_key.slen,
                tsx->transaction_key.ptr));
 
     /* Begin with State_Null.
@@ -1760,7 +1760,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas2(pjsip_module *tsx_user,
     branch = &rdata->msg_info.via->branch_param;
     pj_strdup(tsx->pool, &tsx->branch, branch);
 
-    PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", tsx->transaction_key.slen,
+    PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", (int)tsx->transaction_key.slen,
                tsx->transaction_key.ptr));
 
 
