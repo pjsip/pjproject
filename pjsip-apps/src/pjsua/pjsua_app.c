@@ -1060,6 +1060,11 @@ void on_ip_change_progress(pjsua_ip_change_op op,
 
     if (status == PJ_SUCCESS) {
         switch (op) {
+        case PJSUA_IP_CHANGE_OP_SHUTDOWN_TP:
+            pj_ansi_snprintf(info_str, sizeof(info_str),
+                             "TCP/TLS transports shutdown");
+            break;
+
         case PJSUA_IP_CHANGE_OP_RESTART_LIS:
             pjsua_transport_get_info(info->lis_restart.transport_id, &tp_info);
             pj_ansi_snprintf(info_str, sizeof(info_str),
@@ -1107,6 +1112,7 @@ void on_ip_change_progress(pjsua_ip_change_op op,
             pj_ansi_snprintf(info_str, sizeof(info_str),
                              "done");
         default:
+            info_str[0] = '\0';
             break;
         }
         PJ_LOG(3,(THIS_FILE, "IP change progress report : %s", info_str));

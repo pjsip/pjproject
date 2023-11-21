@@ -347,6 +347,15 @@ struct IpChangeParam {
      */
     unsigned        restartLisDelay;
 
+    /**
+     * If set to PJ_TRUE, this will forcefully shutdown all transports.
+     * Note that this will shutdown TCP/TLS transports only, UDP transport
+     * should be restarted via restart_listener.
+     *
+     * Default : PJ_TRUE
+     */
+    bool            shutdownTransport;
+
 public:
     /**
      * Constructor.

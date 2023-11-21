@@ -3252,6 +3252,7 @@ PJ_DEF(void) pjsua_ip_change_param_default(pjsua_ip_change_param *param)
     pj_bzero(param, sizeof(*param));
     param->restart_listener = PJ_TRUE;
     param->restart_lis_delay = PJSUA_TRANSPORT_RESTART_DELAY_TIME;
+    param->shutdown_transport = PJ_TRUE;
 }
 
 
@@ -3980,6 +3981,28 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
                               pjsip_cfg()->tsx.td);
 
         PJ_LOG(4,(THIS_FILE,"IP change temporarily ignores request timeout"));
+    }
+
+    /* Shutdown all TCP/TLS transports */
+    if (param->shutdown_transport) {
+        pjsip_tpmgr_shutdown_param param;
+        pjsua_ip_change_op_info info;
+
+        pjsip_tpmgr_shutdown_param_default(&param);
+        param.include_udp = PJ_FALSE;
+
+        PJ_LOG(4,(THIS_FILE, "IP change shutting down transports.."));
+        status = pjsip_tpmgr_shutdown_all(
+                                    pjsip_endpt_get_tpmgr(pjsua_var.endpt),
+                                    &param);
+
+        /* Provide dummy info instead of NULL info to avoid possible crash
+         * (if app does not check).
+         */
+        pj_bzero(&info, sizeof(info));
+        pjsua_var.ua_cfg.cb.on_ip_change_progress(
+                                    PJSUA_IP_CHANGE_OP_SHUTDOWN_TP,
+                                    status, &info);
     }
 
     if (param->restart_listener) {
