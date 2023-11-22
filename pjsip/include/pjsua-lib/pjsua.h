@@ -426,6 +426,16 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #   define PJSUA_TRICKLE_ICE_NEW_CAND_CHECK_INTERVAL    100
 #endif
 
+/**
+ * Specify if PJSUA should check for merged requests as per RFC 3261 section
+ * 8.2.2.2. If a merged request is detected, PJSUA will automatically reply
+ * with a 482 - Loop Detected.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJSUA_DETECT_MERGED_REQUESTS
+#   define PJSUA_DETECT_MERGED_REQUESTS  1
+#endif
 
 /**
  * This enumeration represents pjsua state.

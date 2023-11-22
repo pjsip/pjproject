@@ -663,6 +663,7 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 {
     pj_bool_t processed = PJ_FALSE;
 
+#if PJSUA_DETECT_MERGED_REQUESTS
     if (pjsip_tsx_detect_merged_requests(rdata)) {
         PJ_LOG(4, (THIS_FILE, "Merged request detected"));
 
@@ -673,6 +674,7 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 
         return PJ_TRUE;
     }
+#endif
 
     PJSUA_LOCK();
 
