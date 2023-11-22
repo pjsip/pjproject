@@ -427,14 +427,14 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #endif
 
 /**
- * Defines is PJSUA will detect merged requests per RFC 3261 section 8.2.2.2.
- * In a case of merged request appears, PJSUA will respond with 482 - Loop Detected
- * This option is needed in a case of legit accepting different branches of a same transaction.
+ * Specify if PJSUA should check for merged requests as per RFC 3261 section
+ * 8.2.2.2. If a merged request is detected, PJSUA will automatically reply
+ * with a 482 - Loop Detected.
  *
- * Default: Yes
+ * Default: 1 (enabled)
  */
-#ifndef PJSUA_DETECT_MERGED_REQUEST
-#   define PJSUA_DETECT_MERGED_REQUEST  1
+#ifndef PJSUA_DETECT_MERGED_REQUESTS
+#   define PJSUA_DETECT_MERGED_REQUESTS  1
 #endif
 
 /**
