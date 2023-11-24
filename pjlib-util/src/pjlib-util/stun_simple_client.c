@@ -345,7 +345,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
         }
     }
 
-    TRACE_((THIS_FILE, "  Pool usage=%ld of %ld", pj_pool_get_used_size(pool),
+    TRACE_((THIS_FILE, "  Pool usage=%d of %d", pj_pool_get_used_size(pool),
             pj_pool_get_capacity(pool)));
 
     pj_pool_release(pool);

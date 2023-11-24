@@ -787,7 +787,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer_dbg(pjsip_endpoint *endpt,
                                                     const char *src_file,
                                                     int src_line)
 {
-    PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer(entry=%p, delay=%lu.%lu)",
+    PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer(entry=%p, delay=%u.%u)",
                          entry, delay->sec, delay->msec));
     return pj_timer_heap_schedule_dbg(endpt->timer_heap, entry, delay,
                                       src_file, src_line);
@@ -817,7 +817,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock_dbg(
                                                     int src_line)
 {
     PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer_w_grp_lock"
-                          "(entry=%p, delay=%ld.%ld, grp_lock=%p)",
+                          "(entry=%p, delay=%u.%u, grp_lock=%p)",
                           entry, delay->sec, delay->msec, grp_lock));
     return pj_timer_heap_schedule_w_grp_lock_dbg(endpt->timer_heap, entry,
                                                  delay, id_val, grp_lock,
