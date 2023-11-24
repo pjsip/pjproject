@@ -91,43 +91,26 @@ class MyObserver implements MyAppObserver {
 
 class MyJob extends PendingJob
 {
-    private MyJobHub hub;
-    public int id;
-
     @Override
     public void execute(boolean is_pending) {
-        System.out.println("Executing job id:" + id);
-        hub.delJob(this.id);
+        System.out.println("Executing job is_pending:" + is_pending);
     }
 
     protected void finalize() {
         System.out.println("Job deleted");
-    }
-
-    public MyJob(MyJobHub inHub) {
-        super(false);
-        hub = inHub;
-        id = ThreadLocalRandom.current().nextInt(1, 100000 + 1);
     }
 }
 
 class MyJobHub
 {
     Endpoint ep;
-    HashMap<Integer, MyJob> jobMap;
     public MyJobHub(Endpoint inEp) {
         ep = inEp;
-        jobMap = new HashMap();
     }
 
     public void setNewJob() {
-        MyJob job = new MyJob(this);
-        jobMap.put(job.id, job);
+        MyJob job = new MyJob();
         ep.utilAddPendingJob(job);
-    }
-
-    public void delJob(int id) {
-        jobMap.remove(id);
     }
 }
 
@@ -205,6 +188,7 @@ public class sample {
                 } catch (Exception e) {}
 
                 jobHub.setNewJob();
+                System.gc();
 
                 while (!Thread.currentThread().isInterrupted()) {
                         // Handle events

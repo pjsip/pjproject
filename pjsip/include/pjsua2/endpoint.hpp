@@ -1159,27 +1159,41 @@ struct EpConfig : public PersistentObject
 
 };
 
+/* This will add reference counting capability. It is useful to enable
+ * object destruction based on reference counting.
+ */
+struct RefCountObj {
+    /** Return the current reference count. */
+    int refCount() const { return count; }
+
+    /** Add the reference count. */
+    int addRef() const { return add_ref(); }
+
+    /**
+     * Remove or delete reference count. This might delete the object if
+     * the reference count is 0.
+     */
+    int delRef() const;
+
+protected:
+    virtual ~RefCountObj() = 0;
+
+    int add_ref() const { return ++count; }
+
+    int del_ref() const { return --count; }
+
+private:
+    mutable int count;
+};
+
 /* This represents posted job */
-struct PendingJob
+struct PendingJob : public RefCountObj
 {
-    PendingJob():autoDelete(true){};
-
-    PendingJob(bool autoDel):autoDelete(autoDel) {};
-
     /** Perform the job */
     virtual void execute(bool is_pending) = 0;
 
-    bool getAutoDelete() { return autoDelete; };
-
     /** Virtual destructor */
     virtual ~PendingJob() {}
-
-private:
-    /**
-     * If this is set to true, the job will be automatically be deleted
-     * after the job is executed.
-     */
-    bool autoDelete;
 };
 
 //////////////////////////////////////////////////////////////////////////////

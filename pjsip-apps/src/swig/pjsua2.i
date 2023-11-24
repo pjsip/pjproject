@@ -185,6 +185,9 @@ using namespace pj;
 %template(RtcpFbCapVector)              std::vector<pj::RtcpFbCap>;
 %template(SslCertNameVector)            std::vector<pj::SslCertName>;
 
+%refobject    pj::RefCountObj "$this->addRef();"
+%unrefobject  pj::RefCountObj "$this->delRef();"
+
 #if defined(__ANDROID__)
    %ignore pj::WindowHandle::display;
    %ignore pj::WindowHandle::window;

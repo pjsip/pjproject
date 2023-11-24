@@ -580,6 +580,17 @@ struct PendingLog : public PendingJob
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+int RefCountObj::delRef() const
+{
+    if (refCount() == 0 || del_ref() == 0 ) {
+        delete this;
+        return 0;
+    }
+    return refCount();
+}
+
+RefCountObj::~RefCountObj() {}
+///////////////////////////////////////////////////////////////////////////////
 /*
  * Endpoint instance
  */
@@ -611,12 +622,8 @@ Endpoint& Endpoint::instance() PJSUA2_THROW(Error)
 Endpoint::~Endpoint()
 {
     while (!pendingJobs.empty()) {
-        PendingJob *job = NULL;
-        bool autoDel = job->getAutoDelete();
-        job = pendingJobs.front();
-        if (autoDel)
-            delete job;
-
+        PendingJob *job = pendingJobs.front();
+        job->delRef();
         pendingJobs.pop_front();
     }
 
@@ -643,17 +650,11 @@ void Endpoint::utilAddPendingJob(PendingJob *job)
     enum {
         MAX_PENDING_JOBS = 1024
     };
-
+    job->addRef();
     /* See if we can execute immediately */
     if (!mainThreadOnly || pj_thread_this()==mainThread) {
-        bool autoDel = job->getAutoDelete();
         job->execute(false);
-        if (autoDel){
-            utilLogWrite(1, THIS_FILE,
-                     "Deleting job");
-            delete job;
-        }
-
+        job->delRef();
         return;
     }
 
@@ -662,11 +663,8 @@ void Endpoint::utilAddPendingJob(PendingJob *job)
 
         pj_enter_critical_section();
         for (unsigned i=0; i<NUMBER_TO_DISCARD; ++i) {
-            PendingJob *tmp_job = NULL;
-            tmp_job = pendingJobs.back();
-            if (tmp_job->getAutoDelete())
-                delete tmp_job;
-
+            PendingJob *job = pendingJobs.back();
+            job->delRef();
             pendingJobs.pop_back();
         }
 
@@ -724,10 +722,8 @@ void Endpoint::performPendingJobs()
         pj_leave_critical_section();
 
         if (job) {
-            bool autoDel = job->getAutoDelete();
             job->execute(true);
-            if (autoDel)
-                delete job;
+            job->delRef();
         } else
             break;
     }

@@ -4,6 +4,7 @@ import time
 from collections import deque
 from random import randint
 import struct
+import gc
 
 write=sys.stdout.write
 
@@ -227,14 +228,19 @@ class TestJob(pj.PendingJob):
      def __del__(self):
          print("Job deleted")
 
-class JobHub() :
+class MyJob(pj.PendingJob):
+     def __init__(self):
+        super().__init__()
+
+     def execute(self, is_pending):
+         print("Executing job, is_pending: ", is_pending)
+
+class MyJobHub() :
      def __init__(self, ep):
-         self.__jobList__ = {}
          self.__ep__ = ep
 
      def setNewJob(self):
-         job = TestJob(self)
-         self.__jobList__[job.getId()] = job
+         job = MyJob()
          self.__ep__.utilAddPendingJob(job)
 
      def delJob(self, id):
@@ -250,8 +256,10 @@ def ua_pending_job_test():
     ep.libInit(ep_cfg)
     ep.libStart()
 
-    hub = JobHub(ep)
+    hub = MyJobHub(ep)
     hub.setNewJob()
+    gc.collect()
+
     ep.libDestroy()
 
 #
