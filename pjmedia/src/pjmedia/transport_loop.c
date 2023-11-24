@@ -187,6 +187,7 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
         return status;
 
+    tp->base.grp_lock = grp_lock;
     pj_grp_lock_add_ref(grp_lock);
     pj_grp_lock_add_handler(grp_lock, pool, tp, &tp_loop_on_destroy);
 
