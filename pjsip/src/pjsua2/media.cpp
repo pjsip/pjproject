@@ -362,6 +362,12 @@ AudioMediaPlayer::~AudioMediaPlayer()
     }
 }
 
+void AudioMediaPlayer::destroyPlayer(const int &playerID)
+{
+    PJ_LOG(4,(THIS_FILE, "Destroying specific player %d", playerID));
+    pjsua_player_destroy(playerId);
+}
+
 void AudioMediaPlayer::createPlayer(const string &file_name,
                                     unsigned options)
                                     PJSUA2_THROW(Error)
@@ -457,6 +463,7 @@ AudioMediaPlayerInfo AudioMediaPlayer::getInfo() const PJSUA2_THROW(Error)
     info.payloadBitsPerSample   = pj_info.payload_bits_per_sample;
     info.sizeBytes              = pj_info.size_bytes;
     info.sizeSamples            = pj_info.size_samples;
+    info.playerId               = playerId;
 
     return info;
 }

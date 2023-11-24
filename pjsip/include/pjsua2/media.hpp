@@ -535,6 +535,8 @@ struct AudioMediaPlayerInfo
      */
     pj_uint32_t         sizeSamples;
 
+    int                 playerId;
+
 public:
     /**
      * Default constructor
@@ -571,6 +573,13 @@ public:
      */
     void createPlayer(const string &file_name,
                       unsigned options=0) PJSUA2_THROW(Error);
+
+    /**
+     * Destroy specific player to get resource immediatly.
+     * @param playerID  The id of the player returned by 
+     *                  AudioMediaPlayerInfo::getInfo()
+    */
+    void destroyPlayer(const int &playerID);
 
     /**
      * Create a file playlist media port, and automatically add the port
