@@ -1878,6 +1878,11 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
         {
             pj_strdup(dlg->pool, &dlg->initial_dest,
                       &rdata->tp_info.transport->remote_name.host);
+        } else {
+            /* Reset the stored remote name if the transport is a server
+             * transport.
+             */
+            dlg->initial_dest.slen = 0;
         }
 
         /* Ignore subsequent request from remote */
