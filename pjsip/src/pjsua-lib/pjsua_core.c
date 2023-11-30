@@ -3362,7 +3362,7 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     pool = pj_pool_create(&pjsua_var.cp.factory, "check%p", 1024, 0, NULL);
     if (!pool) return PJ_ENOMEM;
 
-    url = (char*) pj_pool_alloc(pool, len+1);
+    url = (char*) pj_pool_calloc(pool, 1, len+1);
     pj_ansi_strxcpy(url, c_url, len+1);
 
     p = pjsip_parse_uri(pool, url, len, 0);
