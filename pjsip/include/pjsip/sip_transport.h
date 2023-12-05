@@ -463,6 +463,33 @@ struct pjsip_rx_data
 
 };
 
+
+/**
+ * This enumerator describes the options for cloning pjsip_rx_data.
+ */
+typedef enum pjsip_rx_data_clone_flag
+{
+    /**
+     * The clone will copy transport pointer in \a tp_info, duplicates
+     * the \a pkt_info, perform deep clone of the \a msg_info parts of
+     * the rdata, and fills the \a endpt_info (i.e. the \a mod_data)
+     * with zeros.
+     */
+    PJSIP_RX_DATA_CLONE_DEFAULT         = 0,
+
+    /**
+     * The clone behavior will be the same as PJSIP_RX_DATA_CLONE_DEFAULT,
+     * except this will also copy the \a endpt_info (i.e. the \a mod_data).
+     *
+     * The mod_data is used by PJSIP module to store its data, for example
+     * the transaction module uses it to link pjsip_rx_data to transaction
+     * instance (see pjsip_rdata_get_tsx()).
+     */
+    PJSIP_RX_DATA_CLONE_ENDPT_INFO      = 1
+
+} pjsip_rx_data_clone_flag;
+
+
 /**
  * Get printable information about the message in the rdata.
  *
@@ -484,7 +511,7 @@ PJ_DECL(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata);
  * fills the \a endpt_info (i.e. the \a mod_data) with zeros.
  *
  * @param src       The source to be cloned.
- * @param flags     Optional flags. Must be zero for now.
+ * @param flags     The clone flags, see pjsip_rx_data_clone_flag.
  * @param p_rdata   Pointer to receive the cloned rdata.
  *
  * @return          PJ_SUCCESS on success or the appropriate error.

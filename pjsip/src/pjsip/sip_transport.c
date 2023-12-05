@@ -781,7 +781,8 @@ PJ_DEF(pj_status_t) pjsip_rx_data_clone( const pjsip_rx_data *src,
     pjsip_rx_data *dst;
     pjsip_hdr *hdr;
 
-    PJ_ASSERT_RETURN(src && flags==0 && p_rdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(src && p_rdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(flags <= PJSIP_RX_DATA_CLONE_ENDPT_INFO, PJ_EINVAL);
 
     pool = pj_pool_create(src->tp_info.pool->factory,
                           "rtd%p",
@@ -838,6 +839,11 @@ PJ_DEF(pj_status_t) pjsip_rx_data_clone( const pjsip_rx_data *src,
 
 #undef GET_MSG_HDR
 #undef GET_MSG_HDR2
+
+    /* Copy endpt_info */
+    if (flags == PJSIP_RX_DATA_CLONE_ENDPT_INFO) {
+        pj_memcpy(&dst->endpt_info, &src->endpt_info, sizeof(src->endpt_info));
+    }
 
     *p_rdata = dst;
 
