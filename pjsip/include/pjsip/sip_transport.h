@@ -511,7 +511,7 @@ PJ_DECL(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata);
  * fills the \a endpt_info (i.e. the \a mod_data) with zeros.
  *
  * @param src       The source to be cloned.
- * @param flags     The clone flags, see pjsip_rx_data_clone_flag.
+ * @param flags     The clone flags, see #pjsip_rx_data_clone_flag.
  * @param p_rdata   Pointer to receive the cloned rdata.
  *
  * @return          PJ_SUCCESS on success or the appropriate error.
