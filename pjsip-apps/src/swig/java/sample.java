@@ -19,9 +19,6 @@
 package org.pjsip.pjsua2.app;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.concurrent.ThreadLocalRandom;
-
 import org.pjsip.pjsua2.*;
 import org.pjsip.pjsua2.app.*;
 

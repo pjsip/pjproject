@@ -2,7 +2,6 @@ import pjsua2 as pj
 import sys
 import time
 from collections import deque
-from random import randint
 import struct
 import gc
 
