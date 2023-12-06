@@ -1349,10 +1349,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     pjmedia_vid_stream_send_rtcp_bye(strm);
 
     /* Release locks before unsubscribing, to avoid deadlock. */
-    while (PJSUA_LOCK_IS_LOCKED()) {
-        num_locks++;
-        PJSUA_UNLOCK();
-    }
+    num_locks = PJSUA_RELEASE_LOCK();
 
     /* Unsubscribe events first, otherwise the event callbacks
      * can be called and access already destroyed objects.
@@ -1388,8 +1385,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
 
     /* Re-acquire the locks. */
-    for (; num_locks > 0; num_locks--)
-        PJSUA_LOCK();
+    PJSUA_RELOCK(num_locks);
 
     PJSUA_LOCK();
 
