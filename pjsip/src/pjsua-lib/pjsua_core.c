@@ -3850,10 +3850,7 @@ static pj_status_t restart_listener(pjsua_transport_id id,
         unsigned num_locks = 0;
 
         /* Release locks before restarting the transport, to avoid deadlock. */
-        while (PJSUA_LOCK_IS_LOCKED()) {
-            num_locks++;
-            PJSUA_UNLOCK();
-        }
+        num_locks = PJSUA_RELEASE_LOCK();
 
         status = pjsip_udp_transport_restart2(
                                        pjsua_var.tpdata[id].data.tp,
