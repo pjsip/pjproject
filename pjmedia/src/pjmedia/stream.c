@@ -161,6 +161,7 @@ struct pjmedia_stream
     pj_uint32_t              tx_duration;   /**< TX duration in timestamp.  */
 
     pj_mutex_t              *jb_mutex;
+    pj_mutex_t              *rtcp_mutex;
     pjmedia_jbuf            *jb;            /**< Jitter buffer.             */
     char                     jb_last_frm;   /**< Last frame type from jb    */
     unsigned                 jb_last_frm_cnt;/**< Last JB frame type counter*/
@@ -1087,10 +1088,9 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
     pj_status_t status;
 
     /* We need to prevent data race since there is only a single instance
-     * of rtcp packet buffer. Let's just use the JB mutex for this instead
-     * of creating a separate lock.
+     * of rtcp packet buffer.
      */
-    pj_mutex_lock(stream->jb_mutex);
+    pj_mutex_lock(stream->rtcp_mutex);
 
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
@@ -1211,7 +1211,7 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
         }
     }
 
-    pj_mutex_unlock(stream->jb_mutex);
+    pj_mutex_unlock(stream->rtcp_mutex);
 
     return status;
 }
@@ -2533,8 +2533,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     }
 
     /* Create mutex to protect jitter buffer: */
-
     status = pj_mutex_create_simple(pool, NULL, &stream->jb_mutex);
+    if (status != PJ_SUCCESS)
+        goto err_cleanup;
+
+    /* Create mutex for RTCP purposes */
+    status = pj_mutex_create_simple(pool, NULL, &stream->rtcp_mutex);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
@@ -3068,7 +3072,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     /* Send RTCP BYE (also SDES & XR) */
-    if (stream->transport && stream->jb_mutex && !stream->rtcp_sdes_bye_disabled) {
+    if (stream->transport && stream->rtcp_mutex &&
+        !stream->rtcp_sdes_bye_disabled)
+    {
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
         send_rtcp(stream, PJ_TRUE, PJ_TRUE, stream->rtcp.xr_enabled, PJ_FALSE);
 #else
@@ -3152,6 +3158,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
         pj_mutex_unlock(stream->jb_mutex);
         pj_mutex_destroy(stream->jb_mutex);
         stream->jb_mutex = NULL;
+    }
+
+    if (stream->rtcp_mutex) {
+        pj_mutex_destroy(stream->rtcp_mutex);
+        stream->rtcp_mutex = NULL;
     }
 
     /* Destroy jitter buffer */
