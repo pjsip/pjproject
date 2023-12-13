@@ -588,7 +588,8 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
     /* To avoid deadlock with media transport, we use the transport's
      * group lock.
      */
-    pj_grp_lock_acquire( stream->transport->grp_lock );
+    if (stream->transport->grp_lock)
+        pj_grp_lock_acquire( stream->transport->grp_lock );
 
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
@@ -671,7 +672,8 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
         }
     }
 
-    pj_grp_lock_release( stream->transport->grp_lock );
+    if (stream->transport->grp_lock)
+        pj_grp_lock_release( stream->transport->grp_lock );
 
     return status;
 }
