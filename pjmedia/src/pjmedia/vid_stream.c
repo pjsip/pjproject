@@ -107,7 +107,6 @@ struct pjmedia_vid_stream
     pjmedia_vid_codec_mgr   *codec_mgr;     /**< Codec manager.             */
     pjmedia_vid_stream_info  info;          /**< Stream info.               */
     pj_grp_lock_t           *grp_lock;      /**< Stream lock.               */
-    pj_mutex_t              *rtcp_mutex;    /**< RTCP mutex.                */
 
     pjmedia_vid_channel     *enc;           /**< Encoding channel.          */
     pjmedia_vid_channel     *dec;           /**< Decoding channel.          */
@@ -585,7 +584,11 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
     int len, max_len;
     pj_status_t status;
 
-    pj_mutex_lock(stream->rtcp_mutex);
+
+    /* To avoid deadlock with media transport, we use the transport's
+     * group lock.
+     */
+    pj_grp_lock_acquire( stream->transport->grp_lock );
 
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
@@ -668,7 +671,7 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
         }
     }
 
-    pj_mutex_unlock(stream->rtcp_mutex);
+    pj_grp_lock_release( stream->transport->grp_lock );
 
     return status;
 }
@@ -1844,11 +1847,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
         stream->cname.slen = p - stream->cname.ptr;
     }
 
-    /* Create mutex for RTCP purposes */
-    status = pj_mutex_create_simple(pool, NULL, &stream->rtcp_mutex);
-    if (status != PJ_SUCCESS)
-        goto err_cleanup;
-
     /* Create group lock */
     status = pj_grp_lock_create_w_handler(pool, NULL, stream, 
                                           &on_destroy,
@@ -2197,9 +2195,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
     pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream, &stream->rtcp);
 
     /* Send RTCP BYE (also SDES) */
-    if (stream->transport && stream->rtcp_mutex &&
-        !stream->rtcp_sdes_bye_disabled)
-    {
+    if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
         send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE);
     }
 
@@ -2243,10 +2239,6 @@ static void on_destroy( void *arg )
     }
 
     /* Free mutex */
-    if (stream->rtcp_mutex) {
-        pj_mutex_destroy(stream->rtcp_mutex);
-        stream->rtcp_mutex = NULL;
-    }
     stream->grp_lock = NULL;
 
     /* Destroy jitter buffer */
