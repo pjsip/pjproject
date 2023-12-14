@@ -584,7 +584,12 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
     int len, max_len;
     pj_status_t status;
 
-    pj_grp_lock_acquire( stream->grp_lock );
+
+    /* To avoid deadlock with media transport, we use the transport's
+     * group lock.
+     */
+    if (stream->transport->grp_lock)
+        pj_grp_lock_acquire( stream->transport->grp_lock );
 
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
@@ -667,7 +672,8 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
         }
     }
 
-    pj_grp_lock_release( stream->grp_lock );
+    if (stream->transport->grp_lock)
+        pj_grp_lock_release( stream->transport->grp_lock );
 
     return status;
 }
@@ -2191,7 +2197,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
     pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream, &stream->rtcp);
 
     /* Send RTCP BYE (also SDES) */
-    if (stream->transport && stream->grp_lock && !stream->rtcp_sdes_bye_disabled) {
+    if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
         send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE);
     }
 
