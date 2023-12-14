@@ -1770,7 +1770,7 @@ PJ_DEF(pj_uint32_t) pjmedia_sdp_transport_get_proto(const pj_str_t *tp)
     PJ_ASSERT_RETURN(tp, PJMEDIA_TP_PROTO_NONE);
 
     idx = pj_strtok2(tp, "/", &token, 0);
-    if (idx != tp->slen)
+    if ((idx != tp->slen) && (tp->slen != token.slen))
         pj_strset(&rest, tp->ptr + token.slen + 1, tp->slen - token.slen - 1);
 
     if (pj_stricmp2(&token, "RTP") == 0) {
