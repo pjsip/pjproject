@@ -2182,16 +2182,18 @@ static void send_msg_callback( pjsip_send_state *send_state,
              * since with 503 normally client should try again.
              * See https://github.com/pjsip/pjproject/issues/870
              */
-            if (-sent==PJ_ERESOLVE || -sent==PJLIB_UTIL_EDNS_NXDOMAIN)
+            if (-sent==PJ_ERESOLVE || -sent==PJLIB_UTIL_EDNS_NXDOMAIN) {
                 sc = PJSIP_SC_BAD_GATEWAY;
-            else
+            } else {
                 sc = PJSIP_SC_TSX_TRANSPORT_ERROR;
+            }
 
             /* Terminate transaction, if it's not already terminated. */
-            tsx_set_status_code(tsx, sc, &err);
-            if (tsx->state != PJSIP_TSX_STATE_TERMINATED &&
+            if (sc == PJSIP_SC_BAD_GATEWAY &&
+                tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
+                tsx_set_status_code(tsx, sc, &err);
                 /* Set tsx state to TERMINATED, but release the lock
                  * when invoking the callback, to avoid deadlock.
                  */
@@ -2204,6 +2206,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
              */
             else if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY)
             {
+                tsx_set_status_code(tsx, sc, &err);
                 tsx_set_state( tsx, PJSIP_TSX_STATE_DESTROYED, 
                                PJSIP_EVENT_TRANSPORT_ERROR,
                                send_state->tdata, 0);
