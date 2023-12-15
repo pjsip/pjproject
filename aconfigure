@@ -4848,7 +4848,7 @@ fi
 
 if test "$AR_FLAGS" = ""; then AR_FLAGS="rv"; fi
 
-if test "$LD" = ""; then LD="$CC"; fi
+if test "$LD" = ""; then LD="$CXX"; fi
 
 if test "$LDOUT" = ""; then LDOUT="-o "; fi
 

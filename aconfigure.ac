@@ -46,7 +46,7 @@ AC_CHECK_TOOLS([AR], [ar gar], :)
 
 if test "$AR_FLAGS" = ""; then AR_FLAGS="rv"; fi
 AC_SUBST(AR_FLAGS)
-if test "$LD" = ""; then LD="$CC"; fi
+if test "$LD" = ""; then LD="$CXX"; fi
 AC_SUBST(LD)
 if test "$LDOUT" = ""; then LDOUT="-o "; fi
 AC_SUBST(LDOUT)
