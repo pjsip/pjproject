@@ -2182,13 +2182,15 @@ static void send_msg_callback( pjsip_send_state *send_state,
              * since with 503 normally client should try again.
              * See https://github.com/pjsip/pjproject/issues/870
              */
-            if (-sent==PJ_ERESOLVE || -sent==PJLIB_UTIL_EDNS_NXDOMAIN) {
+            if (-sent==PJ_ERESOLVE || -sent==PJLIB_UTIL_EDNS_NXDOMAIN)
                 sc = PJSIP_SC_BAD_GATEWAY;
-            } else {
+            else
                 sc = PJSIP_SC_TSX_TRANSPORT_ERROR;
-            }
 
-            /* Terminate transaction, if it's not already terminated. */
+            /* We terminate the transaction for 502 error. For 503,
+             * we will retry it.
+             * See https://github.com/pjsip/pjproject/pull/3805
+             */
             if (sc == PJSIP_SC_BAD_GATEWAY &&
                 tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
