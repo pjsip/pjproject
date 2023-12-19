@@ -2187,11 +2187,12 @@ static void send_msg_callback( pjsip_send_state *send_state,
             else
                 sc = PJSIP_SC_TSX_TRANSPORT_ERROR;
 
-            /* We terminate the transaction for 502 error. For 503,
-             * we will retry it.
+            /* For client transaction, we terminate the transaction.
+             * Otherwise, we terminate the transaction for 502 error.
+             * For 503, we will retry it.
              * See https://github.com/pjsip/pjproject/pull/3805
              */
-            if (sc == PJSIP_SC_BAD_GATEWAY &&
+            if ((tsx->role == PJSIP_ROLE_UAC || sc == PJSIP_SC_BAD_GATEWAY) &&
                 tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
