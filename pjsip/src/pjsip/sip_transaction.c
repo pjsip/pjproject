@@ -2162,6 +2162,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
             char errmsg[PJ_ERR_MSG_SIZE];
             pjsip_status_code sc;
             pj_str_t err;
+            pj_bool_t terminate_tsx = PJ_FALSE;
 
             tsx->transport_err = (pj_status_t)-sent;
 
@@ -2187,12 +2188,21 @@ static void send_msg_callback( pjsip_send_state *send_state,
             else
                 sc = PJSIP_SC_TSX_TRANSPORT_ERROR;
 
-            /* For client transaction, we terminate the transaction.
-             * Otherwise, we terminate the transaction for 502 error.
-             * For 503, we will retry it.
+            /* Terminate transaction on these conditions:
+             * - client transaction
+             * - server transaction with 502 error. We will retry for 503.
+             * - server transaction with status code 100 on
+             *   PJSIP_TSX_STATE_TRYING state
              * See https://github.com/pjsip/pjproject/pull/3805
              */
-            if ((tsx->role == PJSIP_ROLE_UAC || sc == PJSIP_SC_BAD_GATEWAY) &&
+            if ((tsx->role == PJSIP_ROLE_UAC) ||
+                (sc == PJSIP_SC_BAD_GATEWAY) ||
+                (tsx->state == PJSIP_TSX_STATE_TRYING && 
+                 tsx->status_code == 100))
+            {
+                terminate_tsx = PJ_TRUE;
+            }
+            if (terminate_tsx && 
                 tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
@@ -2440,6 +2450,9 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
         
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_str_t err;
+
+        if (tsx->transport == NULL)
+            status = PJ_ENOTFOUND;
 
         if (status == PJ_SUCCESS) {
             pj_assert(!"Unexpected status!");

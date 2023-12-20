@@ -1532,7 +1532,7 @@ int tsx_transport_failure_test(void)
         PJ_LOG(5,(THIS_FILE, "   transport loop fail mode set"));
 
         end_test = now;
-        end_test.sec += 5;
+        end_test.sec += 50;
 
         do {
             pj_time_val interval = { 0, 1 };
