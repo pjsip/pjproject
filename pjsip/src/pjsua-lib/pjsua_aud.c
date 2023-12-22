@@ -2265,9 +2265,12 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
         snd_param->playback_dev == PJSUA_SND_NO_DEV)
     {
         PJSUA_UNLOCK();
+        status = PJ_SUCCESS;
         PJ_LOG(4, (THIS_FILE, "No sound device, mode setting is ignored"));
         if (!pjsua_var.no_snd)
-            pjsua_set_no_snd_dev();
+            if (pjsua_set_no_snd_dev() == NULL)
+                status = PJ_ENOTFOUND;
+
         pj_log_pop_indent();
         return status;
     }
