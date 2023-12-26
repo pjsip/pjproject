@@ -745,7 +745,7 @@ static pj_status_t send_raw(dtls_srtp *ds, unsigned idx, const void *buf,
 {
 #if DTLS_DEBUG
     PJ_LOG(2,(ds->base.name, "DTLS-SRTP %s sending %lu bytes",
-                             CHANNEL_TO_STRING(idx), len));
+                             CHANNEL_TO_STRING(idx), (unsigned long)len));
 #endif
 
     return (idx == RTP_CHANNEL?
@@ -1280,7 +1280,7 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
 
 #if DTLS_DEBUG
     PJ_LOG(2,(ds->base.name, "DTLS-SRTP %s receiving %lu bytes",
-                             CHANNEL_TO_STRING(idx), size));
+                             CHANNEL_TO_STRING(idx), (unsigned long)size));
 #endif
 
     /* This is DTLS packet, let's process it. Note that if DTLS nego has

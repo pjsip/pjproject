@@ -1182,7 +1182,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
 
         PJ_LOG(5,(THIS_FILE, "Decode couldn't produce picture, "
                   "input nframes=%lu, concatenated size=%d bytes, ret=%d",
-                  count, whole_len, ret));
+                  (unsigned long)count, whole_len, ret));
     }
 
     return status;

@@ -220,7 +220,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
               (int)fport->base.info.name.slen,
               fport->base.info.name.ptr,
               PJMEDIA_PIA_SRATE(&fport->base.info),
-              fport->bufsize / 1000));
+              (unsigned long)(fport->bufsize / 1000)));
 
 
     return PJ_SUCCESS;

@@ -178,7 +178,8 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
                     break;
             }
 
-            PJ_LOG(1,(THIS_FILE,"     failed: mismatch at pos %ld", pos+i));
+            PJ_LOG(1,(THIS_FILE,"     failed: mismatch at pos %lu",
+                      (unsigned long)(pos+i)));
             rc = -200;
             break;
         }
