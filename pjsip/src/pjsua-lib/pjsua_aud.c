@@ -2228,7 +2228,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
     unsigned alt_cr_cnt = 1;
     unsigned alt_cr[] = {0, 44100, 48000, 32000, 16000, 8000};
     unsigned i;
-    pj_status_t status = -1;
+    pj_status_t status = PJ_SUCCESS;
     unsigned orig_snd_dev_mode = pjsua_var.snd_mode;
 
     PJ_ASSERT_RETURN(snd_param, PJ_EINVAL);
@@ -2265,7 +2265,6 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
         snd_param->playback_dev == PJSUA_SND_NO_DEV)
     {
         PJSUA_UNLOCK();
-        status = PJ_SUCCESS;
         PJ_LOG(4, (THIS_FILE, "No sound device, mode setting is ignored"));
         if (!pjsua_var.no_snd)
             if (pjsua_set_no_snd_dev() == NULL)
