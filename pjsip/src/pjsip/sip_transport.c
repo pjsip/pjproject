@@ -2225,8 +2225,8 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
              */
             if (tmp.slen) {
                 PJ_LOG(2, (THIS_FILE,
-                      "Dropping %ld bytes packet from %s %s:%d %.*s\n",
-                      msg_fragment_size,
+                      "Dropping %lu bytes packet from %s %s:%d %.*s\n",
+                      (unsigned long)msg_fragment_size,
                       rdata->tp_info.transport->type_name,
                       rdata->pkt_info.src_name,
                       rdata->pkt_info.src_port,

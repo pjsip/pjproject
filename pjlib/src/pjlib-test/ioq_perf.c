@@ -121,8 +121,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                     PJ_LOG(3,(THIS_FILE,
                               ".....additional info: type=%s, total read=%lu, "
                               "total sent=%lu",
-                              item->type_name, item->bytes_recv,
-                              item->bytes_sent));
+                              item->type_name, (unsigned long)item->bytes_recv,
+                              (unsigned long)item->bytes_sent));
                 }
             } else {
                 last_error_counter++;
@@ -480,8 +480,10 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     if (display_report) {
         PJ_LOG(3,(THIS_FILE, "  %s %d threads, %d pairs", type_name,
                   thread_cnt, sockpair_cnt));
-        PJ_LOG(3,(THIS_FILE, "  Elapsed  : %lu msec", total_elapsed_usec/1000));
-        PJ_LOG(3,(THIS_FILE, "  Bandwidth: %lu KB/s", *p_bandwidth));
+        PJ_LOG(3,(THIS_FILE, "  Elapsed  : %lu msec",
+                  (unsigned long)(total_elapsed_usec/1000)));
+        PJ_LOG(3,(THIS_FILE, "  Bandwidth: %lu KB/s",
+                  (unsigned long)*p_bandwidth));
         PJ_LOG(3,(THIS_FILE, "  Threads statistics:"));
         PJ_LOG(3,(THIS_FILE, "    ============================="));
         PJ_LOG(3,(THIS_FILE, "    Thread  Loops  Events  Errors"));
@@ -506,7 +508,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     } else {
         PJ_LOG(3,(THIS_FILE, "   %.4s    %2d        %2d       %8lu KB/s",
                   type_name, thread_cnt, sockpair_cnt,
-                  *p_bandwidth));
+                  (unsigned long)*p_bandwidth));
     }
 
     /* Done. */
@@ -578,7 +580,7 @@ static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
               test_param[best_index].type_name,
               test_param[best_index].thread_cnt,
               test_param[best_index].sockpair_cnt,
-              best_bandwidth));
+              (unsigned long)best_bandwidth));
     PJ_LOG(3,(THIS_FILE, "   (Note: packet size=%d, total errors=%u)", 
                          BUF_SIZE, last_error_counter));
     return 0;

@@ -68,7 +68,7 @@ static int test_timer_heap(void)
     pool = pj_pool_create( mem, NULL, size, 4000, NULL);
     if (!pool) {
         PJ_LOG(3,("test", "...error: unable to create pool of %lu bytes",
-                  size));
+                  (unsigned long)size));
         return -10;
     }
 
@@ -161,8 +161,8 @@ static int test_timer_heap(void)
         } while (PJ_TIME_VAL_LTE(now, expire)&&pj_timer_heap_count(timer) > 0);
 
         if (pj_timer_heap_count(timer)) {
-            PJ_LOG(3, (THIS_FILE, "ERROR: %ld timers left", 
-                       pj_timer_heap_count(timer)));
+            PJ_LOG(3, (THIS_FILE, "ERROR: %lu timers left", 
+                       (unsigned long)pj_timer_heap_count(timer)));
             ++err;
         }
         t_sched.u32.lo /= count; 
@@ -715,8 +715,8 @@ on_return:
     if (timer)
         pj_timer_heap_destroy(timer);
 
-    PJ_LOG(3,("test", "Total memory of timer heap: %ld",
-                      pj_timer_heap_mem_size(ST_ENTRY_COUNT)));
+    PJ_LOG(3,("test", "Total memory of timer heap: %lu",
+                      (unsigned long)pj_timer_heap_mem_size(ST_ENTRY_COUNT)));
 
     if (tparam.idx)
         pj_atomic_destroy(tparam.idx);
