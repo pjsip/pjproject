@@ -2170,7 +2170,6 @@ static void send_msg_callback( pjsip_send_state *send_state,
             char errmsg[PJ_ERR_MSG_SIZE];
             pjsip_status_code sc;
             pj_str_t err;
-            pj_bool_t terminate_tsx = PJ_FALSE;
 
             tsx->transport_err = (pj_status_t)-sent;
 
@@ -2196,21 +2195,12 @@ static void send_msg_callback( pjsip_send_state *send_state,
             else
                 sc = PJSIP_SC_TSX_TRANSPORT_ERROR;
 
-            /* Terminate transaction on these conditions:
-             * - client transaction
-             * - server transaction with 502 error. We will retry for 503.
-             * - server transaction with status code 100 on
-             *   PJSIP_TSX_STATE_TRYING state
-             * See https://github.com/pjsip/pjproject/pull/3805
+            /* For UAC tsx, we directly terminate the transaction.
+             * For UAS tsx, we terminate the transaction for 502 error,
+             * and will retry for 503.
+             * See #3805 and #3806.
              */
-            if ((tsx->role == PJSIP_ROLE_UAC) ||
-                (sc == PJSIP_SC_BAD_GATEWAY) ||
-                (tsx->state == PJSIP_TSX_STATE_TRYING && 
-                 tsx->status_code == 100))
-            {
-                terminate_tsx = PJ_TRUE;
-            }
-            if (terminate_tsx && 
+            if ((tsx->role == PJSIP_ROLE_UAC || sc == PJSIP_SC_BAD_GATEWAY) &&
                 tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
@@ -2285,7 +2275,16 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
     pj_grp_lock_acquire(tsx->grp_lock);
     tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 
-    if (sent > 0) {
+    if (sent > 0 || tsx->role == PJSIP_ROLE_UAS) {
+        if (sent < 0) {
+            /* For UAS transactions, we just print error log
+             * and continue as per normal.
+             */
+            PJ_PERROR(2,(tsx->obj_name, (pj_status_t)-sent,
+                          "Transport failed to send %s!",
+                          pjsip_tx_data_get_info(tdata)));
+        }
+
         /* Pending destroy? */
         if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY) {
             tsx_set_state( tsx, PJSIP_TSX_STATE_DESTROYED,
@@ -2318,7 +2317,7 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
     }
     pj_grp_lock_release(tsx->grp_lock);
 
-    if (sent < 0) {
+    if (sent < 0 && tsx->role == PJSIP_ROLE_UAC) {
         pj_time_val delay = {0, 0};
 
         PJ_PERROR(2,(tsx->obj_name, (pj_status_t)-sent,
@@ -2453,14 +2452,14 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 
     /* If we have resolved the server, we treat the error as permanent error.
      * Terminate transaction with transport error failure.
+     * Only applicable for UAC transactions.
      */
-    if (tsx->transport_flag & TSX_HAS_RESOLVED_SERVER) {
+    if (tsx->role == PJSIP_ROLE_UAC &&
+        (tsx->transport_flag & TSX_HAS_RESOLVED_SERVER))
+    {
         
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_str_t err;
-
-        if (tsx->transport == NULL)
-            status = PJ_ENOTFOUND;
 
         if (status == PJ_SUCCESS) {
             pj_assert(!"Unexpected status!");

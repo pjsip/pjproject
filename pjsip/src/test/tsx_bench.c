@@ -138,7 +138,7 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     rdata.msg_info.from = (pjsip_from_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
     rdata.msg_info.to = (pjsip_to_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_TO, NULL);
     rdata.msg_info.cseq = (pjsip_cseq_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_CSEQ, NULL);
-    rdata.msg_info.cid = (pjsip_cid_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_FROM, NULL);
+    rdata.msg_info.cid = (pjsip_cid_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_CALL_ID, NULL);
     rdata.msg_info.via = via;
     
     pj_sockaddr_in_init(&remote, 0, 0);
