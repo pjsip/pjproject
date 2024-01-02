@@ -1141,7 +1141,8 @@ static pj_status_t and_media_codec_encode(pjmedia_codec *codec,
                 } else {
                     PJ_LOG(4,(THIS_FILE, "Encoder getInputBuffer "
                                          "size: %lu, expecting %d.",
-                                         output_size, input_size));
+                                         (unsigned long)output_size,
+                                         input_size));
                 }
                 goto on_return;
             }
@@ -1262,7 +1263,8 @@ static pj_status_t and_media_codec_decode(pjmedia_codec *codec,
                                            &input_size);
     if (input_buf == 0) {
         PJ_LOG(4,(THIS_FILE, "Decoder getInputBuffer failed "
-                  "return input_buf=%d, size=%lu", *input_buf, input_size));
+                  "return input_buf=%d, size=%lu", *input_buf,
+                  (unsigned long)input_size));
         goto on_return;
     }
 

@@ -880,6 +880,7 @@ pjsip_tsx_detect_merged_requests(pjsip_rx_data *rdata)
 {
     pj_str_t key, key2;
     pj_uint32_t hval = 0;
+    pjsip_transaction *tsx = NULL;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG, NULL);
@@ -895,12 +896,15 @@ pjsip_tsx_detect_merged_requests(pjsip_rx_data *rdata)
     if (status != PJ_SUCCESS)
         return NULL;
 
+    pj_mutex_lock( mod_tsx_layer.mutex );
+
     /* This request must not match any transaction in our primary hash
      * table.
      */
     if (pj_hash_get_lower(mod_tsx_layer.htable, key.ptr, (unsigned)key.slen,
                           &hval) != NULL)
     {
+        pj_mutex_unlock( mod_tsx_layer.mutex);
         return NULL;
     }
 
@@ -910,14 +914,18 @@ pjsip_tsx_detect_merged_requests(pjsip_rx_data *rdata)
     status = create_tsx_key_2543(rdata->tp_info.pool, &key2, PJSIP_ROLE_UAS,
                                  &rdata->msg_info.cseq->method, rdata,
                                  PJ_FALSE);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        pj_mutex_unlock( mod_tsx_layer.mutex);
         return NULL;
+    }
 
     hval = 0;
-    return (pjsip_transaction *) pj_hash_get_lower(mod_tsx_layer.htable2,
-                                                   key2.ptr,
-                                                   (unsigned)key2.slen,
-                                                   &hval);
+    tsx = pj_hash_get_lower(mod_tsx_layer.htable2, key2.ptr,
+                            (unsigned)key2.slen, &hval);
+
+    pj_mutex_unlock( mod_tsx_layer.mutex);
+
+    return tsx;
 }
 
 /* This module callback is called when endpoint has received an

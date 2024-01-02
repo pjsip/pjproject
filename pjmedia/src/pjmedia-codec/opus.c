@@ -931,7 +931,7 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
                                            sizeof(tmp_buf));
         if (size < 0) {
             PJ_LOG(5, (THIS_FILE, "Parse failed! (pkt_size=%lu, err=%d)",
-                       pkt_size, size));
+                       (unsigned long)pkt_size, size));
             pj_mutex_unlock (opus_data->mutex);
             return PJMEDIA_CODEC_EFAILED;
         }

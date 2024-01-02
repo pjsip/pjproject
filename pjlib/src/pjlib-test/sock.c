@@ -541,14 +541,15 @@ static int send_recv_test(int sock_type,
                 rc = -155; goto on_error;
             }
             if (received <= 0) {
-                PJ_LOG(3,("", "...error: socket has closed! (received=%ld)",
-                          received));
+                PJ_LOG(3,("", "...error: socket has closed! (received=%lu)",
+                          (unsigned long)received));
                 rc = -156; goto on_error;
             }
             if (received != DATA_LEN-total_received) {
                 if (sock_type != pj_SOCK_STREAM()) {
                     PJ_LOG(3,("", "...error: expecting %lu bytes, got %lu bytes",
-                              DATA_LEN-total_received, received));
+                              (unsigned long)(DATA_LEN-total_received),
+                              (unsigned long)received));
                     rc = -157; goto on_error;
                 }
             }
@@ -599,14 +600,15 @@ static int send_recv_test(int sock_type,
             rc = -170; goto on_error;
         }
         if (received <= 0) {
-            PJ_LOG(3,("", "...error: socket has closed! (received=%ld)",
-                      received));
+            PJ_LOG(3,("", "...error: socket has closed! (received=%lu)",
+                      (unsigned long)received));
             rc = -173; goto on_error;
         }
         if (received != BIG_DATA_LEN-total_received) {
             if (sock_type != pj_SOCK_STREAM()) {
                 PJ_LOG(3,("", "...error: expecting %lu bytes, got %lu bytes",
-                          BIG_DATA_LEN-total_received, received));
+                          (unsigned long)BIG_DATA_LEN-total_received,
+                          (unsigned long)received));
                 rc = -176; goto on_error;
             }
         }
