@@ -350,7 +350,8 @@ static pj_bool_t ssl_on_data_read(pj_ssl_sock_t *ssock,
                 }
 
                 pj_sockaddr_print((pj_sockaddr_t*)&info.local_addr, buf, sizeof(buf), 1);
-                PJ_LOG(3, ("", "...%s successfully recv %lu bytes echo", buf, st->recv));
+                PJ_LOG(3, ("", "...%s successfully recv %lu bytes echo", buf,
+                           (unsigned long)st->recv));
                 st->done = PJ_TRUE;
             }
         }
@@ -501,7 +502,8 @@ static int https_client_test(unsigned ms_timeout)
     }
 
     PJ_LOG(3, ("", "...Done!"));
-    PJ_LOG(3, ("", ".....Sent/recv: %lu/%lu bytes", state.sent, state.recv));
+    PJ_LOG(3, ("", ".....Sent/recv: %lu/%lu bytes", (unsigned long)state.sent,
+               (unsigned long)state.recv));
 
 on_return:
     if (ssock && !state.err && !state.done) 
@@ -755,7 +757,8 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     }
 
     PJ_LOG(3, ("", "...Done!"));
-    PJ_LOG(3, ("", ".....Sent/recv: %lu/%lu bytes", state_cli.sent, state_cli.recv));
+    PJ_LOG(3, ("", ".....Sent/recv: %lu/%lu bytes", (unsigned long)state_cli.sent,
+               (unsigned long)state_cli.recv));
 
 on_return:
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN) || \
@@ -1464,7 +1467,8 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
     }
 
     PJ_LOG(3, ("", ".....Clients: %d (%d errors)", clients, cli_err));
-    PJ_LOG(3, ("", ".....Total sent/recv: %lu/%lu bytes", tot_sent, tot_recv));
+    PJ_LOG(3, ("", ".....Total sent/recv: %lu/%lu bytes",
+               (unsigned long)tot_sent, (unsigned long)tot_recv));
 
 on_return:
     if (ssock_serv) 

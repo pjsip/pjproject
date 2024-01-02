@@ -2547,8 +2547,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
     if (pdu_len > 0) {
         /* Stray trailing bytes */
         PJ_LOG(4,(THIS_FILE, 
-                  "Error decoding STUN message: unparsed trailing %ld bytes",
-                  pdu_len));
+                  "Error decoding STUN message: unparsed trailing %lu bytes",
+                  (unsigned long)pdu_len));
         return PJNATH_EINSTUNMSGLEN;
     }
 

@@ -1111,8 +1111,10 @@ void on_ip_change_progress(pjsua_ip_change_op op,
         case PJSUA_IP_CHANGE_OP_COMPLETED:
             pj_ansi_snprintf(info_str, sizeof(info_str),
                              "done");
+            break;
         default:
-            info_str[0] = '\0';
+            pj_ansi_snprintf(info_str, sizeof(info_str),
+                             "unknown-op");
             break;
         }
         PJ_LOG(3,(THIS_FILE, "IP change progress report : %s", info_str));

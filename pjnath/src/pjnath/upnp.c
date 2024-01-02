@@ -325,12 +325,14 @@ static void add_device(const char *dev_id, const char *url)
 {
     unsigned i;
 
+    pj_mutex_lock(upnp_mgr.mutex);
+
     if (upnp_mgr.igd_cnt >= MAX_DEVS) {
+        pj_mutex_unlock(upnp_mgr.mutex);
         PJ_LOG(3, (THIS_FILE, "Warning: Too many UPnP devices discovered"));
         return;
     }
 
-    pj_mutex_lock(upnp_mgr.mutex);
     for (i = 0; i < upnp_mgr.igd_cnt; i++) {
         if (!pj_strcmp2(&upnp_mgr.igd_devs[i].dev_id, dev_id) &&
             !pj_strcmp2(&upnp_mgr.igd_devs[i].url, url))
@@ -358,6 +360,8 @@ static void set_device_online(const char *dev_id)
 {
     unsigned i;
 
+    pj_mutex_lock(upnp_mgr.mutex);
+
     for (i = 0; i < upnp_mgr.igd_cnt; i++) {
         struct igd *igd = &upnp_mgr.igd_devs[i];
         
@@ -367,15 +371,15 @@ static void set_device_online(const char *dev_id)
 
             if (upnp_mgr.primary_igd_idx < 0) {
                 /* If we don't have a primary IGD, use this. */
-                pj_mutex_lock(upnp_mgr.mutex);
                 upnp_mgr.primary_igd_idx = i;
-                pj_mutex_unlock(upnp_mgr.mutex);
 
                 PJ_LOG(4, (THIS_FILE, "Using primary IGD %s",
                                       upnp_mgr.igd_devs[i].dev_id.ptr));
             }
         }
     }
+
+    pj_mutex_unlock(upnp_mgr.mutex);
 }
 
 /* Update IGD status to offline. */

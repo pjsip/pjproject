@@ -992,32 +992,6 @@ static void on_ice_complete(pjmedia_transport *tp,
 }
 
 
-/* Parse "HOST:PORT" format */
-static pj_status_t parse_host_port(const pj_str_t *host_port,
-                                   pj_str_t *host, pj_uint16_t *port)
-{
-    pj_str_t str_port;
-
-    str_port.ptr = pj_strchr(host_port, ':');
-    if (str_port.ptr != NULL) {
-        int iport;
-
-        host->ptr = host_port->ptr;
-        host->slen = (str_port.ptr - host->ptr);
-        str_port.ptr++;
-        str_port.slen = host_port->slen - host->slen - 1;
-        iport = (int)pj_strtoul(&str_port);
-        if (iport < 1 || iport > 65535)
-            return PJ_EINVAL;
-        *port = (pj_uint16_t)iport;
-    } else {
-        *host = *host_port;
-        *port = 0;
-    }
-
-    return PJ_SUCCESS;
-}
-
 /* Create ICE media transports (when ice is enabled) */
 static pj_status_t create_ice_media_transport(
                                 const pjsua_transport_config *cfg,
@@ -1183,9 +1157,13 @@ static pj_status_t create_ice_media_transport(
         }
 
         /* Configure TURN server */
-        status = parse_host_port(&acc_cfg->turn_cfg.turn_server,
-                                 &ice_cfg.turn_tp[0].server,
-                                 &ice_cfg.turn_tp[0].port);
+
+        /* Parse the server entry into host:port */
+        status = pj_sockaddr_parse2(pj_AF_UNSPEC(), 0,
+                                    &acc_cfg->turn_cfg.turn_server,
+                                    &ice_cfg.turn_tp[0].server,
+                                    &ice_cfg.turn_tp[0].port,
+                                    NULL);
         if (status != PJ_SUCCESS || ice_cfg.turn_tp[0].server.slen == 0) {
             PJ_LOG(1,(THIS_FILE, "Invalid TURN server setting"));
             return PJ_EINVAL;

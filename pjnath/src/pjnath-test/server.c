@@ -1047,8 +1047,8 @@ static pj_bool_t alloc_on_data_recvfrom(pj_activesock_t *asock,
         }
     }
     if (i==alloc->perm_cnt) {
-        PJ_LOG(5,("", "Client %s received %ld bytes unauthorized data from peer %s", 
-                      client_info, size, peer_info));
+        PJ_LOG(5,("", "Client %s received %lu bytes unauthorized data from peer %s", 
+                      client_info, (unsigned long)size, peer_info));
         if (alloc->perm_cnt == 0)
             PJ_LOG(5,("", "Client %s has no permission", client_info));
         return PJ_TRUE;
@@ -1073,8 +1073,8 @@ static pj_bool_t alloc_on_data_recvfrom(pj_activesock_t *asock,
 
     /* Send */
     sent = size;
-    PJ_LOG(5,("", "Forwarding %ld bytes data from peer %s to client %s", 
-                   sent, peer_info, client_info));
+    PJ_LOG(5,("", "Forwarding %lu bytes data from peer %s to client %s", 
+                   (unsigned long)sent, peer_info, client_info));
 
     pj_activesock_sendto(alloc->test_srv->turn_sock, &alloc->send_key, buffer,
                          &sent, 0, &alloc->client_addr,

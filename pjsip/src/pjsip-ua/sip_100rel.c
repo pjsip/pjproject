@@ -857,8 +857,9 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
             status = PJ_SUCCESS;
             
             PJ_LOG(4,(dd->inv->dlg->obj_name, 
-                      "Reliable %d response enqueued (%ld pending)", 
-                      code, pj_list_size(&dd->uas_state->tx_data_list)));
+                      "Reliable %d response enqueued (%lu pending)", 
+                      code, (unsigned long)
+                      pj_list_size(&dd->uas_state->tx_data_list)));
             
         } else {
             pj_list_push_back(&dd->uas_state->tx_data_list, tl);

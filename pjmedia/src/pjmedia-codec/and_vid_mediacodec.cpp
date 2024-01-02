@@ -1033,7 +1033,8 @@ static pj_status_t and_media_codec_encode_begin(pjmedia_vid_codec *codec,
             } else {
                 PJ_LOG(4,(THIS_FILE, "Encoder getInputBuffer "
                                      "size: %lu, expecting %lu.",
-                                     output_size, input->size));
+                                     (unsigned long)output_size,
+                                     (unsigned long)input->size));
             }
             goto on_return;
         }
