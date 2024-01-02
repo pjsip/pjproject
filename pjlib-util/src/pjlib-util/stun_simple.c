@@ -76,7 +76,8 @@ PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t buf_len,
     msg_len = pj_ntohs(msg->hdr->length);
     if (msg_len != buf_len - sizeof(pjstun_msg_hdr)) {
         PJ_LOG(4,(THIS_FILE, "Error: invalid msg_len %d (expecting %lu)", 
-                             msg_len, buf_len - sizeof(pjstun_msg_hdr)));
+                             msg_len, (unsigned long)
+                             (buf_len - sizeof(pjstun_msg_hdr))));
         return PJLIB_UTIL_ESTUNINMSGLEN;
     }
 

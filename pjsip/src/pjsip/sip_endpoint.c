@@ -788,7 +788,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer_dbg(pjsip_endpoint *endpt,
                                                     int src_line)
 {
     PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer(entry=%p, delay=%lu.%lu)",
-                         entry, delay->sec, delay->msec));
+                         entry, (unsigned long)delay->sec,
+                         (unsigned long)delay->msec));
     return pj_timer_heap_schedule_dbg(endpt->timer_heap, entry, delay,
                                       src_file, src_line);
 }
@@ -797,8 +798,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
                                                 pj_timer_entry *entry,
                                                 const pj_time_val *delay )
 {
-    PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer(entry=%p, delay=%u.%u)",
-                         entry, delay->sec, delay->msec));
+    PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer(entry=%p, delay=%lu.%lu)",
+                         entry, (unsigned long)delay->sec,
+                         (unsigned long)delay->msec));
     return pj_timer_heap_schedule( endpt->timer_heap, entry, delay );
 }
 #endif
@@ -817,8 +819,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock_dbg(
                                                     int src_line)
 {
     PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer_w_grp_lock"
-                          "(entry=%p, delay=%ld.%ld, grp_lock=%p)",
-                          entry, delay->sec, delay->msec, grp_lock));
+                          "(entry=%p, delay=%lu.%lu, grp_lock=%p)",
+                          entry, (unsigned long)delay->sec,
+                          (unsigned long)delay->msec, grp_lock));
     return pj_timer_heap_schedule_w_grp_lock_dbg(endpt->timer_heap, entry,
                                                  delay, id_val, grp_lock,
                                                  src_file, src_line);
@@ -832,8 +835,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock(
                                                  pj_grp_lock_t *grp_lock )
 {
     PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer_w_grp_lock"
-                          "(entry=%p, delay=%u.%u, grp_lock=%p)",
-                          entry, delay->sec, delay->msec, grp_lock));
+                          "(entry=%p, delay=%lu.%lu, grp_lock=%p)",
+                          entry, (unsigned long)delay->sec,
+                          (unsigned long)delay->msec, grp_lock));
     return pj_timer_heap_schedule_w_grp_lock( endpt->timer_heap, entry,
                                               delay, id_val, grp_lock );
 }
@@ -1314,8 +1318,8 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
 
     /* Pool health. */
     PJ_LOG(3, (THIS_FILE," Endpoint pool capacity=%lu, used_size=%lu",
-               pj_pool_get_capacity(endpt->pool),
-               pj_pool_get_used_size(endpt->pool)));
+               (unsigned long)pj_pool_get_capacity(endpt->pool),
+               (unsigned long)pj_pool_get_used_size(endpt->pool)));
 
     /* Resolver */
 #if PJSIP_HAS_RESOLVER
@@ -1333,7 +1337,7 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
     pj_timer_heap_dump(endpt->timer_heap);
 #else
     PJ_LOG(3,(THIS_FILE, " Timer heap has %lu entries",
-                        pj_timer_heap_count(endpt->timer_heap)));
+              (unsigned long)pj_timer_heap_count(endpt->timer_heap)));
 #endif
 
     /* Unlock mutex. */

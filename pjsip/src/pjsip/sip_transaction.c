@@ -880,6 +880,7 @@ pjsip_tsx_detect_merged_requests(pjsip_rx_data *rdata)
 {
     pj_str_t key, key2;
     pj_uint32_t hval = 0;
+    pjsip_transaction *tsx = NULL;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_REQUEST_MSG, NULL);
@@ -895,12 +896,15 @@ pjsip_tsx_detect_merged_requests(pjsip_rx_data *rdata)
     if (status != PJ_SUCCESS)
         return NULL;
 
+    pj_mutex_lock( mod_tsx_layer.mutex );
+
     /* This request must not match any transaction in our primary hash
      * table.
      */
     if (pj_hash_get_lower(mod_tsx_layer.htable, key.ptr, (unsigned)key.slen,
                           &hval) != NULL)
     {
+        pj_mutex_unlock( mod_tsx_layer.mutex);
         return NULL;
     }
 
@@ -910,14 +914,18 @@ pjsip_tsx_detect_merged_requests(pjsip_rx_data *rdata)
     status = create_tsx_key_2543(rdata->tp_info.pool, &key2, PJSIP_ROLE_UAS,
                                  &rdata->msg_info.cseq->method, rdata,
                                  PJ_FALSE);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        pj_mutex_unlock( mod_tsx_layer.mutex);
         return NULL;
+    }
 
     hval = 0;
-    return (pjsip_transaction *) pj_hash_get_lower(mod_tsx_layer.htable2,
-                                                   key2.ptr,
-                                                   (unsigned)key2.slen,
-                                                   &hval);
+    tsx = pj_hash_get_lower(mod_tsx_layer.htable2, key2.ptr,
+                            (unsigned)key2.slen, &hval);
+
+    pj_mutex_unlock( mod_tsx_layer.mutex);
+
+    return tsx;
 }
 
 /* This module callback is called when endpoint has received an
@@ -2187,11 +2195,12 @@ static void send_msg_callback( pjsip_send_state *send_state,
             else
                 sc = PJSIP_SC_TSX_TRANSPORT_ERROR;
 
-            /* We terminate the transaction for 502 error. For 503,
-             * we will retry it.
-             * See https://github.com/pjsip/pjproject/pull/3805
+            /* For UAC tsx, we directly terminate the transaction.
+             * For UAS tsx, we terminate the transaction for 502 error,
+             * and will retry for 503.
+             * See #3805 and #3806.
              */
-            if (sc == PJSIP_SC_BAD_GATEWAY &&
+            if ((tsx->role == PJSIP_ROLE_UAC || sc == PJSIP_SC_BAD_GATEWAY) &&
                 tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
@@ -2266,7 +2275,16 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
     pj_grp_lock_acquire(tsx->grp_lock);
     tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 
-    if (sent > 0) {
+    if (sent > 0 || tsx->role == PJSIP_ROLE_UAS) {
+        if (sent < 0) {
+            /* For UAS transactions, we just print error log
+             * and continue as per normal.
+             */
+            PJ_PERROR(2,(tsx->obj_name, (pj_status_t)-sent,
+                          "Transport failed to send %s!",
+                          pjsip_tx_data_get_info(tdata)));
+        }
+
         /* Pending destroy? */
         if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY) {
             tsx_set_state( tsx, PJSIP_TSX_STATE_DESTROYED,
@@ -2299,7 +2317,7 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
     }
     pj_grp_lock_release(tsx->grp_lock);
 
-    if (sent < 0) {
+    if (sent < 0 && tsx->role == PJSIP_ROLE_UAC) {
         pj_time_val delay = {0, 0};
 
         PJ_PERROR(2,(tsx->obj_name, (pj_status_t)-sent,
@@ -2434,8 +2452,11 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 
     /* If we have resolved the server, we treat the error as permanent error.
      * Terminate transaction with transport error failure.
+     * Only applicable for UAC transactions.
      */
-    if (tsx->transport_flag & TSX_HAS_RESOLVED_SERVER) {
+    if (tsx->role == PJSIP_ROLE_UAC &&
+        (tsx->transport_flag & TSX_HAS_RESOLVED_SERVER))
+    {
         
         char errmsg[PJ_ERR_MSG_SIZE];
         pj_str_t err;

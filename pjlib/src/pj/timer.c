@@ -381,8 +381,9 @@ static pj_status_t grow_heap(pj_timer_heap_t *ht)
     pj_timer_entry_dup *new_dup;
 #endif
 
-    PJ_LOG(6,(THIS_FILE, "Growing heap size from %ld to %ld",
-                         ht->max_size, new_size));
+    PJ_LOG(6,(THIS_FILE, "Growing heap size from %lu to %lu",
+                         (unsigned long)ht->max_size,
+                         (unsigned long)new_size));
 
     // First grow the heap itself.
     new_heap = (pj_timer_entry_dup**) 

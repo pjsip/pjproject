@@ -503,7 +503,8 @@ on_return:
 
     /* Dumping memory pool usage */
     PJ_LOG(3,(THIS_FILE, "Peak memory size=%lu MB",
-                         caching_pool.peak_used_size / 1000000));
+                         (unsigned long)
+                         (caching_pool.peak_used_size / 1000000)));
 
     pjsip_endpt_destroy(endpt);
     pj_caching_pool_destroy(&caching_pool);
