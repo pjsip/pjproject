@@ -121,6 +121,7 @@ using namespace pj;
 %feature("director") FindBuddyMatch;
 %feature("director") AudioMediaPlayer;
 %feature("director") AudioMediaPort;
+%feature("director") PendingJob;
 
 //
 // STL stuff.
@@ -234,6 +235,13 @@ using namespace pj;
 	Runtime.getRuntime().gc();
 	libDestroy_();
   }
+%}
+#endif
+
+#ifdef SWIGPYTHON
+%pythonprepend pj::Endpoint::utilAddPendingJob(PendingJob *job) %{
+    # print('disowning job')
+    job.__disown__()
 %}
 #endif
 
