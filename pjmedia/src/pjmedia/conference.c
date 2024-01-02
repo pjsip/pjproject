@@ -820,10 +820,206 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     if (p_port) {
         *p_port = index;
     }
-
     pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
+}
+
+/*
+ * Replace stream port in the conference bridge.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
+					   pj_pool_t *pool,
+					   pjmedia_port *strm_port,
+					   unsigned slot )
+{
+	struct conf_port *conf_port;
+	pjmedia_port *old_port;
+	pj_status_t status;
+    PJ_LOG(4, (THIS_FILE, "pjmedia_conf_replace_port [conf_slot:%d]", slot));
+	PJ_ASSERT_RETURN(conf && pool && strm_port && slot<conf->max_ports, PJ_EINVAL);
+
+	/* For this version of PJMEDIA, channel(s) number MUST be:
+	 * - same between port & conference bridge.
+	 * - monochannel on port or conference bridge.
+	 */
+	if (PJMEDIA_PIA_CCNT(&strm_port->info) != conf->channel_count &&
+	(PJMEDIA_PIA_CCNT(&strm_port->info) != 1 &&
+		conf->channel_count != 1))
+	{
+		pj_assert(!"Number of channels mismatch");
+		return PJMEDIA_ENCCHANNEL;
+	}
+
+	pj_mutex_lock(conf->mutex);
+
+	/* Old port must be valid. */
+	conf_port = conf->ports[slot];
+	if (conf_port == NULL) {
+		pj_mutex_unlock(conf->mutex);
+		return PJ_EINVAL;
+	}
+
+	/* Disable port whilst configuration is updated */
+	conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
+	conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
+
+	// Save old media port
+	old_port = conf_port->port;
+	conf_port->port = NULL;
+
+	/* Save some port's infos, for convenience. */
+	if (strm_port) {
+		pjmedia_audio_format_detail *afd;
+		afd = pjmedia_format_get_audio_format_detail(&strm_port->info.fmt, 1);
+		conf_port->clock_rate = afd->clock_rate;
+		conf_port->samples_per_frame = PJMEDIA_AFD_SPF(afd);
+		conf_port->channel_count = afd->channel_count;
+	} else {
+		conf_port->clock_rate = conf->clock_rate;
+		conf_port->samples_per_frame = conf->samples_per_frame;
+		conf_port->channel_count = conf->channel_count;
+	}
+
+	/* If port's clock rate is different than conference's clock rate,
+	 * create a resample sessions.
+	 */
+	if (conf_port->clock_rate != conf->clock_rate) {
+		pj_bool_t high_quality;
+		pj_bool_t large_filter;
+
+		high_quality = ((conf->options & PJMEDIA_CONF_USE_LINEAR) == 0);
+		large_filter = ((conf->options & PJMEDIA_CONF_SMALL_FILTER) == 0);
+
+		/* Create resample for rx buffer. */
+		status = pjmedia_resample_create(pool,
+			high_quality,
+			large_filter,
+			conf->channel_count,
+			conf_port->clock_rate,/* Rate in */
+			conf->clock_rate, /* Rate out */
+			conf->samples_per_frame *
+			conf_port->clock_rate /
+			conf->clock_rate,
+			&conf_port->rx_resample);
+		if (status != PJ_SUCCESS)
+			goto on_return;
+
+		/* Create resample for tx buffer. */
+		status = pjmedia_resample_create(pool,
+			high_quality,
+			large_filter,
+			conf->channel_count,
+			conf->clock_rate,  /* Rate in */
+			conf_port->clock_rate, /* Rate out */
+			conf->samples_per_frame,
+			&conf_port->tx_resample);
+		if (status != PJ_SUCCESS)
+			goto on_return;
+	}
+	else {
+		conf_port->rx_resample = NULL;
+		conf_port->tx_resample = NULL;
+	}
+
+	/*
+	 * Initialize rx and tx buffer, only when port's samples per frame or
+	 * port's clock rate or channel number is different then the conference
+	 * bridge settings.
+	 */
+	if (conf_port->clock_rate != conf->clock_rate ||
+		conf_port->channel_count != conf->channel_count ||
+		conf_port->samples_per_frame != conf->samples_per_frame)
+	{
+		unsigned port_ptime, conf_ptime, buff_ptime;
+
+		port_ptime = conf_port->samples_per_frame / conf_port->channel_count *
+			1000 / conf_port->clock_rate;
+		conf_ptime = conf->samples_per_frame / conf->channel_count *
+			1000 / conf->clock_rate;
+
+		/* Calculate the size (in ptime) for the port buffer according to
+		 * this formula:
+		 *   - if either ptime is an exact multiple of the other, then use
+		 *     the larger ptime (e.g. 20ms and 40ms, use 40ms).
+		 *   - if not, then the ptime is sum of both ptimes (e.g. 20ms
+		 *     and 30ms, use 50ms)
+		 */
+		if (port_ptime > conf_ptime) {
+			buff_ptime = port_ptime;
+			if (port_ptime % conf_ptime)
+				buff_ptime += conf_ptime;
+		} else {
+			buff_ptime = conf_ptime;
+			if (conf_ptime % port_ptime)
+				buff_ptime += port_ptime;
+		}
+
+		/* Create RX buffer. */
+		//conf_port->rx_buf_cap = (unsigned)(conf_port->samples_per_frame +
+		//				   conf->samples_per_frame * 
+		//				   conf_port->clock_rate * 1.0 /
+		//				   conf->clock_rate + 0.5);
+		conf_port->rx_buf_cap = conf_port->clock_rate * buff_ptime / 1000;
+		if (conf_port->channel_count > conf->channel_count)
+			conf_port->rx_buf_cap *= conf_port->channel_count;
+		else
+			conf_port->rx_buf_cap *= conf->channel_count;
+
+		conf_port->rx_buf_count = 0;
+		conf_port->rx_buf = (pj_int16_t*)
+			pj_pool_alloc(pool, conf_port->rx_buf_cap *
+				sizeof(conf_port->rx_buf[0]));
+		if (!conf_port->rx_buf) {
+			status = PJ_ENOMEM;
+			goto on_return;
+		}
+
+		/* Create TX buffer. */
+		conf_port->tx_buf_cap = conf_port->rx_buf_cap;
+		conf_port->tx_buf_count = 0;
+		conf_port->tx_buf = (pj_int16_t*)
+			pj_pool_alloc(pool, conf_port->tx_buf_cap *
+				sizeof(conf_port->tx_buf[0]));
+		if (!conf_port->tx_buf) {
+			status = PJ_ENOMEM;
+			goto on_return;
+		}
+	} else {
+		conf_port->rx_buf_cap = 0;
+		conf_port->rx_buf_count = 0;
+		conf_port->rx_buf = NULL;
+		conf_port->tx_buf_cap = 0;
+		conf_port->tx_buf_count = 0;
+		conf_port->tx_buf = NULL;
+	}
+
+	/* Put the port. */
+	conf_port->port = strm_port;
+
+	/* Default has tx and rx enabled. */
+	conf_port->rx_setting = PJMEDIA_PORT_ENABLE;
+	conf_port->tx_setting = PJMEDIA_PORT_ENABLE;
+
+	/* Done. */
+	status = PJ_SUCCESS;
+
+on_return:
+	/* Destroy old pjmedia port if this conf port is passive port,
+	 * i.e: has delay buf.
+	 */
+    if (old_port )
+    {
+        if (conf_port->delay_buf || old_port->info.signature== PJMEDIA_SIG_PORT_NULL)
+        {
+            PJ_LOG(4, (THIS_FILE, "pjmedia_conf_replace_port::distroy old port "));
+            pjmedia_port_destroy(old_port);
+        }
+    }
+
+	pj_mutex_unlock(conf->mutex);
+
+	return status;
 }
 
 
@@ -1293,7 +1489,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
 {
     unsigned i, count=0;
 
-    PJ_ASSERT_RETURN(conf && p_count && ports, PJ_EINVAL);
+    PJ_ASSERT_RETURN(conf && p_count, PJ_EINVAL);
 
     /* Lock mutex */
     pj_mutex_lock(conf->mutex);
@@ -1301,8 +1497,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
     for (i=0; i<conf->max_ports && count<*p_count; ++i) {
         if (!conf->ports[i])
             continue;
-
+		if (ports)
         ports[count++] = i;
+		else
+			count++;
     }
 
     /* Unlock mutex */
@@ -1311,7 +1509,38 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
     *p_count = count;
     return PJ_SUCCESS;
 }
+PJ_DEF(pj_status_t) pjmedia_conf_get_media_port_info(pjmedia_conf* conf,unsigned slot, pjmedia_port_info* info)
+{
+    struct conf_port* conf_port;
 
+    /* Check arguments */
+    PJ_ASSERT_RETURN(conf && slot < conf->max_ports, PJ_EINVAL);
+
+    /* Lock mutex */
+    pj_mutex_lock(conf->mutex);
+
+    /* Port must be valid. */
+    conf_port = conf->ports[slot];
+    if (conf_port == NULL) {
+        pj_mutex_unlock(conf->mutex);
+        return PJ_EINVAL;
+    }
+
+    if (!conf_port->port) {
+        pj_mutex_unlock(conf->mutex);
+        return PJ_EINVAL;
+    }
+    pjmedia_port_info * port_info = &conf_port->port->info;
+    pjmedia_format_copy(&info->fmt, &port_info->fmt);
+    info->name= port_info->name;
+    info->dir= port_info->dir;
+    info->signature= port_info->signature;
+
+    /* Unlock mutex */
+    pj_mutex_unlock(conf->mutex);
+
+    return PJ_SUCCESS;
+}
 /*
  * Get port info
  */
@@ -1718,7 +1947,8 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     *frm_type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     /* Skip port if it is disabled */
-    if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
+    if (cport->tx_setting == PJMEDIA_PORT_DISABLE &&
+		(cport->tx_setting != PJMEDIA_PORT_ENABLE_ALWAYS)) {
         cport->tx_level = 0;
         *frm_type = PJMEDIA_FRAME_TYPE_NONE;
         return PJ_SUCCESS;
@@ -2006,7 +2236,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         }
 
         /* Also skip if this port doesn't have listeners. */
-        if (conf_port->listener_cnt == 0) {
+	if ((conf_port->listener_cnt == 0) &&
+		(conf_port->rx_setting != PJMEDIA_PORT_ENABLE_ALWAYS)) {
             conf_port->rx_level = 0;
             continue;
         }
@@ -2119,7 +2350,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
             listener = conf->ports[conf_port->listener_slots[cj]];
 
             /* Skip if this listener doesn't want to receive audio */
-            if (listener->tx_setting != PJMEDIA_PORT_ENABLE)
+	    if ((listener->tx_setting != PJMEDIA_PORT_ENABLE) &&
+			(listener->tx_setting != PJMEDIA_PORT_ENABLE_ALWAYS))
                 continue;
 
             mix_buf = listener->mix_buf;
@@ -2301,12 +2533,15 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     PJ_ASSERT_RETURN( port->delay_buf, PJ_EBUG );
 
     /* Skip if this port is muted/disabled. */
-    if (port->rx_setting != PJMEDIA_PORT_ENABLE) {
+	if ((port->rx_setting != PJMEDIA_PORT_ENABLE) &&
+		(port->rx_setting != PJMEDIA_PORT_ENABLE_ALWAYS)) {
         return PJ_SUCCESS;
     }
 
     /* Skip if no port is listening to the microphone */
-    if (port->listener_cnt == 0) {
+	if ((port->listener_cnt == 0) &&
+		(port->rx_setting != PJMEDIA_PORT_ENABLE_ALWAYS))
+    {
         return PJ_SUCCESS;
     }
 

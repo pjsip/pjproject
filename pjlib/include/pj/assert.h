@@ -35,20 +35,48 @@
  * Assertion and other helper macros for sanity checking.
  */
 
-/**
- * @hideinitializer
- * Check during debug build that an expression is true. If the expression
- * computes to false during run-time, then the program will stop at the
- * offending statements.
- * For release build, this macro will not do anything.
- *
- * @param expr      The expression to be evaluated.
- */
+ /**
+  * @hideinitializer
+  * Check during debug build that an expression is true. If the expression
+  * computes to false during run-time, then the program will stop at the
+  * offending statements.
+  * For release build, this macro only print assert expression on the log.
+  *
+  * @param expr	    The expression to be evaluated.
+  */
+#ifndef _DEBUG  
+#ifndef pj_assert
+#include "pj/log.h"
+#include <string.h>
+#define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
+#define pj_assert(expr) \
+        do { \
+                if (!(expr)) { PJ_LOG(1,(__FILENAME__, "Assert failed: " #expr)); } \
+        } while (0)
+#endif
+#else
 #ifndef pj_assert
 #   define pj_assert(expr)   assert(expr)
 #endif
+#endif
 
+  /**
+   * @hideinitializer
+   * for all buils log the message
+   * Check during debug build that an expression is true. If the expression
+   * computes to false during run-time, then the program will stop at the
+   * offending statements.
+   * For release build, this macro only print message on the log.
+   * @param expr	    The expression to be evaluated.
+   * @param ...	    file name,The format string for the log message ("config.c", " PJ_VERSION: %s", PJ_VERSION)
+   */
+#ifndef PJ_ASSERT_LOG
+#define PJ_ASSERT_LOG(expr,...)    \
+            do { \
+                if (!(expr)) { PJ_LOG(1,(__VA_ARGS__)); assert(expr); } \
+            } while (0)
 
+#endif
 /**
  * @hideinitializer
  * If the expression yields false, assertion will be triggered

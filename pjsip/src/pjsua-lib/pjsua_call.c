@@ -148,7 +148,35 @@ static pj_status_t call_inv_end_session(pjsua_call *call,
                                         unsigned code,
                                         const pj_str_t *reason,
                                         const pjsua_msg_data *msg_data);
-
+/*
+ * Allocate conference slot for call.
+ */
+static pj_status_t allocate_conference_slot(pjsua_call *call)
+{
+	register pj_status_t status = PJ_SUCCESS;
+	if (call->inv) {
+		if ((call->conf_slot == PJSUA_INVALID_ID) && pjsua_var.null_port) {
+			char tmp[PJSIP_MAX_URL_SIZE];
+			pj_str_t port_name;
+			port_name.ptr = tmp;
+			port_name.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
+				call->inv->dlg->remote.info->uri,
+				tmp, sizeof(tmp));
+			if (port_name.slen < 1)
+				port_name = pj_str("call");
+			status = pjmedia_conf_add_port(pjsua_var.mconf,
+				call->inv->pool,
+				pjsua_var.null_port,
+				&port_name,
+				(unsigned*)&call->conf_slot);
+			if (status != PJ_SUCCESS)
+				pjsua_perror(THIS_FILE, "Error adding null port to conference for call", status);
+		}
+	} else {
+		status = PJ_EBUSY;
+	}
+	return status;
+}
 /*
  * Reset call descriptor.
  */
@@ -161,8 +189,18 @@ static void reset_call(pjsua_call_id id)
         pjsip_rx_data_free_cloned(call->incoming_data);
         call->incoming_data = NULL;
     }
+	if (call->offer)
+	{
+		/* Decrement dialog session. */
+		pjsip_dialog *dlg = call->async_call.dlg;
+		if (dlg)
+			pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
+		call->offer = NULL;
+	}
     pj_bzero(call, sizeof(*call));
     call->index = id;
+	call->conf_idx = -1;
+	call->conf_slot = PJSUA_INVALID_ID;
     call->last_text.ptr = call->last_text_buf_;
     call->cname.ptr = call->cname_buf;
     call->cname.slen = sizeof(call->cname_buf);
@@ -209,17 +247,19 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     const pj_str_t str_trickle_ice = { "trickle-ice", 11 };
     pj_status_t status;
 
-    /* Init calls array. */
-    for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.calls); ++i)
-        reset_call(i);
-
     /* Copy config */
     pjsua_config_dup(pjsua_var.pool, &pjsua_var.ua_cfg, cfg);
 
     /* Verify settings */
-    if (pjsua_var.ua_cfg.max_calls >= PJSUA_MAX_CALLS) {
+    if (pjsua_var.ua_cfg.max_calls > PJSUA_MAX_CALLS)
         pjsua_var.ua_cfg.max_calls = PJSUA_MAX_CALLS;
-    }
+	pjsua_var.calls = (pjsua_call*)pj_pool_zalloc(pjsua_var.pool, sizeof(pjsua_call) * pjsua_var.ua_cfg.max_calls);
+	if (!pjsua_var.calls)
+		return PJ_ENOMEM;
+
+	/* Init calls array. */
+	for (i=0U; i<pjsua_var.ua_cfg.max_calls; ++i)
+		reset_call(i);
 
     /* Check the route URI's and force loose route if required */
     for (i=0; i<pjsua_var.ua_cfg.outbound_proxy_cnt; ++i) {
@@ -269,6 +309,16 @@ pj_status_t pjsua_call_subsys_start(void)
 {
     /* Nothing to do */
     return PJ_SUCCESS;
+}
+
+/*
+* Destroy call subsystem.
+*/
+pj_status_t pjsua_call_subsys_destroy(void)
+{
+	pjsua_var.ua_cfg.max_calls = 0U;
+	pjsua_var.calls = NULL;
+	return PJ_SUCCESS;
 }
 
 
@@ -644,8 +694,6 @@ void pjsua_call_cleanup_flag(pjsua_call_setting *opt)
  */
 PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
 {
-    unsigned i;
-
     pj_assert(opt);
 
     pj_bzero(opt, sizeof(*opt));
@@ -658,7 +706,7 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
                                PJSUA_VID_REQ_KEYFRAME_RTCP_PLI;
 #endif
 
-    for (i = 0; i < PJMEDIA_MAX_SDP_MEDIA; i++) {
+    for (unsigned i = 0; i < PJMEDIA_MAX_SDP_MEDIA; ++i) {
         opt->media_dir[i] = PJMEDIA_DIR_ENCODING_DECODING;
     }
 }
@@ -831,6 +879,17 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
                                          const pjsua_msg_data *msg_data,
                                          pjsua_call_id *p_call_id)
 {
+	return pjsua_call_make_call2(acc_id,dest_uri,opt,user_data,msg_data,p_call_id,NULL,NULL);
+}
+PJ_DEF(pj_status_t) pjsua_call_make_call2(pjsua_acc_id acc_id,
+					 const pj_str_t *dest_uri,				 
+					 const pjsua_call_setting *opt,
+					 void *user_data,
+					 const pjsua_msg_data *msg_data,
+					 pjsua_call_id *p_call_id,
+					 const pj_str_t *src_uri,
+					 const pj_str_t *contact_uri)
+{
     pj_pool_t *tmp_pool = NULL;
     pjsip_dialog *dlg = NULL;
     pjsua_acc *acc;
@@ -848,6 +907,15 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
     PJ_LOG(4,(THIS_FILE, "Making call with acc #%d to %.*s", acc_id,
               (int)dest_uri->slen, dest_uri->ptr));
+
+    if (src_uri)
+    {
+        PJ_LOG(4,(THIS_FILE, "src_uri %.*s", (int)src_uri->slen, src_uri->ptr));
+    }
+    if (contact_uri)
+    {
+        PJ_LOG(4,(THIS_FILE, "contact_uri %.*s", (int)contact_uri->slen, contact_uri->ptr));
+    }
 
     pj_log_push_indent();
 
@@ -923,6 +991,26 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
             status = PJSIP_EINVALIDREQURI;
             goto on_error;
         }
+
+		if (src_uri && src_uri->slen) {
+			pj_strdup_with_null(tmp_pool, &dup, src_uri);
+			uri = pjsip_parse_uri(tmp_pool, dup.ptr, dup.slen, 0);
+            if (uri == NULL)
+            {
+                PJ_LOG(2, (THIS_FILE, "invalid src_uri"));
+                src_uri = NULL;
+            }
+		}
+
+		if (contact_uri && contact_uri->slen) {
+			pj_strdup_with_null(tmp_pool, &dup, contact_uri);
+			uri = pjsip_parse_uri(tmp_pool, dup.ptr, dup.slen, 0);
+            if (uri == NULL)
+            {
+                PJ_LOG(2, (THIS_FILE, "invalid contact_uri"));
+                contact_uri = NULL;
+            }
+		}
     }
 
     /* Mark call start time. */
@@ -934,7 +1022,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     /* Create suitable Contact header unless a Contact header has been
      * set in the account.
      */
-    if (acc->contact.slen) {
+	if (contact_uri && contact_uri->slen) {
+			contact = *contact_uri;
+		} else if (acc->contact.slen) {
         contact = acc->contact;
     } else {
         status = pjsua_acc_create_uac_contact(tmp_pool, &contact,
@@ -946,9 +1036,19 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
         }
     }
 
+    pj_str_t from;
+    if(src_uri && src_uri->slen)
+    {
+        from = *src_uri;
+    }
+    else
+    {
+        from = acc->cfg.id;
+    }
+
     /* Create outgoing dialog: */
     status = pjsip_dlg_create_uac( pjsip_ua_instance(),
-                                   &acc->cfg.id, &contact,
+                                   &from, &contact,
                                    dest_uri,
                                    (msg_data && msg_data->target_uri.slen?
                                     &msg_data->target_uri: dest_uri),
@@ -1002,6 +1102,11 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
         pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
         goto on_error;
     }
+
+	/* Allocate conference slot for the call. */
+	status = allocate_conference_slot(call);
+	if (status != PJ_SUCCESS)
+		goto on_error;
 
     /* Done. */
 
@@ -2023,6 +2128,19 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
             update_remote_nat_type(call, remote_sdp);
     }
 
+	/* Allocate conference slot for the call. */
+	status = allocate_conference_slot(call);
+	if (status != PJ_SUCCESS) {
+		pjsip_dlg_respond(dlg, rdata, PJSIP_SC_INTERNAL_SERVER_ERROR, NULL, NULL, NULL);
+		pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR, PJ_FALSE);
+
+		pjsua_media_channel_deinit(call->index);
+		call->inv = NULL;
+		call->async_call.dlg = NULL;
+
+		goto on_return;
+	}
+
     /* Must answer with some response to initial INVITE. We'll do this before
      * attaching the call to the invite session/dialog, so that the application
      * will not get notification about this event (on another scenario, it is
@@ -2104,9 +2222,12 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
              * answer/hangup should have been delayed (see #1923), 
              * so let's process the answer/hangup now.
              */
-            if (call->async_call.call_var.inc_call.hangup) {
+            if (call->async_call.call_var.inc_call.hangup || (offer && (!call->inv || !call->inv->pool_prov))) {
                 process_pending_call_hangup(call);
-            } else if (call->med_ch_cb == NULL && call->inv) {
+            } else {
+				if (offer)
+				call->offer = pjmedia_sdp_session_clone(call->inv->pool_prov, offer);
+			if (call->med_ch_cb == NULL && call->inv)
                 process_pending_call_answer(call);
             }
         } else {
@@ -2381,12 +2502,15 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
         }
         ++info->media_cnt;
     }
-
-    if (call->audio_idx != -1) {
+	info->conf_slot = call->conf_slot;
+    if (call->audio_idx >=0) {
         info->media_status = call->media[call->audio_idx].state;
         info->media_dir = call->media[call->audio_idx].dir;
+	if (info->conf_slot == PJSUA_INVALID_ID )
+	{
         info->conf_slot = call->media[call->audio_idx].strm.a.conf_slot;
     }
+    }	
 
     /* Build array of provisional media info */
     info->prov_media_cnt = 0;
@@ -2698,7 +2822,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
      */
     if (!call->med_ch_cb &&
         (call->opt_inited || (code==183 || code/100==2)) &&
-        (!call->inv->neg ||
+		(call->offer || !call->inv->neg ||
          pjmedia_sdp_neg_get_state(call->inv->neg) ==
                 PJMEDIA_SDP_NEG_STATE_NULL))
     {
@@ -2710,8 +2834,16 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
         status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
                                           call->secure_level,
                                           dlg->pool,
-                                          NULL, NULL, PJ_TRUE,
+					  call->offer, NULL, PJ_TRUE,
                                           &on_answer_call_med_tp_complete);
+	if (call->offer)
+	{
+		/* Decrement dialog session. */
+		pjsip_dialog *_dlg = call->async_call.dlg;
+		if (_dlg)
+			pjsip_dlg_dec_session(_dlg, &pjsua_var.mod);
+		call->offer = NULL;
+	}
         if (status == PJ_SUCCESS) {
             status = on_answer_call_med_tp_complete(call->index, NULL);
             if (status != PJ_SUCCESS) {
@@ -2751,8 +2883,13 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
             answer->msg_data = pjsua_msg_data_clone(call->inv->pool_prov,
                                                     msg_data);
         }
+		if (call->async_call.call_var.inc_call.answers.prev) {
         pj_list_push_back(&call->async_call.call_var.inc_call.answers,
                           answer);
+		} else {
+			if (status == PJ_SUCCESS) status = PJ_EBUG;
+			pjsua_perror(THIS_FILE, "Error answering call without a media transport", status);
+		}
 
         PJSUA_UNLOCK();
         if (dlg) pjsip_dlg_dec_lock(dlg);

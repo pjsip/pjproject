@@ -270,6 +270,10 @@ typedef int pjsua_buddy_id;
 /** File player identification */
 typedef int pjsua_player_id;
 
+/** Media port identification */
+typedef int pjsua_mport_id;
+
+
 /** File recorder identification */
 typedef int pjsua_recorder_id;
 
@@ -377,19 +381,33 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #endif
 
 
-/**
- * Specify whether timer heap events will be polled by a separate worker
- * thread. If this is set/enabled, a worker thread will be dedicated to
- * poll timer heap events only, and the rest worker thread(s) will poll
- * ioqueue/network events only.
- *
- * Note that if worker thread count setting (i.e: pjsua_config.thread_cnt)
- * is set to zero, this setting will be ignored.
- *
- * Default: 0 (disabled)
- */
+ /**
+  * Specify whether timer heap events will be polled by a separate worker
+  * thread. If this is set/enabled, a worker thread will be dedicated to
+  * poll timer heap events only, and the rest worker thread(s) will poll
+  * ioqueue/network events only.
+  *
+  * Note that if worker thread count setting (i.e: pjsua_config.thread_cnt)
+  * is set to zero, this setting will be ignored.
+  *
+  * Default: 0 (disabled)
+  */
 #ifndef PJSUA_SEPARATE_WORKER_FOR_TIMER
 #   define PJSUA_SEPARATE_WORKER_FOR_TIMER      0
+#endif
+/**
+ * Size of internal media port record buffer (in ms)
+ */
+#ifndef PJSUA_MPORT_RECORD_BUFFER_SIZE
+#   define PJSUA_MPORT_RECORD_BUFFER_SIZE	1250
+#endif
+
+
+/**
+ * Size of internal media port replay buffer (in ms)
+ */
+#ifndef PJSUA_MPORT_REPLAY_BUFFER_SIZE
+#   define PJSUA_MPORT_REPLAY_BUFFER_SIZE	1250
 #endif
 
 
@@ -2468,7 +2486,16 @@ PJ_DECL(pjsua_msg_data*) pjsua_msg_data_clone(pj_pool_t *pool,
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_create(void);
-
+/**
+ * Instantiate pjsua application. Application must call this function before
+ * calling any other functions, to make sure that the underlying libraries
+ * are properly initialized. Once this function has returned success,
+ * application must call pjsua_destroy() before quitting.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_create2(const pjsua_logging_config *log_cfg);
+ 
 
 /** Forward declaration */
 typedef struct pjsua_media_config pjsua_media_config;
@@ -4944,7 +4971,7 @@ PJ_DECL(pj_status_t) pjsua_acc_set_transport(pjsua_acc_id acc_id,
  * Maximum simultaneous calls.
  */
 #ifndef PJSUA_MAX_CALLS
-#   define PJSUA_MAX_CALLS          4
+#   define PJSUA_MAX_CALLS	    64
 #endif
 
 /**
@@ -5511,6 +5538,33 @@ PJ_DECL(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
 
 /**
+ * Make outgoing call to the specified URI using the specified account.
+ *
+ * @param acc_id	The account to be used.
+ * @param dst_uri	URI to be put in the To header (normally is the same
+ *			as the target URI).
+ * @param opt		Optional call setting. This should be initialized
+ *			using #pjsua_call_setting_default().
+ * @param user_data	Arbitrary user data to be attached to the call, and
+ *			can be retrieved later.
+ * @param msg_data	Optional headers etc to be added to outgoing INVITE
+ *			request, or NULL if no custom header is desired.
+ * @param p_call_id	Pointer to receive call identification.
+ * @param src_uri	Optional From URI to override the local account uri.
+ * @param contact	Optional Constact URI to override the account's default.
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_make_call2(pjsua_acc_id acc_id,
+					  const pj_str_t *dst_uri,
+					  const pjsua_call_setting *opt,
+					  void *user_data,
+					  const pjsua_msg_data *msg_data,
+					  pjsua_call_id *p_call_id,
+                      const pj_str_t* src_uri,
+                      const pj_str_t* contact_uri);
+
+
+/**
  * Check if the specified call has active INVITE session and the INVITE
  * session has not been disconnected.
  *
@@ -5982,6 +6036,18 @@ PJ_DECL(pj_status_t) pjsua_call_xfer_replaces(pjsua_call_id call_id,
  */
 PJ_DECL(pj_status_t) pjsua_call_dial_dtmf(pjsua_call_id call_id, 
                                           const pj_str_t *digits);
+
+/**
+* Get number of digits in the DTMF transmit queue.
+ *
+ * @param call_id	Call identification.
+ * @param digits	Receives the number of digits currently queued for
+ *					transmission using RFC 2833 payload formats 
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_get_queued_dtmf_digits(pjsua_call_id call_id, 
+					  unsigned *digits);
 
 /**
  * Send DTMF digits to remote. Use this method to send DTMF using the method in
@@ -6844,6 +6910,20 @@ struct pjsua_media_config
      * Default value: PJSUA_MAX_CONF_PORTS
      */
     unsigned            max_media_ports;
+
+    /**
+     * Default size of internal media port record buffer (in ms).
+     *
+     * Default value: PJSUA_MPORT_RECORD_BUFFER_SIZE
+     */
+    unsigned		mport_record_buffer_size;
+
+    /**
+     * Default size of internal media port play buffer (in ms).
+     *
+     * Default value: PJSUA_MPORT_REPLAY_BUFFER_SIZE
+     */
+    unsigned		mport_replay_buffer_size;
 
     /**
      * Specify whether the media manager should manage its own
@@ -7710,6 +7790,498 @@ PJ_DECL(pj_status_t) pjsua_recorder_get_port(pjsua_recorder_id id,
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id);
+
+/*****************************************************************************
+* 
+* 
+* 
+*
+ * Low-level media/audio port/channel API (similar to memory players and recorders).
+ */
+
+/**
+ * Create/allocate a media port, and automatically add this port to
+ * the conference bridge so that its connectivity can be controlled
+ * and play, record and/or conferencing operations can be initiated
+ * as necessary.
+ *
+ * @param dir					Media port's direction.
+ * @param enable_vad			Set to true to enable VAD features during record.
+ * @param record_buffer_size	Desired size of internal record buffer (in ms).
+ *								If 0, the default value in mport_record_buffer_size
+ *								will be used instead.
+ * @param record_data_threshold	Threshold, in ms, that should be used to signal
+ *								the record event so that the application can collect
+ *								the recorded data. The record event will signaled
+ *								whilst the available/free space in the record buffer
+ *								is below this threshold. If 0, the default value of
+ *								250 will be used;
+ * @param play_buffer_size		Desired size of internal play buffer (in ms).
+ *								If 0, the default value in mport_replay_buffer_size
+ *								will be used instead.
+ * @param play_data_threshold	Threshold, in ms, that should be used to signal
+ *								the play event so that the application can supply
+ *								additional data. The play event will signaled
+ *								whilst the available/unplayed data in the play buffer
+ *								is below this threshold. If 0, the default value of
+ *								250 will be used;
+ * @param p_id					Pointer to receive media port ID.
+ *
+ * @return						PJ_SUCCESS on success, or the appropriate error
+ *								code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_alloc(pjmedia_dir dir,
+									   pj_bool_t enable_vad,
+									   pj_size_t record_buffer_size,
+									   pj_size_t record_data_threshold,
+									   pj_size_t play_buffer_size,
+									   pj_size_t play_data_threshold,
+									   pjsua_mport_id *p_id);
+
+
+/**
+ * Destroy/free media port, remove it from the bridge, and free
+ * associated resources.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_free(pjsua_mport_id id);
+
+/**
+ * Get conference port ID associated with media port.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			Conference port ID associated with this media port.
+ */
+PJ_DECL(pjsua_conf_port_id) pjsua_mport_get_conf_port(pjsua_mport_id id);
+
+/**
+ * Get the underlying pjmedia_port for the media port.
+ *
+ * @param id		The media port ID.
+ * @param p_port	The media port associated with the player.
+ *
+ * @return			PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_get_port(pjsua_mport_id id,
+										  pjmedia_port **p_port);
+
+/**
+ * Get the media port's direction.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			Direction.
+ */
+PJ_DECL(pjmedia_dir) pjsua_mport_get_dir(pjsua_mport_id id);
+
+/**
+ * Get media port's replay event object. The returned event object is
+ * valid only until pjsua_mport_free() is invoked and must therefore
+ * not be accessed after that point.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			Event object that is signaled when the status of the
+ *					replay operation changes indicating that the
+ *					application should invoke pjsua_mport_play_status().
+ */
+PJ_DECL(pj_event_t *) pjsua_mport_get_play_event(pjsua_mport_id id);
+
+/**
+ * Get media port's record event object. The returned event object is
+ * valid only until pjsua_mport_free() is invoked and must therefore
+ * not be accessed after that point.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			Event object that is signaled when the status of the
+ *					record operation changes indicating that the
+ *					application should invoke pjsua_mport_record_status().
+ */
+PJ_DECL(pj_event_t *) pjsua_mport_get_record_event(pjsua_mport_id id);
+
+/**
+ * Get media port's recognition event object. The returned event object
+ * is valid only until pjsua_mport_free() is invoked and must therefore
+ * not be accessed after that point.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			Event object that is signaled when a recognition
+ *					event is available for collection via
+ *					pjsua_mport_get_recognised().
+ */
+PJ_DECL(pj_event_t *) pjsua_mport_get_recognition_event(pjsua_mport_id id);
+
+/**
+ * Initiate a replay operation. If successful, the replay will continue
+ * until pjsua_mport_play_status() returns with the 'completed' flag set
+ * after all the supplied data is played. Additional data can be periodically
+ * supplied by invoking pjsua_mport_play_put_data() once the play event is
+ * signaled.
+ *
+ * @param id		The media port ID.
+ * @param fmt		Format/ecoding details for the replay data.
+ * @param data		Optional address of initial block of data that should be
+ *					replayed.
+ * @param size		Number of bytes/octets of replay data provided in the
+ *					initial block.
+ * @param count		Address of count that will receive the number of bytes
+ *					of replay data that were copied from the supplied initial
+ *					data block to the internal replay buffer.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_play_start(pjsua_mport_id id,
+											const pjmedia_format *fmt,
+											const void *data,
+											pj_size_t size,
+											pj_size_t *count);
+
+/**
+ * Status information about the play operation.
+ */
+typedef struct pjsua_mport_play_info
+{
+	/**
+	 * Number of samples actually played thus far.
+	 */
+	pj_uint64_t	samples_played;
+
+	/**
+	 * Flag which is set to true if the replay has completed.
+	 */
+	pj_bool_t	completed;
+
+	/**
+	 * Flag which is set to true if an underrun has occurred
+	 * since the last invokation of pjsua_mport_play_status().
+	 */
+	pj_bool_t	underrun;
+
+	/**
+	 * Space, in samples, available in the internal buffer
+	 * for new replay data.
+	 */
+	pj_uint32_t		free_buffer_size;
+
+} pjs_mport_play_info;
+
+/**
+ * Get status info about the current play operation.
+ *
+ * @param id		The media port ID.
+ * @param info		The status.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_play_status(pjsua_mport_id id,
+											 pjs_mport_play_info *info);
+
+/**
+ * Supply the next chunk of data to be replayed. If no data is supplied,
+ * then this taken as an idication that no more data is available and
+ * that the replay should complete when the already buffered data is
+ * replayed.
+ *
+ * @param id		The media port ID.
+ * @param data		Address of next block of data that should be replayed.
+ * @param size		Number of bytes/octets of replay data provided in the
+ *					data block.
+ * @param count		Address of count that will receive the number of bytes
+ *					of replay data that were copied from the supplied data
+ *					block to the internal replay buffer.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_play_put_data(pjsua_mport_id id,
+	const void *data,
+	pj_size_t size,
+	pj_size_t *count);
+
+/**
+ * Stop/abort the current play operation.
+ *
+ * @param id		The file player ID.
+ * @param discard	Flag which should be set to discard any unplayed data
+ *					in the internal replay buffer (i.e., stop immediately).
+ *					If not set, the replay operation will continue until
+ *					all the already internally buffered data is played.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_play_stop(pjsua_mport_id id, pj_bool_t discard);
+
+
+/**
+ * Initiate a record operation. If successful, the record will continue
+ * until pjsua_mport_record_status() returns with the 'completed' flag
+ * set after a completion condition has been met. The recorded data can be
+ * retreived periodically (when the record event is signaled) by invoking
+ * pjsua_mport_record_get_data().
+ *
+ * @param id				The media port ID.
+ * @param fmt				Format/ecoding details for the recorded data.
+ * @param rec_output		Flag which should be set to PJ_TRUE if the
+ *							port's output (player or transmit direction)
+ *							should be recorded. Otherwise, the port's input
+ *							will be recorded.
+ * @param max_duration		Maximum duration, in ms, for the recording. 0
+ *							if no limit.
+ * @param max_samples		Maximum number of samples to record. 0 if no
+ *							limit.
+ * @param max_silence		Max period of silence, in ms, before the
+ *							recording is terminated. 0 if no limit.
+ *@param eliminate_silence	The maximum duration, in ms, of silence to
+ *							record. Silences longer than this are truncated
+ *							to this length. 0 disables silence elimination.
+ *
+ * @return					PJ_SUCCESS on success, or the appropriate error
+ *							code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_record_start(pjsua_mport_id id,
+	const pjmedia_format *fmt,
+	pj_bool_t rec_output,
+	pj_size_t max_duration,
+	pj_size_t max_samples,
+	pj_size_t max_silence,
+	pj_size_t eliminate_silence);
+
+/**
+* Status information about the record operation.
+*/
+typedef enum pjsua_record_end_reason
+{
+	PJSUA_REC_ER_NONE,
+	PJSUA_REC_ER_MAX_SAMPLES,
+	PJSUA_REC_ER_MAX_DURATION,
+	PJSUA_REC_ER_MAX_SILENCE,
+	PJSUA_REC_ER_STOP
+} pjs_record_end_reason;
+typedef struct pjsua_mport_record_info
+{
+	/**
+	 * Total number of samples actually recorded thus far.
+	 */
+	pj_uint64_t	samples_recorded;
+
+	/**
+	 * Flag which is set to true if the record has completed.
+	 */
+	pj_bool_t	completed;
+
+	/**
+	 * Identifies the reason the recording was completed.
+	 */
+	pjs_record_end_reason end_reason;
+
+	/**
+	 * Flag which is set to true if an overrun has occurred
+	 * since the last invokation of pjsua_mport_record_status().
+	 */
+	pj_bool_t	overrun;
+
+	/**
+	 * Number of samples available for immediate retreival from
+	 * the internal record buffer.
+	 */
+	pj_uint32_t		samples_available;
+
+} pjs_mport_record_info;
+
+/**
+ * Get the status of the current record operation.
+ *
+ * @param id		The media port ID.
+ * @param info		The info.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_record_status(pjsua_mport_id id,
+	pjs_mport_record_info *info);
+
+/**
+ * Get the next chunk of data that was recorded.
+ *
+ * @param id		The media port ID.
+ * @param data		Address of buffer that should receive the data.
+ * @param size		Size of data buffer in bytes.
+ * @param count		Address of count that will receive the number of bytes
+ *					of record data that were copied to the supplied buffer.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_record_get_data(pjsua_mport_id id,
+	void *data,
+	pj_size_t size,
+	pj_size_t *count);
+
+/**
+ * Stop/abort the current record operation.
+ *
+ * @param id		The media port ID.
+ * @param discard	Flag which should be set to discard any uncollected
+ *					data in the internal record buffer.
+ *					The media port will continue to be 'reserved' for
+ *					recording purposes until pjsua_mport_record_status()
+ *					returns with the 'completed' flag set.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_record_stop(pjsua_mport_id id, pj_bool_t discard);
+
+
+/**
+ * Initiate a conference operation. If successful, the port's output will
+ * contain the mixed result of the inputs of all the conference's
+ * participants. A play operation can not be active at the same time as
+ * a conference on the same port/channel. The conference will continue
+ * until #pjsua_mport_conf_stop() is invoked. Participants can be added
+ * and removed using #pjsua_mport_conf_add() and
+ * #pjsua_mport_conf_remove() respectively.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_conf_start(pjsua_mport_id id);
+
+/**
+ * Add new participant to the conference on the media port.
+ *
+ * @param id		The media port ID.
+ * @param pid		The media port ID of the participant to add.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_conf_add(pjsua_mport_id id, pjsua_mport_id pid);
+
+/**
+ * Remove participant from the conference on the media port.
+ *
+ * @param id		The media port ID.
+ * @param pid		The media port ID of the participant to remove.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_conf_remove(pjsua_mport_id id, pjsua_mport_id pid);
+
+/**
+ * Stop conference operation.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_conf_stop(pjsua_mport_id id);
+
+
+/**
+* Recognition event types
+*/
+typedef enum pjsua_recognition_type
+{
+	PJSUA_RCG_NONE = 0
+	,PJSUA_RCG_DTMF_RFC2833 = 1
+	,PJSUA_RCG_DTMF_TONE = 2
+	,PJSUA_RCG_DTMF = (PJSUA_RCG_DTMF_RFC2833 | PJSUA_RCG_DTMF_TONE)
+	//,PJSUA_RCG_GRUNT = 4
+	//,PJSUA_RCG_CALL_PROGRESS_TONE = 8
+	//,PJSUA_RCG_TONE = 16
+	//,PJSUA_RCG_LIVE_SPEAKER = 32
+} pjs_recognition_type;
+
+typedef struct pjsua_listen_for_parms {
+	/**
+	 * Bitmask of the detector types that should be activated or
+	 * PJSUA_RCG_NONE to disable all detectors.
+	 *
+	 * PJSUA_RCG_DTMF_RFC2833 does not represent a detector that can
+	 * be activated on the audio stream, however, it allows the
+	 * application's #on_dtmf_digit() callback handler to use the
+	 * same consistent event delivery mechanism for RFC2833 received
+	 * DTMF digits as those received directly as inband tones from
+	 * peers that do not support RFC2833. RFC2833 digits can be
+	 * queued by the application by invoking
+	 * #pjsua_mport_add_rfc2833_dtmf_digit(). If desired,
+	 * PJSUA_RCG_DTMF_TONE can be added to detect inband tones. If
+	 * both RFC2833 and tone based DTMF tone detectors are activated
+	 * (i.e., PJSUA_RCG_DTMF), then the first event queued of either
+	 * type will automatically deactivate the other detector to
+	 * prevent the potential of digit duplication.
+	 *
+	 * PJSUA_RCG_GRUNT activates a grunt detector that generates an
+	 * event whenever the silence state of the audio stream changes
+	 * based on an adaptive noise threshold algorithm.
+	 */
+	unsigned	types;
+
+	//int		grunt_latency;
+	//double	min_noise_level;
+	//double	grunt_threshold;
+} pjs_listen_for_parms;
+
+/**
+ * Start or stop one or more of a series of detectors that can be
+ * activated on a media port. Once a detector is activated, detection
+ * events can be retreived by invoking #pjsua_mport_get_recognised()
+ * after the recognition event, which can be retreived by invoking
+ * #pjsua_mport_get_recognition_event(), is signaled.
+ *
+ * @param id		The media port ID.
+ * @param params	Details of detectors to be activated or NULL to
+ *					disable all detectors.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_listen_for(pjsua_mport_id id, pjs_listen_for_parms* params);
+
+typedef struct pjsua_recognition_info {
+	pjs_recognition_type	type;
+	unsigned				timestamp;
+	unsigned				param0;
+	unsigned				param1;
+} pjs_recognition_info;
+
+/**
+ * Get the next available detection event.
+ *
+ * @param id		The media port ID.
+ * @param info		Details of detected event.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+
+PJ_DECL(pj_status_t) pjsua_mport_get_recognised(pjsua_mport_id id, pjs_recognition_info* info);
+
+/**
+ * Discard any recognition events currently queued in the internal buffer.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+
+PJ_DECL(pj_status_t) pjsua_mport_discard_recognised(pjsua_mport_id id);
+
+/**
+ * Add a RFC2833 DTMF digit to the internal recognition event queue.
+ *
+ * @param id		The media port ID.
+ * @param digit		The actual digit.
+ * @param timestamp	The RTP timestamp associated with the digit.
+ * @param duration	The duration, in ms, of the digit.
+ *
+ * @return			PJ_SUCCESS on success PJ_EIGNORED if the port is
+ *					not currently listening for RFC2833 digits, or
+ *					the appropriate error code.
+ */
+
+PJ_DECL(pj_status_t) pjsua_mport_add_rfc2833_dtmf_digit(pjsua_mport_id id, char digit, unsigned timestamp, unsigned duration);
 
 
 /*****************************************************************************

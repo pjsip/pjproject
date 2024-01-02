@@ -413,6 +413,18 @@ PJ_DECL(pj_status_t) pjmedia_stream_resume(pjmedia_stream *stream,
 PJ_DECL(pj_status_t) pjmedia_stream_dial_dtmf(pjmedia_stream *stream,
                                               const pj_str_t *ascii_digit);
 
+/**
+ * Get the number of DTMF digits currently in the RFC 2833 transmit
+ * queue for this stream (valid only for audio streams).
+ *
+ * @param stream	The media stream.
+ * @param digits	Receives the number of queued digits.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_get_queued_dtmf_digits(pjmedia_stream *stream,
+					      unsigned *digits);
+
 
 /**
  * Check if the stream has incoming DTMF digits in the incoming DTMF

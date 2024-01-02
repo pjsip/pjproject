@@ -1380,7 +1380,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
             while (pj_cmp_timestamp(&cport->ts_clock, &cport->ts_tx) > 0)
             {
-                if (cport->tx_setting == PJMEDIA_PORT_ENABLE) {
+		if ((cport->tx_setting == PJMEDIA_PORT_ENABLE) ||
+			(cport->tx_setting == PJMEDIA_PORT_ENABLE_ALWAYS)) {
                     pjmedia_frame tmp_f;
 
                     tmp_f.timestamp = cport->ts_tx;

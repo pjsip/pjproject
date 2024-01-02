@@ -582,7 +582,7 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
         clear_all_responses(dd);
 
         /* Send 500 response */
-        status = pjsip_inv_end_session(dd->inv, 500, &reason, &tdata);
+        status = pjsip_inv_end_session(dd->inv, 504, &reason, &tdata);
         if (status == PJ_SUCCESS && tdata) {
             pjsip_dlg_send_response(dd->inv->dlg, 
                                     dd->inv->invite_tsx,
@@ -608,7 +608,10 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
             return;
         }
     } else {
+		if (dd->inv->invite_tsx)
         pjsip_tsx_retransmit_no_state(dd->inv->invite_tsx, tdata);
+		else
+			pjsip_tx_data_dec_ref(tdata);
     }
 
     if (final) {

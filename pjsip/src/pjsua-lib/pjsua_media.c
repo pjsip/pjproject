@@ -79,10 +79,6 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
         pjsua_var.media_cfg.thread_cnt = 1;
     }
 
-    if (pjsua_var.media_cfg.max_media_ports < pjsua_var.ua_cfg.max_calls) {
-        pjsua_var.media_cfg.max_media_ports = pjsua_var.ua_cfg.max_calls + 2;
-    }
-
     /* Create media endpoint. */
     status = pjmedia_endpt_create(&pjsua_var.cp.factory, 
                                   pjsua_var.media_cfg.has_ioqueue? NULL :
@@ -2788,7 +2784,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                         const pjmedia_sdp_session *s_;
                         pjmedia_sdp_neg_get_active_local(call->inv->neg, &s_);
 
-                        if (mi < s_->media_count) {
+                        if (s_ && mi < s_->media_count) {
                             m = pjmedia_sdp_media_clone(pool, s_->media[mi]);
                             m->desc.port = 0;
                         } else {
@@ -3096,7 +3092,7 @@ on_error:
 static void stop_media_stream(pjsua_call *call, unsigned med_idx)
 {
     pjsua_call_media *call_med;
-    
+
     if (pjsua_call_media_is_changing(call)) {
         call_med = &call->media_prov[med_idx];
         if (med_idx >= call->med_prov_cnt)

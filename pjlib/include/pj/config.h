@@ -412,7 +412,7 @@
  * Default: 4
  */
 #ifndef PJ_LOG_MAX_LEVEL
-#  define PJ_LOG_MAX_LEVEL   5
+#  define PJ_LOG_MAX_LEVEL   6
 #endif
 
 /**

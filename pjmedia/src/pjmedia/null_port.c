@@ -82,7 +82,11 @@ static pj_status_t null_get_frame(pjmedia_port *this_port,
 {
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame->size = PJMEDIA_PIA_AVG_FSZ(&this_port->info);
+#if PJ_HAS_INT64
+	frame->timestamp.u64 += PJMEDIA_PIA_SPF(&this_port->info);
+#else
     frame->timestamp.u32.lo += PJMEDIA_PIA_SPF(&this_port->info);
+#endif
     pjmedia_zero_samples((pj_int16_t*)frame->buf, 
                           PJMEDIA_PIA_SPF(&this_port->info));
 

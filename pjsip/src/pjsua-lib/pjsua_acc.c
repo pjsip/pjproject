@@ -1456,6 +1456,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     if (update_reg) {
         /* If accounts has registration enabled, start registration */
         if (acc->cfg.reg_uri.slen) {
+            pjsip_regc_destroy(acc->regc);
             status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
             if (status != PJ_SUCCESS) {
                 pjsua_perror(THIS_FILE, "Failed to register with new account "
@@ -2866,6 +2867,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
             goto on_return;
         }
 
+on_retry_reg:
         status = pjsip_regc_register(pjsua_var.acc[acc_id].regc,
                                      PJSUA_REG_AUTO_REG_REFRESH,
                                      &tdata);
@@ -2903,6 +2905,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
         status = pjsip_regc_unregister(pjsua_var.acc[acc_id].regc, &tdata);
     }
 
+on_retry_unreg:
     if (status == PJ_SUCCESS) {
         pjsip_regc *regc = pjsua_var.acc[acc_id].regc;
 
@@ -2933,7 +2936,25 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
         
         //pjsua_process_msg_data(tdata, NULL);
         status = pjsip_regc_send( regc, tdata );
-        
+        if (status == PJSIP_EBUSY)
+		{
+			PJ_LOG(3, (THIS_FILE, "Acc %d: %s could not be sent using the current registration client because it is busy; creating a new client", acc_id, renew ? "Registration" : "Unregistration"));
+			status = pjsua_regc_init(acc_id);
+			if (status == PJ_SUCCESS)
+			{
+				if (!regc)
+				{
+					status = PJ_EINVALIDOP;
+				}
+				else
+				{
+					if (renew)
+						goto on_retry_reg;
+					status = pjsip_regc_unregister_all(regc, &tdata);
+					goto on_retry_unreg;
+				}
+			}
+		}
         PJSUA_LOCK();
         if (pjsip_regc_dec_ref(regc) == PJ_EGONE) {
             /* regc has been deleted. */
@@ -3392,7 +3413,6 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     pjsip_sip_uri *sip_uri;
     pj_status_t status;
     pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
-    unsigned flag;
     pjsip_tpselector tp_sel;
     pjsip_tpmgr *tpmgr;
     pjsip_tpmgr_fla2_param tfla2_prm;
@@ -3442,7 +3462,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
         tp_type = (pjsip_transport_type_e)(((int)tp_type) |
                   PJSIP_TRANSPORT_IPV6);
 
-    flag = pjsip_transport_get_flag_from_type(tp_type);
+    unsigned flag = pjsip_transport_get_flag_from_type(tp_type);
 
     /* Init transport selector. */
     pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
@@ -3462,6 +3482,9 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
         return status;
 
     /* Set this as default return value. This may be changed below. */
+    if (acc->cfg.rtp_cfg.public_addr.slen > 0)
+		addr->host = acc->cfg.rtp_cfg.public_addr;
+	else
     addr->host = tfla2_prm.ret_addr;
     addr->port = tfla2_prm.ret_port;
 
@@ -3735,7 +3758,6 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     pjsip_tpselector tp_sel;
     pjsip_tpmgr *tpmgr;
     pjsip_tpmgr_fla2_param tfla2_prm;
-    unsigned flag;
     int secure;
     int local_port;
     const char *beginquote, *endquote;
@@ -3821,7 +3843,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
                   (((int)tp_type) | PJSIP_TRANSPORT_IPV6);
     }
 
-    flag = pjsip_transport_get_flag_from_type(tp_type);
+    unsigned flag = pjsip_transport_get_flag_from_type(tp_type);
     secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
 
     /* Init transport selector. */

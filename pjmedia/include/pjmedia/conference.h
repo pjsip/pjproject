@@ -243,6 +243,34 @@ PJ_DECL(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
                                             const pj_str_t *name,
                                             unsigned *p_slot );
 
+/**
+ * Replace existing media port in the conference bridge (that was
+ * initially added using #pjmedia_conf_add_port()) with a new port
+ * in the same slot whilst maintaining any connections established
+ * by invoking #pjmedia_conf_connect_port().
+ *
+ * By default, the new conference port will have both TX and RX enabled, 
+ * but it is not connected to any other ports. Application SHOULD call 
+ * #pjmedia_conf_connect_port() to  enable audio transmission and receipt 
+ * to/from this port.
+ *
+ * Once the media port is connected to other port(s) in the bridge,
+ * the bridge will continuosly call get_frame() and put_frame() to the
+ * port, allowing media to flow to/from the port.
+ *
+ * @param conf		The conference bridge.
+ * @param pool		Pool to allocate buffers for this port.
+ * @param strm_port	Stream port interface.
+ * @param slot		Slot index of the existing port in
+ *			the conference bridge.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
+					    pj_pool_t *pool,
+					    pjmedia_port *strm_port,
+					    unsigned slot );
+
 
 #if !DEPRECATED_FOR_TICKET_2234
 /**
@@ -433,7 +461,18 @@ PJ_DECL(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 PJ_DECL(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
                                               unsigned ports[],
                                               unsigned *count );
-
+/**
+ * Get port info.
+ *
+ * @param conf          The conference bridge.
+ * @param slot          Port index.
+ * @param info          Pointer to receive the info.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_get_media_port_info(pjmedia_conf* conf,
+    unsigned slot,
+    pjmedia_port_info* info);
 
 /**
  * Get port info.
