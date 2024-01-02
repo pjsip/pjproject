@@ -121,7 +121,13 @@ using namespace pj;
 %feature("director") FindBuddyMatch;
 %feature("director") AudioMediaPlayer;
 %feature("director") AudioMediaPort;
-%feature("director") PendingJob;
+// PendingJob is only used on Python
+#ifdef SWIGPYTHON
+    %feature("director") PendingJob;
+#else
+    %ignore pj::PendingJob;
+    %ignore pj::Endpoint::utilAddPendingJob;
+#endif
 
 //
 // STL stuff.
