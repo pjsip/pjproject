@@ -230,10 +230,10 @@ class TestJob(pj.PendingJob):
         print("Job deleted id:", id(self), "value:", self.val.value)
 
 def add_new_job1(ep):
-	print("Creating job 1")
-	job = TestJob()
-	print("Adding job 1")
-	ep.utilAddPendingJob(job)
+    print("Creating job 1")
+    job = TestJob()
+    print("Adding job 1")
+    ep.utilAddPendingJob(job)
 
 # Function to be executed in a separate thread
 def add_new_job2(ep):
