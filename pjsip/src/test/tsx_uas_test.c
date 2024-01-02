@@ -710,10 +710,11 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             if (!test_complete)
                 test_complete = 1;
 
-            if (tsx->status_code != PJSIP_SC_TSX_TRANSPORT_ERROR) {
+            if (tsx->status_code != PJSIP_SC_REQUEST_TIMEOUT) {
                 PJ_LOG(3,(THIS_FILE,"    error: incorrect status code"
                           " (expecting %d, got %d)",
-                          PJSIP_SC_TSX_TRANSPORT_ERROR,
+                          PJSIP_SC_REQUEST_TIMEOUT,
+                          // PJSIP_SC_TSX_TRANSPORT_ERROR,
                           tsx->status_code));
                 test_complete = -170;
             }
@@ -726,12 +727,13 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             if (!test_complete)
                 test_complete = 1;
 
-            if (tsx->status_code != PJSIP_SC_TSX_TRANSPORT_ERROR &&
+            if (tsx->status_code != PJSIP_SC_REQUEST_TIMEOUT &&
                 tsx->status_code != PJSIP_SC_OK)
             {
                 PJ_LOG(3,(THIS_FILE,"    error: incorrect status code"
                           " (expecting %d, got %d)",
-                          PJSIP_SC_TSX_TRANSPORT_ERROR,
+                          PJSIP_SC_REQUEST_TIMEOUT,
+                          // PJSIP_SC_TSX_TRANSPORT_ERROR,
                           tsx->status_code));
                 test_complete = -170;
             }
@@ -1199,9 +1201,11 @@ static int perform_test( char *target_uri, char *from_uri,
     int sent_cnt;
     pj_status_t status;
 
-    PJ_LOG(3,(THIS_FILE,
-              "   please standby, this will take at most %d seconds..",
-              test_time));
+    if (test_time > 0) {
+        PJ_LOG(3,(THIS_FILE,
+                  "   please standby, this will take at most %d seconds..",
+                  test_time));
+    }
 
     /* Reset test. */
     recv_count = 0;
@@ -1481,24 +1485,29 @@ int tsx_transport_failure_test(void)
 {
     struct test_desc
     {
+        int result;
         int transport_delay;
         int fail_delay;
         char *branch_id;
         char *title;
     } tests[] =
     {
-        { 0,  10,   TEST10_BRANCH_ID, "test10: failed transport in TRYING state (no delay)" },
-        { 50, 10,   TEST10_BRANCH_ID, "test10: failed transport in TRYING state (50 ms delay)" },
-        { 0,  1500, TEST11_BRANCH_ID, "test11: failed transport in PROCEEDING state (no delay)" },
-        // After ticket #2076, transport error will be ignored if tsx is in COMPLETED state, note that
-        // tsx state will be shifted to COMPLETED state once 200 response is sent due to transport delay.
-        //{ 50, 1500, TEST11_BRANCH_ID, "test11: failed transport in PROCEEDING state (50 ms delay)" },
-        { 0,  2500, TEST12_BRANCH_ID, "test12: failed transport in COMPLETED state (no delay)" },
-        //Not applicable (maybe)
-        //This test may expect transport failure notification in COMPLETED state. This may not be
-        //possible because the loop transport can only notify failure when it has something to send,
-        //while in this case, there is nothing to send because UAS already sends 200/OK
-        //{ 50, 2500, TEST12_BRANCH_ID, "test12: failed transport in COMPLETED state (50 ms delay)" },
+        // After #3805 and #3806, transport error will be ignored and
+        // the tests will time out.
+        // All tests are valid, but it will take too long to complete,
+        // so we disable some of the similar ones.
+        { 0, 0,  10,   TEST10_BRANCH_ID,
+          "test10: failed transport in TRYING state (no delay)" },
+        //{ 0, 50, 10,   TEST10_BRANCH_ID,
+        //  "test10: failed transport in TRYING state (50 ms delay)" },
+        //{ 1, 0,  1500, TEST11_BRANCH_ID,
+        //  "test11: failed transport in PROCEEDING state (no delay)" },
+        { 1, 50, 1500, TEST11_BRANCH_ID,
+          "test11: failed transport in PROCEEDING state (50 ms delay)" },
+        { 1, 0,  2500, TEST12_BRANCH_ID,
+          "test12: failed transport in COMPLETED state (no delay)" },
+        //{ 1, 50, 2500, TEST12_BRANCH_ID,
+        //  "test12: failed transport in COMPLETED state (50 ms delay)" },
     };
     int i, status;
 
@@ -1532,7 +1541,7 @@ int tsx_transport_failure_test(void)
         PJ_LOG(5,(THIS_FILE, "   transport loop fail mode set"));
 
         end_test = now;
-        end_test.sec += 5;
+        end_test.sec += 33;
 
         do {
             pj_time_val interval = { 0, 1 };
@@ -1540,13 +1549,10 @@ int tsx_transport_failure_test(void)
             pjsip_endpt_handle_events(endpt, &interval);
         } while (!test_complete && PJ_TIME_VAL_LT(now, end_test));
 
-        if (test_complete == 0) {
-            PJ_LOG(3,(THIS_FILE, "   error: test has timed out"));
+        if (test_complete != tests[i].result) {
+            PJ_LOG(3,(THIS_FILE, "   error: expecting timeout"));
             return -41;
         }
-
-        if (test_complete != 1)
-            return test_complete;
     }
 
     return 0;
