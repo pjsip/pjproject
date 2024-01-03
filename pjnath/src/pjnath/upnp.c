@@ -387,6 +387,8 @@ static void set_device_offline(const char *dev_id)
 {
     int i;
 
+    pj_mutex_lock(upnp_mgr.mutex);
+
     for (i = 0; i < (int)upnp_mgr.igd_cnt; i++) {
         struct igd *igd = &upnp_mgr.igd_devs[i];
 
@@ -394,7 +396,6 @@ static void set_device_offline(const char *dev_id)
         if (!pj_strcmp2(&igd->dev_id, dev_id) && igd->valid) {
             igd->alive = PJ_FALSE;
  
-            pj_mutex_lock(upnp_mgr.mutex);
             if (i == upnp_mgr.primary_igd_idx) {
                 unsigned j;
 
@@ -413,9 +414,10 @@ static void set_device_offline(const char *dev_id)
                                       (upnp_mgr.primary_igd_idx < 0? "(none)":
                                       igd->dev_id.ptr)));
             }
-            pj_mutex_unlock(upnp_mgr.mutex);
         }
     }
+
+    pj_mutex_unlock(upnp_mgr.mutex);
 }
 
 /* UPnP client callback. */
@@ -853,7 +855,6 @@ PJ_DEF(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr)
     }
 
     igd = &upnp_mgr.igd_devs[upnp_mgr.primary_igd_idx];
-    pj_mutex_unlock(upnp_mgr.mutex);
 
     /* Compare IGD's public IP to the mapped public address. */
     pj_sockaddr_cp(&host_addr, mapped_addr);
@@ -874,7 +875,8 @@ PJ_DEF(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr)
             }
         }
     }
-    
+    pj_mutex_unlock(upnp_mgr.mutex);
+
     if (!igd) {
         /* Either the IGD we previously requested to add port mapping has become
          * offline, or the address is actually not a valid.
