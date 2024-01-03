@@ -1634,6 +1634,12 @@ typedef struct pjsua_callback
      */
     void (*on_buddy_state)(pjsua_buddy_id buddy_id);
 
+    /**
+     * Notify application when the buddy "busy lamp field" state has changed.
+     * Application may then query the buddy into to get the details.
+     *
+     * @param buddy_id      The buddy id.
+     */
     void (*on_buddy_blf_state)(pjsua_buddy_id buddy_id);
 
     /**
@@ -1650,6 +1656,16 @@ typedef struct pjsua_callback
                                  pjsip_evsub *sub,
                                  pjsip_event *event);
 
+    /**
+     * Notify application when the state of client subscription session
+     * associated with a buddy "busy lamp field" has changed. Application
+     * may use this callback to retrieve more detailed information about the
+     * state changed event.
+     *
+     * @param buddy_id      The buddy id.
+     * @param sub           Event subscription session.
+     * @param event         The event which triggers state change event.
+     */
     void (*on_buddy_evsub_blf_state)(pjsua_buddy_id buddy_id,
                                      pjsip_evsub *sub,
                                      pjsip_event *event);
@@ -6684,8 +6700,16 @@ PJ_DECL(pjsua_buddy_id) pjsua_buddy_find(const pj_str_t *uri);
 PJ_DECL(pj_status_t) pjsua_buddy_get_info(pjsua_buddy_id buddy_id,
                                           pjsua_buddy_info *info);
 
+/**
+ * Get detailed buddy "busy lamp field" info.
+ *
+ * @param buddy_id      The buddy identification.
+ * @param info          Pointer to receive information about buddy.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
 PJ_DECL(pj_status_t) pjsua_buddy_get_blf_info(pjsua_buddy_id buddy_id,
-                      pjsua_buddy_blf_info *info);
+                                              pjsua_buddy_blf_info *info);
 
 /**
  * Set the user data associated with the buddy object.
@@ -6725,8 +6749,8 @@ PJ_DECL(pj_status_t) pjsua_buddy_add(const pjsua_buddy_config *buddy_cfg,
 
 
 /**
- * Add new buddy to the buddy list. If blf subscription is enabled
- * for this buddy, this function will also start the blf subscription
+ * Add new buddy to the buddy list. If "busy lamp field" subscription is
+ * enabled for this buddy, this function will also start the blf subscription
  * session immediately.
  *
  * @param buddy_cfg Buddy configuration.
@@ -6735,7 +6759,8 @@ PJ_DECL(pj_status_t) pjsua_buddy_add(const pjsua_buddy_config *buddy_cfg,
  * @return      PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_buddy_add_blf(const pjsua_buddy_config *buddy_cfg,
-                     pjsua_buddy_id *p_buddy_id);
+                                         pjsua_buddy_id *p_buddy_id);
+
 
 /**
  * Delete the specified buddy from the buddy list. Any presence subscription
@@ -6762,8 +6787,22 @@ PJ_DECL(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id);
 PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
                                                 pj_bool_t subscribe);
 
+
+/**
+ * Enable/disable buddy's "busy lamp field" monitoring. Once buddy's blf is
+ * subscribed, application will be informed about buddy's blf status
+ * changed via \a on_buddy_blf_state() callback.
+ *
+ * @param buddy_id      Buddy identification.
+ * @param subscribe     Specify non-zero to activate presence subscription to
+ *                      the specified buddy.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
 PJ_DECL(pj_status_t) pjsua_buddy_subscribe_blf(pjsua_buddy_id buddy_id,
-                        pj_bool_t subscribe);
+                                               pj_bool_t subscribe);
+
+
 /**
  * Update the presence information for the buddy. Although the library
  * periodically refreshes the presence subscription for all buddies, some
@@ -6786,7 +6825,29 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_blf(pjsua_buddy_id buddy_id,
  */
 PJ_DECL(pj_status_t) pjsua_buddy_update_pres(pjsua_buddy_id buddy_id);
 
+
+/**
+ * Update the "busy lamp field" information for the buddy. Although the library
+ * periodically refreshes the blf subscription for all buddies, some
+ * application may want to refresh the buddy's blf subscription
+ * immediately, and in this case it can use this function to accomplish
+ * this.
+ *
+ * Note that the buddy's blf subscription will only be initiated
+ * if blf monitoring is enabled for the buddy. See
+ * #pjsua_buddy_subscribe_blf() for more info. Also if blf subscription
+ * for the buddy is already active, this function will not do anything.
+ *
+ * Once the blf subscription is activated successfully for the buddy,
+ * application will be notified about the buddy's blf status in the
+ * on_buddy_blf_state() callback.
+ *
+ * @param buddy_id      Buddy identification.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
 PJ_DECL(pj_status_t) pjsua_buddy_update_blf(pjsua_buddy_id buddy_id);
+
 
 /**
  * Send NOTIFY to inform account presence status or to terminate server

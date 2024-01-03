@@ -74,14 +74,14 @@ typedef enum content_type_e
  */
 struct pjsip_blf
 {
-    pjsip_evsub     *sub;       /**< Event subscribtion record.     */
-    pjsip_dialog    *dlg;       /**< The dialog.            */
-    content_type_e   content_type;  /**< Content-Type.          */
-    pj_pool_t       *status_pool;   /**< Pool for pres_status       */
-    pjsip_blf_status    status;    /**< BLF status.           */
-    pj_pool_t       *tmp_pool;  /**< Pool for tmp_status        */
-    pjsip_blf_status    tmp_status;    /**< Temp, before NOTIFY is answred.*/
-    pjsip_evsub_user     user_cb;   /**< The user callback.         */
+    pjsip_evsub     *sub;           /**< Event subscribtion record.         */
+    pjsip_dialog    *dlg;           /**< The dialog.                        */
+    content_type_e   content_type;  /**< Content-Type.                      */
+    pj_pool_t       *status_pool;   /**< Pool for pres_status               */
+    pjsip_blf_status    status;     /**< BLF status.                        */
+    pj_pool_t       *tmp_pool;      /**< Pool for tmp_status                */
+    pjsip_blf_status    tmp_status; /**< Temp, before NOTIFY is answered.   */
+    pjsip_evsub_user     user_cb;   /**< The user callback.                 */
 };
 
 
