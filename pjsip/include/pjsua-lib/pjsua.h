@@ -6774,6 +6774,17 @@ PJ_DECL(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id);
 
 
 /**
+ * Delete the specified buddy from the buddy list. Any presence "busy lamp field"
+ * subscription to this buddy will be terminated.
+ *
+ * @param buddy_id      Buddy identification.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_buddy_del_blf(pjsua_buddy_id buddy_id);
+
+
+/**
  * Enable/disable buddy's presence monitoring. Once buddy's presence is
  * subscribed, application will be informed about buddy's presence status
  * changed via \a on_buddy_state() callback.
