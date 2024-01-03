@@ -3,6 +3,9 @@ import sys
 import time
 from collections import deque
 import struct
+import gc
+from random import randint
+import threading
 
 write=sys.stdout.write
 
@@ -210,6 +213,69 @@ def ua_tonegen_test():
 
     ep.libDestroy()
 
+class RandomIntVal():
+    def __init__(self):
+        self.value = randint(0, 100000)
+
+class TestJob(pj.PendingJob):
+    def __init__(self):
+        super().__init__()
+        self.val = RandomIntVal()
+        print("Job created id:", id(self), "value:", self.val.value)
+
+    def execute(self, is_pending):
+        print("Executing job value:", self.val.value, is_pending)
+
+    def __del__(self):
+        print("Job deleted id:", id(self), "value:", self.val.value)
+
+def add_new_job1(ep):
+    print("Creating job 1")
+    job = TestJob()
+    print("Adding job 1")
+    ep.utilAddPendingJob(job)
+
+# Function to be executed in a separate thread
+def add_new_job2(ep):
+    ep.libRegisterThread("thread")
+    print("Creating job 2")
+    job = TestJob()
+    print("Adding job 2")
+    ep.utilAddPendingJob(job)
+
+def ua_pending_job_test():
+    write("PendingJob test.." + "\r\n")
+    ep_cfg = pj.EpConfig()
+    ep_cfg.uaConfig.threadCnt = 0
+    ep_cfg.uaConfig.mainThreadOnly = True
+
+    ep = pj.Endpoint()
+    ep.libCreate()
+    ep.libInit(ep_cfg)
+    ep.libStart()
+
+    # test 1
+    # adding job from a separate function
+    add_new_job1(ep)
+
+    # test 2
+    # adding job from a different thread
+    my_thread = threading.Thread(target=add_new_job2, args=(ep,))
+    my_thread.start()
+
+    time.sleep(1)
+    print("Collecting gc 1")
+    gc.collect()
+
+    print("Handling events")
+    for _ in range(100):
+        ep.libHandleEvents(10)
+
+    print("Collecting gc 2")
+    gc.collect()
+
+    ep.libDestroy()
+
 #
 # main()
 #
@@ -219,6 +285,7 @@ if __name__ == "__main__":
     ua_run_log_test()
     ua_run_ua_test()
     ua_tonegen_test()
+    ua_pending_job_test()
     sys.exit(0)
 
 
