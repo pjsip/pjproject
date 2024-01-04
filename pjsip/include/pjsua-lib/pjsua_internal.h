@@ -772,6 +772,7 @@ void pjsua_ice_check_start_trickling(pjsua_call *call,
 pj_bool_t   pjsua_call_media_is_changing(pjsua_call *call);
 pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
                                   pjmedia_type type,
+                                  const pjmedia_sdp_session *rem_sdp,
                                   const pjsua_transport_config *tcfg,
                                   int security_level,
                                   int *sip_err_code,

@@ -5587,6 +5587,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
             goto on_return;
         }
 
+        opt.vid_cnt = 1;
         call->opt = opt;
     }
 

@@ -1929,14 +1929,14 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
         /* Terminate all calls. */
         if ((flags & PJSUA_DESTROY_NO_TX_MSG) == 0) {
             pjsua_call_hangup_all();
-        }
-
-        /* Deinit media channel of all calls (see #1717) */
-        for (i=0; i<(int)pjsua_var.ua_cfg.max_calls; ++i) {
-            /* TODO: check if we're not allowed to send to network in the
-             *       "flags", and if so do not do TURN allocation...
-             */
-            pjsua_media_channel_deinit(i);
+        } else {
+            /* Deinit media channel of all calls (see #1717) */
+            for (i=0; i<(int)pjsua_var.ua_cfg.max_calls; ++i) {
+                /* TODO: check if we're not allowed to send to network in the
+                 *       "flags", and if so do not do TURN allocation...
+                 */
+                pjsua_media_channel_deinit(i);
+            }
         }
 
         /* Set all accounts to offline */
