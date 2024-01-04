@@ -667,7 +667,7 @@ static void on_buddy_state(pjsua_buddy_id buddy_id)
 
 
 /*
- * Handler on buddy blf state changed.
+ * Handler on buddy "busy lamp field" state changed.
  */
 static void on_buddy_blf_state(pjsua_buddy_id buddy_id)
 {
@@ -745,8 +745,8 @@ static void on_buddy_evsub_state(pjsua_buddy_id buddy_id,
 }
 
 static void on_buddy_evsub_blf_state(pjsua_buddy_id buddy_id,
-                 pjsip_evsub *sub,
-                 pjsip_event *event)
+                                     pjsip_evsub *sub,
+                                     pjsip_event *event)
 {
     char event_info[80];
 

@@ -6556,50 +6556,50 @@ typedef struct pjsua_buddy_blf_info
      */
     pj_str_t        uri;
 
-    /* BLF Dialog-Info id */
+    /* "busy lamp field" Dialog-Info id */
     pj_str_t        dialog_id;
 
-    /* BLF Dialog-Info state */
+    /* "busy lamp field" Dialog-Info state */
     pj_str_t        dialog_info_state;
 
-    /* BLF Dialog-Info entity */
+    /* "busy lamp field" Dialog-Info entity */
     pj_str_t        dialog_info_entity;
 
-    /* BLF Dialog call_id */
+    /* "busy lamp field" Dialog call_id */
     pj_str_t        dialog_call_id;
 
-    /* BLF Dialog remote_tag */
+    /* "busy lamp field" Dialog remote_tag */
     pj_str_t        dialog_remote_tag;
 
-    /* BLF Dialog local_tag */
+    /* "busy lamp field" Dialog local_tag */
     pj_str_t        dialog_local_tag;
 
-    /* BLF Dialog direction */
+    /* "busy lamp field" Dialog direction */
     pj_str_t        dialog_direction;
 
-    /* BLF dialog state */
+    /* "busy lamp field" dialog state */
     pj_str_t        dialog_state;
 
-    /* BLF dialog duration */
+    /* "busy lamp field" dialog duration */
     pj_str_t        dialog_duration;
 
-    /* BLF local identity */
+    /* "busy lamp field" local identity */
     pj_str_t        local_identity;
 
-    /* BLF local identity_display */
+    /* "busy lamp field" local identity_display */
     pj_str_t        local_identity_display;
 
-    /* BLF local target uri */
+    /* "busy lamp field" local target uri */
     pj_str_t        local_target_uri;
 
 
-    /* BLF remote identity */
+    /* "busy lamp field" remote identity */
     pj_str_t        remote_identity;
 
-    /* BLF remote identity_display */
+    /* "busy lamp field" remote identity_display */
     pj_str_t        remote_identity_display;
 
-    /* BLF remote target uri */
+    /* "busy lamp field" remote target uri */
     pj_str_t        remote_target_uri;
 
 
@@ -6749,9 +6749,9 @@ PJ_DECL(pj_status_t) pjsua_buddy_add(const pjsua_buddy_config *buddy_cfg,
 
 
 /**
- * Add new buddy to the buddy list. If "busy lamp field" subscription is
- * enabled for this buddy, this function will also start the blf subscription
- * session immediately.
+ * Add new buddy to the buddy list. If "busy lamp field" (blf) subscription is
+ * enabled for this buddy, this function will also start the "busy lamp field"
+ * subscription session immediately.
  *
  * @param buddy_cfg Buddy configuration.
  * @param p_buddy_id    Pointer to receive buddy ID.
@@ -6800,8 +6800,8 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
 
 
 /**
- * Enable/disable buddy's "busy lamp field" monitoring. Once buddy's blf is
- * subscribed, application will be informed about buddy's blf status
+ * Enable/disable buddy's "busy lamp field" monitoring. Once buddy's "busy lamp field"
+ * is subscribed, application will be informed about buddy's "busy lamp field" status
  * changed via \a on_buddy_blf_state() callback.
  *
  * @param buddy_id      Buddy identification.
@@ -6838,7 +6838,7 @@ PJ_DECL(pj_status_t) pjsua_buddy_update_pres(pjsua_buddy_id buddy_id);
 
 
 /**
- * Update the "busy lamp field" information for the buddy. Although the library
+ * Update the "busy lamp field" (blf) information for the buddy. Although the library
  * periodically refreshes the blf subscription for all buddies, some
  * application may want to refresh the buddy's blf subscription
  * immediately, and in this case it can use this function to accomplish
@@ -6850,7 +6850,7 @@ PJ_DECL(pj_status_t) pjsua_buddy_update_pres(pjsua_buddy_id buddy_id);
  * for the buddy is already active, this function will not do anything.
  *
  * Once the blf subscription is activated successfully for the buddy,
- * application will be notified about the buddy's blf status in the
+ * application will be notified about the buddy's "busy lamp field" status in the
  * on_buddy_blf_state() callback.
  *
  * @param buddy_id      Buddy identification.

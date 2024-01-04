@@ -40,7 +40,7 @@
 #endif
 
 /*
- * BLF module (mod-blf)
+ * "busy lamp field" (blf)  module (mod-blf)
  */
 static struct pjsip_module mod_blf =
 {
@@ -61,7 +61,7 @@ static struct pjsip_module mod_blf =
 
 
 /*
- * BLF message body type.
+ * "busy lamp field" message body type.
  */
 typedef enum content_type_e
 {
@@ -74,11 +74,11 @@ typedef enum content_type_e
  */
 struct pjsip_blf
 {
-    pjsip_evsub     *sub;           /**< Event subscribtion record.         */
+    pjsip_evsub     *sub;           /**< Event subscription record.         */
     pjsip_dialog    *dlg;           /**< The dialog.                        */
     content_type_e   content_type;  /**< Content-Type.                      */
     pj_pool_t       *status_pool;   /**< Pool for pres_status               */
-    pjsip_blf_status    status;     /**< BLF status.                        */
+    pjsip_blf_status    status;     /**< "busy lamp field" status.          */
     pj_pool_t       *tmp_pool;      /**< Pool for tmp_status                */
     pjsip_blf_status    tmp_status; /**< Temp, before NOTIFY is answered.   */
     pjsip_evsub_user     user_cb;   /**< The user callback.                 */
@@ -91,20 +91,20 @@ typedef struct pjsip_blf pjsip_blf;
 /*
  * Forward decl for evsub callback.
  */
-static void blf_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
-static void blf_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
-                     pjsip_event *event);
-static void blf_on_evsub_rx_notify( pjsip_evsub *sub,
-                     pjsip_rx_data *rdata,
-                     int *p_st_code,
-                     pj_str_t **p_st_text,
-                     pjsip_hdr *res_hdr,
-                     pjsip_msg_body **p_body);
+static void blf_on_evsub_state(pjsip_evsub *sub, pjsip_event *event);
+static void blf_on_evsub_tsx_state(pjsip_evsub *sub, pjsip_transaction *tsx,
+                                   pjsip_event *event);
+static void blf_on_evsub_rx_notify(pjsip_evsub *sub,
+                                   pjsip_rx_data *rdata,
+                                   int *p_st_code,
+                                   pj_str_t **p_st_text,
+                                   pjsip_hdr *res_hdr,
+                                   pjsip_msg_body **p_body);
 static void blf_on_evsub_client_refresh(pjsip_evsub *sub);
 
 
 /*
- * Event subscription callback for blf.
+ * Event subscription callback for "busy lamp field".
  */
 static pjsip_evsub_blf_user blf_user =
 {
@@ -120,18 +120,18 @@ static pjsip_evsub_blf_user blf_user =
 /*
  * Some static constants.
  */
-const pj_str_t STR_DIALOG_EVENT      = { "Event", 5 };
-const pj_str_t STR_DIALOG     = { "dialog", 6 };
-const pj_str_t STR_DIALOG_APPLICATION      = { "application", 11 };
+const pj_str_t STR_DIALOG_EVENT        = { "Event", 5 };
+const pj_str_t STR_DIALOG              = { "dialog", 6 };
+const pj_str_t STR_DIALOG_APPLICATION  = { "application", 11 };
 const pj_str_t STR_DIALOG_INFO_XML     = { "dialog-info+xml", 15 };
-const pj_str_t STR_APP_DIALOG_INFO_XML     = { "application/dialog-info+xml", 27 };
+const pj_str_t STR_APP_DIALOG_INFO_XML = { "application/dialog-info+xml", 27 };
 
 
 /*
  * Init presence module.
  */
-PJ_DEF(pj_status_t) pjsip_blf_init_module( pjsip_endpoint *endpt,
-                        pjsip_module *mod_evsub)
+PJ_DEF(pj_status_t) pjsip_blf_init_module(pjsip_endpoint *endpt,
+                                          pjsip_module *mod_evsub)
 {
     pj_status_t status;
     pj_str_t accept[1];
@@ -174,10 +174,10 @@ PJ_DEF(pjsip_module*) pjsip_blf_instance(void)
 /*
  * Create client subscription.
  */
-PJ_DEF(pj_status_t) pjsip_blf_create_uac( pjsip_dialog *dlg,
-                       const pjsip_evsub_blf_user *user_cb,
-                       unsigned options,
-                       pjsip_evsub **p_evsub )
+PJ_DEF(pj_status_t) pjsip_blf_create_uac(pjsip_dialog *dlg,
+                                         const pjsip_evsub_blf_user *user_cb,
+                                         unsigned options,
+                                         pjsip_evsub **p_evsub)
 {
     pj_status_t status;
     pjsip_blf *pres;
@@ -222,8 +222,8 @@ on_return:
 /*
  * Forcefully terminate presence.
  */
-PJ_DEF(pj_status_t) pjsip_blf_terminate( pjsip_evsub *sub,
-                      pj_bool_t notify )
+PJ_DEF(pj_status_t) pjsip_blf_terminate(pjsip_evsub *sub,
+                                        pj_bool_t notify)
 {
     return pjsip_evsub_terminate(sub, notify);
 }
@@ -231,20 +231,20 @@ PJ_DEF(pj_status_t) pjsip_blf_terminate( pjsip_evsub *sub,
 /*
  * Create SUBSCRIBE
  */
-PJ_DEF(pj_status_t) pjsip_blf_initiate( pjsip_evsub *sub,
-                     pj_int32_t expires,
-                     pjsip_tx_data **p_tdata)
+PJ_DEF(pj_status_t) pjsip_blf_initiate(pjsip_evsub *sub,
+                                       pj_int32_t expires,
+                                       pjsip_tx_data **p_tdata)
 {
     return pjsip_evsub_initiate(sub, &pjsip_subscribe_method, expires,
-                p_tdata);
+                                p_tdata);
 }
 
 
 /*
  * Add custom headers.
  */
-PJ_DEF(pj_status_t) pjsip_blf_add_header( pjsip_evsub *sub,
-                       const pjsip_hdr *hdr_list )
+PJ_DEF(pj_status_t) pjsip_blf_add_header(pjsip_evsub *sub,
+                                         const pjsip_hdr *hdr_list )
 {
     return pjsip_evsub_add_header( sub, hdr_list );
 }
@@ -253,20 +253,20 @@ PJ_DEF(pj_status_t) pjsip_blf_add_header( pjsip_evsub *sub,
 /*
  * Accept incoming subscription.
  */
-PJ_DEF(pj_status_t) pjsip_blf_accept( pjsip_evsub *sub,
-                       pjsip_rx_data *rdata,
-                       int st_code,
-                       const pjsip_hdr *hdr_list )
+PJ_DEF(pj_status_t) pjsip_blf_accept(pjsip_evsub *sub,
+                                     pjsip_rx_data *rdata,
+                                     int st_code,
+                                     const pjsip_hdr *hdr_list)
 {
     return pjsip_evsub_accept( sub, rdata, st_code, hdr_list );
 }
 
 
 /*
- * Get blf status.
+ * Get "busy lamp field" status.
  */
-PJ_DEF(pj_status_t) pjsip_blf_get_status( pjsip_evsub *sub,
-                       pjsip_blf_status *status )
+PJ_DEF(pj_status_t) pjsip_blf_get_status(pjsip_evsub *sub,
+                                         pjsip_blf_status *status )
 {
     pjsip_blf *blf;
 
@@ -290,8 +290,8 @@ PJ_DEF(pj_status_t) pjsip_blf_get_status( pjsip_evsub *sub,
 /*
  * Send request.
  */
-PJ_DEF(pj_status_t) pjsip_blf_send_request( pjsip_evsub *sub,
-                         pjsip_tx_data *tdata )
+PJ_DEF(pj_status_t) pjsip_blf_send_request(pjsip_evsub *sub,
+                                           pjsip_tx_data *tdata )
 {
     return pjsip_evsub_send_request(sub, tdata);
 }
@@ -326,8 +326,9 @@ static void blf_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 /*
  * Called when transaction state has changed.
  */
-static void blf_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
-                     pjsip_event *event)
+static void blf_on_evsub_tsx_state(pjsip_evsub *sub,
+                                   pjsip_transaction *tsx,
+                                   pjsip_event *event)
 {
     pjsip_blf *pres;
 
@@ -346,11 +347,11 @@ static void blf_on_evsub_tsx_state( pjsip_evsub *sub, pjsip_transaction *tsx,
  * return PJ_SUCCESS if incoming request is acceptable. If return value
  *    is not PJ_SUCCESS, res_hdr may be added with Warning header.
  */
-static pj_status_t blf_process_rx_notify( pjsip_blf *blf,
-                       pjsip_rx_data *rdata,
-                       int *p_st_code,
-                       pj_str_t **p_st_text,
-                       pjsip_hdr *res_hdr)
+static pj_status_t blf_process_rx_notify(pjsip_blf *blf,
+                                         pjsip_rx_data *rdata,
+                                         int *p_st_code,
+                                         pj_str_t **p_st_text,
+                                         pjsip_hdr *res_hdr)
 {
     pjsip_ctype_hdr *ctype_hdr;
     pj_status_t status = PJ_SUCCESS;
@@ -432,12 +433,12 @@ static pj_status_t blf_process_rx_notify( pjsip_blf *blf,
 /*
  * Called when NOTIFY is received.
  */
-static void blf_on_evsub_rx_notify( pjsip_evsub *sub,
-                     pjsip_rx_data *rdata,
-                     int *p_st_code,
-                     pj_str_t **p_st_text,
-                     pjsip_hdr *res_hdr,
-                     pjsip_msg_body **p_body)
+static void blf_on_evsub_rx_notify(pjsip_evsub *sub,
+                                   pjsip_rx_data *rdata,
+                                   int *p_st_code,
+                                   pj_str_t **p_st_text,
+                                   pjsip_hdr *res_hdr,
+                                   pjsip_msg_body **p_body)
 {
     pjsip_blf *blf;
     pj_status_t status;

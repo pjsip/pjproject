@@ -321,7 +321,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
 }
 
 /*
- * Get detailed buddy blf info.
+ * Get detailed buddy "busy lamp field" info.
  */
 PJ_DEF(pj_status_t) pjsua_buddy_get_blf_info( pjsua_buddy_id buddy_id,
                       pjsua_buddy_blf_info *info)
@@ -803,7 +803,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id)
 }
 
 /*
-  * Delete blf buddy.
+  * Delete "busy lamp field" buddy.
   */
 PJ_DEF(pj_status_t) pjsua_buddy_del_blf(pjsua_buddy_id buddy_id)
 {
@@ -825,7 +825,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_del_blf(pjsua_buddy_id buddy_id)
     PJ_LOG(4,(THIS_FILE, "BLF buddy %d: deleting..", buddy_id));
     pj_log_push_indent();
 
-    /* Unsubscribe blf */
+    /* Unsubscribe "busy lamp field" */
     pjsua_buddy_subscribe_blf(buddy_id, PJ_FALSE);
 
     /* Not interested with further events for this buddy */
@@ -834,7 +834,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_del_blf(pjsua_buddy_id buddy_id)
                                                          pjsua_var.mod.id, NULL);
     }
 
-    /* Remove blf buddy */
+    /* Remove "busy lamp field" buddy */
     pjsua_var.buddy[buddy_id].uri.slen = 0;
     pjsua_var.buddy_cnt--;
 
@@ -844,7 +844,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_del_blf(pjsua_buddy_id buddy_id)
         pjsua_var.buddy[buddy_id].timer.id = PJ_FALSE;
     }
 
-    /* Reset blf buddy struct */
+    /* Reset "busy lamp field" buddy struct */
     reset_buddy(buddy_id);
 
     unlock_buddy(&lck);
@@ -2295,13 +2295,13 @@ static void pjsua_evsub_on_rx_notify(pjsip_evsub *sub,
     PJ_UNUSED_ARG(p_body);
 }
 
-/* Callback called when we receive blf NOTIFY */
+/* Callback called when we receive "busy lamp field" NOTIFY */
 static void pjsua_evsub_on_rx_blf_notify(pjsip_evsub *sub,
-                     pjsip_rx_data *rdata,
-                     int *p_st_code,
-                     pj_str_t **p_st_text,
-                     pjsip_hdr *res_hdr,
-                     pjsip_msg_body **p_body)
+                                         pjsip_rx_data *rdata,
+                                         int *p_st_code,
+                                         pj_str_t **p_st_text,
+                                         pjsip_hdr *res_hdr,
+                                         pjsip_msg_body **p_body)
 {
     pjsua_buddy *buddy;
 

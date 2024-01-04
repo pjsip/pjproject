@@ -381,7 +381,7 @@ typedef struct pjsua_buddy
     unsigned             term_code; /**< Subscription termination code  */
     pj_str_t             term_reason;/**< Subscription termination reason */
     pjsip_pres_status    status;    /**< Buddy presence status.         */
-    pjsip_blf_status     blf_status;/**< Buddy blf status.              */
+    pjsip_blf_status     blf_status;/**< Buddy "busy lamp field" status.*/
     pj_timer_entry       timer;     /**< Resubscription timer           */
 } pjsua_buddy;
 

@@ -259,18 +259,18 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_pidf2(char *body, unsigned body_len,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pjsip_blf_parse_dialog_info( pjsip_rx_data *rdata,
-                       pj_pool_t *pool,
-                       pjsip_blf_status *blf_status)
+PJ_DEF(pj_status_t) pjsip_blf_parse_dialog_info(pjsip_rx_data *rdata,
+                                                pj_pool_t *pool,
+                                                pjsip_blf_status *blf_status)
 {
     return pjsip_blf_parse_dialog_info2((char*)rdata->msg_info.msg->body->data,
-                  rdata->msg_info.msg->body->len,
-                  pool, blf_status);
+                                        rdata->msg_info.msg->body->len,
+                                        pool, blf_status);
 }
 
 PJ_DEF(pj_status_t) pjsip_blf_parse_dialog_info2(char *body, unsigned body_len,
-                       pj_pool_t *pool,
-                       pjsip_blf_status *blf_status)
+                                                 pj_pool_t *pool,
+                                                 pjsip_blf_status *blf_status)
 {
     pjdialog_info_dialog_info *dialog_info;
     pjdialog_info_dialog *dialog;

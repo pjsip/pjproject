@@ -20,7 +20,7 @@
 
 /**
  * @file blf.h
- * @brief SIP Extension for blf (RFC 4235)
+ * @brief SIP Extension for "busy lamp field" (blf) (RFC 4235)
  */
 #include <pjsip-simple/evsub.h>
 #include <pjsip-simple/dialog-info.h>
@@ -29,9 +29,9 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJSIP_SIMPLE_BLF SIP Extension for BLF (RFC 4235)
+ * @defgroup PJSIP_SIMPLE_BLF SIP Extension for "busy lamp field" (blf) (RFC 4235)
  * @ingroup PJSIP_SIMPLE
- * @brief Support for SIP Extension for BLF (RFC 4235)
+ * @brief Support for SIP Extension for "busy lamp field" (blf) (RFC 4235)
  * @{
  *
  * This module contains the implementation of SIP Presence Extension as
@@ -42,7 +42,7 @@ PJ_BEGIN_DECL
 
 
 /**
- * Initialize the blf module and register it as endpoint module and
+ * Initialize the "busy lamp field" module and register it as endpoint module and
  * package to the event subscription module.
  *
  * @param endpt     The endpoint instance.
@@ -53,7 +53,7 @@ PJ_BEGIN_DECL
  *          and the event subscription module.
  */
 PJ_DECL(pj_status_t) pjsip_blf_init_module(pjsip_endpoint *endpt,
-                        pjsip_module *mod_evsub);
+                                           pjsip_module *mod_evsub);
 
 
 /**
@@ -65,13 +65,14 @@ PJ_DECL(pjsip_module*) pjsip_blf_instance(void);
 
 
 /**
- * Maximum blf status info.
+ * Maximum "busy lamp field" status info items which can handled by application.
+ *
  */
 #define PJSIP_BLF_STATUS_MAX_INFO  8
 
 
 /**
- * This structure describes blf status of a presentity.
+ * This structure describes "busy lamp field" status of a presentity.
  */
 struct pjsip_blf_status
 {
@@ -79,22 +80,22 @@ struct pjsip_blf_status
     struct {
 
             pj_str_t   dialog_info_state;       /**< Dialog-Info state              */
-            pj_str_t   dialog_info_entity;       /**< Dialog-Info entity              */
-            pj_str_t   dialog_call_id;          /**< Dialog's call_id      */
-            pj_str_t   dialog_remote_tag;       /**< Dialog's remote-tag      */
-            pj_str_t   dialog_local_tag;       /**< Dialog's local-tag      */
-            pj_str_t   dialog_direction;        /**< Dialog's direction      */
-            pj_str_t   dialog_id;               /**< Dialog's id      */
-            pj_str_t   dialog_state;            /**< Dialog state              */
-            pj_str_t   dialog_duration;         /**< Dialog duration      */
+            pj_str_t   dialog_info_entity;      /**< Dialog-Info entity             */
+            pj_str_t   dialog_call_id;          /**< Dialog's call_id               */
+            pj_str_t   dialog_remote_tag;       /**< Dialog's remote-tag            */
+            pj_str_t   dialog_local_tag;        /**< Dialog's local-tag             */
+            pj_str_t   dialog_direction;        /**< Dialog's direction             */
+            pj_str_t   dialog_id;               /**< Dialog's id                    */
+            pj_str_t   dialog_state;            /**< Dialog state                   */
+            pj_str_t   dialog_duration;         /**< Dialog duration                */
 
-            pj_xml_node    *dialog_node;             /**< Pointer to tuple XML node of
-                                                parsed dialog-info body received from
-                                                remote agent. Only valid for
-                                                client subscription. If the
-                                                last received NOTIFY request
-                                                does not contain any dialog-info body,
-                                                this valud will be set to NULL */
+            pj_xml_node    *dialog_node;        /**< Pointer to tuple XML node of
+                                                     parsed dialog-info body received from
+                                                     remote agent. Only valid for
+                                                     client subscription. If the
+                                                     last received NOTIFY request
+                                                     does not contain any dialog-info body,
+                                                     this valid will be set to NULL */
             pj_str_t    local_identity;
             pj_str_t    local_identity_display;
             pj_str_t    local_target_uri;
@@ -117,7 +118,7 @@ typedef struct pjsip_blf_status pjsip_blf_status;
 
 
 /**
- * Create blf client subscription session.
+ * Create "busy lamp field" client subscription session.
  *
  * @param dlg       The underlying dialog to use.
  * @param user_cb   Pointer to callbacks to receive presence subscription
@@ -129,10 +130,10 @@ typedef struct pjsip_blf_status pjsip_blf_status;
  *
  * @return      PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_blf_create_uac( pjsip_dialog *dlg,
-                        const pjsip_evsub_blf_user *user_cb,
-                        unsigned options,
-                        pjsip_evsub **p_evsub );
+PJ_DECL(pj_status_t) pjsip_blf_create_uac(pjsip_dialog *dlg,
+                                          const pjsip_evsub_blf_user *user_cb,
+                                          unsigned options,
+                                          pjsip_evsub **p_evsub );
 
 
 /**
@@ -147,8 +148,8 @@ PJ_DECL(pj_status_t) pjsip_blf_create_uac( pjsip_dialog *dlg,
  *
  * @return      PJ_SUCCESS if subscription session has been destroyed.
  */
-PJ_DECL(pj_status_t) pjsip_blf_terminate( pjsip_evsub *sub,
-                       pj_bool_t notify );
+PJ_DECL(pj_status_t) pjsip_blf_terminate(pjsip_evsub *sub,
+                                         pj_bool_t notify );
 
 
 
@@ -163,9 +164,9 @@ PJ_DECL(pj_status_t) pjsip_blf_terminate( pjsip_evsub *sub,
  *
  * @return      PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_blf_initiate( pjsip_evsub *sub,
-                      pj_int32_t expires,
-                      pjsip_tx_data **p_tdata);
+PJ_DECL(pj_status_t) pjsip_blf_initiate(pjsip_evsub *sub,
+                                        pj_int32_t expires,
+                                        pjsip_tx_data **p_tdata);
 
 
 /**
@@ -177,8 +178,8 @@ PJ_DECL(pj_status_t) pjsip_blf_initiate( pjsip_evsub *sub,
  *
  * @return      PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_blf_add_header( pjsip_evsub *sub,
-                        const pjsip_hdr *hdr_list );
+PJ_DECL(pj_status_t) pjsip_blf_add_header(pjsip_evsub *sub,
+                                          const pjsip_hdr *hdr_list);
 
 
 /**
@@ -192,10 +193,10 @@ PJ_DECL(pj_status_t) pjsip_blf_add_header( pjsip_evsub *sub,
  *
  * @return      PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_blf_accept( pjsip_evsub *sub,
-                    pjsip_rx_data *rdata,
-                        int st_code,
-                    const pjsip_hdr *hdr_list );
+PJ_DECL(pj_status_t) pjsip_blf_accept(pjsip_evsub *sub,
+                                      pjsip_rx_data *rdata,
+                                      int st_code,
+                                      const pjsip_hdr *hdr_list );
 
 /**
  * Send request message that was previously created with initiate(), notify(),
@@ -208,8 +209,8 @@ PJ_DECL(pj_status_t) pjsip_blf_accept( pjsip_evsub *sub,
  *
  * @return      PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_blf_send_request( pjsip_evsub *sub,
-                          pjsip_tx_data *tdata );
+PJ_DECL(pj_status_t) pjsip_blf_send_request(pjsip_evsub *sub,
+                                            pjsip_tx_data *tdata);
 
 
 /**
@@ -221,8 +222,8 @@ PJ_DECL(pj_status_t) pjsip_blf_send_request( pjsip_evsub *sub,
  *
  * @return      PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjsip_blf_get_status( pjsip_evsub *sub,
-                        pjsip_blf_status *status );
+PJ_DECL(pj_status_t) pjsip_blf_get_status(pjsip_evsub *sub,
+                                          pjsip_blf_status *status);
 
 
 /**
@@ -238,9 +239,22 @@ PJ_DECL(pj_status_t) pjsip_blf_get_status( pjsip_evsub *sub,
  * @see pjsip_pres_parse_pidf2()
  */
 PJ_DECL(pj_status_t) pjsip_blf_parse_dialog_info(pjsip_rx_data *rdata,
-                       pj_pool_t *pool,
-                       pjsip_blf_status *blf_status);
+                                                 pj_pool_t *pool,
+                                                 pjsip_blf_status *blf_status);
 
+
+/**
+ * This is a utility function to parse PIDF body into PJSIP presence status.
+ *
+ * @param rdata     The incoming SIP message containing the PIDF body.
+ * @param pool      Pool to allocate memory to copy the strings into
+ *          the presence status structure.
+ * @param status    The presence status to be initialized.
+ *
+ * @return      PJ_SUCCESS on success.
+ *
+ * @see pjsip_pres_parse_pidf2()
+ */
 PJ_DECL(pj_status_t) pjsip_blf_parse_dialog_info2(char *body, unsigned body_len,
                                                   pj_pool_t *pool,
                                                   pjsip_blf_status *blf_status);
