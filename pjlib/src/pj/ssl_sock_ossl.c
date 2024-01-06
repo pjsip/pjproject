@@ -161,7 +161,7 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #  define OPENSSL_NO_SSL2           /* seems to be removed in 1.1.0 */
-# if !USING_LIBRESSL
+# ifndef M_ASN1_STRING_data
 #  define M_ASN1_STRING_data(x)     ASN1_STRING_get0_data(x)
 #  define M_ASN1_STRING_length(x)   ASN1_STRING_length(x)
 # endif
