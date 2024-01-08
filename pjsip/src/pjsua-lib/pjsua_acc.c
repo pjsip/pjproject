@@ -2446,6 +2446,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                 acc_check_nat_addr(acc, (acc->cfg.contact_rewrite_method & 3),
                                    param))
             {
+                /* Check and update Service-Route header */
+                update_service_route(acc, param->rdata);
+
                 PJSUA_UNLOCK();
                 pj_log_pop_indent();
 
