@@ -1004,8 +1004,7 @@ static void ui_add_buddy()
 
 static void ui_add_buddy_blf()
 {
-    const int buffer_size = 128;
-    char buf[buffer_size];
+    char buf[128];
     pjsua_buddy_config buddy_cfg;
     pjsua_buddy_id buddy_id;
     pj_status_t status;
