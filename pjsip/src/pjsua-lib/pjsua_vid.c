@@ -2134,6 +2134,7 @@ static pj_status_t call_add_video(pjsua_call *call,
 
         pjmedia_sdp_media_add_attr(sdp_m, a);
     }
+    call_med->def_dir = dir;
 
     /* Update SDP media line by media transport */
     status = pjmedia_transport_encode_sdp(call_med->tp, pool,
