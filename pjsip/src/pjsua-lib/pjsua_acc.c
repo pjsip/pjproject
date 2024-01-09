@@ -2002,7 +2002,7 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
     pj_size_t rcnt;
 
     /* Find and parse Service-Route headers */
-    for (;;) {
+    for (;(rdata);) {
         char saved;
         int parsed_len;
 
@@ -2053,9 +2053,6 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
         if ((void*)hsr == (void*)&rdata->msg_info.msg->hdr)
             break;
     }
-
-    if (uri_cnt == 0)
-        return;
 
     /* 
      * Update account's route set 
@@ -2416,6 +2413,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                    (int)param->reason.slen, param->reason.ptr));
         destroy_regc(acc, PJ_TRUE);
 
+        /* Clear Service-Route header */
+        update_service_route(acc, NULL);
+
         /* Stop keep-alive timer if any. */
         update_keep_alive(acc, PJ_FALSE, NULL);
     } else if (PJSIP_IS_STATUS_IN_CLASS(param->code, 200)) {
@@ -2446,9 +2446,6 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                 acc_check_nat_addr(acc, (acc->cfg.contact_rewrite_method & 3),
                                    param))
             {
-                /* Check and update Service-Route header */
-                update_service_route(acc, param->rdata);
-
                 PJSUA_UNLOCK();
                 pj_log_pop_indent();
 
