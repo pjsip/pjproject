@@ -2002,7 +2002,7 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
     pj_size_t rcnt;
 
     /* Find and parse Service-Route headers */
-    for (;;) {
+    for (;(rdata);) {
         char saved;
         int parsed_len;
 
@@ -2053,9 +2053,6 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
         if ((void*)hsr == (void*)&rdata->msg_info.msg->hdr)
             break;
     }
-
-    if (uri_cnt == 0)
-        return;
 
     /* 
      * Update account's route set 
@@ -2415,6 +2412,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                    param->code, 
                    (int)param->reason.slen, param->reason.ptr));
         destroy_regc(acc, PJ_TRUE);
+
+        /* Clear Service-Route header */
+        update_service_route(acc, NULL);
 
         /* Stop keep-alive timer if any. */
         update_keep_alive(acc, PJ_FALSE, NULL);
