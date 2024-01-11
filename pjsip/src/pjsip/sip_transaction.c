@@ -2221,6 +2221,13 @@ static void send_msg_callback( pjsip_send_state *send_state,
                 tsx_set_state( tsx, PJSIP_TSX_STATE_DESTROYED, 
                                PJSIP_EVENT_TRANSPORT_ERROR,
                                send_state->tdata, 0);
+            } else if (tsx->role == PJSIP_ROLE_UAS && 
+                       tsx->transport_flag & TSX_HAS_PENDING_RESCHED &&
+                       tsx->state != PJSIP_TSX_STATE_TERMINATED &&
+                       tsx->state != PJSIP_TSX_STATE_DESTROYED) 
+            {
+                tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
+                tsx_resched_retransmission(tsx);
             }
 
         } else {
