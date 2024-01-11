@@ -370,7 +370,9 @@ static pj_status_t initialize_acc(unsigned acc_id)
         }
         pj_list_push_back(&acc->route_set, r);
     }
-
+       pj_list_push_back(&acc->route_set, pjsip_hdr_shallow_clone(acc->pool, pjsua_var.outbound_proxy.next));
+       pj_list_push_back(&acc->route_set, pjsip_hdr_shallow_clone(acc->pool, pjsua_var.outbound_proxy.prev));
+ 
     /* Concatenate credentials from account config and global config */
     acc->cred_cnt = 0;
     for (i=0; i<acc_cfg->cred_count; ++i) {
@@ -824,6 +826,7 @@ static pj_bool_t update_hdr_list(pj_pool_t *pool, pjsip_hdr *dst,
     return changed;
 }
 
+
 /*
  * Modify account information.
  */
@@ -834,14 +837,12 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     pjsip_name_addr *id_name_addr = NULL;
     pjsip_sip_uri *id_sip_uri = NULL;
     pjsip_sip_uri *reg_sip_uri = NULL;
-    pj_uint32_t local_route_crc, global_route_crc;
-    pjsip_route_hdr global_route;
+    pj_uint32_t local_route_crc;
     pjsip_route_hdr local_route;
     pj_str_t acc_proxy[PJSUA_ACC_MAX_PROXIES];
     pj_bool_t update_reg = PJ_FALSE;
     pj_bool_t unreg_first = PJ_FALSE;
     pj_bool_t update_mwi = PJ_FALSE;
-    pj_bool_t update_route = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
@@ -888,6 +889,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Registrar URI */
     if (pj_strcmp(&acc->cfg.reg_uri, &cfg->reg_uri) && cfg->reg_uri.slen) {
         pjsip_uri *reg_uri;
+        unsigned rcnt;
 
         /* Need to parse reg_uri to get the elements: */
         reg_uri = pjsip_parse_uri(acc->pool, cfg->reg_uri.ptr, 
@@ -909,7 +911,22 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
         reg_sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(reg_uri);
 
-        update_route = PJ_TRUE;
+        /* Clear route headers from the previous registrar. */
+        rcnt = (unsigned)pj_list_size(&acc->route_set);
+        if (rcnt != pjsua_var.ua_cfg.outbound_proxy_cnt + acc->cfg.proxy_cnt) {
+            pjsip_route_hdr *hr;
+            unsigned i;
+
+            for (i=pjsua_var.ua_cfg.outbound_proxy_cnt + acc->cfg.proxy_cnt,
+                 hr=acc->route_set.prev;
+                 i<rcnt; 
+                 ++i)
+             {
+                pjsip_route_hdr *prev = hr->prev;
+                pj_list_erase(hr);
+                hr = prev;
+             }
+        }
     }
 
     /* REGISTER header list */
@@ -921,29 +938,11 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* SUBSCRIBE header list */
     update_hdr_list(acc->pool, &acc->cfg.sub_hdr_list, &cfg->sub_hdr_list);
 
-    /* Global outbound proxy */
-    global_route_crc = calc_proxy_crc(pjsua_var.ua_cfg.outbound_proxy, 
-                                      pjsua_var.ua_cfg.outbound_proxy_cnt);
     /* Account proxy */
     local_route_crc = calc_proxy_crc(cfg->proxy, cfg->proxy_cnt);
-    if (global_route_crc != acc->global_route_crc ||
-        local_route_crc != acc->local_route_crc)
-    {
-        update_route = PJ_TRUE;
-    }
-
-    if (update_route) {
+    if (local_route_crc != acc->local_route_crc) {
         pjsip_route_hdr *r;
         unsigned i;
-
-        /* Copy from global outbound proxies */
-        pj_list_init(&global_route);
-        r = pjsua_var.outbound_proxy.next;
-        while (r != &pjsua_var.outbound_proxy) {
-            pj_list_push_back(&global_route,
-                              pjsip_hdr_shallow_clone(acc->pool, r));
-            r = r->next;
-        }
 
         /* Validate the local route and save it to temporary var */
         pj_list_init(&local_route);
@@ -969,6 +968,33 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
         /* Recalculate the CRC again after route URI normalization */
         local_route_crc = calc_proxy_crc(acc_proxy, cfg->proxy_cnt);
+    }
+
+    if (local_route_crc != acc->local_route_crc) {
+        unsigned i;
+        pjsip_route_hdr *r = &acc->route_set;
+
+        /* Remove the current account proxies from the route set */
+        for (i = 0; i < pjsua_var.ua_cfg.outbound_proxy_cnt; i++)
+            r = r->next;
+        for (i = 0; i < acc->cfg.proxy_cnt; ++i) {
+            pjsip_route_hdr *r_ = r->next;
+            pj_list_erase(r_);
+        }
+
+        /* Insert new proxy setting to the route set */
+        pj_list_insert_list_after(r, &local_route);
+
+        /* Update the proxy setting */
+        acc->cfg.proxy_cnt = cfg->proxy_cnt;
+        for (i = 0; i < cfg->proxy_cnt; ++i)
+            acc->cfg.proxy[i] = acc_proxy[i];
+
+        /* Update local route CRC */
+        acc->local_route_crc = local_route_crc;
+
+        update_reg = PJ_TRUE;
+        unreg_first = PJ_TRUE;
     }
 
 
@@ -1161,34 +1187,6 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Use of proxy */
     if (acc->cfg.reg_use_proxy != cfg->reg_use_proxy) {
         acc->cfg.reg_use_proxy = cfg->reg_use_proxy;
-        update_reg = PJ_TRUE;
-        unreg_first = PJ_TRUE;
-    }
-
-    /* Update route set */
-    if (update_route) {
-        unsigned i;
-
-        /* Clear the route set */
-        pj_list_init(&acc->route_set);
-
-        /* Insert the outbound proxies to the beginning of route set */
-        pj_list_merge_first(&acc->route_set, &global_route);
-
-        /* Update global route CRC */
-        acc->global_route_crc = global_route_crc;
-
-        /* Insert new proxy setting to the route set */
-        pj_list_merge_last(&acc->route_set, &local_route);
-
-        /* Update the proxy setting */
-        acc->cfg.proxy_cnt = cfg->proxy_cnt;
-        for (i = 0; i < cfg->proxy_cnt; ++i)
-            acc->cfg.proxy[i] = acc_proxy[i];
-
-        /* Update local route CRC */
-        acc->local_route_crc = local_route_crc;
-
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
     }
