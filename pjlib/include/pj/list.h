@@ -171,7 +171,7 @@ PJ_IDECL(void) pj_list_insert_nodes_after(pj_list_type *lst,
 
 
 /**
- * Insert the node to the list before the specified element position.
+ * Insert a list to another list before the specified element position.
  *
  * @param pos   The element to which the node will be inserted before.
  * @param lst   The list to be inserted.
@@ -181,7 +181,7 @@ PJ_IDECL(void) pj_list_insert_list_before(pj_list_type *pos,
 
 
 /**
- * Insert the node to the list after the specified element position.
+ * Insert a list to another list after the specified element position.
  *
  * @param pos   The element in the list which will precede the inserted
  *              list.

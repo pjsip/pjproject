@@ -370,8 +370,6 @@ static pj_status_t initialize_acc(unsigned acc_id)
         }
         pj_list_push_back(&acc->route_set, r);
     }
-       pj_list_push_back(&acc->route_set, pjsip_hdr_shallow_clone(acc->pool, pjsua_var.outbound_proxy.next));
-       pj_list_push_back(&acc->route_set, pjsip_hdr_shallow_clone(acc->pool, pjsua_var.outbound_proxy.prev));
  
     /* Concatenate credentials from account config and global config */
     acc->cred_cnt = 0;

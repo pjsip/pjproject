@@ -62,6 +62,7 @@ PJ_IDEF(void) pj_list_insert_list_after(pj_list_type *pos, pj_list_type *lst)
 
         pj_link_node(pos, (pj_list *) ((pj_list*)lst)->next);
         pj_link_node(lst_last, pos_next);
+        pj_list_init(lst);
     }
 }
 
