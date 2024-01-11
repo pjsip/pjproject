@@ -370,7 +370,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
         }
         pj_list_push_back(&acc->route_set, r);
     }
- 
+
     /* Concatenate credentials from account config and global config */
     acc->cred_cnt = 0;
     for (i=0; i<acc_cfg->cred_count; ++i) {
@@ -824,7 +824,6 @@ static pj_bool_t update_hdr_list(pj_pool_t *pool, pjsip_hdr *dst,
     return changed;
 }
 
-
 /*
  * Modify account information.
  */
@@ -917,7 +916,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
             for (i=pjsua_var.ua_cfg.outbound_proxy_cnt + acc->cfg.proxy_cnt,
                  hr=acc->route_set.prev;
-                 i<rcnt; 
+                 i<rcnt;
                  ++i)
              {
                 pjsip_route_hdr *prev = hr->prev;
