@@ -2088,7 +2088,7 @@ static pj_status_t call_add_video(pjsua_call *call,
 
     /* Initialize call media */
     call_med = &call->media_prov[call->med_prov_cnt++];
-    status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
+    status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO, NULL,
                                    &acc_cfg->rtp_cfg, call->secure_level,
                                    NULL, PJ_FALSE, NULL);
     if (status != PJ_SUCCESS)
@@ -2134,6 +2134,7 @@ static pj_status_t call_add_video(pjsua_call *call,
 
         pjmedia_sdp_media_add_attr(sdp_m, a);
     }
+    call_med->def_dir = dir;
 
     /* Update SDP media line by media transport */
     status = pjmedia_transport_encode_sdp(call_med->tp, pool,
@@ -2237,7 +2238,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
                 call->opt.vid_cnt++;
         }
 
-        status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
+        status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO, NULL,
                                        &acc_cfg->rtp_cfg, call->secure_level,
                                        NULL, PJ_FALSE, NULL);
         if (status != PJ_SUCCESS)
