@@ -171,6 +171,27 @@ PJ_IDECL(void) pj_list_insert_nodes_after(pj_list_type *lst,
 
 
 /**
+ * Insert a list to another list before the specified element position.
+ *
+ * @param pos   The element to which the node will be inserted before.
+ * @param lst   The list to be inserted.
+ */
+PJ_IDECL(void) pj_list_insert_list_before(pj_list_type *pos,
+                                          pj_list_type *lst);
+
+
+/**
+ * Insert a list to another list after the specified element position.
+ *
+ * @param pos   The element in the list which will precede the inserted
+ *              list.
+ * @param lst   The list to be inserted.
+ */
+PJ_IDECL(void) pj_list_insert_list_after(pj_list_type *pos,
+                                         pj_list_type *lst);
+
+
+/**
  * Remove elements from the source list, and insert them to the destination
  * list. The elements of the source list will occupy the
  * front elements of the target list. Note that the node pointed by \a list2
