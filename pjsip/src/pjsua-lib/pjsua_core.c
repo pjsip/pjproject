@@ -3985,7 +3985,6 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
     /* Shutdown all TCP/TLS transports */
     if (param->shutdown_transport) {
         pjsip_tpmgr_shutdown_param param;
-        pjsua_ip_change_op_info info;
 
         pjsip_tpmgr_shutdown_param_default(&param);
         param.include_udp = PJ_FALSE;
@@ -3998,10 +3997,14 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
         /* Provide dummy info instead of NULL info to avoid possible crash
          * (if app does not check).
          */
-        pj_bzero(&info, sizeof(info));
-        pjsua_var.ua_cfg.cb.on_ip_change_progress(
-                                    PJSUA_IP_CHANGE_OP_SHUTDOWN_TP,
-                                    status, &info);
+        if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+            pjsua_ip_change_op_info info;
+
+            pj_bzero(&info, sizeof(info));
+            pjsua_var.ua_cfg.cb.on_ip_change_progress(
+                                        PJSUA_IP_CHANGE_OP_SHUTDOWN_TP,
+                                        status, &info);
+        }
     }
 
     if (param->restart_listener) {
