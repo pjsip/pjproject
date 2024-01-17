@@ -348,7 +348,11 @@ typedef struct pjmedia_aud_dev_info
      */
     pjmedia_format ext_fmt[8];
 
-
+    /** 
+     * True if builtin audio device
+     */
+    pj_bool_t builtin;
+    
 } pjmedia_aud_dev_info;
 
 

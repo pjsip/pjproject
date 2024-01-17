@@ -562,6 +562,20 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
         CFRelease(uid);
     }
     
+    /* Get builtin bool */
+    addr.mSelector = kAudioDevicePropertyTransportType;
+    addr.mScope = kAudioObjectPropertyScopeGlobal;
+    addr.mElement = kAudioObjectPropertyElementMaster;
+    UInt32 prop;
+    size = sizeof(UInt32);
+    ostatus = AudioObjectGetPropertyData(cdi->dev_id, &addr, 0, NULL, &size, &prop);
+
+    if(ostatus == noErr) {
+        cdi->info.builtin = prop == kAudioDeviceTransportTypeBuiltIn ? PJ_TRUE : PJ_FALSE;
+    } else {
+        PJ_LOG(1, (THIS_FILE, " failed to copy builtin to buffer"));
+    }
+
     /* Get device name */
     addr.mSelector = kAudioDevicePropertyDeviceName;
     addr.mScope = kAudioObjectPropertyScopeGlobal;
@@ -663,9 +677,10 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
 
         cf->dev_count++;
 
-        PJ_LOG(4, (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d) %dHz",
+        PJ_LOG(4, (THIS_FILE, " dev_id %d: %s builtin: %d (in=%d, out=%d) %dHz",
                cdi->dev_id,
                cdi->info.name,
+               cdi->info.builtin,
                cdi->info.input_count,
                cdi->info.output_count,
                cdi->info.default_samples_per_sec));
