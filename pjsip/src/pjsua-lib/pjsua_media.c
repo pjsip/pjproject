@@ -249,6 +249,8 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 static int get_media_ip_version(pjsua_call_media *call_med,
                                 const pjmedia_sdp_session *rem_sdp)
 {
+#if PJ_HAS_IPV6
+
     pjsua_ipv6_use ipv6_use;
 
     ipv6_use = pjsua_var.acc[call_med->call->acc_id].cfg.ipv6_media_use;
@@ -276,6 +278,10 @@ static int get_media_ip_version(pjsua_call_media *call_med,
             return 6;
         }
     }
+#else
+    PJ_UNUSED_ARG(call_med);
+    PJ_UNUSED_ARG(rem_sdp);
+#endif
 
     /* Use IPv4. */
     return 4;
@@ -2811,7 +2817,8 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                 pj_bool_t use_ipv6;
                 pj_bool_t use_nat64;
 
-                use_ipv6 = (pjsua_var.acc[call->acc_id].cfg.ipv6_media_use !=
+                use_ipv6 = PJ_HAS_IPV6 &&
+                           (pjsua_var.acc[call->acc_id].cfg.ipv6_media_use !=
                             PJSUA_IPV6_DISABLED);
                 use_nat64 = (pjsua_var.acc[call->acc_id].cfg.nat64_opt !=
                              PJSUA_NAT64_DISABLED);
