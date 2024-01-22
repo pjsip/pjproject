@@ -1217,6 +1217,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
         }
     }
 
+#if !PJ_HAS_IPV6
+    pjsua_var.ua_cfg.stun_try_ipv6 = PJ_FALSE;
+#endif
+
     /* Start resolving STUN server */
     status = resolve_stun_server(PJ_FALSE, PJ_FALSE, 0);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
