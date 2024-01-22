@@ -2756,10 +2756,9 @@ pj_bool_t pjsua_sip_acc_is_using_ipv6(pjsua_acc_id acc_id)
 #if PJ_HAS_IPV6
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
-    return (PJ_HAS_IPV6 &&
-            ((acc->tp_type & PJSIP_TRANSPORT_IPV6) == PJSIP_TRANSPORT_IPV6 ||
-             pjsua_var.acc[acc_id].cfg.ipv6_sip_use ==
-             PJSUA_IPV6_ENABLED_USE_IPV6_ONLY));
+    return ((acc->tp_type & PJSIP_TRANSPORT_IPV6) == PJSIP_TRANSPORT_IPV6 ||
+            pjsua_var.acc[acc_id].cfg.ipv6_sip_use ==
+            PJSUA_IPV6_ENABLED_USE_IPV6_ONLY);
 #else
     PJ_UNUSED_ARG(acc_id);
     return PJ_FALSE;
