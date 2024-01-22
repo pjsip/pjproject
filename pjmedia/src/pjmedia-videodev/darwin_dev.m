@@ -326,7 +326,8 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
                   , AVCaptureDeviceTypeExternalUnknown
 #endif
 #if TARGET_OS_IPHONE && defined(__IPHONE_10_0)
-                  , AVCaptureDeviceTypeBuiltInDuoCamera
+                  // Deprecated in iOS 10.2
+                  // , AVCaptureDeviceTypeBuiltInDuoCamera
                   , AVCaptureDeviceTypeBuiltInTelephotoCamera
 #endif
                   ];
@@ -338,7 +339,10 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
 
             dev_list = [dds devices];
         } else {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_15
+#if (defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && \
+     __MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_15) || \
+    (defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && \
+     __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_10_0)
             dev_list = [AVCaptureDevice devices];
 #endif
         }
