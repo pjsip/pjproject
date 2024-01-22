@@ -313,23 +313,34 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
     if (NSClassFromString(@"AVCaptureSession")) {
         NSArray *dev_list = NULL;
 
-#if (TARGET_OS_IPHONE && defined(__IPHONE_10_0)) || \
-    (TARGET_OS_OSX && defined(__MAC_10_15))
-        if (__builtin_available(macOS 10.15, iOS 10.0, *)) {
+        if (@available(macOS 10.15, iOS 10.0, *)) {
             /* Starting in iOS 10 and macOS 10.15, [AVCaptureDevice devices]
              * is deprecated and replaced by AVCaptureDeviceDiscoverySession.
              */
             AVCaptureDeviceDiscoverySession *dds;
-            NSArray<AVCaptureDeviceType> *dev_types =
-                @[AVCaptureDeviceTypeBuiltInWideAngleCamera
-#if TARGET_OS_OSX && defined(__MAC_10_15)
-                  , AVCaptureDeviceTypeExternalUnknown
-#endif
+            NSMutableArray<AVCaptureDeviceType> *dev_types =
+                [NSMutableArray arrayWithCapacity:5];
+
+            [dev_types addObject:AVCaptureDeviceTypeBuiltInWideAngleCamera];
 #if TARGET_OS_IPHONE && defined(__IPHONE_10_0)
-                  , AVCaptureDeviceTypeBuiltInDuoCamera
-                  , AVCaptureDeviceTypeBuiltInTelephotoCamera
+            // Deprecated in iOS 10.2
+            // AVCaptureDeviceTypeBuiltInDuoCamera
+            [dev_types addObject:AVCaptureDeviceTypeBuiltInTelephotoCamera];
 #endif
-                  ];
+
+#if (TARGET_OS_IPHONE && defined(__IPHONE_17_0)) || \
+    (TARGET_OS_OSX && defined(__MAC_14_0))
+            if (@available(macOS 14.0, iOS 17.0, *)) {
+                [dev_types addObject:AVCaptureDeviceTypeExternal];
+            } else {
+#   if (TARGET_OS_OSX && __MAC_OS_X_VERSION_MIN_REQUIRED < 140000)
+                [dev_types addObject:AVCaptureDeviceTypeExternalUnknown];
+#   endif
+            }
+
+#elif TARGET_OS_OSX
+            [dev_types addObject:AVCaptureDeviceTypeExternalUnknown];
+#endif
 
             dds = [AVCaptureDeviceDiscoverySession
                    discoverySessionWithDeviceTypes:dev_types
@@ -338,13 +349,11 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
 
             dev_list = [dds devices];
         } else {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_15
+#if (TARGET_OS_OSX && __MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_15) || \
+    (TARGET_OS_IPHONE &&  __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_10_0)
             dev_list = [AVCaptureDevice devices];
 #endif
         }
-#else
-        dev_list = [AVCaptureDevice devices];
-#endif
 
         for (AVCaptureDevice *device in dev_list) {
             if (![device hasMediaType:AVMediaTypeVideo] ||
@@ -1040,6 +1049,32 @@ static pj_status_t darwin_stream_get_cap(pjmedia_vid_dev_stream *s,
     return PJMEDIA_EVID_INVCAP;
 }
 
+static pj_bool_t set_orientation(struct darwin_stream *strm)
+{
+#if (TARGET_OS_OSX && __MAC_OS_X_VERSION_MIN_REQUIRED < 140000) || \
+    (TARGET_OS_IPHONE && __IPHONE_OS_VERSION_MIN_REQUIRED < 170000)
+
+    const AVCaptureVideoOrientation cap_ori[4] =
+    {
+        AVCaptureVideoOrientationLandscapeLeft,      /* NATURAL */
+        AVCaptureVideoOrientationPortrait,           /* 90DEG   */
+        AVCaptureVideoOrientationLandscapeRight,     /* 180DEG  */
+        AVCaptureVideoOrientationPortraitUpsideDown, /* 270DEG  */
+    };
+    AVCaptureConnection *vidcon;
+
+    vidcon = [strm->video_output
+              connectionWithMediaType:AVMediaTypeVideo];
+    if ([vidcon isVideoOrientationSupported]) {
+        vidcon.videoOrientation = cap_ori[strm->param.orient-1];
+        return PJ_TRUE;
+    }
+
+#endif
+
+    return PJ_FALSE;
+}
+
 /* API: set capability */
 static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                                          pjmedia_vid_dev_cap cap,
@@ -1242,6 +1277,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
         case PJMEDIA_VID_DEV_CAP_ORIENTATION:
         {
             pjmedia_orient orient = *(pjmedia_orient *)pval;
+            pj_bool_t support_ori = PJ_FALSE;
 
             pj_assert(orient >= PJMEDIA_ORIENT_UNKNOWN &&
                       orient <= PJMEDIA_ORIENT_ROTATE_270DEG);
@@ -1263,30 +1299,35 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
 
                 return PJ_SUCCESS;
             }
-        
-            const AVCaptureVideoOrientation cap_ori[4] =
-            {
-                AVCaptureVideoOrientationLandscapeLeft,      /* NATURAL */
-                AVCaptureVideoOrientationPortrait,           /* 90DEG   */
-                AVCaptureVideoOrientationLandscapeRight,     /* 180DEG  */
-                AVCaptureVideoOrientationPortraitUpsideDown, /* 270DEG  */
-            };
-            AVCaptureConnection *vidcon;
-            pj_bool_t support_ori = PJ_TRUE;
-            
+
             pj_assert(strm->param.dir == PJMEDIA_DIR_CAPTURE);
-            
+
             if (!strm->video_output)
                 return PJMEDIA_EVID_NOTREADY;
 
-            vidcon = [strm->video_output 
-                      connectionWithMediaType:AVMediaTypeVideo];
-            if ([vidcon isVideoOrientationSupported]) {
-                vidcon.videoOrientation = cap_ori[strm->param.orient-1];
+#if (TARGET_OS_IPHONE && defined(__IPHONE_17_0)) || \
+    (TARGET_OS_OSX && defined(__MAC_14_0))
+            if (@available(macOS 14.0, iOS 17.0, *)) {
+
+                const CGFloat cap_ori[4] = { 0, 90, 180, 270};
+                AVCaptureConnection *vidcon;
+
+                vidcon = [strm->video_output
+                          connectionWithMediaType:AVMediaTypeVideo];
+                if ([vidcon isVideoRotationAngleSupported:
+                            cap_ori[strm->param.orient-1]])
+                {
+                    vidcon.videoRotationAngle = cap_ori[strm->param.orient-1];
+                    support_ori = PJ_TRUE;
+                }
+
             } else {
-                support_ori = PJ_FALSE;
+                support_ori = set_orientation(strm);
             }
-            
+#else
+            support_ori = set_orientation(strm);
+#endif
+
             if (!strm->conv.conv) {
                 pj_status_t status;
                 pjmedia_rect_size orig_size;
