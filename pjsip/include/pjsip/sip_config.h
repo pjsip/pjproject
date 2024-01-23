@@ -1426,6 +1426,12 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
+/**
+ * Specify the status code value to respond to bad message body in NOTIFY
+ * request for dialog event.
+ *
+ * Default: 488 (Not Acceptable Here)
+ */
 #ifndef PJSIP_DLG_EVENT_BAD_CONTENT_RESPONSE
 #   define PJSIP_DLG_EVENT_BAD_CONTENT_RESPONSE  488
 #endif
