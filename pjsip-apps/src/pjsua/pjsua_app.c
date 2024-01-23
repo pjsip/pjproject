@@ -742,7 +742,7 @@ static void on_buddy_evsub_dlg_event_state(pjsua_buddy_id buddy_id,
     }
 
     PJ_LOG(4,(THIS_FILE,
-          "Buddy %d: blf subscription state: %s (event: %s%s)",
+          "Buddy %d: dialog event subscription state: %s (event: %s%s)",
           buddy_id, pjsip_evsub_get_state_name(sub),
           pjsip_event_str(event->type),
           event_info));

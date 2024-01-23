@@ -6421,14 +6421,15 @@ typedef struct pjsua_buddy_config
 
     /**
      * Specify whether presence subscription should start immediately.
-     * For each buddy, only one subscription (presence or dialog event)
+     * Note that only one subscription (presence or dialog event)
      * can be active at any time.
      */
     pj_bool_t   subscribe;
 
     /**
-     * Specify whether dialog event subscription should start immediately.
-     * For each buddy, only one subscription (presence or dialog event)
+     * Specify whether we should immediately subscribe to the buddy's
+     * dialog event, such as for Busy Lamp Field (BLF) feature.
+     * Note that only one subscription (presence or dialog event)
      * can be active at any time.
      */
     pj_bool_t   subscribe_dlg_event;
@@ -6774,6 +6775,9 @@ PJ_DECL(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id);
  * subscribed, application will be informed about buddy's presence status
  * changed via \a on_buddy_state() callback.
  *
+ * Note that only one subscription (presence or dialog event) can be active
+ * at any time.
+ *
  * @param buddy_id      Buddy identification.
  * @param subscribe     Specify non-zero to activate presence subscription to
  *                      the specified buddy.
@@ -6788,6 +6792,9 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
  * Enable/disable buddy's dialog event monitoring. Once buddy's dialog event
  * is subscribed, application will be informed about buddy's dialog info
  * status change via \a on_buddy_dlg_event_state() callback.
+ *
+ * Note that only one subscription (presence or dialog event) can be active
+ * at any time.
  *
  * @param buddy_id      Buddy identification.
  * @param subscribe     Specify non-zero to activate dialog event subscription
