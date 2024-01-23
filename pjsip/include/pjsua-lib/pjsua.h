@@ -6602,7 +6602,6 @@ typedef struct pjsua_buddy_dlg_event_info
     /* Dialog event local target uri */
     pj_str_t        local_target_uri;
 
-
     /* Dialog event remote identity */
     pj_str_t        remote_identity;
 
@@ -6612,33 +6611,23 @@ typedef struct pjsua_buddy_dlg_event_info
     /* Dialog event remote target uri */
     pj_str_t        remote_target_uri;
 
-
     /**
-     * If \a monitor_pres is enabled, this specifies the last state of the
-     * presence subscription. If presence subscription session is currently
-     * active, the value will be PJSIP_EVSUB_STATE_ACTIVE. If presence
-     * subscription request has been rejected, the value will be
-     * PJSIP_EVSUB_STATE_TERMINATED, and the termination reason will be
-     * specified in \a sub_term_reason.
+     * This specifies the last state of the dialog event subscription.
      */
     pjsip_evsub_state   sub_state;
 
     /**
      * String representation of subscription state.
      */
-    const char         *sub_state_name;
+    const char     *sub_state_name;
 
     /**
-     * Specifies the last presence subscription termination code. This would
-     * return the last status of the SUBSCRIBE request. If the subscription
-     * is terminated with NOTIFY by the server, this value will be set to
-     * 200, and subscription termination reason will be given in the
-     * \a sub_term_reason field.
+     * Specifies the last dialog event subscription termination code.
      */
     unsigned        sub_term_code;
 
     /**
-     * Specifies the last presence subscription termination reason. If
+     * Specifies the last dialog event subscription termination reason. If
      * presence subscription is currently active, the value will be empty.
      */
     pj_str_t        sub_term_reason;
@@ -6646,7 +6635,7 @@ typedef struct pjsua_buddy_dlg_event_info
     /**
      * Internal buffer.
      */
-   char        buf_[512];
+   char             buf_[512];
 
 } pjsua_buddy_dlg_event_info;
 

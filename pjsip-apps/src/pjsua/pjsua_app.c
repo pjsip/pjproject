@@ -737,15 +737,14 @@ static void on_buddy_evsub_dlg_event_state(pjsua_buddy_id buddy_id,
     {
         pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
         snprintf(event_info, sizeof(event_info),
-             " (RX %s)",
-             pjsip_rx_data_get_info(rdata));
+                 " (RX %s)",
+                 pjsip_rx_data_get_info(rdata));
     }
 
     PJ_LOG(4,(THIS_FILE,
-          "Buddy %d: dialog event subscription state: %s (event: %s%s)",
-          buddy_id, pjsip_evsub_get_state_name(sub),
-          pjsip_event_str(event->type),
-          event_info));
+              "Buddy %d: dialog event subscription state: %s (event: %s%s)",
+              buddy_id, pjsip_evsub_get_state_name(sub),
+              pjsip_event_str(event->type), event_info));
 }
 
 
