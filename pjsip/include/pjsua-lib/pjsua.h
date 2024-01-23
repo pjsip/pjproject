@@ -1640,7 +1640,7 @@ typedef struct pjsua_callback
      *
      * @param buddy_id      The buddy id.
      */
-    void (*on_buddy_blf_state)(pjsua_buddy_id buddy_id);
+    void (*on_buddy_dlg_event_state)(pjsua_buddy_id buddy_id);
 
     /**
      * Notify application when the state of client subscription session
@@ -1666,7 +1666,7 @@ typedef struct pjsua_callback
      * @param sub           Event subscription session.
      * @param event         The event which triggers state change event.
      */
-    void (*on_buddy_evsub_blf_state)(pjsua_buddy_id buddy_id,
+    void (*on_buddy_evsub_dlg_event_state)(pjsua_buddy_id buddy_id,
                                      pjsip_evsub *sub,
                                      pjsip_event *event);
 
@@ -6544,7 +6544,7 @@ typedef struct pjsua_buddy_info
 } pjsua_buddy_info;
 
 
-typedef struct pjsua_buddy_blf_info
+typedef struct pjsua_buddy_dlg_event_info
 {
     /**
      * The buddy ID.
@@ -6638,7 +6638,7 @@ typedef struct pjsua_buddy_blf_info
      */
    char        buf_[512];
 
-} pjsua_buddy_blf_info;
+} pjsua_buddy_dlg_event_info;
 
 /**
  * Set default values to the buddy config.
@@ -6708,8 +6708,8 @@ PJ_DECL(pj_status_t) pjsua_buddy_get_info(pjsua_buddy_id buddy_id,
  *
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsua_buddy_get_blf_info(pjsua_buddy_id buddy_id,
-                                              pjsua_buddy_blf_info *info);
+PJ_DECL(pj_status_t) pjsua_buddy_get_dlg_event_info(pjsua_buddy_id buddy_id,
+                                              pjsua_buddy_dlg_event_info *info);
 
 /**
  * Set the user data associated with the buddy object.
@@ -6802,7 +6802,7 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
 /**
  * Enable/disable buddy's "busy lamp field" monitoring. Once buddy's "busy lamp field"
  * is subscribed, application will be informed about buddy's "busy lamp field" status
- * changed via \a on_buddy_blf_state() callback.
+ * changed via \a on_buddy_dlg_event_state() callback.
  *
  * @param buddy_id      Buddy identification.
  * @param subscribe     Specify non-zero to activate presence subscription to
@@ -6851,7 +6851,7 @@ PJ_DECL(pj_status_t) pjsua_buddy_update_pres(pjsua_buddy_id buddy_id);
  *
  * Once the blf subscription is activated successfully for the buddy,
  * application will be notified about the buddy's "busy lamp field" status in the
- * on_buddy_blf_state() callback.
+ * on_buddy_dlg_event_state() callback.
  *
  * @param buddy_id      Buddy identification.
  *

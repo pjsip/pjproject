@@ -34,7 +34,7 @@
 static const pj_str_t STR_APPLICATION = { "application", 11 };
 static const pj_str_t STR_PIDF_XML =    { "pidf+xml", 8 };
 static const pj_str_t STR_XPIDF_XML =   { "xpidf+xml", 9 };
-static const pj_str_t STR_DIALOG_INFO_XML = { "dialog-info+xml", 15 };
+//static const pj_str_t STR_DIALOG_INFO_XML = { "dialog-info+xml", 15 };
 
 
 
@@ -259,72 +259,72 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_pidf2(char *body, unsigned body_len,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pjsip_blf_parse_dialog_info(pjsip_rx_data *rdata,
+PJ_DEF(pj_status_t) pjsip_dlg_event_parse_dialog_info(pjsip_rx_data *rdata,
                                                 pj_pool_t *pool,
-                                                pjsip_blf_status *blf_status)
+                                                pjsip_dlg_event_status *dlg_event_status)
 {
-    return pjsip_blf_parse_dialog_info2((char*)rdata->msg_info.msg->body->data,
+    return pjsip_dlg_event_parse_dialog_info2((char*)rdata->msg_info.msg->body->data,
                                         rdata->msg_info.msg->body->len,
-                                        pool, blf_status);
+                                        pool, dlg_event_status);
 }
 
-PJ_DEF(pj_status_t) pjsip_blf_parse_dialog_info2(char *body, unsigned body_len,
+PJ_DEF(pj_status_t) pjsip_dlg_event_parse_dialog_info2(char *body, unsigned body_len,
                                                  pj_pool_t *pool,
-                                                 pjsip_blf_status *blf_status)
+                                                 pjsip_dlg_event_status *dlg_event_status)
 {
-    pjdialog_info_dialog_info *dialog_info;
-    pjdialog_info_dialog *dialog;
+    pjsip_dlg_info_dialog_info *dialog_info;
+    pjsip_dlg_info_dialog *dialog;
 
-    dialog_info = pjdialog_info_parse(pool, body, body_len);
+    dialog_info = pjsip_dlg_info_parse(pool, body, body_len);
     if (dialog_info == NULL)
         return PJSIP_SIMPLE_EBADPIDF;
 
-    blf_status->info_cnt = 0;
+    dlg_event_status->info_cnt = 0;
 
-    dialog = pjdialog_info_dialog_info_get_dialog(dialog_info);
-    pj_strdup(pool, &blf_status->info[blf_status->info_cnt].dialog_info_entity, pjdialog_info_dialog_info_get_entity(dialog_info));
-    pj_strdup(pool, &blf_status->info[blf_status->info_cnt].dialog_info_state, pjdialog_info_dialog_info_get_state(dialog_info));
+    dialog = pjsip_dlg_info_dialog_info_get_dialog(dialog_info);
+    pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].dialog_info_entity, pjsip_dlg_info_dialog_info_get_entity(dialog_info));
+    pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].dialog_info_state, pjsip_dlg_info_dialog_info_get_state(dialog_info));
     
     if (dialog)
     {
-        blf_status->info[blf_status->info_cnt].dialog_node = pj_xml_clone(pool, dialog);
+        dlg_event_status->info[dlg_event_status->info_cnt].dialog_node = pj_xml_clone(pool, dialog);
 
-        pj_strdup(pool, &blf_status->info[blf_status->info_cnt].dialog_id, pjdialog_info_dialog_get_id(dialog));
-        pj_strdup(pool, &blf_status->info[blf_status->info_cnt].dialog_call_id, pjdialog_info_dialog_get_call_id(dialog));
-        pj_strdup(pool, &blf_status->info[blf_status->info_cnt].dialog_remote_tag, pjdialog_info_dialog_get_remote_tag(dialog));
-        pj_strdup(pool, &blf_status->info[blf_status->info_cnt].dialog_local_tag, pjdialog_info_dialog_get_local_tag(dialog));
-        pj_strdup(pool, &blf_status->info[blf_status->info_cnt].dialog_direction, pjdialog_info_dialog_get_direction(dialog));
-        pj_strdup(pool, &blf_status->info[blf_status->info_cnt].dialog_state, pjdialog_info_dialog_get_state(dialog));
-        pj_strdup(pool, &blf_status->info[blf_status->info_cnt].dialog_duration, pjdialog_info_dialog_get_duration(dialog));
+        pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].dialog_id, pjsip_dlg_info_dialog_get_id(dialog));
+        pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].dialog_call_id, pjsip_dlg_info_dialog_get_call_id(dialog));
+        pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].dialog_remote_tag, pjsip_dlg_info_dialog_get_remote_tag(dialog));
+        pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].dialog_local_tag, pjsip_dlg_info_dialog_get_local_tag(dialog));
+        pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].dialog_direction, pjsip_dlg_info_dialog_get_direction(dialog));
+        pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].dialog_state, pjsip_dlg_info_dialog_get_state(dialog));
+        pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].dialog_duration, pjsip_dlg_info_dialog_get_duration(dialog));
 
-        pjdialog_info_local * local =pjdialog_info_dialog_get_local(dialog);
+        pjsip_dlg_info_local * local =pjsip_dlg_info_dialog_get_local(dialog);
         if (local)
         {
-            pj_strdup(pool, &blf_status->info[blf_status->info_cnt].local_identity, pjdialog_info_local_get_identity(local));
-            pj_strdup(pool, &blf_status->info[blf_status->info_cnt].local_identity_display, pjdialog_info_local_get_identity_display(local));
-            pj_strdup(pool, &blf_status->info[blf_status->info_cnt].local_target_uri, pjdialog_info_local_get_target_uri(local));
+            pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].local_identity, pjsip_dlg_info_local_get_identity(local));
+            pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].local_identity_display, pjsip_dlg_info_local_get_identity_display(local));
+            pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].local_target_uri, pjsip_dlg_info_local_get_target_uri(local));
         }
         else {
-            blf_status->info[blf_status->info_cnt].local_identity.ptr = NULL;
-            blf_status->info[blf_status->info_cnt].local_identity_display.ptr = NULL;
-            blf_status->info[blf_status->info_cnt].local_target_uri.ptr = NULL;
+            dlg_event_status->info[dlg_event_status->info_cnt].local_identity.ptr = NULL;
+            dlg_event_status->info[dlg_event_status->info_cnt].local_identity_display.ptr = NULL;
+            dlg_event_status->info[dlg_event_status->info_cnt].local_target_uri.ptr = NULL;
         }
 
-        pjdialog_info_remote * remote =pjdialog_info_dialog_get_remote(dialog);
+        pjsip_dlg_info_remote * remote =pjsip_dlg_info_dialog_get_remote(dialog);
         if (remote)
         {
-            pj_strdup(pool, &blf_status->info[blf_status->info_cnt].remote_identity, pjdialog_info_remote_get_identity(remote));
-            pj_strdup(pool, &blf_status->info[blf_status->info_cnt].remote_identity_display, pjdialog_info_remote_get_identity_display(remote));
-            pj_strdup(pool, &blf_status->info[blf_status->info_cnt].remote_target_uri, pjdialog_info_remote_get_target_uri(remote));
+            pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].remote_identity, pjsip_dlg_info_remote_get_identity(remote));
+            pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].remote_identity_display, pjsip_dlg_info_remote_get_identity_display(remote));
+            pj_strdup(pool, &dlg_event_status->info[dlg_event_status->info_cnt].remote_target_uri, pjsip_dlg_info_remote_get_target_uri(remote));
         }
         else {
-            blf_status->info[blf_status->info_cnt].remote_identity.ptr = NULL;
-            blf_status->info[blf_status->info_cnt].remote_identity_display.ptr = NULL;
-            blf_status->info[blf_status->info_cnt].remote_target_uri.ptr = NULL;
+            dlg_event_status->info[dlg_event_status->info_cnt].remote_identity.ptr = NULL;
+            dlg_event_status->info[dlg_event_status->info_cnt].remote_identity_display.ptr = NULL;
+            dlg_event_status->info[dlg_event_status->info_cnt].remote_target_uri.ptr = NULL;
         }
     }
     else
-        blf_status->info[blf_status->info_cnt].dialog_node = NULL;
+        dlg_event_status->info[dlg_event_status->info_cnt].dialog_node = NULL;
     return PJ_SUCCESS;
 }
 

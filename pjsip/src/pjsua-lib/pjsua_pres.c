@@ -323,8 +323,8 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
 /*
  * Get detailed buddy "busy lamp field" info.
  */
-PJ_DEF(pj_status_t) pjsua_buddy_get_blf_info( pjsua_buddy_id buddy_id,
-                      pjsua_buddy_blf_info *info)
+PJ_DEF(pj_status_t) pjsua_buddy_get_dlg_event_info( pjsua_buddy_id buddy_id,
+                      pjsua_buddy_dlg_event_info *info)
 {
     unsigned total=0;
     struct buddy_lock lck;
@@ -333,9 +333,9 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_blf_info( pjsua_buddy_id buddy_id,
 
     PJ_ASSERT_RETURN(pjsua_buddy_is_valid(buddy_id),  PJ_EINVAL);
 
-    pj_bzero(info, sizeof(pjsua_buddy_blf_info));
+    pj_bzero(info, sizeof(pjsua_buddy_dlg_event_info));
 
-    status = lock_buddy("pjsua_buddy_get_blf_info()", buddy_id, &lck, 0);
+    status = lock_buddy("pjsua_buddy_get_dlg_event_info()", buddy_id, &lck, 0);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -351,94 +351,94 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_blf_info( pjsua_buddy_id buddy_id,
     pj_strncpy(&info->uri, &buddy->uri, sizeof(info->buf_)-total);
     total += info->uri.slen;
 
-    if (pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_info_state.slen > 0) {
+    if (pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_info_state.slen > 0) {
         info->dialog_info_state.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_info_state, &pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_info_state, pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_info_state.slen);
+        pj_strncpy(&info->dialog_info_state, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_info_state, pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_info_state.slen);
         total += info->dialog_info_state.slen;
     }
 
-    if (pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_info_entity.slen > 0) {
+    if (pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_info_entity.slen > 0) {
         info->dialog_info_entity.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_info_entity, &pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_info_entity, pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_info_entity.slen);
+        pj_strncpy(&info->dialog_info_entity, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_info_entity, pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_info_entity.slen);
         total += info->dialog_info_entity.slen;
     }
-    if (pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_state.slen == 0) {
+    if (pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_state.slen == 0) {
         info->dialog_state.ptr = info->buf_ + total;
         info->dialog_state = pj_str("NULL");
         total += info->dialog_state.slen;
     }
-    if (pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_node) {
+    if (pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_node) {
         info->dialog_id.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_id, &pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_id, sizeof(info->buf_)-total);
+        pj_strncpy(&info->dialog_id, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_id, sizeof(info->buf_)-total);
         total += info->dialog_id.slen;
 
         info->dialog_call_id.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_call_id, &pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_call_id, sizeof(info->buf_)-total);
+        pj_strncpy(&info->dialog_call_id, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_call_id, sizeof(info->buf_)-total);
         total += info->dialog_call_id.slen;
 
         info->dialog_remote_tag.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_remote_tag, &pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_remote_tag, sizeof(info->buf_)-total);
+        pj_strncpy(&info->dialog_remote_tag, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_remote_tag, sizeof(info->buf_)-total);
         total += info->dialog_remote_tag.slen;
 
         info->dialog_local_tag.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_local_tag, &pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_local_tag, sizeof(info->buf_)-total);
+        pj_strncpy(&info->dialog_local_tag, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_local_tag, sizeof(info->buf_)-total);
         total += info->dialog_local_tag.slen;
 
         info->dialog_direction.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_direction, &pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_direction, sizeof(info->buf_)-total);
+        pj_strncpy(&info->dialog_direction, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_direction, sizeof(info->buf_)-total);
         total += info->dialog_direction.slen;
 
         info->dialog_state.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_state, &pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_state, pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_state.slen);
+        pj_strncpy(&info->dialog_state, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_state, pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_state.slen);
         total += info->dialog_state.slen;
 
         info->dialog_duration.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_duration, &pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_duration, pjsua_var.buddy[buddy_id].blf_status.info[0].dialog_duration.slen);
+        pj_strncpy(&info->dialog_duration, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_duration, pjsua_var.buddy[buddy_id].dlg_event_status.info[0].dialog_duration.slen);
         total += info->dialog_duration.slen;
 
-        if (pjsua_var.buddy[buddy_id].blf_status.info[0].local_identity.ptr) {
+        if (pjsua_var.buddy[buddy_id].dlg_event_status.info[0].local_identity.ptr) {
             info->local_identity.ptr = info->buf_ + total;
-            pj_strncpy(&info->local_identity, &pjsua_var.buddy[buddy_id].blf_status.info[0].local_identity, pjsua_var.buddy[buddy_id].blf_status.info[0].local_identity.slen);
+            pj_strncpy(&info->local_identity, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].local_identity, pjsua_var.buddy[buddy_id].dlg_event_status.info[0].local_identity.slen);
             total += info->local_identity.slen;
         }
         else
             info->local_identity = pj_str("NULL");
 
-        if (pjsua_var.buddy[buddy_id].blf_status.info[0].local_identity_display.ptr) {
+        if (pjsua_var.buddy[buddy_id].dlg_event_status.info[0].local_identity_display.ptr) {
             info->local_identity_display.ptr = info->buf_ + total;
-            pj_strncpy(&info->local_identity_display, &pjsua_var.buddy[buddy_id].blf_status.info[0].local_identity_display, pjsua_var.buddy[buddy_id].blf_status.info[0].local_identity_display.slen);
+            pj_strncpy(&info->local_identity_display, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].local_identity_display, pjsua_var.buddy[buddy_id].dlg_event_status.info[0].local_identity_display.slen);
             total += info->local_identity_display.slen;
         }
         else
             info->local_identity_display = pj_str("NULL");
 
-        if (pjsua_var.buddy[buddy_id].blf_status.info[0].local_target_uri.ptr) {
+        if (pjsua_var.buddy[buddy_id].dlg_event_status.info[0].local_target_uri.ptr) {
             info->local_target_uri.ptr = info->buf_ + total;
-            pj_strncpy(&info->local_target_uri, &pjsua_var.buddy[buddy_id].blf_status.info[0].local_target_uri, pjsua_var.buddy[buddy_id].blf_status.info[0].local_target_uri.slen);
+            pj_strncpy(&info->local_target_uri, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].local_target_uri, pjsua_var.buddy[buddy_id].dlg_event_status.info[0].local_target_uri.slen);
             total += info->local_target_uri.slen;
         }
         else
             info->local_target_uri = pj_str("NULL");
 
-        if (pjsua_var.buddy[buddy_id].blf_status.info[0].remote_identity.ptr) {
+        if (pjsua_var.buddy[buddy_id].dlg_event_status.info[0].remote_identity.ptr) {
             info->remote_identity.ptr = info->buf_ + total;
-            pj_strncpy(&info->remote_identity, &pjsua_var.buddy[buddy_id].blf_status.info[0].remote_identity, pjsua_var.buddy[buddy_id].blf_status.info[0].remote_identity.slen);
+            pj_strncpy(&info->remote_identity, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].remote_identity, pjsua_var.buddy[buddy_id].dlg_event_status.info[0].remote_identity.slen);
             total += info->remote_identity.slen;
         }
         else
             info->remote_identity = pj_str("NULL");
 
-        if (pjsua_var.buddy[buddy_id].blf_status.info[0].remote_identity_display.ptr) {
+        if (pjsua_var.buddy[buddy_id].dlg_event_status.info[0].remote_identity_display.ptr) {
             info->remote_identity_display.ptr = info->buf_ + total;
-            pj_strncpy(&info->remote_identity_display, &pjsua_var.buddy[buddy_id].blf_status.info[0].remote_identity_display, pjsua_var.buddy[buddy_id].blf_status.info[0].remote_identity_display.slen);
+            pj_strncpy(&info->remote_identity_display, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].remote_identity_display, pjsua_var.buddy[buddy_id].dlg_event_status.info[0].remote_identity_display.slen);
             total += info->remote_identity_display.slen;
         }
         else
             info->remote_identity_display = pj_str("NULL");
 
-        if (pjsua_var.buddy[buddy_id].blf_status.info[0].remote_target_uri.ptr) {
+        if (pjsua_var.buddy[buddy_id].dlg_event_status.info[0].remote_target_uri.ptr) {
             info->remote_target_uri.ptr = info->buf_ + total;
-            pj_strncpy(&info->remote_target_uri, &pjsua_var.buddy[buddy_id].blf_status.info[0].remote_target_uri, pjsua_var.buddy[buddy_id].blf_status.info[0].remote_target_uri.slen);
+            pj_strncpy(&info->remote_target_uri, &pjsua_var.buddy[buddy_id].dlg_event_status.info[0].remote_target_uri, pjsua_var.buddy[buddy_id].dlg_event_status.info[0].remote_target_uri.slen);
             total += info->remote_target_uri.slen;
         }
         else
@@ -2071,7 +2071,7 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 }
 
 /* Callback called when *client* subscription state has changed. */
-static void pjsua_evsub_on_blf_state( pjsip_evsub *sub, pjsip_event *event)
+static void pjsua_evsub_on_dlg_event_state( pjsip_evsub *sub, pjsip_event *event)
 {
     pjsua_buddy *buddy;
 
@@ -2194,12 +2194,12 @@ static void pjsua_evsub_on_blf_state( pjsip_evsub *sub, pjsip_event *event)
     }
 
     /* Call callbacks */
-    if (pjsua_var.ua_cfg.cb.on_buddy_evsub_blf_state)
-        (*pjsua_var.ua_cfg.cb.on_buddy_evsub_blf_state)(buddy->index, sub,
+    if (pjsua_var.ua_cfg.cb.on_buddy_evsub_dlg_event_state)
+        (*pjsua_var.ua_cfg.cb.on_buddy_evsub_dlg_event_state)(buddy->index, sub,
                             event);
 
-    if (pjsua_var.ua_cfg.cb.on_buddy_blf_state)
-        (*pjsua_var.ua_cfg.cb.on_buddy_blf_state)(buddy->index);
+    if (pjsua_var.ua_cfg.cb.on_buddy_dlg_event_state)
+        (*pjsua_var.ua_cfg.cb.on_buddy_dlg_event_state)(buddy->index);
 
     /* Clear subscription */
     if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) {
@@ -2296,7 +2296,7 @@ static void pjsua_evsub_on_rx_notify(pjsip_evsub *sub,
 }
 
 /* Callback called when we receive "busy lamp field" NOTIFY */
-static void pjsua_evsub_on_rx_blf_notify(pjsip_evsub *sub,
+static void pjsua_evsub_on_rx_dlg_event_notify(pjsip_evsub *sub,
                                          pjsip_rx_data *rdata,
                                          int *p_st_code,
                                          pj_str_t **p_st_text,
@@ -2312,7 +2312,7 @@ static void pjsua_evsub_on_rx_blf_notify(pjsip_evsub *sub,
     buddy = (pjsua_buddy*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
     if (buddy) {
         /* Update our info. */
-        pjsip_blf_get_status(sub, &buddy->blf_status);
+        pjsip_dlg_event_get_status(sub, &buddy->dlg_event_status);
     }
 
     /* The default is to send 200 response to NOTIFY.
@@ -2483,7 +2483,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
 /* It does what it says.. */
 static void subscribe_buddy_blf(pjsua_buddy_id buddy_id)
 {
-    pjsip_evsub_blf_user blf_callback;
+    pjsip_evsub_dlg_event_user dlg_event_callback;
     pj_pool_t *tmp_pool = NULL;
     pjsua_buddy *buddy;
     int acc_id;
@@ -2493,10 +2493,10 @@ static void subscribe_buddy_blf(pjsua_buddy_id buddy_id)
     pj_status_t status;
 
     /* Event subscription callback. */
-    pj_bzero(&blf_callback, sizeof(blf_callback));
-    blf_callback.on_evsub_state = &pjsua_evsub_on_blf_state;
-    blf_callback.on_tsx_state = &pjsua_evsub_on_tsx_state;
-    blf_callback.on_rx_notify = &pjsua_evsub_on_rx_blf_notify;
+    pj_bzero(&dlg_event_callback, sizeof(dlg_event_callback));
+    dlg_event_callback.on_evsub_state = &pjsua_evsub_on_dlg_event_state;
+    dlg_event_callback.on_tsx_state = &pjsua_evsub_on_tsx_state;
+    dlg_event_callback.on_rx_notify = &pjsua_evsub_on_rx_dlg_event_notify;
 
     buddy = &pjsua_var.buddy[buddy_id];
     acc_id = pjsua_acc_find_for_outgoing(&buddy->uri);
@@ -2547,7 +2547,7 @@ static void subscribe_buddy_blf(pjsua_buddy_id buddy_id)
     if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0)
         pjsip_dlg_set_via_sent_by(buddy->dlg, &acc->via_addr, acc->via_tp);
 
-    status = pjsip_blf_create_uac(buddy->dlg, &blf_callback,
+    status = pjsip_dlg_event_create_uac(buddy->dlg, &dlg_event_callback,
                     PJSIP_EVSUB_NO_EVENT_ID, &buddy->sub);
     if (status != PJ_SUCCESS) {
         buddy->sub = NULL;
@@ -2589,12 +2589,12 @@ static void subscribe_buddy_blf(pjsua_buddy_id buddy_id)
 
     pjsip_evsub_set_mod_data(buddy->sub, pjsua_var.mod.id, buddy);
 
-    status = pjsip_blf_initiate(buddy->sub, -1, &tdata);
+    status = pjsip_dlg_event_initiate(buddy->sub, -1, &tdata);
     if (status != PJ_SUCCESS) {
         if (buddy->dlg)
             pjsip_dlg_dec_lock(buddy->dlg);
         if (buddy->sub) {
-            pjsip_blf_terminate(buddy->sub, PJ_FALSE);
+            pjsip_dlg_event_terminate(buddy->sub, PJ_FALSE);
         }
         buddy->sub = NULL;
         pjsua_perror(THIS_FILE, "Unable to create initial SUBSCRIBE",
@@ -2607,12 +2607,12 @@ static void subscribe_buddy_blf(pjsua_buddy_id buddy_id)
 
     pjsua_process_msg_data(tdata, NULL);
 
-    status = pjsip_blf_send_request(buddy->sub, tdata);
+    status = pjsip_dlg_event_send_request(buddy->sub, tdata);
     if (status != PJ_SUCCESS) {
         if (buddy->dlg)
             pjsip_dlg_dec_lock(buddy->dlg);
         if (buddy->sub) {
-            pjsip_blf_terminate(buddy->sub, PJ_FALSE);
+            pjsip_dlg_event_terminate(buddy->sub, PJ_FALSE);
         }
         buddy->sub = NULL;
         pjsua_perror(THIS_FILE, "Unable to send initial SUBSCRIBE",
@@ -2647,14 +2647,14 @@ static void unsubscribe_buddy_blf(pjsua_buddy_id buddy_id)
             PJ_LOG(5,(THIS_FILE, "Buddy %d: unsubscribing blf...", buddy_id));
         pj_log_push_indent();
 
-            status = pjsip_blf_initiate( buddy->sub, 0, &tdata);
+            status = pjsip_dlg_event_initiate( buddy->sub, 0, &tdata);
         if (status == PJ_SUCCESS) {
                 pjsua_process_msg_data(tdata, NULL);
-                status = pjsip_blf_send_request( buddy->sub, tdata );
+                status = pjsip_dlg_event_send_request( buddy->sub, tdata );
             }
 
             if (status != PJ_SUCCESS && buddy->sub) {
-                pjsip_blf_terminate(buddy->sub, PJ_FALSE);
+                pjsip_dlg_event_terminate(buddy->sub, PJ_FALSE);
                 buddy->sub = NULL;
                 pjsua_perror(THIS_FILE, "Unable to unsubscribe blf", status);
             }

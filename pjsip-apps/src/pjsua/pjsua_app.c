@@ -669,10 +669,10 @@ static void on_buddy_state(pjsua_buddy_id buddy_id)
 /*
  * Handler on buddy "busy lamp field" state changed.
  */
-static void on_buddy_blf_state(pjsua_buddy_id buddy_id)
+static void on_buddy_dlg_event_state(pjsua_buddy_id buddy_id)
 {
-    pjsua_buddy_blf_info info;
-    pjsua_buddy_get_blf_info(buddy_id, &info);
+    pjsua_buddy_dlg_event_info info;
+    pjsua_buddy_get_dlg_event_info(buddy_id, &info);
 
     PJ_LOG(3,(THIS_FILE, "%.*s dialog-info-state: %.*s, dialog-info-entity: %.*s, "
             "dialog-id: %.*s, dialog-call-id: %.*s, dialog-remote-tag: %.*s, "
@@ -744,7 +744,7 @@ static void on_buddy_evsub_state(pjsua_buddy_id buddy_id,
 
 }
 
-static void on_buddy_evsub_blf_state(pjsua_buddy_id buddy_id,
+static void on_buddy_evsub_dlg_event_state(pjsua_buddy_id buddy_id,
                                      pjsip_evsub *sub,
                                      pjsip_event *event)
 {
@@ -1459,9 +1459,9 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_reg_state = &on_reg_state;
     app_config.cfg.cb.on_incoming_subscribe = &on_incoming_subscribe;
     app_config.cfg.cb.on_buddy_state = &on_buddy_state;
-    app_config.cfg.cb.on_buddy_blf_state = &on_buddy_blf_state;
+    app_config.cfg.cb.on_buddy_dlg_event_state = &on_buddy_dlg_event_state;
     app_config.cfg.cb.on_buddy_evsub_state = &on_buddy_evsub_state;
-    app_config.cfg.cb.on_buddy_evsub_blf_state = &on_buddy_evsub_blf_state;
+    app_config.cfg.cb.on_buddy_evsub_dlg_event_state = &on_buddy_evsub_dlg_event_state;
     app_config.cfg.cb.on_pager = &on_pager;
     app_config.cfg.cb.on_typing = &on_typing;
     app_config.cfg.cb.on_call_transfer_status = &on_call_transfer_status;

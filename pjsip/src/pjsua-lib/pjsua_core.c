@@ -1254,7 +1254,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     status = pjsip_pres_init_module( pjsua_var.endpt, pjsip_evsub_instance());
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
-    status = pjsip_blf_init_module( pjsua_var.endpt, pjsip_evsub_instance());
+    status = pjsip_dlg_event_init_module( pjsua_var.endpt, pjsip_evsub_instance());
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Initialize MWI support */

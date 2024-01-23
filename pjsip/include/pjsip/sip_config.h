@@ -932,8 +932,13 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 # endif
 #endif
 
-#ifndef PJSIP_BLF_DEFAULT_EXPIRES
-#   define PJSIP_BLF_DEFAULT_EXPIRES       600
+/**
+ * Specify the default expiration time for dialog event subscription.
+ *
+ * Default: 600 seconds (10 minutes)
+ */
+#ifndef PJSIP_DLG_EVENT_DEFAULT_EXPIRES
+#   define PJSIP_DLG_EVENT_DEFAULT_EXPIRES       600
 #endif
 
 /**
@@ -1421,8 +1426,8 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
-#ifndef PJSIP_BLF_BAD_CONTENT_RESPONSE
-#   define PJSIP_BLF_BAD_CONTENT_RESPONSE  488
+#ifndef PJSIP_DLG_EVENT_BAD_CONTENT_RESPONSE
+#   define PJSIP_DLG_EVENT_BAD_CONTENT_RESPONSE  488
 #endif
 
 
