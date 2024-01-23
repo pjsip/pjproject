@@ -373,8 +373,10 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->register_on_acc_add = PJ_TRUE;
     cfg->mwi_expires = PJSIP_MWI_DEFAULT_EXPIRES;
 
-    cfg->ipv6_sip_use = PJSUA_IPV6_ENABLED_NO_PREFERENCE;
-    cfg->ipv6_media_use = PJSUA_IPV6_ENABLED_PREFER_IPV4;
+    cfg->ipv6_sip_use   = PJ_HAS_IPV6? PJSUA_IPV6_ENABLED_NO_PREFERENCE :
+                                       PJSUA_IPV6_DISABLED;
+    cfg->ipv6_media_use = PJ_HAS_IPV6? PJSUA_IPV6_ENABLED_PREFER_IPV4 :
+                                       PJSUA_IPV6_DISABLED;
 
     cfg->media_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
     cfg->ip_change_cfg.shutdown_tp = PJ_TRUE;
@@ -1214,6 +1216,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
                 pjsua_var.ua_cfg.stun_host;
         }
     }
+
+#if !PJ_HAS_IPV6
+    pjsua_var.ua_cfg.stun_try_ipv6 = PJ_FALSE;
+#endif
 
     /* Start resolving STUN server */
     status = resolve_stun_server(PJ_FALSE, PJ_FALSE, 0);

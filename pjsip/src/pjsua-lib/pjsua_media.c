@@ -249,6 +249,8 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 static int get_media_ip_version(pjsua_call_media *call_med,
                                 const pjmedia_sdp_session *rem_sdp)
 {
+#if PJ_HAS_IPV6
+
     pjsua_ipv6_use ipv6_use;
 
     ipv6_use = pjsua_var.acc[call_med->call->acc_id].cfg.ipv6_media_use;
@@ -276,6 +278,10 @@ static int get_media_ip_version(pjsua_call_media *call_med,
             return 6;
         }
     }
+#else
+    PJ_UNUSED_ARG(call_med);
+    PJ_UNUSED_ARG(rem_sdp);
+#endif
 
     /* Use IPv4. */
     return 4;
@@ -304,7 +310,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     pj_sock_t sock[2];
 
     use_ipv6 = (get_media_ip_version(call_med, rem_sdp) == 6);
-    use_nat64 = (acc->cfg.nat64_opt != PJSUA_NAT64_DISABLED);
+    use_nat64 = PJ_HAS_IPV6 && (acc->cfg.nat64_opt != PJSUA_NAT64_DISABLED);
     af = (use_ipv6 || use_nat64) ? pj_AF_INET6() : pj_AF_INET();
 
     /* Make sure STUN server resolution has completed */
@@ -757,7 +763,7 @@ static pj_status_t create_loop_media_transport(
     pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
 
     use_ipv6 = (get_media_ip_version(call_med, rem_sdp) == 6);
-    use_nat64 = (acc->cfg.nat64_opt != PJSUA_NAT64_DISABLED);
+    use_nat64 = PJ_HAS_IPV6 && (acc->cfg.nat64_opt != PJSUA_NAT64_DISABLED);
     af = (use_ipv6 || use_nat64) ? pj_AF_INET6() : pj_AF_INET();
 
     pjmedia_loop_tp_setting_default(&opt);
@@ -1015,7 +1021,7 @@ static pj_status_t create_ice_media_transport(
 
     acc_cfg = &pjsua_var.acc[call_med->call->acc_id].cfg;
     use_ipv6 = (get_media_ip_version(call_med, remote_sdp) == 6);
-    use_nat64 = (acc_cfg->nat64_opt != PJSUA_NAT64_DISABLED);
+    use_nat64 = PJ_HAS_IPV6 && (acc_cfg->nat64_opt != PJSUA_NAT64_DISABLED);
 
     /* Make sure STUN server resolution has completed */
     if (pjsua_media_acc_is_using_stun(call_med->call->acc_id)) {
@@ -2811,9 +2817,11 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                 pj_bool_t use_ipv6;
                 pj_bool_t use_nat64;
 
-                use_ipv6 = (pjsua_var.acc[call->acc_id].cfg.ipv6_media_use !=
+                use_ipv6 = PJ_HAS_IPV6 &&
+                           (pjsua_var.acc[call->acc_id].cfg.ipv6_media_use !=
                             PJSUA_IPV6_DISABLED);
-                use_nat64 = (pjsua_var.acc[call->acc_id].cfg.nat64_opt !=
+                use_nat64 = PJ_HAS_IPV6 &&
+                            (pjsua_var.acc[call->acc_id].cfg.nat64_opt !=
                              PJSUA_NAT64_DISABLED);
 
                 m->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
