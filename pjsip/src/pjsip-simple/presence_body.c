@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsip-simple/presence.h>
-#include <pjsip-simple/blf.h>
+#include <pjsip-simple/dlg_event.h>
 #include <pjsip-simple/errno.h>
 #include <pjsip/sip_msg.h>
 #include <pjsip/sip_transport.h>
