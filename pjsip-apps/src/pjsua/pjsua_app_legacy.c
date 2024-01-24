@@ -236,8 +236,8 @@ static void keystroke_help()
     puts("|  a  Answer call              |  i  Send IM              | !a  Modify accnt. |");
     puts("|  h  Hangup call  (ha=all)    |  s  Subscribe presence   | rr  (Re-)register |");
     puts("|  H  Hold call                |  u  Unsubscribe presence | ru  Unregister    |");
-    puts("|                              |  E  Subscribe dlg event  |                   |");
-    puts("|                              |  Eu Unsub dlg event      |                   |");
+    puts("|                              |  D  Subscribe dlg event  |                   |");
+    puts("|                              |  Du Unsub dlg event      |                   |");
     puts("|  v  re-inVite (release hold) |  t  Toggle online status |  >  Cycle next ac.|");
     puts("|  U  send UPDATE              |  T  Set online status    |  <  Cycle prev ac.|");
     puts("| ],[ Select next/prev call    +--------------------------+-------------------+");
@@ -993,7 +993,10 @@ static void ui_add_buddy()
     pj_bzero(&buddy_cfg, sizeof(pjsua_buddy_config));
 
     buddy_cfg.uri = pj_str(buf);
-    buddy_cfg.subscribe = PJ_TRUE;
+    /* Only one subscription can be active, so we need to disable this
+     * to allow user to choose between presence or dialog event.
+     */
+    // buddy_cfg.subscribe = PJ_TRUE;
 
     status = pjsua_buddy_add(&buddy_cfg, &buddy_id);
     if (status == PJ_SUCCESS) {
@@ -2015,7 +2018,7 @@ void legacy_main(void)
             ui_subscribe(menuin);
             break;
 
-        case 'E':
+        case 'D':
             /* Subscribe/unsubscribe dialog event */
             ui_subscribe_dlg_event(menuin[1] != 'u');
             break;
