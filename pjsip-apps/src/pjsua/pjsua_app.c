@@ -674,13 +674,18 @@ static void on_buddy_dlg_event_state(pjsua_buddy_id buddy_id)
     pjsua_buddy_dlg_event_info info;
     pjsua_buddy_get_dlg_event_info(buddy_id, &info);
 
-    PJ_LOG(3,(THIS_FILE,
-              "%.*s dialog-call-id: %.*s, dialog-direction: %.*s, "
+    PJ_LOG(3,(THIS_FILE, "%.*s dialog-info-state: %.*s, "
+              "dialog-info-entity: %.*s, dialog-id: %.*s, "
+              "dialog-call-id: %.*s, dialog-direction: %.*s, "
               "dialog-state: %.*s, dialog-duration: %.*s, "
               "local-identity: %.*s, local-target-uri: %.*s, "
               "remote-identity: %.*s, remote-target-uri: %.*s, "
-              "subscription state: %s",
+              "dialog-local-tag: %.*s, dialog-remote-tag: %.*s, "
+              "subscription state: %s, (last termination reason code=%d %.*s)",
               (int)info.uri.slen, info.uri.ptr,
+              (int)info.dialog_info_state.slen, info.dialog_info_state.ptr,
+              (int)info.dialog_info_entity.slen, info.dialog_info_entity.ptr,
+              (int)info.dialog_id.slen, info.dialog_id.ptr,
               (int)info.dialog_call_id.slen, info.dialog_call_id.ptr,
               (int)info.dialog_direction.slen, info.dialog_direction.ptr,
               (int)info.dialog_state.slen, info.dialog_state.ptr,
@@ -689,7 +694,10 @@ static void on_buddy_dlg_event_state(pjsua_buddy_id buddy_id)
               (int)info.local_target_uri.slen, info.local_target_uri.ptr,
               (int)info.remote_identity.slen, info.remote_identity.ptr,
               (int)info.remote_target_uri.slen, info.remote_target_uri.ptr,
-              info.sub_state_name));
+              (int)info.dialog_local_tag.slen, info.dialog_local_tag.ptr,
+              (int)info.dialog_remote_tag.slen, info.dialog_remote_tag.ptr,
+              info.sub_state_name, info.sub_term_code,
+              (int)info.sub_term_reason.slen, info.sub_term_reason.ptr));
 }
 
 /*
