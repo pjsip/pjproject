@@ -712,6 +712,7 @@ ac_pjmedia_video_has_qt
 ac_darwin_cflags
 ac_pjmedia_video_has_ios_opengl
 ac_pjmedia_video_has_vtoolbox
+ac_pjmedia_video_has_metal
 ac_pjmedia_video_has_darwin
 ac_dshow_ldflags
 ac_dshow_cflags
@@ -7469,6 +7470,7 @@ printf "%s\n" "Checking if OpenGL ES 2 is available... no" >&6; }
 
 
 
+
 	SAVED_LIBS="$LIBS"
 	LIBS="-framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
 	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -7510,6 +7512,26 @@ else $as_nop
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
+	LIBS="-framework Metal"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main (void)
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_pjmedia_video_has_metal=yes
+else $as_nop
+  ac_pjmedia_video_has_metal=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
 	LIBS="-framework OpenGLES"
 	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
@@ -7539,6 +7561,15 @@ printf "%s\n" "Checking if AVFoundation framework is available... yes" >&6; }
 	else
 	  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if AVFoundation framework is available... no" >&5
 printf "%s\n" "Checking if AVFoundation framework is available... no" >&6; }
+	fi
+	if test "$ac_pjmedia_video_has_metal" = "yes"; then
+	  ac_darwin_cflags+=" -DPJMEDIA_VIDEO_DEV_HAS_METAL=1"
+	  LIBS="$LIBS -framework Metal -framework MetalKit"
+	  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if Metal framework is available... yes" >&5
+printf "%s\n" "Checking if Metal framework is available... yes" >&6; }
+	else
+	  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if Metal framework is available... no" >&5
+printf "%s\n" "Checking if Metal framework is available... no" >&6; }
 	fi
 	if test "$ac_pjmedia_video_has_vtoolbox" = "yes"; then
 	  #ac_darwin_cflags+=" -DPJMEDIA_HAS_VID_TOOLBOX_CODEC=1"

@@ -1047,6 +1047,7 @@ else
   *darwin*)
 	ac_pjmedia_video=darwin_os
 	AC_SUBST(ac_pjmedia_video_has_darwin)
+	AC_SUBST(ac_pjmedia_video_has_metal)
 	AC_SUBST(ac_pjmedia_video_has_vtoolbox)
 	AC_SUBST(ac_pjmedia_video_has_ios_opengl)
 	AC_SUBST(ac_darwin_cflags)
@@ -1059,6 +1060,10 @@ else
 	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
 		       [ac_pjmedia_video_has_vtoolbox=yes],
 		       [ac_pjmedia_video_has_vtoolbox=no])
+	LIBS="-framework Metal"
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
+		       [ac_pjmedia_video_has_metal=yes],
+		       [ac_pjmedia_video_has_metal=no])
 	LIBS="-framework OpenGLES"
 	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
 		       [ac_pjmedia_video_has_ios_opengl=yes],
@@ -1070,6 +1075,13 @@ else
 	  AC_MSG_RESULT([Checking if AVFoundation framework is available... yes])
 	else
 	  AC_MSG_RESULT([Checking if AVFoundation framework is available... no])
+	fi
+	if test "$ac_pjmedia_video_has_metal" = "yes"; then
+	  ac_darwin_cflags+=" -DPJMEDIA_VIDEO_DEV_HAS_METAL=1"
+	  LIBS="$LIBS -framework Metal -framework MetalKit"
+	  AC_MSG_RESULT([Checking if Metal framework is available... yes])
+	else
+	  AC_MSG_RESULT([Checking if Metal framework is available... no])
 	fi
 	if test "$ac_pjmedia_video_has_vtoolbox" = "yes"; then
 	  #ac_darwin_cflags+=" -DPJMEDIA_HAS_VID_TOOLBOX_CODEC=1"
