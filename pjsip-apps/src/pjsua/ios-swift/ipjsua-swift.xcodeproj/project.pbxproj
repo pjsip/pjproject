@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3A4E3B582B62025C0016735C /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B562B62025B0016735C /* MetalKit.framework */; };
+		3A4E3B592B62025C0016735C /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B572B62025B0016735C /* Metal.framework */; };
 		3A6FC61C25CBD4540065F472 /* ipjsua_swiftApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6FC61B25CBD4540065F472 /* ipjsua_swiftApp.swift */; };
 		3A6FC61E25CBD4540065F472 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6FC61D25CBD4540065F472 /* ContentView.swift */; };
 		3A6FC62025CBD4550065F472 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3A6FC61F25CBD4550065F472 /* Assets.xcassets */; };
@@ -52,6 +54,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3A4E3B562B62025B0016735C /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		3A4E3B572B62025B0016735C /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		3A6FC61825CBD4540065F472 /* ipjsua-swift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ipjsua-swift.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A6FC61B25CBD4540065F472 /* ipjsua_swiftApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ipjsua_swiftApp.swift; sourceTree = "<group>"; };
 		3A6FC61D25CBD4540065F472 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -135,6 +139,8 @@
 				3A6FC7E725CD1A3E0065F472 /* libyuv.a in Frameworks */,
 				3A6FC78325CBE3700065F472 /* Security.framework in Frameworks */,
 				3A6FC7F425CD1A3E0065F472 /* libpjmedia-audiodev.a in Frameworks */,
+				3A4E3B592B62025C0016735C /* Metal.framework in Frameworks */,
+				3A4E3B582B62025C0016735C /* MetalKit.framework in Frameworks */,
 				3A6FC7EA25CD1A3E0065F472 /* libpjnath.a in Frameworks */,
 				3A6FC7E125CD1A3D0065F472 /* libpjsip-simple.a in Frameworks */,
 				3A6FC78425CBE3700065F472 /* SystemConfiguration.framework in Frameworks */,
@@ -217,6 +223,8 @@
 		3A6FC75A25CBD6CF0065F472 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				3A4E3B572B62025B0016735C /* Metal.framework */,
+				3A4E3B562B62025B0016735C /* MetalKit.framework */,
 				3A6FC75B25CBD6E10065F472 /* AudioToolbox.framework */,
 				3A6FC76B25CBD6E10065F472 /* AVFoundation.framework */,
 				3A6FC76925CBD6E10065F472 /* CFNetwork.framework */,

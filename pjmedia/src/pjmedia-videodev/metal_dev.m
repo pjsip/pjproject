@@ -35,7 +35,7 @@
 
 #if TARGET_OS_IPHONE
 #   define NSView   UIView
-#   define NSWindow void
+#   define NSWindow UIWindow
 #endif
 
 typedef struct metal_fmt_info
@@ -767,10 +767,12 @@ static pj_status_t metal_stream_set_cap(pjmedia_vid_dev_stream *s,
                            strm->view.bounds;
                 r.size = CGSizeMake(strm->param.disp_size.w,
                                     strm->param.disp_size.h);
-                if (strm->window)
-                    [strm->window setFrame:r display:YES];
-                else
+                if (!strm->window)
                     strm->view.bounds = r;
+#if !TARGET_OS_IPHONE
+                else
+                    [strm->window setFrame:r display:YES];
+#endif
             });
             return PJ_SUCCESS;
         }
@@ -806,10 +808,12 @@ static pj_status_t metal_stream_set_cap(pjmedia_vid_dev_stream *s,
             dispatch_sync_on_main_queue(^{
                 pj_bool_t hide = *((pj_bool_t *)pval);
                 if (strm->window) {
+#if !TARGET_OS_IPHONE
                     if (hide)
                         [strm->window orderOut: nil];
                     else
                         [strm->window orderFront: nil];
+#endif
                 } else {
                     strm->view.hidden = (BOOL)hide;
                 }

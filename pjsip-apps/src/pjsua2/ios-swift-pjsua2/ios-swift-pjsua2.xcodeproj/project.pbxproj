@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3A4E3B5E2B6206E50016735C /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B5C2B6206E50016735C /* Metal.framework */; };
+		3A4E3B5F2B6206E50016735C /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B5D2B6206E50016735C /* MetalKit.framework */; };
 		3AEC29312995BF1400F59EA0 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AEC29302995BF1400F59EA0 /* VideoToolbox.framework */; };
 		3AEC29332995BF4C00F59EA0 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AEC29322995BF4C00F59EA0 /* CoreMedia.framework */; };
 		C337417325BADEEE007785D7 /* Model.swift in Sources */ = {isa = PBXBuildFile; fileRef = C337417225BADEEE007785D7 /* Model.swift */; };
@@ -46,6 +48,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3A4E3B5C2B6206E50016735C /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		3A4E3B5D2B6206E50016735C /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		3AEC29302995BF1400F59EA0 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
 		3AEC29322995BF4C00F59EA0 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		C337417225BADEEE007785D7 /* Model.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model.swift; sourceTree = "<group>"; };
@@ -94,6 +98,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3A4E3B5F2B6206E50016735C /* MetalKit.framework in Frameworks */,
 				C351398125A5F70D00A090AA /* libg7221codec.a in Frameworks */,
 				C351398225A5F70D00A090AA /* libgsmcodec.a in Frameworks */,
 				C351398325A5F70D00A090AA /* libilbccodec.a in Frameworks */,
@@ -112,6 +117,7 @@
 				C351398E25A5F70D00A090AA /* libpjsua.a in Frameworks */,
 				C351398F25A5F70D00A090AA /* libpjsua2.a in Frameworks */,
 				C351399025A5F70D00A090AA /* libresample.a in Frameworks */,
+				3A4E3B5E2B6206E50016735C /* Metal.framework in Frameworks */,
 				C351399125A5F70D00A090AA /* libspeex.a in Frameworks */,
 				C351399225A5F70D00A090AA /* libsrtp.a in Frameworks */,
 				C351399325A5F70D00A090AA /* libwebrtc.a in Frameworks */,
@@ -188,6 +194,8 @@
 		C3B8521725A5EC380037A8AB /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				3A4E3B5C2B6206E50016735C /* Metal.framework */,
+				3A4E3B5D2B6206E50016735C /* MetalKit.framework */,
 				3AEC29322995BF4C00F59EA0 /* CoreMedia.framework */,
 				3AEC29302995BF1400F59EA0 /* VideoToolbox.framework */,
 				C3B8524625A5ED6D0037A8AB /* AudioToolbox.framework */,
