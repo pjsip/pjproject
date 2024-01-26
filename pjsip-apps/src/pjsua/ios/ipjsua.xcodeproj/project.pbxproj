@@ -548,7 +548,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Bitrise profile";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Teluu Profile";
 				VALID_ARCHS = arm64;
 				WRAPPER_EXTENSION = app;
 			};
@@ -591,7 +591,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Bitrise profile";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Teluu Profile";
 				VALID_ARCHS = arm64;
 				WRAPPER_EXTENSION = app;
 			};
