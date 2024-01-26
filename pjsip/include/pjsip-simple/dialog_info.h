@@ -144,14 +144,6 @@ typedef struct pjsip_dlg_info_dialog_info_op
 } pjsip_dlg_info_dialog_info_op;
 
 
-extern struct pjsip_dlg_info_op_desc
-{
-    pjsip_dlg_info_dialog_info  dialog_info;
-    pjsip_dlg_info_dialog       dialog;
-    pjsip_dlg_info_local        local;
-    pjsip_dlg_info_remote       remote;
-} pjsip_dlg_info_op;
-
 /******************************************************************************
  * Top level API for managing dialog-info document.
  *****************************************************************************/

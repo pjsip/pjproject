@@ -21,56 +21,6 @@
 #include <pj/pool.h>
 #include <pj/assert.h>
 
-/*
-struct pjsip_dlg_info_op_desc pjsip_dlg_info_op = {
-    &pjsip_dlg_info_dialog_info_construct,
-    &pjsip_dlg_info_dialog_info_get_state,
-    &pjsip_dlg_info_dialog_info_set_state,
-    &pjsip_dlg_info_dialog_info_get_version,
-    &pjsip_dlg_info_dialog_info_set_version,
-    &pjsip_dlg_info_dialog_info_get_entity,
-    &pjsip_dlg_info_dialog_info_set_entity,
-    &pjsip_dlg_info_dialog_info_get_dialog,
-    &pjsip_dlg_info_dialog_info_add_dialog,
-    
-    &pjsip_dlg_info_dialog_construct,
-    &pjsip_dlg_info_dialog_get_id,
-    &pjsip_dlg_info_dialog_set_id,
-    &pjsip_dlg_info_dialog_get_call_id,
-    &pjsip_dlg_info_dialog_set_call_id,
-    &pjsip_dlg_info_dialog_get_remote_tag,
-    &pjsip_dlg_info_dialog_set_remote_tag,
-    &pjsip_dlg_info_dialog_get_local_tag,
-    &pjsip_dlg_info_dialog_set_local_tag,
-    &pjsip_dlg_info_dialog_get_direction,
-    &pjsip_dlg_info_dialog_set_direction,
-    &pjsip_dlg_info_dialog_get_state,
-    &pjsip_dlg_info_dialog_set_state,
-    &pjsip_dlg_info_dialog_get_duration,
-    &pjsip_dlg_info_dialog_set_duration,
-    &pjsip_dlg_info_dialog_get_local,
-    &pjsip_dlg_info_dialog_add_local,
-    &pjsip_dlg_info_dialog_get_remote,
-    &pjsip_dlg_info_dialog_add_remote,
-
-    &pjsip_dlg_info_local_construct,
-    &pjsip_dlg_info_local_get_identity,
-    &pjsip_dlg_info_local_add_identity,
-    &pjsip_dlg_info_local_get_identity_display,
-    &pjsip_dlg_info_local_set_identity_display,
-    &pjsip_dlg_info_local_get_target_uri,
-    &pjsip_dlg_info_local_set_target_uri,
-
-    &pjsip_dlg_info_remote_construct,
-    &pjsip_dlg_info_remote_get_identity,
-    &pjsip_dlg_info_remote_add_identity,
-    &pjsip_dlg_info_remote_get_identity_display,
-    &pjsip_dlg_info_remote_set_identity_display,
-    &pjsip_dlg_info_remote_get_target_uri,
-    &pjsip_dlg_info_remote_set_target_uri
-};
-*/
-
 static pj_str_t DIALOG_INFO = { "dialog-info", 11 };
 static pj_str_t VERSION = { "version", 7 };
 static pj_str_t DIALOG = { "dialog", 6};
