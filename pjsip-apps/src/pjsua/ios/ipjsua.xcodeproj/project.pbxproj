@@ -512,7 +512,7 @@
 		3AF0582C16F050780046B835 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				DEVELOPMENT_TEAM = 93NHJQ455P;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ipjsua/ipjsua-Prefix.pch";
@@ -552,7 +552,7 @@
 		3AF0582D16F050780046B835 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				DEVELOPMENT_TEAM = 93NHJQ455P;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ipjsua/ipjsua-Prefix.pch";
