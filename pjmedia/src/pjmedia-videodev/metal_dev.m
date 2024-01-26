@@ -942,7 +942,6 @@ static pj_status_t metal_stream_destroy(pjmedia_vid_dev_stream *strm)
     if (stream->window) {
         [stream->window performSelectorOnMainThread:@selector(close)
                         withObject:nil waitUntilDone:YES];
-        [stream->window release];
         stream->window = nil;
     }
     
