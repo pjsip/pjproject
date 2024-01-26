@@ -8,9 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		3A31F1B21DA4F568007C23A3 /* libwebrtc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A31F1B11DA4F568007C23A3 /* libwebrtc.a */; };
-		3A4E3B622B636E360016735C /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B602B636E360016735C /* Metal.framework */; };
-		3A4E3B632B636E360016735C /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B612B636E360016735C /* MetalKit.framework */; };
-		3A4E3B652B636E580016735C /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B642B636E580016735C /* Network.framework */; };
+		3A4E3B542B61FEAB0016735C /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B522B61FEAB0016735C /* Metal.framework */; };
+		3A4E3B552B61FEAB0016735C /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B532B61FEAB0016735C /* MetalKit.framework */; };
+		3A4E3B5B2B6205BA0016735C /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B5A2B6205B90016735C /* Network.framework */; };
 		3A6FDEF0223B3BEC001726FD /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FDEEF223B3BEC001726FD /* Security.framework */; };
 		3AA31FF618F3FB4C00112C3D /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FE918F3FB4C00112C3D /* AudioToolbox.framework */; };
 		3AA31FF718F3FB4C00112C3D /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FEA18F3FB4C00112C3D /* AVFoundation.framework */; };
@@ -66,9 +66,9 @@
 
 /* Begin PBXFileReference section */
 		3A31F1B11DA4F568007C23A3 /* libwebrtc.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libwebrtc.a; sourceTree = "<group>"; };
-		3A4E3B602B636E360016735C /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
-		3A4E3B612B636E360016735C /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
-		3A4E3B642B636E580016735C /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
+		3A4E3B522B61FEAB0016735C /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		3A4E3B532B61FEAB0016735C /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
+		3A4E3B5A2B6205B90016735C /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
 		3A6FDEEF223B3BEC001726FD /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		3AA31FE918F3FB4C00112C3D /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		3AA31FEA18F3FB4C00112C3D /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
@@ -153,19 +153,19 @@
 				E5E991EA1B67A45500017E67 /* libpjlib-util.a in Frameworks */,
 				E5E991ED1B67A45500017E67 /* libpjmedia-videodev.a in Frameworks */,
 				E5E991E81B67A45500017E67 /* libilbccodec.a in Frameworks */,
-				3A4E3B652B636E580016735C /* Network.framework in Frameworks */,
+				3A4E3B5B2B6205BA0016735C /* Network.framework in Frameworks */,
 				3AA3200118F3FB4C00112C3D /* CoreGraphics.framework in Frameworks */,
 				3AA31FF918F3FB4C00112C3D /* CoreAudio.framework in Frameworks */,
 				3AA31FFD18F3FB4C00112C3D /* CoreVideo.framework in Frameworks */,
 				3AA3200218F3FB4C00112C3D /* UIKit.framework in Frameworks */,
 				3AA31FFA18F3FB4C00112C3D /* CoreFoundation.framework in Frameworks */,
 				E5E991F01B67A45500017E67 /* libpjsip-simple.a in Frameworks */,
-				3A4E3B622B636E360016735C /* Metal.framework in Frameworks */,
+				3A4E3B542B61FEAB0016735C /* Metal.framework in Frameworks */,
 				E5E991E91B67A45500017E67 /* libpj.a in Frameworks */,
 				E5E991F71B67A45500017E67 /* libsrtp.a in Frameworks */,
 				3AA31FFC18F3FB4C00112C3D /* CoreMedia.framework in Frameworks */,
 				E5E991F21B67A45500017E67 /* libpjsip.a in Frameworks */,
-				3A4E3B632B636E360016735C /* MetalKit.framework in Frameworks */,
+				3A4E3B552B61FEAB0016735C /* MetalKit.framework in Frameworks */,
 				3A31F1B21DA4F568007C23A3 /* libwebrtc.a in Frameworks */,
 				E5E991F51B67A45500017E67 /* libresample.a in Frameworks */,
 				E5E991F61B67A45500017E67 /* libspeex.a in Frameworks */,
@@ -211,9 +211,9 @@
 		3AF0580716F050770046B835 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				3A4E3B642B636E580016735C /* Network.framework */,
-				3A4E3B602B636E360016735C /* Metal.framework */,
-				3A4E3B612B636E360016735C /* MetalKit.framework */,
+				3A4E3B5A2B6205B90016735C /* Network.framework */,
+				3A4E3B522B61FEAB0016735C /* Metal.framework */,
+				3A4E3B532B61FEAB0016735C /* MetalKit.framework */,
 				3A6FDEEF223B3BEC001726FD /* Security.framework */,
 				7485A6B01F09B2D500122F1A /* SystemConfiguration.framework */,
 				3AF253011EFBD36E00213893 /* VideoToolbox.framework */,
@@ -437,8 +437,7 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				ENABLE_BITCODE = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -491,8 +490,7 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
 				ENABLE_BITCODE = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -515,8 +513,7 @@
 		3AF0582C16F050780046B835 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
@@ -549,10 +546,9 @@
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.${PRODUCT_NAME:rfc1034identifier}";
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.teluu.ipjsuapjsip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Bitrise-iOS";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Bitrise profile";
 				VALID_ARCHS = arm64;
 				WRAPPER_EXTENSION = app;
 			};
@@ -561,8 +557,7 @@
 		3AF0582D16F050780046B835 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
@@ -594,10 +589,9 @@
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.${PRODUCT_NAME:rfc1034identifier}";
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.teluu.ipjsuapjsip;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Bitrise-iOS";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Bitrise profile";
 				VALID_ARCHS = arm64;
 				WRAPPER_EXTENSION = app;
 			};
