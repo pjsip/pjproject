@@ -190,22 +190,22 @@ struct pjsip_evsub_user
     void (*on_client_refresh)(pjsip_evsub *sub);
 
     /**
-     * This callback is called when server doesn't receive subscription
+     * This callback is called when server doesn't receive subscription 
      * refresh after the specified subscription interval.
      *
-     * This callback is OPTIONAL when PJSIP package such as presence or
-     * refer is used; the event package send NOTIFY to terminate the
+     * This callback is OPTIONAL when PJSIP package such as presence or 
+     * refer is used; the event package send NOTIFY to terminate the 
      * subscription.
      */
     void (*on_server_timeout)(pjsip_evsub *sub);
 
 };
 
+
 /**
  * @see pjsip_evsub_user
  */
 typedef struct pjsip_evsub_user pjsip_evsub_user;
-typedef struct pjsip_evsub_user pjsip_evsub_dlg_event_user;
 
 
 /**

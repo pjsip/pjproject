@@ -675,7 +675,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\pjsip-simple\dlg_event.c" />
-    <ClCompile Include="..\src\pjsip-simple\dialog-info.c" />
+    <ClCompile Include="..\src\pjsip-simple\dialog_info.c" />
     <ClCompile Include="..\src\pjsip-simple\errno.c" />
     <ClCompile Include="..\src\pjsip-simple\evsub.c" />
     <ClCompile Include="..\src\pjsip-simple\evsub_msg.c" />
@@ -690,7 +690,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjsip-simple\dlg_event.h" />
-    <ClInclude Include="..\include\pjsip-simple\dialog-info.h" />
+    <ClInclude Include="..\include\pjsip-simple\dialog_info.h" />
     <ClInclude Include="..\include\pjsip-simple\errno.h" />
     <ClInclude Include="..\include\pjsip-simple\evsub.h" />
     <ClInclude Include="..\include\pjsip-simple\evsub_msg.h" />

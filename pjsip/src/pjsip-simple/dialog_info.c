@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include <pjsip-simple/dialog-info.h>
+#include <pjsip-simple/dialog_info.h>
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>

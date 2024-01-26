@@ -20,7 +20,7 @@
 #define __PJSIP_SIMPLE_DIALOG_INFO_H__
 
 /**
- * @file dialog-info.h
+ * @file dialog_info.h
  * @brief Dialog-Info Information Data Format (RFC 4235)
  */
 #include <pjsip-simple/types.h>

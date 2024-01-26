@@ -24,7 +24,7 @@
  * @brief SIP Extension for INVITE-Initiated Dialog Event (RFC 4235)
  */
 #include <pjsip-simple/evsub.h>
-#include <pjsip-simple/dialog-info.h>
+#include <pjsip-simple/dialog_info.h>
 
 PJ_BEGIN_DECL
 
@@ -132,7 +132,7 @@ typedef struct pjsip_dlg_event_status pjsip_dlg_event_status;
  */
 PJ_DECL(pj_status_t)
 pjsip_dlg_event_create_uac(pjsip_dialog *dlg,
-                           const pjsip_evsub_dlg_event_user *user_cb,
+                           const pjsip_evsub_user *user_cb,
                            unsigned options,
                            pjsip_evsub **p_evsub );
 

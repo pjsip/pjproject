@@ -6429,7 +6429,14 @@ pjsua_call_get_med_transport_info(pjsua_call_id call_id,
 #   define PJSUA_PRES_TIMER         300
 #endif
 
-
+/**
+ * This specifies the buffer size of pjsua_buddy_dlg_event_info.
+ *
+ * Default: 1024 bytes
+ */
+#ifndef PJSUA_BUDDY_DLG_EVENT_INFO_BUF_SIZE
+#   define PJSUA_BUDDY_DLG_EVENT_INFO_BUF_SIZE 1024
+#endif
 /**
  * This structure describes buddy configuration when adding a buddy to
  * the buddy list with #pjsua_buddy_add(). Application MUST initialize
@@ -6659,7 +6666,7 @@ typedef struct pjsua_buddy_dlg_event_info
     /**
      * Internal buffer.
      */
-   char             buf_[512];
+   char             buf_[PJSUA_BUDDY_DLG_EVENT_INFO_BUF_SIZE];
 
 } pjsua_buddy_dlg_event_info;
 

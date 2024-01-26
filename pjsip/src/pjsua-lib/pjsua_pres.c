@@ -2076,7 +2076,7 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
                             pj_bool_t presence)
 {
     pjsip_evsub_user pres_callback;
-    pjsip_evsub_dlg_event_user dlg_event_callback;
+    pjsip_evsub_user dlg_event_callback;
     pj_pool_t *tmp_pool = NULL;
     pjsua_buddy *buddy;
     int acc_id;
