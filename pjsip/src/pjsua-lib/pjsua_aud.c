@@ -2228,7 +2228,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
     unsigned alt_cr_cnt = 1;
     unsigned alt_cr[] = {0, 44100, 48000, 32000, 16000, 8000};
     unsigned i;
-    pj_status_t status = -1;
+    pj_status_t status = PJ_SUCCESS;
     unsigned orig_snd_dev_mode = pjsua_var.snd_mode;
 
     PJ_ASSERT_RETURN(snd_param, PJ_EINVAL);
@@ -2267,7 +2267,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
         PJSUA_UNLOCK();
         PJ_LOG(4, (THIS_FILE, "No sound device, mode setting is ignored"));
         if (!pjsua_var.no_snd)
-            pjsua_set_no_snd_dev();
+            PJ_ASSERT_RETURN(pjsua_set_no_snd_dev(), PJ_ENOTFOUND);
+
         pj_log_pop_indent();
         return status;
     }
@@ -2409,8 +2410,14 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
 
     /* Create memory pool for sound device. */
     pjsua_var.snd_pool = pjsua_pool_create("pjsua_snd", 4000, 4000);
-    PJ_ASSERT_RETURN(pjsua_var.snd_pool, PJ_ENOMEM);
-
+    if (!pjsua_var.snd_pool) {
+        pjsua_perror(THIS_FILE, "Unable to create pool for null sound device",
+                     PJ_ENOMEM);
+        PJSUA_UNLOCK();
+        pj_log_pop_indent();
+        return PJ_ENOMEM;
+    }
+    
     PJ_LOG(4,(THIS_FILE, "Opening null sound device.."));
 
     /* Get the port0 of the conference bridge. */
@@ -2432,7 +2439,13 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
 
     /* Start the master port */
     status = pjmedia_master_port_start(pjsua_var.null_snd);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to start null sound device",
+                     status);
+        PJSUA_UNLOCK();
+        pj_log_pop_indent();
+        return status;
+    }
 
     pjsua_var.no_snd = PJ_FALSE;
     pjsua_var.snd_is_on = PJ_TRUE;

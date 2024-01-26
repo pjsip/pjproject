@@ -426,6 +426,16 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #   define PJSUA_TRICKLE_ICE_NEW_CAND_CHECK_INTERVAL    100
 #endif
 
+/**
+ * Specify if PJSUA should check for merged requests as per RFC 3261 section
+ * 8.2.2.2. If a merged request is detected, PJSUA will automatically reply
+ * with a 482 - Loop Detected.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJSUA_DETECT_MERGED_REQUESTS
+#   define PJSUA_DETECT_MERGED_REQUESTS  1
+#endif
 
 /**
  * This enumeration represents pjsua state.
@@ -836,6 +846,11 @@ typedef enum pjsua_ip_change_op {
      * Hasn't start ip change process.
      */
     PJSUA_IP_CHANGE_OP_NULL,
+
+    /**
+     * The restart listener process.
+     */
+    PJSUA_IP_CHANGE_OP_SHUTDOWN_TP,
 
     /**
      * The restart listener process.
@@ -2784,6 +2799,15 @@ typedef struct pjsua_ip_change_param
      * Default : PJSUA_TRANSPORT_RESTART_DELAY_TIME
      */
     unsigned        restart_lis_delay;
+
+    /**
+     * If set to PJ_TRUE, this will forcefully shutdown all transports.
+     * Note that this will shutdown TCP/TLS transports only, UDP transport
+     * should be restarted via restart_listener.
+     *
+     * Default : PJ_TRUE
+     */
+    pj_bool_t       shutdown_transport;
 
 } pjsua_ip_change_param;
 
@@ -7616,7 +7640,7 @@ typedef struct pjsua_snd_dev_param
      */
     unsigned            mode;
 
-    /*
+    /**
      * The library will maintain the global sound device settings set when
      * opening the sound device for the first time and later can be modified
      * using #pjsua_snd_set_setting(). These setings are then applied to any

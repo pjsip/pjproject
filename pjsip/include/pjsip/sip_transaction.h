@@ -410,9 +410,24 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool,
  *
  * @param tsx       The transaction.
  * @param code      The status code to report.
+ *
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx,
                                           int code );
+
+
+/**
+ * Force terminate transaction asynchronously, using the transaction
+ * internal timer.
+ *
+ * @param tsx       The transaction.
+ * @param code      The status code to report.
+ *
+ * @return          PJ_SUCCESS or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
+                                               int code );
 
 
 /**

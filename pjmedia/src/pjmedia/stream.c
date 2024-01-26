@@ -1087,10 +1087,11 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
     pj_status_t status;
 
     /* We need to prevent data race since there is only a single instance
-     * of rtcp packet buffer. Let's just use the JB mutex for this instead
-     * of creating a separate lock.
+     * of rtcp packet buffer. And to avoid deadlock with media transport,
+     * we use the transport's group lock.
      */
-    pj_mutex_lock(stream->jb_mutex);
+    if (stream->transport->grp_lock)
+        pj_grp_lock_acquire(stream->transport->grp_lock);
 
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
@@ -1211,7 +1212,8 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
         }
     }
 
-    pj_mutex_unlock(stream->jb_mutex);
+    if (stream->transport->grp_lock)
+        pj_grp_lock_release(stream->transport->grp_lock);
 
     return status;
 }
@@ -3068,7 +3070,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     /* Send RTCP BYE (also SDES & XR) */
-    if (stream->transport && stream->jb_mutex && !stream->rtcp_sdes_bye_disabled) {
+    if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
         send_rtcp(stream, PJ_TRUE, PJ_TRUE, stream->rtcp.xr_enabled, PJ_FALSE);
 #else

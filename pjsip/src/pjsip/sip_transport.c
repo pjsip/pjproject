@@ -142,8 +142,9 @@ struct pjsip_tpmgr
 #endif
     void           (*on_rx_msg)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
     pj_status_t    (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
-    pjsip_tp_state_callback tp_state_cb;
+    pjsip_tp_state_callback   tp_state_cb;
     pjsip_tp_on_rx_dropped_cb tp_drop_data_cb;
+    pjsip_tp_on_rx_data_cb    tp_rx_data_cb;
 
     /* Transmit data list, for transmit data cleanup when transport manager
      * is destroyed.
@@ -1985,6 +1986,60 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 }
 
 
+/**
+ * Initialize transports shutdown parameter with default values.
+ *
+ * @param prm       The parameter to be initialized.
+ */
+PJ_DEF(void) pjsip_tpmgr_shutdown_param_default(
+                                    pjsip_tpmgr_shutdown_param *prm)
+{
+    pj_bzero(prm, sizeof(*prm));
+    prm->force = PJ_TRUE;
+    prm->include_udp = PJ_TRUE;
+}
+
+/*
+ * Shutdown all transports.
+ */
+PJ_DEF(pj_status_t) pjsip_tpmgr_shutdown_all(
+                                    pjsip_tpmgr *mgr,
+                                    const pjsip_tpmgr_shutdown_param *prm)
+{
+    pj_hash_iterator_t itr_val;
+    pj_hash_iterator_t *itr;
+
+    PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
+
+    PJ_LOG(3, (THIS_FILE, "Shutting down all transports"));
+
+    pj_lock_acquire(mgr->lock);
+
+    itr = pj_hash_first(mgr->table, &itr_val);
+    while (itr) {
+        transport *tp_entry = (transport*)pj_hash_this(mgr->table, itr);
+        if (tp_entry) {
+            transport *tp_iter = tp_entry;
+            do {
+                pjsip_transport *tp = tp_iter->tp;
+                if (prm->include_udp ||
+                    ((tp->key.type & ~PJSIP_TRANSPORT_IPV6) !=
+                            PJSIP_TRANSPORT_UDP))
+                {
+                    pjsip_transport_shutdown2(tp, prm->force);
+                }
+                tp_iter = tp_iter->next;
+            } while (tp_iter != tp_entry);
+        }
+        itr = pj_hash_next(mgr->table, itr);
+    }
+
+    pj_lock_release(mgr->lock);
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * pjsip_tpmgr_receive_packet()
  *
@@ -2066,6 +2121,24 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
         /* For TCP transport, check if the whole message has been received. */
         if ((tr->flag & PJSIP_TRANSPORT_DATAGRAM) == 0) {
             pj_status_t msg_status;
+
+            if (mgr->tp_rx_data_cb) {
+                pjsip_tp_rx_data rd;
+                pj_bzero(&rd, sizeof(rd));
+                rd.tp = tr;
+                rd.data = current_pkt;
+                rd.len = remaining_len;
+
+                (*mgr->tp_rx_data_cb)(&rd);
+                if (rd.len < remaining_len) {
+                    msg_fragment_size = remaining_len - rd.len;
+                    total_processed += msg_fragment_size;
+                    current_pkt += msg_fragment_size;
+                    remaining_len = rd.len;
+                    continue;
+                }
+            }
+
             msg_status = pjsip_find_msg(current_pkt, remaining_len, PJ_FALSE, 
                                         &msg_fragment_size);
             if (msg_status != PJ_SUCCESS) {
@@ -2152,8 +2225,8 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
              */
             if (tmp.slen) {
                 PJ_LOG(2, (THIS_FILE,
-                      "Dropping %ld bytes packet from %s %s:%d %.*s\n",
-                      msg_fragment_size,
+                      "Dropping %lu bytes packet from %s %s:%d %.*s\n",
+                      (unsigned long)msg_fragment_size,
                       rdata->tp_info.transport->type_name,
                       rdata->pkt_info.src_name,
                       rdata->pkt_info.src_port,
@@ -2838,3 +2911,18 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_set_drop_data_cb(pjsip_tpmgr *mgr,
 
     return PJ_SUCCESS;
 }
+
+/*
+ * Set callback for custom parser
+ */
+
+PJ_DEF(pj_status_t) pjsip_tpmgr_set_recv_data_cb(pjsip_tpmgr *mgr,
+                                                 pjsip_tp_on_rx_data_cb cb)
+{
+    PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
+
+    mgr->tp_rx_data_cb = cb;
+
+    return PJ_SUCCESS;
+}
+

@@ -139,6 +139,7 @@ static int max_retrans_count = -1;
 #define TIMEOUT_TIMER           2
 #define TRANSPORT_ERR_TIMER     3
 #define TRANSPORT_DISC_TIMER    4
+#define TERMINATE_TIMER         5
 
 /* Flags for tsx_set_state() */
 enum
@@ -953,6 +954,18 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
         return PJ_FALSE;
     }
 
+    /* In the case of an INVITE transaction, if the response was a 2xx,
+     * the ACK is not considered part of the transaction.
+     * Let sip_dialog and sip_inv handle it instead.
+     */
+    if (rdata->msg_info.msg->line.req.method.id == PJSIP_ACK_METHOD &&
+        tsx->method.id == PJSIP_INVITE_METHOD &&
+        tsx->status_code/100 == 2)
+    {
+        pj_mutex_unlock( mod_tsx_layer.mutex);
+        return PJ_FALSE;
+    }
+
     /* Prevent the transaction to get deleted before we have chance to lock it
      * in pjsip_tsx_recv_msg().
      */
@@ -1253,7 +1266,13 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
         return;
     }
 
-    if (entry->id == TRANSPORT_ERR_TIMER || entry->id == TRANSPORT_DISC_TIMER)
+
+    if (entry->id == TERMINATE_TIMER) {
+        if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
+            pjsip_tsx_terminate(tsx, tsx->status_code);
+        }
+    } else if (entry->id == TRANSPORT_ERR_TIMER ||
+               entry->id == TRANSPORT_DISC_TIMER)
     {
         /* Posted transport error/disconnection event */
         pj_bool_t tp_disc = (entry->id == TRANSPORT_DISC_TIMER);
@@ -1582,7 +1601,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac2(pjsip_module *tsx_user,
     tsx->hashed_key = pj_hash_calc_tolower(0, NULL, &tsx->transaction_key);
 #endif
 
-    PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", tsx->transaction_key.slen,
+    PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", (int)tsx->transaction_key.slen,
                tsx->transaction_key.ptr));
 
     /* Begin with State_Null.
@@ -1741,7 +1760,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas2(pjsip_module *tsx_user,
     branch = &rdata->msg_info.via->branch_param;
     pj_strdup(tsx->pool, &tsx->branch, branch);
 
-    PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", tsx->transaction_key.slen,
+    PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", (int)tsx->transaction_key.slen,
                tsx->transaction_key.ptr));
 
 
@@ -1863,6 +1882,30 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
     pj_grp_lock_release(tsx->grp_lock);
 
     pj_log_pop_indent();
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Force terminate transaction asynchronously, using the transaction
+ * internal timer.
+ */
+PJ_DEF(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
+                                              int code )
+{
+    pj_time_val delay = {0, 100};
+
+    PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
+
+    PJ_LOG(5,(tsx->obj_name, "Request to terminate transaction async"));
+
+    PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
+
+    lock_timer(tsx);
+    tsx_cancel_timer(tsx, &tsx->timeout_timer);
+    tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay, TERMINATE_TIMER);
+    unlock_timer(tsx);
 
     return PJ_SUCCESS;
 }
@@ -2144,11 +2187,15 @@ static void send_msg_callback( pjsip_send_state *send_state,
             else
                 sc = PJSIP_SC_TSX_TRANSPORT_ERROR;
 
-            /* Terminate transaction, if it's not already terminated. */
-            tsx_set_status_code(tsx, sc, &err);
-            if (tsx->state != PJSIP_TSX_STATE_TERMINATED &&
+            /* We terminate the transaction for 502 error. For 503,
+             * we will retry it.
+             * See https://github.com/pjsip/pjproject/pull/3805
+             */
+            if (sc == PJSIP_SC_BAD_GATEWAY &&
+                tsx->state != PJSIP_TSX_STATE_TERMINATED &&
                 tsx->state != PJSIP_TSX_STATE_DESTROYED)
             {
+                tsx_set_status_code(tsx, sc, &err);
                 /* Set tsx state to TERMINATED, but release the lock
                  * when invoking the callback, to avoid deadlock.
                  */
@@ -2161,6 +2208,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
              */
             else if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY)
             {
+                tsx_set_status_code(tsx, sc, &err);
                 tsx_set_state( tsx, PJSIP_TSX_STATE_DESTROYED, 
                                PJSIP_EVENT_TRANSPORT_ERROR,
                                send_state->tdata, 0);

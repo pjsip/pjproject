@@ -52,8 +52,9 @@ static pj_pool_block *pj_pool_create_block( pj_pool_t *pool, pj_size_t size)
     PJ_CHECK_STACK();
     pj_assert(size >= sizeof(pj_pool_block));
 
-    LOG((pool->obj_name, "create_block(sz=%u), cur.cap=%u, cur.used=%u", 
-         size, pool->capacity, pj_pool_get_used_size(pool)));
+    LOG((pool->obj_name, "create_block(sz=%lu), cur.cap=%lu, cur.used=%lu", 
+         (unsigned long)size, (unsigned long)pool->capacity,
+         (unsigned long)pj_pool_get_used_size(pool)));
 
     /* Request memory from allocator. */
     block = (pj_pool_block*) 
@@ -116,9 +117,10 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
 
     /* If pool is configured NOT to expand, return error. */
     if (pool->increment_size == 0) {
-        LOG((pool->obj_name, "Can't expand pool to allocate %u bytes "
-             "(used=%u, cap=%u)",
-             size, pj_pool_get_used_size(pool), pool->capacity));
+        LOG((pool->obj_name, "Can't expand pool to allocate %lu bytes "
+             "(used=%lu, cap=%lu)",
+             (unsigned long)size, (unsigned long)pj_pool_get_used_size(pool),
+             (unsigned long)pool->capacity));
         (*pool->callback)(pool, size);
         return NULL;
     }
@@ -142,8 +144,10 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
     }
 
     LOG((pool->obj_name, 
-         "%u bytes requested, resizing pool by %u bytes (used=%u, cap=%u)",
-         size, block_size, pj_pool_get_used_size(pool), pool->capacity));
+         "%lu bytes requested, resizing pool by %lu bytes (used=%lu, cap=%lu)",
+         (unsigned long)size, (unsigned long)block_size,
+         (unsigned long)pj_pool_get_used_size(pool),
+         (unsigned long)pool->capacity));
 
     block = pj_pool_create_block(pool, block_size);
     if (!block)
@@ -233,7 +237,8 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
     /* Pool initial capacity and used size */
     pool->capacity = initial_size;
 
-    LOG((pool->obj_name, "pool created, size=%u", pool->capacity));
+    LOG((pool->obj_name, "pool created, size=%lu",
+                         (unsigned long)pool->capacity));
     return pool;
 }
 
@@ -278,9 +283,10 @@ static void reset_pool(pj_pool_t *pool)
  */
 PJ_DEF(void) pj_pool_reset(pj_pool_t *pool)
 {
-    LOG((pool->obj_name, "reset(): cap=%d, used=%d(%d%%)", 
-        pool->capacity, pj_pool_get_used_size(pool), 
-        pj_pool_get_used_size(pool)*100/pool->capacity));
+    LOG((pool->obj_name, "reset(): cap=%lu, used=%lu(%lu%%)", 
+        (unsigned long)pool->capacity,
+        (unsigned long)pj_pool_get_used_size(pool), 
+        (unsigned long)(pj_pool_get_used_size(pool)*100/pool->capacity)));
 
     reset_pool(pool);
 }
@@ -292,9 +298,10 @@ PJ_DEF(void) pj_pool_destroy_int(pj_pool_t *pool)
 {
     pj_size_t initial_size;
 
-    LOG((pool->obj_name, "destroy(): cap=%d, used=%d(%d%%), block0=%p-%p", 
-        pool->capacity, pj_pool_get_used_size(pool), 
-        pj_pool_get_used_size(pool)*100/pool->capacity,
+    LOG((pool->obj_name, "destroy(): cap=%lu, used=%lu(%lu%%), block0=%p-%p", 
+        (unsigned long)pool->capacity,
+        (unsigned long)pj_pool_get_used_size(pool),
+        (unsigned long)(pj_pool_get_used_size(pool)*100/pool->capacity),
         ((pj_pool_block*)pool->block_list.next)->buf, 
         ((pj_pool_block*)pool->block_list.next)->end));
 

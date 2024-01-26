@@ -698,13 +698,25 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
             }
 
             /* Now we can terminate the INVITE transaction */
-            pj_assert(inv->invite_tsx->status_code >= 200);
-            pjsip_tsx_terminate(inv->invite_tsx, 
-                                inv->invite_tsx->status_code);
+            if (inv->invite_tsx->status_code/100 == 2) {
+                pjsip_tsx_terminate(inv->invite_tsx,
+                                    inv->invite_tsx->status_code);
+            } else {
+                /* If the response was not 2xx, the ACK is considered part of
+                 * the INVITE transaction, so should have been handled by
+                 * the transaction.
+                 * But for best effort, we will also attempt to terminate
+                 * the tsx here. However, we need to do it asynchronously
+                 * to avoid deadlock.
+                 */
+                pjsip_tsx_terminate_async(inv->invite_tsx,
+                                          inv->invite_tsx->status_code);
+            }
             inv->invite_tsx = NULL;
+
             if (inv->last_answer) {
-                    pjsip_tx_data_dec_ref(inv->last_answer);
-                    inv->last_answer = NULL;
+                pjsip_tx_data_dec_ref(inv->last_answer);
+                inv->last_answer = NULL;
             }
         }
 
