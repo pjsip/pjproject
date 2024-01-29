@@ -667,6 +667,40 @@ static void on_buddy_state(pjsua_buddy_id buddy_id)
 
 
 /*
+ * Handler on buddy dialog event state changed.
+ */
+static void on_buddy_dlg_event_state(pjsua_buddy_id buddy_id)
+{
+    pjsua_buddy_dlg_event_info info;
+    pjsua_buddy_get_dlg_event_info(buddy_id, &info);
+
+    PJ_LOG(3,(THIS_FILE, "%.*s dialog-info-state: %.*s, "
+              "dialog-info-entity: %.*s, dialog-id: %.*s, "
+              "dialog-call-id: %.*s, dialog-direction: %.*s, "
+              "dialog-state: %.*s, dialog-duration: %.*s, "
+              "local-identity: %.*s, local-target-uri: %.*s, "
+              "remote-identity: %.*s, remote-target-uri: %.*s, "
+              "dialog-local-tag: %.*s, dialog-remote-tag: %.*s, "
+              "subscription state: %s (last termination reason code=%d %.*s)",
+              (int)info.uri.slen, info.uri.ptr,
+              (int)info.dialog_info_state.slen, info.dialog_info_state.ptr,
+              (int)info.dialog_info_entity.slen, info.dialog_info_entity.ptr,
+              (int)info.dialog_id.slen, info.dialog_id.ptr,
+              (int)info.dialog_call_id.slen, info.dialog_call_id.ptr,
+              (int)info.dialog_direction.slen, info.dialog_direction.ptr,
+              (int)info.dialog_state.slen, info.dialog_state.ptr,
+              (int)info.dialog_duration.slen, info.dialog_duration.ptr,
+              (int)info.local_identity.slen, info.local_identity.ptr,
+              (int)info.local_target_uri.slen, info.local_target_uri.ptr,
+              (int)info.remote_identity.slen, info.remote_identity.ptr,
+              (int)info.remote_target_uri.slen, info.remote_target_uri.ptr,
+              (int)info.dialog_local_tag.slen, info.dialog_local_tag.ptr,
+              (int)info.dialog_remote_tag.slen, info.dialog_remote_tag.ptr,
+              info.sub_state_name, info.sub_term_code,
+              (int)info.sub_term_reason.slen, info.sub_term_reason.ptr));
+}
+
+/*
  * Subscription state has changed.
  */
 static void on_buddy_evsub_state(pjsua_buddy_id buddy_id,
@@ -696,11 +730,36 @@ static void on_buddy_evsub_state(pjsua_buddy_id buddy_id,
 
 }
 
+static void on_buddy_evsub_dlg_event_state(pjsua_buddy_id buddy_id,
+                                     pjsip_evsub *sub,
+                                     pjsip_event *event)
+{
+    char event_info[80];
+
+    PJ_UNUSED_ARG(sub);
+
+    event_info[0] = '\0';
+
+    if (event->type == PJSIP_EVENT_TSX_STATE &&
+        event->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+    {
+        pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
+        snprintf(event_info, sizeof(event_info),
+                 " (RX %s)",
+                 pjsip_rx_data_get_info(rdata));
+    }
+
+    PJ_LOG(4,(THIS_FILE,
+              "Buddy %d: dialog event subscription state: %s (event: %s%s)",
+              buddy_id, pjsip_evsub_get_state_name(sub),
+              pjsip_event_str(event->type), event_info));
+}
+
 
 /**
  * Incoming IM message (i.e. MESSAGE request)!
  */
-static void on_pager(pjsua_call_id call_id, const pj_str_t *from, 
+static void on_pager(pjsua_call_id call_id, const pj_str_t *from,
                      const pj_str_t *to, const pj_str_t *contact,
                      const pj_str_t *mime_type, const pj_str_t *text)
 {
@@ -1393,7 +1452,10 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_reg_state = &on_reg_state;
     app_config.cfg.cb.on_incoming_subscribe = &on_incoming_subscribe;
     app_config.cfg.cb.on_buddy_state = &on_buddy_state;
+    app_config.cfg.cb.on_buddy_dlg_event_state = &on_buddy_dlg_event_state;
     app_config.cfg.cb.on_buddy_evsub_state = &on_buddy_evsub_state;
+    app_config.cfg.cb.on_buddy_evsub_dlg_event_state = 
+        &on_buddy_evsub_dlg_event_state;
     app_config.cfg.cb.on_pager = &on_pager;
     app_config.cfg.cb.on_typing = &on_typing;
     app_config.cfg.cb.on_call_transfer_status = &on_call_transfer_status;

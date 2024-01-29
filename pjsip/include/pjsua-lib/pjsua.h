@@ -1649,6 +1649,13 @@ typedef struct pjsua_callback
      */
     void (*on_buddy_state)(pjsua_buddy_id buddy_id);
 
+    /**
+     * Notify application when the buddy dialog state has changed.
+     * Application may then query the buddy into to get the details.
+     *
+     * @param buddy_id      The buddy id.
+     */
+    void (*on_buddy_dlg_event_state)(pjsua_buddy_id buddy_id);
 
     /**
      * Notify application when the state of client subscription session
@@ -1663,6 +1670,20 @@ typedef struct pjsua_callback
     void (*on_buddy_evsub_state)(pjsua_buddy_id buddy_id,
                                  pjsip_evsub *sub,
                                  pjsip_event *event);
+
+    /**
+     * Notify application when the state of client subscription session
+     * associated with a buddy dialog state has changed. Application
+     * may use this callback to retrieve more detailed information about the
+     * state changed event.
+     *
+     * @param buddy_id      The buddy id.
+     * @param sub           Event subscription session.
+     * @param event         The event which triggers state change event.
+     */
+    void (*on_buddy_evsub_dlg_event_state)(pjsua_buddy_id buddy_id,
+                                           pjsip_evsub *sub,
+                                           pjsip_event *event);
 
     /**
      * Notify application on incoming pager (i.e. MESSAGE request).
@@ -6408,7 +6429,14 @@ pjsua_call_get_med_transport_info(pjsua_call_id call_id,
 #   define PJSUA_PRES_TIMER         300
 #endif
 
-
+/**
+ * This specifies the buffer size of pjsua_buddy_dlg_event_info.
+ *
+ * Default: 1024 bytes
+ */
+#ifndef PJSUA_BUDDY_DLG_EVENT_INFO_BUF_SIZE
+#   define PJSUA_BUDDY_DLG_EVENT_INFO_BUF_SIZE 1024
+#endif
 /**
  * This structure describes buddy configuration when adding a buddy to
  * the buddy list with #pjsua_buddy_add(). Application MUST initialize
@@ -6424,8 +6452,18 @@ typedef struct pjsua_buddy_config
 
     /**
      * Specify whether presence subscription should start immediately.
+     * Note that only one subscription (presence or dialog event)
+     * can be active at any time.
      */
     pj_bool_t   subscribe;
+
+    /**
+     * Specify whether we should immediately subscribe to the buddy's
+     * dialog event, such as for Busy Lamp Field (BLF) feature.
+     * Note that only one subscription (presence or dialog event)
+     * can be active at any time.
+     */
+    pj_bool_t   subscribe_dlg_event;
 
     /**
      * Specify arbitrary application data to be associated with with
@@ -6547,6 +6585,91 @@ typedef struct pjsua_buddy_info
 } pjsua_buddy_info;
 
 
+typedef struct pjsua_buddy_dlg_event_info
+{
+    /**
+     * The buddy ID.
+     */
+    pjsua_buddy_id  id;
+
+    /**
+     * The full URI of the buddy, as specified in the configuration.
+     */
+    pj_str_t        uri;
+
+    /* Dialog event Dialog-Info id */
+    pj_str_t        dialog_id;
+
+    /* Dialog event Dialog-Info state */
+    pj_str_t        dialog_info_state;
+
+    /* Dialog event Dialog-Info entity */
+    pj_str_t        dialog_info_entity;
+
+    /* Dialog event Dialog call_id */
+    pj_str_t        dialog_call_id;
+
+    /* Dialog event Dialog remote_tag */
+    pj_str_t        dialog_remote_tag;
+
+    /* Dialog event Dialog local_tag */
+    pj_str_t        dialog_local_tag;
+
+    /* Dialog event Dialog direction */
+    pj_str_t        dialog_direction;
+
+    /* Dialog event dialog state */
+    pj_str_t        dialog_state;
+
+    /* Dialog event dialog duration */
+    pj_str_t        dialog_duration;
+
+    /* Dialog event local identity */
+    pj_str_t        local_identity;
+
+    /* Dialog event local identity_display */
+    pj_str_t        local_identity_display;
+
+    /* Dialog event local target uri */
+    pj_str_t        local_target_uri;
+
+    /* Dialog event remote identity */
+    pj_str_t        remote_identity;
+
+    /* Dialog event remote identity_display */
+    pj_str_t        remote_identity_display;
+
+    /* Dialog event remote target uri */
+    pj_str_t        remote_target_uri;
+
+    /**
+     * This specifies the last state of the dialog event subscription.
+     */
+    pjsip_evsub_state   sub_state;
+
+    /**
+     * String representation of subscription state.
+     */
+    const char     *sub_state_name;
+
+    /**
+     * Specifies the last dialog event subscription termination code.
+     */
+    unsigned        sub_term_code;
+
+    /**
+     * Specifies the last dialog event subscription termination reason. If
+     * presence subscription is currently active, the value will be empty.
+     */
+    pj_str_t        sub_term_reason;
+
+    /**
+     * Internal buffer.
+     */
+   char             buf_[PJSUA_BUDDY_DLG_EVENT_INFO_BUF_SIZE];
+
+} pjsua_buddy_dlg_event_info;
+
 /**
  * Set default values to the buddy config.
  */
@@ -6608,6 +6731,18 @@ PJ_DECL(pj_status_t) pjsua_buddy_get_info(pjsua_buddy_id buddy_id,
                                           pjsua_buddy_info *info);
 
 /**
+ * Get detailed buddy dialog event info.
+ *
+ * @param buddy_id      The buddy identification.
+ * @param info          Pointer to receive information about buddy.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t)
+pjsua_buddy_get_dlg_event_info(pjsua_buddy_id buddy_id,
+                               pjsua_buddy_dlg_event_info *info);
+
+/**
  * Set the user data associated with the buddy object.
  *
  * @param buddy_id      The buddy identification.
@@ -6660,6 +6795,9 @@ PJ_DECL(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id);
  * subscribed, application will be informed about buddy's presence status
  * changed via \a on_buddy_state() callback.
  *
+ * Note that only one subscription (presence or dialog event) can be active
+ * at any time.
+ *
  * @param buddy_id      Buddy identification.
  * @param subscribe     Specify non-zero to activate presence subscription to
  *                      the specified buddy.
@@ -6668,6 +6806,24 @@ PJ_DECL(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id);
  */
 PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
                                                 pj_bool_t subscribe);
+
+
+/**
+ * Enable/disable buddy's dialog event monitoring. Once buddy's dialog event
+ * is subscribed, application will be informed about buddy's dialog info
+ * status change via \a on_buddy_dlg_event_state() callback.
+ *
+ * Note that only one subscription (presence or dialog event) can be active
+ * at any time.
+ *
+ * @param buddy_id      Buddy identification.
+ * @param subscribe     Specify non-zero to activate dialog event subscription
+ *                      to the specified buddy.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_buddy_subscribe_dlg_event(pjsua_buddy_id buddy_id,
+                                                     pj_bool_t subscribe);
 
 
 /**
@@ -6691,6 +6847,30 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_buddy_update_pres(pjsua_buddy_id buddy_id);
+
+
+/**
+ * Update the dialog event information for the buddy. Although the library
+ * periodically refreshes the dialog event subscription for all buddies, some
+ * application may want to refresh the buddy's dialog event subscription
+ * immediately, and in this case it can use this function to accomplish
+ * this.
+ *
+ * Note that the buddy's dialog event subscription will only be initiated
+ * if dialog event monitoring is enabled for the buddy. See
+ * #pjsua_buddy_subscribe_dlg_event() for more info. Also if dialog event
+ * subscription for the buddy is already active, this function will not do
+ * anything.
+ *
+ * Once the dialog event subscription is activated successfully for the buddy,
+ * application will be notified about the buddy's dialog info status in the
+ * on_buddy_dlg_event_state() callback.
+ *
+ * @param buddy_id      Buddy identification.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_buddy_update_dlg_event(pjsua_buddy_id buddy_id);
 
 
 /**

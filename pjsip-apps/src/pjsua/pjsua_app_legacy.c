@@ -236,6 +236,8 @@ static void keystroke_help()
     puts("|  a  Answer call              |  i  Send IM              | !a  Modify accnt. |");
     puts("|  h  Hangup call  (ha=all)    |  s  Subscribe presence   | rr  (Re-)register |");
     puts("|  H  Hold call                |  u  Unsubscribe presence | ru  Unregister    |");
+    puts("|                              |  D  Subscribe dlg event  |                   |");
+    puts("|                              |  Du Unsub dlg event      |                   |");
     puts("|  v  re-inVite (release hold) |  t  Toggle online status |  >  Cycle next ac.|");
     puts("|  U  send UPDATE              |  T  Set online status    |  <  Cycle prev ac.|");
     puts("| ],[ Select next/prev call    +--------------------------+-------------------+");
@@ -991,7 +993,10 @@ static void ui_add_buddy()
     pj_bzero(&buddy_cfg, sizeof(pjsua_buddy_config));
 
     buddy_cfg.uri = pj_str(buf);
-    buddy_cfg.subscribe = PJ_TRUE;
+    /* Only one subscription can be active, so we need to disable this
+     * to allow user to choose between presence or dialog event.
+     */
+    // buddy_cfg.subscribe = PJ_TRUE;
 
     status = pjsua_buddy_add(&buddy_cfg, &buddy_id);
     if (status == PJ_SUCCESS) {
@@ -1496,6 +1501,32 @@ static void ui_subscribe(char menuin[])
     }
 }
 
+static void ui_subscribe_dlg_event(pj_bool_t sub)
+{
+    char buf[128];
+    input_result result;
+
+    ui_input_url("(un)Subscribe dialog event of", buf, sizeof(buf), &result,
+                 PJ_TRUE);
+    if (result.nb_result != PJSUA_APP_NO_NB) {
+        if (result.nb_result == -1) {
+            int i, count;
+            count = pjsua_get_buddy_count();
+            for (i=0; i<count; ++i)
+                pjsua_buddy_subscribe_dlg_event(i, sub);
+        } else if (result.nb_result == 0) {
+            puts("Sorry, can only subscribe to buddy's dialog event, "
+                 "not from existing call");
+        } else {
+            pjsua_buddy_subscribe_dlg_event(result.nb_result-1, sub);
+        }
+
+    } else if (result.uri_result) {
+        puts("Sorry, can only subscribe to buddy's dialog event, "
+             "not arbitrary URL (for now)");
+    }
+}
+
 static void ui_register(char menuin[])
 {
     switch (menuin[1]) {
@@ -1985,6 +2016,11 @@ void legacy_main(void)
              * Subscribe/unsubscribe presence.
              */
             ui_subscribe(menuin);
+            break;
+
+        case 'D':
+            /* Subscribe/unsubscribe dialog event */
+            ui_subscribe_dlg_event(menuin[1] != 'u');
             break;
 
         case 'r':

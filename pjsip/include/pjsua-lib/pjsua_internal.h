@@ -377,10 +377,12 @@ typedef struct pjsua_buddy
     unsigned             port;      /**< Buddy port.                    */
     pj_bool_t            monitor;   /**< Should we monitor?             */
     pjsip_dialog        *dlg;       /**< The underlying dialog.         */
-    pjsip_evsub         *sub;       /**< Buddy presence subscription    */
+    pjsip_evsub         *sub;       /**< Buddy subscription             */
+    pj_bool_t            presence;  /**< Presence subscription?         */
     unsigned             term_code; /**< Subscription termination code  */
     pj_str_t             term_reason;/**< Subscription termination reason */
     pjsip_pres_status    status;    /**< Buddy presence status.         */
+    pjsip_dlg_event_status dlg_ev_status;/**< Buddy dialog event status */
     pj_timer_entry       timer;     /**< Resubscription timer           */
 } pjsua_buddy;
 
