@@ -301,6 +301,13 @@ export PJMEDIA_VIDEODEV_OBJS += darwin_dev.o
 endif
 
 #
+# Metal video device
+#
+ifeq ($(AC_PJMEDIA_VIDEO_HAS_METAL),yes)
+export PJMEDIA_VIDEODEV_OBJS += metal_dev.o
+endif
+
+#
 # VideoToolbox codec
 #
 ifeq ($(AC_PJMEDIA_VIDEO_HAS_VTOOLBOX),yes)
