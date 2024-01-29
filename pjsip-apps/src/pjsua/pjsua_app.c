@@ -681,7 +681,7 @@ static void on_buddy_dlg_event_state(pjsua_buddy_id buddy_id)
               "local-identity: %.*s, local-target-uri: %.*s, "
               "remote-identity: %.*s, remote-target-uri: %.*s, "
               "dialog-local-tag: %.*s, dialog-remote-tag: %.*s, "
-              "subscription state: %s, (last termination reason code=%d %.*s)",
+              "subscription state: %s (last termination reason code=%d %.*s)",
               (int)info.uri.slen, info.uri.ptr,
               (int)info.dialog_info_state.slen, info.dialog_info_state.ptr,
               (int)info.dialog_info_entity.slen, info.dialog_info_entity.ptr,
@@ -1452,7 +1452,8 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_buddy_state = &on_buddy_state;
     app_config.cfg.cb.on_buddy_dlg_event_state = &on_buddy_dlg_event_state;
     app_config.cfg.cb.on_buddy_evsub_state = &on_buddy_evsub_state;
-    app_config.cfg.cb.on_buddy_evsub_dlg_event_state = &on_buddy_evsub_dlg_event_state;
+    app_config.cfg.cb.on_buddy_evsub_dlg_event_state = 
+        &on_buddy_evsub_dlg_event_state;
     app_config.cfg.cb.on_pager = &on_pager;
     app_config.cfg.cb.on_typing = &on_typing;
     app_config.cfg.cb.on_call_transfer_status = &on_call_transfer_status;

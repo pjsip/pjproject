@@ -306,7 +306,8 @@ pjsip_dlg_info_dialog_get_id(const pjsip_dlg_info_dialog *dialog)
 {
     const pj_xml_attr *attr = pj_xml_find_attr((pj_xml_node*)dialog,
                                                &ID, NULL);
-    pj_assert(attr);
+    if (!attr)
+        return &EMPTY_STRING;
     return &attr->value;
 }
 
@@ -339,9 +340,9 @@ pjsip_dlg_info_dialog_set_call_id(pj_pool_t *pool,
     if (!attr) {
         attr = xml_create_attr(pool, &CALL_ID, call_id);
         pj_xml_add_attr(dialog, attr);
-    }
-    else
+    } else {
         pj_strdup(pool, &attr->value, call_id);
+    }
 }
 
 PJ_DEF(const pj_str_t *)
@@ -419,7 +420,8 @@ PJ_DEF(const pj_str_t *)
 pjsip_dlg_info_dialog_get_state(pjsip_dlg_info_dialog *dialog)
 {
     pj_xml_node *node = pj_xml_find_node((pj_xml_node*)dialog, &STATE);
-    pj_assert(node);
+    if (!node)
+        return &EMPTY_STRING;
     return &node->content;
 }
 
@@ -535,7 +537,8 @@ pjsip_dlg_info_dialog_info_get_state(pjsip_dlg_info_dialog_info *dialog_info)
 {
     const pj_xml_attr *attr = pj_xml_find_attr((pj_xml_node*)dialog_info,
                                                &STATE, NULL);
-    pj_assert(attr);
+    if (!attr)
+        return &EMPTY_STRING;
     return &attr->value;
 }
 
@@ -554,7 +557,8 @@ pjsip_dlg_info_dialog_info_get_version(pjsip_dlg_info_dialog_info *dialog_info)
 {
     const pj_xml_attr *attr = pj_xml_find_attr((pj_xml_node*)dialog_info,
                                                &VERSION, NULL);
-    pj_assert(attr);
+    if (!attr)
+        return &EMPTY_STRING;
     return &attr->value;
 }
 
@@ -574,7 +578,8 @@ pjsip_dlg_info_dialog_info_get_entity(pjsip_dlg_info_dialog_info *dialog_info)
 {
     const pj_xml_attr *attr = pj_xml_find_attr((pj_xml_node*)dialog_info,
                                                &ENTITY, NULL);
-    pj_assert(attr);
+    if (!attr)
+        return &EMPTY_STRING;
     return &attr->value;
 }
 

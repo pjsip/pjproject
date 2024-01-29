@@ -107,8 +107,6 @@ struct pjsip_dlg_event_status
         pj_str_t    remote_target_uri;
 
     } info[PJSIP_DLG_EVENT_STATUS_MAX_INFO]; /**< Array of info.            */
-
-    pj_bool_t       _is_valid;            /**< Internal flag.               */
 };
 
 
@@ -197,11 +195,10 @@ PJ_DECL(pj_status_t) pjsip_dlg_event_add_header(pjsip_evsub *sub,
 PJ_DECL(pj_status_t) pjsip_dlg_event_accept(pjsip_evsub *sub,
                                             pjsip_rx_data *rdata,
                                             int st_code,
-                                             const pjsip_hdr *hdr_list );
+                                            const pjsip_hdr *hdr_list );
 
 /**
- * Send request message that was previously created with initiate(), notify(),
- * or current_notify(). Application may also send request created with other
+ * Send request message. Application may also send request created with other
  * functions, e.g. authentication. But the request MUST be either request
  * that creates/refresh subscription or NOTIFY request.
  *
@@ -264,6 +261,8 @@ PJ_DECL(pj_status_t)
 pjsip_dlg_event_parse_dialog_info2(char *body, unsigned body_len,
                                    pj_pool_t *pool,
                                    pjsip_dlg_event_status *dlg_status);
+
+
 /**
  * @}
  */

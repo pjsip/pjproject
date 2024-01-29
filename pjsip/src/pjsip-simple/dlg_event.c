@@ -82,7 +82,9 @@ struct pjsip_dlg_event
     pjsip_dlg_event_status status;  /**< Dialog event status.               */
     pj_pool_t       *tmp_pool;      /**< Pool for tmp_status                */
     pjsip_dlg_event_status tmp_status; /**< Temp, before NOTIFY is answered */
+    pj_bool_t        is_ts_valid;   /**< Is tmp_status valid?               */
     pjsip_evsub_user user_cb;       /**< The user callback.                 */
+    pj_mutex_t      *mutex;         /**< Mutex                              */
 };
 
 typedef struct pjsip_dlg_event pjsip_dlg_event;
@@ -201,6 +203,11 @@ pjsip_dlg_event_create_uac(pjsip_dialog *dlg,
     if (user_cb)
         pj_memcpy(&dlgev->user_cb, user_cb, sizeof(pjsip_evsub_user));
 
+    status = pj_mutex_create_recursive(dlg->pool, "dlgev_mutex",
+                                       &dlgev->mutex);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
     pj_ansi_snprintf(obj_name, PJ_MAX_OBJ_NAME, "dlgev%p", dlg->pool);
     dlgev->status_pool = pj_pool_create(dlg->pool->factory, obj_name,
                                         512, 512, NULL);
@@ -275,13 +282,17 @@ PJ_DEF(pj_status_t) pjsip_dlg_event_get_status(pjsip_evsub *sub,
     dlgev = (pjsip_dlg_event*) pjsip_evsub_get_mod_data(sub, mod_dlg_event.id);
     PJ_ASSERT_RETURN(dlgev!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
 
-    if (dlgev->tmp_status._is_valid) {
+    pj_mutex_lock(dlgev->mutex);
+
+    if (dlgev->is_ts_valid) {
         PJ_ASSERT_RETURN(dlgev->tmp_pool!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
         pj_memcpy(status, &dlgev->tmp_status, sizeof(pjsip_dlg_event_status));
     } else {
         PJ_ASSERT_RETURN(dlgev->status_pool!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
         pj_memcpy(status, &dlgev->status, sizeof(pjsip_dlg_event_status));
     }
+
+    pj_mutex_unlock(dlgev->mutex);
 
     return PJ_SUCCESS;
 }
@@ -415,6 +426,10 @@ static void dlg_event_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
             pj_pool_release(dlgev->tmp_pool);
             dlgev->tmp_pool = NULL;
         }
+        if (dlgev->mutex) {
+            pj_mutex_destroy(dlgev->mutex);
+            dlgev->mutex = NULL;
+        }
     }
 }
 
@@ -484,6 +499,11 @@ dlg_event_process_rx_notify(pjsip_dlg_event *dlgev,
         status = PJSIP_SIMPLE_EBADCONTENT;
     }
 
+    /* If application calls dlgev_get_status(), redirect the call to
+     * retrieve the temporary status.
+     */
+    dlgev->is_ts_valid = (status == PJ_SUCCESS? PJ_TRUE: PJ_FALSE);
+
     if (status != PJ_SUCCESS) {
     /* Unsupported or bad Content-Type */
         if (PJSIP_DLG_EVENT_BAD_CONTENT_RESPONSE >= 300) {
@@ -515,11 +535,6 @@ dlg_event_process_rx_notify(pjsip_dlg_event *dlgev,
             status = PJ_SUCCESS;
         }
     }
-
-    /* If application calls dlgev_get_status(), redirect the call to
-     * retrieve the temporary status.
-     */
-    dlgev->tmp_status._is_valid = PJ_TRUE;
 
     return PJ_SUCCESS;
 }
@@ -564,10 +579,13 @@ static void dlg_event_on_evsub_rx_notify(pjsip_evsub *sub,
     /* If application responded NOTIFY with 2xx, copy temporary status
      * to main status, and mark the temporary status as invalid.
      */
+    pj_mutex_lock(dlgev->mutex);
+
     if ((*p_st_code)/100 == 2) {
         pj_pool_t *tmp;
 
-        pj_memcpy(&dlgev->status, &dlgev->tmp_status, sizeof(pjsip_dlg_event_status));
+        pj_memcpy(&dlgev->status, &dlgev->tmp_status,
+                  sizeof(pjsip_dlg_event_status));
 
         /* Swap the pool */
         tmp = dlgev->tmp_pool;
@@ -575,8 +593,10 @@ static void dlg_event_on_evsub_rx_notify(pjsip_evsub *sub,
         dlgev->status_pool = tmp;
     }
 
-    dlgev->tmp_status._is_valid = PJ_FALSE;
+    dlgev->is_ts_valid = PJ_FALSE;
     pj_pool_reset(dlgev->tmp_pool);
+
+    pj_mutex_unlock(dlgev->mutex);
 
     /* Done */
 }

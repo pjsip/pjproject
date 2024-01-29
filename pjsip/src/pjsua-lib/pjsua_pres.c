@@ -1951,6 +1951,7 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
         if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) {
             buddy->sub = NULL;
             buddy->status.info_cnt = 0;
+            pj_bzero(&buddy->dlg_ev_status, sizeof(buddy->dlg_ev_status));
             buddy->dlg = NULL;
             pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
         }
