@@ -396,7 +396,8 @@ PJ_DEF(pj_status_t) pjsip_pres_get_status( pjsip_evsub *sub,
     pres = (pjsip_pres*) pjsip_evsub_get_mod_data(sub, mod_presence.id);
     PJ_ASSERT_RETURN(pres!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
 
-    pj_mutex_lock(pres->mutex);
+    if (pres->mutex)
+        pj_mutex_lock(pres->mutex);
 
     if (pres->is_ts_valid) {
         PJ_ASSERT_RETURN(pres->tmp_pool!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
@@ -406,7 +407,8 @@ PJ_DEF(pj_status_t) pjsip_pres_get_status( pjsip_evsub *sub,
         pj_memcpy(status, &pres->status, sizeof(pjsip_pres_status));
     }
 
-    pj_mutex_unlock(pres->mutex);
+    if (pres->mutex)
+        pj_mutex_unlock(pres->mutex);
 
     return PJ_SUCCESS;
 }
