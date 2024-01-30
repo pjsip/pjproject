@@ -400,10 +400,14 @@ PJ_DEF(pj_status_t) pjsip_pres_get_status( pjsip_evsub *sub,
         pj_mutex_lock(pres->mutex);
 
     if (pres->is_ts_valid) {
-        PJ_ASSERT_RETURN(pres->tmp_pool!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
+        PJ_ASSERT_ON_FAIL(pres->tmp_pool!=NULL,
+                          {if (pres->mutex) pj_mutex_unlock(pres->mutex);
+                           return PJSIP_SIMPLE_ENOPRESENCE;});
         pj_memcpy(status, &pres->tmp_status, sizeof(pjsip_pres_status));
     } else {
-        PJ_ASSERT_RETURN(pres->status_pool!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
+        PJ_ASSERT_ON_FAIL(pres->status_pool!=NULL,
+                          {if (pres->mutex) pj_mutex_unlock(pres->mutex);
+                           return PJSIP_SIMPLE_ENOPRESENCE;});
         pj_memcpy(status, &pres->status, sizeof(pjsip_pres_status));
     }
 
