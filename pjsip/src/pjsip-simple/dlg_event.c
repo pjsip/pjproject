@@ -564,9 +564,11 @@ static void dlg_event_on_evsub_rx_notify(pjsip_evsub *sub,
 
     } else {
         unsigned i;
+        pj_mutex_lock(dlgev->mutex);
         for (i=0; i<dlgev->status.info_cnt; ++i) {
             dlgev->status.info[i].dialog_node = NULL;
         }
+        pj_mutex_unlock(dlgev->mutex);
     }
 
     /* Notify application. */

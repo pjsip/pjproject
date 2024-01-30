@@ -349,7 +349,9 @@ pjsua_buddy_get_dlg_event_info( pjsua_buddy_id buddy_id,
     pj_strncpy(&info->uri, &buddy->uri, sizeof(info->buf_)-total);
     total += info->uri.slen;
 
-    if (buddy->dlg_ev_status.info[0].dialog_info_state.slen > 0) {
+    if (buddy->dlg_ev_status.info[0].dialog_info_state.slen > 0 &&
+        total < sizeof(info->buf_))
+    {
         info->dialog_info_state.ptr = info->buf_ + total;
         pj_strncpy(&info->dialog_info_state,
             &buddy->dlg_ev_status.info[0].dialog_info_state,
@@ -357,119 +359,131 @@ pjsua_buddy_get_dlg_event_info( pjsua_buddy_id buddy_id,
         total += info->dialog_info_state.slen;
     }
 
-    if (buddy->dlg_ev_status.info[0].dialog_info_entity.slen > 0) {
+    if (buddy->dlg_ev_status.info[0].dialog_info_entity.slen > 0 &&
+        total < sizeof(info->buf_))
+    {
         info->dialog_info_entity.ptr = info->buf_ + total;
         pj_strncpy(&info->dialog_info_entity,
             &buddy->dlg_ev_status.info[0].dialog_info_entity,
             buddy->dlg_ev_status.info[0].dialog_info_entity.slen);
         total += info->dialog_info_entity.slen;
     }
-    if (buddy->dlg_ev_status.info[0].dialog_state.slen == 0) {
-        info->dialog_state.ptr = info->buf_ + total;
-        info->dialog_state = pj_str("NULL");
-        total += info->dialog_state.slen;
-    }
+
     if (buddy->dlg_ev_status.info[0].dialog_node) {
-        info->dialog_id.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_id, &buddy->dlg_ev_status.info[0].dialog_id,
-                   sizeof(info->buf_)-total);
-        total += info->dialog_id.slen;
+        if (total < sizeof(info->buf_)) {
+            info->dialog_id.ptr = info->buf_ + total;
+            pj_strncpy(&info->dialog_id,
+                       &buddy->dlg_ev_status.info[0].dialog_id,
+                       sizeof(info->buf_)-total);
+            total += info->dialog_id.slen;
+        }
 
-        info->dialog_call_id.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_call_id,
-                   &buddy->dlg_ev_status.info[0].dialog_call_id,
-                   sizeof(info->buf_)-total);
-        total += info->dialog_call_id.slen;
+        if (total < sizeof(info->buf_)) {
+            info->dialog_call_id.ptr = info->buf_ + total;
+            pj_strncpy(&info->dialog_call_id,
+                       &buddy->dlg_ev_status.info[0].dialog_call_id,
+                       sizeof(info->buf_)-total);
+            total += info->dialog_call_id.slen;
+        }
 
-        info->dialog_remote_tag.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_remote_tag,
-                   &buddy->dlg_ev_status.info[0].dialog_remote_tag,
-                   sizeof(info->buf_)-total);
-        total += info->dialog_remote_tag.slen;
+        if (total < sizeof(info->buf_)) {
+            info->dialog_remote_tag.ptr = info->buf_ + total;
+            pj_strncpy(&info->dialog_remote_tag,
+                       &buddy->dlg_ev_status.info[0].dialog_remote_tag,
+                       sizeof(info->buf_)-total);
+            total += info->dialog_remote_tag.slen;
+        }
 
-        info->dialog_local_tag.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_local_tag,
-                   &buddy->dlg_ev_status.info[0].dialog_local_tag,
-                   sizeof(info->buf_)-total);
-        total += info->dialog_local_tag.slen;
+        if (total < sizeof(info->buf_)) {
+            info->dialog_local_tag.ptr = info->buf_ + total;
+            pj_strncpy(&info->dialog_local_tag,
+                       &buddy->dlg_ev_status.info[0].dialog_local_tag,
+                       sizeof(info->buf_)-total);
+            total += info->dialog_local_tag.slen;
+        }
 
-        info->dialog_direction.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_direction,
-                   &buddy->dlg_ev_status.info[0].dialog_direction,
-                   sizeof(info->buf_)-total);
-        total += info->dialog_direction.slen;
+        if (total < sizeof(info->buf_)) {
+            info->dialog_direction.ptr = info->buf_ + total;
+            pj_strncpy(&info->dialog_direction,
+                       &buddy->dlg_ev_status.info[0].dialog_direction,
+                       sizeof(info->buf_)-total);
+            total += info->dialog_direction.slen;
+        }
 
-        info->dialog_state.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_state,
-                   &buddy->dlg_ev_status.info[0].dialog_state,
-                   buddy->dlg_ev_status.info[0].dialog_state.slen);
-        total += info->dialog_state.slen;
+        if (total < sizeof(info->buf_)) {
+            info->dialog_state.ptr = info->buf_ + total;
+            pj_strncpy(&info->dialog_state,
+                       &buddy->dlg_ev_status.info[0].dialog_state,
+                       buddy->dlg_ev_status.info[0].dialog_state.slen);
+            total += info->dialog_state.slen;
+        }
 
-        info->dialog_duration.ptr = info->buf_ + total;
-        pj_strncpy(&info->dialog_duration,
-                   &buddy->dlg_ev_status.info[0].dialog_duration,
-                   buddy->dlg_ev_status.info[0].dialog_duration.slen);
-        total += info->dialog_duration.slen;
+        if (total < sizeof(info->buf_)) {
+            info->dialog_duration.ptr = info->buf_ + total;
+            pj_strncpy(&info->dialog_duration,
+                       &buddy->dlg_ev_status.info[0].dialog_duration,
+                       buddy->dlg_ev_status.info[0].dialog_duration.slen);
+            total += info->dialog_duration.slen;
+        }
 
-        if (buddy->dlg_ev_status.info[0].local_identity.ptr) {
+        if (buddy->dlg_ev_status.info[0].local_identity.slen > 0 &&
+            total < sizeof(info->buf_))
+        {
             info->local_identity.ptr = info->buf_ + total;
             pj_strncpy(&info->local_identity,
                        &buddy->dlg_ev_status.info[0].local_identity,
                        buddy->dlg_ev_status.info[0].local_identity.slen);
             total += info->local_identity.slen;
-        } else {
-            info->local_identity = pj_str("NULL");
         }
 
-        if (buddy->dlg_ev_status.info[0].local_identity_display.ptr) {
+        if (buddy->dlg_ev_status.info[0].local_identity_display.slen > 0 &&
+            total < sizeof(info->buf_))
+        {
             info->local_identity_display.ptr = info->buf_ + total;
             pj_strncpy(&info->local_identity_display,
                 &buddy->dlg_ev_status.info[0].local_identity_display,
                 buddy->dlg_ev_status.info[0].local_identity_display.slen);
             total += info->local_identity_display.slen;
-        } else {
-            info->local_identity_display = pj_str("NULL");
         }
 
-        if (buddy->dlg_ev_status.info[0].local_target_uri.ptr) {
+        if (buddy->dlg_ev_status.info[0].local_target_uri.slen > 0 &&
+            total < sizeof(info->buf_))
+        {
             info->local_target_uri.ptr = info->buf_ + total;
             pj_strncpy(&info->local_target_uri,
                        &buddy->dlg_ev_status.info[0].local_target_uri,
                        buddy->dlg_ev_status.info[0].local_target_uri.slen);
             total += info->local_target_uri.slen;
-        } else {
-            info->local_target_uri = pj_str("NULL");
         }
 
-        if (buddy->dlg_ev_status.info[0].remote_identity.ptr) {
+        if (buddy->dlg_ev_status.info[0].remote_identity.slen > 0 &&
+            total < sizeof(info->buf_))
+        {
             info->remote_identity.ptr = info->buf_ + total;
             pj_strncpy(&info->remote_identity,
                        &buddy->dlg_ev_status.info[0].remote_identity,
                        buddy->dlg_ev_status.info[0].remote_identity.slen);
             total += info->remote_identity.slen;
-        } else {
-            info->remote_identity = pj_str("NULL");
         }
 
-        if (buddy->dlg_ev_status.info[0].remote_identity_display.ptr) {
+        if (buddy->dlg_ev_status.info[0].remote_identity_display.slen > 0 &&
+            total < sizeof(info->buf_))
+        {
             info->remote_identity_display.ptr = info->buf_ + total;
             pj_strncpy(&info->remote_identity_display,
                 &buddy->dlg_ev_status.info[0].remote_identity_display,
                 buddy->dlg_ev_status.info[0].remote_identity_display.slen);
             total += info->remote_identity_display.slen;
-        } else {
-            info->remote_identity_display = pj_str("NULL");
         }
 
-        if (buddy->dlg_ev_status.info[0].remote_target_uri.ptr) {
+        if (buddy->dlg_ev_status.info[0].remote_target_uri.slen > 0 &&
+            total < sizeof(info->buf_))
+        {
             info->remote_target_uri.ptr = info->buf_ + total;
             pj_strncpy(&info->remote_target_uri,
                        &buddy->dlg_ev_status.info[0].remote_target_uri,       
                        buddy->dlg_ev_status.info[0].remote_target_uri.slen);
             total += info->remote_target_uri.slen;
-        }
-        else {
-            info->remote_target_uri = pj_str("NULL");
         }
     }
 
