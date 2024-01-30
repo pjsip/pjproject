@@ -285,10 +285,14 @@ PJ_DEF(pj_status_t) pjsip_dlg_event_get_status(pjsip_evsub *sub,
     pj_mutex_lock(dlgev->mutex);
 
     if (dlgev->is_ts_valid) {
-        PJ_ASSERT_RETURN(dlgev->tmp_pool!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
+        PJ_ASSERT_ON_FAIL(dlgev->tmp_pool!=NULL,
+                          {pj_mutex_unlock(dlgev->mutex);
+                           return PJSIP_SIMPLE_ENOPRESENCE;});
         pj_memcpy(status, &dlgev->tmp_status, sizeof(pjsip_dlg_event_status));
     } else {
-        PJ_ASSERT_RETURN(dlgev->status_pool!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
+        PJ_ASSERT_ON_FAIL(dlgev->status_pool!=NULL,
+                          {pj_mutex_unlock(dlgev->mutex);
+                           return PJSIP_SIMPLE_ENOPRESENCE;});
         pj_memcpy(status, &dlgev->status, sizeof(pjsip_dlg_event_status));
     }
 
