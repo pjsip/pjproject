@@ -18,6 +18,7 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
+#include <string.h>
 
 
 #define THIS_FILE   "pjsua_core.c"
@@ -436,6 +437,206 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->vid_preview_enable_native = PJ_TRUE;
 }
 
+
+pjsip_hdr* pjsip_msg_find_hdr_by_field(pjsip_msg *msg, char *name, char *field)
+{
+//	Find a header in the message by its name and substring value.
+//	usage: pjsip_msg_find_hdr_by_field(tdata->msg, 'Contact', '<sip:123001')
+	pjsip_hdr *find_hdr = NULL;
+	pjsip_hdr *bottom_hdr = NULL;
+	pj_str_t pj_name = pj_str(name);
+	char field_buffer[FIELD_SIZE];
+	char *expect = NULL;
+	find_hdr = (pjsip_hdr*)pjsip_msg_find_hdr_by_names (msg, &pj_name, &pj_name, NULL);
+	bottom_hdr = find_hdr;
+	while (bottom_hdr != NULL){
+		find_hdr = bottom_hdr;
+		(bottom_hdr->vptr->print_on)(bottom_hdr, field_buffer, sizeof(field_buffer));
+		expect = strstr(field_buffer, field);
+		if (expect!=NULL){
+			return find_hdr;
+		}
+		bottom_hdr = (pjsip_hdr*)pjsip_msg_find_hdr_by_names
+		(msg, &pj_name, &pj_name, find_hdr->next);
+	}
+	return NULL;
+}
+
+pj_bool_t append_hdr(pjsip_tx_data *tdata, char *title, char *value, int carefull)
+{
+		pj_str_t t = pj_str(title);
+		pj_str_t v = pj_str(value);
+		pj_ssize_t size;
+
+		pjsip_hdr *appended_hdr;
+		pjsip_hdr *previous_hdr;
+		pjsip_hdr *exist_hdr;
+		int overhead = 4*sizeof(char);
+
+		exist_hdr = pjsip_msg_find_hdr_by_field(tdata->msg, title, value);
+		if (exist_hdr != NULL){
+			// alredy append
+			return PJ_TRUE;
+		}
+		appended_hdr = (pjsip_hdr*)pjsip_generic_string_hdr_create(tdata->pool, &t, &v);
+		previous_hdr = (pjsip_hdr*)pjsip_msg_find_hdr_by_names (tdata->msg, &t, &t, NULL);
+		if (previous_hdr==NULL){
+			if(carefull==1){
+				puts("Header not found for carefull append, skip\n");
+				return PJ_TRUE;
+
+			}
+			puts("Header not found, append to tail\n");
+			// add to tail
+			pjsip_hdr *cursor;
+			pjsip_hdr *tmp;
+			cursor = &(tdata->msg->hdr);
+			tmp = cursor->prev;
+			cursor->prev = appended_hdr;
+			appended_hdr->prev = tmp;
+			appended_hdr->next = cursor;
+			tmp->next = appended_hdr;
+
+		}
+		else{
+			pjsip_hdr *bottom_hdr = NULL;
+			//insert after last header with same title
+			bottom_hdr = previous_hdr;
+			while(bottom_hdr!=NULL){
+				previous_hdr = bottom_hdr;
+				bottom_hdr = (pjsip_hdr*)pjsip_msg_find_hdr_by_names(tdata->msg, &t, &t, bottom_hdr->next);
+			}
+			pjsip_hdr *re_link;
+			re_link = previous_hdr->next;
+			previous_hdr->next = appended_hdr;
+			appended_hdr->next = re_link;
+			re_link->prev = appended_hdr;
+			appended_hdr->prev = previous_hdr;
+		}
+		tdata->buf.cur = tdata->buf.cur + t.slen + v.slen + overhead;
+		tdata->buf.end = tdata->buf.end + t.slen + v.slen + overhead;
+		size = pjsip_msg_print( tdata->msg, tdata->buf.start,
+				tdata->buf.end - tdata->buf.start);
+		return PJ_TRUE;
+}
+
+pj_bool_t delete_hdr(pjsip_tx_data *tdata, char *title, char *hint_field)
+{
+		pj_str_t t = pj_str(title);
+		pjsip_hdr *removed_hdr = NULL;
+		pjsip_hdr *start_hdr = NULL;
+		pj_ssize_t size;
+
+		if (hint_field != NULL){
+			start_hdr = pjsip_msg_find_hdr_by_field(tdata->msg, title, hint_field);
+			if (start_hdr == NULL){
+				printf("Header has been already deleted, %s: %s \n", title, hint_field);
+				return PJ_FALSE;
+			}
+		}
+		removed_hdr = (pjsip_hdr*)pjsip_msg_find_hdr_by_names (tdata->msg, &t, &t, start_hdr);
+
+		if (removed_hdr==NULL){
+			puts("Header not found, skip delete\n");
+			return PJ_FALSE;
+		}
+		else {
+			removed_hdr = (pjsip_hdr*)pjsip_msg_find_remove_hdr(tdata->msg, removed_hdr->type , start_hdr);
+			if (removed_hdr==NULL){
+				puts("Header still do not delete\n");  // should never seen this
+				return PJ_FALSE;
+				}
+		}
+		size = pjsip_msg_print( tdata->msg, tdata->buf.start,
+			tdata->buf.end - tdata->buf.start);
+
+		return PJ_TRUE;
+}
+
+pj_bool_t replace_hdr(pjsip_tx_data *tdata, char *title, char *value )
+{
+		pj_str_t t = pj_str(title);
+		pj_str_t v = pj_str(value);
+		pj_ssize_t size;
+		pjsip_hdr *replaced_hdr;
+		pjsip_hdr *previous_hdr;
+		int overhead = 4*sizeof(char);
+		pjsip_hdr *head, *linked;
+		head = &(tdata->msg->hdr);
+		previous_hdr = (pjsip_hdr*)pjsip_msg_find_hdr_by_names (tdata->msg, &t, &t, NULL);
+
+		replaced_hdr = (pjsip_hdr*)pjsip_generic_string_hdr_create(tdata->pool, &t, &v);
+
+		if (previous_hdr==NULL){
+			puts("Header not found, skip replace\n");
+			// replace fail
+			return PJ_FALSE;
+		}
+		else{
+			// look up previous element
+			while(head!= previous_hdr){
+				linked = head;
+				head = head->next;
+			}
+			pjsip_hdr *re_link;
+			re_link = previous_hdr->next;
+			linked->next = replaced_hdr;
+			replaced_hdr->next = re_link;
+			re_link->prev = replaced_hdr;
+			replaced_hdr->prev = linked;
+		}
+
+		tdata->buf.cur = tdata->buf.cur + t.slen + v.slen + overhead;
+		tdata->buf.end = tdata->buf.end + t.slen + v.slen + overhead;
+		size = pjsip_msg_print( tdata->msg, tdata->buf.start,
+				tdata->buf.end - tdata->buf.start);
+
+		return PJ_TRUE;
+}
+
+static pj_status_t header_request_management(pjsip_tx_data *tdata)
+{
+	if (get_override()==1){
+		extheader* ext_hdr = NULL;
+		ext_hdr = get_request_head();
+
+		if(ext_hdr != NULL){
+
+			while(ext_hdr!= NULL){
+				switch(ext_hdr->operation){
+					case 0:{
+						replace_hdr(tdata, ext_hdr->title, ext_hdr->value);
+						break;
+					}
+
+					case 1:{
+						append_hdr(tdata, ext_hdr->title, ext_hdr->value, 0);
+						break;
+					}
+
+					case -1:{
+						delete_hdr(tdata, ext_hdr->title, ext_hdr->value);
+						break;
+					}
+
+					case 10:{
+						append_hdr(tdata, ext_hdr->title, ext_hdr->value, 1);
+						// append header, if currently exist header with the same name
+						break;
+
+					}
+
+				}
+
+			ext_hdr = ext_hdr->next;
+			}
+		}
+	}
+	return PJ_SUCCESS;
+}
+
+
+
 /*****************************************************************************
  * This is a very simple PJSIP module, whose sole purpose is to display
  * incoming and outgoing messages to log. This module will have priority
@@ -520,7 +721,7 @@ static pjsip_module pjsua_msg_logger =
     &logging_on_tx_msg,                 /* on_tx_request.       */
     &logging_on_tx_msg,                 /* on_tx_response()     */
     NULL,                               /* on_tsx_state()       */
-
+    &header_request_management,         /* on_tx_request()      */
 };
 
 

@@ -1115,13 +1115,19 @@ static pj_status_t endpt_on_tx_msg( pjsip_endpoint *endpt,
 
     mod = endpt->module_list.prev;
     if (tdata->msg->type == PJSIP_REQUEST_MSG) {
-        while (mod != &endpt->module_list) {
-            if (mod->on_tx_request)
-                status = (*mod->on_tx_request)(tdata);
-            if (status != PJ_SUCCESS)
-                break;
-            mod = mod->prev;
-        }
+	while (mod != &endpt->module_list) {
+		if (mod->pre_send_cb)     {
+			status = (*mod->pre_send_cb)(tdata);
+			if (status != PJ_SUCCESS){
+				puts("Header management fails!");
+			}
+		}
+	    if (mod->on_tx_request)
+		status = (*mod->on_tx_request)(tdata);
+	    if (status != PJ_SUCCESS)
+		break;
+	    mod = mod->prev;
+	}
 
     } else {
         while (mod != &endpt->module_list) {

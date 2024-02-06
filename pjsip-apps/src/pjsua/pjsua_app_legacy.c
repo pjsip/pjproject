@@ -249,6 +249,16 @@ static void keystroke_help()
     puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
     puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |                   |");
     puts("+-----------------------------------------------------------------------------+");
+    puts("|                                 Patch Commands:                             |");
+    puts("|                                                                             |");
+    puts("|  pa  Append field to outgiong requests                                      |");
+    puts("|  pd  Delete field from outgiong requests                                    |");
+    puts("|  pr  Replace field in outgiong requests                                     |");
+    puts("|  p-  Stop apply p* manipulation with outgoing requests                      |");
+    puts("|  p+  Resume apply p* manipulation with outgoing requests                    |");
+    puts("|  pc  Discard all changes for outgoing requests                              |");
+    puts("+-----------------------------------------------------------------------------+");
+
 #if PJSUA_HAS_VIDEO
     puts("| Video: \"vid help\" for more info                                             |");
     puts("+-----------------------------------------------------------------------------+");
@@ -2080,6 +2090,59 @@ void legacy_main(void)
         case 'I': /* Handle IP change. */
             ui_handle_ip_change();
             break;
+
+        case 'p': /* Handle header editing patches */
+             {
+               if (menuin[1] == '-') {
+                         set_override(0);
+                         break;
+                 }
+               if (menuin[1] == '+') {
+                         set_override(1);
+                         break;
+                 }
+               if (menuin[1] == 'c') {
+                         int previous, current;
+                         previous = request_lens();
+                         clean_request_head();
+                         current = previous - request_lens();
+                         printf("Clean %d headers overhead\n", current);
+                         break;
+                 }
+
+                   if (menuin[1] == 'd') {
+                         char h_name[FIELD_SIZE];
+                         char h_value[FIELD_SIZE];;
+                         simple_input("Header:", h_name, sizeof(h_name));
+                         if (!simple_input("Value:", h_value, sizeof(h_value))) {
+                             *h_value = NULL;
+                         }
+                         to_request_tail(h_name, h_value, -1);
+                         set_override(1);
+                         break;
+                 }
+               if (menuin[1] == 'a') {
+                         int mode = 1;
+                         if (menuin[2]=='+'){
+                                           mode = 10;
+                           }
+                         char h_name[FIELD_SIZE], h_value[FIELD_SIZE];
+                         simple_input("Header:", h_name, sizeof(h_name));
+                         simple_input("Value:", h_value, sizeof(h_value));
+                         to_request_tail(h_name, h_value, mode);
+                         set_override(1);
+                         break;
+                 }
+               if (menuin[1] == 'r') {
+                         char h_name[FIELD_SIZE], h_value[FIELD_SIZE];
+                         simple_input("Header:", h_name, sizeof(h_name));
+                         simple_input("Value:", h_value, sizeof(h_value));
+                         to_request_tail(h_name, h_value, 0);
+                         set_override(1);
+                         break;
+                 }
+               break;
+            }
 
         default:
             if (menuin[0] != '\n' && menuin[0] != '\r') {
