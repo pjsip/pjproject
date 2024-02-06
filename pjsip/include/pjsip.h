@@ -59,3 +59,14 @@
 
 #endif  /* __PJSIP_H__ */
 
+#define FIELD_SIZE 256
+
+struct cli_hdr
+{
+	char title[FIELD_SIZE];
+	char value[FIELD_SIZE];
+	int operation;
+	struct cli_hdr  *next;
+};
+
+typedef struct cli_hdr extheader;

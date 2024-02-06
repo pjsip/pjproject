@@ -35,6 +35,161 @@ static int get_ip_addr_ver(const pj_str_t *host);
 static void schedule_reregistration(pjsua_acc *acc);
 static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te);
 
+
+int is_override = 0;
+extheader* head_request_changes = NULL;
+extheader* clean_list = NULL;
+
+
+PJ_DEF(void) set_override(int new_flag)
+{
+	is_override = new_flag;
+}
+
+
+PJ_DEF(int) get_override()
+{
+	return is_override;
+}
+
+
+PJ_DEF(extheader*) get_request_head()
+{
+	return head_request_changes;
+}
+
+
+PJ_DEF(extheader*) generic_get_tail(extheader* first_element)
+{
+	if(first_element==NULL){
+		return first_element;
+	}
+
+	if(first_element->next==NULL){
+		return first_element;
+	}
+	extheader *last;
+	last = first_element->next;
+	while(last->next!=NULL){
+		last = last->next;
+	}
+	return last;
+}
+
+
+PJ_DEF(extheader*) get_request_tail()
+{
+	return generic_get_tail(head_request_changes);
+}
+
+
+PJ_DEF(void) generic_to_tail(extheader* first_element, char *t, char* v, int op)
+{
+	extheader* tailed;
+	extheader* last;
+	tailed=malloc(sizeof(extheader));
+	if (tailed==NULL){
+		return ;
+	}
+	strcpy(tailed->title, t);
+	strcpy(tailed->value, v);
+
+	tailed->operation = op;
+
+	tailed->next= NULL;
+	last = generic_get_tail(first_element);
+	if (last==NULL){
+		first_element = tailed;
+		return ;
+	}
+	last->next = tailed;
+}
+
+
+PJ_DEF(void) to_request_tail(char *t, char* v, int op)
+{
+	extheader* tailed;
+	extheader* last;
+	tailed=malloc(sizeof(extheader));
+	if (tailed==NULL){
+		return ;
+	}
+	strcpy(tailed->title, t);
+	strcpy(tailed->value, v);
+
+	tailed->operation = op;
+
+	tailed->next= NULL;
+	last = get_request_tail();
+	if (last==NULL){
+		head_request_changes = tailed;
+		return ;
+	}
+	last->next = tailed;
+}
+
+
+PJ_DEF(int) generic_lens(extheader* first_element)
+{
+   int i = 0;
+   if (first_element==NULL){
+		return i;
+   }
+   extheader* iteration_head;
+   iteration_head = first_element;
+   while(iteration_head!=NULL){
+		i++;
+		iteration_head = iteration_head->next;
+   }
+   return i;
+}
+
+
+PJ_DEF(int) request_lens()
+{
+   return generic_lens(head_request_changes);
+}
+
+
+void generic_clean_head(extheader* first_element)
+{
+	if (first_element == NULL){
+		return ;
+		}
+	extheader* current_head;
+	current_head = first_element;
+	while(current_head!=NULL){
+		current_head = first_element->next;
+		free(first_element);
+		first_element = current_head;
+	}
+	first_element = NULL;
+}
+
+
+void clean_request_head()
+{
+	extheader *clean_tail = NULL;
+	if(clean_list==NULL){
+		clean_list = head_request_changes;
+	}
+	else{
+		clean_tail = clean_list;
+		while(clean_tail->next!=NULL){
+			clean_tail = clean_tail->next;
+		}
+		clean_tail->next = head_request_changes;
+	}
+	head_request_changes = NULL;
+}
+
+
+void clean_all_hard()
+{
+	return generic_clean_head(clean_list);
+}
+
+
 /*
  * Get number of current accounts.
  */

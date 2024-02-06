@@ -175,7 +175,13 @@ struct pjsip_module
      *                  to change.
      */
     void (*on_tsx_state)(pjsip_transaction *tsx, pjsip_event *event);
+   /**
+    * Optional function to be called when transport layer is about to
+    * transmit outgoing response message and provide manipulation with
+    * tdata
 
+   */
+    pj_status_t (*pre_send_cb)(pjsip_tx_data *tdata);    // pre request cb
 };
 
 

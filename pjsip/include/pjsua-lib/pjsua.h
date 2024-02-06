@@ -9091,11 +9091,15 @@ PJ_DECL(pj_status_t) pjsua_vid_conf_update_port(pjsua_conf_port_id port_id);
 /**
  * @}
  */
+PJ_DECL(int) get_override();
+PJ_DECL(void) set_override(int new_flag);
 
 
-/**
- * @}
- */
+PJ_DECL(extheader*) get_request_head();
+PJ_DECL(int) request_lens();
+
+PJ_DECL(void) clean_request_head();
+PJ_DECL(void) to_request_tail(char *t, char* v, int op);
 
 PJ_END_DECL
 
