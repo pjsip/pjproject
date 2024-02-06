@@ -472,7 +472,7 @@ const char* get_libsrtp_errstr(int err)
         "nonce check failed",               /* err_status_nonce_bad     = 18 */
         "couldn't read data",               /* err_status_read_fail     = 19 */
         "couldn't write data",              /* err_status_write_fail    = 20 */
-        "error pasring data",               /* err_status_parse_err     = 21 */
+        "error parsing data",               /* err_status_parse_err     = 21 */
         "error encoding data",              /* err_status_encode_err    = 22 */
         "error while using semaphores",     /* err_status_semaphore_err = 23 */
         "error while using pfkey"           /* err_status_pfkey_err     = 24 */
