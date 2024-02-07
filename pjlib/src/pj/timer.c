@@ -534,11 +534,14 @@ static int cancel( pj_timer_heap_t *ht,
 
     PJ_CHECK_STACK();
 
-    // Check to see if the timer_id is out of range
+    // Check to see if the timer_id is out of range.
+    // Moved to cancel_timer() as it needs to validate _timer_id earlier
+    /*
     if (entry->_timer_id < 1 || (pj_size_t)entry->_timer_id >= ht->max_size) {
         entry->_timer_id = -1;
         return 0;
     }
+    */
 
     timer_node_slot = ht->timer_ids[entry->_timer_id];
 
@@ -811,6 +814,13 @@ static int cancel_timer(pj_timer_heap_t *ht,
     PJ_ASSERT_RETURN(ht && entry, PJ_EINVAL);
 
     lock_timer_heap(ht);
+
+    // Check to see if the timer_id is out of range
+    if (entry->_timer_id < 1 || (pj_size_t)entry->_timer_id >= ht->max_size) {
+        unlock_timer_heap(ht);
+        return 0;
+    }
+
     timer_copy = GET_TIMER(ht, entry);
     grp_lock = timer_copy->_grp_lock;
 
