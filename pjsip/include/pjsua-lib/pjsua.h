@@ -9088,18 +9088,57 @@ PJ_DECL(pj_status_t) pjsua_vid_conf_update_port(pjsua_conf_port_id port_id);
 
 
 /* end of VIDEO API */
+
 /**
- * @}
+ * Get the override headers flag.
+ *
+ * @return              int value of the override flag.
  */
 PJ_DECL(int) get_override();
+
+
+/**
+ * Set the override headers flag.
+ *
+ * @param               int value to set into the override flag
+ */
 PJ_DECL(void) set_override(int new_flag);
 
 
+/**
+ * Return pointer to the extheader object
+ *
+ * @return              pointer to extheader object
+ */
 PJ_DECL(extheader*) get_request_head();
+
+
+/**
+ * Returns length of extheader list
+ *
+ * @return              length of extheader list
+ */
 PJ_DECL(int) request_lens();
 
+
+/**
+ * Clean extheader object
+ */
 PJ_DECL(void) clean_request_head();
+
+
+/**
+ *
+ * @param t             header title for an operation
+ * @param v             header value for an operation
+ * @param op            number of operation, where
+ *                          0  - replace header
+ *                          1  - append header
+ *                          -1 - delete header
+ *                          10 - append header, if currently exist header with the same name
+ */
 PJ_DECL(void) to_request_tail(char *t, char* v, int op);
+
 
 PJ_END_DECL
 

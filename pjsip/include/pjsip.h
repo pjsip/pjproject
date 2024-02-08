@@ -56,9 +56,6 @@
 #include <pjsip/sip_ua_layer.h>
 #include <pjsip/sip_dialog.h>
 
-
-#endif  /* __PJSIP_H__ */
-
 #define FIELD_SIZE 256
 
 struct cli_hdr
@@ -70,3 +67,6 @@ struct cli_hdr
 };
 
 typedef struct cli_hdr extheader;
+
+
+#endif  /* __PJSIP_H__ */
