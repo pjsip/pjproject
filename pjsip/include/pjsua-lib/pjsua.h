@@ -380,7 +380,6 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #   define PJSUA_VID_REQ_KEYFRAME_INTERVAL      3000
 #endif
 
-
  /**
   * Specify whether timer heap events will be polled by a separate worker
   * thread. If this is set/enabled, a worker thread will be dedicated to
@@ -395,6 +394,7 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #ifndef PJSUA_SEPARATE_WORKER_FOR_TIMER
 #   define PJSUA_SEPARATE_WORKER_FOR_TIMER      0
 #endif
+
 /**
  * Size of internal media port record buffer (in ms)
  */
@@ -2495,7 +2495,6 @@ PJ_DECL(pj_status_t) pjsua_create(void);
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_create2(const pjsua_logging_config *log_cfg);
- 
 
 /** Forward declaration */
 typedef struct pjsua_media_config pjsua_media_config;

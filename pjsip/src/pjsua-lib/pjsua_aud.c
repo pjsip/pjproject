@@ -1366,7 +1366,6 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                         (unsigned*)&call_med->strm.a.conf_slot);
                     if (status != PJ_SUCCESS)
                         goto on_return;
-                    PJ_LOG(4, (THIS_FILE, "pjsua_aud_channel_update::pjmedia_conf_add_port [call_med->strm.a.conf_slot:%d]", call_med->strm.a.conf_slot));
                 }
                     if (call->conf_slot == PJSUA_INVALID_ID)
                         call->conf_slot = call_med->strm.a.conf_slot;

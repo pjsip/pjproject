@@ -76,3 +76,4 @@ tests/pjsua/logs
 */docs/xml/
 */docs/latex/
 */docs/*.tag
+*.bak

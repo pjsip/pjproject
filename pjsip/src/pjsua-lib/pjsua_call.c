@@ -183,20 +183,11 @@ static pj_status_t allocate_conference_slot(pjsua_call *call)
 static void reset_call(pjsua_call_id id)
 {
     pjsua_call *call = &pjsua_var.calls[id];
-    unsigned i;
 
     if (call->incoming_data) {
         pjsip_rx_data_free_cloned(call->incoming_data);
         call->incoming_data = NULL;
     }
-	if (call->offer)
-	{
-		/* Decrement dialog session. */
-		pjsip_dialog *dlg = call->async_call.dlg;
-		if (dlg)
-			pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
-		call->offer = NULL;
-	}
     pj_bzero(call, sizeof(*call));
     call->index = id;
 	call->conf_idx = -1;
@@ -204,7 +195,7 @@ static void reset_call(pjsua_call_id id)
     call->last_text.ptr = call->last_text_buf_;
     call->cname.ptr = call->cname_buf;
     call->cname.slen = sizeof(call->cname_buf);
-    for (i=0; i<PJ_ARRAY_SIZE(call->media); ++i) {
+    for (unsigned i=0; i<PJ_ARRAY_SIZE(call->media); ++i) {
         pjsua_call_media *call_med = &call->media[i];
         call_med->ssrc = pj_rand();
         call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
@@ -2222,12 +2213,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
              * answer/hangup should have been delayed (see #1923), 
              * so let's process the answer/hangup now.
              */
-            if (call->async_call.call_var.inc_call.hangup || (offer && (!call->inv || !call->inv->pool_prov))) {
+            if (call->async_call.call_var.inc_call.hangup) {
                 process_pending_call_hangup(call);
-            } else {
-				if (offer)
-				call->offer = pjmedia_sdp_session_clone(call->inv->pool_prov, offer);
-			if (call->med_ch_cb == NULL && call->inv)
+            } else if (call->med_ch_cb == NULL && call->inv){
                 process_pending_call_answer(call);
             }
         } else {
@@ -2822,7 +2810,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
      */
     if (!call->med_ch_cb &&
         (call->opt_inited || (code==183 || code/100==2)) &&
-		(call->offer || !call->inv->neg ||
+		(!call->inv->neg ||
          pjmedia_sdp_neg_get_state(call->inv->neg) ==
                 PJMEDIA_SDP_NEG_STATE_NULL))
     {
@@ -2834,16 +2822,8 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
         status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
                                           call->secure_level,
                                           dlg->pool,
-					  call->offer, NULL, PJ_TRUE,
+					  NULL, NULL, PJ_TRUE,
                                           &on_answer_call_med_tp_complete);
-	if (call->offer)
-	{
-		/* Decrement dialog session. */
-		pjsip_dialog *_dlg = call->async_call.dlg;
-		if (_dlg)
-			pjsip_dlg_dec_session(_dlg, &pjsua_var.mod);
-		call->offer = NULL;
-	}
         if (status == PJ_SUCCESS) {
             status = on_answer_call_med_tp_complete(call->index, NULL);
             if (status != PJ_SUCCESS) {

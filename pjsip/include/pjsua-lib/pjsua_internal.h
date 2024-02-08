@@ -148,8 +148,6 @@ struct pjsua_call
     pjsua_call_setting   opt;       /**< Call setting.                      */
     pj_bool_t            opt_inited;/**< Initial call setting has been set,
                                          to avoid different opt in answer.  */
-	pjmedia_sdp_session *offer;		/* Unprocessed remote SDP received in
-									the initial INVITE for inbound calls */
     pjsip_inv_session   *inv;       /**< The invite session.                */
     void                *user_data; /**< User/application data.             */
     pjsip_status_code    last_code; /**< Last status code seen.             */
