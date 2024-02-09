@@ -2115,7 +2115,7 @@ void legacy_main(void)
                          char h_value[FIELD_SIZE];;
                          simple_input("Header:", h_name, sizeof(h_name));
                          if (!simple_input("Value:", h_value, sizeof(h_value))) {
-                             *h_value = NULL;
+                             *h_value = '\0';
                          }
                          to_request_tail(h_name, h_value, -1);
                          set_override(1);
