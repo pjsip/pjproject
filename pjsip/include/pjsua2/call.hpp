@@ -599,6 +599,16 @@ struct StreamInfo
      * Incoming codec payload type.
      */
     unsigned            rxPt;
+
+    /**
+     * Outgoing pt for audio telephone-events.
+     */
+    int                 audTxEventPt;
+
+    /**
+     * Incoming pt for audio telephone-events.
+     */
+    int                 audRxEventPt;
     
     /**
      * Codec name.
@@ -668,6 +678,8 @@ public:
       dir(PJMEDIA_DIR_NONE),
       txPt(0),
       rxPt(0),
+      audTxEventPt(0),
+      audRxEventPt(0),
       codecClockRate(0),
       jbInit(-1),
       jbMinPre(-1),

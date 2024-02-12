@@ -127,7 +127,6 @@ PJ_DEF(pj_status_t) pjrpid_add_element(pjpidf_pres *pres,
             nd_note = pj_xml_node_new(pool, &NOTE);
             pj_strdup(pool, &nd_note->content, &elem->note);
             pj_xml_add_node(nd_tuple? nd_tuple: pres, nd_note);
-            nd_note = NULL;
         }
     }
 

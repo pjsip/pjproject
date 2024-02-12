@@ -33,6 +33,7 @@ interface MyAppObserver
     abstract void notifyCallMediaState(MyCall call);
     abstract void notifyBuddyState(MyBuddy buddy);
     abstract void notifyChangeNetwork();
+    abstract void notifyCallMediaEvent(MyCall call, OnCallMediaEventParam prm);
 }
 
 
@@ -51,10 +52,14 @@ class MyCall extends Call
     public VideoWindow vidWin;
     public VideoPreview vidPrev;
 
+    public boolean vidPrevStarted;
+
     MyCall(MyAccount acc, int call_id)
     {
         super(acc, call_id);
         vidWin = null;
+        vidPrev = null;
+        vidPrevStarted = false;
     }
 
     @Override
@@ -65,6 +70,9 @@ class MyCall extends Call
             if (ci.getState() == 
                 pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED)
             {
+                if (vidPrevStarted)
+                    vidPrev.stop();
+
                 MyApp.ep.utilLogWrite(3, "MyCall", this.dump(true, ""));
             }
         } catch (Exception e) {
@@ -109,16 +117,43 @@ class MyCall extends Call
                     continue;
                 }
             } else if (cmi.getType() == pjmedia_type.PJMEDIA_TYPE_VIDEO &&
-                       cmi.getStatus() == 
-                            pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE &&
-                       cmi.getVideoIncomingWindowId() != pjsua2.INVALID_ID)
+                       cmi.getStatus() == pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE)
             {
-                vidWin = new VideoWindow(cmi.getVideoIncomingWindowId());
-                vidPrev = new VideoPreview(cmi.getVideoCapDev());
+                /* If videoPreview was started, stop it first in case capture device has changed */
+                if (vidPrevStarted) {
+                    try {
+                        vidPrevStarted = false;
+                        vidPrev.stop();
+                        vidPrev.delete();
+                        vidPrev = null;
+                    } catch (Exception e) {}
+                }
+
+                if (cmi.getVideoIncomingWindowId() != pjsua2.INVALID_ID)
+                    vidWin = new VideoWindow(cmi.getVideoIncomingWindowId());
+
+                if ((cmi.getDir() & pjmedia_dir.PJMEDIA_DIR_ENCODING) != 0) {
+                    vidPrev = new VideoPreview(cmi.getVideoCapDev());
+                    if (!vidPrevStarted) {
+                        try {
+                            vidPrev.start(new VideoPreviewOpParam());
+                            vidPrevStarted = true;
+                        } catch (Exception e) {
+                            System.out.println("Failed start video preview" +
+                                e.getMessage());
+                            continue;
+                        }
+                    }
+                }
             }
         }
 
         MyApp.observer.notifyCallMediaState(this);
+    }
+
+    @Override
+    public void onCallMediaEvent(OnCallMediaEventParam prm) {
+        MyApp.observer.notifyCallMediaEvent(this, prm);
     }
 }
 
@@ -421,6 +456,24 @@ class MyApp extends pjsua2 {
         } catch (Exception e) {
             return;
         }
+
+        /* Also adjust encoding size in H264 to portrait 240x320 */
+        try {
+            CodecInfoVector2 codecs = ep.videoCodecEnum2();
+            String codecId = "H264/";
+            for (CodecInfo c : codecs) {
+                if (c.getCodecId().startsWith(codecId)) {
+                    codecId = c.getCodecId();
+                    break;
+                }
+            }
+            VidCodecParam vcp = ep.getVideoCodecParam(codecId);
+            vcp.getEncFmt().setWidth(240);
+            vcp.getEncFmt().setHeight(320);
+            ep.setVideoCodecParam(codecId, vcp);
+        } catch (Exception e) {
+            System.out.println(e);
+        }
     }
 
     public MyAccount addAcc(AccountConfig cfg)
@@ -558,5 +611,5 @@ class MyApp extends pjsua2 {
         */
         ep.delete();
         ep = null;
-    } 
+    }
 }

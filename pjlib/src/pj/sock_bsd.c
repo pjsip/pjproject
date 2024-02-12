@@ -735,6 +735,11 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
     
     CHECK_ADDR_LEN(to, tolen);
 
+#ifdef MSG_NOSIGNAL
+    /* Suppress SIGPIPE. See https://github.com/pjsip/pjproject/issues/1538 */
+    flags |= MSG_NOSIGNAL;
+#endif
+
     *len = sendto(sock, (const char*)buf, (int)(*len), flags, 
                   (const struct sockaddr*)to, tolen);
 

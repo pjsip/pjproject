@@ -35,19 +35,15 @@
 
 #if (defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE)
 #import <UIKit/UIKit.h>
-
-#  define DEFAULT_WIDTH         352
-#  define DEFAULT_HEIGHT        288
-#else
-#  define DEFAULT_WIDTH         720
-#  define DEFAULT_HEIGHT        480
 #endif
 
+#define DEFAULT_WIDTH           720
+#define DEFAULT_HEIGHT          480
 #define DEFAULT_FPS             15
-#define DEFAULT_AVG_BITRATE     256000
-#define DEFAULT_MAX_BITRATE     256000
+#define DEFAULT_AVG_BITRATE     384000
+#define DEFAULT_MAX_BITRATE     512000
 
-#define MAX_RX_WIDTH            1200
+#define MAX_RX_WIDTH            1280
 #define MAX_RX_HEIGHT           800
 
 #define SPS_PPS_BUF_SIZE        32
@@ -168,7 +164,7 @@ typedef struct vtool_codec_data
     pj_uint8_t                  *dec_buf;
     unsigned                     dec_buf_size;
     CMFormatDescriptionRef       dec_format;
-    OSStatus             dec_status;
+    OSStatus                     dec_status;
 
     unsigned                     dec_sps_size;
     unsigned                     dec_pps_size;
@@ -1046,7 +1042,7 @@ static void decode_cb(void *decompressionOutputRefCon,
                       CMTime presentationDuration)
 {
     struct vtool_codec_data *vtool_data;
-    pj_size_t width, height, len;
+    pj_size_t width, height, len = 0;
     
     /* This callback can be called from another, unregistered thread.
      * So do not call pjlib functions here.
@@ -1072,7 +1068,12 @@ static void decode_cb(void *decompressionOutputRefCon,
         vtool_data->dec_fmt_change = PJ_FALSE;
     }
 
-    len = process_i420(imageBuffer, (pj_uint8_t *)vtool_data->dec_frame->buf);
+    if (vtool_data->dec_frame->size >= width * height * 3 / 2) {
+        len = process_i420(imageBuffer,
+                           (pj_uint8_t *)vtool_data->dec_frame->buf);
+    } else {
+        vtool_data->dec_status = (OSStatus)PJMEDIA_CODEC_EFRMTOOSHORT;
+    }
     vtool_data->dec_frame->size = len;
 
     CVPixelBufferUnlockBaseAddress(imageBuffer,0);
@@ -1312,6 +1313,7 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
             
             if (ret == noErr) {
                 vtool_data->dec_frame = output;
+                vtool_data->dec_frame->size = out_size;
                 ret = VTDecompressionSessionDecodeFrame(
                           vtool_data->dec, sample_buf, 0,
                           NULL, NULL);
@@ -1349,8 +1351,9 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
                 }
 
                 if ((ret != noErr) || (vtool_data->dec_status != noErr)) {
-            char *ret_err = (ret != noErr)?"decode err":"cb err";
-            OSStatus err_code = (ret != noErr)?ret:vtool_data->dec_status;
+                    char *ret_err = (ret != noErr)?"decode err":"cb err";
+                    OSStatus err_code = (ret != noErr)? ret:
+                                        vtool_data->dec_status;
 
                     PJ_LOG(5,(THIS_FILE, "Failed to decode frame %d of size "
                                  "%d %s:%d", nalu_type, frm_size, ret_err,
@@ -1401,8 +1404,8 @@ on_return:
                               PJMEDIA_EVENT_PUBLISH_DEFAULT);
 
         PJ_LOG(5,(THIS_FILE, "Decode couldn't produce picture, "
-                  "input nframes=%ld, concatenated size=%d bytes",
-                  count, whole_len));
+                  "input nframes=%lu, concatenated size=%d bytes",
+                  (unsigned long)count, whole_len));
 
         output->type = PJMEDIA_FRAME_TYPE_NONE;
         output->size = 0;

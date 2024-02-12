@@ -90,11 +90,11 @@ PJ_BEGIN_DECL
  *
  * Few samples are provided:
  *
-  - @ref page_pjsip_sample_simple_pjsuaua_c \n
+  - Simple pjsua app: \src{pjsip-apps/src/samples/simple_pjsua.c} \n
     Very simple SIP User Agent with registration, call, and media, using
     PJSUA-API, all in under 200 lines of code.
 
-  - @ref page_pjsip_samples_pjsua \n
+  - Pjsua app: \srcdir{pjsip-apps/src/pjsua/} \n
     This is the reference implementation for PJSIP and PJMEDIA.
     PJSUA is a console based application, designed to be simple enough
     to be readble, but powerful enough to demonstrate all features
@@ -426,6 +426,16 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #   define PJSUA_TRICKLE_ICE_NEW_CAND_CHECK_INTERVAL    100
 #endif
 
+/**
+ * Specify if PJSUA should check for merged requests as per RFC 3261 section
+ * 8.2.2.2. If a merged request is detected, PJSUA will automatically reply
+ * with a 482 - Loop Detected.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJSUA_DETECT_MERGED_REQUESTS
+#   define PJSUA_DETECT_MERGED_REQUESTS  1
+#endif
 
 /**
  * This enumeration represents pjsua state.
@@ -840,6 +850,11 @@ typedef enum pjsua_ip_change_op {
     /**
      * The restart listener process.
      */
+    PJSUA_IP_CHANGE_OP_SHUTDOWN_TP,
+
+    /**
+     * The restart listener process.
+     */
     PJSUA_IP_CHANGE_OP_RESTART_LIS,
 
     /**
@@ -1081,6 +1096,63 @@ typedef struct pjsua_call_setting
 
 
 /**
+ * This will contain the information passed from the callback 
+ * \a pjsua_on_rejected_incoming_call_cb.
+ */
+typedef struct pjsua_on_rejected_incoming_call_param {
+    /**
+     * The incoming call id. This will be set to PJSUA_INVALID_ID when there is
+     * no available call slot at the time.
+     */
+    pjsua_call_id   call_id;
+
+    /** 
+     * Local URI.
+     */
+    pj_str_t        local_info;
+
+    /** 
+     * Remote URI.
+     */
+    pj_str_t        remote_info;
+
+    /** 
+     * Rejection code.
+     */
+    int             st_code;
+
+    /**
+     * Rejection text.
+     */
+    pj_str_t        st_text;
+
+    /** 
+     * The original INVITE message, if it's not available this will be set
+     * to NULL.
+     */
+    pjsip_rx_data  *rdata;
+    
+    /** 
+     * Internal.
+     */
+    struct {
+        char    local_info[PJSIP_MAX_URL_SIZE];
+        char    remote_info[PJSIP_MAX_URL_SIZE];
+    } buf_;
+
+} pjsua_on_rejected_incoming_call_param;
+
+/**
+  * Type of callback to be called when incoming call is rejected.
+  *
+  * @param param      The rejected call information.
+  *
+  */
+typedef void (*pjsua_on_rejected_incoming_call_cb)(
+                           const pjsua_on_rejected_incoming_call_param *param);
+
+
+/**
  * This structure describes application callback to receive various event
  * notification from PJSUA-API. All of these callbacks are OPTIONAL,
  * although definitely application would want to implement some of
@@ -1161,7 +1233,7 @@ typedef struct pjsua_callback
      * called *after* the session has been created). The application may change
      * some stream info parameter values, i.e: jb_init, jb_min_pre, jb_max_pre,
      * jb_max, use_ka, rtcp_sdes_bye_disabled, jb_discard_algo (audio),
-     * codec_param->enc_fmt (video).
+     * rx_event_pt (audio), codec_param->enc_fmt (video).
      *
      * @param call_id       Call identification.
      * @param param         The on stream precreate callback parameter.
@@ -1577,6 +1649,13 @@ typedef struct pjsua_callback
      */
     void (*on_buddy_state)(pjsua_buddy_id buddy_id);
 
+    /**
+     * Notify application when the buddy dialog state has changed.
+     * Application may then query the buddy into to get the details.
+     *
+     * @param buddy_id      The buddy id.
+     */
+    void (*on_buddy_dlg_event_state)(pjsua_buddy_id buddy_id);
 
     /**
      * Notify application when the state of client subscription session
@@ -1591,6 +1670,20 @@ typedef struct pjsua_callback
     void (*on_buddy_evsub_state)(pjsua_buddy_id buddy_id,
                                  pjsip_evsub *sub,
                                  pjsip_event *event);
+
+    /**
+     * Notify application when the state of client subscription session
+     * associated with a buddy dialog state has changed. Application
+     * may use this callback to retrieve more detailed information about the
+     * state changed event.
+     *
+     * @param buddy_id      The buddy id.
+     * @param sub           Event subscription session.
+     * @param event         The event which triggers state change event.
+     */
+    void (*on_buddy_evsub_dlg_event_state)(pjsua_buddy_id buddy_id,
+                                           pjsip_evsub *sub,
+                                           pjsip_event *event);
 
     /**
      * Notify application on incoming pager (i.e. MESSAGE request).
@@ -1966,6 +2059,23 @@ typedef struct pjsua_callback
      * @param event     The media event.
      */
     void (*on_media_event)(pjmedia_event *event);
+
+    /**
+     * This callback will be invoked when the library implicitly rejects
+     * an incoming call.
+     * 
+     * In addition to being declined explicitly using the 
+     * #pjsua_call_answer()/#pjsua_call_answer2() method,
+     * the library may also automatically reject the incoming call due 
+     * to different scenarios, e.g:
+     * - no available call slot.
+     * - no available account to handle the call.
+     * - when an incoming INVITE is received with, for instance, a message 
+     *   containing invalid SDP.
+     *
+     * See also #pjsua_on_rejected_incoming_call_cb.
+     */
+    pjsua_on_rejected_incoming_call_cb on_rejected_incoming_call;
 
 } pjsua_callback;
 
@@ -2690,6 +2800,15 @@ typedef struct pjsua_ip_change_param
      */
     unsigned        restart_lis_delay;
 
+    /**
+     * If set to PJ_TRUE, this will forcefully shutdown all transports.
+     * Note that this will shutdown TCP/TLS transports only, UDP transport
+     * should be restarted via restart_listener.
+     *
+     * Default : PJ_TRUE
+     */
+    pj_bool_t       shutdown_transport;
+
 } pjsua_ip_change_param;
 
 
@@ -3097,6 +3216,9 @@ typedef struct pjsua_transport_config
      * to apply QoS tagging to the transport, it's preferable to set this
      * field rather than \a qos_param fields since this is more portable.
      *
+     * For TLS transport, this field will be ignored, the QoS traffic type
+     * can be set via tls_setting.
+     *
      * Default is QoS not set.
      */
     pj_qos_type         qos_type;
@@ -3106,12 +3228,18 @@ typedef struct pjsua_transport_config
      * level operation than setting the \a qos_type field and may not be
      * supported on all platforms.
      *
+     * For TLS transport, this field will be ignored, the low level QoS
+     * parameters can be set via tls_setting.
+     *
      * Default is QoS not set.
      */
     pj_qos_params       qos_params;
 
     /**
      * Specify options to be set on the transport. 
+     *
+     * For TLS transport, this field will be ignored, the socket options
+     * can be set via tls_setting.
      *
      * By default there is no options.
      * 
@@ -6301,7 +6429,14 @@ pjsua_call_get_med_transport_info(pjsua_call_id call_id,
 #   define PJSUA_PRES_TIMER         300
 #endif
 
-
+/**
+ * This specifies the buffer size of pjsua_buddy_dlg_event_info.
+ *
+ * Default: 1024 bytes
+ */
+#ifndef PJSUA_BUDDY_DLG_EVENT_INFO_BUF_SIZE
+#   define PJSUA_BUDDY_DLG_EVENT_INFO_BUF_SIZE 1024
+#endif
 /**
  * This structure describes buddy configuration when adding a buddy to
  * the buddy list with #pjsua_buddy_add(). Application MUST initialize
@@ -6317,8 +6452,18 @@ typedef struct pjsua_buddy_config
 
     /**
      * Specify whether presence subscription should start immediately.
+     * Note that only one subscription (presence or dialog event)
+     * can be active at any time.
      */
     pj_bool_t   subscribe;
+
+    /**
+     * Specify whether we should immediately subscribe to the buddy's
+     * dialog event, such as for Busy Lamp Field (BLF) feature.
+     * Note that only one subscription (presence or dialog event)
+     * can be active at any time.
+     */
+    pj_bool_t   subscribe_dlg_event;
 
     /**
      * Specify arbitrary application data to be associated with with
@@ -6445,6 +6590,91 @@ typedef struct pjsua_buddy_info
 } pjsua_buddy_info;
 
 
+typedef struct pjsua_buddy_dlg_event_info
+{
+    /**
+     * The buddy ID.
+     */
+    pjsua_buddy_id  id;
+
+    /**
+     * The full URI of the buddy, as specified in the configuration.
+     */
+    pj_str_t        uri;
+
+    /* Dialog event Dialog-Info id */
+    pj_str_t        dialog_id;
+
+    /* Dialog event Dialog-Info state */
+    pj_str_t        dialog_info_state;
+
+    /* Dialog event Dialog-Info entity */
+    pj_str_t        dialog_info_entity;
+
+    /* Dialog event Dialog call_id */
+    pj_str_t        dialog_call_id;
+
+    /* Dialog event Dialog remote_tag */
+    pj_str_t        dialog_remote_tag;
+
+    /* Dialog event Dialog local_tag */
+    pj_str_t        dialog_local_tag;
+
+    /* Dialog event Dialog direction */
+    pj_str_t        dialog_direction;
+
+    /* Dialog event dialog state */
+    pj_str_t        dialog_state;
+
+    /* Dialog event dialog duration */
+    pj_str_t        dialog_duration;
+
+    /* Dialog event local identity */
+    pj_str_t        local_identity;
+
+    /* Dialog event local identity_display */
+    pj_str_t        local_identity_display;
+
+    /* Dialog event local target uri */
+    pj_str_t        local_target_uri;
+
+    /* Dialog event remote identity */
+    pj_str_t        remote_identity;
+
+    /* Dialog event remote identity_display */
+    pj_str_t        remote_identity_display;
+
+    /* Dialog event remote target uri */
+    pj_str_t        remote_target_uri;
+
+    /**
+     * This specifies the last state of the dialog event subscription.
+     */
+    pjsip_evsub_state   sub_state;
+
+    /**
+     * String representation of subscription state.
+     */
+    const char     *sub_state_name;
+
+    /**
+     * Specifies the last dialog event subscription termination code.
+     */
+    unsigned        sub_term_code;
+
+    /**
+     * Specifies the last dialog event subscription termination reason. If
+     * presence subscription is currently active, the value will be empty.
+     */
+    pj_str_t        sub_term_reason;
+
+    /**
+     * Internal buffer.
+     */
+   char             buf_[PJSUA_BUDDY_DLG_EVENT_INFO_BUF_SIZE];
+
+} pjsua_buddy_dlg_event_info;
+
 /**
  * Set default values to the buddy config.
  */
@@ -6506,6 +6736,18 @@ PJ_DECL(pj_status_t) pjsua_buddy_get_info(pjsua_buddy_id buddy_id,
                                           pjsua_buddy_info *info);
 
 /**
+ * Get detailed buddy dialog event info.
+ *
+ * @param buddy_id      The buddy identification.
+ * @param info          Pointer to receive information about buddy.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t)
+pjsua_buddy_get_dlg_event_info(pjsua_buddy_id buddy_id,
+                               pjsua_buddy_dlg_event_info *info);
+
+/**
  * Set the user data associated with the buddy object.
  *
  * @param buddy_id      The buddy identification.
@@ -6558,6 +6800,9 @@ PJ_DECL(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id);
  * subscribed, application will be informed about buddy's presence status
  * changed via \a on_buddy_state() callback.
  *
+ * Note that only one subscription (presence or dialog event) can be active
+ * at any time.
+ *
  * @param buddy_id      Buddy identification.
  * @param subscribe     Specify non-zero to activate presence subscription to
  *                      the specified buddy.
@@ -6566,6 +6811,24 @@ PJ_DECL(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id);
  */
 PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
                                                 pj_bool_t subscribe);
+
+
+/**
+ * Enable/disable buddy's dialog event monitoring. Once buddy's dialog event
+ * is subscribed, application will be informed about buddy's dialog info
+ * status change via \a on_buddy_dlg_event_state() callback.
+ *
+ * Note that only one subscription (presence or dialog event) can be active
+ * at any time.
+ *
+ * @param buddy_id      Buddy identification.
+ * @param subscribe     Specify non-zero to activate dialog event subscription
+ *                      to the specified buddy.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_buddy_subscribe_dlg_event(pjsua_buddy_id buddy_id,
+                                                     pj_bool_t subscribe);
 
 
 /**
@@ -6589,6 +6852,30 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_buddy_update_pres(pjsua_buddy_id buddy_id);
+
+
+/**
+ * Update the dialog event information for the buddy. Although the library
+ * periodically refreshes the dialog event subscription for all buddies, some
+ * application may want to refresh the buddy's dialog event subscription
+ * immediately, and in this case it can use this function to accomplish
+ * this.
+ *
+ * Note that the buddy's dialog event subscription will only be initiated
+ * if dialog event monitoring is enabled for the buddy. See
+ * #pjsua_buddy_subscribe_dlg_event() for more info. Also if dialog event
+ * subscription for the buddy is already active, this function will not do
+ * anything.
+ *
+ * Once the dialog event subscription is activated successfully for the buddy,
+ * application will be notified about the buddy's dialog info status in the
+ * on_buddy_dlg_event_state() callback.
+ *
+ * @param buddy_id      Buddy identification.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_buddy_update_dlg_event(pjsua_buddy_id buddy_id);
 
 
 /**
@@ -7365,7 +7652,7 @@ typedef struct pjsua_snd_dev_param
      */
     unsigned            mode;
 
-    /*
+    /**
      * The library will maintain the global sound device settings set when
      * opening the sound device for the first time and later can be modified
      * using #pjsua_snd_set_setting(). These setings are then applied to any

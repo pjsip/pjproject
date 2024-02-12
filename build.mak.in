@@ -204,6 +204,7 @@ AC_PJMEDIA_VIDEO_HAS_QT = @ac_pjmedia_video_has_qt@
 
 # Darwin (Mac and iOS)
 AC_PJMEDIA_VIDEO_HAS_DARWIN = @ac_pjmedia_video_has_darwin@
+AC_PJMEDIA_VIDEO_HAS_METAL = @ac_pjmedia_video_has_metal@
 AC_PJMEDIA_VIDEO_HAS_VTOOLBOX = @ac_pjmedia_video_has_vtoolbox@
 AC_PJMEDIA_VIDEO_HAS_IOS_OPENGL = @ac_pjmedia_video_has_ios_opengl@
 DARWIN_CFLAGS = @ac_darwin_cflags@

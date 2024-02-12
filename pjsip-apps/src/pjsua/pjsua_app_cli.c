@@ -629,7 +629,7 @@ static void get_video_codec_id(pj_cli_dyn_choice_param *param)
         pjsua_vid_enum_codecs(ci, &count);
         for (i = 0; i <= count; ++i) {
             pjmedia_vid_codec_param cp;
-            pjmedia_video_format_detail *vfd;
+            pjmedia_video_format_detail *vfd = NULL;
             pj_status_t status = PJ_SUCCESS;
             pj_str_t cur_ci;
 
@@ -1519,7 +1519,7 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
                 loop = PJ_TRUE;
                 result.nb_result = 1;
             }
-            if (result.nb_result > pjsua_get_buddy_count()) break;
+            if (result.nb_result > (int)pjsua_get_buddy_count()) break;
 
             if (result.nb_result == 0) {
                 const pj_str_t err_msg =

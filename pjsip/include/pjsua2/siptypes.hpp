@@ -281,6 +281,13 @@ struct TlsConfig : public PersistentObject
      */
     bool                qosIgnoreError;
 
+    /**
+     * Specify if renegotiation is enabled for TLSv1.2 or earlier.
+     *
+     * Default: PJ_TRUE
+     */
+    bool                enableRenegotiation;
+
 public:
     /** Default constructor initialises with default values */
     TlsConfig();
@@ -380,6 +387,9 @@ struct TransportConfig : public PersistentObject
      * to apply QoS tagging to the transport, it's preferable to set this
      * field rather than \a qosParam fields since this is more portable.
      *
+     * For TLS transport, this field will be ignored, the QoS traffic type
+     * can be set via tlsConfig.
+     *
      * Default is QoS not set.
      */
     pj_qos_type         qosType;
@@ -388,6 +398,9 @@ struct TransportConfig : public PersistentObject
      * Set the low level QoS parameters to the transport. This is a lower
      * level operation than setting the \a qosType field and may not be
      * supported on all platforms.
+     *
+     * For TLS transport, this field will be ignored, the low level QoS
+     * parameters can be set via tlsConfig.
      *
      * Default is QoS not set.
      */

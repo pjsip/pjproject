@@ -207,6 +207,7 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.qos_type         = this->qosType;
     ts.qos_params       = this->qosParams;
     ts.qos_ignore_error = this->qosIgnoreError;
+    ts.enable_renegotiation = this->enableRenegotiation;
 
     return ts;
 }
@@ -232,6 +233,7 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->qosType       = prm.qos_type;
     this->qosParams     = prm.qos_params;
     this->qosIgnoreError = PJ2BOOL(prm.qos_ignore_error);
+    this->enableRenegotiation = PJ2BOOL(prm.enable_renegotiation);
 }
 
 void TlsConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)

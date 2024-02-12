@@ -1573,18 +1573,28 @@ static pj_status_t create_answer( pj_pool_t *pool,
         const pjmedia_sdp_media *om;    /* offer */
         const pjmedia_sdp_media *im;    /* initial media */
         pjmedia_sdp_media *am = NULL;   /* answer/result */
+        pj_uint32_t om_tp;
         unsigned j;
 
         om = offer->media[i];
+
+        om_tp = pjmedia_sdp_transport_get_proto(&om->desc.transport);
+        PJMEDIA_TP_PROTO_TRIM_FLAG(om_tp, PJMEDIA_TP_PROFILE_RTCP_FB);
 
         /* Find media description in our initial capability that matches
          * the media type and transport type of offer's media, has
          * matching codec, and has not been used to answer other offer.
          */
         for (im=NULL, j=0; j<initial->media_count; ++j) {
+            pj_uint32_t im_tp;
+
             im = initial->media[j];
+
+            im_tp = pjmedia_sdp_transport_get_proto(&im->desc.transport);
+            PJMEDIA_TP_PROTO_TRIM_FLAG(im_tp, PJMEDIA_TP_PROFILE_RTCP_FB);
+
             if (pj_strcmp(&om->desc.media, &im->desc.media)==0 &&
-                pj_strcmp(&om->desc.transport, &im->desc.transport)==0 &&
+                om_tp == im_tp &&
                 media_used[j] == 0)
             {
                 pj_status_t status2;
@@ -1705,6 +1715,8 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
 {
     unsigned i, j;
 
+    PJ_UNUSED_ARG(pool);
+
     for (i = 0; i < sess->media_count; ++i) {
         pjmedia_type med_type;
         unsigned count;
@@ -1785,8 +1797,8 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
                 codec = rtpmap.enc_name;
             }
 
-            codec_idx = pjmedia_codec_mgr_find_codec(dyn_codecs, count,
-                                                     &codec, NULL);
+            codec_idx = (pj_int8_t)pjmedia_codec_mgr_find_codec(dyn_codecs,
+                                                     count, &codec, NULL);
             if (codec_idx < 0) {
                 /* This typically happens when remote offers unknown
                  * codec.
@@ -1798,7 +1810,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
                 /* Update the mapping. */
                 neg->pt_to_codec[i][pt - START_DYNAMIC_PT] = codec_idx;
                 if (codec_idx != UNKNOWN_CODEC)
-                    neg->codec_to_pt[i][codec_idx] = pt;
+                    neg->codec_to_pt[i][codec_idx] = (pj_int8_t)pt;
                 continue;
             }
 
@@ -1841,15 +1853,15 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
              * find the first unused one.
              */
             if (need_new_pt && new_pt == 0) {
-                new_pt = find_new_pt(&neg->pt_to_codec[i], pt_used,
-                                     &codec, codec_idx);
+                new_pt = (pj_int8_t)find_new_pt(&neg->pt_to_codec[i], pt_used,
+                                                &codec, codec_idx);
             }
 
-            if (new_pt != 0 && new_pt != pt) {
+            if (new_pt != 0 && new_pt != (pj_int8_t)pt) {
                 rewrite_pt2(neg->pool_active, (pj_str_t *)&attr->value,
                             pt, new_pt);
             } else {
-                new_pt = pt;
+                new_pt = (pj_int8_t)pt;
             }
 
             /* Mark the PT number as used and keep track of the change

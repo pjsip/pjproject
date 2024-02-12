@@ -33,6 +33,22 @@ using namespace pj;
     
     return $null;
   }
+  %typemap(ctype)  void* "void *"
+  %typemap(imtype) void* "System.IntPtr"
+  %typemap(cstype) void* "System.IntPtr"
+  %typemap(csin)   void* "$csinput"
+  %typemap(in)     void* %{ $1 = $input; %}
+  %typemap(out)    void* %{ $result = $1; %}
+  %typemap(csout, excode=SWIGEXCODE)  void* {
+      System.IntPtr cPtr = $imcall;$excode
+      return cPtr;
+  }
+  %typemap(csvarout, excode=SWIGEXCODE2) void* %{
+    get {
+        System.IntPtr cPtr = $imcall;$excode
+        return cPtr;
+    }
+  %}
 #endif
 
 // Allow C++ exceptions to be handled in Java
@@ -105,6 +121,13 @@ using namespace pj;
 %feature("director") FindBuddyMatch;
 %feature("director") AudioMediaPlayer;
 %feature("director") AudioMediaPort;
+// PendingJob is only used on Python
+#ifdef SWIGPYTHON
+    %feature("director") PendingJob;
+#else
+    %ignore pj::PendingJob;
+    %ignore pj::Endpoint::utilAddPendingJob;
+#endif
 
 //
 // STL stuff.
@@ -168,8 +191,10 @@ using namespace pj;
 %template(RtcpFbCapVector)              std::vector<pj::RtcpFbCap>;
 %template(SslCertNameVector)            std::vector<pj::SslCertName>;
 
-%ignore pj::WindowHandle::display;
-%ignore pj::WindowHandle::window;
+#if defined(__ANDROID__)
+   %ignore pj::WindowHandle::display;
+   %ignore pj::WindowHandle::window;
+#endif
 
 /* pj::WindowHandle::setWindow() receives Surface object */
 #if defined(SWIGJAVA) && defined(__ANDROID__)
@@ -216,6 +241,13 @@ using namespace pj;
 	Runtime.getRuntime().gc();
 	libDestroy_();
   }
+%}
+#endif
+
+#ifdef SWIGPYTHON
+%pythonprepend pj::Endpoint::utilAddPendingJob(PendingJob *job) %{
+    # print('disowning job')
+    job.__disown__()
 %}
 #endif
 

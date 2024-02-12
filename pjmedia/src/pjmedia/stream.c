@@ -1087,10 +1087,11 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
     pj_status_t status;
 
     /* We need to prevent data race since there is only a single instance
-     * of rtcp packet buffer. Let's just use the JB mutex for this instead
-     * of creating a separate lock.
+     * of rtcp packet buffer. And to avoid deadlock with media transport,
+     * we use the transport's group lock.
      */
-    pj_mutex_lock(stream->jb_mutex);
+    if (stream->transport->grp_lock)
+        pj_grp_lock_acquire(stream->transport->grp_lock);
 
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
@@ -1211,7 +1212,8 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
         }
     }
 
-    pj_mutex_unlock(stream->jb_mutex);
+    if (stream->transport->grp_lock)
+        pj_grp_lock_release(stream->transport->grp_lock);
 
     return status;
 }
@@ -1400,6 +1402,14 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 
         /* Update RTCP stats with last RTP timestamp. */
         stream->rtcp.stat.rtp_tx_last_ts = pj_ntohl(channel->rtp.out_hdr.ts);
+
+        /* Check if now is the time to transmit RTCP SR/RR report.
+         * We only do this when the decoder is paused,
+         * because otherwise check_tx_rtcp() will be handled by on_rx_rtp().
+         */
+        if (stream->dec->paused) {
+            check_tx_rtcp(stream, pj_ntohl(channel->rtp.out_hdr.ts));
+        }
 
         return PJ_SUCCESS;
     }
@@ -2240,16 +2250,22 @@ on_return:
     if (stream->rtcp.received >= 10 && seq_st.diff > 1 &&
         stream->send_rtcp_fb_nack && pj_ntohs(hdr->seq) >= seq_st.diff)
     {
-        int i;
+        pj_uint16_t nlost, first_seq;
+
+        /* Report only one NACK (last 17 losts) */
+        nlost = PJ_MIN(seq_st.diff - 1, 17);
+        first_seq = pj_ntohs(hdr->seq) - nlost;
+
         pj_bzero(&stream->rtcp_fb_nack, sizeof(stream->rtcp_fb_nack));
-        stream->rtcp_fb_nack.pid = pj_ntohs(hdr->seq) - seq_st.diff + 1;
-        for (i = 0; i < (seq_st.diff - 1); ++i) {
+        stream->rtcp_fb_nack.pid = first_seq;
+        while (--nlost) {
             stream->rtcp_fb_nack.blp <<= 1;
             stream->rtcp_fb_nack.blp |= 1;
         }
 
         /* Send it immediately */
-        status = send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_TRUE);
+        status = send_rtcp(stream, !stream->rtcp_sdes_bye_disabled,
+                           PJ_FALSE, PJ_FALSE, PJ_TRUE);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4,(stream->port.info.name.ptr, status,
                       "Error sending RTCP FB generic NACK"));
@@ -2642,14 +2658,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
         ptime = afd->frame_time_usec;
 
-        if (stream->codec_param.info.enc_ptime * 1000 >
+        if (stream->codec_param.info.enc_ptime * (unsigned)1000 >
             ptime * stream->codec_param.info.enc_ptime_denum)
         {
             ptime = stream->codec_param.info.enc_ptime * 1000 /
                     stream->codec_param.info.enc_ptime_denum;
         }
 
-        if (stream->codec_param.info.frm_ptime * 1000 >
+        if (stream->codec_param.info.frm_ptime * (unsigned)1000 >
             ptime * stream->codec_param.info.frm_ptime_denum)
         {
             ptime = stream->codec_param.info.frm_ptime * 1000 /
@@ -3054,7 +3070,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     /* Send RTCP BYE (also SDES & XR) */
-    if (stream->transport && stream->jb_mutex && !stream->rtcp_sdes_bye_disabled) {
+    if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
         send_rtcp(stream, PJ_TRUE, PJ_TRUE, stream->rtcp.xr_enabled, PJ_FALSE);
 #else

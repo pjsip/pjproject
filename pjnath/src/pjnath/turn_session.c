@@ -1199,7 +1199,7 @@ PJ_DEF(pj_status_t) pj_turn_session_connection_bind(
                               PJ_STUN_ATTR_CONNECTION_ID,
                               conn_id);
 
-    conn_bind = PJ_POOL_ZALLOC_T(pool, struct conn_bind_t);
+    conn_bind = PJ_POOL_ZALLOC_T(tdata->pool, struct conn_bind_t);
     conn_bind->id = conn_id;
     pj_sockaddr_cp(&conn_bind->peer_addr, peer_addr);
     conn_bind->peer_addr_len = addr_len;

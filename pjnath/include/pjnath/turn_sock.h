@@ -237,6 +237,7 @@ typedef struct pj_turn_sock_tls_cfg
      * - timeout
      * - sockopt_params
      * - sockopt_ignore_error
+     * - enable_renegotiation
      */
     pj_ssl_sock_param ssock_param;
 

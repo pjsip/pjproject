@@ -682,6 +682,10 @@ typedef struct pj_ssl_sock_cb
      * Certification info can be obtained from #pj_ssl_sock_info. Currently
      * it's only implemented for OpenSSL backend.
      *
+     * If this is set, the callback will always be invoked, even when peer
+     * verification is disabled (pj_ssl_sock_param.verify_peer set to
+     * PJ_FALSE).
+     *
      * @param ssock     The secure socket.
      * @param is_server PJ_TRUE to indicate an incoming connection.
      *
@@ -808,6 +812,12 @@ typedef struct pj_ssl_sock_info
      * Group lock assigned to the ioqueue key.
      */
     pj_grp_lock_t *grp_lock;
+
+    /**
+     * Native TLS/SSL instance of the backend. Currently only available for
+     * OpenSSL backend (this will contain the OpenSSL "SSL" instance).
+     */
+    void *native_ssl;
 
 } pj_ssl_sock_info;
 
@@ -1068,7 +1078,8 @@ typedef struct pj_ssl_sock_param
     /**
      * Specify options to be set on the transport. 
      *
-     * By default there is no options.
+     * For GnuTLS backend, by default TCP_NODELAY will be set. For other
+     * SSL backends, the default is no options.
      * 
      */
     pj_sockopt_params sockopt_params;
@@ -1088,6 +1099,13 @@ typedef struct pj_ssl_sock_param
      * Default: PJ_TRUE
     */
     pj_bool_t sock_cloexec;
+
+    /**
+     * Specify if renegotiation is enabled for TLSv1.2 or earlier.
+     * 
+     * Default: PJ_TRUE
+     */
+    pj_bool_t enable_renegotiation;
 
 } pj_ssl_sock_param;
 

@@ -338,10 +338,15 @@ static void set_ssock_param(pj_ssl_sock_param *ssock_param,
 
     ssock_param->sockopt_ignore_error =
                                     listener->tls_setting.sockopt_ignore_error;
+
+    ssock_param->enable_renegotiation =
+                                    listener->tls_setting.enable_renegotiation;
     /* Copy the sockopt */
-    pj_memcpy(&ssock_param->sockopt_params,
-              &listener->tls_setting.sockopt_params,
-              sizeof(listener->tls_setting.sockopt_params));
+    if (listener->tls_setting.sockopt_params.cnt > 0) {
+        pj_memcpy(&ssock_param->sockopt_params, 
+                  &listener->tls_setting.sockopt_params,
+                  sizeof(listener->tls_setting.sockopt_params));
+    }
 
     sip_ssl_method = listener->tls_setting.method;
     sip_ssl_proto = listener->tls_setting.proto;
@@ -373,15 +378,25 @@ static pj_status_t update_factory_addr(struct tls_listener *listener,
 
     if (addr_name && addr_name->host.slen) {
         pj_sockaddr tmp;
-        int af = pjsip_transport_type_get_af(listener->factory.type);
+        pj_uint16_t af = (pj_uint16_t)
+                         pjsip_transport_type_get_af(listener->factory.type);
 
-        status = pj_sockaddr_init(af, &tmp, &addr_name->host,
-                                  (pj_uint16_t)addr_name->port);
-        if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
-            (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+        tmp.addr.sa_family = af;
+
+        /* Validate IP address only */
+        if (pj_inet_pton(af, &addr_name->host, pj_sockaddr_get_addr(&tmp)) ==
+            PJ_SUCCESS)
         {
-            /* Invalid address */
-            return PJ_EINVAL;
+            /* Verify that address given in a_name (if any) is valid */
+            status = pj_sockaddr_init(af, &tmp, &addr_name->host,
+                                      (pj_uint16_t)addr_name->port);
+            if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
+                (af == pj_AF_INET() &&
+                 tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+            {
+                /* Invalid address */
+                return PJ_EINVAL;
+            }
         }
 
         /* Copy the address */
@@ -892,6 +907,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls->base.do_shutdown = &tls_shutdown;
     tls->base.destroy = &tls_destroy_transport;
     tls->base.factory = &listener->factory;
+    tls->base.initial_timeout = listener->tls_setting.initial_timeout;
 
     tls->ssock = ssock;
     tls->on_verify_cb = listener->tls_setting.on_verify_cb;
@@ -1220,10 +1236,14 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     ssock_param.sockopt_ignore_error = 
                                      listener->tls_setting.sockopt_ignore_error;
+
+    ssock_param.enable_renegotiation = listener->tls_setting.enable_renegotiation;
     /* Copy the sockopt */
-    pj_memcpy(&ssock_param.sockopt_params, 
-              &listener->tls_setting.sockopt_params,
-              sizeof(listener->tls_setting.sockopt_params));
+    if (listener->tls_setting.sockopt_params.cnt > 0) {
+        pj_memcpy(&ssock_param.sockopt_params, 
+                  &listener->tls_setting.sockopt_params,
+                  sizeof(listener->tls_setting.sockopt_params));
+    }
 
     sip_ssl_method = listener->tls_setting.method;
     sip_ssl_proto = listener->tls_setting.proto;
@@ -1614,6 +1634,7 @@ static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
         param.local_cert_info = info.local_cert_info;
         param.remote_cert_info = info.remote_cert_info;
         param.tp_dir = is_server?PJSIP_TP_DIR_INCOMING:PJSIP_TP_DIR_OUTGOING;
+        param.ssock = ssock;
         
         return (*verify_cb)(&param);
     }

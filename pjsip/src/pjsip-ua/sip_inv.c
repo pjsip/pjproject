@@ -698,13 +698,25 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
             }
 
             /* Now we can terminate the INVITE transaction */
-            pj_assert(inv->invite_tsx->status_code >= 200);
-            pjsip_tsx_terminate(inv->invite_tsx, 
-                                inv->invite_tsx->status_code);
+            if (inv->invite_tsx->status_code/100 == 2) {
+                pjsip_tsx_terminate(inv->invite_tsx,
+                                    inv->invite_tsx->status_code);
+            } else {
+                /* If the response was not 2xx, the ACK is considered part of
+                 * the INVITE transaction, so should have been handled by
+                 * the transaction.
+                 * But for best effort, we will also attempt to terminate
+                 * the tsx here. However, we need to do it asynchronously
+                 * to avoid deadlock.
+                 */
+                pjsip_tsx_terminate_async(inv->invite_tsx,
+                                          inv->invite_tsx->status_code);
+            }
             inv->invite_tsx = NULL;
+
             if (inv->last_answer) {
-                    pjsip_tx_data_dec_ref(inv->last_answer);
-                    inv->last_answer = NULL;
+                pjsip_tx_data_dec_ref(inv->last_answer);
+                inv->last_answer = NULL;
             }
         }
 
@@ -820,6 +832,7 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 {
     pjsip_dialog *dlg;
     pjsip_inv_session *inv;
+    pj_bool_t cb_called = PJ_FALSE;
 
     dlg = pjsip_tsx_get_dlg(tsx);
     if (dlg == NULL)
@@ -828,6 +841,17 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     inv = pjsip_dlg_get_inv_session(dlg);
     if (inv == NULL)
         return;
+
+    /* Call on_tsx_state_changed() upon receipt of request (tsx state is
+     * PJSIP_TSX_STATE_TRYING). We need to do this before calling the state
+     * handler since the handler will send response and change the tsx state.
+     */
+    if (mod_inv.cb.on_tsx_state_changed && inv->notify &&
+        e->body.tsx_state.tsx->state == PJSIP_TSX_STATE_TRYING)
+    {
+        cb_called = PJ_TRUE;
+        (*mod_inv.cb.on_tsx_state_changed)(inv, tsx, e);
+    }
 
     /* Call state handler for the invite session. */
     (*inv_state_handler[inv->state])(inv, e);
@@ -845,13 +869,8 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
         }
     }
 
-    /* Call on_tsx_state. CANCEL request is a special case and has been
-     * reported earlier in inv_respond_incoming_cancel()
-     */
-    if (mod_inv.cb.on_tsx_state_changed && inv->notify &&
-        !(tsx->method.id==PJSIP_CANCEL_METHOD &&
-          e->body.tsx_state.type==PJSIP_EVENT_RX_MSG))
-    {
+    /* Call on_tsx_state. */
+    if (mod_inv.cb.on_tsx_state_changed && inv->notify && !cb_called) {
         (*mod_inv.cb.on_tsx_state_changed)(inv, tsx, e);
     }
 
@@ -2662,10 +2681,16 @@ PJ_DEF(pj_status_t) pjsip_inv_initial_answer(   pjsip_inv_session *inv,
             goto on_return;
         }
         status2 = pjsip_timer_update_resp(inv, tdata);
-        if (status2 == PJ_SUCCESS)
+        if (status2 == PJ_SUCCESS) {
+            inv->last_answer = tdata;
             *p_tdata = tdata;
-        else
+        } else {
+            /* To avoid leak, we need to decrement 2 times since
+             * pjsip_dlg_modify_response() increment tdata ref count.
+             */
             pjsip_tx_data_dec_ref(tdata);
+            pjsip_tx_data_dec_ref(tdata);
+        }
 
         goto on_return;
     }
@@ -2748,6 +2773,10 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(   pjsip_inv_session *inv,
     /* Process SDP in answer */
     status = process_answer(inv, st_code, last_res, local_sdp);
     if (status != PJ_SUCCESS) {
+        /* To avoid leak, we need to decrement 2 times since 
+         * pjsip_dlg_modify_response() increment tdata ref count.
+         */
+        pjsip_tx_data_dec_ref(last_res);
         pjsip_tx_data_dec_ref(last_res);
         goto on_return;
     }
@@ -3788,9 +3817,9 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
          * request.
          */
         cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
-        PJ_ASSERT_RETURN(cseq != NULL
+        PJ_ASSERT_ON_FAIL(cseq != NULL
                           && (inv->invite_tsx && cseq->cseq == inv->invite_tsx->cseq),
-                         PJ_EINVALIDOP);
+                          { pjsip_tx_data_dec_ref(tdata); return PJ_EINVALIDOP; });
 
         if (inv->options & PJSIP_INV_REQUIRE_100REL) {
             status = pjsip_100rel_tx_response(inv, tdata);
@@ -3839,9 +3868,11 @@ static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
      * may not see the CANCEL request at all because by the time the CANCEL
      * request is reported, call has been disconnected and further events
      * from the INVITE session has been suppressed.
+     *
+     * Update: we have called this in mod_inv_on_tsx_state()
      */
-    if (mod_inv.cb.on_tsx_state_changed && inv->notify)
-        (*mod_inv.cb.on_tsx_state_changed)(inv, cancel_tsx, e);
+    // if (mod_inv.cb.on_tsx_state_changed && inv->notify)
+    //    (*mod_inv.cb.on_tsx_state_changed)(inv, cancel_tsx, e);
 
     /* See if we have matching INVITE server transaction: */
 

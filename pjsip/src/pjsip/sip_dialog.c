@@ -362,6 +362,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     pjsip_contact_hdr *contact_hdr;
     pjsip_rr_hdr *rr;
     pjsip_transaction *tsx = NULL;
+    pj_grp_lock_t *tsx_lock = NULL;
     pj_str_t tmp;
     enum { TMP_LEN=PJSIP_MAX_URL_SIZE };
     pj_ssize_t len;
@@ -561,8 +562,20 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
         lock_incremented = PJ_TRUE;
     }
 
+    /* Create tsx lock first so we can lock it before creating
+     * the transaction. This is to avoid deadlock by preventing
+     * the newly created transaction to process messages before
+     * this function returns.
+     */
+    status = pj_grp_lock_create(dlg->pool, NULL, &tsx_lock);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+
+    pj_grp_lock_add_ref(tsx_lock);
+    pj_grp_lock_acquire(tsx_lock);
+
     /* Create UAS transaction for this request. */
-    status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
+    status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -591,12 +604,20 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     /* Feed the first request to the transaction. */
     pjsip_tsx_recv_msg(tsx, rdata);
 
+    pj_grp_lock_release(tsx_lock);
+    pj_grp_lock_dec_ref(tsx_lock);
+
     /* Done. */
     *p_dlg = dlg;
     PJ_LOG(5,(dlg->obj_name, "UAS dialog created"));
     return PJ_SUCCESS;
 
 on_error:
+    if (tsx_lock) {
+        pj_grp_lock_release(tsx_lock);
+        pj_grp_lock_dec_ref(tsx_lock);
+    }
+
     if (tsx) {
         pjsip_tsx_terminate(tsx, 500);
         pj_assert(dlg->tsx_count>0);
@@ -1679,6 +1700,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 {
     pj_status_t status;
     pjsip_transaction *tsx = NULL;
+    pj_grp_lock_t *tsx_lock = NULL;
     pj_bool_t processed = PJ_FALSE;
     unsigned i;
 
@@ -1727,7 +1749,18 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     if (pjsip_rdata_get_tsx(rdata) == NULL &&
         rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD)
     {
-        status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
+        /* Create tsx lock first so we can lock it before creating
+         * the transaction. This is to avoid deadlock by preventing
+         * the newly created transaction to process messages before
+         * this function returns.
+         */
+        status = pj_grp_lock_create(dlg->pool, NULL, &tsx_lock);
+        if (status == PJ_SUCCESS) {
+            pj_grp_lock_add_ref(tsx_lock);
+            pj_grp_lock_acquire(tsx_lock);
+            status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
+        }
+
         if (status != PJ_SUCCESS) {
             /* Once case for this is when re-INVITE contains same
              * Via branch value as previous INVITE (ticket #965).
@@ -1808,6 +1841,10 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     }
 
 on_return:
+    if (tsx_lock) {
+        pj_grp_lock_release(tsx_lock);
+        pj_grp_lock_dec_ref(tsx_lock);
+    }
     /* Unlock dialog and dec session, may destroy dialog. */
     pjsip_dlg_dec_lock(dlg);
     pj_log_pop_indent();
@@ -1841,6 +1878,11 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
         {
             pj_strdup(dlg->pool, &dlg->initial_dest,
                       &rdata->tp_info.transport->remote_name.host);
+        } else {
+            /* Reset the stored remote name if the transport is a server
+             * transport.
+             */
+            dlg->initial_dest.slen = 0;
         }
 
         /* Ignore subsequent request from remote */

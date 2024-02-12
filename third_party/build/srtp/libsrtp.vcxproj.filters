@@ -74,17 +74,11 @@
     <ClCompile Include="..\..\srtp\crypto\math\datatypes.c">
       <Filter>crypto\math</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\srtp\crypto\math\stat.c">
-      <Filter>crypto\math</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\srtp\crypto\replay\rdb.c">
       <Filter>crypto\replay</Filter>
     </ClCompile>
     <ClCompile Include="..\..\srtp\crypto\replay\rdbx.c">
       <Filter>crypto\replay</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\srtp\srtp\ekt.c">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\srtp\crypto\cipher\aes_icm_ossl.c">
       <Filter>crypto\cipher</Filter>
@@ -93,6 +87,12 @@
       <Filter>crypto\cipher</Filter>
     </ClCompile>
     <ClCompile Include="..\..\srtp\crypto\hash\hmac_ossl.c">
+      <Filter>crypto\hash</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\cipher\cipher_test_cases.c">
+      <Filter>crypto\cipher</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\hash\auth_test_cases.c">
       <Filter>crypto\hash</Filter>
     </ClCompile>
   </ItemGroup>

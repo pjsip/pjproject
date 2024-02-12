@@ -576,6 +576,7 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
                 identity = (SecIdentityRef)
                            CFDictionaryGetValue((CFDictionaryRef) item,
                                                 kSecImportItemIdentity);
+                identity = CFRetain(identity);
                 break;
             }
 #if !TARGET_OS_IPHONE
@@ -994,7 +995,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
         }
         
         sec_protocol_options_set_tls_renegotiation_enabled(sec_options,
-                                                           true);
+                                            ssock->param.enable_renegotiation);
         /* This must be disabled, otherwise server may think this is
          * a resumption of a previously closed connection, and our
          * verify block may never be invoked!

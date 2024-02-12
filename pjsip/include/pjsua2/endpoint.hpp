@@ -347,6 +347,15 @@ struct IpChangeParam {
      */
     unsigned        restartLisDelay;
 
+    /**
+     * If set to PJ_TRUE, this will forcefully shutdown all transports.
+     * Note that this will shutdown TCP/TLS transports only, UDP transport
+     * should be restarted via restart_listener.
+     *
+     * Default : PJ_TRUE
+     */
+    bool            shutdownTransport;
+
 public:
     /**
      * Constructor.
@@ -434,6 +443,43 @@ struct OnMediaEventParam
      * The media event.
      */
     MediaEvent      ev;
+};
+
+/**
+ * Parameter of Endpoint::onRejectedIncomingCall() callback.
+ */
+struct OnRejectedIncomingCallParam
+{
+    /**
+     * The incoming call id. This will be set to PJSUA_INVALID_ID when there is
+     * no available call slot at the time.
+     */
+    pjsua_call_id   callId;
+
+    /**
+     * Local URI.
+     */
+    std::string     localInfo;
+
+    /**
+     * Remote URI.
+     */
+    std::string     remoteInfo;
+
+    /**
+     * Rejection code.
+     */
+    int             statusCode;
+
+    /**
+     * Rejection text.
+     */
+    std::string     reason;
+
+    /**
+     * The original INVITE message, on some cases it is not available.
+     */
+    SipRxData       rdata;
 };
 
 /**
@@ -1898,11 +1944,28 @@ public:
      */
     virtual pj_status_t onCredAuth(OnCredAuthParam &prm);
 
+    /**
+     * This callback will be invoked when the library implicitly rejects
+     * an incoming call.
+     * 
+     * In addition to being declined explicitly using the Call::answer()
+     * method, the library may also automatically reject the incoming call
+     * due to different scenarios, e.g:
+     * - no available call slot.
+     * - no available account to handle the call.
+     * - when an incoming INVITE is received with, for instance, a message
+     *   containing invalid SDP.
+     *
+     * @param prm       Callback parameters.
+     */
+    virtual void onRejectedIncomingCall(OnRejectedIncomingCallParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
 private:
     static Endpoint             *instance_;     // static instance
     LogWriter                   *writer;        // Custom writer, if any
-    AudDevManager                audioDevMgr;
-    VidDevManager                videoDevMgr;
+    AudDevManager               *audioDevMgr;
+    VidDevManager               *videoDevMgr;
 #if !DEPRECATED_FOR_TICKET_2232
     CodecInfoVector              codecInfoList;
     CodecInfoVector              videoCodecInfoList;
@@ -2078,6 +2141,10 @@ private:
                                              const pjsip_cred_info *cred,
                                              const pj_str_t *method,
                                              pjsip_digest_credential *auth);
+
+    static void on_rejected_incoming_call(
+                                      const pjsua_on_rejected_incoming_call_param *param);
+
     friend class Account;
 
 

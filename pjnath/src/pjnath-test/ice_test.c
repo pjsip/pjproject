@@ -679,7 +679,7 @@ static int perform_test2(const char *title,
     if (sess->caller.result.init_status != PJ_SUCCESS ||
         sess->callee.result.init_status != PJ_SUCCESS)
     {
-        rc = 0;
+        // rc = 0;
         goto on_return;
     }
     /* Init ICE on caller */

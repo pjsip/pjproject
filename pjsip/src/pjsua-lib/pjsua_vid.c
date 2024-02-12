@@ -1349,10 +1349,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     pjmedia_vid_stream_send_rtcp_bye(strm);
 
     /* Release locks before unsubscribing, to avoid deadlock. */
-    while (PJSUA_LOCK_IS_LOCKED()) {
-        num_locks++;
-        PJSUA_UNLOCK();
-    }
+    num_locks = PJSUA_RELEASE_LOCK();
 
     /* Unsubscribe events first, otherwise the event callbacks
      * can be called and access already destroyed objects.
@@ -1388,8 +1385,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
 
     /* Re-acquire the locks. */
-    for (; num_locks > 0; num_locks--)
-        PJSUA_LOCK();
+    PJSUA_RELOCK(num_locks);
 
     PJSUA_LOCK();
 
@@ -2092,7 +2088,7 @@ static pj_status_t call_add_video(pjsua_call *call,
 
     /* Initialize call media */
     call_med = &call->media_prov[call->med_prov_cnt++];
-    status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
+    status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO, NULL,
                                    &acc_cfg->rtp_cfg, call->secure_level,
                                    NULL, PJ_FALSE, NULL);
     if (status != PJ_SUCCESS)
@@ -2138,6 +2134,7 @@ static pj_status_t call_add_video(pjsua_call *call,
 
         pjmedia_sdp_media_add_attr(sdp_m, a);
     }
+    call_med->def_dir = dir;
 
     /* Update SDP media line by media transport */
     status = pjmedia_transport_encode_sdp(call_med->tp, pool,
@@ -2241,7 +2238,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
                 call->opt.vid_cnt++;
         }
 
-        status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
+        status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO, NULL,
                                        &acc_cfg->rtp_cfg, call->secure_level,
                                        NULL, PJ_FALSE, NULL);
         if (status != PJ_SUCCESS)

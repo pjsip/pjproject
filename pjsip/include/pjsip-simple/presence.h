@@ -99,8 +99,6 @@ struct pjsip_pres_status
                                              this valud will be set to NULL */
 
     } info[PJSIP_PRES_STATUS_MAX_INFO]; /**< Array of info.                 */
-
-    pj_bool_t           _is_valid;      /**< Internal flag.                 */
 };
 
 

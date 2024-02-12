@@ -245,6 +245,14 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
 static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock, 
                                        pj_status_t status)
 {
+    pj_lock_acquire(ssock->write_mutex);
+    if (ssock->handshake_status != PJ_EUNKNOWN) {
+        pj_lock_release(ssock->write_mutex);
+        return (ssock->handshake_status == PJ_SUCCESS)? PJ_TRUE: PJ_FALSE;
+    }
+    ssock->handshake_status = status;
+    pj_lock_release(ssock->write_mutex);
+
     /* Cancel handshake timer */
     if (ssock->timer.id == TIMER_HANDSHAKE_TIMEOUT) {
         pj_timer_heap_cancel(ssock->param.timer_heap, &ssock->timer);
@@ -942,7 +950,7 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
                                            int src_addr_len,
                                            pj_status_t accept_status)
 {
-    pj_ssl_sock_t *ssock;
+    pj_ssl_sock_t *ssock = NULL;
 #ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
     pj_activesock_cb asock_cb;
     pj_activesock_cfg asock_cfg;
@@ -1126,7 +1134,6 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
                                                    ssock->param.grp_lock);
         if (status != PJ_SUCCESS) {
             ssock->timer.id = TIMER_NONE;
-            status = PJ_SUCCESS;
         }
     }
 
@@ -1440,6 +1447,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     ssock->ssl_state = SSL_STATE_NULL;
     ssock->circ_buf_input.owner = ssock;
     ssock->circ_buf_output.owner = ssock;
+    ssock->handshake_status = PJ_EUNKNOWN;
     pj_list_init(&ssock->write_pending);
     pj_list_init(&ssock->write_pending_empty);
     pj_list_init(&ssock->send_pending);
@@ -1573,16 +1581,25 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
     
     if (info->established) {
         info->cipher = ssl_get_cipher(ssock);
-
-        /* Verification status */
-        info->verify_status = ssock->verify_status;
     }
+
+    /* Verification status */
+    info->verify_status = ssock->verify_status;
 
     /* Last known SSL error code */
     info->last_native_err = ssock->last_err;
 
     /* Group lock */
     info->grp_lock = ssock->param.grp_lock;
+
+    /* Native SSL object */
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+    {
+        ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+        info->native_ssl = ossock->ossl_ssl;
+    }
+#endif
 
     return PJ_SUCCESS;
 }

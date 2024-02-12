@@ -159,7 +159,9 @@ PJ_DECL(pj_status_t) pjsip_mwi_accept( pjsip_evsub *sub,
  * @param reason        Specify reason if new state is terminated, otherwise
  *                      put NULL.
  * @param mime_type     MIME type/content type of the message body.
- * @param body          Message body to be included in the NOTIFY request.
+ * @param body          Message body to be included in the NOTIFY request,
+ *                      if NULL, the last body will be used. Note that
+ *                      the mime_type must also be set when body is not NULL.
  * @param p_tdata       Pointer to receive the request.
  *
  * @return              PJ_SUCCESS on success.

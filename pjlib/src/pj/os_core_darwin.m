@@ -91,6 +91,7 @@ PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
     param.main_func = main_func;
     if (pthread_create(&thread, NULL, &main_thread, &param) == 0) {
         CFRunLoopRun();
+        pthread_join(thread, NULL);
     }
     
     PJ_UNUSED_ARG(pool);

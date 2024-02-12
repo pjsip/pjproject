@@ -507,6 +507,9 @@ static pj_status_t stun_tsx_on_send_msg(pj_stun_client_tsx *tsx,
     pj_status_t status;
 
     tdata = (pj_stun_tx_data*) pj_stun_client_tsx_get_data(tsx);
+    if (!tdata)
+        return PJ_EGONE;
+     
     sess = tdata->sess;
 
     /* Lock the session and prevent user from destroying us in the callback */

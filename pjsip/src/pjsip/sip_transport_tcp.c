@@ -124,8 +124,6 @@ struct tcp_transport
     /* Group lock to be used by TCP transport and ioqueue key */
     pj_grp_lock_t           *grp_lock;
 
-    /* Initial timer. */
-    pj_timer_entry           initial_timer;
 };
 
 
@@ -235,7 +233,8 @@ PJ_DEF(void) pjsip_tcp_transport_cfg_default(pjsip_tcp_transport_cfg *cfg,
     pj_sockaddr_init(cfg->af, &cfg->bind_addr, NULL, 0);
     cfg->async_cnt = 1;
     cfg->reuse_addr = PJSIP_TCP_TRANSPORT_REUSEADDR;
-    cfg->initial_timeout = PJSIP_TCP_INITIAL_TIMEOUT;
+    cfg->initial_timeout = (PJSIP_TCP_INITIAL_TIMEOUT!=0)?
+              PJSIP_TCP_INITIAL_TIMEOUT:PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST;
 }
 
 
@@ -274,14 +273,20 @@ static pj_status_t update_factory_addr(struct tcp_listener *listener,
         pj_sockaddr tmp;
         int af = pjsip_transport_type_get_af(listener->factory.type);
 
-        /* Verify that address given in a_name (if any) is valid */
-        status = pj_sockaddr_init(af, &tmp, &addr_name->host,
-                                  (pj_uint16_t)addr_name->port);
-        if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
-            (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+        tmp.addr.sa_family = (pj_uint16_t)af;
+
+        /* Validate IP address only */
+        if (pj_inet_pton(af, &addr_name->host, pj_sockaddr_get_addr(&tmp)) == PJ_SUCCESS)
         {
-            /* Invalid address */
-            return PJ_EINVAL;
+            /* Verify that address given in a_name (if any) is valid */
+            status = pj_sockaddr_init(af, &tmp, &addr_name->host,
+                                      (pj_uint16_t)addr_name->port);
+            if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
+                (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+            {
+                /* Invalid address */
+                return PJ_EINVAL;
+            }
         }
 
         /* Copy the address */
@@ -599,9 +604,6 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
 /* TCP keep-alive timer callback */
 static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e);
 
-/* TCP initial timer callback */
-static void tcp_initial_timer(pj_timer_heap_t *th, pj_timer_entry *e);
-
 /* Clean up TCP resources */
 static void tcp_on_destroy(void *arg);
 
@@ -682,6 +684,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     tcp->base.do_shutdown = &tcp_shutdown;
     tcp->base.destroy = &tcp_destroy_transport;
     tcp->base.factory = &listener->factory;
+    tcp->base.initial_timeout = listener->initial_timeout;
 
     /* Create group lock */
     status = pj_grp_lock_create_w_handler(pool, NULL, tcp, &tcp_on_destroy,
@@ -724,18 +727,10 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     pj_ioqueue_op_key_init(&tcp->ka_op_key.key, sizeof(pj_ioqueue_op_key_t));
     pj_strdup(tcp->base.pool, &tcp->ka_pkt, &ka_pkt);
 
-    /* Initialize initial timer. */
     if (is_server && listener->initial_timeout) {
-        pj_time_val delay = { 0 };
-
-        tcp->initial_timer.user_data = (void*)tcp;
-        tcp->initial_timer.cb = &tcp_initial_timer;
-        
-        delay.sec = listener->initial_timeout;
-        pjsip_endpt_schedule_timer(listener->endpt, 
-                                    &tcp->initial_timer, 
-                                    &delay);
-        tcp->initial_timer.id = PJ_TRUE;
+        /* Initialize initial timer. */
+        pjsip_transport_add_ref(&tcp->base);
+        pjsip_transport_dec_ref(&tcp->base);
     }
 
     /* Done setting up basic transport. */
@@ -840,12 +835,6 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
     if (tcp->ka_timer.id) {
         pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->ka_timer);
         tcp->ka_timer.id = PJ_FALSE;
-    }
-
-    /* Stop initial timer. */
-    if (tcp->initial_timer.id) {
-        pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->initial_timer);
-        tcp->initial_timer.id = PJ_FALSE;
     }
 
     /* Cancel all delayed transmits */
@@ -1388,12 +1377,6 @@ static pj_status_t tcp_shutdown(pjsip_transport *transport)
         tcp->ka_timer.id = PJ_FALSE;
     }
 
-    /* Stop initial timer. */
-    if (tcp->initial_timer.id) {
-        pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->initial_timer);
-        tcp->initial_timer.id = PJ_FALSE;
-    }
-
     return PJ_SUCCESS;
 }
 
@@ -1420,11 +1403,6 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
     if (tcp->is_closing) {
         tcp->is_closing++;
         return PJ_FALSE;
-    }
-
-    if (tcp->initial_timer.id) {
-        pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->initial_timer);
-        tcp->initial_timer.id = PJ_FALSE;
     }
 
     /* Houston, we have packet! Report the packet to transport manager
@@ -1644,16 +1622,6 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     tcp->ka_timer.id = PJ_TRUE;
 }
 
-/* Transport keep-alive timer callback */
-static void tcp_initial_timer(pj_timer_heap_t *th, pj_timer_entry *e)
-{
-    pj_status_t status = PJ_ETIMEDOUT;
-    struct tcp_transport *tcp = (struct tcp_transport*) e->user_data;
-
-    PJ_UNUSED_ARG(th);
-
-    tcp_init_shutdown(tcp, status);
-}
 
 PJ_DEF(pj_sock_t) pjsip_tcp_transport_get_socket(pjsip_transport *transport)
 {

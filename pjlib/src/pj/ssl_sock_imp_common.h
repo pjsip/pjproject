@@ -112,6 +112,7 @@ struct pj_ssl_sock_t
     pj_ioqueue_op_key_t   shutdown_op_key;
     pj_timer_entry        timer;
     pj_status_t           verify_status;
+    pj_status_t           handshake_status;
 
     pj_bool_t             is_closing;
     unsigned long         last_err;
@@ -229,7 +230,7 @@ inline static void io_read(pj_ssl_sock_t *ssock, circ_buf_t *cb,
                            pj_uint8_t *dst, pj_size_t len)
 {
     PJ_UNUSED_ARG(ssock);
-    return circ_read(cb, dst, len);
+    circ_read(cb, dst, len);
 }
 inline static pj_status_t io_write(pj_ssl_sock_t *ssock, circ_buf_t *cb,
                             const pj_uint8_t *src, pj_size_t len)

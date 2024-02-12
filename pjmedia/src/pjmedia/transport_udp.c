@@ -31,7 +31,11 @@
 #define RTP_LEN     PJMEDIA_MAX_MRU
 
 /* Maximum size of incoming RTCP packet */
-#define RTCP_LEN    600
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#   define RTCP_LEN    PJMEDIA_MAX_MRU
+#else
+#   define RTCP_LEN    600
+#endif
 
 /* Maximum pending write operations */
 #define MAX_PENDING 4
@@ -294,6 +298,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     pj_pool_t *pool;
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback rtp_cb, rtcp_cb;
+    pj_grp_lock_t *grp_lock;
     pj_status_t status;
 
 
@@ -344,18 +349,29 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
                   pj_sockaddr_get_addr_len(&tp->rtp_addr_name));
     }
 
+    /* Create group lock */
+    status = pj_grp_lock_create(pool, NULL, &grp_lock);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+
+    pj_grp_lock_add_ref(grp_lock);
+    tp->base.grp_lock = grp_lock;
+
     /* Setup RTP socket with the ioqueue */
     pj_bzero(&rtp_cb, sizeof(rtp_cb));
     rtp_cb.on_read_complete = &on_rx_rtp;
     rtp_cb.on_write_complete = &on_rtp_data_sent;
 
-    status = pj_ioqueue_register_sock(pool, ioqueue, tp->rtp_sock, tp,
-                                      &rtp_cb, &tp->rtp_key);
+    status = pj_ioqueue_register_sock2(pool, ioqueue, tp->rtp_sock, grp_lock,
+                                       tp, &rtp_cb, &tp->rtp_key);
     if (status != PJ_SUCCESS)
         goto on_error;
     
     /* Disallow concurrency so that detach() and destroy() are
      * synchronized with the callback.
+     *
+     * Note that we still need this even after group lock is added to
+     * maintain the above behavior.
      */
     status = pj_ioqueue_set_concurrency(tp->rtp_key, PJ_FALSE);
     if (status != PJ_SUCCESS)
@@ -384,8 +400,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     pj_bzero(&rtcp_cb, sizeof(rtcp_cb));
     rtcp_cb.on_read_complete = &on_rx_rtcp;
 
-    status = pj_ioqueue_register_sock(pool, ioqueue, tp->rtcp_sock, tp,
-                                      &rtcp_cb, &tp->rtcp_key);
+    status = pj_ioqueue_register_sock2(pool, ioqueue, tp->rtcp_sock, grp_lock,
+                                       tp, &rtcp_cb, &tp->rtcp_key);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -432,12 +448,13 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 
     /* Must not close while application is using this */
     //PJ_ASSERT_RETURN(!udp->attached, PJ_EINVALIDOP);
-    
+
+    /* The following calls to pj_ioqueue_unregister() will block the execution
+     * if callback is still being called because allow_concurrent is false.
+     * So it is safe to release the pool immediately after.
+     */
 
     if (udp->rtp_key) {
-        /* This will block the execution if callback is still
-         * being called.
-         */
         pj_ioqueue_unregister(udp->rtp_key);
         udp->rtp_key = NULL;
         udp->rtp_sock = PJ_INVALID_SOCKET;
@@ -454,6 +471,8 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
         pj_sock_close(udp->rtcp_sock);
         udp->rtcp_sock = PJ_INVALID_SOCKET;
     }
+
+    pj_grp_lock_dec_ref(tp->grp_lock);
 
     PJ_LOG(4,(udp->base.name, "UDP media transport destroyed"));
     pj_pool_release(udp->pool);

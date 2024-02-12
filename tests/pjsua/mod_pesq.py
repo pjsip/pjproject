@@ -10,7 +10,6 @@
 # - clock-rate of those files can only be 8khz or 16khz
 
 import time
-import imp
 import os
 import sys
 import re
@@ -18,11 +17,12 @@ import subprocess
 import wave
 import shutil
 import inc_const as const
+import inc_util as util
 
 from inc_cfg import *
 
 # Load configuration
-cfg_file = imp.load_source("cfg_file", ARGS[1])
+cfg_file = util.load_module_from_file("cfg_file", ARGS[1])
 
 # PESQ configs
 PESQ = "tools/pesq"				# PESQ executable path
@@ -56,7 +56,7 @@ def test_func(t):
     inwavlen = fin.getnframes() * 1.0 / fin.getframerate()
     inwavlen += 0.2
     fin.close()
-    print "WAV input len = " + str(inwavlen) + "s"
+    print("WAV input len = " + str(inwavlen) + "s")
 
     # Get clock rate of the output
     mo_clock_rate = re.compile("\.(\d+)\.wav").search(output_filename)
@@ -159,9 +159,9 @@ def post_func(t):
         wavoutname = "logs/" + wavoutname
         try:
             shutil.copyfile(output_filename, wavoutname)
-            print "Output WAV is copied to " + wavoutname
+            print("Output WAV is copied to " + wavoutname)
         except:
-            print "Couldn't copy output WAV, please check if 'logs' directory exists."
+            print("Couldn't copy output WAV, please check if 'logs' directory exists.")
 
         raise TestError("WAV seems to be degraded badly, PESQ = "+ pesq_res + " (target=" + str(threshold) + ").")
 

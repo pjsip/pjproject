@@ -44,6 +44,12 @@
     <ClCompile Include="..\src\pjsip-simple\xpidf.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjsip-simple\dlg_event.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip-simple\dialog_info.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjsip-simple\errno.h">
@@ -80,6 +86,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pjsip-simple\xpidf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip-simple\dlg_event.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip-simple\dialog_info.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -373,8 +373,10 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->register_on_acc_add = PJ_TRUE;
     cfg->mwi_expires = PJSIP_MWI_DEFAULT_EXPIRES;
 
-    cfg->ipv6_sip_use = PJSUA_IPV6_ENABLED_NO_PREFERENCE;
-    cfg->ipv6_media_use = PJSUA_IPV6_ENABLED_PREFER_IPV4;
+    cfg->ipv6_sip_use   = PJ_HAS_IPV6? PJSUA_IPV6_ENABLED_NO_PREFERENCE :
+                                       PJSUA_IPV6_DISABLED;
+    cfg->ipv6_media_use = PJ_HAS_IPV6? PJSUA_IPV6_ENABLED_PREFER_IPV4 :
+                                       PJSUA_IPV6_DISABLED;
 
     cfg->media_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
     cfg->ip_change_cfg.shutdown_tp = PJ_TRUE;
@@ -663,6 +665,7 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 {
     pj_bool_t processed = PJ_FALSE;
 
+#if PJSUA_DETECT_MERGED_REQUESTS
     if (pjsip_tsx_detect_merged_requests(rdata)) {
         PJ_LOG(4, (THIS_FILE, "Merged request detected"));
 
@@ -673,6 +676,7 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
 
         return PJ_TRUE;
     }
+#endif
 
     PJSUA_LOCK();
 
@@ -1213,6 +1217,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
         }
     }
 
+#if !PJ_HAS_IPV6
+    pjsua_var.ua_cfg.stun_try_ipv6 = PJ_FALSE;
+#endif
+
     /* Start resolving STUN server */
     status = resolve_stun_server(PJ_FALSE, PJ_FALSE, 0);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
@@ -1252,6 +1260,9 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 
     /* Init presence module: */
     status = pjsip_pres_init_module( pjsua_var.endpt, pjsip_evsub_instance());
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
+    status = pjsip_dlg_event_init_module( pjsua_var.endpt, pjsip_evsub_instance());
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Initialize MWI support */
@@ -1927,14 +1938,14 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
         /* Terminate all calls. */
         if ((flags & PJSUA_DESTROY_NO_TX_MSG) == 0) {
             pjsua_call_hangup_all();
-        }
-
-        /* Deinit media channel of all calls (see #1717) */
-        for (i=0; i<(int)pjsua_var.ua_cfg.max_calls; ++i) {
-            /* TODO: check if we're not allowed to send to network in the
-             *       "flags", and if so do not do TURN allocation...
-             */
-            pjsua_media_channel_deinit(i);
+        } else {
+            /* Deinit media channel of all calls (see #1717) */
+            for (i=0; i<(int)pjsua_var.ua_cfg.max_calls; ++i) {
+                /* TODO: check if we're not allowed to send to network in the
+                 *       "flags", and if so do not do TURN allocation...
+                 */
+                pjsua_media_channel_deinit(i);
+            }
         }
 
         /* Set all accounts to offline */
@@ -2600,8 +2611,8 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
         pjsua_var.tpdata[id].local_name = tp->local_name;
         pjsua_var.tpdata[id].data.tp = tp;
         pj_sockaddr_cp(&pjsua_var.tpdata[id].pub_addr, &pub_addr);
-        if (cfg->bound_addr.slen)
-            pjsua_var.tpdata[id].has_bound_addr = PJ_TRUE;
+        if (cfg->bound_addr.slen || cfg->public_addr.slen)
+            pjsua_var.tpdata[id].has_cfg_addr = PJ_TRUE;
 
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
 
@@ -3252,6 +3263,7 @@ PJ_DEF(void) pjsua_ip_change_param_default(pjsua_ip_change_param *param)
     pj_bzero(param, sizeof(*param));
     param->restart_listener = PJ_TRUE;
     param->restart_lis_delay = PJSUA_TRANSPORT_RESTART_DELAY_TIME;
+    param->shutdown_transport = PJ_TRUE;
 }
 
 
@@ -3359,7 +3371,7 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     pool = pj_pool_create(&pjsua_var.cp.factory, "check%p", 1024, 0, NULL);
     if (!pool) return PJ_ENOMEM;
 
-    url = (char*) pj_pool_alloc(pool, len+1);
+    url = (char*) pj_pool_calloc(pool, 1, len+1);
     pj_ansi_strxcpy(url, c_url, len+1);
 
     p = pjsip_parse_uri(pool, url, len, 0);
@@ -3847,10 +3859,7 @@ static pj_status_t restart_listener(pjsua_transport_id id,
         unsigned num_locks = 0;
 
         /* Release locks before restarting the transport, to avoid deadlock. */
-        while (PJSUA_LOCK_IS_LOCKED()) {
-            num_locks++;
-            PJSUA_UNLOCK();
-        }
+        num_locks = PJSUA_RELEASE_LOCK();
 
         status = pjsip_udp_transport_restart2(
                                        pjsua_var.tpdata[id].data.tp,
@@ -3980,6 +3989,31 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
                               pjsip_cfg()->tsx.td);
 
         PJ_LOG(4,(THIS_FILE,"IP change temporarily ignores request timeout"));
+    }
+
+    /* Shutdown all TCP/TLS transports */
+    if (param->shutdown_transport) {
+        pjsip_tpmgr_shutdown_param param;
+
+        pjsip_tpmgr_shutdown_param_default(&param);
+        param.include_udp = PJ_FALSE;
+
+        PJ_LOG(4,(THIS_FILE, "IP change shutting down transports.."));
+        status = pjsip_tpmgr_shutdown_all(
+                                    pjsip_endpt_get_tpmgr(pjsua_var.endpt),
+                                    &param);
+
+        /* Provide dummy info instead of NULL info to avoid possible crash
+         * (if app does not check).
+         */
+        if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+            pjsua_ip_change_op_info info;
+
+            pj_bzero(&info, sizeof(info));
+            pjsua_var.ua_cfg.cb.on_ip_change_progress(
+                                        PJSUA_IP_CHANGE_OP_SHUTDOWN_TP,
+                                        status, &info);
+        }
     }
 
     if (param->restart_listener) {
