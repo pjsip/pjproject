@@ -24,7 +24,7 @@ import SwiftUI
 
 class PjsipVars: ObservableObject {
     @Published var calling = false
-    var dest: String = "sip:localhost:5080"
+    var dest: String = "sip:test@sip.pjsip.org"
     var call_id: pjsua_call_id = PJSUA_INVALID_ID.rawValue
     /* Video window */
     @Published var vid_win:UIView? = nil

@@ -26,7 +26,7 @@ final class ipjsua_swiftVidTest: XCTestCase {
         app.launch()
 
         // Access the Destination text field
-        let textField = app.textFields["Destination:"]
+        let textField = app.textFields["sip:test@sip.pjsip.org"]
 
         // Type localhost into the text field
         textField.tap() // Ensure the text field is focused
