@@ -29,8 +29,9 @@ final class ipjsua_swiftVidTest: XCTestCase {
         let textField = app.textFields["sip:test@sip.pjsip.org"]
 
         // Type localhost into the text field
-        textField.tap() // Ensure the text field is focused
-        let dest = "sip:localhost:5080";
+        textField.tap()
+        textField.tap(withNumberOfTaps: 3, numberOfTouches: 1)
+        let dest = "sip:localhost:5080"
         textField.typeText(dest)
 
         // Click "Make call" button
