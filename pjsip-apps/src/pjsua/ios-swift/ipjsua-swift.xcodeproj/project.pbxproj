@@ -118,6 +118,7 @@
 		3AF9B5342B7B454D0043987D /* ipjsua-swiftVidTest.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ipjsua-swiftVidTest.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AF9B5362B7B454D0043987D /* ipjsua_swiftVidTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ipjsua_swiftVidTest.swift; sourceTree = "<group>"; };
 		3AF9B5382B7B454D0043987D /* ipjsua_swiftVidTestLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ipjsua_swiftVidTestLaunchTests.swift; sourceTree = "<group>"; };
+		3AF9B53F2B7B583C0043987D /* ipjsua-swift.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "ipjsua-swift.xctestplan"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -181,6 +182,7 @@
 		3A6FC60F25CBD4540065F472 = {
 			isa = PBXGroup;
 			children = (
+				3AF9B53F2B7B583C0043987D /* ipjsua-swift.xctestplan */,
 				3AF9B5352B7B454D0043987D /* ipjsua-swiftVidTest */,
 				3A6FC75A25CBD6CF0065F472 /* Frameworks */,
 				3A6FC6AF25CBD5790065F472 /* Libraries */,
@@ -637,7 +639,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.ipjsua-swiftVidTest";
@@ -665,7 +667,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.ipjsua-swiftVidTest";
