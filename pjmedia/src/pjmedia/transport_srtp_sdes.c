@@ -34,7 +34,7 @@
 #  endif
 #endif
 
-#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
     #include <Security/SecRandom.h>
 #endif
 
