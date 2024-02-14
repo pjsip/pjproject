@@ -34,7 +34,7 @@
 #  endif
 #endif
 
-#ifdef PJ_SSL_SOCK_IMP_APPLE
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
     #include <Security/SecRandom.h>
 #endif
 
@@ -138,12 +138,14 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
                 return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
             }
 #elif defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0) && \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
-            int status = SecRandomCopyBytes(kSecRandomDefault, crypto_suites[cs_idx].cipher_key_len, &key);
-            if (status != errSecSuccess) {
-                    PJ_LOG(4,(THIS_FILE, "Failed generating random key "
-                            "(native err=%d)", status));
-                    return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
+      (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
+            int err = SecRandomCopyBytes(kSecRandomDefault,
+                                         crypto_suites[cs_idx].cipher_key_len,
+                                         &key);
+            if (err != errSecSuccess) {
+                PJ_LOG(4,(THIS_FILE, "Failed generating random key "
+                          "(native err=%d)", err));
+                return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
             }
 #else
             PJ_LOG(3,(THIS_FILE, "Warning: simple random generator is used "
