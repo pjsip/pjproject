@@ -78,9 +78,16 @@
 #include <security.h>
 #include <schannel.h>
 
+#include <Bcrypt.h>    // for enumerating ciphers
+//#include <Ncrypt.h>    // for enumerating ciphers
+//#include <Sslprovider.h>    // for enumerating ciphers
+
+
 #pragma comment (lib, "secur32.lib")
 #pragma comment (lib, "shlwapi.lib")
 #pragma comment (lib, "Crypt32.lib") // for creating & manipulating certs
+#pragma comment (lib, "Bcrypt.lib")  // for enumerating ciphers
+//#pragma comment (lib, "Ncrypt.lib")  // for enumerating ciphers
 
 
 /* SSL sock implementation API */
@@ -356,7 +363,39 @@ static void ssl_reset_sock_state(pj_ssl_sock_t* ssock)
 /* Ciphers and certs */
 static void ssl_ciphers_populate()
 {
-    PJ_TODO(implement_this);
+    PCRYPT_CONTEXT_FUNCTIONS fn = NULL;
+    ULONG size = 0;
+    NTSTATUS s;
+
+    /* Populate once only */
+    if (ssl_cipher_num)
+        return;
+
+    s = BCryptEnumContextFunctions(CRYPT_LOCAL, L"SSL",
+                                   NCRYPT_SCHANNEL_INTERFACE,
+                                   &size, &fn);
+    if (s < 0) {
+        PJ_LOG(1,(SENDER, "Error in enumerating ciphers (code=0x%x)", s));
+        return;
+    }
+
+    for (ULONG i = 0; i < fn->cFunctions; i++) {
+        char tmp_buf[SZ_ALG_MAX_SIZE];
+        pj_str_t tmp_st;
+
+        pj_unicode_to_ansi(fn->rgpszFunctions[i], SZ_ALG_MAX_SIZE,
+                           tmp_buf, sizeof(tmp_buf));
+        pj_strdup2_with_null(sch_ssl.pool, &tmp_st, tmp_buf);
+
+        /* Unfortunately we cannot get the ID, set ID to 0 for now,
+         * may be updated later.
+         */
+        ssl_ciphers[ssl_cipher_num].id = 0;
+        ssl_ciphers[ssl_cipher_num].name = tmp_st.ptr;
+        ++ssl_cipher_num;
+    }
+
+    BCryptFreeBuffer(fn);
 }
 
 static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock)
@@ -375,30 +414,244 @@ static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock)
     if (ss == SEC_E_OK) {
         pj_ssl_cipher c = (pj_ssl_cipher)ci.dwCipherSuite;
 
-        /* Add cipher to cipher list, if not yet */
+        /* Check if this is in the cipher list */
         if (ssl_cipher_num < PJ_SSL_SOCK_MAX_CIPHERS &&
             !pj_ssl_cipher_name(c))
         {
-            char tmp_buf[SZ_ALG_MAX_SIZE];
-            pj_str_t tmp_st;
+            char tmp_buf[SZ_ALG_MAX_SIZE+1];
+            unsigned i;
 
             pj_unicode_to_ansi(ci.szCipherSuite, SZ_ALG_MAX_SIZE,
                                tmp_buf, sizeof(tmp_buf));
-            pj_strdup2_with_null(sch_ssl.pool, &tmp_st, tmp_buf);
 
-            ssl_ciphers[ssl_cipher_num].id = c;
-            ssl_ciphers[ssl_cipher_num].name = tmp_st.ptr;
-            ++ssl_cipher_num;
+            /* If cipher is in the list but ID is 0, update it
+             * (we init'd cipher list without ID)
+             */
+            for (i = 0; i < ssl_cipher_num; ++i) {
+                if (!pj_ansi_stricmp(ssl_ciphers[i].name, tmp_buf)) {
+                    if (ssl_ciphers[i].id == 0) {
+                        ssl_ciphers[i].id = c;
+                        break;
+                    }
+                }
+            }
+
+            /* Add to cipher list if not found */
+            if (i == ssl_cipher_num) {
+                pj_str_t tmp_st;
+                pj_strdup2_with_null(sch_ssl.pool, &tmp_st, tmp_buf);
+
+                ssl_ciphers[ssl_cipher_num].id = c;
+                ssl_ciphers[ssl_cipher_num].name = tmp_st.ptr;
+                ++ssl_cipher_num;
+            }
         }
-        return (pj_ssl_cipher)ci.dwCipherSuite;
+        return c;
     }
 
     return PJ_TLS_UNKNOWN_CIPHER;
 }
 
+static pj_status_t blob_to_str(DWORD enc_type, CERT_NAME_BLOB* blob,
+                               DWORD flag, char *buf, unsigned buf_len)
+{
+    DWORD ret;
+    ret = CertNameToStrA(enc_type, blob, flag, buf, buf_len);
+    if (ret < 0) {
+        PJ_LOG(3,(SENDER, "Failed convert cert blob to string"));
+        return PJ_ETOOSMALL;
+    }
+    return PJ_SUCCESS;
+}
+
+
+static pj_status_t file_time_to_time_val(const FILETIME* file_time,
+                                         pj_time_val* time_val)
+{
+    FILETIME local_file_time;
+    SYSTEMTIME localTime;
+    pj_parsed_time pt;
+
+    if (!FileTimeToLocalFileTime(file_time, &local_file_time))
+        return PJ_RETURN_OS_ERROR(GetLastError());
+
+    if (!FileTimeToSystemTime(file_time, &localTime))
+        return PJ_RETURN_OS_ERROR(GetLastError());
+
+    pj_bzero(&pt, sizeof(pt));
+    pt.year = localTime.wYear;
+    pt.mon = localTime.wMonth - 1;
+    pt.day = localTime.wDay;
+    pt.wday = localTime.wDayOfWeek;
+
+    pt.hour = localTime.wHour;
+    pt.min = localTime.wMinute;
+    pt.sec = localTime.wSecond;
+    pt.msec = localTime.wMilliseconds;
+
+    return pj_time_encode(&pt, time_val);
+}
+
+
+static void cert_parse_info(pj_pool_t* pool, pj_ssl_cert_info* ci,
+                            const CERT_CONTEXT *cert)
+{
+    PCERT_INFO cert_info = cert->pCertInfo;
+    char buf[512];
+    pj_uint8_t serial_no[20];
+    unsigned serial_size;
+    pj_bool_t update_needed;
+    pj_status_t status;
+
+    /* Get issuer & serial no first */
+    status = blob_to_str(cert->dwCertEncodingType, &cert_info->Issuer,
+                         CERT_SIMPLE_NAME_STR,
+                         buf, sizeof(buf));
+
+    serial_size = PJ_MIN(cert_info->SerialNumber.cbData, sizeof(serial_no));
+    pj_memcpy(&serial_no, cert_info->SerialNumber.pbData, serial_size);
+
+    /* Check if the contents need to be updated */
+    update_needed = status == PJ_SUCCESS &&
+                    (pj_strcmp2(&ci->issuer.info, buf) ||
+                     pj_memcmp(ci->serial_no, serial_no, serial_size));
+    if (!update_needed)
+        return;
+
+    /* Update info */
+
+    pj_bzero(ci, sizeof(pj_ssl_cert_info));
+
+    /* Version */
+    ci->version = cert_info->dwVersion;
+
+    /* Issuer */
+    pj_strdup2(pool, &ci->issuer.info, buf);
+    status = blob_to_str(cert->dwCertEncodingType, &cert_info->Issuer,
+                         CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG,
+                         buf, sizeof(buf));
+    if (status == PJ_SUCCESS)
+        pj_strdup2(pool, &ci->issuer.cn, buf);
+
+    /* Serial number */
+    pj_memcpy(ci->serial_no, serial_no, serial_size);
+
+    /* Subject */
+    status = blob_to_str(cert->dwCertEncodingType, &cert_info->Subject,
+                         CERT_SIMPLE_NAME_STR,
+                         buf, sizeof(buf));
+    if (status == PJ_SUCCESS)
+        pj_strdup2(pool, &ci->subject.info, buf);
+
+    status = blob_to_str(cert->dwCertEncodingType, &cert_info->Subject,
+                         CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG,
+                         buf, sizeof(buf));
+    if (status == PJ_SUCCESS)
+        pj_strdup2(pool, &ci->subject.cn, buf);
+
+    /* Validity */
+    file_time_to_time_val(&cert_info->NotAfter, &ci->validity.end);
+    file_time_to_time_val(&cert_info->NotBefore, &ci->validity.start);
+    ci->validity.gmt = 0;
+
+    /* Subject Alternative Name extension */
+    while (1) {
+        PCERT_EXTENSION ext = CertFindExtension(szOID_SUBJECT_ALT_NAME2,
+                                                cert_info->cExtension,
+                                                cert_info->rgExtension);
+        if (!ext)
+            break;
+
+        CERT_ALT_NAME_INFO* alt_name_info = NULL;
+        DWORD alt_name_info_size = 0;
+        BOOL rv;
+        rv = CryptDecodeObjectEx(cert->dwCertEncodingType,
+                                 szOID_SUBJECT_ALT_NAME2,
+                                 ext->Value.pbData,
+                                 ext->Value.cbData,
+                                 CRYPT_DECODE_ALLOC_FLAG |
+                                    CRYPT_DECODE_NOCOPY_FLAG,
+                                 NULL,
+                                 &alt_name_info,
+                                 &alt_name_info_size);
+        if (!rv)
+            break;
+
+        ci->subj_alt_name.entry = pj_pool_calloc(
+                                        pool, alt_name_info->cAltEntry,
+                                        sizeof(*ci->subj_alt_name.entry));
+        if (!ci->subj_alt_name.entry) {
+            PJ_LOG(3,(SENDER, "Failed allocate memory for subject alt name"));
+            LocalFree(alt_name_info);
+            break;
+        }
+
+        for (unsigned i = 0; i < alt_name_info->cAltEntry; ++i) {
+            CERT_ALT_NAME_ENTRY *ane = &alt_name_info->rgAltEntry[i];
+            pj_ssl_cert_name_type type;
+            unsigned len = 0;
+
+            switch (ane->dwAltNameChoice) {
+            case CERT_ALT_NAME_DNS_NAME:
+                type = PJ_SSL_CERT_NAME_DNS;
+                len = pj_unicode_to_ansi(ane->pwszDNSName, sizeof(buf),
+                                         buf, sizeof(buf)) != NULL;
+                break;
+            case CERT_ALT_NAME_IP_ADDRESS:
+                type = PJ_SSL_CERT_NAME_IP;
+                pj_inet_ntop2(ane->IPAddress.cbData == sizeof(pj_in6_addr)?
+                                    pj_AF_INET6() : pj_AF_INET(),
+                              ane->IPAddress.pbData, buf, sizeof(buf));
+                break;
+            case CERT_ALT_NAME_URL:
+                type = PJ_SSL_CERT_NAME_URI;
+                len = pj_unicode_to_ansi(ane->pwszDNSName, sizeof(buf),
+                                         buf, sizeof(buf)) != NULL;
+                break;
+            case CERT_ALT_NAME_RFC822_NAME:
+                type = PJ_SSL_CERT_NAME_RFC822;
+                len = pj_unicode_to_ansi(ane->pwszDNSName, sizeof(buf),
+                                         buf, sizeof(buf)) != NULL;
+                break;
+            default:
+                type = PJ_SSL_CERT_NAME_UNKNOWN;
+                break;
+            }
+
+            if (len && type != PJ_SSL_CERT_NAME_UNKNOWN) {
+                ci->subj_alt_name.entry[ci->subj_alt_name.cnt].type = type;
+                pj_strdup2(pool,
+                        &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
+                        buf);
+                ci->subj_alt_name.cnt++;
+            }
+        }
+
+        /* Done parsing Subject Alt Name */
+        LocalFree(alt_name_info);
+        break;
+    }
+}
+
 static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 {
-    PJ_TODO(implement_this);
+    sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
+    CERT_CONTEXT *cert_ctx = NULL;
+    SECURITY_STATUS ss;
+
+    if (!SecIsValidHandle(&sch_ssock->ctx_handle)) {
+        return;
+    }
+
+    ss = QueryContextAttributes(&sch_ssock->ctx_handle,
+                                SECPKG_ATTR_REMOTE_CERT_CONTEXT,
+                                &cert_ctx);
+
+    if (ss != SEC_E_OK || !cert_ctx) {
+        log_sec_err(3, "Failed getting remote certificate", ss);
+    } else {
+        cert_parse_info(ssock->pool, &ssock->remote_cert_info, cert_ctx);
+    }
 }
 
 /* SSL session functions */
@@ -418,8 +671,8 @@ static void ssl_set_peer_name(pj_ssl_sock_t* ssock)
 
 static PCCERT_CONTEXT create_self_signed_cert()
 {
-    CERT_CONTEXT const* cert_context = NULL;
-    CERT_EXTENSIONS cert_extensions = { 0 };
+    PCCERT_CONTEXT cert_ctx = NULL;
+    CERT_EXTENSIONS cert_ext = { 0 };
 
     BYTE cert_name_buffer[16];
     CERT_NAME_BLOB cert_name;
@@ -432,11 +685,11 @@ static PCCERT_CONTEXT create_self_signed_cert()
         return NULL;
     }
 
-    cert_context = CertCreateSelfSignCertificate(
+    cert_ctx = CertCreateSelfSignCertificate(
                                     0, &cert_name, 0, NULL,
-                                    NULL, NULL, NULL, &cert_extensions);
+                                    NULL, NULL, NULL, &cert_ext);
 
-    return cert_context;
+    return cert_ctx;
 }
 
 
@@ -751,7 +1004,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
                 LOG_DEBUG2("Read %d: after decrypt, excess=%d",
                            requested, len);
             } else {
-                /* Not enough, gave everyting */
+                /* Not enough, give everyting */
                 pj_memcpy((pj_uint8_t*)data + *size, p, len);
                 *size += (int)len;
                 LOG_DEBUG2("Read %d: after decrypt, only got %d",
