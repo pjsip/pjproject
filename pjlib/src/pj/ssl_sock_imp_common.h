@@ -205,9 +205,11 @@ static pj_status_t flush_delayed_send(pj_ssl_sock_t *ssock);
 static pj_status_t circ_init(pj_pool_factory *factory,
                              circ_buf_t *cb, pj_size_t cap);
 static void circ_deinit(circ_buf_t *cb);
+static void circ_reset(circ_buf_t* cb);
 static pj_bool_t circ_empty(const circ_buf_t *cb);
 static pj_size_t circ_size(const circ_buf_t *cb);
 static void circ_read(circ_buf_t *cb, pj_uint8_t *dst, pj_size_t len);
+static void circ_read_cancel(circ_buf_t* cb, pj_size_t len);
 static pj_status_t circ_write(circ_buf_t *cb,
                               const pj_uint8_t *src, pj_size_t len);
 

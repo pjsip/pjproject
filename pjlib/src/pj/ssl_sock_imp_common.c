@@ -52,9 +52,25 @@ static pj_bool_t asock_on_data_sent (pj_activesock_t *asock,
  *******************************************************************
  */
 
+static pj_size_t next_pow2(pj_size_t n)
+{
+    /* Next 32-bit power of two */
+    n--;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    n++;
+    return n;
+}
+
 static pj_status_t circ_init(pj_pool_factory *factory,
                              circ_buf_t *cb, pj_size_t cap)
 {
+    /* Round-up cap */
+    cap = next_pow2(cap);
+
     cb->cap    = cap;
     cb->readp  = 0;
     cb->writep = 0;
@@ -68,17 +84,24 @@ static pj_status_t circ_init(pj_pool_factory *factory,
     /* Allocate circular buffer */
     cb->buf = pj_pool_alloc(cb->pool, cap);
     if (!cb->buf) {
-        pj_pool_release(cb->pool);
+        pj_pool_secure_release(&cb->pool);
         return PJ_ENOMEM;
     }
 
     return PJ_SUCCESS;
 }
 
+static void circ_reset(circ_buf_t* cb)
+{
+    cb->readp = 0;
+    cb->writep = 0;
+    cb->size = 0;
+}
+
 static void circ_deinit(circ_buf_t *cb)
 {
     if (cb->pool) {
-        pj_pool_release(cb->pool);
+        pj_pool_secure_release(&cb->pool);
         cb->pool = NULL;
     }
 }
@@ -104,6 +127,8 @@ static void circ_read(circ_buf_t *cb, pj_uint8_t *dst, pj_size_t len)
     pj_size_t tbc = PJ_MIN(size_after, len);
     pj_size_t rem = len - tbc;
 
+    pj_assert(cb->size >= len);
+
     pj_memcpy(dst, cb->buf + cb->readp, tbc);
     pj_memcpy(dst + tbc, cb->buf, rem);
 
@@ -111,6 +136,21 @@ static void circ_read(circ_buf_t *cb, pj_uint8_t *dst, pj_size_t len)
     cb->readp &= (cb->cap - 1);
 
     cb->size -= len;
+}
+
+/* Cancel previous read, partially or fully.
+ * Should be called in the same mutex block as circ_read().
+ */
+static void circ_read_cancel(circ_buf_t* cb, pj_size_t len)
+{
+    pj_assert(cb->cap - cb->size >= len);
+
+    if (cb->readp < len)
+        cb->readp = cb->cap - (len - cb->readp);
+    else
+        cb->readp -= len;
+
+    cb->size += len;
 }
 
 static pj_status_t circ_write(circ_buf_t *cb,
@@ -121,14 +161,8 @@ static pj_status_t circ_write(circ_buf_t *cb,
         /* Minimum required capacity */
         pj_size_t min_cap = len + cb->size;
 
-        /* Next 32-bit power of two */
-        min_cap--;
-        min_cap |= min_cap >> 1;
-        min_cap |= min_cap >> 2;
-        min_cap |= min_cap >> 4;
-        min_cap |= min_cap >> 8;
-        min_cap |= min_cap >> 16;
-        min_cap++;
+        /* Round-up minimum capacity */
+        min_cap = next_pow2(min_cap);
 
         /* Create a new pool to hold a bigger buffer, using the same factory */
         pj_pool_t *pool = pj_pool_create(cb->pool->factory, "tls-circ%p",
@@ -153,7 +187,7 @@ static pj_status_t circ_write(circ_buf_t *cb,
         cb->size = old_size;
 
         /* Release the previous pool */
-        pj_pool_release(cb->pool);
+        pj_pool_secure_release(&cb->pool);
 
         /* Update circular buffer members */
         cb->pool = pool;
@@ -1737,7 +1771,7 @@ static pj_status_t ssl_send (pj_ssl_sock_t *ssock,
                              unsigned flags)
 {
     pj_status_t status;
-    int nwritten;
+    int nwritten = 0;
 
     /* Write the plain data to SSL, after SSL encrypts it, the buffer will
      * contain the secured data to be sent via socket. Note that re-

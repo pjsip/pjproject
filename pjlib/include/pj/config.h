@@ -1077,6 +1077,9 @@
 /** Using Apple's Network framework */
 #define PJ_SSL_SOCK_IMP_APPLE       4
 
+/** Using Windows's Schannel */
+#define PJ_SSL_SOCK_IMP_SCHANNEL    5
+
 /**
  * Select which SSL socket implementation to use. Currently pjlib supports
  * PJ_SSL_SOCK_IMP_OPENSSL, which uses OpenSSL, and PJ_SSL_SOCK_IMP_GNUTLS,
