@@ -175,6 +175,17 @@ struct TlsConfig : public PersistentObject
     string              privKeyBuf;
 
     /**
+     * For Windows SSPI Schannel backend. This specifies the subject keyword
+     * used for searching certificate in OS certificate stores. The search
+     * will be performed in local machine and user account stores.
+     *
+     * The certificate will be used as client-side certificate for outgoing
+     * TLS connection, and server-side certificate for incoming TLS
+     * connection.
+     */
+    string              certSubject;
+
+    /**
      * TLS protocol method from #pjsip_ssl_method. In the future, this field
      * might be deprecated in favor of <b>proto</b> field. For now, this field 
      * is only applicable only when <b>proto</b> field is set to zero.

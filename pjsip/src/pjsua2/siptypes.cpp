@@ -192,6 +192,7 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.ca_buf           = str2Pj(this->CaBuf);
     ts.cert_buf         = str2Pj(this->certBuf);
     ts.privkey_buf      = str2Pj(this->privKeyBuf);
+    ts.cert_subject     = str2Pj(this->certSubject);
     ts.method           = this->method;
     ts.ciphers_num      = (unsigned)this->ciphers.size();
     ts.proto            = this->proto;
@@ -221,6 +222,7 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->CaBuf         = pj2Str(prm.ca_buf);
     this->certBuf       = pj2Str(prm.cert_buf);
     this->privKeyBuf    = pj2Str(prm.privkey_buf);
+    this->certSubject   = pj2Str(prm.cert_subject);
     this->method        = (pjsip_ssl_method)prm.method;
     this->proto         = prm.proto;
     // The following will only work if sizeof(enum)==sizeof(int)
@@ -256,6 +258,7 @@ void TlsConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_NUM_T   ( this_node, pj_qos_type, qosType);
     readQosParams     ( this_node, qosParams);
     NODE_READ_BOOL    ( this_node, qosIgnoreError);
+    NODE_READ_STRING  ( this_node, certSubject);
 }
 
 void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -278,6 +281,7 @@ void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_NUM_T   ( this_node, pj_qos_type, qosType);
     writeQosParams     ( this_node, qosParams);
     NODE_WRITE_BOOL    ( this_node, qosIgnoreError);
+    NODE_WRITE_STRING  ( this_node, certSubject);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

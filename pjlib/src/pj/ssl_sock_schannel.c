@@ -119,7 +119,9 @@ typedef struct sch_ssl_sock_t
 
     CredHandle            cred_handle;
     CtxtHandle            ctx_handle;
+    PCCERT_CONTEXT        cert_ctx;
     SecPkgContext_StreamSizes strm_sizes;
+
     pj_uint8_t           *write_buf;
     pj_size_t             write_buf_cap;
     pj_uint8_t           *read_buf;
@@ -281,6 +283,12 @@ static void ssl_destroy(pj_ssl_sock_t* ssock)
     circ_deinit(&ssock->circ_buf_input);
     circ_deinit(&ssock->circ_buf_output);
     circ_deinit(&sch_ssock->decrypted_buf);
+
+    /* Free certificate */
+    if (sch_ssock->cert_ctx) {
+        CertFreeCertificateContext(sch_ssock->cert_ctx);
+        sch_ssock->cert_ctx = NULL;
+    }
 
     sch_dec();
 }
@@ -488,7 +496,7 @@ static pj_status_t file_time_to_time_val(const FILETIME* file_time,
     if (!FileTimeToLocalFileTime(file_time, &local_file_time))
         return PJ_RETURN_OS_ERROR(GetLastError());
 
-    if (!FileTimeToSystemTime(file_time, &localTime))
+    if (!FileTimeToSystemTime(&local_file_time, &localTime))
         return PJ_RETURN_OS_ERROR(GetLastError());
 
     pj_bzero(&pt, sizeof(pt));
@@ -717,7 +725,45 @@ static PCCERT_CONTEXT create_self_signed_cert()
                                         &cert_ext);
     }
 
-    return sch_ssl.self_signed_cert;
+    return CertDuplicateCertificateContext(sch_ssl.self_signed_cert);
+}
+
+static PCCERT_CONTEXT find_cert_in_stores(const pj_str_t *subject)
+{
+    HCERTSTORE store = NULL;
+    PCCERT_CONTEXT cert = NULL;
+
+    /* Find in Current User store */
+    store = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING, 0,
+                          CERT_SYSTEM_STORE_CURRENT_USER, L"MY");
+    if (store) {
+        cert = CertFindCertificateInStore(store, X509_ASN_ENCODING,
+                        0, CERT_FIND_SUBJECT_STR_A, subject->ptr, NULL);
+        CertCloseStore(store, 0);
+        if (cert)
+            return cert;
+    } else {
+        log_sec_err(1, "Error opening current user cert store.",
+                    GetLastError());
+    }
+
+    /* Find in Local Machine store */
+    store = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING, 0,
+                          CERT_SYSTEM_STORE_LOCAL_MACHINE, L"MY");
+    if (store) {
+        cert = CertFindCertificateInStore(store, X509_ASN_ENCODING,
+                        0, CERT_FIND_SUBJECT_STR_A, subject->ptr, NULL);
+        CertCloseStore(store, 0);
+        if (cert)
+            return cert;
+    } else {
+        log_sec_err(1, "Error opening local machine cert store.",
+                    GetLastError());
+    }
+
+    PJ_LOG(1,(SENDER, "Cannot find certificate with specified subject: %.*s",
+              subject->slen, subject->ptr));
+    return NULL;
 }
 
 
@@ -734,21 +780,37 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
 
     /* Create credential handle, if not yet */
     if (!SecIsValidHandle(&sch_ssock->cred_handle)) {
-        PCCERT_CONTEXT cert_context;
         SCH_CREDENTIALS creds = { 0 };
 
         creds.dwVersion = SCH_CREDENTIALS_VERSION;
         creds.dwFlags = SCH_USE_STRONG_CRYPTO;
 
-        if (ssock->is_server && create_self_signed_cert()) {
-            cert_context = create_self_signed_cert();
-            creds.dwFlags |= SCH_CRED_MANUAL_CRED_VALIDATION;
-            creds.cCreds = 1;
-            creds.paCred = &cert_context;
+        if (ssock->param.cert_subject.slen && !sch_ssock->cert_ctx) {
+            /* Search certificate from stores */
+            sch_ssock->cert_ctx =
+                find_cert_in_stores(&ssock->param.cert_subject);
+        }
+
+        if (ssock->is_server) {
+            if (!ssock->param.cert_subject.slen) {
+                /* No certificate subject to search, use self-signed cert */
+                sch_ssock->cert_ctx = create_self_signed_cert();
+
+                // -- test code --
+                //pj_str_t test = {"test.pjsip.org", 14};
+                //sch_ssock->cert_ctx =
+                    //find_cert_in_stores(&test);
+            }
         } else {
             creds.dwFlags |= SCH_CRED_MANUAL_CRED_VALIDATION |
                              // SCH_CRED_AUTO_CRED_VALIDATION |
                              SCH_CRED_NO_DEFAULT_CREDS;
+        }
+
+        /* Use the certificate, if specified */
+        if (sch_ssock->cert_ctx) {
+            creds.cCreds = 1;
+            creds.paCred = &sch_ssock->cert_ctx;
         }
 
         ss = AcquireCredentialsHandle(NULL, UNISP_NAME,

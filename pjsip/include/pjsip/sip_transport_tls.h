@@ -189,6 +189,17 @@ typedef struct pjsip_tls_setting
     pj_ssl_cert_buffer privkey_buf;
 
     /**
+     * For Windows SSPI Schannel backend. This specifies the subject keyword
+     * used for searching certificate in OS certificate stores. The search
+     * will be performed in local machine and user account stores.
+     *
+     * The certificate will be used as client-side certificate for outgoing
+     * TLS connection, and server-side certificate for incoming TLS
+     * connection.
+     */
+    pj_str_t    cert_subject;
+
+    /**
      * Password to open private key.
      */
     pj_str_t    password;
@@ -466,6 +477,7 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->ca_list_path, &src->ca_list_path);
     pj_strdup_with_null(pool, &dst->cert_file, &src->cert_file);
     pj_strdup_with_null(pool, &dst->privkey_file, &src->privkey_file);
+    pj_strdup_with_null(pool, &dst->cert_subject, &src->cert_subject);
     pj_strdup_with_null(pool, &dst->password, &src->password);
     pj_strdup_with_null(pool, &dst->sigalgs, &src->sigalgs);
     pj_strdup_with_null(pool, &dst->entropy_path, &src->entropy_path);

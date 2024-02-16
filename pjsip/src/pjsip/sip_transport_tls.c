@@ -351,6 +351,7 @@ static void set_ssock_param(pj_ssl_sock_param *ssock_param,
     sip_ssl_method = listener->tls_setting.method;
     sip_ssl_proto = listener->tls_setting.proto;
     ssock_param->proto = ssl_get_proto(sip_ssl_method, sip_ssl_proto);
+    ssock_param->cert_subject = listener->tls_setting.cert_subject;
 }
 
 static void update_bound_addr(struct tls_listener *listener,

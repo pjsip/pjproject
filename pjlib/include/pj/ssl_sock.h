@@ -1042,6 +1042,17 @@ typedef struct pj_ssl_sock_param
     pj_str_t server_name;
 
     /**
+     * For Windows SSPI Schannel backend. This specifies the subject keyword
+     * used for searching certificate in OS certificate stores. The search
+     * will be performed in local machine and user account stores.
+     *
+     * The certificate will be used as client-side certificate for outgoing
+     * TLS connection, and server-side certificate for incoming TLS
+     * connection.
+     */
+    pj_str_t    cert_subject;
+
+    /**
      * Specify if SO_REUSEADDR should be used for listening socket. This
      * option will only be used with accept() operation.
      *
