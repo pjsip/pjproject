@@ -46,7 +46,7 @@
 #define THIS_FILE "ssl_sock_schannel.c"
 
 /* Sender string in logging */
-#define SENDER "Schannel"
+#define SENDER    "ssl_schannel"
 
 /* Debugging */
 #define DEBUG_SCHANNEL  0
@@ -106,6 +106,7 @@ static struct sch_ssl_t
     pj_caching_pool   cp;
     pj_pool_t        *pool;
     unsigned long     init_cnt;
+    PCCERT_CONTEXT    self_signed_cert;
 } sch_ssl;
 
 
@@ -120,7 +121,9 @@ typedef struct sch_ssl_sock_t
     CtxtHandle            ctx_handle;
     SecPkgContext_StreamSizes strm_sizes;
     pj_uint8_t           *write_buf;
+    pj_size_t             write_buf_cap;
     pj_uint8_t           *read_buf;
+    pj_size_t             read_buf_cap;
     circ_buf_t            decrypted_buf;
 } sch_ssl_sock_t;
 
@@ -132,6 +135,9 @@ typedef struct sch_ssl_sock_t
 
 static void sch_deinit(void)
 {
+    if (sch_ssl.self_signed_cert)
+        CertFreeCertificateContext(sch_ssl.self_signed_cert);
+
     if (sch_ssl.pool) {
         pj_pool_secure_release(&sch_ssl.pool);
         pj_caching_pool_destroy(&sch_ssl.cp);
@@ -218,35 +224,42 @@ static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
 static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 {
     sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
-    pj_ssize_t read_cap;
+    pj_pool_factory* pf = ssock->pool->factory;
+    pj_pool_t* pool = ssock->pool;
+    pj_ssize_t read_cap, write_cap;
     pj_status_t status = PJ_SUCCESS;
 
-    read_cap = PJ_MAX(MIN_READ_BUF_CAP, ssock->param.read_buffer_size);
+    read_cap  = PJ_MAX(MIN_READ_BUF_CAP,  ssock->param.read_buffer_size);
+    write_cap = PJ_MAX(MIN_WRITE_BUF_CAP, ssock->param.send_buffer_size);
 
     /* Allocate read buffer */
-    sch_ssock->read_buf =
-        (pj_uint8_t*)pj_pool_zalloc(ssock->pool, read_cap);
+    sch_ssock->read_buf_cap = read_cap;
+    sch_ssock->read_buf = (pj_uint8_t*)pj_pool_zalloc(pool, read_cap);
     if (!sch_ssock->read_buf) {
         status = PJ_ENOMEM;
         goto on_return;
     }
 
+    /* Allocate write buffer */
+    sch_ssock->write_buf_cap = write_cap;
+    sch_ssock->write_buf = (pj_uint8_t*)pj_pool_zalloc(pool, write_cap);
+    if (!sch_ssock->write_buf) {
+        status = PJ_ENOMEM;
+        goto on_return;
+    }
+
     /* Initialize input circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_input,
-                       read_cap);
+    status = circ_init(pf, &ssock->circ_buf_input, read_cap);
     if (status != PJ_SUCCESS)
         goto on_return;
 
     /* Initialize output circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_output,
-                       PJ_MAX(MIN_WRITE_BUF_CAP,
-                              ssock->param.send_buffer_size));
+    status = circ_init(pf, &ssock->circ_buf_output, write_cap);
     if (status != PJ_SUCCESS)
         goto on_return;
 
     /* Initialize decrypted circular buffer */
-    status = circ_init(ssock->pool->factory, &sch_ssock->decrypted_buf,
-                       read_cap);
+    status = circ_init(pf, &sch_ssock->decrypted_buf, read_cap);
     if (status != PJ_SUCCESS)
         goto on_return;
 
@@ -300,13 +313,14 @@ static void ssl_reset_sock_state(pj_ssl_sock_t* ssock)
 
         SecBuffer buf_out[1] = { {0} };
         buf_out[0].BufferType = SECBUFFER_TOKEN;
+        buf_out[0].pvBuffer = sch_ssock->write_buf;
+        buf_out[0].cbBuffer = (ULONG)sch_ssock->write_buf_cap;
         SecBufferDesc buf_desc_out = { 0 };
         buf_desc_out.ulVersion = SECBUFFER_VERSION;
         buf_desc_out.cBuffers = ARRAYSIZE(buf_out);
         buf_desc_out.pBuffers = buf_out;
 
         DWORD flags =
-            ISC_REQ_ALLOCATE_MEMORY |
             ISC_REQ_CONFIDENTIALITY |
             ISC_REQ_REPLAY_DETECT |
             ISC_REQ_SEQUENCE_DETECT |
@@ -326,10 +340,9 @@ static void ssl_reset_sock_state(pj_ssl_sock_t* ssock)
                 status = circ_write(&ssock->circ_buf_output,
                                     buf_out[0].pvBuffer,
                                     buf_out[0].cbBuffer);
-                FreeContextBuffer(buf_out[0].pvBuffer);
                 if (status != PJ_SUCCESS) {
                     PJ_PERROR(1, (SENDER, status,
-                        "Failed queueing handshake packets"));
+                        "Failed to queuehandshake packets"));
                 } else {
                     flush_circ_buf_output(ssock, &ssock->shutdown_op_key,
                                           0, 0);
@@ -458,7 +471,7 @@ static pj_status_t blob_to_str(DWORD enc_type, CERT_NAME_BLOB* blob,
     DWORD ret;
     ret = CertNameToStrA(enc_type, blob, flag, buf, buf_len);
     if (ret < 0) {
-        PJ_LOG(3,(SENDER, "Failed convert cert blob to string"));
+        PJ_LOG(3,(SENDER, "Failed to convert cert blob to string"));
         return PJ_ETOOSMALL;
     }
     return PJ_SUCCESS;
@@ -581,7 +594,7 @@ static void cert_parse_info(pj_pool_t* pool, pj_ssl_cert_info* ci,
                                         pool, alt_name_info->cAltEntry,
                                         sizeof(*ci->subj_alt_name.entry));
         if (!ci->subj_alt_name.entry) {
-            PJ_LOG(3,(SENDER, "Failed allocate memory for subject alt name"));
+            PJ_LOG(3,(SENDER, "Failed to allocate memory for SubjectAltName"));
             LocalFree(alt_name_info);
             break;
         }
@@ -648,9 +661,22 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
                                 &cert_ctx);
 
     if (ss != SEC_E_OK || !cert_ctx) {
-        log_sec_err(3, "Failed getting remote certificate", ss);
+        if (!ssock->is_server)
+            log_sec_err(1, "Failed to retrieve remote certificate", ss);
     } else {
         cert_parse_info(ssock->pool, &ssock->remote_cert_info, cert_ctx);
+    }
+
+    ss = QueryContextAttributes(&sch_ssock->ctx_handle,
+                                SECPKG_ATTR_LOCAL_CERT_CONTEXT,
+                                &cert_ctx);
+
+    if (ss != SEC_E_OK || !cert_ctx) {
+        if (ssock->is_server)
+            log_sec_err(3, "Failed to retrieve local certificate", ss);
+    }
+    else {
+        cert_parse_info(ssock->pool, &ssock->local_cert_info, cert_ctx);
     }
 }
 
@@ -671,25 +697,27 @@ static void ssl_set_peer_name(pj_ssl_sock_t* ssock)
 
 static PCCERT_CONTEXT create_self_signed_cert()
 {
-    PCCERT_CONTEXT cert_ctx = NULL;
-    CERT_EXTENSIONS cert_ext = { 0 };
+    if (!sch_ssl.self_signed_cert) {
+        CERT_EXTENSIONS cert_ext = { 0 };
+        BYTE cert_name_buffer[64];
+        CERT_NAME_BLOB cert_name;
+        cert_name.pbData = cert_name_buffer;
+        cert_name.cbData = ARRAYSIZE(cert_name_buffer);
 
-    BYTE cert_name_buffer[16];
-    CERT_NAME_BLOB cert_name;
-    cert_name.pbData = cert_name_buffer;
-    cert_name.cbData = ARRAYSIZE(cert_name_buffer);
+        if (!CertStrToNameA(X509_ASN_ENCODING, "CN=lab.pjsip.org",
+                            CERT_X500_NAME_STR, NULL,
+                            cert_name.pbData, &cert_name.cbData, NULL))
+        {
+            return NULL;
+        }
 
-    if (!CertStrToName(X509_ASN_ENCODING, "", CERT_X500_NAME_STR, NULL,
-                       cert_name.pbData, &cert_name.cbData, NULL))
-    {
-        return NULL;
+        sch_ssl.self_signed_cert = CertCreateSelfSignCertificate(
+                                        0, &cert_name, 0, NULL,
+                                        NULL, NULL, NULL,
+                                        &cert_ext);
     }
 
-    cert_ctx = CertCreateSelfSignCertificate(
-                                    0, &cert_name, 0, NULL,
-                                    NULL, NULL, NULL, &cert_ext);
-
-    return cert_ctx;
+    return sch_ssl.self_signed_cert;
 }
 
 
@@ -706,13 +734,14 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
 
     /* Create credential handle, if not yet */
     if (!SecIsValidHandle(&sch_ssock->cred_handle)) {
+        PCCERT_CONTEXT cert_context;
         SCH_CREDENTIALS creds = { 0 };
 
         creds.dwVersion = SCH_CREDENTIALS_VERSION;
         creds.dwFlags = SCH_USE_STRONG_CRYPTO;
 
-        if (ssock->is_server) {
-            PCCERT_CONTEXT cert_context = create_self_signed_cert();
+        if (ssock->is_server && create_self_signed_cert()) {
+            cert_context = create_self_signed_cert();
             creds.dwFlags |= SCH_CRED_MANUAL_CRED_VALIDATION;
             creds.cCreds = 1;
             creds.paCred = &cert_context;
@@ -727,7 +756,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
                 NULL, &creds, NULL, NULL,
                 &sch_ssock->cred_handle, NULL);
         if (ss < 0) {
-            log_sec_err(1, "Failed AcquireCredentialsHandle()", ss);
+            log_sec_err(1, "Failed in AcquireCredentialsHandle()", ss);
             status = PJ_EUNKNOWN;
             goto on_return;
         }
@@ -739,7 +768,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
 
     if (!circ_empty(&ssock->circ_buf_input)) {
         data_in = sch_ssock->read_buf;
-        data_in_size = PJ_MIN(MIN_READ_BUF_CAP,
+        data_in_size = PJ_MIN(sch_ssock->read_buf_cap,
                               circ_size(&ssock->circ_buf_input));
         circ_read(&ssock->circ_buf_input, data_in, data_in_size);
     }
@@ -747,7 +776,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
     SecBuffer buf_in[2] = { {0} };
     buf_in[0].BufferType = SECBUFFER_TOKEN;
     buf_in[0].pvBuffer = data_in;
-    buf_in[0].cbBuffer = (unsigned long)data_in_size;
+    buf_in[0].cbBuffer = (ULONG)data_in_size;
     buf_in[1].BufferType = SECBUFFER_EMPTY;
     SecBufferDesc buf_desc_in = { 0 };
     buf_desc_in.ulVersion = SECBUFFER_VERSION;
@@ -756,6 +785,8 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
 
     SecBuffer buf_out[1] = { {0} };
     buf_out[0].BufferType = SECBUFFER_TOKEN;
+    buf_out[0].pvBuffer = sch_ssock->write_buf;
+    buf_out[0].cbBuffer = (ULONG)sch_ssock->write_buf_cap;
     SecBufferDesc buf_desc_out = { 0 };
     buf_desc_out.ulVersion = SECBUFFER_VERSION;
     buf_desc_out.cBuffers = ARRAYSIZE(buf_out);
@@ -765,7 +796,6 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
     if (!ssock->is_server) {
         DWORD flags =
             ISC_REQ_USE_SUPPLIED_CREDS |
-            ISC_REQ_ALLOCATE_MEMORY |
             ISC_REQ_CONFIDENTIALITY |
             ISC_REQ_REPLAY_DETECT |
             ISC_REQ_SEQUENCE_DETECT |
@@ -787,7 +817,6 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
     /* As server */
     else {
         DWORD flags =
-            ASC_REQ_ALLOCATE_MEMORY |
             ASC_REQ_CONFIDENTIALITY |
             ASC_REQ_REPLAY_DETECT |
             ASC_REQ_SEQUENCE_DETECT |
@@ -820,27 +849,20 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
                                     SECPKG_ATTR_STREAM_SIZES,
                                     &sch_ssock->strm_sizes);
         if (ss != SEC_E_OK) {
-            log_sec_err(1, "Failed querying stream sizes", ss);
+            log_sec_err(1, "Failed to query stream sizes", ss);
             ssl_reset_sock_state(ssock);
             status = PJ_EUNKNOWN;
         }
 
-        /* Allocate SSL write buf, if not yet */
+        /* Adjust maximum message size to our allocated buffer size */
         if (!sch_ssock->write_buf) {
-            pj_size_t size;
+            pj_size_t max_msg = sch_ssock->write_buf_cap -
+                                sch_ssock->strm_sizes.cbHeader -
+                                sch_ssock->strm_sizes.cbTrailer;
 
             sch_ssock->strm_sizes.cbMaximumMessage =
-                PJ_MIN(sch_ssock->strm_sizes.cbMaximumMessage,
-                       (unsigned long)ssock->param.send_buffer_size);
-            sch_ssock->strm_sizes.cbMaximumMessage =
-                PJ_MAX(MIN_WRITE_BUF_CAP,
-                       sch_ssock->strm_sizes.cbMaximumMessage);
-
-            size = (pj_size_t)sch_ssock->strm_sizes.cbHeader +
-                   sch_ssock->strm_sizes.cbMaximumMessage +
-                   sch_ssock->strm_sizes.cbTrailer;
-            sch_ssock->write_buf = (pj_uint8_t*)
-                                    pj_pool_zalloc(ssock->pool, size);
+                            PJ_MIN((ULONG)max_msg,
+                                   sch_ssock->strm_sizes.cbMaximumMessage);
         }
     }
 
@@ -879,14 +901,15 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
 
     pj_lock_release(ssock->circ_buf_input_mutex);
 
-    if (buf_out[0].cbBuffer > 0 && buf_out[0].pvBuffer) {
+    if ((ss == SEC_E_OK || ss == SEC_I_CONTINUE_NEEDED) &&
+        buf_out[0].cbBuffer > 0 && buf_out[0].pvBuffer)
+    {
         /* Queue output data to send */
         status2 = circ_write(&ssock->circ_buf_output, buf_out[0].pvBuffer,
                              buf_out[0].cbBuffer);
-        FreeContextBuffer(buf_out[0].pvBuffer);
         if (status2 != PJ_SUCCESS) {
             PJ_PERROR(1,(SENDER, status2,
-                         "Failed queueing handshake packets"));
+                         "Failed to queue handshake packets"));
             status = status2;
         }
     }
@@ -894,7 +917,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
     /* Send handshake packets to wire */
     status2 = flush_circ_buf_output(ssock, &ssock->handshake_op_key, 0, 0);
     if (status2 != PJ_SUCCESS && status2 != PJ_EPENDING) {
-        PJ_PERROR(1,(SENDER, status2, "Failed sending handshake packets"));
+        PJ_PERROR(1,(SENDER, status2, "Failed to send handshake packets"));
         status = status2;
     }
 
@@ -956,7 +979,8 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
     /* Decrypt data of network input buffer */
     if (!circ_empty(&ssock->circ_buf_input)) {
         data_ = sch_ssock->read_buf;
-        size_ = PJ_MIN(MIN_READ_BUF_CAP, circ_size(&ssock->circ_buf_input));
+        size_ = PJ_MIN(sch_ssock->read_buf_cap,
+                       circ_size(&ssock->circ_buf_input));
         circ_read(&ssock->circ_buf_input, data_, size_);
     } else {
         LOG_DEBUG2("Read %d: no data to decrypt, returned %d.",
@@ -968,7 +992,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
     SecBuffer buf[4] = { {0} };
     buf[0].BufferType = SECBUFFER_DATA;
     buf[0].pvBuffer = data_;
-    buf[0].cbBuffer = (unsigned long)size_;
+    buf[0].cbBuffer = (ULONG)size_;
     buf[1].BufferType = SECBUFFER_EMPTY;
     buf[2].BufferType = SECBUFFER_EMPTY;
     buf[3].BufferType = SECBUFFER_EMPTY;
@@ -1085,7 +1109,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t* ssock, const void* data,
         buf[0].cbBuffer = sch_ssock->strm_sizes.cbHeader;
         buf[1].BufferType = SECBUFFER_DATA;
         buf[1].pvBuffer = p_data;
-        buf[1].cbBuffer = (unsigned long)write_len;
+        buf[1].cbBuffer = (ULONG)write_len;
         buf[2].BufferType = SECBUFFER_STREAM_TRAILER;
         buf[2].pvBuffer = p_trailer;
         buf[2].cbBuffer = sch_ssock->strm_sizes.cbTrailer;
@@ -1110,7 +1134,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t* ssock, const void* data,
                             out_size);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(1, (SENDER, status,
-                          "Failed queueing outgoing packets"));
+                          "Failed to queue outgoing packets"));
             break;
         }
 
