@@ -24,13 +24,11 @@
 #include <pj/log.h>
 #include <pj/pool.h>
 
+#define THIS_FILE   "resample.c"
 
 #if PJMEDIA_RESAMPLE_IMP==PJMEDIA_RESAMPLE_LIBRESAMPLE
 
 #include <third_party/resample/include/resamplesubs.h>
-
-#define THIS_FILE   "resample.c"
-
 
 
 struct pjmedia_resample
