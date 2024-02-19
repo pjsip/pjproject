@@ -320,8 +320,8 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     PJ_UNUSED_ARG(samples_per_frame);
     PJ_UNUSED_ARG(p_resample);
 
-    PJ_LOG(3, (THIS_FILE, "Resampler creation cancelled due to missing"
-                          "resample implementation");
+    PJ_LOG(3, (THIS_FILE, "No resampler created (sample rate conversion is "
+                          "disabled or no resample implementation selected)"));
     return PJ_EINVALIDOP;
 }
 
