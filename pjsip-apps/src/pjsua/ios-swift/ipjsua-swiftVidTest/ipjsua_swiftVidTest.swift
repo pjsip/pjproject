@@ -10,6 +10,15 @@ final class ipjsua_swiftVidTest: XCTestCase {
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
 
+        // Add an interruption monitor to handle system alerts
+        addUIInterruptionMonitor(withDescription: "Allow network permission") { (alert) -> Bool in
+            if alert.buttons["Allow"].exists {
+                alert.buttons["Allow"].tap()
+                return true
+            }
+            return false
+        }
+
         // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
 
