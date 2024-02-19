@@ -79,6 +79,8 @@ struct ContentView: View {
                     Text("Destination:")
                     TextField(pjsip_vars.dest, text: $pjsip_vars.dest)
                         .frame(minWidth:0, maxWidth:200)
+                } else if (pjsip_vars.vid_win != nil) {
+                    Text("Video")
                 }
             }
 

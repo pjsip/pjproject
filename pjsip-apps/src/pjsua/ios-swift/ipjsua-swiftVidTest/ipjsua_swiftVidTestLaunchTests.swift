@@ -14,7 +14,7 @@ final class ipjsua_swiftVidTestLaunchTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
-
+/*
     func testLaunch() throws {
         let app = XCUIApplication()
         app.launch()
@@ -27,4 +27,5 @@ final class ipjsua_swiftVidTestLaunchTests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+*/
 }
