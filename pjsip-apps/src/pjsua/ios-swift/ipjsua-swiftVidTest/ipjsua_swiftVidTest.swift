@@ -12,8 +12,8 @@ final class ipjsua_swiftVidTest: XCTestCase {
 
         // Add an interruption monitor to handle system alerts
         addUIInterruptionMonitor(withDescription: "Allow network permission") { (alert) -> Bool in
-            if alert.buttons["Allow"].exists {
-                alert.buttons["Allow"].tap()
+            if alert.buttons["OK"].exists {
+                alert.buttons["OK"].tap()
                 return true
             }
             return false
