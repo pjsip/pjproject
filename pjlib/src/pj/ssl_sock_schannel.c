@@ -135,48 +135,44 @@ typedef struct sch_ssl_sock_t
 
 /* === Helper functions === */
 
-static void sch_deinit(void)
+#define PJ_SSL_ERRNO_START              (PJ_ERRNO_START_USER + \
+                                         PJ_ERRNO_SPACE_SIZE*6)
+
+static pj_status_t sec_err_to_pj(SECURITY_STATUS ss)
 {
-    if (sch_ssl.self_signed_cert)
-        CertFreeCertificateContext(sch_ssl.self_signed_cert);
+    DWORD err = ss & 0xFFFF;
 
-    if (sch_ssl.pool) {
-        pj_pool_secure_release(&sch_ssl.pool);
-        pj_caching_pool_destroy(&sch_ssl.cp);
-    }
+    /* Make sure it does not exceed PJ_ERRNO_SPACE_SIZE */
+    if (err >= PJ_ERRNO_SPACE_SIZE)
+        return PJ_EUNKNOWN;
 
-    pj_bzero(&sch_ssl, sizeof(sch_ssl));
+    return PJ_SSL_ERRNO_START + err;
 }
 
-static void sch_inc()
+static SECURITY_STATUS sec_err_from_pj(pj_status_t status)
 {
-    if (++sch_ssl.init_cnt == 1 && sch_ssl.pool == NULL) {
-        pj_caching_pool_init(&sch_ssl.cp, NULL, 0);
-        sch_ssl.pool = pj_pool_create(&sch_ssl.cp.factory, "sch%p",
-                                      512, 512, NULL);
-        if (pj_atexit(&sch_deinit) != PJ_SUCCESS) {
-            PJ_LOG(1,(SENDER, "Failed to register atexit() for Schannel."));
-        }
+    /* Make sure it is within SSL error space */
+    if (status < PJ_SSL_ERRNO_START ||
+        status >= PJ_SSL_ERRNO_START + PJ_ERRNO_SPACE_SIZE)
+    {
+        return ERROR_INVALID_DATA;
     }
-}
 
-static void sch_dec()
-{
-    pj_assert(sch_ssl.init_cnt > 0);
-    --sch_ssl.init_cnt;
+    return 0x80090000 + (status - PJ_SSL_ERRNO_START);
 }
 
 /* Print Schannel error to log */
-void log_sec_err(int log_level, const char* title, SECURITY_STATUS ss)
+static void log_sec_err(int log_level, const char* title, SECURITY_STATUS ss)
 {
-    char *str;
+    char *str = NULL;
     DWORD len;
     len = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
                          FORMAT_MESSAGE_FROM_SYSTEM |
                          FORMAT_MESSAGE_IGNORE_INSERTS,
-                         NULL, ss, 0, (LPTSTR)&str, 0, NULL);
+                         NULL, ss, 0, (LPSTR)&str, 0, NULL);
     /* Trim new line chars */
-    while (str[len-1] == '\r' || str[len-1] == '\n') str[--len] = 0;
+    while (len > 0 && (str[len-1] == '\r' || str[len-1] == '\n'))
+        str[--len] = 0;
 
     switch (log_level) {
     case 1:
@@ -200,6 +196,59 @@ void log_sec_err(int log_level, const char* title, SECURITY_STATUS ss)
     }
 
     LocalFree(str);
+}
+
+static pj_str_t sch_err_print(pj_status_t e, char *msg, pj_size_t max)
+{
+    DWORD len;
+    SECURITY_STATUS ss = sec_err_from_pj(e);
+    pj_str_t pjstr = {0};
+
+    len = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM |
+                         FORMAT_MESSAGE_IGNORE_INSERTS,
+                         NULL, ss, 0, (LPSTR)msg, (DWORD)max, NULL);
+
+    /* Trim new line chars */
+    while (len > 0 && (msg[len-1] == '\r' || msg[len-1] == '\n'))
+        msg[--len] = 0;
+
+    pj_strset(&pjstr, msg, len);
+
+    return pjstr;
+}
+
+static void sch_deinit(void)
+{
+    if (sch_ssl.self_signed_cert)
+        CertFreeCertificateContext(sch_ssl.self_signed_cert);
+
+    if (sch_ssl.pool) {
+        pj_pool_secure_release(&sch_ssl.pool);
+        pj_caching_pool_destroy(&sch_ssl.cp);
+    }
+
+    pj_bzero(&sch_ssl, sizeof(sch_ssl));
+}
+
+static void sch_inc()
+{
+    if (++sch_ssl.init_cnt == 1 && sch_ssl.pool == NULL) {
+        pj_caching_pool_init(&sch_ssl.cp, NULL, 0);
+        sch_ssl.pool = pj_pool_create(&sch_ssl.cp.factory, "sch%p",
+                                      512, 512, NULL);
+        if (pj_atexit(&sch_deinit) != PJ_SUCCESS) {
+            PJ_LOG(1,(SENDER, "Failed to register atexit() for Schannel."));
+        }
+
+        pj_register_strerror(PJ_SSL_ERRNO_START, PJ_ERRNO_SPACE_SIZE,
+                             &sch_err_print);
+    }
+}
+
+static void sch_dec()
+{
+    pj_assert(sch_ssl.init_cnt > 0);
+    --sch_ssl.init_cnt;
 }
 
 
@@ -408,10 +457,10 @@ static void ssl_ciphers_populate()
                            tmp_buf, sizeof(tmp_buf));
         pj_strdup2_with_null(sch_ssl.pool, &tmp_st, tmp_buf);
 
-        /* Unfortunately we cannot get the ID, set ID to 0 for now,
-         * may be updated later.
+        /* Unfortunately we do not get the ID here.
+         * Let's just set ID to (0x8000000 + i) for now.
          */
-        ssl_ciphers[ssl_cipher_num].id = 0;
+        ssl_ciphers[ssl_cipher_num].id = 0x8000000 + i;
         ssl_ciphers[ssl_cipher_num].name = tmp_st.ptr;
         ++ssl_cipher_num;
     }
@@ -445,15 +494,17 @@ static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock)
             pj_unicode_to_ansi(ci.szCipherSuite, SZ_ALG_MAX_SIZE,
                                tmp_buf, sizeof(tmp_buf));
 
-            /* If cipher is in the list but ID is 0, update it
-             * (we init'd cipher list without ID)
+            /* If cipher is actually in the list and:
+             * - if ID is 0, update it, or
+             * - if ID does not match, return ID from our list.
              */
             for (i = 0; i < ssl_cipher_num; ++i) {
                 if (!pj_ansi_stricmp(ssl_ciphers[i].name, tmp_buf)) {
-                    if (ssl_ciphers[i].id == 0) {
+                    if (ssl_ciphers[i].id == 0)
                         ssl_ciphers[i].id = c;
-                        break;
-                    }
+                    else
+                        c = ssl_ciphers[i].id;
+                    break;
                 }
             }
 
@@ -673,6 +724,7 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
             log_sec_err(1, "Failed to retrieve remote certificate", ss);
     } else {
         cert_parse_info(ssock->pool, &ssock->remote_cert_info, cert_ctx);
+        CertFreeCertificateContext(cert_ctx);
     }
 
     ss = QueryContextAttributes(&sch_ssock->ctx_handle,
@@ -685,6 +737,7 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
     }
     else {
         cert_parse_info(ssock->pool, &ssock->local_cert_info, cert_ctx);
+        CertFreeCertificateContext(cert_ctx);
     }
 }
 
@@ -725,6 +778,7 @@ static PCCERT_CONTEXT create_self_signed_cert()
                                         &cert_ext);
     }
 
+    /* May return NULL on any failure */
     return CertDuplicateCertificateContext(sch_ssl.self_signed_cert);
 }
 
@@ -767,6 +821,105 @@ static PCCERT_CONTEXT find_cert_in_stores(const pj_str_t *subject)
 }
 
 
+static pj_status_t init_creds(pj_ssl_sock_t* ssock)
+{
+    sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
+    SCH_CREDENTIALS creds = { 0 };
+    unsigned param_cnt = 0;
+    TLS_PARAMETERS params[1] = {{0}};
+    SECURITY_STATUS ss;
+
+    creds.dwVersion = SCH_CREDENTIALS_VERSION;
+    creds.dwFlags = SCH_USE_STRONG_CRYPTO;
+
+    /* Setup Protocol version */
+    if (ssock->param.proto != PJ_SSL_SOCK_PROTO_DEFAULT &&
+        ssock->param.proto != PJ_SSL_SOCK_PROTO_ALL)
+    {
+        DWORD tmp = 0;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
+            tmp |= ssock->is_server ? SP_PROT_TLS1_3_SERVER :
+                                      SP_PROT_TLS1_3_CLIENT;
+        }
+        if ((ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) == 0) {
+            tmp |= ssock->is_server ? SP_PROT_TLS1_2_SERVER :
+                                      SP_PROT_TLS1_2_CLIENT;
+        }
+        if ((ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1) == 0) {
+            tmp |= ssock->is_server ? SP_PROT_TLS1_1_SERVER :
+                                      SP_PROT_TLS1_1_CLIENT;
+        }
+        if ((ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) == 0) {
+            tmp |= ssock->is_server ? SP_PROT_TLS1_0_SERVER :
+                                      SP_PROT_TLS1_0_CLIENT;
+        }
+        if ((ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) == 0) {
+            tmp |= ssock->is_server ? SP_PROT_SSL3_SERVER :
+                                      SP_PROT_SSL3_CLIENT;
+        }
+        if ((ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL2) == 0) {
+            tmp |= ssock->is_server ? SP_PROT_SSL2_SERVER :
+                                      SP_PROT_SSL2_CLIENT;
+        }
+        if (tmp) {
+            param_cnt = 1;
+            params[0].grbitDisabledProtocols = SP_PROT_ALL & ~tmp;
+        }
+    }
+
+    /* Setup the TLS certificate */
+    if (ssock->param.cert_subject.slen && !sch_ssock->cert_ctx) {
+        /* Search certificate from stores */
+        sch_ssock->cert_ctx =
+            find_cert_in_stores(&ssock->param.cert_subject);
+    }
+
+    if (ssock->is_server) {
+        if (!ssock->param.cert_subject.slen) {
+            /* No certificate subject specified, use self-signed cert */
+            sch_ssock->cert_ctx = create_self_signed_cert();
+
+            // -- test code --
+            //pj_str_t test = {"test.pjsip.org", 14};
+            //sch_ssock->cert_ctx =
+            //find_cert_in_stores(&test);
+        }
+    } else {
+        creds.dwFlags |= SCH_CRED_NO_DEFAULT_CREDS;
+    }
+
+    /* Verification */
+    if (!ssock->is_server) {
+        if (ssock->param.verify_peer)
+            creds.dwFlags |= SCH_CRED_AUTO_CRED_VALIDATION;
+        else
+            creds.dwFlags |= SCH_CRED_MANUAL_CRED_VALIDATION;
+    }
+
+    if (sch_ssock->cert_ctx) {
+        creds.cCreds = 1;
+        creds.paCred = &sch_ssock->cert_ctx;
+    }
+
+    /* Now init the credentials */
+    if (param_cnt) {
+        creds.cTlsParameters = param_cnt;
+        creds.pTlsParameters = params;
+    }
+
+    ss = AcquireCredentialsHandle(NULL, UNISP_NAME,
+                                  ssock->is_server? SECPKG_CRED_INBOUND :
+                                                    SECPKG_CRED_OUTBOUND,
+                                  NULL, &creds, NULL, NULL,
+                                  &sch_ssock->cred_handle, NULL);
+    if (ss < 0) {
+        log_sec_err(1, "Failed in AcquireCredentialsHandle()", ss);
+        return sec_err_to_pj(ss);
+    }
+
+    return PJ_SUCCESS;
+}
+
 static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
 {
     sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
@@ -780,46 +933,9 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
 
     /* Create credential handle, if not yet */
     if (!SecIsValidHandle(&sch_ssock->cred_handle)) {
-        SCH_CREDENTIALS creds = { 0 };
-
-        creds.dwVersion = SCH_CREDENTIALS_VERSION;
-        creds.dwFlags = SCH_USE_STRONG_CRYPTO;
-
-        if (ssock->param.cert_subject.slen && !sch_ssock->cert_ctx) {
-            /* Search certificate from stores */
-            sch_ssock->cert_ctx =
-                find_cert_in_stores(&ssock->param.cert_subject);
-        }
-
-        if (ssock->is_server) {
-            if (!ssock->param.cert_subject.slen) {
-                /* No certificate subject to search, use self-signed cert */
-                sch_ssock->cert_ctx = create_self_signed_cert();
-
-                // -- test code --
-                //pj_str_t test = {"test.pjsip.org", 14};
-                //sch_ssock->cert_ctx =
-                    //find_cert_in_stores(&test);
-            }
-        } else {
-            creds.dwFlags |= SCH_CRED_MANUAL_CRED_VALIDATION |
-                             // SCH_CRED_AUTO_CRED_VALIDATION |
-                             SCH_CRED_NO_DEFAULT_CREDS;
-        }
-
-        /* Use the certificate, if specified */
-        if (sch_ssock->cert_ctx) {
-            creds.cCreds = 1;
-            creds.paCred = &sch_ssock->cert_ctx;
-        }
-
-        ss = AcquireCredentialsHandle(NULL, UNISP_NAME,
-                ssock->is_server? SECPKG_CRED_INBOUND : SECPKG_CRED_OUTBOUND,
-                NULL, &creds, NULL, NULL,
-                &sch_ssock->cred_handle, NULL);
-        if (ss < 0) {
-            log_sec_err(1, "Failed in AcquireCredentialsHandle()", ss);
-            status = PJ_EUNKNOWN;
+        status2 = init_creds(ssock);
+        if (status2 != PJ_SUCCESS) {
+            status = status2;
             goto on_return;
         }
     }
@@ -884,6 +1000,9 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
             ASC_REQ_SEQUENCE_DETECT |
             ASC_REQ_STREAM;
 
+        if (ssock->param.require_client_cert)
+            flags |= ASC_REQ_MUTUAL_AUTH;
+
         ss = AcceptSecurityContext(
                     &sch_ssock->cred_handle,
                     SecIsValidHandle(&sch_ssock->ctx_handle) ?
@@ -913,7 +1032,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
         if (ss != SEC_E_OK) {
             log_sec_err(1, "Failed to query stream sizes", ss);
             ssl_reset_sock_state(ssock);
-            status = PJ_EUNKNOWN;
+            status = sec_err_to_pj(ss);
         }
 
         /* Adjust maximum message size to our allocated buffer size */
@@ -938,7 +1057,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
         ss = CompleteAuthToken(&sch_ssock->ctx_handle, &buf_desc_out);
         if (ss != SEC_E_OK) {
             log_sec_err(1, "Handshake error in CompleteAuthToken()", ss);
-            status = PJ_EUNKNOWN;
+            status = sec_err_to_pj(ss);
         }
     }
 
@@ -958,7 +1077,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
     else {
         /* Handshake failed */
         log_sec_err(1, "Handshake failed!", ss);
-        status = PJ_EUNKNOWN;
+        status = sec_err_to_pj(ss);
     }
 
     pj_lock_release(ssock->circ_buf_input_mutex);
@@ -1083,14 +1202,14 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
                 len -= need;
                 p += need;
 
-                /* Store any excess to the decrypted buffer */
+                /* Store any excess in the decrypted buffer */
                 if (len)
                     circ_write(&sch_ssock->decrypted_buf, p, len);
 
                 LOG_DEBUG2("Read %d: after decrypt, excess=%d",
                            requested, len);
             } else {
-                /* Not enough, give everyting */
+                /* Not enough, just give everything */
                 pj_memcpy((pj_uint8_t*)data + *size, p, len);
                 *size += (int)len;
                 LOG_DEBUG2("Read %d: after decrypt, only got %d",
@@ -1130,7 +1249,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
 
     else {
         log_sec_err(1, "Decrypt error", ss);
-        status = PJ_EUNKNOWN;
+        status = sec_err_to_pj(ss);
     }
 
     pj_lock_release(ssock->circ_buf_input_mutex);
@@ -1186,7 +1305,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t* ssock, const void* data,
 
         if (ss != SEC_E_OK) {
             log_sec_err(1, "Encrypt error", ss);
-            status = (ss==SEC_E_CONTEXT_EXPIRED)? PJ_EEOF : PJ_EUNKNOWN;
+            status = (ss==SEC_E_CONTEXT_EXPIRED)? PJ_EEOF : sec_err_to_pj(ss);
             break;
         }
 
