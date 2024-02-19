@@ -46,6 +46,8 @@ final class ipjsua_swiftVidTest: XCTestCase {
         let expectedText = "Video"
         waitForElement(label, toHaveText: expectedText, timeout: 6)
 
+        expectation.fulfill()
+
         // Capture a screenshot of the entire screen
         let fullScreenshot = app.windows.firstMatch.screenshot()
         // Save the screenshot to a file
@@ -62,7 +64,7 @@ final class ipjsua_swiftVidTest: XCTestCase {
 
         let result = XCTWaiter().wait(for: [expectation], timeout: timeout)
         XCTAssertEqual(result, .completed, "Element didn't contain expected" +
-                                           " \text within \(timeout) seconds")
+                       " \(text) within \(timeout) seconds")
     }
 
     func saveScreenshot(image: XCUIScreenshot) {
