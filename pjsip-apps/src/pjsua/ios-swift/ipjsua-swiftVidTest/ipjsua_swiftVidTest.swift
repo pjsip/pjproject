@@ -12,7 +12,7 @@ final class ipjsua_swiftVidTest: XCTestCase {
 
         // Add an interruption monitor to handle system alerts
         addUIInterruptionMonitor(withDescription: "Allow network permission") { (alert) -> Bool in
-            print("UI alert: ", alert.staticTexts.element.label)
+            print("UI alert: ", alert.description)
             if alert.buttons["Allow"].exists {
                 alert.buttons["Allow"].tap()
                 return true
@@ -34,13 +34,12 @@ final class ipjsua_swiftVidTest: XCTestCase {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
 
-    func testExample() throws {
+    func testVideo() throws {
         // UI tests must launch the application that they test.
         let app = XCUIApplication()
         app.launch()
 
         // Access the Destination text field
-        let label = app.staticTexts["Destination:"]
         let textField = app.textFields["sip:test@sip.pjsip.org"]
 
         // Type localhost into the text field
@@ -58,11 +57,16 @@ final class ipjsua_swiftVidTest: XCTestCase {
 
         // Wait for video to appear
         let expectation = XCTestExpectation(description: "Wait for video")
-        let expectedText = "Video"
-        waitForElement(label, toHaveText: expectedText, timeout: 6)
+        let label = app.staticTexts["Video"]
+        waitForElement(label, timeout: 6)
 
         expectation.fulfill()
 
+        // This is necessary to invoke UI interruption monitor above
+        app.staticTexts["Video"].tap()
+
+        sleep(1)
+        
         // Capture a screenshot of the entire screen
         let fullScreenshot = app.windows.firstMatch.screenshot()
         // Save the screenshot to a file
@@ -70,16 +74,15 @@ final class ipjsua_swiftVidTest: XCTestCase {
     }
 
     // Helper method to wait for an element to have a certain text
-    func waitForElement(_ element: XCUIElement, toHaveText text: String,
-                        timeout: TimeInterval)
+    func waitForElement(_ element: XCUIElement, timeout: TimeInterval)
     {
-        let predicate = NSPredicate(format: "label CONTAINS[c] %@", text)
+        let predicate = NSPredicate(format: "exists == 1")
         let expectation = XCTNSPredicateExpectation(predicate: predicate,
                                                     object: element)
 
         let result = XCTWaiter().wait(for: [expectation], timeout: timeout)
-        XCTAssertEqual(result, .completed, "Element didn't contain expected" +
-                       " \(text) within \(timeout) seconds")
+        XCTAssertEqual(result, .completed, "Element not found within " +
+                                           "\(timeout) seconds")
     }
 
     func saveScreenshot(image: XCUIScreenshot) {
