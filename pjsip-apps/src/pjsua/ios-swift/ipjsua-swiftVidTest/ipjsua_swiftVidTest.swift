@@ -12,6 +12,11 @@ final class ipjsua_swiftVidTest: XCTestCase {
 
         // Add an interruption monitor to handle system alerts
         addUIInterruptionMonitor(withDescription: "Allow network permission") { (alert) -> Bool in
+            print("UI alert: ", alert.staticTexts.element.label)
+            if alert.buttons["Allow"].exists {
+                alert.buttons["Allow"].tap()
+                return true
+            }
             if alert.buttons["OK"].exists {
                 alert.buttons["OK"].tap()
                 return true
@@ -48,6 +53,7 @@ final class ipjsua_swiftVidTest: XCTestCase {
         XCTAssertEqual(textField.value as? String, dest)
 
         // Click "Make call" button
+        print("Making video call")
         app.buttons["Make call"].tap()
 
         // Wait for video to appear
