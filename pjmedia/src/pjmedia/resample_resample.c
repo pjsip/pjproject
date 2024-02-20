@@ -1,4 +1,4 @@
-/*
+/* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
 #include <pjmedia/resample.h>
@@ -112,7 +112,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
         resample->in_buffer = (pj_int16_t**)pj_pool_alloc(pool, size);
 
         /* Allocate input buffer */
-        size = (samples_per_frame/channel_count + 2*resample->xoff) *
+        size = (samples_per_frame/channel_count + 2*resample->xoff) * 
                sizeof(pj_int16_t);
         for (i = 0; i < channel_count; ++i) {
             resample->in_buffer[i] = (pj_int16_t*)pj_pool_alloc(pool, size);
@@ -121,7 +121,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
         }
 
         /* Allocate temporary output buffer */
-        size = (unsigned) (resample->frame_size * sizeof(pj_int16_t) *
+        size = (unsigned) (resample->frame_size * sizeof(pj_int16_t) * 
                            resample->factor / channel_count + 0.5);
         resample->tmp_buffer = (pj_int16_t*) pj_pool_alloc(pool, size);
         PJ_ASSERT_RETURN(resample->tmp_buffer, PJ_ENOMEM);
@@ -130,7 +130,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     *p_resample = resample;
 
     PJ_LOG(5,(THIS_FILE, "resample created: %s qualiy, %s filter, in/out "
-                          "rate=%d/%d",
+                          "rate=%d/%d", 
                           (high_quality?"high":"low"),
                           (large_filter?"large":"small"),
                           rate_in, rate_out));
@@ -155,7 +155,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
      *
      * So here comes the trick.
      *
-     * First of all, because of the history and lookahead requirement,
+     * First of all, because of the history and lookahead requirement, 
      * resample->buffer need to accommodate framesize+2*xoff samples in its
      * buffer. This is done when the buffer is created.
      *
@@ -169,7 +169,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
      *
      * So here's the layout of resample->buffer on the first run.
      *
-     * run 0
+     * run 0 
      *     +------+------+--------------+
      *     | 0000 | 0000 |  frame0...   |
      *     +------+------+--------------+
@@ -178,7 +178,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
      *
      * (Note again: resample algorithm is called at resample->buffer+xoff)
      *
-     * At the end of the run, 2*xoff samples from the end of
+     * At the end of the run, 2*xoff samples from the end of 
      * resample->buffer are copied to the beginning of resample->buffer.
      * The first xoff part of this will be used as history for the next
      * run, and the second xoff part of this is actually the start of
@@ -186,10 +186,10 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
      *
      * And the first run completes, the function returns.
      *
-     *
+     * 
      * On the next run, the input frame supplied by application is again
-     * copied at 2*xoff position in the resample->buffer, and the
-     * resample algorithm is again invoked at resample->buffer+xoff
+     * copied at 2*xoff position in the resample->buffer, and the 
+     * resample algorithm is again invoked at resample->buffer+xoff 
      * position. So effectively, the resample algorithm will start its
      * operation on the last xoff from the previous frame, and gets the
      * history from the last 2*xoff of the previous frame, and the look-
@@ -202,7 +202,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
      *     | frm0 | frm0 |  frame1...   |
      *     +------+------+--------------+
      *     ^      ^      ^              ^
-     *     0    xoff  2*xoff       size+2*xoff
+     *     0    xoff  2*xoff       size+2*xoff 
      *
      * As you can see from above diagram, the resampling algorithm is
      * actually called from the last xoff part of previous frame (frm0).
@@ -225,7 +225,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
                          resample->factor, (pj_uint16_t)resample->frame_size,
                          (char)resample->large_filter, (char)PJ_TRUE);
         } else {
-            res_SrcLinear(resample->buffer + resample->xoff, output,
+            res_SrcLinear(resample->buffer + resample->xoff, output, 
                           resample->factor, (pj_uint16_t)resample->frame_size);
         }
 
@@ -242,7 +242,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
             const pj_int16_t *src_buf;
             unsigned mono_frm_sz_in;
             unsigned mono_frm_sz_out;
-
+        
             mono_frm_sz_in  = resample->frame_size / resample->channel_cnt;
             mono_frm_sz_out = (unsigned)(mono_frm_sz_in * resample->factor + 0.5);
 
@@ -262,8 +262,8 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
                              (char)resample->large_filter, (char)PJ_TRUE);
             } else {
                 res_SrcLinear( resample->in_buffer[i],
-                               resample->tmp_buffer,
-                               resample->factor,
+                               resample->tmp_buffer, 
+                               resample->factor, 
                                (pj_uint16_t)mono_frm_sz_in);
             }
 
@@ -307,7 +307,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
                                              unsigned rate_in,
                                              unsigned rate_out,
                                              unsigned samples_per_frame,
-                                             pjmedia_resample **p_resample)
+                                             pjmedia_resample **p_resample) 
 {
     PJ_UNUSED_ARG(pool);
     PJ_UNUSED_ARG(high_quality);
@@ -325,20 +325,20 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 
 PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
                                    const pj_int16_t *input,
-                                   pj_int16_t *output )
+                                   pj_int16_t *output ) 
 {
     PJ_UNUSED_ARG(resample);
     PJ_UNUSED_ARG(input);
     PJ_UNUSED_ARG(output);
 }
 
-PJ_DEF(unsigned) pjmedia_resample_get_input_size(pjmedia_resample *resample)
+PJ_DEF(unsigned) pjmedia_resample_get_input_size(pjmedia_resample *resample) 
 {
     PJ_UNUSED_ARG(resample);
     return 0;
 }
 
-PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample)
+PJ_DEF(void) pjmedia_resample_destroy(pjmedia_resample *resample) 
 {
     PJ_UNUSED_ARG(resample);
 }
