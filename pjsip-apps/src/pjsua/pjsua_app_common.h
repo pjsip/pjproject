@@ -77,6 +77,7 @@ typedef struct pjsua_app_config
     pj_bool_t               no_refersub;
     pj_bool_t               ipv6;
     pj_bool_t               enable_qos;
+    pj_bool_t               enable_mci;
     pj_bool_t               no_tcp;
     pj_bool_t               no_udp;
     pj_bool_t               use_tls;
