@@ -118,6 +118,11 @@ typedef enum pj_ssl_cert_verify_flag_t
     PJ_SSL_CERT_ECHAIN_TOO_LONG                         = (1 << 8),
 
     /**
+     * The certificate signature is created using a weak hashing algorithm.
+     */
+    PJ_SSL_CERT_EWEAK_SIGNATURE                         = (1 << 9),
+
+    /**
      * The server identity does not match to any identities specified in 
      * the certificate, e.g: subjectAltName extension, subject common name.
      * This flag will only be set by application as SSL socket does not 

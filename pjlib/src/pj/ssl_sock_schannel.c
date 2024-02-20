@@ -140,7 +140,7 @@ typedef struct sch_ssl_sock_t
 
 static pj_status_t sec_err_to_pj(SECURITY_STATUS ss)
 {
-    DWORD err = ss & 0xFFFF;
+    DWORD err = ((ss & 0x7FFF) << 1) | ((ss & 0x80000000) >> 31);
 
     /* Make sure it does not exceed PJ_ERRNO_SPACE_SIZE */
     if (err >= PJ_ERRNO_SPACE_SIZE)
@@ -151,6 +151,8 @@ static pj_status_t sec_err_to_pj(SECURITY_STATUS ss)
 
 static SECURITY_STATUS sec_err_from_pj(pj_status_t status)
 {
+    SECURITY_STATUS ss;
+
     /* Make sure it is within SSL error space */
     if (status < PJ_SSL_ERRNO_START ||
         status >= PJ_SSL_ERRNO_START + PJ_ERRNO_SPACE_SIZE)
@@ -158,7 +160,9 @@ static SECURITY_STATUS sec_err_from_pj(pj_status_t status)
         return ERROR_INVALID_DATA;
     }
 
-    return 0x80090000 + (status - PJ_SSL_ERRNO_START);
+    ss = status - PJ_SSL_ERRNO_START;
+    ss = (ss >> 1) | ((ss & 1) << 31) | 0x00090000;
+    return ss;
 }
 
 /* Print Schannel error to log */
@@ -837,30 +841,18 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
         ssock->param.proto != PJ_SSL_SOCK_PROTO_ALL)
     {
         DWORD tmp = 0;
-        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
-            tmp |= ssock->is_server ? SP_PROT_TLS1_3_SERVER :
-                                      SP_PROT_TLS1_3_CLIENT;
-        }
-        if ((ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) == 0) {
-            tmp |= ssock->is_server ? SP_PROT_TLS1_2_SERVER :
-                                      SP_PROT_TLS1_2_CLIENT;
-        }
-        if ((ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1) == 0) {
-            tmp |= ssock->is_server ? SP_PROT_TLS1_1_SERVER :
-                                      SP_PROT_TLS1_1_CLIENT;
-        }
-        if ((ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) == 0) {
-            tmp |= ssock->is_server ? SP_PROT_TLS1_0_SERVER :
-                                      SP_PROT_TLS1_0_CLIENT;
-        }
-        if ((ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) == 0) {
-            tmp |= ssock->is_server ? SP_PROT_SSL3_SERVER :
-                                      SP_PROT_SSL3_CLIENT;
-        }
-        if ((ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL2) == 0) {
-            tmp |= ssock->is_server ? SP_PROT_SSL2_SERVER :
-                                      SP_PROT_SSL2_CLIENT;
-        }
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3)
+            tmp |= SP_PROT_TLS1_3;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2)
+            tmp |= SP_PROT_TLS1_2;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1)
+            tmp |= SP_PROT_TLS1_1;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1)
+            tmp |= SP_PROT_TLS1_0;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3)
+            tmp |= SP_PROT_SSL3;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL2)
+            tmp |= SP_PROT_SSL2;
         if (tmp) {
             param_cnt = 1;
             params[0].grbitDisabledProtocols = SP_PROT_ALL & ~tmp;
@@ -878,27 +870,32 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
         if (!ssock->param.cert_subject.slen) {
             /* No certificate subject specified, use self-signed cert */
             sch_ssock->cert_ctx = create_self_signed_cert();
+            PJ_LOG(2,(SENDER, "Warning: TLS server does not specify a "
+                              "certificate, use a self-signed certificate"));
 
             // -- test code --
             //pj_str_t test = {"test.pjsip.org", 14};
-            //sch_ssock->cert_ctx =
-            //find_cert_in_stores(&test);
+            //sch_ssock->cert_ctx = find_cert_in_stores(&test);
         }
     } else {
         creds.dwFlags |= SCH_CRED_NO_DEFAULT_CREDS;
     }
 
-    /* Verification */
-    if (!ssock->is_server) {
-        if (ssock->param.verify_peer)
-            creds.dwFlags |= SCH_CRED_AUTO_CRED_VALIDATION;
-        else
-            creds.dwFlags |= SCH_CRED_MANUAL_CRED_VALIDATION;
-    }
-
     if (sch_ssock->cert_ctx) {
         creds.cCreds = 1;
         creds.paCred = &sch_ssock->cert_ctx;
+    }
+
+    /* Verification */
+    if (!ssock->is_server) {
+        if (ssock->param.verify_peer)
+            creds.dwFlags |= SCH_CRED_AUTO_CRED_VALIDATION |
+                             SCH_CRED_REVOCATION_CHECK_CHAIN;
+        else
+            creds.dwFlags |= SCH_CRED_MANUAL_CRED_VALIDATION;
+    } else {
+        if (ssock->param.verify_peer)
+            creds.dwFlags |= SCH_CRED_REVOCATION_CHECK_CHAIN;
     }
 
     /* Now init the credentials */
@@ -914,11 +911,112 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
                                   &sch_ssock->cred_handle, NULL);
     if (ss < 0) {
         log_sec_err(1, "Failed in AcquireCredentialsHandle()", ss);
+
         return sec_err_to_pj(ss);
     }
 
     return PJ_SUCCESS;
 }
+
+
+static void verify_remote_cert(pj_ssl_sock_t* ssock)
+{
+    sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
+    CERT_CONTEXT *cert_ctx = NULL;
+    CERT_CHAIN_CONTEXT *chain_ctx = NULL;
+    CERT_CHAIN_PARA chain_para = {0};
+    DWORD info, err;
+    SECURITY_STATUS ss;
+
+    ss = QueryContextAttributes(&sch_ssock->ctx_handle,
+                                SECPKG_ATTR_REMOTE_CERT_CONTEXT,
+                                &cert_ctx);
+    if (ss != SEC_E_OK || !cert_ctx) {
+        if (!ssock->is_server ||
+            (ssock->is_server && ssock->param.require_client_cert))
+        {
+            log_sec_err(1, "Error querying remote cert", ss);
+        }
+        goto on_return;
+    }
+
+    chain_para.cbSize = sizeof(chain_para);
+    chain_para.cbSize = sizeof(chain_para);
+    if (!CertGetCertificateChain(HCCE_CURRENT_USER,
+                                 (PCCERT_CONTEXT)cert_ctx,
+                                 NULL, NULL, &chain_para, 0, 0,
+                                 &chain_ctx))
+    {
+        log_sec_err(1, "Failed to get remote cert chain for verification",
+                    GetLastError());
+        goto on_return;
+    }
+
+    info = chain_ctx->TrustStatus.dwInfoStatus;
+    err  = chain_ctx->TrustStatus.dwErrorStatus;
+
+    if (err == CERT_TRUST_NO_ERROR) {
+        ssock->verify_status = PJ_SUCCESS;
+        return;
+    }
+
+    if (err & CERT_TRUST_IS_NOT_TIME_VALID)
+        ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
+    if (err & CERT_TRUST_IS_REVOKED)
+        ssock->verify_status |= PJ_SSL_CERT_EREVOKED;
+    if (err & CERT_TRUST_IS_NOT_SIGNATURE_VALID)
+        ssock->verify_status |= PJ_SSL_CERT_EUNTRUSTED;
+    if (err & CERT_TRUST_IS_NOT_VALID_FOR_USAGE)
+        ssock->verify_status |= PJ_SSL_CERT_EINVALID_PURPOSE;
+    if (err & CERT_TRUST_IS_UNTRUSTED_ROOT)
+        ssock->verify_status |= PJ_SSL_CERT_EUNTRUSTED;
+    if (err & CERT_TRUST_REVOCATION_STATUS_UNKNOWN)
+        ssock->verify_status |= PJ_SSL_CERT_ECRL_FAILURE;
+    if (err & CERT_TRUST_IS_CYCLIC)
+        ssock->verify_status |= PJ_SSL_CERT_ECHAIN_TOO_LONG;
+    if (err & CERT_TRUST_INVALID_EXTENSION ||
+        err & CERT_TRUST_INVALID_POLICY_CONSTRAINTS ||
+        err & CERT_TRUST_INVALID_BASIC_CONSTRAINTS ||
+        err & CERT_TRUST_INVALID_NAME_CONSTRAINTS ||
+        err & CERT_TRUST_HAS_NOT_SUPPORTED_NAME_CONSTRAINT ||
+        err & CERT_TRUST_HAS_NOT_DEFINED_NAME_CONSTRAINT ||
+        err & CERT_TRUST_HAS_NOT_PERMITTED_NAME_CONSTRAINT ||
+        err & CERT_TRUST_HAS_EXCLUDED_NAME_CONSTRAINT
+        )
+    {
+        ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
+    }
+    if (err & CERT_TRUST_IS_OFFLINE_REVOCATION)
+        ssock->verify_status |= PJ_SSL_CERT_ECRL_FAILURE;
+    if (err & CERT_TRUST_NO_ISSUANCE_CHAIN_POLICY)
+        ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
+    if (err & CERT_TRUST_IS_EXPLICIT_DISTRUST)
+        ssock->verify_status |= PJ_SSL_CERT_EUNTRUSTED;
+    if (err & CERT_TRUST_HAS_NOT_SUPPORTED_CRITICAL_EXT)
+        ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
+    if (err & CERT_TRUST_HAS_WEAK_SIGNATURE)
+        ssock->verify_status |= PJ_SSL_CERT_EWEAK_SIGNATURE;
+
+    if (err & CERT_TRUST_IS_PARTIAL_CHAIN)
+        ssock->verify_status |= PJ_SSL_CERT_ECHAIN_TOO_LONG;
+    if (err & CERT_TRUST_CTL_IS_NOT_TIME_VALID)
+        ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
+    if (err & CERT_TRUST_CTL_IS_NOT_SIGNATURE_VALID)
+        ssock->verify_status |= PJ_SSL_CERT_EUNTRUSTED;
+    if (err & CERT_TRUST_CTL_IS_NOT_VALID_FOR_USAGE)
+        ssock->verify_status |= PJ_SSL_CERT_EINVALID_PURPOSE;
+
+    /* Some unknown error */
+    if (ssock->verify_status == PJ_SUCCESS)
+        ssock->verify_status = PJ_SSL_CERT_EUNKNOWN;
+
+on_return:
+    if (chain_ctx)
+        CertFreeCertificateChain(chain_ctx);
+    if (cert_ctx)
+        CertFreeCertificateContext(cert_ctx);
+}
+
 
 static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
 {
@@ -973,7 +1071,6 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
     /* As client */
     if (!ssock->is_server) {
         DWORD flags =
-            ISC_REQ_USE_SUPPLIED_CREDS |
             ISC_REQ_CONFIDENTIALITY |
             ISC_REQ_REPLAY_DETECT |
             ISC_REQ_SEQUENCE_DETECT |
@@ -1020,19 +1117,21 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
     }
 
     if (ss == SEC_E_OK) {
+        SECURITY_STATUS ss2;
+
         /* Handshake completed! */
         ssock->ssl_state = SSL_STATE_ESTABLISHED;
         status = PJ_SUCCESS;
         PJ_LOG(3, (SENDER, "TLS handshake completed!"));
 
         /* Get stream sizes */
-        ss = QueryContextAttributes(&sch_ssock->ctx_handle,
-                                    SECPKG_ATTR_STREAM_SIZES,
-                                    &sch_ssock->strm_sizes);
-        if (ss != SEC_E_OK) {
-            log_sec_err(1, "Failed to query stream sizes", ss);
+        ss2 = QueryContextAttributes(&sch_ssock->ctx_handle,
+                                     SECPKG_ATTR_STREAM_SIZES,
+                                     &sch_ssock->strm_sizes);
+        if (ss2 != SEC_E_OK) {
+            log_sec_err(1, "Failed to query stream sizes", ss2);
             ssl_reset_sock_state(ssock);
-            status = sec_err_to_pj(ss);
+            status = sec_err_to_pj(ss2);
         }
 
         /* Adjust maximum message size to our allocated buffer size */
@@ -1045,6 +1144,10 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
                             PJ_MIN((ULONG)max_msg,
                                    sch_ssock->strm_sizes.cbMaximumMessage);
         }
+
+        /* Manually verify remote cert */
+        if (!ssock->param.verify_peer)
+            verify_remote_cert(ssock);
     }
 
     else if (ss == SEC_I_COMPLETE_NEEDED ||
@@ -1103,9 +1206,6 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
     }
 
 on_return:
-    if (status != PJ_SUCCESS && status != PJ_EPENDING)
-        ssl_reset_sock_state(ssock);
-
     pj_lock_release(ssock->write_mutex);
 
     return status;
@@ -1114,6 +1214,7 @@ on_return:
 static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
 {
     PJ_TODO(implement_this);
+    PJ_UNUSED_ARG(ssock);
     return PJ_ENOTSUP;
 }
 
@@ -1155,7 +1256,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
     LOG_DEBUG2("Read %d: %d from decrypted buffer..", requested, size_);
     circ_read(&sch_ssock->decrypted_buf, data, size_);
     *size = (int)size_;
-    need  -= (int)size_;
+    need -= (int)size_;
 
     /* Decrypt data of network input buffer */
     if (!circ_empty(&ssock->circ_buf_input)) {
@@ -1244,7 +1345,8 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
     else if (ss == SEC_I_CONTEXT_EXPIRED)
     {
         PJ_LOG(3, (SENDER, "TLS connection closed"));
-        ssock->ssl_state = SSL_STATE_ERROR;
+        //status = sec_err_to_pj(ss);
+        status = PJ_ECANCELLED;
     }
 
     else {
@@ -1253,10 +1355,6 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
     }
 
     pj_lock_release(ssock->circ_buf_input_mutex);
-
-    /* Reset SSL if it is not renegotiating */
-    if (status != PJ_SUCCESS && ssock->ssl_state != SSL_STATE_HANDSHAKING)
-        ssl_reset_sock_state(ssock);
 
     LOG_DEBUG2("Read %d: returned=%d.", requested, *size);
     return status;
@@ -1305,7 +1403,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t* ssock, const void* data,
 
         if (ss != SEC_E_OK) {
             log_sec_err(1, "Encrypt error", ss);
-            status = (ss==SEC_E_CONTEXT_EXPIRED)? PJ_EEOF : sec_err_to_pj(ss);
+            status = sec_err_to_pj(ss);
             break;
         }
 
