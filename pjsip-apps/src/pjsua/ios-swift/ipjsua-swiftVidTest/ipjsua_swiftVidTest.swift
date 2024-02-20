@@ -73,7 +73,7 @@ final class ipjsua_swiftVidTest: XCTestCase {
         saveScreenshot(image: fullScreenshot)
     }
 
-    // Helper method to wait for an element to have a certain text
+    // Helper method to wait for an element to appear/exist
     func waitForElement(_ element: XCUIElement, timeout: TimeInterval)
     {
         let predicate = NSPredicate(format: "exists == 1")
@@ -87,10 +87,8 @@ final class ipjsua_swiftVidTest: XCTestCase {
 
     func saveScreenshot(image: XCUIScreenshot) {
         let pngData = image.pngRepresentation
-        let documentsDirectory = FileManager.default.urls(
-                                 for: .documentDirectory,
-                                 in: .userDomainMask).first!
-        let fileURL = documentsDirectory.appendingPathComponent("screenshot.png")
+        let resultPath = URL(fileURLWithPath: ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]!)
+        let fileURL = resultPath.appendingPathComponent("screenshot.png")
 
         do {
             try pngData.write(to: fileURL)
