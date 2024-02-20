@@ -87,8 +87,10 @@ final class ipjsua_swiftVidTest: XCTestCase {
 
     func saveScreenshot(image: XCUIScreenshot) {
         let pngData = image.pngRepresentation
-        let resultPath = URL(fileURLWithPath: ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"]!)
-        let fileURL = resultPath.appendingPathComponent("screenshot.png")
+        let documentsDirectory = FileManager.default.urls(
+                                 for: .documentDirectory,
+                                 in: .userDomainMask).first!
+        let fileURL = documentsDirectory.appendingPathComponent("screenshot.png")
 
         do {
             try pngData.write(to: fileURL)
