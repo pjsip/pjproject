@@ -69,25 +69,15 @@
 
 /* For using SCH_CREDENTIALS */
 #define SCHANNEL_USE_BLACKLISTS
-//#define UNICODE_STRING
-//#define PUNICODE_STRING
-//#include <Ntdef.h>        // error: many redefinitions
-//#include <SubAuth.h>
 #include <Winternl.h>
-
 #include <security.h>
 #include <schannel.h>
-
 #include <Bcrypt.h>    // for enumerating ciphers
-//#include <Ncrypt.h>    // for enumerating ciphers
-//#include <Sslprovider.h>    // for enumerating ciphers
-
 
 #pragma comment (lib, "secur32.lib")
 #pragma comment (lib, "shlwapi.lib")
 #pragma comment (lib, "Crypt32.lib") // for creating & manipulating certs
 #pragma comment (lib, "Bcrypt.lib")  // for enumerating ciphers
-//#pragma comment (lib, "Ncrypt.lib")  // for enumerating ciphers
 
 
 /* SSL sock implementation API */
@@ -138,6 +128,25 @@ typedef struct sch_ssl_sock_t
 #define PJ_SSL_ERRNO_START              (PJ_ERRNO_START_USER + \
                                          PJ_ERRNO_SPACE_SIZE*6)
 
+/* Map SECURITY_STATUS to pj_status_t.
+ *
+ * SECURITY_STATUS/Windows-error 32 bit structure (from winerror.h):
+ *
+ *   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+ *  +---+-+-+-----------------------+-------------------------------+
+ *  |Sev|C|R|     Facility          |               Code            |
+ *  +---+-+-+-----------------------+-------------------------------+
+ *
+ * For this mapping, we only save one severity bit & 15 bit error code.
+ * The facility value for security/SSPI is 9, which needs to be inserted
+ * when converting back from pj_status_t.
+ *
+ * So in pj_status_t it is stored as:
+ *   1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+ *  +---+-+-+-----------------------+-------------------------------+
+ *  |        PJLIB internal         |               Code          |S|
+ *  +---+-+-+-----------------------+-------------------------------+
+ */
 static pj_status_t sec_err_to_pj(SECURITY_STATUS ss)
 {
     DWORD err = ((ss & 0x7FFF) << 1) | ((ss & 0x80000000) >> 31);
@@ -149,6 +158,7 @@ static pj_status_t sec_err_to_pj(SECURITY_STATUS ss)
     return PJ_SSL_ERRNO_START + err;
 }
 
+/* Get SECURITY_STATUS from pj_status_t. */
 static SECURITY_STATUS sec_err_from_pj(pj_status_t status)
 {
     SECURITY_STATUS ss;
@@ -362,24 +372,24 @@ static void ssl_reset_sock_state(pj_ssl_sock_t* ssock)
     {
         DWORD type = SCHANNEL_SHUTDOWN;
 
-        SecBuffer buf_in[1] = { {0} };
-        buf_in[0].BufferType = SECBUFFER_TOKEN;
-        buf_in[0].pvBuffer = &type;
-        buf_in[0].cbBuffer = sizeof(type);
+        SecBuffer buf_in[1]     = { {0} };
+        buf_in[0].BufferType    = SECBUFFER_TOKEN;
+        buf_in[0].pvBuffer      = &type;
+        buf_in[0].cbBuffer      = sizeof(type);
         SecBufferDesc buf_desc_in = { 0 };
-        buf_desc_in.ulVersion = SECBUFFER_VERSION;
-        buf_desc_in.cBuffers = ARRAYSIZE(buf_in);
-        buf_desc_in.pBuffers = buf_in;
+        buf_desc_in.ulVersion   = SECBUFFER_VERSION;
+        buf_desc_in.cBuffers    = ARRAYSIZE(buf_in);
+        buf_desc_in.pBuffers    = buf_in;
         ApplyControlToken(&sch_ssock->ctx_handle, &buf_desc_in);
 
-        SecBuffer buf_out[1] = { {0} };
-        buf_out[0].BufferType = SECBUFFER_TOKEN;
-        buf_out[0].pvBuffer = sch_ssock->write_buf;
-        buf_out[0].cbBuffer = (ULONG)sch_ssock->write_buf_cap;
+        SecBuffer buf_out[1]    = { {0} };
+        buf_out[0].BufferType   = SECBUFFER_TOKEN;
+        buf_out[0].pvBuffer     = sch_ssock->write_buf;
+        buf_out[0].cbBuffer     = (ULONG)sch_ssock->write_buf_cap;
         SecBufferDesc buf_desc_out = { 0 };
-        buf_desc_out.ulVersion = SECBUFFER_VERSION;
-        buf_desc_out.cBuffers = ARRAYSIZE(buf_out);
-        buf_desc_out.pBuffers = buf_out;
+        buf_desc_out.ulVersion  = SECBUFFER_VERSION;
+        buf_desc_out.cBuffers   = ARRAYSIZE(buf_out);
+        buf_desc_out.pBuffers   = buf_out;
 
         DWORD flags =
             ISC_REQ_CONFIDENTIALITY |
@@ -556,13 +566,13 @@ static pj_status_t file_time_to_time_val(const FILETIME* file_time,
 
     pj_bzero(&pt, sizeof(pt));
     pt.year = localTime.wYear;
-    pt.mon = localTime.wMonth - 1;
-    pt.day = localTime.wDay;
+    pt.mon  = localTime.wMonth - 1;
+    pt.day  = localTime.wDay;
     pt.wday = localTime.wDayOfWeek;
 
     pt.hour = localTime.wHour;
-    pt.min = localTime.wMinute;
-    pt.sec = localTime.wSecond;
+    pt.min  = localTime.wMinute;
+    pt.sec  = localTime.wSecond;
     pt.msec = localTime.wMilliseconds;
 
     return pj_time_encode(&pt, time_val);
@@ -981,8 +991,7 @@ static void verify_remote_cert(pj_ssl_sock_t* ssock)
         err & CERT_TRUST_HAS_NOT_SUPPORTED_NAME_CONSTRAINT ||
         err & CERT_TRUST_HAS_NOT_DEFINED_NAME_CONSTRAINT ||
         err & CERT_TRUST_HAS_NOT_PERMITTED_NAME_CONSTRAINT ||
-        err & CERT_TRUST_HAS_EXCLUDED_NAME_CONSTRAINT
-        )
+        err & CERT_TRUST_HAS_EXCLUDED_NAME_CONSTRAINT)
     {
         ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
     }
@@ -1049,28 +1058,29 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
         circ_read(&ssock->circ_buf_input, data_in, data_in_size);
     }
 
-    SecBuffer buf_in[2] = { {0} };
-    buf_in[0].BufferType = SECBUFFER_TOKEN;
-    buf_in[0].pvBuffer = data_in;
-    buf_in[0].cbBuffer = (ULONG)data_in_size;
-    buf_in[1].BufferType = SECBUFFER_EMPTY;
+    SecBuffer buf_in[2]     = { {0} };
+    buf_in[0].BufferType    = SECBUFFER_TOKEN;
+    buf_in[0].pvBuffer      = data_in;
+    buf_in[0].cbBuffer      = (ULONG)data_in_size;
+    buf_in[1].BufferType    = SECBUFFER_EMPTY;
     SecBufferDesc buf_desc_in = { 0 };
-    buf_desc_in.ulVersion = SECBUFFER_VERSION;
-    buf_desc_in.cBuffers = ARRAYSIZE(buf_in);
-    buf_desc_in.pBuffers = buf_in;
+    buf_desc_in.ulVersion   = SECBUFFER_VERSION;
+    buf_desc_in.cBuffers    = ARRAYSIZE(buf_in);
+    buf_desc_in.pBuffers    = buf_in;
 
-    SecBuffer buf_out[1] = { {0} };
-    buf_out[0].BufferType = SECBUFFER_TOKEN;
-    buf_out[0].pvBuffer = sch_ssock->write_buf;
-    buf_out[0].cbBuffer = (ULONG)sch_ssock->write_buf_cap;
+    SecBuffer buf_out[1]    = { {0} };
+    buf_out[0].BufferType   = SECBUFFER_TOKEN;
+    buf_out[0].pvBuffer     = sch_ssock->write_buf;
+    buf_out[0].cbBuffer     = (ULONG)sch_ssock->write_buf_cap;
     SecBufferDesc buf_desc_out = { 0 };
-    buf_desc_out.ulVersion = SECBUFFER_VERSION;
-    buf_desc_out.cBuffers = ARRAYSIZE(buf_out);
-    buf_desc_out.pBuffers = buf_out;
+    buf_desc_out.ulVersion  = SECBUFFER_VERSION;
+    buf_desc_out.cBuffers   = ARRAYSIZE(buf_out);
+    buf_desc_out.pBuffers   = buf_out;
 
     /* As client */
     if (!ssock->is_server) {
         DWORD flags =
+            ISC_REQ_USE_SUPPLIED_CREDS |
             ISC_REQ_CONFIDENTIALITY |
             ISC_REQ_REPLAY_DETECT |
             ISC_REQ_SEQUENCE_DETECT |
@@ -1271,17 +1281,17 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
         return PJ_SUCCESS;
     }
 
-    SecBuffer buf[4] = { {0} };
-    buf[0].BufferType = SECBUFFER_DATA;
-    buf[0].pvBuffer = data_;
-    buf[0].cbBuffer = (ULONG)size_;
-    buf[1].BufferType = SECBUFFER_EMPTY;
-    buf[2].BufferType = SECBUFFER_EMPTY;
-    buf[3].BufferType = SECBUFFER_EMPTY;
+    SecBuffer buf[4]    = { {0} };
+    buf[0].BufferType   = SECBUFFER_DATA;
+    buf[0].pvBuffer     = data_;
+    buf[0].cbBuffer     = (ULONG)size_;
+    buf[1].BufferType   = SECBUFFER_EMPTY;
+    buf[2].BufferType   = SECBUFFER_EMPTY;
+    buf[3].BufferType   = SECBUFFER_EMPTY;
     SecBufferDesc buf_desc = { 0 };
-    buf_desc.ulVersion = SECBUFFER_VERSION;
-    buf_desc.cBuffers = ARRAYSIZE(buf);
-    buf_desc.pBuffers = buf;
+    buf_desc.ulVersion  = SECBUFFER_VERSION;
+    buf_desc.cBuffers   = ARRAYSIZE(buf);
+    buf_desc.pBuffers   = buf;
 
     ss = DecryptMessage(&sch_ssock->ctx_handle, &buf_desc, 0, NULL);
 
@@ -1382,22 +1392,22 @@ static pj_status_t ssl_write(pj_ssl_sock_t* ssock, const void* data,
 
         pj_memcpy(p_data, (pj_uint8_t*)data + total, write_len);
 
-        SecBuffer buf[4] = { {0} };
-        buf[0].BufferType = SECBUFFER_STREAM_HEADER;
-        buf[0].pvBuffer = p_header;
-        buf[0].cbBuffer = sch_ssock->strm_sizes.cbHeader;
-        buf[1].BufferType = SECBUFFER_DATA;
-        buf[1].pvBuffer = p_data;
-        buf[1].cbBuffer = (ULONG)write_len;
-        buf[2].BufferType = SECBUFFER_STREAM_TRAILER;
-        buf[2].pvBuffer = p_trailer;
-        buf[2].cbBuffer = sch_ssock->strm_sizes.cbTrailer;
-        buf[3].BufferType = SECBUFFER_EMPTY;
+        SecBuffer buf[4]    = { {0} };
+        buf[0].BufferType   = SECBUFFER_STREAM_HEADER;
+        buf[0].pvBuffer     = p_header;
+        buf[0].cbBuffer     = sch_ssock->strm_sizes.cbHeader;
+        buf[1].BufferType   = SECBUFFER_DATA;
+        buf[1].pvBuffer     = p_data;
+        buf[1].cbBuffer     = (ULONG)write_len;
+        buf[2].BufferType   = SECBUFFER_STREAM_TRAILER;
+        buf[2].pvBuffer     = p_trailer;
+        buf[2].cbBuffer     = sch_ssock->strm_sizes.cbTrailer;
+        buf[3].BufferType   = SECBUFFER_EMPTY;
 
         SecBufferDesc buf_desc = { 0 };
-        buf_desc.ulVersion = SECBUFFER_VERSION;
-        buf_desc.cBuffers = ARRAYSIZE(buf);
-        buf_desc.pBuffers = buf;
+        buf_desc.ulVersion  = SECBUFFER_VERSION;
+        buf_desc.cBuffers   = ARRAYSIZE(buf);
+        buf_desc.pBuffers   = buf;
 
         ss = EncryptMessage(&sch_ssock->ctx_handle, 0, &buf_desc, 0);
 
