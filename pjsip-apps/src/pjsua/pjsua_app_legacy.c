@@ -824,7 +824,7 @@ static void ui_send_instant_message()
 
 
     /* Send typing indication. */
-    if (app_config.enable_mci) {
+    if (!app_config.no_mci) {
         if (i != -1)
             pjsua_call_send_typing_ind(i, PJ_TRUE, NULL);
         else {
@@ -835,7 +835,7 @@ static void ui_send_instant_message()
 
     /* Input the IM . */
     if (!simple_input("Message", text, sizeof(text))) {
-        if (app_config.enable_mci) {
+        if (!app_config.no_mci) {
             /*
             * Cancelled.
             * Send typing notification too, saying we're not typing.

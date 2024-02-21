@@ -94,6 +94,7 @@ static void usage(void)
     puts  ("  --ipv6              Create SIP IPv6 transports.");
 #endif
     puts  ("  --set-qos           Enable QoS tagging for SIP and media.");
+    puts  ("  --no-mci            Disable message composition indication (RFC 3994)");
     puts  ("  --local-port=port   Set TCP/UDP port. This implicitly enables both ");
     puts  ("                      TCP and UDP transports on the specified port, unless");
     puts  ("                      if TCP or UDP is disabled.");
@@ -226,7 +227,6 @@ static void usage(void)
     puts  ("  --accept-redirect=N Specify how to handle call redirect (3xx) response.");
     puts  ("                      0: reject, 1: follow automatically,");
     puts  ("                      2: follow + replace To header (default), 3: ask");
-    puts  ("  --set-mci           Use message composition indication RFC 3994");
 
     puts  ("");
     puts  ("CLI options:");
@@ -534,7 +534,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "ipv6",        0, 0, OPT_IPV6},
 #endif
         { "set-qos",     0, 0, OPT_QOS},
-        { "set-mci",     0, 0, OPT_MCI},
+        { "no-mci",     0, 0, OPT_MCI},
         { "use-timer",  1, 0, OPT_TIMER},
         { "timer-se",   1, 0, OPT_TIMER_SE},
         { "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
@@ -1469,7 +1469,7 @@ static pj_status_t parse_args(int argc, char *argv[],
             cfg->udp_cfg.qos_params.dscp_val = 0x18;
             break;
         case OPT_MCI:
-            cfg->enable_mci = PJ_TRUE;
+            cfg->no_mci = PJ_TRUE;
             break;
         case OPT_VIDEO:
             cfg->vid.vid_cnt = 1;
@@ -1985,8 +1985,8 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     }
 
     /* Message Composition Indication */
-    if (config->enable_mci) {
-        pj_strcat2(&cfg, "--set-mci\n");
+    if (config->no_mci) {
+        pj_strcat2(&cfg, "--no-mci\n");
     }
     /* UDP Transport. */
     pj_ansi_snprintf(line, sizeof(line), "--local-port %d\n",
