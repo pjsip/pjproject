@@ -824,26 +824,30 @@ static void ui_send_instant_message()
 
 
     /* Send typing indication. */
-    if (i != -1)
-        pjsua_call_send_typing_ind(i, PJ_TRUE, NULL);
-    else {
-        pj_str_t tmp_uri = pj_str(uri);
-        pjsua_im_typing(current_acc, &tmp_uri, PJ_TRUE, NULL);
+    if (!app_config.no_mci) {
+        if (i != -1)
+            pjsua_call_send_typing_ind(i, PJ_TRUE, NULL);
+        else {
+            pj_str_t tmp_uri = pj_str(uri);
+            pjsua_im_typing(current_acc, &tmp_uri, PJ_TRUE, NULL);
+        }
     }
 
     /* Input the IM . */
     if (!simple_input("Message", text, sizeof(text))) {
-        /*
-        * Cancelled.
-        * Send typing notification too, saying we're not typing.
-        */
-        if (i != -1)
-            pjsua_call_send_typing_ind(i, PJ_FALSE, NULL);
-        else {
-            pj_str_t tmp_uri = pj_str(uri);
-            pjsua_im_typing(current_acc, &tmp_uri, PJ_FALSE, NULL);
+        if (!app_config.no_mci) {
+            /*
+            * Cancelled.
+            * Send typing notification too, saying we're not typing.
+            */
+            if (i != -1)
+                pjsua_call_send_typing_ind(i, PJ_FALSE, NULL);
+            else {
+                pj_str_t tmp_uri = pj_str(uri);
+                pjsua_im_typing(current_acc, &tmp_uri, PJ_FALSE, NULL);
+            }
+            return;
         }
-        return;
     }
 
     tmp = pj_str(text);
