@@ -95,6 +95,7 @@ static void usage(void)
 #endif
     puts  ("  --set-qos           Enable QoS tagging for SIP and media.");
     puts  ("  --no-mci            Disable message composition indication (RFC 3994)");
+    puts  ("  --set-loam          Enable Late offer answer model");
     puts  ("  --local-port=port   Set TCP/UDP port. This implicitly enables both ");
     puts  ("                      TCP and UDP transports on the specified port, unless");
     puts  ("                      if TCP or UDP is disabled.");
@@ -393,7 +394,8 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_TLS_NEG_TIMEOUT, OPT_TLS_CIPHER,
            OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
            OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES, OPT_JB_MAX_SIZE,
-           OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6, OPT_QOS, OPT_MCI,
+           OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6, OPT_QOS,
+           OPT_MCI, OPT_LOAM,
 #ifdef _IONBF
            OPT_STDOUT_NO_BUF,
 #endif
@@ -535,6 +537,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 #endif
         { "set-qos",     0, 0, OPT_QOS},
         { "no-mci",     0, 0, OPT_MCI},
+        { "set-loam",   0, 0, OPT_LOAM},
         { "use-timer",  1, 0, OPT_TIMER},
         { "timer-se",   1, 0, OPT_TIMER_SE},
         { "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
@@ -1471,6 +1474,9 @@ static pj_status_t parse_args(int argc, char *argv[],
         case OPT_MCI:
             cfg->no_mci = PJ_TRUE;
             break;
+        case OPT_LOAM:
+            cfg->enable_loam = PJ_TRUE;
+            break;
         case OPT_VIDEO:
             cfg->vid.vid_cnt = 1;
             cfg->vid.in_auto_show = PJ_TRUE;
@@ -1988,6 +1994,12 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     if (config->no_mci) {
         pj_strcat2(&cfg, "--no-mci\n");
     }
+
+    /* Late Offer Answer Model */
+    if (config->enable_loam) {
+        pj_strcat2(&cfg, "--set-loam\n");
+    }
+
     /* UDP Transport. */
     pj_ansi_snprintf(line, sizeof(line), "--local-port %d\n",
                      config->udp_cfg.port);

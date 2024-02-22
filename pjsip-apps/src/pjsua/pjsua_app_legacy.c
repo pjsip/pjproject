@@ -734,6 +734,9 @@ static void ui_make_new_call()
 
         pjsua_msg_data_init(&msg_data_);
         TEST_MULTIPART(&msg_data_);
+        if (app_config.enable_loam) {
+            call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+        }
         pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
                              &msg_data_, &current_call);
 
@@ -771,6 +774,10 @@ static void ui_make_multi_call()
         pj_strncpy(&tmp, &binfo.uri, sizeof(buf));
     } else {
         tmp = pj_str(result.uri_result);
+    }
+
+    if (app_config.enable_loam) {
+        call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
 
     for (i=0; i<my_atoi(menuin); ++i) {
@@ -1099,6 +1106,9 @@ static void ui_call_reinvite()
 static void ui_send_update()
 {
     if (current_call != -1) {
+        if (app_config.enable_loam) {
+            call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+        }
         pjsua_call_update2(current_call, &call_opt, NULL);
     } else {
         PJ_LOG(3,(THIS_FILE, "No current call"));
