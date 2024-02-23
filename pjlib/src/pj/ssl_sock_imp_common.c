@@ -2398,8 +2398,7 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_store(
     return PJ_SUCCESS;
 #else
     PJ_UNUSED_ARG(pool);
-    PJ_UNUSED_ARG(type);
-    PJ_UNUSED_ARG(keyword);
+    PJ_UNUSED_ARG(criteria);
     PJ_UNUSED_ARG(p_cert);
     return PJ_ENOTSUP;
 #endif
