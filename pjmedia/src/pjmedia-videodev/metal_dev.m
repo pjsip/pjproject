@@ -217,7 +217,16 @@ static pj_status_t metal_factory_refresh(pjmedia_vid_dev_factory *f)
     if (@available(macOS 10.14, iOS 12.0, *)) {
         struct metal_dev_info *qdi;
         unsigned l;
-        
+        id<MTLDevice> device;
+
+        device = MTLCreateSystemDefaultDevice();
+        if (!device) {
+            PJ_LOG(3, (THIS_FILE, "No Metal device found"));
+            return PJ_SUCCESS;
+        } else {
+            [device release];
+        }
+
         /* Init output device */
         qdi = &qf->dev_info[qf->dev_count++];
         pj_bzero(qdi, sizeof(*qdi));
