@@ -647,14 +647,14 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                         &listener->cert);
         if (status != PJ_SUCCESS)
             goto on_error;    
-    } else if (listener->tls_setting.cert_lookup_type !=
+    } else if (listener->tls_setting.cert_lookup.type !=
                                                 PJ_SSL_CERT_LOOKUP_NONE &&
-               listener->tls_setting.cert_lookup_keyword.slen)
+               listener->tls_setting.cert_lookup.keyword.slen)
     {
-        pj_ssl_cert_lookup_criteria crit = {0};
-        crit.type    = listener->tls_setting.cert_lookup_type;
-        crit.keyword = listener->tls_setting.cert_lookup_keyword;
-        status = pj_ssl_cert_load_from_store(pool, &crit, &listener->cert);
+        status = pj_ssl_cert_load_from_store(
+                                pool,
+                                &listener->tls_setting.cert_lookup,
+                                &listener->cert);
         if (status != PJ_SUCCESS)
             goto on_error;
     }

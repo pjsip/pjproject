@@ -192,8 +192,8 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.ca_buf           = str2Pj(this->CaBuf);
     ts.cert_buf         = str2Pj(this->certBuf);
     ts.privkey_buf      = str2Pj(this->privKeyBuf);
-    ts.cert_lookup_type = this->certLookupType;
-    ts.cert_lookup_keyword = str2Pj(this->certLookupKeyword);
+    ts.cert_lookup.type = this->certLookupType;
+    ts.cert_lookup.keyword = str2Pj(this->certLookupKeyword);
     ts.method           = this->method;
     ts.ciphers_num      = (unsigned)this->ciphers.size();
     ts.proto            = this->proto;
@@ -223,8 +223,8 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->CaBuf         = pj2Str(prm.ca_buf);
     this->certBuf       = pj2Str(prm.cert_buf);
     this->privKeyBuf    = pj2Str(prm.privkey_buf);
-    this->certLookupType= prm.cert_lookup_type;
-    this->certLookupKeyword = pj2Str(prm.cert_lookup_keyword);
+    this->certLookupType= prm.cert_lookup.type;
+    this->certLookupKeyword = pj2Str(prm.cert_lookup.keyword);
     this->method        = (pjsip_ssl_method)prm.method;
     this->proto         = prm.proto;
     // The following will only work if sizeof(enum)==sizeof(int)

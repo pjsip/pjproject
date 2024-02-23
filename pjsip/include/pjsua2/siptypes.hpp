@@ -192,7 +192,7 @@ struct TlsConfig : public PersistentObject
      * Lookup certificate from OS certificate store, this setting will
      * specify the keyword to lookup.
      */
-    string    certLookupKeyword;
+    string              certLookupKeyword;
 
     /**
      * TLS protocol method from #pjsip_ssl_method. In the future, this field

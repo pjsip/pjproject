@@ -224,8 +224,7 @@ typedef struct pj_turn_sock_tls_cfg
     pj_str_t    password;
 
     /**
-     * Lookup certificate from OS certificate store, this setting will
-     * specify the field type to lookup.
+     * Lookup certificate from OS certificate store with specified criteria.
      *
      * Currently only TLS backend Windows Schannel support this and this
      * backend only support this type of certificate settings (settings via
@@ -235,13 +234,7 @@ typedef struct pj_turn_sock_tls_cfg
      * the backend will provide pre-verification result against trusted
      * CA certificates in Current User store.
      */
-    pj_ssl_cert_lookup_type cert_lookup_type;
-
-    /**
-     * Lookup certificate from OS certificate store, this setting will
-     * specify the keyword to lookup.
-     */
-    pj_str_t    cert_lookup_keyword;
+    pj_ssl_cert_lookup_criteria cert_lookup;
 
     /**
      * The ssl socket parameter.
