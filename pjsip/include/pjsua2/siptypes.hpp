@@ -175,15 +175,24 @@ struct TlsConfig : public PersistentObject
     string              privKeyBuf;
 
     /**
-     * For Windows SSPI Schannel backend. This specifies the subject keyword
-     * used for searching certificate in OS certificate stores. The search
-     * will be performed in local machine and user account stores.
+     * Lookup certificate from OS certificate store, this setting will
+     * specify the field type to lookup.
      *
-     * The certificate will be used as client-side certificate for outgoing
-     * TLS connection, and server-side certificate for incoming TLS
-     * connection.
+     * Currently only TLS backend Windows Schannel support this and this
+     * backend only support this type of certificate settings (settings via
+     * files or buffers are not supported). The lookup will be performed in
+     * the Current User store, if not found, it will try Local Machine store.
+     * Note that in manual verification (e.g: when verifyServer is disabled),
+     * the backend will provide pre-verification result against trusted
+     * CA certificates in Current User store.
      */
-    string              certSubject;
+    pj_ssl_cert_lookup_type certLookupType;
+
+    /**
+     * Lookup certificate from OS certificate store, this setting will
+     * specify the keyword to lookup.
+     */
+    string    certLookupKeyword;
 
     /**
      * TLS protocol method from #pjsip_ssl_method. In the future, this field

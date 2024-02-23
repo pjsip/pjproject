@@ -151,6 +151,59 @@ typedef enum pj_ssl_cert_name_type
 } pj_ssl_cert_name_type;
 
 /**
+ * Field type for looking up SSL certificate in the certificate stores.
+ */
+typedef enum pj_ssl_cert_lookup_type
+{
+    /**
+     * No certificate to be looked up.
+     */
+    PJ_SSL_CERT_LOOKUP_NONE,
+
+    /**
+     * Lookup by subject, this will lookup any first certificate whose
+     * subject containing the specified keyword. Note that subject may not
+     * be unique in the store, the lookup may end up selecting a wrong
+     * certificate.
+     */
+    PJ_SSL_CERT_LOOKUP_SUBJECT,
+
+    /**
+     * Lookup by fingerprint/thumbprint (SHA1 hash), this will lookup
+     * any first certificate whose fingerprint matching the specified
+     * keyword. The keyword is an array of hash octets.
+     */
+    PJ_SSL_CERT_LOOKUP_FINGERPRINT,
+
+    /**
+     * Lookup by friendly name, this will lookup any first certificate
+     * whose friendly name containing the specified keyword. Note that
+     * friendly name may not be unique in the store, the lookup may end up
+     * selecting a wrong certificate.
+     */
+    PJ_SSL_CERT_LOOKUP_FRIENDLY_NAME
+
+} pj_ssl_cert_lookup_type;
+
+/**
+ * Describe structure of certificate lookup criteria.
+ */
+typedef struct pj_ssl_cert_lookup_criteria
+{
+    /**
+     * Certificate field type to look.
+     */
+    pj_ssl_cert_lookup_type type;
+
+    /*
+     * Keyword to match.
+     */
+    pj_str_t                keyword;
+
+} pj_ssl_cert_lookup_criteria;
+
+
+/**
  * Describe structure of certificate info.
  */
 typedef struct pj_ssl_cert_info {
@@ -277,6 +330,25 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
                                         const pj_ssl_cert_buffer *privkey_buf,
                                         const pj_str_t *privkey_pass,
                                         pj_ssl_cert_t **p_cert);
+
+/**
+ * Create credential from OS certificate store, this function will lookup
+ * certificate using the specified criterias.
+ *
+ * Currently this is used by Windows Schannel backend only, it will lookup
+ * in the Current User store first, if not found it will lookup in the
+ * Local Machine store.
+ *
+ * @param pool              The pool.
+ * @param criteria          The lookup criteria.
+ * @param p_cert            Pointer to credential instance to be created.
+ *
+ * @return                  PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_load_from_store(
+                                pj_pool_t *pool,
+                                const pj_ssl_cert_lookup_criteria *criteria,
+                                pj_ssl_cert_t **p_cert);
 
 /**
  * Dump SSL certificate info.
@@ -1045,17 +1117,6 @@ typedef struct pj_ssl_sock_param
      * Default value is zero/not-set.
      */
     pj_str_t server_name;
-
-    /**
-     * For Windows SSPI Schannel backend. This specifies the subject keyword
-     * used for searching certificate in OS certificate stores. The search
-     * will be performed in local machine and user account stores.
-     *
-     * The certificate will be used as client-side certificate for outgoing
-     * TLS connection, and server-side certificate for incoming TLS
-     * connection.
-     */
-    pj_str_t    cert_subject;
 
     /**
      * Specify if SO_REUSEADDR should be used for listening socket. This

@@ -184,6 +184,14 @@ typedef enum pj_ssl_cert_verify_flag_t
   PJ_SSL_CERT_EUNKNOWN = 1 << 31
 } pj_ssl_cert_verify_flag_t;
 
+typedef enum pj_ssl_cert_lookup_type
+{
+  PJ_SSL_CERT_LOOKUP_NONE,
+  PJ_SSL_CERT_LOOKUP_SUBJECT,
+  PJ_SSL_CERT_LOOKUP_FINGERPRINT,
+  PJ_SSL_CERT_LOOKUP_FRIENDLY_NAME
+} pj_ssl_cert_lookup_type;
+
 typedef enum pj_ice_sess_trickle
 {
   PJ_ICE_SESS_TRICKLE_DISABLED,

@@ -189,15 +189,24 @@ typedef struct pjsip_tls_setting
     pj_ssl_cert_buffer privkey_buf;
 
     /**
-     * For Windows SSPI Schannel backend. This specifies the subject keyword
-     * used for searching certificate in OS certificate stores. The search
-     * will be performed in local machine and user account stores.
+     * Lookup certificate from OS certificate store, this setting will
+     * specify the field type to lookup.
      *
-     * The certificate will be used as client-side certificate for outgoing
-     * TLS connection, and server-side certificate for incoming TLS
-     * connection.
+     * Currently only TLS backend Windows Schannel support this and this
+     * backend only support this type of certificate settings (settings via
+     * files or buffers are not supported). The lookup will be performed in
+     * the Current User store, if not found, it will try Local Machine store.
+     * Note that in manual verification (e.g: when verify_server is disabled),
+     * the backend will provide pre-verification result against trusted
+     * CA certificates in Current User store.
      */
-    pj_str_t    cert_subject;
+    pj_ssl_cert_lookup_type cert_lookup_type;
+
+    /**
+     * Lookup certificate from OS certificate store, this setting will
+     * specify the keyword to lookup.
+     */
+    pj_str_t    cert_lookup_keyword;
 
     /**
      * Password to open private key.
@@ -477,7 +486,6 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->ca_list_path, &src->ca_list_path);
     pj_strdup_with_null(pool, &dst->cert_file, &src->cert_file);
     pj_strdup_with_null(pool, &dst->privkey_file, &src->privkey_file);
-    pj_strdup_with_null(pool, &dst->cert_subject, &src->cert_subject);
     pj_strdup_with_null(pool, &dst->password, &src->password);
     pj_strdup_with_null(pool, &dst->sigalgs, &src->sigalgs);
     pj_strdup_with_null(pool, &dst->entropy_path, &src->entropy_path);
@@ -485,6 +493,9 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
     pj_strdup(pool, &dst->ca_buf, &src->ca_buf);
     pj_strdup(pool, &dst->cert_buf, &src->cert_buf);
     pj_strdup(pool, &dst->privkey_buf, &src->privkey_buf);
+
+    pj_strdup_with_null(pool, &dst->cert_lookup_keyword,
+                              &src->cert_lookup_keyword);
 
     if (src->ciphers_num) {
         unsigned i;

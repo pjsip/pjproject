@@ -351,7 +351,6 @@ static void set_ssock_param(pj_ssl_sock_param *ssock_param,
     sip_ssl_method = listener->tls_setting.method;
     sip_ssl_proto = listener->tls_setting.proto;
     ssock_param->proto = ssl_get_proto(sip_ssl_method, sip_ssl_proto);
-    ssock_param->cert_subject = listener->tls_setting.cert_subject;
 }
 
 static void update_bound_addr(struct tls_listener *listener,
@@ -648,6 +647,16 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                         &listener->cert);
         if (status != PJ_SUCCESS)
             goto on_error;    
+    } else if (listener->tls_setting.cert_lookup_type !=
+                                                PJ_SSL_CERT_LOOKUP_NONE &&
+               listener->tls_setting.cert_lookup_keyword.slen)
+    {
+        pj_ssl_cert_lookup_criteria crit = {0};
+        crit.type    = listener->tls_setting.cert_lookup_type;
+        crit.keyword = listener->tls_setting.cert_lookup_keyword;
+        status = pj_ssl_cert_load_from_store(pool, &crit, &listener->cert);
+        if (status != PJ_SUCCESS)
+            goto on_error;
     }
 
     /* Register to transport manager */

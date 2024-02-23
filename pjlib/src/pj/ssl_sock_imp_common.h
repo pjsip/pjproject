@@ -152,6 +152,7 @@ struct pj_ssl_sock_t
  */
 struct pj_ssl_cert_t
 {
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
     pj_str_t CA_file;
     pj_str_t CA_path;
     pj_str_t cert_file;
@@ -162,6 +163,9 @@ struct pj_ssl_cert_t
     pj_ssl_cert_buffer CA_buf;
     pj_ssl_cert_buffer cert_buf;
     pj_ssl_cert_buffer privkey_buf;
+#else
+    pj_ssl_cert_lookup_criteria criteria;
+#endif
 };
 
 /* ssl available ciphers */

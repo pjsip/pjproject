@@ -49,17 +49,19 @@
 #define SENDER    "ssl_schannel"
 
 /* Debugging */
-#define DEBUG_SCHANNEL  0
+#define DEBUG_SCHANNEL  1
 
 #if DEBUG_SCHANNEL
-#  define LOG_DEBUG(title)                  PJ_LOG(4,(SENDER, title))
-#  define LOG_DEBUG1(title, p1)             PJ_LOG(4,(SENDER, title, p1))
-#  define LOG_DEBUG2(title, p1, p2)         PJ_LOG(4,(SENDER, title, p1, p2))
+#  define LOG_DEBUG(title)              PJ_LOG(4,(SENDER,title))
+#  define LOG_DEBUG1(title,p1)          PJ_LOG(4,(SENDER,title,p1))
+#  define LOG_DEBUG2(title,p1,p2)       PJ_LOG(4,(SENDER,title,p1,p2))
+#  define LOG_DEBUG3(title,p1,p2,p3)    PJ_LOG(4,(SENDER,title,p1,p2,p3))
 #  define LOG_DEBUG_ERR(title, sec_status)  log_sec_err(4, title, sec_status)
 #else
 #  define LOG_DEBUG(s)
-#  define LOG_DEBUG1(title, p1)
-#  define LOG_DEBUG2(title, p1, p2)
+#  define LOG_DEBUG1(title,p1)
+#  define LOG_DEBUG2(title,p1,p2)
+#  define LOG_DEBUG3(title,p1,p2,p3)
 #  define LOG_DEBUG_ERR(title, sec_status)
 #endif
 
@@ -796,42 +798,91 @@ static PCCERT_CONTEXT create_self_signed_cert()
     return CertDuplicateCertificateContext(sch_ssl.self_signed_cert);
 }
 
-static PCCERT_CONTEXT find_cert_in_stores(const pj_str_t *subject)
+static PCCERT_CONTEXT find_cert_in_stores(pj_ssl_cert_lookup_type type,
+                                          const pj_str_t *keyword)
 {
-    HCERTSTORE store = NULL;
     PCCERT_CONTEXT cert = NULL;
 
-    /* Find in Current User store */
-    store = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING, 0,
-                          CERT_SYSTEM_STORE_CURRENT_USER, L"MY");
-    if (store) {
-        cert = CertFindCertificateInStore(store, X509_ASN_ENCODING,
-                        0, CERT_FIND_SUBJECT_STR_A, subject->ptr, NULL);
+    LOG_DEBUG3("Looking up certificate with criteria: type=%d keyword=%.*s",
+               type, (type==PJ_SSL_CERT_LOOKUP_FINGERPRINT? 4:keyword->slen),
+               (type==PJ_SSL_CERT_LOOKUP_FINGERPRINT?"[..]":keyword->ptr));
+
+    /* Find in Current User & Local Machine stores */
+    DWORD flags[2] = { CERT_SYSTEM_STORE_CURRENT_USER,
+                       CERT_SYSTEM_STORE_LOCAL_MACHINE };
+
+    for (int i = 0; (!cert && i < PJ_ARRAY_SIZE(flags)); ++i) {
+        HCERTSTORE store = NULL;
+
+        /* Open the store */
+        store = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING,
+                                0, flags[i], L"MY");
+        if (!store) {
+            log_sec_err(1, "Error opening store", GetLastError());
+            continue;
+        }
+
+        /* Lookup based on type */
+
+        if (type == PJ_SSL_CERT_LOOKUP_SUBJECT) {
+            cert = CertFindCertificateInStore(
+                        store, X509_ASN_ENCODING, 0,
+                        CERT_FIND_SUBJECT_STR_A, keyword->ptr, NULL);
+
+        } else if (type == PJ_SSL_CERT_LOOKUP_FINGERPRINT) {
+            CRYPT_HASH_BLOB hash = {0};
+            hash.cbData = (DWORD)keyword->slen;
+            hash.pbData = (BYTE*)keyword->ptr;
+            cert = CertFindCertificateInStore(
+                        store, X509_ASN_ENCODING,
+                        0, CERT_FIND_SHA1_HASH, &hash, NULL);
+
+        } else if (type == PJ_SSL_CERT_LOOKUP_FRIENDLY_NAME) {
+            WCHAR buf[256];
+            DWORD buf_size;
+
+            if (keyword->slen >= sizeof(buf)) {
+                PJ_LOG(1,(SENDER,"Cannot lookup certificate, friendly name "
+                                 "keyword is too long (max=%d)",sizeof(buf)));
+            } else {
+                cert = NULL;
+                while (1) {
+                    cert = CertEnumCertificatesInStore(store, cert);
+                    if (!cert)
+                        break;
+
+                    buf_size = sizeof(buf);
+                    if (CertGetCertificateContextProperty(
+                            cert, CERT_FRIENDLY_NAME_PROP_ID, buf, &buf_size))
+                    {
+                        char buf2[256];
+                        pj_ssize_t buf2_len;
+
+                        /* The output buf is null-terminated */
+                        pj_unicode_to_ansi(buf, -1, buf2, sizeof(buf2));
+                        buf2_len = pj_ansi_strlen(buf2);
+                        if (keyword->slen == buf2_len &&
+                            !pj_memcmp(buf2, keyword->ptr, buf2_len))
+                        {
+                            /* Found it */
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         CertCloseStore(store, 0);
-        if (cert)
-            return cert;
-    } else {
-        log_sec_err(1, "Error opening current user cert store.",
-                    GetLastError());
     }
 
-    /* Find in Local Machine store */
-    store = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING, 0,
-                          CERT_SYSTEM_STORE_LOCAL_MACHINE, L"MY");
-    if (store) {
-        cert = CertFindCertificateInStore(store, X509_ASN_ENCODING,
-                        0, CERT_FIND_SUBJECT_STR_A, subject->ptr, NULL);
-        CertCloseStore(store, 0);
-        if (cert)
-            return cert;
-    } else {
-        log_sec_err(1, "Error opening local machine cert store.",
-                    GetLastError());
+    if (!cert) {
+        PJ_LOG(1,(SENDER,
+                  "Cannot find certificate with criteria: "
+                  "type=%d keyword=%.*s", type,
+                  (type==PJ_SSL_CERT_LOOKUP_FINGERPRINT? 4:keyword->slen),
+                  (type==PJ_SSL_CERT_LOOKUP_FINGERPRINT?"[..]":keyword->ptr)));
     }
-
-    PJ_LOG(1,(SENDER, "Cannot find certificate with specified subject: %.*s",
-              subject->slen, subject->ptr));
-    return NULL;
+    return cert;
 }
 
 
@@ -840,7 +891,7 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
     sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
     SCH_CREDENTIALS creds = { 0 };
     unsigned param_cnt = 0;
-    TLS_PARAMETERS params[1] = {{0}};
+    TLS_PARAMETERS param = {0};
     SECURITY_STATUS ss;
 
     creds.dwVersion = SCH_CREDENTIALS_VERSION;
@@ -865,27 +916,44 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
             tmp |= SP_PROT_SSL2;
         if (tmp) {
             param_cnt = 1;
-            params[0].grbitDisabledProtocols = SP_PROT_ALL & ~tmp;
+            param.grbitDisabledProtocols = ~tmp;
+            LOG_DEBUG1("grbitDisabledProtocols=0x%x", (~tmp));
         }
     }
 
     /* Setup the TLS certificate */
-    if (ssock->param.cert_subject.slen && !sch_ssock->cert_ctx) {
+    if (ssock->cert &&
+        ssock->cert->criteria.type != PJ_SSL_CERT_LOOKUP_NONE &&
+        !sch_ssock->cert_ctx)
+    {
         /* Search certificate from stores */
         sch_ssock->cert_ctx =
-            find_cert_in_stores(&ssock->param.cert_subject);
+            find_cert_in_stores(ssock->cert->criteria.type,
+                                &ssock->cert->criteria.keyword);
     }
 
     if (ssock->is_server) {
-        if (!ssock->param.cert_subject.slen) {
-            /* No certificate subject specified, use self-signed cert */
+        if (!ssock->cert ||
+            ssock->cert->criteria.type == PJ_SSL_CERT_LOOKUP_NONE)
+        {
+            /* No certificate specified, use self-signed cert */
             sch_ssock->cert_ctx = create_self_signed_cert();
             PJ_LOG(2,(SENDER, "Warning: TLS server does not specify a "
                               "certificate, use a self-signed certificate"));
 
             // -- test code --
-            //pj_str_t test = {"test.pjsip.org", 14};
-            //sch_ssock->cert_ctx = find_cert_in_stores(&test);
+            //pj_str_t keyword = {"test.pjsip.org", 14};
+            //pj_ssl_cert_lookup_type type = PJ_SSL_CERT_LOOKUP_SUBJECT;
+
+            //pj_str_t keyword = {"schannel-test", 13};
+            //pj_ssl_cert_lookup_type type = PJ_SSL_CERT_LOOKUP_FRIENDLY_NAME;
+
+            //pj_str_t keyword = {"\x08\x3a\x6c\xdc\xd0\x19\x59\xec\x28\xc3"
+            //                    "\x81\xb8\xc0\x21\x09\xe9\xd5\xf6\x57\x7d",
+            //                    20};
+            //pj_ssl_cert_lookup_type type = PJ_SSL_CERT_LOOKUP_FINGERPRINT;
+
+            //sch_ssock->cert_ctx = find_cert_in_stores( type, &keyword);
         }
     } else {
         creds.dwFlags |= SCH_CRED_NO_DEFAULT_CREDS;
@@ -911,7 +979,7 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
     /* Now init the credentials */
     if (param_cnt) {
         creds.cTlsParameters = param_cnt;
-        creds.pTlsParameters = params;
+        creds.pTlsParameters = &param;
     }
 
     ss = AcquireCredentialsHandle(NULL, UNISP_NAME,
