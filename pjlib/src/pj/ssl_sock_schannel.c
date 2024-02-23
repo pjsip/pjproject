@@ -996,6 +996,94 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
     return PJ_SUCCESS;
 }
 
+static pj_status_t init_creds_old(pj_ssl_sock_t* ssock)
+{
+    sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
+    SCHANNEL_CRED creds = { 0 };
+    SECURITY_STATUS ss;
+
+    creds.dwVersion = SCHANNEL_CRED_VERSION;
+    creds.dwFlags = SCH_USE_STRONG_CRYPTO;
+
+    /* Setup Protocol version */
+    if (ssock->param.proto != PJ_SSL_SOCK_PROTO_DEFAULT &&
+        ssock->param.proto != PJ_SSL_SOCK_PROTO_ALL)
+    {
+        DWORD tmp = 0;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3)
+            tmp |= SP_PROT_TLS1_3;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2)
+            tmp |= SP_PROT_TLS1_2;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1)
+            tmp |= SP_PROT_TLS1_1;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1)
+            tmp |= SP_PROT_TLS1_0;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3)
+            tmp |= SP_PROT_SSL3;
+        if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL2)
+            tmp |= SP_PROT_SSL2;
+        if (tmp) {
+            creds.grbitEnabledProtocols = tmp;
+            LOG_DEBUG1("grbitEnabledProtocols=0x%x", tmp);
+        }
+    }
+
+    /* Setup the TLS certificate */
+    if (ssock->cert &&
+        ssock->cert->criteria.type != PJ_SSL_CERT_LOOKUP_NONE &&
+        !sch_ssock->cert_ctx)
+    {
+        /* Search certificate from stores */
+        sch_ssock->cert_ctx =
+            find_cert_in_stores(ssock->cert->criteria.type,
+                                &ssock->cert->criteria.keyword);
+    }
+
+    if (ssock->is_server) {
+        if (!ssock->cert ||
+            ssock->cert->criteria.type == PJ_SSL_CERT_LOOKUP_NONE)
+        {
+            /* No certificate specified, use self-signed cert */
+            sch_ssock->cert_ctx = create_self_signed_cert();
+            PJ_LOG(2,(SENDER, "Warning: TLS server does not specify a "
+                              "certificate, use a self-signed certificate"));
+        }
+    } else {
+        creds.dwFlags |= SCH_CRED_NO_DEFAULT_CREDS;
+    }
+
+    if (sch_ssock->cert_ctx) {
+        creds.cCreds = 1;
+        creds.paCred = &sch_ssock->cert_ctx;
+    }
+
+    /* Verification */
+    if (!ssock->is_server) {
+        if (ssock->param.verify_peer)
+            creds.dwFlags |= SCH_CRED_AUTO_CRED_VALIDATION |
+                             SCH_CRED_REVOCATION_CHECK_CHAIN;
+        else
+            creds.dwFlags |= SCH_CRED_MANUAL_CRED_VALIDATION;
+    } else {
+        if (ssock->param.verify_peer)
+            creds.dwFlags |= SCH_CRED_REVOCATION_CHECK_CHAIN;
+    }
+
+    ss = AcquireCredentialsHandle(NULL, UNISP_NAME,
+                                  ssock->is_server? SECPKG_CRED_INBOUND :
+                                                    SECPKG_CRED_OUTBOUND,
+                                  NULL, &creds, NULL, NULL,
+                                  &sch_ssock->cred_handle, NULL);
+    if (ss < 0) {
+        log_sec_err(1, "Failed in AcquireCredentialsHandle()", ss);
+
+        return sec_err_to_pj(ss);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 
 static void verify_remote_cert(pj_ssl_sock_t* ssock)
 {
@@ -1109,6 +1197,10 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
     /* Create credential handle, if not yet */
     if (!SecIsValidHandle(&sch_ssock->cred_handle)) {
         status2 = init_creds(ssock);
+        if (status2 != PJ_SUCCESS) {
+            /* On error, retry using older version of credential */
+            status2 = init_creds_old(ssock);
+        }
         if (status2 != PJ_SUCCESS) {
             status = status2;
             goto on_return;
@@ -1363,13 +1455,14 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
 
     ss = DecryptMessage(&sch_ssock->ctx_handle, &buf_desc, 0, NULL);
 
-    /* Check for any unprocessed input data, put it back to buffer */
-    i = find_sec_buffer(buf, ARRAYSIZE(buf), SECBUFFER_EXTRA);
-    if (i >= 0) {
-        circ_read_cancel(&ssock->circ_buf_input, buf[i].cbBuffer);
-    }
-
     if (ss == SEC_E_OK) {
+        /* Check for any unprocessed input data, put it back to buffer */
+        i = find_sec_buffer(buf, ARRAYSIZE(buf), SECBUFFER_EXTRA);
+        if (i >= 0) {
+            circ_read_cancel(&ssock->circ_buf_input, buf[i].cbBuffer);
+        }
+
+        /* Process any decrypted data */
         i = find_sec_buffer(buf, ARRAYSIZE(buf), SECBUFFER_DATA);
         if (i >= 0) {
             pj_uint8_t *p = buf[i].pvBuffer;
@@ -1404,20 +1497,24 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
     }
 
     else if (ss == SEC_I_RENEGOTIATE) {
-        PJ_LOG(3, (SENDER, "Remote signals renegotiation"));
+        /* Proceed renegotiation (initiated by local or remote) */
+        PJ_LOG(3, (SENDER, "Renegotiation on progress"));
 
+        /* Check for any token for renegotiation */
+        i = find_sec_buffer(buf, ARRAYSIZE(buf), SECBUFFER_EXTRA);
+        if (i >= 0 && buf[i].pvBuffer && buf[i].cbBuffer) {
+            /* Queue the token as input in the handshake */
+            circ_write(&ssock->circ_buf_input, buf[i].pvBuffer,
+                       buf[i].cbBuffer);
+        }
+
+        /* Proceed as though creating a new connection */
         if (SecIsValidHandle(&sch_ssock->ctx_handle)) {
             DeleteSecurityContext(&sch_ssock->ctx_handle);
             SecInvalidateHandle(&sch_ssock->ctx_handle);
         }
-
         ssock->ssl_state = SSL_STATE_HANDSHAKING;
         status = PJ_EEOF;
-
-        /* Any unprocessed data should have been returned via buffer type
-         * SECBUFFER_EXTRA above (docs seems to say so).
-         */
-        //circ_read_cancel(&ssock->circ_buf_input, size_);
     }
 
     else if (ss == SEC_I_CONTEXT_EXPIRED)
