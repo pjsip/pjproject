@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		3A4E3B582B62025C0016735C /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B562B62025B0016735C /* MetalKit.framework */; };
 		3A4E3B592B62025C0016735C /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B572B62025B0016735C /* Metal.framework */; };
+		3A4E3BA52B734E9A0016735C /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3BA42B734E9A0016735C /* Network.framework */; };
 		3A6FC61C25CBD4540065F472 /* ipjsua_swiftApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6FC61B25CBD4540065F472 /* ipjsua_swiftApp.swift */; };
 		3A6FC61E25CBD4540065F472 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6FC61D25CBD4540065F472 /* ContentView.swift */; };
 		3A6FC62025CBD4550065F472 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3A6FC61F25CBD4550065F472 /* Assets.xcassets */; };
@@ -51,11 +52,24 @@
 		3A6FC7F225CD1A3E0065F472 /* libwebrtc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7DE25CD1A3D0065F472 /* libwebrtc.a */; };
 		3A6FC7F325CD1A3E0065F472 /* libpjmedia-codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7DF25CD1A3D0065F472 /* libpjmedia-codec.a */; };
 		3A6FC7F425CD1A3E0065F472 /* libpjmedia-audiodev.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7E025CD1A3D0065F472 /* libpjmedia-audiodev.a */; };
+		3AF9B5372B7B454D0043987D /* ipjsua_swiftVidTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AF9B5362B7B454D0043987D /* ipjsua_swiftVidTest.swift */; };
+		3AF9B5392B7B454D0043987D /* ipjsua_swiftVidTestLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AF9B5382B7B454D0043987D /* ipjsua_swiftVidTestLaunchTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3AF9B53A2B7B454D0043987D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3A6FC61025CBD4540065F472 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3A6FC61725CBD4540065F472;
+			remoteInfo = "ipjsua-swift";
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		3A4E3B562B62025B0016735C /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		3A4E3B572B62025B0016735C /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		3A4E3BA42B734E9A0016735C /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
 		3A6FC61825CBD4540065F472 /* ipjsua-swift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ipjsua-swift.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A6FC61B25CBD4540065F472 /* ipjsua_swiftApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ipjsua_swiftApp.swift; sourceTree = "<group>"; };
 		3A6FC61D25CBD4540065F472 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -101,6 +115,10 @@
 		3A6FC7DE25CD1A3D0065F472 /* libwebrtc.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libwebrtc.a; sourceTree = "<group>"; };
 		3A6FC7DF25CD1A3D0065F472 /* libpjmedia-codec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libpjmedia-codec.a"; sourceTree = "<group>"; };
 		3A6FC7E025CD1A3D0065F472 /* libpjmedia-audiodev.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libpjmedia-audiodev.a"; sourceTree = "<group>"; };
+		3AF9B5342B7B454D0043987D /* ipjsua-swiftVidTest.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ipjsua-swiftVidTest.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3AF9B5362B7B454D0043987D /* ipjsua_swiftVidTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ipjsua_swiftVidTest.swift; sourceTree = "<group>"; };
+		3AF9B5382B7B454D0043987D /* ipjsua_swiftVidTestLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ipjsua_swiftVidTestLaunchTests.swift; sourceTree = "<group>"; };
+		3AF9B53F2B7B583C0043987D /* ipjsua-swift.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "ipjsua-swift.xctestplan"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -147,6 +165,14 @@
 				3A6FC7F325CD1A3E0065F472 /* libpjmedia-codec.a in Frameworks */,
 				3A6FC78525CBE3700065F472 /* UIKit.framework in Frameworks */,
 				3A6FC78625CBE3700065F472 /* VideoToolbox.framework in Frameworks */,
+				3A4E3BA52B734E9A0016735C /* Network.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3AF9B5312B7B454D0043987D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -156,6 +182,8 @@
 		3A6FC60F25CBD4540065F472 = {
 			isa = PBXGroup;
 			children = (
+				3AF9B53F2B7B583C0043987D /* ipjsua-swift.xctestplan */,
+				3AF9B5352B7B454D0043987D /* ipjsua-swiftVidTest */,
 				3A6FC75A25CBD6CF0065F472 /* Frameworks */,
 				3A6FC6AF25CBD5790065F472 /* Libraries */,
 				3A6FC61A25CBD4540065F472 /* ipjsua-swift */,
@@ -167,6 +195,7 @@
 			isa = PBXGroup;
 			children = (
 				3A6FC61825CBD4540065F472 /* ipjsua-swift.app */,
+				3AF9B5342B7B454D0043987D /* ipjsua-swiftVidTest.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -223,6 +252,7 @@
 		3A6FC75A25CBD6CF0065F472 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				3A4E3BA42B734E9A0016735C /* Network.framework */,
 				3A4E3B572B62025B0016735C /* Metal.framework */,
 				3A4E3B562B62025B0016735C /* MetalKit.framework */,
 				3A6FC75B25CBD6E10065F472 /* AudioToolbox.framework */,
@@ -246,6 +276,15 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		3AF9B5352B7B454D0043987D /* ipjsua-swiftVidTest */ = {
+			isa = PBXGroup;
+			children = (
+				3AF9B5362B7B454D0043987D /* ipjsua_swiftVidTest.swift */,
+				3AF9B5382B7B454D0043987D /* ipjsua_swiftVidTestLaunchTests.swift */,
+			);
+			path = "ipjsua-swiftVidTest";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -266,18 +305,40 @@
 			productReference = 3A6FC61825CBD4540065F472 /* ipjsua-swift.app */;
 			productType = "com.apple.product-type.application";
 		};
+		3AF9B5332B7B454D0043987D /* ipjsua-swiftVidTest */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3AF9B53E2B7B454D0043987D /* Build configuration list for PBXNativeTarget "ipjsua-swiftVidTest" */;
+			buildPhases = (
+				3AF9B5302B7B454D0043987D /* Sources */,
+				3AF9B5312B7B454D0043987D /* Frameworks */,
+				3AF9B5322B7B454D0043987D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3AF9B53B2B7B454D0043987D /* PBXTargetDependency */,
+			);
+			name = "ipjsua-swiftVidTest";
+			productName = "ipjsua-swiftVidTest";
+			productReference = 3AF9B5342B7B454D0043987D /* ipjsua-swiftVidTest.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		3A6FC61025CBD4540065F472 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 1240;
+				LastSwiftUpdateCheck = 1520;
 				LastUpgradeCheck = 1240;
 				TargetAttributes = {
 					3A6FC61725CBD4540065F472 = {
 						CreatedOnToolsVersion = 12.4;
 						LastSwiftMigration = 1240;
+					};
+					3AF9B5332B7B454D0043987D = {
+						CreatedOnToolsVersion = 15.2;
+						TestTargetID = 3A6FC61725CBD4540065F472;
 					};
 				};
 			};
@@ -295,6 +356,7 @@
 			projectRoot = "";
 			targets = (
 				3A6FC61725CBD4540065F472 /* ipjsua-swift */,
+				3AF9B5332B7B454D0043987D /* ipjsua-swiftVidTest */,
 			);
 		};
 /* End PBXProject section */
@@ -306,6 +368,13 @@
 			files = (
 				3A6FC62325CBD4550065F472 /* Preview Assets.xcassets in Resources */,
 				3A6FC62025CBD4550065F472 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3AF9B5322B7B454D0043987D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -322,7 +391,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3AF9B5302B7B454D0043987D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3AF9B5392B7B454D0043987D /* ipjsua_swiftVidTestLaunchTests.swift in Sources */,
+				3AF9B5372B7B454D0043987D /* ipjsua_swiftVidTest.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3AF9B53B2B7B454D0043987D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3A6FC61725CBD4540065F472 /* ipjsua-swift */;
+			targetProxy = 3AF9B53A2B7B454D0043987D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		3A6FC62525CBD4550065F472 /* Debug */ = {
@@ -463,9 +549,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_ASSET_PATHS = "\"ipjsua-swift/Preview Content\"";
-				DEVELOPMENT_TEAM = 93NHJQ455P;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "ipjsua-swift/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -488,6 +576,8 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.ipjsua-swift";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Teluu Profile";
 				SWIFT_OBJC_BRIDGING_HEADER = "ipjsua-swift/ipjsua-swift-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -501,9 +591,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_ASSET_PATHS = "\"ipjsua-swift/Preview Content\"";
-				DEVELOPMENT_TEAM = 93NHJQ455P;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "ipjsua-swift/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -526,9 +618,66 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.ipjsua-swift";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Teluu Profile";
 				SWIFT_OBJC_BRIDGING_HEADER = "ipjsua-swift/ipjsua-swift-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		3AF9B53C2B7B454D0043987D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.ipjsua-swiftVidTest";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Teluu Profile";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "ipjsua-swift";
+			};
+			name = Debug;
+		};
+		3AF9B53D2B7B454D0043987D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.ipjsua-swiftVidTest";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Teluu Profile";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "ipjsua-swift";
 			};
 			name = Release;
 		};
@@ -549,6 +698,15 @@
 			buildConfigurations = (
 				3A6FC62825CBD4550065F472 /* Debug */,
 				3A6FC62925CBD4550065F472 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3AF9B53E2B7B454D0043987D /* Build configuration list for PBXNativeTarget "ipjsua-swiftVidTest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3AF9B53C2B7B454D0043987D /* Debug */,
+				3AF9B53D2B7B454D0043987D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
