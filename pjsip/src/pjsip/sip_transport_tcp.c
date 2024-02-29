@@ -1744,6 +1744,22 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory,
     pj_status_t status = PJ_SUCCESS;
     struct tcp_listener *listener = (struct tcp_listener *)factory;
 
+    /* Just update the published address if currently no listener */
+    if (!listener->asock) {
+        PJ_LOG(3,(factory->obj_name,
+                      "TCP restart requested while no listener created, "
+                      "update the published address only"));
+
+        status = update_factory_addr(listener, a_name);
+        if (status != PJ_SUCCESS)
+            return status;
+
+        /* Set transport info. */
+       update_transport_info(listener);
+
+       return PJ_SUCCESS;
+    }
+
     lis_close(listener);
 
     status = pjsip_tcp_transport_lis_start(factory, local, a_name);
@@ -1753,15 +1769,15 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory,
 
         return status;
     }
-    
+
     status = pjsip_tpmgr_register_tpfactory(listener->tpmgr,
                                             &listener->factory);
     if (status != PJ_SUCCESS) {
         tcp_perror(listener->factory.obj_name,
                    "Unable to register the transport listener", status);
     } else {
-        listener->is_registered = PJ_TRUE;      
-    }    
+        listener->is_registered = PJ_TRUE;
+    }
 
     return status;
 }
