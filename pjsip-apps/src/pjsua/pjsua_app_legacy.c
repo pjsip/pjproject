@@ -248,6 +248,8 @@ static void keystroke_help()
     puts("| dq  Dump curr. call quality  | cd  Disconnect port      | dc  Dump config   |");
     puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
     puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |                   |");
+    puts("| +l Set Late Offer Answer Mode   |                       |                   |");
+    puts("| -l Unset Late Offer Answer Mode |                       |                   |");
     puts("+-----------------------------------------------------------------------------+");
 #if PJSUA_HAS_VIDEO
     puts("| Video: \"vid help\" for more info                                             |");
@@ -1088,6 +1090,11 @@ static void ui_delete_account()
     }
 }
 
+static void ui_unset_loam_mode()
+{
+    app_config.enable_loam = PJ_FALSE;
+}
+
 static void ui_call_hold()
 {
     if (current_call != -1) {
@@ -1451,6 +1458,11 @@ static void ui_send_arbitrary_request()
         pj_str_t method = pj_str(text);
         pjsua_call_send_request(current_call, &method, NULL);
     }
+}
+
+static void ui_set_loam_mode()
+{
+    app_config.enable_loam = PJ_TRUE;
 }
 
 static void ui_echo(char menuin[])
@@ -1930,6 +1942,8 @@ void legacy_main(void)
                 ui_add_buddy();
             } else if (menuin[1] == 'a') {
                 ui_add_account(&app_config.rtp_cfg);
+            } else if (menuin[1] == 'l') {
+                ui_set_loam_mode();
             } else {
                 printf("Invalid input %s\n", menuin);
             }
@@ -1940,6 +1954,8 @@ void legacy_main(void)
                 ui_delete_buddy();
             } else if (menuin[1] == 'a') {
                 ui_delete_account();
+            } else if (menuin[1] == 'l') {
+                ui_unset_loam_mode();
             } else {
                 printf("Invalid input %s\n", menuin);
             }
