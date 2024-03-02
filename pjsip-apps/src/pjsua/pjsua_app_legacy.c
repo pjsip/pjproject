@@ -248,6 +248,8 @@ static void keystroke_help()
     puts("| dq  Dump curr. call quality  | cd  Disconnect port      | dc  Dump config   |");
     puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
     puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |                   |");
+    puts("|                              | ct  Start recording      |                   |");
+    puts("|                              | cp  Stop recording       |                   |");
     puts("+-----------------------------------------------------------------------------+");
 #if PJSUA_HAS_VIDEO
     puts("| Video: \"vid help\" for more info                                             |");
@@ -1714,6 +1716,29 @@ static void ui_conf_connect(char menuin[])
     }
 }
 
+static void ui_conf_recorder_create()
+{
+    pj_status_t status;
+
+    if (app_config.rec_file.slen) {
+        status = pjsua_recorder_create(&app_config.rec_file, 0, NULL, 0, 0,
+                                       &app_config.rec_id);
+    }
+    if (status != PJ_SUCCESS) {
+        puts("Error to create recorder");
+        return;
+    }
+    app_config.rec_port = pjsua_recorder_get_conf_port(app_config.rec_id);
+    puts("Recorder was created");
+}
+
+static void ui_conf_recorder_destroy()
+{
+    pjsua_recorder_destroy(app_config.rec_id);
+    app_config.rec_port = PJSUA_INVALID_ID;
+    puts("Recorder was destroyed");
+}
+
 static void ui_adjust_volume()
 {
     char buf[128];
@@ -2047,6 +2072,12 @@ void legacy_main(void)
             case 'c':
             case 'd':
                 ui_conf_connect(menuin);
+                break;
+            case 't':
+                ui_conf_recorder_create();
+                break;
+            case 'p':
+                ui_conf_recorder_destroy();
                 break;
             }
             break;
