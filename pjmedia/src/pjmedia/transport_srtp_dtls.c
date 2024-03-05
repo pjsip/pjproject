@@ -464,7 +464,7 @@ static pj_status_t ssl_generate_cert(X509 **p_cert, EVP_PKEY **p_priv_key)
     if (!X509_set_pubkey(cert, priv_key)) goto on_error;
 
     /* Sign with the private key */
-    if (!X509_sign(cert, priv_key, EVP_sha1())) goto on_error;
+    if (!X509_sign(cert, priv_key, EVP_sha256())) goto on_error;
 
     /* Free big number */
     BN_free(bne);
