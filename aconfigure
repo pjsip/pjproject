@@ -6518,19 +6518,26 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking ioqueue backend" >&5
 printf %s "checking ioqueue backend... " >&6; }
 
+ac_os_objs=ioqueue_select.o
+ac_linux_poll=select
+
 case $target in
 	*darwin* | *bsd*)
 		# Check whether --enable-kqueue was given.
 if test ${enable_kqueue+y}
 then :
   enableval=$enable_kqueue;
-				ac_os_objs=ioqueue_kqueue.o
-				{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: kqueue()" >&5
+				if test "$enable_kqueue" = "yes"; then
+					ac_os_objs=ioqueue_kqueue.o
+					{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: kqueue()" >&5
 printf "%s\n" "kqueue()" >&6; }
+				else
+					{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: select()" >&5
+printf "%s\n" "select()" >&6; }
+				fi
 
 else $as_nop
 
-				ac_os_objs=ioqueue_select.o
 				{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: select()" >&5
 printf "%s\n" "select()" >&6; }
 
@@ -6542,19 +6549,22 @@ fi
 if test ${enable_epoll+y}
 then :
   enableval=$enable_epoll;
-				ac_os_objs=ioqueue_epoll.o
-				{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: /dev/epoll" >&5
+				if test "$enable_epoll" = "yes"; then
+					ac_os_objs=ioqueue_epoll.o
+					{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: /dev/epoll" >&5
 printf "%s\n" "/dev/epoll" >&6; }
-				printf "%s\n" "#define PJ_HAS_LINUX_EPOLL 1" >>confdefs.h
+					printf "%s\n" "#define PJ_HAS_LINUX_EPOLL 1" >>confdefs.h
 
-				ac_linux_poll=epoll
+					ac_linux_poll=epoll
+				else
+					{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: select()" >&5
+printf "%s\n" "select()" >&6; }
+				fi
 
 else $as_nop
 
-				ac_os_objs=ioqueue_select.o
 				{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: select()" >&5
 printf "%s\n" "select()" >&6; }
-				ac_linux_poll=select
 
 fi
 
