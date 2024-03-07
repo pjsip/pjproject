@@ -236,7 +236,7 @@ static void keystroke_help()
     puts("|  a  Answer call              |  i  Send IM              | !a  Modify accnt. |");
     puts("|  h  Hangup call  (ha=all)    |  s  Subscribe presence   | rr  (Re-)register |");
     puts("|  H  Hold call                |  u  Unsubscribe presence | ru  Unregister    |");
-    puts("|                              |  D  Subscribe dlg event  |                   |");
+    puts("|  o Toggle call SDP offer     |  D  Subscribe dlg event  |                   |");
     puts("|                              |  Du Unsub dlg event      |                   |");
     puts("|  v  re-inVite (release hold) |  t  Toggle online status |  >  Cycle next ac.|");
     puts("|  U  send UPDATE              |  T  Set online status    |  <  Cycle prev ac.|");
@@ -248,8 +248,6 @@ static void keystroke_help()
     puts("| dq  Dump curr. call quality  | cd  Disconnect port      | dc  Dump config   |");
     puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
     puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |                   |");
-    puts("| +l Set Late Offer Answer Mode   |                       |                   |");
-    puts("| -l Unset Late Offer Answer Mode |                       |                   |");
     puts("+-----------------------------------------------------------------------------+");
 #if PJSUA_HAS_VIDEO
     puts("| Video: \"vid help\" for more info                                             |");
@@ -1460,9 +1458,9 @@ static void ui_send_arbitrary_request()
     }
 }
 
-static void ui_set_loam_mode()
+static void ui_toggle_call_sdp_offer()
 {
-    app_config.enable_loam = PJ_TRUE;
+    app_config.enable_loam = !app_config.enable_loam;
 }
 
 static void ui_echo(char menuin[])
@@ -1942,8 +1940,6 @@ void legacy_main(void)
                 ui_add_buddy();
             } else if (menuin[1] == 'a') {
                 ui_add_account(&app_config.rtp_cfg);
-            } else if (menuin[1] == 'l') {
-                ui_set_loam_mode();
             } else {
                 printf("Invalid input %s\n", menuin);
             }
@@ -1954,8 +1950,6 @@ void legacy_main(void)
                 ui_delete_buddy();
             } else if (menuin[1] == 'a') {
                 ui_delete_account();
-            } else if (menuin[1] == 'l') {
-                ui_unset_loam_mode();
             } else {
                 printf("Invalid input %s\n", menuin);
             }
@@ -1966,6 +1960,13 @@ void legacy_main(void)
              * Hold call.
              */
             ui_call_hold();
+            break;
+
+        case 'o':
+            /*
+             * Toggle call SDP offer
+             */
+            ui_toggle_call_sdp_offer();
             break;
 
         case 'v':
