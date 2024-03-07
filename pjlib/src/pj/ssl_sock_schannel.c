@@ -52,11 +52,12 @@
 #define DEBUG_SCHANNEL  1
 
 #if DEBUG_SCHANNEL
-#  define LOG_DEBUG(title)              PJ_LOG(4,(SENDER,title))
-#  define LOG_DEBUG1(title,p1)          PJ_LOG(4,(SENDER,title,p1))
-#  define LOG_DEBUG2(title,p1,p2)       PJ_LOG(4,(SENDER,title,p1,p2))
-#  define LOG_DEBUG3(title,p1,p2,p3)    PJ_LOG(4,(SENDER,title,p1,p2,p3))
-#  define LOG_DEBUG_ERR(title, sec_status)  log_sec_err(4, title, sec_status)
+#  define LOG_DEBUG(sender,title)           PJ_LOG(4,(sender,title))
+#  define LOG_DEBUG1(sender,title,p1)       PJ_LOG(4,(sender,title,p1))
+#  define LOG_DEBUG2(sender,title,p1,p2)    PJ_LOG(4,(sender,title,p1,p2))
+#  define LOG_DEBUG3(sender,title,p1,p2,p3) PJ_LOG(4,(sender,title,p1,p2,p3))
+#  define LOG_DEBUG_ERR(sender,title,sec_status) \
+                                        log_sec_err(4,sender,title,sec_status)
 #else
 #  define LOG_DEBUG(s)
 #  define LOG_DEBUG1(title,p1)
@@ -127,8 +128,8 @@ typedef struct sch_ssl_sock_t
 
 /* === Helper functions === */
 
-#define PJ_SSL_ERRNO_START              (PJ_ERRNO_START_USER + \
-                                         PJ_ERRNO_SPACE_SIZE*6)
+#define SNAME(ssock)       ((ssock)->pool->obj_name)
+#define PJ_SSL_ERRNO_START (PJ_ERRNO_START_USER + PJ_ERRNO_SPACE_SIZE*6)
 
 /* Map SECURITY_STATUS to pj_status_t.
  *
@@ -178,7 +179,8 @@ static SECURITY_STATUS sec_err_from_pj(pj_status_t status)
 }
 
 /* Print Schannel error to log */
-static void log_sec_err(int log_level, const char* title, SECURITY_STATUS ss)
+static void log_sec_err(int log_level, const char* sender,
+                        const char* title, SECURITY_STATUS ss)
 {
     char *str = NULL;
     DWORD len;
@@ -192,22 +194,22 @@ static void log_sec_err(int log_level, const char* title, SECURITY_STATUS ss)
 
     switch (log_level) {
     case 1:
-        PJ_LOG(1, (SENDER, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(1, (sender, "%s: 0x%x-%s", title, ss, str));
         break;
     case 2:
-        PJ_LOG(2, (SENDER, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(2, (sender, "%s: 0x%x-%s", title, ss, str));
         break;
     case 3:
-        PJ_LOG(3, (SENDER, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(3, (sender, "%s: 0x%x-%s", title, ss, str));
         break;
     case 4:
-        PJ_LOG(4, (SENDER, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(4, (sender, "%s: 0x%x-%s", title, ss, str));
         break;
     case 5:
-        PJ_LOG(5, (SENDER, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(5, (sender, "%s: 0x%x-%s", title, ss, str));
         break;
     default:
-        PJ_LOG(6, (SENDER, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(6, (sender, "%s: 0x%x-%s", title, ss, str));
         break;
     }
 
@@ -364,7 +366,7 @@ static void ssl_reset_sock_state(pj_ssl_sock_t* ssock)
     sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
     SECURITY_STATUS ss;
 
-    LOG_DEBUG("SSL reset");
+    LOG_DEBUG(SNAME(ssock), "SSL reset");
 
     pj_lock_acquire(ssock->write_mutex);
 
@@ -414,7 +416,7 @@ static void ssl_reset_sock_state(pj_ssl_sock_t* ssock)
                                     buf_out[0].pvBuffer,
                                     buf_out[0].cbBuffer);
                 if (status != PJ_SUCCESS) {
-                    PJ_PERROR(1, (SENDER, status,
+                    PJ_PERROR(1, (SNAME(ssock), status,
                         "Failed to queuehandshake packets"));
                 } else {
                     flush_circ_buf_output(ssock, &ssock->shutdown_op_key,
@@ -422,7 +424,7 @@ static void ssl_reset_sock_state(pj_ssl_sock_t* ssock)
                 }
             }
         } else {
-            log_sec_err(1, "Error in shutting down SSL", ss);
+            log_sec_err(1, SNAME(ssock), "Error in shutting down SSL", ss);
         }
     }
 
@@ -737,7 +739,8 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 
     if (ss != SEC_E_OK || !cert_ctx) {
         if (!ssock->is_server)
-            log_sec_err(1, "Failed to retrieve remote certificate", ss);
+            log_sec_err(1, SNAME(ssock),
+                        "Failed to retrieve remote certificate", ss);
     } else {
         cert_parse_info(ssock->pool, &ssock->remote_cert_info, cert_ctx);
         CertFreeCertificateContext(cert_ctx);
@@ -749,7 +752,8 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 
     if (ss != SEC_E_OK || !cert_ctx) {
         if (ssock->is_server)
-            log_sec_err(3, "Failed to retrieve local certificate", ss);
+            log_sec_err(3, SNAME(ssock),
+                        "Failed to retrieve local certificate", ss);
     }
     else {
         cert_parse_info(ssock->pool, &ssock->local_cert_info, cert_ctx);
@@ -803,7 +807,8 @@ static PCCERT_CONTEXT find_cert_in_stores(pj_ssl_cert_lookup_type type,
 {
     PCCERT_CONTEXT cert = NULL;
 
-    LOG_DEBUG3("Looking up certificate with criteria: type=%d keyword=%.*s",
+    LOG_DEBUG3(SENDER,
+               "Looking up certificate with criteria: type=%d keyword=%.*s",
                type, (type==PJ_SSL_CERT_LOOKUP_FINGERPRINT? 4:keyword->slen),
                (type==PJ_SSL_CERT_LOOKUP_FINGERPRINT?"[..]":keyword->ptr));
 
@@ -818,7 +823,7 @@ static PCCERT_CONTEXT find_cert_in_stores(pj_ssl_cert_lookup_type type,
         store = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING,
                                 0, flags[i], L"MY");
         if (!store) {
-            log_sec_err(1, "Error opening store", GetLastError());
+            log_sec_err(1, SENDER, "Error opening store", GetLastError());
             continue;
         }
 
@@ -917,7 +922,7 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
         if (tmp) {
             param_cnt = 1;
             param.grbitDisabledProtocols = ~tmp;
-            LOG_DEBUG1("grbitDisabledProtocols=0x%x", (~tmp));
+            LOG_DEBUG1(SNAME(ssock), "grbitDisabledProtocols=0x%x", (~tmp));
         }
     }
 
@@ -938,8 +943,9 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
         {
             /* No certificate specified, use self-signed cert */
             sch_ssock->cert_ctx = create_self_signed_cert();
-            PJ_LOG(2,(SENDER, "Warning: TLS server does not specify a "
-                              "certificate, use a self-signed certificate"));
+            PJ_LOG(2,(SNAME(ssock),
+                      "Warning: certificate is not specified for "
+                      "TLS server, use a self-signed certificate."));
 
             // -- test code --
             //pj_str_t keyword = {"test.pjsip.org", 14};
@@ -988,7 +994,8 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
                                   NULL, &creds, NULL, NULL,
                                   &sch_ssock->cred_handle, NULL);
     if (ss < 0) {
-        log_sec_err(1, "Failed in AcquireCredentialsHandle()", ss);
+        log_sec_err(1, SNAME(ssock),
+                    "Failed in AcquireCredentialsHandle()", ss);
 
         return sec_err_to_pj(ss);
     }
@@ -1024,7 +1031,7 @@ static pj_status_t init_creds_old(pj_ssl_sock_t* ssock)
             tmp |= SP_PROT_SSL2;
         if (tmp) {
             creds.grbitEnabledProtocols = tmp;
-            LOG_DEBUG1("grbitEnabledProtocols=0x%x", tmp);
+            LOG_DEBUG1(SNAME(ssock), "grbitEnabledProtocols=0x%x", tmp);
         }
     }
 
@@ -1045,8 +1052,9 @@ static pj_status_t init_creds_old(pj_ssl_sock_t* ssock)
         {
             /* No certificate specified, use self-signed cert */
             sch_ssock->cert_ctx = create_self_signed_cert();
-            PJ_LOG(2,(SENDER, "Warning: TLS server does not specify a "
-                              "certificate, use a self-signed certificate"));
+            PJ_LOG(2,(SNAME(ssock),
+                      "Warning: TLS server does not specify a "
+                      "certificate, use a self-signed certificate"));
         }
     } else {
         creds.dwFlags |= SCH_CRED_NO_DEFAULT_CREDS;
@@ -1075,7 +1083,8 @@ static pj_status_t init_creds_old(pj_ssl_sock_t* ssock)
                                   NULL, &creds, NULL, NULL,
                                   &sch_ssock->cred_handle, NULL);
     if (ss < 0) {
-        log_sec_err(1, "Failed in AcquireCredentialsHandle()", ss);
+        log_sec_err(1, SNAME(ssock),
+                    "Failed in AcquireCredentialsHandle()", ss);
 
         return sec_err_to_pj(ss);
     }
@@ -1101,7 +1110,7 @@ static void verify_remote_cert(pj_ssl_sock_t* ssock)
         if (!ssock->is_server ||
             (ssock->is_server && ssock->param.require_client_cert))
         {
-            log_sec_err(1, "Error querying remote cert", ss);
+            log_sec_err(1, SNAME(ssock), "Error querying remote cert", ss);
         }
         goto on_return;
     }
@@ -1113,7 +1122,8 @@ static void verify_remote_cert(pj_ssl_sock_t* ssock)
                                  NULL, NULL, &chain_para, 0, 0,
                                  &chain_ctx))
     {
-        log_sec_err(1, "Failed to get remote cert chain for verification",
+        log_sec_err(1, SNAME(ssock),
+                    "Failed to get remote cert chain for verification",
                     GetLastError());
         goto on_return;
     }
@@ -1186,6 +1196,7 @@ on_return:
 static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
 {
     sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
+    pj_bool_t renego_req;
     pj_size_t data_in_size = 0;
     pj_uint8_t* data_in = NULL;
     SECURITY_STATUS ss;
@@ -1207,11 +1218,14 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
         }
     }
 
+    /* Is this a renegotiation request? */
+    renego_req = (ssock->ssl_state == SSL_STATE_ESTABLISHED);
+
     /* Start handshake iteration */
 
     pj_lock_acquire(ssock->circ_buf_input_mutex);
 
-    if (!circ_empty(&ssock->circ_buf_input)) {
+    if (!circ_empty(&ssock->circ_buf_input) && !renego_req) {
         data_in = sch_ssock->read_buf;
         data_in_size = PJ_MIN(sch_ssock->read_buf_cap,
                               circ_size(&ssock->circ_buf_input));
@@ -1286,20 +1300,20 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
         circ_read_cancel(&ssock->circ_buf_input, buf_in[1].cbBuffer);
     }
 
-    if (ss == SEC_E_OK) {
+    if (ss == SEC_E_OK && !renego_req) {
         SECURITY_STATUS ss2;
 
         /* Handshake completed! */
         ssock->ssl_state = SSL_STATE_ESTABLISHED;
         status = PJ_SUCCESS;
-        PJ_LOG(3, (SENDER, "TLS handshake completed!"));
+        PJ_LOG(3, (SNAME(ssock), "TLS handshake completed!"));
 
         /* Get stream sizes */
         ss2 = QueryContextAttributes(&sch_ssock->ctx_handle,
                                      SECPKG_ATTR_STREAM_SIZES,
                                      &sch_ssock->strm_sizes);
         if (ss2 != SEC_E_OK) {
-            log_sec_err(1, "Failed to query stream sizes", ss2);
+            log_sec_err(1, SNAME(ssock), "Failed to query stream sizes", ss2);
             ssl_reset_sock_state(ssock);
             status = sec_err_to_pj(ss2);
         }
@@ -1326,30 +1340,31 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
         /* Perhaps CompleteAuthToken() is unnecessary for Schannel, but
          * the sample code seems to call it.
          */
-        LOG_DEBUG_ERR("Handshake progress", ss);
+        LOG_DEBUG_ERR(SNAME(ssock), "Handshake progress", ss);
         ss = CompleteAuthToken(&sch_ssock->ctx_handle, &buf_desc_out);
         if (ss != SEC_E_OK) {
-            log_sec_err(1, "Handshake error in CompleteAuthToken()", ss);
+            log_sec_err(1, SNAME(ssock),
+                        "Handshake error in CompleteAuthToken()", ss);
             status = sec_err_to_pj(ss);
         }
     }
 
     else if (ss == SEC_I_CONTINUE_NEEDED)
     {
-        LOG_DEBUG_ERR("Handshake progress", ss);
+        LOG_DEBUG_ERR(SNAME(ssock), "Handshake progress", ss);
     }
 
     else if (ss == SEC_E_INCOMPLETE_MESSAGE)
     {
-        LOG_DEBUG_ERR("Handshake progress", ss);
+        LOG_DEBUG_ERR(SNAME(ssock), "Handshake progress", ss);
 
         /* Put back the incomplete message */
         circ_read_cancel(&ssock->circ_buf_input, data_in_size);
     }
 
-    else {
+    else if (!renego_req) {
         /* Handshake failed */
-        log_sec_err(1, "Handshake failed!", ss);
+        log_sec_err(1, SNAME(ssock), "Handshake failed!", ss);
         status = sec_err_to_pj(ss);
     }
 
@@ -1362,7 +1377,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
         status2 = circ_write(&ssock->circ_buf_output, buf_out[0].pvBuffer,
                              buf_out[0].cbBuffer);
         if (status2 != PJ_SUCCESS) {
-            PJ_PERROR(1,(SENDER, status2,
+            PJ_PERROR(1,(SNAME(ssock), status2,
                          "Failed to queue handshake packets"));
             status = status2;
         }
@@ -1371,7 +1386,8 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
     /* Send handshake packets to wire */
     status2 = flush_circ_buf_output(ssock, &ssock->handshake_op_key, 0, 0);
     if (status2 != PJ_SUCCESS && status2 != PJ_EPENDING) {
-        PJ_PERROR(1,(SENDER, status2, "Failed to send handshake packets"));
+        PJ_PERROR(1,(SNAME(ssock), status2,
+                     "Failed to send handshake packets"));
         status = status2;
     }
 
@@ -1383,9 +1399,10 @@ on_return:
 
 static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
 {
-    PJ_TODO(implement_this);
-    PJ_UNUSED_ARG(ssock);
-    return PJ_ENOTSUP;
+    PJ_LOG(3, (SNAME(ssock), "App requested renegotiation.."));
+
+    /* Nothing to do, SSL sock common will invoke ssl_do_handshake() */
+    return PJ_SUCCESS;
 }
 
 static int find_sec_buffer(const SecBuffer* buf, int buf_cnt,
@@ -1417,13 +1434,15 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
         /* Got all from the decrypted buffer */
         circ_read(&sch_ssock->decrypted_buf, data, need);
         *size = need;
-        LOG_DEBUG1("Read %d: returned all from decrypted buffer.", requested);
+        LOG_DEBUG1(SNAME(ssock),
+                   "Read %d: returned all from decrypted buffer.", requested);
         pj_lock_release(ssock->circ_buf_input_mutex);
         return PJ_SUCCESS;
     }
 
     /* Get all data of the decrypted buffer, then decrypt more */
-    LOG_DEBUG2("Read %d: %d from decrypted buffer..", requested, size_);
+    LOG_DEBUG2(SNAME(ssock),
+               "Read %d: %d from decrypted buffer..", requested, size_);
     circ_read(&sch_ssock->decrypted_buf, data, size_);
     *size = (int)size_;
     need -= (int)size_;
@@ -1435,7 +1454,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
                        circ_size(&ssock->circ_buf_input));
         circ_read(&ssock->circ_buf_input, data_, size_);
     } else {
-        LOG_DEBUG2("Read %d: no data to decrypt, returned %d.",
+        LOG_DEBUG2(SNAME(ssock), "Read %d: no data to decrypt, returned %d.",
                    requested, *size);
         pj_lock_release(ssock->circ_buf_input_mutex);
         return PJ_SUCCESS;
@@ -1478,13 +1497,13 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
                 if (len)
                     circ_write(&sch_ssock->decrypted_buf, p, len);
 
-                LOG_DEBUG2("Read %d: after decrypt, excess=%d",
+                LOG_DEBUG2(SNAME(ssock), "Read %d: after decrypt, excess=%d",
                            requested, len);
             } else {
                 /* Not enough, just give everything */
                 pj_memcpy((pj_uint8_t*)data + *size, p, len);
                 *size += (int)len;
-                LOG_DEBUG2("Read %d: after decrypt, only got %d",
+                LOG_DEBUG2(SNAME(ssock),"Read %d: after decrypt, only got %d",
                            requested, len);
             }
         }
@@ -1498,7 +1517,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
 
     else if (ss == SEC_I_RENEGOTIATE) {
         /* Proceed renegotiation (initiated by local or remote) */
-        PJ_LOG(3, (SENDER, "Renegotiation on progress"));
+        PJ_LOG(3, (SNAME(ssock), "Renegotiation on progress"));
 
         /* Check for any token for renegotiation */
         i = find_sec_buffer(buf, ARRAYSIZE(buf), SECBUFFER_EXTRA);
@@ -1508,30 +1527,27 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
                        buf[i].cbBuffer);
         }
 
-        /* Proceed as though creating a new connection */
-        if (SecIsValidHandle(&sch_ssock->ctx_handle)) {
-            DeleteSecurityContext(&sch_ssock->ctx_handle);
-            SecInvalidateHandle(&sch_ssock->ctx_handle);
-        }
+        /* Set SSL state as handshaking & reset handshake status */
         ssock->ssl_state = SSL_STATE_HANDSHAKING;
+        ssock->handshake_status = PJ_EUNKNOWN;
         status = PJ_EEOF;
     }
 
     else if (ss == SEC_I_CONTEXT_EXPIRED)
     {
-        PJ_LOG(3, (SENDER, "TLS connection closed"));
+        PJ_LOG(3, (SNAME(ssock), "TLS connection closed"));
         //status = sec_err_to_pj(ss);
         status = PJ_ECANCELLED;
     }
 
     else {
-        log_sec_err(1, "Decrypt error", ss);
+        log_sec_err(1, SNAME(ssock), "Decrypt error", ss);
         status = sec_err_to_pj(ss);
     }
 
     pj_lock_release(ssock->circ_buf_input_mutex);
 
-    LOG_DEBUG2("Read %d: returned=%d.", requested, *size);
+    LOG_DEBUG2(SNAME(ssock), "Read %d: returned=%d.", requested, *size);
     return status;
 }
 
@@ -1577,7 +1593,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t* ssock, const void* data,
         ss = EncryptMessage(&sch_ssock->ctx_handle, 0, &buf_desc, 0);
 
         if (ss != SEC_E_OK) {
-            log_sec_err(1, "Encrypt error", ss);
+            log_sec_err(1, SNAME(ssock), "Encrypt error", ss);
             status = sec_err_to_pj(ss);
             break;
         }
@@ -1587,7 +1603,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t* ssock, const void* data,
         status = circ_write(&ssock->circ_buf_output, sch_ssock->write_buf,
                             out_size);
         if (status != PJ_SUCCESS) {
-            PJ_PERROR(1, (SENDER, status,
+            PJ_PERROR(1, (SNAME(ssock), status,
                           "Failed to queue outgoing packets"));
             break;
         }
