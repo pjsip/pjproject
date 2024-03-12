@@ -376,9 +376,8 @@ struct TransportConfig : public PersistentObject
     string              boundAddress;
 
     /**
-     * This specifies TLS settings for TLS transport. It is only be used
-     * when this transport config is being used to create a SIP TLS
-     * transport.
+     * This specifies TLS settings for TLS transport. 
+     * It’s only used when creating a SIP TLS transport.
      */
     TlsConfig           tlsConfig;
 
