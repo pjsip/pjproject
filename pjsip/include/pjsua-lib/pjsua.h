@@ -3795,8 +3795,8 @@ typedef struct pjsua_turn_config
     pj_stun_auth_cred   turn_auth_cred;
 
     /**
-     * This specifies TLS settings for TURN TLS. 
-     * It’s only used when connecting to the TURN server.
+     * This specifies TLS settings for TURN TLS. It’s only applicable when
+     * TLS is used to connect to the TURN server.
      */
     pj_turn_sock_tls_cfg turn_tls_setting;
 
@@ -7393,8 +7393,8 @@ struct pjsua_media_config
     pj_stun_auth_cred   turn_auth_cred;
 
     /**
-     * This specifies TLS settings for TLS transport.
-     * It’s only used when connecting to the TURN server.
+     * This specifies TLS settings for TLS transport. It’s only applicable
+     * when TLS is used to connect to the TURN server.
      */
     pj_turn_sock_tls_cfg turn_tls_setting;
 
