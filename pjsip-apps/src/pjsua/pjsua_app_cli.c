@@ -38,6 +38,7 @@
 #define CMD_QUIT                    110
 #define CMD_RESTART                 120
 #define CMD_HANDLE_IP_CHANGE        130
+#define CMD_TOGGLE_SDP_OFFER        140
 
 /* call level 2 command */
 #define CMD_CALL_NEW                ((CMD_CALL*10)+1)
@@ -1537,6 +1538,9 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
 
         pjsua_msg_data_init(&msg_data);
         TEST_MULTIPART(&msg_data);
+        if (app_config.enable_loam) {
+            call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+        }
         pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
                              &msg_data, &current_call);
 
@@ -1580,6 +1584,10 @@ static pj_status_t cmd_make_multi_call(pj_cli_cmd_val *cval)
         pj_strncpy(&tmp, &binfo.uri, sizeof(dest));
     } else {
         tmp = pj_str(result.uri_result);
+    }
+
+    if (app_config.enable_loam) {
+        call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
 
     for (i=0; i<count; ++i) {
@@ -1701,6 +1709,10 @@ static pj_status_t cmd_call_reinvite()
 static pj_status_t cmd_call_update()
 {
     if (current_call != PJSUA_INVALID_ID) {
+        if (app_config.enable_loam) {
+            call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+        }
+
         pjsua_call_update2(current_call, &call_opt, NULL);
     } else {
         PJ_LOG(3,(THIS_FILE, "No current call"));
@@ -2083,6 +2095,17 @@ static pj_status_t cmd_show_current_call(pj_cli_cmd_val *cval)
                                   pj_ansi_strlen(out_str));
         }
     }
+    return PJ_SUCCESS;
+}
+
+static pj_status_t cmd_toggle_call_sdp_offer(pj_cli_cmd_val* cval)
+{
+    if (pj_ansi_strnicmp(cval->argv[1].ptr, "y", 1) == 0) {
+        app_config.enable_loam = 0;
+    } else {
+        app_config.enable_loam = 1;
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -3221,12 +3244,22 @@ static pj_status_t add_other_command(pj_cli_t *c)
     char* ip_change_command =
         "<CMD name='ip_change' id='130' desc='Handle IP change'/>";
 
+    char* toggle_sdp_offer_command =
+        "<CMD name='toggle_sdp_offer' id='140' "
+        "desc='Subsequent calls and UPDATEs will contain SDP offer'>"
+        "    <ARG name='options' type='choice' desc='Options'>"
+        "        <CHOICE value='Yes' desc='Yes'/>"
+        "        <CHOICE value='No' desc='No'/>"
+        "    </ARG>"
+        "</CMD>";
+
     pj_status_t status;
     pj_str_t sleep_xml = pj_str(sleep_command);
     pj_str_t network_xml = pj_str(network_command);
     pj_str_t shutdown_xml = pj_str(shutdown_command);
     pj_str_t restart_xml = pj_str(restart_command);
     pj_str_t ip_change_xml = pj_str(ip_change_command);
+    pj_str_t toggle_sdp_offer_xml = pj_str(toggle_sdp_offer_command);
 
     status = pj_cli_add_cmd_from_xml(c, NULL,
                                      &sleep_xml, cmd_sleep_handler,
@@ -3256,6 +3289,13 @@ static pj_status_t add_other_command(pj_cli_t *c)
 
     status = pj_cli_add_cmd_from_xml(c, NULL,
                                      &ip_change_xml, cmd_ip_change_handler,
+                                     NULL, NULL);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    status = pj_cli_add_cmd_from_xml(c, NULL,
+                                     &toggle_sdp_offer_xml,
+                                     cmd_toggle_call_sdp_offer,
                                      NULL, NULL);
 
     return status;
