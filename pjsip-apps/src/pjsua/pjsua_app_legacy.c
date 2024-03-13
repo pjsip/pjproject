@@ -1460,7 +1460,17 @@ static void ui_send_arbitrary_request()
 
 static void ui_toggle_call_sdp_offer()
 {
-    app_config.enable_loam = !app_config.enable_loam;
+    char input[32];
+
+    printf("Subsequent calls and UPDATEs will contain SDP offer [yes/no]:");
+    if (fgets(input, sizeof(input), stdin) == NULL)
+        return;
+
+    if (pj_ansi_strnicmp(input, "y", 1) == 0) {
+        app_config.enable_loam = 0;
+    } else {
+        app_config.enable_loam = 1;
+    }
 }
 
 static void ui_echo(char menuin[])
