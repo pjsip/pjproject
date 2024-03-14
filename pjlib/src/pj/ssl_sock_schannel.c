@@ -49,7 +49,7 @@
 #define SENDER    "ssl_schannel"
 
 /* Debugging */
-#define DEBUG_SCHANNEL  1
+#define DEBUG_SCHANNEL  0
 
 #if DEBUG_SCHANNEL
 #  define LOG_DEBUG(sender,title)           PJ_LOG(4,(sender,title))
@@ -59,11 +59,11 @@
 #  define LOG_DEBUG_ERR(sender,title,sec_status) \
                                         log_sec_err(4,sender,title,sec_status)
 #else
-#  define LOG_DEBUG(s)
-#  define LOG_DEBUG1(title,p1)
-#  define LOG_DEBUG2(title,p1,p2)
-#  define LOG_DEBUG3(title,p1,p2,p3)
-#  define LOG_DEBUG_ERR(title, sec_status)
+#  define LOG_DEBUG(sender,title)
+#  define LOG_DEBUG1(sender,title,p1)
+#  define LOG_DEBUG2(sender,title,p1,p2)
+#  define LOG_DEBUG3(sender,title,p1,p2,p3)
+#  define LOG_DEBUG_ERR(sender,title,sec_status)
 #endif
 
 
@@ -298,6 +298,12 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     pj_ssize_t read_cap, write_cap;
     pj_status_t status = PJ_SUCCESS;
 
+    /* Ciphers & curves settings should be set via OS/registry */
+    if (ssock->param.ciphers_num || ssock->param.curves_num) {
+        PJ_LOG(3,(SNAME(ssock), "Ciphers and curves settings are ignored, "
+                  "they should be set via OS/registry"));
+    }
+
     read_cap  = PJ_MAX(MIN_READ_BUF_CAP,  ssock->param.read_buffer_size);
     write_cap = PJ_MAX(MIN_WRITE_BUF_CAP, ssock->param.send_buffer_size);
 
@@ -466,6 +472,10 @@ static void ssl_ciphers_populate()
         PJ_LOG(1,(SENDER, "Error in enumerating ciphers (code=0x%x)", s));
         return;
     }
+
+    /* Make sure schannel's pool is created */
+    sch_inc();
+    sch_dec();
 
     for (ULONG i = 0; i < fn->cFunctions; i++) {
         char tmp_buf[SZ_ALG_MAX_SIZE];
@@ -891,6 +901,7 @@ static PCCERT_CONTEXT find_cert_in_stores(pj_ssl_cert_lookup_type type,
 }
 
 
+/* Initialize credentials */
 static pj_status_t init_creds(pj_ssl_sock_t* ssock)
 {
     sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
@@ -1003,6 +1014,7 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
     return PJ_SUCCESS;
 }
 
+/* Initialize credentials using older data type SCHANNEL_CRED */
 static pj_status_t init_creds_old(pj_ssl_sock_t* ssock)
 {
     sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
