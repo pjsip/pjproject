@@ -2787,6 +2787,9 @@ typedef struct pjsua_ip_change_param
 {
     /**
      * If set to PJ_TRUE, this will restart the transport listener.
+     * Note that if restarting listener is enabled and the listener is
+     * configured with a bound address, the address will be reset
+     * so it will bind to any address (e.g: IPv4 "0.0.0.0" or IPv6 "::").
      * 
      * Default : PJ_TRUE
      */
