@@ -163,7 +163,7 @@ typedef enum pj_ssl_cert_lookup_type
     /**
      * Lookup by subject, this will lookup any first certificate whose
      * subject containing the specified keyword. Note that subject may not
-     * be unique in the store, the lookup may end up selecting a wrong
+     * be unique in the store, so the lookup may end up selecting a wrong
      * certificate.
      */
     PJ_SSL_CERT_LOOKUP_SUBJECT,
@@ -178,7 +178,7 @@ typedef enum pj_ssl_cert_lookup_type
     /**
      * Lookup by friendly name, this will lookup any first certificate
      * whose friendly name containing the specified keyword. Note that
-     * friendly name may not be unique in the store, the lookup may end up
+     * friendly name may not be unique in the store, so the lookup may end up
      * selecting a wrong certificate.
      */
     PJ_SSL_CERT_LOOKUP_FRIENDLY_NAME
@@ -196,7 +196,7 @@ typedef struct pj_ssl_cert_lookup_criteria
     pj_ssl_cert_lookup_type type;
 
     /*
-     * Keyword to match.
+     * Keyword to match on the field specified in \a type.
      */
     pj_str_t                keyword;
 
@@ -336,8 +336,13 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
  * certificate using the specified criterias.
  *
  * Currently this is used by Windows Schannel backend only, it will lookup
- * in the Current User store first, if not found it will lookup in the
- * Local Machine store.
+ * in the Current User store first, if no certificate with the specified
+ * criteria is not found, it will lookup in the Local Machine store.
+ *
+ * Note that for manual verification (e.g: when pj_ssl_sock_param.verify_peer
+ * is disabled), the backend will provide pre-verification result against
+ * trusted CA certificates in Current User store only (will not check CA
+ * certificates in the Local Machine store).
  *
  * @param pool              The pool.
  * @param criteria          The lookup criteria.

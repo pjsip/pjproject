@@ -37,7 +37,7 @@
  *
  * Note:
  * - Older Windows SDK versions are not supported (some APIs deprecated,
- *   further more they must be missing newer/safer TLS protocol versions).
+ *   also missing newer/safer TLS protocol versions).
  */
 #if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL) && \
@@ -47,6 +47,9 @@
 
 /* Sender string in logging */
 #define SENDER    "ssl_schannel"
+
+/* Subject for self-signed certificate */
+#define SELF_SIGNED_CERT_SUBJECT "CN=lab.pjsip.org"
 
 /* Debugging */
 #define DEBUG_SCHANNEL  0
@@ -155,8 +158,11 @@ static pj_status_t sec_err_to_pj(SECURITY_STATUS ss)
     DWORD err = ((ss & 0x7FFF) << 1) | ((ss & 0x80000000) >> 31);
 
     /* Make sure it does not exceed PJ_ERRNO_SPACE_SIZE */
-    if (err >= PJ_ERRNO_SPACE_SIZE)
+    if (err >= PJ_ERRNO_SPACE_SIZE) {
+        LOG_DEBUG1(SENDER,"sec_err_to_pj() failed mapping error code %d",
+                   err);
         return PJ_EUNKNOWN;
+    }
 
     return PJ_SSL_ERRNO_START + err;
 }
@@ -170,6 +176,8 @@ static SECURITY_STATUS sec_err_from_pj(pj_status_t status)
     if (status < PJ_SSL_ERRNO_START ||
         status >= PJ_SSL_ERRNO_START + PJ_ERRNO_SPACE_SIZE)
     {
+        LOG_DEBUG1(SENDER,"sec_err_from_pj() failed mapping status code %d",
+                  status);
         return ERROR_INVALID_DATA;
     }
 
@@ -795,7 +803,7 @@ static PCCERT_CONTEXT create_self_signed_cert()
         cert_name.pbData = cert_name_buffer;
         cert_name.cbData = ARRAYSIZE(cert_name_buffer);
 
-        if (!CertStrToNameA(X509_ASN_ENCODING, "CN=lab.pjsip.org",
+        if (!CertStrToNameA(X509_ASN_ENCODING, SELF_SIGNED_CERT_SUBJECT,
                             CERT_X500_NAME_STR, NULL,
                             cert_name.pbData, &cert_name.cbData, NULL))
         {
@@ -836,6 +844,9 @@ static PCCERT_CONTEXT find_cert_in_stores(pj_ssl_cert_lookup_type type,
             log_sec_err(1, SENDER, "Error opening store", GetLastError());
             continue;
         }
+
+        LOG_DEBUG1(SENDER, "Looking up certificate in store: %s",
+                   (i==0? "Current User" : "Local Machine"));
 
         /* Lookup based on type */
 
@@ -956,21 +967,7 @@ static pj_status_t init_creds(pj_ssl_sock_t* ssock)
             sch_ssock->cert_ctx = create_self_signed_cert();
             PJ_LOG(2,(SNAME(ssock),
                       "Warning: certificate is not specified for "
-                      "TLS server, use a self-signed certificate."));
-
-            // -- test code --
-            //pj_str_t keyword = {"test.pjsip.org", 14};
-            //pj_ssl_cert_lookup_type type = PJ_SSL_CERT_LOOKUP_SUBJECT;
-
-            //pj_str_t keyword = {"schannel-test", 13};
-            //pj_ssl_cert_lookup_type type = PJ_SSL_CERT_LOOKUP_FRIENDLY_NAME;
-
-            //pj_str_t keyword = {"\x08\x3a\x6c\xdc\xd0\x19\x59\xec\x28\xc3"
-            //                    "\x81\xb8\xc0\x21\x09\xe9\xd5\xf6\x57\x7d",
-            //                    20};
-            //pj_ssl_cert_lookup_type type = PJ_SSL_CERT_LOOKUP_FINGERPRINT;
-
-            //sch_ssock->cert_ctx = find_cert_in_stores( type, &keyword);
+                      "TLS server, using a self-signed certificate."));
         }
     } else {
         creds.dwFlags |= SCH_CRED_NO_DEFAULT_CREDS;

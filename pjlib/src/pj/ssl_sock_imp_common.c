@@ -55,14 +55,11 @@ static pj_bool_t asock_on_data_sent (pj_activesock_t *asock,
 static pj_size_t next_pow2(pj_size_t n)
 {
     /* Next 32-bit power of two */
-    n--;
-    n |= n >> 1;
-    n |= n >> 2;
-    n |= n >> 4;
-    n |= n >> 8;
-    n |= n >> 16;
-    n++;
-    return n;
+    pj_size_t power = 1;
+    while (power < n && power < 0x8000000) {
+        power <<= 1;
+    }
+    return power;
 }
 
 static pj_status_t circ_init(pj_pool_factory *factory,

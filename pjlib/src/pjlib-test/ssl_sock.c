@@ -540,6 +540,24 @@ static pj_status_t load_cert_to_buf(pj_pool_t *pool, const pj_str_t *file_name,
 }
 #endif
 
+static pj_status_t load_cert_from_store(pj_pool_t *pool,
+                                        pj_ssl_cert_t **p_cert)
+{
+    pj_ssl_cert_lookup_criteria crit = {0};
+
+    crit.type = PJ_SSL_CERT_LOOKUP_SUBJECT;
+    pj_cstr(&crit.keyword, "test.pjsip.org");
+
+    //crit.type = PJ_SSL_CERT_LOOKUP_FRIENDLY_NAME;
+    //pj_cstr(&crit.keyword, "schannel-test");
+
+    //crit.type = PJ_SSL_CERT_LOOKUP_FINGERPRINT;
+    //pj_cstr(&crit.keyword, "\x08\x3a\x6c\xdc\xd0\x19\x59\xec\x28\xc3"
+    //                       "\x81\xb8\xc0\x21\x09\xe9\xd5\xf6\x57\x7d");
+
+    return pj_ssl_cert_load_from_store(pool, &crit, p_cert);
+}
+
 static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
                      pj_ssl_cipher srv_cipher, pj_ssl_cipher cli_cipher,
                      pj_bool_t req_client_cert, pj_bool_t client_provide_cert)
@@ -602,12 +620,18 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     }
 
     /* Set server cert */
-    /* Schannel backend currently can only load certificates from
-     * OS cert store. It will create a self-signed cert if none is specified.
-     */
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
-    PJ_UNUSED_ARG(cert);
-    PJ_UNUSED_ARG(client_provide_cert);
+    /* Schannel backend currently can only load certificates from
+     * OS cert store. If the certificate loading fails, we'll skip setting
+     * certificate, so the SSL socket will create & use a self-signed cert.
+     */
+    status = load_cert_from_store(pool, &cert);
+    if (status == PJ_SUCCESS) {
+        status = pj_ssl_sock_set_certificate(ssock_serv, pool, cert);
+        if (status != PJ_SUCCESS) {
+            goto on_return;
+        }
+    }
 #else
     {
         pj_str_t ca_file = pj_str(CERT_CA_FILE);
@@ -694,13 +718,22 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
         goto on_return;
     }
 
-    /* Set cert for client */
-    /* Schannel backend currently can only load certificates from
-     * OS cert store.
+    /* Set cert for client.
+     * Reusing certificate for server above, but if client_provide_cert
+     * is not set, override the certificate with CA certificate.
      */
-#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
-    {
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
+    if (client_provide_cert) {
+        status = load_cert_from_store(pool, &cert);
+        if (status == PJ_SUCCESS)
+            status = pj_ssl_sock_set_certificate(ssock_cli, pool, cert);
 
+        if (status != PJ_SUCCESS) {
+            goto on_return;
+        }
+    }
+#else
+    {
         if (!client_provide_cert) {
             pj_str_t ca_file = pj_str(CERT_CA_FILE);
             pj_str_t null_str = pj_str("");
@@ -961,11 +994,18 @@ static int client_non_ssl(unsigned ms_timeout)
     }
 
     /* Set cert */
-    /* Schannel backend currently can only load certificates from
-     * OS cert store. It will create a self-signed cert if none is specified.
-     */
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
-    PJ_UNUSED_ARG(cert);
+    /* Schannel backend currently can only load certificates from
+     * OS cert store. If the certificate loading fails, we'll skip setting
+     * certificate, so the SSL socket will create & use a self-signed cert.
+     */
+    status = load_cert_from_store(pool, &cert);
+    if (status == PJ_SUCCESS) {
+        status = pj_ssl_sock_set_certificate(ssock_serv, pool, cert);
+        if (status != PJ_SUCCESS) {
+            goto on_return;
+        }
+    }
 #else
     {
         pj_str_t ca_file = pj_str(CERT_CA_FILE);
@@ -1311,11 +1351,18 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
     }
 
     /* Set cert */
-    /* Schannel backend currently can only load certificates from
-     * OS cert store. It will create a self-signed cert if none is specified.
-     */
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
-    PJ_UNUSED_ARG(cert);
+    /* Schannel backend currently can only load certificates from
+     * OS cert store. If the certificate loading fails, we'll skip setting
+     * certificate, so the SSL socket will create & use a self-signed cert.
+     */
+    status = load_cert_from_store(pool, &cert);
+    if (status == PJ_SUCCESS) {
+        status = pj_ssl_sock_set_certificate(ssock_serv, pool, cert);
+        if (status != PJ_SUCCESS) {
+            goto on_return;
+        }
+    }
 #else
     {
         pj_str_t ca_file = pj_str(CERT_CA_FILE);
