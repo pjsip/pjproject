@@ -1466,7 +1466,7 @@ static void ui_toggle_call_sdp_offer()
     if (app_config.enable_loam) {
         printf("YES.\n");
     } else {
-      printf("NO.\n");
+        printf("NO.\n");
     }
 }
 
