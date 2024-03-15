@@ -2471,6 +2471,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                 (sel->u.ip_ver == PJSIP_TPSELECTOR_USE_IPV6_ONLY &&
                  pjsip_transport_type_get_af(type) != pj_AF_INET6()))
             {
+                pj_lock_release(mgr->lock);
                 TRACE_((THIS_FILE, "Address type in tpsel not matched"));
                 return PJSIP_ETPNOTSUITABLE;
             }
