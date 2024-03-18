@@ -416,6 +416,24 @@ PJ_DEF(void) pj_log( const char *sender, int level,
                 *pre++ = *sender++;
         }
     }
+    if (log_decor & PJ_LOG_HAS_FILENAME) {
+        enum { SENDER_WIDTH = PJ_LOG_SENDER_WIDTH };
+        pj_size_t sender_len = strlen(sender);
+        if (pre!=log_buffer) *pre++ = ' ';
+        if (sender_len <= SENDER_WIDTH) {
+            while (sender_len < SENDER_WIDTH)
+                *pre++ = ' ', ++sender_len;
+            while (*sender)
+                *pre++ = *sender++;
+        } else {
+            int i;
+            for (i=0; i<3; ++i)
+                *pre++ = '.';
+            char *truncated_begin = sender + sender_len - SENDER_WIDTH + 3;
+            for (i=0; i<SENDER_WIDTH -3; ++i)
+                *pre++ = *truncated_begin++;
+        }
+    }
     if (log_decor & PJ_LOG_HAS_THREAD_ID) {
         enum { THREAD_WIDTH = PJ_LOG_THREAD_WIDTH };
         const char *thread_name = pj_thread_get_name(pj_thread_this());

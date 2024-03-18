@@ -82,7 +82,8 @@ enum pj_log_decoration
     PJ_LOG_HAS_LEVEL_TEXT = 2048, /**< Include level text string [no]         */
     PJ_LOG_HAS_THREAD_ID  = 4096, /**< Include thread identification [no]     */
     PJ_LOG_HAS_THREAD_SWC = 8192, /**< Add mark when thread has switched [yes]*/
-    PJ_LOG_HAS_INDENT     =16384  /**< Indentation. Say yes! [yes]            */
+    PJ_LOG_HAS_INDENT     =16384, /**< Indentation. Say yes! [yes]            */
+    PJ_LOG_HAS_FILENAME   =32768, /**< Like HAS_SENDER but truncated left     */
 };
 
 /**
