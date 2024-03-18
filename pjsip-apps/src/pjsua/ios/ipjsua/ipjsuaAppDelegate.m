@@ -22,6 +22,7 @@
 #import <pjlib.h>
 #import <pjsua.h>
 #import <pj/log.h>
+#import <CallKit/CallKit.h>
 
 #include "../../pjsua_app.h"
 #include "../../pjsua_app_config.h"
@@ -32,6 +33,14 @@
 @implementation ipjsuaAppDelegate
 
 #define THIS_FILE       "ipjsuaAppDelegate.m"
+
+/* Specify if we use push notification. */
+#define USE_PUSH_NOTIFICATION 1
+
+/* Account details. */
+#define SIP_DOMAIN "sip.pjsip.org"
+#define SIP_USER   "test"
+#define SIP_PASSWD "test"
 
 #define KEEP_ALIVE_INTERVAL 600
 
@@ -48,18 +57,18 @@ Reachability            *internetReach;
     BOOL connectionRequired = [curReach connectionRequired];
     switch (netStatus) {
         case NotReachable:
-            PJ_LOG(3,("", "Access Not Available.."));
+            NSLog(@"Access Not Available..");
             connectionRequired= NO;
             break;
         case ReachableViaWiFi:
-            PJ_LOG(3,("", "Reachable WiFi.."));
+            NSLog(@"Reachable WiFi..");
             break;
         case ReachableViaWWAN:
-            PJ_LOG(3,("", "Reachable WWAN.."));
+            NSLog(@"Reachable WWAN..");
         break;
     }
     if (connectionRequired) {
-        PJ_LOG(3,("", "Connection Required"));
+        NSLog(@"Connection Required");
     }
 }
 
@@ -68,7 +77,7 @@ Reachability            *internetReach;
 {
     Reachability* curReach = [note object];
     NSParameterAssert([curReach isKindOfClass: [Reachability class]]);
-    PJ_LOG(3,("", "reachability changed.."));
+    NSLog(@"reachability changed..");
     [self updateWithReachability: curReach];
     
     if ([curReach currentReachabilityStatus] != NotReachable &&
@@ -76,10 +85,28 @@ Reachability            *internetReach;
     {
         pjsua_ip_change_param param;
         pjsua_ip_change_param_default(&param);
-        pjsua_handle_ip_change(&param);
+//        pjsua_handle_ip_change(&param);
     }
 }
 
+- (void)pushRegistry:(PKPushRegistry *)registry didUpdatePushCredentials:(PKPushCredentials *)credentials forType:(NSString *)type
+{
+    if ([credentials.token length] == 0) {
+        NSLog(@"voip token NULL");
+        return;
+    }
+
+    /* Get device token */
+    const char *data = [credentials.token bytes];
+    self.token = [NSMutableString string];
+    for (NSUInteger i = 0; i < [credentials.token length]; i++) {
+        [self.token appendFormat:@"%02.2hhx", data[i]];
+    }
+    NSLog(@"== VOIP Push Notification Token: %@ ==", self.token);
+
+    /* Now start pjsua */
+    [NSThread detachNewThreadSelector:@selector(pjsuaStart) toTarget:self withObject:nil];
+}
 
 void displayLog(const char *msg, int len)
 {
@@ -171,6 +198,53 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
                 object:[UIDevice currentDevice]];
         });
         
+        static char contact_uri_buf[1024];
+        pjsua_acc_config cfg;
+
+        pjsua_acc_config_default(&cfg);
+        cfg.id = pj_str("sip:" SIP_USER "@" SIP_DOMAIN);
+        cfg.reg_uri = pj_str("sip:" SIP_DOMAIN ";transport=tcp");
+        cfg.cred_count = 1;
+        cfg.cred_info[0].realm = pj_str(SIP_DOMAIN);
+        cfg.cred_info[0].scheme = pj_str("digest");
+        cfg.cred_info[0].username = pj_str(SIP_USER);
+        cfg.cred_info[0].data = pj_str(SIP_PASSWD);
+
+        /* If we have Push Notification token, put it in the registration
+         * Contact URI params.
+         */
+        if ([self.token length]) {
+            /* According to RFC 8599:
+             * - pn-provider is the Push Notification Service provider. Here
+             * we use APNS (Apple Push Notification Service).
+             * - pn-param is composed of Team ID and Topic separated by
+             * a period (.).
+             * The Topic consists of the Bundle ID, the app's unique ID,
+             * and the app's service value ("voip" for VoIP apps), separated
+             * by a period (.).
+             * - pn-prid is the PN token.
+             */
+            NSDictionary *infoDictionary = [[NSBundle mainBundle] infoDictionary];
+            NSString *bundleID = infoDictionary[@"CFBundleIdentifier"];
+            NSString *teamID = infoDictionary[@"AppIdentifierPrefix"];
+            NSLog(@"Team ID from settings: %@", teamID);
+
+            pj_ansi_snprintf(contact_uri_buf, sizeof(contact_uri_buf),
+                             ";pn-provider=apns"
+                             ";pn-param=%s%s.voip"
+                             ";pn-prid=%s",
+                             (teamID? [teamID UTF8String]: "93NHJQ455P."),
+                             [bundleID UTF8String],
+                             [self.token UTF8String]);
+            cfg.reg_contact_uri_params = pj_str(contact_uri_buf);
+        }
+        status = pjsua_acc_add(&cfg, PJ_TRUE, NULL);
+        if (status != PJ_SUCCESS) {
+            char errmsg[PJ_ERR_MSG_SIZE];
+            pj_strerror(status, errmsg, sizeof(errmsg));
+            displayMsg(errmsg);
+        }
+
         status = pjsua_app_run(PJ_TRUE);
         if (status != PJ_SUCCESS) {
             char errmsg[PJ_ERR_MSG_SIZE];
@@ -187,6 +261,42 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     restartArgc = 0;
 }
 
+- (void)reportIncomingCall {
+    CXCallUpdate *callUpdate = [[CXCallUpdate alloc] init];
+
+    /* Report the incoming call to the system using CallKit. */
+    CXProviderConfiguration *configuration = [[CXProviderConfiguration alloc]
+                                              initWithLocalizedName:@"ipjsua"];
+    CXProvider *provider = [[CXProvider alloc]
+                            initWithConfiguration:configuration];
+
+    [provider reportNewIncomingCallWithUUID:[NSUUID UUID] update:callUpdate
+              completion:^(NSError * _Nullable error)
+    {
+        if (error) {
+            NSLog(@"Error reporting incoming call: %@",
+                  error.localizedDescription);
+        } else {
+            NSLog(@"Incoming call reported successfully");
+        }
+    }];
+}
+
+- (void)pushRegistry:(PKPushRegistry *)registry
+        didReceiveIncomingPushWithPayload:(PKPushPayload *)payload
+        forType:(PKPushType)type withCompletionHandler:(void (^)(void))completion
+{
+    /* Handle incoming VoIP push notification. */
+    NSLog(@"Receiving push notification");
+    /* Re-register. */
+    [self performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
+    /* Report the incoming call via CallKit. */
+    [self reportIncomingCall];
+
+    /* Call the completion handler when you have finished processing the incoming call. */
+    completion();
+}
+
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
@@ -198,7 +308,31 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     }
     self.window.rootViewController = self.viewController;
     [self.window makeKeyAndVisible];
-    
+
+#if USE_PUSH_NOTIFICATION
+    /* Set up a push notification registry for Voice over IP (VoIP). */
+    self.voipRegistry = [[PKPushRegistry alloc] initWithQueue:dispatch_get_main_queue()];
+    self.voipRegistry.delegate = self;
+    self.voipRegistry.desiredPushTypes = [NSSet setWithObject:PKPushTypeVoIP];
+
+    /* Request permission for push notifications. */
+    UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+    center.delegate = self;
+    [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert |
+                                             UNAuthorizationOptionBadge |
+                                             UNAuthorizationOptionSound)
+            completionHandler:^(BOOL granted, NSError * _Nullable error)
+    {
+        NSLog(@"Notification request %sgranted", (granted ? "" : "not"));
+
+        if (granted) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [application registerForRemoteNotifications];
+            });
+        }
+    }];
+#endif
+
     /* Observe the kNetworkReachabilityChangedNotification. When that
      * notification is posted, the method "reachabilityChanged" will be called.
      */
@@ -212,8 +346,12 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     
     app = self;
     
-    /* Start pjsua app thread */
+#if !USE_PUSH_NOTIFICATION
+    /* Start pjsua app thread immediately, otherwise we do it after push
+     * notification setup completes.
+     */
     [NSThread detachNewThreadSelector:@selector(pjsuaStart) toTarget:self withObject:nil];
+#endif
 
     return YES;
 }
@@ -275,10 +413,6 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
         pj_thread_register("ipjsua", a_thread_desc, &a_thread);
     }
     
-    /* Since iOS requires that the minimum keep alive interval is 600s,
-     * application needs to make sure that the account's registration
-     * timeout is long enough.
-     */
     for (i = 0; i < (int)pjsua_acc_get_count(); ++i) {
         if (pjsua_acc_is_valid(i)) {
             pjsua_acc_set_registration(i, PJ_TRUE);

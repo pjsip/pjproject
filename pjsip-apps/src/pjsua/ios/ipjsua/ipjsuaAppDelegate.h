@@ -18,13 +18,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#import <PushKit/PushKit.h>
 #import <UIKit/UIKit.h>
+#import <UserNotifications/UserNotifications.h>
 
 @class ipjsuaViewController;
 
-@interface ipjsuaAppDelegate : UIResponder <UIApplicationDelegate>
+@interface ipjsuaAppDelegate : UIResponder <UIApplicationDelegate, PKPushRegistryDelegate, UNUserNotificationCenterDelegate>
 
 @property (strong, nonatomic) UIWindow *window;
+
+@property (strong, nonatomic) PKPushRegistry *voipRegistry;
+@property (strong, nonatomic) NSMutableString *token;
 
 @property (strong, nonatomic) ipjsuaViewController *viewController;
 
