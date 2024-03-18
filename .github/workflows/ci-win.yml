@@ -178,7 +178,7 @@ jobs:
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
 
-  windows-with-video-libvpx-unit-test-1:
+  windows-with-video-libvpx-schannel-unit-test-1:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
