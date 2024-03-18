@@ -543,19 +543,34 @@ static pj_status_t load_cert_to_buf(pj_pool_t *pool, const pj_str_t *file_name,
 static pj_status_t load_cert_from_store(pj_pool_t *pool,
                                         pj_ssl_cert_t **p_cert)
 {
+#if 0
+    /* To test loading certificate from the store, follow these steps:
+     * 1. Install the certificate & the private-key pair to the store,
+     *    and optionally set the friendly-name for it.
+     * 2. Update the lookup criteria below (field & keyword).
+     */
     pj_ssl_cert_lookup_criteria crit = {0};
 
+    /* Lookup by subject */
     crit.type = PJ_SSL_CERT_LOOKUP_SUBJECT;
     pj_cstr(&crit.keyword, "test.pjsip.org");
 
+    /* Lookup by friendly-name */
     //crit.type = PJ_SSL_CERT_LOOKUP_FRIENDLY_NAME;
     //pj_cstr(&crit.keyword, "schannel-test");
 
+    /* Lookup by fingerprint */
     //crit.type = PJ_SSL_CERT_LOOKUP_FINGERPRINT;
     //pj_cstr(&crit.keyword, "\x08\x3a\x6c\xdc\xd0\x19\x59\xec\x28\xc3"
     //                       "\x81\xb8\xc0\x21\x09\xe9\xd5\xf6\x57\x7d");
 
     return pj_ssl_cert_load_from_store(pool, &crit, p_cert);
+#else
+    /* Set no certificate, Schannel will use self-signed cert */
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(p_cert);
+    return PJ_ENOTFOUND;
+#endif
 }
 
 static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
