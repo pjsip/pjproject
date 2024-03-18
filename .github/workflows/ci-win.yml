@@ -217,6 +217,7 @@ jobs:
         cd pjlib/include/pj; cp config_site_test.h config_site.h
         Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
         Add-Content config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_SCHANNEL"
+        Add-Content config_site.h "#undef PJMEDIA_SRTP_HAS_DTLS"
         Add-Content config_site.h "#define PJMEDIA_HAS_VIDEO 1"
         Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_DSHOW 1"
         Add-Content config_site.h "#define PJMEDIA_HAS_LIBYUV 1"
