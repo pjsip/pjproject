@@ -1538,9 +1538,6 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
 
         pjsua_msg_data_init(&msg_data);
         TEST_MULTIPART(&msg_data);
-        if (app_config.enable_loam) {
-            call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
-        }
         pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
                              &msg_data, &current_call);
 
@@ -1584,10 +1581,6 @@ static pj_status_t cmd_make_multi_call(pj_cli_cmd_val *cval)
         pj_strncpy(&tmp, &binfo.uri, sizeof(dest));
     } else {
         tmp = pj_str(result.uri_result);
-    }
-
-    if (app_config.enable_loam) {
-        call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
 
     for (i=0; i<count; ++i) {
@@ -1709,10 +1702,6 @@ static pj_status_t cmd_call_reinvite()
 static pj_status_t cmd_call_update()
 {
     if (current_call != PJSUA_INVALID_ID) {
-        if (app_config.enable_loam) {
-            call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
-        }
-
         pjsua_call_update2(current_call, &call_opt, NULL);
     } else {
         PJ_LOG(3,(THIS_FILE, "No current call"));
@@ -2100,11 +2089,13 @@ static pj_status_t cmd_show_current_call(pj_cli_cmd_val *cval)
 
 static pj_status_t cmd_toggle_call_sdp_offer(pj_cli_cmd_val* cval)
 {
-    if (pj_ansi_strnicmp(cval->argv[1].ptr, "y", 1) == 0) {
-        app_config.enable_loam = 0;
-    } else {
-        app_config.enable_loam = 1;
-    }
+    char out_str[64];
+    app_config.enable_loam = !app_config.enable_loam;
+
+    pj_ansi_snprintf(out_str, sizeof(out_str),
+                   "Subsequent calls and UPDATEs will contain SDP offer: %s\n",
+                   app_config.enable_loam ? "No" : "Yes");
+    pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
 
     return PJ_SUCCESS;
 }
@@ -2116,6 +2107,14 @@ pj_status_t cmd_call_handler(pj_cli_cmd_val *cval)
     pj_cli_cmd_id cmd_id = pj_cli_get_cmd_id(cval->cmd);
 
     CHECK_PJSUA_RUNNING();
+
+    /* Update call setting */
+    pjsua_call_setting_default(&call_opt);
+    call_opt.aud_cnt = app_config.aud_cnt;
+    call_opt.vid_cnt = app_config.vid.vid_cnt;
+    if (app_config.enable_loam) {
+        call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+    }
 
     switch(cmd_id) {
     case CMD_CALL_NEW:
@@ -3245,13 +3244,8 @@ static pj_status_t add_other_command(pj_cli_t *c)
         "<CMD name='ip_change' id='130' desc='Handle IP change'/>";
 
     char* toggle_sdp_offer_command =
-        "<CMD name='toggle_sdp_offer' id='140' "
-        "desc='Subsequent calls and UPDATEs will contain SDP offer'>"
-        "    <ARG name='options' type='choice' desc='Options'>"
-        "        <CHOICE value='Yes' desc='Yes'/>"
-        "        <CHOICE value='No' desc='No'/>"
-        "    </ARG>"
-        "</CMD>";
+        "<CMD name='toggle_sdp_offer' sc='o' id='140' "
+        "desc='Toggle SDP offer use on susequent calls and UPDATEs' />";
 
     pj_status_t status;
     pj_str_t sleep_xml = pj_str(sleep_command);
