@@ -3245,7 +3245,7 @@ static pj_status_t add_other_command(pj_cli_t *c)
 
     char* toggle_sdp_offer_command =
         "<CMD name='toggle_sdp_offer' sc='o' id='140' "
-        "desc='Toggle SDP offer use on susequent calls and UPDATEs' />";
+        "desc='Toggle SDP offer use on subsequent calls and UPDATEs' />";
 
     pj_status_t status;
     pj_str_t sleep_xml = pj_str(sleep_command);

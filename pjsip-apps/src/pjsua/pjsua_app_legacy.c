@@ -1464,9 +1464,9 @@ static void ui_toggle_call_sdp_offer()
 
     printf("Subsequent calls and UPDATEs will contain SDP offer: ");
     if (app_config.enable_loam) {
-        printf("YES.\n");
-    } else {
         printf("NO.\n");
+    } else {
+        printf("YES.\n");
     }
 }
 
