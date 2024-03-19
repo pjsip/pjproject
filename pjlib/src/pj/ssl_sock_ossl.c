@@ -483,11 +483,12 @@ static pj_str_t ssl_strerror(pj_status_t status,
 */
 static const struct ssl_ciphers_t ADDITIONAL_CIPHERS[] = {
         {0xFF000000, "DEFAULT"},
-        {0xFF000001, "@SECLEVEL=1"},
-        {0xFF000002, "@SECLEVEL=2"},
-        {0xFF000003, "@SECLEVEL=3"},
-        {0xFF000004, "@SECLEVEL=4"},
-        {0xFF000005, "@SECLEVEL=5"}
+        {0xFF000001, "@SECLEVEL=0"},
+        {0xFF000002, "@SECLEVEL=1"},
+        {0xFF000003, "@SECLEVEL=2"},
+        {0xFF000004, "@SECLEVEL=3"},
+        {0xFF000005, "@SECLEVEL=4"},
+        {0xFF000006, "@SECLEVEL=5"}
 };
 static const unsigned int ADDITIONAL_CIPHER_COUNT = 
     sizeof (ADDITIONAL_CIPHERS) / sizeof (ADDITIONAL_CIPHERS[0]);
