@@ -178,19 +178,18 @@ struct TlsConfig : public PersistentObject
      * Lookup certificate from OS certificate store, this setting will
      * specify the field type to lookup.
      *
-     * Currently only TLS backend Windows Schannel support this and this
-     * backend only support this type of certificate settings (settings via
-     * files or buffers are not supported). The lookup will be performed in
-     * the Current User store, if not found, it will try Local Machine store.
-     * Note that in manual verification (e.g: when verifyServer is disabled),
-     * the backend will provide pre-verification result against trusted
-     * CA certificates in Current User store.
+     * Currently only used by Windows Schannel backend, see also
+     * \a pj_ssl_cert_load_from_store() for more info.
      */
     pj_ssl_cert_lookup_type certLookupType;
 
     /**
      * Lookup certificate from OS certificate store, this setting will
-     * specify the keyword to lookup.
+     * specify the keyword to match on the field specified in
+     * \a certLookupType above.
+     *
+     * Currently only used by Windows Schannel backend, see also
+     * \a pj_ssl_cert_load_from_store() for more info.
      */
     string              certLookupKeyword;
 

@@ -191,13 +191,8 @@ typedef struct pjsip_tls_setting
     /**
      * Lookup certificate from OS certificate store with specified criteria.
      *
-     * Currently only TLS backend Windows Schannel support this and this
-     * backend only support this type of certificate settings (settings via
-     * files or buffers are not supported). The lookup will be performed in
-     * the Current User store, if not found, it will try Local Machine store.
-     * Note that in manual verification (e.g: when verify_server is disabled),
-     * the backend will provide pre-verification result against trusted
-     * CA certificates in Current User store.
+     * Currently only used by TLS backend Windows Schannel, please check
+     * pj_ssl_cert_load_from_store() for more info.
      */
     pj_ssl_cert_lookup_criteria cert_lookup;
 
