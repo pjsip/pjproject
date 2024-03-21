@@ -1988,6 +1988,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     if (config->no_mci) {
         pj_strcat2(&cfg, "--no-mci\n");
     }
+
     /* UDP Transport. */
     pj_ansi_snprintf(line, sizeof(line), "--local-port %d\n",
                      config->udp_cfg.port);

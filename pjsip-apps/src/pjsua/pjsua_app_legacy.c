@@ -236,7 +236,7 @@ static void keystroke_help()
     puts("|  a  Answer call              |  i  Send IM              | !a  Modify accnt. |");
     puts("|  h  Hangup call  (ha=all)    |  s  Subscribe presence   | rr  (Re-)register |");
     puts("|  H  Hold call                |  u  Unsubscribe presence | ru  Unregister    |");
-    puts("|                              |  D  Subscribe dlg event  |                   |");
+    puts("|  o Toggle call SDP offer     |  D  Subscribe dlg event  |                   |");
     puts("|                              |  Du Unsub dlg event      |                   |");
     puts("|  v  re-inVite (release hold) |  t  Toggle online status |  >  Cycle next ac.|");
     puts("|  U  send UPDATE              |  T  Set online status    |  <  Cycle prev ac.|");
@@ -734,6 +734,9 @@ static void ui_make_new_call()
 
         pjsua_msg_data_init(&msg_data_);
         TEST_MULTIPART(&msg_data_);
+        if (app_config.enable_loam) {
+            call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+        }
         pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
                              &msg_data_, &current_call);
 
@@ -771,6 +774,10 @@ static void ui_make_multi_call()
         pj_strncpy(&tmp, &binfo.uri, sizeof(buf));
     } else {
         tmp = pj_str(result.uri_result);
+    }
+
+    if (app_config.enable_loam) {
+        call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
 
     for (i=0; i<my_atoi(menuin); ++i) {
@@ -1081,6 +1088,11 @@ static void ui_delete_account()
     }
 }
 
+static void ui_unset_loam_mode()
+{
+    app_config.enable_loam = PJ_FALSE;
+}
+
 static void ui_call_hold()
 {
     if (current_call != -1) {
@@ -1099,6 +1111,9 @@ static void ui_call_reinvite()
 static void ui_send_update()
 {
     if (current_call != -1) {
+        if (app_config.enable_loam) {
+            call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+        }
         pjsua_call_update2(current_call, &call_opt, NULL);
     } else {
         PJ_LOG(3,(THIS_FILE, "No current call"));
@@ -1440,6 +1455,18 @@ static void ui_send_arbitrary_request()
         */
         pj_str_t method = pj_str(text);
         pjsua_call_send_request(current_call, &method, NULL);
+    }
+}
+
+static void ui_toggle_call_sdp_offer()
+{
+    app_config.enable_loam = !app_config.enable_loam;
+
+    printf("Subsequent calls and UPDATEs will contain SDP offer: ");
+    if (app_config.enable_loam) {
+        printf("NO.\n");
+    } else {
+        printf("YES.\n");
     }
 }
 
@@ -1940,6 +1967,13 @@ void legacy_main(void)
              * Hold call.
              */
             ui_call_hold();
+            break;
+
+        case 'o':
+            /*
+             * Toggle call SDP offer
+             */
+            ui_toggle_call_sdp_offer();
             break;
 
         case 'v':
