@@ -1840,16 +1840,20 @@ PJ_DEF(pj_status_t) pj_dns_resolver_add_entry( pj_dns_resolver *resolver,
     pj_bzero(&key, sizeof(struct res_key));
     if (pkt->hdr.anscount) {
         /* Make sure name is not too long. */
-        PJ_ASSERT_RETURN(pkt->ans[0].name.slen < PJ_MAX_HOSTNAME, 
-                         PJ_ENAMETOOLONG);
+        if (pkt->ans[0].name.slen >= PJ_MAX_HOSTNAME){
+            pj_grp_lock_release(resolver->grp_lock);
+            return PJ_ENAMETOOLONG;
+        }
 
         init_res_key(&key, pkt->ans[0].type, &pkt->ans[0].name);
 
     } else {
         /* Make sure name is not too long. */
-        PJ_ASSERT_RETURN(pkt->q[0].name.slen < PJ_MAX_HOSTNAME, 
-                         PJ_ENAMETOOLONG);
-
+        if (pkt->q[0].name.slen >= PJ_MAX_HOSTNAME){
+            pj_grp_lock_release(resolver->grp_lock);
+            return PJ_ENAMETOOLONG;
+        }
+        
         init_res_key(&key, pkt->q[0].type, &pkt->q[0].name);
     }
 

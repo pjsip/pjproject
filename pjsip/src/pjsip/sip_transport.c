@@ -1283,8 +1283,10 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
         /* Allocate new entry for the freelist. */
         for (; i < PJSIP_TRANSPORT_ENTRY_ALLOC_CNT; ++i) {
             tp_add = PJ_POOL_ZALLOC_T(mgr->pool, transport);
-            if (!tp_add)
+            if (!tp_add){
+                pj_lock_release(mgr->lock);
                 return PJ_ENOMEM;
+            }  
             pj_list_init(tp_add);
             pj_list_push_back(&mgr->tp_entry_freelist, tp_add);
         }
