@@ -485,10 +485,10 @@ static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
      *  transport layer. So don't try to access tp_info when the module
      *  has lower priority than transport layer.
      */
-    PJ_LOG(4,(THIS_FILE, "TX %ld bytes %s to %s %s:\n"
+    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s %s:\n"
                          "%.*s\n"
                          "--end msg--",
-                         (tdata->buf.cur - tdata->buf.start),
+                         (int)(tdata->buf.cur - tdata->buf.start),
                          pjsip_tx_data_get_info(tdata),
                          tdata->tp_info.transport->type_name,
                          pj_addr_str_print(&input_str, 
