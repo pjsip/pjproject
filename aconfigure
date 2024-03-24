@@ -10362,7 +10362,11 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 		     *)
 			;;
 		  esac
-		  ac_webrtc_aec3_cflags+=" -DWEBRTC_APM_DEBUG_DUMP=0 -DWEBRTC_POSIX=1"
+      if [ -n "${ac_webrtc_aec3_cflags}" ]; then
+        ac_webrtc_aec3_cflags="${ac_webrtc_aec3_cflags} -DWEBRTC_APM_DEBUG_DUMP=0 -DWEBRTC_POSIX=1"
+      else
+        ac_webrtc_aec3_cflags="-DWEBRTC_APM_DEBUG_DUMP=0 -DWEBRTC_POSIX=1"
+      fi
            	else
            	  ac_no_webrtc_aec3=1
            	  printf "%s\n" "#define PJMEDIA_HAS_LIBWEBRTC_AEC3 0" >>confdefs.h
