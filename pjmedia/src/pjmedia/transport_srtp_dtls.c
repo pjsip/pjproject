@@ -1890,8 +1890,10 @@ static pj_status_t dtls_media_stop(pjmedia_transport *tp)
     PJ_LOG(2,(ds->base.name, "dtls_media_stop()"));
 #endif
 
+    DTLS_LOCK(ds);
     dtls_media_stop_channel(ds, RTP_CHANNEL);
     dtls_media_stop_channel(ds, RTCP_CHANNEL);
+    DTLS_UNLOCK(ds);
 
     ds->setup = DTLS_SETUP_UNKNOWN;
     ds->use_ice = PJ_FALSE;
