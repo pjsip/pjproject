@@ -900,8 +900,9 @@ static void destroy_app()
     if (app.pool) {
         pj_pool_release(app.pool);
         app.pool = NULL;
-        PJ_LOG(3,(THIS_FILE, "Peak memory size: %luMB",
-                             app.cp.peak_used_size / 1000000));
+        /* Field peak_used_size is deprecated by #3897 */
+        //PJ_LOG(3,(THIS_FILE, "Peak memory size: %luMB",
+        //                     app.cp.peak_used_size / 1000000));
         pj_caching_pool_destroy(&app.cp);
     }
 
