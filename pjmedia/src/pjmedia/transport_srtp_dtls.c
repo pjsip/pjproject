@@ -829,14 +829,14 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds, unsigned idx)
     PJ_LOG(2,(ds->base.name, "DTLS-SRTP negotiation for %s completed!",
                              CHANNEL_TO_STRING(idx)));
 
-    DTLS_UNLOCK(ds);
-
     /* Stop the retransmission clock. Note that the clock may not be stopped
      * if this function is called from clock thread context. We'll try again
      * later in socket context.
      */
     if (ds->clock[idx])
         pjmedia_clock_stop(ds->clock[idx]);
+
+    DTLS_UNLOCK(ds);
 
     /* Get SRTP key material */
     status = ssl_get_srtp_material(ds, idx);
