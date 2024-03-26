@@ -664,7 +664,9 @@ PJ_DEF(pj_status_t) pj_turn_session_set_server( pj_turn_session *sess,
         unsigned i, cnt;
 
         /* Default port must be specified */
-        PJ_ASSERT_RETURN(default_port>0 && default_port<65536, PJ_EINVAL);
+        PJ_ASSERT_ON_FAIL(default_port>0 && default_port<65536, 
+                            {status=PJ_EINVAL; goto on_return;});
+        
         sess->default_port = (pj_uint16_t)default_port;
 
         cnt = PJ_TURN_MAX_DNS_SRV_CNT;

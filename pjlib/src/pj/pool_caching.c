@@ -220,6 +220,7 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
 #if PJ_SAFE_POOL
     /* Make sure pool is still in our used list */
     if (pj_list_find_node(&cp->used_list, pool) != pool) {
+        pj_lock_release(cp->lock);
         pj_assert(!"Attempt to destroy pool that has been destroyed before");
         return;
     }
