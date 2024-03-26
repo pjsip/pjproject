@@ -189,6 +189,14 @@ typedef struct pjsip_tls_setting
     pj_ssl_cert_buffer privkey_buf;
 
     /**
+     * Lookup certificate from OS certificate store with specified criteria.
+     *
+     * Currently only used by TLS backend Windows Schannel, please check
+     * pj_ssl_cert_load_from_store() for more info.
+     */
+    pj_ssl_cert_lookup_criteria cert_lookup;
+
+    /**
      * Password to open private key.
      */
     pj_str_t    password;
@@ -473,6 +481,9 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
     pj_strdup(pool, &dst->ca_buf, &src->ca_buf);
     pj_strdup(pool, &dst->cert_buf, &src->cert_buf);
     pj_strdup(pool, &dst->privkey_buf, &src->privkey_buf);
+
+    pj_strdup_with_null(pool, &dst->cert_lookup.keyword,
+                              &src->cert_lookup.keyword);
 
     if (src->ciphers_num) {
         unsigned i;

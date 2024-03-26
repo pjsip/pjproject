@@ -224,6 +224,14 @@ typedef struct pj_turn_sock_tls_cfg
     pj_str_t    password;
 
     /**
+     * Lookup certificate from OS certificate store with specified criteria.
+     *
+     * Currently only used by TLS backend Windows Schannel, please check
+     * pj_ssl_cert_load_from_store() for more info.
+     */
+    pj_ssl_cert_lookup_criteria cert_lookup;
+
+    /**
      * The ssl socket parameter.
      * These fields are used by TURN TLS:
      * - proto

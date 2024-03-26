@@ -52,9 +52,22 @@ static pj_bool_t asock_on_data_sent (pj_activesock_t *asock,
  *******************************************************************
  */
 
+static pj_size_t next_pow2(pj_size_t n)
+{
+    /* Next 32-bit power of two */
+    pj_size_t power = 1;
+    while (power < n && power < 0x8000000) {
+        power <<= 1;
+    }
+    return power;
+}
+
 static pj_status_t circ_init(pj_pool_factory *factory,
                              circ_buf_t *cb, pj_size_t cap)
 {
+    /* Round-up cap */
+    cap = next_pow2(cap);
+
     cb->cap    = cap;
     cb->readp  = 0;
     cb->writep = 0;
@@ -68,17 +81,24 @@ static pj_status_t circ_init(pj_pool_factory *factory,
     /* Allocate circular buffer */
     cb->buf = pj_pool_alloc(cb->pool, cap);
     if (!cb->buf) {
-        pj_pool_release(cb->pool);
+        pj_pool_secure_release(&cb->pool);
         return PJ_ENOMEM;
     }
 
     return PJ_SUCCESS;
 }
 
+static void circ_reset(circ_buf_t* cb)
+{
+    cb->readp = 0;
+    cb->writep = 0;
+    cb->size = 0;
+}
+
 static void circ_deinit(circ_buf_t *cb)
 {
     if (cb->pool) {
-        pj_pool_release(cb->pool);
+        pj_pool_secure_release(&cb->pool);
         cb->pool = NULL;
     }
 }
@@ -104,6 +124,8 @@ static void circ_read(circ_buf_t *cb, pj_uint8_t *dst, pj_size_t len)
     pj_size_t tbc = PJ_MIN(size_after, len);
     pj_size_t rem = len - tbc;
 
+    pj_assert(cb->size >= len);
+
     pj_memcpy(dst, cb->buf + cb->readp, tbc);
     pj_memcpy(dst + tbc, cb->buf, rem);
 
@@ -111,6 +133,21 @@ static void circ_read(circ_buf_t *cb, pj_uint8_t *dst, pj_size_t len)
     cb->readp &= (cb->cap - 1);
 
     cb->size -= len;
+}
+
+/* Cancel previous read, partially or fully.
+ * Should be called in the same mutex block as circ_read().
+ */
+static void circ_read_cancel(circ_buf_t* cb, pj_size_t len)
+{
+    pj_assert(cb->cap - cb->size >= len);
+
+    if (cb->readp < len)
+        cb->readp = cb->cap - (len - cb->readp);
+    else
+        cb->readp -= len;
+
+    cb->size += len;
 }
 
 static pj_status_t circ_write(circ_buf_t *cb,
@@ -121,14 +158,8 @@ static pj_status_t circ_write(circ_buf_t *cb,
         /* Minimum required capacity */
         pj_size_t min_cap = len + cb->size;
 
-        /* Next 32-bit power of two */
-        min_cap--;
-        min_cap |= min_cap >> 1;
-        min_cap |= min_cap >> 2;
-        min_cap |= min_cap >> 4;
-        min_cap |= min_cap >> 8;
-        min_cap |= min_cap >> 16;
-        min_cap++;
+        /* Round-up minimum capacity */
+        min_cap = next_pow2(min_cap);
 
         /* Create a new pool to hold a bigger buffer, using the same factory */
         pj_pool_t *pool = pj_pool_create(cb->pool->factory, "tls-circ%p",
@@ -153,7 +184,7 @@ static pj_status_t circ_write(circ_buf_t *cb,
         cb->size = old_size;
 
         /* Release the previous pool */
-        pj_pool_release(cb->pool);
+        pj_pool_secure_release(&cb->pool);
 
         /* Update circular buffer members */
         cb->pool = pool;
@@ -1737,7 +1768,7 @@ static pj_status_t ssl_send (pj_ssl_sock_t *ssock,
                              unsigned flags)
 {
     pj_status_t status;
-    int nwritten;
+    int nwritten = 0;
 
     /* Write the plain data to SSL, after SSL encrypts it, the buffer will
      * contain the secured data to be sent via socket. Note that re-
@@ -2241,8 +2272,9 @@ static void wipe_buf(pj_str_t *buf)
 }
 
 PJ_DEF(void) pj_ssl_cert_wipe_keys(pj_ssl_cert_t *cert)
-{    
+{
     if (cert) {
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
         wipe_buf(&cert->CA_file);
         wipe_buf(&cert->CA_path);
         wipe_buf(&cert->cert_file);
@@ -2251,6 +2283,10 @@ PJ_DEF(void) pj_ssl_cert_wipe_keys(pj_ssl_cert_t *cert)
         wipe_buf(&cert->CA_buf);
         wipe_buf(&cert->cert_buf);
         wipe_buf(&cert->privkey_buf);
+#else
+        cert->criteria.type = PJ_SSL_CERT_LOOKUP_NONE;
+        wipe_buf(&cert->criteria.keyword);
+#endif
     }
 }
 
@@ -2274,6 +2310,7 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files2(pj_pool_t *pool,
                                                  const pj_str_t *privkey_pass,
                                                  pj_ssl_cert_t **p_cert)
 {
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
     pj_ssl_cert_t *cert;
 
     PJ_ASSERT_RETURN(pool && (CA_file || CA_path) && cert_file &&
@@ -2294,6 +2331,16 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files2(pj_pool_t *pool,
     *p_cert = cert;
 
     return PJ_SUCCESS;
+#else
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(CA_file);
+    PJ_UNUSED_ARG(CA_path);
+    PJ_UNUSED_ARG(cert_file);
+    PJ_UNUSED_ARG(privkey_file);
+    PJ_UNUSED_ARG(privkey_pass);
+    PJ_UNUSED_ARG(p_cert);
+    return PJ_ENOTSUP;
+#endif
 }
 
 PJ_DEF(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
@@ -2303,6 +2350,7 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
                                         const pj_str_t *privkey_pass,
                                         pj_ssl_cert_t **p_cert)
 {
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
     pj_ssl_cert_t *cert;
 
     PJ_ASSERT_RETURN(pool && CA_buf && cert_buf && privkey_buf, PJ_EINVAL);
@@ -2316,7 +2364,43 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
     *p_cert = cert;
 
     return PJ_SUCCESS;
+#else
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(CA_buf);
+    PJ_UNUSED_ARG(cert_buf);
+    PJ_UNUSED_ARG(privkey_buf);
+    PJ_UNUSED_ARG(privkey_pass);
+    PJ_UNUSED_ARG(p_cert);
+    return PJ_ENOTSUP;
+#endif
 }
+
+
+PJ_DEF(pj_status_t) pj_ssl_cert_load_from_store(
+                                pj_pool_t *pool,
+                                const pj_ssl_cert_lookup_criteria *criteria,
+                                pj_ssl_cert_t **p_cert)
+{
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
+    pj_ssl_cert_t *cert;
+
+    PJ_ASSERT_RETURN(pool && criteria && p_cert, PJ_EINVAL);
+
+    cert = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
+    pj_memcpy(&cert->criteria, criteria, sizeof(*criteria));
+    pj_strdup_with_null(pool, &cert->criteria.keyword, &criteria->keyword);
+
+    *p_cert = cert;
+
+    return PJ_SUCCESS;
+#else
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(criteria);
+    PJ_UNUSED_ARG(p_cert);
+    return PJ_ENOTSUP;
+#endif
+}
+
 
 /* Set SSL socket credentials. */
 PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
@@ -2330,6 +2414,8 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
 
     cert_ = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
     pj_memcpy(cert_, cert, sizeof(pj_ssl_cert_t));
+
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
     pj_strdup_with_null(pool, &cert_->CA_file, &cert->CA_file);
     pj_strdup_with_null(pool, &cert_->CA_path, &cert->CA_path);
     pj_strdup_with_null(pool, &cert_->cert_file, &cert->cert_file);
@@ -2339,6 +2425,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
     pj_strdup(pool, &cert_->CA_buf, &cert->CA_buf);
     pj_strdup(pool, &cert_->cert_buf, &cert->cert_buf);
     pj_strdup(pool, &cert_->privkey_buf, &cert->privkey_buf);
+#else
+    pj_strdup_with_null(pool, &cert_->criteria.keyword,
+                        &cert->criteria.keyword);
+#endif
 
     ssock->cert = cert_;
 

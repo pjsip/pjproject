@@ -118,6 +118,11 @@ typedef enum pj_ssl_cert_verify_flag_t
     PJ_SSL_CERT_ECHAIN_TOO_LONG                         = (1 << 8),
 
     /**
+     * The certificate signature is created using a weak hashing algorithm.
+     */
+    PJ_SSL_CERT_EWEAK_SIGNATURE                         = (1 << 9),
+
+    /**
      * The server identity does not match to any identities specified in 
      * the certificate, e.g: subjectAltName extension, subject common name.
      * This flag will only be set by application as SSL socket does not 
@@ -144,6 +149,59 @@ typedef enum pj_ssl_cert_name_type
     PJ_SSL_CERT_NAME_URI,
     PJ_SSL_CERT_NAME_IP
 } pj_ssl_cert_name_type;
+
+/**
+ * Field type for looking up SSL certificate in the certificate stores.
+ */
+typedef enum pj_ssl_cert_lookup_type
+{
+    /**
+     * No certificate to be looked up.
+     */
+    PJ_SSL_CERT_LOOKUP_NONE,
+
+    /**
+     * Lookup by subject, this will lookup any first certificate whose
+     * subject containing the specified keyword. Note that subject may not
+     * be unique in the store, so the lookup may end up selecting a wrong
+     * certificate.
+     */
+    PJ_SSL_CERT_LOOKUP_SUBJECT,
+
+    /**
+     * Lookup by fingerprint/thumbprint (SHA1 hash), this will lookup
+     * any first certificate whose fingerprint matching the specified
+     * keyword. The keyword is an array of hash octets.
+     */
+    PJ_SSL_CERT_LOOKUP_FINGERPRINT,
+
+    /**
+     * Lookup by friendly name, this will lookup any first certificate
+     * whose friendly name containing the specified keyword. Note that
+     * friendly name may not be unique in the store, so the lookup may end up
+     * selecting a wrong certificate.
+     */
+    PJ_SSL_CERT_LOOKUP_FRIENDLY_NAME
+
+} pj_ssl_cert_lookup_type;
+
+/**
+ * Describe structure of certificate lookup criteria.
+ */
+typedef struct pj_ssl_cert_lookup_criteria
+{
+    /**
+     * Certificate field type to look.
+     */
+    pj_ssl_cert_lookup_type type;
+
+    /*
+     * Keyword to match on the field specified in \a type.
+     */
+    pj_str_t                keyword;
+
+} pj_ssl_cert_lookup_criteria;
+
 
 /**
  * Describe structure of certificate info.
@@ -272,6 +330,30 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
                                         const pj_ssl_cert_buffer *privkey_buf,
                                         const pj_str_t *privkey_pass,
                                         pj_ssl_cert_t **p_cert);
+
+/**
+ * Create credential from OS certificate store, this function will lookup
+ * certificate using the specified criterias.
+ *
+ * Currently this is used by Windows Schannel backend only, it will lookup
+ * in the Current User store first, if no certificate with the specified
+ * criteria is not found, it will lookup in the Local Machine store.
+ *
+ * Note that for manual verification (e.g: when pj_ssl_sock_param.verify_peer
+ * is disabled), the backend will provide pre-verification result against
+ * trusted CA certificates in Current User store only (will not check CA
+ * certificates in the Local Machine store).
+ *
+ * @param pool              The pool.
+ * @param criteria          The lookup criteria.
+ * @param p_cert            Pointer to credential instance to be created.
+ *
+ * @return                  PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_load_from_store(
+                                pj_pool_t *pool,
+                                const pj_ssl_cert_lookup_criteria *criteria,
+                                pj_ssl_cert_t **p_cert);
 
 /**
  * Dump SSL certificate info.
