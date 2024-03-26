@@ -502,9 +502,10 @@ on_return:
     pj_log_set_level(4);
 
     /* Dumping memory pool usage */
-    PJ_LOG(3,(THIS_FILE, "Peak memory size=%lu MB",
-                         (unsigned long)
-                         (caching_pool.peak_used_size / 1000000)));
+    /* Field peak_used_size is deprecated by #3897 */
+    //PJ_LOG(3,(THIS_FILE, "Peak memory size=%lu MB",
+    //                     (unsigned long)
+    //                     (caching_pool.peak_used_size / 1000000)));
 
     pjsip_endpt_destroy(endpt);
     pj_caching_pool_destroy(&caching_pool);
