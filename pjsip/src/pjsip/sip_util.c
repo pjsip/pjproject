@@ -1470,9 +1470,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
              */
             if (tdata->tp_sel.type == PJSIP_TPSELECTOR_IP_VER &&
                 ((tdata->tp_sel.u.ip_ver == PJSIP_TPSELECTOR_USE_IPV4_ONLY &&
-                  dest_info.type & PJSIP_TRANSPORT_IPV6 != 0) ||
-                 (tdata->tp_sel.u.ip_ver == PJSIP_TPSELECTOR_USE_IPV6_ONLY)
-                  dest_info.type & PJSIP_TRANSPORT_IPV6 == 0)))
+                  (dest_info.type & PJSIP_TRANSPORT_IPV6) != 0) ||
+                 (tdata->tp_sel.u.ip_ver == PJSIP_TPSELECTOR_USE_IPV6_ONLY &&
+                  (dest_info.type & PJSIP_TRANSPORT_IPV6) == 0)))
             {
                 PJ_LOG(5, (THIS_FILE, "Using initial dest %.*s",
                            (int)tdata->dest_info.name.slen,
