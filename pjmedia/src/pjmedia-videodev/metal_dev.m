@@ -428,6 +428,11 @@ static pj_status_t metal_factory_default_param(pj_pool_t *pool,
         textureCoordBuffer = [device newBufferWithBytes:textureCoordinates
                                      length:sizeof(textureCoordinates)
                                      options:MTLResourceStorageModeShared];
+
+        [pQuadPipelineStateDescriptor release];
+        [fragmentProgram release];
+        [vertexProgram release];
+        [shaderLibrary release];
     }
 
     return self;
@@ -508,6 +513,8 @@ static pj_status_t metal_factory_default_param(pj_pool_t *pool,
      */
     [commandBuffer presentDrawable:drawable];
     [commandBuffer commit];
+
+    [texture release];
 
     stream->is_rendering = PJ_FALSE;
 }
