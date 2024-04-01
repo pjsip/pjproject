@@ -1848,8 +1848,6 @@ static void ui_handle_ip_change()
     status = pjsua_handle_ip_change(&param);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "IP change failed", status);
-    } else {
-        PJ_LOG(3,(THIS_FILE, "IP change succeeded"));
     }
 }
 

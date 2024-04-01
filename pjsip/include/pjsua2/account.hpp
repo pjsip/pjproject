@@ -63,6 +63,18 @@ struct AccountRegConfig : public PersistentObject
     bool                registerOnAdd;
 
     /**
+     * Specify whether account modification with Account::modify() should
+     * automatically update registration if necessary, for example if
+     * account credentials change.
+     *
+     * Disable this when immediate registration is not desirable, such as
+     * during IP address change.
+     *
+     * Default: false.
+     */
+    bool                disableRegOnModify;
+
+    /**
      * The optional custom SIP headers to be put in the registration
      * request.
      */
