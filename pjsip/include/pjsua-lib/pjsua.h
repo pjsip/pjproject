@@ -4553,6 +4553,18 @@ typedef struct pjsua_acc_config
     pj_bool_t           register_on_acc_add;
 
     /**
+     * Specify whether account modification with pjsua_acc_modify() should
+     * automatically update registration if necessary, for example if
+     * account credentials change.
+     *
+     * Disable this when immediate registration is not desirable, such as
+     * during IP address change.
+     *
+     * Default: PJ_FALSE.
+     */
+    pj_bool_t           disable_reg_on_modify;
+
+    /**
      * Specify account configuration specific to IP address change used when
      * calling #pjsua_handle_ip_change().
      */

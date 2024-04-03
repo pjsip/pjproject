@@ -575,6 +575,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     // AccountRegConfig
     ret.reg_uri                 = str2Pj(regConfig.registrarUri);
     ret.register_on_acc_add     = regConfig.registerOnAdd;
+    ret.disable_reg_on_modify   = regConfig.disableRegOnModify;
     ret.reg_timeout             = regConfig.timeoutSec;
     ret.reg_retry_interval      = regConfig.retryIntervalSec;
     ret.reg_first_retry_interval= regConfig.firstRetryIntervalSec;
@@ -734,6 +735,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     // AccountRegConfig
     regConfig.registrarUri      = pj2Str(prm.reg_uri);
     regConfig.registerOnAdd     = (prm.register_on_acc_add != 0);
+    regConfig.disableRegOnModify= (prm.disable_reg_on_modify != 0);
     regConfig.timeoutSec        = prm.reg_timeout;
     regConfig.retryIntervalSec  = prm.reg_retry_interval;
     regConfig.firstRetryIntervalSec = prm.reg_first_retry_interval;
