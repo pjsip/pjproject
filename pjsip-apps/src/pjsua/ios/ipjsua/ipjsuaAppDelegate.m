@@ -22,6 +22,7 @@
 #import <pjlib.h>
 #import <pjsua.h>
 #import <pj/log.h>
+#import <AVFoundation/AVFoundation.h>
 #import <CallKit/CallKit.h>
 
 #include "../../pjsua_app.h"
@@ -37,19 +38,166 @@
 /* Specify if we use push notification. */
 #define USE_PUSH_NOTIFICATION 1
 
+/* Specify the timeout (in sec) to wait for the incoming INVITE
+ * to come after we receive push notification.
+ */
+#define MAX_INV_TIMEOUT 10
+
 /* Account details. */
 #define SIP_DOMAIN "sip.pjsip.org"
 #define SIP_USER   "test"
 #define SIP_PASSWD "test"
-
-#define KEEP_ALIVE_INTERVAL 600
 
 ipjsuaAppDelegate      *app;
 static pjsua_app_cfg_t  app_cfg;
 static bool             isShuttingDown;
 static char           **restartArgv;
 static int              restartArgc;
-Reachability            *internetReach;
+Reachability           *internetReach;
+
+static pjsua_call_id    push_call_id;
+static NSUUID          *push_call_uuid;
+
+enum {
+    REREGISTER = 1,
+    ANSWER_CALL,
+    END_CALL,
+    ACTIVATE_AUDIO,
+    DEACTIVATE_AUDIO,
+    HANDLE_IP_CHANGE,
+    HANDLE_ORI_CHANGE
+};
+
+#define SCHEDULE_TIMER(action) \
+{ \
+    static pj_thread_desc a_thread_desc; \
+    static pj_thread_t *a_thread; \
+    if (!pj_thread_is_registered()) { \
+        pj_thread_register("ipjsua", a_thread_desc, &a_thread); \
+    } \
+    pjsua_schedule_timer2(pjsip_funcs, (void *)action, 0); \
+}
+
+static void pjsip_funcs(void *user_data)
+{
+    /* IMPORTANT:
+     * We need to call PJSIP API from a separate thread since
+     * PJSIP API can potentially block the main/GUI thread.
+     * And make sure we don't use Apple's Dispatch / gcd since
+     * it's incompatible with POSIX threads.
+     * In this example, we take advantage of PJSUA's timer thread
+     * to invoke PJSIP APIs. For a more complex application,
+     * it is recommended to create your own separate thread
+     * instead for this purpose.
+     */
+    long code = (long)user_data;
+    if (code == REREGISTER) {
+        for (unsigned i = 0; i < pjsua_acc_get_count(); ++i) {
+            if (pjsua_acc_is_valid(i)) {
+                pjsua_acc_set_registration(i, PJ_TRUE);
+            }
+        }
+    } else if (code == ANSWER_CALL) {
+        pj_status_t status;
+
+        if (push_call_id == PJSUA_INVALID_ID) return;
+
+        status = pjsua_call_answer(push_call_id, PJSIP_SC_OK, NULL, NULL);
+        if (status != PJ_SUCCESS) {
+            [app.provider reportCallWithUUID:push_call_uuid
+                          endedAtDate:[NSDate date]
+                          reason:CXCallEndedReasonFailed];
+        }
+    } else if (code == END_CALL) {
+        pj_status_t status;
+        pjsua_call_info info;
+        pjsua_call_id end_call_id;
+
+        if (push_call_id == PJSUA_INVALID_ID) return;
+
+        end_call_id = push_call_id;
+        push_call_id = PJSUA_INVALID_ID;
+        push_call_uuid = nil;
+        pjsua_call_get_info(end_call_id, &info);
+        if (info.state < PJSIP_INV_STATE_CONFIRMED) {
+            status = pjsua_call_answer(end_call_id, PJSIP_SC_DECLINE, NULL, NULL);
+        } else {
+            status = pjsua_call_hangup(end_call_id, PJSIP_SC_OK, NULL, NULL);
+        }
+        if (status != PJ_SUCCESS) {
+            NSLog(@"Failed ending the call %d", status);
+        }
+    } else if (code == ACTIVATE_AUDIO) {
+        pjsua_call_info call_info;
+
+        if (push_call_id == PJSUA_INVALID_ID) return;
+        if (pjsua_snd_is_active()) return;
+
+        /* If sound device is not yet active, we open it now and connect it
+         * to the call media.
+         */
+        pjsua_set_snd_dev(PJSUA_SND_DEFAULT_CAPTURE_DEV, PJSUA_SND_DEFAULT_PLAYBACK_DEV);
+
+        pjsua_call_get_info(push_call_id, &call_info);
+
+        for (unsigned mi = 0; mi < call_info.media_cnt; ++mi) {
+            if (call_info.media[mi].type == PJMEDIA_TYPE_AUDIO &&
+                (call_info.media[mi].status == PJSUA_CALL_MEDIA_ACTIVE ||
+                 call_info.media[mi].status == PJSUA_CALL_MEDIA_REMOTE_HOLD))
+            {
+                pjsua_conf_port_id call_conf_slot;
+                call_conf_slot = call_info.media[mi].stream.aud.conf_slot;
+                pjsua_conf_connect(0, call_conf_slot);
+                pjsua_conf_connect(call_conf_slot, 0);
+            }
+        }
+    } else if (code == DEACTIVATE_AUDIO) {
+        NSLog(@"Deactivating audio session, is sound active: %d",
+              pjsua_snd_is_active());
+        if (!pjsua_snd_is_active()) {
+            [[AVAudioSession sharedInstance] setActive:NO
+            withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation
+            error:nil];
+        }
+    } else if (code == HANDLE_IP_CHANGE) {
+        pjsua_ip_change_param param;
+        pjsua_ip_change_param_default(&param);
+        pjsua_handle_ip_change(&param);
+    } else if (code == HANDLE_ORI_CHANGE) {
+#if PJSUA_HAS_VIDEO
+        const pjmedia_orient pj_ori[4] =
+        {
+            PJMEDIA_ORIENT_ROTATE_90DEG,  /* UIDeviceOrientationPortrait */
+            PJMEDIA_ORIENT_ROTATE_270DEG, /* UIDeviceOrientationPortraitUpsideDown */
+            PJMEDIA_ORIENT_ROTATE_180DEG, /* UIDeviceOrientationLandscapeLeft,
+                                             home button on the right side */
+            PJMEDIA_ORIENT_NATURAL        /* UIDeviceOrientationLandscapeRight,
+                                             home button on the left side */
+        };
+        static UIDeviceOrientation prev_ori = 0;
+        UIDeviceOrientation dev_ori = [[UIDevice currentDevice] orientation];
+        int i;
+
+        if (dev_ori == prev_ori) return;
+
+        NSLog(@"Device orientation changed: %d", (int)(prev_ori = dev_ori));
+
+        if (dev_ori >= UIDeviceOrientationPortrait &&
+            dev_ori <= UIDeviceOrientationLandscapeRight)
+        {
+            /* Here we set the orientation for all video devices.
+             * This may return failure for renderer devices or for
+             * capture devices which do not support orientation setting,
+             * we can simply ignore them.
+             */
+            for (i = pjsua_vid_dev_count()-1; i >= 0; i--) {
+                pjsua_vid_dev_set_setting(i, PJMEDIA_VID_DEV_CAP_ORIENTATION,
+                                          &pj_ori[dev_ori-1], PJ_TRUE);
+            }
+        }
+#endif
+    }
+}
 
 - (void) updateWithReachability: (Reachability *)curReach
 {
@@ -83,9 +231,7 @@ Reachability            *internetReach;
     if ([curReach currentReachabilityStatus] != NotReachable &&
         ![curReach connectionRequired])
     {
-        pjsua_ip_change_param param;
-        pjsua_ip_change_param_default(&param);
-//        pjsua_handle_ip_change(&param);
+        SCHEDULE_TIMER(HANDLE_IP_CHANGE);
     }
 }
 
@@ -102,7 +248,7 @@ Reachability            *internetReach;
     for (NSUInteger i = 0; i < [credentials.token length]; i++) {
         [self.token appendFormat:@"%02.2hhx", data[i]];
     }
-    NSLog(@"== VOIP Push Notification Token: %@ ==", self.token);
+    NSLog(@"VOIP Push Notification Token: %@", self.token);
 
     /* Now start pjsua */
     [NSThread detachNewThreadSelector:@selector(pjsuaStart) toTarget:self withObject:nil];
@@ -179,6 +325,8 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     app_cfg.on_config_init = &pjsuaOnAppConfigCb;
     
     while (!isShuttingDown) {
+        push_call_id = PJSUA_INVALID_ID;
+        push_call_uuid = nil;
         status = pjsua_app_init(&app_cfg);
         if (status != PJ_SUCCESS) {
             char errmsg[PJ_ERR_MSG_SIZE];
@@ -209,6 +357,10 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
         cfg.cred_info[0].scheme = pj_str("digest");
         cfg.cred_info[0].username = pj_str(SIP_USER);
         cfg.cred_info[0].data = pj_str(SIP_PASSWD);
+        /* Uncomment this to enable video. Note that video can only
+         * work in the foreground.
+         */
+        // app_config_init_video(&cfg);
 
         /* If we have Push Notification token, put it in the registration
          * Contact URI params.
@@ -261,23 +413,84 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     restartArgc = 0;
 }
 
+- (void) provider:(CXProvider *) provider
+didActivateAudioSession:(AVAudioSession *) audioSession
+{
+    NSLog(@"Did activate Audio Session");
+
+    pjsua_schedule_timer2(pjsip_funcs, (void *)ACTIVATE_AUDIO, 0);
+}
+
+- (void)provider:(CXProvider *)provider
+        performAnswerCallAction:(CXAnswerCallAction *)action
+{
+    NSLog(@"Perform answer call %d", push_call_id);
+
+    /* User has answered the call, but we may need to wait for
+     * the incoming INVITE to come.
+     */
+    for (int i = MAX_INV_TIMEOUT * 1000 / 100; i >= 0; i--) {
+        if (push_call_id != PJSUA_INVALID_ID) break;
+        [NSThread sleepForTimeInterval:0.1];
+    }
+    if (push_call_id == PJSUA_INVALID_ID) {
+        [action fail];
+        return;
+    }
+
+    pjsua_schedule_timer2(pjsip_funcs, (void *)ANSWER_CALL, 0);
+
+    [action fulfill];
+}
+
+- (void)provider:(CXProvider *)provider
+        performEndCallAction:(CXEndCallAction *)action
+{
+    NSLog(@"Perform end call %d", push_call_id);
+
+    /* User has declined or ended the call. For call decline, we may need
+     * to wait for the incoming INVITE to come.
+     */
+    for (int i = MAX_INV_TIMEOUT * 1000 / 100; i >= 0; i--) {
+        if (push_call_id != PJSUA_INVALID_ID) break;
+        [NSThread sleepForTimeInterval:0.1];
+    }
+    if (push_call_id == PJSUA_INVALID_ID) {
+        [action fulfill];
+        return;
+    }
+
+    pjsua_schedule_timer2(pjsip_funcs, (void *)END_CALL, 0);
+
+    [action fulfill];
+}
+
 - (void)reportIncomingCall {
-    CXCallUpdate *callUpdate = [[CXCallUpdate alloc] init];
+    /* Activate audio session. */
+    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+    NSError *error = nil;
+    if (![audioSession setCategory:AVAudioSessionCategoryPlayAndRecord
+                       mode:AVAudioSessionModeVoiceChat
+                       options:0 error:&error])
+    {
+        NSLog(@"Error setting up audio session: %@", error.localizedDescription);
+        return;
+    }
+    if (![audioSession setActive:YES error:&error]) {
+        NSLog(@"Error activating audio session: %@", error.localizedDescription);
+        return;
+    }
 
     /* Report the incoming call to the system using CallKit. */
-    CXProviderConfiguration *configuration = [[CXProviderConfiguration alloc]
-                                              initWithLocalizedName:@"ipjsua"];
-    CXProvider *provider = [[CXProvider alloc]
-                            initWithConfiguration:configuration];
-
-    [provider reportNewIncomingCallWithUUID:[NSUUID UUID] update:callUpdate
-              completion:^(NSError * _Nullable error)
+    CXCallUpdate *callUpdate = [[CXCallUpdate alloc] init];
+    push_call_uuid = [NSUUID UUID];
+    [self.provider reportNewIncomingCallWithUUID:push_call_uuid
+                   update:callUpdate
+                   completion:^(NSError * _Nullable error)
     {
         if (error) {
             NSLog(@"Error reporting incoming call: %@",
                   error.localizedDescription);
-        } else {
-            NSLog(@"Incoming call reported successfully");
         }
     }];
 }
@@ -288,8 +501,12 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
 {
     /* Handle incoming VoIP push notification. */
     NSLog(@"Receiving push notification");
-    /* Re-register. */
-    [self performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
+
+    /* Re-register, so the server will send us the suspended INVITE. */
+    push_call_id = PJSUA_INVALID_ID;
+    push_call_uuid = nil;
+    SCHEDULE_TIMER(REREGISTER);
+
     /* Report the incoming call via CallKit. */
     [self reportIncomingCall];
 
@@ -331,6 +548,33 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
             });
         }
     }];
+
+    /* Note that opening audio device when in the background will not trigger
+     * permission request, so we won't be able to use audio device.
+     * Thus, we need to request permission now.
+     */
+    [[AVAudioSession sharedInstance] requestRecordPermission:^(BOOL granted)
+    {
+        NSLog(@"Microphone access %sgranted", (granted ? "" : "not"));
+    }];
+
+    /* We need to request local network access permission as well to
+     * immediately send media traffic when in the background.
+     * Due to its complexity, the code is not included here in the sample app.
+     * Please refer to the Apple "Local Network Privacy" FAQ for more details.
+     */
+
+    /* Create CallKit provider. */
+    CXProviderConfiguration *configuration = [[CXProviderConfiguration alloc]
+                                              initWithLocalizedName:@"ipjsua"];
+    self.provider = [[CXProvider alloc] initWithConfiguration:configuration];
+    [self.provider setDelegate:self queue:nil];
+#else
+    /* Start pjsua app thread immediately, otherwise we do it after push
+     * notification setup completes.
+     */
+    [NSThread detachNewThreadSelector:@selector(pjsuaStart) toTarget:self
+                                      withObject:nil];
 #endif
 
     /* Observe the kNetworkReachabilityChangedNotification. When that
@@ -345,13 +589,6 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     [self updateWithReachability: internetReach];
     
     app = self;
-    
-#if !USE_PUSH_NOTIFICATION
-    /* Start pjsua app thread immediately, otherwise we do it after push
-     * notification setup completes.
-     */
-    [NSThread detachNewThreadSelector:@selector(pjsuaStart) toTarget:self withObject:nil];
-#endif
 
     return YES;
 }
@@ -364,74 +601,14 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
 
 - (void)orientationChanged:(NSNotification *)note
 {
-#if PJSUA_HAS_VIDEO
-    const pjmedia_orient pj_ori[4] =
-    {
-        PJMEDIA_ORIENT_ROTATE_90DEG,  /* UIDeviceOrientationPortrait */
-        PJMEDIA_ORIENT_ROTATE_270DEG, /* UIDeviceOrientationPortraitUpsideDown */
-        PJMEDIA_ORIENT_ROTATE_180DEG, /* UIDeviceOrientationLandscapeLeft,
-                                         home button on the right side */
-        PJMEDIA_ORIENT_NATURAL        /* UIDeviceOrientationLandscapeRight,
-                                         home button on the left side */
-    };
-    static pj_thread_desc a_thread_desc;
-    static pj_thread_t *a_thread;
-    static UIDeviceOrientation prev_ori = 0;
-    UIDeviceOrientation dev_ori = [[UIDevice currentDevice] orientation];
-    int i;
-    
-    if (dev_ori == prev_ori) return;
-    
-    NSLog(@"Device orientation changed: %d", (int)(prev_ori = dev_ori));
-    
-    if (dev_ori >= UIDeviceOrientationPortrait &&
-        dev_ori <= UIDeviceOrientationLandscapeRight)
-    {
-        if (!pj_thread_is_registered()) {
-            pj_thread_register("ipjsua", a_thread_desc, &a_thread);
-        }
-        
-        /* Here we set the orientation for all video devices.
-         * This may return failure for renderer devices or for
-         * capture devices which do not support orientation setting,
-         * we can simply ignore them.
-         */
-        for (i = pjsua_vid_dev_count()-1; i >= 0; i--) {
-            pjsua_vid_dev_set_setting(i, PJMEDIA_VID_DEV_CAP_ORIENTATION,
-                                      &pj_ori[dev_ori-1], PJ_TRUE);
-        }
-    }
-#endif
-}
-
-- (void)keepAlive {
-    static pj_thread_desc a_thread_desc;
-    static pj_thread_t *a_thread;
-    int i;
-    
-    if (!pj_thread_is_registered()) {
-        pj_thread_register("ipjsua", a_thread_desc, &a_thread);
-    }
-    
-    for (i = 0; i < (int)pjsua_acc_get_count(); ++i) {
-        if (pjsua_acc_is_valid(i)) {
-            pjsua_acc_set_registration(i, PJ_TRUE);
-        }
-    }
+    SCHEDULE_TIMER(HANDLE_ORI_CHANGE);
 }
 
 - (void)applicationDidEnterBackground:(UIApplication *)application
 {
-    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later. 
-    // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
-    [self performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
-
-#if 0
-    /* setKeepAliveTimeout is deprecated. Use PushKit instead. */
-    [application setKeepAliveTimeout:KEEP_ALIVE_INTERVAL handler: ^{
-        [self performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
-    }];
-#endif
+    SCHEDULE_TIMER(REREGISTER);
+    /* Allow the re-registration to complete. */
+    [NSThread sleepForTimeInterval:0.3];
 }
 
 - (void)applicationWillEnterForeground:(UIApplication *)application
@@ -450,28 +627,40 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
 }
 
 
+pj_bool_t reportCallState(pjsua_call_id call_id)
+{
+    pjsua_call_info call_info;
+
+    pjsua_call_get_info(call_id, &call_info);
+
+    if (call_info.state == PJSIP_INV_STATE_DISCONNECTED) {
+        if (call_id == push_call_id && push_call_uuid) {
+            [app.provider reportCallWithUUID:push_call_uuid
+                          endedAtDate:[NSDate date]
+                          reason:CXCallEndedReasonRemoteEnded];
+            push_call_id = PJSUA_INVALID_ID;
+            push_call_uuid = nil;
+        }
+    }
+
+    /* Check if we need to deactivate audio session. Note that sound device
+     * will only be closed after pjsua_media_config.snd_auto_close_time.
+     */
+    pjsua_schedule_timer2(pjsip_funcs, (void *)DEACTIVATE_AUDIO, 1500);
+
+    return PJ_FALSE;
+}
+
 pj_bool_t showNotification(pjsua_call_id call_id)
 {
-    /* This is deprecated. Use VoIP Push Notifications with PushKit
-     * framework instead.
+#if USE_PUSH_NOTIFICATION
+    NSLog(@"Receiving incoming call %d", call_id);
+    push_call_id = call_id;
+    /* If we report the incoming call using CallKit, we cannot open
+     * the sound device until the audio session becomes active.
      */
-#if 0
-    // Create a new notification
-    UILocalNotification* alert = [[UILocalNotification alloc] init];
-    if (alert)
-    {
-        alert.repeatInterval = 0;
-        alert.alertBody = @"Incoming call received...";
-        /* This action just brings the app to the FG, it doesn't
-         * automatically answer the call (unless you specify the
-         * --auto-answer option).
-         */
-        alert.alertAction = @"Activate app";
-        
-        dispatch_async(dispatch_get_main_queue(),
-                       ^{[[UIApplication sharedApplication]
-                          presentLocalNotificationNow:alert];});
-    }
+    if (!pjsua_snd_is_active())
+        pjsua_set_no_snd_dev();
 #endif
 
     return PJ_FALSE;
