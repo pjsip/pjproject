@@ -465,7 +465,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 #if !PJ_HAS_IPV6
     PJ_ASSERT_RETURN(cfg->ipv6_sip_use == PJSUA_IPV6_DISABLED, PJ_EINVAL);
     PJ_ASSERT_RETURN(cfg->ipv6_media_use == PJSUA_IPV6_DISABLED, PJ_EINVAL);
-    PJ_ASSERT_RETURN(cfg->nat64_opt == PJSUA_IPV6_DISABLED, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg->nat64_opt == PJSUA_NAT64_DISABLED, PJ_EINVAL);
 #endif
 
     /* Must have a transport */
@@ -854,7 +854,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 #if !PJ_HAS_IPV6
     PJ_ASSERT_RETURN(cfg->ipv6_sip_use == PJSUA_IPV6_DISABLED, PJ_EINVAL);
     PJ_ASSERT_RETURN(cfg->ipv6_media_use == PJSUA_IPV6_DISABLED, PJ_EINVAL);
-    PJ_ASSERT_RETURN(cfg->nat64_opt == PJSUA_IPV6_DISABLED, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg->nat64_opt == PJSUA_NAT64_DISABLED, PJ_EINVAL);
 #endif
 
     PJ_LOG(4,(THIS_FILE, "Modifying account %d", acc_id));
