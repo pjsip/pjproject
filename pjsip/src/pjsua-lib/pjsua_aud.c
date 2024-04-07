@@ -288,6 +288,9 @@ pj_status_t pjsua_aud_subsys_init()
     unsigned opt;
     pjmedia_audio_codec_config codec_cfg;
     pj_status_t status;
+#if PJMEDIA_HAS_PASSTHROUGH_CODECS
+    pjmedia_format ext_fmts[32];
+#endif
 
     /* To suppress warning about unused var when all codecs are disabled */
     PJ_UNUSED_ARG(codec_id);
@@ -305,7 +308,6 @@ pj_status_t pjsua_aud_subsys_init()
     {
         unsigned aud_idx;
         unsigned ext_fmt_cnt = 0;
-        pjmedia_format ext_fmts[32];
 
         /* List extended formats supported by audio devices */
         for (aud_idx = 0; aud_idx < pjmedia_aud_dev_count(); ++aud_idx) {
