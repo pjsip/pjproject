@@ -2492,8 +2492,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
                            16, 80);
     afd = pjmedia_format_get_audio_format_detail(&stream->port.info.fmt, 1);
 
-    /* Init port. */
-
     //No longer there in 2.0
     //pj_strdup(pool, &stream->port.info.encoding_name, &info->fmt.encoding_name);
     afd->clock_rate = info->fmt.clock_rate;
