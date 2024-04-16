@@ -898,7 +898,8 @@ static int print_session(const pjmedia_sdp_session *ses,
     if (len < 5 + 2 + ses->origin.user.slen +
               20 + 20 + 3 + /* max digits of origin.id and version +
                              * whitespaces */
-              ses->origin.net_type.slen+ses->origin.addr.slen + 4)
+              ses->origin.net_type.slen + ses->origin.addr_type.slen +
+              ses->origin.addr.slen + 2 + 2)
     {
         return -1;
     }
