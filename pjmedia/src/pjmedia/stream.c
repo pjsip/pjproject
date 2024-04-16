@@ -299,6 +299,8 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
                              pj_bool_t with_xr,
                              pj_bool_t with_fb);
 
+static pj_status_t stream_port_destroy(pjmedia_port *port);
+
 
 #if TRACE_JB
 
@@ -2491,6 +2493,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     afd = pjmedia_format_get_audio_format_detail(&stream->port.info.fmt, 1);
 
     /* Init port. */
+    stream->port.on_destroy = &stream_port_destroy;
 
     //No longer there in 2.0
     //pj_strdup(pool, &stream->port.info.encoding_name, &info->fmt.encoding_name);
@@ -3060,6 +3063,17 @@ err_cleanup:
 }
 
 
+
+static pj_status_t stream_port_destroy(pjmedia_port *port)
+{
+    pjmedia_stream *stream = (pjmedia_stream*) port->port_data.pdata;
+
+    if (stream->own_pool)
+        pj_pool_safe_release(&stream->own_pool);
+
+    return PJ_SUCCESS;
+}
+
 /*
  * Destroy stream.
  */
@@ -3167,7 +3181,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     }
 #endif
 
-    pj_pool_safe_release(&stream->own_pool);
+    pjmedia_port_destroy(&stream->port);
 
     return PJ_SUCCESS;
 }

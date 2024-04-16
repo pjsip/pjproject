@@ -2180,7 +2180,16 @@ static pj_status_t app_destroy(void)
     pjsip_tls_setting_wipe_keys(&app_config.udp_cfg.tls_setting);
 #endif
 
-    pj_pool_safe_release(&app_config.pool);
+    /* We can only release the pool after audio & video conference destroy.
+     * Note that pjsua_conf_remove_port()/pjsua_vid_conf_remove_port()
+     * is asynchronous, so when sound device is not active, PJMEDIA ports
+     * have not been removed from the conference (and destroyed) yet
+     * until the audio & video conferences are destroyed (in pjsua_destroy()).
+     *
+     * But also note that if we don't release the pool here, pjsua_destroy()
+     * will automatically release it.
+     */
+    //pj_pool_safe_release(&app_config.pool);
 
     status = pjsua_destroy();
 
