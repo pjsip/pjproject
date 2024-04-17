@@ -665,6 +665,22 @@ static pj_status_t oh264_codec_modify(pjmedia_vid_codec *codec,
                               param->enc_fmt.det.vid.max_bps));
     }
 
+	float framerate = param->enc_fmt.det.vid.fps.num / param->enc_fmt.det.vid.fps.denum;
+	rc = oh264_data->enc->SetOption(ENCODER_OPTION_FRAME_RATE, &framerate);
+	if (rc != cmResultSuccess) {
+		PJ_LOG(4, (THIS_FILE, "OpenH264 encoder SetOption framerate failed, "
+							  "rc=%d", rc));
+	} else {
+		oh264_data->prm->enc_fmt.det.vid.fps.num =
+            param->enc_fmt.det.vid.fps.num;
+        oh264_data->prm->enc_fmt.det.vid.fps.denum = 
+            param->enc_fmt.det.vid.fps.denum;
+        
+		PJ_LOG(4, (THIS_FILE, "OpenH264 encoder framerate is modified to "
+							  "%d",
+				   param->enc_fmt.det.vid.fps.num));
+	}
+    
     return PJ_SUCCESS;
 }
 
