@@ -205,11 +205,7 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
         med_port = new MyAudioMediaPort();
 
         MediaFormatAudio fmt;
-        fmt.type = PJMEDIA_TYPE_AUDIO;
-        fmt.clockRate = 16000;
-        fmt.channelCount = 1;
-        fmt.bitsPerSample = 16;
-        fmt.frameTimeUsec = 20000;
+        fmt.init(PJMEDIA_FORMAT_PCM, 16000, 1, 20000, 16);
 
         med_port->createPort("med_port", fmt);
 
