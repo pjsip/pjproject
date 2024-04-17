@@ -895,9 +895,11 @@ static int print_session(const pjmedia_sdp_session *ses,
     int printed;
 
     /* Check length for v= and o= lines. */
-    if (len < 5+ 
-              2+ses->origin.user.slen+18+
-              ses->origin.net_type.slen+ses->origin.addr.slen + 2)
+    if (len < 5 + 2 + ses->origin.user.slen +
+              20 + 20 + 3 + /* max digits of origin.id and version +
+                             * whitespaces */
+              ses->origin.net_type.slen + ses->origin.addr_type.slen +
+              ses->origin.addr.slen + 2 + 2)
     {
         return -1;
     }
@@ -959,7 +961,7 @@ static int print_session(const pjmedia_sdp_session *ses,
     }
 
     /* Time */
-    if ((end-p) < 24) {
+    if ((end-p) < 2+20+1+20+2) {
         return -1;
     }
     *p++ = 't';
