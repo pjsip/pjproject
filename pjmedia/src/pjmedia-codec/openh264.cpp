@@ -678,7 +678,7 @@ static pj_status_t oh264_codec_modify(pjmedia_vid_codec *codec,
 
 		PJ_LOG(4, (THIS_FILE, "OpenH264 encoder framerate is modified to "
 							  "%d",
-				   param->enc_fmt.det.vid.fps.num));
+				   framerate));
 	}
 
     return PJ_SUCCESS;
