@@ -55,8 +55,8 @@ static char           **restartArgv;
 static int              restartArgc;
 Reachability           *internetReach;
 
-static pjsua_call_id    push_call_id;
-static NSUUID          *push_call_uuid;
+/* Mapping between CallKit UUID and pjsua_call_id. */
+NSMutableDictionary<NSUUID *, NSNumber *> *call_map;
 
 enum {
     REREGISTER = 1,
@@ -68,13 +68,16 @@ enum {
     HANDLE_ORI_CHANGE
 };
 
-#define SCHEDULE_TIMER(action) \
-{ \
+#define REGISTER_THREAD \
     static pj_thread_desc a_thread_desc; \
     static pj_thread_t *a_thread; \
     if (!pj_thread_is_registered()) { \
         pj_thread_register("ipjsua", a_thread_desc, &a_thread); \
-    } \
+    }
+
+#define SCHEDULE_TIMER(action) \
+{ \
+    REGISTER_THREAD \
     pjsua_schedule_timer2(pjsip_funcs, (void *)action, 0); \
 }
 
@@ -90,7 +93,7 @@ static void pjsip_funcs(void *user_data)
      * it is recommended to create your own separate thread
      * instead for this purpose.
      */
-    long code = (long)user_data;
+    long code = (long)user_data & 0xF;
     if (code == REREGISTER) {
         for (unsigned i = 0; i < pjsua_acc_get_count(); ++i) {
             if (pjsua_acc_is_valid(i)) {
@@ -99,56 +102,56 @@ static void pjsip_funcs(void *user_data)
         }
     } else if (code == ANSWER_CALL) {
         pj_status_t status;
+        pjsua_call_id call_id = (pjsua_call_id)((long)user_data & 0xFF0) >> 4;
 
-        if (push_call_id == PJSUA_INVALID_ID) return;
-
-        status = pjsua_call_answer(push_call_id, PJSIP_SC_OK, NULL, NULL);
+        status = pjsua_call_answer(call_id, PJSIP_SC_OK, NULL, NULL);
         if (status != PJ_SUCCESS) {
-            [app.provider reportCallWithUUID:push_call_uuid
-                          endedAtDate:[NSDate date]
-                          reason:CXCallEndedReasonFailed];
+            NSUUID *uuid =(__bridge NSUUID *)pjsua_call_get_user_data(call_id);
+            if (uuid) {
+                [app.provider reportCallWithUUID:uuid
+                                     endedAtDate:[NSDate date]
+                                          reason:CXCallEndedReasonFailed];
+            }
         }
     } else if (code == END_CALL) {
         pj_status_t status;
-        pjsua_call_info info;
-        pjsua_call_id end_call_id;
+        pjsua_call_id call_id = (pjsua_call_id)((long)user_data & 0xFF0) >> 4;
 
-        if (push_call_id == PJSUA_INVALID_ID) return;
-
-        end_call_id = push_call_id;
-        push_call_id = PJSUA_INVALID_ID;
-        push_call_uuid = nil;
-        pjsua_call_get_info(end_call_id, &info);
-        if (info.state < PJSIP_INV_STATE_CONFIRMED) {
-            status = pjsua_call_answer(end_call_id, PJSIP_SC_DECLINE, NULL, NULL);
-        } else {
-            status = pjsua_call_hangup(end_call_id, PJSIP_SC_OK, NULL, NULL);
-        }
+        status = pjsua_call_hangup(call_id, PJSIP_SC_OK, NULL, NULL);
         if (status != PJ_SUCCESS) {
-            NSLog(@"Failed ending the call %d", status);
+            NSUUID *uuid =(__bridge NSUUID *)pjsua_call_get_user_data(call_id);
+            if (uuid) {
+                [app.provider reportCallWithUUID:uuid
+                                     endedAtDate:[NSDate date]
+                                          reason:CXCallEndedReasonFailed];
+            }
         }
     } else if (code == ACTIVATE_AUDIO) {
         pjsua_call_info call_info;
+        pjsua_call_id ids[PJSUA_MAX_CALLS];
+        unsigned count = PJSUA_MAX_CALLS;
 
-        if (push_call_id == PJSUA_INVALID_ID) return;
-        if (pjsua_snd_is_active()) return;
-
-        /* If sound device is not yet active, we open it now and connect it
-         * to the call media.
+        /* If we use CallKit, sound device may not work until audio session
+         * becomes active, so we need to force reopen sound device here.
          */
-        pjsua_set_snd_dev(PJSUA_SND_DEFAULT_CAPTURE_DEV, PJSUA_SND_DEFAULT_PLAYBACK_DEV);
+        pjsua_set_no_snd_dev();
+        pjsua_set_snd_dev(PJSUA_SND_DEFAULT_CAPTURE_DEV,
+                          PJSUA_SND_DEFAULT_PLAYBACK_DEV);
 
-        pjsua_call_get_info(push_call_id, &call_info);
+        pjsua_enum_calls(ids, &count);
+        for (unsigned i = 0; i < count; i++) {
+            pjsua_call_get_info(i, &call_info);
 
-        for (unsigned mi = 0; mi < call_info.media_cnt; ++mi) {
-            if (call_info.media[mi].type == PJMEDIA_TYPE_AUDIO &&
-                (call_info.media[mi].status == PJSUA_CALL_MEDIA_ACTIVE ||
-                 call_info.media[mi].status == PJSUA_CALL_MEDIA_REMOTE_HOLD))
-            {
-                pjsua_conf_port_id call_conf_slot;
-                call_conf_slot = call_info.media[mi].stream.aud.conf_slot;
-                pjsua_conf_connect(0, call_conf_slot);
-                pjsua_conf_connect(call_conf_slot, 0);
+            for (unsigned mi = 0; mi < call_info.media_cnt; ++mi) {
+                if (call_info.media[mi].type == PJMEDIA_TYPE_AUDIO &&
+                    (call_info.media[mi].status == PJSUA_CALL_MEDIA_ACTIVE ||
+                     call_info.media[mi].status == PJSUA_CALL_MEDIA_REMOTE_HOLD))
+                {
+                    pjsua_conf_port_id call_conf_slot;
+                    call_conf_slot = call_info.media[mi].stream.aud.conf_slot;
+                    pjsua_conf_connect(0, call_conf_slot);
+                    pjsua_conf_connect(call_conf_slot, 0);
+                }
             }
         }
     } else if (code == DEACTIVATE_AUDIO) {
@@ -325,8 +328,6 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     app_cfg.on_config_init = &pjsuaOnAppConfigCb;
     
     while (!isShuttingDown) {
-        push_call_id = PJSUA_INVALID_ID;
-        push_call_uuid = nil;
         status = pjsua_app_init(&app_cfg);
         if (status != PJ_SUCCESS) {
             char errmsg[PJ_ERR_MSG_SIZE];
@@ -421,51 +422,78 @@ didActivateAudioSession:(AVAudioSession *) audioSession
     pjsua_schedule_timer2(pjsip_funcs, (void *)ACTIVATE_AUDIO, 0);
 }
 
+- (void) provider:(CXProvider *) provider
+didDectivateAudioSession:(AVAudioSession *) audioSession
+{
+    NSLog(@"Did deactivate Audio Session");
+}
+
 - (void)provider:(CXProvider *)provider
         performAnswerCallAction:(CXAnswerCallAction *)action
 {
-    NSLog(@"Perform answer call %d", push_call_id);
+    NSLog(@"Perform answer call %@", action.callUUID.UUIDString);
 
     /* User has answered the call, but we may need to wait for
      * the incoming INVITE to come.
      */
     for (int i = MAX_INV_TIMEOUT * 1000 / 100; i >= 0; i--) {
-        if (push_call_id != PJSUA_INVALID_ID) break;
+        if (call_map[action.callUUID].intValue != PJSUA_INVALID_ID) break;
         [NSThread sleepForTimeInterval:0.1];
     }
-    if (push_call_id == PJSUA_INVALID_ID) {
-        [action fail];
+
+    [action fulfill];
+
+    pjsua_call_id call_id = call_map[action.callUUID].intValue;
+    if (call_id == PJSUA_INVALID_ID) {
+        [app.provider reportCallWithUUID:action.callUUID
+                      endedAtDate:[NSDate date]
+                      reason:CXCallEndedReasonFailed];
         return;
     }
 
-    pjsua_schedule_timer2(pjsip_funcs, (void *)ANSWER_CALL, 0);
-
-    [action fulfill];
+    long code = (long)ANSWER_CALL | (call_id << 4);
+    pjsua_schedule_timer2(pjsip_funcs, (void *)code, 0);
 }
 
 - (void)provider:(CXProvider *)provider
         performEndCallAction:(CXEndCallAction *)action
 {
-    NSLog(@"Perform end call %d", push_call_id);
+    NSLog(@"Perform end call %@", action.callUUID.UUIDString);
 
-    /* User has declined or ended the call. For call decline, we may need
-     * to wait for the incoming INVITE to come.
+    /* User has answered the call, but we may need to wait for
+     * the incoming INVITE to come.
      */
     for (int i = MAX_INV_TIMEOUT * 1000 / 100; i >= 0; i--) {
-        if (push_call_id != PJSUA_INVALID_ID) break;
+        if (call_map[action.callUUID].intValue != PJSUA_INVALID_ID) break;
         [NSThread sleepForTimeInterval:0.1];
     }
-    if (push_call_id == PJSUA_INVALID_ID) {
-        [action fulfill];
+
+    [action fulfill];
+
+    pjsua_call_id call_id = call_map[action.callUUID].intValue;
+    if (call_id == PJSUA_INVALID_ID) {
+        [app.provider reportCallWithUUID:action.callUUID
+                      endedAtDate:[NSDate date]
+                      reason:CXCallEndedReasonFailed];
         return;
     }
 
-    pjsua_schedule_timer2(pjsip_funcs, (void *)END_CALL, 0);
-
-    [action fulfill];
+    long code = (long)END_CALL | (call_id << 4);
+    pjsua_schedule_timer2(pjsip_funcs, (void *)code, 0);
 }
 
-- (void)reportIncomingCall {
+- (void)pushRegistry:(PKPushRegistry *)registry
+        didReceiveIncomingPushWithPayload:(PKPushPayload *)payload
+        forType:(PKPushType)type withCompletionHandler:(void (^)(void))completion
+{
+    /* Handle incoming VoIP push notification. */
+    NSUUID *uuid = [NSUUID UUID];
+    call_map[uuid] = @(PJSUA_INVALID_ID);
+    NSLog(@"Receiving push notification %@", uuid.UUIDString);
+
+    /* Re-register, so the server will send us the suspended INVITE. */
+    SCHEDULE_TIMER(REREGISTER);
+
     /* Activate audio session. */
     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
     NSError *error = nil;
@@ -474,41 +502,23 @@ didActivateAudioSession:(AVAudioSession *) audioSession
                        options:0 error:&error])
     {
         NSLog(@"Error setting up audio session: %@", error.localizedDescription);
-        return;
     }
     if (![audioSession setActive:YES error:&error]) {
         NSLog(@"Error activating audio session: %@", error.localizedDescription);
-        return;
     }
 
     /* Report the incoming call to the system using CallKit. */
     CXCallUpdate *callUpdate = [[CXCallUpdate alloc] init];
-    push_call_uuid = [NSUUID UUID];
-    [self.provider reportNewIncomingCallWithUUID:push_call_uuid
+    [self.provider reportNewIncomingCallWithUUID:uuid
                    update:callUpdate
                    completion:^(NSError * _Nullable error)
     {
         if (error) {
             NSLog(@"Error reporting incoming call: %@",
                   error.localizedDescription);
+            [call_map removeObjectForKey:uuid];
         }
     }];
-}
-
-- (void)pushRegistry:(PKPushRegistry *)registry
-        didReceiveIncomingPushWithPayload:(PKPushPayload *)payload
-        forType:(PKPushType)type withCompletionHandler:(void (^)(void))completion
-{
-    /* Handle incoming VoIP push notification. */
-    NSLog(@"Receiving push notification");
-
-    /* Re-register, so the server will send us the suspended INVITE. */
-    push_call_id = PJSUA_INVALID_ID;
-    push_call_uuid = nil;
-    SCHEDULE_TIMER(REREGISTER);
-
-    /* Report the incoming call via CallKit. */
-    [self reportIncomingCall];
 
     /* Call the completion handler when you have finished processing the incoming call. */
     completion();
@@ -527,6 +537,8 @@ didActivateAudioSession:(AVAudioSession *) audioSession
     [self.window makeKeyAndVisible];
 
 #if USE_PUSH_NOTIFICATION
+    call_map = [NSMutableDictionary dictionary];
+
     /* Set up a push notification registry for Voice over IP (VoIP). */
     self.voipRegistry = [[PKPushRegistry alloc] initWithQueue:dispatch_get_main_queue()];
     self.voipRegistry.delegate = self;
@@ -567,6 +579,8 @@ didActivateAudioSession:(AVAudioSession *) audioSession
     /* Create CallKit provider. */
     CXProviderConfiguration *configuration = [[CXProviderConfiguration alloc]
                                               initWithLocalizedName:@"ipjsua"];
+    configuration.maximumCallGroups = 1;
+    configuration.maximumCallsPerCallGroup = 1;
     self.provider = [[CXProvider alloc] initWithConfiguration:configuration];
     [self.provider setDelegate:self queue:nil];
 #else
@@ -629,24 +643,24 @@ didActivateAudioSession:(AVAudioSession *) audioSession
 
 pj_bool_t reportCallState(pjsua_call_id call_id)
 {
-    pjsua_call_info call_info;
+    pjsua_call_info info;
 
-    pjsua_call_get_info(call_id, &call_info);
+    pjsua_call_get_info(call_id, &info);
 
-    if (call_info.state == PJSIP_INV_STATE_DISCONNECTED) {
-        if (call_id == push_call_id && push_call_uuid) {
-            [app.provider reportCallWithUUID:push_call_uuid
+    if (info.state == PJSIP_INV_STATE_DISCONNECTED) {
+        NSUUID *uuid = (__bridge NSUUID *)pjsua_call_get_user_data(call_id);
+        if (uuid && call_map[uuid].intValue == call_id) {
+            [app.provider reportCallWithUUID:uuid
                           endedAtDate:[NSDate date]
                           reason:CXCallEndedReasonRemoteEnded];
-            push_call_id = PJSUA_INVALID_ID;
-            push_call_uuid = nil;
+            [call_map removeObjectForKey:uuid];
         }
-    }
 
-    /* Check if we need to deactivate audio session. Note that sound device
-     * will only be closed after pjsua_media_config.snd_auto_close_time.
-     */
-    pjsua_schedule_timer2(pjsip_funcs, (void *)DEACTIVATE_AUDIO, 1500);
+        /* Check if we need to deactivate audio session. Note that sound device
+         * will only be closed after pjsua_media_config.snd_auto_close_time.
+         */
+        pjsua_schedule_timer2(pjsip_funcs, (void *)DEACTIVATE_AUDIO, 1500);
+    }
 
     return PJ_FALSE;
 }
@@ -655,12 +669,17 @@ pj_bool_t showNotification(pjsua_call_id call_id)
 {
 #if USE_PUSH_NOTIFICATION
     NSLog(@"Receiving incoming call %d", call_id);
-    push_call_id = call_id;
-    /* If we report the incoming call using CallKit, we cannot open
-     * the sound device until the audio session becomes active.
-     */
-    if (!pjsua_snd_is_active())
-        pjsua_set_no_snd_dev();
+
+    for (NSUUID *uuid in call_map) {
+        if (call_map[uuid].intValue == PJSUA_INVALID_ID) {
+            NSLog(@"Associating incoming call %d with UUID %@",
+                  call_id, uuid.UUIDString);
+            call_map[uuid] = @(call_id);
+            pjsua_call_set_user_data(call_id, (__bridge void *)uuid);
+
+            break;
+        }
+    }
 #endif
 
     return PJ_FALSE;
