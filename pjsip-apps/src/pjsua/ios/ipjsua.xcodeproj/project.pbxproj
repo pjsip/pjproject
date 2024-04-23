@@ -42,6 +42,9 @@
 		3AF0582816F050780046B835 /* ipjsuaViewController_iPad.xib in Resources */ = {isa = PBXBuildFile; fileRef = 3AF0582616F050780046B835 /* ipjsuaViewController_iPad.xib */; };
 		3AF253001EFBD15E00213893 /* libyuv.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF252FF1EFBD15E00213893 /* libyuv.a */; };
 		3AF253021EFBD36E00213893 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF253011EFBD36E00213893 /* VideoToolbox.framework */; };
+		3AF9B5422B8890880043987D /* PushKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF9B5412B8890880043987D /* PushKit.framework */; };
+		3AF9B5462B8890F40043987D /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF9B5442B8890F40043987D /* UserNotifications.framework */; };
+		3AF9B5482BA407AD0043987D /* CallKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF9B5472BA407AD0043987D /* CallKit.framework */; };
 		7485A6AF1F09AAE500122F1A /* Reachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 7485A6AE1F09AAE500122F1A /* Reachability.m */; };
 		7485A6B11F09B2D500122F1A /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7485A6B01F09B2D500122F1A /* SystemConfiguration.framework */; };
 		E5E991E61B67A45500017E67 /* libg7221codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5E991D41B67A45500017E67 /* libg7221codec.a */; };
@@ -105,6 +108,11 @@
 		3AF0582716F050780046B835 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/ipjsuaViewController_iPad.xib; sourceTree = "<group>"; };
 		3AF252FF1EFBD15E00213893 /* libyuv.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libyuv.a; sourceTree = "<group>"; };
 		3AF253011EFBD36E00213893 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
+		3AF9B5402B88896D0043987D /* ipjsua.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ipjsua.entitlements; sourceTree = "<group>"; };
+		3AF9B5412B8890880043987D /* PushKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PushKit.framework; path = System/Library/Frameworks/PushKit.framework; sourceTree = SDKROOT; };
+		3AF9B5432B8890F40043987D /* UserNotificationsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotificationsUI.framework; path = System/Library/Frameworks/UserNotificationsUI.framework; sourceTree = SDKROOT; };
+		3AF9B5442B8890F40043987D /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
+		3AF9B5472BA407AD0043987D /* CallKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CallKit.framework; path = System/Library/Frameworks/CallKit.framework; sourceTree = SDKROOT; };
 		7485A6AD1F09AAE500122F1A /* Reachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reachability.h; sourceTree = "<group>"; };
 		7485A6AE1F09AAE500122F1A /* Reachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Reachability.m; sourceTree = "<group>"; };
 		7485A6B01F09B2D500122F1A /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
@@ -138,6 +146,7 @@
 				3AF253021EFBD36E00213893 /* VideoToolbox.framework in Frameworks */,
 				E5E991EC1B67A45500017E67 /* libpjmedia-codec.a in Frameworks */,
 				3AA31FF818F3FB4C00112C3D /* CFNetwork.framework in Frameworks */,
+				3AF9B5422B8890880043987D /* PushKit.framework in Frameworks */,
 				E5E991E61B67A45500017E67 /* libg7221codec.a in Frameworks */,
 				E5E991EB1B67A45500017E67 /* libpjmedia-audiodev.a in Frameworks */,
 				3AA31FFB18F3FB4C00112C3D /* CoreImage.framework in Frameworks */,
@@ -152,8 +161,10 @@
 				E5E991EE1B67A45500017E67 /* libpjmedia.a in Frameworks */,
 				E5E991EA1B67A45500017E67 /* libpjlib-util.a in Frameworks */,
 				E5E991ED1B67A45500017E67 /* libpjmedia-videodev.a in Frameworks */,
+				3AF9B5462B8890F40043987D /* UserNotifications.framework in Frameworks */,
 				E5E991E81B67A45500017E67 /* libilbccodec.a in Frameworks */,
 				3A4E3B5B2B6205BA0016735C /* Network.framework in Frameworks */,
+				3AF9B5482BA407AD0043987D /* CallKit.framework in Frameworks */,
 				3AA3200118F3FB4C00112C3D /* CoreGraphics.framework in Frameworks */,
 				3AA31FF918F3FB4C00112C3D /* CoreAudio.framework in Frameworks */,
 				3AA31FFD18F3FB4C00112C3D /* CoreVideo.framework in Frameworks */,
@@ -211,6 +222,10 @@
 		3AF0580716F050770046B835 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				3AF9B5472BA407AD0043987D /* CallKit.framework */,
+				3AF9B5442B8890F40043987D /* UserNotifications.framework */,
+				3AF9B5432B8890F40043987D /* UserNotificationsUI.framework */,
+				3AF9B5412B8890880043987D /* PushKit.framework */,
 				3A4E3B5A2B6205B90016735C /* Network.framework */,
 				3A4E3B522B61FEAB0016735C /* Metal.framework */,
 				3A4E3B532B61FEAB0016735C /* MetalKit.framework */,
@@ -237,6 +252,7 @@
 		3AF0580E16F050770046B835 /* ipjsua */ = {
 			isa = PBXGroup;
 			children = (
+				3AF9B5402B88896D0043987D /* ipjsua.entitlements */,
 				3A92068D16F1D1A100D49F96 /* pjsua */,
 				3AF0581716F050780046B835 /* ipjsuaAppDelegate.h */,
 				3AF0581816F050780046B835 /* ipjsuaAppDelegate.m */,
@@ -513,7 +529,9 @@
 		3AF0582C16F050780046B835 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_ENTITLEMENTS = ipjsua/ipjsua.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
@@ -545,10 +563,11 @@
 					"$(PROJECT_DIR)",
 				);
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.teluupush.--PRODUCT-NAME-rfc1034identifier-";
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.teluupush.ipjsua;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Teluu Profile";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ipjsua Push";
 				VALID_ARCHS = arm64;
 				WRAPPER_EXTENSION = app;
 			};
@@ -557,7 +576,9 @@
 		3AF0582D16F050780046B835 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_ENTITLEMENTS = ipjsua/ipjsua.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
@@ -588,10 +609,11 @@
 					"$(PROJECT_DIR)",
 				);
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.${PRODUCT_NAME:rfc1034identifier}";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.teluupush.--PRODUCT-NAME-rfc1034identifier-";
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.teluupush.ipjsua;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Teluu Profile";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ipjsua Push";
 				VALID_ARCHS = arm64;
 				WRAPPER_EXTENSION = app;
 			};

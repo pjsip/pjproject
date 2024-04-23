@@ -1605,7 +1605,8 @@ done:
               acc->cfg.reg_contact_params.slen +
               acc->cfg.reg_contact_uri_params.slen +
               (need_outbound?
-               (acc->rfc5626_instprm.slen + acc->rfc5626_regprm.slen): 0);
+               (acc->rfc5626_instprm.slen + acc->rfc5626_regprm.slen): 0) +
+              5; /* allowance */
         if (len > acc->contact.slen) {
             reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, len);
 

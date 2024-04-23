@@ -47,6 +47,7 @@ static void stereo_demo();
 
 #ifdef USE_GUI
 pj_bool_t showNotification(pjsua_call_id call_id);
+pj_bool_t reportCallState(pjsua_call_id call_id);
 #endif
 
 static void ringback_start(pjsua_call_id call_id);
@@ -170,6 +171,10 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
     pjsua_call_info call_info;
 
     PJ_UNUSED_ARG(e);
+
+#ifdef USE_GUI
+    reportCallState(call_id);
+#endif
 
     pjsua_call_get_info(call_id, &call_info);
 
