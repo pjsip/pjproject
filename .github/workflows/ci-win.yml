@@ -178,25 +178,10 @@ jobs:
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
 
-  windows-with-video-libvpx-unit-test-1:
+  windows-with-video-libvpx-schannel-unit-test-1:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
-    - name: get openssl
-      run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/openssl-1.1.1s-win.zip" -OutFile ".\openssl.zip"
-      shell: powershell
-    - name: expand openssl
-      run: |
-        Expand-Archive -LiteralPath .\openssl.zip -DestinationPath .; pwd
-        cd openssl_build
-        Add-Content ..\openssl_dir.txt $pwd.Path
-      shell: powershell
-    - name: check openssl folder
-      run: |
-        set /P OPENSSL_DIR=<openssl_dir.txt
-        dir "%OPENSSL_DIR%\include"
-        dir "%OPENSSL_DIR%\lib"
-      shell: cmd
     - name: get vpx
       run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/vpx-1.12-win.zip" -Outfile "vpx.zip"
       shell: powershell
@@ -231,6 +216,8 @@ jobs:
       run: |
         cd pjlib/include/pj; cp config_site_test.h config_site.h
         Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
+        Add-Content config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_SCHANNEL"
+        Add-Content config_site.h "#undef PJMEDIA_SRTP_HAS_DTLS"
         Add-Content config_site.h "#define PJMEDIA_HAS_VIDEO 1"
         Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_DSHOW 1"
         Add-Content config_site.h "#define PJMEDIA_HAS_LIBYUV 1"
@@ -258,7 +245,7 @@ jobs:
         set /P SDL_DIR=<sdl_dir.txt
         cd tests/pjsua/tools
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%VPX_DIR%\include;%SDL_DIR%\include
-        set LIB=%LIB%;%OPENSSL_DIR%\lib;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
+        set LIB=%LIB%;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
@@ -268,9 +255,8 @@ jobs:
         python-version: '3.10'
     - name: unit tests
       run: |
-        $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
-        $env:PATH+=";$env:OPENSSL_DIR\bin;$env:SDL_DIR\lib\x86;"
+        $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd tests/pjsua; python runall.py
         cd ../../pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe --ci-mode
         cd ../../pjlib-util/bin; ./pjlib-util-test-i386-Win32-vc14-Release.exe

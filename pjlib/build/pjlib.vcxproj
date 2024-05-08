@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug-Dynamic|ARM">
@@ -998,6 +998,7 @@
     </ClCompile>
     <ClCompile Include="..\src\pj\ssl_sock_ossl.c" />
     <ClCompile Include="..\src\pj\ssl_sock_gtls.c" />
+    <ClCompile Include="..\src\pj\ssl_sock_schannel.c" />
     <ClCompile Include="..\src\pj\string.c" />
     <ClCompile Include="..\src\pj\symbols.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">true</ExcludedFromBuild>
