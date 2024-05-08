@@ -150,9 +150,9 @@ static int AndroidRecorderCallback(void *userData)
 {
     struct android_aud_stream *stream = (struct android_aud_stream *)userData;
     jmethodID read_method=0, record_method=0, stop_method=0;
-    int size = stream->rec_buf_size;
-    jbyteArray inputBuffer;
-    jbyte *buf;
+    int size = stream->rec_buf_size / 2;
+    jshortArray inputBuffer;
+    jshort *buf;
     JNIEnv *jni_env = 0;
     pj_bool_t attached = attach_jvm(&jni_env);
     
@@ -166,7 +166,7 @@ static int AndroidRecorderCallback(void *userData)
 
     /* Get methods ids */
     read_method = (*jni_env)->GetMethodID(jni_env, stream->record_class, 
-                                          "read", "([BII)I");
+                                          "read", "([SII)I");
     record_method = (*jni_env)->GetMethodID(jni_env, stream->record_class,
                                             "startRecording", "()V");
     stop_method = (*jni_env)->GetMethodID(jni_env, stream->record_class,
@@ -177,7 +177,7 @@ static int AndroidRecorderCallback(void *userData)
     }
     
     /* Create a buffer for frames read */
-    inputBuffer = (*jni_env)->NewByteArray(jni_env, size);
+    inputBuffer = (*jni_env)->NewShortArray(jni_env, size);
     if (inputBuffer == 0) {
         PJ_LOG(3, (THIS_FILE, "Unable to allocate input buffer"));
         goto on_return;
@@ -190,7 +190,7 @@ static int AndroidRecorderCallback(void *userData)
     while (!stream->quit_flag) {
         pjmedia_frame frame;
         pj_status_t status;
-        int bytesRead;
+        int shortRead;
         
         if (!stream->running) {
             (*jni_env)->CallVoidMethod(jni_env, stream->record, stop_method);
@@ -200,25 +200,25 @@ static int AndroidRecorderCallback(void *userData)
             (*jni_env)->CallVoidMethod(jni_env, stream->record, record_method);
         }
         
-        bytesRead = (*jni_env)->CallIntMethod(jni_env, stream->record,
+        shortRead = (*jni_env)->CallIntMethod(jni_env, stream->record,
                                               read_method, inputBuffer,
                                               0, size);
-        if (bytesRead <= 0 || bytesRead != size) {
+        if (shortRead <= 0 || shortRead != size) {
             PJ_LOG (4, (THIS_FILE, "Record thread : error %d reading data",
-                                   bytesRead));
+                                   shortRead));
             continue;
         }
 
-        buf = (*jni_env)->GetByteArrayElements(jni_env, inputBuffer, 0);
+        buf = (*jni_env)->GetShortArrayElements(jni_env, inputBuffer, 0);
         frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-        frame.size =  size;
+        frame.size =  stream->rec_buf_size;
         frame.bit_info = 0;
         frame.buf = (void *)buf;
         frame.timestamp.u64 = stream->rec_timestamp.u64;
 
         status = (*stream->rec_cb)(stream->user_data, &frame);
-        (*jni_env)->ReleaseByteArrayElements(jni_env, inputBuffer, buf,
-                                             JNI_ABORT);
+        (*jni_env)->ReleaseShortArrayElements(jni_env, inputBuffer, buf,
+                                              JNI_ABORT);
         if (status != PJ_SUCCESS || stream->quit_flag)
             break;
 
@@ -241,9 +241,9 @@ static int AndroidTrackCallback(void *userData)
 {
     struct android_aud_stream *stream = (struct android_aud_stream*) userData;
     jmethodID write_method=0, play_method=0, stop_method=0, flush_method=0;
-    int size = stream->play_buf_size;
-    jbyteArray outputBuffer;
-    jbyte *buf;
+    int size = stream->play_buf_size / 2;
+    jshortArray outputBuffer;
+    jshort *buf;
     JNIEnv *jni_env = 0;
     pj_bool_t attached = attach_jvm(&jni_env);
     
@@ -255,7 +255,7 @@ static int AndroidTrackCallback(void *userData)
 
     /* Get methods ids */
     write_method = (*jni_env)->GetMethodID(jni_env, stream->track_class,
-                                           "write", "([BII)I");
+                                           "write", "([SII)I");
     play_method = (*jni_env)->GetMethodID(jni_env, stream->track_class,
                                           "play", "()V");
     stop_method = (*jni_env)->GetMethodID(jni_env, stream->track_class,
@@ -269,12 +269,12 @@ static int AndroidTrackCallback(void *userData)
         goto on_return;
     }
 
-    outputBuffer = (*jni_env)->NewByteArray(jni_env, size);
+    outputBuffer = (*jni_env)->NewShortArray(jni_env, size);
     if (outputBuffer == 0) {
         PJ_LOG(3, (THIS_FILE, "Unable to allocate output buffer"));
         goto on_return;
     }
-    buf = (*jni_env)->GetByteArrayElements(jni_env, outputBuffer, 0);
+    buf = (*jni_env)->GetShortArrayElements(jni_env, outputBuffer, 0);
 
     /* Start playing */
     pj_thread_set_prio(NULL, THREAD_PRIORITY_URGENT_AUDIO);
@@ -283,7 +283,7 @@ static int AndroidTrackCallback(void *userData)
     while (!stream->quit_flag) {
         pjmedia_frame frame;
         pj_status_t status;
-        int bytesWritten;
+        int shortWritten;
 
         if (!stream->running) {
             (*jni_env)->CallVoidMethod(jni_env, stream->track, stop_method);
@@ -295,7 +295,7 @@ static int AndroidTrackCallback(void *userData)
         }
         
         frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-        frame.size = size;
+        frame.size = stream->play_buf_size;
         frame.buf = (void *)buf;
         frame.timestamp.u64 = stream->play_timestamp.u64;
         frame.bit_info = 0;
@@ -307,16 +307,16 @@ static int AndroidTrackCallback(void *userData)
         if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
             pj_bzero(frame.buf, frame.size);
         
-        (*jni_env)->ReleaseByteArrayElements(jni_env, outputBuffer, buf,
+        (*jni_env)->ReleaseShortArrayElements(jni_env, outputBuffer, buf,
                                              JNI_COMMIT);
 
         /* Write to the device output. */
-        bytesWritten = (*jni_env)->CallIntMethod(jni_env, stream->track,
+        shortWritten = (*jni_env)->CallIntMethod(jni_env, stream->track,
                                                  write_method, outputBuffer,
                                                  0, size);
-        if (bytesWritten <= 0 || bytesWritten != size) {
+        if (shortWritten <= 0 || shortWritten != size) {
             PJ_LOG(4, (THIS_FILE, "Player thread: Error %d writing data",
-                                  bytesWritten));
+                                  shortWritten));
             continue;
         }
 
@@ -324,7 +324,7 @@ static int AndroidTrackCallback(void *userData)
                                       stream->param.channel_count;
     };
     
-    (*jni_env)->ReleaseByteArrayElements(jni_env, outputBuffer, buf, 0);
+    (*jni_env)->ReleaseShortArrayElements(jni_env, outputBuffer, buf, 0);
     (*jni_env)->DeleteLocalRef(jni_env, outputBuffer);
     
 on_return:
@@ -476,7 +476,8 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
     
     PJ_ASSERT_RETURN(param->channel_count >= 1 && param->channel_count <= 2,
                      PJ_EINVAL);
-    PJ_ASSERT_RETURN(param->bits_per_sample==8 || param->bits_per_sample==16,
+    PJ_ASSERT_RETURN(/* param->bits_per_sample==8 || */
+                     param->bits_per_sample==16,
                      PJ_EINVAL);
     PJ_ASSERT_RETURN(play_cb && rec_cb && p_aud_strm, PJ_EINVAL);
 
@@ -500,8 +501,11 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
                    12 /*CHANNEL_IN_STEREO*/;
     channelOutCfg = (param->channel_count == 1)? 4 /*CHANNEL_OUT_MONO*/:
                     12 /*CHANNEL_OUT_STEREO*/;
-    sampleFormat = (param->bits_per_sample == 8)? 3 /*ENCODING_PCM_8BIT*/:
-                   2 /*ENCODING_PCM_16BIT*/;
+
+    // The 8bit/byte read/write methods no longer support 16bit
+    //sampleFormat = (param->bits_per_sample == 8)? 3 /*ENCODING_PCM_8BIT*/:
+    //               2 /*ENCODING_PCM_16BIT*/;
+    sampleFormat = 2 /*ENCODING_PCM_16BIT*/;
 
     attached = attach_jvm(&jni_env);
 
