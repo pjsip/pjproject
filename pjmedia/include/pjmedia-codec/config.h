@@ -540,6 +540,24 @@
 #endif
 
 
+ /**
+  * Enable Lyra codec.
+  *
+  * Default: 0
+  */
+#ifndef PJMEDIA_HAS_LYRA_CODEC
+#   define PJMEDIA_HAS_LYRA_CODEC                       0
+#endif
+
+/**
+ * Lyra default bitrate setting
+ *
+ * Default: 3200 (available bitrate:3200, 6000, 9200)
+ */
+#ifndef PJMEDIA_CODEC_LYRA_DEFAULT_BIT_RATE
+#   define PJMEDIA_CODEC_LYRA_DEFAULT_BIT_RATE           3200
+#endif
+
 /**
  * Specify if FFMPEG codecs are available.
  *

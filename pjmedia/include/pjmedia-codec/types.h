@@ -83,6 +83,10 @@ enum pjmedia_audio_pt
     PJMEDIA_RTP_PT_G7221_RSV1,                  /**< G722.1 reserve         */
     PJMEDIA_RTP_PT_G7221_RSV2,                  /**< G722.1 reserve         */
     PJMEDIA_RTP_PT_OPUS,                        /**< OPUS                   */
+    PJMEDIA_RTP_PT_LYRA_8,                      /**< LYRA @ 8Kbps           */
+    PJMEDIA_RTP_PT_LYRA_16,                     /**< LYRA @ 16Kbps          */
+    PJMEDIA_RTP_PT_LYRA_32,                     /**< LYRA @ 32Kbps          */
+    PJMEDIA_RTP_PT_LYRA_48,                     /**< LYRA @ 48Kbps          */
 #if PJMEDIA_CODEC_L16_HAS_8KHZ_MONO
     PJMEDIA_RTP_PT_L16_8KHZ_MONO,               /**< L16 @ 8KHz, mono       */
 #endif

@@ -1795,6 +1795,21 @@ public:
                             PJSUA2_THROW(Error);
 
     /**
+     * Get codec Lyra config.
+     *
+     */
+     CodecLyraConfig getCodecLyraConfig() const PJSUA2_THROW(Error);
+
+    /**
+     * Set codec Lyra config.
+     *
+     * @param lyra_cfg  Codec Lyra configuration.
+     *
+     */
+    void setCodecLyraConfig(const CodecLyraConfig &lyra_cfg)
+                            PJSUA2_THROW(Error);
+
+    /**
      * Enumerate all SRTP crypto-suite names.
      *
      * @return          The list of SRTP crypto-suite name.

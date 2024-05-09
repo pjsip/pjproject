@@ -2642,6 +2642,18 @@ struct CodecOpusConfig
 };
 
 /**
+ * Lyra codec parameters setting;
+ */
+struct CodecLyraConfig
+{
+    unsigned   bit_rate;    /**< Codec bit rate.                     */
+    string     model_path;  /**< Model path.                         */
+
+    pjmedia_codec_lyra_config toPj() const;
+    void fromPj(const pjmedia_codec_lyra_config &config);
+};
+
+/**
  * Detailed codec attributes used in configuring a video codec and in querying
  * the capability of video codec factories. 
  *
