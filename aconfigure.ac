@@ -2311,6 +2311,18 @@ AC_ARG_ENABLE(bcg729,
 
 	      ])
 		  
+dnl # lyra prefix
+AC_ARG_WITH(lyra,
+            AS_HELP_STRING([--with-lyra=DIR],
+		           [Specify alternate lyra prefix]),
+            [],
+            [with_lyra=no]
+            )
+
+dnl # Do not use default lyra installation if we are cross-compiling
+if test "x$ac_cross_compile" != "x" -a "x$with_lyra" = "xno"; then
+    enable_lyra=no
+fi
 
 dnl # lyra
 AC_SUBST(ac_no_lyra_codec)

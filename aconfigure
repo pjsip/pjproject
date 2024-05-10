@@ -886,6 +886,7 @@ with_opus
 enable_opus
 with_bcg729
 enable_bcg729
+with_lyra
 enable_lyra
 enable_libsrtp
 enable_libyuv
@@ -1644,6 +1645,7 @@ Optional Packages:
   --with-silk=DIR         Specify alternate SILK prefix
   --with-opus=DIR         Specify alternate OPUS prefix
   --with-bcg729=DIR       Specify alternate bcg729 prefix
+  --with-lyra=DIR         Specify alternate lyra prefix
 
 Some influential environment variables:
   CC          C compiler command
@@ -10120,6 +10122,20 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
 fi
 
 
+
+# Check whether --with-lyra was given.
+if test ${with_lyra+y}
+then :
+  withval=$with_lyra;
+else $as_nop
+  with_lyra=no
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_lyra" = "xno"; then
+    enable_lyra=no
+fi
 
 
 # Check whether --enable-lyra was given.
