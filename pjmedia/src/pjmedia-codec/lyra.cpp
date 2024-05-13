@@ -284,7 +284,16 @@ static pj_status_t lyra_default_attr(pjmedia_codec_factory *factory,
     attr->info.pt = (pj_uint8_t)id->pt;
     attr->info.channel_cnt = 1;
 
-    idx = attr->info.pt - PJMEDIA_RTP_PT_LYRA_8;
+    for (; idx < PJ_ARRAY_SIZE(lyra_factory.param); ++idx) {
+        if (lyra_factory.param[idx].enabled &&
+            id->clock_rate == lyra_factory.param[idx].clock_rate)
+        {
+            break;
+        }
+    }
+    if (idx == PJ_ARRAY_SIZE(lyra_factory.param)) {
+        PJ_EINVAL;
+    }
     attr->info.clock_rate = lyra_factory.param[idx].clock_rate;
     attr->info.avg_bps = lyra_cfg.bit_rate;
     attr->info.max_bps = LYRA_MAX_BITRATE;
@@ -430,11 +439,13 @@ static pj_status_t lyra_codec_open(pjmedia_codec *codec,
     lyra_data->samples_per_frame =
                           attr->info.clock_rate / lyra_data->enc->frame_rate();
 
-    PJ_LOG(4, (THIS_FILE,"Codec opened, model_path=%s, chan_cnt=%d, bitrate=%d,"
-               " clockrate:%d, vad=%d, frame_rate=%d, samples_per_frame=%d",
-               lyra_cfg.model_path.ptr, attr->info.channel_cnt,
-               lyra_cfg.bit_rate, attr->info.clock_rate, lyra_data->vad_enabled,
-               lyra_data->enc->frame_rate(), lyra_data->samples_per_frame));
+    PJ_LOG(4, (THIS_FILE, "Codec opened, model_path=%.*s, chan_cnt=%d, "
+            "bitrate=%d, clockrate=%d, vad=%d, frame_rate=%d, "
+            "samples_per_frame=%d",
+            lyra_cfg.model_path.slen, lyra_cfg.model_path.ptr,
+            attr->info.channel_cnt, lyra_cfg.bit_rate, attr->info.clock_rate,
+            lyra_data->vad_enabled, lyra_data->enc->frame_rate(),
+            lyra_data->samples_per_frame));
 
     pj_mutex_unlock(lyra_data->mutex);
     return PJ_SUCCESS;
@@ -588,6 +599,7 @@ static pj_status_t lyra_codec_decode(pjmedia_codec *codec,
         auto decoded = lyra_data->dec->DecodeSamples(samples_to_request);
         if (!decoded.has_value()) {
             PJ_LOG(4, (THIS_FILE, "Decode failed!"));
+            pj_mutex_unlock(lyra_data->mutex);
             return PJMEDIA_CODEC_EFAILED;
         }
         samples_decoded += (unsigned)decoded->size();
