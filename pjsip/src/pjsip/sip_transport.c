@@ -2156,40 +2156,67 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 
             msg_status = pjsip_find_msg(current_pkt, remaining_len, PJ_FALSE, 
                                         &msg_fragment_size);
-            if (msg_status != PJ_SUCCESS) {
-                if (remaining_len == PJSIP_MAX_PKT_LEN) {
-                    mgr->on_rx_msg(mgr->endpt, PJSIP_ERXOVERFLOW, rdata);
-                    
-                    /* Notify application about the message overflow */
-                    if (mgr->tp_drop_data_cb) {
-                        pjsip_tp_dropped_data dd;
-                        pj_bzero(&dd, sizeof(dd));
-                        dd.tp = tr;
-                        dd.data = current_pkt;
-                        dd.len = msg_fragment_size;
-                        dd.status = PJSIP_ERXOVERFLOW;
-                        (*mgr->tp_drop_data_cb)(&dd);
-                    }
-
-                    if (rdata->tp_info.transport->idle_timer.id == 
-                                                         INITIAL_IDLE_TIMER_ID)
-                    {
-                        /* We are not getting the first valid SIP message 
-                         * as expected, close the transport.
-                         */
-                        PJ_LOG(4, (THIS_FILE, "Unexpected data was received "\
-                            "while waiting for a valid initial SIP messages. "\
-                            "Shutting down transport %s",
-                            rdata->tp_info.transport->obj_name));
-
-                        pjsip_transport_shutdown(rdata->tp_info.transport);
-                    }
-                    
-                    /* Exhaust all data. */
-                    return rdata->pkt_info.len;
-                } else {
+            switch (msg_status) {
+            case PJ_SUCCESS:
+                /* continue below */
+                break;
+            case PJSIP_EPARTIALMSG:
+                if (remaining_len != PJSIP_MAX_PKT_LEN) {
                     /* Not enough data in packet. */
                     return total_processed;
+                }
+                mgr->on_rx_msg(mgr->endpt, PJSIP_ERXOVERFLOW, rdata);
+                /* Notify application about the message overflow */
+                if (mgr->tp_drop_data_cb) {
+                    pjsip_tp_dropped_data dd;
+                    pj_bzero(&dd, sizeof(dd));
+                    dd.tp = tr;
+                    dd.data = current_pkt;
+                    dd.len = msg_fragment_size;
+                    dd.status = PJSIP_ERXOVERFLOW;
+                    (*mgr->tp_drop_data_cb)(&dd);
+                }
+
+                if (rdata->tp_info.transport->idle_timer.id ==
+                                                        INITIAL_IDLE_TIMER_ID)
+                {
+                    /* We are not getting the first valid SIP message
+                     * as expected, close the transport.
+                     */
+                    PJ_LOG(4, (THIS_FILE, "Unexpected data was received "\
+                        "while waiting for a valid initial SIP messages. "\
+                        "Shutting down transport %s",
+                        rdata->tp_info.transport->obj_name));
+
+                    pjsip_transport_shutdown(rdata->tp_info.transport);
+                }
+                /* Exhaust all data. */
+                return rdata->pkt_info.len;
+            case PJSIP_EMISSINGHDR:
+            case PJSIP_EINVALIDHDR:
+            default:
+                {
+                char errbuf[128];
+                pj_str_t errstr;
+
+                errstr = pjsip_strerror(msg_status, errbuf, sizeof(errbuf) - 1);
+                errstr.ptr[errstr.slen] = '\0';
+                PJ_LOG(1, (THIS_FILE, "%s Unable to match whole message: %s",
+                           rdata->tp_info.transport->obj_name, errstr.ptr));
+
+                mgr->on_rx_msg(mgr->endpt, msg_status, rdata);
+                /* Notify application about the missing header. */
+                if (mgr->tp_drop_data_cb) {
+                    pjsip_tp_dropped_data dd;
+                    pj_bzero(&dd, sizeof(dd));
+                    dd.tp = tr;
+                    dd.data = current_pkt;
+                    dd.len = msg_fragment_size;
+                    dd.status = msg_status;
+                    (*mgr->tp_drop_data_cb)(&dd);
+                }
+
+                return rdata->pkt_info.len;
                 }
             }
         }
