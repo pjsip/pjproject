@@ -559,6 +559,17 @@
 #endif
 
 /**
+ * Lyra default model path containing lyra_config.binarypb, lyragan.tflite,
+ * quantizer.tflite and soundstream_encoder.tflite file. If autoconf is used,
+ * it will be set to "[lyra src folder]/model_coeffs".
+ *
+ * Default: "model_coeffs"
+ */
+#ifndef PJMEDIA_CODEC_LYRA_DEFAULT_MODEL_PATH
+#   define PJMEDIA_CODEC_LYRA_DEFAULT_MODEL_PATH           "model_coeffs"
+#endif
+
+/**
  * Specify if FFMPEG codecs are available.
  *
  * Default: PJMEDIA_HAS_LIBAVFORMAT

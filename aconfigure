@@ -658,6 +658,7 @@ ac_webrtc_instset
 ac_no_webrtc
 ac_no_yuv
 ac_no_srtp
+ac_lyra_model_path
 ac_no_lyra_codec
 ac_no_bcg729
 opus_present
@@ -10138,6 +10139,7 @@ if test "x$ac_cross_compile" != "x" -a "x$with_lyra" = "xno"; then
 fi
 
 
+
 # Check whether --enable-lyra was given.
 if test ${enable_lyra+y}
 then :
@@ -10201,6 +10203,7 @@ _ACEOF
 if ac_fn_cxx_try_link "$LINENO"
 then :
 
+	      				   ac_lyra_model_path="$LYRA_PREFIX/model_coeffs"
 	      				   printf "%s\n" "#define PJMEDIA_HAS_LYRA_CODEC 1" >>confdefs.h
 
 					   	      		  	      	   LYRA_CPPFLAGS="'-DGLOG_DEPRECATED=__attribute__((deprecated))' '-DGLOG_EXPORT=__attribute__((visibility(\"default\")))' '-DGLOG_NO_EXPORT=__attribute__((visibility(\"default\")))'"

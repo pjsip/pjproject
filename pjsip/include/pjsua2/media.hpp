@@ -2642,12 +2642,12 @@ struct CodecOpusConfig
 };
 
 /**
- * Lyra codec parameters setting;
+ * Lyra codec setting;
  */
 struct CodecLyraConfig
 {
-    unsigned   bit_rate;    /**< Codec bit rate.                     */
-    string     model_path;  /**< Model path.                         */
+    unsigned   bit_rate;    /**< The expected bit rate from remote.     */
+    string     model_path;  /**< The path to the model files.           */
 
     pjmedia_codec_lyra_config toPj() const;
     void fromPj(const pjmedia_codec_lyra_config &config);

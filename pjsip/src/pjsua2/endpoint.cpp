@@ -2548,7 +2548,7 @@ void Endpoint::setCodecLyraConfig(const CodecLyraConfig &lyra_cfg)
     pjmedia_codec_lyra_config new_lyra_cfg;
     new_lyra_cfg = lyra_cfg.toPj();
 
-    PJSUA2_CHECK_EXPR(pjmedia_codec_lyra_set_default_param(&new_lyra_cfg));
+    PJSUA2_CHECK_EXPR(pjmedia_codec_lyra_set_config(&new_lyra_cfg));
 #else
     PJ_UNUSED_ARG(lyra_cfg);
 

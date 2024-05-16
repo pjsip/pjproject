@@ -39,10 +39,13 @@
 
 PJ_BEGIN_DECL
 
+/**
+ * Lyra codec setting;
+ */
 typedef struct pjmedia_codec_lyra_config
 {
-    unsigned    bit_rate;
-    pj_str_t    model_path;
+    unsigned    bit_rate;    /**< The expected bit rate from remote.     */
+    pj_str_t    model_path;  /**< The path to the model files.           */
 } pjmedia_codec_lyra_config;
 
 /**
@@ -80,7 +83,7 @@ pjmedia_codec_lyra_get_config( pjmedia_codec_lyra_config *cfg);
  * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t)
-pjmedia_codec_lyra_set_default_param(const pjmedia_codec_lyra_config *cfg);
+pjmedia_codec_lyra_set_config(const pjmedia_codec_lyra_config *cfg);
 
 
 PJ_END_DECL
