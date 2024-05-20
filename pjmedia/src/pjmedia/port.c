@@ -126,8 +126,7 @@ PJ_DEF(pj_status_t) pjmedia_port_destroy( pjmedia_port *port )
     PJ_ASSERT_RETURN(port, PJ_EINVAL);
 
     if (port->grp_lock) {
-        pjmedia_port_dec_ref(port);
-        return PJ_SUCCESS;
+        return pjmedia_port_dec_ref(port);
     }
 
     if (port->on_destroy) {
@@ -160,16 +159,19 @@ PJ_DEF(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
     PJ_ASSERT_RETURN(port && pool, PJ_EINVAL);
     PJ_ASSERT_RETURN(port->grp_lock == NULL, PJ_EEXISTS);
 
-    /* We need to be caution on ports that do not have the on_destroy()!
-     * It is either uninitialized yet or the port does not have one.
-     * If the port doesn't have one, we'd expect a possible premature destroy!
+    /* We need to be caution on ports that do not have its own pool,
+     * such port is likely using app's pool, so if the app destroys the port
+     * and then destroys the pool immediately, it may cause crash as the port
+     * may have not really been destroyed and may still be accessed.
+     * When port has a pool, it usually implements on_destroy(), so here
+     * we check availability of on_destroy implementation.
      */
     if (port->on_destroy == NULL) {
         PJ_LOG(3,(THIS_FILE, "Media port %s is using group lock but does not "
                              "implement on_destroy()!",
                              port->info.name.ptr));
-        pj_assert(!"Port using group lock should implement on_destroy()!");
-        return PJ_EINVALIDOP;
+        //pj_assert(!"Port using group lock should implement on_destroy()!");
+        //return PJ_EINVALIDOP;
     }
 
     if (!grp_lock) {
