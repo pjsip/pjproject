@@ -427,11 +427,13 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_get_info(pjmedia_aud_dev_index id,
     if (status != PJ_SUCCESS)
         return status;
 
+    status = f->op->get_dev_info(f, index, info);
+
     /* Make sure device ID is the real ID (not PJMEDIA_AUD_DEFAULT_*_DEV) */
     info->id = index;
     make_global_index(f->sys.drv_idx, &info->id);
 
-    return f->op->get_dev_info(f, index, info);
+    return status;
 }
 
 /* API: find device */
