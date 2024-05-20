@@ -937,6 +937,8 @@ PJ_DEF(pj_status_t) pjsip_find_msg( const char *buf, pj_size_t size,
 
     /* Found Content-Length? */
     if (content_length == -1) {
+        /* As per RFC3261 7.4.2, 7.5, 20.14, Content-Length is mandatory over TCP. */
+        PJ_LOG(2, (THIS_FILE, "Field Content-Length not found!"));
         return status;
     }
 
