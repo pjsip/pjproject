@@ -2036,16 +2036,16 @@ pjmedia_codec_lyra_config CodecLyraConfig::toPj() const
 {
     pjmedia_codec_lyra_config config;
 
-    config.bit_rate = bit_rate;
-    config.model_path = str2Pj(model_path);
+    config.bit_rate = bitRate;
+    config.model_path = str2Pj(modelPath);
 
     return config;
 }
 
 void CodecLyraConfig::fromPj(const pjmedia_codec_lyra_config &config)
 {
-    bit_rate = config.bit_rate;
-    model_path = pj2Str(config.model_path);
+    bitRate = config.bit_rate;
+    modelPath = pj2Str(config.model_path);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

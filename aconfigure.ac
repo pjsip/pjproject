@@ -2342,7 +2342,7 @@ AC_ARG_ENABLE(lyra,
 	      		LYRA_PREFIX=$with_lyra
                   	dnl # inside autoconf, single quoted preprocessor definition will raise error
 	      		LYRA_CPPFLAGS="-DGLOG_DEPRECATED=__attribute__((deprecated)) -DGLOG_EXPORT=__attribute__((visibility(\"default\"))) -DGLOG_NO_EXPORT=__attribute__((visibility(\"default\")))"
-	      		LYRA_CXXFLAGS="-std=c++17 -I$LYRA_PREFIX/include/com_google_absl -I$LYRA_PREFIX/include/gulrak_filesystem -I$LYRA_PREFIX/include/com_google_glog/src -I$LYRA_PREFIX"
+	      		LYRA_CXXFLAGS="-std=c++17 -Wno-deprecated-builtins -I$LYRA_PREFIX/include/com_google_absl -I$LYRA_PREFIX/include/gulrak_filesystem -I$LYRA_PREFIX/include/com_google_glog/src -I$LYRA_PREFIX"
 	                LYRA_LDFLAGS="-L$LYRA_PREFIX/lib"
 	      		AC_MSG_RESULT([Using lyra prefix... $with_lyra])
 	      	  else

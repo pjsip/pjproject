@@ -673,8 +673,6 @@ static pj_status_t lyra_codec_recover(pjmedia_codec *codec,
     unsigned samples_per_frame = lyra_data->samples_per_frame;
     pj_status_t status;
 
-    //PJ_LOG(4, (THIS_FILE, "Codec recover"));
-
     /* output_buf_len is unreferenced when building in Release mode */
     PJ_UNUSED_ARG(output_buf_len);
 

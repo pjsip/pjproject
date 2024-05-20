@@ -10157,7 +10157,7 @@ else $as_nop
    		  if test "x$with_lyra" != "xno" -a "x$with_lyra" != "x"; then
 	      		LYRA_PREFIX=$with_lyra
                   		      		LYRA_CPPFLAGS="-DGLOG_DEPRECATED=__attribute__((deprecated)) -DGLOG_EXPORT=__attribute__((visibility(\"default\"))) -DGLOG_NO_EXPORT=__attribute__((visibility(\"default\")))"
-	      		LYRA_CXXFLAGS="-std=c++17 -I$LYRA_PREFIX/include/com_google_absl -I$LYRA_PREFIX/include/gulrak_filesystem -I$LYRA_PREFIX/include/com_google_glog/src -I$LYRA_PREFIX"
+	      		LYRA_CXXFLAGS="-std=c++17 -Wno-deprecated-builtins -I$LYRA_PREFIX/include/com_google_absl -I$LYRA_PREFIX/include/gulrak_filesystem -I$LYRA_PREFIX/include/com_google_glog/src -I$LYRA_PREFIX"
 	                LYRA_LDFLAGS="-L$LYRA_PREFIX/lib"
 	      		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Using lyra prefix... $with_lyra" >&5
 printf "%s\n" "Using lyra prefix... $with_lyra" >&6; }

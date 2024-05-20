@@ -2646,8 +2646,25 @@ struct CodecOpusConfig
  */
 struct CodecLyraConfig
 {
-    unsigned   bit_rate;    /**< The expected bit rate from remote.     */
-    string     model_path;  /**< The path to the model files.           */
+    /**
+     * The value represents the decoder bitrate requested by the receiver.
+     * Endpoints can be configured with different bitrates. For example,
+     * the local endpoint might be set to a bitrate of 3200, while
+     * the remote endpoint is set to 6000. In this scenario, the remote
+     * endpoint will send data at 3200 bitrate, while the local endpoint
+     * will send data at 6000 bitrate.
+     */
+    unsigned   bitRate;
+
+    /**
+     * Lyra required some additional (model) files, including
+     * \b lyra_config.binarypb , \b lyragan.tflite , \b quantizer.tflite and
+     * \b soundstream_encoder.tflite .
+     * This setting represents the folder containing the above files.
+     * The specified folder should contain these files. If an invalid folder
+     * is provided, the codec creation will fail.
+     */
+    string     modelPath;
 
     pjmedia_codec_lyra_config toPj() const;
     void fromPj(const pjmedia_codec_lyra_config &config);
