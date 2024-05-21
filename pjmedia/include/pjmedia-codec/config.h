@@ -570,6 +570,46 @@
 #endif
 
 /**
+ * Settings to enable Lyra codec 8KHz. This option is only used
+ * when PJMEDIA_HAS_LYRA_CODEC is enabled.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_CODEC_LYRA_HAS_8KHZ
+#   define PJMEDIA_CODEC_LYRA_HAS_8KHZ   0
+#endif
+
+/**
+ * Settings to enable Lyra codec 16KHz. This option is only used
+ * when PJMEDIA_HAS_LYRA_CODEC is enabled.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_CODEC_LYRA_HAS_16KHZ
+#   define PJMEDIA_CODEC_LYRA_HAS_16KHZ   1
+#endif
+
+/**
+ * Settings to enable Lyra codec 32KHz. This option is only used
+ * when PJMEDIA_HAS_LYRA_CODEC is enabled.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_CODEC_LYRA_HAS_32KHZ
+#   define PJMEDIA_CODEC_LYRA_HAS_32KHZ   0
+#endif
+
+/**
+ * Settings to enable Lyra codec 48KHz. This option is only used
+ * when PJMEDIA_HAS_LYRA_CODEC is enabled.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_CODEC_LYRA_HAS_48KHZ
+#   define PJMEDIA_CODEC_LYRA_HAS_48KHZ   0
+#endif
+
+/**
  * Specify if FFMPEG codecs are available.
  *
  * Default: PJMEDIA_HAS_LIBAVFORMAT

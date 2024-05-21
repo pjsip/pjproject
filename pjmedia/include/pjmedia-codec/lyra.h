@@ -35,6 +35,9 @@
    * factory to the codec manager. After the codec factory has been registered,
    * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
    *
+   * Lyra codec supports 16-bit PCM audio signal with sampling rate of (8000Hz,
+   * 16000Hz, 32000Hz and 48000Hz), frame length 20ms, and resulting in
+   * bitrate 3200bps, 6000bps and 9200bps.
    */
 
 PJ_BEGIN_DECL
@@ -50,7 +53,8 @@ typedef struct pjmedia_codec_lyra_config
      * the local endpoint might be set to a bitrate of 3200, while
      * the remote endpoint is set to 6000. In this scenario, the remote
      * endpoint will send data at 3200 bitrate, while the local endpoint
-     * will send data at 6000 bitrate.
+     * will send data at 6000 bitrate. Valid bitrate: 3200, 6000, 9200.
+     * By default it is set to PJMEDIA_CODEC_LYRA_DEFAULT_BIT_RATE.
      */
     unsigned    bit_rate;
 

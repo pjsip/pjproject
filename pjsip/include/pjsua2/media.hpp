@@ -2652,7 +2652,8 @@ struct CodecLyraConfig
      * the local endpoint might be set to a bitrate of 3200, while
      * the remote endpoint is set to 6000. In this scenario, the remote
      * endpoint will send data at 3200 bitrate, while the local endpoint
-     * will send data at 6000 bitrate.
+     * will send data at 6000 bitrate. Valid bitrate: 3200, 6000, 9200.
+     * By default it is set to PJMEDIA_CODEC_LYRA_DEFAULT_BIT_RATE.
      */
     unsigned   bitRate;
 

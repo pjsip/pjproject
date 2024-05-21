@@ -170,19 +170,19 @@ PJ_DEF(pj_status_t) pjmedia_codec_lyra_init(pjmedia_endpt *endpt)
         PJ_LOG(2, (THIS_FILE, "Unable to create memory pool for Lyra codec"));
         return PJ_ENOMEM;
     }
-    lyra_factory.param[0].enabled = 0;
+    lyra_factory.param[0].enabled = PJMEDIA_CODEC_LYRA_HAS_8KHZ;
     lyra_factory.param[0].pt = PJMEDIA_RTP_PT_LYRA_8;
     lyra_factory.param[0].clock_rate = 8000;
 
-    lyra_factory.param[1].enabled = 1;
+    lyra_factory.param[1].enabled = PJMEDIA_CODEC_LYRA_HAS_16KHZ;
     lyra_factory.param[1].pt = PJMEDIA_RTP_PT_LYRA_16;
     lyra_factory.param[1].clock_rate = 16000;
 
-    lyra_factory.param[2].enabled = 0;
+    lyra_factory.param[2].enabled = PJMEDIA_CODEC_LYRA_HAS_32KHZ;
     lyra_factory.param[2].pt = PJMEDIA_RTP_PT_LYRA_32;
     lyra_factory.param[2].clock_rate = 32000;
 
-    lyra_factory.param[3].enabled = 0;
+    lyra_factory.param[3].enabled = PJMEDIA_CODEC_LYRA_HAS_48KHZ;
     lyra_factory.param[3].pt = PJMEDIA_RTP_PT_LYRA_48;
     lyra_factory.param[3].clock_rate = 48000;
 
@@ -433,6 +433,29 @@ static pj_status_t lyra_codec_init(pjmedia_codec *codec,
     return PJ_SUCCESS;
 }
 
+static unsigned get_bit_rate_from_fmtp(pj_bool_t is_enc,
+                                       pjmedia_codec_param *attr)
+{
+    unsigned bit_rate = 0;
+
+    pjmedia_codec_fmtp *fmtp = (is_enc?&attr->setting.enc_fmtp:
+                                       &attr->setting.dec_fmtp);
+    /* Get bit_rate from fmpt */
+    for (unsigned i = 0; i < fmtp->cnt; ++i) {
+        if (pj_strcmp2(&fmtp->param[i].name, BIT_RATE_STR) == 0)
+        {
+            bit_rate = (pj_uint16_t) pj_strtoul(&fmtp->param[i].val);
+            break;
+        }
+    }
+    if (bit_rate == 0 ||
+        (bit_rate != 3200 && bit_rate != 6000 && bit_rate != 9200))
+    {
+        bit_rate = PJMEDIA_CODEC_LYRA_DEFAULT_BIT_RATE;
+    }
+    return bit_rate;
+}
+
 static pj_status_t lyra_codec_open(pjmedia_codec *codec,
                                    pjmedia_codec_param *attr)
 {
@@ -441,28 +464,18 @@ static pj_status_t lyra_codec_open(pjmedia_codec *codec,
 
     pj_mutex_lock(lyra_data->mutex);
 
-    PJ_LOG(4, (THIS_FILE, "Codec opening, model_path=%.*s",
-            (int)lyra_cfg.model_path.slen, lyra_cfg.model_path.ptr));
-
-    /* Get encoder bit_rate */
-    for (unsigned i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
-        if (pj_strcmp2(&attr->setting.enc_fmtp.param[i].name, 
-                       BIT_RATE_STR) == 0)
-        {
-            lyra_data->enc_bit_rate = (pj_uint16_t)
-                              pj_strtoul(&attr->setting.enc_fmtp.param[i].val);
-            break;
-        }
-    }
-    if (lyra_data->enc_bit_rate == 0 ||
-        (lyra_data->enc_bit_rate != 3200 && lyra_data->enc_bit_rate != 6000 &&
-         lyra_data->enc_bit_rate != 9200))
-    {
-        lyra_data->enc_bit_rate = PJMEDIA_CODEC_LYRA_DEFAULT_BIT_RATE;
-    }
+    lyra_data->enc_bit_rate = get_bit_rate_from_fmtp(PJ_TRUE, attr);
+    lyra_data->dec_bit_rate = get_bit_rate_from_fmtp(PJ_FALSE, attr);
 
     lyra_data->vad_enabled = (attr->setting.vad != 0);
     lyra_data->plc_enabled = (attr->setting.plc != 0);
+
+    PJ_LOG(4, (THIS_FILE, "Opening codec, model_path=%.*s, chan_cnt=%d, "
+            "enc_bit_rate=%d, dec_bit_rate=%d, clockrate=%d, vad=%d",
+            (int)lyra_cfg.model_path.slen, lyra_cfg.model_path.ptr,
+            attr->info.channel_cnt, lyra_data->enc_bit_rate,
+            lyra_data->dec_bit_rate, attr->info.clock_rate,
+            lyra_data->vad_enabled));
 
     lyra_data->enc = LyraEncoder::Create(attr->info.clock_rate,
                                          attr->info.channel_cnt,
@@ -486,14 +499,7 @@ static pj_status_t lyra_codec_open(pjmedia_codec *codec,
     lyra_data->samples_per_frame =
                           attr->info.clock_rate / lyra_data->enc->frame_rate();
 
-    PJ_LOG(4, (THIS_FILE, "Codec opened, model_path=%.*s, chan_cnt=%d, "
-            "enc_bit_rate=%d, dec_bit_rate=%d, clockrate=%d, vad=%d, "
-            "frame_rate=%d, samples_per_frame=%d",
-            (int)lyra_cfg.model_path.slen, lyra_cfg.model_path.ptr,
-            attr->info.channel_cnt, lyra_data->enc_bit_rate,
-            lyra_data->dec_bit_rate, attr->info.clock_rate,
-            lyra_data->vad_enabled, lyra_data->enc->frame_rate(),
-            lyra_data->samples_per_frame));
+    PJ_LOG(4, (THIS_FILE, "Done opening codec"));
 
     pj_mutex_unlock(lyra_data->mutex);
     return PJ_SUCCESS;
@@ -537,6 +543,7 @@ static pj_status_t lyra_codec_parse(pjmedia_codec *codec,
     unsigned count = 0;
     struct lyra_data* lyra_data = (struct lyra_data*)codec->codec_data;
     unsigned frm_size = lyra_data->dec_bit_rate / (50 * 8);
+    pj_size_t orig_pkt_size = pkt_size;
 
     PJ_UNUSED_ARG(codec);
 
@@ -553,6 +560,9 @@ static pj_status_t lyra_codec_parse(pjmedia_codec *codec,
         pkt_size -= frm_size;
 
         ++count;
+    }
+    if (pkt_size != 0 && count == 1) {
+        frames[0].size = orig_pkt_size;
     }
 
     *frame_cnt = count;
