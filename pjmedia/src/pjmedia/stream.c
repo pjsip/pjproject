@@ -110,6 +110,7 @@ struct dtmf
 struct pjmedia_stream
 {
     pjmedia_endpt           *endpt;         /**< Media endpoint.            */
+    pj_grp_lock_t           *grp_lock;      /**< Group lock.                */
     pjmedia_codec_mgr       *codec_mgr;     /**< Codec manager instance.    */
     pjmedia_stream_info      si;            /**< Creation parameter.        */
     pjmedia_port             port;          /**< Port interface.            */
@@ -299,6 +300,7 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
                              pj_bool_t with_xr,
                              pj_bool_t with_fb);
 
+static void stream_on_destroy(void *arg);
 
 #if TRACE_JB
 
@@ -2453,7 +2455,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     PJ_ASSERT_RETURN(endpt && info && p_stream, PJ_EINVAL);
 
-    if (pool == NULL) {
+    if (1 || pool == NULL) {
         own_pool = pjmedia_endpt_create_pool( endpt, "strm%p",
                                               PJMEDIA_STREAM_SIZE,
                                               PJMEDIA_STREAM_INC);
@@ -2897,6 +2899,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     att_param.rtp_cb2 = &on_rx_rtp;
     att_param.rtcp_cb = &on_rx_rtcp;
 
+    /* Attach handler to group lock from transport */
+    if (tp->grp_lock) {
+        stream->grp_lock = tp->grp_lock;
+        pj_grp_lock_add_ref(stream->grp_lock);
+        pj_grp_lock_add_handler(stream->grp_lock, pool, stream,
+                                &stream_on_destroy);
+    }
+
     /* Only attach transport when stream is ready. */
     stream->transport = tp;
     status = pjmedia_transport_attach2(tp, &att_param);
@@ -3060,6 +3070,15 @@ err_cleanup:
 }
 
 
+static void stream_on_destroy(void *arg)
+{
+    pjmedia_stream* stream = (pjmedia_stream*)arg;
+
+    PJ_LOG(4,(stream->port.info.name.ptr, "Stream destroyed"));
+    pj_pool_safe_release(&stream->own_pool);
+}
+
+
 /*
  * Destroy stream.
  */
@@ -3068,6 +3087,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     pj_status_t status;
 
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
+
+    PJ_LOG(4,(stream->port.info.name.ptr, "Stream destroying"));
 
     /* Send RTCP BYE (also SDES & XR) */
     if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
@@ -3167,7 +3188,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     }
 #endif
 
-    pj_pool_safe_release(&stream->own_pool);
+    if (stream->grp_lock) {
+        pj_grp_lock_dec_ref(stream->grp_lock);
+    } else {
+        stream_on_destroy(stream);
+    }
 
     return PJ_SUCCESS;
 }
