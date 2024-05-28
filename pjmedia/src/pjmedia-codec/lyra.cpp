@@ -22,12 +22,6 @@
 
 #if defined(PJMEDIA_HAS_LYRA_CODEC) && PJMEDIA_HAS_LYRA_CODEC != 0
 
-#ifdef _MSC_VER
-#    pragma warning(disable: 4117)    // Reserved macro
-#    pragma warning(disable: 4244)    // Possible loss of data
-#    pragma warning(disable: 4100)    // Possible loss of data
-#endif
-
 #include "lyra_encoder.h"
 #include "lyra_decoder.h"
 
@@ -612,6 +606,10 @@ static pj_status_t lyra_codec_encode(pjmedia_codec *codec,
                             encoded.value().end());
 
     }
+    PJ_ASSERT_ON_FAIL(encoded_data.size() <= output_buf_len,
+                     { pj_mutex_unlock(lyra_data->mutex); 
+                       return PJMEDIA_CODEC_EFRMTOOSHORT; });
+
     output->size = encoded_data.size();
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->timestamp = input->timestamp;
@@ -630,6 +628,9 @@ static pj_status_t lyra_codec_decode(pjmedia_codec *codec,
     unsigned samples_per_frame = lyra_data->samples_per_frame;
     unsigned samples_decoded = 0;
     std::vector<pj_int16_t> decoded_data;
+
+    if (output_buf_len < (samples_per_frame << 1))
+        return PJMEDIA_CODEC_EPCMTOOSHORT;
 
     pj_mutex_lock(lyra_data->mutex);
     if (input) {
