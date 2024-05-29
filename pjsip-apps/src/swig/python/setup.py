@@ -63,7 +63,7 @@ pj_version = pj_version_major + "." + pj_version_minor
 if pj_version_rev:
     pj_version += "." + pj_version_rev
 if pj_version_suffix:
-    pj_version += "-" + pj_version_suffix
+    pj_version += pj_version_suffix
 
 #print 'PJ_VERSION = "'+ pj_version + '"'
 
