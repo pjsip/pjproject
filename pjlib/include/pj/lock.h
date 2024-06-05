@@ -177,7 +177,7 @@ PJ_DECL(pj_status_t) pj_lock_destroy( pj_lock_t *lock );
  *    - must be able to synchronize with external lock (for example, a dialog
  *      lock must be able to sync itself with PJSUA lock)
  *
- * Please see https://trac.pjsip.org/repos/wiki/Group_Lock for more info.
+ * Please see https://docs.pjsip.org/en/latest/specific-guides/develop/group_lock.html for more info.
  */
 
 /**
