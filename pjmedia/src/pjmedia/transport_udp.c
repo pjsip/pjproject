@@ -115,6 +115,7 @@ static void on_rtp_data_sent(pj_ioqueue_key_t *key,
 static void on_rx_rtcp(pj_ioqueue_key_t *key, 
                        pj_ioqueue_op_key_t *op_key, 
                        pj_ssize_t bytes_read);
+static void transport_on_destroy(void *arg);
 
 /*
  * These are media transport operations.
@@ -355,6 +356,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
         goto on_error;
 
     pj_grp_lock_add_ref(grp_lock);
+    pj_grp_lock_add_handler(grp_lock, pool, tp, &transport_on_destroy);
     tp->base.grp_lock = grp_lock;
 
     /* Setup RTP socket with the ioqueue */
@@ -436,6 +438,15 @@ on_error:
 }
 
 
+static void transport_on_destroy(void *arg)
+{
+    struct transport_udp *udp = (struct transport_udp*) arg;
+
+    PJ_LOG(4, (udp->base.name, "UDP media transport destroyed"));
+    pj_pool_safe_release(&udp->pool);
+}
+
+
 /**
  * Close UDP transport.
  */
@@ -448,6 +459,8 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 
     /* Must not close while application is using this */
     //PJ_ASSERT_RETURN(!udp->attached, PJ_EINVALIDOP);
+
+    PJ_LOG(4,(udp->base.name, "UDP media transport destroying"));
 
     /* The following calls to pj_ioqueue_unregister() will block the execution
      * if callback is still being called because allow_concurrent is false.
@@ -473,9 +486,6 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     }
 
     pj_grp_lock_dec_ref(tp->grp_lock);
-
-    PJ_LOG(4,(udp->base.name, "UDP media transport destroyed"));
-    pj_pool_release(udp->pool);
 
     return PJ_SUCCESS;
 }
@@ -574,6 +584,10 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
             call_rtp_cb(udp, bytes_read, &rem_switch);
         }
 
+        /* Transport may be destroyed from the callback! */
+        if (!udp->rtp_key || !udp->started)
+            break;
+
 #if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
     (PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR == 1)
         if (rem_switch &&
@@ -617,9 +631,9 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
         bytes_read = sizeof(udp->rtp_pkt);
         udp->rtp_addrlen = sizeof(udp->rtp_src_addr);
         status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
-                                        udp->rtp_pkt, &bytes_read, 0,
-                                        &udp->rtp_src_addr,
-                                        &udp->rtp_addrlen);
+                                     udp->rtp_pkt, &bytes_read, 0,
+                                     &udp->rtp_src_addr,
+                                     &udp->rtp_addrlen);
 
         if (status != PJ_EPENDING && status != PJ_SUCCESS) {        
             if (transport_restarted && last_err == status) {
@@ -708,6 +722,10 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 
     do {
         call_rtcp_cb(udp, bytes_read);
+
+        /* Transport may be destroyed from the callback! */
+        if (!udp->rtcp_key || !udp->started)
+            break;
 
 #if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
     (PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR == 1)

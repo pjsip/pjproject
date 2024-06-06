@@ -96,6 +96,13 @@ public:
     MediaFormatAudio() : clockRate(0), channelCount(0), frameTimeUsec(0),
                          bitsPerSample(0), avgBps(0), maxBps(0)
     {}
+
+    /**
+     * Initialization
+     */
+    void init(pj_uint32_t formatId, unsigned clockRate, unsigned channelCount,
+              int frameTimeUsec, int bitsPerSample,
+              pj_uint32_t avgBps=0, pj_uint32_t maxBps=0);
 };
 
 /**
@@ -119,6 +126,21 @@ struct MediaFormatVideo : public MediaFormat
      * Export to pjmedia_format.
      */
     pjmedia_format toPj() const;
+
+public:
+    /**
+     * Default constructor
+     */
+    MediaFormatVideo() : width(0), height(0), fpsNum(0),
+                         fpsDenum(1), avgBps(0), maxBps(0)
+    {}
+
+    /**
+     * Initialization
+     */
+    void init(pj_uint32_t formatId, unsigned width, unsigned height,
+              int fpsNum, int fpsDenum=1,
+              pj_uint32_t avgBps=0, pj_uint32_t maxBps=0);
 };
 
 /** Array of MediaFormatAudio */
@@ -2026,12 +2048,16 @@ struct VideoPreviewOpParam {
     unsigned                windowFlags;
 
     /**
-     * Media format video. If left uninitialized, this parameter will not be used and 
-     * the capture device will be opened using PJMEDIA wrapper default format, 
-     * e.g: 
+     * Media format video. By default, this parameter is uninitialized
+     * and will not be used.
+     *
+     * To initialize it, use MediaFormatVideo::init().
+     * If left uninitialized, the capture device will be opened using
+     * PJMEDIA wrapper default format, e.g:
      * - Android : PJMEDIA_FORMAT_I420 using the first supported size and 15fps
      * - iOS : PJMEDIA_FORMAT_BGRA using size 352x288 and 15fps
-     * Note that when the preview is already opened, this setting will be ignored.
+     * Note that when the preview is already opened, this setting will be
+     * ignored.
      */
     MediaFormatVideo        format;
 

@@ -70,6 +70,22 @@ pjmedia_format MediaFormatAudio::toPj() const
     return pj_format;
 }
 
+void MediaFormatAudio::init(pj_uint32_t formatId,
+                            unsigned clockRate, unsigned channelCount,
+                            int frameTimeUsec, int bitsPerSample,
+                            pj_uint32_t avgBps, pj_uint32_t maxBps)
+{
+    type = PJMEDIA_TYPE_AUDIO;
+    id = formatId;
+
+    this->clockRate = clockRate;
+    this->channelCount = channelCount;
+    this->frameTimeUsec = frameTimeUsec;
+    this->bitsPerSample = bitsPerSample;
+    this->avgBps = avgBps;
+    this->maxBps = maxBps;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /* Audio Media operations. */
 void ConfPortInfo::fromPj(const pjsua_conf_port_info &port_info)
@@ -1558,6 +1574,27 @@ pjmedia_format MediaFormatVideo::toPj() const
 #endif
     return pj_format;
 }
+
+void MediaFormatVideo::init(pj_uint32_t formatId,
+                            unsigned width, unsigned height,
+                            int fpsNum, int fpsDenum,
+                            pj_uint32_t avgBps, pj_uint32_t maxBps)
+{
+#if PJSUA_HAS_VIDEO
+    type = PJMEDIA_TYPE_VIDEO;
+    id = formatId;
+
+    this->width = width;
+    this->height = height;
+    this->fpsNum = fpsNum;
+    this->fpsDenum = fpsDenum;
+    this->avgBps = avgBps;
+    this->maxBps = maxBps;
+#else
+    type = PJMEDIA_TYPE_UNKNOWN;
+#endif
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 void VideoDevInfo::fromPj(const pjmedia_vid_dev_info &dev_info)

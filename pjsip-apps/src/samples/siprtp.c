@@ -1420,6 +1420,11 @@ static void call_on_media_update( pjsip_inv_session *inv,
     pjmedia_sdp_neg_get_active_local(inv->neg, &local_sdp);
     pjmedia_sdp_neg_get_active_remote(inv->neg, &remote_sdp);
 
+    if (local_sdp->media[0]->desc.port == 0) {
+        PJ_LOG(3, (THIS_FILE, "Audio media inactive"));
+        return;
+    }
+
     status = pjmedia_stream_info_from_sdp(&audio->si, inv->pool, app.med_endpt,
                                           local_sdp, remote_sdp, 0);
     if (status != PJ_SUCCESS) {

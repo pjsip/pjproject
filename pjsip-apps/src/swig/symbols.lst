@@ -2,7 +2,7 @@ pj/types.h			pj_status_t pj_constants_ pj_uint8_t pj_int32_t pj_uint32_t pj_uint
 pj/file_io.h			pj_file_access
 pj/log.h			pj_log_decoration
 pj/sock_qos.h			pj_qos_type pj_qos_flag pj_qos_wmm_prio pj_qos_params
-pj/ssl_sock.h			pj_ssl_cipher pj_ssl_sock_proto pj_ssl_cert_name_type pj_ssl_cert_verify_flag_t
+pj/ssl_sock.h			pj_ssl_cipher pj_ssl_sock_proto pj_ssl_cert_name_type pj_ssl_cert_verify_flag_t pj_ssl_cert_lookup_type
 
 pjnath/ice_session.h          	pj_ice_sess_trickle
 pjnath/nat_detect.h          	pj_stun_nat_type

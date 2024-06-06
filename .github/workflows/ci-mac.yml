@@ -23,11 +23,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openssl@1.1 opencore-amr swig sipp
+      run: brew install openssl opencore-amr swig sipp
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl@1.1/include -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1.1/lib" CXXFLAGS="-g -fPIC" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
       run: make
     - name: set up Python
@@ -47,11 +47,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openssl@1.1 opencore-amr
+      run: brew install openssl opencore-amr
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl@1.1/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1.1/lib" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
       run: make
     - name: disable firewall
@@ -65,11 +65,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openssl@1.1 opencore-amr
+      run: brew install openssl opencore-amr
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl@1.1/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1.1/lib" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
       run: make
     - name: disable firewall
@@ -86,9 +86,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openssl@1.1 swig
+      run: brew install openssl swig
     - name: configure
-      run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl@1.1/include -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1.1/lib" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
     - name: make
       run: make
     - name: set up Python
@@ -123,11 +123,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openssl@1.1 openh264 libvpx opencore-amr swig sipp 
+      run: brew install openssl openh264 libvpx opencore-amr swig sipp 
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl@1.1/include -DHAS_VID_CODEC_TEST=0 -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1.1/lib" CXXFLAGS="-g -fPIC" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -DHAS_VID_CODEC_TEST=0 -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
       run: make
     - name: set up Python
@@ -147,11 +147,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openssl@1.1 openh264 libvpx opencore-amr
+      run: brew install openssl openh264 libvpx opencore-amr
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl@1.1/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1.1/lib" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
       run: make
     - name: disable firewall
@@ -165,11 +165,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openssl@1.1 openh264 libvpx opencore-amr
+      run: brew install openssl openh264 libvpx opencore-amr
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl@1.1/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1.1/lib" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
       run: make
     - name: disable firewall
@@ -183,17 +183,17 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openssl@1.1 x264 libvpx nasm swig
+      run: brew install openssl x264 libvpx nasm swig
     - name: get ffmpeg
-      run: git clone --single-branch --branch release/4.2 https://github.com/FFmpeg/FFmpeg.git
+      run: git clone --single-branch --branch release/7.0 https://github.com/FFmpeg/FFmpeg.git
     - name: configure ffmpeg
-      run: cd FFmpeg && ./configure --enable-shared --disable-static --enable-gpl --enable-libx264
+      run: cd FFmpeg && LDFLAGS="-Wl,-ld_classic" ./configure --enable-shared --disable-static --enable-gpl --enable-libx264
     - name: build ffmpeg
       run: cd FFmpeg && make -j10 && sudo make install
     - name: config site
       run: echo -e "#define PJMEDIA_HAS_VIDEO 1\n" > pjlib/include/pj/config_site.h
     - name: configure
-      run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl@1.1/include -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1.1/lib" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
     - name: make
       run: make
     - name: set up Python
@@ -209,11 +209,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openssl@1.1 libvpx swig
+      run: brew install openssl libvpx swig
     - name: config site
       run: echo -e "#define PJMEDIA_HAS_VIDEO 1\n#define PJMEDIA_HAS_VID_TOOLBOX_CODEC 1\n" > pjlib/include/pj/config_site.h
     - name: configure
-      run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl@1.1/include -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1.1/lib" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
     - name: make
       run: make
     - name: set up Python
