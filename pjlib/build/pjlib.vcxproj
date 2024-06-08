@@ -1029,6 +1029,7 @@
     <ClCompile Include="..\src\pj\timer.c" />
     <ClCompile Include="..\src\pj\types.c" />
     <ClCompile Include="..\src\pj\unicode_win32.c" />
+    <ClCompile Include="..\src\pj\unittest.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\third_party\threademulation\include\ThreadEmulation.h" />

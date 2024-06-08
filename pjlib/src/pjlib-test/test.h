@@ -67,6 +67,7 @@
 #define INCLUDE_IOQUEUE_PERF_TEST   (PJ_HAS_THREADS && GROUP_NETWORK && WITH_BENCHMARK)
 #define INCLUDE_IOQUEUE_UNREG_TEST  (PJ_HAS_THREADS && GROUP_NETWORK)
 #define INCLUDE_FILE_TEST           GROUP_FILE
+#define INCLUDE_UNITTEST_TEST       GROUP_DATA_STRUCTURE
 
 #define INCLUDE_ECHO_SERVER         0
 #define INCLUDE_ECHO_CLIENT         0
@@ -109,6 +110,7 @@ extern int ioqueue_stress_test(void);
 extern int activesock_test(void);
 extern int file_test(void);
 extern int ssl_sock_test(void);
+extern int unittest_test(void);
 
 extern int echo_server(void);
 extern int echo_client(int sock_type, const char *server, int port);

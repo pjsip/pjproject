@@ -173,6 +173,9 @@
     <ClCompile Include="..\src\pj\unicode_win32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pj\unittest.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pj\addr_resolv_linux_kernel.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>

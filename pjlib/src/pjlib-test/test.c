@@ -84,6 +84,10 @@ int test_inner(void)
     DO_TEST( errno_test() );
 #endif
 
+#if INCLUDE_UNITTEST_TEST
+    DO_TEST( unittest_test() );
+#endif
+
 #if INCLUDE_EXCEPTION_TEST
     DO_TEST( exception_test() );
 #endif
