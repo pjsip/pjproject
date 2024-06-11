@@ -21,6 +21,7 @@
 #include <pj/string.h>
 #include <pj/sock.h>
 #include <pj/log.h>
+#include <pj/unittest.h>
 #include <stdio.h>
 
 extern int param_echo_sock_type;
@@ -28,6 +29,8 @@ extern const char *param_echo_server;
 extern int param_echo_port;
 extern pj_bool_t param_ci_mode;
 
+extern pj_test_select_tests param_unittest_logging_policy;
+extern int param_unittest_nthreads;
 
 //#if defined(PJ_WIN32) && PJ_WIN32!=0
 #if 0
@@ -82,55 +85,120 @@ static void init_signals(void)
 #define init_signals()
 #endif
 
+static void usage()
+{
+    puts("Usage:");
+    puts("  pjlib-test [OPTION] [test_to_run] [..]");
+    puts("");
+    puts("where OPTIONS:");
+    puts("");
+    puts("  -h, --help   Show this help screen");
+    puts("  --ci-mode    Running in slow CI  mode");
+    puts("  -l 0,1,2     0: Don't show logging after tests");
+    puts("               1: Show logs of failed tests (default)");
+    puts("               2: Show logs of all tests");
+    puts("  -w N         Set N worker threads (0: disable worker threads)");
+    puts("  -i           Ask ENTER before quitting");
+    puts("  -n           Do not trap signals");
+    puts("  -p PORT      Use port PORT for echo port");
+    puts("  -s SERVER    Use SERVER as ech oserver");
+    puts("  -t ucp,tcp   Set echo socket type to UDP or TCP");
+}
+
+
 int main(int argc, char *argv[])
 {
-    int iarg=1, rc;
+    int i, rc;
     int interractive = 0;
     int no_trap = 0;
+    pj_status_t status;
+    char *s;
 
     boost();
 
-    while (iarg < argc) {
-        char *arg = argv[iarg++];
+    /* 
+     * Parse arguments
+     */
+    if (pj_argparse_get("-h", &argc, argv) ||
+        pj_argparse_get("--help", &argc, argv))
+    {
+        usage();
+        return 0;
+    }
+    interractive = pj_argparse_get("-i", &argc, argv);
+    no_trap = pj_argparse_get("-n", &argc, argv);
+    status = pj_argparse_get_int("-p", &argc, argv, &param_echo_port);
+    if (status!=PJ_SUCCESS && status!=PJ_ENOTFOUND) {
+        puts("Error: invalid/missing value for -p option");
+        usage();
+        return 1;
+    }
+    status = pj_argparse_get_str("-s", &argc, argv, 
+                                 (char**)&param_echo_server);
+    if (status!=PJ_SUCCESS && status!=PJ_ENOTFOUND) {
+        puts("Error: value is required for -s option");
+        usage();
+        return 1;
+    }
 
-        if (*arg=='-' && *(arg+1)=='i') {
-            interractive = 1;
-
-        } else if (*arg=='-' && *(arg+1)=='n') {
-            no_trap = 1;
-        } else if (*arg=='-' && *(arg+1)=='p') {
-            pj_str_t port = pj_str(argv[iarg++]);
-
-            param_echo_port = pj_strtoul(&port);
-
-        } else if (*arg=='-' && *(arg+1)=='s') {
-            param_echo_server = argv[iarg++];
-
-        } else if (*arg=='-' && *(arg+1)=='t') {
-            pj_str_t type = pj_str(argv[iarg++]);
-            
-            if (pj_stricmp2(&type, "tcp")==0)
-                param_echo_sock_type = pj_SOCK_STREAM();
-            else if (pj_stricmp2(&type, "udp")==0)
-                param_echo_sock_type = pj_SOCK_DGRAM();
-            else {
-                printf("Error: unknown socket type %s\n", type.ptr);
-                return 1;
-            }
-        } else if (strcmp(arg, "--ci-mode")==0) {
-            param_ci_mode = PJ_TRUE;
-
-        } else {
-            printf("Error in argument \"%s\"\n", arg);
+    status = pj_argparse_get_str("-t", &argc, argv, &s);
+    if (status==PJ_SUCCESS) {
+        if (pj_ansi_stricmp(s, "tcp")==0)
+            param_echo_sock_type = pj_SOCK_STREAM();
+        else if (pj_ansi_stricmp(s, "udp")==0)
+            param_echo_sock_type = pj_SOCK_DGRAM();
+        else {
+            printf("Error: unknown socket type %s for -t option\n", s);
+            usage();
             return 1;
         }
+    } else if (status!=PJ_ENOTFOUND) {
+        puts("Error: value is required for -t option");
+        usage();
+        return 1;
+    }
+
+    param_ci_mode = pj_argparse_get("--ci-mode", &argc, argv);
+
+    status = pj_argparse_get_int("-l", &argc, argv, &i);
+    if (status==PJ_SUCCESS) {
+        if (i==0)
+            param_unittest_logging_policy = PJ_TEST_NO_TEST;
+        else if (i==1)
+            param_unittest_logging_policy = PJ_TEST_FAILED_TESTS;
+        else if (i==2)
+            param_unittest_logging_policy = PJ_TEST_ALL_TESTS;
+        else {
+            printf("Error: invalid value %d for -l option\n", i);
+            usage();
+            return 1;
+        }
+    } else if (status!=PJ_ENOTFOUND) {
+        puts("Error: invalid/missing value for -l option");
+        usage();
+        return 1;
+    }
+
+    status = pj_argparse_get_int("-w", &argc, argv, 
+                                 (int*)&param_unittest_nthreads);
+    if (status==PJ_SUCCESS) {
+        if (param_unittest_nthreads > 100 || param_unittest_nthreads < 0) {
+            printf("Error: value %d is not valid for -w option\n", 
+                   param_unittest_nthreads);
+            usage();
+            return 1;
+        }
+    } else if (status!=PJ_ENOTFOUND) {
+        puts("Error: invalid/missing value for -w option");
+        usage();
     }
 
     if (!no_trap) {
         init_signals();
     }
 
-    rc = test_main();
+    /* argc/argv now contains option values only, if any */
+    rc = test_main(argc, argv);
 
     if (interractive) {
         char s[10];

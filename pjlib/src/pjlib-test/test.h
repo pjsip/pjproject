@@ -20,6 +20,7 @@
 #define __PJLIB_TEST_H__
 
 #include <pj/types.h>
+#include <pj/argparse.h>
 
 #define TEST_DEFAULT                1
 
@@ -110,6 +111,7 @@ extern int ioqueue_stress_test(void);
 extern int activesock_test(void);
 extern int file_test(void);
 extern int ssl_sock_test(void);
+extern int unittest_basic_test(void);
 extern int unittest_test(void);
 
 extern int echo_server(void);
@@ -122,7 +124,7 @@ extern int echo_srv_common_loop(pj_atomic_t *bytes_counter);
 
 extern pj_pool_factory *mem;
 
-extern int          test_main(void);
+extern int          test_main(int argc, char *argv[]);
 extern void         app_perror(const char *msg, pj_status_t err);
 extern pj_status_t  app_socket(int family, int type, int proto, int port,
                                pj_sock_t *ptr_sock);

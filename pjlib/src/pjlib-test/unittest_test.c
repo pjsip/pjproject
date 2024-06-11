@@ -422,11 +422,23 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
     return 0;
 }
 
-int unittest_test(void)
+static int log_msg_sizes[] = { 
+    1*MSG_LEN, /* log buffer enough for 1 message */
+    2*MSG_LEN, /* log buffer enough for 2 messages */
+    3*MSG_LEN, /* log buffer enough for 3 message */
+    0,         /* no log buffer */
+    64,        /* log will be truncated */
+};
+
+int unittest_basic_test(void)
 {
     int ret, log_level = pj_log_get_level();
-    pj_bool_t basic_flags[] = { PJ_FALSE }; //, PJ_FALSE };
-    unsigned i;
+    unsigned j;
+
+    if (pj_test_is_under_test()) {
+        PJ_LOG(1,(THIS_FILE, "Cannot run unittest_test under unit-test!"));
+        return -1;
+    }
 
     /* We wants to get detailed logging */
     pj_log_set_level(4);
@@ -436,26 +448,42 @@ int unittest_test(void)
     end_capture_log();
     if (ret) goto on_return;
 
-    for (i=0; i<PJ_ARRAY_SIZE(basic_flags); ++i) {
-        unsigned j, log_msg_sizes[] = { 
-            1*MSG_LEN, /* log buffer enough for 1 message */
-            2*MSG_LEN, /* log buffer enough for 2 messages */
-            3*MSG_LEN, /* log buffer enough for 3 message */
-            0,         /* no log buffer */
-            64,        /* log will be truncated */
-        };
-        for (j=0; j<PJ_ARRAY_SIZE(log_msg_sizes); ++j) {
-            pj_bool_t parallel;
-            for (parallel=0; parallel<2; ++parallel) {
-                pj_pool_t *pool = pj_pool_create( mem, NULL, 4000, 4000, NULL);
+    for (j=0; j<PJ_ARRAY_SIZE(log_msg_sizes); ++j) {
+        pj_bool_t parallel;
+        for (parallel=0; parallel<2; ++parallel) {
+            ret = usage_test(NULL, PJ_TRUE, parallel, log_msg_sizes[j]);
+            if (ret) goto on_return;
+        }
+    }
 
-                ret = usage_test(pool, basic_flags[i], parallel, 
-                                 log_msg_sizes[j]);
+on_return:
+    pj_log_set_level(log_level);
+    return ret;
+}
 
-                pj_pool_release(pool);
+int unittest_test(void)
+{
+    int ret, log_level = pj_log_get_level();
+    unsigned j;
 
-                if (ret) goto on_return;
-            }
+    if (pj_test_is_under_test()) {
+        PJ_LOG(1,(THIS_FILE, "Cannot run unittest_test under unit-test!"));
+        return -1;
+    }
+
+    /* We wants to get detailed logging */
+    pj_log_set_level(4);
+
+    for (j=0; j<PJ_ARRAY_SIZE(log_msg_sizes); ++j) {
+        pj_bool_t parallel;
+        for (parallel=0; parallel<2; ++parallel) {
+            pj_pool_t *pool = pj_pool_create( mem, NULL, 4000, 4000, NULL);
+
+            ret = usage_test(pool, PJ_FALSE, parallel, log_msg_sizes[j]);
+
+            pj_pool_release(pool);
+
+            if (ret) goto on_return;
         }
     }
 

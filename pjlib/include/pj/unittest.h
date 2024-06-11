@@ -350,6 +350,12 @@ typedef struct pj_test_case
     /** Total number of test cases in the suite */
     unsigned total;
 
+    /** Start time */
+    pj_timestamp start_time;
+
+    /** End time */
+    pj_timestamp end_time;
+
 } pj_test_case;
 
 
@@ -448,6 +454,9 @@ typedef enum pj_test_select_tests
     /** Select only successful tests */
     PJ_TEST_SUCCESSFUL_TESTS = 2,
 
+    /** Select no test*/
+    PJ_TEST_NO_TEST = 4,
+
 } pj_test_select_tests;
 
 
@@ -541,6 +550,15 @@ PJ_DECL(pj_status_t) pj_test_create_text_runner(
  */
 PJ_DECL(void) pj_test_run(pj_test_runner *runner, 
                           pj_test_suite *suite);
+
+/**
+ * This is a crude test to detect if thread is currently running under
+ * a test. It is mainly used to prevent nested unit testing.
+ * 
+ * @return PJ_TRUE if we are currently running in the context of a test case
+ *         being run.
+ */
+PJ_DECL(pj_bool_t) pj_test_is_under_test(void);
 
 /**
  * Get the test statistics after the run completes. The test suite and

@@ -150,6 +150,12 @@ PJ_DEF(void) pj_test_run(pj_test_runner *runner, pj_test_suite *suite)
     pj_log_set_log_func(runner->orig_log_writer);
 }
 
+/* Check if we are under test */
+PJ_DEF(pj_bool_t) pj_test_is_under_test(void)
+{
+    return pj_log_get_log_func()==&unittest_log_callback;
+}
+
 /* Calculate statistics */
 PJ_DEF(void) pj_test_get_stat( const pj_test_suite *suite, pj_test_stat *stat)
 {
@@ -244,8 +250,18 @@ static void unittest_log_callback(int level, const char *data, int len)
     pj_bool_t truncated;
     pj_test_log_item *log_item;
 
-    PJ_ASSERT_ON_FAIL(len > 0, return);
-    PJ_ASSERT_ON_FAIL(tc, return);
+    if (len < 1)
+        return;
+
+    if (tc==NULL) {
+        /* We are being called by thread that is not part of unit-test.
+         * Call the original log writer, hoping that the thread did not
+         * change the writer before this.. (note: this can only be solved
+         * by setting pj_log_set/get_log_func() to be thread specific.)
+         */
+        pj_log_write(level, data, len);
+        return;
+    }
 
     /* Filter out unwanted log */
     if (level > tc->prm.log_level)
@@ -312,18 +328,23 @@ static void unittest_log_callback(int level, const char *data, int len)
 static int get_completion_line( const pj_test_case *tc, const char *end_line,
                                 char *log_buf, unsigned buf_size)
 {
-    char res_buf[20];
+    char res_buf[64];
+    pj_time_val elapsed;
     int log_len;
 
+    elapsed = pj_elapsed_time(&tc->start_time, &tc->end_time);
+
     if (tc->result==0) {
-        pj_ansi_strxcpy(res_buf, "OK", sizeof(res_buf));
+        pj_ansi_snprintf(res_buf, sizeof(res_buf), "[OK] [%d.%03ds]",
+                         (int)elapsed.sec, (int)elapsed.msec);
     } else if (tc->result==PJ_EPENDING) {
         pj_ansi_strxcpy(res_buf, "pending", sizeof(res_buf));
     } else {
-        pj_ansi_snprintf(res_buf, sizeof(res_buf), "Err: %d", tc->result);    
+        pj_ansi_snprintf(res_buf, sizeof(res_buf), "[Err: %d] [%d.%03ds]", 
+                         tc->result, (int)elapsed.sec, (int)elapsed.msec);
     }
 
-    log_len = pj_ansi_snprintf(log_buf, buf_size, "[%d/%d] %-32s [%s]%s\n",
+    log_len = pj_ansi_snprintf(log_buf, buf_size, "[% 2d/%d] %-32s %s%s\n",
                                tc->index+1, tc->total, tc->obj_name, res_buf,
                                end_line);
 
@@ -354,6 +375,8 @@ static void run_test_case(pj_test_runner *runner, pj_test_case *tc)
     /* Set the test case being worked on by this thread */
     set_current_test_case(tc);
 
+    pj_get_timestamp(&tc->start_time);
+
     /* Call the test case's function */
     if (tc->flags & PJ_TEST_FUNC_NO_ARG) {
         /* Function without argument */
@@ -367,6 +390,7 @@ static void run_test_case(pj_test_runner *runner, pj_test_case *tc)
     if (tc->result == PJ_EPENDING)
         tc->result = -12345;
 
+    pj_get_timestamp(&tc->end_time);
     runner->on_test_complete(runner, tc);
 
     /* Reset the test case being worked on by this thread */
