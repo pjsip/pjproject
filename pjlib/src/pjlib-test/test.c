@@ -120,7 +120,7 @@ static int essential_tests(int argc, char *argv[])
             ++ntests; \
         } \
     } else { \
-        PJ_LOG(1,(THIS_FILE, "Too many essential tests (%d)", ntests)); \
+        PJ_LOG(1,(THIS_FILE, "Too many tests for adding %s", #test_func)); \
     }
 
 
@@ -166,7 +166,8 @@ static int essential_tests(int argc, char *argv[])
     pj_test_init_basic_runner(&runner);
     pj_test_run(&runner, &suite);
     pj_test_get_stat(&suite, &stat);
-    pj_test_dump_log_messages(&suite, param_unittest_logging_policy);
+    pj_test_display_stat(&stat, "essential tests", THIS_FILE);
+    pj_test_display_log_messages(&suite, param_unittest_logging_policy);
 
     if (stat.nfailed)
         return 1;
@@ -215,90 +216,90 @@ static int features_tests(int argc, char *argv[])
             ++ntests; \
         } \
     } else { \
-        PJ_LOG(1,(THIS_FILE, "Too many features tests (%d)", ntests)); \
+        PJ_LOG(1,(THIS_FILE, "Too many tests for adding %s", #test_func)); \
     }
 
 #if INCLUDE_RAND_TEST
-    ADD_TEST( rand_test, 0);
+    ADD_TEST( rand_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_POOL_PERF_TEST
-    ADD_TEST( pool_perf_test, 0);
+    ADD_TEST( pool_perf_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_RBTREE_TEST
-    ADD_TEST( rbtree_test, 0);
+    ADD_TEST( rbtree_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_HASH_TEST
-    ADD_TEST( hash_test, 0);
+    ADD_TEST( hash_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_TIMESTAMP_TEST
-    ADD_TEST( timestamp_test, 0);
+    ADD_TEST( timestamp_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_ATOMIC_TEST
-    ADD_TEST( atomic_test, 0);
+    ADD_TEST( atomic_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_TIMER_TEST
-    ADD_TEST( timer_test, 0);
+    ADD_TEST( timer_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_SLEEP_TEST
-    ADD_TEST( sleep_test, 0);
+    ADD_TEST( sleep_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_SOCK_TEST
-    ADD_TEST( sock_test, 0);
+    ADD_TEST( sock_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_SOCK_PERF_TEST
-    ADD_TEST( sock_perf_test, 0);
+    ADD_TEST( sock_perf_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_SELECT_TEST
-    ADD_TEST( select_test, 0);
+    ADD_TEST( select_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_UDP_IOQUEUE_TEST
-    ADD_TEST( udp_ioqueue_test, 0);
+    ADD_TEST( udp_ioqueue_test, PJ_TEST_PARALLEL);
 #endif
 
 #if PJ_HAS_TCP && INCLUDE_TCP_IOQUEUE_TEST
-    ADD_TEST( tcp_ioqueue_test, 0);
+    ADD_TEST( tcp_ioqueue_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_IOQUEUE_UNREG_TEST
-    ADD_TEST( udp_ioqueue_unreg_test, 0);
+    ADD_TEST( udp_ioqueue_unreg_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_IOQUEUE_STRESS_TEST
-    ADD_TEST( ioqueue_stress_test, 0);
+    ADD_TEST( ioqueue_stress_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_IOQUEUE_PERF_TEST
-    ADD_TEST( ioqueue_perf_test, 0);
+    ADD_TEST( ioqueue_perf_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_ACTIVESOCK_TEST
-    ADD_TEST( activesock_test, 0);
+    ADD_TEST( activesock_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_FILE_TEST
-    ADD_TEST( file_test, 0);
+    ADD_TEST( file_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_SSLSOCK_TEST
-    ADD_TEST( ssl_sock_test, 0 );
+    ADD_TEST( ssl_sock_test, PJ_TEST_PARALLEL);
 #endif
 
 
 #undef ADD_TEST
 
     pj_test_text_runner_param_default(&prm);
-    if (param_unittest_nthreads > 0)
+    if (param_unittest_nthreads >= 0)
         prm.nthreads = param_unittest_nthreads;
     status = pj_test_create_text_runner(pool, &prm, &runner);
     if (status != PJ_SUCCESS) {
@@ -307,12 +308,13 @@ static int features_tests(int argc, char *argv[])
     }
 
     PJ_LOG(3,(THIS_FILE,
-              "Performing %d features tests with %d worker threads", 
-              ntests, prm.nthreads));
+              "Performing %d features tests with %d worker thread%s", 
+              ntests, prm.nthreads, prm.nthreads>1?"s":""));
     pj_test_run(runner, &suite);
     pj_test_runner_destroy(runner);
     pj_test_get_stat(&suite, &stat);
-    pj_test_dump_log_messages(&suite, param_unittest_logging_policy);
+    pj_test_display_stat(&stat, "features tests", THIS_FILE);
+    pj_test_display_log_messages(&suite, param_unittest_logging_policy);
     pj_pool_release(pool);
     
     return stat.nfailed ? 1 : 0;

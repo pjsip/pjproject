@@ -28,6 +28,28 @@
 static long tls_id = INVALID_TLS_ID;
 static pj_test_case *tc_main_thread;
 
+#if 0
+#  define TC_TRACE(tc__, msg__)   \
+        {\
+            pj_time_val tv = pj_elapsed_time(&tc__->runner->suite->start_time, \
+                                             &tc__->start_time); \
+            printf("%02ld:%02ld %s %s\n", tv.sec/60, tv.sec%60, \
+                   tc__->obj_name, msg__); \
+        }
+
+#  define RUNNER_TRACE(runner__, msg__)   \
+        { \
+            pj_timestamp now; \
+            pj_time_val tv; \
+            pj_get_timestamp(&now); \
+            tv = pj_elapsed_time(&((pj_test_runner*)runner__)->suite->start_time, &now); \
+            printf("%02ld:%02ld %s\n", tv.sec/60, tv.sec%60, msg__); \
+        }
+#else
+#  define TC_TRACE(tc__, msg__)
+#  define RUNNER_TRACE(runner__, msg__)
+#endif
+
 /* Forward decls. */
 static void unittest_log_callback(int level, const char *data, int len);
 static int get_completion_line( const pj_test_case *tc, const char *end_line,
@@ -122,7 +144,6 @@ PJ_DEF(void) pj_test_text_runner_param_default(
 /* Main API to start running a test runner */
 PJ_DEF(void) pj_test_run(pj_test_runner *runner, pj_test_suite *suite)
 {
-    unsigned index, total;
     pj_test_case *tc;
 
     /* Redirect logging to our custom callback */
@@ -131,14 +152,14 @@ PJ_DEF(void) pj_test_run(pj_test_runner *runner, pj_test_suite *suite)
 
     /* Initialize suite and test cases */
     runner->suite = suite;
-    total = pj_list_size(&suite->tests);
-    for (tc=suite->tests.next, index=0; tc!=&suite->tests; 
-         tc=tc->next, ++index) 
+    runner->ntests = pj_list_size(&suite->tests);
+    runner->nruns = 0;
+
+    for (tc=suite->tests.next; tc!=&suite->tests; 
+         tc=tc->next) 
     {
         tc->result = PJ_EPENDING;
         tc->runner = runner;
-        tc->index = index;
-        tc->total = total;
     }
 
     /* Call the run method to perform runner specific loop */
@@ -178,13 +199,25 @@ PJ_DEF(void) pj_test_get_stat( const pj_test_suite *suite, pj_test_stat *stat)
     }
 }
 
+/* Display statistics */
+PJ_DEF(void) pj_test_display_stat(const pj_test_stat *stat,
+                                  const char *test_name,
+                                  const char *log_sender)
+{
+    PJ_LOG(3,(log_sender, "Unit test statistics for %s:", test_name));
+    PJ_LOG(3,(log_sender, "    Total number of tests: %d", stat->ntests));
+    PJ_LOG(3,(log_sender, "    Number of failed test: %d", stat->nfailed));
+    PJ_LOG(3,(log_sender, "    Total duration:        %dm%d.%03ds",
+              (int)stat->duration.sec/60, (int)stat->duration.sec%60,
+              (int)stat->duration.msec));
+}
+
 /* Dump previously saved log messages */
-PJ_DEF(void) pj_test_dump_log_messages( const pj_test_suite *suite,
-                                        pj_test_select_tests which)
+PJ_DEF(void) pj_test_display_log_messages(const pj_test_suite *suite,
+                                          pj_test_select_tests which)
 {
     const pj_test_case *tc = suite->tests.next;
     pj_log_func *log_writer = pj_log_get_log_func();
-    char test_line[80];
 
     while (tc != &suite->tests) {
         const pj_test_log_item *log_item = tc->logs.next;
@@ -199,8 +232,8 @@ PJ_DEF(void) pj_test_dump_log_messages( const pj_test_suite *suite,
         }
 
         if (log_item != &tc->logs) {
-            get_completion_line(tc, " logs:", test_line, sizeof(test_line));
-            log_writer(3, test_line, pj_ansi_strlen(test_line));
+            PJ_LOG(3,(THIS_FILE, "Logs for %s [rc:%d]:", 
+                      tc->obj_name, tc->result));
 
             do {
                 log_writer(log_item->level, log_item->msg, log_item->len);
@@ -344,26 +377,13 @@ static int get_completion_line( const pj_test_case *tc, const char *end_line,
                          tc->result, (int)elapsed.sec, (int)elapsed.msec);
     }
 
-    log_len = pj_ansi_snprintf(log_buf, buf_size, "[% 2d/%d] %-32s %s%s\n",
-                               tc->index+1, tc->total, tc->obj_name, res_buf,
-                               end_line);
+    log_len = pj_ansi_snprintf(log_buf, buf_size, "%-32s %s%s\n",
+                               tc->obj_name, res_buf, end_line);
 
     if (log_len < 1 || log_len >= sizeof(log_buf))
         log_len = pj_ansi_strlen(log_buf);
         
     return log_len;
-}
-
-/* Default runner's callback when a test case completes. This must be
- * reentrant from multiple threads
- */
-static void on_test_complete(pj_test_runner *runner, pj_test_case *tc)
-{
-    char line[80];
-    int len;
-
-    len = get_completion_line(tc, "", line, sizeof(line));
-    tc->runner->orig_log_writer(3, line, len);
 }
 
 /* This is the main function to run a single test case. It may
@@ -376,6 +396,7 @@ static void run_test_case(pj_test_runner *runner, pj_test_case *tc)
     set_current_test_case(tc);
 
     pj_get_timestamp(&tc->start_time);
+    TC_TRACE(tc, "starting");
 
     /* Call the test case's function */
     if (tc->flags & PJ_TEST_FUNC_NO_ARG) {
@@ -390,6 +411,7 @@ static void run_test_case(pj_test_runner *runner, pj_test_case *tc)
     if (tc->result == PJ_EPENDING)
         tc->result = -12345;
 
+    TC_TRACE(tc, "done");
     pj_get_timestamp(&tc->end_time);
     runner->on_test_complete(runner, tc);
 
@@ -413,6 +435,23 @@ static void basic_runner_main(pj_test_runner *runner)
     }
 }
 
+/* Basic runner's callback when a test case completes.  */
+static void basic_on_test_complete(pj_test_runner *runner, pj_test_case *tc)
+{
+    char line[80];
+    int len;
+
+    runner->nruns++;
+
+    len = pj_ansi_snprintf( line, sizeof(line), "[%2d/%d] ",
+                            runner->nruns, runner->ntests);
+    if (len < 1 || len >= sizeof(line))
+        len = pj_ansi_strlen(line);
+    
+    len += get_completion_line(tc, "", line+len, sizeof(line)-len);
+    tc->runner->orig_log_writer(3, line, len);
+}
+
 /* Destroy for basic runner */
 static void basic_runner_destroy(pj_test_runner *runner)
 {
@@ -425,7 +464,7 @@ PJ_DEF(void) pj_test_init_basic_runner(pj_test_runner *runner)
     pj_bzero(runner, sizeof(*runner));
     runner->main = &basic_runner_main;
     runner->destroy = &basic_runner_destroy;
-    runner->on_test_complete = &on_test_complete;
+    runner->on_test_complete = &basic_on_test_complete;
 }
 
 /******************************* Text Runner *******************************/
@@ -465,6 +504,7 @@ static pj_status_t text_runner_get_next_test_case(text_runner_t *runner,
     pj_mutex_lock(runner->mutex);
 
     if (runner->cur_case == NULL) {
+        /* Only on the very first invocation */
         if (pj_list_empty(&runner->base.suite->tests)) {
             status = PJ_ENOTFOUND;
             goto on_return;
@@ -517,6 +557,10 @@ on_return:
 /* Thread loop */
 static int text_runner_thread_proc(void *arg)
 {
+    static int global_tid = 0;
+    int tid = global_tid++;
+    char tmp[80];
+
     text_runner_t *runner = (text_runner_t*)arg;
 
     for (;;) {
@@ -525,16 +569,24 @@ static int text_runner_thread_proc(void *arg)
 
         status = text_runner_get_next_test_case(runner, &tc);
         if (status==PJ_SUCCESS) {
+            snprintf(tmp, sizeof(tmp), "thread %d running %s", tid, tc->obj_name);
+            RUNNER_TRACE(runner, tmp);
             run_test_case(&runner->base, tc);
+            snprintf(tmp, sizeof(tmp), "thread %d done running %s", tid, tc->obj_name);
+            RUNNER_TRACE(runner, tmp);
         } else if (status==PJ_EPENDING) {
             /* Yeah sleep, but the "correct" solution is probably an order of
              * magnitute more complicated, so this is good I think.
              */
-            pj_thread_sleep(250);
+            snprintf(tmp, sizeof(tmp), "thread %d waiting", tid);
+            RUNNER_TRACE(runner, tmp);
+            pj_thread_sleep(1000);
         } else {
             break;
         }
     }
+
+    RUNNER_TRACE(runner, "thread exiting");
     return 0;
 }
 
@@ -554,6 +606,16 @@ static void text_runner_main(pj_test_runner *base)
     for (i=0; i<runner->prm.nthreads; ++i) {
         pj_thread_join(runner->threads[i]);
     }
+}
+
+/* text runner's callback when a test case completes.  */
+static void text_runner_on_test_complete(pj_test_runner *base,
+                                         pj_test_case *tc)
+{
+    text_runner_t *runner = (text_runner_t*)base;
+    pj_mutex_lock(runner->mutex);
+    basic_on_test_complete(base, tc);
+    pj_mutex_unlock(runner->mutex);
 }
 
 /* text runner destructor */
@@ -589,7 +651,7 @@ PJ_DEF(pj_status_t) pj_test_create_text_runner(
     runner = PJ_POOL_ZALLOC_T(pool, text_runner_t);
     runner->base.main = text_runner_main;
     runner->base.destroy = text_runner_destroy;
-    runner->base.on_test_complete = &on_test_complete;
+    runner->base.on_test_complete = &text_runner_on_test_complete;
 
     status = pj_mutex_create(pool, "unittest%p", PJ_MUTEX_RECURSE,
                              &runner->mutex);

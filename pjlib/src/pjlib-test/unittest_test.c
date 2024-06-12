@@ -343,7 +343,7 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
      */
     start_capture_log();
     /* Dumping all test logs. both test 0 and 1 must be present */
-    pj_test_dump_log_messages(&suite, PJ_TEST_ALL_TESTS);
+    pj_test_display_log_messages(&suite, PJ_TEST_ALL_TESTS);
     print_log_buffer(test_title);
     end_capture_log();
     if (log_size >= MSG_LEN) {
@@ -377,7 +377,7 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
 
     /* Dumping only failed test. Only test 1 must be present */
     start_capture_log();
-    pj_test_dump_log_messages(&suite, PJ_TEST_FAILED_TESTS);
+    pj_test_display_log_messages(&suite, PJ_TEST_FAILED_TESTS);
     print_log_buffer(test_title);
     end_capture_log();
     if (log_size >= MSG_LEN) {
@@ -405,7 +405,7 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
 
     /* Dumping only successful test. Only test 0 must be present */
     start_capture_log();
-    pj_test_dump_log_messages(&suite, PJ_TEST_SUCCESSFUL_TESTS);
+    pj_test_display_log_messages(&suite, PJ_TEST_SUCCESSFUL_TESTS);
     print_log_buffer(test_title);
     end_capture_log();
     if (log_size >= MSG_LEN) {

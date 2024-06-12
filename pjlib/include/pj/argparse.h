@@ -80,7 +80,7 @@ static pj_bool_t pj_argparse_get(const char *opt, int *argc, char *argv[])
 }
 
 /**
- * Check for an option and if it exists, get integer value and remove both
+ * Check for an option and if it exists, get the value and remove both
  * the option the the value from argc/argv. Note that the function only
  * supports whitespace as separator between option and value (i.e. equal
  * sign is not supported).

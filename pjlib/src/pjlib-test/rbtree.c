@@ -66,18 +66,13 @@ static int test(void)
     size = MAX_COUNT*(sizeof(*key)+PJ_RBTREE_NODE_SIZE) + 
                            PJ_RBTREE_SIZE + PJ_POOL_SIZE;
     pool = pj_pool_create( mem, "pool", size, 0, NULL);
-    if (!pool) {
-        PJ_LOG(3,("test", "...error: creating pool of %u bytes", size));
-        return -10;
-    }
+    PJ_TEST_NOT_NULL(pool, -10, NULL);
 
     key = (node_key *)pj_pool_alloc(pool, MAX_COUNT*sizeof(*key));
-    if (!key)
-        return -20;
+    PJ_TEST_NOT_NULL(key, -20, NULL);
 
     node = (pj_rbtree_node*)pj_pool_alloc(pool, MAX_COUNT*sizeof(*node));
-    if (!node)
-        return -30;
+    PJ_TEST_NOT_NULL(node, -30, NULL);
 
     for (i=0; i<LOOP; ++i) {
         int j;
@@ -104,7 +99,7 @@ static int test(void)
             t_insert.u32.lo += (t2.u32.lo - t1.u32.lo);
         }
 
-        pj_assert(rb.size == (unsigned)count);
+        PJ_TEST_EQ(rb.size, (unsigned)count, -40, NULL);
 
         // Iterate key, make sure they're sorted.
         prev = NULL;

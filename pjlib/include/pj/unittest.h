@@ -344,12 +344,6 @@ typedef struct pj_test_case
     /** Pointer to the runner running this test case */
     pj_test_runner *runner;
 
-    /** Index/position in the suite */
-    unsigned index;
-
-    /** Total number of test cases in the suite */
-    unsigned total;
-
     /** Start time */
     pj_timestamp start_time;
 
@@ -431,6 +425,12 @@ struct pj_test_runner
 
     /** Saving the original log writer */
     pj_log_func   *orig_log_writer;
+
+    /** Number of tests */
+    unsigned ntests;
+
+    /** Number of completed tests */
+    unsigned nruns;
 
     /** main method */
     void (*main)(pj_test_runner*);
@@ -571,7 +571,16 @@ PJ_DECL(pj_bool_t) pj_test_is_under_test(void);
 PJ_DECL(void) pj_test_get_stat(const pj_test_suite *suite, pj_test_stat *stat);
 
 /**
- * Dump previously saved log messages in the test cases to logging.
+ * Display statistics to the log.
+ * 
+ * @param stat          The test statistics result.
+ */
+PJ_DECL(void) pj_test_display_stat(const pj_test_stat *stat, 
+                                   const char *test_name,
+                                   const char *log_sender);
+
+/**
+ * Display previously saved log messages in the test cases to logging.
  * Note that log messages emited during test case's run are only saved
  * when fifobuf of the test case is configured with a suitable buffer.
  * Also note that the test suite and test cases instances must be kept alive
@@ -580,8 +589,8 @@ PJ_DECL(void) pj_test_get_stat(const pj_test_suite *suite, pj_test_stat *stat);
  * @param suite         The test suite
  * @param which         Which test cases to dump
  */
-PJ_DECL(void) pj_test_dump_log_messages(const pj_test_suite *suite,
-                                        pj_test_select_tests which);
+PJ_DECL(void) pj_test_display_log_messages(const pj_test_suite *suite,
+                                           pj_test_select_tests which);
 
 /**
  * Destroy the runner. Runner may be destroyed right after it is run,
