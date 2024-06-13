@@ -214,17 +214,29 @@ PJ_DEF(void) pj_test_display_stat(const pj_test_stat *stat,
 
 /* Dump previously saved log messages */
 PJ_DEF(void) pj_test_display_log_messages(const pj_test_suite *suite,
-                                          pj_test_select_tests which)
+                                          unsigned flags)
 {
     const pj_test_case *tc = suite->tests.next;
     pj_log_func *log_writer = pj_log_get_log_func();
+    const char *title;
+
+    if ((flags & PJ_TEST_ALL_TESTS)==PJ_TEST_ALL_TESTS)
+        title = "all";
+    else if ((flags & PJ_TEST_ALL_TESTS)==PJ_TEST_FAILED_TESTS)
+        title = "failed";
+    else if ((flags & PJ_TEST_ALL_TESTS)==PJ_TEST_SUCCESSFUL_TESTS)
+        title = "successful";
+    else
+        title = "unknown";
 
     while (tc != &suite->tests) {
         const pj_test_log_item *log_item = tc->logs.next;
 
         if ((tc->result == PJ_EPENDING) ||
-            (which==PJ_TEST_FAILED_TESTS && tc->result==0) ||
-            (which==PJ_TEST_SUCCESSFUL_TESTS && tc->result!=0))
+            ((flags & PJ_TEST_ALL_TESTS)==PJ_TEST_FAILED_TESTS && 
+              tc->result==0) ||
+            ((flags & PJ_TEST_ALL_TESTS)==PJ_TEST_SUCCESSFUL_TESTS && 
+              tc->result!=0))
         {
             /* Test doesn't meet criteria */
             tc = tc->next;
@@ -232,6 +244,13 @@ PJ_DEF(void) pj_test_display_log_messages(const pj_test_suite *suite,
         }
 
         if (log_item != &tc->logs) {
+            if (title && (flags & PJ_TEST_NO_HEADER_FOOTER)==0) {
+                PJ_LOG(3,(THIS_FILE, 
+                          "------------ Displaying %s test logs: ------------",
+                          title));
+                title = NULL;
+            }
+
             PJ_LOG(3,(THIS_FILE, "Logs for %s [rc:%d]:", 
                       tc->obj_name, tc->result));
 
@@ -241,6 +260,11 @@ PJ_DEF(void) pj_test_display_log_messages(const pj_test_suite *suite,
             } while (log_item != &tc->logs);
         }
         tc = tc->next;
+    }
+
+    if (!title) {
+        PJ_LOG(3,(THIS_FILE, 
+                  "--------------------------------------------------------"));
     }
 }
 

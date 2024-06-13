@@ -315,7 +315,8 @@ static int features_tests(int argc, char *argv[])
 #endif
 
 #if INCLUDE_IOQUEUE_PERF_TEST
-    ADD_TEST( ioqueue_perf_test, PJ_TEST_PARALLEL);
+    ADD_TEST( ioqueue_perf_test0, PJ_TEST_PARALLEL);
+    ADD_TEST( ioqueue_perf_test1, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_ACTIVESOCK_TEST
@@ -391,12 +392,12 @@ int test_inner(int argc, char *argv[])
     if (!test_app.param_skip_essentials) {
         rc = essential_tests(argc, argv);
         if (rc)
-            return rc;
+            goto on_return;
     }
 
     rc = features_tests(argc, argv);
     if (rc)
-        return rc;
+        goto on_return;
 
 #if INCLUDE_ECHO_SERVER
     //echo_server();
@@ -427,7 +428,7 @@ on_return:
     if (rc == 0)
         PJ_LOG(3,(THIS_FILE, "Looks like everything is okay!.."));
     else
-        PJ_LOG(3,(THIS_FILE, "Test completed with error(s)"));
+        PJ_LOG(3,(THIS_FILE, "**Test completed with error(s)**"));
 
     pj_shutdown();
 

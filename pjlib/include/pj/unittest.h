@@ -434,8 +434,8 @@ struct pj_test_runner
 /** Option to select tests (e.g. in pj_test_dump_log_messages()) */
 typedef enum pj_test_select_tests
 {
-    /** Select all tests*/
-    PJ_TEST_ALL_TESTS = 0,
+    /** Select no test*/
+    PJ_TEST_NO_TEST = 0,
 
     /** Select only failed tests */
     PJ_TEST_FAILED_TESTS = 1,
@@ -443,9 +443,12 @@ typedef enum pj_test_select_tests
     /** Select only successful tests */
     PJ_TEST_SUCCESSFUL_TESTS = 2,
 
-    /** Select no test*/
-    PJ_TEST_NO_TEST = 4,
+    /** Select all tests*/
+    PJ_TEST_ALL_TESTS = 3,
 
+    /** No header/footer separator */
+    PJ_TEST_NO_HEADER_FOOTER = 4,
+    
 } pj_test_select_tests;
 
 
@@ -577,10 +580,11 @@ PJ_DECL(void) pj_test_display_stat(const pj_test_stat *stat,
  * in order to get and access the statistics or log messages.
  * 
  * @param suite         The test suite
- * @param which         Which test cases to dump
+ * @param flags         Select which test logs to display by choosing
+ *                      from pj_test_select_tests.
  */
 PJ_DECL(void) pj_test_display_log_messages(const pj_test_suite *suite,
-                                           pj_test_select_tests which);
+                                           unsigned flags);
 
 /**
  * Destroy the runner. Runner may be destroyed right after it is run,
