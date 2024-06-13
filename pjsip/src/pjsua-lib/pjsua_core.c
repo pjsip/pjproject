@@ -337,7 +337,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->timer_setting = pjsua_var.ua_cfg.timer_setting;
     cfg->lock_codec = 1;
     cfg->ka_interval = 15;
-    cfg->ka_data = pj_str("\r\n");
+    cfg->ka_data = pj_str("\r\n\r\n");
     cfg->vid_cap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     cfg->vid_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
 #if PJMEDIA_HAS_VIDEO
