@@ -540,6 +540,75 @@
 #endif
 
 
+ /**
+  * Enable Lyra codec.
+  *
+  * Default: 0
+  */
+#ifndef PJMEDIA_HAS_LYRA_CODEC
+#   define PJMEDIA_HAS_LYRA_CODEC                       0
+#endif
+
+/**
+ * Lyra default bitrate setting
+ *
+ * Default: 3200 (available bitrate:3200, 6000, 9200)
+ */
+#ifndef PJMEDIA_CODEC_LYRA_DEFAULT_BIT_RATE
+#   define PJMEDIA_CODEC_LYRA_DEFAULT_BIT_RATE           3200
+#endif
+
+/**
+ * Lyra default model path containing lyra_config.binarypb, lyragan.tflite,
+ * quantizer.tflite and soundstream_encoder.tflite file. If autoconf is used,
+ * it will be set to "[lyra src folder]/model_coeffs".
+ *
+ * Default: "model_coeffs"
+ */
+#ifndef PJMEDIA_CODEC_LYRA_DEFAULT_MODEL_PATH
+#   define PJMEDIA_CODEC_LYRA_DEFAULT_MODEL_PATH           "model_coeffs"
+#endif
+
+/**
+ * Settings to enable Lyra codec 8KHz. This option is only used
+ * when PJMEDIA_HAS_LYRA_CODEC is enabled.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_CODEC_LYRA_HAS_8KHZ
+#   define PJMEDIA_CODEC_LYRA_HAS_8KHZ   0
+#endif
+
+/**
+ * Settings to enable Lyra codec 16KHz. This option is only used
+ * when PJMEDIA_HAS_LYRA_CODEC is enabled.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_CODEC_LYRA_HAS_16KHZ
+#   define PJMEDIA_CODEC_LYRA_HAS_16KHZ   1
+#endif
+
+/**
+ * Settings to enable Lyra codec 32KHz. This option is only used
+ * when PJMEDIA_HAS_LYRA_CODEC is enabled.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_CODEC_LYRA_HAS_32KHZ
+#   define PJMEDIA_CODEC_LYRA_HAS_32KHZ   0
+#endif
+
+/**
+ * Settings to enable Lyra codec 48KHz. This option is only used
+ * when PJMEDIA_HAS_LYRA_CODEC is enabled.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_CODEC_LYRA_HAS_48KHZ
+#   define PJMEDIA_CODEC_LYRA_HAS_48KHZ   0
+#endif
+
 /**
  * Specify if FFMPEG codecs are available.
  *

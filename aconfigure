@@ -658,6 +658,8 @@ ac_webrtc_instset
 ac_no_webrtc
 ac_no_yuv
 ac_no_srtp
+ac_lyra_model_path
+ac_no_lyra_codec
 ac_no_bcg729
 opus_present
 opus_h_present
@@ -885,6 +887,8 @@ with_opus
 enable_opus
 with_bcg729
 enable_bcg729
+with_lyra
+enable_lyra
 enable_libsrtp
 enable_libyuv
 enable_libwebrtc
@@ -1574,6 +1578,7 @@ Optional Features:
                           autodetect)
 
   --disable-bcg729        Disable bcg729 (default: not disabled)
+  --disable-lyra          Disable lyra (default: not disabled)
   --disable-libsrtp       Exclude libsrtp in the build
   --disable-libyuv        Exclude libyuv in the build
   --disable-libwebrtc     Exclude libwebrtc in the build
@@ -1641,6 +1646,7 @@ Optional Packages:
   --with-silk=DIR         Specify alternate SILK prefix
   --with-opus=DIR         Specify alternate OPUS prefix
   --with-bcg729=DIR       Specify alternate bcg729 prefix
+  --with-lyra=DIR         Specify alternate lyra prefix
 
 Some influential environment variables:
   CC          C compiler command
@@ -10115,6 +10121,118 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
 
 
 fi
+
+
+
+# Check whether --with-lyra was given.
+if test ${with_lyra+y}
+then :
+  withval=$with_lyra;
+else $as_nop
+  with_lyra=no
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_lyra" = "xno"; then
+    enable_lyra=no
+fi
+
+
+
+# Check whether --enable-lyra was given.
+if test ${enable_lyra+y}
+then :
+  enableval=$enable_lyra;
+	      	if test "$enable_lyra" = "no"; then
+	      	  ac_no_lyra_codec=1
+	      	  printf "%s\n" "#define PJMEDIA_HAS_LYRA_CODEC 0" >>confdefs.h
+
+		  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if lyra is disabled... yes" >&5
+printf "%s\n" "Checking if lyra is disabled... yes" >&6; }
+  		fi
+
+else $as_nop
+
+   		  if test "x$with_lyra" != "xno" -a "x$with_lyra" != "x"; then
+	      		LYRA_PREFIX=$with_lyra
+                  		      		LYRA_CPPFLAGS="-DGLOG_DEPRECATED=__attribute__((deprecated)) -DGLOG_EXPORT=__attribute__((visibility(\"default\"))) -DGLOG_NO_EXPORT=__attribute__((visibility(\"default\")))"
+	      		LYRA_CXXFLAGS="-std=c++17 -Wno-deprecated-builtins -I$LYRA_PREFIX/include/com_google_absl -I$LYRA_PREFIX/include/gulrak_filesystem -I$LYRA_PREFIX/include/com_google_glog/src -I$LYRA_PREFIX"
+	                LYRA_LDFLAGS="-L$LYRA_PREFIX/lib"
+	      		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Using lyra prefix... $with_lyra" >&5
+printf "%s\n" "Using lyra prefix... $with_lyra" >&6; }
+	      	  else
+	      		LYRA_CXXFLAGS=""
+	      		LYRA_LDFLAGS=""
+	      	  fi
+
+    		  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking lyra usability" >&5
+printf %s "checking lyra usability... " >&6; }
+
+    		  LYRA_LIBS="-llyra"
+
+    		  SAVED_LIBS="$LIBS"
+     		  SAVED_LDFLAGS="$LDFLAGS"
+   		  SAVED_CXXFLAGS="$CXXFLAGS"
+     		  SAVED_CPPFLAGS="$CPPFLAGS"
+
+     		  LIBS="$LYRA_LIBS $LIBS"
+     		  LDFLAGS="$LYRA_LDFLAGS $LDFLAGS"
+     		  CXXFLAGS="$LYRA_CXXFLAGS $CXXFLAGS"
+     		  CPPFLAGS="$LYRA_CPPFLAGS $CPPFLAGS"
+
+     		  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+     		  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "lyra_decoder.h"
+
+int
+main (void)
+{
+std::unique_ptr<chromemedia::codec::LyraDecoder> dec = chromemedia::codec::LyraDecoder::Create(8000,1,"");
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"
+then :
+
+	      				   ac_lyra_model_path="$LYRA_PREFIX/model_coeffs"
+	      				   printf "%s\n" "#define PJMEDIA_HAS_LYRA_CODEC 1" >>confdefs.h
+
+					   	      		  	      	   LYRA_CPPFLAGS="'-DGLOG_DEPRECATED=__attribute__((deprecated))' '-DGLOG_EXPORT=__attribute__((visibility(\"default\")))' '-DGLOG_NO_EXPORT=__attribute__((visibility(\"default\")))'"
+                        		   CXXFLAGS="$LYRA_CPPFLAGS $CXXFLAGS"
+	      		  		   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+else $as_nop
+
+	      				   ac_no_lyra_codec=1
+	      				   LIBS="$SAVED_LIBS"
+	      				   LDFLAGS="$SAVED_LDFLAGS"
+	      				   CXXFLAGS="$SAVED_CXXFLAGS"
+	      		  		   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+	      		  ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+                          CPPFLAGS="$SAVED_CPPFLAGS"
+
+fi
+
 
 
 

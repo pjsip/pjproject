@@ -2032,6 +2032,22 @@ void CodecOpusConfig::fromPj(const pjmedia_codec_opus_config &config)
     cbr = PJ2BOOL(config.cbr);
 }
 
+pjmedia_codec_lyra_config CodecLyraConfig::toPj() const
+{
+    pjmedia_codec_lyra_config config;
+
+    config.bit_rate = bitRate;
+    config.model_path = str2Pj(modelPath);
+
+    return config;
+}
+
+void CodecLyraConfig::fromPj(const pjmedia_codec_lyra_config &config)
+{
+    bitRate = config.bit_rate;
+    modelPath = pj2Str(config.model_path);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 void VidCodecParam::fromPj(const pjmedia_vid_codec_param &param)
 {
