@@ -311,10 +311,10 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
     /* Create runner */
     if (basic) {
         runner = &basic_runner;
-        pj_test_init_basic_runner(runner);
+        pj_test_init_basic_runner(runner, NULL);
     } else {
-        pj_test_text_runner_param prm;
-        pj_test_text_runner_param_default(&prm);
+        pj_test_runner_param prm;
+        pj_test_runner_param_default(&prm);
         prm.nthreads = 4; /* more threads than we need, for testing */
         PJ_TEST_SUCCESS(pj_test_create_text_runner(pool, &prm, &runner), 
                         -10, test_title);

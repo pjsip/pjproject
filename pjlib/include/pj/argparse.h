@@ -22,6 +22,7 @@
  * @file argparse.h
  * @brief Command line argument parser
  */
+#include <pj/ctype.h>
 #include <pj/errno.h>
 #include <pj/string.h>
 
@@ -39,6 +40,25 @@ PJ_BEGIN_DECL
  */
 
 /**
+ * Peek the next possible option from argv. An argument is considered an
+ * option if it starts with "-" and followed by at least another letter that
+ * is not digit.
+ * 
+ * @param argv      The argv, which must be null terminated.
+ * 
+ * @return next option or NULL.
+ */
+static char* pj_argparse_peek_next_option(char *const argv[])
+{
+    while (*argv) {
+        if (**argv=='-' && **argv && !pj_isdigit(**argv) )
+            return *argv;
+        ++argv;
+    }
+    return NULL;
+}
+
+/**
  * Check that an option exists, without modifying argv.
  * 
  * @param opt       The option to find, e.g. "-h", "--help"
@@ -46,7 +66,7 @@ PJ_BEGIN_DECL
  * 
  * @return PJ_TRUE if the option exists, else PJ_FALSE.
  */
-static pj_bool_t pj_argparse_exists(const char *opt, const char *const argv[])
+static pj_bool_t pj_argparse_exists(const char *opt, char *const argv[])
 {
     int i;
     for (i=1; argv[i]; ++i) {

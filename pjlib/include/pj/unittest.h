@@ -400,14 +400,20 @@ typedef struct pj_test_stat
 
 
 /**
- * Options for creating text runner.
+ * Test runner parameters. Use pj_test_runner_param_default() to initialize
+ * this structure.
  */
-typedef struct pj_test_text_runner_param
+typedef struct pj_test_runner_param
 {
-    /** Number of worker threads. Set to zero to disable parallel testings */
+    /** Stop the test on error (default: false) */
+    pj_bool_t stop_on_error;
+
+    /** Number of worker threads. Set to zero to disable parallel testings.
+     * Only applicable to test text runner.
+     */
     unsigned nthreads;
 
-} pj_test_text_runner_param;
+} pj_test_runner_param;
 
 
 /** 
@@ -420,6 +426,9 @@ typedef struct pj_test_text_runner_param
  */
 struct pj_test_runner
 {
+    /** Parameters */
+    pj_test_runner_param prm;
+
     /** The test suite being run */
     pj_test_suite *suite;
 
@@ -431,6 +440,9 @@ struct pj_test_runner
 
     /** Number of completed tests */
     unsigned nruns;
+
+    /** Stopping */
+    pj_bool_t stopping;
 
     /** main method */
     void (*main)(pj_test_runner*);
@@ -511,35 +523,36 @@ PJ_DECL(void) pj_test_case_init(pj_test_case *tc,
 PJ_DECL(void) pj_test_suite_add_case(pj_test_suite *suite, pj_test_case *tc);
 
 /**
- * Initialize a basic test runner. A basic runner can be declared in the stack
- * and it does not require pool nor multithreading.
- * 
- * @param runner        The runner.
- */
-PJ_DECL(void) pj_test_init_basic_runner(pj_test_runner *runner);
-
-/**
  * Initialize parameters with reasonable default values. This usually means
  * using one worker thread if threading is enabled, and zero worker thread
  * (i.e. only use the main thread) otherwise.
  * 
- * @param prm           Text runner parameter
+ * @param prm           Test runner parameter
  */
-PJ_DECL(void) pj_test_text_runner_param_default(
-                pj_test_text_runner_param *prm);
+PJ_DECL(void) pj_test_runner_param_default(pj_test_runner_param *prm);
+
+/**
+ * Initialize a basic test runner. A basic runner can be declared in the stack
+ * and it does not require pool nor multithreading.
+ * 
+ * @param runner        The runner.
+ * @param prm           Runner params, or NULL to accept default values.
+ */
+PJ_DECL(void) pj_test_init_basic_runner(pj_test_runner *runner,
+                                        const pj_test_runner_param *prm);
 
 /**
  * Create console based test runner.
  * 
  * @param pool          The pool to use to allocate memory
- * @param prm           Text runner parameter, or NULL for default values.
+ * @param prm           Test runner parameter, or NULL for default values.
  * @param p_runner      Pointer to receive the text runner
  * 
  * @return PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_test_create_text_runner(
                             pj_pool_t *pool, 
-                            const pj_test_text_runner_param *prm,
+                            const pj_test_runner_param *prm,
                             pj_test_runner **p_runner);
 
 /**

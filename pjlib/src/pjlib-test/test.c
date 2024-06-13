@@ -46,15 +46,16 @@
 
 pj_pool_factory *mem;
 
-int param_echo_sock_type;
-const char *param_echo_server = ECHO_SERVER_ADDRESS;
-int param_echo_port = ECHO_SERVER_START_PORT;
-int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-                      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
-pj_bool_t param_ci_mode = PJ_FALSE;  /* GH CI mode: more lenient tests */
-pj_test_select_tests param_unittest_logging_policy = PJ_TEST_FAILED_TESTS;
-int param_unittest_nthreads = -1;
-
+struct test_app_t test_app = {
+    0,
+    ECHO_SERVER_ADDRESS,
+    ECHO_SERVER_START_PORT,
+    PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
+        PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
+    PJ_FALSE,
+    PJ_TEST_FAILED_TESTS,
+    -1,
+};
 
 int null_func()
 {
@@ -85,6 +86,21 @@ static pj_test_case *init_test_case( int (*test_func)(void), const char *obj_nam
     return tc;
 }
 
+static void list_tests(const pj_test_suite *suite, const char *title)
+{
+    unsigned d = pj_log_get_decor();
+    const pj_test_case *tc;
+
+    pj_log_set_decor(d ^ PJ_LOG_HAS_NEWLINE);
+    PJ_LOG(3,(THIS_FILE, "%ld %s:", pj_list_size(&suite->tests), title));
+    pj_log_set_decor(0);
+    for (tc=suite->tests.next; tc!=&suite->tests; tc=tc->next) {
+        PJ_LOG(3,(THIS_FILE, " %s", tc->obj_name));
+    }
+    PJ_LOG(3,(THIS_FILE, "\n"));
+    pj_log_set_decor(d);
+}
+
 static int essential_tests(int argc, char *argv[])
 {
     pj_test_suite suite;
@@ -97,11 +113,6 @@ static int essential_tests(int argc, char *argv[])
     char log_bufs[MAX_TESTS][LOG_BUF_SIZE];
     pj_test_case test_cases[MAX_TESTS];
     int ntests = 0;
-
-    /* Test the unit-testing framework first, outside unit-test! */
-    PJ_LOG(3,(THIS_FILE, "Testing the unit-test framework (basic)"));
-    if (unittest_basic_test())
-        return 1;
 
     /* Now that the basic unit-testing framework has been tested, 
      * perform essential tests using basic unit-testing framework.
@@ -122,7 +133,6 @@ static int essential_tests(int argc, char *argv[])
     } else { \
         PJ_LOG(1,(THIS_FILE, "Too many tests for adding %s", #test_func)); \
     }
-
 
 #if INCLUDE_ERRNO_TEST
     ADD_TEST( errno_test, 0);
@@ -162,23 +172,48 @@ static int essential_tests(int argc, char *argv[])
 
 #undef ADD_TEST
 
-    PJ_LOG(3,(THIS_FILE, "Performing %d essential tests", ntests));
-    pj_test_init_basic_runner(&runner);
-    pj_test_run(&runner, &suite);
-    pj_test_get_stat(&suite, &stat);
-    pj_test_display_stat(&stat, "essential tests", THIS_FILE);
-    pj_test_display_log_messages(&suite, param_unittest_logging_policy);
+    if (test_app.param_list_test) {
+        list_tests(&suite, "essential tests");
+        return 0;
+    }
 
-    if (stat.nfailed)
-        return 1;
+    /* Test the unit-testing framework first, outside unit-test! 
+     * Only perform the test if user is not requesting specific test.
+     */
+    if (argc==1) {
+        pj_dump_config();
+
+        PJ_LOG(3,(THIS_FILE, "Testing the unit-test framework (basic)"));
+        if (unittest_basic_test())
+            return 1;
+    }
+
+    if (ntests > 0) {
+        pj_test_runner_param runner_prm;
+        pj_test_runner_param_default(&runner_prm);
+        runner_prm.stop_on_error = test_app.param_stop_on_error;
+
+        PJ_LOG(3,(THIS_FILE, "Performing %d essential tests", ntests));
+        pj_test_init_basic_runner(&runner, &runner_prm);
+        pj_test_run(&runner, &suite);
+        pj_test_get_stat(&suite, &stat);
+        pj_test_display_stat(&stat, "essential tests", THIS_FILE);
+        pj_test_display_log_messages(&suite, 
+                                     test_app.param_unittest_logging_policy);
+
+        if (stat.nfailed)
+            return 1;
+    }
 
     /* Now that the essential components have been tested, test the
      * multithreaded unit-testing framework.
      */
-    PJ_LOG(3,(THIS_FILE, "Testing the unit-test framework (multithread)"));
-    if (unittest_test())
-        return 1;
-    
+    if (argc==1) {
+        PJ_LOG(3,(THIS_FILE, "Testing the unit-test framework (multithread)"));
+        if (unittest_test())
+            return 1;
+    }
+
     return 0;
 }
 
@@ -186,7 +221,7 @@ static int features_tests(int argc, char *argv[])
 {
     pj_test_suite suite;
     pj_test_runner *runner;
-    pj_test_text_runner_param prm;
+    pj_test_runner_param prm;
     pj_test_stat stat;
     pj_pool_t *pool;
     enum { 
@@ -298,9 +333,18 @@ static int features_tests(int argc, char *argv[])
 
 #undef ADD_TEST
 
-    pj_test_text_runner_param_default(&prm);
-    if (param_unittest_nthreads >= 0)
-        prm.nthreads = param_unittest_nthreads;
+    if (ntests==0)
+        return 0;
+
+    if (test_app.param_list_test) {
+        list_tests(&suite, "features tests");
+        return 0;
+    }
+
+    pj_test_runner_param_default(&prm);
+    prm.stop_on_error = test_app.param_stop_on_error;
+    if (test_app.param_unittest_nthreads >= 0)
+        prm.nthreads = test_app.param_unittest_nthreads;
     status = pj_test_create_text_runner(pool, &prm, &runner);
     if (status != PJ_SUCCESS) {
         app_perror("Error creating text runner", status);
@@ -314,7 +358,8 @@ static int features_tests(int argc, char *argv[])
     pj_test_runner_destroy(runner);
     pj_test_get_stat(&suite, &stat);
     pj_test_display_stat(&stat, "features tests", THIS_FILE);
-    pj_test_display_log_messages(&suite, param_unittest_logging_policy);
+    pj_test_display_log_messages(&suite,
+                                 test_app.param_unittest_logging_policy);
     pj_pool_release(pool);
     
     return stat.nfailed ? 1 : 0;
@@ -330,7 +375,7 @@ int test_inner(int argc, char *argv[])
     mem = &caching_pool.factory;
 
     pj_log_set_level(3);
-    pj_log_set_decor(param_log_decor);
+    pj_log_set_decor(test_app.param_log_decor);
 
     rc = pj_init();
     if (rc != 0) {
@@ -338,15 +383,16 @@ int test_inner(int argc, char *argv[])
         return rc;
     }
 
-    pj_dump_config();
     pj_caching_pool_init( &caching_pool, NULL, 0 );
 
-    if (param_ci_mode)
+    if (test_app.param_ci_mode)
         PJ_LOG(3,(THIS_FILE, "Using ci-mode"));
 
-    rc = essential_tests(argc, argv);
-    if (rc)
-        return rc;
+    if (!test_app.param_skip_essentials) {
+        rc = essential_tests(argc, argv);
+        if (rc)
+            return rc;
+    }
 
     rc = features_tests(argc, argv);
     if (rc)
@@ -358,12 +404,12 @@ int test_inner(int argc, char *argv[])
     udp_echo_srv_ioqueue();
 
 #elif INCLUDE_ECHO_CLIENT
-    if (param_echo_sock_type == 0)
-        param_echo_sock_type = pj_SOCK_DGRAM();
+    if (test_app.param_echo_sock_type == 0)
+        test_app.param_echo_sock_type = pj_SOCK_DGRAM();
 
-    echo_client( param_echo_sock_type,
-                 param_echo_server,
-                 param_echo_port);
+    echo_client( test_app.param_echo_sock_type,
+                 test_app.param_echo_server,
+                 test_app.param_echo_port);
 #endif
 
     goto on_return;

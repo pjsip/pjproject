@@ -41,8 +41,6 @@ BOOL                        InitInstance        (HINSTANCE, int);
 LRESULT CALLBACK            WndProc             (HWND, UINT, WPARAM, LPARAM);
 
 
-extern int                  param_log_decor;    // in test.c
-
 static HINSTANCE            hInst;
 static HWND                 hwndLog;
 static HFONT                hFixedFont;
@@ -72,7 +70,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         return FALSE;
     
     pj_log_set_log_func( &write_log );
-    param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR;
+    test_app.param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR;
 
     // Run the test!
     test_main();

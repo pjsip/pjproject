@@ -27,8 +27,8 @@
 
 static long tls_id = INVALID_TLS_ID;
 static pj_test_case *tc_main_thread;
-
-#if 0
+#define TRACE 0
+#if TRACE
 #  define TC_TRACE(tc__, msg__)   \
         {\
             pj_time_val tv = pj_elapsed_time(&tc__->runner->suite->start_time, \
@@ -132,8 +132,7 @@ PJ_DEF(void) pj_test_suite_add_case(pj_test_suite *suite, pj_test_case *tc)
 }
 
 /* Initialize text runner param with default values */
-PJ_DEF(void) pj_test_text_runner_param_default(
-                pj_test_text_runner_param *prm)
+PJ_DEF(void) pj_test_runner_param_default(pj_test_runner_param *prm)
 {
     pj_bzero(prm, sizeof(*prm));
 #if PJ_HAS_THREADS
@@ -206,6 +205,7 @@ PJ_DEF(void) pj_test_display_stat(const pj_test_stat *stat,
 {
     PJ_LOG(3,(log_sender, "Unit test statistics for %s:", test_name));
     PJ_LOG(3,(log_sender, "    Total number of tests: %d", stat->ntests));
+    PJ_LOG(3,(log_sender, "    Number of test run:    %d", stat->nruns));
     PJ_LOG(3,(log_sender, "    Number of failed test: %d", stat->nfailed));
     PJ_LOG(3,(log_sender, "    Total duration:        %dm%d.%03ds",
               (int)stat->duration.sec/60, (int)stat->duration.sec%60,
@@ -411,6 +411,9 @@ static void run_test_case(pj_test_runner *runner, pj_test_case *tc)
     if (tc->result == PJ_EPENDING)
         tc->result = -12345;
 
+    if (tc->result && runner->prm.stop_on_error)
+        runner->stopping = PJ_TRUE;
+
     TC_TRACE(tc, "done");
     pj_get_timestamp(&tc->end_time);
     runner->on_test_complete(runner, tc);
@@ -428,7 +431,7 @@ static void basic_runner_main(pj_test_runner *runner)
 {
     pj_test_case *tc;
     for (tc = runner->suite->tests.next; 
-         tc != &runner->suite->tests; 
+         tc != &runner->suite->tests && !runner->stopping; 
          tc = tc->next)
     {
         run_test_case(runner, tc);
@@ -459,9 +462,14 @@ static void basic_runner_destroy(pj_test_runner *runner)
 }
 
 /* Initialize a basic runner. */
-PJ_DEF(void) pj_test_init_basic_runner(pj_test_runner *runner)
+PJ_DEF(void) pj_test_init_basic_runner(pj_test_runner *runner,
+                                       const pj_test_runner_param *prm)
 {
     pj_bzero(runner, sizeof(*runner));
+    if (prm)
+        pj_memcpy(&runner->prm, prm, sizeof(*prm));
+    else
+        pj_test_runner_param_default(&runner->prm);
     runner->main = &basic_runner_main;
     runner->destroy = &basic_runner_destroy;
     runner->on_test_complete = &basic_on_test_complete;
@@ -472,8 +480,6 @@ PJ_DEF(void) pj_test_init_basic_runner(pj_test_runner *runner)
 typedef struct text_runner_t
 {
     pj_test_runner              base;
-    pj_test_text_runner_param   prm;
-
     pj_test_case               *cur_case;
     pj_mutex_t                 *mutex;
     pj_thread_t               **threads;
@@ -503,7 +509,9 @@ static pj_status_t text_runner_get_next_test_case(text_runner_t *runner,
     *p_test_case = NULL;
     pj_mutex_lock(runner->mutex);
 
-    if (runner->cur_case == NULL) {
+    if (runner->base.stopping) {
+        status = PJ_ENOTFOUND;
+    } else if (runner->cur_case == NULL) {
         /* Only on the very first invocation */
         if (pj_list_empty(&runner->base.suite->tests)) {
             status = PJ_ENOTFOUND;
@@ -557,9 +565,11 @@ on_return:
 /* Thread loop */
 static int text_runner_thread_proc(void *arg)
 {
+    #if TRACE
     static int global_tid = 0;
     int tid = global_tid++;
     char tmp[80];
+    #endif
 
     text_runner_t *runner = (text_runner_t*)arg;
 
@@ -569,17 +579,26 @@ static int text_runner_thread_proc(void *arg)
 
         status = text_runner_get_next_test_case(runner, &tc);
         if (status==PJ_SUCCESS) {
+            #if TRACE
             snprintf(tmp, sizeof(tmp), "thread %d running %s", tid, tc->obj_name);
             RUNNER_TRACE(runner, tmp);
+            #endif
+
             run_test_case(&runner->base, tc);
+
+            #if TRACE
             snprintf(tmp, sizeof(tmp), "thread %d done running %s", tid, tc->obj_name);
             RUNNER_TRACE(runner, tmp);
+            #endif
         } else if (status==PJ_EPENDING) {
             /* Yeah sleep, but the "correct" solution is probably an order of
              * magnitute more complicated, so this is good I think.
              */
+            #if TRACE
             snprintf(tmp, sizeof(tmp), "thread %d waiting", tid);
             RUNNER_TRACE(runner, tmp);
+            #endif
+
             pj_thread_sleep(1000);
         } else {
             break;
@@ -596,14 +615,14 @@ static void text_runner_main(pj_test_runner *base)
     text_runner_t *runner = (text_runner_t*)base;
     unsigned i;
 
-    for (i=0; i<runner->prm.nthreads; ++i) {
+    for (i=0; i<base->prm.nthreads; ++i) {
         pj_thread_resume(runner->threads[i]);
     }
 
     /* The main thread behaves like another worker thread */
     text_runner_thread_proc(base);
 
-    for (i=0; i<runner->prm.nthreads; ++i) {
+    for (i=0; i<base->prm.nthreads; ++i) {
         pj_thread_join(runner->threads[i]);
     }
 }
@@ -624,7 +643,7 @@ static void text_runner_destroy(pj_test_runner *base)
     text_runner_t *runner = (text_runner_t*)base;
     unsigned i;
 
-    for (i=0; i<runner->prm.nthreads; ++i) {
+    for (i=0; i<base->prm.nthreads; ++i) {
         pj_thread_destroy(runner->threads[i]);
     }
     if (runner->mutex)
@@ -635,7 +654,7 @@ static void text_runner_destroy(pj_test_runner *base)
 /* Create text runner */
 PJ_DEF(pj_status_t) pj_test_create_text_runner(
                             pj_pool_t *pool, 
-                            const pj_test_text_runner_param *prm,
+                            const pj_test_runner_param *prm,
                             pj_test_runner **p_runner)
 {
     text_runner_t *runner;
@@ -659,11 +678,11 @@ PJ_DEF(pj_status_t) pj_test_create_text_runner(
         goto on_error;
 
     if (prm) {
-        pj_memcpy(&runner->prm, prm, sizeof(*prm));
+        pj_memcpy(&runner->base.prm, prm, sizeof(*prm));
     } else {
-        pj_test_text_runner_param_default(&runner->prm);
+        pj_test_runner_param_default(&runner->base.prm);
     }
-    runner->prm.nthreads = 0;
+    runner->base.prm.nthreads = 0;
     runner->threads = (pj_thread_t**) pj_pool_calloc(pool, prm->nthreads,
                                                      sizeof(pj_thread_t*));
     for (i=0; i<prm->nthreads; ++i) {
@@ -673,7 +692,7 @@ PJ_DEF(pj_status_t) pj_test_create_text_runner(
                                   &runner->threads[i]);
         if (status != PJ_SUCCESS)
             goto on_error;
-        runner->prm.nthreads++;
+        runner->base.prm.nthreads++;
     }
 
     *p_runner = (pj_test_runner*)runner;    

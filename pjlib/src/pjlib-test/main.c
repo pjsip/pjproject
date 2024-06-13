@@ -24,14 +24,6 @@
 #include <pj/unittest.h>
 #include <stdio.h>
 
-extern int param_echo_sock_type;
-extern const char *param_echo_server;
-extern int param_echo_port;
-extern pj_bool_t param_ci_mode;
-
-extern pj_test_select_tests param_unittest_logging_policy;
-extern int param_unittest_nthreads;
-
 //#if defined(PJ_WIN32) && PJ_WIN32!=0
 #if 0
 #include <windows.h>
@@ -98,6 +90,9 @@ static void usage()
     puts("               1: Show logs of failed tests (default)");
     puts("               2: Show logs of all tests");
     puts("  -w N         Set N worker threads (0: disable worker threads)");
+    puts("  -L, --list   List the tests and exit");
+    puts("  --stop-err   Stop testing on error");
+    puts("  --skip-e     Skip essential tests");
     puts("  -i           Ask ENTER before quitting");
     puts("  -n           Do not trap signals");
     puts("  -p PORT      Use port PORT for echo port");
@@ -127,14 +122,14 @@ int main(int argc, char *argv[])
     }
     interractive = pj_argparse_get("-i", &argc, argv);
     no_trap = pj_argparse_get("-n", &argc, argv);
-    status = pj_argparse_get_int("-p", &argc, argv, &param_echo_port);
+    status = pj_argparse_get_int("-p", &argc, argv, &test_app.param_echo_port);
     if (status!=PJ_SUCCESS && status!=PJ_ENOTFOUND) {
         puts("Error: invalid/missing value for -p option");
         usage();
         return 1;
     }
     status = pj_argparse_get_str("-s", &argc, argv, 
-                                 (char**)&param_echo_server);
+                                 (char**)&test_app.param_echo_server);
     if (status!=PJ_SUCCESS && status!=PJ_ENOTFOUND) {
         puts("Error: value is required for -s option");
         usage();
@@ -144,9 +139,9 @@ int main(int argc, char *argv[])
     status = pj_argparse_get_str("-t", &argc, argv, &s);
     if (status==PJ_SUCCESS) {
         if (pj_ansi_stricmp(s, "tcp")==0)
-            param_echo_sock_type = pj_SOCK_STREAM();
+            test_app.param_echo_sock_type = pj_SOCK_STREAM();
         else if (pj_ansi_stricmp(s, "udp")==0)
-            param_echo_sock_type = pj_SOCK_DGRAM();
+            test_app.param_echo_sock_type = pj_SOCK_DGRAM();
         else {
             printf("Error: unknown socket type %s for -t option\n", s);
             usage();
@@ -158,16 +153,20 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    param_ci_mode = pj_argparse_get("--ci-mode", &argc, argv);
+    test_app.param_list_test = pj_argparse_get("-L", &argc, argv) ||
+                               pj_argparse_get("--list", &argc, argv);
+    test_app.param_stop_on_error = pj_argparse_get("--stop-err", &argc, argv);
+    test_app.param_skip_essentials = pj_argparse_get("--skip-e", &argc, argv);
+    test_app.param_ci_mode = pj_argparse_get("--ci-mode", &argc, argv);
 
     status = pj_argparse_get_int("-l", &argc, argv, &i);
     if (status==PJ_SUCCESS) {
         if (i==0)
-            param_unittest_logging_policy = PJ_TEST_NO_TEST;
+            test_app.param_unittest_logging_policy = PJ_TEST_NO_TEST;
         else if (i==1)
-            param_unittest_logging_policy = PJ_TEST_FAILED_TESTS;
+            test_app.param_unittest_logging_policy = PJ_TEST_FAILED_TESTS;
         else if (i==2)
-            param_unittest_logging_policy = PJ_TEST_ALL_TESTS;
+            test_app.param_unittest_logging_policy = PJ_TEST_ALL_TESTS;
         else {
             printf("Error: invalid value %d for -l option\n", i);
             usage();
@@ -180,11 +179,13 @@ int main(int argc, char *argv[])
     }
 
     status = pj_argparse_get_int("-w", &argc, argv, 
-                                 (int*)&param_unittest_nthreads);
+                                 (int*)&test_app.param_unittest_nthreads);
     if (status==PJ_SUCCESS) {
-        if (param_unittest_nthreads > 100 || param_unittest_nthreads < 0) {
+        if (test_app.param_unittest_nthreads > 100 || 
+            test_app.param_unittest_nthreads < 0) 
+        {
             printf("Error: value %d is not valid for -w option\n", 
-                   param_unittest_nthreads);
+                   test_app.param_unittest_nthreads);
             usage();
             return 1;
         }
@@ -195,6 +196,13 @@ int main(int argc, char *argv[])
 
     if (!no_trap) {
         init_signals();
+    }
+
+    if (pj_argparse_peek_next_option(argv)) {
+        printf("Error: unknown argument %s\n", 
+               pj_argparse_peek_next_option(argv));
+        usage();
+        return 1;
     }
 
     /* argc/argv now contains option values only, if any */
