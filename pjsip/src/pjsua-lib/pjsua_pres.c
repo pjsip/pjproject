@@ -1995,7 +1995,6 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
     pjsip_tpselector tp_sel;
     pj_status_t status;
     const char *sub_str = presence? "presence": "dialog event";
-    pjsip_evsub *sub;
     pjsip_dialog *dlg;
 
     /* Event subscription callback. */
@@ -2147,7 +2146,6 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
      * to be prepared for such scenario here.
      */
     dlg = buddy->dlg;
-    sub = buddy->sub;
 
     if (presence) {
         status = pjsip_pres_send_request(buddy->sub, tdata);
