@@ -26,7 +26,6 @@ int dummy_unittest_test;
 
 #if INCLUDE_UNITTEST_TEST
 
-
 #define THIS_FILE   "unittest_test.c"
 
 static char log_buffer[1024], *log_buffer_ptr = log_buffer;
@@ -77,19 +76,19 @@ static void end_capture_log()
 
 static int test_true(int is_true, const char *reason)
 {
-    PJ_TEST_TRUE(is_true, -100, reason);
+    PJ_TEST_TRUE(is_true, reason, return -100);
     return 0;
 }
 
 static int test_eq(int value0, int value1, const char *reason)
 {
-    PJ_TEST_EQ(value0, value1, -200, reason);
+    PJ_TEST_EQ(value0, value1, reason, return -200);
     return 0;
 }
 
 static int test_success(pj_status_t status, const char *reason)
 {
-    PJ_TEST_SUCCESS(status, -300, reason);
+    PJ_TEST_SUCCESS(status, reason, return -300);
     return 0;
 }
 
@@ -281,7 +280,7 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
                      basic, parallel, log_size);
     //PJ_LOG(3,(THIS_FILE, "Unittest usage_test: %s", test_title));
 
-    PJ_TEST_LTE(log_size, TEST_CASE_LOG_SIZE, -1, test_title);
+    PJ_TEST_LTE(log_size, TEST_CASE_LOG_SIZE, test_title, return -1);
 
     /* Init test suite */
     pj_test_suite_init(&suite);
@@ -317,7 +316,7 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
         pj_test_runner_param_default(&prm);
         prm.nthreads = 4; /* more threads than we need, for testing */
         PJ_TEST_SUCCESS(pj_test_create_text_runner(pool, &prm, &runner), 
-                        -10, test_title);
+                        test_title, return -10);
     }
 
     /* Run runner */
@@ -329,13 +328,13 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
     /* test the statistics returned by pj_test_get_stat() */
     pj_bzero(&stat, sizeof(stat));
     pj_test_get_stat(&suite, &stat);
-    PJ_TEST_EQ(stat.ntests, 2, -100, test_title);
-    PJ_TEST_EQ(stat.nruns, 2, -110, test_title);
-    PJ_TEST_EQ(stat.nfailed, 1, -120, test_title);
-    PJ_TEST_EQ(stat.failed_names[0], test_case1.obj_name, -130, test_title);
+    PJ_TEST_EQ(stat.ntests, 2, test_title, return -100);
+    PJ_TEST_EQ(stat.nruns, 2, test_title, return -110);
+    PJ_TEST_EQ(stat.nfailed, 1, test_title, return -120);
+    PJ_TEST_EQ(stat.failed_names[0], test_case1.obj_name, test_title, return -130);
     PJ_TEST_EQ(strcmp(stat.failed_names[0], "failure test"), 0, 
-               -135, test_title);
-    PJ_TEST_GTE( PJ_TIME_VAL_MSEC(stat.duration), 200, -140, test_title);
+               test_title, return -135);
+    PJ_TEST_GTE( PJ_TIME_VAL_MSEC(stat.duration), 200, test_title, return -140);
 
     /* test logging.
      * Since gave the test cases buffer to store log messages, we can dump
@@ -349,30 +348,30 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
     if (log_size >= MSG_LEN) {
         /* We should only have space for the last log */
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Some error in func_to_test(1)"),
-                        -201, test_title);
+                         test_title, return -201);
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Performing func_to_test(0)"),
-                        -202, test_title);
+                         test_title, return -202);
     } else if (log_size < 10) {
         /* buffer is too small, writing log will be rejected */
         PJ_TEST_EQ(strstr(log_buffer, "Some error"), NULL,
-                   -203, test_title);
+                   test_title, return -203);
     } else {
         /* buffer is small, message will be truncated */
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Some error in"),
-                        -204, test_title);
+                         test_title, return -204);
     }
 
     if (log_size >= 2*MSG_LEN) {
         /* We should have space for two last log messages */
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Performing func_to_test(1)"),
-                        -205, test_title);
+                         test_title, return -205);
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Entering func_to_test(0)"),
-                        -206, test_title);
+                         test_title, return -206);
     }
     if (log_size >= 3*MSG_LEN) {
         /* We should have space for three last log messages */
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Entering func_to_test(1)"),
-                        -207, test_title);
+                         test_title, return -207);
     }
 
     /* Dumping only failed test. Only test 1 must be present */
@@ -382,26 +381,26 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
     end_capture_log();
     if (log_size >= MSG_LEN) {
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Some error in func_to_test(1)"),
-                        -211, test_title);
+                         test_title, return -211);
     } else if (log_size < 10) {
         /* buffer is too small, writing log will be rejected */
         PJ_TEST_EQ(strstr(log_buffer, "Some error"), NULL,
-                   -212, test_title);
+                   test_title, return -212);
     } else {
         /* buffer is small, message will be truncated */
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Some error in"),
-                        -213, test_title);
+                         test_title, return -213);
     }
     if (log_size >= 2*MSG_LEN) {
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Performing func_to_test(1)"),
-                        -214, test_title);
+                         test_title, return -214);
     }
     if (log_size >= 3*MSG_LEN) {
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Entering func_to_test(1)"),
-                        -215, test_title);
+                         test_title, return -215);
     }
     PJ_TEST_EQ(strstr(log_buffer, "Entering func_to_test(0)"), NULL,
-               -216, test_title);
+               test_title, return -216);
 
     /* Dumping only successful test. Only test 0 must be present */
     start_capture_log();
@@ -410,14 +409,14 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
     end_capture_log();
     if (log_size >= MSG_LEN) {
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Performing func_to_test(0)"),
-                        -221, test_title);
+                         test_title, return -221);
     }
     if (log_size >= 2*MSG_LEN) {
         PJ_TEST_NOT_NULL(strstr(log_buffer, "Entering func_to_test(0)"),
-                        -222, test_title);
+                         test_title, return -222);
     }
     PJ_TEST_EQ(strstr(log_buffer, "Entering func_to_test(1)"), NULL,
-               -223, test_title);
+               test_title, return -223);
 
     return 0;
 }

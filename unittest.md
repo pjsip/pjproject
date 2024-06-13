@@ -47,6 +47,7 @@ Some considerations:
    a. If apps change the log writer before running the unittest, this should be okay. The unittest will restore the log writer to any writer prior to it being run, and will use that writer to display the logs after it is run.
    b. If apps change the log writer somewhere inside a test function, I think this should be okay as long as it restores back the writer. 
    c. if another thread (that is not aware about testing) is writing to the log, then the unittest log writer will pass that log message to pj_log_write() (i.e. the "official" log writer). I think this is okay and it is the desired behavior, but it will clutter the test output.
+2. Use {} instead of do {} while (0) in case user pus "break" as action.
 
 Test times:
 

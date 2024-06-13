@@ -46,8 +46,8 @@ static int fifobuf_size_test()
 
     pj_fifobuf_init (&fifo, buffer, sizeof(buffer));
 
-    PJ_TEST_EQ(pj_fifobuf_capacity(&fifo), SIZE-SZ, -11, NULL);
-    PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, -12, NULL);
+    PJ_TEST_EQ(pj_fifobuf_capacity(&fifo), SIZE-SZ, NULL, return -11);
+    PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, NULL, return -12);
 
     p0 = pj_fifobuf_alloc(&fifo, 16);
     p1 = pj_fifobuf_alloc(&fifo, 4);
@@ -55,9 +55,9 @@ static int fifobuf_size_test()
 
     pj_fifobuf_free(&fifo, p0);
 
-    PJ_TEST_EQ( pj_fifobuf_available_size(&fifo), 16, -14, NULL);
-    PJ_TEST_EQ( pj_memcmp(before, zero, sizeof(zero)), 0, -18, NULL);
-    PJ_TEST_EQ( pj_memcmp(after, zero, sizeof(zero)), 0, -19, NULL);
+    PJ_TEST_EQ( pj_fifobuf_available_size(&fifo), 16, NULL, return -14);
+    PJ_TEST_EQ( pj_memcmp(before, zero, sizeof(zero)), 0, NULL, return -18);
+    PJ_TEST_EQ( pj_memcmp(after, zero, sizeof(zero)), 0, NULL, return -19);
     return 0;
 }
 
@@ -78,34 +78,34 @@ int fifobuf_test()
         return i;
 
     pool = pj_pool_create(mem, NULL, SIZE+256, 0, NULL);
-    PJ_TEST_NOT_NULL(pool, -10, NULL);
+    PJ_TEST_NOT_NULL(pool, NULL, return -10);
 
     buffer = pj_pool_alloc(pool, SIZE);
-    PJ_TEST_NOT_NULL(buffer, -20, NULL);
+    PJ_TEST_NOT_NULL(buffer, NULL, return -20);
 
     pj_fifobuf_init (&fifo, buffer, SIZE);
     
     /* Capacity and maximum alloc */
-    PJ_TEST_EQ(pj_fifobuf_capacity(&fifo), SIZE-SZ, -21, NULL);
-    PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, -22, NULL);
+    PJ_TEST_EQ(pj_fifobuf_capacity(&fifo), SIZE-SZ, NULL, return -21);
+    PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, NULL, return -22);
 
     entries[0] = pj_fifobuf_alloc(&fifo, SIZE-SZ);
-    PJ_TEST_NOT_NULL(entries[0], -23, NULL);
+    PJ_TEST_NOT_NULL(entries[0], NULL, return -23);
 
     pj_fifobuf_free(&fifo, entries[0]);
-    PJ_TEST_EQ(pj_fifobuf_capacity(&fifo), SIZE-SZ, -21, NULL);
-    PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, -22, NULL);
+    PJ_TEST_EQ(pj_fifobuf_capacity(&fifo), SIZE-SZ, NULL, return -21);
+    PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, NULL, return -22);
 
     /* Alignment test */
     for (i=0; i<30; ++i) {
         entries[i] = pj_fifobuf_alloc(&fifo, i+1);
-        PJ_TEST_NOT_NULL(entries[i], -50, NULL);
+        PJ_TEST_NOT_NULL(entries[i], NULL, return -50);
         //fifobuf is no longer aligned.
         //PJ_TEST_EQ(((pj_size_t)entries[i]) % sizeof(unsigned), 0, -60, 
         //           "alignment error");
     }
     for (i=0; i<30; ++i) {
-        PJ_TEST_SUCCESS( pj_fifobuf_free(&fifo, entries[i]), -70, NULL);
+        PJ_TEST_SUCCESS( pj_fifobuf_free(&fifo, entries[i]), NULL, return -70);
     }
 
     /* alloc() and free() */
@@ -125,7 +125,7 @@ int fifobuf_test()
     if (entries[(i+1)%2])
         pj_fifobuf_free(&fifo, entries[(i+1)%2]);
 
-    PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, -1, NULL);
+    PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, NULL, return -1);
 
     /* alloc() and unalloc() */
     entries[0] = pj_fifobuf_alloc (&fifo, MIN_SIZE);
@@ -137,7 +137,7 @@ int fifobuf_test()
             pj_fifobuf_unalloc(&fifo, entries[1]);
     }
     pj_fifobuf_unalloc(&fifo, entries[0]);
-    PJ_TEST_GTE(pj_fifobuf_available_size(&fifo), SIZE-SZ, -2, NULL);
+    PJ_TEST_GTE(pj_fifobuf_available_size(&fifo), SIZE-SZ, NULL, return -2);
 
     /* Allocate as much as possible, then free them all. */
     for (i=0; i<LOOP; ++i) {
@@ -157,7 +157,7 @@ int fifobuf_test()
     }
 
     /* Fifobuf must be empty (==not used) */
-    PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, -3, NULL);
+    PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, NULL, return -3);
 
     pj_pool_release(pool);
     return 0;

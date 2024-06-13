@@ -39,26 +39,18 @@ PJ_BEGIN_DECL
  * having to use the unit-test framework.
  */
 
-/** 
- * Special constant as retval in the various PJ_TEST_XXX macros, to tell
- * the macro NOT to issue return when the test fails.
- */
-#define PJ_TEST_NO_RET   0xbe2decb1
-
 /**
  * Check that an expression is non-zero. If the check fails, informative error
- * message will be displayed, and the test will return with the value specified
- * in retval, unless retval is PJ_TEST_NO_RET which in this case the test
- * function will not return on failure.
+ * message will be displayed, and the code in err_action will be executed.
  * 
- * @param expr      The expression to check
- * @param retval    Return value on error, or PJ_TEST_NO_RET.
- * @param reason    NULL or extra text to be displayed when the check fails
+ * @param expr          The expression to check
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
  */
-#define PJ_TEST_NON_ZERO(expr, retval, reason)  \
-            do { \
+#define PJ_TEST_NON_ZERO(expr, err_reason, err_action)  \
+            { \
                 if (!(expr)) { \
-                    const char *tmp_reason_ = reason; \
+                    const char *tmp_reason_ = err_reason; \
                     const char *sep0_ = (tmp_reason_ ? " (": ""); \
                     const char *sep1_ = (tmp_reason_ ? ")": ""); \
                     if (!tmp_reason_) tmp_reason_=""; \
@@ -66,28 +58,26 @@ PJ_BEGIN_DECL
                                          "%s:%d%s%s%s", \
                               #expr, THIS_FILE,__LINE__,sep0_, \
                               tmp_reason_,sep1_));\
-                    if (retval != PJ_TEST_NO_RET) return retval; \
+                    err_action; \
                 } \
-            } while (0)
+            }
 
 /**
  * Generic check for binary operation. If the check fails, informative error
- * message will be displayed, and the test will return with the value specified
- * in retval, unless retval is PJ_TEST_NO_RET which in this case the test
- * function will not return on failure.
+ * message will be displayed, and the code in err_action will be executed.
  * 
- * @param expr0     First expression
- * @param op        The operator
- * @param expr1     Second expression
- * @param retval    Return value on error, or PJ_TEST_NO_RET.
- * @param reason    NULL or extra text to be displayed when the check fails
+ * @param expr0         First expression
+ * @param op            The operator
+ * @param expr1         Second expression
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
  */
-#define PJ_TEST_BINARY_OP(expr0, op, expr1, retval, reason) \
-            do { \
+#define PJ_TEST_BINARY_OP(expr0, op, expr1, err_reason, err_action) \
+            { \
                 long tmp_value0_ = (long)(expr0); \
                 long tmp_value1_ = (long)(expr1); \
                 if (!(tmp_value0_ op tmp_value1_)) { \
-                    const char *tmp_reason_ = reason; \
+                    const char *tmp_reason_ = err_reason; \
                     const char *sep0_ = (tmp_reason_ ? " (": ""); \
                     const char *sep1_ = (tmp_reason_ ? ")": ""); \
                     if (!tmp_reason_) tmp_reason_=""; \
@@ -96,26 +86,25 @@ PJ_BEGIN_DECL
                               #expr0, tmp_value0_, #expr1, tmp_value1_, \
                               THIS_FILE, __LINE__, \
                               sep0_, tmp_reason_, sep1_)); \
-                    if (retval != PJ_TEST_NO_RET) return retval; \
+                    err_action; \
                 } \
-            } while (0)
+            }
 
 /**
  * Check that an expression is PJ_SUCCESS. If the check fails, error message
- * explaining the error code will be displayed, and the test will return with
- * the value specified in retval, unless retval is PJ_TEST_NO_RET which in 
- * this case the test function will not return on failure.
+ * explaining the error code will be displayed, and the code in err_action
+ * will be executed.
  * 
- * @param expr      The expression to check
- * @param retval    Return value on error, or PJ_TEST_NO_RET.
- * @param reason    NULL or extra text to be displayed when the check fails
+ * @param expr          The expression to check
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
  */
-#define PJ_TEST_SUCCESS(expr, retval, reason) \
-            do { \
+#define PJ_TEST_SUCCESS(expr, err_reason, err_action) \
+            { \
                 pj_status_t tmp_status_ = (expr); \
                 if (tmp_status_ != PJ_SUCCESS) { \
                     char errbuf[80]; \
-                    const char *tmp_reason_ = reason; \
+                    const char *tmp_reason_ = err_reason; \
                     const char *sep0_ = (tmp_reason_ ? " (": ""); \
                     const char *sep1_ = (tmp_reason_ ? ")": ""); \
                     if (!tmp_reason_) tmp_reason_=""; \
@@ -124,111 +113,99 @@ PJ_BEGIN_DECL
                               "status=%d (%s)%s%s%s", \
                               #expr, THIS_FILE, __LINE__, tmp_status_,errbuf,\
                               sep0_, tmp_reason_, sep1_)); \
-                    if (retval != PJ_TEST_NO_RET) return retval; \
+                    err_action; \
                 } \
-            } while (0)
+            }
 
 /**
  * Alias for PJ_TEST_NON_ZERO()
  */
-#define PJ_TEST_TRUE(expr, retval, reason)  \
-            PJ_TEST_NON_ZERO(expr, retval, reason)
+#define PJ_TEST_TRUE(expr, err_reason, err_action)  \
+            PJ_TEST_NON_ZERO(expr, err_reason, err_action)
 
 /**
  * Alias for PJ_TEST_NON_ZERO()
  */
-#define PJ_TEST_NOT_NULL(expr, retval, reason)  \
-            PJ_TEST_NON_ZERO(expr, retval, reason)
+#define PJ_TEST_NOT_NULL(expr, err_reason, err_action)  \
+            PJ_TEST_NON_ZERO(expr, err_reason, err_action)
 
 /**
  * Check that expr0 equals expr1.
- * If the check fails, informative error message will be displayed, and
- * the test will return with the value specified in retval, unless retval
- * is PJ_TEST_NO_RET which in this case the test function will not return
- * on failure.
+ * If the check fails, informative error message will be displayed and
+ * the code in err_action will be executed.
  * 
- * @param expr0     First expression
- * @param expr1     Second expression
- * @param retval    Return value on error, or PJ_TEST_NO_RET.
- * @param reason    NULL or extra text to be displayed when the check fails
+ * @param expr0         First expression
+ * @param expr1         Second expression
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
  */
-#define PJ_TEST_EQ(expr0, expr1, retval, reason)  \
-            PJ_TEST_BINARY_OP(expr0, ==, expr1, retval, reason)
+#define PJ_TEST_EQ(expr0, expr1, err_reason, err_action)  \
+            PJ_TEST_BINARY_OP(expr0, ==, expr1, err_reason, err_action)
 
 /**
- * Check that expr0 not equals expr1.
- * If the check fails, informative error message will be displayed, and
- * the test will return with the value specified in retval, unless retval
- * is PJ_TEST_NO_RET which in this case the test function will not return
- * on failure.
+ * Check that expr0 does not equal expr1.
+ * If the check fails, informative error message will be displayed and
+ * the code in err_action will be executed.
  * 
- * @param expr0     First expression
- * @param expr1     Second expression
- * @param retval    Return value on error, or PJ_TEST_NO_RET.
- * @param reason    NULL or extra text to be displayed when the check fails
+ * @param expr0         First expression
+ * @param expr1         Second expression
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
  */
-#define PJ_TEST_NEQ(expr0, expr1, retval, reason)  \
-            PJ_TEST_BINARY_OP(expr0, !=, expr1, retval, reason)
+#define PJ_TEST_NEQ(expr0, expr1, err_reason, err_action)  \
+            PJ_TEST_BINARY_OP(expr0, !=, expr1, err_reason, err_action)
 
 /**
  * Check that expr0 is less than expr1.
- * If the check fails, informative error message will be displayed, and
- * the test will return with the value specified in retval, unless retval
- * is PJ_TEST_NO_RET which in this case the test function will not return
- * on failure.
+ * If the check fails, informative error message will be displayed and
+ * the code in err_action will be executed.
  * 
- * @param expr0     First expression
- * @param expr1     Second expression
- * @param retval    Return value on error, or PJ_TEST_NO_RET.
- * @param reason    NULL or extra text to be displayed when the check fails
+ * @param expr0         First expression
+ * @param expr1         Second expression
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
  */
-#define PJ_TEST_LT(expr0, expr1, retval, reason)  \
-            PJ_TEST_BINARY_OP(expr0, <, expr1, retval, reason)
+#define PJ_TEST_LT(expr0, expr1, err_reason, err_action)  \
+            PJ_TEST_BINARY_OP(expr0, <, expr1, err_reason, err_action)
 
 /**
  * Check that expr0 is less than or equal to expr1.
- * If the check fails, informative error message will be displayed, and
- * the test will return with the value specified in retval, unless retval
- * is PJ_TEST_NO_RET which in this case the test function will not return
- * on failure.
+ * If the check fails, informative error message will be displayed and
+ * the code in err_action will be executed.
  * 
- * @param expr0     First expression
- * @param expr1     Second expression
- * @param retval    Return value on error, or PJ_TEST_NO_RET.
- * @param reason    NULL or extra text to be displayed when the check fails
+ * @param expr0         First expression
+ * @param expr1         Second expression
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
  */
-#define PJ_TEST_LTE(expr0, expr1, retval, reason)  \
-            PJ_TEST_BINARY_OP(expr0, <=, expr1, retval, reason)
+#define PJ_TEST_LTE(expr0, expr1, err_reason, err_action)  \
+            PJ_TEST_BINARY_OP(expr0, <=, expr1, err_reason, err_action)
 
 /**
  * Check that expr0 is greater than expr1.
- * If the check fails, informative error message will be displayed, and
- * the test will return with the value specified in retval, unless retval
- * is PJ_TEST_NO_RET which in this case the test function will not return
- * on failure.
+ * If the check fails, informative error message will be displayed and
+ * the code in err_action will be executed.
  * 
- * @param expr0     First expression
- * @param expr1     Second expression
- * @param retval    Return value on error, or PJ_TEST_NO_RET.
- * @param reason    NULL or extra text to be displayed when the check fails
+ * @param expr0         First expression
+ * @param expr1         Second expression
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
  */
-#define PJ_TEST_GT(expr0, expr1, retval, reason)  \
-            PJ_TEST_BINARY_OP(expr0, >, expr1, retval, reason)
+#define PJ_TEST_GT(expr0, expr1, err_reason, err_action)  \
+            PJ_TEST_BINARY_OP(expr0, >, expr1, err_reason, err_action)
 
 /**
  * Check that expr0 is greater than or equal to expr1.
- * If the check fails, informative error message will be displayed, and
- * the test will return with the value specified in retval, unless retval
- * is PJ_TEST_NO_RET which in this case the test function will not return
- * on failure.
+ * If the check fails, informative error message will be displayed and
+ * the code in err_action will be executed.
  * 
- * @param expr0     First expression
- * @param expr1     Second expression
- * @param retval    Return value on error, or PJ_TEST_NO_RET.
- * @param reason    NULL or extra text to be displayed when the check fails
+ * @param expr0         First expression
+ * @param expr1         Second expression
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
  */
-#define PJ_TEST_GTE(expr0, expr1, retval, reason)  \
-            PJ_TEST_BINARY_OP(expr0, >=, expr1, retval, reason)
+#define PJ_TEST_GTE(expr0, expr1, err_reason, err_action)  \
+            PJ_TEST_BINARY_OP(expr0, >=, expr1, err_reason, err_action)
 
 
 /**
