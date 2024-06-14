@@ -12646,6 +12646,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\pj\argparse.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pj\array.h"
 				>
 			</File>
@@ -12791,6 +12795,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pj\unicode.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pj\unittest.h"
 				>
 			</File>
 			<Filter

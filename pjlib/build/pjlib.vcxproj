@@ -1036,6 +1036,7 @@
     <ClInclude Include="..\include\pjlib.h" />
     <ClInclude Include="..\include\pj\activesock.h" />
     <ClInclude Include="..\include\pj\addr_resolv.h" />
+    <ClInclude Include="..\include\pj\argparse.h" />
     <ClInclude Include="..\include\pj\array.h" />
     <ClInclude Include="..\include\pj\assert.h" />
     <ClInclude Include="..\include\pj\compat\assert.h" />
@@ -1101,6 +1102,7 @@
     <ClInclude Include="..\include\pj\timer.h" />
     <ClInclude Include="..\include\pj\types.h" />
     <ClInclude Include="..\include\pj\unicode.h" />
+    <ClInclude Include="..\include\pj\unittest.h" />
     <ClInclude Include="..\src\pj\ioqueue_common_abs.h" />
     <ClInclude Include="..\src\pj\ssl_sock_imp_common.h" />
   </ItemGroup>
