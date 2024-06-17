@@ -156,7 +156,7 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
                                          query_job->dns_state, 0, 
                                          &dns_callback,
                                          query_job, &query_job->q_srv);
-    if (status==PJ_SUCCESS && p_query)
+    if (status==PJ_SUCCESS && p_query && query_job->q_srv)
         *p_query = query_job;
 
     return status;
