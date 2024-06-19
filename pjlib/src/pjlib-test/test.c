@@ -34,16 +34,6 @@
 
 #endif
 
-#define DO_TEST(test)   do { \
-                            PJ_LOG(3, (THIS_FILE, "Running %s...", #test));  \
-                            rc = test; \
-                            PJ_LOG(3, (THIS_FILE,  \
-                                       "%s(%d)",  \
-                                       (rc ? "..ERROR" : "..success"), rc)); \
-                            if (rc!=0) goto on_return; \
-                        } while (0)
-
-
 pj_pool_factory *mem;
 
 struct test_app_t test_app = {
@@ -286,6 +276,10 @@ static int features_tests(int argc, char *argv[])
     ADD_TEST( sleep_test, PJ_TEST_PARALLEL);
 #endif
 
+#if INCLUDE_FILE_TEST
+    ADD_TEST( file_test, PJ_TEST_PARALLEL);
+#endif
+
 #if INCLUDE_SOCK_TEST
     ADD_TEST( sock_test, PJ_TEST_PARALLEL);
 #endif
@@ -306,12 +300,31 @@ static int features_tests(int argc, char *argv[])
     ADD_TEST( tcp_ioqueue_test, PJ_TEST_PARALLEL);
 #endif
 
-#if INCLUDE_IOQUEUE_UNREG_TEST
-    ADD_TEST( udp_ioqueue_unreg_test, PJ_TEST_PARALLEL);
+    /* Consistently encountered retcode 520 on Windows virtual machine
+       with 8 vcpu and 16GB RAM when multithread unit test is used,
+       with the following logs:
+    17:50:57.761 .tcp (multithreads)
+    17:50:58.254 ...pj_ioqueue_send() error: Object is busy (PJ_EBUSY)
+    17:50:58.264 ..test failed (retcode=520)
+    17:50:58.264 .tcp (multithreads, sequenced, concur=0)
+    17:51:06.084 .tcp (multithreads, sequenced, concur=1)
+    17:51:06.484 ...pj_ioqueue_send() error: Object is busy (PJ_EBUSY)
+    17:51:06.486 ..test failed (retcode=520)
+
+    I suspect it's because the ioq stress test also uses a lot of threads
+    and couldn't keep up with processing the data.
+    Therefore we'll disable parallelism on Windows for this test. [blp]
+    */
+#if INCLUDE_IOQUEUE_STRESS_TEST
+#  if defined(PJ_WIN32) && PJ_WIN32!=0
+    ADD_TEST(ioqueue_stress_test, 0);
+#  else
+    ADD_TEST(ioqueue_stress_test, PJ_TEST_PARALLEL);
+#  endif
 #endif
 
-#if INCLUDE_IOQUEUE_STRESS_TEST
-    ADD_TEST( ioqueue_stress_test, PJ_TEST_PARALLEL);
+#if INCLUDE_IOQUEUE_UNREG_TEST
+    ADD_TEST(udp_ioqueue_unreg_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_IOQUEUE_PERF_TEST
@@ -321,10 +334,6 @@ static int features_tests(int argc, char *argv[])
 
 #if INCLUDE_ACTIVESOCK_TEST
     ADD_TEST( activesock_test, PJ_TEST_PARALLEL);
-#endif
-
-#if INCLUDE_FILE_TEST
-    ADD_TEST( file_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_SSLSOCK_TEST
