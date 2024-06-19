@@ -107,7 +107,7 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
 {
     pj_size_t len;
     pj_str_t target_name;
-    pj_dns_srv_async_query *query_job;
+    pj_dns_srv_async_query *query_job, *p_q = NULL;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(domain_name && domain_name->slen &&
@@ -156,8 +156,11 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
                                          query_job->dns_state, 0, 
                                          &dns_callback,
                                          query_job, &query_job->q_srv);
-    if (status==PJ_SUCCESS && p_query && query_job->q_srv)
-        *p_query = query_job;
+    if (query_job->q_srv)
+        p_q = query_job;
+
+    if (status==PJ_SUCCESS && p_query)
+        *p_query = p_q;
 
     return status;
 }
