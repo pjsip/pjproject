@@ -151,7 +151,7 @@ PJ_DEF(void) pj_test_run(pj_test_runner *runner, pj_test_suite *suite)
 
     /* Initialize suite and test cases */
     runner->suite = suite;
-    runner->ntests = pj_list_size(&suite->tests);
+    runner->ntests = (unsigned)pj_list_size(&suite->tests);
     runner->nruns = 0;
 
     for (tc=suite->tests.next; tc!=&suite->tests; 
@@ -183,7 +183,7 @@ PJ_DEF(void) pj_test_get_stat( const pj_test_suite *suite, pj_test_stat *stat)
 
     pj_bzero(stat, sizeof(*stat));
     stat->duration = pj_elapsed_time(&suite->start_time, &suite->end_time);
-    stat->ntests = pj_list_size(&suite->tests);
+    stat->ntests = (unsigned)pj_list_size(&suite->tests);
 
     for (tc=suite->tests.next; tc!=&suite->tests; tc=tc->next) {
         if (tc->result != PJ_EPENDING) {
@@ -405,7 +405,7 @@ static int get_completion_line( const pj_test_case *tc, const char *end_line,
                                tc->obj_name, res_buf, end_line);
 
     if (log_len < 1 || log_len >= sizeof(log_buf))
-        log_len = pj_ansi_strlen(log_buf);
+        log_len = (int)pj_ansi_strlen(log_buf);
         
     return log_len;
 }
@@ -473,7 +473,7 @@ static void basic_on_test_complete(pj_test_runner *runner, pj_test_case *tc)
     len = pj_ansi_snprintf( line, sizeof(line), "[%2d/%d] ",
                             runner->nruns, runner->ntests);
     if (len < 1 || len >= sizeof(line))
-        len = pj_ansi_strlen(line);
+        len = (int)pj_ansi_strlen(line);
     
     len += get_completion_line(tc, "", line+len, sizeof(line)-len);
     tc->runner->orig_log_writer(3, line, len);
@@ -483,6 +483,7 @@ static void basic_on_test_complete(pj_test_runner *runner, pj_test_case *tc)
 static void basic_runner_destroy(pj_test_runner *runner)
 {
     /* Nothing to do for basic runner */
+    PJ_UNUSED_ARG(runner);
 }
 
 /* Initialize a basic runner. */
