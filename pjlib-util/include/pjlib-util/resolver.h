@@ -406,7 +406,7 @@ PJ_DECL(pj_status_t) pj_dns_resolver_destroy(pj_dns_resolver *resolver,
  * @param user_data Arbitrary user data to be associated with the query,
  *                  and which will be given back in the callback.
  * @param p_query   Optional pointer to receive the query object, if one
- *                  was started. If this pointer is specified, a NULL may
+ *                  was started. If this pointer is specified, a NULL will
  *                  be returned if response cache is available immediately.
  *
  * @return          PJ_SUCCESS if either an asynchronous query has been 
