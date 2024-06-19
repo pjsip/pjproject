@@ -975,8 +975,8 @@
 
 /**
  * Specify the tone generator algorithm to be used. Please see 
- * http://trac.pjsip.org/repos/wiki/Tone_Generator for the performance
- * analysis results of the various tone generator algorithms.
+ * https://docs.pjsip.org/en/latest/specific-guides/media/tonegen.html for
+ * the performance analysis results of the various tone generator algorithms.
  *
  * Default value:
  *  - PJMEDIA_TONEGEN_FLOATING_POINT when PJ_HAS_FLOATING_POINT is set
