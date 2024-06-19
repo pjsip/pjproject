@@ -917,6 +917,12 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
             cache->ref_cnt++;
             pj_grp_lock_release(resolver->grp_lock);
 
+            /* Since we're returning an answer from cache,
+             * there is no query object to return.
+             */
+            if (p_query)
+                *p_query = NULL;
+
             /* This cached response is still valid. Just return this
              * response to caller.
              */
