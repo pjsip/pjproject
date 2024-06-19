@@ -10340,7 +10340,7 @@ printf "%s\n" "Checking if libwebrtc is disabled...no" >&6; }
                          case $target in
                              armv7l*gnueabihf)
                                  ac_webrtc_instset=neon
-                                 ac_webrtc_cflags="-DWEBRTC_ARCH_ARMV7 -mfloat-abi=hard -mfpu=neon"
+                                 ac_webrtc_cflags="-DWEBRTC_ARCH_ARM_V7 -mfloat-abi=hard -mfpu=neon"
                                  ;;
 			     arm-apple-darwin* | aarch64*)
 				 ac_webrtc_instset=neon
@@ -10458,7 +10458,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
                          case $target in
                              armv7l*gnueabihf)
                                  ac_webrtc_aec3_instset=neon
-                                 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARMV7 -mfloat-abi=hard -mfpu=neon"
+                                 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM_V7 -mfloat-abi=hard -mfpu=neon"
                                  ;;
 			     arm-apple-darwin* | aarch64*)
 				 ac_webrtc_aec3_instset=neon
