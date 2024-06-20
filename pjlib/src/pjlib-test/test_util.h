@@ -153,8 +153,8 @@ static pj_status_t ut_run_tests(ut_app_t *ut_app, const char *title,
                     break;
             }
             if (tc==&ut_app->suite.tests) {
-                PJ_LOG(1,(THIS_FILE, "Test \"%s\" is not found", argv[i]));
-                return PJ_ENOTFOUND;
+                PJ_LOG(2,(THIS_FILE, "Test \"%s\" is not found in %s",
+                          argv[i], title));
             }
         }
     }

@@ -89,7 +89,7 @@ static void list_tests(const pj_test_suite *suite, const char *title)
     pj_log_set_decor(d);
 }
 
-static int essential_tests(int argc, char *argv[])
+static pj_test_stat essential_tests(int argc, char *argv[])
 {
     pj_test_suite suite;
     pj_test_runner runner;
@@ -102,15 +102,19 @@ static int essential_tests(int argc, char *argv[])
     pj_test_case test_cases[MAX_TESTS];
     int ntests = 0;
 
+    pj_bzero(&stat, sizeof(stat));
+
     /* Test the unit-testing framework first, outside unit-test! 
      * Only perform the test if user is not requesting specific test.
      */
-    if (argc==1) {
+    if (argc==1 && !test_app.ut_app.prm_list_test) {
         pj_dump_config();
 
         PJ_LOG(3,(THIS_FILE, "Testing the unit-test framework (basic)"));
-        if (unittest_basic_test())
-            return 1;
+        if (unittest_basic_test()) {
+            stat.nfailed = 1;
+            return stat;
+        }
     }
 
     /* Now that the basic unit-testing framework has been tested, 
@@ -173,7 +177,7 @@ static int essential_tests(int argc, char *argv[])
 
     if (test_app.ut_app.prm_list_test) {
         list_tests(&suite, "essential tests");
-        return 0;
+        return stat;
     }
 
     if (ntests > 0) {
@@ -190,7 +194,7 @@ static int essential_tests(int argc, char *argv[])
                                      test_app.ut_app.prm_logging_policy);
 
         if (stat.nfailed)
-            return 1;
+            return stat;
     }
 
     /* Now that the essential components have been tested, test the
@@ -198,15 +202,19 @@ static int essential_tests(int argc, char *argv[])
      */
     if (argc==1) {
         PJ_LOG(3,(THIS_FILE, "Testing the unit-test test scheduling"));
-        if (unittest_parallel_test())
-            return 1;
+        if (unittest_parallel_test()) {
+            stat.nfailed = 1;
+            return stat;
+        }
 
         PJ_LOG(3,(THIS_FILE, "Testing the unit-test framework (multithread)"));
-        if (unittest_test())
-            return 1;
+        if (unittest_test()) {
+            stat.nfailed = 1;
+            return stat;
+        }
     }
 
-    return 0;
+    return stat;
 }
 
 static int features_tests(int argc, char *argv[])
@@ -325,6 +333,7 @@ static int features_tests(int argc, char *argv[])
 int test_inner(int argc, char *argv[])
 {
     pj_caching_pool caching_pool;
+    pj_test_stat stat;
     const char *filename;
     int line;
     int rc = 0;
@@ -346,14 +355,22 @@ int test_inner(int argc, char *argv[])
         PJ_LOG(3,(THIS_FILE, "Using ci-mode"));
 
     if (!test_app.param_skip_essentials) {
-        rc = essential_tests(argc, argv);
+        stat = essential_tests(argc, argv);
+        if (stat.nfailed) {
+            rc = 1;
+            goto on_return;
+        }
+    }
+
+    if (argc-1 > 0 && stat.nruns==argc-1) {
+        /* cmdline specifies test(s) to run, and the number of runs
+         * matches that. That means all requested tests have been run.
+         */
+    } else {
+        rc = features_tests(argc, argv);
         if (rc)
             goto on_return;
     }
-
-    rc = features_tests(argc, argv);
-    if (rc)
-        goto on_return;
 
 #if INCLUDE_ECHO_SERVER
     //echo_server();

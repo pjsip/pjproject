@@ -83,7 +83,6 @@ static int test_inner(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, http_client_test, PJ_TEST_PARALLEL);
 #endif
 
-
     if (ut_run_tests(&test_app.ut_app, "pjlib-util tests", argc, argv)) {
         ut_app_destroy(&test_app.ut_app);
         return 1;

@@ -44,7 +44,7 @@ extern int http_client_test();
 extern void app_perror(const char *title, pj_status_t rc);
 extern pj_pool_factory *mem;
 
-#define UT_MAX_TESTS    16
+#define UT_MAX_TESTS    20
 #include "../../../pjlib/src/pjlib-test/test_util.h"
 
 struct test_app_t
