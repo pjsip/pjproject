@@ -97,6 +97,7 @@ static int test_success(pj_status_t status, const char *reason)
  */
 static int assertion_tests()
 {
+    pj_str_t s0, s1;
     int ret;
 
     /* Unary PJ_TEST_TRUE successful */
@@ -202,6 +203,27 @@ static int assertion_tests()
     if (!pj_ansi_strstr(log_buffer, "Pending operation")) return -351;
     if (!pj_ansi_strstr(log_buffer, THIS_FILE)) return -352;
     if (!pj_ansi_strstr(log_buffer, " (should be immediate)")) return -353;
+
+    /* String tests */
+    PJ_TEST_STREQ(pj_cstr(&s0, "123456"), pj_cstr(&s1, "123456"), NULL,
+                  return -400);
+    PJ_TEST_STRICMP(pj_cstr(&s0, "123456"), pj_cstr(&s1, "123456"), ==, 0,
+                    NULL, return -405);
+
+    ret = -1;
+    PJ_TEST_STREQ(pj_cstr(&s0, "123456"), pj_cstr(&s1, "135"), NULL,
+                  ret=0);
+    if (ret)
+        PJ_TEST_EQ(ret, 0, "PJ_TEST_STREQ was expected to fail", return -410);
+
+    PJ_TEST_STRNEQ(pj_cstr(&s0, "123456"), pj_cstr(&s1, "000000"), NULL,
+                   return -420);
+
+    ret = -1;
+    PJ_TEST_STRNEQ(pj_cstr(&s0, "123456"), pj_cstr(&s1, "123456"), NULL,
+                   ret=0);
+    if (ret)
+        PJ_TEST_EQ(ret, 0, "PJ_TEST_STRNEQ was expected to fail", return -410);
 
     return 0;
 }
@@ -461,6 +483,87 @@ int unittest_basic_test(void)
 on_return:
     pj_log_set_level(log_level);
     return ret;
+}
+
+struct parallel_param_t
+{
+    unsigned    flags;
+    int         sleep;
+    const char *id;
+};
+
+static char parallel_msg[128];
+static int parallel_func(void *arg)
+{
+    struct parallel_param_t *prm = (struct parallel_param_t*)arg;
+    pj_thread_sleep(prm->sleep);
+    pj_ansi_strxcat(parallel_msg, prm->id, sizeof(parallel_msg));
+    return 0;
+}
+
+/* 
+ * Test that PJ_TEST_PARALLEL flag (or lack of) works.
+ */
+int unittest_parallel_test()
+{
+    enum {
+        MAX_TESTS = 11,
+        LOG_SIZE = 128,
+        MS = PJ_TEST_THREAD_WAIT_MSEC,
+    };
+    pj_pool_t *pool;
+    pj_test_suite suite;
+    char buffers[MAX_TESTS][LOG_SIZE];
+    pj_test_case test_cases[MAX_TESTS];
+    pj_test_runner_param prm;
+    struct parallel_param_t parallel_params[MAX_TESTS] = {
+        {0,                MS+2*MS, "a"},
+        {0,                MS+1*MS, "b"},    /* b have to wait for a */
+        {PJ_TEST_PARALLEL, MS+7*MS, "c"},    /* c have to wait for b */
+        {PJ_TEST_PARALLEL, MS+1*MS, "d"},    /* d have to wait for b */
+        {PJ_TEST_PARALLEL, MS+4*MS, "e"},    /* e have to wait for b */
+        {0,                MS+2*MS, "f"},    /* f have to wait for c, d, e */
+        {0,                MS+0*MS, "g"},    /* g have to wait for f */
+        {0,                MS+5*MS, "h"},    /* h have to wait for g */
+        {PJ_TEST_PARALLEL, MS+4*MS, "i"},    /* i will finish last */
+        {PJ_TEST_PARALLEL, MS+2*MS, "j"},    /* i will finish second last */
+        {PJ_TEST_PARALLEL, MS+0*MS, "k"},    /* i will finish third last */
+    };
+    const char *correct_msg = "abdecfghkji";
+    pj_str_t stmp0, stmp1;
+    pj_test_runner *runner;
+    int i;
+
+    pj_test_suite_init(&suite);
+    PJ_TEST_NOT_NULL((pool=pj_pool_create( mem, NULL, 4000, 4000, NULL)),
+                      NULL, return -1);
+
+    for (i=0; i<MAX_TESTS; ++i) {
+        char test_name[32];
+        pj_ansi_snprintf(test_name, sizeof(test_name), "%s %s",
+                         parallel_params[i].flags & PJ_TEST_PARALLEL ? 
+                                "parallel_test" : "serial test",
+                         parallel_params[i].id);
+        pj_test_case_init(&test_cases[i],  test_name, 
+                          parallel_params[i].flags,
+                          &parallel_func, &parallel_params[i],
+                          buffers[i], LOG_SIZE, NULL);
+        pj_test_suite_add_case(&suite, &test_cases[i]);
+    }
+
+    pj_test_runner_param_default(&prm);
+    prm.nthreads = MAX_TESTS; /* more threads than we need, for testing */
+    PJ_TEST_SUCCESS(pj_test_create_text_runner(pool, &prm, &runner), 
+                    NULL, { pj_pool_release(pool); return -10; });
+
+    pj_test_run(runner, &suite);
+    pj_test_runner_destroy(runner);
+    pj_pool_release(pool);
+
+    PJ_TEST_STREQ(pj_cstr(&stmp0, parallel_msg), pj_cstr(&stmp1, correct_msg),
+                  "wrong test scheduling", return -112);
+
+    return 0;
 }
 
 int unittest_test(void)

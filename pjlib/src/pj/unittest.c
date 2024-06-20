@@ -158,7 +158,7 @@ PJ_DEF(void) pj_test_run(pj_test_runner *runner, pj_test_suite *suite)
          tc=tc->next) 
     {
         tc->result = PJ_EPENDING;
-        tc->runner = runner;
+        tc->runner = NULL; /* WIll be assigned runner when is run */
     }
 
     /* Call the run method to perform runner specific loop */
@@ -327,7 +327,7 @@ static void unittest_log_callback(int level, const char *data, int len)
     /* If the test case wants to display the original log as they are called,
      * then write it using the original logging writer now.
      */
-    if (tc->flags & PJ_TEST_ORIGINAL_LOG) {
+    if (tc->flags & PJ_TEST_LOG_NO_CACHE) {
         tc->runner->orig_log_writer(level, data, len);
         return;
     }
@@ -419,6 +419,7 @@ static void run_test_case(pj_test_runner *runner, pj_test_case *tc)
     /* Set the test case being worked on by this thread */
     set_current_test_case(tc);
 
+    tc->runner = runner;
     pj_get_timestamp(&tc->start_time);
     TC_TRACE(tc, "starting");
 
@@ -444,6 +445,28 @@ static void run_test_case(pj_test_runner *runner, pj_test_case *tc)
 
     /* Reset the test case being worked on by this thread */
     set_current_test_case(NULL);
+}
+
+static pj_test_case *get_first_running(pj_test_case *tests)
+{
+    pj_test_case *tc;
+    for (tc=tests->next; tc!=tests; tc=tc->next) {
+        if (tc->runner && tc->result==PJ_EPENDING)
+            return tc;
+    }
+    return NULL;
+}
+
+static pj_test_case *get_next_to_run(pj_test_case *tests)
+{
+    pj_test_case *tc;
+    for (tc=tests->next; tc!=tests; tc=tc->next) {
+        if (tc->runner==NULL) {
+            assert(tc->result==PJ_EPENDING);
+            return tc;
+        }
+    }
+    return NULL;
 }
 
 /******************************* Basic Runner *******************************/
@@ -505,7 +528,6 @@ PJ_DEF(void) pj_test_init_basic_runner(pj_test_runner *runner,
 typedef struct text_runner_t
 {
     pj_test_runner              base;
-    pj_test_case               *cur_case;
     pj_mutex_t                 *mutex;
     pj_thread_t               **threads;
 } text_runner_t;
@@ -529,60 +551,61 @@ typedef struct text_runner_t
 static pj_status_t text_runner_get_next_test_case(text_runner_t *runner,
                                                   pj_test_case **p_test_case)
 {
+    pj_test_suite *suite;
+    pj_test_case *cur, *next;
     pj_status_t status;
 
     *p_test_case = NULL;
     pj_mutex_lock(runner->mutex);
 
+    suite = runner->base.suite;
+
     if (runner->base.stopping) {
-        status = PJ_ENOTFOUND;
-    } else if (runner->cur_case == NULL) {
-        /* Only on the very first invocation */
-        if (pj_list_empty(&runner->base.suite->tests)) {
+        pj_mutex_unlock(runner->mutex);
+        return PJ_ENOTFOUND;
+    }
+
+    cur = get_first_running(&suite->tests);
+    next = get_next_to_run(&suite->tests);
+
+    if (cur == NULL) {
+        if (next==NULL) {
             status = PJ_ENOTFOUND;
-            goto on_return;
-        }
-        runner->cur_case = *p_test_case = runner->base.suite->tests.next;
-        status = PJ_SUCCESS;
-    } else if (runner->cur_case == &runner->base.suite->tests) {
-        /* All done */
-        status = PJ_ENOTFOUND;
-    } else {
-        if (runner->cur_case->result == PJ_EPENDING) {
-            /* Test is still running. */
-            if (runner->cur_case->flags & PJ_TEST_PARALLEL) {
-                /* Allow other test to run */
-                runner->cur_case = runner->cur_case->next;
-                if (runner->cur_case == &runner->base.suite->tests) {
-                    status = PJ_ENOTFOUND;
-                } else {
-                    *p_test_case = runner->cur_case;
-                    status = PJ_SUCCESS;
-                }
-            } else {
-                if (runner->cur_case->next == &runner->base.suite->tests) {
-                    /* The current case is the last one. The calling thread
-                     * can quit now.
-                     */
-                    status = PJ_ENOTFOUND;
-                } else {
-                    /* Current test case does not allow parallel run */
-                    status = PJ_EPENDING;
-                }
-            }
         } else {
-            /* Current test is done, get next text */
-            runner->cur_case = runner->cur_case->next;
-            if (runner->cur_case == &runner->base.suite->tests) {
+            *p_test_case = next;
+             /* Mark as running so it won't get picked up by other threads
+              * when we exit this function
+              */
+            next->runner = &runner->base;
+            status = PJ_SUCCESS;
+        }
+    } else {
+        /* Test is still running. */
+        if ((cur->flags & PJ_TEST_PARALLEL) && next != NULL &&
+            (next->flags & PJ_TEST_PARALLEL)) 
+        {
+            /* Allowed other test to run because test also allows
+             * parallel test
+             */
+            *p_test_case = next;
+             /* Mark as running so it won't get picked up by other threads
+              * when we exit this function
+              */
+            next->runner = &runner->base;
+            status = PJ_SUCCESS;
+        } else {
+            if (next==NULL) {
+                /* The current case is the last one. The calling thread
+                 * can quit now.
+                 */
                 status = PJ_ENOTFOUND;
             } else {
-                *p_test_case = runner->cur_case;
-                status = PJ_SUCCESS;
+                /* Current test case or next test do not allow parallel run */
+                status = PJ_EPENDING;
             }
         }
     }
 
-on_return:
     pj_mutex_unlock(runner->mutex);
     return status;
 }
@@ -624,7 +647,7 @@ static int text_runner_thread_proc(void *arg)
             RUNNER_TRACE(runner, tmp);
             #endif
 
-            pj_thread_sleep(1000);
+            pj_thread_sleep(PJ_TEST_THREAD_WAIT_MSEC);
         } else {
             break;
         }

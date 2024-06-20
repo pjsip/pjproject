@@ -91,6 +91,39 @@ PJ_BEGIN_DECL
             }
 
 /**
+ * Generic check for (PJ) string comparison operation. If the check fails,
+ * informative error  message will be displayed, and the code in err_action
+ * will be executed.
+ * 
+ * @param str_op        The string operation (e.g. pj_strcmp)
+ * @param ps0           Pointer to first string
+ * @param ps1           Pointer to second string
+ * @param res_op        Operator to compare result (e.g. ==)
+ * @param res           Expected return value of str_op(&s0, &s1)
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
+ */
+#define PJ_TEST_STR_OP(str_op, ps0, ps1, res_op, res, err_reason, err_action) \
+            { \
+                int result__ = str_op(ps0, ps1); \
+                if (!(result__ res_op res)) { \
+                    const char *fn_name = #str_op; \
+                    const char *tmp_reason_ = err_reason; \
+                    const char *sep0_ = (tmp_reason_ ? " (": ""); \
+                    const char *sep1_ = (tmp_reason_ ? ")": ""); \
+                    if (!tmp_reason_) tmp_reason_=""; \
+                    PJ_LOG(1,(THIS_FILE, "Test %s(\"%.*s\", \"%.*s\")%s%d" \
+                              " fails (%s result=%d) in %s:%d%s%s%s", \
+                              fn_name, (int)ps0->slen, ps0->ptr, \
+                              (int)ps1->slen, ps1->ptr, #res_op, res, \
+                              fn_name, result__, \
+                              THIS_FILE, __LINE__, \
+                              sep0_, tmp_reason_, sep1_)); \
+                    err_action; \
+                } \
+            }
+
+/**
  * Check that an expression is PJ_SUCCESS. If the check fails, error message
  * explaining the error code will be displayed, and the code in err_action
  * will be executed.
@@ -209,6 +242,65 @@ PJ_BEGIN_DECL
 
 
 /**
+ * Check string comparison result.
+ * If the check fails, informative error message will be displayed and
+ * the code in err_action will be executed.
+ * 
+ * @param ps0           Pointer to first string
+ * @param ps1           Pointer to second string
+ * @param res_op        Operator to compare result (e.g. ==, <, >)
+ * @param exp_result    Expected result (e.g. zero for equal string)
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
+ */
+#define PJ_TEST_STRCMP(ps0, ps1, res_op, exp_result, err_reason, err_action) \
+            PJ_TEST_STR_OP(pj_strcmp, ps0, ps1, res_op, exp_result, \
+                           err_reason, err_action)
+
+/**
+ * Check case-insensitive string comparison result.
+ * If the check fails, informative error message will be displayed and
+ * the code in err_action will be executed.
+ * 
+ * @param ps0           Pointer to first string
+ * @param ps1           Pointer to second string
+ * @param res_op        Operator to compare result (e.g. ==, <, >)
+ * @param exp_result    Expected result (e.g. zero for equal)
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
+ */
+#define PJ_TEST_STRICMP(ps0, ps1, res_op, exp_result, err_reason, err_action) \
+            PJ_TEST_STR_OP(pj_stricmp, ps0, ps1, res_op, exp_result, \
+                           err_reason, err_action)
+
+/**
+ * Check that two strings are equal.
+ * If the check fails, informative error message will be displayed and
+ * the code in err_action will be executed.
+ * 
+ * @param ps0           Pointer to first string
+ * @param ps1           Pointer to second string
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
+ */
+#define PJ_TEST_STREQ(ps0, ps1, err_reason, err_action)  \
+            PJ_TEST_STRCMP(ps0, ps1, ==, 0, err_reason, err_action)
+
+/**
+ * Check that two strings are not equal.
+ * If the check fails, informative error message will be displayed and
+ * the code in err_action will be executed.
+ * 
+ * @param ps0           Pointer to first string
+ * @param ps1           Pointer to second string
+ * @param err_reason    NULL or extra text to display when the check fails
+ * @param err_action    Action to perform when the check fails
+ */
+#define PJ_TEST_STRNEQ(ps0, ps1, err_reason, err_action)  \
+            PJ_TEST_STRCMP(ps0, ps1, !=, 0, err_reason, err_action)
+
+
+/**
  * Bitwise constants that can be used in test case flags (see
  * pj_test_case_init()).
  */
@@ -216,9 +308,9 @@ typedef enum pj_test_case_flag
 {
     /** 
      * Allow next test case to run in parallel. If this flag is not specified,
-     * next test case will have to wait until current test finishes before
-     * it can run. Note this only works for test runners that support
-     * worker threads.
+     * the test case will run exclusively without other test cases running.
+     * Note this only works for test runners that support worker threads.
+     * Basic runner will always run serially.
      */
     PJ_TEST_PARALLEL = 1,
 
@@ -233,7 +325,7 @@ typedef enum pj_test_case_flag
      * Write the original log at the time it is called instead of pooling
      * the logs to be printed after all tests finish.
      */
-    PJ_TEST_ORIGINAL_LOG = 4,
+    PJ_TEST_LOG_NO_CACHE = 4,
 
 } pj_test_case_flag;
 
@@ -595,6 +687,14 @@ PJ_DECL(void) pj_test_display_log_messages(const pj_test_suite *suite,
  */
 PJ_DECL(void) pj_test_runner_destroy(pj_test_runner *runner);
 
+
+/**
+ * Macro to control how long worker thread should sleep waiting for next
+ * ready test.
+ */
+#ifndef PJ_TEST_THREAD_WAIT_MSEC
+#  define PJ_TEST_THREAD_WAIT_MSEC  100
+#endif
 
 PJ_END_DECL
 
