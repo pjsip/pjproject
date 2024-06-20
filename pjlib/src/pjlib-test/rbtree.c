@@ -102,7 +102,7 @@ static int test(void)
                 if (compare_node((node_key*)prev->key,(node_key*)it->key)>=0) {
                     PJ_LOG(3, (THIS_FILE, "Error: %s >= %s", 
                                (char*)prev->user_data, (char*)it->user_data));
-                    rc=-40;
+                    rc=-45;
                     goto on_error;
                 }
             }

@@ -114,6 +114,7 @@ extern int activesock_test(void);
 extern int file_test(void);
 extern int ssl_sock_test(void);
 extern int unittest_basic_test(void);
+extern int unittest_parallel_test(void);
 extern int unittest_test(void);
 
 extern int echo_server(void);
@@ -123,20 +124,21 @@ extern int echo_srv_sync(void);
 extern int udp_echo_srv_ioqueue(void);
 extern int echo_srv_common_loop(pj_atomic_t *bytes_counter);
 
+#define UT_MAX_TESTS    24
+#include "test_util.h"
+
 /* Global vars */
 extern pj_pool_factory *mem;
 struct test_app_t
 {
+    ut_app_t    ut_app;
+    
     int         param_echo_sock_type;
     const char *param_echo_server;
     int         param_echo_port;
     int         param_log_decor;
     pj_bool_t   param_ci_mode;
-    pj_test_select_tests param_unittest_logging_policy;
-    int         param_unittest_nthreads;
-    int         param_list_test;
     pj_bool_t   param_skip_essentials;
-    pj_bool_t   param_stop_on_error;
 };
 extern struct test_app_t test_app;
 

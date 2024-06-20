@@ -37,14 +37,12 @@
 pj_pool_factory *mem;
 
 struct test_app_t test_app = {
-    0,
-    ECHO_SERVER_ADDRESS,
-    ECHO_SERVER_START_PORT,
-    PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-        PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
-    PJ_FALSE,
-    PJ_TEST_FAILED_TESTS,
-    -1,
+    .param_echo_sock_type = 0,
+    .param_echo_server    = ECHO_SERVER_ADDRESS,
+    .param_echo_port      = ECHO_SERVER_START_PORT,
+    .param_log_decor      = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
+                            PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
+    .param_ci_mode        = PJ_FALSE,
 };
 
 int null_func()
@@ -104,6 +102,17 @@ static int essential_tests(int argc, char *argv[])
     pj_test_case test_cases[MAX_TESTS];
     int ntests = 0;
 
+    /* Test the unit-testing framework first, outside unit-test! 
+     * Only perform the test if user is not requesting specific test.
+     */
+    if (argc==1) {
+        pj_dump_config();
+
+        PJ_LOG(3,(THIS_FILE, "Testing the unit-test framework (basic)"));
+        if (unittest_basic_test())
+            return 1;
+    }
+
     /* Now that the basic unit-testing framework has been tested, 
      * perform essential tests using basic unit-testing framework.
      */
@@ -162,26 +171,15 @@ static int essential_tests(int argc, char *argv[])
 
 #undef ADD_TEST
 
-    if (test_app.param_list_test) {
+    if (test_app.ut_app.prm_list_test) {
         list_tests(&suite, "essential tests");
         return 0;
-    }
-
-    /* Test the unit-testing framework first, outside unit-test! 
-     * Only perform the test if user is not requesting specific test.
-     */
-    if (argc==1) {
-        pj_dump_config();
-
-        PJ_LOG(3,(THIS_FILE, "Testing the unit-test framework (basic)"));
-        if (unittest_basic_test())
-            return 1;
     }
 
     if (ntests > 0) {
         pj_test_runner_param runner_prm;
         pj_test_runner_param_default(&runner_prm);
-        runner_prm.stop_on_error = test_app.param_stop_on_error;
+        runner_prm.stop_on_error = test_app.ut_app.prm_stop_on_error;
 
         PJ_LOG(3,(THIS_FILE, "Performing %d essential tests", ntests));
         pj_test_init_basic_runner(&runner, &runner_prm);
@@ -189,7 +187,7 @@ static int essential_tests(int argc, char *argv[])
         pj_test_get_stat(&suite, &stat);
         pj_test_display_stat(&stat, "essential tests", THIS_FILE);
         pj_test_display_log_messages(&suite, 
-                                     test_app.param_unittest_logging_policy);
+                                     test_app.ut_app.prm_logging_policy);
 
         if (stat.nfailed)
             return 1;
@@ -199,6 +197,10 @@ static int essential_tests(int argc, char *argv[])
      * multithreaded unit-testing framework.
      */
     if (argc==1) {
+        PJ_LOG(3,(THIS_FILE, "Testing the unit-test test scheduling"));
+        if (unittest_parallel_test())
+            return 1;
+
         PJ_LOG(3,(THIS_FILE, "Testing the unit-test framework (multithread)"));
         if (unittest_test())
             return 1;
@@ -209,95 +211,63 @@ static int essential_tests(int argc, char *argv[])
 
 static int features_tests(int argc, char *argv[])
 {
-    pj_test_suite suite;
-    pj_test_runner *runner;
-    pj_test_runner_param prm;
-    pj_test_stat stat;
-    pj_pool_t *pool;
-    enum { 
-        MAX_TESTS = 24,
-        LOG_BUF_SIZE = 1000,
-    };
-    pj_test_case test_cases[MAX_TESTS];
-    int ntests = 0;
-    pj_status_t status;
-
-    pool = pj_pool_create(mem, "test.c", 4000, 4000, NULL);
-    if (!pool) {
-        PJ_LOG(1,(THIS_FILE, "Pool creation error"));
+    if (ut_app_init1(&test_app.ut_app, mem) != PJ_SUCCESS)
         return 1;
-    }
-    pj_test_suite_init(&suite);
-
-#define ADD_TEST(test_func, flags) \
-    if (ntests < MAX_TESTS) { \
-        const char *test_name = #test_func; \
-        if (test_included(test_name, argc, argv)) { \
-            char *log_buf = (char*)pj_pool_alloc(pool, LOG_BUF_SIZE); \
-            pj_test_case *tc = init_test_case( &test_func, test_name, flags, \
-                                               &test_cases[ntests], \
-                                               log_buf, LOG_BUF_SIZE); \
-            pj_test_suite_add_case( &suite, tc); \
-            ++ntests; \
-        } \
-    } else { \
-        PJ_LOG(1,(THIS_FILE, "Too many tests for adding %s", #test_func)); \
-    }
 
 #if INCLUDE_RAND_TEST
-    ADD_TEST( rand_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, rand_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_POOL_PERF_TEST
-    ADD_TEST( pool_perf_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, pool_perf_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_RBTREE_TEST
-    ADD_TEST( rbtree_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, rbtree_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_HASH_TEST
-    ADD_TEST( hash_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, hash_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_TIMESTAMP_TEST
-    ADD_TEST( timestamp_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, timestamp_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_ATOMIC_TEST
-    ADD_TEST( atomic_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, atomic_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_TIMER_TEST
-    ADD_TEST( timer_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, timer_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_SLEEP_TEST
-    ADD_TEST( sleep_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, sleep_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_FILE_TEST
-    ADD_TEST( file_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, file_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_SOCK_TEST
-    ADD_TEST( sock_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, sock_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_SOCK_PERF_TEST
-    ADD_TEST( sock_perf_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, sock_perf_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_SELECT_TEST
-    ADD_TEST( select_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, select_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_UDP_IOQUEUE_TEST
-    ADD_TEST( udp_ioqueue_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, udp_ioqueue_test, PJ_TEST_PARALLEL);
 #endif
 
 #if PJ_HAS_TCP && INCLUDE_TCP_IOQUEUE_TEST
-    ADD_TEST( tcp_ioqueue_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, tcp_ioqueue_test, PJ_TEST_PARALLEL);
 #endif
 
     /* Consistently encountered retcode 520 on Windows virtual machine
@@ -317,62 +287,39 @@ static int features_tests(int argc, char *argv[])
     */
 #if INCLUDE_IOQUEUE_STRESS_TEST
 #  if defined(PJ_WIN32) && PJ_WIN32!=0
-    ADD_TEST(ioqueue_stress_test, 0);
+    UT_ADD_TEST(&test_app.ut_app, ioqueue_stress_test, 0);
 #  else
-    ADD_TEST(ioqueue_stress_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, ioqueue_stress_test, PJ_TEST_PARALLEL);
 #  endif
 #endif
 
 #if INCLUDE_IOQUEUE_UNREG_TEST
-    ADD_TEST(udp_ioqueue_unreg_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, udp_ioqueue_unreg_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_IOQUEUE_PERF_TEST
-    ADD_TEST( ioqueue_perf_test0, PJ_TEST_PARALLEL);
-    ADD_TEST( ioqueue_perf_test1, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, ioqueue_perf_test0, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, ioqueue_perf_test1, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_ACTIVESOCK_TEST
-    ADD_TEST( activesock_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, activesock_test, PJ_TEST_PARALLEL);
 #endif
 
 #if INCLUDE_SSLSOCK_TEST
-    ADD_TEST( ssl_sock_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, ssl_sock_test, PJ_TEST_PARALLEL);
 #endif
 
 
 #undef ADD_TEST
 
-    if (ntests==0)
-        return 0;
-
-    if (test_app.param_list_test) {
-        list_tests(&suite, "features tests");
-        return 0;
-    }
-
-    pj_test_runner_param_default(&prm);
-    prm.stop_on_error = test_app.param_stop_on_error;
-    if (test_app.param_unittest_nthreads >= 0)
-        prm.nthreads = test_app.param_unittest_nthreads;
-    status = pj_test_create_text_runner(pool, &prm, &runner);
-    if (status != PJ_SUCCESS) {
-        app_perror("Error creating text runner", status);
+    if (ut_run_tests(&test_app.ut_app, "features tests", argc, argv)) {
+        ut_app_destroy(&test_app.ut_app);
         return 1;
     }
 
-    PJ_LOG(3,(THIS_FILE,
-              "Performing %d features tests with %d worker thread%s", 
-              ntests, prm.nthreads, prm.nthreads>1?"s":""));
-    pj_test_run(runner, &suite);
-    pj_test_runner_destroy(runner);
-    pj_test_get_stat(&suite, &stat);
-    pj_test_display_stat(&stat, "features tests", THIS_FILE);
-    pj_test_display_log_messages(&suite,
-                                 test_app.param_unittest_logging_policy);
-    pj_pool_release(pool);
-    
-    return stat.nfailed ? 1 : 0;
+    ut_app_destroy(&test_app.ut_app);
+    return 0;
 }
 
 int test_inner(int argc, char *argv[])

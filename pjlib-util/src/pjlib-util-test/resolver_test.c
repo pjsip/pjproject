@@ -1897,34 +1897,42 @@ int resolver_test(void)
 {
     int rc;
     
+    PJ_LOG(3,(THIS_FILE, "init"));
     rc = init(PJ_FALSE);
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "a_parser_test"));
     rc = a_parser_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "addr_parser_test"));
     rc = addr_parser_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "simple_test"));
     rc = simple_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "dns_test"));
     rc = dns_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "srv_resolver_test"));
     rc = srv_resolver_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "srv_resolver_fallback_test"));
     rc = srv_resolver_fallback_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "srv_resolver_many_test"));
     rc = srv_resolver_many_test();
     if (rc != 0)
         goto on_error;

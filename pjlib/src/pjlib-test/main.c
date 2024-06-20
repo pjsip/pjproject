@@ -84,32 +84,30 @@ static void usage()
     puts("");
     puts("where OPTIONS:");
     puts("");
-    puts("  -h, --help   Show this help screen");
-    puts("  --ci-mode    Running in slow CI  mode");
-    puts("  -l 0,1,2     0: Don't show logging after tests");
-    puts("               1: Show logs of failed tests (default)");
-    puts("               2: Show logs of all tests");
-    puts("  -w N         Set N worker threads (0: disable worker threads)");
-    puts("  -L, --list   List the tests and exit");
-    puts("  --stop-err   Stop testing on error");
-    puts("  --skip-e     Skip essential tests");
-    puts("  -i           Ask ENTER before quitting");
-    puts("  -n           Do not trap signals");
-    puts("  -p PORT      Use port PORT for echo port");
-    puts("  -s SERVER    Use SERVER as ech oserver");
-    puts("  -t ucp,tcp   Set echo socket type to UDP or TCP");
+    puts("  -h, --help       Show this help screen");
+    
+    ut_usage();
+
+    puts("  --skip-e         Skip essential tests");
+    puts("  --ci-mode        Running in slow CI  mode");
+    puts("  -i               Ask ENTER before quitting");
+    puts("  -n               Do not trap signals");
+    puts("  -p PORT          Use port PORT for echo port");
+    puts("  -s SERVER        Use SERVER as ech oserver");
+    puts("  -t ucp,tcp       Set echo socket type to UDP or TCP");
 }
 
 
 int main(int argc, char *argv[])
 {
-    int i, rc;
+    int rc;
     int interractive = 0;
     int no_trap = 0;
     pj_status_t status;
     char *s;
 
     boost();
+    ut_app_init0(&test_app.ut_app);
 
     /* 
      * Parse arguments
@@ -153,46 +151,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    test_app.param_list_test = pj_argparse_get("-L", &argc, argv) ||
-                               pj_argparse_get("--list", &argc, argv);
-    test_app.param_stop_on_error = pj_argparse_get("--stop-err", &argc, argv);
-    test_app.param_skip_essentials = pj_argparse_get("--skip-e", &argc, argv);
-    test_app.param_ci_mode = pj_argparse_get("--ci-mode", &argc, argv);
-
-    status = pj_argparse_get_int("-l", &argc, argv, &i);
-    if (status==PJ_SUCCESS) {
-        if (i==0)
-            test_app.param_unittest_logging_policy = PJ_TEST_NO_TEST;
-        else if (i==1)
-            test_app.param_unittest_logging_policy = PJ_TEST_FAILED_TESTS;
-        else if (i==2)
-            test_app.param_unittest_logging_policy = PJ_TEST_ALL_TESTS;
-        else {
-            printf("Error: invalid value %d for -l option\n", i);
-            usage();
-            return 1;
-        }
-    } else if (status!=PJ_ENOTFOUND) {
-        puts("Error: invalid/missing value for -l option");
+    if (ut_parse_args(&test_app.ut_app, &argc, argv)) {
         usage();
         return 1;
     }
+    test_app.param_skip_essentials = pj_argparse_get("--skip-e", &argc, argv);
+    test_app.param_ci_mode = pj_argparse_get("--ci-mode", &argc, argv);
 
-    status = pj_argparse_get_int("-w", &argc, argv, 
-                                 (int*)&test_app.param_unittest_nthreads);
-    if (status==PJ_SUCCESS) {
-        if (test_app.param_unittest_nthreads > 100 || 
-            test_app.param_unittest_nthreads < 0) 
-        {
-            printf("Error: value %d is not valid for -w option\n", 
-                   test_app.param_unittest_nthreads);
-            usage();
-            return 1;
-        }
-    } else if (status!=PJ_ENOTFOUND) {
-        puts("Error: invalid/missing value for -w option");
-        usage();
-    }
 
     if (!no_trap) {
         init_signals();

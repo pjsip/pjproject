@@ -61,6 +61,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPTSTR lpCmdLine, int nCmdShow)
 {
     MSG msg;
+    char *argv[] = {"pjlib-test", NULL};
     
     PJ_UNUSED_ARG(lpCmdLine);
     PJ_UNUSED_ARG(hPrevInstance);
@@ -73,7 +74,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     test_app.param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR;
 
     // Run the test!
-    test_main();
+    test_main(1, argv);
 
     PJ_LOG(3,(THIS_FILE,""));
     PJ_LOG(3,(THIS_FILE,"Press ESC to quit"));
