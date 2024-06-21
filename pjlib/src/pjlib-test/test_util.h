@@ -46,7 +46,7 @@ static void ut_app_init0(ut_app_t *ut_app)
     pj_bzero(ut_app, sizeof(*ut_app));
     ut_app->prm_logging_policy = PJ_TEST_FAILED_TESTS;
     ut_app->prm_nthreads = -1;
-    ut_app->flags = PJ_TEST_FUNC_NO_ARG;
+    ut_app->flags = 0;
 }
 
 /* Call this in test.c before adding test cases */
@@ -65,8 +65,18 @@ static void ut_app_destroy(ut_app_t *ut_app)
     ut_app->pool = NULL;
 }
 
+typedef int (*ut_func)(void*);
+
+/* This is for adding test func that has no arg */
 #define UT_ADD_TEST(ut_app, test_func, flags) \
-            ut_add_test(ut_app, test_func, #test_func, flags, argc, argv)
+            ut_add_test(ut_app, (ut_func)test_func, 0, \
+                        #test_func, flags | PJ_TEST_FUNC_NO_ARG, argc, argv)
+
+
+/* This is for adding test func that HAS arg */
+#define UT_ADD_TEST1(ut_app, test_func, arg, flags) \
+            ut_add_test(ut_app, test_func, arg, #test_func, flags, argc, argv)
+
 
 /* Check if a test is specified/requested in cmdline */
 static pj_bool_t ut_test_included(const char *name, int argc, char *argv[])
@@ -84,9 +94,9 @@ static pj_bool_t ut_test_included(const char *name, int argc, char *argv[])
 }
 
 /* Add test case */
-static pj_status_t ut_add_test(ut_app_t *ut_app, int (*test_func)(void),
-                               const char *test_name, unsigned flags,
-                               int argc, char *argv[])
+static pj_status_t ut_add_test(ut_app_t *ut_app, int (*test_func)(void*),
+                               void *arg, const char *test_name,
+                               unsigned flags, int argc, char *argv[])
 {
     char *log_buf;
     pj_test_case *tc;
@@ -103,7 +113,7 @@ static pj_status_t ut_add_test(ut_app_t *ut_app, int (*test_func)(void),
     log_buf = (char*)pj_pool_alloc(ut_app->pool, UT_LOG_BUF_SIZE);
     tc = &ut_app->test_cases[ut_app->ntests];
     flags |= ut_app->flags;
-    pj_test_case_init(tc, test_name, flags, (int (*)(void*))test_func, NULL,
+    pj_test_case_init(tc, test_name, flags, (int (*)(void*))test_func, arg,
                       log_buf, UT_LOG_BUF_SIZE, NULL);
 
     pj_test_suite_add_case( &ut_app->suite, tc);

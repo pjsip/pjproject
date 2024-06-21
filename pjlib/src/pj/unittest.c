@@ -212,12 +212,36 @@ PJ_DEF(void) pj_test_display_stat(const pj_test_stat *stat,
               (int)stat->duration.msec));
 }
 
+static const char *get_test_case_info(const pj_test_case *tc,
+                                      char *buf, unsigned size)
+{
+    char arg_info[64];
+    if (tc->flags & PJ_TEST_FUNC_NO_ARG) {
+        arg_info[0] = '\0';
+    } else {
+        char arg_val[40];
+        /* treat argument as integer */
+        pj_ansi_snprintf(arg_val, sizeof(arg_val), "%ld", (long)tc->arg);
+
+        /* if arg value is too long (e.g. it's a pointer!), then just show
+         * a portion of it */
+        if (pj_ansi_strlen(arg_val) > 6) {
+            pj_ansi_strxcat(arg_val+6, "...", sizeof(arg_val));
+        }
+
+        pj_ansi_snprintf(arg_info, sizeof(arg_info), " (arg: %s)", arg_val);
+    }
+    pj_ansi_snprintf(buf, size, "%s%s", tc->obj_name, arg_info);
+    return buf;
+}
+
 /* Dump previously saved log messages */
 PJ_DEF(void) pj_test_display_log_messages(const pj_test_suite *suite,
                                           unsigned flags)
 {
     const pj_test_case *tc = suite->tests.next;
     pj_log_func *log_writer = pj_log_get_log_func();
+    char tcname[64];
     const char *title;
 
     if ((flags & PJ_TEST_ALL_TESTS)==PJ_TEST_ALL_TESTS)
@@ -252,7 +276,8 @@ PJ_DEF(void) pj_test_display_log_messages(const pj_test_suite *suite,
             }
 
             PJ_LOG(3,(THIS_FILE, "Logs for %s [rc:%d]:", 
-                      tc->obj_name, tc->result));
+                      get_test_case_info(tc, tcname, sizeof(tcname)),
+                      tc->result));
 
             do {
                 log_writer(log_item->level, log_item->msg, log_item->len);
@@ -385,6 +410,7 @@ static void unittest_log_callback(int level, const char *data, int len)
 static int get_completion_line( const pj_test_case *tc, const char *end_line,
                                 char *log_buf, unsigned buf_size)
 {
+    char tcname[64];
     char res_buf[64];
     pj_time_val elapsed;
     int log_len;
@@ -402,7 +428,8 @@ static int get_completion_line( const pj_test_case *tc, const char *end_line,
     }
 
     log_len = pj_ansi_snprintf(log_buf, buf_size, "%-32s %s%s\n",
-                               tc->obj_name, res_buf, end_line);
+                               get_test_case_info(tc, tcname, sizeof(tcname)),
+                               res_buf, end_line);
 
     if (log_len < 1 || log_len >= sizeof(log_buf))
         log_len = (int)pj_ansi_strlen(log_buf);

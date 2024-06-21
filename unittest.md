@@ -163,8 +163,21 @@ In PJLIB-UTIL-TEST, there is almost 2x speed up from 5m52.500s to 3m3.615s with 
 
 #### Speed result: PJNATH-TEST
 
-Original: 45m42.275s
-10 threads: 15m10.862s
+The original version took 45m42.275s to complete, excluding `ice_conc_test()` which apparently is not called (this test alone takes 123s to complete). Parallelizing the test requires large modifications as follows:
+
+- remove global `mem` pool factory altogether, since the tests validate the memory leak in the pool factory, therefore having a single pool factory shared by multiple threads will not work
+- remove static constants (such as server port number) in `server.c` so that server can be instantiated multiple times simultaneously.
+- split tests with multiple configurations (such as `ice_test`, `turn_sock_test`, `concur_test`) into individual test for each configuration, making them parallelable.
+
+As the result, there are 70 test items in pjnath.test. The test durations are as follows:
+
+- 3 worker threads: 11m51.526s
+- 4 worker threads: 9m44.503s
+- 10 worker threads: 4m31.195s
+- 40 worker threads: 2m9.205s
+
+Hence with 10 worker threads, we can save 40 minutes of test time!
+
 
 ### 3. Other developments
 

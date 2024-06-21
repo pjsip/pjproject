@@ -21,6 +21,7 @@
 
 #define SRV_DOMAIN      "pjsip.lab.domain"
 #define KA_INTERVAL     50
+#define THIS_FILE       "turn_sock_test.c"
 
 struct test_result
 {
@@ -153,7 +154,7 @@ static int create_test_session(pj_stun_config  *stun_cfg,
 
     } else {
         pj_str_t dns_srv = use_ipv6?pj_str("::1") : pj_str("127.0.0.1");
-        pj_uint16_t dns_srv_port = (pj_uint16_t) DNS_SERVER_PORT;
+        pj_uint16_t dns_srv_port = sess->test_srv->dns_server_port;
         status = pj_dns_resolver_set_ns(sess->resolver, 1, &dns_srv, &dns_srv_port);
 
         if (status != PJ_SUCCESS) {
@@ -178,13 +179,15 @@ static int create_test_session(pj_stun_config  *stun_cfg,
     if (cfg->client.enable_dns_srv) {
         /* Use DNS SRV to resolve server, may fallback to DNS A */
         pj_str_t domain = pj_str(SRV_DOMAIN);
-        status = pj_turn_sock_alloc(sess->turn_sock, &domain, TURN_SERVER_PORT,
+        status = pj_turn_sock_alloc(sess->turn_sock, &domain,
+                                    sess->test_srv->turn_server_port,
                                     sess->resolver, &cred, &alloc_param);
 
     } else {
         /* Explicitly specify server address */
         pj_str_t host = use_ipv6?pj_str("::1") : pj_str("127.0.0.1");
-        status = pj_turn_sock_alloc(sess->turn_sock, &host, TURN_SERVER_PORT,
+        status = pj_turn_sock_alloc(sess->turn_sock, &host,
+                                    sess->test_srv->turn_server_port,
                                     NULL, &cred, &alloc_param);
 
     }
@@ -531,41 +534,45 @@ static int destroy_test(pj_stun_config  *stun_cfg,
 
 /////////////////////////////////////////////////////////////////////
 
-int turn_sock_test(void)
+int turn_sock_test(void *p)
 {
+    unsigned n = (int)(long)p;
     app_sess_t app_sess;
-    int n, i, rc = 0;
+    pj_turn_tp_type tp_type = PJ_TURN_TP_UDP;
+    int i, rc = 0;
+
+    if ((n == 2) && !USE_TLS)
+        return 0;
+
+    switch (n) {
+    case 0:
+        tp_type = PJ_TURN_TP_UDP;
+        break;
+    case 1:
+        tp_type = PJ_TURN_TP_TCP;
+        break;
+    case 2:
+        tp_type = PJ_TURN_TP_TLS;
+        break;
+    default:
+        PJ_TEST_LTE(n, 2, NULL, return -1);
+    }
 
     rc = create_stun_config(&app_sess);
     if (rc != PJ_SUCCESS) {
         return -2;
     }
 
-    for (n = 0; n <= 2; ++n) {
-        pj_turn_tp_type tp_type = PJ_TURN_TP_UDP;
+    rc = state_progression_test(&app_sess.stun_cfg, USE_IPV6, tp_type);
+    if (rc != 0) 
+        goto on_return;
 
-        if ((n == 2) && !USE_TLS)
-            break;
-
-        switch (n) {
-        case 1:
-            tp_type = PJ_TURN_TP_TCP;
-            break;
-        case 2:
-            tp_type = PJ_TURN_TP_TLS;
-        }
-
-        rc = state_progression_test(&app_sess.stun_cfg, USE_IPV6, tp_type);
-        if (rc != 0) 
-            goto on_return;
-
-        for (i=0; i<=1; ++i) {
-            int j;
-            for (j=0; j<=1; ++j) {
-                rc = destroy_test(&app_sess.stun_cfg, i, j, USE_IPV6, tp_type);
-                if (rc != 0)
-                    goto on_return;
-            }
+    for (i=0; i<=1; ++i) {
+        int j;
+        for (j=0; j<=1; ++j) {
+            rc = destroy_test(&app_sess.stun_cfg, i, j, USE_IPV6, tp_type);
+            if (rc != 0)
+                goto on_return;
         }
     }
 

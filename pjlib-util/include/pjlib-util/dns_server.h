@@ -66,6 +66,17 @@ PJ_DECL(pj_status_t) pj_dns_server_create(pj_pool_factory *pf,
                                           pj_dns_server **p_srv);
 
 /**
+ * Get the DNS server address
+ *
+ * @param srv	    The DNS server instance.
+ * @param addr      It will be filled with the server's bound address.
+ *
+ * @return	    PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_dns_server_get_addr(pj_dns_server *srv,
+                                            pj_sockaddr *bound_addr);
+
+/**
  * Destroy DNS server instance.
  *
  * @param srv       The DNS server instance.

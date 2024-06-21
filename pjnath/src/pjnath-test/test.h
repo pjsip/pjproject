@@ -47,11 +47,26 @@
 #   define USE_TLS      0
 #endif
 
+#define ICE_TEST_ARRAY_COUNT    6
+
+/* Test id to be specified in ice_test() */
+enum ice_test_id_t
+{
+    ICE_TEST_BASIC_HOST,
+    ICE_TEST_BASIC_SRFLX,
+    ICE_TEST_BASIC_RELAY,
+    ICE_TEST_STUN_RES_FAIL,
+    ICE_TEST_TURN_ALLOC_FAIL,
+    ICE_TEST_STUN_FAIL_TURN_DEALLOC,
+
+    ICE_TEST_START_ARRAY,
+};
+
 int stun_test(void);
 int sess_auth_test(void);
 int stun_sock_test(void);
-int turn_sock_test(void);
-int ice_test(void);
+int turn_sock_test(void*);
+int ice_test(void*);
 int ice_conc_test(void);
 int trickle_ice_test(void);
 int concur_test(void);
@@ -65,7 +80,7 @@ extern pj_pool_factory *mem;
 
 int ice_one_conc_test(pj_stun_config *stun_cfg, int err_quit);
 
-#define UT_MAX_TESTS    64
+#define UT_MAX_TESTS    80
 #include "../../../pjlib/src/pjlib-test/test_util.h"
 
 struct test_app_t

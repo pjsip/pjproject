@@ -246,19 +246,22 @@ static int test_inner(int argc, char *argv[])
 #endif
 
 #if INCLUDE_ICE_TEST
-    UT_ADD_TEST(&test_app.ut_app, ice_test, PJ_TEST_EXCLUSIVE);
+    for (i=0; i<ICE_TEST_START_ARRAY+ICE_TEST_ARRAY_COUNT; ++i)
+        UT_ADD_TEST1(&test_app.ut_app, ice_test, (void*)(long)i, 0);
 #endif
 
 #if INCLUDE_TRICKLE_ICE_TEST
-    UT_ADD_TEST(&test_app.ut_app, trickle_ice_test, PJ_TEST_EXCLUSIVE);
+    UT_ADD_TEST(&test_app.ut_app, trickle_ice_test, 0);
 #endif
 
 #if INCLUDE_TURN_SOCK_TEST
-    UT_ADD_TEST(&test_app.ut_app, turn_sock_test, PJ_TEST_EXCLUSIVE);
+    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(long)0, 0);
+    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(long)1, 0);
+    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(long)2, 0);
 #endif
 
 #if INCLUDE_CONCUR_TEST
-    UT_ADD_TEST(&test_app.ut_app, ice_conc_test, PJ_TEST_EXCLUSIVE);
+    UT_ADD_TEST(&test_app.ut_app, ice_conc_test, 0);
 
     for (i=0; i<50; ++i) {
         UT_ADD_TEST(&test_app.ut_app, concur_test, 0);

@@ -30,6 +30,9 @@ enum
 #define SRV_DOMAIN      "pjsip.lab.domain"
 #define MAX_THREADS     16
 
+#define STUN_RANDOM_PORT 43478
+#define TURN_RANDOM_PORT 43479
+
 #define THIS_FILE       "ice_test.c"
 #define INDENT          "    "
 
@@ -155,9 +158,11 @@ static pj_bool_t enable_ipv6_test()
 #endif
 
 static void set_stun_turn_cfg(struct ice_ept *ept, 
-                                     pj_ice_strans_cfg *ice_cfg, 
-                                     char *serverip,
-                                     pj_bool_t use_ipv6) 
+                              pj_ice_strans_cfg *ice_cfg, 
+                              char *serverip,
+                              pj_uint16_t stun_server_port,
+                              pj_uint16_t turn_server_port,
+                              pj_bool_t use_ipv6) 
 {        
     if (ept->cfg.enable_stun & YES) {
         unsigned stun_idx = ice_cfg->stun_tp_cnt++;
@@ -168,7 +173,7 @@ static void set_stun_turn_cfg(struct ice_ept *ept,
         } else {
             ice_cfg->stun_tp[stun_idx].server = pj_str(serverip);
         }
-        ice_cfg->stun_tp[stun_idx].port = STUN_SERVER_PORT;
+        ice_cfg->stun_tp[stun_idx].port = stun_server_port;
 
         ice_cfg->stun_tp[stun_idx].af = GET_AF(use_ipv6);
     }
@@ -189,7 +194,7 @@ static void set_stun_turn_cfg(struct ice_ept *ept,
         } else {
             ice_cfg->turn_tp[turn_idx].server = pj_str(serverip);
         }
-        ice_cfg->turn_tp[turn_idx].port = TURN_SERVER_PORT;
+        ice_cfg->turn_tp[turn_idx].port = turn_server_port;
         ice_cfg->turn_tp[turn_idx].conn_type = PJ_TURN_TP_UDP;
         ice_cfg->turn_tp[turn_idx].auth_cred.type = PJ_STUN_AUTH_CRED_STATIC;
         ice_cfg->turn_tp[turn_idx].auth_cred.data.static_cred.realm =
@@ -247,13 +252,23 @@ static int create_ice_strans(struct test_sess *test_sess,
     if ((ept->cfg.enable_stun & SRV)==SRV || (ept->cfg.enable_turn & SRV)==SRV)
         ice_cfg.resolver = test_sess->resolver;
 
+    /* Assertion in pj_stun_sock_start() if default_port is zero*/
+#define OR(val1,val2)   (val1? val1 : val2)
+
     if (flag & CLIENT_IPV4) {
-        set_stun_turn_cfg(ept, &ice_cfg, serveripv4, PJ_FALSE);
+        set_stun_turn_cfg(ept, &ice_cfg, serveripv4,
+                          OR(test_sess->server1->stun_server_port, STUN_RANDOM_PORT),
+                          OR(test_sess->server1->turn_server_port, TURN_RANDOM_PORT),
+                          PJ_FALSE);
     }
 
     if (flag & CLIENT_IPV6) {
-        set_stun_turn_cfg(ept, &ice_cfg, serveripv6, PJ_TRUE);
+        set_stun_turn_cfg(ept, &ice_cfg, serveripv6,
+                          OR(test_sess->server2->stun_server_port, STUN_RANDOM_PORT),
+                          OR(test_sess->server2->turn_server_port, TURN_RANDOM_PORT),
+                          PJ_TRUE);
     }
+#undef OR
 
     /* Create ICE stream transport */
     PJ_TEST_SUCCESS(pj_ice_strans_create(NULL, &ice_cfg, ept->cfg.comp_cnt,
@@ -332,8 +347,14 @@ static int create_sess(pj_stun_config *stun_cfg,
                                                &sess->resolver),
                         NULL, { destroy_sess(sess, 500); return -20; });
 
-        ns_ip =  (flags & SERVER_IPV6)?pj_str("::1"):pj_str("127.0.0.1");
-        ns_port = (pj_uint16_t)DNS_SERVER_PORT;
+        if (flags & SERVER_IPV6) {
+            ns_ip = pj_str("::1");
+            ns_port = sess->server2->dns_server_port;
+        } else {
+            ns_ip = pj_str("127.0.0.1");
+            ns_port = sess->server1->dns_server_port;
+        }
+
         PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(sess->resolver, 1, &ns_ip,
                                                &ns_port),
                         NULL, { destroy_sess(sess, 500); return -21; });
@@ -882,8 +903,9 @@ static int perform_test(const char *title,
 #define ROLE1   PJ_ICE_SESS_ROLE_CONTROLLED
 #define ROLE2   PJ_ICE_SESS_ROLE_CONTROLLING
 
-int ice_test(void)
+int ice_test(void *p)
 {
+    unsigned test_id = (unsigned)(long)p;
     app_sess_t app_sess;
     unsigned i;
     int rc;
@@ -892,7 +914,7 @@ int ice_test(void)
         unsigned         server_flag;
         struct test_cfg  ua1;
         struct test_cfg  ua2;
-    } sess_cfg[] =
+    } sess_cfg[ICE_TEST_ARRAY_COUNT] =
     {
         /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
         {
@@ -933,12 +955,14 @@ int ice_test(void)
         },
     };
 
+    assert(test_id < ICE_TEST_START_ARRAY+PJ_ARRAY_SIZE(sess_cfg));
+
     rc = create_stun_config(&app_sess);
     if (rc != PJ_SUCCESS)
         return -7;
 
     /* Simple test first with host candidate */
-    if (1) {
+    if (test_id==ICE_TEST_BASIC_HOST) {
         struct sess_cfg_t cfg =
         {
             "Basic with host candidates",
@@ -963,7 +987,7 @@ int ice_test(void)
     }
 
     /* Simple test first with srflx candidate */
-    if (1) {
+    if (test_id==ICE_TEST_BASIC_SRFLX) {
         struct sess_cfg_t cfg =
         {
             "Basic with srflx candidates",
@@ -989,7 +1013,7 @@ int ice_test(void)
     }
 
     /* Simple test with relay candidate */
-    if (1) {
+    if (test_id==ICE_TEST_BASIC_RELAY) {
         struct sess_cfg_t cfg =
         {
             "Basic with relay candidates",
@@ -1015,7 +1039,7 @@ int ice_test(void)
     }
 
     /* Failure test with STUN resolution */
-    if (1) {
+    if (test_id==ICE_TEST_STUN_RES_FAIL) {
         struct sess_cfg_t cfg =
         {
             "STUN resolution failure",
@@ -1041,7 +1065,7 @@ int ice_test(void)
     }
 
     /* Failure test with TURN resolution */
-    if (1) {
+    if (test_id==ICE_TEST_TURN_ALLOC_FAIL) {
         struct sess_cfg_t cfg =
         {
             "TURN allocation failure",
@@ -1068,7 +1092,7 @@ int ice_test(void)
 
 
     /* STUN failure, testing TURN deallocation */
-    if (1) {
+    if (test_id==ICE_TEST_STUN_FAIL_TURN_DEALLOC) {
         struct sess_cfg_t cfg =
         {
             "STUN failure, testing TURN deallocation",
@@ -1094,8 +1118,8 @@ int ice_test(void)
     }
 
     rc = 0;
-    /* Iterate each test item */
-    for (i=0; i<PJ_ARRAY_SIZE(sess_cfg); ++i) {
+    if (test_id >= ICE_TEST_START_ARRAY) {
+        i = test_id - ICE_TEST_START_ARRAY;
         struct sess_cfg_t *cfg = &sess_cfg[i];
         unsigned delay[] = { 50, 2000 };
         unsigned d;
