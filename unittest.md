@@ -161,6 +161,10 @@ It looks like the sweet spot is with 3 worker threads. Runing with more than thi
 
 In PJLIB-UTIL-TEST, there is almost 2x speed up from 5m52.500s to 3m3.615s with 1 worker thread (the default). We couldn't speed up more because tests such as `resolver_test()` and `http_client_test()` takes about three minutes to complete and they couldn't be split up due to the use of global states.
 
+#### Speed result: PJNATH-TEST
+
+Original: 45m42.275s
+10 threads: 15m10.862s
 
 ### 3. Other developments
 

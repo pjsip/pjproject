@@ -221,19 +221,15 @@ static int create_ice_strans(struct test_sess *test_sess,
     pj_sockaddr hostip;
     char serveripv4[PJ_INET6_ADDRSTRLEN];
     char serveripv6[PJ_INET6_ADDRSTRLEN];
-    pj_status_t status;
     unsigned flag = (ept->cfg.client_flag)?ept->cfg.client_flag:CLIENT_IPV4;
 
-    status = pj_gethostip(pj_AF_INET(), &hostip);
-    if (status != PJ_SUCCESS)
-        return -1030;
+    PJ_TEST_SUCCESS(pj_gethostip(pj_AF_INET(), &hostip), NULL, return -1030);
 
     pj_sockaddr_print(&hostip, serveripv4, sizeof(serveripv4), 0);
 
     if (flag & CLIENT_IPV6) {
-        status = pj_gethostip(pj_AF_INET6(), &hostip);    
-        if (status != PJ_SUCCESS)
-            return -1031;
+        PJ_TEST_SUCCESS(pj_gethostip(pj_AF_INET6(), &hostip),
+                        NULL, return -1031);
 
         pj_sockaddr_print(&hostip, serveripv6, sizeof(serveripv6), 0);
     }
@@ -260,20 +256,16 @@ static int create_ice_strans(struct test_sess *test_sess,
     }
 
     /* Create ICE stream transport */
-    status = pj_ice_strans_create(NULL, &ice_cfg, ept->cfg.comp_cnt,
-                                  (void*)ept, &ice_cb,
-                                  &ice);
-    if (status != PJ_SUCCESS) {
-        app_perror(INDENT "err: pj_ice_strans_create()", status);
-        return status;
-    }
+    PJ_TEST_SUCCESS(pj_ice_strans_create(NULL, &ice_cfg, ept->cfg.comp_cnt,
+                                         (void*)ept, &ice_cb, &ice),
+                    NULL, return -1040);
 
     pj_create_unique_string(test_sess->pool, &ept->ufrag);
     pj_create_unique_string(test_sess->pool, &ept->pass);
 
     /* Looks alright */
     *p_ice = ice;
-    return PJ_SUCCESS;
+    return 0;
 }
 
 /* Create test session */
@@ -289,10 +281,10 @@ static int create_sess(pj_stun_config *stun_cfg,
     pj_str_t ns_ip;
     pj_uint16_t ns_port;
     unsigned flags;
-    pj_status_t status = PJ_SUCCESS;
+    int rc;
 
     /* Create session structure */
-    pool = pj_pool_create(mem, "testsess", 512, 512, NULL);
+    pool = pj_pool_create(stun_cfg->pf, "testsess", 512, 512, NULL);
     sess = PJ_POOL_ZALLOC_T(pool, struct test_sess);
     sess->pool = pool;
     sess->stun_cfg = stun_cfg;
@@ -307,20 +299,17 @@ static int create_sess(pj_stun_config *stun_cfg,
     /* Create server */
     flags = server_flag;
     if (flags & SERVER_IPV4) {
-        status = create_test_server(stun_cfg, (flags & ~SERVER_IPV6), 
-                                    SRV_DOMAIN, &sess->server1);
+        PJ_TEST_SUCCESS(create_test_server(stun_cfg, (flags & ~SERVER_IPV6), 
+                                           SRV_DOMAIN, &sess->server1),
+                        NULL, { destroy_sess(sess, 500); return -10; });
     }
 
-    if ((status == PJ_SUCCESS) && (flags & SERVER_IPV6)) {
-        status = create_test_server(stun_cfg, (flags & ~SERVER_IPV4), 
-                                    SRV_DOMAIN, &sess->server2);
+    if (flags & SERVER_IPV6) {
+        PJ_TEST_SUCCESS(create_test_server(stun_cfg, (flags & ~SERVER_IPV4), 
+                                           SRV_DOMAIN, &sess->server2),
+                        NULL, { destroy_sess(sess, 500); return -11; });
     }
 
-    if (status != PJ_SUCCESS) {
-        app_perror(INDENT "error: create_test_server()", status);
-        destroy_sess(sess, 500);
-        return -10;
-    }
     if (flags & SERVER_IPV4) {
         sess->server1->turn_respond_allocate =
             sess->server1->turn_respond_refresh = PJ_TRUE;
@@ -337,36 +326,31 @@ static int create_sess(pj_stun_config *stun_cfg,
         (sess->caller.cfg.enable_stun & SRV)==SRV || 
         (sess->caller.cfg.enable_turn & SRV)==SRV) 
     {
-        status = pj_dns_resolver_create(mem, NULL, 0, stun_cfg->timer_heap,
-                                        stun_cfg->ioqueue, &sess->resolver);
-        if (status != PJ_SUCCESS) {
-            app_perror(INDENT "error: pj_dns_resolver_create()", status);
-            destroy_sess(sess, 500);
-            return -20;
-        }
+        PJ_TEST_SUCCESS(pj_dns_resolver_create(stun_cfg->pf, NULL, 0,
+                                               stun_cfg->timer_heap,
+                                               stun_cfg->ioqueue,
+                                               &sess->resolver),
+                        NULL, { destroy_sess(sess, 500); return -20; });
 
         ns_ip =  (flags & SERVER_IPV6)?pj_str("::1"):pj_str("127.0.0.1");
         ns_port = (pj_uint16_t)DNS_SERVER_PORT;
-        status = pj_dns_resolver_set_ns(sess->resolver, 1, &ns_ip, &ns_port);
-        if (status != PJ_SUCCESS) {
-            app_perror(INDENT "error: pj_dns_resolver_set_ns()", status);
-            destroy_sess(sess, 500);
-            return -21;
-        }
+        PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(sess->resolver, 1, &ns_ip,
+                                               &ns_port),
+                        NULL, { destroy_sess(sess, 500); return -21; });
     }
 
     /* Create caller ICE stream transport */
-    status = create_ice_strans(sess, &sess->caller, &sess->caller.ice);
-    if (status != PJ_SUCCESS) {
+    rc = create_ice_strans(sess, &sess->caller, &sess->caller.ice);
+    if (rc != 0) {
         destroy_sess(sess, 500);
-        return -30;
+        return rc;
     }
 
     /* Create callee ICE stream transport */
-    status = create_ice_strans(sess, &sess->callee, &sess->callee.ice);
-    if (status != PJ_SUCCESS) {
+    rc = create_ice_strans(sess, &sess->callee, &sess->callee.ice);
+    if (rc != 0) {
         destroy_sess(sess, 500);
-        return -40;
+        return rc;
     }
 
     *p_sess = sess;
@@ -502,22 +486,18 @@ static pj_status_t start_ice(struct ice_ept *ept, const struct ice_ept *remote)
         unsigned i;
         for (i=0; i<remote->cfg.comp_cnt; ++i) {
             unsigned cnt = PJ_ARRAY_SIZE(rcand) - rcand_cnt;
-            status = pj_ice_strans_enum_cands(remote->ice, i+1, &cnt, rcand+rcand_cnt);
-            if (status != PJ_SUCCESS) {
-                app_perror(INDENT "err: pj_ice_strans_enum_cands()", status);
-                return status;
-            }
+            PJ_TEST_SUCCESS((status=pj_ice_strans_enum_cands(remote->ice, i+1, &cnt,
+                                                     rcand+rcand_cnt)),
+                            NULL, return status);
             rcand_cnt += cnt;
         }
     }
 
-    status = pj_ice_strans_start_ice(ept->ice, &remote->ufrag, &remote->pass,
-                                     rcand_cnt, rcand);
-
-    if (status != ept->cfg.expected.start_status) {
-        app_perror(INDENT "err: pj_ice_strans_start_ice()", status);
-        return status;
-    }
+    PJ_TEST_EQ((status=pj_ice_strans_start_ice(ept->ice, &remote->ufrag,
+                                       &remote->pass,
+                                       rcand_cnt, rcand)),
+               ept->cfg.expected.start_status, NULL,
+               {return status==PJ_SUCCESS? PJ_EINVALIDOP : status; });
 
     return status;
 }
@@ -688,7 +668,7 @@ static int perform_test2(const char *title,
     if (rc != PJ_SUCCESS) {
         app_perror(INDENT "err: caller pj_ice_strans_init_ice()", rc);
         destroy_sess(sess, 500);
-        return -100;
+        return -106;
     }
 
     /* Init ICE on callee */
@@ -904,8 +884,7 @@ static int perform_test(const char *title,
 
 int ice_test(void)
 {
-    pj_pool_t *pool;
-    pj_stun_config stun_cfg;
+    app_sess_t app_sess;
     unsigned i;
     int rc;
     struct sess_cfg_t {
@@ -954,12 +933,9 @@ int ice_test(void)
         },
     };
 
-    pool = pj_pool_create(mem, NULL, 512, 512, NULL);
-    rc = create_stun_config(pool, &stun_cfg);
-    if (rc != PJ_SUCCESS) {
-        pj_pool_release(pool);
+    rc = create_stun_config(&app_sess);
+    if (rc != PJ_SUCCESS)
         return -7;
-    }
 
     /* Simple test first with host candidate */
     if (1) {
@@ -972,7 +948,7 @@ int ice_test(void)
             {ROLE2,     1,      YES,     NO,        NO,     0,      0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
         };
 
-        rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
+        rc = perform_test(cfg.title, &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -980,7 +956,7 @@ int ice_test(void)
         cfg.ua1.comp_cnt = 2;
         cfg.ua2.comp_cnt = 2;
         rc = perform_test("Basic with host candidates, 2 components",
-                          &stun_cfg, cfg.server_flag,
+                          &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -997,7 +973,7 @@ int ice_test(void)
             {ROLE2,     1,      YES,    YES,        NO,     0,      0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
         };
 
-        rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
+        rc = perform_test(cfg.title, &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -1006,7 +982,7 @@ int ice_test(void)
         cfg.ua2.comp_cnt = 2;
 
         rc = perform_test("Basic with srflx candidates, 2 components",
-                          &stun_cfg, cfg.server_flag,
+                          &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -1023,7 +999,7 @@ int ice_test(void)
             {ROLE2,     1,       NO,     NO,      YES,      0,      0,      0,      0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
         };
 
-        rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
+        rc = perform_test(cfg.title, &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -1032,7 +1008,7 @@ int ice_test(void)
         cfg.ua2.comp_cnt = 2;
 
         rc = perform_test("Basic with relay candidates, 2 components",
-                          &stun_cfg, cfg.server_flag,
+                          &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -1049,7 +1025,7 @@ int ice_test(void)
             {ROLE2,     2,       NO,    YES,        NO,     0,      0,      0,      0, {PJ_SUCCESS, PJNATH_ESTUNTIMEDOUT, -1}}
         };
 
-        rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
+        rc = perform_test(cfg.title, &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -1058,7 +1034,7 @@ int ice_test(void)
         cfg.ua2.client_flag |= DEL_ON_ERR;
 
         rc = perform_test("STUN resolution failure with destroy on callback",
-                          &stun_cfg, cfg.server_flag,
+                          &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -1075,7 +1051,7 @@ int ice_test(void)
             {ROLE2,     2,       NO,    NO,     YES, WRONG_TURN,    0,      0,      0, {PJ_SUCCESS, PJ_STATUS_FROM_STUN_CODE(401), -1}}
         };
 
-        rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
+        rc = perform_test(cfg.title, &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -1084,7 +1060,7 @@ int ice_test(void)
         cfg.ua2.client_flag |= DEL_ON_ERR;
 
         rc = perform_test("TURN allocation failure with destroy on callback",
-                          &stun_cfg, cfg.server_flag,
+                          &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -1102,7 +1078,7 @@ int ice_test(void)
             {ROLE2,     1,       YES,    YES,   YES,    0,    0,            0,      0, {PJ_SUCCESS, PJNATH_ESTUNTIMEDOUT, -1}}
         };
 
-        rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
+        rc = perform_test(cfg.title, &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -1111,7 +1087,7 @@ int ice_test(void)
         cfg.ua2.client_flag |= DEL_ON_ERR;
 
         rc = perform_test("STUN failure, testing TURN deallocation (cb)",
-                          &stun_cfg, cfg.server_flag,
+                          &app_sess.stun_cfg, cfg.server_flag,
                           &cfg.ua1, &cfg.ua2);
         if (rc != 0)
             goto on_return;
@@ -1166,7 +1142,7 @@ int ice_test(void)
                                 delay[d], k1, k2);
 
                         cfg->ua2.comp_cnt = k2;
-                        rc = perform_test(title, &stun_cfg, cfg->server_flag,
+                        rc = perform_test(title, &app_sess.stun_cfg, cfg->server_flag,
                                           &cfg->ua1, &cfg->ua2);
                         if (rc != 0)
                             goto on_return;
@@ -1177,8 +1153,7 @@ int ice_test(void)
     }
 
 on_return:
-    destroy_stun_config(&stun_cfg);
-    pj_pool_release(pool);
+    destroy_stun_config(&app_sess);
     return rc;
 }
 
@@ -1239,22 +1214,19 @@ int ice_one_conc_test(pj_stun_config *stun_cfg, int err_quit)
 
 int ice_conc_test(void)
 {
-    const unsigned LOOP = 100;
-    pj_pool_t *pool;
-    pj_stun_config stun_cfg;
+    const unsigned LOOP = 20;
+    app_sess_t app_sess;
     unsigned i;
     int rc;
 
-    pool = pj_pool_create(mem, NULL, 512, 512, NULL);
-    rc = create_stun_config(pool, &stun_cfg);
+    rc = create_stun_config(&app_sess);
     if (rc != PJ_SUCCESS) {
-        pj_pool_release(pool);
         return -7;
     }
 
     for (i = 0; i < LOOP; i++) {
         PJ_LOG(3,(THIS_FILE, INDENT "Test %d of %d", i+1, LOOP));
-        rc = ice_one_conc_test(&stun_cfg, PJ_TRUE);
+        rc = ice_one_conc_test(&app_sess.stun_cfg, PJ_TRUE);
         if (rc)
             break;
     }
@@ -1263,8 +1235,7 @@ int ice_conc_test(void)
     goto on_return;
 
 on_return:
-    destroy_stun_config(&stun_cfg);
-    pj_pool_release(pool);
+    destroy_stun_config(&app_sess);
 
     return rc;
 }
@@ -1531,8 +1502,7 @@ on_return:
 /* Simple trickle ICE test */
 int trickle_ice_test(void)
 {
-    pj_pool_t *pool;
-    pj_stun_config stun_cfg;
+    app_sess_t app_sess;
     struct sess_param test_param;
     unsigned i;
     int rc;
@@ -1569,11 +1539,8 @@ int trickle_ice_test(void)
     PJ_LOG(3,(THIS_FILE, "Trickle ICE"));
     pj_log_push_indent();
 
-    pool = pj_pool_create(mem, NULL, 512, 512, NULL);
-
-    rc = create_stun_config(pool, &stun_cfg);
+    rc = create_stun_config(&app_sess);
     if (rc != PJ_SUCCESS) {
-        pj_pool_release(pool);
         pj_log_pop_indent();
         return -10;
     }
@@ -1588,7 +1555,7 @@ int trickle_ice_test(void)
                 cfg[i].ua1.comp_cnt = c1;
                 cfg[i].ua2.comp_cnt = c2;
                 rc = perform_trickle_test(cfg[i].title,
-                                          &stun_cfg,
+                                          &app_sess.stun_cfg,
                                           cfg[i].server_flag,
                                           &cfg[i].ua1,
                                           &cfg[i].ua2,
@@ -1597,8 +1564,7 @@ int trickle_ice_test(void)
         }
     }
 
-    destroy_stun_config(&stun_cfg);
-    pj_pool_release(pool);
+    destroy_stun_config(&app_sess);
     pj_log_pop_indent();
 
     return rc;

@@ -533,14 +533,11 @@ static int destroy_test(pj_stun_config  *stun_cfg,
 
 int turn_sock_test(void)
 {
-    pj_pool_t *pool;
-    pj_stun_config stun_cfg;
+    app_sess_t app_sess;
     int n, i, rc = 0;
 
-    pool = pj_pool_create(mem, "turntest", 512, 512, NULL);
-    rc = create_stun_config(pool, &stun_cfg);
+    rc = create_stun_config(&app_sess);
     if (rc != PJ_SUCCESS) {
-        pj_pool_release(pool);
         return -2;
     }
 
@@ -558,14 +555,14 @@ int turn_sock_test(void)
             tp_type = PJ_TURN_TP_TLS;
         }
 
-        rc = state_progression_test(&stun_cfg, USE_IPV6, tp_type);
+        rc = state_progression_test(&app_sess.stun_cfg, USE_IPV6, tp_type);
         if (rc != 0) 
             goto on_return;
 
         for (i=0; i<=1; ++i) {
             int j;
             for (j=0; j<=1; ++j) {
-                rc = destroy_test(&stun_cfg, i, j, USE_IPV6, tp_type);
+                rc = destroy_test(&app_sess.stun_cfg, i, j, USE_IPV6, tp_type);
                 if (rc != 0)
                     goto on_return;
             }
@@ -573,8 +570,7 @@ int turn_sock_test(void)
     }
 
 on_return:
-    destroy_stun_config(&stun_cfg);
-    pj_pool_release(pool);
+    destroy_stun_config(&app_sess);
     return rc;
 }
 

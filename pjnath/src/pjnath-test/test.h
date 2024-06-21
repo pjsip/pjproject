@@ -52,9 +52,10 @@ int sess_auth_test(void);
 int stun_sock_test(void);
 int turn_sock_test(void);
 int ice_test(void);
+int ice_conc_test(void);
 int trickle_ice_test(void);
 int concur_test(void);
-int test_main(void);
+int test_main(int argc, char *argv[]);
 
 #define app_perror(msg, rc) app_perror_dbg(msg, rc, __FILE__, __LINE__)
 extern void app_perror_dbg(const char *msg, pj_status_t rc,
@@ -64,12 +65,30 @@ extern pj_pool_factory *mem;
 
 int ice_one_conc_test(pj_stun_config *stun_cfg, int err_quit);
 
+#define UT_MAX_TESTS    64
+#include "../../../pjlib/src/pjlib-test/test_util.h"
+
+struct test_app_t
+{
+    ut_app_t    ut_app;
+    int         param_log_decor;
+};
+extern struct test_app_t test_app;
+
+
 ////////////////////////////////////
 /*
  * Utilities
  */
-pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg);
-void destroy_stun_config(pj_stun_config *stun_cfg);
+typedef struct app_sess_t
+{
+    pj_caching_pool      cp;
+    pj_pool_t           *pool;
+    pj_stun_config       stun_cfg;
+} app_sess_t;
+
+pj_status_t create_stun_config(app_sess_t *stun_cfg);
+void destroy_stun_config(app_sess_t *stun_cfg);
 
 void poll_events(pj_stun_config *stun_cfg, unsigned msec,
                  pj_bool_t first_event_only);

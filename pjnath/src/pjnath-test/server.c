@@ -105,7 +105,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
             RETURN_ERROR(status);
     }
 
-    pool = pj_pool_create(mem, THIS_FILE, 512, 512, NULL);
+    pool = pj_pool_create(stun_cfg->pf, THIS_FILE, 512, 512, NULL);
     test_srv = (test_server*) PJ_POOL_ZALLOC_T(pool, test_server);
     test_srv->pool = pool;
     test_srv->flags = flags;
@@ -118,7 +118,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
     pj_ioqueue_op_key_init(&test_srv->send_key, sizeof(test_srv->send_key));
 
     if (flags & CREATE_DNS_SERVER) {
-        status = pj_dns_server_create(mem, test_srv->stun_cfg->ioqueue,
+        status = pj_dns_server_create(stun_cfg->pf, test_srv->stun_cfg->ioqueue,
                                       GET_AF(use_ipv6), DNS_SERVER_PORT,
                                       0, &test_srv->dns_server);
         if (status != PJ_SUCCESS) {
