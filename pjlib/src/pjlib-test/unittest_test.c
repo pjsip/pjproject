@@ -310,7 +310,7 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
     if (basic)
         flags = 0;
     else
-        flags = parallel? PJ_TEST_PARALLEL : 0;
+        flags = parallel? 0 : PJ_TEST_EXCLUSIVE;
 
     /* Add test case 0. This test case writes some logs and returns
      * success.
@@ -502,7 +502,7 @@ static int parallel_func(void *arg)
 }
 
 /* 
- * Test that PJ_TEST_PARALLEL flag (or lack of) works.
+ * Test that PJ_TEST_EXCLUSIVE flag (or lack of) works.
  */
 int unittest_parallel_test()
 {
@@ -517,17 +517,17 @@ int unittest_parallel_test()
     pj_test_case test_cases[MAX_TESTS];
     pj_test_runner_param prm;
     struct parallel_param_t parallel_params[MAX_TESTS] = {
-        {0,                MS+2*MS, "a"},
-        {0,                MS+1*MS, "b"},    /* b have to wait for a */
-        {PJ_TEST_PARALLEL, MS+7*MS, "c"},    /* c have to wait for b */
-        {PJ_TEST_PARALLEL, MS+1*MS, "d"},    /* d have to wait for b */
-        {PJ_TEST_PARALLEL, MS+4*MS, "e"},    /* e have to wait for b */
-        {0,                MS+2*MS, "f"},    /* f have to wait for c, d, e */
-        {0,                MS+0*MS, "g"},    /* g have to wait for f */
-        {0,                MS+5*MS, "h"},    /* h have to wait for g */
-        {PJ_TEST_PARALLEL, MS+4*MS, "i"},    /* i will finish last */
-        {PJ_TEST_PARALLEL, MS+2*MS, "j"},    /* i will finish second last */
-        {PJ_TEST_PARALLEL, MS+0*MS, "k"},    /* i will finish third last */
+        {PJ_TEST_EXCLUSIVE, MS+2*MS, "a"},
+        {PJ_TEST_EXCLUSIVE, MS+1*MS, "b"},    /* b have to wait for a */
+        {0,                 MS+7*MS, "c"},    /* c have to wait for b */
+        {0,                 MS+1*MS, "d"},    /* d have to wait for b */
+        {0,                 MS+4*MS, "e"},    /* e have to wait for b */
+        {PJ_TEST_EXCLUSIVE, MS+2*MS, "f"},    /* f have to wait for c, d, e */
+        {PJ_TEST_EXCLUSIVE, MS+0*MS, "g"},    /* g have to wait for f */
+        {PJ_TEST_EXCLUSIVE, MS+5*MS, "h"},    /* h have to wait for g */
+        {0,                 MS+4*MS, "i"},    /* i will finish last */
+        {0,                 MS+2*MS, "j"},    /* i will finish second last */
+        {0,                 MS+0*MS, "k"},    /* i will finish third last */
     };
     const char *correct_msg = "abdecfghkji";
     pj_str_t stmp0, stmp1;
@@ -541,8 +541,8 @@ int unittest_parallel_test()
     for (i=0; i<MAX_TESTS; ++i) {
         char test_name[32];
         pj_ansi_snprintf(test_name, sizeof(test_name), "%s %s",
-                         parallel_params[i].flags & PJ_TEST_PARALLEL ? 
-                                "parallel_test" : "serial test",
+                         parallel_params[i].flags & PJ_TEST_EXCLUSIVE ?
+                                "exclusive test" : "parallel test",
                          parallel_params[i].id);
         pj_test_case_init(&test_cases[i],  test_name, 
                           parallel_params[i].flags,

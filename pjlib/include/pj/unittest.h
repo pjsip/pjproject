@@ -307,12 +307,11 @@ PJ_BEGIN_DECL
 typedef enum pj_test_case_flag
 {
     /** 
-     * Allow next test case to run in parallel. If this flag is not specified,
-     * the test case will run exclusively without other test cases running.
-     * Note this only works for test runners that support worker threads.
-     * Basic runner will always run serially.
+     * Do not allow other test cases to run while this test case is running.
+     * Note this only makes sense for test runners that support worker
+     * threads. Basic runner will always run test cases serially.
      */
-    PJ_TEST_PARALLEL = 1,
+    PJ_TEST_EXCLUSIVE = 1,
 
     /** 
      * Specify that the test function must be called without argument.

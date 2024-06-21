@@ -223,59 +223,59 @@ static int features_tests(int argc, char *argv[])
         return 1;
 
 #if INCLUDE_RAND_TEST
-    UT_ADD_TEST(&test_app.ut_app, rand_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, rand_test, 0);
 #endif
 
 #if INCLUDE_POOL_PERF_TEST
-    UT_ADD_TEST(&test_app.ut_app, pool_perf_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, pool_perf_test, 0);
 #endif
 
 #if INCLUDE_RBTREE_TEST
-    UT_ADD_TEST(&test_app.ut_app, rbtree_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, rbtree_test, 0);
 #endif
 
 #if INCLUDE_HASH_TEST
-    UT_ADD_TEST(&test_app.ut_app, hash_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, hash_test, 0);
 #endif
 
 #if INCLUDE_TIMESTAMP_TEST
-    UT_ADD_TEST(&test_app.ut_app, timestamp_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, timestamp_test, 0);
 #endif
 
 #if INCLUDE_ATOMIC_TEST
-    UT_ADD_TEST(&test_app.ut_app, atomic_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, atomic_test, 0);
 #endif
 
 #if INCLUDE_TIMER_TEST
-    UT_ADD_TEST(&test_app.ut_app, timer_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, timer_test, 0);
 #endif
 
 #if INCLUDE_SLEEP_TEST
-    UT_ADD_TEST(&test_app.ut_app, sleep_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, sleep_test, 0);
 #endif
 
 #if INCLUDE_FILE_TEST
-    UT_ADD_TEST(&test_app.ut_app, file_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, file_test, 0);
 #endif
 
 #if INCLUDE_SOCK_TEST
-    UT_ADD_TEST(&test_app.ut_app, sock_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, sock_test, 0);
 #endif
 
 #if INCLUDE_SOCK_PERF_TEST
-    UT_ADD_TEST(&test_app.ut_app, sock_perf_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, sock_perf_test, 0);
 #endif
 
 #if INCLUDE_SELECT_TEST
-    UT_ADD_TEST(&test_app.ut_app, select_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, select_test, 0);
 #endif
 
 #if INCLUDE_UDP_IOQUEUE_TEST
-    UT_ADD_TEST(&test_app.ut_app, udp_ioqueue_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, udp_ioqueue_test, 0);
 #endif
 
 #if PJ_HAS_TCP && INCLUDE_TCP_IOQUEUE_TEST
-    UT_ADD_TEST(&test_app.ut_app, tcp_ioqueue_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, tcp_ioqueue_test, 0);
 #endif
 
     /* Consistently encountered retcode 520 on Windows virtual machine
@@ -295,27 +295,27 @@ static int features_tests(int argc, char *argv[])
     */
 #if INCLUDE_IOQUEUE_STRESS_TEST
 #  if defined(PJ_WIN32) && PJ_WIN32!=0
-    UT_ADD_TEST(&test_app.ut_app, ioqueue_stress_test, 0);
+    UT_ADD_TEST(&test_app.ut_app, ioqueue_stress_test, PJ_TEST_EXCLUSIVE);
 #  else
-    UT_ADD_TEST(&test_app.ut_app, ioqueue_stress_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, ioqueue_stress_test, 0);
 #  endif
 #endif
 
 #if INCLUDE_IOQUEUE_UNREG_TEST
-    UT_ADD_TEST(&test_app.ut_app, udp_ioqueue_unreg_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, udp_ioqueue_unreg_test, 0);
 #endif
 
 #if INCLUDE_IOQUEUE_PERF_TEST
-    UT_ADD_TEST(&test_app.ut_app, ioqueue_perf_test0, PJ_TEST_PARALLEL);
-    UT_ADD_TEST(&test_app.ut_app, ioqueue_perf_test1, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, ioqueue_perf_test0, 0);
+    UT_ADD_TEST(&test_app.ut_app, ioqueue_perf_test1, 0);
 #endif
 
 #if INCLUDE_ACTIVESOCK_TEST
-    UT_ADD_TEST(&test_app.ut_app, activesock_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, activesock_test, 0);
 #endif
 
 #if INCLUDE_SSLSOCK_TEST
-    UT_ADD_TEST(&test_app.ut_app, ssl_sock_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, ssl_sock_test, 0);
 #endif
 
 

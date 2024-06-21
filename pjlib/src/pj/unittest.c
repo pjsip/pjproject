@@ -533,17 +533,11 @@ typedef struct text_runner_t
 } text_runner_t;
 
 /* This is called by thread(s) to get the next test case to run.
- * The rule is:
- *  1. if current test case (tc) doesn't have PJ_TEST_PARALLEL flag, then we
- *     cannot get next tc until that tc completes
- *  2. if tc has PJ_TEST_PARALLEL flag, free to return next tc, until we
- *     meet tc with no PJ_TEST_PARALLEL flag, in this case that tc is
- *     returned and we'll have rule 1.
  * 
  *  Returns:
- *   - PJ_SUCCESS if we successfully returns next tc
+ *   - PJ_SUCCESS if we successfully returns next test case (tc)
  *   - PJ_EPENDING if there is tc left but we must wait for completion of
- *     non-parallel tc
+ *     exclusive tc
  *   - PJ_ENOTFOUND if there is no further tests, which in this case the
  *     thread can exit.
  *   - other error is not anticipated, and will cause thread to exit.
@@ -581,8 +575,8 @@ static pj_status_t text_runner_get_next_test_case(text_runner_t *runner,
         }
     } else {
         /* Test is still running. */
-        if ((cur->flags & PJ_TEST_PARALLEL) && next != NULL &&
-            (next->flags & PJ_TEST_PARALLEL)) 
+        if ((cur->flags & PJ_TEST_EXCLUSIVE)==0 && next != NULL &&
+            (next->flags & PJ_TEST_EXCLUSIVE)==0) 
         {
             /* Allowed other test to run because test also allows
              * parallel test

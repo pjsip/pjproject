@@ -115,14 +115,16 @@ static pj_status_t ut_add_test(ut_app_t *ut_app, int (*test_func)(void),
 static void ut_list_tests(ut_app_t *ut_app, const char *title)
 {
     unsigned d = pj_log_get_decor();
-    const pj_test_case *tc;
+    const pj_test_case *tc, *prev=NULL;
 
     pj_log_set_decor(d ^ PJ_LOG_HAS_NEWLINE);
     PJ_LOG(3,(THIS_FILE, "%ld %s:", pj_list_size(&ut_app->suite.tests),
               title));
     pj_log_set_decor(0);
     for (tc=ut_app->suite.tests.next; tc!=&ut_app->suite.tests; tc=tc->next) {
-        PJ_LOG(3,(THIS_FILE, " %s", tc->obj_name));
+        if (!prev || pj_ansi_strcmp(tc->obj_name, prev->obj_name))
+            PJ_LOG(3,(THIS_FILE, " %s", tc->obj_name));
+        prev = tc;
     }
     PJ_LOG(3,(THIS_FILE, "\n"));
     pj_log_set_decor(d);

@@ -5,8 +5,8 @@ This PR is part one of two to speed up testing in PJSIP. This part attempts to s
 The plan is to implement unit testing framework in PJLIB, that that is what the bulk of this PR does. More specifically, this PR contains several work:
 
 1. A (new) unit testing framework, in `<pj/unittest.h>` and `pj/unittest.c`.
-2. largish modifications to `pjlib-test`, `pjlib-util-test`, `pjnath-test`, `pjmedia-test`, and `pjsip-test`.
-3. minor developments:
+2. Some modifications to `pjlib-test`, `pjlib-util-test`, `pjnath-test`, `pjmedia-test`, and `pjsip-test` to use the framework.
+3. Other developments:
 
    - modifications to `pj/fifobuf.[hc]`, an old feature (part of pjsip initial commit!) that has never been used until now 
    - new auxiliary feature: `<pj/argparse.h>`, header only utilities to parse command line arguments.
@@ -85,11 +85,11 @@ The second part is the unit test framework. The framework uses common architectu
 
 Below are the features of the unit-test and also other enhancements done in this PR:
 
-- Supports parallel execution on per test case basis, resulting in up to four times speed up in PJLIB-TEST.
 - Familiarity with common architecture as described in https://en.wikipedia.org/wiki/XUnit
+- By default uses parallel execution unless it is disabled on per test case basis.
 - Easy to port existing test functions. In fact, no modification is needed to the test functions
-- PJ_TEST_XXX() macros can be used in place of manual testing
-- All (C based) PJ unit testing apps have nicer output:
+- Convenient `PJ_TEST_XXX()` macros can be used in place of manual testing and error reporting
+- Nicer output:
 
 ```
 07:34:32.878 Performing 20 features tests with 4 worker threads
@@ -99,7 +99,7 @@ Below are the features of the unit-test and also other enhancements done in this
 ...
 ```
 
-- Even nicer output, logging emited during test is captured and by default only displayed if the test fails (or can be displayed all the time, configurable by cmdline option)
+- Even nicer output, logging is captured and by default only displayed if the test fails (configurable by cmdline option)
 - All (C based) PJ unit testing apps can select test(s) to invoke from cmdline
 
 ### 2. Modifications to test apps
@@ -135,35 +135,13 @@ Other test apps have been modified to produce similar look.
 
 #### Test body
 
-The main test body (`test.c`) was modified to use the unit-test framework, resulting in nicer output:
+The main modification in test body (`test.c`) is to use the unit-test framework.
 
-```
-07:34:32.878 Performing 20 features tests with 4 worker threads
-[ 1/20] hash_test                        [OK] [0.000s]
-[ 2/20] atomic_test                      [OK] [0.000s]
-[ 3/20] rand_test                        [OK] [0.002s]
-[ 4/20] pool_perf_test                   [OK] [0.003s]
-[ 5/20] sock_test                        [OK] [0.003s]
-[ 6/20] rbtree_test                      [Err: -40] [0.007s]
-[ 7/20] select_test                      [OK] [0.010s]
-...
-...
-...
-[19/20] ioqueue_perf_test1               [OK] [110.046s]
-[20/20] ioqueue_stress_test              [OK] [132.287s]
-07:37:02.192 Unit test statistics for features tests:
-07:37:02.192     Total number of tests: 20
-07:37:02.192     Number of test run:    20
-07:37:02.192     Number of failed test: 1
-07:37:02.192     Total duration:        2m29.313s
-07:37:02.192 ------------ Displaying failed test logs: ------------
-07:37:02.192 Logs for rbtree_test [rc:-40]:
-07:34:32.885 Error: .....
-07:37:02.192 --------------------------------------------------------
-07:37:02.192  
-07:37:02.192 Stack max usage: 0, deepest: :0
-07:37:02.192 **Test completed with error(s)**
-```
+#### Test modifications
+
+Some tests (mostly in pjlib-test) was modified, replacing manual checks with `PJ_TEST_XXX()` macros. This is done to test the usage of `PJ_TEST_XXX()` macros and to make the test nicer. But since it made the PR very big, I didn't continue the effort.
+
+Some tests were also split up to make them run in parallel.
 
 #### Speed result: PJLIB-TEST
 
@@ -177,20 +155,11 @@ In PJLIB-TEST, test time is speed up by up to four times:
 - 6 worker threads: 2m28.450s
 - 8 worker threads: 2m19.779s
 
-It looks like the sweet spot is with 3 worker threads. This is because some tests takes quite a long time t o finish, so using many threads won't help these tests:
-
-```
-[14/20] udp_ioqueue_unreg_test           [OK] [92.759s]
-[15/20] ioqueue_stress_test              [OK] [111.061s]
-[17/20] ioqueue_perf_test1               [OK] [110.149s]
-[18/20] activesock_test                  [OK] [101.890s]
-```
-
-I've tried to split up those tests into smaller tests, but mostly that's not feasible because the tests are benchmarking tests (that need to gather all results to determine the overall winner).
+It looks like the sweet spot is with 3 worker threads. Runing with more than this did not speed up the test considerably because some tests just take a long time to finish (more than 2 minutes). I've tried to split up those tests into smaller tests, but mostly that's not feasible because the tests are benchmarking tests (that need to gather all results to determine the overall winner), or because the tests shares global states with each other.
 
 #### Speed result: PJLIB-UTIL-TEST
 
-In PJLIB-UTIL-TEST, there is about 2x speed up from 5m52.500s to 3m3.615s. We couldn't achieve more speed up due to long running tests such as resolver_test() and http_client_test() which couldn't be broken up due to the use of global states.
+In PJLIB-UTIL-TEST, there is almost 2x speed up from 5m52.500s to 3m3.615s with 1 worker thread (the default). We couldn't speed up more because tests such as `resolver_test()` and `http_client_test()` takes about three minutes to complete and they couldn't be split up due to the use of global states.
 
 
 ### 3. Other developments

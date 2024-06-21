@@ -57,30 +57,30 @@ static int test_inner(int argc, char *argv[])
     pj_dump_config();
 
 #if INCLUDE_XML_TEST
-    UT_ADD_TEST(&test_app.ut_app, xml_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, xml_test, 0);
 #endif
 
 #if INCLUDE_JSON_TEST
-    UT_ADD_TEST(&test_app.ut_app, json_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, json_test, 0);
 #endif
 
 #if INCLUDE_ENCRYPTION_TEST
-    UT_ADD_TEST(&test_app.ut_app, encryption_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, encryption_test, 0);
 #   if WITH_BENCHMARK
-    UT_ADD_TEST(&test_app.ut_app, encryption_benchmark, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, encryption_benchmark, 0);
 #   endif
 #endif
 
 #if INCLUDE_STUN_TEST
-    UT_ADD_TEST(&test_app.ut_app, stun_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, stun_test, 0);
 #endif
 
 #if INCLUDE_RESOLVER_TEST
-    UT_ADD_TEST(&test_app.ut_app, resolver_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, resolver_test, 0);
 #endif
 
 #if INCLUDE_HTTP_CLIENT_TEST
-    UT_ADD_TEST(&test_app.ut_app, http_client_test, PJ_TEST_PARALLEL);
+    UT_ADD_TEST(&test_app.ut_app, http_client_test, 0);
 #endif
 
     if (ut_run_tests(&test_app.ut_app, "pjlib-util tests", argc, argv)) {
