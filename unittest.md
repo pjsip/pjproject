@@ -104,9 +104,11 @@ Below are the features of the unit-test and also other enhancements done in this
 
 ### 2. Modifications to test apps
 
-#### Console front-end
+#### Common modifications
 
-The main front-end (`main.c`) was modified to be more nice as command line apps, now it can be invoked with arguments:
+There is a new utility file in `pjlib/src/pjlib-test/test_util.h` which is shared by all test apps, to parse command line arguments, show usage, register tests, and control the unit testing process.
+
+The main front-end files (`main.c`) were modified to be more nice as command line apps, now it can be invoked with arguments, which are uniform in all unit-test apps:
 
 ```
 Usage:
@@ -130,20 +132,15 @@ where OPTIONS:
   -t ucp,tcp   Set echo socket type to UDP or TCP
 ```
 
-Other test apps have been modified to produce similar look.
-
-
-#### Test body
-
 The main modification in test body (`test.c`) is to use the unit-test framework.
 
-#### Test modifications
-
-Some tests (mostly in pjlib-test) was modified, replacing manual checks with `PJ_TEST_XXX()` macros. This is done to test the usage of `PJ_TEST_XXX()` macros and to make the test nicer. But since it made the PR very big, I didn't continue the effort.
+Some test codes were changed, replacing manual checks with `PJ_TEST_XXX()` macros, mainly to test the usage of these macros and to make the test nicer. But since it made the PR very big, I didn't continue the effort, unless when it was necessary for debugging some problems.
 
 Some tests were also split up to make them run in parallel.
 
-#### Speed result: PJLIB-TEST
+More specific changes are discussed below.
+
+#### Changes to PJLIB-TEST
 
 In PJLIB-TEST, test time is speed up by up to four times:
 
@@ -157,19 +154,19 @@ In PJLIB-TEST, test time is speed up by up to four times:
 
 It looks like the sweet spot is with 3 worker threads. Runing with more than this did not speed up the test considerably because some tests just take a long time to finish (more than 2 minutes). I've tried to split up those tests into smaller tests, but mostly that's not feasible because the tests are benchmarking tests (that need to gather all results to determine the overall winner), or because the tests shares global states with each other.
 
-#### Speed result: PJLIB-UTIL-TEST
+#### Changes to PJLIB-UTIL-TEST
 
 In PJLIB-UTIL-TEST, there is almost 2x speed up from 5m52.500s to 3m3.615s with 1 worker thread (the default). We couldn't speed up more because tests such as `resolver_test()` and `http_client_test()` takes about three minutes to complete and they couldn't be split up due to the use of global states.
 
-#### Speed result: PJNATH-TEST
+#### Changes to PJNATH-TEST
 
-The original version took 45m42.275s to complete, excluding `ice_conc_test()` which apparently is not called (this test alone takes 123s to complete). Parallelizing the test requires large modifications as follows:
+PJNATH-TEST is the one with biggest modifications. The original version took 45m42.275s to complete, excluding `ice_conc_test()` which apparently is not called (this test alone takes 123s to complete). Parallelizing the test requires large modifications as follows:
 
 - remove global `mem` pool factory altogether, since the tests validate the memory leak in the pool factory, therefore having a single pool factory shared by multiple threads will not work
-- remove static constants (such as server port number) in `server.c` so that server can be instantiated multiple times simultaneously.
+- remove constant server port numbers in `server.c` so that server can be instantiated multiple times simultaneously.
 - split tests with multiple configurations (such as `ice_test`, `turn_sock_test`, `concur_test`) into individual test for each configuration, making them parallelable.
 
-As the result, there are 70 test items in pjnath.test. The test durations are as follows:
+As the result, there are 70 smaller test items in pjnath-test. The test durations are as follows:
 
 - 3 worker threads: 11m51.526s
 - 4 worker threads: 9m44.503s
@@ -178,6 +175,14 @@ As the result, there are 70 test items in pjnath.test. The test durations are as
 
 Hence with 10 worker threads, we can save 40 minutes of test time!
 
+#### Changes to PJMEDIA-TEST
+
+PJMEDIA-TEST has the least modifications because it has very few tests. The original duration was 4m18.691s, and has come down a little to 2m8.363s with 1 worker thread.
+
+Having said that, some minor modifications were done:
+
+- replace `pjmedia_endpt_create()` with `pjmedia_endpt_create2()` (similarly `..destroy()` with `..destroy2()` in `mips_test()` and `codec_test_vectors()`, to avoid inadvertently initializing `pjmedia_aud_subsys`.
+- replace `printf` with log in jbuf test to make the output tidy, and renamed `jbuf_main` function name to `jbuf_test`.
 
 ### 3. Other developments
 
@@ -189,6 +194,13 @@ This is header only feature to parse command line options. We have `pj_getopt()`
 
 The `fifobuf` feature has been there for the longest time (it was part of pjlib first ever commit) and finally has got some use.
 
+#### Minor fixes in `pj/log.c`
+
+Fixed bug with writing empty string i.e. `PJ_LOG(3,(THIS_FILE, "%s", ""))` causing message length to be set to the size of the buffer (i.e. too large). This causes the buffer to take all the available space in unit-testing log buffer.
+
+#### Minor enhancements in `pjlib-util/dns_server.[hc]`
+
+Add `pj_dns_server_get_addr()` API to allow app to get the bound port when null port is specified for the server.
 
 ### 4. Known issues and considerations
 

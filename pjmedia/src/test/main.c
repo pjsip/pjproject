@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/os.h>
+#include <pj/argparse.h>
 
 #include "test.h"
 
@@ -59,6 +60,21 @@ static void init_signals(void)
 #define init_signals()
 #endif
 
+static void usage()
+{
+    puts("Usage:");
+    puts("  pjmedia-test [OPTION] [test_to_run] [..]");
+    puts("");
+    puts("where OPTIONS:");
+    puts("");
+    puts("  -h, --help       Show this help screen");
+
+    ut_usage();
+
+    puts("  -i               Ask ENTER before quitting");
+    puts("  -n               Do not trap signals");
+}
+
 
 static int main_func(int argc, char *argv[])
 {
@@ -66,22 +82,25 @@ static int main_func(int argc, char *argv[])
     int interractive = 0;
     int no_trap = 0;
 
-    while (argc > 1) {
-        char *arg = argv[--argc];
-
-        if (*arg=='-' && *(arg+1)=='i') {
-            interractive = 1;
-
-        } else if (*arg=='-' && *(arg+1)=='n') {
-            no_trap = 1;
-        }
+    if (pj_argparse_get("-h", &argc, argv) ||
+        pj_argparse_get("--help", &argc, argv))
+    {
+        usage();
+        return 0;
     }
+
+    ut_app_init0(&test_app.ut_app);
+
+    interractive = pj_argparse_get("-i", &argc, argv);
+    no_trap = pj_argparse_get("-n", &argc, argv);
+    if (ut_parse_args(&test_app.ut_app, &argc, argv))
+        return 1;
 
     if (!no_trap) {
         init_signals();
     }
 
-    rc = test_main();
+    rc = test_main(argc, argv);
 
     if (interractive) {
         char s[10];

@@ -86,7 +86,6 @@ int ice_one_conc_test(pj_stun_config *stun_cfg, int err_quit);
 struct test_app_t
 {
     ut_app_t    ut_app;
-    int         param_log_decor;
 };
 extern struct test_app_t test_app;
 

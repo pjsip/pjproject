@@ -50,7 +50,8 @@ typedef struct pj_dns_server pj_dns_server;
  *                  registered to.
  * @param af        Address family of the server socket (valid values
  *                  are pj_AF_INET() for IPv4 and pj_AF_INET6() for IPv6).
- * @param port      The UDP port to listen.
+ * @param port      The UDP port to listen. Specify zero to bind to any
+ *                  port.
  * @param flags     Flags, currently must be zero.
  * @param p_srv     Pointer to receive the DNS server instance.
  *

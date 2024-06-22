@@ -212,6 +212,7 @@ PJ_DEF(void) pj_test_display_stat(const pj_test_stat *stat,
               (int)stat->duration.msec));
 }
 
+/* Get name with argument info if any, e.g. "ice_test (arg: 1)" */
 static const char *get_test_case_info(const pj_test_case *tc,
                                       char *buf, unsigned size)
 {
@@ -275,7 +276,7 @@ PJ_DEF(void) pj_test_display_log_messages(const pj_test_suite *suite,
                 title = NULL;
             }
 
-            PJ_LOG(3,(THIS_FILE, "Logs for %s [rc:%d]:", 
+            PJ_LOG(3,(THIS_FILE, "------------ Logs for %s [rc:%d]: ------------", 
                       get_test_case_info(tc, tcname, sizeof(tcname)),
                       tc->result));
 

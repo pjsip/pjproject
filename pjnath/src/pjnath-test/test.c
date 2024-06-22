@@ -22,8 +22,6 @@
 
 #define THIS_FILE   "test.c"
 
-struct test_app_t test_app;
-
 void app_perror_dbg(const char *msg, pj_status_t rc,
                     const char *file, int line)
 {
@@ -180,17 +178,8 @@ int check_pjlib_state(pj_stun_config *cfg,
 }
 
 
-#define DO_TEST(test)   do { \
-                            PJ_LOG(3, ("test", "Running %s...", #test));  \
-                            rc = test; \
-                            PJ_LOG(3, ("test",  \
-                                       "%s(%d)",  \
-                                       (char*)(rc ? "..ERROR" : "..success"), rc)); \
-                            if (rc!=0) goto on_return; \
-                        } while (0)
-
-
 pj_pool_factory *mem;
+struct test_app_t test_app;
 
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | PJ_LOG_HAS_SENDER |
                       PJ_LOG_HAS_MICRO_SEC;
