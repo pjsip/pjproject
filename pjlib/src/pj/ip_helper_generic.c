@@ -523,12 +523,12 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
             return PJ_ETOOSMALL;
         }
 
-        if (nlmsg_ptr->nlmsg_type == NLMSG_DONE)
-            break;
-
         for(; NLMSG_OK(nlmsg_ptr, nlmsg_len);
             nlmsg_ptr = NLMSG_NEXT(nlmsg_ptr, nlmsg_len))
         {
+            if (nlmsg_ptr->nlmsg_type == NLMSG_DONE)
+                goto nlmsg_done;
+
             struct ifaddrmsg *ifaddrmsg_ptr;
             struct rtattr *rtattr_ptr;
             int ifaddrmsg_len;
@@ -567,6 +567,7 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
             }
         }
     }
+    nlmsg_done:;
 
     close(fd);
     *count = idx;
