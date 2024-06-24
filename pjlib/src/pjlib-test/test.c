@@ -89,6 +89,7 @@ int test_inner(void)
 #endif
 
 #if INCLUDE_OS_TEST
+    DO_TEST( log_test() );
     DO_TEST( os_test() );
 #endif
 
