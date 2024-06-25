@@ -39,10 +39,8 @@ int generic_transport_test(pjsip_transport *tp)
         if (pj_inet_pton(pj_AF_INET(), &tp->local_name.host,
                          &addr) == PJ_SUCCESS)
         {
-            if (addr.s_addr==PJ_INADDR_ANY || addr.s_addr==PJ_INADDR_NONE) {
-                PJ_LOG(3,(THIS_FILE, "   Error: invalid address name"));
-                return -420;
-            }
+            PJ_TEST_TRUE(addr.s_addr!=PJ_INADDR_ANY && addr.s_addr!=PJ_INADDR_NONE,
+                         "invalid address name", return -420);
         } else {
             /* It's okay. local_name.host may be a hostname instead of
              * IP address.
@@ -51,17 +49,13 @@ int generic_transport_test(pjsip_transport *tp)
     }
 
     /* Check that port is valid. */
-    if (tp->local_name.port <= 0) {
-        return -430;
-    }
+    PJ_TEST_GT(tp->local_name.port, 0, NULL, return -430);
 
     /* Check length of address (for now we only check against sockaddr_in). */
-    if (tp->addr_len != sizeof(pj_sockaddr_in))
-        return -440;
+    PJ_TEST_EQ(tp->addr_len, sizeof(pj_sockaddr_in), NULL, return -440);
 
     /* Check type. */
-    if (tp->key.type == PJSIP_TRANSPORT_UNSPECIFIED)
-        return -450;
+    PJ_TEST_NEQ(tp->key.type, PJSIP_TRANSPORT_UNSPECIFIED, NULL, return -450);
 
     /* That's it. */
     return PJ_SUCCESS;
@@ -77,8 +71,8 @@ int generic_transport_test(pjsip_transport *tp)
  * The main purpose is to test that the basic transport functionalities works,
  * before we continue with more complicated tests.
  */
-#define FROM_HDR    "Bob <sip:bob@example.com>"
-#define CONTACT_HDR "Bob <sip:bob@127.0.0.1>"
+#define FROM_HDR    "Bob <sip:transport_test@example.com>"
+#define CONTACT_HDR "Bob <sip:transport_test@127.0.0.1>"
 #define CALL_ID_HDR "SendRecv-Test"
 #define CSEQ_VALUE  100
 #define BODY        "Hello World!"
@@ -687,7 +681,7 @@ static struct mod_load_test
 static pj_bool_t load_on_rx_request(pjsip_rx_data *rdata)
 {
     if (rdata->msg_info.cseq->cseq != mod_load.next_seq) {
-        PJ_LOG(1,("THIS_FILE", "    err: expecting cseq %u, got %u", 
+        PJ_LOG(1,(THIS_FILE, "    err: expecting cseq %u, got %u", 
                   mod_load.next_seq, rdata->msg_info.cseq->cseq));
         mod_load.err = PJ_TRUE;
         mod_load.next_seq = rdata->msg_info.cseq->cseq + 1;
@@ -726,7 +720,7 @@ int transport_load_test(char *target_url)
         pjsip_tx_data *tdata;
 
         target = pj_str(target_url);
-        from = pj_str("<sip:user@host>");
+        from = pj_str("<sip:transport_test@host>");
         call_id = pj_str("thecallid");
         status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, 
                                             &target, &from, 
@@ -751,7 +745,7 @@ int transport_load_test(char *target_url)
     } while (i != 0);
 
     if (mod_load.next_seq != COUNT) {
-        PJ_LOG(1,("THIS_FILE", "    err: expecting %u msg, got only %u", 
+        PJ_LOG(1,(THIS_FILE, "    err: expecting %u msg, got only %u", 
                   COUNT, mod_load.next_seq));
         status = -2;
         goto on_return;

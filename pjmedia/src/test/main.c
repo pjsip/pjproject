@@ -63,7 +63,7 @@ static void init_signals(void)
 static void usage()
 {
     puts("Usage:");
-    puts("  pjmedia-test [OPTION] [test_to_run] [..]");
+    puts("  pjmedia-test [OPTIONS] [test_to_run] [test to run] [..]");
     puts("");
     puts("where OPTIONS:");
     puts("");

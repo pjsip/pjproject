@@ -86,6 +86,7 @@ int transport_loop_test(void);
 int transport_tcp_test(void);
 int resolve_test(void);
 int regc_test(void);
+int inv_offer_answer_test(void);
 
 struct tsx_test_param
 {
@@ -93,10 +94,11 @@ struct tsx_test_param
     int port;
     char *tp_type;
 };
+extern struct tsx_test_param tsx_test[10];
 
-int tsx_basic_test(struct tsx_test_param *param);
-int tsx_uac_test(struct tsx_test_param *param);
-int tsx_uas_test(struct tsx_test_param *param);
+int tsx_basic_test(unsigned index);
+int tsx_uac_test(unsigned index);
+int tsx_uas_test(unsigned index);
 
 /* Transport test helpers (transport_test.c). */
 int generic_transport_test(pjsip_transport *tp);
@@ -110,14 +112,10 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
                        int *pkt_lost);
 int transport_load_test(char *target_url);
 
-/* Invite session */
-int inv_offer_answer_test(void);
-
 /* Test main entry */
-int  test_main(char *testlist);
+int  test_main(int argc, char *argv[]);
 
 /* Test utilities. */
-void list_tests(void);
 void app_perror(const char *msg, pj_status_t status);
 int  init_msg_logger(void);
 int  msg_logger_set_enabled(pj_bool_t enabled);
@@ -130,5 +128,14 @@ void report_sval(const char *name, const char* value, const char *valname, const
 
 /* Settings. */
 extern int log_level;
+
+#define UT_MAX_TESTS    32
+#include "../../../pjlib/src/pjlib-test/test_util.h"
+
+struct test_app_t
+{
+    ut_app_t         ut_app;
+};
+extern struct test_app_t test_app;
 
 #endif  /* __TEST_H__ */

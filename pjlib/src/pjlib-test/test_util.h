@@ -31,6 +31,7 @@ typedef struct ut_app_t
     int                  prm_list_test;
     pj_bool_t            prm_stop_on_error;
     unsigned             flags;
+    unsigned             verbosity;
 
     pj_pool_t           *pool;
     pj_test_suite        suite;
@@ -75,7 +76,7 @@ typedef int (*ut_func)(void*);
 
 /* This is for adding test func that HAS arg */
 #define UT_ADD_TEST1(ut_app, test_func, arg, flags) \
-            ut_add_test(ut_app, test_func, arg, #test_func, flags, argc, argv)
+            ut_add_test(ut_app, (ut_func)test_func, arg, #test_func, flags, argc, argv)
 
 
 /* Check if a test is specified/requested in cmdline */
@@ -178,6 +179,7 @@ static pj_status_t ut_run_tests(ut_app_t *ut_app, const char *title,
     runner_prm.stop_on_error = ut_app->prm_stop_on_error;
     if (ut_app->prm_nthreads >= 0)
         runner_prm.nthreads = ut_app->prm_nthreads;
+    runner_prm.verbosity = ut_app->verbosity;
     status = pj_test_create_text_runner(ut_app->pool, &runner_prm, &runner);
     PJ_TEST_SUCCESS(status, "error creating text runner", return status);
 
@@ -204,6 +206,7 @@ static void ut_usage()
     printf("  -w N             Set N worker threads (0: disable. Default: %d)\n", PJ_HAS_THREADS);
     puts("  -L, --list       List the tests and exit");
     puts("  --stop-err       Stop testing on error");
+    puts("  -v, --verbose    Show info when starting/stopping tests");
 }
 
 
@@ -239,6 +242,10 @@ static pj_status_t ut_parse_args(ut_app_t *ut_app, int *argc, char *argv[])
         puts("Error: invalid/missing value for -w option");
         return PJ_EINVAL;
     }
+
+    ut_app->verbosity = pj_argparse_get("-v", argc, argv) ||
+                        pj_argparse_get("--verbose", argc, argv);
+
     return PJ_SUCCESS;
 }
 

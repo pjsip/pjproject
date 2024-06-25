@@ -1353,10 +1353,12 @@ static int perform_generic_test( const char *title,
  **
  *****************************************************************************
  */
-int tsx_uac_test(struct tsx_test_param *param)
+int tsx_uac_test(unsigned index)
 {
+#define ERR(rc__)   { status=rc__; goto on_return; }
+    struct tsx_test_param *param = &tsx_test[index];
     pj_sockaddr_in addr;
-    pj_status_t status;
+    int status;
 
     timer.tsx_key.ptr = timer.key_buf;
 
@@ -1367,43 +1369,36 @@ int tsx_uac_test(struct tsx_test_param *param)
 
     pj_ansi_snprintf(TARGET_URI, sizeof(TARGET_URI), "sip:bob@127.0.0.1:%d;transport=%s", 
                     param->port, param->tp_type);
-    pj_ansi_snprintf(FROM_URI, sizeof(FROM_URI), "sip:alice@127.0.0.1:%d;transport=%s", 
+    pj_ansi_snprintf(FROM_URI, sizeof(FROM_URI), "sip:tsx_uac_test@127.0.0.1:%d;transport=%s", 
                     param->port, param->tp_type);
 
     /* Check if loop transport is configured. */
-    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
-                                      &addr, sizeof(addr), NULL, &loop);
-    if (status != PJ_SUCCESS) {
-        PJ_LOG(3,(THIS_FILE, "  Error: loop transport is not configured!"));
-        return -10;
-    }
+    PJ_TEST_SUCCESS(pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
+                                      &addr, sizeof(addr), NULL, &loop),
+                    NULL, ERR(-10));
 
     /* Register modules. */
-    status = pjsip_endpt_register_module(endpt, &tsx_user);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to register module", status);
-        return -30;
+    if (tsx_user.id == -1) {
+        PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &tsx_user), NULL, ERR(-30));
     }
-    status = pjsip_endpt_register_module(endpt, &msg_receiver);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to register module", status);
-        return -40;
+    if (msg_receiver.id == -1) {
+        PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &msg_receiver), NULL, ERR(-40));
     }
 
     /* TEST1_BRANCH_ID: Basic retransmit and timeout test. */
     status = tsx_uac_retransmit_test();
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST2_BRANCH_ID: Resolve error test. */
     status = tsx_resolve_error_test();
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST3_BRANCH_ID: UAC terminate while resolving test. */
     status = tsx_terminate_resolving_test();
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST4_BRANCH_ID: Transport failed after several retransmissions.
      *                  Only applies to loop transport.
@@ -1411,7 +1406,7 @@ int tsx_uac_test(struct tsx_test_param *param)
     if (test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
         status = tsx_retransmit_fail_test();
         if (status != 0)
-            return status;
+            goto on_return;
     }
 
     /* TEST5_BRANCH_ID: Terminate transaction after several retransmissions 
@@ -1420,50 +1415,55 @@ int tsx_uac_test(struct tsx_test_param *param)
     if ((tp_flag & PJSIP_TRANSPORT_RELIABLE) == 0) {
         status = tsx_terminate_after_retransmit_test();
         if (status != 0)
-            return status;
+            goto on_return;
     }
 
     /* TEST6_BRANCH_ID: Successfull non-invite transaction */
     status = perform_generic_test("test6: successfull non-invite transaction",
                                   TEST6_BRANCH_ID, &pjsip_options_method);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST7_BRANCH_ID: Successfull non-invite transaction */
     status = perform_generic_test("test7: successfull non-invite transaction "
                                   "with provisional response",
                                   TEST7_BRANCH_ID, &pjsip_options_method);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST8_BRANCH_ID: Failed invite transaction */
     status = perform_generic_test("test8: failed invite transaction",
                                   TEST8_BRANCH_ID, &pjsip_invite_method);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST9_BRANCH_ID: Failed invite transaction with provisional response */
     status = perform_generic_test("test9: failed invite transaction with "
                                   "provisional response",
                                   TEST9_BRANCH_ID, &pjsip_invite_method);
     if (status != 0)
-        return status;
+        goto on_return;
 
     pjsip_transport_dec_ref(loop);
     flush_events(500);
 
+on_return:
     /* Unregister modules. */
-    status = pjsip_endpt_unregister_module(endpt, &tsx_user);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to unregister module", status);
-        return -31;
+    if (tsx_user.id != -1) {
+        status = pjsip_endpt_unregister_module(endpt, &tsx_user);
+        if (status != PJ_SUCCESS) {
+            app_perror("   Error: unable to unregister module", status);
+            return -31;
+        }
     }
-    status = pjsip_endpt_unregister_module(endpt, &msg_receiver);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to unregister module", status);
-        return -41;
+    if (msg_receiver.id != -1) {
+        status = pjsip_endpt_unregister_module(endpt, &msg_receiver);
+        if (status != PJ_SUCCESS) {
+            app_perror("   Error: unable to unregister module", status);
+            return -41;
+        }
     }
-
-    return 0;
+    return status;
+#undef ERR
 }
 

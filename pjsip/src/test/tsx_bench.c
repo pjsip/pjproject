@@ -20,7 +20,7 @@
 #include <pjsip.h>
 #include <pjlib.h>
 
-#define THIS_FILE   "tsx_uas_test.c"
+#define THIS_FILE   "tsx_bench.c"
 
 
 static pjsip_module mod_tsx_user;
@@ -36,7 +36,7 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 
     /* Create the request first. */
     pj_str_t str_target = pj_str("sip:someuser@someprovider.com");
-    pj_str_t str_from = pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
+    pj_str_t str_from = pj_str("\"Local User\" <sip:tsx_bench@serviceprovider.com>");
     pj_str_t str_to = pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
     pj_str_t str_contact = str_from;
 
@@ -108,7 +108,7 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 
     /* Create the request first. */
     pj_str_t str_target = pj_str("sip:someuser@someprovider.com");
-    pj_str_t str_from = pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
+    pj_str_t str_from = pj_str("\"Local User\" <sip:tsx_bench@serviceprovider.com>");
     pj_str_t str_to = pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
     pj_str_t str_contact = str_from;
 

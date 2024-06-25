@@ -23,87 +23,99 @@
 
 #define THIS_FILE   "transport_udp_test.c"
 
-static pj_status_t multi_transport_test(pjsip_transport *tp[], unsigned num_tp)
+static pj_status_t multi_transport_test(pjsip_transport *tp[], unsigned max_tp)
 {
-    pj_status_t status;
-    unsigned i = 0;
+#define ERR(rc__)   { rc=rc__; goto on_return; }
+    int rc;
+    unsigned i, num_tp=0;
     pj_str_t s;
-    pjsip_transport *udp_tp;
+    pjsip_transport *other_udp_tp = NULL, *udp_tp;
     pj_sockaddr_in rem_addr;    
     pjsip_tpselector tp_sel;
 
-    for (;i<num_tp;++i)
-    {
+    /* Check if an UDP transport has been registered by other part of
+     * pjsip-test */
+    pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "1.1.1.1"), 80);
+    pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_UDP,
+                                      &rem_addr, sizeof(rem_addr),
+                                      NULL, &other_udp_tp);
+
+    for (i=num_tp; i<max_tp; ++i) {
         pj_sockaddr_in addr;
 
         pj_sockaddr_in_init(&addr, NULL, (pj_uint16_t)(TEST_UDP_PORT+i));
 
         /* Start UDP transport. */
-        status = pjsip_udp_transport_start( endpt, &addr, NULL, 1, &udp_tp);
-        if (status != PJ_SUCCESS) {
-            app_perror("   Error: unable to start UDP transport", status);
-            return -110;
-        }
+        PJ_TEST_SUCCESS(pjsip_udp_transport_start( endpt, &addr, NULL, 1, &udp_tp),
+                        NULL, ERR(-110));
 
         /* UDP transport must have initial reference counter set to 1. */
-        if (pj_atomic_get(udp_tp->ref_cnt) != 1)
-            return -120;
+        PJ_TEST_EQ(pj_atomic_get(udp_tp->ref_cnt), 1, NULL, ERR(-120));
 
-        /* Test basic transport attributes */
-        status = generic_transport_test(udp_tp);
-        if (status != PJ_SUCCESS)
-            return status;
-
-        tp[i] = udp_tp;
+        tp[num_tp++] = udp_tp;
     }
 
     for (i = 0; i < num_tp; ++i) {
-        udp_tp = tp[i];
-        if (pj_atomic_get(udp_tp->ref_cnt) != 1)
-            return -130;
+        PJ_TEST_EQ(pj_atomic_get(tp[i]->ref_cnt), 1, NULL, ERR(-130));
+
+        /* Test basic transport attributes */
+        rc = generic_transport_test(udp_tp);
+        if (rc != 0)
+            goto on_return;
     }
 
     /* Acquire transport test without selector. */
     pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "1.1.1.1"), 80);
-    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_UDP,
+    PJ_TEST_SUCCESS(pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_UDP,
                                            &rem_addr, sizeof(rem_addr),
-                                           NULL, &udp_tp);
-    if (status != PJ_SUCCESS)
-        return -140;
+                                           NULL, &udp_tp),
+                    NULL, ERR(-140));
 
     for (i = 0; i < num_tp; ++i) {
         if (udp_tp == tp[i]) {
             break;
         }
     }
-    if (i == num_tp)
-        return -150;
+    PJ_TEST_TRUE(i<num_tp || udp_tp==other_udp_tp, NULL, ERR(-150));
 
     pjsip_transport_dec_ref(udp_tp);
 
-    if (pj_atomic_get(udp_tp->ref_cnt) != 1)
-        return -160;
+    if (udp_tp == other_udp_tp) {
+        PJ_TEST_GT(pj_atomic_get(udp_tp->ref_cnt), 1, NULL, ERR(-160));
+    } else {
+        PJ_TEST_EQ(pj_atomic_get(udp_tp->ref_cnt), 1, NULL, ERR(-165));
+    }
 
     /* Acquire transport test with selector. */
     pj_bzero(&tp_sel, sizeof(tp_sel));
     tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
     tp_sel.u.transport = tp[num_tp-1];
     pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "1.1.1.1"), 80);
-    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_UDP,
+    PJ_TEST_SUCCESS( pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_UDP,
                                            &rem_addr, sizeof(rem_addr),
-                                           &tp_sel, &udp_tp);
-    if (status != PJ_SUCCESS)
-        return -170;
+                                           &tp_sel, &udp_tp),
+                     NULL, ERR(-170));
 
-    if (udp_tp != tp[num_tp-1])
-        return -180;
+    PJ_TEST_EQ(udp_tp, tp[num_tp-1], NULL, ERR(-180));
 
     pjsip_transport_dec_ref(udp_tp);
 
-    if (pj_atomic_get(udp_tp->ref_cnt) != 1)
-        return -190;
+    PJ_TEST_EQ(pj_atomic_get(udp_tp->ref_cnt), 1, NULL, ERR(-190));
 
-    return PJ_SUCCESS;
+    rc = 0;
+
+on_return:
+    if (other_udp_tp) {
+        pjsip_transport_dec_ref(other_udp_tp);
+    }
+    if (rc != 0) {
+        for (i=0; i<num_tp; ++i) {
+            pjsip_transport_dec_ref(tp[i]);
+        }
+    }
+
+    return rc;
+#undef ERR
 }
 
 /*

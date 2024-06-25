@@ -1564,8 +1564,9 @@ int tsx_transport_failure_test(void)
  **
  *****************************************************************************
  */
-int tsx_uas_test(struct tsx_test_param *param)
+int tsx_uas_test(unsigned index)
 {
+    struct tsx_test_param *param = &tsx_test[index];
     pj_sockaddr_in addr;
     pj_status_t status;
 
@@ -1574,7 +1575,7 @@ int tsx_uas_test(struct tsx_test_param *param)
 
     pj_ansi_snprintf(TARGET_URI, sizeof(TARGET_URI), "sip:bob@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
-    pj_ansi_snprintf(FROM_URI, sizeof(FROM_URI), "sip:alice@127.0.0.1:%d;transport=%s",
+    pj_ansi_snprintf(FROM_URI, sizeof(FROM_URI), "sip:tsx_uas_test@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
 
     /* Check if loop transport is configured. */

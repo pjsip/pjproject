@@ -184,6 +184,13 @@ Having said that, some minor modifications were done:
 - replace `pjmedia_endpt_create()` with `pjmedia_endpt_create2()` (similarly `..destroy()` with `..destroy2()` in `mips_test()` and `codec_test_vectors()`, to avoid inadvertently initializing `pjmedia_aud_subsys`.
 - replace `printf` with log in jbuf test to make the output tidy, and renamed `jbuf_main` function name to `jbuf_test`.
 
+#### Changes to PJSIP-TEST
+
+Original: 28m22.744s
+First porting: 27m1.894s
+
+Changed `tsx_basic_test`, `tsx_uac_test`, `tsx_uas_test` to take the index to parameters rather than the parameter itself to make the test output more informative.
+
 ### 3. Other developments
 
 #### `<pj/argparse.h>`
@@ -194,15 +201,17 @@ This is header only feature to parse command line options. We have `pj_getopt()`
 
 The `fifobuf` feature has been there for the longest time (it was part of pjlib first ever commit) and finally has got some use.
 
-#### Minor fixes in `pj/log.c`
+### 4. Tips, known issues and considerations
 
-Fixed bug with writing empty string i.e. `PJ_LOG(3,(THIS_FILE, "%s", ""))` causing message length to be set to the size of the buffer (i.e. too large). This causes the buffer to take all the available space in unit-testing log buffer.
+### Basic runner limitations
 
-#### Minor enhancements in `pjlib-util/dns_server.[hc]`
+There can only be one basic runner running at any single time, because it stores current test in a global variable.
 
-Add `pj_dns_server_get_addr()` API to allow app to get the bound port when null port is specified for the server.
+Note: this limitation is because the unit test needs to access current test case inside logging callback, and we want the basic runner to be as simple as possible without the need to use pool or OS features such as thread local storage.
 
-### 4. Known issues and considerations
+### Multithreaded debugging tips
+
+Set `verbosity` to 1 in runner's param to display what tests are running to help finding out what's going on when error happens during test which suspected to be caused by concurrency issue.
 
 ### Cluttered logging
 

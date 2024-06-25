@@ -135,15 +135,16 @@ static int double_terminate(void)
     return PJ_SUCCESS;
 }
 
-int tsx_basic_test(struct tsx_test_param *param)
+int tsx_basic_test(unsigned index)
 {
+    struct tsx_test_param *param = &tsx_test[index];
     int status;
 
     pj_ansi_snprintf(TARGET_URI, sizeof(TARGET_URI),
                     "sip:bob@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
     pj_ansi_snprintf(FROM_URI, sizeof(FROM_URI),
-                    "sip:alice@127.0.0.1:%d;transport=%s",
+                    "sip:tsx_basic_test@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
 
     status = tsx_layer_test();

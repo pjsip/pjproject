@@ -477,9 +477,16 @@ typedef struct pj_test_runner_param
     pj_bool_t stop_on_error;
 
     /** Number of worker threads. Set to zero to disable parallel testings.
-     * Only applicable to test text runner.
+     * Only applicable to test text runner. Default is 1 if multithreading
+     * is available.
      */
     unsigned nthreads;
+
+    /**
+     * 0: only display test name and result after test completion (default)
+     * 1: display test name test when starting and finishing a test
+     */
+    unsigned verbosity;
 
 } pj_test_runner_param;
 
