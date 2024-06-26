@@ -90,6 +90,7 @@ extern int exception_test(void);
 extern int rand_test(void);
 extern int list_test(void);
 extern int hash_test(void);
+extern int log_test(void);
 extern int os_test(void);
 extern int pool_test(void);
 extern int pool_perf_test(void);

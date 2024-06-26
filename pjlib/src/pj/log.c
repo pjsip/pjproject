@@ -468,18 +468,11 @@ PJ_DEF(void) pj_log( const char *sender, int level,
         print_len = pj_ansi_snprintf(pre, sizeof(log_buffer)-len, 
                                      "<logging error: msg too long>");
     }
-    /* blp:
-     * The old "print_len < 1" check causes print_len to be very large when
-     * user specifies empty string, e.g. PJ_LOG(3,(THIS_FILE, "%s", "")).
-     * This breaks unit-test logging because the resulting log takes up all
-     * the unit-test logging buffer.
-     */
-    //if (print_len < 1 || print_len >= (int)(sizeof(log_buffer)-len)) {
     if (print_len < 0 || print_len >= (int)(sizeof(log_buffer)-len)) {
         print_len = sizeof(log_buffer) - len - 1;
     }
     len = len + print_len;
-    if (len > 0 && len < (int)sizeof(log_buffer)-2) {
+    if (len >= 0 && len < (int)sizeof(log_buffer)-2) {
         if (log_decor & PJ_LOG_HAS_CR) {
             log_buffer[len++] = '\r';
         }
