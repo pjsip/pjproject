@@ -103,8 +103,6 @@ int main(int argc, char *argv[])
     int rc;
     int interractive = 0;
     int no_trap = 0;
-    pj_status_t status;
-    char *s;
 
     boost();
     ut_app_init0(&test_app.ut_app);
@@ -112,51 +110,47 @@ int main(int argc, char *argv[])
     /* 
      * Parse arguments
      */
-    if (pj_argparse_get("-h", &argc, argv) ||
-        pj_argparse_get("--help", &argc, argv))
+    if (pj_argparse_get_bool("-h", &argc, argv) ||
+        pj_argparse_get_bool("--help", &argc, argv))
     {
         usage();
         return 0;
     }
-    interractive = pj_argparse_get("-i", &argc, argv);
-    no_trap = pj_argparse_get("-n", &argc, argv);
-    status = pj_argparse_get_int("-p", &argc, argv, &test_app.param_echo_port);
-    if (status!=PJ_SUCCESS && status!=PJ_ENOTFOUND) {
-        puts("Error: invalid/missing value for -p option");
+    interractive = pj_argparse_get_bool("-i", &argc, argv);
+    no_trap = pj_argparse_get_bool("-n", &argc, argv);
+    if (pj_argparse_get_int("-p", &argc, argv, &test_app.param_echo_port)) {
         usage();
         return 1;
     }
-    status = pj_argparse_get_str("-s", &argc, argv, 
-                                 (char**)&test_app.param_echo_server);
-    if (status!=PJ_SUCCESS && status!=PJ_ENOTFOUND) {
-        puts("Error: value is required for -s option");
+    if (pj_argparse_get_str("-s", &argc, argv, (char**)&test_app.param_echo_server)) {
         usage();
         return 1;
     }
 
-    status = pj_argparse_get_str("-t", &argc, argv, &s);
-    if (status==PJ_SUCCESS) {
-        if (pj_ansi_stricmp(s, "tcp")==0)
-            test_app.param_echo_sock_type = pj_SOCK_STREAM();
-        else if (pj_ansi_stricmp(s, "udp")==0)
-            test_app.param_echo_sock_type = pj_SOCK_DGRAM();
-        else {
-            printf("Error: unknown socket type %s for -t option\n", s);
+    if (pj_argparse_exists("-t", argv)) {
+        char *sock_type;
+        if (pj_argparse_get_str("-t", &argc, argv, &sock_type)==PJ_SUCCESS) {
+            if (pj_ansi_stricmp(sock_type, "tcp")==0)
+                test_app.param_echo_sock_type = pj_SOCK_STREAM();
+            else if (pj_ansi_stricmp(sock_type, "udp")==0)
+                test_app.param_echo_sock_type = pj_SOCK_DGRAM();
+            else {
+                printf("Error: unknown socket type %s for -t option\n", sock_type);
+                usage();
+                return 1;
+            }
+        } else {
             usage();
             return 1;
         }
-    } else if (status!=PJ_ENOTFOUND) {
-        puts("Error: value is required for -t option");
-        usage();
-        return 1;
     }
 
     if (ut_parse_args(&test_app.ut_app, &argc, argv)) {
         usage();
         return 1;
     }
-    test_app.param_skip_essentials = pj_argparse_get("--skip-e", &argc, argv);
-    test_app.param_ci_mode = pj_argparse_get("--ci-mode", &argc, argv);
+    test_app.param_skip_essentials = pj_argparse_get_bool("--skip-e", &argc, argv);
+    test_app.param_ci_mode = pj_argparse_get_bool("--ci-mode", &argc, argv);
 
 
     if (!no_trap) {

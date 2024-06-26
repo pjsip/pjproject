@@ -212,39 +212,38 @@ static void ut_usage()
 
 static pj_status_t ut_parse_args(ut_app_t *ut_app, int *argc, char *argv[])
 {
-    int itmp;
+    int itmp = -1;
     pj_status_t status;
 
-    ut_app->prm_list_test = pj_argparse_get("-L", argc, argv) ||
-                            pj_argparse_get("--list", argc, argv);
-    ut_app->prm_stop_on_error = pj_argparse_get("--stop-err", argc, argv);
-    if (pj_argparse_get("--log-no-cache", argc, argv)) {
+    ut_app->prm_list_test = pj_argparse_get_bool("-L", argc, argv) ||
+                            pj_argparse_get_bool("--list", argc, argv);
+    ut_app->prm_stop_on_error = pj_argparse_get_bool("--stop-err", argc, argv);
+    if (pj_argparse_get_bool("--log-no-cache", argc, argv)) {
         ut_app->flags |= PJ_TEST_LOG_NO_CACHE;
     }
 
-    status = pj_argparse_get_int("-l", argc, argv, &itmp);
-    if (status==PJ_SUCCESS && itmp>=0 && itmp<=3) {
-        ut_app->prm_logging_policy = (pj_test_select_tests)itmp;
-    } else if (status!=PJ_ENOTFOUND) {
-        puts("Error: invalid/missing value for -l option");
-        return PJ_EINVAL;
-    }
-
-    status = pj_argparse_get_int("-w", argc, argv, 
-                                 (int*)&ut_app->prm_nthreads);
-    if (status==PJ_SUCCESS) {
-        if (ut_app->prm_nthreads > 50 || ut_app->prm_nthreads < 0) {
-            printf("Error: value %d is not valid for -w option\n", 
-                   ut_app->prm_nthreads);
+    if (pj_argparse_exists("-l", argv)) {
+        status = pj_argparse_get_int("-l", argc, argv, &itmp);
+        if (status==PJ_SUCCESS && itmp>=0 && itmp<=3) {
+            ut_app->prm_logging_policy = (pj_test_select_tests)itmp;
+        } else {
+            puts("Error: invalid value for -l option");
             return PJ_EINVAL;
         }
-    } else if (status!=PJ_ENOTFOUND) {
-        puts("Error: invalid/missing value for -w option");
-        return PJ_EINVAL;
     }
 
-    ut_app->verbosity = pj_argparse_get("-v", argc, argv) ||
-                        pj_argparse_get("--verbose", argc, argv);
+    if (pj_argparse_exists("-w", argv)) {
+        status = pj_argparse_get_int("-w", argc, argv, &itmp);
+        if (status==PJ_SUCCESS && itmp>=0 && itmp<50) {
+            ut_app->prm_nthreads = itmp;
+        } else {
+            puts("Error: invalid/missing value for -w option");
+            return PJ_EINVAL;
+        }
+    }
+
+    ut_app->verbosity = pj_argparse_get_bool("-v", argc, argv) ||
+                        pj_argparse_get_bool("--verbose", argc, argv);
 
     return PJ_SUCCESS;
 }

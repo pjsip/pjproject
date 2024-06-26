@@ -75,8 +75,8 @@ int main(int argc, char *argv[])
     int retval;
     int no_trap = 0;
 
-    if (pj_argparse_get("-h", &argc, argv) ||
-        pj_argparse_get("--help", &argc, argv))
+    if (pj_argparse_get_bool("-h", &argc, argv) ||
+        pj_argparse_get_bool("--help", &argc, argv))
     {
         usage();
         return 0;
@@ -84,24 +84,16 @@ int main(int argc, char *argv[])
 
     ut_app_init0(&test_app.ut_app);
 
-    interractive = pj_argparse_get("-i", &argc, argv);
-    no_trap = pj_argparse_get("-n", &argc, argv);
-    if (pj_argparse_exists("-s", argv)) {
-        if (pj_argparse_get_str("-s", &argc, argv, (char**)&system_name)==PJ_EINVAL) {
-            puts("Error: value required for -s argument");
-            usage();
-            return 1;
-        }
-    } else if (pj_argparse_exists("--system", argv)) {
-        if (pj_argparse_get_str("--system", &argc, argv, (char**)&system_name)==PJ_EINVAL) {
-            puts("Error: value required for --system argument");
-            usage();
-            return 1;
-        }
+    interractive = pj_argparse_get_bool("-i", &argc, argv);
+    no_trap = pj_argparse_get_bool("-n", &argc, argv);
+    if (pj_argparse_get_str("-s", &argc, argv, (char**)&system_name) ||
+        pj_argparse_get_str("--system", &argc, argv, (char**)&system_name))
+    {
+        usage();
+        return 1;
     }
 
-    if (pj_argparse_get_int("--log-level", &argc, argv, &log_level)==PJ_EINVAL) {
-        puts("Error: invalid/missing value for --log-level argument");
+    if (pj_argparse_get_int("--log-level", &argc, argv, &log_level)) {
         usage();
         return 1;
     }

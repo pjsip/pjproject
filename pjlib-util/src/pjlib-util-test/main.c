@@ -90,8 +90,8 @@ int main(int argc, char *argv[])
 
     boost();
 
-    if (pj_argparse_get("-h", &argc, argv) ||
-        pj_argparse_get("--help", &argc, argv))
+    if (pj_argparse_get_bool("-h", &argc, argv) ||
+        pj_argparse_get_bool("--help", &argc, argv))
     {
         usage();
         return 0;
@@ -99,8 +99,8 @@ int main(int argc, char *argv[])
 
     ut_app_init0(&test_app.ut_app);
 
-    interractive = pj_argparse_get("-i", &argc, argv);
-    no_trap = pj_argparse_get("-n", &argc, argv);
+    interractive = pj_argparse_get_bool("-i", &argc, argv);
+    no_trap = pj_argparse_get_bool("-n", &argc, argv);
     if (ut_parse_args(&test_app.ut_app, &argc, argv))
         return 1;
         
