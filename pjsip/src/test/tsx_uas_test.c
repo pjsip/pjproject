@@ -131,12 +131,34 @@
 #define TEST5_TITLE "test5: retransmit last response in PROCEEDING state"
 #define TEST6_TITLE "test6: retransmit last response in COMPLETED state"
 
+/* Since several tsx_uas_test() may run concurrently, keep the global vars
+ * in array indexed according to the test index (tid)
+ */
+static struct tsx_uas_test_global_t
+{
+    char TARGET_URI[128];
+    char FROM_URI[128];
+    struct tsx_test_param *test_param;
+    unsigned tp_flag;
 
-static char TARGET_URI[128];
-static char FROM_URI[128];
-static struct tsx_test_param *test_param;
-static unsigned tp_flag;
+    /* Static vars, which will be reset on each test. */
+    int recv_count;
+    pj_time_val recv_last;
+    pj_bool_t test_complete;
 
+    /* Loop transport instance. */
+    pjsip_transport *loop;
+
+    /* UAS transaction key. */
+    char key_buf[64];
+    pj_str_t tsx_key;
+
+    /* General timer entry to be used by tests. */
+    //pj_timer_entry timer;
+
+    pj_bool_t modules_registered;
+
+} g[MAX_TSX_TESTS];
 
 #define TEST_TIMEOUT_ERROR      -30
 
@@ -182,28 +204,99 @@ static pjsip_module msg_sender =
     NULL,                               /* on_tsx_state()       */
 };
 
-/* Static vars, which will be reset on each test. */
-static int recv_count;
-static pj_time_val recv_last;
-static pj_bool_t test_complete;
-
-/* Loop transport instance. */
-static pjsip_transport *loop;
-
-/* UAS transaction key. */
-static char key_buf[64];
-static pj_str_t tsx_key = { key_buf, 0 };
-
-
-/* General timer entry to be used by tests. */
-//static pj_timer_entry timer;
-
 /* Timer to send response via transaction. */
 struct response
 {
     pj_str_t         tsx_key;
     pjsip_tx_data   *tdata;
 };
+
+/* Get test ID from transaction instance */
+static unsigned get_tsx_tid(const pjsip_transaction *tsx)
+{
+    pj_assert(tsx_user.id >= 0);
+    return (unsigned)(long)tsx->mod_data[tsx_user.id];
+}
+
+/* Set test ID to transaction instance */
+static void set_tsx_tid(pjsip_transaction *tsx, unsigned tid)
+{
+    pj_assert(tsx_user.id >= 0);
+    tsx->mod_data[tsx_user.id] = (void*)(long)tid;
+}
+
+static int modules_reg_cnt;
+
+/* Register modules, taking care of multiple re-registration attempts */
+static pj_status_t register_modules(unsigned tid)
+{
+    int old_reg_cnt;
+    pj_status_t status;
+
+    pj_enter_critical_section();
+    old_reg_cnt = modules_reg_cnt++;
+    pj_leave_critical_section();
+
+    if (old_reg_cnt==0) {
+        PJ_TEST_SUCCESS(status=pjsip_endpt_register_module(endpt, &tsx_user),
+                        NULL, goto on_error);
+        PJ_TEST_SUCCESS(status=pjsip_endpt_register_module(endpt, &msg_sender),
+                        NULL, {
+                            pjsip_endpt_unregister_module(endpt, &tsx_user);
+                            goto on_error;
+                        });
+    } else {
+        unsigned i;
+        /* Make sure modules are registered, wait if necessary */
+        for (i=0; i<20 && (tsx_user.id<0 || msg_sender.id<0); ++i)
+            pj_thread_sleep(50);
+
+        if (tsx_user.id<0 || msg_sender.id<0) {
+            PJ_TEST_SUCCESS(status = PJSIP_ENOTINITIALIZED,
+                            "other thread failed to register module",
+                            goto on_error);
+        }
+    }
+
+    g[tid].modules_registered = 1;
+    return PJ_SUCCESS;
+
+on_error:
+    pj_enter_critical_section();
+    modules_reg_cnt--;
+    pj_leave_critical_section();
+
+    return status;
+}
+
+/* Unregister modules, taking care of premature unregistration attempt */
+static void unregister_modules(unsigned tid)
+{
+    int new_reg_cnt;
+
+    if (!g[tid].modules_registered)
+        return;
+
+    g[tid].modules_registered = 0;
+
+    // Note:
+    //  on_tsx_state() can be called much later during pjsip shutdown
+    //  i.e. when transaction layer is being destroyed. If we unregister
+    //  the modules, get_tsx_tid() will fail with assertion.
+    //  So just let the module registered.
+    return;
+
+    pj_enter_critical_section();
+    new_reg_cnt = --modules_reg_cnt;
+    pj_leave_critical_section();
+
+    if (new_reg_cnt == 0) {
+        PJ_TEST_SUCCESS(pjsip_endpt_unregister_module(endpt, &tsx_user),
+                        "error ignored", {});
+        PJ_TEST_SUCCESS(pjsip_endpt_unregister_module(endpt, &msg_sender),
+                        "error ignored", {});
+    }
+}
 
 /* Timer callback to send response. */
 static void send_response_timer( pj_timer_heap_t *timer_heap,
@@ -241,12 +334,13 @@ static void send_response( pjsip_rx_data *rdata,
 {
     pj_status_t status;
     pjsip_tx_data *tdata;
+    unsigned tid = get_tsx_tid(tsx);
 
     status = pjsip_endpt_create_response( endpt, rdata, status_code, NULL,
                                           &tdata);
     if (status != PJ_SUCCESS) {
         app_perror("    error: unable to create response", status);
-        test_complete = -196;
+        g[tid].test_complete = -196;
         return;
     }
 
@@ -255,13 +349,14 @@ static void send_response( pjsip_rx_data *rdata,
         pjsip_tx_data_dec_ref(tdata);
         // Some tests do expect failure!
         //app_perror("    error: unable to send response", status);
-        //test_complete = -197;
+        //g[tid].test_complete = -197;
         return;
     }
 }
 
 /* Schedule timer to send response for the specified UAS transaction */
-static void schedule_send_response( pjsip_rx_data *rdata,
+static void schedule_send_response( unsigned tid,
+                                    pjsip_rx_data *rdata,
                                     const pj_str_t *tsx_key_,
                                     int status_code,
                                     int msec_delay )
@@ -276,7 +371,7 @@ static void schedule_send_response( pjsip_rx_data *rdata,
                                           &tdata);
     if (status != PJ_SUCCESS) {
         app_perror("    error: unable to create response", status);
-        test_complete = -198;
+        g[tid].test_complete = -198;
         return;
     }
 
@@ -296,18 +391,18 @@ static void schedule_send_response( pjsip_rx_data *rdata,
     if (status != PJ_SUCCESS) {
         pjsip_tx_data_dec_ref(tdata);
         app_perror("    error: unable to schedule timer", status);
-        test_complete = -199;
+        g[tid].test_complete = -199;
         return;
     }
 }
 
 
 /* Find and terminate tsx with the specified key. */
-static void terminate_our_tsx(int status_code)
+static void terminate_our_tsx(unsigned tid, int status_code)
 {
     pjsip_transaction *tsx;
 
-    tsx = pjsip_tsx_layer_find_tsx(&tsx_key, PJ_TRUE);
+    tsx = pjsip_tsx_layer_find_tsx(&g[tid].tsx_key, PJ_TRUE);
     if (!tsx) {
         PJ_LOG(3,(THIS_FILE,"    error: timer unable to find transaction"));
         return;
@@ -337,7 +432,7 @@ static void schedule_terminate_tsx( pjsip_transaction *tsx,
     delay.msec = msec_delay;
     pj_time_val_normalize(&delay);
 
-    pj_assert(pj_strcmp(&tsx->transaction_key, &tsx_key)==0);
+    pj_assert(pj_strcmp(&tsx->transaction_key, &g[tid].tsx_key)==0);
     timer.user_data = NULL;
     timer.id = status_code;
     timer.cb = &terminate_tsx_timer;
@@ -353,6 +448,8 @@ static void schedule_terminate_tsx( pjsip_transaction *tsx,
  */
 static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 {
+    unsigned tid = get_tsx_tid(tsx);
+
     if (pj_stricmp2(&tsx->branch, TEST1_BRANCH_ID)==0 ||
         pj_stricmp2(&tsx->branch, TEST2_BRANCH_ID)==0)
     {
@@ -368,18 +465,18 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
         if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
-            test_complete = 1;
+            g[tid].test_complete = 1;
 
             /* Check that status code is status_code. */
             if (tsx->status_code != status_code) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -100;
+                g[tid].test_complete = -100;
             }
 
             /* Previous state must be completed. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -101;
+                g[tid].test_complete = -101;
             }
 
         } else if (tsx->state == PJSIP_TSX_STATE_COMPLETED) {
@@ -387,7 +484,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             /* Previous state must be TRYING. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_TRYING) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -102;
+                g[tid].test_complete = -102;
             }
         }
 
@@ -399,18 +496,18 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
          */
         if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
-            test_complete = 1;
+            g[tid].test_complete = 1;
 
             /* Check that status code is status_code. */
             if (tsx->status_code != TEST3_STATUS_CODE) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -110;
+                g[tid].test_complete = -110;
             }
 
             /* Previous state must be completed. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -111;
+                g[tid].test_complete = -111;
             }
 
         } else if (tsx->state == PJSIP_TSX_STATE_PROCEEDING) {
@@ -418,19 +515,19 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             /* Previous state must be TRYING. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_TRYING) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -112;
+                g[tid].test_complete = -112;
             }
 
             /* Check that status code is status_code. */
             if (tsx->status_code != TEST3_PROVISIONAL_CODE) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -113;
+                g[tid].test_complete = -113;
             }
 
             /* Check that event must be TX_MSG */
             if (e->body.tsx_state.type != PJSIP_EVENT_TX_MSG) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect event"));
-                test_complete = -114;
+                g[tid].test_complete = -114;
             }
 
         } else if (tsx->state == PJSIP_TSX_STATE_COMPLETED) {
@@ -438,19 +535,19 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             /* Previous state must be PROCEEDING. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_PROCEEDING) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -115;
+                g[tid].test_complete = -115;
             }
 
             /* Check that status code is status_code. */
             if (tsx->status_code != TEST3_STATUS_CODE) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -116;
+                g[tid].test_complete = -116;
             }
 
             /* Check that event must be TX_MSG */
             if (e->body.tsx_state.type != PJSIP_EVENT_TX_MSG) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect event"));
-                test_complete = -117;
+                g[tid].test_complete = -117;
             }
 
         }
@@ -470,20 +567,20 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                           "    error: incorrect status code %d "
                           "(expecting %d)", tsx->status_code,
                           TEST4_STATUS_CODE));
-                test_complete = -120;
+                g[tid].test_complete = -120;
             }
 
             /* Previous state. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_TRYING) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -121;
+                g[tid].test_complete = -121;
             }
 
         } else if (tsx->state != PJSIP_TSX_STATE_DESTROYED)
         {
             PJ_LOG(3,(THIS_FILE, "    error: unexpected state %s (122)",
                       pjsip_tsx_state_str(tsx->state)));
-            test_complete = -122;
+            g[tid].test_complete = -122;
 
         }
 
@@ -501,13 +598,13 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             /* Check that status code is status_code. */
             if (tsx->status_code != TEST5_STATUS_CODE) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -130;
+                g[tid].test_complete = -130;
             }
 
             /* Previous state. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_PROCEEDING) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -131;
+                g[tid].test_complete = -131;
             }
 
         } else if (tsx->state == PJSIP_TSX_STATE_PROCEEDING) {
@@ -515,13 +612,13 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             /* Check status code. */
             if (tsx->status_code != TEST5_PROVISIONAL_CODE) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -132;
+                g[tid].test_complete = -132;
             }
 
         } else if (tsx->state != PJSIP_TSX_STATE_DESTROYED) {
             PJ_LOG(3,(THIS_FILE, "    error: unexpected state %s (133)",
                       pjsip_tsx_state_str(tsx->state)));
-            test_complete = -133;
+            g[tid].test_complete = -133;
 
         }
 
@@ -540,13 +637,13 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code %d "
                           "(expecting %d)", tsx->status_code,
                           TEST6_STATUS_CODE));
-                test_complete = -140;
+                g[tid].test_complete = -140;
             }
 
             /* Previous state. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -141;
+                g[tid].test_complete = -141;
             }
 
         } else if (tsx->state != PJSIP_TSX_STATE_PROCEEDING &&
@@ -555,7 +652,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
         {
             PJ_LOG(3,(THIS_FILE, "    error: unexpected state %s (142)",
                       pjsip_tsx_state_str(tsx->state)));
-            test_complete = -142;
+            g[tid].test_complete = -142;
 
         }
 
@@ -580,27 +677,27 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
         } else if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
-            if (test_complete == 0)
-                test_complete = 1;
+            if (g[tid].test_complete == 0)
+                g[tid].test_complete = 1;
 
             /* Check status code. */
             if (tsx->status_code != PJSIP_SC_TSX_TIMEOUT) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -150;
+                g[tid].test_complete = -150;
             }
 
             /* Previous state. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -151;
+                g[tid].test_complete = -151;
             }
 
             /* Check the number of retransmissions */
-            if (tp_flag & PJSIP_TRANSPORT_RELIABLE) {
+            if (g[tid].tp_flag & PJSIP_TRANSPORT_RELIABLE) {
 
                 if (tsx->retransmit_count != 0) {
                     PJ_LOG(3,(THIS_FILE, "    error: should not retransmit"));
-                    test_complete = -1510;
+                    g[tid].test_complete = -1510;
                 }
 
             } else {
@@ -610,7 +707,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                               "    error: incorrect retransmit count %d "
                               "(expecting 10)",
                               tsx->retransmit_count));
-                    test_complete = -1510;
+                    g[tid].test_complete = -1510;
                 }
 
             }
@@ -620,19 +717,19 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             /* Check that status code is status_code. */
             if (tsx->status_code != code) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -152;
+                g[tid].test_complete = -152;
             }
 
             /* Previous state. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_TRYING) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -153;
+                g[tid].test_complete = -153;
             }
 
         } else if (tsx->state != PJSIP_TSX_STATE_DESTROYED)  {
 
             PJ_LOG(3,(THIS_FILE, "    error: unexpected state (154)"));
-            test_complete = -154;
+            g[tid].test_complete = -154;
 
         }
 
@@ -649,19 +746,20 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
         } else if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
-            if (test_complete == 0)
-                test_complete = 1;
+            if (g[tid].test_complete == 0)
+                g[tid].test_complete = 1;
 
             /* Check status code. */
             if (tsx->status_code != TEST9_STATUS_CODE) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -160;
+                g[tid].test_complete = -160;
             }
 
             /* Previous state. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_CONFIRMED) {
-                PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -161;
+                PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state %d",
+                          e->body.tsx_state.prev_state));
+                g[tid].test_complete = -161;
             }
 
         } else if (tsx->state == PJSIP_TSX_STATE_COMPLETED) {
@@ -669,13 +767,13 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             /* Check that status code is status_code. */
             if (tsx->status_code != TEST9_STATUS_CODE) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -162;
+                g[tid].test_complete = -162;
             }
 
             /* Previous state. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_TRYING) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -163;
+                g[tid].test_complete = -163;
             }
 
 
@@ -684,19 +782,19 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             /* Check that status code is status_code. */
             if (tsx->status_code != TEST9_STATUS_CODE) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -164;
+                g[tid].test_complete = -164;
             }
 
             /* Previous state. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state"));
-                test_complete = -165;
+                g[tid].test_complete = -165;
             }
 
         } else if (tsx->state != PJSIP_TSX_STATE_DESTROYED)  {
 
             PJ_LOG(3,(THIS_FILE, "    error: unexpected state (166)"));
-            test_complete = -166;
+            g[tid].test_complete = -166;
 
         }
 
@@ -707,8 +805,8 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     {
         if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
-            if (!test_complete)
-                test_complete = 1;
+            if (!g[tid].test_complete)
+                g[tid].test_complete = 1;
 
             if (tsx->status_code != PJSIP_SC_REQUEST_TIMEOUT) {
                 PJ_LOG(3,(THIS_FILE,"    error: incorrect status code"
@@ -716,7 +814,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                           PJSIP_SC_REQUEST_TIMEOUT,
                           // PJSIP_SC_TSX_TRANSPORT_ERROR,
                           tsx->status_code));
-                test_complete = -170;
+                g[tid].test_complete = -170;
             }
         }
     } else
@@ -724,8 +822,8 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     {
         if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
-            if (!test_complete)
-                test_complete = 1;
+            if (!g[tid].test_complete)
+                g[tid].test_complete = 1;
 
             if (tsx->status_code != PJSIP_SC_REQUEST_TIMEOUT &&
                 tsx->status_code != PJSIP_SC_OK)
@@ -735,7 +833,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                           PJSIP_SC_REQUEST_TIMEOUT,
                           // PJSIP_SC_TSX_TRANSPORT_ERROR,
                           tsx->status_code));
-                test_complete = -170;
+                g[tid].test_complete = -170;
             }
         }
     }
@@ -745,9 +843,12 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 static void save_key(pjsip_transaction *tsx)
 {
     pj_str_t key;
+    unsigned tid = get_tsx_tid(tsx);
 
+    g[tid].tsx_key.ptr = g[tid].key_buf;
+    g[tid].tsx_key.slen = 0;
     pj_strdup(tsx->pool, &key, &tsx->transaction_key);
-    pj_strcpy(&tsx_key, &key);
+    pj_strcpy(&g[tid].tsx_key, &key);
 }
 
 #define DIFF(a,b)   ((a<b) ? (b-a) : (a-b))
@@ -760,6 +861,9 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
     pjsip_msg *msg = rdata->msg_info.msg;
     pj_str_t branch_param = rdata->msg_info.via->branch_param;
     pj_status_t status;
+    pjsip_to_hdr *to_hdr = rdata->msg_info.to;
+    pjsip_sip_uri *target = (pjsip_sip_uri*)pjsip_uri_get_uri(to_hdr->uri);
+    unsigned tid = (unsigned)pj_strtol(&target->user);
 
     if (pj_stricmp2(&branch_param, TEST1_BRANCH_ID) == 0 ||
         pj_stricmp2(&branch_param, TEST2_BRANCH_ID) == 0)
@@ -783,9 +887,10 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
             status = pjsip_tsx_create_uas(&tsx_user, rdata, &tsx);
             if (status != PJ_SUCCESS) {
                 app_perror("    error: unable to create transaction", status);
-                test_complete = -110;
+                g[tid].test_complete = -110;
                 return PJ_TRUE;
             }
+            set_tsx_tid(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
 
             save_key(tsx);
@@ -794,18 +899,18 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
         } else {
             /* Verify the response received. */
 
-            ++recv_count;
+            ++g[tid].recv_count;
 
             /* Verify status code. */
             if (msg->line.status.code != status_code) {
                 PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                test_complete = -113;
+                g[tid].test_complete = -113;
             }
 
             /* Verify that no retransmissions is received. */
-            if (recv_count > 1) {
+            if (g[tid].recv_count > 1) {
                 PJ_LOG(3,(THIS_FILE, "    error: retransmission received"));
-                test_complete = -114;
+                g[tid].test_complete = -114;
             }
 
         }
@@ -824,37 +929,38 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
             status = pjsip_tsx_create_uas(&tsx_user, rdata, &tsx);
             if (status != PJ_SUCCESS) {
                 app_perror("    error: unable to create transaction", status);
-                test_complete = -116;
+                g[tid].test_complete = -116;
                 return PJ_TRUE;
             }
+            set_tsx_tid(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
 
             save_key(tsx);
 
             send_response(rdata, tsx, TEST3_PROVISIONAL_CODE);
-            schedule_send_response(rdata, &tsx->transaction_key,
+            schedule_send_response(tid, rdata, &tsx->transaction_key,
                                    TEST3_STATUS_CODE, 2000);
 
         } else {
             /* Verify the response received. */
 
-            ++recv_count;
+            ++g[tid].recv_count;
 
-            if (recv_count == 1) {
+            if (g[tid].recv_count == 1) {
                 /* Verify status code. */
                 if (msg->line.status.code != TEST3_PROVISIONAL_CODE) {
                     PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                    test_complete = -123;
+                    g[tid].test_complete = -123;
                 }
-            } else if (recv_count == 2) {
+            } else if (g[tid].recv_count == 2) {
                 /* Verify status code. */
                 if (msg->line.status.code != TEST3_STATUS_CODE) {
                     PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                    test_complete = -124;
+                    g[tid].test_complete = -124;
                 }
             } else {
                 PJ_LOG(3,(THIS_FILE, "    error: retransmission received"));
-                test_complete = -125;
+                g[tid].test_complete = -125;
             }
 
         }
@@ -878,10 +984,10 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
             status = pjsip_tsx_create_uas(&tsx_user, rdata, &tsx);
             if (status != PJ_SUCCESS) {
                 app_perror("    error: unable to create transaction", status);
-                test_complete = -130;
+                g[tid].test_complete = -130;
                 return PJ_TRUE;
             }
-
+            set_tsx_tid(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
             save_key(tsx);
 
@@ -900,35 +1006,35 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
         } else {
             /* Verify the response received. */
 
-            PJ_LOG(4,(THIS_FILE, "    received response number %d", recv_count));
+            PJ_LOG(4,(THIS_FILE, "    received response number %d", g[tid].recv_count));
 
-            ++recv_count;
+            ++g[tid].recv_count;
 
             if (pj_stricmp2(&branch_param, TEST4_BRANCH_ID) == 0) {
                 PJ_LOG(3,(THIS_FILE, "    error: not expecting response!"));
-                test_complete = -132;
+                g[tid].test_complete = -132;
 
             } else if (pj_stricmp2(&branch_param, TEST5_BRANCH_ID) == 0) {
 
                 if (rdata->msg_info.msg->line.status.code!=TEST5_PROVISIONAL_CODE) {
                     PJ_LOG(3,(THIS_FILE, "    error: incorrect status code!"));
-                    test_complete = -133;
+                    g[tid].test_complete = -133;
 
                 }
-                if (recv_count > TEST5_RESPONSE_COUNT) {
+                if (g[tid].recv_count > TEST5_RESPONSE_COUNT) {
                     PJ_LOG(3,(THIS_FILE, "    error: not expecting response!"));
-                    test_complete = -134;
+                    g[tid].test_complete = -134;
                 }
 
             } else if (pj_stricmp2(&branch_param, TEST6_BRANCH_ID) == 0) {
 
                 int code = rdata->msg_info.msg->line.status.code;
 
-                switch (recv_count) {
+                switch (g[tid].recv_count) {
                 case 1:
                     if (code != TEST6_PROVISIONAL_CODE) {
                         PJ_LOG(3,(THIS_FILE, "    error: invalid code!"));
-                        test_complete = -135;
+                        g[tid].test_complete = -135;
                     }
                     break;
                 case 2:
@@ -936,12 +1042,12 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                     if (code != TEST6_STATUS_CODE) {
                         PJ_LOG(3,(THIS_FILE, "    error: invalid code %d "
                                   "(expecting %d)", code, TEST6_STATUS_CODE));
-                        test_complete = -136;
+                        g[tid].test_complete = -136;
                     }
                     break;
                 default:
                     PJ_LOG(3,(THIS_FILE, "    error: not expecting response"));
-                    test_complete = -137;
+                    g[tid].test_complete = -137;
                     break;
                 }
             }
@@ -965,10 +1071,10 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
             status = pjsip_tsx_create_uas(&tsx_user, rdata, &tsx);
             if (status != PJ_SUCCESS) {
                 app_perror("    error: unable to create transaction", status);
-                test_complete = -140;
+                g[tid].test_complete = -140;
                 return PJ_TRUE;
             }
-
+            set_tsx_tid(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
             save_key(tsx);
 
@@ -985,21 +1091,21 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
         } else {
             int code;
 
-            ++recv_count;
+            ++g[tid].recv_count;
 
             if (pj_stricmp2(&branch_param, TEST7_BRANCH_ID) == 0)
                 code = TEST7_STATUS_CODE;
             else
                 code = TEST8_STATUS_CODE;
 
-            if (recv_count==1) {
+            if (g[tid].recv_count==1) {
 
                 if (rdata->msg_info.msg->line.status.code != code) {
                     PJ_LOG(3,(THIS_FILE,"    error: invalid status code"));
-                    test_complete = -141;
+                    g[tid].test_complete = -141;
                 }
 
-                recv_last = rdata->pkt_info.timestamp;
+                g[tid].recv_last = rdata->pkt_info.timestamp;
 
             } else {
 
@@ -1008,10 +1114,10 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 
                 now = rdata->pkt_info.timestamp;
 
-                PJ_TIME_VAL_SUB(now, recv_last);
+                PJ_TIME_VAL_SUB(now, g[tid].recv_last);
 
                 msec = now.sec*1000 + now.msec;
-                msec_expected = (1 << (recv_count-2)) * pjsip_cfg()->tsx.t1;
+                msec_expected = (1 << (g[tid].recv_count-2)) * pjsip_cfg()->tsx.t1;
                 if (msec_expected > pjsip_cfg()->tsx.t2)
                     msec_expected = pjsip_cfg()->tsx.t2;
 
@@ -1020,16 +1126,16 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                               "    error: incorrect retransmission "
                               "time (%d ms expected, %d ms received",
                               msec_expected, msec));
-                    test_complete = -142;
+                    g[tid].test_complete = -142;
                 }
 
-                if (recv_count > 11) {
+                if (g[tid].recv_count > 11) {
                     PJ_LOG(3,(THIS_FILE,"    error: too many responses (%d)",
-                                        recv_count));
-                    test_complete = -143;
+                                        g[tid].recv_count));
+                    g[tid].test_complete = -143;
                 }
 
-                recv_last = rdata->pkt_info.timestamp;
+                g[tid].recv_last = rdata->pkt_info.timestamp;
             }
 
         }
@@ -1050,10 +1156,10 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
             status = pjsip_tsx_create_uas(&tsx_user, rdata, &tsx);
             if (status != PJ_SUCCESS) {
                 app_perror("    error: unable to create transaction", status);
-                test_complete = -150;
+                g[tid].test_complete = -150;
                 return PJ_TRUE;
             }
-
+            set_tsx_tid(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
             save_key(tsx);
             send_response(rdata, tsx, TEST9_STATUS_CODE);
@@ -1061,18 +1167,18 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 
         } else {
 
-            ++recv_count;
+            ++g[tid].recv_count;
 
             if (rdata->msg_info.msg->line.status.code != TEST9_STATUS_CODE) {
                 PJ_LOG(3,(THIS_FILE,"    error: invalid status code"));
-                test_complete = -151;
+                g[tid].test_complete = -151;
             }
 
-            if (recv_count==1) {
+            if (g[tid].recv_count==1) {
 
-                recv_last = rdata->pkt_info.timestamp;
+                g[tid].recv_last = rdata->pkt_info.timestamp;
 
-            } else if (recv_count < 5) {
+            } else if (g[tid].recv_count < 5) {
 
                 /* Let UAS retransmit some messages before we send ACK. */
                 pj_time_val now;
@@ -1080,10 +1186,10 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 
                 now = rdata->pkt_info.timestamp;
 
-                PJ_TIME_VAL_SUB(now, recv_last);
+                PJ_TIME_VAL_SUB(now, g[tid].recv_last);
 
                 msec = now.sec*1000 + now.msec;
-                msec_expected = (1 << (recv_count-2)) * pjsip_cfg()->tsx.t1;
+                msec_expected = (1 << (g[tid].recv_count-2)) * pjsip_cfg()->tsx.t1;
                 if (msec_expected > pjsip_cfg()->tsx.t2)
                     msec_expected = pjsip_cfg()->tsx.t2;
 
@@ -1092,12 +1198,12 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                               "    error: incorrect retransmission "
                               "time (%d ms expected, %d ms received",
                               msec_expected, msec));
-                    test_complete = -152;
+                    g[tid].test_complete = -152;
                 }
 
-                recv_last = rdata->pkt_info.timestamp;
+                g[tid].recv_last = rdata->pkt_info.timestamp;
 
-            } else if (recv_count == 5) {
+            } else if (g[tid].recv_count == 5) {
                 pjsip_tx_data *tdata;
                 pjsip_sip_uri *uri;
                 pjsip_via_hdr *via;
@@ -1114,12 +1220,14 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                             &tdata);
                 if (status != PJ_SUCCESS) {
                     app_perror("    error: unable to create ACK", status);
-                    test_complete = -153;
+                    g[tid].test_complete = -153;
                     return PJ_TRUE;
                 }
 
                 uri=(pjsip_sip_uri*)pjsip_uri_get_uri(tdata->msg->line.req.uri);
-                uri->transport_param = pj_str("loop-dgram");
+                pj_strdup2(tdata->pool, &uri->transport_param,
+                           g[tid].test_param->tp_type);
+                uri->port = g[tid].test_param->port;
 
                 via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
                 via->branch_param = pj_str(TEST9_BRANCH_ID);
@@ -1128,13 +1236,13 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                                                             NULL, NULL);
                 if (status != PJ_SUCCESS) {
                     app_perror("    error: unable to send ACK", status);
-                    test_complete = -154;
+                    g[tid].test_complete = -154;
                 }
 
             } else {
                 PJ_LOG(3,(THIS_FILE,"    error: too many responses (%d)",
-                                    recv_count));
-                test_complete = -155;
+                                    g[tid].recv_count));
+                g[tid].test_complete = -155;
             }
 
         }
@@ -1163,17 +1271,17 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
             status = pjsip_tsx_create_uas(&tsx_user, rdata, &tsx);
             if (status != PJ_SUCCESS) {
                 app_perror("    error: unable to create transaction", status);
-                test_complete = -150;
+                g[tid].test_complete = -150;
                 return PJ_TRUE;
             }
-
+            set_tsx_tid(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
             save_key(tsx);
 
-            schedule_send_response(rdata, &tsx_key, code1, 1000);
+            schedule_send_response(tid, rdata, &g[tid].tsx_key, code1, 1000);
 
             if (code2)
-                schedule_send_response(rdata, &tsx_key, code2, 2000);
+                schedule_send_response(tid, rdata, &g[tid].tsx_key, code2, 2000);
 
         } else {
 
@@ -1188,7 +1296,8 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 /*
  * The generic test framework, used by most of the tests.
  */
-static int perform_test( char *target_uri, char *from_uri,
+static int perform_test( unsigned tid,
+                         char *target_uri, char *from_uri,
                          char *branch_param, int test_time,
                          const pjsip_method *method,
                          int request_cnt, int request_interval_msec,
@@ -1208,9 +1317,9 @@ static int perform_test( char *target_uri, char *from_uri,
     }
 
     /* Reset test. */
-    recv_count = 0;
-    test_complete = 0;
-    tsx_key.slen = 0;
+    g[tid].recv_count = 0;
+    g[tid].test_complete = 0;
+    g[tid].tsx_key.slen = 0;
 
     /* Init headers. */
     target = pj_str(target_uri);
@@ -1239,7 +1348,7 @@ static int perform_test( char *target_uri, char *from_uri,
     timeout.sec += test_time;
 
     /* Wait until test complete. */
-    while (!test_complete) {
+    while (!g[tid].test_complete) {
         pj_time_val now, poll_delay = {0, 10};
 
         pjsip_endpt_handle_events(endpt, &poll_delay);
@@ -1279,24 +1388,24 @@ static int perform_test( char *target_uri, char *from_uri,
         }
     }
 
-    if (test_complete < 0) {
+    if (g[tid].test_complete < 0) {
         pjsip_transaction *tsx;
 
-        tsx = pjsip_tsx_layer_find_tsx(&tsx_key, PJ_TRUE);
+        tsx = pjsip_tsx_layer_find_tsx(&g[tid].tsx_key, PJ_TRUE);
         if (tsx) {
             pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
             pj_grp_lock_release(tsx->grp_lock);
             flush_events(1000);
         }
         pjsip_tx_data_dec_ref(tdata);
-        return test_complete;
+        return g[tid].test_complete;
     }
 
     /* Allow transaction to destroy itself */
     flush_events(500);
 
     /* Make sure transaction has been destroyed. */
-    if (pjsip_tsx_layer_find_tsx(&tsx_key, PJ_FALSE) != NULL) {
+    if (pjsip_tsx_layer_find_tsx(&g[tid].tsx_key, PJ_FALSE) != NULL) {
         PJ_LOG(3,(THIS_FILE, "   Error: transaction has not been destroyed"));
         pjsip_tx_data_dec_ref(tdata);
         return -40;
@@ -1325,7 +1434,7 @@ static int perform_test( char *target_uri, char *from_uri,
  **
  *****************************************************************************
  */
-static int tsx_basic_final_response_test(void)
+static int tsx_basic_final_response_test(unsigned tid)
 {
     unsigned duration;
     int status;
@@ -1335,16 +1444,16 @@ static int tsx_basic_final_response_test(void)
     /* Test duration must be greater than 32 secs if unreliable transport
      * is used.
      */
-    duration = (tp_flag & PJSIP_TRANSPORT_RELIABLE) ? 1 : 33;
+    duration = (g[tid].tp_flag & PJSIP_TRANSPORT_RELIABLE) ? 1 : 33;
 
-    status = perform_test(TARGET_URI, FROM_URI, TEST1_BRANCH_ID,
+    status = perform_test(tid, g[tid].TARGET_URI, g[tid].FROM_URI, TEST1_BRANCH_ID,
                           duration,  &pjsip_options_method, 1, 0, 0);
     if (status != 0)
         return status;
 
     PJ_LOG(3,(THIS_FILE,"  test2: basic sending non-2xx final response"));
 
-    status = perform_test(TARGET_URI, FROM_URI, TEST2_BRANCH_ID,
+    status = perform_test(tid, g[tid].TARGET_URI, g[tid].FROM_URI, TEST2_BRANCH_ID,
                           duration, &pjsip_options_method, 1, 0, 0);
     if (status != 0)
         return status;
@@ -1359,17 +1468,17 @@ static int tsx_basic_final_response_test(void)
  **
  *****************************************************************************
  */
-static int tsx_basic_provisional_response_test(void)
+static int tsx_basic_provisional_response_test(unsigned tid)
 {
     unsigned duration;
     int status;
 
     PJ_LOG(3,(THIS_FILE,"  test3: basic sending 2xx final response"));
 
-    duration = (tp_flag & PJSIP_TRANSPORT_RELIABLE) ? 1 : 33;
+    duration = (g[tid].tp_flag & PJSIP_TRANSPORT_RELIABLE) ? 1 : 33;
     duration += 2;
 
-    status = perform_test(TARGET_URI, FROM_URI, TEST3_BRANCH_ID, duration,
+    status = perform_test(tid, g[tid].TARGET_URI, g[tid].FROM_URI, TEST3_BRANCH_ID, duration,
                           &pjsip_options_method, 1, 0, 0);
 
     return status;
@@ -1384,7 +1493,8 @@ static int tsx_basic_provisional_response_test(void)
  **
  *****************************************************************************
  */
-static int tsx_retransmit_last_response_test(const char *title,
+static int tsx_retransmit_last_response_test(unsigned tid,
+                                             const char *title,
                                              char *branch_id,
                                              int request_cnt,
                                              int status_code)
@@ -1393,7 +1503,7 @@ static int tsx_retransmit_last_response_test(const char *title,
 
     PJ_LOG(3,(THIS_FILE,"  %s", title));
 
-    status = perform_test(TARGET_URI, FROM_URI, branch_id, 5,
+    status = perform_test(tid, g[tid].TARGET_URI, g[tid].FROM_URI, branch_id, 5,
                           &pjsip_options_method,
                           request_cnt, 1000, 1);
     if (status && status != TEST_TIMEOUT_ERROR)
@@ -1403,11 +1513,11 @@ static int tsx_retransmit_last_response_test(const char *title,
         return -31;
     }
 
-    terminate_our_tsx(status_code);
+    terminate_our_tsx(tid, status_code);
     flush_events(100);
 
-    if (test_complete != 1)
-        return test_complete;
+    if (g[tid].test_complete != 1)
+        return g[tid].test_complete;
 
     flush_events(100);
     return 0;
@@ -1420,14 +1530,14 @@ static int tsx_retransmit_last_response_test(const char *title,
  **
  *****************************************************************************
  */
-static int tsx_final_response_retransmission_test(void)
+static int tsx_final_response_retransmission_test(unsigned tid)
 {
     int status;
 
     PJ_LOG(3,(THIS_FILE,
               "  test7: INVITE non-2xx final response retransmission"));
 
-    status = perform_test(TARGET_URI, FROM_URI, TEST7_BRANCH_ID,
+    status = perform_test(tid, g[tid].TARGET_URI, g[tid].FROM_URI, TEST7_BRANCH_ID,
                           33, /* Test duration must be greater than 32 secs */
                           &pjsip_invite_method, 1, 0, 0);
     if (status != 0)
@@ -1436,7 +1546,7 @@ static int tsx_final_response_retransmission_test(void)
     PJ_LOG(3,(THIS_FILE,
               "  test8: INVITE 2xx final response retransmission"));
 
-    status = perform_test(TARGET_URI, FROM_URI, TEST8_BRANCH_ID,
+    status = perform_test(tid, g[tid].TARGET_URI, g[tid].FROM_URI, TEST8_BRANCH_ID,
                           33, /* Test duration must be greater than 32 secs */
                           &pjsip_invite_method, 1, 0, 0);
     if (status != 0)
@@ -1453,14 +1563,14 @@ static int tsx_final_response_retransmission_test(void)
  **
  *****************************************************************************
  */
-static int tsx_ack_test(void)
+static int tsx_ack_test(unsigned tid)
 {
     int status;
 
     PJ_LOG(3,(THIS_FILE,
               "  test9: receiving ACK for non-2xx final response"));
 
-    status = perform_test(TARGET_URI, FROM_URI, TEST9_BRANCH_ID,
+    status = perform_test(tid, g[tid].TARGET_URI, g[tid].FROM_URI, TEST9_BRANCH_ID,
                           20, /* allow 5 retransmissions */
                           &pjsip_invite_method, 1, 0, 0);
     if (status != 0)
@@ -1481,7 +1591,7 @@ static int tsx_ack_test(void)
  **
  *****************************************************************************
  */
-int tsx_transport_failure_test(void)
+int tsx_transport_failure_test(unsigned tid)
 {
     struct test_desc
     {
@@ -1515,10 +1625,10 @@ int tsx_transport_failure_test(void)
         pj_time_val fail_time, end_test, now;
 
         PJ_LOG(3,(THIS_FILE, "  %s", tests[i].title));
-        pjsip_loop_set_failure(loop, 0, NULL);
-        pjsip_loop_set_delay(loop, tests[i].transport_delay);
+        pjsip_loop_set_failure(g[tid].loop, 0, NULL);
+        pjsip_loop_set_delay(g[tid].loop, tests[i].transport_delay);
 
-        status = perform_test(TARGET_URI, FROM_URI, tests[i].branch_id,
+        status = perform_test(tid, g[tid].TARGET_URI, g[tid].FROM_URI, tests[i].branch_id,
                               0, &pjsip_invite_method, 1, 0, 1);
         if (status && status != TEST_TIMEOUT_ERROR)
             return status;
@@ -1537,7 +1647,7 @@ int tsx_transport_failure_test(void)
             pjsip_endpt_handle_events(endpt, &interval);
         } while (PJ_TIME_VAL_LT(now, fail_time));
 
-        pjsip_loop_set_failure(loop, 1, NULL);
+        pjsip_loop_set_failure(g[tid].loop, 1, NULL);
         PJ_LOG(5,(THIS_FILE, "   transport loop fail mode set"));
 
         end_test = now;
@@ -1547,9 +1657,9 @@ int tsx_transport_failure_test(void)
             pj_time_val interval = { 0, 1 };
             pj_gettimeofday(&now);
             pjsip_endpt_handle_events(endpt, &interval);
-        } while (!test_complete && PJ_TIME_VAL_LT(now, end_test));
+        } while (!g[tid].test_complete && PJ_TIME_VAL_LT(now, end_test));
 
-        if (test_complete != tests[i].result) {
+        if (g[tid].test_complete != tests[i].result) {
             PJ_LOG(3,(THIS_FILE, "   error: expecting timeout"));
             return -41;
         }
@@ -1564,99 +1674,95 @@ int tsx_transport_failure_test(void)
  **
  *****************************************************************************
  */
-int tsx_uas_test(unsigned index)
+int tsx_uas_test(unsigned tid)
 {
-    struct tsx_test_param *param = &tsx_test[index];
+    struct tsx_test_param *param = &tsx_test[tid];
     pj_sockaddr_in addr;
     pj_status_t status;
 
-    test_param = param;
-    tp_flag = pjsip_transport_get_flag_from_type((pjsip_transport_type_e)param->type);
+    g[tid].test_param = param;
+    g[tid].tp_flag = pjsip_transport_get_flag_from_type((pjsip_transport_type_e)param->type);
 
-    pj_ansi_snprintf(TARGET_URI, sizeof(TARGET_URI), "sip:bob@127.0.0.1:%d;transport=%s",
-                    param->port, param->tp_type);
-    pj_ansi_snprintf(FROM_URI, sizeof(FROM_URI), "sip:tsx_uas_test@127.0.0.1:%d;transport=%s",
-                    param->port, param->tp_type);
+    pj_ansi_snprintf(g[tid].TARGET_URI, sizeof(g[tid].TARGET_URI),
+                     "sip:%d@127.0.0.1:%d;transport=%s",
+                     tid, param->port, param->tp_type);
+    pj_ansi_snprintf(g[tid].FROM_URI, sizeof(g[tid].FROM_URI),
+                     "sip:tsx_uas_test@127.0.0.1:%d;transport=%s",
+                     param->port, param->tp_type);
 
     /* Check if loop transport is configured. */
     status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
-                                      &addr, sizeof(addr), NULL, &loop);
+                                      &addr, sizeof(addr), NULL, &g[tid].loop);
     if (status != PJ_SUCCESS) {
         PJ_LOG(3,(THIS_FILE, "  Error: loop transport is not configured!"));
         return -10;
     }
     /* Register modules. */
-    status = pjsip_endpt_register_module(endpt, &tsx_user);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to register module", status);
-        return -3;
-    }
-    status = pjsip_endpt_register_module(endpt, &msg_sender);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to register module", status);
-        return -4;
+    if ((status=register_modules(tid)) != PJ_SUCCESS) {
+        pjsip_transport_dec_ref(g[tid].loop);
+        return -20;
     }
 
     /* TEST1_BRANCH_ID: Basic 2xx final response.
      * TEST2_BRANCH_ID: Basic non-2xx final response.
      */
-    status = tsx_basic_final_response_test();
+    status = tsx_basic_final_response_test(tid);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST3_BRANCH_ID: with provisional response
      */
-    status = tsx_basic_provisional_response_test();
+    status = tsx_basic_provisional_response_test(tid);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST4_BRANCH_ID: absorbs retransmissions in TRYING state
      */
-    status = tsx_retransmit_last_response_test(TEST4_TITLE,
+    status = tsx_retransmit_last_response_test(tid, TEST4_TITLE,
                                                TEST4_BRANCH_ID,
                                                TEST4_REQUEST_COUNT,
                                                TEST4_STATUS_CODE);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST5_BRANCH_ID: retransmit last response in PROCEEDING state
      */
-    status = tsx_retransmit_last_response_test(TEST5_TITLE,
+    status = tsx_retransmit_last_response_test(tid, TEST5_TITLE,
                                                TEST5_BRANCH_ID,
                                                TEST5_REQUEST_COUNT,
                                                TEST5_STATUS_CODE);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST6_BRANCH_ID: retransmit last response in COMPLETED state
      *                  This only applies to non-reliable transports,
      *                  since UAS transaction is destroyed as soon
      *                  as final response is sent for reliable transports.
      */
-    if ((tp_flag & PJSIP_TRANSPORT_RELIABLE) == 0) {
-        status = tsx_retransmit_last_response_test(TEST6_TITLE,
+    if ((g[tid].tp_flag & PJSIP_TRANSPORT_RELIABLE) == 0) {
+        status = tsx_retransmit_last_response_test(tid, TEST6_TITLE,
                                                    TEST6_BRANCH_ID,
                                                    TEST6_REQUEST_COUNT,
                                                    TEST6_STATUS_CODE);
         if (status != 0)
-            return status;
+            goto on_return;
     }
 
     /* TEST7_BRANCH_ID: INVITE non-2xx final response retransmission test
      * TEST8_BRANCH_ID: INVITE 2xx final response retransmission test
      */
-    status = tsx_final_response_retransmission_test();
+    status = tsx_final_response_retransmission_test(tid);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST9_BRANCH_ID: retransmission of non-2xx INVITE final response must
      * cease when ACK is received
      * Only applicable for non-reliable transports.
      */
-    if ((tp_flag & PJSIP_TRANSPORT_RELIABLE) == 0) {
-        status = tsx_ack_test();
+    if ((g[tid].tp_flag & PJSIP_TRANSPORT_RELIABLE) == 0) {
+        status = tsx_ack_test(tid);
         if (status != 0)
-            return status;
+            goto on_return;
     }
 
     /* TEST10_BRANCH_ID: test transport failure in TRYING state.
@@ -1666,27 +1772,18 @@ int tsx_uas_test(unsigned index)
      */
     /* Only valid for loop-dgram */
     if (param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
-        status = tsx_transport_failure_test();
+        status = tsx_transport_failure_test(tid);
         if (status != 0)
-            return status;
+            goto on_return;
     }
 
+    status = 0;
 
-    /* Register modules. */
-    status = pjsip_endpt_unregister_module(endpt, &tsx_user);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to unregister module", status);
-        return -8;
-    }
-    status = pjsip_endpt_unregister_module(endpt, &msg_sender);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to unregister module", status);
-        return -9;
-    }
+on_return:
 
+    if (g[tid].loop)
+        pjsip_transport_dec_ref(g[tid].loop);
 
-    if (loop)
-        pjsip_transport_dec_ref(loop);
-
-    return 0;
+    unregister_modules(tid);
+    return status;
 }

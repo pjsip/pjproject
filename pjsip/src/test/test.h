@@ -88,13 +88,15 @@ int resolve_test(void);
 int regc_test(void);
 int inv_offer_answer_test(void);
 
+#define MAX_TSX_TESTS   10
+
 struct tsx_test_param
 {
     int type;
     int port;
     char *tp_type;
 };
-extern struct tsx_test_param tsx_test[10];
+extern struct tsx_test_param tsx_test[MAX_TSX_TESTS];
 
 int tsx_basic_test(unsigned index);
 int tsx_uac_test(unsigned index);

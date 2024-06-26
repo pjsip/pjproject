@@ -35,7 +35,7 @@ static pj_oshandle_t fd_report;
 const char *system_name = "Unknown";
 static char buf[1024];
 struct test_app_t test_app;
-struct tsx_test_param tsx_test[10];
+struct tsx_test_param tsx_test[MAX_TSX_TESTS];
 
 void app_perror(const char *msg, pj_status_t rc)
 {
