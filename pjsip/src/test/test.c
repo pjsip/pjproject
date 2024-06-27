@@ -296,22 +296,6 @@ int test_main(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, regc_test, 0);
 #endif
 
-    /* Note: put exclusive tests last */
-
-#if INCLUDE_UDP_TEST
-    /* Transport tests share same testing codes which are not reentrant */
-    UT_ADD_TEST(&test_app.ut_app, transport_udp_test, PJ_TEST_EXCLUSIVE);
-#endif
-
-#if INCLUDE_LOOP_TEST
-    UT_ADD_TEST(&test_app.ut_app, transport_loop_test, PJ_TEST_EXCLUSIVE);
-#endif
-
-#if INCLUDE_TCP_TEST
-    UT_ADD_TEST(&test_app.ut_app, transport_tcp_test, PJ_TEST_EXCLUSIVE);
-#endif
-
-
 #if INCLUDE_TSX_TEST
     PJ_TEST_SUCCESS(rc=pjsip_udp_transport_start(endpt, NULL, NULL, 1, &tp),
                     NULL, goto on_return);
@@ -329,15 +313,26 @@ int test_main(int argc, char *argv[])
     ++tsx_test_cnt;
 #endif
 
-    /* each of these tests registers the same module hence must be exclusive */
     for (i = 0; i < tsx_test_cnt; ++i) {
-        UT_ADD_TEST1(&test_app.ut_app, tsx_basic_test, (void*)(long)i,
-                     PJ_TEST_EXCLUSIVE);
-        UT_ADD_TEST1(&test_app.ut_app, tsx_uac_test, (void*)(long)i,
-                     PJ_TEST_EXCLUSIVE);
-        UT_ADD_TEST1(&test_app.ut_app, tsx_uas_test, (void*)(long)i,
-                     PJ_TEST_EXCLUSIVE);
+        UT_ADD_TEST1(&test_app.ut_app, tsx_basic_test, (void*)(long)i, 0);
+        UT_ADD_TEST1(&test_app.ut_app, tsx_uac_test, (void*)(long)i, 0);
+        UT_ADD_TEST1(&test_app.ut_app, tsx_uas_test, (void*)(long)i, 0);
     }
+#endif
+
+    /* Note: put exclusive tests last */
+
+#if INCLUDE_UDP_TEST
+    /* Transport tests share same testing codes which are not reentrant */
+    UT_ADD_TEST(&test_app.ut_app, transport_udp_test, PJ_TEST_EXCLUSIVE);
+#endif
+
+#if INCLUDE_LOOP_TEST
+    UT_ADD_TEST(&test_app.ut_app, transport_loop_test, PJ_TEST_EXCLUSIVE);
+#endif
+
+#if INCLUDE_TCP_TEST
+    UT_ADD_TEST(&test_app.ut_app, transport_tcp_test, PJ_TEST_EXCLUSIVE);
 #endif
 
     /*
