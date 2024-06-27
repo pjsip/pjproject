@@ -71,11 +71,12 @@ int generic_transport_test(pjsip_transport *tp)
  * The main purpose is to test that the basic transport functionalities works,
  * before we continue with more complicated tests.
  */
-#define FROM_HDR    "Bob <sip:transport_test@example.com>"
-#define CONTACT_HDR "Bob <sip:transport_test@127.0.0.1>"
-#define CALL_ID_HDR "SendRecv-Test"
-#define CSEQ_VALUE  100
-#define BODY        "Hello World!"
+#define SEND_RECV_FROM_HDR      "Bob <sip:transport_send_recv_test@example.com>"
+#define SEND_RECV_CALL_ID_HDR   "Transport-SendRecv-Test"
+#define RT_FROM_HDR             "Bob <sip:transport_rt_test@example.com>"
+#define CONTACT_HDR             "Bob <sip:transport_test@127.0.0.1>"
+#define CSEQ_VALUE              100
+#define BODY                    "Hello World!"
 
 static pj_bool_t my_on_rx_request(pjsip_rx_data *rdata);
 static pj_bool_t my_on_rx_response(pjsip_rx_data *rdata);
@@ -89,7 +90,7 @@ static int recv_status = NO_STATUS;
 static pj_timestamp my_send_time, my_recv_time;
 
 /* Module to receive messages for this test. */
-static pjsip_module my_module = 
+static pjsip_module send_recv_module = 
 {
     NULL, NULL,                         /* prev and next        */
     { "Transport-Test", 14},            /* Name.                */
@@ -107,8 +108,11 @@ static pjsip_module my_module =
 
 static pj_bool_t my_on_rx_request(pjsip_rx_data *rdata)
 {
+    if (!is_user_equal(rdata->msg_info.from, "transport_send_recv_test"))
+        return PJ_FALSE;
+
     /* Check that this is our request. */
-    if (pj_strcmp2(&rdata->msg_info.cid->id, CALL_ID_HDR) == 0) {
+    if (pj_strcmp2(&rdata->msg_info.cid->id, SEND_RECV_CALL_ID_HDR) == 0) {
         /* It is! */
         /* Send response. */
         pjsip_tx_data *tdata;
@@ -141,7 +145,10 @@ static pj_bool_t my_on_rx_request(pjsip_rx_data *rdata)
 
 static pj_bool_t my_on_rx_response(pjsip_rx_data *rdata)
 {
-    if (pj_strcmp2(&rdata->msg_info.cid->id, CALL_ID_HDR) == 0) {
+    if (!is_user_equal(rdata->msg_info.from, "transport_send_recv_test"))
+        return PJ_FALSE;
+
+    if (pj_strcmp2(&rdata->msg_info.cid->id, SEND_RECV_CALL_ID_HDR) == 0) {
         pj_get_timestamp(&my_recv_time);
         recv_status = PJ_SUCCESS;
         return PJ_TRUE;
@@ -186,8 +193,8 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     PJ_LOG(3,(THIS_FILE, "  single message round-trip test..."));
 
     /* Register out test module to receive the message (if necessary). */
-    if (my_module.id == -1) {
-        status = pjsip_endpt_register_module( endpt, &my_module );
+    if (send_recv_module.id == -1) {
+        status = pjsip_endpt_register_module( endpt, &send_recv_module );
         if (status != PJ_SUCCESS) {
             app_perror("   error: unable to register module", status);
             return -500;
@@ -199,10 +206,10 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
 
     /* Create a request message. */
     target = pj_str(target_url);
-    from = pj_str(FROM_HDR);
+    from = pj_str(SEND_RECV_FROM_HDR);
     to = pj_str(target_url);
     contact = pj_str(CONTACT_HDR);
-    call_id = pj_str(CALL_ID_HDR);
+    call_id = pj_str(SEND_RECV_CALL_ID_HDR);
     body = pj_str(BODY);
 
     pjsip_method_set(&method, PJSIP_OPTIONS_METHOD);
@@ -334,6 +341,9 @@ static pj_str_t  rt_call_id;
 
 static pj_bool_t rt_on_rx_request(pjsip_rx_data *rdata)
 {
+    if (!is_user_equal(rdata->msg_info.from, "transport_rt_test"))
+        return PJ_FALSE;
+
     if (!pj_strncmp(&rdata->msg_info.cid->id, &rt_call_id, rt_call_id.slen)) {
         pjsip_tx_data *tdata;
         pjsip_response_addr res_addr;
@@ -373,7 +383,7 @@ static pj_status_t rt_send_request(int thread_id)
 
     /* Create a request message. */
     target = pj_str(rt_target_uri);
-    from = pj_str(FROM_HDR);
+    from = pj_str(RT_FROM_HDR);
     to = pj_str(rt_target_uri);
     contact = pj_str(CONTACT_HDR);
     call_id = rt_test_data[thread_id].call_id;
@@ -419,6 +429,9 @@ static pj_status_t rt_send_request(int thread_id)
 
 static pj_bool_t rt_on_rx_response(pjsip_rx_data *rdata)
 {
+    if (!is_user_equal(rdata->msg_info.from, "transport_rt_test"))
+        return PJ_FALSE;
+
     if (!pj_strncmp(&rdata->msg_info.cid->id, &rt_call_id, rt_call_id.slen)) {
         char *pos = pj_strchr(&rdata->msg_info.cid->id, '/')+1;
         int thread_id = (*pos - '0');
@@ -680,6 +693,9 @@ static struct mod_load_test
 
 static pj_bool_t load_on_rx_request(pjsip_rx_data *rdata)
 {
+    if (!is_user_equal(rdata->msg_info.from, "transport_load_test"))
+        return PJ_FALSE;
+
     if (rdata->msg_info.cseq->cseq != mod_load.next_seq) {
         PJ_LOG(1,(THIS_FILE, "    err: expecting cseq %u, got %u", 
                   mod_load.next_seq, rdata->msg_info.cseq->cseq));
@@ -720,7 +736,7 @@ int transport_load_test(char *target_url)
         pjsip_tx_data *tdata;
 
         target = pj_str(target_url);
-        from = pj_str("<sip:transport_test@host>");
+        from = pj_str("<sip:transport_load_test@host>");
         call_id = pj_str("thecallid");
         status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, 
                                             &target, &from, 

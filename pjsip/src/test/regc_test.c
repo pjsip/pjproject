@@ -39,14 +39,14 @@ static struct
         NULL, NULL,                         /* prev, next.              */
         { "mod-send", 8 },                  /* Name.                    */
         -1,                                 /* Id                       */
-        PJSIP_MOD_PRIORITY_TRANSPORT_LAYER,         /* Priority                 */
+        PJSIP_MOD_PRIORITY_TRANSPORT_LAYER, /* Priority                 */
         NULL,                               /* load()                   */
         NULL,                               /* start()                  */
         NULL,                               /* stop()                   */
         NULL,                               /* unload()                 */
         NULL,                               /* on_rx_request()          */
         NULL,                               /* on_rx_response()         */
-        &mod_send_on_tx_request,                    /* on_tx_request.           */
+        &mod_send_on_tx_request,            /* on_tx_request.           */
         NULL,                               /* on_tx_response()         */
         NULL,                               /* on_tsx_state()           */
     },
@@ -57,7 +57,12 @@ static struct
 
 static pj_status_t mod_send_on_tx_request(pjsip_tx_data *tdata)
 {
-    PJ_UNUSED_ARG(tdata);
+    const pjsip_from_hdr *from_hdr = (const pjsip_from_hdr*)
+                        pjsip_msg_find_hdr(tdata->msg, PJSIP_H_FROM, NULL);
+
+    if ((tdata->msg->line.req.method.id != PJSIP_REGISTER_METHOD) ||
+        !is_user_equal(from_hdr, "regc-test"))
+        return PJ_FALSE;
 
     if (++send_mod.count > send_mod.count_before_reject)
         return PJ_ECANCELLED;
@@ -120,7 +125,8 @@ static pj_bool_t regs_rx_request(pjsip_rx_data *rdata)
     int code;
     pj_status_t status;
 
-    if (msg->line.req.method.id != PJSIP_REGISTER_METHOD)
+    if ((rdata->msg_info.msg->line.req.method.id != PJSIP_REGISTER_METHOD) ||
+        !is_user_equal(rdata->msg_info.from, "regc-test"))
         return PJ_FALSE;
 
     if (!registrar.cfg.respond)

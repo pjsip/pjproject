@@ -189,9 +189,9 @@ static pj_status_t ut_run_tests(ut_app_t *ut_app, const char *title,
               runner_prm.nthreads>1?"s":""));
     pj_test_run(runner, &ut_app->suite);
     pj_test_runner_destroy(runner);
+    pj_test_display_log_messages(&ut_app->suite, ut_app->prm_logging_policy);
     pj_test_get_stat(&ut_app->suite, &stat);
     pj_test_display_stat(&stat, title, THIS_FILE);
-    pj_test_display_log_messages(&ut_app->suite, ut_app->prm_logging_policy);
 
     return stat.nfailed ? PJ_EBUG : PJ_SUCCESS;
 }

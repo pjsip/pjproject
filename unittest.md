@@ -203,6 +203,57 @@ The `fifobuf` feature has been there for the longest time (it was part of pjlib 
 
 ### 4. Tips, known issues and considerations
 
+### [MAJOR] Wrong logging report with multithreading
+
+Consider two test cases running on two threads:
+
+test0() is running on thread 0:
+
+```
+/* simplified on_rx_request() module callback */
+pj_bool_t on_rx_message0(pjsip_rx_data *rdata)
+{
+   if (pj_strcmp2(&rdata->msg_info.from->user, "test0")) {
+      PJ_LOG(1,(THIS_FILE, "test0 got message"));
+      return PJ_TRUE;
+   }
+   return PJ_FALSE;
+}
+
+/* test0() is running on thread 0 */
+int test0()
+{
+   send_request( .., from_uri="sip:test0@127.0.0.1" );
+   while (1)
+      pjsip_endpt_handle_events(..);
+}
+```
+
+test1() is running on thread 1:
+
+```
+/* simplified on_rx_request() module callback */
+pj_bool_t on_rx_message1(pjsip_rx_data *rdata)
+{
+   if (pj_strcmp2(&rdata->msg_info.from->user, "test1")) {
+      PJ_LOG(1,(THIS_FILE, "test1 got message"));
+      return PJ_TRUE;
+   }
+   return PJ_FALSE;
+}
+
+/* test1() is running on thread 1 */
+int test1()
+{
+   send_request( .., from_uri="sip:test1@127.0.0.1" );
+   while (1)
+      pjsip_endpt_handle_events(..);
+}
+```
+
+The tests above should run correctly, in the sense that `on_rx_message0()` and `on_rx_message1()` will work correctly. However, logging messages `"test0 got message"` or `"test1 got message"` may appear in the wrong test, because we don't know which thread will get the event. If thread 1 happens to get message for test 0, then `"test0 got message"` will appear in test1 log.
+
+
 ### Basic runner limitations
 
 There can only be one basic runner running at any single time, because it stores current test in a global variable.

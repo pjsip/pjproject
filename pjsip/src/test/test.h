@@ -20,6 +20,8 @@
 #define __TEST_H__
 
 #include <pjsip/sip_types.h>
+#include <pjsip/sip_msg.h>
+#include <pj/string.h>
 
 extern pjsip_endpoint *endpt;
 extern pj_caching_pool caching_pool;
@@ -127,6 +129,17 @@ void flush_events(unsigned duration);
 void report_ival(const char *name, int value, const char *valname, const char *desc);
 void report_sval(const char *name, const char* value, const char *valname, const char *desc);
 
+/* Utility to check if the user part of From/To is equal to the string */
+PJ_INLINE(pj_bool_t) is_user_equal(const pjsip_fromto_hdr *hdr, const char *user)
+{
+    const pjsip_sip_uri *sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(hdr->uri);
+    const pj_str_t *scheme = pjsip_uri_get_scheme(sip_uri);
+
+    if (pj_stricmp2(scheme, "sip") && pj_stricmp2(scheme, "sips"))
+        return PJ_FALSE;
+
+    return pj_strcmp2(&sip_uri->user, user)==0;
+}
 
 /* Settings. */
 extern int log_level;

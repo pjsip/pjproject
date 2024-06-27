@@ -23,12 +23,15 @@
 
 #define THIS_FILE   "tsx_basic_test.c"
 
-static char TARGET_URI[PJSIP_MAX_URL_SIZE];
-static char FROM_URI[PJSIP_MAX_URL_SIZE];
+static struct tsx_basic_test_global_t
+{
+    char TARGET_URI[PJSIP_MAX_URL_SIZE];
+    char FROM_URI[PJSIP_MAX_URL_SIZE];
+} g[MAX_TSX_TESTS];
 
 
 /* Test transaction layer. */
-static int tsx_layer_test(void)
+static int tsx_layer_test(unsigned tid)
 {
     pj_str_t target, from, tsx_key;
     pjsip_tx_data *tdata;
@@ -37,8 +40,8 @@ static int tsx_layer_test(void)
 
     PJ_LOG(3,(THIS_FILE, "  transaction layer test"));
 
-    target = pj_str(TARGET_URI);
-    from = pj_str(FROM_URI);
+    target = pj_str(g[tid].TARGET_URI);
+    from = pj_str(g[tid].FROM_URI);
 
     status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, &target,
                                         &from, &target, NULL, NULL, -1, NULL,
@@ -72,7 +75,7 @@ static int tsx_layer_test(void)
 }
 
 /* Double terminate test. */
-static int double_terminate(void)
+static int double_terminate(unsigned tid)
 {
     pj_str_t target, from, tsx_key;
     pjsip_tx_data *tdata;
@@ -81,8 +84,8 @@ static int double_terminate(void)
 
     PJ_LOG(3,(THIS_FILE, "  double terminate test"));
 
-    target = pj_str(TARGET_URI);
-    from = pj_str(FROM_URI);
+    target = pj_str(g[tid].TARGET_URI);
+    from = pj_str(g[tid].FROM_URI);
 
     /* Create request. */
     status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, &target,
@@ -135,23 +138,23 @@ static int double_terminate(void)
     return PJ_SUCCESS;
 }
 
-int tsx_basic_test(unsigned index)
+int tsx_basic_test(unsigned tid)
 {
-    struct tsx_test_param *param = &tsx_test[index];
+    struct tsx_test_param *param = &tsx_test[tid];
     int status;
 
-    pj_ansi_snprintf(TARGET_URI, sizeof(TARGET_URI),
-                    "sip:bob@127.0.0.1:%d;transport=%s",
+    pj_ansi_snprintf(g[tid].TARGET_URI, sizeof(g[tid].TARGET_URI),
+                    "sip:tsx_basic_test@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
-    pj_ansi_snprintf(FROM_URI, sizeof(FROM_URI),
+    pj_ansi_snprintf(g[tid].FROM_URI, sizeof(g[tid].FROM_URI),
                     "sip:tsx_basic_test@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
 
-    status = tsx_layer_test();
+    status = tsx_layer_test(tid);
     if (status != 0)
         return status;
 
-    status = double_terminate();
+    status = double_terminate(tid);
     if (status != 0)
         return status;
 

@@ -865,7 +865,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
     pj_status_t status;
     pjsip_to_hdr *to_hdr = rdata->msg_info.to;
     pjsip_sip_uri *target = (pjsip_sip_uri*)pjsip_uri_get_uri(to_hdr->uri);
-    pjsip_to_hdr *from_hdr = rdata->msg_info.from;
+    pjsip_from_hdr *from_hdr = rdata->msg_info.from;
     pjsip_sip_uri *from_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(from_hdr->uri);
     unsigned tid;
 

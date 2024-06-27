@@ -189,16 +189,6 @@ static pjmedia_sdp_session *create_sdp(pj_pool_t *pool, const char *body)
     return sdp;
 }
 
-/* Check that the message is part of our test. Multiple tests sharing the
- * same SIP endpoint may run simultaneously
- */
-static pj_bool_t is_our_message(const pjsip_from_hdr *from_hdr)
-{
-    const pjsip_sip_uri *sip_uri = (pjsip_sip_uri *)
-                                   pjsip_uri_get_uri(from_hdr->uri);
-    return pj_strcmp2(&sip_uri->user, "inv_offer_answer_test")==0;
-}
-
 /**************** INVITE SESSION CALLBACKS ******************/
 static void on_rx_offer(pjsip_inv_session *inv,
                         const pjmedia_sdp_session *offer)
@@ -325,7 +315,7 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
         pj_str_t uri;
         pjsip_tx_data *tdata;
 
-        if (!is_our_message(rdata->msg_info.from))
+        if (!is_user_equal(rdata->msg_info.from, "inv_offer_answer_test"))
             return PJ_FALSE;
 
         /*
@@ -527,7 +517,7 @@ static pj_bool_t log_on_rx_msg(pjsip_rx_data *rdata)
     pjsip_msg *msg = rdata->msg_info.msg;
     char info[80];
 
-    if (!is_our_message(rdata->msg_info.from))
+    if (!is_user_equal(rdata->msg_info.from, "inv_offer_answer_test"))
         return PJ_FALSE;
         
     if (msg->type == PJSIP_REQUEST_MSG)
