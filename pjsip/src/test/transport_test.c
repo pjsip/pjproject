@@ -164,6 +164,8 @@ static void send_msg_callback(pjsip_send_state *stateless_data,
 
     if (sent < 1) {
         /* Obtain the error code. */
+        PJ_LOG(3,(THIS_FILE, "   Sending %s got callback error %ld",
+                  stateless_data->tdata->info, -sent));
         send_status = (int)-sent;
     } else {
         send_status = PJ_SUCCESS;
@@ -234,6 +236,8 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
                                                  &send_msg_callback);
     if (status != PJ_SUCCESS) {
         /* Immediate error! */
+        PJ_LOG(3,(THIS_FILE, "   Sending %s to %.*s got immediate error %d",
+                  tdata->info, (int)target.slen, target.ptr, status));
         pjsip_tx_data_dec_ref(tdata);
         send_status = status;
     }

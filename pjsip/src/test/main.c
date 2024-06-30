@@ -31,14 +31,14 @@ static void usage(void)
     puts("");
     puts("where OPTIONS:");
     puts("");
-    puts(" -h,--help         Show this screen");
+    puts("  -h,--help        Show this screen");
 
     ut_usage();
 
-    puts(" -i,--interractive Key input at the end.");
-    puts(" -n,--no-trap      Let signals be handled by the OS");
-    puts(" --log-level N     Set log level (0-6)");
-    puts(" -s,--system NAME  Set system name to NAME");
+    puts("  -i,--interractive Key input at the end.");
+    puts("  -n,--no-trap     Let signals be handled by the OS");
+    puts("  --log-level N    Set log level (0-6)");
+    puts("  -s,--system NAME Set system name to NAME");
 }
 
 #if (PJ_LINUX || PJ_DARWINOS) && defined(PJ_HAS_EXECINFO_H) && PJ_HAS_EXECINFO_H != 0

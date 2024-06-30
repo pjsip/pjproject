@@ -188,6 +188,8 @@ Having said that, some minor modifications were done:
 
 Original: 28m22.744s
 First porting: 27m1.894s
+4 worker threads: 14m12.509s
+10 worker threads: 13m2.482s
 
 Changed `tsx_basic_test`, `tsx_uac_test`, `tsx_uas_test` to take the index to parameters rather than the parameter itself to make the test output more informative.
 

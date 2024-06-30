@@ -44,6 +44,8 @@ static int datagram_loop_test()
         return -20;
     }
 
+    pjsip_loop_set_failure(loop, 0, 0);
+
     /* Get initial reference counter */
     ref_cnt = pj_atomic_get(loop->ref_cnt);
 

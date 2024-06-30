@@ -100,9 +100,10 @@ struct tsx_test_param
 };
 extern struct tsx_test_param tsx_test[MAX_TSX_TESTS];
 
-int tsx_basic_test(unsigned index);
-int tsx_uac_test(unsigned index);
-int tsx_uas_test(unsigned index);
+int tsx_basic_test(unsigned tid);
+int tsx_uac_test(unsigned tid);
+int tsx_uas_test(unsigned tid);
+int tsx_transport_failure_test(unsigned tid);
 
 /* Transport test helpers (transport_test.c). */
 int generic_transport_test(pjsip_transport *tp);

@@ -230,7 +230,9 @@ int test_main(int argc, char *argv[])
     PJ_TEST_SUCCESS(pjlib_util_init(), NULL, return 20);
     PJ_TEST_SUCCESS(init_report(), NULL, return 30);
 
-    pj_dump_config();
+    if (test_app.ut_app.prm_config) {
+        pj_dump_config();
+    }
 
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 
                           PJSIP_TEST_MEM_SIZE );
@@ -240,8 +242,6 @@ int test_main(int argc, char *argv[])
                         pj_caching_pool_destroy(&caching_pool); 
                         return 40; 
                     });
-
-    PJ_LOG(3,(THIS_FILE," "));
 
     /* Init logger module. */
     init_msg_logger();
@@ -313,15 +313,33 @@ int test_main(int argc, char *argv[])
     ++tsx_test_cnt;
 #endif
 
+    pj_assert(tsx_test[0].type == PJSIP_TRANSPORT_LOOP_DGRAM);
+
     for (i = 0; i < tsx_test_cnt; ++i) {
         UT_ADD_TEST1(&test_app.ut_app, tsx_basic_test, (void*)(long)i, 0);
-        UT_ADD_TEST1(&test_app.ut_app, tsx_uac_test, (void*)(long)i, 0);
+        /* tsx_uac_test for loop dgram will be added later because it's exclusive */
+        if (i!=0)
+            UT_ADD_TEST1(&test_app.ut_app, tsx_uac_test, (void*)(long)i, 0);
         UT_ADD_TEST1(&test_app.ut_app, tsx_uas_test, (void*)(long)i, 0);
+    }
+
+    if (tsx_test_cnt) {
+        /* tsx_uac_test for loop dgram sets various delay to the loop dgram.
+         * This will mess up other tests that are also uses loop-dgram
+         * such as tsx_uas_test(0). So run it exclusively. */
+        UT_ADD_TEST1(&test_app.ut_app, tsx_uac_test, (void*)(long)0,
+                     PJ_TEST_EXCLUSIVE);
+        
+        /* tsx_transport_failure_test() also sets transport loop delay, hence
+         * it must run exclusively. */
+        UT_ADD_TEST1(&test_app.ut_app, tsx_transport_failure_test,
+                     (void*)(long)0, PJ_TEST_EXCLUSIVE);
+
     }
 #endif
 
     /* Note: put exclusive tests last */
-
+    
 #if INCLUDE_UDP_TEST
     /* Transport tests share same testing codes which are not reentrant */
     UT_ADD_TEST(&test_app.ut_app, transport_udp_test, PJ_TEST_EXCLUSIVE);

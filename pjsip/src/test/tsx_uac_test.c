@@ -142,13 +142,17 @@ static pjsip_module tsx_user =
     &tsx_user_on_tsx_state,             /* on_tsx_state()       */
 };
 
-/* Module to receive the loop-backed request. */
+/* Module to receive the loop-backed request and also process tx msgs. */
 static pjsip_module msg_receiver = 
 {
     NULL, NULL,                         /* prev and next        */
     { "Msg-Receiver", 12},              /* Name.                */
     -1,                                 /* Id                   */
-    PJSIP_MOD_PRIORITY_APPLICATION-1,   /* Priority             */
+    /* Note:
+     * Priority needs to be more important than UA layer, because UA layer
+     * silently absorbs ACK with To tag.
+     */
+    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER-1,/* Priority             */
     NULL,                               /* load()               */
     NULL,                               /* start()              */
     NULL,                               /* stop()               */
@@ -159,6 +163,44 @@ static pjsip_module msg_receiver =
     NULL,                               /* on_tx_response()     */
     NULL,                               /* on_tsx_state()       */
 };
+
+/* Init uac test */
+static int init_test(unsigned tid)
+{
+    pj_sockaddr_in addr;
+
+    pj_enter_critical_section();
+    if (tsx_user.id == -1) {
+        PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &tsx_user), NULL,
+                        { pj_leave_critical_section(); return -30; });
+    }
+
+    if (msg_receiver.id == -1) {
+        PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &msg_receiver), NULL,
+                        { pj_leave_critical_section(); return -40; });
+    }
+    pj_leave_critical_section();
+
+    pj_assert(g[tid].loop==NULL);
+    PJ_TEST_SUCCESS(pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
+                                      &addr, sizeof(addr), NULL, &g[tid].loop),
+                    NULL, return -50);
+
+    return PJ_SUCCESS;
+}
+
+/* Finish test */
+static void finish_test(unsigned tid)
+{
+    /* Note: don't unregister modules on_tsx_state() may be called when
+     *       transaction layer is shutdown later, which will cause
+     *       get_tsx_tid() to be called and it needs the module id.
+     */    
+    if (g[tid].loop) {
+        pjsip_transport_dec_ref(g[tid].loop);
+        g[tid].loop = 0;
+    }
+}
 
 /* Get test ID from transaction instance */
 static unsigned get_tsx_tid(const pjsip_transaction *tsx)
@@ -182,6 +224,13 @@ static void set_tsx_tid(pjsip_transaction *tsx, unsigned tid)
 static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 {
     unsigned tid = get_tsx_tid(tsx);
+
+    PJ_LOG(3,(THIS_FILE, 
+                "    on_tsx_state state: %s, event: %s (%s)",
+                pjsip_tsx_state_str(tsx->state),
+                pjsip_event_str(e->type),
+                pjsip_event_str(e->body.tsx_state.type)
+                ));
 
     if (pj_strnicmp2(&tsx->branch, TEST1_BRANCH_ID, BRANCH_LEN)==0) {
         /*
@@ -487,6 +536,9 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
             /* Previous state must be COMPLETED. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED) {
+                PJ_LOG(3,(THIS_FILE, 
+                          "    error: expecting last state=COMLETED instead of %d",
+                          e->body.tsx_state.prev_state));
                 g[tid].test_complete = -750;
             }
 
@@ -630,6 +682,12 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
     }
 
     tid = (unsigned)pj_strtol(&target->user);
+
+    PJ_LOG(3,(THIS_FILE, "   on_rx_request %s (recv_count: %d) on %s, branch: %.*s", 
+                pjsip_rx_data_get_info(rdata),
+                g[tid].recv_count, rdata->tp_info.transport->info,
+                (int)rdata->msg_info.via->branch_param.slen,
+                rdata->msg_info.via->branch_param.ptr));
 
     if (pj_strnicmp2(&rdata->msg_info.via->branch_param, TEST1_BRANCH_ID,
                      BRANCH_LEN) == 0) {
@@ -838,8 +896,8 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
         pjsip_method *method;
         pj_status_t status;
 
+    
         method = &rdata->msg_info.msg->line.req.method;
-
         g[tid].recv_count++;
 
         if (method->id == PJSIP_INVITE_METHOD) {
@@ -1162,7 +1220,6 @@ static int tsx_uac_retransmit_test(unsigned tid)
 
     PJ_LOG(3,(THIS_FILE, "  test1: basic uac retransmit and timeout test"));
 
-
     /* For this test. message printing shound be disabled because it makes
      * incorrect timing.
      */
@@ -1177,8 +1234,10 @@ static int tsx_uac_retransmit_test(unsigned tid)
                   sub_test[i].delay));
 
         /* Configure transport */
-        pjsip_loop_set_failure(g[tid].loop, 0, NULL);
-        pjsip_loop_set_recv_delay(g[tid].loop, sub_test[i].delay, NULL);
+        if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+            pjsip_loop_set_failure(g[tid].loop, 0, NULL);
+            pjsip_loop_set_recv_delay(g[tid].loop, sub_test[i].delay, NULL);
+        }
 
         /* Do the test. */
         status = perform_tsx_test(tid, -500, g[tid].TARGET_URI,
@@ -1189,7 +1248,9 @@ static int tsx_uac_retransmit_test(unsigned tid)
     }
 
     /* Restore transport. */
-    pjsip_loop_set_recv_delay(g[tid].loop, 0, NULL);
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_loop_set_recv_delay(g[tid].loop, 0, NULL);
+    }
 
     /* Restore msg logger. */
     msg_logger_set_enabled(enabled);
@@ -1234,19 +1295,23 @@ static int tsx_resolve_error_test(unsigned tid)
 
     /* This only applies to "loop-dgram" transport */
     if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        int prev_fail = 0;
+        unsigned prev_delay = 0;
+
         /* Set loop transport to return delayed error. */
-        pjsip_loop_set_failure(g[tid].loop, 2, NULL);
-        pjsip_loop_set_send_callback_delay(g[tid].loop, 10, NULL);
+        pjsip_loop_set_failure(g[tid].loop, 2, &prev_fail);
+        pjsip_loop_set_send_callback_delay(g[tid].loop, 10, &prev_delay);
 
         status = perform_tsx_test(tid, -800, g[tid].TARGET_URI,
                                   g[tid].FROM_URI, TEST2_BRANCH_ID, 2,
                                   &pjsip_options_method);
-        if (status != 0)
-            return status;
 
         /* Restore loop transport settings. */
-        pjsip_loop_set_failure(g[tid].loop, 0, NULL);
-        pjsip_loop_set_send_callback_delay(g[tid].loop, 0, NULL);
+        pjsip_loop_set_failure(g[tid].loop, prev_fail, NULL);
+        pjsip_loop_set_send_callback_delay(g[tid].loop, prev_delay, NULL);
+
+        if (status != 0)
+            return status;
     }
 
     return status;
@@ -1269,14 +1334,18 @@ static int tsx_terminate_resolving_test(unsigned tid)
     PJ_LOG(3,(THIS_FILE, "  test3: terminate while resolving test"));
 
     /* Configure transport delay. */
-    pjsip_loop_set_send_callback_delay(g[tid].loop, 100, &prev_delay);
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_loop_set_send_callback_delay(g[tid].loop, 100, &prev_delay);
+    }
 
     /* Start the test. */
     status = perform_tsx_test(tid, -900, g[tid].TARGET_URI, g[tid].FROM_URI,
                               TEST3_BRANCH_ID, 2, &pjsip_options_method);
 
     /* Restore delay. */
-    pjsip_loop_set_send_callback_delay(g[tid].loop, prev_delay, NULL);
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_loop_set_send_callback_delay(g[tid].loop, prev_delay, NULL);
+    }
 
     return status;
 }
@@ -1372,7 +1441,7 @@ static int perform_generic_test( unsigned tid,
     unsigned delay[] = { 1, 200 };
 
     PJ_LOG(3,(THIS_FILE, "  %s", title));
-
+    
     /* Do the test. */
     for (i=0; i<(int)PJ_ARRAY_SIZE(delay); ++i) {
         
@@ -1380,6 +1449,7 @@ static int perform_generic_test( unsigned tid,
             PJ_LOG(3,(THIS_FILE, "   variant %c: with %d ms transport delay",
                                  ('a'+i), delay[i]));
 
+            pjsip_loop_set_failure(g[tid].loop, 0, 0);
             pjsip_loop_set_delay(g[tid].loop, delay[i]);
         }
 
@@ -1392,7 +1462,9 @@ static int perform_generic_test( unsigned tid,
             break;
     }
 
-    pjsip_loop_set_delay(g[tid].loop, 0);
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_loop_set_delay(g[tid].loop, 0);
+    }
 
     /* Done. */
     return status;
@@ -1409,7 +1481,6 @@ int tsx_uac_test(unsigned tid)
 {
 #define ERR(rc__)   { status=rc__; goto on_return; }
     struct tsx_test_param *param = &tsx_test[tid];
-    pj_sockaddr_in addr;
     int status;
 
     g[tid].timer.tsx_key.ptr = g[tid].timer.key_buf;
@@ -1427,25 +1498,9 @@ int tsx_uac_test(unsigned tid)
                      "sip:tsx_uac_test@127.0.0.1:%d;transport=%s", 
                     param->port, param->tp_type);
 
-    /* Check if loop transport is configured. */
-    PJ_TEST_SUCCESS(pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
-                                      &addr, sizeof(addr), NULL, &g[tid].loop),
-                    NULL, ERR(-10));
+    if ((status=init_test(tid)) != 0)
+        return status;
 
-    /* Register modules. */
-    pj_enter_critical_section();
-    if (tsx_user.id == -1) {
-        PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &tsx_user), NULL,
-                        { status=-30; pj_leave_critical_section(); goto on_return; });
-    }
-
-    if (msg_receiver.id == -1) {
-        PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &msg_receiver), NULL,
-                        { status=-40; pj_leave_critical_section(); goto on_return; });
-    }
-    pj_leave_critical_section();
-
-    /* TEST1_BRANCH_ID: Basic retransmit and timeout test. */
     status = tsx_uac_retransmit_test(tid);
     if (status != 0)
         goto on_return;
@@ -1497,6 +1552,7 @@ int tsx_uac_test(unsigned tid)
     status = perform_generic_test(tid,
                                   "test8: failed invite transaction",
                                   TEST8_BRANCH_ID, &pjsip_invite_method);
+
     if (status != 0)
         goto on_return;
 
@@ -1508,20 +1564,10 @@ int tsx_uac_test(unsigned tid)
     if (status != 0)
         goto on_return;
 
-    pjsip_transport_dec_ref(g[tid].loop);
     flush_events(500);
 
 on_return:
-    /* Note: don't unregister modules on_tsx_state() may be called when
-     *       transaction layer is shutdown later, which will cause
-     *       get_tsx_tid() to be called and it needs the module id.
-     */
-    if (tsx_user.id != -1) {
-        //status = pjsip_endpt_unregister_module(endpt, &tsx_user);
-    }
-    if (msg_receiver.id != -1) {
-        //status = pjsip_endpt_unregister_module(endpt, &msg_receiver);
-    }
+    finish_test(tid);
     return status;
 #undef ERR
 }

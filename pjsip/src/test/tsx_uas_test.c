@@ -684,7 +684,8 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
             /* Check status code. */
             if (tsx->status_code != PJSIP_SC_TSX_TIMEOUT) {
-                PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
+                PJ_LOG(3,(THIS_FILE, "    error: incorrect status code %d",
+                          tsx->status_code));
                 g[tid].test_complete = -150;
             }
 
@@ -1070,7 +1071,6 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
     } else if (pj_strnicmp2(&branch_param, TEST7_BRANCH_ID, BRANCH_LEN) == 0 ||
                pj_strnicmp2(&branch_param, TEST8_BRANCH_ID, BRANCH_LEN) == 0)
     {
-
         /*
          * TEST7_BRANCH_ID and TEST8_BRANCH_ID test the retransmission
          * of INVITE final response
@@ -1113,7 +1113,8 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
             if (g[tid].recv_count==1) {
 
                 if (rdata->msg_info.msg->line.status.code != code) {
-                    PJ_LOG(3,(THIS_FILE,"    error: invalid status code"));
+                    PJ_LOG(3,(THIS_FILE,"    error: invalid status code %d",
+                              rdata->msg_info.msg->line.status.code));
                     g[tid].test_complete = -141;
                 }
 
@@ -1662,7 +1663,7 @@ int tsx_transport_failure_test(unsigned tid)
         pj_time_val_normalize(&fail_time);
 
         do {
-            pj_time_val interval = { 0, 1 };
+            pj_time_val interval = { 0, 10 };
             pj_gettimeofday(&now);
             pjsip_endpt_handle_events(endpt, &interval);
         } while (PJ_TIME_VAL_LT(now, fail_time));
@@ -1674,7 +1675,7 @@ int tsx_transport_failure_test(unsigned tid)
         end_test.sec += 33;
 
         do {
-            pj_time_val interval = { 0, 1 };
+            pj_time_val interval = { 0, 10 };
             pj_gettimeofday(&now);
             pjsip_endpt_handle_events(endpt, &interval);
         } while (!g[tid].test_complete && PJ_TIME_VAL_LT(now, end_test));
@@ -1791,11 +1792,15 @@ int tsx_uas_test(unsigned tid)
      * TEST13_BRANCH_ID: test transport failure in CONFIRMED state.
      */
     /* Only valid for loop-dgram */
+    /* 2024-06-28:
+     * tsx_transport_failure_test() is now run directly from test.c because
+     * it sets transport loop delay, hence it must run exclusively.
     if (param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
         status = tsx_transport_failure_test(tid);
         if (status != 0)
             goto on_return;
     }
+    */
 
     status = 0;
 
