@@ -26,6 +26,7 @@
 /* Unit testing app */
 typedef struct ut_app_t
 {
+    pj_bool_t            prm_config;
     pj_test_select_tests prm_logging_policy;
     int                  prm_nthreads;
     int                  prm_list_test;
@@ -198,6 +199,7 @@ static pj_status_t ut_run_tests(ut_app_t *ut_app, const char *title,
 
 static void ut_usage()
 {
+    puts("  -c, --config     Show configuration macros");
     puts("  -l 0,1,2,3       0: Don't show logging after tests");
     puts("                   1: Show logs of only failed tests (default)");
     puts("                   2: Show logs of only successful tests");
@@ -215,6 +217,8 @@ static pj_status_t ut_parse_args(ut_app_t *ut_app, int *argc, char *argv[])
     int itmp = -1;
     pj_status_t status;
 
+    ut_app->prm_config = pj_argparse_get_bool("-c", argc, argv) ||
+                         pj_argparse_get_bool("--config", argc, argv);
     ut_app->prm_list_test = pj_argparse_get_bool("-L", argc, argv) ||
                             pj_argparse_get_bool("--list", argc, argv);
     ut_app->prm_stop_on_error = pj_argparse_get_bool("--stop-err", argc, argv);

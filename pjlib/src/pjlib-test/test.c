@@ -104,12 +104,13 @@ static pj_test_stat essential_tests(int argc, char *argv[])
 
     pj_bzero(&stat, sizeof(stat));
 
+    if (test_app.ut_app.prm_config)
+        pj_dump_config();
+
     /* Test the unit-testing framework first, outside unit-test! 
      * Only perform the test if user is not requesting specific test.
      */
     if (argc==1 && !test_app.ut_app.prm_list_test) {
-        pj_dump_config();
-
         PJ_LOG(3,(THIS_FILE, "Testing the unit-test framework (basic)"));
         if (unittest_basic_test()) {
             stat.nfailed = 1;

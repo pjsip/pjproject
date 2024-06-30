@@ -51,6 +51,10 @@ int test_main(int argc, char *argv[])
     pj_pool_t *pool = NULL;
 
     PJ_TEST_SUCCESS(pj_init(), NULL, return 1);
+
+    if (test_app.ut_app.prm_config)
+        pj_dump_config();
+
     pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
     PJ_TEST_NOT_NULL(pool=pj_pool_create(&caching_pool.factory, "test",
                                          1000, 512, NULL),

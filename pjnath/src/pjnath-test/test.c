@@ -217,7 +217,8 @@ static int test_inner(int argc, char *argv[])
     PJ_TEST_SUCCESS(pj_init(), NULL, 
                     {if (log_file) fclose(log_file); return 1; });
 
-    pj_dump_config();
+    if (test_app.ut_app.prm_config)
+        pj_dump_config();
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
 
     PJ_TEST_SUCCESS(pjlib_util_init(), NULL, {rc=2; goto on_return;});

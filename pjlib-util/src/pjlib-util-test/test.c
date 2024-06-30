@@ -54,7 +54,8 @@ static int test_inner(int argc, char *argv[])
     if (ut_app_init1(&test_app.ut_app, mem) != PJ_SUCCESS)
         return 1;
 
-    pj_dump_config();
+    if (test_app.ut_app.prm_config)
+        pj_dump_config();
 
 #if INCLUDE_XML_TEST
     UT_ADD_TEST(&test_app.ut_app, xml_test, 0);
