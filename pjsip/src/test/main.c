@@ -24,6 +24,20 @@
 
 extern const char *system_name;
 
+static void warn(void)
+{
+    puts("*******************************************************************");
+    puts("**                       W A R N I N G                           **");
+    puts("*******************************************************************");
+    puts("** Due to centralized event processing in PJSIP, events may be   **");
+    puts("** read by different thread than the test's thread. This may     **");
+    puts("** cause logging to be sent to the wrong test when multithreaded **");
+    puts("** testing is used. The test results are correct, but do not     **");
+    puts("** trust the log.                                                **");
+    puts("** For debugging with correct logging, use \"-w 0 --log-no-cache\" **");
+    puts("*******************************************************************");
+}
+
 static void usage(void)
 {
     puts("Usage:");
@@ -74,6 +88,8 @@ int main(int argc, char *argv[])
     int interractive = 0;
     int retval;
     int no_trap = 0;
+
+    warn();
 
     if (pj_argparse_get_bool("-h", &argc, argv) ||
         pj_argparse_get_bool("--help", &argc, argv))

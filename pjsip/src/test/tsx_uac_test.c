@@ -114,7 +114,7 @@ static struct tsx_uac_test_global_t
     pj_time_val recv_last;
     pj_bool_t test_complete;
 
-    /* Loop transport instance. */
+    /* Loop transport instance, only valid when test_param->tp_type is loop. */
     pjsip_transport *loop;
 
     struct my_timer timer;
@@ -167,8 +167,6 @@ static pjsip_module msg_receiver =
 /* Init uac test */
 static int init_test(unsigned tid)
 {
-    pj_sockaddr_in addr;
-
     pj_enter_critical_section();
     if (tsx_user.id == -1) {
         PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &tsx_user), NULL,
@@ -182,10 +180,11 @@ static int init_test(unsigned tid)
     pj_leave_critical_section();
 
     pj_assert(g[tid].loop==NULL);
-    PJ_TEST_SUCCESS(pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
-                                      &addr, sizeof(addr), NULL, &g[tid].loop),
-                    NULL, return -50);
-
+    
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &g[tid].loop),
+                        NULL, return -50);
+    }
     return PJ_SUCCESS;
 }
 
@@ -197,7 +196,7 @@ static void finish_test(unsigned tid)
      *       get_tsx_tid() to be called and it needs the module id.
      */    
     if (g[tid].loop) {
-        pjsip_transport_dec_ref(g[tid].loop);
+        pjsip_transport_shutdown(g[tid].loop);
         g[tid].loop = 0;
     }
 }
@@ -225,12 +224,32 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 {
     unsigned tid = get_tsx_tid(tsx);
 
+    /*
     PJ_LOG(3,(THIS_FILE, 
                 "    on_tsx_state state: %s, event: %s (%s)",
                 pjsip_tsx_state_str(tsx->state),
                 pjsip_event_str(e->type),
                 pjsip_event_str(e->body.tsx_state.type)
                 ));
+    */
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM &&
+        e->type==PJSIP_EVENT_TSX_STATE)
+    {
+        if (e->body.tsx_state.type==PJSIP_EVENT_RX_MSG) {
+            PJ_TEST_EQ( e->body.tsx_state.src.rdata->tp_info.transport,
+                        g[tid].loop, NULL, {
+                            g[tid].test_complete = -704;
+                            return;
+                        });
+        } else if (e->body.tsx_state.type==PJSIP_EVENT_TX_MSG &&
+                   e->body.tsx_state.src.tdata->dest_info.addr.count) {
+            PJ_TEST_EQ( e->body.tsx_state.src.tdata->tp_info.transport,
+                        g[tid].loop, NULL, {
+                            g[tid].test_complete = -706;
+                            return;
+                        });
+        }
+    }
 
     if (pj_strnicmp2(&tsx->branch, TEST1_BRANCH_ID, BRANCH_LEN)==0) {
         /*
@@ -681,13 +700,20 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
         return PJ_FALSE;
     }
 
-    tid = (unsigned)pj_strtol(&target->user);
+    tid = (unsigned)pj_strtoul(&target->user);
 
+    /*
     PJ_LOG(3,(THIS_FILE, "   on_rx_request %s (recv_count: %d) on %s, branch: %.*s", 
                 pjsip_rx_data_get_info(rdata),
                 g[tid].recv_count, rdata->tp_info.transport->info,
                 (int)rdata->msg_info.via->branch_param.slen,
                 rdata->msg_info.via->branch_param.ptr));
+    */
+
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        PJ_TEST_EQ(rdata->tp_info.transport, g[tid].loop, NULL,
+                   {g[tid].test_complete = -602; return PJ_TRUE;});
+    }
 
     if (pj_strnicmp2(&rdata->msg_info.via->branch_param, TEST1_BRANCH_ID,
                      BRANCH_LEN) == 0) {
@@ -1110,6 +1136,16 @@ static int perform_tsx_test(unsigned tid, int dummy, char *target_uri,
     }
     set_tsx_tid(tsx, tid);
 
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_tpselector tp_sel;
+
+        pj_assert(g[tid].loop);
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = g[tid].loop;
+        pjsip_tsx_set_transport(tsx, &tp_sel);
+    }
+    
     /* Get transaction key. */
     pj_strdup(tdata->pool, &tsx_key, &tsx->transaction_key);
 
@@ -1564,10 +1600,9 @@ int tsx_uac_test(unsigned tid)
     if (status != 0)
         goto on_return;
 
-    flush_events(500);
-
 on_return:
     finish_test(tid);
+    flush_events(500);
     return status;
 #undef ERR
 }

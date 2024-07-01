@@ -452,6 +452,24 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 {
     unsigned tid = get_tsx_tid(tsx);
 
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM &&
+        e->type==PJSIP_EVENT_TSX_STATE)
+    {
+        if (e->body.tsx_state.type==PJSIP_EVENT_RX_MSG) {
+            PJ_TEST_EQ( e->body.tsx_state.src.rdata->tp_info.transport,
+                        g[tid].loop, NULL, {
+                            g[tid].test_complete = -704;
+                            return;
+                        });
+        } else if (e->body.tsx_state.type==PJSIP_EVENT_TX_MSG) {
+            PJ_TEST_EQ( e->body.tsx_state.src.tdata->tp_info.transport,
+                        g[tid].loop, NULL, {
+                            g[tid].test_complete = -706;
+                            return;
+                        });
+        }
+    }
+
     if (pj_strnicmp2(&tsx->branch, TEST1_BRANCH_ID, BRANCH_LEN)==0 ||
         pj_strnicmp2(&tsx->branch, TEST2_BRANCH_ID, BRANCH_LEN)==0)
     {
@@ -876,6 +894,11 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
     }
 
     tid = (unsigned)pj_strtol(&target->user);
+
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        PJ_TEST_EQ(rdata->tp_info.transport, g[tid].loop, NULL,
+                   {g[tid].test_complete = -602; return PJ_TRUE;});
+    }
 
     if (pj_strnicmp2(&branch_param, TEST1_BRANCH_ID, BRANCH_LEN) == 0 ||
         pj_strnicmp2(&branch_param, TEST2_BRANCH_ID, BRANCH_LEN) == 0)
@@ -1323,6 +1346,7 @@ static int perform_test( unsigned tid,
     char branch_buf[BRANCH_LEN+20];
     pj_time_val timeout, next_send;
     int sent_cnt;
+    pjsip_tpselector tp_sel;
     pj_status_t status;
 
     PJ_TEST_EQ(strlen(branch_param), BRANCH_LEN, NULL, return -99);
@@ -1358,6 +1382,15 @@ static int perform_test( unsigned tid,
     pj_ansi_snprintf(branch_buf, sizeof(branch_buf),
                      "%s-%02d", branch_param, tid);
     pj_strdup2(tdata->pool, &via->branch_param, branch_buf);
+
+    /* Must select specific transport to use */
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pj_assert(g[tid].loop);
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = g[tid].loop;
+        pjsip_tx_data_set_transport(tdata, &tp_sel);
+    }
 
     /* Schedule first send. */
     sent_cnt = 0;
@@ -1612,7 +1645,7 @@ static int tsx_ack_test(unsigned tid)
  **
  *****************************************************************************
  */
-int tsx_transport_failure_test(unsigned tid)
+static int tsx_transport_failure_test(unsigned tid)
 {
     struct test_desc
     {
@@ -1697,12 +1730,20 @@ int tsx_transport_failure_test(unsigned tid)
  */
 int tsx_uas_test(unsigned tid)
 {
+#define ERR(rc__)   { status=rc__; goto on_return; }
     struct tsx_test_param *param = &tsx_test[tid];
-    pj_sockaddr_in addr;
-    pj_status_t status;
+    int status;
 
     g[tid].test_param = param;
     g[tid].tp_flag = pjsip_transport_get_flag_from_type((pjsip_transport_type_e)param->type);
+
+    /* Create loop transport */
+    g[tid].loop = NULL;
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &g[tid].loop),
+                        NULL, return -50);
+        pjsip_transport_add_ref(g[tid].loop);
+    }
 
     pj_ansi_snprintf(g[tid].TARGET_URI, sizeof(g[tid].TARGET_URI),
                      "sip:%d@127.0.0.1:%d;transport=%s",
@@ -1711,16 +1752,12 @@ int tsx_uas_test(unsigned tid)
                      "sip:tsx_uas_test@127.0.0.1:%d;transport=%s",
                      param->port, param->tp_type);
 
-    /* Check if loop transport is configured. */
-    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
-                                      &addr, sizeof(addr), NULL, &g[tid].loop);
-    if (status != PJ_SUCCESS) {
-        PJ_LOG(3,(THIS_FILE, "  Error: loop transport is not configured!"));
-        return -10;
-    }
     /* Register modules. */
     if ((status=register_modules(tid)) != PJ_SUCCESS) {
-        pjsip_transport_dec_ref(g[tid].loop);
+        if (g[tid].loop) {
+            pjsip_transport_dec_ref(g[tid].loop);
+            g[tid].loop = NULL;
+        }
         return -20;
     }
 
@@ -1792,15 +1829,11 @@ int tsx_uas_test(unsigned tid)
      * TEST13_BRANCH_ID: test transport failure in CONFIRMED state.
      */
     /* Only valid for loop-dgram */
-    /* 2024-06-28:
-     * tsx_transport_failure_test() is now run directly from test.c because
-     * it sets transport loop delay, hence it must run exclusively.
     if (param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
         status = tsx_transport_failure_test(tid);
         if (status != 0)
             goto on_return;
     }
-    */
 
     status = 0;
 

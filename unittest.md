@@ -186,10 +186,18 @@ Having said that, some minor modifications were done:
 
 #### Changes to PJSIP-TEST
 
+PJSIP-TEST has also gone through one of the biggest modifications to make the tests parallelable, which involves:
+
+- changing tests to mark and uniquely identify its own message and skip messages belonging to other tests
+- remove global loop transport and replace with individual loop transport for each test
+- bug fixing to the test code as some test flows have changed (for example, `tsx_uac_test` failed because UA layer has now been registered before the test)
+
 Original: 28m22.744s
 First porting: 27m1.894s
+3 worker threads: 16m20.369s
 4 worker threads: 14m12.509s
-10 worker threads: 13m2.482s
+5 worker threads: 13m12.218s
+10 worker threads: 13m2.482s  --> 7m3.533s
 
 Changed `tsx_basic_test`, `tsx_uac_test`, `tsx_uas_test` to take the index to parameters rather than the parameter itself to make the test output more informative.
 
@@ -255,6 +263,7 @@ int test1()
 
 The tests above should run correctly, in the sense that `on_rx_message0()` and `on_rx_message1()` will work correctly. However, logging messages `"test0 got message"` or `"test1 got message"` may appear in the wrong test, because we don't know which thread will get the event. If thread 1 happens to get message for test 0, then `"test0 got message"` will appear in test1 log.
 
+Other issues: pjsip_loop_transport uses a worker thread, thus the log will not be captured.
 
 ### Basic runner limitations
 

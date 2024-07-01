@@ -85,6 +85,7 @@ int tsx_bench(void);
 int tsx_destroy_test(void);
 int transport_udp_test(void);
 int transport_loop_test(void);
+int transport_loop_multi_test(void);
 int transport_tcp_test(void);
 int resolve_test(void);
 int regc_test(void);
@@ -103,19 +104,19 @@ extern struct tsx_test_param tsx_test[MAX_TSX_TESTS];
 int tsx_basic_test(unsigned tid);
 int tsx_uac_test(unsigned tid);
 int tsx_uas_test(unsigned tid);
-int tsx_transport_failure_test(unsigned tid);
 
 /* Transport test helpers (transport_test.c). */
 int generic_transport_test(pjsip_transport *tp);
 int transport_send_recv_test( pjsip_transport_type_e tp_type,
                               pjsip_transport *ref_tp,
-                              char *target_url,
+                              const char *host_port_transport,
                               int *p_usec_rtt);
 int transport_rt_test( pjsip_transport_type_e tp_type,
                        pjsip_transport *ref_tp,
-                       char *target_url,
+                       const char *host_port_transport,
                        int *pkt_lost);
-int transport_load_test(char *target_url);
+int transport_load_test(pjsip_transport_type_e tp_type,
+                        const char *host_port_transport);
 
 /* Test main entry */
 int  test_main(int argc, char *argv[]);

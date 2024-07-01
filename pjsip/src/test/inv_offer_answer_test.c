@@ -25,7 +25,7 @@
 #define THIS_FILE   "inv_offer_answer_test.c"
 #define PORT        5068
 #define CONTACT     "sip:inv_offer_answer_test@127.0.0.1:5068"
-#define TRACE_(x)   PJ_LOG(3,x)
+#define TRACE_(x)   //PJ_LOG(3,x)
 
 static struct oa_sdp_t
 {
@@ -277,6 +277,7 @@ static void on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
     const char *who = NULL;
 
     PJ_UNUSED_ARG(e);
+    PJ_UNUSED_ARG(who);
 
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
         TRACE_((THIS_FILE, "      %s call disconnected",

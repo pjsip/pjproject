@@ -140,7 +140,7 @@ int transport_udp_test(void)
     pj_sockaddr_in_init(&rem_addr, pj_cstr(&s, "127.0.0.1"), TEST_UDP_PORT);
     for (i=0; i<SEND_RECV_LOOP; ++i) {
         status = transport_send_recv_test(PJSIP_TRANSPORT_UDP, tp[0], 
-                                          "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR,
+                                          "127.0.0.1:"TEST_UDP_PORT_STR,
                                           &rtt[i]);
         if (status != 0)
             return status;
@@ -158,7 +158,7 @@ int transport_udp_test(void)
 
     /* Multi-threaded round-trip test. */
     status = transport_rt_test(PJSIP_TRANSPORT_UDP, tp[0], 
-                               "sip:alice@127.0.0.1:"TEST_UDP_PORT_STR, 
+                               "127.0.0.1:"TEST_UDP_PORT_STR, 
                                &pkt_lost);
     if (status != 0)
         return status;
