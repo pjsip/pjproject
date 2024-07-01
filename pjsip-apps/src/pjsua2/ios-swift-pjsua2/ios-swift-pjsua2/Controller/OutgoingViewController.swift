@@ -28,11 +28,11 @@ class OutgoingViewController: UIViewController {
     @IBOutlet weak var outgoingCallTitle: UILabel!
     
     override func viewDidLoad() {
-        super.viewDidLoad()
-        title = "Outgoing Call"
-        outgoingCallTitle.text = outgoingCallId
-        CPPWrapper().outgoingCall(outgoingCallId)
-        CPPWrapper().call_listener_wrapper(call_status_listener_swift)
+//        super.viewDidLoad()
+//        title = "Outgoing Call"
+//        outgoingCallTitle.text = outgoingCallId
+//        CPPWrapper().outgoingCall(outgoingCallId)
+//        CPPWrapper().call_listener_wrapper(call_status_listener_swift)
     }
     
     override func viewDidDisappear(_ animated: Bool) {

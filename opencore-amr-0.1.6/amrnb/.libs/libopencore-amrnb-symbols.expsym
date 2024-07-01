@@ -1,0 +1,6 @@
+_Decoder_Interface_init
+_Decoder_Interface_exit
+_Decoder_Interface_Decode
+_Encoder_Interface_init
+_Encoder_Interface_exit
+_Encoder_Interface_Encode

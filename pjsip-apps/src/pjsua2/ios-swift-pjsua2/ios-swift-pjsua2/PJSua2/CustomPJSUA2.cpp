@@ -34,6 +34,8 @@ class MyAccount : public Account
 {
 public:
     std::string dest_uri;
+    std::string xData;  // Add this line
+    std::string xSign;  // Add this line
 
     MyAccount() {}
     ~MyAccount()
@@ -58,8 +60,7 @@ public:
         : Call(acc, call_id)
     { }
     ~MyCall()
-    { }
-
+    {}
     // Notification when call's state has changed.
     virtual void onCallState(OnCallStateParam &prm);
 
@@ -100,24 +101,57 @@ void MyEndpoint::onTimer(const OnTimerParam &prm)
      * it is recommended to create your own separate thread
      * instead for this purpose.
      */
+
     long code = (long) prm.userData;
     if (code == MAKE_CALL) {
+        uint8_t devices = ep->audDevManager().getDevCount();
+
+        for( int i=0;i<devices;i++){
+
+            AudioDevInfo info = ep->audDevManager().getDevInfo(i);
+
+            std::cout << "Device [" << i << "] " << std::endl;
+
+        }
+
         CallOpParam prm(true); // Use default call settings
-        prm.opt.videoCount = 1;
+        prm.opt.videoCount = 0;
+        SipHeader SipHeader1;
+         SipHeader1.hName = "X-Data";
+         SipHeader1.hValue = acc-> xData; // Use the stored xData value
+         prm.txOption.headers.push_back(SipHeader1);
+
+         SipHeader SipHeader2;
+         SipHeader2.hName = "X-Sign";
+         SipHeader2.hValue = acc-> xSign; // Use the stored xSign value
+         prm.txOption.headers.push_back(SipHeader2);
+//        this->audDevManager().setCaptureDev(-1);
+//        this->audDevManager().setPlaybackDev(-1);
+        
+        
+        std::cout << "Capture Dev: " << this->audDevManager().getCaptureDev() << std::endl;
+        std::cout << "Sound active: " << this->audDevManager().sndIsActive() << std::endl;
+        this->audDevManager().setSndDevMode(2);
+//        std::cout << "Dev count: " << this->audDevManager().getDevCount() << std::endl;
         try {
+            this->audDevManager().getCaptureDevMedia().startTransmit(this->audDevManager().getCaptureDevMedia());
             call = new MyCall(*acc);
+            std::cout << "Port: " << this->audDevManager().getCaptureDevMedia().getPortId() << std::endl;
             call->makeCall(acc->dest_uri, prm);
+            //
         } catch(Error& err) {
             std::cout << err.info() << std::endl;
         }
     } else if (code == ANSWER_CALL) {
+        this->audDevManager().setNoDev();
         CallOpParam op(true);
         op.statusCode = PJSIP_SC_OK;
         call->answer(op);
+        
     } else if (code == HOLD_CALL) {
         if (call != NULL) {
             CallOpParam op(true);
-            
+             
             try {
                 call->setHold(op);
             } catch(Error& err) {
@@ -157,6 +191,7 @@ void MyAccount::onRegState(OnRegStateParam &prm)
 void MyAccount::onIncomingCall(OnIncomingCallParam &iprm)
 {
     incomingCallPtr();
+    std::cout << ("*** Unregister: code=") << std::endl;
     call = new MyCall(*this, iprm.callId);
 }
 
@@ -173,6 +208,7 @@ std::string getCallerId()
 void MyCall::onCallState(OnCallStateParam &prm)
 {
     CallInfo ci = getInfo();
+    std::cout << "on call state"  << std::endl;
     if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
         callStatusListenerPtr(0);
         
@@ -197,6 +233,7 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
 {
     CallInfo ci = getInfo();
     // Iterate all the call medias
+    std::cout << "here" << ci.media.size() << std::endl;
     for (unsigned i = 0; i < ci.media.size(); i++) {
         if (ci.media[i].status == PJSUA_CALL_MEDIA_ACTIVE ||
             ci.media[i].status == PJSUA_CALL_MEDIA_REMOTE_HOLD)
@@ -204,7 +241,7 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
             if (ci.media[i].type==PJMEDIA_TYPE_AUDIO) {
                 AudioMedia *aud_med = (AudioMedia *)getMedia(i);
                 
-                // Connect the call audio media to sound device
+                // Connect the call audio media to sound devicex
                 AudDevManager& mgr = Endpoint::instance().audDevManager();
                 aud_med->startTransmit(mgr.getPlaybackDevMedia());
                 mgr.getCaptureDevMedia().startTransmit(*aud_med);
@@ -232,6 +269,9 @@ void PJSua2::createLib()
     //LibInit
     try {
         EpConfig ep_cfg;
+        StringVector stun;
+        stun.push_back("stun.pjsip.org");
+        ep_cfg.uaConfig.stunServer = stun;
         ep->libInit( ep_cfg );
     } catch(Error& err) {
         std::cout << "Initialization error: " << err.info() << std::endl;
@@ -249,6 +289,9 @@ void PJSua2::createLib()
     // Start the library (worker threads etc)
     try {
         ep->libStart();
+        ep->audDevManager().setCaptureDev(0);
+        ep->audDevManager().setPlaybackDev(0);
+        std::cout << "Dev count: " << ep->audDevManager().getDevCount() << std::endl;
     } catch(Error& err) {
         std::cout << "Startup error: " << err.info() << std::endl;
     }
@@ -273,14 +316,27 @@ void PJSua2::deleteLib()
  Create Account via following config(string username, string password, string ip, string port)
  */
 void PJSua2::createAccount(std::string username, std::string password,
-                           std::string registrar, std::string port)
+                           std::string registrar, std::string port, std::string xSign, std::string xData)
 {
     // Configure an AccountConfig
     AccountConfig acfg;
+    acfg.natConfig.iceEnabled = true;
+    acfg.natConfig.turnServer = "134.209.88.4:3478";
+    acfg.natConfig.turnEnabled = true;
+    
     acfg.idUri = "sip:" + username + "@" + registrar + ":" + port;;
     acfg.regConfig.registrarUri = "sip:" + registrar + ":" + port;;
-    AuthCredInfo cred("digest", "*", username, 0, password);
+    
+    AuthCredInfo cred("digest", "*", xSign, 0, xData);
     acfg.sipConfig.authCreds.push_back(cred);
+    SipHeader SipHeader1;
+    SipHeader1.hName = "X-Data";
+    SipHeader1.hValue = xData;
+    SipHeader SipHeader2;
+    SipHeader2.hName = "X-Sign";
+    SipHeader2.hValue = xSign;
+    acfg.regConfig.headers.push_back(SipHeader1);
+    acfg.regConfig.headers.push_back(SipHeader2);
 
     acfg.videoConfig.autoShowIncoming = true;
     acfg.videoConfig.autoTransmitOutgoing = true;
@@ -289,7 +345,7 @@ void PJSua2::createAccount(std::string username, std::string password,
         // Create the account
         acc = new MyAccount;
         try {
-            acc->create(acfg);
+            acc->create(acfg, true);
         } catch(Error& err) {
             std::cout << "Account creation error: " << err.info() << std::endl;
         }
@@ -316,9 +372,11 @@ void PJSua2::unregisterAccount()
 /**
  Make outgoing call (string dest_uri) -> e.g. makeCall(sip:<SIP_USERNAME@SIP_IP:SIP_PORT>)
  */
-void PJSua2::outgoingCall(std::string dest_uri)
+void PJSua2::outgoingCall(std::string dest_uri, std::string xData, std::string xSign)
 {
     acc->dest_uri = dest_uri;
+    acc->xData = xData; // Store xData in the account object or another suitable place
+    acc->xSign = xSign; // Store xSign in the account object or another suitable place
     ep->utilTimerSchedule(0, (Token)MAKE_CALL);
 }
 

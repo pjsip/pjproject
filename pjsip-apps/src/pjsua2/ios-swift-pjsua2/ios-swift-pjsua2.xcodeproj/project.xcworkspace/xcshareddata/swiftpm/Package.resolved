@@ -1,0 +1,42 @@
+{
+  "originHash" : "9e8a5123ab99b36a6c65665bb6236da57f282ff05cabdf3318f4255bdbbb8464",
+  "pins" : [
+    {
+      "identity" : "arnacon_sdk_ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/cellact/Arnacon_SDK_iOS",
+      "state" : {
+        "branch" : "main",
+        "revision" : "5bc40d285d73603bfbb036d0239f3f745a86a2e6"
+      }
+    },
+    {
+      "identity" : "bigint",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/attaswift/BigInt.git",
+      "state" : {
+        "revision" : "0ed110f7555c34ff468e72e1686e59721f2b0da6",
+        "version" : "5.3.0"
+      }
+    },
+    {
+      "identity" : "cryptoswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/krzyzanowskim/CryptoSwift.git",
+      "state" : {
+        "revision" : "039f56c5d7960f277087a0be51f5eb04ed0ec073",
+        "version" : "1.5.1"
+      }
+    },
+    {
+      "identity" : "web3swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/web3swift-team/web3swift.git",
+      "state" : {
+        "revision" : "60a56e3b9c4cd0568d84acde27af2f25d2a8ff4d",
+        "version" : "3.2.1"
+      }
+    }
+  ],
+  "version" : 3
+}

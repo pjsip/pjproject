@@ -46,16 +46,24 @@ PJSua2 pjsua2;
 /**
  Create Account via following config(string username, string password, string ip, string port)
  */
--(void) createAccountWrapper :(NSString*) usernameNS :(NSString*) passwordNS
-                             :(NSString*) registrarNS :(NSString*) portNS
+// wrapper.m
+-(void) createAccountWrapper :(NSString*) usernameNS
+                            :(NSString*) passwordNS
+                            :(NSString*) registrarNS
+                            :(NSString*) portNS
+                            :(NSString*) xSignNS
+                            :(NSString*) xDataNS
 {
     std::string username = std::string([[usernameNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string password = std::string([[passwordNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string registrar = std::string([[registrarNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string port = std::string([[portNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    std::string xSign = std::string([[xSignNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    std::string xData = std::string([[xDataNS componentsSeparatedByString:@"*"][0] UTF8String]);
     
-    pjsua2.createAccount(username, password, registrar, port);
+    pjsua2.createAccount(username, password, registrar, port, xSign, xData);
 }
+
 
 /**
  Unregister account
@@ -95,10 +103,14 @@ PJSua2 pjsua2;
 /**
  Make outgoing call (string dest_uri) -> e.g. makeCall(sip:<SIP_USERNAME@SIP_URI:SIP_PORT>)
  */
--(void) outgoingCallWrapper :(NSString*) dest_uriNS
+-(void) outgoingCallWrapper :(NSString*) dest_uriNS xData:(NSString*) xData xSign:(NSString*) xSign
 {
+    pj_log_set_level(5);  // Set to maximum verbosity
     std::string dest_uri = std::string([[dest_uriNS componentsSeparatedByString:@"*"][0] UTF8String]);
-    pjsua2.outgoingCall(dest_uri);
+    std::string xDataString = std::string([xData UTF8String]);
+    std::string xSignString = std::string([xSign UTF8String]);
+    
+    pjsua2.outgoingCall(dest_uri, xDataString, xSignString);
 }
 
 // Factory method to create NSString from C++ string

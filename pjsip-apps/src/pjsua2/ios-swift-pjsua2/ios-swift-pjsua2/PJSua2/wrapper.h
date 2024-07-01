@@ -41,7 +41,7 @@
  Create Account via following config(string username, string password, string ip, string port)
  */
 -(void) createAccountWrapper :(NSString*) username :(NSString*) password
-                             :(NSString*) registrar :(NSString*) port;
+                             :(NSString*) registrar :(NSString*) port :(NSString*) xSign :(NSString*) xData;
 
 /**
  Unregister account
@@ -72,7 +72,7 @@
 /**
  Make outgoing call (string dest_uri) -> e.g. makeCall(sip:<SIP_USERNAME@SIP_URI:SIP_PORT>)
  */
--(void) outgoingCallWrapper :(NSString*) dest_uri;
+-(void) outgoingCallWrapper :(NSString*) dest_uriNS xData:(NSString*) xData xSign:(NSString*) xSign;
 
 /**
  Get caller id for incoming call, checks account currently registered (ai.regIsActive)

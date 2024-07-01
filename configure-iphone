@@ -28,14 +28,14 @@ fi
 
 # Set the main iPhone developer directory, if not set
 if test "x${DEVPATH}" = "x"; then
-  DEVPATH=/Applications/XCode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer
+  DEVPATH=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer
   if test  ! -d $DEVPATH; then
     DEVPATH=/Developer/Platforms/iPhoneOS.platform/Developer
   fi
   echo "$F: DEVPATH is not specified, using ${DEVPATH}"
 fi
 
-# Make sure $DEVPATH directory exist
+# Make sure $DEVPATH directory exists
 if test ! -d $DEVPATH; then
   echo "$F error: directory $DEVPATH does not exist. Please install iPhone development kit"
   exit 1
@@ -62,6 +62,7 @@ if test ! -d ${SDKPATH}/usr/include; then
   echo "$F error: unable to find valid iPhone SDK in ${SDKPATH}"
   exit 1
 fi
+
 
 # Default CFLAGS if it's not specified
 if test "$CFLAGS" = ""; then

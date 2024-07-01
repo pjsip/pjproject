@@ -49,7 +49,7 @@ public:
      Create Account via following config(string username, string password, string registrar, string port)
      */
     void createAccount(std::string username, std::string password,
-                       std::string registrar, std::string port);
+                       std::string registrar, std::string port, std::string xSign, std::string xData);
     
     /**
      Unregister account
@@ -80,7 +80,7 @@ public:
     /**
      Make outgoing call (string dest_uri) -> e.g. makeCall(sip:<SIP_USERNAME@SIP_IP:SIP_PORT>)
      */
-    void outgoingCall(std::string dest_uri);
+    void outgoingCall(std::string dest_uri, std::string xData, std::string xSign);
 
     //Call Info
     /**

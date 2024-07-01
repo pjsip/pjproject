@@ -842,9 +842,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
     PJ_LOG(4,(THIS_FILE, "Making call with acc #%d to %.*s", acc_id,
               (int)dest_uri->slen, dest_uri->ptr));
-
     pj_log_push_indent();
-
     PJSUA_LOCK();
 
     acc = &pjsua_var.acc[acc_id];
@@ -2323,8 +2321,8 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     pjsip_dialog *dlg;
     unsigned mi;
 
-    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
-                     PJ_EINVAL);
+    // PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+    //                  PJ_EINVAL);
 
     pj_bzero(info, sizeof(*info));
 

@@ -1,0 +1,182 @@
+amrencode.lo: \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/amrencode.cpp \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/cnst.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/mode.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/frame_type_3gpp.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/typedef.h \
+  ../oscl/oscl_base_macros.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/gsm_amr_typedefs.h \
+  ../oscl/oscl_base.h \
+  /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stdint.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/stdint.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int8_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int16_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int32_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int64_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint8_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint16_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint32_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint64_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/cdefs.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_symbol_aliasing.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_posix_availability.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_pthread/_pthread_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int16_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int32_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int64_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_uintptr_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_intmax_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uintmax_t.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/amrencode.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/ets_to_if2.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/get_const_tbls.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/ets_to_wmf.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/sid_sync.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/frame.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/sp_enc.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/pre_proc.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/cod_amr.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/lpc.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/levinson.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/lsp.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/q_plsf.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/cl_ltp.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/pitch_fr.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/ton_stab.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/gain_q.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/gc_pred.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/g_adapt.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/p_ol_wgh.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/vad.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/vad1.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/cnst_vad.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/vad2.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/dtx_enc.h \
+  ../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/dtx_common_def.h
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/cnst.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/mode.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/frame_type_3gpp.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/typedef.h:
+
+../oscl/oscl_base_macros.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/gsm_amr_typedefs.h:
+
+../oscl/oscl_base.h:
+
+/Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stdint.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/stdint.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int8_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int16_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int32_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int64_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint8_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint16_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint32_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint64_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/cdefs.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_symbol_aliasing.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_posix_availability.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/_types.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/_types.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_pthread/_pthread_types.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/types.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int16_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int32_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int64_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_uintptr_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_intmax_t.h:
+
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uintmax_t.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/amrencode.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/ets_to_if2.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/get_const_tbls.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/ets_to_wmf.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/sid_sync.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/frame.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/sp_enc.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/pre_proc.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/cod_amr.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/lpc.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/levinson.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/lsp.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/q_plsf.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/cl_ltp.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/pitch_fr.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/ton_stab.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/gain_q.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/gc_pred.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/g_adapt.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/p_ol_wgh.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/vad.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/vad1.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/cnst_vad.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/vad2.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/enc/src/dtx_enc.h:
+
+../opencore/codecs_v2/audio/gsm_amr/amr_nb/common/include/dtx_common_def.h:

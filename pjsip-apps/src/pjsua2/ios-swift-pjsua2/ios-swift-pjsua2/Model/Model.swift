@@ -18,56 +18,70 @@
  */
 
 import UIKit
+import SwiftUI
+import WebKit
 
-func topMostController() -> UIViewController {
-    var topController: UIViewController = (UIApplication.shared.windows.first { $0.isKeyWindow }?.rootViewController!)!
-    while (topController.presentedViewController != nil) {
-        topController = topController.presentedViewController!
-    }
-    return topController
+func topMostController() -> Void {
+//    print(UIApplication.shared.windows);
+//    var topController: UIViewController = (UIApplication.shared.windows.first { $0.isKeyWindow }?.rootViewController!)!
+//    while (topController.presentedViewController != nil) {
+//        topController = topController.presentedViewController!
+//    }
+//    return topController
+}
+
+func showMainScreen() {
+//    DispatchQueue.main.async () {
+//        let topVC = topMostController()
+//        let vcToPresent = MainController.shared
+//        topVC.present(vcToPresent, animated: true, completion: nil)
+//    }
 }
 
 func incoming_call_swift() {
-    DispatchQueue.main.async () {
-        let storyboard = UIStoryboard(name: "Main", bundle: nil)
-        let vc = storyboard.instantiateViewController(withIdentifier: "viewController")
-        let topVC = topMostController()
-        let vcToPresent = vc.storyboard!.instantiateViewController(withIdentifier: "incomingCallVC") as! IncomingViewController
-        vcToPresent.incomingCallId = CPPWrapper().incomingCallInfoWrapper()
-        topVC.present(vcToPresent, animated: true, completion: nil)
-    }
+    print("incoming call")
+//    let vcToPresent = MainController.shared
+//    vcToPresent.callData.inCallWith = CPPWrapper().incomingCallInfoWrapper()
 }
 
 func call_status_listener_swift ( call_answer_code: Int32) {
     if (call_answer_code == 0) {
-        DispatchQueue.main.async () {
-            UIApplication.shared.windows.first {$0.isKeyWindow}?.rootViewController?.dismiss(animated: true, completion: nil)
-        }
-    } else if (call_answer_code == 1) {
-        DispatchQueue.main.async () {
-            let storyboard = UIStoryboard(name: "Main", bundle: nil)
-            let vc = storyboard.instantiateViewController(withIdentifier: "viewController")
-            let vcToPresent = vc.storyboard!.instantiateViewController(withIdentifier: "activeCallVC") as! ActiveViewController
-            if (vcToPresent.presentedViewController != nil) {
-                let topVC = topMostController()
-                vcToPresent.activeCallId = CPPWrapper().incomingCallInfoWrapper()
-                topVC.present(vcToPresent, animated: true, completion: nil)
+        print("declined")
+//        let vcToPresent = MainController.shared
+//        let caller = vcToPresent.callData.inCallWith
+//        vcToPresent.hostingController!.rootView.sendDataToHTML("{\"action\": \"call-ended\", \"body\": {\"from\": \"\(caller)\"}}")
+//        print("caller:", caller)
+    }
+    else if (call_answer_code == 1) {
+        print("answered")
+        let jsonString = """
+        {
+            "action": "call",
+            "body": {
+                "to": "example.eth"
             }
         }
+        """
+        HomeView.shared.webView?.sendDataToHTML("{\"action\": \"call-started\", \"body\": {\"to\": \"test\", \"from\": \"csda\"}}")
+//        let vcToPresent = MainController.shared
+//        let caller = vcToPresent.callData.inCallWith
+//        vcToPresent.hostingController!.rootView.sendDataToHTML("{\"action\": \"call-started\", \"body\": {\"from\": \"\(caller)\"}}")
+//        print("caller:", caller)
+//
     }
 }
 
 func update_video_swift(window: UnsafeMutableRawPointer?) {
-    DispatchQueue.main.async () {
-        let storyboard = UIStoryboard(name: "Main", bundle: nil)
-        let vc = storyboard.instantiateViewController(withIdentifier: "viewController")
-        let activeVc = vc.storyboard!.instantiateViewController(withIdentifier: "activeCallVC") as! ActiveViewController
-        let topVC = topMostController()
-        activeVc.activeCallId = CPPWrapper().incomingCallInfoWrapper()
-        topVC.present(activeVc, animated: true, completion: nil)
-        let vid_view:UIView =
-            Unmanaged<UIView>.fromOpaque(window!).takeUnretainedValue();
-        activeVc.loadViewIfNeeded()
-        activeVc.updateVideo(vid_win: vid_view);
-    }
+//    DispatchQueue.main.async () {
+//        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+//        let vc = storyboard.instantiateViewController(withIdentifier: "viewController")
+//        let activeVc = vc.storyboard!.instantiateViewController(withIdentifier: "activeCallVC") as! ActiveViewController
+//        let topVC = topMostController()
+//        activeVc.activeCallId = CPPWrapper().incomingCallInfoWrapper()
+//        topVC.present(activeVc, animated: true, completion: nil)
+//        let vid_view:UIView =
+//            Unmanaged<UIView>.fromOpaque(window!).takeUnretainedValue();
+//        activeVc.loadViewIfNeeded()
+//        activeVc.updateVideo(vid_win: vid_view);
+//    }
 }

@@ -1807,7 +1807,7 @@ static pj_status_t create_aud_param(pjmedia_aud_param *param,
     status = pjmedia_aud_dev_default_param((speaker_only? playback_dev:
                                             capture_dev), param);
     if (status != PJ_SUCCESS) {
-        pjsua_perror(THIS_FILE, "Error retrieving default audio "
+        pjsua_perror(THIS_FILE, "Error retrieving default audioiisondiso audio "
                                 "device parameters", status);
         return status;
     }
@@ -1818,7 +1818,6 @@ static pj_status_t create_aud_param(pjmedia_aud_param *param,
     param->channel_count = channel_count;
     param->samples_per_frame = samples_per_frame;
     param->bits_per_sample = bits_per_sample;
-
     if (use_default_settings) {
         /* Reset the sound device settings. */
         pjsua_var.aud_open_cnt = 0;

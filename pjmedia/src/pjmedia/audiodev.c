@@ -363,13 +363,11 @@ static pj_status_t lookup_dev(pjmedia_aud_dev_index id,
                               unsigned *p_local_index)
 {
     int f_id, index;
-
     if (id < 0) {
         unsigned i;
-
         if (id == PJMEDIA_AUD_INVALID_DEV)
             return PJMEDIA_EAUD_INVDEV;
-
+        
         for (i=0; i<aud_subsys.drv_cnt; ++i) {
             pjmedia_aud_driver *drv = &aud_subsys.drv[i];
             if (drv->dev_idx >= 0) {
