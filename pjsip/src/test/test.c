@@ -441,6 +441,12 @@ int test_main(char *testlist)
     }
 #endif
 
+#if INCLUDE_LOOP_TEST
+    /* repeat again after resolver is configured in resolve_test() */
+    if (SHOULD_RUN_TEST(include_loop_test)) {
+        DO_TEST(transport_loop_test());
+    }
+#endif
 
 #if INCLUDE_TSX_TEST
     if (SHOULD_RUN_TEST(include_tsx_test)) {
