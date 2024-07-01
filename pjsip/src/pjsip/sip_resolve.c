@@ -441,7 +441,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
         else if (type == PJSIP_TRANSPORT_UDP || type == PJSIP_TRANSPORT_UDP6)
             query->naptr[0].res_type = pj_str("_sip._udp.");
         else if (type == PJSIP_TRANSPORT_LOOP_DGRAM)
-            query->naptr[0].res_type = pj_str("_sip._loopdgram.");
+            query->naptr[0].res_type = pj_str("_sip._udp.");
         else {
             pj_assert(!"Unknown transport type");
             query->naptr[0].res_type = pj_str("_sip._udp.");
