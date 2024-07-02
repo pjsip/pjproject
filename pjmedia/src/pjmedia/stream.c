@@ -2895,7 +2895,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pj_sockaddr_cp(&stream->rem_rtp_addr, &info->rem_addr);
     if (stream->si.rtcp_mux) {
         pj_sockaddr_cp(&att_param.rem_rtcp, &info->rem_addr);
-    } else if (pj_sockaddr_has_addr(&info->rem_rtcp.addr)) {
+    } else if (pj_sockaddr_has_addr(&info->rem_rtcp)) {
         pj_sockaddr_cp(&att_param.rem_rtcp, &info->rem_rtcp);
     }
     att_param.addr_len = pj_sockaddr_get_len(&info->rem_addr);
