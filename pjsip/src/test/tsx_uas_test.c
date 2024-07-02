@@ -1205,10 +1205,8 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 
             ++g[tid].recv_count;
 
-            if (rdata->msg_info.msg->line.status.code != TEST9_STATUS_CODE) {
-                PJ_LOG(3,(THIS_FILE,"    error: invalid status code"));
-                g[tid].test_complete = -151;
-            }
+            PJ_TEST_EQ(rdata->msg_info.msg->line.status.code, TEST9_STATUS_CODE,
+                       NULL, g[tid].test_complete = -151);
 
             if (g[tid].recv_count==1) {
 

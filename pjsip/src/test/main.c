@@ -26,16 +26,16 @@ extern const char *system_name;
 
 static void warn(void)
 {
-    puts("*******************************************************************");
-    puts("**                       W A R N I N G                           **");
-    puts("*******************************************************************");
-    puts("** Due to centralized event processing in PJSIP, events may be   **");
-    puts("** read by different thread than the test's thread. This may     **");
-    puts("** cause logging to be sent to the wrong test when multithreaded **");
-    puts("** testing is used. The test results are correct, but do not     **");
-    puts("** trust the log.                                                **");
-    puts("** For debugging with correct logging, use \"-w 0 --log-no-cache\" **");
-    puts("*******************************************************************");
+    puts("********************************************************************");
+    puts("**                        W A R N I N G                           **");
+    puts("********************************************************************");
+    puts("** Due to centralized event processing in PJSIP, events may be    **");
+    puts("** read by different thread than the test's thread. This may      **");
+    puts("** cause logs to be saved by the wrong test when multithreaded    **");
+    puts("** testing is used. The test results are correct, but the log     **");
+    puts("** may not be accurate.                                           **");
+    puts("** For debugging with correct logging, use \"-w 0 --log-no-cache\"  **");
+    puts("********************************************************************");
 }
 
 static void usage(void)

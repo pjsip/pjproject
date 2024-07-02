@@ -178,13 +178,6 @@ int transport_tcp_test(void)
                                   sizeof(addr)),
                     pj_ntohs(rem_addr.sin_port));
 
-    /* Load test */
-    if ((status=transport_load_test(PJSIP_TRANSPORT_TCP,
-                                    host_port_param)) != 0)
-    {
-        return status;
-    }
-
     /* Basic transport's send/receive loopback test. */
     for (i=0; i<SEND_RECV_LOOP; ++i) {
         status = transport_send_recv_test(PJSIP_TRANSPORT_TCP, tcp[0],
@@ -222,6 +215,13 @@ int transport_tcp_test(void)
 
     if (pkt_lost != 0)
         PJ_LOG(3,(THIS_FILE, "   note: %d packet(s) was lost", pkt_lost));
+
+    /* Load test */
+    if ((status=transport_load_test(PJSIP_TRANSPORT_TCP,
+                                    host_port_param)) != 0)
+    {
+        return status;
+    }
 
     /* Check again that reference counter is still 1. */
     for (i = 0; i < num_tp; ++i) {

@@ -118,6 +118,7 @@ int transport_loop_multi_test(void)
         pj_time_val timeout, now;
 
         loop_test_status = PJ_EPENDING;
+        cur_loop = loops[i];
 
         pj_bzero(&tp_sel, sizeof(tp_sel));
         tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
@@ -173,6 +174,7 @@ static int datagram_loop_test()
 {
     enum { LOOP = 8 };
     pjsip_transport *loop = NULL;
+    char host_port_transport[64];
     int i, pkt_lost;
     int status;
     long ref_cnt;
@@ -186,6 +188,12 @@ static int datagram_loop_test()
 
     pjsip_loop_set_failure(loop, 0, 0);
 
+    pj_ansi_snprintf(host_port_transport, sizeof(host_port_transport),
+                     "%.*s:%d;transport=loop-dgram",
+                     (int)loop->local_name.host.slen,
+                     loop->local_name.host.ptr,
+                     loop->local_name.port);
+
     /* Get initial reference counter */
     ref_cnt = pj_atomic_get(loop->ref_cnt);
 
@@ -197,8 +205,7 @@ static int datagram_loop_test()
     /* Basic transport's send/receive loopback test. */
     for (i=0; i<LOOP; ++i) {
         status = transport_send_recv_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
-                                          "130.0.0.1;transport=loop-dgram",
-                                          &rtt[i]);
+                                          host_port_transport, &rtt[i]);
         if (status != 0)
             goto on_return;
     }

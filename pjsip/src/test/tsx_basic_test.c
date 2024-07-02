@@ -141,8 +141,13 @@ static int double_terminate(unsigned tid)
 int tsx_basic_test(unsigned tid)
 {
     struct tsx_test_param *param = &tsx_test[tid];
+    pjsip_transport *loop = NULL;
     int status;
 
+    if (param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &loop), NULL, return -10);
+        pjsip_transport_add_ref(loop);
+    }
     pj_ansi_snprintf(g[tid].TARGET_URI, sizeof(g[tid].TARGET_URI),
                     "sip:tsx_basic_test@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
@@ -152,13 +157,18 @@ int tsx_basic_test(unsigned tid)
 
     status = tsx_layer_test(tid);
     if (status != 0)
-        return status;
+        goto on_return;
 
     status = double_terminate(tid);
     if (status != 0)
-        return status;
+        goto on_return;
 
-    return 0;
+    status = 0;
+
+on_return:
+    if (loop)
+        pjsip_transport_dec_ref(loop);
+    return status;
 }
 
 /**************************************************************************/

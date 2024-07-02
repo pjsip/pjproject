@@ -256,7 +256,7 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     pj_get_timestamp(&sr_g[tid].my_send_time);
 
     /* Send the message (statelessly). */
-    PJ_LOG(5,(THIS_FILE, "Sending request to %.*s", 
+    PJ_LOG(3,(THIS_FILE, "Sending request to %.*s", 
                          (int)target.slen, target.ptr));
     status = pjsip_endpt_send_request_stateless( endpt, tdata, (void*)(long)tid,
                                                  &send_msg_callback);
@@ -819,6 +819,8 @@ int transport_load_test(pjsip_transport_type_e tp_type,
         PJ_TEST_SUCCESS(pjsip_endpt_send_request_stateless(endpt, tdata,
                                                            NULL, NULL),
                         NULL, ERR(-630));
+
+        flush_events(20);
     }
 
     flush_events(1000);
