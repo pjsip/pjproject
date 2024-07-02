@@ -272,7 +272,7 @@ PJ_DEF(pj_status_t) pjsip_100rel_create_prack( pjsip_inv_session *inv,
     if (rseq < 1) {
         PJ_LOG(4, (dd->inv->dlg->obj_name,
                    "Ignoring 100rel response RSeq header value less than 1"));
-        return PJSIP_EINVALIDMSG;
+        return PJ_EIGNORED;
     }
 
     /* Find UAC state for the specified call leg */
