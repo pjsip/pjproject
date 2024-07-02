@@ -103,6 +103,9 @@ static pj_test_stat essential_tests(int argc, char *argv[])
     int ntests = 0;
 
     pj_bzero(&stat, sizeof(stat));
+    /* Not necessary but to prevent unused-var warning when no test */
+    pj_bzero(test_cases, sizeof(test_cases));
+    pj_bzero(log_bufs, sizeof(log_bufs));
 
     if (test_app.ut_app.prm_config)
         pj_dump_config();
@@ -189,10 +192,10 @@ static pj_test_stat essential_tests(int argc, char *argv[])
         PJ_LOG(3,(THIS_FILE, "Performing %d essential tests", ntests));
         pj_test_init_basic_runner(&runner, &runner_prm);
         pj_test_run(&runner, &suite);
-        pj_test_get_stat(&suite, &stat);
-        pj_test_display_stat(&stat, "essential tests", THIS_FILE);
         pj_test_display_log_messages(&suite, 
                                      test_app.ut_app.prm_logging_policy);
+        pj_test_get_stat(&suite, &stat);
+        pj_test_display_stat(&stat, "essential tests", THIS_FILE);
 
         if (stat.nfailed)
             return stat;

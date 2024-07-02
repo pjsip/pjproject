@@ -176,7 +176,7 @@ static pjsip_module tsx_user =
     NULL, NULL,                         /* prev and next        */
     { "Tsx-UAS-User", 12},              /* Name.                */
     -1,                                 /* Id                   */
-    PJSIP_MOD_PRIORITY_APPLICATION-1,   /* Priority             */
+    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER-1,/* Priority             */
     NULL,                               /* load()               */
     NULL,                               /* start()              */
     NULL,                               /* stop()               */
@@ -194,7 +194,7 @@ static pjsip_module msg_sender =
     NULL, NULL,                         /* prev and next        */
     { "Msg-Sender", 10},                /* Name.                */
     -1,                                 /* Id                   */
-    PJSIP_MOD_PRIORITY_APPLICATION-1,   /* Priority             */
+    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER-1,/* Priority             */
     NULL,                               /* load()               */
     NULL,                               /* start()              */
     NULL,                               /* stop()               */
@@ -220,11 +220,22 @@ static unsigned get_tsx_tid(const pjsip_transaction *tsx)
     return (unsigned)(long)tsx->mod_data[tsx_user.id];
 }
 
-/* Set test ID to transaction instance */
-static void set_tsx_tid(pjsip_transaction *tsx, unsigned tid)
+
+static void init_tsx(pjsip_transaction *tsx, unsigned tid)
 {
     pj_assert(tsx_user.id >= 0);
     tsx->mod_data[tsx_user.id] = (void*)(long)tid;
+
+    /* Must select specific transport to use for loop */
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_tpselector tp_sel;
+
+        pj_assert(g[tid].loop);
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = g[tid].loop;
+        pjsip_tsx_set_transport(tsx, &tp_sel);
+    }
 }
 
 static int modules_reg_cnt;
@@ -771,17 +782,12 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 g[tid].test_complete = 1;
 
             /* Check status code. */
-            if (tsx->status_code != TEST9_STATUS_CODE) {
-                PJ_LOG(3,(THIS_FILE, "    error: incorrect status code"));
-                g[tid].test_complete = -160;
-            }
+            PJ_TEST_EQ(tsx->status_code, TEST9_STATUS_CODE, NULL,
+                       g[tid].test_complete = -160);
 
             /* Previous state. */
-            if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_CONFIRMED) {
-                PJ_LOG(3,(THIS_FILE, "    error: incorrect prev_state %d",
-                          e->body.tsx_state.prev_state));
-                g[tid].test_complete = -161;
-            }
+            PJ_TEST_EQ(e->body.tsx_state.prev_state, PJSIP_TSX_STATE_CONFIRMED,
+                       NULL, g[tid].test_complete = -161);
 
         } else if (tsx->state == PJSIP_TSX_STATE_COMPLETED) {
 
@@ -925,7 +931,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                 g[tid].test_complete = -110;
                 return PJ_TRUE;
             }
-            set_tsx_tid(tsx, tid);
+            init_tsx(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
 
             save_key(tsx);
@@ -968,7 +974,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                 g[tid].test_complete = -116;
                 return PJ_TRUE;
             }
-            set_tsx_tid(tsx, tid);
+            init_tsx(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
 
             save_key(tsx);
@@ -1023,7 +1029,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                 g[tid].test_complete = -130;
                 return PJ_TRUE;
             }
-            set_tsx_tid(tsx, tid);
+            init_tsx(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
             save_key(tsx);
 
@@ -1109,7 +1115,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                 g[tid].test_complete = -140;
                 return PJ_TRUE;
             }
-            set_tsx_tid(tsx, tid);
+            init_tsx(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
             save_key(tsx);
 
@@ -1195,7 +1201,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                 g[tid].test_complete = -150;
                 return PJ_TRUE;
             }
-            set_tsx_tid(tsx, tid);
+            init_tsx(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
             save_key(tsx);
             send_response(rdata, tsx, TEST9_STATUS_CODE);
@@ -1267,6 +1273,15 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                 pj_strdup(tdata->pool, &via->branch_param,
                           &rdata->msg_info.via->branch_param);
 
+                if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+                    pjsip_tpselector tp_sel;
+
+                    pj_bzero(&tp_sel, sizeof(tp_sel));
+                    tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+                    tp_sel.u.transport = g[tid].loop;
+                    pjsip_tx_data_set_transport(tdata, &tp_sel);
+                }
+
                 status = pjsip_endpt_send_request_stateless(endpt, tdata,
                                                             NULL, NULL);
                 if (status != PJ_SUCCESS) {
@@ -1309,7 +1324,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
                 g[tid].test_complete = -150;
                 return PJ_TRUE;
             }
-            set_tsx_tid(tsx, tid);
+            init_tsx(tsx, tid);
             pjsip_tsx_recv_msg(tsx, rdata);
             save_key(tsx);
 

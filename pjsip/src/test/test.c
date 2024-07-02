@@ -341,7 +341,8 @@ int test_main(int argc, char *argv[])
      * Better be last because it recreates the endpt
      */
 #if INCLUDE_TSX_DESTROY_TEST
-    UT_ADD_TEST(&test_app.ut_app, tsx_destroy_test, PJ_TEST_EXCLUSIVE);
+    UT_ADD_TEST(&test_app.ut_app, tsx_destroy_test,
+                PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #endif
 
     if (ut_run_tests(&test_app.ut_app, "pjsip tests", argc, argv)) {

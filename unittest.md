@@ -101,6 +101,7 @@ Below are the features of the unit-test and also other enhancements done in this
 
 - Even nicer output, logging is captured and by default only displayed if the test fails (configurable by cmdline option)
 - All (C based) PJ unit testing apps can select test(s) to invoke from cmdline
+- Test shuffle feature for all testing apps
 
 ### 2. Modifications to test apps
 
@@ -189,7 +190,7 @@ Having said that, some minor modifications were done:
 PJSIP-TEST has also gone through one of the biggest modifications to make the tests parallelable, which involves:
 
 - changing tests to mark and uniquely identify its own message and skip messages belonging to other tests
-- remove global loop transport and replace with individual loop transport for each test
+- remove global loop transport and replace with individual loop transport for each test. Fix tests that assume there is only one global loop transport (for example, with one global loop transport, there is no failover when sending messages fails).
 - bug fixing to the test code as some test flows have changed (for example, `tsx_uac_test` failed because UA layer has now been registered before the test)
 
 Original: 28m22.744s

@@ -326,6 +326,18 @@ typedef enum pj_test_case_flag
      */
     PJ_TEST_LOG_NO_CACHE = 4,
 
+    /**
+     * Keep this test case in front of the list when shuffling the test
+     * cases.
+     */
+    PJ_TEST_KEEP_FIRST = 8,
+
+    /**
+     * Keep this test case in last in the list when shuffling the test
+     * cases.
+     */
+    PJ_TEST_KEEP_LAST = 16,
+
 } pj_test_case_flag;
 
 
@@ -599,6 +611,16 @@ PJ_DECL(void) pj_test_case_init(pj_test_case *tc,
  * @param tc            The test case
  */
 PJ_DECL(void) pj_test_suite_add_case(pj_test_suite *suite, pj_test_case *tc);
+
+/**
+ * Shuffle the tests.
+ * 
+ * @param suite         The test suite
+ * @param seed          Optional random seed to use, only if the value is
+ *                      greater than or equal to zero. It is recommended
+ *                      to set this value to make the test reproducible.
+ */
+PJ_DECL(void) pj_test_suite_shuffle(pj_test_suite *suite, int seed);
 
 /**
  * Initialize parameters with reasonable default values. This usually means

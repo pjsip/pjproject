@@ -2,6 +2,7 @@
 #include <pj/errno.h>
 #include <pj/list.h>
 #include <pj/log.h>
+#include <pj/os.h>
 #include <pj/string.h>
 #include <pj/unittest.h>
 
@@ -31,6 +32,8 @@ typedef struct ut_app_t
     int                  prm_nthreads;
     int                  prm_list_test;
     pj_bool_t            prm_stop_on_error;
+    pj_bool_t            prm_shuffle;
+    int                  prm_seed;
     unsigned             flags;
     unsigned             verbosity;
 
@@ -188,6 +191,13 @@ static pj_status_t ut_run_tests(ut_app_t *ut_app, const char *title,
               "Performing %d %s with %d worker thread%s", 
               ut_app->ntests, title, runner_prm.nthreads, 
               runner_prm.nthreads>1?"s":""));
+    
+    if (ut_app->prm_shuffle) {
+        PJ_LOG(3,(THIS_FILE, "Shuffling tests, random seed=%d",
+                  ut_app->prm_seed));
+        pj_test_suite_shuffle(&ut_app->suite, ut_app->prm_seed);
+    }
+
     pj_test_run(runner, &ut_app->suite);
     pj_test_runner_destroy(runner);
     pj_test_display_log_messages(&ut_app->suite, ut_app->prm_logging_policy);
@@ -208,6 +218,8 @@ static void ut_usage()
     printf("  -w N             Set N worker threads (0: disable. Default: %d)\n", PJ_HAS_THREADS);
     puts("  -L, --list       List the tests and exit");
     puts("  --stop-err       Stop testing on error");
+    puts("  --shuffle        Shuffle the test order");
+    puts("  --seed N         Set shuffle random seed (must be >= 0)");
     puts("  -v, --verbose    Show info when starting/stopping tests");
 }
 
@@ -222,6 +234,7 @@ static pj_status_t ut_parse_args(ut_app_t *ut_app, int *argc, char *argv[])
     ut_app->prm_list_test = pj_argparse_get_bool("-L", argc, argv) ||
                             pj_argparse_get_bool("--list", argc, argv);
     ut_app->prm_stop_on_error = pj_argparse_get_bool("--stop-err", argc, argv);
+    ut_app->prm_shuffle = pj_argparse_get_bool("--shuffle", argc, argv);
     if (pj_argparse_get_bool("--log-no-cache", argc, argv)) {
         ut_app->flags |= PJ_TEST_LOG_NO_CACHE;
     }
@@ -244,6 +257,19 @@ static pj_status_t ut_parse_args(ut_app_t *ut_app, int *argc, char *argv[])
             puts("Error: invalid/missing value for -w option");
             return PJ_EINVAL;
         }
+    }
+
+    if (ut_app->prm_shuffle) {
+        pj_time_val tv;
+
+        status = pj_gettimeofday(&tv);
+        if (status != PJ_SUCCESS)
+            return status;
+
+        ut_app->prm_seed = (int)(tv.msec);
+        status = pj_argparse_get_int("--seed", argc, argv, &ut_app->prm_seed);
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
     ut_app->verbosity = pj_argparse_get_bool("-v", argc, argv) ||

@@ -19,13 +19,6 @@
 #include <pjlib.h>
 
 
-/* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
- */
-int dummy_unittest_test;
-
-#if INCLUDE_UNITTEST_TEST
-
 #define THIS_FILE   "unittest_test.c"
 
 static char log_buffer[1024], *log_buffer_ptr = log_buffer;
@@ -446,6 +439,77 @@ static int usage_test(pj_pool_t *pool, pj_bool_t basic, pj_bool_t parallel,
     return 0;
 }
 
+static int shuffle_test()
+{
+    enum { N=16, REPEAT=16 };
+    pj_test_suite suite;
+    char test_names[N][16];
+    pj_test_case tcs[N], *tc;
+    unsigned i, repeat, flags[N];
+
+    for (i=0; i<N; ++i) {
+        pj_ansi_snprintf(test_names[i], sizeof(test_names[i]), "test%02d", i);
+        pj_test_case_init(&tcs[i], test_names[i], 0, 
+                          &func_to_test, (void*)(long)i, NULL, 0, NULL);
+    }
+
+    /* Shuffle empty suite */
+    pj_test_suite_init(&suite);
+    pj_test_suite_shuffle(&suite, 1);
+    PJ_TEST_TRUE(pj_list_empty(&suite.tests), NULL, return -10);
+
+    /* Shuffle list with one element */
+    flags[0] = 0;
+    flags[1] = PJ_TEST_KEEP_FIRST;
+    flags[2] = PJ_TEST_KEEP_LAST;
+    for (i=0; i<3; ++i) {
+        tcs[i].flags = flags[i];
+        pj_test_suite_init(&suite);
+        
+        pj_test_suite_add_case(&suite, &tcs[i]);
+        pj_test_suite_shuffle(&suite, 1);
+        PJ_TEST_EQ(pj_list_size(&suite.tests), 1, NULL, return -20);
+        PJ_TEST_EQ(suite.tests.next, &tcs[i], NULL, return -21);
+    }
+
+    /* Shuffle list with all kind of elements */
+    for (repeat=0; repeat<REPEAT; ++repeat) {
+        char seed_info[32];
+
+        pj_test_suite_init(&suite);
+        tcs[0].flags = 0;
+        tcs[1].flags = PJ_TEST_KEEP_LAST;
+        tcs[2].flags = PJ_TEST_KEEP_FIRST;
+        tcs[3].flags = 0;
+        tcs[4].flags = PJ_TEST_KEEP_LAST;
+        tcs[5].flags = PJ_TEST_KEEP_FIRST;
+        for (i=0; i<6; ++i)
+            pj_test_suite_add_case(&suite, &tcs[i]);
+
+        pj_ansi_snprintf(seed_info, sizeof(seed_info), "seed=%d", repeat);
+        pj_test_suite_shuffle(&suite, repeat);
+
+        PJ_TEST_EQ(pj_list_size(&suite.tests), 6, seed_info, return -30);
+
+        tc = suite.tests.next;
+        PJ_TEST_EQ((long)tc->arg, 2, seed_info, return -40);
+        tc = tc->next;
+        PJ_TEST_EQ((long)tc->arg, 5, seed_info, return -41);
+        tc = tc->next;
+        PJ_TEST_TRUE((long)tc->arg==0 || (long)tc->arg==3, seed_info,
+                      return -42);
+        tc = tc->next;
+        PJ_TEST_TRUE((long)tc->arg==0 || (long)tc->arg==3, seed_info,
+                      return -43);
+        tc = tc->next;
+        PJ_TEST_EQ((long)tc->arg, 1, seed_info, return -44);
+        tc = tc->next;
+        PJ_TEST_EQ((long)tc->arg, 4, seed_info, return -45);
+    }
+
+    return 0;
+}
+
 static int log_msg_sizes[] = { 
     1*MSG_LEN, /* log buffer enough for 1 message */
     2*MSG_LEN, /* log buffer enough for 2 messages */
@@ -479,6 +543,10 @@ int unittest_basic_test(void)
             if (ret) goto on_return;
         }
     }
+
+    ret = shuffle_test();
+    if (ret)
+        goto on_return;
 
 on_return:
     pj_log_set_level(log_level);
@@ -597,4 +665,3 @@ on_return:
     return ret;
 }
 
-#endif  /* INCLUDE_UNITTEST_TEST */

@@ -20,6 +20,7 @@
 #include <pj/errno.h>
 #include <pj/fifobuf.h>
 #include <pj/os.h>
+#include <pj/rand.h>
 #include <pj/string.h>
 
 #define THIS_FILE       "unittest.c"
@@ -79,6 +80,8 @@ PJ_DEF(void) pj_test_case_init( pj_test_case *tc,
                                 unsigned buf_size,
                                 const pj_test_case_param *prm)
 {
+    PJ_ASSERT_ON_FAIL( ((flags & (PJ_TEST_KEEP_FIRST|PJ_TEST_KEEP_LAST)) != 
+                        (PJ_TEST_KEEP_FIRST|PJ_TEST_KEEP_LAST)), {} );
     pj_bzero(tc, sizeof(*tc));
 
     /* Parameters */
@@ -109,6 +112,66 @@ PJ_DEF(void) pj_test_suite_init(pj_test_suite *suite)
 PJ_DEF(void) pj_test_suite_add_case(pj_test_suite *suite, pj_test_case *tc)
 {
     pj_list_push_back(&suite->tests, tc);
+}
+
+/* Shuffle */
+PJ_DEF(void) pj_test_suite_shuffle(pj_test_suite *suite, int seed)
+{
+    pj_test_case src, *tc;
+    unsigned total, movable;
+
+    if (seed >= 0)
+        pj_srand(seed);
+
+    /* Move tests to new list */
+    pj_list_init(&src);
+    pj_list_merge_last(&src, &suite->tests);
+
+    /* Move KEEP_FIRST tests first */
+    for (tc=src.next; tc!=&src; ) {
+        pj_test_case *next = tc->next;
+        if (tc->flags & PJ_TEST_KEEP_FIRST) {
+            pj_list_erase(tc);
+            pj_list_push_back(&suite->tests, tc);
+        }
+        
+        tc = next;
+    }
+
+    /* Count non-KEEP_LAST tests */
+    for (total=0, movable=0, tc=src.next; tc!=&src; tc=tc->next) {
+        ++total;
+        if ((tc->flags & PJ_TEST_KEEP_LAST)==0)
+            ++movable;
+    }
+
+    /* Shuffle non KEEP_LAST tests */
+    while (movable > 0) {
+        int step = pj_rand() % total;
+        if (step < 0)
+            continue;
+        
+        for (tc=src.next; step>0; tc=tc->next, --step)
+            ;
+        
+        pj_assert(tc!=&src);
+        if (tc->flags & PJ_TEST_KEEP_LAST)
+            continue;
+        
+        pj_list_erase(tc);
+        pj_list_push_back(&suite->tests, tc);
+        --movable;
+        --total;
+    }
+
+    /* Move KEEP_LAST tests */
+    for (tc=src.next; tc!=&src; ) {
+        pj_test_case *next = tc->next;
+        pj_assert(tc->flags & PJ_TEST_KEEP_LAST);
+        pj_list_erase(tc);
+        pj_list_push_back(&suite->tests, tc);
+        tc = next;
+    }
 }
 
 /* Initialize text runner param with default values */
