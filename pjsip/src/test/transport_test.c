@@ -252,6 +252,19 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     /* Reset statuses */
     sr_g[tid].send_status = sr_g[tid].recv_status = NO_STATUS;
 
+    /* Need this to make sure we use our loop transport rather than other
+     * loop transport instances created by other test thread (which they
+     * can disappear at any time)
+     */
+    if (tp_type==PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_tpselector tp_sel;
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = ref_tp;
+
+        pjsip_tx_data_set_transport(tdata, &tp_sel);
+    }
+
     /* Start time. */
     pj_get_timestamp(&sr_g[tid].my_send_time);
 
