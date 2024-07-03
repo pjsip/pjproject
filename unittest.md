@@ -2,6 +2,10 @@
 
 This PR is part one of two to speed up testing in PJSIP. This part attempts to speed up the C/C++ based tests and part two will address Python based testing framework.
 
+## Tasks
+
+### Task 1. Unit testing framework
+
 The plan is to implement unit testing framework in PJLIB, that that is what the bulk of this PR does. More specifically, this PR contains several work:
 
 1. A (new) unit testing framework, in `<pj/unittest.h>` and `pj/unittest.c`.
@@ -10,6 +14,7 @@ The plan is to implement unit testing framework in PJLIB, that that is what the 
 
    - modifications to `pj/fifobuf.[hc]`, an old feature (part of pjsip initial commit!) that has never been used until now 
    - new auxiliary feature: `<pj/argparse.h>`, header only utilities to parse command line arguments.
+   - modify CI workflows
 
 Let's discuss the work in more detail.
 
@@ -103,7 +108,7 @@ Below are the features of the unit-test and also other enhancements done in this
 - All (C based) PJ unit testing apps can select test(s) to invoke from cmdline
 - Test shuffle feature for all testing apps
 
-### 2. Modifications to test apps
+### Task 2. Modifications to test apps
 
 #### Common modifications
 

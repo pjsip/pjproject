@@ -104,22 +104,19 @@ xhdrid:
 selftest: pjlib-test pjlib-util-test pjnath-test pjmedia-test pjsip-test pjsua-test
 
 pjlib-test: pjlib/bin/pjlib-test-$(TARGET_NAME)
-	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME)
-
-pjlib-test-ci: pjlib/bin/pjlib-test-$(TARGET_NAME)
-	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME) --ci-mode
+	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjlib-util-test: pjlib-util/bin/pjlib-util-test-$(TARGET_NAME)
-	cd pjlib-util/build && ../bin/pjlib-util-test-$(TARGET_NAME)
+	cd pjlib-util/build && ../bin/pjlib-util-test-$(TARGET_NAME) $(CI_ARGS)
 
 pjnath-test: pjnath/bin/pjnath-test-$(TARGET_NAME)
-	cd pjnath/build && ../bin/pjnath-test-$(TARGET_NAME)
+	cd pjnath/build && ../bin/pjnath-test-$(TARGET_NAME) $(CI_ARGS)
 
 pjmedia-test: pjmedia/bin/pjmedia-test-$(TARGET_NAME)
-	cd pjmedia/build && ../bin/pjmedia-test-$(TARGET_NAME)
+	cd pjmedia/build && ../bin/pjmedia-test-$(TARGET_NAME) $(CI_ARGS)
 
 pjsip-test: pjsip/bin/pjsip-test-$(TARGET_NAME)
-	cd pjsip/build && ../bin/pjsip-test-$(TARGET_NAME)
+	cd pjsip/build && ../bin/pjsip-test-$(TARGET_NAME) $(CI_ARGS)
 
 pjsua-test: cmp_wav
 	cd tests/pjsua && python runall.py -t 2

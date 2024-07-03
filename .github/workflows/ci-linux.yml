@@ -37,7 +37,7 @@ jobs:
       with:
         python-version: '3.10'
     - name: unit tests
-      run: make pjlib-test-ci pjlib-util-test pjmedia-test pjsua-test
+      run: make pjlib-test pjlib-util-test pjmedia-test pjsua-test
 
   ubuntu-default-full-bundle-2:
   # full bundle 2: running pjnath test
@@ -127,7 +127,7 @@ jobs:
       with:
         python-version: '3.10'
     - name: unit tests
-      run: make pjlib-test-ci pjlib-util-test pjmedia-test pjsua-test
+      run: make pjlib-test pjlib-util-test pjmedia-test pjsua-test
 
   ubuntu-video-openh264-2:
   # video 2: running pjnath test
