@@ -12646,10 +12646,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\pj\argparse.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\pj\array.h"
 				>
 			</File>
