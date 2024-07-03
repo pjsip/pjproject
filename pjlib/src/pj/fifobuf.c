@@ -20,10 +20,24 @@
 #include <pj/log.h>
 #include <pj/assert.h>
 #include <pj/os.h>
+#include <pj/string.h>
 
 #define THIS_FILE   "fifobuf"
 
 #define SZ  sizeof(unsigned)
+
+/* put and get size at arbitrary, possibly unaligned location */
+PJ_INLINE(void) put_size(void *ptr, unsigned size)
+{
+    pj_memcpy(ptr, &size, sizeof(size));
+}
+
+PJ_INLINE(unsigned) get_size(const void *ptr)
+{
+    unsigned size;
+    pj_memcpy(&size, ptr, sizeof(size));
+    return size;
+}
 
 PJ_DEF(void) pj_fifobuf_init (pj_fifobuf_t *fifobuf, void *buffer, unsigned size)
 {
@@ -36,23 +50,38 @@ PJ_DEF(void) pj_fifobuf_init (pj_fifobuf_t *fifobuf, void *buffer, unsigned size
     fifobuf->first = (char*)buffer;
     fifobuf->last = fifobuf->first + size;
     fifobuf->ubegin = fifobuf->uend = fifobuf->first;
-    fifobuf->full = 0;
+    fifobuf->full = (fifobuf->last==fifobuf->first);
 }
 
-PJ_DEF(unsigned) pj_fifobuf_max_size (pj_fifobuf_t *fifobuf)
+PJ_DEF(unsigned) pj_fifobuf_capacity (pj_fifobuf_t *fifobuf)
 {
-    unsigned s1, s2;
+    unsigned cap = (unsigned)(fifobuf->last - fifobuf->first);
+    return (cap > 0) ? cap-SZ : 0;
+}
 
+PJ_DEF(unsigned) pj_fifobuf_available_size (pj_fifobuf_t *fifobuf)
+{
     PJ_CHECK_STACK();
 
+    if (fifobuf->full)
+        return 0;
+
     if (fifobuf->uend >= fifobuf->ubegin) {
-        s1 = (unsigned)(fifobuf->last - fifobuf->uend);
-        s2 = (unsigned)(fifobuf->ubegin - fifobuf->first);
+        unsigned s;
+        unsigned s1 = (unsigned)(fifobuf->last - fifobuf->uend);
+        unsigned s2 = (unsigned)(fifobuf->ubegin - fifobuf->first);
+        if (s1 <= SZ)
+            s = s2;
+        else if (s2 <= SZ)
+            s = s1;
+        else
+            s = s1<s2 ? s2 : s1;
+
+        return (s>=SZ) ? s-SZ : 0;
     } else {
-        s1 = s2 = (unsigned)(fifobuf->ubegin - fifobuf->uend);
+        unsigned s = (unsigned)(fifobuf->ubegin - fifobuf->uend);
+        return (s>=SZ) ? s-SZ : 0;
     }
-    
-    return s1<s2 ? s2 : s1;
 }
 
 PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
@@ -79,7 +108,7 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
                 fifobuf->uend = fifobuf->first;
             if (fifobuf->uend == fifobuf->ubegin)
                 fifobuf->full = 1;
-            *(unsigned*)ptr = size+SZ;
+            put_size(ptr, size+SZ);
             ptr += SZ;
 
             PJ_LOG(6, (THIS_FILE, 
@@ -97,7 +126,7 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
         fifobuf->uend = start + size + SZ;
         if (fifobuf->uend == fifobuf->ubegin)
             fifobuf->full = 1;
-        *(unsigned*)ptr = size+SZ;
+        put_size(ptr, size+SZ);
         ptr += SZ;
 
         PJ_LOG(6, (THIS_FILE, 
@@ -121,7 +150,7 @@ PJ_DEF(pj_status_t) pj_fifobuf_unalloc (pj_fifobuf_t *fifobuf, void *buf)
     PJ_CHECK_STACK();
 
     ptr -= SZ;
-    sz = *(unsigned*)ptr;
+    sz = get_size(ptr);
 
     endptr = fifobuf->uend;
     if (endptr == fifobuf->first)
@@ -162,7 +191,7 @@ PJ_DEF(pj_status_t) pj_fifobuf_free (pj_fifobuf_t *fifobuf, void *buf)
     }
 
     end = (fifobuf->uend > fifobuf->ubegin) ? fifobuf->uend : fifobuf->last;
-    sz = *(unsigned*)ptr;
+    sz = get_size(ptr);
     if (ptr+sz > end) {
         pj_assert(!"Invalid size!");
         return -1;

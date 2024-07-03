@@ -117,6 +117,12 @@ int test_inner(void)
     DO_TEST( fifobuf_test() );
 #endif
 
+#if INCLUDE_UNITTEST_TEST
+    DO_TEST( unittest_basic_test() );
+    DO_TEST( unittest_test() );
+    DO_TEST( unittest_parallel_test() );
+#endif
+
 #if INCLUDE_RBTREE_TEST
     DO_TEST( rbtree_test() );
 #endif

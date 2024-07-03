@@ -49,7 +49,7 @@ PJ_BEGIN_DECL
  */
 #define PJ_TEST_NON_ZERO(expr, err_reason, err_action)  \
             { \
-                if (!(expr)) { \
+                if ((expr)==0) { \
                     const char *tmp_reason_ = err_reason; \
                     const char *sep0_ = (tmp_reason_ ? " (": ""); \
                     const char *sep1_ = (tmp_reason_ ? ")": ""); \
