@@ -25,9 +25,6 @@
  * @brief Include all PJLIB header files.
  */
 
-/* argparse is a utility for test apps, not really a feature of pjlib. */
-/*#include <pj/argparse.h>*/
-
 #include <pj/activesock.h>
 #include <pj/addr_resolv.h>
 #include <pj/array.h>

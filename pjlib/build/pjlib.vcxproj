@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug-Dynamic|ARM">
@@ -1036,7 +1036,6 @@
     <ClInclude Include="..\include\pjlib.h" />
     <ClInclude Include="..\include\pj\activesock.h" />
     <ClInclude Include="..\include\pj\addr_resolv.h" />
-    <ClInclude Include="..\include\pj\argparse.h" />
     <ClInclude Include="..\include\pj\array.h" />
     <ClInclude Include="..\include\pj\assert.h" />
     <ClInclude Include="..\include\pj\compat\assert.h" />
