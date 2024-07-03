@@ -803,8 +803,10 @@ pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
             continue;
         }
 
-        pjmedia_vid_codec_mgr_get_default_param(NULL, &codec_info[i],
-                                                &codec_param);
+        status = pjmedia_vid_codec_mgr_get_default_param(NULL, &codec_info[i],
+                                                         &codec_param);
+        if (status != PJ_SUCCESS)
+            return status;
 
         fmt = &m->desc.fmt[m->desc.fmt_count++];
         fmt->ptr = (char*) pj_pool_alloc(pool, 8);

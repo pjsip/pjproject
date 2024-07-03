@@ -269,6 +269,12 @@ PJ_DEF(pj_status_t) pjsip_100rel_create_prack( pjsip_inv_session *inv,
     }
     rseq = (pj_uint32_t) pj_strtoul(&rseq_hdr->hvalue);
 
+    if (rseq < 1) {
+        PJ_LOG(4, (dd->inv->dlg->obj_name,
+                   "Ignoring 100rel response RSeq header value less than 1"));
+        return PJ_EIGNORED;
+    }
+
     /* Find UAC state for the specified call leg */
     uac_state = dd->uac_state_list;
     while (uac_state) {

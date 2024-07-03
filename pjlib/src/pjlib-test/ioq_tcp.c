@@ -887,7 +887,7 @@ on_error:
         if (client[i].key != NULL) {
             pj_ioqueue_unregister(client[i].key);
             client[i].key = NULL;
-            server[i].sock = PJ_INVALID_SOCKET;
+            client[i].sock = PJ_INVALID_SOCKET;
         } else if (client[i].sock != PJ_INVALID_SOCKET) {
             pj_sock_close(client[i].sock);
             client[i].sock = PJ_INVALID_SOCKET;
