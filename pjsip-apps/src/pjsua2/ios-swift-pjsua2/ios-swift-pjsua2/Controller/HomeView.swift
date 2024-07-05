@@ -82,8 +82,8 @@ struct HomeView: View {
                 print("change in selection", newValue)
                 webViewUrl = getProductDetails(ens: newValue)
                 if viewModel.options.count > 0 {
-                    let xData = (AppManager.shared.web3Service?.getXData())!
-                    let xSign = AppManager.shared.web3Service?.getXSign(data: xData)
+                    let xData = "B89FC85E-DD58-456D-A84A-702AB22D7ED7:1719906408227"//(AppManager.shared.web3Service?.getXData())!  // Example XData, replace with real data
+                    let xSign = "0xd3154ed6b15d786478ae77cb852075afb8f65cf6be113b4401328de6effcb3444202cc918b153223fff3d22b2d2a6beba91540911ec586b73c439205294797721c"//AppManager.shared.web3Service?.getXSign(data: xData)
                     Task{
                         var domain = try await AppManager.shared.web3Service?.getCalleeDomain(callee: newValue)
                         if (domain == "Error"){
@@ -116,10 +116,17 @@ struct HomeView: View {
             }
             Spacer()
             Button(action: {
-                let xData = (AppManager.shared.web3Service?.getXData())!
-                let xSign = AppManager.shared.web3Service?.getXSign(data: xData)
-                registerAccount(ens: viewModel.selectedOption, domain: "test.cellact.nl", xData: xData, xSign: xSign!)
-                print("registered")
+                Task{
+                    let xData = (AppManager.shared.web3Service?.getXData())!
+                    let xSign = AppManager.shared.web3Service?.getXSign(data: xData)
+                    var domain = try await AppManager.shared.web3Service?.getCalleeDomain(callee: viewModel.selectedOption)
+                    if (domain == "Error"){
+                        domain = "test2.cellact.nl"
+                    }
+                    registerAccount(ens: viewModel.selectedOption, domain: domain!, xData: xData, xSign: xSign!)
+                    print("registered")
+                }
+                
             }) {
                 Text("Register Account")
             }

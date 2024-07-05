@@ -16,7 +16,7 @@ struct ShopView: View {
 var body: some View {
     
     VStack {
-        _WebView(url: URL(string: "https://arnacon-shop.vercel.app/shop?user_address=\(walletAddress)")!, webView: $webView)
+        _WebView(url: URL(string: "https://arnacon-shop.vercel.app/?user_address=\(walletAddress)")!, webView: $webView)
             .edgesIgnoringSafeArea(.all)
     }
 }

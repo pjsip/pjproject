@@ -1,0 +1,155 @@
+/*
+ * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
+ * Contributed by Emre Tufekci (github.com/emretufekci)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#import "wrapper.h"
+#import "CustomPJSUA2.hpp"
+
+/**
+ Create a object from .hpp class & wrapper to be able to use it via Swift
+ */
+@implementation CPPWrapper
+PJSua2 pjsua2;
+
+//Lib
+/**
+ Create Lib with EpConfig
+ */
+-(void) createLibWrapper
+{
+    return pjsua2.createLib();
+};
+
+/**
+ Delete lib
+ */
+-(void) deleteLibWrapper {
+    pjsua2.deleteLib();
+}
+
+//Account
+/**
+ Create Account via following config(string username, string password, string ip, string port)
+ */
+// wrapper.m
+-(void) createAccountWrapper :(NSString*) usernameNS
+                            :(NSString*) passwordNS
+                            :(NSString*) registrarNS
+                            :(NSString*) portNS
+                            :(NSString*) xSignNS
+                            :(NSString*) xDataNS
+{
+    std::string username = std::string([[usernameNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    std::string password = std::string([[passwordNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    std::string registrar = std::string([[registrarNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    std::string port = std::string([[portNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    std::string xSign = std::string([[xSignNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    std::string xData = std::string([[xDataNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    
+    pjsua2.createAccount(username, password, registrar, port, xSign, xData);
+}
+
+
+/**
+ Unregister account
+ */
+-(void) unregisterAccountWrapper {
+    return pjsua2.unregisterAccount();
+}
+
+/**
+ Answer incoming call
+ */
+- (void) answerCallWrapper {
+    pjsua2.answerCall();
+}
+
+/**
+ Hangup active call (Incoming/Outgoing/Active)
+ */
+- (void) hangupCallWrapper {
+    pjsua2.hangupCall();
+}
+
+/**
+ Hold the call
+ */
+- (void) holdCallWrapper{
+    pjsua2.holdCall();
+}
+
+/**
+ unhold the call
+ */
+- (void) unholdCallWrapper{
+    pjsua2.unholdCall();
+}
+
+/**
+ Make outgoing call (string dest_uri) -> e.g. makeCall(sip:<SIP_USERNAME@SIP_URI:SIP_PORT>)
+ */
+-(void) outgoingCallWrapper :(NSString*) dest_uriNS xData:(NSString*) xData xSign:(NSString*) xSign
+{
+    pj_log_set_level(5);  // Set to maximum verbosity
+    std::string dest_uri = std::string([[dest_uriNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    std::string xDataString = std::string([xData UTF8String]);
+    std::string xSignString = std::string([xSign UTF8String]);
+    
+    pjsua2.outgoingCall(dest_uri, xDataString, xSignString);
+}
+
+// Factory method to create NSString from C++ string
+/**
+ Get caller id for incoming call, checks account currently registered (ai.regIsActive)
+ */
+- (NSString*) incomingCallInfoWrapper {
+    NSString* result = [NSString stringWithUTF8String:pjsua2.incomingCallInfo().c_str()];
+    return result;
+}
+
+/**
+ Listener (When we have incoming call, this function pointer will notify swift.)
+ */
+- (void)incoming_call_wrapper: (void(*)())function {
+    pjsua2.incoming_call(function);
+}
+
+/**
+ Listener (When we have changes on the call state, this function pointer will notify swift.)
+ */
+- (void)call_listener_wrapper: (void(*)(int))function {
+    pjsua2.call_listener(function);
+}
+
+/**
+ Listener (When we have changes on the acc reg state, this function pointer will notify swift.)
+ (Runs swift code from C++)
+ */
+-(void) acc_listener_wrapper: (void(*)(bool))function {
+    pjsua2.acc_listener(function);
+}
+
+/**
+ Listener (When we have video, this function pointer will notify swift.)
+ (Runs swift code from C++)
+ */
+-(void) update_video_wrapper: (void(*)(void *))function {
+    pjsua2.update_video(function);
+}
+
+@end

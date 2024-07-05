@@ -8,6 +8,8 @@
 import Foundation
 import WebKit
 import SwiftUI
+import CallKit
+import PortSIPVoIPSDK
 
 struct _WebView: UIViewRepresentable {
     let url: URL
@@ -120,11 +122,13 @@ struct _WebView: UIViewRepresentable {
                     let ens = to
                     // resolve ens to sip address
                     let sip = "sip:\(ens)@test.cellact.nl" //let sip = "sip:\(ens)@\(domain)"
-                    let xData = (AppManager.shared.web3Service?.getXData())!
-                    let xSign = AppManager.shared.web3Service?.getXSign(data: xData)
-
+                    let xData = "B89FC85E-DD58-456D-A84A-702AB22D7ED7:1719906408227"//(AppManager.shared.web3Service?.getXData())!  // Example XData, replace with real data
+                    let xSign = "0xd3154ed6b15d786478ae77cb852075afb8f65cf6be113b4401328de6effcb3444202cc918b153223fff3d22b2d2a6beba91540911ec586b73c439205294797721c"//AppManager.shared.web3Service?.getXSign(data: xData)
+                    CallController.shared.currentCaller = ens
+                    
                     CPPWrapper().outgoingCall(sip, xData: xData, xSign: xSign)
                     CPPWrapper().call_listener_wrapper(call_status_listener_swift)
+                    CallController.shared.startCall(name: ens)
                     parent.webView?.sendDataToHTML("{\"action\": \"ringing\", \"body\": {\"to\": \"\(ens)\", \"from\": \"csda\"}}")
                     print("mtn Parent in call with is: ", ens)
                     parent.inCallWith = ens

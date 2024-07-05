@@ -91,29 +91,14 @@ std::string callerId;
 
 void MyEndpoint::onTimer(const OnTimerParam &prm)
 {
-    /* IMPORTANT:
-     * We need to call PJSIP API from a separate thread since
-     * PJSIP API can potentially block the main/GUI thread.
-     * And make sure we don't use Apple's Dispatch / gcd since
-     * it's incompatible with POSIX threads.
-     * In this example, we take advantage of PJSUA2's timer thread
-     * to perform call operations. For a more complex application,
-     * it is recommended to create your own separate thread
-     * instead for this purpose.
-     */
-
     long code = (long) prm.userData;
     if (code == MAKE_CALL) {
         uint8_t devices = ep->audDevManager().getDevCount();
 
-        for( int i=0;i<devices;i++){
-
-            AudioDevInfo info = ep->audDevManager().getDevInfo(i);
-
-            std::cout << "Device [" << i << "] " << std::endl;
-
+        if (devices == 0) {
+            std::cerr << "No audio devices found" << std::endl;
+//            return;
         }
-
         CallOpParam prm(true); // Use default call settings
         prm.opt.videoCount = 0;
         SipHeader SipHeader1;
@@ -125,16 +110,16 @@ void MyEndpoint::onTimer(const OnTimerParam &prm)
          SipHeader2.hName = "X-Sign";
          SipHeader2.hValue = acc-> xSign; // Use the stored xSign value
          prm.txOption.headers.push_back(SipHeader2);
-//        this->audDevManager().setCaptureDev(-1);
-//        this->audDevManager().setPlaybackDev(-1);
+        this->audDevManager().setCaptureDev(0);
+        this->audDevManager().setPlaybackDev(0);
         
         
         std::cout << "Capture Dev: " << this->audDevManager().getCaptureDev() << std::endl;
         std::cout << "Sound active: " << this->audDevManager().sndIsActive() << std::endl;
-        this->audDevManager().setSndDevMode(2);
-//        std::cout << "Dev count: " << this->audDevManager().getDevCount() << std::endl;
+//        this->audDevManager().setSndDevMode(2);
+        std::cout << "Dev count: " << this->audDevManager().getDevCount() << std::endl;
         try {
-            this->audDevManager().getCaptureDevMedia().startTransmit(this->audDevManager().getCaptureDevMedia());
+//            this->audDevManager().getCaptureDevMedia().startTransmit(this->audDevManager().getCaptureDevMedia());
             call = new MyCall(*acc);
             std::cout << "Port: " << this->audDevManager().getCaptureDevMedia().getPortId() << std::endl;
             call->makeCall(acc->dest_uri, prm);
@@ -143,8 +128,13 @@ void MyEndpoint::onTimer(const OnTimerParam &prm)
             std::cout << err.info() << std::endl;
         }
     } else if (code == ANSWER_CALL) {
-        this->audDevManager().setNoDev();
+        std::cout << "answering call..." << std::endl;
+        std::cout << "Capture Dev: " << this->audDevManager().getCaptureDev() << std::endl;
+        std::cout << "Sound active: " << this->audDevManager().sndIsActive() << std::endl;
+//        this->audDevManager().setSndDevMode(2);
+        std::cout << "Dev count:: " << this->audDevManager().getDevCount() << std::endl;
         CallOpParam op(true);
+        op.opt.videoCount = 0;
         op.statusCode = PJSIP_SC_OK;
         call->answer(op);
         
@@ -233,16 +223,19 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
 {
     CallInfo ci = getInfo();
     // Iterate all the call medias
-    std::cout << "here" << ci.media.size() << std::endl;
+    std::cout << "here: " << ci.media[0].status << std::endl;
     for (unsigned i = 0; i < ci.media.size(); i++) {
         if (ci.media[i].status == PJSUA_CALL_MEDIA_ACTIVE ||
             ci.media[i].status == PJSUA_CALL_MEDIA_REMOTE_HOLD)
         {
             if (ci.media[i].type==PJMEDIA_TYPE_AUDIO) {
+                std::cout << "here media is audio " << std::endl;
                 AudioMedia *aud_med = (AudioMedia *)getMedia(i);
-                
+                std::cout <<"here port: " << aud_med-> getPortId() << std::endl;
                 // Connect the call audio media to sound devicex
                 AudDevManager& mgr = Endpoint::instance().audDevManager();
+                std::cout <<"here playback media port: " << mgr.getPlaybackDevMedia().getPortId() << std::endl;
+                std::cout <<"here capture media port: " << mgr.getCaptureDevMedia().getPortId() << std::endl;
                 aud_med->startTransmit(mgr.getPlaybackDevMedia());
                 mgr.getCaptureDevMedia().startTransmit(*aud_med);
             } else if (ci.media[i].type==PJMEDIA_TYPE_VIDEO) {
@@ -272,7 +265,7 @@ void PJSua2::createLib()
         StringVector stun;
         stun.push_back("stun.pjsip.org");
         ep_cfg.uaConfig.stunServer = stun;
-        ep->libInit( ep_cfg );
+        ep->libInit( ep_cfg);
     } catch(Error& err) {
         std::cout << "Initialization error: " << err.info() << std::endl;
     }
@@ -289,8 +282,14 @@ void PJSua2::createLib()
     // Start the library (worker threads etc)
     try {
         ep->libStart();
-        ep->audDevManager().setCaptureDev(0);
-        ep->audDevManager().setPlaybackDev(0);
+//        ep->audDevManager().setCaptureDev(0);
+//        ep->audDevManager().setPlaybackDev(0);
+//        for( int i=0;i<1;i++){
+//            AudioDevInfo info = ep->audDevManager().getDevInfo(i);
+//
+//            std::cout << "Device [" << i << "] " << std::endl;
+//
+//        }
         std::cout << "Dev count: " << ep->audDevManager().getDevCount() << std::endl;
     } catch(Error& err) {
         std::cout << "Startup error: " << err.info() << std::endl;

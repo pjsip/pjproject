@@ -49,7 +49,7 @@ struct RecentCalls: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        addNewCall()
+                        addNewCall(from: "New Caller", to:"callee", timestamp: Date(), callDuration: 120)
                     }) {
                         Image(systemName: "plus")
                     }
@@ -58,8 +58,8 @@ struct RecentCalls: View {
         }
     }
     
-    func addNewCall() {
-        let newCall = CallInfo(caller: "New Caller", callee:"callee", timestamp: Date(), callDuration: 120)
+    func addNewCall(from: String, to:String, timestamp: Date, callDuration: TimeInterval) {
+        let newCall = CallInfo(caller: from, callee:to, timestamp: timestamp, callDuration: callDuration)
         viewModel.addRecentCall(call: newCall)
     }
 }

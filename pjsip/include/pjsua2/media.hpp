@@ -1075,7 +1075,7 @@ public:
      *                          own sound device or master port.
      */
     MediaPort *setNoDev();
-
+    
     /**
      * Set sound device mode.
      *

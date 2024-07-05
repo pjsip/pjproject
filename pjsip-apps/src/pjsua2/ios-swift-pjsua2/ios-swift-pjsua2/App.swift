@@ -5,7 +5,8 @@ import AVFoundation
 @main
 struct YourApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-
+    public var calls: [UUID] = []
+    
     var body: some Scene {
         WindowGroup {
             MainView()
@@ -35,10 +36,18 @@ struct YourApp: App {
     func requestMicrophonePermission() {
         AVAudioSession.sharedInstance().requestRecordPermission { granted in
             if granted {
-                print("Microphone permission granted")
+                do {
+                    
+//                    try AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .mixWithOthers])
+//                    try AVAudioSession.sharedInstance().setActive(true)
+                    print("audio permission granted")
+                } catch {
+                    print("Failed to set audio session category: \(error)")
+                }
             } else {
                 print("Microphone permission denied")
             }
         }
+        
     }
 }

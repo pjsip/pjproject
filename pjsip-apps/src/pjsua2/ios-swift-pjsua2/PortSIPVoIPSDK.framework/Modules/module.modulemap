@@ -1,0 +1,6 @@
+framework module PortSIPVoIPSDK {
+  umbrella header "PortSIPVoIPSDK.h"
+  export *
+
+  module * { export * }
+}

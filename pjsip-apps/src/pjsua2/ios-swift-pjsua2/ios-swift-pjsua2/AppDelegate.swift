@@ -3,6 +3,7 @@ import PushKit
 import CallKit
 import AVFoundation
 import UserNotifications
+import PortSIPVoIPSDK
 
 
 class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, CXProviderDelegate, UNUserNotificationCenterDelegate {
@@ -29,7 +30,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, C
         CPPWrapper().update_video_wrapper(update_video_swift)
         CPPWrapper().call_listener_wrapper(call_status_listener_swift)
     }
-
+    
     // VoIP registration function
     func voipRegistration() {
         let voipRegistry = PKPushRegistry(queue: DispatchQueue.main)
@@ -39,12 +40,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, C
 
     // CallKit setup function
     func setupCallKit() {
-        let configuration = CXProviderConfiguration(localizedName: "YourApp")
+        let configuration = CXProviderConfiguration()
         configuration.supportsVideo = true
         configuration.maximumCallGroups = 1
         configuration.maximumCallsPerCallGroup = 1
-        self.provider = CXProvider(configuration: configuration)
-        self.provider?.setDelegate(self, queue: nil)
+        configuration.supportedHandleTypes = [.phoneNumber, .generic, .emailAddress]
+
+        let provider = CXProvider(configuration: configuration)
+        provider.setDelegate(self, queue: nil)
+        CallController.shared.provider = provider
+        print("CallKit provider set up with delegate")
     }
 
     // MARK: - PKPushRegistryDelegate
@@ -66,34 +71,36 @@ class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, C
     
     func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
         let payloadDictionary = payload.dictionaryPayload
-        print("caller: ",  CPPWrapper().incomingCallInfoWrapper())
-
+        
         if let aps = payloadDictionary["aps"] as? [String: Any],
            let handle = aps["caller"] as? String,
            let ens = aps["callee"] as? String {
+            print("caller: ", handle)
+            CallController.shared.currentCaller = handle
             print("payload dictionary:", payloadDictionary, ens, handle)
             Task {
                 do {
                     let domain = try await AppManager.shared.web3Service?.getCalleeDomain(callee: ens)
                     print("dmn:", domain)
                     
-                    let xData = "27C03A3B-F5E2-4C92-A448-CE9C6F348C19:1718960144593"//(AppManager.shared.web3Service?.getXData())!  // Example XData, replace with real data
-                    let xSign = "0xf458a012753421fc3104ab6629afd0d77bb21702897704e1f8e532e5735c8ec759b0011f4e16dfba085a29ea0797f3695aee4dc33a7a027a25de0638d3c1a5df1c"//AppManager.shared.web3Service?.getXSign(data: xData)
+                    let xData = "B89FC85E-DD58-456D-A84A-702AB22D7ED7:1719906408227"//(AppManager.shared.web3Service?.getXData())!  // Example XData, replace with real data
+                    let xSign = "0xd3154ed6b15d786478ae77cb852075afb8f65cf6be113b4401328de6effcb3444202cc918b153223fff3d22b2d2a6beba91540911ec586b73c439205294797721c"//AppManager.shared.web3Service?.getXSign(data: xData)
                     print(xData, xSign)
                     
                     CPPWrapper().createAccountWrapper(ens,
                                                       "password",
-                                                      "test.cellact.nl",
+                                                      domain,
                                                       "5060",
                                                       xSign,
                                                       xData)
-                    CPPWrapper().call_listener_wrapper(call_status_listener_swift)
+//                    CPPWrapper().call_listener_wrapper(call_status_listener_swift)
                 } catch {
                     print("Error during asynchronous operations: \(error)")
                 }
             }
-            self.reportIncomingCall(uuid: UUID(), handle: handle)
             
+            var uuid = UUID()
+            self.reportIncomingCall(uuid: uuid, handle: handle)
         }
         completion()
     }
@@ -102,7 +109,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, C
     func reportIncomingCall(uuid: UUID, handle: String) {
         let update = CXCallUpdate()
         update.remoteHandle = CXHandle(type: .generic, value: handle)
-        provider?.reportNewIncomingCall(with: uuid, update: update) { error in
+        CallController.shared.provider!.reportNewIncomingCall(with: uuid, update: update) { error in
             if let error = error {
                 print("Error reporting new incoming call: \(error)")
             } else {
@@ -117,16 +124,52 @@ class AppDelegate: UIResponder, UIApplicationDelegate, PKPushRegistryDelegate, C
 
     func provider(_ provider: CXProvider, perform action: CXAnswerCallAction) {
         // Handle answering the call
+        print("answered call")
+        setupAudioSession() // Activate the audio session here
         CPPWrapper().answerCall()
+        var handle = CallController.shared.currentCaller
+        print("handle: ", handle)
+//        CallController.shared.startCall(name: handle)
         action.fulfill()
     }
 
     func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
         // Handle ending the call
-        print("Declined call")
-        CPPWrapper().hangupCall()
         
+        CPPWrapper().hangupCall()
+//        var callId = ActiveCalls.shared.calls[0];
+//        print("ending call: ", callId)
+//        CallController.shared.endCall(call: callId)
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+            print("Sound deactivated")
+        } catch {
+            print("Failed to deactivate audio session: \(error)")
+        }
         // Ensure the action is fulfilled after handling the hangup
         action.fulfill()
+    }
+    
+    func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
+        print("Audio started here")
+        print("Received", #function)
+        /*
+         Start call audio media, now that the audio session is activated,
+         after having its priority elevated.
+         */
+        //        startAudio()
+    }
+    func setupAudioSession() {
+        let audioSession = AVAudioSession.sharedInstance()
+        print("Current audio session active state: \(audioSession.isOtherAudioPlaying)")
+        do {
+//            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+            try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.mixWithOthers, .defaultToSpeaker])
+//            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+            print("Audio setup successfully")
+        } catch {
+            print("Failed to set up audio session: \(error)")
+        }
     }
 }

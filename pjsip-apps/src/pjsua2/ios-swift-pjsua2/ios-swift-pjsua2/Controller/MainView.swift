@@ -1,15 +1,22 @@
 import SwiftUI
 import AVFoundation
 
-struct MainView: View {
-    static var shared = MainView()
 
+
+class AppState: ObservableObject {
+    @Published var isServiceProvider: Bool = false
+}
+
+struct MainView: View {
+    @StateObject private var appState = AppState()
+    
+    static var shared = MainView()
     @State private var showSidebar = false
     @State var selectedView: String?
 
     var body: some View {
         NavigationView {
-            ZStack(alignment: .leading) {  // Align the ZStack to the leading edge
+            ZStack(alignment: .leading) {
                 _MainView(selectedView: $selectedView)
 
                 if showSidebar {
@@ -17,7 +24,6 @@ struct MainView: View {
                         .transition(.move(edge: .leading))
                 }
             }
-            //            .navigationBarTitle("Main View", displayMode: .inline)
             .navigationBarItems(leading: Button(action: {
                 withAnimation {
                     showSidebar.toggle()
@@ -27,21 +33,15 @@ struct MainView: View {
                     .imageScale(.large)
             })
             .onAppear {
-                
                 initializeViews()
             }
         }
+        .environmentObject(appState)
     }
 
     func initializeViews() {
         Task {
-            await AppManager.shared.initializeWeb3Service()
-            
-//                let deviceToken:String = TokenManager.shared.devicetoken!
-//                let voipToken:String = TokenManager.shared.voipToken!
-//            print("tokens got")
-//                try await AppManager.shared.web3Service?.sendTokens(_fcmToken: deviceToken, _voipToken: voipToken)
-//                print("tokens sent")
+            AppManager.shared.initializeWeb3Service()
             
             if let count = try? AppManager.shared.web3Service?.getENSList().count, count > 0 {
                 selectedView = "View2"
@@ -53,53 +53,53 @@ struct MainView: View {
 }
 
 struct Sidebar: View {
+    @EnvironmentObject var appState: AppState
     @Binding var showSidebar: Bool
     @Binding var selectedView: String?
     
     var body: some View {
         VStack(alignment: .leading) {
-            Button(action: {
-                selectedView = "View1"
-                withAnimation {
-                    showSidebar.toggle()
-                }
-            }) {
-                Text("Shop")
-                    .padding()
-            }
-            Button(action: {
-                selectedView = "View2"
-                withAnimation {
-                    showSidebar.toggle()
-                }
-            }) {
-                Text("Main")
-                    .padding()
-            }
-            Button(action: {
-                selectedView = "View3"
-                withAnimation {
-                    showSidebar.toggle()
-                }
-            }) {
-                Text("Recent calls")
-                    .padding()
-            }
-            Button(action: {
-                selectedView = "View4"
-                withAnimation {
-                    showSidebar.toggle()
-                }
-            }) {
-                Text("Profile")
-                    .padding()
+            if appState.isServiceProvider {
+                serviceProviderSidebarContent
+            } else {
+                regularSidebarContent
             }
             Spacer()
         }
         .frame(width: 200)
         .background(Color(.systemGray6))
-        .offset(x: showSidebar ? 0 : -200)  // Offset to hide the sidebar when not visible
+        .offset(x: showSidebar ? 0 : -200)
         .animation(.default, value: showSidebar)
+    }
+    
+    var serviceProviderSidebarContent: some View {
+        Group {
+            sidebarButton(title: "My Products", view: "MyProducts")
+            sidebarButton(title: "My Payments", view: "MyPayments")
+            sidebarButton(title: "Clients", view: "Clients")
+            sidebarButton(title: "Profile", view: "View4")
+        }
+    }
+    
+    var regularSidebarContent: some View {
+        Group {
+            sidebarButton(title: "Shop", view: "View1")
+            sidebarButton(title: "Main", view: "View2")
+            sidebarButton(title: "Recent calls", view: "View3")
+            sidebarButton(title: "Profile", view: "View4")
+        }
+    }
+    
+    func sidebarButton(title: String, view: String) -> some View {
+        Button(action: {
+            selectedView = view
+            withAnimation {
+                showSidebar.toggle()
+            }
+        }) {
+            Text(title)
+                .padding()
+        }
     }
 }
 
@@ -115,8 +115,14 @@ struct _MainView: View {
             } else if selectedView == "View3" {
                 RecentCalls.shared
             } else if selectedView == "View4" {
-                Text("This is the profile page.")
-            } else {
+                ProfileView()
+            } else if selectedView == "MyPayments" {
+                ProfileView()
+            }
+            else if selectedView == "MyProducts" {
+                MyProductsView()
+            }
+            else {
                 Text("Loading...")
             }
             Spacer()

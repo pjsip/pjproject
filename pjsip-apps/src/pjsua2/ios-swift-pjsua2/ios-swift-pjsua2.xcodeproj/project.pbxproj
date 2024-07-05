@@ -10,8 +10,12 @@
 		3A4E3B5E2B6206E50016735C /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B5C2B6206E50016735C /* Metal.framework */; };
 		3A4E3B5F2B6206E50016735C /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A4E3B5D2B6206E50016735C /* MetalKit.framework */; };
 		3AEC29312995BF1400F59EA0 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AEC29302995BF1400F59EA0 /* VideoToolbox.framework */; };
-		3AEC29332995BF4C00F59EA0 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AEC29322995BF4C00F59EA0 /* CoreMedia.framework */; };
+		902E55B22C35809400B59B74 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 902E55B12C35809400B59B74 /* ProfileView.swift */; };
+		902E55B52C35862D00B59B74 /* MyPayments.swift in Sources */ = {isa = PBXBuildFile; fileRef = 902E55B42C35862D00B59B74 /* MyPayments.swift */; };
+		902E55B72C35863B00B59B74 /* MyProducts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 902E55B62C35863B00B59B74 /* MyProducts.swift */; };
 		904CB2822C08C5190068357C /* Test.swift in Sources */ = {isa = PBXBuildFile; fileRef = 904CB2812C08C5190068357C /* Test.swift */; };
+		9099E3B92C33E35600C46797 /* CallController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9099E3B82C33E35600C46797 /* CallController.swift */; };
+		9099E40F2C33EEF500C46797 /* CallAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9099E40E2C33EEF500C46797 /* CallAudio.swift */; };
 		909A22812C12F167006DE307 /* ProductController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 909A22802C12F167006DE307 /* ProductController.swift */; };
 		909A22852C12FB44006DE307 /* iArnaconSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 909A22842C12FB44006DE307 /* iArnaconSDK */; };
 		909A22882C12FE19006DE307 /* AppDataSaver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 909A22872C12FE19006DE307 /* AppDataSaver.swift */; };
@@ -70,8 +74,22 @@
 		3A4E3B5C2B6206E50016735C /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
 		3A4E3B5D2B6206E50016735C /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
 		3AEC29302995BF1400F59EA0 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
-		3AEC29322995BF4C00F59EA0 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+		902E55B12C35809400B59B74 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		902E55B42C35862D00B59B74 /* MyPayments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPayments.swift; sourceTree = "<group>"; };
+		902E55B62C35863B00B59B74 /* MyProducts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyProducts.swift; sourceTree = "<group>"; };
 		904CB2812C08C5190068357C /* Test.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Test.swift; sourceTree = "<group>"; };
+		9099E3B82C33E35600C46797 /* CallController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallController.swift; sourceTree = "<group>"; };
+		9099E4032C33EB5900C46797 /* AudioController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AudioController.h; sourceTree = "<group>"; };
+		9099E4042C33EB5900C46797 /* CADebugMacros.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CADebugMacros.h; sourceTree = "<group>"; };
+		9099E4052C33EB5900C46797 /* CAMath.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CAMath.h; sourceTree = "<group>"; };
+		9099E4062C33EB5900C46797 /* CAStreamBasicDescription.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CAStreamBasicDescription.cpp; sourceTree = "<group>"; };
+		9099E4072C33EB5900C46797 /* CADebugMacros.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CADebugMacros.cpp; sourceTree = "<group>"; };
+		9099E4082C33EB5900C46797 /* CAXException.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CAXException.cpp; sourceTree = "<group>"; };
+		9099E4092C33EB5900C46797 /* CAXException.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CAXException.h; sourceTree = "<group>"; };
+		9099E40A2C33EB5900C46797 /* CAStreamBasicDescription.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CAStreamBasicDescription.h; sourceTree = "<group>"; };
+		9099E40B2C33EB5900C46797 /* AudioController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AudioController.mm; sourceTree = "<group>"; };
+		9099E40E2C33EEF500C46797 /* CallAudio.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallAudio.swift; sourceTree = "<group>"; };
+		9099E4122C33F45F00C46797 /* PortSIPVoIPSDK.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = PortSIPVoIPSDK.framework; sourceTree = "<group>"; };
 		909A22802C12F167006DE307 /* ProductController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductController.swift; sourceTree = "<group>"; };
 		909A22872C12FE19006DE307 /* AppDataSaver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDataSaver.swift; sourceTree = "<group>"; };
 		909A22892C12FE36006DE307 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
@@ -152,7 +170,6 @@
 				C351398C25A5F70D00A090AA /* libpjsip-ua.a in Frameworks */,
 				909A229B2C1995A6006DE307 /* CallKit.framework in Frameworks */,
 				C351398D25A5F70D00A090AA /* libpjsip.a in Frameworks */,
-				3AEC29332995BF4C00F59EA0 /* CoreMedia.framework in Frameworks */,
 				909A22852C12FB44006DE307 /* iArnaconSDK in Frameworks */,
 				C351398E25A5F70D00A090AA /* libpjsua.a in Frameworks */,
 				C351398F25A5F70D00A090AA /* libpjsua2.a in Frameworks */,
@@ -171,6 +188,32 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		902E55B32C35862000B59B74 /* SPviews */ = {
+			isa = PBXGroup;
+			children = (
+				902E55B42C35862D00B59B74 /* MyPayments.swift */,
+				902E55B62C35863B00B59B74 /* MyProducts.swift */,
+			);
+			path = SPviews;
+			sourceTree = "<group>";
+		};
+		9099E4012C33EB4D00C46797 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+				9099E40E2C33EEF500C46797 /* CallAudio.swift */,
+				9099E4032C33EB5900C46797 /* AudioController.h */,
+				9099E40B2C33EB5900C46797 /* AudioController.mm */,
+				9099E4072C33EB5900C46797 /* CADebugMacros.cpp */,
+				9099E4042C33EB5900C46797 /* CADebugMacros.h */,
+				9099E4052C33EB5900C46797 /* CAMath.h */,
+				9099E4062C33EB5900C46797 /* CAStreamBasicDescription.cpp */,
+				9099E40A2C33EB5900C46797 /* CAStreamBasicDescription.h */,
+				9099E4082C33EB5900C46797 /* CAXException.cpp */,
+				9099E4092C33EB5900C46797 /* CAXException.h */,
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
 		909A22862C12FE0B006DE307 /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -184,17 +227,9 @@
 			path = App;
 			sourceTree = "<group>";
 		};
-		90DC4CA42C241C840097F5C2 /* CallServices */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = CallServices;
-			sourceTree = "<group>";
-		};
 		C337417125BADEB3007785D7 /* Model */ = {
 			isa = PBXGroup;
 			children = (
-				C337417225BADEEE007785D7 /* Model.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -205,12 +240,14 @@
 				904CB2812C08C5190068357C /* Test.swift */,
 				909A22952C187B3A006DE307 /* MainView.swift */,
 				909A22972C187DEC006DE307 /* HomeView.swift */,
+				902E55B12C35809400B59B74 /* ProfileView.swift */,
 				C3B8520225A5EA6C0037A8AB /* ViewController.swift */,
+				902E55B32C35862000B59B74 /* SPviews */,
 				909A229C2C199603006DE307 /* TokenManager.swift */,
 				909A22A12C1C6F4A006DE307 /* NotificationManager.swift */,
 				90DC4CAD2C25A8550097F5C2 /* RecentCalls.swift */,
+				9099E3B82C33E35600C46797 /* CallController.swift */,
 				C399A57025AF2721000F742A /* IncomingViewController.swift */,
-				90DC4CA42C241C840097F5C2 /* CallServices */,
 				C374860725B84FA100FBE972 /* OutgoingViewController.swift */,
 				90DC4CA22C241BF30097F5C2 /* CallSession.swift */,
 				909A22802C12F167006DE307 /* ProductController.swift */,
@@ -248,6 +285,7 @@
 		C3B851FD25A5EA6C0037A8AB /* ios-swift-pjsua2 */ = {
 			isa = PBXGroup;
 			children = (
+				9099E4012C33EB4D00C46797 /* Audio */,
 				909A22992C199539006DE307 /* ios-swift-pjsua2.entitlements */,
 				C3C1F63A25AC26A300E5E080 /* PJSua2 */,
 				C337417725BADF22007785D7 /* View */,
@@ -255,6 +293,7 @@
 				C337417625BADF12007785D7 /* Controller */,
 				C3B851FE25A5EA6C0037A8AB /* AppDelegate.swift */,
 				90DC4C9C2C2042190097F5C2 /* App.swift */,
+				C337417225BADEEE007785D7 /* Model.swift */,
 				90DC4C9E2C22E20A0097F5C2 /* ProviderDelegate.swift */,
 				C3B8520025A5EA6C0037A8AB /* SceneDelegate.swift */,
 				909A22862C12FE0B006DE307 /* App */,
@@ -268,10 +307,10 @@
 		C3B8521725A5EC380037A8AB /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				9099E4122C33F45F00C46797 /* PortSIPVoIPSDK.framework */,
 				909A229A2C1995A6006DE307 /* CallKit.framework */,
 				3A4E3B5C2B6206E50016735C /* Metal.framework */,
 				3A4E3B5D2B6206E50016735C /* MetalKit.framework */,
-				3AEC29322995BF4C00F59EA0 /* CoreMedia.framework */,
 				3AEC29302995BF1400F59EA0 /* VideoToolbox.framework */,
 				C3B8524625A5ED6D0037A8AB /* AudioToolbox.framework */,
 				C3B8524125A5EC940037A8AB /* AVFoundation.framework */,
@@ -391,6 +430,7 @@
 				90DC4CAE2C25A8550097F5C2 /* RecentCalls.swift in Sources */,
 				909A22812C12F167006DE307 /* ProductController.swift in Sources */,
 				90DC4CA32C241BF30097F5C2 /* CallSession.swift in Sources */,
+				902E55B72C35863B00B59B74 /* MyProducts.swift in Sources */,
 				909A228E2C12FF53006DE307 /* Helper.swift in Sources */,
 				90DC4C9F2C22E20A0097F5C2 /* ProviderDelegate.swift in Sources */,
 				C3C4082E25B9A547002C19EB /* ActiveViewController.swift in Sources */,
@@ -406,13 +446,17 @@
 				909A22982C187DEC006DE307 /* HomeView.swift in Sources */,
 				909A22942C16F199006DE307 /* ShopView.swift in Sources */,
 				904CB2822C08C5190068357C /* Test.swift in Sources */,
+				9099E40F2C33EEF500C46797 /* CallAudio.swift in Sources */,
 				909A22882C12FE19006DE307 /* AppDataSaver.swift in Sources */,
+				902E55B22C35809400B59B74 /* ProfileView.swift in Sources */,
 				909A228C2C12FEB7006DE307 /* Logger.swift in Sources */,
 				909A22A02C1C2FCF006DE307 /* WebviewController.swift in Sources */,
+				9099E3B92C33E35600C46797 /* CallController.swift in Sources */,
 				C3B8520125A5EA6C0037A8AB /* SceneDelegate.swift in Sources */,
 				90DC4C9D2C2042190097F5C2 /* App.swift in Sources */,
 				C3AB88A025A7358700224276 /* CustomPJSUA2.cpp in Sources */,
 				909A22A22C1C6F4A006DE307 /* NotificationManager.swift in Sources */,
+				902E55B52C35862D00B59B74 /* MyPayments.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -476,6 +520,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -553,6 +598,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/ios-swift-pjsua2/App",
+					"$(PROJECT_DIR)/ios-swift-pjsua2/Frameworks",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -620,6 +666,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/ios-swift-pjsua2/App",
+					"$(PROJECT_DIR)/ios-swift-pjsua2/Frameworks",
 				);
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = "PJ_AUTOCONF=1";
