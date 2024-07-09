@@ -57,7 +57,7 @@ PJ_BEGIN_DECL
  *
  * @return next option or NULL.
  */
-static char* pj_argparse_peek_next_option(char *const argv[])
+PJ_INLINE(char*) pj_argparse_peek_next_option(char *const argv[])
 {
     while (*argv) {
         const char *arg = *argv;
@@ -79,7 +79,7 @@ static char* pj_argparse_peek_next_option(char *const argv[])
  *
  * @return PJ_TRUE if the option exists, else PJ_FALSE.
  */
-static pj_bool_t pj_argparse_exists(const char *opt, char *const argv[])
+PJ_INLINE(pj_bool_t) pj_argparse_exists(const char *opt, char *const argv[])
 {
     int i;
     for (i=1; argv[i]; ++i) {
@@ -99,7 +99,7 @@ static pj_bool_t pj_argparse_exists(const char *opt, char *const argv[])
  *
  * @return PJ_TRUE if the option exists, else PJ_FALSE.
  */
-static pj_bool_t pj_argparse_get_bool(const char *opt, int *argc, char *argv[])
+PJ_INLINE(pj_bool_t) pj_argparse_get_bool(const char *opt, int *argc, char *argv[])
 {
     int i;
     for (i=1; argv[i]; ++i) {
@@ -127,8 +127,8 @@ static pj_bool_t pj_argparse_get_bool(const char *opt, int *argc, char *argv[])
  *                    option does not exist
  *         PJ_EINVAL if the option exits but value is not found,
  */
-static pj_status_t pj_argparse_get_str( const char *opt, int *argc,
-                                        char *argv[], char **ptr_value)
+PJ_INLINE(pj_status_t) pj_argparse_get_str(const char *opt, int *argc,
+                                           char *argv[], char **ptr_value)
 {
     int i;
     for (i=1; argv[i]; ++i) {
@@ -167,8 +167,8 @@ static pj_status_t pj_argparse_get_str( const char *opt, int *argc,
  *                    option does not exist
  *         PJ_EINVAL if the option exits but value is not found,
  */
-static pj_status_t pj_argparse_get_int( char *opt, int *argc, char *argv[],
-                                        int *ptr_value)
+PJ_INLINE(pj_status_t) pj_argparse_get_int(char *opt, int *argc, char *argv[],
+                                           int *ptr_value)
 {
     char *endptr, *sval=NULL;
     long val;
