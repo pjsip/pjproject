@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/fifobuf.h>
+#include <pj/errno.h>
 #include <pj/log.h>
 #include <pj/assert.h>
 #include <pj/os.h>
@@ -100,6 +101,16 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
 
     /* try to allocate from the end part of the fifo */
     if (fifobuf->uend >= fifobuf->ubegin) {
+        /* If we got here, then first <= ubegin <= uend <= last, and
+         * the the buffer layout is like this:
+         *
+         *      <--free0---> <--- used --> <-free1->
+         *     |            |#############|         |
+         *     ^            ^             ^         ^
+         *   first       ubegin          uend      last
+         *
+         * where the size of free0, used, and/or free1 may be zero.
+         */
         available = (unsigned)(fifobuf->last - fifobuf->uend);
         if (available >= size+SZ) {
             char *ptr = fifobuf->uend;
@@ -112,13 +123,22 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
             ptr += SZ;
 
             PJ_LOG(6, (THIS_FILE, 
-                       "fifobuf_alloc fifobuf=%p, size=%d: returning %p, p1=%p, p2=%p", 
+                       "fifobuf_alloc fifobuf=%p, size=%d: returning %p, p1=%p, p2=%p",
                        fifobuf, size, ptr, fifobuf->ubegin, fifobuf->uend));
             return ptr;
         }
     }
 
-    /* try to allocate from the start part of the fifo */
+    /* If we got here, then either there is not enough space in free1 above,
+     * or the the buffer layout is like this:
+     *
+     *     <-used0-> <--free--> <- used1 ->
+     *    |#########|          |###########|
+     *    ^         ^          ^           ^
+     *   first    uend       ubegin       last
+     * 
+     * where the size of used0, used1, and/or free may be zero.
+     */
     start = (fifobuf->uend <= fifobuf->ubegin) ? fifobuf->uend : fifobuf->first;
     available = (unsigned)(fifobuf->ubegin - start);
     if (available >= size+SZ) {
@@ -141,36 +161,6 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
     return NULL;
 }
 
-PJ_DEF(pj_status_t) pj_fifobuf_unalloc (pj_fifobuf_t *fifobuf, void *buf)
-{
-    char *ptr = (char*)buf;
-    char *endptr;
-    unsigned sz;
-
-    PJ_CHECK_STACK();
-
-    ptr -= SZ;
-    sz = get_size(ptr);
-
-    endptr = fifobuf->uend;
-    if (endptr == fifobuf->first)
-        endptr = fifobuf->last;
-
-    if (ptr+sz != endptr) {
-        pj_assert(!"Invalid pointer to undo alloc");
-        return -1;
-    }
-
-    fifobuf->uend = ptr;
-    fifobuf->full = 0;
-
-    PJ_LOG(6, (THIS_FILE, 
-               "fifobuf_unalloc fifobuf=%p, ptr=%p, size=%d, p1=%p, p2=%p", 
-               fifobuf, buf, sz, fifobuf->ubegin, fifobuf->uend));
-
-    return 0;
-}
-
 PJ_DEF(pj_status_t) pj_fifobuf_free (pj_fifobuf_t *fifobuf, void *buf)
 {
     char *ptr = (char*)buf;
@@ -182,19 +172,19 @@ PJ_DEF(pj_status_t) pj_fifobuf_free (pj_fifobuf_t *fifobuf, void *buf)
     ptr -= SZ;
     if (ptr < fifobuf->first || ptr >= fifobuf->last) {
         pj_assert(!"Invalid pointer to free");
-        return -1;
+        return PJ_EINVAL;
     }
 
     if (ptr != fifobuf->ubegin && ptr != fifobuf->first) {
         pj_assert(!"Invalid free() sequence!");
-        return -1;
+        return PJ_EINVAL;
     }
 
     end = (fifobuf->uend > fifobuf->ubegin) ? fifobuf->uend : fifobuf->last;
     sz = get_size(ptr);
     if (ptr+sz > end) {
         pj_assert(!"Invalid size!");
-        return -1;
+        return PJ_EINVAL;
     }
 
     fifobuf->ubegin = ptr + sz;
