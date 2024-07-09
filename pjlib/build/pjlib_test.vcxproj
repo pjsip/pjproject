@@ -795,6 +795,7 @@
     <ClCompile Include="..\src\pjlib-test\timestamp.c" />
     <ClCompile Include="..\src\pjlib-test\udp_echo_srv_ioqueue.c" />
     <ClCompile Include="..\src\pjlib-test\udp_echo_srv_sync.c" />
+    <ClCompile Include="..\src\pjlib-test\unittest_test.c" />
     <ClCompile Include="..\src\pjlib-test\util.c" />
   </ItemGroup>
   <ItemGroup>

@@ -114,6 +114,9 @@
     <ClCompile Include="..\src\pjlib-test\udp_echo_srv_sync.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjlib-test\unittest_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjlib-test\util.c">
       <Filter>Source Files</Filter>
     </ClCompile>

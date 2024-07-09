@@ -55,6 +55,7 @@
 #include <pj/string.h>
 #include <pj/timer.h>
 #include <pj/unicode.h>
+#include <pj/unittest.h>
 
 #include <pj/compat/high_precision.h>
 

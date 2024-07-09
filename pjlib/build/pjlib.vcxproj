@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug-Dynamic|ARM">
@@ -1029,6 +1029,7 @@
     <ClCompile Include="..\src\pj\timer.c" />
     <ClCompile Include="..\src\pj\types.c" />
     <ClCompile Include="..\src\pj\unicode_win32.c" />
+    <ClCompile Include="..\src\pj\unittest.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\third_party\threademulation\include\ThreadEmulation.h" />
@@ -1100,6 +1101,7 @@
     <ClInclude Include="..\include\pj\timer.h" />
     <ClInclude Include="..\include\pj\types.h" />
     <ClInclude Include="..\include\pj\unicode.h" />
+    <ClInclude Include="..\include\pj\unittest.h" />
     <ClInclude Include="..\src\pj\ioqueue_common_abs.h" />
     <ClInclude Include="..\src\pj\ssl_sock_imp_common.h" />
   </ItemGroup>
