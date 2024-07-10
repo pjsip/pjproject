@@ -119,7 +119,7 @@ PJ_INLINE(pj_bool_t) pj_argparse_get_bool(int *argc, char *argv[],
 
 /**
  * Check for an option and if it exists get the value and remove both
- * the option the the value from argc/argv. Note that the function only
+ * the option and the value from argc/argv. Note that the function only
  * supports whitespace(s) as separator between option and value (i.e. equal
  * sign is not supported, e.g. "--server=127.0.0.1" will not be parsed
  * correctly).
@@ -160,7 +160,7 @@ PJ_INLINE(pj_status_t) pj_argparse_get_str(int *argc, char *argv[],
 
 /**
  * Check for an option and if it exists, get the integer value and remove both
- * the option the the value from argc/argv. Note that the function only
+ * the option and the value from argc/argv. Note that the function only
  * supports whitespace(s) as separator between option and value (i.e. equal
  * sign is not supported, e.g. "--port=80" will not be parsed correctly).
  *
