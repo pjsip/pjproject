@@ -110,32 +110,35 @@ int main(int argc, char *argv[])
     /* 
      * Parse arguments
      */
-    if (pj_argparse_get_bool("-h", &argc, argv) ||
-        pj_argparse_get_bool("--help", &argc, argv))
+    if (pj_argparse_get_bool(&argc, argv, "-h") ||
+        pj_argparse_get_bool(&argc, argv, "--help"))
     {
         usage();
         return 0;
     }
-    interractive = pj_argparse_get_bool("-i", &argc, argv);
-    no_trap = pj_argparse_get_bool("-n", &argc, argv);
-    if (pj_argparse_get_int("-p", &argc, argv, &test_app.param_echo_port)) {
+    interractive = pj_argparse_get_bool(&argc, argv, "-i");
+    no_trap = pj_argparse_get_bool(&argc, argv, "-n");
+    if (pj_argparse_get_int(&argc, argv, "-p", &test_app.param_echo_port)) {
         usage();
         return 1;
     }
-    if (pj_argparse_get_str("-s", &argc, argv, (char**)&test_app.param_echo_server)) {
+    if (pj_argparse_get_str(&argc, argv, "-s",
+                            (char**)&test_app.param_echo_server))
+    {
         usage();
         return 1;
     }
 
-    if (pj_argparse_exists("-t", argv)) {
+    if (pj_argparse_exists(argv, "-t")) {
         char *sock_type;
-        if (pj_argparse_get_str("-t", &argc, argv, &sock_type)==PJ_SUCCESS) {
+        if (pj_argparse_get_str(&argc, argv, "-t", &sock_type)==PJ_SUCCESS) {
             if (pj_ansi_stricmp(sock_type, "tcp")==0)
                 test_app.param_echo_sock_type = pj_SOCK_STREAM();
             else if (pj_ansi_stricmp(sock_type, "udp")==0)
                 test_app.param_echo_sock_type = pj_SOCK_DGRAM();
             else {
-                printf("Error: unknown socket type %s for -t option\n", sock_type);
+                printf("Error: unknown socket type %s for -t option\n",
+                       sock_type);
                 usage();
                 return 1;
             }
@@ -149,8 +152,9 @@ int main(int argc, char *argv[])
         usage();
         return 1;
     }
-    test_app.param_skip_essentials = pj_argparse_get_bool("--skip-e", &argc, argv);
-    test_app.param_ci_mode = pj_argparse_get_bool("--ci-mode", &argc, argv);
+    test_app.param_skip_essentials = pj_argparse_get_bool(&argc, argv,
+                                                          "--skip-e");
+    test_app.param_ci_mode = pj_argparse_get_bool(&argc, argv, "--ci-mode");
 
 
     if (!no_trap) {
