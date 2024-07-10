@@ -27,6 +27,7 @@
 
 #include <pj/activesock.h>
 #include <pj/addr_resolv.h>
+#include <pj/argparse.h>
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>

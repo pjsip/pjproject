@@ -1036,6 +1036,7 @@
     <ClInclude Include="..\include\pjlib.h" />
     <ClInclude Include="..\include\pj\activesock.h" />
     <ClInclude Include="..\include\pj\addr_resolv.h" />
+    <ClInclude Include="..\include\pj\argparse.h" />
     <ClInclude Include="..\include\pj\array.h" />
     <ClInclude Include="..\include\pj\assert.h" />
     <ClInclude Include="..\include\pj\compat\assert.h" />
