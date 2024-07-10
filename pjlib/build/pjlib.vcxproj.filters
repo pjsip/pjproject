@@ -445,5 +445,8 @@
     <ClInclude Include="..\src\pj\ssl_sock_imp_common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pj\argparse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

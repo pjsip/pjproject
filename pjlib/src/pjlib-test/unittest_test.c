@@ -44,7 +44,9 @@ static void print_log_buffer(char *title)
 /* This log callback appends the log to the log_buffer */
 static void log_callback(int level, const char *data, int len)
 {
-    unsigned max_len = (log_buffer+sizeof(log_buffer))-log_buffer_ptr-1;
+    int max_len = (log_buffer+sizeof(log_buffer))-log_buffer_ptr-1;
+
+    PJ_UNUSED_ARG(level);
 
     /* make sure len is correct */
     len = strlen(data);

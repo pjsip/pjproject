@@ -91,7 +91,7 @@ static int main_func(int argc, char *argv[])
 
     ut_app_init0(&test_app.ut_app);
 
-    interractive = pj_argparse_get_bool&argc, argv, ("-i");
+    interractive = pj_argparse_get_bool(&argc, argv, "-i");
     no_trap = pj_argparse_get_bool(&argc, argv, "-n");
     if (ut_parse_args(&test_app.ut_app, &argc, argv))
         return 1;

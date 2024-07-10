@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2024 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJ_ARGPARSE_H__
 #define __PJ_ARGPARSE_H__
@@ -45,25 +45,29 @@ PJ_BEGIN_DECL
  * This module provides header only utilities to parse command line arguments.
  * This is mostly used by PJSIP test and sample apps. Note that there is
  * getopt() implementation in PJLIB-UTIL (but it's in PJLIB-UTIL, so it can't
- * be used by PJLIB)
+ * be used by PJLIB).
+ *
+ * Limitations:
+ * - the utility only supports white space(s) as separator between an option
+ *   and its value. Equal sign is not supported.
+ * - the utility does not support double dash (--) as separator between options
+ *   and operands. It will keep treating arguments after -- as possible
+ *   options.
  */
 
 /**
  * Peek the next possible option from argv. An argument is considered an
- * option if it starts with "-" and followed by at least another letter that
- * is not digit or starts with "--" and followed by a letter.
- * 
+ * option if it starts with "-".
+ *
  * @param argv      The argv, which must be null terminated.
- * 
- * @return next option or NULL.
+ *
+ * @return          next option or NULL.
  */
-static char* pj_argparse_peek_next_option(char *const argv[])
+PJ_INLINE(char*) pj_argparse_peek_next_option(char *const argv[])
 {
     while (*argv) {
         const char *arg = *argv;
-        if ((*arg=='-' && *(arg+1) && !pj_isdigit(*(arg+1))) ||
-            (*arg=='-' && *(arg+1)=='-' && *(arg+2)))
-        {
+        if (*arg=='-') {
             return *argv;
         }
         ++argv;
@@ -73,13 +77,13 @@ static char* pj_argparse_peek_next_option(char *const argv[])
 
 /**
  * Check that an option exists, without modifying argv.
- * 
- * @param opt       The option to find, e.g. "-h", "--help"
+ *
  * @param argv      The argv, which must be null terminated.
- * 
- * @return PJ_TRUE if the option exists, else PJ_FALSE.
+ * @param opt       The option to find, e.g. "-h", "--help"
+ *
+ * @return          PJ_TRUE if the option exists, else PJ_FALSE.
  */
-static pj_bool_t pj_argparse_exists(const char *opt, char *const argv[])
+PJ_INLINE(pj_bool_t) pj_argparse_exists(char *const argv[], const char *opt)
 {
     int i;
     for (i=1; argv[i]; ++i) {
@@ -90,16 +94,17 @@ static pj_bool_t pj_argparse_exists(const char *opt, char *const argv[])
 }
 
 /**
- * Check for an option and if it exists, returns PJ_TRUE remove that option
- * from argc/argv.
- * 
- * @param opt       The option to find, e.g. "-h", "--help"
- * @param argc      Pointer to argc. 
+ * Check for an option and if it exists remove that option from argc/argv and
+ * returns PJ_TRUE.
+ *
+ * @param argc      Pointer to argc.
  * @param argv      Null terminated argv.
- * 
- * @return PJ_TRUE if the option exists, else PJ_FALSE.
+ * @param opt       The option to find, e.g. "-h", "--help"
+ *
+ * @return          PJ_TRUE if the option exists, else PJ_FALSE.
  */
-static pj_bool_t pj_argparse_get_bool(const char *opt, int *argc, char *argv[])
+PJ_INLINE(pj_bool_t) pj_argparse_get_bool(int *argc, char *argv[],
+                                          const char *opt)
 {
     int i;
     for (i=1; argv[i]; ++i) {
@@ -113,22 +118,23 @@ static pj_bool_t pj_argparse_get_bool(const char *opt, int *argc, char *argv[])
 }
 
 /**
- * Check for an option and if it exists, get the value and remove both
- * the option the the value from argc/argv. Note that the function only
- * supports whitespace as separator between option and value (i.e. equal
- * sign is not supported).
- * 
- * @param opt           The option to find, e.g. "-t", "--type"
- * @param argc          Pointer to argc. 
+ * Check for an option and if it exists get the value and remove both
+ * the option and the value from argc/argv. Note that the function only
+ * supports whitespace(s) as separator between option and value (i.e. equal
+ * sign is not supported, e.g. "--server=127.0.0.1" will not be parsed
+ * correctly).
+ *
+ * @param argc          Pointer to argc.
  * @param argv          Null terminated argv.
+ * @param opt           The option to find, e.g. "-t", "--type"
  * @param ptr_value     Pointer to receive the value.
- * 
- * @return PJ_SUCCESS if the option exists and value is found or if the
- *                    option does not exist
- *         PJ_EINVAL if the option exits but value is not found,
+ *
+ * @return              - PJ_SUCCESS if the option exists and value is found
+ *                        or if the option does not exist
+ *                      - PJ_EINVAL if the option exits but value is not found
  */
-static pj_status_t pj_argparse_get_str( const char *opt, int *argc,
-                                        char *argv[], char **ptr_value)
+PJ_INLINE(pj_status_t) pj_argparse_get_str(int *argc, char *argv[],
+                                           const char *opt, char **ptr_value)
 {
     int i;
     for (i=1; argv[i]; ++i) {
@@ -154,35 +160,36 @@ static pj_status_t pj_argparse_get_str( const char *opt, int *argc,
 
 /**
  * Check for an option and if it exists, get the integer value and remove both
- * the option the the value from argc/argv. Note that the function only
- * supports whitespace as separator between option and value (i.e. equal
- * sign is not supported)
- * 
+ * the option and the value from argc/argv. Note that the function only
+ * supports whitespace(s) as separator between option and value (i.e. equal
+ * sign is not supported, e.g. "--port=80" will not be parsed correctly).
+ *
  * @param opt           The option to find, e.g. "-h", "--help"
- * @param argc          Pointer to argc. 
+ * @param argc          Pointer to argc.
  * @param argv          Null terminated argv.
  * @param ptr_value     Pointer to receive the value.
- * 
- * @return PJ_SUCCESS if the option exists and value is found or if the
- *                    option does not exist
- *         PJ_EINVAL if the option exits but value is not found,
+ *
+ * @return              - PJ_SUCCESS if the option exists and value is found
+ *                        or if the option does not exist
+ *                      - PJ_EINVAL if the option exits but value is not found,
+ *                        or if the value is not an integer.
  */
-static pj_status_t pj_argparse_get_int( char *opt, int *argc, char *argv[],
-                                        int *ptr_value)
+PJ_INLINE(pj_status_t) pj_argparse_get_int(int *argc, char *argv[],
+                                           const char *opt, int *ptr_value)
 {
     char *endptr, *sval=NULL;
     long val;
-    pj_status_t status = pj_argparse_get_str(opt, argc, argv, &sval);
+    pj_status_t status = pj_argparse_get_str(argc, argv, opt, &sval);
     if (status!=PJ_SUCCESS || !sval)
         return status;
-    
+
     val = strtol(sval, &endptr, 10);
     if (*endptr) {
         PJ_ARGPARSE_ERROR("Error: invalid value for %s argument",
-                          opt);        
+                          opt);
         return PJ_EINVAL;
     }
-    
+
     *ptr_value = (int)val;
     return PJ_SUCCESS;
 }

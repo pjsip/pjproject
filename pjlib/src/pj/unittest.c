@@ -725,8 +725,11 @@ static int text_runner_thread_proc(void *arg)
 static void text_runner_main(pj_test_runner *base)
 {
     text_runner_t *runner = (text_runner_t*)base;
-    thread_param_t tprm = { runner, 0 };
+    thread_param_t tprm ;
     unsigned i;
+
+    tprm.runner = runner;
+    tprm.tid = 0;
 
     for (i=0; i<base->prm.nthreads; ++i) {
         pj_thread_resume(runner->threads[i]);

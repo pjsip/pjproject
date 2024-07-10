@@ -53,6 +53,7 @@
 #define INCLUDE_FIFOBUF_TEST        GROUP_DATA_STRUCTURE
 #define INCLUDE_RBTREE_TEST         GROUP_DATA_STRUCTURE
 #define INCLUDE_TIMER_TEST          GROUP_DATA_STRUCTURE
+#define INCLUDE_UNITTEST_TEST       GROUP_DATA_STRUCTURE
 #define INCLUDE_ATOMIC_TEST         GROUP_OS
 #define INCLUDE_MUTEX_TEST          (PJ_HAS_THREADS && GROUP_OS)
 #define INCLUDE_SLEEP_TEST          GROUP_OS
@@ -95,6 +96,9 @@ extern int pool_test(void);
 extern int pool_perf_test(void);
 extern int string_test(void);
 extern int fifobuf_test(void);
+extern int unittest_basic_test(void);
+extern int unittest_parallel_test(void);
+extern int unittest_test(void);
 extern int timer_test(void);
 extern int rbtree_test(void);
 extern int atomic_test(void);
