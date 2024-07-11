@@ -79,9 +79,9 @@ jobs:
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
-        cd pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe %CI_ARGS% %CI_MODE%
-        cd ../../pjlib-util/bin; ./pjlib-util-test-i386-Win32-vc14-Release.exe %CI_ARGS%
-        cd ../../pjmedia/bin/; ./pjmedia-test-i386-Win32-vc14-Release.exe %CI_ARGS%
+        cd pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }} ${{ vars.CI_MODE }}
+        cd ../../pjlib-util/bin; ./pjlib-util-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }}
+        cd ../../pjmedia/bin/; ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }}
       shell: powershell
 
   windows-with-openssl-unit-test-2:
@@ -137,7 +137,7 @@ jobs:
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd tests/pjsua; python runall.py
-        cd ../../pjsip/bin; ./pjsip-test-i386-Win32-vc14-Release.exe %CI_ARGS%
+        cd ../../pjsip/bin; ./pjsip-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }}
       shell: powershell
 
   build-windows-gnu-tls:
@@ -258,9 +258,9 @@ jobs:
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd tests/pjsua; python runall.py
-        cd ../../pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe %CI_ARGS% --ci-mode
-        cd ../../pjlib-util/bin; ./pjlib-util-test-i386-Win32-vc14-Release.exe %CI_ARGS%
-        cd ../../pjmedia/bin/; ./pjmedia-test-i386-Win32-vc14-Release.exe %CI_ARGS%
+        cd ../../pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }} ${{ vars.CI_MODE }}
+        cd ../../pjlib-util/bin; ./pjlib-util-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }}
+        cd ../../pjmedia/bin/; ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }}
       shell: powershell
 
   build-windows-video-ffmpeg:

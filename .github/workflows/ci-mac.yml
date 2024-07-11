@@ -39,7 +39,7 @@ jobs:
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: unit tests
-      run: make pjlib-test pjmedia-test pjlib-util-test pjsua-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjlib-test pjmedia-test pjlib-util-test pjsua-test
 
   mac-default-full-bundle-2:
   # full bundle 2: running pjnath test
@@ -57,7 +57,7 @@ jobs:
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: unit tests
-      run: make pjnath-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjnath-test
 
   mac-default-full-bundle-3:
   # full bundle 3: running pjsip test
@@ -75,7 +75,7 @@ jobs:
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: unit tests
-      run: make pjsip-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjsip-test
 
   # build-ubuntu-no-tls:
   # no TLS (same as build-mac-default)
@@ -139,7 +139,7 @@ jobs:
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: unit tests
-      run: make pjlib-test pjmedia-test pjlib-util-test pjsua-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjlib-test pjmedia-test pjlib-util-test pjsua-test
 
   mac-video-openh264-2:
   # video 2: running pjnath test
@@ -157,7 +157,7 @@ jobs:
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: unit tests
-      run: make pjnath-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjnath-test
 
   mac-video-openh264-3:
   # video 3: running pjsip test
@@ -175,7 +175,7 @@ jobs:
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: unit tests
-      run: make pjsip-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjsip-test
 
   build-mac-video-ffmpeg:
   # video enabled with vpx and ffmpeg and x264

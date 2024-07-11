@@ -37,7 +37,7 @@ jobs:
       with:
         python-version: '3.10'
     - name: unit tests
-      run: make pjlib-test pjlib-util-test pjmedia-test pjsua-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjlib-test pjlib-util-test pjmedia-test pjsua-test
 
   ubuntu-default-full-bundle-2:
   # full bundle 2: running pjnath test
@@ -53,7 +53,7 @@ jobs:
     - name: make
       run: make
     - name: unit tests
-      run: make pjnath-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjnath-test
 
   ubuntu-default-full-bundle-3:
   # full bundle 3: running pjsip test
@@ -69,7 +69,7 @@ jobs:
     - name: make
       run: make
     - name: unit tests
-      run: make pjsip-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjsip-test
 
   build-ubuntu-no-tls:
   # no TLS
@@ -127,7 +127,7 @@ jobs:
       with:
         python-version: '3.10'
     - name: unit tests
-      run: make pjlib-test pjlib-util-test pjmedia-test pjsua-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjlib-test pjlib-util-test pjmedia-test pjsua-test
 
   ubuntu-video-openh264-2:
   # video 2: running pjnath test
@@ -147,7 +147,7 @@ jobs:
     - name: make
       run: make
     - name: unit tests
-      run: make pjnath-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjnath-test
 
   ubuntu-video-openh264-3:
   # video: 3: running pjsip test
@@ -167,7 +167,7 @@ jobs:
     - name: make
       run: make
     - name: unit tests
-      run: make pjsip-test
+      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjsip-test
 
   build-ubuntu-video-ffmpeg:
   # video enabled with vpx and ffmpeg and x264
