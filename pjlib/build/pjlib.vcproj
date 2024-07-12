@@ -12638,10 +12638,6 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\include\pj\argparse.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\pj\activesock.h"
 				>
 			</File>
