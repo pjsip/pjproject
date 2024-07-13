@@ -1852,8 +1852,12 @@ int tsx_uas_test(unsigned tid)
 
 on_return:
 
-    if (g[tid].loop)
+    if (g[tid].loop) {
+        /* Order must be shutdown then dec_ref so it gets destroyed */
+        pjsip_transport_shutdown(g[tid].loop);
         pjsip_transport_dec_ref(g[tid].loop);
+        g[tid].loop = NULL;
+    }
 
     unregister_modules(tid);
     return status;

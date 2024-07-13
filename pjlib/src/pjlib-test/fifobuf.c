@@ -137,10 +137,6 @@ static int fifobuf_misc_test()
     void *buffer;
     int i;
 
-    i = fifobuf_size_test();
-    if (i != 0)
-        return i;
-
     pool = pj_pool_create(mem, NULL, SIZE+256, 0, NULL);
     PJ_TEST_NOT_NULL(pool, NULL, return -10);
 

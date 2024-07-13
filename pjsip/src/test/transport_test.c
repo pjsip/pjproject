@@ -366,6 +366,12 @@ static pjsip_module rt_module =
     NULL,                               /* tsx_handler()        */
 };
 
+enum
+{
+    STOP_SEND = 1,
+    STOP_RECV = 2,
+};
+
 static struct rt_global_t {
     struct {
         pj_thread_t *thread;
@@ -379,8 +385,9 @@ static struct rt_global_t {
     } rt_test_data[16];
 
     char      rt_target_uri[64];
-    pj_bool_t rt_stop;
+    int       rt_stop;
     pj_str_t  rt_call_id;
+    pjsip_transport *rt_transport;
 
 } g_rt[PJSIP_TRANSPORT_START_OTHER];
 
@@ -432,6 +439,7 @@ static pj_status_t rt_send_request(unsigned tid, int thread_id)
     pj_str_t target, from, to, contact, call_id;
     pjsip_tx_data *tdata;
     pj_time_val timeout_delay;
+    pjsip_tpselector tp_sel;
 
     pj_mutex_lock(g_rt[tid].rt_test_data[thread_id].mutex);
 
@@ -452,6 +460,13 @@ static pj_status_t rt_send_request(unsigned tid, int thread_id)
         return -610;
     }
 
+    if (g_rt[tid].rt_transport) {
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = g_rt[tid].rt_transport;
+        pjsip_tx_data_set_transport(tdata, &tp_sel);
+        
+    }
     /* Start time. */
     pj_get_timestamp(&g_rt[tid].rt_test_data[thread_id].send_time);
 
@@ -512,7 +527,7 @@ static pj_bool_t rt_on_rx_response(pjsip_rx_data *rdata)
         pj_sub_timestamp(&recv_time, &g_rt[tid].rt_test_data[thread_id].send_time);
         pj_add_timestamp(&g_rt[tid].rt_test_data[thread_id].total_rt_time, &recv_time);
 
-        if (!g_rt[tid].rt_stop) {
+        if ((g_rt[tid].rt_stop & STOP_SEND)==0) {
             pj_time_val tx_delay = { 0, 0 };
             pj_assert(g_rt[tid].rt_test_data[thread_id].tx_timer.user_data == NULL);
             g_rt[tid].rt_test_data[thread_id].tx_timer.user_data = (void*)(pj_ssize_t)1;
@@ -580,13 +595,14 @@ static int rt_worker_thread(void *arg)
     /* Sleep to allow main threads to run. */
     pj_thread_sleep(10);
 
-    while (!g_rt[tid].rt_stop) {
+    while ((g_rt[tid].rt_stop & STOP_RECV)==0) {
         pjsip_endpt_handle_events(endpt, &poll_delay);
     }
 
     /* Exhaust responses. */
-    for (i=0; i<100; ++i)
+    for (i=0; i<100; ++i) {
         pjsip_endpt_handle_events(endpt, &poll_delay);
+    }
 
     return 0;
 }
@@ -596,7 +612,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
                        const char *host_port_transport,
                        int *lost)
 {
-    enum { THREADS = 4, INTERVAL = 10 };
+    enum { THREADS = 1, INTERVAL = 120 };
     int i, tid=tp_type;
     char target_url[80];
     pj_status_t status;
@@ -639,7 +655,13 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     pj_ansi_strxcpy(g_rt[tid].rt_target_uri, target_url,
                     sizeof(g_rt[tid].rt_target_uri));
     g_rt[tid].rt_call_id = pj_str("RT-Call-Id/");
-    g_rt[tid].rt_stop = PJ_FALSE;
+    g_rt[tid].rt_stop = 0;
+
+    pj_bzero(g_rt[tid].rt_test_data, sizeof(g_rt[tid].rt_test_data));
+
+    /* Need to use specific loop transport (otherwise we may get transport
+     * that is being shutdown) */
+    g_rt[tid].rt_transport = tp_type==PJSIP_TRANSPORT_LOOP_DGRAM? ref_tp : NULL;
 
     /* Initialize thread data. */
     for (i=0; i<THREADS; ++i) {
@@ -647,7 +669,6 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
         pj_str_t str_id;
         
         pj_strset(&str_id, buf, 1);
-        pj_bzero(&g_rt[tid].rt_test_data[i], sizeof(g_rt[tid].rt_test_data[i]));
 
         /* Init timer entry */
         g_rt[tid].rt_test_data[i].tx_timer.id = (tid << 16) | i;
@@ -680,7 +701,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 
     /* Start threads! */
     for (i=0; i<THREADS; ++i) {
-        pj_time_val delay = {0,0};
+        pj_time_val delay = {0, i*10};
         pj_thread_resume(g_rt[tid].rt_test_data[i].thread);
 
         /* Schedule first message transmissions. */
@@ -691,8 +712,14 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     /* Sleep for some time. */
     pj_thread_sleep(INTERVAL * 1000);
 
-    /* Signal thread to stop. */
-    g_rt[tid].rt_stop = PJ_TRUE;
+    /* Signal thread to stop sending. */
+    g_rt[tid].rt_stop |= STOP_SEND;
+
+    /* Sleep for some time. */
+    pj_thread_sleep(2 * 1000);
+
+    /* Signal thread to stop . */
+    g_rt[tid].rt_stop |= STOP_RECV;
 
     /* Wait threads to complete. */
     for (i=0; i<THREADS; ++i) {

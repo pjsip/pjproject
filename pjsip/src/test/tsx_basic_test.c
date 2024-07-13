@@ -166,8 +166,12 @@ int tsx_basic_test(unsigned tid)
     status = 0;
 
 on_return:
-    if (loop)
+    if (loop) {
+        /* Order must be shutdown then dec_ref so it gets destroyed */
+        pjsip_transport_shutdown(loop);
         pjsip_transport_dec_ref(loop);
+        flush_events(500);
+    }
     return status;
 }
 

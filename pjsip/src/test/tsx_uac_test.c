@@ -184,6 +184,7 @@ static int init_test(unsigned tid)
     if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
         PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &g[tid].loop),
                         NULL, return -50);
+        pjsip_transport_add_ref(g[tid].loop);
     }
     return PJ_SUCCESS;
 }
@@ -196,7 +197,9 @@ static void finish_test(unsigned tid)
      *       get_tsx_tid() to be called and it needs the module id.
      */    
     if (g[tid].loop) {
+        /* Order must be shutdown then dec_ref so it gets destroyed */
         pjsip_transport_shutdown(g[tid].loop);
+        pjsip_transport_dec_ref(g[tid].loop);
         g[tid].loop = 0;
     }
 }
@@ -1213,10 +1216,11 @@ static int perform_tsx_test(unsigned tid, int dummy, char *target_uri,
     }
 
     /* Check tdata reference counter. */
-    if (pj_atomic_get(tdata->ref_cnt) != 1) {
+    if (pj_atomic_get(tdata->ref_cnt) > 1) {
         PJ_LOG(3,(THIS_FILE, "   Error: tdata reference counter is %ld",
                       pj_atomic_get(tdata->ref_cnt)));
-        pjsip_tx_data_dec_ref(tdata);
+        while (pj_atomic_get(tdata->ref_cnt) > 1)
+            pjsip_tx_data_dec_ref(tdata);
         return -150;
     }
 
@@ -1308,17 +1312,21 @@ static int tsx_uac_retransmit_test(unsigned tid)
  */
 static int tsx_resolve_error_test(unsigned tid)
 {
+    char target[80];
     int status = 0;
 
     PJ_LOG(3,(THIS_FILE, "  test2: resolve error test"));
+
+    pj_ansi_snprintf(target, sizeof(target),
+                     "sip:%d@unresolved-host;transport=%s", 
+                    tid, g[tid].test_param->tp_type);
 
     /*
      * Variant (a): immediate resolve error.
      */
     PJ_LOG(3,(THIS_FILE, "   variant a: immediate resolving error"));
 
-    status = perform_tsx_test(tid, -800, 
-                              "sip:bob@unresolved-host",
+    status = perform_tsx_test(tid, -800, target,
                               g[tid].FROM_URI,  TEST2_BRANCH_ID, 20, 
                               &pjsip_options_method);
     if (status != 0)

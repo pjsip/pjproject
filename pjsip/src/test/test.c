@@ -68,6 +68,40 @@ void flush_events(unsigned duration)
     }
 }
 
+/* Wait until there is no loop transport instance */
+pjsip_transport *wait_loop_transport_clear(int secs)
+{
+    pj_time_val timeout;
+    
+    pj_gettimeofday(&timeout);
+    timeout.sec += secs;
+
+    for (;;) {
+        pj_sockaddr_in addr;
+        pjsip_transport *loop = NULL;
+        pj_time_val now;
+        pj_status_t status;
+
+        loop = NULL;
+        pj_bzero(&addr, sizeof(addr));
+        status = pjsip_endpt_acquire_transport(endpt,
+                                               PJSIP_TRANSPORT_LOOP_DGRAM,
+                                               &addr, sizeof(addr), NULL,
+                                               &loop);
+        if (status!=PJ_SUCCESS)
+            return NULL;
+
+        pj_gettimeofday(&now);
+        if (PJ_TIME_VAL_GTE(now, timeout)) {
+            return loop;
+        }
+
+        pjsip_transport_dec_ref(loop);
+        loop = NULL;
+        flush_events(500);
+    }
+}
+
 pj_status_t register_static_modules(pj_size_t *count, pjsip_module **modules)
 {
     PJ_UNUSED_ARG(modules);
@@ -329,12 +363,17 @@ int test_main(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, transport_udp_test, 0);
 #endif
 
-#if INCLUDE_LOOP_TEST
-    UT_ADD_TEST(&test_app.ut_app, transport_loop_test, 0);
-#endif
-
 #if INCLUDE_TCP_TEST
     UT_ADD_TEST(&test_app.ut_app, transport_tcp_test, 0);
+#endif
+
+    /* Loop test needs to be exclusive, because there must NOT be any other
+     * loop transport otherwise some test will fail (e.g. sending will
+     * fallback to that transport)
+     */
+#if INCLUDE_LOOP_TEST
+    UT_ADD_TEST(&test_app.ut_app, transport_loop_test,
+                PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #endif
 
     /*

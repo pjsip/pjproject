@@ -109,6 +109,7 @@ int transport_loop_multi_test(void)
     pj_bzero(loops, sizeof(loops));
     for (i=0; i<N; ++i) {
         PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &loops[i]), NULL, ERR(-10));
+        pjsip_transport_add_ref(loops[i]);
     }
 
     for (i=0; i<N; ++i) {
@@ -158,14 +159,17 @@ int transport_loop_multi_test(void)
     
 on_return:
     for (i=0; i<N; ++i) {
-        if (loops[i])
+        if (loops[i]) {
+            /* Order must be shutdown then dec_ref so it gets destroyed */
             pjsip_transport_shutdown(loops[i]);
+            pjsip_transport_dec_ref(loops[i]);
+        }
     }
     if (loop_tester_mod.id != -1) {
         pjsip_endpt_unregister_module(endpt, &loop_tester_mod);
     }
     /* let transport destroy run its course */
-    flush_events(100);
+    flush_events(500);
     return rc;
 #undef ERR
 }
@@ -184,7 +188,7 @@ static void send_cb(pjsip_send_state *st, pj_ssize_t sent, pj_bool_t *cont)
     }
 }
 
-static int loop_resolve_error()
+static int loop_resolve_error(pj_bool_t disable_no_selector)
 {
     pjsip_transport *loop = NULL;
     pj_sockaddr_in addr;
@@ -206,9 +210,12 @@ static int loop_resolve_error()
         return -210;
     }
 
-    url = pj_str("sip:bob@unresolved-host");
+    url = pj_str("sip:bob@unresolved-host;transport=loop-dgram");
 
     for (i=0; i<2; ++i) {
+        if (i==0 && disable_no_selector)
+            continue;
+
         /* variant a: without tp_selector */
         status = pjsip_endpt_create_request( endpt, &pjsip_options_method,
                                             &url, &url, &url, NULL, NULL, -1, 
@@ -235,14 +242,20 @@ static int loop_resolve_error()
             /* Success! (we're expecting error and got immediate error)*/
             loop_resolve_status = 0;
         } else {
-            flush_events(500);
+            unsigned j;
+
+            for (j=0; j<40 && loop_resolve_status==PJ_EPENDING; ++j)
+                flush_events(500);
+
             if (loop_resolve_status!=PJ_EPENDING && loop_resolve_status!=PJ_SUCCESS) {
                 /* Success! (we're expecting error in callback)*/
                 //PJ_PERROR(3, (THIS_FILE, loop_resolve_status, 
                 //              "   correctly got error"));
                 loop_resolve_status = 0;
             } else {
-                PJ_LOG(3,(THIS_FILE, "   error: expecting error but status=%d", status));
+                PJ_LOG(3,(THIS_FILE, 
+                          "   error (variant %d): expecting error but loop_resolve_status=%d",
+                          i, loop_resolve_status));
                 loop_resolve_status = -240;
                 goto on_return;
             }
@@ -255,23 +268,45 @@ on_return:
     return loop_resolve_status;
 }
 
-static int datagram_loop_test()
+int transport_loop_test()
 {
     enum { LOOP = 8 };
     pjsip_transport *loop = NULL;
     char host_port_transport[64];
+    pj_bool_t disable_no_selector = PJ_FALSE;
     int i, pkt_lost;
     int status;
     long ref_cnt;
     int rtt[LOOP], min_rtt;
 
-    PJ_LOG(3,(THIS_FILE, "testing datagram loop transport"));
 
-    /* Test acquire transport. */
-    PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &loop), NULL, return -10);
-    pjsip_transport_add_ref(loop);
+    PJ_LOG(3,(THIS_FILE, "  Loop transport count: %d",
+                pjsip_tpmgr_get_transport_count_by_type(
+                pjsip_endpt_get_tpmgr(endpt),
+                PJSIP_TRANSPORT_LOOP_DGRAM)));
+                
+    /* if there is another transport, wait sometime until it's gone */
+    loop = wait_loop_transport_clear(10);
 
-    pjsip_loop_set_failure(loop, 0, 0);
+    if (loop) {
+        /* We are not supposed to have another instance of loop transport, but
+         * we found one. If there are more than one, test will fail. Otherwise
+         * test should succeed
+         */
+        PJ_LOG(2,(THIS_FILE,
+                  "Warning: found %d loop transport instances",
+                  pjsip_tpmgr_get_transport_count_by_type(
+                    pjsip_endpt_get_tpmgr(endpt),
+                    PJSIP_TRANSPORT_LOOP_DGRAM)));
+        disable_no_selector = PJ_TRUE;
+        pjsip_loop_set_discard(loop, 0, NULL);
+        pjsip_loop_set_failure(loop, 0, NULL);
+        pjsip_loop_set_delay(loop, 0);
+    } else {
+        PJ_TEST_EQ(loop, NULL, NULL, return -2);
+        PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &loop), NULL, return -3);
+        pjsip_transport_add_ref(loop);
+    }
 
     pj_ansi_snprintf(host_port_transport, sizeof(host_port_transport),
                      "%.*s:%d;transport=loop-dgram",
@@ -281,6 +316,11 @@ static int datagram_loop_test()
 
     /* Get initial reference counter */
     ref_cnt = pj_atomic_get(loop->ref_cnt);
+
+    /* Resolve error */
+    status = loop_resolve_error(disable_no_selector);
+    if (status)
+        goto on_return;
 
     /* Test basic transport attributes */
     status = generic_transport_test(loop);
@@ -295,11 +335,6 @@ static int datagram_loop_test()
             goto on_return;
     }
 
-    /* Resolve error */
-    status = loop_resolve_error();
-    if (status)
-        goto on_return;
-
     min_rtt = 0xFFFFFFF;
     for (i=0; i<LOOP; ++i)
         if (rtt[i] < min_rtt) min_rtt = rtt[i];
@@ -311,16 +346,15 @@ static int datagram_loop_test()
 
 
     /* Multi-threaded round-trip test. */
+    pjsip_loop_set_discard(loop, 0, NULL);
+    pjsip_loop_set_failure(loop, 0, NULL);
+    pjsip_loop_set_delay(loop, 0);
     status = transport_rt_test(PJSIP_TRANSPORT_LOOP_DGRAM, loop, 
                                "130.0.0.1;transport=loop-dgram", &pkt_lost);
     if (status != 0)
         goto on_return;
 
-    if (pkt_lost != 0) {
-        PJ_LOG(3,(THIS_FILE, "   error: %d packet(s) was lost", pkt_lost));
-        status = -40;
-        goto on_return;
-    }
+    PJ_TEST_EQ(pkt_lost, 0, NULL, { status = -40; goto on_return;});
 
     /* Put delay. */
     PJ_LOG(3,(THIS_FILE,"  setting network delay to 10 ms"));
@@ -333,11 +367,7 @@ static int datagram_loop_test()
     if (status != 0)
         goto on_return;
 
-    if (pkt_lost != 0) {
-        PJ_LOG(3,(THIS_FILE, "   error: %d packet(s) was lost", pkt_lost));
-        status = -50;
-        goto on_return;
-    }
+    PJ_TEST_EQ(pkt_lost, 0, NULL, { status = -50; goto on_return;});
 
     /* Restore delay. */
     pjsip_loop_set_delay(loop, 0);
@@ -356,15 +386,4 @@ on_return:
     /* Decrement reference. */
     pjsip_transport_dec_ref(loop);
     return status;
-}
-
-int transport_loop_test(void)
-{
-    int status;
-
-    status = datagram_loop_test();
-    if (status != 0)
-        return status;
-
-    return 0;
 }

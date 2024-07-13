@@ -126,7 +126,7 @@ void app_perror(const char *msg, pj_status_t status);
 int  init_msg_logger(void);
 int  msg_logger_set_enabled(pj_bool_t enabled);
 void flush_events(unsigned duration);
-
+pjsip_transport *wait_loop_transport_clear(int secs);
 
 void report_ival(const char *name, int value, const char *valname, const char *desc);
 void report_sval(const char *name, const char* value, const char *valname, const char *desc);
