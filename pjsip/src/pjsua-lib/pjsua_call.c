@@ -155,7 +155,7 @@ static pj_status_t allocate_conference_slot(pjsua_call *call)
 {
 	register pj_status_t status = PJ_SUCCESS;
 	if (call->inv) {
-		if ((call->conf_slot == PJSUA_INVALID_ID) && pjsua_var.null_port) {
+		if ((call->conf_slot == PJSUA_INVALID_ID) && call->null_port) {
 			char tmp[PJSIP_MAX_URL_SIZE];
 			pj_str_t port_name;
 			port_name.ptr = tmp;
@@ -164,9 +164,10 @@ static pj_status_t allocate_conference_slot(pjsua_call *call)
 				tmp, sizeof(tmp));
 			if (port_name.slen < 1)
 				port_name = pj_str("call");
+            pjsip_dlg_inc_session(call->inv->dlg,&pjsua_var.mod);
 			status = pjmedia_conf_add_port(pjsua_var.mconf,
 				call->inv->pool,
-				pjsua_var.null_port,
+				call->null_port,
 				&port_name,
 				(unsigned*)&call->conf_slot);
 			if (status != PJ_SUCCESS)
@@ -176,6 +177,30 @@ static pj_status_t allocate_conference_slot(pjsua_call *call)
 		status = PJ_EBUSY;
 	}
 	return status;
+}
+static pj_status_t deallocate_conference_slot(pjsua_call* call)
+{ 
+    if (!call->inv) 
+    {
+        return PJ_EBUSY;
+    }
+   
+    if (pjsua_var.mconf && call->conf_slot != PJSUA_INVALID_ID) 
+    {
+        pj_status_t status = pjsua_conf_remove_port(call->conf_slot);
+        pjsip_dlg_dec_session(call->inv->dlg, &pjsua_var.mod);
+        if (status== PJ_SUCCESS)
+        {
+            PJ_LOG(4, (THIS_FILE, "deallocate_conference_slot::pjsua_conf_remove_port done [conf_slot: %d]", call->conf_slot));
+        }
+        else
+        {
+            PJ_LOG(2, (THIS_FILE, "deallocate_conference_slot::pjsua_conf_remove_port failed"));
+            return status;
+        }     
+    }
+    call->conf_slot = PJSUA_INVALID_ID;
+    return pjsua_conf_distroy_port(call->null_port);
 }
 /*
  * Reset call descriptor.
@@ -190,6 +215,7 @@ static void reset_call(pjsua_call_id id)
     }
     pj_bzero(call, sizeof(*call));
     call->index = id;
+    call->null_port = NULL;
 	call->conf_idx = -1;
 	call->conf_slot = PJSUA_INVALID_ID;
     call->last_text.ptr = call->last_text_buf_;
@@ -1079,6 +1105,11 @@ PJ_DEF(pj_status_t) pjsua_call_make_call2(pjsua_acc_id acc_id,
 
     if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
         /* Init media channel */
+        pjmedia_null_port_create(dlg->pool, pjsua_var.media_cfg.clock_rate,
+            pjsua_var.mconf_cfg.channel_count,
+            pjsua_var.mconf_cfg.samples_per_frame,
+            pjsua_var.mconf_cfg.bits_per_sample, 
+            &call->null_port);
         status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
                                           call->secure_level, dlg->pool,
                                           NULL, NULL, PJ_TRUE,
@@ -1264,6 +1295,15 @@ static pj_status_t process_pending_call_hangup(pjsua_call *call)
     }
 
     pjsua_media_channel_deinit(call->index);
+
+    if(deallocate_conference_slot(call) ==PJ_SUCCESS)
+    {
+        PJ_LOG(4,(THIS_FILE, "Call %d: conference slot deallocated", call->index));
+    }
+    else
+    {
+        PJ_LOG(2,(THIS_FILE, "Call %d: conference slot deallocation failed", call->index));
+    }
     pjsua_check_snd_dev_idle();
 
     if (call->inv)
@@ -2018,6 +2058,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
             call->async_call.dlg = NULL;
             goto on_return;
         }
+        pjmedia_null_port_create(dlg->pool, pjsua_var.media_cfg.clock_rate,
+            pjsua_var.mconf_cfg.channel_count,
+            pjsua_var.mconf_cfg.samples_per_frame,
+            pjsua_var.mconf_cfg.bits_per_sample,
+            &call->null_port);
         status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS,
                                           call->secure_level,
                                           rdata->tp_info.pool,
@@ -3155,6 +3200,14 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
         } else {
             /* Destroy media session. */
             pjsua_media_channel_deinit(call_id);
+            if (deallocate_conference_slot(call) == PJ_SUCCESS)
+            {
+                PJ_LOG(4, (THIS_FILE, "Call %d: conference slot deallocated", call->index));
+            }
+            else
+            {
+                PJ_LOG(2, (THIS_FILE, "Call %d: conference slot deallocation failed", call->index));
+            }
             call->hanging_up = PJ_TRUE;
             pjsua_check_snd_dev_idle();
         }

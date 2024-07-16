@@ -1453,11 +1453,6 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
         silence_frame.timestamp.u32.lo = pj_ntohl(stream->enc->rtp.out_hdr.ts);
 
         /* Encode! */
-        if (!stream->codec)
-        {
-            PJ_PERROR(4,(stream->port.info.name.ptr, PJ_EINVAL,"stream codec is null"));
-            return PJ_EINVAL;
-        }
         status = pjmedia_codec_encode( stream->codec, &silence_frame,
                                        channel->out_pkt_size -
                                        sizeof(pjmedia_rtp_hdr),
@@ -1481,11 +1476,6 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
                (frame->type == PJMEDIA_FRAME_TYPE_EXTENDED))
     {
         /* Encode! */
-        if (!stream->codec)
-        {
-            PJ_PERROR(4, (stream->port.info.name.ptr, PJ_EINVAL, "stream codec is null"));
-            return PJ_EINVAL;
-        }
         status = pjmedia_codec_encode( stream->codec, frame,
                                        channel->out_pkt_size -
                                        sizeof(pjmedia_rtp_hdr),

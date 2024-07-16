@@ -1035,7 +1035,17 @@ pj_status_t pjsua_aud_subsys_destroy()
 
     return PJ_SUCCESS;
 }
-
+static pj_status_t replace_conference_slot_to_null_port(pjsua_call* call)
+{
+    if (!call->inv) {
+        return PJ_EBUSY;
+    }
+    if (call->conf_slot == PJSUA_INVALID_ID || !call->null_port)
+    {
+        return PJ_EINVAL;
+    }
+    return pjmedia_conf_replace_port(pjsua_var.mconf, call->inv->pool, call->null_port, (unsigned)call->conf_slot);
+}
 void remove_conf_port(pjsua_conf_port_id* id)
 {
     if (pjsua_var.mconf) {
@@ -1067,8 +1077,19 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
         if(call_med->strm.a.conf_slot != PJSUA_INVALID_ID )
         {
             if (call->conf_slot == call_med->strm.a.conf_slot)
-                call->conf_slot = PJSUA_INVALID_ID;
-            remove_conf_port(&call_med->strm.a.conf_slot);
+            {
+                if(replace_conference_slot_to_null_port(call)==PJ_SUCCESS)
+                {
+                    PJ_LOG(4, (THIS_FILE, "pjsua_aud_stop_stream: replace_conference_slot_to_null_port [call->conf_slot:%d]", call->conf_slot));
+                    call_med->strm.a.conf_slot= PJSUA_INVALID_ID;
+                }
+                else
+                {
+                    PJ_LOG(2, (THIS_FILE, "pjsua_aud_stop_stream: replace_conference_slot_to_null_port failed [call->conf_slot:%d]", call->conf_slot));
+                }
+            }
+            else
+                remove_conf_port(&call_med->strm.a.conf_slot);
         }
         else
         {
@@ -1175,19 +1196,6 @@ static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
     }
 
     pj_log_pop_indent();
-}
-pj_bool_t compare_port_signature(pjsua_conf_port_id conf_slot, pj_uint32_t signature)
-{
-    if (conf_slot == PJSUA_INVALID_ID)
-    {
-        return PJ_FALSE;
-    }
-    pjmedia_port_info port_info;
-    if(pjmedia_conf_get_media_port_info(pjsua_var.mconf, conf_slot, &port_info)!=PJ_SUCCESS)
-    {
-        return PJ_FALSE;
-    }
-    return port_info.signature == signature;
 }
 /* Internal function: update audio channel after SDP negotiation.
  * Warning: do not use temporary/flip-flop pool, e.g: inv->pool_prov,
@@ -1346,7 +1354,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                 if (port_name.slen < 1) {
                     port_name = pj_str("call");
                 }          
-                if (compare_port_signature(call->conf_slot, PJMEDIA_SIG_PORT_NULL))
+                if (pjmedia_conf_compare_port_signature(pjsua_var.mconf, call->conf_slot, PJMEDIA_SIG_PORT_NULL))
                 {
                     status = pjmedia_conf_replace_port(pjsua_var.mconf,
                         call->inv->pool,
@@ -1355,7 +1363,6 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                     if (status != PJ_SUCCESS)
                         goto on_return;
                     call_med->strm.a.conf_slot= call->conf_slot;
-                    PJ_LOG(4, (THIS_FILE, "pjsua_aud_channel_update::pjmedia_conf_replace_port [call->conf_slot:%d]", call->conf_slot));
                 }
                 else
                 {
@@ -1366,10 +1373,11 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                         (unsigned*)&call_med->strm.a.conf_slot);
                     if (status != PJ_SUCCESS)
                         goto on_return;
+                    PJ_LOG(4, (THIS_FILE, "pjsua_aud_channel_update::pjmedia_conf_add_port [call_med->strm.a.conf_slot:%d]", call_med->strm.a.conf_slot));
                 }
-                    if (call->conf_slot == PJSUA_INVALID_ID)
+                if (call->conf_slot == PJSUA_INVALID_ID)
                         call->conf_slot = call_med->strm.a.conf_slot;
-                
+                PJ_LOG(4, (THIS_FILE, " pjsua_aud_channel_update:[call->conf_slot:%d] [call->index:%d]", call->conf_slot, call->index));
 			}
 			else
 			{
@@ -1491,7 +1499,10 @@ PJ_DEF(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id id,
 
     return PJ_SUCCESS;
 }
-
+PJ_DEF(pj_status_t) pjsua_conf_distroy_port( pjmedia_port* port)
+{
+    return pjmedia_conf_distroy_port( port);
+}
 
 /*
  * Add arbitrary media port to PJSUA's conference bridge.

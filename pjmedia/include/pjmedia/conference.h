@@ -213,8 +213,20 @@ PJ_DECL(pjmedia_port*) pjmedia_conf_get_master_port(pjmedia_conf *conf);
 PJ_DECL(pj_status_t) pjmedia_conf_set_port0_name(pjmedia_conf *conf,
                                                  const pj_str_t *name);
 
-
 /**
+ * compare signature of the port with the signature of the port in the conference bridge
+ *
+ * if the conf_slot is not found, return PJ_FALSE
+ *
+ * @param conf          The conference bridge.
+ * @param conf_slot     conference bridge slot
+ * @param signature     signature of the port
+ *
+ * @return              PJ_TRUE if the signature of the port is the same as the signature of the port in the conference bridge
+ */
+ 
+PJ_DECL(pj_bool_t) pjmedia_conf_compare_port_signature(pjmedia_conf* conf, unsigned conf_slot, pj_uint32_t signature);
+/** 
  * Add media port to the conference bridge.
  *
  * By default, the new conference port will have both TX and RX enabled, 
@@ -271,7 +283,7 @@ PJ_DECL(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
 					    pjmedia_port *strm_port,
 					    unsigned slot );
 
-
+PJ_DECL(pj_status_t) pjmedia_conf_distroy_port( pjmedia_port* port);
 #if !DEPRECATED_FOR_TICKET_2234
 /**
  * <i><b>Warning:</b> This API has been deprecated since 1.3 and will be

@@ -7466,7 +7466,7 @@ PJ_DECL(pj_status_t) pjsua_enum_conf_ports(pjsua_conf_port_id id[],
 PJ_DECL(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id port_id,
                                                pjsua_conf_port_info *info);
 
-
+PJ_DEF(pj_status_t) pjsua_conf_distroy_port(pjmedia_port* port);
 /**
  * Add arbitrary media port to PJSUA's conference bridge. Application
  * can use this function to add the media port that it creates. For

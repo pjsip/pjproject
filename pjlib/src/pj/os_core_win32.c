@@ -978,6 +978,10 @@ PJ_DEF(void*) pj_thread_local_get(long index)
     //Can't check stack because this function is called
     //by PJ_CHECK_STACK() itself!!!
     //PJ_CHECK_STACK();
+if (index == -1)
+    {
+        return 0;
+    }
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     return TlsGetValueRT(index);
 #else
@@ -1093,10 +1097,18 @@ PJ_DEF(pj_status_t) pj_mutex_lock(pj_mutex_t *mutex)
         status = PJ_STATUS_FROM_OS(GetLastError());
 
 #endif
+if (status == PJ_SUCCESS)
+    {
     LOG_MUTEX((mutex->obj_name, 
-              (status==PJ_SUCCESS ? "Mutex acquired by thread %s" : "FAILED by %s"),
+            "Mutex acquired by thread %s",
               pj_thread_this()->obj_name));
-
+    }
+    else
+    {
+        LOG_MUTEX_WARN((mutex->obj_name,
+           "FAILED by %s",
+            pj_thread_this()->obj_name));
+    }
 #if PJ_DEBUG
     if (status == PJ_SUCCESS) {
         mutex->owner = pj_thread_this();
@@ -1296,7 +1308,7 @@ static pj_status_t pj_sem_wait_for(pj_sem_t *sem, unsigned timeout)
         LOG_MUTEX((sem->obj_name, "Semaphore acquired by thread %s", 
                                   pj_thread_this()->obj_name));
     } else {
-        LOG_MUTEX((sem->obj_name, "Semaphore: thread %s FAILED to acquire", 
+        LOG_MUTEX_WARN((sem->obj_name, "Semaphore: thread %s FAILED to acquire",
                                   pj_thread_this()->obj_name));
     }
 

@@ -902,8 +902,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
 			conf_port->clock_rate /
 			conf->clock_rate,
 			&conf_port->rx_resample);
-		if (status != PJ_SUCCESS)
-			goto on_return;
+        if (status != PJ_SUCCESS)
+            goto on_return;
 
 		/* Create resample for tx buffer. */
 		status = pjmedia_resample_create(pool,
@@ -914,9 +914,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
 			conf_port->clock_rate, /* Rate out */
 			conf->samples_per_frame,
 			&conf_port->tx_resample);
-		if (status != PJ_SUCCESS)
-			goto on_return;
-	}
+        if (status != PJ_SUCCESS)
+        goto on_return;
+        }
 	else {
 		conf_port->rx_resample = NULL;
 		conf_port->tx_resample = NULL;
@@ -972,6 +972,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
 				sizeof(conf_port->rx_buf[0]));
 		if (!conf_port->rx_buf) {
 			status = PJ_ENOMEM;
+            PJ_LOG(2, (THIS_FILE, "pjmedia_conf_replace_port: conf_port->rx_buf alloc failed [conf_slot:%d]", slot));
 			goto on_return;
 		}
 
@@ -983,6 +984,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
 				sizeof(conf_port->tx_buf[0]));
 		if (!conf_port->tx_buf) {
 			status = PJ_ENOMEM;
+            PJ_LOG(2, (THIS_FILE, "pjmedia_conf_replace_port: conf_port->tx_buf alloc failed [conf_slot:%d]", slot));
 			goto on_return;
 		}
 	} else {
@@ -1005,23 +1007,41 @@ PJ_DEF(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
 	status = PJ_SUCCESS;
 
 on_return:
-	/* Destroy old pjmedia port if this conf port is passive port,
+	/* Destroy old pjmedia port if this conf port not a passive port,
 	 * i.e: has delay buf.
 	 */
     if (old_port )
     {
-        if (conf_port->delay_buf || old_port->info.signature== PJMEDIA_SIG_PORT_NULL)
+        if (/*conf_port->delay_buf ||*/ old_port->info.signature != PJMEDIA_SIG_PORT_NULL)
         {
             PJ_LOG(4, (THIS_FILE, "pjmedia_conf_replace_port::distroy old port "));
             pjmedia_port_destroy(old_port);
+            old_port= NULL;
         }
     }
 
 	pj_mutex_unlock(conf->mutex);
 
+    if(status!=PJ_SUCCESS)
+    {
+        PJ_LOG(2, (THIS_FILE, "pjmedia_conf_replace_port failed [conf_slot:%d]", slot));
+    }
 	return status;
 }
+PJ_DEF(pj_status_t) pjmedia_conf_distroy_port( pjmedia_port* port)
+{
 
+    PJ_ASSERT_RETURN(port, PJ_EINVAL);
+    pj_status_t status = pjmedia_port_destroy(port);
+    if(status!=PJ_SUCCESS)
+    {
+        pj_perror_2( THIS_FILE,status, "pjmedia_conf_distroy_port::distroy port failed ");
+        return status;
+    }
+    PJ_LOG(4, (THIS_FILE, "pjmedia_conf_distroy_port::distroy port "));
+    return PJ_SUCCESS;
+
+}
 
 #if !DEPRECATED_FOR_TICKET_2234
 /*
@@ -1509,12 +1529,33 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
     *p_count = count;
     return PJ_SUCCESS;
 }
+PJ_DECL(pj_bool_t) pjmedia_conf_compare_port_signature(pjmedia_conf* conf,unsigned conf_slot, pj_uint32_t signature)
+{
+    /* Check arguments */
+    PJ_ASSERT_RETURN(conf, PJ_FALSE);
+    if (conf_slot<0 || conf_slot >= conf->max_ports)
+    {
+        PJ_LOG(4, (THIS_FILE, " pjmedia_conf_compare_port_signature : [conf_slot : %d], [conf->max_ports:%d]",conf_slot, conf->max_ports));
+        return PJ_FALSE;
+    }
+    pjmedia_port_info port_info;
+    if (pjmedia_conf_get_media_port_info(conf, conf_slot, &port_info) != PJ_SUCCESS)
+    {
+        return PJ_FALSE;
+    }
+    return port_info.signature == signature;
+}
 PJ_DEF(pj_status_t) pjmedia_conf_get_media_port_info(pjmedia_conf* conf,unsigned slot, pjmedia_port_info* info)
 {
     struct conf_port* conf_port;
 
     /* Check arguments */
-    PJ_ASSERT_RETURN(conf && slot < conf->max_ports, PJ_EINVAL);
+    if (slot < 0 || slot >= conf->max_ports)
+    {
+        PJ_LOG(2, (THIS_FILE, " pjmedia_conf_get_media_port_info : [slot : %d], [conf->max_ports:%d]", slot, conf->max_ports));
+        return PJ_EINVAL;
+    }
+    PJ_ASSERT_RETURN(conf && slot >=0 && slot < conf->max_ports, PJ_EINVAL);
 
     /* Lock mutex */
     pj_mutex_lock(conf->mutex);

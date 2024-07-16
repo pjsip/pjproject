@@ -3164,18 +3164,6 @@ static void stop_media_session(pjsua_call_id call_id)
     for (unsigned mi=0; mi<call->med_cnt; ++mi) {
         stop_media_stream(call, mi);
     }
-
-    if (pjsua_var.mconf && call->conf_slot!= PJSUA_INVALID_ID) {
-        if (pjsua_conf_remove_port(call->conf_slot) == PJ_SUCCESS)
-        {
-            PJ_LOG(4, (THIS_FILE, "stop_media_session::pjsua_conf_remove_port done id: %d", call->conf_slot));
-        }
-        else
-        {
-            PJ_LOG(2, (THIS_FILE, "stop_media_session::pjsua_conf_remove_port failed"));
-        }
-        call->conf_slot = PJSUA_INVALID_ID;
-    }
 }
 
 
