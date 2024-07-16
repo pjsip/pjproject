@@ -17,6 +17,10 @@
 
 #pragma warning(disable:4355)
 
+#if defined(_MSC_VER)
+#   pragma comment(lib, "winmm.lib")
+#endif
+
 //  Helper function for clamping time differences
 int inline TimeDiff(REFERENCE_TIME rt)
 {
