@@ -356,8 +356,10 @@ int test_main(int argc, char *argv[])
     }
 #endif
 
-    /* Note: put exclusive tests last */
-    
+#if INCLUDE_LOOP_TEST
+    UT_ADD_TEST(&test_app.ut_app, transport_loop_test, 0);
+#endif
+
 #if INCLUDE_UDP_TEST
     /* Transport tests share same testing codes which are not reentrant */
     UT_ADD_TEST(&test_app.ut_app, transport_udp_test, 0);
@@ -367,12 +369,14 @@ int test_main(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, transport_tcp_test, 0);
 #endif
 
-    /* Loop test needs to be exclusive, because there must NOT be any other
+    /* Note: put exclusive tests last */
+
+    /* This needs to be exclusive, because there must NOT be any other
      * loop transport otherwise some test will fail (e.g. sending will
      * fallback to that transport)
      */
 #if INCLUDE_LOOP_TEST
-    UT_ADD_TEST(&test_app.ut_app, transport_loop_test,
+    UT_ADD_TEST(&test_app.ut_app, transport_loop_resolve_error_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #endif
 

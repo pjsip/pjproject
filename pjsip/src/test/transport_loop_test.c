@@ -273,40 +273,14 @@ int transport_loop_test()
     enum { LOOP = 8 };
     pjsip_transport *loop = NULL;
     char host_port_transport[64];
-    pj_bool_t disable_no_selector = PJ_FALSE;
     int i, pkt_lost;
     int status;
     long ref_cnt;
     int rtt[LOOP], min_rtt;
 
 
-    PJ_LOG(3,(THIS_FILE, "  Loop transport count: %d",
-                pjsip_tpmgr_get_transport_count_by_type(
-                pjsip_endpt_get_tpmgr(endpt),
-                PJSIP_TRANSPORT_LOOP_DGRAM)));
-                
-    /* if there is another transport, wait sometime until it's gone */
-    loop = wait_loop_transport_clear(10);
-
-    if (loop) {
-        /* We are not supposed to have another instance of loop transport, but
-         * we found one. If there are more than one, test will fail. Otherwise
-         * test should succeed
-         */
-        PJ_LOG(2,(THIS_FILE,
-                  "Warning: found %d loop transport instances",
-                  pjsip_tpmgr_get_transport_count_by_type(
-                    pjsip_endpt_get_tpmgr(endpt),
-                    PJSIP_TRANSPORT_LOOP_DGRAM)));
-        disable_no_selector = PJ_TRUE;
-        pjsip_loop_set_discard(loop, 0, NULL);
-        pjsip_loop_set_failure(loop, 0, NULL);
-        pjsip_loop_set_delay(loop, 0);
-    } else {
-        PJ_TEST_EQ(loop, NULL, NULL, return -2);
-        PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &loop), NULL, return -3);
-        pjsip_transport_add_ref(loop);
-    }
+    PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &loop), NULL, return -3);
+    pjsip_transport_add_ref(loop);
 
     pj_ansi_snprintf(host_port_transport, sizeof(host_port_transport),
                      "%.*s:%d;transport=loop-dgram",
@@ -316,11 +290,6 @@ int transport_loop_test()
 
     /* Get initial reference counter */
     ref_cnt = pj_atomic_get(loop->ref_cnt);
-
-    /* Resolve error */
-    status = loop_resolve_error(disable_no_selector);
-    if (status)
-        goto on_return;
 
     /* Test basic transport attributes */
     status = generic_transport_test(loop);
@@ -381,6 +350,54 @@ int transport_loop_test()
     }
 
     status = 0;
+
+on_return:
+    /* Decrement reference. */
+    pjsip_transport_dec_ref(loop);
+    return status;
+}
+
+
+/* tgus needs to be exclusive, because there must NOT be any other
+ * loop transport otherwise some test will fail (e.g. sending will
+ * fallback to that transport)
+ */
+int transport_loop_resolve_error_test()
+{
+    pjsip_transport *loop;
+    pj_bool_t disable_no_selector = PJ_FALSE;
+    int status;
+
+    PJ_LOG(3,(THIS_FILE, "  Loop transport count: %d",
+                pjsip_tpmgr_get_transport_count_by_type(
+                pjsip_endpt_get_tpmgr(endpt),
+                PJSIP_TRANSPORT_LOOP_DGRAM)));
+                
+    /* if there is another transport, wait sometime until it's gone */
+    loop = wait_loop_transport_clear(10);
+
+    if (loop) {
+        /* We are not supposed to have another instance of loop transport, but
+         * we found one. If there are more than one, test will fail. Otherwise
+         * test should succeed
+         */
+        PJ_LOG(2,(THIS_FILE,
+                  "Warning: found %d loop transport instances",
+                  pjsip_tpmgr_get_transport_count_by_type(
+                    pjsip_endpt_get_tpmgr(endpt),
+                    PJSIP_TRANSPORT_LOOP_DGRAM)));
+        disable_no_selector = PJ_TRUE;
+        pjsip_loop_set_discard(loop, 0, NULL);
+        pjsip_loop_set_failure(loop, 0, NULL);
+        pjsip_loop_set_delay(loop, 0);
+    } else {
+        PJ_TEST_EQ(loop, NULL, NULL, return -2);
+        PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &loop), NULL, return -3);
+        pjsip_transport_add_ref(loop);
+    }
+
+    /* Resolve error */
+    status = loop_resolve_error(disable_no_selector);
 
 on_return:
     /* Decrement reference. */

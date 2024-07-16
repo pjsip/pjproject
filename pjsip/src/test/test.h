@@ -86,6 +86,7 @@ int tsx_destroy_test(void);
 int transport_udp_test(void);
 int transport_loop_test(void);
 int transport_loop_multi_test(void);
+int transport_loop_resolve_error_test(void);
 int transport_tcp_test(void);
 int resolve_test(void);
 int regc_test(void);
