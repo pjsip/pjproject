@@ -6,7 +6,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
-  build-windows-default:
+  build-default:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
@@ -40,7 +40,7 @@ jobs:
         msbuild swig_java_pjsua2.vcxproj /p:PlatformToolset=v143 /p:Configuration=Debug /p:Platform=win32 /p:UseEnv=true
       shell: cmd
 
-  windows-with-openssl-unit-test-1:
+  openssl-1:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
@@ -75,16 +75,29 @@ jobs:
         set LIB=%LIB%;%OPENSSL_DIR%\lib
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
-    - name: unit tests
+    - name: pjlib-test
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
-        cd pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }} ${{ vars.CI_MODE }}
-        cd ../../pjlib-util/bin; ./pjlib-util-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }}
-        cd ../../pjmedia/bin/; ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }}
+        cd pjlib/bin
+        ./pjlib-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }} ${{ vars.CI_MODE }}
+      shell: powershell
+    - name: pjlib-util-test
+      run: |
+        $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
+        $env:PATH+=";$env:OPENSSL_DIR\bin"
+        cd pjlib-util/bin
+        ./pjlib-util-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
+      shell: powershell
+    - name: pjmedia-test
+      run: |
+        $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
+        $env:PATH+=";$env:OPENSSL_DIR\bin"
+        cd pjmedia/bin
+        ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
       shell: powershell
 
-  windows-with-openssl-unit-test-2:
+  openssl-2:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
@@ -132,15 +145,22 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-    - name: unit tests
+    - name: pjsip-test
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
-        cd tests/pjsua; python runall.py
-        cd ../../pjsip/bin; ./pjsip-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }}
+        cd pjsip/bin
+        ./pjsip-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
+      shell: powershell
+    - name: python pjsua tests
+      run: |
+        $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
+        $env:PATH+=";$env:OPENSSL_DIR\bin"
+        cd tests/pjsua
+        python runall.py
       shell: powershell
 
-  build-windows-gnu-tls:
+  build-gnu-tls:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
@@ -178,7 +198,100 @@ jobs:
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
 
-  windows-with-video-libvpx-schannel-unit-test-1:
+  vid-libvpx-schannel-1:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: get vpx
+      run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/vpx-1.12-win.zip" -Outfile "vpx.zip"
+      shell: powershell
+    - name: expand libvpx
+      run: |
+        Expand-Archive -LiteralPath .\vpx.zip -DestinationPath .; pwd
+        cd vpx_build
+        Add-Content ..\vpx_dir.txt $pwd.Path
+      shell: powershell
+    - name: check vpx folder
+      run: |
+        set /P VPX_DIR=<vpx_dir.txt
+        dir "%VPX_DIR%\include"
+        dir "%VPX_DIR%\lib"
+      shell: cmd
+    - name: get sdl
+      run: Invoke-WebRequest -Uri "https://github.com/libsdl-org/SDL/releases/download/release-2.26.2/SDL2-devel-2.26.2-VC.zip" -Outfile ".\sdl.zip"
+      shell: powershell
+    - name: expand sdl
+      run: |
+        Expand-Archive -LiteralPath .\sdl.zip -DestinationPath .\sdl_build\; pwd
+        cd sdl_build\SDL2-2.26.2
+        Add-Content ..\..\sdl_dir.txt $pwd.Path
+      shell: powershell
+    - name: check sdl folder
+      run: |
+        set /P SDL_DIR=<sdl_dir.txt
+        dir "%SDL_DIR%\include"
+        dir "%SDL_DIR%\lib\x86"
+      shell: cmd
+    - name: config site
+      run: |
+        cd pjlib/include/pj; cp config_site_test.h config_site.h
+        Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
+        Add-Content config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_SCHANNEL"
+        Add-Content config_site.h "#undef PJMEDIA_SRTP_HAS_DTLS"
+        Add-Content config_site.h "#define PJMEDIA_HAS_VIDEO 1"
+        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_DSHOW 1"
+        Add-Content config_site.h "#define PJMEDIA_HAS_LIBYUV 1"
+        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
+        Add-Content config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
+      shell: powershell
+    - name: check VsDevCmd.bat
+      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      shell: cmd
+    - name: MSBuild
+      working-directory: .
+      run: |
+        set /P OPENSSL_DIR=<openssl_dir.txt
+        set /P VPX_DIR=<vpx_dir.txt
+        set /P SDL_DIR=<sdl_dir.txt
+        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%VPX_DIR%\include;%SDL_DIR%\include
+        set LIB=%LIB%;%OPENSSL_DIR%\lib;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
+        msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
+      shell: cmd
+    - name: build test tools cmp_wav
+      run: |
+        set /P OPENSSL_DIR=<openssl_dir.txt
+        set /P VPX_DIR=<vpx_dir.txt
+        set /P SDL_DIR=<sdl_dir.txt
+        cd tests/pjsua/tools
+        set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%VPX_DIR%\include;%SDL_DIR%\include
+        set LIB=%LIB%;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
+        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
+      shell: cmd
+    - name: pjlib-test
+      run: |
+        $env:SDL_DIR = Get-Content .\sdl_dir.txt
+        $env:PATH+=";$env:SDL_DIR\lib\x86;"
+        cd pjlib/bin
+        ./pjlib-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }} ${{ vars.CI_MODE }}
+      shell: powershell
+    - name: pjlib-util-test
+      run: |
+        $env:SDL_DIR = Get-Content .\sdl_dir.txt
+        $env:PATH+=";$env:SDL_DIR\lib\x86;"
+        cd pjlib-util/bin
+        ./pjlib-util-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
+      shell: powershell
+    - name: pjmedia-test
+      run: |
+        $env:SDL_DIR = Get-Content .\sdl_dir.txt
+        $env:PATH+=";$env:SDL_DIR\lib\x86;"
+        cd pjmedia/bin
+        ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
+      shell: powershell
+
+  vid-libvpx-schannel-2:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
@@ -253,17 +366,14 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-    - name: unit tests
+    - name: python pjsua tests
       run: |
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
-        cd tests/pjsua; python runall.py
-        cd ../../pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }} ${{ vars.CI_MODE }}
-        cd ../../pjlib-util/bin; ./pjlib-util-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }}
-        cd ../../pjmedia/bin/; ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_ARGS }}
-      shell: powershell
+        cd tests/pjsua
+        python runall.py
 
-  build-windows-video-ffmpeg:
+  build-vid-ffmpeg:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master

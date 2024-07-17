@@ -5,8 +5,11 @@ on:
       - 'master'
   pull_request:
     types: [opened, synchronize, reopened]
+env:
+  CI_ARGS: ${{ vars.CI_LIN_ARGS }}
+  CI_MODE: ${{ vars.CI_MODE }}
 jobs:
-  build-ubuntu-default:
+  build-default:
   # checking pure lib source distribution with plain configure & make
     runs-on: ubuntu-latest
     steps:
@@ -16,7 +19,7 @@ jobs:
     - name: make
       run: make
 
-  ubuntu-default-full-bundle-1:
+  default-full-bundle-1:
   # full bundle: enable all codecs + AEC + DTLS
   # full bundle 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
     runs-on: ubuntu-latest
@@ -36,10 +39,16 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.10'
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjlib-test pjlib-util-test pjmedia-test pjsua-test
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjlib-util-test
+      run: make pjlib-util-test
+    - name: pjmedia-test
+      run: make pjmedia-test
+    - name: pjsua-test
+      run: make pjsua-test
 
-  ubuntu-default-full-bundle-2:
+  default-full-bundle-2:
   # full bundle 2: running pjnath test
     runs-on: ubuntu-latest
     steps:
@@ -52,10 +61,10 @@ jobs:
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: make
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjnath-test
+    - name: pjnath-test
+      run: make pjnath-test
 
-  ubuntu-default-full-bundle-3:
+  default-full-bundle-3:
   # full bundle 3: running pjsip test
     runs-on: ubuntu-latest
     steps:
@@ -68,10 +77,10 @@ jobs:
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: make
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjsip-test
+    - name: pjsip-test
+      run: make pjsip-test
 
-  build-ubuntu-no-tls:
+  build-no-tls:
   # no TLS
     runs-on: ubuntu-latest
     steps:
@@ -88,7 +97,7 @@ jobs:
   # build-ubuntu-openssl
   # TLS: with OpenSSL (same as build-ubuntu-default)
 
-  build-ubuntu-gnu-tls:
+  build-gnu-tls:
   # TLS: with GnuTLS
     runs-on: ubuntu-latest
     steps:
@@ -102,7 +111,7 @@ jobs:
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
 
-  ubuntu-video-openh264-1:
+  video-openh264-1:
   # video: video enabled with vpx and openh264
   # video 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
     runs-on: ubuntu-latest
@@ -126,10 +135,16 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjlib-test pjlib-util-test pjmedia-test pjsua-test
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjlib-util-test
+      run: make pjlib-util-test
+    - name: pjmedia-test
+      run: make pjmedia-test
+    - name: pjsua-test
+      run: make pjsua-test
 
-  ubuntu-video-openh264-2:
+  video-openh264-2:
   # video 2: running pjnath test
     runs-on: ubuntu-latest
     steps:
@@ -146,10 +161,10 @@ jobs:
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: make
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjnath-test
+    - name: pjnath-test
+      run: make pjnath-test
 
-  ubuntu-video-openh264-3:
+  video-openh264-3:
   # video: 3: running pjsip test
     runs-on: ubuntu-latest
     steps:
@@ -166,10 +181,10 @@ jobs:
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: make
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjsip-test
+    - name: pjsip-test
+      run: make pjsip-test
 
-  build-ubuntu-video-ffmpeg:
+  build-video-ffmpeg:
   # video enabled with vpx and ffmpeg and x264
     runs-on: ubuntu-latest
     steps:

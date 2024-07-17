@@ -5,8 +5,11 @@ on:
       - 'master'
   pull_request:
     types: [opened, synchronize, reopened]
+env:
+  CI_ARGS: ${{ vars.CI_LIN_ARGS }}
+  CI_MODE: ${{ vars.CI_MODE }}
 jobs:
-  build-mac-default:
+  build-default:
   # checking pure lib source distribution with plain configure & make
     runs-on: macos-latest
     steps:
@@ -16,7 +19,7 @@ jobs:
     - name: make
       run: make
 
-  mac-default-full-bundle-1:
+  default-full-bundle-1:
   # full bundle: enable all codecs + AEC + DTLS
   # full bundle 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
     runs-on: macos-latest
@@ -38,10 +41,16 @@ jobs:
       run: cd pjsip-apps/src/swig && make
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjlib-test pjmedia-test pjlib-util-test pjsua-test
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjlib-util-test
+      run: make pjlib-util-test
+    - name: pjmedia-test
+      run: make pjmedia-test
+    - name: pjsua-test
+      run: make pjsua-test
 
-  mac-default-full-bundle-2:
+  default-full-bundle-2:
   # full bundle 2: running pjnath test
     runs-on: macos-latest
     steps:
@@ -56,10 +65,10 @@ jobs:
       run: make
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjnath-test
+    - name: pjnath-test
+      run: make pjnath-test
 
-  mac-default-full-bundle-3:
+  default-full-bundle-3:
   # full bundle 3: running pjsip test
     runs-on: macos-latest
     steps:
@@ -74,13 +83,13 @@ jobs:
       run: make
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjsip-test
+    - name: pjsip-test
+      run: make pjsip-test
 
   # build-ubuntu-no-tls:
   # no TLS (same as build-mac-default)
 
-  build-mac-openssl:
+  build-openssl:
   # TLS: with OpenSSL
     runs-on: macos-latest
     steps:
@@ -98,7 +107,7 @@ jobs:
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
 
-  build-mac-gnu-tls:
+  build-gnu-tls:
   # TLS: with GnuTLS
     runs-on: macos-latest
     steps:
@@ -116,7 +125,7 @@ jobs:
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
 
-  mac-video-openh264-1:
+  video-openh264-1:
   # video: video enabled with vpx and openh264
   # video 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
     runs-on: macos-latest
@@ -138,10 +147,16 @@ jobs:
       run: cd pjsip-apps/src/swig && make
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjlib-test pjmedia-test pjlib-util-test pjsua-test
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjlib-util-test
+      run: make pjlib-util-test
+    - name: pjmedia-test
+      run: make pjmedia-test
+    - name: pjsua-test
+      run: make pjsua-test
 
-  mac-video-openh264-2:
+  video-openh264-2:
   # video 2: running pjnath test
     runs-on: macos-latest
     steps:
@@ -156,10 +171,10 @@ jobs:
       run: make
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjnath-test
+    - name: pjnath-test
+      run: make pjnath-test
 
-  mac-video-openh264-3:
+  video-openh264-3:
   # video 3: running pjsip test
     runs-on: macos-latest
     steps:
@@ -174,10 +189,10 @@ jobs:
       run: make
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
-      run: make CI_ARGS="${{ vars.CI_ARGS }}" CI_MODE="${{ vars.CI_MODE }}" pjsip-test
+    - name: pjsip-test
+      run: make pjsip-test
 
-  build-mac-video-ffmpeg:
+  build-video-ffmpeg:
   # video enabled with vpx and ffmpeg and x264
     runs-on: macos-latest
     steps:
@@ -203,7 +218,7 @@ jobs:
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
 
-  build-mac-video-vid-toolbox:
+  build-video-vid-toolbox:
   # video enabled with vpx and video toolbox
     runs-on: macos-latest
     steps:
