@@ -27,6 +27,7 @@ static struct tsx_basic_test_global_t
 {
     char TARGET_URI[PJSIP_MAX_URL_SIZE];
     char FROM_URI[PJSIP_MAX_URL_SIZE];
+    pjsip_transport *tp;
 } g[MAX_TSX_TESTS];
 
 
@@ -55,6 +56,16 @@ static int tsx_layer_test(unsigned tid)
     if (status != PJ_SUCCESS) {
         app_perror("   error: unable to create transaction", status);
         return -120;
+    }
+
+    if (g[tid].tp) {
+        pjsip_tpselector tp_sel;
+
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = g[tid].tp;
+
+        pjsip_tsx_set_transport(tsx, &tp_sel);
     }
 
     pj_strdup(tdata->pool, &tsx_key, &tsx->transaction_key);
@@ -103,6 +114,16 @@ static int double_terminate(unsigned tid)
         return -20;
     }
 
+    if (g[tid].tp) {
+        pjsip_tpselector tp_sel;
+
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = g[tid].tp;
+
+        pjsip_tsx_set_transport(tsx, &tp_sel);
+    }
+
     /* Save transaction key for later. */
     pj_strdup_with_null(tdata->pool, &tsx_key, &tsx->transaction_key);
 
@@ -144,9 +165,12 @@ int tsx_basic_test(unsigned tid)
     pjsip_transport *loop = NULL;
     int status;
 
+    g[tid].tp = NULL;
+
     if (param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
         PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &loop), NULL, return -10);
         pjsip_transport_add_ref(loop);
+        g[tid].tp = loop;
     }
     pj_ansi_snprintf(g[tid].TARGET_URI, sizeof(g[tid].TARGET_URI),
                     "sip:tsx_basic_test@127.0.0.1:%d;transport=%s",
