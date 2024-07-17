@@ -7013,7 +7013,7 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  * Application connects one media termination/slot to another by calling
  * #pjsua_conf_connect() function. This will establish <b>unidirectional</b>
  * media flow from the source termination to the sink termination. To
- * establish bidirectional media flow, application wound need to make another
+ * establish bidirectional media flow, application would need to make another
  * call to #pjsua_conf_connect(), this time inverting the source and 
  * destination slots in the parameter.
  *
