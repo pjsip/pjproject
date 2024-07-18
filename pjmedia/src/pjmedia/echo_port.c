@@ -31,6 +31,7 @@
 struct ec
 {
     pjmedia_port         base;
+    pj_pool_t           *pool;
     pjmedia_port        *dn_port;
     pjmedia_echo_state  *ec;
 };
@@ -43,7 +44,7 @@ static pj_status_t ec_get_frame(pjmedia_port *this_port,
 static pj_status_t ec_on_destroy(pjmedia_port *this_port);
 
 
-PJ_DEF(pj_status_t) pjmedia_echo_port_create(pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_echo_port_create(pj_pool_t *pool_,
                                              pjmedia_port *dn_port,
                                              unsigned tail_ms,
                                              unsigned latency_ms,
@@ -54,16 +55,22 @@ PJ_DEF(pj_status_t) pjmedia_echo_port_create(pj_pool_t *pool,
     pjmedia_audio_format_detail *afd;
     struct ec *ec;
     pj_status_t status;
+    pj_pool_t *pool = NULL;
 
-    PJ_ASSERT_RETURN(pool && dn_port && p_port, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool_ && dn_port && p_port, PJ_EINVAL);
 
     afd = pjmedia_format_get_audio_format_detail(&dn_port->info.fmt, PJ_TRUE);
 
     PJ_ASSERT_RETURN(afd->bits_per_sample==16 && tail_ms,
                      PJ_EINVAL);
 
+    /* Create own pool */
+    pool = pj_pool_create(pool_->factory, AEC.ptr, 500, 500, NULL);
+    PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
+
     /* Create the port and the AEC itself */
     ec = PJ_POOL_ZALLOC_T(pool, struct ec);
+    ec->pool = pool;
     
     pjmedia_port_info_init(&ec->base.info, &AEC, SIGNATURE,
                            afd->clock_rate,
@@ -75,14 +82,19 @@ PJ_DEF(pj_status_t) pjmedia_echo_port_create(pj_pool_t *pool,
                                   afd->channel_count,
                                   PJMEDIA_AFD_SPF(afd),
                                   tail_ms, latency_ms, options, &ec->ec);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        pj_pool_release(pool);
         return status;
+    }
 
     /* More init */
     ec->dn_port = dn_port;
     ec->base.get_frame = &ec_get_frame;
     ec->base.put_frame = &ec_put_frame;
     ec->base.on_destroy = &ec_on_destroy;
+
+    if (dn_port->grp_lock)
+        pjmedia_port_init_grp_lock(&ec->base, pool, dn_port->grp_lock);
 
     /* Done */
     *p_port = &ec->base;
@@ -137,7 +149,13 @@ static pj_status_t ec_on_destroy(pjmedia_port *this_port)
 
     PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE, PJ_EINVAL);
 
-    pjmedia_echo_destroy(ec->ec);
+    if (ec->ec) {
+        pjmedia_echo_destroy(ec->ec);
+        ec->ec = NULL;
+    }
+
+    if (ec->pool)
+        pj_pool_safe_release(&ec->pool);
 
     return PJ_SUCCESS;
 }
