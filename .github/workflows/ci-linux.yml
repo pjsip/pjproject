@@ -8,6 +8,7 @@ on:
 env:
   CI_ARGS: ${{ vars.CI_LIN_ARGS }}
   CI_MODE: ${{ vars.CI_MODE }}
+  MAKE_FAST: make -j 3
 jobs:
   build-lin-default:
   # checking pure lib source distribution with plain configure & make
@@ -17,7 +18,7 @@ jobs:
     - name: configure
       run: ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
 
   lin-default-full-bundle-1:
   # full bundle: enable all codecs + AEC + DTLS
@@ -32,9 +33,9 @@ jobs:
     - name: configure
       run: CFLAGS="-g -fPIC" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: swig bindings
-      run: cd pjsip-apps/src/swig && make
+      run: cd pjsip-apps/src/swig && $MAKE_FAST
     - name: set up Python 3.10 for pjsua test
       uses: actions/setup-python@v2
       with:
@@ -60,7 +61,7 @@ jobs:
     - name: configure
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: pjnath-test
       run: make pjnath-test
 
@@ -76,7 +77,7 @@ jobs:
     - name: configure
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: pjsip-test
       run: make pjsip-test
 
@@ -90,9 +91,9 @@ jobs:
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --disable-ssl
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: swig bindings
-      run: cd pjsip-apps/src/swig && make
+      run: cd pjsip-apps/src/swig && $MAKE_FAST
 
   # build-ubuntu-openssl
   # TLS: with OpenSSL (same as build-ubuntu-default)
@@ -107,9 +108,9 @@ jobs:
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=/usr/
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: swig bindings
-      run: cd pjsip-apps/src/swig && make
+      run: cd pjsip-apps/src/swig && $MAKE_FAST
 
   lin-vid-openh264-1:
   # video: video enabled with vpx and openh264
@@ -122,15 +123,15 @@ jobs:
     - name: get openh264
       run: git clone --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
-      run: cd openh264 && make && sudo make install && sudo ldconfig
+      run: cd openh264 && $MAKE_FAST && sudo make install && sudo ldconfig
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
       run: CFLAGS="-g -fPIC -DHAS_VID_CODEC_TEST=0" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: swig bindings
-      run: cd pjsip-apps/src/swig && make
+      run: cd pjsip-apps/src/swig && $MAKE_FAST
     - name: set up Python 3.10 for pjsua test
       uses: actions/setup-python@v4
       with:
@@ -154,13 +155,13 @@ jobs:
     - name: get openh264
       run: git clone --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
-      run: cd openh264 && make && sudo make install && sudo ldconfig
+      run: cd openh264 && $MAKE_FAST && sudo make install && sudo ldconfig
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: pjnath-test
       run: make pjnath-test
 
@@ -174,13 +175,13 @@ jobs:
     - name: get openh264
       run: git clone --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
-      run: cd openh264 && make && sudo make install && sudo ldconfig
+      run: cd openh264 && $MAKE_FAST && sudo make install && sudo ldconfig
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: pjsip-test
       run: make pjsip-test
 
@@ -196,12 +197,12 @@ jobs:
     - name: configure ffmpeg
       run: cd FFmpeg && ./configure --enable-shared --disable-static --enable-gpl --enable-libx264
     - name: build ffmpeg
-      run: cd FFmpeg && make -j10 && sudo make install
+      run: cd FFmpeg && $MAKE_FAST && sudo make install
     - name: config site
       run: echo -e "#define PJMEDIA_HAS_VIDEO 1\n" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: swig bindings
-      run: cd pjsip-apps/src/swig && make
+      run: cd pjsip-apps/src/swig && $MAKE_FAST

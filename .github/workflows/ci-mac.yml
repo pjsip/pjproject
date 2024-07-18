@@ -6,8 +6,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 env:
-  CI_ARGS: ${{ vars.CI_LIN_ARGS }}
+  CI_ARGS: ${{ vars.CI_MAC_ARGS }}
   CI_MODE: ${{ vars.CI_MODE }}
+  MAKE_FAST: make -j 2
 jobs:
   build-mac-default:
   # checking pure lib source distribution with plain configure & make
@@ -17,7 +18,7 @@ jobs:
     - name: configure
       run: ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
 
   mac-default-full-bundle-1:
   # full bundle: enable all codecs + AEC + DTLS
@@ -32,7 +33,7 @@ jobs:
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: set up Python
       uses: actions/setup-python@v4
       with:
@@ -62,7 +63,7 @@ jobs:
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: pjnath-test
@@ -80,7 +81,7 @@ jobs:
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: pjsip-test
@@ -99,7 +100,7 @@ jobs:
     - name: configure
       run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: set up Python
       uses: actions/setup-python@v4
       with:
@@ -117,7 +118,7 @@ jobs:
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=/usr/local/
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: set up Python
       uses: actions/setup-python@v4
       with:
@@ -138,7 +139,7 @@ jobs:
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -DHAS_VID_CODEC_TEST=0 -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: set up Python
       uses: actions/setup-python@v4
       with:
@@ -168,7 +169,7 @@ jobs:
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: pjnath-test
@@ -186,7 +187,7 @@ jobs:
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: pjsip-test
@@ -204,13 +205,13 @@ jobs:
     - name: configure ffmpeg
       run: cd FFmpeg && LDFLAGS="-Wl,-ld_classic" ./configure --enable-shared --disable-static --enable-gpl --enable-libx264
     - name: build ffmpeg
-      run: cd FFmpeg && make -j10 && sudo make install
+      run: cd FFmpeg && $MAKE_FAST && sudo make install
     - name: config site
       run: echo -e "#define PJMEDIA_HAS_VIDEO 1\n" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: set up Python
       uses: actions/setup-python@v4
       with:
@@ -230,7 +231,7 @@ jobs:
     - name: configure
       run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: set up Python
       uses: actions/setup-python@v4
       with:
