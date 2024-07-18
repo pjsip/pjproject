@@ -221,6 +221,11 @@ PJ_INLINE(void) ut_usage()
     puts("  --stop-err       Stop testing on error");
     puts("  --shuffle        Shuffle the test order");
     puts("  --seed N         Set shuffle random seed (must be >= 0)");
+    puts("  --stdout-buf N   Set stdout buffering mode:");
+    puts("  --stderr-buf N   Set stderr buffering mode:");
+    puts("                   0: unbufferred (default for stderr)");
+    puts("                   1: line");
+    puts("                   2: fully bufferred (default for stdout)");
     puts("  -v, --verbose    Show info when starting/stopping tests");
 }
 
@@ -275,6 +280,34 @@ PJ_INLINE(pj_status_t) ut_parse_args(ut_app_t *ut_app, int *argc, char *argv[])
 
     ut_app->verbosity = pj_argparse_get_bool(argc, argv, "-v") ||
                         pj_argparse_get_bool(argc, argv, "--verbose");
+
+    itmp = -101;
+    if (pj_argparse_get_int(argc, argv, "--stdout-buf", &itmp)==PJ_SUCCESS &&
+        itmp != -101)
+    {
+        switch (itmp) {
+            case 0: setvbuf(stdout, NULL, _IONBF, 0); break;
+            case 1: setvbuf(stdout, NULL, _IOLBF, 0); break;
+            case 2: setvbuf(stdout, NULL, _IOFBF, 0); break;
+            default:
+                printf("Error: invalid --stdout-buf value %d\n", itmp);
+                return PJ_EINVAL;
+        }
+    }
+
+    itmp = -101;
+    if (pj_argparse_get_int(argc, argv, "--stderr-buf", &itmp)==PJ_SUCCESS &&
+        itmp != -101)
+    {
+        switch (itmp) {
+            case 0: setvbuf(stderr, NULL, _IONBF, 0); break;
+            case 1: setvbuf(stderr, NULL, _IOLBF, 0); break;
+            case 2: setvbuf(stderr, NULL, _IOFBF, 0); break;
+            default:
+                printf("Error: invalid --stderr-buf value %d\n", itmp);
+                return PJ_EINVAL;
+        }
+    }
 
     return PJ_SUCCESS;
 }
