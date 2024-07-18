@@ -93,6 +93,7 @@ typedef struct vconf_port
     unsigned             idx;           /**< Port index.                    */
     pj_str_t             name;          /**< Port name.                     */
     pjmedia_port        *port;          /**< Video port.                    */
+    pj_bool_t            is_new;        /**< Port newly added?              */
     pjmedia_format       format;        /**< Copy of port format info.      */
     pj_uint32_t          ts_interval;   /**< Port put/get interval.         */
     pj_timestamp         ts_next;       /**< Time for next put/get_frame(). */
@@ -340,6 +341,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf)
         vid_conf->clock = NULL;
     }
 
+    /* Flush any pending operation (connect, disconnect, etc) */
+    handle_op_queue(vid_conf);
+
     /* Remove any registered ports (at least to cleanup their pool) */
     for (i=0; i < vid_conf->opt.max_slot_cnt; ++i) {
         if (vid_conf->ports[i]) {
@@ -395,19 +399,16 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 
     pj_mutex_lock(vid_conf->mutex);
 
-    if (vid_conf->port_cnt >= vid_conf->opt.max_slot_cnt) {
-        PJ_PERROR(3,(THIS_FILE, PJ_ETOOMANY, "Add port %s failed", name->ptr));
-        pj_assert(!"Too many ports");
-        pj_mutex_unlock(vid_conf->mutex);
-        return PJ_ETOOMANY;
-    }
-
     /* Find empty port in the conference bridge. */
     for (index=0; index < vid_conf->opt.max_slot_cnt; ++index) {
         if (vid_conf->ports[index] == NULL)
             break;
     }
-    pj_assert(index != vid_conf->opt.max_slot_cnt);
+    if (index == vid_conf->opt.max_slot_cnt) {
+        PJ_PERROR(3,(THIS_FILE, PJ_ETOOMANY, "Add port %s failed", name->ptr));
+        pj_mutex_unlock(vid_conf->mutex);
+        return PJ_ETOOMANY;
+    }
 
     /* Create pool */
     pool = pj_pool_create(parent_pool->factory, name->ptr, 500, 500, NULL);
@@ -553,9 +554,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
         goto on_error;
     }
 
-    /* Register the conf port. */
+    /* Video data flow is not protected, avoid processing this newly
+     * added port.
+     */
+    cport->is_new = PJ_TRUE;
+
+    /* Register the conf port, but don't add port counter yet */
     vid_conf->ports[index] = cport;
-    vid_conf->port_cnt++;
+    //vid_conf->port_cnt++;
 
     PJ_LOG(4,(THIS_FILE,"Added port %d (%.*s)",
               index, (int)cport->name.slen, cport->name.ptr));
@@ -1032,6 +1038,17 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
     if (!pj_list_empty(vid_conf->op_queue)) {
         pj_mutex_lock(vid_conf->mutex);
         handle_op_queue(vid_conf);
+
+        /* Activate any newly added port */
+        for (i=0; i<vid_conf->opt.max_slot_cnt; ++i) {
+            vconf_port *port = vid_conf->ports[i];
+            if (!port || !port->is_new)
+                continue;
+
+            port->is_new = PJ_FALSE;
+            ++vid_conf->port_cnt;
+        }
+
         pj_mutex_unlock(vid_conf->mutex);
     }
 
@@ -1054,8 +1071,8 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
         vconf_port *sink = vid_conf->ports[i];
         pjmedia_format *cur_fmt, *new_fmt;
 
-        /* Skip empty port */
-        if (!sink)
+        /* Skip empty or new port */
+        if (!sink || sink->is_new)
             continue;
 
         /* Increment occupied port counter */

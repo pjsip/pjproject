@@ -1185,8 +1185,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
     dst_port = conf->ports[sink_slot];
     if (!src_port || !dst_port) {
         PJ_PERROR(3,(THIS_FILE, PJ_EINVAL,
-                     "Failed connecting ports, make sure ports are valid and "
-                     "source has get_frame() & sink has put_frame()"));
+                     "Failed connecting ports, make sure ports are valid"));
         pj_mutex_unlock(conf->mutex);
         pj_log_pop_indent();
         return PJ_EINVAL;
@@ -1245,16 +1244,11 @@ static void op_connect_ports(pjmedia_conf *conf, const op_param *prm)
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
 
-    /*
-    if (!src_port || !src_port->port->get_frame ||
-        !dst_port || !dst_port->port->put_frame)
-    {
+    if (!src_port || !dst_port) {
         PJ_PERROR(3,(THIS_FILE, PJ_EINVAL,
-                     "Failed connecting ports, make sure ports are valid and "
-                     "source has get_frame() & sink has put_frame()"));
+                     "Failed connecting ports, make sure ports are valid"));
         return;
     }
-    */
 
     /* Check if connection has been made */
     for (i=0; i<src_port->listener_cnt; ++i) {
