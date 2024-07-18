@@ -9,7 +9,7 @@ env:
   CI_ARGS: ${{ vars.CI_LIN_ARGS }}
   CI_MODE: ${{ vars.CI_MODE }}
 jobs:
-  build-default:
+  build-lin-default:
   # checking pure lib source distribution with plain configure & make
     runs-on: ubuntu-latest
     steps:
@@ -19,7 +19,7 @@ jobs:
     - name: make
       run: make
 
-  default-full-bundle-1:
+  lin-default-full-bundle-1:
   # full bundle: enable all codecs + AEC + DTLS
   # full bundle 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
     runs-on: ubuntu-latest
@@ -48,7 +48,7 @@ jobs:
     - name: pjsua-test
       run: make pjsua-test
 
-  default-full-bundle-2:
+  lin-default-full-bundle-2:
   # full bundle 2: running pjnath test
     runs-on: ubuntu-latest
     steps:
@@ -64,7 +64,7 @@ jobs:
     - name: pjnath-test
       run: make pjnath-test
 
-  default-full-bundle-3:
+  lin-default-full-bundle-3:
   # full bundle 3: running pjsip test
     runs-on: ubuntu-latest
     steps:
@@ -80,7 +80,7 @@ jobs:
     - name: pjsip-test
       run: make pjsip-test
 
-  build-no-tls:
+  build-lin-no-tls:
   # no TLS
     runs-on: ubuntu-latest
     steps:
@@ -97,7 +97,7 @@ jobs:
   # build-ubuntu-openssl
   # TLS: with OpenSSL (same as build-ubuntu-default)
 
-  build-gnu-tls:
+  build-lin-gnu-tls:
   # TLS: with GnuTLS
     runs-on: ubuntu-latest
     steps:
@@ -111,7 +111,7 @@ jobs:
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
 
-  video-openh264-1:
+  lin-vid-openh264-1:
   # video: video enabled with vpx and openh264
   # video 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
     runs-on: ubuntu-latest
@@ -144,7 +144,7 @@ jobs:
     - name: pjsua-test
       run: make pjsua-test
 
-  video-openh264-2:
+  lin-vid-openh264-2:
   # video 2: running pjnath test
     runs-on: ubuntu-latest
     steps:
@@ -164,7 +164,7 @@ jobs:
     - name: pjnath-test
       run: make pjnath-test
 
-  video-openh264-3:
+  lin-vid-openh264-3:
   # video: 3: running pjsip test
     runs-on: ubuntu-latest
     steps:
@@ -184,7 +184,7 @@ jobs:
     - name: pjsip-test
       run: make pjsip-test
 
-  build-video-ffmpeg:
+  build-lin-vid-ffmpeg:
   # video enabled with vpx and ffmpeg and x264
     runs-on: ubuntu-latest
     steps:

@@ -9,7 +9,7 @@ env:
   CI_ARGS: ${{ vars.CI_LIN_ARGS }}
   CI_MODE: ${{ vars.CI_MODE }}
 jobs:
-  build-default:
+  build-mac-default:
   # checking pure lib source distribution with plain configure & make
     runs-on: macos-latest
     steps:
@@ -19,7 +19,7 @@ jobs:
     - name: make
       run: make
 
-  default-full-bundle-1:
+  mac-default-full-bundle-1:
   # full bundle: enable all codecs + AEC + DTLS
   # full bundle 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
     runs-on: macos-latest
@@ -50,7 +50,7 @@ jobs:
     - name: pjsua-test
       run: make pjsua-test
 
-  default-full-bundle-2:
+  mac-default-full-bundle-2:
   # full bundle 2: running pjnath test
     runs-on: macos-latest
     steps:
@@ -68,7 +68,7 @@ jobs:
     - name: pjnath-test
       run: make pjnath-test
 
-  default-full-bundle-3:
+  mac-default-full-bundle-3:
   # full bundle 3: running pjsip test
     runs-on: macos-latest
     steps:
@@ -89,7 +89,7 @@ jobs:
   # build-ubuntu-no-tls:
   # no TLS (same as build-mac-default)
 
-  build-openssl:
+  build-mac-openssl:
   # TLS: with OpenSSL
     runs-on: macos-latest
     steps:
@@ -107,7 +107,7 @@ jobs:
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
 
-  build-gnu-tls:
+  build-mac-gnu-tls:
   # TLS: with GnuTLS
     runs-on: macos-latest
     steps:
@@ -125,7 +125,7 @@ jobs:
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
 
-  video-openh264-1:
+  mac-video-openh264-1:
   # video: video enabled with vpx and openh264
   # video 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
     runs-on: macos-latest
@@ -156,7 +156,7 @@ jobs:
     - name: pjsua-test
       run: make pjsua-test
 
-  video-openh264-2:
+  mac-video-openh264-2:
   # video 2: running pjnath test
     runs-on: macos-latest
     steps:
@@ -174,7 +174,7 @@ jobs:
     - name: pjnath-test
       run: make pjnath-test
 
-  video-openh264-3:
+  mac-video-openh264-3:
   # video 3: running pjsip test
     runs-on: macos-latest
     steps:
@@ -192,7 +192,7 @@ jobs:
     - name: pjsip-test
       run: make pjsip-test
 
-  build-video-ffmpeg:
+  build-mac-video-ffmpeg:
   # video enabled with vpx and ffmpeg and x264
     runs-on: macos-latest
     steps:
@@ -218,7 +218,7 @@ jobs:
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
 
-  build-video-vid-toolbox:
+  build-mac-video-vid-toolbox:
   # video enabled with vpx and video toolbox
     runs-on: macos-latest
     steps:

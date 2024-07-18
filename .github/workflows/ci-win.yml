@@ -6,7 +6,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
-  build-default:
+  build-win-default:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
@@ -40,7 +40,7 @@ jobs:
         msbuild swig_java_pjsua2.vcxproj /p:PlatformToolset=v143 /p:Configuration=Debug /p:Platform=win32 /p:UseEnv=true
       shell: cmd
 
-  openssl-1:
+  win-openssl-1:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
@@ -97,7 +97,7 @@ jobs:
         ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
       shell: powershell
 
-  openssl-2:
+  win-openssl-2:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
@@ -160,7 +160,7 @@ jobs:
         python runall.py
       shell: powershell
 
-  build-gnu-tls:
+  build-win-gnu-tls:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
@@ -198,7 +198,7 @@ jobs:
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
 
-  vid-libvpx-schannel-1:
+  win-vid-libvpx-schannel-1:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
@@ -291,7 +291,7 @@ jobs:
         ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
       shell: powershell
 
-  vid-libvpx-schannel-2:
+  win-vid-libvpx-schannel-2:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
@@ -373,7 +373,7 @@ jobs:
         cd tests/pjsua
         python runall.py
 
-  build-vid-ffmpeg:
+  build-win-vid-ffmpeg:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
