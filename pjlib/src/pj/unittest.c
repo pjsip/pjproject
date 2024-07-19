@@ -114,14 +114,27 @@ PJ_DEF(void) pj_test_suite_add_case(pj_test_suite *suite, pj_test_case *tc)
     pj_list_push_back(&suite->tests, tc);
 }
 
+/* Own PRNG with Linear congruential generator because rand() yields
+ * difference sequence on different machines even with the same seed.
+ */
+static unsigned rand_int(unsigned seed)
+{
+    enum {
+        M = 1<<31,
+        A = 1103515245,
+        C = 12345
+    };
+
+    return ((A*seed) + C) % M;
+}
+
 /* Shuffle */
 PJ_DEF(void) pj_test_suite_shuffle(pj_test_suite *suite, int seed)
 {
     pj_test_case src, *tc;
-    unsigned total, movable;
+    unsigned rand, total, movable;
 
-    if (seed >= 0)
-        pj_srand(seed);
+    rand = (seed >= 0) ? seed : pj_rand();
 
     /* Move tests to new list */
     pj_list_init(&src);
@@ -147,10 +160,11 @@ PJ_DEF(void) pj_test_suite_shuffle(pj_test_suite *suite, int seed)
 
     /* Shuffle non KEEP_LAST tests */
     while (movable > 0) {
-        int step = pj_rand() % total;
-        if (step < 0)
-            continue;
-        
+        unsigned step;
+
+        rand = rand_int(rand);
+        step = rand % total;
+
         for (tc=src.next; step>0; tc=tc->next, --step)
             ;
         

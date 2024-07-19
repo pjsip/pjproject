@@ -154,6 +154,12 @@ PJ_INLINE(pj_status_t) ut_run_tests(ut_app_t *ut_app, const char *title,
     pj_test_stat stat;
     pj_status_t status;
 
+    if (ut_app->prm_shuffle) {
+        PJ_LOG(3,(THIS_FILE, "Shuffling tests, random seed=%d",
+                  ut_app->prm_seed));
+        pj_test_suite_shuffle(&ut_app->suite, ut_app->prm_seed);
+    }
+
     if (ut_app->prm_list_test) {
         ut_list_tests(ut_app, title);
         return PJ_SUCCESS;
@@ -192,12 +198,6 @@ PJ_INLINE(pj_status_t) ut_run_tests(ut_app_t *ut_app, const char *title,
               ut_app->ntests, title, runner_prm.nthreads, 
               runner_prm.nthreads>1?"s":""));
     
-    if (ut_app->prm_shuffle) {
-        PJ_LOG(3,(THIS_FILE, "Shuffling tests, random seed=%d",
-                  ut_app->prm_seed));
-        pj_test_suite_shuffle(&ut_app->suite, ut_app->prm_seed);
-    }
-
     pj_test_run(runner, &ut_app->suite);
     pj_test_runner_destroy(runner);
     pj_test_display_log_messages(&ut_app->suite, ut_app->prm_logging_policy);
