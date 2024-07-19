@@ -35,7 +35,7 @@ jobs:
     - name: make
       run: $MAKE_FAST
     - name: swig bindings
-      run: cd pjsip-apps/src/swig && $MAKE_FAST
+      run: cd pjsip-apps/src/swig && make
     - name: set up Python 3.10 for pjsua test
       uses: actions/setup-python@v2
       with:
@@ -93,7 +93,7 @@ jobs:
     - name: make
       run: $MAKE_FAST
     - name: swig bindings
-      run: cd pjsip-apps/src/swig && $MAKE_FAST
+      run: cd pjsip-apps/src/swig && make
 
   # build-ubuntu-openssl
   # TLS: with OpenSSL (same as build-ubuntu-default)
@@ -110,7 +110,7 @@ jobs:
     - name: make
       run: $MAKE_FAST
     - name: swig bindings
-      run: cd pjsip-apps/src/swig && $MAKE_FAST
+      run: cd pjsip-apps/src/swig && make
 
   lin-vid-openh264-1:
   # video: video enabled with vpx and openh264
@@ -131,7 +131,7 @@ jobs:
     - name: make
       run: $MAKE_FAST
     - name: swig bindings
-      run: cd pjsip-apps/src/swig && $MAKE_FAST
+      run: cd pjsip-apps/src/swig && make
     - name: set up Python 3.10 for pjsua test
       uses: actions/setup-python@v4
       with:
@@ -205,4 +205,4 @@ jobs:
     - name: make
       run: $MAKE_FAST
     - name: swig bindings
-      run: cd pjsip-apps/src/swig && $MAKE_FAST
+      run: cd pjsip-apps/src/swig && make
