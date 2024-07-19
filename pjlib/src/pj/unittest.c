@@ -114,27 +114,35 @@ PJ_DEF(void) pj_test_suite_add_case(pj_test_suite *suite, pj_test_case *tc)
     pj_list_push_back(&suite->tests, tc);
 }
 
-/* Own PRNG with Linear congruential generator because rand() yields
+/* Own PRNG using Linear congruential generator because rand() yields
  * difference sequence on different machines even with the same seed.
  */
-static unsigned rand_int(unsigned seed)
+static pj_uint32_t rand_int(pj_uint32_t seed)
 {
-    enum {
-        M = 1<<31,
-        A = 1103515245,
-        C = 12345
-    };
+#define M   ((pj_uint32_t)(1<<31))
+#define A   ((pj_uint32_t)1103515245)
+#define C   ((pj_uint32_t)12345)
 
-    return ((A*seed) + C) % M;
+    return (pj_uint32_t)(((A*seed) + C) % M);
+
+#undef M
+#undef A
+#undef C
 }
 
 /* Shuffle */
 PJ_DEF(void) pj_test_suite_shuffle(pj_test_suite *suite, int seed)
 {
     pj_test_case src, *tc;
-    unsigned rand, total, movable;
+    pj_uint32_t rand;
+    unsigned total, movable;
 
-    rand = (seed >= 0) ? seed : pj_rand();
+    /* although pj_rand() is not used here, still call pj_srand() to make
+     * RNG used by other parts of the program repeatable. This should be
+     * the only call to pj_srand() in the whole program.
+     */
+    pj_srand(seed);
+    rand = (pj_uint32_t)((seed >= 0) ? seed : pj_rand());
 
     /* Move tests to new list */
     pj_list_init(&src);
