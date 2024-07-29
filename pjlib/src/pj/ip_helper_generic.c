@@ -527,7 +527,7 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
             nlmsg_ptr = NLMSG_NEXT(nlmsg_ptr, nlmsg_len))
         {
             if (nlmsg_ptr->nlmsg_type == NLMSG_DONE)
-                goto nlmsg_done;
+                goto on_return;
 
             struct ifaddrmsg *ifaddrmsg_ptr;
             struct rtattr *rtattr_ptr;
@@ -567,8 +567,8 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
             }
         }
     }
-    nlmsg_done:;
 
+on_return:
     close(fd);
     *count = idx;
 
