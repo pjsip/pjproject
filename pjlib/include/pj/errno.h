@@ -82,7 +82,7 @@ PJ_BEGIN_DECL
  * Guidelines on error message length.
  */
 #ifndef PJ_ERR_MSG_SIZE
-#define PJ_ERR_MSG_SIZE  80
+#   define PJ_ERR_MSG_SIZE  80
 #endif
 
 /**
@@ -92,13 +92,15 @@ PJ_BEGIN_DECL
 #   define PJ_PERROR_TITLE_BUF_SIZE     120
 #endif
 
- /**
-  * On Windows XP and later, force the use of GetThreadLocale() in pj_strerror()
-  * to obtain the required locale and corresponding language for the platform error message string.
-  * Default value is set to "no" for compatibility reason, which means use "User default language".
-  *
-  * Default: 0 (no!)
-  */
+/**
+ * On Windows XP and later, force the use of GetThreadLocale() in pj_strerror()
+ * to obtain the required locale and corresponding language for the platform
+ * error message string.
+ * Default value is set to "no" for compatibility reason, which means use
+ * "User default language".
+ *
+ * Default: 0 (no)
+ */
 #ifndef PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE
 #   define PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE      0
 #endif
