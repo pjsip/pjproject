@@ -2141,7 +2141,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      */
     if (dlg->mod_data[pjsua_var.mod.id] == NULL) {
         /* In PJSUA2, on_incoming_call() may be called from 
-         * on_media_transport_created() hence this might already set
+         * on_create_media_transport() hence this might already set
          * to allow notification about fail events via on_call_state() and
          * on_call_tsx_state().
          */
@@ -2168,7 +2168,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
          */
         if (pjsua_var.ua_cfg.cb.on_incoming_call) {
             /* For PJSUA2, avoid invoking this callback again when it has been
-             * invoked from on_media_transport_created().
+             * invoked from on_create_media_transport().
              */
             if (call->incoming_data) {
                 pjsua_var.ua_cfg.cb.on_incoming_call(acc_id, call_id, rdata);
