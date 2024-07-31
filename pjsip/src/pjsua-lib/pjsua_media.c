@@ -2823,9 +2823,13 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                 pj_bool_t use_ipv6;
                 pj_bool_t use_nat64;
 
-                use_ipv6 = PJ_HAS_IPV6 &&
-                           (pjsua_var.acc[call->acc_id].cfg.ipv6_media_use !=
-                            PJSUA_IPV6_DISABLED);
+                if (rem_sdp) {
+                    use_ipv6 = (get_media_ip_version(call_med, rem_sdp) == 6);
+                } else {
+                    use_ipv6 = PJ_HAS_IPV6 &&
+                        (pjsua_var.acc[call->acc_id].cfg.ipv6_media_use !=
+                         PJSUA_IPV6_DISABLED);
+                }
                 use_nat64 = PJ_HAS_IPV6 &&
                             (pjsua_var.acc[call->acc_id].cfg.nat64_opt !=
                              PJSUA_NAT64_DISABLED);
