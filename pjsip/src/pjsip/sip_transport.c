@@ -2157,20 +2157,43 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
             msg_status = pjsip_find_msg(current_pkt, remaining_len, PJ_FALSE, 
                                         &msg_fragment_size);
             if (msg_status != PJ_SUCCESS) {
-                if (remaining_len == PJSIP_MAX_PKT_LEN) {
-                    mgr->on_rx_msg(mgr->endpt, PJSIP_ERXOVERFLOW, rdata);
-                    
-                    /* Notify application about the message overflow */
+                pj_status_t dd_status = msg_status;
+
+                if (msg_status == PJSIP_EPARTIALMSG) {
+                    if (remaining_len != PJSIP_MAX_PKT_LEN) {
+                        /* Not enough data in packet. */
+                        return total_processed;
+                    }
+                    dd_status = PJSIP_ERXOVERFLOW;
+                } else {
+                    /* msg_status == PJSIP_EMISSINGHDR ||
+                       msg_status == PJSIP_EINVALIDHDR
+                     */
+                    char errbuf[128];
+                    pj_str_t errstr;
+
+                    errstr = pjsip_strerror(msg_status, errbuf, sizeof(errbuf) - 1);
+                    errstr.ptr[errstr.slen] = '\0';
+                    PJ_LOG(1, (THIS_FILE, "%s Unable to match whole message: %s",
+                               rdata->tp_info.transport->obj_name, errstr.ptr));
+                }
+
+                if (1) {
+                    mgr->on_rx_msg(mgr->endpt, dd_status, rdata);
+
+                    /* Notify application */
                     if (mgr->tp_drop_data_cb) {
                         pjsip_tp_dropped_data dd;
                         pj_bzero(&dd, sizeof(dd));
                         dd.tp = tr;
                         dd.data = current_pkt;
                         dd.len = msg_fragment_size;
-                        dd.status = PJSIP_ERXOVERFLOW;
+                        dd.status = dd_status;
                         (*mgr->tp_drop_data_cb)(&dd);
                     }
+                }
 
+                if (msg_status == PJSIP_EPARTIALMSG) {
                     if (rdata->tp_info.transport->idle_timer.id == 
                                                          INITIAL_IDLE_TIMER_ID)
                     {
@@ -2184,13 +2207,10 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 
                         pjsip_transport_shutdown(rdata->tp_info.transport);
                     }
-                    
-                    /* Exhaust all data. */
-                    return rdata->pkt_info.len;
-                } else {
-                    /* Not enough data in packet. */
-                    return total_processed;
                 }
+
+                /* Exhaust all data. */
+                return rdata->pkt_info.len;
             }
         }
 
