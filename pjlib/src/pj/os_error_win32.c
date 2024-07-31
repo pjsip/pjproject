@@ -174,10 +174,13 @@ int platform_strerror( pj_os_err_type os_errcode,
 
     if (!len) {
         DWORD   dwLanguageId;
-#if defined(PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE) && (PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE==1) && (WINVER >= 0x0500)
-        dwLanguageId = LANGIDFROMLCID(GetThreadLocale());        /* current thread language */
+#if defined(PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE) && \
+    (PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE==1) && (WINVER >= 0x0500)
+        /* current thread language */
+        dwLanguageId = LANGIDFROMLCID(GetThreadLocale());
 #else
-        dwLanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);/* LANG_USER_DEFAULT - User default language */
+        /* LANG_USER_DEFAULT - User default language */
+        dwLanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
 #endif
 #if PJ_NATIVE_STRING_IS_UNICODE
         len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
