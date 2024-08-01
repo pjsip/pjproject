@@ -45,7 +45,12 @@
 #define PJ_HAS_SETJMP_H             1
 #define PJ_HAS_STDARG_H             1
 #define PJ_HAS_STDDEF_H             1
-#undef  PJ_HAS_STDINT_H
+/* vs2010/msvc10 or later has stdint.h */
+#if PJ_CC_VER_1 >= 16
+#  define PJ_HAS_STDINT_H           1
+#else
+#  undef  PJ_HAS_STDINT_H
+#endif
 #define PJ_HAS_STDIO_H              1
 #define PJ_HAS_STDLIB_H             1
 #define PJ_HAS_STRING_H             1
