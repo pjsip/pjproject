@@ -2161,9 +2161,12 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 
                 if (msg_status == PJSIP_EPARTIALMSG) {
                     if (remaining_len != PJSIP_MAX_PKT_LEN) {
-                        /* Not enough data in packet. */
+                        /* We only get partial message: Not enough data in
+                         * packet.
+                         */
                         return total_processed;
                     }
+                    /* Overflow, buffer too small. */
                     dd_status = PJSIP_ERXOVERFLOW;
                 } else {
                     /* msg_status == PJSIP_EMISSINGHDR ||
@@ -2174,7 +2177,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 
                     errstr = pjsip_strerror(msg_status, errbuf, sizeof(errbuf) - 1);
                     errstr.ptr[errstr.slen] = '\0';
-                    PJ_LOG(1, (THIS_FILE, "%s Unable to match whole message: %s",
+                    PJ_LOG(4, (THIS_FILE, "%s Unable to match whole message: %s",
                                rdata->tp_info.transport->obj_name, errstr.ptr));
                 }
 
@@ -2206,6 +2209,9 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
                             rdata->tp_info.transport->obj_name));
 
                         pjsip_transport_shutdown(rdata->tp_info.transport);
+                    } else {
+                        PJ_LOG(4, (THIS_FILE, "Insufficient buffer to receive "
+                                              "incoming packet."));
                     }
                 }
 
