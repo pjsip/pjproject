@@ -49,8 +49,9 @@ static void dump_status(pj_turn_srv *srv)
     }
 
     printf("Worker threads : %d\n", srv->core.thread_cnt);
-    printf("Total mem usage: %u.%03uMB\n", (unsigned)(g_cp.used_size / 1000000), 
-           (unsigned)((g_cp.used_size % 1000000)/1000));
+    /* Field used_size is deprecated by #3897 */
+    //printf("Total mem usage: %u.%03uMB\n", (unsigned)(g_cp.used_size / 1000000),
+    //       (unsigned)((g_cp.used_size % 1000000)/1000));
     printf("UDP port range : %u %u %u (next/min/max)\n", srv->ports.next_udp,
            srv->ports.min_udp, srv->ports.max_udp);
     printf("TCP port range : %u %u %u (next/min/max)\n", srv->ports.next_tcp,

@@ -75,8 +75,12 @@ PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp,
     cp->factory.create_pool = &cpool_create_pool;
     cp->factory.release_pool = &cpool_release_pool;
     cp->factory.dump_status = &cpool_dump_status;
-    cp->factory.on_block_alloc = &cpool_on_block_alloc;
-    cp->factory.on_block_free = &cpool_on_block_free;
+
+    /* Deprecated, these callbacks are only used for updating cp.used_size &
+     * cp.peak_used_size which are no longer used.
+     */
+    //cp->factory.on_block_alloc = &cpool_on_block_alloc;
+    //cp->factory.on_block_free = &cpool_on_block_free;
 
     pool = pj_pool_create_on_buf("cachingpool", cp->pool_buf, sizeof(cp->pool_buf));
     status = pj_lock_create_simple_mutex(pool, "cachingpool", &cp->lock);
@@ -220,6 +224,7 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
 #if PJ_SAFE_POOL
     /* Make sure pool is still in our used list */
     if (pj_list_find_node(&cp->used_list, pool) != pool) {
+        pj_lock_release(cp->lock);
         pj_assert(!"Attempt to destroy pool that has been destroyed before");
         return;
     }

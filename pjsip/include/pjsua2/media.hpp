@@ -96,6 +96,13 @@ public:
     MediaFormatAudio() : clockRate(0), channelCount(0), frameTimeUsec(0),
                          bitsPerSample(0), avgBps(0), maxBps(0)
     {}
+
+    /**
+     * Initialization
+     */
+    void init(pj_uint32_t formatId, unsigned clockRate, unsigned channelCount,
+              int frameTimeUsec, int bitsPerSample,
+              pj_uint32_t avgBps=0, pj_uint32_t maxBps=0);
 };
 
 /**
@@ -119,6 +126,21 @@ struct MediaFormatVideo : public MediaFormat
      * Export to pjmedia_format.
      */
     pjmedia_format toPj() const;
+
+public:
+    /**
+     * Default constructor
+     */
+    MediaFormatVideo() : width(0), height(0), fpsNum(0),
+                         fpsDenum(1), avgBps(0), maxBps(0)
+    {}
+
+    /**
+     * Initialization
+     */
+    void init(pj_uint32_t formatId, unsigned width, unsigned height,
+              int fpsNum, int fpsDenum=1,
+              pj_uint32_t avgBps=0, pj_uint32_t maxBps=0);
 };
 
 /** Array of MediaFormatAudio */
@@ -2026,12 +2048,16 @@ struct VideoPreviewOpParam {
     unsigned                windowFlags;
 
     /**
-     * Media format video. If left uninitialized, this parameter will not be used and 
-     * the capture device will be opened using PJMEDIA wrapper default format, 
-     * e.g: 
+     * Media format video. By default, this parameter is uninitialized
+     * and will not be used.
+     *
+     * To initialize it, use MediaFormatVideo::init().
+     * If left uninitialized, the capture device will be opened using
+     * PJMEDIA wrapper default format, e.g:
      * - Android : PJMEDIA_FORMAT_I420 using the first supported size and 15fps
      * - iOS : PJMEDIA_FORMAT_BGRA using size 352x288 and 15fps
-     * Note that when the preview is already opened, this setting will be ignored.
+     * Note that when the preview is already opened, this setting will be
+     * ignored.
      */
     MediaFormatVideo        format;
 
@@ -2613,6 +2639,36 @@ struct CodecOpusConfig
 
     pjmedia_codec_opus_config toPj() const;
     void fromPj(const pjmedia_codec_opus_config &config);
+};
+
+/**
+ * Lyra codec setting;
+ */
+struct CodecLyraConfig
+{
+    /**
+     * The value represents the decoder bitrate requested by the receiver.
+     * Endpoints can be configured with different bitrates. For example,
+     * the local endpoint might be set to a bitrate of 3200, while
+     * the remote endpoint is set to 6000. In this scenario, the remote
+     * endpoint will send data at 3200 bitrate, while the local endpoint
+     * will send data at 6000 bitrate. Valid bitrate: 3200, 6000, 9200.
+     * By default it is set to PJMEDIA_CODEC_LYRA_DEFAULT_BIT_RATE.
+     */
+    unsigned   bitRate;
+
+    /**
+     * Lyra required some additional (model) files, including
+     * \b lyra_config.binarypb , \b lyragan.tflite , \b quantizer.tflite and
+     * \b soundstream_encoder.tflite .
+     * This setting represents the folder containing the above files.
+     * The specified folder should contain these files. If an invalid folder
+     * is provided, the codec creation will fail.
+     */
+    string     modelPath;
+
+    pjmedia_codec_lyra_config toPj() const;
+    void fromPj(const pjmedia_codec_lyra_config &config);
 };
 
 /**

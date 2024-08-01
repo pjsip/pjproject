@@ -70,6 +70,22 @@ pjmedia_format MediaFormatAudio::toPj() const
     return pj_format;
 }
 
+void MediaFormatAudio::init(pj_uint32_t formatId,
+                            unsigned clockRate, unsigned channelCount,
+                            int frameTimeUsec, int bitsPerSample,
+                            pj_uint32_t avgBps, pj_uint32_t maxBps)
+{
+    type = PJMEDIA_TYPE_AUDIO;
+    id = formatId;
+
+    this->clockRate = clockRate;
+    this->channelCount = channelCount;
+    this->frameTimeUsec = frameTimeUsec;
+    this->bitsPerSample = bitsPerSample;
+    this->avgBps = avgBps;
+    this->maxBps = maxBps;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /* Audio Media operations. */
 void ConfPortInfo::fromPj(const pjsua_conf_port_info &port_info)
@@ -1559,6 +1575,27 @@ pjmedia_format MediaFormatVideo::toPj() const
     return pj_format;
 }
 
+void MediaFormatVideo::init(pj_uint32_t formatId,
+                            unsigned width, unsigned height,
+                            int fpsNum, int fpsDenum,
+                            pj_uint32_t avgBps, pj_uint32_t maxBps)
+{
+#if PJSUA_HAS_VIDEO
+    type = PJMEDIA_TYPE_VIDEO;
+    id = formatId;
+
+    this->width = width;
+    this->height = height;
+    this->fpsNum = fpsNum;
+    this->fpsDenum = fpsDenum;
+    this->avgBps = avgBps;
+    this->maxBps = maxBps;
+#else
+    type = PJMEDIA_TYPE_UNKNOWN;
+#endif
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 void VideoDevInfo::fromPj(const pjmedia_vid_dev_info &dev_info)
 {
@@ -1993,6 +2030,22 @@ void CodecOpusConfig::fromPj(const pjmedia_codec_opus_config &config)
     packet_loss = config.packet_loss;
     complexity = config.complexity;
     cbr = PJ2BOOL(config.cbr);
+}
+
+pjmedia_codec_lyra_config CodecLyraConfig::toPj() const
+{
+    pjmedia_codec_lyra_config config;
+
+    config.bit_rate = bitRate;
+    config.model_path = str2Pj(modelPath);
+
+    return config;
+}
+
+void CodecLyraConfig::fromPj(const pjmedia_codec_lyra_config &config)
+{
+    bitRate = config.bit_rate;
+    modelPath = pj2Str(config.model_path);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

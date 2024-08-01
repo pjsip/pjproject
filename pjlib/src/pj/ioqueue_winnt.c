@@ -495,6 +495,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
     }
 #endif
 
+    pj_lock_release(ioqueue->lock);
     if (ioqueue->auto_delete_lock)
         pj_lock_destroy(ioqueue->lock);
 

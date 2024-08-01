@@ -877,6 +877,12 @@ static void transport_send_callback(pjsip_transport *transport,
 
     PJ_UNUSED_ARG(transport);
 
+    /* Print log on successful sending */
+    if (size > 0) {
+        PJ_LOG(5,(transport->obj_name,
+                  "%s sent successfully", pjsip_tx_data_get_info(tdata)));
+    }
+
     /* Mark pending off so that app can resend/reuse txdata from inside
      * the callback.
      */
@@ -965,6 +971,13 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
 
     if (status != PJ_EPENDING) {
         tdata->is_pending = 0;
+
+        /* Print log on successful sending */
+        if (status == PJ_SUCCESS) {
+            PJ_LOG(5,(tr->obj_name,
+                      "%s sent successfully", pjsip_tx_data_get_info(tdata)));
+        }
+
         pjsip_tx_data_dec_ref(tdata);
     }
 
@@ -1283,8 +1296,10 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
         /* Allocate new entry for the freelist. */
         for (; i < PJSIP_TRANSPORT_ENTRY_ALLOC_CNT; ++i) {
             tp_add = PJ_POOL_ZALLOC_T(mgr->pool, transport);
-            if (!tp_add)
+            if (!tp_add){
+                pj_lock_release(mgr->lock);
                 return PJ_ENOMEM;
+            }  
             pj_list_init(tp_add);
             pj_list_push_back(&mgr->tp_entry_freelist, tp_add);
         }
@@ -2471,6 +2486,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                 (sel->u.ip_ver == PJSIP_TPSELECTOR_USE_IPV6_ONLY &&
                  pjsip_transport_type_get_af(type) != pj_AF_INET6()))
             {
+                pj_lock_release(mgr->lock);
                 TRACE_((THIS_FILE, "Address type in tpsel not matched"));
                 return PJSIP_ETPNOTSUITABLE;
             }

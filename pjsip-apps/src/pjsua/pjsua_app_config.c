@@ -94,6 +94,7 @@ static void usage(void)
     puts  ("  --ipv6              Create SIP IPv6 transports.");
 #endif
     puts  ("  --set-qos           Enable QoS tagging for SIP and media.");
+    puts  ("  --no-mci            Disable message composition indication (RFC 3994)");
     puts  ("  --local-port=port   Set TCP/UDP port. This implicitly enables both ");
     puts  ("                      TCP and UDP transports on the specified port, unless");
     puts  ("                      if TCP or UDP is disabled.");
@@ -392,7 +393,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_TLS_NEG_TIMEOUT, OPT_TLS_CIPHER,
            OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
            OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES, OPT_JB_MAX_SIZE,
-           OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6, OPT_QOS,
+           OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6, OPT_QOS, OPT_MCI,
 #ifdef _IONBF
            OPT_STDOUT_NO_BUF,
 #endif
@@ -533,6 +534,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "ipv6",        0, 0, OPT_IPV6},
 #endif
         { "set-qos",     0, 0, OPT_QOS},
+        { "no-mci",     0, 0, OPT_MCI},
         { "use-timer",  1, 0, OPT_TIMER},
         { "timer-se",   1, 0, OPT_TIMER_SE},
         { "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
@@ -1466,6 +1468,9 @@ static pj_status_t parse_args(int argc, char *argv[],
             cfg->udp_cfg.qos_params.flags = PJ_QOS_PARAM_HAS_DSCP;
             cfg->udp_cfg.qos_params.dscp_val = 0x18;
             break;
+        case OPT_MCI:
+            cfg->no_mci = PJ_TRUE;
+            break;
         case OPT_VIDEO:
             cfg->vid.vid_cnt = 1;
             cfg->vid.in_auto_show = PJ_TRUE;
@@ -1977,6 +1982,11 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     }
     if (config->enable_qos) {
         pj_strcat2(&cfg, "--set-qos\n");
+    }
+
+    /* Message Composition Indication */
+    if (config->no_mci) {
+        pj_strcat2(&cfg, "--no-mci\n");
     }
 
     /* UDP Transport. */

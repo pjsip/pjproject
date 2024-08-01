@@ -474,6 +474,8 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     if (rdata->tp_info.transport->dir == PJSIP_TP_DIR_OUTGOING) {
         pj_strdup(dlg->pool, &dlg->initial_dest,
                   &rdata->tp_info.transport->remote_name.host);
+        PJ_LOG(5, (THIS_FILE, "Saving initial dest %.*s",
+                   (int)dlg->initial_dest.slen, dlg->initial_dest.ptr));
     }
 
     /* Init remote's contact from Contact header.
@@ -1222,8 +1224,11 @@ static pj_status_t dlg_create_request_throw( pjsip_dialog *dlg,
     /* Copy the initial destination host to tdata. This information can be
      * used later by transport for transport selection.
      */
-    if (dlg->initial_dest.slen)
+    if (dlg->initial_dest.slen) {
         pj_strdup(tdata->pool, &tdata->dest_info.name, &dlg->initial_dest);
+        PJ_LOG(5, (THIS_FILE, "Setting initial dest %.*s",
+                   (int)dlg->initial_dest.slen, dlg->initial_dest.ptr));
+    }
 
     /* Done. */
     *p_tdata = tdata;
@@ -1878,6 +1883,8 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
         {
             pj_strdup(dlg->pool, &dlg->initial_dest,
                       &rdata->tp_info.transport->remote_name.host);
+            PJ_LOG(5, (THIS_FILE, "Saving initial dest %.*s",
+                       (int)dlg->initial_dest.slen, dlg->initial_dest.ptr));
         } else {
             /* Reset the stored remote name if the transport is a server
              * transport.

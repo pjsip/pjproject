@@ -2787,6 +2787,9 @@ typedef struct pjsua_ip_change_param
 {
     /**
      * If set to PJ_TRUE, this will restart the transport listener.
+     * Note that if restarting listener is enabled and the listener is
+     * configured with a bound address, the address will be reset
+     * so it will bind to any address (e.g: IPv4 "0.0.0.0" or IPv6 "::").
      * 
      * Default : PJ_TRUE
      */
@@ -3205,9 +3208,8 @@ typedef struct pjsua_transport_config
     pj_str_t            bound_addr;
 
     /**
-     * This specifies TLS settings for TLS transport. It is only be used
-     * when this transport config is being used to create a SIP TLS
-     * transport.
+     * This specifies TLS settings for TLS transport. 
+     * It’s only used when creating a SIP TLS transport.
      */
     pjsip_tls_setting   tls_setting;
 
@@ -3796,8 +3798,8 @@ typedef struct pjsua_turn_config
     pj_stun_auth_cred   turn_auth_cred;
 
     /**
-     * This specifies TLS settings for TURN TLS. It is only be used
-     * when this TLS is used to connect to the TURN server.
+     * This specifies TLS settings for TURN TLS. It’s only applicable when
+     * TLS is used to connect to the TURN server.
      */
     pj_turn_sock_tls_cfg turn_tls_setting;
 
@@ -4549,6 +4551,18 @@ typedef struct pjsua_acc_config
      * Default: PJ_TRUE
      */
     pj_bool_t           register_on_acc_add;
+
+    /**
+     * Specify whether account modification with pjsua_acc_modify() should
+     * automatically update registration if necessary, for example if
+     * account credentials change.
+     *
+     * Disable this when immediate registration is not desirable, such as
+     * during IP address change.
+     *
+     * Default: PJ_FALSE.
+     */
+    pj_bool_t           disable_reg_on_modify;
 
     /**
      * Specify account configuration specific to IP address change used when
@@ -6999,7 +7013,7 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  * Application connects one media termination/slot to another by calling
  * #pjsua_conf_connect() function. This will establish <b>unidirectional</b>
  * media flow from the source termination to the sink termination. To
- * establish bidirectional media flow, application wound need to make another
+ * establish bidirectional media flow, application would need to make another
  * call to #pjsua_conf_connect(), this time inverting the source and 
  * destination slots in the parameter.
  *
@@ -7394,8 +7408,8 @@ struct pjsua_media_config
     pj_stun_auth_cred   turn_auth_cred;
 
     /**
-     * This specifies TLS settings for TLS transport. It is only be used
-     * when this TLS is used to connect to the TURN server.
+     * This specifies TLS settings for TLS transport. It’s only applicable
+     * when TLS is used to connect to the TURN server.
      */
     pj_turn_sock_tls_cfg turn_tls_setting;
 

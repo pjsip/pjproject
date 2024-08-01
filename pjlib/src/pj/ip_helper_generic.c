@@ -560,6 +560,7 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
                         pj_sockaddr_init(pj_AF_INET6(), &addr[idx],
                                          &pj_addr_str, 0);
                         ++idx;
+                        break;
                     default:
                         break;
                     }

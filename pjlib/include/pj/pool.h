@@ -849,12 +849,16 @@ struct pj_caching_pool
 
     /**
      * Total size of memory currently used by application.
+     *
+     * This field is deprecated.
      */
     pj_size_t       used_size;
 
     /**
      * The maximum size of memory used by application throughout the life
      * of the caching pool.
+     *
+     * This field is deprecated.
      */
     pj_size_t       peak_used_size;
 

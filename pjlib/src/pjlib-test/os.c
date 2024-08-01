@@ -19,6 +19,10 @@
 #include "test.h"
 #include <pj/log.h>
 #include <pj/os.h>
+#include <string.h>
+#include <stdio.h>
+
+#define THIS_FILE       "os.c"
 
 #if INCLUDE_OS_TEST
 static int endianness_test32(void)
@@ -86,6 +90,141 @@ static int endianness_test32(void)
 #else
 #    error Error: Endianness is not set properly!
 #endif
+
+    return 0;
+}
+
+static int log_written;
+static char test_large_msg[PJ_LOG_MAX_SIZE];
+
+static void log_write(int level, const char *buffer, int len)
+{
+    log_written = len;
+    //printf("%s", buffer);
+}
+
+int log_test(void)
+{
+    pj_log_func *old_func = pj_log_get_log_func();
+    struct log_test_t {
+        const char *title;
+        unsigned decor;
+        const char *fmt;
+        const char *arg;
+        int min_len;
+        int max_len;
+    } log_tests[] = {
+        /* String lengths:
+         *  PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC: 13
+         *  PJ_LOG_HAS_SENDER: PJ_LOG_SENDER_WIDTH+1
+         *  "Hello world!": 12
+         *  PJ_LOG_HAS_NEWLINE: 1
+         */
+        {
+            "normal log",
+            PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC | 
+                PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE,
+            "Hello %s!",
+            "world",
+            13+PJ_LOG_SENDER_WIDTH+1+12+1,
+            13+PJ_LOG_SENDER_WIDTH+1+12+1,
+        },
+        {
+            "normal log with no decor",
+            0,
+            "Hello %s!",
+            "world",
+            12,
+            12,
+        },
+        {
+            "normal log with just newline",
+            PJ_LOG_HAS_NEWLINE,
+            "Hello %s!",
+            "world",
+            13,
+            13,
+        },
+        {
+            "empty string with normal decor",
+            PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC | 
+                PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE,
+            "%s",
+            "",
+            13+PJ_LOG_SENDER_WIDTH+1+1,
+            13+PJ_LOG_SENDER_WIDTH+1+1,
+        },
+        {
+            "empty string with nodecor",
+            0,
+            "%s",
+            "",
+            0,
+            0,
+        },
+        {
+            "empty string with just newline",
+            PJ_LOG_HAS_NEWLINE,
+            "%s",
+            "",
+            1,
+            1,
+        },
+        {
+            "large message with normal decor",
+            PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC | 
+                PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE,
+            "%s",
+            test_large_msg,
+            PJ_LOG_MAX_SIZE-1,
+            PJ_LOG_MAX_SIZE-1,
+        },
+        {
+            "large message with no decor",
+            0,
+            "%s",
+            test_large_msg,
+            PJ_LOG_MAX_SIZE-1,
+            PJ_LOG_MAX_SIZE-1,
+        },
+        {
+            "large message with just newline",
+            PJ_LOG_HAS_NEWLINE,
+            "%s",
+            test_large_msg,
+            PJ_LOG_MAX_SIZE-1,
+            PJ_LOG_MAX_SIZE-1,
+        },
+    };
+    unsigned old_decor = pj_log_get_decor();
+    unsigned i;
+
+    memset(test_large_msg, 'A', sizeof(test_large_msg));
+    test_large_msg[sizeof(test_large_msg)-1] = '\0';
+
+    pj_log_set_log_func( &log_write );
+
+    for (i=0; i<PJ_ARRAY_SIZE(log_tests); ++i) {
+        struct log_test_t *t = &log_tests[i];
+
+        log_written = -1;
+        pj_log_set_decor(t->decor);
+
+        PJ_LOG(1,(THIS_FILE, t->fmt, t->arg));
+
+        if (log_written < t->min_len || log_written > t->max_len) {
+            pj_log_set_log_func( old_func );
+            pj_log_set_decor(old_decor);
+
+            PJ_LOG(1,(THIS_FILE,
+                     "  Error: in test %d (%s), writing (\"%s\", \"%s\"), expecting %d<=len<=%d, got len=%d",
+                      i, t->title, t->fmt, t->arg, t->min_len, t->max_len, log_written));
+            return 33;
+        }
+    }
+
+    pj_log_set_log_func( old_func );
+    pj_log_set_decor(old_decor);
 
     return 0;
 }

@@ -485,10 +485,10 @@ static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
      *  transport layer. So don't try to access tp_info when the module
      *  has lower priority than transport layer.
      */
-    PJ_LOG(4,(THIS_FILE, "TX %ld bytes %s to %s %s:\n"
+    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s %s:\n"
                          "%.*s\n"
                          "--end msg--",
-                         (tdata->buf.cur - tdata->buf.start),
+                         (int)(tdata->buf.cur - tdata->buf.start),
                          pjsip_tx_data_get_info(tdata),
                          tdata->tp_info.transport->type_name,
                          pj_addr_str_print(&input_str, 
@@ -3845,12 +3845,22 @@ static pj_status_t restart_listener(pjsua_transport_id id,
     pj_sockaddr bind_addr;
     pjsua_transport_info tp_info;
     pj_status_t status;
+    pj_bool_t tp_valid = PJ_TRUE;
+    pj_uint16_t saf;
 
-    pjsua_transport_get_info(id, &tp_info);
+    status = pjsua_transport_get_info(id, &tp_info);
+    if (status != PJ_SUCCESS) {
+        /* Transport not valid or already destroyed */
+        tp_valid = PJ_FALSE;
+        goto on_return;
+    }
+
+    saf = tp_info.local_addr.addr.sa_family;
     pj_sockaddr_init(pjsip_transport_type_get_af(tp_info.type),
-                     &bind_addr,
-                     NULL,
-                     pj_sockaddr_get_port(&tp_info.local_addr));
+                        &bind_addr,
+                        NULL,
+                        (saf==PJ_AF_INET || saf==PJ_AF_INET6)?
+                            pj_sockaddr_get_port(&tp_info.local_addr) : 0);
 
     switch (tp_info.type) {
     case PJSIP_TRANSPORT_UDP:
@@ -3899,7 +3909,9 @@ static pj_status_t restart_listener(pjsua_transport_id id,
     PJ_PERROR(3,(THIS_FILE, status, "Listener %.*s restart",
                  (int)tp_info.info.slen, tp_info.info.ptr));
 
-    if (status != PJ_SUCCESS && (restart_lis_delay > 0)) {
+on_return:
+
+    if (tp_valid && status != PJ_SUCCESS && (restart_lis_delay > 0)) {
         /* Try restarting again, with delay. */
         pjsua_schedule_timer2(&restart_listener_cb,
                               (void*)(pj_size_t)id,
@@ -3993,15 +4005,15 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
 
     /* Shutdown all TCP/TLS transports */
     if (param->shutdown_transport) {
-        pjsip_tpmgr_shutdown_param param;
+        pjsip_tpmgr_shutdown_param sd_param;
 
-        pjsip_tpmgr_shutdown_param_default(&param);
-        param.include_udp = PJ_FALSE;
+        pjsip_tpmgr_shutdown_param_default(&sd_param);
+        sd_param.include_udp = PJ_FALSE;
 
         PJ_LOG(4,(THIS_FILE, "IP change shutting down transports.."));
         status = pjsip_tpmgr_shutdown_all(
                                     pjsip_endpt_get_tpmgr(pjsua_var.endpt),
-                                    &param);
+                                    &sd_param);
 
         /* Provide dummy info instead of NULL info to avoid possible crash
          * (if app does not check).

@@ -47,6 +47,7 @@ static void stereo_demo();
 
 #ifdef USE_GUI
 pj_bool_t showNotification(pjsua_call_id call_id);
+pj_bool_t reportCallState(pjsua_call_id call_id);
 #endif
 
 static void ringback_start(pjsua_call_id call_id);
@@ -170,6 +171,10 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
     pjsua_call_info call_info;
 
     PJ_UNUSED_ARG(e);
+
+#ifdef USE_GUI
+    reportCallState(call_id);
+#endif
 
     pjsua_call_get_info(call_id, &call_info);
 
@@ -1998,6 +2003,9 @@ static pj_status_t app_init(void)
     pjsua_call_setting_default(&call_opt);
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
+    if (app_config.enable_loam) {
+        call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+    }
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
     /* Wipe out TLS key settings in transport configs */

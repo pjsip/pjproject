@@ -1779,7 +1779,6 @@ public:
      */
     void resetVideoCodecParam(const string &codec_id) PJSUA2_THROW(Error);
 
-#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
     /**
      * Get codec Opus config.
      *
@@ -1794,7 +1793,21 @@ public:
      */
     void setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
                             PJSUA2_THROW(Error);
-#endif
+
+    /**
+     * Get codec Lyra config.
+     *
+     */
+     CodecLyraConfig getCodecLyraConfig() const PJSUA2_THROW(Error);
+
+    /**
+     * Set codec Lyra config.
+     *
+     * @param lyra_cfg  Codec Lyra configuration.
+     *
+     */
+    void setCodecLyraConfig(const CodecLyraConfig &lyra_cfg)
+                            PJSUA2_THROW(Error);
 
     /**
      * Enumerate all SRTP crypto-suite names.

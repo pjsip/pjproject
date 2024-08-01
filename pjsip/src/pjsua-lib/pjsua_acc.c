@@ -465,7 +465,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 #if !PJ_HAS_IPV6
     PJ_ASSERT_RETURN(cfg->ipv6_sip_use == PJSUA_IPV6_DISABLED, PJ_EINVAL);
     PJ_ASSERT_RETURN(cfg->ipv6_media_use == PJSUA_IPV6_DISABLED, PJ_EINVAL);
-    PJ_ASSERT_RETURN(cfg->nat64_opt == PJSUA_IPV6_DISABLED, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg->nat64_opt == PJSUA_NAT64_DISABLED, PJ_EINVAL);
 #endif
 
     /* Must have a transport */
@@ -854,7 +854,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 #if !PJ_HAS_IPV6
     PJ_ASSERT_RETURN(cfg->ipv6_sip_use == PJSUA_IPV6_DISABLED, PJ_EINVAL);
     PJ_ASSERT_RETURN(cfg->ipv6_media_use == PJSUA_IPV6_DISABLED, PJ_EINVAL);
-    PJ_ASSERT_RETURN(cfg->nat64_opt == PJSUA_IPV6_DISABLED, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg->nat64_opt == PJSUA_NAT64_DISABLED, PJ_EINVAL);
 #endif
 
     PJ_LOG(4,(THIS_FILE, "Modifying account %d", acc_id));
@@ -1026,6 +1026,14 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         acc->cfg.ipv6_sip_use = cfg->ipv6_sip_use;
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
+
+        /* Set client registration's transport based on acc's config. */
+        if (acc->regc) {
+            pjsip_tpselector tp_sel;
+
+            pjsua_init_tpselector(acc->index, &tp_sel);
+            pjsip_regc_set_transport(acc->regc, &tp_sel);
+        }
     }
 
     /* User data */
@@ -1446,7 +1454,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.call_hold_type = cfg->call_hold_type;
 
     /* Unregister first */
-    if (unreg_first) {
+    if (unreg_first && !cfg->disable_reg_on_modify) {
         if (acc->regc) {
             status = pjsua_acc_set_registration(acc->index, PJ_FALSE);
             if (status != PJ_SUCCESS) {
@@ -1466,7 +1474,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     }
 
     /* Update registration */
-    if (update_reg) {
+    if (update_reg && !cfg->disable_reg_on_modify) {
         /* If accounts has registration enabled, start registration */
         if (acc->cfg.reg_uri.slen) {
             status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
@@ -1597,7 +1605,8 @@ done:
               acc->cfg.reg_contact_params.slen +
               acc->cfg.reg_contact_uri_params.slen +
               (need_outbound?
-               (acc->rfc5626_instprm.slen + acc->rfc5626_regprm.slen): 0);
+               (acc->rfc5626_instprm.slen + acc->rfc5626_regprm.slen): 0) +
+              5; /* allowance */
         if (len > acc->contact.slen) {
             reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, len);
 
@@ -4335,12 +4344,29 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
     {
         for (i = 0; i < pjsua_var.ua_cfg.max_calls; ++i) {
             pjsua_call_info call_info;
+            pjsua_call *call;
+            pjsip_dialog *dlg = NULL;
 
             if (!pjsua_call_is_active(i) ||
                 pjsua_var.calls[i].acc_id != acc->index ||
                 pjsua_call_get_info(i, &call_info) != PJ_SUCCESS)
             {
                 continue;
+            }
+
+            status = acquire_call("call_tpsel_on_ip_change()",
+                                  i, &call, &dlg);
+            if (status == PJ_SUCCESS) {
+                pjsip_tpselector tp_sel;
+
+                /* Set dialog's transport based on acc's config. */
+                pjsua_init_tpselector(call->acc_id, &tp_sel);
+                pjsip_dlg_set_transport(dlg, &tp_sel);
+
+                pjsip_dlg_dec_lock(dlg);
+            } else {
+                PJ_LOG(4, (THIS_FILE, "Failed to update call %d's transport "
+                           "selector", i));
             }
 
             if ((acc->cfg.ip_change_cfg.hangup_calls) &&
@@ -4398,9 +4424,6 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 
                 /* Check if remote support SIP UPDATE method */
                 if (use_update) {
-                    pjsua_call *call;
-                    pjsip_dialog *dlg = NULL;
-
                     PJ_LOG(5, (THIS_FILE, "Call #%d: IP change is configured "
                                "to using UPDATE", i));
 

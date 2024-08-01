@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "A0480BD1-665B-4D82-9F04-A4890A775321",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : false,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:ipjsua-swift.xcodeproj",
+      "identifier" : "3A6FC61725CBD4540065F472",
+      "name" : "ipjsua-swift"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:ipjsua-swift.xcodeproj",
+        "identifier" : "3AF9B5332B7B454D0043987D",
+        "name" : "ipjsua-swiftVidTest"
+      }
+    }
+  ],
+  "version" : 1
+}
