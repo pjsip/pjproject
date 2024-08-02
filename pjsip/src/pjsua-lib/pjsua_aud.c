@@ -606,8 +606,15 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
         }
 
         if (call_med->strm.a.media_port) {
-            if (call_med->strm.a.destroy_port)
+            pjmedia_port *stream_port;
+
+            /* Destroy custom stream port if any & configured to */
+            pjmedia_stream_get_port(call_med->strm.a.stream, &stream_port);
+            if (call_med->strm.a.destroy_port &&
+                call_med->strm.a.media_port != stream_port)
+            {
                 pjmedia_port_destroy(call_med->strm.a.media_port);
+            }
             call_med->strm.a.media_port = NULL;
         }
 
