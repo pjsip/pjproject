@@ -1694,8 +1694,15 @@ PJ_DEF(pj_status_t) pjsip_get_response_addr( pj_pool_t *pool,
         res_addr->addr_len = rdata->pkt_info.src_addr_len;
         res_addr->dst_host.type=(pjsip_transport_type_e)src_transport->key.type;
         res_addr->dst_host.flag = src_transport->flag;
-        pj_strdup( pool, &res_addr->dst_host.addr.host, 
-                   &rdata->msg_info.via->recvd_param);
+        if (rdata->tp_info.transport->flag & PJSIP_TRANSPORT_SECURE) {
+            if (rdata->tp_info.transport->remote_name.host.slen) {
+                pj_strdup(pool, &res_addr->dst_name,
+                          &rdata->tp_info.transport->remote_name.host);
+            }
+        } 
+        pj_strdup(pool, &res_addr->dst_host.addr.host,
+                  &rdata->msg_info.via->recvd_param);
+
         res_addr->dst_host.addr.port = rdata->msg_info.via->sent_by.port;
         if (res_addr->dst_host.addr.port == 0) {
             res_addr->dst_host.addr.port = 
@@ -1879,8 +1886,15 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
     } else {
         /* Copy the destination host name to TX data */
         if (!tdata->dest_info.name.slen) {
-            pj_strdup(tdata->pool, &tdata->dest_info.name, 
-                      &res_addr->dst_host.addr.host);
+            if ((res_addr->dst_host.flag & PJSIP_TRANSPORT_SECURE) && 
+                (res_addr->dst_name.slen)) 
+            {
+                pj_strdup(tdata->pool, &tdata->dest_info.name,
+                          &res_addr->dst_name);
+            } else {
+                pj_strdup(tdata->pool, &tdata->dest_info.name,
+                          &res_addr->dst_host.addr.host);
+            }
         }
 
         pjsip_endpt_resolve(endpt, tdata->pool, &res_addr->dst_host, 

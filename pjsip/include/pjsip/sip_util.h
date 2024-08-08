@@ -619,6 +619,8 @@ typedef struct pjsip_response_addr
     pj_sockaddr      addr;      /**< Immediate address to send to.   */
     int              addr_len;  /**< Address length.                 */
     pjsip_host_info  dst_host;  /**< Destination host to contact.    */
+    pj_str_t         dst_name;  /**< Destination hostname (used for
+                                     verifying remote TLS cert)      */
 } pjsip_response_addr;
 
 /**
