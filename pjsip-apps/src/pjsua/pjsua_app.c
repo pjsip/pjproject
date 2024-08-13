@@ -1718,6 +1718,11 @@ static pj_status_t app_init(void)
             }
         }
 #else
+        for (i=0; i<app_config.avi_cnt; ++i) {
+            app_config.avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
+            app_config.avi[i].slot = PJSUA_INVALID_ID;
+        }
+
         PJ_LOG(2,(THIS_FILE,
                   "Warning: --play-avi is ignored because AVI is disabled"));
 #endif  /* PJMEDIA_VIDEO_DEV_HAS_AVI */
