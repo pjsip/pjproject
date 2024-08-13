@@ -709,18 +709,14 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     /* Delete server presence subscription */
     pjsua_pres_delete_acc(acc_id, 0);
 
-    /* Release account pool */
+    /* Release & wipe account pool */
     if (acc->pool) {
-        pj_pool_release(acc->pool);
-        acc->pool = NULL;
+        pj_pool_secure_release(&acc->pool);
     }
 
     /* Invalidate */
-    acc->valid = PJ_FALSE;
-    pj_bzero(&acc->via_addr, sizeof(acc->via_addr));
-    acc->via_tp = NULL;
-    acc->next_rtp_port = 0;
-    acc->ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
+    pj_bzero(acc, sizeof(*acc));
+    acc->index = acc_id;
 
     /* Remove from array */
     for (i=0; i<pjsua_var.acc_cnt; ++i) {
