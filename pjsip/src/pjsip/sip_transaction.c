@@ -2369,6 +2369,8 @@ static void tsx_tp_state_callback( pjsip_transport *tp,
 
         tsx = (pjsip_transaction*)info->user_data;
 
+        tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
+
         /* Post the event for later processing, to avoid deadlock.
          * See https://github.com/pjsip/pjproject/issues/1646
          */
@@ -2690,6 +2692,13 @@ static pj_status_t tsx_retransmit( pjsip_transaction *tsx, int resched)
     status = tsx_send_msg( tsx, tsx->last_tx);
     if (status != PJ_SUCCESS) {
         return status;
+    }
+
+    /* Cancel retransmission timer if transport is pending. */
+    if (resched && (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT))
+    {
+        tsx_cancel_timer( tsx, &tsx->retransmit_timer );
+        tsx->transport_flag |= TSX_HAS_PENDING_RESCHED;
     }
 
     return PJ_SUCCESS;
