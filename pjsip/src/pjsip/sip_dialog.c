@@ -1630,6 +1630,15 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_response( pjsip_dialog *dlg,
         pj_assert(status == PJ_SUCCESS);
     }
 
+    /* Copy the initial destination host to tdata. This information can be
+     * used later by transport for transport selection.
+     */
+    if (!tdata->dest_info.name.slen && dlg->initial_dest.slen) {
+        pj_strdup(tdata->pool, &tdata->dest_info.name, &dlg->initial_dest);
+        PJ_LOG(5, (THIS_FILE, "Setting initial dest %.*s",
+            (int)dlg->initial_dest.slen, dlg->initial_dest.ptr));
+    }
+
     /* Ask transaction to send the response */
     status = pjsip_tsx_send_msg(tsx, tdata);
 
