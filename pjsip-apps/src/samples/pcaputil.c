@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjlib.h>
 #include <pjlib-util.h>
@@ -164,7 +164,7 @@ static int read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
          * We will decode it again to get the payload after we do
          * SRTP decoding
          */
-        status = pjmedia_rtp_decode_rtp(&app.rtp_sess, buf, (int)sz, &r, 
+        status = pjmedia_rtp_decode_rtp(&app.rtp_sess, buf, (int)sz, &r,
                                         &p, payload_size);
         if (status != PJ_SUCCESS) {
             char errmsg[PJ_ERR_MSG_SIZE];
@@ -177,12 +177,12 @@ static int read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
 #if PJMEDIA_HAS_SRTP
         if (app.srtp) {
             int len = (int)sz;
-            status = pjmedia_transport_srtp_decrypt_pkt(app.srtp, PJ_TRUE, 
+            status = pjmedia_transport_srtp_decrypt_pkt(app.srtp, PJ_TRUE,
                                                         buf, &len);
             if (status != PJ_SUCCESS) {
                 char errmsg[PJ_ERR_MSG_SIZE];
                 pj_strerror(status, errmsg, sizeof(errmsg));
-                printf("SRTP packet decryption failed, skipping packet: %s\n", 
+                printf("SRTP packet decryption failed, skipping packet: %s\n",
                         errmsg);
                 continue;
             }
@@ -252,7 +252,7 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *f)
     PJ_UNUSED_ARG(user_data);
 
     if (!play_frm_ready) {
-        PJ_LOG(3, ("play_cb()", "Warning! Play frame not ready")); 
+        PJ_LOG(3, ("play_cb()", "Warning! Play frame not ready"));
         return PJ_SUCCESS;
     }
 
@@ -305,7 +305,7 @@ static void pcap2wav(const pj_str_t *codec,
 #endif
 
     /* Read first packet */
-    read_rtp(pkt0.buffer, sizeof(pkt0.buffer), &pkt0.rtp, 
+    read_rtp(pkt0.buffer, sizeof(pkt0.buffer), &pkt0.rtp,
              &pkt0.payload, &pkt0.payload_len, PJ_FALSE);
 
     cmgr = pjmedia_endpt_get_codec_mgr(app.mept);
@@ -317,7 +317,7 @@ static void pcap2wav(const pj_str_t *codec,
     } else {
         unsigned cnt = 2;
         const pjmedia_codec_info *info[2];
-        T( pjmedia_codec_mgr_find_codecs_by_id(cmgr, codec, &cnt, 
+        T( pjmedia_codec_mgr_find_codecs_by_id(cmgr, codec, &cnt,
                                                info, NULL) );
         if (cnt != 1)
             err_exit("Codec ID must be specified and unique!", 0);
@@ -342,7 +342,7 @@ static void pcap2wav(const pj_str_t *codec,
         aud_param.channel_count = ci->channel_cnt;
         aud_param.clock_rate = ci->clock_rate;
         aud_param.samples_per_frame = samples_per_frame;
-        T( pjmedia_aud_stream_create(&aud_param, NULL, &play_cb, 
+        T( pjmedia_aud_stream_create(&aud_param, NULL, &play_cb,
                                      NULL, &app.aud_strm) );
         T( pjmedia_aud_stream_start(app.aud_strm) );
     } else if (pj_stristr(wav_filename, &WAV)) {
@@ -370,7 +370,7 @@ static void pcap2wav(const pj_str_t *codec,
         /* Parse first packet */
         ts.u64 = 0;
         frame_cnt = PJ_ARRAY_SIZE(frames);
-        T( pjmedia_codec_parse(app.codec, pkt0.payload, pkt0.payload_len, 
+        T( pjmedia_codec_parse(app.codec, pkt0.payload, pkt0.payload_len,
                                 &ts, &frame_cnt, frames) );
 
         /* Decode and write to WAV file */
@@ -379,7 +379,7 @@ static void pcap2wav(const pj_str_t *codec,
             pcm_frame.buf = pcm;
             pcm_frame.size = samples_per_frame * 2;
 
-            T( pjmedia_codec_decode(app.codec, &frames[i], 
+            T( pjmedia_codec_decode(app.codec, &frames[i],
                                     (unsigned)pcm_frame.size, &pcm_frame) );
             if (app.wav) {
                 T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
@@ -405,7 +405,7 @@ static void pcap2wav(const pj_str_t *codec,
             pcm_frame.size = samples_per_frame * 2;
 
             if (app.codec->op->recover) {
-                T( pjmedia_codec_recover(app.codec, (unsigned)pcm_frame.size, 
+                T( pjmedia_codec_recover(app.codec, (unsigned)pcm_frame.size,
                                          &pcm_frame) );
             } else {
                 pj_bzero(pcm_frame.buf, pcm_frame.size);
@@ -419,7 +419,7 @@ static void pcap2wav(const pj_str_t *codec,
             }
             ts_gap -= samples_per_frame;
         }
-        
+
         /* Next */
         pkt0 = pkt1;
         pkt0.rtp = (pjmedia_rtp_hdr*)pkt0.buffer;
@@ -435,7 +435,7 @@ int main(int argc, char *argv[])
     pj_pcap_filter filter;
     pj_status_t status;
 
-    enum { 
+    enum {
         OPT_SRC_IP = 1, OPT_DST_IP, OPT_SRC_PORT, OPT_DST_PORT,
         OPT_CODEC, OPT_PLAY_DEV_ID
     };
@@ -525,7 +525,7 @@ int main(int argc, char *argv[])
 
     input = pj_str(argv[pj_optind]);
     output = pj_str(argv[pj_optind+1]);
-    
+
     T( pj_init() );
 
     pj_caching_pool_init(&app.cp, NULL, 0);
