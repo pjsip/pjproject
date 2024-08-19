@@ -436,12 +436,18 @@ int main(int argc, char *argv[])
     pj_status_t status;
 
     enum {
-        OPT_SRC_IP = 1, OPT_DST_IP, OPT_SRC_PORT, OPT_DST_PORT,
-        OPT_CODEC, OPT_PLAY_DEV_ID
+        OPT_SRC_IP = 1,
+        OPT_DST_IP,
+        OPT_SRC_PORT,
+        OPT_DST_PORT,
+        OPT_CODEC,
+        OPT_PLAY_DEV_ID,
+        OPT_SRTP_CRYPTO = 'c',
+        OPT_SRTP_KEY = 'k'
     };
     struct pj_getopt_option long_options[] = {
-        { "srtp-crypto",    1, 0, 'c' },
-        { "srtp-key",       1, 0, 'k' },
+        { "srtp-crypto",    1, 0, OPT_SRTP_CRYPTO },
+        { "srtp-key",       1, 0, OPT_SRTP_KEY },
         { "src-ip",         1, 0, OPT_SRC_IP },
         { "dst-ip",         1, 0, OPT_DST_IP },
         { "src-port",       1, 0, OPT_SRC_PORT },
@@ -465,10 +471,10 @@ int main(int argc, char *argv[])
     pj_optind = 0;
     while((c=pj_getopt_long(argc,argv, "c:k:", long_options, &option_index))!=-1) {
         switch (c) {
-        case 'c':
+        case OPT_SRTP_CRYPTO:
             srtp_crypto = pj_str(pj_optarg);
             break;
-        case 'k':
+        case OPT_SRTP_KEY:
             {
                 int key_len = sizeof(key_bin);
                 srtp_key = pj_str(pj_optarg);
