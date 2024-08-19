@@ -569,7 +569,11 @@ static pjsip_uri *create_uri14(pj_pool_t *pool)
     name_addr->uri = (pjsip_uri*) url;
 
     pj_strdup2(pool, &name_addr->display, "This is -. !% *_+`'~ me");
+#if PJSIP_UNESCAPE_WHEN_PARSING_URI
     pj_strdup2(pool, &url->user, "a19A&=+$,;?/,");
+#else
+    pj_strdup2(pool, &url->user, "a19A&=+$,;?/%2c");
+#endif
     pj_strdup2(pool, &url->passwd, "@a&Zz=+$,");
     pj_strdup2(pool, &url->host, "my_proxy09.MY-domain.com");
     url->port = 9801;

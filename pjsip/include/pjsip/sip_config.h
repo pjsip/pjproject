@@ -605,6 +605,16 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_UNESCAPE_IN_PLACE      0
 #endif
 
+/**
+ * If non-zero, SIP parser will unescape the escape characters ('%')
+ * during the URI parsing. Otherwise, the unescaping will be done
+ * when necessary, such as during URI comparison.
+ *
+ * Default: 1
+ */
+#ifndef PJSIP_UNESCAPE_WHEN_PARSING_URI
+#   define PJSIP_UNESCAPE_WHEN_PARSING_URI     0
+#endif
 
 /**
  * Specify port number should be allowed to appear in To and From

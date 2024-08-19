@@ -26,6 +26,8 @@
 #include <pj/pool.h>
 #include <pj/assert.h>
 
+#define MAX_URI_LEN 512
+
 /*
  * Generic parameter manipulation.
  */
@@ -388,6 +390,8 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
                                       const pjsip_sip_uri *url2)
 {
     const pjsip_param *p1;
+    char buf[2][MAX_URI_LEN];
+    pj_str_t str[2];
 
     /*
      * Compare two SIP URL's according to Section 19.1.4 of RFC 3261.
@@ -404,7 +408,13 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
      * This includes userinfo containing passwords or formatted as 
      * telephone-subscribers.
      */
-    if (pj_strcmp(&url1->user, &url2->user) != 0)
+    str[0].ptr = buf[0];
+    str[0].slen = 0;
+    str[1].ptr = buf[1];
+    str[1].slen = 0;
+    pj_strcpy_unescape(&str[0], &url1->user);
+    pj_strcpy_unescape(&str[1], &url2->user);
+    if (pj_strcmp(&str[0], &str[1]) != 0)
         return PJSIP_ECMPUSER;
     if (pj_strcmp(&url1->passwd, &url2->passwd) != 0)
         return PJSIP_ECMPPASSWD;

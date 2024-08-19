@@ -1390,8 +1390,12 @@ static int int_is_next_user(pj_scanner *scanner)
 static void int_parse_user_pass( pj_scanner *scanner, pj_pool_t *pool,
                                  pj_str_t *user, pj_str_t *pass)
 {
-    parser_get_and_unescape(scanner, pool, &pconst.pjsip_USER_SPEC_LENIENT, 
+#if PJSIP_UNESCAPE_WHEN_PARSING_URI
+    parser_get_and_unescape(scanner, pool, &pconst.pjsip_USER_SPEC_LENIENT,
                             &pconst.pjsip_USER_SPEC_LENIENT_ESC, user);
+#else
+    pj_scan_get(scanner, &pconst.pjsip_USER_SPEC_LENIENT, user);
+#endif
 
     if ( *scanner->curptr == ':') {
         pj_scan_get_char( scanner );
