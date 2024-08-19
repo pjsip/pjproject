@@ -51,6 +51,10 @@ static const char *USAGE =
 "                           AES_CM_128_HMAC_SHA1_80 \n"
 "                           AES_CM_128_HMAC_SHA1_32\n"
 "  --srtp-key=KEY, -k     Set the base64 key to decrypt SRTP packets.\n"
+#if PJMEDIA_HAS_OPUS_CODEC
+"  --opus-ch=CH           Opus channel count                            \n"
+"  --opus-clock-rate=CR   Opus clock rate                               \n"
+#endif
 "\n"
 "Options for playing to audio device:\n"
 ""
@@ -86,6 +90,10 @@ struct args
     pjmedia_aud_dev_index dev_id;
     pj_str_t srtp_crypto;
     pj_str_t srtp_key;
+#if PJMEDIA_HAS_OPUS_CODEC
+    int opus_clock_rate;
+    int opus_ch;
+#endif
 };
 
 
@@ -344,6 +352,14 @@ static void pcap2wav(const struct args *args)
         aud_param.channel_count = param.info.channel_cnt;
         aud_param.clock_rate = param.info.clock_rate;
         aud_param.samples_per_frame = samples_per_frame;
+#if PJMEDIA_HAS_OPUS_CODEC
+        if (!pj_stricmp2(&args->codec, "opus")) {
+            if (args->opus_clock_rate > 0)
+                aud_param.clock_rate = args->opus_clock_rate;
+            if (args->opus_ch > 0)
+                aud_param.channel_count = args->opus_ch;
+        }
+#endif
         T( pjmedia_aud_stream_create(&aud_param, NULL, &play_cb,
                                      NULL, &app.aud_strm) );
         T( pjmedia_aud_stream_start(app.aud_strm) );
@@ -444,6 +460,10 @@ int main(int argc, char *argv[])
         OPT_DST_PORT,
         OPT_CODEC,
         OPT_PLAY_DEV_ID,
+#if PJMEDIA_HAS_OPUS_CODEC
+        OPT_OPUS_CH = 'C',
+        OPT_OPUS_CLOCK_RATE = 'K',
+#endif
         OPT_SRTP_CRYPTO = 'c',
         OPT_SRTP_KEY = 'k'
     };
@@ -456,6 +476,10 @@ int main(int argc, char *argv[])
         { "dst-port",       1, 0, OPT_DST_PORT },
         { "codec",          1, 0, OPT_CODEC },
         { "play-dev-id",    1, 0, OPT_PLAY_DEV_ID },
+#if PJMEDIA_HAS_OPUS_CODEC
+        { "opus-ch", 1, 0, OPT_OPUS_CH },
+        { "opus-clock-rate", 1, 0, OPT_OPUS_CLOCK_RATE },
+#endif
         { NULL, 0, 0, 0}
     };
     int c;
@@ -465,6 +489,10 @@ int main(int argc, char *argv[])
     args.srtp_crypto.slen = args.srtp_key.slen = 0;
     args.codec.slen = 0;
     args.dev_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+#if PJMEDIA_HAS_OPUS_CODEC
+    args.opus_clock_rate = -1;
+    args.opus_ch = -1;
+#endif
 
     pj_pcap_filter_default(&filter);
     filter.link = PJ_PCAP_LINK_TYPE_ETH;
@@ -515,6 +543,14 @@ int main(int argc, char *argv[])
         case OPT_PLAY_DEV_ID:
             args.dev_id = atoi(pj_optarg);
             break;
+#if PJMEDIA_HAS_OPUS_CODEC
+        case OPT_OPUS_CLOCK_RATE:
+            args.opus_clock_rate = atoi(pj_optarg);
+            break;
+        case OPT_OPUS_CH:
+            args.opus_ch = atoi(pj_optarg);
+            break;
+#endif
         default:
             puts("Error: invalid option");
             return 1;
