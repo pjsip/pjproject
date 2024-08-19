@@ -132,11 +132,11 @@ static void err_exit(const char *title, pj_status_t status)
                     } while (0)
 
 
-static void read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
-                     pjmedia_rtp_hdr **rtp,
-                     pj_uint8_t **payload,
-                     unsigned *payload_size,
-                     pj_bool_t check_pt)
+static int read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
+                    pjmedia_rtp_hdr **rtp,
+                    pj_uint8_t **payload,
+                    unsigned *payload_size,
+                    pj_bool_t check_pt)
 {
     pj_status_t status;
 
@@ -154,8 +154,11 @@ static void read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
         pjmedia_rtp_status seq_st;
 
         status = pj_pcap_read_udp(app.pcap, NULL, buf, &sz);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            if (status == PJ_EEOF)
+                return PJ_FALSE;
             err_exit("Error reading PCAP file", status);
+        }
 
         /* Decode RTP packet to make sure that this is an RTP packet.
          * We will decode it again to get the payload after we do
@@ -225,6 +228,7 @@ static void read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
         /* We have good packet */
         break;
     }
+    return PJ_TRUE;
 }
 
 pjmedia_frame play_frm;
@@ -387,8 +391,10 @@ static void pcap2wav(const pj_str_t *codec,
         }
 
         /* Read next packet */
-        read_rtp(pkt1.buffer, sizeof(pkt1.buffer), &pkt1.rtp,
-                 &pkt1.payload, &pkt1.payload_len, PJ_TRUE);
+        if (!read_rtp(pkt1.buffer, sizeof(pkt1.buffer), &pkt1.rtp,
+                      &pkt1.payload, &pkt1.payload_len, PJ_TRUE)) {
+            break;
+        }
 
         /* Fill in the gap (if any) between pkt0 and pkt1 */
         ts_gap = pj_ntohl(pkt1.rtp->ts) - pj_ntohl(pkt0.rtp->ts) -
