@@ -79,6 +79,15 @@ static struct app
     pj_bool_t            rtp_sess_init;
 } app;
 
+struct args
+{
+    pj_str_t codec;
+    pj_str_t wav_filename;
+    pjmedia_aud_dev_index dev_id;
+    pj_str_t srtp_crypto;
+    pj_str_t srtp_key;
+};
+
 
 static void cleanup()
 {
@@ -263,11 +272,7 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *f)
     return PJ_SUCCESS;
 }
 
-static void pcap2wav(const pj_str_t *codec,
-                     const pj_str_t *wav_filename,
-                     pjmedia_aud_dev_index dev_id,
-                     const pj_str_t *srtp_crypto,
-                     const pj_str_t *srtp_key)
+static void pcap2wav(const struct args *args)
 {
     const pj_str_t WAV = {".wav", 4};
     struct pkt
@@ -288,20 +293,17 @@ static void pcap2wav(const pj_str_t *codec,
 
     /* Create SRTP transport is needed */
 #if PJMEDIA_HAS_SRTP
-    if (srtp_crypto->slen) {
+    if (args->srtp_crypto.slen) {
         pjmedia_srtp_crypto crypto;
         pjmedia_transport *tp;
 
         pj_bzero(&crypto, sizeof(crypto));
-        crypto.key = *srtp_key;
-        crypto.name = *srtp_crypto;
+        crypto.key = args->srtp_key;
+        crypto.name = args->srtp_crypto;
         T( pjmedia_transport_loop_create(app.mept, &tp) );
         T( pjmedia_transport_srtp_create(app.mept, tp, NULL, &app.srtp) );
         T( pjmedia_transport_srtp_start(app.srtp, &crypto, &crypto) );
     }
-#else
-    PJ_UNUSED_ARG(srtp_crypto);
-    PJ_UNUSED_ARG(srtp_key);
 #endif
 
     /* Read first packet */
@@ -317,7 +319,7 @@ static void pcap2wav(const pj_str_t *codec,
     } else {
         unsigned cnt = 2;
         const pjmedia_codec_info *info[2];
-        T( pjmedia_codec_mgr_find_codecs_by_id(cmgr, codec, &cnt,
+        T( pjmedia_codec_mgr_find_codecs_by_id(cmgr, &args->codec, &cnt,
                                                info, NULL) );
         if (cnt != 1)
             err_exit("Codec ID must be specified and unique!", 0);
@@ -333,11 +335,11 @@ static void pcap2wav(const pj_str_t *codec,
 
     /* Init audio device or WAV file */
     samples_per_frame = ci->clock_rate * param.info.frm_ptime / 1000;
-    if (pj_strcmp2(wav_filename, "-") == 0) {
+    if (pj_strcmp2(&args->wav_filename, "-") == 0) {
         pjmedia_aud_param aud_param;
 
         /* Open audio device */
-        T( pjmedia_aud_dev_default_param(dev_id, &aud_param) );
+        T( pjmedia_aud_dev_default_param(args->dev_id, &aud_param) );
         aud_param.dir = PJMEDIA_DIR_PLAYBACK;
         aud_param.channel_count = ci->channel_cnt;
         aud_param.clock_rate = ci->clock_rate;
@@ -345,9 +347,9 @@ static void pcap2wav(const pj_str_t *codec,
         T( pjmedia_aud_stream_create(&aud_param, NULL, &play_cb,
                                      NULL, &app.aud_strm) );
         T( pjmedia_aud_stream_start(app.aud_strm) );
-    } else if (pj_stristr(wav_filename, &WAV)) {
+    } else if (pj_stristr(&args->wav_filename, &WAV)) {
         /* Open WAV file */
-        T( pjmedia_wav_writer_port_create(app.pool, wav_filename->ptr,
+        T( pjmedia_wav_writer_port_create(app.pool, args->wav_filename.ptr,
                                           ci->clock_rate, ci->channel_cnt,
                                           samples_per_frame,
                                           param.info.pcm_bits_per_sample, 0, 0,
@@ -430,10 +432,10 @@ static void pcap2wav(const pj_str_t *codec,
 
 int main(int argc, char *argv[])
 {
-    pj_str_t input, output, srtp_crypto, srtp_key, codec;
-    pjmedia_aud_dev_index dev_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+    pj_str_t input;
     pj_pcap_filter filter;
     pj_status_t status;
+    struct args args;
 
     enum {
         OPT_SRC_IP = 1,
@@ -460,8 +462,9 @@ int main(int argc, char *argv[])
     int option_index;
     char key_bin[32];
 
-    srtp_crypto.slen = srtp_key.slen = 0;
-    codec.slen = 0;
+    args.srtp_crypto.slen = args.srtp_key.slen = 0;
+    args.codec.slen = 0;
+    args.dev_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
 
     pj_pcap_filter_default(&filter);
     filter.link = PJ_PCAP_LINK_TYPE_ETH;
@@ -472,18 +475,18 @@ int main(int argc, char *argv[])
     while((c=pj_getopt_long(argc,argv, "c:k:", long_options, &option_index))!=-1) {
         switch (c) {
         case OPT_SRTP_CRYPTO:
-            srtp_crypto = pj_str(pj_optarg);
+            args.srtp_crypto = pj_str(pj_optarg);
             break;
         case OPT_SRTP_KEY:
             {
                 int key_len = sizeof(key_bin);
-                srtp_key = pj_str(pj_optarg);
-                if (pj_base64_decode(&srtp_key, (pj_uint8_t*)key_bin, &key_len)) {
+                args.srtp_key = pj_str(pj_optarg);
+                if (pj_base64_decode(&args.srtp_key, (pj_uint8_t*)key_bin, &key_len)) {
                     puts("Error: invalid key");
                     return 1;
                 }
-                srtp_key.ptr = key_bin;
-                srtp_key.slen = key_len;
+                args.srtp_key.ptr = key_bin;
+                args.srtp_key.slen = key_len;
             }
             break;
         case OPT_SRC_IP:
@@ -507,10 +510,10 @@ int main(int argc, char *argv[])
             filter.dst_port = pj_htons((pj_uint16_t)atoi(pj_optarg));
             break;
         case OPT_CODEC:
-            codec = pj_str(pj_optarg);
+            args.codec = pj_str(pj_optarg);
             break;
         case OPT_PLAY_DEV_ID:
-            dev_id = atoi(pj_optarg);
+            args.dev_id = atoi(pj_optarg);
             break;
         default:
             puts("Error: invalid option");
@@ -523,14 +526,14 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (!(srtp_crypto.slen) != !(srtp_key.slen)) {
+    if (!(args.srtp_crypto.slen) != !(args.srtp_key.slen)) {
         puts("Error: both SRTP crypto and key must be specified");
         puts(USAGE);
         return 1;
     }
 
     input = pj_str(argv[pj_optind]);
-    output = pj_str(argv[pj_optind+1]);
+    args.wav_filename = pj_str(argv[pj_optind+1]);
 
     T( pj_init() );
 
@@ -543,7 +546,7 @@ int main(int argc, char *argv[])
     T( pj_pcap_open(app.pool, input.ptr, &app.pcap) );
     T( pj_pcap_set_filter(app.pcap, &filter) );
 
-    pcap2wav(&codec, &output, dev_id, &srtp_crypto, &srtp_key);
+    pcap2wav(&args);
 
     cleanup();
     return 0;
