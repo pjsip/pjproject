@@ -334,15 +334,15 @@ static void pcap2wav(const struct args *args)
     T( pjmedia_codec_open(app.codec, &param) );
 
     /* Init audio device or WAV file */
-    samples_per_frame = ci->clock_rate * param.info.frm_ptime / 1000;
+    samples_per_frame = param.info.clock_rate * param.info.frm_ptime / 1000;
     if (pj_strcmp2(&args->wav_filename, "-") == 0) {
         pjmedia_aud_param aud_param;
 
         /* Open audio device */
         T( pjmedia_aud_dev_default_param(args->dev_id, &aud_param) );
         aud_param.dir = PJMEDIA_DIR_PLAYBACK;
-        aud_param.channel_count = ci->channel_cnt;
-        aud_param.clock_rate = ci->clock_rate;
+        aud_param.channel_count = param.info.channel_cnt;
+        aud_param.clock_rate = param.info.clock_rate;
         aud_param.samples_per_frame = samples_per_frame;
         T( pjmedia_aud_stream_create(&aud_param, NULL, &play_cb,
                                      NULL, &app.aud_strm) );
@@ -350,7 +350,7 @@ static void pcap2wav(const struct args *args)
     } else if (pj_stristr(&args->wav_filename, &WAV)) {
         /* Open WAV file */
         T( pjmedia_wav_writer_port_create(app.pool, args->wav_filename.ptr,
-                                          ci->clock_rate, ci->channel_cnt,
+                                          param.info.clock_rate, param.info.channel_cnt,
                                           samples_per_frame,
                                           param.info.pcm_bits_per_sample, 0, 0,
                                           &app.wav) );
