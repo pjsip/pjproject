@@ -1508,6 +1508,8 @@ static void* int_parse_sip_url( pj_scanner *scanner,
     int colon;
     int skip_ws = scanner->skip_ws;
     scanner->skip_ws = 0;
+    char *start, *end;
+    pj_str_t orig;
 
     pj_scan_get(scanner, &pconst.pjsip_TOKEN_SPEC, &scheme);
     colon = pj_scan_get_char(scanner);
@@ -1530,9 +1532,15 @@ static void* int_parse_sip_url( pj_scanner *scanner,
         })
     }
 
+    start = scanner->curptr;
+
     if (int_is_next_user(scanner)) {
         int_parse_user_pass(scanner, pool, &url->user, &url->passwd);
     }
+
+    end = scanner->curptr;
+    pj_strset3(&orig, start, end);
+    pj_strdup(pool, &url->original, &orig);
 
     /* Get host:port */
     int_parse_uri_host_port(scanner, &url->host, &url->port);

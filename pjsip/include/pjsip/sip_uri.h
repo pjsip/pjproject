@@ -337,6 +337,7 @@ PJ_INLINE(void*) pjsip_uri_clone( pj_pool_t *pool, const void *uri )
 typedef struct pjsip_sip_uri
 {
     pjsip_uri_vptr *vptr;               /**< Pointer to virtual function table.*/
+    pj_str_t        original;           /**< Optional pointer to original user and password. */
     pj_str_t        user;               /**< Optional user part. */
     pj_str_t        passwd;             /**< Optional password part. */
     pj_str_t        host;               /**< Host part, always exists. */

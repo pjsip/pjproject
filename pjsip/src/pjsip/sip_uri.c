@@ -267,6 +267,10 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
     copy_advance_check(buf, *scheme);
     copy_advance_char_check(buf, ':');
 
+    if (url->original.slen) {
+        copy_advance_check(buf, url->original);
+    } else {
+
     /* Print "user:password@", if any. */
     if (url->user.slen) {
         const pj_cis_t *spec = pjsip_cfg()->endpt.allow_tx_hash_in_uri ?
@@ -279,6 +283,7 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
         }
 
         copy_advance_char_check(buf, '@');
+    }
     }
 
     /* Print host. */
@@ -506,6 +511,7 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
 PJ_DEF(void) pjsip_sip_uri_assign(pj_pool_t *pool, pjsip_sip_uri *url, 
                                   const pjsip_sip_uri *rhs)
 {
+    pj_strdup( pool, &url->original, &rhs->original);
     pj_strdup( pool, &url->user, &rhs->user);
     pj_strdup( pool, &url->passwd, &rhs->passwd);
     pj_strdup( pool, &url->host, &rhs->host);
