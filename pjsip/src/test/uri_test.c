@@ -571,6 +571,7 @@ static pjsip_uri *create_uri14(pj_pool_t *pool)
     pj_strdup2(pool, &name_addr->display, "This is -. !% *_+`'~ me");
     pj_strdup2(pool, &url->user, "a19A&=+$,;?/,");
     pj_strdup2(pool, &url->passwd, "@a&Zz=+$,");
+    pj_strdup2(pool, &url->orig_userpass, "a19A&=+$,;?/%2c:%40a&Zz=+$,");
     pj_strdup2(pool, &url->host, "my_proxy09.MY-domain.com");
     url->port = 9801;
     return (pjsip_uri*)name_addr;
@@ -908,8 +909,6 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
     pj_add_timestamp(&var.cmp_time, &t2);
 
     /* Compare text. */
-    /* Printing results may differ, but the comparison above must match. */
-#if 0
     if (entry->printed) {
         if (pj_strcmp2(&s1, entry->printed) != 0) {
             /* Not equal. */
@@ -929,7 +928,6 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
             status = -70;
         }
     }
-#endif
 
 on_return:
     return status;
