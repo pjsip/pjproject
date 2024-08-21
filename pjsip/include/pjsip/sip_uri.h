@@ -339,6 +339,7 @@ typedef struct pjsip_sip_uri
     pjsip_uri_vptr *vptr;               /**< Pointer to virtual function table.*/
     pj_str_t        user;               /**< Optional user part. */
     pj_str_t        passwd;             /**< Optional password part. */
+    pj_str_t        orig_userpass;      /**< Optional original user&pass. */
     pj_str_t        host;               /**< Host part, always exists. */
     int             port;               /**< Optional port number, or zero. */
     pj_str_t        user_param;         /**< Optional user parameter */

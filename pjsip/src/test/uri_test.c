@@ -571,6 +571,7 @@ static pjsip_uri *create_uri14(pj_pool_t *pool)
     pj_strdup2(pool, &name_addr->display, "This is -. !% *_+`'~ me");
     pj_strdup2(pool, &url->user, "a19A&=+$,;?/,");
     pj_strdup2(pool, &url->passwd, "@a&Zz=+$,");
+    pj_strdup2(pool, &url->orig_userpass, "a19A&=+$,;?/%2c:%40a&Zz=+$,");
     pj_strdup2(pool, &url->host, "my_proxy09.MY-domain.com");
     url->port = 9801;
     return (pjsip_uri*)name_addr;
