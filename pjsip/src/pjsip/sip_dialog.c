@@ -1818,6 +1818,9 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
             enum { TMP_LEN=PJSIP_MAX_URL_SIZE };
             pj_ssize_t len;
 
+            PJ_LOG(4, (dlg->obj_name, "Updating remote contact in "
+                                      "target refresh"));
+
             dlg->remote.contact = (pjsip_contact_hdr*)
                                   pjsip_hdr_clone(dlg->pool, contact);
             dlg->target = dlg->remote.contact->uri;
@@ -1828,6 +1831,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
             pjsip_fromto_hdr_set_to(dlg->remote.info);
         
             /* Print the remote info. */
+            tmp.ptr = (char*) pj_pool_alloc(rdata->tp_info.pool, TMP_LEN);
             len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
                                   dlg->remote.info->uri, tmp.ptr, TMP_LEN);
             if (len < 1) {
