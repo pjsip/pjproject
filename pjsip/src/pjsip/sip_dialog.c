@@ -1814,9 +1814,31 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
                            dlg->remote.contact->uri,
                            contact->uri)))
         {
+            pj_str_t tmp;
+            enum { TMP_LEN=PJSIP_MAX_URL_SIZE };
+            pj_ssize_t len;
+
             dlg->remote.contact = (pjsip_contact_hdr*)
                                   pjsip_hdr_clone(dlg->pool, contact);
             dlg->target = dlg->remote.contact->uri;
+
+            /* Update remote info as well. */
+            dlg->remote.info = (pjsip_fromto_hdr*)
+                               pjsip_hdr_clone(dlg->pool, rdata->msg_info.from);
+            pjsip_fromto_hdr_set_to(dlg->remote.info);
+        
+            /* Print the remote info. */
+            len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+                                  dlg->remote.info->uri, tmp.ptr, TMP_LEN);
+            if (len < 1) {
+                tmp.slen=pj_ansi_strxcpy(tmp.ptr, "<-error: uri too long->", TMP_LEN);
+                if (tmp.slen<0)
+                    tmp.slen = pj_ansi_strlen(tmp.ptr);
+            } else
+                tmp.slen = len;
+        
+            /* Save the remote info. */
+            pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
         }
     }
 
