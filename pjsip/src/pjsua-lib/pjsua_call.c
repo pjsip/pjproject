@@ -644,6 +644,7 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
     pj_bzero(opt, sizeof(*opt));
     opt->flag = PJSUA_CALL_INCLUDE_DISABLED_MEDIA;
     opt->aud_cnt = 1;
+    opt->user_call_id = pj_str("");
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     opt->vid_cnt = 1;
@@ -953,6 +954,15 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
         pjsua_perror(THIS_FILE, "Dialog creation failed", status);
         goto on_error;
     }
+
+    /*
+     * Use pre defined Call-ID to be sent out with INVITE as opposed to
+     * default Call-ID generation
+     */
+
+    if( opt->user_call_id.slen >= 0 ){
+         pj_strcpy(&dlg->call_id->id, &opt->user_call_id);
+     }
 
     /* Increment the dialog's lock otherwise when invite session creation
      * fails the dialog will be destroyed prematurely.
