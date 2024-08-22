@@ -1021,8 +1021,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
     pj_log_pop_indent();
 
-    PJ_LOG(4,(THIS_FILE, "Final Call-ID (%s)", dlg->call_id->id  ));
-
     return PJ_SUCCESS;
 
 
