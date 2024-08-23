@@ -234,7 +234,7 @@ void CallSetting::fromPj(const pjsua_call_setting &prm)
     this->audioCount        = prm.aud_cnt;
     this->videoCount        = prm.vid_cnt;
     this->mediaDir.clear();
-    this->userCallId        = pj2Str(prm.user_call_id);
+    this->customCallId        = pj2Str(prm.custom_call_id);
 
     /* Since we don't know the size of media_dir array, we populate
      * mediaDir vector up to the element with non-default value.
@@ -263,8 +263,8 @@ pjsua_call_setting CallSetting::toPj() const
         setting.media_dir[mi] = (pjmedia_dir)this->mediaDir[mi];
     }
 
-    if( ! this->userCallId.empty()) {
-        setting.user_call_id = str2Pj(this->userCallId);
+    if( ! this->customCallId.empty()) {
+        setting.custom_call_id = str2Pj(this->customCallId);
     }
     
     return setting;

@@ -644,7 +644,7 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
     pj_bzero(opt, sizeof(*opt));
     opt->flag = PJSUA_CALL_INCLUDE_DISABLED_MEDIA;
     opt->aud_cnt = 1;
-    opt->user_call_id = pj_str("");
+    opt->custom_call_id = pj_str("");
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     opt->vid_cnt = 1;
@@ -960,8 +960,8 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
      * a randomly generated Call-ID
      */
 
-    if( opt->user_call_id.slen > 0 ){
-        dlg->call_id->id = opt->user_call_id;
+    if( opt->custom_call_id.slen > 0 ){
+        dlg->call_id->id = opt->custom_call_id;
         PJ_LOG(4,(THIS_FILE, "Set user defined Call-ID (%s)", dlg->call_id->id  ));
     }
 

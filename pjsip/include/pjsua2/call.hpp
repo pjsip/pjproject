@@ -334,9 +334,9 @@ struct CallSetting
     MediaDirVector mediaDir;
 
     /**
-     * User defined Call-ID to be sent out with INVITE
+     * User defined Call-ID to be sent out with outgoing INVITE
      */
-    string userCallId;
+    string customCallId;
 
     
 public:
