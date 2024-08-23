@@ -335,6 +335,8 @@ struct CallSetting
 
     /**
      * User defined Call-ID to be sent out with outgoing INVITE
+     *
+     * This setting will only be used when creating a new outgoing call via Call::makeCall().
      */
     string customCallId;
 
