@@ -644,7 +644,6 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
     pj_bzero(opt, sizeof(*opt));
     opt->flag = PJSUA_CALL_INCLUDE_DISABLED_MEDIA;
     opt->aud_cnt = 1;
-    opt->custom_call_id = pj_str("");
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     opt->vid_cnt = 1;
@@ -956,8 +955,8 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     }
 
     /*
-     * Use pre defined Call-ID to be sent out with INVITE as opposed to using
-     * a randomly generated Call-ID
+     * Use pre defined Call-ID to be sent out with INVITE as opposed
+     * to using a randomly generated Call-ID
      */
 
     if( opt->custom_call_id.slen > 0 ){

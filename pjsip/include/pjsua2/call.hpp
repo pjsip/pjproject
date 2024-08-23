@@ -334,9 +334,15 @@ struct CallSetting
     MediaDirVector mediaDir;
 
     /**
-     * User defined Call-ID to be sent out with outgoing INVITE
+     * User defined Call-ID to be sent out with outgoing INVITE.
      *
-     * This setting will only be used when creating a new outgoing call via Call::makeCall().
+     * Note: It is up to the developer to verify uniqueness of the
+     * Call-ID as there will be no verification. The developer must
+     * change the Call-ID between calls creating a unique id for each
+     * outgoing call.
+     *
+     * This setting will only be used when creating a new outgoing call
+     * via Call::makeCall().
      */
     string customCallId;
 
