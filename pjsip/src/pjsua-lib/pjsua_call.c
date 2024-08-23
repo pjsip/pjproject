@@ -961,8 +961,8 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
      */
 
     if( opt->custom_call_id.slen > 0 ){
-        dlg->call_id->id = opt->custom_call_id;
-        PJ_LOG(4,(THIS_FILE, "Set user defined Call-ID (%.*s)", (int)dlg->call_id->id.slen, dlg->call_id->id  ));
+        pj_strdup(dlg->pool, &dlg->call_id->id, &opt->custom_call_id);
+        PJ_LOG(4,(THIS_FILE, "Set user defined Call-ID (%.*s)", (int)dlg->call_id->id.slen, dlg->call_id->id.ptr  ));
     }
 
     /* Increment the dialog's lock otherwise when invite session creation
