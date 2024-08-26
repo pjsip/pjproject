@@ -954,6 +954,16 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
         goto on_error;
     }
 
+    /*
+     * Use pre defined Call-ID to be sent out with INVITE as opposed
+     * to using a randomly generated Call-ID
+     */
+
+    if( opt->custom_call_id.slen > 0 ){
+        pj_strdup(dlg->pool, &dlg->call_id->id, &opt->custom_call_id);
+        PJ_LOG(4,(THIS_FILE, "Set user defined Call-ID (%.*s)", (int)dlg->call_id->id.slen, dlg->call_id->id.ptr  ));
+    }
+
     /* Increment the dialog's lock otherwise when invite session creation
      * fails the dialog will be destroyed prematurely.
      */
