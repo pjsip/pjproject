@@ -234,6 +234,8 @@ void CallSetting::fromPj(const pjsua_call_setting &prm)
     this->audioCount        = prm.aud_cnt;
     this->videoCount        = prm.vid_cnt;
     this->mediaDir.clear();
+
+    if( prm.custom_call_id.slen > 0 )
     this->customCallId        = pj2Str(prm.custom_call_id);
 
     /* Since we don't know the size of media_dir array, we populate
