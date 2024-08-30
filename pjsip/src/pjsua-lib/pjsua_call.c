@@ -966,8 +966,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
                   (int)dlg->call_id->id.slen, dlg->call_id->id.ptr  ));
         pj_bzero(&call->opt.custom_call_id,
                   sizeof(call->opt.custom_call_id));
-        call->opt.custom_call_id.slen=0;
-     }
+    }
 
     /* Increment the dialog's lock otherwise when invite session creation
      * fails the dialog will be destroyed prematurely.
