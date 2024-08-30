@@ -965,7 +965,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
                              "Call-ID (%.*s)",
                   (int)dlg->call_id->id.slen, dlg->call_id->id.ptr  ));
         pj_bzero(&call->opt.custom_call_id,
-                  sizeof(&call->opt.custom_call_id));
+                  sizeof(call->opt.custom_call_id));
         call->opt.custom_call_id.slen=0;
      }
 
