@@ -1244,7 +1244,7 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
 }
 
 #if defined(_MSC_VER)
-#   pragma comment(lib, "libopus.a")
+#   pragma comment(lib, "opus.lib")
 #endif
 
 
