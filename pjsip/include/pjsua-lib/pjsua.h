@@ -3410,6 +3410,8 @@ PJ_DECL(pj_status_t) pjsua_transport_get_info(pjsua_transport_id id,
                                               pjsua_transport_info *info);
 
 
+#if 0
+// Not implemented.
 /**
  * Disable a transport or re-enable it. By default transport is always 
  * enabled after it is created. Disabling a transport does not necessarily
@@ -3423,6 +3425,7 @@ PJ_DECL(pj_status_t) pjsua_transport_get_info(pjsua_transport_id id,
  */
 PJ_DECL(pj_status_t) pjsua_transport_set_enable(pjsua_transport_id id,
                                                 pj_bool_t enabled);
+#endif
 
 
 /**

@@ -2937,6 +2937,7 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 }
 
 
+#if 0
 /*
  * Disable a transport or re-enable it.
  */
@@ -2957,6 +2958,7 @@ PJ_DEF(pj_status_t) pjsua_transport_set_enable( pjsua_transport_id id,
 
     return PJ_EINVALIDOP;
 }
+#endif
 
 
 /*
