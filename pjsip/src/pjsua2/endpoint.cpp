@@ -2287,11 +2287,14 @@ TransportInfo Endpoint::transportGetInfo(TransportId id) const PJSUA2_THROW(Erro
     return tinfo;
 }
 
+#if 0
+// pjsua_transport_set_enable() not implemented
 void Endpoint::transportSetEnable(TransportId id, bool enabled)
                                   PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_transport_set_enable(id, enabled) );
 }
+#endif
 
 void Endpoint::transportClose(TransportId id) PJSUA2_THROW(Error)
 {

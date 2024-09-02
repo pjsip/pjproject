@@ -1533,6 +1533,8 @@ public:
      */
     TransportInfo transportGetInfo(TransportId id) const PJSUA2_THROW(Error);
 
+#if 0
+    // Not implemented.
     /**
      * Disable a transport or re-enable it. By default transport is always
      * enabled after it is created. Disabling a transport does not necessarily
@@ -1544,6 +1546,7 @@ public:
      *
      */
     void transportSetEnable(TransportId id, bool enabled) PJSUA2_THROW(Error);
+#endif
 
     /**
      * Close the transport. The system will wait until all transactions are
