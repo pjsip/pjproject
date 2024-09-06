@@ -375,7 +375,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
 
     cfg->ipv6_sip_use   = PJ_HAS_IPV6? PJSUA_IPV6_ENABLED_NO_PREFERENCE :
                                        PJSUA_IPV6_DISABLED;
-    cfg->ipv6_media_use = PJ_HAS_IPV6? PJSUA_IPV6_ENABLED_PREFER_IPV4 :
+    cfg->ipv6_media_use = PJ_HAS_IPV6? PJSUA_IPV6_ENABLED_PREFER_IPV6 :
                                        PJSUA_IPV6_DISABLED;
 
     cfg->media_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
