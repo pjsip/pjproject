@@ -348,12 +348,13 @@ static int get_media_ip_version(pjsua_call_media *call_med,
 
 
         /* Preferred IP version is not usable, fallback to any usable.
-         * Note that in this point, max only one is usable (but not preferred).
+         * Note that in this point, max only one is usable (but not preferred),
+         * or no preference (prioritizing IPv4 for now).
          */
-        if (ipv6_status == 2)
-            return 6;
         if (ipv4_status == 2)
             return 4;
+        if (ipv6_status == 2)
+            return 6;
 
         /* No usable IP version, use any available.
          * Prioritizing IPv4 here, maybe it has a better chance to work.
