@@ -948,6 +948,11 @@ PJ_DEF(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg,
  */
 PJ_DEF(void) pjsip_dlg_inc_lock(pjsip_dialog *dlg)
 {
+    /* Add ref temporarily to avoid possible dialog destroy while waiting
+     * the lock.
+     */
+    pj_grp_lock_add_ref(dlg->grp_lock_);
+
     PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_inc_lock(), sess_count=%d",
               dlg->sess_count));
 
@@ -956,6 +961,9 @@ PJ_DEF(void) pjsip_dlg_inc_lock(pjsip_dialog *dlg)
 
     PJ_LOG(6,(dlg->obj_name, "Leaving pjsip_dlg_inc_lock(), sess_count=%d",
               dlg->sess_count));
+
+    /* Lock has been acquired, dec ref */
+    pj_grp_lock_dec_ref(dlg->grp_lock_);
 }
 
 /* Try to acquire dialog's group lock, but bail out if group lock can not be
