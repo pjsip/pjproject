@@ -275,9 +275,15 @@ static int get_media_ip_version(pjsua_call_media *call_med,
 
     } else {
         pj_sockaddr addr = {{0}};
+        pj_status_t status;
+
+        /* Status:
+         * - not avail: no IP address, gethostip() returns error.
+         * - available: IP address is loopback, local-link, or disabled.
+         * - usable   : IP address is not loopback, local-link, nor disabled.
+         */
         unsigned ipv6_status = 0; /* 0: not avail, 1: available, 2: usable*/
         unsigned ipv4_status = 0; /* 0: not avail, 1: available, 2: usable*/
-        pj_status_t status;
 
         /* Use IPv4 regardless. */
         if (ipv6_use == PJSUA_IPV6_DISABLED)
@@ -348,22 +354,36 @@ static int get_media_ip_version(pjsua_call_media *call_med,
 
 
         /* Preferred IP version is not usable, fallback to any usable.
-         * Note that in this point, max only one is usable (but not preferred),
-         * or no preference (prioritizing IPv4 for now).
+         * In this point, either only one is usable (but not preferred)
+         * or there is no preference (IPv4 will be returned).
          */
         if (ipv4_status == 2)
             return 4;
         if (ipv6_status == 2)
             return 6;
 
-        /* No usable IP version, use any available.
-         * Prioritizing IPv4 here, maybe it has a better chance to work.
-         */
-        if (ipv4_status == 1 || ipv6_status == 0)
+        PJ_LOG(3,(THIS_FILE,"Call %d: Media %d: Warning, no usable "
+                            "IP address for SDP offer",
+                            call_med->call->index, call_med->idx));
+
+        /* No usable IP version, pick based on availability & preference. */
+        if (ipv6_use == PJSUA_IPV6_ENABLED_PREFER_IPV6 && ipv6_status > 0)
+            return 6;
+        if (ipv6_use == PJSUA_IPV6_ENABLED_PREFER_IPV4 && ipv4_status > 0)
             return 4;
 
-        /* IPv4 is not available */
-        return 6;
+        /* Preferred IP version is not available, fallback to any available.
+         * In this point, either only one is available (but not preferred)
+         * or there is no preference (IPv4 will be returned).
+         */
+        if (ipv4_status == 1)
+            return 4;
+        if (ipv6_status == 1)
+            return 6;
+
+        PJ_LOG(3,(THIS_FILE,"Call %d: Media %d: Warning, no available "
+                            "IP address for SDP offer",
+                            call_med->call->index, call_med->idx));
     }
 #else
     PJ_UNUSED_ARG(call_med);
