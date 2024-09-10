@@ -116,14 +116,24 @@ static int server_thread(void *p)
         } else if (srv->action == ACTION_REPLY) {
             pj_size_t send_len = 0;
             unsigned ctr = 0;
-            pj_ansi_sprintf(pkt, "HTTP/1.0 200 OK\r\n");
+            pkt_len = pj_ansi_snprintf(pkt, srv->buf_size, 
+                                       "HTTP/1.0 200 OK\r\n");
+            PJ_ASSERT_ON_FAIL(pkt_len>0, {
+                PJ_PERROR(2, (THIS_FILE, -pkt_len, "Error creating response"));
+                pj_sock_close(newsock);
+                continue;
+            })
             if (srv->send_content_length) {
-                pj_ansi_sprintf(pkt + pj_ansi_strlen(pkt), 
+                pj_ansi_snprintf(pkt + pkt_len, srv->buf_size - pkt_len,
                                 "Content-Length: %d\r\n",
                                 srv->data_size);
             }
-            pj_ansi_sprintf(pkt + pj_ansi_strlen(pkt), "\r\n");
-            pkt_len = pj_ansi_strlen(pkt);
+            pkt_len = pj_ansi_strxcat(pkt, "\r\n", srv->buf_size);
+            if (pkt_len < 0) {
+                PJ_PERROR(2, (THIS_FILE, -pkt_len, "Error creating response"));
+                pj_sock_close(newsock);
+                continue;
+            }
             rc = pj_sock_send(newsock, pkt, &pkt_len, 0);
             if (rc != PJ_SUCCESS) {
                 pj_sock_close(newsock);
@@ -135,7 +145,7 @@ static int server_thread(void *p)
                     pkt_len = srv->buf_size;
                 send_len += pkt_len;
                 pj_create_random_string(pkt, pkt_len);
-                pj_ansi_sprintf(pkt, "\nPacket: %d", ++ctr);
+                pj_ansi_snprintf(pkt, srv->buf_size, "\nPacket: %d", ++ctr);
                 pkt[pj_ansi_strlen(pkt)] = '\n';
                 rc = pj_sock_send(newsock, pkt, &pkt_len, 0);
                 if (rc != PJ_SUCCESS)
@@ -153,7 +163,7 @@ static void on_data_read(pj_http_req *hreq, void *data, pj_size_t size)
     PJ_UNUSED_ARG(hreq);
     PJ_UNUSED_ARG(data);
 
-    PJ_LOG(5, (THIS_FILE, "\nData received: %d bytes", size));
+    PJ_LOG(5, (THIS_FILE, "\nData received: %lu bytes", (unsigned long)size));
     if (size > 0) {
 #ifdef VERBOSE
         printf("%.*s\n", (int)size, (char *)data);
@@ -176,12 +186,12 @@ static void on_send_data(pj_http_req *hreq,
 
     sdata = (char*)pj_pool_alloc(pool, sendsz);
     pj_create_random_string(sdata, sendsz);
-    pj_ansi_sprintf(sdata, "\nSegment #%d\n", ++counter);
+    pj_ansi_snprintf(sdata, sendsz, "\nSegment #%d\n", ++counter);
     *data = sdata;
     *size = sendsz;
 
-    PJ_LOG(5, (THIS_FILE, "\nSending data progress: %d out of %d bytes", 
-           send_size, total_size));
+    PJ_LOG(5, (THIS_FILE, "\nSending data progress: %lu out of %lu bytes",
+           (unsigned long)send_size, (unsigned long)total_size));
 }
 
 
@@ -200,7 +210,8 @@ static void on_complete(pj_http_req *hreq, pj_status_t status,
         PJ_LOG(3, (THIS_FILE, "Error %d", status));
         return;
     }
-    PJ_LOG(5, (THIS_FILE, "\nData completed: %d bytes", resp->size));
+    PJ_LOG(5, (THIS_FILE, "\nData completed: %lu bytes",
+               (unsigned long)resp->size));
     if (resp->size > 0 && resp->data) {
 #ifdef VERBOSE
         printf("%.*s\n", (int)resp->size, (char *)resp->data);
@@ -688,7 +699,7 @@ int http_client_test_put1()
     pj_strset2(&param.method, (char*)"PUT");
     data = (char*)pj_pool_alloc(pool, length);
     pj_create_random_string(data, length);
-    pj_ansi_sprintf(data, "PUT test\n");
+    pj_ansi_snprintf(data, length, "PUT test\n");
     param.reqdata.data = data;
     param.reqdata.size = length;
     if (pj_http_req_create(pool, &url, timer_heap, ioqueue, 

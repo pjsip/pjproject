@@ -389,7 +389,7 @@ PJ_DEF(pj_status_t) pj_cli_create(pj_cli_cfg *cfg,
     pj_list_init(cli->root.sub_cmd);
 
     /* Register some standard commands. */
-    for (i = 0; i < sizeof(cmd_xmls)/sizeof(cmd_xmls[0]); i++) {
+    for (i = 0; i < PJ_ARRAY_SIZE(cmd_xmls); i++) {
         pj_str_t xml = pj_str(cmd_xmls[i]);
 
         if (pj_cli_add_cmd_from_xml(cli, NULL, &xml, 
@@ -501,7 +501,7 @@ static pj_cli_cmd_spec *get_cmd_name(const pj_cli_t *cli,
 
     if (group) {
         char cmd_str[MAX_CMD_ID_LENGTH];
-        pj_ansi_sprintf(cmd_str, "%d", group->id);
+        pj_ansi_snprintf(cmd_str, sizeof(cmd_str), "%d", group->id);
         pj_strcat2(&cmd_val, cmd_str);  
     }
     pj_strcat(&cmd_val, cmd);
@@ -522,7 +522,7 @@ static void add_cmd_name(pj_cli_t *cli, pj_cli_cmd_spec *group,
 
     if (group) {
         char cmd_str[MAX_CMD_ID_LENGTH];
-        pj_ansi_sprintf(cmd_str, "%d", group->id);
+        pj_ansi_snprintf(cmd_str, sizeof(cmd_str),  "%d", group->id);
         pj_strcat2(&cmd_val, cmd_str);  
     }
     pj_strcat(&cmd_val, cmd_name);
@@ -851,7 +851,7 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
     pj_str_t str;
     pj_size_t len;    
     pj_cli_cmd_spec *cmd;
-    pj_cli_cmd_spec *next_cmd;
+    pj_cli_cmd_spec *next_cmd = NULL;
     pj_status_t status = PJ_SUCCESS;
     pj_cli_parse_mode parse_mode = PARSE_NONE;    
 
@@ -1072,7 +1072,7 @@ static pj_status_t get_comp_match_cmds(const pj_cli_t *cli,
                                        pj_cli_exec_info *info)
 {
     pj_cli_cmd_spec *cmd;    
-    PJ_ASSERT_RETURN(cli && group && cmd_val && pool && info, PJ_EINVAL);   
+    PJ_ASSERT_RETURN(cli && group && cmd_val && pool && info, PJ_EINVAL);
 
     cmd = get_cmd_name(cli, group, cmd_val);
 
@@ -1083,7 +1083,7 @@ static pj_status_t get_comp_match_cmds(const pj_cli_t *cli,
         if (status != PJ_SUCCESS)
             return status;
 
-        *p_cmd = cmd;
+        if (p_cmd) *p_cmd = cmd;
     }
 
     return PJ_SUCCESS;

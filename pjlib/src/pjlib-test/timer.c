@@ -67,8 +67,8 @@ static int test_timer_heap(void)
     size = pj_timer_heap_mem_size(MAX_COUNT)+MAX_COUNT*sizeof(pj_timer_entry);
     pool = pj_pool_create( mem, NULL, size, 4000, NULL);
     if (!pool) {
-        PJ_LOG(3,("test", "...error: unable to create pool of %u bytes",
-                  size));
+        PJ_LOG(3,("test", "...error: unable to create pool of %lu bytes",
+                  (unsigned long)size));
         return -10;
     }
 
@@ -161,8 +161,8 @@ static int test_timer_heap(void)
         } while (PJ_TIME_VAL_LTE(now, expire)&&pj_timer_heap_count(timer) > 0);
 
         if (pj_timer_heap_count(timer)) {
-            PJ_LOG(3, (THIS_FILE, "ERROR: %d timers left", 
-                       pj_timer_heap_count(timer)));
+            PJ_LOG(3, (THIS_FILE, "ERROR: %lu timers left", 
+                       (unsigned long)pj_timer_heap_count(timer)));
             ++err;
         }
         t_sched.u32.lo /= count; 
@@ -436,6 +436,7 @@ static int poll_worker(void *arg)
     return 0;
 }
 
+#if ST_CANCEL_THREAD_COUNT
 /* Cancel worker thread function. */
 static int cancel_worker(void *arg)
 {
@@ -466,6 +467,7 @@ static int cancel_worker(void *arg)
 
     return 0;
 }
+#endif
 
 static int timer_stress_test(void)
 {
@@ -627,11 +629,11 @@ static int timer_stress_test(void)
     }
 
     /* Start cancel worker threads */
-    if (ST_CANCEL_THREAD_COUNT) {
-        cancel_threads = (pj_thread_t**)
-                          pj_pool_calloc(pool, ST_CANCEL_THREAD_COUNT,
-                                         sizeof(pj_thread_t*));
-    }
+#if ST_CANCEL_THREAD_COUNT
+    cancel_threads = (pj_thread_t**)
+                        pj_pool_calloc(pool, ST_CANCEL_THREAD_COUNT,
+                                        sizeof(pj_thread_t*));
+
     for (i=0; i<ST_CANCEL_THREAD_COUNT; ++i) {
         status = pj_thread_create( pool, "cancel", &cancel_worker, &tparam,
                                    0, 0, &cancel_threads[i]);
@@ -641,6 +643,7 @@ static int timer_stress_test(void)
             goto on_return;
         }
     }
+#endif
 
 #if SIMULATE_CRASH
     tmp_pool = pj_pool_create( mem, NULL, 4096, 128, NULL);
@@ -668,7 +671,7 @@ on_return:
     tparam.stopping = PJ_TRUE;
     
     for (i=0; i<ST_STRESS_THREAD_COUNT; ++i) {
-        if (!stress_threads[i])
+        if (!stress_threads || !stress_threads[i])
             continue;
         pj_thread_join(stress_threads[i]);
         pj_thread_destroy(stress_threads[i]);
@@ -712,8 +715,8 @@ on_return:
     if (timer)
         pj_timer_heap_destroy(timer);
 
-    PJ_LOG(3,("test", "Total memory of timer heap: %d",
-                      pj_timer_heap_mem_size(ST_ENTRY_COUNT)));
+    PJ_LOG(3,("test", "Total memory of timer heap: %lu",
+                      (unsigned long)pj_timer_heap_mem_size(ST_ENTRY_COUNT)));
 
     if (tparam.idx)
         pj_atomic_destroy(tparam.idx);
@@ -966,6 +969,9 @@ int timer_test()
     rc = timer_bench_test();
     if (rc != 0)
         return rc;
+#else
+    /* Avoid unused warning */
+    PJ_UNUSED_ARG(timer_bench_test);
 #endif
 
     return 0;

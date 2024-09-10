@@ -467,7 +467,6 @@
     <ClCompile>
       <AdditionalIncludeDirectories>../include;../../pjlib/include;../../third_party/speex/include;../../third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile />
     </ClCompile>
     <Lib>
       <OutputFile>..\lib\pjmedia-codec-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -689,6 +688,12 @@
     <ClCompile Include="..\src\pjmedia-codec\ilbc.c" />
     <ClCompile Include="..\src\pjmedia-codec\ipp_codecs.c" />
     <ClCompile Include="..\src\pjmedia-codec\l16.c" />
+    <ClCompile Include="..\src\pjmedia-codec\lyra.cpp">
+      <PreprocessorDefinitions>GLOG_DEPRECATED=__declspec(deprecated);GLOG_EXPORT=;GLOG_NO_ABBREVIATED_SEVERITIES;GLOG_NO_EXPORT=;
+EIGEN_MPL2_ONLY;EIGEN_MAX_ALIGN_BYTES=64;XNN_ENABLE_ASSEMBLY=1;XNN_ENABLE_JIT=0;XNN_ENABLE_SPARSE=1;XNN_LOG_LEVEL=2;PTHREADPOOL_NO_DEPRECATED_API;XNN_ENABLE_MEMOPT=1;XNN_WASMSIMD_VERSION=87;EIGEN_ALTIVEC_USE_CUSTOM_PACK=0;TFLITE_BUILD_WITH_XNNPACK_DELEGATE;_USE_MATH_DEFINES;__DATE__="redacted";__TIMESTAMP__="redacted";__TIME__="redacted";NOGDI;__PRETTY_FUNCTION__=__FUNCSIG__;_HAS_DEPRECATED_RESULT_OF=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DisableSpecificWarnings>4117;4244;4267%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
     <ClCompile Include="..\src\pjmedia-codec\opencore_amr.c" />
     <ClCompile Include="..\src\pjmedia-codec\openh264.cpp" />
     <ClCompile Include="..\src\pjmedia-codec\opus.c" />
@@ -715,6 +720,7 @@
     <ClInclude Include="..\include\pjmedia-codec\ilbc.h" />
     <ClInclude Include="..\include\pjmedia-codec\ipp_codecs.h" />
     <ClInclude Include="..\include\pjmedia-codec\l16.h" />
+    <ClInclude Include="..\include\pjmedia-codec\lyra.h" />
     <ClInclude Include="..\include\pjmedia-codec\opencore_amr.h" />
     <ClInclude Include="..\include\pjmedia-codec\opus.h" />
     <ClInclude Include="..\include\pjmedia-codec\passthrough.h" />

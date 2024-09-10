@@ -31,7 +31,11 @@
 #define RTP_LEN     PJMEDIA_MAX_MRU
 
 /* Maximum size of incoming RTCP packet */
-#define RTCP_LEN    600
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#   define RTCP_LEN    PJMEDIA_MAX_MRU
+#else
+#   define RTCP_LEN    600
+#endif
 
 /* Maximum pending write operations */
 #define MAX_PENDING 4
@@ -111,6 +115,7 @@ static void on_rtp_data_sent(pj_ioqueue_key_t *key,
 static void on_rx_rtcp(pj_ioqueue_key_t *key, 
                        pj_ioqueue_op_key_t *op_key, 
                        pj_ssize_t bytes_read);
+static void transport_on_destroy(void *arg);
 
 /*
  * These are media transport operations.
@@ -236,7 +241,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
     si.rtp_sock = si.rtcp_sock = PJ_INVALID_SOCKET;
 
     /* Create RTP socket */
-    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &si.rtp_sock);
+    status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &si.rtp_sock);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -252,7 +257,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
 
 
     /* Create RTCP socket */
-    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &si.rtcp_sock);
+    status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &si.rtcp_sock);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -294,6 +299,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     pj_pool_t *pool;
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback rtp_cb, rtcp_cb;
+    pj_grp_lock_t *grp_lock;
     pj_status_t status;
 
 
@@ -344,18 +350,30 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
                   pj_sockaddr_get_addr_len(&tp->rtp_addr_name));
     }
 
+    /* Create group lock */
+    status = pj_grp_lock_create(pool, NULL, &grp_lock);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+
+    pj_grp_lock_add_ref(grp_lock);
+    pj_grp_lock_add_handler(grp_lock, pool, tp, &transport_on_destroy);
+    tp->base.grp_lock = grp_lock;
+
     /* Setup RTP socket with the ioqueue */
     pj_bzero(&rtp_cb, sizeof(rtp_cb));
     rtp_cb.on_read_complete = &on_rx_rtp;
     rtp_cb.on_write_complete = &on_rtp_data_sent;
 
-    status = pj_ioqueue_register_sock(pool, ioqueue, tp->rtp_sock, tp,
-                                      &rtp_cb, &tp->rtp_key);
+    status = pj_ioqueue_register_sock2(pool, ioqueue, tp->rtp_sock, grp_lock,
+                                       tp, &rtp_cb, &tp->rtp_key);
     if (status != PJ_SUCCESS)
         goto on_error;
     
     /* Disallow concurrency so that detach() and destroy() are
      * synchronized with the callback.
+     *
+     * Note that we still need this even after group lock is added to
+     * maintain the above behavior.
      */
     status = pj_ioqueue_set_concurrency(tp->rtp_key, PJ_FALSE);
     if (status != PJ_SUCCESS)
@@ -384,8 +402,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     pj_bzero(&rtcp_cb, sizeof(rtcp_cb));
     rtcp_cb.on_read_complete = &on_rx_rtcp;
 
-    status = pj_ioqueue_register_sock(pool, ioqueue, tp->rtcp_sock, tp,
-                                      &rtcp_cb, &tp->rtcp_key);
+    status = pj_ioqueue_register_sock2(pool, ioqueue, tp->rtcp_sock, grp_lock,
+                                       tp, &rtcp_cb, &tp->rtcp_key);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -420,6 +438,15 @@ on_error:
 }
 
 
+static void transport_on_destroy(void *arg)
+{
+    struct transport_udp *udp = (struct transport_udp*) arg;
+
+    PJ_LOG(4, (udp->base.name, "UDP media transport destroyed"));
+    pj_pool_safe_release(&udp->pool);
+}
+
+
 /**
  * Close UDP transport.
  */
@@ -432,12 +459,15 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 
     /* Must not close while application is using this */
     //PJ_ASSERT_RETURN(!udp->attached, PJ_EINVALIDOP);
-    
+
+    PJ_LOG(4,(udp->base.name, "UDP media transport destroying"));
+
+    /* The following calls to pj_ioqueue_unregister() will block the execution
+     * if callback is still being called because allow_concurrent is false.
+     * So it is safe to release the pool immediately after.
+     */
 
     if (udp->rtp_key) {
-        /* This will block the execution if callback is still
-         * being called.
-         */
         pj_ioqueue_unregister(udp->rtp_key);
         udp->rtp_key = NULL;
         udp->rtp_sock = PJ_INVALID_SOCKET;
@@ -455,8 +485,7 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
         udp->rtcp_sock = PJ_INVALID_SOCKET;
     }
 
-    PJ_LOG(4,(udp->base.name, "UDP media transport destroyed"));
-    pj_pool_release(udp->pool);
+    pj_grp_lock_dec_ref(tp->grp_lock);
 
     return PJ_SUCCESS;
 }
@@ -555,6 +584,10 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
             call_rtp_cb(udp, bytes_read, &rem_switch);
         }
 
+        /* Transport may be destroyed from the callback! */
+        if (!udp->rtp_key || !udp->started)
+            break;
+
 #if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
     (PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR == 1)
         if (rem_switch &&
@@ -598,9 +631,9 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
         bytes_read = sizeof(udp->rtp_pkt);
         udp->rtp_addrlen = sizeof(udp->rtp_src_addr);
         status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
-                                        udp->rtp_pkt, &bytes_read, 0,
-                                        &udp->rtp_src_addr,
-                                        &udp->rtp_addrlen);
+                                     udp->rtp_pkt, &bytes_read, 0,
+                                     &udp->rtp_src_addr,
+                                     &udp->rtp_addrlen);
 
         if (status != PJ_EPENDING && status != PJ_SUCCESS) {        
             if (transport_restarted && last_err == status) {
@@ -689,6 +722,10 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 
     do {
         call_rtcp_cb(udp, bytes_read);
+
+        /* Transport may be destroyed from the callback! */
+        if (!udp->rtcp_key || !udp->started)
+            break;
 
 #if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
     (PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR == 1)

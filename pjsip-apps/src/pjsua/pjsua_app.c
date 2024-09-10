@@ -47,6 +47,7 @@ static void stereo_demo();
 
 #ifdef USE_GUI
 pj_bool_t showNotification(pjsua_call_id call_id);
+pj_bool_t reportCallState(pjsua_call_id call_id);
 #endif
 
 static void ringback_start(pjsua_call_id call_id);
@@ -170,6 +171,10 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
     pjsua_call_info call_info;
 
     PJ_UNUSED_ARG(e);
+
+#ifdef USE_GUI
+    reportCallState(call_id);
+#endif
 
     pjsua_call_get_info(call_id, &call_info);
 
@@ -599,7 +604,7 @@ static pjsip_redirect_op call_on_redirected(pjsua_call_id call_id,
         len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, target, uristr, 
                               sizeof(uristr));
         if (len < 1) {
-            pj_ansi_strcpy(uristr, "--URI too long--");
+            pj_ansi_strxcpy(uristr, "--URI too long--", sizeof(uristr));
         }
 
         PJ_LOG(3,(THIS_FILE, "Call %d is being redirected to %.*s. "
@@ -667,6 +672,40 @@ static void on_buddy_state(pjsua_buddy_id buddy_id)
 
 
 /*
+ * Handler on buddy dialog event state changed.
+ */
+static void on_buddy_dlg_event_state(pjsua_buddy_id buddy_id)
+{
+    pjsua_buddy_dlg_event_info info;
+    pjsua_buddy_get_dlg_event_info(buddy_id, &info);
+
+    PJ_LOG(3,(THIS_FILE, "%.*s dialog-info-state: %.*s, "
+              "dialog-info-entity: %.*s, dialog-id: %.*s, "
+              "dialog-call-id: %.*s, dialog-direction: %.*s, "
+              "dialog-state: %.*s, dialog-duration: %.*s, "
+              "local-identity: %.*s, local-target-uri: %.*s, "
+              "remote-identity: %.*s, remote-target-uri: %.*s, "
+              "dialog-local-tag: %.*s, dialog-remote-tag: %.*s, "
+              "subscription state: %s (last termination reason code=%d %.*s)",
+              (int)info.uri.slen, info.uri.ptr,
+              (int)info.dialog_info_state.slen, info.dialog_info_state.ptr,
+              (int)info.dialog_info_entity.slen, info.dialog_info_entity.ptr,
+              (int)info.dialog_id.slen, info.dialog_id.ptr,
+              (int)info.dialog_call_id.slen, info.dialog_call_id.ptr,
+              (int)info.dialog_direction.slen, info.dialog_direction.ptr,
+              (int)info.dialog_state.slen, info.dialog_state.ptr,
+              (int)info.dialog_duration.slen, info.dialog_duration.ptr,
+              (int)info.local_identity.slen, info.local_identity.ptr,
+              (int)info.local_target_uri.slen, info.local_target_uri.ptr,
+              (int)info.remote_identity.slen, info.remote_identity.ptr,
+              (int)info.remote_target_uri.slen, info.remote_target_uri.ptr,
+              (int)info.dialog_local_tag.slen, info.dialog_local_tag.ptr,
+              (int)info.dialog_remote_tag.slen, info.dialog_remote_tag.ptr,
+              info.sub_state_name, info.sub_term_code,
+              (int)info.sub_term_reason.slen, info.sub_term_reason.ptr));
+}
+
+/*
  * Subscription state has changed.
  */
 static void on_buddy_evsub_state(pjsua_buddy_id buddy_id,
@@ -696,11 +735,36 @@ static void on_buddy_evsub_state(pjsua_buddy_id buddy_id,
 
 }
 
+static void on_buddy_evsub_dlg_event_state(pjsua_buddy_id buddy_id,
+                                     pjsip_evsub *sub,
+                                     pjsip_event *event)
+{
+    char event_info[80];
+
+    PJ_UNUSED_ARG(sub);
+
+    event_info[0] = '\0';
+
+    if (event->type == PJSIP_EVENT_TSX_STATE &&
+        event->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+    {
+        pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
+        snprintf(event_info, sizeof(event_info),
+                 " (RX %s)",
+                 pjsip_rx_data_get_info(rdata));
+    }
+
+    PJ_LOG(4,(THIS_FILE,
+              "Buddy %d: dialog event subscription state: %s (event: %s%s)",
+              buddy_id, pjsip_evsub_get_state_name(sub),
+              pjsip_event_str(event->type), event_info));
+}
+
 
 /**
  * Incoming IM message (i.e. MESSAGE request)!
  */
-static void on_pager(pjsua_call_id call_id, const pj_str_t *from, 
+static void on_pager(pjsua_call_id call_id, const pj_str_t *from,
                      const pj_str_t *to, const pj_str_t *contact,
                      const pj_str_t *mime_type, const pj_str_t *text)
 {
@@ -1060,6 +1124,11 @@ void on_ip_change_progress(pjsua_ip_change_op op,
 
     if (status == PJ_SUCCESS) {
         switch (op) {
+        case PJSUA_IP_CHANGE_OP_SHUTDOWN_TP:
+            pj_ansi_snprintf(info_str, sizeof(info_str),
+                             "TCP/TLS transports shutdown");
+            break;
+
         case PJSUA_IP_CHANGE_OP_RESTART_LIS:
             pjsua_transport_get_info(info->lis_restart.transport_id, &tp_info);
             pj_ansi_snprintf(info_str, sizeof(info_str),
@@ -1106,7 +1175,10 @@ void on_ip_change_progress(pjsua_ip_change_op op,
         case PJSUA_IP_CHANGE_OP_COMPLETED:
             pj_ansi_snprintf(info_str, sizeof(info_str),
                              "done");
+            break;
         default:
+            pj_ansi_snprintf(info_str, sizeof(info_str),
+                             "unknown-op");
             break;
         }
         PJ_LOG(3,(THIS_FILE, "IP change progress report : %s", info_str));
@@ -1135,7 +1207,6 @@ static void simple_registrar(pjsip_rx_data *rdata)
     pjsip_tx_data *tdata;
     const pjsip_expires_hdr *exp;
     const pjsip_hdr *h;
-    unsigned cnt = 0;
     pjsip_generic_string_hdr *srv;
     pj_status_t status;
 
@@ -1165,7 +1236,6 @@ static void simple_registrar(pjsip_rx_data *rdata)
                                                                 tdata->pool, h);
                 nc->expires = e;
                 pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)nc);
-                ++cnt;
             }
         }
         h = h->next;
@@ -1387,7 +1457,10 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_reg_state = &on_reg_state;
     app_config.cfg.cb.on_incoming_subscribe = &on_incoming_subscribe;
     app_config.cfg.cb.on_buddy_state = &on_buddy_state;
+    app_config.cfg.cb.on_buddy_dlg_event_state = &on_buddy_dlg_event_state;
     app_config.cfg.cb.on_buddy_evsub_state = &on_buddy_evsub_state;
+    app_config.cfg.cb.on_buddy_evsub_dlg_event_state = 
+        &on_buddy_evsub_dlg_event_state;
     app_config.cfg.cb.on_pager = &on_pager;
     app_config.cfg.cb.on_typing = &on_typing;
     app_config.cfg.cb.on_call_transfer_status = &on_call_transfer_status;
@@ -1645,6 +1718,11 @@ static pj_status_t app_init(void)
             }
         }
 #else
+        for (i=0; i<app_config.avi_cnt; ++i) {
+            app_config.avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
+            app_config.avi[i].slot = PJSUA_INVALID_ID;
+        }
+
         PJ_LOG(2,(THIS_FILE,
                   "Warning: --play-avi is ignored because AVI is disabled"));
 #endif  /* PJMEDIA_VIDEO_DEV_HAS_AVI */
@@ -1715,7 +1793,7 @@ static pj_status_t app_init(void)
 
             app_config_init_video(&acc_cfg);
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
-            acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+            // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -1780,7 +1858,7 @@ static pj_status_t app_init(void)
 
             app_config_init_video(&acc_cfg);
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
-            acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+            // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -1848,7 +1926,7 @@ static pj_status_t app_init(void)
 
             app_config_init_video(&acc_cfg);
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
-            acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+            // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -1930,6 +2008,9 @@ static pj_status_t app_init(void)
     pjsua_call_setting_default(&call_opt);
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
+    if (app_config.enable_loam) {
+        call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
+    }
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
     /* Wipe out TLS key settings in transport configs */
@@ -1974,8 +2055,10 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
 
     /* Start console refresh thread */
     if (stdout_refresh > 0) {
-        pj_thread_create(app_config.pool, "stdout", &stdout_refresh_proc,
-                         NULL, 0, 0, &stdout_refresh_thread);
+        status = pj_thread_create(app_config.pool, "stdout", 
+                                  &stdout_refresh_proc,
+                                  NULL, 0, 0, &stdout_refresh_thread);
+        PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
     }
 
     status = pjsua_start();

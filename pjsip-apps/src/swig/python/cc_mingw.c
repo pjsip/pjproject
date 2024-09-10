@@ -41,7 +41,7 @@ const char* find_gcc(const char *gcc_exe)
         return NULL;
     }
 
-    strncpy(spath, p, sizeof(spath));
+    pj_ansi_strxcpy(spath, p, sizeof(spath));
     p = strtok(spath, ";");
     while (p) {
         int len;

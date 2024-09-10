@@ -60,22 +60,23 @@
 #if LIBAVCODEC_VER_AT_LEAST(53,61)
 #  if LIBAVCODEC_VER_AT_LEAST(54,59)
    /* Not sure when AVCodec::encode is obsoleted/removed. */
-#    define AVCODEC_HAS_ENCODE(c)       (c->encode2)
+#    define AVCODEC_HAS_ENCODE(c)       (c->encode2 != (void*)0)
 #  else
    /* Not sure when AVCodec::encode2 is introduced. It appears in 
     * libavcodec 53.61 where some codecs actually still use AVCodec::encode
     * (e.g: H263, H264).
     */
-#    define AVCODEC_HAS_ENCODE(c)       (c->encode || c->encode2)
+#    define AVCODEC_HAS_ENCODE(c)       (c->encode != (void*)0 || \
+                                         c->encode2 != (void*)0)
 #  endif
 #  define AV_OPT_SET(obj,name,val,opt)  (av_opt_set(obj,name,val,opt)==0)
 #  define AV_OPT_SET_INT(obj,name,val)  (av_opt_set_int(obj,name,val,0)==0)
 #else
-#  define AVCODEC_HAS_ENCODE(c)         (c->encode)
+#  define AVCODEC_HAS_ENCODE(c)         (c->encode != (void*)0)
 #  define AV_OPT_SET(obj,name,val,opt)  (av_set_string3(obj,name,val,opt,NULL)==0)
 #  define AV_OPT_SET_INT(obj,name,val)  (av_set_int(obj,name,val)!=NULL)
 #endif
-#define AVCODEC_HAS_DECODE(c)         (c->decode)
+#define AVCODEC_HAS_DECODE(c)           (c->decode != (void*)0)
 
 /* AVCodec H264 default PT */
 #define AVC_H264_PT                       PJMEDIA_RTP_PT_H264_RSV3
@@ -184,8 +185,8 @@ typedef struct ffmpeg_private
     pj_timestamp                     last_dec_keyframe_ts; 
 
     /* The ffmpeg codec states. */
-    AVCodec                         *enc;
-    AVCodec                         *dec;
+    const AVCodec                   *enc;
+    const AVCodec                   *dec;
     AVCodecContext                  *enc_ctx;
     AVCodecContext                  *dec_ctx;
 
@@ -253,8 +254,8 @@ struct ffmpeg_codec_desc
 
     /* Init time defined info */
     pj_bool_t                    enabled;
-    AVCodec                     *enc;
-    AVCodec                     *dec;
+    const AVCodec               *enc;
+    const AVCodec               *dec;
 };
 
 
@@ -598,12 +599,13 @@ static pj_status_t h264_postopen(ffmpeg_private *ff)
 
 static FUNC_PACKETIZE(h264_packetize)
 {
+    PJ_UNUSED_ARG(is_keyframe);
     h264_data *data = (h264_data*)ff->data;
     pj_status_t status;
     pj_uint8_t *outbuf = payload;
     pj_size_t out_size = *payload_len;
     status = pjmedia_h264_packetize(data->pktz, bits, bits_len, bits_pos,
-                                  &payload, payload_len);
+                                    (const pj_uint8_t **)&payload, payload_len);
     if (status != PJ_SUCCESS)
         return status;
     if (out_size < *payload_len)
@@ -671,12 +673,13 @@ static pj_status_t h263_preopen(ffmpeg_private *ff)
 
 static FUNC_PACKETIZE(h263_packetize)
 {
+    PJ_UNUSED_ARG(is_keyframe);
     h263_data *data = (h263_data*)ff->data;
     pj_status_t status;
     pj_uint8_t *outbuf = payload;
     pj_size_t out_size = *payload_len;
     status = pjmedia_h263_packetize(data->pktz, bits, bits_len, bits_pos,
-                                  &payload, payload_len);
+                                    &payload, payload_len);
     if (status != PJ_SUCCESS)
         return status;
     if (out_size < *payload_len)
@@ -698,7 +701,7 @@ static FUNC_UNPACKETIZE(h263_unpacketize)
 static const ffmpeg_codec_desc* find_codec_desc_by_info(
                         const pjmedia_vid_codec_info *info)
 {
-    int i;
+    unsigned i;
 
     for (i=0; i<PJ_ARRAY_SIZE(codec_desc); ++i) {
         ffmpeg_codec_desc *desc = &codec_desc[i];
@@ -719,7 +722,7 @@ static const ffmpeg_codec_desc* find_codec_desc_by_info(
 
 static int find_codec_idx_by_fmt_id(pjmedia_format_id fmt_id)
 {
-    int i;
+    unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(codec_desc); ++i) {
         if (codec_desc[i].info.fmt_id == fmt_id)
             return i;
@@ -728,7 +731,7 @@ static int find_codec_idx_by_fmt_id(pjmedia_format_id fmt_id)
     return -1;
 }
 
-static void init_codec(const AVCodec *c, pj_bool_t is_encoder, 
+static void init_codec(AVCodec *c, pj_bool_t is_encoder,
                        pj_bool_t is_decoder)
 {
     pj_status_t status;
@@ -985,10 +988,10 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
             if (copied_dir != PJMEDIA_DIR_NONE) {
                 const char *dir_name[] = {NULL, "encoder", "decoder", "codec"};
                 PJ_LOG(5, (THIS_FILE, "The %.*s %s is using base codec (%.*s)",
-                           desc->info.encoding_name.slen,
+                           (int)desc->info.encoding_name.slen,
                            desc->info.encoding_name.ptr,
                            dir_name[copied_dir],
-                           base_desc->info.encoding_name.slen,
+                           (int)base_desc->info.encoding_name.slen,
                            base_desc->info.encoding_name.ptr));
             }
         }
@@ -1004,12 +1007,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
         /* Print warning about missing encoder/decoder */
         if (!desc->enc) {
             PJ_LOG(4, (THIS_FILE, "Cannot find %.*s encoder in ffmpeg library",
-                       desc->info.encoding_name.slen,
+                       (int)desc->info.encoding_name.slen,
                        desc->info.encoding_name.ptr));
         }
         if (!desc->dec) {
             PJ_LOG(4, (THIS_FILE, "Cannot find %.*s decoder in ffmpeg library",
-                       desc->info.encoding_name.slen,
+                       (int)desc->info.encoding_name.slen,
                        desc->info.encoding_name.ptr));
         }
     }
@@ -1191,6 +1194,10 @@ static pj_status_t ffmpeg_alloc_codec( pjmedia_vid_codec_factory *factory,
 
     /* Create pool for codec instance */
     pool = pj_pool_create(ffmpeg_factory.pf, "ffmpeg codec", 512, 512, NULL);
+    if (!pool) {
+        status = PJ_ENOMEM;
+        goto on_error;
+    }
     codec = PJ_POOL_ZALLOC_T(pool, pjmedia_vid_codec);
     if (!codec) {
         status = PJ_ENOMEM;
@@ -1540,7 +1547,8 @@ static pj_status_t  ffmpeg_packetize ( pjmedia_vid_codec *codec,
                                        pj_size_t bits_len,
                                        unsigned *bits_pos,
                                        pj_uint8_t *payload,
-                                       pj_size_t *payload_len, pj_bool_t is_keyframe)
+                                       pj_size_t *payload_len,
+                                       pj_bool_t is_keyframe)
 {
     ffmpeg_private *ff = (ffmpeg_private*)codec->codec_data;
 
@@ -1707,8 +1715,7 @@ static pj_status_t ffmpeg_codec_encode_begin(pjmedia_vid_codec *codec,
     *has_more = PJ_FALSE;
 
     if (ff->whole) {
-        status = ffmpeg_codec_encode_whole(codec, opt, input, out_size,
-                                           output);
+        status = ffmpeg_codec_encode_whole(codec, opt, input, out_size, output);
     } else {
         pjmedia_frame whole_frm;
         pj_bzero(&whole_frm, sizeof(whole_frm));
@@ -1841,6 +1848,18 @@ static pj_status_t check_decode_result(pjmedia_vid_codec *codec,
 }
 
 /*
+ * Unreference AVFrame.
+ */
+static void ffmpeg_frame_unref(AVFrame *frame)
+{
+#ifdef PJMEDIA_USE_OLD_FFMPEG
+    (void)frame;
+#else
+    av_frame_unref(frame);
+#endif
+}
+
+/*
  * Decode frame.
  */
 static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
@@ -1950,12 +1969,16 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
          */
         status = check_decode_result(codec, &input->timestamp,
                                      avframe.key_frame);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            ffmpeg_frame_unref(&avframe);
             return status;
+        }
 
         /* Check provided buffer size */
-        if (vafp->framebytes > output_buf_len)
+        if (vafp->framebytes > output_buf_len) {
+            ffmpeg_frame_unref(&avframe);
             return PJ_ETOOSMALL;
+        }
 
         /* Get the decoded data */
         for (i = 0; i < ff->dec_vfi->plane_cnt; ++i) {
@@ -1981,6 +2004,7 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
 
         output->type = PJMEDIA_FRAME_TYPE_VIDEO;
         output->size = vafp->framebytes;
+        ffmpeg_frame_unref(&avframe);
     } else {
         output->type = PJMEDIA_FRAME_TYPE_NONE;
         output->size = 0;

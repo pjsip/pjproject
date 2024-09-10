@@ -26,6 +26,7 @@
 #define THIS_FILE   "codec.c"
 
 
+static pjmedia_codec_mgr *def_codec_mgr;
 
 /* Definition of default codecs parameters */
 struct pjmedia_codec_default_param
@@ -38,6 +39,93 @@ struct pjmedia_codec_default_param
 /* Sort codecs in codec manager based on priorities */
 static void sort_codecs(pjmedia_codec_mgr *mgr);
 
+
+/* Internal: Find a certain codec string in the dynamic codecs array. */
+int pjmedia_codec_mgr_find_codec(const pj_str_t dyn_codecs[],
+                                 unsigned count,
+                                 const pj_str_t *codec,
+                                 pj_bool_t *found)
+{
+    int start = 0;
+    int end = count - 1;
+
+    if (found) *found = PJ_FALSE;
+    while (start <= end) {
+        int mid = start + (end - start) / 2;
+        int cmp = pj_stricmp(&dyn_codecs[mid], codec);
+
+        if (cmp == 0) {
+            if (found) *found = PJ_TRUE;
+            return mid;
+        } else if (cmp < 0) {
+            start = mid + 1;
+        } else {
+            end = mid - 1;
+        }
+    }
+
+    return (found? start: -1);
+}
+
+/* Internal: Insert a codec ID string into the dynamic codecs array and keep
+ * the array sorted.
+ */
+void pjmedia_codec_mgr_insert_codec(pj_pool_t *pool, pj_str_t dyn_codecs[],
+                                    unsigned *count, const pj_str_t *codec)
+{
+    pj_bool_t found;
+    int idx;
+    pj_str_t codec_str;
+
+    idx = pjmedia_codec_mgr_find_codec(dyn_codecs, *count, codec, &found);
+    if (!found) {
+        pj_strdup_with_null(pool, &codec_str, codec);
+        pj_array_insert(dyn_codecs, sizeof(pj_str_t),
+                        (*count)++, idx, &codec_str);
+    }
+}
+
+#if PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0 || \
+    PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP != 0
+
+static void add_tel_event_clockrate(pjmedia_codec_mgr *mgr,
+                                     unsigned clock_rate)
+{
+    unsigned i;
+    char buf[32];
+    pj_str_t str;
+
+    if (mgr->dyn_codecs_cnt >= PJ_ARRAY_SIZE(mgr->dyn_codecs))
+        return;
+
+#if !PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES &&  \
+    PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP == 0
+    if (mgr->televent_num != 0)
+        return;
+
+    clock_rate = 8000;
+#endif
+
+    if (mgr->televent_num >= PJ_ARRAY_SIZE(mgr->televent_clockrates))
+        return;
+
+    /* Find the "telephone-event" clock rate */
+    for (i = 0; i < mgr->televent_num; ++i) {
+        if (mgr->televent_clockrates[i] == clock_rate)
+            return;
+    }
+
+    /* Not found, add the clockrate */
+    mgr->televent_clockrates[mgr->televent_num++] = clock_rate;
+
+    /* Add to dyn_codecs array */
+    pj_ansi_snprintf(buf, sizeof(buf), "telephone-event/%d/1", clock_rate);
+    pj_cstr(&str, buf);
+    pjmedia_codec_mgr_insert_codec(mgr->pool, mgr->dyn_codecs,
+                                   &mgr->dyn_codecs_cnt, &str);
+}
+
+#endif
 
 /*
  * Duplicate codec parameter.
@@ -87,6 +175,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_init (pjmedia_codec_mgr *mgr,
     mgr->pf = pf;
     pj_list_init (&mgr->factory_list);
     mgr->codec_cnt = 0;
+    mgr->dyn_codecs_cnt = 0;
 
     /* Create pool */
     mgr->pool = pj_pool_create(mgr->pf, "codec-mgr", 256, 256, NULL);
@@ -95,6 +184,22 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_init (pjmedia_codec_mgr *mgr,
     status = pj_mutex_create_recursive(mgr->pool, "codec-mgr", &mgr->mutex);
     if (status != PJ_SUCCESS)
         return status;
+
+#if PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP != 0
+    {
+        /* If we need to keep track of remote PT, we have to add all telephone
+         * events which can potentially be offered by remote.
+         */
+        add_tel_event_clockrate(mgr, 8000);
+        add_tel_event_clockrate(mgr, 16000);
+        add_tel_event_clockrate(mgr, 32000);
+        add_tel_event_clockrate(mgr, 44100);
+        add_tel_event_clockrate(mgr, 48000);
+    }
+#endif
+
+    if (!def_codec_mgr)
+        def_codec_mgr = mgr;
 
     return PJ_SUCCESS;
 }
@@ -132,6 +237,9 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_destroy (pjmedia_codec_mgr *mgr)
     /* Release pool */
     if (mgr->pool)
         pj_pool_release(mgr->pool);
+
+    if (mgr == def_codec_mgr)
+        def_codec_mgr = NULL;
 
     /* Just for safety, set codec manager states to zero */
     pj_bzero(mgr, sizeof(pjmedia_codec_mgr));
@@ -183,6 +291,24 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
         pjmedia_codec_info_to_id( &info[i],
                                   mgr->codec_desc[mgr->codec_cnt+i].id,
                                   sizeof(pjmedia_codec_id));
+
+        /* Add it to dyn_codecs array if the codec has dynamic PT */
+        if (info[i].pt >= PJMEDIA_RTP_PT_DYNAMIC) {
+            pj_str_t codec_id = pj_str(mgr->codec_desc[mgr->codec_cnt+i].id);
+            if (mgr->dyn_codecs_cnt >= PJ_ARRAY_SIZE(mgr->dyn_codecs)) {
+                PJ_LOG(3, (THIS_FILE, ("Dynamic codecs array full")));
+                continue;
+            }
+
+            pjmedia_codec_mgr_insert_codec(mgr->pool, mgr->dyn_codecs,
+                                           &mgr->dyn_codecs_cnt, &codec_id);
+        }
+
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+            PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+        /* Add telephone event */
+        add_tel_event_clockrate(mgr, info[i].clock_rate);
+#endif
     }
 
     /* Update count */
@@ -232,6 +358,23 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_unregister_factory(
             if (mgr->codec_desc[i].param) {
                 pj_assert(mgr->codec_desc[i].param->pool);
                 pj_pool_release(mgr->codec_desc[i].param->pool);
+            }
+
+            /* Remove it from the dynamic codecs array */
+            if (mgr->codec_desc[i].info.pt >= PJMEDIA_RTP_PT_DYNAMIC) {
+                pj_int8_t codec_idx;
+                pj_bool_t found;
+                pj_str_t codec_str = pj_str(mgr->codec_desc[i].id);
+
+                codec_idx = (pj_int8_t)pjmedia_codec_mgr_find_codec(
+                                                         mgr->dyn_codecs,
+                                                         mgr->dyn_codecs_cnt,
+                                                         &codec_str,
+                                                         &found);
+                if (found) {
+                    pj_array_erase(mgr->dyn_codecs, sizeof(pj_str_t),
+                                   mgr->dyn_codecs_cnt--, codec_idx);
+                }
             }
 
             /* Remove the codec from array of codec descriptions */
@@ -293,7 +436,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_get_codec_info( pjmedia_codec_mgr *mgr,
 {
     unsigned i;
 
-    PJ_ASSERT_RETURN(mgr && p_info && pt>=0 && pt < 96, PJ_EINVAL);
+    PJ_ASSERT_RETURN(mgr && p_info && pt < 96, PJ_EINVAL);
 
     pj_mutex_lock(mgr->mutex);
 
@@ -658,5 +801,28 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_dealloc_codec(pjmedia_codec_mgr *mgr,
     PJ_ASSERT_RETURN(mgr && codec, PJ_EINVAL);
 
     return (*codec->factory->op->dealloc_codec)(codec->factory, codec);
+}
+
+/* Internal: Get array of codec IDs with dynamic PT. */
+pj_status_t pjmedia_codec_mgr_get_dyn_codecs(pjmedia_codec_mgr* mgr,
+                                             pj_int8_t *count,
+                                             pj_str_t dyn_codecs[])
+{
+    if (!mgr) mgr = def_codec_mgr;
+    if (!mgr) {
+        *count = 0;
+        return PJ_EINVAL;;
+    }
+
+    pj_mutex_lock(mgr->mutex);
+
+    if (mgr->dyn_codecs_cnt < (unsigned)*count)
+        *count = (pj_int8_t)mgr->dyn_codecs_cnt;
+
+    pj_memcpy(dyn_codecs, mgr->dyn_codecs, *count * sizeof(pj_str_t));
+
+    pj_mutex_unlock(mgr->mutex);
+
+    return PJ_SUCCESS;
 }
 

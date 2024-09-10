@@ -89,6 +89,11 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pathname!=NULL, PJ_EINVAL);
 
+    if ((flags & PJ_O_CLOEXEC) == PJ_O_CLOEXEC) {
+        /* Win32 not support cloexec flag, should remove it */
+        flags &= ~(PJ_O_CLOEXEC & 0xF);
+    }
+
     if ((flags & PJ_O_WRONLY) == PJ_O_WRONLY) {
         dwDesiredAccess |= GENERIC_WRITE;
         if ((flags & PJ_O_APPEND) == PJ_O_APPEND) {

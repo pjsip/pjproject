@@ -63,6 +63,18 @@ struct AccountRegConfig : public PersistentObject
     bool                registerOnAdd;
 
     /**
+     * Specify whether account modification with Account::modify() should
+     * automatically update registration if necessary, for example if
+     * account credentials change.
+     *
+     * Disable this when immediate registration is not desirable, such as
+     * during IP address change.
+     *
+     * Default: false.
+     */
+    bool                disableRegOnModify;
+
+    /**
      * The optional custom SIP headers to be put in the registration
      * request.
      */
@@ -277,6 +289,15 @@ struct AccountSipConfig : public PersistentObject
      */
     TransportId         transportId;
 
+    /**
+     * Specify whether IPv6 should be used for SIP signalling.
+     *
+     * Default: PJSUA_IPV6_ENABLED_NO_PREFERENCE
+     * (IP version used will be based on the address resolution
+     * returned by OS/resolver)
+     */
+    pjsua_ipv6_use      ipv6Use;
+
 public:
     /**
      * Read this object from a container node.
@@ -341,7 +362,9 @@ public:
      */
     AccountCallConfig() : holdType(PJSUA_CALL_HOLD_TYPE_DEFAULT),
                           prackUse(PJSUA_100REL_NOT_USED),
-                          timerUse(PJSUA_SIP_TIMER_OPTIONAL)
+                          timerUse(PJSUA_SIP_TIMER_OPTIONAL),
+                          timerMinSESec(90),
+                          timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE)
     {}
 
     /**
@@ -748,7 +771,9 @@ public:
       iceWaitNominationTimeoutMsec(ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT),
       iceNoRtcp(false),
       iceAlwaysUpdate(true),
+      turnEnabled(false),
       turnConnType(PJ_TURN_TP_UDP),
+      turnPasswordType(0),
       contactRewriteUse(PJ_TRUE),
       contactRewriteMethod(PJSUA_CONTACT_REWRITE_METHOD),
       contactUseSrcPort(PJ_TRUE),
@@ -1029,12 +1054,17 @@ struct AccountMediaConfig : public PersistentObject
     SrtpOpt             srtpOpt;
 
     /**
-     * Specify whether IPv6 should be used on media. Default is not used.
+     * Specify whether IPv6 should be used on media.
+     *
+     * Default: PJSUA_IPV6_ENABLED_PREFER_IPV4
+     * (Dual stack media, capable to use IPv4/IPv6.
+     * Outgoing offer will prefer to use IPv4)
      */
     pjsua_ipv6_use      ipv6Use;
 
     /**
      * Enable RTP and RTCP multiplexing.
+     * Default: false
      */
     bool                rtcpMuxEnabled;
 
@@ -1072,8 +1102,16 @@ public:
     /**
      * Default constructor
      */
-    AccountMediaConfig() : srtpUse(PJSUA_DEFAULT_USE_SRTP),
-                           ipv6Use(PJSUA_IPV6_DISABLED)
+    AccountMediaConfig() 
+    : lockCodecEnabled(true),
+      streamKaEnabled(false),
+      srtpUse(PJSUA_DEFAULT_USE_SRTP),
+      srtpSecureSignaling(PJSUA_DEFAULT_SRTP_SECURE_SIGNALING),
+      ipv6Use(PJSUA_IPV6_ENABLED_PREFER_IPV4),
+      rtcpMuxEnabled(false),
+      rtcpXrEnabled(PJMEDIA_STREAM_ENABLE_XR),
+      useLoopMedTp(false),
+      enableLoopback(false)
     {}
 
     /**
@@ -1185,8 +1223,16 @@ public:
     /**
      * Default constructor
      */
-    AccountVideoConfig() :
-                    rateControlMethod(PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING)
+    AccountVideoConfig() 
+    : autoShowIncoming(false),
+      autoTransmitOutgoing(false),
+      windowFlags(0),
+      defaultCaptureDevice(PJMEDIA_VID_DEFAULT_CAPTURE_DEV),
+      defaultRenderDevice(PJMEDIA_VID_DEFAULT_RENDER_DEV),
+      rateControlMethod(PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING),
+      rateControlBandwidth(0),
+      startKeyframeCount(PJMEDIA_VID_STREAM_START_KEYFRAME_CNT),
+      startKeyframeInterval(PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC)
     {}
 
     /**
@@ -1445,7 +1491,14 @@ public:
     /**
      * Default constructor
      */
-    AccountInfo() : regStatus(PJSIP_SC_NULL)
+    AccountInfo() : id(PJSUA_INVALID_ID), 
+                    isDefault(false),
+                    regIsConfigured(false),
+                    regIsActive(false),
+                    regExpiresSec(0),
+                    regStatus(PJSIP_SC_NULL),
+                    regLastErr(-1),
+                    onlineStatus(false)
     {}
 
     /** Import from pjsip data */

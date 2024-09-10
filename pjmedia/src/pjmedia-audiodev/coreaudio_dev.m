@@ -29,6 +29,12 @@
     #define COREAUDIO_MAC 1
 #endif
 
+#if (TARGET_OS_OSX && defined(__MAC_12_0))
+    #define AUDIO_OBJECT_ELEMENT_MAIN kAudioObjectPropertyElementMain;
+#else
+    #define AUDIO_OBJECT_ELEMENT_MAIN kAudioObjectPropertyElementMaster;
+#endif
+
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioConverter.h>
 #if COREAUDIO_MAC
@@ -291,8 +297,9 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
         cdi = &cf->dev_info[i];
         pj_bzero(cdi, sizeof(*cdi));
         cdi->dev_id = 0;
-        strcpy(cdi->info.name, "iPhone IO device");
-        strcpy(cdi->info.driver, "apple");
+        pj_ansi_strxcpy(cdi->info.name, "iPhone IO device",
+                        sizeof(cdi->info.name));
+        pj_ansi_strxcpy(cdi->info.driver, "apple", sizeof(cdi->info.driver));
         cdi->info.input_count = 1;
         cdi->info.output_count = 1;
         cdi->info.default_samples_per_sec = 8000;
@@ -446,7 +453,7 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
     /* Find out how many audio devices there are */
     addr.mSelector = kAudioHardwarePropertyDevices;
     addr.mScope = kAudioObjectPropertyScopeGlobal;
-    addr.mElement = kAudioObjectPropertyElementMaster;
+    addr.mElement = AUDIO_OBJECT_ELEMENT_MAIN;
     ostatus = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &addr,
                                              0, NULL, &dev_size);
     if (ostatus != noErr) {
@@ -491,7 +498,7 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
         /* Find default audio input device */
         addr.mSelector = kAudioHardwarePropertyDefaultInputDevice;
         addr.mScope = kAudioObjectPropertyScopeGlobal;
-        addr.mElement = kAudioObjectPropertyElementMaster;
+        addr.mElement = AUDIO_OBJECT_ELEMENT_MAIN;
         size = sizeof(dev_id);
         
         ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject,
@@ -543,13 +550,14 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
         /* Get device name */
         addr.mSelector = kAudioDevicePropertyDeviceName;
         addr.mScope = kAudioObjectPropertyScopeGlobal;
-        addr.mElement = kAudioObjectPropertyElementMaster;
+        addr.mElement = AUDIO_OBJECT_ELEMENT_MAIN;
         size = sizeof(cdi->info.name);
         AudioObjectGetPropertyData(cdi->dev_id, &addr,
                                    0, NULL,
                                    &size, (void *)cdi->info.name);
 
-        strcpy(cdi->info.driver, "core audio");
+        pj_ansi_strxcpy(cdi->info.driver, "core audio",
+                        sizeof(cdi->info.driver));
 
         /* Get the number of input channels */
         addr.mSelector = kAudioDevicePropertyStreamConfiguration;

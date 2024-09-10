@@ -803,8 +803,10 @@ pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
             continue;
         }
 
-        pjmedia_vid_codec_mgr_get_default_param(NULL, &codec_info[i],
-                                                &codec_param);
+        status = pjmedia_vid_codec_mgr_get_default_param(NULL, &codec_info[i],
+                                                         &codec_param);
+        if (status != PJ_SUCCESS)
+            return status;
 
         fmt = &m->desc.fmt[m->desc.fmt_count++];
         fmt->ptr = (char*) pj_pool_alloc(pool, 8);
@@ -1011,16 +1013,16 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 
 
 #if PJ_LOG_MAX_LEVEL >= 3
-static const char *good_number(char *buf, pj_int32_t val)
+static const char *good_number(char *buf, unsigned buf_size, pj_int32_t val)
 {
     if (val < 1000) {
-        pj_ansi_sprintf(buf, "%d", val);
+        pj_ansi_snprintf(buf, buf_size, "%d", val);
     } else if (val < 1000000) {
-        pj_ansi_sprintf(buf, "%d.%dK", 
+        pj_ansi_snprintf(buf, buf_size, "%d.%dK", 
                         val / 1000,
                         (val % 1000) / 100);
     } else {
-        pj_ansi_sprintf(buf, "%d.%02dM", 
+        pj_ansi_snprintf(buf, buf_size, "%d.%02dM", 
                         val / 1000000,
                         (val % 1000000) / 10000);
     }
@@ -1076,7 +1078,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
                   codec_info[i].encoding_name.ptr,
                   codec_info[i].clock_rate/1000,
                   codec_info[i].channel_cnt,
-                  good_number(bps, param.info.avg_bps), 
+                  good_number(bps, sizeof(bps), param.info.avg_bps), 
                   param.info.frm_ptime * param.setting.frm_per_pkt,
                   (param.setting.vad ? " vad" : ""),
                   (param.setting.cng ? " cng" : ""),

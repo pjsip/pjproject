@@ -114,17 +114,19 @@ PJ_DEF(pj_status_t) pjrpid_add_element(pjpidf_pres *pres,
 
     PJ_UNUSED_ARG(options);
 
-    /* Add <note> to <tuple>, if none */
+    /* Add <note>, if none. We add it to the first <tuple>, if any,
+     * otherwise to the root <presence>.
+     */
     if (elem->note.slen != 0) {
         pj_xml_node *nd_tuple;
 
         nd_tuple = find_node(pres, "tuple");
-        nd_note = nd_tuple? find_node(nd_tuple, "note"):NULL;
+        nd_note = nd_tuple? find_node(nd_tuple, "note"):
+                  find_node(pres, "note");
         if (!nd_note) {
             nd_note = pj_xml_node_new(pool, &NOTE);
             pj_strdup(pool, &nd_note->content, &elem->note);
-            pj_xml_add_node(nd_tuple, nd_note);
-            nd_note = NULL;
+            pj_xml_add_node(nd_tuple? nd_tuple: pres, nd_note);
         }
     }
 
@@ -251,6 +253,8 @@ PJ_DEF(pj_status_t) pjrpid_get_element(const pjpidf_pres *pres,
 
         /* Get the activity */
         nd_activity = nd_activities->node_head.next;
+        PJ_ASSERT_RETURN(nd_activity && nd_activity->next, PJ_EBUG);
+
         if (nd_activity == nd_note)
             nd_activity = nd_activity->next;
 

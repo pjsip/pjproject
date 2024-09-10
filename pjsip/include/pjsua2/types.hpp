@@ -52,6 +52,9 @@ typedef std::vector<std::string> StringVector;
 /** Array of integers */
 typedef std::vector<int> IntVector;
 
+/** Array of bytes */
+typedef std::vector<unsigned char> ByteVector;
+
 /** Map string to string */
 typedef std::map<std::string, std::string> StringToStringMap;
 
@@ -205,6 +208,14 @@ struct Error
             PJSUA2_CHECK_RAISE_ERROR2(the_status, #expr); \
         } while (0)
 
+/** Run the statement and catch and ignore Error exception */
+#define PJSUA2_CATCH_IGNORE(stmt)   \
+        try { \
+            stmt; \
+        } catch (Error &err) { \
+            PJ_UNUSED_ARG(err); \
+        }
+
 //////////////////////////////////////////////////////////////////////////////
 /**
  * Version information.
@@ -252,6 +263,9 @@ struct TimeVal
     long msec;
     
 public:
+    TimeVal() : sec(0), msec(0)
+    {}
+    
     /**
      * Convert from pjsip
      */

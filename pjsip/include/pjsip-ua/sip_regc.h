@@ -117,7 +117,9 @@ struct pjsip_regc_info
     pj_bool_t   auto_reg;   /**< Will register automatically?               */
     unsigned    interval;   /**< Registration interval (seconds).           */
     unsigned    next_reg;   /**< Time until next registration (seconds).    */
-    pjsip_transport *transport; /**< Last transport used.                   */
+    pjsip_transport *transport; /**< Last transport used, for informational
+                                     purpose only (e.g: comparing pointers),
+                                     the transport may be invalid already.  */
 };
 
 /**

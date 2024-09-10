@@ -267,6 +267,7 @@ static void strtoi_validate(const pj_str_t *str, int min_val,
 
     if (!str || !value) {
         on_str_parse_error(str, PJ_EINVAL);
+        return;
     }
     status = pj_strtol2(str, &retval);
     if (status != PJ_EINVAL) {
@@ -936,6 +937,8 @@ PJ_DEF(pj_status_t) pjsip_find_msg( const char *buf, pj_size_t size,
 
     /* Found Content-Length? */
     if (content_length == -1) {
+        /* As per RFC3261 7.4.2, 7.5, 20.14, Content-Length is mandatory over TCP. */
+        PJ_LOG(2, (THIS_FILE, "Field Content-Length not found!"));
         return status;
     }
 
@@ -1528,7 +1531,14 @@ static void* int_parse_sip_url( pj_scanner *scanner,
     }
 
     if (int_is_next_user(scanner)) {
+        char *start = scanner->curptr;
+        pj_str_t orig;
+
+        start = scanner->curptr;
         int_parse_user_pass(scanner, pool, &url->user, &url->passwd);
+
+        pj_strset3(&orig, start, scanner->curptr - 1);
+        pj_strdup(pool, &url->orig_userpass, &orig);
     }
 
     /* Get host:port */
@@ -1905,8 +1915,10 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
                 hdr->expires--;
             if (hdr->expires > PJSIP_MAX_EXPIRES)
                 hdr->expires = PJSIP_MAX_EXPIRES;
+#if PJSIP_MIN_EXPIRES > 0
             if (hdr->expires < PJSIP_MIN_EXPIRES)
                 hdr->expires = PJSIP_MIN_EXPIRES;
+#endif
         } else {
             pjsip_param *p = PJ_POOL_ALLOC_T(pool, pjsip_param);
             p->name = pname;
@@ -2421,7 +2433,7 @@ PJ_DEF(pj_status_t) pjsip_parse_headers( pj_pool_t *pool, char *input,
                                          unsigned options)
 {
     enum { STOP_ON_ERROR = 1 };
-    pj_str_t hname;
+    pj_str_t hname = {0, 0};
     pj_scanner scanner;
     pjsip_parse_ctx ctx;
 

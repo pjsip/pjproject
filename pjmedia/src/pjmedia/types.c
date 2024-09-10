@@ -56,7 +56,7 @@ PJ_DEF(const char*) pjmedia_type_name(pjmedia_type t)
 PJ_DEF(pjmedia_type) pjmedia_get_type(const pj_str_t *name)
 {
     int i;
-    for (i = 0; i < PJ_ARRAY_SIZE(media_type_names); ++i) {
+    for (i = 0; i < (int)PJ_ARRAY_SIZE(media_type_names); ++i) {
         if (pj_stricmp2(name, media_type_names[i].name)==0)
             return media_type_names[i].type;
     }

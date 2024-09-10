@@ -56,6 +56,7 @@ class MyObserver implements MyAppObserver {
         public void notifyCallMediaState(MyCall call) {
         }
 
+        @Override
         public void notifyCallState(MyCall call) {
                 if (currentCall == null || call.getId() != currentCall.getId())
                         return;
@@ -80,6 +81,9 @@ class MyObserver implements MyAppObserver {
 
         @Override
         public void notifyChangeNetwork() {}
+        
+        @Override
+        public void notifyCallMediaEvent(MyCall call, OnCallMediaEventParam prm) {}
 }
 
 class MyShutdownHook extends Thread {

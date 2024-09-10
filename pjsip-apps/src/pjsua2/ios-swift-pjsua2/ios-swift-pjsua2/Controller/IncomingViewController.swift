@@ -28,7 +28,7 @@ class IncomingViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Gelen Arama"
+        title = "Incoming Call"
         callTitle.text = incomingCallId
         
         CPPWrapper().call_listener_wrapper(call_status_listener_swift)

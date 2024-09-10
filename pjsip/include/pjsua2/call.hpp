@@ -333,6 +333,19 @@ struct CallSetting
      */
     MediaDirVector mediaDir;
 
+    /**
+     * User defined Call-ID to be sent out with outgoing INVITE.
+     *
+     * Note: It is up to the developer to verify uniqueness of the
+     * Call-ID as there will be no verification. The developer must
+     * change the Call-ID between calls creating a unique id for each
+     * outgoing call.
+     *
+     * This setting will only be used when creating a new outgoing call
+     * via Call::makeCall().
+     */
+    string customCallId;
+
     
 public:
     /**
@@ -546,8 +559,12 @@ public:
      */
     CallInfo() : id(PJSUA_INVALID_ID),
                  role(PJSIP_ROLE_UAC),
+                 accId(PJSUA_INVALID_ID),
                  state(PJSIP_INV_STATE_NULL),
-                 lastStatusCode(PJSIP_SC_NULL)
+                 lastStatusCode(PJSIP_SC_NULL),
+                 remOfferer(false),
+                 remAudioCount(0),
+                 remVideoCount(0)
     {}
 
     /**
@@ -595,6 +612,16 @@ struct StreamInfo
      * Incoming codec payload type.
      */
     unsigned            rxPt;
+
+    /**
+     * Outgoing pt for audio telephone-events.
+     */
+    int                 audTxEventPt;
+
+    /**
+     * Incoming pt for audio telephone-events.
+     */
+    int                 audRxEventPt;
     
     /**
      * Codec name.
@@ -658,9 +685,24 @@ public:
     /**
      * Default constructor
      */
-    StreamInfo() : type(PJMEDIA_TYPE_NONE),
-                   proto(PJMEDIA_TP_PROTO_NONE),
-                   dir(PJMEDIA_DIR_NONE)
+    StreamInfo() 
+    : type(PJMEDIA_TYPE_NONE),
+      proto(PJMEDIA_TP_PROTO_NONE),
+      dir(PJMEDIA_DIR_NONE),
+      txPt(0),
+      rxPt(0),
+      audTxEventPt(0),
+      audRxEventPt(0),
+      codecClockRate(0),
+      jbInit(-1),
+      jbMinPre(-1),
+      jbMaxPre(-1),
+      jbMax(-1),
+      jbDiscardAlgo(PJMEDIA_JB_DISCARD_NONE),
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+      useKa(false),
+#endif
+      rtcpSdesByeDisabled(false)
     {}
 
     /**
@@ -771,11 +813,11 @@ struct OnStreamCreatedParam
     
     /**
      * Specify if PJSUA2 should take ownership of the port returned in
-     * the pPort parameter below. If set to PJ_TRUE,
+     * the pPort parameter below. If set to true,
      * pjmedia_port_destroy() will be called on the port when it is
      * no longer needed.
      *
-     * Default: PJ_FALSE
+     * Default: false
      */
     bool        destroyPort;
 
@@ -950,7 +992,7 @@ struct OnCallReplaceRequestParam
     
     /**
      * Status code to be set by application. Application should only
-     * return a final status (200-699)
+     * return a final status (>= PJSIP_SC_OK (200))
      */
     pjsip_status_code   statusCode;
     
@@ -999,8 +1041,8 @@ struct OnCallRxOfferParam
     
     /**
      * Status code to be returned for answering the offer. On input,
-     * it contains status code 200. Currently, valid values are only
-     * 200 and 488.
+     * it contains status code PJSIP_SC_OK (200). Currently, valid values are only
+     * PJSIP_SC_OK (200) and PJSIP_SC_NOT_ACCEPTABLE_HERE (488).
      */
     pjsip_status_code   statusCode;
     
@@ -1034,8 +1076,8 @@ struct OnCallRxReinviteParam
     
     /**
      * Status code to be returned for answering the offer. On input,
-     * it contains status code 200. Currently, valid values are only
-     * 200 and 488.
+     * it contains status code PJSIP_SC_OK (200). Currently, valid values are only
+     * PJSIP_SC_OK (200) and PJSIP_SC_NOT_ACCEPTABLE_HERE (488).
      */
     pjsip_status_code   statusCode;
     
@@ -1073,9 +1115,8 @@ struct OnCallRedirectedParam
      * The event that caused this callback to be called.
      * This could be the receipt of 3xx response, or 4xx/5xx response
      * received for the INVITE sent to subsequent targets, or empty
-     * (e.type == PJSIP_EVENT_UNKNOWN)
-     * if this callback is called from within Call::processRedirect()
-     * context.
+     * (e.type == PJSIP_EVENT_UNKNOWN) if this callback is called from 
+     * within Call::processRedirect() context.
      */
     SipEvent        e;
 };
@@ -1495,8 +1536,8 @@ public:
      * which means for incoming call, this function can be called as soon as
      * call is received as long as incoming call contains SDP, and for outgoing
      * call, this function can be called only after SDP is received (normally in
-     * 200/OK response to INVITE). As a general case, application should call
-     * this function after or in \a onCallMediaState() callback.
+     * PJSIP_SC_OK (200) response to INVITE). As a general case, application
+     * should call this function after or in \a onCallMediaState() callback.
      *
      * @return              The NAT type.
      *
@@ -1530,7 +1571,7 @@ public:
      *    check CallSetting for its default values.
      *
      * @param prm.opt       Optional call setting.
-     * @param prm.statusCode   Status code, (100-699).
+     * @param prm.statusCode   Status code, (>= PJSIP_SC_TRYING (100)).
      * @param prm.reason    Optional reason phrase. If empty, default text
      *                      will be used.
      * @param prm.txOption  Optional list of headers etc to be added to outgoing
@@ -1759,6 +1800,22 @@ public:
                       const CallVidSetStreamParam &param) PJSUA2_THROW(Error);
 
     /**
+     * Modify the video stream's codec parameter after the codec is opened.
+     * Note that not all codec backends support modifying parameters during
+     * runtime and only certain parameters can be changed.
+     *
+     * Currently, only Video Toolbox and OpenH264 backends support runtime
+     * adjustment of encoding bitrate (avg_bps and max_bps).
+     *
+     * @param med_idx       Video stream index.
+     * @param param         The new codec parameter.
+     *
+     * @return              PJ_SUCCESS on success.
+     */
+    void vidStreamModifyCodecParam(int med_idx, const VidCodecParam &param)
+                                   PJSUA2_THROW(Error);
+
+    /**
      * Modify the audio stream's codec parameter after the codec is opened.
      * Note that not all codec parameters can be modified during run-time.
      * Currently, only Opus codec supports changing key codec parameters
@@ -1865,8 +1922,8 @@ public:
 
     /**
      * Notify application when an audio media session is about to be created
-     * (as opposed to on_stream_created() and on_stream_created2() which are
-     * called *after* the session has been created). The application may change
+     * (as opposed to onStreamCreated(), which is called *after* the session
+     * has been created). The application may change
      * some stream info parameter values, i.e: jbInit, jbMinPre, jbMaxPre,
      * jbMax, useKa, rtcpSdesByeDisabled, jbDiscardAlgo (audio),
      * vidCodecParam.encFmt (video).
@@ -2004,8 +2061,8 @@ public:
      * Notify application when call has received new offer from remote
      * (i.e. re-INVITE/UPDATE with SDP is received). Application can
      * decide to accept/reject the offer by setting the code (default
-     * is 200). If the offer is accepted, application can update the
-     * call setting to be applied in the answer. When this callback is
+     * is PJSIP_SC_OK (200)). If the offer is accepted, application can update
+     * the call setting to be applied in the answer. When this callback is
      * not implemented, the default behavior is to accept the offer using
      * current call setting.
      *
@@ -2017,7 +2074,7 @@ public:
     /**
      * Notify application when call has received a re-INVITE offer from
      * the peer. It allows more fine-grained control over the response to
-     * a re-INVITE. If application sets async to PJ_TRUE, it can send
+     * a re-INVITE. If application sets prm.isAsync to true, it can send
      * the reply manually using the function #pj::Call::answer() and setting
      * the SDP answer. Otherwise, by default the re-INVITE will be
      * answered automatically after the callback returns.
@@ -2028,11 +2085,14 @@ public:
      *
      * Remarks: If manually answering at a later timing, application may
      * need to monitor onCallTsxState() callback to check whether
-     * the re-INVITE is already answered automatically with 487 due to
-     * being cancelled.
+     * the re-INVITE is already answered automatically with
+     * PJSIP_SC_REQUEST_TERMINATED (487) due to being cancelled.
      *
      * Note: onCallRxOffer() will still be called after this callback,
-     * but only if prm.async is false and prm.code is 200. 
+     * but only if prm.isAsync is false and prm.statusCode is PJSIP_SC_OK
+     * (200).
+     *
+     * @param prm       Callback parameter.
      */
     virtual void onCallRxReinvite(OnCallRxReinviteParam &prm)
     { PJ_UNUSED_ARG(prm); }

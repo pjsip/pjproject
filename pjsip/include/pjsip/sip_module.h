@@ -41,7 +41,7 @@ PJ_BEGIN_DECL
  * structure, and register the structure to PJSIP with 
  * #pjsip_endpt_register_module().
  *
- * The <A HREF="/docs.htm">PJSIP Developer's Guide</A>
+ * The <A HREF="/en/latest/api/pjsip/guide.html">PJSIP Developer's Guide</A>
  * has a thorough discussion on this subject, and readers are encouraged
  * to read the document for more information.
  */

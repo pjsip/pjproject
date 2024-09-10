@@ -184,6 +184,14 @@ typedef enum pj_ssl_cert_verify_flag_t
   PJ_SSL_CERT_EUNKNOWN = 1 << 31
 } pj_ssl_cert_verify_flag_t;
 
+typedef enum pj_ssl_cert_lookup_type
+{
+  PJ_SSL_CERT_LOOKUP_NONE,
+  PJ_SSL_CERT_LOOKUP_SUBJECT,
+  PJ_SSL_CERT_LOOKUP_FINGERPRINT,
+  PJ_SSL_CERT_LOOKUP_FRIENDLY_NAME
+} pj_ssl_cert_lookup_type;
+
 typedef enum pj_ice_sess_trickle
 {
   PJ_ICE_SESS_TRICKLE_DISABLED,
@@ -426,6 +434,14 @@ typedef enum pjmedia_orient
   PJMEDIA_ORIENT_ROTATE_180DEG,
   PJMEDIA_ORIENT_ROTATE_270DEG
 } pjmedia_orient;
+
+typedef enum pjmedia_frame_type
+{
+    PJMEDIA_FRAME_TYPE_NONE,
+    PJMEDIA_FRAME_TYPE_AUDIO,
+    PJMEDIA_FRAME_TYPE_EXTENDED,
+    PJMEDIA_FRAME_TYPE_VIDEO
+} pjmedia_frame_type;
 
 typedef enum pjmedia_format_id
 {
@@ -808,7 +824,11 @@ typedef enum pjsua_sip_timer_use
 typedef enum pjsua_ipv6_use
 {
   PJSUA_IPV6_DISABLED,
-  PJSUA_IPV6_ENABLED
+  PJSUA_IPV6_ENABLED = 1,
+  PJSUA_IPV6_ENABLED_NO_PREFERENCE = 1,
+  PJSUA_IPV6_ENABLED_PREFER_IPV4,
+  PJSUA_IPV6_ENABLED_PREFER_IPV6,
+  PJSUA_IPV6_ENABLED_USE_IPV6_ONLY
 } pjsua_ipv6_use;
 
 typedef enum pjsua_nat64_opt
@@ -899,6 +919,7 @@ typedef enum pjsua_snd_dev_mode
 typedef enum pjsua_ip_change_op
 {
   PJSUA_IP_CHANGE_OP_NULL,
+  PJSUA_IP_CHANGE_OP_SHUTDOWN_TP,
   PJSUA_IP_CHANGE_OP_RESTART_LIS,
   PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP,
   PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT,

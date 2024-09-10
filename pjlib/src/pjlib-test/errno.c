@@ -86,7 +86,17 @@ int errno_test(void)
     pj_set_os_error(rc);
 
     /* Whole */
+#if defined(PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE) && (PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE==1) && (WINVER >= 0x0500)
+    LCID lcid = GetThreadLocale();
+    /* set en_US thread locale to obtain "invalid" in errbuff */
+    BOOL res = SetThreadLocale(MAKELCID(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), SORT_DEFAULT));
+    PJ_UNUSED_ARG(res);
+#endif
     pj_strerror(rc, errbuf, sizeof(errbuf));
+#if defined(PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE) && (PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE==1) && (WINVER >= 0x0500)
+    /* restore thread locale now */
+    SetThreadLocale(lcid);
+#endif
     trim_newlines(errbuf);
     PJ_LOG(3,(THIS_FILE, "...msg for rc=ERROR_INVALID_DATA: '%s'", errbuf));
     if (my_stristr(errbuf, "invalid") == NULL) {

@@ -148,6 +148,7 @@ static const char *action_get_external_ip(struct igd *igd)
     IXML_Document *response = NULL;
     const char *public_ip = NULL;
     int upnp_err;
+    pj_status_t status;
 
     /* Create action XML. */
     action = UpnpMakeAction(action_name, igd->service_type.ptr, 0, NULL);
@@ -175,8 +176,10 @@ static const char *action_get_external_ip(struct igd *igd)
         goto on_error;
     }
     pj_strdup2_with_null(upnp_mgr.pool, &igd->public_ip, public_ip);
-    pj_sockaddr_parse(pj_AF_UNSPEC(), 0, &igd->public_ip,
-                      &igd->public_ip_addr);
+    status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, &igd->public_ip,
+                               &igd->public_ip_addr);
+    if (status != PJ_SUCCESS)
+        goto on_error;
     public_ip = igd->public_ip.ptr;
 
 on_error:
@@ -322,12 +325,14 @@ static void add_device(const char *dev_id, const char *url)
 {
     unsigned i;
 
+    pj_mutex_lock(upnp_mgr.mutex);
+
     if (upnp_mgr.igd_cnt >= MAX_DEVS) {
+        pj_mutex_unlock(upnp_mgr.mutex);
         PJ_LOG(3, (THIS_FILE, "Warning: Too many UPnP devices discovered"));
         return;
     }
 
-    pj_mutex_lock(upnp_mgr.mutex);
     for (i = 0; i < upnp_mgr.igd_cnt; i++) {
         if (!pj_strcmp2(&upnp_mgr.igd_devs[i].dev_id, dev_id) &&
             !pj_strcmp2(&upnp_mgr.igd_devs[i].url, url))
@@ -355,6 +360,8 @@ static void set_device_online(const char *dev_id)
 {
     unsigned i;
 
+    pj_mutex_lock(upnp_mgr.mutex);
+
     for (i = 0; i < upnp_mgr.igd_cnt; i++) {
         struct igd *igd = &upnp_mgr.igd_devs[i];
         
@@ -364,21 +371,23 @@ static void set_device_online(const char *dev_id)
 
             if (upnp_mgr.primary_igd_idx < 0) {
                 /* If we don't have a primary IGD, use this. */
-                pj_mutex_lock(upnp_mgr.mutex);
                 upnp_mgr.primary_igd_idx = i;
-                pj_mutex_unlock(upnp_mgr.mutex);
 
                 PJ_LOG(4, (THIS_FILE, "Using primary IGD %s",
                                       upnp_mgr.igd_devs[i].dev_id.ptr));
             }
         }
     }
+
+    pj_mutex_unlock(upnp_mgr.mutex);
 }
 
 /* Update IGD status to offline. */
 static void set_device_offline(const char *dev_id)
 {
     int i;
+
+    pj_mutex_lock(upnp_mgr.mutex);
 
     for (i = 0; i < (int)upnp_mgr.igd_cnt; i++) {
         struct igd *igd = &upnp_mgr.igd_devs[i];
@@ -387,7 +396,6 @@ static void set_device_offline(const char *dev_id)
         if (!pj_strcmp2(&igd->dev_id, dev_id) && igd->valid) {
             igd->alive = PJ_FALSE;
  
-            pj_mutex_lock(upnp_mgr.mutex);
             if (i == upnp_mgr.primary_igd_idx) {
                 unsigned j;
 
@@ -406,9 +414,10 @@ static void set_device_offline(const char *dev_id)
                                       (upnp_mgr.primary_igd_idx < 0? "(none)":
                                       igd->dev_id.ptr)));
             }
-            pj_mutex_unlock(upnp_mgr.mutex);
         }
     }
+
+    pj_mutex_unlock(upnp_mgr.mutex);
 }
 
 /* UPnP client callback. */
@@ -563,6 +572,7 @@ PJ_DEF(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param)
     unsigned short port;
     const char *ip_address6 = NULL;
     unsigned short port6 = 0;
+    pj_status_t status;
 
     if (upnp_mgr.initialized)
         return PJ_SUCCESS;
@@ -615,7 +625,11 @@ PJ_DEF(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param)
         pj_upnp_deinit();
         return PJ_ENOMEM;
     }
-    pj_mutex_create_recursive(upnp_mgr.pool, "upnp", &upnp_mgr.mutex);
+    status = pj_mutex_create_recursive(upnp_mgr.pool, "upnp", &upnp_mgr.mutex);
+    if (status != PJ_SUCCESS) {
+        pj_upnp_deinit();
+        return status;
+    }
 
     ip_address = UpnpGetServerIpAddress();
     port = UpnpGetServerPort();
@@ -786,14 +800,16 @@ PJ_DEF(pj_status_t)pj_upnp_add_port_mapping(unsigned sock_cnt,
         ixmlDocument_free(action);
         if (response) ixmlDocument_free(response);
         
-        pj_sockaddr_cp(&mapped_addr[i], &bound_addr);
-        pj_sockaddr_set_str_addr(bound_addr.addr.sa_family,
-                                 &mapped_addr[i], &igd->public_ip);
-        pj_sockaddr_set_port(&mapped_addr[i],
-                             (pj_uint16_t)(ext_port? ext_port[i]: int_port));
-
         if (status != PJ_SUCCESS)
             goto on_error;
+
+        pj_sockaddr_cp(&mapped_addr[i], &bound_addr);
+        status = pj_sockaddr_set_str_addr(bound_addr.addr.sa_family,
+                                          &mapped_addr[i], &igd->public_ip);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+        pj_sockaddr_set_port(&mapped_addr[i],
+                             (pj_uint16_t)(ext_port? ext_port[i]: int_port));
 
         PJ_LOG(4, (THIS_FILE, "Successfully add port mapping to IGD %s: "
                               "%s:%s -> %s:%s", igd->dev_id.ptr,
@@ -839,7 +855,6 @@ PJ_DEF(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr)
     }
 
     igd = &upnp_mgr.igd_devs[upnp_mgr.primary_igd_idx];
-    pj_mutex_unlock(upnp_mgr.mutex);
 
     /* Compare IGD's public IP to the mapped public address. */
     pj_sockaddr_cp(&host_addr, mapped_addr);
@@ -860,7 +875,8 @@ PJ_DEF(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr)
             }
         }
     }
-    
+    pj_mutex_unlock(upnp_mgr.mutex);
+
     if (!igd) {
         /* Either the IGD we previously requested to add port mapping has become
          * offline, or the address is actually not a valid.

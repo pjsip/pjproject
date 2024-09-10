@@ -34,6 +34,9 @@
 #  endif
 #endif
 
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
+    #include <Security/SecRandom.h>
+#endif
 
 #include <pj/rand.h>
 
@@ -79,7 +82,7 @@ static pj_status_t sdes_create(transport_srtp *srtp,
     pjmedia_transport *sdes;
 
     sdes = PJ_POOL_ZALLOC_T(srtp->pool, pjmedia_transport);
-    pj_ansi_strncpy(sdes->name, srtp->pool->obj_name, PJ_MAX_OBJ_NAME);
+    pj_ansi_strxcpy(sdes->name, srtp->pool->obj_name, PJ_MAX_OBJ_NAME);
     pj_memcpy(sdes->name, "sdes", 4);
     sdes->type = (pjmedia_transport_type)PJMEDIA_SRTP_KEYING_SDES;
     sdes->op = &sdes_op;
@@ -130,6 +133,16 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
             int err = RAND_bytes((unsigned char*)key,
                                  crypto_suites[cs_idx].cipher_key_len);
             if (err != 1) {
+                PJ_LOG(4,(THIS_FILE, "Failed generating random key "
+                          "(native err=%d)", err));
+                return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
+            }
+#elif defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0) && \
+      (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
+            int err = SecRandomCopyBytes(kSecRandomDefault,
+                                         crypto_suites[cs_idx].cipher_key_len,
+                                         &key);
+            if (err != errSecSuccess) {
                 PJ_LOG(4,(THIS_FILE, "Failed generating random key "
                           "(native err=%d)", err));
                 return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
@@ -240,7 +253,7 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
     }
     if (pj_stricmp2(&token, "inline")) {
         PJ_LOG(4,(THIS_FILE, "Attribute crypto key method '%.*s' "
-                  "not supported!", token.slen, token.ptr));
+                  "not supported!", (int)token.slen, token.ptr));
         return PJMEDIA_SDP_EINATTR;
     }
 
@@ -395,8 +408,8 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
              * crypto-suites in the setting.
              */
             for (i=0; i<srtp->setting.crypto_count; ++i) {
-                if (srtp->tx_policy.name.slen &&
-                    pj_stricmp(&srtp->tx_policy.name,
+                if (srtp->srtp_ctx.tx_policy.name.slen &&
+                    pj_stricmp(&srtp->srtp_ctx.tx_policy.name,
                                &srtp->setting.crypto[i].name) != 0)
                 {
                     continue;
@@ -494,7 +507,7 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
                                 (int)crypto_suites[cs_idx].cipher_key_len)
                                 return PJMEDIA_SRTP_EINKEYLEN;
 
-                            srtp->rx_policy_neg = tmp_rx_crypto;
+                            srtp->srtp_ctx.rx_policy_neg = tmp_rx_crypto;
                             chosen_tag = tags[cr_attr_count];
                             matched_idx = j;
                             break;
@@ -540,7 +553,7 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
             }
 
             /* we have to generate crypto answer,
-             * with srtp->tx_policy_neg matched the offer
+             * with srtp->srtp_ctx.tx_policy_neg matched the offer
              * and rem_tag contains matched offer tag.
              */
             buffer_len = MAXLEN;
@@ -551,7 +564,7 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
             if (status != PJ_SUCCESS)
                 return status;
 
-            srtp->tx_policy_neg = srtp->setting.crypto[matched_idx];
+            srtp->srtp_ctx.tx_policy_neg = srtp->setting.crypto[matched_idx];
 
             /* If buffer_len==0, just skip the crypto attribute. */
             if (buffer_len) {
@@ -597,7 +610,7 @@ static pj_status_t fill_local_crypto(pj_pool_t *pool,
         if (status != PJ_SUCCESS)
             return status;
 
-        if (loc_tag > *count)
+        if (loc_tag <= 0 || loc_tag > *count)
             return PJMEDIA_SRTP_ESDPINCRYPTOTAG;
 
         loc_crypto[loc_tag-1] = tmp_crypto;
@@ -653,7 +666,7 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
      * media_encode_sdp(). Check if the key changes on the local SDP.
      */
     if (!srtp->offerer_side) {
-        if (srtp->tx_policy_neg.name.slen == 0)
+        if (srtp->srtp_ctx.tx_policy_neg.name.slen == 0)
             return PJ_SUCCESS;
 
         /* Get the local crypto. */
@@ -662,12 +675,12 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
         if (loc_cryto_cnt == 0)
             return PJ_SUCCESS;
 
-        if ((pj_stricmp(&srtp->tx_policy_neg.name,
+        if ((pj_stricmp(&srtp->srtp_ctx.tx_policy_neg.name,
                         &loc_crypto[0].name) == 0) &&
-            (pj_stricmp(&srtp->tx_policy_neg.key,
+            (pj_stricmp(&srtp->srtp_ctx.tx_policy_neg.key,
                         &loc_crypto[0].key) != 0))
         {
-            srtp->tx_policy_neg = loc_crypto[0];
+            srtp->srtp_ctx.tx_policy_neg = loc_crypto[0];
             for (i = 0; i<srtp->setting.crypto_count ;++i) {
                 if ((pj_stricmp(&srtp->setting.crypto[i].name,
                                 &loc_crypto[0].name) == 0) &&
@@ -752,12 +765,12 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
             if (pj_stricmp(&tmp_tx_crypto.name,
                            &loc_crypto[j].name) == 0)
             {
-                srtp->tx_policy_neg = loc_crypto[j];
+                srtp->srtp_ctx.tx_policy_neg = loc_crypto[j];
                 break;
             }
         }
 
-        srtp->rx_policy_neg = tmp_tx_crypto;
+        srtp->srtp_ctx.rx_policy_neg = tmp_tx_crypto;
     }
 
     if (srtp->setting.use == PJMEDIA_SRTP_DISABLED) {

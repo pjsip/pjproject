@@ -212,7 +212,7 @@ static pj_status_t bb10_add_dev (struct bb10_factory *af)
     pj_bzero(adi, sizeof(*adi));
 
     /* Set device name */
-    strcpy(adi->name, "preferred");
+    pj_ansi_strxcpy(adi->name, "preferred", sizeof(adi->name));
 
     /* Check the number of playback channels */
     adi->output_count = (pb_result >= 0) ? 1 : 0;
@@ -224,7 +224,7 @@ static pj_status_t bb10_add_dev (struct bb10_factory *af)
     adi->default_samples_per_sec = 8000;
 
     /* Driver name */
-    strcpy(adi->driver, "BB10");
+    pj_ansi_strxcpy(adi->driver, "BB10", sizeof(adi->driver));
 
     ++af->dev_cnt;
 

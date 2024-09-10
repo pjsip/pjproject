@@ -73,12 +73,12 @@ static const char* print_tpsel_info(const pjsip_tpselector *sel)
 
 /* Specify the initial size of the transport manager's pool. */
 #ifndef  TPMGR_POOL_INIT_SIZE
-#   define TPMGR_POOL_INIT_SIZE 64
+#   define TPMGR_POOL_INIT_SIZE 1000
 #endif
 
 /* Specify the increment size of the transport manager's pool. */
 #ifndef TPMGR_POOL_INC_SIZE
-    #define TPMGR_POOL_INC_SIZE 64
+    #define TPMGR_POOL_INC_SIZE 1000
 #endif
 
 /* Specify transport entry allocation count. When registering a new transport,
@@ -89,6 +89,12 @@ static const char* print_tpsel_info(const pjsip_tpselector *sel)
 #ifndef PJSIP_TRANSPORT_ENTRY_ALLOC_CNT
 #   define PJSIP_TRANSPORT_ENTRY_ALLOC_CNT  16
 #endif
+
+/* Enum for id idle_timer. */
+enum timer_id {
+    IDLE_TIMER_ID = 1,
+    INITIAL_IDLE_TIMER_ID
+};
 
 /* Prototype. */
 static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata);
@@ -136,8 +142,9 @@ struct pjsip_tpmgr
 #endif
     void           (*on_rx_msg)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
     pj_status_t    (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
-    pjsip_tp_state_callback tp_state_cb;
+    pjsip_tp_state_callback   tp_state_cb;
     pjsip_tp_on_rx_dropped_cb tp_drop_data_cb;
+    pjsip_tp_on_rx_data_cb    tp_rx_data_cb;
 
     /* Transmit data list, for transmit data cleanup when transport manager
      * is destroyed.
@@ -329,7 +336,8 @@ PJ_DEF(pj_status_t) pjsip_transport_register_type( unsigned tp_flag,
     }
 
     transport_names[i].port = (pj_uint16_t)def_port;
-    pj_ansi_strcpy(transport_names[i].name_buf, tp_name);
+    pj_ansi_strxcpy(transport_names[i].name_buf, tp_name,
+                    sizeof(transport_names[i].name_buf));
     transport_names[i].name = pj_str(transport_names[i].name_buf);
     transport_names[i].flag = tp_flag;
 
@@ -439,8 +447,9 @@ PJ_DEF(void) pjsip_tpselector_add_ref(pjsip_tpselector *sel)
 {
     if (sel->type == PJSIP_TPSELECTOR_TRANSPORT && sel->u.transport != NULL)
         pjsip_transport_add_ref(sel->u.transport);
-    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL)
+    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL) {
         ; /* Hmm.. looks like we don't have reference counter for listener */
+    }
 }
 
 
@@ -451,8 +460,9 @@ PJ_DEF(void) pjsip_tpselector_dec_ref(pjsip_tpselector *sel)
 {
     if (sel->type == PJSIP_TPSELECTOR_TRANSPORT && sel->u.transport != NULL)
         pjsip_transport_dec_ref(sel->u.transport);
-    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL)
+    else if (sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener != NULL) {
         ; /* Hmm.. looks like we don't have reference counter for listener */
+    }
 }
 
 
@@ -647,7 +657,7 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
     }
 
     if (len < 1 || len >= (int)sizeof(info_buf)) {
-        return (char*)obj_name;
+        return "MSG TOO LONG";
     }
 
     info = (char*) pj_pool_alloc(pool, len+1);
@@ -754,7 +764,7 @@ PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
     if (rdata->msg_info.info)
         return rdata->msg_info.info;
 
-    pj_ansi_strcpy(obj_name, "rdata");
+    pj_ansi_strxcpy(obj_name, "rdata", sizeof(obj_name));
     pj_ansi_snprintf(obj_name+5, sizeof(obj_name)-5, "%p", rdata);
 
     rdata->msg_info.info = get_msg_info(rdata->tp_info.pool, obj_name,
@@ -867,6 +877,12 @@ static void transport_send_callback(pjsip_transport *transport,
 
     PJ_UNUSED_ARG(transport);
 
+    /* Print log on successful sending */
+    if (size > 0) {
+        PJ_LOG(5,(transport->obj_name,
+                  "%s sent successfully", pjsip_tx_data_get_info(tdata)));
+    }
+
     /* Mark pending off so that app can resend/reuse txdata from inside
      * the callback.
      */
@@ -955,6 +971,13 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
 
     if (status != PJ_EPENDING) {
         tdata->is_pending = 0;
+
+        /* Print log on successful sending */
+        if (status == PJ_SUCCESS) {
+            PJ_LOG(5,(tr->obj_name,
+                      "%s sent successfully", pjsip_tx_data_get_info(tdata)));
+        }
+
         pjsip_tx_data_dec_ref(tdata);
     }
 
@@ -1063,6 +1086,8 @@ static void transport_idle_callback(pj_timer_heap_t *timer_heap,
                                     struct pj_timer_entry *entry)
 {
     pjsip_transport *tp = (pjsip_transport*) entry->user_data;
+    int entry_id = entry->id;
+
     pj_assert(tp != NULL);
 
     PJ_UNUSED_ARG(timer_heap);
@@ -1076,8 +1101,23 @@ static void transport_idle_callback(pj_timer_heap_t *timer_heap,
      * race condition with pjsip_tpmgr_acquire_transport2().
      */
     pj_lock_acquire(tp->tpmgr->lock);
+
     if (pj_atomic_get(tp->ref_cnt) == 0) {
         tp->is_destroying = PJ_TRUE;
+        PJ_LOG(4, (THIS_FILE, "Transport %s is being destroyed "
+                  "due to timeout in %s timer", tp->obj_name, 
+                  (entry_id == IDLE_TIMER_ID)?"idle":"initial"));
+        if (entry_id == INITIAL_IDLE_TIMER_ID) {
+            if (tp->last_recv_len > 0 && tp->tpmgr->tp_drop_data_cb) {
+                pjsip_tp_dropped_data dd;
+                pj_bzero(&dd, sizeof(dd));
+                dd.tp = tp;
+                dd.data = NULL;
+                dd.len = tp->last_recv_len;
+                dd.status = PJ_ESOCKETSTOP;
+                (*tp->tpmgr->tp_drop_data_cb)(&dd);
+            }
+        }
     } else {
         pj_lock_release(tp->tpmgr->lock);
         return;
@@ -1176,6 +1216,8 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
         {
             pj_time_val delay;
             
+            int timer_id = IDLE_TIMER_ID;
+
             /* If transport is in graceful shutdown, then this is the
              * last user who uses the transport. Schedule to destroy the
              * transport immediately. Otherwise schedule idle timer.
@@ -1183,9 +1225,18 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
             if (tp->is_shutdown) {
                 delay.sec = delay.msec = 0;
             } else {
-                delay.sec = (tp->dir==PJSIP_TP_DIR_OUTGOING) ?
-                                PJSIP_TRANSPORT_IDLE_TIME :
-                                PJSIP_TRANSPORT_SERVER_IDLE_TIME;
+                if (tp->dir == PJSIP_TP_DIR_OUTGOING) {
+                    delay.sec = PJSIP_TRANSPORT_IDLE_TIME;
+                } else {
+                    delay.sec = PJSIP_TRANSPORT_SERVER_IDLE_TIME;
+                    if (tp->last_recv_ts.u64 == 0 && tp->initial_timeout) {
+                        PJ_LOG(4, (THIS_FILE, 
+                                   "Starting transport %s initial timer",
+                                   tp->obj_name));
+                        timer_id = INITIAL_IDLE_TIMER_ID;
+                        delay.sec = tp->initial_timeout;
+                    }
+                }
                 delay.msec = 0;
             }
 
@@ -1196,7 +1247,7 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
             pjsip_endpt_schedule_timer_w_grp_lock(tp->tpmgr->endpt,
                                                   &tp->idle_timer,
                                                   &delay,
-                                                  PJ_TRUE,
+                                                  timer_id,
                                                   tp->grp_lock);
         }
         pj_lock_release(tpmgr->lock);
@@ -1245,8 +1296,10 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
         /* Allocate new entry for the freelist. */
         for (; i < PJSIP_TRANSPORT_ENTRY_ALLOC_CNT; ++i) {
             tp_add = PJ_POOL_ZALLOC_T(mgr->pool, transport);
-            if (!tp_add)
+            if (!tp_add){
+                pj_lock_release(mgr->lock);
                 return PJ_ENOMEM;
+            }  
             pj_list_init(tp_add);
             pj_list_push_back(&mgr->tp_entry_freelist, tp_add);
         }
@@ -1338,11 +1391,11 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
                         pj_hash_set_np(mgr->table, &tp_next->tp->key, key_len,
                                        hval, tp_next->tp_buf, tp_next);
                         TRACE_((THIS_FILE, "Hash entry updated after "
-                                           "transport %d being destroyed",
+                                           "transport %s being destroyed",
                                            tp->obj_name));
                     } else {
                         TRACE_((THIS_FILE, "Hash entry deleted after "
-                                           "transport %d being destroyed",
+                                           "transport %s being destroyed",
                                            tp->obj_name));
                     }
                 }
@@ -1694,6 +1747,11 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
         prm->tp_sel->u.transport)
     {
         const pjsip_transport *tp = prm->tp_sel->u.transport;
+        /* If transport selector is specified, we can use the transport's
+         * address instead of using the address obtained from
+         * get_net_interface().
+         */
+        /*
         if (prm->local_if) {
             status = get_net_interface((pjsip_transport_type_e)tp->key.type,
                                        &prm->dst_host, &tmp_str);
@@ -1702,7 +1760,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
             pj_strdup(pool, &prm->ret_addr, &tmp_str);
             prm->ret_port = pj_sockaddr_get_port(&tp->local_addr);
             prm->ret_tp = tp;
-        } else {
+        } else */
+        {
             pj_strdup(pool, &prm->ret_addr, &tp->local_name.host);
             prm->ret_port = (pj_uint16_t)tp->local_name.port;
         }
@@ -1711,13 +1770,19 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
     } else if (prm->tp_sel && prm->tp_sel->type == PJSIP_TPSELECTOR_LISTENER &&
                prm->tp_sel->u.listener)
     {
+        /* If transport selector is specified, we can use the listener's
+         * address instead of using the address obtained from
+         * get_net_interface().
+         */
+        /*
         if (prm->local_if) {
             status = get_net_interface(prm->tp_sel->u.listener->type,
                                        &prm->dst_host, &tmp_str);
             if (status != PJ_SUCCESS)
                 goto on_return;
             pj_strdup(pool, &prm->ret_addr, &tmp_str);
-        } else {
+        } else */
+        {
             pj_strdup(pool, &prm->ret_addr,
                       &prm->tp_sel->u.listener->addr_name.host);
         }
@@ -1899,7 +1964,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
      */
     //pj_assert(pj_atomic_get(mgr->tdata_counter) == 0);
     if (pj_atomic_get(mgr->tdata_counter) != 0) {
-        PJ_LOG(3,(THIS_FILE, "Warning: %d transmit buffer(s) not freed!",
+        PJ_LOG(3,(THIS_FILE, "Warning: %ld transmit buffer(s) not freed!",
                   pj_atomic_get(mgr->tdata_counter)));
     }
 #endif
@@ -1931,6 +1996,60 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
     if (mgr->pool) {
         pjsip_endpt_release_pool( mgr->endpt, mgr->pool );
     }
+
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Initialize transports shutdown parameter with default values.
+ *
+ * @param prm       The parameter to be initialized.
+ */
+PJ_DEF(void) pjsip_tpmgr_shutdown_param_default(
+                                    pjsip_tpmgr_shutdown_param *prm)
+{
+    pj_bzero(prm, sizeof(*prm));
+    prm->force = PJ_TRUE;
+    prm->include_udp = PJ_TRUE;
+}
+
+/*
+ * Shutdown all transports.
+ */
+PJ_DEF(pj_status_t) pjsip_tpmgr_shutdown_all(
+                                    pjsip_tpmgr *mgr,
+                                    const pjsip_tpmgr_shutdown_param *prm)
+{
+    pj_hash_iterator_t itr_val;
+    pj_hash_iterator_t *itr;
+
+    PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
+
+    PJ_LOG(3, (THIS_FILE, "Shutting down all transports"));
+
+    pj_lock_acquire(mgr->lock);
+
+    itr = pj_hash_first(mgr->table, &itr_val);
+    while (itr) {
+        transport *tp_entry = (transport*)pj_hash_this(mgr->table, itr);
+        if (tp_entry) {
+            transport *tp_iter = tp_entry;
+            do {
+                pjsip_transport *tp = tp_iter->tp;
+                if (prm->include_udp ||
+                    ((tp->key.type & ~PJSIP_TRANSPORT_IPV6) !=
+                            PJSIP_TRANSPORT_UDP))
+                {
+                    pjsip_transport_shutdown2(tp, prm->force);
+                }
+                tp_iter = tp_iter->next;
+            } while (tp_iter != tp_entry);
+        }
+        itr = pj_hash_next(mgr->table, itr);
+    }
+
+    pj_lock_release(mgr->lock);
 
     return PJ_SUCCESS;
 }
@@ -2017,29 +2136,87 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
         /* For TCP transport, check if the whole message has been received. */
         if ((tr->flag & PJSIP_TRANSPORT_DATAGRAM) == 0) {
             pj_status_t msg_status;
+
+            if (mgr->tp_rx_data_cb) {
+                pjsip_tp_rx_data rd;
+                pj_bzero(&rd, sizeof(rd));
+                rd.tp = tr;
+                rd.data = current_pkt;
+                rd.len = remaining_len;
+
+                (*mgr->tp_rx_data_cb)(&rd);
+                if (rd.len < remaining_len) {
+                    msg_fragment_size = remaining_len - rd.len;
+                    total_processed += msg_fragment_size;
+                    current_pkt += msg_fragment_size;
+                    remaining_len = rd.len;
+                    continue;
+                }
+            }
+
             msg_status = pjsip_find_msg(current_pkt, remaining_len, PJ_FALSE, 
                                         &msg_fragment_size);
             if (msg_status != PJ_SUCCESS) {
-                if (remaining_len == PJSIP_MAX_PKT_LEN) {
-                    mgr->on_rx_msg(mgr->endpt, PJSIP_ERXOVERFLOW, rdata);
-                    
-                    /* Notify application about the message overflow */
+                pj_status_t dd_status = msg_status;
+
+                if (msg_status == PJSIP_EPARTIALMSG) {
+                    if (remaining_len != PJSIP_MAX_PKT_LEN) {
+                        /* We only get partial message: Not enough data in
+                         * packet.
+                         */
+                        return total_processed;
+                    }
+                    /* Overflow, buffer too small. */
+                    dd_status = PJSIP_ERXOVERFLOW;
+                } else {
+                    /* msg_status == PJSIP_EMISSINGHDR ||
+                       msg_status == PJSIP_EINVALIDHDR
+                     */
+                    char errbuf[128];
+                    pj_str_t errstr;
+
+                    errstr = pjsip_strerror(msg_status, errbuf, sizeof(errbuf) - 1);
+                    errstr.ptr[errstr.slen] = '\0';
+                    PJ_LOG(4, (THIS_FILE, "%s Unable to match whole message: %s",
+                               rdata->tp_info.transport->obj_name, errstr.ptr));
+                }
+
+                if (1) {
+                    mgr->on_rx_msg(mgr->endpt, dd_status, rdata);
+
+                    /* Notify application */
                     if (mgr->tp_drop_data_cb) {
                         pjsip_tp_dropped_data dd;
                         pj_bzero(&dd, sizeof(dd));
                         dd.tp = tr;
                         dd.data = current_pkt;
                         dd.len = msg_fragment_size;
-                        dd.status = PJSIP_ERXOVERFLOW;
+                        dd.status = dd_status;
                         (*mgr->tp_drop_data_cb)(&dd);
                     }
-                    
-                    /* Exhaust all data. */
-                    return rdata->pkt_info.len;
-                } else {
-                    /* Not enough data in packet. */
-                    return total_processed;
                 }
+
+                if (msg_status == PJSIP_EPARTIALMSG) {
+                    if (rdata->tp_info.transport->idle_timer.id == 
+                                                         INITIAL_IDLE_TIMER_ID)
+                    {
+                        /* We are not getting the first valid SIP message 
+                         * as expected, close the transport.
+                         */
+                        PJ_LOG(4, (THIS_FILE, "Unexpected data was received "\
+                            "while waiting for a valid initial SIP messages. "\
+                            "Shutting down transport %s",
+                            rdata->tp_info.transport->obj_name));
+
+                        pjsip_transport_shutdown(rdata->tp_info.transport);
+                    } else {
+                        PJ_LOG(4, (THIS_FILE, "Insufficient buffer to receive "
+                                              "incoming packet."));
+                    }
+                }
+
+                /* Exhaust all data. */
+                return rdata->pkt_info.len;
             }
         }
 
@@ -2088,15 +2265,17 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
              * which were sent to keep NAT bindings.
              */
             if (tmp.slen) {
-                PJ_LOG(1, (THIS_FILE, 
-                      "Error processing %d bytes packet from %s %s:%d %.*s:\n"
+                PJ_LOG(2, (THIS_FILE,
+                      "Dropping %lu bytes packet from %s %s:%d %.*s\n",
+                      (unsigned long)msg_fragment_size,
+                      rdata->tp_info.transport->type_name,
+                      rdata->pkt_info.src_name,
+                      rdata->pkt_info.src_port,
+                      (int)tmp.slen, tmp.ptr));
+                PJ_LOG(4, (THIS_FILE,
+                      "Dropped packet:"
                       "%.*s\n"
                       "-- end of packet.",
-                      msg_fragment_size,
-                      rdata->tp_info.transport->type_name,
-                      rdata->pkt_info.src_name, 
-                      rdata->pkt_info.src_port,
-                      (int)tmp.slen, tmp.ptr,
                       (int)msg_fragment_size,
                       rdata->msg_info.msg_buf));
             }
@@ -2193,6 +2372,17 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
             }
         }
         */
+
+        /* We have a valid message, cancel the initial timer. */
+        if (rdata->tp_info.transport->idle_timer.id == INITIAL_IDLE_TIMER_ID) {
+            PJ_LOG(4, (THIS_FILE, "Receive initial valid message from %s, "\
+                                  "cancelling the initial timer",
+                                  rdata->tp_info.transport->obj_name));
+
+            rdata->tp_info.transport->idle_timer.id = PJ_FALSE;
+            pjsip_endpt_cancel_timer(mgr->endpt,
+                                     &rdata->tp_info.transport->idle_timer);
+        }
 
         /* Call the transport manager's upstream message callback.
          */
@@ -2314,6 +2504,16 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
             if (sel->u.listener->type != type) {
                 pj_lock_release(mgr->lock);
                 TRACE_((THIS_FILE, "Listener type in tpsel not matched"));
+                return PJSIP_ETPNOTSUITABLE;
+            }
+        } else if (sel && sel->type == PJSIP_TPSELECTOR_IP_VER) {
+            if ((sel->u.ip_ver == PJSIP_TPSELECTOR_USE_IPV4_ONLY &&
+                 pjsip_transport_type_get_af(type) != pj_AF_INET()) ||
+                (sel->u.ip_ver == PJSIP_TPSELECTOR_USE_IPV6_ONLY &&
+                 pjsip_transport_type_get_af(type) != pj_AF_INET6()))
+            {
+                pj_lock_release(mgr->lock);
+                TRACE_((THIS_FILE, "Address type in tpsel not matched"));
                 return PJSIP_ETPNOTSUITABLE;
             }
         }
@@ -2523,7 +2723,7 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
     pj_lock_acquire(mgr->lock);
 
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
-    PJ_LOG(3,(THIS_FILE, " Outstanding transmit buffers: %d",
+    PJ_LOG(3,(THIS_FILE, " Outstanding transmit buffers: %ld",
               pj_atomic_get(mgr->tdata_counter)));
 #endif
 
@@ -2551,7 +2751,7 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
                 do {
                     pjsip_transport *tp_ref = tp_iter->tp;
 
-                    PJ_LOG(3, (THIS_FILE, "  %s %s%s%s%s(refcnt=%d%s)",
+                    PJ_LOG(3, (THIS_FILE, "  %s %s%s%s%s(refcnt=%ld%s)",
                                tp_ref->obj_name,
                                tp_ref->info,
                                (tp_ref->factory)?" listener[":"",
@@ -2753,3 +2953,18 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_set_drop_data_cb(pjsip_tpmgr *mgr,
 
     return PJ_SUCCESS;
 }
+
+/*
+ * Set callback for custom parser
+ */
+
+PJ_DEF(pj_status_t) pjsip_tpmgr_set_recv_data_cb(pjsip_tpmgr *mgr,
+                                                 pjsip_tp_on_rx_data_cb cb)
+{
+    PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
+
+    mgr->tp_rx_data_cb = cb;
+
+    return PJ_SUCCESS;
+}
+

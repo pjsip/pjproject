@@ -713,14 +713,15 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_close( pjmedia_vid_codec *codec )
 
 
 /** 
- * Modify the codec parameter after the codec is open. 
- * Note that not all codec parameters can be modified during run-time. 
- * When the parameter cannot be changed, this function will return 
- * non-PJ_SUCCESS, and the original parameters will not be changed.
+ * Modify the codec parameter after the codec is opened.
+ * Note that not all codec backends support modifying parameters during
+ * runtime and only certain parameters can be changed.
+ *
+ * Currently, only Video Toolbox and OpenH264 backends support runtime
+ * adjustment of encoding bitrate (avg_bps and max_bps).
  *
  * @param codec         The codec instance.
- * @param param         The new codec parameter. Note that encoding video
- *                      codec resolution must be even numbers.
+ * @param param         The new codec parameter.
  *
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
@@ -877,6 +878,16 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_recover(pjmedia_vid_codec *codec,
  */
 
 
+/*
+ * Internal functions.
+ */
+
+/**
+ * Internal: Get the array of codec identifiers that have dynamic PT.
+ */
+pj_status_t pjmedia_vid_codec_mgr_get_dyn_codecs(pjmedia_vid_codec_mgr* mgr,
+                                                 pj_int8_t *count,
+                                                 pj_str_t dyn_codecs[]);
 
 
 PJ_END_DECL

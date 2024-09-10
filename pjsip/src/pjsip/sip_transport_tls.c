@@ -180,7 +180,7 @@ static void tls_perror(const char *sender, const char *title,
                        pj_status_t status, pj_str_t *remote_name)
 {
     PJ_PERROR(3,(sender, status, "%s: [code=%d]%s%.*s", title, status,
-        remote_name ? " peer: " : "", remote_name ? remote_name->slen : 0,
+        remote_name ? " peer: " : "", remote_name ? (int)remote_name->slen : 0,
         remote_name ? remote_name->ptr : ""));
 }
 
@@ -338,10 +338,15 @@ static void set_ssock_param(pj_ssl_sock_param *ssock_param,
 
     ssock_param->sockopt_ignore_error =
                                     listener->tls_setting.sockopt_ignore_error;
+
+    ssock_param->enable_renegotiation =
+                                    listener->tls_setting.enable_renegotiation;
     /* Copy the sockopt */
-    pj_memcpy(&ssock_param->sockopt_params,
-              &listener->tls_setting.sockopt_params,
-              sizeof(listener->tls_setting.sockopt_params));
+    if (listener->tls_setting.sockopt_params.cnt > 0) {
+        pj_memcpy(&ssock_param->sockopt_params, 
+                  &listener->tls_setting.sockopt_params,
+                  sizeof(listener->tls_setting.sockopt_params));
+    }
 
     sip_ssl_method = listener->tls_setting.method;
     sip_ssl_proto = listener->tls_setting.proto;
@@ -373,15 +378,25 @@ static pj_status_t update_factory_addr(struct tls_listener *listener,
 
     if (addr_name && addr_name->host.slen) {
         pj_sockaddr tmp;
-        int af = pjsip_transport_type_get_af(listener->factory.type);
+        pj_uint16_t af = (pj_uint16_t)
+                         pjsip_transport_type_get_af(listener->factory.type);
 
-        status = pj_sockaddr_init(af, &tmp, &addr_name->host,
-                                  (pj_uint16_t)addr_name->port);
-        if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
-            (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+        tmp.addr.sa_family = af;
+
+        /* Validate IP address only */
+        if (pj_inet_pton(af, &addr_name->host, pj_sockaddr_get_addr(&tmp)) ==
+            PJ_SUCCESS)
         {
-            /* Invalid address */
-            return PJ_EINVAL;
+            /* Verify that address given in a_name (if any) is valid */
+            status = pj_sockaddr_init(af, &tmp, &addr_name->host,
+                                      (pj_uint16_t)addr_name->port);
+            if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
+                (af == pj_AF_INET() &&
+                 tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+            {
+                /* Invalid address */
+                return PJ_EINVAL;
+            }
         }
 
         /* Copy the address */
@@ -574,9 +589,11 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                 pjsip_transport_get_flag_from_type(listener->factory.type);
     listener->endpt = endpt;
 
-    pj_ansi_strcpy(listener->factory.obj_name, "tlstp");
+    pj_ansi_strxcpy(listener->factory.obj_name, "tlstp",
+                    sizeof(listener->factory.obj_name));
     if (is_ipv6)
-        pj_ansi_strcat(listener->factory.obj_name, "6");
+        pj_ansi_strxcat(listener->factory.obj_name, "6",
+                        sizeof(listener->factory.obj_name));
 
     if (opt)
         pjsip_tls_setting_copy(pool, &listener->tls_setting, opt);
@@ -630,6 +647,16 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                         &listener->cert);
         if (status != PJ_SUCCESS)
             goto on_error;    
+    } else if (listener->tls_setting.cert_lookup.type !=
+                                                PJ_SSL_CERT_LOOKUP_NONE &&
+               listener->tls_setting.cert_lookup.keyword.slen)
+    {
+        status = pj_ssl_cert_load_from_store(
+                                pool,
+                                &listener->tls_setting.cert_lookup,
+                                &listener->cert);
+        if (status != PJ_SUCCESS)
+            goto on_error;
     }
 
     /* Register to transport manager */
@@ -738,6 +765,22 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
 {
     pj_status_t status = PJ_SUCCESS;
     struct tls_listener *listener = (struct tls_listener *)factory;
+
+    /* Just update the published address if currently no listener */
+    if (!listener->ssock) {
+        PJ_LOG(3,(factory->obj_name,
+                      "TLS restart requested while no listener created, "
+                      "update the published address only"));
+
+        status = update_factory_addr(listener, a_name);
+        if (status != PJ_SUCCESS)
+            return status;
+
+        /* Set transport info. */
+       update_transport_info(listener);
+
+       return PJ_SUCCESS;
+    }
 
     lis_close(listener);
 
@@ -890,6 +933,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls->base.do_shutdown = &tls_shutdown;
     tls->base.destroy = &tls_destroy_transport;
     tls->base.factory = &listener->factory;
+    tls->base.initial_timeout = listener->tls_setting.initial_timeout;
 
     tls->ssock = ssock;
     tls->on_verify_cb = listener->tls_setting.on_verify_cb;
@@ -1218,10 +1262,14 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     ssock_param.sockopt_ignore_error = 
                                      listener->tls_setting.sockopt_ignore_error;
+
+    ssock_param.enable_renegotiation = listener->tls_setting.enable_renegotiation;
     /* Copy the sockopt */
-    pj_memcpy(&ssock_param.sockopt_params, 
-              &listener->tls_setting.sockopt_params,
-              sizeof(listener->tls_setting.sockopt_params));
+    if (listener->tls_setting.sockopt_params.cnt > 0) {
+        pj_memcpy(&ssock_param.sockopt_params, 
+                  &listener->tls_setting.sockopt_params,
+                  sizeof(listener->tls_setting.sockopt_params));
+    }
 
     sip_ssl_method = listener->tls_setting.method;
     sip_ssl_proto = listener->tls_setting.proto;
@@ -1350,7 +1398,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
         if (new_ssock && accept_status == PJ_SUCCESS) {
             /* Close the SSL socket if the accept op is successful */
             PJ_LOG(4,(THIS_FILE,
-                      "Incoming TLS connection from %s (sock=%d) is discarded "
+                      "Incoming TLS connection from %s (sock=%p) is discarded "
                       "because listener is already destroyed",
                       pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
                       new_ssock));
@@ -1400,7 +1448,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
 
     PJ_LOG(4,(listener->factory.obj_name, 
               "TLS listener %s: got incoming TLS connection "
-              "from %s, sock=%d",
+              "from %s, sock=%p",
               pj_addr_str_print(&listener->factory.addr_name.host, 
                                 listener->factory.addr_name.port, addr_buf, 
                                 sizeof(addr_buf), 1),
@@ -1501,23 +1549,22 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     if (is_shutdown)
         return PJ_TRUE;
 
+    /* Start keep-alive timer */
+    if (pjsip_cfg()->tls.keep_alive_interval) {
+        pj_time_val delay = {0};
+        delay.sec = pjsip_cfg()->tls.keep_alive_interval;
+        pjsip_endpt_schedule_timer(listener->endpt,
+                                   &tls->ka_timer,
+                                   &delay);
+        tls->ka_timer.id = PJ_TRUE;
+        pj_gettimeofday(&tls->last_activity);
+    }
 
     status = tls_start_read(tls);
     if (status != PJ_SUCCESS) {
         PJ_LOG(3,(tls->base.obj_name, "New transport cancelled"));
         tls_init_shutdown(tls, status);
         tls_destroy(&tls->base, status);
-    } else {
-        /* Start keep-alive timer */
-        if (pjsip_cfg()->tls.keep_alive_interval) {
-            pj_time_val delay = {0};        
-            delay.sec = pjsip_cfg()->tls.keep_alive_interval;
-            pjsip_endpt_schedule_timer(listener->endpt, 
-                                       &tls->ka_timer, 
-                                       &delay);
-            tls->ka_timer.id = PJ_TRUE;
-            pj_gettimeofday(&tls->last_activity);
-        }
     }
 
     return PJ_TRUE;
@@ -1571,7 +1618,7 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
     if (bytes_sent <= 0) {
         pj_status_t status;
 
-        PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%d", 
+        PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%ld", 
                   bytes_sent));
 
         status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
@@ -1613,6 +1660,7 @@ static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
         param.local_cert_info = info.local_cert_info;
         param.remote_cert_info = info.remote_cert_info;
         param.tp_dir = is_server?PJSIP_TP_DIR_INCOMING:PJSIP_TP_DIR_OUTGOING;
+        param.ssock = ssock;
         
         return (*verify_cb)(&param);
     }
@@ -1710,7 +1758,7 @@ static pj_status_t tls_send_msg(pjsip_transport *transport,
             /* Shutdown transport on closure/errors */
             if (size <= 0) {
 
-                PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%d", 
+                PJ_LOG(5,(tls->base.obj_name, "TLS send() error, sent=%ld", 
                           size));
 
                 if (status == PJ_SUCCESS) 

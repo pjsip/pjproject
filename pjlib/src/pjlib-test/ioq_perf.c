@@ -116,13 +116,13 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                  */
                 if (!IS_ERROR_SILENCED(rc)) {
                     pj_strerror(rc, errmsg, sizeof(errmsg));
-                    PJ_LOG(3,(THIS_FILE,"...error: read error, bytes_read=%d (%s)",
+                    PJ_LOG(3,(THIS_FILE,"...error: read error, bytes_read=%ld (%s)",
                               bytes_read, errmsg));
                     PJ_LOG(3,(THIS_FILE,
-                              ".....additional info: type=%s, total read=%u, "
-                              "total sent=%u",
-                              item->type_name, item->bytes_recv,
-                              item->bytes_sent));
+                              ".....additional info: type=%s, total read=%lu, "
+                              "total sent=%lu",
+                              item->type_name, (unsigned long)item->bytes_recv,
+                              (unsigned long)item->bytes_sent));
                 }
             } else {
                 last_error_counter++;
@@ -192,7 +192,7 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     if (bytes_sent <= 0) {
         if (!IS_ERROR_SILENCED(-bytes_sent)) {
             PJ_PERROR(3, (THIS_FILE, (pj_status_t)-bytes_sent,
-                          "...error: sending stopped. bytes_sent=%d",
+                          "...error: sending stopped. bytes_sent=%ld",
                          -bytes_sent));
         }
         item->has_pending_send = 0;
@@ -284,6 +284,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
 
     TRACE_((THIS_FILE, "    starting test.."));
 
+    pj_bzero(&ioqueue_callback, sizeof(ioqueue_callback));
     ioqueue_callback.on_read_complete = &on_read_complete;
     ioqueue_callback.on_write_complete = &on_write_complete;
 
@@ -479,8 +480,10 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     if (display_report) {
         PJ_LOG(3,(THIS_FILE, "  %s %d threads, %d pairs", type_name,
                   thread_cnt, sockpair_cnt));
-        PJ_LOG(3,(THIS_FILE, "  Elapsed  : %u msec", total_elapsed_usec/1000));
-        PJ_LOG(3,(THIS_FILE, "  Bandwidth: %d KB/s", *p_bandwidth));
+        PJ_LOG(3,(THIS_FILE, "  Elapsed  : %lu msec",
+                  (unsigned long)(total_elapsed_usec/1000)));
+        PJ_LOG(3,(THIS_FILE, "  Bandwidth: %lu KB/s",
+                  (unsigned long)*p_bandwidth));
         PJ_LOG(3,(THIS_FILE, "  Threads statistics:"));
         PJ_LOG(3,(THIS_FILE, "    ============================="));
         PJ_LOG(3,(THIS_FILE, "    Thread  Loops  Events  Errors"));
@@ -503,9 +506,9 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
                       item->bytes_recv*100.0/total_received));
         }
     } else {
-        PJ_LOG(3,(THIS_FILE, "   %.4s    %2d        %2d       %8d KB/s",
+        PJ_LOG(3,(THIS_FILE, "   %.4s    %2d        %2d       %8lu KB/s",
                   type_name, thread_cnt, sockpair_cnt,
-                  *p_bandwidth));
+                  (unsigned long)*p_bandwidth));
     }
 
     /* Done. */
@@ -549,7 +552,7 @@ static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
     PJ_LOG(3,(THIS_FILE, "   ======================================="));
 
     best_bandwidth = 0;
-    for (i=0; i<(int)(sizeof(test_param)/sizeof(test_param[0])); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(test_param); ++i) {
         pj_size_t bandwidth;
 
         rc = perform_test(cfg,
@@ -573,11 +576,11 @@ static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
     }
 
     PJ_LOG(3,(THIS_FILE, 
-              "   Best: Type=%s Threads=%d, Skt.Pairs=%d, Bandwidth=%u KB/s",
+              "   Best: Type=%s Threads=%d, Skt.Pairs=%d, Bandwidth=%lu KB/s",
               test_param[best_index].type_name,
               test_param[best_index].thread_cnt,
               test_param[best_index].sockpair_cnt,
-              best_bandwidth));
+              (unsigned long)best_bandwidth));
     PJ_LOG(3,(THIS_FILE, "   (Note: packet size=%d, total errors=%u)", 
                          BUF_SIZE, last_error_counter));
     return 0;
@@ -602,7 +605,7 @@ int ioqueue_perf_test(void)
     int i, rc;
 
     /* Defailed performance report (concurrency=1) */
-    for (i=0; i<PJ_ARRAY_SIZE(epoll_flags); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(epoll_flags); ++i) {
         pj_ioqueue_cfg_default(&cfg);
         cfg.epoll_flags = epoll_flags[i];
 
@@ -637,7 +640,7 @@ int ioqueue_perf_test(void)
         return rc;
 
     /* The benchmark across configs */
-    for (i=0; i<PJ_ARRAY_SIZE(epoll_flags); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(epoll_flags); ++i) {
         int concur;
         for (concur=0; concur<2; ++concur) {
             pj_ioqueue_cfg_default(&cfg);

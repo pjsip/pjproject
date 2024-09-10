@@ -600,8 +600,8 @@ static pj_bool_t codec_exists(const pj_str_t *codec_name)
 
     codec = AMediaCodec_createCodecByName(codec_txt);
     if (!codec) {
-        PJ_LOG(4, (THIS_FILE, "Failed creating codec : %.*s", codec_name->slen,
-                   codec_name->ptr));
+        PJ_LOG(4, (THIS_FILE, "Failed creating codec : %.*s",
+                   (int)codec_name->slen, codec_name->ptr));
         return PJ_FALSE;
     }
     AMediaCodec_delete(codec);
@@ -777,8 +777,8 @@ static pj_status_t and_media_enum_info(pjmedia_vid_codec_factory *factory,
         and_media_codec[i].encoder_name = enc_name;
         and_media_codec[i].decoder_name = dec_name;
         PJ_LOG(4, (THIS_FILE, "Found encoder [%d]: %.*s and decoder: %.*s ",
-                   *count, enc_name->slen, enc_name->ptr, dec_name->slen,
-                   dec_name->ptr));
+                   *count, (int)enc_name->slen, enc_name->ptr,
+                   (int)dec_name->slen, dec_name->ptr));
         add_codec(&and_media_codec[*count], count, info);
         and_media_codec[i].enabled = PJ_TRUE;
     }
@@ -1032,13 +1032,15 @@ static pj_status_t and_media_codec_encode_begin(pjmedia_vid_codec *codec,
                                      "returns no input buff"));
             } else {
                 PJ_LOG(4,(THIS_FILE, "Encoder getInputBuffer "
-                                     "size: %d, expecting %d.",
-                                     input_buf, output_size, input->size));
+                                     "size: %lu, expecting %lu.",
+                                     (unsigned long)output_size,
+                                     (unsigned long)input->size));
             }
             goto on_return;
         }
     } else {
-        PJ_LOG(4,(THIS_FILE, "Encoder dequeueInputBuffer failed[%d]", buf_idx));
+        PJ_LOG(4,(THIS_FILE, "Encoder dequeueInputBuffer failed[%ld]",
+                             buf_idx));
         goto on_return;
     }
 
@@ -1143,7 +1145,7 @@ static pj_status_t and_media_codec_encode_begin(pjmedia_vid_codec *codec,
 
             AMediaFormat_delete(vid_fmt);
         } else {
-            PJ_LOG(4, (THIS_FILE, "Encoder dequeueOutputBuffer failed[%d]",
+            PJ_LOG(4, (THIS_FILE, "Encoder dequeueOutputBuffer failed[%ld]",
                        buf_idx));
         }
         goto on_return;
@@ -1243,7 +1245,7 @@ static void and_media_get_input_buffer(
                                              CODEC_DEQUEUE_TIMEOUT);
 
     if (buf_idx < 0) {
-        PJ_LOG(4,(THIS_FILE, "Decoder dequeueInputBuffer failed return %d",
+        PJ_LOG(4,(THIS_FILE, "Decoder dequeueInputBuffer failed return %ld",
                   buf_idx));
 
         and_media_data->dec_input_buf = NULL;
@@ -1290,7 +1292,7 @@ static pj_status_t and_media_decode(pjmedia_vid_codec *codec,
                                             input_ts->u32.lo,
                                             buf_flag);
         if (am_status != AMEDIA_OK) {
-            PJ_LOG(4,(THIS_FILE, "Decoder queueInputBuffer idx[%d] return %d",
+            PJ_LOG(4,(THIS_FILE, "Decoder queueInputBuffer idx[%ld] return %d",
                     and_media_data->dec_input_buf_idx, am_status));
             return status;
         }
@@ -1403,7 +1405,7 @@ static pj_status_t and_media_decode(pjmedia_vid_codec *codec,
                                   PJMEDIA_EVENT_PUBLISH_DEFAULT);
         }
     } else {
-        PJ_LOG(4,(THIS_FILE, "Decoder dequeueOutputBuffer failed [%d]",
+        PJ_LOG(4,(THIS_FILE, "Decoder dequeueOutputBuffer failed [%ld]",
                   buf_idx));
     }
     return status;
@@ -1743,6 +1745,8 @@ static pj_status_t decode_h264(pjmedia_vid_codec *codec,
 
         buf_pos += frm_size;
     }
+
+    PJ_UNUSED_ARG(frm_cnt);
 
     return PJ_SUCCESS;
 }

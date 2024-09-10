@@ -345,7 +345,7 @@ pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
                     h->fd_type==pj_SOCK_DGRAM())
                 {
                     PJ_PERROR(4,(THIS_FILE, send_rc,
-                                 "Send error for socket %d, retrying",
+                                 "Send error for socket %ld, retrying",
                                  h->fd));
                     send_rc = replace_udp_sock(h);
                     continue;
@@ -1037,7 +1037,7 @@ retry_on_restart:
                 {
                     if (!restart_retry) {
                         PJ_PERROR(4, (THIS_FILE, status,
-                                      "Send error for socket %d, retrying",
+                                      "Send error for socket %ld, retrying",
                                       key->fd));
                         status = replace_udp_sock(key);
                         if (status == PJ_SUCCESS) {
@@ -1056,7 +1056,7 @@ retry_on_restart:
     /*
      * Check that address storage can hold the address parameter.
      */
-    PJ_ASSERT_RETURN(addrlen <= (int)sizeof(pj_sockaddr_in), PJ_EBUG);
+    PJ_ASSERT_RETURN(addrlen <= (int)sizeof(pj_sockaddr), PJ_EBUG);
 
     /*
      * Schedule asynchronous send.

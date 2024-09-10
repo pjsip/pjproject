@@ -463,7 +463,7 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_codecs( pjsua_codec_info id[],
             id[j].codec_id = pj_str(id[j].buf_);
             id[j].priority = (pj_uint8_t) prio[i];
 
-            if (id[j].codec_id.slen < sizeof(id[j].buf_)) {
+            if (id[j].codec_id.slen < (pj_ssize_t)sizeof(id[j].buf_)) {
                 id[j].desc.ptr = id[j].codec_id.ptr + id[j].codec_id.slen + 1;
                 pj_strncpy(&id[j].desc, &info[i].encoding_desc,
                            sizeof(id[j].buf_) - id[j].codec_id.slen - 1);
@@ -556,7 +556,10 @@ static pjsua_vid_win_id vid_preview_get_win(pjmedia_vid_dev_index id,
     /* Get real capture ID, if set to PJMEDIA_VID_DEFAULT_CAPTURE_DEV */
     if (id == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
         pjmedia_vid_dev_info info;
-        pjmedia_vid_dev_get_info(id, &info);
+        if (pjmedia_vid_dev_get_info(id, &info) != PJ_SUCCESS) {
+            PJSUA_UNLOCK();
+            return wid;
+        }
         id = info.id;
     }
 
@@ -1346,10 +1349,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     pjmedia_vid_stream_send_rtcp_bye(strm);
 
     /* Release locks before unsubscribing, to avoid deadlock. */
-    while (PJSUA_LOCK_IS_LOCKED()) {
-        num_locks++;
-        PJSUA_UNLOCK();
-    }
+    num_locks = PJSUA_RELEASE_LOCK();
 
     /* Unsubscribe events first, otherwise the event callbacks
      * can be called and access already destroyed objects.
@@ -1385,8 +1385,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
 
     /* Re-acquire the locks. */
-    for (; num_locks > 0; num_locks--)
-        PJSUA_LOCK();
+    PJSUA_RELOCK(num_locks);
 
     PJSUA_LOCK();
 
@@ -1536,8 +1535,11 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
 
     rend_id = prm->rend_id;
 
-    if (prm->format.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO)
+    if (prm->format.type == PJMEDIA_TYPE_VIDEO &&
+        prm->format.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO)
+    {
         fmt = &prm->format;
+    }
     status = create_vid_win(PJSUA_WND_TYPE_PREVIEW, fmt, rend_id, id,
                             prm->show, prm->wnd_flags,
                             (prm->wnd.info.window? &prm->wnd: NULL), &wid);
@@ -1775,8 +1777,13 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_show( pjsua_vid_win_id wid,
     }
 
     /* Make sure that renderer gets started before shown up */
-    if (show && !pjmedia_vid_port_is_running(w->vp_rend))
+    if (show && w->vp_rend && !pjmedia_vid_port_is_running(w->vp_rend)) {
         status = pjmedia_vid_port_start(w->vp_rend);
+        if (status != PJ_SUCCESS) {
+            PJSUA_UNLOCK();
+            return status;
+        }
+    }
 
     hide = !show;
     status = pjmedia_vid_dev_stream_set_cap(s,
@@ -2081,7 +2088,7 @@ static pj_status_t call_add_video(pjsua_call *call,
 
     /* Initialize call media */
     call_med = &call->media_prov[call->med_prov_cnt++];
-    status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
+    status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO, NULL,
                                    &acc_cfg->rtp_cfg, call->secure_level,
                                    NULL, PJ_FALSE, NULL);
     if (status != PJ_SUCCESS)
@@ -2127,6 +2134,7 @@ static pj_status_t call_add_video(pjsua_call *call,
 
         pjmedia_sdp_media_add_attr(sdp_m, a);
     }
+    call_med->def_dir = dir;
 
     /* Update SDP media line by media transport */
     status = pjmedia_transport_encode_sdp(call_med->tp, pool,
@@ -2230,7 +2238,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
                 call->opt.vid_cnt++;
         }
 
-        status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
+        status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO, NULL,
                                        &acc_cfg->rtp_cfg, call->secure_level,
                                        NULL, PJ_FALSE, NULL);
         if (status != PJ_SUCCESS)
@@ -2287,7 +2295,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
         sdp->media[med_idx] = sdp_m;
 
-        if (call_med->dir == PJMEDIA_DIR_NONE) {
+        if (call_med->dir == PJMEDIA_DIR_NONE && call_med->tp) {
             /* Update SDP media line by media transport */
             status = pjmedia_transport_encode_sdp(call_med->tp, pool,
                                                   sdp, NULL, call_med->idx);
@@ -2664,7 +2672,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
          */
         if (param_.cap_dev == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
             pjmedia_vid_dev_info info;
-            pjmedia_vid_dev_get_info(param_.cap_dev, &info);
+            status = pjmedia_vid_dev_get_info(param_.cap_dev, &info);
+            if (status != PJ_SUCCESS)
+                goto on_return;
             pj_assert(info.dir == PJMEDIA_DIR_CAPTURE);
             param_.cap_dev = info.id;
         }
@@ -2701,6 +2711,43 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
     pj_log_pop_indent();
+    return status;
+}
+
+
+/*
+ * Modify video stream's codec parameters.
+ */
+PJ_DEF(pj_status_t)
+pjsua_call_vid_stream_modify_codec_param(pjsua_call_id call_id,
+                                         int med_idx,
+                                         const pjmedia_vid_codec_param *param)
+{
+    pjsua_call *call;
+    pjsua_call_media *call_med;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls &&
+                     med_idx>=0 &&
+                     med_idx<(int)pjsua_var.calls[call_id].med_cnt && param,
+                     PJ_EINVAL);
+
+    PJSUA_LOCK();
+
+    /* Verify media index */
+    call = &pjsua_var.calls[call_id];
+
+    /* Verify if the media is audio */
+    call_med = &call->media[med_idx];
+    if (call_med->type != PJMEDIA_TYPE_VIDEO || !call_med->strm.v.stream) {
+        PJSUA_UNLOCK();
+        return PJ_EINVALIDOP;
+    }
+
+    status = pjmedia_vid_stream_modify_codec_param(call_med->strm.v.stream,
+                                                   param);
+
+    PJSUA_UNLOCK();
     return status;
 }
 

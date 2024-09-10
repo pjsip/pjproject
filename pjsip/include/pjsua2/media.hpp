@@ -88,6 +88,21 @@ struct MediaFormatAudio : public MediaFormat
      * Export to pjmedia_format.
      */
     pjmedia_format toPj() const;
+
+public:
+    /**
+     * Default constructor
+     */
+    MediaFormatAudio() : clockRate(0), channelCount(0), frameTimeUsec(0),
+                         bitsPerSample(0), avgBps(0), maxBps(0)
+    {}
+
+    /**
+     * Initialization
+     */
+    void init(pj_uint32_t formatId, unsigned clockRate, unsigned channelCount,
+              int frameTimeUsec, int bitsPerSample,
+              pj_uint32_t avgBps=0, pj_uint32_t maxBps=0);
 };
 
 /**
@@ -111,6 +126,21 @@ struct MediaFormatVideo : public MediaFormat
      * Export to pjmedia_format.
      */
     pjmedia_format toPj() const;
+
+public:
+    /**
+     * Default constructor
+     */
+    MediaFormatVideo() : width(0), height(0), fpsNum(0),
+                         fpsDenum(1), avgBps(0), maxBps(0)
+    {}
+
+    /**
+     * Initialization
+     */
+    void init(pj_uint32_t formatId, unsigned width, unsigned height,
+              int fpsNum, int fpsDenum=1,
+              pj_uint32_t avgBps=0, pj_uint32_t maxBps=0);
 };
 
 /** Array of MediaFormatAudio */
@@ -407,7 +437,7 @@ protected:
      * Descendant should only call this method if it has registered the media
      * with the previous call to registerMediaPort().
      */
-    void unregisterMediaPort();
+    void unregisterMediaPort() PJSUA2_THROW(Error);
 
 private:
     /* Memory pool for deprecated registerMediaPort() */
@@ -425,6 +455,81 @@ typedef std::vector<AudioMedia*> AudioMediaVector;
 
 /** Array of Audio Media */
 typedef std::vector<AudioMedia> AudioMediaVector2;
+
+/**
+ * This structure describes a media frame.
+ */
+struct MediaFrame
+{
+    pjmedia_frame_type   type;      /**< Frame type.                        */
+    ByteVector           buf;       /**< Frame buffer content.              */
+    unsigned             size;      /**< Frame size in bytes.               */
+
+public:
+    /**
+     * Default constructor
+     */
+    MediaFrame()
+    : type(PJMEDIA_FRAME_TYPE_NONE),
+      size(0)
+    {}
+};
+
+/**
+ * Audio Media Port.
+ */
+class AudioMediaPort : public AudioMedia
+{
+public:
+    /**
+     * Constructor.
+     */
+    AudioMediaPort();
+
+    /**
+     * Destructor. This will unregister the audio media port from the
+     * conference bridge.
+     */
+    virtual ~AudioMediaPort();
+
+    /**
+     * Create an audio media port and register it to the conference bridge.
+     *
+     * @param name      The port name.
+     * @param fmt       The audio format.
+     */
+    void createPort(const string &name, MediaFormatAudio &fmt)
+                    PJSUA2_THROW(Error);
+
+    /*
+     * Callbacks
+     */
+    /**
+     * This callback is called to request a frame from this port. On input,
+     * frame.size indicates the capacity of the frame buffer and frame.buf
+     * will initially be an empty vector. Application can then set the frame
+     * type and fill the vector.
+     *
+     * @param frame       The frame.
+     */
+    virtual void onFrameRequested(MediaFrame &frame)
+    { PJ_UNUSED_ARG(frame); }
+
+    /**
+     * This callback is called when this port receives a frame. The frame
+     * content will be provided in frame.buf vector, and the frame size
+     * can be found in either frame.size or the vector's size (both
+     * have the same value).
+     *
+     * @param frame       The frame.
+     */
+    virtual void onFrameReceived(MediaFrame &frame)
+    { PJ_UNUSED_ARG(frame); }
+
+private:
+    pj_pool_t *pool;
+    pjmedia_port port;
+};
 
 /**
  * This structure contains additional info about AudioMediaPlayer.
@@ -456,7 +561,11 @@ public:
     /**
      * Default constructor
      */
-    AudioMediaPlayerInfo() : formatId(PJMEDIA_FORMAT_L16)
+    AudioMediaPlayerInfo() 
+    : formatId(PJMEDIA_FORMAT_L16),
+      payloadBitsPerSample(0),
+      sizeBytes(0),
+      sizeSamples(0)
     {}
 };
 
@@ -803,6 +912,11 @@ private:
  */
 struct AudioDevInfo
 {
+    /**
+     * The device ID
+     */
+    pjmedia_aud_dev_index id;
+
     /**
      * The device name
      */
@@ -1549,7 +1663,7 @@ public:
      * Close the audio device and unregister the audio device port from the
      * conference bridge.
      */
-    void close();
+    void close() PJSUA2_THROW(Error);
 
     /**
      * Is the extra audio device opened?
@@ -1934,9 +2048,18 @@ struct VideoPreviewOpParam {
     unsigned                windowFlags;
 
     /**
-     * Media format. If left unitialized, this parameter will not be used.
+     * Media format video. By default, this parameter is uninitialized
+     * and will not be used.
+     *
+     * To initialize it, use MediaFormatVideo::init().
+     * If left uninitialized, the capture device will be opened using
+     * PJMEDIA wrapper default format, e.g:
+     * - Android : PJMEDIA_FORMAT_I420 using the first supported size and 15fps
+     * - iOS : PJMEDIA_FORMAT_BGRA using size 352x288 and 15fps
+     * Note that when the preview is already opened, this setting will be
+     * ignored.
      */
-    MediaFormat             format;
+    MediaFormatVideo        format;
 
     /**
      * Optional output window to be used to display the video preview.
@@ -2056,7 +2179,7 @@ public:
     /**
      * Default constructor
      */
-    VideoDevInfo() : id(-1), dir(PJMEDIA_DIR_NONE)
+    VideoDevInfo() : id(-1), dir(PJMEDIA_DIR_NONE), caps(0)
     {}
 
     /**
@@ -2430,8 +2553,12 @@ struct CodecParamInfo
     unsigned    maxBps;                 /**< Maximum bandwidth in bits/sec  */
     unsigned    maxRxFrameSize;         /**< Maximum frame size             */
     unsigned    frameLen;               /**< Decoder frame ptime in msec.   */
+    unsigned    frameLenDenum;          /**< Decoder frame ptime denum, or
+                                             zero if ptime is integer.      */
     unsigned    encFrameLen;            /**< Encoder ptime, or zero if it's
                                              equal to decoder ptime.        */
+    unsigned    encFrameLenDenum;       /**< Encoder ptime denum, or zero
+                                             if ptime is integer.           */
     unsigned    pcmBitsPerSample;       /**< Bits/sample in the PCM side    */
     unsigned    pt;                     /**< Payload type.                  */
     pjmedia_format_id fmtId;            /**< Source format, it's format of
@@ -2441,7 +2568,19 @@ public:
     /**
      * Default constructor
      */
-    CodecParamInfo() : fmtId(PJMEDIA_FORMAT_L16)
+    CodecParamInfo() 
+    : clockRate(0),
+      channelCnt(0),
+      avgBps(0),
+      maxBps(0),
+      maxRxFrameSize(0),
+      frameLen(0),
+      frameLenDenum(0),
+      encFrameLen(0),
+      encFrameLenDenum(0),
+      pcmBitsPerSample(0),
+      pt(0),
+      fmtId(PJMEDIA_FORMAT_L16)
     {}
 };
 
@@ -2492,6 +2631,7 @@ struct CodecOpusConfig
     unsigned   sample_rate; /**< Sample rate in Hz.                     */
     unsigned   channel_cnt; /**< Number of channels.                    */
     unsigned   frm_ptime;   /**< Frame time in msec.                    */
+    unsigned   frm_ptime_denum;/**< Frame time denumerator.             */
     unsigned   bit_rate;    /**< Encoder bit rate in bps.               */
     unsigned   packet_loss; /**< Encoder's expected packet loss pct.    */
     unsigned   complexity;  /**< Encoder complexity, 0-10(10 is highest)*/
@@ -2499,6 +2639,36 @@ struct CodecOpusConfig
 
     pjmedia_codec_opus_config toPj() const;
     void fromPj(const pjmedia_codec_opus_config &config);
+};
+
+/**
+ * Lyra codec setting;
+ */
+struct CodecLyraConfig
+{
+    /**
+     * The value represents the decoder bitrate requested by the receiver.
+     * Endpoints can be configured with different bitrates. For example,
+     * the local endpoint might be set to a bitrate of 3200, while
+     * the remote endpoint is set to 6000. In this scenario, the remote
+     * endpoint will send data at 3200 bitrate, while the local endpoint
+     * will send data at 6000 bitrate. Valid bitrate: 3200, 6000, 9200.
+     * By default it is set to PJMEDIA_CODEC_LYRA_DEFAULT_BIT_RATE.
+     */
+    unsigned   bitRate;
+
+    /**
+     * Lyra required some additional (model) files, including
+     * \b lyra_config.binarypb , \b lyragan.tflite , \b quantizer.tflite and
+     * \b soundstream_encoder.tflite .
+     * This setting represents the folder containing the above files.
+     * The specified folder should contain these files. If an invalid folder
+     * is provided, the codec creation will fail.
+     */
+    string     modelPath;
+
+    pjmedia_codec_lyra_config toPj() const;
+    void fromPj(const pjmedia_codec_lyra_config &config);
 };
 
 /**
@@ -2533,7 +2703,9 @@ public:
      * Default constructor
      */
     VidCodecParam() : dir(PJMEDIA_DIR_NONE),
-                      packing(PJMEDIA_VID_PACKING_UNKNOWN)
+                      packing(PJMEDIA_VID_PACKING_UNKNOWN),
+                      encMtu(0),
+                      ignoreFmtp(false)
     {}
 
     void fromPj(const pjmedia_vid_codec_param &param);
@@ -2614,7 +2786,7 @@ public:
     /**
      * Default constructor
      */
-    MediaEvent() : type(PJMEDIA_EVENT_NONE)
+    MediaEvent() : type(PJMEDIA_EVENT_NONE), pjMediaEvent(NULL)
     {}
 
     /**

@@ -270,6 +270,9 @@ typedef struct pjmedia_codec_param
     /**
      * The "info" part of codec param describes the capability of the codec,
      * and is recommended not to be modified unless necessary.
+     * Note that application must be ready to handle cases when ptime
+     * denumerators are zero, since most codecs that only support integer
+     * ptime will leave these fields untouched.
      */
     struct {
        unsigned    clock_rate;          /**< Sampling rate in Hz            */
@@ -278,8 +281,12 @@ typedef struct pjmedia_codec_param
        pj_uint32_t max_bps;             /**< Maximum bandwidth in bits/sec  */
        unsigned    max_rx_frame_size;   /**< Maximum frame size             */
        pj_uint16_t frm_ptime;           /**< Decoder frame ptime in msec.   */
+       pj_uint8_t  frm_ptime_denum;     /**< Decoder frame ptime denum, or
+                                             zero if ptime is integer.      */
        pj_uint16_t enc_ptime;           /**< Encoder ptime, or zero if it's
                                              equal to decoder ptime.        */
+       pj_uint8_t  enc_ptime_denum;     /**< Encoder frame ptime denum, or
+                                             zero if ptime is integer.      */
        pj_uint8_t  pcm_bits_per_sample; /**< Bits/sample in the PCM side    */
        pj_uint8_t  pt;                  /**< Payload type.                  */
        pjmedia_format_id fmt_id;        /**< Source format, it's format of
@@ -355,8 +362,8 @@ typedef struct pjmedia_codec_op
     /** 
      * Open the codec and initialize with the specified parameter.
      * Upon successful initialization, the codec may modify the parameter
-     * and fills in the unspecified values (such as enc_ptime, when
-     * encoder ptime is different than decoder ptime).
+     * and fills in the unspecified values (such as enc_ptime/enc_ptime_denum,
+     * when encoder ptime is different than decoder ptime).
      *
      * Application should call #pjmedia_codec_open() instead of 
      * calling this function directly.
@@ -404,7 +411,7 @@ typedef struct pjmedia_codec_op
      * Instruct the codec to inspect the specified payload/packet and
      * split the packet into individual base frames. Each output frames will
      * have ptime that is equal to basic frame ptime (i.e. the value of
-     * info.frm_ptime in #pjmedia_codec_param).
+     * info.frm_ptime/info.frm_ptime_denum in #pjmedia_codec_param).
      *
      * Application should call #pjmedia_codec_parse() instead of 
      * calling this function directly.
@@ -431,7 +438,8 @@ typedef struct pjmedia_codec_op
     /** 
      * Instruct the codec to encode the specified input frame. The input
      * PCM samples MUST have ptime that is multiplication of base frame
-     * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
+     * ptime (i.e. the value of info.frm_ptime/info.frm_ptime_denum in
+     * #pjmedia_codec_param).
      *
      * Application should call #pjmedia_codec_encode() instead of 
      * calling this function directly.
@@ -451,7 +459,8 @@ typedef struct pjmedia_codec_op
     /** 
      * Instruct the codec to decode the specified input frame. The input
      * frame MUST have ptime that is exactly equal to base frame
-     * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
+     * ptime (i.e. the value of info.frm_ptime/info.frm_ptime_denum in
+     * #pjmedia_codec_param).
      * Application can achieve this by parsing the packet into base
      * frames before decoding each frame.
      *
@@ -721,6 +730,22 @@ typedef struct pjmedia_codec_mgr
 
     /** Array of codec descriptor. */
     struct pjmedia_codec_desc    codec_desc[PJMEDIA_CODEC_MGR_MAX_CODECS];
+
+    /** Number of codecs with dynamic PT. */
+    unsigned                     dyn_codecs_cnt;
+
+    /** Array of codec identifiers with dynamic PT. */
+    pj_str_t                     dyn_codecs[PJMEDIA_CODEC_MGR_MAX_CODECS];
+
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+            PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+    /** Number of televent clockrates. */
+    unsigned                     televent_num;
+
+    /** Array of televent clockrates. */
+    unsigned                     televent_clockrates[8];
+#endif
+
 
 } pjmedia_codec_mgr;
 
@@ -1021,7 +1046,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_modify(pjmedia_codec *codec,
  * Instruct the codec to inspect the specified payload/packet and
  * split the packet into individual base frames. Each output frames will
  * have ptime that is equal to basic frame ptime (i.e. the value of
- * info.frm_ptime in #pjmedia_codec_param).
+ * info.frm_ptime/info.frm_ptime_denum in #pjmedia_codec_param).
  *
  * @param codec     The codec instance
  * @param pkt       The input packet.
@@ -1050,7 +1075,8 @@ PJ_INLINE(pj_status_t) pjmedia_codec_parse( pjmedia_codec *codec,
 /** 
  * Instruct the codec to encode the specified input frame. The input
  * PCM samples MUST have ptime that is multiplication of base frame
- * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
+ * ptime (i.e. the value of info.frm_ptime/info.frm_ptime_denum in
+ * #pjmedia_codec_param).
  *
  * @param codec         The codec instance.
  * @param input         The input frame.
@@ -1072,7 +1098,8 @@ PJ_INLINE(pj_status_t) pjmedia_codec_encode(
 /** 
  * Instruct the codec to decode the specified input frame. The input
  * frame MUST have ptime that is exactly equal to base frame
- * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
+ * ptime (i.e. the value of info.frm_ptime/info.frm_ptime_denum in
+ * #pjmedia_codec_param).
  * Application can achieve this by parsing the packet into base
  * frames before decoding each frame.
  *
@@ -1129,8 +1156,35 @@ PJ_INLINE(pj_status_t) pjmedia_codec_recover( pjmedia_codec *codec,
  * @}
  */
 
+/*
+ * Internal functions.
+ */
 
+/**
+ * Internal: Get the array of codec identifiers that have dynamic PT.
+ * Note that the array also includes telephone events.
+ */
+pj_status_t pjmedia_codec_mgr_get_dyn_codecs(pjmedia_codec_mgr* mgr,
+                                             pj_int8_t *count,
+                                             pj_str_t dyn_codecs[]);
 
+/* Internal: Find a certain codec string in the dynamic codecs array.
+ * Return the index of the array if the string is found and set
+ * *found == PJ_TRUE. If the string is not found, returns -1 if found
+ * is specified, otherwise returns the index in the array where
+ * the particular string could be inserted so that the array remains
+ * sorted, and set *found == PJ_FALSE.
+ */
+int pjmedia_codec_mgr_find_codec(const pj_str_t dyn_codecs[],
+                                 unsigned count,
+                                 const pj_str_t *codec,
+                                 pj_bool_t *found);
+
+/* Internal: Insert a codec ID string into the dynamic codecs array and keep
+ * the array sorted.
+ */
+void pjmedia_codec_mgr_insert_codec(pj_pool_t *pool, pj_str_t dyn_codecs[],
+                                    unsigned *count, const pj_str_t *codec);
 
 PJ_END_DECL
 

@@ -341,7 +341,8 @@ PJ_DEF(pj_status_t) pj_init(void)
         return PJ_SUCCESS;
     }
 
-    pj_ansi_strcpy(main_thread.obj_name, "pjthread");
+    pj_ansi_strxcpy(main_thread.obj_name, "pjthread", 
+                    sizeof(main_thread.obj_name));
 
     // Init main thread
     pj_memset(&main_thread, 0, sizeof(main_thread));

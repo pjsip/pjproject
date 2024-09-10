@@ -551,6 +551,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
     const pj_str_t name = { "Conf", 4 };
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(samples_per_frame > 0, PJ_EINVAL);
     /* Can only accept 16bits per sample, for now.. */
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
 
@@ -1048,6 +1049,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
                                                   unsigned sink_slot )
 {
     struct conf_port *src_port, *dst_port;
+    pj_bool_t no_conn = PJ_FALSE;
     unsigned i;
 
     /* Check arguments */
@@ -1097,9 +1099,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
             pjmedia_delay_buf_reset(src_port->delay_buf);
     }
 
+    /* Evaluate connect_cnt with mutex, but pause sound dev outside mutex */
+    no_conn = (conf->connect_cnt == 0);
+
     pj_mutex_unlock(conf->mutex);
 
-    if (conf->connect_cnt == 0) {
+    if (no_conn) {
         pause_sound(conf);
     }
 

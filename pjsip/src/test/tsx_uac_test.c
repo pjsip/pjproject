@@ -609,7 +609,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
             msg->line.req.method.id != PJSIP_OPTIONS_METHOD)
         {
             PJ_LOG(3,(THIS_FILE, "    error: received unexpected method %.*s",
-                          msg->line.req.method.name.slen,
+                          (int)msg->line.req.method.name.slen,
                           msg->line.req.method.name.ptr));
             test_complete = -600;
             return PJ_TRUE;
@@ -1069,7 +1069,7 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
 
     /* Check tdata reference counter. */
     if (pj_atomic_get(tdata->ref_cnt) != 1) {
-        PJ_LOG(3,(THIS_FILE, "   Error: tdata reference counter is %d",
+        PJ_LOG(3,(THIS_FILE, "   Error: tdata reference counter is %ld",
                       pj_atomic_get(tdata->ref_cnt)));
         pjsip_tx_data_dec_ref(tdata);
         return -150;
@@ -1365,9 +1365,9 @@ int tsx_uac_test(struct tsx_test_param *param)
     /* Get transport flag */
     tp_flag = pjsip_transport_get_flag_from_type((pjsip_transport_type_e)test_param->type);
 
-    pj_ansi_sprintf(TARGET_URI, "sip:bob@127.0.0.1:%d;transport=%s", 
+    pj_ansi_snprintf(TARGET_URI, sizeof(TARGET_URI), "sip:bob@127.0.0.1:%d;transport=%s", 
                     param->port, param->tp_type);
-    pj_ansi_sprintf(FROM_URI, "sip:alice@127.0.0.1:%d;transport=%s", 
+    pj_ansi_snprintf(FROM_URI, sizeof(FROM_URI), "sip:alice@127.0.0.1:%d;transport=%s", 
                     param->port, param->tp_type);
 
     /* Check if loop transport is configured. */

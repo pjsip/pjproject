@@ -49,7 +49,7 @@
  * The connection between \ref PJMED_STRM and media transport is shown in
  * the diagram below:
 
-   \image html media-transport.PNG
+   \img{pjmedia/docs/media-transport.PNG}
 
 
  * \section PJMEDIA_TRANSPORT_H_USING Basic Media Transport Usage
@@ -513,6 +513,9 @@ struct pjmedia_transport
 
     /** Application/user data */
     void                    *user_data;
+
+    /** Group lock, for synchronization between destroy() & callbacks. */
+    pj_grp_lock_t           *grp_lock;
 };
 
 /**

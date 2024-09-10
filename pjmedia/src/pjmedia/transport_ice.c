@@ -285,7 +285,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
     tp_ice->pool = pool;
     tp_ice->options = options;
     tp_ice->comp_cnt = comp_cnt;
-    pj_ansi_strcpy(tp_ice->base.name, pool->obj_name);
+    pj_ansi_strxcpy(tp_ice->base.name, pool->obj_name, 
+                    sizeof(tp_ice->base.name));
     tp_ice->base.op = &transport_ice_op;
     tp_ice->base.type = PJMEDIA_TRANSPORT_TYPE_ICE;
     tp_ice->base.user_data = user_data;
@@ -337,6 +338,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
         pj_grp_lock_t *grp_lock = pj_ice_strans_get_grp_lock(tp_ice->ice_st);
         pj_grp_lock_add_ref(grp_lock);
         pj_grp_lock_add_handler(grp_lock, pool, tp_ice, &tp_ice_on_destroy);
+        tp_ice->base.grp_lock = grp_lock;
     }
 
     /* Done */
@@ -407,7 +409,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_remove_ice_cb( pjmedia_transport *tp,
     pj_grp_lock_acquire(grp_lock);
 
     for (il=tp_ice->listener.next; il!=&tp_ice->listener; il=il->next) {
-        if (pj_memcmp(&il->cb, cb, sizeof(cb))==0 && il->user_data==user_data)
+        if (pj_memcmp(&il->cb, cb, sizeof(*cb))==0 && il->user_data==user_data)
             break;
     }
     if (il != &tp_ice->listener) {
@@ -1295,7 +1297,7 @@ static pj_status_t parse_cand(const char *obj_name,
 
     } else {
         PJ_LOG(5,(obj_name, "Invalid ICE candidate type %.*s in candidate", 
-                  token.slen, token.ptr));
+                  (int)token.slen, token.ptr));
         goto on_return;
     }
 
@@ -2256,6 +2258,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
                                       pjmedia_transport_info *info)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    pj_ice_sess_cand cands[PJ_ICE_ST_MAX_CAND];
     pj_ice_sess_cand cand;
     pj_sockaddr_t *addr;
     pj_status_t status;
@@ -2278,7 +2281,6 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
         addr = &cand.addr;
     } else if (pj_ice_strans_has_sess(tp_ice->ice_st)) {
         unsigned i, cnt = PJ_ICE_ST_MAX_CAND;
-        pj_ice_sess_cand cands[PJ_ICE_ST_MAX_CAND];
         pj_ice_strans_enum_cands(tp_ice->ice_st, 1, &cnt, cands);
         for (i = 0; i < cnt && !addr; ++i) {
             if (pj_sockaddr_has_addr(&cands[i].addr))
@@ -2293,7 +2295,8 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 
     /* Get RTCP default address */
     if (tp_ice->use_rtcp_mux) {
-        pj_sockaddr_cp(&info->sock_info.rtcp_addr_name, addr);
+        pj_sockaddr_cp(&info->sock_info.rtcp_addr_name,
+                       &info->sock_info.rtp_addr_name);
     } else if (tp_ice->comp_cnt > 1) {
         status = pj_ice_strans_get_def_cand(tp_ice->ice_st, 2, &cand);
         if (status != PJ_SUCCESS)
@@ -2309,7 +2312,6 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
             addr = &cand.addr;
         } else if (pj_ice_strans_has_sess(tp_ice->ice_st)) {
             unsigned i, cnt = PJ_ICE_ST_MAX_CAND;
-            pj_ice_sess_cand cands[PJ_ICE_ST_MAX_CAND];
             pj_ice_strans_enum_cands(tp_ice->ice_st, 2, &cnt, cands);
             for (i = 0; i < cnt && !addr; ++i) {
                 if (pj_sockaddr_has_addr(&cands[i].addr))
@@ -2604,6 +2606,8 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
                                             sizeof(addr_text), 3)));
             }
         }
+#else
+        PJ_UNUSED_ARG(rem_switch);
 #endif
 
     } else if (comp_id==2 && tp_ice->rtcp_cb) {
@@ -2733,6 +2737,8 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
 static void tp_ice_on_destroy(void *arg)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)arg;
+
+    PJ_LOG(4, (tp_ice->base.name, "ICE transport destroyed"));
     pj_pool_safe_release(&tp_ice->pool);
 }
 
@@ -2742,6 +2748,8 @@ static void tp_ice_on_destroy(void *arg)
 static pj_status_t transport_destroy(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
+
+    PJ_LOG(4, (tp_ice->base.name, "Destroying ICE transport"));
 
     /* Reset callback and user data */
     pj_bzero(&tp_ice->cb, sizeof(tp_ice->cb));

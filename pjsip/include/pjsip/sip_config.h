@@ -677,6 +677,25 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
+ * The initial timeout interval for incoming TCP/TLS transports
+ * (i.e. server side) in the event that no valid SIP message is received
+ * following a successful connection. The value is in seconds.
+ * Disable the timeout by setting it to 0.
+ *
+ * Note that even if this is disabled, the connection might still get closed
+ * when it is idle or not referred anymore. Have a look at \a
+ * PJSIP_TRANSPORT_SERVER_IDLE_TIME.
+ * 
+ * Notes:
+ * - keep-alive packet is not considered as a valid message.
+ *
+ * Default: 0
+*/
+#ifndef PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST
+#   define PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST     0
+#endif
+
+/**
  * Maximum number of usages for a transport before a new transport is
  * created. This only applies for ephemeral transports such as TCP.
  *
@@ -786,14 +805,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
- * Initial timeout interval to be applied to incoming transports (i.e. server
- * side) when no data received after a successful connection. Value is in
- * seconds. Disable the timeout by setting it to 0.
+ * The initial timeout interval for incoming TCP transports
+ * (i.e. server side) in the event that no valid SIP message is received
+ * following a successful connection. The value is in seconds.
+ * Disable the timeout by setting it to 0.
  *
- * Note that even when this is disable, the connection might still get closed
+ * Note that even if this is disabled, the connection might still get closed
  * when it is idle or not referred anymore. Have a look at \a
- * PJSIP_TRANSPORT_SERVER_IDLE_TIME
+ * PJSIP_TRANSPORT_SERVER_IDLE_TIME.
  *
+ * Notes:
+ * - keep-alive packet is not considered as a valid message.
+ * - This macro is specific to TCP usage and takes precedence over
+ *   a\ PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST when both are set.
+ * 
  * Default: 0 (disabled)
  */
 #ifndef PJSIP_TCP_INITIAL_TIMEOUT
@@ -907,6 +932,14 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 # endif
 #endif
 
+/**
+ * Specify the default expiration time for dialog event subscription.
+ *
+ * Default: 600 seconds (10 minutes)
+ */
+#ifndef PJSIP_DLG_EVENT_DEFAULT_EXPIRES
+#   define PJSIP_DLG_EVENT_DEFAULT_EXPIRES       600
+#endif
 
 /**
  * Specify the maximum number of timer entries initially allocated by
@@ -1098,9 +1131,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #define PJSIP_MAX_HNAME_LEN             64
 
 /** Dialog's pool setting. */
-#define PJSIP_POOL_LEN_DIALOG           1200
+#define PJSIP_POOL_LEN_DIALOG           4000
 /** Dialog's pool setting. */
-#define PJSIP_POOL_INC_DIALOG           512
+#define PJSIP_POOL_INC_DIALOG           4000
 
 /** Maximum header types. */
 #define PJSIP_MAX_HEADER_TYPES          72
@@ -1390,6 +1423,17 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_PRES_BAD_CONTENT_RESPONSE
 #   define PJSIP_PRES_BAD_CONTENT_RESPONSE      488
+#endif
+
+
+/**
+ * Specify the status code value to respond to bad message body in NOTIFY
+ * request for dialog event.
+ *
+ * Default: 488 (Not Acceptable Here)
+ */
+#ifndef PJSIP_DLG_EVENT_BAD_CONTENT_RESPONSE
+#   define PJSIP_DLG_EVENT_BAD_CONTENT_RESPONSE  488
 #endif
 
 

@@ -347,6 +347,15 @@ struct IpChangeParam {
      */
     unsigned        restartLisDelay;
 
+    /**
+     * If set to PJ_TRUE, this will forcefully shutdown all transports.
+     * Note that this will shutdown TCP/TLS transports only, UDP transport
+     * should be restarted via restart_listener.
+     *
+     * Default : PJ_TRUE
+     */
+    bool            shutdownTransport;
+
 public:
     /**
      * Constructor.
@@ -434,6 +443,43 @@ struct OnMediaEventParam
      * The media event.
      */
     MediaEvent      ev;
+};
+
+/**
+ * Parameter of Endpoint::onRejectedIncomingCall() callback.
+ */
+struct OnRejectedIncomingCallParam
+{
+    /**
+     * The incoming call id. This will be set to PJSUA_INVALID_ID when there is
+     * no available call slot at the time.
+     */
+    pjsua_call_id   callId;
+
+    /**
+     * Local URI.
+     */
+    std::string     localInfo;
+
+    /**
+     * Remote URI.
+     */
+    std::string     remoteInfo;
+
+    /**
+     * Rejection code.
+     */
+    int             statusCode;
+
+    /**
+     * Rejection text.
+     */
+    std::string     reason;
+
+    /**
+     * The original INVITE message, on some cases it is not available.
+     */
+    SipRxData       rdata;
 };
 
 /**
@@ -1487,6 +1533,8 @@ public:
      */
     TransportInfo transportGetInfo(TransportId id) const PJSUA2_THROW(Error);
 
+#if 0
+    // Not implemented.
     /**
      * Disable a transport or re-enable it. By default transport is always
      * enabled after it is created. Disabling a transport does not necessarily
@@ -1498,6 +1546,7 @@ public:
      *
      */
     void transportSetEnable(TransportId id, bool enabled) PJSUA2_THROW(Error);
+#endif
 
     /**
      * Close the transport. The system will wait until all transactions are
@@ -1733,7 +1782,6 @@ public:
      */
     void resetVideoCodecParam(const string &codec_id) PJSUA2_THROW(Error);
 
-#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
     /**
      * Get codec Opus config.
      *
@@ -1748,7 +1796,21 @@ public:
      */
     void setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
                             PJSUA2_THROW(Error);
-#endif
+
+    /**
+     * Get codec Lyra config.
+     *
+     */
+     CodecLyraConfig getCodecLyraConfig() const PJSUA2_THROW(Error);
+
+    /**
+     * Set codec Lyra config.
+     *
+     * @param lyra_cfg  Codec Lyra configuration.
+     *
+     */
+    void setCodecLyraConfig(const CodecLyraConfig &lyra_cfg)
+                            PJSUA2_THROW(Error);
 
     /**
      * Enumerate all SRTP crypto-suite names.
@@ -1898,11 +1960,28 @@ public:
      */
     virtual pj_status_t onCredAuth(OnCredAuthParam &prm);
 
+    /**
+     * This callback will be invoked when the library implicitly rejects
+     * an incoming call.
+     * 
+     * In addition to being declined explicitly using the Call::answer()
+     * method, the library may also automatically reject the incoming call
+     * due to different scenarios, e.g:
+     * - no available call slot.
+     * - no available account to handle the call.
+     * - when an incoming INVITE is received with, for instance, a message
+     *   containing invalid SDP.
+     *
+     * @param prm       Callback parameters.
+     */
+    virtual void onRejectedIncomingCall(OnRejectedIncomingCallParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
 private:
     static Endpoint             *instance_;     // static instance
     LogWriter                   *writer;        // Custom writer, if any
-    AudDevManager                audioDevMgr;
-    VidDevManager                videoDevMgr;
+    AudDevManager               *audioDevMgr;
+    VidDevManager               *videoDevMgr;
 #if !DEPRECATED_FOR_TICKET_2232
     CodecInfoVector              codecInfoList;
     CodecInfoVector              videoCodecInfoList;
@@ -2078,6 +2157,10 @@ private:
                                              const pjsip_cred_info *cred,
                                              const pj_str_t *method,
                                              pjsip_digest_credential *auth);
+
+    static void on_rejected_incoming_call(
+                                      const pjsua_on_rejected_incoming_call_param *param);
+
     friend class Account;
 
 

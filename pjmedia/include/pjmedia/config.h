@@ -65,10 +65,19 @@
 #endif
 
 /**
- * Memory increment for evnt manager.
+ * Memory increment for event manager.
  */
 #ifndef PJMEDIA_POOL_INC_EVTMGR
 #   define PJMEDIA_POOL_INC_EVTMGR              500
+#endif
+
+/**
+ * Maximum number of events that can be handled by event manager.
+ *
+ * Default: 16
+ */
+#ifndef PJMEDIA_EVENT_MAX_EVENTS
+#   define PJMEDIA_EVENT_MAX_EVENTS             16
 #endif
 
 /**
@@ -442,6 +451,9 @@
 /**
  * DTMF/telephone-event duration, in timestamp. To specify the duration in
  * milliseconds, use the setting PJMEDIA_DTMF_DURATION_MSEC instead.
+ *
+ * Note that for a clockrate of 8 KHz, a dtmf duration of 1600 timestamp
+ * units (the default value of PJMEDIA_DTMF_DURATION) is equivalent to 200 ms. 
  */
 #ifndef PJMEDIA_DTMF_DURATION           
 #  define PJMEDIA_DTMF_DURATION                 1600    /* in timestamp */
@@ -451,12 +463,9 @@
 /**
  * DTMF/telephone-event duration, in milliseconds. If the value is greater
  * than zero, than this setting will be used instead of PJMEDIA_DTMF_DURATION.
- *
- * Note that for a clockrate of 8 KHz, a dtmf duration of 1600 timestamp
- * units (the default value of PJMEDIA_DTMF_DURATION) is equivalent to 200 ms. 
  */
 #ifndef PJMEDIA_DTMF_DURATION_MSEC              
-#  define PJMEDIA_DTMF_DURATION_MSEC            0
+#  define PJMEDIA_DTMF_DURATION_MSEC            200
 #endif
 
 
@@ -810,6 +819,22 @@
 #   define PJMEDIA_SDP_NEG_ANSWER_SYMMETRIC_PT          1
 #endif
 
+/**
+ * The SDP negotiator will maintain that the mapping from a particular
+ * dynamic payload type number to a particular codec does not change,
+ * as mandated by RFC 3264 section 8.3.2.
+ * By default, the mapping is maintained for local endpoint only, i.e.
+ * it only takes into account local offer and local answer.
+ * Enable this if application wishes to maintain PT->codec mapping for
+ * remote endpoint as well, i.e. to update the mapping based on remote
+ * offer and answer too.
+ *
+ * Default is 0 (no)
+ */
+#ifndef PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP
+#   define PJMEDIA_SDP_NEG_MAINTAIN_REMOTE_PT_MAP       0
+#endif
+
 
 /**
  * This specifies if the SDP negotiator should compare its content before 
@@ -959,8 +984,8 @@
 
 /**
  * Specify the tone generator algorithm to be used. Please see 
- * http://trac.pjsip.org/repos/wiki/Tone_Generator for the performance
- * analysis results of the various tone generator algorithms.
+ * https://docs.pjsip.org/en/latest/specific-guides/media/tonegen.html for
+ * the performance analysis results of the various tone generator algorithms.
  *
  * Default value:
  *  - PJMEDIA_TONEGEN_FLOATING_POINT when PJ_HAS_FLOATING_POINT is set

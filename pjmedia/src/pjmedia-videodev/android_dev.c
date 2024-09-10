@@ -248,30 +248,8 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
                                jlong user_data);
 #endif
 
-
-static pj_bool_t jni_get_env(JNIEnv **jni_env)
-{
-    pj_bool_t with_attach = PJ_FALSE;
-    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
-                              JNI_VERSION_1_4) < 0)
-    {
-        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0)
-        {
-            *jni_env = NULL;
-        } else {
-            with_attach = PJ_TRUE;
-        }
-    }
-    
-    return with_attach;
-}
-
-
-static void jni_detach_env(pj_bool_t need_detach)
-{
-    if (need_detach)
-        (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
-}
+#define jni_get_env(jni_env)     pj_jni_attach_jvm((void **)jni_env)
+#define jni_detach_env(attached) pj_jni_detach_jvm(attached)
 
 
 /* Get Java object IDs (via FindClass, GetMethodID, GetFieldID, etc).
@@ -540,12 +518,12 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
                     PJMEDIA_VID_DEV_CAP_ORIENTATION;
 
         /* Set driver & name info */
-        pj_ansi_strncpy(vdi->driver, "Android", sizeof(vdi->driver));
+        pj_ansi_strxcpy(vdi->driver, "Android", sizeof(vdi->driver));
         adi->facing = facing;
         if (facing == 0) {
-            pj_ansi_strncpy(vdi->name, "Back camera", sizeof(vdi->name));
+            pj_ansi_strxcpy(vdi->name, "Back camera", sizeof(vdi->name));
         } else {
-            pj_ansi_strncpy(vdi->name, "Front camera", sizeof(vdi->name));
+            pj_ansi_strxcpy(vdi->name, "Front camera", sizeof(vdi->name));
         }
 
         /* Get supported sizes */
@@ -1338,7 +1316,8 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
         PJ_LOG(1,(THIS_FILE, "Unrecognized image format from Android camera2, "
                              "please report the following plane format:"));
         PJ_LOG(1,(THIS_FILE, " Planes (buf/len/row_stride/pix_stride):"
-                             " p0=%p/%d/%d/%d p1=%p/%d/%d/%d p2=%p/%d/%d/%d",
+                             " p0=%p/%ld/%d/%d p1=%p/%ld/%d/%d "
+                             "p2=%p/%ld/%d/%d",
                              p0, p0_len, rowStride0, pixStride0,
                              p1, p1_len, rowStride1, pixStride1,
                              p2, p2_len, rowStride2, pixStride2));

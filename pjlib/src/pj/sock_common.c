@@ -205,7 +205,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
                                          const pj_str_t *str_addr,
                                          pj_uint16_t port)
 {
-    PJ_ASSERT_RETURN(addr, (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+    PJ_ASSERT_RETURN(addr, PJ_EINVAL);
 
     PJ_SOCKADDR_RESET_LEN(addr);
     addr->sin_family = PJ_AF_INET;
@@ -1068,6 +1068,21 @@ PJ_DEF(pj_status_t) pj_getipinterface(int af,
         return PJ_ENOTFOUND;
     }
 
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+    /* Check if the local address is link-local but the destination
+     * is not link-local.
+     */
+    if (af == pj_AF_INET6() &&
+        IN6_IS_ADDR_LINKLOCAL(&itf_addr->ipv6.sin6_addr) &&
+        (!IN6_IS_ADDR_LINKLOCAL(&dst_addr.ipv6.sin6_addr)))
+    {
+        TRACE_((THIS_FILE, "Local interface address is link-local and "
+                           "the destination host is external"));
+
+        return PJ_ENOTFOUND;
+    }
+#endif
+
     if (p_dst_addr)
         *p_dst_addr = dst_addr;
 
@@ -1238,18 +1253,27 @@ static pj_status_t socketpair_imp(int family,
     pj_str_t loopback;
     pj_sockaddr sa;
     int salen;
+    int type0 = type;
 
 #if PJ_HAS_TCP
-    PJ_ASSERT_RETURN(type == pj_SOCK_DGRAM() || type == pj_SOCK_STREAM(),
+    PJ_ASSERT_RETURN((type & 0xF) == pj_SOCK_DGRAM() ||
+                     (type & 0xF) == pj_SOCK_STREAM(),
                      PJ_EINVAL);
 #else
-    PJ_ASSERT_RETURN(type == pj_SOCK_DGRAM(), PJ_EINVAL);
+    PJ_ASSERT_RETURN((type & 0xF) == pj_SOCK_DGRAM(), PJ_EINVAL);
 #endif
 
     PJ_ASSERT_RETURN(family == pj_AF_INET() || family == pj_AF_INET6(),
                      PJ_EINVAL);
 
     loopback = family == pj_AF_INET() ? pj_str("127.0.0.1") : pj_str("::1");
+
+#if !defined(SOCK_CLOEXEC)
+    if ((type0 & pj_SOCK_CLOEXEC()) == pj_SOCK_CLOEXEC())
+        type &= ~pj_SOCK_CLOEXEC();
+#else
+    PJ_UNUSED_ARG(type0);
+#endif
 
     /* listen */
     status = pj_sock_socket(family, type, protocol, &lfd);
@@ -1267,7 +1291,7 @@ static pj_status_t socketpair_imp(int family,
         goto on_error;
 
 #if PJ_HAS_TCP
-    if (type == pj_SOCK_STREAM()) {
+    if ((type & 0xF) == pj_SOCK_STREAM()) {
         status = pj_sock_listen(lfd, 1);
         if (status != PJ_SUCCESS)
             goto on_error;
@@ -1282,7 +1306,7 @@ static pj_status_t socketpair_imp(int family,
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    if (type == pj_SOCK_DGRAM()) {
+    if ((type & 0xF) == pj_SOCK_DGRAM()) {
         status = pj_sock_getsockname(cfd, &sa, &salen);
         if (status != PJ_SUCCESS)
             goto on_error;
@@ -1293,7 +1317,7 @@ static pj_status_t socketpair_imp(int family,
         sv[1] = cfd;
     }
 #if PJ_HAS_TCP
-    else if (type == pj_SOCK_STREAM()) {
+    else if ((type & 0xF) == pj_SOCK_STREAM()) {
         pj_sock_t newfd = PJ_INVALID_SOCKET;
         status = pj_sock_accept(lfd, &newfd, NULL, NULL);
         if (status != PJ_SUCCESS)
@@ -1301,6 +1325,13 @@ static pj_status_t socketpair_imp(int family,
         pj_sock_close(lfd);
         sv[0] = newfd;
         sv[1] = cfd;
+    }
+#endif
+
+#if !defined(SOCK_CLOEXEC)
+    if ((type0 & pj_SOCK_CLOEXEC()) == pj_SOCK_CLOEXEC()) {
+        pj_set_cloexec_flag((int)sv[0]);
+        pj_set_cloexec_flag((int)sv[1]);
     }
 #endif
 
@@ -1322,13 +1353,19 @@ PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
 {
     int status;
     int tmp_sv[2];
+    int type0 = type;
 
     PJ_CHECK_STACK();
+
+#if !defined(SOCK_CLOEXEC)
+    if ((type0 & pj_SOCK_CLOEXEC()) == pj_SOCK_CLOEXEC())
+        type &= ~pj_SOCK_CLOEXEC();
+#endif
 
     status = socketpair(family, type, protocol, tmp_sv);
     if (status != PJ_SUCCESS) {
         if (errno == EOPNOTSUPP) {
-            return socketpair_imp(family, type, protocol, sv);
+            return socketpair_imp(family, type0, protocol, sv);
         }
         status = PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
         return status;
@@ -1400,6 +1437,11 @@ PJ_DEF(int) pj_SOCK_RAW(void)
 PJ_DEF(int) pj_SOCK_RDM(void)
 {
     return PJ_SOCK_RDM;
+}
+
+PJ_DEF(int) pj_SOCK_CLOEXEC(void)
+{
+    return PJ_SOCK_CLOEXEC;
 }
 
 PJ_DEF(pj_uint16_t) pj_SOL_SOCKET(void)

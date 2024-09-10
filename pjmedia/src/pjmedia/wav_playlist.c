@@ -428,15 +428,15 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
         /* Get the file size. */
         fport->current_file = index;
         fport->fsize_list[index] = pj_file_size(filename);
-        
+
         /* Size must be more than WAVE header size */
-        if (fport->fsize_list[index] <= sizeof(pjmedia_wave_hdr)) {
+        if (fport->fsize_list[index] <= (pj_off_t)sizeof(pjmedia_wave_hdr)) {
             status = PJMEDIA_ENOTVALIDWAVE;
             goto on_error;
         }
         
         /* Open file. */
-        status = pj_file_open( pool, filename, PJ_O_RDONLY, 
+        status = pj_file_open( pool, filename, PJ_O_RDONLY | PJ_O_CLOEXEC, 
                                &fport->fd_list[index]);
         if (status != PJ_SUCCESS)
             goto on_error;

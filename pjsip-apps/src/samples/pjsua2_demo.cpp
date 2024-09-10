@@ -38,6 +38,7 @@ public:
     MyEndpoint() : Endpoint() {};
     virtual pj_status_t onCredAuth(OnCredAuthParam &prm)
     {
+        PJ_UNUSED_ARG(prm);
         std::cout << "*** Callback onCredAuth called ***" << std::endl;
         /* Return PJ_ENOTSUP to use
          * pjsip_auth_create_aka_response()/<b>libmilenage</b> (default),
@@ -49,17 +50,36 @@ public:
 
 class MyAccount;
 
+class MyAudioMediaPort: public AudioMediaPort
+{
+    virtual void onFrameRequested(MediaFrame &frame)
+    {
+        // Give the input frame here
+        frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+        // frame.buf.assign(frame.size, 'c');
+    }
+
+    virtual void onFrameReceived(MediaFrame &frame)
+    {
+        PJ_UNUSED_ARG(frame);
+        // Process the incoming frame here
+    }
+};
+
+
 class MyCall : public Call
 {
 private:
     MyAccount *myAcc;
     AudioMediaPlayer *wav_player;
+    AudioMediaPort *med_port;
 
 public:
     MyCall(Account &acc, int call_id = PJSUA_INVALID_ID)
     : Call(acc, call_id)
     {
         wav_player = NULL;
+        med_port = NULL;
         myAcc = (MyAccount *)&acc;
     }
     
@@ -67,6 +87,8 @@ public:
     {
         if (wav_player)
             delete wav_player;
+        if (med_port)
+            delete med_port;
     }
     
     virtual void onCallState(OnCallStateParam &prm);
@@ -179,6 +201,19 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
     if (wav_player)
         wav_player->startTransmit(aud_med);
 
+    if (!med_port) {
+        med_port = new MyAudioMediaPort();
+
+        MediaFormatAudio fmt;
+        fmt.init(PJMEDIA_FORMAT_PCM, 16000, 1, 20000, 16);
+
+        med_port->createPort("med_port", fmt);
+
+        // Connect the media port to the call audio media in both directions
+        med_port->startTransmit(aud_med);
+        aud_med.startTransmit(*med_port);
+    }
+
     // And this will connect the call audio media to the sound device/speaker
     aud_med.startTransmit(play_dev_med);
 }
@@ -194,7 +229,6 @@ void MyCall::onCallReplaceRequest(OnCallReplaceRequestParam &prm)
     /* Create new Call for call replace */
     prm.newCall = new MyCall(*myAcc);
 }
-
 
 #if USE_TEST == 1
 static void mainProg1(MyEndpoint &ep)

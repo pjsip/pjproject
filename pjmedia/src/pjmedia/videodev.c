@@ -87,7 +87,7 @@ PJ_DEF(const char*) pjmedia_vid_dev_cap_name(pjmedia_vid_dev_cap cap,
     if (p_desc==NULL) p_desc = &desc;
 
     for (i=0; i<PJ_ARRAY_SIZE(cap_infos); ++i) {
-        if ((1 << i)==cap)
+        if ((1 << i)==(int)cap)
             break;
     }
 
@@ -218,6 +218,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_driver_init(unsigned drv_idx,
         }
     } else {
         f = drv->f;
+        if (!f)
+            return PJ_EINVALIDOP;
     }
 
     /* Get number of devices */
@@ -252,8 +254,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_driver_init(unsigned drv_idx,
 
         if (drv->name[0]=='\0') {
             /* Set driver name */
-            pj_ansi_strncpy(drv->name, info.driver, sizeof(drv->name));
-            drv->name[sizeof(drv->name)-1] = '\0';
+            pj_ansi_strxcpy(drv->name, info.driver, sizeof(drv->name));
         }
 
         if (drv->rend_dev_idx < 0 && (info.dir & PJMEDIA_DIR_RENDER)) {
@@ -412,8 +413,7 @@ pjmedia_vid_dev_get_global_index(const pjmedia_vid_dev_factory *f,
                                  unsigned local_idx,
                                  pjmedia_vid_dev_index *pid)
 {
-    PJ_ASSERT_RETURN(f->sys.drv_idx >= 0 && f->sys.drv_idx < MAX_DRIVERS,
-                     PJ_EINVALIDOP);
+    PJ_ASSERT_RETURN(f->sys.drv_idx < MAX_DRIVERS, PJ_EINVALIDOP);
     *pid = local_idx;
     return make_global_index(f->sys.drv_idx, pid);
 }

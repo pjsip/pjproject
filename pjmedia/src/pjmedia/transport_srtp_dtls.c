@@ -40,6 +40,16 @@
 /* Set to 1 to enable DTLS-SRTP debugging */
 #define DTLS_DEBUG  0
 
+#define NUM_CHANNEL 2
+
+enum {
+    RTP_CHANNEL = 0,
+    RTCP_CHANNEL = 1
+};
+
+#define CHANNEL_TO_STRING(idx) (idx == RTP_CHANNEL? "RTP channel": \
+                                "RTCP channel")
+
 /* DTLS-SRTP transport op */
 static pj_status_t dtls_media_create  (pjmedia_transport *tp,
                                        pj_pool_t *sdp_pool,
@@ -61,11 +71,16 @@ static pj_status_t dtls_destroy       (pjmedia_transport *tp);
 static pj_status_t dtls_on_recv_rtp   (pjmedia_transport *tp,
                                        const void *pkt,
                                        pj_size_t size);
+static pj_status_t dtls_on_recv_rtcp  (pjmedia_transport *tp,
+                                       const void *pkt,
+                                       pj_size_t size);
 
 static void on_ice_complete2(pjmedia_transport *tp,
                              pj_ice_strans_op op,
                              pj_status_t status,
                              void *user_data);
+
+static void dtls_on_destroy(void *arg);
 
 
 static pjmedia_transport_op dtls_op =
@@ -74,7 +89,7 @@ static pjmedia_transport_op dtls_op =
     NULL,
     NULL,
     &dtls_on_recv_rtp,      // originally send_rtp()
-    NULL,
+    &dtls_on_recv_rtcp,     // originally send_rtcp()
     NULL,
     &dtls_media_create,
     &dtls_encode_sdp,
@@ -94,6 +109,13 @@ typedef enum dtls_setup
     DTLS_SETUP_PASSIVE
 } dtls_setup;
 
+typedef struct dtls_srtp dtls_srtp;
+
+typedef struct dtls_srtp_channel
+{
+    dtls_srtp           *dtls_srtp;
+    unsigned             channel;
+} dtls_srtp_channel;
 
 typedef struct dtls_srtp
 {
@@ -104,8 +126,9 @@ typedef struct dtls_srtp
     dtls_setup           setup;
     unsigned long        last_err;
     pj_bool_t            use_ice;
-    pj_bool_t            nego_started;
-    pj_bool_t            nego_completed;
+    dtls_srtp_channel    channel[NUM_CHANNEL];
+    pj_bool_t            nego_started[NUM_CHANNEL];
+    pj_bool_t            nego_completed[NUM_CHANNEL];
     pj_str_t             rem_fingerprint;   /* Remote fingerprint in SDP    */
     pj_status_t          rem_fprint_status; /* Fingerprint verif. status    */
     pj_sockaddr          rem_addr;          /* Remote address (from SDP/RTP)*/
@@ -113,17 +136,18 @@ typedef struct dtls_srtp
     pj_bool_t            pending_start;     /* media_start() invoked but DTLS
                                                nego not done yet, so start
                                                the SRTP once the nego done  */
+    pj_bool_t            is_destroying;     /* DTLS being destroyed?        */
     pj_bool_t            got_keys;          /* DTLS nego done & keys ready  */
-    pjmedia_srtp_crypto  tx_crypto;
-    pjmedia_srtp_crypto  rx_crypto;
+    pjmedia_srtp_crypto  tx_crypto[NUM_CHANNEL];
+    pjmedia_srtp_crypto  rx_crypto[NUM_CHANNEL];
 
-    char                 buf[PJMEDIA_MAX_MTU];
-    pjmedia_clock       *clock;             /* Timer workaround for retrans */
+    char                 buf[NUM_CHANNEL][PJMEDIA_MAX_MTU];
+    pjmedia_clock       *clock[NUM_CHANNEL];/* Timer workaround for retrans */
 
-    SSL_CTX             *ossl_ctx;
-    SSL                 *ossl_ssl;
-    BIO                 *ossl_rbio;
-    BIO                 *ossl_wbio;
+    SSL_CTX             *ossl_ctx[NUM_CHANNEL];
+    SSL                 *ossl_ssl[NUM_CHANNEL];
+    BIO                 *ossl_rbio[NUM_CHANNEL];
+    BIO                 *ossl_wbio[NUM_CHANNEL];
     pj_lock_t           *ossl_lock;
 } dtls_srtp;
 
@@ -248,27 +272,60 @@ static pj_status_t dtls_create(transport_srtp *srtp,
 {
     dtls_srtp *ds;
     pj_pool_t *pool;
-	pj_status_t status;
+    pj_status_t status;
 
     pool = pj_pool_create(srtp->pool->factory, "dtls%p",
                           2000, 256, NULL);
     ds = PJ_POOL_ZALLOC_T(pool, dtls_srtp);
     ds->pool = pool;
 
-    pj_ansi_strncpy(ds->base.name, pool->obj_name, PJ_MAX_OBJ_NAME);
+    pj_ansi_strxcpy(ds->base.name, pool->obj_name, PJ_MAX_OBJ_NAME);
     ds->base.type = (pjmedia_transport_type)PJMEDIA_SRTP_KEYING_DTLS_SRTP;
     ds->base.op = &dtls_op;
     ds->base.user_data = srtp;
     ds->srtp = srtp;
 
-    status = pj_lock_create_simple_mutex(ds->pool, "dtls_ssl_lock%p",
-                                         &ds->ossl_lock);
-    if (status != PJ_SUCCESS)
-        return status;
+    /* Setup group lock handler for destroy and callback synchronization */
+    if (srtp->base.grp_lock) {
+        pj_grp_lock_t *grp_lock = srtp->base.grp_lock;
+
+        ds->base.grp_lock = grp_lock;
+        pj_grp_lock_add_ref(grp_lock);
+        pj_grp_lock_add_handler(grp_lock, pool, ds, &dtls_on_destroy);
+    } else {
+        status = pj_lock_create_recursive_mutex(ds->pool, "dtls_ssl_lock%p",
+                                             &ds->ossl_lock);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
 
     *p_keying = &ds->base;
     PJ_LOG(5,(srtp->pool->obj_name, "SRTP keying DTLS-SRTP created"));
     return PJ_SUCCESS;
+}
+
+
+/* Lock/unlock for DTLS states access protection */
+
+static void DTLS_LOCK(dtls_srtp *ds) {
+    if (ds->base.grp_lock)
+        pj_grp_lock_acquire(ds->base.grp_lock);
+    else
+        pj_lock_acquire(ds->ossl_lock);
+}
+
+static pj_status_t DTLS_TRY_LOCK(dtls_srtp *ds) {
+    if (ds->base.grp_lock)
+        return pj_grp_lock_tryacquire(ds->base.grp_lock);
+    else
+        return pj_lock_tryacquire(ds->ossl_lock);
+}
+
+static void DTLS_UNLOCK(dtls_srtp *ds) {
+    if (ds->base.grp_lock)
+        pj_grp_lock_release(ds->base.grp_lock);
+    else
+        pj_lock_release(ds->ossl_lock);
 }
 
 
@@ -333,7 +390,7 @@ static pj_status_t ssl_get_fingerprint(X509 *cert, pj_bool_t is_sha256,
 {
     unsigned int len, st_out_len, i;
     unsigned char tmp[EVP_MAX_MD_SIZE];
-    char *p;
+    char *p, *end=buf+*buf_len;
 
     if (!X509_digest(cert, (is_sha256?EVP_sha256():EVP_sha1()), tmp, &len))
         return PJ_EUNKNOWN;
@@ -344,9 +401,10 @@ static pj_status_t ssl_get_fingerprint(X509 *cert, pj_bool_t is_sha256,
 
     /* Format fingerprint to "SHA-256 XX:XX:XX..." */
     p = buf;
-    p += pj_ansi_sprintf(p, "SHA-%s %.2X", (is_sha256?"256":"1"), tmp[0]);
+    p += pj_ansi_snprintf(p, end-p, "SHA-%s %.2X", 
+                          (is_sha256?"256":"1"), tmp[0]);
     for (i=1; i<len; ++i)
-        p += pj_ansi_sprintf(p, ":%.2X", tmp[i]);
+        p += pj_ansi_snprintf(p, end-p, ":%.2X", tmp[i]);
 
     *buf_len = st_out_len;
 
@@ -406,7 +464,7 @@ static pj_status_t ssl_generate_cert(X509 **p_cert, EVP_PKEY **p_priv_key)
     if (!X509_set_pubkey(cert, priv_key)) goto on_error;
 
     /* Sign with the private key */
-    if (!X509_sign(cert, priv_key, EVP_sha1())) goto on_error;
+    if (!X509_sign(cert, priv_key, EVP_sha256())) goto on_error;
 
     /* Free big number */
     BN_free(bne);
@@ -424,14 +482,14 @@ on_error:
 }
 
 /* Create and initialize new SSL context and instance */
-static pj_status_t ssl_create(dtls_srtp *ds)
+static pj_status_t ssl_create(dtls_srtp *ds, unsigned idx)
 {
     SSL_CTX *ctx;
     unsigned i;
     int mode, rc;
 
     /* Check if it is already instantiated */
-    if (ds->ossl_ssl)
+    if (ds->ossl_ssl[idx])
         return PJ_SUCCESS;
 
     /* Create DTLS context */
@@ -440,7 +498,8 @@ static pj_status_t ssl_create(dtls_srtp *ds)
         return GET_SSL_STATUS(ds);
     }
 
-    if (valid_profiles_cnt == 0) {      
+    if (valid_profiles_cnt == 0) {
+        SSL_CTX_free(ctx);
         return PJMEDIA_SRTP_DTLS_ENOPROFILE;
     }
 
@@ -486,16 +545,16 @@ static pj_status_t ssl_create(dtls_srtp *ds)
     pj_assert(rc);
 
     /* Create SSL instance */
-    ds->ossl_ctx = ctx;
-    ds->ossl_ssl = SSL_new(ds->ossl_ctx);
-    if (ds->ossl_ssl == NULL) {
+    ds->ossl_ctx[idx] = ctx;
+    ds->ossl_ssl[idx] = SSL_new(ds->ossl_ctx[idx]);
+    if (ds->ossl_ssl[idx] == NULL) {
         SSL_CTX_free(ctx);
         return GET_SSL_STATUS(ds);
     }
 
     /* Set MTU */
 #ifdef DTLS_CTRL_SET_LINK_MTU
-    if (!SSL_ctrl(ds->ossl_ssl, DTLS_CTRL_SET_LINK_MTU, PJMEDIA_MAX_MTU,
+    if (!SSL_ctrl(ds->ossl_ssl[idx], DTLS_CTRL_SET_LINK_MTU, PJMEDIA_MAX_MTU,
                   NULL))
     {
         PJ_LOG(4, (ds->base.name,
@@ -506,51 +565,51 @@ static pj_status_t ssl_create(dtls_srtp *ds)
 
     /* SSL verification options, must be mutual auth */
     mode = SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
-    SSL_set_verify(ds->ossl_ssl, mode, &verify_cb);
+    SSL_set_verify(ds->ossl_ssl[idx], mode, &verify_cb);
 
     /* Setup SSL BIOs */
-    ds->ossl_rbio = BIO_new(BIO_s_mem());
-    ds->ossl_wbio = BIO_new(BIO_s_mem());
-    (void)BIO_set_close(ds->ossl_rbio, BIO_CLOSE);
-    (void)BIO_set_close(ds->ossl_wbio, BIO_CLOSE);
-    SSL_set_bio(ds->ossl_ssl, ds->ossl_rbio, ds->ossl_wbio);
+    ds->ossl_rbio[idx] = BIO_new(BIO_s_mem());
+    ds->ossl_wbio[idx] = BIO_new(BIO_s_mem());
+    (void)BIO_set_close(ds->ossl_rbio[idx], BIO_CLOSE);
+    (void)BIO_set_close(ds->ossl_wbio[idx], BIO_CLOSE);
+    SSL_set_bio(ds->ossl_ssl[idx], ds->ossl_rbio[idx], ds->ossl_wbio[idx]);
 
     return PJ_SUCCESS;
 }
 
 
 /* Destroy SSL context and instance */
-static void ssl_destroy(dtls_srtp *ds)
+static void ssl_destroy(dtls_srtp *ds, unsigned idx)
 {
-    pj_lock_acquire(ds->ossl_lock);
+    DTLS_LOCK(ds);
 
     /* Destroy SSL instance */
-    if (ds->ossl_ssl) {
+    if (ds->ossl_ssl[idx]) {
         /**
          * Avoid calling SSL_shutdown() if handshake wasn't completed.
          * OpenSSL 1.0.2f complains if SSL_shutdown() is called during an
          * SSL handshake, while previous versions always return 0.       
          */
-        if (SSL_in_init(ds->ossl_ssl) == 0) {
-            SSL_shutdown(ds->ossl_ssl);
+        if (SSL_in_init(ds->ossl_ssl[idx]) == 0) {
+            SSL_shutdown(ds->ossl_ssl[idx]);
         }
-        SSL_free(ds->ossl_ssl); /* this will also close BIOs */
-        ds->ossl_ssl = NULL;
+        SSL_free(ds->ossl_ssl[idx]); /* this will also close BIOs */
+        ds->ossl_ssl[idx] = NULL;
         /* thus reset the BIOs as well */
-        ds->ossl_rbio = NULL;
-        ds->ossl_wbio = NULL;
+        ds->ossl_rbio[idx] = NULL;
+        ds->ossl_wbio[idx] = NULL;
     }
 
     /* Destroy SSL context */
-    if (ds->ossl_ctx) {
-        SSL_CTX_free(ds->ossl_ctx);
-        ds->ossl_ctx = NULL;
+    if (ds->ossl_ctx[idx]) {
+        SSL_CTX_free(ds->ossl_ctx[idx]);
+        ds->ossl_ctx[idx] = NULL;
     }
 
-    pj_lock_release(ds->ossl_lock);
+    DTLS_UNLOCK(ds);
 }
 
-static pj_status_t ssl_get_srtp_material(dtls_srtp *ds)
+static pj_status_t ssl_get_srtp_material(dtls_srtp *ds, unsigned idx)
 {
     unsigned char material[SRTP_MAX_KEY_LEN * 2];
     SRTP_PROTECTION_PROFILE *profile;
@@ -558,25 +617,25 @@ static pj_status_t ssl_get_srtp_material(dtls_srtp *ds)
     pjmedia_srtp_crypto *tx, *rx;
     pj_status_t status = PJ_SUCCESS;
 
-    pj_lock_acquire(ds->ossl_lock);
+    DTLS_LOCK(ds);
 
-    if (!ds->ossl_ssl) {
+    if (!ds->ossl_ssl[idx]) {
         status = PJ_EGONE;
         goto on_return;
     }
 
     /* Get selected crypto-suite */
-    profile = SSL_get_selected_srtp_profile(ds->ossl_ssl);
+    profile = SSL_get_selected_srtp_profile(ds->ossl_ssl[idx]);
     if (!profile) {
         status = PJMEDIA_SRTP_DTLS_ENOCRYPTO;
         goto on_return;
     }
 
-    tx = &ds->tx_crypto;
-    rx = &ds->rx_crypto;
+    tx = &ds->tx_crypto[idx];
+    rx = &ds->rx_crypto[idx];
     pj_bzero(tx, sizeof(*tx));
     pj_bzero(rx, sizeof(*rx));
-    for (i=0; i<PJ_ARRAY_SIZE(ossl_profiles); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(ossl_profiles); ++i) {
         if (pj_ansi_stricmp(profile->name, ossl_profiles[i])==0) {
             pj_strset2(&tx->name, pj_profiles[i]);
             pj_strset2(&rx->name, pj_profiles[i]);
@@ -592,8 +651,9 @@ static pj_status_t ssl_get_srtp_material(dtls_srtp *ds)
     /* Get keying material from DTLS nego. There seems to be no info about
      * material length returned by SSL_export_keying_material()?
      */
-    rc = SSL_export_keying_material(ds->ossl_ssl, material, sizeof(material),
-                                    "EXTRACTOR-dtls_srtp", 19, NULL, 0, 0);
+    rc = SSL_export_keying_material(ds->ossl_ssl[idx], material,
+                                    sizeof(material), "EXTRACTOR-dtls_srtp",
+                                    19, NULL, 0, 0);
     if (rc == 0) {
         status = PJMEDIA_SRTP_EINKEYLEN;
         goto on_return;
@@ -628,12 +688,12 @@ static pj_status_t ssl_get_srtp_material(dtls_srtp *ds)
     }
 
 on_return:
-    pj_lock_release(ds->ossl_lock);
+    DTLS_UNLOCK(ds);
     return status;
 }
 
 /* Match remote fingerprint: SDP vs actual */
-static pj_status_t ssl_match_fingerprint(dtls_srtp *ds)
+static pj_status_t ssl_match_fingerprint(dtls_srtp *ds, unsigned idx)
 {
     X509 *rem_cert;
     pj_bool_t is_sha256;
@@ -652,16 +712,16 @@ static pj_status_t ssl_match_fingerprint(dtls_srtp *ds)
         return PJ_ENOTSUP;
     }
 
-    pj_lock_acquire(ds->ossl_lock);
-    if (!ds->ossl_ssl) {
-        pj_lock_release(ds->ossl_lock);
+    DTLS_LOCK(ds);
+    if (!ds->ossl_ssl[idx]) {
+        DTLS_UNLOCK(ds);
         return PJ_EGONE;
     }
 
     /* Get remote cert & calculate the hash */
-    rem_cert = SSL_get_peer_certificate(ds->ossl_ssl);
+    rem_cert = SSL_get_peer_certificate(ds->ossl_ssl[idx]);
 
-    pj_lock_release(ds->ossl_lock);
+    DTLS_UNLOCK(ds);
 
     if (!rem_cert)
         return PJMEDIA_SRTP_DTLS_EPEERNOCERT;
@@ -680,13 +740,17 @@ static pj_status_t ssl_match_fingerprint(dtls_srtp *ds)
 
 
 /* Send data to network */
-static pj_status_t send_raw(dtls_srtp *ds, const void *buf, pj_size_t len)
+static pj_status_t send_raw(dtls_srtp *ds, unsigned idx, const void *buf,
+                            pj_size_t len)
 {
 #if DTLS_DEBUG
-    PJ_LOG(2,(ds->base.name, "DTLS-SRTP sending %d bytes", len));
+    PJ_LOG(2,(ds->base.name, "DTLS-SRTP %s sending %lu bytes",
+                             CHANNEL_TO_STRING(idx), (unsigned long)len));
 #endif
 
-    return pjmedia_transport_send_rtp(ds->srtp->member_tp, buf, len);
+    return (idx == RTP_CHANNEL?
+            pjmedia_transport_send_rtp(ds->srtp->member_tp, buf, len):
+            pjmedia_transport_send_rtcp(ds->srtp->member_tp, buf, len));
 }
 
 
@@ -715,26 +779,26 @@ static pj_status_t udp_member_transport_media_start(dtls_srtp *ds)
 
 
 /* Flush write BIO */
-static pj_status_t ssl_flush_wbio(dtls_srtp *ds)
+static pj_status_t ssl_flush_wbio(dtls_srtp *ds, unsigned idx)
 {
     pj_size_t len;
     pj_status_t status = PJ_SUCCESS;
 
-    pj_lock_acquire(ds->ossl_lock);
+    DTLS_LOCK(ds);
 
-    if (!ds->ossl_wbio) {
-        pj_lock_release(ds->ossl_lock);
+    if (!ds->ossl_wbio[idx]) {
+        DTLS_UNLOCK(ds);
         return PJ_EGONE;
     }
 
     /* Check whether there is data to send */
-    if (BIO_ctrl_pending(ds->ossl_wbio) > 0) {
+    if (BIO_ctrl_pending(ds->ossl_wbio[idx]) > 0) {
         /* Yes, get and send it */
-        len = BIO_read(ds->ossl_wbio, ds->buf, sizeof(ds->buf));
+        len = BIO_read(ds->ossl_wbio[idx], ds->buf[idx], sizeof(ds->buf));
         if (len > 0) {
-            pj_lock_release(ds->ossl_lock);
+            DTLS_UNLOCK(ds);
 
-            status = send_raw(ds, ds->buf, len);
+            status = send_raw(ds, idx, ds->buf[idx], len);
             if (status != PJ_SUCCESS) {
 #if DTLS_DEBUG
                 pj_perror(2, ds->base.name, status, "Send error");
@@ -743,38 +807,39 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds)
                  * its packet when not receiving from us.
                  */
             }
-            pj_lock_acquire(ds->ossl_lock);
+            DTLS_LOCK(ds);
         }
     }
 
-    if (!ds->ossl_ssl) {
-        pj_lock_release(ds->ossl_lock);
+    if (!ds->ossl_ssl[idx]) {
+        DTLS_UNLOCK(ds);
         return PJ_EGONE;
     }
 
     /* Just return if handshake completion procedure (key parsing, fingerprint
      * verification, etc) has been done or handshake is still in progress.
      */
-    if (ds->nego_completed || !SSL_is_init_finished(ds->ossl_ssl)) {
-        pj_lock_release(ds->ossl_lock);
+    if (ds->nego_completed[idx] || !SSL_is_init_finished(ds->ossl_ssl[idx])) {
+        DTLS_UNLOCK(ds);
         return PJ_SUCCESS;
     }
 
     /* Yes, SSL handshake is done! */
-    ds->nego_completed = PJ_TRUE;
-    PJ_LOG(2,(ds->base.name, "DTLS-SRTP negotiation completed!"));
-
-    pj_lock_release(ds->ossl_lock);
+    ds->nego_completed[idx] = PJ_TRUE;
+    PJ_LOG(2,(ds->base.name, "DTLS-SRTP negotiation for %s completed!",
+                             CHANNEL_TO_STRING(idx)));
 
     /* Stop the retransmission clock. Note that the clock may not be stopped
      * if this function is called from clock thread context. We'll try again
      * later in socket context.
      */
-    if (ds->clock)
-        pjmedia_clock_stop(ds->clock);
+    if (ds->clock[idx])
+        pjmedia_clock_stop(ds->clock[idx]);
+
+    DTLS_UNLOCK(ds);
 
     /* Get SRTP key material */
-    status = ssl_get_srtp_material(ds);
+    status = ssl_get_srtp_material(ds, idx);
     if (status != PJ_SUCCESS) {
         pj_perror(4, ds->base.name, status,
                   "Failed to get SRTP material");
@@ -783,7 +848,7 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds)
 
     /* Verify remote fingerprint if we've already got one from SDP */
     if (ds->rem_fingerprint.slen && ds->rem_fprint_status == PJ_EPENDING) {
-        ds->rem_fprint_status = status = ssl_match_fingerprint(ds);
+        ds->rem_fprint_status = status = ssl_match_fingerprint(ds, idx);
         if (status != PJ_SUCCESS) {
             pj_perror(4, ds->base.name, status,
                       "Fingerprint specified in remote SDP doesn't match "
@@ -793,21 +858,35 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds)
     }
 
     /* If media_start() has been called, start SRTP now */
-    if (ds->pending_start) {
+    if (ds->pending_start && idx == RTP_CHANNEL) {
         ds->pending_start = PJ_FALSE;
         ds->srtp->keying_pending_cnt--;
 
         /* Copy negotiated policy to SRTP */
-        ds->srtp->tx_policy_neg = ds->tx_crypto;
-        ds->srtp->rx_policy_neg = ds->rx_crypto;
+        ds->srtp->srtp_ctx.tx_policy_neg = ds->tx_crypto[idx];
+        ds->srtp->srtp_ctx.rx_policy_neg = ds->rx_crypto[idx];
 
         status = start_srtp(ds->srtp);
         if (status != PJ_SUCCESS)
             pj_perror(4, ds->base.name, status, "Failed starting SRTP");
+    } else if (idx == RTCP_CHANNEL) {
+        pjmedia_srtp_setting setting;
+
+        pjmedia_srtp_setting_default (&setting);
+
+        /* Copy negotiated policy to SRTP */
+        ds->srtp->srtp_rtcp.tx_policy_neg = ds->tx_crypto[idx];
+        ds->srtp->srtp_rtcp.rx_policy_neg = ds->rx_crypto[idx];
+
+        status = create_srtp_ctx(ds->srtp, &ds->srtp->srtp_rtcp,
+                                 &setting, &ds->srtp->srtp_rtcp.tx_policy_neg,
+                                 &ds->srtp->srtp_rtcp.rx_policy_neg);
+        if (status != PJ_SUCCESS)
+            pj_perror(4, ds->base.name, status, "Failed creating SRTP RTCP");
     }
 
 on_return:
-    if (ds->srtp->setting.cb.on_srtp_nego_complete) {
+    if (idx == RTP_CHANNEL && ds->srtp->setting.cb.on_srtp_nego_complete) {
         (*ds->srtp->setting.cb.on_srtp_nego_complete)
                                             (&ds->srtp->base, status);
     }
@@ -818,61 +897,80 @@ on_return:
 
 static void clock_cb(const pj_timestamp *ts, void *user_data)
 {
-    dtls_srtp *ds = (dtls_srtp*)user_data;
+    dtls_srtp_channel *ds_ch = (dtls_srtp_channel*)user_data;
+    dtls_srtp *ds = ds_ch->dtls_srtp;
+    unsigned idx = ds_ch->channel;
+    pj_status_t status;
 
     PJ_UNUSED_ARG(ts);
 
-    pj_lock_acquire(ds->ossl_lock);
+    while (1) {
+        /* Check if we should quit before trying to acquire the lock. */
+        if (ds->nego_completed[idx])
+            return;
 
-    if (!ds->ossl_ssl) {
-        pj_lock_release(ds->ossl_lock);
+        /* To avoid deadlock, we must use TRY_LOCK here. */
+        status = DTLS_TRY_LOCK(ds);
+        if (status == PJ_SUCCESS)
+            break;
+
+        /* Acquiring lock failed, check if we have been signaled to quit. */
+        if (ds->nego_completed[idx])
+            return;
+
+        pj_thread_sleep(20);
+    }
+
+
+    if (!ds->ossl_ssl[idx]) {
+        DTLS_UNLOCK(ds);
         return;
     }
 
-    if (DTLSv1_handle_timeout(ds->ossl_ssl) > 0) {
-        pj_lock_release(ds->ossl_lock);
-        ssl_flush_wbio(ds);
+    if (DTLSv1_handle_timeout(ds->ossl_ssl[idx]) > 0) {
+        DTLS_UNLOCK(ds);
+        ssl_flush_wbio(ds, idx);
     } else {
-        pj_lock_release(ds->ossl_lock);
+        DTLS_UNLOCK(ds);
     }
 }
 
 
 /* Asynchronous handshake */
-static pj_status_t ssl_handshake(dtls_srtp *ds)
+static pj_status_t ssl_handshake_channel(dtls_srtp *ds, unsigned idx)
 {
     pj_status_t status;
     int err;
 
-    pj_lock_acquire(ds->ossl_lock);
+    DTLS_LOCK(ds);
 
     /* Init DTLS (if not yet) */
-    status = ssl_create(ds);
+    status = ssl_create(ds, idx);
     if (status != PJ_SUCCESS) {
-        pj_lock_release(ds->ossl_lock);
+        DTLS_UNLOCK(ds);
         return status;
     }
 
     /* Check if handshake has been initiated or even completed */
-    if (ds->nego_started || SSL_is_init_finished(ds->ossl_ssl)) {
-        pj_lock_release(ds->ossl_lock);
+    if (ds->nego_started[idx] || SSL_is_init_finished(ds->ossl_ssl[idx])) {
+        DTLS_UNLOCK(ds);
         return PJ_SUCCESS;
     }
 
     /* Perform SSL handshake */
     if (ds->setup == DTLS_SETUP_ACTIVE) {
-        SSL_set_connect_state(ds->ossl_ssl);
+        SSL_set_connect_state(ds->ossl_ssl[idx]);
     } else {
-        SSL_set_accept_state(ds->ossl_ssl);
+        SSL_set_accept_state(ds->ossl_ssl[idx]);
     }
-    err = SSL_do_handshake(ds->ossl_ssl);
+    err = SSL_do_handshake(ds->ossl_ssl[idx]);
     if (err < 0) {
-        err = SSL_get_error(ds->ossl_ssl, err);
+        err = SSL_get_error(ds->ossl_ssl[idx], err);
 
-        pj_lock_release(ds->ossl_lock);
+        DTLS_UNLOCK(ds);
 
         if (err == SSL_ERROR_WANT_READ) {
-            status = ssl_flush_wbio(ds);
+            status = ssl_flush_wbio(ds, idx);
             if (status != PJ_SUCCESS)
                 goto on_return;
         } else if (err != SSL_ERROR_NONE) {
@@ -882,34 +980,51 @@ static pj_status_t ssl_handshake(dtls_srtp *ds)
             goto on_return;
         }
     } else {
-        pj_lock_release(ds->ossl_lock);
+        DTLS_UNLOCK(ds);
     }
 
     /* Create and start clock @4Hz for retransmission */
-    if (!ds->clock) {
+    if (!ds->clock[idx]) {
+        ds->channel[idx].dtls_srtp = ds;
+        ds->channel[idx].channel = idx;
         status = pjmedia_clock_create(ds->pool, 4, 1, 1,
                                       PJMEDIA_CLOCK_NO_HIGHEST_PRIO, clock_cb,
-                                      ds, &ds->clock);
+                                      &ds->channel[idx], &ds->clock[idx]);
         if (status != PJ_SUCCESS)
             goto on_return;
     }    
-    status = pjmedia_clock_start(ds->clock);
+    status = pjmedia_clock_start(ds->clock[idx]);
     if (status != PJ_SUCCESS)
         goto on_return;
 
     /* Finally, DTLS nego started! */
-    ds->nego_started = PJ_TRUE;
-    PJ_LOG(4,(ds->base.name, "DTLS-SRTP negotiation initiated as %s",
+    ds->nego_started[idx] = PJ_TRUE;
+    PJ_LOG(4,(ds->base.name, "DTLS-SRTP %s negotiation initiated as %s",
+              CHANNEL_TO_STRING(idx),
               (ds->setup==DTLS_SETUP_ACTIVE? "client":"server")));
 
 on_return:
     if (status != PJ_SUCCESS) {
-        if (ds->clock)
-            pjmedia_clock_stop(ds->clock);
+        ds->nego_completed[idx] = PJ_TRUE;
+        if (ds->clock[idx])
+            pjmedia_clock_stop(ds->clock[idx]);
     }
     return status;
 }
 
+static pj_status_t ssl_handshake(dtls_srtp *ds)
+{
+    pj_status_t status;
+
+    status = ssl_handshake_channel(ds, RTP_CHANNEL);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    if (!ds->srtp->use_rtcp_mux)
+        status = ssl_handshake_channel(ds, RTCP_CHANNEL);
+
+    return status;
+}
 
 /* Parse a=setup & a=fingerprint in remote SDP to update DTLS-SRTP states
  * 'setup' and 'rem_fingerprint'.
@@ -1068,20 +1183,20 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
 
 
 /* Received packet (SSL handshake) from socket */
-static pj_status_t ssl_on_recv_packet(dtls_srtp *ds,
+static pj_status_t ssl_on_recv_packet(dtls_srtp *ds, unsigned idx,
                                       const void *data, pj_size_t len)
 {
     char tmp[128];
     pj_size_t nwritten;
 
-    pj_lock_acquire(ds->ossl_lock);
+    DTLS_LOCK(ds);
 
-    if (!ds->ossl_rbio) {
-        pj_lock_release(ds->ossl_lock);
+    if (!ds->ossl_rbio[idx]) {
+        DTLS_UNLOCK(ds);
         return PJ_EGONE;
     }
 
-    nwritten = BIO_write(ds->ossl_rbio, data, (int)len);
+    nwritten = BIO_write(ds->ossl_rbio[idx], data, (int)len);
     if (nwritten < len) {
         /* Error? */
         pj_status_t status;
@@ -1089,18 +1204,18 @@ static pj_status_t ssl_on_recv_packet(dtls_srtp *ds,
 #if DTLS_DEBUG
         pj_perror(2, ds->base.name, status, "BIO_write() error");
 #endif
-        pj_lock_release(ds->ossl_lock);
+        DTLS_UNLOCK(ds);
         return status;
     }
 
-    if (!ds->ossl_ssl) {
-        pj_lock_release(ds->ossl_lock);
+    if (!ds->ossl_ssl[idx]) {
+        DTLS_UNLOCK(ds);
         return PJ_EGONE;
     }
 
     /* Consume (and ignore) the packet */
     while (1) {
-        int rc = SSL_read(ds->ossl_ssl, tmp, sizeof(tmp));
+        int rc = SSL_read(ds->ossl_ssl[idx], tmp, sizeof(tmp));
         if (rc <= 0) {
 #if DTLS_DEBUG
             pj_status_t status = GET_SSL_STATUS(ds);
@@ -1111,10 +1226,10 @@ static pj_status_t ssl_on_recv_packet(dtls_srtp *ds,
         }
     }
 
-    pj_lock_release(ds->ossl_lock);
+    DTLS_UNLOCK(ds);
 
     /* Flush anything pending in the write BIO */
-    return ssl_flush_wbio(ds);
+    return ssl_flush_wbio(ds, idx);
 }
 
 
@@ -1145,27 +1260,27 @@ static void on_ice_complete2(pjmedia_transport *tp,
  *
  * *************************************/
 
-/*
- * This callback is called by SRTP transport when incoming rtp is received.
- * Originally this is send_rtp() op.
- */
-static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
-                                     const void *pkt,
-                                     pj_size_t size)
+static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,     
+                                const void *pkt, pj_size_t size)
 {
     dtls_srtp *ds = (dtls_srtp*)tp;
 
+    DTLS_LOCK(ds);
+
     /* Destroy the retransmission clock if handshake has been completed. */
-    if (ds->clock && ds->nego_completed) {
-        pjmedia_clock_destroy(ds->clock);
-        ds->clock = NULL;
+    if (ds->clock[idx] && ds->nego_completed[idx]) {
+        pjmedia_clock_destroy(ds->clock[idx]);
+        ds->clock[idx] = NULL;
     }
 
-    if (size < 1 || !IS_DTLS_PKT(pkt, size))
+    if (size < 1 || !IS_DTLS_PKT(pkt, size) || ds->is_destroying) {
+        DTLS_UNLOCK(ds);
         return PJ_EIGNORED;
+    }
 
 #if DTLS_DEBUG
-    PJ_LOG(2,(ds->base.name, "DTLS-SRTP receiving %d bytes", size));
+    PJ_LOG(2,(ds->base.name, "DTLS-SRTP %s receiving %lu bytes",
+                             CHANNEL_TO_STRING(idx), (unsigned long)size));
 #endif
 
     /* This is DTLS packet, let's process it. Note that if DTLS nego has
@@ -1174,41 +1289,66 @@ static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
      */
 
     /* Check remote address info, reattach member tp if changed */
-    if (!ds->use_ice && !ds->nego_completed) {
+    if (!ds->use_ice && !ds->nego_completed[idx]) {
         pjmedia_transport_info info;
-        pjmedia_transport_get_info(ds->srtp->member_tp, &info);
-        if (pj_sockaddr_cmp(&ds->rem_addr, &info.src_rtp_name)) {
-            pjmedia_transport_attach_param ap;
+        pj_bool_t reattach_tp = PJ_FALSE;
 
+        pjmedia_transport_get_info(ds->srtp->member_tp, &info);
+
+        if (idx == RTP_CHANNEL &&
+            pj_sockaddr_cmp(&ds->rem_addr, &info.src_rtp_name))
+        {
+            pj_sockaddr_cp(&ds->rem_addr, &info.src_rtp_name);
+            reattach_tp = PJ_TRUE;
+        } else if (idx == RTCP_CHANNEL && !ds->srtp->use_rtcp_mux &&
+                   pj_sockaddr_has_addr(&info.src_rtcp_name) &&
+                   pj_sockaddr_cmp(&ds->rem_rtcp, &info.src_rtcp_name))
+        {
+            pj_sockaddr_cp(&ds->rem_rtcp, &info.src_rtcp_name);
+            reattach_tp = PJ_TRUE;
+        }
+
+        if (reattach_tp) {
+            pjmedia_transport_attach_param ap;
+            pj_status_t status;
+
+            /* Attach member transport */
             pj_bzero(&ap, sizeof(ap));
             ap.user_data = ds->srtp;
-            pj_sockaddr_cp(&ds->rem_addr, &info.src_rtp_name);
-            pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
-            ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);
-            if (pj_sockaddr_cmp(&info.sock_info.rtp_addr_name,
-                                &info.sock_info.rtcp_addr_name) == 0)
-            {
+            if (pj_sockaddr_has_addr(&ds->rem_addr)) {
+                pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
+            } else {
+                pj_sockaddr_init(pj_AF_INET(), &ap.rem_addr, 0, 0);
+            }
+            if (ds->srtp->use_rtcp_mux) {
                 /* Using RTP & RTCP multiplexing */
-                pj_sockaddr_cp(&ds->rem_rtcp, &ds->rem_addr);
-                pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
+                pj_sockaddr_cp(&ap.rem_rtcp, &ap.rem_addr);
             } else if (pj_sockaddr_has_addr(&ds->rem_rtcp)) {
                 pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
-            } else {
+            } else if (pj_sockaddr_has_addr(&ds->rem_addr)) {
                 pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_addr);
                 pj_sockaddr_set_port(&ap.rem_rtcp,
-                                     pj_sockaddr_get_port(&ds->rem_addr)+1);
+                                     pj_sockaddr_get_port(&ap.rem_rtcp) + 1);
+            } else {
+                pj_sockaddr_init(pj_AF_INET(), &ap.rem_rtcp, 0, 0);
             }
-
-            pjmedia_transport_attach2(&ds->srtp->base, &ap);
+            ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);
+            status = pjmedia_transport_attach2(&ds->srtp->base, &ap);
+            if (status != PJ_SUCCESS) {
+                DTLS_UNLOCK(ds);
+                return status;
+            }
 
 #if DTLS_DEBUG
             {
                 char addr[PJ_INET6_ADDRSTRLEN];
+                char addr2[PJ_INET6_ADDRSTRLEN];
                 PJ_LOG(2,(ds->base.name, "Re-attached transport to update "
-                          "remote addr=%s:%d",
+                          "remote addr=%s remote rtcp=%s",
                           pj_sockaddr_print(&ap.rem_addr, addr,
-                                            sizeof(addr), 2),
-                          pj_sockaddr_get_port(&ap.rem_addr)));
+                                            sizeof(addr), 3),
+                          pj_sockaddr_print(&ap.rem_rtcp, addr2,
+                                            sizeof(addr2), 3)));
             }
 #endif
         }
@@ -1217,19 +1357,46 @@ static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
     /* If our setup is ACTPASS, incoming packet may be a client hello,
      * so let's update setup to PASSIVE and initiate DTLS handshake.
      */
-    if (!ds->nego_started &&
+    if (!ds->nego_started[idx] &&
         (ds->setup == DTLS_SETUP_ACTPASS || ds->setup == DTLS_SETUP_PASSIVE))
     {
         pj_status_t status;
         ds->setup = DTLS_SETUP_PASSIVE;
-        status = ssl_handshake(ds);
-        if (status != PJ_SUCCESS)
+        status = ssl_handshake_channel(ds, idx);
+        if (status != PJ_SUCCESS) {
+            DTLS_UNLOCK(ds);
             return status;
+        }
     }
 
+    DTLS_UNLOCK(ds);
+
     /* Send it to OpenSSL */
-    ssl_on_recv_packet(ds, pkt, size);
+    ssl_on_recv_packet(ds, idx, pkt, size);
+
     return PJ_SUCCESS;
+}
+
+/*
+ * This callback is called by SRTP transport when incoming rtp is received.
+ * Originally this is send_rtp() op.
+ */
+static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
+                                     const void *pkt,
+                                     pj_size_t size)
+{
+    return dtls_on_recv(tp, RTP_CHANNEL, pkt, size);
+}
+
+/*
+ * This callback is called by SRTP transport when incoming rtcp is received.
+ * Originally this is send_rtcp() op.
+ */
+static pj_status_t dtls_on_recv_rtcp(pjmedia_transport *tp,
+                                     const void *pkt,
+                                     pj_size_t size)
+{
+    return dtls_on_recv(tp, RTCP_CHANNEL, pkt, size);
 }
 
 static pj_status_t dtls_media_create( pjmedia_transport *tp,
@@ -1281,19 +1448,12 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
         /* Check for a=fingerprint in remote SDP. */
         switch (ds->srtp->setting.use) {
             case PJMEDIA_SRTP_DISABLED:
-                if (attr_fp) {
-                    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
-                    goto on_return;
-                }
+                status = PJMEDIA_SRTP_ESDPINTRANSPORT;
+                goto on_return;
                 break;
             case PJMEDIA_SRTP_OPTIONAL:
                 break;
             case PJMEDIA_SRTP_MANDATORY:
-                if (!attr_fp) {
-                    /* Should never reach here, this is already checked */
-                    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
-                    goto on_return;
-                }
                 break;
         }
     }
@@ -1308,6 +1468,18 @@ on_return:
     }
 #endif
     return status;
+}
+
+static void dtls_media_stop_channel(dtls_srtp *ds, unsigned idx)
+{
+    ds->nego_completed[idx] = PJ_TRUE;
+    if (ds->clock[idx])
+        pjmedia_clock_stop(ds->clock[idx]);
+
+    /* Reset DTLS state */
+    ssl_destroy(ds, idx);
+    ds->nego_started[idx] = PJ_FALSE;
+    ds->nego_completed[idx] = PJ_FALSE;
 }
 
 static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
@@ -1369,7 +1541,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
                     (ds->setup==DTLS_SETUP_ACTIVE? &ID_ACTIVE:&ID_PASSIVE));
         pjmedia_sdp_media_add_attr(m_loc, a);
 
-        if (last_setup != DTLS_SETUP_UNKNOWN && sdp_remote) {
+        if (last_setup != DTLS_SETUP_UNKNOWN) {
             pj_sockaddr rem_rtp;
             pj_sockaddr rem_rtcp;
             pj_bool_t use_rtcp_mux;
@@ -1411,9 +1583,8 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
              pj_memcmp(&last_rem_fp, &ds->rem_fingerprint, sizeof(pj_str_t)))||
             (rem_addr_changed))
         {
-            ssl_destroy(ds);
-            ds->nego_started = PJ_FALSE;
-            ds->nego_completed = PJ_FALSE;
+            dtls_media_stop_channel(ds, RTP_CHANNEL);
+            dtls_media_stop_channel(ds, RTCP_CHANNEL);
             ds->got_keys = PJ_FALSE;
             ds->rem_fprint_status = PJ_EPENDING;
         }
@@ -1445,7 +1616,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
         pjmedia_sdp_media_add_attr(m_loc, a);
     }
 
-    if (ds->nego_completed) {
+    if (ds->nego_completed[RTP_CHANNEL]) {
         /* This is subsequent SDP offer/answer and no DTLS re-nego has been
          * signalled.
          */
@@ -1502,9 +1673,11 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 #if DTLS_DEBUG
         {
             char addr[PJ_INET6_ADDRSTRLEN];
-            PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s:%d",
-                      pj_sockaddr_print(&ap.rem_addr, addr, sizeof(addr), 2),
-                      pj_sockaddr_get_port(&ap.rem_addr)));
+            char addr2[PJ_INET6_ADDRSTRLEN];
+            PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s "
+                                     "remote rtcp=%s",
+                      pj_sockaddr_print(&ap.rem_addr, addr2, sizeof(addr2), 3),
+                      pj_sockaddr_print(&ap.rem_rtcp, addr, sizeof(addr), 3)));
         }
 #endif
     }
@@ -1577,9 +1750,8 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
             (last_rem_fp.slen &&
              pj_memcmp(&last_rem_fp, &ds->rem_fingerprint, sizeof(pj_str_t))))
         {
-            ssl_destroy(ds);
-            ds->nego_started = PJ_FALSE;
-            ds->nego_completed = PJ_FALSE;
+            dtls_media_stop_channel(ds, RTP_CHANNEL);
+            dtls_media_stop_channel(ds, RTCP_CHANNEL);
             ds->got_keys = PJ_FALSE;
             ds->rem_fprint_status = PJ_EPENDING;
         }
@@ -1599,7 +1771,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
         if (pj_sockaddr_cmp(&info.sock_info.rtp_addr_name,
                             &info.sock_info.rtcp_addr_name) == 0)
         {
-            use_rtcp_mux = PJ_TRUE;
+            ds->srtp->use_rtcp_mux = use_rtcp_mux = PJ_TRUE;
         }
         ice_info = (pjmedia_ice_transport_info*)
                    pjmedia_transport_info_get_spc_info(
@@ -1614,13 +1786,15 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 
     /* Check if the background DTLS nego has completed */
     if (ds->got_keys) { 
-        ds->srtp->tx_policy_neg = ds->tx_crypto;
-        ds->srtp->rx_policy_neg = ds->rx_crypto;
+        unsigned idx = RTP_CHANNEL;
+
+        ds->srtp->srtp_ctx.tx_policy_neg = ds->tx_crypto[idx];
+        ds->srtp->srtp_ctx.rx_policy_neg = ds->rx_crypto[idx];
 
         /* Verify remote fingerprint (if available) */
         if (ds->rem_fingerprint.slen && ds->rem_fprint_status == PJ_EPENDING)
         {
-            ds->rem_fprint_status = ssl_match_fingerprint(ds);
+            ds->rem_fprint_status = ssl_match_fingerprint(ds, idx);
             if (ds->rem_fprint_status != PJ_SUCCESS) {
                 pj_perror(4, ds->base.name, ds->rem_fprint_status,
                           "Fingerprint specified in remote SDP doesn't match "
@@ -1683,11 +1857,13 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 #if DTLS_DEBUG
             {
                 char addr[PJ_INET6_ADDRSTRLEN];
+                char addr2[PJ_INET6_ADDRSTRLEN];
                 PJ_LOG(2,(ds->base.name, "Attached transport, "
-                          "remote addr=%s:%d",
+                          "remote addr=%s remote rtcp=%s",
                           pj_sockaddr_print(&ap.rem_addr, addr,
-                          sizeof(addr), 2),
-                          pj_sockaddr_get_port(&ap.rem_addr)));
+                          sizeof(addr), 3),
+                          pj_sockaddr_print(&ap.rem_rtcp, addr2,
+                          sizeof(addr2), 3)));
             }
 #endif
             
@@ -1714,20 +1890,37 @@ static pj_status_t dtls_media_stop(pjmedia_transport *tp)
     PJ_LOG(2,(ds->base.name, "dtls_media_stop()"));
 #endif
 
-    if (ds->clock)
-        pjmedia_clock_stop(ds->clock);
-    
-    /* Reset DTLS state */
-    ssl_destroy(ds);
+    DTLS_LOCK(ds);
+    dtls_media_stop_channel(ds, RTP_CHANNEL);
+    dtls_media_stop_channel(ds, RTCP_CHANNEL);
+    DTLS_UNLOCK(ds);
+
     ds->setup = DTLS_SETUP_UNKNOWN;
-        ds->use_ice = PJ_FALSE;
-    ds->nego_started = PJ_FALSE;
-    ds->nego_completed = PJ_FALSE;
+    ds->use_ice = PJ_FALSE;
     ds->got_keys = PJ_FALSE;
     ds->rem_fingerprint.slen = 0;
     ds->rem_fprint_status = PJ_EPENDING;
 
     return PJ_SUCCESS;
+}
+
+static void dtls_destroy_channel(dtls_srtp *ds, unsigned idx)
+{
+    if (ds->clock[idx]) {
+        ds->nego_completed[idx] = PJ_TRUE;
+        pjmedia_clock_destroy(ds->clock[idx]);
+        ds->clock[idx] = NULL;
+    }
+    ssl_destroy(ds, idx);
+}
+
+static void dtls_on_destroy(void *arg) {
+    dtls_srtp *ds = (dtls_srtp *)arg;
+
+    if (ds->ossl_lock)
+        pj_lock_destroy(ds->ossl_lock);
+
+    pj_pool_safe_release(&ds->pool);
 }
 
 static pj_status_t dtls_destroy(pjmedia_transport *tp)
@@ -1738,16 +1931,20 @@ static pj_status_t dtls_destroy(pjmedia_transport *tp)
     PJ_LOG(2,(ds->base.name, "dtls_destroy()"));
 #endif
 
-    if (ds->clock)
-        pjmedia_clock_destroy(ds->clock);
-    ssl_destroy(ds);
+    ds->is_destroying = PJ_TRUE;
 
-    if (ds->ossl_lock) {
-        pj_lock_destroy(ds->ossl_lock);
-        ds->ossl_lock = NULL;
+    DTLS_LOCK(ds);
+
+    dtls_destroy_channel(ds, RTP_CHANNEL);
+    dtls_destroy_channel(ds, RTCP_CHANNEL);
+
+    DTLS_UNLOCK(ds);
+
+    if (ds->base.grp_lock) {
+        pj_grp_lock_dec_ref(ds->base.grp_lock);
+    } else {
+        dtls_on_destroy(tp);
     }
-
-    pj_pool_safe_release(&ds->pool);
 
     return PJ_SUCCESS;
 }
@@ -1818,6 +2015,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
     ap.user_data = ds->srtp;
     pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
     pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
+    if (pj_sockaddr_cmp(&ds->rem_addr, &ds->rem_rtcp) == 0)
+        ds->srtp->use_rtcp_mux = PJ_TRUE;
     ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);
     status = pjmedia_transport_attach2(&ds->srtp->base, &ap);
     if (status != PJ_SUCCESS)
@@ -1826,22 +2025,27 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
 #if DTLS_DEBUG
     {
         char addr[PJ_INET6_ADDRSTRLEN];
-        PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s:%d",
-                  pj_sockaddr_print(&ap.rem_addr, addr, sizeof(addr), 2),
-                  pj_sockaddr_get_port(&ap.rem_addr)));
+        char addr2[PJ_INET6_ADDRSTRLEN];
+        PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s "
+                                 "remote rtcp=%s",
+                  pj_sockaddr_print(&ap.rem_addr, addr, sizeof(addr), 3),
+                  pj_sockaddr_print(&ap.rem_addr, addr2, sizeof(addr2), 3)));
     }
 #endif
 
     /* Start DTLS handshake */
-    pj_bzero(&srtp->rx_policy_neg, sizeof(srtp->rx_policy_neg));
-    pj_bzero(&srtp->tx_policy_neg, sizeof(srtp->tx_policy_neg));
+    pj_bzero(&srtp->srtp_ctx.rx_policy_neg,
+             sizeof(srtp->srtp_ctx.rx_policy_neg));
+    pj_bzero(&srtp->srtp_ctx.tx_policy_neg,
+             sizeof(srtp->srtp_ctx.tx_policy_neg));
     status = ssl_handshake(ds);
     if (status != PJ_SUCCESS)
         goto on_return;
 
 on_return:
     if (status != PJ_SUCCESS) {
-        ssl_destroy(ds);
+        ssl_destroy(ds, RTP_CHANNEL);
+        ssl_destroy(ds, RTCP_CHANNEL);
     }
     return status;
 }

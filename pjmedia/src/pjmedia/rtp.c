@@ -252,7 +252,7 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
         ses->peer_ssrc = pj_ntohl(hdr->ssrc);
 
     if (pj_ntohl(hdr->ssrc) != ses->peer_ssrc) {
-        seq_st.status.flag.badssrc = 1;
+        seq_st.status.flag.badssrc = -1;
         if (!ses->has_peer_ssrc)
             ses->peer_ssrc = pj_ntohl(hdr->ssrc);
     }
@@ -261,8 +261,8 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
     if (check_pt && hdr->pt != ses->out_pt) {
         if (p_seq_st) {
             p_seq_st->status.value = seq_st.status.value;
-            p_seq_st->status.flag.bad = 1;
-            p_seq_st->status.flag.badpt = 1;
+            p_seq_st->status.flag.bad = -1;
+            p_seq_st->status.flag.badpt = -1;
         }
         return;
     }
@@ -315,6 +315,7 @@ void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess,
     
     /* Init status */
     st.status.value = 0;
+    st.status.flag.probation = 0;
     st.diff = 0;
 
     /*
@@ -323,25 +324,26 @@ void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess,
      */
     if (sess->probation) {
 
-        st.status.flag.probation = 1;
-        
-        if (seq == sess->max_seq+ 1) {
+        st.status.flag.probation = -1;
+
+        if (seq == (pj_uint16_t)(sess->max_seq + 1)) {
             /* packet is in sequence */
             st.diff = 1;
             sess->probation--;
             sess->max_seq = seq;
             if (sess->probation == 0) {
-                st.status.flag.probation = 0;
+                /* Init base seq, as per the RFC 3550. */
+                sess->base_seq = seq;
             }
         } else {
 
             st.diff = 0;
 
-            st.status.flag.bad = 1;
+            st.status.flag.bad = -1;
             if (seq == sess->max_seq)
-                st.status.flag.dup = 1;
+                st.status.flag.dup = -1;
             else
-                st.status.flag.outorder = 1;
+                st.status.flag.outorder = -1;
 
             sess->probation = MIN_SEQUENTIAL - 1;
             sess->max_seq = seq;
@@ -350,7 +352,7 @@ void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess,
 
     } else if (udelta == 0) {
 
-        st.status.flag.dup = 1;
+        st.status.flag.dup = -1;
 
     } else if (udelta < MAX_DROPOUT) {
         /* in order, with permissible gap */
@@ -371,22 +373,22 @@ void pjmedia_rtp_seq_update( pjmedia_rtp_seq_session *sess,
              * (i.e., pretend this was the first packet).
              */
             pjmedia_rtp_seq_restart(sess, seq);
-            st.status.flag.restart = 1;
-            st.status.flag.probation = 1;
+            st.status.flag.restart = -1;
+            st.status.flag.probation = -1;
             st.diff = 1;
         }
         else {
             sess->bad_seq = (seq + 1) & (RTP_SEQ_MOD-1);
-            st.status.flag.bad = 1;
-            st.status.flag.outorder = 1;
+            st.status.flag.bad = -1;
+            st.status.flag.outorder = -1;
         }
     } else {
         /* old duplicate or reordered packet.
          * Not necessarily bad packet (?)
          */
-        st.status.flag.outorder = 1;
+        st.status.flag.outorder = -1;
     }
-    
+
 
     if (seq_status) {
         seq_status->diff = st.diff;

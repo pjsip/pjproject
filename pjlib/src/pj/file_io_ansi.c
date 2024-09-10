@@ -22,6 +22,9 @@
 #include <pj/limits.h>
 #include <stdio.h>
 #include <errno.h>
+#if defined(PJ_HAS_FCNTL_H) && PJ_HAS_FCNTL_H != 0
+#include <fcntl.h>
+#endif
 
 PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
                                   const char *pathname, 
@@ -53,6 +56,11 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
             *p++ = 'w';
         }
     }
+
+#if defined(O_CLOEXEC)
+    if ((flags & PJ_O_CLOEXEC) == PJ_O_CLOEXEC)
+        *p++ = 'e';
+#endif
 
     if (p==mode)
         return PJ_EINVAL;

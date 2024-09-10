@@ -184,14 +184,16 @@ static pj_status_t init_report(void)
     pj_ssize_t len;
     pj_status_t status;
     
-    pj_ansi_sprintf(tmp, "pjsip-static-bench-%s-%s.htm", PJ_OS_NAME, PJ_CC_NAME);
+    pj_ansi_snprintf(tmp, sizeof(tmp),
+                     "pjsip-static-bench-%s-%s.htm", PJ_OS_NAME, PJ_CC_NAME);
 
     status = pj_file_open(NULL, tmp, PJ_O_WRONLY, &fd_report);
     if (status != PJ_SUCCESS)
         return status;
 
     /* Title */
-    len = pj_ansi_sprintf(buf, "<HTML>\n"
+    len = pj_ansi_snprintf(buf, sizeof(buf),
+                               "<HTML>\n"
                                " <HEAD>\n"
                                "  <TITLE>PJSIP %s (%s) - Static Benchmark</TITLE>\n"
                                " </HEAD>\n"
@@ -203,19 +205,22 @@ static pj_status_t init_report(void)
 
 
     /* Title */
-    len = pj_ansi_sprintf(buf, "<H1>PJSIP %s (%s) - Static Benchmark</H1>\n", 
+    len = pj_ansi_snprintf(buf, sizeof(buf),
+                               "<H1>PJSIP %s (%s) - Static Benchmark</H1>\n", 
                                PJ_VERSION,
                                (PJ_DEBUG ? "Debug" : "Release"));
     pj_file_write(fd_report, buf, &len);
 
-    len = pj_ansi_sprintf(buf, "<P>Below is the benchmark result generated "
+    len = pj_ansi_snprintf(buf, sizeof(buf), 
+                               "<P>Below is the benchmark result generated "
                                "by <b>test-pjsip</b> program. The program "
                                "is single-threaded only.</P>\n");
     pj_file_write(fd_report, buf, &len);
 
 
     /* Write table heading */
-    len = pj_ansi_sprintf(buf, "<TABLE border=\"1\" cellpadding=\"4\">\n"
+    len = pj_ansi_snprintf(buf, sizeof(buf), 
+                               "<TABLE border=\"1\" cellpadding=\"4\">\n"
                                "  <TR><TD bgColor=\"aqua\" align=\"center\">Variable</TD>\n"
                                "      <TD bgColor=\"aqua\" align=\"center\">Value</TD>\n"
                                "      <TD bgColor=\"aqua\" align=\"center\">Description</TD>\n"
@@ -238,7 +243,7 @@ static pj_status_t init_report(void)
 
     /* Write time of day */
     pj_time_decode(&timestamp, &date_time);
-    len = pj_ansi_sprintf(tmp, "%04d-%02d-%02d %02d:%02d:%02d",
+    len = pj_ansi_snprintf(tmp, sizeof(tmp), "%04d-%02d-%02d %02d:%02d:%02d",
                                date_time.year, date_time.mon+1, date_time.day,
                                date_time.hour, date_time.min, date_time.sec);
     report_sval("date-time", tmp, "", "Date/time of the test");
@@ -253,7 +258,7 @@ static pj_status_t init_report(void)
 
 
     /* Write CC name */
-    len = pj_ansi_sprintf(tmp, "%s-%d.%d.%d", PJ_CC_NAME, 
+    len = pj_ansi_snprintf(tmp, sizeof(tmp), "%s-%d.%d.%d", PJ_CC_NAME,
                           PJ_CC_VER_1, PJ_CC_VER_2, PJ_CC_VER_2);
     report_sval("cc-name", tmp, "", "Compiler name and version");
 
@@ -266,7 +271,8 @@ void report_sval(const char *name, const char* value, const char *valname,
 {
     pj_ssize_t len;
 
-    len = pj_ansi_sprintf(buf, "  <TR><TD><TT>%s</TT></TD>\n"
+    len = pj_ansi_snprintf(buf, sizeof(buf),
+                               "  <TR><TD><TT>%s</TT></TD>\n"
                                "      <TD align=\"right\"><B>%s %s</B></TD>\n"
                                "      <TD>%s</TD>\n"
                                "  </TR>\n",
@@ -280,7 +286,8 @@ void report_ival(const char *name, int value, const char *valname,
 {
     pj_ssize_t len;
 
-    len = pj_ansi_sprintf(buf, "  <TR><TD><TT>%s</TT></TD>\n"
+    len = pj_ansi_snprintf(buf, sizeof(buf),
+                               "  <TR><TD><TT>%s</TT></TD>\n"
                                "      <TD align=\"right\"><B>%d %s</B></TD>\n"
                                "      <TD>%s</TD>\n"
                                "  </TR>\n",
@@ -294,7 +301,7 @@ static void close_report(void)
     pj_ssize_t len;
 
     if (fd_report) {
-        len = pj_ansi_sprintf(buf, "</TABLE>\n</BODY>\n</HTML>\n");
+        len = pj_ansi_snprintf(buf, sizeof(buf), "</TABLE>\n</BODY>\n</HTML>\n");
         pj_file_write(fd_report, buf, &len);
 
         pj_file_close(fd_report);
@@ -353,7 +360,7 @@ int test_main(char *testlist)
         return rc;
     }
 
-    PJ_LOG(3,(THIS_FILE,""));
+    PJ_LOG(3,(THIS_FILE," "));
 
     /* Init logger module. */
     init_msg_logger();
@@ -434,6 +441,12 @@ int test_main(char *testlist)
     }
 #endif
 
+#if INCLUDE_LOOP_TEST   
+    /* repeat again after resolver is configured in resolve_test() */
+    if (SHOULD_RUN_TEST(include_loop_test)) {
+        DO_TEST(transport_loop_test());
+    }
+#endif
 
 #if INCLUDE_TSX_TEST
     if (SHOULD_RUN_TEST(include_tsx_test)) {
@@ -495,13 +508,15 @@ on_return:
     pj_log_set_level(4);
 
     /* Dumping memory pool usage */
-    PJ_LOG(3,(THIS_FILE, "Peak memory size=%u MB",
-                         caching_pool.peak_used_size / 1000000));
+    /* Field peak_used_size is deprecated by #3897 */
+    //PJ_LOG(3,(THIS_FILE, "Peak memory size=%lu MB",
+    //                     (unsigned long)
+    //                     (caching_pool.peak_used_size / 1000000)));
 
     pjsip_endpt_destroy(endpt);
     pj_caching_pool_destroy(&caching_pool);
 
-    PJ_LOG(3,(THIS_FILE, ""));
+    PJ_LOG(3,(THIS_FILE, " "));
  
     pj_thread_get_stack_info(pj_thread_this(), &filename, &line);
     PJ_LOG(3,(THIS_FILE, "Stack max usage: %u, deepest: %s:%u", 

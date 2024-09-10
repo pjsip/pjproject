@@ -276,7 +276,7 @@ PJ_BEGIN_DECL
  * \section PJ_POOL_EXAMPLES_SEC Examples
  *
  * For some sample codes on how to use the pool, please see:
- *  - @ref page_pjlib_pool_test
+ *  - Pool test: \src{pjlib/src/pjlib-test/pool.c}
  *
  * @{
  */
@@ -849,12 +849,16 @@ struct pj_caching_pool
 
     /**
      * Total size of memory currently used by application.
+     *
+     * This field is deprecated.
      */
     pj_size_t       used_size;
 
     /**
      * The maximum size of memory used by application throughout the life
      * of the caching pool.
+     *
+     * This field is deprecated.
      */
     pj_size_t       peak_used_size;
 

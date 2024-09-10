@@ -104,7 +104,7 @@ static pj_bool_t parse_test_headers(char *line, test_param_t *param,
 static pj_bool_t process_test_data(char data, pjmedia_jbuf *jb,
                                    pj_uint16_t *seq, pj_uint16_t *last_seq)
 {
-    char frame[1];
+    char frame[1] = {0};
     char f_type;
     pj_bool_t print_state = PJ_TRUE;
     pj_bool_t data_eos = PJ_FALSE;
@@ -183,7 +183,7 @@ int jbuf_main(void)
     /* If that fails, try to open test data file in specified search paths */
     if (input == NULL) {
         char input_path[PJ_MAXPATH];
-        int i;
+        unsigned i;
 
         for (i = 0; !input && i < PJ_ARRAY_SIZE(input_search_path); ++i) {
             pj_ansi_snprintf(input_path, PJ_MAXPATH, "%s/%s",

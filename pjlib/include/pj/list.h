@@ -47,8 +47,8 @@ PJ_BEGIN_DECL
  * \section pj_list_example_sec Examples
  *
  * See below for examples on how to manipulate linked list:
- *  - @ref page_pjlib_samples_list_c
- *  - @ref page_pjlib_list_test
+ *  - List sample: \src{pjlib/src/pjlib-samples/list.c}
+ *  - List test: \src{pjlib/src/pjlib-test/list.c}
  */
 
 
@@ -168,6 +168,27 @@ PJ_INLINE(void) pj_list_push_front(pj_list_type *list, pj_list_type *node)
  */
 PJ_IDECL(void) pj_list_insert_nodes_after(pj_list_type *lst,
                                           pj_list_type *nodes);
+
+
+/**
+ * Insert a list to another list before the specified element position.
+ *
+ * @param pos   The element to which the node will be inserted before.
+ * @param lst   The list to be inserted.
+ */
+PJ_IDECL(void) pj_list_insert_list_before(pj_list_type *pos,
+                                          pj_list_type *lst);
+
+
+/**
+ * Insert a list to another list after the specified element position.
+ *
+ * @param pos   The element in the list which will precede the inserted
+ *              list.
+ * @param lst   The list to be inserted.
+ */
+PJ_IDECL(void) pj_list_insert_list_after(pj_list_type *pos,
+                                         pj_list_type *lst);
 
 
 /**

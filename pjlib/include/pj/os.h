@@ -136,8 +136,8 @@ PJ_DECL(const pj_sys_info*) pj_get_sys_info(void);
  * \section pj_thread_examples_sec Examples
  *
  * For examples, please see:
- *  - \ref page_pjlib_thread_test
- *  - \ref page_pjlib_sleep_test
+ *  - Thread test: \src{pjlib/src/pjlib-test/thread.c}
+ *  - Sleep, Time, and Timestamp test: \src{pjlib/src/pjlib-test/sleep.c}
  *
  */
 
@@ -387,6 +387,49 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
 
 /* **************************************************************************/
 /**
+ * @defgroup PJ_JNI Java Native Interface specific
+ * @ingroup PJ_OS
+ * @{
+ * Functionalities specific to JNI.
+ * Currently only implemented on Android OS, but may be extended to other
+ * platforms in the future.
+ *
+ */
+
+/**
+ * Set the Java Virtual Machine environment variable.
+ * Note that applications typically do not need to call this function unless
+ * PJ_JNI_HAS_JNI_ONLOAD is disabled.
+ *
+ * @param jvm           The Java Virtual Machine environment.
+ */
+PJ_DECL(void) pj_jni_set_jvm(void *jvm);
+
+/**
+ * Attach the current thread to a Java Virtual Machine.
+ *
+ * @param jni_env       Output parameter to store the JNI interface pointer.
+ *
+ * @return              PJ_TRUE if the attachment is successful,
+ *                      PJ_FALSE if otherwise.
+ */
+PJ_DECL(pj_bool_t) pj_jni_attach_jvm(void **jni_env);
+
+/**
+ * Detach the current thread from a Java Virtual Machine.
+ *
+ * @param attached      Specify whether the current thread is attached
+ *                      to a JVM.
+ */
+PJ_DECL(void) pj_jni_detach_jvm(pj_bool_t attached);
+
+
+/**
+ * @}
+ */
+
+/* **************************************************************************/
+/**
  * @defgroup PJ_SYMBIAN_OS Symbian OS Specific
  * @ingroup PJ_OS
  * @{
@@ -565,7 +608,7 @@ PJ_DECL(void*) pj_thread_local_get(long index);
  * \section pj_atomic_examples_sec Examples
  *
  * For some example codes, please see:
- *  - @ref page_pjlib_atomic_test
+ *  - Atomic Variable test: \src{pjlib/src/pjlib-test/atomic.c}
  */
 
 
@@ -1060,7 +1103,7 @@ PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t *event);
  * \section pj_time_examples_sec Examples
  *
  * For examples, please see:
- *  - \ref page_pjlib_sleep_test
+ *  - Sleep, Time, and Timestamp test: \src{pjlib/src/pjlib-test/sleep.c}
  */
 
 /**
@@ -1163,8 +1206,8 @@ PJ_DECL(pj_color_t) pj_term_get_color(void);
  * \section pj_timestamp_examples_sec Examples
  *
  * For examples, please see:
- *  - \ref page_pjlib_sleep_test
- *  - \ref page_pjlib_timestamp_test
+ *  - Sleep, Time, and Timestamp test: \src{pjlib/src/pjlib-test/sleep.c}
+ *  - Timestamp test: \src{pjlib/src/pjlib-test/timestamp.c}
  */
 
 /*
@@ -1474,6 +1517,17 @@ PJ_DECL(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
  * @return          PJ_SUCCESS or the appropriate error code.
  */
 pj_status_t pj_thread_init(void);
+
+
+/* **************************************************************************/
+/**
+ * Set file descriptor close-on-exec flag
+ *
+ * @param fd    The file descriptor
+ * @return      on success, PJ_SUCCESS
+ *
+ */
+PJ_DECL(pj_status_t) pj_set_cloexec_flag(int fd);
 
 
 PJ_END_DECL

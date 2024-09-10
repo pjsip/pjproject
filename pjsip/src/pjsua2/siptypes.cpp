@@ -192,6 +192,8 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.ca_buf           = str2Pj(this->CaBuf);
     ts.cert_buf         = str2Pj(this->certBuf);
     ts.privkey_buf      = str2Pj(this->privKeyBuf);
+    ts.cert_lookup.type = this->certLookupType;
+    ts.cert_lookup.keyword = str2Pj(this->certLookupKeyword);
     ts.method           = this->method;
     ts.ciphers_num      = (unsigned)this->ciphers.size();
     ts.proto            = this->proto;
@@ -207,6 +209,7 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.qos_type         = this->qosType;
     ts.qos_params       = this->qosParams;
     ts.qos_ignore_error = this->qosIgnoreError;
+    ts.enable_renegotiation = this->enableRenegotiation;
 
     return ts;
 }
@@ -220,6 +223,8 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->CaBuf         = pj2Str(prm.ca_buf);
     this->certBuf       = pj2Str(prm.cert_buf);
     this->privKeyBuf    = pj2Str(prm.privkey_buf);
+    this->certLookupType= prm.cert_lookup.type;
+    this->certLookupKeyword = pj2Str(prm.cert_lookup.keyword);
     this->method        = (pjsip_ssl_method)prm.method;
     this->proto         = prm.proto;
     // The following will only work if sizeof(enum)==sizeof(int)
@@ -232,6 +237,7 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->qosType       = prm.qos_type;
     this->qosParams     = prm.qos_params;
     this->qosIgnoreError = PJ2BOOL(prm.qos_ignore_error);
+    this->enableRenegotiation = PJ2BOOL(prm.enable_renegotiation);
 }
 
 void TlsConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
@@ -254,6 +260,8 @@ void TlsConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_NUM_T   ( this_node, pj_qos_type, qosType);
     readQosParams     ( this_node, qosParams);
     NODE_READ_BOOL    ( this_node, qosIgnoreError);
+    NODE_READ_NUM_T   ( this_node, pj_ssl_cert_lookup_type, certLookupType);
+    NODE_READ_STRING  ( this_node, certLookupKeyword);
 }
 
 void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -276,6 +284,8 @@ void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_NUM_T   ( this_node, pj_qos_type, qosType);
     writeQosParams     ( this_node, qosParams);
     NODE_WRITE_BOOL    ( this_node, qosIgnoreError);
+    NODE_WRITE_NUM_T   ( this_node, pj_ssl_cert_lookup_type, certLookupType);
+    NODE_WRITE_STRING  ( this_node, certLookupKeyword);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -485,6 +495,15 @@ pjsip_media_type SipMediaType::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
+SipHeader::SipHeader()
+{
+    pj_str_t dummy;
+
+    // Init pjHdr with null string to suppress warning
+    pj_bzero(&dummy, sizeof(dummy));
+    pjsip_generic_string_hdr_init2(&pjHdr, &dummy, &dummy);
+}
+
 void SipHeader::fromPj(const pjsip_hdr *hdr) PJSUA2_THROW(Error)
 {
     char *buf = NULL;
@@ -542,6 +561,13 @@ pjsip_generic_string_hdr &SipHeader::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
+SipMultipartPart::SipMultipartPart()
+{
+    pj_bzero(&pjMpp, sizeof(pjMpp));
+    pj_bzero(&pjMsgBody, sizeof(pjMsgBody));
+    pj_list_init(&pjMpp.hdr);
+}
+
 void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
                               PJSUA2_THROW(Error)
 {
@@ -559,6 +585,10 @@ void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
     
     contentType.fromPj(prm.body->content_type);
     body = string((char*)prm.body->data, prm.body->len);
+
+    pj_list_init(&pjMpp.hdr);
+    pjMpp.body = NULL;
+    pj_bzero(&pjMsgBody, sizeof(pjMsgBody));
 }
 
 pjsip_multipart_part& SipMultipartPart::toPj() const

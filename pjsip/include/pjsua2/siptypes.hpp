@@ -175,6 +175,25 @@ struct TlsConfig : public PersistentObject
     string              privKeyBuf;
 
     /**
+     * Lookup certificate from OS certificate store, this setting will
+     * specify the field type to lookup.
+     *
+     * Currently only used by Windows Schannel backend, see also
+     * \a pj_ssl_cert_load_from_store() for more info.
+     */
+    pj_ssl_cert_lookup_type certLookupType;
+
+    /**
+     * Lookup certificate from OS certificate store, this setting will
+     * specify the keyword to match on the field specified in
+     * \a certLookupType above.
+     *
+     * Currently only used by Windows Schannel backend, see also
+     * \a pj_ssl_cert_load_from_store() for more info.
+     */
+    string              certLookupKeyword;
+
+    /**
      * TLS protocol method from #pjsip_ssl_method. In the future, this field
      * might be deprecated in favor of <b>proto</b> field. For now, this field 
      * is only applicable only when <b>proto</b> field is set to zero.
@@ -280,6 +299,13 @@ struct TlsConfig : public PersistentObject
      * Default: PJ_TRUE
      */
     bool                qosIgnoreError;
+
+    /**
+     * Specify if renegotiation is enabled for TLSv1.2 or earlier.
+     *
+     * Default: PJ_TRUE
+     */
+    bool                enableRenegotiation;
 
 public:
     /** Default constructor initialises with default values */
@@ -435,9 +461,8 @@ struct TransportConfig : public PersistentObject
     string              boundAddress;
 
     /**
-     * This specifies TLS settings for TLS transport. It is only be used
-     * when this transport config is being used to create a SIP TLS
-     * transport.
+     * This specifies TLS settings for TLS transport. 
+     * It’s only used when creating a SIP TLS transport.
      */
     TlsConfig           tlsConfig;
 
@@ -445,6 +470,9 @@ struct TransportConfig : public PersistentObject
      * QoS traffic type to be set on this transport. When application wants
      * to apply QoS tagging to the transport, it's preferable to set this
      * field rather than \a qosParam fields since this is more portable.
+     *
+     * For TLS transport, this field will be ignored, the QoS traffic type
+     * can be set via tlsConfig.
      *
      * Default is QoS not set.
      */
@@ -454,6 +482,9 @@ struct TransportConfig : public PersistentObject
      * Set the low level QoS parameters to the transport. This is a lower
      * level operation than setting the \a qosType field and may not be
      * supported on all platforms.
+     *
+     * For TLS transport, this field will be ignored, the low level QoS
+     * parameters can be set via tlsConfig.
      *
      * Default is QoS not set.
      */
@@ -667,7 +698,9 @@ struct TsxStateEventSrc
     pj_status_t     status;         /**< Transport error status.    */
     GenericData     data;           /**< Generic data.              */
 
-    TsxStateEventSrc() : status() {}
+    TsxStateEventSrc()
+    : timer(NULL), status(PJ_SUCCESS), data(NULL)
+    {}
 };
 
 /**
@@ -839,6 +872,11 @@ struct SipHeader
 
 public:
     /**
+     * Default constructor.
+     */
+    SipHeader();
+
+    /**
      * Initiaize from PJSIP header.
      */
     void fromPj(const pjsip_hdr *) PJSUA2_THROW(Error);
@@ -878,6 +916,8 @@ struct SipMultipartPart
     string              body;
 
 public:
+    SipMultipartPart();
+    
     /**
      * Initiaize from PJSIP's pjsip_multipart_part.
      */

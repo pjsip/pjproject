@@ -49,8 +49,10 @@ pj_status_t app_socket(int family, int type, int proto, int port,
     addr.sin_family = (pj_uint16_t)family;
     addr.sin_port = (short)(port!=-1 ? pj_htons((pj_uint16_t)port) : 0);
     rc = pj_sock_bind(sock, &addr, sizeof(addr));
-    if (rc != PJ_SUCCESS)
+    if (rc != PJ_SUCCESS) {
+        pj_sock_close(sock);
         return rc;
+    }
     
 #if PJ_HAS_TCP
     if (type == pj_SOCK_STREAM()) {

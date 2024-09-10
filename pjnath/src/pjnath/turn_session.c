@@ -273,6 +273,7 @@ PJ_DEF(pj_status_t) pj_turn_session_create( const pj_stun_config *cfg,
     sess->ka_interval = PJ_TURN_KEEP_ALIVE_SEC;
     sess->user_data = user_data;
     sess->next_ch = PJ_TURN_CHANNEL_MIN;
+    pj_turn_alloc_param_default(&sess->alloc_param);
 
     /* Copy STUN session */
     pj_memcpy(&sess->stun_cfg, cfg, sizeof(pj_stun_config));
@@ -663,7 +664,9 @@ PJ_DEF(pj_status_t) pj_turn_session_set_server( pj_turn_session *sess,
         unsigned i, cnt;
 
         /* Default port must be specified */
-        PJ_ASSERT_RETURN(default_port>0 && default_port<65536, PJ_EINVAL);
+        PJ_ASSERT_ON_FAIL(default_port>0 && default_port<65536, 
+                            {status=PJ_EINVAL; goto on_return;});
+        
         sess->default_port = (pj_uint16_t)default_port;
 
         cnt = PJ_TURN_MAX_DNS_SRV_CNT;
@@ -738,7 +741,7 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
     PJ_ASSERT_RETURN(sess->state>PJ_TURN_STATE_NULL && 
                      sess->state<=PJ_TURN_STATE_RESOLVED, 
                      PJ_EINVALIDOP);
-    PJ_ASSERT_RETURN(param->peer_conn_type == PJ_TURN_TP_UDP ||
+    PJ_ASSERT_RETURN(!param || param->peer_conn_type == PJ_TURN_TP_UDP ||
                      param->peer_conn_type == PJ_TURN_TP_TCP,
                      PJ_EINVAL);
 
@@ -777,8 +780,8 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 
     /* MUST include REQUESTED-TRANSPORT attribute */
     pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-                              PJ_STUN_ATTR_REQ_TRANSPORT, 
-                              PJ_STUN_SET_RT_PROTO(param->peer_conn_type));
+        PJ_STUN_ATTR_REQ_TRANSPORT,
+        PJ_STUN_SET_RT_PROTO(sess->alloc_param.peer_conn_type));
 
     /* Include BANDWIDTH if requested */
     if (sess->alloc_param.bandwidth > 0) {
@@ -1198,7 +1201,7 @@ PJ_DEF(pj_status_t) pj_turn_session_connection_bind(
                               PJ_STUN_ATTR_CONNECTION_ID,
                               conn_id);
 
-    conn_bind = PJ_POOL_ZALLOC_T(pool, struct conn_bind_t);
+    conn_bind = PJ_POOL_ZALLOC_T(tdata->pool, struct conn_bind_t);
     conn_bind->id = conn_id;
     pj_sockaddr_cp(&conn_bind->peer_addr, peer_addr);
     conn_bind->peer_addr_len = addr_len;

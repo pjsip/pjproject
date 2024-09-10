@@ -123,6 +123,8 @@ void JsonDocument::loadFile(const string &filename) PJSUA2_THROW(Error)
         PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
 
     pj_ssize_t size = (pj_ssize_t)pj_file_size(filename.c_str());
+    if (size <= 0)
+        PJSUA2_RAISE_ERROR(PJ_ETOOSMALL);
     pj_status_t status;
 
     char *buffer = (char*)pj_pool_alloc(pool, size+1);
@@ -156,7 +158,7 @@ void JsonDocument::loadFile(const string &filename) PJSUA2_THROW(Error)
                          "JSON parsing failed: syntax error in file '%s' at "
                          "line %d column %d",
                          filename.c_str(), err_info.line, err_info.col);
-        PJ_LOG(1,(THIS_FILE, err_msg));
+        PJ_LOG(1,(THIS_FILE, "%s", err_msg));
         status = PJLIB_UTIL_EINJSON;
         goto on_error;
     }
@@ -193,7 +195,7 @@ void JsonDocument::loadString(const string &input) PJSUA2_THROW(Error)
         pj_ansi_snprintf(err_msg, sizeof(err_msg),
                          "JSON parsing failed at line %d column %d",
                          err_info.line, err_info.col);
-        PJ_LOG(1,(THIS_FILE, err_msg));
+        PJ_LOG(1,(THIS_FILE, "%s", err_msg));
         PJSUA2_RAISE_ERROR3(PJLIB_UTIL_EINJSON, "loadString()", err_msg);
     }
     initRoot();

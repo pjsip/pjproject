@@ -160,6 +160,7 @@ struct pjsip_dialog
     pj_bool_t           uac_has_2xx;/**< UAC has received 2xx response?     */
     pj_bool_t           secure;     /**< Use secure transport?              */
     pj_bool_t           add_allow;  /**< Add Allow header in requests?      */
+    pj_bool_t           ack_sent;   /**< ACK has been sent?                 */
     pjsip_cid_hdr      *call_id;    /**< Call-ID header.                    */
     pjsip_route_hdr     route_set;  /**< Route set.                         */
     pj_bool_t           route_set_frozen; /**< Route set has been set.      */
@@ -739,7 +740,8 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_response( pjsip_dialog *dlg,
  *
  * @param dlg               The dialog.
  * @param tdata             The transmit data buffer containing response
- *                          message to be modified.
+ *                          message to be modified. Upon successful return,
+ *                          the reference count will be incremented.
  * @param st_code           New status code to be set.
  * @param st_text           Optional string for custom status reason text.
  *

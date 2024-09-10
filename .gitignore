@@ -2,6 +2,7 @@ pjlib/include/pj/config_site.h
 lib/
 bin/
 output/
+tmp/
 
 # VS stuff
 *.ncb
@@ -61,6 +62,7 @@ pjsip-apps/src/swig/python/pjsua2.py
 pjsip-apps/src/swig/python/pjsua2_wrap.*
 
 # unit tests files
+tests/pjsua/**/__pycache__/
 tests/pjsua/*.pyc
 tests/pjsua/scripts-*/*.pyc
 tests/pjsua/*.log
@@ -80,3 +82,8 @@ tests/fuzz/*.o
 */docs/xml/
 */docs/latex/
 */docs/*.tag
+
+# Coverity scan stuff
+cov-int/
+getversion.mak
+configure.out

@@ -92,8 +92,8 @@ static int simple_sleep_test(void)
 
 static int sleep_duration_test(void)
 {
-    const int MAX_SLIP = param_ci_mode? 200 : 20;
-    unsigned duration[] = { 2000, 1000, 500, 200, 100 };
+    const unsigned MAX_SLIP = param_ci_mode? 200 : 20;
+    long duration[] = { 2000, 1000, 500, 200, 100 };
     unsigned i;
     unsigned avg_diff, max_diff;
     pj_status_t rc;
@@ -103,7 +103,7 @@ static int sleep_duration_test(void)
     /* Test pj_thread_sleep() and pj_gettimeofday() */
     for (i=0, avg_diff=0, max_diff=0; i<PJ_ARRAY_SIZE(duration); ++i) {
         pj_time_val start, stop;
-        pj_uint32_t msec;
+        long msec;
         unsigned diff;
 
         /* Mark start of test. */
@@ -122,6 +122,10 @@ static int sleep_duration_test(void)
 
         /* Mark end of test. */
         rc = pj_gettimeofday(&stop);
+        if (rc != PJ_SUCCESS) {
+            app_perror("...error: pj_gettimeofday()", rc);
+            return -22;
+        }
 
         /* Calculate duration (store in stop). */
         PJ_TIME_VAL_SUB(stop, start);
@@ -135,7 +139,7 @@ static int sleep_duration_test(void)
         max_diff = diff>max_diff ? diff : max_diff;
         if (diff > MAX_SLIP) {
             PJ_LOG(3,(THIS_FILE, 
-                      "...error: slept for %d ms instead of %d ms "
+                      "...error: slept for %ld ms instead of %ld ms "
                       "(outside %d msec tolerance)",
                       msec, duration[i], MAX_SLIP));
         }
@@ -149,7 +153,7 @@ static int sleep_duration_test(void)
     for (i=0, avg_diff=0, max_diff=0; i<PJ_ARRAY_SIZE(duration); ++i) {
         pj_time_val t1, t2;
         pj_timestamp start, stop;
-        pj_uint32_t msec;
+        long msec;
         unsigned diff;
 
         pj_thread_sleep(0);
@@ -192,13 +196,13 @@ static int sleep_duration_test(void)
         max_diff = diff>max_diff ? diff : max_diff;
         if (diff > MAX_SLIP) {
             PJ_LOG(3,(THIS_FILE, 
-                      "...error: slept for %d ms instead of %d ms "
+                      "...error: slept for %ld ms instead of %ld ms "
                       "(outside %d msec tolerance)",
                       msec, duration[i], MAX_SLIP));
             PJ_TIME_VAL_SUB(t2, t1);
             PJ_LOG(3,(THIS_FILE, 
                       "...info: gettimeofday() reported duration is "
-                      "%d msec",
+                      "%ld msec",
                       PJ_TIME_VAL_MSEC(t2)));
         }
     }

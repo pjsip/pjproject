@@ -1022,7 +1022,7 @@ static pj_status_t wsola_plc_get_frame(struct pjmedia_port *this_port,
     pj_status_t status;
 
 
-    if ((pj_rand() % 100) > wp->loss_pct) {
+    if ((pj_rand() % 100) >= wp->loss_pct) {
         status = pjmedia_port_get_frame(wp->gen_port, frame);
         pj_assert(status == PJ_SUCCESS);
 
@@ -1725,6 +1725,12 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
     pjmedia_codec_param codec_param;
     pjmedia_stream_info si;
     pj_status_t status;
+
+#if !PJMEDIA_HAS_SRTP
+    PJ_UNUSED_ARG(srtp_enabled);
+    PJ_UNUSED_ARG(srtp_80);
+    PJ_UNUSED_ARG(srtp_auth);
+#endif
 
     PJ_UNUSED_ARG(flags);
 

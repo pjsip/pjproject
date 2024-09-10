@@ -52,7 +52,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
     pj_bzero(fmtp, sizeof(pjmedia_codec_fmtp));
 
     /* Get "fmtp" attribute for the format */
-    pj_ansi_sprintf(fmt_buf, "%d", pt);
+    pj_ansi_snprintf(fmt_buf, sizeof(fmt_buf), "%d", pt);
     fmt = pj_str(fmt_buf);
     attr = pjmedia_sdp_media_find_attr2(m, "fmtp", &fmt);
     if (attr == NULL)
@@ -102,7 +102,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
 
             if (pool) {
                 token = (char*)pj_pool_alloc(pool, end - start);
-                pj_ansi_strncpy(token, start, end - start);
+                pj_memcpy(token, start, end - start);
             } else {
                 token = start;
             }
