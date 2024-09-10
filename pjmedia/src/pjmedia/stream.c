@@ -3076,6 +3076,37 @@ static void stream_on_destroy(void *arg)
 {
     pjmedia_stream* stream = (pjmedia_stream*)arg;
 
+    /* This function may be called when stream is partly initialized. */
+    if (stream->jb_mutex)
+        pj_mutex_lock(stream->jb_mutex);
+
+    /* Free codec. */
+
+    if (stream->codec) {
+        pjmedia_codec_close(stream->codec);
+        pjmedia_codec_mgr_dealloc_codec(stream->codec_mgr, stream->codec);
+        stream->codec = NULL;
+    }
+
+    /* Free mutex */
+
+    if (stream->jb_mutex) {
+        pj_mutex_unlock(stream->jb_mutex);
+        pj_mutex_destroy(stream->jb_mutex);
+        stream->jb_mutex = NULL;
+    }
+
+    /* Destroy jitter buffer */
+    if (stream->jb)
+        pjmedia_jbuf_destroy(stream->jb);
+
+#if TRACE_JB
+    if (TRACE_JB_OPENED(stream)) {
+        pj_file_close(stream->trace_jb_fd);
+        stream->trace_jb_fd = TRACE_JB_INVALID_FD;
+    }
+#endif
+
     PJ_LOG(4,(stream->port.info.name.ptr, "Stream destroyed"));
     pj_pool_safe_release(&stream->own_pool);
 }
@@ -3155,40 +3186,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
      */
     if (stream->transport) {
         pjmedia_transport_detach(stream->transport, stream);
-        stream->transport = NULL;
+        //stream->transport = NULL;
     }
-
-    /* This function may be called when stream is partly initialized. */
-    if (stream->jb_mutex)
-        pj_mutex_lock(stream->jb_mutex);
-
-
-    /* Free codec. */
-
-    if (stream->codec) {
-        pjmedia_codec_close(stream->codec);
-        pjmedia_codec_mgr_dealloc_codec(stream->codec_mgr, stream->codec);
-        stream->codec = NULL;
-    }
-
-    /* Free mutex */
-
-    if (stream->jb_mutex) {
-        pj_mutex_unlock(stream->jb_mutex);
-        pj_mutex_destroy(stream->jb_mutex);
-        stream->jb_mutex = NULL;
-    }
-
-    /* Destroy jitter buffer */
-    if (stream->jb)
-        pjmedia_jbuf_destroy(stream->jb);
-
-#if TRACE_JB
-    if (TRACE_JB_OPENED(stream)) {
-        pj_file_close(stream->trace_jb_fd);
-        stream->trace_jb_fd = TRACE_JB_INVALID_FD;
-    }
-#endif
 
     if (stream->grp_lock) {
         pj_grp_lock_dec_ref(stream->grp_lock);
