@@ -200,8 +200,9 @@ static pj_status_t file_read3(pj_oshandle_t fd, void *data, pj_ssize_t size,
 }
 
 
-static void streams_on_destroy(pjmedia_avi_streams *streams)
+static void streams_on_destroy(void *arg)
 {
+    pjmedia_avi_streams *streams = (pjmedia_avi_streams*)arg;
     pj_pool_safe_release(&streams->pool);
 }
 
