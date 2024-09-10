@@ -2455,7 +2455,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     PJ_ASSERT_RETURN(endpt && info && p_stream, PJ_EINVAL);
 
-    if (1 || pool == NULL) {
+    /* Must create own pool to avoid premature destroy */
+    if (1 /* || pool == NULL */) {
         own_pool = pjmedia_endpt_create_pool( endpt, "strm%p",
                                               PJMEDIA_STREAM_SIZE,
                                               PJMEDIA_STREAM_INC);
@@ -2902,7 +2903,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Attach handler to group lock from transport */
     if (tp->grp_lock) {
-        stream->grp_lock = tp->grp_lock;
+        stream->grp_lock = stream->port.grp_lock = tp->grp_lock;
         pj_grp_lock_add_ref(stream->grp_lock);
         pj_grp_lock_add_handler(stream->grp_lock, pool, stream,
                                 &stream_on_destroy);
