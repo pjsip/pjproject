@@ -209,6 +209,8 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.qos_type         = this->qosType;
     ts.qos_params       = this->qosParams;
     ts.qos_ignore_error = this->qosIgnoreError;
+    ts.sockopt_params   = this->sockOptParams.toPj();
+    ts.sockopt_ignore_error = this->sockOptIgnoreError;
     ts.enable_renegotiation = this->enableRenegotiation;
 
     return ts;
@@ -237,6 +239,8 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->qosType       = prm.qos_type;
     this->qosParams     = prm.qos_params;
     this->qosIgnoreError = PJ2BOOL(prm.qos_ignore_error);
+    this->sockOptParams.fromPj(prm.sockopt_params);
+    this->sockOptIgnoreError = PJ2BOOL(prm.sockopt_ignore_error);
     this->enableRenegotiation = PJ2BOOL(prm.enable_renegotiation);
 }
 
@@ -317,7 +321,7 @@ void SockOptParams::fromPj(const pj_sockopt_params &prm)
 
     this->sockOpts.clear();
     for (i = 0; i < prm.cnt; ++i) {
-        SockOptParams::SockOpt so;
+        SockOpt so;
         so.level = prm.options[i].level;
         so.optName = prm.options[i].optname;
         if (prm.options[i].optlen > 0) {
@@ -339,7 +343,7 @@ void SockOptParams::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     sockOpts.resize(0);
     while (array_node.hasUnread()) {
         ContainerNode so_node = array_node.readContainer("sockOpt");
-        SockOptParams::SockOpt so;
+        SockOpt so;
         so.level = so_node.readInt("level");
         so.optName = so_node.readInt("optName");
         so.optValBuf_ = so_node.readString("optVal");

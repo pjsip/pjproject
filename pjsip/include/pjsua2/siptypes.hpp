@@ -127,6 +127,75 @@ public:
 //////////////////////////////////////////////////////////////////////////////
 
 /**
+ * Socket option type.
+ */
+struct SockOpt {
+    /**
+     * The level at which the option is defined.
+     */
+    int                 level;
+
+    /**
+     * Option name.
+     */
+    int                 optName;
+
+    /**
+     * Pointer to the buffer in which the option is specified.
+     */
+    void               *optVal;
+
+    /**
+     * Buffer size of the buffer pointed by optVal.
+     */
+    int                 optLen;
+
+    /**
+     * Internal buffer for optval.
+     */
+    string optValBuf_;
+};
+
+/** Array of socket options */
+typedef std::vector<SockOpt> SockOptVector;
+
+/**
+ * Socket option parameters, to be specified in TransportConfig.
+ */
+struct SockOptParams : public PersistentObject
+{
+    /**
+     * Array of socket options.
+     */
+    SockOptVector    sockOpts;
+
+public:
+    /** Default constructor initialises with default values */
+    SockOptParams();
+
+    /** Convert to pjsip */
+    pj_sockopt_params toPj() const;
+
+    /** Convert from pjsip */
+    void fromPj(const pj_sockopt_params &prm);
+
+    /**
+     * Read this object from a container node.
+     *
+     * @param node              Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node              Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
+};
+
+
+/**
  * TLS transport settings, to be specified in TransportConfig.
  */
 struct TlsConfig : public PersistentObject
@@ -301,6 +370,22 @@ struct TlsConfig : public PersistentObject
     bool                qosIgnoreError;
 
     /**
+     * Specify options to be set on the transport.
+     *
+     * By default, this is unset, which means that the underlying sockopt
+     * params as returned by #pj_ssl_sock_param_default() will be used.
+     */
+    SockOptParams       sockOptParams;
+
+    /**
+     * Specify if the transport should ignore any errors when setting the
+     * sockopt parameters.
+     *
+     * Default: true
+     */
+    bool                sockOptIgnoreError;
+
+    /**
      * Specify if renegotiation is enabled for TLSv1.2 or earlier.
      *
      * Default: PJ_TRUE
@@ -316,72 +401,6 @@ public:
 
     /** Convert from pjsip */
     void fromPj(const pjsip_tls_setting &prm);
-
-    /**
-     * Read this object from a container node.
-     *
-     * @param node              Container to read values from.
-     */
-    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
-
-    /**
-     * Write this object to a container node.
-     *
-     * @param node              Container to write values to.
-     */
-    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
-};
-
-
-/**
- * Socket option parameters, to be specified in TransportConfig.
- */
-struct SockOptParams : public PersistentObject
-{
-    /**
-     * Socket option type.
-     */
-    struct SockOpt {
-        /**
-         * The level at which the option is defined.
-         */
-        int                 level;
-
-        /**
-         * Option name.
-         */
-        int                 optName;
-
-        /**
-         * Pointer to the buffer in which the option is specified.
-         */
-        void               *optVal;
-
-        /**
-         * Buffer size of the buffer pointed by optVal.
-         */
-        int                 optLen;
-
-        /**
-         * Internal buffer for optval.
-         */
-        string optValBuf_;
-    };
-
-    /**
-     * Array of socket options.
-     */
-    std::vector<SockOpt>    sockOpts;
-
-public:
-    /** Default constructor initialises with default values */
-    SockOptParams();
-
-    /** Convert to pjsip */
-    pj_sockopt_params toPj() const;
-
-    /** Convert from pjsip */
-    void fromPj(const pj_sockopt_params &prm);
 
     /**
      * Read this object from a container node.
