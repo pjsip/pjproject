@@ -105,7 +105,8 @@ public class sample {
         private static MyApp app = new MyApp();
         private static MyObserver observer = new MyObserver();
         private static MyAccount account = null;
-        private static AccountConfig accCfg = null;             
+        private static AccountConfig accCfg = null;
+        private static MyCall call = null;
 
         // Snippet code to set native window to output video 
         /*
@@ -156,6 +157,15 @@ public class sample {
 
                 try {
                         account.modify(accCfg);
+
+                        /* Make call to self */
+                        /*
+                        call = new MyCall(app.accList.get(0), -1);
+                        CallOpParam prm = new CallOpParam(true);
+                        prm.getOpt().setAudioCount(1);
+                        prm.getOpt().setVideoCount(0);
+                        call.makeCall("sip:localhost:6000", prm);
+                        */
                 } catch (Exception e) {}                                
 
                 while (!Thread.currentThread().isInterrupted()) {
