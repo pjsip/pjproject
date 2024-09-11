@@ -990,7 +990,7 @@ static void create_dtmf_payload(pjmedia_stream *stream,
     event = (pjmedia_rtp_dtmf_event*) frame_out->buf;
 
     if (digit->duration == 0) {
-        PJ_LOG(5,(stream->port.info.name.ptr, "Sending DTMF digit id %c",
+        PJ_LOG(4,(stream->port.info.name.ptr, "Sending DTMF digit id %c",
                   digitmap[digit->event]));
         *first = 1;
     }

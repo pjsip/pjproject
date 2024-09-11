@@ -338,8 +338,6 @@ static void handle_op_queue(pjmedia_conf *conf)
 {
     op_entry *op, *next_op;
 
-    pj_log_push_indent();
-
     op = conf->op_queue->next;
     while (op != conf->op_queue) {
         next_op = op->next;
@@ -366,8 +364,6 @@ static void handle_op_queue(pjmedia_conf *conf)
         pj_list_push_back(conf->op_queue_free, op);
         op = next_op;
     }
-
-    pj_log_pop_indent();
 }
 
 
@@ -837,6 +833,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 
     PJ_ASSERT_RETURN(conf != NULL, PJ_EINVAL);
 
+    pj_log_push_indent();
+
     /* Destroy sound device port. */
     if (conf->snd_dev_port) {
         pjmedia_snd_port_destroy(conf->snd_dev_port);
@@ -862,6 +860,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
     /* Destroy pool */
     if (conf->pool)
         pj_pool_safe_release(&conf->pool);
+
+    pj_log_pop_indent();
 
     return PJ_SUCCESS;
 }
@@ -1000,6 +1000,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     if (p_port) {
         *p_port = index;
     }
+
+    PJ_LOG(5,(THIS_FILE, "Adding new port %d (%.*s)",
+                         index, (int)port_name->slen, port_name->ptr));
 
 on_return:
     pj_mutex_unlock(conf->mutex);
@@ -2349,8 +2352,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
      * the clock such as connect, disonnect, remove.
      */
     if (!pj_list_empty(conf->op_queue)) {
+        pj_log_push_indent();
         pj_mutex_lock(conf->mutex);
-        handle_op_queue(conf);
 
         /* Activate any newly added port */
         for (i=0; i<conf->max_ports; ++i) {
@@ -2360,9 +2363,15 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
             port->is_new = PJ_FALSE;
             ++conf->port_cnt;
+
+            PJ_LOG(5,(THIS_FILE, "New port %d (%.*s) is added",
+                      i, (int)port->name.slen, port->name.ptr));
         }
 
+        handle_op_queue(conf);
+
         pj_mutex_unlock(conf->mutex);
+        pj_log_pop_indent();
     }
 
     /* No mutex from this point! Otherwise it may cause deadlock as
