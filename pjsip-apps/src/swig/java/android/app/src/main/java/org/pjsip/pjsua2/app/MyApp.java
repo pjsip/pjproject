@@ -416,6 +416,15 @@ class MyApp extends pjsua2 {
         }
 
         try {
+            /* Setting socket option parameters (uncomment this if needed).
+             * Important: Make sure that the SockOptParams is available
+             * throughout the lifetime of the transport.
+             *
+             * One way to do this is by holding a reference to the
+             * TransportConfig object to prevent it from being garbage
+             * collected.
+             */
+            /*
             final int SOL_SOCKET = 1;
             final int SOL_TCP = 6;
 
@@ -431,6 +440,7 @@ class MyApp extends pjsua2 {
             soVector.add(new SockOpt(SOL_TCP, TCP_KEEPCNT, 1));
 
             sipTpConfig.getTlsConfig().getSockOptParams().setSockOpts(soVector);
+             */
 
             sipTpConfig.setPort(SIP_PORT+1);
             ep.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TLS,

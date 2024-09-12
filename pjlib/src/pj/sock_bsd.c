@@ -25,7 +25,7 @@
 #include <pj/errno.h>
 #include <pj/unicode.h>
 
-#if 1
+#if 0
     /* Enable some tracing */
     #include <pj/log.h>
     #define TRACE_(arg) PJ_LOG(4,arg)

@@ -385,6 +385,9 @@ struct TlsConfig : public PersistentObject
      *
      * By default, this is unset, which means that the underlying sockopt
      * params as returned by #pj_ssl_sock_param_default() will be used.
+     *
+     * Important: Application must make sure that these sockopt params
+     * are available throughout the lifetime of the transport.
      */
     SockOptParams       sockOptParams;
 
@@ -524,6 +527,9 @@ struct TransportConfig : public PersistentObject
      * Set the low level socket options to the transport.
      *
      * Default is no socket option set.
+     *
+     * Important: Application must make sure that these sockopt params
+     * are available throughout the lifetime of the transport.
      */
     SockOptParams       sockOptParams;
 
