@@ -1244,8 +1244,11 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
 }
 
 #if defined(_MSC_VER)
-#   pragma comment(lib, "libopus.a")
+#  if 1 /* Change to 0 if Opus lib name is "opus.lib" */
+#    pragma comment(lib, "libopus.a")
+#  else
+#    pragma comment(lib, "opus.lib")
+#  endif
 #endif
-
 
 #endif /* PJMEDIA_HAS_OPUS_CODEC */
