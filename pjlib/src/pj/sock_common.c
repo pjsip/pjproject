@@ -1221,6 +1221,8 @@ PJ_DEF(pj_status_t) pj_sockopt_params_clone(pj_sockopt_params *dst,
             pj_memcpy(dst->options[i].buf_, src->options[i].optval,
                       dst->options[i].optlen);
         } else {
+            TRACE_((THIS_FILE, "Warning: failed cloning socket options %d "
+                               "of size %d", i, dst->options[i].optlen));
             status = PJ_ETOOBIG;
         }
     }
