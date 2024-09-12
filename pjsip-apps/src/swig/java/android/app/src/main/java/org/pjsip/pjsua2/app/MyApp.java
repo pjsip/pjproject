@@ -416,14 +416,7 @@ class MyApp extends pjsua2 {
         }
 
         try {
-            /* Setting socket option parameters (uncomment this if needed).
-             * Important: Make sure that the SockOptParams is available
-             * throughout the lifetime of the transport.
-             *
-             * One way to do this is by holding a reference to the
-             * TransportConfig object to prevent it from being garbage
-             * collected.
-             */
+            /* Setting socket option parameters (uncomment this if needed). */
             /*
             final int SOL_SOCKET = 1;
             final int SOL_TCP = 6;

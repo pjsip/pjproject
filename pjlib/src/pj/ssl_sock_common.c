@@ -107,6 +107,8 @@ PJ_DEF(void) pj_ssl_sock_param_copy( pj_pool_t *pool,
         /* Path name must be null-terminated */
         pj_strdup_with_null(pool, &dst->entropy_path, &src->entropy_path);
     }
+
+    pj_sockopt_params_clone(&dst->sockopt_params, &src->sockopt_params);
 }
 
 

@@ -2660,8 +2660,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
                   sizeof(cfg->qos_params));
 
         /* Copy the sockopt */
-        pj_memcpy(&tcp_cfg.sockopt_params, &cfg->sockopt_params,
-                  sizeof(tcp_cfg.sockopt_params));
+        pj_sockopt_params_clone(&tcp_cfg.sockopt_params, &cfg->sockopt_params);
 
         /* Create the TCP transport */
         status = pjsip_tcp_transport_start3(pjsua_var.endpt, &tcp_cfg, &tcp);

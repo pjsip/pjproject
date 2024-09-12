@@ -1205,6 +1205,30 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_sobuf( pj_sock_t sockfd,
 }
 
 
+PJ_DEF(pj_status_t) pj_sockopt_params_clone(pj_sockopt_params *dst,
+                                            const pj_sockopt_params *src)
+{
+    unsigned int i;
+    pj_status_t status = PJ_SUCCESS;
+
+    PJ_ASSERT_RETURN(src && dst, PJ_EINVAL);
+
+    pj_memcpy(dst, src, sizeof(pj_sockopt_params));
+    for (i = 0; i < dst->cnt && i < PJ_MAX_SOCKOPT_PARAMS; ++i) {
+        if (dst->options[i].optlen == 0) continue;
+        if (dst->options[i].optlen <= sizeof(dst->options[i].buf_)) {
+            dst->options[i].optval = dst->options[i].buf_;
+            pj_memcpy(dst->options[i].buf_, src->options[i].optval,
+                      dst->options[i].optlen);
+        } else {
+            status = PJ_ETOOBIG;
+        }
+    }
+
+    return status;
+}
+
+
 PJ_DEF(char *) pj_addr_str_print( const pj_str_t *host_str, int port, 
                                   char *buf, int size, unsigned flag)
 {

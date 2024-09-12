@@ -401,8 +401,7 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
     listener->initial_timeout = cfg->initial_timeout;
     pj_memcpy(&listener->qos_params, &cfg->qos_params,
               sizeof(cfg->qos_params));
-    pj_memcpy(&listener->sockopt_params, &cfg->sockopt_params,
-              sizeof(cfg->sockopt_params));
+    pj_sockopt_params_clone(&listener->sockopt_params, &cfg->sockopt_params);
 
     pj_ansi_strxcpy(listener->factory.obj_name, "tcptp", 
                     sizeof(listener->factory.obj_name));
