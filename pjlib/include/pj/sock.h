@@ -674,10 +674,6 @@ typedef struct pj_sockopt_params
 
         /** Buffer size of the buffer pointed by optval. */
         int optlen;
-
-        /** Internal. */
-        char buf_[16]; /* 2 * sizeof(long) */
-
     } options[PJ_MAX_SOCKOPT_PARAMS];
 } pj_sockopt_params;
 
@@ -1524,13 +1520,14 @@ PJ_DECL(pj_status_t) pj_sock_shutdown( pj_sock_t sockfd,
 /**
  * Deep clone the socket options.
  *
+ * @param pool      The pool.
  * @param dst       Destination socket options.
  * @param src       Source socket options.
  *
- * @return          PJ_SUCCESS on success, or PJ_ETOOBIG if
- *                  the source's option length is too large.
+ * @return          PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pj_sockopt_params_clone(pj_sockopt_params *dst,
+PJ_DECL(pj_status_t) pj_sockopt_params_clone(pj_pool_t *pool,
+                                             pj_sockopt_params *dst,
                                              const pj_sockopt_params *src);
 
 /**

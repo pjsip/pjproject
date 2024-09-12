@@ -501,7 +501,7 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
             dst->curves[i] = src->curves[i];
     }
 
-    pj_sockopt_params_clone(&dst->sockopt_params, &src->sockopt_params);
+    pj_sockopt_params_clone(pool, &dst->sockopt_params, &src->sockopt_params);
 }
 
 

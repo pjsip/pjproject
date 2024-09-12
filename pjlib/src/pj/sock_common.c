@@ -22,6 +22,7 @@
 #include <pj/errno.h>
 #include <pj/ip_helper.h>
 #include <pj/os.h>
+#include <pj/pool.h>
 #include <pj/addr_resolv.h>
 #include <pj/rand.h>
 #include <pj/string.h>
@@ -1205,29 +1206,26 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_sobuf( pj_sock_t sockfd,
 }
 
 
-PJ_DEF(pj_status_t) pj_sockopt_params_clone(pj_sockopt_params *dst,
+PJ_DEF(pj_status_t) pj_sockopt_params_clone(pj_pool_t *pool,
+                                            pj_sockopt_params *dst,
                                             const pj_sockopt_params *src)
 {
     unsigned int i;
-    pj_status_t status = PJ_SUCCESS;
 
-    PJ_ASSERT_RETURN(src && dst, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool && src && dst, PJ_EINVAL);
 
     pj_memcpy(dst, src, sizeof(pj_sockopt_params));
     for (i = 0; i < dst->cnt && i < PJ_MAX_SOCKOPT_PARAMS; ++i) {
-        if (dst->options[i].optlen == 0) continue;
-        if (dst->options[i].optlen <= sizeof(dst->options[i].buf_)) {
-            dst->options[i].optval = dst->options[i].buf_;
-            pj_memcpy(dst->options[i].buf_, src->options[i].optval,
-                      dst->options[i].optlen);
-        } else {
-            TRACE_((THIS_FILE, "Warning: failed cloning socket options %d "
-                               "of size %d", i, dst->options[i].optlen));
-            status = PJ_ETOOBIG;
+        if (dst->options[i].optlen == 0) {
+            dst->options[i].optval = NULL;
+            continue;
         }
+        dst->options[i].optval = pj_pool_alloc(pool, dst->options[i].optlen);
+        pj_memcpy(dst->options[i].optval, src->options[i].optval,
+                  dst->options[i].optlen);
     }
 
-    return status;
+    return PJ_SUCCESS;
 }
 
 
