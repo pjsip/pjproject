@@ -140,20 +140,31 @@ struct SockOpt {
      */
     int                 optName;
 
+public:
+    /** Default constructor. */
+    SockOpt();
+
+    /** Construct a socket option with the specified parameters. */
+    SockOpt(int level, int optName, int optVal);
+
     /**
-     * Pointer to the buffer in which the option is specified.
+     * Set option value of type integer.
+     *
+     * @param opt_val           Option value.
      */
+    void setOptValInt(int opt_val);
+
+private:
+    friend struct SockOptParams;
+
+    /** Pointer to the buffer in which the option is specified. */
     void               *optVal;
 
-    /**
-     * Buffer size of the buffer pointed by optVal.
-     */
+    /** Buffer size of the buffer pointed by optVal. */
     int                 optLen;
 
-    /**
-     * Internal buffer for optval.
-     */
-    string optValBuf_;
+    /** Option value if the type is integer. */
+    int                 optValInt;
 };
 
 /** Array of socket options */

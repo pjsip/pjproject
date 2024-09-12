@@ -25,6 +25,14 @@
 #include <pj/errno.h>
 #include <pj/unicode.h>
 
+#if 1
+    /* Enable some tracing */
+    #include <pj/log.h>
+    #define TRACE_(arg) PJ_LOG(4,arg)
+#else
+    #define TRACE_(arg)
+#endif
+
 #define THIS_FILE       "sock_bsd.c"
 
 /*
@@ -569,6 +577,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 #endif
 
     *sock = socket(af, type, proto);
+    TRACE_((THIS_FILE, "Created new socket of type %d: %ld", type, *sock));
     if (*sock == PJ_INVALID_SOCKET)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
@@ -832,6 +841,8 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt( pj_sock_t sock,
                      (const char*)optval, optlen);
 #else
     status = setsockopt(sock, level, optname, (const char*)optval, optlen);
+    TRACE_((THIS_FILE, "setsockopt %ld level:%d name:%d val:%d(%d)->%d", sock,
+            level, optname, *((const char *)optval), optlen, status));
 #endif
 
     if (status != 0)

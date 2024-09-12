@@ -264,6 +264,8 @@ void TlsConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_NUM_T   ( this_node, pj_qos_type, qosType);
     readQosParams     ( this_node, qosParams);
     NODE_READ_BOOL    ( this_node, qosIgnoreError);
+    NODE_READ_OBJ     ( this_node, sockOptParams);
+    NODE_READ_BOOL    ( this_node, sockOptIgnoreError);
     NODE_READ_NUM_T   ( this_node, pj_ssl_cert_lookup_type, certLookupType);
     NODE_READ_STRING  ( this_node, certLookupKeyword);
 }
@@ -288,11 +290,33 @@ void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_NUM_T   ( this_node, pj_qos_type, qosType);
     writeQosParams     ( this_node, qosParams);
     NODE_WRITE_BOOL    ( this_node, qosIgnoreError);
+    NODE_WRITE_OBJ     ( this_node, sockOptParams);
+    NODE_WRITE_BOOL    ( this_node, sockOptIgnoreError);
     NODE_WRITE_NUM_T   ( this_node, pj_ssl_cert_lookup_type, certLookupType);
     NODE_WRITE_STRING  ( this_node, certLookupKeyword);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+SockOpt::SockOpt()
+{
+    pj_bzero(this, sizeof(*this));
+}
+
+SockOpt::SockOpt(int level, int optName, int optVal)
+{
+    pj_bzero(this, sizeof(*this));
+    this->level = level;
+    this->optName = optName;
+    setOptValInt(optVal);
+}
+
+void SockOpt::setOptValInt(int opt_val)
+{
+    optVal = &optValInt;
+    optLen = sizeof(int);
+    optValInt = opt_val;
+}
 
 SockOptParams::SockOptParams()
 {
@@ -305,6 +329,8 @@ pj_sockopt_params SockOptParams::toPj() const
 
     pj_bzero(&sop, sizeof(sop));
     sop.cnt = this->sockOpts.size();
+    if (sop.cnt > PJ_MAX_SOCKOPT_PARAMS)
+        sop.cnt = PJ_MAX_SOCKOPT_PARAMS;
     for (i = 0; i < sop.cnt; ++i) {
         sop.options[i].level = this->sockOpts[i].level;
         sop.options[i].optname = this->sockOpts[i].optName;
@@ -324,14 +350,8 @@ void SockOptParams::fromPj(const pj_sockopt_params &prm)
         SockOpt so;
         so.level = prm.options[i].level;
         so.optName = prm.options[i].optname;
-        if (prm.options[i].optlen > 0) {
-            string so_val((char*)prm.options[i].optval, prm.options[i].optlen);
-            so.optValBuf_ = so_val;
-            so.optVal = (void*)so.optValBuf_.data();
-            so.optLen = so.optValBuf_.size();
-        } else {
-            so.optVal = NULL;
-            so.optLen = 0;
+        if (prm.options[i].optlen == sizeof(int)) {
+            so.setOptValInt(*((int *)prm.options[i].optval));
         }
         this->sockOpts.push_back(so);
     }
@@ -346,9 +366,11 @@ void SockOptParams::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
         SockOpt so;
         so.level = so_node.readInt("level");
         so.optName = so_node.readInt("optName");
-        so.optValBuf_ = so_node.readString("optVal");
-        so.optLen = so.optValBuf_.size();
-        so.optVal = so.optLen > 0? (void*)so.optValBuf_.data() : NULL;
+        so.optLen = so_node.readInt("optLen");
+        if (so.optLen == sizeof(int)) {
+            int optVal = so_node.readInt("optVal");
+            so.setOptValInt(optVal);
+        }
         sockOpts.push_back(so);
     }
 }
@@ -362,7 +384,10 @@ void SockOptParams::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
                       sockOpts[i].optLen > 0? sockOpts[i].optLen : 0);
         so_node.writeInt("level", sockOpts[i].level);
         so_node.writeInt("optName", sockOpts[i].optName);
-        so_node.writeString("optVal", so_val);
+        so_node.writeInt("optLen", sockOpts[i].optLen);
+        if (sockOpts[i].optLen == sizeof(int)) {
+            so_node.writeInt("optVal", sockOpts[i].optValInt);
+        }
     }
 }
 
