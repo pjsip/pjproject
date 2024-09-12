@@ -282,8 +282,6 @@ PJ_DECL(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
 					    pj_pool_t *pool,
 					    pjmedia_port *strm_port,
 					    unsigned slot );
-
-PJ_DECL(pj_status_t) pjmedia_conf_distroy_port( pjmedia_port* port);
 #if !DEPRECATED_FOR_TICKET_2234
 /**
  * <i><b>Warning:</b> This API has been deprecated since 1.3 and will be

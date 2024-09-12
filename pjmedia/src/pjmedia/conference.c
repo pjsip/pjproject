@@ -1028,20 +1028,6 @@ on_return:
     }
 	return status;
 }
-PJ_DEF(pj_status_t) pjmedia_conf_distroy_port( pjmedia_port* port)
-{
-
-    PJ_ASSERT_RETURN(port, PJ_EINVAL);
-    pj_status_t status = pjmedia_port_destroy(port);
-    if(status!=PJ_SUCCESS)
-    {
-        pj_perror_2( THIS_FILE,status, "pjmedia_conf_distroy_port::distroy port failed ");
-        return status;
-    }
-    PJ_LOG(4, (THIS_FILE, "pjmedia_conf_distroy_port::distroy port "));
-    return PJ_SUCCESS;
-
-}
 
 #if !DEPRECATED_FOR_TICKET_2234
 /*

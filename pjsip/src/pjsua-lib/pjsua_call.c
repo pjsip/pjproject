@@ -200,7 +200,7 @@ static pj_status_t deallocate_conference_slot(pjsua_call* call)
         }     
     }
     call->conf_slot = PJSUA_INVALID_ID;
-    return pjsua_conf_distroy_port(call->null_port);
+    return pjmedia_port_destroy(call->null_port);
 }
 /*
  * Reset call descriptor.

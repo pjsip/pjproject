@@ -474,7 +474,7 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
 
     PJ_ASSERT_RETURN(mgr && p_tdata, PJ_EINVAL);
 
-    pool = pjsip_endpt_create_pool( mgr->endpt, "tdta%Ix",
+    pool = pjsip_endpt_create_pool( mgr->endpt, "tdta%p",
                                     PJSIP_POOL_LEN_TDATA,
                                     PJSIP_POOL_INC_TDATA );
     if (!pool)
@@ -492,8 +492,8 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
         return status;
     }
     
-    //status = pj_lock_create_simple_mutex(pool, "tdta%Ix", &tdata->lock);
-    status = pj_lock_create_null_mutex(pool, "tdta%Ix", &tdata->lock);
+    //status = pj_lock_create_simple_mutex(pool, "tdta%p", &tdata->lock);
+    status = pj_lock_create_null_mutex(pool, "tdta%p", &tdata->lock);
     if (status != PJ_SUCCESS) {
         pjsip_endpt_release_pool( mgr->endpt, tdata->pool );
         return status;
@@ -767,7 +767,7 @@ PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
         return rdata->msg_info.info;
 
     pj_ansi_strcpy(obj_name, "rdata");
-    pj_ansi_snprintf(obj_name+5, sizeof(obj_name)-5, "%Ix", rdata);
+    pj_ansi_snprintf(obj_name+5, sizeof(obj_name)-5, "%p", rdata);
 
     rdata->msg_info.info = get_msg_info(rdata->tp_info.pool, obj_name,
                                         rdata->msg_info.msg);
@@ -786,7 +786,7 @@ PJ_DEF(pj_status_t) pjsip_rx_data_clone( const pjsip_rx_data *src,
     PJ_ASSERT_RETURN(src && flags==0 && p_rdata, PJ_EINVAL);
 
     pool = pj_pool_create(src->tp_info.pool->factory,
-                          "rtd%Ix",
+                          "rtd%p",
                           PJSIP_POOL_RDATA_LEN,
                           PJSIP_POOL_RDATA_INC,
                           NULL);
@@ -1605,7 +1605,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
     if (!mgr->table)
         return PJ_ENOMEM;
 
-    status = pj_lock_create_recursive_mutex(pool, "tmgr%Ix", &mgr->lock);
+    status = pj_lock_create_recursive_mutex(pool, "tmgr%p", &mgr->lock);
     if (status != PJ_SUCCESS)
         return status;
 

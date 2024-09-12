@@ -48,7 +48,11 @@
 #ifndef pj_assert
 #include "pj/log.h"
 #include <string.h>
+#ifdef _WIN32
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
+#else
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#endif
 #define pj_assert(expr) \
         do { \
                 if (!(expr)) { PJ_LOG(1,(__FILENAME__, "Assert failed: " #expr)); } \
@@ -60,17 +64,18 @@
 #endif
 #endif
 
-  /**
-   * @hideinitializer
-   * for all buils log the message
-   * Check during debug build that an expression is true. If the expression
-   * computes to false during run-time, then the program will stop at the
-   * offending statements.
-   * For release build, this macro only print message on the log.
-   * @param expr	    The expression to be evaluated.
-   * @param ...	    file name,The format string for the log message ("config.c", " PJ_VERSION: %s", PJ_VERSION)
-   */
+/**
+ * @hideinitializer
+ * for all buils log the message
+ * Check during debug build that an expression is true. If the expression
+ * computes to false during run-time, then the program will stop at the
+ * offending statements.
+ * For release build, this macro only print message on the log.
+ * @param expr	    The expression to be evaluated.
+ * @param ...	    file name,The format string for the log message ("config.c", " PJ_VERSION: %s", PJ_VERSION)
+ */
 #ifndef PJ_ASSERT_LOG
+#include "pj/log.h"
 #define PJ_ASSERT_LOG(expr,...)    \
             do { \
                 if (!(expr)) { PJ_LOG(1,(__VA_ARGS__)); assert(expr); } \

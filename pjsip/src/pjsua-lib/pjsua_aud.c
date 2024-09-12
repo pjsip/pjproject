@@ -1499,11 +1499,6 @@ PJ_DEF(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id id,
 
     return PJ_SUCCESS;
 }
-PJ_DEF(pj_status_t) pjsua_conf_distroy_port( pjmedia_port* port)
-{
-    return pjmedia_conf_distroy_port( port);
-}
-
 /*
  * Add arbitrary media port to PJSUA's conference bridge.
  */
