@@ -22,6 +22,7 @@
 #include <pj/errno.h>
 #include <pj/ip_helper.h>
 #include <pj/os.h>
+#include <pj/pool.h>
 #include <pj/addr_resolv.h>
 #include <pj/rand.h>
 #include <pj/string.h>
@@ -1202,6 +1203,29 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_sobuf( pj_sock_t sockfd,
     }
 
     return status;
+}
+
+
+PJ_DEF(pj_status_t) pj_sockopt_params_clone(pj_pool_t *pool,
+                                            pj_sockopt_params *dst,
+                                            const pj_sockopt_params *src)
+{
+    unsigned int i;
+
+    PJ_ASSERT_RETURN(pool && src && dst, PJ_EINVAL);
+
+    pj_memcpy(dst, src, sizeof(pj_sockopt_params));
+    for (i = 0; i < dst->cnt && i < PJ_MAX_SOCKOPT_PARAMS; ++i) {
+        if (dst->options[i].optlen == 0) {
+            dst->options[i].optval = NULL;
+            continue;
+        }
+        dst->options[i].optval = pj_pool_alloc(pool, dst->options[i].optlen);
+        pj_memcpy(dst->options[i].optval, src->options[i].optval,
+                  dst->options[i].optlen);
+    }
+
+    return PJ_SUCCESS;
 }
 
 

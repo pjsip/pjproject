@@ -1518,6 +1518,19 @@ PJ_DECL(pj_status_t) pj_sock_shutdown( pj_sock_t sockfd,
  */
 
 /**
+ * Deep clone the socket options.
+ *
+ * @param pool      The pool.
+ * @param dst       Destination socket options.
+ * @param src       Source socket options.
+ *
+ * @return          PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pj_sockopt_params_clone(pj_pool_t *pool,
+                                             pj_sockopt_params *dst,
+                                             const pj_sockopt_params *src);
+
+/**
  * Print socket address string. This method will enclose the address string 
  * with square bracket if it's IPv6 address.
  *

@@ -473,7 +473,9 @@ static void jsonNode_writeString(ContainerNode *node,
     pj_json_elem *el = jdat->doc->allocElement();
     pj_str_t nm = alloc_name(jdat->doc, name);
     pj_str_t new_val;
-    pj_strdup2(jdat->doc->getPool(), &new_val, value.c_str());
+    pj_str_t str_val;
+    pj_strset(&str_val, (char*)value.data(), value.size());
+    pj_strdup(jdat->doc->getPool(), &new_val, &str_val);
     pj_json_elem_string(el, &nm, &new_val);
 
     pj_json_elem_add(jdat->jnode, el);
@@ -491,8 +493,10 @@ static void jsonNode_writeStringVector(ContainerNode *node,
     pj_json_elem_array(el, &nm);
     for (unsigned i=0; i<value.size(); ++i) {
         pj_str_t new_val;
+        pj_str_t str_val;
 
-        pj_strdup2(jdat->doc->getPool(), &new_val, value[i].c_str());
+        pj_strset(&str_val, (char*)value[i].data(), value[i].size());
+        pj_strdup(jdat->doc->getPool(), &new_val, &str_val);
         pj_json_elem *child = jdat->doc->allocElement();
         pj_json_elem_string(child, NULL, &new_val);
         pj_json_elem_add(el, child);
