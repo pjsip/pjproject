@@ -959,7 +959,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
      * to using a randomly generated Call-ID
      */
 
-    if( opt->custom_call_id.slen > 0 ){
+    if (opt && opt->custom_call_id.slen > 0) {
         pj_strdup(dlg->pool, &dlg->call_id->id, &opt->custom_call_id);
         PJ_LOG(4,(THIS_FILE, "Set user defined "
                              "Call-ID (%.*s)",
