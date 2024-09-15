@@ -131,9 +131,8 @@ public class CallPageRenderer : VisualElementRenderer<CallView>
                     System.Diagnostics.Debug.WriteLine(@"ERROR: ",
                                                        ex.Message);
                 }
-                Device.BeginInvokeOnMainThread(() => {
-                    updateCallState(lastCallInfo);
-                });
+                
+                Application.Current.Dispatcher.Dispatch(() => updateCallState(lastCallInfo));
             }
             else
             {

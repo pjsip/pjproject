@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:id="@+id/activity_call"
+   
+    android:layout_weight="1">
+
+    <SurfaceView
+        android:id="@+id/incomingVideoView"
+        android:layout_marginTop="-95dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    <TextView
+        android:id="@+id/peerTxt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center"
+        android:layout_marginTop="25dp"
+        android:text="Peer"
+        android:textColor="@android:color/holo_red_dark"
+        android:textAlignment="center"/>
+    <TextView
+        android:id="@+id/statusTxt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center"
+        android:layout_marginTop="50dp"
+        android:text="Status"
+        android:textColor="@android:color/holo_red_dark"
+        android:textAlignment="center"/>
+    <Button
+        android:id="@+id/acceptCallButton"
+        android:layout_width="150dp"
+        android:layout_height="50dp"
+        android:layout_marginBottom="15dp"
+        android:layout_marginLeft="25dp"
+        android:layout_gravity="left|bottom"
+        android:text="Accept"/>
+    <Button
+        android:id="@+id/hangupCallButton"
+        android:layout_width="150dp"
+        android:layout_height="50dp"
+        android:layout_marginBottom="15dp"
+        android:layout_marginRight="25dp"
+        android:layout_gravity="right|bottom"
+        android:text="Hangup"/>
+</FrameLayout>

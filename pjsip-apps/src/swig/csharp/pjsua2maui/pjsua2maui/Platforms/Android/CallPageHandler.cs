@@ -1,9 +1,23 @@
 ﻿#if __ANDROID__
 
+using Android.App;
+using Android.Content;
+using Android.Graphics;
+using Android.Runtime;
+using Android.Views;
+using Android.Widget;
+using CommunityToolkit.Mvvm.Messaging;
 using libpjsua2.maui;
+using Microsoft.Maui.Controls.Handlers.Compatibility;
+using Microsoft.Maui.Controls.Platform;
+using pjsua2maui.Controls;
+using pjsua2maui.Messages;
+using pjsua2maui.Models;
+using pjsua2maui.Views;
+using System.Runtime.InteropServices;
 namespace pjsua2maui.Platforms.Android;
 
-public class CallPageRenderer : VisualElementRenderer<CallView> , ISurfaceHolderCallback
+public class CallPageRenderer : VisualElementRenderer<CallView>, ISurfaceHolderCallback
 {
     global::Android.Widget.Button acceptCallButton;
     global::Android.Widget.Button hangupCallButton;
@@ -98,7 +112,7 @@ public class CallPageRenderer : VisualElementRenderer<CallView> , ISurfaceHolder
     void SetupUserInterface()
     {
         var activity = this.Context as Activity;
-        view = activity.LayoutInflater.Inflate(Resource.Layout.activity_call, this, false);
+        view = activity.LayoutInflater.Inflate(Resources.GetLayout(Resource.Layout.activity_call), this, false);
 
         incomingView = view.FindViewById<SurfaceView>(Resource.Id.incomingVideoView);
         incomingView.Holder.AddCallback(this);
@@ -236,18 +250,19 @@ public class CallPageRenderer : VisualElementRenderer<CallView> , ISurfaceHolder
         statusTxt.Text = call_state;
     }
 
-    void ISurfaceHolderCallback.SurfaceChanged(ISurfaceHolder holder, Format format, int width, int height)
-    {
-        updateVideoWindow(true);
-    }
-
     void ISurfaceHolderCallback.SurfaceCreated(ISurfaceHolder holder)
     {
+        updateVideoWindow(true);
     }
 
     void ISurfaceHolderCallback.SurfaceDestroyed(ISurfaceHolder holder)
     {
         updateVideoWindow(false);
+    }
+
+    public void SurfaceChanged(ISurfaceHolder holder, [GeneratedEnum] Format format, int width, int height)
+    {
+        updateVideoWindow(true);
     }
 }
 #endif

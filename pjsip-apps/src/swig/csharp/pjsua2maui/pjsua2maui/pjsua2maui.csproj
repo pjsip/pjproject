@@ -1,72 +1,114 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFrameworks>net8.0-android;net8.0-ios</TargetFrameworks>
-		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
-		<!-- <TargetFrameworks>$(TargetFrameworks);net7.0-tizen</TargetFrameworks> -->
-		<OutputType>Exe</OutputType>
-		<RootNamespace>pjsua2maui</RootNamespace>
-		<UseMaui>true</UseMaui>
-		<SingleProject>true</SingleProject>
-		<ImplicitUsings>enable</ImplicitUsings>
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-android;net8.0-ios</TargetFrameworks>
+    <!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
+    <!-- <TargetFrameworks>$(TargetFrameworks);net7.0-tizen</TargetFrameworks> -->
+    <OutputType>Exe</OutputType>
+    <RootNamespace>pjsua2maui</RootNamespace>
+    <UseMaui>true</UseMaui>
+    <SingleProject>true</SingleProject>
+    <ImplicitUsings>enable</ImplicitUsings>
 
-		<!-- Display name -->
-		<ApplicationTitle>pjsua2maui</ApplicationTitle>
+    <!-- Display name -->
+    <ApplicationTitle>pjsua2maui</ApplicationTitle>
 
-		<!-- App Identifier -->
-		<ApplicationId>com.teluu.pjsua2maui</ApplicationId>
-		<ApplicationIdGuid>a7d2caba-c6e0-4af1-a896-a4e3c8011591</ApplicationIdGuid>
+    <!-- App Identifier -->
+    <ApplicationId>com.teluu.pjsua2maui</ApplicationId>
+    <ApplicationIdGuid>a7d2caba-c6e0-4af1-a896-a4e3c8011591</ApplicationIdGuid>
 
-		<!-- Versions -->
-		<ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-		<ApplicationVersion>1</ApplicationVersion>
+    <!-- Versions -->
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
 
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">11.0</SupportedOSPlatformVersion> 
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion> 
-		<BuildWithMSBuildOnMono>false</BuildWithMSBuildOnMono>
-	</PropertyGroup>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">11.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+    <BuildWithMSBuildOnMono>false</BuildWithMSBuildOnMono>
+  </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net7.0-ios|AnyCPU'">
-	  <CreatePackage>false</CreatePackage>
-	</PropertyGroup>
-	<ItemGroup>
-		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net7.0-ios|AnyCPU'">
+    <CreatePackage>false</CreatePackage>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- App Icon -->
+    <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
 
-		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+    <!-- Splash Screen -->
+    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
 
-		<!-- Images -->
-		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\dotnet_bot.svg" BaseSize="168,208" />
+    <!-- Images -->
+    <MauiImage Include="Resources\Images\*" />
+    <MauiImage Update="Resources\Images\dotnet_bot.svg" BaseSize="168,208" />
 
-		<!-- Custom Fonts -->
-		<MauiFont Include="Resources\Fonts\*" />
+    <!-- Custom Fonts -->
+    <MauiFont Include="Resources\Fonts\*" />
 
-		<!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
-		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
-	</ItemGroup>
+    <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+    <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCamera.java" />
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCamera2.java" />
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCameraInfo.java" />
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCameraInfo2.java" />
+  </ItemGroup>
+  <ItemGroup>
+    <AndroidLibrary Include="Platforms\Android\lib\armeabi-v7a\libc++_shared.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AndroidLibrary>
+    <AndroidLibrary Include="Platforms\Android\lib\armeabi-v7a\libpjsua2.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AndroidLibrary>
+    <AndroidLibrary Include="Platforms\Android\lib\arm64-v8a\libc++_shared.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AndroidLibrary>
+    <AndroidLibrary Include="Platforms\Android\lib\arm64-v8a\libpjsua2.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AndroidLibrary>
+    <AndroidLibrary Include="Platforms\Android\lib\x86\libc++_shared.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AndroidLibrary>
+    <AndroidLibrary Include="Platforms\Android\lib\x86\libpjsua2.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AndroidLibrary>
+    <AndroidLibrary Include="Platforms\Android\lib\x86_64\libc++_shared.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AndroidLibrary>
+    <AndroidLibrary Include="Platforms\Android\lib\x86_64\libpjsua2.so">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AndroidLibrary>
+  </ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="7.0.0" />
-	</ItemGroup>
-	<!-- <ItemGroup Condition="(('$(Platform)' == 'iPhoneSimulator') OR $(RuntimeIdentifier.StartsWith('iossimulator-x64')))">
-	  <NativeReference Include="$(MSBuildThisFileDirectory)Platforms\iOS\lib\x86_64\libpjsua2.a">
-	    <Kind>Static</Kind>
-		<ForceLoad>True</ForceLoad>
-		<SmartLink>False</SmartLink>
-		<IsCxx>True</IsCxx>
-		<LinkerFlags>-L$(MSBuildThisFileDirectory)Platforms\iOS\lib\x86_64\ -lpjsua2 -ld_classic</LinkerFlags>
-	 </NativeReference>
-	</ItemGroup> -->
-	<ItemGroup>
-		<NativeReference Include="$(ProjectDir)Platforms/iOS/lib/arm64/libpjsua2.a">
-		<Kind>Static</Kind>
-		<ForceLoad>True</ForceLoad>
-		<SmartLink>False</SmartLink>
-		<IsCxx>True</IsCxx>
-		<LinkerFlags>-L$(ProjectDir)Platforms/iOS/lib/arm64 -lpjsua2 -ld_classic</LinkerFlags>
-		</NativeReference>
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.71" />
+  </ItemGroup>
+  <ItemGroup Condition="(('$(Platform)' == 'iPhoneSimulator') OR $(RuntimeIdentifier.StartsWith('iossimulator-arm64')))">
+    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64/libpjsua2.a">
+      <Kind>Static</Kind>
+      <ForceLoad>True</ForceLoad>
+      <SmartLink>False</SmartLink>
+      <IsCxx>True</IsCxx>
+      <LinkerFlags>-L$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64 -lpjsua2 -ld_classic</LinkerFlags>
+    </NativeReference>
+  </ItemGroup>
+  <ItemGroup Condition="(('$(Platform)' == 'iPhoneSimulator') OR $(RuntimeIdentifier.StartsWith('iossimulator-x64')))">
+    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/x86_64/libpjsua2.a">
+      <Kind>Static</Kind>
+      <ForceLoad>True</ForceLoad>
+      <SmartLink>False</SmartLink>
+      <IsCxx>True</IsCxx>
+      <LinkerFlags>-L$(ProjectDir)Platforms/iOS/lib/x86_64 -lpjsua2 -ld_classic</LinkerFlags>
+    </NativeReference>
+  </ItemGroup>
+  <ItemGroup>
+    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/arm64/libpjsua2.a">
+      <Kind>Static</Kind>
+      <ForceLoad>True</ForceLoad>
+      <SmartLink>False</SmartLink>
+      <IsCxx>True</IsCxx>
+      <LinkerFlags>-L$(ProjectDir)Platforms/iOS/lib/arm64 -lpjsua2 -ld_classic</LinkerFlags>
+    </NativeReference>
+  </ItemGroup>
 </Project>
