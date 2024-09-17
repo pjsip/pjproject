@@ -881,6 +881,8 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
         goto on_error;
+    } else if (!opt) {
+        opt = &call->opt;
     }
     
     /* Create sound port if none is instantiated, to check if sound device
