@@ -728,7 +728,7 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
     pjsua_logging_config_dup(pjsua_var.pool, &pjsua_var.log_cfg, cfg);
 
     /* Redirect log function to ours */
-    pj_log_set_log_func( &log_writer );
+    pj_log_set_log_func( (cfg && cfg->cb && !cfg->log_filename.slen) ? cfg->cb : &log_writer );
 
     /* Set decor */
     pj_log_set_decor(pjsua_var.log_cfg.decor);

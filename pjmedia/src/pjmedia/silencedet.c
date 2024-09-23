@@ -235,9 +235,11 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
                     /* Voiced for long time (>recalc_on_voiced), current 
                      * threshold seems to be too low.
                      */
+			unsigned old = sd->threshold;
                     sd->threshold = (avg_recent_level + sd->threshold) >> 1;
-                    TRACE_((THIS_FILE,"Re-adjust threshold (in talk burst)"
-                            "to %d", sd->threshold));
+			if (sd->threshold != old)
+				TRACE_((THIS_FILE,"%s re-adjust threshold (in talk burst) to %d (was %d)",
+					sd->objname, sd->threshold, old));
 
                     sd->voiced_timer = 0;
 
@@ -248,8 +250,8 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
                 break;
 
             case STATE_SILENCE:
-                TRACE_((THIS_FILE,"Starting talk burst (level=%d threshold=%d)",
-                        level, sd->threshold));
+		TRACE_((THIS_FILE,"%s starting talk burst (level=%d threshold=%d)",
+			sd->objname, level, sd->threshold));
 
             case STATE_START_SILENCE:
                 sd->state = STATE_VOICED;
@@ -271,9 +273,11 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
         switch(sd->state) {
             case STATE_SILENCE:
                 if (sd->silence_timer >= sd->recalc_on_silence) {
+			unsigned old = sd->threshold;
                     sd->threshold = avg_recent_level << 1;
-                    TRACE_((THIS_FILE,"Re-adjust threshold (in silence)"
-                            "to %d", sd->threshold));
+			if (sd->threshold != old)
+				TRACE_((THIS_FILE,"%s re-adjust threshold (in silence) to %d (was %d)",
+					sd->objname, sd->threshold, old));
 
                     sd->silence_timer = 0;
 
@@ -294,8 +298,8 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
                 if (sd->silence_timer >= sd->before_silence) {
                     sd->state = STATE_SILENCE;
                     sd->threshold = avg_recent_level << 1;
-                    TRACE_((THIS_FILE,"Starting silence (level=%d "
-                            "threshold=%d)", level, sd->threshold));
+		    TRACE_((THIS_FILE,"%s starting silence (level=%d threshold=%d)",
+				sd->objname, level, sd->threshold));
 
                     /* Reset sig_level */
                     sd->sum_level = avg_recent_level;

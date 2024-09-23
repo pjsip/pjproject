@@ -965,8 +965,8 @@ PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
 {
     PJ_ASSERT_ON_FAIL(dlg!=NULL, return);
 
-    PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_dec_lock(), sess_count=%d",
-              dlg->sess_count));
+    PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_dec_lock(), sess_count=%d, tsx_count=%d",
+	      dlg->sess_count, dlg->tsx_count));
 
     pj_assert(dlg->sess_count > 0);
     --dlg->sess_count;

@@ -1546,7 +1546,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
         pjmedia_rtp_hdr *rtp = (pjmedia_rtp_hdr*) channel->out_pkt;
 
         rtp->m = 1;
-        PJ_LOG(5,(stream->port.info.name.ptr,"Start talksprut.."));
+	PJ_LOG(5,(stream->port.info.name.ptr,"Starting talksprut.."));
     }
 
     stream->is_streaming = PJ_TRUE;
