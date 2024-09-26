@@ -167,11 +167,9 @@ PJ_DEF(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
      * the pool, so here we check availability of on_destroy implementation.
      */
     if (port->on_destroy == NULL) {
-        PJ_LOG(3,(THIS_FILE, "Media port %s is using group lock but does not "
-                             "implement on_destroy()!",
+        PJ_LOG(2,(THIS_FILE, "Warning, media port %s is using group lock, but "
+                             "it does not seem to have a pool.",
                              port->info.name.ptr));
-        //pj_assert(!"Port using group lock should implement on_destroy()!");
-        //return PJ_EINVALIDOP;
     }
 
     if (!grp_lock) {
@@ -179,14 +177,19 @@ PJ_DEF(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
         status = pj_grp_lock_create_w_handler(pool, NULL, port,
                                               &port_on_destroy,
                                               &grp_lock);
-    } else {
-        /* Just add handler, and use internal group lock pool */
-        status = pj_grp_lock_add_handler(grp_lock, NULL, port,
-                                         &port_on_destroy);
-    }
 
-    if (status == PJ_SUCCESS) {
+        /* Add ref */
+        if (status == PJ_SUCCESS)
+            status = pj_grp_lock_add_ref(grp_lock);
+    } else {
+        /* Add ref first before add handler */
         status = pj_grp_lock_add_ref(grp_lock);
+
+        /* Just add handler, and use internal group lock pool */
+        if (status == PJ_SUCCESS) {
+            status = pj_grp_lock_add_handler(grp_lock, NULL, port,
+                                             &port_on_destroy);
+        }
     }
 
     if (status == PJ_SUCCESS) {
