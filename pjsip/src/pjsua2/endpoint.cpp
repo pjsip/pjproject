@@ -2701,6 +2701,7 @@ pj_status_t Endpoint::on_auth_create_aka_response_callback(pj_pool_t *pool,
                                            pjsip_digest_credential *auth)
 {
     OnCredAuthParam prm;
+
     prm.digestChallenge.fromPj(*chal);
     prm.credentialInfo.fromPj(*cred);
     prm.method = pj2Str(*method);
@@ -2709,24 +2710,26 @@ pj_status_t Endpoint::on_auth_create_aka_response_callback(pj_pool_t *pool,
     pj_status_t status = Endpoint::instance().onCredAuth(prm);
 
    if (status == PJ_SUCCESS) {
-            pjsip_digest_credential auth_new = prm.digestCredential.toPj();
-            // Duplicate in the pool, so that digestCredential
-            // is allowed to be destructed at the end of the method.
-            pj_strdup(pool, &auth->realm, &auth_new.realm);
-            pj_strdup(pool, &auth->username, &auth_new.username);
-            pj_strdup(pool, &auth->nonce, &auth_new.nonce);
-            pj_strdup(pool, &auth->uri, &auth_new.uri);
-            pj_strdup(pool, &auth->response, &auth_new.response);
-            pj_strdup(pool, &auth->algorithm, &auth_new.algorithm);
-            pj_strdup(pool, &auth->cnonce, &auth_new.cnonce);
-            pj_strdup(pool, &auth->opaque, &auth_new.opaque);
-            pj_strdup(pool, &auth->qop, &auth_new.qop);
-            pj_strdup(pool, &auth->nc, &auth_new.nc);
-            pjsip_param_clone(pool, &auth->other_param, &auth_new.other_param);
+        pjsip_digest_credential auth_new = prm.digestCredential.toPj();
+
+        // Duplicate in the pool, so that digestCredential
+        // is allowed to be destructed at the end of the method.
+        pj_strdup(pool, &auth->realm, &auth_new.realm);
+        pj_strdup(pool, &auth->username, &auth_new.username);
+        pj_strdup(pool, &auth->nonce, &auth_new.nonce);
+        pj_strdup(pool, &auth->uri, &auth_new.uri);
+        pj_strdup(pool, &auth->response, &auth_new.response);
+        pj_strdup(pool, &auth->algorithm, &auth_new.algorithm);
+        pj_strdup(pool, &auth->cnonce, &auth_new.cnonce);
+        pj_strdup(pool, &auth->opaque, &auth_new.opaque);
+        pj_strdup(pool, &auth->qop, &auth_new.qop);
+        pj_strdup(pool, &auth->nc, &auth_new.nc);
+        pjsip_param_clone(pool, &auth->other_param, &auth_new.other_param);
     }
 #if PJSIP_HAS_DIGEST_AKA_AUTH
-   else if (status == PJ_ENOTSUP) {
-            status = pjsip_auth_create_aka_response(pool, chal, cred, method, auth);
+    else if (status == PJ_ENOTSUP) {
+        status = pjsip_auth_create_aka_response(pool, chal, cred, method,
+                                                auth);
     }
 #endif
     return status;
