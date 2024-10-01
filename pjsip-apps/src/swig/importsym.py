@@ -22,6 +22,7 @@ import pycparser
 from pycparser import c_generator
 import sys
 import os
+from modules.win32fix import *
 
 def which(program):
 	import os
@@ -52,18 +53,40 @@ if not CPP_PATH:
 	print 'Error: need to have cpp in PATH'
 	sys.exit(1)
 
-# Hardcoded!
-# Note for win32:
-# - temporarily comment "#include <pj/compat/socket.h>" in pj/sock.h (line ~29)
-if sys.platform == 'win32':
-	PYCPARSER_DIR="D:/work/tool/pycparser-master"
-elif sys.platform == "linux2":
-	PYCPARSER_DIR="/home/bennylp/Desktop/opt/src/pycparser-master"
-else:
-	PYCPARSER_DIR="/Library/Python/2.7/site-packages/pycparser"
+# If OS is Linux, find local OS path for Unix .local installation of python, and assume user has installed pycparser via pip.
+if sys.platform == "linux2":
+	script_path_list = os.path.normpath(os.path.abspath(__file__)).split(os.sep)
+	home_linux = os.path.join("/", script_path_list[1], script_path_list[2])
+# if OS is Windows, find the path to current python environment, and assume user has installed pycparser via pip.
+elif sys.platform == "win32":
+    # Current Environment Path. it will take the currently active python interpreter path, which means if you are using a virtual environment,
+    # it will take the path of the virtual environment.
+	home_win = sys.prefix
+	if home_win == "C:/msys64/mingw64":
+		home_win = "C:/msys64/mingw64/lib/python2.7"
+	else:
+		pass
+		
+	# disable the include of pj/compat/socket.h in pj/sock.h, fixes having to go in and manually comment out the include.
+	disable_include()
+	print("continuing with code")
 
-if not os.path.exists(PYCPARSER_DIR + '/utils/fake_libc_include'):
-	print "Error: couldn't find pycparser utils in '%s'" % PYCPARSER_DIR 
+# Checks if its mingw64, if it is, it will use the path to the python interpreter in the mingw64 folder.
+if sys.platform == 'win32' and home_win == "C:/msys64/mingw64/lib/python2.7":
+	PYCPARSER_DIR = home_win + "/site-packages/pycparser"
+# else it will use the path to the python interpreter in the default location.
+elif sys.platform == "win32" and not home_win == "C:/msys64/mingw64/lib/python2.7":
+    PYCPARSER_DIR = home_win + "/Lib/site-packages/pycparser"
+elif sys.platform == "linux2":
+	PYCPARSER_DIR = home_linux + "/.local/lib/python2.7/site-packages/pycparser"
+else:
+	print("Couldnt find your python location with pycparser.")
+	PYCPARSER_DIR = raw_input("Enter the path to your pycparser installation: ")
+
+pycparser_Fakelibc = os.path.dirname(PYCPARSER_DIR) + '/pycparser_fake_libc'
+
+if not os.path.exists(pycparser_Fakelibc):
+	print "Error: couldn't find pycparser_fake_libc in '%s'" % os.path.dirname(PYCPARSER_DIR) 
 	sys.exit(1)
 
 # Heading, to be placed before the source files
@@ -75,7 +98,7 @@ C_HEADING_SECTION = """
 
 # CPP (C preprocessor) settings
 CPP_CFLAGS   = [
-	'-I' + PYCPARSER_DIR + '/utils/fake_libc_include',
+	'-I' + pycparser_Fakelibc,
 	"-I" + PJ_ROOT_PATH + "pjlib/include",
 	"-I" + PJ_ROOT_PATH + "pjlib-util/include",
 	"-I" + PJ_ROOT_PATH + "pjnath/include",
@@ -190,5 +213,9 @@ if __name__ == "__main__":
 		os.remove("yacctab.py")
 	except OSError:
 		pass
-	
+	finally: 
+		if sys.platform == "win32":
+			re_enable_include()
+			print("re-enabled pj/compat/socket.h!")
+		sys.exit(0)
 	
