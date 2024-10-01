@@ -25,6 +25,12 @@ except ImportError:
 import os
 import sys
 import platform
+import transform_docs
+
+try:
+    transform_docs.transform()
+except Exception as e:
+    print(f"Error transforming docs: {e}")
 
 # find pjsip version
 pj_version=""
