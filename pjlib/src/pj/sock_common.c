@@ -731,6 +731,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_parse( int af, unsigned options,
     return status;
 }
 
+
 /* Resolve the IP address of local machine */
 PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 {
@@ -1408,6 +1409,116 @@ PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
     return socketpair_imp(family, type, protocol, sv);
 }
 #endif
+
+
+/* Check IP address type. */
+PJ_DEF(pj_bool_t) pj_check_addr_type(const pj_sockaddr *addr, unsigned type)
+{
+    int af;
+
+    PJ_ASSERT_RETURN(addr && type, PJ_EINVAL);
+    PJ_ASSERT_RETURN(addr->addr.sa_family == PJ_AF_INET ||
+                     addr->addr.sa_family == PJ_AF_INET6, PJ_EINVAL);
+
+    af = addr->addr.sa_family;
+
+    if (af == PJ_AF_INET) {
+        enum {
+            /* Disabled: 0.0.0.0/8 */
+            ADDR4_DISABLED = 0x00000000,
+            MASK4_DISABLED = 0xFF000000,
+            /* Loopback: 127.0.0.0/8 */
+            ADDR4_LOOPBACK = 0x7f000000,
+            MASK4_LOOPBACK = 0xFF000000,
+            /* Link-local: 169.254.0.0/16 */
+            ADDR4_LINKLOCAL = 0xa9fe0000,
+            MASK4_LINKLOCAL = 0xFFFF0000,
+            /* Multicast: 224.0.0.0/3 */
+            ADDR4_MULTICAST = 0xE0000000,
+            MASK4_MULTICAST = 0xF0000000,
+        };
+
+        pj_uint32_t a = pj_ntohl(addr->ipv4.sin_addr.s_addr);
+
+        if ((type & PJ_ADDR_TYPE_DISABLED) &&
+            (a & (pj_uint32_t)MASK4_DISABLED)==(pj_uint32_t)ADDR4_DISABLED)
+        {
+            return PJ_TRUE;
+        }
+
+        if ((type & PJ_ADDR_TYPE_LOOPBACK) &&
+            (a & (pj_uint32_t)MASK4_LOOPBACK)==(pj_uint32_t)ADDR4_LOOPBACK)
+        {
+            return PJ_TRUE;
+        }
+
+        if ((type & PJ_ADDR_TYPE_LINK_LOCAL) &&
+            (a & (pj_uint32_t)MASK4_LINKLOCAL)==(pj_uint32_t)ADDR4_LINKLOCAL)
+        {
+            return PJ_TRUE;
+        }
+
+        if (type & PJ_ADDR_TYPE_PRIVATE) {
+            pj_uint8_t b1 = (pj_uint8_t)(a >> 24);
+            pj_uint8_t b2 = (pj_uint8_t)((a >> 16) & 0x0ff);;
+
+            /* 10.0.0.0/8 */
+            if (b1 == 10)
+                return PJ_TRUE;
+
+            /* 172.16.0.0/12 or 172.16.0.0-172.31.255.255 */
+            if ((b1 == 172) && (b2 >= 16) && (b2 <= 31))
+                return PJ_TRUE;
+
+            /* 192.168.0.0/16 */
+            if ((b1 == 192) && (b2 == 168))
+                return PJ_TRUE;
+        }
+
+        if ((type & PJ_ADDR_TYPE_MULTICAST) &&
+            (a & (pj_uint32_t)MASK4_MULTICAST)==(pj_uint32_t)ADDR4_MULTICAST)
+        {
+            return PJ_TRUE;
+        }
+
+    } else /* if (af == PJ_AF_INET6) */ {
+
+        if (type & PJ_ADDR_TYPE_DISABLED) {
+            /* ::/128 */
+            pj_uint8_t saddr[16] = {0x0,0x0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            if (pj_memcmp(saddr, &addr->ipv6.sin6_addr, 16) == 0)
+                return PJ_TRUE;
+        }
+
+        if (type & PJ_ADDR_TYPE_LOOPBACK) {
+            /* ::1/128 */
+            pj_uint8_t saddr[16] = {0x0,0x0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+            if (pj_memcmp(saddr, &addr->ipv6.sin6_addr, 16) == 0)
+                return PJ_TRUE;
+        }
+
+        if (type & PJ_ADDR_TYPE_LINK_LOCAL) {
+            /* fe80::/64 */
+            pj_uint8_t saddr[16] = {0xfe,0x80,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            if (pj_memcmp(saddr, &addr->ipv6.sin6_addr, 8) == 0)
+                return PJ_TRUE;
+        }
+
+        if (type & PJ_ADDR_TYPE_PRIVATE) {
+            /* fc00::/7 */
+            if ((addr->ipv6.sin6_addr.s6_addr[0] & 0xfe) == 0xfc)
+                return PJ_TRUE;
+        }
+
+        if (type & PJ_ADDR_TYPE_MULTICAST) {
+            /* ff00::/8 */
+            if (addr->ipv6.sin6_addr.s6_addr[0] == 0xff)
+                return PJ_TRUE;
+        }
+    }
+
+    return PJ_FALSE;
+}
 
 
 /* Only need to implement these in DLL build */

@@ -180,6 +180,51 @@ PJ_DECL(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *name,
                                     unsigned *count, pj_addrinfo ai[]);
 
 
+/**
+ * Enumeration of IP address type.
+ */
+typedef enum pj_addr_type
+{
+    /**
+     * Disabled: 0.0.0.0/8 or ::/128
+     */
+    PJ_ADDR_TYPE_DISABLED       = 1,
+
+    /**
+     * Loopback: 127.0.0.0/8 or ::1/128
+     */
+    PJ_ADDR_TYPE_LOOPBACK       = 2,
+
+    /**
+     * Link-local: 169.254.0.0/16 or fe80::/64
+     */
+    PJ_ADDR_TYPE_LINK_LOCAL     = 4,
+
+    /**
+     * Private: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 or fc00::/7
+     */
+    PJ_ADDR_TYPE_PRIVATE        = 8,
+
+    /**
+     * Multicast: 224.0.0.0/3 or ff00::/8
+     */
+    PJ_ADDR_TYPE_MULTICAST      = 16,
+
+} pj_addr_type;
+
+
+
+/**
+ * Check IP address type.
+ *
+ * @param addr      The IP address to check, must be IPv4 or IPv6 address.
+ * @param type      Bit mask of address type pj_addr_type.
+ *
+ * @return          PJ_TRUE if the type of specified address \addr match to
+ *                  the specified types \a type.
+ */
+PJ_DECL(pj_bool_t) pj_check_addr_type(const pj_sockaddr *addr, unsigned type);
+
 
 /** @} */
 
