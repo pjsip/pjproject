@@ -48,7 +48,7 @@
 /* UPnP device descriptions. */
 static const char* UPNP_ROOT_DEVICE = "upnp:rootdevice";
 static const char* UPNP_IGD_DEVICE =
-    "urn:schemas-upnp-org:device:InternetGatewayDevice:1";
+    "urn:schemas-upnp-org:device:InternetGatewayDevice";
 static const char* UPNP_WANIP_SERVICE =
     "urn:schemas-upnp-org:service:WANIPConnection:1";
 static const char* UPNP_WANPPP_SERVICE =
@@ -215,7 +215,9 @@ static void download_igd_xml(unsigned dev_idx)
     /* Check device type. */
     dev_type = doc_get_elmt_value(doc, "deviceType");
     if (!dev_type) return;
-    if (pj_ansi_strcmp(dev_type, UPNP_IGD_DEVICE) != 0) {
+    if (pj_ansi_strncmp(dev_type, UPNP_IGD_DEVICE,
+                        pj_ansi_strlen(UPNP_IGD_DEVICE)) != 0)
+    {
         /* Device type is not IGD. */
         goto on_error;
     }
@@ -515,7 +517,8 @@ static int client_cb(Upnp_EventType event_type, const void *event,
             if (!check_error_response(response)) {
                 PJ_LOG(4, (THIS_FILE, "Successfully deleted port mapping"));
             }
-            ixmlDocument_free(response);
+            /* According to the sample, we don't need to free this. */
+            // ixmlDocument_free(response);
         }
 
         break;
