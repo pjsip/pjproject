@@ -61,7 +61,7 @@
 
 #define SPS_PPS_BUF_SIZE        64
 
-#define MAX_RX_WIDTH            1200
+#define MAX_RX_WIDTH            1280
 #define MAX_RX_HEIGHT           800
 
 /* Maximum duration from one key frame to the next (in seconds). */
@@ -1350,7 +1350,7 @@ static pj_status_t and_media_decode(pjmedia_vid_codec *codec,
             return status;
         }
         len = write_yuv((pj_uint8_t *)output->buf,
-                        and_media_data->dec_buf_info.size,
+                        output->size,
                         output_buf,
                         and_media_data->dec_stride_len,
                         and_media_data->prm->dec_fmt.det.vid.size.w,
