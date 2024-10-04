@@ -48,11 +48,13 @@
 #if PJ_DEBUG==0
 
 #   ifndef pj_assert
+#       include "pj/os.h"
 #       include "pj/log.h"
 #       define pj_assert(expr) \
             do { \
                 if (!(expr)) { \
-                    PJ_LOG(1, (__FILE__, "Assert failed: %s", #expr)); \
+                    if (pj_thread_is_registered()) \
+                        PJ_LOG(1, (__FILE__, "Assert failed: %s", #expr)); \
                 } \
             } while (0)
 #   endif
