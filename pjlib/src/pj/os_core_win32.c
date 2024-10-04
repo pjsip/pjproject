@@ -54,7 +54,7 @@
 #else
 #   define LOG_MUTEX(expr)  PJ_LOG(6,expr)
 #endif
-#   define LOG_MUTEX_WARN(expr)  PJ_PERROR(3,expr)
+#   define LOG_MUTEX_WARN(expr)  PJ_LOG(3,expr)
 #define THIS_FILE       "os_core_win32.c"
 
 /*
@@ -1284,6 +1284,7 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
 static pj_status_t pj_sem_wait_for(pj_sem_t *sem, unsigned timeout)
 {
     DWORD result;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
@@ -1301,16 +1302,15 @@ static pj_status_t pj_sem_wait_for(pj_sem_t *sem, unsigned timeout)
         LOG_MUTEX((sem->obj_name, "Semaphore acquired by thread %s", 
                                   pj_thread_this()->obj_name));
     } else {
+        if (result == WAIT_TIMEOUT)
+            status = PJ_ETIMEDOUT;
+        else
+            status = PJ_RETURN_OS_ERROR(GetLastError());
         LOG_MUTEX_WARN((sem->obj_name, status, "Semaphore: thread %s failed "
                         "to acquire", pj_thread_this()->obj_name));
     }
 
-    if (result==WAIT_OBJECT_0)
-        return PJ_SUCCESS;
-    else if (result==WAIT_TIMEOUT)
-        return PJ_ETIMEDOUT;
-    else
-        return PJ_RETURN_OS_ERROR(GetLastError());
+    return status;
 }
 
 /*
