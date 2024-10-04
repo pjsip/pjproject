@@ -54,7 +54,7 @@
 #else
 #   define LOG_MUTEX(expr)  PJ_LOG(6,expr)
 #endif
-
+#   define LOG_MUTEX_WARN(expr)  PJ_PERROR(3,expr)
 #define THIS_FILE       "os_core_win32.c"
 
 /*
@@ -1094,10 +1094,15 @@ PJ_DEF(pj_status_t) pj_mutex_lock(pj_mutex_t *mutex)
         status = PJ_STATUS_FROM_OS(GetLastError());
 
 #endif
-    LOG_MUTEX((mutex->obj_name, 
-              (status==PJ_SUCCESS ? "Mutex acquired by thread %s" : "FAILED by %s"),
-              pj_thread_this()->obj_name));
-
+    if (status == PJ_SUCCESS) {
+        LOG_MUTEX((mutex->obj_name, 
+                   "Mutex acquired by thread %s",
+                   pj_thread_this()->obj_name));
+    } else {
+        LOG_MUTEX_WARN((mutex->obj_name, status,
+                        "Failed to acquire mutex by thread %s",
+                        pj_thread_this()->obj_name));
+    }
 #if PJ_DEBUG
     if (status == PJ_SUCCESS) {
         mutex->owner = pj_thread_this();
@@ -1296,8 +1301,8 @@ static pj_status_t pj_sem_wait_for(pj_sem_t *sem, unsigned timeout)
         LOG_MUTEX((sem->obj_name, "Semaphore acquired by thread %s", 
                                   pj_thread_this()->obj_name));
     } else {
-        LOG_MUTEX((sem->obj_name, "Semaphore: thread %s FAILED to acquire", 
-                                  pj_thread_this()->obj_name));
+        LOG_MUTEX_WARN((sem->obj_name, status, "Semaphore: thread %s failed "
+                        "to acquire", pj_thread_this()->obj_name));
     }
 
     if (result==WAIT_OBJECT_0)
