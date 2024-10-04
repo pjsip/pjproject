@@ -185,7 +185,9 @@ static int AndroidRecorderCallback(void *userData)
     
     /* Start recording */
     pj_thread_set_prio(NULL, THREAD_PRIORITY_URGENT_AUDIO);
-    (*jni_env)->CallVoidMethod(jni_env, stream->record, record_method);
+    pj_sem_wait(stream->rec_sem);
+    if (!stream->quit_flag)
+        (*jni_env)->CallVoidMethod(jni_env, stream->record, record_method);
     
     while (!stream->quit_flag) {
         pjmedia_frame frame;
@@ -278,7 +280,9 @@ static int AndroidTrackCallback(void *userData)
 
     /* Start playing */
     pj_thread_set_prio(NULL, THREAD_PRIORITY_URGENT_AUDIO);
-    (*jni_env)->CallVoidMethod(jni_env, stream->track, play_method);
+    pj_sem_wait(stream->play_sem);
+    if (!stream->quit_flag)
+        (*jni_env)->CallVoidMethod(jni_env, stream->track, play_method);
 
     while (!stream->quit_flag) {
         pjmedia_frame frame;
