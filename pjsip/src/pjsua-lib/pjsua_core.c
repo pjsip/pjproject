@@ -890,15 +890,28 @@ static void init_random_seed(void)
 /*
  * Instantiate pjsua application.
  */
-PJ_DEF(pj_status_t) pjsua_create(void)
+PJ_DECL(pj_status_t) pjsua_create(void)
+{
+	return pjsua_create2(NULL);
+}
+PJ_DEF(pj_status_t) pjsua_create2(const pjsua_logging_config *log_cfg)
 {
     pj_status_t status;
 
     /* Init pjsua data */
     init_data();
 
+	if (log_cfg) {
+		/* Save custom logging config */
+		pj_memcpy(&pjsua_var.log_cfg, log_cfg, sizeof(*log_cfg));
+		pj_bzero(&pjsua_var.log_cfg.log_filename, sizeof(pjsua_var.log_cfg.log_filename));
+	} else {
     /* Set default logging settings */
     pjsua_logging_config_default(&pjsua_var.log_cfg);
+	}
+	pj_log_set_log_func((log_cfg && log_cfg->cb && !log_cfg->log_filename.slen) ? log_cfg->cb : &log_writer);
+	pj_log_set_decor(pjsua_var.log_cfg.decor);
+	pj_log_set_level(pjsua_var.log_cfg.level);
 
     /* Init PJLIB: */
     status = pj_init();

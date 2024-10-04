@@ -2468,7 +2468,15 @@ PJ_DECL(pjsua_msg_data*) pjsua_msg_data_clone(pj_pool_t *pool,
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_create(void);
-
+/*
+ * Instantiate pjsua application. Application must call this function before
+ * calling any other functions, to make sure that the underlying libraries
+ * are properly initialized. Once this function has returned success,
+ * application must call pjsua_destroy() before quitting.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_create2(const pjsua_logging_config *log_cfg);
 
 /** Forward declaration */
 typedef struct pjsua_media_config pjsua_media_config;
