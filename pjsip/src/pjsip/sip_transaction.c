@@ -2108,6 +2108,8 @@ static void send_msg_callback( pjsip_send_state *send_state,
             tsx_update_transport(tsx, send_state->cur_transport);
 
             /* Update remote address. */
+		    pj_assert(tdata->dest_info.cur_addr <
+		              PJ_ARRAY_SIZE(tdata->dest_info.addr.entry));
             tsx->addr_len = tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr_len;
             pj_memcpy(&tsx->addr, 
                       &tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr,

@@ -743,6 +743,8 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
 {
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
+
     /* Save config. */
     pjsua_logging_config_dup(pjsua_var.pool, &pjsua_var.log_cfg, cfg);
 
