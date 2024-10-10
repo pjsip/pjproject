@@ -55,6 +55,7 @@
 struct file_reader_port
 {
     pjmedia_port     base;
+    pj_pool_t       *pool;
     unsigned         options;
     pjmedia_wave_fmt_tag fmt_tag;
     pj_uint16_t      bytes_per_sample;
@@ -87,8 +88,10 @@ static struct file_reader_port *create_file_port(pj_pool_t *pool)
     struct file_reader_port *port;
 
     port = PJ_POOL_ZALLOC_T(pool, struct file_reader_port);
-    if (!port)
+    if (!port) {
+        pj_pool_release(pool);
         return NULL;
+    }
 
     /* Put in default values.
      * These will be overriden once the file is read.
@@ -217,7 +220,7 @@ static pj_status_t read_wav_until(struct file_reader_port *fport,
 /*
  * Create WAVE player port.
  */
-PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool_,
                                                      const char *filename,
                                                      unsigned ptime,
                                                      unsigned options,
@@ -234,14 +237,16 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     unsigned samples_per_frame;
     pjmedia_wave_subchunk chunk;
     pj_status_t status = PJ_SUCCESS;
+    pj_pool_t *pool = NULL;
 
 
     /* Check arguments. */
-    PJ_ASSERT_RETURN(pool && filename && p_port, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool_ && filename && p_port, PJ_EINVAL);
 
     /* Check the file really exists. */
     if (!pj_file_exists(filename)) {
-        return PJ_ENOTFOUND;
+        status = PJ_ENOTFOUND;
+        goto on_error;
     }
 
     /* Normalize ptime */
@@ -252,11 +257,20 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     if (buff_size < 1) buff_size = PJMEDIA_FILE_PORT_BUFSIZE;
 
 
+    /* Create own pool */
+    pool = pj_pool_create(pool_->factory, filename, 500, 500, NULL);
+    if (!pool) {
+        status = PJ_ENOMEM;
+        goto on_error;
+    }
+
     /* Create fport instance. */
     fport = create_file_port(pool);
     if (!fport) {
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
+    fport->pool = pool;
 
 
     /* Get the file size. */
@@ -264,25 +278,28 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
     /* Size must be more than WAVE header size */
     if (fport->fsize <= (pj_off_t)sizeof(pjmedia_wave_hdr)) {
-        return PJMEDIA_ENOTVALIDWAVE;
+        status = PJMEDIA_ENOTVALIDWAVE;
+        goto on_error;
     }
 
     /* Open file. */
     status = pj_file_open(pool, filename, PJ_O_RDONLY | PJ_O_CLOEXEC,
                           &fport->fd);
     if (status != PJ_SUCCESS)
-        return status;
+        goto on_error;
+
 
     /* Read the RIFF file header only. */
     size_to_read = size_read = sizeof(wave_hdr.riff_hdr);
     status = pj_file_read( fport->fd, &wave_hdr, &size_read);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-        return status;
+        goto on_error;
     }
     if (size_read != size_to_read) {
         pj_file_close(fport->fd);
-        return PJMEDIA_ENOTVALIDWAVE;
+        status = PJMEDIA_ENOTVALIDWAVE;
+        goto on_error;
     }
 
     /* Normalize WAVE header fields values from little-endian to host
@@ -299,14 +316,15 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
                 "actual value|expected riff=%x|%x, wave=%x|%x",
                 wave_hdr.riff_hdr.riff, PJMEDIA_RIFF_TAG,
                 wave_hdr.riff_hdr.wave, PJMEDIA_WAVE_TAG));
-        return PJMEDIA_ENOTVALIDWAVE;
+        status = PJMEDIA_ENOTVALIDWAVE;
+        goto on_error;
     }
 
     /* Read the WAVE file until we find 'fmt ' chunk. */
     status = read_wav_until(fport, PJMEDIA_FMT_TAG, &chunk);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-        return status;
+        goto on_error;
     }
 
     pj_memcpy(&wave_hdr.fmt_hdr, &chunk, sizeof(chunk));
@@ -316,7 +334,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     status = pj_file_read(fport->fd, &wave_hdr.fmt_hdr.fmt_tag, &size_read);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-        return status;
+        goto on_error;
     }
 
     pjmedia_wave_hdr_file_to_host(&wave_hdr);
@@ -343,7 +361,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-        return status;
+        goto on_error;
     }
 
     fport->fmt_tag = (pjmedia_wave_fmt_tag)wave_hdr.fmt_hdr.fmt_tag;
@@ -360,7 +378,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
         status = pj_file_setpos(fport->fd, size_to_read, PJ_SEEK_CUR);
         if (status != PJ_SUCCESS) {
             pj_file_close(fport->fd);
-            return status;
+            goto on_error;
         }
     }
 
@@ -368,7 +386,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     status = read_wav_until(fport, PJMEDIA_DATA_TAG, &chunk);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-        return status;
+        goto on_error;
     }
 
     PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(&chunk);
@@ -394,7 +412,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
                                 wave_hdr.fmt_hdr.nchan / 1000)
     {
         pj_file_close(fport->fd);
-        return PJMEDIA_EWAVETOOSHORT;
+        status = PJMEDIA_EWAVETOOSHORT;
+        goto on_error;
     }
 
     /* It seems like we have a valid WAVE file. */
@@ -430,14 +449,16 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
      */
     if (samples_per_frame * fport->bytes_per_sample > fport->bufsize) {
         pj_file_close(fport->fd);
-        return PJ_EINVAL;
+        status = PJ_EINVAL;
+        goto on_error;
     }
 
     /* Create buffer. */
     fport->buf = (char*) pj_pool_alloc(pool, fport->bufsize);
     if (!fport->buf) {
         pj_file_close(fport->fd);
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
  
     fport->readpos = fport->buf;
@@ -449,7 +470,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     status = fill_buffer(fport);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-        return status;
+        goto on_error;
     }
 
     /* Done. */
@@ -468,6 +489,15 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
               (unsigned long)(fport->fsize / 1000)));
 
     return PJ_SUCCESS;
+
+on_error:
+    if (pool)
+        pj_pool_release(pool);
+
+    PJ_PERROR(1,(THIS_FILE, status,
+                 "Failed creating file player '%s'", filename));
+
+    return status;
 }
 
 
@@ -856,6 +886,9 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
         pjmedia_event_unsubscribe(NULL, &file_on_event, fport, fport);
         fport->subscribed = PJ_FALSE;
     }
+
+    if (fport->pool)
+        pj_pool_safe_release(&fport->pool);
 
     return PJ_SUCCESS;
 }

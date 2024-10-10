@@ -31,6 +31,7 @@
 struct mem_player
 {
     pjmedia_port     base;
+    pj_pool_t       *pool;
 
     unsigned         options;
     pj_timestamp     timestamp;
@@ -55,7 +56,7 @@ static pj_status_t mem_get_frame(pjmedia_port *this_port,
 static pj_status_t mem_on_destroy(pjmedia_port *this_port);
 
 
-PJ_DEF(pj_status_t) pjmedia_mem_player_create( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_mem_player_create( pj_pool_t *pool_,
                                                const void *buffer,
                                                pj_size_t size,
                                                unsigned clock_rate,
@@ -67,9 +68,10 @@ PJ_DEF(pj_status_t) pjmedia_mem_player_create( pj_pool_t *pool,
 {
     struct mem_player *port;
     pj_str_t name = pj_str("memplayer");
+    pj_pool_t *pool = NULL;
 
     /* Sanity check */
-    PJ_ASSERT_RETURN(pool && buffer && size && clock_rate && channel_count &&
+    PJ_ASSERT_RETURN(pool_ && buffer && size && clock_rate && channel_count &&
                      samples_per_frame && bits_per_sample && p_port,
                      PJ_EINVAL);
 
@@ -77,8 +79,13 @@ PJ_DEF(pj_status_t) pjmedia_mem_player_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
 
 
+    /* Create own pool */
+    pool = pj_pool_create(pool_->factory, name.ptr, 500, 500, NULL);
+    PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
+
     port = PJ_POOL_ZALLOC_T(pool, struct mem_player);
-    PJ_ASSERT_RETURN(port != NULL, PJ_ENOMEM);
+    PJ_ASSERT_ON_FAIL(port != NULL, {pj_pool_release(pool);return PJ_ENOMEM;});
+    port->pool = pool;
 
     /* Create the port */
     pjmedia_port_info_init(&port->base.info, &name, SIGNATURE, clock_rate,
@@ -317,6 +324,9 @@ static pj_status_t mem_on_destroy(pjmedia_port *this_port)
 
     /* Destroy signature */
     this_port->info.signature = 0;
+
+    if (player->pool)
+        pj_pool_safe_release(&player->pool);
 
     return PJ_SUCCESS;
 }
