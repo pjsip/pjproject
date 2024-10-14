@@ -58,7 +58,7 @@ export _LDFLAGS := $(APP_THIRD_PARTY_LIBS) \
 #
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			alaw_ulaw.o alaw_ulaw_table.o avi_player.o \
+			alaw_ulaw.o alaw_ulaw_table.o avi_player.o atomic_queue.o \
 			bidirectional.o clock_thread.o codec.o conference.o \
 			conf_switch.o converter.o  converter_libswscale.o converter_libyuv.o \
 			delaybuf.o echo_common.o \

@@ -27,6 +27,7 @@
 #include <pjmedia/circbuf.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/event.h>
+#include <pjmedia/atomic_queue.hpp>
 
 #if defined(PJMEDIA_AUDIO_DEV_HAS_OBOE) &&  PJMEDIA_AUDIO_DEV_HAS_OBOE != 0
 
@@ -37,9 +38,6 @@
 #include <semaphore.h>
 #include <android/log.h>
 #include <oboe/Oboe.h>
-
-#include <atomic>
-
 
 /* Device info */
 typedef struct aud_dev_info
@@ -524,106 +522,6 @@ static pj_status_t oboe_default_param(pjmedia_aud_dev_factory *ff,
 
     return PJ_SUCCESS;
 }
-
-
-/* Atomic queue (ring buffer) for single consumer & single producer.
- *
- * Producer invokes 'put(frame)' to put a frame to the back of the queue and
- * consumer invokes 'get(frame)' to get a frame from the head of the queue.
- *
- * For producer, there is write pointer 'ptrWrite' that will be incremented
- * every time a frame is queued to the back of the queue. If the queue is
- * almost full (the write pointer is right before the read pointer) the
- * producer will forcefully discard the oldest frame in the head of the
- * queue by incrementing read pointer.
- *
- * For consumer, there is read pointer 'ptrRead' that will be incremented
- * every time a frame is fetched from the head of the queue, only if the
- * pointer is not modified by producer (in case of queue full).
- */
-class AtomicQueue {
-public:
-
-    AtomicQueue(unsigned max_frame_cnt, unsigned frame_size,
-                const char* name_= "") :
-        maxFrameCnt(max_frame_cnt), frameSize(frame_size),
-        ptrWrite(0), ptrRead(0),
-        buffer(NULL), name(name_)
-    {
-        buffer = new char[maxFrameCnt * frameSize];
-
-        /* Surpress warning when debugging log is disabled */
-        PJ_UNUSED_ARG(name);
-    }
-
-    ~AtomicQueue() {
-        delete [] buffer;
-    }
-
-    /* Get a frame from the head of the queue */
-    bool get(void* frame) {
-        if (ptrRead == ptrWrite)
-            return false;
-
-        unsigned cur_ptr = ptrRead;
-        void *p = &buffer[cur_ptr * frameSize];
-        pj_memcpy(frame, p, frameSize);
-        inc_ptr_read_if_not_yet(cur_ptr);
-
-        //__android_log_print(ANDROID_LOG_INFO, name,
-        //                    "GET: ptrRead=%d ptrWrite=%d\n",
-        //                    ptrRead.load(), ptrWrite.load());
-        return true;
-    }
-
-    /* Put a frame to the back of the queue */
-    void put(void* frame) {
-        unsigned cur_ptr = ptrWrite;
-        void *p = &buffer[cur_ptr * frameSize];
-        pj_memcpy(p, frame, frameSize);
-        unsigned next_ptr = inc_ptr_write(cur_ptr);
-
-        /* Increment read pointer if next write is overlapping (next_ptr == read ptr) */
-        unsigned next_read_ptr = (next_ptr == maxFrameCnt-1)? 0 : (next_ptr+1);
-        ptrRead.compare_exchange_strong(next_ptr, next_read_ptr);
-
-        //__android_log_print(ANDROID_LOG_INFO, name,
-        //                    "PUT: ptrRead=%d ptrWrite=%d\n",
-        //                    ptrRead.load(), ptrWrite.load());
-    }
-
-private:
-
-    unsigned maxFrameCnt;
-    unsigned frameSize;
-    std::atomic<unsigned> ptrWrite;
-    std::atomic<unsigned> ptrRead;
-    char *buffer;
-    const char *name;
-
-    /* Increment read pointer, only if producer not incemented it already.
-     * Producer may increment the read pointer if the write pointer is
-     * right before the read pointer (buffer almost full).
-     */
-    bool inc_ptr_read_if_not_yet(unsigned old_ptr) {
-        unsigned new_ptr = (old_ptr == maxFrameCnt-1)? 0 : (old_ptr+1);
-        return ptrRead.compare_exchange_strong(old_ptr, new_ptr);
-    }
-
-    /* Increment write pointer */
-    unsigned inc_ptr_write(unsigned old_ptr) {
-        unsigned new_ptr = (old_ptr == maxFrameCnt-1)? 0 : (old_ptr+1);
-        if (ptrWrite.compare_exchange_strong(old_ptr, new_ptr))
-            return new_ptr;
-
-        /* Should never happen */
-        pj_assert(!"There is more than one producer!");
-        return old_ptr;
-    }
-
-    AtomicQueue() {}
-};
-
 
 /* Interface to Oboe */
 class MyOboeEngine : oboe::AudioStreamDataCallback,
