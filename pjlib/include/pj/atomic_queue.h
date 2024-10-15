@@ -15,67 +15,79 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef __ATOMIC_QUEUE_H__
-#define __ATOMIC_QUEUE_H__
+#ifndef __PJ_ATOMIC_QUEUE_H__
+#define __PJ_ATOMIC_QUEUE_H__
 
-#include <atomic>
+/**
+ * @file atomic_queue.h
+ * @brief Atomic Queue operations
+ */
+
+#include <pj/types.h>
+
+PJ_BEGIN_DECL
 
 /* Atomic queue (ring buffer) for single consumer & single producer.
  *
- * Producer invokes 'put(item)' to put an item to the back of the queue and
- * consumer invokes 'get(item)' to get an item from the head of the queue.
- *
- * For producer, there is write pointer 'ptrWrite' that will be incremented
- * every time a item is queued to the back of the queue. If the queue is
- * almost full (the write pointer is right before the read pointer) the
- * producer will forcefully discard the oldest item in the head of the
- * queue by incrementing read pointer.
- *
- * For consumer, there is read pointer 'ptrRead' that will be incremented
- * every time a item is fetched from the head of the queue, only if the
- * pointer is not modified by producer (in case of queue full).
+ * Producer invokes 'pj_atomic_queue_put(item)' to put an item to the back of
+ * the queue.
+ * Consumer invokes 'pj_atomic_queue_get(item)' to get an item from the head of
+ * the queue.
  */
-class pj_atomic_queue {
-public:
-    /**
-     * Constructor
-     */
-    pj_atomic_queue(unsigned max_item_cnt_, unsigned item_size_,
-                    const char* name_);
 
-    /**
-     * Destructor
-     */
-    ~pj_atomic_queue();
+/**
+ * Create a new Atomic Queue.
+ *
+ * @param pool          The pool to allocate the atomic queue structure.
+ * @param max_item_cnt  The maximum number of items that can be stored.
+ * @param item_size     The size of each item.
+ * @param name          The name of the queue.
+ * @param atomic_queue  Pointer to hold the newly created Atomic Queue.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pj_atomic_queue_create(pj_pool_t *pool,
+                                            unsigned max_item_cnt,
+                                            unsigned item_size,
+                                            const char* name,
+                                            pj_atomic_queue_t **atomic_queue);
 
-    /**
-     * Get a item from the head of the queue
-     */
-    bool get(void* item);
+/**
+ * Destroy the Atomic Queue.
+ *
+ * @param atomic_queue  The Atomic Queue to be destroyed.
+ *
+ * @return              PJ_SUCCESS if success.
+ */
+PJ_DECL(pj_status_t) pj_atomic_queue_destroy(pj_atomic_queue_t *atomic_queue);
 
-    /**
-     * Put a item to the back of the queue
-     */
-    void put(void* item);
+/**
+ * Put a item to the back of the queue. If the queue is almost full
+ * the producer will forcefully discard the oldest item.
+ *
+ * @param atomic_queue  The Atomic Queue.
+ * @param item          The pointer to the data to store.
+ *
+ * @return              PJ_SUCCESS if success.
+ */
+PJ_DECL(pj_status_t) pj_atomic_queue_put(pj_atomic_queue_t *atomic_queue,
+                                         void *item);
 
-private:
-    unsigned max_item_cnt_;
-    unsigned item_size_;
-    std::atomic<unsigned> ptr_write;
-    std::atomic<unsigned> ptr_read;
-    char *buffer;
-    const char *name_;
+/**
+ * Get an item from the head of the queue.
+ *
+ * @param atomic_queue  The Atomic Queue.
+ * @param item          The pointer to data to get the data.
+ *
+ * @return              PJ_SUCCESS if success.
+ */
+PJ_DECL(pj_status_t) pj_atomic_queue_get(pj_atomic_queue_t *atomic_queue,
+                                         void *item);
 
-    /* Increment read pointer, only if producer not incemented it already.
-     * Producer may increment the read pointer if the write pointer is
-     * right before the read pointer (buffer almost full).
-     */
-    bool inc_ptr_read_if_not_yet(unsigned old_ptr);
+/**
+ * @}
+ */
 
-    /* Increment write pointer */
-    unsigned inc_ptr_write(unsigned old_ptr);
-
-    pj_atomic_queue() {}
-};
+PJ_END_DECL
 
 #endif

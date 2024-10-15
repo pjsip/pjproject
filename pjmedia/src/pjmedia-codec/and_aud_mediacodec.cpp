@@ -157,13 +157,13 @@ typedef struct and_media_private {
                                                  codec has internal VAD.    */
     pj_timestamp         last_tx;           /**< Timestamp of last transmit.*/
 
-    pj_atomic_queue     *enc_avail_input_buf; /**< Encoder available input
+    pj_atomic_queue_t   *enc_avail_input_buf; /**< Encoder available input
                                                    buffer                   */
-    pj_atomic_queue     *enc_avail_output_buf; /**< Encoder available ouput
+    pj_atomic_queue_t   *enc_avail_output_buf; /**< Encoder available ouput
                                                     buffer                  */
-    pj_atomic_queue     *dec_avail_input_buf; /**< Decoder available input
+    pj_atomic_queue_t   *dec_avail_input_buf; /**< Decoder available input
                                                     buffer                  */
-    pj_atomic_queue     *dec_avail_output_buf; /**< Decoder available output
+    pj_atomic_queue_t   *dec_avail_output_buf; /**< Decoder available output
                                                     buffer                  */
 } and_media_private_t;
 
@@ -234,7 +234,7 @@ static void and_med_on_input_avail(AMediaCodec *codec,
 {
     and_media_private_t *and_media_data = (and_media_private_t *) userdata;
     and_med_buf_info buf_info;
-    pj_atomic_queue *buf_queue;
+    pj_atomic_queue_t *buf_queue;
     pj_bzero(&buf_info, sizeof(buf_info));
 
     if (codec == and_media_data->enc) {
@@ -243,7 +243,7 @@ static void and_med_on_input_avail(AMediaCodec *codec,
         buf_queue = and_media_data->dec_avail_input_buf;
     }
     buf_info.index = index;
-    buf_queue->put(&buf_info);
+    pj_atomic_queue_put(buf_queue, &buf_info);
 }
 /**
  * Called when an output buffer becomes available.
@@ -256,7 +256,7 @@ static void and_med_on_output_avail(AMediaCodec *codec,
 {
     and_media_private_t *and_media_data = (and_media_private_t *) userdata;
     and_med_buf_info buf_info;
-    pj_atomic_queue *buf_queue;
+    pj_atomic_queue_t *buf_queue;
     pj_bzero(&buf_info, sizeof(buf_info));
     if (codec == and_media_data->enc) {
         buf_queue = and_media_data->enc_avail_output_buf;
@@ -266,7 +266,7 @@ static void and_med_on_output_avail(AMediaCodec *codec,
     buf_info.index = index;
     buf_info.size = bufferInfo->size;
     buf_info.flags = bufferInfo->flags;
-    buf_queue->put(&buf_info);
+    pj_atomic_queue_put(buf_queue, &buf_info);
 }
 
 /**
@@ -796,14 +796,16 @@ static void create_codec(and_media_private_t *and_media_data)
         if (!and_media_data->enc) {
             PJ_LOG(4, (THIS_FILE, "Failed creating encoder: %s", enc_name));
         }
-        and_media_data->enc_avail_input_buf = new pj_atomic_queue(
-                                                       BUFFER_MAX_ITEM,
-                                                       sizeof(and_med_buf_info),
-                                                       "enc_input_buf");
-        and_media_data->enc_avail_output_buf = new pj_atomic_queue(
-                                                       BUFFER_MAX_ITEM,
-                                                       sizeof(and_med_buf_info),
-                                                       "enc_output_buf");
+        pj_atomic_queue_create(and_media_data->pool,
+                               BUFFER_MAX_ITEM,
+                               sizeof(and_med_buf_info),
+                               "enc_input_buf",
+                               &and_media_data->enc_avail_input_buf);
+        pj_atomic_queue_create(and_media_data->pool,
+                               BUFFER_MAX_ITEM,
+                               sizeof(and_med_buf_info),
+                               "enc_output_buf",
+                               &and_media_data->enc_avail_output_buf);
 
         PJ_LOG(4, (THIS_FILE, "Done creating encoder: %s [0x%p]", enc_name,
                and_media_data->enc));
@@ -814,14 +816,16 @@ static void create_codec(and_media_private_t *and_media_data)
         if (!and_media_data->dec) {
             PJ_LOG(4, (THIS_FILE, "Failed creating decoder: %s", dec_name));
         }
-        and_media_data->dec_avail_input_buf = new pj_atomic_queue(
-                                                       BUFFER_MAX_ITEM,
-                                                       sizeof(and_med_buf_info),
-                                                       "dec_input_buf");
-        and_media_data->dec_avail_output_buf = new pj_atomic_queue(
-                                                       BUFFER_MAX_ITEM,
-                                                       sizeof(and_med_buf_info),
-                                                       "dec_output_buf");
+        pj_atomic_queue_create(and_media_data->pool,
+                               BUFFER_MAX_ITEM,
+                               sizeof(and_med_buf_info),
+                               "dec_input_buf",
+                               &and_media_data->dec_avail_input_buf);
+        pj_atomic_queue_create(and_media_data->pool,
+                               BUFFER_MAX_ITEM,
+                               sizeof(and_med_buf_info),
+                               "dec_output_buf",
+                               &and_media_data->dec_avail_output_buf);
 
         PJ_LOG(4, (THIS_FILE, "Done creating decoder: %s [0x%p]", dec_name,
                and_media_data->dec));
@@ -933,9 +937,9 @@ static pj_status_t and_media_dealloc_codec(pjmedia_codec_factory *factory,
         AMediaCodec_stop(codec_data->enc);
         AMediaCodec_delete(codec_data->enc);
         codec_data->enc = NULL;
-        delete codec_data->enc_avail_input_buf;
+        pj_atomic_queue_destroy(codec_data->enc_avail_input_buf);
         codec_data->enc_avail_input_buf = NULL;
-        delete codec_data->enc_avail_output_buf;
+        pj_atomic_queue_destroy(codec_data->enc_avail_output_buf);
         codec_data->enc_avail_output_buf = NULL;
     }
 
@@ -943,9 +947,9 @@ static pj_status_t and_media_dealloc_codec(pjmedia_codec_factory *factory,
         AMediaCodec_stop(codec_data->dec);
         AMediaCodec_delete(codec_data->dec);
         codec_data->dec = NULL;
-        delete codec_data->dec_avail_input_buf;
+        pj_atomic_queue_destroy(codec_data->dec_avail_input_buf);
         codec_data->dec_avail_input_buf = NULL;
-        delete codec_data->dec_avail_output_buf;
+        pj_atomic_queue_destroy(codec_data->dec_avail_output_buf);
         codec_data->dec_avail_output_buf = NULL;
     }
     pj_pool_release(codec_data->pool);
@@ -1236,9 +1240,10 @@ static pj_status_t and_media_codec_encode(pjmedia_codec *codec,
         unsigned input_size;
         pj_uint8_t *input_buf;
         and_med_buf_info buf_info;
+        pj_atomic_queue_t *queue = codec_data->enc_avail_input_buf;
 
         pj_bzero(&buf_info, sizeof(buf_info));
-        if (!codec_data->enc_avail_input_buf->get(&buf_info) ||
+        if (pj_atomic_queue_get(queue, &buf_info) != PJ_SUCCESS ||
             buf_info.index < 0)
         {
             PJ_LOG(4,(THIS_FILE, "Encoder failed to get input Buffer[%d]",
@@ -1272,8 +1277,9 @@ static pj_status_t and_media_codec_encode(pjmedia_codec *codec,
         }
 
         pj_bzero(&buf_info, sizeof(buf_info));
-        if (!codec_data->enc_avail_output_buf->get(&buf_info) ||
-             buf_info.index < 0)
+        queue = codec_data->enc_avail_output_buf;
+        if (pj_atomic_queue_get(queue, &buf_info) != PJ_SUCCESS ||
+            buf_info.index < 0)
         {
             PJ_LOG(4, (THIS_FILE, "Encoder failed to get output Buffer[%d]",
                    buf_info.index));
@@ -1344,6 +1350,7 @@ static pj_status_t and_media_codec_decode(pjmedia_codec *codec,
     media_status_t am_status;
     pj_uint8_t *output_buf;
     pjmedia_frame input_;
+    pj_atomic_queue_t *queue;
 
     pj_bzero(&input_, sizeof(pjmedia_frame));
     pj_bzero(&buf_info, sizeof(buf_info));
@@ -1356,8 +1363,8 @@ static pj_status_t and_media_codec_decode(pjmedia_codec *codec,
     {
         goto on_return;
     }
-
-    if (!codec_data->dec_avail_input_buf->get(&buf_info) ||
+    queue = codec_data->dec_avail_input_buf;
+    if (pj_atomic_queue_get(queue, &buf_info) != PJ_SUCCESS ||
         buf_info.index < 0)
     {
         PJ_LOG(4,(THIS_FILE, "Decoder failed to get input Buffer[%d]",
@@ -1396,7 +1403,8 @@ static pj_status_t and_media_codec_decode(pjmedia_codec *codec,
     }
 
     pj_bzero(&buf_info, sizeof(buf_info));
-    if (!codec_data->dec_avail_output_buf->get(&buf_info) ||
+    queue = codec_data->dec_avail_output_buf;
+    if (pj_atomic_queue_get(queue, &buf_info) != PJ_SUCCESS ||
         buf_info.index < 0)
     {
         PJ_LOG(4, (THIS_FILE, "Decoder failed to get output Buffer[%d]",

@@ -618,9 +618,9 @@ public:
                   "Oboe stream %s queue size=%d frames (latency=%d ms)",
                   dir_st, queue_size, latency));
 
-        queue = new pj_atomic_queue(queue_size,
-                                    stream->param.samples_per_frame*2,
-                                    dir_st);
+        pj_atomic_queue_create(stream->pool, queue_size,
+                               stream->param.samples_per_frame*2, dir_st,
+                               &queue);
 
         /* Create semaphore */
         if (sem_init(&sem, 0, 0) != 0) {
@@ -715,7 +715,7 @@ public:
 
         if (queue) {
             PJ_LOG(5,(THIS_FILE, "Oboe %s deleting queue", dir_st));
-            delete queue;
+            pj_atomic_queue_destroy(queue);
             queue = NULL;
         }
 
@@ -735,10 +735,10 @@ public:
     {
         if (dir == PJMEDIA_DIR_CAPTURE) {
             /* Put the audio frame to queue */
-            queue->put(audioData);
+            pj_atomic_queue_put(this->queue, audioData);
         } else {
             /* Get audio frame from queue */
-            if (!queue->get(audioData)) {
+            if (pj_atomic_queue_get(this->queue, audioData) != PJ_SUCCESS) {
                 pj_bzero(audioData, stream->param.samples_per_frame*2);
                 __android_log_write(ANDROID_LOG_WARN, THIS_FILE,
                         "Oboe playback got an empty queue");
@@ -849,7 +849,7 @@ private:
 
         /* Queue a silent frame to playback buffer */
         if (this_->dir == PJMEDIA_DIR_PLAYBACK) {
-            this_->queue->put(tmp_buf);
+            pj_atomic_queue_put(this_->queue, tmp_buf);
         }
 
         while (1) {
@@ -862,7 +862,8 @@ private:
                 bool stop_stream = false;
 
                 /* Read audio frames from Oboe */
-                while (this_->queue->get(tmp_buf)) {
+                while (pj_atomic_queue_get(this_->queue, tmp_buf) == PJ_SUCCESS)
+                {
                     /* Send audio frame to app via callback rec_cb() */
                     pjmedia_frame frame;
                     frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
@@ -905,7 +906,7 @@ private:
 
                 /* Send audio frame to Oboe */
                 if (status == PJ_SUCCESS) {
-                    this_->queue->put(tmp_buf);
+                    pj_atomic_queue_put(this_->queue, tmp_buf);
                 } else {
                     /* App wants to stop audio dev stream */
                     break;
@@ -930,7 +931,7 @@ private:
     pj_thread_t                 *thread;
     volatile pj_bool_t           thread_quit;
     sem_t                        sem;
-    pj_atomic_queue             *queue;
+    pj_atomic_queue_t           *queue;
     pj_timestamp                 ts;
     bool                         err_thread_registered;
     pj_thread_desc               err_thread_desc;
