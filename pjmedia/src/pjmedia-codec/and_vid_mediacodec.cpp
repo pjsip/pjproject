@@ -19,9 +19,9 @@
 #include <pjmedia-codec/and_vid_mediacodec.h>
 #include <pjmedia-codec/h264_packetizer.h>
 #include <pjmedia-codec/vpx_packetizer.h>
-#include <pjmedia/atomic_queue.hpp>
 #include <pjmedia/vid_codec_util.h>
 #include <pjmedia/errno.h>
+#include <pj/atomic_queue.h>
 #include <pj/log.h>
 
 #if defined(PJMEDIA_HAS_ANDROID_MEDIACODEC) && \
@@ -212,10 +212,10 @@ typedef struct and_media_codec_data
     unsigned                     dec_buf_size;
     AMediaCodecBufferInfo        dec_buf_info;
 
-    AtomicQueue                 *enc_avail_input_buf;
-    AtomicQueue                 *enc_avail_output_buf;
-    AtomicQueue                 *dec_avail_input_buf;
-    AtomicQueue                 *dec_avail_output_buf;
+    pj_atomic_queue             *enc_avail_input_buf;
+    pj_atomic_queue             *enc_avail_output_buf;
+    pj_atomic_queue             *dec_avail_input_buf;
+    pj_atomic_queue             *dec_avail_output_buf;
 
     pj_bool_t                    format_changed;
     pjmedia_rect_size            new_size;
@@ -259,7 +259,7 @@ static void and_med_on_input_avail(AMediaCodec *codec,
 {
     and_media_codec_data *and_media_data = (and_media_codec_data *) userdata;
     and_med_buf_info buf_info;
-    AtomicQueue *buf_queue;
+    pj_atomic_queue *buf_queue;
 
     pj_bzero(&buf_info, sizeof(buf_info));
     if (codec == and_media_data->enc) {
@@ -281,7 +281,7 @@ static void and_med_on_output_avail(AMediaCodec *codec,
 {
     and_media_codec_data *and_media_data = (and_media_codec_data *) userdata;
     and_med_buf_info buf_info;
-    AtomicQueue *buf_queue;
+    pj_atomic_queue *buf_queue;
 
     pj_bzero(&buf_info, sizeof(buf_info));
     if (codec == and_media_data->enc) {
@@ -915,16 +915,16 @@ static void create_codec(struct and_media_codec_data *and_media_data)
             PJ_LOG(4, (THIS_FILE, "Failed creating decoder: %s", dec_name));
         }
     }
-    and_media_data->enc_avail_input_buf = new AtomicQueue(BUFFER_MAX_ITEM,
+    and_media_data->enc_avail_input_buf = new pj_atomic_queue(BUFFER_MAX_ITEM,
                                                        sizeof(and_med_buf_info),
                                                        "enc_input_buf");
-    and_media_data->enc_avail_output_buf = new AtomicQueue(BUFFER_MAX_ITEM,
+    and_media_data->enc_avail_output_buf = new pj_atomic_queue(BUFFER_MAX_ITEM,
                                                        sizeof(and_med_buf_info),
                                                        "enc_output_buf");
-    and_media_data->dec_avail_input_buf = new AtomicQueue(BUFFER_MAX_ITEM,
+    and_media_data->dec_avail_input_buf = new pj_atomic_queue(BUFFER_MAX_ITEM,
                                                        sizeof(and_med_buf_info),
                                                        "dec_input_buf");
-    and_media_data->dec_avail_output_buf = new AtomicQueue(BUFFER_MAX_ITEM,
+    and_media_data->dec_avail_output_buf = new pj_atomic_queue(BUFFER_MAX_ITEM,
                                                        sizeof(and_med_buf_info),
                                                        "dec_output_buf");
 

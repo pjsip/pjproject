@@ -15,8 +15,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef __ATOMIC_QUEUE_HPP__
-#define __ATOMIC_QUEUE_HPP__
+#ifndef __ATOMIC_QUEUE_H__
+#define __ATOMIC_QUEUE_H__
 
 #include <atomic>
 
@@ -35,18 +35,18 @@
  * every time a item is fetched from the head of the queue, only if the
  * pointer is not modified by producer (in case of queue full).
  */
-class AtomicQueue {
+class pj_atomic_queue {
 public:
     /**
      * Constructor
      */
-    AtomicQueue(unsigned max_item_cnt, unsigned item_size,
-                const char* name_);
+    pj_atomic_queue(unsigned max_item_cnt_, unsigned item_size_,
+                    const char* name_);
 
     /**
      * Destructor
      */
-    ~AtomicQueue();
+    ~pj_atomic_queue();
 
     /**
      * Get a item from the head of the queue
@@ -59,12 +59,12 @@ public:
     void put(void* item);
 
 private:
-    unsigned maxItemCnt;
-    unsigned itemSize;
-    std::atomic<unsigned> ptrWrite;
-    std::atomic<unsigned> ptrRead;
+    unsigned max_item_cnt_;
+    unsigned item_size_;
+    std::atomic<unsigned> ptr_write;
+    std::atomic<unsigned> ptr_read;
     char *buffer;
-    const char *name;
+    const char *name_;
 
     /* Increment read pointer, only if producer not incemented it already.
      * Producer may increment the read pointer if the write pointer is
@@ -75,7 +75,7 @@ private:
     /* Increment write pointer */
     unsigned inc_ptr_write(unsigned old_ptr);
 
-    AtomicQueue() {}
+    pj_atomic_queue() {}
 };
 
 #endif

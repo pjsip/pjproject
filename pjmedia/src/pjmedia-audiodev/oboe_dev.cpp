@@ -21,13 +21,13 @@
 
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pj/assert.h>
+#include <pj/atomic_queue.h>
 #include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pjmedia/circbuf.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/event.h>
-#include <pjmedia/atomic_queue.hpp>
 
 #if defined(PJMEDIA_AUDIO_DEV_HAS_OBOE) &&  PJMEDIA_AUDIO_DEV_HAS_OBOE != 0
 
@@ -618,8 +618,9 @@ public:
                   "Oboe stream %s queue size=%d frames (latency=%d ms)",
                   dir_st, queue_size, latency));
 
-        queue = new AtomicQueue(queue_size, stream->param.samples_per_frame*2,
-                                dir_st);
+        queue = new pj_atomic_queue(queue_size,
+                                    stream->param.samples_per_frame*2,
+                                    dir_st);
 
         /* Create semaphore */
         if (sem_init(&sem, 0, 0) != 0) {
@@ -929,7 +930,7 @@ private:
     pj_thread_t                 *thread;
     volatile pj_bool_t           thread_quit;
     sem_t                        sem;
-    AtomicQueue                 *queue;
+    pj_atomic_queue             *queue;
     pj_timestamp                 ts;
     bool                         err_thread_registered;
     pj_thread_desc               err_thread_desc;

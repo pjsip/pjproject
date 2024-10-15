@@ -17,7 +17,6 @@
  */
 #include <pjmedia-codec/and_aud_mediacodec.h>
 #include <pjmedia-codec/amr_sdp_match.h>
-#include <pjmedia/atomic_queue.hpp>
 #include <pjmedia/codec.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/endpoint.h>
@@ -25,6 +24,7 @@
 #include <pjmedia/port.h>
 #include <pjmedia/silencedet.h>
 #include <pj/assert.h>
+#include <pj/atomic_queue.h>
 #include <pj/log.h>
 #include <pj/math.h>
 #include <pj/pool.h>
@@ -157,13 +157,13 @@ typedef struct and_media_private {
                                                  codec has internal VAD.    */
     pj_timestamp         last_tx;           /**< Timestamp of last transmit.*/
 
-    AtomicQueue          *enc_avail_input_buf; /**< Encoder available input
+    pj_atomic_queue     *enc_avail_input_buf; /**< Encoder available input
+                                                   buffer                   */
+    pj_atomic_queue     *enc_avail_output_buf; /**< Encoder available ouput
                                                     buffer                  */
-    AtomicQueue          *enc_avail_output_buf; /**< Encoder available ouput
+    pj_atomic_queue     *dec_avail_input_buf; /**< Decoder available input
                                                     buffer                  */
-    AtomicQueue          *dec_avail_input_buf; /**< Decoder available input
-                                                    buffer                  */
-    AtomicQueue          *dec_avail_output_buf; /**< Decoder available output
+    pj_atomic_queue     *dec_avail_output_buf; /**< Decoder available output
                                                     buffer                  */
 } and_media_private_t;
 
@@ -234,7 +234,7 @@ static void and_med_on_input_avail(AMediaCodec *codec,
 {
     and_media_private_t *and_media_data = (and_media_private_t *) userdata;
     and_med_buf_info buf_info;
-    AtomicQueue *buf_queue;
+    pj_atomic_queue *buf_queue;
     pj_bzero(&buf_info, sizeof(buf_info));
 
     if (codec == and_media_data->enc) {
@@ -256,7 +256,7 @@ static void and_med_on_output_avail(AMediaCodec *codec,
 {
     and_media_private_t *and_media_data = (and_media_private_t *) userdata;
     and_med_buf_info buf_info;
-    AtomicQueue *buf_queue;
+    pj_atomic_queue *buf_queue;
     pj_bzero(&buf_info, sizeof(buf_info));
     if (codec == and_media_data->enc) {
         buf_queue = and_media_data->enc_avail_output_buf;
@@ -796,12 +796,14 @@ static void create_codec(and_media_private_t *and_media_data)
         if (!and_media_data->enc) {
             PJ_LOG(4, (THIS_FILE, "Failed creating encoder: %s", enc_name));
         }
-        and_media_data->enc_avail_input_buf = new AtomicQueue(BUFFER_MAX_ITEM,
-                                                    sizeof(and_med_buf_info),
-                                                    "enc_input_buf");
-        and_media_data->enc_avail_output_buf = new AtomicQueue(BUFFER_MAX_ITEM,
-                                                    sizeof(and_med_buf_info),
-                                                    "enc_output_buf");
+        and_media_data->enc_avail_input_buf = new pj_atomic_queue(
+                                                       BUFFER_MAX_ITEM,
+                                                       sizeof(and_med_buf_info),
+                                                       "enc_input_buf");
+        and_media_data->enc_avail_output_buf = new pj_atomic_queue(
+                                                       BUFFER_MAX_ITEM,
+                                                       sizeof(and_med_buf_info),
+                                                       "enc_output_buf");
 
         PJ_LOG(4, (THIS_FILE, "Done creating encoder: %s [0x%p]", enc_name,
                and_media_data->enc));
@@ -812,12 +814,14 @@ static void create_codec(and_media_private_t *and_media_data)
         if (!and_media_data->dec) {
             PJ_LOG(4, (THIS_FILE, "Failed creating decoder: %s", dec_name));
         }
-        and_media_data->dec_avail_input_buf = new AtomicQueue(BUFFER_MAX_ITEM,
-                                                    sizeof(and_med_buf_info),
-                                                    "dec_input_buf");
-        and_media_data->dec_avail_output_buf = new AtomicQueue(BUFFER_MAX_ITEM,
-                                                    sizeof(and_med_buf_info),
-                                                    "dec_output_buf");
+        and_media_data->dec_avail_input_buf = new pj_atomic_queue(
+                                                       BUFFER_MAX_ITEM,
+                                                       sizeof(and_med_buf_info),
+                                                       "dec_input_buf");
+        and_media_data->dec_avail_output_buf = new pj_atomic_queue(
+                                                       BUFFER_MAX_ITEM,
+                                                       sizeof(and_med_buf_info),
+                                                       "dec_output_buf");
 
         PJ_LOG(4, (THIS_FILE, "Done creating decoder: %s [0x%p]", dec_name,
                and_media_data->dec));
