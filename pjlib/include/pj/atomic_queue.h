@@ -21,22 +21,24 @@
 /**
  * @file atomic_queue.h
  * @brief Atomic Queue operations
+ * @{
+ *
+ * Atomic queue for a single consumer and producer.
+ * This cyclic queue employs a ring buffer for storage, maintaining read/write
+ * pointers without locks. It’s designed for one producer and one consumer,
+ * as having multiple producers/consumers could lead to conflicts with the
+ * read/write pointers.
+ * The producer uses #pj_atomic_queue_put() to add an item to the back
+ * of the queue, while the consumer uses #pj_atomic_queue_get()
+ * to retrieve an item from the front.
  */
 
 #include <pj/types.h>
 
 PJ_BEGIN_DECL
 
-/* Atomic queue (ring buffer) for single consumer & single producer.
- *
- * Producer invokes 'pj_atomic_queue_put(item)' to put an item to the back of
- * the queue.
- * Consumer invokes 'pj_atomic_queue_get(item)' to get an item from the head of
- * the queue.
- */
-
 /**
- * Create a new Atomic Queue.
+ * Create a new Atomic Queue for single consumer and single producer case.
  *
  * @param pool          The pool to allocate the atomic queue structure.
  * @param max_item_cnt  The maximum number of items that can be stored.
@@ -49,7 +51,7 @@ PJ_BEGIN_DECL
 PJ_DECL(pj_status_t) pj_atomic_queue_create(pj_pool_t *pool,
                                             unsigned max_item_cnt,
                                             unsigned item_size,
-                                            const char* name,
+                                            const char *name,
                                             pj_atomic_queue_t **atomic_queue);
 
 /**

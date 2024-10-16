@@ -132,11 +132,12 @@ struct pj_atomic_queue_t
 PJ_DEF(pj_status_t) pj_atomic_queue_create(pj_pool_t *pool,
                                            unsigned max_item_cnt,
                                            unsigned item_size,
-                                           const char* name,
+                                           const char *name,
                                            pj_atomic_queue_t **atomic_queue)
 {
     pj_atomic_queue_t *aqueue;
 
+    PJ_ASSERT_RETURN(pool, PJ_EINVAL);
     aqueue = PJ_POOL_ZALLOC_T(pool, pj_atomic_queue_t);
     aqueue->aQ = new AtomicQueue(max_item_cnt, item_size, name);
     *atomic_queue = aqueue;
@@ -145,6 +146,7 @@ PJ_DEF(pj_status_t) pj_atomic_queue_create(pj_pool_t *pool,
 
 PJ_DEF(pj_status_t) pj_atomic_queue_destroy(pj_atomic_queue_t *atomic_queue)
 {
+    PJ_ASSERT_RETURN(atomic_queue && atomic_queue->aQ, PJ_EINVAL);
     delete atomic_queue->aQ;
     atomic_queue->aQ = NULL;
     return PJ_SUCCESS;
@@ -160,7 +162,7 @@ PJ_DEF(pj_status_t) pj_atomic_queue_destroy(pj_atomic_queue_t *atomic_queue)
 PJ_DEF(pj_status_t) pj_atomic_queue_put(pj_atomic_queue_t *atomic_queue,
                                         void *item)
 {
-    PJ_ASSERT_RETURN(atomic_queue && atomic_queue->aQ, PJ_EINVAL);
+    PJ_ASSERT_RETURN(atomic_queue && atomic_queue->aQ && item, PJ_EINVAL);
     atomic_queue->aQ->put(item);
     return PJ_SUCCESS;
 }
@@ -173,7 +175,7 @@ PJ_DEF(pj_status_t) pj_atomic_queue_put(pj_atomic_queue_t *atomic_queue,
 PJ_DEF(pj_status_t) pj_atomic_queue_get(pj_atomic_queue_t *atomic_queue,
                                         void *item)
 {
-    PJ_ASSERT_RETURN(atomic_queue && atomic_queue->aQ, PJ_EINVAL);
+    PJ_ASSERT_RETURN(atomic_queue && atomic_queue->aQ && item, PJ_EINVAL);
     if (atomic_queue->aQ->get(item))
         return PJ_SUCCESS;
     else
