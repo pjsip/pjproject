@@ -4664,7 +4664,11 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
         pj_status_t status;
 
         inv_set_cause(inv, tsx->status_code, &tsx->status_text);
-        inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+
+        /* Do not shift state to DISCONNECTED here, as it will destroy the
+         * invite session and the BYE sending below will raise an assertion.
+         */
+        //inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 
         /* Send BYE */
         status = pjsip_dlg_create_request(inv->dlg, pjsip_get_bye_method(), 
