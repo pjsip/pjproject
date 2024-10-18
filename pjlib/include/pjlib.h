@@ -30,6 +30,7 @@
 #include <pj/argparse.h>
 #include <pj/array.h>
 #include <pj/assert.h>
+#include <pj/atomic_queue.h>
 #include <pj/ctype.h>
 #include <pj/errno.h>
 #include <pj/except.h>
