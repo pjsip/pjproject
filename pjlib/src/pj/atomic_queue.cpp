@@ -22,6 +22,11 @@
 #include <pj/string.h>
 #include <atomic>
 
+#if 0
+#   define TRACE_(arg) PJ_LOG(4,arg)
+#else
+#   define TRACE_(expr)
+#endif
 class AtomicQueue {
 public:
     /**
@@ -40,8 +45,8 @@ public:
         /* Surpress warning when debugging log is disabled */
         PJ_UNUSED_ARG(name_);
 
-        // PJ_LOG(5, (name_, "Created AtomicQueue: maxItemCnt=%d itemSize=%d",
-        //            maxItemCnt_, itemSize_));
+        TRACE_((name_, "Created AtomicQueue: maxItemCnt=%d itemSize=%d",
+                maxItemCnt_, itemSize_));
     }
 
     /**
@@ -65,8 +70,8 @@ public:
         pj_memcpy(item, p, itemSize_);
         inc_ptrRead_if_not_yet(cur_ptr);
 
-        // PJ_LOG(5, (name_, "GET: ptrRead=%d ptrWrite=%d\n",
-        //        ptrRead.load(), ptrWrite.load()));
+        TRACE_((name_, "GET: ptrRead=%d ptrWrite=%d\n",
+               ptrRead.load(), ptrWrite.load()));
 
         return true;
     }
@@ -87,8 +92,8 @@ public:
         unsigned next_read_ptr = (next_ptr == maxItemCnt_-1)? 0 : (next_ptr+1);
         ptrRead.compare_exchange_strong(next_ptr, next_read_ptr);
 
-        // PJ_LOG(5, (name_, "PUT: ptrRead=%d ptrWrite=%d\n",
-        //        ptrRead.load(), ptrWrite.load()));
+        TRACE_((name_, "PUT: ptrRead=%d ptrWrite=%d\n",
+               ptrRead.load(), ptrWrite.load()));
     }
 
 private:
@@ -154,10 +159,7 @@ PJ_DEF(pj_status_t) pj_atomic_queue_destroy(pj_atomic_queue_t *atomic_queue)
 
 /**
  * For producer, there is write pointer 'ptrWrite' that will be incremented
- * every time a item is queued to the back of the queue. If the queue is
- * almost full (the write pointer is right before the read pointer) the
- * producer will forcefully discard the oldest item in the head of the
- * queue by incrementing read pointer.
+ * every time a item is queued to the back of the queue.
  */
 PJ_DEF(pj_status_t) pj_atomic_queue_put(pj_atomic_queue_t *atomic_queue,
                                         void *item)

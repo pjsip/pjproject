@@ -43,7 +43,7 @@
 #define AND_MEDIA_KEY_BIT_RATE      "bitrate"
 #define AND_MEDIA_KEY_PROFILE       "profile"
 #define AND_MEDIA_KEY_FRAME_RATE    "frame-rate"
-#define AND_MEDIA_KEY_IFR_INTTERVAL "i-frame-interval"
+#define AND_MEDIA_KEY_IFR_INTERVAL  "i-frame-interval"
 #define AND_MEDIA_KEY_MIME          "mime"
 #define AND_MEDIA_KEY_REQUEST_SYNCF "request-sync"
 #define AND_MEDIA_KEY_CSD0          "csd-0"
@@ -52,6 +52,8 @@
 #define AND_MEDIA_KEY_ENCODER       "encoder"
 #define AND_MEDIA_KEY_PRIORITY      "priority"
 #define AND_MEDIA_KEY_STRIDE        "stride"
+#define AND_MEDIA_KEY_LATENCY       "latency"
+#define AND_MEDIA_KEY_LOW_LATENCY   "low-latency"
 #define AND_MEDIA_I420_PLANAR_FMT   0x13
 #define AND_MEDIA_QUEUE_TIMEOUT     2000*100
 
@@ -475,12 +477,13 @@ static pj_status_t configure_encoder(and_media_codec_data *and_media_data)
     AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_BIT_RATE,
                           param->enc_fmt.det.vid.avg_bps);
     //AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_PROFILE, 1);
-    AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_IFR_INTTERVAL,
+    AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_IFR_INTERVAL,
                           KEYFRAME_INTERVAL);
     AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_FRAME_RATE,
                           (param->enc_fmt.det.vid.fps.num /
                            param->enc_fmt.det.vid.fps.denum));
     AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_PRIORITY, 0);
+    AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_LATENCY, 1);
 
     /* Configure and start encoder. */
     am_status = AMediaCodec_configure(and_media_data->enc, vid_fmt, NULL, NULL,
@@ -520,6 +523,7 @@ static pj_status_t configure_decoder(and_media_codec_data *and_media_data) {
     AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_MAX_INPUT_SZ, 0);
     AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_ENCODER, 0);
     AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_PRIORITY, 0);
+    AMediaFormat_setInt32(vid_fmt, AND_MEDIA_KEY_LOW_LATENCY, 1);
 
     if (and_media_codec[and_media_data->codec_idx].fmt_id ==
         PJMEDIA_FORMAT_H264)

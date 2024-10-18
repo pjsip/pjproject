@@ -64,8 +64,10 @@ PJ_DECL(pj_status_t) pj_atomic_queue_create(pj_pool_t *pool,
 PJ_DECL(pj_status_t) pj_atomic_queue_destroy(pj_atomic_queue_t *atomic_queue);
 
 /**
- * Put a item to the back of the queue. If the queue is almost full
- * the producer will forcefully discard the oldest item.
+ * Put an item to the back of the queue. If the queue is almost full
+ * (the write pointer is right before the read pointer) the producer will
+ * forcefully discard the oldest item in the head of the queue by incrementing
+ * the read pointer.
  *
  * @param atomic_queue  The Atomic Queue.
  * @param item          The pointer to the data to store.
