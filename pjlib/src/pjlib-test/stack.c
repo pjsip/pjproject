@@ -39,15 +39,15 @@ typedef struct PJ_SYS_ALIGN_PREFIX stack_node {
 
 int stack_test()
 {
-    pj_stack_type* stack = NULL;
-    const int sz = 15;
-    stack_node* nodes;
-    stack_node* p;
+    pj_stack_type   *stack = NULL;
+    const int        sz = 15;
+    stack_node      *nodes;
+    stack_node      *p;
     int i; // don't change to unsigned!
 
-    pj_pool_t* pool = NULL;;
-    pj_status_t status;
-    int rc;
+    pj_pool_t       *pool = NULL;;
+    pj_status_t      status;
+    int              rc;
 
     pool = pj_pool_create(mem, NULL, 4096, 0, NULL);
     if (!pool)

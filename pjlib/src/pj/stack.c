@@ -26,14 +26,14 @@ typedef struct pj_stack_item_t
 
 struct pj_stack_type
 {
-    pj_stack_item_t head;
-    pj_mutex_t* mutex;
+    pj_stack_item_t  head;
+    pj_mutex_t      *mutex;
 };
 
 PJ_DEF(pj_status_t) pj_stack_create(pj_pool_t *pool, pj_stack_type **stack)
 {
-    pj_stack_type* p_stack;
-    pj_status_t rc;
+    pj_stack_type   *p_stack;
+    pj_status_t      rc;
 
     PJ_ASSERT_RETURN(pool && stack, PJ_EINVAL);
 
@@ -139,7 +139,7 @@ PJ_DEF(pj_size_t) pj_stack_size(/*const*/ pj_stack_type *stack)
         return 0;
     }
 
-    const pj_stack_item_t* node = stack->head.next;
+    const pj_stack_item_t *node = stack->head.next;
     pj_size_t count = 0;
 
     while (node != node->next) {
