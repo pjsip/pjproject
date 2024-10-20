@@ -68,6 +68,18 @@ int test_inner(void)
     pj_log_set_level(3);
     pj_log_set_decor(param_log_decor);
 
+#if 0
+    unsigned decor = pj_log_get_decor();
+    pj_log_set_decor(PJ_LOG_HAS_THREAD_ID | PJ_LOG_HAS_SENDER | decor);
+    pj_log_set_level(5);
+#if defined(PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE) && (PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE==1) && (WINVER >= 0x0500)
+    LCID locale = GetThreadLocale();
+    BOOL res = SetThreadLocale(MAKELCID(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), SORT_DEFAULT));
+    PJ_UNUSED_ARG(res);
+#endif
+#endif
+
+
     rc = pj_init();
     if (rc != 0) {
         app_perror("pj_init() error!!", rc);
