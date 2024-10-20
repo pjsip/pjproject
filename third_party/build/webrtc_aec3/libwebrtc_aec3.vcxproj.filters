@@ -512,11 +512,14 @@
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_processor_metrics.cc">
       <Filter>Source Files\modules\audio_processing\aec3</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_neon.cc">
-      <Filter>Source Files\common_audio\resampler</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft_neon.cc">
-      <Filter>Source Files\third_party</Filter>
-    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_sse.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft_sse2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_erl_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fft_data_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\vector_math_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn_vector_math_avx2.cc" />
   </ItemGroup>
 </Project>

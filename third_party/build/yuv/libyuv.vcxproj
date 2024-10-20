@@ -105,6 +105,10 @@
     <RootNamespace>libyuv</RootNamespace>
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
+    <SccProjectName>SAK</SccProjectName>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccProvider>SAK</SccProvider>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
@@ -726,6 +730,26 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\yuv\include\libyuv.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\basic_types.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\compare.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\compare_row.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\convert.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\convert_argb.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\convert_from.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\convert_from_argb.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\cpu_id.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\macros_msa.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\mjpeg_decoder.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\planar_functions.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\rotate.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\rotate_argb.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\rotate_row.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\row.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\scale.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\scale_argb.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\scale_row.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\version.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv\video_common.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

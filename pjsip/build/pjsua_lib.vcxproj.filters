@@ -9,6 +9,9 @@
       <UniqueIdentifier>{e83578b3-3953-431c-8cb0-3e0da189893c}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl</Extensions>
     </Filter>
+    <Filter Include="Source Files\vulkan">
+      <UniqueIdentifier>{c3260fa6-0427-42b4-bc21-6a450f043b27}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\pjsua-lib\pjsua_acc.c">
@@ -37,6 +40,12 @@
     </ClCompile>
     <ClCompile Include="..\src\pjsua-lib\pjsua_vid.c">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsua-lib\vulkan\vulkan_call.c">
+      <Filter>Source Files\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsua-lib\vulkan\vulkan_aud.c">
+      <Filter>Source Files\vulkan</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

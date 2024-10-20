@@ -123,6 +123,9 @@
     <ClCompile Include="..\src\pjlib-test\main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjlib-test\stack.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjlib-test\ioq_stress_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>

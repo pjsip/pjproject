@@ -104,6 +104,10 @@
     <ProjectGuid>{2A3F241E-682C-47E1-9543-DC28708B406A}</ProjectGuid>
     <RootNamespace>libg7221codec</RootNamespace>
     <DefaultLanguage>en-US</DefaultLanguage>
+    <SccProjectName>SAK</SccProjectName>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccProvider>SAK</SccProvider>
     <!-- Specific UWP property -->
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

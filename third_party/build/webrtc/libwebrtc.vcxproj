@@ -149,7 +149,7 @@
     <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\complex_fft.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\copy_set_operations.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\cross_correlation.c" />
-    <ClCompile Condition="$(InstSet)==NEON" Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\cross_correlation_neon.c" />  
+    <ClCompile Condition="$(InstSet)==NEON" Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\cross_correlation_neon.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\division_operations.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\dot_product_with_scale.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\downsample_fast.c" />
@@ -178,16 +178,16 @@
     <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\spl_sqrt.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\spl_sqrt_floor.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\sqrt_of_one_minus_x_squared.c" />
-    <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\vector_scaling_operations.c" />      
+    <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\vector_scaling_operations.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\aecm\aecm_core.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\aecm\aecm_core_c.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\aecm\echo_control_mobile.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_core.c" />
-    <ClCompile Condition="$(InstSet)==NEON" Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_core_neon.c" />      
-    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_core_sse2.c" />    
+    <ClCompile Condition="$(InstSet)==NEON" Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_core_neon.c" />
+    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_core_sse2.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_rdft.c" />
     <ClCompile Condition="$(InstSet)==NEON" Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_rdft_neon.c" />
-    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_rdft_sse2.c" />    
+    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_rdft_sse2.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_resampler.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\echo_cancellation.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\ns\noise_suppression.c" />
@@ -207,6 +207,10 @@
     <RootNamespace>libwebrtc</RootNamespace>
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
+    <SccProjectName>SAK</SccProjectName>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccProvider>SAK</SccProvider>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">

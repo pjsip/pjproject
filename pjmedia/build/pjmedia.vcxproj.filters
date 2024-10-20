@@ -9,6 +9,9 @@
       <UniqueIdentifier>{299e6683-786a-497a-ab65-a7ae49842874}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl</Extensions>
     </Filter>
+    <Filter Include="Header Files\vulkan">
+      <UniqueIdentifier>{6e2190e6-cb61-431d-9b62-784b4e93c46e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\pjmedia\alaw_ulaw.c">
@@ -417,6 +420,12 @@
     </ClInclude>
     <ClInclude Include="..\include\pjmedia\vid_conf.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\pjmedia\echo_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vulkan\include\vulkan_wav.h">
+      <Filter>Header Files\vulkan</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

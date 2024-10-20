@@ -105,6 +105,10 @@
     <RootNamespace>pjnath</RootNamespace>
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
+    <SccProjectName>SAK</SccProjectName>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccProvider>SAK</SccProvider>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
@@ -733,7 +737,6 @@
     <ClCompile Include="..\src\pjnath\stun_transaction.c" />
     <ClCompile Include="..\src\pjnath\turn_session.c" />
     <ClCompile Include="..\src\pjnath\turn_sock.c" />
-    <ClCompile Include="..\src\pjnath\upnp.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\docs\doc_ice.h" />
@@ -752,11 +755,11 @@
     <ClInclude Include="..\include\pjnath\stun_config.h" />
     <ClInclude Include="..\include\pjnath\stun_msg.h" />
     <ClInclude Include="..\include\pjnath\stun_session.h" />
+    <ClInclude Include="..\include\pjnath\stun_sock.h" />
     <ClInclude Include="..\include\pjnath\stun_transaction.h" />
     <ClInclude Include="..\include\pjnath\turn_session.h" />
     <ClInclude Include="..\include\pjnath\turn_sock.h" />
     <ClInclude Include="..\include\pjnath\types.h" />
-    <ClInclude Include="..\include\pjnath\upnp.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

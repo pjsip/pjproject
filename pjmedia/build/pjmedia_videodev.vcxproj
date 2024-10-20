@@ -104,6 +104,10 @@
     <ProjectGuid>{A1989FF3-9894-40F4-B5A6-6EA364476E45}</ProjectGuid>
     <RootNamespace>pjmedia_audiodev</RootNamespace>
     <DefaultLanguage>en-US</DefaultLanguage>
+    <SccProjectName>SAK</SccProjectName>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccProvider>SAK</SccProvider>
     <!-- Specific UWP property -->
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -689,6 +693,7 @@
     <ClInclude Include="..\include\pjmedia-videodev\errno.h" />
     <ClInclude Include="..\include\pjmedia-videodev\videodev.h" />
     <ClInclude Include="..\include\pjmedia-videodev\videodev_imp.h" />
+    <ClInclude Include="..\include\pjmedia_videodev.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

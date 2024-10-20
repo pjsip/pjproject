@@ -244,5 +244,17 @@
     <ClInclude Include="..\..\speex\libspeex\vq.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\speex\include\speex\speexdsp_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="speex\speex_config_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\speex\win32\config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\speex\libspeex\vorbis_psy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

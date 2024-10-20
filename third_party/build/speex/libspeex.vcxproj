@@ -105,6 +105,10 @@
     <RootNamespace>libspeex</RootNamespace>
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
+    <SccProjectName>SAK</SccProjectName>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccProvider>SAK</SccProvider>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
@@ -1210,6 +1214,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\speex\include\speex\speex.h" />
+    <ClInclude Include="..\..\speex\include\speex\speexdsp_types.h" />
     <ClInclude Include="..\..\speex\include\speex\speex_bits.h" />
     <ClInclude Include="..\..\speex\include\speex\speex_callbacks.h" />
     <ClInclude Include="..\..\speex\include\speex\speex_echo.h" />
@@ -1244,9 +1249,12 @@
     <ClInclude Include="..\..\speex\libspeex\smallft.h" />
     <ClInclude Include="..\..\speex\libspeex\stack_alloc.h" />
     <ClInclude Include="..\..\speex\libspeex\vbr.h" />
+    <ClInclude Include="..\..\speex\libspeex\vorbis_psy.h" />
     <ClInclude Include="..\..\speex\libspeex\vq.h" />
     <ClInclude Include="..\..\speex\libspeex\_kiss_fft_guts.h" />
+    <ClInclude Include="..\..\speex\win32\config.h" />
     <ClInclude Include="config.h" />
+    <ClInclude Include="speex\speex_config_types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

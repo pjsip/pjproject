@@ -50,5 +50,8 @@
     <ClInclude Include="..\src\pjnath-test\test.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\pjnath-test\server.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
