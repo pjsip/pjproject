@@ -546,57 +546,57 @@ struct DigestChallenge
 struct DigestCredential
 {
     /**
-     *Realm of the credential
+     * Realm of the credential
      */
     std::string realm;
 
     /**
-     *Other parameters.
+     * Other parameters.
      */
     StringToStringMap otherParam;
 
     /**
-     *Username parameter.
+     * Username parameter.
      */
     std::string username;
 
     /**
-     *Nonce parameter.
+     * Nonce parameter.
      */
     std::string nonce;
 
     /**
-     *URI parameter.
+     * URI parameter.
      */
     std::string uri;
 
     /**
-     *Response digest.
+     * Response digest.
      */
     std::string response;
 
     /**
-     *Algorithm.
+     * Algorithm.
      */
     std::string algorithm;
 
     /**
-     *Cnonce.
+     * Cnonce.
      */
     std::string cnonce;
 
     /**
-     *Opaque value.
+     * Opaque value.
      */
     std::string opaque;
 
     /**
-     *Quality of protection.
+     * Quality of protection.
      */
     std::string qop;
 
     /**
-     *Nonce count.
+     * Nonce count.
      */
     std::string nc;
 
@@ -613,20 +613,36 @@ struct DigestCredential
 
 
 /**
- * Parameters for onCredAuth account method.
+ * Parameter of Endpoint::onCredAuth() callback.
  */
 struct OnCredAuthParam
 {
-    /** Digest challenge */
+    /**
+     * Digest challenge.
+     * The authentication challenge sent by server in 401 or 401 response,
+     * as either Proxy-Authenticate or WWW-Authenticate header.
+     */
     DigestChallenge digestChallenge;
 
-    /** Credential info */
+    /**
+     * Credential info.
+     */
     AuthCredInfo credentialInfo;
 
-    /** Method */
+    /**
+     * The request method.
+     */
     std::string method;
 
-    /** Digest credential */
+    /**
+     * The digest credential where the digest response will be placed to.
+     *
+     * Upon calling this function, the nonce, nc, cnonce, qop, uri, and realm
+     * fields of this structure must be set by the caller.
+     *
+     * Upon return, the callback must set the response in
+     * \a DigestCredential.response.
+     */
     DigestCredential digestCredential;
 };
 
@@ -1928,35 +1944,24 @@ public:
     { PJ_UNUSED_ARG(prm); }
 
     /**
-     * Callback for computation of the digest credential.
+     * Callback for custom computation of the digest AKA response.
      *
-     * Usually, an application does not need to implement (overload) this callback.
-     * Use it, if your application needs to support Digest AKA authentication without 
-     * the default digest computation back-end (i.e: using <b>libmilenage</b>).
+     * Usually an application does not need to implement (overload) this
+     * callback because by default the response digest AKA is automatically
+     * computed using <b>libmilenage</b>.
      *
-     * To use Digest AKA authentication, add \a PJSIP_CRED_DATA_EXT_AKA flag in the
-     * AuthCredInfo's \a dataType field of the AccountConfig, and fill up other
-     * AKA specific information in AuthCredInfo:
-     *  - If PJSIP_HAS_DIGEST_AKA_AUTH is disabled, you have to overload this callback
-     *    to provide your own digest computation back-end.
-     *  - If PJSIP_HAS_DIGEST_AKA_AUTH is enabled, <b>libmilenage</b> library from 
-     *    \a third_party directory is linked, and this callback returns PJ_ENOTSUP,
-     *    then the default digest computation back-end is used.
+     * To use Digest AKA authentication, add \a PJSIP_CRED_DATA_EXT_AKA flag
+     * in the AuthCredInfo's \a dataType field of the AccountConfig, and
+     * fill up other AKA specific information in AuthCredInfo.
+     * Please see \ref PJSIP_AUTH_AKA_API for more information.
      *
-     * @param prm.digestChallenge       The authentication challenge sent by server in 401
-     *              or 401 response, as either Proxy-Authenticate or
-     *              WWW-Authenticate header.
-     * @param prm.credentialInfo            The credential to be used.
-     * @param method    The request method.
-     * @param prm.digestCredential          The digest credential where the digest response
-     *              will be placed to. Upon calling this function, the
-     *              nonce, nc, cnonce, qop, uri, and realm fields of
-     *              this structure must have been set by caller. Upon
-     *              return, the \a response field will be initialized
-     *              by this function.
+     * @param prm       Callback parameter.
      *
-     * @return PJ_ENOTSUP is the default. If you overload this callback,
-     *              return PJ_SUCCESS on success. 
+     * @return          Return PJ_ENOTSUP to let the library compute
+     *                  the response digest automatically.
+     *                  Return PJ_SUCCESS if application does the computation
+     *                  and sets the response digest in
+     *                  \a prm.DigestCredential.response.
      */
     virtual pj_status_t onCredAuth(OnCredAuthParam &prm);
 

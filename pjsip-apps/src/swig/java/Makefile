@@ -9,6 +9,9 @@ SWIG_FLAGS=-I../../../../pjlib/include \
 SRC_DIR=../../../../pjsip/include
 SRCS=$(SRC_DIR)/pjsua2/endpoint.hpp $(SRC_DIR)/pjsua2/types.hpp
 
+GEN_DOC = -doxygen
+SWIG_FLAGS += $(GEN_DOC)
+
 ifneq ($(findstring android,$(TARGET_NAME)),)
  OS=android
  ifeq ("$(JAVA_HOME)","")

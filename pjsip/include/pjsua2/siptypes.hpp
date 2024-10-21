@@ -492,7 +492,7 @@ struct TransportConfig : public PersistentObject
 
     /**
      * This specifies TLS settings for TLS transport. 
-     * It’s only used when creating a SIP TLS transport.
+     * It's only used when creating a SIP TLS transport.
      */
     TlsConfig           tlsConfig;
 

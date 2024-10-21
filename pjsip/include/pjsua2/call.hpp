@@ -1355,7 +1355,8 @@ struct CallSendDtmfParam
     pjsua_dtmf_method method;    
 
     /**
-     * The signal duration used for the DTMF.
+     * The signal duration used for the DTMF. This field is only used
+     * if the method is PJSUA_DTMF_METHOD_SIP_INFO.
      *
      * Default: PJSUA_CALL_SEND_DTMF_DURATION_DEFAULT
      */
