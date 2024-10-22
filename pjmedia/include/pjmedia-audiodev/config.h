@@ -111,6 +111,13 @@ PJ_BEGIN_DECL
 #   define PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO     0
 #endif
 
+/**
+ * This setting controls whether sigmastar audio support should be included.
+ */
+#ifndef PJMEDIA_AUDIO_DEV_HAS_SIGMASTAR_AUDIO
+#   define PJMEDIA_AUDIO_DEV_HAS_SIGMASTAR_AUDIO     1
+#endif
+
 
 /**
  * This setting controls whether coreaudio support should be included.
