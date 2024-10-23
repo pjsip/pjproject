@@ -245,6 +245,13 @@ on_return:
 PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( pjsua_call_id call_id,
                                           const pj_str_t *digits)
 {
+    return pjsua_call_dial_dtmf2(call_id, digits, 0);
+}
+
+PJ_DEF(pj_status_t) pjsua_call_dial_dtmf2( pjsua_call_id call_id,
+                                          const pj_str_t *digits,
+                                          unsigned duration)
+{
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
     pj_status_t status;
@@ -266,8 +273,8 @@ PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( pjsua_call_id call_id,
         goto on_return;
     }
 
-    status = pjmedia_stream_dial_dtmf(
-                call->media[call->audio_idx].strm.a.stream, digits);
+    status = pjmedia_stream_dial_dtmf2(
+                call->media[call->audio_idx].strm.a.stream, digits, duration);
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);

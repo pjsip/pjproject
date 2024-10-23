@@ -96,6 +96,7 @@ struct dtmf
 {
     int             event;
     pj_uint32_t     duration;
+    pj_uint32_t     send_duration;
     int             ebit_cnt;               /**< # of E bit transmissions   */
 };
 
@@ -982,9 +983,27 @@ static void create_dtmf_payload(pjmedia_stream *stream,
 {
     pjmedia_rtp_dtmf_event *event;
     struct dtmf *digit = &stream->tx_dtmf_buf[0];
+    unsigned duration = 0;
 
     pj_assert(sizeof(pjmedia_rtp_dtmf_event) == 4);
 
+    if (digit->send_duration)
+    {
+        float ts_modifier = 1.0;
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+        if (stream->codec_param.info.pt == PJMEDIA_RTP_PT_G722) {
+            ts_modifier = 0.5;
+        }
+#endif
+        if (!pj_stricmp2(&stream->si.fmt.encoding_name, "opus")) {
+            ts_modifier = 48000 / stream->codec_param.info.clock_rate;
+        }
+        duration = ts_modifier * digit->send_duration * stream->codec_param.info.clock_rate / 1000;
+    }
+    else
+    {
+        duration = stream->dtmf_duration;
+    }
     *first = *last = 0;
 
     event = (pjmedia_rtp_dtmf_event*) frame_out->buf;
@@ -996,19 +1015,18 @@ static void create_dtmf_payload(pjmedia_stream *stream,
     }
 
     digit->duration += stream->rtp_tx_ts_len_per_pkt;
-    if (digit->duration >= stream->dtmf_duration)
-        digit->duration = stream->dtmf_duration;
+    if (digit->duration >= duration)
+        digit->duration = duration;
 
     event->event = (pj_uint8_t)digit->event;
     event->e_vol = 10;
     event->duration = pj_htons((pj_uint16_t)digit->duration);
 
     if (forced_last) {
-        digit->duration = stream->dtmf_duration;
+        digit->duration = duration;
     }
 
-    if (digit->duration >= stream->dtmf_duration) {
-
+    if (digit->duration >= duration) {
         event->e_vol |= 0x80;
 
         if (++digit->ebit_cnt >= DTMF_EBIT_RETRANSMIT_CNT) {
@@ -3386,6 +3404,13 @@ PJ_DEF(pj_status_t) pjmedia_stream_resume( pjmedia_stream *stream,
 PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
                                               const pj_str_t *digit_char)
 {
+    return pjmedia_stream_dial_dtmf2(stream, digit_char, 0);
+}
+
+PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf2( pjmedia_stream *stream,
+                                              const pj_str_t *digit_char,
+                                              unsigned duration)
+{
     pj_status_t status = PJ_SUCCESS;
 
     /* By convention we use jitter buffer mutex to access DTMF
@@ -3444,6 +3469,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
 
             stream->tx_dtmf_buf[stream->tx_dtmf_count+i].event = pt;
             stream->tx_dtmf_buf[stream->tx_dtmf_count+i].duration = 0;
+            stream->tx_dtmf_buf[stream->tx_dtmf_count+i].send_duration = duration;
             stream->tx_dtmf_buf[stream->tx_dtmf_count+i].ebit_cnt = 0;
         }
 

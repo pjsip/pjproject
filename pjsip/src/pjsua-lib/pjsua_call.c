@@ -3777,7 +3777,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_dtmf(pjsua_call_id call_id,
                        get_dtmf_method_name(param->method)));
 
     if (param->method == PJSUA_DTMF_METHOD_RFC2833) {
-        status = pjsua_call_dial_dtmf(call_id, &param->digits);
+        status = pjsua_call_dial_dtmf2(call_id, &param->digits, param->duration);
     } else if (param->method == PJSUA_DTMF_METHOD_SIP_INFO) {
         const pj_str_t SIP_INFO = pj_str("INFO");
         int i;
