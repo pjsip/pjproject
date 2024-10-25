@@ -1,22 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug-Dynamic-Client|ARM">
-      <Configuration>Debug-Dynamic-Client</Configuration>
-      <Platform>ARM</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug-Dynamic-Client|ARM64">
-      <Configuration>Debug-Dynamic-Client</Configuration>
-      <Platform>ARM64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug-Dynamic-Client|Win32">
-      <Configuration>Debug-Dynamic-Client</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug-Dynamic-Client|x64">
-      <Configuration>Debug-Dynamic-Client</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug-Dynamic|ARM">
       <Configuration>Debug-Dynamic</Configuration>
       <Platform>ARM</Platform>
@@ -63,22 +47,6 @@
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release-Dynamic-Client|ARM">
-      <Configuration>Release-Dynamic-Client</Configuration>
-      <Platform>ARM</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release-Dynamic-Client|ARM64">
-      <Configuration>Release-Dynamic-Client</Configuration>
-      <Platform>ARM64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release-Dynamic-Client|Win32">
-      <Configuration>Release-Dynamic-Client</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release-Dynamic-Client|x64">
-      <Configuration>Release-Dynamic-Client</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release-Dynamic|ARM">
@@ -161,19 +129,7 @@
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v140</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
@@ -185,19 +141,7 @@
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v140</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
@@ -257,19 +201,7 @@
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v140</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
@@ -281,19 +213,7 @@
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
-    <UseOfMfc>false</UseOfMfc>
-    <CharacterSet>MultiByte</CharacterSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v140</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
@@ -359,17 +279,7 @@
     <Import Project="..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
     <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
-  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\vs\pjproject-vs14-arm-common-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|ARM'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\build\vs\pjproject-vs14-arm-common-defaults.props" />
     <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
@@ -379,17 +289,7 @@
     <Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
     <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
-  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\vs\pjproject-vs14-arm-release-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|ARM'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\build\vs\pjproject-vs14-arm-release-defaults.props" />
     <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
@@ -439,17 +339,7 @@
     <Import Project="..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
     <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
-  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\vs\pjproject-vs14-arm64-common-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\build\vs\pjproject-vs14-arm64-common-defaults.props" />
     <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
@@ -459,17 +349,7 @@
     <Import Project="..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
     <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|x64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
-  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\build\vs\pjproject-vs14-arm64-release-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\build\vs\pjproject-vs14-arm64-release-defaults.props" />
     <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
@@ -667,29 +547,7 @@
       <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|Win32'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;PJ_CLIENT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
-    </ClCompile>
-    <Lib>
-      <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
-    </Lib>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
-    </ClCompile>
-    <Lib>
-      <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
-    </Lib>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|ARM'">
     <ClCompile>
       <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -713,33 +571,7 @@
       <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|x64'">
-    <Midl>
-      <TargetEnvironment>X64</TargetEnvironment>
-    </Midl>
-    <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
-    </ClCompile>
-    <Lib>
-      <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
-    </Lib>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">
-    <Midl />
-    <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
-    </ClCompile>
-    <Lib>
-      <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
-    </Lib>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|ARM64'">
     <Midl />
     <ClCompile>
       <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -761,29 +593,7 @@
       <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|Win32'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;PJ_CLIENT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
-    </ClCompile>
-    <Lib>
-      <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
-    </Lib>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'">
-    <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
-    </ClCompile>
-    <Lib>
-      <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
-    </Lib>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|ARM'">
     <ClCompile>
       <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -808,35 +618,7 @@
       <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|x64'">
-    <Midl>
-      <TargetEnvironment>X64</TargetEnvironment>
-    </Midl>
-    <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-    </ClCompile>
-    <Lib>
-      <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
-    </Lib>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'">
-    <Midl />
-    <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-    </ClCompile>
-    <Lib>
-      <OutputFile>..\lib\pjsua-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
-    </Lib>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|ARM64'">
     <Midl />
     <ClCompile>
       <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -905,26 +687,6 @@
     <ClCompile Include="..\src\pjsua-lib\pjsua_media.c" />
     <ClCompile Include="..\src\pjsua-lib\pjsua_pres.c" />
     <ClCompile Include="..\src\pjsua-lib\pjsua_vid.c" />
-    <ClCompile Include="..\src\pjsua-lib\vulkan\vulkan_aud.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\src\pjsua-lib\vulkan\vulkan_call.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic-Client|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic-Client|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjsua-lib\pjsua.h" />
