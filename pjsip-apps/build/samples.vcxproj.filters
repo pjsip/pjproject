@@ -111,6 +111,9 @@
     <ClCompile Include="..\src\samples\vid_streamutil.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\samples\stereotest.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\samples\proxy.h">

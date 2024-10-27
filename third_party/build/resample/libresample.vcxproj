@@ -105,6 +105,10 @@
     <RootNamespace>libresample</RootNamespace>
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
+    <SccProjectName>SAK</SccProjectName>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccProvider>SAK</SccProvider>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
@@ -679,6 +683,7 @@
     <ClInclude Include="..\..\resample\src\resample.h" />
     <ClInclude Include="..\..\resample\src\smallfilter.h" />
     <ClInclude Include="..\..\resample\src\stddefs.h" />
+    <ClInclude Include="config.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\resample\src\resamplesubs.c" />

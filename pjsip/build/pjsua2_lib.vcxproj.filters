@@ -76,5 +76,8 @@
     <ClInclude Include="..\include\pjsua2\types.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pjsua2.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

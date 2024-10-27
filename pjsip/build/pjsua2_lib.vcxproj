@@ -105,6 +105,11 @@
     <RootNamespace>pjsua2_lib</RootNamespace>
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
+    <SccProjectName>SAK</SccProjectName>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccProvider>SAK</SccProvider>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
@@ -396,6 +401,7 @@
       <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -445,6 +451,7 @@
       <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -491,6 +498,7 @@
       <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -539,6 +547,7 @@
       <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -585,6 +594,7 @@
       <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -633,6 +643,7 @@
       <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -686,6 +697,7 @@
     <ClCompile Include="..\src\pjsua2\types.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\pjsua2.hpp" />
     <ClInclude Include="..\include\pjsua2\account.hpp" />
     <ClInclude Include="..\include\pjsua2\call.hpp" />
     <ClInclude Include="..\include\pjsua2\config.hpp" />

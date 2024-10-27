@@ -7,13 +7,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="pch.cpp" />
-    <ClCompile Include="ApiLock.cpp" />
     <ClCompile Include="MyApp.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="pch.h" />
-    <ClInclude Include="ApiLock.h" />
     <ClInclude Include="MyApp.h" />
   </ItemGroup>
 </Project>

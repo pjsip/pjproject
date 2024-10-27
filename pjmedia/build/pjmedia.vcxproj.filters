@@ -418,5 +418,8 @@
     <ClInclude Include="..\include\pjmedia\vid_conf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\pjmedia\echo_internal.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31624.102
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35027.167
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1DFF1CF3-DBD7-4DA4-A36D-663D695EB678}"
 	ProjectSection(SolutionItems) = preProject
@@ -121,10 +121,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimplePjsua2CS", "pjsip-apps\src\swig\csharp\sample\SimplePjsua2CS\SimplePjsua2CS.csproj", "{3DCDD02D-C3CF-40EB-A66C-F7C2DAD93FD9}"
 EndProject
 Global
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		pjsip-apps\src\pjsua\winrt\cli\comp\pjsua_cli_shared_comp.vcxitems*{207e7bd4-7b11-4a40-ba3a-cc627762a7b6}*SharedItemsImports = 4
-		pjsip-apps\src\pjsua\winrt\cli\comp\pjsua_cli_shared_comp.vcxitems*{45d41acc-2c3c-43d2-bc10-02aa73ffc7c7}*SharedItemsImports = 9
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|ARM = Debug|ARM
@@ -1571,8 +1567,8 @@ Global
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug-Dynamic|ARM.ActiveCfg = Debug|Win32
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug-Dynamic|ARM64.ActiveCfg = Debug|ARM64
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug-Dynamic|ARM64.Build.0 = Debug|ARM64
-		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug-Dynamic|Win32.ActiveCfg = Debug|Win32
-		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug-Dynamic|Win32.Build.0 = Debug|Win32
+		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug-Dynamic|Win32.ActiveCfg = Debug-Dynamic|Win32
+		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug-Dynamic|Win32.Build.0 = Debug-Dynamic|Win32
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug-Dynamic|x64.ActiveCfg = Debug|x64
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug-Dynamic|x64.Build.0 = Debug|x64
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug-Static|Any CPU.ActiveCfg = Release|x64
@@ -1597,8 +1593,8 @@ Global
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Release-Dynamic|ARM.ActiveCfg = Release|Win32
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Release-Dynamic|ARM64.ActiveCfg = Release|ARM64
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Release-Dynamic|ARM64.Build.0 = Release|ARM64
-		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Release-Dynamic|Win32.ActiveCfg = Release|Win32
-		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Release-Dynamic|Win32.Build.0 = Release|Win32
+		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Release-Dynamic|Win32.ActiveCfg = Release-Dynamic|Win32
+		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Release-Dynamic|Win32.Build.0 = Release-Dynamic|Win32
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Release-Dynamic|x64.ActiveCfg = Release|x64
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Release-Dynamic|x64.Build.0 = Release|x64
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Release-Static|Any CPU.ActiveCfg = Release|x64
@@ -2524,5 +2520,10 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9D1363FE-B481-479E-82A2-290F6C4DB91B}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		pjsip-apps\src\pjsua\winrt\cli\comp\pjsua_cli_shared_comp.vcxitems*{207e7bd4-7b11-4a40-ba3a-cc627762a7b6}*SharedItemsImports = 4
+		pjsip-apps\src\pjsua\winrt\cli\comp\pjsua_cli_shared_comp.vcxitems*{45d41acc-2c3c-43d2-bc10-02aa73ffc7c7}*SharedItemsImports = 9
+		pjsip-apps\src\pjsua\winrt\cli\comp\pjsua_cli_shared_comp.vcxitems*{e75efd41-c7f5-44c8-8ff1-a310d920989d}*SharedItemsImports = 4
 	EndGlobalSection
 EndGlobal

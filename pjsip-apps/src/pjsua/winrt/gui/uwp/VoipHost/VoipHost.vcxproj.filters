@@ -7,9 +7,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="VoipHost.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <AppxManifest Include="..\voip\package.appxmanifest" />
   </ItemGroup>
 </Project>

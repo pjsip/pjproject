@@ -52,5 +52,8 @@
     <ClInclude Include="..\include\pjmedia-videodev\videodev_imp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pjmedia_videodev.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
