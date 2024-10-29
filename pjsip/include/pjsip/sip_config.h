@@ -606,6 +606,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
+ /**
+  * If non-zero, SIP parser will parse the user/password part of the URI,
+  * and use it in its original form. Otherwise the parser will unescape it,
+  * and then store and use it in its unescaped form.
+  * 
+  * To store the URI in the original form, set this to Yes/1.
+  *
+  * Default: 0
+  */
+#ifndef PJSIP_URI_USE_ORIG_USERPASS
+#   define PJSIP_URI_USE_ORIG_USERPASS      0
+#endif
+
+
 /**
  * Specify port number should be allowed to appear in To and From
  * header. Note that RFC 3261 disallow this, see Table 1 in section
