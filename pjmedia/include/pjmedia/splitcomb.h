@@ -106,7 +106,8 @@ PJ_DECL(pj_status_t) pjmedia_splitcomb_set_channel(pjmedia_port *splitcomb,
  * media port. So this effectively reverse the phase of the media port.
  *
  * @param pool              The pool to allocate memory for the port and
- *                          buffers.
+ *                          buffers. This is deprecated, the channel will be
+ *                          created using splitter/combiner's pool.
  * @param splitcomb         The splitter/combiner.
  * @param ch_num            Audio channel starting number (zero based).
  * @param options           Normally is zero, but the lower 8-bit of the 

@@ -990,7 +990,7 @@ static void create_dtmf_payload(pjmedia_stream *stream,
     event = (pjmedia_rtp_dtmf_event*) frame_out->buf;
 
     if (digit->duration == 0) {
-        PJ_LOG(5,(stream->port.info.name.ptr, "Sending DTMF digit id %c",
+        PJ_LOG(4,(stream->port.info.name.ptr, "Sending DTMF digit id %c",
                   digitmap[digit->event]));
         *first = 1;
     }
@@ -2455,7 +2455,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     PJ_ASSERT_RETURN(endpt && info && p_stream, PJ_EINVAL);
 
-    if (1 || pool == NULL) {
+    /* Must create own pool to avoid premature destroy */
+    if (1 /* || pool == NULL */) {
         own_pool = pjmedia_endpt_create_pool( endpt, "strm%p",
                                               PJMEDIA_STREAM_SIZE,
                                               PJMEDIA_STREAM_INC);
@@ -2491,8 +2492,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
                            info->fmt.clock_rate, info->fmt.channel_cnt,
                            16, 80);
     afd = pjmedia_format_get_audio_format_detail(&stream->port.info.fmt, 1);
-
-    /* Init port. */
 
     //No longer there in 2.0
     //pj_strdup(pool, &stream->port.info.encoding_name, &info->fmt.encoding_name);
@@ -2904,7 +2903,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Attach handler to group lock from transport */
     if (tp->grp_lock) {
-        stream->grp_lock = tp->grp_lock;
+        stream->grp_lock = stream->port.grp_lock = tp->grp_lock;
         pj_grp_lock_add_ref(stream->grp_lock);
         pj_grp_lock_add_handler(stream->grp_lock, pool, stream,
                                 &stream_on_destroy);
@@ -3077,6 +3076,37 @@ static void stream_on_destroy(void *arg)
 {
     pjmedia_stream* stream = (pjmedia_stream*)arg;
 
+    /* This function may be called when stream is partly initialized. */
+    if (stream->jb_mutex)
+        pj_mutex_lock(stream->jb_mutex);
+
+    /* Free codec. */
+
+    if (stream->codec) {
+        pjmedia_codec_close(stream->codec);
+        pjmedia_codec_mgr_dealloc_codec(stream->codec_mgr, stream->codec);
+        stream->codec = NULL;
+    }
+
+    /* Free mutex */
+
+    if (stream->jb_mutex) {
+        pj_mutex_unlock(stream->jb_mutex);
+        pj_mutex_destroy(stream->jb_mutex);
+        stream->jb_mutex = NULL;
+    }
+
+    /* Destroy jitter buffer */
+    if (stream->jb)
+        pjmedia_jbuf_destroy(stream->jb);
+
+#if TRACE_JB
+    if (TRACE_JB_OPENED(stream)) {
+        pj_file_close(stream->trace_jb_fd);
+        stream->trace_jb_fd = TRACE_JB_INVALID_FD;
+    }
+#endif
+
     PJ_LOG(4,(stream->port.info.name.ptr, "Stream destroyed"));
     pj_pool_safe_release(&stream->own_pool);
 }
@@ -3156,40 +3186,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
      */
     if (stream->transport) {
         pjmedia_transport_detach(stream->transport, stream);
-        stream->transport = NULL;
+        //stream->transport = NULL;
     }
-
-    /* This function may be called when stream is partly initialized. */
-    if (stream->jb_mutex)
-        pj_mutex_lock(stream->jb_mutex);
-
-
-    /* Free codec. */
-
-    if (stream->codec) {
-        pjmedia_codec_close(stream->codec);
-        pjmedia_codec_mgr_dealloc_codec(stream->codec_mgr, stream->codec);
-        stream->codec = NULL;
-    }
-
-    /* Free mutex */
-
-    if (stream->jb_mutex) {
-        pj_mutex_unlock(stream->jb_mutex);
-        pj_mutex_destroy(stream->jb_mutex);
-        stream->jb_mutex = NULL;
-    }
-
-    /* Destroy jitter buffer */
-    if (stream->jb)
-        pjmedia_jbuf_destroy(stream->jb);
-
-#if TRACE_JB
-    if (TRACE_JB_OPENED(stream)) {
-        pj_file_close(stream->trace_jb_fd);
-        stream->trace_jb_fd = TRACE_JB_INVALID_FD;
-    }
-#endif
 
     if (stream->grp_lock) {
         pj_grp_lock_dec_ref(stream->grp_lock);
