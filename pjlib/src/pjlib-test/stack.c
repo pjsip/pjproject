@@ -26,9 +26,9 @@
 
 #ifdef PJ_WIN32
 
-#if !defined(MEMORY_ALLOCATION_ALIGNMENT)
-#include <windows.h>
-#endif  //MEMORY_ALLOCATION_ALIGNMENT
+#   if !defined(MEMORY_ALLOCATION_ALIGNMENT)
+#       include <windows.h>
+#   endif  //MEMORY_ALLOCATION_ALIGNMENT
 
 #endif  // PJ_WIN32
 
@@ -65,10 +65,10 @@ int stack_test()
 
 #ifdef PJ_WIN32
 
-#if  defined(_MSC_VER)
-#pragma warning(push)                                                  
-#pragma warning(disable:4324)   // structure padded due to align()
-#endif  // defined(_MSC_VER)
+#   if  defined(_MSC_VER)
+#       pragma warning(push)                                                  
+#       pragma warning(disable:4324)   // structure padded due to align()
+#   endif  // defined(_MSC_VER)
 
     if (TYPE_ALIGNMENT(stack_node) < MEMORY_ALLOCATION_ALIGNMENT)
     {
@@ -77,9 +77,9 @@ int stack_test()
         goto error;
     }
 
-#if  defined(_MSC_VER)
-#pragma warning(pop)
-#endif  // defined(_MSC_VER)
+#   if  defined(_MSC_VER)
+#       pragma warning(pop)
+#   endif  // defined(_MSC_VER)
 
     for (i = 0; i < sz; ++i) {
         if (!IS_ALIGNED_PTR(&nodes[i], MEMORY_ALLOCATION_ALIGNMENT))

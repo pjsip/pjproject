@@ -87,10 +87,12 @@ typedef unsigned __int64 pj_uint64_t;
 #define PJ_ALIGN_DATA_SUFFIX(alignment) __pragma(warning(pop))
 #define PJ_ALIGN_DATA(declaration, alignment) PJ_ALIGN_DATA_PREFIX(alignment) declaration PJ_ALIGN_DATA_SUFFIX(alignment)
 
-//please add #include <windows.h> into your config_site.h if macro bellow is not compilable
-#define PJ_SYS_ALIGN_PREFIX PJ_ALIGN_DATA_PREFIX(MEMORY_ALLOCATION_ALIGNMENT)
-#define PJ_SYS_ALIGN_SUFFIX PJ_ALIGN_DATA_SUFFIX(MEMORY_ALLOCATION_ALIGNMENT)
-
+////please add #include <windows.h> into your config_site.h if macro bellow is not compilable
+//#define PJ_SYS_ALIGN_PREFIX PJ_ALIGN_DATA_PREFIX(MEMORY_ALLOCATION_ALIGNMENT)
+//#define PJ_SYS_ALIGN_SUFFIX PJ_ALIGN_DATA_SUFFIX(MEMORY_ALLOCATION_ALIGNMENT)
+/* PJ_POOL_ALIGNMENT is defined in os_win32.h and os_winuwp.h */
+#define PJ_SYS_ALIGN_PREFIX PJ_ALIGN_DATA_PREFIX(PJ_POOL_ALIGNMENT)
+#define PJ_SYS_ALIGN_SUFFIX PJ_ALIGN_DATA_SUFFIX(PJ_POOL_ALIGNMENT)
 
 #endif  /* __PJ_COMPAT_CC_MSVC_H__ */
 
