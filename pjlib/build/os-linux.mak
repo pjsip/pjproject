@@ -12,8 +12,9 @@ export PJLIB_OBJS += 	addr_resolv_sock.o file_access_unistd.o \
 			log_writer_stdout.o os_core_unix.o \
 			os_error_unix.o os_time_unix.o \
 			os_timestamp_common.o os_timestamp_posix.o \
-			pool_policy_malloc.o sock_bsd.o sock_select.o \
-			stack.o
+			pool_policy_malloc.o sock_bsd.o sock_select.o
+
+export PJLIB_OBJS += stack.o 
 
 ifeq (epoll,$(LINUX_POLL))
 export PJLIB_OBJS += ioqueue_epoll.o
