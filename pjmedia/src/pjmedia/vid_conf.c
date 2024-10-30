@@ -598,7 +598,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_remove_port( pjmedia_vid_conf *vid_conf,
 
     pj_log_push_indent();
 
-    PJ_LOG(5,(THIS_FILE, "Remove video port %d remove requested", slot));
+    PJ_LOG(5,(THIS_FILE, "Remove video port %d requested", slot));
 
     PJ_ASSERT_RETURN(vid_conf && slot<vid_conf->opt.max_slot_cnt, PJ_EINVAL);
 
