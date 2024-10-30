@@ -284,8 +284,6 @@ typedef enum op_type
     OP_REMOVE_PORT,
     OP_CONNECT_PORTS,
     OP_DISCONNECT_PORTS,
-    OP_DISCONNECT_PORT_FROM_SOURCES,
-    OP_DISCONNECT_PORT_FROM_SINKS,
 } op_type;
 
 /* Synchronized operation parameter. */
@@ -351,8 +349,6 @@ static void handle_op_queue(pjmedia_conf *conf)
                 op_connect_ports(conf, &op->param);
                 break;
             case OP_DISCONNECT_PORTS:
-            case OP_DISCONNECT_PORT_FROM_SOURCES:
-            case OP_DISCONNECT_PORT_FROM_SINKS:
                 op_disconnect_ports(conf, &op->param);
                 break;
             default:
@@ -1164,7 +1160,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 {
     struct conf_port *src_port, *dst_port;
     pj_bool_t start_sound = PJ_FALSE;
-    unsigned i;
+    op_entry *ope;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && src_slot<conf->max_ports &&
@@ -1187,27 +1184,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
     if (!src_port || !dst_port) {
-        PJ_PERROR(3,(THIS_FILE, PJ_EINVAL,
-                     "Failed connecting ports, make sure ports are valid"));
-        pj_mutex_unlock(conf->mutex);
-        pj_log_pop_indent();
-        return PJ_EINVAL;
-    }
-
-    /* Check if connection has been made */
-    for (i=0; i<src_port->listener_cnt; ++i) {
-        if (src_port->listener_slots[i] == sink_slot) {
-            PJ_LOG(3,(THIS_FILE, "Ports connection %d->%d already exists",
-                      src_slot, sink_slot));
-            break;
-        }
+        status = PJ_EINVAL;
+        goto on_return;
     }
 
     /* Queue the operation */
-    if (i == src_port->listener_cnt) {
-        op_entry *ope;
-
-        ope = get_free_op_entry(conf);
+    ope = get_free_op_entry(conf);
+    if (ope) {
         ope->type = OP_CONNECT_PORTS;
         ope->param.connect_ports.src = src_slot;
         ope->param.connect_ports.sink = sink_slot;
@@ -1216,12 +1199,16 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 
         PJ_LOG(4,(THIS_FILE, "Connect ports %d->%d queued",
                              src_slot, sink_slot));
+    } else {
+        status = PJ_ENOMEM;
+        goto on_return;
     }
 
     /* This is first connection, start clock */
     if (conf->connect_cnt == 0)
         start_sound = 1;
 
+on_return:
     pj_mutex_unlock(conf->mutex);
 
     /* Sound device must be started without mutex, otherwise the
@@ -1230,9 +1217,14 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
     if (start_sound)
         resume_sound(conf);
 
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(3,(THIS_FILE, status, "Connect ports %d->%d failed",
+                     src_slot, sink_slot));
+    }
+
     pj_log_pop_indent();
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 static void op_connect_ports(pjmedia_conf *conf, const op_param *prm)
@@ -1249,7 +1241,8 @@ static void op_connect_ports(pjmedia_conf *conf, const op_param *prm)
 
     if (!src_port || !dst_port) {
         PJ_PERROR(3,(THIS_FILE, PJ_EINVAL,
-                     "Failed connecting ports, make sure ports are valid"));
+                     "Failed connecting %d->%d, make sure ports are valid",
+                     src_slot, sink_slot));
         return;
     }
 
@@ -1289,7 +1282,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
                                                   unsigned sink_slot )
 {
     struct conf_port *src_port, *dst_port;
-    unsigned i;
+    op_entry *ope;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && src_slot<conf->max_ports &&
@@ -1306,25 +1300,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
     if (!src_port || !dst_port) {
-        PJ_PERROR(3,(THIS_FILE, PJ_EINVAL,"Cannot disconnect invalid ports"));
-        pj_mutex_unlock(conf->mutex);
-        pj_log_pop_indent();
-        return PJ_EINVAL;
+        status = PJ_EINVAL;
+        goto on_return;
     }
 
-    /* Check if connection has been made */
-    for (i=0; i<src_port->listener_cnt; ++i) {
-        if (src_port->listener_slots[i] == sink_slot)
-            break;
-    }
-
-    if (i == src_port->listener_cnt) {
-        PJ_LOG(3,(THIS_FILE, "Ports connection %d->%d does not exist",
-                    src_slot, sink_slot));
-    } else {
-        op_entry *ope;
-
-        ope = get_free_op_entry(conf);
+    /* Queue the operation */
+    ope = get_free_op_entry(conf);
+    if (ope) {
         ope->type = OP_DISCONNECT_PORTS;
         ope->param.disconnect_ports.src = src_slot;
         ope->param.disconnect_ports.sink = sink_slot;
@@ -1332,12 +1314,22 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 
         PJ_LOG(4,(THIS_FILE, "Disconnect ports %d->%d queued",
                              src_slot, sink_slot));
+    } else {
+        status = PJ_ENOMEM;
+        goto on_return;
     }
 
+on_return:
     pj_mutex_unlock(conf->mutex);
+
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(3,(THIS_FILE, status, "Disconnect ports %d->%d failed",
+                     src_slot, sink_slot));
+    }
+
     pj_log_pop_indent();
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 static void op_disconnect_ports(pjmedia_conf *conf,
@@ -1460,6 +1452,8 @@ pjmedia_conf_disconnect_port_from_sources( pjmedia_conf *conf,
                                            unsigned sink_slot)
 {
     struct conf_port *dst_port;
+    op_entry *ope;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && sink_slot<conf->max_ports, PJ_EINVAL);
@@ -1473,31 +1467,35 @@ pjmedia_conf_disconnect_port_from_sources( pjmedia_conf *conf,
     /* Ports must be valid. */
     dst_port = conf->ports[sink_slot];
     if (!dst_port) {
-        PJ_PERROR(3,(THIS_FILE, PJ_EINVAL,"Cannot disconnect invalid port"));
-        pj_mutex_unlock(conf->mutex);
-        pj_log_pop_indent();
-        return PJ_EINVAL;
+        status = PJ_EINVAL;
+        goto on_return;
     }
 
-    if (dst_port->transmitter_cnt == 0) {
-        PJ_LOG(3,(THIS_FILE, "Port %d does not have any transmitter",
-                  sink_slot));
-    } else {
-        op_entry *ope;
-
-        ope = get_free_op_entry(conf);
+    /* Queue the operation */
+    ope = get_free_op_entry(conf);
+    if (ope) {
         ope->type = OP_DISCONNECT_PORTS;
         ope->param.disconnect_ports.src = INVALID_SLOT;
         ope->param.disconnect_ports.sink = sink_slot;
         pj_list_push_back(conf->op_queue, ope);
 
         PJ_LOG(4,(THIS_FILE, "Disconnect ports any->%d queued", sink_slot));
+    } else {
+        status = PJ_ENOMEM;
+        goto on_return;
     }
 
+on_return:
     pj_mutex_unlock(conf->mutex);
+
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(3,(THIS_FILE, status, "Disconnect ports any->%d failed",
+                     sink_slot));
+    }
+
     pj_log_pop_indent();
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 
@@ -1509,6 +1507,8 @@ pjmedia_conf_disconnect_port_from_sinks( pjmedia_conf *conf,
                                          unsigned src_slot)
 {
     struct conf_port *src_port;
+    op_entry *ope;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && src_slot<conf->max_ports, PJ_EINVAL);
@@ -1523,30 +1523,34 @@ pjmedia_conf_disconnect_port_from_sinks( pjmedia_conf *conf,
     /* Port must be valid. */
     src_port = conf->ports[src_slot];
     if (!src_port) {
-        PJ_PERROR(3,(THIS_FILE, PJ_EINVAL,"Cannot disconnect invalid port"));
-        pj_mutex_unlock(conf->mutex);
-        return PJ_EINVAL;
+        status = PJ_EINVAL;
+        goto on_return;
     }
 
-    if (src_port->listener_cnt == 0) {
-        PJ_LOG(3,(THIS_FILE, "Port %d does not have any transmitter",
-                  src_slot));
-    } else {
-        op_entry *ope;
-
-        ope = get_free_op_entry(conf);
+    ope = get_free_op_entry(conf);
+    if (ope) {
         ope->type = OP_DISCONNECT_PORTS;
         ope->param.disconnect_ports.src = src_slot;
         ope->param.disconnect_ports.sink = INVALID_SLOT;
         pj_list_push_back(conf->op_queue, ope);
 
         PJ_LOG(4,(THIS_FILE, "Disconnect ports %d->any queued", src_slot));
+    } else {
+        status = PJ_ENOMEM;
+        goto on_return;
     }
 
+on_return:
     pj_mutex_unlock(conf->mutex);
+
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(3,(THIS_FILE, status, "Disconnect ports %d->any failed",
+                     src_slot));
+    }
+
     pj_log_pop_indent();
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 
@@ -1575,10 +1579,11 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 {
     struct conf_port *conf_port;
     op_entry *ope;
+    pj_status_t status = PJ_SUCCESS;
 
     pj_log_push_indent();
 
-    PJ_LOG(5,(THIS_FILE, "Port %d remove requested", port));
+    PJ_LOG(5,(THIS_FILE, "Remove port %d requested", port));
 
     PJ_ASSERT_RETURN(conf && port < conf->max_ports, PJ_EINVAL);
 
@@ -1587,24 +1592,33 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     /* Port must be valid. */
     conf_port = conf->ports[port];
     if (conf_port == NULL) {
-        PJ_PERROR(3, (THIS_FILE, PJ_EINVAL, "Remove port failed"));
-        pj_mutex_unlock(conf->mutex);
-        pj_log_pop_indent();
-        return PJ_EINVAL;
+        status = PJ_EINVAL;
+        goto on_return;
     }
 
     /* Queue the operation */
     ope = get_free_op_entry(conf);
-    ope->type = OP_REMOVE_PORT;
-    ope->param.remove_port.port = port;
-    pj_list_push_back(conf->op_queue, ope);
-    PJ_LOG(4,(THIS_FILE, "Port %d (%.*s) remove queued", port,
-              (int)conf_port->name.slen, conf_port->name.ptr));
+    if (ope) {
+        ope->type = OP_REMOVE_PORT;
+        ope->param.remove_port.port = port;
+        pj_list_push_back(conf->op_queue, ope);
 
+        PJ_LOG(4,(THIS_FILE, "Remove port %d queued", port));
+    } else {
+        status = PJ_ENOMEM;
+        goto on_return;
+    }
+
+on_return:
     pj_mutex_unlock(conf->mutex);
+
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(3,(THIS_FILE, status, "Remove port %d failed", port));
+    }
+
     pj_log_pop_indent();
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 
