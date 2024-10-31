@@ -3077,11 +3077,8 @@ static void stream_on_destroy(void *arg)
     pjmedia_stream* stream = (pjmedia_stream*)arg;
 
     /* This function may be called when stream is partly initialized. */
-    if (stream->jb_mutex)
-        pj_mutex_lock(stream->jb_mutex);
 
     /* Free codec. */
-
     if (stream->codec) {
         pjmedia_codec_close(stream->codec);
         pjmedia_codec_mgr_dealloc_codec(stream->codec_mgr, stream->codec);
@@ -3089,9 +3086,7 @@ static void stream_on_destroy(void *arg)
     }
 
     /* Free mutex */
-
     if (stream->jb_mutex) {
-        pj_mutex_unlock(stream->jb_mutex);
         pj_mutex_destroy(stream->jb_mutex);
         stream->jb_mutex = NULL;
     }

@@ -342,7 +342,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf)
     }
 
     /* Flush any pending operation (connect, disconnect, etc) */
-    handle_op_queue(vid_conf);
+    if (vid_conf->op_queue && vid_conf->op_queue_free) {
+        handle_op_queue(vid_conf);
+    }
 
     /* Remove any registered ports (at least to cleanup their pool) */
     for (i=0; i < vid_conf->opt.max_slot_cnt; ++i) {

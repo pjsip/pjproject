@@ -352,9 +352,10 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool_,
     /* Create fport instance. */
     fport = create_file_list_port(pool, port_label);
     if (!fport) {
-        status = PJ_ENOMEM;
-        goto on_error;
+        PJ_PERROR(4,(THIS_FILE, PJ_ENOMEM, "WAV playlist create failed"));
+        return PJ_ENOMEM;
     }
+
     fport->pool = pool;
 
     afd = pjmedia_format_get_audio_format_detail(&fport->base.info.fmt, 1);
@@ -646,16 +647,18 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool_,
 
 on_error:
 
-    for (index=0; index<file_count; ++index) {
-        if (fport->fd_list[index] != 0)
-            pj_file_close(fport->fd_list[index]);
+    if (fport->fd_list) {
+        for (index=0; index<file_count; ++index) {
+            if (fport->fd_list[index] != 0)
+                pj_file_close(fport->fd_list[index]);
+        }
     }
 
     if (pool)
         pj_pool_release(pool);
 
     PJ_PERROR(1,(THIS_FILE, status,
-                 "Failed creating WAV playlist '%s'",
+                 "Failed creating WAV playlist '%.*s'",
                  (int)port_label->slen, port_label->ptr));
 
     return status;

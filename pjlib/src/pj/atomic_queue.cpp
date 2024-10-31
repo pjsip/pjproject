@@ -126,7 +126,7 @@ private:
         return old_ptr;
     }
 
-    AtomicQueue() {}
+    AtomicQueue():name_(""){}
 };
 
 struct pj_atomic_queue_t
