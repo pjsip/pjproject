@@ -19,6 +19,7 @@
 #include <pjsip-ua/sip_inv.h>
 #include <pjsip-ua/sip_100rel.h>
 #include <pjsip-ua/sip_timer.h>
+#include <pjsip-ua/sip_siprec.h>
 #include <pjsip/print_util.h>
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_endpoint.h>
@@ -1277,7 +1278,9 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
         *options |= PJSIP_INV_SUPPORT_ICE;
     if (*options & PJSIP_INV_REQUIRE_TRICKLE_ICE)
         *options |= PJSIP_INV_SUPPORT_TRICKLE_ICE;
-
+    if (*options & PJSIP_INV_REQUIRE_SIPREC)
+        *options |= PJSIP_INV_SUPPORT_SIPREC;
+    
     if (rdata) {
         /* Get the message in rdata */
         msg = rdata->msg_info.msg;
@@ -1529,6 +1532,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
         const pj_str_t STR_TIMER = { "timer", 5 };
         const pj_str_t STR_ICE = { "ice", 3 };
         const pj_str_t STR_TRICKLE_ICE = { "trickle-ice", 11 };
+        const pj_str_t STR_SIPREC = { "siprec", 6 };
         unsigned unsupp_cnt = 0;
         pj_str_t unsupp_tags[PJSIP_GENERIC_ARRAY_MAX_COUNT];
         
@@ -1538,6 +1542,11 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
             {
                 rem_option |= PJSIP_INV_REQUIRE_100REL;
 
+            } else if ((*options & PJSIP_INV_SUPPORT_SIPREC) && 
+                pj_stricmp(&req_hdr->values[i], &STR_SIPREC)==0)
+            {
+                rem_option |= PJSIP_INV_REQUIRE_SIPREC;
+
             } else if ((*options & PJSIP_INV_SUPPORT_TIMER) && 
                 pj_stricmp(&req_hdr->values[i], &STR_TIMER)==0)
             {
@@ -1545,6 +1554,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 
             } else if (pj_stricmp(&req_hdr->values[i], &STR_REPLACES)==0) {
                 pj_bool_t supp;
+                
                 
                 supp = pjsip_endpt_has_capability(endpt, PJSIP_H_SUPPORTED, 
                                                   NULL, &STR_REPLACES);

@@ -1802,6 +1802,17 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* Verify that we can handle the request. */
     options |= PJSIP_INV_SUPPORT_100REL;
     options |= PJSIP_INV_SUPPORT_TIMER;
+    options |= PJSIP_INV_SUPPORT_SIPREC;
+
+    status = pjsip_siprec_verify_request(rdata, offer);
+
+    if(status == PJ_SUCCESS){
+        options |= PJSIP_INV_REQUIRE_MULTIMEDIA;
+    }
+        
+    if(pjsua_var.acc[acc_id].cfg.enable_multimedia || (options & PJSIP_INV_REQUIRE_MULTIMEDIA)){
+        call->opt.aud_cnt = offer->media_count;
+    }
     if (pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_MANDATORY)
         options |= PJSIP_INV_REQUIRE_100REL;
     if (pjsua_var.acc[acc_id].cfg.ice_cfg.enable_ice) {

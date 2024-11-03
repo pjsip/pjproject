@@ -4390,6 +4390,11 @@ typedef struct pjsua_acc_config
     pjsua_upnp_use              media_upnp_use;
 
     /**
+     * Default: PJ_FALSE
+     */
+    pj_bool_t                   enable_multimedia;
+
+    /**
      * Use loopback media transport. This may be useful if application
      * doesn't want PJSIP to create real media transports/sockets, such as
      * when using third party media.

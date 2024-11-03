@@ -388,7 +388,21 @@ enum pjsip_inv_option
      * Require trickle ICE support.
      */
     PJSIP_INV_REQUIRE_TRICKLE_ICE = 512,
+    
+    /**
+     * Indicate support for siprec
+     */
+    PJSIP_INV_SUPPORT_SIPREC      = 1024,
 
+    /**
+     * Require siprec support.
+     */
+    PJSIP_INV_REQUIRE_SIPREC      = 2048,
+
+    /**
+     * Require multimedia for support.
+     */
+    PJSIP_INV_REQUIRE_MULTIMEDIA  = 4096,
 };
 
 /* Forward declaration of Session Timers */
