@@ -298,6 +298,11 @@ struct AccountSipConfig : public PersistentObject
      */
     pjsua_ipv6_use      ipv6Use;
 
+    /**
+     * Default is false.
+     */
+    bool                enableMultimedia;
+
 public:
     /**
      * Read this object from a container node.
