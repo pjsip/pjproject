@@ -3,14 +3,24 @@
 
 /**
  * @file sip_siprec.h
- * @brief SIP Session Timers support (RFC 4028 - Session Timer in SIP)
+ * @brief SIP Session Recording Protocol (siprec) support (RFC 7866 - Session Recording Protocol in SIP)
  */
 
 
 #include <pjsip-ua/sip_inv.h>
 #include <pjsip/sip_msg.h>
 
-
+/**
+ * @defgroup PJSIP_SIPREC SIP Session Recording Protocol (siprec) support (RFC 7866 - Session Recording Protocol in SIP)
+ * @brief SIP Session Recording Protocol support (RFC 7866 - Session Recording Protocol in SIP)
+ * @{
+ *
+ * \section PJSIP_SIPREC_REFERENCE References
+ *
+ * References:
+ *  - <A HREF="http://www.ietf.org/rfc/rfc7866.txt">RFC 7866: Session Recording Protocol (siprec)
+ *    in the Session Initiation Protocol (SIP)</A>
+ */
 PJ_BEGIN_DECL
 
 /**
@@ -29,6 +39,11 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                               const pjmedia_sdp_session *sdp);
                                               
 PJ_END_DECL
+
+
+/**
+ * @}
+ */
 
 
 #endif  /* __PJSIP_SIPREC_H__ */
