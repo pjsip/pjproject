@@ -63,13 +63,12 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pjmedia_sdp_media *answe
 }
 
 
-PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
-                                              const pjmedia_sdp_session *sdp)
+PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata)
 {
     int code = 200;
     pjsip_require_hdr *req_hdr;
     pj_status_t status = PJ_SUCCESS;
-    const pj_str_t str_require         = {"Require", 7};
+    const pj_str_t str_require = {"Require", 7};
 
     req_hdr = (pjsip_require_hdr*) pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_require, NULL);
 

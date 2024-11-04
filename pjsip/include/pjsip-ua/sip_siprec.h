@@ -44,8 +44,19 @@ PJ_DECL(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt);
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pjmedia_sdp_media *answer);
 
 
-PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
-                                              const pjmedia_sdp_session *sdp);
+/**
+ * Verifies that the incoming request has the `siprec` value in the `Require` header.
+ * This function checks whether the incoming request is a `siprec` request or not."
+ *
+ * @param rdata     The incoming request to be verified.
+ *
+ * @return          The function returns the following:
+ *                  - If the request doesn't contain siprec in Require header, the
+ *                    function returns non-PJ_SUCCESS
+ *                  - If the request contains siprec in Require header, the
+ *                    function returns PJ_SUCCESS
+ */
+PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata);
 
 
                                             
