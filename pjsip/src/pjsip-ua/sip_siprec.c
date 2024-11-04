@@ -55,10 +55,10 @@ PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
 }
 
 
-PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pjmedia_sdp_media *media)
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pjmedia_sdp_media *answer)
 {
     pjmedia_sdp_attr *attr;
-    attr = pjmedia_sdp_media_find_attr(media, &STR_LABEL, NULL);
+    attr = pjmedia_sdp_media_find_attr(answer, &STR_LABEL, NULL);
     return attr;
 }
 

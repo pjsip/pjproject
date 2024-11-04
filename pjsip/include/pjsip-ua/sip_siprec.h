@@ -33,11 +33,22 @@ PJ_BEGIN_DECL
  */
 PJ_DECL(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt);
 
-PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pjmedia_sdp_media *media);
+
+/**
+ * Create a=label attribute.
+ *
+ * @param media          The SDP media answer.
+ *
+ * @return              SDP label attribute.
+ */
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pjmedia_sdp_media *answer);
+
 
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                               const pjmedia_sdp_session *sdp);
-                                              
+
+
+                                            
 PJ_END_DECL
 
 
