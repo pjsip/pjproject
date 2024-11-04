@@ -45,8 +45,8 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pjmedia_sdp_media *answe
 
 
 /**
- * Verifies that the incoming request has the `siprec` value in the `Require` header.
- * This function checks whether the incoming request is a `siprec` request or not."
+ * Verifies that the incoming request has the siprec value in the Require header.
+ * This function checks whether the incoming request is a siprec request or not."
  *
  * @param rdata     The incoming request to be verified.
  *

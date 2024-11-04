@@ -63,6 +63,9 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pjmedia_sdp_media *answe
 }
 
 
+/*
+ * Verifies that the incoming request has the siprec value in the Require header.
+ */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata)
 {
     int code = 200;
@@ -70,11 +73,13 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata)
     pj_status_t status = PJ_SUCCESS;
     const pj_str_t str_require = {"Require", 7};
 
+    /* Find Require header */
     req_hdr = (pjsip_require_hdr*) pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_require, NULL);
 
     if(req_hdr)
     {
         for (int i=0; i<req_hdr->count; ++i) {
+            /* Check request has the siprec value in the Require header.*/
             if (pj_stricmp(&req_hdr->values[i], &STR_SIPREC)==0)
             {
                 return status;
@@ -82,6 +87,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata)
         }
     }
 
+    /* No Require header or not exist siprec value in Require header */
     code = PJSIP_SC_NOT_FOUND;
     status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
     return status;
