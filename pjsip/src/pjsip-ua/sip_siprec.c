@@ -25,7 +25,7 @@ static void pjsip_siprec_deinit_module(pjsip_endpoint *endpt)
 }
 
 
-/*
+/**
  * Initialize siprec support in PJSIP. 
  */
 PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
@@ -55,6 +55,9 @@ PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
 }
 
 
+/**
+ * Returns the label attribute in the SDP offer 
+ */
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *answer)
 {
     pjmedia_sdp_attr *attr;
@@ -63,7 +66,7 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *answer)
 }
 
 
-/*
+/**
  * Verifies that the incoming request has the siprec value in the Require header.
  */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata)
