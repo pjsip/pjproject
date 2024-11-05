@@ -299,6 +299,8 @@ struct AccountSipConfig : public PersistentObject
     pjsua_ipv6_use      ipv6Use;
 
     /**
+     * Control the use of When the SDP offer includes multiple media
+     * 
      * Default is false.
      */
     bool                enableMultimedia;

@@ -4390,6 +4390,8 @@ typedef struct pjsua_acc_config
     pjsua_upnp_use              media_upnp_use;
 
     /**
+     * Control the use of when the SDP offer includes multiple media
+     * 
      * Default: PJ_FALSE
      */
     pj_bool_t                   enable_multimedia;
