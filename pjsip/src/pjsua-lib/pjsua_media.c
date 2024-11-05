@@ -1951,6 +1951,7 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
         goto on_return;
     }
 
+
     /* Check if media is deinitializing */
     if (call_med->call->async_call.med_ch_deinit || !call_med->tp) {
         status = PJ_ECANCELLED;
