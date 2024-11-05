@@ -1808,7 +1808,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * If siprec is present, this function returns the value PJ_TRUE
      * if not, it returns PJ_FALSE 
      */
-    status = pjsip_siprec_verify_request(rdata, offer);
+    status = pjsip_siprec_verify_request(rdata);
 
     /* Check if the siprec value is present in the INVITE request
      * in that case, it must be able to support multiple media in the SDP.
@@ -1817,7 +1817,10 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         options |= PJSIP_INV_SUPPORT_MULTIMEDIA;
     }
         
-    
+    /* Check if the enable_multimedia option is enabled in the account config
+     * or if request supports PJSIP_INV_SUPPORT_MULTIMEDIA. If so
+     * set the number of call active streams to the number of media in the SDP offer.
+     */
     if(pjsua_var.acc[acc_id].cfg.enable_multimedia || (options & PJSIP_INV_SUPPORT_MULTIMEDIA)){
         call->opt.aud_cnt = offer->media_count;
     }
