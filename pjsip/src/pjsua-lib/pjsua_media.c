@@ -1953,8 +1953,8 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
 
     /* Check if media is deinitializing */
     if (call_med->call->async_call.med_ch_deinit || !call_med->tp) {
-       status = PJ_ECANCELLED;
-       goto on_return;
+        status = PJ_ECANCELLED;
+        goto on_return;
     }
 
     pjmedia_transport_simulate_lost(call_med->tp, PJMEDIA_DIR_ENCODING,
