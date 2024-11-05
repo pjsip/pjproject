@@ -41,7 +41,7 @@ PJ_DECL(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt);
  *
  * @return              SDP label attribute.
  */
-PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pjmedia_sdp_media *answer);
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *answer);
 
 
 /**
