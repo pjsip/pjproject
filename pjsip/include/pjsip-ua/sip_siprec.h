@@ -52,9 +52,9 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pjmedia_sdp_media *answe
  *
  * @return          The function returns the following:
  *                  - If the request doesn't contain siprec in Require header, the
- *                    function returns non-PJ_SUCCESS
+ *                    function returns PJ_FALSE
  *                  - If the request contains siprec in Require header, the
- *                    function returns PJ_SUCCESS
+ *                    function returns PJ_TRUE
  */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata);
 

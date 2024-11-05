@@ -68,9 +68,7 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pjmedia_sdp_media *answe
  */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata)
 {
-    int code = 200;
     pjsip_require_hdr *req_hdr;
-    pj_status_t status = PJ_SUCCESS;
     const pj_str_t str_require = {"Require", 7};
 
     /* Find Require header */
@@ -82,13 +80,11 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata)
             /* Check request has the siprec value in the Require header.*/
             if (pj_stricmp(&req_hdr->values[i], &STR_SIPREC)==0)
             {
-                return status;
+                return PJ_TRUE;
             }
         }
     }
 
     /* No Require header or not exist siprec value in Require header */
-    code = PJSIP_SC_NOT_FOUND;
-    status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
-    return status;
+    return PJ_FALSE;
 }
