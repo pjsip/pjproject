@@ -1804,18 +1804,21 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     options |= PJSIP_INV_SUPPORT_TIMER;
     options |= PJSIP_INV_SUPPORT_SIPREC;
 
-    /* Check INVITE request for siprec in the Require header. If siprec is
-     * present, the function will make sure that we can handle the request.
+    /* Check the INVITE request for siprec in the Require header.
+     * If siprec is present, this function returns the value PJ_TRUE
+     * if not, it returns PJ_FALSE 
      */
     status = pjsip_siprec_verify_request(rdata, offer);
 
-
-    if(status == PJ_SUCCESS){
-        options |= PJSIP_INV_REQUIRE_MULTIMEDIA;
+    /* Check if the siprec value is present in the INVITE request
+     * in that case, it must be able to support multiple media in the SDP.
+     */
+    if(status == PJ_TRUE){
+        options |= PJSIP_INV_SUPPORT_MULTIMEDIA;
     }
         
     
-    if(pjsua_var.acc[acc_id].cfg.enable_multimedia || (options & PJSIP_INV_REQUIRE_MULTIMEDIA)){
+    if(pjsua_var.acc[acc_id].cfg.enable_multimedia || (options & PJSIP_INV_SUPPORT_MULTIMEDIA)){
         call->opt.aud_cnt = offer->media_count;
     }
 
