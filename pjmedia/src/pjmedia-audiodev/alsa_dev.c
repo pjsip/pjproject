@@ -107,6 +107,8 @@ struct alsa_factory
     pj_str_t                     custom_dev[MAX_DEVICES];
 };
 
+static pjmedia_aud_dev_factory *default_factory;
+
 struct alsa_stream
 {
     pjmedia_aud_stream   base;
@@ -356,6 +358,9 @@ static pj_status_t alsa_factory_init(pjmedia_aud_dev_factory *f)
     if (PJ_SUCCESS != status)
         return status;
 
+    if (!default_factory)
+        default_factory = f;
+
     PJ_LOG(4,(THIS_FILE, "ALSA initialized"));
     return PJ_SUCCESS;
 }
@@ -365,6 +370,9 @@ static pj_status_t alsa_factory_init(pjmedia_aud_dev_factory *f)
 static pj_status_t alsa_factory_destroy(pjmedia_aud_dev_factory *f)
 {
     struct alsa_factory *af = (struct alsa_factory*)f;
+
+    if (default_factory == f)
+        default_factory = NULL;
 
     if (af->pool)
         pj_pool_release(af->pool);
@@ -1168,12 +1176,16 @@ static pj_status_t alsa_stream_destroy (pjmedia_aud_stream *s)
 /*
  * Manually set ALSA devices.
  */
-PJ_DEF(pj_status_t) pjmedia_aud_alsa_set_devices( pjmedia_aud_dev_factory *af,
+PJ_DEF(pj_status_t) pjmedia_aud_alsa_set_devices( pjmedia_aud_dev_factory *f,
                                                   unsigned count,
                                                   const char* names[] )
 {
     struct alsa_factory *af = (struct alsa_factory*)f;
 
+    if (!af)
+        af = (struct alsa_factory*)default_factory;
+
+    PJ_ASSERT_RETURN(af, PJ_EINVAL);
     PJ_ASSERT_RETURN(count <= MAX_DEVICES, PJ_ETOOMANY);
 
     PJ_LOG(4,(THIS_FILE, "ALSA driver set manually %d devices", count));
