@@ -51,15 +51,15 @@ PJ_BEGIN_DECL
  * If application wish to let the library do the device enumeration again,
  * just call this function with zero device, i.e: \a count is set to zero.
  *
- * @param af        The audio device factory.
+ * @param af        The ALSA factory, or NULL to use the default.
  * @param count     The number of ALSA device names.
  * @param names     The ALSA device names to be registered.
  *
  * @return          PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_aud_alsa_set_devices( pjmedia_aud_dev_factory *af,
-                                                   int count,
-                                                   const char* names[] );
+PJ_DECL(pj_status_t) pjmedia_aud_alsa_set_devices(pjmedia_aud_dev_factory *af,
+                                                  unsigned count,
+                                                  const char* names[]);
 
 
 
