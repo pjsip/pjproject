@@ -23,6 +23,7 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pjmedia/errno.h>
+#include <pjmedia-audiodev/alsa.h>
 
 #if defined(PJMEDIA_AUDIO_DEV_HAS_ALSA) && PJMEDIA_AUDIO_DEV_HAS_ALSA
 
@@ -101,6 +102,9 @@ struct alsa_factory
     pjmedia_aud_dev_info         devs[MAX_DEVICES];
     char                         pb_mixer_name[MAX_MIX_NAME_LEN];
     char                         cap_mixer_name[MAX_MIX_NAME_LEN];
+
+    unsigned                     custom_dev_cnt;
+    pj_str_t                     custom_dev[MAX_DEVICES];
 };
 
 struct alsa_stream
@@ -387,18 +391,14 @@ static pj_status_t alsa_factory_refresh(pjmedia_aud_dev_factory *f)
 
     TRACE_((THIS_FILE, "pjmedia_snd_init: Enumerate sound devices"));
 
-    if (af->pool != NULL) {
-        pj_pool_release(af->pool);
-        af->pool = NULL;
-    }
-
-    af->pool = pj_pool_create(af->pf, "alsa_aud", 256, 256, NULL);
     af->dev_cnt = 0;
 
-    /* Enumerate sound devices */
-    err = snd_device_name_hint(-1, "pcm", (void***)&hints);
-    if (err != 0)
-        return PJMEDIA_EAUD_SYSERR;
+    if (af->custom_dev_cnt == 0) {
+        /* Enumerate sound devices */
+        err = snd_device_name_hint(-1, "pcm", (void***)&hints);
+        if (err != 0)
+            return PJMEDIA_EAUD_SYSERR;
+    }
 
 #if ENABLE_TRACING
     snd_lib_error_set_handler(alsa_error_handler);
@@ -407,15 +407,22 @@ static pj_status_t alsa_factory_refresh(pjmedia_aud_dev_factory *f)
     snd_lib_error_set_handler(null_alsa_error_handler);
 #endif
 
-    n = hints;
-    while (*n != NULL) {
-        char *name = snd_device_name_get_hint(*n, "NAME");
-        if (name != NULL) {
-            if (0 != strcmp("null", name))
-                add_dev(af, name);
-            free(name);
+    if (af->custom_dev_cnt == 0) {
+        n = hints;
+        while (*n != NULL) {
+            char *name = snd_device_name_get_hint(*n, "NAME");
+            if (name != NULL) {
+                if (0 != strcmp("null", name))
+                    add_dev(af, name);
+                free(name);
+            }
+            n++;
         }
-        n++;
+    } else {
+        unsigned i;
+        for (i = 0; i < af->custom_dev_cnt; ++i) {
+            add_dev(af, af->custom_dev[i].ptr);
+        }
     }
 
     /* Get the mixer name */
@@ -426,7 +433,9 @@ static pj_status_t alsa_factory_refresh(pjmedia_aud_dev_factory *f)
      */
     snd_lib_error_set_handler(alsa_error_handler);
 
-    err = snd_device_name_free_hint((void**)hints);
+    if (af->custom_dev_cnt == 0) {
+        err = snd_device_name_free_hint((void**)hints);
+    }
 
     PJ_LOG(4,(THIS_FILE, "ALSA driver found %d devices", af->dev_cnt));
 
@@ -1154,5 +1163,38 @@ static pj_status_t alsa_stream_destroy (pjmedia_aud_stream *s)
 
     return PJ_SUCCESS;
 }
+
+
+/*
+ * Manually set ALSA devices.
+ */
+PJ_DEF(pj_status_t) pjmedia_aud_alsa_set_devices( pjmedia_aud_dev_factory *af,
+                                                  unsigned count,
+                                                  const char* names[] )
+{
+    struct alsa_factory *af = (struct alsa_factory*)f;
+
+    PJ_ASSERT_RETURN(count <= MAX_DEVICES, PJ_ETOOMANY);
+
+    PJ_LOG(4,(THIS_FILE, "ALSA driver set manually %d devices", count));
+
+    if (af->pool != NULL) {
+        pj_pool_release(af->pool);
+        af->pool = NULL;
+    }
+
+    if (count > 0) {
+        unsigned i;
+        af->pool = pj_pool_create(af->pf, "alsa_custom_dev", 256, 256, NULL);
+
+        for (i = 0; i < count; ++i) {
+            pj_strdup2_with_null(af->pool, &af->custom_dev[i], names[i]);
+        }
+    }
+    af->custom_dev_cnt = count;
+
+    return pjmedia_aud_dev_refresh();
+}
+
 
 #endif  /* PJMEDIA_AUDIO_DEV_HAS_ALSA */
