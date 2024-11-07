@@ -606,7 +606,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     }
 
     /* Associate with IOCP */
-    hioq = CreateIoCompletionPort((HANDLE)sock, ioqueue->iocp, (DWORD)rec, 0);
+    hioq = CreateIoCompletionPort((HANDLE)sock, ioqueue->iocp, (ULONG_PTR)rec, 0);
     if (!hioq) {
         pj_lock_release(ioqueue->lock);
         return PJ_RETURN_OS_ERROR(GetLastError());
@@ -705,7 +705,8 @@ static void decrement_counter(pj_ioqueue_key_t *key)
 static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout, 
                             pj_ssize_t *p_bytes, pj_ioqueue_key_t **p_key )
 {
-    DWORD dwBytesTransferred, dwKey;
+    DWORD dwBytesTransferred;
+    ULONG_PTR dwKey;
     generic_overlapped *pOv;
     pj_ioqueue_key_t *key;
     pj_ssize_t size_status = -1;
@@ -1468,7 +1469,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
     BOOL rc;
 
     rc = PostQueuedCompletionStatus(key->ioqueue->iocp, bytes_status,
-                                    (long)key, (OVERLAPPED*)op_key );
+                                    (ULONG_PTR)key, (OVERLAPPED*)op_key );
     if (rc == FALSE) {
         return PJ_RETURN_OS_ERROR(GetLastError());
     }
