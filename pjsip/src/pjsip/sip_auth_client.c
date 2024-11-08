@@ -736,7 +736,7 @@ static const pjsip_cred_info* auth_find_cred( const pjsip_auth_clt_sess *sess,
         case PJSIP_CRED_DATA_PLAIN_PASSWD:
             /* PLAIN_PASSWD creds can be used for any algorithm other than AKA */
             if (algorithm_type != PJSIP_AUTH_ALGORITHM_AKAV1_MD5
-                    || algorithm_type != PJSIP_AUTH_ALGORITHM_AKAV2_MD5) {
+                    && algorithm_type != PJSIP_AUTH_ALGORITHM_AKAV2_MD5) {
                 break;
             }
             continue;

@@ -22,7 +22,8 @@ enum pj_file_access
   PJ_O_RDONLY = 0x1101,
   PJ_O_WRONLY = 0x1102,
   PJ_O_RDWR = 0x1103,
-  PJ_O_APPEND = 0x1108
+  PJ_O_APPEND = 0x1108,
+  PJ_O_CLOEXEC = 0x1104
 };
 
 enum pj_log_decoration
@@ -180,6 +181,7 @@ typedef enum pj_ssl_cert_verify_flag_t
   PJ_SSL_CERT_ECRL_FAILURE = 1 << 6,
   PJ_SSL_CERT_EREVOKED = 1 << 7,
   PJ_SSL_CERT_ECHAIN_TOO_LONG = 1 << 8,
+  PJ_SSL_CERT_EWEAK_SIGNATURE = 1 << 9,
   PJ_SSL_CERT_EIDENTITY_NOT_MATCH = 1 << 30,
   PJ_SSL_CERT_EUNKNOWN = 1 << 31
 } pj_ssl_cert_verify_flag_t;
@@ -437,10 +439,10 @@ typedef enum pjmedia_orient
 
 typedef enum pjmedia_frame_type
 {
-    PJMEDIA_FRAME_TYPE_NONE,
-    PJMEDIA_FRAME_TYPE_AUDIO,
-    PJMEDIA_FRAME_TYPE_EXTENDED,
-    PJMEDIA_FRAME_TYPE_VIDEO
+  PJMEDIA_FRAME_TYPE_NONE,
+  PJMEDIA_FRAME_TYPE_AUDIO,
+  PJMEDIA_FRAME_TYPE_EXTENDED,
+  PJMEDIA_FRAME_TYPE_VIDEO
 } pjmedia_frame_type;
 
 typedef enum pjmedia_format_id
@@ -506,6 +508,17 @@ typedef enum pjsip_cred_data_type
   PJSIP_CRED_DATA_DIGEST = 1,
   PJSIP_CRED_DATA_EXT_AKA = 16
 } pjsip_cred_data_type;
+
+typedef enum pjsip_auth_algorithm_type
+{
+  PJSIP_AUTH_ALGORITHM_NOT_SET = 0,
+  PJSIP_AUTH_ALGORITHM_MD5,
+  PJSIP_AUTH_ALGORITHM_SHA256,
+  PJSIP_AUTH_ALGORITHM_SHA512_256,
+  PJSIP_AUTH_ALGORITHM_AKAV1_MD5,
+  PJSIP_AUTH_ALGORITHM_AKAV2_MD5,
+  PJSIP_AUTH_ALGORITHM_COUNT
+} pjsip_auth_algorithm_type;
 
 typedef enum pjsip_dialog_cap_status
 {
