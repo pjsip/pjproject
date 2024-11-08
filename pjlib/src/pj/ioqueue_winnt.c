@@ -754,7 +754,6 @@ static void cancel_all_pending_op(pj_ioqueue_key_t *key)
             if (rc)
                 PJ_PERROR(2, (THIS_FILE, PJ_RETURN_OS_ERROR(GetLastError()), "cancel io error"));
         }
-        fnCancelIoEx(key->hnd, NULL);
         pj_mutex_unlock(key->mutex);
     }
 }
