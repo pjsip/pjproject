@@ -6192,6 +6192,25 @@ PJ_DECL(pj_status_t) pjsua_call_dial_dtmf(pjsua_call_id call_id,
                                           const pj_str_t *digits);
 
 /**
+ * Send DTMF digits to remote using RFC 2833 payload formats. Use 
+ * #pjsua_call_send_dtmf() to send DTMF using SIP INFO or other method in 
+ * \a pjsua_dtmf_method. App can use \a on_dtmf_digit() or \a on_dtmf_digit2() 
+ * callback to monitor incoming DTMF.
+ *
+ * @param call_id       Call identification.
+ * @param digits        DTMF string digits to be sent as described on RFC 2833 
+ *                      section 3.10. If PJMEDIA_HAS_DTMF_FLASH is enabled, 
+ *                      character 'R' is used to represent the 
+ *                      event type 16 (flash) as stated in RFC 4730.
+ * @param duration      duration of event in ms or 0 to use default
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_dial_dtmf2(pjsua_call_id call_id, 
+                                          const pj_str_t *digits,
+                                          unsigned duration);
+
+/**
  * Send DTMF digits to remote. Use this method to send DTMF using the method in
  * \a pjsua_dtmf_method. This method will call #pjsua_call_dial_dtmf() when
  * sending DTMF using \a PJSUA_DTMF_METHOD_RFC2833. Note that 
