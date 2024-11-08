@@ -715,6 +715,50 @@ static void decrement_counter(pj_ioqueue_key_t *key)
 }
 #endif
 
+static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key, pj_ioqueue_op_key_t *op_key)
+{
+    pj_pool_t *pool;
+    struct pending_op *op;
+
+    pool = pj_pool_create(key->ioqueue->pool->factory, "pending_op%p", 512, 512, NULL);
+    PJ_ASSERT_RETURN(pool, NULL);
+    op = PJ_POOL_ZALLOC_T(pool, struct pending_op);
+    op->pool = pool;
+    op->op_key = op_key;
+
+    pj_mutex_lock(key->mutex);
+    pj_list_push_back(&key->pending_list, op);
+    pj_mutex_unlock(key->mutex);
+    return op;
+}
+
+static void release_pending_op(pj_ioqueue_key_t *key, struct pending_op *op)
+{
+    if (!key || !op)
+        return;
+    pj_mutex_lock(key->mutex);
+    pj_list_erase(op);
+    pj_mutex_unlock(key->mutex);
+    pj_pool_release(op->pool);
+}
+
+static void cancel_all_pending_op(pj_ioqueue_key_t *key)
+{
+    if (!fnCancelIoEx)
+        fnCancelIoEx = (FnCancelIoEx)GetProcAddress(GetModuleHandle(PJ_T("Kernel32.dll")), "CancelIoEx");
+    if (fnCancelIoEx) {
+        struct pending_op *op;
+        pj_mutex_lock(key->mutex);
+        for (op = key->pending_list.next; op != &key->pending_list; op = op->next) {
+            BOOL rc = fnCancelIoEx(key->ioqueue->iocp, (LPOVERLAPPED)&op->pending_key);
+            if (rc)
+                PJ_PERROR(2, (THIS_FILE, PJ_RETURN_OS_ERROR(GetLastError()), "cancel io error"));
+        }
+        fnCancelIoEx(key->hnd, NULL);
+        pj_mutex_unlock(key->mutex);
+    }
+}
+
 /*
  * Poll the I/O Completion Port, execute callback, 
  * and return the key and bytes transferred of the last operation.
@@ -729,7 +773,6 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
     pj_ssize_t size_status = -1;
     BOOL rcGetQueued;
     struct pending_op *xpending_op = NULL;
-    pj_pool_t *xpending_pool = NULL;
     pj_ioqueue_op_key_t *op_key = NULL;
 
     /* Poll for completion status. */
@@ -765,10 +808,6 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
             case PJ_IOQUEUE_OP_SEND_TO:
             case PJ_IOQUEUE_OP_ACCEPT:
                 xpending_op = (struct pending_op *)((char *)pOv - offsetof(struct pending_op, pending_key));
-                pj_mutex_lock(key->mutex);
-                pj_list_erase(xpending_op);
-                pj_mutex_unlock(key->mutex);
-                xpending_pool = xpending_op->pool;
                 op_key = xpending_op->op_key;
                 break;
             default:
@@ -778,8 +817,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
         /* We shouldn't call callbacks if key is quitting. */
         if (key->closing) {
-            if (xpending_pool)
-                pj_pool_release(xpending_pool);
+            release_pending_op(key, xpending_op);
             return PJ_TRUE;
         }
 
@@ -798,8 +836,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
             if (has_lock) {
                 pj_mutex_unlock(key->mutex);
             }
-            if (xpending_pool)
-                pj_pool_release(xpending_pool);
+            release_pending_op(key, xpending_op);
             return PJ_TRUE;
         }
 
@@ -861,9 +898,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
             pj_mutex_unlock(key->mutex);
 #endif
 
-        if (xpending_pool)
-            pj_pool_release(xpending_pool);
-
+        release_pending_op(key, xpending_op);
         return PJ_TRUE;
     }
 
@@ -920,19 +955,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
 #endif
 
     /* Cancel all penging I/O operations in order to free all pending memory */
-    if (!fnCancelIoEx)
-        fnCancelIoEx = (FnCancelIoEx)GetProcAddress(GetModuleHandle(PJ_T("Kernel32.dll")), "CancelIoEx");
-    if (fnCancelIoEx) {
-        struct pending_op *op;
-        pj_mutex_lock(key->mutex);
-        for (op = key->pending_list.next; op != &key->pending_list; op = op->next) {
-            BOOL rc = fnCancelIoEx(key->ioqueue->iocp, (LPOVERLAPPED)&op->pending_key);
-            if (rc)
-                PJ_PERROR(2, (THIS_FILE, PJ_RETURN_OS_ERROR(GetLastError()), "cancel io error"));
-        }
-        fnCancelIoEx(key->hnd, NULL);
-        pj_mutex_unlock(key->mutex);
-    }
+    cancel_all_pending_op(key);
 
     /* Close handle (the only way to disassociate handle from IOCP). 
      * We also need to close handle to make sure that no further events
@@ -1087,7 +1110,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
     DWORD bytesRead;
     DWORD dwFlags = 0;
     union operation_key *op_key_rec;
-    pj_pool_t *pool;
     struct pending_op *op;
 
     PJ_CHECK_STACK();
@@ -1123,10 +1145,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
         }
     }
 
-    pool = pj_pool_create(key->ioqueue->pool->factory, "pending_op%p", 512, 512, NULL);
-    op = PJ_POOL_ZALLOC_T(pool, struct pending_op);
-    op->pool = pool;
-    op->op_key = op_key;
+    op = alloc_pending_op(key, op_key);
     memcpy(&op->pending_key, op_key_rec, sizeof(union operation_key));
     op_key_rec = &op->pending_key;
 
@@ -1147,14 +1166,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
         DWORD dwStatus = WSAGetLastError();
         if (dwStatus!=WSA_IO_PENDING) {
             *length = -1;
-            pj_pool_release(pool);
+            release_pending_op(key, op);
             return PJ_STATUS_FROM_OS(dwStatus);
         }
     }
-
-    pj_mutex_lock(key->mutex);
-    pj_list_push_back(&key->pending_list, op);
-    pj_mutex_unlock(key->mutex);
 
     /* Pending operation has been scheduled. */
     return PJ_EPENDING;
@@ -1177,7 +1192,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
     DWORD bytesRead;
     DWORD dwFlags = 0;
     union operation_key *op_key_rec;
-    pj_pool_t *pool;
     struct pending_op *op;
 
     PJ_CHECK_STACK();
@@ -1213,10 +1227,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
         }
     }
 
-    pool = pj_pool_create(key->ioqueue->pool->factory, "pending_op%p", 512, 512, NULL);
-    op = PJ_POOL_ZALLOC_T(pool, struct pending_op);
-    op->pool = pool;
-    op->op_key = op_key;
+    op = alloc_pending_op(key, op_key);
     memcpy(&op->pending_key, op_key_rec, sizeof(union operation_key));
     op_key_rec = &op->pending_key;
 
@@ -1237,14 +1248,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
         DWORD dwStatus = WSAGetLastError();
         if (dwStatus!=WSA_IO_PENDING) {
             *length = -1;
-            pj_pool_release(pool);
+            release_pending_op(key, op);
             return PJ_STATUS_FROM_OS(dwStatus);
         }
     } 
-
-    pj_mutex_lock(key->mutex);
-    pj_list_push_back(&key->pending_list, op);
-    pj_mutex_unlock(key->mutex);
 
     /* Pending operation has been scheduled. */
     return PJ_EPENDING;
@@ -1282,7 +1289,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     DWORD bytesWritten;
     DWORD dwFlags;
     union operation_key *op_key_rec;
-    pj_pool_t *pool;
     struct pending_op *op;
 
     PJ_CHECK_STACK();
@@ -1320,10 +1326,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
         }
     }
 
-    pool = pj_pool_create(key->ioqueue->pool->factory, "pending_op%p", 512, 512, NULL);
-    op = PJ_POOL_ZALLOC_T(pool, struct pending_op);
-    op->pool = pool;
-    op->op_key = op_key;
+    op = alloc_pending_op(key, op_key);
     memcpy(&op->pending_key, op_key_rec, sizeof(union operation_key));
     op_key_rec = &op->pending_key;
 
@@ -1343,14 +1346,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     if (rc == SOCKET_ERROR) {
         DWORD dwStatus = WSAGetLastError();
         if (dwStatus!=WSA_IO_PENDING) {
-            pj_pool_release(pool);
+            release_pending_op(key, op);
             return PJ_STATUS_FROM_OS(dwStatus);
         }
     }
-
-    pj_mutex_lock(key->mutex);
-    pj_list_push_back(&key->pending_list, op);
-    pj_mutex_unlock(key->mutex);
 
     /* Asynchronous operation successfully submitted. */
     return PJ_EPENDING;
@@ -1375,7 +1374,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     pj_status_t status;
     union operation_key *op_key_rec;
     SOCKET sock;
-    pj_pool_t *pool;
     struct pending_op *op;
 
     PJ_CHECK_STACK();
@@ -1427,16 +1425,13 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
      * No connection is immediately available.
      * Must schedule an asynchronous operation.
      */
-    pool = pj_pool_create(key->ioqueue->pool->factory, "pending_op%p", 512, 512, NULL);
-    op = PJ_POOL_ZALLOC_T(pool, struct pending_op);
-    op->pool = pool;
-    op->op_key = op_key;
+    op = alloc_pending_op(key, op_key);
     op_key_rec = &op->pending_key;
 
     status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
                             &op_key_rec->accept.newsock);
     if (status != PJ_SUCCESS) {
-        pj_pool_release(pool);
+        release_pending_op(key, op);
         return status;
     }
 
@@ -1456,19 +1451,15 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
 
     if (rc == TRUE) {
         ioqueue_on_accept_complete(key, &op_key_rec->accept);
-        pj_pool_release(pool);
+        release_pending_op(key, op);
         return PJ_SUCCESS;
     } else {
         DWORD dwStatus = WSAGetLastError();
         if (dwStatus!=WSA_IO_PENDING) {
-            pj_pool_release(pool);
+            release_pending_op(key, op);
             return PJ_STATUS_FROM_OS(dwStatus);
         }
     }
-
-    pj_mutex_lock(key->mutex);
-    pj_list_push_back(&key->pending_list, op);
-    pj_mutex_unlock(key->mutex);
 
     /* Asynchronous Accept() has been submitted. */
     return PJ_EPENDING;
