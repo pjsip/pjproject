@@ -1260,7 +1260,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     pjmedia_port *port;
     pj_status_t status = PJ_SUCCESS;
 
-    PJ_ASSERT_RETURN(filename->slen > 0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(filename && filename->slen > 0, PJ_EINVAL);
 
     if (pjsua_var.player_cnt >= PJ_ARRAY_SIZE(pjsua_var.player))
         return PJ_ETOOMANY;
