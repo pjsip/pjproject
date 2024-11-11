@@ -126,7 +126,9 @@ private:
         return old_ptr;
     }
 
-    AtomicQueue():name_(""){}
+    AtomicQueue():maxItemCnt_(0), itemSize_(0), ptrWrite(0),
+                  ptrRead(0), buffer(NULL), name_("")
+    {}
 };
 
 struct pj_atomic_queue_t

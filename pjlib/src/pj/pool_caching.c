@@ -81,6 +81,8 @@ PJ_DEF(void) pj_caching_pool_init( pj_caching_pool *cp,
      */
     //cp->factory.on_block_alloc = &cpool_on_block_alloc;
     //cp->factory.on_block_free = &cpool_on_block_free;
+    PJ_UNUSED_ARG(cpool_on_block_alloc);
+    PJ_UNUSED_ARG(cpool_on_block_free);
 
     pool = pj_pool_create_on_buf("cachingpool", cp->pool_buf, sizeof(cp->pool_buf));
     status = pj_lock_create_simple_mutex(pool, "cachingpool", &cp->lock);
