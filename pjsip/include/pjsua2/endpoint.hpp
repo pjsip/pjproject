@@ -945,6 +945,16 @@ public:
     unsigned            sndClockRate;
 
     /**
+     * Sound device uses \ref PJMEDIA_CLOCK instead of native sound device
+     * clock, generally this will be able to reduce jitter and clock skew.
+     *
+     * This option is not applicable for encoded/non-PCM format.
+     *
+     * Default value: PJSUA_DEFAULT_SND_USE_SOFT_CLOCK
+     */
+    bool                sndUseSoftClock;
+
+    /**
      * Channel count be applied when opening the sound device and
      * conference bridge.
      */
