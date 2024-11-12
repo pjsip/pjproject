@@ -21,6 +21,7 @@
 #include <pjmedia/delaybuf.h>
 #include <pjmedia/echo.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/master_port.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/rand.h>
@@ -42,6 +43,12 @@ struct pjmedia_snd_port
     pjmedia_aud_stream  *aud_stream;
     pjmedia_dir          dir;
     pjmedia_port        *port;
+
+    /* Use clock */
+    pjmedia_clock       *clock;
+    pjmedia_delay_buf   *play_dbuf;
+    pjmedia_delay_buf   *cap_dbuf;
+    pj_int16_t          *frame_buf;
 
     pjmedia_clock_src    cap_clocksrc,
                          play_clocksrc;
@@ -78,18 +85,25 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
     const unsigned required_size = (unsigned)frame->size;
     pj_status_t status;
 
-    pjmedia_clock_src_update(&snd_port->play_clocksrc, &frame->timestamp);
-
     port = snd_port->port;
     if (port == NULL)
         goto no_frame;
 
-    status = pjmedia_port_get_frame(port, frame);
-    if (status != PJ_SUCCESS)
-        goto no_frame;
+    if (snd_port->options & PJMEDIA_SND_PORT_USE_SOFT_CLOCK) {
+        pj_assert(frame->size >= snd_port->samples_per_frame*2);
+        status = pjmedia_delay_buf_get(snd_port->play_dbuf, frame->buf);
+        if (status != PJ_SUCCESS)
+            goto no_frame;
+    } else {
+        pjmedia_clock_src_update(&snd_port->play_clocksrc, &frame->timestamp);
 
-    if (frame->type != PJMEDIA_FRAME_TYPE_AUDIO)
-        goto no_frame;
+        status = pjmedia_port_get_frame(port, frame);
+        if (status != PJ_SUCCESS)
+            goto no_frame;
+
+        if (frame->type != PJMEDIA_FRAME_TYPE_AUDIO)
+            goto no_frame;
+    }
 
     /* Must supply the required samples */
     pj_assert(frame->size == required_size);
@@ -144,23 +158,25 @@ static pj_status_t rec_cb(void *user_data, pjmedia_frame *frame)
     pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
 
-    pjmedia_clock_src_update(&snd_port->cap_clocksrc, &frame->timestamp);
-
     /* Invoke preview callback */
     if (snd_port->on_rec_frame)
         (*snd_port->on_rec_frame)(snd_port->user_data, frame);
-
-    port = snd_port->port;
-    if (port == NULL)
-        return PJ_SUCCESS;
 
     /* Cancel echo */
     if (snd_port->ec_state && !snd_port->ec_suspended) {
         pjmedia_echo_capture(snd_port->ec_state, (pj_int16_t*) frame->buf, 0);
     }
 
-    pjmedia_port_put_frame(port, frame);
+    port = snd_port->port;
+    if (port == NULL)
+        return PJ_SUCCESS;
 
+    if (snd_port->options & PJMEDIA_SND_PORT_USE_SOFT_CLOCK) {
+        pjmedia_delay_buf_put(snd_port->cap_dbuf, frame->buf);
+    } else {
+        pjmedia_clock_src_update(&snd_port->cap_clocksrc, &frame->timestamp);
+        pjmedia_port_put_frame(port, frame);
+    }
 
     return PJ_SUCCESS;
 }
@@ -215,6 +231,51 @@ static pj_status_t rec_cb_ext(void *user_data, pjmedia_frame *frame)
 
     return PJ_SUCCESS;
 }
+
+
+/*
+ * Callback to be called for each clock ticks.
+ */
+static void clock_callback(const pj_timestamp *ts, void *user_data)
+{
+    pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
+    pjmedia_port *port = snd_port->port;
+    pjmedia_frame frame;
+    pj_status_t status;
+
+    /* Sound port not connected */
+    if (port == NULL)
+        return;
+
+    /* Playback, get a frame from underlying port, put into delay buffer */
+    pjmedia_clock_src_update(&snd_port->play_clocksrc, ts);
+
+    pj_bzero(&frame, sizeof(frame));
+    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+    frame.buf = snd_port->frame_buf;
+    frame.size = snd_port->samples_per_frame * 2;
+    frame.timestamp.u64 = ts->u64;
+    status = pjmedia_port_get_frame(port, &frame);
+    if (status != PJ_SUCCESS || frame.type != PJMEDIA_FRAME_TYPE_AUDIO) {
+        pjmedia_zero_samples(snd_port->frame_buf, snd_port->samples_per_frame);
+    }
+    pjmedia_delay_buf_put(snd_port->play_dbuf, frame.buf);
+
+    /* Record: get a frame from delay buffer, put into underlying port */
+    pjmedia_clock_src_update(&snd_port->cap_clocksrc, ts);
+
+    status = pjmedia_delay_buf_get(snd_port->cap_dbuf, snd_port->frame_buf);
+    pj_bzero(&frame, sizeof(frame));
+    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+    frame.buf = snd_port->frame_buf;
+    frame.size = snd_port->samples_per_frame * 2;
+    frame.timestamp.u64 = ts->u64;
+    if (status != PJ_SUCCESS) {
+        pjmedia_zero_samples(snd_port->frame_buf, snd_port->samples_per_frame);
+    }
+    pjmedia_port_put_frame(port, &frame);
+}
+
 
 /* Initialize with default values (zero) */
 PJ_DEF(void) pjmedia_snd_port_param_default(pjmedia_snd_port_param *prm)
@@ -322,24 +383,79 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
         status = pjmedia_snd_port_set_ec(snd_port, pool, 
                                          snd_port->aud_param.ec_tail_ms,
                                          snd_port->prm_ec_options);
-        if (status != PJ_SUCCESS) {
-            pjmedia_aud_stream_destroy(snd_port->aud_stream);
-            snd_port->aud_stream = NULL;
-            return status;
+        if (status != PJ_SUCCESS)
+            goto on_error;
+    }
+
+    /* Create clock and buffers, if configured */
+    if ((snd_port->options & PJMEDIA_SND_PORT_USE_SOFT_CLOCK) &&
+        (snd_port->aud_param.ext_fmt.id == PJMEDIA_FORMAT_L16))
+    {
+        unsigned ptime;
+
+        status = pjmedia_clock_create(pool,
+                                      snd_port->clock_rate,
+                                      snd_port->channel_count,
+                                      snd_port->samples_per_frame,
+                                      0,
+                                      &clock_callback,
+                                      snd_port,
+                                      &snd_port->clock);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        ptime = snd_port->samples_per_frame * 1000 / snd_port->clock_rate /
+                snd_port->channel_count;
+        status = pjmedia_delay_buf_create(pool, "playdbuf",
+                                          snd_port->clock_rate,
+                                          snd_port->samples_per_frame,
+                                          snd_port->channel_count,
+                                          PJMEDIA_SOUND_BUFFER_COUNT * ptime,
+                                          0, /* options */
+                                          &snd_port->play_dbuf);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        status = pjmedia_delay_buf_create(pool, "capdbuf",
+                                          snd_port->clock_rate,
+                                          snd_port->samples_per_frame,
+                                          snd_port->channel_count,
+                                          PJMEDIA_SOUND_BUFFER_COUNT * ptime,
+                                          0, /* options */
+                                          &snd_port->cap_dbuf);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        snd_port->frame_buf = (pj_int16_t*)
+                              pj_pool_zalloc(pool,
+                                             snd_port->samples_per_frame * 2);
+        if (!snd_port->frame_buf) {
+            status = PJ_ENOMEM;
+            goto on_error;
         }
+
+        status = pjmedia_clock_start(snd_port->clock);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        PJ_LOG(4,(THIS_FILE, "Sound port does not use native clock"));
+    } else {
+        PJ_LOG(4,(THIS_FILE, "Sound port uses native clock"));
     }
 
     /* Start sound stream. */
     if (!(snd_port->options & PJMEDIA_SND_PORT_NO_AUTO_START)) {
         status = pjmedia_aud_stream_start(snd_port->aud_stream);
     }
-    if (status != PJ_SUCCESS) {
-        pjmedia_aud_stream_destroy(snd_port->aud_stream);
-        snd_port->aud_stream = NULL;
-        return status;
-    }
+    if (status != PJ_SUCCESS)
+        goto on_error;
 
     return PJ_SUCCESS;
+
+on_error:
+    pjmedia_aud_stream_destroy(snd_port->aud_stream);
+    snd_port->aud_stream = NULL;
+    return status;
 }
 
 
@@ -349,11 +465,28 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
  */
 static pj_status_t stop_sound_device( pjmedia_snd_port *snd_port )
 {
+    /* Stop and destroy clock */
+    if (snd_port->clock) {
+        pjmedia_clock_stop(snd_port->clock);
+        pjmedia_clock_destroy(snd_port->clock);
+        snd_port->clock = NULL;
+    }
+
     /* Check if we have sound stream device. */
     if (snd_port->aud_stream) {
         pjmedia_aud_stream_stop(snd_port->aud_stream);
         pjmedia_aud_stream_destroy(snd_port->aud_stream);
         snd_port->aud_stream = NULL;
+    }
+
+    /* Destroy buffers for clock */
+    if (snd_port->play_dbuf) {
+        pjmedia_delay_buf_destroy(snd_port->play_dbuf);
+        snd_port->play_dbuf = NULL;
+    }
+    if (snd_port->cap_dbuf) {
+        pjmedia_delay_buf_destroy(snd_port->cap_dbuf);
+        snd_port->cap_dbuf = NULL;
     }
 
     /* Destroy AEC */
@@ -773,6 +906,11 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_connect( pjmedia_snd_port *snd_port,
 
     if (afd->bits_per_sample != snd_port->bits_per_sample)
         return PJMEDIA_ENCBITS;
+
+    if (snd_port->play_dbuf)
+        pjmedia_delay_buf_reset(snd_port->play_dbuf);
+    if (snd_port->cap_dbuf)
+        pjmedia_delay_buf_reset(snd_port->cap_dbuf);
 
     /* Port is okay. */
     snd_port->port = port;

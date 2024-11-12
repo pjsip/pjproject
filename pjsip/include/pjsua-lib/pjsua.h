@@ -7139,6 +7139,15 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 #endif
 
 /**
+ * Sound device uses \ref PJMEDIA_CLOCK instead of native sound device
+ * clock. This setting is the default value for
+ * pjsua_media_config.snd_use_soft_clock.
+ */
+#ifndef PJSUA_DEFAULT_SND_USE_SOFT_CLOCK
+#   define PJSUA_DEFAULT_SND_USE_SOFT_CLOCK PJ_FALSE
+#endif
+
+/**
  * Default frame length in the conference bridge. This setting
  * is the default value for pjsua_media_config.audio_frame_ptime.
  */
@@ -7224,6 +7233,16 @@ struct pjsua_media_config
      * If value is zero, conference bridge clock rate will be used.
      */
     unsigned            snd_clock_rate;
+
+    /**
+     * Sound device uses \ref PJMEDIA_CLOCK instead of native sound device
+     * clock, generally this will be able to reduce jitter and clock skew.
+     *
+     * This option is not applicable for encoded/non-PCM format.
+     *
+     * Default value: PJSUA_DEFAULT_SND_USE_SOFT_CLOCK
+     */
+    pj_bool_t           snd_use_soft_clock;
 
     /**
      * Channel count be applied when opening the sound device and
