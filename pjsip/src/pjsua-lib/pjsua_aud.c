@@ -2358,6 +2358,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
 
         /* Open! */
         param.options = 0;
+        if (pjsua_var.media_cfg.snd_use_sw_clock)
+            param.options |= PJMEDIA_SND_PORT_USE_SW_CLOCK;
         status = open_snd_dev(&param);
         if (status == PJ_SUCCESS)
             break;
