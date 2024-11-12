@@ -433,7 +433,7 @@ void MediaConfig::fromPj(const pjsua_media_config &mc)
 {
     this->clockRate = mc.clock_rate;
     this->sndClockRate = mc.snd_clock_rate;
-    this->sndUseSoftClock = PJ2BOOL(mc.snd_use_soft_clock);
+    this->sndUseSwClock = PJ2BOOL(mc.snd_use_sw_clock);
     this->channelCount = mc.channel_count;
     this->audioFramePtime = mc.audio_frame_ptime;
     this->maxMediaPorts = mc.max_media_ports;
@@ -466,7 +466,7 @@ pjsua_media_config MediaConfig::toPj() const
 
     mcfg.clock_rate = this->clockRate;
     mcfg.snd_clock_rate = this->sndClockRate;
-    mcfg.snd_use_soft_clock = this->sndUseSoftClock;
+    mcfg.snd_use_sw_clock = this->sndUseSwClock;
     mcfg.channel_count = this->channelCount;
     mcfg.audio_frame_ptime = this->audioFramePtime;
     mcfg.max_media_ports = this->maxMediaPorts;
@@ -521,7 +521,7 @@ void MediaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_NUM_T   ( this_node, pjmedia_jb_discard_algo, jbDiscardAlgo);
     NODE_READ_INT     ( this_node, sndAutoCloseTime);
     NODE_READ_BOOL    ( this_node, vidPreviewEnableNative);
-    NODE_READ_BOOL    ( this_node, sndUseSoftClock);
+    NODE_READ_BOOL    ( this_node, sndUseSwClock);
 }
 
 void MediaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -552,7 +552,7 @@ void MediaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_NUM_T   ( this_node, pjmedia_jb_discard_algo, jbDiscardAlgo);
     NODE_WRITE_INT     ( this_node, sndAutoCloseTime);
     NODE_WRITE_BOOL    ( this_node, vidPreviewEnableNative);
-    NODE_WRITE_BOOL    ( this_node, sndUseSoftClock);
+    NODE_WRITE_BOOL    ( this_node, sndUseSwClock);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

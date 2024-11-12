@@ -75,11 +75,11 @@ enum pjmedia_snd_port_option
 
     /**
      * Sound device uses \ref PJMEDIA_CLOCK instead of native sound device
-     * clock, generally this will be able to reduce jitter and clock skew.
+     * clock, generally this will be able to reduce jitter and clock drift.
      *
      * This option is not applicable for encoded/non-PCM format.
      */
-    PJMEDIA_SND_PORT_USE_SOFT_CLOCK = 2
+    PJMEDIA_SND_PORT_USE_SW_CLOCK  = 2
 };
 
 /**

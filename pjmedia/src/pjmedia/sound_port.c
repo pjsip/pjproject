@@ -89,7 +89,7 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
     if (port == NULL)
         goto no_frame;
 
-    if (snd_port->options & PJMEDIA_SND_PORT_USE_SOFT_CLOCK) {
+    if (snd_port->options & PJMEDIA_SND_PORT_USE_SW_CLOCK) {
         pj_assert(frame->size >= snd_port->samples_per_frame*2);
         status = pjmedia_delay_buf_get(snd_port->play_dbuf, frame->buf);
         if (status != PJ_SUCCESS)
@@ -171,7 +171,7 @@ static pj_status_t rec_cb(void *user_data, pjmedia_frame *frame)
     if (port == NULL)
         return PJ_SUCCESS;
 
-    if (snd_port->options & PJMEDIA_SND_PORT_USE_SOFT_CLOCK) {
+    if (snd_port->options & PJMEDIA_SND_PORT_USE_SW_CLOCK) {
         pjmedia_delay_buf_put(snd_port->cap_dbuf, frame->buf);
     } else {
         pjmedia_clock_src_update(&snd_port->cap_clocksrc, &frame->timestamp);
@@ -388,7 +388,7 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
     }
 
     /* Create clock and buffers, if configured */
-    if ((snd_port->options & PJMEDIA_SND_PORT_USE_SOFT_CLOCK) &&
+    if ((snd_port->options & PJMEDIA_SND_PORT_USE_SW_CLOCK) &&
         (snd_port->aud_param.ext_fmt.id == PJMEDIA_FORMAT_L16))
     {
         unsigned ptime;
@@ -438,7 +438,7 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
         if (status != PJ_SUCCESS)
             goto on_error;
 
-        PJ_LOG(4,(THIS_FILE, "Sound port does not use native clock"));
+        PJ_LOG(4,(THIS_FILE, "Sound port uses internal (or software) clock"));
     } else {
         PJ_LOG(4,(THIS_FILE, "Sound port uses native clock"));
     }

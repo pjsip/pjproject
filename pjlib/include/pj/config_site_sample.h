@@ -390,8 +390,10 @@
     /* Fine tune Speex's default settings for best performance/quality */
     #define PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY 5
 
-    /* Software clock for sound device can improve quality */
-    #define PJSUA_DEFAULT_SND_USE_SOFT_CLOCK    PJ_TRUE
+    /* Using software clock for media flow can improve quality,
+     * i.e: more consistent RTP timing and less jitter/burst.
+     */
+    #define PJSUA_DEFAULT_SND_USE_SW_CLOCK      PJ_TRUE
 
     /*
      * PJSIP settings.

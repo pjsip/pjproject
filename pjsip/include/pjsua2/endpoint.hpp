@@ -946,13 +946,13 @@ public:
 
     /**
      * Sound device uses \ref PJMEDIA_CLOCK instead of native sound device
-     * clock, generally this will be able to reduce jitter and clock skew.
+     * clock, generally this will be able to reduce jitter and clock drift.
      *
      * This option is not applicable for encoded/non-PCM format.
      *
-     * Default value: PJSUA_DEFAULT_SND_USE_SOFT_CLOCK
+     * Default value: PJSUA_DEFAULT_SND_USE_SW_CLOCK
      */
-    bool                sndUseSoftClock;
+    bool                sndUseSwClock;
 
     /**
      * Channel count be applied when opening the sound device and
