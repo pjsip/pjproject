@@ -1725,6 +1725,17 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Parse SDP from incoming request */
     if (rdata->msg_info.msg->body) {
+        pj_size_t buffer_size = 4096;
+        char *buffer = malloc(buffer_size);
+
+        int result = rdata->msg_info.msg->body->print_body(rdata->msg_info.msg->body, buffer, buffer_size);
+
+        if (result >= 0) {
+            printf("######################### Message body:\n%.*s\n", result, buffer);
+        } else {
+            printf("######################### Failed to print message body. Error code: %d\n", result);
+        }
+
         pjsip_rdata_sdp_info *sdp_info;
 
         sdp_info = pjsip_rdata_get_sdp_info(rdata);
