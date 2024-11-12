@@ -102,7 +102,8 @@ void writeSipHeaders(ContainerNode &node,
 ///////////////////////////////////////////////////////////////////////////////
 
 AuthCredInfo::AuthCredInfo()
-: scheme("digest"), realm("*"), dataType(0)
+: scheme("digest"), realm("*"), dataType(0),
+  algoType(PJSIP_AUTH_ALGORITHM_NOT_SET)
 {
 }
 
@@ -112,7 +113,8 @@ AuthCredInfo::AuthCredInfo(const string &param_scheme,
                            const int param_data_type,
                            const string param_data)
 : scheme(param_scheme), realm(param_realm), username(param_user_name),
-  dataType(param_data_type), data(param_data)
+  dataType(param_data_type), data(param_data),
+  algoType(PJSIP_AUTH_ALGORITHM_NOT_SET)
 {
 }
 
