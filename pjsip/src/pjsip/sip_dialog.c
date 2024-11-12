@@ -621,7 +621,13 @@ on_error:
     }
 
     if (tsx) {
-        pjsip_tsx_terminate(tsx, 500);
+        int st_code;
+
+        st_code = (status == PJSIP_ENOTREQUESTMSG ||
+                   status == PJSIP_EMISSINGHDR ||
+                   status == PJSIP_EINVALIDHDR)? PJSIP_SC_BAD_REQUEST:
+                  PJSIP_SC_INTERNAL_SERVER_ERROR;
+        pjsip_tsx_terminate(tsx, st_code);
         pj_assert(dlg->tsx_count>0);
         --dlg->tsx_count;
     }
@@ -1789,9 +1795,14 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
              */
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_str_t reason;
+            int st_code;
 
+            st_code = (status == PJSIP_ENOTREQUESTMSG ||
+                       status == PJSIP_EMISSINGHDR ||
+                       status == PJSIP_EINVALIDHDR)? PJSIP_SC_BAD_REQUEST:
+                      PJSIP_SC_INTERNAL_SERVER_ERROR;
             reason = pj_strerror(status, errmsg, sizeof(errmsg));
-            pjsip_endpt_respond_stateless(dlg->endpt, rdata, 500, &reason,
+            pjsip_endpt_respond_stateless(dlg->endpt, rdata, st_code, &reason,
                                           NULL, NULL);
             goto on_return;
         }
