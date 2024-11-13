@@ -1813,10 +1813,24 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
          * already, call it.
          */
         if (stream->dtmf_event_cb && emit_event) {
+
+            /* Correct duration and timestamp for codecs where clock_rate
+             * differs from sample rate
+             */
+            float ts_modifier = 1.0;
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+            if (stream->has_g722_mpeg_bug == PJ_TRUE) {
+                ts_modifier = 2;
+            }
+#endif
+            if (!pj_stricmp2(&stream->si.fmt.encoding_name, "opus")) {
+                ts_modifier = (float)stream->codec_param.info.clock_rate / 48000;
+            }
+
             dtmf_event.digit = digitmap[event->event];
-            dtmf_event.timestamp = (pj_uint32_t)(timestamp->u64 /
+            dtmf_event.timestamp = (pj_uint32_t)(ts_modifier * timestamp->u64 /
                 (stream->codec_param.info.clock_rate / 1000));
-            dtmf_event.duration = (pj_uint16_t)(event_duration /
+            dtmf_event.duration = (pj_uint16_t)(ts_modifier * event_duration /
                 (stream->codec_param.info.clock_rate / 1000));
             dtmf_event.flags = PJMEDIA_STREAM_DTMF_IS_UPDATE;
             if (is_event_end) {
@@ -1841,10 +1855,23 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
      * the DTMF digits in the buffer.
      */
     if (stream->dtmf_event_cb) {
+        /* Correct duration and timestamp for codecs where clock_rate
+         * differs from sample rate
+         */
+        float ts_modifier = 1.0;
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+        if (stream->has_g722_mpeg_bug == PJ_TRUE) {
+            ts_modifier = 2;
+        }
+#endif
+        if (!pj_stricmp2(&stream->si.fmt.encoding_name, "opus")) {
+            ts_modifier = (float)stream->codec_param.info.clock_rate / 48000;
+        }
+
         dtmf_event.digit = digitmap[event->event];
-        dtmf_event.timestamp = (pj_uint32_t)(timestamp->u64 /
+        dtmf_event.timestamp = (pj_uint32_t)(ts_modifier * timestamp->u64 /
             (stream->codec_param.info.clock_rate / 1000));
-        dtmf_event.duration = (pj_uint16_t)(event_duration /
+        dtmf_event.duration = (pj_uint16_t)(ts_modifier * event_duration /
             (stream->codec_param.info.clock_rate / 1000));
         dtmf_event.flags = 0;
         if (is_event_end) {
