@@ -920,6 +920,22 @@ void Endpoint::on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
     acc->onRegState(prm);
 }
 
+void Endpoint::on_acc_send_request(pjsua_acc_id acc_id,
+                                   void *token,
+                                   pjsip_event *event)
+{
+    Account *acc = lookupAcc(acc_id, "on_acc_send_request:response()");
+    if (!acc) {
+        return;
+    }
+
+    OnSendRequestParam prm;
+    prm.userData = token;
+    prm.e.fromPj(*event);
+
+    acc->onSendRequest(prm);
+}
+
 void Endpoint::on_incoming_subscribe(pjsua_acc_id acc_id,
                                      pjsua_srv_pres *srv_pres,
                                      pjsua_buddy_id buddy_id,
@@ -1926,16 +1942,17 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_nat_detect     = &Endpoint::on_nat_detect;
     ua_cfg.cb.on_transport_state = &Endpoint::on_transport_state;
 
-    ua_cfg.cb.on_incoming_call  = &Endpoint::on_incoming_call;
-    ua_cfg.cb.on_reg_started    = &Endpoint::on_reg_started;
-    ua_cfg.cb.on_reg_state2     = &Endpoint::on_reg_state2;
-    ua_cfg.cb.on_incoming_subscribe = &Endpoint::on_incoming_subscribe;
-    ua_cfg.cb.on_pager2         = &Endpoint::on_pager2;
-    ua_cfg.cb.on_pager_status2  = &Endpoint::on_pager_status2;
-    ua_cfg.cb.on_typing2        = &Endpoint::on_typing2;
-    ua_cfg.cb.on_mwi_info       = &Endpoint::on_mwi_info;
-    ua_cfg.cb.on_buddy_state    = &Endpoint::on_buddy_state;
-    ua_cfg.cb.on_buddy_evsub_state = &Endpoint::on_buddy_evsub_state;
+    ua_cfg.cb.on_acc_send_request       = &Endpoint::on_acc_send_request;
+    ua_cfg.cb.on_incoming_call          = &Endpoint::on_incoming_call;
+    ua_cfg.cb.on_reg_started            = &Endpoint::on_reg_started;
+    ua_cfg.cb.on_reg_state2             = &Endpoint::on_reg_state2;
+    ua_cfg.cb.on_incoming_subscribe     = &Endpoint::on_incoming_subscribe;
+    ua_cfg.cb.on_pager2                 = &Endpoint::on_pager2;
+    ua_cfg.cb.on_pager_status2          = &Endpoint::on_pager_status2;
+    ua_cfg.cb.on_typing2                = &Endpoint::on_typing2;
+    ua_cfg.cb.on_mwi_info               = &Endpoint::on_mwi_info;
+    ua_cfg.cb.on_buddy_state            = &Endpoint::on_buddy_state;
+    ua_cfg.cb.on_buddy_evsub_state      = &Endpoint::on_buddy_evsub_state;
     ua_cfg.cb.on_acc_find_for_incoming  = &Endpoint::on_acc_find_for_incoming;
     ua_cfg.cb.on_ip_change_progress     = &Endpoint::on_ip_change_progress;
 
