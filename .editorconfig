@@ -1,7 +1,7 @@
 root = true
 
 # properties
-[*.{h,c,hpp,cpp,m,java}]
+[*.{h,c,hpp,cpp,m,java,ac}]
 insert_final_newline = true
 indent_style = space
 indent_size = 4

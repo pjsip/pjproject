@@ -5,28 +5,30 @@ host_orig="$host"
 AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
-AC_CONFIG_HEADERS([pjlib/include/pj/compat/os_auto.h
-		  pjlib/include/pj/compat/m_auto.h
-		  pjmedia/include/pjmedia/config_auto.h
-		  pjmedia/include/pjmedia-codec/config_auto.h
-		  pjsip/include/pjsip/sip_autoconf.h
-		 ])
-AC_CONFIG_FILES([build.mak 
-		 build/os-auto.mak 
-		 build/cc-auto.mak
-		 pjlib/build/os-auto.mak 
-		 pjlib-util/build/os-auto.mak 
-		 pjmedia/build/os-auto.mak
-		 pjsip/build/os-auto.mak
-		 third_party/build/os-auto.mak
-		 ])
+AC_CONFIG_HEADERS([
+    pjlib/include/pj/compat/os_auto.h
+    pjlib/include/pj/compat/m_auto.h
+    pjmedia/include/pjmedia/config_auto.h
+    pjmedia/include/pjmedia-codec/config_auto.h
+    pjsip/include/pjsip/sip_autoconf.h
+])
 
+AC_CONFIG_FILES([
+    build.mak
+    build/os-auto.mak
+    build/cc-auto.mak
+    pjlib/build/os-auto.mak
+    pjlib-util/build/os-auto.mak
+    pjmedia/build/os-auto.mak
+    pjsip/build/os-auto.mak
+    third_party/build/os-auto.mak
+])
 
 dnl
 dnl Setup default CFLAGS
 dnl
 if test "$CFLAGS" = ""; then
-  CFLAGS="-O2"
+    CFLAGS="-O2"
 fi
 
 dnl #
@@ -71,31 +73,31 @@ AC_SUBST(ac_pjdir)
 AC_SUBST(ac_build_mak_vars)
 AC_SUBST(ac_cflags)
 
-case $host in 
+case $host in
     *mingw* | *cygw* | *win32* | *w32* )
-	if pwd -W 2&> /dev/null; then
-	   ac_pjdir=`pwd -W`
-	else
-	   # We're probably cross-compiling mingw on Linux
-	   ac_pjdir=`pwd`
-	fi
-	;;
+        if pwd -W 2&> /dev/null; then
+            ac_pjdir=`pwd -W`
+        else
+            # We're probably cross-compiling mingw on Linux
+            ac_pjdir=`pwd`
+        fi
+    ;;
     *)
-	ac_pjdir=`pwd`
-	;;
+        ac_pjdir=`pwd`
+    ;;
 esac
 
 AC_SUBST(ac_shlib_suffix)
 case $target in
     *mingw* | *cygw* | *win32* | *w32* )
-	ac_shlib_suffix=dll
-	;;
+        ac_shlib_suffix=dll
+    ;;
     *darwin*)
-	ac_shlib_suffix=dylib
-	;;
+        ac_shlib_suffix=dylib
+    ;;
     *)
-	ac_shlib_suffix=so
-	;;
+        ac_shlib_suffix=so
+    ;;
 esac
 
 AC_SUBST(ac_cross_compile)
@@ -118,16 +120,18 @@ dnl
 dnl libuuid
 dnl
 AC_ARG_ENABLE(libuuid,
-	AS_HELP_STRING([--disable-libuuid],
-			[Exclude libuuid(default: autodetect)]),
-	[if test "$enable_libuuid" = "no"; then
-	AC_MSG_RESULT([Checking if libuuid disabled... yes])
-	ac_has_uuid_lib=0
-	fi],
-	[
-	AC_CHECK_LIB(uuid,uuid_generate)
-	AC_CHECK_LIB(uuid,uuid_generate,[ac_has_uuid_lib=1])
-	])
+    AS_HELP_STRING([--disable-libuuid], [Exclude libuuid(default: autodetect)]),
+    [
+        if test "$enable_libuuid" = "no"; then
+            AC_MSG_RESULT([Checking if libuuid disabled... yes])
+            ac_has_uuid_lib=0
+        fi
+    ],
+    [
+        AC_CHECK_LIB(uuid,uuid_generate)
+        AC_CHECK_LIB(uuid,uuid_generate,[ac_has_uuid_lib=1])
+    ]
+)
 
 AC_SEARCH_LIBS(gethostbyname,nsl)
 
@@ -140,13 +144,13 @@ dnl
 AC_MSG_CHECKING([memory alignment])
 case $target in
     sparc64-* | ia64-* | x86_64-* | arm64-* | aarch64-* | mips64* )
-	AC_DEFINE(PJ_POOL_ALIGNMENT, 8)
-	AC_MSG_RESULT([8 bytes])
-	;;
+        AC_DEFINE(PJ_POOL_ALIGNMENT, 8)
+        AC_MSG_RESULT([8 bytes])
+    ;;
     * )
-	AC_DEFINE(PJ_POOL_ALIGNMENT, 4)
-	AC_MSG_RESULT([4 bytes (default)])
-	;;
+        AC_DEFINE(PJ_POOL_ALIGNMENT, 4)
+        AC_MSG_RESULT([4 bytes (default)])
+    ;;
 esac
 
 
@@ -156,11 +160,11 @@ dnl
 AC_C_BIGENDIAN
 
 if test "x$ac_cv_c_bigendian" = "xyes"; then
-  CFLAGS="$CFLAGS -DPJ_IS_BIG_ENDIAN=1 -DPJ_IS_LITTLE_ENDIAN=0"
-  ac_cflags="$ac_cflags -DPJ_IS_BIG_ENDIAN=1 -DPJ_IS_LITTLE_ENDIAN=0"
+    CFLAGS="$CFLAGS -DPJ_IS_BIG_ENDIAN=1 -DPJ_IS_LITTLE_ENDIAN=0"
+    ac_cflags="$ac_cflags -DPJ_IS_BIG_ENDIAN=1 -DPJ_IS_LITTLE_ENDIAN=0"
 else
-  CFLAGS="$CFLAGS -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1"
-  ac_cflags="$ac_cflags -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1"
+    CFLAGS="$CFLAGS -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1"
+    ac_cflags="$ac_cflags -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1"
 fi
 
 dnl
@@ -170,52 +174,54 @@ AC_SUBST(ac_target_arch)
 AC_SUBST(ac_std_cpp_lib)
 case $target in
     *android*)
-	AC_DEFINE(PJ_ANDROID,1)
-	ac_target_arch=$TARGET_ABI
-	ac_std_cpp_lib=$STD_CPP_LIB
-	;;
+        AC_DEFINE(PJ_ANDROID,1)
+        ac_target_arch=$TARGET_ABI
+        ac_std_cpp_lib=$STD_CPP_LIB
+    ;;
     *mingw* | *cygw* | *win32* | *w32* )
-	AC_DEFINE(PJ_WIN32,1)
-	AC_DEFINE(PJ_WIN32_WINNT,0x0400)
-	AC_DEFINE(WIN32_LEAN_AND_MEAN)
-	case $target in
-	    *_64-w64-mingw* )
-		AC_DEFINE(PJ_WIN64,1)
-	    ;;
-	esac
-	;;
+        AC_DEFINE(PJ_WIN32,1)
+        AC_DEFINE(PJ_WIN32_WINNT,0x0400)
+        AC_DEFINE(WIN32_LEAN_AND_MEAN)
+        case $target in
+            *_64-w64-mingw* )
+            AC_DEFINE(PJ_WIN64,1)
+        ;;
+        esac
+    ;;
     *darwin*)
-	AC_DEFINE(PJ_DARWINOS,1)
-    	ac_target_arch=$ARCH_VAL
-	;;
+        AC_DEFINE(PJ_DARWINOS,1)
+        ac_target_arch=$ARCH_VAL
+    ;;
     *linux*)
-	AC_DEFINE(PJ_LINUX,1)
-	;;
+        AC_DEFINE(PJ_LINUX,1)
+    ;;
     *bsd*)
-	AC_DEFINE(PJ_BSD,1)
-	;;
+        AC_DEFINE(PJ_BSD,1)
+    ;;
     *rtems*)
-	AC_DEFINE(PJ_RTEMS,1)
-	;;
+        AC_DEFINE(PJ_RTEMS,1)
+    ;;
     *sunos* | *solaris* )
-	AC_DEFINE(PJ_SUNOS,1)
-	;;
+        AC_DEFINE(PJ_SUNOS,1)
+    ;;
     *)
-	;;
+    ;;
 esac
 
 dnl # --disable-floating-point option
 AC_ARG_ENABLE(floating-point,
-	      AS_HELP_STRING([--disable-floating-point],
-			     [Disable floating point where possible]),
-	      [if test "$enable_floating_point" = "no"; then
-		AC_DEFINE(PJ_HAS_FLOATING_POINT,0)
-		AC_MSG_RESULT([Checking if floating point is disabled... yes])
-	       fi],
-	      [
-		AC_DEFINE(PJ_HAS_FLOATING_POINT,1)
-	        AC_MSG_RESULT([Checking if floating point is disabled... no]) 
-	      ])
+    AS_HELP_STRING([--disable-floating-point], [Disable floating point where possible]),
+    [
+        if test "$enable_floating_point" = "no"; then
+            AC_DEFINE(PJ_HAS_FLOATING_POINT,0)
+            AC_MSG_RESULT([Checking if floating point is disabled... yes])
+        fi
+    ],
+    [
+        AC_DEFINE(PJ_HAS_FLOATING_POINT,1)
+        AC_MSG_RESULT([Checking if floating point is disabled... no])
+    ]
+)
 
 
 AC_CHECK_HEADER(arpa/inet.h,[AC_DEFINE(PJ_HAS_ARPA_INET_H,1)])
@@ -224,11 +230,11 @@ AC_CHECK_HEADER(ctype.h,[AC_DEFINE(PJ_HAS_CTYPE_H,1)])
 
 case $target in
     *mingw* | *cygw* | *win32* | *w32* )
-	AC_DEFINE(PJ_HAS_ERRNO_H,0)
-	;;
+        AC_DEFINE(PJ_HAS_ERRNO_H,0)
+    ;;
     *)
-	AC_CHECK_HEADER(errno.h,[AC_DEFINE(PJ_HAS_ERRNO_H,1)])
-	;;
+        AC_CHECK_HEADER(errno.h,[AC_DEFINE(PJ_HAS_ERRNO_H,1)])
+    ;;
 esac
 
 AC_CHECK_HEADER(fcntl.h,[AC_DEFINE(PJ_HAS_FCNTL_H,1)])
@@ -239,19 +245,21 @@ AC_CHECK_HEADER(netdb.h,[AC_DEFINE(PJ_HAS_NETDB_H,1)])
 AC_CHECK_HEADER(netinet/in_systm.h,[AC_DEFINE(PJ_HAS_NETINET_IN_SYSTM_H,1)])
 AC_CHECK_HEADER(netinet/in.h,[AC_DEFINE(PJ_HAS_NETINET_IN_H,1)])
 AC_CHECK_HEADER(netinet/ip.h,[AC_DEFINE(PJ_HAS_NETINET_IP_H,1)],[],
-		 [#if PJ_HAS_SYS_TYPES_H
-          	  #	include <sys/types.h>
-          	  #endif
-		  #if PJ_HAS_NETINET_IN_SYSTM_H
-          	  #	include <netinet/in_systm.h>
-          	  #endif
-		  #if PJ_HAS_NETINET_IN_H
-          	  #	include <netinet/in.h>
-          	  #endif
-          	 ])
+    [
+        #if PJ_HAS_SYS_TYPES_H
+        #	include <sys/types.h>
+        #endif
+        #if PJ_HAS_NETINET_IN_SYSTM_H
+        #	include <netinet/in_systm.h>
+        #endif
+        #if PJ_HAS_NETINET_IN_H
+        #	include <netinet/in.h>
+        #endif
+    ]
+)
+
 AC_CHECK_HEADER(netinet/tcp.h,[AC_DEFINE(PJ_HAS_NETINET_TCP_H,1)])
-AC_CHECK_HEADER(ifaddrs.h,
-		[AC_CHECK_FUNC(getifaddrs,[AC_DEFINE(PJ_HAS_IFADDRS_H,1)])])
+AC_CHECK_HEADER(ifaddrs.h, [AC_CHECK_FUNC(getifaddrs,[AC_DEFINE(PJ_HAS_IFADDRS_H,1)])])
 AC_CHECK_HEADER(semaphore.h,[AC_DEFINE(PJ_HAS_SEMAPHORE_H,1)])
 AC_CHECK_HEADER(setjmp.h,[AC_DEFINE(PJ_HAS_SETJMP_H,1)])
 AC_CHECK_HEADER(stdarg.h,[AC_DEFINE(PJ_HAS_STDARG_H,1)])
@@ -276,28 +284,32 @@ AC_CHECK_HEADER(execinfo.h,[AC_DEFINE(PJ_HAS_EXECINFO_H,1)])
 AC_CHECK_HEADER(winsock.h,[AC_DEFINE(PJ_HAS_WINSOCK_H,1)])
 AC_CHECK_HEADER(winsock2.h,[AC_DEFINE(PJ_HAS_WINSOCK2_H,1)])
 AC_CHECK_HEADER(mswsock.h,[AC_DEFINE(PJ_HAS_MSWSOCK_H,1)],[],
-		 [#if PJ_HAS_WINSOCK2_H
-          	  #	include <winsock2.h>
-		  #elif PJ_HAS_WINSOCK_H
-          	  #	include <winsock.h>
-          	  #endif
-          	 ])
+    [
+        #if PJ_HAS_WINSOCK2_H
+        #	include <winsock2.h>
+        #elif PJ_HAS_WINSOCK_H
+        #	include <winsock.h>
+        #endif
+    ]
+)
+
 AC_CHECK_HEADER(ws2tcpip.h,[AC_DEFINE(PJ_HAS_WS2TCPIP_H,1)])
 AC_CHECK_HEADER(uuid/uuid.h,[ac_has_uuid_h=1])
 AC_CHECK_HEADER(net/if.h,[AC_DEFINE(PJ_HAS_NET_IF_H,1)],[],
-		 [#if PJ_HAS_SYS_TYPES_H
-          	  #	include <sys/types.h>
-          	  #endif
-		  #if PJ_HAS_SYS_SOCKET_H
-
-          	  #	include <sys/socket.h>
-          	  #endif
-          	 ])
+    [
+        #if PJ_HAS_SYS_TYPES_H
+        #	include <sys/types.h>
+        #endif
+        #if PJ_HAS_SYS_SOCKET_H
+        #	include <sys/socket.h>
+        #endif
+    ]
+)
 
 case $target in
-  *android*)
-	AC_CHECK_HEADER(linux/android_alarm.h,[AC_DEFINE(PJ_HAS_ANDROID_ALARM_H,1)])
-	;;
+    *android*)
+        AC_CHECK_HEADER(linux/android_alarm.h,[AC_DEFINE(PJ_HAS_ANDROID_ALARM_H,1)])
+    ;;
 esac
 
 AC_CHECK_FUNC(localtime_r,[AC_DEFINE(PJ_HAS_LOCALTIME_R,1)])
@@ -322,147 +334,239 @@ AC_DEFINE(PJ_ATOMIC_VALUE_TYPE,long)
 
 dnl # Determine if inet_aton() is available
 AC_MSG_CHECKING([if inet_aton() is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
-				     #include <sys/socket.h>
-				     #include <arpa/inet.h>]],
-		    		  [inet_aton(0, 0);])],
-		  [AC_DEFINE(PJ_SOCK_HAS_INET_ATON,1)
-		   AC_MSG_RESULT(yes)],
-		  [AC_MSG_RESULT(no)])
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_PROGRAM([
+            [#include <sys/types.h>
+            #include <sys/socket.h>
+            #include <arpa/inet.h>]],
+            [inet_aton(0, 0);])
+    ],
+    [
+        AC_DEFINE(PJ_SOCK_HAS_INET_ATON,1)
+        AC_MSG_RESULT(yes)
+    ],
+    [AC_MSG_RESULT(no)]
+)
 
 dnl # Determine if inet_pton() is available
 AC_MSG_CHECKING([if inet_pton() is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
-				     #include <sys/socket.h>
-				     #include <arpa/inet.h>]],
-		    		  [inet_pton(0, 0, 0);])],
-		  [AC_DEFINE(PJ_SOCK_HAS_INET_PTON,1)
-		   AC_MSG_RESULT(yes)],
-		  [AC_MSG_RESULT(no)])
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_PROGRAM([
+            [#include <sys/types.h>
+            #include <sys/socket.h>
+            #include <arpa/inet.h>]],
+            [inet_pton(0, 0, 0);])
+    ],
+    [
+        AC_DEFINE(PJ_SOCK_HAS_INET_PTON,1)
+        AC_MSG_RESULT(yes)
+    ],
+    [AC_MSG_RESULT(no)]
+)
 
 dnl # Determine if inet_ntop() is available
 AC_MSG_CHECKING([if inet_ntop() is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
-				     #include <sys/socket.h>
-				     #include <arpa/inet.h>]],
-		    		  [inet_ntop(0, 0, 0, 0);])],
-		  [AC_DEFINE(PJ_SOCK_HAS_INET_NTOP,1)
-		   AC_MSG_RESULT(yes)],
-		  [AC_MSG_RESULT(no)])
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_PROGRAM([
+            [#include <sys/types.h>
+            #include <sys/socket.h>
+            #include <arpa/inet.h>]],
+            [inet_ntop(0, 0, 0, 0);])
+    ],
+    [
+        AC_DEFINE(PJ_SOCK_HAS_INET_NTOP,1)
+        AC_MSG_RESULT(yes)
+    ],
+    [AC_MSG_RESULT(no)]
+)
 
 dnl # Determine if getaddrinfo() is available
 AC_MSG_CHECKING([if getaddrinfo() is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
-				     #include <sys/socket.h>
-				     #include <netdb.h>]],
-		    		  [getaddrinfo(0, 0, 0, 0);])],
-		  [AC_DEFINE(PJ_SOCK_HAS_GETADDRINFO,1)
-		   AC_MSG_RESULT(yes)],
-		  [AC_MSG_RESULT(no)])
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_PROGRAM([
+            [#include <sys/types.h>
+            #include <sys/socket.h>
+            #include <netdb.h>]],
+            [getaddrinfo(0, 0, 0, 0);])
+    ],
+    [
+        AC_DEFINE(PJ_SOCK_HAS_GETADDRINFO,1)
+        AC_MSG_RESULT(yes)
+    ],
+    [AC_MSG_RESULT(no)]
+)
 
 dnl # Determine if socketpair() is available
 AC_MSG_CHECKING([if socketpair() is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
-				     #include <sys/socket.h>]],
-		    		  [socketpair(0, 0, 0, 0);])],
-		  [AC_DEFINE(PJ_SOCK_HAS_SOCKETPAIR,1)
-		   AC_MSG_RESULT(yes)],
-		  [AC_MSG_RESULT(no)])
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_PROGRAM([
+            [#include <sys/types.h>
+            #include <sys/socket.h>]],
+            [socketpair(0, 0, 0, 0);])
+    ],
+    [
+        AC_DEFINE(PJ_SOCK_HAS_SOCKETPAIR,1)
+        AC_MSG_RESULT(yes)
+    ],
+    [AC_MSG_RESULT(no)]
+)
 
 dnl # Determine if sockaddr_in has sin_len member
 AC_MSG_CHECKING([if sockaddr_in has sin_len member])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
-				     #include <sys/socket.h>
-		    		     #include <netinet/in.h>
-		    		     #include <arpa/inet.h>]],
-		    		  [struct sockaddr_in a; a.sin_len=0;])],
-		  [AC_DEFINE(PJ_SOCKADDR_HAS_LEN,1)
-		   AC_MSG_RESULT(yes)],
-		  AC_MSG_RESULT(no))
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_PROGRAM([
+            [#include <sys/types.h>
+            #include <sys/socket.h>
+            #include <netinet/in.h>
+            #include <arpa/inet.h>]],
+            [struct sockaddr_in a; a.sin_len=0;])
+    ],
+    [
+        AC_DEFINE(PJ_SOCKADDR_HAS_LEN,1)
+        AC_MSG_RESULT(yes)
+    ],
+    [AC_MSG_RESULT(no)]
+)
 
 dnl # Determine if socklen_t is available
 AC_MSG_CHECKING([if socklen_t is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
-                                     #include <sys/socket.h>]],
-		    		   [socklen_t xxx = 0;])],
-		  [AC_DEFINE(PJ_HAS_SOCKLEN_T,1)
-		   AC_MSG_RESULT(yes)],
-		  AC_MSG_RESULT(no))
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_PROGRAM([
+            [#include <sys/types.h>
+            #include <sys/socket.h>]],
+            [socklen_t xxx = 0;])
+    ],
+    [
+        AC_DEFINE(PJ_HAS_SOCKLEN_T,1)
+           AC_MSG_RESULT(yes)
+    ],
+    [AC_MSG_RESULT(no)]
+)
 
 dnl # Determine if IPV6_V6ONLY is available
 AC_MSG_CHECKING([if IPV6_V6ONLY is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>
-                                     #include <netinet/in.h>]],
-		    		   [int opt = IPV6_V6ONLY;])],
-		  [AC_DEFINE(PJ_SOCK_HAS_IPV6_V6ONLY,1)
-		   AC_MSG_RESULT(yes)],
-		  AC_MSG_RESULT(no))
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_PROGRAM([
+            [#include <sys/socket.h>
+            #include <netinet/in.h>]],
+            [int opt = IPV6_V6ONLY;])
+    ],
+    [
+        AC_DEFINE(PJ_SOCK_HAS_IPV6_V6ONLY,1)
+        AC_MSG_RESULT(yes)
+    ],
+    [AC_MSG_RESULT(no)]
+)
 
 dnl # Determine if SO_ERROR is available
 AC_MSG_CHECKING([if SO_ERROR is available])
 case $target in
     *mingw* | *cygw* | *win32* | *w32* )
-	AC_DEFINE(PJ_HAS_SO_ERROR,1)
-	AC_MSG_RESULT(yes)
-	;;
+        AC_DEFINE(PJ_HAS_SO_ERROR,1)
+        AC_MSG_RESULT(yes)
+    ;;
     *)
-	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
-					     #include <sys/socket.h>
-					     #include <netinet/in.h>
-					     #include <arpa/inet.h>]],
-					  [int i=SO_ERROR;])],
-			  [AC_DEFINE(PJ_HAS_SO_ERROR,1)
-			   AC_MSG_RESULT(yes)],
-			  AC_MSG_RESULT(no))
-	;;
+        AC_COMPILE_IFELSE(
+            [
+                AC_LANG_PROGRAM([
+                    [#include <sys/types.h>
+                    #include <sys/socket.h>
+                    #include <netinet/in.h>
+                    #include <arpa/inet.h>]],
+                    [int i=SO_ERROR;])
+            ],
+            [
+                AC_DEFINE(PJ_HAS_SO_ERROR,1)
+                AC_MSG_RESULT(yes)
+            ],
+            [AC_MSG_RESULT(no)]
+        )
+    ;;
 esac
 
 
 dnl # Determine if RW-mutex is available
 AC_MSG_CHECKING([if pthread_rwlock_t is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],
-		    		   [pthread_rwlock_t *x;])],
-		  [AC_DEFINE(PJ_EMULATE_RWMUTEX,0)
-		   ac_rwmutex="yes"
-  		   AC_MSG_RESULT(yes)],
-		  [AC_DEFINE(PJ_EMULATE_RWMUTEX,1)
-		   ac_rwmutex="no"
-		   AC_MSG_RESULT(no)])
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_PROGRAM([#include <pthread.h>],[pthread_rwlock_t *x;])
+    ],
+    [
+        AC_DEFINE(PJ_EMULATE_RWMUTEX,0)
+        ac_rwmutex="yes"
+        AC_MSG_RESULT(yes)
+    ],
+    [
+        AC_DEFINE(PJ_EMULATE_RWMUTEX,1)
+        ac_rwmutex="no"
+        AC_MSG_RESULT(no)
+    ]
+)
 
 dnl # If rwmutex is not detected, check again but this time
 dnl # with _POSIX_READER_WRITER_LOCKS defined (newlib needs this)
 if test "$ac_rwmutex" = "no"; then
     AC_MSG_CHECKING([if pthread_rwlock_t is available with _POSIX_READER_WRITER_LOCKS])
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#define _POSIX_READER_WRITER_LOCKS
-					 #include <pthread.h>]],
-				       [pthread_rwlock_t *x;])],
-		      [AC_DEFINE(PJ_EMULATE_RWMUTEX,0)
-		       CFLAGS="$CFLAGS -D_POSIX_THREADS -D_POSIX_READER_WRITER_LOCKS"
-		       AC_MSG_RESULT(yes)],
-		      [AC_DEFINE(PJ_EMULATE_RWMUTEX,1)
-		       AC_MSG_RESULT(no)])
+    AC_COMPILE_IFELSE(
+        [
+            AC_LANG_PROGRAM([
+                [#define _POSIX_READER_WRITER_LOCKS
+                #include <pthread.h>]],
+                [pthread_rwlock_t *x;])
+        ],
+        [
+            AC_DEFINE(PJ_EMULATE_RWMUTEX,0)
+            CFLAGS="$CFLAGS -D_POSIX_THREADS -D_POSIX_READER_WRITER_LOCKS"
+            AC_MSG_RESULT(yes)
+        ],
+        [
+            AC_DEFINE(PJ_EMULATE_RWMUTEX,1)
+            AC_MSG_RESULT(no)
+        ]
+    )
 fi
 
 dnl # Do we have pthread_mutexattr_settype()?
 AC_MSG_CHECKING([if pthread_mutexattr_settype() is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],
-		    		   [pthread_mutexattr_settype(0,PTHREAD_MUTEX_FAST_NP);])],
-		  [AC_DEFINE(PJ_HAS_PTHREAD_MUTEXATTR_SETTYPE,1)
-  		   AC_MSG_RESULT(yes)],
-		  [AC_MSG_RESULT(no)])
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_PROGRAM(
+            [#include <pthread.h>],
+            [pthread_mutexattr_settype(0,PTHREAD_MUTEX_FAST_NP);])
+    ],
+    [
+        AC_DEFINE(PJ_HAS_PTHREAD_MUTEXATTR_SETTYPE,1)
+        AC_MSG_RESULT(yes)
+    ],
+    [AC_MSG_RESULT(no)]
+)
 
 dnl # Does pthread_mutexattr_t has "recursive" member?
 AC_MSG_CHECKING([if pthread_mutexattr_t has recursive member])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],
-		    		   [[pthread_mutexattr_t attr;
-				     attr.recursive=1;]])],
-		  [AC_DEFINE(PJ_PTHREAD_MUTEXATTR_T_HAS_RECURSIVE,1)
-  		   AC_MSG_RESULT(yes)],
-		  [AC_MSG_RESULT(no)])
+AC_COMPILE_IFELSE(
+    [
+        AC_LANG_PROGRAM(
+            [#include <pthread.h>],
+            [pthread_mutexattr_t attr; attr.recursive=1;])
+    ],
+    [
+        AC_DEFINE(PJ_PTHREAD_MUTEXATTR_T_HAS_RECURSIVE,1)
+        AC_MSG_RESULT(yes)
+    ],
+    [AC_MSG_RESULT(no)]
+)
 
 dnl ######################
 dnl # ioqueue selection
-dnl # 
+dnl #
 AC_SUBST(ac_os_objs)
 AC_SUBST(ac_linux_poll)
 AC_MSG_CHECKING([ioqueue backend])
@@ -471,132 +575,135 @@ ac_os_objs=ioqueue_select.o
 ac_linux_poll=select
 
 case $target in
-	*darwin* | *bsd*)
-		AC_ARG_ENABLE(kqueue,
-				AS_HELP_STRING([--enable-kqueue],
-						[Use kqueue ioqueue on macos/BSD (experimental)]),
-				[
-				if test "$enable_kqueue" = "yes"; then
-					ac_os_objs=ioqueue_kqueue.o
-					AC_MSG_RESULT([kqueue()])
-				else
-					AC_MSG_RESULT([select()])
-				fi
-				],
-				[
-				AC_MSG_RESULT([select()])
-				])
-		;;
-	*)
-		AC_ARG_ENABLE(epoll,
-				AS_HELP_STRING([--enable-epoll],
-						[Use /dev/epoll ioqueue on Linux (experimental)]),
-				[
-				if test "$enable_epoll" = "yes"; then
-					ac_os_objs=ioqueue_epoll.o
-					AC_MSG_RESULT([/dev/epoll])
-					AC_DEFINE(PJ_HAS_LINUX_EPOLL,1)
-					ac_linux_poll=epoll
-				else
-					AC_MSG_RESULT([select()])
-				fi
-				],
-				[
-				AC_MSG_RESULT([select()])
-				])
-		;;
+    *darwin* | *bsd*)
+        AC_ARG_ENABLE(kqueue,
+            AS_HELP_STRING([--enable-kqueue], [Use kqueue ioqueue on macos/BSD (experimental)]),
+            [
+                if test "$enable_kqueue" = "yes"; then
+                    ac_os_objs=ioqueue_kqueue.o
+                    AC_MSG_RESULT([kqueue()])
+                else
+                    AC_MSG_RESULT([select()])
+                fi
+            ],
+            [
+                AC_MSG_RESULT([select()])
+            ]
+        )
+        ;;
+    *)
+        AC_ARG_ENABLE(epoll,
+            AS_HELP_STRING([--enable-epoll], [Use /dev/epoll ioqueue on Linux (experimental)]),
+            [
+                if test "$enable_epoll" = "yes"; then
+                    ac_os_objs=ioqueue_epoll.o
+                    AC_MSG_RESULT([/dev/epoll])
+                    AC_DEFINE(PJ_HAS_LINUX_EPOLL,1)
+                    ac_linux_poll=epoll
+                else
+                    AC_MSG_RESULT([select()])
+                fi
+            ],
+            [
+                AC_MSG_RESULT([select()])
+            ]
+        )
+        ;;
 esac
 
 AC_SUBST(ac_shared_libraries)
 AC_ARG_ENABLE(shared,
-	      AS_HELP_STRING([--enable-shared],
-			     [Build shared libraries]),
-	      [if test "$enable_shared" = "yes"; then
-		[ac_shared_libraries=1]
-		CFLAGS="$CFLAGS -fPIC"
-		AC_MSG_RESULT([Building shared libraries... yes])
-	       fi],
-	      AC_MSG_RESULT([Building shared libraries... no])
-	      )
+    AS_HELP_STRING([--enable-shared], [Build shared libraries]),
+    [
+        if test "$enable_shared" = "yes"; then
+            [ac_shared_libraries=1]
+            CFLAGS="$CFLAGS -fPIC"
+            AC_MSG_RESULT([Building shared libraries... yes])
+        fi
+    ],
+    AC_MSG_RESULT([Building shared libraries... no])
+)
 
 AC_SUBST(ac_no_pjsua2)
 AC_ARG_ENABLE(pjsua2,
-	      AS_HELP_STRING([--disable-pjsua2],
-			     [Exclude pjsua2 library and application from the build]),
-	      [if test "$enable_pjsua2" = "no"; then
-		[ac_no_pjsua2=1]
-		AC_MSG_RESULT([Building pjsua2 library and application... no])
-	       fi],
-	      AC_MSG_RESULT([Building pjsua2 library and application... yes])
-	      )
+    AS_HELP_STRING([--disable-pjsua2], [Exclude pjsua2 library and application from the build]),
+    [
+        if test "$enable_pjsua2" = "no"; then
+            [ac_no_pjsua2=1]
+            AC_MSG_RESULT([Building pjsua2 library and application... no])
+        fi
+    ],
+    AC_MSG_RESULT([Building pjsua2 library and application... yes])
+)
 
 
 dnl ######################
 dnl # OS specific files
 dnl #
 case $target in
-  *mingw* | *cygw* | *win32* | *w32* )
-	ac_os_objs="$ac_os_objs file_access_win32.o file_io_win32.o os_core_win32.o os_error_win32.o os_time_win32.o os_timestamp_win32.o guid_win32.o sock_qos_bsd.o unicode_win32.o"
-	;;
-  *)
-	ac_os_objs="$ac_os_objs file_access_unistd.o file_io_ansi.o os_core_unix.o os_error_unix.o os_time_unix.o os_timestamp_posix.o"
-	case $target in
-	  *-apple-darwin_ios*)
-		ac_os_objs="$ac_os_objs os_info_iphone.o os_core_darwin.o"
-		;;
-	  *darwin*)
-		ac_os_objs="$ac_os_objs os_core_darwin.o"
-		;;
-	esac
-	# QoS
-	case $target in
-	  *darwin*)
-		ac_os_objs="$ac_os_objs sock_qos_darwin.o sock_qos_bsd.o"
-		;;
-	  *)
-		ac_os_objs="$ac_os_objs sock_qos_bsd.o"
-		;;
-	esac
-	# SSL
-	case $target in
-	  *darwin*)
-		ac_os_objs="$ac_os_objs ssl_sock_apple.o"
-		;;
-	esac
-	# UUID
-	case $target in
-	  *android*)
-	  	ac_os_objs="$ac_os_objs guid_android.o"
-	  	;;
-	  *darwin*)
-	  	ac_os_objs="$ac_os_objs guid_darwin.o"
-	  	;;
-	  *bsd*)
-	  	ac_os_objs="$ac_os_objs guid_bsd.o"
-	  	;;
-	  *)
-		if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
-			ac_os_objs="$ac_os_objs guid_uuid.o"
-		else
-			ac_os_objs="$ac_os_objs guid_simple.o"
-		fi
-		;;
-	esac
-	;;
+    *mingw* | *cygw* | *win32* | *w32* )
+        ac_os_objs="$ac_os_objs file_access_win32.o file_io_win32.o os_core_win32.o os_error_win32.o os_time_win32.o os_timestamp_win32.o guid_win32.o sock_qos_bsd.o unicode_win32.o"
+    ;;
+    *)
+        ac_os_objs="$ac_os_objs file_access_unistd.o file_io_ansi.o os_core_unix.o os_error_unix.o os_time_unix.o os_timestamp_posix.o"
+        case $target in
+            *-apple-darwin_ios*)
+                ac_os_objs="$ac_os_objs os_info_iphone.o os_core_darwin.o"
+            ;;
+            *darwin*)
+                ac_os_objs="$ac_os_objs os_core_darwin.o"
+            ;;
+        esac
+
+        # QoS
+        case $target in
+            *darwin*)
+                ac_os_objs="$ac_os_objs sock_qos_darwin.o sock_qos_bsd.o"
+            ;;
+            *)
+                ac_os_objs="$ac_os_objs sock_qos_bsd.o"
+            ;;
+        esac
+
+        # SSL
+        case $target in
+            *darwin*)
+                ac_os_objs="$ac_os_objs ssl_sock_apple.o"
+            ;;
+        esac
+
+        # UUID
+        case $target in
+            *android*)
+                ac_os_objs="$ac_os_objs guid_android.o"
+            ;;
+            *darwin*)
+                ac_os_objs="$ac_os_objs guid_darwin.o"
+            ;;
+            *bsd*)
+                ac_os_objs="$ac_os_objs guid_bsd.o"
+            ;;
+            *)
+                if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
+                    ac_os_objs="$ac_os_objs guid_uuid.o"
+                else
+                    ac_os_objs="$ac_os_objs guid_simple.o"
+                fi
+            ;;
+        esac
+    ;;
 esac
 
 dnl ##########################################
 dnl # PJLIB-UTIL
 dnl #
 
-
 dnl # UPnP alt prefix
 AC_ARG_WITH(upnp,
-            AS_HELP_STRING([--with-upnp=DIR],
-		           [Specify alternate libupnp prefix]),
-            [],
-            [with_upnp=no]
-            )
+    AS_HELP_STRING([--with-upnp=DIR], [Specify alternate libupnp prefix]),
+    [],
+    [with_upnp=no]
+)
 
 dnl # Do not use default libupnp installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_upnp" = "xno"; then
@@ -605,51 +712,55 @@ fi
 
 dnl # UPnP
 AC_ARG_ENABLE(upnp,
-	      AS_HELP_STRING([--disable-upnp],
-			     [Disable UPnP (default: not disabled)]),
-	      [
-		if test "$enable_upnp" = "no"; then
-		  AC_MSG_RESULT([Checking if UPnP is disabled... yes])
-		fi
-	      ],
-	      [
-		  if test "x$with_upnp" != "xno" -a "x$with_upnp" != "x"; then
-		        UPNP_PREFIX=$with_upnp
-		  	UPNP_CFLAGS="-I$UPNP_PREFIX/upnp/inc -I$UPNP_PREFIX/ixml/inc"
-			UPNP_LDFLAGS="-L$UPNP_PREFIX/upnp/.libs -L$UPNP_PREFIX/imxl/.libs" 
-			AC_MSG_RESULT([Using UPnP prefix... $with_upnp])
-		  else
-		  	UPNP_CFLAGS=""
-			UPNP_LDFLAGS="" 
-		  fi
+    AS_HELP_STRING([--disable-upnp], [Disable UPnP (default: not disabled)]),
+    [
+        if test "$enable_upnp" = "no"; then
+            AC_MSG_RESULT([Checking if UPnP is disabled... yes])
+        fi
+    ],
+    [
+        if test "x$with_upnp" != "xno" -a "x$with_upnp" != "x"; then
+            UPNP_PREFIX=$with_upnp
+            UPNP_CFLAGS="-I$UPNP_PREFIX/upnp/inc -I$UPNP_PREFIX/ixml/inc"
+            UPNP_LDFLAGS="-L$UPNP_PREFIX/upnp/.libs -L$UPNP_PREFIX/imxl/.libs"
+            AC_MSG_RESULT([Using UPnP prefix... $with_upnp])
+        else
+            UPNP_CFLAGS=""
+            UPNP_LDFLAGS=""
+        fi
 
-		  AC_MSG_CHECKING([UPnP usability])
+        AC_MSG_CHECKING([UPnP usability])
 
-		  UPNP_LIBS="-lupnp -lixml"
-		  
-		  SAVED_LIBS="$LIBS"
-		  SAVED_LDFLAGS="$LDFLAGS"
-		  SAVED_CFLAGS="$CFLAGS"
-		  
-		  LIBS="$UPNP_LIBS $LIBS"
-		  LDFLAGS="$UPNP_LDFLAGS $LDFLAGS"
-		  CFLAGS="$UPNP_CFLAGS $CFLAGS"
-		  
-		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <upnp/upnp.h>]],
-					          [UpnpInit2(NULL, 0);]
-					         )],
-		  		 [ CFLAGS="$CFLAGS -DPJNATH_HAS_UPNP=1 $UPNP_CFLAGS"
-		  		   LDFLAGS="$LDFLAGS $UPNP_LDFLAGS $UPNP_LIBS"
-		  		   AC_MSG_RESULT(yes)
-		  		  ],
-		  		 [
-				   LIBS="$SAVED_LIBS"
-				   LDFLAGS="$SAVED_LDFLAGS"
-				   CFLAGS="$SAVED_CFLAGS"
-		  		   AC_MSG_RESULT(no)
-		  		 ])
+        UPNP_LIBS="-lupnp -lixml"
 
-	      ])
+        SAVED_LIBS="$LIBS"
+        SAVED_LDFLAGS="$LDFLAGS"
+        SAVED_CFLAGS="$CFLAGS"
+
+        LIBS="$UPNP_LIBS $LIBS"
+        LDFLAGS="$UPNP_LDFLAGS $LDFLAGS"
+        CFLAGS="$UPNP_CFLAGS $CFLAGS"
+
+        AC_LINK_IFELSE(
+            [
+                AC_LANG_PROGRAM([
+                    [#include <upnp/upnp.h>]],
+                    [UpnpInit2(NULL, 0);])
+            ],
+            [
+                CFLAGS="$CFLAGS -DPJNATH_HAS_UPNP=1 $UPNP_CFLAGS"
+                LDFLAGS="$LDFLAGS $UPNP_LDFLAGS $UPNP_LIBS"
+                AC_MSG_RESULT(yes)
+            ],
+            [
+                LIBS="$SAVED_LIBS"
+                LDFLAGS="$SAVED_LDFLAGS"
+                CFLAGS="$SAVED_CFLAGS"
+                AC_MSG_RESULT(no)
+            ]
+        )
+    ]
+)
 
 dnl ##########################################
 dnl #
@@ -660,58 +771,73 @@ dnl # Use external Speex installation
 AC_SUBST(ac_external_speex,0)
 AC_ARG_WITH(external-speex,
     AS_HELP_STRING([--with-external-speex],
-		   [Use external Speex development files, not the one in "third_party" directory. When this option is set, make sure that Speex is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
+        [Use external Speex development files, not the one in "third_party" directory. When this option is set, make sure that Speex is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
-	if test "x$with_external_speex" != "xno"; then
-		# Test Speex installation
-		AC_MSG_CHECKING([if external Speex devkit is installed])
-		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <speex/speex.h>
-						     #include <speex/speex_echo.h>
-						     ]],
-						  [speex_echo_state_init(0, 0); speex_encoder_init(0); ])],
-				  [AC_MSG_RESULT(yes!!)
-				   AC_DEFINE(PJMEDIA_EXTERNAL_SPEEX_CODEC, 1)
-				   ac_external_speex="1"
-				   ],
-				  [AC_MSG_ERROR([Unable to use external Speex library. If Speex development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])])
-	fi
+        if test "x$with_external_speex" != "xno"; then
+            # Test Speex installation
+            AC_MSG_CHECKING([if external Speex devkit is installed])
+            AC_COMPILE_IFELSE(
+                [
+                    AC_LANG_PROGRAM([
+                        [#include <speex/speex.h>
+                        #include <speex/speex_echo.h>]],
+                        [speex_echo_state_init(0, 0); speex_encoder_init(0); ])
+                ],
+                [
+                    AC_MSG_RESULT(yes!!)
+                    AC_DEFINE(PJMEDIA_EXTERNAL_SPEEX_CODEC, 1)
+                    ac_external_speex="1"
+                ],
+                [
+                    AC_MSG_ERROR([Unable to use external Speex library. If Speex development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])
+                ]
+            )
+        fi
     ]
-    )
+)
 
 dnl # Use external GSM codec library installation
 AC_SUBST(ac_external_gsm,0)
 AC_ARG_WITH(external-gsm,
     AS_HELP_STRING([--with-external-gsm],
-		   [Use external GSM codec library, not the one in "third_party" directory. When this option is set, make sure that the GSM include/lib files are accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
+        [Use external GSM codec library, not the one in "third_party" directory. When this option is set, make sure that the GSM include/lib files are accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
-	if test "x$with_external_gsm" != "xno"; then
-                # Test GSM library installation
-                AC_MSG_CHECKING([if external GSM devkit is installed as gsm/gsm.h])
-                AC_COMPILE_IFELSE(
-                    [AC_LANG_PROGRAM([[#include <gsm/gsm.h> ]], [gsm_create(); ]) ],
-                    [AC_MSG_RESULT(yes!!)
-                     AC_DEFINE(PJMEDIA_EXTERNAL_GSM_CODEC, 1)
-                     AC_DEFINE(PJMEDIA_EXTERNAL_GSM_GSM_H, 1)
-                     ac_external_gsm="1"
-                    ],
-                    [
-                     AC_MSG_RESULT(no)
-                     AC_MSG_CHECKING([if external GSM devkit is installed as gsm.h])
-                     AC_COMPILE_IFELSE(
-                        [AC_LANG_PROGRAM([[#include <gsm.h> ]], [gsm_create(); ]) ],
-                        [AC_MSG_RESULT(yes!!)
-                         AC_DEFINE(PJMEDIA_EXTERNAL_GSM_CODEC, 1)
-                         AC_DEFINE(PJMEDIA_EXTERNAL_GSM_H, 1)
-                         ac_external_gsm="1"
+        if test "x$with_external_gsm" != "xno"; then
+            # Test GSM library installation
+            AC_MSG_CHECKING([if external GSM devkit is installed as gsm/gsm.h])
+            AC_COMPILE_IFELSE(
+                [
+                    AC_LANG_PROGRAM([[#include <gsm/gsm.h> ]], [gsm_create(); ])
+                ],
+                [
+                    AC_MSG_RESULT(yes!!)
+                    AC_DEFINE(PJMEDIA_EXTERNAL_GSM_CODEC, 1)
+                    AC_DEFINE(PJMEDIA_EXTERNAL_GSM_GSM_H, 1)
+                    ac_external_gsm="1"
+                ],
+                [
+                    AC_MSG_RESULT(no)
+                    AC_MSG_CHECKING([if external GSM devkit is installed as gsm.h])
+                    AC_COMPILE_IFELSE(
+                        [
+                            AC_LANG_PROGRAM([
+                                [#include <gsm.h> ]], [gsm_create(); ])
                         ],
-                        [AC_MSG_ERROR([Unable to use external GSM library. If GSM development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])
+                        [
+                            AC_MSG_RESULT(yes!!)
+                            AC_DEFINE(PJMEDIA_EXTERNAL_GSM_CODEC, 1)
+                            AC_DEFINE(PJMEDIA_EXTERNAL_GSM_H, 1)
+                            ac_external_gsm="1"
+                        ],
+                        [
+                            AC_MSG_ERROR([Unable to use external GSM library. If GSM development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])
                         ]
                      )
-                    ]
-                )
-	fi
+                ]
+            )
+        fi
     ]
-    )
+)
 
 
 dnl # Use external SRTP installation
@@ -719,632 +845,718 @@ AC_SUBST(ac_external_srtp,0)
 AC_SUBST(ac_external_srtp_lib)
 AC_ARG_WITH(external-srtp,
     AS_HELP_STRING([--with-external-srtp],
-		   [Use external SRTP development files, not the one in "third_party" directory. When this option is set, make sure that SRTP is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
+        [Use external SRTP development files, not the one in "third_party" directory. When this option is set, make sure that SRTP is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
-	if test "x$with_external_srtp" != "xno"; then
-		# Test SRTP installation
-		AC_MSG_CHECKING([if external SRTP devkit is installed])
-		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <srtp2/srtp.h>
-						     ]],
-						  [srtp_init();])],
-				  [AC_MSG_RESULT(yes: version 2.x)
-				   ac_external_srtp="2"
-				   ac_external_srtp_lib="srtp2"
-				   ],
-				  [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <srtp/srtp.h>
-						     ]],
-						  [srtp_init();])],
-				  [AC_MSG_RESULT(yes: version 1.x)
-				   ac_external_srtp="1"
-				   ac_external_srtp_lib="srtp"
-				   ],
-				  [AC_MSG_ERROR([Unable to use SRTP. If SRTP development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])])])
-	fi
+        if test "x$with_external_srtp" != "xno"; then
+            # Test SRTP installation
+            AC_MSG_CHECKING([if external SRTP devkit is installed])
+            AC_COMPILE_IFELSE(
+                [
+                    AC_LANG_PROGRAM([
+                        [#include <srtp2/srtp.h>]],
+                        [srtp_init();])
+                ],
+                [
+                    AC_MSG_RESULT(yes: version 2.x)
+                    ac_external_srtp="2"
+                    ac_external_srtp_lib="srtp2"
+                ],
+                [
+                    AC_COMPILE_IFELSE(
+                        [
+                            AC_LANG_PROGRAM([
+                                [#include <srtp/srtp.h>]],
+                                [srtp_init();])
+                        ],
+                        [
+                            AC_MSG_RESULT(yes: version 1.x)
+                            ac_external_srtp="1"
+                            ac_external_srtp_lib="srtp"
+                        ],
+                        [
+                            AC_MSG_ERROR([Unable to use SRTP. If SRTP development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])
+                        ]
+                    )
+                ]
+            )
+        fi
     ]
-    )
+)
 
 dnl # For external SRTP, check availability of srtp_deinit() or srtp_shutdown()
 if test "x$ac_external_srtp" != "x0"; then
-	AC_SUBST(ac_srtp_deinit_present,0)
-	AC_SUBST(ac_srtp_shutdown_present,0)
-	AC_CHECK_LIB($ac_external_srtp_lib,srtp_deinit,[ac_srtp_deinit_present=1])
-	if test "x$ac_srtp_deinit_present" != "x1"; then
-		AC_CHECK_LIB($ac_external_srtp_lib,srtp_shutdown,[ac_srtp_shutdown_present=1])
-	fi
+    AC_SUBST(ac_srtp_deinit_present,0)
+    AC_SUBST(ac_srtp_shutdown_present,0)
+    AC_CHECK_LIB($ac_external_srtp_lib,srtp_deinit,[ac_srtp_deinit_present=1])
+    if test "x$ac_srtp_deinit_present" != "x1"; then
+        AC_CHECK_LIB($ac_external_srtp_lib,srtp_shutdown,[ac_srtp_shutdown_present=1])
+    fi
 fi
-
 
 dnl # Use external libyuv installation
 AC_SUBST(ac_external_yuv,0)
 AC_ARG_WITH(external-yuv,
     AS_HELP_STRING([--with-external-yuv],
-		   [Use external libyuv development files, not the one in "third_party" directory. When this option is set, make sure that libyuv is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
+        [Use external libyuv development files, not the one in "third_party" directory. When this option is set, make sure that libyuv is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
-	if test "x$with_external_yuv" != "xno"; then
-		# Test libyuv installation
-		AC_MSG_CHECKING([if external libyuv devkit is installed])
-		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <libyuv.h>]],
-						  [RGB24ToI420(0,0,0,0,0,0,0,0,0,0);])],
-				  [AC_MSG_RESULT(yes!!)
-				   ac_external_yuv="1"
-				   ],
-				  [AC_MSG_ERROR([Unable to use external libyuv. If libyuv development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])])
-	fi
+        if test "x$with_external_yuv" != "xno"; then
+            # Test libyuv installation
+            AC_MSG_CHECKING([if external libyuv devkit is installed])
+            AC_COMPILE_IFELSE(
+                [
+                    AC_LANG_PROGRAM([
+                        [#include <libyuv.h>]],
+                        [RGB24ToI420(0,0,0,0,0,0,0,0,0,0);])
+                ],
+                [
+                    AC_MSG_RESULT(yes!!)
+                    ac_external_yuv="1"
+                ],
+                [
+                    AC_MSG_ERROR([Unable to use external libyuv. If libyuv development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])
+                ]
+            )
+        fi
     ]
-    )
+)
 
 
 dnl # Use external webrtc installation
 AC_SUBST(ac_external_webrtc,0)
 AC_ARG_WITH(external-webrtc,
     AS_HELP_STRING([--with-external-webrtc],
-		   [Use external webrtc development files, not the one in "third_party" directory. When this option is set, make sure that webrtc is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
+        [Use external webrtc development files, not the one in "third_party" directory. When this option is set, make sure that webrtc is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
-	if test "x$with_external_webrtc" != "xno"; then
-		# Test webrtc installation
-		AC_MSG_CHECKING([if external webrtc devkit is installed])
-		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <webrtc/modules/audio_processing/aec/aec_core.h>
-						     #include <webrtc/modules/audio_processing/aec/include/echo_cancellation.h>
-		]],
-						  [WebRtcAec_Create();])],
-				  [AC_MSG_RESULT(yes!!)
-				   ac_external_webrtc="1"
-				   ],
-				  [AC_MSG_ERROR([Unable to use external webrtc. If webrtc development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])])
-	fi
+        if test "x$with_external_webrtc" != "xno"; then
+            # Test webrtc installation
+            AC_MSG_CHECKING([if external webrtc devkit is installed])
+            AC_COMPILE_IFELSE(
+                [
+                    AC_LANG_PROGRAM([
+                        [#include <webrtc/modules/audio_processing/aec/aec_core.h>
+                        #include <webrtc/modules/audio_processing/aec/include/echo_cancellation.h>]],
+                        [WebRtcAec_Create();])
+                ],
+                [
+                    AC_MSG_RESULT(yes!!)
+                    ac_external_webrtc="1"
+                ],
+                [
+                    AC_MSG_ERROR([Unable to use external webrtc. If webrtc development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])
+                ]
+            )
+        fi
     ]
-    )
+)
 
 
 dnl # Use external webrtc AEC3 installation
 AC_SUBST(ac_external_webrtc_aec3,0)
 AC_ARG_WITH(external-webrtc-aec3,
     AS_HELP_STRING([--with-external-webrtc-aec3],
-		   [Use external webrtc AEC3 development files, not the one in "third_party" directory. When this option is set, make sure that webrtc is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
+        [Use external webrtc AEC3 development files, not the one in "third_party" directory. When this option is set, make sure that webrtc is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
-	if test "x$with_external_webrtc_aec3" != "xno"; then
-		# Test webrtc AEC3 installation
-		AC_MSG_CHECKING([if external webrtc AEC3 is installed])
-		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include "modules/audio_processing/aec3/echo_canceller3.h"
-		]],
-						  [EchoCanceller3 ec(EchoCanceller3Config(), 16000, 1, 1);])],
-				  [AC_MSG_RESULT(yes!!)
-				   ac_external_webrtc_aec3="1"
-				   ],
-				  [AC_MSG_ERROR([Unable to use external webrtc AEC3. If webrtc development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])])
-	fi
+        if test "x$with_external_webrtc_aec3" != "xno"; then
+            # Test webrtc AEC3 installation
+            AC_MSG_CHECKING([if external webrtc AEC3 is installed])
+            AC_COMPILE_IFELSE(
+                [
+                    AC_LANG_PROGRAM([
+                        [#include "modules/audio_processing/aec3/echo_canceller3.h"]],
+                        [EchoCanceller3 ec(EchoCanceller3Config(), 16000, 1, 1);])
+                ],
+                [
+                    AC_MSG_RESULT(yes!!)
+                    ac_external_webrtc_aec3="1"
+                ],
+                [
+                    AC_MSG_ERROR([Unable to use external webrtc AEC3. If webrtc development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])
+                ]
+            )
+        fi
     ]
-    )
+)
 
 
 dnl # Resample implementation
 AC_SUBST(ac_pjmedia_resample,libresample)
 AC_ARG_ENABLE(resample,
-	      AS_HELP_STRING([--disable-resample],
-			     [Disable resampling implementations]),
-	      [if test "$enable_resample" = "no"; then
-		[ac_pjmedia_resample=none]
-		AC_MSG_RESULT([Checking if resampling is disabled...yes])
-	       fi]
-	      )
+    AS_HELP_STRING([--disable-resample], [Disable resampling implementations]),
+    [
+        if test "$enable_resample" = "no"; then
+            [ac_pjmedia_resample=none]
+            AC_MSG_RESULT([Checking if resampling is disabled...yes])
+        fi
+    ]
+)
 
 dnl # Sound device backend selection
 AC_SUBST(ac_pjmedia_snd)
 AC_ARG_ENABLE(sound,
-	      AS_HELP_STRING([--disable-sound],
-			     [Exclude sound (i.e. use null sound)]),
-	      [if test "$enable_sound" = "no"; then
-		[ac_pjmedia_snd=null]
-		AC_MSG_RESULT([Checking if sound is disabled... yes])
-	       fi]
-	      )
+    AS_HELP_STRING([--disable-sound], [Exclude sound (i.e. use null sound)]),
+    [
+        if test "$enable_sound" = "no"; then
+            [ac_pjmedia_snd=null]
+            AC_MSG_RESULT([Checking if sound is disabled... yes])
+        fi
+    ]
+)
 
 dnl # Use external PortAudio installation
 AC_SUBST(ac_external_pa,0)
 AC_ARG_WITH(external-pa,
     AS_HELP_STRING([--with-external-pa],
-		   [Use external PortAudio development files. When this option is set, make sure that PortAudio is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
+        [Use external PortAudio development files. When this option is set, make sure that PortAudio is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
-	if test "x$with_external_pa" != "xno"; then
-		# Test PortAudio installation
-		AC_MSG_CHECKING([if external PortAudio devkit is installed])
-		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <portaudio.h>
-						     ]],
-						  [Pa_Initialize();])],
-				  [AC_MSG_RESULT(yes!!)
-				   ac_external_pa="1"
-				   ],
-				  [AC_MSG_ERROR([Unable to use PortAudio. If PortAudio development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])])
-	fi
+        if test "x$with_external_pa" != "xno"; then
+            # Test PortAudio installation
+            AC_MSG_CHECKING([if external PortAudio devkit is installed])
+            AC_COMPILE_IFELSE(
+                [
+                    AC_LANG_PROGRAM([
+                        [#include <portaudio.h>]],
+                        [Pa_Initialize();])
+                ],
+                [
+                    AC_MSG_RESULT(yes!!)
+                    ac_external_pa="1"
+                ],
+                [
+                    AC_MSG_ERROR([Unable to use PortAudio. If PortAudio development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])
+                ]
+            )
+        fi
     ]
-    )
+)
 
 AC_SUBST(ac_pa_cflags)
-AC_CHECK_HEADER(sys/soundcard.h,
-	 	[ac_pa_cflags="$ac_pa_cflags -DHAVE_SYS_SOUNDCARD_H"])
-AC_CHECK_HEADER(linux/soundcard.h,
-	 	[ac_pa_cflags="$ac_pa_cflags -DHAVE_LINUX_SOUNDCARD_H"])
-AC_CHECK_HEADER(machine/soundcard.h,
-	 	[ac_pa_cflags="$ac_pa_cflags -DHAVE_MACHINE_SOUNDCARD_H"])
+AC_CHECK_HEADER(sys/soundcard.h, [ac_pa_cflags="$ac_pa_cflags -DHAVE_SYS_SOUNDCARD_H"])
+AC_CHECK_HEADER(linux/soundcard.h, [ac_pa_cflags="$ac_pa_cflags -DHAVE_LINUX_SOUNDCARD_H"])
+AC_CHECK_HEADER(machine/soundcard.h, [ac_pa_cflags="$ac_pa_cflags -DHAVE_MACHINE_SOUNDCARD_H"])
 
 if test "x$ac_cv_c_bigendian" = "xyes"; then
-  ac_pa_cflags="$ac_pa_cflags -DPA_BIG_ENDIAN"
+    ac_pa_cflags="$ac_pa_cflags -DPA_BIG_ENDIAN"
 else
-  ac_pa_cflags="$ac_pa_cflags -DPA_LITTLE_ENDIAN"
+    ac_pa_cflags="$ac_pa_cflags -DPA_LITTLE_ENDIAN"
 fi
-
 
 dnl # Enable Android Oboe audio device
 AC_SUBST(ac_oboe_cflags)
 AC_SUBST(ac_oboe_ldflags)
 AC_ARG_WITH(oboe,
-    AS_HELP_STRING([--with-oboe],
-		   [Enable Android Oboe audio device backend.]),
+    AS_HELP_STRING([--with-oboe], [Enable Android Oboe audio device backend.]),
     [
-	if test "x$with_oboe" != "xno" -a "x$with_oboe" != "x"; then
-		OBOE_PREFIX=$with_oboe
-		OBOE_CFLAGS="-I$OBOE_PREFIX/prefab/modules/oboe/include"
-		OBOE_LDFLAGS="-L$OBOE_PREFIX/prefab/modules/oboe/libs/android.$TARGET_ABI"
-		AC_MSG_RESULT([Using Oboe prefix... $with_oboe])
-	else
-		OBOE_CFLAGS=""
-		OBOE_LDFLAGS=""
-	fi
+        if test "x$with_oboe" != "xno" -a "x$with_oboe" != "x"; then
+            OBOE_PREFIX=$with_oboe
+            OBOE_CFLAGS="-I$OBOE_PREFIX/prefab/modules/oboe/include"
+            OBOE_LDFLAGS="-L$OBOE_PREFIX/prefab/modules/oboe/libs/android.$TARGET_ABI"
+            AC_MSG_RESULT([Using Oboe prefix... $with_oboe])
+        else
+            OBOE_CFLAGS=""
+            OBOE_LDFLAGS=""
+        fi
 
-	AC_MSG_CHECKING([Oboe usability])
+        AC_MSG_CHECKING([Oboe usability])
 
-	OBOE_LIBS="-loboe -lOpenSLES -llog"
+        OBOE_LIBS="-loboe -lOpenSLES -llog"
 
-	SAVED_LIBS="$LIBS"
-	SAVED_LDFLAGS="$LDFLAGS"
-	SAVED_CXXFLAGS="$CXXFLAGS"
+        SAVED_LIBS="$LIBS"
+        SAVED_LDFLAGS="$LDFLAGS"
+        SAVED_CXXFLAGS="$CXXFLAGS"
 
-	LIBS="$OBOE_LIBS $LIBS"
-	LDFLAGS="$OBOE_LDFLAGS $LDFLAGS"
-	CXXFLAGS="$OBOE_CFLAGS $CXXFLAGS"
+        LIBS="$OBOE_LIBS $LIBS"
+        LDFLAGS="$OBOE_LDFLAGS $LDFLAGS"
+        CXXFLAGS="$OBOE_CFLAGS $CXXFLAGS"
 
-	AC_LANG_PUSH([C++])
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <oboe/Oboe.h>]],
-					[oboe::AudioStreamBuilder sb; sb.setDeviceId(0);]
-			)],
-		 [ ac_oboe_cflags="-DPJMEDIA_AUDIO_DEV_HAS_OBOE=1 $OBOE_CFLAGS"
-		   ac_oboe_ldflags="$OBOE_LDFLAGS $OBOE_LIBS"
-		   AC_MSG_RESULT(yes)
-		  ],
-		 [
-		   LIBS="$SAVED_LIBS"
-		   LDFLAGS="$SAVED_LDFLAGS"
-		   AC_MSG_RESULT(no)
-		 ])
-	AC_LANG_POP([C++])
+        AC_LANG_PUSH([C++])
+        AC_LINK_IFELSE(
+            [
+                AC_LANG_PROGRAM([
+                    [#include <oboe/Oboe.h>]],
+                    [oboe::AudioStreamBuilder sb; sb.setDeviceId(0);])
+            ],
+            [
+                ac_oboe_cflags="-DPJMEDIA_AUDIO_DEV_HAS_OBOE=1 $OBOE_CFLAGS"
+                ac_oboe_ldflags="$OBOE_LDFLAGS $OBOE_LIBS"
+                AC_MSG_RESULT(yes)
+            ],
+            [
+                LIBS="$SAVED_LIBS"
+                LDFLAGS="$SAVED_LDFLAGS"
+                AC_MSG_RESULT(no)
+            ]
+        )
+        AC_LANG_POP([C++])
 
-	# Put back original CXXFLAGS as app won't needed it.
-	CXXFLAGS="$SAVED_CFLAGS"
+        # Put back original CXXFLAGS as app won't needed it.
+        CXXFLAGS="$SAVED_CFLAGS"
     ]
-    )
+)
 
 
 if test "$enable_sound" = "no"; then
-  true;
+    true;
 else
- AC_SUBST(ac_pjmedia_audiodev_objs)
- case $target in
-  *android*)
-	if test "x$ac_oboe_cflags" != "x"; then
-		AC_MSG_RESULT([Checking sound device backend... Oboe])
-	else
-		LIBS="$LIBS -lOpenSLES"
-		AC_MSG_RESULT([Checking sound device backend... Android])
-	fi
-	;;
-  *-apple-darwin_ios*)
-	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork -framework UIKit -framework AVFoundation"
-	ac_pjmedia_audiodev_objs="coreaudio_dev.o"
-	AC_MSG_RESULT([Checking sound device backend... AudioUnit])
-	;;
-  *darwin*)
-	LIBS="$LIBS -framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox"
-	ac_pjmedia_audiodev_objs="coreaudio_dev.o"
-	if test "`uname -r`" = "6.8"; then
-		#ac_pa_cflags="$ac_pa_cflags -DPA_OLD_CORE_AUDIO -DMOSX_USE_NON_ATOMIC_FLAG_BITS"
-		#AC_MSG_RESULT([Setting additional PortAudio CFLAGS.. -DPA_OLD_CORE_AUDIO -DMOSX_USE_NON_ATOMIC_FLAG_BITS])
-		#ac_pjmedia_snd=pa_old_darwinos
-		AC_MSG_RESULT([Checking sound device backend... old coreaudio])
-	else
-		ac_pjmedia_snd=coreaudio
-		AC_MSG_RESULT([Checking sound device backend... coreaudio])
-	fi
-	;;
-  *cygwin* | *mingw*)
-	ac_pjmedia_snd=win32
-	AC_MSG_RESULT([Checking sound device backend... win32 sound])
-	;;
-  *rtems*)
-	ac_pjmedia_snd=null
-	AC_MSG_RESULT([Checking sound device backend... null sound])
-	;;
-  *)
-	if test "x$ac_external_pa" != "x1"; then
-		dnl # Check if ALSA is available
-		AC_CHECK_HEADER(alsa/version.h,
-				[LIBS="$LIBS -lasound"
-				 ac_pjmedia_snd=alsa])
-		if test "x$ac_pjmedia_snd" = "xalsa"; then
-			AC_MSG_RESULT([Checking sound device backend... alsa])
-		else
-			ac_pjmedia_snd=null
-			AC_MSG_RESULT([Checking sound device backend... null sound])
-		fi
-	fi
-	;;
- esac
+    AC_SUBST(ac_pjmedia_audiodev_objs)
+    case $target in
+        *android*)
+            if test "x$ac_oboe_cflags" != "x"; then
+                AC_MSG_RESULT([Checking sound device backend... Oboe])
+            else
+                LIBS="$LIBS -lOpenSLES"
+                AC_MSG_RESULT([Checking sound device backend... Android])
+            fi
+        ;;
+        *-apple-darwin_ios*)
+            LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork -framework UIKit -framework AVFoundation"
+            ac_pjmedia_audiodev_objs="coreaudio_dev.o"
+            AC_MSG_RESULT([Checking sound device backend... AudioUnit])
+        ;;
+        *darwin*)
+            LIBS="$LIBS -framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox"
+            ac_pjmedia_audiodev_objs="coreaudio_dev.o"
+            if test "`uname -r`" = "6.8"; then
+                #ac_pa_cflags="$ac_pa_cflags -DPA_OLD_CORE_AUDIO -DMOSX_USE_NON_ATOMIC_FLAG_BITS"
+                #AC_MSG_RESULT([Setting additional PortAudio CFLAGS.. -DPA_OLD_CORE_AUDIO -DMOSX_USE_NON_ATOMIC_FLAG_BITS])
+                #ac_pjmedia_snd=pa_old_darwinos
+                AC_MSG_RESULT([Checking sound device backend... old coreaudio])
+            else
+                ac_pjmedia_snd=coreaudio
+                AC_MSG_RESULT([Checking sound device backend... coreaudio])
+            fi
+        ;;
+        *cygwin* | *mingw*)
+            ac_pjmedia_snd=win32
+            AC_MSG_RESULT([Checking sound device backend... win32 sound])
+        ;;
+        *rtems*)
+            ac_pjmedia_snd=null
+            AC_MSG_RESULT([Checking sound device backend... null sound])
+        ;;
+        *)
+            if test "x$ac_external_pa" != "x1"; then
+                dnl # Check if ALSA is available
+                AC_CHECK_HEADER(alsa/version.h,
+                        [LIBS="$LIBS -lasound"
+                        ac_pjmedia_snd=alsa])
+                if test "x$ac_pjmedia_snd" = "xalsa"; then
+                    AC_MSG_RESULT([Checking sound device backend... alsa])
+                else
+                    ac_pjmedia_snd=null
+                    AC_MSG_RESULT([Checking sound device backend... null sound])
+                fi
+            fi
+        ;;
+    esac
 fi
 
 AC_SUBST(ac_pjmedia_video)
 
 # Disable video on mingw by default (but respect --enable-video=yes)
 case $target in
- *mingw*)
-	if test ! "$enable_video" = "yes"; then
-	enable_video="no"
-	fi
-	;;
+    *mingw*)
+        if test ! "$enable_video" = "yes"; then
+            enable_video="no"
+        fi
+    ;;
 esac
 
 dnl # --disable-video option
 AC_ARG_ENABLE(video,
-	      AS_HELP_STRING([--disable-video],
-	      		     [Disable video feature]),
-	      [if test "$enable_video" = "no"; then
-	        #AC_DEFINE(PJMEDIA_HAS_VIDEO,0)
-                AC_MSG_RESULT([Video is disabled]) 
-                enable_sdl="no"
-                enable_ffmpeg="no"
-                enable_v4l2="no"
-                enable_openh264="no"
-                enable_libyuv="no"
-                enable_vpx="no"
-               fi],
-	      [])
+    AS_HELP_STRING([--disable-video], [Disable video feature]),
+    [
+        if test "$enable_video" = "no"; then
+            #AC_DEFINE(PJMEDIA_HAS_VIDEO,0)
+            AC_MSG_RESULT([Video is disabled])
+            enable_sdl="no"
+            enable_ffmpeg="no"
+            enable_v4l2="no"
+            enable_openh264="no"
+            enable_libyuv="no"
+            enable_vpx="no"
+        fi
+    ],
+    []
+)
 
 case $target in
- *android*)
-	LIBS="$LIBS -llog"
-	;;
- *-apple-darwin_ios*)
- 	LIBS="$LIBS -framework UIKit"
-	;;
- *darwin*)
- 	LIBS="$LIBS -framework Foundation -framework AppKit"
-	;;
+    *android*)
+        LIBS="$LIBS -llog"
+    ;;
+    *-apple-darwin_ios*)
+        LIBS="$LIBS -framework UIKit"
+    ;;
+    *darwin*)
+        LIBS="$LIBS -framework Foundation -framework AppKit"
+    ;;
 esac
 
 if test "$enable_video" = "no"; then
-  true;
+    true;
 else
- case $target in
-  *android*)
-	ac_pjmedia_video=android_os
-	AC_SUBST(ac_pjmedia_video_has_android)
-	AC_SUBST(ac_android_cflags)
-	SAVED_LIBS="$LIBS"
-	LIBS="-lGLESv2 -lEGL -landroid -lc"
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_android=yes],[ac_pjmedia_video_has_android=no])
-	LIBS="$SAVED_LIBS"
-	if test "$ac_pjmedia_video_has_android" = "yes"; then
-	  ac_android_cflags="-DPJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL=1"
-	  LIBS="$LIBS -lGLESv2 -lEGL -landroid"
-	  AC_MSG_RESULT([Checking if OpenGL ES 2 is available... yes])
-	else
-	  AC_MSG_RESULT([Checking if OpenGL ES 2 is available... no])
-	fi
-	ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
-	;;
-  *mingw*)
-	if test "$enable_video" = "yes"; then
-	  ac_pjmedia_video=windows_os
-	  AC_SUBST(ac_pjmedia_video_dev_has_dshow)
-	  ac_pjmedia_video_dev_has_dshow=yes
-	  AC_SUBST(ac_dshow_cflags)
-	  ac_dshow_cflags="-DPJMEDIA_HAS_VIDEO=1 -DPJMEDIA_VIDEO_DEV_HAS_DSHOW=1"
-	  AC_SUBST(ac_dshow_ldflags)
-	  ac_dshow_ldflags=" -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
-	  LIBS="$LIBS -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
-	fi
-	;;
-  *darwin*)
-	ac_pjmedia_video=darwin_os
-	AC_SUBST(ac_pjmedia_video_has_darwin)
-	AC_SUBST(ac_pjmedia_video_has_metal)
-	AC_SUBST(ac_pjmedia_video_has_vtoolbox)
-	AC_SUBST(ac_pjmedia_video_has_ios_opengl)
-	AC_SUBST(ac_darwin_cflags)
-	SAVED_LIBS="$LIBS"
-	LIBS="-framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
-		       [ac_pjmedia_video_has_darwin=yes],
-		       [ac_pjmedia_video_has_darwin=no])
-	LIBS="-framework VideoToolbox"
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
-		       [ac_pjmedia_video_has_vtoolbox=yes],
-		       [ac_pjmedia_video_has_vtoolbox=no])
-	LIBS="-framework Metal"
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
-		       [ac_pjmedia_video_has_metal=yes],
-		       [ac_pjmedia_video_has_metal=no])
-	LIBS="-framework OpenGLES"
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
-		       [ac_pjmedia_video_has_ios_opengl=yes],
-		       [ac_pjmedia_video_has_ios_opengl=no])
-	LIBS="$SAVED_LIBS"
-	if test "$ac_pjmedia_video_has_darwin" = "yes"; then
-	  ac_darwin_cflags="-DPJMEDIA_VIDEO_DEV_HAS_DARWIN=1"
-	  LIBS="$LIBS -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
-	  AC_MSG_RESULT([Checking if AVFoundation framework is available... yes])
-	else
-	  AC_MSG_RESULT([Checking if AVFoundation framework is available... no])
-	fi
-	if test "$ac_pjmedia_video_has_metal" = "yes"; then
-	  ac_darwin_cflags+=" -DPJMEDIA_VIDEO_DEV_HAS_METAL=1"
-	  LIBS="$LIBS -framework Metal -framework MetalKit"
-	  AC_MSG_RESULT([Checking if Metal framework is available... yes])
-	else
-	  AC_MSG_RESULT([Checking if Metal framework is available... no])
-	fi
-	if test "$ac_pjmedia_video_has_vtoolbox" = "yes"; then
-	  #ac_darwin_cflags+=" -DPJMEDIA_HAS_VID_TOOLBOX_CODEC=1"
-	  LIBS="$LIBS -framework VideoToolbox"
-	  AC_MSG_RESULT([Checking if VideoToolbox framework is available... yes])
-	else
-	  AC_MSG_RESULT([Checking if VideoToolbox framework is available... no])
-	fi
-	if test "$ac_pjmedia_video_has_ios_opengl" = "yes"; then
-	  ac_darwin_cflags+=" -DPJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL=1"
-	  LIBS="$LIBS -framework OpenGLES"
-	  AC_MSG_RESULT([Checking if OpenGLES framework is available... yes])
-	else
-	  AC_MSG_RESULT([Checking if OpenGLES framework is available... no])
-	fi
-        if false; then
-          # QTKit is deprecated, see ticket #1931.
-	  ac_pjmedia_video=mac_os
-	  AC_SUBST(ac_pjmedia_video_has_qt)
-	  AC_SUBST(ac_qt_cflags)
-	  SAVED_LIBS="$LIBS"
-	  LIBS="-framework QTKit"
-	  AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_qt=yes],[ac_pjmedia_video_has_qt=no])
-	  LIBS="$SAVED_LIBS"
-	  if test "$ac_pjmedia_video_has_qt" = "yes"; then
-	    ac_qt_cflags="-DPJMEDIA_VIDEO_DEV_HAS_QT=1"
-	    LIBS="$LIBS -framework QTKit -framework QuartzCore -framework OpenGL"
-	    AC_MSG_RESULT([Checking if QTKit framework is available... yes])
-	  else
-	    AC_MSG_RESULT([Checking if QTKit framework is available... no])
- 	  fi
- 	fi
- 	;;
- esac
+    case $target in
+        *android*)
+            ac_pjmedia_video=android_os
+            AC_SUBST(ac_pjmedia_video_has_android)
+            AC_SUBST(ac_android_cflags)
+            SAVED_LIBS="$LIBS"
+            LIBS="-lGLESv2 -lEGL -landroid -lc"
+            AC_LINK_IFELSE(
+                [
+                    AC_LANG_PROGRAM([[]], [])
+                ],
+                [ac_pjmedia_video_has_android=yes],
+                [ac_pjmedia_video_has_android=no]
+            )
+            LIBS="$SAVED_LIBS"
+            if test "$ac_pjmedia_video_has_android" = "yes"; then
+                ac_android_cflags="-DPJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL=1"
+                LIBS="$LIBS -lGLESv2 -lEGL -landroid"
+                AC_MSG_RESULT([Checking if OpenGL ES 2 is available... yes])
+            else
+                AC_MSG_RESULT([Checking if OpenGL ES 2 is available... no])
+            fi
+            ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
+        ;;
+        *mingw*)
+            if test "$enable_video" = "yes"; then
+                ac_pjmedia_video=windows_os
+                AC_SUBST(ac_pjmedia_video_dev_has_dshow)
+                ac_pjmedia_video_dev_has_dshow=yes
+                AC_SUBST(ac_dshow_cflags)
+                ac_dshow_cflags="-DPJMEDIA_HAS_VIDEO=1 -DPJMEDIA_VIDEO_DEV_HAS_DSHOW=1"
+                AC_SUBST(ac_dshow_ldflags)
+                ac_dshow_ldflags=" -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
+                LIBS="$LIBS -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
+            fi
+        ;;
+        *darwin*)
+            ac_pjmedia_video=darwin_os
+            AC_SUBST(ac_pjmedia_video_has_darwin)
+            AC_SUBST(ac_pjmedia_video_has_metal)
+            AC_SUBST(ac_pjmedia_video_has_vtoolbox)
+            AC_SUBST(ac_pjmedia_video_has_ios_opengl)
+            AC_SUBST(ac_darwin_cflags)
+            SAVED_LIBS="$LIBS"
+
+            LIBS="-framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
+            AC_LINK_IFELSE(
+                [AC_LANG_PROGRAM([[]], [])],
+               [ac_pjmedia_video_has_darwin=yes],
+               [ac_pjmedia_video_has_darwin=no]
+            )
+
+            LIBS="-framework VideoToolbox"
+            AC_LINK_IFELSE(
+                [AC_LANG_PROGRAM([[]], [])],
+                [ac_pjmedia_video_has_vtoolbox=yes],
+                [ac_pjmedia_video_has_vtoolbox=no])
+
+            LIBS="-framework Metal"
+            AC_LINK_IFELSE(
+                [AC_LANG_PROGRAM([[]], [])],
+                [ac_pjmedia_video_has_metal=yes],
+                [ac_pjmedia_video_has_metal=no])
+
+            LIBS="-framework OpenGLES"
+            AC_LINK_IFELSE(
+                [AC_LANG_PROGRAM([[]], [])],
+                [ac_pjmedia_video_has_ios_opengl=yes],
+                [ac_pjmedia_video_has_ios_opengl=no])
+
+            LIBS="$SAVED_LIBS"
+            if test "$ac_pjmedia_video_has_darwin" = "yes"; then
+                ac_darwin_cflags="-DPJMEDIA_VIDEO_DEV_HAS_DARWIN=1"
+                LIBS="$LIBS -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
+                AC_MSG_RESULT([Checking if AVFoundation framework is available... yes])
+            else
+                AC_MSG_RESULT([Checking if AVFoundation framework is available... no])
+            fi
+
+            if test "$ac_pjmedia_video_has_metal" = "yes"; then
+                ac_darwin_cflags+=" -DPJMEDIA_VIDEO_DEV_HAS_METAL=1"
+                LIBS="$LIBS -framework Metal -framework MetalKit"
+                AC_MSG_RESULT([Checking if Metal framework is available... yes])
+            else
+                AC_MSG_RESULT([Checking if Metal framework is available... no])
+            fi
+
+            if test "$ac_pjmedia_video_has_vtoolbox" = "yes"; then
+                #ac_darwin_cflags+=" -DPJMEDIA_HAS_VID_TOOLBOX_CODEC=1"
+                LIBS="$LIBS -framework VideoToolbox"
+                AC_MSG_RESULT([Checking if VideoToolbox framework is available... yes])
+            else
+                AC_MSG_RESULT([Checking if VideoToolbox framework is available... no])
+            fi
+
+            if test "$ac_pjmedia_video_has_ios_opengl" = "yes"; then
+                ac_darwin_cflags+=" -DPJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL=1"
+                LIBS="$LIBS -framework OpenGLES"
+                AC_MSG_RESULT([Checking if OpenGLES framework is available... yes])
+            else
+                AC_MSG_RESULT([Checking if OpenGLES framework is available... no])
+            fi
+
+            if false; then
+                # QTKit is deprecated, see ticket #1931.
+                ac_pjmedia_video=mac_os
+                AC_SUBST(ac_pjmedia_video_has_qt)
+                AC_SUBST(ac_qt_cflags)
+                SAVED_LIBS="$LIBS"
+                LIBS="-framework QTKit"
+                AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_qt=yes],[ac_pjmedia_video_has_qt=no])
+                LIBS="$SAVED_LIBS"
+                if test "$ac_pjmedia_video_has_qt" = "yes"; then
+                    ac_qt_cflags="-DPJMEDIA_VIDEO_DEV_HAS_QT=1"
+                    LIBS="$LIBS -framework QTKit -framework QuartzCore -framework OpenGL"
+                    AC_MSG_RESULT([Checking if QTKit framework is available... yes])
+                else
+                    AC_MSG_RESULT([Checking if QTKit framework is available... no])
+                fi
+            fi
+        ;;
+    esac
 fi
 
 AC_ARG_ENABLE(ext_sound,
-	      AS_HELP_STRING([--enable-ext-sound],
-			     [PJMEDIA will not provide any sound device backend]),
-	      [if test "$enable_ext_sound" = "yes"; then
-		[ac_pjmedia_snd=external]
-		AC_MSG_RESULT([Checking if external sound is set... yes])
-	       fi]
-	      )
+    AS_HELP_STRING([--enable-ext-sound], [PJMEDIA will not provide any sound device backend]),
+    [
+        if test "$enable_ext_sound" = "yes"; then
+            [ac_pjmedia_snd=external]
+            AC_MSG_RESULT([Checking if external sound is set... yes])
+        fi
+    ]
+)
 
 dnl # Include resampling small filter
 AC_SUBST(ac_no_small_filter)
 AC_ARG_ENABLE(small-filter,
-	      AS_HELP_STRING([--disable-small-filter],
-			     [Exclude small filter in resampling]),
-	      [if test "$enable_small_filter" = "no"; then
-		[ac_no_small_filter='-DPJMEDIA_HAS_SMALL_FILTER=0']
-		AC_MSG_RESULT([Checking if small filter is disabled... yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if small filter is disabled... no]))
+    AS_HELP_STRING([--disable-small-filter], [Exclude small filter in resampling]),
+    [
+        if test "$enable_small_filter" = "no"; then
+            [ac_no_small_filter='-DPJMEDIA_HAS_SMALL_FILTER=0']
+            AC_MSG_RESULT([Checking if small filter is disabled... yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if small filter is disabled... no])
+)
 
 dnl # Include resampling large filter
 AC_SUBST(ac_no_large_filter)
 AC_ARG_ENABLE(large-filter,
-	      AS_HELP_STRING([--disable-large-filter],
-			     [Exclude large filter in resampling]),
-	      [if test "$enable_large_filter" = "no"; then
-		[ac_no_large_filter='-DPJMEDIA_HAS_LARGE_FILTER=0']
-		AC_MSG_RESULT([Checking if large filter is disabled... yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if large filter is disabled... no]))
+    AS_HELP_STRING([--disable-large-filter],[Exclude large filter in resampling]),
+    [
+        if test "$enable_large_filter" = "no"; then
+            [ac_no_large_filter='-DPJMEDIA_HAS_LARGE_FILTER=0']
+            AC_MSG_RESULT([Checking if large filter is disabled... yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if large filter is disabled... no])
+)
 
 dnl # Include Speex AEC
 AC_SUBST(ac_no_speex_aec)
 AC_ARG_ENABLE(speex-aec,
-	      AS_HELP_STRING([--disable-speex-aec],
-			     [Exclude Speex Acoustic Echo Canceller/AEC]),
-	      [if test "$enable_speex_aec" = "no"; then
-		[ac_no_speex_aec='-DPJMEDIA_HAS_SPEEX_AEC=0']
-		AC_MSG_RESULT([Checking if Speex AEC is disabled...yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if Speex AEC is disabled...no]))
+    AS_HELP_STRING([--disable-speex-aec], [Exclude Speex Acoustic Echo Canceller/AEC]),
+    [
+        if test "$enable_speex_aec" = "no"; then
+            [ac_no_speex_aec='-DPJMEDIA_HAS_SPEEX_AEC=0']
+            AC_MSG_RESULT([Checking if Speex AEC is disabled...yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if Speex AEC is disabled...no])
+)
 
 dnl # Include G711 codec
 AC_SUBST(ac_no_g711_codec)
 AC_ARG_ENABLE(g711-codec,
-	      AS_HELP_STRING([--disable-g711-codec],
-			     [Exclude G.711 codecs from the build]),
-	      [if test "$enable_g711_codec" = "no"; then
-		[ac_no_g711_codec=1]
-		AC_DEFINE(PJMEDIA_HAS_G711_CODEC,0)
-		AC_MSG_RESULT([Checking if G.711 codec is disabled...yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if G.711 codec is disabled...no]))
+    AS_HELP_STRING([--disable-g711-codec], [Exclude G.711 codecs from the build]),
+    [
+        if test "$enable_g711_codec" = "no"; then
+            [ac_no_g711_codec=1]
+            AC_DEFINE(PJMEDIA_HAS_G711_CODEC,0)
+            AC_MSG_RESULT([Checking if G.711 codec is disabled...yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if G.711 codec is disabled...no])
+)
 
 
 dnl # Include L16 codec
 AC_SUBST(ac_no_l16_codec)
 AC_ARG_ENABLE(l16-codec,
-	      AS_HELP_STRING([--disable-l16-codec],
-			     [Exclude Linear/L16 codec family from the build]),
-	      [if test "$enable_l16_codec" = "no"; then
-		[ac_no_l16_codec=1]
-		AC_DEFINE(PJMEDIA_HAS_L16_CODEC,0)
-		AC_MSG_RESULT([Checking if L16 codecs are disabled...yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if L16 codec is disabled...no]))
-
+    AS_HELP_STRING([--disable-l16-codec], [Exclude Linear/L16 codec family from the build]),
+    [
+        if test "$enable_l16_codec" = "no"; then
+            [ac_no_l16_codec=1]
+            AC_DEFINE(PJMEDIA_HAS_L16_CODEC,0)
+            AC_MSG_RESULT([Checking if L16 codecs are disabled...yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if L16 codec is disabled...no])
+)
 
 dnl # Include GSM codec
 AC_SUBST(ac_no_gsm_codec)
 AC_ARG_ENABLE(gsm-codec,
-	      AS_HELP_STRING([--disable-gsm-codec],
-			     [Exclude GSM codec in the build]),
-	      [if test "$enable_gsm_codec" = "no"; then
-		[ac_no_gsm_codec=1]
-		AC_DEFINE(PJMEDIA_HAS_GSM_CODEC,0)
-		AC_MSG_RESULT([Checking if GSM codec is disabled...yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if GSM codec is disabled...no]))
+    AS_HELP_STRING([--disable-gsm-codec], [Exclude GSM codec in the build]),
+    [
+        if test "$enable_gsm_codec" = "no"; then
+            [ac_no_gsm_codec=1]
+            AC_DEFINE(PJMEDIA_HAS_GSM_CODEC,0)
+            AC_MSG_RESULT([Checking if GSM codec is disabled...yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if GSM codec is disabled...no])
+)
 
 dnl # Include G.722 codec
 AC_SUBST(ac_no_g722_codec)
 AC_ARG_ENABLE(g722-codec,
-	      AS_HELP_STRING([--disable-g722-codec],
-			     [Exclude G.722 codec in the build]),
-	      [if test "$enable_g722_codec" = "no"; then
-		[ac_no_g722_codec=1]
-		AC_DEFINE(PJMEDIA_HAS_G722_CODEC,0)
-		AC_MSG_RESULT([Checking if G.722 codec is disabled...yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if G.722 codec is disabled...no]))
+    AS_HELP_STRING([--disable-g722-codec], [Exclude G.722 codec in the build]),
+    [
+        if test "$enable_g722_codec" = "no"; then
+            [ac_no_g722_codec=1]
+            AC_DEFINE(PJMEDIA_HAS_G722_CODEC,0)
+            AC_MSG_RESULT([Checking if G.722 codec is disabled...yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if G.722 codec is disabled...no])
+)
 
 dnl # Include G722.1 codec
 AC_SUBST(ac_no_g7221_codec)
 AC_ARG_ENABLE(g7221-codec,
-	      AS_HELP_STRING([--disable-g7221-codec],
-			     [Exclude G.7221 codec in the build]),
-	      [if test "$enable_g7221_codec" = "no"; then
-		[ac_no_g7221_codec=1]
-		AC_DEFINE(PJMEDIA_HAS_G7221_CODEC,0)
-		AC_MSG_RESULT([Checking if G.722.1 codec is disabled...yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if G.722.1 codec is disabled...no]))
+    AS_HELP_STRING([--disable-g7221-codec], [Exclude G.7221 codec in the build]),
+    [
+        if test "$enable_g7221_codec" = "no"; then
+            [ac_no_g7221_codec=1]
+            AC_DEFINE(PJMEDIA_HAS_G7221_CODEC,0)
+            AC_MSG_RESULT([Checking if G.722.1 codec is disabled...yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if G.722.1 codec is disabled...no])
+)
 
 dnl # Include Speex codec
 AC_SUBST(ac_no_speex_codec)
 AC_ARG_ENABLE(speex-codec,
-	      AS_HELP_STRING([--disable-speex-codec],
-			     [Exclude Speex codecs in the build]),
-	      [if test "$enable_speex_codec" = "no"; then
-		[ac_no_speex_codec=1]
-		AC_DEFINE(PJMEDIA_HAS_SPEEX_CODEC,0)
-		AC_MSG_RESULT([Checking if Speex codec is disabled...yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if Speex codec is disabled...no]))
+    AS_HELP_STRING([--disable-speex-codec], [Exclude Speex codecs in the build]),
+    [
+        if test "$enable_speex_codec" = "no"; then
+            [ac_no_speex_codec=1]
+            AC_DEFINE(PJMEDIA_HAS_SPEEX_CODEC,0)
+            AC_MSG_RESULT([Checking if Speex codec is disabled...yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if Speex codec is disabled...no])
+)
 
 dnl # Include iLBC codec
 AC_SUBST(ac_no_ilbc_codec)
 AC_ARG_ENABLE(ilbc-codec,
-	      AS_HELP_STRING([--disable-ilbc-codec],
-			     [Exclude iLBC codec in the build]),
-	      [if test "$enable_ilbc_codec" = "no"; then
-		[ac_no_ilbc_codec=1]
-		AC_DEFINE(PJMEDIA_HAS_ILBC_CODEC,0)
-		AC_MSG_RESULT([Checking if iLBC codec is disabled...yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if iLBC codec is disabled...no]))
+    AS_HELP_STRING([--disable-ilbc-codec], [Exclude iLBC codec in the build]),
+    [
+        if test "$enable_ilbc_codec" = "no"; then
+            [ac_no_ilbc_codec=1]
+            AC_DEFINE(PJMEDIA_HAS_ILBC_CODEC,0)
+            AC_MSG_RESULT([Checking if iLBC codec is disabled...yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if iLBC codec is disabled...no])
+)
 
 dnl # Include libsamplerate
 AC_ARG_ENABLE(libsamplerate,
-           AS_HELP_STRING([--enable-libsamplerate],
-                    [Link with libsamplerate when available.]),
-           [
-           if test "$enable_libsamplerate" = "yes"; then
-             AC_MSG_RESULT([Checking if libsamplerate is enabled...yes])
-             AC_CHECK_LIB(samplerate,src_new)
-             [ac_pjmedia_resample=libsamplerate]
-           else
-             AC_MSG_RESULT([Checking if libsamplerate is enabled...no])
-           fi
-           ], AC_MSG_RESULT([Checking if libsamplerate is enabled...no]))
+    AS_HELP_STRING([--enable-libsamplerate], [Link with libsamplerate when available.]),
+    [
+        if test "$enable_libsamplerate" = "yes"; then
+            AC_MSG_RESULT([Checking if libsamplerate is enabled...yes])
+            AC_CHECK_LIB(samplerate,src_new)
+            [ac_pjmedia_resample=libsamplerate]
+        else
+            AC_MSG_RESULT([Checking if libsamplerate is enabled...no])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if libsamplerate is enabled...no])
+)
 
 AC_SUBST(ac_resample_dll)
 AC_ARG_ENABLE(resample_dll,
-	      AS_HELP_STRING([--enable-resample-dll],
-			     [Build libresample as shared library]),
-	      [if test "$enable_resample_dll" = "yes"; then
-		[ac_resample_dll=1]
-		AC_MSG_RESULT([Building libresample as shared library... yes])
-	       fi],
-	      AC_MSG_RESULT([Building libresample as shared library... no])
-	      )
+    AS_HELP_STRING([--enable-resample-dll], [Build libresample as shared library]),
+    [
+        if test "$enable_resample_dll" = "yes"; then
+            [ac_resample_dll=1]
+            AC_MSG_RESULT([Building libresample as shared library... yes])
+        fi
+    ],
+    AC_MSG_RESULT([Building libresample as shared library... no])
+)
 
 dnl # Include Speex resample
 AC_ARG_ENABLE(speex-resample,
-           AS_HELP_STRING([--enable-speex-resample],
-			  [Enable Speex resample]),
-           [
-           if test "$enable_speex_resample" = "yes"; then
-             AC_MSG_RESULT([Checking if Speex resample is enabled... yes])
-             [ac_pjmedia_resample=speex]
-           else
-             AC_MSG_RESULT([Checking if Speex resample is enabled... no])
-           fi
-           ], AC_MSG_RESULT([Checking if Speex resample is enabled... no]))
+    AS_HELP_STRING([--enable-speex-resample], [Enable Speex resample]),
+    [
+        if test "$enable_speex_resample" = "yes"; then
+            AC_MSG_RESULT([Checking if Speex resample is enabled... yes])
+            [ac_pjmedia_resample=speex]
+        else
+            AC_MSG_RESULT([Checking if Speex resample is enabled... no])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if Speex resample is enabled... no])
+)
 
 dnl # SDL alt prefix
 AC_ARG_WITH(sdl,
-    AS_HELP_STRING([--with-sdl=DIR],
-		   [Specify alternate libSDL prefix]),
+    AS_HELP_STRING([--with-sdl=DIR], [Specify alternate libSDL prefix]),
     [],
     [with_sdl=no]
-    )
+)
 
 dnl # Do not use default SDL installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_sdl" = "xno"; then
-    enable_sdl=no
+    nable_sdl=no
 fi
 
 dnl # SDL
 AC_ARG_ENABLE(sdl,
-	      AS_HELP_STRING([--disable-sdl],
-			     [Disable SDL (default: not disabled)]),
-	      [
-		if test "$enable_sdl" = "no"; then
-		  AC_MSG_RESULT([Checking if SDL is disabled... yes])
-		fi
-	      ],
-	      [
-		  if test "x$with_sdl" != "xno" -a "x$with_sdl" != "x"; then
-			AC_MSG_RESULT([Using SDL prefix... $with_sdl])
-			AC_PATH_PROGS(SDL_CONFIG,sdl2-config sdl-config,,$with_sdl/bin)
-                  else
-			AC_PATH_PROGS(SDL_CONFIG, sdl2-config sdl-config)
-		  fi
-		  
-		  AC_MSG_CHECKING([SDL availability])
-		  if test "x$SDL_CONFIG" = "x"; then
-			AC_MSG_RESULT([not found])
-		  elif (sh -c "$SDL_CONFIG --version" | grep -e '^1\.3' -e '^2\.') then
-			AC_SUBST(ac_sdl_cflags)
-			AC_SUBST(ac_sdl_ldflags)
-			ac_sdl_cflags=`$SDL_CONFIG --cflags`
-			ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
-			ac_sdl_ldflags=`$SDL_CONFIG --libs`
-			ac_sdl_ldflags=`echo "${ac_sdl_ldflags}" | sed -e 's/-mwindows//g'`
-			LIBS="$LIBS $ac_sdl_ldflags"
-		  else
-			AC_MSG_RESULT([Unsupported SDL version])
-		  fi
-	      ])
+    AS_HELP_STRING([--disable-sdl], [Disable SDL (default: not disabled)]),
+    [
+        if test "$enable_sdl" = "no"; then
+            AC_MSG_RESULT([Checking if SDL is disabled... yes])
+        fi
+    ],
+    [
+        if test "x$with_sdl" != "xno" -a "x$with_sdl" != "x"; then
+            AC_MSG_RESULT([Using SDL prefix... $with_sdl])
+            AC_PATH_PROGS(SDL_CONFIG,sdl2-config sdl-config,,$with_sdl/bin)
+        else
+            AC_PATH_PROGS(SDL_CONFIG, sdl2-config sdl-config)
+        fi
 
+        AC_MSG_CHECKING([SDL availability])
+        if test "x$SDL_CONFIG" = "x"; then
+            AC_MSG_RESULT([not found])
+        elif (sh -c "$SDL_CONFIG --version" | grep -e '^1\.3' -e '^2\.') then
+            AC_SUBST(ac_sdl_cflags)
+            AC_SUBST(ac_sdl_ldflags)
+            ac_sdl_cflags=`$SDL_CONFIG --cflags`
+            ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
+            ac_sdl_ldflags=`$SDL_CONFIG --libs`
+            ac_sdl_ldflags=`echo "${ac_sdl_ldflags}" | sed -e 's/-mwindows//g'`
+            LIBS="$LIBS $ac_sdl_ldflags"
+        else
+            AC_MSG_RESULT([Unsupported SDL version])
+        fi
+    ]
+)
 
 AC_ARG_WITH(ffmpeg,
-    AS_HELP_STRING([--with-ffmpeg=DIR],
-		   [Specify alternate FFMPEG prefix]),
+    AS_HELP_STRING([--with-ffmpeg=DIR], [Specify alternate FFMPEG prefix]),
     [],
     [with_ffmpeg=no]
-    )
+)
 
 dnl # Do not use default ffmpeg installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_ffmpeg" = "xno"; then
@@ -1353,157 +1565,133 @@ fi
 
 dnl # FFMPEG stuffs
 AC_ARG_ENABLE(ffmpeg,
-	      AS_HELP_STRING([--disable-ffmpeg],
-			     [Disable ffmpeg (default: not disabled)]),
-	      [
-	        AC_SUBST(ac_has_ffmpeg,0)
-		if test "$enable_ffmpeg" = "no"; then
-			AC_MSG_RESULT([Checking if ffmpeg is disabled... yes])
-		fi
-	      ],
-	      [
-		AC_SUBST(ac_ffmpeg_cflags)
-		AC_SUBST(ac_ffmpeg_ldflags)
+    AS_HELP_STRING([--disable-ffmpeg], [Disable ffmpeg (default: not disabled)]),
+    [
+        AC_SUBST(ac_has_ffmpeg,0)
+        if test "$enable_ffmpeg" = "no"; then
+            AC_MSG_RESULT([Checking if ffmpeg is disabled... yes])
+        fi
+    ],
+    [
+        AC_SUBST(ac_ffmpeg_cflags)
+        AC_SUBST(ac_ffmpeg_ldflags)
 
-		FFMPEG_PREFIX=""
-		AC_SUBST(SAVED_PKG_CONFIG_PATH)
-		SAVED_PKG_CONFIG_PATH=$PKG_CONFIG_PATH
-    		if test "x$with_ffmpeg" != "xno" -a "x$with_ffmpeg" != "x"; then
-			FFMPEG_PREFIX=$with_ffmpeg
-			AC_MSG_RESULT([Using ffmpeg prefix... $FFMPEG_PREFIX])
-			export PKG_CONFIG_PATH=$FFMPEG_PREFIX/lib/pkgconfig
-		fi
+        FFMPEG_PREFIX=""
+        AC_SUBST(SAVED_PKG_CONFIG_PATH)
+        SAVED_PKG_CONFIG_PATH=$PKG_CONFIG_PATH
+        if test "x$with_ffmpeg" != "xno" -a "x$with_ffmpeg" != "x"; then
+            FFMPEG_PREFIX=$with_ffmpeg
+            AC_MSG_RESULT([Using ffmpeg prefix... $FFMPEG_PREFIX])
+            export PKG_CONFIG_PATH=$FFMPEG_PREFIX/lib/pkgconfig
+        fi
 
-		AC_CHECK_PROGS(PKG_CONFIG,pkg-config "python pkgconfig.py",none)
+        AC_CHECK_PROGS(PKG_CONFIG,pkg-config "python pkgconfig.py",none)
 
-		if test "$PKG_CONFIG" != "none"; then
-			AC_MSG_CHECKING([ffmpeg packages])
-			av_pkg=""
-			if $PKG_CONFIG --exists libavdevice; then
-				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVDEVICE=1"
-				av_pkg="$av_pkg libavdevice"
-			fi
-			if $PKG_CONFIG --exists libavformat; then
-				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVFORMAT=1"
-				av_pkg="$av_pkg libavformat"
-			fi
-			if $PKG_CONFIG --exists libavcodec; then
-				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCODEC=1"
-				av_pkg="$av_pkg libavcodec"
-			fi
-			if $PKG_CONFIG --exists libswscale; then
-				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
-				av_pkg="$av_pkg libswscale"
-			fi
-			if $PKG_CONFIG --exists libavutil; then
-				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
-				av_pkg="$av_pkg libavutil"
-			fi
-			
-			if test "x$av_pkg" = "x"; then
-			   AC_MSG_RESULT([none detected (check the prefix)! **])
-			else
-			   AC_MSG_RESULT([$av_pkg])
-			fi
-			
-			ac_ffmpeg_cflags="$ac_ffmpeg_cflags `$PKG_CONFIG --cflags $av_pkg`"
-			ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags `$PKG_CONFIG --libs $av_pkg`"
+        if test "$PKG_CONFIG" != "none"; then
+            AC_MSG_CHECKING([ffmpeg packages])
+            av_pkg=""
+            if $PKG_CONFIG --exists libavdevice; then
+                ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVDEVICE=1"
+                av_pkg="$av_pkg libavdevice"
+            fi
+            if $PKG_CONFIG --exists libavformat; then
+                ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVFORMAT=1"
+                av_pkg="$av_pkg libavformat"
+            fi
+            if $PKG_CONFIG --exists libavcodec; then
+                ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCODEC=1"
+                av_pkg="$av_pkg libavcodec"
+            fi
+            if $PKG_CONFIG --exists libswscale; then
+                ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
+                av_pkg="$av_pkg libswscale"
+            fi
+            if $PKG_CONFIG --exists libavutil; then
+                ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
+                av_pkg="$av_pkg libavutil"
+            fi
 
-		else
-			dnl #
-			dnl # Use hardcoded values to configure ffmpeg
-			dnl #
-			
-			AC_MSG_RESULT([*** Warning: neither pkg-config nor python is available, ffmpeg dependency cannot be calculated. If ffmpeg libraries are not detected, you need to specify the correct CFLAGS and LDFLAGS settings for ffmpeg prior to invoking configure ***])
-			
-			LIBS="-L$FFMPEG_PREFIX/lib $LIBS"
-			LDFLAGS="-L$FFMPEG_PREFIX/lib $LDFLAGS"
-			CFLAGS="-I$FFMPEG_PREFIX/include $CFLAGS"
-			
-			AC_CHECK_LIB(avdevice,
-				     avdevice_version,
-				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVDEVICE=1"
-				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavdevice"
-				     ]
-				     )
-			AC_CHECK_LIB(avutil,
-				     av_malloc,
-				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
-				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavutil"
-				     ]
-				     )
-			AC_CHECK_LIB(avcodec,
-				     avcodec_init,
-				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCODEC=1"
-				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcodec"
-				     ],
-				     [],
-				     [-lavutil]
-				     )
-			AC_CHECK_LIB(avformat,
-				     av_register_all,
-				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVFORMAT=1"
-				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavformat"
-				     ],
-				     [],
-				     [-lavcodec -lavutil]
-				     )
-			AC_CHECK_LIB(swscale,
-				     sws_scale,
-				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
-				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lswscale"
-				     ],
-				     [],
-				     [-lavutil]
-				     )
-			AC_CHECK_LIB(avcore,
-				     avcore_version,
-				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCORE=1"
-				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcore"
-				     ]
-				     )
-			
-		fi
-		
-		AC_CHECK_TYPES(enum AVPixelFormat,
-			       [],
-			       [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_USE_OLD_FFMPEG=1"],
-			       [[#include <libavformat/avformat.h>]]
-			     )
-				     
-		LIBS="$LIBS $ac_ffmpeg_ldflags"
-		export PKG_CONFIG_PATH=$SAVED_PKG_CONFIG_PATH
-	      ]
-	      )
+            if test "x$av_pkg" = "x"; then
+               AC_MSG_RESULT([none detected (check the prefix)! **])
+            else
+               AC_MSG_RESULT([$av_pkg])
+            fi
+
+            ac_ffmpeg_cflags="$ac_ffmpeg_cflags `$PKG_CONFIG --cflags $av_pkg`"
+            ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags `$PKG_CONFIG --libs $av_pkg`"
+
+        else
+            dnl #
+            dnl # Use hardcoded values to configure ffmpeg
+            dnl #
+
+            AC_MSG_RESULT([*** Warning: neither pkg-config nor python is available, ffmpeg dependency cannot be calculated. If ffmpeg libraries are not detected, you need to specify the correct CFLAGS and LDFLAGS settings for ffmpeg prior to invoking configure ***])
+
+            LIBS="-L$FFMPEG_PREFIX/lib $LIBS"
+            LDFLAGS="-L$FFMPEG_PREFIX/lib $LDFLAGS"
+            CFLAGS="-I$FFMPEG_PREFIX/include $CFLAGS"
+
+            AC_CHECK_LIB(avdevice, avdevice_version, [
+                ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVDEVICE=1"
+                ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavdevice"])
+
+            AC_CHECK_LIB(avutil, av_malloc, [
+                ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
+                ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavutil"])
+
+            AC_CHECK_LIB(avcodec, avcodec_init, [
+                ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCODEC=1"
+                ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcodec"],
+                [], [-lavutil])
+
+            AC_CHECK_LIB(avformat, av_register_all, [
+                ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVFORMAT=1"
+                ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavformat"],
+                [], [-lavcodec -lavutil])
+
+            AC_CHECK_LIB(swscale, sws_scale, [
+                ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
+                ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lswscale"],
+                [], [-lavutil])
+
+            AC_CHECK_LIB(avcore, avcore_version, [
+                ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCORE=1"
+                ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcore"])
+        fi
+
+        AC_CHECK_TYPES(enum AVPixelFormat,[],[
+            ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_USE_OLD_FFMPEG=1"],
+            [[#include <libavformat/avformat.h>]])
+
+        LIBS="$LIBS $ac_ffmpeg_ldflags"
+        export PKG_CONFIG_PATH=$SAVED_PKG_CONFIG_PATH
+    ]
+)
 
 dnl # Video for Linux 2
 AC_ARG_ENABLE(v4l2,
-	      AS_HELP_STRING([--disable-v4l2],
-			     [Disable Video4Linux2 (default: not disabled)]),
-	      [
-		if test "$enable_v4l2" = "no"; then
-		  AC_MSG_RESULT([Checking if V4L2 is disabled... yes])
-		fi
-	      ],
-	      [
-	        AC_SUBST(ac_v4l2_cflags)
-	        AC_SUBST(ac_v4l2_ldflags)
-		AC_CHECK_LIB(v4l2,
-			     v4l2_open,
-			     [ac_v4l2_cflags="-DPJMEDIA_VIDEO_DEV_HAS_V4L2=1"
-			      ac_v4l2_ldflags="-lv4l2"
-			      LIBS="$LIBS -lv4l2"
-			     ]
-			     )
-	      ])
+    AS_HELP_STRING([--disable-v4l2], [Disable Video4Linux2 (default: not disabled)]),
+    [
+        if test "$enable_v4l2" = "no"; then
+            AC_MSG_RESULT([Checking if V4L2 is disabled... yes])
+        fi
+    ],
+    [
+        AC_SUBST(ac_v4l2_cflags)
+        AC_SUBST(ac_v4l2_ldflags)
+        AC_CHECK_LIB(v4l2, v4l2_open, [
+            ac_v4l2_cflags="-DPJMEDIA_VIDEO_DEV_HAS_V4L2=1"
+            ac_v4l2_ldflags="-lv4l2"
+            LIBS="$LIBS -lv4l2"])
+    ]
+)
 
 dnl # OpenH264 alt prefix
 AC_ARG_WITH(openh264,
-            AS_HELP_STRING([--with-openh264=DIR],
-		           [Specify alternate OpenH264 prefix]),
-            [],
-            [with_openh264=no]
-            )
+    AS_HELP_STRING([--with-openh264=DIR], [Specify alternate OpenH264 prefix]),
+    [],
+    [with_openh264=no]
+)
 
 dnl # Do not use default OpenH264 installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_openh264" = "xno"; then
@@ -1514,61 +1702,63 @@ dnl # OpenH264
 AC_SUBST(ac_openh264_cflags)
 AC_SUBST(ac_openh264_ldflags)
 AC_ARG_ENABLE(openh264,
-	      AS_HELP_STRING([--disable-openh264],
-			     [Disable OpenH264 (default: not disabled)]),
-	      [
-		if test "$enable_openh264" = "no"; then
-		  AC_MSG_RESULT([Checking if OpenH264 is disabled... yes])
-		fi
-	      ],
-	      [
-		  if test "x$with_openh264" != "xno" -a "x$with_openh264" != "x"; then
-		        OPENH264_PREFIX=$with_openh264
-		  	OPENH264_CFLAGS="-I$OPENH264_PREFIX/include"
-			OPENH264_LDFLAGS="-L$OPENH264_PREFIX/lib" 
-			AC_MSG_RESULT([Using OpenH264 prefix... $with_openh264])
-		  else
-		  	OPENH264_CFLAGS=""
-			OPENH264_LDFLAGS="" 
-		  fi
+    AS_HELP_STRING([--disable-openh264], [Disable OpenH264 (default: not disabled)]),
+    [
+        if test "$enable_openh264" = "no"; then
+            AC_MSG_RESULT([Checking if OpenH264 is disabled... yes])
+        fi
+    ],
+    [
+        if test "x$with_openh264" != "xno" -a "x$with_openh264" != "x"; then
+            OPENH264_PREFIX=$with_openh264
+            OPENH264_CFLAGS="-I$OPENH264_PREFIX/include"
+            OPENH264_LDFLAGS="-L$OPENH264_PREFIX/lib"
+            AC_MSG_RESULT([Using OpenH264 prefix... $with_openh264])
+        else
+            OPENH264_CFLAGS=""
+            OPENH264_LDFLAGS=""
+        fi
 
-		  AC_MSG_CHECKING([OpenH264 usability])
+        AC_MSG_CHECKING([OpenH264 usability])
 
-		  OPENH264_LIBS="-lopenh264 -lstdc++"
-		  
-		  SAVED_LIBS="$LIBS"
-		  SAVED_LDFLAGS="$LDFLAGS"
-		  SAVED_CFLAGS="$CFLAGS"
-		  
-		  LIBS="$OPENH264_LIBS $LIBS"
-		  LDFLAGS="$OPENH264_LDFLAGS $LDFLAGS"
-		  CFLAGS="$OPENH264_CFLAGS $CFLAGS"
-		  
-		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <wels/codec_api.h>
-		                                    #include <wels/codec_app_def.h>
-					          ]],
-					          [WelsCreateSVCEncoder(0);]
-					         )],
-		  		 [ ac_openh264_cflags="-DPJMEDIA_HAS_OPENH264_CODEC=1 $OPENH264_CFLAGS"
-		  		   ac_openh264_ldflags="$OPENH264_LDFLAGS $OPENH264_LIBS"
-		  		   AC_MSG_RESULT(yes)
-		  		  ],
-		  		 [
-				   LIBS="$SAVED_LIBS"
-				   LDFLAGS="$SAVED_LDFLAGS"
-				   CFLAGS="$SAVED_CFLAGS"
-		  		   AC_MSG_RESULT(no)
-		  		 ])
+        OPENH264_LIBS="-lopenh264 -lstdc++"
 
-	      ])
+        SAVED_LIBS="$LIBS"
+        SAVED_LDFLAGS="$LDFLAGS"
+        SAVED_CFLAGS="$CFLAGS"
+
+        LIBS="$OPENH264_LIBS $LIBS"
+        LDFLAGS="$OPENH264_LDFLAGS $LDFLAGS"
+        CFLAGS="$OPENH264_CFLAGS $CFLAGS"
+
+        AC_LINK_IFELSE(
+            [
+                AC_LANG_PROGRAM([
+                    [#include <wels/codec_api.h>
+                    #include <wels/codec_app_def.h>]],
+                    [WelsCreateSVCEncoder(0);])
+            ],
+            [
+                ac_openh264_cflags="-DPJMEDIA_HAS_OPENH264_CODEC=1 $OPENH264_CFLAGS"
+                ac_openh264_ldflags="$OPENH264_LDFLAGS $OPENH264_LIBS"
+                AC_MSG_RESULT(yes)
+            ],
+            [
+                LIBS="$SAVED_LIBS"
+                LDFLAGS="$SAVED_LDFLAGS"
+                CFLAGS="$SAVED_CFLAGS"
+                AC_MSG_RESULT(no)
+            ]
+        )
+    ]
+)
 
 dnl # VPX alt prefix
 AC_ARG_WITH(vpx,
-            AS_HELP_STRING([--with-vpx=DIR],
-		           [Specify alternate VPX prefix]),
-            [],
-            [with_vpx=no]
-            )
+    AS_HELP_STRING([--with-vpx=DIR], [Specify alternate VPX prefix]),
+    [],
+    [with_vpx=no]
+)
 
 dnl # Do not use default VPX installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_vpx" = "xno"; then
@@ -1579,276 +1769,282 @@ dnl # VPX
 AC_SUBST(ac_vpx_cflags)
 AC_SUBST(ac_vpx_ldflags)
 AC_ARG_ENABLE(vpx,
-	      AS_HELP_STRING([--disable-vpx],
-			     [Disable VPX (default: not disabled)]),
-	      [
-		if test "$enable_vpx" = "no"; then
-		  AC_MSG_RESULT([Checking if VPX is disabled... yes])
-		fi
-	      ],
-	      [
-		  if test "x$with_vpx" != "xno" -a "x$with_vpx" != "x"; then
-		        VPX_PREFIX=$with_vpx
-		  	VPX_CFLAGS="-I$VPX_PREFIX/include"
-			VPX_LDFLAGS="-L$VPX_PREFIX/lib" 
-			AC_MSG_RESULT([Using VPX prefix... $with_vpx])
-		  else
-		  	VPX_CFLAGS=""
-			VPX_LDFLAGS="" 
-		  fi
+    AS_HELP_STRING([--disable-vpx], [Disable VPX (default: not disabled)]),
+    [
+        if test "$enable_vpx" = "no"; then
+            AC_MSG_RESULT([Checking if VPX is disabled... yes])
+        fi
+    ],
+    [
+        if test "x$with_vpx" != "xno" -a "x$with_vpx" != "x"; then
+            VPX_PREFIX=$with_vpx
+            VPX_CFLAGS="-I$VPX_PREFIX/include"
+            VPX_LDFLAGS="-L$VPX_PREFIX/lib"
+            AC_MSG_RESULT([Using VPX prefix... $with_vpx])
+        else
+            VPX_CFLAGS=""
+            VPX_LDFLAGS=""
+        fi
 
-		  AC_MSG_CHECKING([VPX usability])
+        AC_MSG_CHECKING([VPX usability])
 
-		  VPX_LIBS="-lvpx"
-		  
-		  SAVED_LIBS="$LIBS"
-		  SAVED_LDFLAGS="$LDFLAGS"
-		  SAVED_CFLAGS="$CFLAGS"
-		  
-		  LIBS="$VPX_LIBS $LIBS"
-		  LDFLAGS="$VPX_LDFLAGS $LDFLAGS"
-		  CFLAGS="$VPX_CFLAGS $CFLAGS"
-		  
-		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <vpx/vpx_encoder.h>
-						    #include <vpx/vp8cx.h>
-					          ]],
-					          [vpx_codec_iface_t *(*enc_if)() = &vpx_codec_vp8_cx;]
-					         )],
-		  		 [ ac_vpx_cflags="-DPJMEDIA_HAS_VPX_CODEC=1 $VPX_CFLAGS"
-		  		   ac_vpx_ldflags="$VPX_LDFLAGS $VPX_LIBS"
-		  		   AC_MSG_RESULT(yes)
-		  		  ],
-		  		 [
-				   LIBS="$SAVED_LIBS"
-				   LDFLAGS="$SAVED_LDFLAGS"
-				   CFLAGS="$SAVED_CFLAGS"
-		  		   AC_MSG_RESULT(no)
-		  		 ])
+        VPX_LIBS="-lvpx"
 
-	      ])
+        SAVED_LIBS="$LIBS"
+        SAVED_LDFLAGS="$LDFLAGS"
+        SAVED_CFLAGS="$CFLAGS"
 
+        LIBS="$VPX_LIBS $LIBS"
+        LDFLAGS="$VPX_LDFLAGS $LDFLAGS"
+        CFLAGS="$VPX_CFLAGS $CFLAGS"
+
+        AC_LINK_IFELSE(
+            [
+                AC_LANG_PROGRAM([
+                    [#include <vpx/vpx_encoder.h>
+                    #include <vpx/vp8cx.h>]],
+                    [vpx_codec_iface_t *(*enc_if)() = &vpx_codec_vp8_cx;])
+            ],
+            [
+                ac_vpx_cflags="-DPJMEDIA_HAS_VPX_CODEC=1 $VPX_CFLAGS"
+                ac_vpx_ldflags="$VPX_LDFLAGS $VPX_LIBS"
+                AC_MSG_RESULT(yes)
+            ],
+            [
+                LIBS="$SAVED_LIBS"
+                LDFLAGS="$SAVED_LDFLAGS"
+                CFLAGS="$SAVED_CFLAGS"
+                AC_MSG_RESULT(no)
+            ]
+        )
+    ]
+)
 
 dnl ########################################################
 dnl # Intel IPP support
 dnl #
 AC_ARG_ENABLE(ipp,
     AS_HELP_STRING([--enable-ipp],
-		   [Enable Intel IPP support. Specify the Intel IPP package and samples location using IPPROOT and IPPSAMPLES env var or with --with-ipp and --with-ipp-samples options]),
+        [Enable Intel IPP support. Specify the Intel IPP package and samples location using IPPROOT and IPPSAMPLES env var or with --with-ipp and --with-ipp-samples options]),
     [],
     [enable_ipp=no]
-    )
+)
 
 AC_ARG_WITH(ipp,
-    AS_HELP_STRING([--with-ipp=DIR],
-		   [Specify the Intel IPP location]),
+    AS_HELP_STRING([--with-ipp=DIR], [Specify the Intel IPP location]),
     [],
     [with_ipp=no]
-    )
+)
 
 AC_ARG_WITH(ipp-samples,
-    AS_HELP_STRING([--with-ipp-samples=DIR],
-		   [Specify the Intel IPP samples location]),
+    AS_HELP_STRING([--with-ipp-samples=DIR], [Specify the Intel IPP samples location]),
     [],
     [with_ipp_samples=no]
-    )
+)
 
 AC_ARG_WITH(ipp-arch,
     AS_HELP_STRING([--with-ipp-arch=ARCH],
-		   [Specify the Intel IPP ARCH suffix, e.g. "64" or "em64t. Default is blank for IA32"]),
+        [Specify the Intel IPP ARCH suffix, e.g. "64" or "em64t. Default is blank for IA32"]),
     [],
     [with_ipp_arch=no]
-    )
+)
 
 if test "x$enable_ipp" != "xno"; then
-    dnl # 
+    dnl #
     dnl # Verifying Intel IPP path
     dnl #
     AC_MSG_CHECKING([Intel IPP location])
 
     if test "x$with_ipp" != "xno" -a "x$with_ipp" != "x"; then
-	AC_MSG_RESULT([$with_ipp])
-	IPPROOT=$with_ipp
+        AC_MSG_RESULT([$with_ipp])
+        IPPROOT=$with_ipp
     elif test "x$IPPROOT" = "x"; then
-	if test -d /opt/intel/ipp; then
-	    IPPROOT=`ls -d /opt/intel/ipp/*/* | head -1`
-	    AC_MSG_RESULT([autodetected in $IPPROOT])
-	fi
+        if test -d /opt/intel/ipp; then
+            IPPROOT=`ls -d /opt/intel/ipp/*/* | head -1`
+            AC_MSG_RESULT([autodetected in $IPPROOT])
+        fi
     else
-	AC_MSG_RESULT([$IPPROOT])
+        AC_MSG_RESULT([$IPPROOT])
     fi
 
     if test "x$with_ipp_arch" != "xno"; then
-	IPP_SUFFIX=$with_ipp_arch
-	AC_MSG_RESULT([IPP arch suffix is set to $IPP_SUFFIX])
+        IPP_SUFFIX=$with_ipp_arch
+        AC_MSG_RESULT([IPP arch suffix is set to $IPP_SUFFIX])
     else
-	IPP_SUFFIX=""
-	AC_MSG_RESULT([IPP arch suffix is set to empty])
+        IPP_SUFFIX=""
+        AC_MSG_RESULT([IPP arch suffix is set to empty])
     fi
 
     if test x$IPPROOT = x; then
-	AC_MSG_ERROR([the location is neither specified nor can be guessed. Please specify with IPPROOT env var or with --with-ipp option])
+        AC_MSG_ERROR([the location is neither specified nor can be guessed. Please specify with IPPROOT env var or with --with-ipp option])
     elif test ! -d $IPPROOT; then
-	AC_MSG_ERROR([not found])
+        AC_MSG_ERROR([not found])
     elif test ! -d $IPPROOT/include; then
-	AC_MSG_ERROR([directory doesn't seem to be valid])
+        AC_MSG_ERROR([directory doesn't seem to be valid])
     else
-	# IPP directory looks okay.
-	# Remove trailing backslash
-	IPPROOT=`echo $IPPROOT | sed 's/\/$//'`
+        # IPP directory looks okay.
+        # Remove trailing backslash
+        IPPROOT=`echo $IPPROOT | sed 's/\/$//'`
 
-	SAVED_CFLAGS="$CFLAGS"
-	SAVED_LDFLAGS="$LDFLAGS"
-	SAVED_LIBS="$LIBS"
+        SAVED_CFLAGS="$CFLAGS"
+        SAVED_LDFLAGS="$LDFLAGS"
+        SAVED_LIBS="$LIBS"
 
-	IPP_CFLAGS="-I$IPPROOT/include"
-	IPP_LIBS="-lippsc${IPP_SUFFIX} -lipps${IPP_SUFFIX} -lippcore${IPP_SUFFIX}"
+        IPP_CFLAGS="-I$IPPROOT/include"
+        IPP_LIBS="-lippsc${IPP_SUFFIX} -lipps${IPP_SUFFIX} -lippcore${IPP_SUFFIX}"
 
-#
-	# Some differences between Mac OS X and Linux
-	case $target in 
-	    *darwin* )
-		IPP_LDFLAGS="-L$IPPROOT/Libraries -L$IPPROOT/lib"
-		;;
-	    *)
-	    	# Find out where the libraries live.
-		IPP7_ARCH=""
-		if test -d $IPPROOT/lib/intel64; then
-		   IPP7_ARCH="intel64"
-		elif test -d $IPPROOT/lib/ia32; then
-		   IPP7_ARCH="ia32"
-		elif test -d $IPPROOT/lib/mic; then
-		   IPP7_ARCH="mic"
-		fi
+       # Some differences between Mac OS X and Linux
+        case $target in
+            *darwin* )
+                IPP_LDFLAGS="-L$IPPROOT/Libraries -L$IPPROOT/lib"
+            ;;
+            *)
+                # Find out where the libraries live.
+                IPP7_ARCH=""
+                if test -d $IPPROOT/lib/intel64; then
+                    IPP7_ARCH="intel64"
+                elif test -d $IPPROOT/lib/ia32; then
+                    IPP7_ARCH="ia32"
+                elif test -d $IPPROOT/lib/mic; then
+                    IPP7_ARCH="mic"
+                fi
 
-		if test -z "$IPP7_ARCH"; then
-		   # IPP6 (and possibly below)
-		   IPP_LDFLAGS="-L$IPPROOT/sharedlib"
-		   IPP_LIBS="$IPP_LIBS  -lippsr${IPP_SUFFIX} -lguide"
-		else
-		   # IPP7
-		   if ! test -d $IPPROOT/../compiler; then
-			AC_MSG_ERROR([Cannot find $IPPROOT/../compiler directory. Please set IPPROOT variable correctly])
-		   fi
-		   IPP_CFLAGS="$IPP_CFLAGS"
-		   IPP_LDFLAGS="-L$IPPROOT/lib/intel64 -L$IPPROOT/../compiler/lib/$IPP7_ARCH"
-		   IPP_LIBS="$IPP_LIBS -liomp5"
-		fi
-		;;
-	esac
+                if test -z "$IPP7_ARCH"; then
+                    # IPP6 (and possibly below)
+                    IPP_LDFLAGS="-L$IPPROOT/sharedlib"
+                    IPP_LIBS="$IPP_LIBS  -lippsr${IPP_SUFFIX} -lguide"
+                else
+                    # IPP7
+                    if ! test -d $IPPROOT/../compiler; then
+                        AC_MSG_ERROR([Cannot find $IPPROOT/../compiler directory. Please set IPPROOT variable correctly])
+                    fi
+                    IPP_CFLAGS="$IPP_CFLAGS"
+                    IPP_LDFLAGS="-L$IPPROOT/lib/intel64 -L$IPPROOT/../compiler/lib/$IPP7_ARCH"
+                    IPP_LIBS="$IPP_LIBS -liomp5"
+                fi
+            ;;
+        esac
 
-	#IPP_LDFLAGS="-L$IPPROOT/sharedlib"
-	#Static:
-	#IPP_LIBS="-lippscmerged -lippsrmerged -lippsmerged -lippcore"
+        #IPP_LDFLAGS="-L$IPPROOT/sharedlib"
+        #Static:
+        #IPP_LIBS="-lippscmerged -lippsrmerged -lippsmerged -lippcore"
 
-	CFLAGS="$CFLAGS $IPP_CFLAGS"
-	LDFLAGS="$LDFLAGS $IPP_LDFLAGS"
-	LIBS="$IPP_LIBS $LIBS"
+        CFLAGS="$CFLAGS $IPP_CFLAGS"
+        LDFLAGS="$LDFLAGS $IPP_LDFLAGS"
+        LIBS="$IPP_LIBS $LIBS"
 
+        AC_MSG_CHECKING([Intel IPP usability])
+        AC_LINK_IFELSE(
+            [
+                AC_LANG_PROGRAM([
+                    [#include <ippcore.h>]],
+                    [ippStaticInit();])
+            ],
+            [AC_MSG_RESULT(yes)],
+            [AC_MSG_FAILURE([Error: unable to recognize your IPP installation. Make sure the paths and ARCH suffix are set correctly, run with --help for more info])]
+        )
 
-	AC_MSG_CHECKING([Intel IPP usability])
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <ippcore.h>
-					   ]],
-					   [ippStaticInit();])],
-		  [AC_MSG_RESULT(yes)],
-		  [AC_MSG_FAILURE([Error: unable to recognize your IPP installation. Make sure the paths and ARCH suffix are set correctly, run with --help for more info])])
-
-	CFLAGS="$SAVED_CFLAGS"
-	LDFLAGS="$SAVED_LDFLAGS"
-	LIBS="$SAVED_LIBS"
+        CFLAGS="$SAVED_CFLAGS"
+        LDFLAGS="$SAVED_LDFLAGS"
+        LIBS="$SAVED_LIBS"
     fi
 
-    dnl # 
+    dnl #
     dnl # Verifying Intel IPP samples path
     dnl #
     AC_MSG_CHECKING([Intel IPP samples location])
 
     if test "x$with_ipp_samples" != "xno" -a "x$with_ipp_samples" != "x"; then
-	AC_MSG_RESULT([$with_ipp_samples])
-	IPPSAMPLES=$with_ipp_samples
+        AC_MSG_RESULT([$with_ipp_samples])
+        IPPSAMPLES=$with_ipp_samples
     elif test "x$IPPSAMPLES" = "x"; then
-	if test -d /opt/intel/ipp-samples; then
-	    IPPSAMPLES=/opt/intel/ipp-samples
-	    AC_MSG_RESULT([autodetected in $IPPSAMPLES])
-	fi
+        if test -d /opt/intel/ipp-samples; then
+            IPPSAMPLES=/opt/intel/ipp-samples
+            AC_MSG_RESULT([autodetected in $IPPSAMPLES])
+        fi
     else
-	AC_MSG_RESULT([$IPPSAMPLES])
+        AC_MSG_RESULT([$IPPSAMPLES])
     fi
 
     if test x$IPPSAMPLES = x; then
-	AC_MSG_ERROR([the location is neither specified nor can be guessed. Please specify with IPPSAMPLES env var or with --with-ipp-samples option])
+        AC_MSG_ERROR([the location is neither specified nor can be guessed. Please specify with IPPSAMPLES env var or with --with-ipp-samples option])
     elif test ! -d $IPPSAMPLES; then
-	AC_MSG_ERROR([not found])
+        AC_MSG_ERROR([not found])
     elif test ! -d $IPPSAMPLES/speech-codecs; then
-	AC_MSG_ERROR([directory doesn't seem to be valid])
+        AC_MSG_ERROR([directory doesn't seem to be valid])
     else
-	# Remove trailing backslash
-	IPPSAMPLES=`echo $IPPSAMPLES | sed 's/\/$//'`
-	
-	# Guess the libusc.a/libspeech.a build location
-	AC_MSG_CHECKING([Intel IPP USC build location])
-	if test -d $IPPSAMPLES/speech-codecs/bin; then
-	    IPPVER=5 
-	    IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/bin/*gcc*/lib | head -1`
-	elif test -d $IPPSAMPLES/speech-codecs/_bin; then
-	    IPPVER=6
-	    if test -d $IPPSAMPLES/speech-codecs/_bin/*gcc*; then
-		# gcc compiler
-	    	IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib | head -1`
-	    elif test -d $IPPSAMPLES/speech-codecs/_bin/*icc*; then
-		# icc compiler
-	    	IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/_bin/*icc*/lib | head -1`
-	    else
-		AC_MSG_FAILURE([Unable to find to find built binaries under $IPPSAMPLES/speech-codecs/{bin,_bin}. Have you built the IPP samples?])
-	    fi
-	else
-	    AC_MSG_FAILURE([unable to find $IPPSAMPLES/speech-codecs/bin/*gcc*/lib or $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib directory. Have you built the samples?])
-	fi
+        # Remove trailing backslash
+        IPPSAMPLES=`echo $IPPSAMPLES | sed 's/\/$//'`
 
-	# Test the directory
-	if test ! -d $IPPSAMP_DIR; then
-	    AC_MSG_FAILURE([There's something wrong with this script, directory $IPPSAMP_DIR does not exist])
-	    exit 1;
-	fi
+        # Guess the libusc.a/libspeech.a build location
+        AC_MSG_CHECKING([Intel IPP USC build location])
+        if test -d $IPPSAMPLES/speech-codecs/bin; then
+            IPPVER=5
+            IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/bin/*gcc*/lib | head -1`
+        elif test -d $IPPSAMPLES/speech-codecs/_bin; then
+            IPPVER=6
+            if test -d $IPPSAMPLES/speech-codecs/_bin/*gcc*; then
+                # gcc compiler
+                IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib | head -1`
+            elif test -d $IPPSAMPLES/speech-codecs/_bin/*icc*; then
+                # icc compiler
+                IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/_bin/*icc*/lib | head -1`
+            else
+                AC_MSG_FAILURE([Unable to find to find built binaries under $IPPSAMPLES/speech-codecs/{bin,_bin}. Have you built the IPP samples?])
+            fi
+        else
+            AC_MSG_FAILURE([unable to find $IPPSAMPLES/speech-codecs/bin/*gcc*/lib or $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib directory. Have you built the samples?])
+        fi
 
-    	if test "x$IPPVER" = "x5"; then
-	    IPPSAMP_LIBS="libusc.a"
-	    IPPSAMP_LDLIBS="-lusc"
-	elif test "x$IPPVER" = "x6"; then
-	    IPPSAMP_LIBS="libspeech.a"
-	    IPPSAMP_LDLIBS="-lspeech"
-	else
-	    AC_MSG_FAILURE([bug in this script: unsupported IPP version])
-	fi
+        # Test the directory
+        if test ! -d $IPPSAMP_DIR; then
+            AC_MSG_FAILURE([There's something wrong with this script, directory $IPPSAMP_DIR does not exist])
+            exit 1;
+        fi
 
-	if test ! -f $IPPSAMP_DIR/$IPPSAMP_LIBS; then
-	    AC_MSG_FAILURE([$IPPSAMP_LIBS doesn't exist in $IPPSAMP_DIR])
-	fi
+        if test "x$IPPVER" = "x5"; then
+            IPPSAMP_LIBS="libusc.a"
+            IPPSAMP_LDLIBS="-lusc"
+        elif test "x$IPPVER" = "x6"; then
+            IPPSAMP_LIBS="libspeech.a"
+            IPPSAMP_LDLIBS="-lspeech"
+        else
+            AC_MSG_FAILURE([bug in this script: unsupported IPP version])
+        fi
 
-	AC_MSG_RESULT([$IPPSAMP_DIR])
+        if test ! -f $IPPSAMP_DIR/$IPPSAMP_LIBS; then
+            AC_MSG_FAILURE([$IPPSAMP_LIBS doesn't exist in $IPPSAMP_DIR])
+        fi
 
-	SAVED_CFLAGS="$CFLAGS"
-	SAVED_LDFLAGS="$LDFLAGS"
-	SAVED_LIBS="$LIBS"
+        AC_MSG_RESULT([$IPPSAMP_DIR])
 
-	IPPSAMP_INC="-I$IPPSAMPLES/speech-codecs/core/usc/include"
-	CFLAGS="$CFLAGS $IPPSAMP_INC"
-	LDFLAGS="$LDFLAGS -L$IPPSAMP_DIR"
-	LIBS="$IPPSAMP_LDLIBS $LIBS"
+        SAVED_CFLAGS="$CFLAGS"
+        SAVED_LDFLAGS="$LDFLAGS"
+        SAVED_LIBS="$LIBS"
 
-	AC_MSG_CHECKING([Intel IPP USC usability])
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <usc.h>
-					   ]],
-					   [extern USC_Fxns USC_G729AFP_Fxns;])],
-		  [AC_MSG_RESULT(yes)],
-		  [AC_MSG_FAILURE(no)])
+        IPPSAMP_INC="-I$IPPSAMPLES/speech-codecs/core/usc/include"
+        CFLAGS="$CFLAGS $IPPSAMP_INC"
+        LDFLAGS="$LDFLAGS -L$IPPSAMP_DIR"
+        LIBS="$IPPSAMP_LDLIBS $LIBS"
 
-	CFLAGS="$SAVED_CFLAGS"
-	LDFLAGS="$IPP_LDFLAGS $SAVED_LDFLAGS"
-	LIBS="$IPP_LIBS $SAVED_LIBS"
+        AC_MSG_CHECKING([Intel IPP USC usability])
+        AC_LINK_IFELSE(
+            [
+                AC_LANG_PROGRAM([
+                    [#include <usc.h>]],
+                    [extern USC_Fxns USC_G729AFP_Fxns;])
+            ],
+            [AC_MSG_RESULT(yes)],
+            [AC_MSG_FAILURE(no)]
+        )
 
-	IPP_CFLAGS="$IPP_CFLAGS $IPPSAMP_INC"
-	IPP_LDFLAGS="$IPP_LDFLAGS -L$IPPSAMP_DIR"
-	IPP_LIBS="$IPPSAMP_LDLIBS $IPP_LIBS"
+        CFLAGS="$SAVED_CFLAGS"
+        LDFLAGS="$IPP_LDFLAGS $SAVED_LDFLAGS"
+        LIBS="$IPP_LIBS $SAVED_LIBS"
+
+        IPP_CFLAGS="$IPP_CFLAGS $IPPSAMP_INC"
+        IPP_LDFLAGS="$IPP_LDFLAGS -L$IPPSAMP_DIR"
+        IPP_LIBS="$IPPSAMP_LDLIBS $IPP_LIBS"
     fi
 
     CFLAGS="$CFLAGS $IPP_CFLAGS"
@@ -1856,9 +2052,9 @@ if test "x$enable_ipp" != "xno"; then
     LIBS="$LIBS $IPP_LIBS"
 
     ac_build_mak_vars="$ac_build_mak_vars\n\
-export IPP_CFLAGS=$IPP_CFLAGS\n\
-export IPP_LDFLAGS=$IPP_LDFLAGS\n\
-export IPP_LIBS=$IPP_LIBS"
+    export IPP_CFLAGS=$IPP_CFLAGS\n\
+    export IPP_LDFLAGS=$IPP_LDFLAGS\n\
+    export IPP_LIBS=$IPP_LIBS"
 else
     AC_MSG_RESULT([Skipping Intel IPP settings (not wanted)])
 fi
@@ -1867,25 +2063,29 @@ dnl # Include Android MediaCodec
 AC_SUBST(ac_no_mediacodec)
 
 AC_ARG_ENABLE(android-mediacodec,
-	      AS_HELP_STRING([--disable-android-mediacodec],
-			     [Exclude Android MediaCodec (default: autodetect)]),
-	      [if test "$enable_android_mediacodec" = "no"; then
-	     [ac_no_mediacodec=1]
-		 AC_MSG_RESULT([Checking if Android MediaCodec support is disabled... yes])
-	        fi],
-	      [
-		case $target in
-        *android*)
-	      AC_CHECK_LIB(mediandk,AMediaCodec_createDecoderByType,[ac_pjmedia_has_amediacodec=1 && LIBS="-lmediandk $LIBS"])
-	      if test "x$ac_pjmedia_has_amediacodec" = "x1"; then
-		    AC_MSG_RESULT([Checking if Android AMediaCodec library is available... yes])
-		    AC_DEFINE(PJMEDIA_HAS_ANDROID_MEDIACODEC, 1)
-	      else
-		    AC_MSG_RESULT([Checking if Android AMediaCodec library is available... no])
-	      fi
-		  ;;
-		esac
-	      ])
+    AS_HELP_STRING([--disable-android-mediacodec], [Exclude Android MediaCodec (default: autodetect)]),
+    [
+        if test "$enable_android_mediacodec" = "no"; then
+            [ac_no_mediacodec=1]
+            AC_MSG_RESULT([Checking if Android MediaCodec support is disabled... yes])
+        fi
+    ],
+    [
+        case $target in
+            *android*)
+                AC_CHECK_LIB(mediandk, AMediaCodec_createDecoderByType, [
+                    ac_pjmedia_has_amediacodec=1 && LIBS="-lmediandk $LIBS"])
+
+                if test "x$ac_pjmedia_has_amediacodec" = "x1"; then
+                    AC_MSG_RESULT([Checking if Android AMediaCodec library is available... yes])
+                    AC_DEFINE(PJMEDIA_HAS_ANDROID_MEDIACODEC, 1)
+                else
+                    AC_MSG_RESULT([Checking if Android AMediaCodec library is available... no])
+                fi
+            ;;
+        esac
+    ]
+)
 
 dnl ##########################################
 dnl #
@@ -1895,20 +2095,19 @@ dnl #
 dnl # SSL alt prefix
 AC_ARG_WITH(ssl,
     AS_HELP_STRING([--with-ssl=DIR],
-                   [Specify alternate SSL library prefix. This option will try
-                    to find OpenSSL first, then if not found, GnuTLS. To skip
-                    OpenSSL finding, use --with-gnutls option instead.]),
+        [Specify alternate SSL library prefix. This option will try
+            to find OpenSSL first, then if not found, GnuTLS. To skip
+            OpenSSL finding, use --with-gnutls option instead.]),
     [],
     [with_ssl=no]
-    )
+)
 
 dnl # GnuTLS alt prefix
 AC_ARG_WITH(gnutls,
-    AS_HELP_STRING([--with-gnutls=DIR],
-		   [Specify alternate GnuTLS prefix]),
+    AS_HELP_STRING([--with-gnutls=DIR], [Specify alternate GnuTLS prefix]),
     [],
     [with_gnutls=no]
-    )
+)
 
 dnl # Do not use default SSL installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno" -a "x$with_gnutls" = "xno"; then
@@ -1921,154 +2120,174 @@ AC_SUBST(ac_ssl_has_aes_gcm,0)
 AC_SUBST(ac_ssl_backend)
 
 AC_ARG_ENABLE(darwin-ssl,
-	      AS_HELP_STRING([--disable-darwin-ssl],
-			     [Exclude Darwin SSL (default: autodetect)]),
-	      [if test "$enable_darwin_ssl" = "no"; then
-		 AC_MSG_RESULT([Checking if Darwin SSL support is disabled... yes])
-	        fi],
-	      [
-		case $target in
-	  	*darwin*)
-	            SAVED_CFLAGS="$CFLAGS"
-	            CFLAGS="-Werror"
-	            SAVED_LIBS="$LIBS"
-	            LIBS="-framework Security"
-		    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <Security/SecureTransport.h>]],
-			[if (__builtin_available(macOS 10.12, iOS 10.0, *)) {
-			     SSLContextRef ssl_ctx;
-			     SSLReHandshake(ssl_ctx);
-			 }])],
-			[ac_ssl_backend=darwin],)
-		    CFLAGS="$SAVED_CFLAGS"
-		    LIBS="$SAVED_LIBS"
-	            if test "x$ac_ssl_backend" = "xdarwin"; then
-		        AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
-		        AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_DARWIN)
-		        LIBS="$LIBS -framework Security"
-	  	        AC_MSG_RESULT([Checking if Darwin SSL is available... yes])
-	            else
-	                AC_MSG_RESULT([Checking if Darwin SSL is available... no])
-		    fi
-		    ;;
-		esac
-	      ])
+    AS_HELP_STRING([--disable-darwin-ssl], [Exclude Darwin SSL (default: autodetect)]),
+    [
+        if test "$enable_darwin_ssl" = "no"; then
+            AC_MSG_RESULT([Checking if Darwin SSL support is disabled... yes])
+        fi
+    ],
+    [
+        case $target in
+            *darwin*)
+                SAVED_CFLAGS="$CFLAGS"
+                CFLAGS="-Werror"
+                SAVED_LIBS="$LIBS"
+
+                LIBS="-framework Security"
+                AC_COMPILE_IFELSE(
+                    [
+                        AC_LANG_PROGRAM([
+                            [#include <Security/SecureTransport.h>]],
+                            [if (__builtin_available(macOS 10.12, iOS 10.0, *)) {
+                                SSLContextRef ssl_ctx;
+                                SSLReHandshake(ssl_ctx);
+                            }])
+                    ],
+                    [ac_ssl_backend=darwin],
+                )
+
+                CFLAGS="$SAVED_CFLAGS"
+                LIBS="$SAVED_LIBS"
+                    if test "x$ac_ssl_backend" = "xdarwin"; then
+                    AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
+                    AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_DARWIN)
+                    LIBS="$LIBS -framework Security"
+                    AC_MSG_RESULT([Checking if Darwin SSL is available... yes])
+                    else
+                        AC_MSG_RESULT([Checking if Darwin SSL is available... no])
+                fi
+            ;;
+        esac
+    ]
+)
 
 AC_ARG_ENABLE(ssl,
-	      AS_HELP_STRING([--disable-ssl],
-			     [Exclude SSL support the build (default: autodetect)])
-	      ,
-	      [
-		if test "$enable_ssl" = "no"; then
-		 [ac_no_ssl=1]
-		 AC_MSG_RESULT([Checking if SSL support is disabled... yes])
-	        fi
-	      ],
-	      [
-	        if test "x$with_ssl" != "xno" -a "x$with_ssl" != "x"; then
-                    CFLAGS="$CFLAGS -I$with_ssl/include"
-                    CPPFLAGS="$CPPFLAGS -I$with_ssl/include"
-                    LDFLAGS="$LDFLAGS -L$with_ssl/lib"
-                    AC_MSG_RESULT([Using SSL prefix... $with_ssl])
+    AS_HELP_STRING([--disable-ssl], [Exclude SSL support the build (default: autodetect)]),
+    [
+        if test "$enable_ssl" = "no"; then
+            [ac_no_ssl=1]
+            AC_MSG_RESULT([Checking if SSL support is disabled... yes])
+        fi
+    ],
+    [
+        if test "x$with_ssl" != "xno" -a "x$with_ssl" != "x"; then
+            CFLAGS="$CFLAGS -I$with_ssl/include"
+            CPPFLAGS="$CPPFLAGS -I$with_ssl/include"
+            LDFLAGS="$LDFLAGS -L$with_ssl/lib"
+            AC_MSG_RESULT([Using SSL prefix... $with_ssl])
+        fi
+
+        if test "x$with_gnutls" = "xno"; then
+            # We still need to check for OpenSSL installations even if
+            # we find Darwin SSL above since DTLS requires OpenSSL.
+            AC_MSG_RESULT([checking for OpenSSL installations..])
+            AC_SUBST(openssl_h_present)
+            AC_SUBST(libssl_present)
+            AC_SUBST(libcrypto_present)
+            AC_CHECK_HEADER(openssl/ssl.h,[openssl_h_present=1])
+
+            AC_CHECK_LIB(crypto,ERR_load_BIO_strings,[
+                libcrypto_present=1 && LIBS="-lcrypto $LIBS"],
+                [
+                    AC_CHECK_LIB(crypto,ERR_get_error,[libcrypto_present=1 && LIBS="-lcrypto $LIBS"])
+                ]
+            )
+
+            AC_CHECK_LIB(ssl,SSL_CTX_new,[libssl_present=1 && LIBS="-lssl $LIBS"])
+
+            if test "x$openssl_h_present" = "x1" -a "x$libssl_present" = "x1" -a "x$libcrypto_present" = "x1"; then
+                AC_MSG_RESULT([OpenSSL library found, SSL support enabled])
+
+                # Check if SRTP should be compiled with OpenSSL
+                # support, to enable cryptos such as AES GCM.
+
+                # EVP_CIPHER_CTX is now opaque in OpenSSL 1.1.0, libsrtp 1.5.4 uses it as a transparent type.
+                # Update 2.7: our bundled libsrtp has been upgraded to 2.1.0,
+                # so we can omit EVP_CIPHER_CTX definition check now.
+                AC_COMPILE_IFELSE(
+                    [
+                        AC_LANG_PROGRAM([
+                            [#include <openssl/evp.h>]],
+                            [EVP_CIPHER_CTX *ctx;EVP_aes_128_gcm();])
+                    ],
+                    [
+                        AC_CHECK_LIB(crypto,EVP_aes_128_gcm,[ac_ssl_has_aes_gcm=1])
+                    ]
+                )
+
+                if test "x$ac_ssl_has_aes_gcm" = "x1"; then
+                    AC_MSG_RESULT([OpenSSL has AES GCM support, SRTP will use OpenSSL])
+                else
+                    AC_MSG_RESULT([OpenSSL AES GCM support not found, SRTP will only support AES CM cryptos])
                 fi
 
-	        if test "x$with_gnutls" = "xno"; then
-		    # We still need to check for OpenSSL installations even if
-		    # we find Darwin SSL above since DTLS requires OpenSSL.
-		    AC_MSG_RESULT([checking for OpenSSL installations..])
-		    AC_SUBST(openssl_h_present)
-		    AC_SUBST(libssl_present)
-		    AC_SUBST(libcrypto_present)
-		    AC_CHECK_HEADER(openssl/ssl.h,[openssl_h_present=1])
-		    AC_CHECK_LIB(crypto,ERR_load_BIO_strings,[libcrypto_present=1 && LIBS="-lcrypto $LIBS"], [AC_CHECK_LIB(crypto,ERR_get_error,[libcrypto_present=1 && LIBS="-lcrypto $LIBS"])])
-		    AC_CHECK_LIB(ssl,SSL_CTX_new,[libssl_present=1 && LIBS="-lssl $LIBS"])
-		    if test "x$openssl_h_present" = "x1" -a "x$libssl_present" = "x1" -a "x$libcrypto_present" = "x1"; then
-	        	AC_MSG_RESULT([OpenSSL library found, SSL support enabled])
-			
-			# Check if SRTP should be compiled with OpenSSL
-			# support, to enable cryptos such as AES GCM.
-			
-			# EVP_CIPHER_CTX is now opaque in OpenSSL 1.1.0, libsrtp 1.5.4 uses it as a transparent type.
-			# Update 2.7: our bundled libsrtp has been upgraded to 2.1.0,
-			# so we can omit EVP_CIPHER_CTX definition check now.
-			AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/evp.h>]],
-							  [EVP_CIPHER_CTX *ctx;EVP_aes_128_gcm();])],
-					  [AC_CHECK_LIB(crypto,EVP_aes_128_gcm,[ac_ssl_has_aes_gcm=1])])
-			if test "x$ac_ssl_has_aes_gcm" = "x1"; then
-				AC_MSG_RESULT([OpenSSL has AES GCM support, SRTP will use OpenSSL])
-			else
-				AC_MSG_RESULT([OpenSSL AES GCM support not found, SRTP will only support AES CM cryptos])
-			fi
+                if test "x$ac_ssl_backend" = "x"; then
+                    # PJSIP_HAS_TLS_TRANSPORT setting follows PJ_HAS_SSL_SOCK
+                    #AC_DEFINE(PJSIP_HAS_TLS_TRANSPORT, 1)
+                    AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
+                    AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_OPENSSL)
+                    ac_ssl_backend="openssl"
+                fi
+            else
+                AC_MSG_RESULT([** OpenSSL libraries not found **])
+            fi
+        fi
 
-    		        if test "x$ac_ssl_backend" = "x"; then
-			    # PJSIP_HAS_TLS_TRANSPORT setting follows PJ_HAS_SSL_SOCK
-			    #AC_DEFINE(PJSIP_HAS_TLS_TRANSPORT, 1)
-			    AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
-			    AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_OPENSSL)
-			    ac_ssl_backend="openssl"
-			fi
-		    else
-			AC_MSG_RESULT([** OpenSSL libraries not found **])
-		    fi
-		
-		fi
-		
-    		if test "x$ac_ssl_backend" = "x"; then
+        if test "x$ac_ssl_backend" = "x"; then
+            if test "x$with_gnutls" != "xno" -a "x$with_gnutls" != "x"; then
+                CFLAGS="$CFLAGS -I$with_gnutls/include"
+                LDFLAGS="$LDFLAGS -L$with_gnutls/lib"
+                AC_MSG_RESULT([Using GnuTLS prefix... $with_gnutls])
+            fi
 
-		    if test "x$with_gnutls" != "xno" -a "x$with_gnutls" != "x"; then
-        	        CFLAGS="$CFLAGS -I$with_gnutls/include"
-        	        LDFLAGS="$LDFLAGS -L$with_gnutls/lib"
-        	        AC_MSG_RESULT([Using GnuTLS prefix... $with_gnutls])
-    		    fi
-
-        	    AC_CHECK_PROGS(PKG_CONFIG,
+            AC_CHECK_PROGS(PKG_CONFIG,
                        $host-pkg-config pkg-config "python pkgconfig.py",
                        none)
-        	    AC_MSG_RESULT([checking for GnuTLS installations..])
-        	    AC_SUBST(gnutls_h_present)
-        	    AC_SUBST(libgnutls_present)
-        	    AC_CHECK_HEADER(gnutls/gnutls.h, [gnutls_h_present=1])
 
-        	    if test "$PKG_CONFIG" != "none"; then
-            	    	if $PKG_CONFIG --exists gnutls; then
-                	    LIBS="$LIBS `$PKG_CONFIG --libs gnutls`"
-                	    libgnutls_present=1
-            		else
-                	    AC_CHECK_LIB(gnutls,
-                             gnutls_certificate_set_x509_system_trust,
-                             [libgnutls_present=1 &&
-                              LIBS="$LIBS -lgnutls"])
-            		fi
-        	    else
-            		AC_MSG_RESULT([*** Warning: neither pkg-config nor python is available, disabling gnutls. ***])
-        	    fi
+            AC_MSG_RESULT([checking for GnuTLS installations..])
+            AC_SUBST(gnutls_h_present)
+            AC_SUBST(libgnutls_present)
+            AC_CHECK_HEADER(gnutls/gnutls.h, [gnutls_h_present=1])
 
-        	    if test "x$gnutls_h_present" = "x1" -a "x$libgnutls_present" = "x1"; then
-           		AC_MSG_RESULT([GnuTLS library found, SSL support enabled])
-			AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
-			AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_GNUTLS)
-            		ac_ssl_backend="gnutls"
-        	    else
-            		AC_MSG_RESULT([** No GnuTLS libraries found, disabling SSL support **])
-        	    fi
-        	
-        	fi
-	      ])
+            if test "$PKG_CONFIG" != "none"; then
+                if $PKG_CONFIG --exists gnutls; then
+                    LIBS="$LIBS `$PKG_CONFIG --libs gnutls`"
+                    libgnutls_present=1
+                else
+                    AC_CHECK_LIB(gnutls, gnutls_certificate_set_x509_system_trust, [
+                        libgnutls_present=1 && LIBS="$LIBS -lgnutls"])
+                fi
+            else
+                AC_MSG_RESULT([*** Warning: neither pkg-config nor python is available, disabling gnutls. ***])
+            fi
+
+            if test "x$gnutls_h_present" = "x1" -a "x$libgnutls_present" = "x1"; then
+                AC_MSG_RESULT([GnuTLS library found, SSL support enabled])
+                AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
+                AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_GNUTLS)
+                ac_ssl_backend="gnutls"
+            else
+                AC_MSG_RESULT([** No GnuTLS libraries found, disabling SSL support **])
+            fi
+
+        fi
+    ]
+)
 
 dnl # Obsolete option --with-opencore-amrnb
 AC_ARG_WITH(opencore-amrnb,
     AS_HELP_STRING([--with-opencore-amrnb=DIR],
-		   [This option is obsolete and replaced by --with-opencore-amr=DIR]),
+    [This option is obsolete and replaced by --with-opencore-amr=DIR]),
     [AC_MSG_ERROR(This option is obsolete and replaced by --with-opencore-amr=DIR)],
     [true;]
-    )
+)
 
 dnl # opencore-amr alt prefix
 AC_ARG_WITH(opencore-amr,
-    AS_HELP_STRING([--with-opencore-amr=DIR],
-		   [Specify alternate libopencore-amr prefix]),
+    AS_HELP_STRING([--with-opencore-amr=DIR], [Specify alternate libopencore-amr prefix]),
     [],
     [with_opencore_amr=no]
-    )
+)
 
 dnl # Do not use default opencore-amr installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_opencore_amr" = "xno"; then
@@ -2077,11 +2296,10 @@ fi
 
 dnl # vo-amrwbenc alt prefix
 AC_ARG_WITH(opencore-amrwbenc,
-    AS_HELP_STRING([--with-opencore-amrwbenc=DIR],
-		   [Specify alternate libvo-amrwbenc prefix]),
+    AS_HELP_STRING([--with-opencore-amrwbenc=DIR], [Specify alternate libvo-amrwbenc prefix]),
     [],
     [with_opencore_amrwbenc=no]
-    )
+)
 
 dnl # Do not use default vo-amrwbenc installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_opencore_amrwbenc" = "xno"; then
@@ -2093,68 +2311,75 @@ dnl # Include opencore-amr support
 AC_SUBST(ac_no_opencore_amrnb)
 AC_SUBST(ac_no_opencore_amrwb)
 AC_ARG_ENABLE(opencore_amr,
-	      AS_HELP_STRING([--disable-opencore-amr],
-			     [Exclude OpenCORE AMR support from the build (default: autodetect)])
-	      ,
-	      [
-		if test "$enable_opencore_amr" = "no"; then
-		 [ac_no_opencore_amrnb=1]
-		 [ac_no_opencore_amrwb=1]
-		 AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRNB_CODEC,0)
-		 AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRWB_CODEC,0)
-		 AC_MSG_RESULT([Checking if OpenCORE AMR support is disabled... yes])
-	        fi
-	      ],
-	      [
-		AC_MSG_RESULT([checking for OpenCORE AMR installations..])
-                if test "x$with_opencore_amr" != "xno" -a "x$with_opencore_amr" != "x"; then
-                    CFLAGS="$CFLAGS -I$with_opencore_amr/include"
-                    CPPFLAGS="$CPPFLAGS -I$with_opencore_amr/include"
-                    LDFLAGS="$LDFLAGS -L$with_opencore_amr/lib"
-                    AC_MSG_RESULT([Using OpenCORE AMR prefix... $with_opencore_amr])
-                fi
-                if test "x$with_opencore_amrwbenc" != "xno" -a "x$with_opencore_amrwbenc" != "x"; then
-                    CFLAGS="$CFLAGS -I$with_opencore_amrwbenc/include"
-                    CPPFLAGS="$CPPFLAGS -I$with_opencore_amrwbenc/include"
-                    LDFLAGS="$LDFLAGS -L$with_opencore_amrwbenc/lib"
-                    AC_MSG_RESULT([Using OpenCORE AMRWB-enc prefix... $with_opencore_amrwbenc])
-                fi
-		AC_SUBST(opencore_amrnb_h_present)
-		AC_SUBST(opencore_amrnb_present)
-		AC_CHECK_HEADER(opencore-amrnb/interf_enc.h,[opencore_amrnb_h_present=1])
-		AC_CHECK_LIB(opencore-amrnb,Encoder_Interface_init,[opencore_amrnb_present=1 && LIBS="$LIBS -lopencore-amrnb"])
-		if test "x$opencore_amrnb_h_present" = "x1" -a "x$opencore_amrnb_present" = "x1"; then
-	        	AC_MSG_RESULT([OpenCORE AMR-NB library found, AMR-NB support enabled])
-	        	AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRNB_CODEC,1)
-		else
-			[ac_no_opencore_amrnb=1]
-			AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRNB_CODEC,0)
-		fi
-		AC_SUBST(opencore_amrwb_enc_h_present)
-		AC_SUBST(opencore_amrwb_enc_present)
-		AC_SUBST(opencore_amrwb_dec_h_present)
-		AC_SUBST(opencore_amrwb_dec_present)
-		AC_CHECK_HEADER(vo-amrwbenc/enc_if.h,[opencore_amrwb_enc_h_present=1])
-		AC_CHECK_HEADER(opencore-amrwb/dec_if.h,[opencore_amrwb_dec_h_present=1])
-		AC_CHECK_LIB(opencore-amrwb,D_IF_init,[opencore_amrwb_dec_present=1 && LIBS="$LIBS -lopencore-amrwb"])
-		AC_CHECK_LIB(vo-amrwbenc,E_IF_init,[opencore_amrwb_enc_present=1 && LIBS="$LIBS -lvo-amrwbenc"])
-		if test "x$opencore_amrwb_enc_h_present" = "x1" -a "x$opencore_amrwb_dec_h_present" = "x1" -a "x$opencore_amrwb_enc_present" = "x1" -a "x$opencore_amrwb_dec_present" = "x1"; then
-	        	AC_MSG_RESULT([OpenCORE AMR-WB library found, AMR-WB support enabled])
-	        	AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRWB_CODEC,1)
-		else
-			[ac_no_opencore_amrwb=1]
-			AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRWB_CODEC,0)
-		fi
+    AS_HELP_STRING([--disable-opencore-amr], [Exclude OpenCORE AMR support from the build (default: autodetect)]),
+    [
+        if test "$enable_opencore_amr" = "no"; then
+            [ac_no_opencore_amrnb=1]
+            [ac_no_opencore_amrwb=1]
+            AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRNB_CODEC,0)
+            AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRWB_CODEC,0)
+            AC_MSG_RESULT([Checking if OpenCORE AMR support is disabled... yes])
+        fi
+    ],
+    [
+        AC_MSG_RESULT([checking for OpenCORE AMR installations..])
+        if test "x$with_opencore_amr" != "xno" -a "x$with_opencore_amr" != "x"; then
+            CFLAGS="$CFLAGS -I$with_opencore_amr/include"
+            CPPFLAGS="$CPPFLAGS -I$with_opencore_amr/include"
+            LDFLAGS="$LDFLAGS -L$with_opencore_amr/lib"
+            AC_MSG_RESULT([Using OpenCORE AMR prefix... $with_opencore_amr])
+        fi
 
-	      ])
+        if test "x$with_opencore_amrwbenc" != "xno" -a "x$with_opencore_amrwbenc" != "x"; then
+            CFLAGS="$CFLAGS -I$with_opencore_amrwbenc/include"
+            CPPFLAGS="$CPPFLAGS -I$with_opencore_amrwbenc/include"
+            LDFLAGS="$LDFLAGS -L$with_opencore_amrwbenc/lib"
+            AC_MSG_RESULT([Using OpenCORE AMRWB-enc prefix... $with_opencore_amrwbenc])
+        fi
+
+        AC_SUBST(opencore_amrnb_h_present)
+        AC_SUBST(opencore_amrnb_present)
+        AC_CHECK_HEADER(opencore-amrnb/interf_enc.h,[opencore_amrnb_h_present=1])
+        AC_CHECK_LIB(opencore-amrnb,Encoder_Interface_init,[
+            opencore_amrnb_present=1 && LIBS="$LIBS -lopencore-amrnb"])
+
+        if test "x$opencore_amrnb_h_present" = "x1" -a "x$opencore_amrnb_present" = "x1"; then
+            AC_MSG_RESULT([OpenCORE AMR-NB library found, AMR-NB support enabled])
+            AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRNB_CODEC,1)
+        else
+            [ac_no_opencore_amrnb=1]
+            AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRNB_CODEC,0)
+        fi
+
+        AC_SUBST(opencore_amrwb_enc_h_present)
+        AC_SUBST(opencore_amrwb_enc_present)
+        AC_SUBST(opencore_amrwb_dec_h_present)
+        AC_SUBST(opencore_amrwb_dec_present)
+        AC_CHECK_HEADER(vo-amrwbenc/enc_if.h,[opencore_amrwb_enc_h_present=1])
+        AC_CHECK_HEADER(opencore-amrwb/dec_if.h,[opencore_amrwb_dec_h_present=1])
+
+        AC_CHECK_LIB(opencore-amrwb,D_IF_init,[
+            opencore_amrwb_dec_present=1 && LIBS="$LIBS -lopencore-amrwb"])
+
+        AC_CHECK_LIB(vo-amrwbenc,E_IF_init,[
+            opencore_amrwb_enc_present=1 && LIBS="$LIBS -lvo-amrwbenc"])
+
+        if test "x$opencore_amrwb_enc_h_present" = "x1" -a "x$opencore_amrwb_dec_h_present" = "x1" -a "x$opencore_amrwb_enc_present" = "x1" -a "x$opencore_amrwb_dec_present" = "x1"; then
+                AC_MSG_RESULT([OpenCORE AMR-WB library found, AMR-WB support enabled])
+                AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRWB_CODEC,1)
+        else
+            [ac_no_opencore_amrwb=1]
+            AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRWB_CODEC,0)
+        fi
+    ]
+)
 
 dnl # SILK prefix
 AC_ARG_WITH(silk,
-    AS_HELP_STRING([--with-silk=DIR],
-		   [Specify alternate SILK prefix]),
+    AS_HELP_STRING([--with-silk=DIR], [Specify alternate SILK prefix]),
     [],
     [with_silk=no]
-    )
+)
 
 dnl # Do not use default SILK installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_silk" = "xno"; then
@@ -2164,36 +2389,38 @@ fi
 dnl # Include SILK support
 AC_SUBST(ac_no_silk)
 AC_ARG_ENABLE(silk,
-	      AS_HELP_STRING([--disable-silk],
-			     [Exclude SILK support from the build (default: autodetect)])
-	      ,
-	      [
-		if test "$enable_silk" = "no"; then
-		 [ac_no_silk=1]
-		 AC_DEFINE(PJMEDIA_HAS_SILK_CODEC,0)
-		 AC_MSG_RESULT([Checking if SILK support is disabled... yes])
-	        fi
-	      ],
-	      [
-		AC_MSG_RESULT([checking for SILK installations..])
-                if test "x$with_silk" != "xno" -a "x$with_silk" != "x"; then
-                    CFLAGS="$CFLAGS -I$with_silk/interface"
-                    CPPFLAGS="$CPPFLAGS -I$with_silk/interface"
-                    LDFLAGS="$LDFLAGS -L$with_silk"
-                    AC_MSG_RESULT([Using SILK prefix... $with_silk])
-                fi                
-		AC_SUBST(silk_h_present)
-		AC_SUBST(silk_present)
-		AC_CHECK_HEADER(SKP_Silk_SDK_API.h,[silk_h_present=1])
-		AC_CHECK_LIB(SKP_SILK_SDK,SKP_Silk_SDK_get_version,[silk_present=1 && LIBS="$LIBS -lSKP_SILK_SDK"])
-		if test "x$silk_h_present" = "x1" -a "x$silk_present" = "x1"; then
-	        	AC_MSG_RESULT([SILK library found, SILK support enabled])
-	        	AC_DEFINE(PJMEDIA_HAS_SILK_CODEC,1)
-		else
-			[ac_no_silk=1]
-			AC_DEFINE(PJMEDIA_HAS_SILK_CODEC,0)
-		fi
-	      ])
+    AS_HELP_STRING([--disable-silk], [Exclude SILK support from the build (default: autodetect)]),
+    [
+        if test "$enable_silk" = "no"; then
+            [ac_no_silk=1]
+            AC_DEFINE(PJMEDIA_HAS_SILK_CODEC,0)
+            AC_MSG_RESULT([Checking if SILK support is disabled... yes])
+        fi
+    ],
+    [
+        AC_MSG_RESULT([checking for SILK installations..])
+        if test "x$with_silk" != "xno" -a "x$with_silk" != "x"; then
+            CFLAGS="$CFLAGS -I$with_silk/interface"
+            CPPFLAGS="$CPPFLAGS -I$with_silk/interface"
+            LDFLAGS="$LDFLAGS -L$with_silk"
+            AC_MSG_RESULT([Using SILK prefix... $with_silk])
+        fi
+
+        AC_SUBST(silk_h_present)
+        AC_SUBST(silk_present)
+        AC_CHECK_HEADER(SKP_Silk_SDK_API.h,[silk_h_present=1])
+        AC_CHECK_LIB(SKP_SILK_SDK,SKP_Silk_SDK_get_version,[
+            silk_present=1 && LIBS="$LIBS -lSKP_SILK_SDK"])
+
+        if test "x$silk_h_present" = "x1" -a "x$silk_present" = "x1"; then
+            AC_MSG_RESULT([SILK library found, SILK support enabled])
+            AC_DEFINE(PJMEDIA_HAS_SILK_CODEC,1)
+        else
+            [ac_no_silk=1]
+            AC_DEFINE(PJMEDIA_HAS_SILK_CODEC,0)
+        fi
+    ]
+)
 
 dnl # Do not use default OPUS installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_opus" = "xno"; then
@@ -2202,54 +2429,53 @@ fi
 
 dnl # OPUS prefix
 AC_ARG_WITH(opus,
-    AS_HELP_STRING([--with-opus=DIR],
-		   [Specify alternate OPUS prefix]),
+    AS_HELP_STRING([--with-opus=DIR], [Specify alternate OPUS prefix]),
     [],
     [with_opus=no]
-    )
+)
 
 dnl # Include OPUS support
 AC_SUBST(ac_no_opus)
 AC_ARG_ENABLE(opus,
-	      AS_HELP_STRING([--disable-opus],
-			     [Exclude OPUS support from the build (default: autodetect)])
-	      ,
-	      [
-		if test "$enable_opus" = "no"; then
-		 [ac_no_opus=1]
-		 AC_DEFINE(PJMEDIA_HAS_OPUS_CODEC,0)
-		 AC_MSG_RESULT([Checking if OPUS support is disabled... yes])
-	        fi
-	      ],
-	      [
-		AC_MSG_RESULT([checking for OPUS installations..])
-                if test "x$with_opus" != "xno" -a "x$with_opus" != "x"; then
-                    CFLAGS="$CFLAGS -I$with_opus/include"
-                    CPPFLAGS="$CPPFLAGS -I$with_opus/include"
-                    LDFLAGS="$LDFLAGS -L$with_opus/lib"
-                    AC_MSG_RESULT([Using OPUS prefix... $with_opus])
-                fi
-		AC_SUBST(opus_h_present)
-		AC_SUBST(opus_present)
-		AC_CHECK_HEADER(opus/opus.h,[opus_h_present=1])
-		AC_CHECK_LIB(opus,opus_repacketizer_get_size,[opus_present=1 && LIBS="-lopus $LIBS"])
-		if test "x$opus_h_present" = "x1" -a "x$opus_present" = "x1"; then
-	        	AC_MSG_RESULT([OPUS library found, OPUS support enabled])
-	        	AC_DEFINE(PJMEDIA_HAS_OPUS_CODEC,1)
-		else
-			[ac_no_opus=1]
-	        	AC_MSG_RESULT([OPUS library not found, OPUS support disabled])
-			AC_DEFINE(PJMEDIA_HAS_OPUS_CODEC,0)
-		fi
-	      ])
+    AS_HELP_STRING([--disable-opus], [Exclude OPUS support from the build (default: autodetect)]),
+    [
+        if test "$enable_opus" = "no"; then
+            [ac_no_opus=1]
+            AC_DEFINE(PJMEDIA_HAS_OPUS_CODEC,0)
+            AC_MSG_RESULT([Checking if OPUS support is disabled... yes])
+        fi
+    ],
+    [
+        AC_MSG_RESULT([checking for OPUS installations..])
+        if test "x$with_opus" != "xno" -a "x$with_opus" != "x"; then
+            CFLAGS="$CFLAGS -I$with_opus/include"
+            CPPFLAGS="$CPPFLAGS -I$with_opus/include"
+            LDFLAGS="$LDFLAGS -L$with_opus/lib"
+            AC_MSG_RESULT([Using OPUS prefix... $with_opus])
+        fi
+        AC_SUBST(opus_h_present)
+        AC_SUBST(opus_present)
+        AC_CHECK_HEADER(opus/opus.h,[opus_h_present=1])
+        AC_CHECK_LIB(opus,opus_repacketizer_get_size,[
+            opus_present=1 && LIBS="-lopus $LIBS"])
+
+        if test "x$opus_h_present" = "x1" -a "x$opus_present" = "x1"; then
+            AC_MSG_RESULT([OPUS library found, OPUS support enabled])
+            AC_DEFINE(PJMEDIA_HAS_OPUS_CODEC,1)
+        else
+            [ac_no_opus=1]
+            AC_MSG_RESULT([OPUS library not found, OPUS support disabled])
+            AC_DEFINE(PJMEDIA_HAS_OPUS_CODEC,0)
+        fi
+    ]
+)
 
 dnl # bcg729 prefix
 AC_ARG_WITH(bcg729,
-            AS_HELP_STRING([--with-bcg729=DIR],
-		           [Specify alternate bcg729 prefix]),
-            [],
-            [with_bcg729=no]
-            )
+    AS_HELP_STRING([--with-bcg729=DIR], [Specify alternate bcg729 prefix]),
+    [],
+    [with_bcg729=no]
+)
 
 dnl # Do not use default bcg729 installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_bcg729" = "xno"; then
@@ -2259,65 +2485,66 @@ fi
 dnl # bcg729
 AC_SUBST(ac_no_bcg729)
 AC_ARG_ENABLE(bcg729,
-	      AS_HELP_STRING([--disable-bcg729],
-			     [Disable bcg729 (default: not disabled)]),
-	      [
-		if test "$enable_bcg729" = "no"; then
-		  [ac_no_bcg729=1]
-		  AC_DEFINE(PJMEDIA_HAS_BCG729,0)
-		  AC_MSG_RESULT([Checking if bcg729 is disabled... yes])
-		fi
-	      ],
-	      [
-		  if test "x$with_bcg729" != "xno" -a "x$with_bcg729" != "x"; then
-		        BCG729_PREFIX=$with_bcg729
-		  	BCG729_CFLAGS="-I$BCG729_PREFIX/include"
-			BCG729_LDFLAGS="-L$BCG729_PREFIX/lib" 
-			AC_MSG_RESULT([Using bcg729 prefix... $with_bcg729])
-		  else
-		  	BCG729_CFLAGS=""
-			BCG729_LDFLAGS="" 
-		  fi
+    AS_HELP_STRING([--disable-bcg729], [Disable bcg729 (default: not disabled)]),
+    [
+        if test "$enable_bcg729" = "no"; then
+            [ac_no_bcg729=1]
+            AC_DEFINE(PJMEDIA_HAS_BCG729,0)
+            AC_MSG_RESULT([Checking if bcg729 is disabled... yes])
+        fi
+    ],
+    [
+        if test "x$with_bcg729" != "xno" -a "x$with_bcg729" != "x"; then
+            BCG729_PREFIX=$with_bcg729
+            BCG729_CFLAGS="-I$BCG729_PREFIX/include"
+            BCG729_LDFLAGS="-L$BCG729_PREFIX/lib"
+            AC_MSG_RESULT([Using bcg729 prefix... $with_bcg729])
+        else
+            BCG729_CFLAGS=""
+            BCG729_LDFLAGS=""
+        fi
 
-		  AC_MSG_CHECKING([bcg729 usability])
+        AC_MSG_CHECKING([bcg729 usability])
 
-		  BCG729_LIBS="-lbcg729"
-		  
-		  SAVED_LIBS="$LIBS"
-		  SAVED_LDFLAGS="$LDFLAGS"
-		  SAVED_CFLAGS="$CFLAGS"
-		  
-		  LIBS="$BCG729_LIBS $LIBS"
-		  LDFLAGS="$BCG729_LDFLAGS $LDFLAGS"
-		  CFLAGS="$BCG729_CFLAGS $CFLAGS"
-		  
-		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <bcg729/encoder.h>
-		                                    #include <bcg729/decoder.h>
-					          ]],
-					          [initBcg729EncoderChannel(0);]
-					         )],
-		  		 [ 
-				   AC_DEFINE(PJMEDIA_HAS_BCG729,1)
-		  		   AC_MSG_RESULT(yes)
-		  		  ],
-		  		 [
-				   [ac_no_bcg729=1]
-				   AC_DEFINE(PJMEDIA_HAS_BCG729,0)
-				   LIBS="$SAVED_LIBS"
-				   LDFLAGS="$SAVED_LDFLAGS"
-				   CFLAGS="$SAVED_CFLAGS"
-		  		   AC_MSG_RESULT(no)
-		  		 ])
+        BCG729_LIBS="-lbcg729"
 
-	      ])
-		  
+        SAVED_LIBS="$LIBS"
+        SAVED_LDFLAGS="$LDFLAGS"
+        SAVED_CFLAGS="$CFLAGS"
+
+        LIBS="$BCG729_LIBS $LIBS"
+        LDFLAGS="$BCG729_LDFLAGS $LDFLAGS"
+        CFLAGS="$BCG729_CFLAGS $CFLAGS"
+
+        AC_LINK_IFELSE(
+            [
+                AC_LANG_PROGRAM([
+                    [#include <bcg729/encoder.h>
+                    #include <bcg729/decoder.h>]],
+                    [initBcg729EncoderChannel(0);])
+            ],
+            [
+                AC_DEFINE(PJMEDIA_HAS_BCG729,1)
+                AC_MSG_RESULT(yes)
+            ],
+            [
+                [ac_no_bcg729=1]
+                AC_DEFINE(PJMEDIA_HAS_BCG729,0)
+                LIBS="$SAVED_LIBS"
+                LDFLAGS="$SAVED_LDFLAGS"
+                CFLAGS="$SAVED_CFLAGS"
+                AC_MSG_RESULT(no)
+            ]
+        )
+    ]
+)
+
 dnl # lyra prefix
 AC_ARG_WITH(lyra,
-            AS_HELP_STRING([--with-lyra=DIR],
-		           [Specify alternate lyra prefix]),
-            [],
-            [with_lyra=no]
-            )
+    AS_HELP_STRING([--with-lyra=DIR], [Specify alternate lyra prefix]),
+    [],
+    [with_lyra=no]
+)
 
 dnl # Do not use default lyra installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_lyra" = "xno"; then
@@ -2328,93 +2555,96 @@ dnl # lyra
 AC_SUBST(ac_no_lyra_codec)
 AC_SUBST(ac_lyra_model_path)
 AC_ARG_ENABLE(lyra,
-    	      AS_HELP_STRING([--disable-lyra],
-    			     [Disable lyra (default: not disabled)]),
-    	      [
-	      	if test "$enable_lyra" = "no"; then
-	      	  [ac_no_lyra_codec=1]
-	      	  AC_DEFINE(PJMEDIA_HAS_LYRA_CODEC,0)
-		  AC_MSG_RESULT([Checking if lyra is disabled... yes])
-  		fi
-     	      ],
-     	      [
-   		  if test "x$with_lyra" != "xno" -a "x$with_lyra" != "x"; then
-	      		LYRA_PREFIX=$with_lyra
-                  	dnl # inside autoconf, single quoted preprocessor definition will raise error
-	      		LYRA_CPPFLAGS="-DGLOG_DEPRECATED=__attribute__((deprecated)) -DGLOG_EXPORT=__attribute__((visibility(\"default\"))) -DGLOG_NO_EXPORT=__attribute__((visibility(\"default\")))"
-	      		LYRA_CXXFLAGS="-std=c++17 -Wno-deprecated-builtins -I$LYRA_PREFIX/include/com_google_absl -I$LYRA_PREFIX/include/gulrak_filesystem -I$LYRA_PREFIX/include/com_google_glog/src -I$LYRA_PREFIX"
-	                LYRA_LDFLAGS="-L$LYRA_PREFIX/lib"
-	      		AC_MSG_RESULT([Using lyra prefix... $with_lyra])
-	      	  else
-	      		LYRA_CXXFLAGS=""
-	      		LYRA_LDFLAGS=""
-	      	  fi
+    AS_HELP_STRING([--disable-lyra], [Disable lyra (default: not disabled)]),
+    [
+        if test "$enable_lyra" = "no"; then
+            [ac_no_lyra_codec=1]
+            AC_DEFINE(PJMEDIA_HAS_LYRA_CODEC,0)
+            AC_MSG_RESULT([Checking if lyra is disabled... yes])
+        fi
+    ],
+    [
+        if test "x$with_lyra" != "xno" -a "x$with_lyra" != "x"; then
+            LYRA_PREFIX=$with_lyra
+            dnl # inside autoconf, single quoted preprocessor definition will raise error
+            LYRA_CPPFLAGS="-DGLOG_DEPRECATED=__attribute__((deprecated)) -DGLOG_EXPORT=__attribute__((visibility(\"default\"))) -DGLOG_NO_EXPORT=__attribute__((visibility(\"default\")))"
+            LYRA_CXXFLAGS="-std=c++17 -Wno-deprecated-builtins -I$LYRA_PREFIX/include/com_google_absl -I$LYRA_PREFIX/include/gulrak_filesystem -I$LYRA_PREFIX/include/com_google_glog/src -I$LYRA_PREFIX"
+            LYRA_LDFLAGS="-L$LYRA_PREFIX/lib"
+            AC_MSG_RESULT([Using lyra prefix... $with_lyra])
+        else
+            LYRA_CXXFLAGS=""
+            LYRA_LDFLAGS=""
+        fi
 
-    		  AC_MSG_CHECKING([lyra usability])
+        AC_MSG_CHECKING([lyra usability])
 
-    		  LYRA_LIBS="-llyra"
+        LYRA_LIBS="-llyra"
 
-    		  SAVED_LIBS="$LIBS"
-     		  SAVED_LDFLAGS="$LDFLAGS"
-   		  SAVED_CXXFLAGS="$CXXFLAGS"
-     		  SAVED_CPPFLAGS="$CPPFLAGS"
+        SAVED_LIBS="$LIBS"
+        SAVED_LDFLAGS="$LDFLAGS"
+        SAVED_CXXFLAGS="$CXXFLAGS"
+        SAVED_CPPFLAGS="$CPPFLAGS"
 
-     		  LIBS="$LYRA_LIBS $LIBS"
-     		  LDFLAGS="$LYRA_LDFLAGS $LDFLAGS"
-     		  CXXFLAGS="$LYRA_CXXFLAGS $CXXFLAGS"
-     		  CPPFLAGS="$LYRA_CPPFLAGS $CPPFLAGS"
+        LIBS="$LYRA_LIBS $LIBS"
+        LDFLAGS="$LYRA_LDFLAGS $LDFLAGS"
+        CXXFLAGS="$LYRA_CXXFLAGS $CXXFLAGS"
+        CPPFLAGS="$LYRA_CPPFLAGS $CPPFLAGS"
 
-     		  AC_LANG_PUSH([C++])
-     		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include "lyra_decoder.h"
-     					          ]],
-     					          [std::unique_ptr<chromemedia::codec::LyraDecoder> dec = chromemedia::codec::LyraDecoder::Create(8000,1,"");]
-     					         )],
-	      		  		 [
-	      				   [ac_lyra_model_path="$LYRA_PREFIX/model_coeffs"]
-	      				   AC_DEFINE(PJMEDIA_HAS_LYRA_CODEC,1)
-					   dnl # use single quoted preprocessor definition
-	      		  	      	   LYRA_CPPFLAGS="'-DGLOG_DEPRECATED=__attribute__((deprecated))' '-DGLOG_EXPORT=__attribute__((visibility(\"default\")))' '-DGLOG_NO_EXPORT=__attribute__((visibility(\"default\")))'"
-                        		   CXXFLAGS="$LYRA_CPPFLAGS $CXXFLAGS"
-	      		  		   AC_MSG_RESULT(yes)
-	      		  		  ],
-	      		  		 [
-	      				   [ac_no_lyra_codec=1]
-	      				   LIBS="$SAVED_LIBS"
-	      				   LDFLAGS="$SAVED_LDFLAGS"
-	      				   CXXFLAGS="$SAVED_CXXFLAGS"
-	      		  		   AC_MSG_RESULT(no)
-	      		  		 ])
-	      		  AC_LANG_POP([C++])
-                          CPPFLAGS="$SAVED_CPPFLAGS"
-	      	      ])
-
-
+        AC_LANG_PUSH([C++])
+        AC_LINK_IFELSE(
+            [
+                AC_LANG_PROGRAM([
+                    [#include "lyra_decoder.h"]],
+                    [std::unique_ptr<chromemedia::codec::LyraDecoder> dec = chromemedia::codec::LyraDecoder::Create(8000,1,"");])
+            ],
+            [
+                [ac_lyra_model_path="$LYRA_PREFIX/model_coeffs"]
+                AC_DEFINE(PJMEDIA_HAS_LYRA_CODEC,1)
+                dnl # use single quoted preprocessor definition
+                LYRA_CPPFLAGS="'-DGLOG_DEPRECATED=__attribute__((deprecated))' '-DGLOG_EXPORT=__attribute__((visibility(\"default\")))' '-DGLOG_NO_EXPORT=__attribute__((visibility(\"default\")))'"
+                CXXFLAGS="$LYRA_CPPFLAGS $CXXFLAGS"
+                AC_MSG_RESULT(yes)
+            ],
+            [
+                [ac_no_lyra_codec=1]
+                LIBS="$SAVED_LIBS"
+                LDFLAGS="$SAVED_LDFLAGS"
+                CXXFLAGS="$SAVED_CXXFLAGS"
+                AC_MSG_RESULT(no)
+            ]
+        )
+        AC_LANG_POP([C++])
+        CPPFLAGS="$SAVED_CPPFLAGS"
+    ]
+)
 
 dnl # Include libsrtp
 AC_SUBST(ac_no_srtp)
 AC_ARG_ENABLE(libsrtp,
-	      AS_HELP_STRING([--disable-libsrtp],
-			     [Exclude libsrtp in the build]),
-	      [if test "$enable_libsrtp" = "no"; then
-		[ac_no_srtp=1]
-		CFLAGS="$CFLAGS -DPJMEDIA_HAS_SRTP=0"
-		AC_MSG_RESULT([Checking if libsrtp is disabled...yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if libsrtp is disabled...no]))
-
+    AS_HELP_STRING([--disable-libsrtp], [Exclude libsrtp in the build]),
+    [
+        if test "$enable_libsrtp" = "no"; then
+            [ac_no_srtp=1]
+            CFLAGS="$CFLAGS -DPJMEDIA_HAS_SRTP=0"
+            AC_MSG_RESULT([Checking if libsrtp is disabled...yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if libsrtp is disabled...no])
+)
 
 dnl # Include libyuv
 AC_SUBST(ac_no_yuv)
 AC_ARG_ENABLE(libyuv,
-	      AS_HELP_STRING([--disable-libyuv],
-			     [Exclude libyuv in the build]),
-	      [if test "$enable_libyuv" = "no"; then
-		[ac_no_yuv=1]
-		AC_DEFINE(PJMEDIA_HAS_LIBYUV,0)
-		AC_MSG_RESULT([Checking if libyuv is disabled...yes])
-	       fi],
-	      AC_MSG_RESULT([Checking if libyuv is disabled...no]))
-
+    AS_HELP_STRING([--disable-libyuv], [Exclude libyuv in the build]),
+    [
+        if test "$enable_libyuv" = "no"; then
+            [ac_no_yuv=1]
+            AC_DEFINE(PJMEDIA_HAS_LIBYUV,0)
+            AC_MSG_RESULT([Checking if libyuv is disabled...yes])
+        fi
+    ],
+    AC_MSG_RESULT([Checking if libyuv is disabled...no])
+)
 
 dnl # Include webrtc
 AC_SUBST(ac_no_webrtc)
@@ -2422,81 +2652,83 @@ AC_SUBST(ac_webrtc_instset)
 AC_SUBST(ac_webrtc_cflags)
 AC_SUBST(ac_webrtc_ldflags)
 AC_ARG_ENABLE(libwebrtc,
-	      AS_HELP_STRING([--disable-libwebrtc],
-			     [Exclude libwebrtc in the build]),
-	      [if test "$enable_libwebrtc" = "no"; then
-		[ac_no_webrtc=1]
-		AC_DEFINE(PJMEDIA_HAS_LIBWEBRTC,0)
-		AC_MSG_RESULT([Checking if libwebrtc is disabled...yes])
-	       fi],
-	      [
-		  AC_MSG_RESULT([Checking if libwebrtc is disabled...no])
-		  case $target in
-		      *-apple-darwin_ios*)
-			case $target in
-			    arm64*)
-				ac_webrtc_instset=neon
-				ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
-			    	;;
-			    *arm*)
-				ac_webrtc_instset=neon
-			    	;;
-			    *)
-				ac_webrtc_instset=sse2
-			    	;;
-			esac
-		        ;;
-		      *android*)
-			case $TARGET_ABI in
-			    armeabi-v7a)
-				ac_webrtc_instset=neon
-				ac_webrtc_cflags="-mfloat-abi=softfp -mfpu=neon"
-			    	;;
-			    armeabi)
-				ac_webrtc_instset=neon
-				ac_webrtc_cflags="-mthumb -mfloat-abi=softfp -mfpu=neon -march=armv7"
-			    	;;
-			    arm64*)
-				ac_webrtc_instset=neon
-				ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
-			    	;;
-			    mips64*)
-			    	ac_webrtc_instset=generic
-			        ;;
-			    mips*)
-			    	ac_webrtc_instset=mips
-			        ;;
-			    x86*)
-			    	ac_webrtc_instset=sse2
-			    	;;
-			    *)
-				ac_webrtc_instset=generic
-			    	;;
-			esac
-		        ;;
-		     *mingw* | *cygw*)
-			ac_webrtc_instset=sse2
-			ac_webrtc_cflags="-msse2"
-			;;
-		     *win32* | *w32* | *darwin* | *linux*)
-                         case $target in
-                             armv7l*gnueabihf)
-                                 ac_webrtc_instset=neon
-                                 ac_webrtc_cflags="-DWEBRTC_ARCH_ARM_V7 -mfloat-abi=hard -mfpu=neon"
-                                 ;;
-			     arm-apple-darwin* | aarch64*)
-				 ac_webrtc_instset=neon
-				 ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
-			    	 ;;
-                             *)
-                                 ac_webrtc_instset=sse2
-                                 ;;
-                         esac
-			;;
-		     *)
-			;;
-		esac	
-	      ])
+    AS_HELP_STRING([--disable-libwebrtc], [Exclude libwebrtc in the build]),
+    [
+        if test "$enable_libwebrtc" = "no"; then
+            [ac_no_webrtc=1]
+            AC_DEFINE(PJMEDIA_HAS_LIBWEBRTC,0)
+            AC_MSG_RESULT([Checking if libwebrtc is disabled...yes])
+        fi
+    ],
+    [
+        AC_MSG_RESULT([Checking if libwebrtc is disabled...no])
+        case $target in
+            *-apple-darwin_ios*)
+                case $target in
+                    arm64*)
+                        ac_webrtc_instset=neon
+                        ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
+                    ;;
+                    *arm*)
+                        ac_webrtc_instset=neon
+                    ;;
+                    *)
+                        ac_webrtc_instset=sse2
+                    ;;
+                esac
+            ;;
+            *android*)
+                case $TARGET_ABI in
+                    armeabi-v7a)
+                        ac_webrtc_instset=neon
+                        ac_webrtc_cflags="-mfloat-abi=softfp -mfpu=neon"
+                    ;;
+                    armeabi)
+                        ac_webrtc_instset=neon
+                        ac_webrtc_cflags="-mthumb -mfloat-abi=softfp -mfpu=neon -march=armv7"
+                    ;;
+                    arm64*)
+                        ac_webrtc_instset=neon
+                        ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
+                    ;;
+                    mips64*)
+                        ac_webrtc_instset=generic
+                    ;;
+                    mips*)
+                        ac_webrtc_instset=mips
+                    ;;
+                    x86*)
+                        ac_webrtc_instset=sse2
+                    ;;
+                    *)
+                        ac_webrtc_instset=generic
+                    ;;
+                esac
+            ;;
+            *mingw* | *cygw*)
+                ac_webrtc_instset=sse2
+                ac_webrtc_cflags="-msse2"
+            ;;
+            *win32* | *w32* | *darwin* | *linux*)
+                case $target in
+                    armv7l*gnueabihf)
+                        ac_webrtc_instset=neon
+                        ac_webrtc_cflags="-DWEBRTC_ARCH_ARM_V7 -mfloat-abi=hard -mfpu=neon"
+                    ;;
+                    arm-apple-darwin* | aarch64*)
+                        ac_webrtc_instset=neon
+                        ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
+                    ;;
+                    *)
+                        ac_webrtc_instset=sse2
+                    ;;
+                esac
+            ;;
+            *)
+            ;;
+        esac
+    ]
+)
 
 
 dnl # Include webrtc AEC3
@@ -2505,104 +2737,112 @@ AC_SUBST(ac_webrtc_aec3_instset)
 AC_SUBST(ac_webrtc_aec3_cflags)
 AC_SUBST(ac_webrtc_aec3_ldflags)
 AC_ARG_ENABLE(libwebrtc_aec3,
-	      AS_HELP_STRING([--enable-libwebrtc-aec3],
-			     [Build libwebrtc-aec3 that's included in PJSIP]),
-	      [
-           	if test "$enable_libwebrtc_aec3" = "yes"; then
-		  # Test if we can build WebRtc AEC3
-		  AC_MSG_CHECKING([if WebRtc AEC3 can be compiled with C++17])
-	
-		  SAVED_CXXFLAGS="$CXXFLAGS"
-		  CXXFLAGS="$CXXFLAGS -std=c++17"
-		  
-		  AC_LANG_PUSH([C++])
-		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
-		  [AC_MSG_RESULT(yes)
-		   LD="$CXX"],
-		  [AC_MSG_RESULT(no)
-		   CXXFLAGS="$SAVED_CXXFLAGS"
-		   ac_no_webrtc_aec3=1
-		   AC_DEFINE(PJMEDIA_HAS_LIBWEBRTC_AEC3,0)])
-		  AC_LANG_POP([C++])
+    AS_HELP_STRING([--enable-libwebrtc-aec3], [Build libwebrtc-aec3 that's included in PJSIP]),
+    [
+        if test "$enable_libwebrtc_aec3" = "yes"; then
+            # Test if we can build WebRtc AEC3
+            AC_MSG_CHECKING([if WebRtc AEC3 can be compiled with C++17])
 
-		  case $target in
-		      *-apple-darwin_ios*)
-			case $target in
-			    arm64*)
-				ac_webrtc_aec3_instset=neon
-				ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
-			    	;;
-			    *arm*)
-				ac_webrtc_aec3_instset=neon
-			    	;;
-			    *)
-				ac_webrtc_aec3_instset=sse2
-			    	;;
-			esac
-                	ac_webrtc_aec3_cflags+=" -DWEBRTC_IOS=1"
-		        ;;
-		      *android*)
-			case $TARGET_ABI in
-			    armeabi-v7a)
-				ac_webrtc_aec3_instset=neon
-				ac_webrtc_aec3_cflags="-mfloat-abi=softfp -mfpu=neon"
-			    	;;
-			    armeabi)
-				ac_webrtc_aec3_instset=neon
-				ac_webrtc_aec3_cflags="-mthumb -mfloat-abi=softfp -mfpu=neon -march=armv7"
-			    	;;
-			    arm64*)
-				ac_webrtc_aec3_instset=neon
-				ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
-			    	;;
-			    x86*)
-			    	ac_webrtc_aec3_instset=sse2
-			    	;;
-			esac
-                	ac_webrtc_aec3_cflags+=" -DWEBRTC_ANDROID=1"
-		        ;;
-		     *mingw* | *cygw*)
-			ac_webrtc_aec3_instset=sse2
-			ac_webrtc_aec3_cflags="-msse2"
-			;;
-		     *win32* | *w32* | *darwin* | *linux*)
-                         case $target in
-                             armv7l*gnueabihf)
-                                 ac_webrtc_aec3_instset=neon
-                                 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM_V7 -mfloat-abi=hard -mfpu=neon"
-                                 ;;
-			     arm-apple-darwin* | aarch64*)
-				 ac_webrtc_aec3_instset=neon
-				 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
-			    	 ;;
-                             *)
-                                 ac_webrtc_aec3_instset=sse2
-                                 ;;
-                         esac
-                         case $target in
-                             *darwin*)
-                                 ac_webrtc_aec3_cflags+=" -DWEBRTC_MAC=1"
-                                 ;;
-                            *linux*)
-                                ac_webrtc_aec3_cflags+=" -DWEBRTC_LINUX=1"
-                                ;;
-                         esac
-			;;
-		     *)
-			;;
-		  esac
-		  ac_webrtc_aec3_cflags+=" -DWEBRTC_APM_DEBUG_DUMP=0 -DWEBRTC_POSIX=1"
-           	else
-           	  ac_no_webrtc_aec3=1
-           	  AC_DEFINE(PJMEDIA_HAS_LIBWEBRTC_AEC3,0)
-             	  AC_MSG_RESULT([Checking if libwebrtc-aec3 is enabled...no])
-          	fi
-	      ],
-	      [ac_no_webrtc_aec3=1
-	       AC_DEFINE(PJMEDIA_HAS_LIBWEBRTC_AEC3,0)
-	       AC_MSG_RESULT([Checking if libwebrtc-aec3 is enabled...no])
-	      ])
+            SAVED_CXXFLAGS="$CXXFLAGS"
+            CXXFLAGS="$CXXFLAGS -std=c++17"
 
+            AC_LANG_PUSH([C++])
+            AC_LINK_IFELSE(
+                [
+                    AC_LANG_PROGRAM([[]], [])
+                ],
+                [
+                    AC_MSG_RESULT(yes)
+                    LD="$CXX"
+                ],
+                [
+                    AC_MSG_RESULT(no)
+                    CXXFLAGS="$SAVED_CXXFLAGS"
+                    ac_no_webrtc_aec3=1
+                    AC_DEFINE(PJMEDIA_HAS_LIBWEBRTC_AEC3,0)
+                ]
+            )
+            AC_LANG_POP([C++])
+
+            case $target in
+                *-apple-darwin_ios*)
+                    case $target in
+                        arm64*)
+                            ac_webrtc_aec3_instset=neon
+                            ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+                        ;;
+                        *arm*)
+                            ac_webrtc_aec3_instset=neon
+                        ;;
+                        *)
+                            ac_webrtc_aec3_instset=sse2
+                        ;;
+                    esac
+                    ac_webrtc_aec3_cflags+=" -DWEBRTC_IOS=1"
+                ;;
+                *android*)
+                    case $TARGET_ABI in
+                        armeabi-v7a)
+                            ac_webrtc_aec3_instset=neon
+                            ac_webrtc_aec3_cflags="-mfloat-abi=softfp -mfpu=neon"
+                        ;;
+                        armeabi)
+                            ac_webrtc_aec3_instset=neon
+                            ac_webrtc_aec3_cflags="-mthumb -mfloat-abi=softfp -mfpu=neon -march=armv7"
+                        ;;
+                        arm64*)
+                            ac_webrtc_aec3_instset=neon
+                            ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+                        ;;
+                        x86*)
+                            ac_webrtc_aec3_instset=sse2
+                        ;;
+                    esac
+                    ac_webrtc_aec3_cflags+=" -DWEBRTC_ANDROID=1"
+                ;;
+                *mingw* | *cygw*)
+                    ac_webrtc_aec3_instset=sse2
+                    ac_webrtc_aec3_cflags="-msse2"
+                ;;
+                *win32* | *w32* | *darwin* | *linux*)
+                    case $target in
+                        armv7l*gnueabihf)
+                            ac_webrtc_aec3_instset=neon
+                            ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM_V7 -mfloat-abi=hard -mfpu=neon"
+                        ;;
+                        arm-apple-darwin* | aarch64*)
+                            ac_webrtc_aec3_instset=neon
+                            ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+                        ;;
+                        *)
+                            ac_webrtc_aec3_instset=sse2
+                        ;;
+                    esac
+                    case $target in
+                        *darwin*)
+                            ac_webrtc_aec3_cflags+=" -DWEBRTC_MAC=1"
+                        ;;
+                        *linux*)
+                            ac_webrtc_aec3_cflags+=" -DWEBRTC_LINUX=1"
+                        ;;
+                    esac
+                ;;
+                *)
+                ;;
+            esac
+            ac_webrtc_aec3_cflags+=" -DWEBRTC_APM_DEBUG_DUMP=0 -DWEBRTC_POSIX=1"
+        else
+            ac_no_webrtc_aec3=1
+            AC_DEFINE(PJMEDIA_HAS_LIBWEBRTC_AEC3,0)
+            AC_MSG_RESULT([Checking if libwebrtc-aec3 is enabled...no])
+        fi
+    ],
+    [
+        ac_no_webrtc_aec3=1
+        AC_DEFINE(PJMEDIA_HAS_LIBWEBRTC_AEC3,0)
+        AC_MSG_RESULT([Checking if libwebrtc-aec3 is enabled...no])
+    ]
+)
 
 dnl ##########################################
 dnl #
@@ -2615,13 +2855,15 @@ dnl # correct value (max_fd+1). If zero, nfds will be filled up with
 dnl # PJ_FD_SETSIZE
 AC_MSG_CHECKING([if select() needs correct nfds])
 case $target in
-  *rtems*) AC_DEFINE(PJ_SELECT_NEEDS_NFDS,1)
-	   AC_MSG_RESULT(yes)
-	;;
-  *) AC_DEFINE(PJ_SELECT_NEEDS_NFDS,0)
-     AC_MSG_RESULT([no (default)])
-     AC_MSG_RESULT([** Decided that select() doesn't need correct nfds (please check)])
-	;;
+    *rtems*)
+        AC_DEFINE(PJ_SELECT_NEEDS_NFDS,1)
+        AC_MSG_RESULT(yes)
+    ;;
+    *)
+        AC_DEFINE(PJ_SELECT_NEEDS_NFDS,0)
+        AC_MSG_RESULT([no (default)])
+        AC_MSG_RESULT([** Decided that select() doesn't need correct nfds (please check)])
+    ;;
 esac
 
 dnl # Determine if pj_thread_create() should enforce thread stack size when
@@ -2629,46 +2871,52 @@ dnl # creating thread. Default is zero, to allow OS to allocate appropriate
 dnl # thread's stack size.
 AC_MSG_CHECKING([if pj_thread_create() should enforce stack size])
 case $target in
-  *rtems*) AC_DEFINE(PJ_THREAD_SET_STACK_SIZE,1)
-	   AC_MSG_RESULT(yes)
-	;;
-  *) AC_DEFINE(PJ_THREAD_SET_STACK_SIZE,0)
-     AC_MSG_RESULT([no (default)])
-	;;
+    *rtems*)
+        AC_DEFINE(PJ_THREAD_SET_STACK_SIZE,1)
+        AC_MSG_RESULT(yes)
+    ;;
+    *)
+        AC_DEFINE(PJ_THREAD_SET_STACK_SIZE,0)
+        AC_MSG_RESULT([no (default)])
+    ;;
 esac
 
 dnl # Determine if pj_thread_create() should allocate thread's stack from
 dnl # the pool. Default is zero, to let OS allocate thread's stack.
 AC_MSG_CHECKING([if pj_thread_create() should allocate stack])
 case $target in
-  *rtems*) AC_DEFINE(PJ_THREAD_ALLOCATE_STACK,1)
-	   AC_MSG_RESULT(yes)
-	;;
-  *) AC_DEFINE(PJ_THREAD_ALLOCATE_STACK,0)
-     AC_MSG_RESULT([no (default)])
-	;;
+    *rtems*)
+        AC_DEFINE(PJ_THREAD_ALLOCATE_STACK,1)
+        AC_MSG_RESULT(yes)
+    ;;
+    *)
+        AC_DEFINE(PJ_THREAD_ALLOCATE_STACK,0)
+        AC_MSG_RESULT([no (default)])
+    ;;
 esac
 
 dnl # This value specifies the value set in errno by the OS when a non-blocking
 dnl # socket recv() can not return immediate data.
 case $target in
-  *mingw* | *cygw* | *win32* | *w32* )
-	AC_DEFINE(PJ_BLOCKING_ERROR_VAL,WSAEWOULDBLOCK)
-	;;
-  *) AC_DEFINE(PJ_BLOCKING_ERROR_VAL,EAGAIN)
-     AC_MSG_RESULT([** Setting non-blocking recv() retval to EAGAIN (please check)])
-	;;
+    *mingw* | *cygw* | *win32* | *w32* )
+        AC_DEFINE(PJ_BLOCKING_ERROR_VAL,WSAEWOULDBLOCK)
+    ;;
+    *)
+        AC_DEFINE(PJ_BLOCKING_ERROR_VAL,EAGAIN)
+        AC_MSG_RESULT([** Setting non-blocking recv() retval to EAGAIN (please check)])
+    ;;
 esac
 
 dnl # This value specifies the value set in errno by the OS when a non-blocking
 dnl # socket connect() can not get connected immediately.
 case $target in
-  *mingw* | *cygw* | *win32* | *w32* )
-	AC_DEFINE(PJ_BLOCKING_CONNECT_ERROR_VAL,WSAEWOULDBLOCK)
-	;;
-  *) AC_DEFINE(PJ_BLOCKING_CONNECT_ERROR_VAL,EINPROGRESS)
-     AC_MSG_RESULT([** Setting non-blocking connect() retval to EINPROGRESS (please check)])
-	;;
+    *mingw* | *cygw* | *win32* | *w32* )
+        AC_DEFINE(PJ_BLOCKING_CONNECT_ERROR_VAL,WSAEWOULDBLOCK)
+    ;;
+    *)
+        AC_DEFINE(PJ_BLOCKING_CONNECT_ERROR_VAL,EINPROGRESS)
+        AC_MSG_RESULT([** Setting non-blocking connect() retval to EINPROGRESS (please check)])
+    ;;
 esac
 
 dnl
@@ -2678,11 +2926,11 @@ dnl #   pthread_setname_np()/pthread_set_name_np() in pthread_np.h on bsd
 dnl
 
 case $target in
-  *linux* | *darwin* | *bsd*)
-	AC_CHECK_HEADER(pthread_np.h,[AC_DEFINE(PJ_HAS_PTHREAD_NP_H,1)])
-	AC_CHECK_FUNC(pthread_setname_np,[AC_DEFINE(PJ_HAS_PTHREAD_SETNAME_NP,1)])
-	AC_CHECK_FUNC(pthread_set_name_np,[AC_DEFINE(PJ_HAS_PTHREAD_SET_NAME_NP,1)])
-	;;
+    *linux* | *darwin* | *bsd*)
+        AC_CHECK_HEADER(pthread_np.h,[AC_DEFINE(PJ_HAS_PTHREAD_NP_H,1)])
+        AC_CHECK_FUNC(pthread_setname_np,[AC_DEFINE(PJ_HAS_PTHREAD_SETNAME_NP,1)])
+        AC_CHECK_FUNC(pthread_set_name_np,[AC_DEFINE(PJ_HAS_PTHREAD_SET_NAME_NP,1)])
+    ;;
 esac
 
 
@@ -2690,18 +2938,17 @@ AC_SUBST(target)
 AC_SUBST(ac_host,unix)
 AC_SUBST(ac_main_obj)
 case $target in
-  *rtems*)
-	ac_main_obj=main_rtems.o
-	;;
-  *)
-	ac_main_obj=main.o
-	;;
+    *rtems*)
+        ac_main_obj=main_rtems.o
+    ;;
+    *)
+        ac_main_obj=main.o
+    ;;
 esac
 AC_SUBST(CC)
 
 ac_build_mak_vars=`echo $ac_build_mak_vars | sed 's/\\\\n/\n/g'`
 AC_OUTPUT
-
 
 AC_MSG_RESULT([
 
