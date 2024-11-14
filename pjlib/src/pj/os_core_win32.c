@@ -54,7 +54,7 @@
 #else
 #   define LOG_MUTEX(expr)  PJ_LOG(6,expr)
 #endif
-#   define LOG_MUTEX_WARN(expr)  PJ_LOG(3,expr)
+#   define LOG_MUTEX_WARN(expr)  PJ_PERROR(3,expr)
 #define THIS_FILE       "os_core_win32.c"
 
 /*
