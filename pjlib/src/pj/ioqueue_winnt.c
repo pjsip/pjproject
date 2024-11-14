@@ -746,16 +746,8 @@ static void cancel_all_pending_op(pj_ioqueue_key_t *key)
 {
     if (!fnCancelIoEx)
         fnCancelIoEx = (FnCancelIoEx)GetProcAddress(GetModuleHandle(PJ_T("Kernel32.dll")), "CancelIoEx");
-    if (fnCancelIoEx) {
-        struct pending_op *op;
-        pj_mutex_lock(key->mutex);
-        for (op = key->pending_list.next; op != &key->pending_list; op = op->next) {
-            BOOL rc = fnCancelIoEx(key->ioqueue->iocp, (LPOVERLAPPED)&op->pending_key);
-            if (rc)
-                PJ_PERROR(2, (THIS_FILE, PJ_RETURN_OS_ERROR(GetLastError()), "cancel io error"));
-        }
-        pj_mutex_unlock(key->mutex);
-    }
+    if (fnCancelIoEx)
+        fnCancelIoEx(key->hnd, NULL);
 }
 
 /*
