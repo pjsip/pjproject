@@ -115,6 +115,7 @@ AC_CHECK_LIB(winmm,puts)
 AC_CHECK_LIB(socket,puts)
 AC_CHECK_LIB(rt,puts)
 AC_CHECK_LIB(m,sin)
+AC_CHECK_PROGS(PKG_CONFIG,$host_cpu-$host_os-pkg-config $host-pkg-config pkg-config "python pkgconfig.py",none)
 
 dnl
 dnl libuuid
@@ -1528,7 +1529,7 @@ AC_ARG_ENABLE(sdl,
         fi
     ],
     [
-        if test "x$with_sdl" != "xno" -a "x$with_sdl" != "x"; then
+        if test "x$with_sdl" != "xyes" -a "x$with_sdl" != "xno" -a "x$with_sdl" != "x"; then
             AC_MSG_RESULT([Using SDL prefix... $with_sdl])
             AC_PATH_PROGS(SDL_CONFIG,sdl2-config sdl-config,,$with_sdl/bin)
         else
@@ -1579,13 +1580,11 @@ AC_ARG_ENABLE(ffmpeg,
         FFMPEG_PREFIX=""
         AC_SUBST(SAVED_PKG_CONFIG_PATH)
         SAVED_PKG_CONFIG_PATH=$PKG_CONFIG_PATH
-        if test "x$with_ffmpeg" != "xno" -a "x$with_ffmpeg" != "x"; then
+        if test "x$with_ffmpeg" != "xyes" -a "x$with_ffmpeg" != "xno" -a "x$with_ffmpeg" != "x"; then
             FFMPEG_PREFIX=$with_ffmpeg
             AC_MSG_RESULT([Using ffmpeg prefix... $FFMPEG_PREFIX])
             export PKG_CONFIG_PATH=$FFMPEG_PREFIX/lib/pkgconfig
         fi
-
-        AC_CHECK_PROGS(PKG_CONFIG,pkg-config "python pkgconfig.py",none)
 
         if test "$PKG_CONFIG" != "none"; then
             AC_MSG_CHECKING([ffmpeg packages])
@@ -2239,10 +2238,6 @@ AC_ARG_ENABLE(ssl,
                 LDFLAGS="$LDFLAGS -L$with_gnutls/lib"
                 AC_MSG_RESULT([Using GnuTLS prefix... $with_gnutls])
             fi
-
-            AC_CHECK_PROGS(PKG_CONFIG,
-                       $host-pkg-config pkg-config "python pkgconfig.py",
-                       none)
 
             AC_MSG_RESULT([checking for GnuTLS installations..])
             AC_SUBST(gnutls_h_present)
