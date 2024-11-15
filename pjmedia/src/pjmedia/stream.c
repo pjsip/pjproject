@@ -1771,6 +1771,7 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
     pjmedia_stream_dtmf_event dtmf_event;
     pj_bool_t is_event_end;
     pj_bool_t emit_event;
+    float ts_modifier = 1.0;
 
     /* Check compiler packing. */
     pj_assert(sizeof(pjmedia_rtp_dtmf_event)==4);
@@ -1797,6 +1798,18 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
     event_duration = pj_ntohs(event->duration);
     is_event_end = (event->e_vol & PJMEDIA_RTP_DTMF_EVENT_END_MASK) != 0;
 
+    /* Correct duration and timestamp for codecs where clock_rate
+     * differs from sample rate
+     */
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+    if (stream->has_g722_mpeg_bug == PJ_TRUE) {
+        ts_modifier = 2;
+    }
+#endif
+    if (!pj_stricmp2(&stream->si.fmt.encoding_name, "opus")) {
+        ts_modifier = (float)stream->codec_param.info.clock_rate / 48000;
+    }
+
     /* Check if this is the same/current digit of the last packet. */
     if (stream->last_dtmf != -1 &&
         event->event == stream->last_dtmf &&
@@ -1813,20 +1826,6 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
          * already, call it.
          */
         if (stream->dtmf_event_cb && emit_event) {
-
-            /* Correct duration and timestamp for codecs where clock_rate
-             * differs from sample rate
-             */
-            float ts_modifier = 1.0;
-#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
-            if (stream->has_g722_mpeg_bug == PJ_TRUE) {
-                ts_modifier = 2;
-            }
-#endif
-            if (!pj_stricmp2(&stream->si.fmt.encoding_name, "opus")) {
-                ts_modifier = (float)stream->codec_param.info.clock_rate / 48000;
-            }
-
             dtmf_event.digit = digitmap[event->event];
             dtmf_event.timestamp = (pj_uint32_t)(ts_modifier * timestamp->u64 /
                 (stream->codec_param.info.clock_rate / 1000));
@@ -1855,19 +1854,6 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
      * the DTMF digits in the buffer.
      */
     if (stream->dtmf_event_cb) {
-        /* Correct duration and timestamp for codecs where clock_rate
-         * differs from sample rate
-         */
-        float ts_modifier = 1.0;
-#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
-        if (stream->has_g722_mpeg_bug == PJ_TRUE) {
-            ts_modifier = 2;
-        }
-#endif
-        if (!pj_stricmp2(&stream->si.fmt.encoding_name, "opus")) {
-            ts_modifier = (float)stream->codec_param.info.clock_rate / 48000;
-        }
-
         dtmf_event.digit = digitmap[event->event];
         dtmf_event.timestamp = (pj_uint32_t)(ts_modifier * timestamp->u64 /
             (stream->codec_param.info.clock_rate / 1000));
