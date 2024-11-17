@@ -715,7 +715,7 @@ static void decrement_counter(pj_ioqueue_key_t *key)
 }
 #endif
 
-static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key, pj_ioqueue_op_key_t *op_key)
+static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key, pj_ioqueue_op_key_t *op_key, void *buf, pj_ssize_t len)
 {
     pj_pool_t *pool;
     struct pending_op *op;
@@ -725,6 +725,8 @@ static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key, pj_ioqueue_op_
     op = PJ_POOL_ZALLOC_T(pool, struct pending_op);
     op->pool = pool;
     op->op_key = op_key;
+    op->pending_key.overlapped.wsabuf.buf = (CHAR *)buf;
+    op->pending_key.overlapped.wsabuf.len = (ULONG)len;
 
     pj_mutex_lock(key->mutex);
     pj_list_push_back(&key->pending_list, op);
@@ -1149,8 +1151,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
         }
     }
 
-    op = alloc_pending_op(key, op_key);
-    memcpy(&op->pending_key, op_key_rec, sizeof(union operation_key));
+    op = alloc_pending_op(key, op_key, buffer, *length);
     op_key_rec = &op->pending_key;
 
     dwFlags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
@@ -1231,8 +1232,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
         }
     }
 
-    op = alloc_pending_op(key, op_key);
-    memcpy(&op->pending_key, op_key_rec, sizeof(union operation_key));
+    op = alloc_pending_op(key, op_key, buffer, *length);
     op_key_rec = &op->pending_key;
 
     dwFlags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
@@ -1330,8 +1330,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
         }
     }
 
-    op = alloc_pending_op(key, op_key);
-    memcpy(&op->pending_key, op_key_rec, sizeof(union operation_key));
+    op = alloc_pending_op(key, op_key, (void *)data, *length);
     op_key_rec = &op->pending_key;
 
     dwFlags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
@@ -1429,7 +1428,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
      * No connection is immediately available.
      * Must schedule an asynchronous operation.
      */
-    op = alloc_pending_op(key, op_key);
+    op = alloc_pending_op(key, op_key, NULL, 0);
     op_key_rec = &op->pending_key;
 
     status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
