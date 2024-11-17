@@ -5770,7 +5770,7 @@ case $target in
     *mingw* | *cygw* | *win32* | *w32* )
         printf "%s\n" "#define PJ_WIN32 1" >>confdefs.h
 
-        printf "%s\n" "#define PJ_WIN32_WINNT 0x0400" >>confdefs.h
+        printf "%s\n" "#define PJ_WIN32_WINNT 0x0501" >>confdefs.h
 
         printf "%s\n" "#define WIN32_LEAN_AND_MEAN 1" >>confdefs.h
 
