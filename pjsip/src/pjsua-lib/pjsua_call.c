@@ -1814,14 +1814,13 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * in that case, it must be able to support multiple media in the SDP.
      */
     if(status == PJ_TRUE){
-        options |= PJSIP_INV_SUPPORT_MULTIMEDIA;
+        options |= PJSIP_INV_REQUIRE_SIPREC;
     }
         
-    /* Check if the enable_multimedia option is enabled in the account config
-     * or if request supports PJSIP_INV_SUPPORT_MULTIMEDIA. If so
+    /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so
      * set the number of call active streams to the number of media in the SDP offer.
      */
-    if(pjsua_var.acc[acc_id].cfg.enable_multimedia || (options & PJSIP_INV_SUPPORT_MULTIMEDIA)){
+    if(options & PJSIP_INV_REQUIRE_SIPREC){
         call->opt.aud_cnt = offer->media_count;
     }
 

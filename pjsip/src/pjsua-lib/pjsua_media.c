@@ -3001,12 +3001,11 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
             continue;
         }
 
-        /* Check if the enable_multimedia option is enabled in the account config
-         * or if request supports PJSIP_INV_SUPPORT_MULTIMEDIA. If so
+        /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so
          * Get label attribute in SDP offer and add label attribute to SDP answer
          */
         if (call->inv){
-            if(acc->cfg.enable_multimedia || (call->inv->options & PJSIP_INV_SUPPORT_MULTIMEDIA))
+            if(call->inv->options & PJSIP_INV_REQUIRE_SIPREC)
                 m->attr[m->attr_count++] = pjmedia_sdp_attr_get_label(rem_sdp->media[mi]);
         }
 
