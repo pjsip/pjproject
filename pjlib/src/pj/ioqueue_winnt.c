@@ -908,6 +908,19 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
 
     PJ_ASSERT_RETURN(key, PJ_EINVAL);
 
+    /* Lock the key to make sure no callback is simultaneously modifying
+     * the key. We need to lock the key before ioqueue here to prevent
+     * deadlock.
+     */
+    pj_ioqueue_lock_key(key);
+
+    /* Best effort to avoid double key-unregistration */
+    if (key->closing) {
+        pj_ioqueue_unlock_key(key);
+        return PJ_SUCCESS;
+    }
+    pj_ioqueue_unlock_key(key);
+
 #if PJ_HAS_TCP
     if (key->connecting) {
         unsigned pos;
