@@ -181,7 +181,7 @@ case $target in
     ;;
     *mingw* | *cygw* | *win32* | *w32* )
         AC_DEFINE(PJ_WIN32,1)
-        AC_DEFINE(PJ_WIN32_WINNT,0x0400)
+        AC_DEFINE(PJ_WIN32_WINNT,0x0501)
         AC_DEFINE(WIN32_LEAN_AND_MEAN)
         case $target in
             *_64-w64-mingw* )
