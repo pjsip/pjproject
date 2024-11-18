@@ -44,6 +44,12 @@ PJ_DECL(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt);
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *answer);
 
 
+PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
+
+
+PJ_DEF(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp);
+
+
 /**
  * Verifies that the incoming request has the siprec value in the Require header.
  * This function checks whether the incoming request is a siprec request or not."
@@ -56,7 +62,12 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *answer);
  *                  - If the request contains siprec in Require header, the
  *                    function returns PJ_TRUE
  */
-PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata);
+PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,    
+                                                pjmedia_sdp_session *sdp_offer,                                       
+                                                unsigned *options,
+                                                pjsip_dialog *dlg,
+                                                pjsip_endpoint *endpt,
+                                                pjsip_tx_data **p_tdata);
 
 
                                             

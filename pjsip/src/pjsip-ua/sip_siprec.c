@@ -58,36 +58,147 @@ PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
 /**
  * Returns the label attribute in the SDP offer 
  */
-PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *answer)
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *sdp_media)
 {
     pjmedia_sdp_attr *attr;
-    attr = pjmedia_sdp_media_find_attr(answer, &STR_LABEL, NULL);
+    attr = pjmedia_sdp_media_find_attr(sdp_media, &STR_LABEL, NULL);
     return attr;
+}
+
+
+PJ_DEF(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp)
+{
+    for (unsigned mi=0; mi<sdp->media_count; ++mi) {
+        if(!pjmedia_sdp_attr_get_label(sdp->media[mi]))
+            return PJ_FALSE;
+    }
+    return PJ_TRUE;
+}
+
+
+PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
+{
+    for (int i=0; i<req_hdr->count; ++i) {
+        /* Check request has the siprec value in the Require header.*/
+        if (pj_stricmp(&req_hdr->values[i], &STR_SIPREC)==0)
+        {
+            return PJ_TRUE;
+        }
+    }
+    return PJ_FALSE;
 }
 
 
 /**
  * Verifies that the incoming request has the siprec value in the Require header.
  */
-PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata)
+PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,    
+                                                pjmedia_sdp_session *sdp_offer,                                     
+                                                unsigned *options,
+                                                pjsip_dialog *dlg,
+                                                pjsip_endpoint *endpt,
+                                                pjsip_tx_data **p_tdata)
 {
     pjsip_require_hdr *req_hdr;
+    pjsip_contact_hdr *conatct_hdr;
     const pj_str_t str_require = {"Require", 7};
+    const pj_str_t str_src = {"+sip.src", 8};
+    int code = 200;
+    pj_status_t status = PJ_SUCCESS;
+    const char *warn_text = NULL;
+    pjsip_hdr res_hdr_list;
+    pjsip_param  *param;
+
+    /* Init return arguments. */
+    if (p_tdata) *p_tdata = NULL;
+
+    /* Init response header list */
+    pj_list_init(&res_hdr_list);
 
     /* Find Require header */
     req_hdr = (pjsip_require_hdr*) pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_require, NULL);
 
-    if(req_hdr)
-    {
-        for (int i=0; i<req_hdr->count; ++i) {
-            /* Check request has the siprec value in the Require header.*/
-            if (pj_stricmp(&req_hdr->values[i], &STR_SIPREC)==0)
-            {
-                return PJ_TRUE;
-            }
-        }
+    if(!req_hdr || (pjsip_siprec_verify_require_hdr(req_hdr) == PJ_FALSE)){
+        return PJ_SUCCESS;
+    }
+    
+    /* Find Conatct header */
+    conatct_hdr = (pjsip_contact_hdr*) pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
+
+    if(!conatct_hdr || !conatct_hdr->uri){
+        code = PJSIP_SC_BAD_REQUEST;
+        warn_text = "Bad/missing Contact header";
+        goto on_return;
     }
 
-    /* No Require header or not exist siprec value in Require header */
-    return PJ_FALSE;
+    if(!pjsip_param_find(&conatct_hdr->other_param, &str_src)){
+        return PJ_SUCCESS;
+    }
+
+    if(!sdp_offer){
+        return PJ_SUCCESS;
+    }
+
+    if(pjsip_siprec_verify_sdp_attr_label(sdp_offer) == PJ_FALSE){
+        code = PJSIP_SC_BAD_REQUEST;
+        warn_text = "SDP media has label attr";
+        goto on_return;
+    }
+
+    *options |= PJSIP_INV_REQUIRE_SIPREC;
+    return status;
+
+on_return:
+
+    /* Create response if necessary */
+    if (code != 200) {
+        pjsip_tx_data *tdata;
+        const pjsip_hdr *h;
+
+        if (dlg) {
+            status = pjsip_dlg_create_response(dlg, rdata, code, NULL, 
+                                               &tdata);
+        } else {
+            status = pjsip_endpt_create_response(endpt, rdata, code, NULL, 
+                                                 &tdata);
+        }
+
+        if (status != PJ_SUCCESS)
+            return status;
+
+        /* Add response headers. */
+        h = res_hdr_list.next;
+        while (h != &res_hdr_list) {    
+            pjsip_hdr *cloned;
+
+            cloned = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, h);
+            PJ_ASSERT_RETURN(cloned, PJ_ENOMEM);
+
+            pjsip_msg_add_hdr(tdata->msg, cloned);
+
+            h = h->next;
+        }
+
+        /* Add warn text, if any */
+        if (warn_text) {
+            pjsip_warning_hdr *warn_hdr;
+            pj_str_t warn_value = pj_str((char*)warn_text);
+
+            warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399, 
+                                                pjsip_endpt_name(endpt),
+                                                &warn_value);
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);
+        }
+
+        *p_tdata = tdata;
+
+        /* Can not return PJ_SUCCESS when response message is produced.
+         * Ref: PROTOS test ~#2490
+         */
+        if (status == PJ_SUCCESS)
+            status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
+
+    }
+
+    return status;
 }

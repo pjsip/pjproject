@@ -1808,13 +1808,29 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * If siprec is present, this function returns the value PJ_TRUE
      * if not, it returns PJ_FALSE 
      */
-    status = pjsip_siprec_verify_request(rdata);
+    status = pjsip_siprec_verify_request(rdata, offer, &options, NULL, pjsua_var.endpt, &response);
 
-    /* Check if the siprec value is present in the INVITE request
-     * in that case, it must be able to support multiple media in the SDP.
-     */
-    if(status == PJ_TRUE){
-        options |= PJSIP_INV_REQUIRE_SIPREC;
+    if(status != PJ_SUCCESS){
+        /*
+         * No we can't handle the incoming INVITE request.
+         */
+        if (response) {
+            pjsip_response_addr res_addr;
+            ret_st_code = response->msg->line.status.code;
+
+            pjsip_get_response_addr(response->pool, rdata, &res_addr);
+            status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, 
+                                               response, NULL, NULL);
+            if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(response);
+
+        } else {
+            /* Respond with 500 (Internal Server Error) */
+            ret_st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+            pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, ret_st_code, 
+                                NULL, NULL, NULL, NULL);
+        }
+
+        goto on_return;
     }
         
     /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so
