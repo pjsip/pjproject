@@ -1804,9 +1804,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     options |= PJSIP_INV_SUPPORT_TIMER;
     options |= PJSIP_INV_SUPPORT_SIPREC;
 
-    /* Check the INVITE request for siprec in the Require header.
-     * If siprec is present, this function returns the value PJ_TRUE
-     * if not, it returns PJ_FALSE 
+    /* Check if the INVITE request is a siprec
+     * this function add PJSIP_INV_REQUIRE_SIPREC to options
+     * and returns the value PJ_SUCCESS 
      */
     status = pjsip_siprec_verify_request(rdata, offer, &options, NULL, pjsua_var.endpt, &response);
 

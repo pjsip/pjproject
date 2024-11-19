@@ -66,6 +66,9 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *sdp_medi
 }
 
 
+/**
+ * Checks if there is an attribute label for each media in the SDP.
+ */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp)
 {
     for (unsigned mi=0; mi<sdp->media_count; ++mi) {
@@ -76,6 +79,9 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp)
 }
 
 
+/**
+ * Check if the value of Require header is equal to siprec.
+ */ 
 PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
 {
     for (int i=0; i<req_hdr->count; ++i) {
@@ -90,7 +96,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
 
 
 /**
- * Verifies that the incoming request has the siprec value in the Require header.
+ * Verifies that the incoming request is a siprec request or not.
  */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,    
                                                 pjmedia_sdp_session *sdp_offer,                                     
@@ -126,11 +132,10 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     conatct_hdr = (pjsip_contact_hdr*) pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
 
     if(!conatct_hdr || !conatct_hdr->uri){
-        code = PJSIP_SC_BAD_REQUEST;
-        warn_text = "Bad/missing Contact header";
-        goto on_return;
+        return PJ_SUCCESS;
     }
 
+    /* Check "+sip.src" parameter exist in the Contact header */
     if(!pjsip_param_find(&conatct_hdr->other_param, &str_src)){
         return PJ_SUCCESS;
     }
@@ -139,9 +144,10 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         return PJ_SUCCESS;
     }
 
+    /* Check that the media attribute label exist in the SDP */
     if(pjsip_siprec_verify_sdp_attr_label(sdp_offer) == PJ_FALSE){
         code = PJSIP_SC_BAD_REQUEST;
-        warn_text = "SDP media has label attr";
+        warn_text = "SDP must have label media attribute";
         goto on_return;
     }
 
