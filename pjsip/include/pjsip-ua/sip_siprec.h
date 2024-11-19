@@ -73,7 +73,8 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp)
  *
  * @param rdata         The incoming request to be verified.
  * @param sdp_offer     The SDP media.
- * @param options       Bitmask of pjsua_call_flag constants. Note that
+ * @param options       The options argument is bitmask combination of SIP 
+ *                      features in pjsip_inv_option enumeration
  * @param dlg           The dialog instance.
  * @param endpt         Media endpoint instance.
  * @param p_tdata       Upon error, it will be filled with the final response
