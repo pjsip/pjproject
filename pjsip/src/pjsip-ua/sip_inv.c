@@ -1114,6 +1114,7 @@ PJ_DEF(pjsip_sdp_info*) pjsip_get_sdp_info(pj_pool_t *pool,
 
     pjsip_media_type_init2(&multipart_mixed, "multipart", "mixed");
     pjsip_media_type_init2(&multipart_alternative, "multipart", "alternative");
+    //Resaa
     pjsip_media_type_init2(&application_metadata, "application", "rs-metadata+xml");
 
     if (pjsip_media_type_cmp(msg_type, &search_type, PJ_FALSE) == 0)
@@ -1146,6 +1147,7 @@ PJ_DEF(pjsip_sdp_info*) pjsip_get_sdp_info(pj_pool_t *pool,
             }
         }
 
+        //Resaa
         printf("######################################################################################################### \n");
         printf("############### SDP:\n %.*s \n", part->body->len, (char*)part->body->data);
         printf("############### Metadata:\n %.*s \n", metadata_part->body->len, (char*)metadata_part->body->data);
@@ -1201,6 +1203,7 @@ PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info2(
     if (rdata->msg_info.ctype) {
         msg_media_type = &rdata->msg_info.ctype->media;
     }
+    //Resaa
     sdp_info = pjsip_get_sdp_info(rdata->tp_info.pool,
                                    rdata->msg_info.msg->body,
                                    msg_media_type,

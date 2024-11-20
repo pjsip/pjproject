@@ -1725,6 +1725,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Parse SDP from incoming request */
     if (rdata->msg_info.msg->body) {
+        //Resaa
         pj_size_t buffer_size = 4096;
         char *buffer = malloc(buffer_size);
 
@@ -1738,6 +1739,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
         pjsip_rdata_sdp_info *sdp_info;
 
+        //Resaa
         sdp_info = pjsip_rdata_get_sdp_info(rdata);
         offer = sdp_info->sdp;
 
