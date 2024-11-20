@@ -572,10 +572,16 @@ static pj_status_t tonegen_destroy(pjmedia_port *port)
 
     TRACE_((THIS_FILE, "tonegen_destroy()"));
 
-    pj_lock_acquire(tonegen->lock);
-    pj_lock_release(tonegen->lock);
+    if (tonegen->lock) {
+        pj_lock_acquire(tonegen->lock);
+        pj_lock_release(tonegen->lock);
 
-    pj_lock_destroy(tonegen->lock);
+        pj_lock_destroy(tonegen->lock);
+        tonegen->lock = NULL;
+    }
+
+    if (tonegen->pool)
+        pj_pool_safe_release(&tonegen->pool);
 
     return PJ_SUCCESS;
 }
@@ -925,9 +931,6 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_set_digit_map(pjmedia_port *port,
     tonegen->digit_map = m;
 
     pj_lock_release(tonegen->lock);
-
-    if (tonegen->pool)
-        pj_pool_safe_release(&tonegen->pool);
 
     return PJ_SUCCESS;
 }
