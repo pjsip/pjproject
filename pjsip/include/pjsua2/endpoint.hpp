@@ -2041,6 +2041,9 @@ private:
                                pj_bool_t renew);
     static void on_reg_state2(pjsua_acc_id acc_id,
                               pjsua_reg_info *info);
+    static void on_acc_send_request(pjsua_acc_id acc_id,
+                                    void* token,
+                                    pjsip_event *event);
     static void on_incoming_subscribe(pjsua_acc_id acc_id,
                                       pjsua_srv_pres *srv_pres,
                                       pjsua_buddy_id buddy_id,
