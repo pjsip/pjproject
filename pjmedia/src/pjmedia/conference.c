@@ -281,6 +281,7 @@ static pj_status_t destroy_port_pasv(pjmedia_port *this_port);
 typedef enum op_type
 {
     OP_UNKNOWN,
+    OP_ADD_PORT,
     OP_REMOVE_PORT,
     OP_CONNECT_PORTS,
     OP_DISCONNECT_PORTS,
@@ -289,6 +290,10 @@ typedef enum op_type
 /* Synchronized operation parameter. */
 typedef union op_param
 {
+    struct {
+        unsigned port;
+    } add_port;
+
     struct {
         unsigned port;
     } remove_port;
@@ -314,6 +319,7 @@ typedef struct op_entry {
 } op_entry;
 
 /* Prototypes of synchronized operation */
+static void op_add_port(pjmedia_conf *conf, const op_param *prm);
 static void op_remove_port(pjmedia_conf *conf, const op_param *prm);
 static void op_connect_ports(pjmedia_conf *conf, const op_param *prm);
 static void op_disconnect_ports(pjmedia_conf *conf, const op_param *prm);
@@ -342,6 +348,9 @@ static void handle_op_queue(pjmedia_conf *conf)
         pj_list_erase(op);
 
         switch(op->type) {
+            case OP_ADD_PORT:
+                op_add_port(conf, &op->param);
+                break;
             case OP_REMOVE_PORT:
                 op_remove_port(conf, &op->param);
                 break;
@@ -383,10 +392,15 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
 {
     struct conf_port *conf_port;
     pj_pool_t *pool = NULL;
+    char pname[PJ_MAX_OBJ_NAME];
     pj_status_t status = PJ_SUCCESS;
 
+    /* Make sure pool name is NULL terminated */
+    pj_assert(name);
+    pj_ansi_strxcpy2(pname, name, sizeof(pname));
+
     /* Create own pool */
-    pool = pj_pool_create(parent_pool->factory, name->ptr, 500, 500, NULL);
+    pool = pj_pool_create(parent_pool->factory, pname, 500, 500, NULL);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_return;
@@ -940,6 +954,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 {
     struct conf_port *conf_port;
     unsigned index;
+    op_entry *ope;
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(conf && pool && strm_port, PJ_EINVAL);
@@ -992,19 +1007,47 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     conf->ports[index] = conf_port;
     //conf->port_cnt++;
 
+    /* Queue the operation */
+    ope = get_free_op_entry(conf);
+    if (ope) {
+        ope->type = OP_ADD_PORT;
+        ope->param.add_port.port = index;
+        pj_list_push_back(conf->op_queue, ope);
+        PJ_LOG(4,(THIS_FILE, "Add port %d (%.*s) queued",
+                             index, (int)port_name->slen, port_name->ptr));
+    } else {
+        status = PJ_ENOMEM;
+        goto on_return;
+    }
+
     /* Done. */
     if (p_port) {
         *p_port = index;
     }
-
-    PJ_LOG(5,(THIS_FILE, "Adding new port %d (%.*s)",
-                         index, (int)port_name->slen, port_name->ptr));
 
 on_return:
     pj_mutex_unlock(conf->mutex);
     pj_log_pop_indent();
 
     return status;
+}
+
+
+static void op_add_port(pjmedia_conf *conf, const op_param *prm)
+{
+    unsigned port = prm->add_port.port;
+    struct conf_port *cport = conf->ports[port];
+
+    /* Port must be valid and flagged as new. */
+    if (!cport || !cport->is_new)
+        return;
+
+    /* Activate newly added port */
+    cport->is_new = PJ_FALSE;
+    ++conf->port_cnt;
+
+    PJ_LOG(4,(THIS_FILE, "Added port %d (%.*s), port count=%d",
+              port, (int)cport->name.slen, cport->name.ptr, conf->port_cnt));
 }
 
 
@@ -1674,10 +1717,12 @@ static void op_remove_port(pjmedia_conf *conf, const op_param *prm)
 
     /* Remove the port. */
     conf->ports[port] = NULL;
-    --conf->port_cnt;
+    if (!conf_port->is_new)
+        --conf->port_cnt;
 
-    PJ_LOG(4,(THIS_FILE,"Removed port %d (%.*s)",
-              port, (int)conf_port->name.slen, conf_port->name.ptr));
+    PJ_LOG(4,(THIS_FILE,"Removed port %d (%.*s), port count=%d",
+              port, (int)conf_port->name.slen, conf_port->name.ptr,
+              conf->port_cnt));
 
     /* Decrease conf port ref count */
     if (conf_port->port && conf_port->port->grp_lock)
@@ -2368,22 +2413,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     if (!pj_list_empty(conf->op_queue)) {
         pj_log_push_indent();
         pj_mutex_lock(conf->mutex);
-
-        /* Activate any newly added port */
-        for (i=0; i<conf->max_ports; ++i) {
-            struct conf_port *port = conf->ports[i];
-            if (!port || !port->is_new)
-                continue;
-
-            port->is_new = PJ_FALSE;
-            ++conf->port_cnt;
-
-            PJ_LOG(5,(THIS_FILE, "New port %d (%.*s) is added",
-                      i, (int)port->name.slen, port->name.ptr));
-        }
-
         handle_op_queue(conf);
-
         pj_mutex_unlock(conf->mutex);
         pj_log_pop_indent();
     }
