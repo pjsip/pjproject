@@ -392,10 +392,15 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
 {
     struct conf_port *conf_port;
     pj_pool_t *pool = NULL;
+    char pname[PJ_MAX_OBJ_NAME];
     pj_status_t status = PJ_SUCCESS;
 
+    /* Make sure pool name is NULL terminated */
+    pj_assert(name);
+    pj_ansi_strxcpy2(pname, name, sizeof(pname));
+
     /* Create own pool */
-    pool = pj_pool_create(parent_pool->factory, name->ptr, 500, 500, NULL);
+    pool = pj_pool_create(parent_pool->factory, pname, 500, 500, NULL);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_return;

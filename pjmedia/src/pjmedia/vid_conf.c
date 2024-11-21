@@ -395,6 +395,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
     vconf_port *cport = NULL;
     unsigned index;
     op_entry *ope;
+    char pname[PJ_MAX_OBJ_NAME];
     pj_status_t status = PJ_SUCCESS;
 
     PJ_LOG(5,(THIS_FILE, "Add video port %s requested", port->info.name.ptr));
@@ -423,8 +424,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
         return PJ_ETOOMANY;
     }
 
+    /* Make sure pool name is NULL terminated */
+    pj_ansi_strxcpy2(pname, name, sizeof(pname));
+
     /* Create pool */
-    pool = pj_pool_create(parent_pool->factory, name->ptr, 500, 500, NULL);
+    pool = pj_pool_create(parent_pool->factory, pname, 500, 500, NULL);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_error;

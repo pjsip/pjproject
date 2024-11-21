@@ -847,8 +847,10 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
             port_name.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
                                              call->inv->dlg->remote.info->uri,
                                              tmp, sizeof(tmp));
-            if (port_name.slen < 1) {
-                port_name = pj_str("call");
+            if (port_name.slen < 1 || pj_strchr(&port_name, '%')) {
+                pj_ansi_snprintf(tmp, sizeof(tmp), "call %d:%d",
+                                 call->index, strm_idx);
+                port_name = pj_str(tmp);
             }
             status = pjmedia_conf_add_port(pjsua_var.mconf,
                                            call->inv->pool,
