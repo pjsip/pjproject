@@ -489,6 +489,7 @@ PJ_DEF(pj_status_t) pjsip_regc_release_transport(pjsip_regc *regc)
     if (regc->last_transport) {
         pjsip_transport_dec_ref(regc->last_transport);
         regc->last_transport = NULL;
+        regc->info_transport = NULL;
     }
     return PJ_SUCCESS;
 }
