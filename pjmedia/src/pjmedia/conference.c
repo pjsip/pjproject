@@ -1046,7 +1046,7 @@ static void op_add_port(pjmedia_conf *conf, const op_param *prm)
     cport->is_new = PJ_FALSE;
     ++conf->port_cnt;
 
-    PJ_LOG(5,(THIS_FILE, "Added port %d (%.*s), port count=%d",
+    PJ_LOG(4,(THIS_FILE, "Added port %d (%.*s), port count=%d",
               port, (int)cport->name.slen, cport->name.ptr, conf->port_cnt));
 }
 
