@@ -7,7 +7,7 @@ import inc_sdp as sdp
 complete_msg = \
 """INVITE sip:sips%3Auser%40example.com@example.net SIP/2.0
 To: sip:%75se%72@example.com
-From: <sip:I%20have%20spaces@example.net>;tag=$FROM_TAG
+From: <sip:Ihavepaces@example.net>;tag=$FROM_TAG
 Max-Forwards: 87
 i: esc01.239409asdfakjkn23onasd0-3234
 CSeq: 234234 INVITE
