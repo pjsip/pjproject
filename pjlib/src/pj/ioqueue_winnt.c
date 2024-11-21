@@ -1042,6 +1042,9 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue)
             pj_assert(key->closing != 0);
 
             if (PJ_TIME_VAL_GTE(now, key->free_time)) {
+                /* Confirm that there're no any pending operations */
+                pj_assert(pj_list_empty(&key->pending_list));
+
                 pj_list_erase(key);
                 pj_list_push_back(&ioqueue->free_list, key);
             }
