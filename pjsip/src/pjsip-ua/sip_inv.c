@@ -1083,7 +1083,6 @@ PJ_DEF(pjsip_sdp_info*) pjsip_get_sdp_info(pj_pool_t *pool,
     pjsip_sdp_info *sdp_info;
     pjsip_media_type search_type;
     pjsip_media_type multipart_mixed;
-    pjsip_media_type application_metadata;
     pjsip_media_type multipart_alternative;
     pjsip_media_type *msg_type;
     pj_status_t status;
@@ -1114,8 +1113,6 @@ PJ_DEF(pjsip_sdp_info*) pjsip_get_sdp_info(pj_pool_t *pool,
 
     pjsip_media_type_init2(&multipart_mixed, "multipart", "mixed");
     pjsip_media_type_init2(&multipart_alternative, "multipart", "alternative");
-    //Resaa
-    pjsip_media_type_init2(&application_metadata, "application", "rs-metadata+xml");
 
     if (pjsip_media_type_cmp(msg_type, &search_type, PJ_FALSE) == 0)
     {
@@ -1135,9 +1132,7 @@ PJ_DEF(pjsip_sdp_info*) pjsip_get_sdp_info(pj_pool_t *pool,
         pjsip_media_type_cmp(&multipart_alternative, msg_type, PJ_FALSE) == 0)
     {
         pjsip_multipart_part *part;
-        pjsip_multipart_part *metadata_part;
         part = pjsip_multipart_find_part(body, &search_type, NULL);
-        metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
         if (part) {
             if (part->body->print_body == print_sdp) {
                 sdp_info->sdp = part->body->data;
@@ -1146,12 +1141,6 @@ PJ_DEF(pjsip_sdp_info*) pjsip_get_sdp_info(pj_pool_t *pool,
                 sdp_info->body.slen = part->body->len;
             }
         }
-
-        //Resaa
-        printf("######################################################################################################### \n");
-        printf("############### SDP:\n %.*s \n", part->body->len, (char*)part->body->data);
-        printf("############### Metadata:\n %.*s \n", metadata_part->body->len, (char*)metadata_part->body->data);
-        printf("######################################################################################################### \n");
     }
 
     /*
@@ -1203,7 +1192,6 @@ PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info2(
     if (rdata->msg_info.ctype) {
         msg_media_type = &rdata->msg_info.ctype->media;
     }
-    //Resaa
     sdp_info = pjsip_get_sdp_info(rdata->tp_info.pool,
                                    rdata->msg_info.msg->body,
                                    msg_media_type,

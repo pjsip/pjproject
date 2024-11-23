@@ -4,6 +4,7 @@
 #include <pjsip/sip_event.h>
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_transaction.h>
+#include <pjsip/sip_multipart.h>
 #include <pj/log.h>
 #include <pj/math.h>
 #include <pj/os.h>
@@ -90,4 +91,30 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata)
 
     /* No Require header or not exist siprec value in Require header */
     return PJ_FALSE;
+}
+
+
+PJ_DECL(pj_str_t*) pjsip_siprec_get_metadata(pj_pool_t *pool,
+                                                 pjsip_msg_body *body)
+{
+    pj_str_t* siprec_metadata;
+    pjsip_media_type application_metadata;
+
+    siprec_metadata = PJ_POOL_ZALLOC_T(pool, pj_str_t);
+
+    if (!body) {
+        return siprec_metadata;
+    }
+
+    pjsip_media_type_init2(&application_metadata, "application", "rs-metadata+xml");
+
+    pjsip_multipart_part *metadata_part;
+    metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
+
+    if(metadata_part){
+        siprec_metadata->ptr = (char*)metadata_part->body->data;
+        siprec_metadata->slen = metadata_part->body->len;
+    }
+    
+    return siprec_metadata;
 }

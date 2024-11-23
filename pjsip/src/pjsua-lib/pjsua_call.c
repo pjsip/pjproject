@@ -1725,21 +1725,18 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Parse SDP from incoming request */
     if (rdata->msg_info.msg->body) {
-        //Resaa
-        pj_size_t buffer_size = 4096;
-        char *buffer = malloc(buffer_size);
+        printf(">>>>>>>>>>>>>>>>>>>>>>>>>> Resaa <<<<<<<<<<<<<<<<<<<< \n");
+        pj_str_t *siprec_metadata;
 
-        int result = rdata->msg_info.msg->body->print_body(rdata->msg_info.msg->body, buffer, buffer_size);
+        siprec_metadata = pjsip_siprec_get_metadata(rdata->tp_info.pool,
+                                                           rdata->msg_info.msg->body);
+        call->siprec_metadata = siprec_metadata;
 
-        if (result >= 0) {
-            printf("######################### Message body:\n%.*s\n", result, buffer);
-        } else {
-            printf("######################### Failed to print message body. Error code: %d\n", result);
-        }
+        printf("%.*s \n", call->siprec_metadata->slen, call->siprec_metadata->ptr);
+        printf(">>>>>>>>>>>>>>>>>>>>>>>>>> Resaa <<<<<<<<<<<<<<<<<<<< \n");
 
         pjsip_rdata_sdp_info *sdp_info;
 
-        //Resaa
         sdp_info = pjsip_rdata_get_sdp_info(rdata);
         offer = sdp_info->sdp;
 

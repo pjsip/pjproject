@@ -59,6 +59,9 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *answer);
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata);
 
 
+PJ_DECL(pj_str_t*) pjsip_siprec_get_metadata(pj_pool_t *pool,
+                                                    pjsip_msg_body *body);
+
                                             
 PJ_END_DECL
 
