@@ -398,11 +398,6 @@ enum pjsip_inv_option
      * Require siprec support.
      */
     PJSIP_INV_REQUIRE_SIPREC      = 2048,
-
-    /**
-     * Indicate support for multimedia
-     */
-    PJSIP_INV_SUPPORT_MULTIMEDIA  = 4096,
 };
 
 /* Forward declaration of Session Timers */
