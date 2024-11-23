@@ -1725,15 +1725,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Parse SDP from incoming request */
     if (rdata->msg_info.msg->body) {
-        printf(">>>>>>>>>>>>>>>>>>>>>>>>>> Resaa <<<<<<<<<<<<<<<<<<<< \n");
         pj_str_t *siprec_metadata;
 
         siprec_metadata = pjsip_siprec_get_metadata(rdata->tp_info.pool,
                                                            rdata->msg_info.msg->body);
         call->siprec_metadata = siprec_metadata;
-
-        printf("%.*s \n", call->siprec_metadata->slen, call->siprec_metadata->ptr);
-        printf(">>>>>>>>>>>>>>>>>>>>>>>>>> Resaa <<<<<<<<<<<<<<<<<<<< \n");
 
         pjsip_rdata_sdp_info *sdp_info;
 

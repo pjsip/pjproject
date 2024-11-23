@@ -214,6 +214,9 @@ on_return:
 }
 
 
+/**
+ * Retrieve siprec metadata from a message body
+ */
 PJ_DECL(pj_str_t*) pjsip_siprec_get_metadata(pj_pool_t *pool,
                                                  pjsip_msg_body *body)
 {
