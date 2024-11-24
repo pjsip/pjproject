@@ -1,9 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0-android;net8.0-ios</TargetFrameworks>
-    <!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
-    <!-- <TargetFrameworks>$(TargetFrameworks);net7.0-tizen</TargetFrameworks> -->
+    <TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
+    
     <OutputType>Exe</OutputType>
     <RootNamespace>pjsua2maui</RootNamespace>
     <UseMaui>true</UseMaui>
@@ -21,12 +20,12 @@
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
 
-    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">11.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">12.2</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
     <BuildWithMSBuildOnMono>false</BuildWithMSBuildOnMono>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net7.0-ios|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-ios|AnyCPU'">
     <CreatePackage>false</CreatePackage>
   </PropertyGroup>
   <ItemGroup>
@@ -47,34 +46,45 @@
     <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
-    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCamera.java" />
-    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCamera2.java" />
-    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCameraInfo.java" />
-    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCameraInfo2.java" />
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCamera.java"
+      Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCamera.java')" />
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCamera2.java"
+      Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCamera2.java')" />
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCameraInfo.java"
+      Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCameraInfo.java')" />
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCameraInfo2.java"
+      Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCameraInfo2.java')" />
   </ItemGroup>
   <ItemGroup>
-    <AndroidLibrary Include="Platforms\Android\lib\armeabi-v7a\libc++_shared.so">
+    <AndroidLibrary Include="Platforms\Android\lib\armeabi-v7a\libc++_shared.so"
+      Condition="Exists('$(ProjectDir)Platforms\Android\lib\armeabi-v7a\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\armeabi-v7a\libpjsua2.so">
+    <AndroidLibrary Include="Platforms\Android\lib\armeabi-v7a\libpjsua2.so" Condition="Exists('Platforms\Android\lib\armeabi-v7a\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\arm64-v8a\libc++_shared.so">
+    <AndroidLibrary Include="Platforms\Android\lib\arm64-v8a\libc++_shared.so"
+      Condition="Exists('Platforms\Android\lib\arm64-v8a\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\arm64-v8a\libpjsua2.so">
+    <AndroidLibrary Include="Platforms\Android\lib\arm64-v8a\libpjsua2.so"
+      Condition="Exists('Platforms\Android\lib\arm64-v8a\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\x86\libc++_shared.so">
+    <AndroidLibrary Include="Platforms\Android\lib\x86\libc++_shared.so"
+      Condition="Exists('Platforms\Android\lib\x86\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\x86\libpjsua2.so">
+    <AndroidLibrary Include="Platforms\Android\lib\x86\libpjsua2.so"
+      Condition="Exists('Platforms\Android\lib\x86\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\x86_64\libc++_shared.so">
+    <AndroidLibrary Include="Platforms\Android\lib\x86_64\libc++_shared.so"
+      Condition="Exists('Platforms\Android\lib\x86_64\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\x86_64\libpjsua2.so">
+    <AndroidLibrary Include="Platforms\Android\lib\x86_64\libpjsua2.so"
+      Condition="Exists('Platforms\Android\lib\x86_64\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidLibrary>
   </ItemGroup>
@@ -85,7 +95,8 @@
     <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.71" />
   </ItemGroup>
   <ItemGroup Condition="(('$(Platform)' == 'iPhoneSimulator') OR $(RuntimeIdentifier.StartsWith('iossimulator-arm64')))">
-    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64/libpjsua2.a">
+    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64/libpjsua2.a"
+      Condition="Exists('$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64/libpjsua2.a')">
       <Kind>Static</Kind>
       <ForceLoad>True</ForceLoad>
       <SmartLink>False</SmartLink>
@@ -94,7 +105,8 @@
     </NativeReference>
   </ItemGroup>
   <ItemGroup Condition="(('$(Platform)' == 'iPhoneSimulator') OR $(RuntimeIdentifier.StartsWith('iossimulator-x64')))">
-    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/x86_64/libpjsua2.a">
+    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/x86_64/libpjsua2.a"
+      Condition="Exists('$(ProjectDir)Platforms/iOS/lib/x86_64/libpjsua2.a')">
       <Kind>Static</Kind>
       <ForceLoad>True</ForceLoad>
       <SmartLink>False</SmartLink>
@@ -103,7 +115,8 @@
     </NativeReference>
   </ItemGroup>
   <ItemGroup>
-    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/arm64/libpjsua2.a">
+    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/arm64/libpjsua2.a"
+      Condition="Exists('$(ProjectDir)Platforms/iOS/lib/arm64/libpjsua2.a')">
       <Kind>Static</Kind>
       <ForceLoad>True</ForceLoad>
       <SmartLink>False</SmartLink>
