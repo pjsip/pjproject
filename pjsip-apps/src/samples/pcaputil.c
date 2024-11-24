@@ -21,6 +21,9 @@
 #include <pjmedia.h>
 #include <pjmedia-codec.h>
 
+/* Ignore gap >30s */
+#define GAP_IGNORE_SECONDS 30
+
 static const char *USAGE =
 "pcaputil [options] INPUT OUTPUT\n"
 "\n"
@@ -417,25 +420,27 @@ static void pcap2wav(const struct args *args)
         /* Fill in the gap (if any) between pkt0 and pkt1 */
         ts_gap = pj_ntohl(pkt1.rtp->ts) - pj_ntohl(pkt0.rtp->ts) -
                  samples_cnt;
-        while (ts_gap >= (long)samples_per_frame) {
 
-            pcm_frame.buf = pcm;
-            pcm_frame.size = samples_per_frame * 2;
+        if (ts_gap <= param.info.clock_rate * GAP_IGNORE_SECONDS) { /* Ignore gap >30s */
+            while (ts_gap >= (long)samples_per_frame) {
+                pcm_frame.buf = pcm;
+                pcm_frame.size = samples_per_frame * 2;
 
-            if (app.codec->op->recover) {
-                T( pjmedia_codec_recover(app.codec, (unsigned)pcm_frame.size,
-                                         &pcm_frame) );
-            } else {
-                pj_bzero(pcm_frame.buf, pcm_frame.size);
-            }
+                if (app.codec->op->recover) {
+                    T( pjmedia_codec_recover(app.codec, (unsigned)pcm_frame.size,
+                                            &pcm_frame) );
+                } else {
+                    pj_bzero(pcm_frame.buf, pcm_frame.size);
+                }
 
-            if (app.wav) {
-                T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
+                if (app.wav) {
+                    T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
+                }
+                if (app.aud_strm) {
+                    T( wait_play(&pcm_frame) );
+                }
+                ts_gap -= samples_per_frame;
             }
-            if (app.aud_strm) {
-                T( wait_play(&pcm_frame) );
-            }
-            ts_gap -= samples_per_frame;
         }
 
         /* Next */

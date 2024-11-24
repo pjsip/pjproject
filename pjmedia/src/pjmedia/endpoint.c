@@ -486,8 +486,10 @@ pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
             break;
 
         codec_info = &endpt->codec_mgr.codec_desc[i].info;
-        pjmedia_codec_mgr_get_default_param(&endpt->codec_mgr, codec_info,
-                                            &codec_param);
+        status = pjmedia_codec_mgr_get_default_param(&endpt->codec_mgr,
+                                                     codec_info, &codec_param);
+        if (status != PJ_SUCCESS)
+            return status;
         fmt = &m->desc.fmt[m->desc.fmt_count++];
         pt = codec_info->pt;
 

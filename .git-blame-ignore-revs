@@ -1,2 +1,5 @@
 # expand tab to spaces and remove $Id$ (#3292)
 5ac9104514499d648f68991ef796368c51b4dfec
+
+# expand tab to spaces and cleanup formatting in aconfigure.ac (#4154)
+22464d7a052ab5b7775496bb52211ea66dc2d62d

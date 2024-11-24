@@ -102,7 +102,8 @@ void writeSipHeaders(ContainerNode &node,
 ///////////////////////////////////////////////////////////////////////////////
 
 AuthCredInfo::AuthCredInfo()
-: scheme("digest"), realm("*"), dataType(0)
+: scheme("digest"), realm("*"), dataType(0),
+  algoType(PJSIP_AUTH_ALGORITHM_NOT_SET)
 {
 }
 
@@ -112,7 +113,8 @@ AuthCredInfo::AuthCredInfo(const string &param_scheme,
                            const int param_data_type,
                            const string param_data)
 : scheme(param_scheme), realm(param_realm), username(param_user_name),
-  dataType(param_data_type), data(param_data)
+  dataType(param_data_type), data(param_data),
+  algoType(PJSIP_AUTH_ALGORITHM_NOT_SET)
 {
 }
 
@@ -151,6 +153,7 @@ void AuthCredInfo::fromPj(const pjsip_cred_info &prm)
     username    = pj2Str(prm.username);
     dataType    = prm.data_type;
     data        = pj2Str(prm.data);
+    algoType    = prm.algorithm_type;
     akaK        = pj2Str(prm.ext.aka.k);
     akaOp       = pj2Str(prm.ext.aka.op);
     akaAmf      = pj2Str(prm.ext.aka.amf);
@@ -159,11 +162,12 @@ void AuthCredInfo::fromPj(const pjsip_cred_info &prm)
 pjsip_cred_info AuthCredInfo::toPj() const
 {
     pjsip_cred_info ret;
-    ret.realm   = str2Pj(realm);
-    ret.scheme  = str2Pj(scheme);
+    ret.realm           = str2Pj(realm);
+    ret.scheme          = str2Pj(scheme);
     ret.username        = str2Pj(username);
     ret.data_type       = dataType;
-    ret.data    = str2Pj(data);
+    ret.data            = str2Pj(data);
+    ret.algorithm_type  = algoType;
     ret.ext.aka.k       = str2Pj(akaK);
     ret.ext.aka.op      = str2Pj(akaOp);
     ret.ext.aka.amf     = str2Pj(akaAmf);

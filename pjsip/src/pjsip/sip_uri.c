@@ -269,10 +269,12 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 
     /* Print "user:password@", if any. */
     if (url->user.slen) {
+#if defined (PJSIP_URI_USE_ORIG_USERPASS) && (PJSIP_URI_USE_ORIG_USERPASS)
         /* Use the URI's original username and password, if any. */
         if (url->orig_userpass.slen) {
             copy_advance_check(buf, url->orig_userpass);
         } else {
+#endif
             const pj_cis_t *spec = pjsip_cfg()->endpt.allow_tx_hash_in_uri ?
                                     &pc->pjsip_USER_SPEC_LENIENT :
                                     &pc->pjsip_USER_SPEC;
@@ -281,8 +283,9 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
                 copy_advance_char_check(buf, ':');
                 copy_advance_escape(buf, url->passwd, pc->pjsip_PASSWD_SPEC);
             }
+#if defined (PJSIP_URI_USE_ORIG_USERPASS) && (PJSIP_URI_USE_ORIG_USERPASS)
         }
-
+#endif
         copy_advance_char_check(buf, '@');
     }
 
@@ -513,7 +516,9 @@ PJ_DEF(void) pjsip_sip_uri_assign(pj_pool_t *pool, pjsip_sip_uri *url,
 {
     pj_strdup( pool, &url->user, &rhs->user);
     pj_strdup( pool, &url->passwd, &rhs->passwd);
+#if defined (PJSIP_URI_USE_ORIG_USERPASS) && (PJSIP_URI_USE_ORIG_USERPASS)
     pj_strdup( pool, &url->orig_userpass, &rhs->orig_userpass);
+#endif
     pj_strdup( pool, &url->host, &rhs->host);
     url->port = rhs->port;
     pj_strdup( pool, &url->user_param, &rhs->user_param);

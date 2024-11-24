@@ -22,8 +22,17 @@
 #include <pjsip/sip_auth_msg.h>
 #include <pjsip/sip_errno.h>
 #include <pjsip/sip_transport.h>
+#include <pj/log.h>
 #include <pj/string.h>
 #include <pj/assert.h>
+
+/* Logging. */
+#define THIS_FILE   "sip_auth_server.c"
+#if 0
+#  define AUTH_TRACE_(expr)  PJ_LOG(3, expr)
+#else
+#  define AUTH_TRACE_(expr)
+#endif
 
 
 /*
@@ -75,11 +84,38 @@ static pj_status_t pjsip_auth_verify( const pjsip_authorization_hdr *hdr,
                                       const pj_str_t *method,
                                       const pjsip_cred_info *cred_info )
 {
+
     if (pj_stricmp(&hdr->scheme, &pjsip_DIGEST_STR) == 0) {
-        char digest_buf[PJSIP_MD5STRLEN];
+        const pjsip_digest_credential *dig = &hdr->credential.digest;
+        const pjsip_auth_algorithm *response_algorithm =
+                pjsip_auth_get_algorithm_by_iana_name(&dig->algorithm);
+        char digest_buf[PJSIP_AUTH_MAX_DIGEST_BUFFER_LENGTH * 2];
         pj_str_t digest;
         pj_status_t status;
-        const pjsip_digest_credential *dig = &hdr->credential.digest;
+        int result = 0;
+
+        AUTH_TRACE_((THIS_FILE, "Authenticating with realm-digest %.*s-%.*s",
+                (int)dig->realm.slen, dig->realm.ptr,
+                (int)dig->algorithm.slen, dig->algorithm.ptr));
+        /*
+         * Check that the response algorithm is supported.
+         * Since we sent the challenge it should be but
+         * we check anyway in case a client responds with a bad
+         * one.
+         */
+        PJ_ASSERT_RETURN(response_algorithm
+                && pjsip_auth_is_algorithm_supported(response_algorithm->algorithm_type),
+                PJSIP_EINVALIDALGORITHM);
+
+        /*
+         * Cred info type must be plain password or digest and if it's digest,
+         * the algorithm must match the algorithm in the header.
+         * We don't support the AKAv1-MD5 algorithm as a server.
+         */
+        PJ_ASSERT_RETURN(PJSIP_CRED_DATA_IS_PASSWD(cred_info)
+                || (PJSIP_CRED_DATA_IS_DIGEST(cred_info)
+                && cred_info->algorithm_type == response_algorithm->algorithm_type),
+                PJSIP_EINVALIDALGORITHM);
 
         /* Check that username and realm match. 
          * These checks should have been performed before entering this
@@ -92,10 +128,10 @@ static pj_status_t pjsip_auth_verify( const pjsip_authorization_hdr *hdr,
 
         /* Prepare for our digest calculation. */
         digest.ptr = digest_buf;
-        digest.slen = PJSIP_MD5STRLEN;
+        digest.slen = response_algorithm->digest_str_length;
 
         /* Create digest for comparison. */
-        status = pjsip_auth_create_digest(&digest, 
+        status = pjsip_auth_create_digest2(&digest,
                                  &hdr->credential.digest.nonce,
                                  &hdr->credential.digest.nc, 
                                  &hdr->credential.digest.cnonce,
@@ -103,13 +139,19 @@ static pj_status_t pjsip_auth_verify( const pjsip_authorization_hdr *hdr,
                                  &hdr->credential.digest.uri,
                                  &cred_info->realm,
                                  cred_info, 
-                                 method );
+                                 method, response_algorithm->algorithm_type);
 
+        AUTH_TRACE_((THIS_FILE, "Create digest response: %s",
+                (status == PJ_SUCCESS ? "success" : "failed")));
         if (status != PJ_SUCCESS)
             return status;
 
         /* Compare digest. */
-        return (pj_stricmp(&digest, &hdr->credential.digest.response) == 0) ?
+        result = pj_stricmp(&digest, &hdr->credential.digest.response);
+        AUTH_TRACE_((THIS_FILE, "Digest comparison: %s",
+                result ? "failed" : "matched"));
+
+        return (result == 0) ?
                PJ_SUCCESS : PJSIP_EAUTHINVALIDDIGEST;
 
     } else {
@@ -133,6 +175,8 @@ PJ_DEF(pj_status_t) pjsip_auth_srv_verify( pjsip_auth_srv *auth_srv,
     pj_str_t acc_name;
     pjsip_cred_info cred_info;
     pj_status_t status;
+    const pjsip_auth_algorithm *algorithm;
+
 
     PJ_ASSERT_RETURN(auth_srv && rdata, PJ_EINVAL);
     PJ_ASSERT_RETURN(msg->type == PJSIP_REQUEST_MSG, PJSIP_ENOTREQUESTMSG);
@@ -171,7 +215,17 @@ PJ_DEF(pj_status_t) pjsip_auth_srv_verify( pjsip_auth_srv *auth_srv,
         return PJSIP_EINVALIDAUTHSCHEME;
     }
 
+    algorithm = pjsip_auth_get_algorithm_by_iana_name(
+            &h_auth->credential.digest.algorithm);
+
+    /* Check that algorithm is supported. */
+    if (!algorithm || !pjsip_auth_is_algorithm_supported(algorithm->algorithm_type)) {
+        return PJSIP_EINVALIDALGORITHM;
+    }
+
     /* Find the credential information for the account. */
+    pj_bzero(&cred_info, sizeof(cred_info));
+
     if (auth_srv->lookup2) {
         pjsip_auth_lookup_cred_param param;
 
@@ -179,6 +233,7 @@ PJ_DEF(pj_status_t) pjsip_auth_srv_verify( pjsip_auth_srv *auth_srv,
         param.realm = auth_srv->realm;
         param.acc_name = acc_name;
         param.rdata = rdata;
+        param.auth_hdr = h_auth;
         status = (*auth_srv->lookup2)(rdata->tp_info.pool, &param, &cred_info);
         if (status != PJ_SUCCESS) {
             *status_code = PJSIP_SC_FORBIDDEN;
@@ -209,18 +264,26 @@ PJ_DEF(pj_status_t) pjsip_auth_srv_verify( pjsip_auth_srv *auth_srv,
  * or can leave the value to NULL to make the function fills them in with 
  * random characters.
  */
-PJ_DEF(pj_status_t) pjsip_auth_srv_challenge(  pjsip_auth_srv *auth_srv,
+PJ_DEF(pj_status_t) pjsip_auth_srv_challenge2(  pjsip_auth_srv *auth_srv,
                                                const pj_str_t *qop,
                                                const pj_str_t *nonce,
                                                const pj_str_t *opaque,
                                                pj_bool_t stale,
-                                               pjsip_tx_data *tdata)
+                                               pjsip_tx_data *tdata,
+                                               const pjsip_auth_algorithm_type algorithm_type)
 {
     pjsip_www_authenticate_hdr *hdr;
     char nonce_buf[16];
     pj_str_t random;
+    const pjsip_auth_algorithm *algorithm =
+            pjsip_auth_get_algorithm_by_type(algorithm_type);
 
     PJ_ASSERT_RETURN( auth_srv && tdata, PJ_EINVAL );
+
+    /* Check that algorithm is supported. */
+    if (!algorithm || !pjsip_auth_is_algorithm_supported(algorithm_type)) {
+        return PJSIP_EINVALIDALGORITHM;
+    }
 
     random.ptr = nonce_buf;
     random.slen = sizeof(nonce_buf);
@@ -235,7 +298,7 @@ PJ_DEF(pj_status_t) pjsip_auth_srv_challenge(  pjsip_auth_srv *auth_srv,
      * Note: only support digest authentication now.
      */
     hdr->scheme = pjsip_DIGEST_STR;
-    hdr->challenge.digest.algorithm = pjsip_MD5_STR;
+    pj_strdup(tdata->pool, &hdr->challenge.digest.algorithm, &algorithm->iana_name);
     if (nonce) {
         pj_strdup(tdata->pool, &hdr->challenge.digest.nonce, nonce);
     } else {
@@ -261,3 +324,13 @@ PJ_DEF(pj_status_t) pjsip_auth_srv_challenge(  pjsip_auth_srv *auth_srv,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pjsip_auth_srv_challenge(  pjsip_auth_srv *auth_srv,
+                                               const pj_str_t *qop,
+                                               const pj_str_t *nonce,
+                                               const pj_str_t *opaque,
+                                               pj_bool_t stale,
+                                               pjsip_tx_data *tdata)
+{
+    return pjsip_auth_srv_challenge2(auth_srv, qop, nonce, opaque,
+                                     stale, tdata, PJSIP_AUTH_ALGORITHM_MD5);
+}
