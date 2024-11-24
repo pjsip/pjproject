@@ -71,6 +71,12 @@ struct AuthCredInfo : public PersistentObject
      */
     string      data;
 
+
+    /**
+     * Digest algorithm type.
+     */
+    pjsip_auth_algorithm_type algoType;
+
     /*
      * Digest AKA credential information. Note that when AKA credential
      * is being used, the \a data field of this pjsip_cred_info is

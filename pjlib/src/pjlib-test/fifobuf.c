@@ -133,7 +133,6 @@ static int fifobuf_misc_test()
            LOOP=10000 };
     pj_pool_t *pool;
     pj_fifobuf_t fifo;
-    pj_size_t available = SIZE;
     void *entries[MAX_ENTRIES];
     void *buffer;
     int i;

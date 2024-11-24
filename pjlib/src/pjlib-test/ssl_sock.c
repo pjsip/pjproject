@@ -540,6 +540,8 @@ static pj_status_t load_cert_to_buf(pj_pool_t *pool, const pj_str_t *file_name,
 }
 #endif
 
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
+
 static pj_status_t load_cert_from_store(pj_pool_t *pool,
                                         pj_ssl_cert_t **p_cert)
 {
@@ -572,6 +574,8 @@ static pj_status_t load_cert_from_store(pj_pool_t *pool,
     return PJ_ENOTFOUND;
 #endif
 }
+
+#endif
 
 static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
                      pj_ssl_cipher srv_cipher, pj_ssl_cipher cli_cipher,

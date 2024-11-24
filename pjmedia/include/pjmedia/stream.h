@@ -413,6 +413,26 @@ PJ_DECL(pj_status_t) pjmedia_stream_resume(pjmedia_stream *stream,
 PJ_DECL(pj_status_t) pjmedia_stream_dial_dtmf(pjmedia_stream *stream,
                                               const pj_str_t *ascii_digit);
 
+/**
+ * Transmit DTMF to this stream. The DTMF will be transmitted using
+ * RTP telephone-events as described in RFC 2833. This operation is
+ * only valid for audio stream.
+ *
+ * @param stream        The media stream.
+ * @param ascii_digit   String containing digits to be sent to remote as
+ *                      described on RFC 2833 section 3.10.
+ *                      If PJMEDIA_HAS_DTMF_FLASH is enabled, character 'R' is
+ *                      used to represent the event type 16 (flash) as stated
+ *                      in RFC 4730.
+ *                      Currently the maximum number of digits are 32.
+ * @param duration      duration of event in ms or 0 to use default
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_dial_dtmf2(pjmedia_stream *stream,
+                                              const pj_str_t *ascii_digit,
+                                              unsigned duration);
+
 
 /**
  * Check if the stream has incoming DTMF digits in the incoming DTMF

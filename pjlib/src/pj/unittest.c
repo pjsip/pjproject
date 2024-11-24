@@ -776,6 +776,7 @@ PJ_DEF(pj_status_t) pj_test_create_text_runner(
     text_runner_t *runner;
     unsigned i;
     pj_status_t status;
+    unsigned nthreads = (PJ_HAS_THREADS? 1: 0);
 
     *p_runner = NULL;
 
@@ -795,13 +796,14 @@ PJ_DEF(pj_status_t) pj_test_create_text_runner(
 
     if (prm) {
         pj_memcpy(&runner->base.prm, prm, sizeof(*prm));
+        nthreads = prm->nthreads;
     } else {
         pj_test_runner_param_default(&runner->base.prm);
     }
     runner->base.prm.nthreads = 0;
-    runner->threads = (pj_thread_t**) pj_pool_calloc(pool, prm->nthreads,
+    runner->threads = (pj_thread_t**) pj_pool_calloc(pool, nthreads,
                                                      sizeof(pj_thread_t*));
-    for (i=0; i<prm->nthreads; ++i) {
+    for (i=0; i<nthreads; ++i) {
         thread_param_t *tprm = PJ_POOL_ZALLOC_T(pool, thread_param_t);
         tprm->runner = runner;
         tprm->tid = i+1;

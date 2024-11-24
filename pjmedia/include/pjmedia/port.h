@@ -416,7 +416,8 @@ typedef struct pjmedia_port
                              pjmedia_frame *frame);
 
     /**
-     * Called to destroy this port.
+     * Destructor.
+     * This should only be called by #pjmedia_port_destroy().
      */
     pj_status_t (*on_destroy)(struct pjmedia_port *this_port);
 
@@ -512,14 +513,21 @@ PJ_DECL(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
 PJ_DECL(pj_status_t) pjmedia_port_destroy( pjmedia_port *port );
 
 
+
+/*
+ *******************************************************************
+ * Helper functions.
+ *******************************************************************
+ */
+
 /**
  * This is a helper function to initialize the port's group lock. This
  * function will create a group lock if NULL is passed, initialize the group
  * lock by adding the port's destructor to the group lock handler list, and
  * increment the reference counter.
  *
- * This function should only be called by a media port implementation and
- * after port's on_destroy() function has been assigned.
+ * This function should only be called by media port implementation. The port
+ * must have its own pool which will be released in its on_destroy() function.
  *
  * @param port              The pjmedia port to be initialized.
  * @param pool              The pool, this can be a temporary pool as

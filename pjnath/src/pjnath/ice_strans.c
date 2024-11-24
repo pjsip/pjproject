@@ -2536,7 +2536,10 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
                     cand->status = PJ_SUCCESS;
 
                     /* Add the candidate (for trickle ICE) */
-                    if (pj_ice_strans_has_sess(ice_st)) {
+                    if (pj_ice_strans_has_sess(ice_st) &&
+                        comp->comp_id <=
+                        pj_ice_strans_get_running_comp_cnt(ice_st))
+                    {
                         status = pj_ice_sess_add_cand(
                                         ice_st->ice,
                                         comp->comp_id,
