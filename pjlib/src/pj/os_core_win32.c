@@ -54,17 +54,6 @@
 #else
 #   define LOG_MUTEX(expr)  PJ_LOG(6,expr)
 #endif
-/*
- * To compile construction such as the next:
- * 
- *          LOG_MUTEX_WARN((mutex->obj_name, status,
- *              "Failed to acquire mutex by thread %s",
- *              pj_thread_this()->obj_name));
- * 
- * We should redefine LOG_MUTEX_WARN macro using PJ_PERROR, instead of PJ_LOG
- * 
- * #   define LOG_MUTEX_WARN(expr)  PJ_LOG(3,expr)
-*/
 #   define LOG_MUTEX_WARN(expr)  PJ_PERROR(3,expr)
 #define THIS_FILE       "os_core_win32.c"
 
@@ -130,7 +119,7 @@ struct pj_event_t
  */
 struct pj_atomic_t
 {
-    long                value;
+    long value;
 };
 
 /*
