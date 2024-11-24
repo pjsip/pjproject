@@ -47,13 +47,13 @@ make
 
 ```
 
-then go to ``` pjsip-apps/src/swig/csharp/pjsua2maui/pjsua2maui ``` and run:
+then start the android emulator, go to ``` pjsip-apps/src/swig/csharp/pjsua2maui/pjsua2maui ``` and run:
 
 ```bash
 
 dotnet workload restore
 dotnet restore
-dotnet build -t:Run -c Debug -f net9.0-android -p:_DeviceName=:v2:udid=UDID_OF_YOUR_EMULATOR
+dotnet build -t:Run -c Debug -f net9.0-android  
 
 ```
 
