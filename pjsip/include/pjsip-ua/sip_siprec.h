@@ -41,7 +41,7 @@ PJ_DECL(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt);
  *
  * @return               SDP label attribute.
  */
-PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *sdp_media);
+PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *sdp_media);
 
 
 /**
@@ -51,7 +51,7 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *sdp_medi
  * 
  * @return                PJ_TRUE if value of Require header is equal to siprec.
  */
-PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
+PJ_DECL(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
 
 
 /**
@@ -61,7 +61,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
  * 
  * @return               PJ_TRUE if a label exists in the SDP.
  */
-PJ_DEF(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp);
+PJ_DECL(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp);
 
 
 /**
@@ -89,7 +89,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp)
  *                        parameter SHOULD be set with a final response message
  *                        to be sent to the sender of the request.
  */
-PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,    
+PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,    
                                                 pjmedia_sdp_session *sdp_offer,                                       
                                                 unsigned *options,
                                                 pjsip_dialog *dlg,
