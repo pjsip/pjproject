@@ -80,6 +80,17 @@ typedef unsigned __int64 pj_uint64_t;
 
 #define PJ_UNREACHED(x)         
 
+/*
+ * Standard pjsip macro is not well human readable for use with structures:
+ * typedef struct PJ_ALIGN_DATA(a{ int value; }, 8) a;
+ * 
+ * The macros PJ_ALIGN_DATA_PREFIX and PJ_ALIGN_DATA_SUFFIX give us a more readable equivalent syntax:
+ * typedef struct PJ_ALIGN_DATA_PREFIX(8) a { int value; } PJ_ALIGN_DATA_SUFFIX(8) a;
+ * 
+ * and PJ_SYS_ALIGN_PREFIX, PJ_SYS_ALIGN_SUFFIX give us an even more readable syntax with the
+ * platform default alignment:
+ * typedef struct PJ_SYS_ALIGN_PREFIX a { int value; } PJ_SYS_ALIGN_SUFFIX a;
+*/
 //#define PJ_ALIGN_DATA(declaration, alignment) __declspec(align(alignment)) declaration
 //#pragma warning(disable:4324)   // structure padded due to align()
 //#define PJ_ALIGN_DATA(declaration, alignment) __pragma(warning(push)) __pragma(warning(disable:4324)) __declspec(align(alignment)) declaration __pragma(warning(pop))
@@ -87,12 +98,28 @@ typedef unsigned __int64 pj_uint64_t;
 #define PJ_ALIGN_DATA_SUFFIX(alignment) __pragma(warning(pop))
 #define PJ_ALIGN_DATA(declaration, alignment) PJ_ALIGN_DATA_PREFIX(alignment) declaration PJ_ALIGN_DATA_SUFFIX(alignment)
 
-////please add #include <windows.h> into your config_site.h if macro bellow is not compilable
-//#define PJ_SYS_ALIGN_PREFIX PJ_ALIGN_DATA_PREFIX(MEMORY_ALLOCATION_ALIGNMENT)
-//#define PJ_SYS_ALIGN_SUFFIX PJ_ALIGN_DATA_SUFFIX(MEMORY_ALLOCATION_ALIGNMENT)
-/* PJ_POOL_ALIGNMENT is defined in os_win32.h and os_winuwp.h */
-#define PJ_SYS_ALIGN_PREFIX PJ_ALIGN_DATA_PREFIX(PJ_POOL_ALIGNMENT)
-#define PJ_SYS_ALIGN_SUFFIX PJ_ALIGN_DATA_SUFFIX(PJ_POOL_ALIGNMENT)
+
+/* 
+ * PJ_SYS_ALIGN_PREFIX, PJ_SYS_ALIGN_SUFFIX is a readable syntax to use with the
+ * platform default alignment (see example above).
+ * The MEMORY_ALLOCATION_ALIGNMENT macro which is 16 on the x64 platform and 8 on the x86 platform
+ * is the platform default alignment for the Windows platform and is set in winnt.h.
+ * But it is too early to use MEMORY_ALLOCATION_ALIGNMENT constant here
+ * so we need to explicity declare alignment as 8 or 16.
+ */
+#if defined(MEMORY_ALLOCATION_ALIGNMENT)
+#   define PJ_SYS_ALIGN_PREFIX PJ_ALIGN_DATA_PREFIX(MEMORY_ALLOCATION_ALIGNMENT)
+#   define PJ_SYS_ALIGN_SUFFIX PJ_ALIGN_DATA_SUFFIX(MEMORY_ALLOCATION_ALIGNMENT)
+#elif defined(_WIN64) || defined(_M_ALPHA)
+#   define PJ_SYS_ALIGN_PREFIX PJ_ALIGN_DATA_PREFIX(16)
+#   define PJ_SYS_ALIGN_SUFFIX PJ_ALIGN_DATA_SUFFIX(16)
+#else
+#   define PJ_SYS_ALIGN_PREFIX PJ_ALIGN_DATA_PREFIX(8)
+#   define PJ_SYS_ALIGN_SUFFIX PJ_ALIGN_DATA_SUFFIX(8)
+#endif
+
+
+
 
 #endif  /* __PJ_COMPAT_CC_MSVC_H__ */
 

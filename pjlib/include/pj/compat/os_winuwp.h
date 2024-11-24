@@ -145,10 +145,10 @@
  */
 #define PJ_THREAD_ALLOCATE_STACK        0
 
-/* The pj_stack implementation requires and checks that
- * PJ_POOL_ALIGNMENT is not less than MEMORY_ALLOCATION_ALIGNMENT
- * which is 16 for x64 and 8 for x86 platform
- * see winnt.h
+/* 
+ * We need to define PJ_POOL_ALIGNMENT as MEMORY_ALLOCATION_ALIGNMENT for the Windows platform.
+ * see winnt.h for MEMORY_ALLOCATION_ALIGNMENT
+ * see more in os_win32.h
  */
 #if defined(MEMORY_ALLOCATION_ALIGNMENT)
 #   define PJ_POOL_ALIGNMENT MEMORY_ALLOCATION_ALIGNMENT
