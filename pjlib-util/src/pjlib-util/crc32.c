@@ -172,7 +172,7 @@ PJ_DEF(pj_uint32_t) pj_crc32_update(pj_crc32_context *ctx,
         data += 4;
     }
 
-    while (nbytes--) {
+    for (; nbytes; nbytes--) {
         crc = crc_tab[CRC32_INDEX(crc) ^ *data++] ^ CRC32_SHIFTED(crc);
     }
 

@@ -945,6 +945,16 @@ public:
     unsigned            sndClockRate;
 
     /**
+     * Sound device uses \ref PJMEDIA_CLOCK instead of native sound device
+     * clock, generally this will be able to reduce jitter and clock drift.
+     *
+     * This option is not applicable for encoded/non-PCM format.
+     *
+     * Default value: PJSUA_DEFAULT_SND_USE_SW_CLOCK
+     */
+    bool                sndUseSwClock;
+
+    /**
      * Channel count be applied when opening the sound device and
      * conference bridge.
      */
@@ -2031,6 +2041,9 @@ private:
                                pj_bool_t renew);
     static void on_reg_state2(pjsua_acc_id acc_id,
                               pjsua_reg_info *info);
+    static void on_acc_send_request(pjsua_acc_id acc_id,
+                                    void* token,
+                                    pjsip_event *event);
     static void on_incoming_subscribe(pjsua_acc_id acc_id,
                                       pjsua_srv_pres *srv_pres,
                                       pjsua_buddy_id buddy_id,

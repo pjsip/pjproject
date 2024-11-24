@@ -245,6 +245,13 @@ on_return:
 PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( pjsua_call_id call_id,
                                           const pj_str_t *digits)
 {
+    return pjsua_call_dial_dtmf2(call_id, digits, 0);
+}
+
+PJ_DEF(pj_status_t) pjsua_call_dial_dtmf2( pjsua_call_id call_id,
+                                          const pj_str_t *digits,
+                                          unsigned duration)
+{
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
     pj_status_t status;
@@ -266,8 +273,8 @@ PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( pjsua_call_id call_id,
         goto on_return;
     }
 
-    status = pjmedia_stream_dial_dtmf(
-                call->media[call->audio_idx].strm.a.stream, digits);
+    status = pjmedia_stream_dial_dtmf2(
+                call->media[call->audio_idx].strm.a.stream, digits, duration);
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
@@ -472,10 +479,11 @@ void pjsua_check_snd_dev_idle()
     /* Activate sound device auto-close timer if sound device is idle.
      * It is idle when there is no port connection in the bridge and
      * there is no active call.
+     * Update: as bridge conn/disconn is now async, the check is moved to
+     *         the timer callback.
      */
     if (pjsua_var.snd_idle_timer.id == PJ_FALSE &&
-        call_cnt == 0 &&
-        pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0)
+        call_cnt == 0)
     {
         pj_time_val delay;
 
@@ -495,14 +503,13 @@ static void close_snd_timer_cb( pj_timer_heap_t *th,
     PJ_UNUSED_ARG(th);
 
     PJSUA_LOCK();
-    if (entry->id) {
+    if (entry->id && pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0) {
         PJ_LOG(4,(THIS_FILE,"Closing sound device after idle for %d second(s)",
                   pjsua_var.media_cfg.snd_auto_close_time));
 
-        entry->id = PJ_FALSE;
-
         close_snd_dev();
     }
+    entry->id = PJ_FALSE;
     PJSUA_UNLOCK();
 }
 
@@ -606,8 +613,15 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
         }
 
         if (call_med->strm.a.media_port) {
-            if (call_med->strm.a.destroy_port)
+            pjmedia_port *stream_port;
+
+            /* Destroy custom stream port if any & configured to */
+            pjmedia_stream_get_port(call_med->strm.a.stream, &stream_port);
+            if (call_med->strm.a.destroy_port &&
+                call_med->strm.a.media_port != stream_port)
+            {
                 pjmedia_port_destroy(call_med->strm.a.media_port);
+            }
             call_med->strm.a.media_port = NULL;
         }
 
@@ -833,8 +847,10 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
             port_name.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
                                              call->inv->dlg->remote.info->uri,
                                              tmp, sizeof(tmp));
-            if (port_name.slen < 1) {
-                port_name = pj_str("call");
+            if (port_name.slen < 1 || pj_strchr(&port_name, '%')) {
+                pj_ansi_snprintf(tmp, sizeof(tmp), "call %d:%d",
+                                 call->index, strm_idx);
+                port_name = pj_str(tmp);
             }
             status = pjmedia_conf_add_port(pjsua_var.mconf,
                                            call->inv->pool,
@@ -1245,6 +1261,8 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     pj_pool_t *pool = NULL;
     pjmedia_port *port;
     pj_status_t status = PJ_SUCCESS;
+
+    PJ_ASSERT_RETURN(filename && filename->slen > 0, PJ_EINVAL);
 
     if (pjsua_var.player_cnt >= PJ_ARRAY_SIZE(pjsua_var.player))
         return PJ_ETOOMANY;
@@ -2342,6 +2360,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
 
         /* Open! */
         param.options = 0;
+        if (pjsua_var.media_cfg.snd_use_sw_clock)
+            param.options |= PJMEDIA_SND_PORT_USE_SW_CLOCK;
         status = open_snd_dev(&param);
         if (status == PJ_SUCCESS)
             break;

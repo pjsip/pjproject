@@ -351,6 +351,7 @@ enum flags
 struct tonegen
 {
     pjmedia_port        base;
+    pj_pool_t          *pool;
 
     /* options */
     unsigned            options;
@@ -409,7 +410,7 @@ static pj_status_t tonegen_destroy(pjmedia_port *this_port);
  * When the tone generator is first created, it will be loaded with the
  * default digit map.
  */
-PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool_,
                                             const pj_str_t *name,
                                             unsigned clock_rate,
                                             unsigned channel_count,
@@ -420,23 +421,31 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
 {
     const pj_str_t STR_TONE_GEN = pj_str("tonegen");
     struct tonegen  *tonegen;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
+    pj_pool_t *pool = NULL;
 
-    PJ_ASSERT_RETURN(pool && clock_rate && channel_count && 
+    PJ_ASSERT_RETURN(pool_ && clock_rate && channel_count && 
                      samples_per_frame && bits_per_sample == 16 && 
                      p_port != NULL, PJ_EINVAL);
 
     /* Only support mono and stereo */
     PJ_ASSERT_RETURN(channel_count==1 || channel_count==2, PJ_EINVAL);
 
+    if (name == NULL || name->slen == 0)
+        name = &STR_TONE_GEN;
+
+    /* Create own pool */
+    pool = pj_pool_create(pool_->factory, name->ptr, 500, 500, NULL);
+    PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
+
     /* Create and initialize port */
     tonegen = PJ_POOL_ZALLOC_T(pool, struct tonegen);
-    if (name == NULL || name->slen == 0) name = &STR_TONE_GEN;
+    tonegen->pool = pool;
     status = pjmedia_port_info_init(&tonegen->base.info, name, 
                                     SIGNATURE, clock_rate, channel_count, 
                                     bits_per_sample, samples_per_frame);
     if (status != PJ_SUCCESS)
-        return status;
+        goto on_return;
 
     tonegen->options = options;
     tonegen->base.get_frame = &tonegen_get_frame;
@@ -454,7 +463,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
     }
 
     if (status != PJ_SUCCESS) {
-        return status;
+        goto on_return;
     }
 
     TRACE_((THIS_FILE, "Tonegen created: %u/%u/%u/%u", clock_rate, 
@@ -462,7 +471,13 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
 
     /* Done */
     *p_port = &tonegen->base;
-    return PJ_SUCCESS;
+
+on_return:
+    if (status != PJ_SUCCESS) {
+        if (pool)
+            pj_pool_release(pool);
+    }
+    return status;
 }
 
 
@@ -557,10 +572,16 @@ static pj_status_t tonegen_destroy(pjmedia_port *port)
 
     TRACE_((THIS_FILE, "tonegen_destroy()"));
 
-    pj_lock_acquire(tonegen->lock);
-    pj_lock_release(tonegen->lock);
+    if (tonegen->lock) {
+        pj_lock_acquire(tonegen->lock);
+        pj_lock_release(tonegen->lock);
 
-    pj_lock_destroy(tonegen->lock);
+        pj_lock_destroy(tonegen->lock);
+        tonegen->lock = NULL;
+    }
+
+    if (tonegen->pool)
+        pj_pool_safe_release(&tonegen->pool);
 
     return PJ_SUCCESS;
 }

@@ -1212,6 +1212,19 @@ typedef struct pjsua_callback
                               pjsip_event *e);
 
     /**
+     * Notify application when a transaction started by pjsua_acc_send_request()
+     * has been completed,i.e. when a response has been received.
+     *
+     * @param acc_id   Account identification.
+     * @param token    Arbitrary data owned by the application
+     *                 that was specified when sending the request.
+     * @param event    Transaction event that caused the state change.
+     */
+    void (*on_acc_send_request)(pjsua_acc_id acc_id,
+                                void *token,
+                                pjsip_event *event);
+
+    /**
      * Notify application when media state in the call has changed.
      * Normal application would need to implement this callback, e.g.
      * to connect the call's media to sound device. When ICE is used,
@@ -4939,6 +4952,30 @@ PJ_DECL(pj_status_t) pjsua_acc_get_config(pjsua_acc_id acc_id,
 PJ_DECL(pj_status_t) pjsua_acc_modify(pjsua_acc_id acc_id,
                                       const pjsua_acc_config *acc_cfg);
 
+/**
+ * Send arbitrary out-of-dialog requests from an account, e.g. OPTIONS.
+ * The application should use the call or presence API to create
+ * dialog-related requests.
+ *
+ * @param acc_id        The account ID.
+ * @param dest_uri      URI to be put into the To header (normally is the same
+ *                      as the target URI).
+ * @param method        The SIP method of the request.
+ * @param options       This is for future use (currently only NULL is supported).
+ * @param token         Arbitrary token (user data owned by the application)
+ *                      to be passed back to the application in callback
+ *                      on_acc_send_request().
+ * @param msg_data      Optional headers etc. to be added to the outgoing
+ *                      request, or NULL if no custom header is desired.
+ *
+ * @return              PJ_SUCCESS or the error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_send_request(pjsua_acc_id acc_id,
+                                            const pj_str_t *dest_uri,
+                                            const pj_str_t *method,
+                                            void *options,
+                                            void *token,
+                                            const pjsua_msg_data *msg_data);
 
 /**
  * Modify account's presence status to be advertised to remote/presence
@@ -5623,8 +5660,7 @@ typedef struct pjsua_call_send_dtmf_param
     pjsua_dtmf_method method;
 
     /**
-     * The signal duration used for the DTMF. This field is only used
-     * if the method is PJSUA_DTMF_METHOD_SIP_INFO.
+     * The signal duration used for the DTMF.
      *
      * Default: PJSUA_CALL_SEND_DTMF_DURATION_DEFAULT
      */
@@ -6190,6 +6226,25 @@ PJ_DECL(pj_status_t) pjsua_call_xfer_replaces(pjsua_call_id call_id,
  */
 PJ_DECL(pj_status_t) pjsua_call_dial_dtmf(pjsua_call_id call_id, 
                                           const pj_str_t *digits);
+
+/**
+ * Send DTMF digits to remote using RFC 2833 payload formats. Use 
+ * #pjsua_call_send_dtmf() to send DTMF using SIP INFO or other method in 
+ * \a pjsua_dtmf_method. App can use \a on_dtmf_digit() or \a on_dtmf_digit2() 
+ * callback to monitor incoming DTMF.
+ *
+ * @param call_id       Call identification.
+ * @param digits        DTMF string digits to be sent as described on RFC 2833 
+ *                      section 3.10. If PJMEDIA_HAS_DTMF_FLASH is enabled, 
+ *                      character 'R' is used to represent the 
+ *                      event type 16 (flash) as stated in RFC 4730.
+ * @param duration      duration of event in ms or 0 to use default
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_dial_dtmf2(pjsua_call_id call_id, 
+                                          const pj_str_t *digits,
+                                          unsigned duration);
 
 /**
  * Send DTMF digits to remote. Use this method to send DTMF using the method in
@@ -7120,6 +7175,15 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 #endif
 
 /**
+ * Sound device uses \ref PJMEDIA_CLOCK instead of native sound device
+ * clock. This setting is the default value for
+ * pjsua_media_config.snd_use_sw_clock.
+ */
+#ifndef PJSUA_DEFAULT_SND_USE_SW_CLOCK
+#   define PJSUA_DEFAULT_SND_USE_SW_CLOCK  PJ_FALSE
+#endif
+
+/**
  * Default frame length in the conference bridge. This setting
  * is the default value for pjsua_media_config.audio_frame_ptime.
  */
@@ -7205,6 +7269,16 @@ struct pjsua_media_config
      * If value is zero, conference bridge clock rate will be used.
      */
     unsigned            snd_clock_rate;
+
+    /**
+     * Sound device uses \ref PJMEDIA_CLOCK instead of native sound device
+     * clock, generally this will be able to reduce jitter and clock drift.
+     *
+     * This option is not applicable for encoded/non-PCM format.
+     *
+     * Default value: PJSUA_DEFAULT_SND_USE_SW_CLOCK
+     */
+    pj_bool_t           snd_use_sw_clock;
 
     /**
      * Channel count be applied when opening the sound device and

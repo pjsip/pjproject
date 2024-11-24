@@ -56,7 +56,7 @@ PJ_BEGIN_DECL
  * Application then specifies digest AKA credential by initializing the 
  * authentication credential as follows:
  *
- @code
+ \verbatim
 
     pjsip_cred_info cred;
 
@@ -65,20 +65,19 @@ PJ_BEGIN_DECL
     cred.scheme = pj_str("Digest");
     cred.realm = pj_str("ims-domain.test");
     cred.username = pj_str("user@ims-domain.test");
-    cred.data_type = PJSIP_CRED_DATA_PLAIN_PASSWD | PJSIP_CRED_DATA_EXT_AKA;
-    cred.data = pj_str("password");
+    cred.data_type = PJSIP_CRED_DATA_EXT_AKA;
 
     // AKA extended info
     cred.ext.aka.k = pj_str("password");
     cred.ext.aka.cb = &pjsip_auth_create_aka_response
 
- @endcode
+ \endverbatim
  *
  * Description:
- * - To support AKA, application adds \a PJSIP_CRED_DATA_EXT_AKA flag in the
+ * - To support AKA, application adds #PJSIP_CRED_DATA_EXT_AKA flag in the
  * \a data_type field. This indicates that extended information specific to
  * AKA authentication is available in the credential, and that response 
- * digest computation will use the callback function instead of the usual MD5
+ * digest computation will use the callback function instead of the usual
  * digest computation.
  *
  * - The \a scheme for the credential is "Digest". 
@@ -86,12 +85,6 @@ PJ_BEGIN_DECL
  * - The \a realm is the expected realm in the challenge. Application may 
  * also specify wildcard realm ("*") if it wishes to respond to any realms 
  * in the challenge.
- *
- * - The \a data field is optional. Application may fill this with the password
- * if it wants to support both MD5 and AKA MD5 in a single credential. The
- * pjsip_auth_create_aka_response() function will use this field if the
- * challenge indicates "MD5" as the algorithm instead of "AKAv1-MD5" or
- * "AKAv2-MD5".
  *
  * - The \a ext.aka.k field specifies the permanent subscriber key to be used
  * for AKA authentication. Application may specify binary password containing
@@ -164,7 +157,7 @@ PJ_BEGIN_DECL
 #define PJSIP_AKA_SQNLEN        6
 
 /**
- * This function creates MD5, AKAv1-MD5, or AKAv2-MD5 response for
+ * This function creates an AKAv1-MD5, or AKAv2-MD5 response for
  * the specified challenge in \a chal, according to the algorithm 
  * specified in the challenge, and based on the information in the 
  * credential \a cred.
