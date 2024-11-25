@@ -2517,17 +2517,16 @@ void Endpoint::codecSetParam(const string &codec_id,
 
 CodecOpusConfig Endpoint::getCodecOpusConfig() const PJSUA2_THROW(Error)
 {
-    CodecOpusConfig config;
 #if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+    CodecOpusConfig config;
     pjmedia_codec_opus_config opus_cfg;
 
     PJSUA2_CHECK_EXPR(pjmedia_codec_opus_get_config(&opus_cfg));
     config.fromPj(opus_cfg);
+    return config;
 #else
     PJSUA2_RAISE_ERROR(PJ_ENOTSUP);
 #endif
-
-    return config;
 }
 
 void Endpoint::setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
@@ -2552,17 +2551,16 @@ void Endpoint::setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
 
 CodecLyraConfig Endpoint::getCodecLyraConfig() const PJSUA2_THROW(Error)
 {
-    CodecLyraConfig config;
 #if defined(PJMEDIA_HAS_LYRA_CODEC) && (PJMEDIA_HAS_LYRA_CODEC!=0)
+    CodecLyraConfig config;
     pjmedia_codec_lyra_config lyra_cfg;
 
     PJSUA2_CHECK_EXPR(pjmedia_codec_lyra_get_config(&lyra_cfg));
     config.fromPj(lyra_cfg);
+    return config;
 #else
     PJSUA2_RAISE_ERROR(PJ_ENOTSUP);
 #endif
-
-    return config;
 }
 
 void Endpoint::setCodecLyraConfig(const CodecLyraConfig &lyra_cfg)

@@ -36,7 +36,6 @@ struct common
     pj_dns_type              type;          /**< Type of this structure.*/
 };
 
-#pragma pack(1)
 struct srv_target
 {
     struct common           common;
@@ -55,7 +54,6 @@ struct srv_target
     unsigned                addr_cnt;
     pj_sockaddr             addr[ADDR_MAX_COUNT];/**< Address family and IP.*/
 };
-#pragma pack()
 
 struct pj_dns_srv_async_query
 {

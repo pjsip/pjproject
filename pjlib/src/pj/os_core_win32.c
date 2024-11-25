@@ -480,7 +480,8 @@ static void set_thread_display_name(const char *name)
     PJ_LOG(5, (THIS_FILE, "SetThreadDescription:%p, name:%s", fn, name));
     if (fn) {
         wchar_t wname[PJ_MAX_OBJ_NAME];
-        pj_ansi_to_unicode(name, pj_ansi_strlen(name), wname, PJ_MAX_OBJ_NAME);
+        pj_ansi_to_unicode(name, (int)pj_ansi_strlen(name), wname,
+                           PJ_MAX_OBJ_NAME);
         fn(GetCurrentThread(), wname);
         return;
     }
