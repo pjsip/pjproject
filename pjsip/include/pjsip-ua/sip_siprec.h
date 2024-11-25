@@ -97,6 +97,17 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                                 pjsip_tx_data **p_tdata);
 
 
+/**
+ * Counts the number of audio and video streams in the SDP
+ * 
+ * @param sdp         The SDP media.
+ * @param maudcnt     media audio count.
+ * @param mvidcnt     media video count
+ */
+PJ_DECL(void) pjsip_siprec_count_media(pjmedia_sdp_session *sdp,                                     
+                                                unsigned *maudcnt,
+                                                unsigned *mvidcnt);
+
                                             
 PJ_END_DECL
 

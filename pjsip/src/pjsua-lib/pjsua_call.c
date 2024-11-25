@@ -1832,12 +1832,16 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
         goto on_return;
     }
-        
+
     /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so
      * set the number of call active streams to the number of media in the SDP offer.
      */
     if(options & PJSIP_INV_REQUIRE_SIPREC){
-        call->opt.aud_cnt = offer->media_count;
+        unsigned maudcnt = 0;
+        unsigned mvidcnt = 0;
+        pjsip_siprec_count_media(offer, &maudcnt, &mvidcnt);
+        call->opt.aud_cnt = maudcnt;
+        call->opt.vid_cnt = mvidcnt;
     }
 
     if (pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_MANDATORY)

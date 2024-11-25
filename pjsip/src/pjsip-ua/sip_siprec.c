@@ -211,3 +211,23 @@ on_return:
 
     return status;
 }
+
+
+/**
+ * Counts the number of audio and video streams in the SDP
+ */
+PJ_DEF(void) pjsip_siprec_count_media(pjmedia_sdp_session *sdp,                                     
+                                                unsigned *maudcnt,
+                                                unsigned *mvidcnt)
+{
+    const pj_str_t STR_AUDIO = { "audio", 5 };
+    const pj_str_t STR_VIDEO = { "video", 5 };
+    
+    for(int mi=0; mi<sdp->media_count; mi++)
+    {
+        if (pj_stricmp(&sdp->media[mi]->desc.media, &STR_AUDIO) == 0) 
+            (*maudcnt)++;
+        else if (pj_stricmp(&sdp->media[mi]->desc.media, &STR_VIDEO) == 0) 
+            (*mvidcnt)++;
+    }
+}
