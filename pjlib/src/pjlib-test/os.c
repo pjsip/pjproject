@@ -99,6 +99,9 @@ static char test_large_msg[PJ_LOG_MAX_SIZE];
 
 static void log_write(int level, const char *buffer, int len)
 {
+    PJ_UNUSED_ARG(level);
+    PJ_UNUSED_ARG(buffer);
+
     log_written = len;
     //printf("%s", buffer);
 }

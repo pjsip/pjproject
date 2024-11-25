@@ -71,19 +71,19 @@ pjmedia_format MediaFormatAudio::toPj() const
 }
 
 void MediaFormatAudio::init(pj_uint32_t formatId,
-                            unsigned clockRate, unsigned channelCount,
-                            int frameTimeUsec, int bitsPerSample,
-                            pj_uint32_t avgBps, pj_uint32_t maxBps)
+                            unsigned clockRate_, unsigned channelCount_,
+                            int frameTimeUsec_, int bitsPerSample_,
+                            pj_uint32_t avgBps_, pj_uint32_t maxBps_)
 {
     type = PJMEDIA_TYPE_AUDIO;
     id = formatId;
 
-    this->clockRate = clockRate;
-    this->channelCount = channelCount;
-    this->frameTimeUsec = frameTimeUsec;
-    this->bitsPerSample = bitsPerSample;
-    this->avgBps = avgBps;
-    this->maxBps = maxBps;
+    this->clockRate = clockRate_;
+    this->channelCount = channelCount_;
+    this->frameTimeUsec = frameTimeUsec_;
+    this->bitsPerSample = bitsPerSample_;
+    this->avgBps = avgBps_;
+    this->maxBps = maxBps_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -301,7 +301,7 @@ static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
     AudioMediaPort *mport = (AudioMediaPort *) port->port_data.pdata;
     MediaFrame frame_;
 
-    frame_.size = frame->size;
+    frame_.size = (unsigned)frame->size;
     mport->onFrameRequested(frame_);
     frame->type = frame_.type;
     frame->size = PJ_MIN(frame_.buf.size(), frame_.size);
@@ -326,7 +326,7 @@ static pj_status_t put_frame(pjmedia_port *port, pjmedia_frame *frame)
 
     frame_.type = frame->type;
     frame_.buf.assign((char *)frame->buf, ((char *)frame->buf) + frame->size);
-    frame_.size = frame->size;
+    frame_.size = (unsigned)frame->size;
     mport->onFrameReceived(frame_);
 
     return PJ_SUCCESS;
@@ -1576,20 +1576,20 @@ pjmedia_format MediaFormatVideo::toPj() const
 }
 
 void MediaFormatVideo::init(pj_uint32_t formatId,
-                            unsigned width, unsigned height,
-                            int fpsNum, int fpsDenum,
-                            pj_uint32_t avgBps, pj_uint32_t maxBps)
+                            unsigned width_, unsigned height_,
+                            int fpsNum_, int fpsDenum_,
+                            pj_uint32_t avgBps_, pj_uint32_t maxBps_)
 {
 #if PJSUA_HAS_VIDEO
     type = PJMEDIA_TYPE_VIDEO;
     id = formatId;
 
-    this->width = width;
-    this->height = height;
-    this->fpsNum = fpsNum;
-    this->fpsDenum = fpsDenum;
-    this->avgBps = avgBps;
-    this->maxBps = maxBps;
+    this->width = width_;
+    this->height = height_;
+    this->fpsNum = fpsNum_;
+    this->fpsDenum = fpsDenum_;
+    this->avgBps = avgBps_;
+    this->maxBps = maxBps_;
 #else
     type = PJMEDIA_TYPE_UNKNOWN;
 #endif
