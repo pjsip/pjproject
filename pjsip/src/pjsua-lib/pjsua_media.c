@@ -388,6 +388,8 @@ static int get_media_ip_version(pjsua_call_media *call_med,
 #else
     PJ_UNUSED_ARG(call_med);
     PJ_UNUSED_ARG(rem_sdp);
+    PJ_UNUSED_ARG(loop_tp);
+    PJ_UNUSED_ARG(ice_tp);
 #endif
 
     /* Use IPv4. */

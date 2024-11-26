@@ -324,7 +324,7 @@ PJ_DEF(pj_status_t)
 pjsua_buddy_get_dlg_event_info( pjsua_buddy_id buddy_id,
                                 pjsua_buddy_dlg_event_info *info)
 {
-    unsigned total=0;
+    pj_ssize_t total=0;
     struct buddy_lock lck;
     pjsua_buddy *buddy;
     pj_status_t status;

@@ -998,7 +998,8 @@ static void create_dtmf_payload(pjmedia_stream *stream,
         if (!pj_stricmp2(&stream->si.fmt.encoding_name, "opus")) {
             ts_modifier = (float)48000 / stream->codec_param.info.clock_rate;
         }
-        duration = ts_modifier * digit->send_duration * stream->codec_param.info.clock_rate / 1000;
+        duration = (unsigned)(ts_modifier * digit->send_duration *
+                              stream->codec_param.info.clock_rate / 1000);
     }
     else
     {

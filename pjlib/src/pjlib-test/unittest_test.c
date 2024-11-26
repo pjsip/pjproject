@@ -44,12 +44,12 @@ static void print_log_buffer(char *title)
 /* This log callback appends the log to the log_buffer */
 static void log_callback(int level, const char *data, int len)
 {
-    int max_len = (log_buffer+sizeof(log_buffer))-log_buffer_ptr-1;
+    int max_len = (int)((log_buffer+sizeof(log_buffer))-log_buffer_ptr-1);
 
     PJ_UNUSED_ARG(level);
 
     /* make sure len is correct */
-    len = strlen(data);
+    len = (int)strlen(data);
     if (len > max_len)
         len = max_len;
 
@@ -638,7 +638,7 @@ int unittest_parallel_test()
 
 int unittest_test(void)
 {
-    int ret, log_level = pj_log_get_level();
+    int ret = 0, log_level = pj_log_get_level();
     unsigned j;
 
     if (pj_test_is_under_test()) {

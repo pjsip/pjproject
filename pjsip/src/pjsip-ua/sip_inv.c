@@ -204,13 +204,14 @@ static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
         pjsip_hdr *hdr;
         const pj_str_t hname = { "Reason", 6 };
         pj_str_t hvalue;
-        unsigned hval_len;
+        pj_size_t hval_len;
 
+        PJ_ASSERT_RETURN(tdata && reason && reason->slen >= 0, PJ_EINVAL);
         PJ_ASSERT_RETURN(code < 1000, PJ_EINVAL);
 
-        hval_len =  3 +                 /* 'SIP' */
-                    11 +                /* ' ;cause=3-digit-code' */
-                    reason->slen + 10;   /* ' ;text=".."' */
+        hval_len =  3 +                     /* 'SIP' */
+                    11 +                    /* ' ;cause=3-digit-code' */
+                    (pj_size_t)reason->slen + 10;   /* ' ;text=".."'  */
         hvalue.ptr = (char*)pj_pool_alloc(tdata->pool, hval_len);
         if (!hvalue.ptr)
             return PJ_ENOMEM;
