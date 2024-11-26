@@ -898,8 +898,11 @@ static int pjsip_generic_int_hdr_print( pjsip_generic_int_hdr *hdr,
 static pjsip_generic_int_hdr* pjsip_generic_int_hdr_clone( pj_pool_t *pool, 
                                                    const pjsip_generic_int_hdr *rhs)
 {
-    pjsip_generic_int_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_generic_int_hdr);
-    pj_memcpy(hdr, rhs, sizeof(*hdr));
+    pjsip_generic_int_hdr *hdr;
+
+    hdr = pjsip_generic_int_hdr_create(pool, &rhs->name, rhs->ivalue);
+    hdr->type = rhs->type;
+
     return hdr;
 }
 
