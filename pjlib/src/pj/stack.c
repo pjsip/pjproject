@@ -101,20 +101,18 @@ PJ_DEF(pj_stack_t*) pj_stack_pop(pj_stack_type *stack)
         return NULL;
     }
 
-    pj_stack_item_t* node = stack->head.next;
-    stack->head.next = node->next;
-
-    if ((status = pj_mutex_unlock(stack->mutex)) != PJ_SUCCESS)
-    {
-        PJ_PERROR(1, ("pj_stack_pop", status, "Error unlocking mutex for stack stc%p", stack));
-    }
-    if (node != node->next)
-    {
+    pj_stack_item_t *node = stack->head.next;
+    if (node != &stack->head) {
+        stack->head.next = node->next;
         node->next = NULL;
-        return node;
     }
     else
-        return NULL;
+        node = NULL;
+
+    if ((status = pj_mutex_unlock(stack->mutex)) != PJ_SUCCESS)
+        PJ_PERROR(1, ("pj_stack_pop", status, "Error unlocking mutex for stack stc%p", stack));
+
+    return node;
 }
 
 

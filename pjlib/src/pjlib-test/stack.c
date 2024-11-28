@@ -73,8 +73,6 @@ typedef struct stack_test_desc {
 
         int                (*test_init)(stack_test_desc *test);
         int                (*test_destroy)(stack_test_desc *test);
-        //slot_data         *(*reserve_slot)(stack_test_desc* test);
-        //void               (*release_slot)(stack_test_desc* test, slot_data* slot);
         int                (*worker_thread)(stack_test_desc* test);
 
     } cfg;
@@ -107,35 +105,45 @@ static stack_test_desc tests[] = {
     {
         .cfg.title = "stack (single thread)",
         .cfg.n_threads = 0,
-        .cfg.repeat = 10000,
+        .cfg.repeat = 1000000,
         .cfg.test_init = &stack_stress_test_init,
         .cfg.test_destroy = &stack_stress_test_destroy,
         .cfg.worker_thread = &stack_worker_thread
     },
+#ifdef PJ_WIN32
+    /* for other platforms, the stack implementation has no performance advantage
+     * over the list
+     */
     {
         .cfg.title = "list (single thread)",
         .cfg.n_threads = 0,
-        .cfg.repeat = 10000,
+        .cfg.repeat = 1000000,
         .cfg.test_init = &list_stress_test_init,
         .cfg.test_destroy = &list_stress_test_destroy,
         .cfg.worker_thread = &list_worker_thread
     },
+#endif
     {
         .cfg.title = "stack (multithread thread)",
         .cfg.n_threads = 16,
-        .cfg.repeat = 10000,
+        .cfg.repeat = 1000000,
         .cfg.test_init = &stack_stress_test_init,
         .cfg.test_destroy = &stack_stress_test_destroy,
         .cfg.worker_thread = &stack_worker_thread
     },
+#ifdef PJ_WIN32
+    /* for other platforms, the stack implementation has no performance advantage
+     * over the list
+     */
     {
         .cfg.title = "list (multithread thread)",
         .cfg.n_threads = 16,
-        .cfg.repeat = 10000,
+        .cfg.repeat = 1000000,
         .cfg.test_init = &list_stress_test_init,
         .cfg.test_destroy = &list_stress_test_destroy,
         .cfg.worker_thread = &list_worker_thread
     }
+#endif
 };
 
 int stack_test()
@@ -222,10 +230,8 @@ int stack_test()
         --i;
         pj_assert(p->value == i); //FILO !
         if (p->value != i || p != nodes + i) {  
-            {
-                rc = -40;
-                goto error;
-            }
+            rc = -40;
+            goto error;
         }
     }
     if (i)
@@ -409,8 +415,9 @@ static int stack_worker_thread(stack_test_desc* test)
             }
         }
         if (slot == NULL ||                         /* no empty slots at all or */
-            reserved_count >= MAX_RESERVED) {            /* this thread has reserved the maximum number of slots allowed */
-            while (reserved_count) {                     /* clear slots reserved here */
+            reserved_count >= MAX_RESERVED ||       /* this thread has reserved the maximum number of slots allowed */
+            n_events >= test->cfg.repeat) {         /* or test completed */
+            while (reserved_count) {                /* clear slots reserved here */
                 slot_id = reserved_slots[--reserved_count];
                 slot = &test->state.slots[slot_id];
                 if (slot->owner != pj_thread_this()) {
@@ -420,7 +427,7 @@ static int stack_worker_thread(stack_test_desc* test)
                 else if (slot->owner == NULL) {
                     PJ_LOG(1, (THIS_FILE, "Anothed thread has freed up this thread's slot"));
                     test->state.retcode = -95;
-                }
+                } 
                 else {
                     slot->owner = NULL;                                /* free up slot before returning */
                     pj_stack_push(test->state.empty_slot_stack, slot); /* slot returned to empty slot's stack */
@@ -454,8 +461,13 @@ static int list_worker_thread(stack_test_desc* test) {
             PJ_PERROR(1, (THIS_FILE, status, "Unable to acquire lock"));
             return -78;
         }
+
         slot_data_list* slot = test->state.empty_slot_list.next;
-        pj_list_erase(slot);
+        if (!pj_list_empty(slot))
+            pj_list_erase(slot);
+        else
+            slot = NULL;
+
         status = pj_lock_release(test->state.list_lock);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(1, (THIS_FILE, status, "Unable to release lock"));
@@ -466,17 +478,18 @@ static int list_worker_thread(stack_test_desc* test) {
                 PJ_LOG(1, (THIS_FILE, "Reserved slot is not empty"));
                 test->state.retcode = -86;
                 break;
-            }
-            else {
+            } else {
                 slot->owner = pj_thread_this();     /* slot reserved successfully */
                 slot_id = slot - test->state.slots_list;
                 reserved_slots[reserved_count++] = slot_id;
                 ++n_events;
+
             }
         }
         if (slot == NULL ||                         /* no empty slots at all or */
-            reserved_count >= MAX_RESERVED) {            /* this thread has reserved the maximum number of slots allowed */
-            while (reserved_count) {                     /* clear slots reserved here */
+            reserved_count >= MAX_RESERVED ||       /* this thread has reserved the maximum number of slots allowed */
+            n_events >= test->cfg.repeat) {         /* or test completed */
+            while (reserved_count) {                /* clear slots reserved here */
                 slot_id = reserved_slots[--reserved_count];
                 slot = &test->state.slots_list[slot_id];
                 if (slot->owner != pj_thread_this()) {
