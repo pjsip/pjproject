@@ -2357,7 +2357,6 @@ static void on_rx_rtcp( void *data,
     }
 
     pjmedia_rtcp_rx_rtcp(&stream->rtcp, pkt, bytes_read);
-    pjmedia_rtcp_rx_rtcp(&stream->rtcp, pkt, bytes_read);
 }
 
 
