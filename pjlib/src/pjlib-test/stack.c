@@ -33,10 +33,19 @@
 #endif  // PJ_WIN32
 
 #define THIS_FILE       "stack.c"
-#define MAX_THREADS     32
 #define MAX_RESERVED    16
 #define MAX_SLOTS       100
-#define MAX_REPEATS     100000
+
+#ifdef PJ_WIN32
+#   define MAX_THREADS     32
+#   define MAX_REPEATS     100000
+#else
+  /* for other platforms, the stack implementation has no performance advantage
+   * over the list. There is no point in waiting long.
+   */
+#   define MAX_THREADS     2
+#   define MAX_REPEATS     1000
+#endif  // PJ_WIN32
 
 #define TRACE(log)      PJ_LOG(3,log)
 
@@ -262,7 +271,7 @@ error:
  * This test illustrates:
  * 1) a multi-threaded use case for the pj_stack API
  * 2) a useful idea: reserving an empty slot in a large array without having to lock the entire array
- * 3) pj_stack performance on Windows is 2-3x higher than pj_list with pj_simple_mutex_lock
+ * 3) pj_stack performance on Windows is 2-5x higher than pj_list with pj_simple_mutex_lock
  */
 static int stack_stress_test(stack_test_desc* test) {
     unsigned i;
