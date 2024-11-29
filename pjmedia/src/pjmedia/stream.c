@@ -2357,6 +2357,7 @@ static void on_rx_rtcp( void *data,
     }
 
     pjmedia_rtcp_rx_rtcp(&stream->rtcp, pkt, bytes_read);
+    pjmedia_rtcp_rx_rtcp(&stream->rtcp, pkt, bytes_read);
 }
 
 
@@ -2956,6 +2957,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
+    /* Also add ref the transport group lock */
+    if (stream->transport->grp_lock)
+        pj_grp_lock_add_ref(stream->transport->grp_lock);
+
+
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     /* Enable RTCP XR and update stream info/config to RTCP XR */
     if (info->rtcp_xr_enabled) {
@@ -3118,6 +3124,10 @@ static void stream_on_destroy(void *arg)
     pjmedia_stream* stream = (pjmedia_stream*)arg;
 
     /* This function may be called when stream is partly initialized. */
+
+    /* Release ref to transport */
+    if (stream->transport && stream->transport->grp_lock)
+        pj_grp_lock_dec_ref(stream->transport->grp_lock);
 
     /* Free codec. */
     if (stream->codec) {
