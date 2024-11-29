@@ -2004,7 +2004,11 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
         }
     }
 
+    /* Add ref counter to avoid premature destroy from callbacks */
+    pj_grp_lock_add_ref(stream->grp_lock);
+
     pj_bzero(&seq_st, sizeof(seq_st));
+
     /* Ignore the packet if decoder is paused */
     if (channel->paused) {
         goto on_return;
@@ -2319,6 +2323,8 @@ on_return:
             stream->initial_rr = PJ_TRUE;
         }
     }
+
+    pj_grp_lock_dec_ref(stream->grp_lock);
 }
 
 
@@ -2933,19 +2939,27 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     att_param.rtp_cb2 = &on_rx_rtp;
     att_param.rtcp_cb = &on_rx_rtcp;
 
-    /* Attach handler to group lock from transport */
-    if (tp->grp_lock) {
-        stream->grp_lock = stream->port.grp_lock = tp->grp_lock;
-        pj_grp_lock_add_ref(stream->grp_lock);
-        pj_grp_lock_add_handler(stream->grp_lock, pool, stream,
-                                &stream_on_destroy);
-    }
+    /* Create group lock & attach handler */
+    status = pj_grp_lock_create_w_handler(pool, NULL, stream,
+                                          &stream_on_destroy,
+                                          &stream->grp_lock);
+    if (status != PJ_SUCCESS)
+        goto err_cleanup;
+
+    /* Add ref */
+    pj_grp_lock_add_ref(stream->grp_lock);
+    stream->port.grp_lock = stream->grp_lock;
 
     /* Only attach transport when stream is ready. */
     stream->transport = tp;
     status = pjmedia_transport_attach2(tp, &att_param);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
+
+    /* Also add ref the transport group lock */
+    if (stream->transport->grp_lock)
+        pj_grp_lock_add_ref(stream->transport->grp_lock);
+
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     /* Enable RTCP XR and update stream info/config to RTCP XR */
@@ -3109,6 +3123,10 @@ static void stream_on_destroy(void *arg)
     pjmedia_stream* stream = (pjmedia_stream*)arg;
 
     /* This function may be called when stream is partly initialized. */
+
+    /* Release ref to transport */
+    if (stream->transport && stream->transport->grp_lock)
+        pj_grp_lock_dec_ref(stream->transport->grp_lock);
 
     /* Free codec. */
     if (stream->codec) {
