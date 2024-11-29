@@ -33,9 +33,10 @@
 #endif  // PJ_WIN32
 
 #define THIS_FILE       "stack.c"
-#define MAX_THREADS     16
+#define MAX_THREADS     32
 #define MAX_RESERVED    16
 #define MAX_SLOTS       100
+#define MAX_REPEATS     100000
 
 #define TRACE(log)      PJ_LOG(3,log)
 
@@ -105,7 +106,7 @@ static stack_test_desc tests[] = {
     {
         .cfg.title = "stack (single thread)",
         .cfg.n_threads = 0,
-        .cfg.repeat = 1000000,
+        .cfg.repeat = MAX_REPEATS,
         .cfg.test_init = &stack_stress_test_init,
         .cfg.test_destroy = &stack_stress_test_destroy,
         .cfg.worker_thread = &stack_worker_thread
@@ -117,16 +118,16 @@ static stack_test_desc tests[] = {
     {
         .cfg.title = "list (single thread)",
         .cfg.n_threads = 0,
-        .cfg.repeat = 1000000,
+        .cfg.repeat = MAX_REPEATS,
         .cfg.test_init = &list_stress_test_init,
         .cfg.test_destroy = &list_stress_test_destroy,
         .cfg.worker_thread = &list_worker_thread
     },
 #endif
     {
-        .cfg.title = "stack (multithread thread)",
-        .cfg.n_threads = 16,
-        .cfg.repeat = 1000000,
+        .cfg.title = "stack (multi threads)",
+        .cfg.n_threads = MAX_THREADS,
+        .cfg.repeat = MAX_REPEATS,
         .cfg.test_init = &stack_stress_test_init,
         .cfg.test_destroy = &stack_stress_test_destroy,
         .cfg.worker_thread = &stack_worker_thread
@@ -136,9 +137,9 @@ static stack_test_desc tests[] = {
      * over the list
      */
     {
-        .cfg.title = "list (multithread thread)",
-        .cfg.n_threads = 16,
-        .cfg.repeat = 1000000,
+        .cfg.title = "list (multi threads)",
+        .cfg.n_threads = MAX_THREADS,
+        .cfg.repeat = MAX_REPEATS,
         .cfg.test_init = &list_stress_test_init,
         .cfg.test_destroy = &list_stress_test_destroy,
         .cfg.worker_thread = &list_worker_thread
@@ -312,13 +313,13 @@ static int stack_stress_test(stack_test_desc* test) {
         }
     }
 
+    pj_get_timestamp(&t2);
+
     rc = (*test->cfg.test_destroy)(test);
     if (rc)
         return rc;
 
-    pj_get_timestamp(&t2);
-
-    TRACE((THIS_FILE, "time: %d ms", pj_elapsed_msec(&t1, &t2)));
+    TRACE((THIS_FILE, "%s time: %d ms", test->cfg.title, pj_elapsed_msec(&t1, &t2)));
 
     pj_log_set_indent(ident); /* restore ident changed by worker_thread() instead of pj_log_pop_indent() */
     return test->state.retcode;
