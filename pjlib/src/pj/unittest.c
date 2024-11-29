@@ -265,7 +265,8 @@ static const char *get_test_case_info(const pj_test_case *tc,
     } else {
         char arg_val[40];
         /* treat argument as integer */
-        pj_ansi_snprintf(arg_val, sizeof(arg_val), "%ld", (long)tc->arg);
+        pj_ansi_snprintf(arg_val, sizeof(arg_val), "%ld",
+                         (long)(intptr_t)tc->arg);
 
         /* if arg value is too long (e.g. it's a pointer!), then just show
          * a portion of it */

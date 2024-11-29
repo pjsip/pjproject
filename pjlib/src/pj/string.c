@@ -638,10 +638,10 @@ PJ_DEF(int) pj_ansi_strxcpy(char *dst, const char *src,
     }
 
     if (!*dst && !*src) {
-        return dst-odst;
+        return (int)(dst-odst);
     } else {
         *dst = '\0';
-        return *src? -PJ_ETOOBIG : dst-odst;
+        return *src? -PJ_ETOOBIG : (int)(dst-odst);
     }
 }
 
@@ -665,7 +665,7 @@ PJ_DEF(int) pj_ansi_strxcpy2(char *dst, const pj_str_t *src,
 
     *dst = '\0';
     if (ssrc==esrc || !*ssrc) {
-         return dst-odst;
+         return (int)(dst-odst);
     } else {
         return -PJ_ETOOBIG;
     }
@@ -685,7 +685,7 @@ PJ_DEF(int) pj_ansi_strxcat(char *dst, const char *src, pj_size_t dst_size)
         int rc = pj_ansi_strxcpy(dst+dst_len, src, dst_size-dst_len);
         if (rc < 0)
             return rc;
-        return dst_len + rc;
+        return (int)dst_len + rc;
     } else
         return -PJ_ETOOBIG;
 }

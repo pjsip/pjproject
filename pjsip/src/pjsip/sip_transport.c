@@ -52,8 +52,14 @@ static const char *addr_string(const pj_sockaddr_t *addr)
 static const char* print_tpsel_info(const pjsip_tpselector *sel)
 {
     static char tpsel_info_buf[80];
-    if (!sel) return "(null)";
-    if (sel->type==PJSIP_TPSELECTOR_LISTENER)
+
+    if (!sel)
+        return "(null)";
+
+    if (sel->type==PJSIP_TPSELECTOR_NONE)
+        pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
+                         "none, reuse=%d", !sel->disable_connection_reuse);
+    else if (sel->type==PJSIP_TPSELECTOR_LISTENER)
         pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
                          "listener[%s], reuse=%d", sel->u.listener->obj_name,
                          !sel->disable_connection_reuse);
@@ -61,9 +67,13 @@ static const char* print_tpsel_info(const pjsip_tpselector *sel)
         pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
                          "transport[%s], reuse=%d", sel->u.transport->info,
                          !sel->disable_connection_reuse);
+    else if (sel->type==PJSIP_TPSELECTOR_IP_VER)
+        pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
+                         "ip_ver[%d], reuse=%d", sel->u.ip_ver,
+                         !sel->disable_connection_reuse);
     else
         pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
-                         "unknown[%p], reuse=%d", sel->u.ptr,
+                         "unknown %d [%p], reuse=%d", sel->type, sel->u.ptr,
                          !sel->disable_connection_reuse);
     return tpsel_info_buf;
 }
@@ -2436,13 +2446,18 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
     pjsip_tpfactory *factory;
     pj_status_t status;
 
-    TRACE_((THIS_FILE,"Acquiring transport type=%s, sel=%s remote=%s:%d",
+    TRACE_((THIS_FILE, "Acquiring transport type=%s, sel=%s remote=%s:%d "
+                       "(%.*s)",
                        pjsip_transport_get_type_name(type),
                        print_tpsel_info(sel),
                        addr_string(remote),
-                       pj_sockaddr_get_port(remote)));
+                       pj_sockaddr_get_port(remote),
+                       tdata? tdata->dest_info.name.slen : 10,
+                       tdata? tdata->dest_info.name.ptr  : "-no tdata-"));
 
     pj_lock_acquire(mgr->lock);
+
+    TRACE_((THIS_FILE, "Acquiring transport got the lock"));
 
     /* If transport is specified, then just use it if it is suitable
      * for the destination.
@@ -2522,6 +2537,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
             pj_bzero(&key, sizeof(key));
             key_len = sizeof(key.type) + addr_len;
 
+            TRACE_((THIS_FILE, "Search transport by remote address"));
+
             /* First try to get exact destination. */
             key.type = type;
             pj_memcpy(&key.rem_addr, remote, addr_len);
@@ -2530,6 +2547,10 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                                                 NULL);
             if (tp_entry) {
                 transport *tp_iter = tp_entry;
+
+                TRACE_((THIS_FILE, "Found one, checking further (e.g: "
+                                   "destroying, verify hostname, etc).."));
+
                 do {
                     /* Don't use transport being shutdown/destroyed */
                     if (!tp_iter->tp->is_shutdown &&
@@ -2543,6 +2564,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                             if (pj_stricmp(&tdata->dest_info.name,
                                            &tp_iter->tp->remote_name.host))
                             {
+                                TRACE_((THIS_FILE, "Skipping secure transport "
+                                                   "with different hostname"));
                                 tp_iter = tp_iter->next;
                                 continue;
                             }
@@ -2556,6 +2579,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                                 tp_ref = tp_iter->tp;
                                 break;
                             }
+                            TRACE_((THIS_FILE, "Skipping transport "
+                                               "with different listener"));
                         } else {
                             tp_ref = tp_iter->tp;
                             break;
@@ -2563,6 +2588,9 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                     }
                     tp_iter = tp_iter->next;
                 } while (tp_iter != tp_entry);
+
+                TRACE_((THIS_FILE, "Search by remote address found %s",
+                                   tp_ref? "one" : "none"));
             }
         }
 
@@ -2571,6 +2599,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
         {
             const pj_sockaddr *remote_addr = (const pj_sockaddr*)remote;
 
+            TRACE_((THIS_FILE, "Search loop & datagram transports "
+                               "with address zero"));
 
             /* Ignore address for loop transports. */
             if (type == PJSIP_TRANSPORT_LOOP ||
@@ -2598,14 +2628,19 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                 key_len = sizeof(key.type) + addr_len;
                 tp_entry = (transport *) pj_hash_get(mgr->table, &key,
                                                      key_len, NULL);
-
-                while (tp_entry) {
-                    tp_ref = tp_entry->tp;
-                    if (!tp_ref->is_shutdown && !tp_ref->is_destroying)
-                        break;
-                    tp_entry = tp_entry->next;
+                if (tp_entry) {
+                    transport *tp_iter = tp_entry;
+                    do {
+                        tp_ref = tp_iter->tp;
+                        if (!tp_ref->is_shutdown && !tp_ref->is_destroying)
+                            break;
+                        tp_iter = tp_iter->next;
+                    } while (tp_iter != tp_entry);
                 }
             }
+
+            TRACE_((THIS_FILE, "Search loop & datagram transports found %s",
+                               tp_ref? "one" : "none"));
         }
 
         /* If transport is found and listener is specified, verify listener */

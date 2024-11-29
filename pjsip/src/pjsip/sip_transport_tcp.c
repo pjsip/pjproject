@@ -520,7 +520,7 @@ static void lis_on_destroy(void *arg)
     }
 
     if (listener->factory.pool) {
-        PJ_LOG(4,(listener->factory.obj_name,  "SIP TCP transport destroyed"));
+        PJ_LOG(4,(listener->factory.obj_name, "SIP TCP listener destroyed"));
         pj_pool_safe_release(&listener->factory.pool);
     }
 }

@@ -1517,7 +1517,7 @@ AC_ARG_WITH(sdl,
 
 dnl # Do not use default SDL installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_sdl" = "xno"; then
-    nable_sdl=no
+    enable_sdl=no
 fi
 
 dnl # SDL

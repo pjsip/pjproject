@@ -2161,9 +2161,14 @@ PJ_DEF(pjsip_warning_hdr*) pjsip_warning_hdr_create(  pj_pool_t *pool,
 {
     const pj_str_t str_warning = { "Warning", 7 };
     pj_str_t hvalue;
-    unsigned buflen = 10 + /* code */
-                      host->slen + 2 +   /* host */
-                      text->slen + 2;   /* text */
+    unsigned buflen;
+
+    PJ_ASSERT_RETURN(pool && host && text, NULL);
+    PJ_ASSERT_RETURN(host->slen >= 0 && text->slen >= 0, NULL);
+
+    buflen = 10 +                          /* code */
+             (unsigned)host->slen + 2 +    /* host */
+             (unsigned)text->slen + 2;     /* text */
 
     hvalue.ptr = (char*) pj_pool_alloc(pool, buflen);
     hvalue.slen = pj_ansi_snprintf(hvalue.ptr, buflen,

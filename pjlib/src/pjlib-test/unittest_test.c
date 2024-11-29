@@ -44,12 +44,12 @@ static void print_log_buffer(char *title)
 /* This log callback appends the log to the log_buffer */
 static void log_callback(int level, const char *data, int len)
 {
-    int max_len = (log_buffer+sizeof(log_buffer))-log_buffer_ptr-1;
+    int max_len = (int)((log_buffer+sizeof(log_buffer))-log_buffer_ptr-1);
 
     PJ_UNUSED_ARG(level);
 
     /* make sure len is correct */
-    len = strlen(data);
+    len = (int)strlen(data);
     if (len > max_len)
         len = max_len;
 
@@ -237,7 +237,7 @@ enum test_flags
 /** Dummy test */
 static int func_to_test(void *arg)
 {
-    unsigned flags = (unsigned)(long)arg;
+    unsigned flags = (unsigned)(intptr_t)arg;
     unsigned test_id = (flags & 31);
     
     /* Note that for simplicity, make the length of log messages the same
@@ -452,7 +452,7 @@ static int shuffle_test()
     for (i=0; i<N; ++i) {
         pj_ansi_snprintf(test_names[i], sizeof(test_names[i]), "test%02d", i);
         pj_test_case_init(&tcs[i], test_names[i], 0, 
-                          &func_to_test, (void*)(long)i, NULL, 0, NULL);
+                          &func_to_test, (void*)(intptr_t)i, NULL, 0, NULL);
     }
 
     /* Shuffle empty suite */
@@ -494,19 +494,19 @@ static int shuffle_test()
         PJ_TEST_EQ(pj_list_size(&suite.tests), 6, seed_info, return -30);
 
         tc = suite.tests.next;
-        PJ_TEST_EQ((long)tc->arg, 2, seed_info, return -40);
+        PJ_TEST_EQ(tc->arg, 2, seed_info, return -40);
         tc = tc->next;
-        PJ_TEST_EQ((long)tc->arg, 5, seed_info, return -41);
+        PJ_TEST_EQ(tc->arg, 5, seed_info, return -41);
         tc = tc->next;
-        PJ_TEST_TRUE((long)tc->arg==0 || (long)tc->arg==3, seed_info,
+        PJ_TEST_TRUE(tc->arg==0 || (intptr_t)tc->arg==3, seed_info,
                       return -42);
         tc = tc->next;
-        PJ_TEST_TRUE((long)tc->arg==0 || (long)tc->arg==3, seed_info,
+        PJ_TEST_TRUE(tc->arg==0 || (intptr_t)tc->arg==3, seed_info,
                       return -43);
         tc = tc->next;
-        PJ_TEST_EQ((long)tc->arg, 1, seed_info, return -44);
+        PJ_TEST_EQ(tc->arg, 1, seed_info, return -44);
         tc = tc->next;
-        PJ_TEST_EQ((long)tc->arg, 4, seed_info, return -45);
+        PJ_TEST_EQ(tc->arg, 4, seed_info, return -45);
     }
 
     return 0;
@@ -638,7 +638,7 @@ int unittest_parallel_test()
 
 int unittest_test(void)
 {
-    int ret, log_level = pj_log_get_level();
+    int ret = 0, log_level = pj_log_get_level();
     unsigned j;
 
     if (pj_test_is_under_test()) {

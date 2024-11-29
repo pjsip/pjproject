@@ -33,7 +33,8 @@
 #include <pj/ctype.h>
 
 
-#if defined(PJ_HAS_SSL_SOCK) && PJ_SSL_SOCK_IMP==PJ_SSL_SOCK_IMP_OPENSSL
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    PJ_SSL_SOCK_IMP==PJ_SSL_SOCK_IMP_OPENSSL
 #  include <openssl/opensslv.h>
 #  include <openssl/sha.h>
 #  include <openssl/evp.h>
@@ -69,7 +70,7 @@
 #define DEFINE_HASH_CONTEXT pj_md5_context pmc; pj_md5_context* mdctx = &pmc
 
 #define EVP_get_digestbyname(digest_name) (digest_name)
-#define EVP_MD_CTX_new(mdctx) &pmc
+#define EVP_MD_CTX_new() &pmc
 #define EVP_DigestInit_ex(mdctx, md, _unused) (void)md; pj_md5_init(mdctx)
 #define EVP_DigestUpdate(mdctx, data, len) MD5_APPEND(mdctx, data, len)
 #define EVP_DigestFinal_ex(mdctx, digest, _unused) pj_md5_final(mdctx, digest)

@@ -93,7 +93,7 @@ static int fifobuf_rolling_test()
         int i, n;
 
         /* Allocate random number of chunks */
-        n = N/2 + (pj_rand() % (N/2)) - pj_list_size(&chunks);
+        n = N/2 + (pj_rand() % (N/2)) - (int)pj_list_size(&chunks);
         for (i=0; i<n; ++i) {
             unsigned size = MIN_SIZE + (pj_rand() % (MAX_SIZE-MIN_SIZE));
             chunk = (pj_list*)pj_fifobuf_alloc(&fifo, size);

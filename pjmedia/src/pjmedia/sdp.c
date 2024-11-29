@@ -802,7 +802,7 @@ PJ_DEF(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media,
 PJ_DEF(int) pjmedia_sdp_attr_print(const pjmedia_sdp_attr *attr,
                                char *buf, pj_size_t size)
 {
-    return print_attr(attr, buf, size);
+    return (int)print_attr(attr, buf, size);
 }
 
 PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone(

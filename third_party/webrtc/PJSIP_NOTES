@@ -1,5 +1,7 @@
 Local changes:
+
 1. ARM64 support build for Visual Studio.
+
 diff --git a/third_party/webrtc/src/webrtc/typedefs.h b/third_party/webrtc/src/webrtc/typedefs.h
 index 3034c7e74..9385befc9 100644
 --- a/third_party/webrtc/src/webrtc/typedefs.h
@@ -13,3 +15,20 @@ index 3034c7e74..9385befc9 100644
  #define WEBRTC_ARCH_64_BITS
  #define WEBRTC_ARCH_LITTLE_ENDIAN
  #elif defined(_M_IX86) || defined(__i386__)
+
+
+2. Add include pj_config.h for PJSIP specific settings.
+
+diff --git a/third_party/webrtc/src/webrtc/typedefs.h b/third_party/webrtc/src/webrtc/typedefs.h
+index 9385befc9..3460ec880 100644
+--- a/third_party/webrtc/src/webrtc/typedefs.h
++++ b/third_party/webrtc/src/webrtc/typedefs.h
+@@ -14,6 +14,8 @@
+ #ifndef WEBRTC_TYPEDEFS_H_
+ #define WEBRTC_TYPEDEFS_H_
+
++#include "pj_config.h"
++
+ // Processor architecture detection.  For more info on what's defined, see:
+ //   http://msdn.microsoft.com/en-us/library/b0084kay.aspx
+ //   http://www.agner.org/optimize/calling_conventions.pdf
