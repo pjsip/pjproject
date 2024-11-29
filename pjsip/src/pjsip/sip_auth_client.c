@@ -33,7 +33,8 @@
 #include <pj/ctype.h>
 
 
-#if defined(PJ_HAS_SSL_SOCK) && PJ_SSL_SOCK_IMP==PJ_SSL_SOCK_IMP_OPENSSL
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    PJ_SSL_SOCK_IMP==PJ_SSL_SOCK_IMP_OPENSSL
 #  include <openssl/opensslv.h>
 #  include <openssl/sha.h>
 #  include <openssl/evp.h>
