@@ -72,6 +72,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp)
  * if INVITE request is a siprec must have media attribute label exist in the SDP
  *
  * @param rdata         The incoming request to be verified.
+ * @param metadata      The siprec metadata information
  * @param sdp_offer     The SDP media.
  * @param options       The options argument is bitmask combination of SIP 
  *                      features in pjsip_inv_option enumeration
@@ -99,13 +100,12 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
 
 
 /**
- * Retrieve siprec metadata information from the message body
+ * Find siprec metadata information from the message body
  * with "rs-metadata+xml" Content-Type.
  *
  * @param pool               Pool to allocate memory.
  * @param body               The message body.
- *
- * @return                   The pj_str_t siprec metadata.
+ * @param metadata           The siprec metadata
  */
 PJ_DECL(void) pjsip_siprec_find_metadata(pj_pool_t *pool,
                                         pjsip_msg_body *body,

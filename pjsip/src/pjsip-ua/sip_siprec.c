@@ -142,10 +142,10 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         return PJ_SUCCESS;
     }
 
-    /* */
+    /* Checks if the body exists */
     if (!rdata->msg_info.msg->body) {
         code = PJSIP_SC_BAD_REQUEST;
-        warn_text = "";
+        warn_text = "SIPREC INVITE must have a body";
         goto on_return; 
     }
 
@@ -167,10 +167,9 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                 rdata->msg_info.msg->body,
                                 metadata);
     
-    /* */
     if(metadata->ptr == NULL || metadata->slen == 0) {
         code = PJSIP_SC_BAD_REQUEST;
-        warn_text = "not metadata";
+        warn_text = "SIPREC INVITE must have a 'rs-metadata+xml' Content-Type";
         goto on_return;
     }
 
@@ -235,7 +234,7 @@ on_return:
 
 
 /**
- * Retrieve siprec metadata from the message body
+ * Find siprec metadata from the message body
  */
 PJ_DECL(void) pjsip_siprec_find_metadata(pj_pool_t *pool,
                                             pjsip_msg_body *body,
