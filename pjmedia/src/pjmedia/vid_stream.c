@@ -2216,7 +2216,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
      */
     if (stream->transport) {
         pjmedia_transport_detach(stream->transport, stream);
-        stream->transport = NULL;
+        //stream->transport = NULL;
     }
 
     /* This function may be called when stream is partly initialized,
