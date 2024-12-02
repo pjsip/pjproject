@@ -1591,6 +1591,13 @@ void MediaFormatVideo::init(pj_uint32_t formatId,
     this->avgBps = avgBps_;
     this->maxBps = maxBps_;
 #else
+    PJ_UNUSED_ARG(formatId);
+    PJ_UNUSED_ARG(width_);
+    PJ_UNUSED_ARG(height_);
+    PJ_UNUSED_ARG(fpsNum_);
+    PJ_UNUSED_ARG(fpsDenum_);
+    PJ_UNUSED_ARG(avgBps_);
+    PJ_UNUSED_ARG(maxBps_);
     type = PJMEDIA_TYPE_UNKNOWN;
 #endif
 }
