@@ -99,7 +99,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
 /**
  * Verifies that the incoming request is a siprec request or not.
  */
-PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,    
+PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata, 
                                                 pjmedia_sdp_session *sdp_offer,                                     
                                                 unsigned *options,
                                                 pjsip_dialog *dlg,
@@ -139,6 +139,13 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     /* Check "+sip.src" parameter exist in the Contact header */
     if(!pjsip_param_find(&conatct_hdr->other_param, &str_src)){
         return PJ_SUCCESS;
+    }
+
+    /* */
+    if (!rdata->msg_info.msg->body) {
+        code = PJSIP_SC_BAD_REQUEST;
+        warn_text = "";
+        goto on_return; 
     }
 
     /* Currently, SIPREC INVITE requests without SPD are not supported. */
@@ -215,7 +222,7 @@ on_return:
 
 
 /**
- * Retrieve siprec metadata from a message body
+ * Retrieve siprec metadata from the message body
  */
 PJ_DECL(pj_str_t*) pjsip_siprec_get_metadata(pj_pool_t *pool,
                                                  pjsip_msg_body *body)
@@ -225,19 +232,18 @@ PJ_DECL(pj_str_t*) pjsip_siprec_get_metadata(pj_pool_t *pool,
 
     siprec_metadata = PJ_POOL_ZALLOC_T(pool, pj_str_t);
 
-    if (!body) {
-        return siprec_metadata;
-    }
-
     pjsip_media_type_init2(&application_metadata, "application", "rs-metadata+xml");
 
     pjsip_multipart_part *metadata_part;
     metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
 
-    if(metadata_part){
-        siprec_metadata->ptr = (char*)metadata_part->body->data;
-        siprec_metadata->slen = metadata_part->body->len;
+    if(!metadata_part) {
+        return NULL;
     }
+
+    siprec_metadata->ptr = (char*)metadata_part->body->data;
+    siprec_metadata->slen = metadata_part->body->len;
+    
     
     return siprec_metadata;
 }

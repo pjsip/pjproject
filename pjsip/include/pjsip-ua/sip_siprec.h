@@ -98,7 +98,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
 
 
 /**
- * Retrieve siprec metadata information from a message body
+ * Retrieve siprec metadata information from the message body
  * with "rs-metadata+xml" Content-Type.
  *
  * @param pool               Pool to allocate memory.
