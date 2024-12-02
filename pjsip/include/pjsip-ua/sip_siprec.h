@@ -107,8 +107,9 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
  *
  * @return                   The pj_str_t siprec metadata.
  */
-PJ_DECL(pj_str_t*) pjsip_siprec_get_metadata(pj_pool_t *pool,
-                                                    pjsip_msg_body *body);
+PJ_DECL(void) pjsip_siprec_find_metadata(pj_pool_t *pool,
+                                        pjsip_msg_body *body,
+                                        pj_str_t* metadata);
 
                                             
 PJ_END_DECL

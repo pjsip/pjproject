@@ -111,7 +111,6 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     pjsip_contact_hdr *conatct_hdr;
     const pj_str_t str_require = {"Require", 7};
     const pj_str_t str_src = {"+sip.src", 8};
-    pj_str_t *sipre_metadata;
     int code = 200;
     pj_status_t status = PJ_SUCCESS;
     const char *warn_text = NULL;
@@ -164,16 +163,17 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         goto on_return;
     }
 
-    sipre_metadata = pjsip_siprec_get_metadata(rdata->tp_info.pool,
-                                                rdata->msg_info.msg->body);
-    if(!sipre_metadata) {
+    pjsip_siprec_find_metadata(rdata->tp_info.pool,
+                                rdata->msg_info.msg->body,
+                                metadata);
+    
+    /* */
+    if(metadata->ptr == NULL || metadata->slen == 0) {
         code = PJSIP_SC_BAD_REQUEST;
-        warn_text = "";
+        warn_text = "not metadata";
         goto on_return;
     }
 
-    metadata->ptr = sipre_metadata->ptr;
-    metadata->slen = sipre_metadata->slen;
     *options |= PJSIP_INV_REQUIRE_SIPREC;
 
     return status;
@@ -237,13 +237,11 @@ on_return:
 /**
  * Retrieve siprec metadata from the message body
  */
-PJ_DECL(pj_str_t*) pjsip_siprec_get_metadata(pj_pool_t *pool,
-                                                 pjsip_msg_body *body)
+PJ_DECL(void) pjsip_siprec_find_metadata(pj_pool_t *pool,
+                                            pjsip_msg_body *body,
+                                            pj_str_t* metadata)
 {
-    pj_str_t* siprec_metadata;
     pjsip_media_type application_metadata;
-
-    siprec_metadata = PJ_POOL_ZALLOC_T(pool, pj_str_t);
 
     pjsip_media_type_init2(&application_metadata, "application", "rs-metadata+xml");
 
@@ -251,11 +249,9 @@ PJ_DECL(pj_str_t*) pjsip_siprec_get_metadata(pj_pool_t *pool,
     metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
 
     if(!metadata_part) {
-        return NULL;
+        return;
     }
 
-    siprec_metadata->ptr = (char*)metadata_part->body->data;
-    siprec_metadata->slen = metadata_part->body->len;
-        
-    return siprec_metadata;
+    metadata->ptr = (char*)metadata_part->body->data;
+    metadata->slen = metadata_part->body->len;
 }
