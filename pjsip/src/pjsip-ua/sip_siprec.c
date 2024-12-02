@@ -236,7 +236,7 @@ on_return:
 /**
  * Find siprec metadata from the message body
  */
-PJ_DECL(void) pjsip_siprec_find_metadata(pj_pool_t *pool,
+PJ_DEF(void) pjsip_siprec_find_metadata(pj_pool_t *pool,
                                             pjsip_msg_body *body,
                                             pj_str_t* metadata)
 {

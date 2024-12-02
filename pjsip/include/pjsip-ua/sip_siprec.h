@@ -90,7 +90,7 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp
  *                        parameter SHOULD be set with a final response message
  *                        to be sent to the sender of the request.
  */
-PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
+PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                                 pj_str_t *metadata,    
                                                 pjmedia_sdp_session *sdp_offer,                                       
                                                 unsigned *options,
