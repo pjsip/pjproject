@@ -246,7 +246,7 @@ PJ_DEF(pj_status_t) pjsip_auth_create_digest2( pj_str_t *result,
     digest_strlen = algorithm->digest_str_length;
     dig_len = digest_len;
 
-    if (result->slen < digest_strlen) {
+    if (result->slen < (pj_ssize_t)digest_strlen) {
         PJ_LOG(4, (THIS_FILE,
                 "The length of the result buffer must be at least %d bytes "
                 "for algorithm %.*s", digest_strlen,
@@ -273,7 +273,8 @@ PJ_DEF(pj_status_t) pjsip_auth_create_digest2( pj_str_t *result,
                     pjsip_auth_algorithms[algorithm_type].iana_name.ptr));
             return PJ_EINVAL;
         }
-        PJ_ASSERT_RETURN(cred_info->data.slen >= digest_strlen, PJ_EINVAL);
+        PJ_ASSERT_RETURN(cred_info->data.slen >= (pj_ssize_t)digest_strlen,
+                         PJ_EINVAL);
     }
 
     md = EVP_get_digestbyname(algorithm->openssl_name);
