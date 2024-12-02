@@ -40,7 +40,6 @@ SOURCE	sip_replaces.c
 SOURCE	sip_xfer.c
 SOURCE	sip_100rel.c
 SOURCE	sip_timer.c
-SOURCE	sip_siprec.c
 
 SYSTEMINCLUDE	..\pjlib\include 
 SYSTEMINCLUDE	..\pjlib-util\include 

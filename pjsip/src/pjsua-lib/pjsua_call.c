@@ -1832,13 +1832,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
         goto on_return;
     }
-        
-    /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so
-     * set the number of call active streams to the number of media in the SDP offer.
-     */
-    if(options & PJSIP_INV_REQUIRE_SIPREC){
-        call->opt.aud_cnt = offer->media_count;
-    }
+
 
     if (pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_MANDATORY)
         options |= PJSIP_INV_REQUIRE_100REL;
@@ -2120,6 +2114,16 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         goto on_return;
     }
 */
+
+    /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so
+     * set the number of call active streams to the number of media in the SDP offer.
+     */
+    if(options & PJSIP_INV_REQUIRE_SIPREC){
+        if (call->rem_offerer){
+            call->opt.aud_cnt = call->rem_aud_cnt;
+            call->opt.vid_cnt = call->rem_vid_cnt;
+        }
+    }
 
     /* Init Session Timers */
     status = pjsip_timer_init_session(inv,
