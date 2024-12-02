@@ -100,6 +100,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
  * Verifies that the incoming request is a siprec request or not.
  */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata, 
+                                                pj_str_t *metadata,
                                                 pjmedia_sdp_session *sdp_offer,                                     
                                                 unsigned *options,
                                                 pjsip_dialog *dlg,
@@ -110,6 +111,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     pjsip_contact_hdr *conatct_hdr;
     const pj_str_t str_require = {"Require", 7};
     const pj_str_t str_src = {"+sip.src", 8};
+    pj_str_t *sipre_metadata;
     int code = 200;
     pj_status_t status = PJ_SUCCESS;
     const char *warn_text = NULL;
@@ -162,7 +164,18 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         goto on_return;
     }
 
+    sipre_metadata = pjsip_siprec_get_metadata(rdata->tp_info.pool,
+                                                rdata->msg_info.msg->body);
+    if(!sipre_metadata) {
+        code = PJSIP_SC_BAD_REQUEST;
+        warn_text = "";
+        goto on_return;
+    }
+
+    metadata->ptr = sipre_metadata->ptr;
+    metadata->slen = sipre_metadata->slen;
     *options |= PJSIP_INV_REQUIRE_SIPREC;
+
     return status;
 
 on_return:
@@ -243,7 +256,6 @@ PJ_DECL(pj_str_t*) pjsip_siprec_get_metadata(pj_pool_t *pool,
 
     siprec_metadata->ptr = (char*)metadata_part->body->data;
     siprec_metadata->slen = metadata_part->body->len;
-    
-    
+        
     return siprec_metadata;
 }

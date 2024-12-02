@@ -1725,12 +1725,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Parse SDP from incoming request */
     if (rdata->msg_info.msg->body) {
-        pj_str_t *siprec_metadata;
-
-        siprec_metadata = pjsip_siprec_get_metadata(rdata->tp_info.pool,
-                                                           rdata->msg_info.msg->body);
-        call->siprec_metadata = siprec_metadata;
-
         pjsip_rdata_sdp_info *sdp_info;
 
         sdp_info = pjsip_rdata_get_sdp_info(rdata);
@@ -1814,7 +1808,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * this function add PJSIP_INV_REQUIRE_SIPREC to options
      * and returns the value PJ_SUCCESS 
      */
-    status = pjsip_siprec_verify_request(rdata, offer, &options, NULL, pjsua_var.endpt, &response);
+    status = pjsip_siprec_verify_request(rdata, &call->siprec_metadata, offer, &options, NULL, pjsua_var.endpt, &response);
 
     if(status != PJ_SUCCESS){
         /*

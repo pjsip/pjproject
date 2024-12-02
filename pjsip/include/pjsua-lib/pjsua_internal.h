@@ -241,7 +241,7 @@ struct pjsua_call
     unsigned             hangup_code;   /**< Hangup code.                   */
     pj_str_t             hangup_reason; /**< Hangup reason.                 */
     pjsua_msg_data      *hangup_msg_data;/**< Hangup message data.          */
-    pj_str_t            *siprec_metadata;/** siprec metadata in body        */
+    pj_str_t             siprec_metadata;/** siprec metadata in body        */
 };
 
 
