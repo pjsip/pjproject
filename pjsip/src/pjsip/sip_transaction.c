@@ -2520,6 +2520,12 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
         if (status == PJ_EPENDING)
             status = PJ_SUCCESS;
         if (status != PJ_SUCCESS) {
+            char errmsg[PJ_ERR_MSG_SIZE];
+            pj_str_t err;
+
+            err = pj_strerror(status, errmsg, sizeof(errmsg));
+            tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+
             tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
             pj_grp_lock_dec_ref(tsx->grp_lock);
             pjsip_tx_data_dec_ref(tdata);
