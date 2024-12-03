@@ -626,7 +626,6 @@ static pj_status_t metal_factory_create_stream(
     pjmedia_video_format_detail *vfd;
     const pjmedia_video_format_info *vfi;
     metal_fmt_info *mfi;
-    pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
@@ -678,11 +677,6 @@ static pj_status_t metal_factory_create_stream(
     *p_vid_strm = &strm->base;
     
     return PJ_SUCCESS;
-    
-on_error:
-    metal_stream_destroy((pjmedia_vid_dev_stream *)strm);
-    
-    return status;
 }
 
 /* API: Get stream info. */

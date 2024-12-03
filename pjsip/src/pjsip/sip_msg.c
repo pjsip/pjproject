@@ -26,6 +26,7 @@
 #include <pj/pool.h>
 #include <pj/assert.h>
 #include <pj/log.h>
+#include <pj/math.h>
 #include <pjlib-util/string.h>
 
 PJ_DEF_DATA(const pjsip_method) pjsip_invite_method =
@@ -898,8 +899,11 @@ static int pjsip_generic_int_hdr_print( pjsip_generic_int_hdr *hdr,
 static pjsip_generic_int_hdr* pjsip_generic_int_hdr_clone( pj_pool_t *pool, 
                                                    const pjsip_generic_int_hdr *rhs)
 {
-    pjsip_generic_int_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_generic_int_hdr);
-    pj_memcpy(hdr, rhs, sizeof(*hdr));
+    pjsip_generic_int_hdr *hdr;
+
+    hdr = pjsip_generic_int_hdr_create(pool, &rhs->name, rhs->ivalue);
+    hdr->type = rhs->type;
+
     return hdr;
 }
 
@@ -979,10 +983,12 @@ static pjsip_generic_array_hdr* pjsip_generic_array_hdr_clone( pj_pool_t *pool,
                                                  const pjsip_generic_array_hdr *rhs)
 {
     unsigned i;
-    pjsip_generic_array_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_generic_array_hdr);
+    pjsip_generic_array_hdr *hdr;
 
-    pj_memcpy(hdr, rhs, sizeof(*hdr));
-    for (i=0; i<rhs->count; ++i) {
+    hdr = pjsip_generic_array_hdr_create(pool, &rhs->name);
+    hdr->type = rhs->type;
+    hdr->count = PJ_MIN(rhs->count, PJSIP_GENERIC_ARRAY_MAX_COUNT);
+    for (i=0; i<hdr->count; ++i) {
         pj_strdup(pool, &hdr->values[i], &rhs->values[i]);
     }
 
