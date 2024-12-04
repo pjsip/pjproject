@@ -29,10 +29,6 @@
 #include <pj/sock.h>
 #include <pj/log.h>
 
-extern int param_echo_sock_type;
-extern const char *param_echo_server;
-extern int param_echo_port;
-
 #include <bsp.h>
 
 #define CONFIGURE_USE_IMFS_AS_BASE_FILESYSTEM

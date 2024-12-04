@@ -290,20 +290,16 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
 
     thread_quit_flag = 0;
 
-    pool = pj_pool_create(mem, NULL, 4096, 4096, NULL);
-    if (!pool)
-        return -10;
+    PJ_TEST_NOT_NULL((pool=pj_pool_create(mem, NULL, 4096, 4096, NULL)),
+                     NULL, return -10);
 
     items = (test_item*) pj_pool_calloc(pool, sockpair_cnt, sizeof(test_item));
     thread = (pj_thread_t**)
              pj_pool_alloc(pool, thread_cnt*sizeof(pj_thread_t*));
 
     TRACE_((THIS_FILE, "     creating ioqueue.."));
-    rc = pj_ioqueue_create2(pool, sockpair_cnt*2, cfg, &ioqueue);
-    if (rc != PJ_SUCCESS) {
-        app_perror("...error: unable to create ioqueue", rc);
-        return -15;
-    }
+    PJ_TEST_SUCCESS(pj_ioqueue_create2(pool, sockpair_cnt*2, cfg, &ioqueue),
+                    NULL, return -15);
 
     /* Initialize each producer-consumer pair. */
     for (i=0; i<sockpair_cnt; ++i) {
@@ -325,55 +321,44 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
 
         /* Create socket pair. */
         TRACE_((THIS_FILE, "      calling socketpair.."));
-        rc = app_socketpair(pj_AF_INET(), sock_type, 0, 
-                            &items[i].server_fd, &items[i].client_fd);
-        if (rc != PJ_SUCCESS) {
-            app_perror("...error: unable to create socket pair", rc);
-            return -20;
-        }
+        PJ_TEST_SUCCESS(app_socketpair(pj_AF_INET(), sock_type, 0, 
+                                       &items[i].server_fd, 
+                                       &items[i].client_fd),
+                        NULL, return -20);
 
         /* Register server socket to ioqueue. */
         TRACE_((THIS_FILE, "      register(1).."));
-        rc = pj_ioqueue_register_sock(pool, ioqueue, 
-                                      items[i].server_fd,
-                                      &items[i], &ioqueue_callback,
-                                      &items[i].server_key);
-        if (rc != PJ_SUCCESS) {
-            app_perror("...error: registering server socket to ioqueue", rc);
-            return -60;
-        }
+        PJ_TEST_SUCCESS( pj_ioqueue_register_sock( pool, ioqueue, 
+                                                   items[i].server_fd,
+                                                   &items[i], 
+                                                   &ioqueue_callback,
+                                                   &items[i].server_key),
+                         NULL, return -60);
 
         /* Register client socket to ioqueue. */
         TRACE_((THIS_FILE, "      register(2).."));
-        rc = pj_ioqueue_register_sock(pool, ioqueue, 
-                                      items[i].client_fd,
-                                      &items[i],  &ioqueue_callback,
-                                      &items[i].client_key);
-        if (rc != PJ_SUCCESS) {
-            app_perror("...error: registering server socket to ioqueue", rc);
-            return -70;
-        }
+        PJ_TEST_SUCCESS( pj_ioqueue_register_sock(pool, ioqueue, 
+                                                  items[i].client_fd,
+                                                  &items[i],
+                                                  &ioqueue_callback,
+                                                  &items[i].client_key),
+                         NULL, return -70);
 
         /* Start reading. */
         TRACE_((THIS_FILE, "      pj_ioqueue_recv.."));
         bytes = items[i].buffer_size;
-        rc = pj_ioqueue_recv(items[i].server_key, &items[i].recv_op,
-                             items[i].incoming_buffer, &bytes,
-                             0);
-        if (rc != PJ_EPENDING) {
-            app_perror("...error: pj_ioqueue_recv", rc);
-            return -73;
-        }
+        PJ_TEST_EQ( pj_ioqueue_recv(items[i].server_key, &items[i].recv_op,
+                                    items[i].incoming_buffer, &bytes, 0),
+                    PJ_EPENDING, NULL, return -73);
 
         /* Start writing. */
         TRACE_((THIS_FILE, "      pj_ioqueue_write.."));
         bytes = items[i].buffer_size;
         rc = pj_ioqueue_send(items[i].client_key, &items[i].send_op,
                              items[i].outgoing_buffer, &bytes, 0);
-        if (rc != PJ_SUCCESS && rc != PJ_EPENDING) {
-            app_perror("...error: pj_ioqueue_write", rc);
-            return -76;
-        } else if (rc == PJ_SUCCESS) {
+        PJ_TEST_TRUE(rc==PJ_SUCCESS || rc==PJ_EPENDING, "pj_ioqueue_send",
+                     return -76);
+        if (rc == PJ_SUCCESS) {
             items[i].bytes_sent += bytes;
         }
 
@@ -388,28 +373,21 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
         arg->id = i;
         arg->ioqueue = ioqueue;
 
-        rc = pj_thread_create( pool, NULL, 
-                               &worker_thread, 
-                               arg, 
-                               PJ_THREAD_DEFAULT_STACK_SIZE, 
-                               PJ_THREAD_SUSPENDED, &thread[i] );
-        if (rc != PJ_SUCCESS) {
-            app_perror("...error: unable to create thread", rc);
-            return -80;
-        }
+        PJ_TEST_SUCCESS( pj_thread_create( pool, NULL, 
+                                           &worker_thread, 
+                                           arg, 
+                                           PJ_THREAD_DEFAULT_STACK_SIZE, 
+                                           PJ_THREAD_SUSPENDED, &thread[i] ),
+                         NULL, return -80);
     }
 
     /* Mark start time. */
-    rc = pj_get_timestamp(&start);
-    if (rc != PJ_SUCCESS)
-        return -90;
+    PJ_TEST_SUCCESS( pj_get_timestamp(&start), NULL, return -90);
 
     /* Start the thread. */
     TRACE_((THIS_FILE, "     resuming all threads.."));
     for (i=0; i<thread_cnt; ++i) {
-        rc = pj_thread_resume(thread[i]);
-        if (rc != 0)
-            return -100;
+        PJ_TEST_SUCCESS(pj_thread_resume(thread[i]), NULL, return -100);
     }
 
     /* Wait for MSEC_DURATION seconds. 
@@ -586,20 +564,18 @@ static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
     return 0;
 }
 
-/*
- * main test entry.
- */
-int ioqueue_perf_test(void)
-{
-    pj_ioqueue_epoll_flag epoll_flags[] = {
+static pj_ioqueue_epoll_flag epoll_flags[] = {
 #if PJ_HAS_LINUX_EPOLL
-        PJ_IOQUEUE_EPOLL_EXCLUSIVE,
-        PJ_IOQUEUE_EPOLL_ONESHOT,
-        0,
+    PJ_IOQUEUE_EPOLL_EXCLUSIVE,
+    PJ_IOQUEUE_EPOLL_ONESHOT,
+    0,
 #else
-        PJ_IOQUEUE_EPOLL_AUTO,
+    PJ_IOQUEUE_EPOLL_AUTO,
 #endif
-    };
+};
+
+int ioqueue_perf_test0(void)
+{
     pj_size_t bandwidth;
     pj_ioqueue_cfg cfg;
     int i, rc;
@@ -639,6 +615,14 @@ int ioqueue_perf_test(void)
     if (rc != 0)
         return rc;
 
+    return 0;
+}
+
+int ioqueue_perf_test1(void)
+{
+    pj_ioqueue_cfg cfg;
+    int i, rc;
+
     /* The benchmark across configs */
     for (i=0; i<(int)PJ_ARRAY_SIZE(epoll_flags); ++i) {
         int concur;
@@ -654,6 +638,7 @@ int ioqueue_perf_test(void)
 
     return 0;
 }
+
 
 #else
 /* To prevent warning about "translation unit is empty"
