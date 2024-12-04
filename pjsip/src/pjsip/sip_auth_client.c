@@ -221,10 +221,7 @@ PJ_DEF(pj_status_t) pjsip_auth_create_digest2( pj_str_t *result,
     PJ_ASSERT_RETURN(result && nonce && uri && realm && cred_info && method, PJ_EINVAL);
     pj_bzero(result->ptr, result->slen);
 
-    algorithm = pjsip_auth_get_algorithm_by_type(algorithm_type == PJSIP_AUTH_ALGORITHM_NOT_SET
-            ? PJSIP_AUTH_ALGORITHM_MD5
-            : algorithm_type);
-
+    algorithm = pjsip_auth_get_algorithm_by_type(algorithm_type);
     if (!algorithm) {
         PJ_LOG(4, (THIS_FILE, "The algorithm_type is invalid"));
         return PJ_ENOTSUP;
@@ -263,12 +260,16 @@ PJ_DEF(pj_status_t) pjsip_auth_create_digest2( pj_str_t *result,
     }
 
     if (PJSIP_CRED_DATA_IS_DIGEST(cred_info)) {
-        if (cred_info->algorithm_type != algorithm_type) {
+        pjsip_auth_algorithm_type cred_algorithm_type = cred_info->algorithm_type;
+
+        if (cred_algorithm_type == PJSIP_AUTH_ALGORITHM_NOT_SET) {
+            cred_algorithm_type = algorithm_type;
+        } else if (cred_algorithm_type != algorithm_type) {
             PJ_LOG(4,(THIS_FILE,
                     "The algorithm specified in the cred_info (%.*s) "
                     "doesn't match the algorithm requested for hashing (%.*s)",
-                    (int)pjsip_auth_algorithms[cred_info->algorithm_type].iana_name.slen,
-                    pjsip_auth_algorithms[cred_info->algorithm_type].iana_name.ptr,
+                    (int)pjsip_auth_algorithms[cred_algorithm_type].iana_name.slen,
+                    pjsip_auth_algorithms[cred_algorithm_type].iana_name.ptr,
                     (int)pjsip_auth_algorithms[algorithm_type].iana_name.slen,
                     pjsip_auth_algorithms[algorithm_type].iana_name.ptr));
             return PJ_EINVAL;
@@ -917,7 +918,16 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
             pj_strdup(sess->pool, &sess->cred_info[i].realm, &c[i].realm);
             pj_strdup(sess->pool, &sess->cred_info[i].username, &c[i].username);
             pj_strdup(sess->pool, &sess->cred_info[i].data, &c[i].data);
-            sess->cred_info[i].algorithm_type = c[i].algorithm_type;
+            /*
+             * If the data type is DIGEST and an auth algorithm isn't set,
+             * default it to MD5.
+             */
+            if (PJSIP_CRED_DATA_IS_DIGEST(&c[i]) &&
+                c[i].algorithm_type == PJSIP_AUTH_ALGORITHM_NOT_SET) {
+                sess->cred_info[i].algorithm_type = PJSIP_AUTH_ALGORITHM_MD5;
+            } else {
+                sess->cred_info[i].algorithm_type = c[i].algorithm_type;
+            }
         }
         sess->cred_cnt = cred_cnt;
     }
