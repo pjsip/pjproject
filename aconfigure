@@ -7064,7 +7064,7 @@ if ac_fn_c_try_link "$LINENO"
 then :
 
                 CFLAGS="$CFLAGS -DPJNATH_HAS_UPNP=1 $UPNP_CFLAGS"
-                LDFLAGS="$LDFLAGS $UPNP_LDFLAGS $UPNP_LIBS"
+                LDFLAGS="$LDFLAGS $UPNP_LDFLAGS"
                 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 
@@ -8566,7 +8566,6 @@ printf "%s\n" "not found" >&6; }
             ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
             ac_sdl_ldflags=`$SDL_CONFIG --libs`
             ac_sdl_ldflags=`echo "${ac_sdl_ldflags}" | sed -e 's/-mwindows//g'`
-            LIBS="$LIBS $ac_sdl_ldflags"
         else
             { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Unsupported SDL version" >&5
 printf "%s\n" "Unsupported SDL version" >&6; }
@@ -9231,7 +9230,7 @@ if ac_fn_c_try_link "$LINENO"
 then :
 
                 ac_vpx_cflags="-DPJMEDIA_HAS_VPX_CODEC=1 $VPX_CFLAGS"
-                ac_vpx_ldflags="$VPX_LDFLAGS $VPX_LIBS"
+                ac_vpx_ldflags="$VPX_LDFLAGS"
                 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 
