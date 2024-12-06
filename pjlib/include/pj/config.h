@@ -51,6 +51,14 @@
 #  error "PJ_ALIGN_DATA is not defined!"
 #endif
 
+#ifndef PJ_SYS_ALIGN_PREFIX
+#  define PJ_SYS_ALIGN_PREFIX
+#endif
+
+#ifndef PJ_SYS_ALIGN_SUFFIX
+#  define PJ_SYS_ALIGN_SUFFIX
+#endif
+
 /********************************************************************
  * Include target OS specific configuration.
  */

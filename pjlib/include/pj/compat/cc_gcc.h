@@ -72,8 +72,13 @@
 
 #define PJ_UNREACHED(x)         
 
-#define PJ_ALIGN_DATA(declaration, alignment) declaration __attribute__((aligned (alignment)))
+//#define PJ_ALIGN_DATA(declaration, alignment) declaration __attribute__((aligned (alignment)))
+#define PJ_ALIGN_DATA_PREFIX(alignment) 
+#define PJ_ALIGN_DATA_SUFFIX(alignment) __attribute__((aligned (alignment)))
+#define PJ_ALIGN_DATA(declaration, alignment) PJ_ALIGN_DATA_PREFIX(alignment) declaration PJ_ALIGN_DATA_SUFFIX(alignment)
 
+#define PJ_SYS_ALIGN_PREFIX
+#define PJ_SYS_ALIGN_SUFFIX
 
 #endif  /* __PJ_COMPAT_CC_GCC_H__ */
 

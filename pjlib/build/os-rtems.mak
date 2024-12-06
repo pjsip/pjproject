@@ -16,6 +16,8 @@ export PJLIB_OBJS += 	addr_resolv_sock.o guid_simple.o \
 			os_timestamp_common.o os_timestamp_posix.o \
 			pool_policy_malloc.o sock_bsd.o sock_select.o
 
+export PJLIB_OBJS += stack.o 
+
 export PJLIB_OBJS += ioqueue_select.o 
 export PJLIB_OBJS += file_access_unistd.o file_io_ansi.o
 export PJLIB_OBJS += sock_qos_bsd.o
