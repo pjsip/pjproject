@@ -248,6 +248,15 @@ PJ_DEF(pj_status_t) pjsip_auth_srv_verify( pjsip_auth_srv *auth_srv,
         }
     }
 
+    /*
+     * If the data type is DIGEST and an auth algorithm isn't set,
+     * default it to MD5.
+     */
+    if (PJSIP_CRED_DATA_IS_DIGEST(&cred_info) &&
+        cred_info.algorithm_type == PJSIP_AUTH_ALGORITHM_NOT_SET) {
+        cred_info.algorithm_type = PJSIP_AUTH_ALGORITHM_MD5;
+    }
+
     /* Authenticate with the specified credential. */
     status = pjsip_auth_verify(h_auth, &msg->line.req.method.name, 
                                &cred_info);

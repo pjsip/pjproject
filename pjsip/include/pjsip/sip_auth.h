@@ -373,6 +373,10 @@ PJ_DECL(int) pjsip_cred_info_cmp(const pjsip_cred_info *cred1,
 /**
  * Type of function to lookup credential for the specified name.
  *
+ * \note If pjsip_cred_info::data_type is set to PJSIP_CRED_DATA_DIGEST and
+ * pjsip_cred_info::algorithm_type is left unset (0), algorithm_type will
+ * default to #PJSIP_AUTH_ALGORITHM_MD5.
+ *
  * @param pool          Pool to initialize the credential info.
  * @param realm         Realm to find the account.
  * @param acc_name      Account name to look for.
@@ -405,6 +409,10 @@ typedef struct pjsip_auth_lookup_cred_param
 
 /**
  * Type of function to lookup credential for the specified name.
+ *
+ * \note If pjsip_cred_info::data_type is set to PJSIP_CRED_DATA_DIGEST and
+ * pjsip_cred_info::algorithm_type is left unset (0), algorithm_type will
+ * default to #PJSIP_AUTH_ALGORITHM_MD5.
  *
  * @param pool          Pool to initialize the credential info.
  * @param param         The input param for credential lookup.
@@ -481,6 +489,10 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
 /**
  * Set the credentials to be used during the session. This will duplicate 
  * the specified credentials using client authentication's pool.
+ *
+ * \note If pjsip_cred_info::data_type is set to PJSIP_CRED_DATA_DIGEST and
+ * pjsip_cred_info::algorithm_type is left unset (0), algorithm_type will
+ * default to #PJSIP_AUTH_ALGORITHM_MD5.
  *
  * @param sess          The client authentication session.
  * @param cred_cnt      Number of credentials.
@@ -711,6 +723,9 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_challenge2(pjsip_auth_srv *auth_srv,
  * Helper function to create a digest out of the specified
  * parameters.
  *
+ * \deprecated Use #pjsip_auth_create_digest2 with
+ * algorithm_type = #PJSIP_AUTH_ALGORITHM_MD5.
+ *
  * \warning Because of ambiguities in the API, this function
  * should only be used for backward compatibility with the
  * MD5 digest algorithm. New code should use
@@ -718,6 +733,10 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_challenge2(pjsip_auth_srv *auth_srv,
  *
  * pjsip_cred_info::data_type must be #PJSIP_CRED_DATA_PLAIN_PASSWD
  * or #PJSIP_CRED_DATA_DIGEST.
+ *
+ * \note If pjsip_cred_info::data_type is set to PJSIP_CRED_DATA_DIGEST and
+ * pjsip_cred_info::algorithm_type is left unset (0), algorithm_type will
+ * default to #PJSIP_AUTH_ALGORITHM_MD5.
  *
  * @param result        String to store the response digest. This string
  *                      must have been preallocated by caller with the 
@@ -746,9 +765,21 @@ PJ_DECL(pj_status_t) pjsip_auth_create_digest(pj_str_t *result,
 /**
  * Helper function to create SHA-256 digest out of the specified 
  * parameters.
+ *
  * \deprecated Use #pjsip_auth_create_digest2 with
  * algorithm_type = #PJSIP_AUTH_ALGORITHM_SHA256.
  *
+ * \warning Because of ambiguities in the API, this function
+ * should only be used for backward compatibility with the
+ * SHA256 digest algorithm. New code should use
+ * #pjsip_auth_create_digest2
+ *
+ * pjsip_cred_info::data_type must be #PJSIP_CRED_DATA_PLAIN_PASSWD
+ * or #PJSIP_CRED_DATA_DIGEST.
+ *
+ * \note If pjsip_cred_info::data_type is set to PJSIP_CRED_DATA_DIGEST and
+ * pjsip_cred_info::algorithm_type is left unset (0), algorithm_type will
+ * default to #PJSIP_AUTH_ALGORITHM_SHA256.
  *
  * @param result        String to store the response digest. This string
  *                      must have been preallocated by caller with the 
@@ -793,9 +824,6 @@ PJ_DECL(pj_status_t) pjsip_auth_create_digestSHA256(pj_str_t* result,
  * and will be used as the "ha1" hash directly.  In this case
  * pjsip_cred_info::algorithm_type MUST match the algorithm_type
  * passed as the last parameter to this function.
- *
- * \note If left unset (0), pjsip_cred_info::algorithm_type will
- * default to #PJSIP_AUTH_ALGORITHM_MD5.
  *
  * @param result         String to store the response digest. This string
  *                       must have been preallocated by the caller with the
