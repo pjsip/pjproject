@@ -282,23 +282,28 @@ AudioMedia* AudioMedia::typecastFromMedia(Media *media)
 ///////////////////////////////////////////////////////////////////////////////
 
 AudioMediaPort::AudioMediaPort()
-: pool(NULL)
+: pool(NULL), port(NULL)
 {
-    pj_bzero(&port, sizeof(port));
 }
 
 AudioMediaPort::~AudioMediaPort()
 {
-    if (pool) {
-        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
-        pj_pool_release(pool);
-        pool = NULL;
-    }
+    PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
+    if (port) pjmedia_port_destroy(port);
+    /* We release the pool later in port.on_destroy since
+     * the unregistration is async and may not have completed yet.
+     */
 }
+
+struct port_data {
+    AudioMediaPort *mport;
+    pj_pool_t      *pool;
+};
 
 static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
 {
-    AudioMediaPort *mport = (AudioMediaPort *) port->port_data.pdata;
+    struct port_data *pdata = (struct port_data *) port->port_data.pdata;
+    AudioMediaPort *mport = pdata->mport;
     MediaFrame frame_;
 
     frame_.size = (unsigned)frame->size;
@@ -321,7 +326,8 @@ static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
 
 static pj_status_t put_frame(pjmedia_port *port, pjmedia_frame *frame)
 {
-    AudioMediaPort *mport = (AudioMediaPort *) port->port_data.pdata;
+    struct port_data *pdata = (struct port_data *)port->port_data.pdata;
+    AudioMediaPort *mport = pdata->mport;
     MediaFrame frame_;
 
     frame_.type = frame->type;
@@ -332,11 +338,25 @@ static pj_status_t put_frame(pjmedia_port *port, pjmedia_frame *frame)
     return PJ_SUCCESS;
 }
 
+static pj_status_t port_on_destroy(pjmedia_port *port)
+{
+    struct port_data *pdata = (struct port_data *)port->port_data.pdata;
+    pj_pool_t *pool = pdata->pool;
+
+    if (pool) {
+        pj_pool_release(pool);
+    }
+
+    return PJ_SUCCESS;
+}
+
 void AudioMediaPort::createPort(const string &name, MediaFormatAudio &fmt)
                                 PJSUA2_THROW(Error)
 {
     pj_str_t name_;
     pjmedia_format fmt_;
+    struct port_data *pdata;
+    pj_status_t status;
 
     if (pool) {
         PJSUA2_RAISE_ERROR(PJ_EEXISTS);
@@ -348,18 +368,30 @@ void AudioMediaPort::createPort(const string &name, MediaFormatAudio &fmt)
     }
 
     /* Init port. */
-    pj_bzero(&port, sizeof(port));
+    port = PJ_POOL_ZALLOC_T(pool, pjmedia_port);
     pj_strdup2_with_null(pool, &name_, name.c_str());
     fmt_ = fmt.toPj();
-    pjmedia_port_info_init2(&port.info, &name_,
+    pjmedia_port_info_init2(&port->info, &name_,
                             PJMEDIA_SIG_CLASS_APP ('A', 'M', 'P'),
                             PJMEDIA_DIR_ENCODING_DECODING, &fmt_);
 
-    port.port_data.pdata = this;
-    port.put_frame = &put_frame;
-    port.get_frame = &get_frame;
+    pdata = PJ_POOL_ZALLOC_T(pool, struct port_data);
+    pdata->mport = this;
+    pdata->pool = pool;
+    port->port_data.pdata = pdata;
+    port->put_frame = &put_frame;
+    port->get_frame = &get_frame;
 
-    registerMediaPort2(&port, pool);
+    /* Must implement on_destroy() and create group lock to avoid
+     * premature destroy.
+     */
+    port->on_destroy = &port_on_destroy;
+    status = pjmedia_port_init_grp_lock(port, pool, NULL);
+    if (status != PJ_SUCCESS) {
+        PJSUA2_RAISE_ERROR(status);
+    }
+
+    registerMediaPort2(port, pool);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
