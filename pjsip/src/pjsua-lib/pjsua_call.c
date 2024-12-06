@@ -1808,6 +1808,38 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* Verify that we can handle the request. */
     options |= PJSIP_INV_SUPPORT_100REL;
     options |= PJSIP_INV_SUPPORT_TIMER;
+    options |= PJSIP_INV_SUPPORT_SIPREC;
+
+    /* Check if the INVITE request is a siprec
+     * this function add PJSIP_INV_REQUIRE_SIPREC to options
+     * and returns the value PJ_SUCCESS 
+     */
+    status = pjsip_siprec_verify_request(rdata, &call->siprec_metadata, offer, &options, NULL, pjsua_var.endpt, &response);
+
+    if(status != PJ_SUCCESS){
+        /*
+         * No we can't handle the incoming INVITE request.
+         */
+        if (response) {
+            pjsip_response_addr res_addr;
+            ret_st_code = response->msg->line.status.code;
+
+            pjsip_get_response_addr(response->pool, rdata, &res_addr);
+            status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, 
+                                               response, NULL, NULL);
+            if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(response);
+
+        } else {
+            /* Respond with 500 (Internal Server Error) */
+            ret_st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+            pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, ret_st_code, 
+                                NULL, NULL, NULL, NULL);
+        }
+
+        goto on_return;
+    }
+
+
     if (pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_MANDATORY)
         options |= PJSIP_INV_REQUIRE_100REL;
     if (pjsua_var.acc[acc_id].cfg.ice_cfg.enable_ice) {
@@ -2088,6 +2120,16 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         goto on_return;
     }
 */
+
+    /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so
+     * set the number of call active streams to the number of media in the SDP offer.
+     */
+    if(options & PJSIP_INV_REQUIRE_SIPREC){
+        if (call->rem_offerer){
+            call->opt.aud_cnt = call->rem_aud_cnt;
+            call->opt.vid_cnt = call->rem_vid_cnt;
+        }
+    }
 
     /* Init Session Timers */
     status = pjsip_timer_init_session(inv,
