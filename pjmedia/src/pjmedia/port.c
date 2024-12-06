@@ -159,16 +159,17 @@ PJ_DEF(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
     PJ_ASSERT_RETURN(port && pool, PJ_EINVAL);
     PJ_ASSERT_RETURN(port->grp_lock == NULL, PJ_EEXISTS);
 
-    /* We need to be caution on ports that do not have its own pool,
-     * such port is likely using app's pool, so if the app destroys the port
+    /* We need to be extra cautious here!
+     * If media port is using app's pool, and the app destroys the port
      * and then destroys the pool immediately, it may cause crash as the port
      * may have not really been destroyed and may still be accessed.
-     * When port has a pool, it usually implements on_destroy() for releasing
+     * If port uses app's pool, it needs to implement on_destroy() for releasing
      * the pool, so here we check availability of on_destroy implementation.
      */
-    if (port->on_destroy == NULL) {
-        PJ_LOG(2,(THIS_FILE, "Warning, media port %s is using group lock, but "
-                             "it does not seem to have a pool.",
+    if (!grp_lock && port->on_destroy == NULL) {
+        PJ_LOG(2,(THIS_FILE, "Warning! media port %s MUST either: - implement"
+                             " on_destroy() and release the pool there, or"
+                             " - supply its own group lock.",
                              port->info.name.ptr));
     }
 

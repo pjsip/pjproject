@@ -528,7 +528,7 @@ public:
 
 private:
     pj_pool_t *pool;
-    pjmedia_port port;
+    pjmedia_port *port;
 };
 
 /**
