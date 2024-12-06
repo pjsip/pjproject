@@ -1380,7 +1380,7 @@ static void op_disconnect_ports(pjmedia_conf *conf,
 {
     unsigned src_slot, sink_slot;
     struct conf_port *src_port = NULL, *dst_port = NULL;
-    unsigned i;
+    int i;
 
     /* Ports must be valid. */
     src_slot = prm->disconnect_ports.src;
@@ -1440,13 +1440,16 @@ static void op_disconnect_ports(pjmedia_conf *conf,
                   dst_port->name.ptr));
 
         for (i=0; i<conf->max_ports; ++i) {
-            unsigned j;
+            int j;
 
             src_port = conf->ports[i];
             if (!src_port || src_port->listener_cnt == 0)
                 continue;
 
-            for (j=0; j<src_port->listener_cnt; ++j) {
+            /* We need to iterate backwards since the listener count
+             * can potentially decrease.
+             */
+            for (j=src_port->listener_cnt-1; j>=0; --j) {
                 if (src_port->listener_slots[j] == sink_slot) {
                     op_param op_prm = {0};
                     op_prm.disconnect_ports.src = i;
@@ -1465,7 +1468,10 @@ static void op_disconnect_ports(pjmedia_conf *conf,
                   (int)src_port->name.slen,
                   src_port->name.ptr));
 
-        for (i=0; i<src_port->listener_cnt; ++i) {
+        /* We need to iterate backwards since the listener count
+         * will keep decreasing.
+         */
+        for (i=src_port->listener_cnt-1; i>=0; --i) {
             op_param op_prm = {0};
             op_prm.disconnect_ports.src = src_slot;
             op_prm.disconnect_ports.sink = src_port->listener_slots[i];
