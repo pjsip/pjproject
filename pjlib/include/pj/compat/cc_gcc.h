@@ -72,13 +72,18 @@
 
 #define PJ_UNREACHED(x)         
 
+/*
+* Usage example:
+* 
+* typedef struct PJ_ALIGN_DATA_PREFIX(8) a { int value; } PJ_ALIGN_DATA_SUFFIX(8) a;
+* typedef struct PJ_ALIGN_DATA(a{ int value; }, 8) a;
+* 
+* Both options are equivalent, but perhaps the first is a little more readable than the second.
+*/
 //#define PJ_ALIGN_DATA(declaration, alignment) declaration __attribute__((aligned (alignment)))
 #define PJ_ALIGN_DATA_PREFIX(alignment) 
 #define PJ_ALIGN_DATA_SUFFIX(alignment) __attribute__((aligned (alignment)))
 #define PJ_ALIGN_DATA(declaration, alignment) PJ_ALIGN_DATA_PREFIX(alignment) declaration PJ_ALIGN_DATA_SUFFIX(alignment)
-
-#define PJ_SYS_ALIGN_PREFIX
-#define PJ_SYS_ALIGN_SUFFIX
 
 #endif  /* __PJ_COMPAT_CC_GCC_H__ */
 

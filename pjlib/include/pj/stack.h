@@ -8,6 +8,53 @@
 
 #include <pj/types.h>
 
+/**
+ * Specify if compiler should use crossplatform stack implementation 
+ * even if this compilation is for Windows platform.
+ * The performance of pj_stack implementation for Windows platform is 2-5x higher than cross-platform.
+ * 
+ * To use the implementation on the Windows platform, some prerequisites must be met:
+ * - this should be compiling for Windows platform
+ * - add #define PJ_USE_CROSSPLATFORM_STACK_IMPL   0 
+ *      to your config_site.h
+ * - PJ_POOL_ALIGNMENT should be defined in config_site.h and not less then MEMORY_ALLOCATION_ALIGNMENT
+ *      The MEMORY_ALLOCATION_ALIGNMENT macro which is 16 on the x64 platform and 8 on the x86 platform
+ *      is the platform default alignment for the Windows platform and is set in winnt.h.
+ * 
+ * 
+ * Default: 1 (crossplatform)
+ * 
+ * 0 - use the Windows platform stack implementation
+ * 1 - force the crossplatform stack implementation.
+ */
+#ifndef PJ_USE_CROSSPLATFORM_STACK_IMPL
+#   define PJ_USE_CROSSPLATFORM_STACK_IMPL    1
+#endif
+
+#if !PJ_USE_CROSSPLATFORM_STACK_IMPL
+
+/* the Windows platform stack implementation. */
+
+/* 
+ * PJ_STACK_ALIGN_PREFIX, PJ_STACK_ALIGN_SUFFIX is a readable syntax to declare
+ * platform default alignment for the stack item (see example below).
+ */
+
+#   define PJ_STACK_ALIGN_PREFIX PJ_ALIGN_DATA_PREFIX(PJ_POOL_ALIGNMENT)
+#   define PJ_STACK_ALIGN_SUFFIX PJ_ALIGN_DATA_SUFFIX(PJ_POOL_ALIGNMENT)
+
+#else  // PJ_USE_CROSSPLATFORM_STACK_IMPL != 0
+
+/* compilation of crossplatform stack implementation */
+
+#   define PJ_STACK_ALIGN_PREFIX
+#   define PJ_STACK_ALIGN_SUFFIX
+
+#endif
+
+#include <pj/stack.h>
+
+
 PJ_BEGIN_DECL
 
 /*
@@ -22,9 +69,17 @@ PJ_BEGIN_DECL
  * Stack in PJLIB is single-linked list with First In Last Out logic. 
  * Stack is thread safe. Common PJLIB stack implementation uses internal locking mechanism so is thread-safe.
  * Implementation for Windows platform uses locking free Windows embeded single linked list implementation.
+ * The performance of pj_stack implementation for Windows platform is 2-5x higher than cross-platform.
+ * 
  * Windows single linked list implementation requires aligned data, both stack item and stack itself should 
  * be aligned by 8 (for x86) or 16 (for x64) byte. We recomend set PJ_POOL_ALIGNMENT macro to corresponding value.
  * winnt.h define MEMORY_ALLOCATION_ALIGNMENT macro for this purpose.
+ * To use the implementation on the Windows platform, some prerequisites must be met:
+ * - this should be compiling for Windows platform
+ * - add #define PJ_USE_CROSSPLATFORM_STACK_IMPL   0 
+ *      to your config_site.h
+ * - PJ_POOL_ALIGNMENT should be defined in config_site.h and not less then MEMORY_ALLOCATION_ALIGNMENT
+ * 
  * Stack won't require dynamic memory allocation (just as all PJLIB data structures). The stack here
  * should be viewed more like a low level C stack instead of high level C++ stack
  * (which normally are easier to use but require dynamic memory allocations),
@@ -42,9 +97,20 @@ PJ_BEGIN_DECL
 
 
 /**
- * Use this macro in the start of the structure declaration to declare that
- * the structure can be used in the stack operation. This macro simply
- * declares additional member @a next to the structure.
+ * Use PJ_DECL_STACK_MEMBER macro in the start of the structure declaration to
+ * declare that the structure can be used in the stack operation. This macro
+ * simply declares additional member @a next to the structure.
+ * 
+ * The full declaration of stack item should contain alignment macro 
+ * and may look like this:
+ * 
+ * typedef struct PJ_STACK_ALIGN_PREFIX stack_node {
+ *   PJ_DECL_STACK_MEMBER(struct stack_node);
+ *   ...
+ *   your data here
+ *   ...
+ * } PJ_STACK_ALIGN_SUFFIX stack_node;
+* 
  * @hideinitializer
  */
 #define PJ_DECL_STACK_MEMBER(type)                       \
@@ -55,22 +121,22 @@ PJ_BEGIN_DECL
 /**
  * Create the stack: allocate memory, allocate and initialize OS resources.
  * Initially, the stack will have no member, and function pj_stack_pop() will
- * always return NULL (which indicates there are no any items in the stack currently) for the newly initialized 
- * stack.
+ * always return NULL for the newly initialized stack
+ * (which indicates there are no any items in the stack currently).
  *
  * @param pool Pool to allocate memory from.
  * @param stack The stack head.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return    PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stack_create(pj_pool_t *pool, pj_stack_type **stack);
 
 /**
  * Free OS resources allocated by pj_stack_create().
  *
- * @param stack	    The target stack.
+ * @param stack     The target stack.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stack_destroy(pj_stack_type *stack);
 
@@ -78,10 +144,10 @@ PJ_DECL(pj_status_t) pj_stack_destroy(pj_stack_type *stack);
 /**
  * Insert (push) the node to the front of the stack as atomic (thread safe) operation.
  *
- * @param stack	The stack. 
- * @param node	The element to be inserted.
+ * @param stack The stack. 
+ * @param node  The element to be inserted.
  *
- * @return	    PJ_SUCCESS or the appropriate error code.
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stack_push(pj_stack_type *stack, pj_stack_t *node);
 
@@ -89,7 +155,7 @@ PJ_DECL(pj_status_t) pj_stack_push(pj_stack_type *stack, pj_stack_t *node);
 /**
  * Extract (pop) element from the front of the stack (removing it from the stack) as atomic (thread safe) operation.
  *
- * @param stack	    The target stack.
+ * @param stack     The target stack.
  *
  * @return NULL if the stack is empty, or else pointer to element extracted from stack.
  */
@@ -102,9 +168,9 @@ PJ_DECL(pj_stack_t*) pj_stack_pop(pj_stack_type *stack);
  * For Windows platform returns the number of entries in the stack modulo 65535. For example, 
  * if the specified stack contains 65536 entries, pj_stack_size returns zero.
  *
- * @param stack	    The target stack.
+ * @param stack     The target stack.
  *
- * @return	    Number of elements.
+ * @return          Number of elements.
  */
 PJ_DEF(pj_size_t) pj_stack_size(/*const*/ pj_stack_type *stack);
 
@@ -115,5 +181,5 @@ PJ_DEF(pj_size_t) pj_stack_size(/*const*/ pj_stack_type *stack);
 
 PJ_END_DECL
 
-#endif	/* __PJ_STACK_H__ */
+#endif  /* __PJ_STACK_H__ */
 

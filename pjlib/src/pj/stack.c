@@ -5,11 +5,16 @@
 #include <pj/string.h>
 #include <pj/errno.h>
 
-#ifdef PJ_WIN32
-#error stack.c should NOT be compiled for Windows platform (compile stack_win32.c instead)
-#endif  // PJ_WIN32
-
 #include <pj/stack.h>
+
+#if !PJ_USE_CROSSPLATFORM_STACK_IMPL
+
+    /* Include the Windows platform stack implementation. */
+#   include "stack_win32.c"
+
+#else  // PJ_USE_CROSSPLATFORM_STACK_IMPL != 0
+
+//#pragma message("compilation of cross-platform stack implementation")
 
 #define THIS_FILE       "stack.c"
 
@@ -152,3 +157,4 @@ PJ_DEF(pj_size_t) pj_stack_size(/*const*/ pj_stack_type *stack)
 
     return count;
 }
+#endif // PJ_USE_CROSSPLATFORM_STACK_IMPL != 0

@@ -145,18 +145,4 @@
  */
 #define PJ_THREAD_ALLOCATE_STACK        0
 
-/* 
- * We need to define PJ_POOL_ALIGNMENT as MEMORY_ALLOCATION_ALIGNMENT for the Windows platform.
- * see winnt.h for MEMORY_ALLOCATION_ALIGNMENT
- * see more in os_win32.h
- */
-#if defined(MEMORY_ALLOCATION_ALIGNMENT)
-#   define PJ_POOL_ALIGNMENT MEMORY_ALLOCATION_ALIGNMENT
-#elif defined(_WIN64) || defined(_M_ALPHA)
-  //#elif defined(_WIN64) || defined(WIN64)
-#   define PJ_POOL_ALIGNMENT 16
-#else
-#   define PJ_POOL_ALIGNMENT 8
-#endif
-
 #endif  /* __PJ_COMPAT_OS_UWP_H__ */
