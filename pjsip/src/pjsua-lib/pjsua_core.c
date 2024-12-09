@@ -673,7 +673,7 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
         pjsip_dialog *dlg = pjsip_tsx_get_dlg(tsx);
 
         PJ_LOG(4, (THIS_FILE, "Merged request detected (%s) (%s): %s from %s:%d",
-                              dlg ? dlg->obj_name : NULL,
+                              dlg ? dlg->obj_name : "-no-dlg-",
                               tsx->obj_name,
                               pjsip_rx_data_get_info(rdata),
                               rdata->pkt_info.src_name,
