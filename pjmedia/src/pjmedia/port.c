@@ -163,8 +163,12 @@ PJ_DEF(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
      * If media port is using app's pool, and the app destroys the port
      * and then destroys the pool immediately, it may cause crash as the port
      * may have not really been destroyed and may still be accessed.
-     * If port uses app's pool, it needs to implement on_destroy() for releasing
-     * the pool, so here we check availability of on_destroy implementation.
+     *
+     * Thus, media port needs to create and manage its own pool. Since
+     * app MUST NOT free this pool, port typically needs to implement
+     * on_destroy() for releasing the pool. Alternatively, port can also
+     * add a group lock handler for this purpose, but since we can't check
+     * this, here we just check the availability of on_destroy implementation.
      */
     if (port->on_destroy == NULL) {
         PJ_LOG(2,(THIS_FILE, "Warning! Port %s on_destroy() not found. To "
