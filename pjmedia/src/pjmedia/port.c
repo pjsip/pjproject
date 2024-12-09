@@ -166,10 +166,12 @@ PJ_DEF(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
      * If port uses app's pool, it needs to implement on_destroy() for releasing
      * the pool, so here we check availability of on_destroy implementation.
      */
-    if (!grp_lock && port->on_destroy == NULL) {
-        PJ_LOG(2,(THIS_FILE, "Warning! media port %s MUST either: - implement"
-                             " on_destroy() and release the pool there, or"
-                             " - supply its own group lock.",
+    if (port->on_destroy == NULL) {
+        PJ_LOG(2,(THIS_FILE, "Warning! Port %s on_destroy() not found. To "
+                             "avoid premature destroy, media port must "
+                             "manage its own pool, which can only be "
+                             "released in on_destroy() or in its grp lock "
+                             "handler. See PR #3928 for more info.",
                              port->info.name.ptr));
     }
 
