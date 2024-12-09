@@ -281,6 +281,11 @@ AudioMedia* AudioMedia::typecastFromMedia(Media *media)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+struct port_data {
+    AudioMediaPort *mport;
+    pj_pool_t      *pool;
+};
+
 AudioMediaPort::AudioMediaPort()
 : pool(NULL), port(NULL)
 {
@@ -289,22 +294,36 @@ AudioMediaPort::AudioMediaPort()
 AudioMediaPort::~AudioMediaPort()
 {
     PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
-    if (port) pjmedia_port_destroy(port);
-    /* We release the pool later in port.on_destroy since
-     * the unregistration is async and may not have completed yet.
-     */
-}
+    if (port) {
+        struct port_data *pdata = static_cast<struct port_data *>
+                                  (port->port_data.pdata);
 
-struct port_data {
-    AudioMediaPort *mport;
-    pj_pool_t      *pool;
-};
+        /* Make sure port no longer accesses this object in its
+         * get/put_frame() callback.
+         */
+        if (port->grp_lock) {
+            pj_grp_lock_acquire(port->grp_lock);
+            pdata->mport = NULL;
+            pj_grp_lock_release(port->grp_lock);
+        }
+
+        pjmedia_port_destroy(port);
+        /* We release the pool later in port.on_destroy since
+         * the unregistration is async and may not have completed yet.
+         */
+    }
+}
 
 static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
 {
-    struct port_data *pdata = (struct port_data *) port->port_data.pdata;
-    AudioMediaPort *mport = pdata->mport;
+    struct port_data *pdata = static_cast<struct port_data *>
+                              (port->port_data.pdata);
+    AudioMediaPort *mport;
     MediaFrame frame_;
+
+    pj_grp_lock_acquire(port->grp_lock);
+    if ((mport = pdata->mport) == NULL)
+        goto on_return;
 
     frame_.size = (unsigned)frame->size;
     mport->onFrameRequested(frame_);
@@ -320,27 +339,36 @@ static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
     pj_memcpy(frame->buf, frame_.buf.data(), frame->size);
 #endif
 
-
+on_return:
+    pj_grp_lock_release(port->grp_lock);
     return PJ_SUCCESS;
 }
 
 static pj_status_t put_frame(pjmedia_port *port, pjmedia_frame *frame)
 {
-    struct port_data *pdata = (struct port_data *)port->port_data.pdata;
-    AudioMediaPort *mport = pdata->mport;
+    struct port_data *pdata = static_cast<struct port_data *>
+                              (port->port_data.pdata);
+    AudioMediaPort *mport;
     MediaFrame frame_;
+
+    pj_grp_lock_acquire(port->grp_lock);
+    if ((mport = pdata->mport) == NULL)
+        goto on_return;
 
     frame_.type = frame->type;
     frame_.buf.assign((char *)frame->buf, ((char *)frame->buf) + frame->size);
     frame_.size = (unsigned)frame->size;
     mport->onFrameReceived(frame_);
 
+on_return:
+    pj_grp_lock_release(port->grp_lock);
     return PJ_SUCCESS;
 }
 
 static pj_status_t port_on_destroy(pjmedia_port *port)
 {
-    struct port_data *pdata = (struct port_data *)port->port_data.pdata;
+    struct port_data *pdata = static_cast<struct port_data *>
+                              (port->port_data.pdata);
     pj_pool_t *pool = pdata->pool;
 
     if (pool) {
@@ -383,7 +411,7 @@ void AudioMediaPort::createPort(const string &name, MediaFormatAudio &fmt)
     port->get_frame = &get_frame;
 
     /* Must implement on_destroy() and create group lock to avoid
-     * premature destroy.
+     * race and premature destroy.
      */
     port->on_destroy = &port_on_destroy;
     status = pjmedia_port_init_grp_lock(port, pool, NULL);
