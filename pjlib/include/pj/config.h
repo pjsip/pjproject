@@ -1176,6 +1176,56 @@
 #  define PJ_JNI_HAS_JNI_ONLOAD             PJ_ANDROID
 #endif
 
+/**
+ * pj_stack implementation.
+ * Select one of these implementations in PJ_STACK_IMPLEMENTATION.
+ */
+ /** Using os independent "cross-platform" implementation */
+#define PJ_STACK_OS_INDEPENDENT             0
+
+ /** Using Windows's single linked list */
+#define PJ_STACK_WIN32                      1
+
+ /**
+ * Select which pj_stack implementation to use. Currently pjlib supports
+ * PJ_STACK_OS_INDEPENDENT, which uses internal pjsip os independent 
+ * "cross-platform" implementation, and 
+ * PJ_STACK_WIN32, which uses Windows's single linked list.
+ * The last option is very fast, but requires data alignment (see below).
+ *
+ * Default is PJ_STACK_OS_INDEPENDENT.
+ */
+#ifndef PJ_STACK_IMPLEMENTATION
+#   define PJ_STACK_IMPLEMENTATION           PJ_STACK_OS_INDEPENDENT
+#endif
+
+#if !defined(PJ_POOL_ALIGNMENT) && PJ_STACK_IMPLEMENTATION==PJ_STACK_WIN32
+/**
+ * PJ_STACK_WIN32 pj_stack implementation is based on Windows single linked list and requires aligned data,
+ * both stack item and stack itself should be aligned by 8 (for x86) or 16 (for x64) byte.
+ * For this purpose winnt.h define MEMORY_ALLOCATION_ALIGNMENT as 8 for x86, ARM, ARM64 and 
+ * 16 for x64 and ARM64EC.
+ * see winnt.h
+ * 
+ * We need to define PJ_POOL_ALIGNMENT as MEMORY_ALLOCATION_ALIGNMENT for the Windows platform to
+ * dynamicaly allocate memory used by some Windows APIs.
+ * For example the pj_stack implementation and possibly some other implemented APIs require and check
+ * that PJ_POOL_ALIGNMENT is at least equal to MEMORY_ALLOCATION_ALIGNMENT,
+ * which is 16 on the x64 platform and 8 on the x86 platform.
+ * 
+ * But it is too early to use MEMORY_ALLOCATION_ALIGNMENT constant here
+ * so we need to explicity declare PJ_POOL_ALIGNMENT as 8 or 16, as opposed to
+ * pjsip's default of 4 - see pool.h
+ */
+#   if defined(MEMORY_ALLOCATION_ALIGNMENT)
+#       define PJ_POOL_ALIGNMENT MEMORY_ALLOCATION_ALIGNMENT
+#   elif defined(_WIN64) || defined(_M_ALPHA)
+#       define PJ_POOL_ALIGNMENT 16
+#   else
+#       define PJ_POOL_ALIGNMENT 8
+#   endif
+#endif
+
 
 /** @} */
 

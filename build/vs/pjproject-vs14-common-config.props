@@ -18,7 +18,7 @@
   <PropertyGroup>    
     <API_Family Condition="'$(API_Family)'==''">WinDesktop</API_Family>
     <PreprocessorDef></PreprocessorDef>
-    <DefaultToolset>v143</DefaultToolset>
+    <DefaultToolset>v140</DefaultToolset>
   </PropertyGroup>  
   <Choose>
     <When Condition="'$(API_Family)'=='WinDesktop'">

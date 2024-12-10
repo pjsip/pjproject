@@ -27,7 +27,7 @@
 
 #include <pjlib.h>
 
-#if defined(PJ_WIN32) && !PJ_USE_CROSSPLATFORM_STACK_IMPL && !defined(MEMORY_ALLOCATION_ALIGNMENT)
+#if defined(PJ_WIN32) && PJ_STACK_IMPLEMENTATION==PJ_STACK_WIN32 && !defined(MEMORY_ALLOCATION_ALIGNMENT)
 
 #   include <windows.h>
 
@@ -121,7 +121,7 @@ int stack_test()
         goto error;
     }
 
-#if defined(PJ_WIN32) && !PJ_USE_CROSSPLATFORM_STACK_IMPL
+#if defined(PJ_WIN32) && PJ_STACK_IMPLEMENTATION==PJ_STACK_WIN32
 
     /* Here we check our alignment macros PJ_STACK_ALIGN_PREFIX, PJ_STACK_ALIGN_SUFFIX */
 
@@ -149,7 +149,7 @@ int stack_test()
         }
     }
 
-#endif  // !PJ_USE_CROSSPLATFORM_STACK_IMPL
+#endif  // PJ_STACK_IMPLEMENTATION==PJ_STACK_WIN32
 
     //const char* stack_test = "stack_test";
     // test stack_create()

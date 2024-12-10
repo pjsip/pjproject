@@ -8,30 +8,7 @@
 
 #include <pj/types.h>
 
-/**
- * Specify if compiler should use crossplatform stack implementation 
- * even if this compilation is for Windows platform.
- * The performance of pj_stack implementation for Windows platform is 2-5x higher than cross-platform.
- * 
- * To use the implementation on the Windows platform, some prerequisites must be met:
- * - this should be compiling for Windows platform
- * - add #define PJ_USE_CROSSPLATFORM_STACK_IMPL   0 
- *      to your config_site.h
- * - PJ_POOL_ALIGNMENT should be defined in config_site.h and not less then MEMORY_ALLOCATION_ALIGNMENT
- *      The MEMORY_ALLOCATION_ALIGNMENT macro which is 16 on the x64 platform and 8 on the x86 platform
- *      is the platform default alignment for the Windows platform and is set in winnt.h.
- * 
- * 
- * Default: 1 (crossplatform)
- * 
- * 0 - use the Windows platform stack implementation
- * 1 - force the crossplatform stack implementation.
- */
-#ifndef PJ_USE_CROSSPLATFORM_STACK_IMPL
-#   define PJ_USE_CROSSPLATFORM_STACK_IMPL    1
-#endif
-
-#if !PJ_USE_CROSSPLATFORM_STACK_IMPL
+#if defined(PJ_STACK_IMPLEMENTATION) && PJ_STACK_IMPLEMENTATION==PJ_STACK_WIN32
 
 /* the Windows platform stack implementation. */
 
@@ -43,14 +20,14 @@
 #   define PJ_STACK_ALIGN_PREFIX PJ_ALIGN_DATA_PREFIX(PJ_POOL_ALIGNMENT)
 #   define PJ_STACK_ALIGN_SUFFIX PJ_ALIGN_DATA_SUFFIX(PJ_POOL_ALIGNMENT)
 
-#else  // PJ_USE_CROSSPLATFORM_STACK_IMPL != 0
+#else  // PJ_STACK_IMPLEMENTATION != PJ_STACK_WIN32
 
 /* compilation of crossplatform stack implementation */
 
 #   define PJ_STACK_ALIGN_PREFIX
 #   define PJ_STACK_ALIGN_SUFFIX
 
-#endif
+#endif // PJ_STACK_IMPLEMENTATION
 
 #include <pj/stack.h>
 
@@ -62,7 +39,7 @@ PJ_BEGIN_DECL
  */
 
 /**
- * @defgroup PJ_STACK Single Linked List with FILO in/out policy
+ * @defgroup PJ_STACK Single Linked List with LIFO in/out policy
  * @ingroup PJ_DS
  * @{
  *
@@ -71,14 +48,23 @@ PJ_BEGIN_DECL
  * Implementation for Windows platform uses locking free Windows embeded single linked list implementation.
  * The performance of pj_stack implementation for Windows platform is 2-5x higher than cross-platform.
  * 
- * Windows single linked list implementation requires aligned data, both stack item and stack itself should 
- * be aligned by 8 (for x86) or 16 (for x64) byte. We recomend set PJ_POOL_ALIGNMENT macro to corresponding value.
- * winnt.h define MEMORY_ALLOCATION_ALIGNMENT macro for this purpose.
+ * By default pjlib compile and link os independent "cross-platform" implementation. 
+ * To select implementation you may optionaly define PJ_STACK_IMPLEMENTATION as PJ_STACK_WIN32 
+ * or PJ_STACK_OS_INDEPENDENT. The last option is default.
+ * 
  * To use the implementation on the Windows platform, some prerequisites must be met:
  * - this should be compiling for Windows platform
- * - add #define PJ_USE_CROSSPLATFORM_STACK_IMPL   0 
+ * - add #define PJ_STACK_IMPLEMENTATION           PJ_STACK_WIN32 
  *      to your config_site.h
- * - PJ_POOL_ALIGNMENT should be defined in config_site.h and not less then MEMORY_ALLOCATION_ALIGNMENT
+ * 
+ * Windows single linked list implementation requires aligned data, both stack item and stack itself should 
+ * be aligned by 8 (for x86) or 16 (for x64) byte. 
+ * pjsip build system define PJ_POOL_ALIGNMENT macro to corresponding value.
+ * winnt.h define MEMORY_ALLOCATION_ALIGNMENT macro for this purpose.
+ * To use this macro in build system we recomend (this is optional) to add #include <windows.h> 
+ * to your config_site.h.
+ * You may redefine PJ_POOL_ALIGNMENT in your config_site.h but to use PJ_STACK_WIN32 implementation 
+ * PJ_POOL_ALIGNMENTshould not be less then MEMORY_ALLOCATION_ALIGNMENT
  * 
  * Stack won't require dynamic memory allocation (just as all PJLIB data structures). The stack here
  * should be viewed more like a low level C stack instead of high level C++ stack
