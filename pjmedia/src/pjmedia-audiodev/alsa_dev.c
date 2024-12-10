@@ -610,7 +610,13 @@ static int ca_thread_func (void *arg)
 
     while (!stream->quit) {
         pjmedia_frame frame;
-
+        
+        snd_pcm_uframes_t avail;
+        avail = snd_pcm_avail(pcm);
+        if (avail > 0 && avail <= nframes) {
+            pj_thread_sleep(5);
+            continue;
+        }
         pj_bzero (buf, size);
         result = snd_pcm_readi (pcm, buf, nframes);
         if (result == -EPIPE) {
