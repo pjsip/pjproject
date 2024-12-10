@@ -3003,6 +3003,14 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
             continue;
         }
 
+        /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so
+         * Get label attribute in SDP offer and add label attribute to SDP answer
+         */
+        if (call->inv){
+            if(call->inv->options & PJSIP_INV_REQUIRE_SIPREC)
+                m->attr[m->attr_count++] = pjmedia_sdp_attr_get_label(rem_sdp->media[mi]);
+        }
+
         /* Add ssrc and cname attribute */
         m->attr[m->attr_count++] = pjmedia_sdp_attr_create_ssrc(pool,
                                                                 call_med->ssrc,
