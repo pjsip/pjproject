@@ -2115,16 +2115,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     }
 */
 
-    /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so
-     * set the number of call active streams to the number of media in the SDP offer.
-     */
-    if(options & PJSIP_INV_REQUIRE_SIPREC){
-        if (call->rem_offerer){
-            call->opt.aud_cnt = call->rem_aud_cnt;
-            call->opt.vid_cnt = call->rem_vid_cnt;
-        }
-    }
-
     /* Init Session Timers */
     status = pjsip_timer_init_session(inv,
                                     &pjsua_var.acc[acc_id].cfg.timer_setting);
