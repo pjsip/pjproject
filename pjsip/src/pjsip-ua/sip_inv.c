@@ -1554,8 +1554,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 
             } else if (pj_stricmp(&req_hdr->values[i], &STR_REPLACES)==0) {
                 pj_bool_t supp;
-                
-                
+
                 supp = pjsip_endpt_has_capability(endpt, PJSIP_H_SUPPORTED, 
                                                   NULL, &STR_REPLACES);
                 if (!supp)
