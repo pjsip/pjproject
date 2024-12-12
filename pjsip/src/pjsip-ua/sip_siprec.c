@@ -108,7 +108,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                                 pjsip_tx_data **p_tdata)
 {
     pjsip_require_hdr *req_hdr;
-    pjsip_contact_hdr *conatct_hdr;
+    pjsip_contact_hdr *contact_hdr;
     const pj_str_t str_require = {"Require", 7};
     const pj_str_t str_src = {"+sip.src", 8};
     int code = 200;
@@ -130,15 +130,15 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         return PJ_SUCCESS;
     }
     
-    /* Find Conatct header */
-    conatct_hdr = (pjsip_contact_hdr*) pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
+    /* Find Contact header */
+    contact_hdr = (pjsip_contact_hdr*) pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
 
-    if(!conatct_hdr || !conatct_hdr->uri){
+    if(!contact_hdr || !contact_hdr->uri){
         return PJ_SUCCESS;
     }
 
     /* Check "+sip.src" parameter exist in the Contact header */
-    if(!pjsip_param_find(&conatct_hdr->other_param, &str_src)){
+    if(!pjsip_param_find(&contact_hdr->other_param, &str_src)){
         return PJ_SUCCESS;
     }
 
