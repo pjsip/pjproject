@@ -57,23 +57,12 @@ PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
 
 
 /**
- * Returns the label attribute in the SDP offer 
- */
-PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *sdp_media)
-{
-    pjmedia_sdp_attr *attr;
-    attr = pjmedia_sdp_media_find_attr(sdp_media, &STR_LABEL, NULL);
-    return attr;
-}
-
-
-/**
  * Checks if there is an attribute label for each media in the SDP.
  */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp)
 {
     for (unsigned mi=0; mi<sdp->media_count; ++mi) {
-        if(!pjmedia_sdp_attr_get_label(sdp->media[mi]))
+        if(!pjmedia_sdp_media_find_attr(sdp->media[mi], &STR_LABEL, NULL))
             return PJ_FALSE;
     }
     return PJ_TRUE;

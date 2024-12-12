@@ -35,16 +35,6 @@ PJ_DECL(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt);
 
 
 /**
- * Create a=label attribute.
- *
- * @param media          The SDP media.
- *
- * @return               SDP label attribute.
- */
-PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *sdp_media);
-
-
-/**
  * Check if the value of Require header is equal to siprec.
  * 
  * @param req_hdr         Require header.
