@@ -48,8 +48,8 @@ PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
          * work properly when the stack is restarted (without quitting 
          * application).
          */
-        pj_assert(!"Failed to register Session Timer deinit.");
-        PJ_LOG(1, (THIS_FILE, "Failed to register Session Timer deinit."));
+        pj_assert(!"Failed to register Siprec deinit.");
+        PJ_LOG(1, (THIS_FILE, "Failed to register Siprec deinit."));
     }
 
     return PJ_SUCCESS;
