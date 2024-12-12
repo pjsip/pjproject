@@ -110,26 +110,3 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
 PJ_DECL(void) pjsip_siprec_find_metadata(pj_pool_t *pool,
                                         pjsip_msg_body *body,
                                         pj_str_t* metadata);
-
-
-/*
- * Counts the number of audio and video streams in the SDP
- * 
- * @param sdp         The SDP media.
- * @param maudcnt     media audio count.
- * @param mvidcnt     media video count
- */
-PJ_DECL(void) pjsip_siprec_count_media(pjmedia_sdp_session *sdp,                                     
-                                                unsigned *maudcnt,
-                                                unsigned *mvidcnt);
-
-                                            
-PJ_END_DECL
-
-
-/**
- * @}
- */
-
-
-#endif  /* __PJSIP_SIPREC_H__ */
