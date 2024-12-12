@@ -152,11 +152,11 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         goto on_return;
     }
 
-    pjsip_siprec_find_metadata(rdata->tp_info.pool,
-                                rdata->msg_info.msg->body,
-                                metadata);
+    status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
+                                        rdata->msg_info.msg->body,
+                                        metadata);
     
-    if(metadata->ptr == NULL || metadata->slen == 0) {
+    if(status != PJ_SUCCESS) {
         code = PJSIP_SC_BAD_REQUEST;
         warn_text = "SIPREC INVITE must have a 'rs-metadata+xml' Content-Type";
         goto on_return;
@@ -225,7 +225,7 @@ on_return:
 /**
  * Find siprec metadata from the message body
  */
-PJ_DEF(void) pjsip_siprec_find_metadata(pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
                                             pjsip_msg_body *body,
                                             pj_str_t* metadata)
 {
@@ -236,10 +236,11 @@ PJ_DEF(void) pjsip_siprec_find_metadata(pj_pool_t *pool,
     pjsip_multipart_part *metadata_part;
     metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
 
-    if(!metadata_part) {
-        return;
-    }
+    if(!metadata_part)
+        return PJ_ENOTFOUND;
 
     metadata->ptr = (char*)metadata_part->body->data;
     metadata->slen = metadata_part->body->len;
+    
+    return PJ_SUCCESS;
 }

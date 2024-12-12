@@ -96,10 +96,13 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
  * @param pool               Pool to allocate memory.
  * @param body               The message body.
  * @param metadata           The siprec metadata
+ *
+ * @return                   Return PJ_SUCCESS if metadata exists.
  */
-PJ_DECL(void) pjsip_siprec_find_metadata(pj_pool_t *pool,
-                                        pjsip_msg_body *body,
-                                        pj_str_t* metadata);
+
+PJ_DECL(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
+                                                pjsip_msg_body *body,
+                                                pj_str_t* metadata);
 
 
 PJ_END_DECL
