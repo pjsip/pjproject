@@ -43,7 +43,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
 {
     const pjmedia_sdp_attr *attr;
     pjmedia_sdp_fmtp sdp_fmtp;
-    char *p, *p_end, fmt_buf[8];
+    char fmt_buf[8];
     pj_str_t fmt;
     pj_status_t status;
 
@@ -63,9 +63,16 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
         return status;
 
+    return pjmedia_stream_info_parse_fmtp_data(pool, &sdp_fmtp.fmt_param, fmtp);
+}
+
+PJ_DECL(pj_status_t) pjmedia_stream_info_parse_fmtp_data(pj_pool_t *pool,
+                                                         const pj_str_t *str,
+                                                         pjmedia_codec_fmtp *fmtp)
+{
     /* Prepare parsing */
-    p = sdp_fmtp.fmt_param.ptr;
-    p_end = p + sdp_fmtp.fmt_param.slen;
+    char *p = str->ptr;
+    char *p_end = p + str->slen;
 
     /* Parse */
     while (p < p_end) {
