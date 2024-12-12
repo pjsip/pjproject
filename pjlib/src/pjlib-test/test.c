@@ -213,6 +213,10 @@ int test_inner(void)
                  param_echo_port);
 #endif
 
+#if INCLUDE_IOCP_CRASH_TEST
+    DO_TEST( ioqueue_iocp_crash_test() );
+#endif
+
     goto on_return;
 
 on_return:
