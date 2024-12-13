@@ -28,7 +28,7 @@
 #include <pj/errno.h>
 #include <pj/compat/socket.h>
 
-#define THIS_FILE "iocp"
+#define THIS_FILE "ioq_winnt"
 
 typedef BOOL (WINAPI *FnCancelIoEx)(HANDLE hFile, LPOVERLAPPED lpOverlapped);
 static FnCancelIoEx fnCancelIoEx = NULL;
@@ -154,7 +154,6 @@ struct pj_ioqueue_t
 
     pj_ioqueue_key_t  active_list;
     pj_ioqueue_key_t  free_list;
-    pj_ioqueue_key_t  closing_list;
 
     /* These are to keep track of connecting sockets */
 #if PJ_HAS_TCP
@@ -165,9 +164,6 @@ struct pj_ioqueue_t
     pj_ioqueue_key_t *connecting_keys[MAXIMUM_WAIT_OBJECTS+1];
 #endif
 };
-
-/* Prototype */
-static void scan_closing_keys(pj_ioqueue_t *ioqueue);
 
 #if PJ_HAS_TCP
 /*
@@ -190,6 +186,7 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
                         SO_UPDATE_ACCEPT_CONTEXT, 
                         (char*)&key->hnd, 
                         sizeof(SOCKET));
+    (void)status;
     /* SO_UPDATE_ACCEPT_CONTEXT is for WinXP or later.
      * So ignore the error status.
      */
@@ -405,7 +402,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
      */
     pj_list_init(&ioqueue->active_list);
     pj_list_init(&ioqueue->free_list);
-    pj_list_init(&ioqueue->closing_list);
 
     /* Preallocate keys according to max_fd setting, and put them
      * in free_list.
@@ -445,7 +441,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
 
     *p_ioqueue = ioqueue;
 
-    PJ_LOG(4, ("pjlib", "WinNT IOCP I/O Queue created (%p)", ioqueue));
+    PJ_LOG(4, (THIS_FILE, "WinNT IOCP I/O Queue created (%p)", ioqueue));
     return PJ_SUCCESS;
 }
 
@@ -478,13 +474,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
     /* Destroy reference counters */
     key = ioqueue->active_list.next;
     while (key != &ioqueue->active_list) {
-        pj_atomic_destroy(key->ref_count);
-        pj_mutex_destroy(key->mutex);
-        key = key->next;
-    }
-
-    key = ioqueue->closing_list.next;
-    while (key != &ioqueue->closing_list) {
         pj_atomic_destroy(key->ref_count);
         pj_mutex_destroy(key->mutex);
         key = key->next;
@@ -552,11 +541,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && ioqueue && cb && key, PJ_EINVAL);
 
     pj_lock_acquire(ioqueue->lock);
-
-    /* Scan closing list first to release unused keys.
-     * Must do this with lock acquired.
-     */
-    scan_closing_keys(ioqueue);
 
     /* If safe unregistration is used, then get the key record from
      * the free list.
@@ -683,7 +667,7 @@ static void decrement_counter(pj_ioqueue_key_t *key)
         pj_time_val_normalize(&key->free_time);
 
         pj_list_erase(key);
-        pj_list_push_back(&key->ioqueue->closing_list, key);
+        pj_list_push_back(&key->ioqueue->free_list, key);
 
         pj_lock_release(key->ioqueue->lock);
     }
@@ -702,6 +686,7 @@ static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key, pj_ioqueue_op_
     op->pending_key.overlapped.wsabuf.buf = (CHAR *)buf;
     op->pending_key.overlapped.wsabuf.len = (ULONG)len;
 
+    pj_atomic_inc(key->ref_count);
     pj_mutex_lock(key->mutex);
     pj_list_push_back(&key->pending_list, op);
     pj_mutex_unlock(key->mutex);
@@ -716,6 +701,7 @@ static void release_pending_op(pj_ioqueue_key_t *key, struct pending_op *op)
     pj_list_erase(op);
     pj_mutex_unlock(key->mutex);
     pj_pool_release(op->pool);
+    decrement_counter(key);
 }
 
 static void cancel_all_pending_op(pj_ioqueue_key_t *key)
@@ -982,38 +968,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
     return PJ_SUCCESS;
 }
 
-/* Scan the closing list, and put pending closing keys to free list.
- * Must do this with ioqueue mutex held.
- */
-static void scan_closing_keys(pj_ioqueue_t *ioqueue)
-{
-    if (!pj_list_empty(&ioqueue->closing_list)) {
-        pj_time_val now;
-        pj_ioqueue_key_t *key;
-
-        pj_gettickcount(&now);
-        
-        /* Move closing keys to free list when they've finished the closing
-         * idle time.
-         */
-        key = ioqueue->closing_list.next;
-        while (key != &ioqueue->closing_list) {
-            pj_ioqueue_key_t *next = key->next;
-
-            pj_assert(key->closing != 0);
-
-            if (PJ_TIME_VAL_GTE(now, key->free_time)) {
-                /* Confirm that there're no any pending operations */
-                pj_assert(pj_list_empty(&key->pending_list));
-
-                pj_list_erase(key);
-                pj_list_push_back(&ioqueue->free_list, key);
-            }
-            key = next;
-        }
-    }
-}
-
 /*
  * pj_ioqueue_poll()
  *
@@ -1043,15 +997,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
             event_count += connect_count;
     }
 #endif
-
-    /* Check the closing keys only when there's no activity and when there are
-     * pending closing keys.
-     */
-    if (event_count == 0 && !pj_list_empty(&ioqueue->closing_list)) {
-        pj_lock_acquire(ioqueue->lock);
-        scan_closing_keys(ioqueue);
-        pj_lock_release(ioqueue->lock);
-    }
 
     /* Return number of events. */
     return event_count;
