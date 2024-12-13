@@ -51,6 +51,15 @@
 
 #endif
 
+/* define this variable to control multithreaded testing for other platforms */
+#ifndef HAS_MT_STACK_STRESS_TEST
+#   ifdef PJ_WIN32
+#       define HAS_MT_STACK_STRESS_TEST 1
+#   endif
+#       define HAS_MT_STACK_STRESS_TEST 0
+#   endif
+#endif
+
 #define THIS_FILE       "stack.c"
 #define MAX_RESERVED    16
 #define MAX_SLOTS       100
@@ -215,10 +224,12 @@ error:
         rc = -55;
     }
 
+#ifdef HAS_MT_STACK_STRESS_TEST
     for (i = 0; !rc && i < PJ_ARRAY_SIZE(tests); ++i) {
         tests[i].state.pool = pool;
         rc = stack_stress_test(&tests[i]);
     }
+#endif //HAS_MT_STACK_STRESS_TEST
 
     if (pool)
         pj_pool_release(pool);

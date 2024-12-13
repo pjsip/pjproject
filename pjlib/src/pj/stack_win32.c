@@ -140,10 +140,6 @@ PJ_DEF(pj_stack_t*) pj_stack_pop(pj_stack_type *stack)
  * because the item count can be changed at any time by another thread.
  * For Windows platform returns the number of entries in the stack modulo 65535. For example,
  * if the specified stack contains 65536 entries, pj_stack_size returns zero.
- *
- * @param stack	    The target stack.
- *
- * @return	    Number of elements.
  */
 PJ_DEF(pj_size_t) pj_stack_size(/*const*/ pj_stack_type *stack)
 {

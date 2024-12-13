@@ -47,8 +47,6 @@
 
 #endif // PJ_STACK_IMPLEMENTATION
 
-#include <pj/stack.h>
-
 
 PJ_BEGIN_DECL
 
@@ -64,7 +62,7 @@ PJ_BEGIN_DECL
  * Stack in PJLIB is single-linked list with First In Last Out logic. 
  * Stack is thread safe. Common PJLIB stack implementation uses internal locking mechanism so is thread-safe.
  * Implementation for Windows platform uses locking free Windows embeded single linked list implementation.
- * The performance of pj_stack implementation for Windows platform is 2-5x higher than cross-platform.
+ * The performance of pj_stack implementation for Windows platform is considerably higher than cross-platform.
  * 
  * By default pjlib compile and link os independent "cross-platform" implementation. 
  * To select implementation you may optionaly define PJ_STACK_IMPLEMENTATION as PJ_STACK_WIN32 
@@ -77,12 +75,13 @@ PJ_BEGIN_DECL
  * 
  * Windows single linked list implementation requires aligned data, both stack item and stack itself should 
  * be aligned by 8 (for x86) or 16 (for x64) byte. 
- * pjsip build system define PJ_POOL_ALIGNMENT macro to corresponding value.
  * winnt.h define MEMORY_ALLOCATION_ALIGNMENT macro for this purpose.
- * To use this macro in build system we recomend (this is optional) to add #include <windows.h> 
- * to your config_site.h.
+ * pjsip build system define PJ_POOL_ALIGNMENT macro to corresponding value.
  * You may redefine PJ_POOL_ALIGNMENT in your config_site.h but to use PJ_STACK_WIN32 implementation 
  * PJ_POOL_ALIGNMENTshould not be less then MEMORY_ALLOCATION_ALIGNMENT
+ * 
+ * To use MEMORY_ALLOCATION_ALIGNMENT macro in build system we recomend (this is optional) to add
+ * #include <windows.h> to your config_site.h.
  * 
  * Stack won't require dynamic memory allocation (just as all PJLIB data structures). The stack here
  * should be viewed more like a low level C stack instead of high level C++ stack
