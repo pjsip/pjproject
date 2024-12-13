@@ -133,12 +133,9 @@ struct pj_ioqueue_key_t
     int                 connecting;
 #endif
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     pj_atomic_t        *ref_count;
     pj_bool_t           closing;
     pj_time_val         free_time;
-#endif
-
     pj_mutex_t         *mutex;
     struct pending_op pending_list;
 };
@@ -155,11 +152,9 @@ struct pj_ioqueue_t
     pj_bool_t         auto_delete_lock;
     pj_bool_t         default_concurrency;
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     pj_ioqueue_key_t  active_list;
     pj_ioqueue_key_t  free_list;
     pj_ioqueue_key_t  closing_list;
-#endif
 
     /* These are to keep track of connecting sockets */
 #if PJ_HAS_TCP
@@ -171,12 +166,8 @@ struct pj_ioqueue_t
 #endif
 };
 
-
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
 /* Prototype */
 static void scan_closing_keys(pj_ioqueue_t *ioqueue);
-#endif
-
 
 #if PJ_HAS_TCP
 /*
@@ -409,7 +400,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     ioqueue->auto_delete_lock = PJ_TRUE;
     ioqueue->default_concurrency = PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY;
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /*
      * Create and initialize key pools.
      */
@@ -452,7 +442,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
 
         pj_list_push_back(&ioqueue->free_list, key);
     }
-#endif
 
     *p_ioqueue = ioqueue;
 
@@ -486,7 +475,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
     if (CloseHandle(ioqueue->iocp) != TRUE)
         return PJ_RETURN_OS_ERROR(GetLastError());
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Destroy reference counters */
     key = ioqueue->active_list.next;
     while (key != &ioqueue->active_list) {
@@ -508,7 +496,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
         pj_mutex_destroy(key->mutex);
         key = key->next;
     }
-#endif
 
     pj_lock_release(ioqueue->lock);
     if (ioqueue->auto_delete_lock)
@@ -566,7 +553,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     pj_lock_acquire(ioqueue->lock);
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Scan closing list first to release unused keys.
      * Must do this with lock acquired.
      */
@@ -589,12 +575,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     pj_atomic_inc(rec->ref_count);
 
     rec->closing = 0;
-
-#else
-    rec = (pj_ioqueue_key_t *)pj_pool_zalloc(pool, sizeof(pj_ioqueue_key_t));
-    pj_mutex_create_recursive(pool, "ioqkey", rec->mutex);
-    pj_list_init(&rec->pending_list);
-#endif
 
     /* Build the key for this socket. */
     rec->ioqueue = ioqueue;
@@ -641,10 +621,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     *key = rec;
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     pj_list_push_back(&ioqueue->active_list, rec);
-#endif
-
     pj_lock_release(ioqueue->lock);
 
     return PJ_SUCCESS;
@@ -691,8 +668,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_set_user_data( pj_ioqueue_key_t *key,
     return PJ_SUCCESS;
 }
 
-
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
 /* Decrement the key's reference counter, and when the counter reach zero,
  * destroy the key.
  */
@@ -713,7 +688,6 @@ static void decrement_counter(pj_ioqueue_key_t *key)
         pj_lock_release(key->ioqueue->lock);
     }
 }
-#endif
 
 static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key, pj_ioqueue_op_key_t *op_key, void *buf, pj_ssize_t len)
 {
@@ -807,7 +781,6 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
                 break;
         }
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
         /* We shouldn't call callbacks if key is quitting. */
         if (key->closing) {
             release_pending_op(key, xpending_op);
@@ -837,9 +810,6 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
          * deleted
          */
         pj_atomic_inc(key->ref_count);
-#else
-        PJ_UNUSED_ARG(has_lock);
-#endif
 
         /* Carry out the callback */
         switch (pOv->operation) {
@@ -885,11 +855,9 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
             break;
         }
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
         decrement_counter(key);
         if (has_lock)
             pj_mutex_unlock(key->mutex);
-#endif
 
         release_pending_op(key, xpending_op);
         return PJ_TRUE;
@@ -943,7 +911,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
     }
 #endif
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Mark key as closing before closing handle. */
     key->closing = 1;
 
@@ -956,9 +923,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
     } else {
         has_lock = PJ_FALSE;
     }
-#else
-    PJ_UNUSED_ARG(has_lock);
-#endif
 
     /* Cancel all penging I/O operations in order to free all pending memory */
     cancel_all_pending_op(key);
@@ -989,7 +953,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
     key->cb.on_read_complete = NULL;
     key->cb.on_write_complete = NULL;
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Even after handle is closed, I suspect that IOCP may still try to
      * do something with the handle, causing memory corruption when pool
      * debugging is enabled.
@@ -1015,12 +978,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
 
     if (has_lock)
         pj_mutex_unlock(key->mutex);
-#endif
 
     return PJ_SUCCESS;
 }
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
 /* Scan the closing list, and put pending closing keys to free list.
  * Must do this with ioqueue mutex held.
  */
@@ -1052,7 +1013,6 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue)
         }
     }
 }
-#endif
 
 /*
  * pj_ioqueue_poll()
@@ -1084,7 +1044,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     }
 #endif
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Check the closing keys only when there's no activity and when there are
      * pending closing keys.
      */
@@ -1093,7 +1052,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
         scan_closing_keys(ioqueue);
         pj_lock_release(ioqueue->lock);
     }
-#endif
 
     /* Return number of events. */
     return event_count;
@@ -1124,11 +1082,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(key && op_key && buffer && length, PJ_EINVAL);
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Check key is not closing */
     if (key->closing)
         return PJ_ECANCELLED;
-#endif
 
     op_key_rec = (union operation_key*)op_key->internal__;
     op_key_rec->overlapped.wsabuf.buf = buffer;
@@ -1205,11 +1161,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(key && op_key && buffer, PJ_EINVAL);
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Check key is not closing */
     if (key->closing)
         return PJ_ECANCELLED;
-#endif
 
     op_key_rec = (union operation_key*)op_key->internal__;
     op_key_rec->overlapped.wsabuf.buf = buffer;
@@ -1301,11 +1255,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(key && op_key && data, PJ_EINVAL);
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Check key is not closing */
     if (key->closing)
         return PJ_ECANCELLED;
-#endif
 
     op_key_rec = (union operation_key*)op_key->internal__;
 
@@ -1385,11 +1337,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(key && op_key && new_sock, PJ_EINVAL);
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Check key is not closing */
     if (key->closing)
         return PJ_ECANCELLED;
-#endif
 
     /*
      * See if there is a new connection immediately available.
@@ -1488,11 +1438,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(key && addr && addrlen, PJ_EINVAL);
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Check key is not closing */
     if (key->closing)
         return PJ_ECANCELLED;
-#endif
 
     /* Initiate connect() */
     if (connect((pj_sock_t)key->hnd, addr, addrlen) != 0) {
