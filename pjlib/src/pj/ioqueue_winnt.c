@@ -135,7 +135,6 @@ struct pj_ioqueue_key_t
 
     pj_atomic_t        *ref_count;
     pj_bool_t           closing;
-    pj_time_val         free_time;
     pj_mutex_t         *mutex;
     struct pending_op pending_list;
 };
@@ -662,10 +661,6 @@ static void decrement_counter(pj_ioqueue_key_t *key)
         pj_lock_acquire(key->ioqueue->lock);
 
         pj_assert(key->closing == 1);
-        pj_gettickcount(&key->free_time);
-        key->free_time.msec += PJ_IOQUEUE_KEY_FREE_DELAY;
-        pj_time_val_normalize(&key->free_time);
-
         pj_list_erase(key);
         pj_list_push_back(&key->ioqueue->free_list, key);
 
