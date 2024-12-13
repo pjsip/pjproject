@@ -55,7 +55,7 @@
 #ifndef HAS_MT_STACK_STRESS_TEST
 #   ifdef PJ_WIN32
 #       define HAS_MT_STACK_STRESS_TEST 1
-#   endif
+#   else
 #       define HAS_MT_STACK_STRESS_TEST 0
 #   endif
 #endif
