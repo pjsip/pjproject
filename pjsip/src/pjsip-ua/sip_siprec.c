@@ -43,7 +43,8 @@ PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
         return status;
 
     /* Register deinit module to be executed when PJLIB shutdown */
-    if (pjsip_endpt_atexit(endpt, &pjsip_siprec_deinit_module) != PJ_SUCCESS) {
+    if (pjsip_endpt_atexit(endpt, &pjsip_siprec_deinit_module) != PJ_SUCCESS)
+    {
         /* Failure to register this function may cause this module won't 
          * work properly when the stack is restarted (without quitting 
          * application).
@@ -89,12 +90,12 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
  * Verifies that the incoming request is a siprec request or not.
  */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata, 
-                                                pj_str_t *metadata,
-                                                pjmedia_sdp_session *sdp_offer,                                     
-                                                unsigned *options,
-                                                pjsip_dialog *dlg,
-                                                pjsip_endpoint *endpt,
-                                                pjsip_tx_data **p_tdata)
+                                              pj_str_t *metadata,
+                                              pjmedia_sdp_session *sdp_offer,                                      
+                                              unsigned *options,
+                                              pjsip_dialog *dlg,
+                                              pjsip_endpoint *endpt,
+                                              pjsip_tx_data **p_tdata)
 {
     pjsip_require_hdr *req_hdr;
     pjsip_contact_hdr *contact_hdr;
@@ -113,14 +114,16 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     pj_list_init(&res_hdr_list);
 
     /* Find Require header */
-    req_hdr = (pjsip_require_hdr*) pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_require, NULL);
+    req_hdr = (pjsip_require_hdr*)
+        pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_require, NULL);
 
     if(!req_hdr || (pjsip_siprec_verify_require_hdr(req_hdr) == PJ_FALSE)){
         return PJ_SUCCESS;
     }
     
     /* Find Contact header */
-    contact_hdr = (pjsip_contact_hdr*) pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
+    contact_hdr = (pjsip_contact_hdr*)
+            pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
 
     if(!contact_hdr || !contact_hdr->uri){
         return PJ_SUCCESS;
@@ -158,7 +161,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     
     if(status != PJ_SUCCESS) {
         code = PJSIP_SC_BAD_REQUEST;
-        warn_text = "SIPREC INVITE must have a 'rs-metadata+xml' Content-Type";
+        warn_text = "SIPREC INVITE must have a 'rs-metadata' Content-Type";
         goto on_return;
     }
 
@@ -231,10 +234,12 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
 {
     pjsip_media_type application_metadata;
 
-    pjsip_media_type_init2(&application_metadata, "application", "rs-metadata+xml");
+    pjsip_media_type_init2(&application_metadata,
+                            "application", "rs-metadata");
 
     pjsip_multipart_part *metadata_part;
-    metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
+    metadata_part = pjsip_multipart_find_part(body, 
+                                            &application_metadata, NULL);   
 
     if(!metadata_part)
         return PJ_ENOTFOUND;

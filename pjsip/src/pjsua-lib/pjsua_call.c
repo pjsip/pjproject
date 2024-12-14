@@ -1808,7 +1808,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * this function add PJSIP_INV_REQUIRE_SIPREC to options
      * and returns the value PJ_SUCCESS 
      */
-    status = pjsip_siprec_verify_request(rdata, &call->siprec_metadata, offer, &options, NULL, pjsua_var.endpt, &response);
+    status = pjsip_siprec_verify_request(rdata, &call->siprec_metadata, offer,
+                                &options, NULL, pjsua_var.endpt, &response);
 
     if(status != PJ_SUCCESS){
         /*
