@@ -15,7 +15,6 @@
 
 
 static const pj_str_t STR_SIPREC         = {"siprec", 6};
-static const pj_str_t STR_LABEL          = {"label", 5};
 
 
 /* Deinitialize siprec */
@@ -54,19 +53,6 @@ PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
     }
 
     return PJ_SUCCESS;
-}
-
-
-/**
- * Checks if there is an attribute label for each media in the SDP.
- */
-PJ_DEF(pj_status_t) pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp)
-{
-    for (unsigned mi=0; mi<sdp->media_count; ++mi) {
-        if(!pjmedia_sdp_media_find_attr(sdp->media[mi], &STR_LABEL, NULL))
-            return PJ_FALSE;
-    }
-    return PJ_TRUE;
 }
 
 
