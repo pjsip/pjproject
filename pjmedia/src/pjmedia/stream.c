@@ -96,6 +96,7 @@ struct dtmf
 {
     int             event;
     pj_uint32_t     duration;
+    pj_uint32_t     send_duration;
     int             ebit_cnt;               /**< # of E bit transmissions   */
 };
 
@@ -982,9 +983,28 @@ static void create_dtmf_payload(pjmedia_stream *stream,
 {
     pjmedia_rtp_dtmf_event *event;
     struct dtmf *digit = &stream->tx_dtmf_buf[0];
+    unsigned duration = 0;
 
     pj_assert(sizeof(pjmedia_rtp_dtmf_event) == 4);
 
+    if (digit->send_duration)
+    {
+        float ts_modifier = 1.0;
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+        if (stream->codec_param.info.pt == PJMEDIA_RTP_PT_G722) {
+            ts_modifier = 0.5;
+        }
+#endif
+        if (!pj_stricmp2(&stream->si.fmt.encoding_name, "opus")) {
+            ts_modifier = (float)48000 / stream->codec_param.info.clock_rate;
+        }
+        duration = (unsigned)(ts_modifier * digit->send_duration *
+                              stream->codec_param.info.clock_rate / 1000);
+    }
+    else
+    {
+        duration = stream->dtmf_duration;
+    }
     *first = *last = 0;
 
     event = (pjmedia_rtp_dtmf_event*) frame_out->buf;
@@ -996,19 +1016,18 @@ static void create_dtmf_payload(pjmedia_stream *stream,
     }
 
     digit->duration += stream->rtp_tx_ts_len_per_pkt;
-    if (digit->duration >= stream->dtmf_duration)
-        digit->duration = stream->dtmf_duration;
+    if (digit->duration >= duration)
+        digit->duration = duration;
 
     event->event = (pj_uint8_t)digit->event;
     event->e_vol = 10;
     event->duration = pj_htons((pj_uint16_t)digit->duration);
 
     if (forced_last) {
-        digit->duration = stream->dtmf_duration;
+        digit->duration = duration;
     }
 
-    if (digit->duration >= stream->dtmf_duration) {
-
+    if (digit->duration >= duration) {
         event->e_vol |= 0x80;
 
         if (++digit->ebit_cnt >= DTMF_EBIT_RETRANSMIT_CNT) {
@@ -1753,6 +1772,7 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
     pjmedia_stream_dtmf_event dtmf_event;
     pj_bool_t is_event_end;
     pj_bool_t emit_event;
+    float ts_modifier = 1.0;
 
     /* Check compiler packing. */
     pj_assert(sizeof(pjmedia_rtp_dtmf_event)==4);
@@ -1779,6 +1799,18 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
     event_duration = pj_ntohs(event->duration);
     is_event_end = (event->e_vol & PJMEDIA_RTP_DTMF_EVENT_END_MASK) != 0;
 
+    /* Correct duration and timestamp for codecs where clock_rate
+     * differs from sample rate
+     */
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+    if (stream->has_g722_mpeg_bug == PJ_TRUE) {
+        ts_modifier = 2;
+    }
+#endif
+    if (!pj_stricmp2(&stream->si.fmt.encoding_name, "opus")) {
+        ts_modifier = (float)stream->codec_param.info.clock_rate / 48000;
+    }
+
     /* Check if this is the same/current digit of the last packet. */
     if (stream->last_dtmf != -1 &&
         event->event == stream->last_dtmf &&
@@ -1796,9 +1828,9 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
          */
         if (stream->dtmf_event_cb && emit_event) {
             dtmf_event.digit = digitmap[event->event];
-            dtmf_event.timestamp = (pj_uint32_t)(timestamp->u64 /
+            dtmf_event.timestamp = (pj_uint32_t)(ts_modifier * timestamp->u64 /
                 (stream->codec_param.info.clock_rate / 1000));
-            dtmf_event.duration = (pj_uint16_t)(event_duration /
+            dtmf_event.duration = (pj_uint16_t)(ts_modifier * event_duration /
                 (stream->codec_param.info.clock_rate / 1000));
             dtmf_event.flags = PJMEDIA_STREAM_DTMF_IS_UPDATE;
             if (is_event_end) {
@@ -1824,9 +1856,9 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
      */
     if (stream->dtmf_event_cb) {
         dtmf_event.digit = digitmap[event->event];
-        dtmf_event.timestamp = (pj_uint32_t)(timestamp->u64 /
+        dtmf_event.timestamp = (pj_uint32_t)(ts_modifier * timestamp->u64 /
             (stream->codec_param.info.clock_rate / 1000));
-        dtmf_event.duration = (pj_uint16_t)(event_duration /
+        dtmf_event.duration = (pj_uint16_t)(ts_modifier * event_duration /
             (stream->codec_param.info.clock_rate / 1000));
         dtmf_event.flags = 0;
         if (is_event_end) {
@@ -1972,7 +2004,11 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
         }
     }
 
+    /* Add ref counter to avoid premature destroy from callbacks */
+    pj_grp_lock_add_ref(stream->grp_lock);
+
     pj_bzero(&seq_st, sizeof(seq_st));
+
     /* Ignore the packet if decoder is paused */
     if (channel->paused) {
         goto on_return;
@@ -2287,6 +2323,8 @@ on_return:
             stream->initial_rr = PJ_TRUE;
         }
     }
+
+    pj_grp_lock_dec_ref(stream->grp_lock);
 }
 
 
@@ -2901,19 +2939,27 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     att_param.rtp_cb2 = &on_rx_rtp;
     att_param.rtcp_cb = &on_rx_rtcp;
 
-    /* Attach handler to group lock from transport */
-    if (tp->grp_lock) {
-        stream->grp_lock = stream->port.grp_lock = tp->grp_lock;
-        pj_grp_lock_add_ref(stream->grp_lock);
-        pj_grp_lock_add_handler(stream->grp_lock, pool, stream,
-                                &stream_on_destroy);
-    }
+    /* Create group lock & attach handler */
+    status = pj_grp_lock_create_w_handler(pool, NULL, stream,
+                                          &stream_on_destroy,
+                                          &stream->grp_lock);
+    if (status != PJ_SUCCESS)
+        goto err_cleanup;
+
+    /* Add ref */
+    pj_grp_lock_add_ref(stream->grp_lock);
+    stream->port.grp_lock = stream->grp_lock;
 
     /* Only attach transport when stream is ready. */
     stream->transport = tp;
     status = pjmedia_transport_attach2(tp, &att_param);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
+
+    /* Also add ref the transport group lock */
+    if (stream->transport->grp_lock)
+        pj_grp_lock_add_ref(stream->transport->grp_lock);
+
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     /* Enable RTCP XR and update stream info/config to RTCP XR */
@@ -3077,6 +3123,10 @@ static void stream_on_destroy(void *arg)
     pjmedia_stream* stream = (pjmedia_stream*)arg;
 
     /* This function may be called when stream is partly initialized. */
+
+    /* Release ref to transport */
+    if (stream->transport && stream->transport->grp_lock)
+        pj_grp_lock_dec_ref(stream->transport->grp_lock);
 
     /* Free codec. */
     if (stream->codec) {
@@ -3381,6 +3431,13 @@ PJ_DEF(pj_status_t) pjmedia_stream_resume( pjmedia_stream *stream,
 PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
                                               const pj_str_t *digit_char)
 {
+    return pjmedia_stream_dial_dtmf2(stream, digit_char, 0);
+}
+
+PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf2( pjmedia_stream *stream,
+                                              const pj_str_t *digit_char,
+                                              unsigned duration)
+{
     pj_status_t status = PJ_SUCCESS;
 
     /* By convention we use jitter buffer mutex to access DTMF
@@ -3439,6 +3496,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
 
             stream->tx_dtmf_buf[stream->tx_dtmf_count+i].event = pt;
             stream->tx_dtmf_buf[stream->tx_dtmf_count+i].duration = 0;
+            stream->tx_dtmf_buf[stream->tx_dtmf_count+i].send_duration = duration;
             stream->tx_dtmf_buf[stream->tx_dtmf_count+i].ebit_cnt = 0;
         }
 

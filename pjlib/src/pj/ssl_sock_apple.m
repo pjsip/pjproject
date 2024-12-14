@@ -576,7 +576,7 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
                 identity = (SecIdentityRef)
                            CFDictionaryGetValue((CFDictionaryRef) item,
                                                 kSecImportItemIdentity);
-                identity = CFRetain(identity);
+                CFRetain(identity);
                 break;
             }
 #if !TARGET_OS_IPHONE
@@ -1416,6 +1416,11 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
      * is started.
      */
     PJ_UNUSED_ARG(ssock);
+
+    /* Suppress warnings */
+    PJ_UNUSED_ARG(circ_reset);
+    PJ_UNUSED_ARG(circ_read_cancel);
+
     return PJ_SUCCESS;
 }
 

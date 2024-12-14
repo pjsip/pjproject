@@ -1217,7 +1217,7 @@ int main(int argc, char *argv[])
         switch (c) {
         case 'c':
             icedemo.opt.comp_cnt = atoi(pj_optarg);
-            if (icedemo.opt.comp_cnt < 1 || icedemo.opt.comp_cnt >= PJ_ICE_MAX_COMP) {
+            if (icedemo.opt.comp_cnt < 1 || icedemo.opt.comp_cnt > PJ_ICE_MAX_COMP) {
                 puts("Invalid component count value");
                 return 1;
             }

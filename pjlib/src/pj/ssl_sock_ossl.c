@@ -713,6 +713,7 @@ static pj_status_t init_openssl(void)
 #if OPENSSL_VERSION_NUMBER < 0x009080ffL
     /* This is now synonym of SSL_library_init() */
     OpenSSL_add_all_algorithms();
+    OpenSSL_add_all_digests();
 #endif
 
     /* Init available ciphers */

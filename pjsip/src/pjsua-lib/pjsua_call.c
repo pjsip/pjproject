@@ -433,14 +433,20 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 {
     pjmedia_sdp_session *offer = NULL;
     pjsip_inv_session *inv = NULL;
-    pjsua_call *call = &pjsua_var.calls[call_id];
-    pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
-    pjsip_dialog *dlg = call->async_call.dlg;
+    pjsua_call *call;
+    pjsua_acc *acc;
+    pjsip_dialog *dlg;
     unsigned options = 0;
     pjsip_tx_data *tdata;
     pj_bool_t cb_called = PJ_FALSE;
     pjsip_tpselector tp_sel;
     pj_status_t status = (info? info->status: PJ_SUCCESS);
+
+    /* Get call, account, and dialog */
+    PJ_ASSERT_RETURN(call_id != PJSUA_INVALID_ID, PJ_EINVAL);
+    call = &pjsua_var.calls[call_id];
+    acc = &pjsua_var.acc[call->acc_id];
+    dlg = call->async_call.dlg;
 
     PJSUA_LOCK();
 
@@ -3810,7 +3816,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_dtmf(pjsua_call_id call_id,
                        get_dtmf_method_name(param->method)));
 
     if (param->method == PJSUA_DTMF_METHOD_RFC2833) {
-        status = pjsua_call_dial_dtmf(call_id, &param->digits);
+        status = pjsua_call_dial_dtmf2(call_id, &param->digits, param->duration);
     } else if (param->method == PJSUA_DTMF_METHOD_SIP_INFO) {
         const pj_str_t SIP_INFO = pj_str("INFO");
         int i;

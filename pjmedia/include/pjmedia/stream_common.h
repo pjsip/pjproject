@@ -117,6 +117,21 @@ PJ_DECL(pj_status_t) pjmedia_stream_info_parse_fmtp(pj_pool_t *pool,
                                                     pjmedia_codec_fmtp *fmtp);
 
 
+/**
+ * This is an internal function for parsing fmtp data from a raw buffer.
+ *
+ * @param pool          Pool to allocate memory, if pool is NULL, the fmtp
+ *                      string pointers will point to the original string.
+ * @param str           The fmtp string to be parsed.
+ * @param fmtp          The format parameter to store the parsing result.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_info_parse_fmtp_data(pj_pool_t *pool,
+                                                         const pj_str_t *str,
+                                                         pjmedia_codec_fmtp *fmtp);
+
+
 PJ_END_DECL
 
 

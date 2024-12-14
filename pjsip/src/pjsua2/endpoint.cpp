@@ -433,6 +433,7 @@ void MediaConfig::fromPj(const pjsua_media_config &mc)
 {
     this->clockRate = mc.clock_rate;
     this->sndClockRate = mc.snd_clock_rate;
+    this->sndUseSwClock = PJ2BOOL(mc.snd_use_sw_clock);
     this->channelCount = mc.channel_count;
     this->audioFramePtime = mc.audio_frame_ptime;
     this->maxMediaPorts = mc.max_media_ports;
@@ -465,6 +466,7 @@ pjsua_media_config MediaConfig::toPj() const
 
     mcfg.clock_rate = this->clockRate;
     mcfg.snd_clock_rate = this->sndClockRate;
+    mcfg.snd_use_sw_clock = this->sndUseSwClock;
     mcfg.channel_count = this->channelCount;
     mcfg.audio_frame_ptime = this->audioFramePtime;
     mcfg.max_media_ports = this->maxMediaPorts;
@@ -519,6 +521,7 @@ void MediaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_NUM_T   ( this_node, pjmedia_jb_discard_algo, jbDiscardAlgo);
     NODE_READ_INT     ( this_node, sndAutoCloseTime);
     NODE_READ_BOOL    ( this_node, vidPreviewEnableNative);
+    NODE_READ_BOOL    ( this_node, sndUseSwClock);
 }
 
 void MediaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -549,6 +552,7 @@ void MediaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_NUM_T   ( this_node, pjmedia_jb_discard_algo, jbDiscardAlgo);
     NODE_WRITE_INT     ( this_node, sndAutoCloseTime);
     NODE_WRITE_BOOL    ( this_node, vidPreviewEnableNative);
+    NODE_WRITE_BOOL    ( this_node, sndUseSwClock);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -918,6 +922,22 @@ void Endpoint::on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
     prm.expiration      = info->cbparam->expiration;
 
     acc->onRegState(prm);
+}
+
+void Endpoint::on_acc_send_request(pjsua_acc_id acc_id,
+                                   void *token,
+                                   pjsip_event *event)
+{
+    Account *acc = lookupAcc(acc_id, "on_acc_send_request:response()");
+    if (!acc) {
+        return;
+    }
+
+    OnSendRequestParam prm;
+    prm.userData = token;
+    prm.e.fromPj(*event);
+
+    acc->onSendRequest(prm);
 }
 
 void Endpoint::on_incoming_subscribe(pjsua_acc_id acc_id,
@@ -1926,16 +1946,17 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_nat_detect     = &Endpoint::on_nat_detect;
     ua_cfg.cb.on_transport_state = &Endpoint::on_transport_state;
 
-    ua_cfg.cb.on_incoming_call  = &Endpoint::on_incoming_call;
-    ua_cfg.cb.on_reg_started    = &Endpoint::on_reg_started;
-    ua_cfg.cb.on_reg_state2     = &Endpoint::on_reg_state2;
-    ua_cfg.cb.on_incoming_subscribe = &Endpoint::on_incoming_subscribe;
-    ua_cfg.cb.on_pager2         = &Endpoint::on_pager2;
-    ua_cfg.cb.on_pager_status2  = &Endpoint::on_pager_status2;
-    ua_cfg.cb.on_typing2        = &Endpoint::on_typing2;
-    ua_cfg.cb.on_mwi_info       = &Endpoint::on_mwi_info;
-    ua_cfg.cb.on_buddy_state    = &Endpoint::on_buddy_state;
-    ua_cfg.cb.on_buddy_evsub_state = &Endpoint::on_buddy_evsub_state;
+    ua_cfg.cb.on_acc_send_request       = &Endpoint::on_acc_send_request;
+    ua_cfg.cb.on_incoming_call          = &Endpoint::on_incoming_call;
+    ua_cfg.cb.on_reg_started            = &Endpoint::on_reg_started;
+    ua_cfg.cb.on_reg_state2             = &Endpoint::on_reg_state2;
+    ua_cfg.cb.on_incoming_subscribe     = &Endpoint::on_incoming_subscribe;
+    ua_cfg.cb.on_pager2                 = &Endpoint::on_pager2;
+    ua_cfg.cb.on_pager_status2          = &Endpoint::on_pager_status2;
+    ua_cfg.cb.on_typing2                = &Endpoint::on_typing2;
+    ua_cfg.cb.on_mwi_info               = &Endpoint::on_mwi_info;
+    ua_cfg.cb.on_buddy_state            = &Endpoint::on_buddy_state;
+    ua_cfg.cb.on_buddy_evsub_state      = &Endpoint::on_buddy_evsub_state;
     ua_cfg.cb.on_acc_find_for_incoming  = &Endpoint::on_acc_find_for_incoming;
     ua_cfg.cb.on_ip_change_progress     = &Endpoint::on_ip_change_progress;
 
@@ -2496,17 +2517,16 @@ void Endpoint::codecSetParam(const string &codec_id,
 
 CodecOpusConfig Endpoint::getCodecOpusConfig() const PJSUA2_THROW(Error)
 {
-    CodecOpusConfig config;
 #if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+    CodecOpusConfig config;
     pjmedia_codec_opus_config opus_cfg;
 
     PJSUA2_CHECK_EXPR(pjmedia_codec_opus_get_config(&opus_cfg));
     config.fromPj(opus_cfg);
+    return config;
 #else
     PJSUA2_RAISE_ERROR(PJ_ENOTSUP);
 #endif
-
-    return config;
 }
 
 void Endpoint::setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
@@ -2531,17 +2551,16 @@ void Endpoint::setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
 
 CodecLyraConfig Endpoint::getCodecLyraConfig() const PJSUA2_THROW(Error)
 {
-    CodecLyraConfig config;
 #if defined(PJMEDIA_HAS_LYRA_CODEC) && (PJMEDIA_HAS_LYRA_CODEC!=0)
+    CodecLyraConfig config;
     pjmedia_codec_lyra_config lyra_cfg;
 
     PJSUA2_CHECK_EXPR(pjmedia_codec_lyra_get_config(&lyra_cfg));
     config.fromPj(lyra_cfg);
+    return config;
 #else
     PJSUA2_RAISE_ERROR(PJ_ENOTSUP);
 #endif
-
-    return config;
 }
 
 void Endpoint::setCodecLyraConfig(const CodecLyraConfig &lyra_cfg)

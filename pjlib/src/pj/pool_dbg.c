@@ -72,7 +72,14 @@ PJ_DEF(pj_pool_t*) pj_pool_create_imp( const char *file, int line,
         return NULL;
 
     if (name) {
-        pj_ansi_strxcpy(pool->obj_name, name, sizeof(pool->obj_name));
+        char *p = pj_ansi_strchr(name, '%');
+        if (p && *(p+1)=='p' && *(p+2)=='\0') {
+            /* Special name with "%p" suffix */
+            pj_ansi_snprintf(pool->obj_name, sizeof(pool->obj_name),
+                             name, pool);
+        } else {
+            pj_ansi_strxcpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
+        }
     } else {
         pj_ansi_strxcpy(pool->obj_name, "altpool", sizeof(pool->obj_name));
     }
@@ -171,8 +178,9 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
     {
         char msg[120];
         pj_ansi_snprintf(msg, sizeof(msg),
-                        "Mem %X (%d+%d bytes) allocated by %s:%d\r\n",
-                        mem, sz, sizeof(struct pj_pool_mem), 
+                        "Mem %X (%u+%u bytes) allocated by %s:%d\r\n",
+                        (unsigned)(intptr_t)mem, (unsigned)sz,
+                        (unsigned)sizeof(struct pj_pool_mem),
                         file, line);
         TRACE_(msg);
     }
@@ -182,8 +190,8 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
 }
 
 /* Allocate memory from the pool and zero the memory */
-PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line, 
-                                  pj_pool_t *pool, unsigned cnt, 
+PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line,
+                                  pj_pool_t *pool, unsigned cnt,
                                   unsigned elemsz)
 {
     void *mem;
@@ -200,7 +208,7 @@ PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line,
 PJ_DEF(void*) pj_pool_zalloc_imp( const char *file, int line, 
                                   pj_pool_t *pool, pj_size_t sz)
 {
-    return pj_pool_calloc_imp(file, line, pool, 1, sz); 
+    return pj_pool_calloc_imp(file, line, pool, 1, (unsigned)sz); 
 }
 
 

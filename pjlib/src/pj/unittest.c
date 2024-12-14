@@ -265,7 +265,8 @@ static const char *get_test_case_info(const pj_test_case *tc,
     } else {
         char arg_val[40];
         /* treat argument as integer */
-        pj_ansi_snprintf(arg_val, sizeof(arg_val), "%ld", (long)tc->arg);
+        pj_ansi_snprintf(arg_val, sizeof(arg_val), "%ld",
+                         (long)(intptr_t)tc->arg);
 
         /* if arg value is too long (e.g. it's a pointer!), then just show
          * a portion of it */
@@ -776,6 +777,7 @@ PJ_DEF(pj_status_t) pj_test_create_text_runner(
     text_runner_t *runner;
     unsigned i;
     pj_status_t status;
+    unsigned nthreads = (PJ_HAS_THREADS? 1: 0);
 
     *p_runner = NULL;
 
@@ -795,13 +797,14 @@ PJ_DEF(pj_status_t) pj_test_create_text_runner(
 
     if (prm) {
         pj_memcpy(&runner->base.prm, prm, sizeof(*prm));
+        nthreads = prm->nthreads;
     } else {
         pj_test_runner_param_default(&runner->base.prm);
     }
     runner->base.prm.nthreads = 0;
-    runner->threads = (pj_thread_t**) pj_pool_calloc(pool, prm->nthreads,
+    runner->threads = (pj_thread_t**) pj_pool_calloc(pool, nthreads,
                                                      sizeof(pj_thread_t*));
-    for (i=0; i<prm->nthreads; ++i) {
+    for (i=0; i<nthreads; ++i) {
         thread_param_t *tprm = PJ_POOL_ZALLOC_T(pool, thread_param_t);
         tprm->runner = runner;
         tprm->tid = i+1;

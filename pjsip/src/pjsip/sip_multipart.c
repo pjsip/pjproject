@@ -635,7 +635,7 @@ static pjsip_multipart_part *parse_multipart_part(pj_pool_t *pool,
                                                   const pjsip_media_type *pct)
 {
     pjsip_multipart_part *part = pjsip_multipart_create_part(pool);
-    char *p = start, *end = start+len, *end_hdr = NULL, *start_body = NULL;
+    char *p = start, *end = start+len, *end_hdr = NULL, *start_body;
     pjsip_ctype_hdr *ctype_hdr = NULL;
 
     TRACE_((THIS_FILE, "Parsing part: begin--\n%.*s\n--end",
@@ -657,6 +657,7 @@ static pjsip_multipart_part *parse_multipart_part(pj_pool_t *pool,
             /* Empty body section */
             end_hdr = end;
             start_body = ++p;
+            break;
         } else if ((p>=start+1 && *(p-1)=='\n') ||
                    (p>=start+2 && *(p-1)=='\r' && *(p-2)=='\n'))
         {

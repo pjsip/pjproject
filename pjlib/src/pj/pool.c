@@ -177,7 +177,9 @@ PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool,
     pool->callback = callback;
 
     if (name) {
-        if (strchr(name, '%') != NULL) {
+        char *p = pj_ansi_strchr(name, '%');
+        if (p && *(p+1)=='p' && *(p+2)=='\0') {
+            /* Special name with "%p" suffix */
             pj_ansi_snprintf(pool->obj_name, sizeof(pool->obj_name), 
                              name, pool);
         } else {
