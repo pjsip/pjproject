@@ -67,25 +67,6 @@ pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
 
 
 /**
- * Checks if there is an attribute label for each media in the SDP.
- * 
- * @param media          The SDP media.
- * 
- * @return               PJ_TRUE if a label exists in the SDP.
- */
-PJ_INLINE(pj_status_t)
-pjsip_siprec_verify_sdp_attr_label(pjmedia_sdp_session *sdp)
-{
-    const pj_str_t STR_LABEL = {"label", 5};
-    for (unsigned mi=0; mi<sdp->media_count; ++mi) {
-        if(!pjmedia_sdp_media_find_attr(sdp->media[mi], &STR_LABEL, NULL))
-            return PJ_FALSE;
-    }
-    return PJ_TRUE;
-}
-
-
-/**
  * Verifies that the incoming request has the siprec value
  * in the Require header and "+sip.src" parameter exist in the Contact header.
  * If both conditions are met, according to RFC 7866,

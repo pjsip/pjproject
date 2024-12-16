@@ -32,6 +32,7 @@
 
 
 static const pj_str_t STR_SIPREC         = {"siprec", 6};
+static const pj_str_t STR_LABEL          = {"label", 5};
 
 
 /* Deinitialize siprec */
@@ -94,7 +95,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
  */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata, 
                                               pj_str_t *metadata,
-                                              pjmedia_sdp_session *sdp_offer,                                      
+                                              pjmedia_sdp_session *sdp_offer,
                                               unsigned *options,
                                               pjsip_dialog *dlg,
                                               pjsip_endpoint *endpt,
@@ -152,10 +153,13 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     }
 
     /* Check that the media attribute label exist in the SDP */
-    if(pjsip_siprec_verify_sdp_attr_label(sdp_offer) == PJ_FALSE){
-        code = PJSIP_SC_BAD_REQUEST;
-        warn_text = "SDP must have label media attribute";
-        goto on_return;
+    for (unsigned mi=0; mi<sdp_offer->media_count; ++mi) {
+        if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
+                                            &STR_LABEL, NULL)){
+            code = PJSIP_SC_BAD_REQUEST;
+            warn_text = "SDP must have label media attribute";
+            goto on_return;
+        }
     }
 
     status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
