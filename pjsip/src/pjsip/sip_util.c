@@ -1026,11 +1026,29 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
         return status;
 
     /* If transport selector is set, set destination type accordingly */
-    if (tdata->tp_sel.type != PJSIP_TPSELECTOR_NONE && tdata->tp_sel.u.ptr) {
+    if ((tdata->tp_sel.type == PJSIP_TPSELECTOR_TRANSPORT ||
+         tdata->tp_sel.type == PJSIP_TPSELECTOR_LISTENER) &&
+        tdata->tp_sel.u.ptr)
+    {
+        pjsip_transport_type_e tp_type;
+
         if (tdata->tp_sel.type == PJSIP_TPSELECTOR_TRANSPORT)
-            dest_info->type = tdata->tp_sel.u.transport->key.type;
+            tp_type = tdata->tp_sel.u.transport->key.type;
         else if (tdata->tp_sel.type == PJSIP_TPSELECTOR_LISTENER)
-            dest_info->type = tdata->tp_sel.u.listener->type;
+            tp_type = tdata->tp_sel.u.listener->type;
+
+        /* Check if the transport selector type is compatible with
+         * the destination type.
+         */
+        if (dest_info->type != PJSIP_TRANSPORT_UNSPECIFIED &&
+            ((dest_info->type | PJSIP_TRANSPORT_IPV6) !=
+             (tp_type | PJSIP_TRANSPORT_IPV6)))
+        {
+            PJ_LOG(4,(THIS_FILE, "Unsuitable transport selected to "
+                                 "reach destination"));
+            return PJSIP_ETPNOTSUITABLE;
+        }
+        dest_info->type = tp_type;
     }
 
     /* If target URI is different than request URI, replace 

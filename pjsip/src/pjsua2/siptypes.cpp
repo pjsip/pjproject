@@ -332,7 +332,7 @@ pj_sockopt_params SockOptParams::toPj() const
     unsigned i;
 
     pj_bzero(&sop, sizeof(sop));
-    sop.cnt = this->sockOpts.size();
+    sop.cnt = (unsigned)this->sockOpts.size();
     if (sop.cnt > PJ_MAX_SOCKOPT_PARAMS)
         sop.cnt = PJ_MAX_SOCKOPT_PARAMS;
     for (i = 0; i < sop.cnt; ++i) {

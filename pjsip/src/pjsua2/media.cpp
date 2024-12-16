@@ -71,19 +71,19 @@ pjmedia_format MediaFormatAudio::toPj() const
 }
 
 void MediaFormatAudio::init(pj_uint32_t formatId,
-                            unsigned clockRate, unsigned channelCount,
-                            int frameTimeUsec, int bitsPerSample,
-                            pj_uint32_t avgBps, pj_uint32_t maxBps)
+                            unsigned clockRate_, unsigned channelCount_,
+                            int frameTimeUsec_, int bitsPerSample_,
+                            pj_uint32_t avgBps_, pj_uint32_t maxBps_)
 {
     type = PJMEDIA_TYPE_AUDIO;
     id = formatId;
 
-    this->clockRate = clockRate;
-    this->channelCount = channelCount;
-    this->frameTimeUsec = frameTimeUsec;
-    this->bitsPerSample = bitsPerSample;
-    this->avgBps = avgBps;
-    this->maxBps = maxBps;
+    this->clockRate = clockRate_;
+    this->channelCount = channelCount_;
+    this->frameTimeUsec = frameTimeUsec_;
+    this->bitsPerSample = bitsPerSample_;
+    this->avgBps = avgBps_;
+    this->maxBps = maxBps_;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -281,27 +281,51 @@ AudioMedia* AudioMedia::typecastFromMedia(Media *media)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+struct port_data {
+    AudioMediaPort *mport;
+    pj_pool_t      *pool;
+};
+
 AudioMediaPort::AudioMediaPort()
-: pool(NULL)
+: pool(NULL), port(NULL)
 {
-    pj_bzero(&port, sizeof(port));
 }
 
 AudioMediaPort::~AudioMediaPort()
 {
-    if (pool) {
-        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
-        pj_pool_release(pool);
-        pool = NULL;
+    PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
+    if (port) {
+        struct port_data *pdata = static_cast<struct port_data *>
+                                  (port->port_data.pdata);
+
+        /* Make sure port no longer accesses this object in its
+         * get/put_frame() callback.
+         */
+        if (port->grp_lock) {
+            pj_grp_lock_acquire(port->grp_lock);
+            pdata->mport = NULL;
+            pj_grp_lock_release(port->grp_lock);
+        }
+
+        pjmedia_port_destroy(port);
+        /* We release the pool later in port.on_destroy since
+         * the unregistration is async and may not have completed yet.
+         */
     }
 }
 
 static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
 {
-    AudioMediaPort *mport = (AudioMediaPort *) port->port_data.pdata;
+    struct port_data *pdata = static_cast<struct port_data *>
+                              (port->port_data.pdata);
+    AudioMediaPort *mport;
     MediaFrame frame_;
 
-    frame_.size = frame->size;
+    pj_grp_lock_acquire(port->grp_lock);
+    if ((mport = pdata->mport) == NULL)
+        goto on_return;
+
+    frame_.size = (unsigned)frame->size;
     mport->onFrameRequested(frame_);
     frame->type = frame_.type;
     frame->size = PJ_MIN(frame_.buf.size(), frame_.size);
@@ -315,19 +339,41 @@ static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
     pj_memcpy(frame->buf, frame_.buf.data(), frame->size);
 #endif
 
-
+on_return:
+    pj_grp_lock_release(port->grp_lock);
     return PJ_SUCCESS;
 }
 
 static pj_status_t put_frame(pjmedia_port *port, pjmedia_frame *frame)
 {
-    AudioMediaPort *mport = (AudioMediaPort *) port->port_data.pdata;
+    struct port_data *pdata = static_cast<struct port_data *>
+                              (port->port_data.pdata);
+    AudioMediaPort *mport;
     MediaFrame frame_;
+
+    pj_grp_lock_acquire(port->grp_lock);
+    if ((mport = pdata->mport) == NULL)
+        goto on_return;
 
     frame_.type = frame->type;
     frame_.buf.assign((char *)frame->buf, ((char *)frame->buf) + frame->size);
-    frame_.size = frame->size;
+    frame_.size = (unsigned)frame->size;
     mport->onFrameReceived(frame_);
+
+on_return:
+    pj_grp_lock_release(port->grp_lock);
+    return PJ_SUCCESS;
+}
+
+static pj_status_t port_on_destroy(pjmedia_port *port)
+{
+    struct port_data *pdata = static_cast<struct port_data *>
+                              (port->port_data.pdata);
+    pj_pool_t *pool = pdata->pool;
+
+    if (pool) {
+        pj_pool_release(pool);
+    }
 
     return PJ_SUCCESS;
 }
@@ -337,6 +383,8 @@ void AudioMediaPort::createPort(const string &name, MediaFormatAudio &fmt)
 {
     pj_str_t name_;
     pjmedia_format fmt_;
+    struct port_data *pdata;
+    pj_status_t status;
 
     if (pool) {
         PJSUA2_RAISE_ERROR(PJ_EEXISTS);
@@ -348,18 +396,30 @@ void AudioMediaPort::createPort(const string &name, MediaFormatAudio &fmt)
     }
 
     /* Init port. */
-    pj_bzero(&port, sizeof(port));
+    port = PJ_POOL_ZALLOC_T(pool, pjmedia_port);
     pj_strdup2_with_null(pool, &name_, name.c_str());
     fmt_ = fmt.toPj();
-    pjmedia_port_info_init2(&port.info, &name_,
+    pjmedia_port_info_init2(&port->info, &name_,
                             PJMEDIA_SIG_CLASS_APP ('A', 'M', 'P'),
                             PJMEDIA_DIR_ENCODING_DECODING, &fmt_);
 
-    port.port_data.pdata = this;
-    port.put_frame = &put_frame;
-    port.get_frame = &get_frame;
+    pdata = PJ_POOL_ZALLOC_T(pool, struct port_data);
+    pdata->mport = this;
+    pdata->pool = pool;
+    port->port_data.pdata = pdata;
+    port->put_frame = &put_frame;
+    port->get_frame = &get_frame;
 
-    registerMediaPort2(&port, pool);
+    /* Must implement on_destroy() and create group lock to avoid
+     * race and premature destroy.
+     */
+    port->on_destroy = &port_on_destroy;
+    status = pjmedia_port_init_grp_lock(port, pool, NULL);
+    if (status != PJ_SUCCESS) {
+        PJSUA2_RAISE_ERROR(status);
+    }
+
+    registerMediaPort2(port, pool);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1576,21 +1636,28 @@ pjmedia_format MediaFormatVideo::toPj() const
 }
 
 void MediaFormatVideo::init(pj_uint32_t formatId,
-                            unsigned width, unsigned height,
-                            int fpsNum, int fpsDenum,
-                            pj_uint32_t avgBps, pj_uint32_t maxBps)
+                            unsigned width_, unsigned height_,
+                            int fpsNum_, int fpsDenum_,
+                            pj_uint32_t avgBps_, pj_uint32_t maxBps_)
 {
 #if PJSUA_HAS_VIDEO
     type = PJMEDIA_TYPE_VIDEO;
     id = formatId;
 
-    this->width = width;
-    this->height = height;
-    this->fpsNum = fpsNum;
-    this->fpsDenum = fpsDenum;
-    this->avgBps = avgBps;
-    this->maxBps = maxBps;
+    this->width = width_;
+    this->height = height_;
+    this->fpsNum = fpsNum_;
+    this->fpsDenum = fpsDenum_;
+    this->avgBps = avgBps_;
+    this->maxBps = maxBps_;
 #else
+    PJ_UNUSED_ARG(formatId);
+    PJ_UNUSED_ARG(width_);
+    PJ_UNUSED_ARG(height_);
+    PJ_UNUSED_ARG(fpsNum_);
+    PJ_UNUSED_ARG(fpsDenum_);
+    PJ_UNUSED_ARG(avgBps_);
+    PJ_UNUSED_ARG(maxBps_);
     type = PJMEDIA_TYPE_UNKNOWN;
 #endif
 }
