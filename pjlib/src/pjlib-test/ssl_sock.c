@@ -658,8 +658,6 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
         pj_str_t privkey_file = pj_str(CERT_PRIVKEY_FILE);
         pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
 
-        PJ_UNUSED_ARG(load_cert_from_store);
-        
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
         status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
                                              &privkey_file, &privkey_pass,
