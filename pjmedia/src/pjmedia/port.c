@@ -126,8 +126,7 @@ PJ_DEF(pj_status_t) pjmedia_port_destroy( pjmedia_port *port )
     PJ_ASSERT_RETURN(port, PJ_EINVAL);
 
     if (port->grp_lock) {
-        pjmedia_port_dec_ref(port);
-        return PJ_SUCCESS;
+        return pjmedia_port_dec_ref(port);
     }
 
     if (port->on_destroy) {
@@ -160,16 +159,24 @@ PJ_DEF(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
     PJ_ASSERT_RETURN(port && pool, PJ_EINVAL);
     PJ_ASSERT_RETURN(port->grp_lock == NULL, PJ_EEXISTS);
 
-    /* We need to be caution on ports that do not have the on_destroy()!
-     * It is either uninitialized yet or the port does not have one.
-     * If the port doesn't have one, we'd expect a possible premature destroy!
+    /* We need to be extra cautious here!
+     * If media port is using app's pool, and the app destroys the port
+     * and then destroys the pool immediately, it may cause crash as the port
+     * may have not really been destroyed and may still be accessed.
+     *
+     * Thus, media port needs to create and manage its own pool. Since
+     * app MUST NOT free this pool, port typically needs to implement
+     * on_destroy() for releasing the pool. Alternatively, port can also
+     * add a group lock handler for this purpose, but since we can't check
+     * this, here we just check the availability of on_destroy implementation.
      */
     if (port->on_destroy == NULL) {
-        PJ_LOG(3,(THIS_FILE, "Media port %s is using group lock but does not "
-                             "implement on_destroy()!",
+        PJ_LOG(2,(THIS_FILE, "Warning! Port %s on_destroy() not found. To "
+                             "avoid premature destroy, media port must "
+                             "manage its own pool, which can only be "
+                             "released in on_destroy() or in its grp lock "
+                             "handler. See PR #3928 for more info.",
                              port->info.name.ptr));
-        pj_assert(!"Port using group lock should implement on_destroy()!");
-        return PJ_EINVALIDOP;
     }
 
     if (!grp_lock) {
@@ -177,14 +184,19 @@ PJ_DEF(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
         status = pj_grp_lock_create_w_handler(pool, NULL, port,
                                               &port_on_destroy,
                                               &grp_lock);
-    } else {
-        /* Just add handler, and use internal group lock pool */
-        status = pj_grp_lock_add_handler(grp_lock, NULL, port,
-                                         &port_on_destroy);
-    }
 
-    if (status == PJ_SUCCESS) {
+        /* Add ref */
+        if (status == PJ_SUCCESS)
+            status = pj_grp_lock_add_ref(grp_lock);
+    } else {
+        /* Add ref first before add handler */
         status = pj_grp_lock_add_ref(grp_lock);
+
+        /* Just add handler, and use internal group lock pool */
+        if (status == PJ_SUCCESS) {
+            status = pj_grp_lock_add_handler(grp_lock, NULL, port,
+                                             &port_on_destroy);
+        }
     }
 
     if (status == PJ_SUCCESS) {

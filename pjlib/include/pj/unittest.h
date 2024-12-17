@@ -74,8 +74,8 @@ PJ_BEGIN_DECL
  */
 #define PJ_TEST_BINARY_OP(expr0, op, expr1, err_reason, err_action) \
             { \
-                long tmp_value0_ = (long)(expr0); \
-                long tmp_value1_ = (long)(expr1); \
+                intptr_t tmp_value0_ = (intptr_t)(expr0); \
+                intptr_t tmp_value1_ = (intptr_t)(expr1); \
                 if (!(tmp_value0_ op tmp_value1_)) { \
                     const char *tmp_reason_ = err_reason; \
                     const char *sep0_ = (tmp_reason_ ? " (": ""); \
@@ -83,7 +83,8 @@ PJ_BEGIN_DECL
                     if (!tmp_reason_) tmp_reason_=""; \
                     PJ_LOG(1,(THIS_FILE, "Test \"%s\" (value=%ld) " #op \
                               " \"%s\" (value=%ld) fails in %s:%d%s%s%s", \
-                              #expr0, tmp_value0_, #expr1, tmp_value1_, \
+                              #expr0, (long)tmp_value0_, \
+                              #expr1, (long)tmp_value1_, \
                               THIS_FILE, __LINE__, \
                               sep0_, tmp_reason_, sep1_)); \
                     err_action; \

@@ -700,7 +700,7 @@ static pj_status_t  silk_codec_modify(pjmedia_codec *codec,
     PJ_UNUSED_ARG(codec);
     PJ_UNUSED_ARG(attr);
 
-    return PJ_SUCCESS;
+    return PJ_ENOTSUP;
 }
 
 

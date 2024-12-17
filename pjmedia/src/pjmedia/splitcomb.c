@@ -83,6 +83,7 @@ enum sc_dir
 struct splitcomb
 {
     pjmedia_port      base;
+    pj_pool_t        *pool;
 
     unsigned          options;
 
@@ -107,6 +108,7 @@ struct splitcomb
 struct reverse_port
 {
     pjmedia_port     base;
+    pj_pool_t       *pool;
     struct splitcomb*parent;
     unsigned         ch_num;
 
@@ -203,7 +205,7 @@ static pj_status_t rport_on_destroy(pjmedia_port *this_port);
 /*
  * Create the splitter/combiner.
  */
-PJ_DEF(pj_status_t) pjmedia_splitcomb_create( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_splitcomb_create( pj_pool_t *pool_,
                                               unsigned clock_rate,
                                               unsigned channel_count,
                                               unsigned samples_per_frame,
@@ -212,10 +214,12 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create( pj_pool_t *pool,
                                               pjmedia_port **p_splitcomb)
 {
     const pj_str_t name = pj_str("splitcomb");
+    pj_pool_t *pool = NULL;
     struct splitcomb *sc;
+    pj_status_t status;
 
     /* Sanity check */
-    PJ_ASSERT_RETURN(pool && clock_rate && channel_count &&
+    PJ_ASSERT_RETURN(pool_ && clock_rate && channel_count &&
                      samples_per_frame && bits_per_sample &&
                      p_splitcomb, PJ_EINVAL);
 
@@ -224,9 +228,14 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create( pj_pool_t *pool,
 
     *p_splitcomb = NULL;
 
+    /* Create own pool */
+    pool = pj_pool_create(pool_->factory, "splitcomb", 500, 500, NULL);
+    PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
+
     /* Create the splitter/combiner structure */
     sc = PJ_POOL_ZALLOC_T(pool, struct splitcomb);
-    PJ_ASSERT_RETURN(sc != NULL, PJ_ENOMEM);
+    PJ_ASSERT_ON_FAIL(sc != NULL, {pj_pool_release(pool);return PJ_ENOMEM;});
+    sc->pool = pool;
 
     /* Create temporary buffers */
     sc->get_buf = (TMP_SAMP_TYPE*)
@@ -252,6 +261,13 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create( pj_pool_t *pool,
     sc->base.put_frame = &put_frame;
     sc->base.get_frame = &get_frame;
     sc->base.on_destroy = &on_destroy;
+
+    /* Create group lock */
+    status = pjmedia_port_init_grp_lock(&sc->base, pool, NULL);
+    if (status != PJ_SUCCESS) {
+        pj_pool_release(pool);
+        return status;
+    }
 
     /* Init ports array */
     /*
@@ -291,6 +307,16 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_set_channel( pjmedia_port *splitcomb,
     sc->port_desc[ch_num].port = port;
     sc->port_desc[ch_num].reversed = PJ_FALSE;
 
+    if (!port->grp_lock) {
+        /* Create group lock if it does not have one.
+         * Note: don't use splitcomb's group lock as we will addref it here
+         * and only decref it from the destructor.
+         */
+        pjmedia_port_init_grp_lock(port, sc->pool, NULL);
+    }
+
+    pjmedia_port_add_ref(port);
+
     return PJ_SUCCESS;
 }
 
@@ -298,7 +324,7 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_set_channel( pjmedia_port *splitcomb,
 /*
  * Create reverse phase port for the specified channel.
  */
-PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool_,
                                       pjmedia_port *splitcomb,
                                       unsigned ch_num,
                                       unsigned options,
@@ -311,10 +337,11 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     unsigned buf_options;
     const pjmedia_audio_format_detail *sc_afd, *p_afd;
     pjmedia_port *port;
+    pj_pool_t* pool;
     pj_status_t status;
 
     /* Sanity check */
-    PJ_ASSERT_RETURN(pool && splitcomb, PJ_EINVAL);
+    PJ_ASSERT_RETURN(splitcomb, PJ_EINVAL);
 
     /* Make sure this is really a splitcomb port */
     PJ_ASSERT_RETURN(sc->base.info.signature == SIGNATURE, PJ_EINVAL);
@@ -322,13 +349,21 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     /* Check the channel number */
     PJ_ASSERT_RETURN(ch_num < PJMEDIA_PIA_CCNT(&sc->base.info), PJ_EINVAL);
 
+    /* Make sure that the channel has not been setup */
+    PJ_ASSERT_RETURN(sc->port_desc[ch_num].port==NULL, PJ_EINVALIDOP);
+
     /* options is unused for now */
     PJ_UNUSED_ARG(options);
 
     sc_afd = pjmedia_format_get_audio_format_detail(&splitcomb->info.fmt, 1);
 
+    /* Create own pool */
+    pool = pj_pool_create(pool_->factory, "sc-revch", 500, 500, NULL);
+    PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
+
     /* Create the port */
     rport = PJ_POOL_ZALLOC_T(pool, struct reverse_port);
+    rport->pool = pool;
     rport->parent = sc;
     rport->ch_num = ch_num;
 
@@ -367,6 +402,7 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
                                       buf_options,
                                       &rport->buf[DIR_DOWNSTREAM].dbuf);
     if (status != PJ_SUCCESS) {
+        rport_on_destroy(port);
         return status;
     }
 
@@ -379,7 +415,7 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
                                       buf_options,
                                       &rport->buf[DIR_UPSTREAM].dbuf);
     if (status != PJ_SUCCESS) {
-        pjmedia_delay_buf_destroy(rport->buf[DIR_DOWNSTREAM].dbuf);
+        rport_on_destroy(port);
         return status;
     }
 
@@ -392,6 +428,12 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     sc->port_desc[ch_num].port = &rport->base;
     sc->port_desc[ch_num].reversed = PJ_TRUE;
 
+    /* Init group lock */
+    status = pjmedia_port_init_grp_lock(port, pool, sc->base.grp_lock);
+    if (status != PJ_SUCCESS) {
+        rport_on_destroy(port);
+        return status;
+    }
 
     /* Done */
     *p_chport = port;
@@ -688,10 +730,20 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 static pj_status_t on_destroy(pjmedia_port *this_port)
 {
-    /* Nothing to do for the splitcomb
-     * Reverse ports must be destroyed separately.
-     */
-    PJ_UNUSED_ARG(this_port);
+    struct splitcomb *sc = (struct splitcomb*) this_port;
+    unsigned ch;
+
+    /* Decrement reference for non-reserved channels */
+    for (ch=0; ch < PJMEDIA_PIA_CCNT(&this_port->info); ++ch) {
+        pjmedia_port *port = sc->port_desc[ch].port;
+
+        if (!port || sc->port_desc[ch].reversed)
+            continue;
+
+        pjmedia_port_dec_ref(port);
+    }
+
+    pj_pool_release(sc->pool);
 
     return PJ_SUCCESS;
 }
@@ -804,8 +856,13 @@ static pj_status_t rport_on_destroy(pjmedia_port *this_port)
 {
     struct reverse_port *rport = (struct reverse_port*) this_port;
 
-    pjmedia_delay_buf_destroy(rport->buf[DIR_DOWNSTREAM].dbuf);
-    pjmedia_delay_buf_destroy(rport->buf[DIR_UPSTREAM].dbuf);
+    if (rport->buf[DIR_DOWNSTREAM].dbuf)
+        pjmedia_delay_buf_destroy(rport->buf[DIR_DOWNSTREAM].dbuf);
+
+    if (rport->buf[DIR_UPSTREAM].dbuf)
+        pjmedia_delay_buf_destroy(rport->buf[DIR_UPSTREAM].dbuf);
+
+    pj_pool_safe_release(&rport->pool);
 
     return PJ_SUCCESS;
 }

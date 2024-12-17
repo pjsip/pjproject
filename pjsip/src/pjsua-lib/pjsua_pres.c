@@ -324,7 +324,7 @@ PJ_DEF(pj_status_t)
 pjsua_buddy_get_dlg_event_info( pjsua_buddy_id buddy_id,
                                 pjsua_buddy_dlg_event_info *info)
 {
-    unsigned total=0;
+    pj_ssize_t total=0;
     struct buddy_lock lck;
     pjsua_buddy *buddy;
     pj_status_t status;
@@ -1995,6 +1995,7 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
     pjsip_tpselector tp_sel;
     pj_status_t status;
     const char *sub_str = presence? "presence": "dialog event";
+    pjsip_dialog *dlg;
 
     /* Event subscription callback. */
     pj_bzero(&pres_callback, sizeof(pres_callback));
@@ -2139,14 +2140,22 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
 
     pjsua_process_msg_data(tdata, NULL);
 
+    /* Send request. Note that if the send operation fails sync-ly, e.g:
+     * gethostbyname() error, tsx callback may have been invoked which may
+     * get the subscription terminated and the buddy states reset, we need
+     * to be prepared for such scenario here.
+     */
+    dlg = buddy->dlg;
+
     if (presence) {
         status = pjsip_pres_send_request(buddy->sub, tdata);
     } else {
         status = pjsip_dlg_event_send_request(buddy->sub, tdata);
     }
     if (status != PJ_SUCCESS) {
-        pjsip_dlg_dec_lock(buddy->dlg);
-        pjsip_pres_terminate(buddy->sub, PJ_FALSE);
+        pjsip_dlg_dec_lock(dlg);
+        if (buddy->sub)
+            pjsip_pres_terminate(buddy->sub, PJ_FALSE);
         buddy->sub = NULL;
         pjsua_perror(THIS_FILE, "Unable to send initial SUBSCRIBE", 
                      status);

@@ -709,18 +709,14 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     /* Delete server presence subscription */
     pjsua_pres_delete_acc(acc_id, 0);
 
-    /* Release account pool */
+    /* Release & wipe account pool */
     if (acc->pool) {
-        pj_pool_release(acc->pool);
-        acc->pool = NULL;
+        pj_pool_secure_release(&acc->pool);
     }
 
     /* Invalidate */
-    acc->valid = PJ_FALSE;
-    pj_bzero(&acc->via_addr, sizeof(acc->via_addr));
-    acc->via_tp = NULL;
-    acc->next_rtp_port = 0;
-    acc->ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
+    pj_bzero(acc, sizeof(*acc));
+    acc->index = acc_id;
 
     /* Remove from array */
     for (i=0; i<pjsua_var.acc_cnt; ++i) {
@@ -1512,6 +1508,76 @@ on_return:
     PJSUA_UNLOCK();
     pj_log_pop_indent();
     return status;
+}
+
+typedef struct send_request_data
+{
+    pjsua_acc_id acc_id;
+    void *token;
+} send_request_data;
+
+static void on_send_request(void *request_data, pjsip_event *event)
+{
+    send_request_data *data = (send_request_data*) request_data;
+    if (data && pjsua_var.ua_cfg.cb.on_acc_send_request)
+        (pjsua_var.ua_cfg.cb.on_acc_send_request)(data->acc_id, data->token, event);
+}
+
+PJ_DEF(pj_status_t) pjsua_acc_send_request(pjsua_acc_id acc_id,
+                                           const pj_str_t *dest_uri,
+                                           const pj_str_t *method,
+                                           void *options,
+                                           void *token,
+                                           const pjsua_msg_data *msg_data)
+{
+    const pjsip_hdr *cap_hdr = NULL;
+    pjsip_method method_;
+    pj_status_t status;
+    pjsip_tx_data *tdata = NULL;
+    send_request_data *request_data = NULL;
+
+    PJ_ASSERT_RETURN(acc_id>=0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(dest_uri, PJ_EINVAL);
+    PJ_ASSERT_RETURN(method, PJ_EINVAL);
+    PJ_UNUSED_ARG(options);
+    PJ_ASSERT_RETURN(msg_data, PJ_EINVAL);
+
+    PJ_LOG(4,(THIS_FILE, "Account %d sending %.*s request..",
+                          acc_id, (int)method->slen, method->ptr));
+    pj_log_push_indent();
+
+    pjsip_method_init_np(&method_, (pj_str_t*)method);
+    status = pjsua_acc_create_request(acc_id, &method_, &msg_data->target_uri, &tdata);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to create request", status);
+        goto on_return;
+    }
+
+    request_data = PJ_POOL_ZALLOC_T(tdata->pool, send_request_data);
+    if (!request_data) {
+        status = PJ_ENOMEM;
+        goto on_return;
+    }
+    request_data->acc_id = acc_id;
+    request_data->token = token;
+
+    pjsua_process_msg_data(tdata, msg_data);
+
+    cap_hdr = pjsip_endpt_get_capability(pjsua_var.endpt, PJSIP_H_ACCEPT, NULL);
+    if (cap_hdr) {
+        pjsip_msg_add_hdr(tdata->msg,
+                          (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, cap_hdr));
+    }
+
+    status = pjsip_endpt_send_request(pjsua_var.endpt, tdata, -1, request_data, &on_send_request);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to send request", status);
+        goto on_return;
+    }
+
+on_return:
+   pj_log_pop_indent();
+   return status;
 }
 
 
@@ -3927,7 +3993,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
         pjsua_init_tpselector(acc_id, &tp_sel);
     }
 
-    /* Get local address suitable to send request from */
+    /* Get local address suitable to send response from */
     pjsip_tpmgr_fla2_param_default(&tfla2_prm);
     tfla2_prm.tp_type = tp_type;
     tfla2_prm.tp_sel = &tp_sel;
@@ -3944,6 +4010,26 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     local_addr = tfla2_prm.ret_addr;
     local_port = tfla2_prm.ret_port;
 
+    /* For UDP transport, check if we need to overwrite the address
+     * with its configured bound/public address.
+     */
+    if ((flag & PJSIP_TRANSPORT_DATAGRAM) && tfla2_prm.local_if &&
+        tfla2_prm.ret_tp)
+    {
+        int i;
+
+        for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata); i++) {
+            if (tfla2_prm.ret_tp==(const void *)pjsua_var.tpdata[i].data.tp) {
+                if (pjsua_var.tpdata[i].has_cfg_addr) {
+                    pj_strdup(pool, &local_addr,
+                              &pjsua_var.tpdata[i].data.tp->local_name.host);
+                    local_port = (pj_uint16_t)
+                              pjsua_var.tpdata[i].data.tp->local_name.port;
+                }
+                break;
+            }
+        }
+    }
 
     /* Enclose IPv6 address in square brackets */
     if (tp_type & PJSIP_TRANSPORT_IPV6) {

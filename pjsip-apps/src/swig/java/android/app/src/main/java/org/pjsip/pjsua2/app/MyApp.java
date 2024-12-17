@@ -416,6 +416,25 @@ class MyApp extends pjsua2 {
         }
 
         try {
+            /* Setting socket option parameters (uncomment this if needed). */
+            /*
+            final int SOL_SOCKET = 1;
+            final int SOL_TCP = 6;
+
+            final int SO_KEEPALIVE = 9;
+            final int TCP_KEEPIDLE = 4;
+            final int TCP_KEEPINTVL = 5;
+            final int TCP_KEEPCNT = 6;
+
+            SockOptVector soVector = new SockOptVector();
+            soVector.add(new SockOpt(SOL_SOCKET, SO_KEEPALIVE, 1));
+            soVector.add(new SockOpt(SOL_TCP, TCP_KEEPIDLE, 1));
+            soVector.add(new SockOpt(SOL_TCP, TCP_KEEPINTVL, 5));
+            soVector.add(new SockOpt(SOL_TCP, TCP_KEEPCNT, 1));
+
+            sipTpConfig.getTlsConfig().getSockOptParams().setSockOpts(soVector);
+             */
+
             sipTpConfig.setPort(SIP_PORT+1);
             ep.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TLS,
                                sipTpConfig);

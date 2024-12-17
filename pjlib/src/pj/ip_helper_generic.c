@@ -523,12 +523,12 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
             return PJ_ETOOSMALL;
         }
 
-        if (nlmsg_ptr->nlmsg_type == NLMSG_DONE)
-            break;
-
         for(; NLMSG_OK(nlmsg_ptr, nlmsg_len);
             nlmsg_ptr = NLMSG_NEXT(nlmsg_ptr, nlmsg_len))
         {
+            if (nlmsg_ptr->nlmsg_type == NLMSG_DONE)
+                goto on_return;
+
             struct ifaddrmsg *ifaddrmsg_ptr;
             struct rtattr *rtattr_ptr;
             int ifaddrmsg_len;
@@ -560,6 +560,7 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
                         pj_sockaddr_init(pj_AF_INET6(), &addr[idx],
                                          &pj_addr_str, 0);
                         ++idx;
+                        break;
                     default:
                         break;
                     }
@@ -568,6 +569,7 @@ static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
         }
     }
 
+on_return:
     close(fd);
     *count = idx;
 

@@ -204,13 +204,14 @@ static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
         pjsip_hdr *hdr;
         const pj_str_t hname = { "Reason", 6 };
         pj_str_t hvalue;
-        unsigned hval_len;
+        pj_size_t hval_len;
 
+        PJ_ASSERT_RETURN(tdata && reason && reason->slen >= 0, PJ_EINVAL);
         PJ_ASSERT_RETURN(code < 1000, PJ_EINVAL);
 
-        hval_len =  3 +                 /* 'SIP' */
-                    11 +                /* ' ;cause=3-digit-code' */
-                    reason->slen + 10;   /* ' ;text=".."' */
+        hval_len =  3 +                     /* 'SIP' */
+                    11 +                    /* ' ;cause=3-digit-code' */
+                    (pj_size_t)reason->slen + 10;   /* ' ;text=".."'  */
         hvalue.ptr = (char*)pj_pool_alloc(tdata->pool, hval_len);
         if (!hvalue.ptr)
             return PJ_ENOMEM;
@@ -1926,6 +1927,8 @@ PJ_DEF(pj_status_t) pjsip_inv_uac_restart(pjsip_inv_session *inv,
 {
     PJ_ASSERT_RETURN(inv, PJ_EINVAL);
 
+    pjsip_inv_add_ref(inv);
+
     inv->state = PJSIP_INV_STATE_NULL;
     inv->invite_tsx = NULL;
     if (inv->last_answer) {
@@ -1941,6 +1944,8 @@ PJ_DEF(pj_status_t) pjsip_inv_uac_restart(pjsip_inv_session *inv,
             pjmedia_sdp_neg_cancel_offer(inv->neg);
         }
     }
+
+    pjsip_inv_dec_ref(inv);
 
     return PJ_SUCCESS;
 }
@@ -2814,6 +2819,8 @@ PJ_DEF(pj_status_t) pjsip_inv_set_local_sdp(pjsip_inv_session *inv,
 
     PJ_ASSERT_RETURN(inv && sdp, PJ_EINVAL);
 
+    pjsip_inv_add_ref(inv);
+
     /* If we have remote SDP offer, set local answer to respond to the offer,
      * otherwise we set/modify our local offer (and create an SDP negotiator
      * if we don't have one yet).
@@ -2830,12 +2837,16 @@ PJ_DEF(pj_status_t) pjsip_inv_set_local_sdp(pjsip_inv_session *inv,
             status = pjmedia_sdp_neg_modify_local_offer2(inv->pool, inv->neg,
                                                          inv->sdp_neg_flags,
                                                          sdp);
-        } else
+        } else {
+            pjsip_inv_dec_ref(inv);
             return PJMEDIA_SDPNEG_EINSTATE;
+        }
     } else {
         status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
                                                       sdp, &inv->neg);
     }
+
+    pjsip_inv_dec_ref(inv);
 
     return status;
 }
@@ -2874,6 +2885,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
     PJ_ASSERT_RETURN(inv && p_tdata, PJ_EINVAL);
 
     pj_log_push_indent();
+    pjsip_inv_add_ref(inv);
 
     /* Set cause code. */
     inv_set_cause(inv, st_code, st_text);
@@ -2890,7 +2902,8 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
             /* For UAC when session has not been confirmed, create CANCEL. */
 
             /* MUST have the original UAC INVITE transaction. */
-            PJ_ASSERT_RETURN(inv->invite_tsx != NULL, PJ_EBUG);
+            PJ_ASSERT_ON_FAIL(inv->invite_tsx != NULL,
+                              { pjsip_inv_dec_ref(inv); return PJ_EBUG; });
 
             /* But CANCEL should only be called when we have received a
              * provisional response. If we haven't received any responses,
@@ -2905,6 +2918,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
                 *p_tdata = NULL;
                 PJ_LOG(4, (inv->obj_name, "Delaying CANCEL since no "
                            "provisional response is received yet"));
+                pjsip_inv_dec_ref(inv);
                 pj_log_pop_indent();
                 return PJ_SUCCESS;
             }
@@ -2918,6 +2932,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
                                                inv->invite_tsx->last_tx,
                                                &tdata);
             if (status != PJ_SUCCESS) {
+                pjsip_inv_dec_ref(inv);
                 pj_log_pop_indent();
                 return status;
             }
@@ -2938,7 +2953,9 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
             if (tdata == NULL)
                 tdata = inv->last_answer;
 
-            PJ_ASSERT_RETURN(tdata != NULL, PJ_EINVALIDOP);
+            PJ_ASSERT_ON_FAIL(tdata != NULL,
+                              { pjsip_inv_dec_ref(inv);
+                                return PJ_EINVALIDOP; });
 
             //status = pjsip_dlg_modify_response(inv->dlg, tdata, st_code,
             //                                 st_text);
@@ -2960,16 +2977,19 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 
     case PJSIP_INV_STATE_DISCONNECTED:
         /* No need to do anything. */
+        pjsip_inv_dec_ref(inv);
         pj_log_pop_indent();
         return PJSIP_ESESSIONTERMINATED;
 
     default:
         pj_assert(!"Invalid operation!");
+        pjsip_inv_dec_ref(inv);
         pj_log_pop_indent();
         return PJ_EINVALIDOP;
     }
 
     if (status != PJ_SUCCESS) {
+        pjsip_inv_dec_ref(inv);
         pj_log_pop_indent();
         return status;
     }
@@ -2980,6 +3000,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
     inv->cancelling = PJ_TRUE;
     *p_tdata = tdata;
 
+    pjsip_inv_dec_ref(inv);
     pj_log_pop_indent();
     return PJ_SUCCESS;
 }
@@ -2997,6 +3018,7 @@ PJ_DEF(pj_status_t) pjsip_inv_cancel_reinvite( pjsip_inv_session *inv,
     PJ_ASSERT_RETURN(inv && p_tdata, PJ_EINVAL);
     
     pj_log_push_indent();
+    pjsip_inv_add_ref(inv);
 
     /* Create appropriate message. */
     switch (inv->state) {
@@ -3013,6 +3035,7 @@ PJ_DEF(pj_status_t) pjsip_inv_cancel_reinvite( pjsip_inv_session *inv,
             *p_tdata = NULL;
             PJ_LOG(4, (inv->obj_name, "Delaying CANCEL since no "
                        "provisional response is received yet"));
+            pjsip_inv_dec_ref(inv);
             pj_log_pop_indent();
             return PJ_SUCCESS;
         }
@@ -3021,6 +3044,7 @@ PJ_DEF(pj_status_t) pjsip_inv_cancel_reinvite( pjsip_inv_session *inv,
                                            inv->invite_tsx->last_tx,
                                            &tdata);
         if (status != PJ_SUCCESS) {
+            pjsip_inv_dec_ref(inv);
             pj_log_pop_indent();
             return status;
         }
@@ -3030,10 +3054,12 @@ PJ_DEF(pj_status_t) pjsip_inv_cancel_reinvite( pjsip_inv_session *inv,
         /* We cannot send CANCEL to a re-INVITE if the INVITE session is
          * not confirmed.
          */
+        pjsip_inv_dec_ref(inv);
         pj_log_pop_indent();
         return PJ_EINVALIDOP;
     }
 
+    pjsip_inv_dec_ref(inv);
     pj_log_pop_indent();
 
     *p_tdata = tdata;
@@ -3732,6 +3758,7 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
     PJ_ASSERT_RETURN(inv && tdata, PJ_EINVAL);
 
     pj_log_push_indent();
+    pjsip_inv_add_ref(inv);
 
     PJ_LOG(5,(inv->obj_name, "Sending %s", 
               pjsip_tx_data_get_info(tdata)));
@@ -3819,7 +3846,9 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
         cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL);
         PJ_ASSERT_ON_FAIL(cseq != NULL
                           && (inv->invite_tsx && cseq->cseq == inv->invite_tsx->cseq),
-                          { pjsip_tx_data_dec_ref(tdata); return PJ_EINVALIDOP; });
+                          { pjsip_tx_data_dec_ref(tdata);
+                            pjsip_inv_dec_ref(inv);
+                            return PJ_EINVALIDOP; });
 
         if (inv->options & PJSIP_INV_REQUIRE_100REL) {
             status = pjsip_100rel_tx_response(inv, tdata);
@@ -3835,10 +3864,12 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 
     /* Done */
 on_return:
+    pjsip_inv_dec_ref(inv);
     pj_log_pop_indent();
     return PJ_SUCCESS;
 
 on_error:
+    pjsip_inv_dec_ref(inv);
     pj_log_pop_indent();
     return status;
 }
@@ -4634,11 +4665,19 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
         pj_status_t status;
 
         inv_set_cause(inv, tsx->status_code, &tsx->status_text);
-        inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+
+        /* Do not shift state to DISCONNECTED here, as it will destroy the
+         * invite session and the BYE sending below will raise an assertion.
+         */
+        //inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 
         /* Send BYE */
         status = pjsip_dlg_create_request(inv->dlg, pjsip_get_bye_method(), 
                                           -1, &bye);
+        if (status == PJ_SUCCESS && tsx->status_text.slen) {
+            status = add_reason_warning_hdr(bye, tsx->status_code,
+                                            &tsx->status_text);
+        }
         if (status == PJ_SUCCESS) {
             pjsip_inv_send_msg(inv, bye);
         }
@@ -5351,6 +5390,10 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
                     status = pjsip_dlg_create_request(inv->dlg,
                                                       pjsip_get_bye_method(),
                                                       -1, &bye);
+                    if (status == PJ_SUCCESS && tsx->status_text.slen) {
+                        status = add_reason_warning_hdr(bye, tsx->status_code,
+                                                        &tsx->status_text);
+                    }
                     if (status == PJ_SUCCESS) {
                         pjsip_inv_send_msg(inv, bye);
 

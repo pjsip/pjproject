@@ -166,6 +166,7 @@ using namespace pj;
 
 %include "pjsua2/siptypes.hpp"
 
+%template(SockOptVector)		std::vector<pj::SockOpt>;
 %template(SipHeaderVector)		std::vector<pj::SipHeader>;
 %template(AuthCredInfoVector)		std::vector<pj::AuthCredInfo>;
 %template(SrtpCryptoVector)		std::vector<pj::SrtpCrypto>;

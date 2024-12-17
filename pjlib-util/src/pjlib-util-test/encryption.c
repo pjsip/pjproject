@@ -672,7 +672,7 @@ static void crc32_final(pj_crc32_context *ctx, pj_uint32_t *digest)
 static void md5_update_wrapper(pj_md5_context *ctx, 
                                unsigned char const *buf, pj_size_t len)
 {
-    pj_md5_update(ctx, buf, len);
+    pj_md5_update(ctx, buf, (unsigned)len);
 }
 
 int encryption_benchmark()

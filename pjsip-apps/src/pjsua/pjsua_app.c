@@ -1389,6 +1389,14 @@ void legacy_on_stopped(pj_bool_t restart)
         (*app_cfg.on_stopped)(restart, 1, NULL);
 }
 
+
+static void app_cleanup(pjsip_endpoint *endpt)
+{
+    PJ_UNUSED_ARG(endpt);
+    pj_pool_safe_release(&app_config.pool);
+}
+
+
 /*****************************************************************************
  * Public API
  */
@@ -1430,7 +1438,10 @@ static pj_status_t app_init(void)
 
     /* Create pool for application */
     app_config.pool = pjsua_pool_create("pjsua-app", 1000, 1000);
-    tmp_pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);;
+    tmp_pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);
+
+    /* Queue pool release at PJLIB exit */
+    pjsip_endpt_atexit(pjsua_get_pjsip_endpt(), &app_cleanup);
 
     /* Init CLI & its FE settings */
     if (!app_running) {
@@ -1718,6 +1729,11 @@ static pj_status_t app_init(void)
             }
         }
 #else
+        for (i=0; i<app_config.avi_cnt; ++i) {
+            app_config.avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
+            app_config.avi[i].slot = PJSUA_INVALID_ID;
+        }
+
         PJ_LOG(2,(THIS_FILE,
                   "Warning: --play-avi is ignored because AVI is disabled"));
 #endif  /* PJMEDIA_VIDEO_DEV_HAS_AVI */
@@ -2185,7 +2201,15 @@ static pj_status_t app_destroy(void)
     pjsip_tls_setting_wipe_keys(&app_config.udp_cfg.tls_setting);
 #endif
 
-    pj_pool_safe_release(&app_config.pool);
+    /* The pool release has been scheduled via pjsip_endpt_atexit().
+     *
+     * We can only release the pool after audio & video conference destroy.
+     * Note that pjsua_conf_remove_port()/pjsua_vid_conf_remove_port()
+     * is asynchronous, so when sound device is not active, PJMEDIA ports
+     * have not been removed from the conference (and destroyed) yet
+     * until the audio & video conferences are destroyed (in pjsua_destroy()).
+     */
+    //pj_pool_safe_release(&app_config.pool);
 
     status = pjsua_destroy();
 

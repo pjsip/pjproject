@@ -177,6 +177,9 @@ on_return:
 static void send_cb(pjsip_send_state *st, pj_ssize_t sent, pj_bool_t *cont)
 {
     int *loop_resolve_status = (int*)st->token;
+
+    PJ_UNUSED_ARG(cont);
+
     if (sent < 0) {
         /* Success! */
         *loop_resolve_status = (int)-sent;

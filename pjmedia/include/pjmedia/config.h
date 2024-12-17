@@ -65,10 +65,19 @@
 #endif
 
 /**
- * Memory increment for evnt manager.
+ * Memory increment for event manager.
  */
 #ifndef PJMEDIA_POOL_INC_EVTMGR
 #   define PJMEDIA_POOL_INC_EVTMGR              500
+#endif
+
+/**
+ * Maximum number of events that can be handled by event manager.
+ *
+ * Default: 16
+ */
+#ifndef PJMEDIA_EVENT_MAX_EVENTS
+#   define PJMEDIA_EVENT_MAX_EVENTS             16
 #endif
 
 /**
