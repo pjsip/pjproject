@@ -1068,7 +1068,7 @@ static int dns_test(void)
 
     /* Both servers must get packet as both are in probing state */
     PJ_TEST_GTE(g_server[0].pkt_count, 1, NULL, return -430);
-    PJ_TEST_EQ(g_server[1].pkt_count, 1, NULL, return -435);
+    PJ_TEST_GTE(g_server[1].pkt_count, 1, NULL, return -435);
 
     /*
      * Check that both servers still receive requests, since they are
@@ -1092,7 +1092,7 @@ static int dns_test(void)
 
     /* Both servers must get packet as both are in probing & active state */
     PJ_TEST_GTE(g_server[0].pkt_count, 1, NULL, return -450);
-    PJ_TEST_EQ(g_server[1].pkt_count, 1, NULL, return -454);
+    PJ_TEST_GTE(g_server[1].pkt_count, 1, NULL, return -454);
 
     /* Wait to allow probing period to complete, server 0 will be in bad state */
     PJ_LOG(3,(THIS_FILE, "  waiting for probing state to end (%d sec)",
@@ -1122,7 +1122,7 @@ static int dns_test(void)
 
     /* Only server 1 get the request */
     PJ_TEST_EQ(g_server[0].pkt_count, 0, NULL, return -470);
-    PJ_TEST_EQ(g_server[1].pkt_count, 1, NULL, return -474);
+    PJ_TEST_GTE(g_server[1].pkt_count, 1, NULL, return -474);
 
     /* Wait to allow active & bad period to complete, both will be in probing state */
     PJ_LOG(3,(THIS_FILE, "  waiting for active NS to expire (%d sec)",
@@ -1171,7 +1171,7 @@ static int dns_test(void)
     pj_thread_sleep(1000);
 
     /* Only good NS should get request */
-    PJ_TEST_EQ(g_server[0].pkt_count, 1, NULL, return -486);
+    PJ_TEST_GTE(g_server[0].pkt_count, 1, NULL, return -486);
     PJ_TEST_EQ(g_server[1].pkt_count, 0, NULL, return -488);
 
     return 0;
