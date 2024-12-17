@@ -96,7 +96,7 @@ pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
  */
 PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                                 pj_str_t *metadata,    
-                                                pjmedia_sdp_session *sdp_offer,                                       
+                                                pjmedia_sdp_session *sdp_offer,
                                                 unsigned *options,
                                                 pjsip_dialog *dlg,
                                                 pjsip_endpoint *endpt,
@@ -109,11 +109,12 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
  *
  * @param pool               Pool to allocate memory.
  * @param body               The message body.
- * @param metadata           The siprec metadata
+ * @param metadata           If metadata is found, this variable will be
+ *                           populated with the extracted data.
  *
- * @return                   Return PJ_SUCCESS if metadata exists.
+ * @return                   Return PJ_SUCCESS if metadata is found,
+ *                           otherwise return PJ_ENOTFOUND.
  */
-
 PJ_DECL(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
                                                 pjsip_msg_body *body,
                                                 pj_str_t* metadata);
