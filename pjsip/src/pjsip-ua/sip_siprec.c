@@ -146,7 +146,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         goto on_return; 
     }
 
-    /* Currently, SIPREC INVITE requests without SPD are not supported. */
+    /* Currently, SIPREC INVITE requests without SDP are not supported. */
     if(!sdp_offer){
         code = PJSIP_SC_BAD_REQUEST;
         warn_text = "SIPREC INVITE without SDP is not supported";
