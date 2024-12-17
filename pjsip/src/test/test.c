@@ -326,10 +326,6 @@ int test_main(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, inv_offer_answer_test, 0);
 #endif
 
-#if INCLUDE_REGC_TEST
-    UT_ADD_TEST(&test_app.ut_app, regc_test, 0);
-#endif
-
 #if INCLUDE_TSX_TEST
     PJ_TEST_SUCCESS(rc=pjsip_udp_transport_start(endpt, NULL, NULL, 1, &tp),
                     NULL, goto on_return);
@@ -370,6 +366,13 @@ int test_main(int argc, char *argv[])
 #endif
 
     /* Note: put exclusive tests last */
+
+    /*
+     * regc_test() needs exclusive because it modifies pjsip_cfg()
+     */
+#if INCLUDE_REGC_TEST
+    UT_ADD_TEST(&test_app.ut_app, regc_test, PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
+#endif
 
     /* This needs to be exclusive, because there must NOT be any other
      * loop transport otherwise some test will fail (e.g. sending will
