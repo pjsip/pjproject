@@ -791,16 +791,16 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
     pool = pj_pool_create(mem, "test", 4000, 4000, NULL);
     if (!pool) {
         app_perror("Unable to create pool", PJ_ENOMEM);
-        return -100;
+        return -1100;
     }
 
-    CHECK(-110, app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0,
+    CHECK(-1110, app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0,
           &ssock, &csock));
-    CHECK(-120, pj_ioqueue_create2(pool, 2, cfg, &ioqueue));
+    CHECK(-1120, pj_ioqueue_create2(pool, 2, cfg, &ioqueue));
 
     pj_bzero(&cb, sizeof(cb));
     cb.on_read_complete = &on_read_complete2;
-    CHECK(-130, pj_ioqueue_register_sock(pool, ioqueue, ssock, &recv_packet_count,
+    CHECK(-1130, pj_ioqueue_register_sock(pool, ioqueue, ssock, &recv_packet_count,
                                          &cb, &skey));
 
     /* spawn parallel recv()s */
@@ -809,7 +809,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
         pj_ioqueue_op_key_init(&recv_ops[i], sizeof(pj_ioqueue_op_key_t));
         recv_ops[i].user_data = &recv_datas[i];
         recv_datas[i].len = sizeof(packet_t);
-        CHECK(-140, pj_ioqueue_recv(skey, &recv_ops[i], &recv_datas[i].buffer,
+        CHECK(-1140, pj_ioqueue_recv(skey, &recv_ops[i], &recv_datas[i].buffer,
                                     &recv_datas[i].len, 0));
     }
 
@@ -821,7 +821,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
         arg->id = i;
         arg->timeout = TIMEOUT_SECS;
 
-        CHECK(-150, pj_thread_create(pool, "parallel_thread",
+        CHECK(-1150, pj_thread_create(pool, "parallel_thread",
                                      parallel_worker_thread, arg,
                                      0, 0,&threads[i]));
     }
@@ -843,7 +843,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
             TRACE__((THIS_FILE, "......(was async sent)"));
         } else if (status != PJ_SUCCESS) {
             PJ_PERROR(1,(THIS_FILE, status, "......send error"));
-            retcode = -160;
+            retcode = -1160;
             goto on_return;
         }
     }
@@ -856,8 +856,8 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
 
     /* Wait until all threads quits */
     for (i=0; i<ASYNC_CNT; ++i) {
-        CHECK(-170, pj_thread_join(threads[i]));
-        CHECK(-180, pj_thread_destroy(threads[i]));
+        CHECK(-1170, pj_thread_join(threads[i]));
+        CHECK(-1180, pj_thread_destroy(threads[i]));
     }
 
     /* Display thread statistics */
@@ -884,7 +884,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
     if (recv_packet_count != ASYNC_CNT) {
         PJ_LOG(1,(THIS_FILE, "....error: rx packet count is %d (expecting %d)",
                   recv_packet_count, ASYNC_CNT));
-        retcode = -500;
+        retcode = -1190;
     }
     if (threads_total.wakeup_cnt > ASYNC_CNT+async_send) {
         PJ_LOG(3,(THIS_FILE, "....info: total wakeup count is %d "
@@ -1241,7 +1241,7 @@ int udp_ioqueue_test()
 #endif
     };
     pj_bool_t concurs[] = { PJ_TRUE, PJ_FALSE };
-    int i, rc, err = 0;
+    int i, rc;
 
     for (i=0; i<(int)PJ_ARRAY_SIZE(epoll_flags); ++i) {
         pj_ioqueue_cfg cfg;
@@ -1253,8 +1253,8 @@ int udp_ioqueue_test()
                    pj_ioqueue_name(), cfg.epoll_flags));
 
         rc = udp_ioqueue_test_imp(&cfg);
-        if (rc != 0 && err==0)
-            err = rc;
+        if (rc) return rc;
+
     }
 
     for (i=0; i<(int)PJ_ARRAY_SIZE(concurs); ++i) {
@@ -1267,8 +1267,7 @@ int udp_ioqueue_test()
                    pj_ioqueue_name(), cfg.default_concurrency));
 
         rc = udp_ioqueue_test_imp(&cfg);
-        if (rc != 0 && err==0)
-            err = rc;
+        if (rc) return rc;
     }
 
 #if PJ_HAS_THREADS
@@ -1282,13 +1281,12 @@ int udp_ioqueue_test()
                    pj_ioqueue_name(), cfg.epoll_flags));
 
         rc = parallel_recv_test(&cfg);
-        if (rc != 0 && err==0)
-            err = rc;
+        if (rc) return rc;
 
     }
 #endif
 
-    return err;
+    return 0;
 }
 
 #else
