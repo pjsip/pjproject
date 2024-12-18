@@ -790,7 +790,8 @@ public:
             }
 
             nrestart++;
-            PJ_LOG(3,(THIS_FILE, "Trying to restart Oboe %s stream", dir_st));
+            PJ_LOG(3, (THIS_FILE, "Trying to restart Oboe %s stream #%d",
+                                  dir_st, nrestart));
             status = Start();
 
             if (status != PJ_SUCCESS) {
