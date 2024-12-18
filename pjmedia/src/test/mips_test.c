@@ -2388,8 +2388,8 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
 
     if (e->custom_deinit)
         e->custom_deinit(e);
-
-    pjmedia_port_destroy(port);
+    else
+        pjmedia_port_destroy(port);
     pj_pool_release(pool);
 
     return t1;
