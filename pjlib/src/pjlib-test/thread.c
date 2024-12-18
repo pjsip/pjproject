@@ -107,7 +107,9 @@ static int thread_proc(void *data)
     for (;!quit_flag;) {
         (*pcounter)++;
         //Must sleep if platform doesn't do time-slicing.
-        //pj_thread_sleep(0);
+        //2024-12-18: always sleep since otherwise test may occasionaly throw
+        //            error on Linux (bennylp)
+        pj_thread_sleep(0);
     }
 
     TRACE__((THIS_FILE, "     thread %d quitting..", id));
