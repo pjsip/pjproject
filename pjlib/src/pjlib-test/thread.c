@@ -52,6 +52,8 @@
 
 #define THIS_FILE   "thread_test"
 
+typedef unsigned long counter_t;
+#define counter_fmt "%lu"
 static volatile int quit_flag=0;
 
 #if 0
@@ -74,7 +76,7 @@ static int thread_proc(void *data)
     pj_thread_t *this_thread;
     unsigned id;
     pj_status_t rc;
-    pj_uint32_t *pcounter = (pj_uint32_t *)data;
+    counter_t *pcounter = (counter_t *)data;
 
     id = *pcounter;
     PJ_UNUSED_ARG(id); /* Warning about unused var if TRACE__ is disabled */
@@ -120,7 +122,7 @@ static int simple_thread(const char *title, unsigned flags)
     pj_pool_t *pool;
     pj_thread_t *thread;
     pj_status_t rc;
-    pj_uint32_t counter = 0;
+    counter_t counter = 0;
 
     PJ_LOG(3,(THIS_FILE, "..%s", title));
 
@@ -187,7 +189,7 @@ static int timeslice_test(void)
 {
     enum { NUM_THREADS = 4 };
     pj_pool_t *pool;
-    pj_uint32_t counter[NUM_THREADS], lowest, highest, diff;
+    counter_t counter[NUM_THREADS], lowest, highest, diff;
     pj_thread_t *thread[NUM_THREADS];
     unsigned i;
     pj_status_t rc;
@@ -273,9 +275,8 @@ static int timeslice_test(void)
     /* Now examine the value of the counters.
      * Check that all threads had equal proportion of processing.
      */
-    lowest = 0xFFFFFFFF;
-    highest = 0;
-    for (i=0; i<NUM_THREADS; ++i) {
+    lowest = highest = counter[0];
+    for (i=1; i<NUM_THREADS; ++i) {
         if (counter[i] < lowest)
             lowest = counter[i];
         if (counter[i] > highest)
@@ -295,12 +296,14 @@ static int timeslice_test(void)
         PJ_LOG(3,(THIS_FILE,
                   "...ERROR: thread didn't have equal timeslice!"));
         PJ_LOG(3,(THIS_FILE,
-                  ".....lowest counter=%u, highest counter=%u, diff=%u%%",
+                  ".....lowest counter=" counter_fmt
+                  ", highest counter=" counter_fmt
+                  ", diff=" counter_fmt "%%",
                   lowest, highest, diff));
         return -80;
     } else {
         PJ_LOG(3,(THIS_FILE,
-                  "...info: timeslice diff between lowest & highest=%u%%",
+                  "...info: timeslice diff between lowest & highest=" counter_fmt "%%",
                   diff));
     }
 
