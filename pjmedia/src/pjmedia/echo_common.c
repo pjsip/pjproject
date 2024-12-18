@@ -113,21 +113,6 @@ static struct ec_operations speex_aec_op =
 };
 #endif
 
-
-/*
- * IPP AEC prototypes
- */
-#if defined(PJMEDIA_HAS_INTEL_IPP_AEC) && PJMEDIA_HAS_INTEL_IPP_AEC!=0
-static struct ec_operations ipp_aec_op = 
-{
-    "IPP AEC",
-    &ipp_aec_create,
-    &ipp_aec_destroy,
-    &ipp_aec_reset,
-    &ipp_aec_cancel_echo
-};
-#endif
-
 /*
  * WebRTC AEC prototypes
  */
@@ -170,6 +155,7 @@ PJ_DEF(void) pjmedia_echo_stat_default(pjmedia_echo_stat *stat)
     stat->return_loss_enh = (double)PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
     stat->std = PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
     stat->frac_delay = (float)PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
+    stat->learning = PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
     stat->duration = PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
     stat->tail = PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
     stat->min_factor = PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
@@ -229,14 +215,6 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
         ec->op = &speex_aec_op;
 #endif
 
-#if defined(PJMEDIA_HAS_INTEL_IPP_AEC) && PJMEDIA_HAS_INTEL_IPP_AEC!=0
-    } else if ((options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_IPP ||
-               (options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_DEFAULT)
-    {
-        ec->op = &ipp_aec_op;
-
-#endif
-
 #if defined(PJMEDIA_HAS_WEBRTC_AEC) && PJMEDIA_HAS_WEBRTC_AEC!=0
     } else if ((options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_WEBRTC ||
                (options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_DEFAULT)
@@ -251,8 +229,13 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
         ec->op = &webrtc_aec3_op;
 #endif
 
-    } else {
+    } else if ((options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_SIMPLE ||
+               (options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_DEFAULT)
+    {
         ec->op = &echo_supp_op;
+
+    } else {
+        return PJ_ENOTSUP;
     }
 
     /* Completeness check for EC operation playback and capture, they must
