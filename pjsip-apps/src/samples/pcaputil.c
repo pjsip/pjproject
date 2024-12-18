@@ -54,6 +54,8 @@ static const char *USAGE =
 "                           AES_CM_128_HMAC_SHA1_80 \n"
 "                           AES_CM_128_HMAC_SHA1_32\n"
 "  --srtp-key=KEY, -k     Set the base64 key to decrypt SRTP packets.\n"
+"  --codec-fmtp=FMTP      Set the fmtp input for parsing codec options.\n"
+"                         For example: \"mode-set=0;octet-align=1\".\n"
 #if PJMEDIA_HAS_OPUS_CODEC
 "  --opus-ch=CH           Opus channel count                            \n"
 "  --opus-clock-rate=CR   Opus clock rate                               \n"
@@ -93,6 +95,7 @@ struct args
     pjmedia_aud_dev_index dev_id;
     pj_str_t srtp_crypto;
     pj_str_t srtp_key;
+    pj_str_t codec_fmtp;
 #if PJMEDIA_HAS_OPUS_CODEC
     int opus_clock_rate;
     int opus_ch;
@@ -338,6 +341,9 @@ static void pcap2wav(const struct args *args)
         ci = info[0];
     }
     T( pjmedia_codec_mgr_get_default_param(cmgr, ci, &param) );
+    if (args->codec_fmtp.slen > 0) {
+        T( pjmedia_stream_info_parse_fmtp_data(app.pool, &args->codec_fmtp, &param.setting.dec_fmtp) );
+    }
 
     /* Alloc and init codec */
     T( pjmedia_codec_mgr_alloc_codec(cmgr, ci, &app.codec) );
@@ -465,6 +471,7 @@ int main(int argc, char *argv[])
         OPT_DST_PORT,
         OPT_CODEC,
         OPT_PLAY_DEV_ID,
+        OPT_CODEC_FMTP,
 #if PJMEDIA_HAS_OPUS_CODEC
         OPT_OPUS_CH = 'C',
         OPT_OPUS_CLOCK_RATE = 'K',
@@ -481,6 +488,7 @@ int main(int argc, char *argv[])
         { "dst-port",       1, 0, OPT_DST_PORT },
         { "codec",          1, 0, OPT_CODEC },
         { "play-dev-id",    1, 0, OPT_PLAY_DEV_ID },
+        { "codec-fmtp",     1, 0, OPT_CODEC_FMTP },
 #if PJMEDIA_HAS_OPUS_CODEC
         { "opus-ch", 1, 0, OPT_OPUS_CH },
         { "opus-clock-rate", 1, 0, OPT_OPUS_CLOCK_RATE },
@@ -547,6 +555,9 @@ int main(int argc, char *argv[])
             break;
         case OPT_PLAY_DEV_ID:
             args.dev_id = atoi(pj_optarg);
+            break;
+        case OPT_CODEC_FMTP:
+            args.codec_fmtp = pj_str(pj_optarg);
             break;
 #if PJMEDIA_HAS_OPUS_CODEC
         case OPT_OPUS_CLOCK_RATE:
