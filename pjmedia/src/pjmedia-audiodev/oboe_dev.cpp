@@ -747,6 +747,7 @@ public:
             }
         }
 
+        this->nrestart = 0;
         sem_post(&sem);
 
         return (thread_quit? oboe::DataCallbackResult::Stop :
@@ -890,7 +891,6 @@ private:
                     /* Increment timestamp */
                     pj_add_timestamp32(&this_->ts, ts_inc);
                     ++cnt;
-                    this_->nrestart = 0;
                 }
 
                 if (stop_stream)
@@ -905,8 +905,6 @@ private:
                               this_->dir_st, cnt));
                 }
             } else {
-                this_->nrestart = 0;
-
                 /* Get audio frame from app via callback play_cb() */
                 pjmedia_frame frame;
                 frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
