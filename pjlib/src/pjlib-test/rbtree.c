@@ -43,21 +43,13 @@ static int compare_node(const node_key *k1, const node_key *k2)
     }
 }
 
-void randomize_string(char *str, int len)
-{
-    int i;
-    for (i=0; i<len-1; ++i)
-        str[i] = (char)('a' + pj_rand() % 26);
-    str[len-1] = '\0';
-}
-
 static int test(void)
 {
     pj_rbtree rb;
     node_key *key;
     pj_rbtree_node *node;
     pj_pool_t *pool;
-    int err=0;
+    int rc=0;
     int count = MIN_COUNT;
     int i;
     unsigned size;
@@ -66,18 +58,13 @@ static int test(void)
     size = MAX_COUNT*(sizeof(*key)+PJ_RBTREE_NODE_SIZE) + 
                            PJ_RBTREE_SIZE + PJ_POOL_SIZE;
     pool = pj_pool_create( mem, "pool", size, 0, NULL);
-    if (!pool) {
-        PJ_LOG(3,("test", "...error: creating pool of %u bytes", size));
-        return -10;
-    }
+    PJ_TEST_NOT_NULL(pool, NULL, return -10);
 
     key = (node_key *)pj_pool_alloc(pool, MAX_COUNT*sizeof(*key));
-    if (!key)
-        return -20;
+    PJ_TEST_NOT_NULL(key, NULL, { rc=-20; goto on_error; });
 
     node = (pj_rbtree_node*)pj_pool_alloc(pool, MAX_COUNT*sizeof(*node));
-    if (!node)
-        return -30;
+    PJ_TEST_NOT_NULL(node, NULL, { rc=-30; goto on_error; });
 
     for (i=0; i<LOOP; ++i) {
         int j;
@@ -89,7 +76,7 @@ static int test(void)
         t_setup.u32.lo = t_insert.u32.lo = t_search.u32.lo = t_erase.u32.lo = 0;
 
         for (j=0; j<count; j++) {
-            randomize_string(key[j].str, STRSIZE);
+            pj_create_random_string(key[j].str, STRSIZE);
 
             pj_get_timestamp(&t1);
             node[j].key = &key[j];
@@ -99,12 +86,13 @@ static int test(void)
             t_setup.u32.lo += (t2.u32.lo - t1.u32.lo);
 
             pj_get_timestamp(&t1);
-            pj_rbtree_insert(&rb, &node[j]);
+            PJ_TEST_EQ(pj_rbtree_insert(&rb, &node[j]), 0, NULL, 
+                       { rc=-35; goto on_error; });
             pj_get_timestamp(&t2);
             t_insert.u32.lo += (t2.u32.lo - t1.u32.lo);
         }
 
-        pj_assert(rb.size == (unsigned)count);
+        PJ_TEST_EQ(rb.size, (unsigned)count, NULL, { rc=-40; goto on_error; });
 
         // Iterate key, make sure they're sorted.
         prev = NULL;
@@ -112,9 +100,10 @@ static int test(void)
         while (it) {
             if (prev) {
                 if (compare_node((node_key*)prev->key,(node_key*)it->key)>=0) {
-                    ++err;
                     PJ_LOG(3, (THIS_FILE, "Error: %s >= %s", 
                                (char*)prev->user_data, (char*)it->user_data));
+                    rc=-45;
+                    goto on_error;
                 }
             }
             prev = it;
@@ -124,13 +113,10 @@ static int test(void)
         // Search.
         for (j=0; j<count; j++) {
             pj_get_timestamp(&t1);
-            it = pj_rbtree_find(&rb, &key[j]);
+            PJ_TEST_NOT_NULL( pj_rbtree_find(&rb, &key[j]), NULL,
+                              {rc=-50; goto on_error;} );
             pj_get_timestamp(&t2);
             t_search.u32.lo += (t2.u32.lo - t1.u32.lo);
-
-            pj_assert(it != NULL);
-            if (it == NULL)
-                ++err;
         }
 
         // Erase node.
@@ -152,8 +138,9 @@ static int test(void)
             break;
     }
 
+on_error:
     pj_pool_release(pool);
-    return err;
+    return rc;
 }
 
 

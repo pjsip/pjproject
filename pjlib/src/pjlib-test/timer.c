@@ -94,8 +94,6 @@ static int test_timer_heap(void)
         pj_timestamp t1, t2, t_sched, t_cancel, t_poll;
         pj_time_val now, expire;
 
-        pj_gettimeofday(&now);
-        pj_srand(now.sec);
         t_sched.u32.lo = t_cancel.u32.lo = t_poll.u32.lo = 0;
 
         // Register timers
@@ -485,7 +483,6 @@ static int timer_stress_test(void)
     pj_thread_t **poll_threads = NULL;
     pj_thread_t **cancel_threads = NULL;
     struct thread_param tparam = {0};
-    pj_time_val now;
 #if SIMULATE_CRASH
     pj_timer_entry *entry;
     pj_pool_t *tmp_pool;
@@ -493,9 +490,6 @@ static int timer_stress_test(void)
 #endif
 
     PJ_LOG(3,("test", "...Stress test"));
-
-    pj_gettimeofday(&now);
-    pj_srand(now.sec);
 
     pool = pj_pool_create( mem, NULL, 128, 128, NULL);
     if (!pool) {

@@ -719,10 +719,12 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     state_cli.is_verbose = PJ_TRUE;
 
     {
+        /* srand() should be done centrally (blp)
         pj_time_val now;
 
         pj_gettimeofday(&now);
         pj_srand((unsigned)now.sec);
+        */
         state_cli.send_str_len = (pj_rand() % 5 + 1) * 1024 + pj_rand() % 1024;
     }
     state_cli.send_str = (char*)pj_pool_alloc(pool, state_cli.send_str_len);
@@ -1448,14 +1450,6 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
     clients_num = clients;
     param.timeout.sec = 0;
     param.timeout.msec = 0;
-
-    /* Init random seed */
-    {
-        pj_time_val now;
-
-        pj_gettimeofday(&now);
-        pj_srand((unsigned)now.sec);
-    }
 
     /* Allocate SSL socket pointers and test state */
     ssock_cli = (pj_ssl_sock_t**)pj_pool_calloc(pool, clients, sizeof(pj_ssl_sock_t*));

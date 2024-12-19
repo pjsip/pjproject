@@ -39,14 +39,14 @@ static struct
         NULL, NULL,                         /* prev, next.              */
         { "mod-send", 8 },                  /* Name.                    */
         -1,                                 /* Id                       */
-        PJSIP_MOD_PRIORITY_TRANSPORT_LAYER,         /* Priority                 */
+        PJSIP_MOD_PRIORITY_TRANSPORT_LAYER, /* Priority                 */
         NULL,                               /* load()                   */
         NULL,                               /* start()                  */
         NULL,                               /* stop()                   */
         NULL,                               /* unload()                 */
         NULL,                               /* on_rx_request()          */
         NULL,                               /* on_rx_response()         */
-        &mod_send_on_tx_request,                    /* on_tx_request.           */
+        &mod_send_on_tx_request,            /* on_tx_request.           */
         NULL,                               /* on_tx_response()         */
         NULL,                               /* on_tsx_state()           */
     },
@@ -57,7 +57,12 @@ static struct
 
 static pj_status_t mod_send_on_tx_request(pjsip_tx_data *tdata)
 {
-    PJ_UNUSED_ARG(tdata);
+    const pjsip_from_hdr *from_hdr = (const pjsip_from_hdr*)
+                        pjsip_msg_find_hdr(tdata->msg, PJSIP_H_FROM, NULL);
+
+    if ((tdata->msg->line.req.method.id != PJSIP_REGISTER_METHOD) ||
+        !is_user_equal(from_hdr, "regc-test"))
+        return PJ_FALSE;
 
     if (++send_mod.count > send_mod.count_before_reject)
         return PJ_ECANCELLED;
@@ -120,7 +125,8 @@ static pj_bool_t regs_rx_request(pjsip_rx_data *rdata)
     int code;
     pj_status_t status;
 
-    if (msg->line.req.method.id != PJSIP_REGISTER_METHOD)
+    if ((rdata->msg_info.msg->line.req.method.id != PJSIP_REGISTER_METHOD) ||
+        !is_user_equal(rdata->msg_info.from, "regc-test"))
         return PJ_FALSE;
 
     if (!registrar.cfg.respond)
@@ -322,6 +328,9 @@ static int do_test(const char *title,
         pjsip_regc_destroy(regc);
         return -120;
     }
+    /* Add additional ref counter to prevent premature destroy */
+    pjsip_tx_data_add_ref(tdata);
+
     status = pjsip_regc_send(regc, tdata);
 
     /* That's it, wait until the callback is sent */
@@ -332,6 +341,7 @@ static int do_test(const char *title,
     if (!client_result.done) {
         PJ_LOG(3,(THIS_FILE, "    error: test has timed out"));
         pjsip_regc_destroy(regc);
+        pjsip_tx_data_dec_ref(tdata);
         return -200;
     }
 
@@ -346,6 +356,7 @@ static int do_test(const char *title,
     if (client_result.error != client_cfg->error) {
         PJ_LOG(3,(THIS_FILE, "    error: expecting err=%d, got err=%d",
                   client_cfg->error, client_result.error));
+        pjsip_tx_data_dec_ref(tdata);
         return -210;
     }
     if (client_result.code != client_cfg->code &&
@@ -354,31 +365,37 @@ static int do_test(const char *title,
     {
         PJ_LOG(3,(THIS_FILE, "    error: expecting code=%d, got code=%d",
                   client_cfg->code, client_result.code));
+        pjsip_tx_data_dec_ref(tdata);
         return -220;
     }
     if (client_result.expiration != client_cfg->expiration) {
         PJ_LOG(3,(THIS_FILE, "    error: expecting expiration=%d, got expiration=%d",
                   client_cfg->expiration, client_result.expiration));
+        pjsip_tx_data_dec_ref(tdata);
         return -240;
     }
     if (client_result.contact_cnt != client_cfg->contact_cnt) {
         PJ_LOG(3,(THIS_FILE, "    error: expecting contact_cnt=%d, got contact_cnt=%d",
                   client_cfg->contact_cnt, client_result.contact_cnt));
+        pjsip_tx_data_dec_ref(tdata);
         return -250;
     }
     if (client_result.have_reg != client_cfg->have_reg) {
         PJ_LOG(3,(THIS_FILE, "    error: expecting have_reg=%d, got have_reg=%d",
                   client_cfg->have_reg, client_result.have_reg));
+        pjsip_tx_data_dec_ref(tdata);
         return -260;
     }
     if (client_result.have_reg && client_result.interval != client_result.expiration) {
         PJ_LOG(3,(THIS_FILE, "    error: interval (%d) is different than expiration (%d)",
                   client_result.interval, client_result.expiration));
+        pjsip_tx_data_dec_ref(tdata);
         return -270;
     }
     if (client_result.interval > 0 && client_result.next_reg < 1) {
         PJ_LOG(3,(THIS_FILE, "    error: next_reg=%d, expecting positive number because interval is %d",
                   client_result.next_reg, client_result.interval));
+        pjsip_tx_data_dec_ref(tdata);
         return -280;
     }
 
@@ -387,6 +404,7 @@ static int do_test(const char *title,
         *p_regc = regc;
     }
 
+    pjsip_tx_data_dec_ref(tdata);
     return 0;
 }
 
