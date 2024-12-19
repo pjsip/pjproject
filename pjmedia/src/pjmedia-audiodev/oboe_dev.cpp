@@ -782,17 +782,13 @@ public:
 
             Stop();
 
-            if (nrestart >= MAX_RESTART) {
-                PJ_LOG(3, (THIS_FILE, "Oboe %s stream permanently stopped",
-                                      dir_st));
-                pj_mutex_unlock(mutex);
-                return;
+            if (nrestart < MAX_RESTART) {
+                PJ_LOG(3, (THIS_FILE, "Trying to restart Oboe %s stream #%d",
+                                      dir_st, ++nrestart));
+                status = Start();
+            } else {
+                status = PJMEDIA_EAUD_SYSERR;
             }
-
-            nrestart++;
-            PJ_LOG(3, (THIS_FILE, "Trying to restart Oboe %s stream #%d",
-                                  dir_st, nrestart));
-            status = Start();
 
             if (status != PJ_SUCCESS) {
                 pjmedia_event e;
