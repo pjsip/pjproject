@@ -373,7 +373,6 @@ static void on_read_complete(pj_ioqueue_key_t *key,
  */ 
 static int unregister_test(const pj_ioqueue_cfg *cfg)
 {
-    enum { RPORT = 50000, SPORT = 50001 };
     pj_pool_t *pool;
     pj_ioqueue_t *ioqueue;
     pj_sock_t ssock;
@@ -403,14 +402,14 @@ static int unregister_test(const pj_ioqueue_cfg *cfg)
     }
 
     /* Create sender socket */
-    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, SPORT, &ssock);
+    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, -1, &ssock);
     if (status != PJ_SUCCESS) {
         app_perror("Error initializing socket", status);
         return -120;
     }
 
     /* Create receiver socket. */
-    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, RPORT, &rsock);
+    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, -1, &rsock);
     if (status != PJ_SUCCESS) {
         app_perror("Error initializing socket", status);
         return -130;
@@ -543,7 +542,7 @@ static int unregister_test(const pj_ioqueue_cfg *cfg)
      * Second stage of the test. Register another socket. Then unregister using
      * the previous key.
      */
-    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, RPORT, &rsock2);
+    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, -1, &rsock2);
     if (status != PJ_SUCCESS) {
         app_perror("Error initializing socket (2)", status);
         return -330;
