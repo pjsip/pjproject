@@ -39,6 +39,7 @@
 #   define WITH_BENCHMARK           1
 #endif
 
+#define INCLUDE_IOCP_CRASH_TEST     !TEST_DEFAULT
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
 #define INCLUDE_TIMESTAMP_TEST      GROUP_OS
 #define INCLUDE_EXCEPTION_TEST      GROUP_LIBC
@@ -109,6 +110,7 @@ extern int select_test(void);
 extern int udp_ioqueue_test(void);
 extern int udp_ioqueue_unreg_test(void);
 extern int tcp_ioqueue_test(void);
+extern int ioqueue_iocp_crash_test(void);
 extern int ioqueue_perf_test(void);
 extern int ioqueue_stress_test(void);
 extern int activesock_test(void);

@@ -52,7 +52,7 @@ export TEST_OBJS += activesock.o atomic.o echo_clt.o errno.o exception.o \
 		    select.o sleep.o sock.o sock_perf.o ssl_sock.o \
 		    string.o test.o thread.o timer.o timestamp.o \
 		    udp_echo_srv_sync.o udp_echo_srv_ioqueue.o \
-		    unittest_test.o util.o
+		    unittest_test.o util.o ioq_iocp_crash_test.o
 export TEST_CFLAGS += $(_CFLAGS)
 export TEST_CXXFLAGS += $(_CXXFLAGS)
 export TEST_LDFLAGS += $(PJLIB_LDLIB) $(_LDFLAGS)
