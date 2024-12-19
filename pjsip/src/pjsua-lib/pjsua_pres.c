@@ -1679,7 +1679,10 @@ static void buddy_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry)
     PJ_UNUSED_ARG(th);
 
     entry->id = PJ_FALSE;
-    pjsua_buddy_update_pres(buddy->index);
+    if (buddy->presence)
+        pjsua_buddy_update_pres(buddy->index);
+    else
+        pjsua_buddy_update_dlg_event(buddy->index);
 }
 
 /* Reschedule subscription refresh timer or terminate the subscription
@@ -2137,7 +2140,7 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
         pj_log_pop_indent();
         return;
     }
-
+    buddy->presence = presence;
     pjsua_process_msg_data(tdata, NULL);
 
     /* Send request. Note that if the send operation fails sync-ly, e.g:
@@ -2164,7 +2167,6 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
         return;
     }
 
-    buddy->presence = presence;
     pjsip_dlg_dec_lock(buddy->dlg);
     if (tmp_pool) pj_pool_release(tmp_pool);
     pj_log_pop_indent();
