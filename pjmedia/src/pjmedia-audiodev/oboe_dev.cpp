@@ -783,8 +783,9 @@ public:
             Stop();
 
             if (nrestart < MAX_RESTART) {
+                ++nrestart;
                 PJ_LOG(3, (THIS_FILE, "Trying to restart Oboe %s stream #%d",
-                                      dir_st, ++nrestart));
+                                      dir_st, nrestart));
                 status = Start();
             } else {
                 status = PJMEDIA_EAUD_SYSERR;
@@ -889,7 +890,7 @@ private:
                     /* Increment timestamp */
                     pj_add_timestamp32(&this_->ts, ts_inc);
                     ++cnt;
-                    this_-> nrestart = 0;
+                    this_->nrestart = 0;
                 }
 
                 if (stop_stream)
@@ -925,7 +926,7 @@ private:
 
                 /* Increment timestamp */
                 pj_add_timestamp32(&this_->ts, ts_inc);
-                this_-> nrestart = 0;
+                this_->nrestart = 0;
             }
         }
 
