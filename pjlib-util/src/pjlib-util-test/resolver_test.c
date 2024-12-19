@@ -21,7 +21,7 @@
 #include "test.h"
 
 
-#define THIS_FILE   "srv_resolver_test.c"
+#define THIS_FILE   "resolver_test.c"
 
 ////////////////////////////////////////////////////////////////////////////
 /*
@@ -369,13 +369,19 @@ static int server_thread(void *p)
         }
 
         PJ_LOG(5,(THIS_FILE, "Server %ld processing packet", srv - &g_server[0]));
-        srv->pkt_count++;
 
         rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);
         if (rc != PJ_SUCCESS) {
             app_perror("server error parsing packet", rc);
+            /* 2024-12-19
+               blp: if we retry parsing here, it will be successful! strange!
+
+               rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);
+             */
             continue;
         }
+
+        srv->pkt_count++;
 
         /* Verify packet */
         if (req->hdr.qdcount != 1) {
@@ -441,11 +447,6 @@ static int init(pj_bool_t use_ipv6)
         nameservers[0] = pj_str("127.0.0.1");
         nameservers[1] = pj_str("127.0.0.1");
     }
-    ports[0] = 5553;
-    ports[1] = 5554;
-
-    g_server[0].port = ports[0];
-    g_server[1].port = ports[1];
 
     pool = pj_pool_create(mem, NULL, 2000, 2000, NULL);
 
@@ -455,6 +456,7 @@ static int init(pj_bool_t use_ipv6)
 
     for (i=0; i<2; ++i) {
         pj_sockaddr addr;
+        int namelen;
 
         PJ_TEST_SUCCESS(pj_sock_socket(
                             (use_ipv6? pj_AF_INET6() : pj_AF_INET()),
@@ -462,11 +464,17 @@ static int init(pj_bool_t use_ipv6)
                         NULL, return -10);
 
         pj_sockaddr_init((use_ipv6? pj_AF_INET6() : pj_AF_INET()),
-                         &addr, NULL, (pj_uint16_t)g_server[i].port);
+                         &addr, NULL, 0);
 
         PJ_TEST_SUCCESS(pj_sock_bind(g_server[i].sock, &addr,
                                      pj_sockaddr_get_len(&addr)),
                         NULL, return -20);
+
+        namelen = sizeof(addr);
+        PJ_TEST_SUCCESS(pj_sock_getsockname(g_server[i].sock, &addr,
+                                            &namelen),
+                        NULL, return -25);
+        g_server[i].port = ports[i] = pj_sockaddr_get_port(&addr);
 
         PJ_TEST_SUCCESS(pj_thread_create(pool, NULL, &server_thread,
                                          &g_server[i],
@@ -495,6 +503,9 @@ static int init(pj_bool_t use_ipv6)
 
 static void destroy(void)
 {
+    /* note: need to set global vars back to zero since test can be
+     * repeated for IPv6
+     */
     int i;
 
     thread_quit = PJ_TRUE;
@@ -505,13 +516,22 @@ static void destroy(void)
     }
 
     pj_thread_join(poll_thread);
+    poll_thread = NULL;
+    thread_quit = PJ_FALSE;
 
     pj_dns_resolver_destroy(resolver, PJ_FALSE);
+    resolver = NULL;
     pj_ioqueue_destroy(ioqueue);
+    ioqueue = NULL;
     pj_timer_heap_destroy(timer_heap);
+    timer_heap = NULL;
 
     pj_sem_destroy(sem);
+    sem = NULL;
     pj_pool_release(pool);
+    pool = NULL;
+
+    pj_bzero(g_server, sizeof(g_server));
 }
 
 
@@ -1020,6 +1040,7 @@ static void dns_callback_1b(void *user_data,
 static int dns_test(void)
 {
     pj_str_t name = pj_str("name00");
+    enum { D = 2 };
 
     PJ_LOG(3,(THIS_FILE, "  simple error response test"));
 
@@ -1046,7 +1067,7 @@ static int dns_test(void)
     /* Wait to allow active period to complete and get into probing state */
     PJ_LOG(3,(THIS_FILE, "  waiting for active NS to expire (%d sec)",
                          set.good_ns_ttl));
-    pj_thread_sleep(set.good_ns_ttl * 1000);
+    pj_thread_sleep((set.good_ns_ttl+D) * 1000);
 
     /* 
      * Fail-over test 
@@ -1068,7 +1089,7 @@ static int dns_test(void)
 
     /* Both servers must get packet as both are in probing state */
     PJ_TEST_GTE(g_server[0].pkt_count, 1, NULL, return -430);
-    PJ_TEST_GTE(g_server[1].pkt_count, 1, NULL, return -435);
+    PJ_TEST_EQ(g_server[1].pkt_count, 1, NULL, return -435);
 
     /*
      * Check that both servers still receive requests, since they are
@@ -1092,13 +1113,13 @@ static int dns_test(void)
 
     /* Both servers must get packet as both are in probing & active state */
     PJ_TEST_GTE(g_server[0].pkt_count, 1, NULL, return -450);
-    PJ_TEST_GTE(g_server[1].pkt_count, 1, NULL, return -454);
+    PJ_TEST_EQ(g_server[1].pkt_count, 1, NULL, return -454);
 
     /* Wait to allow probing period to complete, server 0 will be in bad state */
     PJ_LOG(3,(THIS_FILE, "  waiting for probing state to end (%d sec)",
                          set.qretr_delay * 
                          (set.qretr_count+2) / 1000));
-    pj_thread_sleep(set.qretr_delay * (set.qretr_count + 2));
+    pj_thread_sleep(1000 + set.qretr_delay * (set.qretr_count + 2));
 
 
     /*
@@ -1122,12 +1143,12 @@ static int dns_test(void)
 
     /* Only server 1 get the request */
     PJ_TEST_EQ(g_server[0].pkt_count, 0, NULL, return -470);
-    PJ_TEST_GTE(g_server[1].pkt_count, 1, NULL, return -474);
+    PJ_TEST_EQ(g_server[1].pkt_count, 1, NULL, return -474);
 
     /* Wait to allow active & bad period to complete, both will be in probing state */
     PJ_LOG(3,(THIS_FILE, "  waiting for active NS to expire (%d sec)",
                          set.good_ns_ttl));
-    pj_thread_sleep(set.good_ns_ttl * 1000);
+    pj_thread_sleep((set.good_ns_ttl+D) * 1000);
 
     /*
      * Now fail server 1 to switch to server 0
@@ -1171,7 +1192,7 @@ static int dns_test(void)
     pj_thread_sleep(1000);
 
     /* Only good NS should get request */
-    PJ_TEST_GTE(g_server[0].pkt_count, 1, NULL, return -486);
+    PJ_TEST_EQ(g_server[0].pkt_count, 1, NULL, return -486);
     PJ_TEST_EQ(g_server[1].pkt_count, 0, NULL, return -488);
 
     return 0;
