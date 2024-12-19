@@ -924,7 +924,6 @@ private:
 
                 /* Increment timestamp */
                 pj_add_timestamp32(&this_->ts, ts_inc);
-                this_->nrestart = 0;
             }
         }
 
