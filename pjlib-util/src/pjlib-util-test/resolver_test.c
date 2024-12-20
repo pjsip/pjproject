@@ -424,7 +424,7 @@ static int poll_worker_thread(void *p)
     PJ_UNUSED_ARG(p);
 
     while (!thread_quit) {
-        pj_time_val delay = {0, 100};
+        pj_time_val delay = {0, 10};
         pj_timer_heap_poll(timer_heap, NULL);
         pj_ioqueue_poll(ioqueue, &delay);
     }
@@ -488,8 +488,8 @@ static int init(pj_bool_t use_ipv6)
                     NULL, return -40);
 
     pj_dns_resolver_get_settings(resolver, &set);
-    set.good_ns_ttl = 20;
-    set.bad_ns_ttl = 20;
+    set.good_ns_ttl = 10;
+    set.bad_ns_ttl = 10;
     pj_dns_resolver_set_settings(resolver, &set);
 
     PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(resolver, 2, nameservers, ports),
@@ -1006,7 +1006,7 @@ static int simple_test(void)
                     NULL, return -300);
 
     pj_sem_wait(sem);
-    pj_thread_sleep(1000);
+    pj_thread_sleep(set.qretr_delay * 1.2);
 
 
     /* Both servers must get packet */
