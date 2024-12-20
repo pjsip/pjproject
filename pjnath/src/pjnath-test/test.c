@@ -20,6 +20,8 @@
 #include <pjlib.h>
 #include <pj/compat/socket.h>
 
+#define THIS_FILE   "test.c"
+
 void app_perror_dbg(const char *msg, pj_status_t rc,
                     const char *file, int line)
 {
@@ -46,44 +48,63 @@ void app_set_sock_nb(pj_sock_t sock)
 #endif
 }
 
-pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg)
+pj_status_t create_stun_config(app_sess_t *app_sess)
 {
-    pj_ioqueue_t *ioqueue;
-    pj_timer_heap_t *timer_heap;
-    pj_lock_t *lock;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_timer_heap_t *timer_heap = NULL;
+    pj_lock_t *lock = NULL;
     pj_status_t status;
 
-    status = pj_ioqueue_create(pool, 64, &ioqueue);
-    if (status != PJ_SUCCESS) {
-        app_perror("   pj_ioqueue_create()", status);
-        return status;
-    }
+    pj_bzero(app_sess, sizeof(*app_sess));
+    pj_caching_pool_init(&app_sess->cp, 
+                         &pj_pool_factory_default_policy, 0 );
+    app_sess->pool = pj_pool_create(&app_sess->cp.factory, NULL,
+                                    512, 512, NULL);
+    PJ_TEST_NOT_NULL(app_sess->pool, NULL,
+                     { status=PJ_ENOMEM; goto on_error;});
 
-    status = pj_timer_heap_create(pool, 256, &timer_heap);
-    if (status != PJ_SUCCESS) {
-        app_perror("   pj_timer_heap_create()", status);
-        pj_ioqueue_destroy(ioqueue);
-        return status;
-    }
+    PJ_TEST_SUCCESS(pj_ioqueue_create(app_sess->pool, 64, &ioqueue), NULL, 
+                    goto on_error);
+    PJ_TEST_SUCCESS(pj_timer_heap_create(app_sess->pool, 256, &timer_heap),
+                    NULL, goto on_error);
 
-    pj_lock_create_recursive_mutex(pool, NULL, &lock);
+    pj_lock_create_recursive_mutex(app_sess->pool, NULL, &lock);
     pj_timer_heap_set_lock(timer_heap, lock, PJ_TRUE);
+    lock = NULL;
 
-    pj_stun_config_init(stun_cfg, mem, 0, ioqueue, timer_heap);
+    pj_stun_config_init(&app_sess->stun_cfg, app_sess->pool->factory, 0,
+                        ioqueue, timer_heap);
 
     return PJ_SUCCESS;
+
+on_error:
+    if (ioqueue)
+        pj_ioqueue_destroy(ioqueue);
+    if (timer_heap)
+        pj_timer_heap_destroy(timer_heap);
+    if (lock)
+        pj_lock_destroy(lock);
+    if (app_sess->pool)
+        pj_pool_release(app_sess->pool);
+    pj_caching_pool_destroy(&app_sess->cp);
+    return status;
 }
 
-void destroy_stun_config(pj_stun_config *stun_cfg)
+void destroy_stun_config(app_sess_t *app_sess)
 {
-    if (stun_cfg->timer_heap) {
-        pj_timer_heap_destroy(stun_cfg->timer_heap);
-        stun_cfg->timer_heap = NULL;
+    if (app_sess->stun_cfg.timer_heap) {
+        pj_timer_heap_destroy(app_sess->stun_cfg.timer_heap);
+        app_sess->stun_cfg.timer_heap = NULL;
     }
-    if (stun_cfg->ioqueue) {
-        pj_ioqueue_destroy(stun_cfg->ioqueue);
-        stun_cfg->ioqueue = NULL;
+    if (app_sess->stun_cfg.ioqueue) {
+        pj_ioqueue_destroy(app_sess->stun_cfg.ioqueue);
+        app_sess->stun_cfg.ioqueue = NULL;
     }
+    if (app_sess->pool) {
+        pj_pool_release(app_sess->pool);
+        app_sess->pool = NULL;
+    }
+    pj_caching_pool_destroy(&app_sess->cp);
 }
 
 void poll_events(pj_stun_config *stun_cfg, unsigned msec,
@@ -138,18 +159,18 @@ int check_pjlib_state(pj_stun_config *cfg,
     capture_pjlib_state(cfg, &current_state);
 
     if (current_state.timer_cnt > initial_st->timer_cnt) {
-        PJ_LOG(3,("", "    error: possibly leaking timer"));
         rc |= ERR_TIMER_LEAK;
 
 #if PJ_TIMER_DEBUG
         pj_timer_heap_dump(cfg->timer_heap);
 #endif
+        PJ_LOG(3,("", "    error: possibly leaking timer"));
     }
 
     if (current_state.pool_used_cnt > initial_st->pool_used_cnt) {
-        PJ_LOG(3,("", "    error: possibly leaking memory"));
         PJ_LOG(3,("", "    dumping memory pool:"));
-        pj_pool_factory_dump(mem, PJ_TRUE);
+        pj_pool_factory_dump(cfg->pf, PJ_TRUE);
+        PJ_LOG(3,("", "    error: possibly leaking memory"));
         rc |= ERR_MEMORY_LEAK;
     }
 
@@ -157,17 +178,8 @@ int check_pjlib_state(pj_stun_config *cfg,
 }
 
 
-#define DO_TEST(test)   do { \
-                            PJ_LOG(3, ("test", "Running %s...", #test));  \
-                            rc = test; \
-                            PJ_LOG(3, ("test",  \
-                                       "%s(%d)",  \
-                                       (char*)(rc ? "..ERROR" : "..success"), rc)); \
-                            if (rc!=0) goto on_return; \
-                        } while (0)
-
-
 pj_pool_factory *mem;
+struct test_app_t test_app;
 
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | PJ_LOG_HAS_SENDER |
                       PJ_LOG_HAS_MICRO_SEC;
@@ -184,10 +196,10 @@ static void test_log_func(int level, const char *data, int len)
         orig_log_func(level, data, len);
 }
 
-static int test_inner(void)
+static int test_inner(int argc, char *argv[])
 {
     pj_caching_pool caching_pool;
-    int rc = 0;
+    int i, rc = 0;
 
     mem = &caching_pool.factory;
 
@@ -202,55 +214,73 @@ static int test_inner(void)
     pj_log_set_log_func(&test_log_func);
 #endif
 
-    rc = pj_init();
-    if (rc != 0) {
-        app_perror("pj_init() error!!", rc);
-        goto on_return;
-    }
+    PJ_TEST_SUCCESS(pj_init(), NULL, 
+                    {if (log_file) fclose(log_file); return 1; });
 
-    pj_dump_config();
+    if (test_app.ut_app.prm_config)
+        pj_dump_config();
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
 
-    pjlib_util_init();
-    pjnath_init();
+    PJ_TEST_SUCCESS(pjlib_util_init(), NULL, {rc=2; goto on_return;});
+    PJ_TEST_SUCCESS(pjnath_init(), NULL, {rc=3; goto on_return;});
+    PJ_TEST_SUCCESS(ut_app_init1(&test_app.ut_app, mem), 
+                    NULL, {rc=4; goto on_return;});
 
 #if INCLUDE_STUN_TEST
-    DO_TEST(stun_test());
-    DO_TEST(sess_auth_test());
-#endif
-
-#if INCLUDE_ICE_TEST
-    DO_TEST(ice_test());
-#endif
-
-#if INCLUDE_TRICKLE_ICE_TEST
-    DO_TEST(trickle_ice_test());
+    UT_ADD_TEST(&test_app.ut_app, stun_test, 0);
+    UT_ADD_TEST(&test_app.ut_app, sess_auth_test, 0);
 #endif
 
 #if INCLUDE_STUN_SOCK_TEST
-    DO_TEST(stun_sock_test());
+    UT_ADD_TEST(&test_app.ut_app, stun_sock_test, 0);
+#endif
+
+#if INCLUDE_ICE_TEST
+    for (i=0; i<ICE_TEST_START_ARRAY+ICE_TEST_ARRAY_COUNT; ++i)
+        UT_ADD_TEST1(&test_app.ut_app, ice_test, (void*)(long)i, 0);
+#endif
+
+#if INCLUDE_TRICKLE_ICE_TEST
+    UT_ADD_TEST(&test_app.ut_app, trickle_ice_test, 0);
 #endif
 
 #if INCLUDE_TURN_SOCK_TEST
-    DO_TEST(turn_sock_test());
+    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(long)0, 0);
+    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(long)1, 0);
+    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(long)2, 0);
 #endif
 
 #if INCLUDE_CONCUR_TEST
-    DO_TEST(concur_test());
+    UT_ADD_TEST(&test_app.ut_app, ice_conc_test, 0);
+
+    for (i=0; i<50; ++i) {
+        UT_ADD_TEST(&test_app.ut_app, concur_test, 0);
+    }
+#else
+    PJ_UNUSED_ARG(i);
 #endif
+
+    if (ut_run_tests(&test_app.ut_app, "pjnath tests", argc, argv)) {
+        rc = 5;
+    } else {
+        rc = 0;
+    }
+
+    ut_app_destroy(&test_app.ut_app);
 
 on_return:
     if (log_file)
         fclose(log_file);
+    pj_caching_pool_destroy( &caching_pool );
     return rc;
 }
 
-int test_main(void)
+int test_main(int argc, char *argv[])
 {
     PJ_USE_EXCEPTION;
 
     PJ_TRY {
-        return test_inner();
+        return test_inner(argc, argv);
     }
     PJ_CATCH_ANY {
         int id = PJ_GET_EXCEPTION();

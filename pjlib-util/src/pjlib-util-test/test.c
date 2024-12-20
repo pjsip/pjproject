@@ -20,6 +20,14 @@
 #include <pjlib.h>
 #include <pjlib-util.h>
 
+#define THIS_FILE   "test.c"
+
+pj_pool_factory *mem;
+struct test_app_t test_app = {
+    .param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
+                       PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
+};
+
 void app_perror(const char *msg, pj_status_t rc)
 {
     char errbuf[256];
@@ -30,80 +38,67 @@ void app_perror(const char *msg, pj_status_t rc)
     PJ_LOG(1,("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
 }
 
-#define DO_TEST(test)   do { \
-                            PJ_LOG(3, ("test", "Running %s...", #test));  \
-                            rc = test; \
-                            PJ_LOG(3, ("test",  \
-                                       "%s(%d)",  \
-                                       (char*)(rc ? "..ERROR" : "..success"), rc)); \
-                            if (rc!=0) goto on_return; \
-                        } while (0)
-
-
-pj_pool_factory *mem;
-
-int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-                      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
-
-static int test_inner(void)
+static int test_inner(int argc, char *argv[])
 {
     pj_caching_pool caching_pool;
-    int rc = 0;
 
     mem = &caching_pool.factory;
 
     pj_log_set_level(3);
-    pj_log_set_decor(param_log_decor);
+    pj_log_set_decor(test_app.param_log_decor);
 
-    rc = pj_init();
-    if (rc != 0) {
-        app_perror("pj_init() error!!", rc);
-        return rc;
-    }
-
-    rc = pjlib_util_init();
-    pj_assert(rc == 0);
-
-    pj_dump_config();
+    PJ_TEST_SUCCESS(pj_init(), NULL, { return 1; })
+    PJ_TEST_SUCCESS(pjlib_util_init(), NULL, { return 2; });
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
+    
+    if (ut_app_init1(&test_app.ut_app, mem) != PJ_SUCCESS)
+        return 1;
+
+    if (test_app.ut_app.prm_config)
+        pj_dump_config();
 
 #if INCLUDE_XML_TEST
-    DO_TEST(xml_test());
+    UT_ADD_TEST(&test_app.ut_app, xml_test, 0);
 #endif
 
 #if INCLUDE_JSON_TEST
-    DO_TEST(json_test());
+    UT_ADD_TEST(&test_app.ut_app, json_test, 0);
 #endif
 
 #if INCLUDE_ENCRYPTION_TEST
-    DO_TEST(encryption_test());
+    UT_ADD_TEST(&test_app.ut_app, encryption_test, 0);
 #   if WITH_BENCHMARK
-    DO_TEST(encryption_benchmark());
+    UT_ADD_TEST(&test_app.ut_app, encryption_benchmark, 0);
 #   endif
 #endif
 
 #if INCLUDE_STUN_TEST
-    DO_TEST(stun_test());
+    UT_ADD_TEST(&test_app.ut_app, stun_test, 0);
 #endif
 
 #if INCLUDE_RESOLVER_TEST
-    DO_TEST(resolver_test());
+    UT_ADD_TEST(&test_app.ut_app, resolver_test, 0);
 #endif
 
 #if INCLUDE_HTTP_CLIENT_TEST
-    DO_TEST(http_client_test());
+    UT_ADD_TEST(&test_app.ut_app, http_client_test, 0);
 #endif
 
-on_return:
-    return rc;
+    if (ut_run_tests(&test_app.ut_app, "pjlib-util tests", argc, argv)) {
+        ut_app_destroy(&test_app.ut_app);
+        return 1;
+    }
+
+    ut_app_destroy(&test_app.ut_app);
+    return 0;
 }
 
-int test_main(void)
+int test_main(int argc, char *argv[])
 {
     PJ_USE_EXCEPTION;
 
     PJ_TRY {
-        return test_inner();
+        return test_inner(argc, argv);
     }
     PJ_CATCH_ANY {
         int id = PJ_GET_EXCEPTION();

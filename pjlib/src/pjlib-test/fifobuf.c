@@ -85,8 +85,6 @@ static int fifobuf_rolling_test()
     PJ_TEST_EQ(pj_fifobuf_capacity(&fifo), SIZE-SZ, NULL, return -300);
     PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, NULL, return -310);
 
-    pj_srand(0);
-
     /* Repeat the test */
     for (rep=0; rep<REPEAT; rep++) {
         pj_list *chunk;
