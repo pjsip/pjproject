@@ -246,6 +246,9 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
     pj_strncpy(&info->uri, &buddy->uri, sizeof(info->buf_)-total);
     total += info->uri.slen;
 
+    /* acc id */
+    info->acc_id = buddy->acc_id;
+
     /* contact */
     if (total < sizeof(info->buf_)) {
         info->contact.ptr = info->buf_ + total;
