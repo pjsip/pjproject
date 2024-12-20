@@ -23,8 +23,8 @@
 #include <pjlib.h>
 
 #define THIS_FILE   "inv_offer_answer_test.c"
-#define PORT        5068
-#define CONTACT     "sip:inv_offer_answer_test@127.0.0.1:5068"
+#define PORT        50068
+#define CONTACT     "sip:inv_offer_answer_test@127.0.0.1:50068"
 #define TRACE_(x)   //PJ_LOG(3,x)
 
 static struct oa_sdp_t
@@ -772,12 +772,10 @@ int inv_offer_answer_test(void)
     {
         pj_sockaddr_in addr;
         pjsip_transport *tp;
-        pj_status_t status;
 
         pj_sockaddr_in_init(&addr, NULL, PORT);
-        status = pjsip_udp_transport_start(endpt, &addr, NULL, 1, &tp);
-        pj_assert(status == PJ_SUCCESS);
-        PJ_UNUSED_ARG(status);
+        PJ_TEST_SUCCESS(pjsip_udp_transport_start(endpt, &addr, NULL, 1, &tp),
+                        NULL, return -5);
     }
 
     /* Do tests */
