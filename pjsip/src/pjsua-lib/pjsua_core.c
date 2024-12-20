@@ -1160,6 +1160,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     status = pjsip_timer_init_module(pjsua_var.endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Initialize siprec support */
+    status = pjsip_siprec_init_module(pjsua_var.endpt);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
     /* Initialize and register PJSUA application module. */
     {
         const pjsip_module mod_initializer = 
