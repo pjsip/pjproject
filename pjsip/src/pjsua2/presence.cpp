@@ -22,6 +22,8 @@
 using namespace pj;
 using namespace std;
 
+#include <pjsua-lib/pjsua_internal.h>
+
 #define THIS_FILE               "presence.cpp"
 
 
@@ -141,6 +143,7 @@ void Buddy::create(Account &account, const BuddyConfig &cfg)
     PJSUA2_CHECK_EXPR( pjsua_buddy_add(&pj_cfg, &id) );
     
     account.addBuddy(this);
+    pjsua_var.buddy[id].acc_id = account.getId();
 }
 
 int Buddy::getId() const

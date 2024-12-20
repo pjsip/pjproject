@@ -467,6 +467,7 @@ static void reset_buddy(pjsua_buddy_id id)
     pj_bzero(&pjsua_var.buddy[id], sizeof(pjsua_var.buddy[id]));
     pjsua_var.buddy[id].pool = pool;
     pjsua_var.buddy[id].index = id;
+    pjsua_var.buddy[id].acc_id = PJSUA_INVALID_ID;
 }
 
 
@@ -2013,7 +2014,8 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
     dlg_event_callback.on_rx_notify = &pjsua_evsub_on_rx_dlg_event_notify;
 
     buddy = &pjsua_var.buddy[buddy_id];
-    acc_id = pjsua_acc_find_for_outgoing(&buddy->uri);
+    acc_id = (buddy->acc_id != PJSUA_INVALID_ID)? buddy->acc_id:
+             pjsua_acc_find_for_outgoing(&buddy->uri);
 
     acc = &pjsua_var.acc[acc_id];
 
