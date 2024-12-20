@@ -39,7 +39,6 @@
 #include <pj/compat/socket.h>
 
 #define THIS_FILE           "test_udp"
-#define PORT                51233
 #define LOOP                2
 ///#define LOOP             2
 #define BUF_MIN_SIZE        32
@@ -130,6 +129,7 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     pj_sock_t ssock=-1, csock=-1;
     pj_sockaddr_in addr, dst_addr;
     int addrlen;
+    unsigned short port;
     pj_pool_t *pool = NULL;
     char *send_buf, *recv_buf;
     pj_ioqueue_t *ioque = NULL;
@@ -169,10 +169,15 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     TRACE_("bind socket...");
     pj_bzero(&addr, sizeof(addr));
     addr.sin_family = pj_AF_INET();
-    addr.sin_port = pj_htons(PORT);
     if (pj_sock_bind(ssock, &addr, sizeof(addr))) {
         status=-10; goto on_error;
     }
+
+    // Get address
+    addrlen = sizeof(addr);
+    PJ_TEST_SUCCESS(pj_sock_getsockname(ssock, &addr, &addrlen), NULL,
+                    {status=-15; goto on_error;});
+    port = pj_sockaddr_get_port(&addr);
 
     // Create I/O Queue.
     TRACE_("create ioqueue...");
@@ -242,7 +247,7 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     // Set destination address to send the packet.
     TRACE_("set destination address...");
     temp = pj_str("127.0.0.1");
-    if ((rc=pj_sockaddr_in_init(&dst_addr, &temp, PORT)) != 0) {
+    if ((rc=pj_sockaddr_in_init(&dst_addr, &temp, port)) != 0) {
         app_perror("...error: unable to resolve 127.0.0.1", rc);
         status=-290; goto on_error;
     }
@@ -925,6 +930,7 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
 {
     pj_sock_t ssock=-1, csock=-1;
     pj_sockaddr_in addr;
+    unsigned short port;
     pj_pool_t *pool = NULL;
     pj_sock_t *inactive_sock=NULL;
     pj_ioqueue_op_key_t *inactive_read_op;
@@ -959,9 +965,14 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     // Bind server socket.
     pj_bzero(&addr, sizeof(addr));
     addr.sin_family = pj_AF_INET();
-    addr.sin_port = pj_htons(PORT);
-    if (pj_sock_bind(ssock, &addr, sizeof(addr)))
-        goto on_error;
+    PJ_TEST_SUCCESS(pj_sock_bind(ssock, &addr, sizeof(addr)), NULL,
+                    goto on_error);
+
+    // Get bound port
+    i = sizeof(addr);
+    PJ_TEST_SUCCESS(pj_sock_getsockname(ssock, &addr, &i), NULL,
+                    goto on_error);
+    port = pj_sockaddr_get_port(&addr);
 
     pj_assert(inactive_sock_count+2 <= PJ_IOQUEUE_MAX_HANDLES);
 
@@ -1033,7 +1044,7 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     }
 
     // Set destination address to send the packet.
-    pj_sockaddr_in_init(&addr, pj_cstr(&temp, "127.0.0.1"), PORT);
+    pj_sockaddr_in_init(&addr, pj_cstr(&temp, "127.0.0.1"), port);
 
     // Test loop.
     t_elapsed.u64 = 0;
