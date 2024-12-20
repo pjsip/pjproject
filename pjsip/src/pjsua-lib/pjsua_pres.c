@@ -2022,6 +2022,11 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
     buddy = &pjsua_var.buddy[buddy_id];
     acc_id = (buddy->acc_id != PJSUA_INVALID_ID)? buddy->acc_id:
              pjsua_acc_find_for_outgoing(&buddy->uri);
+    if (!pjsua_acc_is_valid(acc_id)) {
+        PJ_LOG(4,(THIS_FILE, "Buddy %d: subscription failed, account %d is "
+                             "invalid!", buddy_id, acc_id));
+        return;
+    }
 
     acc = &pjsua_var.acc[acc_id];
 
