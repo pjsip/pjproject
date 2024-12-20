@@ -61,6 +61,7 @@ static struct server_t
 } g_server[2];
 
 static pj_pool_t *pool;
+static pj_mutex_t *mutex;
 static pj_dns_resolver *resolver;
 static pj_bool_t thread_quit;
 static pj_timer_heap_t *timer_heap;
@@ -80,6 +81,16 @@ struct label_tab
         pj_str_t label;
     } a[MAX_LABEL];
 };
+
+static void lock()
+{
+    pj_mutex_lock(mutex);
+}
+
+static void unlock()
+{
+    pj_mutex_unlock(mutex);
+}
 
 static void write16(pj_uint8_t *p, pj_uint16_t val)
 {
@@ -370,14 +381,11 @@ static int server_thread(void *p)
 
         PJ_LOG(5,(THIS_FILE, "Server %ld processing packet", srv - &g_server[0]));
 
+        lock();
         rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);
+        unlock();
         if (rc != PJ_SUCCESS) {
             app_perror("server error parsing packet", rc);
-            /* 2024-12-19
-               blp: if we retry parsing here, it will be successful! strange!
-
-               rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);
-             */
             continue;
         }
 
@@ -450,6 +458,8 @@ static int init(pj_bool_t use_ipv6)
 
     pool = pj_pool_create(mem, NULL, 2000, 2000, NULL);
 
+    PJ_TEST_SUCCESS(pj_mutex_create_simple(pool, "resolver_test", &mutex),
+                    NULL, return -3);
     PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 2, &sem), NULL, return -5);
 
     thread_quit = PJ_FALSE;
@@ -528,6 +538,8 @@ static void destroy(void)
 
     pj_sem_destroy(sem);
     sem = NULL;
+    pj_mutex_destroy(mutex);
+    mutex = NULL;
     pj_pool_release(pool);
     pool = NULL;
 
@@ -1210,6 +1222,7 @@ static void action1_1(const pj_dns_parsed_packet *pkt,
     pj_dns_parsed_packet *res;
     char *target = "sip.somedomain.com";
 
+    lock();
     res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
 
     if (res->q == NULL) {
@@ -1219,6 +1232,7 @@ static void action1_1(const pj_dns_parsed_packet *pkt,
         res->ans = (pj_dns_parsed_rr*) 
                   pj_pool_calloc(pool, 4, sizeof(pj_dns_parsed_rr));
     }
+    unlock();
 
     res->hdr.qdcount = 1;
     res->q[0].type = pkt->q[0].type;
@@ -1506,11 +1520,13 @@ static void action2_1(const pj_dns_parsed_packet *pkt,
 {
     pj_dns_parsed_packet *res;
 
+    lock();
     res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
 
     res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
     res->ans = (pj_dns_parsed_rr*) 
                pj_pool_calloc(pool, 4, sizeof(pj_dns_parsed_rr));
+    unlock();
 
     res->hdr.qdcount = 1;
     res->q[0].type = pkt->q[0].type;
@@ -1755,11 +1771,13 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
     pj_dns_parsed_packet *res;
     unsigned i;
 
+    lock();
     res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
 
     if (res->q == NULL) {
         res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
     }
+    unlock();
 
     res->hdr.qdcount = 1;
     res->q[0].type = pkt->q[0].type;
@@ -1771,8 +1789,10 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
         pj_assert(pj_strcmp2(&pkt->q[0].name, "_sip._udp." DOMAIN3)==0);
 
         res->hdr.anscount = SRV_COUNT3;
+        lock();
         res->ans = (pj_dns_parsed_rr*) 
                    pj_pool_calloc(pool, SRV_COUNT3, sizeof(pj_dns_parsed_rr));
+        unlock();
 
         for (i=0; i<SRV_COUNT3; ++i) {
             char *target;
@@ -1785,7 +1805,9 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
             res->ans[i].rdata.srv.weight = 2;
             res->ans[i].rdata.srv.port = (pj_uint16_t)(PORT3+i);
 
+            lock();
             target = (char*)pj_pool_alloc(pool, 16);
+            unlock();
             pj_ansi_snprintf(target, 16, "sip%02d." DOMAIN3, i);
             res->ans[i].rdata.srv.target = pj_str(target);
         }
@@ -1795,8 +1817,10 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
         //pj_assert(pj_strcmp2(&res->q[0].name, "sip." DOMAIN3)==0);
 
         res->hdr.anscount = A_COUNT3;
+        lock();
         res->ans = (pj_dns_parsed_rr*) 
                    pj_pool_calloc(pool, A_COUNT3, sizeof(pj_dns_parsed_rr));
+        unlock();
 
         for (i=0; i<A_COUNT3; ++i) {
             res->ans[i].type = PJ_DNS_TYPE_A;
