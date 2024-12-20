@@ -561,6 +561,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
     pjsua_var.buddy[index].host = sip_uri->host;
     pjsua_var.buddy[index].port = sip_uri->port;
     pjsua_var.buddy[index].monitor = cfg->subscribe;
+    pjsua_var.buddy[index].acc_id = cfg->acc_id;
     if (pjsua_var.buddy[index].port == 0)
         pjsua_var.buddy[index].port = 5060;
 
@@ -574,7 +575,12 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
 
     PJSUA_UNLOCK();
 
-    PJ_LOG(4,(THIS_FILE, "Buddy %d added.", index));
+    if (cfg->acc_id != PJSUA_INVALID_ID) {
+        PJ_LOG(4,(THIS_FILE, "Buddy %d added for account %d.", index,
+                             cfg->acc_id));
+    } else {
+        PJ_LOG(4,(THIS_FILE, "Buddy %d added.", index));
+    }
 
     if (cfg->subscribe) {
         pjsua_buddy_subscribe_pres(index, cfg->subscribe);

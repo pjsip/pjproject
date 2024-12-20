@@ -6554,10 +6554,18 @@ typedef struct pjsua_buddy_config
     pj_bool_t   subscribe_dlg_event;
 
     /**
-     * Specify arbitrary application data to be associated with with
+     * Specify arbitrary application data to be associated with
      * the buddy object.
      */
     void       *user_data;
+
+    /**
+     * Specify account to be associated with the buddy object. The account
+     * will be used for creating the subscription.
+     *
+     * Default: PJSUA_INVALID_ID (buddy is not associated to any account)
+     */
+    pjsua_acc_id acc_id;
 
 } pjsua_buddy_config;
 
