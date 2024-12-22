@@ -390,14 +390,19 @@ enum pjsip_inv_option
     PJSIP_INV_REQUIRE_TRICKLE_ICE = 512,
     
     /**
-     * Indicate support for siprec
-     */
-    PJSIP_INV_SUPPORT_SIPREC      = 1024,
-
-    /**
      * Require siprec support.
      */
-    PJSIP_INV_REQUIRE_SIPREC      = 2048,
+    PJSIP_INV_REQUIRE_SIPREC      = 1024,
+
+    /**
+     * Indicate support for siprec
+     */
+    PJSIP_INV_SUPPORT_SIPREC      = 2048,
+    
+    /**
+     * Indicate not support for siprec
+     */
+    PJSIP_INV_NOT_SUPPORT_SIPREC  = 4096,
 };
 
 /* Forward declaration of Session Timers */

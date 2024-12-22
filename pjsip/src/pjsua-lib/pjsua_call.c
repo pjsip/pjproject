@@ -1808,7 +1808,15 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* Verify that we can handle the request. */
     options |= PJSIP_INV_SUPPORT_100REL;
     options |= PJSIP_INV_SUPPORT_TIMER;
-    options |= PJSIP_INV_SUPPORT_SIPREC;
+
+    if(pjsua_var.acc[acc_id].cfg.use_siprec == PJSUA_SIP_SIPREC_INACTIVE){
+        options |= PJSIP_INV_NOT_SUPPORT_SIPREC;
+    }else{
+        options |= PJSIP_INV_SUPPORT_SIPREC;
+        if(pjsua_var.acc[acc_id].cfg.use_siprec == PJSUA_SIP_SIPREC_MANDATORY){
+            options |= PJSIP_INV_REQUIRE_SIPREC;
+        }
+    }
 
     /* Check if the INVITE request is a siprec
      * this function add PJSIP_INV_REQUIRE_SIPREC to options
