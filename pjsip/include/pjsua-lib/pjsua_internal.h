@@ -390,13 +390,16 @@ typedef struct pjsua_buddy
 /**
  * File player/recorder data.
  */
-typedef struct pjsua_file_data
+typedef struct PJ_STACK_ALIGN_PREFIX pjsua_file_data
 {
+    PJ_DECL_STACK_MEMBER(struct pjsua_file_data);
     pj_bool_t        type;  /* 0=player, 1=playlist */
     pjmedia_port    *port;
-    pj_pool_t       *pool;
+    pj_pool_t       *pool;  /* This pool is currently only used with the 
+                               legacy conference switch, 
+                               but not with the conference bridge.      */
     unsigned         slot;
-} pjsua_file_data;
+} PJ_STACK_ALIGN_SUFFIX pjsua_file_data;
 
 
 /**
@@ -474,6 +477,11 @@ typedef struct pjsua_event_list
 } pjsua_event_list;
 
 
+#if defined(PJ_STACK_IMPLEMENTATION) && PJ_STACK_IMPLEMENTATION==PJ_STACK_WIN32 && defined(_MSC_VER)
+#   pragma warning(push)                                                  
+#   pragma warning(disable:4324)   // structure padded due to align()
+//warning C4324 : 'pjsua_data' : structure was padded due to alignment specifier
+#endif
 /**
  * Global pjsua application data.
  */
@@ -577,11 +585,11 @@ struct pjsua_data
 #endif
 
     /* File players: */
-    unsigned             player_cnt;/**< Number of file players.        */
+    pj_stack_type       *player_stack;/**< Stack of unused file players. */
     pjsua_file_data      player[PJSUA_MAX_PLAYERS];/**< Array of players.*/
 
     /* File recorders: */
-    unsigned             rec_cnt;   /**< Number of file recorders.      */
+    pj_stack_type       *recorder_stack;/**< Stack of unused file recorders.*/
     pjsua_file_data      recorder[PJSUA_MAX_RECORDERS];/**< Array of recs.*/
 
     /* Video windows */
@@ -595,6 +603,10 @@ struct pjsua_data
     pjsua_event_list     event_list;
     pj_mutex_t          *timer_mutex;
 };
+#if defined(PJ_STACK_IMPLEMENTATION) && PJ_STACK_IMPLEMENTATION==PJ_STACK_WIN32 && defined(_MSC_VER)
+//warning C4324 : 'pjsua_data' : structure was padded due to alignment specifier
+#   pragma warning(pop)
+#endif
 
 
 extern struct pjsua_data pjsua_var;

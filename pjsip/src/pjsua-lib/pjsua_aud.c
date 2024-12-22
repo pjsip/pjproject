@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2021-2024 Leonid Goltsblat <lgoltsblat@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,6 +41,12 @@ static pj_status_t create_aud_param(pjmedia_aud_param *param,
                                     unsigned samples_per_frame,
                                     unsigned bits_per_sample,
                                     pj_bool_t use_default_settings);
+
+static void file_data_destroy(pj_stack_type *stack, pjsua_file_data *file_data);
+static pj_status_t init_file_data_stack(pj_stack_type **stack,
+                                        const char *name,
+                                        pjsua_file_data *rbegin,
+                                        pjsua_file_data *rend);
 
 /*****************************************************************************
  *
@@ -434,7 +441,13 @@ pj_status_t pjsua_aud_subsys_init()
                                       &pjsua_var.null_port);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
-    return status;
+    status = init_file_data_stack(&pjsua_var.player_stack, "player_stack", pjsua_var.player + PJ_ARRAY_SIZE(pjsua_var.player) - 1, pjsua_var.player - 1);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+
+    status = init_file_data_stack(&pjsua_var.recorder_stack, "recorder_stack", pjsua_var.recorder + PJ_ARRAY_SIZE(pjsua_var.recorder) - 1, pjsua_var.recorder - 1);
+    if (status != PJ_SUCCESS) 
+        goto on_error;
 
 on_error:
     return status;
@@ -1027,6 +1040,10 @@ PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
 
     pj_log_push_indent();
 
+    if (pjsua_var.snd_idle_timer.id || pjsua_var.is_mswitch ||
+        (!pjsua_var.no_snd ? pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL : !pjsua_var.snd_is_on)) {
+        //skip extra locking for typical server side usage (no sound device, master port, conf bridge)
+
     PJSUA_LOCK();
 
     /* If sound device idle timer is active, cancel it first. */
@@ -1151,6 +1168,7 @@ PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
 
 on_return:
     PJSUA_UNLOCK();
+    }   //skip extra locking for typical server side usage
 
     if (status == PJ_SUCCESS) {
         pjsua_conf_connect_param cc_param;
@@ -1256,7 +1274,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
                                          unsigned options,
                                          pjsua_player_id *p_id)
 {
-    unsigned slot, file_id;
+    unsigned slot;
     char path[PJ_MAXPATH];
     pj_pool_t *pool = NULL;
     pjmedia_port *port;
@@ -1264,7 +1282,9 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 
     PJ_ASSERT_RETURN(filename && filename->slen > 0, PJ_EINVAL);
 
-    if (pjsua_var.player_cnt >= PJ_ARRAY_SIZE(pjsua_var.player))
+    /* reserve empty slot in pjsua_var.player[] using player_stack member */
+    pjsua_file_data *file_slot = pj_stack_pop(pjsua_var.player_stack);
+    if (file_slot == NULL)
         return PJ_ETOOMANY;
 
     if (filename->slen >= PJ_MAXPATH)
@@ -1273,20 +1293,6 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     PJ_LOG(4,(THIS_FILE, "Creating file player: %.*s..",
               (int)filename->slen, filename->ptr));
     pj_log_push_indent();
-
-    PJSUA_LOCK();
-
-    for (file_id=0; file_id<PJ_ARRAY_SIZE(pjsua_var.player); ++file_id) {
-        if (pjsua_var.player[file_id].port == NULL)
-            break;
-    }
-
-    if (file_id == PJ_ARRAY_SIZE(pjsua_var.player)) {
-        /* This is unexpected */
-        pj_assert(0);
-        status = PJ_EBUG;
-        goto on_error;
-    }
 
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
@@ -1318,25 +1324,34 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
         goto on_error;
     }
 
-    pjsua_var.player[file_id].type = 0;
-    pjsua_var.player[file_id].pool = pool;
-    pjsua_var.player[file_id].port = port;
-    pjsua_var.player[file_id].slot = slot;
+    //PJSUA_LOCK();
+    file_slot->type = 0;
 
+    /* This pool is currently only used in the legacy conference switch, 
+     * but not in the conference bridge.
+     * Destroy immediately!
+     */
+    if (pjsua_var.is_mswitch)
+        file_slot->pool = pool;
+    else
+        pj_pool_safe_release(&pool);
+
+    file_slot->port = port;
+    file_slot->slot = slot;
+    //PJSUA_UNLOCK();
+
+    unsigned file_id = file_slot - pjsua_var.player;
+    pj_assert(file_id>=0 && file_id<(int)PJ_ARRAY_SIZE(pjsua_var.player));
     if (p_id) *p_id = file_id;
-
-    ++pjsua_var.player_cnt;
-
-    PJSUA_UNLOCK();
 
     PJ_LOG(4,(THIS_FILE, "Player created, id=%d, slot=%d", file_id, slot));
 
-    pj_log_pop_indent();
-    return PJ_SUCCESS;
-
 on_error:
-    PJSUA_UNLOCK();
-    if (pool) pj_pool_release(pool);
+    if (status != PJ_SUCCESS) {
+        pj_stack_push(pjsua_var.player_stack, file_slot);
+        if (pool) pj_pool_release(pool);
+    }
+
     pj_log_pop_indent();
     return status;
 }
@@ -1357,25 +1372,13 @@ PJ_DEF(pj_status_t) pjsua_playlist_create( const pj_str_t file_names[],
     pjmedia_port *port;
     pj_status_t status = PJ_SUCCESS;
 
-    if (pjsua_var.player_cnt >= PJ_ARRAY_SIZE(pjsua_var.player))
+    /* reserve empty slot in pjsua_var.player[] using player_stack member */
+    pjsua_file_data* file_slot = pj_stack_pop(pjsua_var.player_stack);
+    if (file_slot == NULL)
         return PJ_ETOOMANY;
 
     PJ_LOG(4,(THIS_FILE, "Creating playlist with %d file(s)..", file_count));
     pj_log_push_indent();
-
-    PJSUA_LOCK();
-
-    for (file_id=0; file_id<PJ_ARRAY_SIZE(pjsua_var.player); ++file_id) {
-        if (pjsua_var.player[file_id].port == NULL)
-            break;
-    }
-
-    if (file_id == PJ_ARRAY_SIZE(pjsua_var.player)) {
-        /* This is unexpected */
-        pj_assert(0);
-        status = PJ_EBUG;
-        goto on_error;
-    }
 
 
     ptime = pjsua_var.mconf_cfg.samples_per_frame * 1000 /
@@ -1403,26 +1406,32 @@ PJ_DEF(pj_status_t) pjsua_playlist_create( const pj_str_t file_names[],
         goto on_error;
     }
 
-    pjsua_var.player[file_id].type = 1;
-    pjsua_var.player[file_id].pool = pool;
-    pjsua_var.player[file_id].port = port;
-    pjsua_var.player[file_id].slot = slot;
+    file_slot->type = 1;
 
+    /* This pool is currently only used in the legacy conference switch, 
+     * but not in the conference bridge.
+     * Destroy immediately!
+     */
+    if (pjsua_var.is_mswitch)
+        file_slot->pool = pool;
+    else
+        pj_pool_safe_release(&pool);
+
+    file_slot->port = port;
+    file_slot->slot = slot;
+
+    file_id = file_slot - pjsua_var.player;
+    pj_assert(file_id>=0 && file_id<(int)PJ_ARRAY_SIZE(pjsua_var.player));
     if (p_id) *p_id = file_id;
-
-    ++pjsua_var.player_cnt;
-
-    PJSUA_UNLOCK();
 
     PJ_LOG(4,(THIS_FILE, "Playlist created, id=%d, slot=%d", file_id, slot));
 
-    pj_log_pop_indent();
-
-    return PJ_SUCCESS;
-
 on_error:
-    PJSUA_UNLOCK();
-    if (pool) pj_pool_release(pool);
+    if (status != PJ_SUCCESS) {
+        pj_stack_push(pjsua_var.player_stack, file_slot);
+        if (pool) pj_pool_release(pool);
+    }
+
     pj_log_pop_indent();
 
     return status;
@@ -1528,22 +1537,8 @@ PJ_DEF(pj_status_t) pjsua_player_destroy(pjsua_player_id id)
     PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, PJ_EINVAL);
 
     PJ_LOG(4,(THIS_FILE, "Destroying player %d..", id));
-    pj_log_push_indent();
 
-    PJSUA_LOCK();
-
-    if (pjsua_var.player[id].port) {
-        pjsua_conf_remove_port(pjsua_var.player[id].slot);
-        pjmedia_port_destroy(pjsua_var.player[id].port);
-        pjsua_var.player[id].port = NULL;
-        pjsua_var.player[id].slot = 0xFFFF;
-        pj_pool_release(pjsua_var.player[id].pool);
-        pjsua_var.player[id].pool = NULL;
-        pjsua_var.player_cnt--;
-    }
-
-    PJSUA_UNLOCK();
-    pj_log_pop_indent();
+    file_data_destroy(pjsua_var.player_stack, pjsua_var.player + id);
 
     return PJ_SUCCESS;
 }
@@ -1570,7 +1565,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
         FMT_WAV,
         FMT_MP3,
     };
-    unsigned slot, file_id;
+    unsigned slot;
     char path[PJ_MAXPATH];
     pj_str_t ext;
     int file_format;
@@ -1594,12 +1589,13 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 
     PJ_LOG(4,(THIS_FILE, "Creating recorder %.*s..",
               (int)filename->slen, filename->ptr));
-    pj_log_push_indent();
 
-    if (pjsua_var.rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.recorder)) {
-        pj_log_pop_indent();
+    /* reserve empty slot in pjsua_var.recorder[] using recorder_stack member */
+    pjsua_file_data *file_slot = pj_stack_pop(pjsua_var.recorder_stack);
+    if (file_slot == NULL)
         return PJ_ETOOMANY;
-    }
+
+    pj_log_push_indent();
 
     /* Determine the file format */
     ext.ptr = filename->ptr + filename->slen - 4;
@@ -1614,20 +1610,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
                              "determine file format for %.*s",
                              (int)filename->slen, filename->ptr));
         pj_log_pop_indent();
-        return PJ_ENOTSUP;
-    }
-
-    PJSUA_LOCK();
-
-    for (file_id=0; file_id<PJ_ARRAY_SIZE(pjsua_var.recorder); ++file_id) {
-        if (pjsua_var.recorder[file_id].port == NULL)
-            break;
-    }
-
-    if (file_id == PJ_ARRAY_SIZE(pjsua_var.recorder)) {
-        /* This is unexpected */
-        pj_assert(0);
-        status = PJ_EBUG;
+        status = PJ_ENOTSUP;
         goto on_return;
     }
 
@@ -1666,24 +1649,30 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
         goto on_return;
     }
 
-    pjsua_var.recorder[file_id].port = port;
-    pjsua_var.recorder[file_id].slot = slot;
-    pjsua_var.recorder[file_id].pool = pool;
+    /* This pool is currently only used in the legacy conference switch, 
+     * but not in the conference bridge.
+     * Destroy immediately!
+     */
+    if (pjsua_var.is_mswitch)
+        file_slot->pool = pool;
+    else
+        pj_pool_safe_release(&pool);
 
+    file_slot->port = port;
+    file_slot->slot = slot;
+
+    unsigned file_id = file_slot - pjsua_var.recorder;
+    pj_assert(file_id>=0 && file_id<(int)PJ_ARRAY_SIZE(pjsua_var.recorder));
     if (p_id) *p_id = file_id;
-
-    ++pjsua_var.rec_cnt;
-
-    PJSUA_UNLOCK();
 
     PJ_LOG(4,(THIS_FILE, "Recorder created, id=%d, slot=%d", file_id, slot));
 
-    pj_log_pop_indent();
-    return PJ_SUCCESS;
-
 on_return:
-    PJSUA_UNLOCK();
-    if (pool) pj_pool_release(pool);
+    if (status != PJ_SUCCESS) {
+        pj_stack_push(pjsua_var.recorder_stack, file_slot);
+        if (pool) pj_pool_release(pool);
+    }
+
     pj_log_pop_indent();
     return status;
 }
@@ -1726,24 +1715,52 @@ PJ_DEF(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id)
     PJ_ASSERT_RETURN(pjsua_var.recorder[id].port != NULL, PJ_EINVAL);
 
     PJ_LOG(4,(THIS_FILE, "Destroying recorder %d..", id));
-    pj_log_push_indent();
 
-    PJSUA_LOCK();
-
-    if (pjsua_var.recorder[id].port) {
-        pjsua_conf_remove_port(pjsua_var.recorder[id].slot);
-        pjmedia_port_destroy(pjsua_var.recorder[id].port);
-        pjsua_var.recorder[id].port = NULL;
-        pjsua_var.recorder[id].slot = 0xFFFF;
-        pj_pool_release(pjsua_var.recorder[id].pool);
-        pjsua_var.recorder[id].pool = NULL;
-        pjsua_var.rec_cnt--;
-    }
-
-    PJSUA_UNLOCK();
-    pj_log_pop_indent();
+    file_data_destroy(pjsua_var.recorder_stack, pjsua_var.recorder + id);
 
     return PJ_SUCCESS;
+}
+
+static void file_data_destroy(pj_stack_type *stack, pjsua_file_data *file_data)
+{
+    pj_assert(stack && file_data);
+    pjsua_file_data pjsua_tmp_file_data = *file_data;
+
+    pj_log_push_indent();
+
+    //excessive precaution...
+    file_data->port = NULL;
+    file_data->slot = 0xFFFF;
+    file_data->pool = NULL;
+
+    pj_stack_push(stack, file_data);
+
+    if (pjsua_tmp_file_data.port) {
+        pjsua_conf_remove_port(pjsua_tmp_file_data.slot);
+        pjmedia_port_destroy(pjsua_tmp_file_data.port);
+        pj_pool_safe_release(&pjsua_tmp_file_data.pool);
+    }
+
+    pj_log_pop_indent();
+
+}
+
+static pj_status_t init_file_data_stack(pj_stack_type **stack, const char *name, pjsua_file_data *rbegin, pjsua_file_data *rend)
+{
+    pj_status_t status;
+    status = pj_stack_create(pjsua_var.pool, stack);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(1, (THIS_FILE, status, "Unable to create %s", name));
+        return status;
+    }
+    pjsua_file_data *p;
+    for (p = rbegin; p > rend; --p) {
+        if ((status = pj_stack_push(*stack, p)) != PJ_SUCCESS) {
+            PJ_PERROR(1, (THIS_FILE, status, "Unable to init %s", name));
+            break;
+        }
+    }
+    return status;
 }
 
 
@@ -2453,7 +2470,7 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
      * a null port.
      */
     status = pjmedia_master_port_create(pjsua_var.snd_pool, pjsua_var.null_port,
-                                        conf_port, 0, &pjsua_var.null_snd);
+                                        conf_port, PJSUA_MASTER_PORT_OPTIONS, &pjsua_var.null_snd);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create null sound device",
                      status);

@@ -1713,6 +1713,17 @@
 #endif
 
 /**
+ * This is pjmedia_master_port_create() options parameter value.
+ * Any combination of flags declared in pjmedia_clock_options is allowed
+ * (for example PJMEDIA_CLOCK_NO_ASYNC may be helpfull for application 
+ * implementing specialized timer waiting algorithm).
+ * Default : 0
+ */
+#ifndef PJSUA_MASTER_PORT_OPTIONS
+#   define PJSUA_MASTER_PORT_OPTIONS            0
+#endif
+
+/**
  * @}
  */
 
