@@ -664,6 +664,18 @@ PJ_DECL(pjmedia_sdp_media*) pjmedia_sdp_media_clone_deactivate(
                                                 const pjmedia_sdp_media *rhs);
 
 
+/**
+ * Create a=label attribute.
+ *
+ * @param pool          Pool to create the attribute.
+ * @param sdp_media     The SDP media.
+ *
+ * @return              SDP label attribute.
+ */
+PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label( pj_pool_t *pool,
+                                                pjmedia_sdp_media *sdp_media);
+
+
 /* **************************************************************************
  * SDP SESSION DESCRIPTION
  ****************************************************************************
