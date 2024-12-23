@@ -128,6 +128,12 @@ struct BuddyInfo
     string               contact;
 
     /**
+     * The account ID associated with this buddy. If not associated
+     * with any account, the value will be PJSUA_INVALID_ID.
+     */
+    pjsua_acc_id         accId;
+
+    /**
      * Flag to indicate that we should monitor the presence information for
      * this buddy (normally yes, unless explicitly disabled).
      */
@@ -237,6 +243,9 @@ public:
      * Note that application should maintain the Buddy original instance, i.e:
      * the instance that calls this create() method as it is only the original
      * instance destructor that will delete the underlying Buddy in PJSUA-LIB.
+     *
+     * IMPORTANT: Application must make sure that the Account instance remains
+     * valid for the entire lifetime of the Buddy object.
      *
      * @param acc               The account for this buddy.
      * @param cfg               The buddy config.
