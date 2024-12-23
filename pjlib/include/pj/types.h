@@ -195,6 +195,18 @@ typedef struct pj_hash_iterator_t
     pj_hash_entry   *entry;     /**< Internal entry.     */
 } pj_hash_iterator_t;
 
+/**
+ * The opaque data type for stack, which is used as arguments throughout
+ * the stack operations.
+ */
+typedef struct pj_stack_type pj_stack_type;
+
+/**
+ * The opaque data type for stack item, which is used as item argument throughout
+ * the stack operations.
+ * Real stack's item should have PJ_DECL_STACK_MEMBER(type) as the first member.
+ */
+typedef void pj_stack_t;
 
 /**
  * Forward declaration for memory pool factory.
