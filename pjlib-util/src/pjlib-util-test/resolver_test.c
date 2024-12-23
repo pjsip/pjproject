@@ -21,7 +21,7 @@
 #include "test.h"
 
 
-#define THIS_FILE   "srv_resolver_test.c"
+#define THIS_FILE   "resolver_test.c"
 
 ////////////////////////////////////////////////////////////////////////////
 /*
@@ -61,6 +61,7 @@ static struct server_t
 } g_server[2];
 
 static pj_pool_t *pool;
+static pj_mutex_t *mutex;
 static pj_dns_resolver *resolver;
 static pj_bool_t thread_quit;
 static pj_timer_heap_t *timer_heap;
@@ -80,6 +81,16 @@ struct label_tab
         pj_str_t label;
     } a[MAX_LABEL];
 };
+
+static void lock()
+{
+    pj_mutex_lock(mutex);
+}
+
+static void unlock()
+{
+    pj_mutex_unlock(mutex);
+}
 
 static void write16(pj_uint8_t *p, pj_uint16_t val)
 {
@@ -170,7 +181,7 @@ static int print_rr(pj_uint8_t *pkt, int size, pj_uint8_t *pos,
     if (size < 8)
         return -1;
 
-    pj_assert(rr->dnsclass == 1);
+    PJ_TEST_EQ(rr->dnsclass, 1, NULL, return -1);
 
     write16(p+0, (pj_uint16_t)rr->type);        /* type     */
     write16(p+2, (pj_uint16_t)rr->dnsclass);    /* class    */
@@ -369,13 +380,16 @@ static int server_thread(void *p)
         }
 
         PJ_LOG(5,(THIS_FILE, "Server %ld processing packet", srv - &g_server[0]));
-        srv->pkt_count++;
 
+        lock();
         rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);
+        unlock();
         if (rc != PJ_SUCCESS) {
             app_perror("server error parsing packet", rc);
             continue;
         }
+
+        srv->pkt_count++;
 
         /* Verify packet */
         if (req->hdr.qdcount != 1) {
@@ -418,7 +432,7 @@ static int poll_worker_thread(void *p)
     PJ_UNUSED_ARG(p);
 
     while (!thread_quit) {
-        pj_time_val delay = {0, 100};
+        pj_time_val delay = {0, 10};
         pj_timer_heap_poll(timer_heap, NULL);
         pj_ioqueue_poll(ioqueue, &delay);
     }
@@ -430,7 +444,6 @@ static void destroy(void);
 
 static int init(pj_bool_t use_ipv6)
 {
-    pj_status_t status;
     pj_str_t nameservers[2];
     pj_uint16_t ports[2];
     int i;
@@ -442,60 +455,57 @@ static int init(pj_bool_t use_ipv6)
         nameservers[0] = pj_str("127.0.0.1");
         nameservers[1] = pj_str("127.0.0.1");
     }
-    ports[0] = 5553;
-    ports[1] = 5554;
-
-    g_server[0].port = ports[0];
-    g_server[1].port = ports[1];
 
     pool = pj_pool_create(mem, NULL, 2000, 2000, NULL);
 
-    status = pj_sem_create(pool, NULL, 0, 2, &sem);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_mutex_create_simple(pool, "resolver_test", &mutex),
+                    NULL, return -3);
+    PJ_TEST_SUCCESS(pj_sem_create(pool, NULL, 0, 2, &sem), NULL, return -5);
 
     thread_quit = PJ_FALSE;
 
     for (i=0; i<2; ++i) {
         pj_sockaddr addr;
+        int namelen;
 
-        status = pj_sock_socket((use_ipv6? pj_AF_INET6() : pj_AF_INET()),
-                                pj_SOCK_DGRAM(), 0, &g_server[i].sock);
-        if (status != PJ_SUCCESS)
-            return -10;
+        PJ_TEST_SUCCESS(pj_sock_socket(
+                            (use_ipv6? pj_AF_INET6() : pj_AF_INET()),
+                            pj_SOCK_DGRAM(), 0, &g_server[i].sock),
+                        NULL, return -10);
 
         pj_sockaddr_init((use_ipv6? pj_AF_INET6() : pj_AF_INET()),
-                         &addr, NULL, (pj_uint16_t)g_server[i].port);
+                         &addr, NULL, 0);
 
-        status = pj_sock_bind(g_server[i].sock, &addr, pj_sockaddr_get_len(&addr));
-        if (status != PJ_SUCCESS)
-            return -20;
+        PJ_TEST_SUCCESS(pj_sock_bind(g_server[i].sock, &addr,
+                                     pj_sockaddr_get_len(&addr)),
+                        NULL, return -20);
 
-        status = pj_thread_create(pool, NULL, &server_thread, &g_server[i],
-                                  0, 0, &g_server[i].thread);
-        if (status != PJ_SUCCESS)
-            return -30;
+        namelen = sizeof(addr);
+        PJ_TEST_SUCCESS(pj_sock_getsockname(g_server[i].sock, &addr,
+                                            &namelen),
+                        NULL, return -25);
+        g_server[i].port = ports[i] = pj_sockaddr_get_port(&addr);
+
+        PJ_TEST_SUCCESS(pj_thread_create(pool, NULL, &server_thread,
+                                         &g_server[i],
+                                         0, 0, &g_server[i].thread),
+                        NULL, return -30);
     }
 
-    status = pj_timer_heap_create(pool, 16, &timer_heap);
-    pj_assert(status == PJ_SUCCESS);
-
-    status = pj_ioqueue_create(pool, 16, &ioqueue);
-    pj_assert(status == PJ_SUCCESS);
-
-    status = pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue, &resolver);
-    if (status != PJ_SUCCESS)
-        return -40;
+    PJ_TEST_SUCCESS(pj_timer_heap_create(pool, 16, &timer_heap), NULL, return -31);
+    PJ_TEST_SUCCESS(pj_ioqueue_create(pool, 16, &ioqueue), NULL, return -32);
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue, &resolver),
+                    NULL, return -40);
 
     pj_dns_resolver_get_settings(resolver, &set);
-    set.good_ns_ttl = 20;
-    set.bad_ns_ttl = 20;
+    set.good_ns_ttl = 10;
+    set.bad_ns_ttl = 10;
     pj_dns_resolver_set_settings(resolver, &set);
 
-    status = pj_dns_resolver_set_ns(resolver, 2, nameservers, ports);
-    pj_assert(status == PJ_SUCCESS);
-
-    status = pj_thread_create(pool, NULL, &poll_worker_thread, NULL, 0, 0, &poll_thread);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(resolver, 2, nameservers, ports),
+                    NULL, return -41);
+    PJ_TEST_SUCCESS(pj_thread_create(pool, NULL, &poll_worker_thread, NULL, 0, 0, &poll_thread),
+                    NULL, return -42);
 
     return 0;
 }
@@ -503,6 +513,9 @@ static int init(pj_bool_t use_ipv6)
 
 static void destroy(void)
 {
+    /* note: need to set global vars back to zero since test can be
+     * repeated for IPv6
+     */
     int i;
 
     thread_quit = PJ_TRUE;
@@ -513,13 +526,24 @@ static void destroy(void)
     }
 
     pj_thread_join(poll_thread);
+    poll_thread = NULL;
+    thread_quit = PJ_FALSE;
 
     pj_dns_resolver_destroy(resolver, PJ_FALSE);
+    resolver = NULL;
     pj_ioqueue_destroy(ioqueue);
+    ioqueue = NULL;
     pj_timer_heap_destroy(timer_heap);
+    timer_heap = NULL;
 
     pj_sem_destroy(sem);
+    sem = NULL;
+    pj_mutex_destroy(mutex);
+    mutex = NULL;
     pj_pool_release(pool);
+    pool = NULL;
+
+    pj_bzero(g_server, sizeof(g_server));
 }
 
 
@@ -529,7 +553,6 @@ static int a_parser_test(void)
 {
     pj_dns_parsed_packet pkt;
     pj_dns_a_record rec;
-    pj_status_t rc;
 
     PJ_LOG(3,(THIS_FILE, "  DNS A record parser tests"));
 
@@ -570,12 +593,11 @@ static int a_parser_test(void)
     pkt.ans[2].rdata.a.ip_addr.s_addr = 0x0203;
 
 
-    rc = pj_dns_parse_a_response(&pkt, &rec);
-    pj_assert(rc == PJ_SUCCESS);
-    pj_assert(pj_strcmp2(&rec.name, "ahost")==0);
-    pj_assert(rec.alias.slen == 0);
-    pj_assert(rec.addr_count == 1);
-    pj_assert(rec.addr[0].s_addr == 0x01020304);
+    PJ_TEST_SUCCESS(pj_dns_parse_a_response(&pkt, &rec), NULL, return -100)
+    PJ_TEST_EQ(pj_strcmp2(&rec.name, "ahost"), 0, NULL, return -110);
+    PJ_TEST_EQ(rec.alias.slen, 0, NULL, return -112);
+    PJ_TEST_EQ(rec.addr_count, 1, NULL, return -114);
+    PJ_TEST_EQ(rec.addr[0].s_addr, 0x01020304, NULL, return -116);
 
     /* Answer with the target corresponds to a CNAME entry, but not
      * as the first record, and with additions of some CNAME and A
@@ -617,12 +639,11 @@ static int a_parser_test(void)
     pkt.ans[3].ttl = 1;
     pkt.ans[3].rdata.a.ip_addr.s_addr = 0x03030303;
 
-    rc = pj_dns_parse_a_response(&pkt, &rec);
-    pj_assert(rc == PJ_SUCCESS);
-    pj_assert(pj_strcmp2(&rec.name, "ahost")==0);
-    pj_assert(pj_strcmp2(&rec.alias, "ahostalias")==0);
-    pj_assert(rec.addr_count == 1);
-    pj_assert(rec.addr[0].s_addr == 0x02020202);
+    PJ_TEST_SUCCESS(pj_dns_parse_a_response(&pkt, &rec), NULL, return -120);
+    PJ_TEST_EQ(pj_strcmp2(&rec.name, "ahost"), 0, NULL, return -122);
+    PJ_TEST_EQ(pj_strcmp2(&rec.alias, "ahostalias"), 0, NULL, return -124);
+    PJ_TEST_EQ(rec.addr_count, 1, NULL, return -126);
+    PJ_TEST_EQ(rec.addr[0].s_addr, 0x02020202, NULL, return -128);
 
     /*
      * No query section.
@@ -631,8 +652,8 @@ static int a_parser_test(void)
     pkt.hdr.qdcount = 0;
     pkt.hdr.anscount = 0;
 
-    rc = pj_dns_parse_a_response(&pkt, &rec);
-    pj_assert(rc == PJLIB_UTIL_EDNSINANSWER);
+    PJ_TEST_EQ(pj_dns_parse_a_response(&pkt, &rec), PJLIB_UTIL_EDNSINANSWER,
+               NULL, return -130);
 
     /*
      * No answer section.
@@ -645,8 +666,8 @@ static int a_parser_test(void)
     pkt.q[0].name = pj_str("ahost");
     pkt.hdr.anscount = 0;
 
-    rc = pj_dns_parse_a_response(&pkt, &rec);
-    pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
+    PJ_TEST_EQ(pj_dns_parse_a_response(&pkt, &rec), PJLIB_UTIL_EDNSNOANSWERREC,
+               NULL, return -140);
 
     /*
      * Answer doesn't match query.
@@ -666,8 +687,8 @@ static int a_parser_test(void)
     pkt.ans[0].ttl = 1;
     pkt.ans[0].rdata.a.ip_addr.s_addr = 0x02020202;
 
-    rc = pj_dns_parse_a_response(&pkt, &rec);
-    pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
+    PJ_TEST_EQ(pj_dns_parse_a_response(&pkt, &rec), PJLIB_UTIL_EDNSNOANSWERREC,
+               NULL, return -150);
 
 
     /*
@@ -688,8 +709,8 @@ static int a_parser_test(void)
     pkt.ans[0].ttl = 1;
     pkt.ans[0].rdata.cname.name = pj_str("ahostalias");
 
-    rc = pj_dns_parse_a_response(&pkt, &rec);
-    pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
+    PJ_TEST_EQ(pj_dns_parse_a_response(&pkt, &rec), PJLIB_UTIL_EDNSNOANSWERREC,
+               NULL, return -160);
 
 
     /*
@@ -717,9 +738,8 @@ static int a_parser_test(void)
     pkt.ans[1].ttl = 1;
     pkt.ans[1].rdata.a.ip_addr.s_addr = 0x01020304;
 
-    rc = pj_dns_parse_a_response(&pkt, &rec);
-    pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
-    PJ_UNUSED_ARG(rc);
+    PJ_TEST_EQ(pj_dns_parse_a_response(&pkt, &rec), PJLIB_UTIL_EDNSNOANSWERREC,
+               NULL, return -170);
 
     return 0;
 }
@@ -731,7 +751,6 @@ static int addr_parser_test(void)
 {
     pj_dns_parsed_packet pkt;
     pj_dns_addr_record rec;
-    pj_status_t rc;
 
     PJ_LOG(3,(THIS_FILE, "  DNS A/AAAA record parser tests"));
 
@@ -779,13 +798,14 @@ static int addr_parser_test(void)
     s6_addr32(pkt.ans[3].rdata.aaaa.ip_addr, 0) = 0x01020304;
 
 
-    rc = pj_dns_parse_addr_response(&pkt, &rec);
-    pj_assert(rc == PJ_SUCCESS);
-    pj_assert(pj_strcmp2(&rec.name, "ahost")==0);
-    pj_assert(rec.alias.slen == 0);
-    pj_assert(rec.addr_count == 2);
-    pj_assert(rec.addr[0].af==pj_AF_INET() && rec.addr[0].ip.v4.s_addr == 0x01020304);
-    pj_assert(rec.addr[1].af==pj_AF_INET6() && s6_addr32(rec.addr[1].ip.v6, 0) == 0x01020304);
+    PJ_TEST_SUCCESS(pj_dns_parse_addr_response(&pkt, &rec), NULL, return -200);
+    PJ_TEST_EQ(pj_strcmp2(&rec.name, "ahost"), 0, NULL, return -210);
+    PJ_TEST_EQ(rec.alias.slen, 0, NULL, return -212);
+    PJ_TEST_EQ(rec.addr_count, 2, NULL, return -214);
+    PJ_TEST_EQ(rec.addr[0].af, pj_AF_INET(), NULL, return -220);
+    PJ_TEST_EQ(rec.addr[0].ip.v4.s_addr, 0x01020304, NULL, return -222);
+    PJ_TEST_EQ(rec.addr[1].af, pj_AF_INET6(), NULL, return -230);
+    PJ_TEST_EQ(s6_addr32(rec.addr[1].ip.v6, 0), 0x01020304, NULL, return -232);
 
     /* Answer with the target corresponds to a CNAME entry, but not
      * as the first record, and with additions of some CNAME and A
@@ -827,12 +847,11 @@ static int addr_parser_test(void)
     pkt.ans[3].ttl = 1;
     pkt.ans[3].rdata.a.ip_addr.s_addr = 0x03030303;
 
-    rc = pj_dns_parse_addr_response(&pkt, &rec);
-    pj_assert(rc == PJ_SUCCESS);
-    pj_assert(pj_strcmp2(&rec.name, "ahost")==0);
-    pj_assert(pj_strcmp2(&rec.alias, "ahostalias")==0);
-    pj_assert(rec.addr_count == 1);
-    pj_assert(rec.addr[0].ip.v4.s_addr == 0x02020202);
+    PJ_TEST_SUCCESS(pj_dns_parse_addr_response(&pkt, &rec), NULL, return -240);
+    PJ_TEST_EQ(pj_strcmp2(&rec.name, "ahost"), 0, NULL, return -242);
+    PJ_TEST_EQ(pj_strcmp2(&rec.alias, "ahostalias"), 0, NULL, return -244);
+    PJ_TEST_EQ(rec.addr_count, 1, NULL, return -246);
+    PJ_TEST_EQ(rec.addr[0].ip.v4.s_addr, 0x02020202, NULL, return -248);
 
     /*
      * No query section.
@@ -841,8 +860,8 @@ static int addr_parser_test(void)
     pkt.hdr.qdcount = 0;
     pkt.hdr.anscount = 0;
 
-    rc = pj_dns_parse_addr_response(&pkt, &rec);
-    pj_assert(rc == PJLIB_UTIL_EDNSINANSWER);
+    PJ_TEST_EQ(pj_dns_parse_addr_response(&pkt, &rec),
+               PJLIB_UTIL_EDNSINANSWER, NULL, return -245);
 
     /*
      * No answer section.
@@ -855,8 +874,8 @@ static int addr_parser_test(void)
     pkt.q[0].name = pj_str("ahost");
     pkt.hdr.anscount = 0;
 
-    rc = pj_dns_parse_addr_response(&pkt, &rec);
-    pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
+    PJ_TEST_EQ(pj_dns_parse_addr_response(&pkt, &rec),
+               PJLIB_UTIL_EDNSNOANSWERREC, NULL, return -250);
 
     /*
      * Answer doesn't match query.
@@ -876,8 +895,8 @@ static int addr_parser_test(void)
     pkt.ans[0].ttl = 1;
     pkt.ans[0].rdata.a.ip_addr.s_addr = 0x02020202;
 
-    rc = pj_dns_parse_addr_response(&pkt, &rec);
-    pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
+    PJ_TEST_EQ(pj_dns_parse_addr_response(&pkt, &rec),
+               PJLIB_UTIL_EDNSNOANSWERREC, NULL, return -260);
 
 
     /*
@@ -898,8 +917,8 @@ static int addr_parser_test(void)
     pkt.ans[0].ttl = 1;
     pkt.ans[0].rdata.cname.name = pj_str("ahostalias");
 
-    rc = pj_dns_parse_addr_response(&pkt, &rec);
-    pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
+    PJ_TEST_EQ(pj_dns_parse_addr_response(&pkt, &rec),
+               PJLIB_UTIL_EDNSNOANSWERREC, NULL, return -270);
 
 
     /*
@@ -927,9 +946,8 @@ static int addr_parser_test(void)
     pkt.ans[1].ttl = 1;
     pkt.ans[1].rdata.a.ip_addr.s_addr = 0x01020304;
 
-    rc = pj_dns_parse_addr_response(&pkt, &rec);
-    pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
-    PJ_UNUSED_ARG(rc);
+    PJ_TEST_EQ(pj_dns_parse_addr_response(&pkt, &rec),
+               PJLIB_UTIL_EDNSNOANSWERREC, NULL, return -280);
 
     return 0;
 }
@@ -960,7 +978,6 @@ static int simple_test(void)
 {
     pj_str_t name = pj_str("helloworld");
     pj_dns_parsed_packet *r;
-    pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "  simple successful test"));
 
@@ -995,18 +1012,18 @@ static int simple_test(void)
     r->ans[0].name = name;
     r->ans[0].rdata.a.ip_addr.s_addr = IP_ADDR0;
 
-    status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-                                         &dns_callback, NULL, NULL);
-    if (status != PJ_SUCCESS)
-        return -1000;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        resolver, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback, NULL, NULL),
+                    NULL, return -300);
 
     pj_sem_wait(sem);
-    pj_thread_sleep(1000);
+    pj_thread_sleep(set.qretr_delay * 1.2);
 
 
     /* Both servers must get packet */
-    pj_assert(g_server[0].pkt_count == 1);
-    pj_assert(g_server[1].pkt_count == 1);
+    PJ_TEST_EQ(g_server[0].pkt_count, 1, NULL, return -310);
+    PJ_TEST_EQ(g_server[1].pkt_count, 1, NULL, return -320);
 
     return 0;
 }
@@ -1024,8 +1041,8 @@ static void dns_callback_1b(void *user_data,
 
     pj_sem_post(sem);
 
-    PJ_ASSERT_ON_FAIL(status==PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_NXDOMAIN),
-                      return);
+    PJ_TEST_EQ(status, PJ_STATUS_FROM_DNS_RCODE(PJ_DNS_RCODE_NXDOMAIN),
+               NULL, return);
 }
 
 
@@ -1035,7 +1052,7 @@ static void dns_callback_1b(void *user_data,
 static int dns_test(void)
 {
     pj_str_t name = pj_str("name00");
-    pj_status_t status;
+    enum { D = 2 };
 
     PJ_LOG(3,(THIS_FILE, "  simple error response test"));
 
@@ -1045,10 +1062,10 @@ static int dns_test(void)
     g_server[0].action = PJ_DNS_RCODE_NXDOMAIN;
     g_server[1].action = PJ_DNS_RCODE_NXDOMAIN;
 
-    status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-                                         &dns_callback_1b, NULL, NULL);
-    if (status != PJ_SUCCESS)
-        return -1000;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        resolver, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_1b, NULL, NULL),
+                    NULL, return -400);
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
@@ -1056,12 +1073,13 @@ static int dns_test(void)
     /* Now only one of the servers should get packet, since both servers are
      * in STATE_ACTIVE state
      */
-    pj_assert(g_server[0].pkt_count + g_server[1].pkt_count == 1);
+    PJ_TEST_EQ(g_server[0].pkt_count + g_server[1].pkt_count, 1,
+               NULL, return -410);
 
     /* Wait to allow active period to complete and get into probing state */
     PJ_LOG(3,(THIS_FILE, "  waiting for active NS to expire (%d sec)",
                          set.good_ns_ttl));
-    pj_thread_sleep(set.good_ns_ttl * 1000);
+    pj_thread_sleep((set.good_ns_ttl+D) * 1000);
 
     /* 
      * Fail-over test 
@@ -1074,15 +1092,16 @@ static int dns_test(void)
     g_server[1].pkt_count = 0;
 
     name = pj_str("name01");
-    status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-                                         &dns_callback_1b, NULL, NULL);
-    if (status != PJ_SUCCESS)
-        return -1000;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                            resolver, &name, PJ_DNS_TYPE_A, 0,
+                            &dns_callback_1b, NULL, NULL),
+                    NULL, return -420);
 
     pj_sem_wait(sem);
 
     /* Both servers must get packet as both are in probing state */
-    pj_assert(g_server[0].pkt_count >= 1 && g_server[1].pkt_count == 1);
+    PJ_TEST_GTE(g_server[0].pkt_count, 1, NULL, return -430);
+    PJ_TEST_EQ(g_server[1].pkt_count, 1, NULL, return -435);
 
     /*
      * Check that both servers still receive requests, since they are
@@ -1096,22 +1115,23 @@ static int dns_test(void)
     g_server[1].pkt_count = 0;
 
     name = pj_str("name02");
-    status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-                                         &dns_callback_1b, NULL, NULL);
-    if (status != PJ_SUCCESS)
-        return -1000;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                            resolver, &name, PJ_DNS_TYPE_A, 0,
+                            &dns_callback_1b, NULL, NULL),
+                    NULL, return -440);
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
 
     /* Both servers must get packet as both are in probing & active state */
-    pj_assert(g_server[0].pkt_count >= 1 && g_server[1].pkt_count == 1);
+    PJ_TEST_GTE(g_server[0].pkt_count, 1, NULL, return -450);
+    PJ_TEST_EQ(g_server[1].pkt_count, 1, NULL, return -454);
 
     /* Wait to allow probing period to complete, server 0 will be in bad state */
     PJ_LOG(3,(THIS_FILE, "  waiting for probing state to end (%d sec)",
                          set.qretr_delay * 
                          (set.qretr_count+2) / 1000));
-    pj_thread_sleep(set.qretr_delay * (set.qretr_count + 2));
+    pj_thread_sleep(1000 + set.qretr_delay * (set.qretr_count + 2));
 
 
     /*
@@ -1125,22 +1145,22 @@ static int dns_test(void)
     g_server[1].pkt_count = 0;
 
     name = pj_str("name03");
-    status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-                                         &dns_callback_1b, NULL, NULL);
-    if (status != PJ_SUCCESS)
-        return -1000;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        resolver, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_1b, NULL, NULL),
+                    NULL, return -460);
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
 
     /* Only server 1 get the request */
-    pj_assert(g_server[0].pkt_count == 0);
-    pj_assert(g_server[1].pkt_count == 1);
+    PJ_TEST_EQ(g_server[0].pkt_count, 0, NULL, return -470);
+    PJ_TEST_EQ(g_server[1].pkt_count, 1, NULL, return -474);
 
     /* Wait to allow active & bad period to complete, both will be in probing state */
     PJ_LOG(3,(THIS_FILE, "  waiting for active NS to expire (%d sec)",
                          set.good_ns_ttl));
-    pj_thread_sleep(set.good_ns_ttl * 1000);
+    pj_thread_sleep((set.good_ns_ttl+D) * 1000);
 
     /*
      * Now fail server 1 to switch to server 0
@@ -1152,10 +1172,10 @@ static int dns_test(void)
     g_server[1].pkt_count = 0;
 
     name = pj_str("name04");
-    status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-                                         &dns_callback_1b, NULL, NULL);
-    if (status != PJ_SUCCESS)
-        return -1000;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        resolver, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_1b, NULL, NULL),
+                    NULL, return -480);
 
     pj_sem_wait(sem);
 
@@ -1175,18 +1195,17 @@ static int dns_test(void)
     g_server[1].pkt_count = 0;
 
     name = pj_str("name05");
-    status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
-                                         &dns_callback_1b, NULL, NULL);
-    if (status != PJ_SUCCESS)
-        return -1000;
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        resolver, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_1b, NULL, NULL),
+                    NULL, return -484);
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
 
     /* Only good NS should get request */
-    pj_assert(g_server[0].pkt_count == 1);
-    pj_assert(g_server[1].pkt_count == 0);
-
+    PJ_TEST_EQ(g_server[0].pkt_count, 1, NULL, return -486);
+    PJ_TEST_EQ(g_server[1].pkt_count, 0, NULL, return -488);
 
     return 0;
 }
@@ -1203,6 +1222,7 @@ static void action1_1(const pj_dns_parsed_packet *pkt,
     pj_dns_parsed_packet *res;
     char *target = "sip.somedomain.com";
 
+    lock();
     res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
 
     if (res->q == NULL) {
@@ -1212,6 +1232,7 @@ static void action1_1(const pj_dns_parsed_packet *pkt,
         res->ans = (pj_dns_parsed_rr*) 
                   pj_pool_calloc(pool, 4, sizeof(pj_dns_parsed_rr));
     }
+    unlock();
 
     res->hdr.qdcount = 1;
     res->q[0].type = pkt->q[0].type;
@@ -1371,7 +1392,6 @@ static void srv_cb_1d(void *user_data,
 
 static int srv_resolver_test(void)
 {
-    pj_status_t status;
     pj_str_t domain = pj_str("somedomain.com");
     pj_str_t res_name = pj_str("_sip._udp.");
 
@@ -1388,15 +1408,16 @@ static int srv_resolver_test(void)
     g_server[0].pkt_count = 0;
     g_server[1].pkt_count = 0;
 
-    status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver, PJ_TRUE,
-                                NULL, &srv_cb_1, NULL);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(
+                        &domain, &res_name, 5061, pool, resolver, PJ_TRUE,
+                        NULL, &srv_cb_1, NULL),
+                    NULL, return -500);
 
     pj_sem_wait(sem);
 
     /* Because of previous tests, only NS 1 should get the request */
-    pj_assert(g_server[0].pkt_count == 2);  /* 2 because of SRV and A resolution */
-    pj_assert(g_server[1].pkt_count == 0);
+    PJ_TEST_EQ(g_server[0].pkt_count, 2, NULL, return -510);  /* 2 because of SRV and A resolution */
+    PJ_TEST_EQ(g_server[1].pkt_count, 0, NULL, return -512);
 
 
     /* Wait until cache expires */
@@ -1415,10 +1436,11 @@ static int srv_resolver_test(void)
     g_server[0].pkt_count = 0;
     g_server[1].pkt_count = 0;
 
-    status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver,
-                                PJ_DNS_SRV_RESOLVE_AAAA,
-                                NULL, &srv_cb_1c, NULL);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(
+                        &domain, &res_name, 5061, pool, resolver,
+                        PJ_DNS_SRV_RESOLVE_AAAA,
+                        NULL, &srv_cb_1c, NULL),
+                    NULL, return -520);
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
@@ -1434,10 +1456,11 @@ static int srv_resolver_test(void)
     g_server[0].pkt_count = 0;
     g_server[1].pkt_count = 0;
 
-    status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver,
-                                PJ_DNS_SRV_RESOLVE_AAAA_ONLY,
-                                NULL, &srv_cb_1d, NULL);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(
+                        &domain, &res_name, 5061, pool, resolver,
+                        PJ_DNS_SRV_RESOLVE_AAAA_ONLY,
+                        NULL, &srv_cb_1d, NULL),
+                    NULL, return -530);
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
@@ -1448,21 +1471,23 @@ static int srv_resolver_test(void)
     g_server[0].pkt_count = 0;
     g_server[1].pkt_count = 0;
 
-    status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver, PJ_TRUE,
-                                NULL, &srv_cb_1, NULL);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(
+                        &domain, &res_name, 5061, pool, resolver, PJ_TRUE,
+                        NULL, &srv_cb_1, NULL),
+                    NULL, return -540);
 
 
-    status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver, PJ_TRUE,
-                                NULL, &srv_cb_1, NULL);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(
+                        &domain, &res_name, 5061, pool, resolver, PJ_TRUE,
+                        NULL, &srv_cb_1, NULL),
+                    NULL, return -550);
 
     pj_sem_wait(sem);
     pj_sem_wait(sem);
 
     /* Only server one should get a query */
-    pj_assert(g_server[0].pkt_count == 2);  /* 2 because of SRV and A resolution */
-    pj_assert(g_server[1].pkt_count == 0);
+    PJ_TEST_EQ(g_server[0].pkt_count, 2, NULL, return -554);  /* 2 because of SRV and A resolution */
+    PJ_TEST_EQ(g_server[1].pkt_count, 0, NULL, return -556);
 
     /* Since TTL is one, subsequent queries should fail */
     PJ_LOG(3,(THIS_FILE, "  srv_resolve(): cache expires scenario"));
@@ -1472,14 +1497,15 @@ static int srv_resolver_test(void)
     g_server[0].action = PJ_DNS_RCODE_NXDOMAIN;
     g_server[1].action = PJ_DNS_RCODE_NXDOMAIN;
 
-    status = pj_dns_srv_resolve(&domain, &res_name, 5061, pool, resolver, PJ_TRUE,
-                                NULL, &srv_cb_1b, NULL);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(
+                        &domain, &res_name, 5061, pool, resolver, PJ_TRUE,
+                        NULL, &srv_cb_1b, NULL),
+                    NULL, return -560);
 
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
 
-    return status;
+    return 0;
 }
 
 
@@ -1494,11 +1520,13 @@ static void action2_1(const pj_dns_parsed_packet *pkt,
 {
     pj_dns_parsed_packet *res;
 
+    lock();
     res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
 
     res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
     res->ans = (pj_dns_parsed_rr*) 
                pj_pool_calloc(pool, 4, sizeof(pj_dns_parsed_rr));
+    unlock();
 
     res->hdr.qdcount = 1;
     res->q[0].type = pkt->q[0].type;
@@ -1642,7 +1670,6 @@ on_return:
 
 static int srv_resolver_fallback_test(void)
 {
-    pj_status_t status;
     pj_str_t domain = pj_str(TARGET);
     pj_str_t res_name = pj_str("_sip._udp.");
     int cb_err = 0;
@@ -1655,43 +1682,31 @@ static int srv_resolver_fallback_test(void)
     g_server[1].action = ACTION_CB;
     g_server[1].action_cb = &action2_1;
 
-    status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver, PJ_TRUE,
-                                &cb_err, &srv_cb_2, NULL);
-    if (status != PJ_SUCCESS) {
-        app_perror("   srv_resolve error", status);
-        return -10;
-    }
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(
+                        &domain, &res_name, PORT2, pool, resolver, PJ_TRUE,
+                        &cb_err, &srv_cb_2, NULL),
+                    NULL, return -600);
 
     pj_sem_wait(sem);
 
-    if (cb_err != 0) {
-        PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
-        return -20;
-    }
+    PJ_TEST_EQ(cb_err, 0, "srv_resolve cb error", return -605);
 
     /* Subsequent query should just get the response from the cache */
     PJ_LOG(3,(THIS_FILE, "  srv_resolve(): cache test"));
     g_server[0].pkt_count = 0;
     g_server[1].pkt_count = 0;
 
-    status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver, PJ_TRUE,
-                                &cb_err, &srv_cb_2, NULL);
-    if (status != PJ_SUCCESS) {
-        app_perror("   srv_resolve error", status);
-        return -30;
-    }
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(
+                        &domain, &res_name, PORT2, pool, resolver, PJ_TRUE,
+                        &cb_err, &srv_cb_2, NULL),
+                    NULL, return -610);
 
     pj_sem_wait(sem);
 
-    if (cb_err != 0) {
-        PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
-        return -40;
-    }
+    PJ_TEST_EQ(cb_err,  0, "srv_resolve cb error", return -615);
 
-    if (g_server[0].pkt_count != 0 || g_server[1].pkt_count != 0) {
-        PJ_LOG(3,("test", "   srv_resolve() not from cache"));
-        return -50;
-    }
+    PJ_TEST_EQ(g_server[0].pkt_count, 0, "must be from cache", return -620);
+    PJ_TEST_EQ(g_server[1].pkt_count, 0, "must be from cache", return -625);
 
     /* Clear cache */
     pj_thread_sleep(1000);
@@ -1704,20 +1719,15 @@ static int srv_resolver_fallback_test(void)
     g_server[1].action = ACTION_CB;
     g_server[1].action_cb = &action2_1;
 
-    status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver,
-                                PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA,
-                                &cb_err, &srv_cb_2a, NULL);
-    if (status != PJ_SUCCESS) {
-        app_perror("   srv_resolve error", status);
-        return -60;
-    }
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(
+                        &domain, &res_name, PORT2, pool, resolver,
+                        PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA,
+                        &cb_err, &srv_cb_2a, NULL),
+                    NULL, return -630);
 
     pj_sem_wait(sem);
 
-    if (cb_err != 0) {
-        PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
-        return -70;
-    }
+    PJ_TEST_EQ(cb_err, 0, "srv_resolve cb error", return -635);
 
     /* Clear cache */
     pj_thread_sleep(1000);
@@ -1730,20 +1740,15 @@ static int srv_resolver_fallback_test(void)
     g_server[1].action = ACTION_CB;
     g_server[1].action_cb = &action2_1;
 
-    status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver,
-                                PJ_DNS_SRV_FALLBACK_AAAA,
-                                &cb_err, &srv_cb_2b, NULL);
-    if (status != PJ_SUCCESS) {
-        app_perror("   srv_resolve error", status);
-        return -80;
-    }
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(
+                        &domain, &res_name, PORT2, pool, resolver,
+                        PJ_DNS_SRV_FALLBACK_AAAA,
+                        &cb_err, &srv_cb_2b, NULL),
+                    NULL, return -640);
 
     pj_sem_wait(sem);
 
-    if (cb_err != 0) {
-        PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
-        return -90;
-    }
+    PJ_TEST_EQ(cb_err, 0, "srv_resolve cb error", return -645);
 
     /* Clear cache */
     pj_thread_sleep(1000);
@@ -1766,11 +1771,13 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
     pj_dns_parsed_packet *res;
     unsigned i;
 
+    lock();
     res = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_packet);
 
     if (res->q == NULL) {
         res->q = PJ_POOL_ZALLOC_T(pool, pj_dns_parsed_query);
     }
+    unlock();
 
     res->hdr.qdcount = 1;
     res->q[0].type = pkt->q[0].type;
@@ -1782,8 +1789,10 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
         pj_assert(pj_strcmp2(&pkt->q[0].name, "_sip._udp." DOMAIN3)==0);
 
         res->hdr.anscount = SRV_COUNT3;
+        lock();
         res->ans = (pj_dns_parsed_rr*) 
                    pj_pool_calloc(pool, SRV_COUNT3, sizeof(pj_dns_parsed_rr));
+        unlock();
 
         for (i=0; i<SRV_COUNT3; ++i) {
             char *target;
@@ -1796,7 +1805,9 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
             res->ans[i].rdata.srv.weight = 2;
             res->ans[i].rdata.srv.port = (pj_uint16_t)(PORT3+i);
 
+            lock();
             target = (char*)pj_pool_alloc(pool, 16);
+            unlock();
             pj_ansi_snprintf(target, 16, "sip%02d." DOMAIN3, i);
             res->ans[i].rdata.srv.target = pj_str(target);
         }
@@ -1806,8 +1817,10 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
         //pj_assert(pj_strcmp2(&res->q[0].name, "sip." DOMAIN3)==0);
 
         res->hdr.anscount = A_COUNT3;
+        lock();
         res->ans = (pj_dns_parsed_rr*) 
                    pj_pool_calloc(pool, A_COUNT3, sizeof(pj_dns_parsed_rr));
+        unlock();
 
         for (i=0; i<A_COUNT3; ++i) {
             res->ans[i].type = PJ_DNS_TYPE_A;
@@ -1856,7 +1869,6 @@ on_return:
 
 static int srv_resolver_many_test(void)
 {
-    pj_status_t status;
     pj_str_t domain = pj_str(DOMAIN3);
     pj_str_t res_name = pj_str("_sip._udp.");
     int cb_err = 0;
@@ -1872,19 +1884,14 @@ static int srv_resolver_many_test(void)
     g_server[0].pkt_count = 0;
     g_server[1].pkt_count = 0;
 
-    status = pj_dns_srv_resolve(&domain, &res_name, 1, pool, resolver, PJ_TRUE,
-                                &cb_err, &srv_cb_3, NULL);
-    if (status != PJ_SUCCESS) {
-        app_perror("   srv_resolve error", status);
-        return -10;
-    }
+    PJ_TEST_SUCCESS(pj_dns_srv_resolve(
+                        &domain, &res_name, 1, pool, resolver, PJ_TRUE,
+                        &cb_err, &srv_cb_3, NULL),
+                    NULL, return -700);
 
     pj_sem_wait(sem);
 
-    if (cb_err != 0) {
-        PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
-        return -20;
-    }
+    PJ_TEST_EQ(cb_err, 0, "srv_resolve cb error", return -710);
 
     return 0;
 }
@@ -1897,34 +1904,42 @@ int resolver_test(void)
 {
     int rc;
     
+    PJ_LOG(3,(THIS_FILE, "init"));
     rc = init(PJ_FALSE);
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "a_parser_test"));
     rc = a_parser_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "addr_parser_test"));
     rc = addr_parser_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "simple_test"));
     rc = simple_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "dns_test"));
     rc = dns_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "srv_resolver_test"));
     rc = srv_resolver_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "srv_resolver_fallback_test"));
     rc = srv_resolver_fallback_test();
     if (rc != 0)
         goto on_error;
 
+    PJ_LOG(3,(THIS_FILE, "srv_resolver_many_test"));
     rc = srv_resolver_many_test();
     if (rc != 0)
         goto on_error;

@@ -20,17 +20,8 @@
 
 #define THIS_FILE   "test.c"
 
-#define DO_TEST(test)   do { \
-                            PJ_LOG(3, (THIS_FILE, "Running %s...", #test));  \
-                            rc = test; \
-                            PJ_LOG(3, (THIS_FILE,  \
-                                       "%s(%d)",  \
-                                       (rc ? "..ERROR" : "..success"), rc)); \
-                            if (rc!=0) goto on_return; \
-                        } while (0)
-
-
 pj_pool_factory *mem;
+struct test_app_t test_app;
 
 
 void app_perror(pj_status_t status, const char *msg)
@@ -53,15 +44,21 @@ void *dummy()
 }
 #endif
 
-int test_main(void)
+int test_main(int argc, char *argv[])
 {
     int rc = 0;
     pj_caching_pool caching_pool;
-    pj_pool_t *pool;
+    pj_pool_t *pool = NULL;
 
-    pj_init();
+    PJ_TEST_SUCCESS(pj_init(), NULL, return 1);
+
+    if (test_app.ut_app.prm_config)
+        pj_dump_config();
+
     pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
-    pool = pj_pool_create(&caching_pool.factory, "test", 1000, 512, NULL);
+    PJ_TEST_NOT_NULL(pool=pj_pool_create(&caching_pool.factory, "test",
+                                         1000, 512, NULL),
+                     NULL, {rc=10; goto on_return;});
 
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
                      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT);
@@ -69,43 +66,59 @@ int test_main(void)
 
     mem = &caching_pool.factory;
 
-    pjmedia_event_mgr_create(pool, 0, NULL);
+    PJ_TEST_SUCCESS(pjmedia_event_mgr_create(pool, 0, NULL),
+                    NULL, {rc=30; goto on_return;});
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
-    pjmedia_video_format_mgr_create(pool, 64, 0, NULL);
-    pjmedia_converter_mgr_create(pool, NULL);
-    pjmedia_vid_codec_mgr_create(pool, NULL);
+    PJ_TEST_SUCCESS(pjmedia_video_format_mgr_create(pool, 64, 0, NULL),
+                    NULL, {rc=50; goto on_return;});
+    PJ_TEST_SUCCESS(pjmedia_converter_mgr_create(pool, NULL),
+                    NULL, {rc=60; goto on_return;});
+    PJ_TEST_SUCCESS(pjmedia_vid_codec_mgr_create(pool, NULL),
+                    NULL, {rc=70; goto on_return;});
 #endif
 
-#if HAS_VID_PORT_TEST
-    DO_TEST(vid_port_test());
-#endif
+    PJ_TEST_SUCCESS(ut_app_init1(&test_app.ut_app, mem), 
+                    NULL, {rc=40; goto on_return;});
 
-#if HAS_VID_DEV_TEST
-    DO_TEST(vid_dev_test());
+#if HAS_MIPS_TEST
+    /* Run in exclusive mode to get the best performance */
+    UT_ADD_TEST(&test_app.ut_app, mips_test, PJ_TEST_EXCLUSIVE);
 #endif
 
 #if HAS_VID_CODEC_TEST
-    DO_TEST(vid_codec_test());
+    /* Run in exclusive mode due to device sharing error? */
+    UT_ADD_TEST(&test_app.ut_app, vid_codec_test, PJ_TEST_EXCLUSIVE);
+#endif
+
+#if HAS_VID_PORT_TEST
+    UT_ADD_TEST(&test_app.ut_app, vid_port_test, 0);
+#endif
+
+#if HAS_VID_DEV_TEST
+    UT_ADD_TEST(&test_app.ut_app, vid_dev_test, 0);
 #endif
 
 #if HAS_SDP_NEG_TEST
-    DO_TEST(sdp_neg_test());
+    UT_ADD_TEST(&test_app.ut_app, sdp_neg_test, 0);
 #endif
     //DO_TEST(sdp_test (&caching_pool.factory));
     //DO_TEST(rtp_test(&caching_pool.factory));
     //DO_TEST(session_test (&caching_pool.factory));
 #if HAS_JBUF_TEST
-    DO_TEST(jbuf_main());
-#endif
-#if HAS_MIPS_TEST
-    DO_TEST(mips_test());
+    UT_ADD_TEST(&test_app.ut_app, jbuf_test, 0);
 #endif
 #if HAS_CODEC_VECTOR_TEST
-    DO_TEST(codec_test_vectors());
+    UT_ADD_TEST(&test_app.ut_app, codec_test_vectors, 0);
 #endif
 
-    PJ_LOG(3,(THIS_FILE," "));
+    if (ut_run_tests(&test_app.ut_app, "pjmedia tests", argc, argv)) {
+        rc = 99;
+    } else {
+        rc = 0;
+    }
+
+    ut_app_destroy(&test_app.ut_app);
 
 on_return:
     if (rc != 0) {
@@ -121,8 +134,8 @@ on_return:
 #endif
 
     pjmedia_event_mgr_destroy(pjmedia_event_mgr_instance());
-
-    pj_pool_release(pool);
+    if (pool)
+        pj_pool_release(pool);
     pj_caching_pool_destroy(&caching_pool);
 
     return rc;
