@@ -371,6 +371,7 @@ public:
     AccountCallConfig() : holdType(PJSUA_CALL_HOLD_TYPE_DEFAULT),
                           prackUse(PJSUA_100REL_NOT_USED),
                           timerUse(PJSUA_SIP_TIMER_OPTIONAL),
+                          siprecUse(PJSUA_SIP_SIPREC_INACTIVE),
                           timerMinSESec(90),
                           timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE)
     {}
