@@ -1136,7 +1136,12 @@ BuddyVector2 Account::enumBuddies2() const PJSUA2_THROW(Error)
 
     PJSUA2_CHECK_EXPR( pjsua_enum_buddies(ids, &count) );
     for (i = 0; i < count; ++i) {
-        bv2.push_back(Buddy(ids[i]));
+        pjsua_buddy_info pbi;
+
+        pjsua_buddy_get_info(ids[i], &pbi);
+        if (id == pbi.acc_id) {
+            bv2.push_back(Buddy(ids[i]));
+        }
     }
 
     return bv2;
@@ -1163,11 +1168,17 @@ Buddy Account::findBuddy2(string uri) const PJSUA2_THROW(Error)
 {
     pj_str_t pj_uri;
     pjsua_buddy_id bud_id;
+    pjsua_buddy_info pbi;
 
     pj_strset2(&pj_uri, (char*)uri.c_str());
 
     bud_id = pjsua_buddy_find(&pj_uri);
-    if (id == PJSUA_INVALID_ID) {
+    if (bud_id == PJSUA_INVALID_ID) {
+        PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+    }
+
+    pjsua_buddy_get_info(bud_id, &pbi);
+    if (id != pbi.acc_id) {
         PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
     }
 

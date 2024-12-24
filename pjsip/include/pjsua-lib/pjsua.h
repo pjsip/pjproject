@@ -6585,10 +6585,21 @@ typedef struct pjsua_buddy_config
     pj_bool_t   subscribe_dlg_event;
 
     /**
-     * Specify arbitrary application data to be associated with with
+     * Specify arbitrary application data to be associated with
      * the buddy object.
      */
     void       *user_data;
+
+    /**
+     * Specify account to be associated with the buddy object. The account
+     * will be used for creating the subscription.
+     *
+     * IMPORTANT: Account must remain valid throughout the entire lifetime
+     * of the buddy object.
+     *
+     * Default: PJSUA_INVALID_ID (buddy is not associated to any account)
+     */
+    pjsua_acc_id acc_id;
 
 } pjsua_buddy_config;
 
@@ -6633,6 +6644,12 @@ typedef struct pjsua_buddy_info
      * The full URI of the buddy, as specified in the configuration.
      */
     pj_str_t            uri;
+
+    /**
+     * The account ID associated with this buddy. If not associated
+     * with any account, the value will be PJSUA_INVALID_ID.
+     */
+    pjsua_acc_id        acc_id;
 
     /**
      * Buddy's Contact, only available when presence subscription has
