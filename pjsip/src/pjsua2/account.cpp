@@ -320,6 +320,7 @@ void AccountCallConfig::readObject(const ContainerNode &node)
     NODE_READ_NUM_T   ( this_node, pjsua_call_hold_type, holdType);
     NODE_READ_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
     NODE_READ_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
+    NODE_READ_NUM_T   ( this_node, pjsua_sip_siprec_use, siprecUse);
     NODE_READ_UNSIGNED( this_node, timerMinSESec);
     NODE_READ_UNSIGNED( this_node, timerSessExpiresSec);
 }
@@ -332,6 +333,7 @@ void AccountCallConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_NUM_T   ( this_node, pjsua_call_hold_type, holdType);
     NODE_WRITE_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
     NODE_WRITE_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
+    NODE_WRITE_NUM_T   ( this_node, pjsua_sip_siprec_use, siprecUse);
     NODE_WRITE_UNSIGNED( this_node, timerMinSESec);
     NODE_WRITE_UNSIGNED( this_node, timerSessExpiresSec);
 }
@@ -634,6 +636,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.call_hold_type          = callConfig.holdType;
     ret.require_100rel          = callConfig.prackUse;
     ret.use_timer               = callConfig.timerUse;
+    ret.use_siprec              = callConfig.siprecUse;
     ret.timer_setting.min_se    = callConfig.timerMinSESec;
     ret.timer_setting.sess_expires = callConfig.timerSessExpiresSec;
 
@@ -797,6 +800,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     callConfig.holdType         = prm.call_hold_type;
     callConfig.prackUse         = prm.require_100rel;
     callConfig.timerUse         = prm.use_timer;
+    callConfig.siprecUse        = prm.use_siprec;
     callConfig.timerMinSESec    = prm.timer_setting.min_se;
     callConfig.timerSessExpiresSec = prm.timer_setting.sess_expires;
 

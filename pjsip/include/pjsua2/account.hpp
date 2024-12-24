@@ -345,6 +345,14 @@ struct AccountCallConfig : public PersistentObject
     pjsua_sip_timer_use timerUse;
 
     /**
+     * Specify the usage of SIPREC INVITE request. See the
+     * pjsua_sip_siprec_use for possible values.
+     * 
+     * Default: PJSUA_SIP_SIPREC_INACTIVE
+     */
+    pjsua_sip_siprec_use siprecUse;
+
+    /**
      * Specify minimum Session Timer expiration period, in seconds.
      * Must not be lower than 90. Default is 90.
      */
@@ -363,6 +371,7 @@ public:
     AccountCallConfig() : holdType(PJSUA_CALL_HOLD_TYPE_DEFAULT),
                           prackUse(PJSUA_100REL_NOT_USED),
                           timerUse(PJSUA_SIP_TIMER_OPTIONAL),
+                          siprecUse(PJSUA_SIP_SIPREC_INACTIVE),
                           timerMinSESec(90),
                           timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE)
     {}
