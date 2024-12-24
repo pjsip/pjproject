@@ -2369,7 +2369,13 @@ typedef struct pjsua_config
      */
     pjsua_sip_timer_use use_timer;
 
-
+    /**
+     * Specify the usage of SIPREC sessions. See the
+     * #pjsua_sip_siprec_use for possible values. Note that this setting can be
+     * further customized in account configuration (#pjsua_acc_config).
+     *
+     * Default: PJSUA_SIP_SIPREC_INACTIVE
+     */
     pjsua_sip_siprec_use use_siprec;
 
     /**
@@ -4094,6 +4100,12 @@ typedef struct pjsua_acc_config
      */
     pjsua_sip_timer_use use_timer;
 
+    /**
+     * Specify the usage of SIPREC sessions. See the
+     * #pjsua_sip_siprec_use for possible values.
+     *
+     * Default: PJSUA_SIP_SIPREC_INACTIVE
+     */
     pjsua_sip_siprec_use use_siprec;
 
     /**
