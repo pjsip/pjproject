@@ -379,7 +379,7 @@ PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_ssrc(pj_pool_t *pool,
  * @return              SDP label attribute.
  */
 PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label( pj_pool_t *pool,
-                                                pjmedia_sdp_attr *attr);
+                                                pj_str_t *label_str);
 
 
 /* **************************************************************************

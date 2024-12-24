@@ -551,16 +551,16 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_ssrc(const pjmedia_sdp_attr *attr,
 
 
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label( pj_pool_t *pool,
-                                                pjmedia_sdp_attr *label_attr)
+                                                pj_str_t *label_str)
 {
     pjmedia_sdp_attr *attr;
     const pj_str_t STR_LABEL_ATTR = {"label", 5};
     
     attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
     attr->name = STR_LABEL_ATTR;
-    attr->value.ptr = (char *)pj_pool_alloc(pool, label_attr->value.slen);
-    pj_memcpy(attr->value.ptr, label_attr->value.ptr, label_attr->value.slen);
-    attr->value.slen = label_attr->value.slen;
+    attr->value.ptr = (char *)pj_pool_alloc(pool, label_str->slen);
+    pj_memcpy(attr->value.ptr, label_str->ptr, label_str->slen);
+    attr->value.slen = label_str->slen;
 
     return attr;
 }
