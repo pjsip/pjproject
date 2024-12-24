@@ -68,17 +68,6 @@ pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
 
 
 /**
- * Checks if the INVITE request is SIPREC.
- * 
- * @param rdata         The incoming request to be verified.
- * 
- * @return               If the request is SIPREC, return PJ_TRUE;
- *                       otherwise, return PJ_FALSE.
- */
-PJ_DECL(pj_status_t) pjsip_siprec_check_request(pjsip_rx_data *rdata);
-
-
-/**
  * Verifies that the incoming request has the siprec value
  * in the Require header and "+sip.src" parameter exist in the Contact header.
  * If both conditions are met, according to RFC 7866,

@@ -45,6 +45,40 @@ static void pjsip_siprec_deinit_module(pjsip_endpoint *endpt)
 
 
 /**
+ * Checks if the INVITE request is SIPREC.
+ */
+static pj_status_t pjsip_siprec_check_request(pjsip_rx_data *rdata)
+{
+    const pj_str_t str_require = {"Require", 7};
+    const pj_str_t str_src = {"+sip.src", 8};
+    pjsip_require_hdr *req_hdr;
+    pjsip_contact_hdr *contact_hdr;
+
+    /* Find Require header */
+    req_hdr = (pjsip_require_hdr*)
+        pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_require, NULL);
+
+    if(!req_hdr || (pjsip_siprec_verify_require_hdr(req_hdr) == PJ_FALSE)){
+        return PJ_FALSE;
+    }
+
+    /* Find Contact header */
+    contact_hdr = (pjsip_contact_hdr*)
+            pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
+
+    if(!contact_hdr || !contact_hdr->uri){
+        return PJ_FALSE;
+    }
+
+    /* Check "+sip.src" parameter exist in the Contact header */
+    if(!pjsip_param_find(&contact_hdr->other_param, &str_src)){
+        return PJ_FALSE;
+    }
+    return PJ_TRUE;
+}
+
+
+/**
  * Initialize siprec support in PJSIP. 
  */
 PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
@@ -88,40 +122,6 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
         }
     }
     return PJ_FALSE;
-}
-
-
-/**
- * Checks if the INVITE request is SIPREC.
- */
-PJ_DEF(pj_status_t) pjsip_siprec_check_request(pjsip_rx_data *rdata)
-{
-    const pj_str_t str_require = {"Require", 7};
-    const pj_str_t str_src = {"+sip.src", 8};
-    pjsip_require_hdr *req_hdr;
-    pjsip_contact_hdr *contact_hdr;
-
-    /* Find Require header */
-    req_hdr = (pjsip_require_hdr*)
-        pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_require, NULL);
-
-    if(!req_hdr || (pjsip_siprec_verify_require_hdr(req_hdr) == PJ_FALSE)){
-        return PJ_FALSE;
-    }
-
-    /* Find Contact header */
-    contact_hdr = (pjsip_contact_hdr*)
-            pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
-
-    if(!contact_hdr || !contact_hdr->uri){
-        return PJ_FALSE;
-    }
-
-    /* Check "+sip.src" parameter exist in the Contact header */
-    if(!pjsip_param_find(&contact_hdr->other_param, &str_src)){
-        return PJ_FALSE;
-    }
-    return PJ_TRUE;
 }
 
 
