@@ -390,6 +390,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
+    cfg->acc_id = PJSUA_INVALID_ID;
 }
 
 PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
