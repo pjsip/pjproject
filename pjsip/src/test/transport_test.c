@@ -218,13 +218,16 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     PJ_LOG(3,(THIS_FILE, "  single message round-trip test..."));
 
     /* Register out test module to receive the message (if necessary). */
+    pj_enter_critical_section();
     if (send_recv_module.id == -1) {
         status = pjsip_endpt_register_module( endpt, &send_recv_module );
         if (status != PJ_SUCCESS) {
+            pj_leave_critical_section();
             app_perror("   error: unable to register module", status);
             return -500;
         }
     }
+    pj_leave_critical_section();
 
     /* Disable message logging. */
     msg_log_enabled = msg_logger_set_enabled(0);
@@ -636,13 +639,16 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     logger_enabled = msg_logger_set_enabled(0);
 
     /* Register module (if not yet registered) */
+    pj_enter_critical_section();
     if (rt_module.id == -1) {
         status = pjsip_endpt_register_module( endpt, &rt_module );
         if (status != PJ_SUCCESS) {
+            pj_leave_critical_section();
             app_perror("   error: unable to register module", status);
             return -600;
         }
     }
+    pj_leave_critical_section();
 
     /* Create pool for this test. */
     pool = pjsip_endpt_create_pool(endpt, NULL, 4000, 4000);
@@ -833,13 +839,16 @@ int transport_load_test(pjsip_transport_type_e tp_type,
 
     PJ_LOG(3,(THIS_FILE, "  transport load test..."));
 
+    pj_enter_critical_section();
     if (mod_load_test.id == -1) {
         rc = pjsip_endpt_register_module( endpt, &mod_load_test);
         if (rc != PJ_SUCCESS) {
+            pj_leave_critical_section();
             app_perror("error registering module", rc);
             return -610;
         }
     }
+    pj_leave_critical_section();
     g_lt[tid].err = PJ_FALSE;
     g_lt[tid].next_seq = 0;
 
