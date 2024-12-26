@@ -1350,6 +1350,9 @@ static pj_status_t verify_request(const pjsua_call *call,
     if (status == PJ_SUCCESS) {
         unsigned options = 0;
 
+        /* Add SIPREC support to prevent the "bad extension" error */
+        options |= PJSIP_INV_SUPPORT_SIPREC;
+
         /* Verify that we can handle the request. */
         status = pjsip_inv_verify_request3(rdata,
                                            call->inv->pool_prov, &options, 
@@ -1809,9 +1812,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     options |= PJSIP_INV_SUPPORT_100REL;
     options |= PJSIP_INV_SUPPORT_TIMER;
 
-    if(pjsua_var.acc[acc_id].cfg.use_siprec == PJSUA_SIP_SIPREC_INACTIVE){
-        options |= PJSIP_INV_NOT_SUPPORT_SIPREC;
-    }else{
+    if(pjsua_var.acc[acc_id].cfg.use_siprec != PJSUA_SIP_SIPREC_INACTIVE){
         options |= PJSIP_INV_SUPPORT_SIPREC;
         if(pjsua_var.acc[acc_id].cfg.use_siprec == PJSUA_SIP_SIPREC_MANDATORY){
             options |= PJSIP_INV_REQUIRE_SIPREC;

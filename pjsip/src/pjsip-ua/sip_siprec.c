@@ -149,7 +149,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     pj_list_init(&res_hdr_list);
 
     /* Checks if The SIPREC request option is inactive */
-    if (*options & PJSIP_INV_NOT_SUPPORT_SIPREC){
+    if (!(*options & PJSIP_INV_SUPPORT_SIPREC)){
         return PJ_SUCCESS;
     }
 

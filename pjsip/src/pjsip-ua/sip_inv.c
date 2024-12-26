@@ -1543,7 +1543,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
             {
                 rem_option |= PJSIP_INV_REQUIRE_100REL;
 
-            } else if ((*options & PJSIP_INV_NOT_SUPPORT_SIPREC) && 
+            } else if (!(*options & PJSIP_INV_SUPPORT_SIPREC) && 
                 pj_stricmp(&req_hdr->values[i], &STR_SIPREC)==0)
             {
                 unsupp_tags[unsupp_cnt++] = req_hdr->values[i];

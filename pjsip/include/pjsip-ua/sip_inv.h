@@ -399,10 +399,6 @@ enum pjsip_inv_option
      */
     PJSIP_INV_SUPPORT_SIPREC      = 2048,
     
-    /**
-     * Indicate not support for siprec
-     */
-    PJSIP_INV_NOT_SUPPORT_SIPREC  = 4096,
 };
 
 /* Forward declaration of Session Timers */
