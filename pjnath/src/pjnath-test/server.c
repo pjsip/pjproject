@@ -309,6 +309,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
                     pj_ssl_sock_close(ssock_serv);
             }
 
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
             status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
                                                  &privkey_file, &privkey_pass,
                                                  &cert);
@@ -316,12 +317,21 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
                 if (ssock_serv)
                     pj_ssl_sock_close(ssock_serv);
             }
-
             status = pj_ssl_sock_set_certificate(ssock_serv, pool, cert);
             if (status != PJ_SUCCESS) {
                 if (ssock_serv)
                     pj_ssl_sock_close(ssock_serv);
             }
+#else
+            /* Schannel backend currently can only load certificates from
+             * OS cert store, here we don't load any cert so the SSL socket
+             * will create & use a self-signed cert.
+             */
+            PJ_UNUSED_ARG(ca_file);
+            PJ_UNUSED_ARG(cert_file);
+            PJ_UNUSED_ARG(privkey_file);
+            PJ_UNUSED_ARG(privkey_pass);
+#endif
             test_srv->ssl_srv_sock = ssock_serv;
 
             status = pj_ssl_sock_start_accept(ssock_serv, pool, &bound_addr, 
