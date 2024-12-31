@@ -502,6 +502,9 @@ static pjmedia_port* init_conf_port(unsigned nb_participant,
         if (status != PJ_SUCCESS)
             return NULL;
 
+        status = pjmedia_port_destroy(gen_port);
+        pj_assert(status == PJ_SUCCESS);
+
         /* Connect gen_port to sound dev */
         status = pjmedia_conf_connect_port(conf, slot1, 0, 0);
         if (status != PJ_SUCCESS)
@@ -517,6 +520,9 @@ static pjmedia_port* init_conf_port(unsigned nb_participant,
         status = pjmedia_conf_add_port(conf, pool, null_port, NULL, &slot2);
         if (status != PJ_SUCCESS)
             return NULL;
+
+        status = pjmedia_port_destroy(null_port);
+        pj_assert(status == PJ_SUCCESS);
 
         /* connect sound to null sink port */
         status = pjmedia_conf_connect_port(conf, 0, slot2, 0);
@@ -2385,6 +2391,8 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
     pj_get_timestamp(&t1);
 
     pj_sub_timestamp(&t1, &t0);
+
+    pjmedia_port_destroy(gen_port);
 
     if (e->custom_deinit)
         e->custom_deinit(e);
