@@ -2476,7 +2476,9 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
         /* SSL might just return SSL_ERROR_WANT_READ in 
          * re-negotiation.
          */
-        if (err != SSL_ERROR_NONE && err != SSL_ERROR_WANT_READ) {
+        if (err != SSL_ERROR_NONE && err != SSL_ERROR_WANT_READ &&
+            err != SSL_ERROR_ZERO_RETURN)
+        {
             if (err == SSL_ERROR_SYSCALL && size_ == -1 &&
                 ERR_peek_error() == 0 && errno == 0)
             {
@@ -2499,9 +2501,11 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
             }
         }
         
-        pj_lock_release(ssock->write_mutex);
-        /* Need renegotiation */
-        return PJ_EEOF;
+        /* Return PJ_EEOF when SSL needs renegotiation */
+        if (!SSL_is_init_finished(ossock->ossl_ssl)) {
+            pj_lock_release(ssock->write_mutex);
+            return PJ_EEOF;
+        }
     }
 
     pj_lock_release(ssock->write_mutex);

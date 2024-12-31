@@ -1,4 +1,4 @@
-name: CI Linux
+name: CI Ubuntu
 on:
   push:
     branches:
@@ -6,11 +6,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 env:
-  CI_ARGS: ${{ vars.CI_LIN_ARGS }}
+  CI_ARGS: ${{ vars.CI_UBUNTU_ARGS }}
   CI_MODE: ${{ vars.CI_MODE }}
   MAKE_FAST: make -j 3
 jobs:
-  build-lin-default:
+  build-ubuntu-default:
   # checking pure lib source distribution with plain configure & make
     runs-on: ubuntu-latest
     steps:
@@ -20,7 +20,7 @@ jobs:
     - name: make
       run: $MAKE_FAST
 
-  lin-default-full-bundle-1:
+  ubuntu-default-full-bundle-1:
   # full bundle: enable all codecs + AEC + DTLS
   # full bundle 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
     runs-on: ubuntu-latest
@@ -49,7 +49,7 @@ jobs:
     - name: pjsua-test
       run: make pjsua-test
 
-  lin-default-full-bundle-2:
+  ubuntu-default-full-bundle-2:
   # full bundle 2: running pjnath test
     runs-on: ubuntu-latest
     steps:
@@ -65,7 +65,7 @@ jobs:
     - name: pjnath-test
       run: make pjnath-test
 
-  lin-default-full-bundle-3:
+  ubuntu-default-full-bundle-3:
   # full bundle 3: running pjsip test
     runs-on: ubuntu-latest
     steps:
@@ -81,7 +81,7 @@ jobs:
     - name: pjsip-test
       run: make pjsip-test
 
-  build-lin-no-tls:
+  build-ubuntu-no-tls:
   # no TLS
     runs-on: ubuntu-latest
     steps:
@@ -98,7 +98,7 @@ jobs:
   # build-ubuntu-openssl
   # TLS: with OpenSSL (same as build-ubuntu-default)
 
-  build-lin-gnu-tls:
+  build-ubuntu-gnu-tls:
   # TLS: with GnuTLS
     runs-on: ubuntu-latest
     steps:
@@ -112,7 +112,7 @@ jobs:
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
 
-  lin-vid-openh264-1:
+  ubuntu-vid-openh264-1:
   # video: video enabled with vpx and openh264
   # video 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
     runs-on: ubuntu-latest
@@ -145,7 +145,7 @@ jobs:
     - name: pjsua-test
       run: make pjsua-test
 
-  lin-vid-openh264-2:
+  ubuntu-vid-openh264-2:
   # video 2: running pjnath test
     runs-on: ubuntu-latest
     steps:
@@ -165,7 +165,7 @@ jobs:
     - name: pjnath-test
       run: make pjnath-test
 
-  lin-vid-openh264-3:
+  ubuntu-vid-openh264-3:
   # video: 3: running pjsip test
     runs-on: ubuntu-latest
     steps:
@@ -185,7 +185,7 @@ jobs:
     - name: pjsip-test
       run: make pjsip-test
 
-  build-lin-vid-ffmpeg:
+  build-ubuntu-vid-ffmpeg:
   # video enabled with vpx and ffmpeg and x264
     runs-on: ubuntu-latest
     steps:
