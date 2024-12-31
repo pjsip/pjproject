@@ -213,7 +213,7 @@ jobs:
         ./pjnath-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
       shell: powershell
 
-build-win-gnu-tls:
+  build-win-gnu-tls:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
