@@ -867,6 +867,11 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
                                      "Failed to flush delayed send"));
                         goto on_error;
                     }
+
+                    /* If renego has been completed, continue reading data */
+                    if (status == PJ_SUCCESS)
+                        continue;
+
                 } else if (status != PJ_EPENDING) {
                     PJ_PERROR(1,(ssock->pool->obj_name, status, 
                                  "Renegotiation failed"));
