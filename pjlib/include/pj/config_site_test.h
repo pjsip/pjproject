@@ -1,5 +1,5 @@
 /* Temp workaround for MacOS rwmutex deadlock */
-#if defined(PJ_DARWINOS) and PJ_DARWINOS
+#if defined(PJ_DARWINOS) && PJ_DARWINOS
     #define PJ_EMULATE_RWMUTEX  1
 #endif
 
