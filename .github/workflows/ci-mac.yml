@@ -24,7 +24,7 @@ jobs:
   default-pjlib-util-pjmedia-pjnath:
     # full bundle: enable all codecs + AEC + DTLS
     runs-on: macos-latest
-    name: Default / pjlib,util,pjmedia,pjnath tests
+    name: Default / pjlib,util,pjmedia,pjnath
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -92,7 +92,7 @@ jobs:
 
   openssl-1:
     runs-on: macos-latest
-    name: OpenSSL / pjlib,util,pjnath,pjmedia tests
+    name: OpenSSL / pjlib,util,pjnath,pjmedia
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -124,7 +124,7 @@ jobs:
 
   openssl-2:
     runs-on: macos-latest
-    name: OpenSSL / pjsip tests
+    name: OpenSSL / pjsip
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -144,7 +144,7 @@ jobs:
 
   gnu-tls-1:
     runs-on: macos-latest
-    name: GnuTLS / pjlib,util,pjmedia,pjnath tests
+    name: GnuTLS / pjlib,util,pjmedia,pjnath
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -192,7 +192,7 @@ jobs:
 
   video-openh264-1:
     runs-on: macos-latest
-    name: Vid Openh264+VPX / pjmedia,pjsua tests
+    name: Openh264+VPX / pjmedia,pjsua
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -218,7 +218,7 @@ jobs:
 
   video-openh264-2:
     runs-on: macos-latest
-    name: Vid Openh264+VPX / pjlib,util,pjnath test
+    name: Openh264+VPX / pjlib,util,pjnath
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -240,7 +240,7 @@ jobs:
 
   video-openh264-3:
     runs-on: macos-latest
-    name: Vid Openh264+VPX / pjsip test
+    name: Openh264+VPX / pjsip
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -258,7 +258,7 @@ jobs:
 
   video-ffmpeg:
     runs-on: macos-latest
-    name: Vid FFMPEG+VPX+x264 / pjmedia test
+    name: FFMPEG+VPX+x264 / pjmedia
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -286,7 +286,7 @@ jobs:
 
   video-vid-toolbox:
     runs-on: macos-latest
-    name: Vid VPX+VidToolbox / pjmedia test
+    name: VPX+VidToolbox / pjmedia
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies

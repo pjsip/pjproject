@@ -43,7 +43,7 @@ jobs:
 
   openssl-1:
     runs-on: windows-latest
-    name: OpenSSL / pjlib,util,pjmedia tests
+    name: OpenSSL / pjlib,util,pjmedia
     steps:
     - uses: actions/checkout@master
     - name: get openssl
@@ -101,7 +101,7 @@ jobs:
 
   openssl-2:
     runs-on: windows-latest
-    name: OpenSSL / pjsip,pjsua tests
+    name: OpenSSL / pjsip,pjsua
     steps:
     - uses: actions/checkout@master
     - name: get openssl
@@ -175,7 +175,7 @@ jobs:
 
   openssl-3:
     runs-on: windows-latest
-    name: OpenSSL / pjnath tests
+    name: OpenSSL / pjnath
     steps:
     - uses: actions/checkout@master
     - name: get openssl
@@ -258,7 +258,7 @@ jobs:
 
   vid-libvpx-schannel-1:
     runs-on: windows-latest
-    name: Vid VPX+SChannel / pjlib,util,pjmedia,pjnath tests
+    name: VPX+SChannel / pjlib,util,pjmedia,pjnath
     steps:
     - uses: actions/checkout@master
     - name: get vpx
@@ -359,7 +359,7 @@ jobs:
 
   vid-libvpx-schannel-2:
     runs-on: windows-latest
-    name: Vid VPX+SChannel / pjsua tests
+    name: VPX+SChannel / pjsua
     steps:
     - uses: actions/checkout@master
     - name: get vpx
@@ -453,7 +453,7 @@ jobs:
 
   vid-libvpx-schannel-3:
     runs-on: windows-latest
-    name: Vid VPX+SChannel / pjsip test
+    name: VPX+SChannel / pjsip
     steps:
     - uses: actions/checkout@master
     - name: get vpx
@@ -522,7 +522,7 @@ jobs:
 
   build-win-vid-ffmpeg:
     runs-on: windows-latest
-    name: Vid FFMPEG / build only
+    name: FFMPEG / build only
     steps:
     - uses: actions/checkout@master
     - name: get ffmpeg
