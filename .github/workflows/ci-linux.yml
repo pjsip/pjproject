@@ -20,6 +20,8 @@ jobs:
       run: ./configure
     - name: make
       run: $MAKE_FAST
+    - name: get SSL info
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify oepnssl is used
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+1'
 
@@ -123,6 +125,8 @@ jobs:
       run: $MAKE_FAST
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
+    - name: get SSL info
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify gnu tls is used
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+2'
     - name: pjlib-test
@@ -140,7 +144,7 @@ jobs:
     - name: install dependencies
       run: sudo apt-get install -y swig nasm sip-tester libvpx-dev libopencore-amrnb-dev
     - name: get openh264
-      run: git clone --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
+      run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
       run: cd openh264 && $MAKE_FAST && sudo make install && sudo ldconfig
     - name: config site
@@ -162,6 +166,7 @@ jobs:
         vid codec list
         q
         EOF
+        cat pjsua-vid-outputs
     - name: pjmedia-test
       run: make pjmedia-test
     - name: pjsua-test
@@ -175,7 +180,7 @@ jobs:
     - name: install dependencies
       run: sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev
     - name: get openh264
-      run: git clone --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
+      run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
       run: cd openh264 && $MAKE_FAST && sudo make install && sudo ldconfig
     - name: config site
@@ -199,7 +204,7 @@ jobs:
     - name: install dependencies
       run: sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev
     - name: get openh264
-      run: git clone --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
+      run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
       run: cd openh264 && $MAKE_FAST && sudo make install && sudo ldconfig
     - name: config site
@@ -219,7 +224,7 @@ jobs:
     - name: install dependencies
       run: sudo apt-get install -y swig nasm libx264-dev libvpx-dev
     - name: get ffmpeg
-      run: git clone --single-branch --branch release/4.2 https://github.com/FFmpeg/FFmpeg.git
+      run: git clone --depth 1 --single-branch --branch release/4.2 https://github.com/FFmpeg/FFmpeg.git
     - name: configure ffmpeg
       run: cd FFmpeg && ./configure --enable-shared --disable-static --enable-gpl --enable-libx264
     - name: build ffmpeg
@@ -234,11 +239,13 @@ jobs:
       run: cd pjsip-apps/src/swig && make
     - name: capture pjsua video capabilities
       run: |
+        export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
         cat << EOF | pjsip-apps/bin/pjsua-`make infotarget` > pjsua-vid-outputs
         vid dev list
         vid codec list
         q
         EOF
+        cat pjsua-vid-outputs
     - name: ensure H264 codec is installed
       run: cat pjsua-vid-outputs | egrep 'H264/'
     - name: ensure VP8 codec is installed

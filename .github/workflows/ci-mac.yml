@@ -109,6 +109,8 @@ jobs:
       run: cd pjsip-apps/src/swig && make
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: get SSL info
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify openssl is used
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+1'
     - name: pjlib-test
@@ -133,6 +135,10 @@ jobs:
       run: $MAKE_FAST
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: get SSL info
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
+    - name: verify openssl is used
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+1'
     - name: pjsip-test
       run: make pjsip-test
 
@@ -153,6 +159,8 @@ jobs:
         python-version: '3.10'
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
+    - name: get SSL info
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify gnu tls is used
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+2'
     - name: pjlib-test
@@ -175,6 +183,8 @@ jobs:
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=/usr/local/
     - name: make
       run: $MAKE_FAST
+    - name: get SSL info
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify gnu tls is used
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+2'
     - name: pjsip-test
@@ -254,7 +264,7 @@ jobs:
     - name: install dependencies
       run: brew install openssl x264 libvpx nasm swig
     - name: get ffmpeg
-      run: git clone --single-branch --branch release/7.0 https://github.com/FFmpeg/FFmpeg.git
+      run: git clone --depth 1 --single-branch --branch release/7.0 https://github.com/FFmpeg/FFmpeg.git
     - name: configure ffmpeg
       run: cd FFmpeg && LDFLAGS="-Wl,-ld_classic" ./configure --enable-shared --disable-static --enable-gpl --enable-libx264
     - name: build ffmpeg
