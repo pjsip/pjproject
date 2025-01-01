@@ -274,4 +274,4 @@ jobs:
     #- name: ensure SDL is installed
     #  run: cat pjsua-caps | egrep '\[SDL\]\[render\]'
     - name: pjmedia-test
-      run: make pjmedia-test
+      run: export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH && make pjmedia-test
