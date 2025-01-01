@@ -158,3 +158,6 @@ uninstall:
 	rmdir $(DESTDIR)$(includedir) 2> /dev/null || true
 	$(RM) $(addprefix $(DESTDIR)$(libdir)/,$(notdir $(APP_LIBXX_FILES)))
 	rmdir $(DESTDIR)$(libdir) 2> /dev/null || true
+
+infotarget:
+	@echo $(TARGET_NAME)

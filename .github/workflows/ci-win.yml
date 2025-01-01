@@ -6,8 +6,9 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
-  build-win-default:
+  default:
     runs-on: windows-latest
+    name: Default / build only
     steps:
     - uses: actions/checkout@master
     - name: get swig
@@ -40,8 +41,9 @@ jobs:
         msbuild swig_java_pjsua2.vcxproj /p:PlatformToolset=v143 /p:Configuration=Debug /p:Platform=win32 /p:UseEnv=true
       shell: cmd
 
-  win-openssl-1:
+  openssl-1:
     runs-on: windows-latest
+    name: OpenSSL / pjlib,util,pjmedia tests
     steps:
     - uses: actions/checkout@master
     - name: get openssl
@@ -97,8 +99,9 @@ jobs:
         ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
       shell: powershell
 
-  win-openssl-2:
+  openssl-2:
     runs-on: windows-latest
+    name: OpenSSL / pjsip,pjsua tests
     steps:
     - uses: actions/checkout@master
     - name: get openssl
@@ -170,8 +173,9 @@ jobs:
         echo python runall.py
       shell: powershell
 
-  win-openssl-3:
+  openssl-3:
     runs-on: windows-latest
+    name: OpenSSL / pjnath tests
     steps:
     - uses: actions/checkout@master
     - name: get openssl
@@ -213,8 +217,9 @@ jobs:
         ./pjnath-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
       shell: powershell
 
-  build-win-gnu-tls:
+  gnu-tls:
     runs-on: windows-latest
+    name: GnuTLS / build only
     steps:
     - uses: actions/checkout@master
     - name: get gnutls
@@ -251,8 +256,9 @@ jobs:
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
 
-  win-vid-libvpx-schannel-1:
+  vid-libvpx-schannel-1:
     runs-on: windows-latest
+    name: Vid VPX+SChannel / pjlib,util,pjmedia,pjnath tests
     steps:
     - uses: actions/checkout@master
     - name: get vpx
@@ -343,9 +349,17 @@ jobs:
         cd pjmedia/bin
         ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
       shell: powershell
+    - name: pjnath-test
+      run: |
+        $env:SDL_DIR = Get-Content .\sdl_dir.txt
+        $env:PATH+=";$env:SDL_DIR\lib\x86;"
+        cd pjnath/bin
+        ./pjnath-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }} ${{ vars.CI_MODE }}
+      shell: powershell
 
-  win-vid-libvpx-schannel-2:
+  vid-libvpx-schannel-2:
     runs-on: windows-latest
+    name: Vid VPX+SChannel / pjsua tests
     steps:
     - uses: actions/checkout@master
     - name: get vpx
@@ -437,8 +451,9 @@ jobs:
         echo python runall.py
       shell: powershell
 
-  win-vid-libvpx-schannel-3:
+  vid-libvpx-schannel-3:
     runs-on: windows-latest
+    name: Vid VPX+SChannel / pjsip test
     steps:
     - uses: actions/checkout@master
     - name: get vpx
@@ -497,13 +512,6 @@ jobs:
         set LIB=%LIB%;%OPENSSL_DIR%\lib;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
-    - name: pjnath-test
-      run: |
-        $env:SDL_DIR = Get-Content .\sdl_dir.txt
-        $env:PATH+=";$env:SDL_DIR\lib\x86;"
-        cd pjnath/bin
-        ./pjnath-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }} ${{ vars.CI_MODE }}
-      shell: powershell
     - name: pjsip-test
       run: |
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
@@ -514,6 +522,7 @@ jobs:
 
   build-win-vid-ffmpeg:
     runs-on: windows-latest
+    name: Vid FFMPEG / build only
     steps:
     - uses: actions/checkout@master
     - name: get ffmpeg

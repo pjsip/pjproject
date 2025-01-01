@@ -10,20 +10,24 @@ env:
   CI_MODE: ${{ vars.CI_MODE }}
   MAKE_FAST: make -j 3
 jobs:
-  build-ubuntu-default:
+  default-build:
   # checking pure lib source distribution with plain configure & make
     runs-on: ubuntu-latest
+    name: Default / build only
     steps:
     - uses: actions/checkout@v2
     - name: configure
       run: ./configure
     - name: make
       run: $MAKE_FAST
+    - name: verify oepnssl is used
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+1'
 
-  ubuntu-default-full-bundle-1:
+  default-full-bundle-1:
   # full bundle: enable all codecs + AEC + DTLS
   # full bundle 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
     runs-on: ubuntu-latest
+    name: Default / pjmedia,pjsua tests
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -40,18 +44,15 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.10'
-    - name: pjlib-test
-      run: make pjlib-test
-    - name: pjlib-util-test
-      run: make pjlib-util-test
     - name: pjmedia-test
       run: make pjmedia-test
     - name: pjsua-test
       run: make pjsua-test
 
-  ubuntu-default-full-bundle-2:
+  default-full-bundle-2:
   # full bundle 2: running pjnath test
     runs-on: ubuntu-latest
+    name: Default / pjlib,util,pjnath tests
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -62,12 +63,17 @@ jobs:
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: $MAKE_FAST
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjlib-util-test
+      run: make pjlib-util-test
     - name: pjnath-test
       run: make pjnath-test
 
-  ubuntu-default-full-bundle-3:
+  default-full-bundle-3:
   # full bundle 3: running pjsip test
     runs-on: ubuntu-latest
+    name: Default / pjsip test
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -81,9 +87,10 @@ jobs:
     - name: pjsip-test
       run: make pjsip-test
 
-  build-ubuntu-no-tls:
+  no-tls:
   # no TLS
     runs-on: ubuntu-latest
+    name: SSL disabled / pjlib,pjsip tests
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -94,13 +101,18 @@ jobs:
       run: $MAKE_FAST
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjsip-test
+      run: make pjsip-test
 
   # build-ubuntu-openssl
   # TLS: with OpenSSL (same as build-ubuntu-default)
 
-  build-ubuntu-gnu-tls:
+  gnu-tls:
   # TLS: with GnuTLS
     runs-on: ubuntu-latest
+    name: GnuTLS / pjlib,pjnath,pjsip tests
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -111,11 +123,18 @@ jobs:
       run: $MAKE_FAST
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
+    - name: verify gnu tls is used
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+2'
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjnath-test
+      run: make pjnath-test
+    - name: pjsip-test
+      run: make pjsip-test
 
-  ubuntu-vid-openh264-1:
-  # video: video enabled with vpx and openh264
-  # video 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
+  vid-openh264-1:
     runs-on: ubuntu-latest
+    name: Vid OpenH264+VPX / pjmedia,pjsua tests
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -136,18 +155,21 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-    - name: pjlib-test
-      run: make pjlib-test
-    - name: pjlib-util-test
-      run: make pjlib-util-test
+    - name: capture pjsua video capabilities
+      run: |
+        cat << EOF | pjsip-apps/bin/pjsua-`make infotarget`
+        vid dev list
+        vid codec list
+        q
+        EOF
     - name: pjmedia-test
       run: make pjmedia-test
     - name: pjsua-test
       run: make pjsua-test
 
-  ubuntu-vid-openh264-2:
-  # video 2: running pjnath test
+  vid-openh264-2:
     runs-on: ubuntu-latest
+    name: Vid OpenH264+VPX / pjlib,util,pjnath tests
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -162,12 +184,16 @@ jobs:
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: $MAKE_FAST
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjlib-util-test
+      run: make pjlib-util-test
     - name: pjnath-test
       run: make pjnath-test
 
-  ubuntu-vid-openh264-3:
-  # video: 3: running pjsip test
+  vid-openh264-3:
     runs-on: ubuntu-latest
+    name: Vid OpenH264+VPX / pjsip tests
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -185,9 +211,9 @@ jobs:
     - name: pjsip-test
       run: make pjsip-test
 
-  build-ubuntu-vid-ffmpeg:
-  # video enabled with vpx and ffmpeg and x264
+  vid-ffmpeg:
     runs-on: ubuntu-latest
+    name: Vid FFMPEG+x264 / pjmedia tests
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -206,3 +232,18 @@ jobs:
       run: $MAKE_FAST
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
+    - name: capture pjsua video capabilities
+      run: |
+        cat << EOF | pjsip-apps/bin/pjsua-`make infotarget` > pjsua-vid-outputs
+        vid dev list
+        vid codec list
+        q
+        EOF
+    - name: ensure H264 codec is installed
+      run: cat pjsua-vid-outputs | egrep 'H264/'
+    - name: ensure VP8 codec is installed
+      run: cat pjsua-vid-outputs | egrep 'VP8/'
+    - name: ensure SDL is installed
+      run: cat pjsua-vid-outputs | egrep '\[SDL\]\[render\]'
+    - name: pjmedia-test
+      run: make pjmedia-test
