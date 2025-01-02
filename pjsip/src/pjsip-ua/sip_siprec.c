@@ -270,7 +270,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
     pjsip_media_type application_metadata;
 
     pjsip_media_type_init2(&application_metadata,
-                            "application", "rs-metadata");
+                            "application", "rs-metadata+xml");
 
     pjsip_multipart_part *metadata_part;
     metadata_part = pjsip_multipart_find_part(body, 
