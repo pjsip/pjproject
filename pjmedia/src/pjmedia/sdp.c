@@ -550,30 +550,6 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_ssrc(const pjmedia_sdp_attr *attr,
 }
 
 
-PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label( pj_pool_t *pool,
-                                                pj_str_t *label_str)
-{
-    pjmedia_sdp_attr *attr;
-    const pj_str_t STR_LABEL_ATTR = {"label", 5};
-    
-    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-    attr->name = STR_LABEL_ATTR;
-    attr->value.ptr = (char *)pj_pool_alloc(pool, label_str->slen);
-    pj_memcpy(attr->value.ptr, label_str->ptr, label_str->slen);
-    attr->value.slen = label_str->slen;
-
-    return attr;
-}
-
-
-PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_get_label(pjmedia_sdp_media *sdp_media)
-{
-    const pj_str_t STR_LABEL_ATTR = {"label", 5};
-    return pjmedia_sdp_media_find_attr(
-                            sdp_media, &STR_LABEL_ATTR, NULL);
-}
-
-
 PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_ssrc( pj_pool_t *pool,
                                                         pj_uint32_t ssrc,
                                                         const pj_str_t *cname)
@@ -591,6 +567,21 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_ssrc( pj_pool_t *pool,
     attr->value.slen = pj_ansi_snprintf(attr->value.ptr, cname->slen+18,
                                         "%u cname:%.*s", ssrc,
                                         (int)cname->slen, cname->ptr);
+
+    return attr;
+}
+
+
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pj_pool_t *pool,
+                                                const pj_str_t *label_str)
+{
+    pjmedia_sdp_attr *attr;
+    
+    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+    attr->name = pj_str("label");
+    attr->value.ptr = (char *)pj_pool_alloc(pool, label_str->slen);
+    pj_memcpy(attr->value.ptr, label_str->ptr, label_str->slen);
+    attr->value.slen = label_str->slen;
 
     return attr;
 }

@@ -3008,7 +3008,10 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
          */
         if (call->inv && (call->inv->options & PJSIP_INV_REQUIRE_SIPREC)) {
             pjmedia_sdp_attr *label_attr;
-            label_attr = pjmedia_sdp_attr_get_label(rem_sdp->media[mi]);
+            const pj_str_t STR_LABEL_ATTR = {"label", 5};
+
+            label_attr = pjmedia_sdp_media_find_attr(
+                            rem_sdp->media[mi], &STR_LABEL_ATTR, NULL);
             m->attr[m->attr_count++] = pjmedia_sdp_attr_create_label(pool,
                                                         &label_attr->value);
         }
