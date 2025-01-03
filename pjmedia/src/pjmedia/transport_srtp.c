@@ -31,6 +31,15 @@
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 
+/* Currently SRTP-DTLS requires OpenSSL */
+#if PJMEDIA_SRTP_HAS_DTLS
+#  if PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_OPENSSL
+#    pragma message("DTLS requires OpenSSL, disabling it...")
+#    undef PJMEDIA_SRTP_HAS_DTLS
+#    define PJMEDIA_SRTP_HAS_DTLS 0
+#  endif
+#endif
+
 /* Enable this to test ROC initialization setting. For offerer,
  * it will send packets with ROC 1 and expect to receive ROC 2.
  * For answerer it will be the other way around.
@@ -497,8 +506,7 @@ const char* get_libsrtp_errstr(int err)
 #endif
 
 /* SRTP keying method: DTLS */
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
 #  include "transport_srtp_dtls.c"
 #else
 PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
@@ -548,8 +556,7 @@ PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt)
     }
 #endif
 
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
     dtls_init();
 #endif
 
@@ -604,8 +611,7 @@ static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt)
     }
 #endif // PJMEDIA_LIBSRTP_AUTO_INIT_DEINIT
 
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
     dtls_deinit();
 #endif
 
@@ -703,8 +709,7 @@ PJ_DEF(pj_status_t) pjmedia_srtp_enum_keying(unsigned *count,
     if (*count < max)
         keying[(*count)++] = PJMEDIA_SRTP_KEYING_SDES;
 #endif
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
     if (*count < max)
         keying[(*count)++] = PJMEDIA_SRTP_KEYING_DTLS_SRTP;
 #endif
@@ -839,8 +844,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
             break;
 
         case PJMEDIA_SRTP_KEYING_DTLS_SRTP:
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
             dtls_create(srtp, &srtp->all_keying[srtp->all_keying_cnt++]);
 #endif
             break;
