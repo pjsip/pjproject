@@ -45,8 +45,6 @@ jobs:
       run: make pjmedia-test
     - name: pjnath-test
       run: make pjnath-test
-    - name: pjsua-test
-      run: make pjsua-test
 
   default-pjsua-test:
     runs-on: macos-latest
@@ -99,6 +97,8 @@ jobs:
       run: brew install openssl swig
     - name: configure
       run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: make
       run: $MAKE_FAST
     - name: set up Python
@@ -131,6 +131,8 @@ jobs:
       run: brew install openssl
     - name: configure
       run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: make
       run: $MAKE_FAST
     - name: disable firewall
