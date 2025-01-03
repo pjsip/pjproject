@@ -200,6 +200,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
     char codec_name[5];
     pj_status_t status;
     int rc = 0;
+    unsigned i, count;
 
     switch (packing) {
     case PJMEDIA_VID_PACKING_PACKETS:
@@ -268,10 +269,28 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
     cap_idx = CAPTURE_DEV;
 #endif
 
-    /* Lookup SDL renderer */
-    status = pjmedia_vid_dev_lookup("SDL", "SDL renderer", &rdr_idx);
-    if (status != PJ_SUCCESS) {
-        rc = 207; goto on_return;
+    /* Lookup renderer */
+    rdr_idx = PJMEDIA_VID_INVALID_DEV;
+    count = pjmedia_vid_dev_count();
+    for (i = 0; i < count; ++i) {
+        pjmedia_vid_dev_info cdi;
+
+        status = pjmedia_vid_dev_get_info(i, &cdi);
+        if (status != PJ_SUCCESS)
+            rc = 211; goto on_return;
+
+        /* Only interested with render device */
+        if ((cdi.dir & PJMEDIA_DIR_RENDER) != 0) {
+            rdr_idx = i;
+            break;
+        }
+    }
+    if (rdr_idx == PJMEDIA_VID_INVALID_DEV) {
+        PJ_LOG(3, (THIS_FILE, "Unable to find renderer device"));
+        /* We may be on a machine that doesn't have access to a renderer
+         * device, don't fail the test.
+         */
+        rc = 0; goto on_return;
     }
 
     /* Prepare codec */
