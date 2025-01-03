@@ -497,7 +497,8 @@ const char* get_libsrtp_errstr(int err)
 #endif
 
 /* SRTP keying method: DTLS */
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 #  include "transport_srtp_dtls.c"
 #else
 PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
@@ -547,7 +548,8 @@ PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt)
     }
 #endif
 
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
     dtls_init();
 #endif
 
@@ -602,7 +604,8 @@ static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt)
     }
 #endif // PJMEDIA_LIBSRTP_AUTO_INIT_DEINIT
 
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
     dtls_deinit();
 #endif
 
@@ -700,7 +703,8 @@ PJ_DEF(pj_status_t) pjmedia_srtp_enum_keying(unsigned *count,
     if (*count < max)
         keying[(*count)++] = PJMEDIA_SRTP_KEYING_SDES;
 #endif
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
     if (*count < max)
         keying[(*count)++] = PJMEDIA_SRTP_KEYING_DTLS_SRTP;
 #endif
@@ -835,7 +839,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
             break;
 
         case PJMEDIA_SRTP_KEYING_DTLS_SRTP:
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0) && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
             dtls_create(srtp, &srtp->all_keying[srtp->all_keying_cnt++]);
 #endif
             break;
