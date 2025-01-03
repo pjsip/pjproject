@@ -148,9 +148,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install swig
+      run: brew install gnutls swig
     - name: configure
-      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=/usr/local/
+      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=`brew --prefix gnutls`
     - name: make
       run: $MAKE_FAST
     - name: set up Python
@@ -178,9 +178,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install swig
+      run: brew install gnutls swig
     - name: configure
-      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=/usr/local/
+      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=`brew --prefix gnutls`
     - name: make
       run: $MAKE_FAST
     - name: get SSL info
