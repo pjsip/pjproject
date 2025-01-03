@@ -370,6 +370,18 @@ PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_ssrc(pj_pool_t *pool,
                                                         const pj_str_t *cname);
 
 
+/**
+ * Create a=label attribute.
+ *
+ * @param pool          Pool to create the attribute.
+ * @param attr          Attribute to create.
+ *
+ * @return              SDP label attribute.
+ */
+PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pj_pool_t *pool,
+                                                const pj_str_t *label_str);
+
+
 /* **************************************************************************
  * SDP CONNECTION INFO
  ****************************************************************************
