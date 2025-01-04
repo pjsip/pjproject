@@ -24,7 +24,7 @@ jobs:
   default-pjlib-util-pjmedia-pjnath:
     # full bundle: enable all codecs + AEC + DTLS
     runs-on: macos-latest
-    name: Default / pjlib,util,pjmedia,pjnath
+    name: Default / pjmedia,pjnath
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -37,10 +37,6 @@ jobs:
       run: $MAKE_FAST
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: pjlib-test
-      run: make pjlib-test
-    - name: pjlib-util-test
-      run: make pjlib-util-test
     - name: pjmedia-test
       run: make pjmedia-test
     - name: pjnath-test
@@ -72,7 +68,7 @@ jobs:
 
   default-pjsip-test:
     runs-on: macos-latest
-    name: Default / pjsip-test
+    name: Default / pjlib,util,pjsip-test
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -85,6 +81,10 @@ jobs:
       run: $MAKE_FAST
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjlib-util-test
+      run: make pjlib-util-test
     - name: pjsip-test
       run: make pjsip-test
 
@@ -220,7 +220,27 @@ jobs:
 
   video-openh264-2:
     runs-on: macos-latest
-    name: Openh264+VPX / pjlib,util,pjnath
+    name: Openh264+VPX / util,pjnath
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: brew install openssl openh264 libvpx opencore-amr
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
+    - name: configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
+    - name: make
+      run: $MAKE_FAST
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: pjlib-util-test
+      run: make pjlib-util-test
+    - name: pjnath-test
+      run: make pjnath-test
+
+  video-openh264-3:
+    runs-on: macos-latest
+    name: Openh264+VPX / pjlib,pjsip
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -235,26 +255,6 @@ jobs:
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: pjlib-test
       run: make pjlib-test
-    - name: pjlib-util-test
-      run: make pjlib-util-test
-    - name: pjnath-test
-      run: make pjnath-test
-
-  video-openh264-3:
-    runs-on: macos-latest
-    name: Openh264+VPX / pjsip
-    steps:
-    - uses: actions/checkout@v2
-    - name: install dependencies
-      run: brew install openssl openh264 libvpx opencore-amr
-    - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
-    - name: configure
-      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
-    - name: make
-      run: $MAKE_FAST
-    - name: disable firewall
-      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: pjsip-test
       run: make pjsip-test
 
