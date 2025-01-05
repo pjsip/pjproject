@@ -612,6 +612,7 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
     pj_ansi_strxcpy2(pname, name, sizeof(pname));
 
     /* Create own pool */
+    /* replace pool to control it's lifetime */
     pool = pj_pool_create(parent_pool->factory, pname, 500, 500, NULL);
     if (!pool) {
         status = PJ_ENOMEM;
@@ -838,6 +839,8 @@ static pj_status_t create_pasv_port( pjmedia_conf *conf,
     if (status != PJ_SUCCESS)
         return status;
 
+    pool = conf_port->pool;
+
     /* Passive port has delay buf. */
     ptime = conf->samples_per_frame * 1000 / conf->clock_rate / 
             conf->channel_count;
@@ -848,8 +851,10 @@ static pj_status_t create_pasv_port( pjmedia_conf *conf,
                                       RX_BUF_COUNT * ptime, /* max delay */
                                       0, /* options */
                                       &conf_port->delay_buf);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        destroy_conf_port(conf_port);
         return status;
+    }
 
     *p_conf_port = conf_port;
 
