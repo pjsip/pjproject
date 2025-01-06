@@ -1399,7 +1399,7 @@ static void op_disconnect_ports(pjmedia_conf *conf,
 {
     unsigned src_slot, sink_slot;
     struct conf_port *src_port = NULL, *dst_port = NULL;
-    unsigned i;
+    int i;
 
     /* Ports must be valid. */
     src_slot = prm->disconnect_ports.src;
