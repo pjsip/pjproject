@@ -202,37 +202,56 @@ static op_entry* get_free_op_entry(pjmedia_vid_conf *conf)
 
 static void handle_op_queue(pjmedia_vid_conf *conf)
 {
-    op_entry *op, *next_op;
-    
-    op = conf->op_queue->next;
-    while (op != conf->op_queue) {
-        next_op = op->next;
-        pj_list_erase(op);
+    /* The queue may grow while mutex is released, better put a limit? */
+    enum { MAX_PROCESSED_OP = 100 };
+    int i = 0;
 
-        switch(op->type) {
-            case OP_ADD_PORT:
-                op_add_port(conf, &op->param);
+    while (i++ < MAX_PROCESSED_OP) {
+        op_entry* op;
+        op_type type;
+        op_param param;
+
+        pj_mutex_lock(conf->mutex);
+
+        /* Stop when queue empty */
+        if (pj_list_empty(conf->op_queue)) {
+            pj_mutex_unlock(conf->mutex);
+            break;
+        }
+
+        /* Copy op */
+        op = conf->op_queue->next;
+        type = op->type;
+        param = op->param;
+
+        /* Free op */
+        pj_list_erase(op);
+        op->type = OP_UNKNOWN;
+        pj_list_push_back(conf->op_queue_free, op);
+
+        pj_mutex_unlock(conf->mutex);
+
+        /* Process op */
+        switch (type) {
+        case OP_ADD_PORT:
+                op_add_port(conf, &param);
                 break;
             case OP_REMOVE_PORT:
-                op_remove_port(conf, &op->param);
+                op_remove_port(conf, &param);
                 break;
             case OP_CONNECT_PORTS:
-                op_connect_ports(conf, &op->param);
+                op_connect_ports(conf, &param);
                 break;
             case OP_DISCONNECT_PORTS:
-                op_disconnect_ports(conf, &op->param);
+                op_disconnect_ports(conf, &param);
                 break;
             case OP_UPDATE_PORT:
-                op_update_port(conf, &op->param);
+                op_update_port(conf, &param);
                 break;
             default:
                 pj_assert(!"Invalid sync-op in video conference");
                 break;
         }
-
-        op->type = OP_UNKNOWN;
-        pj_list_push_back(conf->op_queue_free, op);
-        op = next_op;
     }
 }
 
@@ -708,7 +727,10 @@ static void op_remove_port(pjmedia_vid_conf *vid_conf,
     }
 
     /* Remove the port. */
+    pj_mutex_lock(vid_conf->mutex);
     vid_conf->ports[slot] = NULL;
+    pj_mutex_unlock(vid_conf->mutex);
+
     if (!cport->is_new)
         --vid_conf->port_cnt;
 
