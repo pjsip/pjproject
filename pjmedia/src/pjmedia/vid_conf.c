@@ -233,7 +233,7 @@ static void handle_op_queue(pjmedia_vid_conf *conf)
 
         /* Process op */
         switch (type) {
-        case OP_ADD_PORT:
+            case OP_ADD_PORT:
                 op_add_port(conf, &param);
                 break;
             case OP_REMOVE_PORT:
