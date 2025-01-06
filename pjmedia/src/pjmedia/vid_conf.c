@@ -1108,9 +1108,9 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
      * the clock such as connect, disonnect, remove, update.
      */
     if (!pj_list_empty(vid_conf->op_queue)) {
-        pj_mutex_lock(vid_conf->mutex);
+        pj_log_push_indent();
         handle_op_queue(vid_conf);
-        pj_mutex_unlock(vid_conf->mutex);
+        pj_log_pop_indent();
     }
 
     /* No mutex from this point! Otherwise it may cause deadlock as
