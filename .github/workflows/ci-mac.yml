@@ -112,7 +112,7 @@ jobs:
     - name: get SSL info
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify openssl is used
-      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+1'
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+1'
     - name: pjlib-test
       run: make pjlib-test
     - name: pjlib-util-test
@@ -140,7 +140,7 @@ jobs:
     - name: get SSL info
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify openssl is used
-      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+1'
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+1'
     - name: pjsip-test
       run: make pjsip-test
 
@@ -164,7 +164,7 @@ jobs:
     - name: get SSL info
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify gnu tls is used
-      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+2'
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+2'
     - name: pjlib-test
       run: make pjlib-test
     - name: pjlib-util-test
@@ -188,7 +188,7 @@ jobs:
     - name: get SSL info
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify gnu tls is used
-      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+2'
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+2'
     - name: pjsip-test
       run: make pjsip-test
 

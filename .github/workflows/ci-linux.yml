@@ -23,7 +23,7 @@ jobs:
     - name: get SSL info
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify oepnssl is used
-      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+1'
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+1'
 
   default-full-bundle-1:
     # full bundle: enable all codecs + AEC + DTLS
@@ -56,7 +56,7 @@ jobs:
         EOF
         cat pjsua-caps
     - name: ensure AMR codec is installed
-      run: cat pjsua-caps | egrep 'AMR/8000'
+      run: cat pjsua-caps | grep -E 'AMR/8000'
     - name: pjmedia-test
       run: make pjmedia-test
     - name: pjsua-test
@@ -135,7 +135,7 @@ jobs:
     - name: get SSL info
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify gnu tls is used
-      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | egrep 'PJ_SSL_SOCK_IMP\s+:\s+2'
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+2'
     - name: pjlib-test
       run: make pjlib-test
     - name: pjnath-test
@@ -177,14 +177,14 @@ jobs:
         EOF
         cat pjsua-caps
     - name: ensure AMR codec is installed
-      run: cat pjsua-caps | egrep 'AMR/8000'
+      run: cat pjsua-caps | grep -E 'AMR/8000'
     - name: ensure H264 codec is installed
-      run: cat pjsua-caps | egrep 'H264/'
+      run: cat pjsua-caps | grep -E 'H264/'
     - name: ensure VP8 codec is installed
-      run: cat pjsua-caps | egrep 'VP8/'
-    # SDL error: no avilable vid dev
+      run: cat pjsua-caps | grep -E 'VP8/'
+    # SDL error: no available vid dev
     #- name: ensure SDL is installed
-    #  run: cat pjsua-caps | egrep '\[SDL\]\[render\]'
+    #  run: cat pjsua-caps | grep -E '\[SDL\]\[render\]'
     - name: pjmedia-test
       run: make pjmedia-test
     - name: pjsua-test
@@ -267,11 +267,11 @@ jobs:
         EOF
         cat pjsua-caps
     - name: ensure H264 codec is installed
-      run: cat pjsua-caps | egrep 'H264/'
+      run: cat pjsua-caps | grep -E 'H264/'
     - name: ensure VP8 codec is installed
-      run: cat pjsua-caps | egrep 'VP8/'
-    # SDL error: no avilable vid dev
+      run: cat pjsua-caps | grep -E 'VP8/'
+    # SDL error: no available vid dev
     #- name: ensure SDL is installed
-    #  run: cat pjsua-caps | egrep '\[SDL\]\[render\]'
+    #  run: cat pjsua-caps | grep -E '\[SDL\]\[render\]'
     - name: pjmedia-test
       run: export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH && make pjmedia-test
