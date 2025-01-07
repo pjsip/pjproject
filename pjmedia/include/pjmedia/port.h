@@ -526,8 +526,18 @@ PJ_DECL(pj_status_t) pjmedia_port_destroy( pjmedia_port *port );
  * lock by adding the port's destructor to the group lock handler list, and
  * increment the reference counter.
  *
- * This function should only be called by media port implementation. The port
- * must have its own pool which will be released in its on_destroy() function.
+ * Normally this function is only called by media port implementation,
+ * application should never call this function.
+ *
+ * This function will check whether the port implements on_destroy(),
+ * because when working with conference bridge, a port is required to manage
+ * its lifetime via group lock (e.g: initialized by this function),
+ * so basically it must use its own pool and the pool is normally
+ * released from its on_destroy().
+ *
+ * Also note that this function will add a group lock destroy handler
+ * that calls port's on_destroy(), so port implementation can release
+ * its resources from on_destroy() as usual.
  *
  * @param port              The pjmedia port to be initialized.
  * @param pool              The pool, this can be a temporary pool as
@@ -565,6 +575,15 @@ PJ_DECL(pj_status_t) pjmedia_port_dec_ref( pjmedia_port *port );
 
 /**
  * This is a helper function to add port destructor handler.
+ *
+ * Application can use this function to schedule its resource release.
+ * Note that application cannot release the resources related to the port,
+ * e.g: memory pool (custom ports that do not use its own pool),
+ * immediately after removing the port from the conference bridge
+ * as the port removal is done asynchronously.
+ *
+ * Usually this function is called after adding the port to the conference
+ * bridge.
  *
  * @param port              The PJMEDIA port.
  * @param member            A pointer to be passed to the handler.
