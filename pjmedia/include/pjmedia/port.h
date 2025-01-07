@@ -563,6 +563,37 @@ PJ_DECL(pj_status_t) pjmedia_port_add_ref( pjmedia_port *port );
 PJ_DECL(pj_status_t) pjmedia_port_dec_ref( pjmedia_port *port );
 
 
+/**
+ * This is a helper function to add port destructor handler.
+ *
+ * @param port              The PJMEDIA port.
+ * @param member            A pointer to be passed to the handler.
+ * @param handler           The destroy handler.
+ *
+ * @return                  PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_port_add_destroy_handler(
+                                            pjmedia_port* port,
+                                            void *member,
+                                            pj_grp_lock_handler handler);
+
+
+/**
+ * This is a helper function to remove previously registered
+ * destructor handler.
+ *
+ * @param port              The PJMEDIA port.
+ * @param member            A pointer to be passed to the handler.
+ * @param handler           The destroy handler.
+ *
+ * @return                  PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_port_del_destroy_handler(
+                                            pjmedia_port* port,
+                                            void *member,
+                                            pj_grp_lock_handler handler);
+
+
 PJ_END_DECL
 
 /**
