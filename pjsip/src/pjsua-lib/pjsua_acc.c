@@ -1148,6 +1148,9 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.use_timer = cfg->use_timer;
     acc->cfg.timer_setting = cfg->timer_setting;
 
+    /* SIPREC */
+    acc->cfg.use_siprec = cfg->use_siprec;
+
     /* Transport */
     if (acc->cfg.transport_id != cfg->transport_id) {
         pjsua_acc_set_transport(acc_id, cfg->transport_id);
