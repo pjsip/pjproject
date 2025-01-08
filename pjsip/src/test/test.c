@@ -25,29 +25,6 @@
 
 #define THIS_FILE   "test.c"
 
-#define DO_TEST(test)   do { \
-                            PJ_LOG(3, (THIS_FILE, "Running %s...", #test));  \
-                            rc = test; \
-                            PJ_LOG(3, (THIS_FILE,  \
-                                       "%s(%d)",  \
-                                       (rc ? "..ERROR" : "..success"), rc)); \
-                            if (rc!=0) goto on_return; \
-                        } while (0)
-
-#define DO_TSX_TEST(test, param) \
-                        do { \
-                            PJ_LOG(3, (THIS_FILE, "Running %s(%s)...", #test, (param)->tp_type));  \
-                            rc = test(param); \
-                            PJ_LOG(3, (THIS_FILE,  \
-                                       "%s(%d)",  \
-                                       (rc ? "..ERROR" : "..success"), rc)); \
-                            if (rc!=0) goto on_return; \
-                        } while (0)
-
-#if defined(_MSC_VER) || defined(__MINGW32__)
-# define strtok_r strtok_s
-#endif
-
 pjsip_endpoint *endpt;
 pj_caching_pool caching_pool;
 int log_level = 3;
@@ -57,85 +34,8 @@ int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | PJ_LOG_HAS_SENDER |
 static pj_oshandle_t fd_report;
 const char *system_name = "Unknown";
 static char buf[1024];
-
-static struct {
-    const char *name;
-    int run_test;
-} test_list[] = {
-    { "uri", 0},
-    { "msg", 0},
-    { "multipart", 0},
-    { "txdata", 0},
-    { "tsx_bench", 0},
-    { "udp", 0},
-    { "loop", 0},
-    { "tcp", 0},
-    { "resolve", 0},
-    { "tsx", 0},
-    { "tsx_destroy", 0},
-    { "inv_oa", 0},
-    { "regc", 0},
-};
-enum tests_to_run {
-    include_uri_test = 0,
-    include_msg_test,
-    include_multipart_test,
-    include_txdata_test,
-    include_tsx_bench,
-    include_udp_test,
-    include_loop_test,
-    include_tcp_test,
-    include_resolve_test,
-    include_tsx_test,
-    include_tsx_destroy_test,
-    include_inv_oa_test,
-    include_regc_test,
-};
-static int run_all_tests = 1;
-
-static pj_status_t select_tests(char *testlist)
-{
-    char *token;
-    char *saveptr;
-    int maxtok = PJ_ARRAY_SIZE(test_list);
-    int j;
-
-    if (!testlist) {
-        return PJ_SUCCESS;
-    }
-    run_all_tests = 0;
-
-    for (token = strtok_r(testlist, ",", &saveptr); token != NULL;
-        token = strtok_r(NULL, ",", &saveptr)) {
-
-        int found = 0;
-        for (j = 0; j < maxtok; j++) {
-            if (strcmp(token, test_list[j].name) == 0) {
-                test_list[j].run_test = 1;
-                found = 1;
-            }
-        }
-        if (!found) {
-            fprintf(stderr, "Test '%s' is not valid\n", token);
-            return PJ_ENOTFOUND;
-        }
-    }
-
-    return PJ_SUCCESS;
-}
-
-void list_tests(void) {
-    int maxtok = PJ_ARRAY_SIZE(test_list);
-    int j;
-
-    fprintf(stderr, "Valid tests:\n");
-
-    for (j = 0; j < maxtok; j++) {
-        fprintf(stderr, "   %s\n", test_list[j].name);
-    }
-}
-
-#define SHOULD_RUN_TEST(ix) (run_all_tests || test_list[ix].run_test)
+struct test_app_t test_app;
+struct tsx_test_param tsx_test[MAX_TSX_TESTS];
 
 void app_perror(const char *msg, pj_status_t rc)
 {
@@ -165,6 +65,40 @@ void flush_events(unsigned duration)
         pj_gettimeofday(&now);
         if (PJ_TIME_VAL_GTE(now, stop_time))
             break;
+    }
+}
+
+/* Wait until there is no loop transport instance */
+pjsip_transport *wait_loop_transport_clear(int secs)
+{
+    pj_time_val timeout;
+    
+    pj_gettimeofday(&timeout);
+    timeout.sec += secs;
+
+    for (;;) {
+        pj_sockaddr_in addr;
+        pjsip_transport *loop = NULL;
+        pj_time_val now;
+        pj_status_t status;
+
+        loop = NULL;
+        pj_bzero(&addr, sizeof(addr));
+        status = pjsip_endpt_acquire_transport(endpt,
+                                               PJSIP_TRANSPORT_LOOP_DGRAM,
+                                               &addr, sizeof(addr), NULL,
+                                               &loop);
+        if (status!=PJ_SUCCESS)
+            return NULL;
+
+        pj_gettimeofday(&now);
+        if (PJ_TIME_VAL_GTE(now, timeout)) {
+            return loop;
+        }
+
+        pjsip_transport_dec_ref(loop);
+        loop = NULL;
+        flush_events(500);
     }
 }
 
@@ -309,13 +243,11 @@ static void close_report(void)
 }
 
 
-int test_main(char *testlist)
+int test_main(int argc, char *argv[])
 {
     pj_status_t rc;
     const char *filename;
     unsigned tsx_test_cnt=0;
-    struct tsx_test_param tsx_test[10];
-    pj_status_t status;
 #if INCLUDE_TSX_TEST
     unsigned i;
     pjsip_transport *tp;
@@ -325,187 +257,154 @@ int test_main(char *testlist)
 #endif  /* INCLUDE_TSX_TEST */
     int line;
 
-    rc = select_tests(testlist);
-    if (rc != PJ_SUCCESS) {
-        list_tests();
-        return rc;
-    }
-
     pj_log_set_level(log_level);
     pj_log_set_decor(param_log_decor);
 
-    if ((rc=pj_init()) != PJ_SUCCESS) {
-        app_perror("pj_init", rc);
-        return rc;
+    PJ_TEST_SUCCESS(pj_init(), NULL, return 10);
+    PJ_TEST_SUCCESS(pjlib_util_init(), NULL, return 20);
+    PJ_TEST_SUCCESS(init_report(), NULL, return 30);
+
+    if (test_app.ut_app.prm_config) {
+        pj_dump_config();
     }
-
-    if ((rc=pjlib_util_init()) != PJ_SUCCESS) {
-        app_perror("pj_init", rc);
-        return rc;
-    }
-
-    status = init_report();
-    if (status != PJ_SUCCESS)
-        return status;
-
-    pj_dump_config();
 
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 
                           PJSIP_TEST_MEM_SIZE );
 
-    rc = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
-    if (rc != PJ_SUCCESS) {
-        app_perror("pjsip_endpt_create", rc);
-        pj_caching_pool_destroy(&caching_pool);
-        return rc;
-    }
-
-    PJ_LOG(3,(THIS_FILE," "));
+    PJ_TEST_SUCCESS(pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt),
+                    NULL, { 
+                        pj_caching_pool_destroy(&caching_pool); 
+                        return 40; 
+                    });
 
     /* Init logger module. */
     init_msg_logger();
     msg_logger_set_enabled(1);
 
     /* Start transaction layer module. */
-    rc = pjsip_tsx_layer_init_module(endpt);
-    if (rc != PJ_SUCCESS) {
-        app_perror("   Error initializing transaction module", rc);
-        goto on_return;
-    }
+    PJ_TEST_SUCCESS(rc = pjsip_tsx_layer_init_module(endpt),
+                    NULL, goto on_return);
 
-    /* Create loop transport. */
-    rc = pjsip_loop_start(endpt, NULL);
-    if (rc != PJ_SUCCESS) {
-        app_perror("   error: unable to create datagram loop transport", 
-                   rc);
-        goto on_return;
-    }
     tsx_test[tsx_test_cnt].port = 5060;
     tsx_test[tsx_test_cnt].tp_type = "loop-dgram";
     tsx_test[tsx_test_cnt].type = PJSIP_TRANSPORT_LOOP_DGRAM;
     ++tsx_test_cnt;
 
+    PJ_TEST_SUCCESS(rc=ut_app_init1(&test_app.ut_app, &caching_pool.factory), 
+                    NULL, goto on_return);
 
 #if INCLUDE_URI_TEST
-    if (SHOULD_RUN_TEST(include_uri_test)) {
-        DO_TEST(uri_test());
-    }
+    UT_ADD_TEST(&test_app.ut_app, uri_test, 0);
 #endif
 
 #if INCLUDE_MSG_TEST
-    if (SHOULD_RUN_TEST(include_msg_test)) {
-        DO_TEST(msg_test());
-        DO_TEST(msg_err_test());
-    }
+    UT_ADD_TEST(&test_app.ut_app, msg_test, 0);
+    UT_ADD_TEST(&test_app.ut_app, msg_err_test, 0);
 #endif
 
 #if INCLUDE_MULTIPART_TEST
-    if (SHOULD_RUN_TEST(include_multipart_test)) {
-        DO_TEST(multipart_test());
-    }
+    UT_ADD_TEST(&test_app.ut_app, multipart_test, 0);
 #endif
 
 #if INCLUDE_TXDATA_TEST
-    if (SHOULD_RUN_TEST(include_txdata_test)) {
-        DO_TEST(txdata_test());
-    }
+    UT_ADD_TEST(&test_app.ut_app, txdata_test, 0);
 #endif
 
 #if INCLUDE_TSX_BENCH
-    if (SHOULD_RUN_TEST(include_tsx_bench)) {
-        DO_TEST(tsx_bench());
-    }
+    UT_ADD_TEST(&test_app.ut_app, tsx_bench, 0);
 #endif
 
-#if INCLUDE_UDP_TEST
-    if (SHOULD_RUN_TEST(include_udp_test)) {
-        DO_TEST(transport_udp_test());
+#if INCLUDE_LOOP_TEST
+    UT_ADD_TEST(&test_app.ut_app, transport_loop_multi_test, 0);
+#endif
+
+#if INCLUDE_RESOLVE_TEST
+    UT_ADD_TEST(&test_app.ut_app, resolve_test, 0);
+#endif
+
+#if INCLUDE_INV_OA_TEST
+    UT_ADD_TEST(&test_app.ut_app, inv_offer_answer_test, 0);
+#endif
+
+#if INCLUDE_TSX_TEST
+    PJ_TEST_SUCCESS(rc=pjsip_udp_transport_start(endpt, NULL, NULL, 1, &tp),
+                    NULL, goto on_return);
+    tsx_test[tsx_test_cnt].port = tp->local_name.port;
+    tsx_test[tsx_test_cnt].tp_type = "udp";
+    tsx_test[tsx_test_cnt].type = PJSIP_TRANSPORT_UDP;
+    ++tsx_test_cnt;
+
+#if PJ_HAS_TCP
+    PJ_TEST_SUCCESS(rc=pjsip_tcp_transport_start(endpt, NULL, 1, &tpfactory),
+                    NULL, goto on_return);
+    tsx_test[tsx_test_cnt].port = tpfactory->addr_name.port;
+    tsx_test[tsx_test_cnt].tp_type = "tcp";
+    tsx_test[tsx_test_cnt].type = PJSIP_TRANSPORT_TCP;
+    ++tsx_test_cnt;
+#endif
+
+    pj_assert(tsx_test[0].type == PJSIP_TRANSPORT_LOOP_DGRAM);
+
+    for (i = 0; i < tsx_test_cnt; ++i) {
+        UT_ADD_TEST1(&test_app.ut_app, tsx_basic_test, (void*)(long)i, 0);
+        UT_ADD_TEST1(&test_app.ut_app, tsx_uac_test, (void*)(long)i, 0);
+        UT_ADD_TEST1(&test_app.ut_app, tsx_uas_test, (void*)(long)i, 0);
     }
 #endif
 
 #if INCLUDE_LOOP_TEST
-    if (SHOULD_RUN_TEST(include_loop_test)) {
-        DO_TEST(transport_loop_test());
-    }
+    UT_ADD_TEST(&test_app.ut_app, transport_loop_test, 0);
+#endif
+
+#if INCLUDE_UDP_TEST
+    /* Transport tests share same testing codes which are not reentrant */
+    UT_ADD_TEST(&test_app.ut_app, transport_udp_test, 0);
 #endif
 
 #if INCLUDE_TCP_TEST
-    if (SHOULD_RUN_TEST(include_tcp_test)) {
-        DO_TEST(transport_tcp_test());
-    }
+    UT_ADD_TEST(&test_app.ut_app, transport_tcp_test, 0);
 #endif
 
-#if INCLUDE_RESOLVE_TEST
-    if (SHOULD_RUN_TEST(include_resolve_test)) {
-        DO_TEST(resolve_test());
-    }
-#endif
+    /* Note: put exclusive tests last */
 
-#if INCLUDE_LOOP_TEST   
-    /* repeat again after resolver is configured in resolve_test() */
-    if (SHOULD_RUN_TEST(include_loop_test)) {
-        DO_TEST(transport_loop_test());
-    }
-#endif
-
-#if INCLUDE_TSX_TEST
-    if (SHOULD_RUN_TEST(include_tsx_test)) {
-        status = pjsip_udp_transport_start(endpt, NULL, NULL, 1, &tp);
-        if (status == PJ_SUCCESS) {
-            tsx_test[tsx_test_cnt].port = tp->local_name.port;
-            tsx_test[tsx_test_cnt].tp_type = "udp";
-            tsx_test[tsx_test_cnt].type = PJSIP_TRANSPORT_UDP;
-            ++tsx_test_cnt;
-        }
-
-#if PJ_HAS_TCP
-        status = pjsip_tcp_transport_start(endpt, NULL, 1, &tpfactory);
-        if (status == PJ_SUCCESS) {
-            tsx_test[tsx_test_cnt].port = tpfactory->addr_name.port;
-            tsx_test[tsx_test_cnt].tp_type = "tcp";
-            tsx_test[tsx_test_cnt].type = PJSIP_TRANSPORT_TCP;
-            ++tsx_test_cnt;
-        } else {
-            app_perror("Unable to create TCP", status);
-            rc = -4;
-            goto on_return;
-        }
-#endif
-
-        for (i = 0; i < tsx_test_cnt; ++i) {
-            DO_TSX_TEST(tsx_basic_test, &tsx_test[i]);
-            DO_TSX_TEST(tsx_uac_test, &tsx_test[i]);
-            DO_TSX_TEST(tsx_uas_test, &tsx_test[i]);
-        }
-    }
-#endif
-
-#if INCLUDE_INV_OA_TEST
-    if (SHOULD_RUN_TEST(include_inv_oa_test)) {
-        DO_TEST(inv_offer_answer_test());
-    }
-#endif
-
+    /*
+     * regc_test() needs exclusive because it modifies pjsip_cfg()
+     */
 #if INCLUDE_REGC_TEST
-    if (SHOULD_RUN_TEST(include_regc_test)) {
-        DO_TEST(regc_test());
-    }
+    UT_ADD_TEST(&test_app.ut_app, regc_test, PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
+#endif
+
+    /* This needs to be exclusive, because there must NOT be any other
+     * loop transport otherwise some test will fail (e.g. sending will
+     * fallback to that transport)
+     */
+#if INCLUDE_LOOP_TEST
+    UT_ADD_TEST(&test_app.ut_app, transport_loop_resolve_error_test,
+                PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #endif
 
     /*
      * Better be last because it recreates the endpt
      */
 #if INCLUDE_TSX_DESTROY_TEST
-    if (SHOULD_RUN_TEST(include_tsx_destroy_test)) {
-        DO_TEST(tsx_destroy_test());
-    }
+    UT_ADD_TEST(&test_app.ut_app, tsx_destroy_test,
+                PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #endif
+
+    if (ut_run_tests(&test_app.ut_app, "pjsip tests", argc, argv)) {
+        rc = 99;
+    } else {
+        rc = 0;
+    }
+
+    ut_app_destroy(&test_app.ut_app);
 
 on_return:
     flush_events(500);
 
     /* Show additional info on the log. e.g: not released memory pool. */
-    pj_log_set_level(4);
+    // Commented out to make the output tidy :D (blp)
+    //pj_log_set_level(4);
 
     /* Dumping memory pool usage */
     /* Field peak_used_size is deprecated by #3897 */

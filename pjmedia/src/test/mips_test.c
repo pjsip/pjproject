@@ -731,7 +731,7 @@ static pj_status_t codec_on_destroy(struct pjmedia_port *this_port)
     pjmedia_codec_mgr_dealloc_codec(pjmedia_endpt_get_codec_mgr(cp->endpt),
                                     cp->codec);
     cp->codec_deinit();
-    pjmedia_endpt_destroy(cp->endpt);
+    pjmedia_endpt_destroy2(cp->endpt);
     return PJ_SUCCESS;
 }
 
@@ -764,7 +764,7 @@ static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
     cp->base.on_destroy = &codec_on_destroy;
     cp->codec_deinit = codec_deinit;
 
-    status = pjmedia_endpt_create(mem, NULL, 0, &cp->endpt);
+    status = pjmedia_endpt_create2(mem, NULL, 0, &cp->endpt);
     if (status != PJ_SUCCESS)
         return NULL;
 
@@ -1699,7 +1699,7 @@ static void stream_port_custom_deinit(struct test_entry *te)
     pjmedia_stream_destroy(sp->stream);
     pjmedia_transport_close(sp->transport);
     sp->codec_deinit();
-    pjmedia_endpt_destroy(sp->endpt);
+    pjmedia_endpt_destroy2(sp->endpt);
 
 }
 
@@ -1743,7 +1743,7 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
     te->custom_deinit = &stream_port_custom_deinit;
     sp->codec_deinit = codec_deinit;
 
-    status = pjmedia_endpt_create(mem, NULL, 0, &sp->endpt);
+    status = pjmedia_endpt_create2(mem, NULL, 0, &sp->endpt);
     if (status != PJ_SUCCESS)
         return NULL;
 

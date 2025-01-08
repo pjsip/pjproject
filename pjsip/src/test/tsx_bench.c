@@ -20,7 +20,7 @@
 #include <pjsip.h>
 #include <pjlib.h>
 
-#define THIS_FILE   "tsx_uas_test.c"
+#define THIS_FILE   "tsx_bench.c"
 
 
 static pjsip_module mod_tsx_user;
@@ -32,22 +32,19 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     pjsip_transaction **tsx;
     pj_timestamp t1, t2, elapsed;
     pjsip_via_hdr *via;
-    pj_status_t status;
+    int rc;
 
     /* Create the request first. */
     pj_str_t str_target = pj_str("sip:someuser@someprovider.com");
-    pj_str_t str_from = pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
+    pj_str_t str_from = pj_str("\"Local User\" <sip:tsx_bench@serviceprovider.com>");
     pj_str_t str_to = pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
     pj_str_t str_contact = str_from;
 
-    status = pjsip_endpt_create_request(endpt, &pjsip_invite_method,
+    PJ_TEST_SUCCESS(pjsip_endpt_create_request(endpt, &pjsip_invite_method,
                                         &str_target, &str_from, &str_to,
                                         &str_contact, NULL, -1, NULL,
-                                        &request);
-    if (status != PJ_SUCCESS) {
-        app_perror("    error: unable to create request", status);
-        return status;
-    }
+                                        &request),
+                    NULL, return -110);
 
     via = (pjsip_via_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_VIA,
                                               NULL);
@@ -62,9 +59,9 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     elapsed.u64 = 0;
     pj_get_timestamp(&t1);
     for (i=0; i<working_set; ++i) {
-        status = pjsip_tsx_create_uac(&mod_tsx_user, request, &tsx[i]);
-        if (status != PJ_SUCCESS)
-            goto on_error;
+        PJ_TEST_SUCCESS(pjsip_tsx_create_uac(&mod_tsx_user, request, &tsx[i]),
+                        NULL, {rc=-120; goto on_error;});
+
         /* Reset branch param */
         via->branch_param.slen = 0;
     }
@@ -73,7 +70,7 @@ static int uac_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     pj_add_timestamp(&elapsed, &t2);
 
     p_elapsed->u64 = elapsed.u64;
-    status = PJ_SUCCESS;
+    rc = 0;
     
 on_error:
     for (i=0; i<working_set; ++i) {
@@ -89,7 +86,7 @@ on_error:
     }
     pjsip_tx_data_dec_ref(request);
     flush_events(2000);
-    return status;
+    return rc;
 }
 
 
@@ -97,29 +94,26 @@ on_error:
 static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
 {
     unsigned i;
-    pjsip_tx_data *request;
+    pjsip_transport *loop = NULL;
+    pjsip_tx_data *request = NULL;
     pjsip_via_hdr *via;
     pjsip_rx_data rdata;
-    pj_sockaddr_in remote;
     pjsip_transaction **tsx;
     pj_timestamp t1, t2, elapsed;
     char branch_buf[80] = PJSIP_RFC3261_BRANCH_ID "0000000000";
-    pj_status_t status;
+    int rc;
 
     /* Create the request first. */
     pj_str_t str_target = pj_str("sip:someuser@someprovider.com");
-    pj_str_t str_from = pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
+    pj_str_t str_from = pj_str("\"Local User\" <sip:tsx_bench@serviceprovider.com>");
     pj_str_t str_to = pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
     pj_str_t str_contact = str_from;
 
-    status = pjsip_endpt_create_request(endpt, &pjsip_invite_method,
+    PJ_TEST_SUCCESS( pjsip_endpt_create_request(endpt, &pjsip_invite_method,
                                         &str_target, &str_from, &str_to,
                                         &str_contact, NULL, -1, NULL,
-                                        &request);
-    if (status != PJ_SUCCESS) {
-        app_perror("    error: unable to create request", status);
-        return status;
-    }
+                                        &request),
+                     NULL, return -210);
 
     /* Create  Via */
     via = pjsip_via_hdr_create(request->pool);
@@ -141,15 +135,10 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
     rdata.msg_info.cid = (pjsip_cid_hdr*) pjsip_msg_find_hdr(request->msg, PJSIP_H_CALL_ID, NULL);
     rdata.msg_info.via = via;
     
-    pj_sockaddr_in_init(&remote, 0, 0);
-    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
-                                           &remote, sizeof(pj_sockaddr_in),
-                                           NULL, &rdata.tp_info.transport);
-    if (status != PJ_SUCCESS) {
-        app_perror("    error: unable to get loop transport", status);
-        return status;
-    }
-
+    PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &loop), NULL,
+                    { pjsip_tx_data_dec_ref(request); return -220; });
+    pjsip_transport_add_ref(loop);
+    rdata.tp_info.transport = loop;
 
     /* Create transaction array */
     tsx = (pjsip_transaction**) pj_pool_zalloc(request->pool, working_set * sizeof(pjsip_transaction*));
@@ -167,17 +156,15 @@ static int uas_tsx_bench(unsigned working_set, pj_timestamp *p_elapsed)
                                     pj_ansi_snprintf(branch_buf+PJSIP_RFC3261_BRANCH_LEN,
                                                      sizeof(branch_buf)-PJSIP_RFC3261_BRANCH_LEN,
                                                     "-%d", i);
-        status = pjsip_tsx_create_uas(&mod_tsx_user, &rdata, &tsx[i]);
-        if (status != PJ_SUCCESS)
-            goto on_error;
-
+        PJ_TEST_SUCCESS(pjsip_tsx_create_uas(&mod_tsx_user, &rdata, &tsx[i]),
+                        NULL, { rc=-230; goto on_error; });
     }
     pj_get_timestamp(&t2);
     pj_sub_timestamp(&t2, &t1);
     pj_add_timestamp(&elapsed, &t2);
 
     p_elapsed->u64 = elapsed.u64;
-    status = PJ_SUCCESS;
+    rc = 0;
     
 on_error:
     for (i=0; i<working_set; ++i) {
@@ -192,9 +179,15 @@ on_error:
 
         }
     }
-    pjsip_tx_data_dec_ref(request);
+    if (request)
+        pjsip_tx_data_dec_ref(request);
+    if (loop) {
+        /* Order must be shutdown then dec_ref so it gets destroyed */
+        pjsip_transport_shutdown(loop);
+        pjsip_transport_dec_ref(loop);
+    }
     flush_events(2000);
-    return status;
+    return rc;
 }
 
 

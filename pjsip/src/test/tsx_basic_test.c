@@ -23,12 +23,16 @@
 
 #define THIS_FILE   "tsx_basic_test.c"
 
-static char TARGET_URI[PJSIP_MAX_URL_SIZE];
-static char FROM_URI[PJSIP_MAX_URL_SIZE];
+static struct tsx_basic_test_global_t
+{
+    char TARGET_URI[PJSIP_MAX_URL_SIZE];
+    char FROM_URI[PJSIP_MAX_URL_SIZE];
+    pjsip_transport *tp;
+} g[MAX_TSX_TESTS];
 
 
 /* Test transaction layer. */
-static int tsx_layer_test(void)
+static int tsx_layer_test(unsigned tid)
 {
     pj_str_t target, from, tsx_key;
     pjsip_tx_data *tdata;
@@ -37,8 +41,8 @@ static int tsx_layer_test(void)
 
     PJ_LOG(3,(THIS_FILE, "  transaction layer test"));
 
-    target = pj_str(TARGET_URI);
-    from = pj_str(FROM_URI);
+    target = pj_str(g[tid].TARGET_URI);
+    from = pj_str(g[tid].FROM_URI);
 
     status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, &target,
                                         &from, &target, NULL, NULL, -1, NULL,
@@ -52,6 +56,16 @@ static int tsx_layer_test(void)
     if (status != PJ_SUCCESS) {
         app_perror("   error: unable to create transaction", status);
         return -120;
+    }
+
+    if (g[tid].tp) {
+        pjsip_tpselector tp_sel;
+
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = g[tid].tp;
+
+        pjsip_tsx_set_transport(tsx, &tp_sel);
     }
 
     pj_strdup(tdata->pool, &tsx_key, &tsx->transaction_key);
@@ -72,7 +86,7 @@ static int tsx_layer_test(void)
 }
 
 /* Double terminate test. */
-static int double_terminate(void)
+static int double_terminate(unsigned tid)
 {
     pj_str_t target, from, tsx_key;
     pjsip_tx_data *tdata;
@@ -81,8 +95,8 @@ static int double_terminate(void)
 
     PJ_LOG(3,(THIS_FILE, "  double terminate test"));
 
-    target = pj_str(TARGET_URI);
-    from = pj_str(FROM_URI);
+    target = pj_str(g[tid].TARGET_URI);
+    from = pj_str(g[tid].FROM_URI);
 
     /* Create request. */
     status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, &target,
@@ -98,6 +112,16 @@ static int double_terminate(void)
     if (status != PJ_SUCCESS) {
         app_perror("   error: unable to create transaction", status);
         return -20;
+    }
+
+    if (g[tid].tp) {
+        pjsip_tpselector tp_sel;
+
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = g[tid].tp;
+
+        pjsip_tsx_set_transport(tsx, &tp_sel);
     }
 
     /* Save transaction key for later. */
@@ -135,26 +159,44 @@ static int double_terminate(void)
     return PJ_SUCCESS;
 }
 
-int tsx_basic_test(struct tsx_test_param *param)
+int tsx_basic_test(unsigned tid)
 {
+    struct tsx_test_param *param = &tsx_test[tid];
+    pjsip_transport *loop = NULL;
     int status;
 
-    pj_ansi_snprintf(TARGET_URI, sizeof(TARGET_URI),
-                    "sip:bob@127.0.0.1:%d;transport=%s",
+    g[tid].tp = NULL;
+
+    if (param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &loop), NULL, return -10);
+        pjsip_transport_add_ref(loop);
+        g[tid].tp = loop;
+    }
+    pj_ansi_snprintf(g[tid].TARGET_URI, sizeof(g[tid].TARGET_URI),
+                    "sip:tsx_basic_test@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
-    pj_ansi_snprintf(FROM_URI, sizeof(FROM_URI),
-                    "sip:alice@127.0.0.1:%d;transport=%s",
+    pj_ansi_snprintf(g[tid].FROM_URI, sizeof(g[tid].FROM_URI),
+                    "sip:tsx_basic_test@127.0.0.1:%d;transport=%s",
                     param->port, param->tp_type);
 
-    status = tsx_layer_test();
+    status = tsx_layer_test(tid);
     if (status != 0)
-        return status;
+        goto on_return;
 
-    status = double_terminate();
+    status = double_terminate(tid);
     if (status != 0)
-        return status;
+        goto on_return;
 
-    return 0;
+    status = 0;
+
+on_return:
+    if (loop) {
+        /* Order must be shutdown then dec_ref so it gets destroyed */
+        pjsip_transport_shutdown(loop);
+        pjsip_transport_dec_ref(loop);
+        flush_events(500);
+    }
+    return status;
 }
 
 /**************************************************************************/
