@@ -1733,4 +1733,66 @@ static void op_update_port(pjmedia_vid_conf *vid_conf,
 }
 
 
+/*
+ * Add destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_vid_conf_add_destroy_handler(
+                                            pjmedia_vid_conf* vid_conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    struct vconf_port* cport;
+    pj_grp_lock_t* grp_lock;
+
+    PJ_ASSERT_RETURN(vid_conf && handler && slot < vid_conf->opt.max_slot_cnt,
+                     PJ_EINVAL);
+
+    pj_mutex_lock(vid_conf->mutex);
+
+    /* Port must be valid and has group lock. */
+    cport = vid_conf->ports[slot];
+    if (!cport || !cport->port || !cport->port->grp_lock) {
+        pj_mutex_unlock(vid_conf->mutex);
+        return cport ? PJ_EINVALIDOP : PJ_EINVAL;
+    }
+    grp_lock = cport->port->grp_lock;
+
+    pj_mutex_unlock(vid_conf->mutex);
+
+    return pj_grp_lock_add_handler(grp_lock, NULL, member, handler);
+}
+
+
+/*
+ * Remove previously registered destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_vid_conf_del_destroy_handler(
+                                            pjmedia_vid_conf* vid_conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    struct vconf_port* cport;
+    pj_grp_lock_t* grp_lock;
+
+    PJ_ASSERT_RETURN(vid_conf && handler && slot < vid_conf->opt.max_slot_cnt,
+                     PJ_EINVAL);
+
+    pj_mutex_lock(vid_conf->mutex);
+
+    /* Port must be valid and has group lock. */
+    cport = vid_conf->ports[slot];
+    if (!cport || !cport->port || !cport->port->grp_lock) {
+        pj_mutex_unlock(vid_conf->mutex);
+        return cport ? PJ_EINVALIDOP : PJ_EINVAL;
+    }
+    grp_lock = cport->port->grp_lock;
+
+    pj_mutex_unlock(vid_conf->mutex);
+
+    return pj_grp_lock_del_handler(grp_lock, member, handler);
+}
+
+
 #endif /* PJMEDIA_HAS_VIDEO */

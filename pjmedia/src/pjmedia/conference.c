@@ -1413,11 +1413,11 @@ static void op_disconnect_ports(pjmedia_conf *conf,
     /* Disconnect source -> sink */
     if (src_port && dst_port) {
         /* Check if connection has been made */
-        for (i=0; i<src_port->listener_cnt; ++i) {
+        for (i=0; i<(int)src_port->listener_cnt; ++i) {
             if (src_port->listener_slots[i] == sink_slot)
                 break;
         }
-        if (i == src_port->listener_cnt) {
+        if (i == (int)src_port->listener_cnt) {
             PJ_LOG(3,(THIS_FILE, "Ports connection %d->%d does not exist",
                       src_slot, sink_slot));
             return;
@@ -1458,7 +1458,7 @@ static void op_disconnect_ports(pjmedia_conf *conf,
                   (int)dst_port->name.slen,
                   dst_port->name.ptr));
 
-        for (i=0; i<conf->max_ports; ++i) {
+        for (i=0; i<(int)conf->max_ports; ++i) {
             int j;
 
             src_port = conf->ports[i];
@@ -2805,5 +2805,66 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 
     return status;
 }
+
+
+/*
+ * Add destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_add_destroy_handler(
+                                            pjmedia_conf* conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    struct conf_port *cport;
+    pj_grp_lock_t *grp_lock;
+
+    PJ_ASSERT_RETURN(conf && handler && slot < conf->max_ports, PJ_EINVAL);
+
+    pj_mutex_lock(conf->mutex);
+
+    /* Port must be valid and has group lock. */
+    cport = conf->ports[slot];
+    if (!cport || !cport->port || !cport->port->grp_lock) {
+        pj_mutex_unlock(conf->mutex);
+        return cport? PJ_EINVALIDOP : PJ_EINVAL;
+    }
+    grp_lock = cport->port->grp_lock;
+
+    pj_mutex_unlock(conf->mutex);
+
+    return pj_grp_lock_add_handler(grp_lock, NULL, member, handler);
+}
+
+
+/*
+ * Remove previously registered destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_del_destroy_handler(
+                                            pjmedia_conf* conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    struct conf_port* cport;
+    pj_grp_lock_t* grp_lock;
+
+    PJ_ASSERT_RETURN(conf && handler && slot < conf->max_ports, PJ_EINVAL);
+
+    pj_mutex_lock(conf->mutex);
+
+    /* Port must be valid and has group lock. */
+    cport = conf->ports[slot];
+    if (!cport || !cport->port || !cport->port->grp_lock) {
+        pj_mutex_unlock(conf->mutex);
+        return cport ? PJ_EINVALIDOP : PJ_EINVAL;
+    }
+    grp_lock = cport->port->grp_lock;
+
+    pj_mutex_unlock(conf->mutex);
+
+    return pj_grp_lock_del_handler(grp_lock, member, handler);
+}
+
 
 #endif
