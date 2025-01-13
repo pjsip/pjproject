@@ -285,7 +285,7 @@ on_error:
 /* Unregister modules, taking care of premature unregistration attempt */
 static void unregister_modules(unsigned tid)
 {
-    int new_reg_cnt;
+    // int new_reg_cnt;
 
     if (!g[tid].modules_registered)
         return;

@@ -1033,7 +1033,7 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     elapsed = pj_elapsed_time(&zero, &var.cmp_time);
     avg_cmp = pj_elapsed_usec(&zero, &var.cmp_time);
     if (PJ_HIGHPREC_VALUE_IS_ZERO(avg_cmp) || var.cmp_len == 0) {
-        avg_cmp == 0;
+        avg_cmp = 0;
     } else {
         pj_highprec_mul(avg_cmp, AVERAGE_URL_LEN);
         pj_highprec_div(avg_cmp, var.cmp_len);
