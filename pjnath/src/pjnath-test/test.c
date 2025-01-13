@@ -64,9 +64,9 @@ pj_status_t create_stun_config(app_sess_t *app_sess)
                      { status=PJ_ENOMEM; goto on_error;});
 
     PJ_TEST_SUCCESS(pj_ioqueue_create(app_sess->pool, 64, &ioqueue), NULL, 
-                    goto on_error);
+                    {status = tmp_status_; goto on_error;});
     PJ_TEST_SUCCESS(pj_timer_heap_create(app_sess->pool, 256, &timer_heap),
-                    NULL, goto on_error);
+                    NULL, {status = tmp_status_; goto on_error;});
 
     pj_lock_create_recursive_mutex(app_sess->pool, NULL, &lock);
     pj_timer_heap_set_lock(timer_heap, lock, PJ_TRUE);
@@ -82,8 +82,11 @@ on_error:
         pj_ioqueue_destroy(ioqueue);
     if (timer_heap)
         pj_timer_heap_destroy(timer_heap);
+    // Lock should have been destroyed by timer heap.
+    /*
     if (lock)
         pj_lock_destroy(lock);
+    */
     if (app_sess->pool)
         pj_pool_release(app_sess->pool);
     pj_caching_pool_destroy(&app_sess->cp);

@@ -140,7 +140,6 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     pj_status_t status = PJ_SUCCESS;
     const char *warn_text = NULL;
     pjsip_hdr res_hdr_list;
-    pjsip_param  *param;
 
     /* Init return arguments. */
     if (p_tdata) *p_tdata = NULL;
