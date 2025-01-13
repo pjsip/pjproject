@@ -749,7 +749,7 @@ ToneDigitMapVector ToneGenerator::getDigitMap() const PJSUA2_THROW(Error)
         d.freq1 = pdm->digits[i].freq1;
         d.freq2 = pdm->digits[i].freq2;
 
-        tdm.push_back(d);
+        tdm.push_back(std::move(d));
     }
 
     return tdm;
@@ -796,7 +796,7 @@ void AudioDevInfo::fromPj(const pjmedia_aud_dev_info &dev_info)
         MediaFormatAudio format;
         format.fromPj(dev_info.ext_fmt[i]);
         if (format.type == PJMEDIA_TYPE_AUDIO)
-            extFmt.push_back(format);
+            extFmt.push_back(std::move(format));
     }
 }
 
@@ -946,7 +946,7 @@ AudioDevInfoVector2 AudDevManager::enumDev2() const PJSUA2_THROW(Error)
     for (unsigned i = 0; i<count ;++i) {
         AudioDevInfo di;
         di.fromPj(pj_info[i]);
-        adiv2.push_back(di);
+        adiv2.push_back(std::move(di));
     }
 
     return adiv2;
@@ -1677,7 +1677,7 @@ void VideoDevInfo::fromPj(const pjmedia_vid_dev_info &dev_info)
         MediaFormatVideo format;
         format.fromPj(dev_info.fmt[i]);
         if (format.type == PJMEDIA_TYPE_VIDEO)
-            fmt.push_back(format);
+            fmt.push_back(std::move(format));
     }
 #else
     PJ_UNUSED_ARG(dev_info);
@@ -1765,7 +1765,7 @@ VideoDevInfoVector2 VidDevManager::enumDev2() const PJSUA2_THROW(Error)
     for (unsigned i = 0; i<count;++i) {
         VideoDevInfo vdi;
         vdi.fromPj(pj_info[i]);
-        vdiv2.push_back(vdi);
+        vdiv2.push_back(std::move(vdi));
     }
 #endif
     return vdiv2;
@@ -1979,7 +1979,7 @@ public:
             fmtp.name = pj2Str(in_fmtp.param[i].name);
             fmtp.val = pj2Str(in_fmtp.param[i].val);
         
-            out_fmtp.push_back(fmtp);
+            out_fmtp.push_back(std::move(fmtp));
        }
     }
 

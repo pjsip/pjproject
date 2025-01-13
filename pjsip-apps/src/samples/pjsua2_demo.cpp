@@ -259,7 +259,7 @@ static void mainProg1(MyEndpoint &ep)
     AuthCredInfo aci("digest", "*", "test1", 0, "test1");
 #endif
 
-    acc_cfg.sipConfig.authCreds.push_back(aci);
+    acc_cfg.sipConfig.authCreds.push_back(std::move(aci));
     MyAccount *acc(new MyAccount);
     try {
         acc->create(acc_cfg);
@@ -412,7 +412,7 @@ static void mainProg(MyEndpoint &)
         SipHeader h;
         h.hName = "X-Header";
         h.hValue = "User header";
-        accCfg.regConfig.headers.push_back(h);
+        accCfg.regConfig.headers.push_back(std::move(h));
 
         accCfg.sipConfig.proxies.push_back("<sip:sip.pjsip.org;transport=tcp>");
         accCfg.sipConfig.proxies.push_back("<sip:sip.pjsip.org;transport=tls>");
@@ -431,7 +431,7 @@ static void mainProg(MyEndpoint &)
         aci.dataType |= PJSIP_CRED_DATA_EXT_AKA;
         aci.akaK = "key";
 #endif
-        accCfg.sipConfig.authCreds.push_back(aci);
+        accCfg.sipConfig.authCreds.push_back(std::move(aci));
 
         jdoc.writeObject(accCfg);
         json_str = jdoc.saveString();

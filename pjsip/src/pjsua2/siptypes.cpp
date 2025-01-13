@@ -82,7 +82,7 @@ void readSipHeaders( const ContainerNode &node,
         ContainerNode header_node = headers_node.readContainer("header");
         hdr.hName = header_node.readString("hname");
         hdr.hValue = header_node.readString("hvalue");
-        headers.push_back(hdr);
+        headers.push_back(std::move(hdr));
     }
 }
 
@@ -113,7 +113,7 @@ AuthCredInfo::AuthCredInfo(const string &param_scheme,
                            const int param_data_type,
                            const string param_data)
 : scheme(param_scheme), realm(param_realm), username(param_user_name),
-  dataType(param_data_type), data(param_data),
+  dataType(param_data_type), data(std::move(param_data)),
   algoType(PJSIP_AUTH_ALGORITHM_NOT_SET)
 {
 }
@@ -357,7 +357,7 @@ void SockOptParams::fromPj(const pj_sockopt_params &prm)
         if (prm.options[i].optlen == sizeof(int)) {
             so.setOptValInt(*((int *)prm.options[i].optval));
         }
-        this->sockOpts.push_back(so);
+        this->sockOpts.push_back(std::move(so));
     }
 }
 
@@ -375,7 +375,7 @@ void SockOptParams::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
             int optVal = so_node.readInt("optVal");
             so.setOptValInt(optVal);
         }
-        sockOpts.push_back(so);
+        sockOpts.push_back(std::move(so));
     }
 }
 
@@ -609,7 +609,7 @@ void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
     while (pj_hdr != &prm.hdr) {
         SipHeader sh;
         sh.fromPj(pj_hdr);
-        headers.push_back(sh);
+        headers.push_back(std::move(sh));
         pj_hdr = pj_hdr->next;
     }
 
@@ -757,7 +757,7 @@ void SipTxOption::fromPj(const pjsua_msg_data &prm) PJSUA2_THROW(Error)
     while (pj_hdr != &prm.hdr_list) {
         SipHeader sh;
         sh.fromPj(pj_hdr);
-        headers.push_back(sh);
+        headers.push_back(std::move(sh));
         pj_hdr = pj_hdr->next;
     }
 
@@ -770,7 +770,7 @@ void SipTxOption::fromPj(const pjsua_msg_data &prm) PJSUA2_THROW(Error)
     while (pj_mp != &prm.multipart_parts) {
         SipMultipartPart smp;
         smp.fromPj(*pj_mp);
-        multipartParts.push_back(smp);
+        multipartParts.push_back(std::move(smp));
         pj_mp = pj_mp->next;
     }
 }
