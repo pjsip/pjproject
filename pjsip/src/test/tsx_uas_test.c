@@ -299,6 +299,7 @@ static void unregister_modules(unsigned tid)
     //  So just let the module registered.
     return;
 
+    /*
     pj_enter_critical_section();
     new_reg_cnt = --modules_reg_cnt;
     pj_leave_critical_section();
@@ -309,6 +310,7 @@ static void unregister_modules(unsigned tid)
         PJ_TEST_SUCCESS(pjsip_endpt_unregister_module(endpt, &msg_sender),
                         "error ignored", {});
     }
+    */
 }
 
 /* Timer callback to send response. */

@@ -276,8 +276,10 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
         pjmedia_vid_dev_info cdi;
 
         status = pjmedia_vid_dev_get_info(i, &cdi);
-        if (status != PJ_SUCCESS)
-            rc = 211; goto on_return;
+        if (status != PJ_SUCCESS) {
+            rc = 211;
+            goto on_return;
+        }
 
         /* Only interested with render device */
         if ((cdi.dir & PJMEDIA_DIR_RENDER) != 0) {

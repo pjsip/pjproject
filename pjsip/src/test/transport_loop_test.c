@@ -103,10 +103,11 @@ int transport_loop_multi_test(void)
     pjsip_transport *loops[N];
     int i, rc;
 
+    pj_bzero(loops, sizeof(loops));
+
     PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &loop_tester_mod),
                     NULL, ERR(-5));
 
-    pj_bzero(loops, sizeof(loops));
     for (i=0; i<N; ++i) {
         PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &loops[i]), NULL, ERR(-10));
         pjsip_transport_add_ref(loops[i]);
@@ -402,7 +403,6 @@ int transport_loop_resolve_error_test()
     /* Resolve error */
     status = loop_resolve_error(disable_no_selector);
 
-on_return:
     /* Decrement reference. */
     pjsip_transport_dec_ref(loop);
     return status;

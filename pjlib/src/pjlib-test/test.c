@@ -366,6 +366,7 @@ int test_inner(int argc, char *argv[])
 
     pj_log_set_level(3);
     pj_log_set_decor(test_app.param_log_decor);
+    pj_bzero(&stat, sizeof(pj_test_stat));
 
     rc = pj_init();
     if (rc != 0) {
