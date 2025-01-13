@@ -402,8 +402,8 @@ struct test_entry
     void           (*custom_run)(struct test_entry*);
     void           (*custom_deinit)(struct test_entry*);
 
-    void            *pdata[4];
-    unsigned         idata[4];
+    void            *pdata[2*16+1];
+//    unsigned         idata[4];
 };
 
 
@@ -465,6 +465,22 @@ static pjmedia_port* gen_port_test_init(pj_pool_t *pool,
 
 
 /***************************************************************************/
+
+static void conf_port_custom_deinit(struct test_entry *te)
+{
+    unsigned i;
+    pjmedia_conf *conf = (pjmedia_conf *)te->pdata[0];
+
+    if (conf)
+        pjmedia_conf_destroy(conf);
+
+    for (i = 1; i < PJ_ARRAY_SIZE(te->pdata); i++) {
+        if (!te->pdata[i])
+            break;
+        pjmedia_port_destroy((pjmedia_port *)te->pdata[i]);
+    }
+}
+
 static pjmedia_port* init_conf_port(unsigned nb_participant,
                                     pj_pool_t *pool,
                                     unsigned clock_rate,
@@ -474,11 +490,13 @@ static pjmedia_port* init_conf_port(unsigned nb_participant,
                                     struct test_entry *te)
 {
     pjmedia_conf *conf;
-    unsigned i;
+    unsigned i, nport = 1;
     pj_status_t status;
 
     PJ_UNUSED_ARG(flags);
-    PJ_UNUSED_ARG(te);
+
+    te->custom_deinit = &conf_port_custom_deinit;
+    pj_bzero(te->pdata, sizeof(te->pdata));
 
     /* Create conf */
     status = pjmedia_conf_create(pool, 2+nb_participant*2, clock_rate, 
@@ -486,6 +504,7 @@ static pjmedia_port* init_conf_port(unsigned nb_participant,
                                  PJMEDIA_CONF_NO_DEVICE, &conf);
     if (status != PJ_SUCCESS)
         return NULL;
+    te->pdata[0] = conf;
 
     for (i=0; i<nb_participant; ++i) {
         pjmedia_port *gen_port, *null_port;
@@ -496,6 +515,7 @@ static pjmedia_port* init_conf_port(unsigned nb_participant,
                                    samples_per_frame, 100 / nb_participant);
         if (!gen_port)
             return NULL;
+        te->pdata[nport++] = gen_port;
 
         /* Add port */
         status = pjmedia_conf_add_port(conf, pool, gen_port, NULL, &slot1);
@@ -512,6 +532,7 @@ static pjmedia_port* init_conf_port(unsigned nb_participant,
                                           samples_per_frame, 16, &null_port);
         if (status != PJ_SUCCESS)
             return NULL;
+        te->pdata[nport++] = null_port;
 
         /* add null port */
         status = pjmedia_conf_add_port(conf, pool, null_port, NULL, &slot2);
@@ -727,9 +748,11 @@ static pj_status_t codec_on_destroy(struct pjmedia_port *this_port)
 {
     struct codec_port *cp = (struct codec_port*)this_port;
 
-    pjmedia_codec_close(cp->codec);
-    pjmedia_codec_mgr_dealloc_codec(pjmedia_endpt_get_codec_mgr(cp->endpt),
-                                    cp->codec);
+    if (cp->codec) {
+        pjmedia_codec_close(cp->codec);
+        pjmedia_codec_mgr_dealloc_codec(pjmedia_endpt_get_codec_mgr(cp->endpt),
+                                        cp->codec);
+    }
     cp->codec_deinit();
     pjmedia_endpt_destroy2(cp->endpt);
     return PJ_SUCCESS;
@@ -770,33 +793,37 @@ static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
 
     status = codec_init(cp->endpt);
     if (status != PJ_SUCCESS)
-        return NULL;
+        goto on_error;
 
     count = 1;
     status = pjmedia_codec_mgr_find_codecs_by_id(pjmedia_endpt_get_codec_mgr(cp->endpt),
                                                  &codec_id, &count, ci, NULL);
     if (status != PJ_SUCCESS)
-        return NULL;
+        goto on_error;
 
     status = pjmedia_codec_mgr_alloc_codec(pjmedia_endpt_get_codec_mgr(cp->endpt),
                                            ci[0], &cp->codec);
     if (status != PJ_SUCCESS)
-        return NULL;
+        goto on_error;
 
     status = pjmedia_codec_mgr_get_default_param(pjmedia_endpt_get_codec_mgr(cp->endpt),
                                                  ci[0], &codec_param);
     if (status != PJ_SUCCESS)
-        return NULL;
+        goto on_error;
 
     status = pjmedia_codec_init(cp->codec, pool);
     if (status != PJ_SUCCESS)
-        return NULL;
+        goto on_error;
 
     status = pjmedia_codec_open(cp->codec, &codec_param);
     if (status != PJ_SUCCESS)
-        return NULL;
+        goto on_error;
 
     return &cp->base;
+
+on_error:
+    codec_on_destroy(&cp->base);
+    return NULL;
 }
 #endif
 
@@ -1346,6 +1373,16 @@ static pjmedia_port* wsola_discard_50(pj_pool_t *pool,
 
 /***************************************************************************/
 
+static void ec_custom_deinit(struct test_entry *te)
+{
+    unsigned i;
+
+    for (i = 0; i < PJ_ARRAY_SIZE(te->pdata); i++) {
+        if (!te->pdata[i]) break;
+        pjmedia_port_destroy((pjmedia_port *)te->pdata[i]);
+    }
+}
+
 static pjmedia_port* ec_create(unsigned ec_tail_msec,
                                pj_pool_t *pool,
                                unsigned clock_rate,
@@ -1357,17 +1394,20 @@ static pjmedia_port* ec_create(unsigned ec_tail_msec,
     pjmedia_port *gen_port, *ec_port;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(te);
+    te->custom_deinit = &ec_custom_deinit;
+    pj_bzero(te->pdata, sizeof(te->pdata));
 
     gen_port = create_gen_port(pool, clock_rate, channel_count, 
                                samples_per_frame, 100);
     if (gen_port == NULL)
         return NULL;
+    te->pdata[0] = gen_port;
 
     status = pjmedia_echo_port_create(pool, gen_port, ec_tail_msec, 0,
                                       flags, &ec_port);
     if (status != PJ_SUCCESS)
         return NULL;
+    te->pdata[1] = ec_port;
 
     return ec_port;
 }
@@ -2385,6 +2425,8 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
     pj_get_timestamp(&t1);
 
     pj_sub_timestamp(&t1, &t0);
+
+    pjmedia_port_destroy(gen_port);
 
     if (e->custom_deinit)
         e->custom_deinit(e);
