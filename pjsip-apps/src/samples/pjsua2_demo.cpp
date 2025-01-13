@@ -177,6 +177,8 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
     AudioMedia& play_dev_med =
         MyEndpoint::instance().audDevManager().getPlaybackDevMedia();
 
+        std::cout << "Getting playback dev media" << std::endl;
+
     try {
         // Get the first audio media
         aud_med = getAudioMedia(-1);
@@ -240,7 +242,7 @@ static void mainProg1(MyEndpoint &ep)
 
     // Transport
     TransportConfig tcfg;
-    tcfg.port = 5060;
+    tcfg.port = 6000;
     ep.transportCreate(PJSIP_TRANSPORT_UDP, tcfg);
 
     // Start library
@@ -249,17 +251,17 @@ static void mainProg1(MyEndpoint &ep)
 
     // Add account
     AccountConfig acc_cfg;
-    acc_cfg.idUri = "sip:test1@pjsip.org";
+    acc_cfg.idUri = "sip:401@pjsip.org";
     acc_cfg.regConfig.registrarUri = "sip:sip.pjsip.org";
 
 #if PJSIP_HAS_DIGEST_AKA_AUTH
     AuthCredInfo aci("Digest", "*", "test", PJSIP_CRED_DATA_EXT_AKA | PJSIP_CRED_DATA_PLAIN_PASSWD, "passwd");
     aci.akaK = "passwd";
 #else
-    AuthCredInfo aci("digest", "*", "test1", 0, "test1");
+    AuthCredInfo aci("digest", "*", "401", 0, "pw401");
 #endif
 
-    acc_cfg.sipConfig.authCreds.push_back(std::move(aci));
+    acc_cfg.sipConfig.authCreds.push_back(PJSUA2_MOVE(aci));
     MyAccount *acc(new MyAccount);
     try {
         acc->create(acc_cfg);
@@ -275,7 +277,7 @@ static void mainProg1(MyEndpoint &ep)
     CallOpParam prm(true);
     prm.opt.audioCount = 1;
     prm.opt.videoCount = 0;
-    call->makeCall("sip:test1@pjsip.org", prm);
+    call->makeCall("sip:402@sip.pjsip.org", prm);
     
     // Hangup all calls
     pj_thread_sleep(4000);
@@ -412,7 +414,7 @@ static void mainProg(MyEndpoint &)
         SipHeader h;
         h.hName = "X-Header";
         h.hValue = "User header";
-        accCfg.regConfig.headers.push_back(std::move(h));
+        accCfg.regConfig.headers.push_back(PJSUA2_MOVE(h));
 
         accCfg.sipConfig.proxies.push_back("<sip:sip.pjsip.org;transport=tcp>");
         accCfg.sipConfig.proxies.push_back("<sip:sip.pjsip.org;transport=tls>");
@@ -431,7 +433,7 @@ static void mainProg(MyEndpoint &)
         aci.dataType |= PJSIP_CRED_DATA_EXT_AKA;
         aci.akaK = "key";
 #endif
-        accCfg.sipConfig.authCreds.push_back(std::move(aci));
+        accCfg.sipConfig.authCreds.push_back(PJSUA2_MOVE(aci));
 
         jdoc.writeObject(accCfg);
         json_str = jdoc.saveString();

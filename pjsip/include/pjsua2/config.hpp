@@ -66,6 +66,15 @@
 #endif
 
 /**
+ * std::move() is only supported from C++11.
+ */
+#if __cplusplus >= 201103L
+    #define PJSUA2_MOVE(x) std::move(x)
+#else
+    #define PJSUA2_MOVE(x) (x)
+#endif
+
+/**
  * @}  PJSUA2_CFG
  */
 

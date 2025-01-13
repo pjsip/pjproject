@@ -130,7 +130,7 @@ void SslCertInfo::fromPj(const pj_ssl_cert_info &info)
         SslCertName cname;
         cname.type = info.subj_alt_name.entry[i].type;
         cname.name = pj2Str(info.subj_alt_name.entry[i].name);
-        subjectAltName.push_back(std::move(cname));
+        subjectAltName.push_back(PJSUA2_MOVE(cname));
     }
 }
 
@@ -1843,7 +1843,7 @@ void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
         crypto.key   = pj2Str(srtp_opt->crypto[i].key);
         crypto.name  = pj2Str(srtp_opt->crypto[i].name);
         crypto.flags = srtp_opt->crypto[i].flags;
-        prm.cryptos.push_back(std::move(crypto));
+        prm.cryptos.push_back(PJSUA2_MOVE(crypto));
     }
     
     call->onCreateMediaTransportSrtp(prm);
@@ -2480,7 +2480,7 @@ CodecInfoVector2 Endpoint::codecEnum2() const PJSUA2_THROW(Error)
     for (unsigned i = 0; i<count; ++i) {
         CodecInfo codec_info;
         codec_info.fromPj(pj_codec[i]);
-        civ2.push_back(std::move(codec_info));
+        civ2.push_back(PJSUA2_MOVE(codec_info));
     }
     return civ2;
 }
@@ -2627,7 +2627,7 @@ CodecInfoVector2 Endpoint::videoCodecEnum2() const PJSUA2_THROW(Error)
     for (unsigned i = 0; i<count; ++i) {
         CodecInfo codec_info;
         codec_info.fromPj(pj_codec[i]);
-        civ2.push_back(std::move(codec_info));
+        civ2.push_back(PJSUA2_MOVE(codec_info));
     }
 #endif
     return civ2;

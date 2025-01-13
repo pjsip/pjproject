@@ -65,7 +65,7 @@ void RtcpFbConfig::fromPj(const pjmedia_rtcp_fb_setting &prm)
     for (unsigned i = 0; i < prm.cap_count; ++i) {
         RtcpFbCap cap;
         cap.fromPj(prm.caps[i]);
-        this->caps.push_back(std::move(cap));
+        this->caps.push_back(PJSUA2_MOVE(cap));
     }
 }
 
@@ -96,7 +96,7 @@ void RtcpFbConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
         NODE_READ_NUM_T         (cap_node, pjmedia_rtcp_fb_type, cap.type);
         NODE_READ_STRING        (cap_node, cap.typeName);
         NODE_READ_STRING        (cap_node, cap.param);
-        this->caps.push_back(std::move(cap));
+        this->caps.push_back(PJSUA2_MOVE(cap));
     }
 }
 
@@ -157,7 +157,7 @@ void SrtpOpt::fromPj(const pjsua_srtp_opt &prm)
     for (unsigned i = 0; i < prm.crypto_count; ++i) {
         SrtpCrypto crypto;
         crypto.fromPj(prm.crypto[i]);
-        this->cryptos.push_back(std::move(crypto));
+        this->cryptos.push_back(PJSUA2_MOVE(crypto));
     }
 
     this->keyings.clear();
@@ -196,7 +196,7 @@ void SrtpOpt::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
         NODE_READ_STRING        (crypto_node, crypto.key);
         NODE_READ_STRING        (crypto_node, crypto.name);
         NODE_READ_UNSIGNED      (crypto_node, crypto.flags);
-        this->cryptos.push_back(std::move(crypto));
+        this->cryptos.push_back(PJSUA2_MOVE(crypto));
     }
 
     ContainerNode keying_node = this_node.readArray("keyings");
@@ -287,7 +287,7 @@ void AccountSipConfig::readObject(const ContainerNode &node)
     while (creds_node.hasUnread()) {
         AuthCredInfo cred;
         cred.readObject(creds_node);
-        authCreds.push_back(std::move(cred));
+        authCreds.push_back(PJSUA2_MOVE(cred));
     }
 }
 
@@ -762,7 +762,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         SipHeader new_hdr;
         new_hdr.fromPj(hdr);
 
-        regConfig.headers.push_back(std::move(new_hdr));
+        regConfig.headers.push_back(PJSUA2_MOVE(new_hdr));
 
         hdr = hdr->next;
     }
@@ -782,7 +782,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         cred.akaOp      = pj2Str(src.ext.aka.op);
         cred.akaAmf     = pj2Str(src.ext.aka.amf);
 
-        sipConfig.authCreds.push_back(std::move(cred));
+        sipConfig.authCreds.push_back(PJSUA2_MOVE(cred));
     }
     sipConfig.proxies.clear();
     for (i=0; i<prm.proxy_cnt; ++i) {
@@ -810,7 +810,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     while (hdr != &prm.sub_hdr_list) {
         SipHeader new_hdr;
         new_hdr.fromPj(hdr);
-        presConfig.headers.push_back(std::move(new_hdr));
+        presConfig.headers.push_back(PJSUA2_MOVE(new_hdr));
         hdr = hdr->next;
     }
     presConfig.publishEnabled   = PJ2BOOL(prm.publish_enabled);
