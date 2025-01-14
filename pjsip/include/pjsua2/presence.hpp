@@ -179,7 +179,8 @@ public:
      * Default constructor
      */
     BuddyInfo() 
-    : presMonitorEnabled(true),
+    : accId(PJSUA_INVALID_ID),
+      presMonitorEnabled(true),
       subState(PJSIP_EVSUB_STATE_UNKNOWN),
       subTermCode(PJSIP_SC_NULL)
     {}
