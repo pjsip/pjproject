@@ -719,10 +719,12 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     state_cli.is_verbose = PJ_TRUE;
 
     {
+        /* srand() should be done centrally (blp)
         pj_time_val now;
 
         pj_gettimeofday(&now);
         pj_srand((unsigned)now.sec);
+        */
         state_cli.send_str_len = (pj_rand() % 5 + 1) * 1024 + pj_rand() % 1024;
     }
     state_cli.send_str = (char*)pj_pool_alloc(pool, state_cli.send_str_len);
@@ -1449,14 +1451,6 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
     param.timeout.sec = 0;
     param.timeout.msec = 0;
 
-    /* Init random seed */
-    {
-        pj_time_val now;
-
-        pj_gettimeofday(&now);
-        pj_srand((unsigned)now.sec);
-    }
-
     /* Allocate SSL socket pointers and test state */
     ssock_cli = (pj_ssl_sock_t**)pj_pool_calloc(pool, clients, sizeof(pj_ssl_sock_t*));
     state_cli = (struct test_state*)pj_pool_calloc(pool, clients, sizeof(struct test_state));
@@ -1644,12 +1638,15 @@ int ssl_sock_test(void)
     if (ret != 0)
         return ret;
 
+    /* SSLv23 is deprecated */
+    /*
     PJ_LOG(3,("", "..echo test w/ SSLv23 and PJ_TLS_RSA_WITH_AES_256_CBC_SHA cipher"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_SSL23, PJ_SSL_SOCK_PROTO_SSL23, 
                     PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
                     PJ_FALSE, PJ_FALSE);
     if (ret != 0)
         return ret;
+    */
 #endif
 
     PJ_LOG(3,("", "..echo test w/ compatible proto: server TLSv1.2 vs client TLSv1.2"));

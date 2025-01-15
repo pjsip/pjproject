@@ -114,6 +114,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->hangup_forked_call = PJ_TRUE;
 
     cfg->use_timer = PJSUA_SIP_TIMER_OPTIONAL;
+    cfg->use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
     pjsip_timer_setting_default(&cfg->timer_setting);
     pjsua_srtp_opt_default(&cfg->srtp_opt);
 }
@@ -335,6 +336,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->require_100rel = pjsua_var.ua_cfg.require_100rel;
     cfg->use_timer = pjsua_var.ua_cfg.use_timer;
     cfg->timer_setting = pjsua_var.ua_cfg.timer_setting;
+    cfg->use_siprec = pjsua_var.ua_cfg.use_siprec;
     cfg->lock_codec = 1;
     cfg->ka_interval = 15;
     cfg->ka_data = pj_str("\r\n");
@@ -390,6 +392,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
+    cfg->acc_id = PJSUA_INVALID_ID;
 }
 
 PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
@@ -667,15 +670,31 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
     pj_bool_t processed = PJ_FALSE;
 
 #if PJSUA_DETECT_MERGED_REQUESTS
-    if (pjsip_tsx_detect_merged_requests(rdata)) {
-        PJ_LOG(4, (THIS_FILE, "Merged request detected"));
+    pjsip_transaction *tsx;
+    if ((tsx = pjsip_tsx_detect_merged_requests(rdata)) != NULL) {
 
-        /* Respond with 482 (Loop Detected) */
-        pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
-                            PJSIP_SC_LOOP_DETECTED, NULL,
-                            NULL, NULL, NULL);
+        pjsip_dialog *dlg = pjsip_tsx_get_dlg(tsx);
 
-        return PJ_TRUE;
+        PJ_LOG(4, (THIS_FILE, "Merged request detected (%s) (%s): %s from %s:%d",
+                              dlg ? dlg->obj_name : "-no-dlg-",
+                              tsx->obj_name,
+                              pjsip_rx_data_get_info(rdata),
+                              rdata->pkt_info.src_name,
+                              rdata->pkt_info.src_port));
+
+        /* Don't respond to ACK, even if it looks like a merged request 
+         * Let it be "dropped/unhandled by any modules"
+         */
+        if (pjsip_method_cmp(&rdata->msg_info.msg->line.req.method,
+                             &pjsip_ack_method) == 0) {
+            return PJ_FALSE;
+        } else {
+            /* Respond with 482 (Loop Detected) */
+            pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
+                                PJSIP_SC_LOOP_DETECTED, NULL,
+                                NULL, NULL, NULL);
+            return PJ_TRUE;
+        }
     }
 #endif
 
@@ -1142,6 +1161,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 
     /* Initialize session timer support */
     status = pjsip_timer_init_module(pjsua_var.endpt);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
+    /* Initialize siprec support */
+    status = pjsip_siprec_init_module(pjsua_var.endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Initialize and register PJSUA application module. */

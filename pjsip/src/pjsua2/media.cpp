@@ -281,25 +281,49 @@ AudioMedia* AudioMedia::typecastFromMedia(Media *media)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+struct port_data {
+    AudioMediaPort *mport;
+    pj_pool_t      *pool;
+};
+
 AudioMediaPort::AudioMediaPort()
-: pool(NULL)
+: pool(NULL), port(NULL)
 {
-    pj_bzero(&port, sizeof(port));
 }
 
 AudioMediaPort::~AudioMediaPort()
 {
-    if (pool) {
-        PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
-        pj_pool_release(pool);
-        pool = NULL;
+    PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
+    if (port) {
+        struct port_data *pdata = static_cast<struct port_data *>
+                                  (port->port_data.pdata);
+
+        /* Make sure port no longer accesses this object in its
+         * get/put_frame() callback.
+         */
+        if (port->grp_lock) {
+            pj_grp_lock_acquire(port->grp_lock);
+            pdata->mport = NULL;
+            pj_grp_lock_release(port->grp_lock);
+        }
+
+        pjmedia_port_destroy(port);
+        /* We release the pool later in port.on_destroy since
+         * the unregistration is async and may not have completed yet.
+         */
     }
 }
 
 static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
 {
-    AudioMediaPort *mport = (AudioMediaPort *) port->port_data.pdata;
+    struct port_data *pdata = static_cast<struct port_data *>
+                              (port->port_data.pdata);
+    AudioMediaPort *mport;
     MediaFrame frame_;
+
+    pj_grp_lock_acquire(port->grp_lock);
+    if ((mport = pdata->mport) == NULL)
+        goto on_return;
 
     frame_.size = (unsigned)frame->size;
     mport->onFrameRequested(frame_);
@@ -315,19 +339,41 @@ static pj_status_t get_frame(pjmedia_port *port, pjmedia_frame *frame)
     pj_memcpy(frame->buf, frame_.buf.data(), frame->size);
 #endif
 
-
+on_return:
+    pj_grp_lock_release(port->grp_lock);
     return PJ_SUCCESS;
 }
 
 static pj_status_t put_frame(pjmedia_port *port, pjmedia_frame *frame)
 {
-    AudioMediaPort *mport = (AudioMediaPort *) port->port_data.pdata;
+    struct port_data *pdata = static_cast<struct port_data *>
+                              (port->port_data.pdata);
+    AudioMediaPort *mport;
     MediaFrame frame_;
+
+    pj_grp_lock_acquire(port->grp_lock);
+    if ((mport = pdata->mport) == NULL)
+        goto on_return;
 
     frame_.type = frame->type;
     frame_.buf.assign((char *)frame->buf, ((char *)frame->buf) + frame->size);
     frame_.size = (unsigned)frame->size;
     mport->onFrameReceived(frame_);
+
+on_return:
+    pj_grp_lock_release(port->grp_lock);
+    return PJ_SUCCESS;
+}
+
+static pj_status_t port_on_destroy(pjmedia_port *port)
+{
+    struct port_data *pdata = static_cast<struct port_data *>
+                              (port->port_data.pdata);
+    pj_pool_t *pool = pdata->pool;
+
+    if (pool) {
+        pj_pool_release(pool);
+    }
 
     return PJ_SUCCESS;
 }
@@ -337,6 +383,8 @@ void AudioMediaPort::createPort(const string &name, MediaFormatAudio &fmt)
 {
     pj_str_t name_;
     pjmedia_format fmt_;
+    struct port_data *pdata;
+    pj_status_t status;
 
     if (pool) {
         PJSUA2_RAISE_ERROR(PJ_EEXISTS);
@@ -348,18 +396,30 @@ void AudioMediaPort::createPort(const string &name, MediaFormatAudio &fmt)
     }
 
     /* Init port. */
-    pj_bzero(&port, sizeof(port));
+    port = PJ_POOL_ZALLOC_T(pool, pjmedia_port);
     pj_strdup2_with_null(pool, &name_, name.c_str());
     fmt_ = fmt.toPj();
-    pjmedia_port_info_init2(&port.info, &name_,
+    pjmedia_port_info_init2(&port->info, &name_,
                             PJMEDIA_SIG_CLASS_APP ('A', 'M', 'P'),
                             PJMEDIA_DIR_ENCODING_DECODING, &fmt_);
 
-    port.port_data.pdata = this;
-    port.put_frame = &put_frame;
-    port.get_frame = &get_frame;
+    pdata = PJ_POOL_ZALLOC_T(pool, struct port_data);
+    pdata->mport = this;
+    pdata->pool = pool;
+    port->port_data.pdata = pdata;
+    port->put_frame = &put_frame;
+    port->get_frame = &get_frame;
 
-    registerMediaPort2(&port, pool);
+    /* Must implement on_destroy() and create group lock to avoid
+     * race and premature destroy.
+     */
+    port->on_destroy = &port_on_destroy;
+    status = pjmedia_port_init_grp_lock(port, pool, NULL);
+    if (status != PJ_SUCCESS) {
+        PJSUA2_RAISE_ERROR(status);
+    }
+
+    registerMediaPort2(port, pool);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -689,7 +749,7 @@ ToneDigitMapVector ToneGenerator::getDigitMap() const PJSUA2_THROW(Error)
         d.freq1 = pdm->digits[i].freq1;
         d.freq2 = pdm->digits[i].freq2;
 
-        tdm.push_back(d);
+        tdm.push_back(PJSUA2_MOVE(d));
     }
 
     return tdm;
@@ -736,7 +796,7 @@ void AudioDevInfo::fromPj(const pjmedia_aud_dev_info &dev_info)
         MediaFormatAudio format;
         format.fromPj(dev_info.ext_fmt[i]);
         if (format.type == PJMEDIA_TYPE_AUDIO)
-            extFmt.push_back(format);
+            extFmt.push_back(PJSUA2_MOVE(format));
     }
 }
 
@@ -886,7 +946,7 @@ AudioDevInfoVector2 AudDevManager::enumDev2() const PJSUA2_THROW(Error)
     for (unsigned i = 0; i<count ;++i) {
         AudioDevInfo di;
         di.fromPj(pj_info[i]);
-        adiv2.push_back(di);
+        adiv2.push_back(PJSUA2_MOVE(di));
     }
 
     return adiv2;
@@ -1617,7 +1677,7 @@ void VideoDevInfo::fromPj(const pjmedia_vid_dev_info &dev_info)
         MediaFormatVideo format;
         format.fromPj(dev_info.fmt[i]);
         if (format.type == PJMEDIA_TYPE_VIDEO)
-            fmt.push_back(format);
+            fmt.push_back(PJSUA2_MOVE(format));
     }
 #else
     PJ_UNUSED_ARG(dev_info);
@@ -1705,7 +1765,7 @@ VideoDevInfoVector2 VidDevManager::enumDev2() const PJSUA2_THROW(Error)
     for (unsigned i = 0; i<count;++i) {
         VideoDevInfo vdi;
         vdi.fromPj(pj_info[i]);
-        vdiv2.push_back(vdi);
+        vdiv2.push_back(PJSUA2_MOVE(vdi));
     }
 #endif
     return vdiv2;
@@ -1919,7 +1979,7 @@ public:
             fmtp.name = pj2Str(in_fmtp.param[i].name);
             fmtp.val = pj2Str(in_fmtp.param[i].val);
         
-            out_fmtp.push_back(fmtp);
+            out_fmtp.push_back(PJSUA2_MOVE(fmtp));
        }
     }
 

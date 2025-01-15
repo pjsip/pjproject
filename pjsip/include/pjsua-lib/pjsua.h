@@ -2141,6 +2141,32 @@ typedef enum pjsua_sip_timer_use
 
 
 /**
+ * This enumeration specifies the usage of SIPREC extension.
+ */
+typedef enum pjsua_sip_siprec_use
+{
+    /**
+     * When this flag is specified, when a SIPREC request is received, it 
+     * returns bad extension error. and SIPREC calls will not be established.
+     */
+    PJSUA_SIP_SIPREC_INACTIVE,
+
+    /**
+     * When this flag is specified, when you want both regular calls and
+     * SIPREC calls to be established.
+     */
+    PJSUA_SIP_SIPREC_OPTIONAL,
+
+    /**
+     * When this flag is specified, when you want only SIPREC calls to
+     * be established, and regular calls are rejected.
+     */
+    PJSUA_SIP_SIPREC_MANDATORY,
+
+} pjsua_sip_siprec_use;
+
+
+/**
  * This constants controls the use of 100rel extension.
  */
 typedef enum pjsua_100rel_use
@@ -2342,6 +2368,15 @@ typedef struct pjsua_config
      * Default: PJSUA_SIP_TIMER_OPTIONAL
      */
     pjsua_sip_timer_use use_timer;
+
+    /**
+     * Specify the usage of SIPREC sessions. See the
+     * #pjsua_sip_siprec_use for possible values. Note that this setting can be
+     * further customized in account configuration (#pjsua_acc_config).
+     *
+     * Default: PJSUA_SIP_SIPREC_INACTIVE
+     */
+    pjsua_sip_siprec_use use_siprec;
 
     /**
      * Handle unsolicited NOTIFY requests containing message waiting 
@@ -4064,6 +4099,14 @@ typedef struct pjsua_acc_config
      * Default: PJSUA_SIP_TIMER_OPTIONAL
      */
     pjsua_sip_timer_use use_timer;
+
+    /**
+     * Specify the usage of SIPREC sessions. See the
+     * #pjsua_sip_siprec_use for possible values.
+     *
+     * Default: PJSUA_SIP_SIPREC_INACTIVE
+     */
+    pjsua_sip_siprec_use use_siprec;
 
     /**
      * Specify Session Timer settings, see #pjsip_timer_setting. 
@@ -6554,10 +6597,21 @@ typedef struct pjsua_buddy_config
     pj_bool_t   subscribe_dlg_event;
 
     /**
-     * Specify arbitrary application data to be associated with with
+     * Specify arbitrary application data to be associated with
      * the buddy object.
      */
     void       *user_data;
+
+    /**
+     * Specify account to be associated with the buddy object. The account
+     * will be used for creating the subscription.
+     *
+     * IMPORTANT: Account must remain valid throughout the entire lifetime
+     * of the buddy object.
+     *
+     * Default: PJSUA_INVALID_ID (buddy is not associated to any account)
+     */
+    pjsua_acc_id acc_id;
 
 } pjsua_buddy_config;
 
@@ -6602,6 +6656,12 @@ typedef struct pjsua_buddy_info
      * The full URI of the buddy, as specified in the configuration.
      */
     pj_str_t            uri;
+
+    /**
+     * The account ID associated with this buddy. If not associated
+     * with any account, the value will be PJSUA_INVALID_ID.
+     */
+    pjsua_acc_id        acc_id;
 
     /**
      * Buddy's Contact, only available when presence subscription has

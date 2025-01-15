@@ -23,10 +23,6 @@
 #include <pjlib-util.h>
 #include <pjlib.h>
 
-#define DNS_SERVER_PORT     55533
-#define STUN_SERVER_PORT    33478
-#define TURN_SERVER_PORT    33479
-
 #define TURN_USERNAME   "auser"
 #define TURN_PASSWD     "apass"
 
@@ -81,10 +77,13 @@ struct test_server
     pj_ioqueue_op_key_t  send_key;
 
     pj_dns_server       *dns_server;
+    pj_uint16_t          dns_server_port;
 
     pj_activesock_t     *stun_sock;
+    pj_uint16_t          stun_server_port;
 
     pj_activesock_t     *turn_sock;
+    pj_uint16_t          turn_server_port;
 
     pj_ssl_sock_t       *ssl_srv_sock;
 

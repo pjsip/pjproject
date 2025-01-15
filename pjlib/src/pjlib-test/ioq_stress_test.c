@@ -20,7 +20,8 @@
 
 #define THIS_FILE       "ioq_stress_test.c"
 #define MAX_THREADS     16
-#define TRACE(log)      PJ_LOG(3,log)
+//#define TRACE(log)      PJ_LOG(3,log)
+#define TRACE(log)
 #define MAX_ASYNC       16
 
 #define RETCODE_CONNECT_FAILED  650

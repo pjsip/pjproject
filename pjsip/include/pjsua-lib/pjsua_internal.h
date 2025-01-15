@@ -241,6 +241,7 @@ struct pjsua_call
     unsigned             hangup_code;   /**< Hangup code.                   */
     pj_str_t             hangup_reason; /**< Hangup reason.                 */
     pjsua_msg_data      *hangup_msg_data;/**< Hangup message data.          */
+    pj_str_t             siprec_metadata;/** siprec metadata in body        */
 };
 
 
@@ -368,6 +369,7 @@ typedef struct pjsua_buddy
 {
     pj_pool_t           *pool;      /**< Pool for this buddy.           */
     unsigned             index;     /**< Buddy index.                   */
+    pjsua_acc_id         acc_id;    /**< Account index.                 */
     void                *user_data; /**< Application data.              */
     pj_str_t             uri;       /**< Buddy URI.                     */
     pj_str_t             contact;   /**< Contact learned from subscrp.  */

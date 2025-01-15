@@ -425,6 +425,10 @@ PJ_DECL(unsigned) pjmedia_conf_get_connect_count(pjmedia_conf *conf);
  * should not assume that the port will no longer receive/send audio frame
  * after this function has returned.
  *
+ * If the port uses any app's resources, application should maintain
+ * the resources validity until the port is completely removed. Application
+ * can schedule the resource release via #pjmedia_conf_add_destroy_handler().
+ *
  * @param conf          The conference bridge.
  * @param slot          The port index to be removed.
  *
@@ -601,6 +605,47 @@ PJ_DECL(pj_status_t) pjmedia_conf_adjust_conn_level( pjmedia_conf *conf,
                                                      unsigned sink_slot,
                                                      int adj_level );
 
+
+/**
+ * Add port destructor handler.
+ *
+ * Application can use this function to schedule resource release.
+ * Note that application cannot release any app's resources used by the port,
+ * e.g: memory pool, database connection, immediately after removing the port
+ * from the conference bridge as port removal is asynchronous.
+ *
+ * Usually this function is called after adding the port to the conference
+ * bridge.
+ *
+ * @param conf              The conference bridge.
+ * @param slot              The port slot index.
+ * @param member            A pointer to be passed to the handler.
+ * @param handler           The destroy handler.
+ *
+ * @return                  PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_add_destroy_handler(
+                                            pjmedia_conf* conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler);
+
+
+/**
+ * Remove previously registered destructor handler.
+ *
+ * @param conf              The conference bridge.
+ * @param slot              The port slot index.
+ * @param member            A pointer to be passed to the handler.
+ * @param handler           The destroy handler.
+ *
+ * @return                  PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_del_destroy_handler(
+                                            pjmedia_conf* conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler);
 
 
 PJ_END_DECL

@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/types.h>
+#include <pj/unittest.h>
 
 #if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
 #   define WITH_BENCHMARK           0
@@ -36,10 +37,19 @@ extern int json_test(void);
 extern int encryption_test();
 extern int encryption_benchmark();
 extern int stun_test();
-extern int test_main(void);
+extern int test_main(int argc, char *argv[]);
 extern int resolver_test(void);
 extern int http_client_test();
 
 extern void app_perror(const char *title, pj_status_t rc);
 extern pj_pool_factory *mem;
 
+#define UT_MAX_TESTS    20
+#include "../../../pjlib/src/pjlib-test/test_util.h"
+
+struct test_app_t
+{
+    ut_app_t    ut_app;
+    int         param_log_decor;
+};
+extern struct test_app_t test_app;

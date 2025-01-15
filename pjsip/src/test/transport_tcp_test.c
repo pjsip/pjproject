@@ -156,7 +156,7 @@ int transport_tcp_test(void)
     pjsip_transport *tcp[NUM_TP];
     pj_sockaddr_in rem_addr;
     pj_status_t status;
-    char url[PJSIP_MAX_URL_SIZE];
+    char host_port_param[PJSIP_MAX_URL_SIZE];
     char addr[PJ_INET_ADDRSTRLEN];
     int rtt[SEND_RECV_LOOP], min_rtt;
     int pkt_lost;
@@ -172,19 +172,16 @@ int transport_tcp_test(void)
     status = pj_sockaddr_in_init(&rem_addr, &tpfactory[0]->addr_name.host,
                                  (pj_uint16_t)tpfactory[0]->addr_name.port);
 
-    pj_ansi_snprintf(url, sizeof(url), "sip:alice@%s:%d;transport=tcp",
+    pj_ansi_snprintf(host_port_param, sizeof(host_port_param),
+                    "%s:%d;transport=tcp",
                     pj_inet_ntop2(pj_AF_INET(), &rem_addr.sin_addr, addr,
                                   sizeof(addr)),
                     pj_ntohs(rem_addr.sin_port));
 
-    /* Load test */
-    if (transport_load_test(url) != 0)
-        return -60;
-
     /* Basic transport's send/receive loopback test. */
     for (i=0; i<SEND_RECV_LOOP; ++i) {
-        status = transport_send_recv_test(PJSIP_TRANSPORT_TCP, tcp[0], url,
-                                          &rtt[i]);
+        status = transport_send_recv_test(PJSIP_TRANSPORT_TCP, tcp[0],
+                                          host_port_param, &rtt[i]);
 
         if (status != 0) {
             for (i = 0; i < num_tp ; ++i) {
@@ -207,7 +204,8 @@ int transport_tcp_test(void)
 
 
     /* Multi-threaded round-trip test. */
-    status = transport_rt_test(PJSIP_TRANSPORT_TCP, tcp[0], url, &pkt_lost);
+    status = transport_rt_test(PJSIP_TRANSPORT_TCP, tcp[0], host_port_param,
+                               &pkt_lost);
     if (status != 0) {
         for (i = 0; i < num_tp ; ++i) {
             pjsip_transport_dec_ref(tcp[i]);
@@ -217,6 +215,13 @@ int transport_tcp_test(void)
 
     if (pkt_lost != 0)
         PJ_LOG(3,(THIS_FILE, "   note: %d packet(s) was lost", pkt_lost));
+
+    /* Load test */
+    if ((status=transport_load_test(PJSIP_TRANSPORT_TCP,
+                                    host_port_param)) != 0)
+    {
+        return status;
+    }
 
     /* Check again that reference counter is still 1. */
     for (i = 0; i < num_tp; ++i) {

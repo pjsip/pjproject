@@ -39,10 +39,8 @@ int generic_transport_test(pjsip_transport *tp)
         if (pj_inet_pton(pj_AF_INET(), &tp->local_name.host,
                          &addr) == PJ_SUCCESS)
         {
-            if (addr.s_addr==PJ_INADDR_ANY || addr.s_addr==PJ_INADDR_NONE) {
-                PJ_LOG(3,(THIS_FILE, "   Error: invalid address name"));
-                return -420;
-            }
+            PJ_TEST_TRUE(addr.s_addr!=PJ_INADDR_ANY && addr.s_addr!=PJ_INADDR_NONE,
+                         "invalid address name", return -420);
         } else {
             /* It's okay. local_name.host may be a hostname instead of
              * IP address.
@@ -51,17 +49,13 @@ int generic_transport_test(pjsip_transport *tp)
     }
 
     /* Check that port is valid. */
-    if (tp->local_name.port <= 0) {
-        return -430;
-    }
+    PJ_TEST_GT(tp->local_name.port, 0, NULL, return -430);
 
     /* Check length of address (for now we only check against sockaddr_in). */
-    if (tp->addr_len != sizeof(pj_sockaddr_in))
-        return -440;
+    PJ_TEST_EQ(tp->addr_len, sizeof(pj_sockaddr_in), NULL, return -440);
 
     /* Check type. */
-    if (tp->key.type == PJSIP_TRANSPORT_UNSPECIFIED)
-        return -450;
+    PJ_TEST_NEQ(tp->key.type, PJSIP_TRANSPORT_UNSPECIFIED, NULL, return -450);
 
     /* That's it. */
     return PJ_SUCCESS;
@@ -77,11 +71,12 @@ int generic_transport_test(pjsip_transport *tp)
  * The main purpose is to test that the basic transport functionalities works,
  * before we continue with more complicated tests.
  */
-#define FROM_HDR    "Bob <sip:bob@example.com>"
-#define CONTACT_HDR "Bob <sip:bob@127.0.0.1>"
-#define CALL_ID_HDR "SendRecv-Test"
-#define CSEQ_VALUE  100
-#define BODY        "Hello World!"
+#define SEND_RECV_FROM_HDR      "Bob <sip:transport_send_recv_test@example.com>"
+#define SEND_RECV_CALL_ID_HDR   "Transport-SendRecv-Test"
+#define RT_FROM_HDR             "Bob <sip:transport_rt_test@example.com>"
+#define CONTACT_HDR             "Bob <sip:transport_test@127.0.0.1>"
+#define CSEQ_VALUE              100
+#define BODY                    "Hello World!"
 
 static pj_bool_t my_on_rx_request(pjsip_rx_data *rdata);
 static pj_bool_t my_on_rx_response(pjsip_rx_data *rdata);
@@ -90,12 +85,18 @@ static pj_bool_t my_on_rx_response(pjsip_rx_data *rdata);
  * (or failed to send)
  */
 #define NO_STATUS   -2
-static int send_status = NO_STATUS;
-static int recv_status = NO_STATUS;
-static pj_timestamp my_send_time, my_recv_time;
+
+struct send_recv_test_global_t
+{
+    int             send_status;
+    int             recv_status;
+    pj_timestamp    my_send_time;
+    pj_timestamp    my_recv_time;
+};
+static struct send_recv_test_global_t sr_g[PJSIP_TRANSPORT_START_OTHER];
 
 /* Module to receive messages for this test. */
-static pjsip_module my_module = 
+static pjsip_module send_recv_module = 
 {
     NULL, NULL,                         /* prev and next        */
     { "Transport-Test", 14},            /* Name.                */
@@ -113,8 +114,18 @@ static pjsip_module my_module =
 
 static pj_bool_t my_on_rx_request(pjsip_rx_data *rdata)
 {
+    pjsip_to_hdr *to_hdr = rdata->msg_info.to;
+    pjsip_sip_uri *target = (pjsip_sip_uri*)pjsip_uri_get_uri(to_hdr->uri);
+    unsigned tid;
+
+    if (!is_user_equal(rdata->msg_info.from, "transport_send_recv_test"))
+        return PJ_FALSE;
+
+    tid = (unsigned)pj_strtoul(&target->user);
+    pj_assert(tid < PJSIP_TRANSPORT_START_OTHER);
+
     /* Check that this is our request. */
-    if (pj_strcmp2(&rdata->msg_info.cid->id, CALL_ID_HDR) == 0) {
+    if (pj_strcmp2(&rdata->msg_info.cid->id, SEND_RECV_CALL_ID_HDR) == 0) {
         /* It is! */
         /* Send response. */
         pjsip_tx_data *tdata;
@@ -123,18 +134,18 @@ static pj_bool_t my_on_rx_request(pjsip_rx_data *rdata)
 
         status = pjsip_endpt_create_response( endpt, rdata, 200, NULL, &tdata);
         if (status != PJ_SUCCESS) {
-            recv_status = status;
+            sr_g[tid].recv_status = status;
             return PJ_TRUE;
         }
         status = pjsip_get_response_addr( tdata->pool, rdata, &res_addr);
         if (status != PJ_SUCCESS) {
-            recv_status = status;
+            sr_g[tid].recv_status = status;
             pjsip_tx_data_dec_ref(tdata);
             return PJ_TRUE;
         }
         status = pjsip_endpt_send_response( endpt, &res_addr, tdata, NULL, NULL);
         if (status != PJ_SUCCESS) {
-            recv_status = status;
+            sr_g[tid].recv_status = status;
             pjsip_tx_data_dec_ref(tdata);
             return PJ_TRUE;
         }
@@ -147,9 +158,19 @@ static pj_bool_t my_on_rx_request(pjsip_rx_data *rdata)
 
 static pj_bool_t my_on_rx_response(pjsip_rx_data *rdata)
 {
-    if (pj_strcmp2(&rdata->msg_info.cid->id, CALL_ID_HDR) == 0) {
-        pj_get_timestamp(&my_recv_time);
-        recv_status = PJ_SUCCESS;
+    pjsip_to_hdr *to_hdr = rdata->msg_info.to;
+    pjsip_sip_uri *target = (pjsip_sip_uri*)pjsip_uri_get_uri(to_hdr->uri);
+    unsigned tid;
+
+    if (!is_user_equal(rdata->msg_info.from, "transport_send_recv_test"))
+        return PJ_FALSE;
+
+    tid = (unsigned)pj_strtoul(&target->user);
+    pj_assert(tid < PJSIP_TRANSPORT_START_OTHER);
+
+    if (pj_strcmp2(&rdata->msg_info.cid->id, SEND_RECV_CALL_ID_HDR) == 0) {
+        pj_get_timestamp(&sr_g[tid].my_recv_time);
+        sr_g[tid].recv_status = PJ_SUCCESS;
         return PJ_TRUE;
     }
     return PJ_FALSE;
@@ -159,13 +180,16 @@ static pj_bool_t my_on_rx_response(pjsip_rx_data *rdata)
 static void send_msg_callback(pjsip_send_state *stateless_data,
                               pj_ssize_t sent, pj_bool_t *cont)
 {
-    PJ_UNUSED_ARG(stateless_data);
+    unsigned tid = (unsigned)(long)stateless_data->token;
+    pj_assert(tid < PJSIP_TRANSPORT_START_OTHER);
 
     if (sent < 1) {
         /* Obtain the error code. */
-        send_status = (int)-sent;
+        PJ_LOG(3,(THIS_FILE, "   Sending %s got callback error %ld",
+                  stateless_data->tdata->info, -sent));
+        sr_g[tid].send_status = (int)-sent;
     } else {
-        send_status = PJ_SUCCESS;
+        sr_g[tid].send_status = PJ_SUCCESS;
     }
 
     /* Don't want to continue. */
@@ -176,10 +200,12 @@ static void send_msg_callback(pjsip_send_state *stateless_data,
 /* Test that we receive loopback message. */
 int transport_send_recv_test( pjsip_transport_type_e tp_type,
                               pjsip_transport *ref_tp,
-                              char *target_url,
+                              const char *host_port_transport,
                               int *p_usec_rtt)
 {
+    unsigned tid = tp_type;
     pj_bool_t msg_log_enabled;
+    char target_url[64];
     pj_status_t status;
     pj_str_t target, from, to, contact, call_id, body;
     pjsip_method method;
@@ -192,23 +218,29 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     PJ_LOG(3,(THIS_FILE, "  single message round-trip test..."));
 
     /* Register out test module to receive the message (if necessary). */
-    if (my_module.id == -1) {
-        status = pjsip_endpt_register_module( endpt, &my_module );
+    pj_enter_critical_section();
+    if (send_recv_module.id == -1) {
+        status = pjsip_endpt_register_module( endpt, &send_recv_module );
         if (status != PJ_SUCCESS) {
+            pj_leave_critical_section();
             app_perror("   error: unable to register module", status);
             return -500;
         }
     }
+    pj_leave_critical_section();
 
     /* Disable message logging. */
     msg_log_enabled = msg_logger_set_enabled(0);
 
+    pj_ansi_snprintf(target_url, sizeof(target_url), "sip:%d@%s",
+                     tp_type, host_port_transport);
+
     /* Create a request message. */
     target = pj_str(target_url);
-    from = pj_str(FROM_HDR);
+    from = pj_str(SEND_RECV_FROM_HDR);
     to = pj_str(target_url);
     contact = pj_str(CONTACT_HDR);
-    call_id = pj_str(CALL_ID_HDR);
+    call_id = pj_str(SEND_RECV_CALL_ID_HDR);
     body = pj_str(BODY);
 
     pjsip_method_set(&method, PJSIP_OPTIONS_METHOD);
@@ -221,20 +253,35 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     }
 
     /* Reset statuses */
-    send_status = recv_status = NO_STATUS;
+    sr_g[tid].send_status = sr_g[tid].recv_status = NO_STATUS;
+
+    /* Need this to make sure we use our loop transport rather than other
+     * loop transport instances created by other test thread (which they
+     * can disappear at any time)
+     */
+    if (tp_type==PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_tpselector tp_sel;
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = ref_tp;
+
+        pjsip_tx_data_set_transport(tdata, &tp_sel);
+    }
 
     /* Start time. */
-    pj_get_timestamp(&my_send_time);
+    pj_get_timestamp(&sr_g[tid].my_send_time);
 
     /* Send the message (statelessly). */
-    PJ_LOG(5,(THIS_FILE, "Sending request to %.*s", 
+    PJ_LOG(3,(THIS_FILE, "Sending request to %.*s", 
                          (int)target.slen, target.ptr));
-    status = pjsip_endpt_send_request_stateless( endpt, tdata, NULL,
+    status = pjsip_endpt_send_request_stateless( endpt, tdata, (void*)(long)tid,
                                                  &send_msg_callback);
     if (status != PJ_SUCCESS) {
         /* Immediate error! */
+        PJ_LOG(3,(THIS_FILE, "   Sending %s to %.*s got immediate error %d",
+                  tdata->info, (int)target.slen, target.ptr, status));
         pjsip_tx_data_dec_ref(tdata);
-        send_status = status;
+        sr_g[tid].send_status = status;
     }
 
     /* Set the timeout (2 seconds from now) */
@@ -253,19 +300,19 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
             goto on_return;
         }
 
-        if (send_status!=NO_STATUS && send_status!=PJ_SUCCESS) {
-            app_perror("   error sending message", send_status);
+        if (sr_g[tid].send_status!=NO_STATUS && sr_g[tid].send_status!=PJ_SUCCESS) {
+            app_perror("   error sending message", sr_g[tid].send_status);
             status = -550;
             goto on_return;
         }
 
-        if (recv_status!=NO_STATUS && recv_status!=PJ_SUCCESS) {
-            app_perror("   error receiving message", recv_status);
+        if (sr_g[tid].recv_status!=NO_STATUS && sr_g[tid].recv_status!=PJ_SUCCESS) {
+            app_perror("   error receiving message", sr_g[tid].recv_status);
             status = -560;
             goto on_return;
         }
 
-        if (send_status!=NO_STATUS && recv_status!=NO_STATUS) {
+        if (sr_g[tid].send_status!=NO_STATUS && sr_g[tid].recv_status!=NO_STATUS) {
             /* Success! */
             break;
         }
@@ -276,7 +323,7 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
 
     if (status == PJ_SUCCESS) {
         unsigned usec_rt;
-        usec_rt = pj_elapsed_usec(&my_send_time, &my_recv_time);
+        usec_rt = pj_elapsed_usec(&sr_g[tid].my_send_time, &sr_g[tid].my_recv_time);
 
         PJ_LOG(3,(THIS_FILE, "    round-trip = %d usec", usec_rt));
 
@@ -322,25 +369,46 @@ static pjsip_module rt_module =
     NULL,                               /* tsx_handler()        */
 };
 
-static struct
+enum
 {
-    pj_thread_t *thread;
-    pj_timestamp send_time;
-    pj_timestamp total_rt_time;
-    int sent_request_count, recv_response_count;
-    pj_str_t call_id;
-    pj_timer_entry timeout_timer;
-    pj_timer_entry tx_timer;
-    pj_mutex_t *mutex;
-} rt_test_data[16];
+    STOP_SEND = 1,
+    STOP_RECV = 2,
+};
 
-static char      rt_target_uri[64];
-static pj_bool_t rt_stop;
-static pj_str_t  rt_call_id;
+static struct rt_global_t {
+    struct {
+        pj_thread_t *thread;
+        pj_timestamp send_time;
+        pj_timestamp total_rt_time;
+        int sent_request_count, recv_response_count;
+        pj_str_t call_id;
+        pj_timer_entry timeout_timer;
+        pj_timer_entry tx_timer;
+        pj_mutex_t *mutex;
+    } rt_test_data[16];
+
+    char      rt_target_uri[64];
+    int       rt_stop;
+    pj_str_t  rt_call_id;
+    pjsip_transport *rt_transport;
+
+} g_rt[PJSIP_TRANSPORT_START_OTHER];
 
 static pj_bool_t rt_on_rx_request(pjsip_rx_data *rdata)
 {
-    if (!pj_strncmp(&rdata->msg_info.cid->id, &rt_call_id, rt_call_id.slen)) {
+    pjsip_to_hdr *to_hdr = rdata->msg_info.to;
+    pjsip_sip_uri *target = (pjsip_sip_uri*)pjsip_uri_get_uri(to_hdr->uri);
+    unsigned tid;
+
+    if (!is_user_equal(rdata->msg_info.from, "transport_rt_test"))
+        return PJ_FALSE;
+
+    tid = (unsigned)pj_strtoul(&target->user);
+    pj_assert(tid < PJSIP_TRANSPORT_START_OTHER);
+
+    if (!pj_strncmp(&rdata->msg_info.cid->id, &g_rt[tid].rt_call_id,
+                    g_rt[tid].rt_call_id.slen))
+    {
         pjsip_tx_data *tdata;
         pjsip_response_addr res_addr;
         pj_status_t status;
@@ -368,21 +436,22 @@ static pj_bool_t rt_on_rx_request(pjsip_rx_data *rdata)
     return PJ_FALSE;
 }
 
-static pj_status_t rt_send_request(int thread_id)
+static pj_status_t rt_send_request(unsigned tid, int thread_id)
 {
     pj_status_t status;
     pj_str_t target, from, to, contact, call_id;
     pjsip_tx_data *tdata;
     pj_time_val timeout_delay;
+    pjsip_tpselector tp_sel;
 
-    pj_mutex_lock(rt_test_data[thread_id].mutex);
+    pj_mutex_lock(g_rt[tid].rt_test_data[thread_id].mutex);
 
     /* Create a request message. */
-    target = pj_str(rt_target_uri);
-    from = pj_str(FROM_HDR);
-    to = pj_str(rt_target_uri);
+    target = pj_str(g_rt[tid].rt_target_uri);
+    from = pj_str(RT_FROM_HDR);
+    to = pj_str(g_rt[tid].rt_target_uri);
     contact = pj_str(CONTACT_HDR);
-    call_id = rt_test_data[thread_id].call_id;
+    call_id = g_rt[tid].rt_test_data[thread_id].call_id;
 
     status = pjsip_endpt_create_request( endpt, &pjsip_options_method, 
                                          &target, &from, &to,
@@ -390,12 +459,19 @@ static pj_status_t rt_send_request(int thread_id)
                                          NULL, &tdata );
     if (status != PJ_SUCCESS) {
         app_perror("    error: unable to create request", status);
-        pj_mutex_unlock(rt_test_data[thread_id].mutex);
+        pj_mutex_unlock(g_rt[tid].rt_test_data[thread_id].mutex);
         return -610;
     }
 
+    if (g_rt[tid].rt_transport) {
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = g_rt[tid].rt_transport;
+        pjsip_tx_data_set_transport(tdata, &tp_sel);
+        
+    }
     /* Start time. */
-    pj_get_timestamp(&rt_test_data[thread_id].send_time);
+    pj_get_timestamp(&g_rt[tid].rt_test_data[thread_id].send_time);
 
     /* Send the message (statelessly). */
     status = pjsip_endpt_send_request_stateless( endpt, tdata, NULL, NULL);
@@ -403,54 +479,66 @@ static pj_status_t rt_send_request(int thread_id)
         /* Immediate error! */
         app_perror("    error: send request", status);
         pjsip_tx_data_dec_ref(tdata);
-        pj_mutex_unlock(rt_test_data[thread_id].mutex);
+        pj_mutex_unlock(g_rt[tid].rt_test_data[thread_id].mutex);
         return -620;
     }
 
     /* Update counter. */
-    rt_test_data[thread_id].sent_request_count++;
+    g_rt[tid].rt_test_data[thread_id].sent_request_count++;
 
     /* Set timeout timer. */
-    if (rt_test_data[thread_id].timeout_timer.user_data != NULL) {
-        pjsip_endpt_cancel_timer(endpt, &rt_test_data[thread_id].timeout_timer);
+    if (g_rt[tid].rt_test_data[thread_id].timeout_timer.user_data != NULL) {
+        pjsip_endpt_cancel_timer(endpt, &g_rt[tid].rt_test_data[thread_id].timeout_timer);
     }
     timeout_delay.sec = 100; timeout_delay.msec = 0;
-    rt_test_data[thread_id].timeout_timer.user_data = (void*)(pj_ssize_t)1;
-    pjsip_endpt_schedule_timer(endpt, &rt_test_data[thread_id].timeout_timer,
+    g_rt[tid].rt_test_data[thread_id].timeout_timer.user_data = (void*)(pj_ssize_t)1;
+    pjsip_endpt_schedule_timer(endpt, &g_rt[tid].rt_test_data[thread_id].timeout_timer,
                                &timeout_delay);
 
-    pj_mutex_unlock(rt_test_data[thread_id].mutex);
+    pj_mutex_unlock(g_rt[tid].rt_test_data[thread_id].mutex);
     return PJ_SUCCESS;
 }
 
 static pj_bool_t rt_on_rx_response(pjsip_rx_data *rdata)
 {
-    if (!pj_strncmp(&rdata->msg_info.cid->id, &rt_call_id, rt_call_id.slen)) {
+    pjsip_to_hdr *to_hdr = rdata->msg_info.to;
+    pjsip_sip_uri *target = (pjsip_sip_uri*)pjsip_uri_get_uri(to_hdr->uri);
+    unsigned tid;
+
+    if (!is_user_equal(rdata->msg_info.from, "transport_rt_test"))
+        return PJ_FALSE;
+
+    tid = (unsigned)pj_strtoul(&target->user);
+    pj_assert(tid < PJSIP_TRANSPORT_START_OTHER);
+
+    if (!pj_strncmp(&rdata->msg_info.cid->id, &g_rt[tid].rt_call_id,
+                    g_rt[tid].rt_call_id.slen))
+    {
         char *pos = pj_strchr(&rdata->msg_info.cid->id, '/')+1;
         int thread_id = (*pos - '0');
         pj_timestamp recv_time;
 
-        pj_mutex_lock(rt_test_data[thread_id].mutex);
+        pj_mutex_lock(g_rt[tid].rt_test_data[thread_id].mutex);
 
         /* Stop timer. */
-        pjsip_endpt_cancel_timer(endpt, &rt_test_data[thread_id].timeout_timer);
+        pjsip_endpt_cancel_timer(endpt, &g_rt[tid].rt_test_data[thread_id].timeout_timer);
 
         /* Update counter and end-time. */
-        rt_test_data[thread_id].recv_response_count++;
+        g_rt[tid].rt_test_data[thread_id].recv_response_count++;
         pj_get_timestamp(&recv_time);
 
-        pj_sub_timestamp(&recv_time, &rt_test_data[thread_id].send_time);
-        pj_add_timestamp(&rt_test_data[thread_id].total_rt_time, &recv_time);
+        pj_sub_timestamp(&recv_time, &g_rt[tid].rt_test_data[thread_id].send_time);
+        pj_add_timestamp(&g_rt[tid].rt_test_data[thread_id].total_rt_time, &recv_time);
 
-        if (!rt_stop) {
+        if ((g_rt[tid].rt_stop & STOP_SEND)==0) {
             pj_time_val tx_delay = { 0, 0 };
-            pj_assert(rt_test_data[thread_id].tx_timer.user_data == NULL);
-            rt_test_data[thread_id].tx_timer.user_data = (void*)(pj_ssize_t)1;
-            pjsip_endpt_schedule_timer(endpt, &rt_test_data[thread_id].tx_timer,
+            pj_assert(g_rt[tid].rt_test_data[thread_id].tx_timer.user_data == NULL);
+            g_rt[tid].rt_test_data[thread_id].tx_timer.user_data = (void*)(pj_ssize_t)1;
+            pjsip_endpt_schedule_timer(endpt, &g_rt[tid].rt_test_data[thread_id].tx_timer,
                                        &tx_delay);
         }
 
-        pj_mutex_unlock(rt_test_data[thread_id].mutex);
+        pj_mutex_unlock(g_rt[tid].rt_test_data[thread_id].mutex);
 
         return PJ_TRUE;
     }
@@ -460,64 +548,76 @@ static pj_bool_t rt_on_rx_response(pjsip_rx_data *rdata)
 static void rt_timeout_timer( pj_timer_heap_t *timer_heap,
                               struct pj_timer_entry *entry )
 {
-    pj_mutex_lock(rt_test_data[entry->id].mutex);
+    unsigned tid = entry->id >> 16;
+    unsigned thread_id = entry->id & 0xFFFF;
+
+    pj_assert(tid < PJSIP_TRANSPORT_START_OTHER);
+    pj_mutex_lock(g_rt[tid].rt_test_data[thread_id].mutex);
 
     PJ_UNUSED_ARG(timer_heap);
     PJ_LOG(3,(THIS_FILE, "    timeout waiting for response"));
-    rt_test_data[entry->id].timeout_timer.user_data = NULL;
+    g_rt[tid].rt_test_data[thread_id].timeout_timer.user_data = NULL;
     
-    if (rt_test_data[entry->id].tx_timer.user_data == NULL) {
+    if (g_rt[tid].rt_test_data[thread_id].tx_timer.user_data == NULL) {
         pj_time_val delay = { 0, 0 };
-        rt_test_data[entry->id].tx_timer.user_data = (void*)(pj_ssize_t)1;
-        pjsip_endpt_schedule_timer(endpt, &rt_test_data[entry->id].tx_timer,
+        g_rt[tid].rt_test_data[thread_id].tx_timer.user_data = (void*)(pj_ssize_t)1;
+        pjsip_endpt_schedule_timer(endpt, &g_rt[tid].rt_test_data[thread_id].tx_timer,
                                    &delay);
     }
 
-    pj_mutex_unlock(rt_test_data[entry->id].mutex);
+    pj_mutex_unlock(g_rt[tid].rt_test_data[thread_id].mutex);
 }
 
 static void rt_tx_timer( pj_timer_heap_t *timer_heap,
                          struct pj_timer_entry *entry )
 {
-    pj_mutex_lock(rt_test_data[entry->id].mutex);
+    unsigned tid = entry->id >> 16;
+    unsigned thread_id = entry->id & 0xFFFF;
+
+    pj_assert(tid < PJSIP_TRANSPORT_START_OTHER);
+    pj_mutex_lock(g_rt[tid].rt_test_data[thread_id].mutex);
 
     PJ_UNUSED_ARG(timer_heap);
-    pj_assert(rt_test_data[entry->id].tx_timer.user_data != NULL);
-    rt_test_data[entry->id].tx_timer.user_data = NULL;
-    rt_send_request(entry->id);
+    pj_assert(g_rt[tid].rt_test_data[thread_id].tx_timer.user_data != NULL);
+    g_rt[tid].rt_test_data[thread_id].tx_timer.user_data = NULL;
+    rt_send_request(tid, thread_id);
 
-    pj_mutex_unlock(rt_test_data[entry->id].mutex);
+    pj_mutex_unlock(g_rt[tid].rt_test_data[thread_id].mutex);
 }
 
 
 static int rt_worker_thread(void *arg)
 {
+    unsigned tid;
     int i;
     pj_time_val poll_delay = { 0, 10 };
 
-    PJ_UNUSED_ARG(arg);
+    tid = (unsigned)(long)arg;
+    pj_assert(tid < PJSIP_TRANSPORT_START_OTHER);
 
     /* Sleep to allow main threads to run. */
     pj_thread_sleep(10);
 
-    while (!rt_stop) {
+    while ((g_rt[tid].rt_stop & STOP_RECV)==0) {
         pjsip_endpt_handle_events(endpt, &poll_delay);
     }
 
     /* Exhaust responses. */
-    for (i=0; i<100; ++i)
+    for (i=0; i<100; ++i) {
         pjsip_endpt_handle_events(endpt, &poll_delay);
+    }
 
     return 0;
 }
 
 int transport_rt_test( pjsip_transport_type_e tp_type,
                        pjsip_transport *ref_tp,
-                       char *target_url,
+                       const char *host_port_transport,
                        int *lost)
 {
-    enum { THREADS = 4, INTERVAL = 10 };
-    int i;
+    enum { THREADS = 1, INTERVAL = 120 };
+    int i, tid=tp_type;
+    char target_url[80];
     pj_status_t status;
     pj_pool_t *pool;
     pj_bool_t logger_enabled;
@@ -539,13 +639,16 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     logger_enabled = msg_logger_set_enabled(0);
 
     /* Register module (if not yet registered) */
+    pj_enter_critical_section();
     if (rt_module.id == -1) {
         status = pjsip_endpt_register_module( endpt, &rt_module );
         if (status != PJ_SUCCESS) {
+            pj_leave_critical_section();
             app_perror("   error: unable to register module", status);
             return -600;
         }
     }
+    pj_leave_critical_section();
 
     /* Create pool for this test. */
     pool = pjsip_endpt_create_pool(endpt, NULL, 4000, 4000);
@@ -553,9 +656,18 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
         return -610;
 
     /* Initialize static test data. */
-    pj_ansi_strxcpy(rt_target_uri, target_url, sizeof(rt_target_uri));
-    rt_call_id = pj_str("RT-Call-Id/");
-    rt_stop = PJ_FALSE;
+    pj_ansi_snprintf(target_url, sizeof(target_url), "sip:%d@%s",
+                     tp_type, host_port_transport);
+    pj_ansi_strxcpy(g_rt[tid].rt_target_uri, target_url,
+                    sizeof(g_rt[tid].rt_target_uri));
+    g_rt[tid].rt_call_id = pj_str("RT-Call-Id/");
+    g_rt[tid].rt_stop = 0;
+
+    pj_bzero(g_rt[tid].rt_test_data, sizeof(g_rt[tid].rt_test_data));
+
+    /* Need to use specific loop transport (otherwise we may get transport
+     * that is being shutdown) */
+    g_rt[tid].rt_transport = tp_type==PJSIP_TRANSPORT_LOOP_DGRAM? ref_tp : NULL;
 
     /* Initialize thread data. */
     for (i=0; i<THREADS; ++i) {
@@ -563,22 +675,21 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
         pj_str_t str_id;
         
         pj_strset(&str_id, buf, 1);
-        pj_bzero(&rt_test_data[i], sizeof(rt_test_data[i]));
 
         /* Init timer entry */
-        rt_test_data[i].tx_timer.id = i;
-        rt_test_data[i].tx_timer.cb = &rt_tx_timer;
-        rt_test_data[i].timeout_timer.id = i;
-        rt_test_data[i].timeout_timer.cb = &rt_timeout_timer;
+        g_rt[tid].rt_test_data[i].tx_timer.id = (tid << 16) | i;
+        g_rt[tid].rt_test_data[i].tx_timer.cb = &rt_tx_timer;
+        g_rt[tid].rt_test_data[i].timeout_timer.id = (tid << 16) | i;
+        g_rt[tid].rt_test_data[i].timeout_timer.cb = &rt_timeout_timer;
 
         /* Generate Call-ID for each thread. */
-        rt_test_data[i].call_id.ptr = (char*) pj_pool_alloc(pool, rt_call_id.slen+1);
-        pj_strcpy(&rt_test_data[i].call_id, &rt_call_id);
+        g_rt[tid].rt_test_data[i].call_id.ptr = (char*) pj_pool_alloc(pool, g_rt[tid].rt_call_id.slen+1);
+        pj_strcpy(&g_rt[tid].rt_test_data[i].call_id, &g_rt[tid].rt_call_id);
         buf[0] = '0' + (char)i;
-        pj_strcat(&rt_test_data[i].call_id, &str_id);
+        pj_strcat(&g_rt[tid].rt_test_data[i].call_id, &str_id);
 
         /* Init mutex. */
-        status = pj_mutex_create_recursive(pool, "rt", &rt_test_data[i].mutex);
+        status = pj_mutex_create_recursive(pool, "rt", &g_rt[tid].rt_test_data[i].mutex);
         if (status != PJ_SUCCESS) {
             app_perror("   error: unable to create mutex", status);
             return -615;
@@ -586,8 +697,8 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 
         /* Create thread, suspended. */
         status = pj_thread_create(pool, "rttest%p", &rt_worker_thread, 
-                                  (void*)(pj_ssize_t)i, 0,
-                                  PJ_THREAD_SUSPENDED, &rt_test_data[i].thread);
+                                  (void*)(pj_ssize_t)tid, 0,
+                                  PJ_THREAD_SUSPENDED, &g_rt[tid].rt_test_data[i].thread);
         if (status != PJ_SUCCESS) {
             app_perror("   error: unable to create thread", status);
             return -620;
@@ -596,30 +707,36 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 
     /* Start threads! */
     for (i=0; i<THREADS; ++i) {
-        pj_time_val delay = {0,0};
-        pj_thread_resume(rt_test_data[i].thread);
+        pj_time_val delay = {0, i*10};
+        pj_thread_resume(g_rt[tid].rt_test_data[i].thread);
 
         /* Schedule first message transmissions. */
-        rt_test_data[i].tx_timer.user_data = (void*)(pj_ssize_t)1;
-        pjsip_endpt_schedule_timer(endpt, &rt_test_data[i].tx_timer, &delay);
+        g_rt[tid].rt_test_data[i].tx_timer.user_data = (void*)(pj_ssize_t)1;
+        pjsip_endpt_schedule_timer(endpt, &g_rt[tid].rt_test_data[i].tx_timer, &delay);
     }
 
     /* Sleep for some time. */
     pj_thread_sleep(INTERVAL * 1000);
 
-    /* Signal thread to stop. */
-    rt_stop = PJ_TRUE;
+    /* Signal thread to stop sending. */
+    g_rt[tid].rt_stop |= STOP_SEND;
+
+    /* Sleep for some time. */
+    pj_thread_sleep(2 * 1000);
+
+    /* Signal thread to stop . */
+    g_rt[tid].rt_stop |= STOP_RECV;
 
     /* Wait threads to complete. */
     for (i=0; i<THREADS; ++i) {
-        pj_thread_join(rt_test_data[i].thread);
-        pj_thread_destroy(rt_test_data[i].thread);
+        pj_thread_join(g_rt[tid].rt_test_data[i].thread);
+        pj_thread_destroy(g_rt[tid].rt_test_data[i].thread);
     }
 
     /* Destroy rt_test_data */
     for (i=0; i<THREADS; ++i) {
-        pj_mutex_destroy(rt_test_data[i].mutex);
-        pjsip_endpt_cancel_timer(endpt, &rt_test_data[i].timeout_timer);
+        pj_mutex_destroy(g_rt[tid].rt_test_data[i].mutex);
+        pjsip_endpt_cancel_timer(endpt, &g_rt[tid].rt_test_data[i].timeout_timer);
     }
 
     /* Gather statistics. */
@@ -627,9 +744,9 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     pj_bzero(&zero_time, sizeof(zero_time));
     usec_rt = total_sent = total_recv = 0;
     for (i=0; i<THREADS; ++i) {
-        total_sent += rt_test_data[i].sent_request_count;
-        total_recv +=  rt_test_data[i].recv_response_count;
-        pj_add_timestamp(&total_time, &rt_test_data[i].total_rt_time);
+        total_sent += g_rt[tid].rt_test_data[i].sent_request_count;
+        total_recv +=  g_rt[tid].rt_test_data[i].recv_response_count;
+        pj_add_timestamp(&total_time, &g_rt[tid].rt_test_data[i].total_rt_time);
     }
 
     /* Display statistics. */
@@ -661,14 +778,14 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
  */
 static pj_bool_t load_on_rx_request(pjsip_rx_data *rdata);
 
-static struct mod_load_test
+static struct load_test_global_t
 {
-    pjsip_module    mod;
     pj_int32_t      next_seq;
     pj_bool_t       err;
-} mod_load = 
-{
-    {
+} g_lt[PJSIP_TRANSPORT_START_OTHER];
+
+
+static pjsip_module mod_load_test = {
     NULL, NULL,                         /* prev and next        */
     { "mod-load-test", 13},             /* Name.                */
     -1,                                 /* Id                   */
@@ -680,93 +797,95 @@ static struct mod_load_test
     &load_on_rx_request,                /* on_rx_request()      */
     NULL,                               /* on_rx_response()     */
     NULL,                               /* tsx_handler()        */
-    }
 };
 
 
 static pj_bool_t load_on_rx_request(pjsip_rx_data *rdata)
 {
-    if (rdata->msg_info.cseq->cseq != mod_load.next_seq) {
-        PJ_LOG(1,("THIS_FILE", "    err: expecting cseq %u, got %u", 
-                  mod_load.next_seq, rdata->msg_info.cseq->cseq));
-        mod_load.err = PJ_TRUE;
-        mod_load.next_seq = rdata->msg_info.cseq->cseq + 1;
+    pjsip_to_hdr *to_hdr = rdata->msg_info.to;
+    pjsip_sip_uri *target = (pjsip_sip_uri*)pjsip_uri_get_uri(to_hdr->uri);
+    unsigned tid;
+
+    if (!is_user_equal(rdata->msg_info.from, "transport_load_test"))
+        return PJ_FALSE;
+
+    tid = (unsigned)pj_strtoul(&target->user);
+    pj_assert(tid < PJSIP_TRANSPORT_START_OTHER);
+
+    if (rdata->msg_info.cseq->cseq != g_lt[tid].next_seq) {
+        PJ_LOG(1,(THIS_FILE, "    err: expecting cseq %u, got %u", 
+                  g_lt[tid].next_seq, rdata->msg_info.cseq->cseq));
+        g_lt[tid].err = PJ_TRUE;
+        g_lt[tid].next_seq = rdata->msg_info.cseq->cseq + 1;
     } else 
-        mod_load.next_seq++;
+        g_lt[tid].next_seq++;
     return PJ_TRUE;
 }
 
-int transport_load_test(char *target_url)
+int transport_load_test(pjsip_transport_type_e tp_type,
+                        const char *host_port_transport)
 {
+#define ERR(rc__)   { rc=rc__; goto on_return; }
     enum { COUNT = 2000 };
-    unsigned i;
-    pj_status_t status = PJ_SUCCESS;
+    char target_url[64];
+    unsigned i, tid=tp_type;
+    int rc;
+
+    pj_ansi_snprintf(target_url, sizeof(target_url), "sip:%d@%s",
+                     tp_type, host_port_transport);
 
     /* exhaust packets */
-    do {
-        pj_time_val delay = {1, 0};
-        i = 0;
-        pjsip_endpt_handle_events2(endpt, &delay, &i);
-    } while (i != 0);
+    flush_events(500);
 
     PJ_LOG(3,(THIS_FILE, "  transport load test..."));
 
-    if (mod_load.mod.id == -1) {
-        status = pjsip_endpt_register_module( endpt, &mod_load.mod);
-        if (status != PJ_SUCCESS) {
-            app_perror("error registering module", status);
-            return -1;
+    pj_enter_critical_section();
+    if (mod_load_test.id == -1) {
+        rc = pjsip_endpt_register_module( endpt, &mod_load_test);
+        if (rc != PJ_SUCCESS) {
+            pj_leave_critical_section();
+            app_perror("error registering module", rc);
+            return -610;
         }
     }
-    mod_load.err = PJ_FALSE;
-    mod_load.next_seq = 0;
+    pj_leave_critical_section();
+    g_lt[tid].err = PJ_FALSE;
+    g_lt[tid].next_seq = 0;
 
-    for (i=0; i<COUNT && !mod_load.err; ++i) {
+    for (i=0; i<COUNT && !g_lt[tid].err; ++i) {
         pj_str_t target, from, call_id;
         pjsip_tx_data *tdata;
 
         target = pj_str(target_url);
-        from = pj_str("<sip:user@host>");
+        from = pj_str("<sip:transport_load_test@host>");
         call_id = pj_str("thecallid");
-        status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, 
+        PJ_TEST_SUCCESS(pjsip_endpt_create_request(endpt, &pjsip_invite_method, 
                                             &target, &from, 
                                             &target, &from, &call_id, 
-                                            i, NULL, &tdata );
-        if (status != PJ_SUCCESS) {
-            app_perror("error creating request", status);
-            goto on_return;
-        }
+                                            i, NULL, &tdata ),
+                        NULL, ERR(-620));
 
-        status = pjsip_endpt_send_request_stateless(endpt, tdata, NULL, NULL);
-        if (status != PJ_SUCCESS) {
-            app_perror("error sending request", status);
-            goto on_return;
-        }
+        PJ_TEST_SUCCESS(pjsip_endpt_send_request_stateless(endpt, tdata,
+                                                           NULL, NULL),
+                        NULL, ERR(-630));
+
+        flush_events(20);
     }
 
-    do {
-        pj_time_val delay = {1, 0};
-        i = 0;
-        pjsip_endpt_handle_events2(endpt, &delay, &i);
-    } while (i != 0);
+    flush_events(1000);
 
-    if (mod_load.next_seq != COUNT) {
-        PJ_LOG(1,("THIS_FILE", "    err: expecting %u msg, got only %u", 
-                  COUNT, mod_load.next_seq));
-        status = -2;
-        goto on_return;
-    }
+    PJ_TEST_EQ(g_lt[tid].next_seq, COUNT, "message count mismatch",
+               ERR(-640));
+
+    rc = 0;
 
 on_return:
-    if (mod_load.mod.id != -1) {
-        pjsip_endpt_unregister_module( endpt, &mod_load.mod);
-        mod_load.mod.id = -1;
+    if (mod_load_test.id != -1) {
+        /* Don't unregister if there are multiple transport_load_test() */
+        pjsip_endpt_unregister_module( endpt, &mod_load_test);
+        mod_load_test.id = -1;
     }
-    if (status != PJ_SUCCESS || mod_load.err) {
-        return -2;
-    }
-    PJ_LOG(3,(THIS_FILE, "   success"));
-    return 0;
+    return rc;
 }
 
 

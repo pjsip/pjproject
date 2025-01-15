@@ -202,37 +202,56 @@ static op_entry* get_free_op_entry(pjmedia_vid_conf *conf)
 
 static void handle_op_queue(pjmedia_vid_conf *conf)
 {
-    op_entry *op, *next_op;
-    
-    op = conf->op_queue->next;
-    while (op != conf->op_queue) {
-        next_op = op->next;
-        pj_list_erase(op);
+    /* The queue may grow while mutex is released, better put a limit? */
+    enum { MAX_PROCESSED_OP = 100 };
+    int i = 0;
 
-        switch(op->type) {
+    while (i++ < MAX_PROCESSED_OP) {
+        op_entry* op;
+        op_type type;
+        op_param param;
+
+        pj_mutex_lock(conf->mutex);
+
+        /* Stop when queue empty */
+        if (pj_list_empty(conf->op_queue)) {
+            pj_mutex_unlock(conf->mutex);
+            break;
+        }
+
+        /* Copy op */
+        op = conf->op_queue->next;
+        type = op->type;
+        param = op->param;
+
+        /* Free op */
+        pj_list_erase(op);
+        op->type = OP_UNKNOWN;
+        pj_list_push_back(conf->op_queue_free, op);
+
+        pj_mutex_unlock(conf->mutex);
+
+        /* Process op */
+        switch (type) {
             case OP_ADD_PORT:
-                op_add_port(conf, &op->param);
+                op_add_port(conf, &param);
                 break;
             case OP_REMOVE_PORT:
-                op_remove_port(conf, &op->param);
+                op_remove_port(conf, &param);
                 break;
             case OP_CONNECT_PORTS:
-                op_connect_ports(conf, &op->param);
+                op_connect_ports(conf, &param);
                 break;
             case OP_DISCONNECT_PORTS:
-                op_disconnect_ports(conf, &op->param);
+                op_disconnect_ports(conf, &param);
                 break;
             case OP_UPDATE_PORT:
-                op_update_port(conf, &op->param);
+                op_update_port(conf, &param);
                 break;
             default:
                 pj_assert(!"Invalid sync-op in video conference");
                 break;
         }
-
-        op->type = OP_UNKNOWN;
-        pj_list_push_back(conf->op_queue_free, op);
-        op = next_op;
     }
 }
 
@@ -708,7 +727,10 @@ static void op_remove_port(pjmedia_vid_conf *vid_conf,
     }
 
     /* Remove the port. */
+    pj_mutex_lock(vid_conf->mutex);
     vid_conf->ports[slot] = NULL;
+    pj_mutex_unlock(vid_conf->mutex);
+
     if (!cport->is_new)
         --vid_conf->port_cnt;
 
@@ -1086,9 +1108,9 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
      * the clock such as connect, disonnect, remove, update.
      */
     if (!pj_list_empty(vid_conf->op_queue)) {
-        pj_mutex_lock(vid_conf->mutex);
+        pj_log_push_indent();
         handle_op_queue(vid_conf);
-        pj_mutex_unlock(vid_conf->mutex);
+        pj_log_pop_indent();
     }
 
     /* No mutex from this point! Otherwise it may cause deadlock as
@@ -1708,6 +1730,68 @@ static void op_update_port(pjmedia_vid_conf *vid_conf,
     /* Update cport format info */
     cport->format = *new_fmt;
     PJ_LOG(4,(THIS_FILE, "Video port %d updated", slot));
+}
+
+
+/*
+ * Add destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_vid_conf_add_destroy_handler(
+                                            pjmedia_vid_conf* vid_conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    struct vconf_port* cport;
+    pj_grp_lock_t* grp_lock;
+
+    PJ_ASSERT_RETURN(vid_conf && handler && slot < vid_conf->opt.max_slot_cnt,
+                     PJ_EINVAL);
+
+    pj_mutex_lock(vid_conf->mutex);
+
+    /* Port must be valid and has group lock. */
+    cport = vid_conf->ports[slot];
+    if (!cport || !cport->port || !cport->port->grp_lock) {
+        pj_mutex_unlock(vid_conf->mutex);
+        return cport ? PJ_EINVALIDOP : PJ_EINVAL;
+    }
+    grp_lock = cport->port->grp_lock;
+
+    pj_mutex_unlock(vid_conf->mutex);
+
+    return pj_grp_lock_add_handler(grp_lock, NULL, member, handler);
+}
+
+
+/*
+ * Remove previously registered destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_vid_conf_del_destroy_handler(
+                                            pjmedia_vid_conf* vid_conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    struct vconf_port* cport;
+    pj_grp_lock_t* grp_lock;
+
+    PJ_ASSERT_RETURN(vid_conf && handler && slot < vid_conf->opt.max_slot_cnt,
+                     PJ_EINVAL);
+
+    pj_mutex_lock(vid_conf->mutex);
+
+    /* Port must be valid and has group lock. */
+    cport = vid_conf->ports[slot];
+    if (!cport || !cport->port || !cport->port->grp_lock) {
+        pj_mutex_unlock(vid_conf->mutex);
+        return cport ? PJ_EINVALIDOP : PJ_EINVAL;
+    }
+    grp_lock = cport->port->grp_lock;
+
+    pj_mutex_unlock(vid_conf->mutex);
+
+    return pj_grp_lock_del_handler(grp_lock, member, handler);
 }
 
 

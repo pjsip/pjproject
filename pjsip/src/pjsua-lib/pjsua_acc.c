@@ -678,6 +678,19 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 
     acc = &pjsua_var.acc[acc_id];
 
+    for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.buddy); ++i) {
+        pjsua_buddy *b = &pjsua_var.buddy[i];
+
+        if (!pjsua_buddy_is_valid(i))
+            continue;
+        if (b->acc_id == acc_id) {
+            PJ_LOG(3, (THIS_FILE, "Warning: Account %d is used by "
+                                  "buddy %d. Disassociating it.",
+                                  acc_id, i));
+            b->acc_id = PJSUA_INVALID_ID;
+        }
+    }
+
     /* Cancel keep-alive timer, if any */
     if (acc->ka_timer.id) {
         pjsip_endpt_cancel_timer(pjsua_var.endpt, &acc->ka_timer);
@@ -1134,6 +1147,9 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Session timer */
     acc->cfg.use_timer = cfg->use_timer;
     acc->cfg.timer_setting = cfg->timer_setting;
+
+    /* SIPREC */
+    acc->cfg.use_siprec = cfg->use_siprec;
 
     /* Transport */
     if (acc->cfg.transport_id != cfg->transport_id) {

@@ -65,7 +65,7 @@ void RtcpFbConfig::fromPj(const pjmedia_rtcp_fb_setting &prm)
     for (unsigned i = 0; i < prm.cap_count; ++i) {
         RtcpFbCap cap;
         cap.fromPj(prm.caps[i]);
-        this->caps.push_back(cap);
+        this->caps.push_back(PJSUA2_MOVE(cap));
     }
 }
 
@@ -96,7 +96,7 @@ void RtcpFbConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
         NODE_READ_NUM_T         (cap_node, pjmedia_rtcp_fb_type, cap.type);
         NODE_READ_STRING        (cap_node, cap.typeName);
         NODE_READ_STRING        (cap_node, cap.param);
-        this->caps.push_back(cap);
+        this->caps.push_back(PJSUA2_MOVE(cap));
     }
 }
 
@@ -157,7 +157,7 @@ void SrtpOpt::fromPj(const pjsua_srtp_opt &prm)
     for (unsigned i = 0; i < prm.crypto_count; ++i) {
         SrtpCrypto crypto;
         crypto.fromPj(prm.crypto[i]);
-        this->cryptos.push_back(crypto);
+        this->cryptos.push_back(PJSUA2_MOVE(crypto));
     }
 
     this->keyings.clear();
@@ -196,7 +196,7 @@ void SrtpOpt::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
         NODE_READ_STRING        (crypto_node, crypto.key);
         NODE_READ_STRING        (crypto_node, crypto.name);
         NODE_READ_UNSIGNED      (crypto_node, crypto.flags);
-        this->cryptos.push_back(crypto);
+        this->cryptos.push_back(PJSUA2_MOVE(crypto));
     }
 
     ContainerNode keying_node = this_node.readArray("keyings");
@@ -287,7 +287,7 @@ void AccountSipConfig::readObject(const ContainerNode &node)
     while (creds_node.hasUnread()) {
         AuthCredInfo cred;
         cred.readObject(creds_node);
-        authCreds.push_back(cred);
+        authCreds.push_back(PJSUA2_MOVE(cred));
     }
 }
 
@@ -320,6 +320,7 @@ void AccountCallConfig::readObject(const ContainerNode &node)
     NODE_READ_NUM_T   ( this_node, pjsua_call_hold_type, holdType);
     NODE_READ_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
     NODE_READ_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
+    NODE_READ_NUM_T   ( this_node, pjsua_sip_siprec_use, siprecUse);
     NODE_READ_UNSIGNED( this_node, timerMinSESec);
     NODE_READ_UNSIGNED( this_node, timerSessExpiresSec);
 }
@@ -332,6 +333,7 @@ void AccountCallConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_NUM_T   ( this_node, pjsua_call_hold_type, holdType);
     NODE_WRITE_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
     NODE_WRITE_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
+    NODE_WRITE_NUM_T   ( this_node, pjsua_sip_siprec_use, siprecUse);
     NODE_WRITE_UNSIGNED( this_node, timerMinSESec);
     NODE_WRITE_UNSIGNED( this_node, timerSessExpiresSec);
 }
@@ -634,6 +636,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.call_hold_type          = callConfig.holdType;
     ret.require_100rel          = callConfig.prackUse;
     ret.use_timer               = callConfig.timerUse;
+    ret.use_siprec              = callConfig.siprecUse;
     ret.timer_setting.min_se    = callConfig.timerMinSESec;
     ret.timer_setting.sess_expires = callConfig.timerSessExpiresSec;
 
@@ -759,7 +762,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         SipHeader new_hdr;
         new_hdr.fromPj(hdr);
 
-        regConfig.headers.push_back(new_hdr);
+        regConfig.headers.push_back(PJSUA2_MOVE(new_hdr));
 
         hdr = hdr->next;
     }
@@ -779,7 +782,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         cred.akaOp      = pj2Str(src.ext.aka.op);
         cred.akaAmf     = pj2Str(src.ext.aka.amf);
 
-        sipConfig.authCreds.push_back(cred);
+        sipConfig.authCreds.push_back(PJSUA2_MOVE(cred));
     }
     sipConfig.proxies.clear();
     for (i=0; i<prm.proxy_cnt; ++i) {
@@ -797,6 +800,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     callConfig.holdType         = prm.call_hold_type;
     callConfig.prackUse         = prm.require_100rel;
     callConfig.timerUse         = prm.use_timer;
+    callConfig.siprecUse        = prm.use_siprec;
     callConfig.timerMinSESec    = prm.timer_setting.min_se;
     callConfig.timerSessExpiresSec = prm.timer_setting.sess_expires;
 
@@ -806,7 +810,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     while (hdr != &prm.sub_hdr_list) {
         SipHeader new_hdr;
         new_hdr.fromPj(hdr);
-        presConfig.headers.push_back(new_hdr);
+        presConfig.headers.push_back(PJSUA2_MOVE(new_hdr));
         hdr = hdr->next;
     }
     presConfig.publishEnabled   = PJ2BOOL(prm.publish_enabled);
@@ -1134,7 +1138,12 @@ BuddyVector2 Account::enumBuddies2() const PJSUA2_THROW(Error)
 
     PJSUA2_CHECK_EXPR( pjsua_enum_buddies(ids, &count) );
     for (i = 0; i < count; ++i) {
-        bv2.push_back(Buddy(ids[i]));
+        pjsua_buddy_info pbi;
+
+        pjsua_buddy_get_info(ids[i], &pbi);
+        if (id == pbi.acc_id) {
+            bv2.push_back(Buddy(ids[i]));
+        }
     }
 
     return bv2;
@@ -1161,11 +1170,17 @@ Buddy Account::findBuddy2(string uri) const PJSUA2_THROW(Error)
 {
     pj_str_t pj_uri;
     pjsua_buddy_id bud_id;
+    pjsua_buddy_info pbi;
 
     pj_strset2(&pj_uri, (char*)uri.c_str());
 
     bud_id = pjsua_buddy_find(&pj_uri);
-    if (id == PJSUA_INVALID_ID) {
+    if (bud_id == PJSUA_INVALID_ID) {
+        PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+    }
+
+    pjsua_buddy_get_info(bud_id, &pbi);
+    if (id != pbi.acc_id) {
         PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
     }
 

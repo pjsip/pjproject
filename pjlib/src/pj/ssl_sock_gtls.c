@@ -407,7 +407,10 @@ static pj_status_t tls_str_append_once(pj_str_t *dst, pj_str_t *src)
         if (dst->slen + src->slen + 3 > 1024)
             return PJ_ETOOMANY;
 
-        pj_strcat2(dst, ":+");
+        if (dst->slen > 0 && dst->ptr[dst->slen-1] == ':')
+            pj_strcat2(dst, "+");
+        else
+            pj_strcat2(dst, ":+");
         pj_strcat(dst, src);
     }
     return PJ_SUCCESS;
@@ -430,8 +433,16 @@ static pj_status_t tls_priorities_set(pj_ssl_sock_t *ssock)
     pj_strset(&cipher_list, buf, 0);
     pj_strset(&priority, priority_buf, 0);
 
+    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
+        ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1 |
+                             PJ_SSL_SOCK_PROTO_TLS1_1 |
+                             PJ_SSL_SOCK_PROTO_TLS1_2;
+
     /* For each level, enable only the requested protocol */
-    pj_strcat2(&priority, "NORMAL:");
+    pj_strcat2(&priority, "NORMAL:-VERS-ALL:");
+    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
+        pj_strcat2(&priority, "+VERS-TLS1.3:");
+    }
     if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
         pj_strcat2(&priority, "+VERS-TLS1.2:");
     }
@@ -441,10 +452,17 @@ static pj_status_t tls_priorities_set(pj_ssl_sock_t *ssock)
     if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) {
         pj_strcat2(&priority, "+VERS-TLS1.0:");
     }
-    pj_strcat2(&priority, "-VERS-SSL3.0:");
-    pj_strcat2(&priority, "%LATEST_RECORD_VERSION");
+    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) {
+        pj_strcat2(&priority, "+VERS-SSL3.0:");
+    }
+    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL2) {
+        /* GnuTLS doesn't support SSLv2 */
+    }
 
     pj_strcat(&cipher_list, &priority);
+    if (ssock->param.ciphers_num > 0) {
+        pj_strcat2(&cipher_list, "-CIPHER-ALL");
+    }
     for (i = 0; i < (int)ssock->param.ciphers_num; i++) {
         for (j = 0; ; j++) {
             pj_ssl_cipher c;
@@ -466,12 +484,17 @@ static pj_status_t tls_priorities_set(pj_ssl_sock_t *ssock)
                 pj_str_t cipher_entry;
 
                 /* Protocol version */
+                /* We shouldn't add protocol support that's not specified
+                 * in ssock->param.proto.
+                 */
+                /*
                 pj_strset(&cipher_entry, temp, 0);
                 pj_strcat2(&cipher_entry, "VERS-");
                 pj_strcat2(&cipher_entry, gnutls_protocol_get_name(proto));
                 ret = tls_str_append_once(&cipher_list, &cipher_entry);
                 if (ret != PJ_SUCCESS)
                     return ret;
+                */
 
                 /* Cipher */
                 pj_strset(&cipher_entry, temp, 0);
@@ -513,6 +536,8 @@ static pj_status_t tls_priorities_set(pj_ssl_sock_t *ssock)
     }
 
     /* End the string and print it */
+    if (cipher_list.ptr[cipher_list.slen-1] == ':')
+        cipher_list.slen--;
     cipher_list.ptr[cipher_list.slen] = '\0';
     PJ_LOG(5, (ssock->pool->obj_name, "Priority string: %s", cipher_list.ptr));
 
@@ -622,6 +647,10 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     pj_ssl_cert_t *cert;
     pj_status_t status;
     int ret;
+
+    /* Suppress warnings */
+    PJ_UNUSED_ARG(circ_reset);
+    PJ_UNUSED_ARG(circ_read_cancel);
 
     pj_assert(ssock);
 
@@ -802,7 +831,8 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     gnutls_sock_t *gssock = (gnutls_sock_t *)ssock;
 
     if (gssock->session) {
-        gnutls_bye(gssock->session, GNUTLS_SHUT_RDWR);
+        if (ssock->ssl_state == SSL_STATE_ESTABLISHED)
+            gnutls_bye(gssock->session, GNUTLS_SHUT_RDWR);
         gnutls_deinit(gssock->session);
         gssock->session = NULL;
     }
