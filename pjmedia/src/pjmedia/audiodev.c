@@ -103,12 +103,12 @@ PJ_DEF(pj_status_t) pjmedia_aud_driver_init(unsigned drv_idx,
 
     /* Get number of devices */
     dev_cnt = f->op->get_dev_count(f);
-    if (dev_cnt + aud_subsys.dev_cnt > PJMEDIA_AUD_MAX_DEVS) {
+    if (dev_cnt + aud_subsys.dev_cnt > PJMEDIA_AUD_DEV_MAX_DEVS) {
         PJ_LOG(4,(THIS_FILE, "%d device(s) cannot be registered because"
                               " there are too many devices",
                               aud_subsys.dev_cnt + dev_cnt -
-                              PJMEDIA_AUD_MAX_DEVS));
-        dev_cnt = PJMEDIA_AUD_MAX_DEVS - aud_subsys.dev_cnt;
+                              PJMEDIA_AUD_DEV_MAX_DEVS));
+        dev_cnt = PJMEDIA_AUD_DEV_MAX_DEVS - aud_subsys.dev_cnt;
     }
 
     /* enabling this will cause pjsua-lib initialization to fail when there
