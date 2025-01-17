@@ -1667,24 +1667,47 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     /* If port is new, remove it synchronously */
     if (conf_port->is_new) {
         op_param prm;
+        pj_bool_t found = PJ_FALSE;
 
-        /* Find the add-op */
+        /* Find & cancel the add-op.
+         * Also cancel all following ops involving the slot, note that
+         * after removed, the slot may be reused by another port.
+         */
         ope = conf->op_queue->next;
         while (ope != conf->op_queue) {
-            if (ope->type==OP_ADD_PORT && ope->param.add_port.port==port)
-                break;
+            op_entry* cancel_op;
+
+            cancel_op = NULL;
+            if (ope->type == OP_ADD_PORT && ope->param.add_port.port == port)
+            {
+                found = PJ_TRUE;
+                cancel_op = ope;
+            } else if (found && ope->type == OP_CONNECT_PORTS &&
+                       (ope->param.connect_ports.src == port ||
+                        ope->param.connect_ports.sink == port))
+            {
+                cancel_op = ope;
+            } else if (found && ope->type == OP_DISCONNECT_PORTS &&
+                       (ope->param.disconnect_ports.src == port ||
+                        ope->param.disconnect_ports.sink == port))
+            {
+                cancel_op = ope;
+            }
+
             ope = ope->next;
+
+            /* Cancel op */
+            if (cancel_op) {
+                pj_list_erase(cancel_op);
+                cancel_op->type = OP_UNKNOWN;
+                pj_list_push_back(conf->op_queue_free, cancel_op);
+            }
         }
 
         /* If the add-op is not found, it may be being executed,
          * do not remove it synchronously to avoid race condition.
          */
-        if (ope != conf->op_queue) {
-            /* Cancel the op */
-            pj_list_erase(ope);
-            ope->type = OP_UNKNOWN;
-            pj_list_push_back(conf->op_queue_free, ope);
-
+        if (found) {
             /* Release mutex to avoid deadlock */
             pj_mutex_unlock(conf->mutex);
 
