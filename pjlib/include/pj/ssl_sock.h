@@ -800,27 +800,33 @@ typedef struct pj_ssl_sock_cb
 typedef enum pj_ssl_sock_proto
 {
     /**
-     * Default protocol of backend. 
+     * Default protocol of backend.
+     * Typically this will be set to all supported non-deprecated protocols,
+     * which, currently is TLSv1.2 and TLSv1.3.
      */   
     PJ_SSL_SOCK_PROTO_DEFAULT = 0,
 
     /** 
-     * SSLv2.0 protocol.          
+     * SSLv2.0 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_SSL2    = (1 << 0),
 
     /** 
-     * SSLv3.0 protocol.          
+     * SSLv3.0 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_SSL3    = (1 << 1),
 
     /**
-     * TLSv1.0 protocol.          
+     * TLSv1.0 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_TLS1    = (1 << 2),
 
     /** 
      * TLSv1.1 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_TLS1_1  = (1 << 3),
 
@@ -835,11 +841,14 @@ typedef enum pj_ssl_sock_proto
     PJ_SSL_SOCK_PROTO_TLS1_3  = (1 << 5),
 
     /** 
-     * Certain backend implementation e.g:OpenSSL, has feature to enable all
-     * protocol. 
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_SSL23   = (1 << 16) - 1,
-    PJ_SSL_SOCK_PROTO_ALL = PJ_SSL_SOCK_PROTO_SSL23,
+
+    /**
+     * This will enable all the backend's supported protocols.
+     */
+    PJ_SSL_SOCK_PROTO_ALL     = (1 << 16) - 1,
 
     /**
      * DTLSv1.0 protocol.         
