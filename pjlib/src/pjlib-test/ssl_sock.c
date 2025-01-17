@@ -476,7 +476,7 @@ static int https_client_test(unsigned ms_timeout)
 
     pj_sockaddr_init(PJ_AF_INET, &local_addr, pj_strset2(&tmp_st, "0.0.0.0"), 0);
     pj_sockaddr_init(PJ_AF_INET, &rem_addr, pj_strset2(&tmp_st, HTTP_SERVER_ADDR), HTTP_SERVER_PORT);
-    status = pj_ssl_sock_start_connect(ssock, pool, &local_addr, &rem_addr, sizeof(rem_addr));
+    status = pj_ssl_sock_start_connect(ssock, pool, &local_addr, &rem_addr, pj_sockaddr_get_len(&local_addr));
     if (status == PJ_SUCCESS) {
         ssl_on_connect_complete(ssock, PJ_SUCCESS);
     } else if (status == PJ_EPENDING) {
@@ -1611,9 +1611,8 @@ int ssl_sock_test(void)
 
     PJ_LOG(3,("", "..https client test"));
     ret = https_client_test(30000);
-    // Ignore test result as internet connection may not be available.
-    //if (ret != 0)
-        //return ret;
+    if (ret != 0)
+        return ret;
 
 #ifndef PJ_SYMBIAN
    
@@ -1631,22 +1630,20 @@ int ssl_sock_test(void)
      */
 
 #if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
-    PJ_LOG(3,("", "..echo test w/ TLSv1 and PJ_TLS_RSA_WITH_AES_256_CBC_SHA cipher"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_TLS1, 
-                    PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA, 
+    PJ_LOG(3,("", "..echo test w/ TLSv1.2 and PJ_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher"));
+    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2, PJ_SSL_SOCK_PROTO_TLS1_2,
+                    PJ_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+                    PJ_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
                     PJ_FALSE, PJ_FALSE);
     if (ret != 0)
         return ret;
 
-    /* SSLv23 is deprecated */
-    /*
-    PJ_LOG(3,("", "..echo test w/ SSLv23 and PJ_TLS_RSA_WITH_AES_256_CBC_SHA cipher"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_SSL23, PJ_SSL_SOCK_PROTO_SSL23, 
-                    PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
+    PJ_LOG(3,("", "..echo test w/ TLSv1.3 and PJ_TLS_AES_128_GCM_SHA256 cipher"));
+    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_3, PJ_SSL_SOCK_PROTO_TLS1_3,
+                    PJ_TLS_AES_128_GCM_SHA256, PJ_TLS_AES_128_GCM_SHA256,
                     PJ_FALSE, PJ_FALSE);
     if (ret != 0)
         return ret;
-    */
 #endif
 
     PJ_LOG(3,("", "..echo test w/ compatible proto: server TLSv1.2 vs client TLSv1.2"));
@@ -1664,9 +1661,10 @@ int ssl_sock_test(void)
     if (ret != 0)
         return ret;
 
-    PJ_LOG(3,("", "..echo test w/ incompatible proto: server TLSv1 vs client SSL3"));
-    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_SSL3, 
-                    PJ_TLS_RSA_WITH_DES_CBC_SHA, PJ_TLS_RSA_WITH_DES_CBC_SHA,
+    PJ_LOG(3,("", "..echo test w/ incompatible proto: server TLSv1.3 vs client TLSv1.2"));
+    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_3, PJ_SSL_SOCK_PROTO_TLS1_2,
+                    PJ_TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+                    PJ_TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
                     PJ_FALSE, PJ_FALSE);
     if (ret == 0)
         return PJ_EBUG;
@@ -1682,8 +1680,9 @@ int ssl_sock_test(void)
         return PJ_EBUG;
 #endif
 
-/* We can't seem to enable certain ciphers only. SSLSetEnabledCiphers() is
- * deprecated and we only have sec_protocol_options_append_tls_ciphersuite(),
+/* With Apple SSL, we can't seem to enable certain ciphers only.
+ * SSLSetEnabledCiphers() is deprecated and we only have
+ * sec_protocol_options_append_tls_ciphersuite(),
  * but there's no API to remove certain or all ciphers.
  */
 #if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_APPLE && PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
@@ -1698,14 +1697,14 @@ int ssl_sock_test(void)
 #if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
     PJ_LOG(3,("", "..echo test w/ client cert required but not provided"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
-                    PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
+                    -1, -1,
                     PJ_TRUE, PJ_FALSE);
     if (ret == 0)
         return PJ_EBUG;
 
     PJ_LOG(3,("", "..echo test w/ client cert required and provided"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
-                    PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
+                    -1, -1,
                     PJ_TRUE, PJ_TRUE);
     if (ret != 0)
         return ret;
