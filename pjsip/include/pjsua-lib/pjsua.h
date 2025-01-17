@@ -7240,7 +7240,7 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  * pjsua_media_config.snd_use_sw_clock.
  */
 #ifndef PJSUA_DEFAULT_SND_USE_SW_CLOCK
-#   define PJSUA_DEFAULT_SND_USE_SW_CLOCK  PJ_FALSE
+#   define PJSUA_DEFAULT_SND_USE_SW_CLOCK  PJ_TRUE
 #endif
 
 /**
