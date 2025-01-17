@@ -1664,6 +1664,38 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
         goto on_return;
     }
 
+    /* If port is new, remove it synchronously */
+    if (conf_port->is_new) {
+        op_param prm;
+
+        /* Find the add-op */
+        ope = conf->op_queue->next;
+        while (ope != conf->op_queue) {
+            if (ope->type==OP_ADD_PORT && ope->param.add_port.port==port)
+                break;
+            ope = ope->next;
+        }
+
+        /* If the add-op is not found, it may be being executed */
+        if (ope == conf->op_queue)
+            goto on_return;
+
+        /* Cancel the op */
+        pj_list_erase(ope);
+        ope->type = OP_UNKNOWN;
+        pj_list_push_back(conf->op_queue_free, ope);
+
+        /* Release mutex to avoid deadlock */
+        pj_mutex_unlock(conf->mutex);
+
+        /* Remove it */
+        prm.remove_port.port = port;
+        op_remove_port(conf, &prm);
+
+        pj_log_pop_indent();
+        return PJ_SUCCESS;
+    }
+
     /* Queue the operation */
     ope = get_free_op_entry(conf);
     if (ope) {
