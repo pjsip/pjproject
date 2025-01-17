@@ -652,6 +652,14 @@ typedef struct pjsua_on_stream_created_param
     pj_bool_t            destroy_port;
 
     /**
+     * Specify if PJSUA should add the port returned in the port parameter
+     * below to the conference bridge.
+     *
+     * Default: PJ_TRUE
+     */
+    pj_bool_t            add_port;
+
+    /**
      * On input, it specifies the audio media port of the stream. Application
      * may modify this pointer to point to different media port to be
      * registered to the conference bridge.

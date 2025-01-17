@@ -723,6 +723,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 
     /* Check if no media is active */
     if (local_sdp->media[strm_idx]->desc.port != 0) {
+        pj_bool_t add_port = PJ_TRUE;
 
         /* Optionally, application may modify other stream settings here
          * (such as jitter buffer parameters, codec ptime, etc.)
@@ -822,10 +823,12 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
             prm.stream = call_med->strm.a.stream;
             prm.stream_idx = strm_idx;
             prm.destroy_port = PJ_FALSE;
+            prm.add_port = PJ_TRUE;
             prm.port = call_med->strm.a.media_port;
             (*pjsua_var.ua_cfg.cb.on_stream_created2)(call->index, &prm);
-            
+
             call_med->strm.a.destroy_port = prm.destroy_port;
+            add_port = prm.add_port;
             call_med->strm.a.media_port = prm.port;
 
         } else if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_stream_created)
@@ -839,7 +842,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
         /*
          * Add the call to conference bridge.
          */
-        {
+        if (add_port) {
             char tmp[PJSIP_MAX_URL_SIZE];
             pj_str_t port_name;
 

@@ -1289,11 +1289,13 @@ void Endpoint::on_stream_created2(pjsua_call_id call_id,
     prm.stream = param->stream;
     prm.streamIdx = param->stream_idx;
     prm.destroyPort = (param->destroy_port != PJ_FALSE);
+    prm.addPort = (param->add_port != PJ_FALSE);
     prm.pPort = (MediaPort)param->port;
     
     call->onStreamCreated(prm);
     
     param->destroy_port = prm.destroyPort;
+    param->add_port = prm.addPort;
     param->port = (pjmedia_port *)prm.pPort;
 }
 

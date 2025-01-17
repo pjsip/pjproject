@@ -822,6 +822,14 @@ struct OnStreamCreatedParam
     bool        destroyPort;
 
     /**
+     * Specify if PJSUA2 should add the port returned in the pPort parameter
+     * below to the conference bridge.
+     *
+     * Default: true
+     */
+    bool        addPort;
+
+    /**
      * On input, it specifies the audio media port of the stream. Application
      * may modify this pointer to point to different media port to be
      * registered to the conference bridge.
