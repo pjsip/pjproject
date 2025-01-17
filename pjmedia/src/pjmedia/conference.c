@@ -1664,6 +1664,65 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
         goto on_return;
     }
 
+    /* If port is new, remove it synchronously */
+    if (conf_port->is_new) {
+        pj_bool_t found = PJ_FALSE;
+
+        /* Find & cancel the add-op.
+         * Also cancel all following ops involving the slot.
+         * Note that after removed, the slot may be reused by another port
+         * so if not cancelled, those following ops may be applied to the
+         * wrong port.
+         */
+        ope = conf->op_queue->next;
+        while (ope != conf->op_queue) {
+            op_entry* cancel_op;
+
+            cancel_op = NULL;
+            if (ope->type == OP_ADD_PORT && ope->param.add_port.port == port)
+            {
+                found = PJ_TRUE;
+                cancel_op = ope;
+            } else if (found && ope->type == OP_CONNECT_PORTS &&
+                       (ope->param.connect_ports.src == port ||
+                        ope->param.connect_ports.sink == port))
+            {
+                cancel_op = ope;
+            } else if (found && ope->type == OP_DISCONNECT_PORTS &&
+                       (ope->param.disconnect_ports.src == port ||
+                        ope->param.disconnect_ports.sink == port))
+            {
+                cancel_op = ope;
+            }
+
+            ope = ope->next;
+
+            /* Cancel op */
+            if (cancel_op) {
+                pj_list_erase(cancel_op);
+                cancel_op->type = OP_UNKNOWN;
+                pj_list_push_back(conf->op_queue_free, cancel_op);
+            }
+        }
+
+        /* If the add-op is not found, it may be being executed,
+         * do not remove it synchronously to avoid race condition.
+         */
+        if (found) {
+            op_param prm;
+
+            /* Release mutex to avoid deadlock */
+            pj_mutex_unlock(conf->mutex);
+
+            /* Remove it */
+            prm.remove_port.port = port;
+            op_remove_port(conf, &prm);
+
+            pj_log_pop_indent();
+            return PJ_SUCCESS;
+        }
+    }
+
     /* Queue the operation */
     ope = get_free_op_entry(conf);
     if (ope) {
