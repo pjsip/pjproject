@@ -1908,6 +1908,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
  */
 PJ_DEF(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr)
 {
+    return pjsip_tpmgr_get_transport_count_by_type(mgr, -1);
+}
+
+PJ_DEF(unsigned) pjsip_tpmgr_get_transport_count_by_type(pjsip_tpmgr *mgr,
+                                                         int type)
+{
     pj_hash_iterator_t itr_val;
     pj_hash_iterator_t *itr;
     int nr_of_transports = 0;
@@ -1917,7 +1923,15 @@ PJ_DEF(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr)
     itr = pj_hash_first(mgr->table, &itr_val);
     while (itr) {
         transport *tp_entry = (transport *)pj_hash_this(mgr->table, itr);
-        nr_of_transports += (int)pj_list_size(tp_entry);
+        if (type<0) {
+            nr_of_transports += (int)pj_list_size(tp_entry);
+        } else {
+            transport *node = tp_entry->next;
+            for (; node!=tp_entry; node=node->next) {
+                if (tp_entry->tp->key.type==type)
+                    ++nr_of_transports;
+            }
+        }
         itr = pj_hash_next(mgr->table, itr);
     }
 

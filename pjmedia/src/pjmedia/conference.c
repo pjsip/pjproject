@@ -275,14 +275,14 @@ struct conf_port
      */
     pjmedia_delay_buf   *delay_buf;
 
-#if 0
     /* We always know lower_bound and upper_bound and never use port_cnt 
      * There is no need for asynchronous port creation at all.
-     * This flag has become redundant.
+     * This flag has become redundant 
+     * however it is still used for compatibility with:
+     * "Synchronous port removal in audio conference bridge if port is newly added #4253"
      */
-    pj_bool_t            is_new;        /**< Newly added port, avoid read/write
-                                             data from/to.                  */
-#endif
+    pj_bool_t            is_new;        /**< Newly added port, 
+                                         * remove it synchronously.        */
 
     /* parallel conference bridge support                                  */
     pj_int16_t          *rx_frame_buf;  /**< The RX buffer of size (in bytes)
@@ -427,9 +427,7 @@ static void destroy_conf_port(struct conf_port *conf_port);
 typedef enum op_type
 {
     OP_UNKNOWN,
-#if 0
     OP_ADD_PORT,
-#endif 
     OP_REMOVE_PORT,
     OP_CONNECT_PORTS,
     OP_DISCONNECT_PORTS,
@@ -438,11 +436,9 @@ typedef enum op_type
 /* Synchronized operation parameter. */
 typedef union op_param
 {
-#if 0
     struct {
         unsigned port;
     } add_port;
-#endif 
 
     struct {
         unsigned port;
@@ -469,9 +465,7 @@ typedef struct op_entry {
 } op_entry;
 
 /* Prototypes of synchronized operation */
-#if 0
 static void op_add_port(pjmedia_conf *conf, const op_param *prm);
-#endif 
 static void op_remove_port(pjmedia_conf *conf, const op_param *prm);
 static void op_connect_ports(pjmedia_conf *conf, const op_param *prm);
 static void op_disconnect_ports(pjmedia_conf *conf, const op_param *prm);
@@ -492,52 +486,53 @@ static op_entry* get_free_op_entry(pjmedia_conf *conf)
 
 static void handle_op_queue(pjmedia_conf *conf)
 {
-    op_entry *op = NULL;
+    /* The queue may grow while mutex is released, better put a limit? */
+    enum { MAX_PROCESSED_OP = 100 };
+    int i = 0;
 
-    while (1) {
+    while (i++ < MAX_PROCESSED_OP) {
+        op_entry *op;
+        op_type type;
+        op_param param;
 
-        /* Only op_queue_free and op_queue are accessed concurrently
-         * and require mutex protection. 
-         * The function itself cannot be invoked simultaneously from 
-         * different threads, so no other data requires mutex protection.
-         */
         pj_mutex_lock(conf->mutex);
 
-        if (op)
-            pj_list_push_back(conf->op_queue_free, op);
+        /* Stop when queue empty */
+        if (pj_list_empty(conf->op_queue)) {
+            pj_mutex_unlock(conf->mutex);
+            break;
+        }
 
+        /* Copy op */
         op = conf->op_queue->next;
-        if (op != conf->op_queue)
-            pj_list_erase(op);
+        type = op->type;
+        param = op->param;
+
+        /* Free op */
+        pj_list_erase(op);
+        op->type = OP_UNKNOWN;
+        pj_list_push_back(conf->op_queue_free, op);
 
         pj_mutex_unlock(conf->mutex);
 
-        if (op == conf->op_queue)
-            break;
-
-        pj_assert(op);
-
-        switch(op->type) {
-#if 0
+        /* Process op */
+        switch(type) {
             case OP_ADD_PORT:
-                op_add_port(conf, &op->param);
+                op_add_port(conf, &param);
                 break;
-#endif 
             case OP_REMOVE_PORT:
-                op_remove_port(conf, &op->param);
+                op_remove_port(conf, &param);
                 break;
             case OP_CONNECT_PORTS:
-                op_connect_ports(conf, &op->param);
+                op_connect_ports(conf, &param);
                 break;
             case OP_DISCONNECT_PORTS:
-                op_disconnect_ports(conf, &op->param);
+                op_disconnect_ports(conf, &param);
                 break;
             default:
                 pj_assert(!"Invalid sync-op in conference");
                 break;
         }
-
-        op->type = OP_UNKNOWN;
     }
 }
 
@@ -1303,17 +1298,24 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     conf_port->slot = index;
 #endif //CONF_DEBUG_EX
 
-#if 0
-    /* Audio data flow is not protected, avoid processing this newly
-     * added port.
+    /* redundant flag and code 
+     * however it is still used for compatibility with:
+     * "Synchronous port removal in audio conference bridge if port is newly added #4253"
      */
     conf_port->is_new = PJ_TRUE;
 
+    /* Put the port to the reserved slot. */
+    conf->ports[index] = conf_port;     /* - the port will become active only when connected
+                                         * - pointer assignment is processor level atomic 
+                                         */
+
+#if 0
     /* Put the port, but don't add port counter yet */
     conf->ports[index] = conf_port;
     //conf->port_cnt++;
-    pj_mutex_lock( conf->mutex );
+#endif //0
 
+    pj_mutex_lock( conf->mutex );
     /* Queue the operation */
     op_entry *ope;
     ope = get_free_op_entry(conf);
@@ -1321,20 +1323,14 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
         ope->type = OP_ADD_PORT;
         ope->param.add_port.port = index;
         pj_list_push_back(conf->op_queue, ope);
+        pj_mutex_unlock(conf->mutex);
         PJ_LOG(4,(THIS_FILE, "Add port %d (%.*s) queued",
                              index, (int)port_name->slen, port_name->ptr));
     } else {
+        pj_mutex_unlock(conf->mutex);
         status = PJ_ENOMEM;
         goto on_return;
     }
-#endif //0
-
-    /* Put the port to the reserved slot. */
-    conf->ports[index] = conf_port;     /* - the port will become active only when connected
-                                         * - pointer assignment is processor level atomic 
-                                         */
-    PJ_LOG(4,(THIS_FILE, "Added port %d (%.*s)",
-              index, (int)port_name->slen, port_name->ptr));
 
     /* Done. */
     if (p_port) {
@@ -1399,7 +1395,6 @@ static pj_status_t conf_release_port(pjmedia_conf *conf, SLOT_TYPE slot)
 }
 
 
-#if 0
 static void op_add_port(pjmedia_conf *conf, const op_param *prm)
 {
     unsigned port = prm->add_port.port;
@@ -1418,7 +1413,6 @@ static void op_add_port(pjmedia_conf *conf, const op_param *prm)
               port, (int)cport->name.slen, cport->name.ptr, conf->port_cnt));
 #endif
 }
-#endif 
 
 
 #if !DEPRECATED_FOR_TICKET_2234
@@ -1758,11 +1752,11 @@ static void op_disconnect_ports(pjmedia_conf *conf,
     /* Disconnect source -> sink */
     if (src_port && dst_port) {
         /* Check if connection has been made */
-        for (i=0; i<src_port->listener_cnt; ++i) {
+        for (i=0; i<(int)src_port->listener_cnt; ++i) {
             if (src_port->listener_slots[i] == sink_slot)
                 break;
         }
-        if (i == src_port->listener_cnt) {
+        if (i == (int)src_port->listener_cnt) {
             PJ_LOG(3,(THIS_FILE, "Ports connection %d->%d does not exist",
                       src_slot, sink_slot));
             return;
@@ -2027,6 +2021,65 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     if (conf_port == NULL) {
         status = PJ_EINVAL;
         goto on_return;
+    }
+
+    /* If port is new, remove it synchronously */
+    if (conf_port->is_new) {
+        pj_bool_t found = PJ_FALSE;
+
+        /* Find & cancel the add-op.
+         * Also cancel all following ops involving the slot.
+         * Note that after removed, the slot may be reused by another port
+         * so if not cancelled, those following ops may be applied to the
+         * wrong port.
+         */
+        ope = conf->op_queue->next;
+        while (ope != conf->op_queue) {
+            op_entry* cancel_op;
+
+            cancel_op = NULL;
+            if (ope->type == OP_ADD_PORT && ope->param.add_port.port == port)
+            {
+                found = PJ_TRUE;
+                cancel_op = ope;
+            } else if (found && ope->type == OP_CONNECT_PORTS &&
+                       (ope->param.connect_ports.src == port ||
+                        ope->param.connect_ports.sink == port))
+            {
+                cancel_op = ope;
+            } else if (found && ope->type == OP_DISCONNECT_PORTS &&
+                       (ope->param.disconnect_ports.src == port ||
+                        ope->param.disconnect_ports.sink == port))
+            {
+                cancel_op = ope;
+            }
+
+            ope = ope->next;
+
+            /* Cancel op */
+            if (cancel_op) {
+                pj_list_erase(cancel_op);
+                cancel_op->type = OP_UNKNOWN;
+                pj_list_push_back(conf->op_queue_free, cancel_op);
+            }
+        }
+
+        /* If the add-op is not found, it may be being executed,
+         * do not remove it synchronously to avoid race condition.
+         */
+        if (found) {
+            op_param prm;
+
+            /* Release mutex to avoid deadlock */
+            pj_mutex_unlock(conf->mutex);
+
+            /* Remove it */
+            prm.remove_port.port = port;
+            op_remove_port(conf, &prm);
+
+            pj_log_pop_indent();
+            return PJ_SUCCESS;
+        }
     }
 
     /* Queue the operation */
@@ -2858,9 +2911,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
      */
     if (!pj_list_empty(conf->op_queue)) {
         pj_log_push_indent();
-        pj_mutex_lock(conf->mutex);
         handle_op_queue(conf);
-        pj_mutex_unlock(conf->mutex);
         pj_log_pop_indent();
     }
 #endif
@@ -3526,5 +3577,66 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 
     return status;
 }
+
+
+/*
+ * Add destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_add_destroy_handler(
+                                            pjmedia_conf* conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    struct conf_port *cport;
+    pj_grp_lock_t *grp_lock;
+
+    PJ_ASSERT_RETURN(conf && handler && slot < conf->max_ports, PJ_EINVAL);
+
+    pj_mutex_lock(conf->mutex);
+
+    /* Port must be valid and has group lock. */
+    cport = conf->ports[slot];
+    if (!cport || !cport->port || !cport->port->grp_lock) {
+        pj_mutex_unlock(conf->mutex);
+        return cport? PJ_EINVALIDOP : PJ_EINVAL;
+    }
+    grp_lock = cport->port->grp_lock;
+
+    pj_mutex_unlock(conf->mutex);
+
+    return pj_grp_lock_add_handler(grp_lock, NULL, member, handler);
+}
+
+
+/*
+ * Remove previously registered destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_del_destroy_handler(
+                                            pjmedia_conf* conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    struct conf_port* cport;
+    pj_grp_lock_t* grp_lock;
+
+    PJ_ASSERT_RETURN(conf && handler && slot < conf->max_ports, PJ_EINVAL);
+
+    pj_mutex_lock(conf->mutex);
+
+    /* Port must be valid and has group lock. */
+    cport = conf->ports[slot];
+    if (!cport || !cport->port || !cport->port->grp_lock) {
+        pj_mutex_unlock(conf->mutex);
+        return cport ? PJ_EINVALIDOP : PJ_EINVAL;
+    }
+    grp_lock = cport->port->grp_lock;
+
+    pj_mutex_unlock(conf->mutex);
+
+    return pj_grp_lock_del_handler(grp_lock, member, handler);
+}
+
 
 #endif

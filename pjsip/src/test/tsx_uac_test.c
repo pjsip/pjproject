@@ -77,25 +77,49 @@
  *****************************************************************************
  */
 
-static char *TEST1_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test1";
-static char *TEST2_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test2";
-static char *TEST3_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test3";
-static char *TEST4_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test4";
-static char *TEST5_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test5";
-static char *TEST6_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test6";
-static char *TEST7_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test7";
-static char *TEST8_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test8";
-static char *TEST9_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test9";
+static char *TEST1_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test01";
+static char *TEST2_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test02";
+static char *TEST3_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test03";
+static char *TEST4_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test04";
+static char *TEST5_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test05";
+static char *TEST6_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test06";
+static char *TEST7_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test07";
+static char *TEST8_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test08";
+static char *TEST9_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test09";
+
+#define BRANCH_LEN   (7+11)
 
 // An effort to accommodate CPU load spike on some test machines.
 #define      TEST1_ALLOWED_DIFF     500 //(150)
 #define      TEST4_RETRANSMIT_CNT   3
 #define      TEST5_RETRANSMIT_CNT   3
 
-static char TARGET_URI[128];
-static char FROM_URI[128];
-static unsigned tp_flag;
-static struct tsx_test_param *test_param;
+struct my_timer
+{
+    pj_timer_entry  entry;
+    char            key_buf[1024];
+    pj_str_t        tsx_key;
+};
+
+
+static struct tsx_uac_test_global_t
+{
+    char TARGET_URI[128];
+    char FROM_URI[128];
+    unsigned tp_flag;
+    struct tsx_test_param *test_param;
+
+    /* Static vars, which will be reset on each test. */
+    int recv_count;
+    pj_time_val recv_last;
+    pj_bool_t test_complete;
+
+    /* Loop transport instance, only valid when test_param->tp_type is loop. */
+    pjsip_transport *loop;
+
+    struct my_timer timer;
+
+} g[MAX_TSX_TESTS];
 
 static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e);
 static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata);
@@ -118,13 +142,17 @@ static pjsip_module tsx_user =
     &tsx_user_on_tsx_state,             /* on_tsx_state()       */
 };
 
-/* Module to receive the loop-backed request. */
+/* Module to receive the loop-backed request and also process tx msgs. */
 static pjsip_module msg_receiver = 
 {
     NULL, NULL,                         /* prev and next        */
     { "Msg-Receiver", 12},              /* Name.                */
     -1,                                 /* Id                   */
-    PJSIP_MOD_PRIORITY_APPLICATION-1,   /* Priority             */
+    /* Note:
+     * Priority needs to be more important than UA layer, because UA layer
+     * silently absorbs ACK with To tag.
+     */
+    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER-1,/* Priority             */
     NULL,                               /* load()               */
     NULL,                               /* start()              */
     NULL,                               /* stop()               */
@@ -136,21 +164,59 @@ static pjsip_module msg_receiver =
     NULL,                               /* on_tsx_state()       */
 };
 
-/* Static vars, which will be reset on each test. */
-static int recv_count;
-static pj_time_val recv_last;
-static pj_bool_t test_complete;
-
-/* Loop transport instance. */
-static pjsip_transport *loop;
-
-/* General timer entry to be used by tests. */
-static struct my_timer
+/* Init uac test */
+static int init_test(unsigned tid)
 {
-    pj_timer_entry  entry;
-    char            key_buf[1024];
-    pj_str_t        tsx_key;
-} timer;
+    pj_enter_critical_section();
+    if (tsx_user.id == -1) {
+        PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &tsx_user), NULL,
+                        { pj_leave_critical_section(); return -30; });
+    }
+
+    if (msg_receiver.id == -1) {
+        PJ_TEST_SUCCESS(pjsip_endpt_register_module(endpt, &msg_receiver), NULL,
+                        { pj_leave_critical_section(); return -40; });
+    }
+    pj_leave_critical_section();
+
+    pj_assert(g[tid].loop==NULL);
+    
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        PJ_TEST_SUCCESS(pjsip_loop_start(endpt, &g[tid].loop),
+                        NULL, return -50);
+        pjsip_transport_add_ref(g[tid].loop);
+    }
+    return PJ_SUCCESS;
+}
+
+/* Finish test */
+static void finish_test(unsigned tid)
+{
+    /* Note: don't unregister modules on_tsx_state() may be called when
+     *       transaction layer is shutdown later, which will cause
+     *       get_tsx_tid() to be called and it needs the module id.
+     */    
+    if (g[tid].loop) {
+        /* Order must be shutdown then dec_ref so it gets destroyed */
+        pjsip_transport_shutdown(g[tid].loop);
+        pjsip_transport_dec_ref(g[tid].loop);
+        g[tid].loop = 0;
+    }
+}
+
+/* Get test ID from transaction instance */
+static unsigned get_tsx_tid(const pjsip_transaction *tsx)
+{
+    pj_assert(tsx_user.id >= 0);
+    return (unsigned)(long)tsx->mod_data[tsx_user.id];
+}
+
+/* Set test ID to transaction instance */
+static void set_tsx_tid(pjsip_transaction *tsx, unsigned tid)
+{
+    pj_assert(tsx_user.id >= 0);
+    tsx->mod_data[tsx_user.id] = (void*)(long)tid;
+}
 
 /*
  * This is the handler to receive state changed notification from the
@@ -159,34 +225,63 @@ static struct my_timer
  */
 static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 {
-    if (pj_stricmp2(&tsx->branch, TEST1_BRANCH_ID)==0) {
+    unsigned tid = get_tsx_tid(tsx);
+
+    /*
+    PJ_LOG(3,(THIS_FILE, 
+                "    on_tsx_state state: %s, event: %s (%s)",
+                pjsip_tsx_state_str(tsx->state),
+                pjsip_event_str(e->type),
+                pjsip_event_str(e->body.tsx_state.type)
+                ));
+    */
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM &&
+        e->type==PJSIP_EVENT_TSX_STATE)
+    {
+        if (e->body.tsx_state.type==PJSIP_EVENT_RX_MSG) {
+            PJ_TEST_EQ( e->body.tsx_state.src.rdata->tp_info.transport,
+                        g[tid].loop, NULL, {
+                            g[tid].test_complete = -704;
+                            return;
+                        });
+        } else if (e->body.tsx_state.type==PJSIP_EVENT_TX_MSG &&
+                   e->body.tsx_state.src.tdata->dest_info.addr.count) {
+            PJ_TEST_EQ( e->body.tsx_state.src.tdata->tp_info.transport,
+                        g[tid].loop, NULL, {
+                            g[tid].test_complete = -706;
+                            return;
+                        });
+        }
+    }
+
+    if (pj_strnicmp2(&tsx->branch, TEST1_BRANCH_ID, BRANCH_LEN)==0) {
         /*
          * Transaction with TEST1_BRANCH_ID should terminate with transaction
          * timeout status.
          */
         if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
-            if (test_complete == 0)
-                test_complete = 1;
+            if (g[tid].test_complete == 0)
+                g[tid].test_complete = 1;
 
             /* Test the status code. */
             if (tsx->status_code != PJSIP_SC_TSX_TIMEOUT) {
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: status code is %d instead of %d",
                           tsx->status_code, PJSIP_SC_TSX_TIMEOUT));
-                test_complete = -710;
+                g[tid].test_complete = -710;
             }
 
 
             /* If transport is reliable, then there must not be any
              * retransmissions.
              */
-            if (tp_flag & PJSIP_TRANSPORT_RELIABLE) {
-                if (recv_count != 1) {
+            if (g[tid].tp_flag & PJSIP_TRANSPORT_RELIABLE) {
+                if (g[tid].recv_count != 1) {
                     PJ_LOG(3,(THIS_FILE, 
                            "    error: there were %d (re)transmissions",
-                           recv_count));
-                    test_complete = -715;
+                           g[tid].recv_count));
+                    g[tid].test_complete = -715;
                 }
             } else {
                 /* Check the number of (re)transmissions, which must be
@@ -197,29 +292,29 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                  * fires first which causes recv_count fall short (by one).
                  */
                 //if (tsx->method.id==PJSIP_INVITE_METHOD && recv_count != 7) {
-                if (tsx->method.id==PJSIP_INVITE_METHOD && recv_count < 6) {
+                if (tsx->method.id==PJSIP_INVITE_METHOD && g[tid].recv_count < 6) {
                     PJ_LOG(3,(THIS_FILE, 
                            "    error: there were %d (re)transmissions",
-                           recv_count));
-                    test_complete = -716;
+                           g[tid].recv_count));
+                    g[tid].test_complete = -716;
                 } else
                 //if (tsx->method.id==PJSIP_OPTIONS_METHOD && recv_count != 11) {
-                if (tsx->method.id==PJSIP_OPTIONS_METHOD && recv_count < 10) {
+                if (tsx->method.id==PJSIP_OPTIONS_METHOD && g[tid].recv_count < 10) {
                     PJ_LOG(3,(THIS_FILE, 
                            "    error: there were %d (re)transmissions",
-                           recv_count));
-                    test_complete = -717;
+                           g[tid].recv_count));
+                    g[tid].test_complete = -717;
                 } else
                 if (tsx->method.id!=PJSIP_INVITE_METHOD && 
                     tsx->method.id!=PJSIP_OPTIONS_METHOD)
                 {
                     PJ_LOG(3,(THIS_FILE, "    error: unexpected method"));
-                    test_complete = -718;
+                    g[tid].test_complete = -718;
                 }
             }
         }
 
-    } else if (pj_stricmp2(&tsx->branch, TEST2_BRANCH_ID)==0) {
+    } else if (pj_strnicmp2(&tsx->branch, TEST2_BRANCH_ID, BRANCH_LEN)==0) {
         /*
          * Transaction with TEST2_BRANCH_ID should terminate with transport error.
          */
@@ -233,14 +328,14 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                           "    error: status code is %d instead of %d or %d",
                           tsx->status_code, PJSIP_SC_TSX_TRANSPORT_ERROR,
                           PJSIP_SC_BAD_GATEWAY));
-                test_complete = -720;
+                g[tid].test_complete = -720;
             }
 
-            if (test_complete == 0)
-                test_complete = 1;
+            if (g[tid].test_complete == 0)
+                g[tid].test_complete = 1;
         }
 
-    } else if (pj_stricmp2(&tsx->branch, TEST3_BRANCH_ID)==0) {
+    } else if (pj_strnicmp2(&tsx->branch, TEST3_BRANCH_ID, BRANCH_LEN)==0) {
         /*
          * This test terminates the transaction while resolver is still
          * running. 
@@ -257,15 +352,15 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: status code is %d instead of %d",
                           tsx->status_code, PJSIP_SC_REQUEST_TERMINATED));
-                test_complete = -730;
+                g[tid].test_complete = -730;
             }
 
-            if (test_complete == 0)
-                test_complete = 1;
+            if (g[tid].test_complete == 0)
+                g[tid].test_complete = 1;
 
         }
 
-    } else if (pj_stricmp2(&tsx->branch, TEST4_BRANCH_ID)==0) {
+    } else if (pj_strnicmp2(&tsx->branch, TEST4_BRANCH_ID, BRANCH_LEN)==0) {
         /* 
          * This test simulates transport failure after several 
          * retransmissions.
@@ -277,7 +372,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: status code is %d instead of %d",
                           tsx->status_code, PJSIP_SC_TSX_TRANSPORT_ERROR));
-                test_complete = -730;
+                g[tid].test_complete = -730;
             }
 
             /* Must have correct retransmission count. */
@@ -285,15 +380,15 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: retransmit cnt is %d instead of %d",
                           tsx->retransmit_count, TEST4_RETRANSMIT_CNT));
-                test_complete = -731;
+                g[tid].test_complete = -731;
             }
 
-            if (test_complete == 0)
-                test_complete = 1;
+            if (g[tid].test_complete == 0)
+                g[tid].test_complete = 1;
         }
 
 
-    } else if (pj_stricmp2(&tsx->branch, TEST5_BRANCH_ID)==0) {
+    } else if (pj_strnicmp2(&tsx->branch, TEST5_BRANCH_ID, BRANCH_LEN)==0) {
         /* 
          * This test simulates transport failure after several 
          * retransmissions.
@@ -305,7 +400,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: status code is %d instead of %d",
                           tsx->status_code, PJSIP_SC_REQUEST_TERMINATED));
-                test_complete = -733;
+                g[tid].test_complete = -733;
             }
 
             /* Must have correct retransmission count. */
@@ -313,15 +408,15 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: retransmit cnt is %d instead of %d",
                           tsx->retransmit_count, TEST5_RETRANSMIT_CNT));
-                test_complete = -734;
+                g[tid].test_complete = -734;
             }
 
-            if (test_complete == 0)
-                test_complete = 1;
+            if (g[tid].test_complete == 0)
+                g[tid].test_complete = 1;
         }
 
 
-    } else if (pj_stricmp2(&tsx->branch, TEST6_BRANCH_ID)==0) {
+    } else if (pj_strnicmp2(&tsx->branch, TEST6_BRANCH_ID, BRANCH_LEN)==0) {
         /* 
          * Successfull non-INVITE transaction.
          */
@@ -332,7 +427,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: status code is %d instead of %d",
                           tsx->status_code, 202));
-                test_complete = -736;
+                g[tid].test_complete = -736;
             }
 
             /* Must have correct retransmission count. */
@@ -340,18 +435,18 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: retransmit cnt is %d instead of %d",
                           tsx->retransmit_count, 0));
-                test_complete = -737;
+                g[tid].test_complete = -737;
             }
 
             /* Must still keep last_tx */
             if (tsx->last_tx == NULL) {
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: transaction lost last_tx"));
-                test_complete = -738;
+                g[tid].test_complete = -738;
             }
 
-            if (test_complete == 0) {
-                test_complete = 1;
+            if (g[tid].test_complete == 0) {
+                g[tid].test_complete = 1;
                 pjsip_tsx_terminate(tsx, 202);
             }
 
@@ -359,12 +454,12 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
             /* Previous state must be COMPLETED. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED) {
-                test_complete = -7381;
+                g[tid].test_complete = -7381;
             }
 
         }
 
-    } else if (pj_stricmp2(&tsx->branch, TEST7_BRANCH_ID)==0) {
+    } else if (pj_strnicmp2(&tsx->branch, TEST7_BRANCH_ID, BRANCH_LEN)==0) {
         /* 
          * Successfull non-INVITE transaction.
          */
@@ -376,7 +471,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                           "    error: prev state is %s instead of %s",
                           pjsip_tsx_state_str((pjsip_tsx_state_e)e->body.tsx_state.prev_state),
                           pjsip_tsx_state_str(PJSIP_TSX_STATE_PROCEEDING)));
-                test_complete = -739;
+                g[tid].test_complete = -739;
             }
 
             /* Status code must be 202. */
@@ -384,7 +479,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: status code is %d instead of %d",
                           tsx->status_code, 202));
-                test_complete = -740;
+                g[tid].test_complete = -740;
             }
 
             /* Must have correct retransmission count. */
@@ -392,18 +487,18 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: retransmit cnt is %d instead of %d",
                           tsx->retransmit_count, 0));
-                test_complete = -741;
+                g[tid].test_complete = -741;
             }
 
             /* Must still keep last_tx */
             if (tsx->last_tx == NULL) {
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: transaction lost last_tx"));
-                test_complete = -741;
+                g[tid].test_complete = -741;
             }
 
-            if (test_complete == 0) {
-                test_complete = 1;
+            if (g[tid].test_complete == 0) {
+                g[tid].test_complete = 1;
                 pjsip_tsx_terminate(tsx, 202);
             }
 
@@ -411,13 +506,13 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
             /* Previous state must be COMPLETED. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED) {
-                test_complete = -742;
+                g[tid].test_complete = -742;
             }
 
         }
 
 
-    } else if (pj_stricmp2(&tsx->branch, TEST8_BRANCH_ID)==0) {
+    } else if (pj_strnicmp2(&tsx->branch, TEST8_BRANCH_ID, BRANCH_LEN)==0) {
         /* 
          * Failed INVITE transaction.
          */
@@ -428,7 +523,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: status code is %d instead of %d",
                           tsx->status_code, 301));
-                test_complete = -745;
+                g[tid].test_complete = -745;
             }
 
             /* Must have correct retransmission count. */
@@ -436,14 +531,14 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: retransmit cnt is %d instead of %d",
                           tsx->retransmit_count, 0));
-                test_complete = -746;
+                g[tid].test_complete = -746;
             }
 
             /* Must still keep last_tx */
             if (tsx->last_tx == NULL) {
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: transaction lost last_tx"));
-                test_complete = -747;
+                g[tid].test_complete = -747;
             }
 
             /* last_tx MUST be the INVITE request
@@ -454,16 +549,19 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             {
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: last_tx is not INVITE"));
-                test_complete = -748;
+                g[tid].test_complete = -748;
             }
         }
         else if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
-            test_complete = 1;
+            g[tid].test_complete = 1;
 
             /* Previous state must be COMPLETED. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED) {
-                test_complete = -750;
+                PJ_LOG(3,(THIS_FILE, 
+                          "    error: expecting last state=COMLETED instead of %d",
+                          e->body.tsx_state.prev_state));
+                g[tid].test_complete = -750;
             }
 
             /* Status code must be 301. */
@@ -471,13 +569,13 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: status code is %d instead of %d",
                           tsx->status_code, 301));
-                test_complete = -751;
+                g[tid].test_complete = -751;
             }
 
         }
 
 
-    } else if (pj_stricmp2(&tsx->branch, TEST9_BRANCH_ID)==0) {
+    } else if (pj_strnicmp2(&tsx->branch, TEST9_BRANCH_ID, BRANCH_LEN)==0) {
         /* 
          * Failed INVITE transaction with provisional response.
          */
@@ -485,7 +583,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
             /* Previous state must be PJSIP_TSX_STATE_PROCEEDING. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_PROCEEDING) {
-                test_complete = -760;
+                g[tid].test_complete = -760;
             }
 
             /* Status code must be 302. */
@@ -493,7 +591,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: status code is %d instead of %d",
                           tsx->status_code, 302));
-                test_complete = -761;
+                g[tid].test_complete = -761;
             }
 
             /* Must have correct retransmission count. */
@@ -501,14 +599,14 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: retransmit cnt is %d instead of %d",
                           tsx->retransmit_count, 0));
-                test_complete = -762;
+                g[tid].test_complete = -762;
             }
 
             /* Must still keep last_tx */
             if (tsx->last_tx == NULL) {
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: transaction lost last_tx"));
-                test_complete = -763;
+                g[tid].test_complete = -763;
             }
 
             /* last_tx MUST be INVITE. 
@@ -519,17 +617,17 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
             {
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: last_tx is not INVITE"));
-                test_complete = -764;
+                g[tid].test_complete = -764;
             }
 
         }
         else if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 
-            test_complete = 1;
+            g[tid].test_complete = 1;
 
             /* Previous state must be COMPLETED. */
             if (e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED) {
-                test_complete = -767;
+                g[tid].test_complete = -767;
             }
 
             /* Status code must be 302. */
@@ -537,7 +635,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: status code is %d instead of %d",
                           tsx->status_code, 302));
-                test_complete = -768;
+                g[tid].test_complete = -768;
             }
 
         }
@@ -594,7 +692,34 @@ static void terminate_tsx_callback( pj_timer_heap_t *timer_heap,
  */
 static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 {
-    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST1_BRANCH_ID) == 0) {
+    pjsip_to_hdr *to_hdr = rdata->msg_info.to;
+    pjsip_sip_uri *target = (pjsip_sip_uri*)pjsip_uri_get_uri(to_hdr->uri);
+    pjsip_to_hdr *from_hdr = rdata->msg_info.from;
+    pjsip_sip_uri *from_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(from_hdr->uri);
+    unsigned tid;
+
+    if (pj_strcmp2(&from_uri->user, "tsx_uac_test")) {
+        /* Not our message */
+        return PJ_FALSE;
+    }
+
+    tid = (unsigned)pj_strtoul(&target->user);
+
+    /*
+    PJ_LOG(3,(THIS_FILE, "   on_rx_request %s (recv_count: %d) on %s, branch: %.*s", 
+                pjsip_rx_data_get_info(rdata),
+                g[tid].recv_count, rdata->tp_info.transport->info,
+                (int)rdata->msg_info.via->branch_param.slen,
+                rdata->msg_info.via->branch_param.ptr));
+    */
+
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        PJ_TEST_EQ(rdata->tp_info.transport, g[tid].loop, NULL,
+                   {g[tid].test_complete = -602; return PJ_TRUE;});
+    }
+
+    if (pj_strnicmp2(&rdata->msg_info.via->branch_param, TEST1_BRANCH_ID,
+                     BRANCH_LEN) == 0) {
         /*
          * The TEST1_BRANCH_ID test performs the verifications for transaction
          * retransmission mechanism. It will not answer the incoming request
@@ -611,14 +736,14 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
             PJ_LOG(3,(THIS_FILE, "    error: received unexpected method %.*s",
                           (int)msg->line.req.method.name.slen,
                           msg->line.req.method.name.ptr));
-            test_complete = -600;
+            g[tid].test_complete = -600;
             return PJ_TRUE;
         }
 
-        if (recv_count == 0) {
-            recv_count++;
+        if (g[tid].recv_count == 0) {
+            g[tid].recv_count++;
             //pj_gettimeofday(&recv_last);
-            recv_last = rdata->pkt_info.timestamp;
+            g[tid].recv_last = rdata->pkt_info.timestamp;
         } else {
             pj_time_val now;
             unsigned msec_expected, msec_elapsed;
@@ -626,11 +751,11 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 
             //pj_gettimeofday(&now);
             now = rdata->pkt_info.timestamp;
-            PJ_TIME_VAL_SUB(now, recv_last);
+            PJ_TIME_VAL_SUB(now, g[tid].recv_last);
             msec_elapsed = now.sec*1000 + now.msec;
 
-            ++recv_count;
-            msec_expected = (1<<(recv_count-2))*pjsip_cfg()->tsx.t1;
+            ++g[tid].recv_count;
+            msec_expected = (1<<(g[tid].recv_count-2))*pjsip_cfg()->tsx.t1;
 
             if (msg->line.req.method.id != PJSIP_INVITE_METHOD) {
                 if (msec_expected > pjsip_cfg()->tsx.t2)
@@ -644,53 +769,55 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
                 PJ_LOG(3,(THIS_FILE,
                           "    error: expecting retransmission no. %d in %d "
                           "ms, received in %d ms",
-                          recv_count-1, msec_expected, msec_elapsed));
-                test_complete = -610;
+                          g[tid].recv_count-1, msec_expected, msec_elapsed));
+                g[tid].test_complete = -610;
             }
 
             
-            if (recv_count > max_received) {
+            if (g[tid].recv_count > max_received) {
                 PJ_LOG(3,(THIS_FILE, 
                           "    error: too many messages (%d) received",
-                          recv_count));
-                test_complete = -620;
+                          g[tid].recv_count));
+                g[tid].test_complete = -620;
             }
 
             //pj_gettimeofday(&recv_last);
-            recv_last = rdata->pkt_info.timestamp;
+            g[tid].recv_last = rdata->pkt_info.timestamp;
         }
         return PJ_TRUE;
 
     } else
-    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST4_BRANCH_ID) == 0) {
+    if (pj_strnicmp2(&rdata->msg_info.via->branch_param, TEST4_BRANCH_ID,
+                     BRANCH_LEN) == 0) {
         /*
          * The TEST4_BRANCH_ID test simulates transport failure after several
          * retransmissions.
          */
-        recv_count++;
+        g[tid].recv_count++;
 
-        if (recv_count == TEST4_RETRANSMIT_CNT) {
+        if (g[tid].recv_count == TEST4_RETRANSMIT_CNT) {
             /* Simulate transport failure. */
-            pjsip_loop_set_failure(loop, 2, NULL);
+            pjsip_loop_set_failure(g[tid].loop, 2, NULL);
 
-        } else if (recv_count > TEST4_RETRANSMIT_CNT) {
+        } else if (g[tid].recv_count > TEST4_RETRANSMIT_CNT) {
             PJ_LOG(3,(THIS_FILE,"   error: not expecting %d-th packet!",
-                      recv_count));
-            test_complete = -631;
+                      g[tid].recv_count));
+            g[tid].test_complete = -631;
         }
 
         return PJ_TRUE;
 
 
     } else
-    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST5_BRANCH_ID) == 0) {
+    if (pj_strnicmp2(&rdata->msg_info.via->branch_param, TEST5_BRANCH_ID,
+                     BRANCH_LEN) == 0) {
         /*
          * The TEST5_BRANCH_ID test simulates user terminating the transaction
          * after several retransmissions.
          */
-        recv_count++;
+        g[tid].recv_count++;
 
-        if (recv_count == TEST5_RETRANSMIT_CNT+1) {
+        if (g[tid].recv_count == TEST5_RETRANSMIT_CNT+1) {
             pj_str_t key;
             pjsip_transaction *tsx;
 
@@ -702,44 +829,46 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
                 pj_grp_lock_release(tsx->grp_lock);
             } else {
                 PJ_LOG(3,(THIS_FILE, "    error: uac transaction not found!"));
-                test_complete = -633;
+                g[tid].test_complete = -633;
             }
 
-        } else if (recv_count > TEST5_RETRANSMIT_CNT+1) {
+        } else if (g[tid].recv_count > TEST5_RETRANSMIT_CNT+1) {
             PJ_LOG(3,(THIS_FILE,"   error: not expecting %d-th packet!",
-                      recv_count));
-            test_complete = -634;
+                      g[tid].recv_count));
+            g[tid].test_complete = -634;
         }
 
         return PJ_TRUE;
 
     } else
-    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST6_BRANCH_ID) == 0) {
+    if (pj_strnicmp2(&rdata->msg_info.via->branch_param, TEST6_BRANCH_ID,
+                     BRANCH_LEN) == 0) {
         /*
          * The TEST6_BRANCH_ID test successfull non-INVITE transaction.
          */
         pj_status_t status;
 
-        recv_count++;
+        g[tid].recv_count++;
 
-        if (recv_count > 1) {
+        if (g[tid].recv_count > 1) {
             PJ_LOG(3,(THIS_FILE,"   error: not expecting %d-th packet!",
-                      recv_count));
-            test_complete = -635;
+                      g[tid].recv_count));
+            g[tid].test_complete = -635;
         }
 
         status = pjsip_endpt_respond_stateless(endpt, rdata, 202, NULL,
                                                NULL, NULL);
         if (status != PJ_SUCCESS) {
             app_perror("    error: unable to send response", status);
-            test_complete = -636;
+            g[tid].test_complete = -636;
         }
 
         return PJ_TRUE;
 
 
     } else
-    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST7_BRANCH_ID) == 0) {
+    if (pj_strnicmp2(&rdata->msg_info.via->branch_param, TEST7_BRANCH_ID,
+                     BRANCH_LEN) == 0) {
         /*
          * The TEST7_BRANCH_ID test successfull non-INVITE transaction
          * with provisional response.
@@ -750,12 +879,12 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
         pjsip_tx_data *tdata;
         pj_time_val delay = { 2, 0 };
 
-        recv_count++;
+        g[tid].recv_count++;
 
-        if (recv_count > 1) {
+        if (g[tid].recv_count > 1) {
             PJ_LOG(3,(THIS_FILE,"   error: not expecting %d-th packet!",
-                      recv_count));
-            test_complete = -640;
+                      g[tid].recv_count));
+            g[tid].test_complete = -640;
             return PJ_TRUE;
         }
 
@@ -781,42 +910,43 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
         if (r->res_addr.transport)
             pjsip_transport_add_ref(r->res_addr.transport);
 
-        timer.entry.cb = &send_response_callback;
-        timer.entry.user_data = r;
-        pjsip_endpt_schedule_timer(endpt, &timer.entry, &delay);
+        g[tid].timer.entry.cb = &send_response_callback;
+        g[tid].timer.entry.user_data = r;
+        pjsip_endpt_schedule_timer(endpt, &g[tid].timer.entry, &delay);
 
         return (status == PJ_SUCCESS);
 
     } else
-    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST8_BRANCH_ID) == 0) {
+    if (pj_strnicmp2(&rdata->msg_info.via->branch_param, TEST8_BRANCH_ID,
+                     BRANCH_LEN) == 0) {
         /*
          * The TEST8_BRANCH_ID test failed INVITE transaction.
          */
         pjsip_method *method;
         pj_status_t status;
 
+    
         method = &rdata->msg_info.msg->line.req.method;
-
-        recv_count++;
+        g[tid].recv_count++;
 
         if (method->id == PJSIP_INVITE_METHOD) {
 
-            if (recv_count > 1) {
+            if (g[tid].recv_count > 1) {
                 PJ_LOG(3,(THIS_FILE,"   error: not expecting %d-th packet!",
-                          recv_count));
-                test_complete = -635;
+                          g[tid].recv_count));
+                g[tid].test_complete = -635;
             }
 
             status = pjsip_endpt_respond_stateless(endpt, rdata, 301, NULL,
                                                    NULL, NULL);
             if (status != PJ_SUCCESS) {
                 app_perror("    error: unable to send response", status);
-                test_complete = -636;
+                g[tid].test_complete = -636;
             }
 
         } else if (method->id == PJSIP_ACK_METHOD) {
 
-            if (recv_count == 2) {
+            if (g[tid].recv_count == 2) {
                 pj_str_t key;
                 pj_time_val delay = { 5, 0 };
                 
@@ -828,30 +958,31 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
                                      PJSIP_ROLE_UAC, &pjsip_invite_method,
                                      rdata);
 
-                pj_strcpy(&timer.tsx_key, &key);
-                timer.entry.id = 301;
-                timer.entry.cb = &terminate_tsx_callback;
+                pj_strcpy(&g[tid].timer.tsx_key, &key);
+                g[tid].timer.entry.id = 301;
+                g[tid].timer.entry.cb = &terminate_tsx_callback;
 
-                pjsip_endpt_schedule_timer(endpt, &timer.entry, &delay);
+                pjsip_endpt_schedule_timer(endpt, &g[tid].timer.entry, &delay);
             }
 
-            if (recv_count > 2) {
+            if (g[tid].recv_count > 2) {
                 PJ_LOG(3,(THIS_FILE,"   error: not expecting %d-th packet!",
-                          recv_count));
-                test_complete = -638;
+                          g[tid].recv_count));
+                g[tid].test_complete = -638;
             }
 
 
         } else {
             PJ_LOG(3,(THIS_FILE,"   error: not expecting %s",
                       pjsip_rx_data_get_info(rdata)));
-            test_complete = -639;
+            g[tid].test_complete = -639;
 
         }
 
 
     } else
-    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST9_BRANCH_ID) == 0) {
+    if (pj_strnicmp2(&rdata->msg_info.via->branch_param, TEST9_BRANCH_ID,
+                     BRANCH_LEN) == 0) {
         /*
          * The TEST9_BRANCH_ID test failed INVITE transaction with
          * provisional response.
@@ -861,7 +992,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 
         method = &rdata->msg_info.msg->line.req.method;
 
-        recv_count++;
+        g[tid].recv_count++;
 
         if (method->id == PJSIP_INVITE_METHOD) {
 
@@ -870,10 +1001,10 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
             pjsip_tx_data *tdata;
             pj_time_val delay = { 2, 0 };
 
-            if (recv_count > 1) {
+            if (g[tid].recv_count > 1) {
                 PJ_LOG(3,(THIS_FILE,"   error: not expecting %d-th packet!",
-                          recv_count));
-                test_complete = -650;
+                          g[tid].recv_count));
+                g[tid].test_complete = -650;
                 return PJ_TRUE;
             }
 
@@ -901,13 +1032,13 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
             if (r->res_addr.transport)
                 pjsip_transport_add_ref(r->res_addr.transport);
 
-            timer.entry.cb = &send_response_callback;
-            timer.entry.user_data = r;
-            pjsip_endpt_schedule_timer(endpt, &timer.entry, &delay);
+            g[tid].timer.entry.cb = &send_response_callback;
+            g[tid].timer.entry.user_data = r;
+            pjsip_endpt_schedule_timer(endpt, &g[tid].timer.entry, &delay);
 
         } else if (method->id == PJSIP_ACK_METHOD) {
 
-            if (recv_count == 2) {
+            if (g[tid].recv_count == 2) {
                 pj_str_t key;
                 pj_time_val delay = { 5, 0 };
                 
@@ -919,24 +1050,24 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
                                      PJSIP_ROLE_UAC, &pjsip_invite_method,
                                      rdata);
 
-                pj_strcpy(&timer.tsx_key, &key);
-                timer.entry.id = 302;
-                timer.entry.cb = &terminate_tsx_callback;
+                pj_strcpy(&g[tid].timer.tsx_key, &key);
+                g[tid].timer.entry.id = 302;
+                g[tid].timer.entry.cb = &terminate_tsx_callback;
 
-                pjsip_endpt_schedule_timer(endpt, &timer.entry, &delay);
+                pjsip_endpt_schedule_timer(endpt, &g[tid].timer.entry, &delay);
             }
 
-            if (recv_count > 2) {
+            if (g[tid].recv_count > 2) {
                 PJ_LOG(3,(THIS_FILE,"   error: not expecting %d-th packet!",
-                          recv_count));
-                test_complete = -638;
+                          g[tid].recv_count));
+                g[tid].test_complete = -638;
             }
 
 
         } else {
             PJ_LOG(3,(THIS_FILE,"   error: not expecting %s",
                       pjsip_rx_data_get_info(rdata)));
-            test_complete = -639;
+            g[tid].test_complete = -639;
 
         }
 
@@ -950,26 +1081,28 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 /* 
  * The generic test framework, used by most of the tests. 
  */
-static int perform_tsx_test(int dummy, char *target_uri, char *from_uri, 
-                            char *branch_param, int test_time, 
+static int perform_tsx_test(unsigned tid, int dummy, char *target_uri,
+                            char *from_uri, char *branch_param, int test_time,
                             const pjsip_method *method)
 {
     pjsip_tx_data *tdata;
     pjsip_transaction *tsx;
     pj_str_t target, from, tsx_key;
     pjsip_via_hdr *via;
+    char branch_buf[BRANCH_LEN+20];
     pj_time_val timeout;
     pj_status_t status;
 
     PJ_UNUSED_ARG(dummy);
+    PJ_TEST_EQ(strlen(branch_param), BRANCH_LEN, NULL, return -99);
 
     PJ_LOG(3,(THIS_FILE, 
               "   please standby, this will take at most %d seconds..",
               test_time));
 
     /* Reset test. */
-    recv_count = 0;
-    test_complete = 0;
+    g[tid].recv_count = 0;
+    g[tid].test_complete = 0;
 
     /* Init headers. */
     target = pj_str(target_uri);
@@ -981,12 +1114,16 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
                                          NULL, &tdata);
     if (status != PJ_SUCCESS) {
         app_perror("   Error: unable to create request", status);
-        return -100;
+        return -105;
     }
 
-    /* Set the branch param for test 1. */
+    /* Set the branch param. Note that other tsx_uac_test() instances may
+     * be running simultaneously, thus the branch ID needs to be made unique
+     * by adding tid */
     via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
-    via->branch_param = pj_str(branch_param);
+    pj_ansi_snprintf(branch_buf, sizeof(branch_buf),
+                     "%s-%02d", branch_param, tid);
+    pj_strdup2(tdata->pool, &via->branch_param, branch_buf);
 
     /* Add additional reference to tdata to prevent transaction from
      * deleting it.
@@ -1000,7 +1137,18 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
         pjsip_tx_data_dec_ref(tdata);
         return -110;
     }
+    set_tsx_tid(tsx, tid);
 
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_tpselector tp_sel;
+
+        pj_assert(g[tid].loop);
+        pj_bzero(&tp_sel, sizeof(tp_sel));
+        tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
+        tp_sel.u.transport = g[tid].loop;
+        pjsip_tsx_set_transport(tsx, &tp_sel);
+    }
+    
     /* Get transaction key. */
     pj_strdup(tdata->pool, &tsx_key, &tsx->transaction_key);
 
@@ -1020,7 +1168,7 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
     timeout.sec += test_time;
 
     /* Wait until test complete. */
-    while (!test_complete) {
+    while (!g[tid].test_complete) {
         pj_time_val now, poll_delay = {0, 10};
 
         pjsip_endpt_handle_events(endpt, &poll_delay);
@@ -1033,7 +1181,7 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
         }
     }
 
-    if (test_complete < 0) {
+    if (g[tid].test_complete < 0) {
         tsx = pjsip_tsx_layer_find_tsx(&tsx_key, PJ_TRUE);
         if (tsx) {
             pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
@@ -1041,7 +1189,7 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
             flush_events(1000);
         }
         pjsip_tx_data_dec_ref(tdata);
-        return test_complete;
+        return g[tid].test_complete;
 
     } else {
         pj_time_val now;
@@ -1068,10 +1216,11 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
     }
 
     /* Check tdata reference counter. */
-    if (pj_atomic_get(tdata->ref_cnt) != 1) {
+    if (pj_atomic_get(tdata->ref_cnt) > 1) {
         PJ_LOG(3,(THIS_FILE, "   Error: tdata reference counter is %ld",
                       pj_atomic_get(tdata->ref_cnt)));
-        pjsip_tx_data_dec_ref(tdata);
+        while (pj_atomic_get(tdata->ref_cnt) > 1)
+            pjsip_tx_data_dec_ref(tdata);
         return -150;
     }
 
@@ -1091,7 +1240,7 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
  **
  *****************************************************************************
  */
-static int tsx_uac_retransmit_test(void)
+static int tsx_uac_retransmit_test(unsigned tid)
 {
     int status = 0, enabled;
     int i;
@@ -1111,7 +1260,6 @@ static int tsx_uac_retransmit_test(void)
 
     PJ_LOG(3,(THIS_FILE, "  test1: basic uac retransmit and timeout test"));
 
-
     /* For this test. message printing shound be disabled because it makes
      * incorrect timing.
      */
@@ -1126,19 +1274,23 @@ static int tsx_uac_retransmit_test(void)
                   sub_test[i].delay));
 
         /* Configure transport */
-        pjsip_loop_set_failure(loop, 0, NULL);
-        pjsip_loop_set_recv_delay(loop, sub_test[i].delay, NULL);
+        if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+            pjsip_loop_set_failure(g[tid].loop, 0, NULL);
+            pjsip_loop_set_recv_delay(g[tid].loop, sub_test[i].delay, NULL);
+        }
 
         /* Do the test. */
-        status = perform_tsx_test(-500, TARGET_URI, FROM_URI, 
-                                  TEST1_BRANCH_ID,
+        status = perform_tsx_test(tid, -500, g[tid].TARGET_URI,
+                                  g[tid].FROM_URI, TEST1_BRANCH_ID,
                                   35, sub_test[i].method);
         if (status != 0)
             break;
     }
 
     /* Restore transport. */
-    pjsip_loop_set_recv_delay(loop, 0, NULL);
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_loop_set_recv_delay(g[tid].loop, 0, NULL);
+    }
 
     /* Restore msg logger. */
     msg_logger_set_enabled(enabled);
@@ -1158,20 +1310,24 @@ static int tsx_uac_retransmit_test(void)
  **
  *****************************************************************************
  */
-static int tsx_resolve_error_test(void)
+static int tsx_resolve_error_test(unsigned tid)
 {
+    char target[80];
     int status = 0;
 
     PJ_LOG(3,(THIS_FILE, "  test2: resolve error test"));
+
+    pj_ansi_snprintf(target, sizeof(target),
+                     "sip:%d@unresolved-host;transport=%s", 
+                    tid, g[tid].test_param->tp_type);
 
     /*
      * Variant (a): immediate resolve error.
      */
     PJ_LOG(3,(THIS_FILE, "   variant a: immediate resolving error"));
 
-    status = perform_tsx_test(-800, 
-                              "sip:bob@unresolved-host",
-                              FROM_URI,  TEST2_BRANCH_ID, 20, 
+    status = perform_tsx_test(tid, -800, target,
+                              g[tid].FROM_URI,  TEST2_BRANCH_ID, 20, 
                               &pjsip_options_method);
     if (status != 0)
         return status;
@@ -1182,20 +1338,24 @@ static int tsx_resolve_error_test(void)
     PJ_LOG(3,(THIS_FILE, "   variant b: error via callback"));
 
     /* This only applies to "loop-dgram" transport */
-    if (test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
-        /* Set loop transport to return delayed error. */
-        pjsip_loop_set_failure(loop, 2, NULL);
-        pjsip_loop_set_send_callback_delay(loop, 10, NULL);
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        int prev_fail = 0;
+        unsigned prev_delay = 0;
 
-        status = perform_tsx_test(-800, TARGET_URI, FROM_URI, 
-                                  TEST2_BRANCH_ID, 2, 
+        /* Set loop transport to return delayed error. */
+        pjsip_loop_set_failure(g[tid].loop, 2, &prev_fail);
+        pjsip_loop_set_send_callback_delay(g[tid].loop, 10, &prev_delay);
+
+        status = perform_tsx_test(tid, -800, g[tid].TARGET_URI,
+                                  g[tid].FROM_URI, TEST2_BRANCH_ID, 2,
                                   &pjsip_options_method);
-        if (status != 0)
-            return status;
 
         /* Restore loop transport settings. */
-        pjsip_loop_set_failure(loop, 0, NULL);
-        pjsip_loop_set_send_callback_delay(loop, 0, NULL);
+        pjsip_loop_set_failure(g[tid].loop, prev_fail, NULL);
+        pjsip_loop_set_send_callback_delay(g[tid].loop, prev_delay, NULL);
+
+        if (status != 0)
+            return status;
     }
 
     return status;
@@ -1210,7 +1370,7 @@ static int tsx_resolve_error_test(void)
  **
  *****************************************************************************
  */
-static int tsx_terminate_resolving_test(void)
+static int tsx_terminate_resolving_test(unsigned tid)
 {
     unsigned prev_delay;
     pj_status_t status;
@@ -1218,14 +1378,18 @@ static int tsx_terminate_resolving_test(void)
     PJ_LOG(3,(THIS_FILE, "  test3: terminate while resolving test"));
 
     /* Configure transport delay. */
-    pjsip_loop_set_send_callback_delay(loop, 100, &prev_delay);
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_loop_set_send_callback_delay(g[tid].loop, 100, &prev_delay);
+    }
 
     /* Start the test. */
-    status = perform_tsx_test(-900, TARGET_URI, FROM_URI,
+    status = perform_tsx_test(tid, -900, g[tid].TARGET_URI, g[tid].FROM_URI,
                               TEST3_BRANCH_ID, 2, &pjsip_options_method);
 
     /* Restore delay. */
-    pjsip_loop_set_send_callback_delay(loop, prev_delay, NULL);
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_loop_set_send_callback_delay(g[tid].loop, prev_delay, NULL);
+    }
 
     return status;
 }
@@ -1241,7 +1405,7 @@ static int tsx_terminate_resolving_test(void)
  **
  *****************************************************************************
  */
-static int tsx_retransmit_fail_test(void)
+static int tsx_retransmit_fail_test(unsigned tid)
 {
     int i;
     unsigned delay[] = {0, 10};
@@ -1257,13 +1421,13 @@ static int tsx_retransmit_fail_test(void)
                   "   variant %c: transport delay %d ms", ('a'+i), delay[i]));
 
         /* Configure transport delay. */
-        pjsip_loop_set_send_callback_delay(loop, delay[i], NULL);
+        pjsip_loop_set_send_callback_delay(g[tid].loop, delay[i], NULL);
 
         /* Restore transport failure mode. */
-        pjsip_loop_set_failure(loop, 0, 0);
+        pjsip_loop_set_failure(g[tid].loop, 0, 0);
 
         /* Start the test. */
-        status = perform_tsx_test(-1000, TARGET_URI, FROM_URI,
+        status = perform_tsx_test(tid, -1000, g[tid].TARGET_URI, g[tid].FROM_URI,
                                   TEST4_BRANCH_ID, 6, &pjsip_options_method);
 
         if (status != 0)
@@ -1272,10 +1436,10 @@ static int tsx_retransmit_fail_test(void)
     }
 
     /* Restore delay. */
-    pjsip_loop_set_send_callback_delay(loop, 0, NULL);
+    pjsip_loop_set_send_callback_delay(g[tid].loop, 0, NULL);
 
     /* Restore transport failure mode. */
-    pjsip_loop_set_failure(loop, 0, 0);
+    pjsip_loop_set_failure(g[tid].loop, 0, 0);
 
     return status;
 }
@@ -1287,14 +1451,14 @@ static int tsx_retransmit_fail_test(void)
  **
  *****************************************************************************
  */
-static int tsx_terminate_after_retransmit_test(void)
+static int tsx_terminate_after_retransmit_test(unsigned tid)
 {
     int status;
 
     PJ_LOG(3,(THIS_FILE, "  test5: terminate after retransmissions"));
 
     /* Do the test. */
-    status = perform_tsx_test(-1100, TARGET_URI, FROM_URI, 
+    status = perform_tsx_test(tid, -1100, g[tid].TARGET_URI, g[tid].FROM_URI,
                               TEST5_BRANCH_ID,
                               6, &pjsip_options_method);
 
@@ -1312,7 +1476,8 @@ static int tsx_terminate_after_retransmit_test(void)
  **
  *****************************************************************************
  */
-static int perform_generic_test( const char *title,
+static int perform_generic_test( unsigned tid,
+                                 const char *title,
                                  char *branch_id,
                                  const pjsip_method *method)
 {
@@ -1320,27 +1485,30 @@ static int perform_generic_test( const char *title,
     unsigned delay[] = { 1, 200 };
 
     PJ_LOG(3,(THIS_FILE, "  %s", title));
-
+    
     /* Do the test. */
     for (i=0; i<(int)PJ_ARRAY_SIZE(delay); ++i) {
         
-        if (test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
             PJ_LOG(3,(THIS_FILE, "   variant %c: with %d ms transport delay",
                                  ('a'+i), delay[i]));
 
-            pjsip_loop_set_delay(loop, delay[i]);
+            pjsip_loop_set_failure(g[tid].loop, 0, 0);
+            pjsip_loop_set_delay(g[tid].loop, delay[i]);
         }
 
-        status = perform_tsx_test(-1200, TARGET_URI, FROM_URI,
+        status = perform_tsx_test(tid, -1200, g[tid].TARGET_URI, g[tid].FROM_URI,
                                   branch_id, 10, method);
         if (status != 0)
             return status;
 
-        if (test_param->type != PJSIP_TRANSPORT_LOOP_DGRAM)
+        if (g[tid].test_param->type != PJSIP_TRANSPORT_LOOP_DGRAM)
             break;
     }
 
-    pjsip_loop_set_delay(loop, 0);
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        pjsip_loop_set_delay(g[tid].loop, 0);
+    }
 
     /* Done. */
     return status;
@@ -1353,117 +1521,97 @@ static int perform_generic_test( const char *title,
  **
  *****************************************************************************
  */
-int tsx_uac_test(struct tsx_test_param *param)
+int tsx_uac_test(unsigned tid)
 {
-    pj_sockaddr_in addr;
-    pj_status_t status;
+#define ERR(rc__)   { status=rc__; goto on_return; }
+    struct tsx_test_param *param = &tsx_test[tid];
+    int status;
 
-    timer.tsx_key.ptr = timer.key_buf;
+    g[tid].timer.tsx_key.ptr = g[tid].timer.key_buf;
 
-    test_param = param;
+    g[tid].test_param = param;
 
     /* Get transport flag */
-    tp_flag = pjsip_transport_get_flag_from_type((pjsip_transport_type_e)test_param->type);
+    g[tid].tp_flag = pjsip_transport_get_flag_from_type(
+                        (pjsip_transport_type_e)g[tid].test_param->type);
 
-    pj_ansi_snprintf(TARGET_URI, sizeof(TARGET_URI), "sip:bob@127.0.0.1:%d;transport=%s", 
+    pj_ansi_snprintf(g[tid].TARGET_URI, sizeof(g[tid].TARGET_URI),
+                     "sip:%d@127.0.0.1:%d;transport=%s", 
+                    tid, param->port, param->tp_type);
+    pj_ansi_snprintf(g[tid].FROM_URI, sizeof(g[tid].FROM_URI),
+                     "sip:tsx_uac_test@127.0.0.1:%d;transport=%s", 
                     param->port, param->tp_type);
-    pj_ansi_snprintf(FROM_URI, sizeof(FROM_URI), "sip:alice@127.0.0.1:%d;transport=%s", 
-                    param->port, param->tp_type);
 
-    /* Check if loop transport is configured. */
-    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM, 
-                                      &addr, sizeof(addr), NULL, &loop);
-    if (status != PJ_SUCCESS) {
-        PJ_LOG(3,(THIS_FILE, "  Error: loop transport is not configured!"));
-        return -10;
-    }
-
-    /* Register modules. */
-    status = pjsip_endpt_register_module(endpt, &tsx_user);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to register module", status);
-        return -30;
-    }
-    status = pjsip_endpt_register_module(endpt, &msg_receiver);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to register module", status);
-        return -40;
-    }
-
-    /* TEST1_BRANCH_ID: Basic retransmit and timeout test. */
-    status = tsx_uac_retransmit_test();
-    if (status != 0)
+    if ((status=init_test(tid)) != 0)
         return status;
+
+    status = tsx_uac_retransmit_test(tid);
+    if (status != 0)
+        goto on_return;
 
     /* TEST2_BRANCH_ID: Resolve error test. */
-    status = tsx_resolve_error_test();
+    status = tsx_resolve_error_test(tid);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST3_BRANCH_ID: UAC terminate while resolving test. */
-    status = tsx_terminate_resolving_test();
+    status = tsx_terminate_resolving_test(tid);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST4_BRANCH_ID: Transport failed after several retransmissions.
      *                  Only applies to loop transport.
      */
-    if (test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
-        status = tsx_retransmit_fail_test();
+    if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {
+        status = tsx_retransmit_fail_test(tid);
         if (status != 0)
-            return status;
+            goto on_return;
     }
 
     /* TEST5_BRANCH_ID: Terminate transaction after several retransmissions 
      *                  Only applicable to non-reliable transports.
      */
-    if ((tp_flag & PJSIP_TRANSPORT_RELIABLE) == 0) {
-        status = tsx_terminate_after_retransmit_test();
+    if ((g[tid].tp_flag & PJSIP_TRANSPORT_RELIABLE) == 0) {
+        status = tsx_terminate_after_retransmit_test(tid);
         if (status != 0)
-            return status;
+            goto on_return;
     }
 
     /* TEST6_BRANCH_ID: Successfull non-invite transaction */
-    status = perform_generic_test("test6: successfull non-invite transaction",
+    status = perform_generic_test(tid,
+                                  "test6: successfull non-invite transaction",
                                   TEST6_BRANCH_ID, &pjsip_options_method);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST7_BRANCH_ID: Successfull non-invite transaction */
-    status = perform_generic_test("test7: successfull non-invite transaction "
+    status = perform_generic_test(tid,
+                                  "test7: successfull non-invite transaction "
                                   "with provisional response",
                                   TEST7_BRANCH_ID, &pjsip_options_method);
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST8_BRANCH_ID: Failed invite transaction */
-    status = perform_generic_test("test8: failed invite transaction",
+    status = perform_generic_test(tid,
+                                  "test8: failed invite transaction",
                                   TEST8_BRANCH_ID, &pjsip_invite_method);
+
     if (status != 0)
-        return status;
+        goto on_return;
 
     /* TEST9_BRANCH_ID: Failed invite transaction with provisional response */
-    status = perform_generic_test("test9: failed invite transaction with "
+    status = perform_generic_test(tid,
+                                  "test9: failed invite transaction with "
                                   "provisional response",
                                   TEST9_BRANCH_ID, &pjsip_invite_method);
     if (status != 0)
-        return status;
+        goto on_return;
 
-    pjsip_transport_dec_ref(loop);
+on_return:
+    finish_test(tid);
     flush_events(500);
-
-    /* Unregister modules. */
-    status = pjsip_endpt_unregister_module(endpt, &tsx_user);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to unregister module", status);
-        return -31;
-    }
-    status = pjsip_endpt_unregister_module(endpt, &msg_receiver);
-    if (status != PJ_SUCCESS) {
-        app_perror("   Error: unable to unregister module", status);
-        return -41;
-    }
-
-    return 0;
+    return status;
+#undef ERR
 }
 

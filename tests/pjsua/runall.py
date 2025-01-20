@@ -222,7 +222,7 @@ for t in tests:
             if (i < retry_num + 1):
                 continue
             if with_log:
-                lines = open(logname, "r", encoding='utf-8').readlines()
+                lines = open(logname, "r", encoding='utf-8', errors='ignore').readlines()
                 print(''.join(lines))
                 print("Log file: '" + logname + "'.")
             fails_cnt += 1

@@ -1916,8 +1916,8 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
             hdr->expires = pj_strtoul(&pvalue);
             if (hdr->expires == PJSIP_EXPIRES_NOT_SPECIFIED)
                 hdr->expires--;
-            if (hdr->expires > PJSIP_MAX_EXPIRES)
-                hdr->expires = PJSIP_MAX_EXPIRES;
+            //if (hdr->expires > PJSIP_MAX_EXPIRES)
+            //    hdr->expires = PJSIP_MAX_EXPIRES;
 #if PJSIP_MIN_EXPIRES > 0
             if (hdr->expires < PJSIP_MIN_EXPIRES)
                 hdr->expires = PJSIP_MIN_EXPIRES;

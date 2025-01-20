@@ -1,49 +1,74 @@
-name: CI Mac
+name: CI MacOS
 on:
   push:
     branches:
       - 'master'
   pull_request:
     types: [opened, synchronize, reopened]
+env:
+  CI_ARGS: ${{ vars.CI_MAC_ARGS }}
+  CI_MODE: ${{ vars.CI_MODE }}
+  MAKE_FAST: make -j 2
 jobs:
-  build-mac-default:
-  # checking pure lib source distribution with plain configure & make
+  default-build:
+    # checking pure lib source distribution with plain configure & make
     runs-on: macos-latest
+    name: Default / build only
     steps:
     - uses: actions/checkout@v2
     - name: configure
       run: ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
 
-  mac-default-full-bundle-1:
-  # full bundle: enable all codecs + AEC + DTLS
-  # full bundle 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
+  default-pjlib-util-pjmedia-pjnath:
+    # full bundle: enable all codecs + AEC + DTLS
     runs-on: macos-latest
+    name: Default / pjmedia,pjnath
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openssl opencore-amr swig sipp
+      run: brew install openssl opencore-amr
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: pjmedia-test
+      run: make pjmedia-test
+    - name: pjnath-test
+      run: make pjnath-test
+
+  default-pjsua-test:
+    runs-on: macos-latest
+    name: Default / pjsua-test
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: brew install openssl opencore-amr swig sipp
     - name: set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
+    - name: configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
+    - name: make
+      run: $MAKE_FAST
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
-    - name: disable firewall
-      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
-      run: make pjlib-test-ci pjmedia-test pjlib-util-test pjsua-test
+    - name: pjsua-test
+      run: make pjsua-test
 
-  mac-default-full-bundle-2:
-  # full bundle 2: running pjnath test
+  default-pjsip-test:
     runs-on: macos-latest
+    name: Default / pjlib,util,pjsip-test
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -53,73 +78,123 @@ jobs:
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
-      run: make pjnath-test
-
-  mac-default-full-bundle-3:
-  # full bundle 3: running pjsip test
-    runs-on: macos-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: install dependencies
-      run: brew install openssl opencore-amr
-    - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
-    - name: configure
-      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
-    - name: make
-      run: make
-    - name: disable firewall
-      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjlib-util-test
+      run: make pjlib-util-test
+    - name: pjsip-test
       run: make pjsip-test
 
-  # build-ubuntu-no-tls:
-  # no TLS (same as build-mac-default)
-
-  build-mac-openssl:
-  # TLS: with OpenSSL
+  openssl-1:
     runs-on: macos-latest
+    name: OpenSSL / pjlib,util,pjnath,pjmedia
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
       run: brew install openssl swig
     - name: configure
       run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: get SSL info
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
+    - name: verify openssl is used
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+1'
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjlib-util-test
+      run: make pjlib-util-test
+    - name: pjmedia-test
+      run: make pjmedia-test
+    - name: pjnath-test
+      run: make pjnath-test
 
-  build-mac-gnu-tls:
-  # TLS: with GnuTLS
+  openssl-2:
     runs-on: macos-latest
+    name: OpenSSL / pjsip
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install swig
+      run: brew install openssl
     - name: configure
-      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=/usr/local/
+      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: make
-      run: make
+      run: $MAKE_FAST
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: get SSL info
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
+    - name: verify openssl is used
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+1'
+    - name: pjsip-test
+      run: make pjsip-test
+
+  gnu-tls-1:
+    runs-on: macos-latest
+    name: GnuTLS / pjlib,util,pjmedia,pjnath
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: brew install gnutls swig
+    - name: configure
+      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=`brew --prefix gnutls`
+    - name: make
+      run: $MAKE_FAST
     - name: set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
+    - name: get SSL info
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
+    - name: verify gnu tls is used
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+2'
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjlib-util-test
+      run: make pjlib-util-test
+    - name: pjmedia-test
+      run: make pjmedia-test
+    - name: pjnath-test
+      run: make pjnath-test
 
-  mac-video-openh264-1:
-  # video: video enabled with vpx and openh264
-  # video 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
+  gnu-tls-2:
     runs-on: macos-latest
+    name: GnuTLS / pjsip-test
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: brew install gnutls swig
+    - name: configure
+      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=`brew --prefix gnutls`
+    - name: make
+      run: $MAKE_FAST
+    - name: get SSL info
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
+    - name: verify gnu tls is used
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+2'
+    - name: pjsip-test
+      run: make pjsip-test
+
+  video-openh264-1:
+    runs-on: macos-latest
+    name: Openh264+VPX / pjmedia,pjsua
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -129,7 +204,7 @@ jobs:
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -DHAS_VID_CODEC_TEST=0 -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: set up Python
       uses: actions/setup-python@v4
       with:
@@ -138,12 +213,14 @@ jobs:
       run: cd pjsip-apps/src/swig && make
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
-      run: make pjlib-test-ci pjmedia-test pjlib-util-test pjsua-test
+    - name: pjmedia-test
+      run: make pjmedia-test
+    - name: pjsua-test
+      run: make pjsua-test
 
-  mac-video-openh264-2:
-  # video 2: running pjnath test
+  video-openh264-2:
     runs-on: macos-latest
+    name: Openh264+VPX / util,pjnath
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -153,15 +230,17 @@ jobs:
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
+    - name: pjlib-util-test
+      run: make pjlib-util-test
+    - name: pjnath-test
       run: make pjnath-test
 
-  mac-video-openh264-3:
-  # video 3: running pjsip test
+  video-openh264-3:
     runs-on: macos-latest
+    name: Openh264+VPX / pjlib,pjsip
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -171,41 +250,45 @@ jobs:
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: unit tests
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: pjsip-test
       run: make pjsip-test
 
-  build-mac-video-ffmpeg:
-  # video enabled with vpx and ffmpeg and x264
+  video-ffmpeg:
     runs-on: macos-latest
+    name: FFMPEG+VPX+x264 / pjmedia
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
       run: brew install openssl x264 libvpx nasm swig
     - name: get ffmpeg
-      run: git clone --single-branch --branch release/7.0 https://github.com/FFmpeg/FFmpeg.git
+      run: git clone --depth 1 --single-branch --branch release/7.0 https://github.com/FFmpeg/FFmpeg.git
     - name: configure ffmpeg
       run: cd FFmpeg && LDFLAGS="-Wl,-ld_classic" ./configure --enable-shared --disable-static --enable-gpl --enable-libx264
     - name: build ffmpeg
-      run: cd FFmpeg && make -j10 && sudo make install
+      run: cd FFmpeg && $MAKE_FAST && sudo make install
     - name: config site
       run: echo -e "#define PJMEDIA_HAS_VIDEO 1\n" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
+    - name: pjmedia-test
+      run: make pjmedia-test
 
-  build-mac-video-vid-toolbox:
-  # video enabled with vpx and video toolbox
+  video-vid-toolbox:
     runs-on: macos-latest
+    name: VPX+VidToolbox / pjmedia
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -215,10 +298,12 @@ jobs:
     - name: configure
       run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
     - name: make
-      run: make
+      run: $MAKE_FAST
     - name: set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
+    - name: pjmedia-test
+      run: make pjmedia-test

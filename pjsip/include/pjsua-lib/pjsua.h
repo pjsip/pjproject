@@ -2141,6 +2141,32 @@ typedef enum pjsua_sip_timer_use
 
 
 /**
+ * This enumeration specifies the usage of SIPREC extension.
+ */
+typedef enum pjsua_sip_siprec_use
+{
+    /**
+     * When this flag is specified, when a SIPREC request is received, it 
+     * returns bad extension error. and SIPREC calls will not be established.
+     */
+    PJSUA_SIP_SIPREC_INACTIVE,
+
+    /**
+     * When this flag is specified, when you want both regular calls and
+     * SIPREC calls to be established.
+     */
+    PJSUA_SIP_SIPREC_OPTIONAL,
+
+    /**
+     * When this flag is specified, when you want only SIPREC calls to
+     * be established, and regular calls are rejected.
+     */
+    PJSUA_SIP_SIPREC_MANDATORY,
+
+} pjsua_sip_siprec_use;
+
+
+/**
  * This constants controls the use of 100rel extension.
  */
 typedef enum pjsua_100rel_use
@@ -2342,6 +2368,15 @@ typedef struct pjsua_config
      * Default: PJSUA_SIP_TIMER_OPTIONAL
      */
     pjsua_sip_timer_use use_timer;
+
+    /**
+     * Specify the usage of SIPREC sessions. See the
+     * #pjsua_sip_siprec_use for possible values. Note that this setting can be
+     * further customized in account configuration (#pjsua_acc_config).
+     *
+     * Default: PJSUA_SIP_SIPREC_INACTIVE
+     */
+    pjsua_sip_siprec_use use_siprec;
 
     /**
      * Handle unsolicited NOTIFY requests containing message waiting 
@@ -4064,6 +4099,14 @@ typedef struct pjsua_acc_config
      * Default: PJSUA_SIP_TIMER_OPTIONAL
      */
     pjsua_sip_timer_use use_timer;
+
+    /**
+     * Specify the usage of SIPREC sessions. See the
+     * #pjsua_sip_siprec_use for possible values.
+     *
+     * Default: PJSUA_SIP_SIPREC_INACTIVE
+     */
+    pjsua_sip_siprec_use use_siprec;
 
     /**
      * Specify Session Timer settings, see #pjsip_timer_setting. 
@@ -7197,7 +7240,7 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  * pjsua_media_config.snd_use_sw_clock.
  */
 #ifndef PJSUA_DEFAULT_SND_USE_SW_CLOCK
-#   define PJSUA_DEFAULT_SND_USE_SW_CLOCK  PJ_FALSE
+#   define PJSUA_DEFAULT_SND_USE_SW_CLOCK  PJ_TRUE
 #endif
 
 /**

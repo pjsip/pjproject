@@ -445,7 +445,6 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
         else {
             pj_assert(!"Unknown transport type");
             query->naptr[0].res_type = pj_str("_sip._udp.");
-            
         }
 
     } else {

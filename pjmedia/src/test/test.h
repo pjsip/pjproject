@@ -41,7 +41,7 @@
 int session_test(void);
 int rtp_test(void);
 int sdp_test(void);
-int jbuf_main(void);
+int jbuf_test(void);
 int sdp_neg_test(void);
 int mips_test(void);
 int codec_test_vectors(void);
@@ -52,6 +52,16 @@ int vid_port_test(void);
 extern pj_pool_factory *mem;
 void app_perror(pj_status_t status, const char *title);
 
-int test_main(void);
+int test_main(int argc, char *argv[]);
+
+#define UT_MAX_TESTS    80
+#include "../../../pjlib/src/pjlib-test/test_util.h"
+
+struct test_app_t
+{
+    ut_app_t         ut_app;
+};
+extern struct test_app_t test_app;
+
 
 #endif  /* __PJMEDIA_TEST_H__ */
