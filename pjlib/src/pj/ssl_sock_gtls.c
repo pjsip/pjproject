@@ -433,10 +433,10 @@ static pj_status_t tls_priorities_set(pj_ssl_sock_t *ssock)
     pj_strset(&cipher_list, buf, 0);
     pj_strset(&priority, priority_buf, 0);
 
-    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
-        ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1 |
-                             PJ_SSL_SOCK_PROTO_TLS1_1 |
-                             PJ_SSL_SOCK_PROTO_TLS1_2;
+    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
+        ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1_2 |
+                             PJ_SSL_SOCK_PROTO_TLS1_3;
+    }
 
     /* For each level, enable only the requested protocol */
     pj_strcat2(&priority, "NORMAL:-VERS-ALL:");
