@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+			xmlns:viewModels="clr-namespace:pjsua2maui.ViewModels"
+			x:Class="pjsua2maui.Views.BuddyConfigPage">
+
+    <ContentPage.BindingContext>
+        <viewModels:BuddyConfigViewModel/>
+    </ContentPage.BindingContext>
+
+    <ContentPage.Content>
+        <StackLayout VerticalOptions="FillAndExpand"
+					 HorizontalOptions="FillAndExpand"
+					 x:DataType="viewModels:BuddyConfigViewModel">
+            <StackLayout VerticalOptions="CenterAndExpand" HorizontalOptions="FillAndExpand" Orientation="Vertical">
+                <StackLayout Orientation="Horizontal" VerticalOptions="Center" HorizontalOptions="FillAndExpand">
+                    <Label Text="Buddy Id" HorizontalOptions="Start" VerticalOptions="Center"/>
+                    <Entry Text="{Binding buddyConfig.uri}" HorizontalOptions="FillAndExpand" VerticalOptions="Center"/>
+                </StackLayout>
+                <StackLayout Orientation="Horizontal" VerticalOptions="Center">
+                    <Label Text="Subscribe" HorizontalOptions="Start" />
+                    <Switch IsToggled="{Binding buddyConfig.subscribe}" HorizontalOptions="Start" />
+                </StackLayout>
+            </StackLayout>
+  
+                      <Grid VerticalOptions="End"
+				    HorizontalOptions="FillAndExpand">
+           
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Text="Ok" HorizontalOptions="FillAndExpand"  Clicked="Ok_Clicked" />
+                <Button Grid.Column="1" Text="Cancel" Clicked="Cancel_Clicked"
+                       HorizontalOptions="FillAndExpand" />
+             </Grid>
+        </StackLayout>
+    </ContentPage.Content>
+</ContentPage>
+
