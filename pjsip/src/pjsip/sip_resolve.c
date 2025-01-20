@@ -387,6 +387,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
                       pjsip_transport_get_type_name(type),
                       pjsip_transport_get_type_desc(type)));
 
+            svr_addr.entry[i].name = target->addr.host;
             svr_addr.entry[i].priority = 0;
             svr_addr.entry[i].weight = 0;
             svr_addr.entry[i].type = type;
@@ -571,6 +572,7 @@ static void dns_a_callback(void *user_data,
             if (rec.addr[i].af != pj_AF_INET())
                 continue;
 
+            srv->entry[srv->count].name = rec.name;
             srv->entry[srv->count].type = query->naptr[0].type;
             srv->entry[srv->count].priority = 0;
             srv->entry[srv->count].weight = 0;
@@ -633,6 +635,7 @@ static void dns_aaaa_callback(void *user_data,
             if (rec.addr[i].af != pj_AF_INET6())
                 continue;
 
+            srv->entry[srv->count].name = rec.name;
             srv->entry[srv->count].type = query->naptr[0].type |
                                           PJSIP_TRANSPORT_IPV6;
             srv->entry[srv->count].priority = 0;
@@ -692,6 +695,7 @@ static void srv_resolver_cb(void *user_data,
         for (j = 0; j < s->addr_count &&
                     srv.count < PJSIP_MAX_RESOLVED_ADDRESSES; ++j)
         {
+            srv.entry[srv.count].name = rec->entry[i].server.name;
             srv.entry[srv.count].type = query->naptr[0].type;
             srv.entry[srv.count].priority = rec->entry[i].priority;
             srv.entry[srv.count].weight = rec->entry[i].weight;
