@@ -1666,13 +1666,13 @@ static void op_connect_ports(pjmedia_conf *conf, const op_param *prm)
     correct_port_boundary( conf, sink_slot );
     pj_assert( conf->lower_bound < conf->upper_bound );
 
-    PJ_LOG( 4, (THIS_FILE, "Port %d (%.*s) transmitting to port %d (%.*s)",
-                src_slot,
-                (int)src_port->name.slen,
-                src_port->name.ptr,
-                sink_slot,
-                (int)dst_port->name.slen,
-                dst_port->name.ptr));
+    PJ_LOG(4,(THIS_FILE, "Port %d (%.*s) transmitting to port %d (%.*s)",
+              src_slot,
+              (int)src_port->name.slen,
+              src_port->name.ptr,
+              sink_slot,
+              (int)dst_port->name.slen,
+              dst_port->name.ptr));
 }
 
 /*
@@ -1752,11 +1752,11 @@ static void op_disconnect_ports(pjmedia_conf *conf,
     /* Disconnect source -> sink */
     if (src_port && dst_port) {
         /* Check if connection has been made */
-        for (i=0; i<(int)src_port->listener_cnt; ++i) {
+        for (i=0; i<src_port->listener_cnt; ++i) {
             if (src_port->listener_slots[i] == sink_slot)
                 break;
         }
-        if (i == (int)src_port->listener_cnt) {
+        if (i == src_port->listener_cnt) {
             PJ_LOG(3,(THIS_FILE, "Ports connection %d->%d does not exist",
                       src_slot, sink_slot));
             return;
@@ -1815,7 +1815,7 @@ static void op_disconnect_ports(pjmedia_conf *conf,
                  */
                 for (j = src_port->listener_cnt - 1; j >= 0; --j) {
                     if (src_port->listener_slots[j] == sink_slot) {
-                        op_param op_prm = { 0 };
+                        op_param op_prm = {0};
                         op_prm.disconnect_ports.src = i;
                         op_prm.disconnect_ports.sink = sink_slot;
                         op_disconnect_ports( conf, &op_prm );
@@ -2138,7 +2138,9 @@ static void op_remove_port(pjmedia_conf *conf, const op_param *prm)
 
     pj_assert( !is_port_active( conf_port ) );
     /* Remove the port. */
+    //pj_mutex_lock(conf->mutex);
     conf->ports[port] = NULL;
+    //pj_mutex_unlock(conf->mutex);
 #if 0
     if (!conf_port->is_new)
         --conf->port_cnt;
