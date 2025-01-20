@@ -37,8 +37,6 @@
 
 #if !defined(PJMEDIA_CONF_USE_SWITCH_BOARD) || PJMEDIA_CONF_USE_SWITCH_BOARD==0
 
-#ifdef _OPENMP
-#   include <omp.h>
 
 /* Open MP related modification by Leonid Goltsblat <lgoltsblat@gmail.com> 2021-2025
  * 
@@ -52,6 +50,11 @@
  * and should be compatible with any OpenMP 2.0 compliant compiler.
  */
 
+#ifdef _OPENMP
+#   include <omp.h>
+#   define PRAGMA(clause) _Pragma(#clause)
+#   define PRAGMA_OMP(clause) PRAGMA(omp clause)
+
 #   ifndef PJ_OPENMP_FOR_CLAUSES
 #       define PJ_OPENMP_FOR_CLAUSES
 /* for example
@@ -61,6 +64,14 @@
  * #pragma omp parallel for schedule(dynamic, PJSIP_OMP_CHUNK_SIZE) if (max_thread > 1) num_threads(max_thread)
  */
 #   endif
+
+#   define IS_PARALLEL PJ_TRUE   // OpenMP is enabled
+
+#else   //_OPENMP
+
+#   define PRAGMA_OMP(clause)
+#   define IS_PARALLEL PJ_FALSE  // OpenMP is disabled
+
 #endif  //_OPENMP
 
 /* CONF_DEBUG enables detailed operation of the conference bridge.
@@ -273,13 +284,13 @@ struct conf_port
                                              data from/to.                  */
 #endif
 
-#ifdef _OPENMP
-    pj_int16_t          *rx_frame_buf;  /**< The RX buffer.                */
-    unsigned             rx_frame_buf_cap;/**< Max size, in bytes          */
-
-    omp_lock_t           tx_Lock;       /**< Lock to protect transmit
-                                             buffer                        */
-#endif  //_OPENMP
+    /* parallel conference bridge support                                  */
+    pj_int16_t          *rx_frame_buf;  /**< The RX buffer of size (in bytes)
+                                         * conf->rx_frame_buf_cap used in
+                                         * parallel bridge implementation.
+                                         */
+    pj_lock_t           *tx_Lock;       /**< Lock to protect mix_buf,mix_adj,
+                                         * last_timestamp                  */
 
     pj_timestamp         last_timestamp;/**< last transmited packet
                                          * timestamp. We set this when
@@ -370,16 +381,15 @@ struct pjmedia_conf
                                            * help OpenMP to distribute task 
                                            * throught team's threads        */
 
-
-#ifdef _OPENMP
+    /* parallel conference bridge support                                   */
+    unsigned             rx_frame_buf_cap;/**< size in bytes to allocate 
+                                           * conf_port->rx_frame_buf        */
     pj_thread_desc      *omp_threads;     /**< Thread description's
                                            * to register omp threads
                                            * with pjsip                     */
     int                  omp_max_threads; /**< omp_threads[] dimension      */
-    int                  omp_threads_idx; /**< omp_threads[] current idx    */
-
-#endif  //_OPENMP
-
+    pj_atomic_t         *omp_threads_idx; /**< omp_threads[] current idx    */
+    pj_bool_t            is_parallel;     /**< parallel bridge flag         */
 };
 
 
@@ -397,10 +407,12 @@ static pj_status_t destroy_port_pasv(pjmedia_port *this_port);
 #endif
 
 
-#ifdef _OPENMP
 /* register omp thread with pjsip */
-static void register_omp_thread(pjmedia_conf* conf);
-#endif //_OPENMP
+static inline void register_omp_thread(pjmedia_conf *conf);
+#ifdef CONF_DEBUG
+static inline void inc_omp_thread_usage(int *threads, pj_ssize_t threads_sz);
+#endif //CONF_DEBUG
+static inline pj_int16_t *get_read_buffer(struct conf_port *conf_port, pjmedia_frame *frame);
 
 
 static void destroy_conf_port(struct conf_port *conf_port);
@@ -796,17 +808,15 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
                       {status = PJ_ENOMEM; goto on_return;});
     conf_port->last_mix_adj = NORMAL_LEVEL;
 
-
-#ifdef _OPENMP
-    /* Get the bytes_per_frame value, to determine the size of the
-     * buffer.
-     */
-    conf_port->rx_frame_buf_cap = PJMEDIA_AFD_AVG_FSZ(pjmedia_format_get_audio_format_detail(&conf->master_port->info.fmt, PJ_TRUE));
-    conf_port->rx_frame_buf = (pj_int16_t *)pj_pool_zalloc(pool, conf_port->rx_frame_buf_cap);
-
-    omp_init_lock(&conf_port->tx_Lock);
-#endif //_OPENMP
-
+    if (IS_PARALLEL) {
+        /* the compiler should potentially optimize this "if" away
+         * for the serial conference bridge
+         */
+        conf_port->rx_frame_buf = (pj_int16_t *)pj_pool_zalloc(pool, conf/*_port*/->rx_frame_buf_cap);
+        status = pj_lock_create_simple_mutex(pool, "tx_Lock", &conf_port->tx_Lock);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+    }
 
     /* Done */
     *p_conf_port = conf_port;
@@ -1007,6 +1017,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool_,
     conf->master_port->put_frame = &put_frame;
     conf->master_port->on_destroy = &destroy_port;
 
+    /* Get the bytes_per_frame value, to determine the size of the
+     * buffer.
+     */
+    conf->rx_frame_buf_cap = PJMEDIA_AFD_AVG_FSZ(pjmedia_format_get_audio_format_detail(&conf->master_port->info.fmt, PJ_TRUE));
 
     /* Create port zero for sound device. */
     status = create_sound_port(pool, conf);
@@ -1074,7 +1088,15 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool_,
     conf->omp_max_threads = omp_get_max_threads();
     /* Thread description's to register omp threads with pjsip */
     conf->omp_threads = (pj_thread_desc *)pj_pool_calloc( pool, 2 * conf->omp_max_threads, sizeof(pj_thread_desc) );
+    status = pj_atomic_create(pool, 0, &conf->omp_threads_idx);
+    if (status != PJ_SUCCESS)
+    {
+        pjmedia_conf_destroy(conf);
+        return status;
+    }
 #endif  //_OPENMP
+
+    conf->is_parallel = IS_PARALLEL;
 
     /* Done */
 
@@ -1144,6 +1166,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
     /* Destroy mutex */
     if (conf->mutex)
         pj_mutex_destroy(conf->mutex);
+
+    /* Destroy atomic */
+    if (conf->omp_threads_idx)
+        pj_atomic_destroy(conf->omp_threads_idx);
 
     /* Destroy pool */
     if (conf->pool)
@@ -2117,10 +2143,8 @@ static void destroy_conf_port( struct conf_port *conf_port )
         }
     }
 
-#ifdef _OPENMP
     if (conf_port->tx_Lock != NULL)
-        omp_destroy_lock( &conf_port->tx_Lock );
-#endif // _OPENMP
+        pj_lock_destroy(conf_port->tx_Lock);
 
     pj_pool_safe_release(&conf_port->pool);
 }
@@ -2797,6 +2821,16 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     return status;
 }
 
+static inline pj_int16_t *get_read_buffer(struct conf_port *conf_port, pjmedia_frame *frame) {
+    pj_assert(IS_PARALLEL == (conf_port->rx_frame_buf != NULL));
+    /* the compiler should potentially optimize this away
+     * for the serial conference bridge
+     */
+    if (IS_PARALLEL)
+        return conf_port->rx_frame_buf;   // parallel conference bridge
+    else
+        return (pj_int16_t *)frame->buf;  // sequential conference bridge
+}
 
 /*
  * Player callback.
@@ -2844,9 +2878,9 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     conf->listener_counter = 0;
     pj_int32_t listener_counter = 0;
 
-#if defined(_OPENMP) && defined(CONF_DEBUG)
-    int threads[64] = {0};
-#endif
+#ifdef CONF_DEBUG
+    int threads[IS_PARALLEL ? 64 : 1] = {0};
+#endif //CONF_DEBUG
 
     /* Step 1 initialization 
      * Single threaded loop to get the active_ports[] (transmitters) 
@@ -2929,9 +2963,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
     struct conf_port *sound_port = NULL;
 
-#ifdef _OPENMP
-#   pragma omp parallel for PJ_OPENMP_FOR_CLAUSES
-#endif //_OPENMP
+    PRAGMA_OMP(parallel for PJ_OPENMP_FOR_CLAUSES)
     /* Step 2
      * Get frames from all ports, and "mix" the signal
      * to mix_buf of all listeners of the port.
@@ -2949,18 +2981,12 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         pj_assert( (unsigned)port_idx < conf->max_ports );
         struct conf_port *conf_port = conf->ports[port_idx];
 
-#ifdef _OPENMP
         /* register omp thread with pjsip */
         register_omp_thread( conf );
 
-#   ifdef CONF_DEBUG
-        {
-            int num = omp_get_thread_num();
-            if (num < PJ_ARRAY_SIZE( threads ))
-                threads[num]++;
-        }
-#   endif
-#endif  //_OPENMP
+#ifdef CONF_DEBUG
+        inc_omp_thread_usage(threads, PJ_ARRAY_SIZE(threads));
+#endif //CONF_DEBUG
 
         /* Get frame from this port.
          * For passive ports, get the frame from the delay_buf.
@@ -2969,15 +2995,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         if (conf_port->delay_buf != NULL) {
             pj_status_t status;
 
-#ifdef _OPENMP
             /* Check that correct size is specified. */
-            pj_assert( frame->size == conf_port->rx_frame_buf_cap );
+            pj_assert( frame->size == conf/*_port*/->rx_frame_buf_cap);
             /* read data to different buffers to different conf_port's parallel processing */
-            status = pjmedia_delay_buf_get( conf_port->delay_buf, conf_port->rx_frame_buf );
-#else   //_OPENMP
-            status = pjmedia_delay_buf_get( conf_port->delay_buf,
-                                            (pj_int16_t *)frame->buf );
-#endif  //_OPENMP
+            status = pjmedia_delay_buf_get( conf_port->delay_buf, get_read_buffer(conf_port, frame) );
             if (status != PJ_SUCCESS) {
                 conf_port->rx_level = 0;
                 TRACE_EX( (THIS_FILE, "%s: No frame from the passive port (%.*s, %d, listener_cnt=%d)",
@@ -2993,18 +3014,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
             pj_status_t status;
             pjmedia_frame_type frame_type;
 
-#ifdef _OPENMP
-
             /* Check that correct size is specified. */
-            pj_assert( frame->size == conf_port->rx_frame_buf_cap );
+            pj_assert( frame->size == conf/*_port */->rx_frame_buf_cap);
             /* read data to different buffers to different conf_port's parallel processing */
-            status = read_port( conf, conf_port, conf_port->rx_frame_buf,
+            status = read_port(conf, conf_port, get_read_buffer(conf_port, frame),
                                 conf->samples_per_frame, &frame_type );
-
-#else   //_OPENMP
-            status = read_port( conf, conf_port, (pj_int16_t *)frame->buf,
-                                conf->samples_per_frame, &frame_type );
-#endif  //_OPENMP
 
             /* Check that the port is not removed when we call get_frame() */
             /*
@@ -3025,7 +3039,6 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
             if (status != PJ_SUCCESS) {
 
-//#ifdef _OPENMP
                 /* check status and disable port here.
                  * Prevent multiply eof callback invoke, 
                  * if fileplayer has reached EOF (i.e. status == PJ_EEOF)
@@ -3036,7 +3049,6 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                               conf_port->name.ptr) );
                     conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
                 }
-//#endif  //_OPENMP
 
 
                 /* bennylp: why do we need this????
@@ -3085,11 +3097,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         pj_int16_t *p_in;
         unsigned j;
 
-#ifdef _OPENMP
-        p_in = conf_port->rx_frame_buf;
-#else   //_OPENMP
-        p_in = (pj_int16_t *)frame->buf;
-#endif  //_OPENMP
+        p_in = get_read_buffer(conf_port, frame);
 
         /* Adjust the RX level from this port
          * and calculate the average level at the same time.
@@ -3206,10 +3214,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                 pj_int32_t mix_buf_min = 0;
                 pj_int32_t mix_buf_max = 0;
 
-#ifdef _OPENMP
+                pj_assert(IS_PARALLEL == (listener->tx_Lock != NULL));
                 //protect listener->mix_buf, listener->mix_adj, listener->last_timestamp
-                omp_set_lock( &listener->tx_Lock );
-#endif
+                if (IS_PARALLEL)
+                    pj_lock_acquire(listener->tx_Lock);
+
                 if (listener->last_timestamp.u64 == frame->timestamp.u64) {
                     //this frame is NOT from the first transmitter
                     for (k = 0; k < samples_per_frame; ++k) {
@@ -3266,9 +3275,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                     if (tmp_adj < listener->mix_adj)
                         listener->mix_adj = tmp_adj;
                 }
-#ifdef _OPENMP
-                omp_unset_lock( &listener->tx_Lock );
-#endif
+
+                pj_assert(IS_PARALLEL == (listener->tx_Lock != NULL));
+                if (IS_PARALLEL)
+                    pj_lock_release(listener->tx_Lock);
+
             } else {
                 //this frame is from the only transmitter
                 pj_assert( listener->transmitter_cnt == 1 && listener->last_timestamp.u64 != frame->timestamp.u64 );
@@ -3302,44 +3313,33 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         } /* loop the listeners of conf port */
     } /* loop of all conf ports */
 
-//#if 0
     /* all ports have data in their buffers
      * and may do all work independently.
-     * We must garantee the lifetime of
-     * conf_port see listener->ref_counter
-     * and may release mutex now.        */
-//    pj_mutex_unlock( conf->mutex );
-//#endif
+     * Here we use ports from conf->active_listener[] 
+     * whose lifetime is garanteed at the moment of adding 
+     * port to active_listener[]  by incrementing 
+     * grp_lock->ref_counter.
+     */
 
     listener_counter = conf->listener_counter + 1;
 
 
-#ifdef _OPENMP
-#   pragma omp parallel
+    PRAGMA_OMP(parallel) 
     {
-#endif //_OPENMP
         /* Perform any queued operations that need to be synchronized with
          * the clock such as connect, disonnect, remove.
          * All those operations performed on the single thread
          * but perhaps not on the master thread
          */
-#ifdef _OPENMP
-#       pragma omp single nowait
+        PRAGMA_OMP(single nowait)
         {
-#endif //_OPENMP
             if (!pj_list_empty(conf->op_queue)) {
 
-#ifdef _OPENMP
                 /* register omp thread with pjsip */
                 register_omp_thread(conf);
-#   ifdef CONF_DEBUG
-                {
-                    int num = omp_get_thread_num();
-                    if (num < 16)
-                        threads[num]++;
-                }
-#   endif
-#endif //_OPENMP
+#ifdef CONF_DEBUG
+                inc_omp_thread_usage(threads, PJ_ARRAY_SIZE(threads));
+#endif //CONF_DEBUG
 
                 pj_log_push_indent();
                 /* Calling any callback while a mutex is locked can result in a deadlock,
@@ -3352,17 +3352,13 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                 //pj_mutex_unlock(conf->mutex);
                 pj_log_pop_indent();
             }
-#ifdef _OPENMP
         }   //pragma omp single
-#endif //_OPENMP
 
         /* Step 3
          * Time for all ports to transmit whatever they have in their
          * buffer.
          */
-#ifdef _OPENMP
-#       pragma omp for nowait
-#endif //_OPENMP
+        PRAGMA_OMP(for nowait)
         for (i = 0; i < listener_counter; ++i) {
 
             pjmedia_frame_type frm_type;
@@ -3374,17 +3370,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
             if (!conf_port)
                 continue;
 
-#ifdef _OPENMP
             /* register omp thread with pjsip */
             register_omp_thread(conf);
-#   ifdef CONF_DEBUG
-            {
-                int num = omp_get_thread_num();
-                if (num < 16)
-                    threads[num]++;
-            }
-#   endif
-#endif //_OPENMP
+#ifdef CONF_DEBUG
+            inc_omp_thread_usage(threads, PJ_ARRAY_SIZE(threads));
+#endif //CONF_DEBUG
 
 
             status = write_port(conf, conf_port, &frame->timestamp,
@@ -3422,9 +3412,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
         }
 
-#ifdef _OPENMP
     }  //pragma omp parallel
-#endif //_OPENMP
 
     /* Return sound playback frame. */
     if (sound_port != NULL) {
@@ -3443,13 +3431,9 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     /* MUST set frame type */
     frame->type = speaker_frame_type;
 
-#ifdef _OPENMP
-
     TRACE_( (THIS_FILE, "Ports processed by omp team's threads 0:%d, 1:%d, 2:%d, 3:%d, 4:%d, 5:%d, 6:%d, 7:%d, 8:%d, 9:%d, 10:%d, 11:%d, 12:%d, 13:%d, 14:%d, 15:%d.",
               threads[0], threads[1], threads[2], threads[3], threads[4], threads[5], threads[6], threads[7],
               threads[8], threads[9], threads[10], threads[11], threads[12], threads[13], threads[14], threads[15]) );
-
-#endif
 
 #ifdef REC_FILE
     if (fhnd_rec == NULL)
@@ -3461,26 +3445,38 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     return PJ_SUCCESS;
 }
 
-#ifdef _OPENMP
 
 /* register omp thread with pjsip */
-static void register_omp_thread( pjmedia_conf * conf )
+static inline void register_omp_thread(pjmedia_conf *conf)
 {
-    if (!pj_thread_is_registered())
+    /* the compiler should potentially optimize this away
+     * for the serial conference bridge
+     */
+    if (IS_PARALLEL && !pj_thread_is_registered())
     {
+        pj_assert(conf->omp_threads_idx && conf->omp_threads);
         pj_thread_t *p;
-        int num;
-#pragma omp critical (register_conf_bridge_omp_thread)
-        {
-            num = conf->omp_threads_idx++;
-        }
-        pj_assert( num < 2 * conf->omp_max_threads );
+        int num = pj_atomic_inc_and_get(conf->omp_threads_idx);
+        pj_assert(num < 2 * conf->omp_max_threads);
         char        obj_name[PJ_MAX_OBJ_NAME];
-        pj_ansi_snprintf( obj_name, sizeof(obj_name), "omp_conf_%d", num );
-        pj_thread_register( obj_name, conf->omp_threads[num], &p );
+        pj_ansi_snprintf(obj_name, sizeof(obj_name), "omp_conf_%d", num);
+        pj_thread_register(obj_name, conf->omp_threads[num], &p);
     }
+    pj_assert(pj_thread_is_registered());
 }
-#endif //_OPENMP
+
+#ifdef CONF_DEBUG
+static inline void inc_omp_thread_usage(int *threads, pj_ssize_t threads_sz) {
+#   ifdef  _OPENMP
+    int num = omp_get_thread_num();
+    if (num < threads_sz)
+        threads[num]++;
+#   else
+    PJ_UNUSED_ARG(threads);
+    PJ_UNUSED_ARG(threads_sz);
+#   endif  //_OPENMP
+}
+#endif //CONF_DEBUG
 
 
 #if !DEPRECATED_FOR_TICKET_2234
