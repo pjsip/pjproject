@@ -1371,6 +1371,9 @@ stateless_send_resolver_callback( pj_status_t status,
     if (addr && addr != &tdata->dest_info.addr) {
         pj_memcpy( &tdata->dest_info.addr, addr, 
                    sizeof(pjsip_server_addresses));
+        for (int i = 0; i < addr->count; ++i) {
+            pj_strdup(tdata->pool, &tdata->dest_info.addr.entry[i].name, &addr->entry[i].name);
+        }
     }
     pj_assert(tdata->dest_info.addr.count != 0);
 
@@ -1832,6 +1835,9 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
 
     /* Update address in send_state. */
     pj_memcpy(&send_state->tdata->dest_info.addr, addr, sizeof(*addr));
+    for (int i = 0; i < send_state->tdata->dest_info.addr.count; ++i) {
+        pj_strdup(send_state->tdata->pool, &send_state->tdata->dest_info.addr.entry[i].name, &addr->entry[i].name);
+    }
 
     /* Send response using the transoprt. */
     status = pjsip_transport_send( send_state->cur_transport, 

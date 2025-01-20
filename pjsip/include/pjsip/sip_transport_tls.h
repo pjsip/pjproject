@@ -118,6 +118,11 @@ typedef struct pjsip_tls_on_verify_param {
     const pj_sockaddr_t *remote_addr;
 
     /**
+     * Describes resolved server addresses.
+     */
+    const pjsip_server_addresses *server_addr;
+
+    /**
      * Describes transport direction.
      */
     pjsip_transport_dir tp_dir;
