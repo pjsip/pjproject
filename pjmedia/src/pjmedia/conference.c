@@ -31,7 +31,48 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+#if defined(PJ_STACK_IMPLEMENTATION)
+#include <pj/stack.h>
+#endif
+
 #if !defined(PJMEDIA_CONF_USE_SWITCH_BOARD) || PJMEDIA_CONF_USE_SWITCH_BOARD==0
+
+
+/* Open MP related modification by Leonid Goltsblat <lgoltsblat@gmail.com> 2021-2025
+ * 
+ * Enabling OpenMP support makes it possible to parallelize the processing of audio frames.
+ * To activate OpenMP support you must perform the appropriate development environment setup.
+ * For example, in Visual Studio, you must enable OpenMP support in the project settings.
+ * see: https://learn.microsoft.com/en-us/cpp/build/reference/openmp-enable-openmp-2-0-support?view=msvc-170
+ * In GCC, you must use the appropriate compiler options.
+ * 
+ * Current implementation uses only basic subset of OpenMP features corresponding to OpenMP 2.0 
+ * and should be compatible with any OpenMP 2.0 compliant compiler.
+ */
+
+#ifdef _OPENMP
+#   include <omp.h>
+#   define PRAGMA(clause) _Pragma(#clause)
+#   define PRAGMA_OMP(clause) PRAGMA(omp clause)
+
+#   ifndef PJ_OPENMP_FOR_CLAUSES
+#       define PJ_OPENMP_FOR_CLAUSES
+/* for example
+ * #define PJSIP_OMP_CHUNK_SIZE    16
+ * #define PJ_OPENMP_FOR_CLAUSES   schedule(dynamic, PJSIP_OMP_CHUNK_SIZE) if (max_thread > 1) num_threads(max_thread)
+ * will produce
+ * #pragma omp parallel for schedule(dynamic, PJSIP_OMP_CHUNK_SIZE) if (max_thread > 1) num_threads(max_thread)
+ */
+#   endif
+
+#   define IS_PARALLEL PJ_TRUE   // OpenMP is enabled
+
+#else   //_OPENMP
+
+#   define PRAGMA_OMP(clause)
+#   define IS_PARALLEL PJ_FALSE  // OpenMP is disabled
+
+#endif  //_OPENMP
 
 /* CONF_DEBUG enables detailed operation of the conference bridge.
  * Beware that it prints large amounts of logs (several lines per frame).
@@ -42,6 +83,15 @@
 #   define TRACE_(x)   PJ_LOG(5,x)
 #else
 #   define TRACE_(x)
+#endif
+
+
+//#define CONF_DEBUG_EX
+#ifdef CONF_DEBUG_EX
+//#   include <stdio.h>
+#   define TRACE_EX(x)   PJ_LOG(5,x)
+#else
+#   define TRACE_EX(x)
 #endif
 
 
@@ -110,7 +160,9 @@ static FILE *fhnd_rec;
  */
 struct conf_port
 {
-    pj_pool_t           *pool;          /**< Pool.                          */
+    pj_pool_t           *pool;          /**< for autonomous lifetime control
+                                         * we need separate memory pool
+                                         * this port created from           */
     pj_str_t             name;          /**< Port name.                     */
     pjmedia_port        *port;          /**< get_frame() and put_frame()    */
     pjmedia_port_op      rx_setting;    /**< Can we receive from this port  */
@@ -223,13 +275,64 @@ struct conf_port
      */
     pjmedia_delay_buf   *delay_buf;
 
-    pj_bool_t            is_new;        /**< Newly added port, avoid read/write
-                                             data from/to.                  */
+    /* We always know lower_bound and upper_bound and never use port_cnt 
+     * There is no need for asynchronous port creation at all.
+     * This flag has become redundant 
+     * however it is still used for compatibility with:
+     * "Synchronous port removal in audio conference bridge if port is newly added #4253"
+     */
+    pj_bool_t            is_new;        /**< Newly added port, 
+                                         * remove it synchronously.        */
+
+    /* parallel conference bridge support                                  */
+    pj_int16_t          *rx_frame_buf;  /**< The RX buffer of size (in bytes)
+                                         * conf->rx_frame_buf_cap used in
+                                         * parallel bridge implementation.
+                                         */
+    pj_lock_t           *tx_Lock;       /**< Lock to protect mix_buf,mix_adj,
+                                         * last_timestamp                  */
+
+    pj_timestamp         last_timestamp;/**< last transmited packet
+                                         * timestamp. We set this when
+                                         * first time put something into
+                                         * the mix_buf.
+                                         * If this time stamp is equals to
+                                         * current frame timestamp,
+                                         * we have data to transmite       */
+
+#ifdef CONF_DEBUG_EX
+    SLOT_TYPE            slot;          /**< SLOT for debug purpose        */
+#endif //CONF_DEBUG_EX
 };
 
 
 /* Forward declarations */
 typedef struct op_entry op_entry;
+
+
+/*
+ * port_slot is an array item, which index is index in ports[] (i.e. ports[] slot)
+ * port_slot used to quick find empty slot. Only array index is used for this purpose.
+ */
+#if defined(PJ_STACK_IMPLEMENTATION)
+
+typedef struct PJ_STACK_ALIGN_PREFIX port_slot {
+    PJ_DECL_STACK_MEMBER(struct port_slot);
+} PJ_STACK_ALIGN_SUFFIX port_slot;
+
+typedef pj_stack_type    unused_slots_cache; /**< Container to store unused 
+                                              *   port's slots.             */
+
+#else
+
+typedef struct port_slot {
+    PJ_DECL_LIST_MEMBER(struct port_slot);
+} port_slot;
+
+typedef port_slot        unused_slots_cache; /**< Container to store unused
+                                              *   port's slots.             */
+
+#endif
 
 
 /*
@@ -240,7 +343,14 @@ struct pjmedia_conf
     pj_pool_t            *pool;         /**< Pool                           */
     unsigned              options;      /**< Bitmask options.               */
     unsigned              max_ports;    /**< Maximum ports.                 */
+#if 0
     unsigned              port_cnt;     /**< Current number of ports.       */
+#endif //0 
+    /**< lower and upper boundaries to scan ports[]                         */
+    pj_uint32_t           lower_bound;  /**< The least connected port's slot*/
+    pj_uint32_t           upper_bound;  /**< The next after greatest
+                                         *   connected port's slot          */
+
     unsigned              connect_cnt;  /**< Total number of connections    */
     pjmedia_snd_port     *snd_dev_port; /**< Sound device port.             */
     pjmedia_port         *master_port;  /**< Port zero's port.              */
@@ -254,6 +364,32 @@ struct pjmedia_conf
 
     op_entry             *op_queue;     /**< Queue of operations.           */
     op_entry             *op_queue_free;/**< Queue of free entries.         */
+
+
+    unused_slots_cache  *unused_slots;    /**< Unused port's slots.         */
+    port_slot           *free_port_slots; /**< Persistent array of max_ports
+                                           * size used for quick and locking
+                                           * free finding unused ports[]
+                                           * slot (i.e. index in ports[])   */
+    pj_int32_t           listener_counter;/**< current quantity of
+                                           * active_listener                */
+    struct conf_port   **active_listener; /**< listener with data to transmit */
+
+    pj_int32_t          *active_ports;    /**< array of port slots from 0
+                                           * to upper_bound with no gaps.
+                                           * Compacted port's array should 
+                                           * help OpenMP to distribute task 
+                                           * throught team's threads        */
+
+    /* parallel conference bridge support                                   */
+    unsigned             rx_frame_buf_cap;/**< size in bytes to allocate 
+                                           * conf_port->rx_frame_buf        */
+    pj_thread_desc      *omp_threads;     /**< Thread description's
+                                           * to register omp threads
+                                           * with pjsip                     */
+    int                  omp_max_threads; /**< omp_threads[] dimension      */
+    pj_atomic_t         *omp_threads_idx; /**< omp_threads[] current idx    */
+    pj_bool_t            is_parallel;     /**< parallel bridge flag         */
 };
 
 
@@ -270,6 +406,16 @@ static pj_status_t get_frame_pasv(pjmedia_port *this_port,
 static pj_status_t destroy_port_pasv(pjmedia_port *this_port);
 #endif
 
+
+/* register omp thread with pjsip */
+static inline void register_omp_thread(pjmedia_conf *conf);
+#ifdef CONF_DEBUG
+static inline void inc_omp_thread_usage(int *threads, pj_ssize_t threads_sz);
+#endif //CONF_DEBUG
+static inline pj_int16_t *get_read_buffer(struct conf_port *conf_port, pjmedia_frame *frame);
+
+
+static void destroy_conf_port(struct conf_port *conf_port);
 
 /* As we don't hold mutex in the clock/get_frame(), some conference operations
  * that change conference states need to be synchronized with the clock.
@@ -395,9 +541,63 @@ static void handle_op_queue(pjmedia_conf *conf)
 static void conf_port_on_destroy(void *arg)
 {
     struct conf_port *conf_port = (struct conf_port*)arg;
-    if (conf_port->pool)
-        pj_pool_safe_release(&conf_port->pool);
+    destroy_conf_port(conf_port);
 }
+
+/*
+* port is active (has listers or transmitters), i.e. conference bridge should not skip this port,
+* as voice should be send to or receive from this port.
+*/
+PJ_INLINE(pj_bool_t) is_port_active(struct conf_port* p_conf_port)
+{
+    return p_conf_port && (p_conf_port->listener_cnt || p_conf_port->transmitter_cnt);
+}
+
+PJ_INLINE(void) correct_port_boundary(pjmedia_conf *conf, SLOT_TYPE src_slot)
+{
+    pj_assert(conf && src_slot < conf->max_ports);
+
+    if (is_port_active(conf->ports[src_slot])) {
+
+        if (src_slot >= conf->upper_bound)
+            conf->upper_bound = src_slot + 1;
+        if (src_slot < conf->lower_bound)
+            conf->lower_bound = src_slot;
+
+        pj_assert(conf->lower_bound < conf->upper_bound);
+
+    } else {
+        if (src_slot + 1 >= conf->upper_bound) {
+            while (conf->lower_bound < conf->upper_bound && is_port_active(conf->ports[conf->upper_bound - 1])) {
+                pj_assert(conf->upper_bound);
+                --conf->upper_bound;
+            }
+        }
+        if (src_slot <= conf->lower_bound) {
+            while (conf->lower_bound < conf->upper_bound && !is_port_active(conf->ports[conf->lower_bound])) {
+                pj_assert(conf->lower_bound < conf->max_ports);
+                ++conf->lower_bound;
+            }
+        }
+        if (conf->lower_bound >= conf->upper_bound) {
+            conf->lower_bound = conf->max_ports;
+            conf->upper_bound = 0;
+        }
+    }
+
+}
+
+/*
+ * Find empty port slot in the conference bridge and reserve this slot.
+ * O(1) thread-safe operation
+ */
+static SLOT_TYPE conf_reserve_port(pjmedia_conf *conf);
+
+/*
+ * Return conf_port slot to unused slots cache.
+ * O(1) thread-safe operation
+ */
+static pj_status_t conf_release_port(pjmedia_conf *conf, SLOT_TYPE slot);
 
 
 /*
@@ -409,7 +609,7 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
                                      const pj_str_t *name,
                                      struct conf_port **p_conf_port)
 {
-    struct conf_port *conf_port;
+    struct conf_port *conf_port = NULL;
     pj_pool_t *pool = NULL;
     char pname[PJ_MAX_OBJ_NAME];
     pj_status_t status = PJ_SUCCESS;
@@ -419,6 +619,7 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
     pj_ansi_strxcpy2(pname, name, sizeof(pname));
 
     /* Create own pool */
+    /* replace pool to control it's lifetime */
     pool = pj_pool_create(parent_pool->factory, pname, 500, 500, NULL);
     if (!pool) {
         status = PJ_ENOMEM;
@@ -602,6 +803,15 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
                       {status = PJ_ENOMEM; goto on_return;});
     conf_port->last_mix_adj = NORMAL_LEVEL;
 
+    if (IS_PARALLEL) {
+        /* the compiler should potentially optimize this "if" away
+         * for the serial conference bridge
+         */
+        conf_port->rx_frame_buf = (pj_int16_t *)pj_pool_zalloc(pool, conf/*_port*/->rx_frame_buf_cap);
+        status = pj_lock_create_simple_mutex(pool, "tx_Lock", &conf_port->tx_Lock);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+    }
 
     /* Done */
     *p_conf_port = conf_port;
@@ -634,6 +844,8 @@ static pj_status_t create_pasv_port( pjmedia_conf *conf,
     if (status != PJ_SUCCESS)
         return status;
 
+    pool = conf_port->pool;
+
     /* Passive port has delay buf. */
     ptime = conf->samples_per_frame * 1000 / conf->clock_rate / 
             conf->channel_count;
@@ -644,8 +856,10 @@ static pj_status_t create_pasv_port( pjmedia_conf *conf,
                                       RX_BUF_COUNT * ptime, /* max delay */
                                       0, /* options */
                                       &conf_port->delay_buf);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        destroy_conf_port(conf_port);
         return status;
+    }
 
     *p_conf_port = conf_port;
 
@@ -714,10 +928,15 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
         PJ_LOG(5,(THIS_FILE, "Sound device successfully created for port 0"));
     }
 
+#ifdef CONF_DEBUG_EX
+    conf_port->slot = 0;
+#endif //CONF_DEBUG_EX
 
-     /* Add the port to the bridge */
+    /* Add the port to the bridge */
     conf->ports[0] = conf_port;
-    conf->port_cnt++;
+#if 0
+    conf->port_cnt++;   // the port will become active only when connected
+#endif
 
     return PJ_SUCCESS;
 }
@@ -758,9 +977,14 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool_,
     PJ_ASSERT_RETURN(conf, PJ_ENOMEM);
     conf->pool = pool;
 
-    conf->ports = (struct conf_port**) 
-                  pj_pool_zalloc(pool, max_ports*sizeof(void*));
-    PJ_ASSERT_RETURN(conf->ports, PJ_ENOMEM);
+    conf->ports = pj_pool_calloc(pool, max_ports, sizeof(void*));
+    PJ_ASSERT_ON_FAIL( conf->ports, { pjmedia_conf_destroy( conf ); return PJ_ENOMEM; } );
+
+    conf->active_ports = pj_pool_calloc(pool, max_ports, sizeof(pj_int32_t) );
+    PJ_ASSERT_ON_FAIL( conf->active_ports, { pjmedia_conf_destroy( conf ); return PJ_ENOMEM; } );
+
+    conf->active_listener = pj_pool_calloc(pool, max_ports, sizeof(struct conf_port*));
+    PJ_ASSERT_ON_FAIL( conf->active_listener, { pjmedia_conf_destroy( conf ); return PJ_ENOMEM; } );
 
     conf->options = options;
     conf->max_ports = max_ports;
@@ -768,6 +992,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool_,
     conf->channel_count = channel_count;
     conf->samples_per_frame = samples_per_frame;
     conf->bits_per_sample = bits_per_sample;
+
+    conf->lower_bound = max_ports;  // no connected ports yet
+    conf->upper_bound = 0;          // no connected ports yet
 
     
     /* Create and initialize the master port interface. */
@@ -785,6 +1012,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool_,
     conf->master_port->put_frame = &put_frame;
     conf->master_port->on_destroy = &destroy_port;
 
+    /* Get the bytes_per_frame value, to determine the size of the
+     * buffer.
+     */
+    conf->rx_frame_buf_cap = PJMEDIA_AFD_AVG_FSZ(pjmedia_format_get_audio_format_detail(&conf->master_port->info.fmt, PJ_TRUE));
 
     /* Create port zero for sound device. */
     status = create_sound_port(pool, conf);
@@ -823,6 +1054,44 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool_,
     }
     pj_list_init(conf->op_queue);
     pj_list_init(conf->op_queue_free);
+
+
+#if defined(PJ_STACK_IMPLEMENTATION)
+    status = pj_stack_create( pool, &conf->unused_slots );
+    if (status != PJ_SUCCESS) {
+        pjmedia_conf_destroy( conf );
+        return status;
+    }
+#else
+    conf->unused_slots = PJ_POOL_ZALLOC_T(pool, unused_slots_cache);
+    pj_list_init(conf->unused_slots);
+#endif
+    conf->free_port_slots = pj_pool_calloc(pool, max_ports, sizeof(port_slot));
+    PJ_ASSERT_ON_FAIL( conf->free_port_slots, { pjmedia_conf_destroy( conf ); return PJ_ENOMEM; } );
+    unsigned i = conf->max_ports;
+    while (i--) {               /* prepare unused slots to later reservation, reverse order due to FILO */
+        if (!conf->ports[i]) {  /* If sound device was created, skip it's slot */
+            status = conf_release_port( conf, i );
+            if (status != PJ_SUCCESS) {
+                pjmedia_conf_destroy( conf );
+                return status;
+            }
+        }
+    }
+
+#ifdef _OPENMP
+    conf->omp_max_threads = omp_get_max_threads();
+    /* Thread description's to register omp threads with pjsip */
+    conf->omp_threads = (pj_thread_desc *)pj_pool_calloc( pool, 2 * conf->omp_max_threads, sizeof(pj_thread_desc) );
+    status = pj_atomic_create(pool, 0, &conf->omp_threads_idx);
+    if (status != PJ_SUCCESS)
+    {
+        pjmedia_conf_destroy(conf);
+        return status;
+    }
+#endif  //_OPENMP
+
+    conf->is_parallel = IS_PARALLEL;
 
     /* Done */
 
@@ -871,7 +1140,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
     }
 
     /* Flush any pending operation (connect, disconnect, etc) */
-    handle_op_queue(conf);
+    if (conf->op_queue)
+        handle_op_queue(conf);
 
     /* Remove all ports (may destroy them too). */
     for (i=0; i<conf->max_ports; ++i) {
@@ -882,9 +1152,19 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
         }
     }
 
+#if defined(PJ_STACK_IMPLEMENTATION)
+    /* Destroy stack */
+    if (conf->unused_slots)
+        pj_stack_destroy(conf->unused_slots);
+#endif
+
     /* Destroy mutex */
     if (conf->mutex)
         pj_mutex_destroy(conf->mutex);
+
+    /* Destroy atomic */
+    if (conf->omp_threads_idx)
+        pj_atomic_destroy(conf->omp_threads_idx);
 
     /* Destroy pool */
     if (conf->pool)
@@ -972,8 +1252,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
                                            unsigned *p_port )
 {
     struct conf_port *conf_port;
-    unsigned index;
-    op_entry *ope;
+    SLOT_TYPE index = INVALID_SLOT;
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(conf && pool && strm_port, PJ_EINVAL);
@@ -997,44 +1276,58 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
         goto on_return;
     }
 
-    pj_mutex_lock(conf->mutex);
-
     /* Find empty port in the conference bridge. */
-    for (index=0; index < conf->max_ports; ++index) {
-        if (conf->ports[index] == NULL)
-            break;
-    }
-
-    if (index == conf->max_ports) {
+    index = conf_reserve_port(conf);
+    if (index == INVALID_SLOT) {
         PJ_PERROR(3,(THIS_FILE, PJ_ETOOMANY, "Add port %s failed",
                      port_name->ptr));
+        //pj_assert( !"Too many ports" );
         status = PJ_ETOOMANY;
         goto on_return;
     }
+    pj_assert(index < conf->max_ports && conf->ports[index] == NULL);
 
     /* Create conf port structure. */
     status = create_conf_port(pool, conf, strm_port, port_name, &conf_port);
     if (status != PJ_SUCCESS)
         goto on_return;
 
-    /* Audio data flow is not protected, avoid processing this newly
-     * added port.
+    pj_assert(conf_port != NULL && !is_port_active(conf_port));
+
+#ifdef CONF_DEBUG_EX
+    conf_port->slot = index;
+#endif //CONF_DEBUG_EX
+
+    /* redundant flag and code 
+     * however it is still used for compatibility with:
+     * "Synchronous port removal in audio conference bridge if port is newly added #4253"
      */
     conf_port->is_new = PJ_TRUE;
 
+    /* Put the port to the reserved slot. */
+    conf->ports[index] = conf_port;     /* - the port will become active only when connected
+                                         * - pointer assignment is processor level atomic 
+                                         */
+
+#if 0
     /* Put the port, but don't add port counter yet */
     conf->ports[index] = conf_port;
     //conf->port_cnt++;
+#endif //0
 
+    pj_mutex_lock( conf->mutex );
     /* Queue the operation */
+    op_entry *ope;
     ope = get_free_op_entry(conf);
     if (ope) {
         ope->type = OP_ADD_PORT;
         ope->param.add_port.port = index;
         pj_list_push_back(conf->op_queue, ope);
+        pj_mutex_unlock(conf->mutex);
         PJ_LOG(4,(THIS_FILE, "Add port %d (%.*s) queued",
                              index, (int)port_name->slen, port_name->ptr));
     } else {
+        pj_mutex_unlock(conf->mutex);
         status = PJ_ENOMEM;
         goto on_return;
     }
@@ -1045,10 +1338,60 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     }
 
 on_return:
-    pj_mutex_unlock(conf->mutex);
+    if (status != PJ_SUCCESS) {
+        if (index != INVALID_SLOT) {
+            conf->ports[index] = NULL;
+            conf_release_port( conf, index );
+        }
+    }
+
     pj_log_pop_indent();
 
     return status;
+}
+
+/*
+ * Find empty port in the conference bridge.
+ */
+static SLOT_TYPE conf_reserve_port(pjmedia_conf *conf)
+{
+    port_slot *pslot;
+#if defined(PJ_STACK_IMPLEMENTATION)
+    pslot = pj_stack_pop(conf->unused_slots);
+#else
+    pj_mutex_lock(conf->mutex);
+    if (!pj_list_empty(conf->unused_slots)) {
+        pslot = conf->unused_slots->next;
+        pj_list_erase(pslot);
+    } else {
+        pslot = NULL;
+    }
+    pj_mutex_unlock(conf->mutex);
+#endif
+    if (!pslot)
+        return INVALID_SLOT;
+
+    SLOT_TYPE slot = pslot - conf->free_port_slots;
+    pj_assert( slot < conf->max_ports && conf->ports[slot] == NULL );
+    return slot;
+}
+
+/*
+ * Return conf_port slot to unused slots cache.
+ */
+static pj_status_t conf_release_port(pjmedia_conf *conf, SLOT_TYPE slot)
+{
+    /* Check arguments */
+    PJ_ASSERT_RETURN( conf && slot < conf->max_ports, PJ_EINVAL );
+    PJ_ASSERT_RETURN( conf->ports[slot] == NULL, PJ_EINVALIDOP );
+#if defined(PJ_STACK_IMPLEMENTATION)
+    return pj_stack_push( conf->unused_slots, conf->free_port_slots + slot );
+#else
+    pj_mutex_lock(conf->mutex);
+    pj_list_push_front(conf->unused_slots, conf->free_port_slots + slot);
+    pj_mutex_unlock(conf->mutex);
+    return PJ_SUCCESS;
+#endif
 }
 
 
@@ -1063,10 +1406,12 @@ static void op_add_port(pjmedia_conf *conf, const op_param *prm)
 
     /* Activate newly added port */
     cport->is_new = PJ_FALSE;
+#if 0
     ++conf->port_cnt;
 
     PJ_LOG(4,(THIS_FILE, "Added port %d (%.*s), port count=%d",
               port, (int)cport->name.slen, cport->name.ptr, conf->port_cnt));
+#endif
 }
 
 
@@ -1087,7 +1432,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
 {
     struct conf_port *conf_port;
     pjmedia_port *port;
-    unsigned index;
+    SLOT_TYPE index;
     pj_str_t tmp;
     pj_status_t status;
 
@@ -1111,21 +1456,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
     PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
     PJ_UNUSED_ARG(options);
 
-    pj_mutex_lock(conf->mutex);
-
-    if (conf->port_cnt >= conf->max_ports) {
+    /* Find empty port in the conference bridge. */
+    slot = conf_reserve_port(conf);
+    if (slot == INVALID_SLOT) {
         pj_assert(!"Too many ports");
-        pj_mutex_unlock(conf->mutex);
         return PJ_ETOOMANY;
     }
-
-    /* Find empty port in the conference bridge. */
-    for (index=0; index < conf->max_ports; ++index) {
-        if (conf->ports[index] == NULL)
-            break;
-    }
-
-    pj_assert(index != conf->max_ports);
+    pj_assert(slot < conf->max_ports && conf->ports[slot] == NULL);
 
     if (name == NULL) {
         name = &tmp;
@@ -1153,22 +1490,20 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
     /* Create conf port structure. */
     status = create_pasv_port(conf, pool, name, port, &conf_port);
     if (status != PJ_SUCCESS) {
-        pj_mutex_unlock(conf->mutex);
         return status;
     }
 
-
-    /* Put the port. */
+    /* Put the port to the reserved slot. */
     conf->ports[index] = conf_port;
+#if 0
     conf->port_cnt++;
+#endif
 
     /* Done. */
     if (p_slot)
         *p_slot = index;
     if (p_port)
         *p_port = port;
-
-    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -1327,7 +1662,11 @@ static void op_connect_ports(pjmedia_conf *conf, const op_param *prm)
     ++src_port->listener_cnt;
     ++dst_port->transmitter_cnt;
 
-    PJ_LOG(4,(THIS_FILE,"Port %d (%.*s) transmitting to port %d (%.*s)",
+    correct_port_boundary( conf, src_slot );
+    correct_port_boundary( conf, sink_slot );
+    pj_assert( conf->lower_bound < conf->upper_bound );
+
+    PJ_LOG(4,(THIS_FILE, "Port %d (%.*s) transmitting to port %d (%.*s)",
               src_slot,
               (int)src_port->name.slen,
               src_port->name.ptr,
@@ -1397,9 +1736,9 @@ on_return:
 static void op_disconnect_ports(pjmedia_conf *conf,
                                 const op_param *prm)
 {
-    unsigned src_slot, sink_slot;
+    SLOT_TYPE src_slot, sink_slot;
     struct conf_port *src_port = NULL, *dst_port = NULL;
-    int i;
+    SLOT_TYPE i;
 
     /* Ports must be valid. */
     src_slot = prm->disconnect_ports.src;
@@ -1413,11 +1752,11 @@ static void op_disconnect_ports(pjmedia_conf *conf,
     /* Disconnect source -> sink */
     if (src_port && dst_port) {
         /* Check if connection has been made */
-        for (i=0; i<(int)src_port->listener_cnt; ++i) {
+        for (i=0; i<src_port->listener_cnt; ++i) {
             if (src_port->listener_slots[i] == sink_slot)
                 break;
         }
-        if (i == (int)src_port->listener_cnt) {
+        if (i == src_port->listener_cnt) {
             PJ_LOG(3,(THIS_FILE, "Ports connection %d->%d does not exist",
                       src_slot, sink_slot));
             return;
@@ -1434,6 +1773,10 @@ static void op_disconnect_ports(pjmedia_conf *conf,
         --conf->connect_cnt;
         --src_port->listener_cnt;
         --dst_port->transmitter_cnt;
+
+        correct_port_boundary( conf, src_slot );
+        if (src_port != dst_port)
+            correct_port_boundary( conf, sink_slot );
 
         PJ_LOG(4,(THIS_FILE,
                   "Port %d (%.*s) stop transmitting to port %d (%.*s)",
@@ -1452,49 +1795,57 @@ static void op_disconnect_ports(pjmedia_conf *conf,
 
     /* Disconnect multiple conn: any -> sink */
     } else if (dst_port) {
-        PJ_LOG(4,(THIS_FILE,
-                  "Stop any transmission to port %d (%.*s)",
-                  sink_slot,
-                  (int)dst_port->name.slen,
-                  dst_port->name.ptr));
+        /* Remove this port from transmit array of other ports. */
+        if (dst_port->transmitter_cnt) {
+            PJ_LOG(4,(THIS_FILE,
+                      "Stop any transmission to port %d (%.*s)",
+                      sink_slot,
+                      (int)dst_port->name.slen,
+                      dst_port->name.ptr));
 
-        for (i=0; i<(int)conf->max_ports; ++i) {
-            int j;
+            for (i = conf->lower_bound; i < conf->upper_bound; ++i) {
+                int j;
 
-            src_port = conf->ports[i];
-            if (!src_port || src_port->listener_cnt == 0)
-                continue;
+                src_port = conf->ports[i];
+                if (!src_port || src_port->listener_cnt == 0)
+                    continue;
 
-            /* We need to iterate backwards since the listener count
-             * can potentially decrease.
-             */
-            for (j=src_port->listener_cnt-1; j>=0; --j) {
-                if (src_port->listener_slots[j] == sink_slot) {
-                    op_param op_prm = {0};
-                    op_prm.disconnect_ports.src = i;
-                    op_prm.disconnect_ports.sink = sink_slot;
-                    op_disconnect_ports(conf, &op_prm);
-                    break;
+                /* We need to iterate backwards since the listener count
+                 * can potentially decrease.
+                 */
+                for (j = src_port->listener_cnt - 1; j >= 0; --j) {
+                    if (src_port->listener_slots[j] == sink_slot) {
+                        op_param op_prm = {0};
+                        op_prm.disconnect_ports.src = i;
+                        op_prm.disconnect_ports.sink = sink_slot;
+                        op_disconnect_ports( conf, &op_prm );
+                        break;
+                    }
                 }
             }
+            pj_assert( !dst_port->transmitter_cnt );
         }
 
     /* Disconnect multiple conn: source -> any */
     } else if (src_port) {
-        PJ_LOG(4,(THIS_FILE,
-                  "Stop any transmission from port %d (%.*s)",
-                  src_slot,
-                  (int)src_port->name.slen,
-                  src_port->name.ptr));
+        if (src_port->listener_cnt) {
+            int j;  /* should be signed! */
+            PJ_LOG(4,(THIS_FILE,
+                      "Stop any transmission from port %d (%.*s)",
+                      src_slot,
+                      (int)src_port->name.slen,
+                      src_port->name.ptr));
 
-        /* We need to iterate backwards since the listener count
-         * will keep decreasing.
-         */
-        for (i=src_port->listener_cnt-1; i>=0; --i) {
-            op_param op_prm = {0};
-            op_prm.disconnect_ports.src = src_slot;
-            op_prm.disconnect_ports.sink = src_port->listener_slots[i];
-            op_disconnect_ports(conf, &op_prm);
+            /* We need to iterate backwards since the listener count
+             * will keep decreasing.
+             */
+            for (j = src_port->listener_cnt - 1; j >= 0; --j) {
+                op_param op_prm = {0};
+                op_prm.disconnect_ports.src = src_slot;
+                op_prm.disconnect_ports.sink = src_port->listener_slots[j];
+                op_disconnect_ports( conf, &op_prm );
+            }
+            pj_assert( !src_port->listener_cnt );
         }
 
     /* Invalid ports */
@@ -1627,7 +1978,15 @@ on_return:
  */
 PJ_DEF(unsigned) pjmedia_conf_get_port_count(pjmedia_conf *conf)
 {
+#if defined(PJ_STACK_IMPLEMENTATION)
+    return conf->max_ports - pj_stack_size(conf->unused_slots);    //O(1)
+#else
+    return conf->max_ports - pj_list_size(conf->unused_slots);     //O(n)
+#endif
+
+#if 0
     return conf->port_cnt;
+#endif
 }
 
 /*
@@ -1777,6 +2136,45 @@ static void op_remove_port(pjmedia_conf *conf, const op_param *prm)
     op_prm.disconnect_ports.sink = INVALID_SLOT;
     op_disconnect_ports(conf, &op_prm);
 
+    pj_assert( !is_port_active( conf_port ) );
+    /* Remove the port. */
+    //pj_mutex_lock(conf->mutex);
+    conf->ports[port] = NULL;
+    //pj_mutex_unlock(conf->mutex);
+#if 0
+    if (!conf_port->is_new)
+        --conf->port_cnt;
+
+    PJ_LOG(4,(THIS_FILE,"Removed port %d (%.*s), port count=%d",
+              port, (int)conf_port->name.slen, conf_port->name.ptr,
+              conf->port_cnt));
+#endif
+    PJ_LOG(4,(THIS_FILE,"Removed port %d (%.*s)",
+              port, (int)conf_port->name.slen, conf_port->name.ptr));
+
+    /* Return conf_port slot to unused slots cache. */
+    conf_release_port( conf, port );
+
+    /* Decrease conf port ref count */
+    if (conf_port->port && conf_port->port->grp_lock)
+        pj_grp_lock_dec_ref(conf_port->port->grp_lock);
+    else
+        destroy_conf_port(conf_port);
+}
+
+static void destroy_conf_port( struct conf_port *conf_port )
+{
+    pj_assert( conf_port );
+
+    TRACE_EX( (THIS_FILE, "%s: destroy_conf_port %p (%.*s, %d) transmitter_cnt=%d, listener_cnt=%d",
+                pj_thread_get_name( pj_thread_this() ),
+                conf_port,
+                (int)conf_port->name.slen,
+                conf_port->name.ptr,
+                conf_port->slot,
+                conf_port->transmitter_cnt,
+                conf_port->listener_cnt) );
+
     /* Destroy resample if this conf port has it. */
     if (conf_port->rx_resample) {
         pjmedia_resample_destroy(conf_port->rx_resample);
@@ -1794,28 +2192,16 @@ static void op_remove_port(pjmedia_conf *conf, const op_param *prm)
         pjmedia_delay_buf_destroy(conf_port->delay_buf);
         conf_port->delay_buf = NULL;
 
-        if (conf_port->port)
+        if (conf_port->port) {
             pjmedia_port_destroy(conf_port->port);
-        conf_port->port = NULL;
+            conf_port->port = NULL;
+        }
     }
 
-    /* Remove the port. */
-    pj_mutex_lock(conf->mutex);
-    conf->ports[port] = NULL;
-    pj_mutex_unlock(conf->mutex);
+    if (conf_port->tx_Lock != NULL)
+        pj_lock_destroy(conf_port->tx_Lock);
 
-    if (!conf_port->is_new)
-        --conf->port_cnt;
-
-    PJ_LOG(4,(THIS_FILE,"Removed port %d (%.*s), port count=%d",
-              port, (int)conf_port->name.slen, conf_port->name.ptr,
-              conf->port_cnt));
-
-    /* Decrease conf port ref count */
-    if (conf_port->port && conf_port->port->grp_lock)
-        pj_grp_lock_dec_ref(conf_port->port->grp_lock);
-    else
-        conf_port_on_destroy(conf_port);
+    pj_pool_safe_release(&conf_port->pool);
 }
 
 
@@ -2250,6 +2636,8 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     pj_int32_t tx_level;
     unsigned dst_count;
 
+    pj_assert( conf && cport && timestamp && frm_type );
+
     *frm_type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     /* Skip port if it is disabled */
@@ -2262,7 +2650,18 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
      * transmit NULL frame. 
      */
     else if ((cport->tx_setting == PJMEDIA_PORT_MUTE) ||
-             (cport->transmitter_cnt == 0)) {
+              cport->last_timestamp.u64 != timestamp->u64   // no data in mix_buf
+              /*(cport->transmitter_cnt == 0)*/) {
+
+        TRACE_EX( (THIS_FILE, "%s: Transmit heart-beat frames to port %p (%.*s, %d, transmitter_cnt=%d) last_timestamp=%llu, timestamp=%llu",
+                    pj_thread_get_name( pj_thread_this() ),
+                    cport,
+                    (int)cport->name.slen,
+                    cport->name.ptr,
+                    cport->slot,
+                    cport->transmitter_cnt,
+                    cport->last_timestamp.u64, timestamp->u64) );
+
         pjmedia_frame frame;
 
         /* Clear left-over samples in tx_buffer, if any, so that it won't
@@ -2382,9 +2781,10 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
              */
             frame.timestamp = *timestamp;
 
-            TRACE_((THIS_FILE, "put_frame %.*s, count=%d", 
+            TRACE_((THIS_FILE, "put_frame %.*s, count=%d, last_timestamp=%llu, timestamp=%llu",
                                (int)cport->name.slen, cport->name.ptr,
-                               frame.size / BYTES_PER_SAMPLE));
+                               frame.size / BYTES_PER_SAMPLE,
+                               cport->last_timestamp.u64, timestamp->u64));
 
             return pjmedia_port_put_frame(cport->port, &frame);
         } else
@@ -2476,6 +2876,16 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     return status;
 }
 
+static inline pj_int16_t *get_read_buffer(struct conf_port *conf_port, pjmedia_frame *frame) {
+    pj_assert(IS_PARALLEL == (conf_port->rx_frame_buf != NULL));
+    /* the compiler should potentially optimize this away
+     * for the serial conference bridge
+     */
+    if (IS_PARALLEL)
+        return conf_port->rx_frame_buf;   // parallel conference bridge
+    else
+        return (pj_int16_t *)frame->buf;  // sequential conference bridge
+}
 
 /*
  * Player callback.
@@ -2485,15 +2895,19 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 {
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     pjmedia_frame_type speaker_frame_type = PJMEDIA_FRAME_TYPE_NONE;
-    unsigned ci, cj, i, j;
-    pj_int16_t *p_in;
-    
+
+    //parallelization requires signed int
+    pj_int32_t i,
+        begin, end,    /* this is lower_bound and upper_bound for conf->ports[] array */
+        upper_bound;   /* this is upper_bound for conf->active_ports[] array */
+
     TRACE_((THIS_FILE, "- clock -"));
 
     /* Check that correct size is specified. */
     pj_assert(frame->size == conf->samples_per_frame *
                              conf->bits_per_sample / 8);
 
+#if 0
     /* Perform any queued operations that need to be synchronized with
      * the clock such as connect, disonnect, remove.
      */
@@ -2502,6 +2916,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         handle_op_queue(conf);
         pj_log_pop_indent();
     }
+#endif
 
     /* No mutex from this point! Otherwise it may cause deadlock as
      * put_frame()/get_frame() may invoke callback.
@@ -2510,58 +2925,121 @@ static pj_status_t get_frame(pjmedia_port *this_port,
      * synchronized.
      */
 
-    /* Reset port source count. We will only reset port's mix
-     * buffer when we have someone transmitting to it.
+    begin = conf->lower_bound;
+    end = conf->upper_bound;
+
+    conf->listener_counter = 0;
+    pj_int32_t listener_counter = 0;
+
+#ifdef CONF_DEBUG
+    int threads[IS_PARALLEL ? 64 : 1] = {0};
+#endif //CONF_DEBUG
+
+    /* Step 1 initialization 
+     * Single threaded loop to get the active_ports[] (transmitters) 
+     * and active_listener[] (receivers) arrays.
      */
-    for (i=0, ci=0; i<conf->max_ports && ci < conf->port_cnt; ++i) {
+    for (i = begin, upper_bound = 0; i < end; ++i) {
+        pj_assert( (unsigned)i < conf->max_ports );
         struct conf_port *conf_port = conf->ports[i];
 
-        /* Skip empty or new port. */
-        if (!conf_port || conf_port->is_new)
-            continue;
-
-        /* Var "ci" is to count how many ports have been visited so far. */
-        ++ci;
-
-        /* Skip if we're not allowed to transmit to this port. */
-        if (conf_port->tx_setting != PJMEDIA_PORT_ENABLE)
-            continue;
-
-        /* Reset buffer (only necessary if the port has transmitter) and
-         * reset auto adjustment level for mixed signal.
+        /* Skip empty port. 
+         * Newly added ports are not connected yet 
+         * and so we skip them as not active
          */
-        conf_port->mix_adj = NORMAL_LEVEL;
-        if (conf_port->transmitter_cnt) {
-            pj_bzero(conf_port->mix_buf,
-                     conf->samples_per_frame*sizeof(conf_port->mix_buf[0]));
+        if (is_port_active( conf_port ))
+        {
+            /* Reset auto adjustment level for mixed signal. */
+            conf_port->mix_adj = NORMAL_LEVEL;
+#if 0
+            /* We need not reset buffer, we just want to copy the first (and probably only) frame there. */
+            if (conf_port->transmitter_cnt > 1) {
+                pj_bzero( conf_port->mix_buf,
+                          conf->samples_per_frame * sizeof(conf_port->mix_buf[0]) );
+            }
+#endif
+            if (conf_port->transmitter_cnt && conf_port->tx_setting != PJMEDIA_PORT_DISABLE) {
+
+                /* In the final loop of the get_frame() function, 
+                 * we might call write_port() either concurrently with 
+                 * or even after the OP_PORT_REMOVE operation. 
+                 * Therefore, ports that are being written to 
+                 * (i.e., those with conf_port->transmitter_cnt != 0) 
+                 * require protection from deletion. 
+                 * For such ports, we must increment the ref_count 
+                 * (and decrement it after transmission, 
+                 * which may result in deferred deletion of the port).
+                 * 
+                 * At least "Master/sound" has no media_port.
+                 * We don't manage the lifetime of such ports,
+                 * their lifetime is the conference bridge lifetime.
+                 */
+                if (conf_port->port && conf_port->port->grp_lock)
+                    pj_grp_lock_add_ref(conf_port->port->grp_lock);
+
+                //sound device (from 0 SLOT) to 0 idx, other to next idx
+                conf->active_listener[i == 0 ? 0 : ++conf->listener_counter] = conf_port;
+
+                /* We need not reset mix_buf, we just want to copy the first 
+                 * (and probably only) frame there.
+                 * The criteria for "this frame is from the first transmitter"
+                 *  condition is:
+                 * (conf_port->last_timestamp.u64 != frame->timestamp.u64)
+                 */
+                if (conf_port->last_timestamp.u64 == frame->timestamp.u64)
+                {   //this port have not yet received data on this timer tick
+                    // enforce "this frame is from the first transmitter" condition
+                    //we usually shouldn't come here
+                    conf_port->last_timestamp.u64 = (frame->timestamp.u64 ? PJ_UINT64(0) : (pj_uint64_t)-1);
+                }
+                pj_assert( conf_port->last_timestamp.u64 != frame->timestamp.u64 );
+            }
+
+            /* Skip if we're not allowed to receive from this port. */
+            if (conf_port->rx_setting == PJMEDIA_PORT_DISABLE) {
+                conf_port->rx_level = 0;
+                continue;
+            }
+
+            /* Also skip if this port doesn't have listeners. */
+            if (conf_port->listener_cnt == 0) {
+                conf_port->rx_level = 0;
+                continue;
+            }
+
+            /* compacted transmitter's array should help OpenMP to distribute task throught team's threads */
+            conf->active_ports[upper_bound++] = i;
+            pj_assert( upper_bound <= (end - begin) );
+
         }
     }
 
-    /* Get frames from all ports, and "mix" the signal 
+    struct conf_port *sound_port = NULL;
+
+    PRAGMA_OMP(parallel for PJ_OPENMP_FOR_CLAUSES)
+    /* Step 2
+     * Get frames from all ports, and "mix" the signal
      * to mix_buf of all listeners of the port.
+     * 
+     * Here we use the current switching states, 
+     * which must be stable during this cycle, 
+     * i.e. must not change in parallel.
+     * 
+     * To receive frames from all ports in parallel,
+     * we receive data from each port into separate 
+     * buffers conf_port->rx_frame_buf
      */
-    for (i=0, ci=0; i < conf->max_ports && ci < conf->port_cnt; ++i) {
-        struct conf_port *conf_port = conf->ports[i];
-        pj_int32_t level = 0;
+    for (i = 0; i < upper_bound; ++i) {
+        pj_int32_t port_idx = conf->active_ports[i];
+        pj_assert( (unsigned)port_idx < conf->max_ports );
+        struct conf_port *conf_port = conf->ports[port_idx];
 
-        /* Skip empty or new port. */
-        if (!conf_port || conf_port->is_new)
-            continue;
+        /* register omp thread with pjsip */
+        register_omp_thread( conf );
 
-        /* Var "ci" is to count how many ports have been visited so far. */
-        ++ci;
-
-        /* Skip if we're not allowed to receive from this port. */
-        if (conf_port->rx_setting == PJMEDIA_PORT_DISABLE) {
-            conf_port->rx_level = 0;
-            continue;
-        }
-
-        /* Also skip if this port doesn't have listeners. */
-        if (conf_port->listener_cnt == 0) {
-            conf_port->rx_level = 0;
-            continue;
-        }
+#ifdef CONF_DEBUG
+        inc_omp_thread_usage(threads, PJ_ARRAY_SIZE(threads));
+#endif //CONF_DEBUG
 
         /* Get frame from this port.
          * For passive ports, get the frame from the delay_buf.
@@ -2569,11 +3047,18 @@ static pj_status_t get_frame(pjmedia_port *this_port,
          */
         if (conf_port->delay_buf != NULL) {
             pj_status_t status;
-        
-            status = pjmedia_delay_buf_get(conf_port->delay_buf,
-                                  (pj_int16_t*)frame->buf);
+
+            /* Check that correct size is specified. */
+            pj_assert( frame->size == conf/*_port*/->rx_frame_buf_cap);
+            /* read data to different buffers to different conf_port's parallel processing */
+            status = pjmedia_delay_buf_get( conf_port->delay_buf, get_read_buffer(conf_port, frame) );
             if (status != PJ_SUCCESS) {
                 conf_port->rx_level = 0;
+                TRACE_EX( (THIS_FILE, "%s: No frame from the passive port (%.*s, %d, listener_cnt=%d)",
+                            pj_thread_get_name( pj_thread_this() ),
+                            (int)conf_port->name.slen,
+                            conf_port->name.ptr,
+                            port_idx, conf_port->listener_cnt) );
                 continue;
             }           
 
@@ -2582,10 +3067,43 @@ static pj_status_t get_frame(pjmedia_port *this_port,
             pj_status_t status;
             pjmedia_frame_type frame_type;
 
-            status = read_port(conf, conf_port, (pj_int16_t*)frame->buf, 
-                               conf->samples_per_frame, &frame_type);
-            
+            /* Check that correct size is specified. */
+            pj_assert( frame->size == conf/*_port */->rx_frame_buf_cap);
+            /* read data to different buffers to different conf_port's parallel processing */
+            status = read_port(conf, conf_port, get_read_buffer(conf_port, frame),
+                                conf->samples_per_frame, &frame_type );
+
+            /* Check that the port is not removed when we call get_frame() */
+            /*
+            * if port is removed old conf_port may point to not authorized memory
+            * We can not call conf_port->rx_level = 0; here!
+            * "Port is not removed" check should take priority over the return code check
+            *
+            * However this check is not necessary for async conference bridge,
+            * because application can not remove port while we are in get_frame() callback.
+            * The only thing that can happen is that port removing will be sheduled 
+            * there but still will processed later (see Step 3).
+            */
+            if (conf->ports[port_idx] != conf_port) {
+                //conf_port->rx_level = 0;
+                PJ_LOG( 4, (THIS_FILE, "Port %d is removed when we call get_frame()", port_idx) );
+                continue;
+            }
+
             if (status != PJ_SUCCESS) {
+
+                /* check status and disable port here.
+                 * Prevent multiply eof callback invoke, 
+                 * if fileplayer has reached EOF (i.e. status == PJ_EEOF)
+                 */
+                if (status == PJ_EEOF) {
+                    TRACE_( (THIS_FILE, "Port %.*s reached EOF and is now disabled",
+                              (int)conf_port->name.slen,
+                              conf_port->name.ptr) );
+                    conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
+                }
+
+
                 /* bennylp: why do we need this????
                  * Also see comments on similar issue with write_port().
                 PJ_LOG(4,(THIS_FILE, "Port %.*s get_frame() returned %d. "
@@ -2596,24 +3114,43 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                 conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
                  */
                 conf_port->rx_level = 0;
+
+                TRACE_EX( (THIS_FILE, "%s: No frame from the port (%.*s, %d, listener_cnt=%d)",
+                            pj_thread_get_name( pj_thread_this() ),
+                            (int)conf_port->name.slen,
+                            conf_port->name.ptr,
+                            port_idx, conf_port->listener_cnt) );
+
                 continue;
             }
 
+#if 0
             /* Check that the port is not removed when we call get_frame() */
             if (conf->ports[i] == NULL) {
+                /* if port is removed old conf_port may point to not authorized memory */
                 conf_port->rx_level = 0;
                 continue;
             }
-                
+#endif      
 
             /* Ignore if we didn't get any frame */
             if (frame_type != PJMEDIA_FRAME_TYPE_AUDIO) {
                 conf_port->rx_level = 0;
+                TRACE_EX( (THIS_FILE, "%s: frame_type %d != PJMEDIA_FRAME_TYPE_AUDIO from the port (%.*s, %d, listener_cnt=%d)",
+                            pj_thread_get_name( pj_thread_this() ),
+                            frame_type,
+                            (int)conf_port->name.slen,
+                            conf_port->name.ptr,
+                            port_idx, conf_port->listener_cnt) );
                 continue;
             }           
         }
 
-        p_in = (pj_int16_t*) frame->buf;
+        pj_int32_t level = 0;
+        pj_int16_t *p_in;
+        unsigned j;
+
+        p_in = get_read_buffer(conf_port, frame);
 
         /* Adjust the RX level from this port
          * and calculate the average level at the same time.
@@ -2661,20 +3198,30 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         //if (level == 0)
         //    continue;
 
+        pj_int32_t cj, listener_cnt;  //parallelization requires signed int
+
         /* Add the signal to all listeners. */
-        for (cj=0; cj < conf_port->listener_cnt; ++cj) 
+        for (cj = 0, listener_cnt = conf_port->listener_cnt; cj < listener_cnt; ++cj)
         {
             struct conf_port *listener;
-            pj_int32_t *mix_buf;            
             pj_int16_t *p_in_conn_leveled;
 
             listener = conf->ports[conf_port->listener_slots[cj]];
 
             /* Skip if this listener doesn't want to receive audio */
             if (listener->tx_setting != PJMEDIA_PORT_ENABLE)
+            {
+                TRACE_EX( (THIS_FILE, "%s: listener (%.*s, %d, transmitter_cnt=%d) doesn't want to receive audio from the port (%.*s, %d, listener_cnt=%d)",
+                            pj_thread_get_name( pj_thread_this() ),
+                            (int)listener->name.slen,
+                            listener->name.ptr,
+                            conf_port->listener_slots[cj],
+                            listener->transmitter_cnt,
+                            (int)conf_port->name.slen,
+                            conf_port->name.ptr,
+                            port_idx, conf_port->listener_cnt) );
                 continue;
-
-            mix_buf = listener->mix_buf;
+            }
 
             /* apply connection level, if not normal */
             if (conf_port->listener_adj_level[cj] != NORMAL_LEVEL) {
@@ -2708,6 +3255,9 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                 p_in_conn_leveled = p_in;
             }
 
+            pj_int32_t *mix_buf;
+            mix_buf = listener->mix_buf;
+
             if (listener->transmitter_cnt > 1) {
                 /* Mixing signals,
                  * and calculate appropriate level adjustment if there is
@@ -2717,12 +3267,53 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                 pj_int32_t mix_buf_min = 0;
                 pj_int32_t mix_buf_max = 0;
 
-                for (k = 0; k < samples_per_frame; ++k) {
-                    mix_buf[k] += p_in_conn_leveled[k];
-                    if (mix_buf[k] < mix_buf_min)
-                        mix_buf_min = mix_buf[k];
-                    if (mix_buf[k] > mix_buf_max)
-                        mix_buf_max = mix_buf[k];
+                pj_assert(IS_PARALLEL == (listener->tx_Lock != NULL));
+                //protect listener->mix_buf, listener->mix_adj, listener->last_timestamp
+                if (IS_PARALLEL)
+                    pj_lock_acquire(listener->tx_Lock);
+
+                if (listener->last_timestamp.u64 == frame->timestamp.u64) {
+                    //this frame is NOT from the first transmitter
+                    for (k = 0; k < samples_per_frame; ++k) {
+                        mix_buf[k] += p_in_conn_leveled[k]; // not the first - sum
+                        if (mix_buf[k] < mix_buf_min)
+                            mix_buf_min = mix_buf[k];
+                        if (mix_buf[k] > mix_buf_max)
+                            mix_buf_max = mix_buf[k];
+                    }
+                    TRACE_EX( (THIS_FILE, "%s: listener (%.*s, %d, transmitter_cnt=%d) get (sum) audio from the port (%.*s, %d, listener_cnt=%d)",
+                                pj_thread_get_name( pj_thread_this() ),
+                                (int)listener->name.slen,
+                                listener->name.ptr,
+                                conf_port->listener_slots[cj],
+                                listener->transmitter_cnt,
+                                (int)conf_port->name.slen,
+                                conf_port->name.ptr,
+                                port_idx, conf_port->listener_cnt) );
+
+                } else {
+                    //this frame is from the first transmitter
+                    listener->last_timestamp = frame->timestamp;
+
+                    /* We do not want to reset buffer, we just copy the first frame there. */
+                    for (k = 0; k < samples_per_frame; ++k) {
+                        mix_buf[k] = p_in_conn_leveled[k]; // the first - copy
+                        if (mix_buf[k] < mix_buf_min)
+                            mix_buf_min = mix_buf[k];
+                        if (mix_buf[k] > mix_buf_max)
+                            mix_buf_max = mix_buf[k];
+                    }
+                    TRACE_EX( (THIS_FILE, "%s: listener %p (%.*s, %d, transmitter_cnt=%d) get (copy) audio from the port %p (%.*s, %d, listener_cnt=%d)",
+                                pj_thread_get_name( pj_thread_this() ),
+                                listener,
+                                (int)listener->name.slen,
+                                listener->name.ptr,
+                                conf_port->listener_slots[cj],
+                                listener->transmitter_cnt,
+                                conf_port,
+                                (int)conf_port->name.slen,
+                                conf_port->name.ptr,
+                                port_idx, conf_port->listener_cnt) );
                 }
 
                 /* Check if normalization adjustment needed. */
@@ -2737,7 +3328,16 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                     if (tmp_adj < listener->mix_adj)
                         listener->mix_adj = tmp_adj;
                 }
+
+                pj_assert(IS_PARALLEL == (listener->tx_Lock != NULL));
+                if (IS_PARALLEL)
+                    pj_lock_release(listener->tx_Lock);
+
             } else {
+                //this frame is from the only transmitter
+                pj_assert( listener->transmitter_cnt == 1 && listener->last_timestamp.u64 != frame->timestamp.u64 );
+                listener->last_timestamp = frame->timestamp;
+
                 /* Only 1 transmitter:
                  * just copy the samples to the mix buffer
                  * no mixing and level adjustment needed
@@ -2745,66 +3345,148 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                 unsigned k, samples_per_frame = conf->samples_per_frame;
 
                 for (k = 0; k < samples_per_frame; ++k) {
-                    mix_buf[k] = p_in_conn_leveled[k];
+                    mix_buf[k] = p_in_conn_leveled[k];  // here copying 16 bit value to 32 bit dst
                 }
+                TRACE_EX( (THIS_FILE, "%s: listener %p (%.*s, %d, transmitter_cnt=%d)"
+                            " get audio from the (only) port %p (%.*s, %d, listener_cnt=%d) last_timestamp=%llu, timestamp=%llu",
+                            pj_thread_get_name( pj_thread_this() ),
+                            listener,
+                            (int)listener->name.slen,
+                            listener->name.ptr,
+                            listener->slot,
+                            listener->transmitter_cnt,
+                            conf_port,
+                            (int)conf_port->name.slen,
+                            conf_port->name.ptr,
+                            conf_port->slot, conf_port->listener_cnt,
+                            listener->last_timestamp.u64, frame->timestamp.u64) );
+
             }
+
         } /* loop the listeners of conf port */
     } /* loop of all conf ports */
 
-    /* Time for all ports to transmit whetever they have in their
-     * buffer. 
+    /* all ports have data in their buffers
+     * and may do all work independently.
+     * Here we use ports from conf->active_listener[] 
+     * whose lifetime is garanteed at the moment of adding 
+     * port to active_listener[]  by incrementing 
+     * grp_lock->ref_counter.
      */
-    for (i=0, ci=0; i<conf->max_ports && ci<conf->port_cnt; ++i) {
-        struct conf_port *conf_port = conf->ports[i];
-        pjmedia_frame_type frm_type;
-        pj_status_t status;
 
-        if (!conf_port || conf_port->is_new)
-            continue;
+    listener_counter = conf->listener_counter + 1;
 
-        /* Var "ci" is to count how many ports have been visited. */
-        ++ci;
 
-        status = write_port( conf, conf_port, &frame->timestamp,
-                             &frm_type);
-        if (status != PJ_SUCCESS) {
-            /* bennylp: why do we need this????
-               One thing for sure, put_frame()/write_port() may return
-               non-successfull status on Win32 if there's temporary glitch
-               on network interface, so disabling the port here does not
-               sound like a good idea.
+    PRAGMA_OMP(parallel) 
+    {
+        /* Perform any queued operations that need to be synchronized with
+         * the clock such as connect, disonnect, remove.
+         * All those operations performed on the single thread
+         * but perhaps not on the master thread
+         */
+        PRAGMA_OMP(single nowait)
+        {
+            if (!pj_list_empty(conf->op_queue)) {
 
-            PJ_LOG(4,(THIS_FILE, "Port %.*s put_frame() returned %d. "
-                                 "Port is now disabled",
-                                 (int)conf_port->name.slen,
-                                 conf_port->name.ptr,
-                                 status));
-            conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
-            */
-            continue;
+                /* register omp thread with pjsip */
+                register_omp_thread(conf);
+#ifdef CONF_DEBUG
+                inc_omp_thread_usage(threads, PJ_ARRAY_SIZE(threads));
+#endif //CONF_DEBUG
+
+                pj_log_push_indent();
+                /* Calling any callback while a mutex is locked can result in a deadlock,
+                 * since operations can lock other mutexes in an arbitrary order.
+                 * At least OP_REMOVE_PORT invokes grp_lock handlers callbacks.
+                 * We should move lock inside each operations
+                 */
+                 //pj_mutex_lock(conf->mutex);
+                handle_op_queue(conf);
+                //pj_mutex_unlock(conf->mutex);
+                pj_log_pop_indent();
+            }
+        }   //pragma omp single
+
+        /* Step 3
+         * Time for all ports to transmit whatever they have in their
+         * buffer.
+         */
+        PRAGMA_OMP(for nowait)
+        for (i = 0; i < listener_counter; ++i) {
+
+            pjmedia_frame_type frm_type;
+            pj_status_t status;
+
+            //sound device (from port[0]) has 0 idx here too
+            struct conf_port* conf_port = conf->active_listener[i];
+            conf->active_listener[i] = NULL;
+            if (!conf_port)
+                continue;
+
+            /* register omp thread with pjsip */
+            register_omp_thread(conf);
+#ifdef CONF_DEBUG
+            inc_omp_thread_usage(threads, PJ_ARRAY_SIZE(threads));
+#endif //CONF_DEBUG
+
+
+            status = write_port(conf, conf_port, &frame->timestamp,
+                                &frm_type);
+
+#if 0
+            if (status != PJ_SUCCESS) {
+                /* bennylp: why do we need this????
+                    One thing for sure, put_frame()/write_port() may return
+                    non-successfull status on Win32 if there's temporary glitch
+                    on network interface, so disabling the port here does not
+                    sound like a good idea.
+
+                PJ_LOG(4,(THIS_FILE, "Port %.*s put_frame() returned %d. "
+                                "Port is now disabled",
+                                (int)conf_port->name.slen,
+                                conf_port->name.ptr,
+                                status));
+                conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
+                */
+                continue;
+            }
+#endif
+            /* Set the type of frame to be returned to sound playback
+             * device.
+             */
+            if (status == PJ_SUCCESS && i == 0) {
+                speaker_frame_type = frm_type;
+                sound_port = conf_port;
+            }
+
+            //At least "Master/sound" may have no media_port
+            if (conf_port->port && conf_port->port->grp_lock)
+                pj_grp_lock_dec_ref(conf_port->port->grp_lock);// conf_port may be destroyed here
+
         }
 
-        /* Set the type of frame to be returned to sound playback
-         * device.
-         */
-        if (i == 0)
-            speaker_frame_type = frm_type;
-    }
+    }  //pragma omp parallel
 
     /* Return sound playback frame. */
-    if (conf->ports[0]->tx_level) {
-        TRACE_((THIS_FILE, "write to audio, count=%d", 
-                           conf->samples_per_frame));
-        pjmedia_copy_samples( (pj_int16_t*)frame->buf, 
-                              (const pj_int16_t*)conf->ports[0]->mix_buf, 
-                              conf->samples_per_frame);
-    } else {
-        /* Force frame type NONE */
-        speaker_frame_type = PJMEDIA_FRAME_TYPE_NONE;
+    if (sound_port != NULL) {
+        if (sound_port->tx_level) {
+            TRACE_( (THIS_FILE, "write to audio, count=%d",
+                      conf->samples_per_frame) );
+            pjmedia_copy_samples( (pj_int16_t *)frame->buf,
+                                  (const pj_int16_t *)sound_port->mix_buf,
+                                  conf->samples_per_frame );
+        } else {
+            /* Force frame type NONE */
+            speaker_frame_type = PJMEDIA_FRAME_TYPE_NONE;
+        }
     }
 
     /* MUST set frame type */
     frame->type = speaker_frame_type;
+
+    TRACE_( (THIS_FILE, "Ports processed by omp team's threads 0:%d, 1:%d, 2:%d, 3:%d, 4:%d, 5:%d, 6:%d, 7:%d, 8:%d, 9:%d, 10:%d, 11:%d, 12:%d, 13:%d, 14:%d, 15:%d.",
+              threads[0], threads[1], threads[2], threads[3], threads[4], threads[5], threads[6], threads[7],
+              threads[8], threads[9], threads[10], threads[11], threads[12], threads[13], threads[14], threads[15]) );
 
 #ifdef REC_FILE
     if (fhnd_rec == NULL)
@@ -2815,6 +3497,39 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
     return PJ_SUCCESS;
 }
+
+
+/* register omp thread with pjsip */
+static inline void register_omp_thread(pjmedia_conf *conf)
+{
+    /* the compiler should potentially optimize this away
+     * for the serial conference bridge
+     */
+    if (IS_PARALLEL && !pj_thread_is_registered())
+    {
+        pj_assert(conf->omp_threads_idx && conf->omp_threads);
+        pj_thread_t *p;
+        int num = pj_atomic_inc_and_get(conf->omp_threads_idx);
+        pj_assert(num < 2 * conf->omp_max_threads);
+        char        obj_name[PJ_MAX_OBJ_NAME];
+        pj_ansi_snprintf(obj_name, sizeof(obj_name), "omp_conf_%d", num);
+        pj_thread_register(obj_name, conf->omp_threads[num], &p);
+    }
+    pj_assert(pj_thread_is_registered());
+}
+
+#ifdef CONF_DEBUG
+static inline void inc_omp_thread_usage(int *threads, pj_ssize_t threads_sz) {
+#   ifdef  _OPENMP
+    int num = omp_get_thread_num();
+    if (num < threads_sz)
+        threads[num]++;
+#   else
+    PJ_UNUSED_ARG(threads);
+    PJ_UNUSED_ARG(threads_sz);
+#   endif  //_OPENMP
+}
+#endif //CONF_DEBUG
 
 
 #if !DEPRECATED_FOR_TICKET_2234
