@@ -41,6 +41,13 @@
 #endif
 
 
+#if 0
+#  define TRACE(args) PJ_LOG(1,args)
+#else
+#  define TRACE(args)
+#endif
+
+
 /* The address specified in AcceptEx() must be 16 more than the size of
  * SOCKADDR (source: MSDN).
  */
@@ -135,9 +142,7 @@ struct pj_ioqueue_key_t
     int                 connecting;
 #endif
 
-    pj_atomic_t        *ref_count;
     pj_bool_t           closing;
-    pj_mutex_t         *mutex;
     struct pending_op   pending_list;
     struct pending_op   free_pending_list;
 };
@@ -153,6 +158,7 @@ struct pj_ioqueue_t
     pj_lock_t        *lock;
     pj_bool_t         auto_delete_lock;
     pj_bool_t         default_concurrency;
+    pj_size_t         max_fd;
 
     pj_ioqueue_key_t  active_list;
     pj_ioqueue_key_t  free_list;
@@ -173,6 +179,22 @@ struct pj_ioqueue_t
  */
 typedef BOOL(WINAPI* FnCancelIoEx)(HANDLE hFile, LPOVERLAPPED lpOverlapped);
 static FnCancelIoEx fnCancelIoEx = NULL;
+
+#define OPKEY_OPERATION(op_key) ((union operation_key*)op_key)->generic.operation
+
+/* Prototypes of internal functions */
+static void key_on_destroy(void* data);
+static void increment_counter(pj_ioqueue_key_t* key);
+static void decrement_counter(pj_ioqueue_key_t* key);
+
+
+#define PENDING_OP_POS(op_key) (PJ_ARRAY_SIZE(op_key->internal__) - 1)
+
+static struct pending_op* get_pending_op(pj_ioqueue_op_key_t *op_key)
+{
+    return (struct pending_op*)
+           (op_key->internal__[PENDING_OP_POS(op_key)]);
+}
 
 
 #if PJ_HAS_TCP
@@ -382,7 +404,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     rc = sizeof(union operation_key);
 
     /* Check that sizeof(pj_ioqueue_op_key_t) makes sense. */
-    PJ_ASSERT_RETURN(sizeof(pj_ioqueue_op_key_t)-sizeof(void*) >= 
+    PJ_ASSERT_RETURN(sizeof(pj_ioqueue_op_key_t)-3*sizeof(void*) >= 
                      sizeof(union operation_key), PJ_EBUG);
 
     if (!fnCancelIoEx) {
@@ -431,39 +453,15 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     for (i=0; i<max_fd; ++i) {
         pj_ioqueue_key_t *key;
 
-        key = pj_pool_alloc(pool, sizeof(pj_ioqueue_key_t));
+        key = pj_pool_zalloc(pool, sizeof(pj_ioqueue_key_t));
 
         /* Initialize pending op lists */
         pj_list_init(&key->pending_list);
         pj_list_init(&key->free_pending_list);
 
-        rc = pj_atomic_create(pool, 0, &key->ref_count);
-        if (rc != PJ_SUCCESS) {
-            key = ioqueue->free_list.next;
-            while (key != &ioqueue->free_list) {
-                pj_atomic_destroy(key->ref_count);
-                pj_mutex_destroy(key->mutex);
-                key = key->next;
-            }
-            CloseHandle(ioqueue->iocp);
-            return rc;
-        }
-
-        rc = pj_mutex_create_recursive(pool, "ioqkey", &key->mutex);
-        if (rc != PJ_SUCCESS) {
-            pj_atomic_destroy(key->ref_count);
-            key = ioqueue->free_list.next;
-            while (key != &ioqueue->free_list) {
-                pj_atomic_destroy(key->ref_count);
-                pj_mutex_destroy(key->mutex);
-                key = key->next;
-            }
-            CloseHandle(ioqueue->iocp);
-            return rc;
-        }
-
         pj_list_push_back(&ioqueue->free_list, key);
     }
+    ioqueue->max_fd = pj_list_size(&ioqueue->free_list); // max_fd;
 
     *p_ioqueue = ioqueue;
 
@@ -479,7 +477,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
 #if PJ_HAS_TCP
     unsigned i;
 #endif
-    pj_ioqueue_key_t *key;
+    pj_ioqueue_key_t *key, *next;
+    pj_time_val stop;
+
+    /* Timeout for keys cancelled ops */
+    enum { WAIT_KEY_MS = 5000 };
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(ioqueue, PJ_EINVAL);
@@ -494,25 +496,43 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
     ioqueue->event_count = 0;
 #endif
 
-    if (CloseHandle(ioqueue->iocp) != TRUE)
-        return PJ_RETURN_OS_ERROR(GetLastError());
-
-    /* Destroy reference counters */
+    /* Destroy active keys */
     key = ioqueue->active_list.next;
     while (key != &ioqueue->active_list) {
-        pj_atomic_destroy(key->ref_count);
-        pj_mutex_destroy(key->mutex);
-        key = key->next;
-    }
-
-    key = ioqueue->free_list.next;
-    while (key != &ioqueue->free_list) {
-        pj_atomic_destroy(key->ref_count);
-        pj_mutex_destroy(key->mutex);
-        key = key->next;
+        next = key->next;
+        pj_ioqueue_unregister(key);
+        key = next;
     }
 
     pj_lock_release(ioqueue->lock);
+
+    /* Wait keys cancelling any pending ops. */
+    pj_gettickcount(&stop);
+    stop.msec += WAIT_KEY_MS;
+    pj_time_val_normalize(&stop);
+
+    while (1) {
+        pj_time_val timeout = {0, 100};
+        pj_size_t pending_key_cnt;
+
+        pending_key_cnt = ioqueue->max_fd - pj_list_size(&ioqueue->free_list);
+        if (!pending_key_cnt)
+            break;
+
+        pj_ioqueue_poll(ioqueue, &timeout);
+
+        pj_gettickcount(&timeout);
+        if (PJ_TIME_VAL_GTE(timeout, stop)) {
+            PJ_LOG(3, (THIS_FILE, "Warning, IOCP destroy timeout in waiting "
+                       "for canceling ops, after %dms, pending keys=%d",
+                       WAIT_KEY_MS, pending_key_cnt));
+            break;
+        }
+    }
+
+    if (CloseHandle(ioqueue->iocp) != TRUE)
+        return PJ_RETURN_OS_ERROR(GetLastError());
+
     if (ioqueue->auto_delete_lock)
         pj_lock_destroy(ioqueue->lock);
 
@@ -568,20 +588,15 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     pj_lock_acquire(ioqueue->lock);
 
-    /* If safe unregistration is used, then get the key record from
-     * the free list.
-     */
-    pj_assert(!pj_list_empty(&ioqueue->free_list));
+    /* Verify that there is a free key */
     if (pj_list_empty(&ioqueue->free_list)) {
         pj_lock_release(ioqueue->lock);
         return PJ_ETOOMANY;
     }
 
+    /* Get the key record from the free list. */
     rec = ioqueue->free_list.next;
-    pj_list_erase(rec);
 
-    rec->closing = 0;
-    
     /* Create pool for this key */
     rec->pool = pj_pool_create(ioqueue->pool->factory, "key%p",
                                512, 512, NULL);
@@ -590,6 +605,15 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
         return PJ_ENOMEM;
     }
 
+    /* Move key from free list to active list */
+    pj_list_erase(rec);
+    pj_list_push_back(&ioqueue->active_list, rec);
+
+    pj_lock_release(ioqueue->lock);
+
+
+    rec->closing = 0;
+    
     /* Build the key for this socket. */
     rec->ioqueue = ioqueue;
     rec->hnd = (HANDLE)sock;
@@ -599,10 +623,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     /* Set concurrency for this handle */
     rc = pj_ioqueue_set_concurrency(rec, ioqueue->default_concurrency);
-    if (rc != PJ_SUCCESS) {
-        pj_lock_release(ioqueue->lock);
+    if (rc != PJ_SUCCESS)
         return rc;
-    }
 
 #if PJ_HAS_TCP
     rec->connecting = 0;
@@ -611,39 +633,34 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     /* Set socket to nonblocking. */
     value = 1;
     rc = ioctlsocket(sock, FIONBIO, &value);
-    if (rc != 0) {
-        pj_lock_release(ioqueue->lock);
+    if (rc != 0)
         return PJ_RETURN_OS_ERROR(WSAGetLastError());
-    }
 
     /* Associate with IOCP */
     hioq = CreateIoCompletionPort((HANDLE)sock, ioqueue->iocp,
                                   (ULONG_PTR)rec, 0);
-    if (!hioq) {
-        pj_lock_release(ioqueue->lock);
+    if (!hioq)
         return PJ_RETURN_OS_ERROR(GetLastError());
-    }
 
-    /* Group lock */
+    /* Create group lock if not specified */
+    if (!grp_lock) {
+        pj_status_t status;
+        status = pj_grp_lock_create_w_handler(rec->pool, NULL, rec,
+                                              &key_on_destroy, &grp_lock);
+        if (status != PJ_SUCCESS) {
+            key_on_destroy(rec);
+            return status;
+        }
+    }
     rec->grp_lock = grp_lock;
-    if (rec->grp_lock) {
-        /* IOCP backend doesn't have group lock functionality, so
-         * you should not use it other than for experimental purposes.
-         */
-        PJ_TODO(INTEGRATE_GROUP_LOCK);
-        // pj_grp_lock_add_ref_dbg(rec->grp_lock, "ioqueue", 0);
-    }
-
-    *key = rec;
 
     /* Set initial reference count to 1 */
-    pj_assert(pj_atomic_get(rec->ref_count) == 0);
-    pj_atomic_inc(rec->ref_count);
+    increment_counter(rec);
 
-    pj_list_push_back(&ioqueue->active_list, rec);
+    TRACE((THIS_FILE, "REG key %p", rec));
 
-    pj_lock_release(ioqueue->lock);
-
+    /* Finally */
+    *key = rec;
     return PJ_SUCCESS;
 }
 
@@ -688,27 +705,43 @@ PJ_DEF(pj_status_t) pj_ioqueue_set_user_data( pj_ioqueue_key_t *key,
     return PJ_SUCCESS;
 }
 
+
+static void key_on_destroy(void *data) {
+    pj_ioqueue_key_t *key = (pj_ioqueue_key_t*)data;
+    pj_ioqueue_t* ioqueue = key->ioqueue;
+
+    /* Reset pool & keys */
+    key->grp_lock = NULL;
+    pj_pool_safe_release(&key->pool);
+
+    /* Reset free pending lists */
+    pj_assert(pj_list_empty(&key->pending_list));
+    pj_list_init(&key->free_pending_list);
+
+    /* Return key to free list */
+    pj_lock_acquire(ioqueue->lock);
+    pj_list_erase(key);
+    pj_list_push_back(&ioqueue->free_list, key);
+
+    TRACE((THIS_FILE, "FREE key %p", key));
+
+    pj_lock_release(ioqueue->lock);
+}
+
+
+/* Increment the key's reference counter. */
+static void increment_counter(pj_ioqueue_key_t* key)
+{
+    pj_grp_lock_add_ref_dbg(key->grp_lock, "ioqueue", 0);
+}
+
+
 /* Decrement the key's reference counter, and when the counter reach zero,
  * destroy the key.
  */
 static void decrement_counter(pj_ioqueue_key_t *key)
 {
-    if (pj_atomic_dec_and_get(key->ref_count) == 0) {
-
-        pj_lock_acquire(key->ioqueue->lock);
-
-        pj_assert(key->closing == 1);
-        pj_list_erase(key);
-        pj_list_push_back(&key->ioqueue->free_list, key);
-
-        pj_lock_release(key->ioqueue->lock);
-
-        /* Reset pending lists */
-        pj_assert(pj_list_empty(&key->pending_list));
-        pj_list_init(&key->free_pending_list);
-
-        pj_pool_safe_release(&key->pool);
-    }
+    pj_grp_lock_dec_ref_dbg(key->grp_lock, "ioqueue", 0);
 }
 
 static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key,
@@ -717,14 +750,18 @@ static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key,
                                            pj_ssize_t len)
 {
     struct pending_op *op = NULL;
+    int ref_cnt;
 
     pj_assert(key && op_key);
 
-    pj_mutex_lock(key->mutex);
+    /* Get pending op from free op list, or create a new one if none */
+    pj_ioqueue_lock_key(key);
+    ref_cnt = pj_grp_lock_get_ref(key->grp_lock);
+
     if (pj_list_empty(&key->free_pending_list)) {
         op = PJ_POOL_ZALLOC_T(key->pool, struct pending_op);
         if (!op) {
-            pj_mutex_unlock(key->mutex);
+            pj_ioqueue_unlock_key(key);
             return NULL;
         }
         pj_list_init(op);
@@ -733,13 +770,18 @@ static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key,
         pj_list_erase(op);
     }
     pj_list_push_back(&key->pending_list, op);
-    pj_mutex_unlock(key->mutex);
+    increment_counter(key);
+    pj_ioqueue_unlock_key(key);
 
+    /* Init the pending op */
     op->app_op_key = op_key;
     op->pending_key.overlapped.wsabuf.buf = (CHAR*)buf;
     op->pending_key.overlapped.wsabuf.len = (ULONG)len;
 
-    pj_atomic_inc(key->ref_count);
+    /* Link app op key to pending-op */
+    op_key->internal__[PENDING_OP_POS(op_key)] = op;
+
+    TRACE((THIS_FILE, "ALLOC   op key %p (cnt=%d) op %p", key, ref_cnt, op));
 
     return op;
 }
@@ -747,19 +789,32 @@ static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key,
 static void release_pending_op(pj_ioqueue_key_t *key, struct pending_op *op)
 {
     pj_assert(key && op);
+    int ref_cnt;
 
-    pj_mutex_lock(key->mutex);
+    pj_ioqueue_lock_key(key);
     pj_list_erase(op);
     pj_list_push_back(&key->free_pending_list, op);
-    pj_mutex_unlock(key->mutex);
-
-
     decrement_counter(key);
+    ref_cnt = pj_grp_lock_get_ref(key->grp_lock);
+    pj_ioqueue_unlock_key(key);
+
+    TRACE((THIS_FILE, "RELEASE op key %p (cnt=%d) op %p", key, ref_cnt, op));
 }
 
-static void cancel_all_pending_op(pj_ioqueue_key_t *key)
+static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
 {
-    fnCancelIoEx(key->hnd, NULL);
+    BOOL rc = fnCancelIoEx(key->hnd, NULL);
+
+    if (rc == 0) {
+        DWORD dwError = WSAGetLastError();
+        if (dwError != ERROR_NOT_FOUND) {
+            TRACE((THIS_FILE, "CANCEL key %p error %d", key, dwError));
+            return PJ_RETURN_OS_ERROR(dwError);
+        }
+    }
+
+    TRACE((THIS_FILE, "CANCEL key %p success", key));
+    return PJ_SUCCESS;
 }
 
 /*
@@ -795,6 +850,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
      */
     if (pOv) {
         pj_bool_t has_lock;
+        pj_ioqueue_operation_e operation = pOv->operation;
 
         /* Event was dequeued for either successfull or failed I/O */
         key = (pj_ioqueue_key_t*)dwKey;
@@ -806,7 +862,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
         if (p_key)
             *p_key = key;
 
-        switch(pOv->operation)
+        switch(operation)
         {
             case PJ_IOQUEUE_OP_RECV:
             case PJ_IOQUEUE_OP_RECV_FROM:
@@ -818,7 +874,12 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
                 op_key = op->app_op_key;
                 break;
             default:
-                break;
+                /* Invalid operation, just release op & ignore */
+                pj_assert(0);
+                op = (struct pending_op*)
+                    ((char*)pOv - offsetof(struct pending_op, pending_key));
+                release_pending_op(key, op);
+                return PJ_TRUE;
         }
 
         /* We shouldn't call callbacks if key is quitting. */
@@ -831,7 +892,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
          * (and save the lock status to local var since app may change
          * concurrency setting while in the callback) */
         if (key->allow_concurrent == PJ_FALSE) {
-            pj_mutex_lock(key->mutex);
+            pj_ioqueue_lock_key(key);
             has_lock = PJ_TRUE;
         } else {
             has_lock = PJ_FALSE;
@@ -840,7 +901,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
         /* Now that we get the lock, check again that key is not closing */
         if (key->closing) {
             if (has_lock) {
-                pj_mutex_unlock(key->mutex);
+                pj_ioqueue_unlock_key(key);
             }
             release_pending_op(key, op);
             return PJ_TRUE;
@@ -849,31 +910,30 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
         /* Increment reference counter to prevent this key from being
          * deleted
          */
-        pj_atomic_inc(key->ref_count);
-
-        /* Pending op should be no longer needed */
-        release_pending_op(key, op);
-        op = NULL;
+        increment_counter(key);
 
         /* Carry out the callback */
-        switch (pOv->operation) {
+        switch (operation) {
         case PJ_IOQUEUE_OP_READ:
         case PJ_IOQUEUE_OP_RECV:
         case PJ_IOQUEUE_OP_RECV_FROM:
-            pOv->operation = 0;
+            //pOv->operation = 0;
+            OPKEY_OPERATION(op_key) = 0;
             if (key->cb.on_read_complete)
                 key->cb.on_read_complete(key, op_key, size_status);
             break;
         case PJ_IOQUEUE_OP_WRITE:
         case PJ_IOQUEUE_OP_SEND:
         case PJ_IOQUEUE_OP_SEND_TO:
-            pOv->operation = 0;
+            //pOv->operation = 0;
+            OPKEY_OPERATION(op_key) = 0;
             if (key->cb.on_write_complete)
                 key->cb.on_write_complete(key, op_key, size_status);
             break;
 #if PJ_HAS_TCP
         case PJ_IOQUEUE_OP_ACCEPT:
             /* special case for accept. */
+            OPKEY_OPERATION(op_key) = 0;
             ioqueue_on_accept_complete(key, (ioqueue_accept_rec*)pOv);
             if (key->cb.on_accept_complete) {
                 ioqueue_accept_rec *accept_rec = (ioqueue_accept_rec*)pOv;
@@ -899,9 +959,11 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
             break;
         }
 
-        decrement_counter(key);
         if (has_lock)
-            pj_mutex_unlock(key->mutex);
+            pj_ioqueue_unlock_key(key);
+
+        release_pending_op(key, op);
+        decrement_counter(key);
 
         return PJ_TRUE;
     }
@@ -915,24 +977,15 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
  */
 PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
 {
-    unsigned i;
-    pj_bool_t has_lock;
+    //unsigned i;
+    //pj_bool_t has_lock;
     enum { RETRY = 10 };
 
     PJ_ASSERT_RETURN(key, PJ_EINVAL);
 
-    /* Lock the key to make sure no callback is simultaneously modifying
-     * the key. We need to lock the key before ioqueue here to prevent
-     * deadlock.
-     */
-    pj_ioqueue_lock_key(key);
-
     /* Best effort to avoid double key-unregistration */
-    if (key->closing) {
-        pj_ioqueue_unlock_key(key);
+    if (!key->grp_lock || key->closing)
         return PJ_SUCCESS;
-    }
-    pj_ioqueue_unlock_key(key);
 
 #if PJ_HAS_TCP
     if (key->connecting) {
@@ -960,14 +1013,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
     /* If concurrency is disabled, wait until the key has finished
      * processing the callback
      */
-    if (key->allow_concurrent == PJ_FALSE) {
-        pj_mutex_lock(key->mutex);
-        has_lock = PJ_TRUE;
-    } else {
-        has_lock = PJ_FALSE;
-    }
+    //if (key->allow_concurrent == PJ_FALSE) {
+    //    pj_ioqueue_lock_key(key);
+    //    has_lock = PJ_TRUE;
+    //} else {
+    //    has_lock = PJ_FALSE;
+    //}
 
-    /* Cancel all penging I/O operations in order to free all pending memory */
+    /* Cancel all pending I/O operations (asynchronously) */
     cancel_all_pending_op(key);
 
     /* Close handle (the only way to disassociate handle from IOCP). 
@@ -1007,20 +1060,31 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
      *  This should not happen if concurrency is disallowed for the key.
      *  So at least application has a solution for this (i.e. by disallowing
      *  concurrency in the key).
+     * 
+     * Update 2025/01/20:
+     *  Any pending ops will be cancelled asynchronously, so key resources
+     *  will be released later from the group lock handler after all
+     *  pending ops are cancelled.
      */
     //This will loop forever if unregistration is done on the callback.
     //Doing this with RETRY I think should solve the IOCP setting the 
     //socket signalled, without causing the deadlock.
     //while (pj_atomic_get(key->ref_count) != 1)
     //  pj_thread_sleep(0);
-    for (i=0; pj_atomic_get(key->ref_count) != 1 && i<RETRY; ++i)
-        pj_thread_sleep(0);
+    //for (i=0; pj_atomic_get(key->ref_count) != 1 && i<RETRY; ++i)
+    //    pj_thread_sleep(0);
 
-    /* Decrement reference counter to destroy the key. */
+    //if (has_lock)
+    //    pj_ioqueue_unlock_key(key);
+
+    TRACE((THIS_FILE, "UNREG key %p ref cnt %d",
+                      key, pj_grp_lock_get_ref(key->grp_lock)));
+
+    /* Decrement reference counter to destroy the key.
+     * If the key has pending op, it will be destroyed only after the op is
+     * cancelled (asynchronously).
+     */
     decrement_counter(key);
-
-    if (has_lock)
-        pj_mutex_unlock(key->mutex);
 
     return PJ_SUCCESS;
 }
@@ -1127,6 +1191,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
     pj_bzero( &op_key_rec->overlapped.overlapped, 
               sizeof(op_key_rec->overlapped.overlapped));
     op_key_rec->overlapped.operation = PJ_IOQUEUE_OP_RECV;
+    OPKEY_OPERATION(op_key) = PJ_IOQUEUE_OP_RECV;
 
     rc = WSARecv((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1, 
                   &bytesRead, &dwFlags, 
@@ -1209,6 +1274,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
     pj_bzero( &op_key_rec->overlapped.overlapped, 
               sizeof(op_key_rec->overlapped.overlapped));
     op_key_rec->overlapped.operation = PJ_IOQUEUE_OP_RECV;
+    OPKEY_OPERATION(op_key) = PJ_IOQUEUE_OP_RECV;
 
     rc = WSARecvFrom((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1, 
                      &bytesRead, &dwFlags, addr, addrlen,
@@ -1308,6 +1374,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     pj_bzero( &op_key_rec->overlapped.overlapped, 
               sizeof(op_key_rec->overlapped.overlapped));
     op_key_rec->overlapped.operation = PJ_IOQUEUE_OP_SEND;
+    OPKEY_OPERATION(op_key) = PJ_IOQUEUE_OP_SEND;
 
     rc = WSASendTo((SOCKET)key->hnd, &op_key_rec->overlapped.wsabuf, 1,
                    &bytesWritten,  dwFlags, addr, addrlen,
@@ -1405,6 +1472,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
         return status;
     }
 
+    OPKEY_OPERATION(op_key) = PJ_IOQUEUE_OP_ACCEPT;
     op_key_rec->accept.operation = PJ_IOQUEUE_OP_ACCEPT;
     op_key_rec->accept.addrlen = addrlen;
     op_key_rec->accept.local = local;
@@ -1524,10 +1592,26 @@ PJ_DEF(void) pj_ioqueue_op_key_init( pj_ioqueue_op_key_t *op_key,
 PJ_DEF(pj_bool_t) pj_ioqueue_is_pending( pj_ioqueue_key_t *key,
                                          pj_ioqueue_op_key_t *op_key )
 {
+    struct generic_overlapped* op_rec;
+
+    PJ_UNUSED_ARG(key);
+
+    /* Instead of using GetOverlappedResult(), simply checking the operation
+     * status should be fine.
+     */
+    op_rec = (struct generic_overlapped*)op_key;
+    return op_rec->operation != 0;
+
+#if 0
     BOOL rc;
     DWORD bytesTransferred;
+    struct pending_op *op;
 
-    rc = GetOverlappedResult( key->hnd, (LPOVERLAPPED)op_key,
+    op = get_pending_op(op_key);
+    if (!op)
+        return PJ_FALSE;
+
+    rc = GetOverlappedResult( key->hnd, (LPOVERLAPPED)&op->pending_key,
                               &bytesTransferred, FALSE );
 
     if (rc == FALSE) {
@@ -1535,6 +1619,7 @@ PJ_DEF(pj_bool_t) pj_ioqueue_is_pending( pj_ioqueue_key_t *key,
     }
 
     return FALSE;
+#endif
 }
 
 
@@ -1543,9 +1628,15 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
                                                 pj_ssize_t bytes_status )
 {
     BOOL rc;
+    struct pending_op* op;
+
+    op = get_pending_op(op_key);
+    if (!op)
+        return PJ_EINVAL;
 
     rc = PostQueuedCompletionStatus(key->ioqueue->iocp, (DWORD)bytes_status,
-                                    (ULONG_PTR)key, (OVERLAPPED*)op_key );
+                                    (ULONG_PTR)key,
+                                    (OVERLAPPED*)&op->pending_key );
     if (rc == FALSE) {
         return PJ_RETURN_OS_ERROR(GetLastError());
     }
@@ -1569,12 +1660,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_set_concurrency(pj_ioqueue_key_t *key,
 
 PJ_DEF(pj_status_t) pj_ioqueue_lock_key(pj_ioqueue_key_t *key)
 {
-    return pj_mutex_lock(key->mutex);
+    PJ_ASSERT_RETURN(key && key->grp_lock, PJ_EINVAL);
+    return pj_grp_lock_acquire(key->grp_lock);
 }
 
 PJ_DEF(pj_status_t) pj_ioqueue_unlock_key(pj_ioqueue_key_t *key)
 {
-    return pj_mutex_unlock(key->mutex);
+    PJ_ASSERT_RETURN(key && key->grp_lock, PJ_EINVAL);
+    return pj_grp_lock_release(key->grp_lock);
 }
 
 PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
