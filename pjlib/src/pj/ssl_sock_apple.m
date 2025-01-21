@@ -1446,7 +1446,7 @@ static void close_connection(applessl_sock_t *assock)
                                   "%p %d", assock, assock->con_state));
         }
 
-        nw_connection_set_state_changed_handler(assock->connection, nil);
+        nw_connection_set_state_changed_handler(conn, nil);
         nw_release(conn);
 
 #if SSL_DEBUG
