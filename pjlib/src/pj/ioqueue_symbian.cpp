@@ -24,6 +24,11 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+
+/* Only build when the backend is using Symbian. */
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_SYMBIAN
+
+
 #include "os_symbian.h"
 
 class CIoqueueCallback;
@@ -869,3 +874,5 @@ PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
     PJ_UNUSED_ARG(ioqueue);
     return NULL;
 }
+
+#endif /* PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_SYMBIAN */

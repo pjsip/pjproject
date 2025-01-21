@@ -569,11 +569,7 @@ dnl ######################
 dnl # ioqueue selection
 dnl #
 AC_SUBST(ac_os_objs)
-AC_SUBST(ac_linux_poll)
 AC_MSG_CHECKING([ioqueue backend])
-
-ac_os_objs=ioqueue_select.o
-ac_linux_poll=select
 
 case $target in
     *darwin* | *bsd*)
@@ -581,14 +577,16 @@ case $target in
             AS_HELP_STRING([--enable-kqueue], [Use kqueue ioqueue on macos/BSD (experimental)]),
             [
                 if test "$enable_kqueue" = "yes"; then
-                    ac_os_objs=ioqueue_kqueue.o
                     AC_MSG_RESULT([kqueue()])
+                    AC_DEFINE(PJ_IOQUEUE_IMP, PJ_IOQUEUE_IMP_KQUEUE)
                 else
                     AC_MSG_RESULT([select()])
+                    AC_DEFINE(PJ_IOQUEUE_IMP, PJ_IOQUEUE_IMP_SELECT)
                 fi
             ],
             [
                 AC_MSG_RESULT([select()])
+                AC_DEFINE(PJ_IOQUEUE_IMP, PJ_IOQUEUE_IMP_SELECT)
             ]
         )
         ;;
@@ -597,16 +595,16 @@ case $target in
             AS_HELP_STRING([--enable-epoll], [Use /dev/epoll ioqueue on Linux (experimental)]),
             [
                 if test "$enable_epoll" = "yes"; then
-                    ac_os_objs=ioqueue_epoll.o
                     AC_MSG_RESULT([/dev/epoll])
-                    AC_DEFINE(PJ_HAS_LINUX_EPOLL,1)
-                    ac_linux_poll=epoll
+                    AC_DEFINE(PJ_IOQUEUE_IMP, PJ_IOQUEUE_IMP_EPOLL)
                 else
                     AC_MSG_RESULT([select()])
+                    AC_DEFINE(PJ_IOQUEUE_IMP, PJ_IOQUEUE_IMP_SELECT)
                 fi
             ],
             [
                 AC_MSG_RESULT([select()])
+                AC_DEFINE(PJ_IOQUEUE_IMP, PJ_IOQUEUE_IMP_SELECT)
             ]
         )
         ;;

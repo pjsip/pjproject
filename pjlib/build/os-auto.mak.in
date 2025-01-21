@@ -10,6 +10,7 @@ AC_OS_OBJS=@ac_os_objs@
 #
 export PJLIB_OBJS +=    $(AC_OS_OBJS) \
                         addr_resolv_sock.o \
+                        ioqueue_dummy.o ioqueue_epoll.o ioqueue_kqueue.o ioqueue_select.o \
                         log_writer_stdout.o \
                         os_timestamp_common.o \
                         pool_policy_malloc.o sock_bsd.o sock_select.o

@@ -690,6 +690,43 @@
 #   define PJ_ACTIVESOCK_MAX_CONSECUTIVE_ACCEPT_ERROR 50
 #endif
 
+
+/*
+ * I/O queue implementation backends.
+ * Select one of these implementations in PJ_IOQUEUE_IMP.
+ */
+
+/** No/dummy I/O queue */
+#define PJ_IOQUEUE_IMP_NONE         0
+
+/** Using select() */
+#define PJ_IOQUEUE_IMP_SELECT       1
+
+/** Using epoll() (experimental) */
+#define PJ_IOQUEUE_IMP_EPOLL        2
+
+/** Using Windows I/O Completion Ports (experimental) */
+#define PJ_IOQUEUE_IMP_IOCP         3
+
+/** Using MacOS/BSD kqueue (experimental) */
+#define PJ_IOQUEUE_IMP_KQUEUE       4
+
+/** Using Windows UWP socket (deprecated) */
+#define PJ_IOQUEUE_IMP_UWP          5
+
+/** Using Symbian (deprecated) */
+#define PJ_IOQUEUE_IMP_SYMBIAN      6
+
+/**
+ * I/O queue implementation backend.
+ *
+ * Default: PJ_IOQUEUE_IMP_SELECT
+ */
+#ifndef PJ_IOQUEUE_IMP
+#   define PJ_IOQUEUE_IMP               PJ_IOQUEUE_IMP_SELECT
+#endif
+
+
 /**
  * Constants for declaring the maximum handles that can be supported by
  * a single IOQ framework. This constant might not be relevant to the 
@@ -1068,7 +1105,7 @@
 /** Using OpenSSL */
 #define PJ_SSL_SOCK_IMP_OPENSSL     1
 
-/**< Using GnuTLS */
+/** Using GnuTLS */
 #define PJ_SSL_SOCK_IMP_GNUTLS      2
 
 /** Using Apple's Secure Transport (deprecated in MacOS 10.15 & iOS 13.0) */

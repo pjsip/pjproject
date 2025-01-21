@@ -40,6 +40,11 @@
 #include <pj/errno.h>
 #include <pj/rand.h>
 
+
+/* Only build when the backend is using select(). */
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_SELECT
+
+
 /* Now that we have access to OS'es <sys/select>, lets check again that
  * PJ_IOQUEUE_MAX_HANDLES is not greater than FD_SETSIZE
  */
@@ -1142,3 +1147,5 @@ PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
     PJ_UNUSED_ARG(ioqueue);
     return NULL;
 }
+
+#endif /* PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_SELECT */
