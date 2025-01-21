@@ -982,6 +982,10 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     pjsip_dlg_inc_lock(dlg);
 
     dlg_set_via(dlg, acc);
+    
+#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
+    pjsip_dlg_set_auth_sess(dlg, &acc->shared_auth_sess);
+#endif
 
     /* Calculate call's secure level */
     call->secure_level = get_secure_level(acc_id, dest_uri);

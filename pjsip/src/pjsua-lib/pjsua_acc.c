@@ -330,6 +330,10 @@ static pj_status_t initialize_acc(unsigned acc_id)
         sip_reg_uri = NULL;
     }
 
+#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
+    pjsip_auth_clt_init( &acc->shared_auth_sess, pjsua_var.endpt, acc->pool, 0);
+#endif
+
     if (sip_reg_uri) {
         acc->srv_port = sip_reg_uri->port;
     }
@@ -2753,6 +2757,10 @@ static pj_status_t pjsua_regc_init(int acc_id)
     /* Set client registration's transport based on acc's config. */
     pjsua_init_tpselector(acc_id, &tp_sel);
     pjsip_regc_set_transport(acc->regc, &tp_sel);
+
+#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
+    pjsip_regc_set_auth_sess(acc->regc, &acc->shared_auth_sess);
+#endif
 
     /* Set credentials
      */
