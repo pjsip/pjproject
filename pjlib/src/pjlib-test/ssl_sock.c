@@ -466,7 +466,6 @@ static int https_client_test(unsigned ms_timeout)
     param.timer_heap = timer;
     param.timeout.sec = 0;
     param.timeout.msec = ms_timeout;
-    param.proto = PJ_SSL_SOCK_PROTO_SSL23;
     pj_time_val_normalize(&param.timeout);
 
     status = pj_ssl_sock_create(pool, &param, &ssock);
@@ -658,6 +657,12 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
         pj_str_t privkey_file = pj_str(CERT_PRIVKEY_FILE);
         pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
 
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
+        /* We store private key in Keychain. */
+        privkey_file = pj_str("");
+        privkey_pass = pj_str("");
+#endif
+
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
         status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
                                              &privkey_file, &privkey_pass,
@@ -810,8 +815,10 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 
     /* Clean up sockets */
     {
-        pj_time_val delay = {0, 100};
+        /* The delay must be at least PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT. */
+        pj_time_val delay = {0, 500};
         while (pj_ioqueue_poll(ioqueue, &delay) > 0);
+        pj_timer_heap_poll(timer, &delay);
     }
 
     if (state_serv.err || state_cli.err) {
