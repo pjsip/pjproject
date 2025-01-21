@@ -248,7 +248,7 @@ static int features_tests(int argc, char *argv[])
     07:27:23.440 ....error: timestamp drifted by 3800 usec after 10020 msec
     */
 #if INCLUDE_TIMESTAMP_TEST
-#  if defined(PJ_WIN32) && PJ_WIN32!=0
+#  if 1 //defined(PJ_WIN32) && PJ_WIN32!=0
     UT_ADD_TEST(&test_app.ut_app, timestamp_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #  else
@@ -269,7 +269,7 @@ static int features_tests(int argc, char *argv[])
        as a workaround, set it as exclusive.
      */
 #if INCLUDE_SLEEP_TEST
-#  if defined(PJ_WIN32) && PJ_WIN32!=0
+#  if 1 //defined(PJ_WIN32) && PJ_WIN32!=0
     UT_ADD_TEST(&test_app.ut_app, sleep_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #  else
@@ -317,7 +317,7 @@ static int features_tests(int argc, char *argv[])
     Therefore we'll disable parallelism on Windows for this test. [blp]
     */
 #if INCLUDE_IOQUEUE_STRESS_TEST
-#  if defined(PJ_WIN32) && PJ_WIN32!=0
+#  if 1 //defined(PJ_WIN32) && PJ_WIN32!=0
     UT_ADD_TEST(&test_app.ut_app, ioqueue_stress_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #  else
