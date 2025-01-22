@@ -593,16 +593,13 @@ jobs:
     - name: MSBuild
       working-directory: .
       run: |
-        set /P OPENSSL_DIR=<openssl_dir.txt
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
-        set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include
-        set LIB=%LIB%;%OPENSSL_DIR%\lib
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+    - name: get SSL info
+      run: ./pjlib-test-i386-Win32-vc14-Release.exe  | findstr /C:"ioqueue type" | findstr iocp-test-fail
     - name: pjlib-test
       run: |
-        $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
-        $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjlib/bin
         ./pjlib-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }} ${{ vars.CI_MODE }}
       shell: powershell
