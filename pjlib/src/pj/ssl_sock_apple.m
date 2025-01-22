@@ -926,9 +926,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 
     /* Set min and max protocol version */
     if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
-        ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1 |
-                             PJ_SSL_SOCK_PROTO_TLS1_1 |
-                             PJ_SSL_SOCK_PROTO_TLS1_2 |
+        ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1_2 |
                              PJ_SSL_SOCK_PROTO_TLS1_3;
     }
 
