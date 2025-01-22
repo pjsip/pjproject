@@ -946,7 +946,7 @@ int tcp_ioqueue_test()
 {
     pj_ioqueue_epoll_flag epoll_flags[] = {
         PJ_IOQUEUE_EPOLL_AUTO,
-#if PJ_HAS_LINUX_EPOLL
+#if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
         PJ_IOQUEUE_EPOLL_EXCLUSIVE,
         PJ_IOQUEUE_EPOLL_ONESHOT,
         0

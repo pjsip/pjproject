@@ -1137,37 +1137,13 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
     int rc;
     pj_status_t status;
 
-    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
-        ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
-
-    /* Determine SSL method to use */
-    /* Specific version methods are deprecated since 1.1.0 */
-#if (USING_LIBRESSL && LIBRESSL_VERSION_NUMBER < 0x2020100fL)\
-    || OPENSSL_VERSION_NUMBER < 0x10100000L
-    switch (ssock->param.proto) {
-    case PJ_SSL_SOCK_PROTO_TLS1:
-        ssl_method = (SSL_METHOD*)TLSv1_method();
-        break;
-#ifndef OPENSSL_NO_SSL2
-    case PJ_SSL_SOCK_PROTO_SSL2:
-        ssl_method = (SSL_METHOD*)SSLv2_method();
-        break;
-#endif
-#ifndef OPENSSL_NO_SSL3_METHOD
-    case PJ_SSL_SOCK_PROTO_SSL3:
-        ssl_method = (SSL_METHOD*)SSLv3_method();
-#endif
-        break;
+    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
+        ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1_2 |
+                             PJ_SSL_SOCK_PROTO_TLS1_3;
     }
-#endif
 
     if (!ssl_method) {
-#if (USING_LIBRESSL && LIBRESSL_VERSION_NUMBER < 0x2020100fL)\
-    || OPENSSL_VERSION_NUMBER < 0x10100000L
-        ssl_method = (SSL_METHOD*)SSLv23_method();
-#else
         ssl_method = (SSL_METHOD*)TLS_method();
-#endif
 
 #ifdef SSL_OP_NO_SSLv2
         /** Check if SSLv2 is enabled */
@@ -1630,8 +1606,10 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 
     set_entropy(ssock);
 
-    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
-        ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
+    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
+        ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1_2 |
+                             PJ_SSL_SOCK_PROTO_TLS1_3;
+    }
 
     /* Create SSL context */
     if (SERVER_SUPPORT_SESSION_REUSE && ssock->is_server) {
@@ -1809,7 +1787,7 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
     enum { BUF_SIZE = 8192 };
     pj_str_t cipher_list;
     unsigned i, j;
-    int ret;
+    int ret, ret2 = 1;
 
     if (ssock->param.ciphers_num == 0) {
         ret = SSL_CTX_set_cipher_list(ossock->ossl_ctx, PJ_SSL_SOCK_OSSL_CIPHERS);
@@ -1859,9 +1837,15 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
     /* Put NULL termination in the generated cipher list */
     cipher_list.ptr[cipher_list.slen] = '\0';
 
-    /* Finally, set chosen cipher list */
+    /* Finally, set chosen cipher list.
+     * SSL_CTX_set_cipher_list() is for TLSv1.2 and below, while
+     * SSL_CTX_set_ciphersuites() is for TLSv1.3.
+     */
     ret = SSL_CTX_set_cipher_list(ossock->ossl_ctx, buf);
-    if (ret < 1) {
+    ret2 = SSL_CTX_set_ciphersuites(ossock->ossl_ctx, buf);
+    if (ret < 1 && ret2 < 1) {
+        PJ_LOG(4, (THIS_FILE, "Failed setting cipher list %s",
+                              cipher_list.ptr));
         pj_pool_release(tmp_pool);
         return GET_SSL_STATUS(ssock);
     }

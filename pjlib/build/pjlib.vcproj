@@ -5405,7 +5405,6 @@
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -5415,7 +5414,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|x64"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -5425,7 +5423,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|Win32"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -5435,7 +5432,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release|x64"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -5445,7 +5441,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug-Static|Win32"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -5455,7 +5450,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug-Static|x64"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -5465,7 +5459,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|Win32"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -5475,7 +5468,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|x64"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -5485,7 +5477,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug-Dynamic|Win32"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -5495,7 +5486,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug-Dynamic|x64"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -5505,7 +5495,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Static|Win32"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -5515,7 +5504,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Static|x64"
-					ExcludedFromBuild="true"
 					>
 					<Tool
 						Name="VCCLCompilerTool"

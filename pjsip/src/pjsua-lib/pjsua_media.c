@@ -3006,7 +3006,9 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
         /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so Get label
          * attribute in SDP offer and add label attribute to SDP answer
          */
-        if (call->inv && (call->inv->options & PJSIP_INV_REQUIRE_SIPREC)) {
+        if (call->inv && (call->inv->options & PJSIP_INV_REQUIRE_SIPREC) &&
+            rem_sdp)
+        {
             pjmedia_sdp_attr *label_attr;
             const pj_str_t STR_LABEL_ATTR = {"label", 5};
 

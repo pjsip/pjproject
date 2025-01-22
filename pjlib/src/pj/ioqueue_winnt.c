@@ -30,6 +30,12 @@
 
 #define THIS_FILE "ioq_winnt"
 
+/* Only build when the backend is Windows I/O Completion Ports. */
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
+
+
+#define THIS_FILE "ioq_winnt"
+
 #if defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H != 0
 #  include <winsock2.h>
 #elif defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H != 0
@@ -1674,3 +1680,6 @@ PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
 {
     return ioqueue ? (pj_oshandle_t)ioqueue->iocp : NULL;
 }
+
+
+#endif /* PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP */

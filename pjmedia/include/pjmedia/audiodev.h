@@ -79,7 +79,6 @@ typedef pj_int32_t pjmedia_aud_dev_index;
 #define PJMEDIA_AUD_INVALID_DEV     -3
 
 #define PJMEDIA_AUD_MAX_DRIVERS 16
-#define PJMEDIA_AUD_MAX_DEVS    64
 
 
 /** Forward declaration for pjmedia_aud_stream */
@@ -117,7 +116,7 @@ typedef struct pjmedia_aud_subsys
     pjmedia_aud_driver  drv[PJMEDIA_AUD_MAX_DRIVERS];/* Array of drivers.   */
 
     unsigned            dev_cnt;        /* Total number of devices.         */
-    pj_uint32_t         dev_list[PJMEDIA_AUD_MAX_DEVS];/* Array of dev IDs. */
+    pj_uint32_t         dev_list[PJMEDIA_AUD_DEV_MAX_DEVS];/* Array dev IDs.*/
 
 } pjmedia_aud_subsys;
 

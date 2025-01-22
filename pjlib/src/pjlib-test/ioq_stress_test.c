@@ -770,7 +770,7 @@ static test_desc tests[128] = {
         .cfg.n_clients = 1,
         .cfg.repeat = 4
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
         .cfg.title = "basic udp (single thread, EPOLLEXCLUSIVE)",
         .cfg.max_fd = 4,
@@ -832,7 +832,7 @@ static test_desc tests[128] = {
         .cfg.n_clients = 1,
         .cfg.repeat = 4
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
         .cfg.title = "basic tcp (single thread, EPOLLEXCLUSIVE)",
         .cfg.max_fd = 6,
@@ -894,7 +894,7 @@ static test_desc tests[128] = {
         .cfg.n_clients = 1,
         .cfg.repeat = 2
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
         .cfg.title = "failed tcp connect (EPOLLEXCLUSIVE)",
         .cfg.expected_ret_code = RETCODE_CONNECT_FAILED,
@@ -981,7 +981,7 @@ static test_desc tests[128] = {
         .cfg.n_clients = MAX_ASYNC,
         .cfg.repeat = 4
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     /* EPOLLEXCLUSIVE (udp).
      */
     {
@@ -1052,7 +1052,7 @@ static test_desc tests[128] = {
         .cfg.n_clients = MAX_ASYNC,
         .cfg.repeat = 4
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
         .cfg.title = "tcp (multithreads, EPOLLEXCLUSIVE)",
         .cfg.max_fd = 6,
@@ -1122,7 +1122,7 @@ static test_desc tests[128] = {
         .cfg.n_clients = MAX_ASYNC,
         .cfg.repeat = 4
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
         .cfg.title = "tcp (multithreads, sequenced, concur=0, EPOLLEXCLUSIVE)",
         .cfg.max_fd = 6,

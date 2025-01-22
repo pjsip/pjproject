@@ -242,13 +242,13 @@ static int features_tests(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, hash_test, 0);
 #endif
 
-    /* Windows GH CI oftent fails with:
+    /* GH CI oftent fails with:
 
     07:27:13.217 ...testing frequency accuracy (pls wait)
     07:27:23.440 ....error: timestamp drifted by 3800 usec after 10020 msec
     */
 #if INCLUDE_TIMESTAMP_TEST
-#  if defined(PJ_WIN32) && PJ_WIN32!=0
+#  if 1 //defined(PJ_WIN32) && PJ_WIN32!=0
     UT_ADD_TEST(&test_app.ut_app, timestamp_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #  else
@@ -264,12 +264,12 @@ static int features_tests(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, timer_test, 0);
 #endif
 
-    /* Very often sleep test failed on GitHub Windows CI, with
+    /* Very often sleep test failed on GitHub CI, with
        the thread sleeping for much longer than tolerated. So
        as a workaround, set it as exclusive.
      */
 #if INCLUDE_SLEEP_TEST
-#  if defined(PJ_WIN32) && PJ_WIN32!=0
+#  if 1 //defined(PJ_WIN32) && PJ_WIN32!=0
     UT_ADD_TEST(&test_app.ut_app, sleep_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #  else
