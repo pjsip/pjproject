@@ -596,8 +596,10 @@ jobs:
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
-    - name: get SSL info
-      run: ./pjlib-test-i386-Win32-vc14-Release.exe  | findstr /C:"ioqueue type" | findstr iocp-test-fail
+    - name: verify ioqueue type is iocp
+      run: |
+        cd pjlib/bin
+        ./pjlib-test-i386-Win32-vc14-Release.exe  | findstr /C:"ioqueue type" | findstr iocp
     - name: pjlib-test
       run: |
         cd pjlib/bin
