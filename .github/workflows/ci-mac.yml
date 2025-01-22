@@ -154,7 +154,7 @@ jobs:
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="-framework Network -framework Security" ./configure
     - name: config site
-      run: echo -e "#undef PJ_SSL_SOCK_IMP\n#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_APPLE\n" > pjlib/include/pj/config_site.h
+      run: echo -e "#define PJ_HAS_SSL_SOCK 1\n#undef PJ_SSL_SOCK_IMP\n#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_APPLE\n" > pjlib/include/pj/config_site.h
     - name: make
       run: $MAKE_FAST
     - name: set up Python
