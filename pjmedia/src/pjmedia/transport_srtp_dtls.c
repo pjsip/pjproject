@@ -1391,7 +1391,7 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
                 pj_sockaddr_print(&src_addr, addr, sizeof(addr), 3)));
 
             DTLS_UNLOCK(ds);
-            return PJ_EIGNORED;
+            return PJ_SUCCESS;
         }
 
         if (pj_sockaddr_cmp(&src_addr, &rem_addr) != 0) {
@@ -1404,7 +1404,7 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
                 pj_sockaddr_print(&rem_addr, raddr, sizeof(raddr), 3)));
 
             DTLS_UNLOCK(ds);
-            return PJ_EIGNORED;
+            return PJ_SUCCESS;
         }
 #endif
         ds->setup = DTLS_SETUP_PASSIVE;
