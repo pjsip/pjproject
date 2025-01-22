@@ -600,6 +600,7 @@ jobs:
       run: |
         cd pjlib/bin
         ./pjlib-test-i386-Win32-vc14-Release.exe  | findstr /C:"ioqueue type" | findstr iocp
+      shell: cmd
     - name: pjlib-test
       run: |
         cd pjlib/bin
