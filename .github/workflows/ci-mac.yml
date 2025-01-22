@@ -144,15 +144,17 @@ jobs:
     - name: pjsip-test
       run: make pjsip-test
 
-  gnu-tls-1:
+  apple-ssl-1:
     runs-on: macos-latest
-    name: GnuTLS / pjlib,util,pjmedia,pjnath
+    name: AppleSSL / pjlib,util,pjmedia,pjnath
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install gnutls swig
+      run: brew install swig
     - name: configure
-      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=`brew --prefix gnutls`
+      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="-framework Network -framework Security" ./configure
+    - name: config site
+      run: echo -e "#undef PJ_SSL_SOCK_IMP\n#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_APPLE\n" > pjlib/include/pj/config_site.h
     - name: make
       run: $MAKE_FAST
     - name: set up Python
@@ -163,8 +165,12 @@ jobs:
       run: cd pjsip-apps/src/swig && make
     - name: get SSL info
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
-    - name: verify gnu tls is used
-      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+2'
+    - name: verify Apple SSL is used
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+4'
+    - name: import private key
+      run: security import pjlib/build/privkey.p12 -k ~/Library/Keychains/login.keychain-db -P "pjsip" -T /usr/bin/codesign -T `pwd`/pjlib/bin/`ls pjlib/bin`
+    - name: unlock keychain
+      run: security unlock-keychain ~/Library/Keychains/login.keychain-db
     - name: pjlib-test
       run: make pjlib-test
     - name: pjlib-util-test
@@ -174,21 +180,23 @@ jobs:
     - name: pjnath-test
       run: make pjnath-test
 
-  gnu-tls-2:
+  apple-ssl-2:
     runs-on: macos-latest
-    name: GnuTLS / pjsip-test
+    name: AppleSSL / pjsip-test
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install gnutls swig
+      run: brew install swig
     - name: configure
-      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=`brew --prefix gnutls`
+      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="-framework Network -framework Security" ./configure
+    - name: config site
+      run: echo -e "#undef PJ_SSL_SOCK_IMP\n#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_APPLE\n" > pjlib/include/pj/config_site.h
     - name: make
       run: $MAKE_FAST
     - name: get SSL info
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
-    - name: verify gnu tls is used
-      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+2'
+    - name: verify Apple SSL is used
+      run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+4'
     - name: pjsip-test
       run: make pjsip-test
 
