@@ -35,6 +35,7 @@ struct pjmedia_vpx_packetizer
 {
     /* Current settings */
     pjmedia_vpx_packetizer_cfg cfg;
+    unsigned int picture_id;
 };
 
 /*
@@ -87,7 +88,7 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
                                           pj_uint8_t **payload,
                                           pj_size_t *payload_len)
 {
-    unsigned payload_desc_size = 1;
+    unsigned payload_desc_size = 4;
     unsigned max_size = pktz->cfg.mtu - payload_desc_size;
     unsigned remaining_size = (unsigned)bits_len - *bits_pos;
     unsigned out_size = (unsigned)*payload_len;
@@ -100,10 +101,18 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
     /* Set payload header */
     bits[0] = 0;
     if (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP8) {
+        bits[0] = 0x80;
+        bits[1] = 0x80;
+        bits[2] = ((pktz->picture_id & 0x7f00) >> 8) | 0x80;
+        bits[3] = pktz->picture_id & 0xff;
+
         /* Set N: Non-reference frame */
         if (!is_keyframe) bits[0] |= 0x20;
         /* Set S: Start of VP8 partition. */
-        if (*bits_pos == 0) bits[0] |= 0x10;
+        if (*bits_pos == 0) {
+            bits[0] |= 0x10;
+            ((pjmedia_vpx_packetizer *)pktz)->picture_id++;
+        }
     } else if (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP9) {
         /* Set P: Inter-picture predicted frame */
         if (!is_keyframe) bits[0] |= 0x40;
