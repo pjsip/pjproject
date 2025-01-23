@@ -1365,43 +1365,51 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
 #if defined(PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR) && PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR!=0
         pjmedia_transport_info info;
         pj_sockaddr src_addr, rem_addr;
+        pj_bool_t src_addr_avail = PJ_TRUE;
         pj_bool_t rem_addr_avail = PJ_TRUE;
+
         pjmedia_transport_get_info(ds->srtp->member_tp, &info);
         if (idx == RTP_CHANNEL) {
-            pj_sockaddr_cp(&src_addr, &info.src_rtp_name);
             if (!pj_sockaddr_has_addr(&ds->rem_addr)) {
                 rem_addr_avail = PJ_FALSE;
             } else {
                 pj_sockaddr_cp(&rem_addr, &ds->rem_addr);
             }
+            if (!pj_sockaddr_has_addr(&info.src_rtp_name)) {
+                src_addr_avail = PJ_FALSE;
+            } else {
+                pj_sockaddr_cp(&src_addr, &info.src_rtp_name);
+            }
         } else {
-            pj_sockaddr_cp(&src_addr, &info.src_rtcp_name);
             if (!pj_sockaddr_has_addr(&ds->rem_rtcp)) {
                 rem_addr_avail = PJ_FALSE;
             } else {
                 pj_sockaddr_cp(&rem_addr, &ds->rem_rtcp);
             }
-        }
-        if (!rem_addr_avail) {
-            char addr[PJ_INET6_ADDRSTRLEN];
-
-            PJ_LOG(2, (ds->base.name, "DTLS-SRTP %s ignoring %lu bytes "
-                "from [%s], remote address not available",
-                CHANNEL_TO_STRING(idx), (unsigned long)size,
-                pj_sockaddr_print(&src_addr, addr, sizeof(addr), 3)));
-
-            DTLS_UNLOCK(ds);
-            return PJ_SUCCESS;
+            if (!pj_sockaddr_has_addr(&info.src_rtcp_name)) {
+                src_addr_avail = PJ_FALSE;
+            } else {
+                pj_sockaddr_cp(&src_addr, &info.src_rtcp_name);
+            }
         }
 
-        if (pj_sockaddr_cmp(&src_addr, &rem_addr) != 0) {
-            char addr[PJ_INET6_ADDRSTRLEN], raddr[PJ_INET6_ADDRSTRLEN];
-            
-            PJ_LOG(2, (ds->base.name, "DTLS-SRTP %s ignoring message from [%s],"
-                "expecting from [%s]", 
-                CHANNEL_TO_STRING(idx), 
-                pj_sockaddr_print(&src_addr, addr, sizeof(addr), 3),
-                pj_sockaddr_print(&rem_addr, raddr, sizeof(raddr), 3)));
+        if (!src_addr_avail || !rem_addr_avail || 
+            pj_sockaddr_cmp(&src_addr, &rem_addr) != 0) 
+        {
+            char psrc_addr[PJ_INET6_ADDRSTRLEN] = "Unknown";
+            char prem_addr[PJ_INET6_ADDRSTRLEN] = "Unknown";
+
+            if (src_addr_avail) {
+                pj_sockaddr_print(&src_addr, psrc_addr, sizeof(psrc_addr), 3);
+            }
+            if (rem_addr_avail) {
+                pj_sockaddr_print(&rem_addr, prem_addr, sizeof(prem_addr), 3);
+            }
+
+            PJ_LOG(2, (ds->base.name, "DTLS-SRTP %s ignoring %lu bytes, "
+                "src addr [%s], expecting from [%s]",
+                CHANNEL_TO_STRING(idx), (unsigned long)size, 
+                psrc_addr, prem_addr));
 
             DTLS_UNLOCK(ds);
             return PJ_SUCCESS;
