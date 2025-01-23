@@ -536,8 +536,6 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
                             (pj_sockaddr_t*)listener_addr,
                             pj_sockaddr_get_len((pj_sockaddr_t*)listener_addr),
                             &newsock_param);
-    if (status != PJ_SUCCESS)
-        return status;
 
     if (status == PJ_SUCCESS || status == PJ_EPENDING) {
         pj_ssl_sock_info info;  
@@ -548,6 +546,9 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
             pj_sockaddr_cp(listener_addr, (pj_sockaddr_t*)&info.local_addr);
 
     }
+    else if (status != PJ_SUCCESS)
+        return status;
+
     status = update_factory_addr(listener, a_name);
     if (status != PJ_SUCCESS)
         return status;
