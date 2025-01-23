@@ -5,6 +5,9 @@ on:
       - 'master'
   pull_request:
     types: [opened, synchronize, reopened]
+variables:
+  CI_WIN_ARGS: -w 3 --shuffle
+  CI_MODE: --ci-mode
 jobs:
   default:
     runs-on: windows-latest
