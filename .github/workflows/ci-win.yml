@@ -86,7 +86,7 @@ jobs:
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjlib/bin
         $args = $env:CI_WIN_ARGS -split ' '
-        ./pjlib-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
+        ./pjlib-test-i386-Win32-vc14-Release.exe ${env:CI_WIN_ARGS} ${env:CI_MODE}
       shell: powershell
     - name: pjlib-util-test
       run: |
