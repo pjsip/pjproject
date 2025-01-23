@@ -536,6 +536,8 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
                             (pj_sockaddr_t*)listener_addr,
                             pj_sockaddr_get_len((pj_sockaddr_t*)listener_addr),
                             &newsock_param);
+    if (status != PJ_SUCCESS)
+        return status;
 
     if (status == PJ_SUCCESS || status == PJ_EPENDING) {
         pj_ssl_sock_info info;  
