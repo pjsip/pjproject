@@ -148,11 +148,12 @@ PJ_INLINE(void) ut_list_tests(ut_app_t *ut_app, const char *title)
 PJ_INLINE(pj_status_t) ut_run_tests(ut_app_t *ut_app, const char *title,
                                     int argc, char *argv[])
 {
-    pj_test_runner_param runner_prm;
-    pj_test_runner_param_default(&runner_prm);
     pj_test_runner *runner;
     pj_test_stat stat;
     pj_status_t status;
+    pj_test_runner_param runner_prm;
+
+    pj_test_runner_param_default(&runner_prm);
 
     if (ut_app->prm_shuffle) {
         PJ_LOG(3,(THIS_FILE, "Shuffling tests, random seed=%d",
