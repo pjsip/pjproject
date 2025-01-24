@@ -794,9 +794,9 @@ static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key,
 
 static void release_pending_op(pj_ioqueue_key_t *key, struct pending_op *op)
 {
-    pj_assert(key && op);
     int ref_cnt;
 
+    pj_assert(key && op);
     pj_ioqueue_lock_key(key);
     pj_list_erase(op);
     pj_list_push_back(&key->free_pending_list, op);
