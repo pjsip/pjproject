@@ -329,10 +329,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
     } else {
         sip_reg_uri = NULL;
     }
-
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
     pjsip_auth_clt_init( &acc->shared_auth_sess, pjsua_var.endpt, acc->pool, 0);
-#endif
 
     if (sip_reg_uri) {
         acc->srv_port = sip_reg_uri->port;
@@ -1300,6 +1297,9 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
     }
+
+    /* Shared authentication session */
+    acc->cfg.shared_auth = cfg->shared_auth;
 
     /* Registration */
     if (acc->cfg.reg_timeout != cfg->reg_timeout) {
@@ -2758,9 +2758,9 @@ static pj_status_t pjsua_regc_init(int acc_id)
     pjsua_init_tpselector(acc_id, &tp_sel);
     pjsip_regc_set_transport(acc->regc, &tp_sel);
 
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
-    pjsip_regc_set_auth_sess(acc->regc, &acc->shared_auth_sess);
-#endif
+    if (acc->cfg.shared_auth) {
+        pjsip_regc_set_auth_sess(acc->regc, &acc->shared_auth_sess);
+    }
 
     /* Set credentials
      */

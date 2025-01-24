@@ -903,7 +903,6 @@ PJ_DECL(pj_status_t) pjsip_dlg_update_remote_cap(pjsip_dialog *dlg,
                                                  const pjsip_msg *msg,
                                                  pj_bool_t strict);
 
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
 /**
  * set a shared auth session to be used by this dialog.
  * This will try to reuse authorization headers from another source
@@ -917,7 +916,6 @@ PJ_DECL(pj_status_t) pjsip_dlg_update_remote_cap(pjsip_dialog *dlg,
  */
 PJ_DECL(pj_status_t) pjsip_dlg_set_auth_sess(pjsip_dialog *dlg,
                                              pjsip_auth_clt_sess *session);
-#endif
 
 /**
  * @}

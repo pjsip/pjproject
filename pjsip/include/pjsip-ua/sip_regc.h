@@ -488,7 +488,6 @@ PJ_DECL(pj_status_t) pjsip_regc_update_expires( pjsip_regc *regc,
 PJ_DECL(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata);
 
 
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
 /**
  * set a shared auth session to be used by this register client.
  * This will try to reuse authorization headers from another source
@@ -502,7 +501,6 @@ PJ_DECL(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata);
  */
 PJ_DECL(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
                                               pjsip_auth_clt_sess *session );
-#endif
 
 PJ_END_DECL
 

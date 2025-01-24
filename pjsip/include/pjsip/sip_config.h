@@ -1227,23 +1227,6 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 /**
- * If this flag is set, the stack will allow sharing of a auth session.
- * The session can be set to each dialog and will try to reuse auth headers
- * if possible. This can drastically reduce the amount of messages, that are
- * required to communicate with the same account.
- *
- * May need to have PJSIP_AUTH_AUTO_SEND_NEXT and PJSIP_AUTH_HEADER_CACHING
- * enabled to work properly, and also will grow usage of the used pool for
- * the cached headers.
- *
- * Default: 0
- */
-#if !defined(PJSIP_SHARED_AUTH_SESSION)
-#   define PJSIP_SHARED_AUTH_SESSION        0
-#endif
-
-
-/**
  * Support qop="auth" directive.
  * This option also requires client to cache the last challenge offered by
  * server.

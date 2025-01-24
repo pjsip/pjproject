@@ -343,10 +343,8 @@ typedef struct pjsip_auth_clt_sess
     unsigned             cred_cnt;      /**< Number of credentials.         */
     pjsip_cred_info     *cred_info;     /**< Array of credential information*/
     pjsip_cached_auth    cached_auth;   /**< Cached authorization info.     */
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
-    pj_lock_t           *lock;          /**< Prevent concurrent usage when shared.*/
+    pj_lock_t           *lock;          /**< Prevent concurrent usage when shared. should only used in parent */
     struct pjsip_auth_clt_sess *parent; /**< allow a common parent for multiple sessions.*/
-#endif
 } pjsip_auth_clt_sess;
 
 

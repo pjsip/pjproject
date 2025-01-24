@@ -1556,7 +1556,6 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     return status;
 }
 
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
 PJ_DEF(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
                                               pjsip_auth_clt_sess *session ) {
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
@@ -1572,4 +1571,3 @@ PJ_DEF(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
     }
     return PJ_SUCCESS;
 }
-#endif

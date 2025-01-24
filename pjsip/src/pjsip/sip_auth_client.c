@@ -31,9 +31,7 @@
 #include <pj/guid.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
 #include <pj/lock.h>
-#endif
 
 
 #if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
@@ -108,7 +106,6 @@ const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
 #  define AUTH_TRACE_(expr)
 #endif
 
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
 #define DO_ON_PARENT_LOCKED(sess, call) \
     do { \
         pj_status_t on_parent, lock_status; \
@@ -129,7 +126,6 @@ const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
             return on_parent; \
         } \
     } while(0)
-#endif
 
 static void dup_bin(pj_pool_t *pool, pj_str_t *dst, const pj_str_t *src)
 {
@@ -737,7 +733,6 @@ static pjsip_cached_auth *find_cached_auth( pjsip_auth_clt_sess *sess,
                                             const pj_str_t *realm,
                                             pjsip_auth_algorithm_type algorithm_type)
 {
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
     pj_status_t lock_status;
     pj_bool_t with_parent = PJ_FALSE;
     pjsip_cached_auth * pauth = NULL;
@@ -755,7 +750,6 @@ static pjsip_cached_auth *find_cached_auth( pjsip_auth_clt_sess *sess,
     if (pauth != NULL) {
         return pauth;
     }
-#endif
 
     pjsip_cached_auth *auth = sess->cached_auth.next;
     while (auth != &sess->cached_auth) {
@@ -779,7 +773,6 @@ static const pjsip_cred_info* auth_find_cred( const pjsip_auth_clt_sess *sess,
 
     PJ_UNUSED_ARG(auth_scheme);
 
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
     pj_status_t lock_status;
     pj_bool_t with_parent = PJ_FALSE;
     const pjsip_cred_info * ptr = NULL;
@@ -797,7 +790,6 @@ static const pjsip_cred_info* auth_find_cred( const pjsip_auth_clt_sess *sess,
     if (ptr != NULL) {
         return ptr;
     }
-#endif
 
     for (i=0; i<sess->cred_cnt; ++i) {
         switch(sess->cred_info[i].data_type) {
@@ -860,12 +852,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
     sess->cred_info = NULL;
     pj_list_init(&sess->cached_auth);
 
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
     sess->parent = NULL;
     return pj_lock_create_simple_mutex(pool, "auth_clt_lock", &sess->lock);
-#else
-    return PJ_SUCCESS;
-#endif
 }
 
 
@@ -882,12 +870,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_deinit(pjsip_auth_clt_sess *sess)
         auth = auth->next;
     }
 
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
     sess->parent = NULL;
     return pj_lock_destroy(sess->lock);
-#else
-    return PJ_SUCCESS;
-#endif
 }
 
 
@@ -924,7 +908,6 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
         }
     }
 
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
     pj_status_t status, lock_status;
     if (sess->parent) {
         lock_status = pj_lock_acquire(sess->parent->lock);
@@ -945,7 +928,6 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
     if (status != PJ_SUCCESS) {
         return status;
     }
-#endif
 
     /* TODO note:
      * Cloning the full authentication client is quite a big task.
@@ -966,9 +948,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
                                                     const pjsip_cred_info *c)
 {
     PJ_ASSERT_RETURN(sess && c, PJ_EINVAL);
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
     DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_set_credentials(sess->parent, cred_cnt, c));
-#endif
 
     if (cred_cnt == 0) {
         sess->cred_cnt = 0;
@@ -1044,9 +1024,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_prefs(pjsip_auth_clt_sess *sess,
                                              const pjsip_auth_clt_pref *p)
 {
     PJ_ASSERT_RETURN(sess && p, PJ_EINVAL);
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
     DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_set_prefs(sess->parent, p));
-#endif
 
     pj_memcpy(&sess->pref, p, sizeof(*p));
     pj_strdup(sess->pool, &sess->pref.algorithm, &p->algorithm);
@@ -1064,9 +1042,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_get_prefs(pjsip_auth_clt_sess *sess,
                                              pjsip_auth_clt_pref *p)
 {
     PJ_ASSERT_RETURN(sess && p, PJ_EINVAL);
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
     DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_get_prefs(sess->parent, p));
-#endif
     pj_memcpy(p, &sess->pref, sizeof(pjsip_auth_clt_pref));
     return PJ_SUCCESS;
 }
@@ -1304,9 +1280,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
                      PJSIP_ENOTREQUESTMSG);
 
 
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
     DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_init_req(sess->parent, tdata));
-#endif
     /* Init list */
     pj_list_init(&added);
 
@@ -1658,9 +1632,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
                      rdata->msg_info.msg->line.status.code == 407,
                      PJSIP_EINVALIDSTATUS);
 
-#if defined(PJSIP_SHARED_AUTH_SESSION) && PJSIP_SHARED_AUTH_SESSION
     DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_reinit_req(sess->parent, rdata, old_request, new_request));
-#endif
 
     tdata = old_request;
     tdata->auth_retry = PJ_FALSE;
