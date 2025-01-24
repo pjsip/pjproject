@@ -5,6 +5,9 @@ on:
       - 'master'
   pull_request:
     types: [opened, synchronize, reopened]
+env:
+  CI_WIN_ARGS: -w 3 --shuffle
+  CI_MODE: --ci-mode
 jobs:
   default:
     runs-on: windows-latest
@@ -82,21 +85,24 @@ jobs:
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjlib/bin
-        ./pjlib-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }} ${{ vars.CI_MODE }}
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjlib-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
       shell: powershell
     - name: pjlib-util-test
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjlib-util/bin
-        ./pjlib-util-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjlib-util-test-i386-Win32-vc14-Release.exe $args
       shell: powershell
     - name: pjmedia-test
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjmedia/bin
-        ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjmedia-test-i386-Win32-vc14-Release.exe $args
       shell: powershell
 
   openssl-2:
@@ -161,7 +167,8 @@ jobs:
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjsip/bin
-        ./pjsip-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjsip-test-i386-Win32-vc14-Release.exe $args
       shell: powershell
     - name: python pjsua tests
       run: |
@@ -214,7 +221,8 @@ jobs:
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjnath/bin
-        ./pjnath-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjnath-test-i386-Win32-vc14-Release.exe $args
       shell: powershell
 
   gnu-tls:
@@ -333,28 +341,32 @@ jobs:
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjlib/bin
-        ./pjlib-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }} ${{ vars.CI_MODE }}
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjlib-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
       shell: powershell
     - name: pjlib-util-test
       run: |
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjlib-util/bin
-        ./pjlib-util-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjlib-util-test-i386-Win32-vc14-Release.exe $args
       shell: powershell
     - name: pjmedia-test
       run: |
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjmedia/bin
-        ./pjmedia-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjmedia-test-i386-Win32-vc14-Release.exe $args
       shell: powershell
     - name: pjnath-test
       run: |
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjnath/bin
-        ./pjnath-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }} ${{ vars.CI_MODE }}
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjnath-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
       shell: powershell
 
   vid-libvpx-schannel-2:
@@ -517,7 +529,8 @@ jobs:
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjsip/bin
-        ./pjsip-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }}
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjsip-test-i386-Win32-vc14-Release.exe $args
       shell: powershell
 
   build-win-vid-ffmpeg:

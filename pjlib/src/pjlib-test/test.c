@@ -37,12 +37,14 @@
 pj_pool_factory *mem;
 
 struct test_app_t test_app = {
-    .param_echo_sock_type = 0,
-    .param_echo_server    = ECHO_SERVER_ADDRESS,
-    .param_echo_port      = ECHO_SERVER_START_PORT,
-    .param_log_decor      = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-                            PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
-    .param_ci_mode        = PJ_FALSE,
+    {0},                                /* .ut_app */
+    0,                                  /* .param_echo_sock_type */
+    ECHO_SERVER_ADDRESS,                /* .param_echo_server */
+    ECHO_SERVER_START_PORT,             /* .param_echo_port */
+    PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
+        PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
+                                        /* .param_log_decor */
+    PJ_FALSE,                           /* .param_ci_mode */
 };
 
 int null_func()
@@ -391,7 +393,7 @@ int test_inner(int argc, char *argv[])
         }
     }
 
-    if (argc-1 > 0 && stat.nruns==argc-1) {
+    if (argc-1 > 0 && (int)stat.nruns==argc-1) {
         /* cmdline specifies test(s) to run, and the number of runs
          * matches that. That means all requested tests have been run.
          */

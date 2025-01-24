@@ -46,6 +46,8 @@
 #  include <mswsock.h>
 #endif
 
+/* For GetAcceptExSockaddrs() on MSVC2005 */
+#pragma comment(lib, "mswsock.lib")
 
 #if 0
 #  define TRACE(args) PJ_LOG(1,args)
