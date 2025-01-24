@@ -617,5 +617,6 @@ jobs:
     - name: pjlib-test
       run: |
         cd pjlib/bin
-        ./pjlib-test-i386-Win32-vc14-Release.exe ${{ vars.CI_WIN_ARGS }} ${{ vars.CI_MODE }}
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjlib-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
       shell: powershell
