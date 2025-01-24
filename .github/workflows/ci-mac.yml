@@ -6,8 +6,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 env:
-  CI_ARGS: ${{ vars.CI_MAC_ARGS }}
-  CI_MODE: ${{ vars.CI_MODE }}
+  CI_ARGS: -w 2 --shuffle --stdout-buf 1
+  CI_MODE: --ci-mode
   MAKE_FAST: make -j 2
 jobs:
   default-build:

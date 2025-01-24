@@ -45,6 +45,8 @@
 #  include <mswsock.h>
 #endif
 
+/* For GetAcceptExSockaddrs() on MSVC2005 */
+#pragma comment(lib, "mswsock.lib")
 
 /* The address specified in AcceptEx() must be 16 more than the size of
  * SOCKADDR (source: MSDN).

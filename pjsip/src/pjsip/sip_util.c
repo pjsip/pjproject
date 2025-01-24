@@ -1030,7 +1030,7 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
          tdata->tp_sel.type == PJSIP_TPSELECTOR_LISTENER) &&
         tdata->tp_sel.u.ptr)
     {
-        pjsip_transport_type_e tp_type;
+        pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
 
         if (tdata->tp_sel.type == PJSIP_TPSELECTOR_TRANSPORT)
             tp_type = tdata->tp_sel.u.transport->key.type;
