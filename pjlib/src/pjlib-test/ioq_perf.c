@@ -565,7 +565,7 @@ static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
 }
 
 static pj_ioqueue_epoll_flag epoll_flags[] = {
-#if PJ_HAS_LINUX_EPOLL
+#if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     PJ_IOQUEUE_EPOLL_EXCLUSIVE,
     PJ_IOQUEUE_EPOLL_ONESHOT,
     0,
