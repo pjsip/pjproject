@@ -545,9 +545,11 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
         if (status == PJ_SUCCESS)
             pj_sockaddr_cp(listener_addr, (pj_sockaddr_t*)&info.local_addr);
 
-    }
-    else if (status != PJ_SUCCESS)
+    } else {
+        pj_ssl_sock_close(listener->ssock);
+        listener->ssock = NULL;
         return status;
+    }
 
     status = update_factory_addr(listener, a_name);
     if (status != PJ_SUCCESS)
