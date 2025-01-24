@@ -1372,7 +1372,7 @@ static int tsx_resolve_error_test(unsigned tid)
  */
 static int tsx_terminate_resolving_test(unsigned tid)
 {
-    unsigned prev_delay;
+    unsigned prev_delay = 0;
     pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "  test3: terminate while resolving test"));

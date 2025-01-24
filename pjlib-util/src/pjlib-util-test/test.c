@@ -24,8 +24,10 @@
 
 pj_pool_factory *mem;
 struct test_app_t test_app = {
-    .param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-                       PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
+    {0},            /* ut_app */
+    PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
+        PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
+                    /* param_log_decor */
 };
 
 void app_perror(const char *msg, pj_status_t rc)
