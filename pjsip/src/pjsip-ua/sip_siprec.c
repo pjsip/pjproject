@@ -194,13 +194,18 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         }
     }
 
-    /* Try rs-metadata extension first */
+    /* 
+    * Updated to support RFC base content type extension
+    * https://datatracker.ietf.org/doc/html/draft-sipcore-siprec-fix-mediatype-00
+    */
+
+    /* Try rs-metadata first */
     pjsip_media_type_init2(&media_type, "application", "rs-metadata");
     
     metadata_part = pjsip_multipart_find_part(rdata->msg_info.msg->body,
                                          &media_type, NULL);
 
-    /* Fallback to rs-metadata+xml if needed - RFC7865 updates RFC7866*/
+    /* Fallback to XML extension rs-metadata+xml if needed */
     if (!metadata_part) {
         pjsip_media_type_init2(&media_type, "application", "rs-metadata+xml");
                               
