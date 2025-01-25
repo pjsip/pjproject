@@ -142,6 +142,9 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     const char *warn_text = NULL;
     pjsip_hdr res_hdr_list;
     unsigned mi;
+    pjsip_media_type media_type;
+    pjsip_multipart_part *metadata_part = NULL;
+
 
     /* Init return arguments. */
     if (p_tdata) *p_tdata = NULL;
@@ -191,14 +194,31 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         }
     }
 
-    status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
-                                        rdata->msg_info.msg->body,
-                                        metadata);
+    /* Try rs-metadata extension first */
+    pjsip_media_type_init2(&media_type, "application", "rs-metadata");
     
-    if(status != PJ_SUCCESS) {
+    metadata_part = pjsip_multipart_find_part(rdata->msg_info.msg->body,
+                                         &media_type, NULL);
+
+    /* Fallback to rs-metadata+xml if needed - RFC7865 updates RFC7866*/
+    if (!metadata_part) {
+        pjsip_media_type_init2(&media_type, "application", "rs-metadata+xml");
+                              
+        metadata_part = pjsip_multipart_find_part(rdata->msg_info.msg->body, 
+                                             &media_type, NULL);
+    }
+
+    /* Check if the metadata part exists */
+    if (!metadata_part) {
         code = PJSIP_SC_BAD_REQUEST;
-        warn_text = "SIPREC INVITE must have a 'rs-metadata' Content-Type";
+        warn_text = "SIPREC INVITE must have a content-type of 'rs-metadata' or with XML extension 'rs-metadata+xml'";
         goto on_return;
+    }
+
+    /* Get the metadata content */
+    if (metadata) {
+        metadata->ptr = (char*)metadata_part->body->data;
+        metadata->slen = metadata_part->body->len;
     }
 
     *options |= PJSIP_INV_REQUIRE_SIPREC;
@@ -258,28 +278,4 @@ on_return:
     }
 
     return status;
-}
-
-
-/**
- * Find siprec metadata from the message body
- */
-PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
-                                              pjsip_msg_body *body,
-                                              pj_str_t* metadata)
-{
-    pjsip_media_type app_metadata;
-    pjsip_multipart_part *metadata_part;
-
-    PJ_UNUSED_ARG(pool);
-    pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
-    metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
-
-    if(!metadata_part)
-        return PJ_ENOTFOUND;
-
-    metadata->ptr  = (char*)metadata_part->body->data;
-    metadata->slen = metadata_part->body->len;
-    
-    return PJ_SUCCESS;
 }
