@@ -427,7 +427,7 @@ static void pcap2wav(const struct args *args)
         ts_gap = pj_ntohl(pkt1.rtp->ts) - pj_ntohl(pkt0.rtp->ts) -
                  samples_cnt;
 
-        if (ts_gap <= param.info.clock_rate * GAP_IGNORE_SECONDS) { /* Ignore gap >30s */
+        if (ts_gap <= (long)param.info.clock_rate * GAP_IGNORE_SECONDS) { /* Ignore gap >30s */
             while (ts_gap >= (long)samples_per_frame) {
                 pcm_frame.buf = pcm;
                 pcm_frame.size = samples_per_frame * 2;

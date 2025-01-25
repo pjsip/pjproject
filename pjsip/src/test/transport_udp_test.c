@@ -29,7 +29,7 @@ static pj_status_t multi_transport_test(pjsip_transport *tp[], unsigned max_tp)
     int rc;
     unsigned i, num_tp=0;
     pj_str_t s;
-    pjsip_transport *other_udp_tp = NULL, *udp_tp;
+    pjsip_transport *other_udp_tp = NULL, *udp_tp = NULL;
     pj_sockaddr_in rem_addr;    
     pjsip_tpselector tp_sel;
 

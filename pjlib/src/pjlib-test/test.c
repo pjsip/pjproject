@@ -37,12 +37,14 @@
 pj_pool_factory *mem;
 
 struct test_app_t test_app = {
-    .param_echo_sock_type = 0,
-    .param_echo_server    = ECHO_SERVER_ADDRESS,
-    .param_echo_port      = ECHO_SERVER_START_PORT,
-    .param_log_decor      = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-                            PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
-    .param_ci_mode        = PJ_FALSE,
+    {0},                                /* .ut_app */
+    0,                                  /* .param_echo_sock_type */
+    ECHO_SERVER_ADDRESS,                /* .param_echo_server */
+    ECHO_SERVER_START_PORT,             /* .param_echo_port */
+    PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
+        PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
+                                        /* .param_log_decor */
+    PJ_FALSE,                           /* .param_ci_mode */
 };
 
 int null_func()
@@ -242,13 +244,13 @@ static int features_tests(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, hash_test, 0);
 #endif
 
-    /* Windows GH CI oftent fails with:
+    /* GH CI oftent fails with:
 
     07:27:13.217 ...testing frequency accuracy (pls wait)
     07:27:23.440 ....error: timestamp drifted by 3800 usec after 10020 msec
     */
 #if INCLUDE_TIMESTAMP_TEST
-#  if defined(PJ_WIN32) && PJ_WIN32!=0
+#  if 1 //defined(PJ_WIN32) && PJ_WIN32!=0
     UT_ADD_TEST(&test_app.ut_app, timestamp_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #  else
@@ -264,12 +266,12 @@ static int features_tests(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, timer_test, 0);
 #endif
 
-    /* Very often sleep test failed on GitHub Windows CI, with
+    /* Very often sleep test failed on GitHub CI, with
        the thread sleeping for much longer than tolerated. So
        as a workaround, set it as exclusive.
      */
 #if INCLUDE_SLEEP_TEST
-#  if defined(PJ_WIN32) && PJ_WIN32!=0
+#  if 1 //defined(PJ_WIN32) && PJ_WIN32!=0
     UT_ADD_TEST(&test_app.ut_app, sleep_test,
                 PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #  else
@@ -387,7 +389,7 @@ int test_inner(int argc, char *argv[])
         }
     }
 
-    if (argc-1 > 0 && stat.nruns==argc-1) {
+    if (argc-1 > 0 && (int)stat.nruns==argc-1) {
         /* cmdline specifies test(s) to run, and the number of runs
          * matches that. That means all requested tests have been run.
          */
