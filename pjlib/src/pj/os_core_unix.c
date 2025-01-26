@@ -146,22 +146,18 @@ struct pj_event_t
 };
 #endif  /* PJ_HAS_EVENT_OBJ */
 
+struct pj_barrier_t {
 #if defined(_POSIX_BARRIERS) && _POSIX_BARRIERS >= 200112L
-/* pthread_barrier is supported. */
-struct pj_barrier_t {
+    /* pthread_barrier is supported. */
     pthread_barrier_t barrier;
-};
-
 #else
-/* pthread_barrier is not supported. */
-struct pj_barrier_t {
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-    unsigned count;
-    unsigned trip_count;
-};
-
+    /* pthread_barrier is not supported. */
+    pj_mutex_t          mutex;
+    pthread_cond_t      cond;
+    unsigned            count;
+    unsigned            trip_count;
 #endif
+};
 
 /*
  * Flag and reference counter for PJLIB instance.
@@ -2154,14 +2150,16 @@ pj_status_t pj_barrier_destroy(pj_barrier_t *barrier) {
 pj_status_t pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) {
     pj_barrier_t *barrier;
     int rc;
+    pj_status_t
 
     PJ_ASSERT_RETURN(pool && p_barrier, PJ_EINVAL);
     barrier = (pj_barrier_t *)pj_pool_zalloc(pool, sizeof(pj_barrier_t));
     if (barrier == NULL)
         return PJ_ENOMEM;
-    rc = pthread_mutex_init(&barrier->mutex, &attr);
-    if (rc != 0)
-        return PJ_RETURN_OS_ERROR(rc);
+    status = init_mutex(&barrier->mutex, "barrier%p", PJ_MUTEX_SIMPLE);
+    if (status != PJ_SUCCESS)
+        return status;
+
     pthread_cond_init(&barrier->cond, NULL);
     barrier->count = 0;
     barrier->trip_count = trip_count;
@@ -2175,18 +2173,23 @@ pj_status_t pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t
 pj_status_t pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) {
     PJ_UNUSED_ARG(flags);
 
-    pthread_mutex_lock(&barrier->mutex);
+    pj_bool_t is_last = PJ_FALSE;
+
+    pthread_mutex_lock(&barrier->mutex.mutex);
     barrier->count++;
     if (barrier->count >= barrier->trip_count)
     {
         barrier->count = 0;
         pthread_cond_broadcast(&barrier->cond);
+        is_last = PJ_TRUE;
     }
     else
     {
-        pthread_cond_wait(&barrier->cond, &barrier->mutex);
+        pthread_cond_wait(&barrier->cond, &barrier->mutex.mutex);
     }
-    pthread_mutex_unlock(&barrier->mutex);
+    pthread_mutex_unlock(&barrier->mutex.mutex);
+
+    rerutn is_last;
 }
 
 /**
@@ -2194,11 +2197,7 @@ pj_status_t pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) {
  */
 pj_status_t pj_barrier_destroy(pj_barrier_t *barrier) {
     pthread_cond_destroy(&barrier->cond);
-    int status = pthread_mutex_destroy(&barrier->mutex);
-    if (status == 0)
-        return PJ_SUCCESS;
-    else
-        return PJ_RETURN_OS_ERROR(status);
+    return pj_mutex_destroy(&barrier->mutex);
 }
 
 #endif  // _POSIX_BARRIERS
