@@ -2150,7 +2150,7 @@ pj_status_t pj_barrier_destroy(pj_barrier_t *barrier) {
 pj_status_t pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) {
     pj_barrier_t *barrier;
     int rc;
-    pj_status_t
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && p_barrier, PJ_EINVAL);
     barrier = (pj_barrier_t *)pj_pool_zalloc(pool, sizeof(pj_barrier_t));
