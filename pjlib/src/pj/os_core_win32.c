@@ -131,16 +131,16 @@ struct pj_barrier_t {
 };
 #elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
 struct pj_barrier_t {
-    CRITICAL_SECTION mutex;
-    CONDITION_VARIABLE cond;
-    unsigned count;
-    unsigned waiting;
+    CRITICAL_SECTION        mutex;
+    CONDITION_VARIABLE      cond;
+    unsigned                count;
+    unsigned                waiting;
 };
 #else
 struct pj_barrier_t {
-    HANDLE cond;    /* Semaphore */
-    LONG count;     /* Number of threads required to pass the barrier */
-    LONG waiting;   /* Number of threads waiting at the barrier */
+    HANDLE                  cond;   /* Semaphore */
+    LONG                    count;  /* Number of threads required to pass the barrier */
+    LONG                    waiting;/* Number of threads waiting at the barrier */
 };
 #endif
 
@@ -1596,8 +1596,8 @@ pj_status_t pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t
     return PJ_SUCCESS;
 #else
     barrier->cond = CreateSemaphore(NULL,
-                                    0,      /* initial count */
-                                    count,  /* max count */
+                                    0,          /* initial count */
+                                    trip_count, /* max count */
                                     NULL);
     if (!barrier->cond)
         return pj_get_os_error();
@@ -1640,12 +1640,11 @@ pj_status_t pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) {
 #elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
     PJ_UNUSED_ARG(flags);
     EnterCriticalSection(&barrier->mutex);
-    barrier->waiting++;
-    if (barrier->waiting == barrier->count)
+    if (++barrier->waiting == barrier->count)
     {
         barrier->waiting = 0;
-        WakeAllConditionVariable(&barrier->cond);
         LeaveCriticalSection(&barrier->mutex);
+        WakeAllConditionVariable(&barrier->cond);
         return PJ_TRUE;
     }
     else
@@ -1659,12 +1658,13 @@ pj_status_t pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) {
     }
 #else
     PJ_UNUSED_ARG(flags);
+
     if (InterlockedIncrement(&barrier->waiting) == barrier->count)
     {
-        LONG previousCount;
+        LONG previousCount = 0;
         barrier->waiting = 0;
         /* Release all threads waiting on the semaphore */
-        if (ReleaseSemaphore(barrier->cond, barrier->count, &previousCount))
+        if (barrier->count == 1 || ReleaseSemaphore(barrier->cond, barrier->count - 1, &previousCount))
         {
             PJ_ASSERT_RETURN(previousCount == 0, PJ_EBUG);
             return PJ_TRUE;
@@ -1672,14 +1672,12 @@ pj_status_t pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) {
         else
             return pj_get_os_error();
     }
+
+    DWORD rc = WaitForSingleObject(barrier->cond, INFINITE);
+    if (rc == WAIT_OBJECT_0)
+        return PJ_FALSE;
     else
-    {
-        DWORD rc = WaitForSingleObject(barrier->cond, INFINITE);
-        if (rc == WAIT_OBJECT_0)
-            return PJ_FALSE;
-        else
-            return pj_get_os_error();
-    }
+        return pj_get_os_error();
 #endif
 }
 

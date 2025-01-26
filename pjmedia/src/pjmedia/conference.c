@@ -2965,10 +2965,6 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     begin = conf->lower_bound;
     end = conf->upper_bound;
 
-#ifdef CONF_DEBUG
-    int threads[IS_PARALLEL ? 64 : 1] = {0};
-#endif //CONF_DEBUG
-
     /* Step 1 initialization 
      * Single threaded loop to get the active_ports[] (transmitters) 
      * and active_listener[] (receivers) arrays.
@@ -2985,13 +2981,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         {
             /* Reset auto adjustment level for mixed signal. */
             conf_port->mix_adj = NORMAL_LEVEL;
-#if 0
-            /* We need not reset buffer, we just want to copy the first (and probably only) frame there. */
-            if (conf_port->transmitter_cnt > 1) {
-                pj_bzero( conf_port->mix_buf,
-                          conf->samples_per_frame * sizeof(conf_port->mix_buf[0]) );
-            }
-#endif
+
             if (conf_port->transmitter_cnt && conf_port->tx_setting != PJMEDIA_PORT_DISABLE) {
 
                 /* We need not reset mix_buf, we just want to copy the first 
@@ -3067,8 +3057,9 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                                  conf->samples_per_frame);
             /* MUST set frame type */
             pj_assert(frame->type != PJMEDIA_FRAME_TYPE_NONE);
+            conf->sound_port = NULL;
         }
-
+        conf->frame = NULL;
     }
 
     /* Perform any queued operations that need to be synchronized with
@@ -3080,10 +3071,6 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         handle_op_queue(conf);
         pj_log_pop_indent();
     }
-
-    TRACE_( (THIS_FILE, "Ports processed by omp team's threads 0:%d, 1:%d, 2:%d, 3:%d, 4:%d, 5:%d, 6:%d, 7:%d, 8:%d, 9:%d, 10:%d, 11:%d, 12:%d, 13:%d, 14:%d, 15:%d.",
-              threads[0], threads[1], threads[2], threads[3], threads[4], threads[5], threads[6], threads[7],
-              threads[8], threads[9], threads[10], threads[11], threads[12], threads[13], threads[14], threads[15]) );
 
 #ifdef REC_FILE
     if (fhnd_rec == NULL)
