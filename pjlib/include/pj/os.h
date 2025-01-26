@@ -1093,6 +1093,89 @@ PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t *event);
  */
 #endif  /* PJ_HAS_EVENT_OBJ */
 
+
+ /* **************************************************************************/
+ /**
+  * @defgroup PJ_BARRIER_SEC Barrier sections.
+  * @ingroup PJ_OS
+  * @{
+  * This module provides abstraction to pj_barrier_t - synchronization barrier.
+  * It allows threads to block until all participating threads have reached
+  * the barrier,ensuring synchronization at specific points in execution.
+  * pj_barrier_t provides a barrier mechanism for synchronizing threads in 
+  * a multithreaded application, similar to 
+  * the POSIX pthread_barrier_wait or Windows EnterSynchronizationBarrier.
+  */
+
+/**
+ * Flags that control the behavior of the barrier
+ * Supported on Windows platform starting from Windows 8
+ * Otherwize, the flags are ignored.
+ */
+enum pj_barrier_flags {
+    /* Specifies that the thread entering the barrier should block
+     * immediately until the last thread enters the barrier. */
+    PJ_BARRIER_FLAGS_BLOCK_ONLY = 1,
+
+    /* Specifies that the thread entering the barrier should spin until
+     * the last thread enters the barrier,
+     * even if the spinning thread exceeds the barrier's maximum spin count.*/
+    PJ_BARRIER_FLAGS_SPIN_ONLY = 2,
+
+    /* Specifies that the function can skip the work required to ensure
+     * that it is safe to delete the barrier, which can improve performance.
+     * All threads that enter this barrier must specify the flag;
+     * otherwise, the flag is ignored.
+     * This flag should be used only if the barrier will never be deleted.
+     * "Never" means "when some thread is waiting on this barrier".
+     */
+    PJ_BARRIER_FLAGS_NO_DELETE = 4
+};
+
+/**
+ * Create a barrier object.
+ * pj_barrier_create() creates a barrier object that can be used to synchronize threads.
+ * The barrier object is initialized with a trip count that specifies the number of threads
+ * that must call pj_barrier_wait() before any are allowed to proceed.
+ * 
+ * @param pool The pool to allocate the barrier object.
+ * @param trip_count The number of threads that must call pj_barrier_wait() before any are allowed to proceed.
+ * @param p_barrier Pointer to hold the barrier object upon return.
+ * 
+ * @return PJ_SUCCESS on success, or the error code.
+ */
+pj_status_t pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier);
+
+/**
+ * Destroy a barrier object.
+ * pj_barrier_destroy() destroys a barrier object and releases any resources associated with the barrier.
+ * 
+ * @param barrier The barrier to destroy.
+ * 
+ * @return PJ_SUCCESS on success, or the error code.
+ */
+pj_status_t pj_barrier_destroy(pj_barrier_t *barrier);
+
+/** 
+ * Wait for all threads to reach the barrier
+ * pj_barrier_wait() allows threads to block until all participating threads have reached the barrier,
+ * ensuring synchronization at specific points in execution.
+ * It provides a barrier mechanism for synchronizing threads in a multithreaded application,
+ * similar to the POSIX pthread_barrier_wait or  Windows EnterSynchronizationBarrier.
+ * 
+ * @param barrier The barrier to wait on
+ * @param flags Flags that control the behavior of the barrier (combination of pj_barrier_flags)
+ * 
+ * @return Returns PJ_TRUE for a single (arbitrary) thread synchronized
+ * at the barrier and PJ_FALSE for each of the other threads.
+ * Otherwise, an error number shall be returned to indicate the error.
+ */
+pj_status_t pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags);
+
+  /**
+  * @}
+  */
+
 /* **************************************************************************/
 /**
  * @addtogroup PJ_TIME Time Data Type and Manipulation.

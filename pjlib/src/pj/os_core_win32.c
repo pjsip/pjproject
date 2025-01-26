@@ -123,6 +123,28 @@ struct pj_atomic_t
 };
 
 /*
+ * Implementation of pj_barrier_t.
+ */
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+struct pj_barrier_t {
+    SYNCHRONIZATION_BARRIER sync_barrier;
+};
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+struct pj_barrier_t {
+    CRITICAL_SECTION mutex;
+    CONDITION_VARIABLE cond;
+    unsigned count;
+    unsigned waiting;
+};
+#else
+struct pj_barrier_t {
+    HANDLE cond;    /* Semaphore */
+    LONG count;     /* Number of threads required to pass the barrier */
+    LONG waiting;   /* Number of threads waiting at the barrier */
+};
+#endif
+
+/*
  * Flag and reference counter for PJLIB instance.
  */
 static int initialized;
@@ -1545,6 +1567,121 @@ PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
 }
 
 #endif  /* PJ_HAS_EVENT_OBJ */
+
+///////////////////////////////////////////////////////////////////////////////
+
+/*
+ * pj_barrier_create()
+ */
+pj_status_t pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) {
+    pj_barrier_t *barrier;
+    PJ_ASSERT_RETURN(pool && p_barrier, PJ_EINVAL);
+    barrier = (pj_barrier_t *)pj_pool_zalloc(pool, sizeof(pj_barrier_t));
+    if (barrier == NULL)
+        return PJ_ENOMEM;
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+    if (InitializeSynchronizationBarrier(&barrier->sync_barrier, trip_count, -1))
+    {
+        *p_barrier = barrier;
+        return PJ_SUCCESS;
+    }
+    else
+        return pj_get_os_error();
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+    InitializeCriticalSection(&barrier->mutex);
+    InitializeConditionVariable(&barrier->cond);
+    barrier->count = trip_count;
+    barrier->waiting = 0;
+    *p_barrier = barrier;
+    return PJ_SUCCESS;
+#else
+    barrier->cond = CreateSemaphore(NULL,
+                                    0,      /* initial count */
+                                    count,  /* max count */
+                                    NULL);
+    if (!barrier->cond)
+        return pj_get_os_error();
+    barrier->count = trip_count;
+    barrier->waiting = 0;
+    *p_barrier = barrier;
+    return PJ_SUCCESS;
+#endif
+}
+
+/*
+ * pj_barrier_destroy()
+ */
+pj_status_t pj_barrier_destroy(pj_barrier_t *barrier) {
+    PJ_ASSERT_RETURN(barrier, PJ_EINVAL);
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+    DeleteSynchronizationBarrier(&barrier->sync_barrier);
+    return PJ_SUCCESS;
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+    DeleteCriticalSection(&barrier->mutex);
+    return PJ_SUCCESS;
+#else
+    if (CloseHandle(barrier->cond))
+        return PJ_SUCCESS;
+    else
+        return pj_get_os_error();
+#endif
+}
+
+/*
+ * pj_barrier_wait()
+ */
+pj_status_t pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) {
+    PJ_ASSERT_RETURN(barrier, PJ_EINVAL);
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+    DWORD dwFlags = ((flags & PJ_BARRIER_FLAGS_BLOCK_ONLY) ? SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY : 0) |
+        ((flags & PJ_BARRIER_FLAGS_SPIN_ONLY) ? SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY : 0) |
+        ((flags & PJ_BARRIER_FLAGS_NO_DELETE) ? SYNCHRONIZATION_BARRIER_FLAGS_NO_DELETE : 0);
+    return EnterSynchronizationBarrier(&barrier->sync_barrier, dwFlags);
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+    PJ_UNUSED_ARG(flags);
+    EnterCriticalSection(&barrier->mutex);
+    barrier->waiting++;
+    if (barrier->waiting == barrier->count)
+    {
+        barrier->waiting = 0;
+        WakeAllConditionVariable(&barrier->cond);
+        LeaveCriticalSection(&barrier->mutex);
+        return PJ_TRUE;
+    }
+    else
+    {
+        BOOL rc = SleepConditionVariableCS(&barrier->cond, &barrier->mutex, INFINITE);
+        LeaveCriticalSection(&barrier->mutex);
+        if (rc)
+            return PJ_FALSE;
+        else
+            return pj_get_os_error();
+    }
+#else
+    PJ_UNUSED_ARG(flags);
+    if (InterlockedIncrement(&barrier->waiting) == barrier->count)
+    {
+        LONG previousCount;
+        barrier->waiting = 0;
+        /* Release all threads waiting on the semaphore */
+        if (ReleaseSemaphore(barrier->cond, barrier->count, &previousCount))
+        {
+            PJ_ASSERT_RETURN(previousCount == 0, PJ_EBUG);
+            return PJ_TRUE;
+        }
+        else
+            return pj_get_os_error();
+    }
+    else
+    {
+        DWORD rc = WaitForSingleObject(barrier->cond, INFINITE);
+        if (rc == WAIT_OBJECT_0)
+            return PJ_FALSE;
+        else
+            return pj_get_os_error();
+    }
+#endif
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 #if defined(PJ_TERM_HAS_COLOR) && PJ_TERM_HAS_COLOR != 0

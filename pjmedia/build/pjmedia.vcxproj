@@ -614,6 +614,7 @@
     <ClCompile Include="..\src\pjmedia\clock_thread.c" />
     <ClCompile Include="..\src\pjmedia\codec.c" />
     <ClCompile Include="..\src\pjmedia\conference.c" />
+    <ClCompile Include="..\src\pjmedia\conf_openmp.c" />
     <ClCompile Include="..\src\pjmedia\conf_switch.c" />
     <ClCompile Include="..\src\pjmedia\converter.c" />
     <ClCompile Include="..\src\pjmedia\converter_libswscale.c" />
