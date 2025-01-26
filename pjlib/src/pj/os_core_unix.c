@@ -2149,7 +2149,6 @@ pj_status_t pj_barrier_destroy(pj_barrier_t *barrier) {
  */
 pj_status_t pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) {
     pj_barrier_t *barrier;
-    int rc;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && p_barrier, PJ_EINVAL);
@@ -2189,7 +2188,7 @@ pj_status_t pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) {
     }
     pthread_mutex_unlock(&barrier->mutex.mutex);
 
-    rerutn is_last;
+    return is_last;
 }
 
 /**
