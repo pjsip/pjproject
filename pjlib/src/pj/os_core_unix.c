@@ -146,7 +146,7 @@ struct pj_event_t
 };
 #endif  /* PJ_HAS_EVENT_OBJ */
 
-#if defined(_POSIX_BARRIERS)
+#if defined(_POSIX_BARRIERS) && _POSIX_BARRIERS >= 200112L
 /* pthread_barrier is supported. */
 struct pj_barrier_t {
     pthread_barrier_t barrier;
@@ -2097,7 +2097,7 @@ PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
 #endif  /* PJ_HAS_EVENT_OBJ */
 
 ///////////////////////////////////////////////////////////////////////////////
-#if defined(_POSIX_BARRIERS)
+#if defined(_POSIX_BARRIERS) && _POSIX_BARRIERS >= 200112L
     /* pthread_barrier is supported. */
 
 /**
