@@ -1213,6 +1213,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     pj_ssl_sock_param ssock_param;
     pj_sockaddr local_addr;
     pj_str_t remote_name;
+    pjsip_server_addresses server_addr;
     pj_status_t status;
 
     /* Sanity checks */
@@ -1232,12 +1233,14 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                                    POOL_TP_INIT, POOL_TP_INC);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
-    /* Get remote host name from tdata */
-    if (tdata)
+    /* Get remote host name and DNS queried server addresses from tdata */
+    if (tdata) {
         remote_name = tdata->dest_info.name;
-    else
+        server_addr = tdata->dest_info.addr;
+    } else {
         pj_bzero(&remote_name, sizeof(remote_name));
-
+        pj_bzero(&server_addr, sizeof(server_addr));
+    }
     /* Build SSL socket param */
     pj_ssl_sock_param_default(&ssock_param);
     ssock_param.sock_af = (factory->type & PJSIP_TRANSPORT_IPV6) ?
@@ -1314,7 +1317,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     /* Create the transport descriptor */
     status = tls_create(listener, pool, ssock, PJ_FALSE, &local_addr, 
-                        rem_addr, &remote_name, &tdata->dest_info.addr, glock, &tls);
+                        rem_addr, &remote_name, &server_addr, glock, &tls);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -1646,12 +1649,13 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
 static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
 {
     pj_bool_t(*verify_cb)(const pjsip_tls_on_verify_param * param) = NULL;
-    struct tls_listener* tls_list = NULL;
     struct tls_transport* tls_trans = NULL;
 
     if (is_server) {
-       tls_list = (struct tls_listener*)pj_ssl_sock_get_user_data(ssock);
-       verify_cb = tls_list->tls_setting.on_verify_cb;
+        struct tls_listener* tls;
+
+        tls = (struct tls_listener*)pj_ssl_sock_get_user_data(ssock);
+        verify_cb = tls->tls_setting.on_verify_cb;
     } else {
         tls_trans = (struct tls_transport*)pj_ssl_sock_get_user_data(ssock);
         verify_cb = tls_trans->on_verify_cb;
