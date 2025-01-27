@@ -289,12 +289,6 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
         metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
     }
 
-    /* Get the metadata content */
-    if (metadata) {
-        metadata->ptr = (char*)metadata_part->body->data;
-        metadata->slen = metadata_part->body->len;
-    }
-
     if(!metadata_part)
         return PJ_ENOTFOUND;
 
