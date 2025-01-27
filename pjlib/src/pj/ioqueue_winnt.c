@@ -50,7 +50,7 @@
 #pragma comment(lib, "mswsock.lib")
 
 #if 0
-#  define TRACE(args) PJ_LOG(1,args)
+#  define TRACE(args) PJ_LOG(3,args)
 #else
 #  define TRACE(args)
 #endif
@@ -60,6 +60,15 @@
  * SOCKADDR (source: MSDN).
  */
 #define ACCEPT_ADDR_LEN     (sizeof(pj_sockaddr_in)+16)
+
+
+/* Timeout for cancelling pending operations in ioqueue destroy.
+ * Upon ioqueue destroy, all keys must be unregistered and all pending
+ * operations must be cancelled. As cancelling ops is asynchronous,
+ * IOCP destroy may need to wait for the maximum time specified here.
+ */
+#define TIMEOUT_CANCEL_OP   5000
+
 
 typedef struct generic_overlapped
 {
@@ -137,7 +146,7 @@ struct pj_ioqueue_key_t
 {
     PJ_DECL_LIST_MEMBER(struct pj_ioqueue_key_t);
 
-    pj_pool_t*          pool;
+    pj_pool_t          *pool;
     pj_ioqueue_t       *ioqueue;
     HANDLE              hnd;
     void               *user_data;
@@ -411,7 +420,13 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
 
     rc = sizeof(union operation_key);
 
-    /* Check that sizeof(pj_ioqueue_op_key_t) makes sense. */
+    /* Check that sizeof(pj_ioqueue_op_key_t) makes sense.
+     * IOCP operations require some buffers (WSAOVERLAPPED, etc) which is
+     * represented by operation_key. The pj_ioqueue_op_key_t also holds
+     * three important pointers: activesock_data, user_data, and
+     * app supplied op-key (at .internal__[31]), so pj_ioqueue_op_key_t size
+     * must cover all above.
+     */
     PJ_ASSERT_RETURN(sizeof(pj_ioqueue_op_key_t)-3*sizeof(void*) >= 
                      sizeof(union operation_key), PJ_EBUG);
 
@@ -488,9 +503,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
     pj_ioqueue_key_t *key, *next;
     pj_time_val stop;
 
-    /* Timeout for keys cancelled ops */
-    enum { WAIT_KEY_MS = 5000 };
-
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(ioqueue, PJ_EINVAL);
 
@@ -514,9 +526,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
 
     pj_lock_release(ioqueue->lock);
 
-    /* Wait keys cancelling any pending ops. */
+    /* Wait cancelling pending ops. */
     pj_gettickcount(&stop);
-    stop.msec += WAIT_KEY_MS;
+    stop.msec += TIMEOUT_CANCEL_OP;
     pj_time_val_normalize(&stop);
 
     while (1) {
@@ -532,8 +544,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
         pj_gettickcount(&timeout);
         if (PJ_TIME_VAL_GTE(timeout, stop)) {
             PJ_LOG(3, (THIS_FILE, "Warning, IOCP destroy timeout in waiting "
-                       "for canceling ops, after %dms, pending keys=%d",
-                       WAIT_KEY_MS, pending_key_cnt));
+                       "for cancelling ops, after %dms, pending keys=%d",
+                       TIMEOUT_CANCEL_OP, pending_key_cnt));
             break;
         }
     }
