@@ -102,8 +102,25 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                                 pjsip_endpoint *endpt,
                                                 pjsip_tx_data **p_tdata);
 
-PJ_END_DECL
 
+/**
+ * Find siprec metadata information from the message body
+ * with "rs-metadata" Content-Type.
+ *
+ * @param pool               Pool to allocate memory.
+ * @param body               The message body.
+ * @param metadata           If metadata is found, this variable will be
+ *                           populated with the extracted data.
+ *
+ * @return                   Return PJ_SUCCESS if metadata is found,
+ *                           otherwise return PJ_ENOTFOUND.
+ */
+PJ_DECL(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
+                                                pjsip_msg_body *body,
+                                                pj_str_t* metadata);
+
+
+PJ_END_DECL
 
 /**
  * @}
