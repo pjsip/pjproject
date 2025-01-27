@@ -484,7 +484,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
 
         pj_list_push_back(&ioqueue->free_list, key);
     }
-    ioqueue->max_fd = pj_list_size(&ioqueue->free_list); // max_fd;
+    ioqueue->max_fd = max_fd;
 
     *p_ioqueue = ioqueue;
 
@@ -545,7 +545,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
         if (PJ_TIME_VAL_GTE(timeout, stop)) {
             PJ_LOG(3, (THIS_FILE, "Warning, IOCP destroy timeout in waiting "
                        "for cancelling ops, after %dms, pending keys=%d",
-                       TIMEOUT_CANCEL_OP, pending_key_cnt));
+                       TIMEOUT_CANCEL_OP, (int)pending_key_cnt));
             break;
         }
     }
