@@ -260,7 +260,7 @@ on_return:
     return status;
 }
 
-    /**
+/**
  * Find siprec metadata from the message body
  */
 PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
@@ -274,18 +274,15 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
     * Updated to support RFC base content type extension
     * https://datatracker.ietf.org/doc/html/draft-sipcore-siprec-fix-mediatype-00
     */
-
-    metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL); 
+    metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
 
     /* Try rs-metadata first */
     pjsip_media_type_init2(&application_metadata, "application", "rs-metadata");
-
     metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
 
     /* Fallback to XML extension rs-metadata+xml if needed */
     if (!metadata_part) {
         pjsip_media_type_init2(&application_metadata, "application", "rs-metadata+xml");
-                              
         metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
     }
 
