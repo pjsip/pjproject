@@ -194,7 +194,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
                                         rdata->msg_info.msg->body,
                                         metadata);
-    
+
     if(status != PJ_SUCCESS) {
         code = PJSIP_SC_BAD_REQUEST;
         warn_text = "SIPREC INVITE must have a content-type of 'rs-metadata' or with XML extension 'rs-metadata+xml'";
@@ -260,6 +260,7 @@ on_return:
     return status;
 }
 
+
 /**
  * Find siprec metadata from the message body
  */
@@ -274,8 +275,6 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
     * Updated to support RFC base content type extension
     * https://datatracker.ietf.org/doc/html/draft-sipcore-siprec-fix-mediatype-00
     */
-    metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
-
     /* Try rs-metadata first */
     pjsip_media_type_init2(&application_metadata, "application", "rs-metadata");
     metadata_part = pjsip_multipart_find_part(body, &application_metadata, NULL);
@@ -289,8 +288,8 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
     if(!metadata_part)
         return PJ_ENOTFOUND;
 
-    metadata->ptr = (char*)metadata_part->body->data;
+    metadata->ptr  = (char*)metadata_part->body->data;
     metadata->slen = metadata_part->body->len;
-    
+
     return PJ_SUCCESS;
 }
