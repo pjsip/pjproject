@@ -705,7 +705,7 @@
 
 
 /**
- * Speex Accoustic Echo Cancellation (AEC).
+ * Speex Acoustic Echo Cancellation (AEC).
  * By default is enabled.
  */
 #ifndef PJMEDIA_HAS_SPEEX_AEC
@@ -735,7 +735,7 @@
 
 
 /**
- * WebRtc Accoustic Echo Cancellation (AEC).
+ * WebRtc Acoustic Echo Cancellation (AEC).
  * By default is disabled.
  */
 #ifndef PJMEDIA_HAS_WEBRTC_AEC
