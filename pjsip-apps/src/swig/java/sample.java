@@ -25,6 +25,11 @@ import org.pjsip.pjsua2.app.*;
 class MyObserver implements MyAppObserver {
         private static MyCall currentCall = null;
         private boolean del_call_scheduled = false;
+        private MyApp app = null;
+        
+        public MyObserver(MyApp app_) {
+            app = app_;
+        }
         
         public void check_call_deletion()
         {
@@ -84,6 +89,11 @@ class MyObserver implements MyAppObserver {
         
         @Override
         public void notifyCallMediaEvent(MyCall call, OnCallMediaEventParam prm) {}
+
+        @Override
+        public void notifyTimer(OnTimerParam prm) {
+            app.ep.utilLogWrite(3, "-TIMER-", "OnTimer invoked: user data=" + prm.getUserData());
+        }
 }
 
 class MyShutdownHook extends Thread {
@@ -103,7 +113,7 @@ class MyShutdownHook extends Thread {
 
 public class sample {
         private static MyApp app = new MyApp();
-        private static MyObserver observer = new MyObserver();
+        private static MyObserver observer = new MyObserver(app);
         private static MyAccount account = null;
         private static AccountConfig accCfg = null;
         private static MyCall call = null;
@@ -124,6 +134,9 @@ public class sample {
         private static void runWorker() {
                 try {                                   
                         app.init(observer, ".", true);
+                        
+                        app.ep.utilLogWrite(3, "-TIMER-", "Scheduling timer: timeout=1000ms, user data=-99");
+                        app.ep.utilTimerSchedule(1000, -99);
                 } catch (Exception e) {
                         System.out.println(e);
                         app.deinit();
@@ -145,7 +158,7 @@ public class sample {
                                         "passwd"));
 
                         StringVector proxy = sipCfg.getProxies();
-                        proxy.add("sip:pjsip.org;transport=tcp");                                                       
+                        proxy.add("sip:sip.pjsip.org;transport=tcp");                                                       
 
                         AccountRegConfig regCfg = accCfg.getRegConfig();
                         regCfg.setRegistrarUri("sip:pjsip.org");
@@ -171,15 +184,9 @@ public class sample {
                 while (!Thread.currentThread().isInterrupted()) {
                         // Handle events
                         MyApp.ep.libHandleEvents(10);
-                        
+
                         // Check if any call instance need to be deleted
                         observer.check_call_deletion();
-                        
-                        try {                                           
-                                Thread.currentThread().sleep(50);
-                        } catch (InterruptedException ie) {                                             
-                                break;
-                        }                       
                 }
                 app.deinit();
         }       

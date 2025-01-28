@@ -98,6 +98,11 @@ class MyObserver implements MyAppObserver {
 
         @Override
         public void notifyChangeNetwork() {}
+
+        @Override
+        public void notifyTimer(OnTimerParam prm) {
+            System.out.println("OnTimer invoked, user data=" + prm.getUserData());
+        }
 }
 
 class MyThread extends Thread {
