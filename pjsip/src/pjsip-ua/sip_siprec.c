@@ -275,6 +275,13 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
     pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
     metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
 
+    /* Fallback to XML extension rs-metadata+xml if needed per rfc*/
+    if (!metadata_part) {
+        pjsip_media_type_init2(&app_metadata, "application",
+                               "rs-metadata+xml");
+        metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
+    }
+
     if(!metadata_part)
         return PJ_ENOTFOUND;
 
