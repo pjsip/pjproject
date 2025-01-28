@@ -117,6 +117,12 @@ typedef struct dtls_srtp_channel
     unsigned             channel;
 } dtls_srtp_channel;
 
+typedef struct dtls_srtp_ice_cand
+{
+    unsigned            cand_cnt;
+    pj_sockaddr         cand_addr[PJ_ICE_MAX_CAND];
+} dtls_srtp_ice_cand;
+
 typedef struct dtls_srtp
 {
     pjmedia_transport    base;
@@ -143,6 +149,8 @@ typedef struct dtls_srtp
 
     char                 buf[NUM_CHANNEL][PJMEDIA_MAX_MTU];
     pjmedia_clock       *clock[NUM_CHANNEL];/* Timer workaround for retrans */
+
+    dtls_srtp_ice_cand   ice_rem_cand[NUM_CHANNEL];
 
     SSL_CTX             *ossl_ctx[NUM_CHANNEL];
     SSL                 *ossl_ssl[NUM_CHANNEL];
@@ -1082,6 +1090,152 @@ static pj_status_t parse_setup_finger_attr(dtls_srtp *ds,
     return PJ_SUCCESS;
 }
 
+/* Parse a=candidate line */
+static pj_status_t parse_cand(dtls_srtp *ds, 
+                              const pj_str_t *orig_input,
+                              dtls_srtp_ice_cand cand[])
+{
+    pj_str_t token, delim, host;
+    int af;
+    unsigned comp_id;
+    unsigned cand_cnt;
+    pj_ssize_t found_idx;
+    pj_status_t status = PJNATH_EICEINCANDSDP;
+
+    /* Foundation */
+    delim = pj_str(" ");
+    found_idx = pj_strtok(orig_input, &delim, &token, 0);
+    if (found_idx == orig_input->slen) {
+#if DTLS_DEBUG
+        PJ_LOG(2, (ds->base.name, "Parse ICE cand: "
+            "Expecting ICE foundation in candidate"));
+#endif
+        goto on_return;
+    }
+
+    /* Component ID */
+    found_idx = pj_strtok(orig_input, &delim, &token, found_idx + token.slen);
+    if (found_idx == orig_input->slen) {
+#if DTLS_DEBUG
+        PJ_LOG(2, (ds->base.name, "Parse ICE cand: "
+            "Expecting ICE component ID in candidate"));
+#endif
+        goto on_return;
+    }
+    comp_id = (pj_uint8_t)pj_strtoul(&token) - 1;
+
+    if (comp_id > NUM_CHANNEL) {
+#if DTLS_DEBUG
+        PJ_LOG(2, (ds->base.name, "Parse ICE cand: "
+            "Invalid ICE component ID in candidate"));
+#endif
+        goto on_return;
+    }
+    cand_cnt = cand[comp_id].cand_cnt;
+
+    /* Transport */
+    found_idx = pj_strtok(orig_input, &delim, &token, found_idx + token.slen);
+    if (found_idx == orig_input->slen) {
+#if DTLS_DEBUG
+        PJ_LOG(2, (ds->base.name, "Parse ICE cand: "
+            "Expecting ICE transport in candidate"));
+#endif
+        goto on_return;
+    }
+    if (pj_stricmp2(&token, "UDP") != 0) {
+#if DTLS_DEBUG
+        PJ_LOG(2, (ds->base.name, "Parse ICE cand: "
+            "Expecting ICE UDP transport only in candidate"));
+#endif
+        goto on_return;
+    }
+
+    /* Priority */
+    found_idx = pj_strtok(orig_input, &delim, &token, found_idx + token.slen);
+    if (found_idx == orig_input->slen) {
+#if DTLS_DEBUG
+        PJ_LOG(2, (ds->base.name, "Parse ICE cand: "
+            "Expecting ICE priority in candidate"));
+#endif
+        goto on_return;
+    }
+
+    /* Host */
+    found_idx = pj_strtok(orig_input, &delim, &host, found_idx + token.slen);
+    if (found_idx == orig_input->slen) {
+#if DTLS_DEBUG
+        PJ_LOG(2, (ds->base.name, "Parse ICE cand: "
+            "Expecting ICE priority in candidate"));
+#endif
+        goto on_return;
+    }
+    /* Detect address family */
+    if (pj_strchr(&host, ':'))
+        af = pj_AF_INET6();
+    else
+        af = pj_AF_INET();
+    /* Assign address */
+    if (pj_sockaddr_init(af, &cand[comp_id].cand_addr[cand_cnt], 
+                         &host, 0)) {
+#if DTLS_DEBUG
+        PJ_LOG(2, (ds->base.name, "Parse ICE cand: "
+            "Invalid ICE candidate address"));
+#endif
+        goto on_return;
+    }
+
+    /* Port */
+    found_idx = pj_strtok(orig_input, &delim, &token, found_idx + host.slen);
+    if (found_idx == orig_input->slen) {
+#if DTLS_DEBUG
+        PJ_LOG(2, (ds->base.name, "Parse ICE cand: "
+            "Expecting ICE port number in candidate"));
+#endif
+        goto on_return;
+    }
+    pj_sockaddr_set_port(&cand[comp_id].cand_addr[cand_cnt],
+                         (pj_uint16_t)pj_strtoul(&token));
+
+    cand[comp_id].cand_cnt++;
+    status = PJ_SUCCESS;
+
+on_return:
+    return status;
+}
+
+static pj_status_t get_ice_rem_cand(dtls_srtp* ds,
+                                    const pjmedia_sdp_session* rem_sdp,
+                                    unsigned media_index)
+{
+    /* Get all candidates in the media */
+    unsigned cand_cnt = 0;
+    unsigned i;
+    static const pj_str_t STR_CANDIDATE = { "candidate", 9 };
+    pjmedia_sdp_media* rem_m = rem_sdp->media[media_index];
+
+    for (i = 0; i < rem_m->attr_count && cand_cnt < PJ_ICE_MAX_CAND; ++i) {
+        pjmedia_sdp_attr *attr;
+        pj_status_t status;
+
+        attr = rem_m->attr[i];
+
+        if (pj_strcmp(&attr->name, &STR_CANDIDATE) != 0)
+            continue;
+
+        /* Parse candidate */
+        status = parse_cand(ds, &attr->value, ds->ice_rem_cand);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (ds->base.name, status,
+                "Error in parsing SDP candidate attribute '%.*s'",
+                (int)attr->value.slen, attr->value.ptr));
+            continue;
+        }
+
+        cand_cnt++;
+    }
+    return PJ_SUCCESS;
+}
+
 static pj_status_t get_rem_addrs(dtls_srtp *ds,
                                  const pjmedia_sdp_session *sdp_remote,
                                  unsigned media_index,
@@ -1260,6 +1414,35 @@ static void on_ice_complete2(pjmedia_transport *tp,
  *
  * *************************************/
 
+static pj_bool_t is_valid_src_addr(dtls_srtp *ds, unsigned idx, 
+                                   pj_sockaddr *src_addr)
+{
+    if (ds->use_ice) {
+        dtls_srtp_ice_cand *ice_cand = &ds->ice_rem_cand[idx];
+        unsigned i = 0;
+
+        if (ds->srtp->use_rtcp_mux)
+            idx = RTP_CHANNEL;
+
+        for (; i < ice_cand->cand_cnt && i < PJ_ARRAY_SIZE(ice_cand->cand_addr); 
+            ++i) 
+        {
+            if (pj_sockaddr_cmp(&ice_cand->cand_addr[i], src_addr) == 0)
+                return PJ_TRUE;
+        }
+        return PJ_FALSE;
+    } else {
+        pj_sockaddr *rem_addr;
+
+        if (idx == RTP_CHANNEL) {
+            rem_addr = &ds->rem_addr;
+        } else {
+            rem_addr = &ds->rem_rtcp;
+        }
+        return (pj_sockaddr_cmp(rem_addr, src_addr) == 0);
+    }
+}
+
 static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,     
                                 const void *pkt, pj_size_t size)
 {
@@ -1361,60 +1544,50 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
         (ds->setup == DTLS_SETUP_ACTPASS || ds->setup == DTLS_SETUP_PASSIVE))
     {
         pj_status_t status;
+        pj_bool_t check_hello_addr = PJ_TRUE;
 
-#if defined(PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR) && PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR!=0
-        pjmedia_transport_info info;
-        pj_sockaddr src_addr, rem_addr;
-        pj_bool_t src_addr_avail = PJ_TRUE;
-        pj_bool_t rem_addr_avail = PJ_TRUE;
-
-        pjmedia_transport_get_info(ds->srtp->member_tp, &info);
-        if (idx == RTP_CHANNEL) {
-            if (!pj_sockaddr_has_addr(&ds->rem_addr)) {
-                rem_addr_avail = PJ_FALSE;
-            } else {
-                pj_sockaddr_cp(&rem_addr, &ds->rem_addr);
-            }
-            if (!pj_sockaddr_has_addr(&info.src_rtp_name)) {
-                src_addr_avail = PJ_FALSE;
-            } else {
-                pj_sockaddr_cp(&src_addr, &info.src_rtp_name);
-            }
-        } else {
-            if (!pj_sockaddr_has_addr(&ds->rem_rtcp)) {
-                rem_addr_avail = PJ_FALSE;
-            } else {
-                pj_sockaddr_cp(&rem_addr, &ds->rem_rtcp);
-            }
-            if (!pj_sockaddr_has_addr(&info.src_rtcp_name)) {
-                src_addr_avail = PJ_FALSE;
-            } else {
-                pj_sockaddr_cp(&src_addr, &info.src_rtcp_name);
-            }
-        }
-
-        if (!src_addr_avail || !rem_addr_avail || 
-            pj_sockaddr_cmp(&src_addr, &rem_addr) != 0) 
-        {
-            char psrc_addr[PJ_INET6_ADDRSTRLEN] = "Unknown";
-            char prem_addr[PJ_INET6_ADDRSTRLEN] = "Unknown";
-
-            if (src_addr_avail) {
-                pj_sockaddr_print(&src_addr, psrc_addr, sizeof(psrc_addr), 3);
-            }
-            if (rem_addr_avail) {
-                pj_sockaddr_print(&rem_addr, prem_addr, sizeof(prem_addr), 3);
-            }
-
-            PJ_LOG(2, (ds->base.name, "DTLS-SRTP %s ignoring %lu bytes, "
-                "src addr [%s], expecting from [%s]",
-                CHANNEL_TO_STRING(idx), (unsigned long)size, 
-                psrc_addr, prem_addr));
-
-            DTLS_UNLOCK(ds);
-            return PJ_SUCCESS;
-        }
+#if defined(PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR) && PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR==0
+        if (!ds->use_ice)
+            check_hello_addr = PJ_FALSE;
 #endif
+        if (check_hello_addr) {
+            pjmedia_transport_info info;
+            pj_sockaddr src_addr;
+            pj_bool_t src_addr_avail = PJ_TRUE;
+
+            pjmedia_transport_get_info(ds->srtp->member_tp, &info);
+            if (idx == RTP_CHANNEL) {
+                if (!pj_sockaddr_has_addr(&info.src_rtp_name)) {
+                    src_addr_avail = PJ_FALSE;
+                }
+                else {
+                    pj_sockaddr_cp(&src_addr, &info.src_rtp_name);
+                }
+            }
+            else {
+                if (!pj_sockaddr_has_addr(&info.src_rtcp_name)) {
+                    src_addr_avail = PJ_FALSE;
+                }
+                else {
+                    pj_sockaddr_cp(&src_addr, &info.src_rtcp_name);
+                }
+            }
+
+            if (!src_addr_avail || !is_valid_src_addr(ds, idx, &src_addr)) {
+                char psrc_addr[PJ_INET6_ADDRSTRLEN] = "Unknown";
+
+                if (src_addr_avail) {
+                    pj_sockaddr_print(&src_addr, psrc_addr, 
+                                      sizeof(psrc_addr), 3);
+                }
+                PJ_LOG(2, (ds->base.name, "DTLS-SRTP %s ignoring %lu bytes, "
+                    "from src addr [%s]", CHANNEL_TO_STRING(idx), 
+                    (unsigned long)size,   psrc_addr));
+
+                DTLS_UNLOCK(ds);
+                return PJ_SUCCESS;
+            }
+        }
         ds->setup = DTLS_SETUP_PASSIVE;
         status = ssl_handshake_channel(ds, idx);
         if (status != PJ_SUCCESS) {
@@ -1836,6 +2009,13 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
         /* Update remote RTP & RTCP addresses */
         get_rem_addrs(ds, sdp_remote, media_index, &ds->rem_addr,
                       &ds->rem_rtcp, NULL);
+
+        if (ds->use_ice && 
+            (ds->setup == DTLS_SETUP_ACTPASS || 
+             ds->setup == DTLS_SETUP_PASSIVE))
+        {
+            get_ice_rem_cand(ds, sdp_remote, media_index);
+        }
     }
 
     /* Check if the background DTLS nego has completed */

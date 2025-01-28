@@ -1102,7 +1102,8 @@
 
  /**
   * Enabled this to check the source address of ClientHello message coming
-  * from a valid address.
+  * from a valid address. When ICE is enabled, the check will always be
+  * performed.
   *
   * Default value: 0
   */
