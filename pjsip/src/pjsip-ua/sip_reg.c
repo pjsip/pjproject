@@ -1559,15 +1559,5 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 PJ_DEF(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
                                               pjsip_auth_clt_sess *session ) {
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
-    pj_status_t status = PJ_SUCCESS;
-    status = pj_lock_acquire(regc->auth_sess.lock);
-    if (status != PJ_SUCCESS) {
-        return status;
-    }
-    regc->auth_sess.parent = session;
-    status = pj_lock_release(regc->auth_sess.lock);
-    if (status != PJ_SUCCESS) {
-        return status;
-    }
-    return PJ_SUCCESS;
+    return pjsip_auth_clt_set_parent(&regc->auth_sess, session);
 }

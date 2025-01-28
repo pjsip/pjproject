@@ -108,19 +108,13 @@ const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
 
 #define DO_ON_PARENT_LOCKED(sess, call) \
     do { \
-        pj_status_t on_parent, lock_status; \
+        pj_status_t on_parent; \
         pj_bool_t with_parent = PJ_FALSE; \
         if (sess->parent) { \
-            lock_status = pj_lock_acquire(sess->parent->lock); \
-            if (lock_status != PJ_SUCCESS) { \
-                return lock_status; \
-            } \
+            pj_lock_acquire(sess->parent->lock); \
             with_parent = PJ_TRUE; \
             on_parent = call; \
-            lock_status = pj_lock_release(sess->parent->lock); \
-            if (lock_status != PJ_SUCCESS) { \
-                return lock_status; \
-            } \
+            pj_lock_release(sess->parent->lock); \
         } \
         if (with_parent) { \
             return on_parent; \
@@ -733,19 +727,12 @@ static pjsip_cached_auth *find_cached_auth( pjsip_auth_clt_sess *sess,
                                             const pj_str_t *realm,
                                             pjsip_auth_algorithm_type algorithm_type)
 {
-    pj_status_t lock_status;
     pj_bool_t with_parent = PJ_FALSE;
     pjsip_cached_auth * pauth = NULL;
     if (sess->parent) {
-        lock_status = pj_lock_acquire(sess->parent->lock);
-        if (lock_status != PJ_SUCCESS) {
-            return NULL;
-        }
-         pauth = find_cached_auth(sess->parent, realm, algorithm_type);
-        lock_status = pj_lock_release(sess->parent->lock);
-        if (lock_status != PJ_SUCCESS) {
-          return NULL;
-        }
+        pj_lock_acquire(sess->parent->lock);
+        pauth = find_cached_auth(sess->parent, realm, algorithm_type);
+        pj_lock_release(sess->parent->lock);
     }
     if (pauth != NULL) {
         return pauth;
@@ -773,19 +760,12 @@ static const pjsip_cred_info* auth_find_cred( const pjsip_auth_clt_sess *sess,
 
     PJ_UNUSED_ARG(auth_scheme);
 
-    pj_status_t lock_status;
     pj_bool_t with_parent = PJ_FALSE;
     const pjsip_cred_info * ptr = NULL;
     if (sess->parent) {
-        lock_status = pj_lock_acquire(sess->parent->lock);
-        if (lock_status != PJ_SUCCESS) {
-            return NULL;
-        }
+        pj_lock_acquire(sess->parent->lock);
         ptr = auth_find_cred(sess->parent, realm, auth_scheme, algorithm_type);
-        lock_status = pj_lock_release(sess->parent->lock);
-        if (lock_status != PJ_SUCCESS) {
-          return NULL;
-        }
+        pj_lock_release(sess->parent->lock);
     }
     if (ptr != NULL) {
         return ptr;
@@ -853,7 +833,21 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
     pj_list_init(&sess->cached_auth);
 
     sess->parent = NULL;
-    return pj_lock_create_simple_mutex(pool, "auth_clt_lock", &sess->lock);
+    sess->lock = NULL;
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
+                                              const pjsip_auth_clt_sess *parent)
+{
+    PJ_ASSERT_RETURN(sess && parent, PJ_EINVAL);
+    if (parent->lock == NULL) {
+        pj_lock_create_simple_mutex( parent->pool,
+                                     "auth_clt_parent_lock",
+                                     &parent->lock );
+    }
+    sess->parent = parent;
+    return PJ_SUCCESS;
 }
 
 
@@ -871,7 +865,11 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_deinit(pjsip_auth_clt_sess *sess)
     }
 
     sess->parent = NULL;
-    return pj_lock_destroy(sess->lock);
+    if (sess->lock) {
+        return pj_lock_destroy(sess->lock);
+    } else {
+        return PJ_SUCCESS;
+    }
 }
 
 
@@ -908,22 +906,16 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
         }
     }
 
-    pj_status_t status, lock_status;
+    pj_status_t status;
     if (sess->parent) {
-        lock_status = pj_lock_acquire(sess->parent->lock);
-        if (lock_status != PJ_SUCCESS) {
-            return lock_status;
-        }
+        pj_lock_acquire(sess->parent->lock);
         sess->parent = PJ_POOL_ZALLOC_T(pool, pjsip_auth_clt_sess);
         if (sess->parent == NULL) {
             status = PJ_ENOMEM;
         } else {
             status = pjsip_auth_clt_clone(pool, sess->parent, rhs->parent);
         }
-        lock_status = pj_lock_release(sess->parent->lock);
-        if (lock_status != PJ_SUCCESS) {
-            return lock_status;
-        }
+        pj_lock_release(sess->parent->lock);
     }
     if (status != PJ_SUCCESS) {
         return status;

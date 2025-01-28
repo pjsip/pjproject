@@ -2497,15 +2497,5 @@ PJ_DEF(pj_status_t) pjsip_dlg_remove_remote_cap_hdr(pjsip_dialog *dlg,
 PJ_DEF(pj_status_t) pjsip_dlg_set_auth_sess( pjsip_dialog *dlg,
                                               pjsip_auth_clt_sess *session ) {
     PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
-    pj_status_t status = PJ_SUCCESS;
-    status = pj_lock_acquire(dlg->auth_sess.lock);
-    if (status != PJ_SUCCESS) {
-        return status;
-    }
-    dlg->auth_sess.parent = session;
-    status = pj_lock_release(dlg->auth_sess.lock);
-    if (status != PJ_SUCCESS) {
-        return status;
-    }
-    return PJ_SUCCESS;
+    return pjsip_auth_clt_set_parent(&dlg->auth_sess, session);
 }

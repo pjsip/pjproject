@@ -303,7 +303,7 @@ struct AccountSipConfig : public PersistentObject
      * This will use the accounts credentials on outgoing requests,
      * so that less 401/407 Responses will be returned.
      *
-     * May need to have PJSIP_AUTH_AUTO_SEND_NEXT and PJSIP_AUTH_HEADER_CACHING
+     * Needs PJSIP_AUTH_AUTO_SEND_NEXT and PJSIP_AUTH_HEADER_CACHING
      * enabled to work properly, and also will grow usage of the used pool for
      * the cached headers.
      *
