@@ -1478,30 +1478,58 @@ PJ_DEF(unsigned) pj_ice_strans_get_cands_count(pj_ice_strans *ice_st,
     return cnt;
 }
 
+static pj_status_t ice_strans_enum_cands(pj_ice_strans *ice_st,
+                                         pj_bool_t is_local,
+                                         unsigned comp_id,
+                                         unsigned *count,
+                                         pj_ice_sess_cand cand[])
+{
+    unsigned i, cnt, cand_cnt;
+    pj_ice_sess_cand *ice_cand;
+
+    PJ_ASSERT_RETURN(ice_st&& ice_st->ice&& comp_id&&
+        comp_id <= ice_st->comp_cnt && count && cand, PJ_EINVAL);
+
+    if (is_local) {
+        cand_cnt = ice_st->ice->lcand_cnt;
+        ice_cand = ice_st->ice->lcand;
+    } else {
+        cand_cnt = ice_st->ice->rcand_cnt;
+        ice_cand = ice_st->ice->rcand;
+    }
+
+    cnt = 0;
+    for (i = 0; i < cand_cnt && cnt < *count; ++i) {
+        if (ice_cand[i].comp_id != comp_id)
+            continue;
+        pj_memcpy(&cand[cnt], &ice_cand[i], sizeof(pj_ice_sess_cand));
+        ++cnt;
+    }
+
+    *count = cnt;
+    return PJ_SUCCESS;
+}
+
 /*
- * Enum candidates
+ * Enum local candidates
  */
 PJ_DEF(pj_status_t) pj_ice_strans_enum_cands(pj_ice_strans *ice_st,
                                              unsigned comp_id,
                                              unsigned *count,
                                              pj_ice_sess_cand cand[])
 {
-    unsigned i, cnt;
+    return ice_strans_enum_cands(ice_st, PJ_TRUE, comp_id, count, cand);
+}
 
-    PJ_ASSERT_RETURN(ice_st && ice_st->ice && comp_id &&
-                     comp_id <= ice_st->comp_cnt && count && cand, PJ_EINVAL);
-
-    cnt = 0;
-    for (i=0; i<ice_st->ice->lcand_cnt && cnt<*count; ++i) {
-        if (ice_st->ice->lcand[i].comp_id != comp_id)
-            continue;
-        pj_memcpy(&cand[cnt], &ice_st->ice->lcand[i],
-                  sizeof(pj_ice_sess_cand));
-        ++cnt;
-    }
-
-    *count = cnt;
-    return PJ_SUCCESS;
+/*
+ * Enum remote candidates
+ */
+PJ_DEF(pj_status_t) pj_ice_strans_enum_remote_cands(pj_ice_strans* ice_st,
+                                                    unsigned comp_id,
+                                                    unsigned* count,
+                                                    pj_ice_sess_cand cand[])
+{
+    return ice_strans_enum_cands(ice_st, PJ_FALSE, comp_id, count, cand);
 }
 
 /*
