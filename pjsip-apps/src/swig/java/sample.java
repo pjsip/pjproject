@@ -135,8 +135,15 @@ public class sample {
                 try {                                   
                         app.init(observer, ".", true);
                         
+                        // Schedule a timer
+                        long token = app.ep.utilTimerSchedule(1000, -100);
+                        // Immediately cancel it, callback should not be invoked
+                        app.ep.utilTimerCancel(token);
+                        
+                        // Schedule another timer
                         app.ep.utilLogWrite(3, "-TIMER-", "Scheduling timer: timeout=1000ms, user data=-99");
                         app.ep.utilTimerSchedule(1000, -99);
+
                 } catch (Exception e) {
                         System.out.println(e);
                         app.deinit();
