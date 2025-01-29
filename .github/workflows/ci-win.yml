@@ -41,7 +41,7 @@ jobs:
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         set INCLUDE=%INCLUDE%;%JAVA_HOME%\include;%JAVA_HOME%\include\win32
         cd pjsip-apps/build
-        msbuild swig_java_pjsua2.vcxproj /p:PlatformToolset=v143 /p:Configuration=Debug /p:Platform=win32 /p:UseEnv=true
+        msbuild swig_java_pjsua2.vcxproj /p:PlatformToolset=v143 /p:Configuration=Debug-Dynamic /p:Platform=win32 /p:UseEnv=true
       shell: cmd
 
   openssl-1:

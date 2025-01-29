@@ -670,6 +670,8 @@ public class MainActivity extends Activity
         }
     }
 
+    public void notifyTimer(OnTimerParam prm) {}
+
     /* === end of MyAppObserver ==== */
 
 }
