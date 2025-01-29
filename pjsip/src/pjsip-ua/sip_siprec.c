@@ -114,7 +114,8 @@ PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
  */ 
 PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
 {
-    for (int i=0; i<req_hdr->count; ++i) {
+    unsigned i;
+    for (i=0; i<req_hdr->count; ++i) {
         /* Check request has the siprec value in the Require header.*/
         if (pj_stricmp(&req_hdr->values[i], &STR_SIPREC)==0)
         {
@@ -140,6 +141,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     pj_status_t status = PJ_SUCCESS;
     const char *warn_text = NULL;
     pjsip_hdr res_hdr_list;
+    unsigned mi;
 
     /* Init return arguments. */
     if (p_tdata) *p_tdata = NULL;
@@ -180,7 +182,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     }
 
     /* Check that the media attribute label exist in the SDP */
-    for (unsigned mi=0; mi<sdp_offer->media_count; ++mi) {
+    for (mi=0; mi<sdp_offer->media_count; ++mi) {
         if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
                                             &STR_LABEL, NULL)){
             code = PJSIP_SC_BAD_REQUEST;
@@ -263,22 +265,27 @@ on_return:
  * Find siprec metadata from the message body
  */
 PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
-                                            pjsip_msg_body *body,
-                                            pj_str_t* metadata)
+                                              pjsip_msg_body *body,
+                                              pj_str_t* metadata)
 {
-    pjsip_media_type application_metadata;
-
-    pjsip_media_type_init2(&application_metadata,
-                            "application", "rs-metadata");
-
+    pjsip_media_type app_metadata;
     pjsip_multipart_part *metadata_part;
-    metadata_part = pjsip_multipart_find_part(body, 
-                                            &application_metadata, NULL);   
+
+    PJ_UNUSED_ARG(pool);
+    pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
+    metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
+
+    /* Fallback to XML extension rs-metadata+xml if needed per rfc*/
+    if (!metadata_part) {
+        pjsip_media_type_init2(&app_metadata, "application",
+                               "rs-metadata+xml");
+        metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
+    }
 
     if(!metadata_part)
         return PJ_ENOTFOUND;
 
-    metadata->ptr = (char*)metadata_part->body->data;
+    metadata->ptr  = (char*)metadata_part->body->data;
     metadata->slen = metadata_part->body->len;
     
     return PJ_SUCCESS;

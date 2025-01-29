@@ -1018,7 +1018,7 @@ static int simple_test(void)
                     NULL, return -300);
 
     pj_sem_wait(sem);
-    pj_thread_sleep(set.qretr_delay * 1.2);
+    pj_thread_sleep((unsigned)(set.qretr_delay * 1.2));
 
 
     /* Both servers must get packet */

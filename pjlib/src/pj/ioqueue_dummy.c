@@ -26,6 +26,11 @@
 #include <pj/sock.h>
 #include <pj/errno.h>
 
+
+/* Only build when the backend is using dummy/none. */
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_NONE
+
+
 #define THIS_FILE   "ioqueue"
 
 #define PJ_IOQUEUE_IS_READ_OP(op)   \
@@ -196,3 +201,5 @@ PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
     PJ_UNUSED_ARG(ioqueue);
     return NULL;
 }
+
+#endif /* PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_NONE */
