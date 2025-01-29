@@ -1299,7 +1299,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     }
 
     /* Shared authentication session */
-    acc->cfg.shared_auth = cfg->shared_auth;
+    acc->cfg.use_shared_auth = cfg->use_shared_auth;
 
     /* Registration */
     if (acc->cfg.reg_timeout != cfg->reg_timeout) {
@@ -2758,7 +2758,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
     pjsua_init_tpselector(acc_id, &tp_sel);
     pjsip_regc_set_transport(acc->regc, &tp_sel);
 
-    if (acc->cfg.shared_auth) {
+    if (acc->cfg.use_shared_auth) {
         pjsip_regc_set_auth_sess(acc->regc, &acc->shared_auth_sess);
     }
 

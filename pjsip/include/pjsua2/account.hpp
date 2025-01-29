@@ -266,7 +266,7 @@ struct AccountSipConfig : public PersistentObject
     /**
      * If this flag is set, the authentication client framework will
      * send an empty Authorization header in each initial request.
-     * Default is no.
+     * Default is false.
      */
     bool                authInitialEmpty;
 
@@ -307,9 +307,9 @@ struct AccountSipConfig : public PersistentObject
      * enabled to work properly, and also will grow usage of the used pool for
      * the cached headers.
      *
-     * Default is no
+     * Default is false
      */
-    bool        sharedAuth;
+    bool        useSharedAuth;
 
 public:
     /**

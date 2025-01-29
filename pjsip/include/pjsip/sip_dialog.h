@@ -908,8 +908,8 @@ PJ_DECL(pj_status_t) pjsip_dlg_update_remote_cap(pjsip_dialog *dlg,
  * This will try to reuse authorization headers from another source
  * (e.g. register).
  *
- * If available, the internal auth session will be ignored. To reset
- * call with NULL for session parameter
+ * If available, the internal auth session will be ignored.
+ * To reset client registration, pass NULL as session parameter.
  *
  * @param dlg      The dialog
  * @param session  Pointer to the external session

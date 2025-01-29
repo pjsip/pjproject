@@ -4672,7 +4672,7 @@ typedef struct pjsua_acc_config
      *
      * Default: PJ_FALSE
      */
-    pj_bool_t        shared_auth;
+    pj_bool_t        use_shared_auth;
 
 } pjsua_acc_config;
 

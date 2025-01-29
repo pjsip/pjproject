@@ -493,11 +493,11 @@ PJ_DECL(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata);
  * This will try to reuse authorization headers from another source
  * (e.g. subscribe dialog).
  *
- * If available, the internal auth session will be ignored. To reset
- * call with NULL for session parameter
+ * If available, the internal auth session will be ignored.
+ * To reset client registration, pass NULL as session parameter.
  *
- * @param dlg      The dialog
- * @param session  Pointer to the external session
+ * @param regc     The client registration structure.
+ * @param session  Pointer to the external session.
  */
 PJ_DECL(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
                                               pjsip_auth_clt_sess *session );
