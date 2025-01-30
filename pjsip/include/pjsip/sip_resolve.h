@@ -174,6 +174,9 @@ PJ_BEGIN_DECL
 /** Address records. */
 typedef struct pjsip_server_address_record
 {
+    /** The queried name.   */
+    pj_str_t                name;
+
     /** Preferable transport to be used to contact this address. */
     pjsip_transport_type_e  type;
 

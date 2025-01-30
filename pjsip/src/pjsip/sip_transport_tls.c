@@ -87,6 +87,7 @@ struct tls_transport
     pjsip_transport          base;
     pj_bool_t                is_server;
     pj_str_t                 remote_name;
+    pjsip_server_addresses   server_addr;
 
     pj_bool_t                is_registered;
     pj_bool_t                is_closing;
@@ -166,6 +167,7 @@ static pj_status_t tls_create(struct tls_listener *listener,
                               const pj_sockaddr *local,
                               const pj_sockaddr *remote,
                               const pj_str_t *remote_name,
+                              const pjsip_server_addresses *addr,
                               pj_grp_lock_t *glock,
                               struct tls_transport **p_tls);
 
@@ -851,6 +853,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
                                const pj_sockaddr *local,
                                const pj_sockaddr *remote,
                                const pj_str_t *remote_name,
+                               const pjsip_server_addresses *addr,
                                pj_grp_lock_t *glock,
                                struct tls_transport **p_tls)
 {
@@ -925,6 +928,14 @@ static pj_status_t tls_create( struct tls_listener *listener,
         tls->base.remote_name.port = pj_sockaddr_get_port(remote);
     } else {
         sockaddr_to_host_port(pool, &tls->base.remote_name, remote);
+    }
+
+    if (addr) {
+        pj_memcpy( &tls->server_addr, addr,
+                   sizeof(pjsip_server_addresses));
+        for (int i = 0; i < addr->count; ++i) {
+            pj_strdup(pool, &tls->server_addr.entry[i].name, &addr->entry[i].name);
+        }
     }
 
     tls->base.endpt = listener->endpt;
@@ -1202,6 +1213,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     pj_ssl_sock_param ssock_param;
     pj_sockaddr local_addr;
     pj_str_t remote_name;
+    pjsip_server_addresses server_addr;
     pj_status_t status;
 
     /* Sanity checks */
@@ -1221,12 +1233,14 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                                    POOL_TP_INIT, POOL_TP_INC);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
-    /* Get remote host name from tdata */
-    if (tdata)
+    /* Get remote host name and DNS queried server addresses from tdata */
+    if (tdata) {
         remote_name = tdata->dest_info.name;
-    else
+        server_addr = tdata->dest_info.addr;
+    } else {
         pj_bzero(&remote_name, sizeof(remote_name));
-
+        pj_bzero(&server_addr, sizeof(server_addr));
+    }
     /* Build SSL socket param */
     pj_ssl_sock_param_default(&ssock_param);
     ssock_param.sock_af = (factory->type & PJSIP_TRANSPORT_IPV6) ?
@@ -1303,7 +1317,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     /* Create the transport descriptor */
     status = tls_create(listener, pool, ssock, PJ_FALSE, &local_addr, 
-                        rem_addr, &remote_name, glock, &tls);
+                        rem_addr, &remote_name, &server_addr, glock, &tls);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -1482,7 +1496,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
      * Create TLS transport for the new socket.
      */
     status = tls_create( listener, NULL, new_ssock, PJ_TRUE,
-                         &ssl_info.local_addr, &tmp_src_addr, NULL,
+                         &ssl_info.local_addr, &tmp_src_addr, NULL, NULL,
                          ssl_info.grp_lock, &tls);
     
     if (status != PJ_SUCCESS) {
@@ -1635,6 +1649,7 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
 static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
 {
     pj_bool_t(*verify_cb)(const pjsip_tls_on_verify_param * param) = NULL;
+    struct tls_transport* tls_trans = NULL;
 
     if (is_server) {
         struct tls_listener* tls;
@@ -1642,10 +1657,8 @@ static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
         tls = (struct tls_listener*)pj_ssl_sock_get_user_data(ssock);
         verify_cb = tls->tls_setting.on_verify_cb;
     } else {
-        struct tls_transport* tls;
-
-        tls = (struct tls_transport*)pj_ssl_sock_get_user_data(ssock);
-        verify_cb = tls->on_verify_cb;
+        tls_trans = (struct tls_transport*)pj_ssl_sock_get_user_data(ssock);
+        verify_cb = tls_trans->on_verify_cb;
     }
 
     if (verify_cb) {
@@ -1655,6 +1668,9 @@ static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
         pj_bzero(&param, sizeof(param));
         pj_ssl_sock_get_info(ssock, &info);
 
+        if (tls_trans) {
+            param.server_addr = &tls_trans->server_addr;
+        }
         param.local_addr = &info.local_addr;
         param.remote_addr = &info.remote_addr;
         param.local_cert_info = info.local_cert_info;
