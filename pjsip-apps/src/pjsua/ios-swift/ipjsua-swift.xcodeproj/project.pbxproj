@@ -553,7 +553,7 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_ASSET_PATHS = "\"ipjsua-swift/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3TRN37UBMA;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "ipjsua-swift/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
@@ -595,7 +595,7 @@
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_ASSET_PATHS = "\"ipjsua-swift/Preview Content\"";
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3TRN37UBMA;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = "ipjsua-swift/Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
