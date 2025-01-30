@@ -340,7 +340,7 @@
 				ORGANIZATIONNAME = Teluu;
 				TargetAttributes = {
 					3AF0580316F050770046B835 = {
-						DevelopmentTeam = 93NHJQ455P;
+						DevelopmentTeam = 3TRN37UBMA;
 						ProvisioningStyle = Manual;
 					};
 				};
@@ -534,7 +534,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3TRN37UBMA;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ipjsua/ipjsua-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -564,10 +564,10 @@
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.teluupush.--PRODUCT-NAME-rfc1034identifier-";
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.teluupush.ipjsua;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.teluupn.ipjsua;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ipjsua Push";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Teluu PN Profile";
 				VALID_ARCHS = arm64;
 				WRAPPER_EXTENSION = app;
 			};
@@ -581,7 +581,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 93NHJQ455P;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3TRN37UBMA;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ipjsua/ipjsua-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -610,10 +610,10 @@
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.teluupush.--PRODUCT-NAME-rfc1034identifier-";
-				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.teluupush.ipjsua;
+				"PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]" = com.teluupn.ipjsua;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ipjsua Push";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "Teluu PN Profile";
 				VALID_ARCHS = arm64;
 				WRAPPER_EXTENSION = app;
 			};
