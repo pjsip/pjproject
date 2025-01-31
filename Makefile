@@ -20,7 +20,7 @@ all clean dep depend print:
 	done
 
 distclean realclean:
-	for dir in $(DIRS); do \
+	for dir in $(DIRS) pjsip-apps/src/swig pjsip-apps/src/pjsua/android/jni; do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
 		    true; \
 		else \
