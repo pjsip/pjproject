@@ -3168,6 +3168,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 
     PJ_LOG(4,(stream->port.info.name.ptr, "Stream destroying"));
 
+    /* Stop the streaming */
+    if (stream->enc)
+        stream->port.put_frame = NULL;
+    if (stream->dec)
+        stream->port.get_frame = NULL;
+
     /* Send RTCP BYE (also SDES & XR) */
     if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)

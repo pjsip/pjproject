@@ -2269,6 +2269,7 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
 
             if (call_med->use_custom_med_tp) {
                 unsigned custom_med_tp_flags = PJSUA_MED_TP_CLOSE_MEMBER;
+                pj_grp_lock_t *tp_grp_lock = call_med->tp->grp_lock;
 
                 /* Use custom media transport returned by the application */
                 call_med->tp =
@@ -2278,6 +2279,19 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
                 if (!call_med->tp) {
                     status =
                         PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_TEMPORARILY_UNAVAILABLE);
+                }
+
+                /* Check if the media transport adapter has no group lock. */
+                if (call_med->tp && call_med->tp->grp_lock==NULL) {
+                    PJ_LOG(3, (THIS_FILE, "Call %d media %d: Warning, "
+                               "media transport adapter should manage its "
+                               "lifetime using group lock of the underlying "
+                               "transport", call_id, mi));
+
+                    /* Assign group lock, this will maintain the lifetime of
+                     * the original transport only, not the transport adapter.
+                     */
+                    call_med->tp->grp_lock = tp_grp_lock;
                 }
             }
 
