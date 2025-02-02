@@ -22,6 +22,9 @@ class Runner(abc.ABC):
     Abstract base class for runner class.
     '''
 
+    TIMEOUT = 3600
+    '''Default timeout'''
+
     def __init__(self, path: str, args: List[str], 
                  timeout: int):
         """
@@ -44,6 +47,8 @@ class Runner(abc.ABC):
 
         self.popen : subprocess.Popen = None
         '''Popen object when running the program, will be set later'''
+
+        self.info(f'running. cmd="{self.path}", args={self.args}, timeout={self.timeout}')
 
     @classmethod
     def info(cls, msg, box=False):
@@ -110,7 +115,7 @@ class Runner(abc.ABC):
         the program if it runs for longer than permitted.
         """
 
-        self.popen = subprocess.Popen([self.path] + self.args)
+        self.popen = subprocess.Popen([self.path] + self.args, bufsize=0)
         try:
             self.popen.wait(self.timeout)
         except subprocess.TimeoutExpired as e:
@@ -140,7 +145,7 @@ class WinRunner(Runner):
     """
 
     def __init__(self, path: str, args: List[str], 
-                 timeout: int = 10):
+                 timeout: int = Runner.TIMEOUT):
         super().__init__(path, args, timeout=timeout)
 
         self.cdb_exe = self.find_cdb()
@@ -333,6 +338,7 @@ def main():
     parser.add_argument('-i', '--install', action='store_true',
                         help='Install crash handler on this machine')
     parser.add_argument('-t', '--timeout', type=int,
+                        default=Runner.TIMEOUT,
                         help='Max running time in seconds before terminated')
     parser.add_argument('prog', help='Program to run', nargs='?')
     parser.add_argument('args', nargs='*',
