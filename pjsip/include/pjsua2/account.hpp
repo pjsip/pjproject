@@ -298,6 +298,19 @@ struct AccountSipConfig : public PersistentObject
      */
     pjsua_ipv6_use      ipv6Use;
 
+    /**
+     * Use a shared authorization session within this account.
+     * This will use the accounts credentials on outgoing requests,
+     * so that less 401/407 Responses will be returned.
+     *
+     * Needs PJSIP_AUTH_AUTO_SEND_NEXT and PJSIP_AUTH_HEADER_CACHING
+     * enabled to work properly, and also will grow usage of the used pool for
+     * the cached headers.
+     *
+     * Default is disabled/false.
+     */
+    bool        useSharedAuth;
+
 public:
     /**
      * Read this object from a container node.

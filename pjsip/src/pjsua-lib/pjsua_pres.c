@@ -2127,6 +2127,10 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
         pjsip_dlg_set_route_set(buddy->dlg, &acc->route_set);
     }
 
+    if (acc->cfg.use_shared_auth) {
+        pjsip_dlg_set_auth_sess(buddy->dlg, &acc->shared_auth_sess);
+    }
+
     /* Set credentials */
     if (acc->cred_cnt) {
         pjsip_auth_clt_set_credentials( &buddy->dlg->auth_sess, 
