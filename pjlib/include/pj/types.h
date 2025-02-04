@@ -268,6 +268,9 @@ typedef struct pj_sem_t pj_sem_t;
 /** Event object. */
 typedef struct pj_event_t pj_event_t;
 
+/** Barrier object. */
+typedef struct pj_barrier_t pj_barrier_t;
+
 /** Unidirectional stream pipe object. */
 typedef struct pj_pipe_t pj_pipe_t;
 
