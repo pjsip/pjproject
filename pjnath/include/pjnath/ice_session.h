@@ -317,6 +317,12 @@ struct pj_ice_sess_cand
      */
     pj_sockaddr          rel_addr;
 
+    /**
+     * Indicate that remote connectivity check has been received or the check
+     * has been successful for this candidate.
+     *
+     */
+    pj_bool_t            checked;
 };
 
 
@@ -671,6 +677,15 @@ typedef struct pj_ice_sess_options
      * Default value is PJ_ICE_SESS_TRICKLE_DISABLED.
      */
     pj_ice_sess_trickle trickle;
+
+    /**
+     * Specify whether to check the source address of the incoming messages.
+     * The source address will be compared to the remote candidate which has 
+     * a completed connectivity check or received a connectivity check.
+     *
+     * Default value is PJ_ICE_SESS_CHECK_SRC_ADDR.
+     */
+    unsigned check_src_addr;
 
 } pj_ice_sess_options;
 

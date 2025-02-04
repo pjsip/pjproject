@@ -445,30 +445,6 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_send_local_cand(
                                             pj_bool_t *p_end_of_cand);
 
 
-/**
- * Enumerate the candidates for the specified component.
- *
- * @param tp            The ICE media transport.
- * @param comp_id       Component ID.
- * @param lcount        On input, it specifies the maximum number of
- *                      local candidate elements. On output, it will be filled 
- *                      with the number of candidates copied to the array.
- * @param lcand         Array of local candidates.
- * @param rcount        On input, it specifies the maximum number of
- *                      remote candidate elements. On output, it will be filled
- *                      with the number of candidates copied to the array.
- * @param rcand         Array of remote candidates.
- *
- * @return              PJ_SUCCESS, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pj_ice_enum_cands(pjmedia_transport *tp,
-                                       unsigned comp_id,
-                                       unsigned *lcount,
-                                       pj_ice_sess_cand lcand[],
-                                       unsigned* rcount,
-                                       pj_ice_sess_cand rcand[]);
-
-
 PJ_END_DECL
 
 

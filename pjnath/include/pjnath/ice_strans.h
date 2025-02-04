@@ -874,24 +874,6 @@ PJ_DECL(pj_status_t) pj_ice_strans_enum_cands(pj_ice_strans *ice_st,
                                               pj_ice_sess_cand cand[]);
 
 /**
- * Enumerate the remote candidates for the specified component.
- *
- * @param ice_st        The ICE stream transport.
- * @param comp_id       Component ID.
- * @param count         On input, it specifies the maximum number of
- *                      elements. On output, it will be filled with
- *                      the number of candidates copied to the
- *                      array.
- * @param cand          Array of candidates.
- *
- * @return              PJ_SUCCESS, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pj_ice_strans_enum_remote_cands(pj_ice_strans* ice_st,
-                                                     unsigned comp_id,
-                                                     unsigned *count,
-                                                     pj_ice_sess_cand cand[]);
-
-/**
  * Get the default candidate for the specified component. When this
  * function is called before ICE negotiation completes, the default
  * candidate is selected according to local preference criteria. When

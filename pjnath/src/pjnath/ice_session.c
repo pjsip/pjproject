@@ -325,6 +325,7 @@ PJ_DEF(void) pj_ice_sess_options_default(pj_ice_sess_options *opt)
     opt->controlled_agent_want_nom_timeout = 
         ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT;
     opt->trickle = PJ_ICE_SESS_TRICKLE_DISABLED;
+    opt->check_src_addr = PJ_ICE_SESS_CHECK_SRC_ADDR;
 }
 
 /*
@@ -2883,6 +2884,8 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
                     &ice->clist, check),
          (check->nominated ? " (nominated)" : " (not nominated)")));
 
+    check->rcand->checked = PJ_TRUE;
+
     /* Get the STUN XOR-MAPPED-ADDRESS attribute. */
     xaddr = (pj_stun_xor_mapped_addr_attr*)
             pj_stun_msg_find_attr(response, PJ_STUN_ATTR_XOR_MAPPED_ADDR,0);
@@ -3141,6 +3144,12 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     uc_attr = (pj_stun_use_candidate_attr*)
               pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USE_CANDIDATE, 0);
 
+    if (uc_attr != NULL && ice->is_complete) {
+        LOG4((ice->obj_name,
+            "Ignored incoming check after ICE nego has been completed!, "
+            "no need to send response"));
+        return PJ_SUCCESS;
+    }
 
     /* Get ICE-CONTROLLING or ICE-CONTROLLED */
     role_attr = (pj_stun_uint64_attr*)
@@ -3447,6 +3456,8 @@ static void handle_incoming_check(pj_ice_sess *ice,
          */
         c->nominated = ((rcheck->use_candidate) || c->nominated);
 
+        rcand->checked = PJ_TRUE;
+
         if (c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN ||
             c->state == PJ_ICE_SESS_CHECK_STATE_WAITING)
         {
@@ -3733,6 +3744,29 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
         pj_grp_lock_release(ice->grp_lock);
 
         PJ_RACE_ME(5);
+
+        if (ice->opt.check_src_addr) {
+            for (i = 0; i < ice->rcand_cnt; ++i) {
+                if (ice->rcand[i].comp_id == comp_id && 
+                    ice->rcand[i].checked &&
+                    pj_sockaddr_cmp(src_addr, &ice->rcand[i].addr) == 0)
+                {
+                    break;
+                }
+            }
+            if (i == ice->rcand_cnt) {
+                char psrc_addr[PJ_INET6_ADDRSTRLEN] = {0};
+
+                if (pj_sockaddr_has_addr(src_addr)) {
+                    pj_sockaddr_print(src_addr, psrc_addr,
+                                      sizeof(psrc_addr), 3);
+                }
+                PJ_LOG(2, (ice->obj_name, "Ignoring incoming message for "
+                                          "component [%d], from src addr [%s]",
+                                          comp_id, psrc_addr));
+                return PJ_SUCCESS;
+            }
+        } 
 
         (*ice->cb.on_rx_data)(ice, comp_id, transport_id, pkt, pkt_size, 
                               src_addr, src_addr_len);
