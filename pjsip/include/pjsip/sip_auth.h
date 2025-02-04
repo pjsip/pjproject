@@ -618,7 +618,7 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_init( pj_pool_t *pool,
  * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
-                                               const pjsip_auth_clt_sess *p);
+                                               pjsip_auth_clt_sess *p);
 
 /**
  * This structure describes initialization settings of server authorization
