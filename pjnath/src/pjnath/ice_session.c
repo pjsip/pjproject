@@ -3148,6 +3148,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
         LOG4((ice->obj_name,
             "Ignored incoming check after ICE nego has been completed!, "
             "no need to send response"));
+        pj_grp_lock_release(ice->grp_lock);
         return PJ_SUCCESS;
     }
 
