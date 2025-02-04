@@ -774,34 +774,6 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_ice_enum_cands(pjmedia_transport *tp,
-                                      unsigned comp_id,
-                                      unsigned *lcount,
-                                      pj_ice_sess_cand lcand[],
-                                      unsigned *rcount,
-                                      pj_ice_sess_cand rcand[])
-{
-    struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    pj_status_t status = PJ_SUCCESS;
-
-    PJ_ASSERT_RETURN(tp && comp_id && lcount && rcount, PJ_EINVAL);
-
-    if (*lcount > 0) {
-        status = pj_ice_strans_enum_cands(tp_ice->ice_st, comp_id,
-                                          lcount, lcand);
-
-        if (status != PJ_SUCCESS)
-            return status;
-    }
-
-    if (*rcount > 0) {
-        status = pj_ice_strans_enum_remote_cands(tp_ice->ice_st, comp_id,
-                                                 rcount, rcand);
-    }
-
-    return status;
-}
-
 
 /* Disable ICE when SDP from remote doesn't contain a=candidate line */
 static void set_no_ice(struct transport_ice *tp_ice, const char *reason,
