@@ -91,9 +91,6 @@ struct fmt_match_cb_t
     pjmedia_sdp_neg_fmt_match_cb    cb;
 };
 
-/* The registered customized SDP session comparison callback */
-static pjmedia_sdp_neg_sdp_cmp_cb sdp_cmp_cb;
-
 /* Number of registered customized SDP format negotiation callbacks */
 static unsigned fmt_match_cb_cnt;
 
@@ -371,20 +368,6 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
     return pjmedia_sdp_neg_modify_local_offer2(pool, neg, 0, local);
 }
 
-static pj_status_t sdp_session_cmp(const pjmedia_sdp_session *sd1,
-                                   const pjmedia_sdp_session *sd2,
-                                   unsigned option)
-{
-    pj_status_t status;
-
-    status = pjmedia_sdp_session_cmp(sd1, sd2, option);
-    if (sdp_cmp_cb) {
-        (*sdp_cmp_cb)(sd1, sd2, option, &status);
-    }
-
-    return status;
-}
-
 PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
                                     pj_pool_t *pool,
                                     pjmedia_sdp_neg *neg,
@@ -424,7 +407,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
                                  PJ_TRUE, PJ_FALSE);
         neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
 
-        if (sdp_session_cmp(neg->last_sent, neg->neg_local_sdp, 0) !=
+        if (pjmedia_sdp_session_cmp(neg->last_sent, neg->neg_local_sdp, 0) !=
             PJ_SUCCESS)
         {
             ++neg->neg_local_sdp->origin.version;
@@ -515,7 +498,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
     /* Assign PT numbers for our offer and update the mapping. */
     assign_pt_and_update_map(pool, neg, new_offer, PJ_TRUE, PJ_FALSE);
 
-    if (sdp_session_cmp(neg->last_sent, new_offer, 0) != PJ_SUCCESS) {
+    if (pjmedia_sdp_session_cmp(neg->last_sent, new_offer, 0) != PJ_SUCCESS) {
         ++new_offer->origin.version;
     }
     neg->initial_sdp_tmp = neg->initial_sdp;
@@ -558,7 +541,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
         neg->state = PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER;
         new_offer = pjmedia_sdp_session_clone(pool, neg->active_local_sdp);
 
-        if (sdp_session_cmp(neg->last_sent, new_offer, 0) !=
+        if (pjmedia_sdp_session_cmp(neg->last_sent, new_offer, 0) !=
             PJ_SUCCESS)
         {
             ++new_offer->origin.version;
@@ -2038,7 +2021,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
                 answer->origin.version = neg->last_sent->origin.version;
 
             if (!neg->last_sent ||
-                sdp_session_cmp(neg->last_sent, answer, 0) !=
+                pjmedia_sdp_session_cmp(neg->last_sent, answer, 0) !=
                 PJ_SUCCESS)
             {
                 ++answer->origin.version;
@@ -2074,14 +2057,6 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     return status;
 }
 
-
-/* Register customized SDP session comparison callback function. */
-PJ_DEF(pj_status_t)
-pjmedia_sdp_neg_register_sdp_cmp_cb(pjmedia_sdp_neg_sdp_cmp_cb cb)
-{
-    sdp_cmp_cb = cb;
-    return PJ_SUCCESS;
-}
 
 static pj_status_t custom_fmt_match(pj_pool_t *pool,
                                     const pj_str_t *fmt_name,
