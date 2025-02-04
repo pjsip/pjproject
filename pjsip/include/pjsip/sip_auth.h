@@ -343,7 +343,12 @@ typedef struct pjsip_auth_clt_sess
     unsigned             cred_cnt;      /**< Number of credentials.         */
     pjsip_cred_info     *cred_info;     /**< Array of credential information*/
     pjsip_cached_auth    cached_auth;   /**< Cached authorization info.     */
-
+    pj_lock_t           *lock;          /**< Prevent concurrent usage when
+                                             using a shared parent. Is only
+                                             used in parent. Set up by
+                                             pjsip_auth_clt_set_parent      */
+    struct pjsip_auth_clt_sess *parent; /**< allow a common parent
+                                             for multiple sessions.         */
 } pjsip_auth_clt_sess;
 
 
@@ -601,6 +606,19 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_init( pj_pool_t *pool,
                                           pjsip_auth_lookup_cred *lookup,
                                           unsigned options );
 
+
+/**
+ * Set a parent session to be used instead of the current.
+ * This allows a central caching of authorization headers over multiple
+ * dialogs.
+ *
+ * @param sess          session that will be delegating the requests.
+ * @param p             parent that will be shared.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
+                                               const pjsip_auth_clt_sess *p);
 
 /**
  * This structure describes initialization settings of server authorization
