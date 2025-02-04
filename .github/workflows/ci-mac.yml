@@ -85,6 +85,10 @@ jobs:
     name: Default / pjlib,util,pjsip-test
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install openssl opencore-amr
     - name: config site
