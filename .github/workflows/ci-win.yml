@@ -8,12 +8,18 @@ on:
 env:
   CI_WIN_ARGS: -w 3 --shuffle
   CI_MODE: --ci-mode
+  # Setting CI_RUNNER to empty should disable cirunner
+  CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 --
 jobs:
   default:
     runs-on: windows-latest
     name: Default / build only
     steps:
     - uses: actions/checkout@master
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installwindows.ps1
     - name: get swig
       run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/swigwin-4.1.1.zip"  -OutFile ".\swigwin.zip"
       shell: powershell
@@ -49,6 +55,10 @@ jobs:
     name: OpenSSL / pjlib,util,pjmedia
     steps:
     - uses: actions/checkout@master
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installwindows.ps1
     - name: get openssl
       run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/openssl-1.1.1s-win.zip" -OutFile ".\openssl.zip"
       shell: powershell
@@ -85,24 +95,21 @@ jobs:
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjlib/bin
-        $args = $env:CI_WIN_ARGS -split ' '
-        ./pjlib-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
+        Invoke-Expression "$env:CI_RUNNER ./pjlib-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS $env:CI_MODE"
       shell: powershell
     - name: pjlib-util-test
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjlib-util/bin
-        $args = $env:CI_WIN_ARGS -split ' '
-        ./pjlib-util-test-i386-Win32-vc14-Release.exe $args
+        Invoke-Expression "$env:CI_RUNNER ./pjlib-util-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
       shell: powershell
     - name: pjmedia-test
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjmedia/bin
-        $args = $env:CI_WIN_ARGS -split ' '
-        ./pjmedia-test-i386-Win32-vc14-Release.exe $args
+        Invoke-Expression "$env:CI_RUNNER ./pjmedia-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
       shell: powershell
 
   openssl-2:
@@ -110,6 +117,10 @@ jobs:
     name: OpenSSL / pjsip,pjsua
     steps:
     - uses: actions/checkout@master
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installwindows.ps1
     - name: get openssl
       run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/openssl-1.1.1s-win.zip" -OutFile ".\openssl.zip"
       shell: powershell
@@ -167,8 +178,7 @@ jobs:
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjsip/bin
-        $args = $env:CI_WIN_ARGS -split ' '
-        ./pjsip-test-i386-Win32-vc14-Release.exe $args
+        Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
       shell: powershell
     - name: python pjsua tests
       run: |
@@ -185,6 +195,10 @@ jobs:
     name: OpenSSL / pjnath
     steps:
     - uses: actions/checkout@master
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installwindows.ps1
     - name: get openssl
       run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/openssl-1.1.1s-win.zip" -OutFile ".\openssl.zip"
       shell: powershell
@@ -221,8 +235,7 @@ jobs:
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjnath/bin
-        $args = $env:CI_WIN_ARGS -split ' '
-        ./pjnath-test-i386-Win32-vc14-Release.exe $args
+        Invoke-Expression "$env:CI_RUNNER ./pjnath-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
       shell: powershell
 
   gnu-tls:
@@ -230,6 +243,10 @@ jobs:
     name: GnuTLS / build only
     steps:
     - uses: actions/checkout@master
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installwindows.ps1
     - name: get gnutls
       run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/gnutls-3.5.17-win.zip" -Outfile ".\gnutls.zip"
       shell: powershell
@@ -269,6 +286,10 @@ jobs:
     name: VPX+SChannel / pjlib,util,pjmedia,pjnath
     steps:
     - uses: actions/checkout@master
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installwindows.ps1
     - name: get vpx
       run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/vpx-1.12-win.zip" -Outfile "vpx.zip"
       shell: powershell
@@ -341,32 +362,28 @@ jobs:
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjlib/bin
-        $args = $env:CI_WIN_ARGS -split ' '
-        ./pjlib-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
+        Invoke-Expression "$env:CI_RUNNER ./pjlib-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS $env:CI_MODE"
       shell: powershell
     - name: pjlib-util-test
       run: |
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjlib-util/bin
-        $args = $env:CI_WIN_ARGS -split ' '
-        ./pjlib-util-test-i386-Win32-vc14-Release.exe $args
+        Invoke-Expression "$env:CI_RUNNER ./pjlib-util-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
       shell: powershell
     - name: pjmedia-test
       run: |
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjmedia/bin
-        $args = $env:CI_WIN_ARGS -split ' '
-        ./pjmedia-test-i386-Win32-vc14-Release.exe $args
+        Invoke-Expression "$env:CI_RUNNER ./pjmedia-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
       shell: powershell
     - name: pjnath-test
       run: |
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjnath/bin
-        $args = $env:CI_WIN_ARGS -split ' '
-        ./pjnath-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
+        Invoke-Expression "$env:CI_RUNNER ./pjnath-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS $env:CI_MODE"
       shell: powershell
 
   vid-libvpx-schannel-2:
@@ -374,6 +391,10 @@ jobs:
     name: VPX+SChannel / pjsua
     steps:
     - uses: actions/checkout@master
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installwindows.ps1
     - name: get vpx
       run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/vpx-1.12-win.zip" -Outfile "vpx.zip"
       shell: powershell
@@ -468,6 +489,10 @@ jobs:
     name: VPX+SChannel / pjsip
     steps:
     - uses: actions/checkout@master
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installwindows.ps1
     - name: get vpx
       run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/vpx-1.12-win.zip" -Outfile "vpx.zip"
       shell: powershell
@@ -529,8 +554,7 @@ jobs:
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjsip/bin
-        $args = $env:CI_WIN_ARGS -split ' '
-        ./pjsip-test-i386-Win32-vc14-Release.exe $args
+        Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
       shell: powershell
 
   build-win-vid-ffmpeg:
@@ -538,6 +562,10 @@ jobs:
     name: FFMPEG / build only
     steps:
     - uses: actions/checkout@master
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installwindows.ps1
     - name: get ffmpeg
       run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/ffmpeg-5.1.2-win.zip" -Outfile "ffmpeg.zip"
       shell: powershell

@@ -8,6 +8,8 @@ on:
 env:
   CI_ARGS: -w 2 --shuffle --stdout-buf 1
   CI_MODE: --ci-mode
+  # Setting CI_RUNNER to empty should disable cirunner
+  CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 --
   MAKE_FAST: make -j 2
 jobs:
   default-build:
@@ -16,6 +18,10 @@ jobs:
     name: Default / build only
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: configure
       run: ./configure
     - name: make
@@ -27,6 +33,10 @@ jobs:
     name: Default / pjmedia,pjnath
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install openssl opencore-amr
     - name: config site
@@ -47,6 +57,10 @@ jobs:
     name: Default / pjsua-test
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install openssl opencore-amr swig sipp
     - name: set up Python
@@ -93,6 +107,10 @@ jobs:
     name: OpenSSL / pjlib,util,pjnath,pjmedia
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install openssl swig
     - name: configure
@@ -127,6 +145,10 @@ jobs:
     name: OpenSSL / pjsip
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install openssl
     - name: configure
@@ -149,6 +171,10 @@ jobs:
     name: GnuTLS / pjlib,util,pjmedia,pjnath
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install gnutls swig
     - name: configure
@@ -179,6 +205,10 @@ jobs:
     name: GnuTLS / pjsip-test
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install gnutls swig
     - name: configure
@@ -197,6 +227,10 @@ jobs:
     name: Openh264+VPX / pjmedia,pjsua
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install openssl openh264 libvpx opencore-amr swig sipp 
     - name: config site
@@ -223,6 +257,10 @@ jobs:
     name: Openh264+VPX / util,pjnath
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install openssl openh264 libvpx opencore-amr
     - name: config site
@@ -243,6 +281,10 @@ jobs:
     name: Openh264+VPX / pjlib,pjsip
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install openssl openh264 libvpx opencore-amr
     - name: config site
@@ -263,6 +305,10 @@ jobs:
     name: FFMPEG+VPX+x264 / pjmedia
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install openssl x264 libvpx nasm swig
     - name: get ffmpeg
@@ -291,6 +337,10 @@ jobs:
     name: VPX+VidToolbox / pjmedia
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
     - name: install dependencies
       run: brew install openssl libvpx swig
     - name: config site

@@ -8,6 +8,8 @@ on:
 env:
   CI_ARGS: -w 3 --shuffle --stdout-buf 1
   CI_MODE: --ci-mode
+  # Setting CI_RUNNER to empty should disable cirunner
+  CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 --
   MAKE_FAST: make -j 3
 jobs:
   default-build:
@@ -16,6 +18,10 @@ jobs:
     name: Default / build only
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: configure
       run: ./configure
     - name: make
@@ -31,6 +37,10 @@ jobs:
     name: Default / pjmedia,pjsua
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
     - name: config site
@@ -67,6 +77,10 @@ jobs:
     name: Default / pjlib,util,pjnath
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get install -y libopencore-amrnb-dev
     - name: config site
@@ -87,6 +101,10 @@ jobs:
     name: Default / pjsip
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get install -y libopencore-amrnb-dev
     - name: config site
@@ -103,6 +121,10 @@ jobs:
     name: No SSL / pjlib,pjsip
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get install -y swig
     - name: configure
@@ -124,6 +146,10 @@ jobs:
     name: GnuTLS / pjlib,pjnath,pjsip
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y --fix-missing swig libgnutls28-dev
     - name: configure
@@ -148,6 +174,10 @@ jobs:
     name: OpenH264+VPX / pjmedia,pjsua
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y swig nasm sip-tester libvpx-dev libopencore-amrnb-dev libsdl2-dev
     - name: get openh264
@@ -195,6 +225,10 @@ jobs:
     name: OpenH264+VPX / pjlib,util,pjnath
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev libsdl2-dev
     - name: get openh264
@@ -219,6 +253,10 @@ jobs:
     name: OpenH264+VPX / pjsip
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev libsdl2-dev
     - name: get openh264
@@ -239,6 +277,10 @@ jobs:
     name: FFMPEG+x264 / pjmedia
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y swig nasm libx264-dev libvpx-dev libsdl2-dev
     - name: get ffmpeg
