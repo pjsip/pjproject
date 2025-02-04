@@ -720,6 +720,38 @@ PJ_DECL(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
 
 
 /**
+ * The declaration of customized SDP session comparison callback. See
+ * #pjmedia_sdp_neg_register_sdp_cmp_cb() for more info.
+ *
+ * @param sd1       The first SDP session to compare.
+ * @param sd2       The second SDP session to compare.
+ * @param option    Must be zero for now.
+ * @param status    Status code to be returned for the SDP comparison result
+ *                  (PJ_SUCCESS meaning both SDPs are equal).
+ *                  On input, it contains the return status of our default
+ *                  SDP comparison implementation, i.e.
+ *                  #pjmedia_sdp_session_cmp().
+ */
+typedef void (*pjmedia_sdp_neg_sdp_cmp_cb)(const pjmedia_sdp_session *sd1,
+                                           const pjmedia_sdp_session *sd2,
+                                           unsigned option,
+                                           pj_status_t *status);
+
+
+/**
+ * Register customized SDP session comparison callback.
+ * To unregister, just call this function with parameter cb set to NULL.
+ *
+ * @param cb            The customized SDP session comparison callback or
+ *                      NULL to unregister the callback.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_sdp_neg_register_sdp_cmp_cb(pjmedia_sdp_neg_sdp_cmp_cb cb);
+
+
+/**
  * Enumeration of customized SDP format matching option flags. See
  * #pjmedia_sdp_neg_register_fmt_match_cb() for more info.
  */
