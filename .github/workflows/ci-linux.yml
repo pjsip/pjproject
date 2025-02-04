@@ -215,6 +215,9 @@ jobs:
     # SDL error: no available vid dev
     #- name: ensure SDL is installed
     #  run: cat pjsua-caps | grep -E '\[SDL\]\[render\]'
+      # one of the step above has changed core_pattern, restore it
+    - name: reinstall cirunner
+      run: cirunner/installlinux.sh
     - name: pjmedia-test
       run: make pjmedia-test
     - name: pjsua-test
@@ -241,6 +244,9 @@ jobs:
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: $MAKE_FAST
+      # one of the step above has changed core_pattern, restore it
+    - name: reinstall cirunner
+      run: cirunner/installlinux.sh
     - name: pjlib-test
       run: make pjlib-test
     - name: pjlib-util-test
@@ -269,6 +275,9 @@ jobs:
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: $MAKE_FAST
+      # one of the step above has changed core_pattern, restore it
+    - name: reinstall cirunner
+      run: cirunner/installlinux.sh
     - name: pjsip-test
       run: make pjsip-test
 
@@ -315,5 +324,8 @@ jobs:
     # SDL error: no available vid dev
     #- name: ensure SDL is installed
     #  run: cat pjsua-caps | grep -E '\[SDL\]\[render\]'
+      # one of the step above has changed core_pattern, restore it
+    - name: reinstall cirunner
+      run: cirunner/installlinux.sh
     - name: pjmedia-test
       run: export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH && make pjmedia-test
