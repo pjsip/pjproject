@@ -3762,9 +3762,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
                     pj_sockaddr_print(src_addr, psrc_addr,
                                       sizeof(psrc_addr), 3);
                 }
-                PJ_LOG(2, (ice->obj_name, "Ignoring incoming message for "
-                                          "component [%d], from src addr [%s]",
-                                          comp_id, psrc_addr));
+                PJ_LOG(4, (ice->obj_name, "Ignoring incoming message for "
+                         "component [%d] because source addr [%s] unrecognized",
+                         comp_id, psrc_addr));
                 return PJ_SUCCESS;
             }
         } 

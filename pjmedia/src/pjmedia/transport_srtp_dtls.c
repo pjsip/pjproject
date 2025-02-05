@@ -117,12 +117,6 @@ typedef struct dtls_srtp_channel
     unsigned             channel;
 } dtls_srtp_channel;
 
-typedef struct dtls_srtp_ice_cand
-{
-    unsigned            cand_cnt;
-    pj_sockaddr         cand_addr[PJ_ICE_MAX_CAND];
-} dtls_srtp_ice_cand;
-
 typedef struct dtls_srtp
 {
     pjmedia_transport    base;
@@ -149,8 +143,6 @@ typedef struct dtls_srtp
 
     char                 buf[NUM_CHANNEL][PJMEDIA_MAX_MTU];
     pjmedia_clock       *clock[NUM_CHANNEL];/* Timer workaround for retrans */
-
-    dtls_srtp_ice_cand   ice_rem_cand[NUM_CHANNEL];
 
     SSL_CTX             *ossl_ctx[NUM_CHANNEL];
     SSL                 *ossl_ssl[NUM_CHANNEL];

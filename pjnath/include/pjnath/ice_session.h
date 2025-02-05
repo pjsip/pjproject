@@ -319,7 +319,8 @@ struct pj_ice_sess_cand
 
     /**
      * Indicate that remote connectivity check has been received or the check
-     * has been successful for this candidate.
+     * has been successful for this candidate. It is applicable for 
+     * remote candidate only.
      *
      */
     pj_bool_t            checked;
@@ -685,7 +686,7 @@ typedef struct pj_ice_sess_options
      *
      * Default value is PJ_ICE_SESS_CHECK_SRC_ADDR.
      */
-    unsigned check_src_addr;
+    pj_bool_t check_src_addr;
 
 } pj_ice_sess_options;
 
