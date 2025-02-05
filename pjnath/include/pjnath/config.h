@@ -398,9 +398,11 @@
   * Specify whether to check the source address of the incoming messages.
   * The source address will be compared to the remote candidate which has
   * a completed connectivity check or received a connectivity check.
+  * 
+  * Defalut: 1 (yes)
   */
 #ifndef PJ_ICE_SESS_CHECK_SRC_ADDR
-#   define PJ_ICE_SESS_CHECK_SRC_ADDR 1
+#   define PJ_ICE_SESS_CHECK_SRC_ADDR               1
 #endif
 
 /**
