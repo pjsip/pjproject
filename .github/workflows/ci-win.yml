@@ -590,3 +590,33 @@ jobs:
         set LIB=%LIB%;%FFMPEG_DIR%\lib;%SDL_DIR%\lib\x86
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+
+  iocp:
+    runs-on: windows-latest
+    name: IOCP / pjlib
+    steps:
+    - uses: actions/checkout@master
+    - name: config site
+      run:
+        cd pjlib/include/pj; cp config_site_test.h config_site.h; Add-Content config_site.h "#define PJ_IOQUEUE_IMP PJ_IOQUEUE_IMP_IOCP"
+      shell: powershell
+    - name: check VsDevCmd.bat
+      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      shell: cmd
+    - name: MSBuild
+      working-directory: .
+      run: |
+        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
+      shell: cmd
+    - name: verify ioqueue type is iocp
+      run: |
+        cd pjlib/bin
+        pjlib-test-i386-Win32-vc14-Release.exe -c -L | findstr /C:"ioqueue type" | findstr iocp
+      shell: cmd
+    - name: pjlib-test
+      run: |
+        cd pjlib/bin
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjlib-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
+      shell: powershell

@@ -333,7 +333,7 @@ static void on_accept_complete(pj_ioqueue_key_t *key,
     status = pj_ioqueue_register_sock2(test->state.pool,
                                        test->state.ioq,
                                        test->state.socks[SERVER],
-                                       test->state.grp_lock,
+                                       NULL, //test->state.grp_lock,
                                        test,
                                        &test_cb,
                                        &test->state.keys[SERVER]);
@@ -446,7 +446,8 @@ static int worker_thread(void *p)
             op_key_user_data *okud = &test->state.okuds[CLIENT][i];
             pj_lock_acquire((pj_lock_t*)test->state.grp_lock);
             if (!pj_ioqueue_is_pending(test->state.keys[CLIENT],
-                                       &okud->client.send_op)) {
+                                       &okud->client.send_op))
+            {
                 on_write_complete(test->state.keys[CLIENT],
                                   &okud->client.send_op, -12345);
             }
@@ -529,7 +530,7 @@ static int perform_single_pass(test_desc *test)
         CHECK(24, pj_ioqueue_register_sock2(test->state.pool,
                                             test->state.ioq,
                                             test->state.listen_sock,
-                                            test->state.grp_lock,
+                                            NULL, //test->state.grp_lock,
                                             test,
                                             &test_cb,
                                             &test->state.listen_key));
@@ -559,7 +560,7 @@ static int perform_single_pass(test_desc *test)
         CHECK(33, pj_ioqueue_register_sock2(test->state.pool,
                                             test->state.ioq,
                                             test->state.socks[SERVER],
-                                            test->state.grp_lock,
+                                            NULL, //test->state.grp_lock,
                                             test,
                                             &test_cb,
                                             &test->state.keys[SERVER]));
@@ -604,10 +605,18 @@ static int perform_single_pass(test_desc *test)
                                      pj_SO_RCVBUF(),
                                      &value, sizeof(value)));
     }
+
+    /* We cannot use the global group lock for registering keys (here and
+     * all below) because currently IOCP key uses the group lock handler for
+     * releasing its resources including the key itself. If the key is not
+     * released (the global group lock destroy is done very late) and
+     * as the ioqueue capacity for the tests are quite limited (~4-6 keys),
+     * ioqueue will get full quickly and tests will fail.
+     */
     CHECK(42, pj_ioqueue_register_sock2(test->state.pool,
                                         test->state.ioq,
                                         test->state.socks[CLIENT],
-                                        test->state.grp_lock,
+                                        NULL, //test->state.grp_lock,
                                         test,
                                         &test_cb,
                                         &test->state.keys[CLIENT]));
