@@ -136,7 +136,6 @@ int timestamp_test(void)
      * First we get the first timestamp.
      */
     rc = pj_get_timestamp(&t1);
-
     if (rc != PJ_SUCCESS) {
         app_perror("...ERROR: pj_get_timestamp", rc);
         return -1001;
