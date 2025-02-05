@@ -139,7 +139,6 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
     int idx;
 
     PJ_CHECK_STACK();
-    PJ_UNUSED_ARG(alignment);
 
     pj_lock_acquire(cp->lock);
 
