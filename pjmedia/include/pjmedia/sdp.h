@@ -805,7 +805,13 @@ pjmedia_sdp_session_clone( pj_pool_t *pool,
 
 
 /**
- * Compare two SDP session for equality.
+ * Compare two SDP session for equality, by comparing:
+ * - the fields origin, subject, connection, time
+ * - the attributes direction, fmtp, and rtpmap
+ * - the media descriptions (see #pjmedia_sdp_media_cmp())
+ *
+ * The function will also call the callback
+ * \a pjmedia_sdp_session_cmp_cb() if registered.
  *
  * @param sd1       The first SDP session to compare.
  * @param sd2       The second SDP session to compare.
@@ -814,10 +820,44 @@ pjmedia_sdp_session_clone( pj_pool_t *pool,
  * @return          PJ_SUCCESS when both SDPs are equal, or otherwise
  *                  the status code indicates which part of the session
  *                  descriptors are not equal.
+ *                  If \a pjmedia_sdp_session_cmp_cb() is registered,
+ *                  will return the status output parameter of the callback.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_session_cmp(const pjmedia_sdp_session *sd1,
                                              const pjmedia_sdp_session *sd2,
                                              unsigned option);
+
+
+/**
+ * The declaration of customized SDP session comparison callback. See
+ * #pjmedia_sdp_session_register_cmp_cb() for more info.
+ *
+ * @param sd1       The first SDP session to compare.
+ * @param sd2       The second SDP session to compare.
+ * @param option    Must be zero for now.
+ * @param status    Status code to be returned for the SDP comparison result
+ *                  (PJ_SUCCESS meaning both SDPs are equal).
+ *                  On input, it contains the return status of
+ *                  #pjmedia_sdp_session_cmp().
+ */
+typedef void (*pjmedia_sdp_session_cmp_cb)(const pjmedia_sdp_session *sd1,
+                                           const pjmedia_sdp_session *sd2,
+                                           unsigned option,
+                                           pj_status_t *status);
+
+
+/**
+ * Register customized SDP session comparison callback. The callback will
+ * be called by #pjmedia_sdp_session_cmp().
+ * To unregister, just call this function with parameter cb set to NULL.
+ *
+ * @param cb            The customized SDP session comparison callback or
+ *                      NULL to unregister the callback.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_sdp_session_register_cmp_cb(pjmedia_sdp_session_cmp_cb cb);
 
 
 /**

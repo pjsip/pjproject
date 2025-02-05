@@ -22,6 +22,9 @@
 #include <pj/string.h>
 
 
+/* The registered customized SDP session comparison callback */
+static pjmedia_sdp_session_cmp_cb sdp_cmp_cb;
+
 /* Compare connection line. */
 static pj_status_t compare_conn(const pjmedia_sdp_conn *c1,
                                 const pjmedia_sdp_conn *c2)
@@ -218,12 +221,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_media_cmp( const pjmedia_sdp_media *sd1,
     return PJ_SUCCESS;
 }
 
-/*
- * Compare two SDP session for equality.
- */
-PJ_DEF(pj_status_t) pjmedia_sdp_session_cmp( const pjmedia_sdp_session *sd1,
-                                             const pjmedia_sdp_session *sd2,
-                                             unsigned option)
+static pj_status_t sdp_session_cmp(const pjmedia_sdp_session *sd1,
+                                   const pjmedia_sdp_session *sd2,
+                                   unsigned option)
 {
     unsigned i;
     pj_status_t status;
@@ -295,6 +295,30 @@ PJ_DEF(pj_status_t) pjmedia_sdp_session_cmp( const pjmedia_sdp_session *sd1,
     return PJ_SUCCESS;
 }
 
+/*
+ * Compare two SDP session for equality.
+ */
+PJ_DEF(pj_status_t) pjmedia_sdp_session_cmp( const pjmedia_sdp_session *sd1,
+                                             const pjmedia_sdp_session *sd2,
+                                             unsigned option)
+{
+    pj_status_t status;
+
+    status = sdp_session_cmp(sd1, sd2, option);
+    if (sdp_cmp_cb) {
+        (*sdp_cmp_cb)(sd1, sd2, option, &status);
+    }
+
+    return status;
+}
+
+/* Register customized SDP session comparison callback function. */
+PJ_DEF(pj_status_t)
+pjmedia_sdp_session_register_cmp_cb(pjmedia_sdp_session_cmp_cb cb)
+{
+    sdp_cmp_cb = cb;
+    return PJ_SUCCESS;
+}
 
 PJ_DEF(pj_status_t) pjmedia_sdp_conn_cmp(const pjmedia_sdp_conn *conn1, 
                                          const pjmedia_sdp_conn *conn2,
