@@ -9,7 +9,7 @@ env:
   CI_ARGS: -w 3 --shuffle --stdout-buf 1
   CI_MODE: --ci-mode
   # Setting CI_RUNNER to empty should disable cirunner
-  CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 --
+  CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 -o ${{ github.workspace }}/artifacts --
   MAKE_FAST: make -j 3
 jobs:
   default-build:
@@ -30,6 +30,12 @@ jobs:
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify oepnssl is used
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+1'
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   default-full-bundle-1:
     # full bundle: enable all codecs + AEC + DTLS
@@ -71,6 +77,12 @@ jobs:
       run: make pjmedia-test
     - name: pjsua-test
       run: make pjsua-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   default-full-bundle-2:
     runs-on: ubuntu-latest
@@ -95,6 +107,12 @@ jobs:
       run: make pjlib-util-test
     - name: pjnath-test
       run: make pjnath-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   default-full-bundle-3:
     runs-on: ubuntu-latest
@@ -115,6 +133,12 @@ jobs:
       run: $MAKE_FAST
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   no-tls:
     runs-on: ubuntu-latest
@@ -137,6 +161,12 @@ jobs:
       run: make pjlib-test
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   # build-ubuntu-openssl
   # TLS: with OpenSSL (same as build-ubuntu-default)
@@ -168,6 +198,12 @@ jobs:
       run: make pjnath-test
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   vid-openh264-1:
     runs-on: ubuntu-latest
@@ -222,6 +258,12 @@ jobs:
       run: make pjmedia-test
     - name: pjsua-test
       run: make pjsua-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   vid-openh264-2:
     runs-on: ubuntu-latest
@@ -253,6 +295,12 @@ jobs:
       run: make pjlib-util-test
     - name: pjnath-test
       run: make pjnath-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   vid-openh264-3:
     runs-on: ubuntu-latest
@@ -280,6 +328,12 @@ jobs:
       run: cirunner/installlinux.sh
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   vid-ffmpeg:
     runs-on: ubuntu-latest
@@ -329,3 +383,9 @@ jobs:
       run: cirunner/installlinux.sh
     - name: pjmedia-test
       run: export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH && make pjmedia-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts

@@ -9,7 +9,7 @@ env:
   CI_WIN_ARGS: -w 3 --shuffle
   CI_MODE: --ci-mode
   # Setting CI_RUNNER to empty should disable cirunner
-  CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 --
+  CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 -o ${{ github.workspace }}/artifacts --
 jobs:
   default:
     runs-on: windows-latest
@@ -49,6 +49,12 @@ jobs:
         cd pjsip-apps/build
         msbuild swig_java_pjsua2.vcxproj /p:PlatformToolset=v143 /p:Configuration=Debug-Dynamic /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   openssl-1:
     runs-on: windows-latest
@@ -111,6 +117,12 @@ jobs:
         cd pjmedia/bin
         Invoke-Expression "$env:CI_RUNNER ./pjmedia-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
       shell: powershell
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   openssl-2:
     runs-on: windows-latest
@@ -189,6 +201,12 @@ jobs:
         cd tests/pjsua
         echo python runall.py
       shell: powershell
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   openssl-3:
     runs-on: windows-latest
@@ -237,6 +255,12 @@ jobs:
         cd pjnath/bin
         Invoke-Expression "$env:CI_RUNNER ./pjnath-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
       shell: powershell
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   gnu-tls:
     runs-on: windows-latest
@@ -280,6 +304,12 @@ jobs:
         set LIB=%LIB%;%GNUTLS_DIR%\lib
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   vid-libvpx-schannel-1:
     runs-on: windows-latest
@@ -385,6 +415,12 @@ jobs:
         cd pjnath/bin
         Invoke-Expression "$env:CI_RUNNER ./pjnath-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS $env:CI_MODE"
       shell: powershell
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   vid-libvpx-schannel-2:
     runs-on: windows-latest
@@ -483,6 +519,12 @@ jobs:
         cd tests/pjsua
         echo python runall.py
       shell: powershell
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   vid-libvpx-schannel-3:
     runs-on: windows-latest
@@ -556,6 +598,12 @@ jobs:
         cd pjsip/bin
         Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
       shell: powershell
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   build-win-vid-ffmpeg:
     runs-on: windows-latest
@@ -618,6 +666,12 @@ jobs:
         set LIB=%LIB%;%FFMPEG_DIR%\lib;%SDL_DIR%\lib\x86
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   iocp:
     runs-on: windows-latest
@@ -648,3 +702,9 @@ jobs:
         $args = $env:CI_WIN_ARGS -split ' '
         ./pjlib-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
       shell: powershell
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts

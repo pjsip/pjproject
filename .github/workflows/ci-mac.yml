@@ -9,7 +9,7 @@ env:
   CI_ARGS: -w 2 --shuffle --stdout-buf 1
   CI_MODE: --ci-mode
   # Setting CI_RUNNER to empty should disable cirunner
-  CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 --
+  CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 -o ${{ github.workspace }}/artifacts --
   MAKE_FAST: make -j 2
 jobs:
   default-build:
@@ -26,6 +26,12 @@ jobs:
       run: ./configure
     - name: make
       run: $MAKE_FAST
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   default-pjlib-util-pjmedia-pjnath:
     # full bundle: enable all codecs + AEC + DTLS
@@ -51,6 +57,12 @@ jobs:
       run: make pjmedia-test
     - name: pjnath-test
       run: make pjnath-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   default-pjsua-test:
     runs-on: macos-latest
@@ -79,6 +91,12 @@ jobs:
       run: cd pjsip-apps/src/swig && make
     - name: pjsua-test
       run: make pjsua-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   default-pjsip-test:
     runs-on: macos-latest
@@ -105,6 +123,12 @@ jobs:
       run: make pjlib-util-test
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   openssl-1:
     runs-on: macos-latest
@@ -143,6 +167,12 @@ jobs:
       run: make pjmedia-test
     - name: pjnath-test
       run: make pjnath-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   openssl-2:
     runs-on: macos-latest
@@ -169,6 +199,12 @@ jobs:
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+1'
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   gnu-tls-1:
     runs-on: macos-latest
@@ -203,6 +239,12 @@ jobs:
       run: make pjmedia-test
     - name: pjnath-test
       run: make pjnath-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   gnu-tls-2:
     runs-on: macos-latest
@@ -225,6 +267,12 @@ jobs:
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+2'
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   video-openh264-1:
     runs-on: macos-latest
@@ -255,6 +303,12 @@ jobs:
       run: make pjmedia-test
     - name: pjsua-test
       run: make pjsua-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   video-openh264-2:
     runs-on: macos-latest
@@ -279,6 +333,12 @@ jobs:
       run: make pjlib-util-test
     - name: pjnath-test
       run: make pjnath-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   video-openh264-3:
     runs-on: macos-latest
@@ -303,6 +363,12 @@ jobs:
       run: make pjlib-test
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   video-ffmpeg:
     runs-on: macos-latest
@@ -335,6 +401,12 @@ jobs:
       run: cd pjsip-apps/src/swig && make
     - name: pjmedia-test
       run: make pjmedia-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   video-vid-toolbox:
     runs-on: macos-latest
@@ -361,3 +433,9 @@ jobs:
       run: cd pjsip-apps/src/swig && make
     - name: pjmedia-test
       run: make pjmedia-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
