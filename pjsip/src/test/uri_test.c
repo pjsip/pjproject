@@ -942,9 +942,6 @@ static int simple_uri_test(void)
     pj_pool_t *pool;
     pj_status_t status;
 
-    i = 0;
-    *(int*)(long)i = 0x12345;
-    
     PJ_LOG(3,(THIS_FILE, "  simple test"));
     for (i=0; i<PJ_ARRAY_SIZE(uri_test_array); ++i) {
         pool = pjsip_endpt_create_pool(endpt, "", POOL_SIZE, POOL_SIZE);
