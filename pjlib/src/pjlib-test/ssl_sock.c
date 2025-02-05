@@ -1718,10 +1718,12 @@ int ssl_sock_test(void)
 #endif
 
 #if WITH_BENCHMARK
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_MBEDTLS)
     PJ_LOG(3,("", "..performance test"));
     ret = perf_test(PJ_IOQUEUE_MAX_HANDLES/2 - 1, 0);
     if (ret != 0)
         return ret;
+#endif
 #endif
 
     PJ_LOG(3,("", "..client non-SSL (handshake timeout 5 secs)"));

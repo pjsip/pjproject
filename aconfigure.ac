@@ -2106,8 +2106,15 @@ AC_ARG_WITH(gnutls,
     [with_gnutls=no]
 )
 
+dnl # MbedTLS alt prefix
+AC_ARG_WITH(mbedtls,
+    AS_HELP_STRING([--with-mbedtls=DIR], [Specify alternate MbedTLS prefix]),
+    [],
+    [with_mbedtls=no]
+)
+
 dnl # Do not use default SSL installation if we are cross-compiling
-if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno" -a "x$with_gnutls" = "xno"; then
+if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno" -a "x$with_gnutls" = "xno" -a "x$with_mbedtls" = "xno"; then
     enable_ssl=no
 fi
 
@@ -2174,7 +2181,7 @@ AC_ARG_ENABLE(ssl,
             AC_MSG_RESULT([Using SSL prefix... $with_ssl])
         fi
 
-        if test "x$with_gnutls" = "xno"; then
+        if test "x$with_gnutls" = "xno" -a "x$with_mbedtls" = "xno"; then
             # We still need to check for OpenSSL installations even if
             # we find Darwin SSL above since DTLS requires OpenSSL.
             AC_MSG_RESULT([checking for OpenSSL installations..])
@@ -2261,6 +2268,41 @@ AC_ARG_ENABLE(ssl,
                 ac_ssl_backend="gnutls"
             else
                 AC_MSG_RESULT([** No GnuTLS libraries found, disabling SSL support **])
+            fi
+
+        fi
+
+        if test "x$ac_ssl_backend" = "x"; then
+            if test "x$with_mbedtls" != "xno" -a "x$with_mbedtls" != "x"; then
+                CFLAGS="$CFLAGS -I$with_mbedtls/include"
+                LDFLAGS="$LDFLAGS -L$with_mbedtls/lib"
+                AC_MSG_RESULT([Using MbedTLS prefix... $with_mbedtls])
+            fi
+
+            AC_MSG_RESULT([checking for MbedTLS installations..])
+            AC_SUBST(mbedtls_h_present)
+            AC_SUBST(libmbedtls_present)
+            AC_CHECK_HEADER(mbedtls/version.h, [mbedtls_h_present=1])
+
+            if test "$PKG_CONFIG" != "none"; then
+                if $PKG_CONFIG --exists mbedtls mbedcrypto mbedx509; then
+                    LIBS="$LIBS `$PKG_CONFIG --libs mbedtls mbedcrypto mbedx509`"
+                    libmbedtls_present=1
+                else
+                    AC_CHECK_LIB(mbedtls, mbedtls_version_get_number, [
+                        libmbedtls_present=1 && LIBS="$LIBS -lmbedtls"])
+                fi
+            else
+                AC_MSG_RESULT([*** Warning: neither pkg-config nor python is available, disabling mbedtls. ***])
+            fi
+
+            if test "x$mbedtls_h_present" = "x1" -a "x$libmbedtls_present" = "x1"; then
+                AC_MSG_RESULT([MbedTLS library found, SSL support enabled])
+                AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
+                AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_MBEDTLS)
+                ac_ssl_backend="mbedtls"
+            else
+                AC_MSG_RESULT([** No MbedTLS libraries found, disabling SSL support **])
             fi
 
         fi
