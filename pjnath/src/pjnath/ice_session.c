@@ -3747,21 +3747,34 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
         PJ_RACE_ME(5);
 
         if (ice->opt.check_src_addr) {
-            for (i = 0; i < ice->rcand_cnt; ++i) {
-                if (ice->rcand[i].comp_id == comp_id && 
-                    ice->rcand[i].checked &&
-                    pj_sockaddr_cmp(src_addr, &ice->rcand[i].addr) == 0)
-                {
-                    break;
+            pj_bool_t check_addr = PJ_TRUE;
+            pj_sockaddr *raddr = &comp->rcand_check_addr;
+            char psrc_addr[PJ_INET6_ADDRSTRLEN] = {0};
+
+            if (pj_sockaddr_has_addr(src_addr)) {
+                pj_sockaddr_print(src_addr, psrc_addr, sizeof(psrc_addr), 3);
+            }
+
+            if (!pj_sockaddr_has_addr(raddr)) {
+                for (i = 0; i < ice->rcand_cnt; ++i) {
+                    if (ice->rcand[i].comp_id == comp_id &&
+                        ice->rcand[i].checked &&
+                        pj_sockaddr_cmp(src_addr, &ice->rcand[i].addr) == 0)
+                    {
+                        pj_sockaddr_cp(raddr, src_addr);
+                        PJ_LOG(4, (ice->obj_name, "Using [%s] as valid address "
+                                   "for component [%d]",
+                                   psrc_addr, comp_id));
+
+                        check_addr = PJ_FALSE;
+                        break;
+                    }
                 }
             }
-            if (i == ice->rcand_cnt) {
-                char psrc_addr[PJ_INET6_ADDRSTRLEN] = {0};
-
-                if (pj_sockaddr_has_addr(src_addr)) {
-                    pj_sockaddr_print(src_addr, psrc_addr,
-                                      sizeof(psrc_addr), 3);
-                }
+            if (check_addr && 
+                (!pj_sockaddr_has_addr(raddr) || 
+                 pj_sockaddr_cmp(src_addr, raddr) != 0))
+            {
                 PJ_LOG(4, (ice->obj_name, "Ignoring incoming message for "
                          "component [%d] because source addr [%s] unrecognized",
                          comp_id, psrc_addr));

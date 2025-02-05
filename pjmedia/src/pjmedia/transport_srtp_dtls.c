@@ -1374,16 +1374,15 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
         (ds->setup == DTLS_SETUP_ACTPASS || ds->setup == DTLS_SETUP_PASSIVE))
     {
         pj_status_t status;
-        pj_bool_t check_hello_addr = PJ_FALSE;
 
 #if defined(PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR) && \
             PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR==1
 
-        if (!ds->use_ice)
-            check_hello_addr = PJ_TRUE;
-
-#endif
-        if (check_hello_addr) {
+        /* Check the souce address with the specified remote address from 
+         * the SDP. When ICE is used, the source address checking will be 
+         * done in ICE session.
+         */
+        if (!ds->use_ice) {
             pjmedia_transport_info info;
             pj_sockaddr src_addr;
             pj_bool_t src_addr_avail = PJ_TRUE;
@@ -1407,17 +1406,18 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
                 char psrc_addr[PJ_INET6_ADDRSTRLEN] = "Unknown";
 
                 if (src_addr_avail) {
-                    pj_sockaddr_print(&src_addr, psrc_addr, 
+                    pj_sockaddr_print(&src_addr, psrc_addr,
                                       sizeof(psrc_addr), 3);
                 }
                 PJ_LOG(2, (ds->base.name, "DTLS-SRTP %s ignoring %lu bytes, "
-                    "from src addr [%s]", CHANNEL_TO_STRING(idx), 
-                    (unsigned long)size,   psrc_addr));
+                    "from unrecognized src addr [%s]", CHANNEL_TO_STRING(idx),
+                    (unsigned long)size, psrc_addr));
 
                 DTLS_UNLOCK(ds);
                 return PJ_SUCCESS;
             }
         }
+#endif
         ds->setup = DTLS_SETUP_PASSIVE;
         status = ssl_handshake_channel(ds, idx);
         if (status != PJ_SUCCESS) {

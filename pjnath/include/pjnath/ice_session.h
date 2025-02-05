@@ -201,6 +201,12 @@ typedef struct pj_ice_sess_comp
      */
     pj_stun_session     *stun_sess;
 
+    /**
+     * The remote candidate checked address. This is expected address that 
+     * the remote going to use.
+     */
+    pj_sockaddr         rcand_check_addr;
+
 } pj_ice_sess_comp;
 
 
