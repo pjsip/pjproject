@@ -105,6 +105,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_on_buf(const char *name,
     pj_thread_local_set(tls, &param);
 
     return pj_pool_create_int(&stack_based_factory, name, size, 0, 
+                              PJ_POOL_ALIGNMENT,
                               pj_pool_factory_default_policy.callback);
 #else
     PJ_UNUSED_ARG(buf);

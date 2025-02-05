@@ -81,9 +81,9 @@ static int capacity_test(void)
 /* Test that the alignment works. */
 static int pool_alignment_test(void)
 {
-    pj_pool_t *pool;
+    pj_pool_t *pool, *pool2;
     void *ptr;
-    enum { MEMSIZE = 64, LOOP = 100 };
+    enum { MEMSIZE = 64, LOOP = 100, POOL_ALIGNMENT_TEST = 4*PJ_POOL_ALIGNMENT };
     unsigned i;
 
     PJ_LOG(3,("test", "...alignment test"));
@@ -92,37 +92,121 @@ static int pool_alignment_test(void)
     if (!pool)
         return -300;
 
+    pool2 = pj_pool_aligned_create(mem, NULL, PJ_POOL_SIZE + MEMSIZE, MEMSIZE, POOL_ALIGNMENT_TEST, NULL);
+    if (!pool2) {
+        pj_pool_release(pool);
+        return -302;
+    }
+
 #define IS_ALIGNED(p)   ((((unsigned long)(pj_ssize_t)p) & \
                            (PJ_POOL_ALIGNMENT-1)) == 0)
+#define IS_ALIGNED2(p)   ((((unsigned long)(pj_ssize_t)p) & \
+                           (POOL_ALIGNMENT_TEST-1)) == 0)
 
     for (i=0; i<LOOP; ++i) {
         /* Test first allocation */
-        ptr = pj_pool_alloc(pool, 1);
-        if (!IS_ALIGNED(ptr)) {
-            pj_pool_release(pool);
-            return -310;
+        if (i % 2)
+        {
+            ptr = pj_pool_aligned_alloc(pool, POOL_ALIGNMENT_TEST, 1);
+            if (!IS_ALIGNED2(ptr))
+            {
+                pj_pool_release(pool);
+                pj_pool_release(pool2);
+                return -312;
+            }
+            ptr = pj_pool_aligned_alloc(pool2, PJ_POOL_ALIGNMENT, 1);
+            if (!IS_ALIGNED2(ptr))
+            {
+                pj_pool_release(pool);
+                pj_pool_release(pool2);
+                return -313;
+            }
+        }
+        else
+        {
+            ptr = pj_pool_alloc(pool, 1);
+            if (!IS_ALIGNED(ptr))
+            {
+                pj_pool_release(pool);
+                pj_pool_release(pool2);
+                return -310;
+            }
+            ptr = pj_pool_alloc(pool2, 1);
+            if (!IS_ALIGNED2(ptr))
+            {
+                pj_pool_release(pool);
+                pj_pool_release(pool2);
+                return -312;
+            }
         }
 
         /* Test subsequent allocation */
         ptr = pj_pool_alloc(pool, 1);
         if (!IS_ALIGNED(ptr)) {
             pj_pool_release(pool);
+            pj_pool_release(pool2);
             return -320;
+        }
+        ptr = pj_pool_aligned_alloc(pool, POOL_ALIGNMENT_TEST, 1);
+        if (!IS_ALIGNED2(ptr))
+        {
+            pj_pool_release(pool);
+            pj_pool_release(pool2);
+            return -321;
+        }
+        ptr = pj_pool_alloc(pool2, 1);
+        if (!IS_ALIGNED2(ptr))
+        {
+            pj_pool_release(pool);
+            pj_pool_release(pool2);
+            return -322;
+        }
+        ptr = pj_pool_aligned_alloc(pool2, PJ_POOL_ALIGNMENT, 1);
+        if (!IS_ALIGNED2(ptr))
+        {
+            pj_pool_release(pool);
+            pj_pool_release(pool2);
+            return -323;
         }
 
         /* Test allocation after new block is created */
         ptr = pj_pool_alloc(pool, MEMSIZE*2+1);
         if (!IS_ALIGNED(ptr)) {
             pj_pool_release(pool);
+            pj_pool_release(pool2);
             return -330;
+        }
+        ptr = pj_pool_aligned_alloc(pool, POOL_ALIGNMENT_TEST, MEMSIZE*2+1);
+        if (!IS_ALIGNED2(ptr))
+        {
+            pj_pool_release(pool);
+            pj_pool_release(pool2);
+            return -331;
+        }
+        ptr = pj_pool_alloc(pool2, MEMSIZE*2+1);
+        if (!IS_ALIGNED2(ptr))
+        {
+            pj_pool_release(pool);
+            pj_pool_release(pool2);
+            return -332;
+        }
+        ptr = pj_pool_aligned_alloc(pool2, PJ_POOL_ALIGNMENT, MEMSIZE*2+1);
+        if (!IS_ALIGNED2(ptr))
+        {
+            pj_pool_release(pool);
+            pj_pool_release(pool2);
+            return -333;
         }
 
         /* Reset the pool */
         pj_pool_reset(pool);
+        pj_pool_reset(pool2);
+
     }
 
     /* Done */
     pj_pool_release(pool);
+    pj_pool_release(pool2);
 
     return 0;
 }
@@ -133,7 +217,7 @@ static int pool_buf_alignment_test(void)
     pj_pool_t *pool;
     char buf[512];
     void *ptr;
-    enum { LOOP = 100 };
+    enum { LOOP = 100, POOL_ALIGNMENT_TEST = 4*PJ_POOL_ALIGNMENT};
     unsigned i;
 
     PJ_LOG(3,("test", "...pool_buf alignment test"));
@@ -144,10 +228,23 @@ static int pool_buf_alignment_test(void)
 
     for (i=0; i<LOOP; ++i) {
         /* Test first allocation */
-        ptr = pj_pool_alloc(pool, 1);
-        if (!IS_ALIGNED(ptr)) {
-            pj_pool_release(pool);
-            return -410;
+        if (i % 2)
+        {
+            ptr = pj_pool_aligned_alloc(pool, POOL_ALIGNMENT_TEST, 1);
+            if (!IS_ALIGNED2(ptr))
+            {
+                pj_pool_release(pool);
+                return -411;
+            }
+        }
+        else
+        {
+            ptr = pj_pool_alloc(pool, 1);
+            if (!IS_ALIGNED(ptr))
+            {
+                pj_pool_release(pool);
+                return -410;
+            }
         }
 
         /* Test subsequent allocation */
@@ -155,6 +252,12 @@ static int pool_buf_alignment_test(void)
         if (!IS_ALIGNED(ptr)) {
             pj_pool_release(pool);
             return -420;
+        }
+        ptr = pj_pool_aligned_alloc(pool, POOL_ALIGNMENT_TEST, 1);
+        if (!IS_ALIGNED2(ptr))
+        {
+            pj_pool_release(pool);
+            return -421;
         }
 
         /* Reset the pool */
