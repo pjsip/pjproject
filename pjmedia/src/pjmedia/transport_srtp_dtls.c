@@ -1178,6 +1178,19 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
     return PJ_SUCCESS;
 }
 
+static pj_bool_t is_valid_src_addr(dtls_srtp *ds, unsigned idx,
+                                   pj_sockaddr *src_addr)
+{
+    pj_sockaddr *rem_addr;
+
+    if (idx == RTP_CHANNEL) {
+        rem_addr = &ds->rem_addr;
+    } else {
+        rem_addr = &ds->rem_rtcp;
+    }
+    return (pj_sockaddr_cmp(rem_addr, src_addr) == 0);
+}
+
 /* Check if an incoming packet is a DTLS packet (rfc5764 section 5.1.2) */
 #define IS_DTLS_PKT(pkt, pkt_len) (*(char*)pkt > 19 && *(char*)pkt < 64)
 
@@ -1361,6 +1374,50 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
         (ds->setup == DTLS_SETUP_ACTPASS || ds->setup == DTLS_SETUP_PASSIVE))
     {
         pj_status_t status;
+        pj_bool_t check_hello_addr = PJ_FALSE;
+
+#if defined(PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR) && \
+            PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR==1
+
+        if (!ds->use_ice)
+            check_hello_addr = PJ_TRUE;
+
+#endif
+        if (check_hello_addr) {
+            pjmedia_transport_info info;
+            pj_sockaddr src_addr;
+            pj_bool_t src_addr_avail = PJ_TRUE;
+
+            pjmedia_transport_get_info(ds->srtp->member_tp, &info);
+            if (idx == RTP_CHANNEL) {
+                if (!pj_sockaddr_has_addr(&info.src_rtp_name)) {
+                    src_addr_avail = PJ_FALSE;
+                } else {
+                    pj_sockaddr_cp(&src_addr, &info.src_rtp_name);
+                }
+            } else {
+                if (!pj_sockaddr_has_addr(&info.src_rtcp_name)) {
+                    src_addr_avail = PJ_FALSE;
+                } else {
+                    pj_sockaddr_cp(&src_addr, &info.src_rtcp_name);
+                }
+            }
+
+            if (!src_addr_avail || !is_valid_src_addr(ds, idx, &src_addr)) {
+                char psrc_addr[PJ_INET6_ADDRSTRLEN] = "Unknown";
+
+                if (src_addr_avail) {
+                    pj_sockaddr_print(&src_addr, psrc_addr, 
+                                      sizeof(psrc_addr), 3);
+                }
+                PJ_LOG(2, (ds->base.name, "DTLS-SRTP %s ignoring %lu bytes, "
+                    "from src addr [%s]", CHANNEL_TO_STRING(idx), 
+                    (unsigned long)size,   psrc_addr));
+
+                DTLS_UNLOCK(ds);
+                return PJ_SUCCESS;
+            }
+        }
         ds->setup = DTLS_SETUP_PASSIVE;
         status = ssl_handshake_channel(ds, idx);
         if (status != PJ_SUCCESS) {
