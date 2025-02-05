@@ -6,6 +6,8 @@
 #include <pj/string.h>
 #include <pj/unittest.h>
 
+#include <stdio.h>
+
 /* Overrideable max tests */
 #ifndef UT_MAX_TESTS
 #  define UT_MAX_TESTS  16
@@ -48,6 +50,12 @@ typedef struct ut_app_t
 /* Call this in main.c before parsing arguments */
 PJ_INLINE(void) ut_app_init0(ut_app_t *ut_app)
 {
+    /* Disable buffering because sometimes output is not captured/shown
+     * (by cirunner) if the test program crashes too soon.
+     */
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+
     pj_bzero(ut_app, sizeof(*ut_app));
     ut_app->prm_logging_policy = PJ_TEST_FAILED_TESTS;
     ut_app->prm_nthreads = -1;

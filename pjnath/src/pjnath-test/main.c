@@ -19,47 +19,6 @@
 #include "test.h"
 #include <pj/argparse.h>
 
-#if defined(PJ_SUNOS) && PJ_SUNOS!=0
-
-#include <signal.h>
-static void init_signals()
-{
-    struct sigaction act;
-
-    memset(&act, 0, sizeof(act));
-    act.sa_handler = SIG_IGN;
-
-    sigaction(SIGALRM, &act, NULL);
-}
-
-#elif (PJ_LINUX || PJ_DARWINOS) && defined(PJ_HAS_EXECINFO_H) && PJ_HAS_EXECINFO_H != 0
-
-#include <execinfo.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-static void print_stack(int sig)
-{
-    void *array[16];
-    size_t size;
-
-    size = backtrace(array, 16);
-    fprintf(stderr, "Error: signal %d:\n", sig);
-    backtrace_symbols_fd(array, size, STDERR_FILENO);
-    exit(1);
-}
-
-static void init_signals(void)
-{
-    signal(SIGSEGV, &print_stack);
-    signal(SIGABRT, &print_stack);
-}
-
-#else
-#define init_signals()
-#endif
-
 #define boost()
 
 static void usage()
@@ -74,14 +33,12 @@ static void usage()
     ut_usage();
 
     puts("  -i               Ask ENTER before quitting");
-    puts("  -n               Do not trap signals");
 }
 
 int main(int argc, char *argv[])
 {
     int rc;
     int interractive = 0;
-    int no_trap = 0;
 
     boost();
 
@@ -95,13 +52,8 @@ int main(int argc, char *argv[])
     ut_app_init0(&test_app.ut_app);
 
     interractive = pj_argparse_get_bool(&argc, argv, "-i");
-    no_trap = pj_argparse_get_bool(&argc, argv, "-n");
     if (ut_parse_args(&test_app.ut_app, &argc, argv))
         return 1;
-
-    if (!no_trap) {
-        init_signals();
-    }
 
     rc = test_main(argc, argv);
 
