@@ -1560,14 +1560,13 @@ PJ_DEF(pj_status_t) pjsua_acc_send_request(pjsua_acc_id acc_id,
     PJ_ASSERT_RETURN(dest_uri, PJ_EINVAL);
     PJ_ASSERT_RETURN(method, PJ_EINVAL);
     PJ_UNUSED_ARG(options);
-    PJ_ASSERT_RETURN(msg_data, PJ_EINVAL);
 
     PJ_LOG(4,(THIS_FILE, "Account %d sending %.*s request..",
                           acc_id, (int)method->slen, method->ptr));
     pj_log_push_indent();
 
     pjsip_method_init_np(&method_, (pj_str_t*)method);
-    status = pjsua_acc_create_request(acc_id, &method_, &msg_data->target_uri, &tdata);
+    status = pjsua_acc_create_request(acc_id, &method_, dest_uri, &tdata);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create request", status);
         goto on_return;
@@ -1581,7 +1580,8 @@ PJ_DEF(pj_status_t) pjsua_acc_send_request(pjsua_acc_id acc_id,
     request_data->acc_id = acc_id;
     request_data->token = token;
 
-    pjsua_process_msg_data(tdata, msg_data);
+    if (msg_data)
+        pjsua_process_msg_data(tdata, msg_data);
 
     cap_hdr = pjsip_endpt_get_capability(pjsua_var.endpt, PJSIP_H_ACCEPT, NULL);
     if (cap_hdr) {
