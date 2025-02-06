@@ -376,7 +376,7 @@ static pj_status_t set_ssl_protocol(pj_ssl_sock_t *ssock)
 
     if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
         min_proto = MBEDTLS_SSL_VERSION_TLS1_2;
-    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
+    } else {
         min_proto = MBEDTLS_SSL_VERSION_TLS1_3;
     }
 
@@ -606,6 +606,11 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     const char *pers = "ssl_client";
     pj_status_t status;
     int ret;
+
+    /* Suppress warnings */
+    PJ_UNUSED_ARG(circ_reset);
+    PJ_UNUSED_ARG(circ_read_cancel);
+    PJ_UNUSED_ARG(get_ip_addr_ver);
 
     pj_assert(ssock);
 
