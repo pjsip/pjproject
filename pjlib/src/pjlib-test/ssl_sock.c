@@ -1723,6 +1723,8 @@ int ssl_sock_test(void)
     ret = perf_test(PJ_IOQUEUE_MAX_HANDLES/2 - 1, 0);
     if (ret != 0)
         return ret;
+#else
+    PJ_UNUSED_ARG(perf_test);
 #endif
 #endif
 
