@@ -36,47 +36,6 @@ static void boost(void)
 #endif
 
 
-#if defined(PJ_SUNOS) && PJ_SUNOS!=0
-
-#include <signal.h>
-static void init_signals()
-{
-    struct sigaction act;
-
-    memset(&act, 0, sizeof(act));
-    act.sa_handler = SIG_IGN;
-
-    sigaction(SIGALRM, &act, NULL);
-}
-
-#elif (PJ_LINUX || PJ_DARWINOS) && defined(PJ_HAS_EXECINFO_H) && PJ_HAS_EXECINFO_H != 0
-
-#include <execinfo.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-static void print_stack(int sig)
-{
-    void *array[16];
-    size_t size;
-
-    size = backtrace(array, 16);
-    fprintf(stderr, "Error: signal %d:\n", sig);
-    backtrace_symbols_fd(array, size, STDERR_FILENO);
-    exit(1);
-}
-
-static void init_signals(void)
-{
-    signal(SIGSEGV, &print_stack);
-    signal(SIGABRT, &print_stack);
-}
-
-#else
-#define init_signals()
-#endif
-
 static void usage()
 {
     puts("Usage:");
@@ -91,7 +50,6 @@ static void usage()
     puts("  --skip-e         Skip essential tests");
     puts("  --ci-mode        Running in slow CI  mode");
     puts("  -i               Ask ENTER before quitting");
-    puts("  -n               Do not trap signals");
     puts("  -p PORT          Use port PORT for echo port");
     puts("  -s SERVER        Use SERVER as ech oserver");
     puts("  -t ucp,tcp       Set echo socket type to UDP or TCP");
@@ -102,7 +60,6 @@ int main(int argc, char *argv[])
 {
     int rc;
     int interractive = 0;
-    int no_trap = 0;
 
     boost();
     ut_app_init0(&test_app.ut_app);
@@ -117,7 +74,6 @@ int main(int argc, char *argv[])
         return 0;
     }
     interractive = pj_argparse_get_bool(&argc, argv, "-i");
-    no_trap = pj_argparse_get_bool(&argc, argv, "-n");
     if (pj_argparse_get_int(&argc, argv, "-p", &test_app.param_echo_port)) {
         usage();
         return 1;
@@ -156,10 +112,6 @@ int main(int argc, char *argv[])
                                                           "--skip-e");
     test_app.param_ci_mode = pj_argparse_get_bool(&argc, argv, "--ci-mode");
 
-
-    if (!no_trap) {
-        init_signals();
-    }
 
     if (pj_argparse_peek_next_option(argv)) {
         printf("Error: unknown argument %s\n", 
