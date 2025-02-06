@@ -333,7 +333,7 @@ struct pj_pool_t
 
     /** The default alignment of memory block allocated from this pool
      *  (must be power of 2).                                                 */
-    size_t          alignment;
+    pj_size_t          alignment;
 
 };
 
@@ -405,6 +405,9 @@ PJ_IDECL(pj_pool_t*) pj_pool_create(pj_pool_factory *factory,
  *                          administrative info.
  * @param alignment         the default alignment of memory block allocated 
  *                          from this pool (must be power of 2).
+ *                          The actual allocation alignment will be at least equal
+ *                          to the alignment argument of the function, 
+ *                          but not less than PJ_POOL_ALIGNMENT. 
  *                          Value of 0 means use PJ_POOL_ALIGNMENT.
  * @param callback          Callback to be called when error occurs in the pool.
  *                          If this value is NULL, then the callback from pool
@@ -513,6 +516,10 @@ PJ_IDECL(void*) pj_pool_alloc( pj_pool_t *pool, pj_size_t size);
  *
  * @param pool      the pool.
  * @param alignment the requested alignment of the allocation.
+ *                  The actual alignment of the allocation will be at least 
+ *                  equal to the alignment argument of the function, 
+ *                  but not less than the default pool alignment specified 
+ *                  when the pool was created.
  *                  Value of 0 means use the default alignment of this pool.
  * @param size      the requested size.
  *

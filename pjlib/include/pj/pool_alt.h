@@ -46,7 +46,7 @@ struct pj_pool_t
     char                obj_name[32];
     pj_size_t           used_size;
     pj_pool_callback   *cb;
-    size_t              alignment;
+    pj_size_t           alignment;
 };
 
 

@@ -305,11 +305,12 @@ static int pool_buf_test(void)
 int pool_test(void)
 {
     enum { LOOP = 2 };
-    int loop;
     int rc;
 
+#if PJ_HAS_POOL_ALT_API == 0
     rc = capacity_test();
     if (rc) return rc;
+#endif  //PJ_HAS_POOL_ALT_API == 0
 
     rc = pool_alignment_test();
     if (rc) return rc;
@@ -317,6 +318,8 @@ int pool_test(void)
     rc = pool_buf_alignment_test();
     if (rc) return rc;
 
+#if PJ_HAS_POOL_ALT_API == 0
+    int loop;
     for (loop=0; loop<LOOP; ++loop) {
         /* Test that the pool should grow automaticly. */
         rc = drain_test(SIZE, SIZE);
@@ -332,6 +335,7 @@ int pool_test(void)
     rc = pool_buf_test();
     if (rc != 0)
         return rc;
+#endif  //PJ_HAS_POOL_ALT_API == 0
 
 
     return 0;

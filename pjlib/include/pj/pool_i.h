@@ -123,7 +123,7 @@ PJ_IDECL(pj_pool_t *) pj_pool_aligned_create(pj_pool_factory *f,
                                              const char *name,
                                              pj_size_t initial_size,
                                              pj_size_t increment_size,
-                                             size_t alignment,
+                                             pj_size_t alignment,
                                              pj_pool_callback *callback)
 {
     return (*f->create_pool)(f, name, initial_size, increment_size, alignment, callback);

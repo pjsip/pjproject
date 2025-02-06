@@ -169,6 +169,7 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
                                  pj_size_t sz)
 {
     struct pj_pool_mem *mem;
+    char               *buf;
 
     PJ_UNUSED_ARG(file);
     PJ_UNUSED_ARG(line);
@@ -178,9 +179,13 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
         
     PJ_ASSERT_RETURN(IS_POWER_OF_TWO(alignment), NULL);
 
-    /* TODO: how to obey alignment request from user? */
-
-    mem = malloc(sz + sizeof(struct pj_pool_mem));
+    /* obey alignment request from user */
+    if (sz & (alignment - 1)) {
+        sz = (sz + alignment) & ~(alignment - 1);
+    }
+    mem = malloc(sz +                /* allocation size, already aligned      */
+                 alignment-1 +       /*gap [0:alignment-1] to align allocation*/
+                 sizeof(struct pj_pool_mem)); /*block header, may be unaligned*/
     if (!mem) {
         if (pool->cb)
             (*pool->cb)(pool, sz);
@@ -201,8 +206,8 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
         TRACE_(msg);
     }
 #endif
-
-    return ((char*)mem) + sizeof(struct pj_pool_mem);
+    buf = ((char*)mem) + sizeof(struct pj_pool_mem);
+    return (buf + (-(pj_ssize_t)buf & (alignment-1)));
 }
 
 /* Allocate memory from the pool and zero the memory */
