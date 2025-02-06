@@ -40,7 +40,13 @@ else
 endif
 
 # Get JDK location
-ifeq ("$(JAVA_HOME)","")
+CHECK_JDK := 1
+ifeq ($(findstring clean,$(MAKECMDGOALS)),clean)
+  CHECK_JDK := 0
+endif
+
+ifeq ($(CHECK_JDK), 1)
+ ifeq ("$(JAVA_HOME)","")
 
   verify_jdk  = $(shell test -d $(1)/include && test -d $(1)/lib && \
                 	echo inclib1) \
@@ -121,7 +127,7 @@ ifeq ("$(JAVA_HOME)","")
     $(warning Cannot determine JDK binary path. Set to $(JAVA_BIN))
   endif
 
-else
+ else
 
   JAVA_INC := $(JAVA_HOME)/include
   JAVA_LIB := $(JAVA_HOME)/lib
@@ -131,6 +137,7 @@ else
     JAVA_BIN := $(JAVA_HOME)
   endif
 
+ endif
 endif
 
 # Env settings, e.g: path to SWIG, JDK, java(.exe), javac(.exe)
