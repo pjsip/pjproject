@@ -3144,14 +3144,6 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     uc_attr = (pj_stun_use_candidate_attr*)
               pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USE_CANDIDATE, 0);
 
-    if (uc_attr != NULL && ice->is_complete) {
-        LOG4((ice->obj_name,
-            "Ignored incoming check after ICE nego has been completed!, "
-            "no need to send response"));
-        pj_grp_lock_release(ice->grp_lock);
-        return PJ_SUCCESS;
-    }
-
     /* Get ICE-CONTROLLING or ICE-CONTROLLED */
     role_attr = (pj_stun_uint64_attr*)
                 pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_ICE_CONTROLLING, 0);
@@ -3761,11 +3753,15 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
                         ice->rcand[i].checked &&
                         pj_sockaddr_cmp(src_addr, &ice->rcand[i].addr) == 0)
                     {
-                        pj_sockaddr_cp(raddr, src_addr);
-                        PJ_LOG(4, (ice->obj_name, "Using [%s] as valid address "
-                                   "for component [%d]",
-                                   psrc_addr, comp_id));
-
+                        /* Before ICE completed, it is still allowed to receive 
+                         * data from other candidates.
+                         */
+                        if (ice->is_complete) {
+                            pj_sockaddr_cp(raddr, src_addr);
+                            PJ_LOG(4, (ice->obj_name, "Using [%s] as valid"
+                                       " address for component [%d]",
+                                       psrc_addr, comp_id));
+                        }
                         check_addr = PJ_FALSE;
                         break;
                     }
