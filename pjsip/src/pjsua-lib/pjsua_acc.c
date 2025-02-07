@@ -1556,18 +1556,19 @@ PJ_DEF(pj_status_t) pjsua_acc_send_request(pjsua_acc_id acc_id,
     pjsip_tx_data *tdata = NULL;
     send_request_data *request_data = NULL;
 
-    PJ_ASSERT_RETURN(acc_id>=0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     PJ_ASSERT_RETURN(dest_uri, PJ_EINVAL);
     PJ_ASSERT_RETURN(method, PJ_EINVAL);
     PJ_UNUSED_ARG(options);
-    PJ_ASSERT_RETURN(msg_data, PJ_EINVAL);
 
     PJ_LOG(4,(THIS_FILE, "Account %d sending %.*s request..",
                           acc_id, (int)method->slen, method->ptr));
     pj_log_push_indent();
 
     pjsip_method_init_np(&method_, (pj_str_t*)method);
-    status = pjsua_acc_create_request(acc_id, &method_, &msg_data->target_uri, &tdata);
+    status = pjsua_acc_create_request(acc_id, &method_, dest_uri, &tdata);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create request", status);
         goto on_return;
@@ -1581,7 +1582,8 @@ PJ_DEF(pj_status_t) pjsua_acc_send_request(pjsua_acc_id acc_id,
     request_data->acc_id = acc_id;
     request_data->token = token;
 
-    pjsua_process_msg_data(tdata, msg_data);
+    if (msg_data)
+        pjsua_process_msg_data(tdata, msg_data);
 
     cap_hdr = pjsip_endpt_get_capability(pjsua_var.endpt, PJSIP_H_ACCEPT, NULL);
     if (cap_hdr) {
@@ -3433,8 +3435,12 @@ PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
     pjsip_tpselector tp_sel;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+                     PJ_EINVAL);
     PJ_ASSERT_RETURN(method && target && p_tdata, PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
+
+    PJSUA_LOCK();
 
     acc = &pjsua_var.acc[acc_id];
 
@@ -3443,6 +3449,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
                                         NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create request", status);
+        PJSUA_UNLOCK();
         return status;
     }
 
@@ -3476,6 +3483,8 @@ PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
                                NULL, NULL,
                                &tdata->via_tp);
     }
+
+    PJSUA_UNLOCK();
 
     /* Done */
     *p_tdata = tdata;
