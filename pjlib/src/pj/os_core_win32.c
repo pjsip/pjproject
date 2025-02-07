@@ -1573,19 +1573,18 @@ PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
 /*
  * pj_barrier_create()
  */
-pj_status_t pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) {
+PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) 
+{
     pj_barrier_t *barrier;
     PJ_ASSERT_RETURN(pool && p_barrier, PJ_EINVAL);
     barrier = (pj_barrier_t *)pj_pool_zalloc(pool, sizeof(pj_barrier_t));
     if (barrier == NULL)
         return PJ_ENOMEM;
 #if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
-    if (InitializeSynchronizationBarrier(&barrier->sync_barrier, trip_count, -1))
-    {
+    if (InitializeSynchronizationBarrier(&barrier->sync_barrier, trip_count, -1)) {
         *p_barrier = barrier;
         return PJ_SUCCESS;
-    }
-    else
+    } else
         return pj_get_os_error();
 #elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
     InitializeCriticalSection(&barrier->mutex);
@@ -1611,7 +1610,8 @@ pj_status_t pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t
 /*
  * pj_barrier_destroy()
  */
-pj_status_t pj_barrier_destroy(pj_barrier_t *barrier) {
+PJ_DEF(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier) 
+{
     PJ_ASSERT_RETURN(barrier, PJ_EINVAL);
 #if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
     DeleteSynchronizationBarrier(&barrier->sync_barrier);
@@ -1630,7 +1630,8 @@ pj_status_t pj_barrier_destroy(pj_barrier_t *barrier) {
 /*
  * pj_barrier_wait()
  */
-pj_status_t pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) {
+PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) 
+{
     PJ_ASSERT_RETURN(barrier, PJ_EINVAL);
 #if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
     DWORD dwFlags = ((flags & PJ_BARRIER_FLAGS_BLOCK_ONLY) ? SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY : 0) |
@@ -1640,15 +1641,12 @@ pj_status_t pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) {
 #elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
     PJ_UNUSED_ARG(flags);
     EnterCriticalSection(&barrier->mutex);
-    if (++barrier->waiting == barrier->count)
-    {
+    if (++barrier->waiting == barrier->count) {
         barrier->waiting = 0;
         LeaveCriticalSection(&barrier->mutex);
         WakeAllConditionVariable(&barrier->cond);
         return PJ_TRUE;
-    }
-    else
-    {
+    } else {
         BOOL rc = SleepConditionVariableCS(&barrier->cond, &barrier->mutex, INFINITE);
         LeaveCriticalSection(&barrier->mutex);
         if (rc)
@@ -1659,13 +1657,12 @@ pj_status_t pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) {
 #else
     PJ_UNUSED_ARG(flags);
 
-    if (InterlockedIncrement(&barrier->waiting) == barrier->count)
-    {
+    if (InterlockedIncrement(&barrier->waiting) == barrier->count) {
         LONG previousCount = 0;
         barrier->waiting = 0;
         /* Release all threads waiting on the semaphore */
-        if (barrier->count == 1 || ReleaseSemaphore(barrier->cond, barrier->count - 1, &previousCount))
-        {
+        if (barrier->count == 1 || 
+            ReleaseSemaphore(barrier->cond, barrier->count-1, &previousCount)) {
             PJ_ASSERT_RETURN(previousCount == 0, PJ_EBUG);
             return PJ_TRUE;
         }
