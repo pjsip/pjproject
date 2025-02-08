@@ -1147,11 +1147,12 @@ enum pj_barrier_flags {
  * @param pool          The pool to allocate the barrier object.
  * @param thread_count  The number of threads that must call pj_barrier_wait()
  *                      before any are allowed to proceed.
- *                      The behaviîr of the barrier is undefined if more
- *                      threads than thread_count arrive at the barrier.
  * @param p_barrier     Pointer to hold the barrier object upon return.
+ *
+ * @return              PJ_SUCCESS on success, or the error code.
  * 
- * @return PJ_SUCCESS on success, or the error code.
+ * @warning             The behavior of the barrier is undefined if more
+ *                      threads than thread_count arrive at the barrier.
  */
 PJ_DECL(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned thread_count, 
                                        pj_barrier_t **p_barrier);
@@ -1163,7 +1164,7 @@ PJ_DECL(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned thread_count,
  * 
  * @param barrier       The barrier to destroy.
  * 
- * @return PJ_SUCCESS on success, or the error code.
+ * @return              PJ_SUCCESS on success, or the error code.
  */
 PJ_DECL(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier);
 
@@ -1179,9 +1180,14 @@ PJ_DECL(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier);
  * @param flags         Flags that control the behavior of the barrier
  *                      (combination of pj_barrier_flags), default 0.
  * 
- * @return Returns PJ_TRUE for a single (arbitrary) thread synchronized
- * at the barrier and PJ_FALSE for each of the other threads.
- * Otherwise, an error number shall be returned to indicate the error.
+ * @return              Returns PJ_TRUE for a single (arbitrary) thread
+ *                      synchronized at the barrier and PJ_FALSE for each
+ *                      of the other threads. Otherwise, an error number 
+ *                      shall be returned to indicate the error.
+ *
+ * @warning             The behavior of the barrier is undefined if more
+ *                      threads arrive at the barrier than the thread_count
+ *                      specified when the barrier was created.
  */
 PJ_DECL(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags);
 
