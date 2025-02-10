@@ -104,6 +104,32 @@ enum pjmedia_conf_option
                                      based.                                 */
 };
 
+/**
+ * Conference bridge creation parameters.
+//TODO
+ */
+typedef struct pjmedia_conf_param
+{
+    unsigned max_slots;
+    unsigned sampling_rate;
+    unsigned channel_count;
+    unsigned samples_per_frame;
+    unsigned bits_per_sample;
+    unsigned options;
+    /** The number of worker threads to use, from 0-N.
+     *  Zero means the operations will be done only by get_frame() thread.
+     */
+    unsigned worker_threads;
+} pjmedia_conf_param;
+
+
+/**
+ * Initialize conference bridge creation parameters.
+ */
+PJ_INLINE(void) pjmedia_conf_param_default(pjmedia_conf_param *param)
+{
+    pj_bzero(param, sizeof(pjmedia_conf_param));
+}
 
 /**
  * Create conference bridge with the specified parameters. The sampling rate,
@@ -169,6 +195,13 @@ PJ_DECL(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
                                           unsigned bits_per_sample,
                                           unsigned options,
                                           pjmedia_conf **p_conf );
+
+/**
+//TODO
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool,
+                                          pjmedia_conf_param *param,
+                                          pjmedia_conf **p_conf);
 
 
 /**
