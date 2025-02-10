@@ -717,6 +717,7 @@
     <ClCompile Include="..\src\pjlib-test\fifobuf.c" />
     <ClCompile Include="..\src\pjlib-test\file.c" />
     <ClCompile Include="..\src\pjlib-test\hash_test.c" />
+    <ClCompile Include="..\src\pjlib-test\ioq_iocp_unreg_test.c" />
     <ClCompile Include="..\src\pjlib-test\ioq_perf.c" />
     <ClCompile Include="..\src\pjlib-test\ioq_stress_test.c" />
     <ClCompile Include="..\src\pjlib-test\ioq_tcp.c" />

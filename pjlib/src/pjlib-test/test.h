@@ -65,6 +65,7 @@
 #define INCLUDE_IOQUEUE_STRESS_TEST (PJ_HAS_THREADS && GROUP_NETWORK)
 #define INCLUDE_UDP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_TCP_IOQUEUE_TEST    GROUP_NETWORK
+#define INCLUDE_IOCP_UNREG_TEST     GROUP_NETWORK
 #define INCLUDE_ACTIVESOCK_TEST     GROUP_NETWORK
 #define INCLUDE_SSLSOCK_TEST        (PJ_HAS_SSL_SOCK && GROUP_NETWORK)
 #define INCLUDE_IOQUEUE_PERF_TEST   (PJ_HAS_THREADS && GROUP_NETWORK && WITH_BENCHMARK)
@@ -114,6 +115,7 @@ extern int tcp_ioqueue_test(void);
 extern int ioqueue_perf_test0(void);
 extern int ioqueue_perf_test1(void);
 extern int ioqueue_stress_test(void);
+extern int iocp_unregister_test(void);
 extern int activesock_test(void);
 extern int file_test(void);
 extern int ssl_sock_test(void);

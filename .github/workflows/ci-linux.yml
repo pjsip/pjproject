@@ -8,6 +8,8 @@ on:
 env:
   CI_ARGS: -w 3 --shuffle --stdout-buf 1
   CI_MODE: --ci-mode
+  # Setting CI_RUNNER to empty should disable cirunner
+  CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 -o ${{ github.workspace }}/artifacts --
   MAKE_FAST: make -j 3
 jobs:
   default-build:
@@ -16,6 +18,10 @@ jobs:
     name: Default / build only
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: configure
       run: ./configure
     - name: make
@@ -24,6 +30,12 @@ jobs:
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep SSL
     - name: verify oepnssl is used
       run: pjlib/bin/pjlib-test-`make infotarget` --config --list | grep -E 'PJ_SSL_SOCK_IMP\s+:\s+1'
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   default-full-bundle-1:
     # full bundle: enable all codecs + AEC + DTLS
@@ -31,8 +43,12 @@ jobs:
     name: Default / pjmedia,pjsua
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
+      run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
@@ -61,12 +77,22 @@ jobs:
       run: make pjmedia-test
     - name: pjsua-test
       run: make pjsua-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   default-full-bundle-2:
     runs-on: ubuntu-latest
     name: Default / pjlib,util,pjnath
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get install -y libopencore-amrnb-dev
     - name: config site
@@ -81,12 +107,22 @@ jobs:
       run: make pjlib-util-test
     - name: pjnath-test
       run: make pjnath-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   default-full-bundle-3:
     runs-on: ubuntu-latest
     name: Default / pjsip
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get install -y libopencore-amrnb-dev
     - name: config site
@@ -97,12 +133,22 @@ jobs:
       run: $MAKE_FAST
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   no-tls:
     runs-on: ubuntu-latest
     name: No SSL / pjlib,pjsip
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get install -y swig
     - name: configure
@@ -115,6 +161,12 @@ jobs:
       run: make pjlib-test
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   # build-ubuntu-openssl
   # TLS: with OpenSSL (same as build-ubuntu-default)
@@ -124,6 +176,10 @@ jobs:
     name: GnuTLS / pjlib,pjnath,pjsip
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y --fix-missing swig libgnutls28-dev
     - name: configure
@@ -142,14 +198,24 @@ jobs:
       run: make pjnath-test
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   vid-openh264-1:
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjmedia,pjsua
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get install -y swig nasm sip-tester libvpx-dev libopencore-amrnb-dev libsdl2-dev
+      run: sudo apt-get update && sudo apt-get install -y swig nasm sip-tester libvpx-dev libopencore-amrnb-dev libsdl2-dev
     - name: get openh264
       run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
@@ -185,18 +251,31 @@ jobs:
     # SDL error: no available vid dev
     #- name: ensure SDL is installed
     #  run: cat pjsua-caps | grep -E '\[SDL\]\[render\]'
+      # one of the step above has changed core_pattern, restore it
+    - name: reinstall cirunner
+      run: cirunner/installlinux.sh
     - name: pjmedia-test
       run: make pjmedia-test
     - name: pjsua-test
       run: make pjsua-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   vid-openh264-2:
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjlib,util,pjnath
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev libsdl2-dev
+      run: sudo apt-get update && sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev libsdl2-dev
     - name: get openh264
       run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
@@ -207,20 +286,33 @@ jobs:
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: $MAKE_FAST
+      # one of the step above has changed core_pattern, restore it
+    - name: reinstall cirunner
+      run: cirunner/installlinux.sh
     - name: pjlib-test
       run: make pjlib-test
     - name: pjlib-util-test
       run: make pjlib-util-test
     - name: pjnath-test
       run: make pjnath-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   vid-openh264-3:
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjsip
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev libsdl2-dev
+      run: sudo apt-get update && sudo apt-get install -y nasm libvpx-dev libopencore-amrnb-dev libsdl2-dev
     - name: get openh264
       run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
@@ -231,16 +323,29 @@ jobs:
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: $MAKE_FAST
+      # one of the step above has changed core_pattern, restore it
+    - name: reinstall cirunner
+      run: cirunner/installlinux.sh
     - name: pjsip-test
       run: make pjsip-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
 
   vid-ffmpeg:
     runs-on: ubuntu-latest
     name: FFMPEG+x264 / pjmedia
     steps:
     - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get install -y swig nasm libx264-dev libvpx-dev libsdl2-dev
+      run: sudo apt-get update && sudo apt-get install -y swig nasm libx264-dev libvpx-dev libsdl2-dev
     - name: get ffmpeg
       run: git clone --depth 1 --single-branch --branch release/4.2 https://github.com/FFmpeg/FFmpeg.git
     - name: configure ffmpeg
@@ -273,5 +378,14 @@ jobs:
     # SDL error: no available vid dev
     #- name: ensure SDL is installed
     #  run: cat pjsua-caps | grep -E '\[SDL\]\[render\]'
+      # one of the step above has changed core_pattern, restore it
+    - name: reinstall cirunner
+      run: cirunner/installlinux.sh
     - name: pjmedia-test
       run: export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH && make pjmedia-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts

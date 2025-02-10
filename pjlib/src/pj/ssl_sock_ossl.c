@@ -1573,7 +1573,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
             PJ_LOG(4,(ssock->pool->obj_name,
                       "CA certificates loaded from %s",
                       (cert->CA_file.slen?cert->CA_file.ptr:"buffer")));
-        } else {
+        } else if (cert->CA_file.slen > 0 || cert->CA_buf.slen > 0) {
             PJ_LOG(1,(ssock->pool->obj_name,
                       "Error reading CA certificates from %s",
                       (cert->CA_file.slen?cert->CA_file.ptr:"buffer")));
