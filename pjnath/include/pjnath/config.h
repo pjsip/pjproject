@@ -399,7 +399,7 @@
  * The source address will be compared to the remote candidate which has
  * a completed connectivity check or received a connectivity check.
  * 
- * Defalut: 1 (yes)
+ * Default: 1 (yes)
  */
 #ifndef PJ_ICE_SESS_CHECK_SRC_ADDR
 #   define PJ_ICE_SESS_CHECK_SRC_ADDR               1

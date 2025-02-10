@@ -3768,7 +3768,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
                                                       sizeof(psrc_addr), 3);
                                 }
                                 pj_sockaddr_cp(raddr, src_addr);
-                                PJ_LOG(4, (ice->obj_name, "Using [%s] as valid"
+                                PJ_LOG(4, (ice->obj_name, "Using %s as valid"
                                     " address for component [%d]",
                                     psrc_addr, comp_id));
                             }
@@ -3783,7 +3783,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 
                 pj_sockaddr_print(src_addr, paddr, sizeof(paddr), 3);
                 PJ_LOG(4, (ice->obj_name, "Ignoring incoming message for "
-                         "component [%d] because source addr [%s] unrecognized",
+                         "component [%d] because source addr %s unrecognized",
                          comp_id, paddr));
                 return PJ_SUCCESS;
             }

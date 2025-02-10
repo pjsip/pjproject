@@ -1370,16 +1370,7 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
             pj_sockaddr *src_addr;
             pj_sockaddr *rem_addr;
 
-            pjmedia_transport_get_info(ds->srtp->member_tp, &info);
-            if (idx == RTP_CHANNEL) {
-                rem_addr = &ds->rem_addr;
-                src_addr = &info.src_rtp_name;
-            } else {
-                rem_addr = &ds->rem_rtcp;
-                src_addr = &info.src_rtcp_name;
-            }
-
-            /* Check the souce address with the specified remote address from
+            /* Check the source address with the specified remote address from
              * the SDP. At this point, if the remote address information
              * is not available yet (e.g.: remote SDP has not been received), 
              * delay the handshake.
@@ -1393,13 +1384,21 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
                 DTLS_UNLOCK(ds);
                 return PJ_SUCCESS;
             }
+            pjmedia_transport_get_info(ds->srtp->member_tp, &info);
+            if (idx == RTP_CHANNEL) {
+                rem_addr = &ds->rem_addr;
+                src_addr = &info.src_rtp_name;
+            } else {
+                rem_addr = &ds->rem_rtcp;
+                src_addr = &info.src_rtcp_name;
+            }
 
             if (pj_sockaddr_cmp(src_addr, rem_addr) != 0) {
                 char psrc_addr[PJ_INET6_ADDRSTRLEN] = {0};
 
                 pj_sockaddr_print(src_addr, psrc_addr, sizeof(psrc_addr), 3);
                 PJ_LOG(4, (ds->base.name, "DTLS-SRTP %s ignoring %lu bytes, "
-                    "from unrecognized src addr [%s]", CHANNEL_TO_STRING(idx),
+                    "from unrecognized src addr %s", CHANNEL_TO_STRING(idx),
                     (unsigned long)size, psrc_addr));
 
                 DTLS_UNLOCK(ds);
