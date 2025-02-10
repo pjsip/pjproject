@@ -1371,6 +1371,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
     if (!ice->is_complete) {
         ice->is_complete = PJ_TRUE;
         ice->ice_status = status;
+        pj_gettimeofday(&ice->time_completed);
     
         pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap, &ice->timer,
                                        TIMER_NONE);
@@ -3741,11 +3742,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
         if (ice->opt.check_src_addr) {
             pj_bool_t check_addr = PJ_TRUE;
             pj_sockaddr *raddr = &comp->rcand_check_addr;
-            char psrc_addr[PJ_INET6_ADDRSTRLEN] = {0};
-
-            if (pj_sockaddr_has_addr(src_addr)) {
-                pj_sockaddr_print(src_addr, psrc_addr, sizeof(psrc_addr), 3);
-            }
 
             if (!pj_sockaddr_has_addr(raddr)) {
                 for (i = 0; i < ice->rcand_cnt; ++i) {
@@ -3757,23 +3753,38 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
                          * data from other candidates.
                          */
                         if (ice->is_complete) {
-                            pj_sockaddr_cp(raddr, src_addr);
-                            PJ_LOG(4, (ice->obj_name, "Using [%s] as valid"
-                                       " address for component [%d]",
-                                       psrc_addr, comp_id));
+                            pj_time_val now;
+                            pj_uint32_t duration;
+
+                            pj_gettimeofday(&now);
+                            PJ_TIME_VAL_SUB(now, ice->time_completed);
+                            duration = PJ_TIME_VAL_MSEC(now);
+
+                            if (duration > PJ_ICE_SESS_SET_RADDR_DELAY) {
+                                char psrc_addr[PJ_INET6_ADDRSTRLEN] = {0};
+
+                                if (pj_sockaddr_has_addr(src_addr)) {
+                                    pj_sockaddr_print(src_addr, psrc_addr, 
+                                                      sizeof(psrc_addr), 3);
+                                }
+                                pj_sockaddr_cp(raddr, src_addr);
+                                PJ_LOG(4, (ice->obj_name, "Using [%s] as valid"
+                                    " address for component [%d]",
+                                    psrc_addr, comp_id));
+                            }
                         }
                         check_addr = PJ_FALSE;
                         break;
                     }
                 }
             }
-            if (check_addr && 
-                (!pj_sockaddr_has_addr(raddr) || 
-                 pj_sockaddr_cmp(src_addr, raddr) != 0))
-            {
+            if (check_addr && pj_sockaddr_cmp(src_addr, raddr) != 0) {
+                char paddr[PJ_INET6_ADDRSTRLEN] = {0};
+
+                pj_sockaddr_print(src_addr, paddr, sizeof(paddr), 3);
                 PJ_LOG(4, (ice->obj_name, "Ignoring incoming message for "
                          "component [%d] because source addr [%s] unrecognized",
-                         comp_id, psrc_addr));
+                         comp_id, paddr));
                 return PJ_SUCCESS;
             }
         } 

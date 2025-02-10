@@ -727,6 +727,8 @@ struct pj_ice_sess
     pj_timer_entry       timer;                     /**< ICE timer.         */
     pj_timer_entry       timer_end_of_cand;         /**< End-of-cand timer. */
     pj_ice_sess_cb       cb;                        /**< Callback.          */
+    pj_time_val          time_completed;            /**< The time when ICE  
+                                                         is completed.      */
 
     pj_stun_config       stun_cfg;                  /**< STUN settings.     */
 
