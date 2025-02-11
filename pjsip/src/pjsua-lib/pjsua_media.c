@@ -3913,6 +3913,333 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
 #endif /* PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO */
 
 
+/* Apply media update. */
+static pj_status_t apply_med_update(pjsua_call_media *call_med,
+                                    const pjmedia_sdp_session *local_sdp,
+                                    const pjmedia_sdp_session *remote_sdp,
+                                    pj_bool_t *need_renego_sdp)
+{
+    const char *STR_SENDRECV = "sendrecv";
+    const char *STR_SENDONLY = "sendonly";
+    const char *STR_RECVONLY = "recvonly";
+    const char *STR_INACTIVE = "inactive";
+
+    pjsua_call *call = call_med->call;
+    pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
+    pjsua_call_id call_id = call->index;
+    unsigned mi = call_med->idx;
+    pj_bool_t media_changed = PJ_FALSE;
+    pj_pool_t *tmp_pool = call->inv->pool_prov;
+    pj_status_t status = PJ_SUCCESS;
+
+    pjmedia_stream_info asi;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    pjmedia_vid_stream_info vsi;
+#endif
+    pjmedia_stream_info_common *si;
+    pjsua_stream_info stream_info;
+                               pj_str_t *enc_name;
+
+    if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+        si = (pjmedia_stream_info_common *)&asi;
+        status = pjmedia_stream_info_from_sdp(
+                                    &asi, tmp_pool, pjsua_var.med_endpt,
+                                    local_sdp, remote_sdp, mi);
+        stream_info.info.aud = asi;
+        enc_name = &asi.fmt.encoding_name;
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    } else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
+        si = (pjmedia_stream_info_common *)&vsi;
+        status = pjmedia_vid_stream_info_from_sdp(
+                                    &vsi, tmp_pool, pjsua_var.med_endpt,
+                                    local_sdp, remote_sdp, mi);
+        stream_info.info.vid = vsi;
+        enc_name = &vsi.codec_info.encoding_name;
+#endif
+    }
+
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(1,(THIS_FILE, status,
+                     "pjmedia_stream_info_from_sdp() failed "
+                         "for call_id %d media %d",
+                     call_id, mi));
+        return status;
+    }
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    /* Enable/disable RTCP XR based on account setting. */
+    si->rtcp_xr_enabled = acc->cfg.enable_rtcp_xr;
+#endif
+
+    /* Check if remote wants RTP and RTCP multiplexing,
+     * but we don't enable it.
+     */
+    if (si->rtcp_mux && !call_med->enable_rtcp_mux) {
+        si->rtcp_mux = PJ_FALSE;
+    }
+
+    if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+        /* Codec parameter of stream info (si->param) can be NULL if
+         * the stream is rejected or disabled.
+         */
+        /* Override ptime, if this option is specified. */
+        if (pjsua_var.media_cfg.ptime != 0 && asi.param) {
+            asi.param->setting.frm_per_pkt = (pj_uint8_t)
+                (pjsua_var.media_cfg.ptime / asi.param->info.frm_ptime);
+            if (asi.param->setting.frm_per_pkt == 0)
+                asi.param->setting.frm_per_pkt = 1;
+        }
+
+        /* Disable VAD, if this option is specified. */
+        if (pjsua_var.media_cfg.no_vad && asi.param) {
+            asi.param->setting.vad = 0;
+        }
+
+        if (call->audio_idx==-1 && status==PJ_SUCCESS &&
+            si->dir != PJMEDIA_DIR_NONE)
+        {
+            call->audio_idx = mi;
+        }
+    }
+
+    if (!pjmedia_sdp_neg_was_answer_remote(call->inv->neg) &&
+        si->dir != PJMEDIA_DIR_NONE)
+    {
+        pjmedia_dir dir = si->dir;
+
+        if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
+            call_med->def_dir = call->opt.media_dir[mi];
+            PJ_LOG(4,(THIS_FILE, "Call %d: setting audio media "
+                                 "direction #%d to %d.",
+                                 call_id, mi, call_med->def_dir));
+        }
+
+        /* If the default direction specifies we do not wish
+         * encoding/decoding, clear that direction.
+         */
+        if ((call_med->def_dir & PJMEDIA_DIR_ENCODING) == 0) {
+            dir &= ~PJMEDIA_DIR_ENCODING;
+        }
+        if ((call_med->def_dir & PJMEDIA_DIR_DECODING) == 0) {
+            dir &= ~PJMEDIA_DIR_DECODING;
+        }
+
+        if (dir != si->dir) {
+            const char *str_attr = NULL;
+            pjmedia_sdp_attr *attr;
+            pjmedia_sdp_media *m;
+
+            if (!*need_renego_sdp) {
+                pjmedia_sdp_session *local_sdp_renego;
+                local_sdp_renego =
+                    pjmedia_sdp_session_clone(tmp_pool, local_sdp);
+                local_sdp = local_sdp_renego;
+                *need_renego_sdp = PJ_TRUE;
+            }
+
+            si->dir = dir;
+            m = local_sdp->media[mi];
+
+            /* Remove existing directions attributes */
+            pjmedia_sdp_media_remove_all_attr(m, STR_SENDRECV);
+            pjmedia_sdp_media_remove_all_attr(m, STR_SENDONLY);
+            pjmedia_sdp_media_remove_all_attr(m, STR_RECVONLY);
+
+            if (si->dir == PJMEDIA_DIR_ENCODING_DECODING) {
+                str_attr = STR_SENDRECV;
+            } else if (si->dir == PJMEDIA_DIR_ENCODING) {
+                str_attr = STR_SENDONLY;
+            } else if (si->dir == PJMEDIA_DIR_DECODING) {
+                str_attr = STR_RECVONLY;
+            } else {
+                str_attr = STR_INACTIVE;
+            }
+            attr = pjmedia_sdp_attr_create(tmp_pool, str_attr, NULL);
+            pjmedia_sdp_media_add_attr(m, attr);
+        }
+    }
+
+    stream_info.type = call_med->type;
+
+#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    /* Check if we need to reset or maintain SRTP ROC */
+    check_srtp_roc(call, mi, &stream_info, local_sdp, remote_sdp);
+#endif
+#endif
+
+    /* Check if this media is changed */
+    if (pjsua_var.media_cfg.no_smart_media_update ||
+        is_media_changed(call, mi, &stream_info))
+    {
+        media_changed = PJ_TRUE;
+        /* Stop the media */
+        stop_media_stream(call, mi);
+    } else {
+        PJ_LOG(4,(THIS_FILE, "Call %d: stream #%d (%s) unchanged.",
+                  call_id, mi, pjmedia_type_name(call_med->type)));
+    }
+
+    /* Check if no media is active */
+    if (local_sdp->media[mi]->desc.port == 0) {
+
+        /* Update call media state and direction */
+        call_med->state = PJSUA_CALL_MEDIA_NONE;
+        call_med->dir = PJMEDIA_DIR_NONE;
+
+    } else if (call_med->tp) {
+        pjmedia_transport_info tp_info;
+        pjmedia_srtp_info *srtp_info;
+
+        /* Call media direction */
+        call_med->dir = si->dir;
+
+        /* Call media state */
+        if (call->local_hold ||
+            ((call_med->dir & PJMEDIA_DIR_DECODING) == 0 &&
+             (call_med->def_dir & PJMEDIA_DIR_DECODING) == 0))
+        {
+            /* Local hold: Either the user holds the call, or sets
+             * the media direction that requests the remote party to
+             * stop sending media (i.e. sendonly or inactive).
+             */
+            call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
+        } else if ((call_med->dir & PJMEDIA_DIR_ENCODING) == 0 &&
+                   (call_med->def_dir & PJMEDIA_DIR_DECODING) != 0)
+        {
+            /* Remote hold: Remote doesn't want us to send media
+             * (recvonly or inactive) and we don't set media dir that
+             * locally holds the media.
+             */
+            call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
+        } else {
+            call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
+        }
+
+        if (call->inv->following_fork) {
+            unsigned options = (call_med->enable_rtcp_mux?
+                                PJMEDIA_TPMED_RTCP_MUX: 0);
+            /* Normally media transport will automatically restart
+             * itself (if needed, based on info from the SDP) in
+             * pjmedia_transport_media_start(), however in "following
+             * forked media" case (see #1644), we need to explicitly
+             * restart it as it cannot detect fork scenario from
+             * the SDP only.
+             */
+            status = pjmedia_transport_media_stop(call_med->tp);
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(1,(THIS_FILE, status,
+                             "pjmedia_transport_media_stop() failed "
+                             "for call_id %d media %d",
+                             call_id, mi));
+                return status;
+            }
+            status = pjmedia_transport_media_create(call_med->tp,
+                                                    tmp_pool,
+                                                    options, NULL, mi);
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(1,(THIS_FILE, status,
+                             "pjmedia_transport_media_create() failed "
+                             "for call_id %d media %d",
+                             call_id, mi));
+                return status;
+            }
+        }
+
+        /* Start/restart media transport based on info in SDP */
+        status = pjmedia_transport_media_start(call_med->tp,
+                                               tmp_pool, local_sdp,
+                                               remote_sdp, mi);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(1,(THIS_FILE, status,
+                         "pjmedia_transport_media_start() failed "
+                             "for call_id %d media %d",
+                         call_id, mi));
+            return status;
+        }
+
+        pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_RUNNING);
+
+        /* Get remote SRTP usage policy */
+        pjmedia_transport_info_init(&tp_info);
+        pjmedia_transport_get_info(call_med->tp, &tp_info);
+        srtp_info = (pjmedia_srtp_info*)
+                    pjmedia_transport_info_get_spc_info(
+                            &tp_info, PJMEDIA_TRANSPORT_TYPE_SRTP);
+        if (srtp_info) {
+            call_med->rem_srtp_use = srtp_info->peer_use;
+        }
+
+        /* Update audio channel */
+        if (media_changed) {
+            if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+            status = pjsua_aud_channel_update(call_med,
+                                              call->inv->pool, &asi,
+                                              local_sdp, remote_sdp);
+            } else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+            status = pjsua_vid_channel_update(call_med,
+                                              call->inv->pool, &vsi,
+                                              local_sdp, remote_sdp);
+#endif
+            }
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(1,(THIS_FILE, status,
+                             "pjsua_aud_channel_update() failed "
+                                 "for call_id %d media %d",
+                             call_id, mi));
+                return status;
+            }
+
+            if (pjmedia_transport_info_get_spc_info(
+                            &tp_info, PJMEDIA_TRANSPORT_TYPE_LOOP))
+            {
+                pjmedia_transport_loop_disable_rx(
+                        call_med->tp, call_med->strm.a.stream,
+                        !acc->cfg.enable_loopback);
+            }
+        }
+    }
+
+    /* Print info. */
+    if (status == PJ_SUCCESS) {
+        char info[80];
+        int info_len = 0;
+        int len;
+        const char *dir;
+
+        switch (si->dir) {
+        case PJMEDIA_DIR_NONE:
+            dir = "inactive";
+            break;
+        case PJMEDIA_DIR_ENCODING:
+            dir = "sendonly";
+            break;
+        case PJMEDIA_DIR_DECODING:
+            dir = "recvonly";
+            break;
+        case PJMEDIA_DIR_ENCODING_DECODING:
+            dir = "sendrecv";
+            break;
+        default:
+            dir = "unknown";
+            break;
+        }
+        len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
+                               ", stream #%d: %.*s (%s)", mi,
+                               (int)enc_name->slen,
+                               enc_name->ptr,
+                               dir);
+        if (len > 0)
+            info_len += len;
+        PJ_LOG(4,(THIS_FILE,"%s updated%s",
+                  pjmedia_type_name(call_med->type), info));
+    }
+    return status;
+}
+
+
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                                        const pjmedia_sdp_session *local_sdp,
                                        const pjmedia_sdp_session *remote_sdp)
@@ -4025,12 +4352,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
     /* Process each media stream */
     for (mi=0; mi < call->med_cnt; ++mi) {
-        const char *STR_SENDRECV = "sendrecv";
-        const char *STR_SENDONLY = "sendonly";
-        const char *STR_RECVONLY = "recvonly";
-        const char *STR_INACTIVE = "inactive";
         pjsua_call_media *call_med = &call->media[mi];
-        pj_bool_t media_changed = PJ_FALSE;
 
         if (mi >= local_sdp->media_count ||
             mi >= remote_sdp->media_count)
@@ -4060,490 +4382,15 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
         /* Apply media update action */
         if (call_med->type==PJMEDIA_TYPE_AUDIO) {
-            pjmedia_stream_info the_si, *si = &the_si;
-            pjsua_stream_info stream_info;
-
-            status = pjmedia_stream_info_from_sdp(
-                                        si, tmp_pool, pjsua_var.med_endpt,
-                                        local_sdp, remote_sdp, mi);
-            if (status != PJ_SUCCESS) {
-                PJ_PERROR(1,(THIS_FILE, status,
-                             "pjmedia_stream_info_from_sdp() failed "
-                                 "for call_id %d media %d",
-                             call_id, mi));
+            status = apply_med_update(call_med, local_sdp, remote_sdp, &need_renego_sdp);
+            if (status != PJ_SUCCESS)
                 goto on_check_med_status;
-            }
-
-#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-            /* Enable/disable RTCP XR based on account setting. */
-            si->rtcp_xr_enabled = acc->cfg.enable_rtcp_xr;
-#endif
-
-            /* Check if remote wants RTP and RTCP multiplexing,
-             * but we don't enable it.
-             */
-            if (si->rtcp_mux && !call_med->enable_rtcp_mux) {
-                si->rtcp_mux = PJ_FALSE;
-            }
-
-            /* Codec parameter of stream info (si->param) can be NULL if
-             * the stream is rejected or disabled.
-             */
-            /* Override ptime, if this option is specified. */
-            if (pjsua_var.media_cfg.ptime != 0 && si->param) {
-                si->param->setting.frm_per_pkt = (pj_uint8_t)
-                    (pjsua_var.media_cfg.ptime / si->param->info.frm_ptime);
-                if (si->param->setting.frm_per_pkt == 0)
-                    si->param->setting.frm_per_pkt = 1;
-            }
-
-            /* Disable VAD, if this option is specified. */
-            if (pjsua_var.media_cfg.no_vad && si->param) {
-                si->param->setting.vad = 0;
-            }
-
-            if (!pjmedia_sdp_neg_was_answer_remote(call->inv->neg) &&
-                si->dir != PJMEDIA_DIR_NONE)
-            {
-                pjmedia_dir dir = si->dir;
-                
-                if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
-                    call_med->def_dir = call->opt.media_dir[mi];
-                    PJ_LOG(4,(THIS_FILE, "Call %d: setting audio media "
-                                         "direction #%d to %d.",
-                                         call_id, mi, call_med->def_dir));
-                }
-
-                /* If the default direction specifies we do not wish
-                 * encoding/decoding, clear that direction.
-                 */
-                if ((call_med->def_dir & PJMEDIA_DIR_ENCODING) == 0) {
-                    dir &= ~PJMEDIA_DIR_ENCODING;
-                }
-                if ((call_med->def_dir & PJMEDIA_DIR_DECODING) == 0) {
-                    dir &= ~PJMEDIA_DIR_DECODING;
-                }
-
-                if (dir != si->dir) {
-                    const char *str_attr = NULL;
-                    pjmedia_sdp_attr *attr;
-                    pjmedia_sdp_media *m;
-
-                    if (!need_renego_sdp) {
-                        pjmedia_sdp_session *local_sdp_renego;
-                        local_sdp_renego =
-                            pjmedia_sdp_session_clone(tmp_pool, local_sdp);
-                        local_sdp = local_sdp_renego;
-                        need_renego_sdp = PJ_TRUE;
-                    }
-
-                    si->dir = dir;
-                    m = local_sdp->media[mi];
-
-                    /* Remove existing directions attributes */
-                    pjmedia_sdp_media_remove_all_attr(m, STR_SENDRECV);
-                    pjmedia_sdp_media_remove_all_attr(m, STR_SENDONLY);
-                    pjmedia_sdp_media_remove_all_attr(m, STR_RECVONLY);
-
-                    if (si->dir == PJMEDIA_DIR_ENCODING_DECODING) {
-                        str_attr = STR_SENDRECV;
-                    } else if (si->dir == PJMEDIA_DIR_ENCODING) {
-                        str_attr = STR_SENDONLY;
-                    } else if (si->dir == PJMEDIA_DIR_DECODING) {
-                        str_attr = STR_RECVONLY;
-                    } else {
-                        str_attr = STR_INACTIVE;
-                    }
-                    attr = pjmedia_sdp_attr_create(tmp_pool, str_attr, NULL);
-                    pjmedia_sdp_media_add_attr(m, attr);
-                }
-            }
-
-            stream_info.type = PJMEDIA_TYPE_AUDIO;
-            stream_info.info.aud = the_si;
-
-#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
-#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-            /* Check if we need to reset or maintain SRTP ROC */
-            check_srtp_roc(call, mi, &stream_info, local_sdp, remote_sdp);
-#endif
-#endif
-
-            /* Check if this media is changed */
-            if (pjsua_var.media_cfg.no_smart_media_update ||
-                is_media_changed(call, mi, &stream_info))
-            {
-                media_changed = PJ_TRUE;
-                /* Stop the media */
-                stop_media_stream(call, mi);
-            } else {
-                PJ_LOG(4,(THIS_FILE, "Call %d: stream #%d (audio) unchanged.",
-                          call_id, mi));
-            }
-
-            /* Check if no media is active */
-            if (local_sdp->media[mi]->desc.port == 0) {
-
-                /* Update call media state and direction */
-                call_med->state = PJSUA_CALL_MEDIA_NONE;
-                call_med->dir = PJMEDIA_DIR_NONE;
-
-            } else if (call_med->tp) {
-                pjmedia_transport_info tp_info;
-                pjmedia_srtp_info *srtp_info;
-
-                /* Call media direction */
-                call_med->dir = si->dir;
-
-                /* Call media state */
-                if (call->local_hold ||
-                    ((call_med->dir & PJMEDIA_DIR_DECODING) == 0 &&
-                     (call_med->def_dir & PJMEDIA_DIR_DECODING) == 0))
-                {
-                    /* Local hold: Either the user holds the call, or sets
-                     * the media direction that requests the remote party to
-                     * stop sending media (i.e. sendonly or inactive).
-                     */
-                    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-                } else if ((call_med->dir & PJMEDIA_DIR_ENCODING) == 0 &&
-                           (call_med->def_dir & PJMEDIA_DIR_DECODING) != 0)
-                {
-                    /* Remote hold: Remote doesn't want us to send media
-                     * (recvonly or inactive) and we don't set media dir that
-                     * locally holds the media.
-                     */
-                    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-                } else {
-                    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
-                }
-
-                if (call->inv->following_fork) {
-                    unsigned options = (call_med->enable_rtcp_mux?
-                                        PJMEDIA_TPMED_RTCP_MUX: 0);
-                    /* Normally media transport will automatically restart
-                     * itself (if needed, based on info from the SDP) in
-                     * pjmedia_transport_media_start(), however in "following
-                     * forked media" case (see #1644), we need to explicitly
-                     * restart it as it cannot detect fork scenario from
-                     * the SDP only.
-                     */
-                    status = pjmedia_transport_media_stop(call_med->tp);
-                    if (status != PJ_SUCCESS) {
-                        PJ_PERROR(1,(THIS_FILE, status,
-                                     "pjmedia_transport_media_stop() failed "
-                                     "for call_id %d media %d",
-                                     call_id, mi));
-                        goto on_check_med_status;
-                    }
-                    status = pjmedia_transport_media_create(call_med->tp,
-                                                            tmp_pool,
-                                                            options, NULL, mi);
-                    if (status != PJ_SUCCESS) {
-                        PJ_PERROR(1,(THIS_FILE, status,
-                                     "pjmedia_transport_media_create() failed "
-                                     "for call_id %d media %d",
-                                     call_id, mi));
-                        goto on_check_med_status;
-                    }
-                }
-
-                /* Start/restart media transport based on info in SDP */
-                status = pjmedia_transport_media_start(call_med->tp,
-                                                       tmp_pool, local_sdp,
-                                                       remote_sdp, mi);
-                if (status != PJ_SUCCESS) {
-                    PJ_PERROR(1,(THIS_FILE, status,
-                                 "pjmedia_transport_media_start() failed "
-                                     "for call_id %d media %d",
-                                 call_id, mi));
-                    goto on_check_med_status;
-                }
-
-                pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_RUNNING);
-
-                /* Get remote SRTP usage policy */
-                pjmedia_transport_info_init(&tp_info);
-                pjmedia_transport_get_info(call_med->tp, &tp_info);
-                srtp_info = (pjmedia_srtp_info*)
-                            pjmedia_transport_info_get_spc_info(
-                                    &tp_info, PJMEDIA_TRANSPORT_TYPE_SRTP);
-                if (srtp_info) {
-                    call_med->rem_srtp_use = srtp_info->peer_use;
-                }
-
-                /* Update audio channel */
-                if (media_changed) {
-                    status = pjsua_aud_channel_update(call_med,
-                                                      call->inv->pool, si,
-                                                      local_sdp, remote_sdp);
-                    if (status != PJ_SUCCESS) {
-                        PJ_PERROR(1,(THIS_FILE, status,
-                                     "pjsua_aud_channel_update() failed "
-                                         "for call_id %d media %d",
-                                     call_id, mi));
-                        goto on_check_med_status;
-                    }
-
-                    if (pjmedia_transport_info_get_spc_info(
-                                    &tp_info, PJMEDIA_TRANSPORT_TYPE_LOOP))
-                    {
-                        pjmedia_transport_loop_disable_rx(
-                                call_med->tp, call_med->strm.a.stream,
-                                !acc->cfg.enable_loopback);
-                    }
-                }
-            }
-
-            /* Print info. */
-            if (status == PJ_SUCCESS) {
-                char info[80];
-                int info_len = 0;
-                int len;
-                const char *dir;
-
-                switch (si->dir) {
-                case PJMEDIA_DIR_NONE:
-                    dir = "inactive";
-                    break;
-                case PJMEDIA_DIR_ENCODING:
-                    dir = "sendonly";
-                    break;
-                case PJMEDIA_DIR_DECODING:
-                    dir = "recvonly";
-                    break;
-                case PJMEDIA_DIR_ENCODING_DECODING:
-                    dir = "sendrecv";
-                    break;
-                default:
-                    dir = "unknown";
-                    break;
-                }
-                len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
-                                       ", stream #%d: %.*s (%s)", mi,
-                                       (int)si->fmt.encoding_name.slen,
-                                       si->fmt.encoding_name.ptr,
-                                       dir);
-                if (len > 0)
-                    info_len += len;
-                PJ_LOG(4,(THIS_FILE,"Audio updated%s", info));
-            }
-
-
-            if (call->audio_idx==-1 && status==PJ_SUCCESS &&
-                si->dir != PJMEDIA_DIR_NONE)
-            {
-                call->audio_idx = mi;
-            }
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
         } else if (call_med->type==PJMEDIA_TYPE_VIDEO) {
-            pjmedia_vid_stream_info the_si, *si = &the_si;
-            pjsua_stream_info stream_info;
-
-            status = pjmedia_vid_stream_info_from_sdp(
-                                        si, tmp_pool, pjsua_var.med_endpt,
-                                        local_sdp, remote_sdp, mi);
-            if (status != PJ_SUCCESS) {
-                PJ_PERROR(1,(THIS_FILE, status,
-                             "pjmedia_vid_stream_info_from_sdp() failed "
-                                 "for call_id %d media %d",
-                             call_id, mi));
+            status = apply_med_update(call_med, local_sdp, remote_sdp, &need_renego_sdp);
+            if (status != PJ_SUCCESS)
                 goto on_check_med_status;
-            }
-
-            /* Check if remote wants RTP and RTCP multiplexing,
-             * but we don't enable it.
-             */
-            if (si->rtcp_mux && !call_med->enable_rtcp_mux) {
-                si->rtcp_mux = PJ_FALSE;
-            }
-
-            if (!pjmedia_sdp_neg_was_answer_remote(call->inv->neg) &&
-                si->dir != PJMEDIA_DIR_NONE)
-            {
-                pjmedia_dir dir = si->dir;
-                
-                if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
-                    call_med->def_dir = call->opt.media_dir[mi];
-                    PJ_LOG(4,(THIS_FILE, "Call %d: setting video media "
-                                         "direction #%d to %d.",
-                                         call_id, mi, call_med->def_dir));
-                }
-
-                /* If the default direction specifies we do not wish
-                 * encoding/decoding, clear that direction.
-                 */
-                if ((call_med->def_dir & PJMEDIA_DIR_ENCODING) == 0) {
-                    dir &= ~PJMEDIA_DIR_ENCODING;
-                }
-                if ((call_med->def_dir & PJMEDIA_DIR_DECODING) == 0) {
-                    dir &= ~PJMEDIA_DIR_DECODING;
-                }
-
-                if (dir != si->dir) {
-                    const char *str_attr = NULL;
-                    pjmedia_sdp_attr *attr;
-                    pjmedia_sdp_media *m;
-
-                    if (!need_renego_sdp) {
-                        pjmedia_sdp_session *local_sdp_renego;
-                        local_sdp_renego =
-                            pjmedia_sdp_session_clone(tmp_pool, local_sdp);
-                        local_sdp = local_sdp_renego;
-                        need_renego_sdp = PJ_TRUE;
-                    }
-
-                    si->dir = dir;
-                    m = local_sdp->media[mi];
-
-                    /* Remove existing directions attributes */
-                    pjmedia_sdp_media_remove_all_attr(m, STR_SENDRECV);
-                    pjmedia_sdp_media_remove_all_attr(m, STR_SENDONLY);
-                    pjmedia_sdp_media_remove_all_attr(m, STR_RECVONLY);
-
-                    if (si->dir == PJMEDIA_DIR_ENCODING_DECODING) {
-                        str_attr = STR_SENDRECV;
-                    } else if (si->dir == PJMEDIA_DIR_ENCODING) {
-                        str_attr = STR_SENDONLY;
-                    } else if (si->dir == PJMEDIA_DIR_DECODING) {
-                        str_attr = STR_RECVONLY;
-                    } else {
-                        str_attr = STR_INACTIVE;
-                    }
-                    attr = pjmedia_sdp_attr_create(tmp_pool, str_attr, NULL);
-                    pjmedia_sdp_media_add_attr(m, attr);
-                }
-            }
-
-            stream_info.type = PJMEDIA_TYPE_VIDEO;
-            stream_info.info.vid = the_si;
-
-#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
-#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-            /* Check if we need to reset or maintain SRTP ROC */
-            check_srtp_roc(call, mi, &stream_info, local_sdp, remote_sdp);
-#endif
-#endif
-
-            /* Check if this media is changed */
-            if (is_media_changed(call, mi, &stream_info)) {
-                media_changed = PJ_TRUE;
-                /* Stop the media */
-                stop_media_stream(call, mi);
-            } else {
-                PJ_LOG(4,(THIS_FILE, "Call %d: stream #%d (video) unchanged.",
-                          call_id, mi));
-            }
-
-            /* Check if no media is active */
-            if (local_sdp->media[mi]->desc.port == 0) {
-
-                /* Update call media state and direction */
-                call_med->state = PJSUA_CALL_MEDIA_NONE;
-                call_med->dir = PJMEDIA_DIR_NONE;
-
-            } else if (call_med->tp) {
-                pjmedia_transport_info tp_info;
-                pjmedia_srtp_info *srtp_info;
-
-                /* Call media direction */
-                call_med->dir = si->dir;
-
-                /* Call media state */
-                if (call->local_hold ||
-                    ((call_med->dir & PJMEDIA_DIR_DECODING) == 0 &&
-                     (call_med->def_dir & PJMEDIA_DIR_DECODING) == 0))
-                {
-                    /* Local hold: Either the user holds the call, or sets
-                     * the media direction that requests the remote party to
-                     * stop sending media (i.e. sendonly or inactive).
-                     */
-                    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-                } else if ((call_med->dir & PJMEDIA_DIR_ENCODING) == 0 &&
-                           (call_med->def_dir & PJMEDIA_DIR_DECODING) != 0)
-                {
-                    /* Remote hold: Remote doesn't want us to send media 
-                     * (recvonly or inactive) and we don't set media dir that
-                     * locally holds the media.
-                     */
-                    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-                } else {
-                    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
-                }
-
-                /* Start/restart media transport */
-                status = pjmedia_transport_media_start(call_med->tp,
-                                                       tmp_pool, local_sdp,
-                                                       remote_sdp, mi);
-                if (status != PJ_SUCCESS) {
-                    PJ_PERROR(1,(THIS_FILE, status,
-                                 "pjmedia_transport_media_start() failed "
-                                     "for call_id %d media %d",
-                                 call_id, mi));
-                    goto on_check_med_status;
-                }
-
-                pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_RUNNING);
-
-                /* Get remote SRTP usage policy */
-                pjmedia_transport_info_init(&tp_info);
-                pjmedia_transport_get_info(call_med->tp, &tp_info);
-                srtp_info = (pjmedia_srtp_info*)
-                            pjmedia_transport_info_get_spc_info(
-                                    &tp_info, PJMEDIA_TRANSPORT_TYPE_SRTP);
-                if (srtp_info) {
-                    call_med->rem_srtp_use = srtp_info->peer_use;
-                }
-
-                /* Update video channel */
-                if (media_changed) {
-                    status = pjsua_vid_channel_update(call_med,
-                                                      call->inv->pool, si,
-                                                      local_sdp, remote_sdp);
-                    if (status != PJ_SUCCESS) {
-                        PJ_PERROR(1,(THIS_FILE, status,
-                                     "pjsua_vid_channel_update() failed "
-                                         "for call_id %d media %d",
-                                     call_id, mi));
-                        goto on_check_med_status;
-                    }
-                }
-            }
-
-            /* Print info. */
-            {
-                char info[80];
-                int info_len = 0;
-                int len;
-                const char *dir;
-
-                switch (si->dir) {
-                case PJMEDIA_DIR_NONE:
-                    dir = "inactive";
-                    break;
-                case PJMEDIA_DIR_ENCODING:
-                    dir = "sendonly";
-                    break;
-                case PJMEDIA_DIR_DECODING:
-                    dir = "recvonly";
-                    break;
-                case PJMEDIA_DIR_ENCODING_DECODING:
-                    dir = "sendrecv";
-                    break;
-                default:
-                    dir = "unknown";
-                    break;
-                }
-                len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
-                                       ", stream #%d: %.*s (%s)", mi,
-                                       (int)si->codec_info.encoding_name.slen,
-                                       si->codec_info.encoding_name.ptr,
-                                       dir);
-                if (len > 0)
-                    info_len += len;
-                PJ_LOG(4,(THIS_FILE,"Video updated%s", info));
-            }
-
 #endif
         } else {
             status = PJMEDIA_EUNSUPMEDIATYPE;

@@ -148,53 +148,10 @@ typedef struct pjmedia_vid_stream_sk_config
  */
 typedef struct pjmedia_vid_stream_info
 {
-    pjmedia_type        type;       /**< Media type (audio, video)          */
-    pjmedia_tp_proto    proto;      /**< Transport protocol (RTP/AVP, etc.) */
-    pjmedia_dir         dir;        /**< Media direction.                   */
-    pj_sockaddr         local_addr; /**< Local RTP address                  */
-    pj_sockaddr         rem_addr;   /**< Remote RTP address                 */
-    pj_sockaddr         rem_rtcp;   /**< Optional remote RTCP address. If
-                                         sin_family is zero, the RTP address
-                                         will be calculated from RTP.       */
-    pj_bool_t           rtcp_mux;   /**< Use RTP and RTCP multiplexing.     */
-    pjmedia_rtcp_fb_info loc_rtcp_fb; /**< Local RTCP-FB info.              */
-    pjmedia_rtcp_fb_info rem_rtcp_fb; /**< Remote RTCP-FB info.             */
-    unsigned            tx_pt;      /**< Outgoing codec paylaod type.       */
-    unsigned            rx_pt;      /**< Incoming codec paylaod type.       */
-    pj_uint32_t         ssrc;       /**< RTP SSRC.                          */
-    pj_str_t            cname;      /**< RTCP CNAME.                        */
-    pj_bool_t           has_rem_ssrc;/**<Has remote RTP SSRC?               */
-    pj_uint32_t         rem_ssrc;   /**< Remote RTP SSRC.                   */
-    pj_str_t            rem_cname;  /**< Remote RTCP CNAME.                 */
-    pj_uint32_t         rtp_ts;     /**< Initial RTP timestamp.             */
-    pj_uint16_t         rtp_seq;    /**< Initial RTP sequence number.       */
-    pj_uint8_t          rtp_seq_ts_set;
-                                    /**< Bitmask flags if initial RTP sequence 
-                                         and/or timestamp for sender are set.
-                                         bit 0/LSB : sequence flag 
-                                         bit 1     : timestamp flag         */
-    int                 jb_init;    /**< Jitter buffer init delay in msec.  
-                                         (-1 for default).                  */
-    int                 jb_min_pre; /**< Jitter buffer minimum prefetch
-                                         delay in msec (-1 for default).    */
-    int                 jb_max_pre; /**< Jitter buffer maximum prefetch
-                                         delay in msec (-1 for default).    */
-    int                 jb_max;     /**< Jitter buffer max delay in msec.   */
-
-#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
-    pj_bool_t           use_ka;     /**< Stream keep-alive and NAT hole punch
-                                         (see #PJMEDIA_STREAM_ENABLE_KA)
-                                         is enabled?                        */
-    pjmedia_stream_ka_config ka_cfg;
-                                    /**< Stream send kep-alive settings.    */
-#endif
+    PJ_DECL_STREAM_INFO_COMMON_MEMBER()
 
     pjmedia_vid_codec_info   codec_info;  /**< Incoming codec format info.  */
     pjmedia_vid_codec_param *codec_param; /**< Optional codec param.        */
-
-    pj_bool_t           rtcp_sdes_bye_disabled; 
-                                    /**< Disable automatic sending of RTCP
-                                         SDES and BYE.                      */
 
     pjmedia_vid_stream_rc_config rc_cfg;
                                     /**< Stream send rate control settings. */
