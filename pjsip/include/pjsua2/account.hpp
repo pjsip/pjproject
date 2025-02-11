@@ -604,6 +604,15 @@ struct AccountNatConfig : public PersistentObject
     int                 iceWaitNominationTimeoutMsec;
 
     /**
+     * Specify whether to check the source address of the incoming messages.
+     * The source address will be compared to the remote candidate which has
+     * a completed connectivity check or received a connectivity check.
+     *
+     * Default value is PJ_ICE_SESS_CHECK_SRC_ADDR.
+     */
+    unsigned            iceCheckSrcAddr;
+
+    /**
      * Disable RTCP component.
      *
      * Default: False
