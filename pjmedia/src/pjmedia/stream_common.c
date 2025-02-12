@@ -40,7 +40,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_common_from_sdp(
                                            pjmedia_endpt *endpt,
                                            const pjmedia_sdp_session *local,
                                            const pjmedia_sdp_session *remote,
-                                           unsigned stream_idx)
+                                           unsigned stream_idx,
+                                           pj_bool_t *active)
 {
     const pj_str_t STR_INACTIVE = { "inactive", 8 };
     const pj_str_t STR_SENDONLY = { "sendonly", 8 };
@@ -55,6 +56,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_common_from_sdp(
     unsigned i;
     pj_status_t status;
 
+    /* Init */
+    *active = PJ_FALSE;
 
     /* Validate arguments: */
     PJ_ASSERT_RETURN(pool && si && local && remote, PJ_EINVAL);
@@ -285,6 +288,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_common_from_sdp(
             return status;
     }
 
+    *active = PJ_TRUE;
     return status;
 }
 

@@ -357,11 +357,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     pjmedia_codec_mgr *mgr;
     const pjmedia_sdp_media *local_m;
     const pjmedia_sdp_media *rem_m;
+    pj_bool_t active;
     pj_status_t status;
 
     status = pjmedia_stream_info_common_from_sdp(csi, pool, endpt, local,
-                                                 remote, stream_idx);
-    if (status != PJ_SUCCESS)
+                                                 remote, stream_idx, &active);
+    if (status != PJ_SUCCESS || !active)
         return status;
 
     /* Keep SDP shortcuts */

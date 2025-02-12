@@ -411,6 +411,8 @@ typedef struct pjmedia_stream_info_common
  * @param local         Local SDP session descriptor.
  * @param remote        Remote SDP session descriptor.
  * @param stream_idx    Media stream index in the session descriptor.
+ * @param active        Output parameter to indicate whether the stream is
+ *                      active.
  *
  * @return              PJ_SUCCESS if stream info is successfully initialized.
  */
@@ -420,7 +422,8 @@ pjmedia_stream_info_common_from_sdp(pjmedia_stream_info_common *si,
                                     pjmedia_endpt *endpt,
                                     const pjmedia_sdp_session *local,
                                     const pjmedia_sdp_session *remote,
-                                    unsigned stream_idx);
+                                    unsigned stream_idx,
+                                    pj_bool_t *active);
 
 
 /**
