@@ -86,11 +86,14 @@ typedef struct mbedtls_sock_t {
 static void mbedtls_print_logs(void *ctx, int level, const char *file,
                                int line, const char *str)
 {
+    const char* last_slash;
+    const char* file_name;
+
     PJ_UNUSED_ARG(ctx);
     PJ_UNUSED_ARG(level);
 
-    const char* last_slash = strrchr(file, '/');
-    const char* file_name = last_slash ? last_slash + 1 : file;
+    last_slash = strrchr(file, '/');
+    file_name = last_slash ? last_slash + 1 : file;
 
     PJ_LOG(3, (THIS_FILE, "%s:%d: %s", file_name, line, str));
 }
@@ -98,9 +101,9 @@ static void mbedtls_print_logs(void *ctx, int level, const char *file,
 /* Convert from MbedTLS error to pj_status_t. */
 static pj_status_t ssl_status_from_err(pj_ssl_sock_t *ssock, int err)
 {
-    PJ_UNUSED_ARG(ssock);
-
     pj_status_t status;
+
+    PJ_UNUSED_ARG(ssock);
 
     switch (err) {
     case 0:
@@ -165,6 +168,8 @@ static int ssl_data_push(void *ctx, const unsigned char *buf, size_t len)
 static int ssl_data_pull(void *ctx, unsigned char *buf, size_t len)
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)ctx;
+    pj_size_t circ_buf_size;
+    pj_size_t read_size;
 
     pj_lock_acquire(ssock->circ_buf_input_mutex);
 
@@ -174,8 +179,8 @@ static int ssl_data_pull(void *ctx, unsigned char *buf, size_t len)
         return MBEDTLS_ERR_SSL_WANT_READ;
     }
 
-    pj_size_t circ_buf_size = circ_size(&ssock->circ_buf_input);
-    pj_size_t read_size = PJ_MIN(circ_buf_size, len);
+    circ_buf_size = circ_size(&ssock->circ_buf_input);
+    read_size = PJ_MIN(circ_buf_size, len);
 
     circ_read(&ssock->circ_buf_input, buf, read_size);
     pj_lock_release(ssock->circ_buf_input_mutex);
@@ -606,6 +611,9 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     const char *pers = "ssl_client";
     pj_status_t status;
     int ret;
+    int endpoint;
+    /* This version string is 18 bytes long, as advised by version.h. */
+    char version[18];
 
     /* Suppress warnings */
     PJ_UNUSED_ARG(circ_reset);
@@ -625,8 +633,6 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
         return status;
     }
 
-    /* This version string is 18 bytes long, as advised by version.h. */
-    char version[18];
     mbedtls_version_get_string_full(version);
     PJ_LOG(4, (THIS_FILE, "Mbed TLS version : %s", version));
 
@@ -647,8 +653,8 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     mbedtls_x509_crt_init(&mssock->cert);
     mbedtls_pk_init(&mssock->pk_ctx);
 
-    const int endpoint =
-            ssock->is_server ? MBEDTLS_SSL_IS_SERVER : MBEDTLS_SSL_IS_CLIENT;
+    endpoint = ssock->is_server ? MBEDTLS_SSL_IS_SERVER
+                                : MBEDTLS_SSL_IS_CLIENT;
     ret = mbedtls_ssl_config_defaults(&mssock->ssl_config, endpoint,
                                       MBEDTLS_SSL_TRANSPORT_STREAM,
                                       MBEDTLS_SSL_PRESET_DEFAULT);
@@ -752,12 +758,14 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 
 static void ssl_ciphers_populate()
 {
+    const int *list;
+
     /* Populate once only */
     if (ssl_cipher_num) {
         return;
     }
 
-    const int *list = mbedtls_ssl_list_ciphersuites();
+    list = mbedtls_ssl_list_ciphersuites();
 
     for (unsigned num = 0;
             ssl_cipher_num < PJ_ARRAY_SIZE(ssl_ciphers) && list[num]; num++) {
@@ -788,11 +796,12 @@ static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock)
 static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 {
     mbedtls_sock_t *mssock = (mbedtls_sock_t *)ssock;
+    const mbedtls_x509_crt *crt;
 
     pj_assert(ssock->ssl_state == SSL_STATE_ESTABLISHED);
 
     /* Get active remote certificate */
-    const mbedtls_x509_crt *crt = mbedtls_ssl_get_peer_cert(&mssock->ssl_ctx);
+    crt = mbedtls_ssl_get_peer_cert(&mssock->ssl_ctx);
     if (crt) {
         update_cert_info(crt, ssock->pool, &ssock->remote_cert_info);
     }
