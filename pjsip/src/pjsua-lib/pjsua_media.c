@@ -3938,7 +3938,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
 #endif
     pjmedia_stream_info_common *si;
     pjsua_stream_info stream_info;
-                               pj_str_t *enc_name;
+    pj_str_t *enc_name = NULL;
 
     if (call_med->type == PJMEDIA_TYPE_AUDIO) {
         si = (pjmedia_stream_info_common *)&asi;
@@ -4228,8 +4228,8 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         }
         len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
                                ", stream #%d: %.*s (%s)", mi,
-                               (int)enc_name->slen,
-                               enc_name->ptr,
+                               (enc_name? (int)enc_name->slen: 0),
+                               (enc_name? enc_name->ptr: info),
                                dir);
         if (len > 0)
             info_len += len;
