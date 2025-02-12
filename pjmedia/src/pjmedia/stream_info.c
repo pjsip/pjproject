@@ -360,6 +360,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     pj_bool_t active;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(si, PJ_EINVAL);
+    pj_bzero(si, sizeof(*si));
+
     status = pjmedia_stream_info_common_from_sdp(csi, pool, endpt, local,
                                                  remote, stream_idx, &active);
     if (status != PJ_SUCCESS || !active)
