@@ -406,6 +406,7 @@ void AccountNatConfig::readObject(const ContainerNode &node)
     NODE_READ_BOOL    ( this_node, iceAggressiveNomination);
     NODE_READ_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
     NODE_READ_INT     ( this_node, iceWaitNominationTimeoutMsec);
+    NODE_READ_INT     ( this_node, iceCheckSrcAddr);
     NODE_READ_BOOL    ( this_node, iceNoRtcp);
     NODE_READ_BOOL    ( this_node, iceAlwaysUpdate);
     NODE_READ_BOOL    ( this_node, turnEnabled);
@@ -442,6 +443,7 @@ void AccountNatConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_BOOL    ( this_node, iceAggressiveNomination);
     NODE_WRITE_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
     NODE_WRITE_INT     ( this_node, iceWaitNominationTimeoutMsec);
+    NODE_WRITE_INT     ( this_node, iceCheckSrcAddr);
     NODE_WRITE_BOOL    ( this_node, iceNoRtcp);
     NODE_WRITE_BOOL    ( this_node, iceAlwaysUpdate);
     NODE_WRITE_BOOL    ( this_node, turnEnabled);
@@ -671,6 +673,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
                             natConfig.iceNominatedCheckDelayMsec;
     ret.ice_cfg.ice_opt.controlled_agent_want_nom_timeout =
                             natConfig.iceWaitNominationTimeoutMsec;
+    ret.ice_cfg.ice_opt.check_src_addr = natConfig.iceCheckSrcAddr;
     ret.ice_cfg.ice_no_rtcp     = natConfig.iceNoRtcp;
     ret.ice_cfg.ice_always_update = natConfig.iceAlwaysUpdate;
 
@@ -842,6 +845,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
                         prm.ice_cfg.ice_opt.nominated_check_delay;
         natConfig.iceWaitNominationTimeoutMsec =
                         prm.ice_cfg.ice_opt.controlled_agent_want_nom_timeout;
+        natConfig.iceCheckSrcAddr = prm.ice_cfg.ice_opt.check_src_addr;
         natConfig.iceNoRtcp     = PJ2BOOL(prm.ice_cfg.ice_no_rtcp);
         natConfig.iceAlwaysUpdate = PJ2BOOL(prm.ice_cfg.ice_always_update);
     } else {
@@ -856,6 +860,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
                         mcfg->ice_opt.nominated_check_delay;
         natConfig.iceWaitNominationTimeoutMsec =
                         mcfg->ice_opt.controlled_agent_want_nom_timeout;
+        natConfig.iceCheckSrcAddr = mcfg->ice_opt.check_src_addr;
         natConfig.iceNoRtcp     = PJ2BOOL(mcfg->ice_no_rtcp);
         natConfig.iceAlwaysUpdate = PJ2BOOL(mcfg->ice_always_update);
     }

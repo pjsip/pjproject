@@ -1100,6 +1100,16 @@
 #   define PJMEDIA_SRTP_DTLS_OSSL_CIPHERS           "DEFAULT"
 #endif
 
+/**
+ * Enabled this to check the source address of ClientHello message coming
+ * from a valid address. See PJ_ICE_SESS_CHECK_SRC_ADDR when ICE is used.
+ *
+ * Default value: 0
+ */
+#ifndef PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR
+#   define PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR       0
+#endif
+
 
 /**
  * Maximum number of SRTP cryptos.

@@ -325,6 +325,7 @@ PJ_DEF(void) pj_ice_sess_options_default(pj_ice_sess_options *opt)
     opt->controlled_agent_want_nom_timeout = 
         ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT;
     opt->trickle = PJ_ICE_SESS_TRICKLE_DISABLED;
+    opt->check_src_addr = PJ_ICE_SESS_CHECK_SRC_ADDR;
 }
 
 /*
@@ -1370,6 +1371,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
     if (!ice->is_complete) {
         ice->is_complete = PJ_TRUE;
         ice->ice_status = status;
+        pj_gettimeofday(&ice->time_completed);
     
         pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap, &ice->timer,
                                        TIMER_NONE);
@@ -2883,6 +2885,8 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
                     &ice->clist, check),
          (check->nominated ? " (nominated)" : " (not nominated)")));
 
+    check->rcand->checked = PJ_TRUE;
+
     /* Get the STUN XOR-MAPPED-ADDRESS attribute. */
     xaddr = (pj_stun_xor_mapped_addr_attr*)
             pj_stun_msg_find_attr(response, PJ_STUN_ATTR_XOR_MAPPED_ADDR,0);
@@ -3140,7 +3144,6 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     /* Get USE-CANDIDATE attribute */
     uc_attr = (pj_stun_use_candidate_attr*)
               pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_USE_CANDIDATE, 0);
-
 
     /* Get ICE-CONTROLLING or ICE-CONTROLLED */
     role_attr = (pj_stun_uint64_attr*)
@@ -3447,6 +3450,8 @@ static void handle_incoming_check(pj_ice_sess *ice,
          */
         c->nominated = ((rcheck->use_candidate) || c->nominated);
 
+        rcand->checked = PJ_TRUE;
+
         if (c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN ||
             c->state == PJ_ICE_SESS_CHECK_STATE_WAITING)
         {
@@ -3733,6 +3738,56 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
         pj_grp_lock_release(ice->grp_lock);
 
         PJ_RACE_ME(5);
+
+        if (ice->opt.check_src_addr) {
+            pj_bool_t check_addr = PJ_TRUE;
+            pj_sockaddr *raddr = &comp->rcand_check_addr;
+
+            if (!pj_sockaddr_has_addr(raddr)) {
+                for (i = 0; i < ice->rcand_cnt; ++i) {
+                    if (ice->rcand[i].comp_id == comp_id &&
+                        ice->rcand[i].checked &&
+                        pj_sockaddr_cmp(src_addr, &ice->rcand[i].addr) == 0)
+                    {
+                        /* Before ICE completed, it is still allowed to receive 
+                         * data from other candidates.
+                         */
+                        if (ice->is_complete) {
+                            pj_time_val now;
+                            pj_uint32_t duration;
+
+                            pj_gettimeofday(&now);
+                            PJ_TIME_VAL_SUB(now, ice->time_completed);
+                            duration = PJ_TIME_VAL_MSEC(now);
+
+                            if (duration > PJ_ICE_SESS_SET_RADDR_DELAY) {
+                                char psrc_addr[PJ_INET6_ADDRSTRLEN] = {0};
+
+                                if (pj_sockaddr_has_addr(src_addr)) {
+                                    pj_sockaddr_print(src_addr, psrc_addr, 
+                                                      sizeof(psrc_addr), 3);
+                                }
+                                pj_sockaddr_cp(raddr, src_addr);
+                                PJ_LOG(4, (ice->obj_name, "Using %s as valid"
+                                    " address for component [%d]",
+                                    psrc_addr, comp_id));
+                            }
+                        }
+                        check_addr = PJ_FALSE;
+                        break;
+                    }
+                }
+            }
+            if (check_addr && pj_sockaddr_cmp(src_addr, raddr) != 0) {
+                char paddr[PJ_INET6_ADDRSTRLEN] = {0};
+
+                pj_sockaddr_print(src_addr, paddr, sizeof(paddr), 3);
+                PJ_LOG(4, (ice->obj_name, "Ignoring incoming message for "
+                         "component [%d] because source addr %s unrecognized",
+                         comp_id, paddr));
+                return PJ_SUCCESS;
+            }
+        } 
 
         (*ice->cb.on_rx_data)(ice, comp_id, transport_id, pkt, pkt_size, 
                               src_addr, src_addr_len);
