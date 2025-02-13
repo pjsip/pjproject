@@ -217,6 +217,8 @@ jobs:
         cirunner/installmac.sh
     - name: install dependencies
       run: brew install gnutls swig
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=`brew --prefix gnutls`
     - name: make
@@ -257,6 +259,8 @@ jobs:
         cirunner/installmac.sh
     - name: install dependencies
       run: brew install gnutls swig
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=`brew --prefix gnutls`
     - name: make
@@ -388,7 +392,7 @@ jobs:
     - name: build ffmpeg
       run: cd FFmpeg && $MAKE_FAST && sudo make install
     - name: config site
-      run: echo -e "#define PJMEDIA_HAS_VIDEO 1\n" > pjlib/include/pj/config_site.h
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJMEDIA_HAS_VIDEO 1\n" >> config_site.h
     - name: configure
       run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
     - name: make
@@ -420,7 +424,7 @@ jobs:
     - name: install dependencies
       run: brew install openssl libvpx swig
     - name: config site
-      run: echo -e "#define PJMEDIA_HAS_VIDEO 1\n#define PJMEDIA_HAS_VID_TOOLBOX_CODEC 1\n" > pjlib/include/pj/config_site.h
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJMEDIA_HAS_VIDEO 1\n#define PJMEDIA_HAS_VID_TOOLBOX_CODEC 1\n" >> config_site.h
     - name: configure
       run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
     - name: make
