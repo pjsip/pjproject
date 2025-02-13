@@ -3957,6 +3957,8 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         stream_info.info.vid = vsi;
         enc_name = &vsi.codec_info.encoding_name;
 #endif
+    } else {
+        PJ_ASSERT_RETURN(!"Invalid media!", PJ_EINVAL);
     }
 
     if (status != PJ_SUCCESS) {

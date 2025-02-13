@@ -1612,8 +1612,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_get_port(pjmedia_vid_stream *stream,
 {
     pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
 
-    PJ_ASSERT_RETURN(dir==PJMEDIA_DIR_ENCODING || dir==PJMEDIA_DIR_DECODING,
-                     PJ_EINVAL);
+    PJ_ASSERT_RETURN((dir==PJMEDIA_DIR_ENCODING || dir==PJMEDIA_DIR_DECODING)&&
+                     stream, PJ_EINVAL);
 
     if (dir == PJMEDIA_DIR_ENCODING)
         *p_port = &c_strm->enc->port;
