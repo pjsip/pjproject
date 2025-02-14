@@ -800,6 +800,7 @@ public:
       iceAggressiveNomination(true),
       iceNominatedCheckDelayMsec(PJ_ICE_NOMINATED_CHECK_DELAY),
       iceWaitNominationTimeoutMsec(ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT),
+      iceCheckSrcAddr(PJ_ICE_SESS_CHECK_SRC_ADDR),
       iceNoRtcp(false),
       iceAlwaysUpdate(true),
       turnEnabled(false),

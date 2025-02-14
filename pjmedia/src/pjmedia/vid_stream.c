@@ -1527,10 +1527,11 @@ err_cleanup:
  */
 PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm;
 
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
+    c_strm = &stream->base;
     PJ_LOG(4,(THIS_FILE, "Destroy request on %s..", c_strm->name.ptr));
 
     /* Stop the streaming */
@@ -1610,7 +1611,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_get_port(pjmedia_vid_stream *stream,
                                                 pjmedia_dir dir,
                                                 pjmedia_port **p_port )
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(dir==PJMEDIA_DIR_ENCODING || dir==PJMEDIA_DIR_DECODING,
                      PJ_EINVAL);
@@ -1691,7 +1692,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_get_info(
  */
 PJ_DEF(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream && c_strm->enc && c_strm->dec, PJ_EINVALIDOP);
 
@@ -1734,7 +1735,7 @@ pjmedia_vid_stream_modify_codec_param(pjmedia_vid_stream *stream,
 PJ_DEF(pj_bool_t) pjmedia_vid_stream_is_running(pjmedia_vid_stream *stream,
                                                 pjmedia_dir dir)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
     pj_bool_t is_running = PJ_TRUE;
 
     PJ_ASSERT_RETURN(stream, PJ_FALSE);
@@ -1756,7 +1757,7 @@ PJ_DEF(pj_bool_t) pjmedia_vid_stream_is_running(pjmedia_vid_stream *stream,
 PJ_DEF(pj_status_t) pjmedia_vid_stream_pause(pjmedia_vid_stream *stream,
                                              pjmedia_dir dir)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
@@ -1786,7 +1787,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_pause(pjmedia_vid_stream *stream,
 PJ_DEF(pj_status_t) pjmedia_vid_stream_resume(pjmedia_vid_stream *stream,
                                               pjmedia_dir dir)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
@@ -1860,7 +1861,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_send_rtcp_bye(
 PJ_DEF(pj_status_t) pjmedia_vid_stream_send_rtcp_pli(
                                                 pjmedia_vid_stream *stream)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 

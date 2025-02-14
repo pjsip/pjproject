@@ -446,6 +446,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     /* Add ref counter to avoid premature destroy from callbacks */
     pj_grp_lock_add_ref(c_strm->grp_lock);
 
+    pj_bzero(&seq_st, sizeof(seq_st));
+
     /* Ignore the packet if decoder is paused */
     if (channel->paused)
         goto on_return;
@@ -453,7 +455,6 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     /* Update RTP session (also checks if RTP session can accept
      * the incoming packet.
      */
-    pj_bzero(&seq_st, sizeof(seq_st));
     check_pt = PJMEDIA_STREAM_CHECK_RTP_PT;
 #ifdef AUDIO_STREAM
     check_pt = check_pt && hdr->pt != stream->rx_event_pt;

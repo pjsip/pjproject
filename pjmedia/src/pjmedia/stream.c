@@ -2403,7 +2403,7 @@ static void on_stream_destroy(void *arg)
  */
 PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
@@ -2530,7 +2530,7 @@ PJ_DEF(pjmedia_transport*) pjmedia_stream_get_transport(pjmedia_stream *st)
  */
 PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream && c_strm->enc && c_strm->dec, PJ_EINVALIDOP);
 
@@ -2602,7 +2602,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_reset_stat(pjmedia_stream *stream)
 PJ_DEF(pj_status_t) pjmedia_stream_get_stat_xr( const pjmedia_stream *stream,
                                                 pjmedia_rtcp_xr_stat *stat)
 {
-    const pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    const pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream && stat, PJ_EINVAL);
 
@@ -2620,7 +2620,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_stat_xr( const pjmedia_stream *stream,
 PJ_DEF(pj_status_t) pjmedia_stream_get_stat_jbuf(const pjmedia_stream *stream,
                                                  pjmedia_jb_state *state)
 {
-    const pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    const pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream && state, PJ_EINVAL);
     return pjmedia_jbuf_get_state(c_strm->jb, state);
@@ -2632,7 +2632,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_stat_jbuf(const pjmedia_stream *stream,
 PJ_DEF(pj_status_t) pjmedia_stream_pause( pjmedia_stream *stream,
                                           pjmedia_dir dir)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
@@ -2662,7 +2662,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_pause( pjmedia_stream *stream,
 PJ_DEF(pj_status_t) pjmedia_stream_resume( pjmedia_stream *stream,
                                            pjmedia_dir dir)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
@@ -2693,7 +2693,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf2( pjmedia_stream *stream,
                                               const pj_str_t *digit_char,
                                               unsigned duration)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
     pj_status_t status = PJ_SUCCESS;
 
     /* By convention we use jitter buffer mutex to access DTMF
@@ -2786,7 +2786,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_dtmf( pjmedia_stream *stream,
                                              char *digits,
                                              unsigned *size)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream && digits && size, PJ_EINVAL);
 
@@ -2823,7 +2823,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
                                             int digit),
                                  void *user_data)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
@@ -2846,7 +2846,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_event_callback(pjmedia_stream *strea
                                                                       const pjmedia_stream_dtmf_event *event),
                                                            void *user_data)
 {
-    pjmedia_stream_common *c_strm = (stream? &stream->base: NULL);
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
