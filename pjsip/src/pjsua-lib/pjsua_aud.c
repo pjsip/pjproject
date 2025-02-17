@@ -407,14 +407,26 @@ pj_status_t pjsua_aud_subsys_init()
         opt |= PJMEDIA_CONF_USE_LINEAR;
     }
 
+    pjmedia_conf_param param;
+    pjmedia_conf_param_default(&param);
+
+    param.max_slots = pjsua_var.media_cfg.max_media_ports;
+    param.sampling_rate = pjsua_var.media_cfg.clock_rate;
+    param.channel_count = pjsua_var.mconf_cfg.channel_count;
+    param.samples_per_frame = pjsua_var.mconf_cfg.samples_per_frame;
+    param.bits_per_sample = pjsua_var.mconf_cfg.bits_per_sample;
+    param.options = opt;
+    param.worker_threads = pjsua_var.media_cfg.conf_threads-1;
+
     /* Init conference bridge. */
-    status = pjmedia_conf_create(pjsua_var.pool,
-                                 pjsua_var.media_cfg.max_media_ports,
-                                 pjsua_var.media_cfg.clock_rate,
-                                 pjsua_var.mconf_cfg.channel_count,
-                                 pjsua_var.mconf_cfg.samples_per_frame,
-                                 pjsua_var.mconf_cfg.bits_per_sample,
-                                 opt, &pjsua_var.mconf);
+    status = pjmedia_conf_create2(pjsua_var.pool, &param, &pjsua_var.mconf);
+    //status = pjmedia_conf_create(pjsua_var.pool,
+    //                             pjsua_var.media_cfg.max_media_ports,
+    //                             pjsua_var.media_cfg.clock_rate,
+    //                             pjsua_var.mconf_cfg.channel_count,
+    //                             pjsua_var.mconf_cfg.samples_per_frame,
+    //                             pjsua_var.mconf_cfg.bits_per_sample,
+    //                             opt, &pjsua_var.mconf);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Error creating conference bridge",
                      status);

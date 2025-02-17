@@ -437,6 +437,7 @@ void MediaConfig::fromPj(const pjsua_media_config &mc)
     this->channelCount = mc.channel_count;
     this->audioFramePtime = mc.audio_frame_ptime;
     this->maxMediaPorts = mc.max_media_ports;
+    this->confThreads = mc.conf_threads;
     this->hasIoqueue = PJ2BOOL(mc.has_ioqueue);
     this->threadCnt = mc.thread_cnt;
     this->quality = mc.quality;
@@ -470,6 +471,7 @@ pjsua_media_config MediaConfig::toPj() const
     mcfg.channel_count = this->channelCount;
     mcfg.audio_frame_ptime = this->audioFramePtime;
     mcfg.max_media_ports = this->maxMediaPorts;
+    mcfg.conf_threads = this->confThreads;
     mcfg.has_ioqueue = this->hasIoqueue;
     mcfg.thread_cnt = this->threadCnt;
     mcfg.quality = this->quality;
@@ -502,6 +504,7 @@ void MediaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_UNSIGNED( this_node, channelCount);
     NODE_READ_UNSIGNED( this_node, audioFramePtime);
     NODE_READ_UNSIGNED( this_node, maxMediaPorts);
+    NODE_READ_UNSIGNED( this_node, confThreads);
     NODE_READ_BOOL    ( this_node, hasIoqueue);
     NODE_READ_UNSIGNED( this_node, threadCnt);
     NODE_READ_UNSIGNED( this_node, quality);
@@ -533,6 +536,7 @@ void MediaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_UNSIGNED( this_node, channelCount);
     NODE_WRITE_UNSIGNED( this_node, audioFramePtime);
     NODE_WRITE_UNSIGNED( this_node, maxMediaPorts);
+    NODE_WRITE_UNSIGNED( this_node, confThreads);
     NODE_WRITE_BOOL    ( this_node, hasIoqueue);
     NODE_WRITE_UNSIGNED( this_node, threadCnt);
     NODE_WRITE_UNSIGNED( this_node, quality);

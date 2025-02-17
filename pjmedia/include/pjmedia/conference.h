@@ -61,17 +61,15 @@ PJ_BEGIN_DECL
 #define PJMEDIA_CONF_SWITCH_SIGNATURE   PJMEDIA_SIG_PORT_CONF_SWITCH
 
 /**
- * Total number of threads that can be used by the conference bridge
- * including get_frame() thread.
+ * The default value for the total number of threads, including get_frame()
+ * thread, that can be used by the conference bridge.
  * This value is used to determine if the conference bridge should be
  * implemented as a parallel bridge or not.
  * If this value is set to 1, the conference bridge will be implemented as a
  * serial bridge, otherwise it will be implemented as a parallel bridge.
  * PJMEDIA_CONF_THREADS should not be less than 1.
  *
- * DEFAULT: 1 - serial bridge
- * Please set this macro in the config_site.h to a value greater than 1
- * to enable parallel bridge.
+ * Default value: 1 - serial bridge
  */
 #ifndef PJMEDIA_CONF_THREADS
 #   define PJMEDIA_CONF_THREADS  1
