@@ -32,6 +32,7 @@ export G7221_CODEC_OBJS = common/common.o common/huff_tab.o common/tables.o \
                 	encode/dct4_a.o encode/sam2coef.o encode/encoder.o
 
 export G7221_CODEC_CFLAGS = $(_CFLAGS)
+export G7221_CODEC_LDFLAGS = $(_LDFLAGS)
 
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
