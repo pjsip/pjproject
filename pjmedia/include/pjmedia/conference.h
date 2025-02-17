@@ -60,6 +60,22 @@ PJ_BEGIN_DECL
  */
 #define PJMEDIA_CONF_SWITCH_SIGNATURE   PJMEDIA_SIG_PORT_CONF_SWITCH
 
+/**
+ * Total number of threads that can be used by the conference bridge
+ * including get_frame() thread.
+ * This value is used to determine if the conference bridge should be
+ * implemented as a parallel bridge or not.
+ * If this value is set to 1, the conference bridge will be implemented as a
+ * serial bridge, otherwise it will be implemented as a parallel bridge.
+ * PJMEDIA_CONF_THREADS should not be less than 1.
+ *
+ * DEFAULT: 1 - serial bridge
+ * Please set this macro in the config_site.h to a value greater than 1
+ * to enable parallel bridge.
+ */
+#ifndef PJMEDIA_CONF_THREADS
+#   define PJMEDIA_CONF_THREADS  1
+#endif
 
 /**
  * Opaque type for conference bridge.
@@ -105,19 +121,72 @@ enum pjmedia_conf_option
 };
 
 /**
- * Conference bridge creation parameters.
-//TODO
+ * This structure specifies the conference bridge creation parameters.
  */
 typedef struct pjmedia_conf_param
 {
+    /**
+     * Maximum number of slots/ports to be created in
+     * the bridge. Note that the bridge internally uses
+     * one port for the sound device, so the actual 
+     * maximum number of ports will be less one than
+     * this value.
+     */
     unsigned max_slots;
+
+    /**
+     * Set the sampling rate of the bridge. This value
+     * is also used to set the sampling rate of the
+     * sound device.
+     */
     unsigned sampling_rate;
+
+    /**
+     * Number of channels in the PCM stream. Normally
+     * the value will be 1 for mono, but application may
+     * specify a value of 2 for stereo. Note that all
+     * ports that will be connected to the bridge MUST 
+     * have the same number of channels as the bridge.
+     */
     unsigned channel_count;
+
+    /**
+     * Set the number of samples per frame. This value
+     * is also used to set the sound device.
+     */
     unsigned samples_per_frame;
+
+    /**
+     * Set the number of bits per sample. This value
+     * is also used to set the sound device. Currently
+     * only 16bit per sample is supported.
+     */
     unsigned bits_per_sample;
+
+    /**
+     * Bitmask options to be set for the bridge. The
+     * options are constructed from #pjmedia_conf_option
+     * enumeration.
+     * The default value is zero.
+     */
     unsigned options;
-    /** The number of worker threads to use, from 0-N.
-     *  Zero means the operations will be done only by get_frame() thread.
+
+    /** 
+     * The number of worker threads to use.
+     * Zero means the operations will be done only by get_frame() thread, 
+     * i.e. conference bridge will be sequential.
+     * Set this parameter to non-zero value to enable parallel processing.
+     * The number of worker threads should be less than or equal to the number 
+     * of the processor cores. However, the optimal number of worker threads
+     * is application and hardware dependent.
+     * The default value is zero - sequential conference bridge.
+     * This value is compatible with previous behavior.
+     * At compile time application developer can change the default value by 
+     * setting #PJMEDIA_CONF_THREADS macro in the config_site.h.
+     * PJMEDIA_CONF_THREADS is total number of conference bridge threads 
+     * including get_frame() thread. worker_threads is the number of conference
+     * bridge threads excluding get_frame() thread. 
+     * As a general rule worker_threads is 1 less than PJMEDIA_CONF_THREADS.
      */
     unsigned worker_threads;
 } pjmedia_conf_param;
@@ -129,6 +198,8 @@ typedef struct pjmedia_conf_param
 PJ_INLINE(void) pjmedia_conf_param_default(pjmedia_conf_param *param)
 {
     pj_bzero(param, sizeof(pjmedia_conf_param));
+    /* Set the default values */
+    param->worker_threads = PJMEDIA_CONF_THREADS-1;
 }
 
 /**
@@ -197,7 +268,41 @@ PJ_DECL(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
                                           pjmedia_conf **p_conf );
 
 /**
-//TODO
+ * Create conference bridge with the specified parameters. The sampling rate,
+ * samples per frame, and bits per sample will be used for the internal
+ * operation of the bridge (e.g. when mixing audio frames). However, ports
+ * with different configuration may be connected to the bridge. In this case,
+ * the bridge is able to perform sampling rate conversion, and buffering in
+ * case the samples per frame is different.
+ *
+ * For this version of PJMEDIA, only 16bits per sample is supported.
+ *
+ * For this version of PJMEDIA, the channel count of the ports MUST match
+ * the channel count of the bridge.
+ *
+ * Under normal operation (i.e. when PJMEDIA_CONF_NO_DEVICE option is NOT
+ * specified), the bridge internally create an instance of sound device
+ * and connect the sound device to port zero of the bridge.
+ *
+ * If PJMEDIA_CONF_NO_DEVICE options is specified, no sound device will
+ * be created in the conference bridge. Application MUST acquire the port
+ * interface of the bridge by calling #pjmedia_conf_get_master_port(), and
+ * connect this port interface to a sound device port by calling
+ * #pjmedia_snd_port_connect(), or to a master port (pjmedia_master_port)
+ * if application doesn't want to instantiate any sound devices.
+ *
+ * The sound device or master port are crucial for the bridge's operation,
+ * because it provides the bridge with necessary clock to process the audio
+ * frames periodically. Internally, the bridge runs when get_frame() to
+ * port zero is called.
+ *
+ * @param pool              Pool to use to allocate the bridge and
+ *                          additional buffers for the sound device.
+ * @param param             The conference bridge creation parameters.
+ *                          See #pjmedia_conf_param for more information.
+ * @param p_conf            Pointer to receive the conference bridge instance.
+ *
+ * @return                  PJ_SUCCESS if conference bridge can be created.
  */
 PJ_DECL(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool,
                                           pjmedia_conf_param *param,

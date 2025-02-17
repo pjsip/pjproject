@@ -41,21 +41,6 @@
 #if (!defined(PJMEDIA_CONF_USE_SWITCH_BOARD) || PJMEDIA_CONF_USE_SWITCH_BOARD==0) && \
     (!defined(PJMEDIA_CONF_USE_OPENMP) || PJMEDIA_CONF_USE_OPENMP == 0)
 
-#ifndef PJ_CONF_BRIDGE_MAX_THREADS
-/**
- * The maximum number of threads that can be used by the conference bridge.
- * This value is used to determine if the conference bridge should be
- * implemented as a parallel bridge or not.
- * If this value is set to 1, the conference bridge will be implemented as a
- * serial bridge, otherwise it will be implemented as a parallel bridge.
- * 
- * DEFAULT: 1 - serial bridge
- * Please set this macro in the config_site.h to a value greater than 1 
- * to enable parallel bridge.
- */
-#   define PJ_CONF_BRIDGE_MAX_THREADS  1
-#endif
-
 
 /* CONF_DEBUG enables detailed operation of the conference bridge.
  * Beware that it prints large amounts of logs (several lines per frame).
@@ -955,7 +940,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_create(pj_pool_t *pool,
     param.samples_per_frame = samples_per_frame;
     param.bits_per_sample = bits_per_sample;
     param.options = options;
-    param.worker_threads = PJ_CONF_BRIDGE_MAX_THREADS - 1;
+    /* Let's skip setting the parameter for the number of worker threads here
+     * to use the default number of worker threads.
+     * param.worker_threads = PJMEDIA_CONF_THREADS-1;
+     */
 
     return pjmedia_conf_create2(pool, &param, p_conf);
 }
