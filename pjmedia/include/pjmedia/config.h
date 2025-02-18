@@ -1234,8 +1234,14 @@
 #endif
 
 
-/* Setting to determine if media transport should switch RTP and RTCP
+/**
+ * Setting to determine if media transport should switch RTP and RTCP
  * remote address to the source address of the packets it receives.
+ * This feature is usually used for handling NAT traversal issues,
+ * also known as symmetric RTP and 'latching' techniques.
+ *
+ * See also run-time options #PJMEDIA_UDP_NO_SRC_ADDR_CHECKING and
+ * #PJMEDIA_ICE_NO_SRC_ADDR_CHECKING.
  *
  * By default it is enabled.
  */
