@@ -580,15 +580,15 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
      */
     if (ssock->param.ciphers_num > 0) {
         unsigned i;
-        pj_ssl_cipher *ciphers;
-        ciphers = (pj_ssl_cipher*)
+        int *ciphers;
+        ciphers = (int*)
                   pj_pool_calloc(ssock->pool, ssock->param.ciphers_num + 1,
-                                 sizeof(pj_ssl_cipher));
+                                 sizeof(int));
         if (!ciphers)
             return PJ_ENOMEM;
 
         for (i = 0; i < ssock->param.ciphers_num; ++i)
-            ciphers[i] = ssock->param.ciphers[i];
+            ciphers[i] = (int)ssock->param.ciphers[i];
 
         mbedtls_ssl_conf_ciphersuites(&mssock->ssl_config, ciphers);
     }
