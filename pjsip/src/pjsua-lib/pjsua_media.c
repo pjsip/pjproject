@@ -3940,11 +3940,6 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
     pjsua_stream_info stream_info;
     pj_str_t *enc_name = NULL;
 
-    /* Sanity check. */
-    PJ_ASSERT_RETURN(call_med->type == PJMEDIA_TYPE_AUDIO ||
-                     call_med->type == PJMEDIA_TYPE_VIDEO,
-                     PJ_EINVAL);
-
     if (call_med->type == PJMEDIA_TYPE_AUDIO) {
         si = (pjmedia_stream_info_common *)&asi;
         status = pjmedia_stream_info_from_sdp(
@@ -3962,6 +3957,9 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         stream_info.info.vid = vsi;
         enc_name = &vsi.codec_info.encoding_name;
 #endif
+    }
+    else {
+        status = PJMEDIA_EUNSUPMEDIATYPE;
     }
 
     if (status != PJ_SUCCESS) {
