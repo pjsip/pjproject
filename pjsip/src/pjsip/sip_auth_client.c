@@ -108,7 +108,7 @@ const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
 
 #define DO_ON_PARENT_LOCKED(sess, call) \
     do { \
-        pj_status_t on_parent; \
+        pj_status_t on_parent = PJ_SUCCESS; \
         pj_bool_t with_parent = PJ_FALSE; \
         if (sess->parent) { \
             pj_lock_acquire(sess->parent->lock); \
