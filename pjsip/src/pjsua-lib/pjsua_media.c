@@ -3932,12 +3932,16 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
     pj_pool_t *tmp_pool = call->inv->pool_prov;
     pj_status_t status = PJ_SUCCESS;
 
-    pjmedia_stream_info asi;
+    /* Initialize the following variables to avoid warnings from compiler
+     * and code analysis. Actually the function will always init the vars
+     * when the media type is valid/recognized.
+     */
+    pjmedia_stream_info asi = {0};
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
-    pjmedia_vid_stream_info vsi;
+    pjmedia_vid_stream_info vsi = {0};
 #endif
-    pjmedia_stream_info_common *si;
-    pjsua_stream_info stream_info;
+    pjmedia_stream_info_common *si = NULL;
+    pjsua_stream_info stream_info = {0};
     pj_str_t *enc_name = NULL;
 
     if (call_med->type == PJMEDIA_TYPE_AUDIO) {
@@ -4231,8 +4235,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         }
         len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
                                ", stream #%d: %.*s (%s)", mi,
-                               (enc_name? (int)enc_name->slen: 0),
-                               (enc_name? enc_name->ptr: info),
+                               (int)enc_name->slen, enc_name->ptr,
                                dir);
         if (len > 0)
             info_len += len;
