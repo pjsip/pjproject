@@ -18,6 +18,7 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
+#include <pjmedia/vid_codec_util.h>
 
 
 #define THIS_FILE               "pjsua_media.c"
@@ -3876,14 +3877,41 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
             return PJ_TRUE;
         }
 
-        /* Compare codec param */
-        if (/* old_cp->enc_mtu != new_cp->enc_mtu || */
-            pj_memcmp(&old_cp->enc_fmt.det, &new_cp->enc_fmt.det,
-                      sizeof(pjmedia_video_format_detail)) ||
-            !match_codec_fmtp(&old_cp->dec_fmtp, &new_cp->dec_fmtp) ||
+        /* Compare SDP fmtp for both directions */
+        if (!match_codec_fmtp(&old_cp->dec_fmtp, &new_cp->dec_fmtp) ||
             !match_codec_fmtp(&old_cp->enc_fmtp, &new_cp->enc_fmtp))
         {
             return PJ_TRUE;
+        }
+
+        /* Compare format for encoding only */
+        if (pj_memcmp(&old_cp->enc_fmt.det, &new_cp->enc_fmt.det,
+                      sizeof(pjmedia_video_format_detail)))
+        {
+            /* For H264, resolution may be adjusted to remote's profile-level,
+             * so check if it is different because of the adjusted format.
+             */
+            if (pj_strcmp2(&new_ci->encoding_name, "H264") == 0) {
+                pjmedia_vid_codec_param param = {0};
+                pj_status_t status;
+
+                param.dir = PJMEDIA_DIR_ENCODING;
+                pj_memcpy(&param.enc_fmt, &new_cp->enc_fmt,
+                          sizeof(param.enc_fmt));
+                pj_memcpy(&param.enc_fmtp,&new_cp->enc_fmtp,
+                          sizeof(param.enc_fmtp));
+                status = pjmedia_vid_codec_h264_apply_fmtp(&param);
+                if (status != PJ_SUCCESS)
+                    return PJ_TRUE;
+
+                if (pj_memcmp(&old_cp->enc_fmt.det, &param.enc_fmt.det,
+                              sizeof(pjmedia_video_format_detail)))
+                {
+                    return PJ_TRUE;
+                }
+            } else {
+                return PJ_TRUE;
+            }
         }
     }
 
