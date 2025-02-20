@@ -1488,7 +1488,7 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
         tp->is_shutdown = PJ_TRUE;
 
     /* Notify application of transport shutdown */
-    state_cb = pjsip_tpmgr_get_state_cb(tp->tpmgr);
+    state_cb = pjsip_tpmgr_get_state_cb(mgr);
     if (state_cb) {
         pjsip_transport_state_info state_info;
 

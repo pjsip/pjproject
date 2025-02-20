@@ -931,9 +931,10 @@ static pj_status_t tls_create( struct tls_listener *listener,
     }
 
     if (addr) {
+        unsigned i;
         pj_memcpy( &tls->server_addr, addr,
                    sizeof(pjsip_server_addresses));
-        for (int i = 0; i < addr->count; ++i) {
+        for (i = 0; i < addr->count; ++i) {
             pj_strdup(pool, &tls->server_addr.entry[i].name, &addr->entry[i].name);
         }
     }
