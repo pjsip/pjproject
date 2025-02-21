@@ -3320,8 +3320,10 @@ static void handle_incoming_check(pj_ice_sess *ice,
     pj_ice_sess_cand *rcand;
     unsigned i;
 
-    /* Check if ICE has been completed */
-    if (ice->is_complete) {
+    /* Check if ICE has been completed. We still need to check if remote 
+     * candidate is valid when check_src_addr is set.
+     */
+    if (ice->is_complete && !ice->opt.check_src_addr) {
         LOG4((ice->obj_name,
               "Ignored incoming check after ICE nego has been completed!"));
         return;
@@ -3428,6 +3430,13 @@ static void handle_incoming_check(pj_ice_sess *ice,
         if (c->lcand == lcand && c->rcand == rcand)
             break;
     }
+    
+    if (ice->is_complete && ice->opt.check_src_addr) {
+        if (i != ice->clist.count) {
+            rcand->checked = PJ_TRUE;
+        }
+        return;
+    }
 
     /* If the pair is already on the check list:
      * - If the state of that pair is Waiting or Frozen, its state is
@@ -3449,8 +3458,6 @@ static void handle_incoming_check(pj_ice_sess *ice,
          * Note: DO NOT overwrite nominated flag if one is already set.
          */
         c->nominated = ((rcheck->use_candidate) || c->nominated);
-
-        rcand->checked = PJ_TRUE;
 
         if (c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN ||
             c->state == PJ_ICE_SESS_CHECK_STATE_WAITING)
