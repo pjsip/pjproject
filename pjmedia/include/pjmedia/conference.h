@@ -170,7 +170,7 @@ typedef struct pjmedia_conf_param
     unsigned options;
 
     /** 
-     * The number of worker threads to use.
+     * The number of worker threads to use by conference bridge.
      * Zero means the operations will be done only by get_frame() thread, 
      * i.e. conference bridge will be sequential.
      * Set this parameter to non-zero value to enable parallel processing.
@@ -185,6 +185,7 @@ typedef struct pjmedia_conf_param
      * including get_frame() thread. worker_threads is the number of conference
      * bridge threads excluding get_frame() thread. 
      * As a general rule worker_threads is 1 less than PJMEDIA_CONF_THREADS.
+     * This value will not be used for switchboard.
      */
     unsigned worker_threads;
 } pjmedia_conf_param;

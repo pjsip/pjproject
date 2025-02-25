@@ -909,7 +909,7 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     conf_port->slot = 0;
 #endif //CONF_DEBUG_EX
 
-    /* Add the port to the bridge */
+     /* Add the port to the bridge */
     conf->ports[0] = conf_port;
 #if 0
     conf->port_cnt++;   // the port will become active only when connected
@@ -921,14 +921,14 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 /*
  * Create conference bridge.
  */
-PJ_DEF(pj_status_t) pjmedia_conf_create(pj_pool_t *pool,
-                                        unsigned max_slots,
-                                        unsigned sampling_rate,
-                                        unsigned channel_count,
-                                        unsigned samples_per_frame,
-                                        unsigned bits_per_sample,
-                                        unsigned options,
-                                        pjmedia_conf **p_conf)
+PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
+                                         unsigned max_slots,
+                                         unsigned sampling_rate,
+                                         unsigned channel_count,
+                                         unsigned samples_per_frame,
+                                         unsigned bits_per_sample,
+                                         unsigned options,
+                                         pjmedia_conf **p_conf )
 {
     pjmedia_conf_param param;
 
@@ -954,8 +954,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool_,
 {
     pj_pool_t *pool;
     pjmedia_conf *conf;
-    const pj_str_t name = {"Conf", 4};
+    const pj_str_t name = { "Conf", 4 };
     pj_status_t status;
+    unsigned i;
 
     PJ_ASSERT_RETURN(param && p_conf, PJ_EINVAL);
 
@@ -1051,8 +1052,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool_,
      * master port.
      */
     if (conf->snd_dev_port) {
-        status = pjmedia_snd_port_connect(conf->snd_dev_port,
-                                          conf->master_port);
+        status = pjmedia_snd_port_connect( conf->snd_dev_port, 
+                                           conf->master_port );
         if (status != PJ_SUCCESS) {
             pjmedia_conf_destroy(conf);
             return status;
@@ -1084,7 +1085,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool_,
 #endif
     conf->free_port_slots = pj_pool_calloc(pool, conf->max_ports, sizeof(port_slot));
     PJ_ASSERT_ON_FAIL(conf->free_port_slots, {pjmedia_conf_destroy(conf); return PJ_ENOMEM;});
-    unsigned i = conf->max_ports;
+    i = conf->max_ports;
     while (i--) {               /* prepare unused slots to later reservation, reverse order due to FILO */
         if (!conf->ports[i]) {  /* If sound device was created, skip it's slot */
             status = conf_release_port(conf, i);
@@ -1140,7 +1141,7 @@ static pj_status_t resume_sound( pjmedia_conf *conf )
 /**
  * Destroy conference bridge.
  */
-PJ_DEF(pj_status_t) pjmedia_conf_destroy(pjmedia_conf *conf)
+PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 {
     unsigned i;
     pj_int32_t rc;
@@ -1203,7 +1204,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy(pjmedia_conf *conf)
         handle_op_queue(conf);
 
     /* Remove all ports (may destroy them too). */
-    for (i = 0; i < conf->max_ports; ++i) {
+    for (i=0; i<conf->max_ports; ++i) {
         if (conf->ports[i]) {
             op_param oprm = {0};
             oprm.remove_port.port = i;
@@ -2946,7 +2947,7 @@ static inline pj_int16_t *get_read_buffer(struct conf_port *conf_port, pjmedia_f
 /*
  * Player callback.
  */
-static pj_status_t get_frame(pjmedia_port *this_port,
+static pj_status_t get_frame(pjmedia_port *this_port, 
                              pjmedia_frame *frame)
 {
     pjmedia_conf *conf = (pjmedia_conf *)this_port->port_data.pdata;
@@ -2960,7 +2961,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
     /* Check that correct size is specified. */
     pj_assert(frame->size == conf->samples_per_frame *
-              conf->bits_per_sample / 8);
+                             conf->bits_per_sample / 8);
 
 #if 0
     /* Perform any queued operations that need to be synchronized with
@@ -3212,7 +3213,7 @@ static void perform_get_frame(pjmedia_conf *conf)
 
         /* Get frame from this port.
          * For passive ports, get the frame from the delay_buf.
-         * For other ports, get the frame from the port.
+         * For other ports, get the frame from the port. 
          */
         if (conf_port->delay_buf != NULL) {
 
@@ -3320,7 +3321,7 @@ static void perform_get_frame(pjmedia_conf *conf)
          * and calculate the average level at the same time.
          */
         if (conf_port->rx_adj_level != NORMAL_LEVEL) {
-            for (j = 0; j < conf->samples_per_frame; ++j) {
+            for (j=0; j<conf->samples_per_frame; ++j) {
                 /* For the level adjustment, we need to store the sample to
                  * a temporary 32bit integer value to avoid overflowing the
                  * 16bit sample storage.
@@ -3339,12 +3340,12 @@ static void perform_get_frame(pjmedia_conf *conf)
                 if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
                 else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
 
-                p_in[j] = (pj_int16_t)itemp;
-                level += (p_in[j] >= 0 ? p_in[j] : -p_in[j]);
+                p_in[j] = (pj_int16_t) itemp;
+                level += (p_in[j]>=0 ? p_in[j] : -p_in[j]);
             }
         } else {
-            for (j = 0; j < conf->samples_per_frame; ++j) {
-                level += (p_in[j] >= 0 ? p_in[j] : -p_in[j]);
+            for (j=0; j<conf->samples_per_frame; ++j) {
+                level += (p_in[j]>=0 ? p_in[j] : -p_in[j]);
             }
         }
 
@@ -3366,6 +3367,7 @@ static void perform_get_frame(pjmedia_conf *conf)
 
         /* Add the signal to all listeners. */
         for (cj = 0, listener_cnt = conf_port->listener_cnt; cj < listener_cnt; ++cj) {
+            pj_int32_t *mix_buf;
             struct conf_port *listener;
             pj_int16_t *p_in_conn_leveled;
             SLOT_TYPE listener_slot = conf_port->listener_slots[cj];
@@ -3418,7 +3420,6 @@ static void perform_get_frame(pjmedia_conf *conf)
                 p_in_conn_leveled = p_in;
             }
 
-            pj_int32_t *mix_buf;
             mix_buf = listener->mix_buf;
             pj_bool_t ready_to_transmit = PJ_FALSE;
 
@@ -3488,7 +3489,7 @@ static void perform_get_frame(pjmedia_conf *conf)
                         mix_buf_max = -mix_buf_min;
 
                     /* NORMAL_LEVEL * MAX_LEVEL / mix_buf_max; */
-                    tmp_adj = (MAX_LEVEL << 7) / mix_buf_max;
+                    tmp_adj = (MAX_LEVEL<<7) / mix_buf_max;
                     if (tmp_adj < listener->mix_adj)
                         listener->mix_adj = tmp_adj;
                 }
@@ -3596,8 +3597,8 @@ static void perform_get_frame(pjmedia_conf *conf)
 /*
  * get_frame() for passive port
  */
-static pj_status_t get_frame_pasv(pjmedia_port *this_port,
-                                  pjmedia_frame *frame )
+static pj_status_t get_frame_pasv(pjmedia_port *this_port, 
+                                  pjmedia_frame *frame)
 {
     pj_assert(0);
     PJ_UNUSED_ARG(this_port);
@@ -3610,7 +3611,7 @@ static pj_status_t get_frame_pasv(pjmedia_port *this_port,
 /*
  * Recorder (or passive port) callback.
  */
-static pj_status_t put_frame(pjmedia_port *this_port,
+static pj_status_t put_frame(pjmedia_port *this_port, 
                              pjmedia_frame *frame)
 {
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
@@ -3620,7 +3621,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     /* Check for correct size. */
     PJ_ASSERT_RETURN( frame->size == conf->samples_per_frame *
                                      conf->bits_per_sample / 8,
-                      PJMEDIA_ENCSAMPLESPFRAME );
+                      PJMEDIA_ENCSAMPLESPFRAME);
 
     /* Check existance of delay_buf instance */
     PJ_ASSERT_RETURN( port->delay_buf, PJ_EBUG );

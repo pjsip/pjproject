@@ -7388,6 +7388,7 @@ struct pjsua_media_config
      * If this value is set to 1, the conference bridge will be implemented as a
      * serial bridge, otherwise it will be implemented as a parallel bridge.
      * Should not be less than 1.
+     * This value will not be used for switchboard.
      *
      * Default value: PJMEDIA_CONF_THREADS
      */
