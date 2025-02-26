@@ -3745,6 +3745,11 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 
             if (!pj_sockaddr_has_addr(raddr)) {
                 for (i = 0; i < ice->rcand_cnt; ++i) {
+                    /* Make sure that the source address is part of the remote
+                     * candidate and it is a valid (already checked). 
+                     * Note that the candidate will not be set to valid if the 
+                     * incoming check is received after the ICE is completed.
+                     */
                     if (ice->rcand[i].comp_id == comp_id &&
                         ice->rcand[i].checked &&
                         pj_sockaddr_cmp(src_addr, &ice->rcand[i].addr) == 0)
