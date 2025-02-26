@@ -3323,7 +3323,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
     /* Check if ICE has been completed. We still need to check if remote 
      * candidate is valid when check_src_addr is set.
      */
-    if (ice->is_complete && !ice->opt.check_src_addr) {
+    if (ice->is_complete) {
         LOG4((ice->obj_name,
               "Ignored incoming check after ICE nego has been completed!"));
         return;
@@ -3430,13 +3430,6 @@ static void handle_incoming_check(pj_ice_sess *ice,
         if (c->lcand == lcand && c->rcand == rcand)
             break;
     }
-    
-    if (ice->is_complete && ice->opt.check_src_addr) {
-        if (i != ice->clist.count) {
-            rcand->checked = PJ_TRUE;
-        }
-        return;
-    }
 
     /* If the pair is already on the check list:
      * - If the state of that pair is Waiting or Frozen, its state is
@@ -3458,6 +3451,8 @@ static void handle_incoming_check(pj_ice_sess *ice,
          * Note: DO NOT overwrite nominated flag if one is already set.
          */
         c->nominated = ((rcheck->use_candidate) || c->nominated);
+
+        rcand->checked = PJ_TRUE;
 
         if (c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN ||
             c->state == PJ_ICE_SESS_CHECK_STATE_WAITING)
@@ -3790,7 +3785,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 
                 pj_sockaddr_print(src_addr, paddr, sizeof(paddr), 3);
                 PJ_LOG(4, (ice->obj_name, "Ignoring incoming message for "
-                         "component [%d] because source addr %s unrecognized",
+                         "component [%d] because source addr %s unrecognized "
+                         "or unchecked",
                          comp_id, paddr));
                 return PJ_SUCCESS;
             }
