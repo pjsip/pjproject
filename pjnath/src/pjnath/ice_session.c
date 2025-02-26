@@ -3320,9 +3320,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
     pj_ice_sess_cand *rcand;
     unsigned i;
 
-    /* Check if ICE has been completed. We still need to check if remote 
-     * candidate is valid when check_src_addr is set.
-     */
+    /* Check if ICE has been completed */
     if (ice->is_complete) {
         LOG4((ice->obj_name,
               "Ignored incoming check after ICE nego has been completed!"));
