@@ -1185,6 +1185,14 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
         if (status != PJ_SUCCESS)
             goto on_error;
 
+        /* Add stream to synchronizer */
+        if (call->av_sync) {
+            status = pjmedia_stream_common_set_avsync(
+                                    call_med->strm.v.stream, call->av_sync);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+        }
+
         /* Subscribe to video stream events */
         pjmedia_event_subscribe(NULL, &call_media_on_event,
                                 call_med, call_med->strm.v.stream);

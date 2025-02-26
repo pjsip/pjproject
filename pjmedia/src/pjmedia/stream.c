@@ -213,6 +213,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
     pjmedia_channel *channel = c_strm->dec;
     unsigned samples_count, samples_per_frame, samples_required;
     pj_int16_t *p_out_samp;
+    pj_uint32_t rtp_ts = 0;
     pj_status_t status;
 
 
@@ -270,8 +271,8 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
         }
 
         /* Get frame from jitter buffer. */
-        pjmedia_jbuf_get_frame2(c_strm->jb, channel->buf, &frame_size,
-                                &frame_type, &bit_info);
+        pjmedia_jbuf_get_frame3(c_strm->jb, channel->buf, &frame_size,
+                                &frame_type, &bit_info, &rtp_ts, NULL);
 
 #if TRACE_JB
         trace_jb_get(c_strm, frame_type, frame_size);
@@ -489,6 +490,16 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
             }
             if (!use_dec_buf)
                 samples_count += samples_per_frame;
+
+            /* Update synchronizer with presentation time */
+            if (c_strm->av_sync_media) {
+                pj_timestamp pts = { 0 };
+                pj_int32_t delay_req;
+
+                pts.u32.lo = rtp_ts;
+                delay_req = pjmedia_av_sync_update_pts(c_strm->av_sync_media,
+                                                       &pts);
+            }
         }
     }
 
@@ -522,6 +533,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
     pjmedia_channel *channel = c_strm->dec;
     pjmedia_frame_ext *f = (pjmedia_frame_ext*)frame;
     unsigned samples_per_frame, samples_required;
+    pj_uint32_t rtp_ts = 0;
     pj_status_t status;
 
     /* Return no frame if channel is paused */
@@ -553,8 +565,8 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
         pj_mutex_lock( c_strm->jb_mutex );
 
         /* Get frame from jitter buffer. */
-        pjmedia_jbuf_get_frame2(c_strm->jb, channel->buf, &frame_size,
-                                &frame_type, &bit_info);
+        pjmedia_jbuf_get_frame3(c_strm->jb, channel->buf, &frame_size,
+                                &frame_type, &bit_info, &rtp_ts, NULL);
 
 #if TRACE_JB
         trace_jb_get(c_strm, frame_type, frame_size);
@@ -593,6 +605,16 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
                 c_strm->jb_last_frm_cnt = 1;
             } else {
                 c_strm->jb_last_frm_cnt++;
+            }
+
+            /* Update synchronizer with presentation time */
+            if (c_strm->av_sync_media) {
+                pj_timestamp pts = { 0 };
+                pj_int32_t delay_req;
+
+                pts.u32.lo = rtp_ts;
+                delay_req = pjmedia_av_sync_update_pts(c_strm->av_sync_media,
+                                                       &pts);
             }
 
         } else {
@@ -1404,21 +1426,20 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
                                     pj_bool_t *pkt_discarded)
 {
     pjmedia_stream *stream = (pjmedia_stream*) c_strm;
+    pj_timestamp ts;
     pj_status_t status = PJ_SUCCESS;
+
+    /* Get the timestamp from the RTP header */
+    ts.u64 = pj_ntohl(hdr->ts);
 
     /* Handle incoming DTMF. */
     if (hdr->pt == stream->rx_event_pt) {
-        pj_timestamp ts;
-
         /* Ignore out-of-order packet as it will be detected as new
          * digit. Also ignore duplicate packet as it serves no use.
          */
         if (seq_st.status.flag.outorder || seq_st.status.flag.dup) {
             goto on_return;
         }
-
-        /* Get the timestamp of the event */
-        ts.u64 = pj_ntohl(hdr->ts);
 
         handle_incoming_dtmf(stream, &ts, payload, payloadlen);
         goto on_return;
@@ -1438,14 +1459,10 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
          * to ask the codec to "parse" the payload into multiple frames.
          */
         enum { MAX = 16 };
-        pj_timestamp ts;
         unsigned i, count = MAX;
         unsigned ts_span;
         pjmedia_frame frames[MAX];
         pj_bzero(frames, sizeof(frames[0]) * MAX);
-
-        /* Get the timestamp of the first sample */
-        ts.u64 = pj_ntohl(hdr->ts);
 
         /* Parse the payload. */
         status = pjmedia_codec_parse(stream->codec, (void*)payload,
@@ -1587,8 +1604,9 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
             pj_bool_t discarded;
 
             ext_seq = (unsigned)(frames[i].timestamp.u64 / ts_span);
-            pjmedia_jbuf_put_frame2(c_strm->jb, frames[i].buf, frames[i].size,
-                                    frames[i].bit_info, ext_seq, &discarded);
+            pjmedia_jbuf_put_frame3(c_strm->jb, frames[i].buf, frames[i].size,
+                                    frames[i].bit_info, ext_seq, ts.u32.lo,
+                                    &discarded);
             if (discarded)
                 *pkt_discarded = PJ_TRUE;
         }

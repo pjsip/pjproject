@@ -574,6 +574,11 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
         sess->rx_lsr = ((pj_ntohl(sr->ntp_sec) & 0x0000FFFF) << 16) | 
                        ((pj_ntohl(sr->ntp_frac) >> 16) & 0xFFFF);
 
+        /* Save RTP & NTP timestamps of RTCP packet */
+        sess->rx_lsr_ts = pj_ntohl(sr->rtp_ts);
+        sess->rx_lsr_ntp.u32.hi = pj_ntohl(sr->ntp_sec);
+        sess->rx_lsr_ntp.u32.lo = pj_ntohl(sr->ntp_frac);
+
         /* Calculate SR arrival time for DLSR */
         pj_get_timestamp(&sess->rx_lsr_time);
 

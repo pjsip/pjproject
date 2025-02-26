@@ -488,6 +488,48 @@ pjmedia_stream_common_get_rtp_session_info(pjmedia_stream_common *c_strm,
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Set media presentation synchronizer.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_common_set_avsync(pjmedia_stream_common* stream,
+                                 pjmedia_av_sync* av_sync)
+{
+    pj_status_t status = PJ_SUCCESS;
+
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    /* First, remove existing */
+    if (stream->av_sync && stream->av_sync_media) {
+        status = pjmedia_av_sync_del_media(stream->av_sync,
+                                           stream->av_sync_media);
+        stream->av_sync = NULL;
+        stream->av_sync_media = NULL;
+    }
+
+    /* Then set a new or reset */
+    if (av_sync) {
+        pjmedia_av_sync_media_setting setting;
+
+        pjmedia_av_sync_media_setting_default(&setting);
+        if (stream->si->type == PJMEDIA_TYPE_AUDIO) {
+            setting.name = "Audio";
+            setting.clock_rate = PJMEDIA_PIA_SRATE(&stream->port.info);
+        } else if (stream->si->type == PJMEDIA_TYPE_VIDEO) {
+            setting.name = "Video";
+            setting.clock_rate = 90000;
+        }
+
+        stream->av_sync = av_sync;
+        status = pjmedia_av_sync_add_media(av_sync, &setting,
+                                           &stream->av_sync_media);
+    }
+
+    return status;
+}
+
+
 static pj_status_t build_rtcp_fb(pjmedia_stream_common *c_strm, void *buf,
                                  pj_size_t *length)
 {
