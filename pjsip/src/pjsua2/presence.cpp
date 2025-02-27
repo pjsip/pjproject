@@ -201,7 +201,15 @@ void Buddy::updatePresence(void) PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_buddy_update_pres(id) );
 }
-     
+
+/*
+ * Update the dialog event information for the buddy.
+ */
+void Buddy::updateDlgEvent(void) PJSUA2_THROW(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_buddy_update_dlg_event(id) );
+}
+
 /*
  * Send instant messaging outside dialog.
  */
