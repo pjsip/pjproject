@@ -93,6 +93,14 @@ struct BuddyConfig : public PersistentObject
      */
     bool                 subscribe;
 
+    /**
+     * Specify whether we should immediately subscribe to the buddy's
+     * dialog event, such as for Busy Lamp Field (BLF) feature.
+     * Note that only one subscription (presence or dialog event)
+     * can be active at any time.
+     */
+    bool                 subscribe_dlg_event;
+
 public:
     /**
      * Read this object from a container node.
