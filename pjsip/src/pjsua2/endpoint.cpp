@@ -1132,6 +1132,18 @@ void Endpoint::on_buddy_state(pjsua_buddy_id buddy_id)
     buddy->onBuddyState();
 }
 
+void Endpoint::on_buddy_dlg_event_state(pjsua_buddy_id buddy_id)
+{
+    Buddy b(buddy_id);
+    Buddy *buddy = b.getOriginalInstance();
+    if (!buddy || !buddy->isValid()) {
+        /* Ignored */
+        return;
+    }
+
+    buddy->onBuddyDlgEventState();
+}
+
 void Endpoint::on_buddy_evsub_state(pjsua_buddy_id buddy_id,
                                     pjsip_evsub *sub,
                                     pjsip_event *event)

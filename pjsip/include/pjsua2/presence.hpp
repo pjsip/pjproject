@@ -338,6 +338,12 @@ public:
      */
     virtual void onBuddyState()
     {}
+    /**
+     * Notify application when the buddy dialog state has changed.
+     * Application may then query the buddy into to get the details.
+     */
+    virtual void onBuddyDlgEventState()
+    {}
 
     /**
      * Notify application when the state of client subscription session
