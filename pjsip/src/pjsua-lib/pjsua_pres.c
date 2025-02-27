@@ -675,6 +675,10 @@ PJ_DEF(pj_status_t) pjsua_buddy_subscribe_pres( pjsua_buddy_id buddy_id,
     return PJ_SUCCESS;
 }
 
+/*
+ * Enable/disable buddy's dialog event monitoring.
+ */
+
 PJ_DEF(pj_status_t) pjsua_buddy_subscribe_dlg_event(pjsua_buddy_id buddy_id,
                                                     pj_bool_t subscribe)
 {

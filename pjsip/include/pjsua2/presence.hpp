@@ -311,6 +311,21 @@ public:
      void updatePresence(void) PJSUA2_THROW(Error);
      
     /**
+     * Enable/disable buddy's dialog event monitoring. Once buddy's dialog event
+     * is subscribed, application will be informed about buddy's dialog info
+     * status change via \a on_buddy_dlg_event_state() callback.
+     *
+     * Note that only one subscription (presence or dialog event) can be active
+     * at any time.
+     *
+     * @param subscribe     Specify non-zero to activate dialog event subscription
+     *                      to the specified buddy.
+     *
+     * @return              PJ_SUCCESS on success, or the appropriate error code.
+     */
+    void subscribeDlgEvent(bool subscribe) PJSUA2_THROW(Error);
+
+    /**
      * Send instant messaging outside dialog, using this buddy's specified
      * account for route set and authentication.
      *

@@ -186,7 +186,14 @@ void Buddy::subscribePresence(bool subscribe) PJSUA2_THROW(Error)
     PJSUA2_CHECK_EXPR( pjsua_buddy_subscribe_pres(id, subscribe) );
 }
 
-    
+/*
+ * Enable/disable buddy's dialog event monitoring.
+ */
+void Buddy::subscribeDlgEvent(bool subscribe) PJSUA2_THROW(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_buddy_subscribe_dlg_event(id, subscribe) );
+}
+
 /*
  * Update the presence information for the buddy.
  */
