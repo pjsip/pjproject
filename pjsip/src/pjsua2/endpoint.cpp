@@ -1163,6 +1163,25 @@ void Endpoint::on_buddy_evsub_state(pjsua_buddy_id buddy_id,
     buddy->onBuddyEvSubState(prm);
 }
 
+void Endpoint::on_buddy_evsub_dlg_event_state(pjsua_buddy_id buddy_id,
+                                              pjsip_evsub *sub,
+                                              pjsip_event *event)
+{
+    PJ_UNUSED_ARG(sub);
+
+    Buddy b(buddy_id);
+    Buddy *buddy = b.getOriginalInstance();
+    if (!buddy || !buddy->isValid()) {
+        /* Ignored */
+        return;
+    }
+
+    OnBuddyEvSubStateParam prm;
+    prm.e.fromPj(*event);
+
+    buddy->onBuddyEvSubDlgEventState(prm);
+}
+
 // Call callbacks
 void Endpoint::on_call_state(pjsua_call_id call_id, pjsip_event *e)
 {

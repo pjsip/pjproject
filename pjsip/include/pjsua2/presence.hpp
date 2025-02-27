@@ -355,7 +355,14 @@ public:
      */
     virtual void onBuddyEvSubState(OnBuddyEvSubStateParam &prm)
     { PJ_UNUSED_ARG(prm); }
-     
+    /**
+     * Notify application when the state of client subscription session
+     * associated with a buddy dialog state has changed. Application
+     * may use this callback to retrieve more detailed information about the
+     * state changed event.
+     */
+    virtual void onBuddyEvSubDlgEventState(OnBuddyEvSubStateParam &prm)
+    { PJ_UNUSED_ARG(prm); }
 private:
      /**
       * Buddy ID.
