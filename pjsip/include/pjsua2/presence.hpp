@@ -313,7 +313,7 @@ public:
     /**
      * Enable/disable buddy's dialog event monitoring. Once buddy's dialog event
      * is subscribed, application will be informed about buddy's dialog info
-     * status change via \a on_buddy_dlg_event_state() callback.
+     * status change via \a onBuddyDlgEventState() callback.
      *
      * Note that only one subscription (presence or dialog event) can be active
      * at any time.
@@ -334,13 +334,13 @@ public:
      *
      * Note that the buddy's dialog event subscription will only be initiated
      * if dialog event monitoring is enabled for the buddy. See
-     * #pjsua_buddy_subscribe_dlg_event() for more info. Also if dialog event
+     * subscribeDlgEvent() for more info. Also if dialog event
      * subscription for the buddy is already active, this function will not do
      * anything.
      *
      * Once the dialog event subscription is activated successfully for the buddy,
      * application will be notified about the buddy's dialog info status in the
-     * on_buddy_dlg_event_state() callback.
+     * onBuddyDlgEventState() callback.
      */
     void updateDlgEvent(void) PJSUA2_THROW(Error);
 
