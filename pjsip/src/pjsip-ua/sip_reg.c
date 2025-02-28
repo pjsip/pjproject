@@ -1222,6 +1222,9 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
             }
         }
 
+        if (regc->_delete_flag != 0) {
+            regc->auth_sess.parent = NULL;
+        }
         status = pjsip_auth_clt_reinit_req( &regc->auth_sess,
                                             rdata, 
                                             tsx->last_tx,  

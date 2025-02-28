@@ -907,17 +907,17 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
         }
     }
 
-    if (sess->parent) {
+    if (rhs->parent) {
         pj_status_t status;
 
-        pj_lock_acquire(sess->parent->lock);
+        pj_lock_acquire(rhs->parent->lock);
         sess->parent = PJ_POOL_ZALLOC_T(pool, pjsip_auth_clt_sess);
         if (sess->parent == NULL) {
             status = PJ_ENOMEM;
         } else {
             status = pjsip_auth_clt_clone(pool, sess->parent, rhs->parent);
         }
-        pj_lock_release(sess->parent->lock);
+        pj_lock_release(rhs->parent->lock);
 
         if (status != PJ_SUCCESS)
             return status;
