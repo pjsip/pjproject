@@ -84,8 +84,7 @@ typedef struct PJ_ATOMIC_SLIST_ALIGN_PREFIX slist_node {
  * here simply pj_thread_t* - thread owned this slot 
  * alignment of array's items used as slist node under Windows platform should not be less than MEMORY_ALLOCATION_ALIGNMENT
  */
-typedef struct PJ_ATOMIC_SLIST_ALIGN_PREFIX slot_data
-{
+typedef struct PJ_ATOMIC_SLIST_ALIGN_PREFIX slot_data {
     PJ_DECL_ATOMIC_SLIST_MEMBER(struct slot_data);
 
     /* this member simulates "payload" - user data stored in this slot */
@@ -114,8 +113,15 @@ typedef struct slist_test_desc {
          * Otherwise (dynamically allocated from the pool), the application 
          * must request correctly aligned memory for slist_test_desc.
          */
+#   if  defined(_MSC_VER)
+#       pragma warning(push)                                                  
+#       pragma warning(disable:4324)   // structure padded due to align()
+#   endif  // defined(_MSC_VER)
         slot_data            slots[MAX_SLOTS];  /**< Array of useful information
                                                  * "slots" (file players, for example)*/
+#   if  defined(_MSC_VER)
+#       pragma warning(pop)
+#   endif  // defined(_MSC_VER)
 
         int                  retcode;           /* test retcode. non-zero will abort. */
     } state;

@@ -29,14 +29,14 @@
 
 #if defined(PJ_ATOMIC_SLIST_IMPLEMENTATION) && PJ_ATOMIC_SLIST_IMPLEMENTATION==PJ_ATOMIC_SLIST_WIN32
 
-#ifdef PJ_WIN32
-#   include <windows.h>
-#else
+#if !defined(PJ_WIN32)
 #   error atomic slist PJ_ATOMIC_SLIST_WIN32 implementation should be compiled only for Windows platform
+#elif !defined(MEMORY_ALLOCATION_ALIGNMENT)
+#   include <windows.h>
 #endif  // PJ_WIN32
 
 //uncomment next line to check alignment in runtime
-#define PJ_ATOMIC_SLIST_ALIGN_DEBUG
+//#define PJ_ATOMIC_SLIST_ALIGN_DEBUG
 
 
 #ifndef PJ_IS_ALIGNED
@@ -97,52 +97,49 @@ PJ_DEF(pj_status_t) pj_atomic_slist_create(pj_pool_t *pool, pj_atomic_slist **sl
 
 PJ_DEF(pj_status_t) pj_atomic_slist_destroy(pj_atomic_slist *slist)
 {
-    PJ_ASSERT_RETURN(slist, PJ_EINVAL);
     pj_status_t rc;
+
+    PJ_ASSERT_RETURN(slist, PJ_EINVAL);
     rc = pj_mutex_destroy(slist->mutex);
     if (rc == PJ_SUCCESS)
-    {
         PJ_LOG(6, (THIS_FILE, "Atomic slist destroyed slst%p", slist));
-    }
     return rc;
 }
 
 
 PJ_DEF(pj_status_t) pj_atomic_slist_push(pj_atomic_slist *slist, pj_atomic_slist_node_t *node)
 {
-    PJ_ASSERT_RETURN(node && slist, PJ_EINVAL);
     pj_status_t status;
-    if ((status = pj_mutex_lock(slist->mutex)) != PJ_SUCCESS)
-    {
+
+    PJ_ASSERT_RETURN(node && slist, PJ_EINVAL);
+    if ((status = pj_mutex_lock(slist->mutex)) != PJ_SUCCESS) {
         PJ_PERROR(1, ("pj_atomic_slist_push", status, "Error locking mutex for slist slst%p", slist));
         return status;
     }
     ((pj_atomic_slist_node*)node)->next = slist->head.next;
     slist->head.next = node;
     if ((status = pj_mutex_unlock(slist->mutex)) != PJ_SUCCESS)
-    {
         PJ_PERROR(1, ("pj_atomic_slist_push", status, "Error unlocking mutex for slist slst%p", slist));
-    }
+
     return status;
 }
 
 
 PJ_DEF(pj_atomic_slist_node_t*) pj_atomic_slist_pop(pj_atomic_slist *slist)
 {
-    PJ_ASSERT_RETURN(slist, NULL);
     pj_status_t status;
-    if ((status = pj_mutex_lock(slist->mutex)) != PJ_SUCCESS)
-    {
+    pj_atomic_slist_node *node;
+
+    PJ_ASSERT_RETURN(slist, NULL);
+    if ((status = pj_mutex_lock(slist->mutex)) != PJ_SUCCESS) {
         PJ_PERROR(1, ("pj_atomic_slist_pop", status, "Error locking mutex for slist slst%p", slist));
         return NULL;
     }
 
-    pj_atomic_slist_node *node = slist->head.next;
-    if (node != &slist->head) {
+    if ((node = slist->head.next) != &slist->head) {
         slist->head.next = node->next;
         node->next = NULL;
-    }
-    else
+    } else
         node = NULL;
 
     if ((status = pj_mutex_unlock(slist->mutex)) != PJ_SUCCESS)
@@ -165,8 +162,7 @@ PJ_DEF(pj_size_t) pj_atomic_slist_size(/*const*/ pj_atomic_slist *slist)
 
     PJ_ASSERT_RETURN(slist, 0);
 
-    if ((status = pj_mutex_lock(slist->mutex)) != PJ_SUCCESS)
-    {
+    if ((status = pj_mutex_lock(slist->mutex)) != PJ_SUCCESS) {
         PJ_PERROR(1, ("pj_atomic_slist_size", status, "Error locking mutex for slist slst%p", slist));
         return 0;
     }
@@ -175,9 +171,7 @@ PJ_DEF(pj_size_t) pj_atomic_slist_size(/*const*/ pj_atomic_slist *slist)
         ++count;
 
     if ((status = pj_mutex_unlock(slist->mutex)) != PJ_SUCCESS)
-    {
         PJ_PERROR(1, ("pj_atomic_slist_size", status, "Error unlocking mutex for slist slst%p", slist));
-    }
 
     return count;
 }
@@ -200,10 +194,11 @@ struct pj_atomic_slist {
 
 PJ_DEF(pj_status_t) pj_atomic_slist_create(pj_pool_t *pool, pj_atomic_slist **slist)
 {
+    pj_atomic_slist *p_slist;
 
     PJ_ASSERT_RETURN(pool && slist, PJ_EINVAL);
 
-    pj_atomic_slist *p_slist = pj_pool_aligned_alloc(pool, MEMORY_ALLOCATION_ALIGNMENT, sizeof(pj_atomic_slist));
+    p_slist = pj_pool_aligned_alloc(pool, MEMORY_ALLOCATION_ALIGNMENT, sizeof(pj_atomic_slist));
     if (!p_slist)
         return PJ_ENOMEM;
 
@@ -238,8 +233,7 @@ PJ_DEF(pj_status_t) pj_atomic_slist_push(pj_atomic_slist *slist, pj_atomic_slist
     PJ_ASSERT_RETURN(node && slist, PJ_EINVAL);
 
     PJ_ASSERT_ON_FAIL(PJ_IS_ALIGNED(&slist->head, MEMORY_ALLOCATION_ALIGNMENT) &&
-        PJ_IS_ALIGNED(node, MEMORY_ALLOCATION_ALIGNMENT),
-        {
+        PJ_IS_ALIGNED(node, MEMORY_ALLOCATION_ALIGNMENT), {
             PJ_LOG(1, (THIS_FILE, "Windows platform's pj_atomic_slist implementation requires alignment not less than %d (slst%p).", MEMORY_ALLOCATION_ALIGNMENT, slist));
             return PJ_EINVALIDOP;
         });
@@ -254,8 +248,7 @@ PJ_DEF(pj_atomic_slist_node_t*) pj_atomic_slist_pop(pj_atomic_slist *slist)
 {
 #ifdef PJ_ATOMIC_SLIST_ALIGN_DEBUG
     PJ_ASSERT_RETURN(slist, NULL);
-    PJ_ASSERT_ON_FAIL(PJ_IS_ALIGNED(&slist->head, MEMORY_ALLOCATION_ALIGNMENT),
-        {
+    PJ_ASSERT_ON_FAIL(PJ_IS_ALIGNED(&slist->head, MEMORY_ALLOCATION_ALIGNMENT), {
             PJ_LOG(1, (THIS_FILE, "Windows platform's pj_atomic_slist implementation requires alignment not less than %d (slst%p).", MEMORY_ALLOCATION_ALIGNMENT, slist));
             return NULL;
         });
@@ -275,8 +268,7 @@ PJ_DEF(pj_size_t) pj_atomic_slist_size(/*const*/ pj_atomic_slist *slist)
 {
 #ifdef PJ_ATOMIC_SLIST_ALIGN_DEBUG
     PJ_ASSERT_RETURN(slist, 0);
-    PJ_ASSERT_ON_FAIL(PJ_IS_ALIGNED(&slist->head, MEMORY_ALLOCATION_ALIGNMENT),
-        {
+    PJ_ASSERT_ON_FAIL(PJ_IS_ALIGNED(&slist->head, MEMORY_ALLOCATION_ALIGNMENT), {
             PJ_LOG(1, (THIS_FILE, "Windows platform's pj_atomic_slist implementation requires alignment not less than %d (slst%p).", MEMORY_ALLOCATION_ALIGNMENT, slist));
             return 0;
         });
@@ -288,8 +280,7 @@ PJ_DEF(pj_size_t) pj_atomic_slist_size(/*const*/ pj_atomic_slist *slist)
 PJ_DEF(void*) pj_atomic_slist_calloc(pj_pool_t *pool, pj_size_t count, pj_size_t elem)
 {
 #ifdef PJ_ATOMIC_SLIST_ALIGN_DEBUG
-    PJ_ASSERT_ON_FAIL(PJ_IS_ALIGNED(elem, MEMORY_ALLOCATION_ALIGNMENT),
-        {
+    PJ_ASSERT_ON_FAIL(PJ_IS_ALIGNED(elem, MEMORY_ALLOCATION_ALIGNMENT), {
             PJ_LOG(1, (THIS_FILE, "Windows platform's pj_atomic_slist implementation requires alignment not less than %d.", MEMORY_ALLOCATION_ALIGNMENT));
             return 0;
         });
