@@ -684,7 +684,7 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
     pj_scan_fini(&scanner);
 
     /* Parse the response headers. */
-    size = i - 2 - (end_status - newdata);
+    size = (i < 2)? 0: i - 2 - (end_status - newdata);
     if (size > 0) {
         status = http_headers_parse(end_status + 1, size,
                                     &response->headers);

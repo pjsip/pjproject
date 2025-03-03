@@ -866,7 +866,8 @@ static int do_sockpair_tst(int family, int type, int proto)
         goto on_error;
 
     /* sv[0] send text to sv[1] */
-    len = pj_ansi_snprintf(buf, sizeof(buf), "hello, %ld->%ld", sv[0], sv[1]);
+    len = pj_ansi_snprintf(buf, sizeof(buf), "hello, %ld->%ld",
+                           (long)sv[0], (long)sv[1]);
     rc = pj_sock_send(sv[0], buf, &len, 0);
     if (rc != PJ_SUCCESS)
         goto on_error;
@@ -879,7 +880,8 @@ static int do_sockpair_tst(int family, int type, int proto)
     PJ_LOG(3, ("test", "recv: %.*s", (int)len, buf));
 
     /* sv[1] send text to sv[0] */
-    len = pj_ansi_snprintf(buf, sizeof(buf), "hello, %ld->%ld", sv[1], sv[0]);
+    len = pj_ansi_snprintf(buf, sizeof(buf), "hello, %ld->%ld",
+                           (long)sv[1], (long)sv[0]);
     rc = pj_sock_send(sv[1], buf, &len, 0);
     if (rc != PJ_SUCCESS)
         goto on_error;

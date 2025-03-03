@@ -26,10 +26,11 @@ SWIG_FLAGS=-I../../../../pjlib/include \
 SRC_DIR=../../../../pjsip/include
 SRCS=$(SRC_DIR)/pjsua2/endpoint.hpp $(SRC_DIR)/pjsua2/types.hpp
 
+GEN_DOC = -doxygen
 USE_THREADS = -threads
 # In SWIG 4.2 the build will fail if we use this flag
 #-DSWIG_NO_EXPORT_ITERATOR_METHODS
-SWIG_FLAGS += -w312 $(USE_THREADS)
+SWIG_FLAGS += -w312 $(USE_THREADS) $(GEN_DOC)
 
 .PHONY: all install uninstall
 

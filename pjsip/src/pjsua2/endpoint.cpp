@@ -130,7 +130,7 @@ void SslCertInfo::fromPj(const pj_ssl_cert_info &info)
         SslCertName cname;
         cname.type = info.subj_alt_name.entry[i].type;
         cname.name = pj2Str(info.subj_alt_name.entry[i].name);
-        subjectAltName.push_back(cname);
+        subjectAltName.push_back(PJSUA2_MOVE(cname));
     }
 }
 
@@ -433,6 +433,7 @@ void MediaConfig::fromPj(const pjsua_media_config &mc)
 {
     this->clockRate = mc.clock_rate;
     this->sndClockRate = mc.snd_clock_rate;
+    this->sndUseSwClock = PJ2BOOL(mc.snd_use_sw_clock);
     this->channelCount = mc.channel_count;
     this->audioFramePtime = mc.audio_frame_ptime;
     this->maxMediaPorts = mc.max_media_ports;
@@ -465,6 +466,7 @@ pjsua_media_config MediaConfig::toPj() const
 
     mcfg.clock_rate = this->clockRate;
     mcfg.snd_clock_rate = this->sndClockRate;
+    mcfg.snd_use_sw_clock = this->sndUseSwClock;
     mcfg.channel_count = this->channelCount;
     mcfg.audio_frame_ptime = this->audioFramePtime;
     mcfg.max_media_ports = this->maxMediaPorts;
@@ -519,6 +521,7 @@ void MediaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_NUM_T   ( this_node, pjmedia_jb_discard_algo, jbDiscardAlgo);
     NODE_READ_INT     ( this_node, sndAutoCloseTime);
     NODE_READ_BOOL    ( this_node, vidPreviewEnableNative);
+    NODE_READ_BOOL    ( this_node, sndUseSwClock);
 }
 
 void MediaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -549,6 +552,7 @@ void MediaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_NUM_T   ( this_node, pjmedia_jb_discard_algo, jbDiscardAlgo);
     NODE_WRITE_INT     ( this_node, sndAutoCloseTime);
     NODE_WRITE_BOOL    ( this_node, vidPreviewEnableNative);
+    NODE_WRITE_BOOL    ( this_node, sndUseSwClock);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -920,6 +924,22 @@ void Endpoint::on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
     acc->onRegState(prm);
 }
 
+void Endpoint::on_acc_send_request(pjsua_acc_id acc_id,
+                                   void *token,
+                                   pjsip_event *event)
+{
+    Account *acc = lookupAcc(acc_id, "on_acc_send_request:response()");
+    if (!acc) {
+        return;
+    }
+
+    OnSendRequestParam prm;
+    prm.userData = token;
+    prm.e.fromPj(*event);
+
+    acc->onSendRequest(prm);
+}
+
 void Endpoint::on_incoming_subscribe(pjsua_acc_id acc_id,
                                      pjsua_srv_pres *srv_pres,
                                      pjsua_buddy_id buddy_id,
@@ -1112,6 +1132,18 @@ void Endpoint::on_buddy_state(pjsua_buddy_id buddy_id)
     buddy->onBuddyState();
 }
 
+void Endpoint::on_buddy_dlg_event_state(pjsua_buddy_id buddy_id)
+{
+    Buddy b(buddy_id);
+    Buddy *buddy = b.getOriginalInstance();
+    if (!buddy || !buddy->isValid()) {
+        /* Ignored */
+        return;
+    }
+
+    buddy->onBuddyDlgEventState();
+}
+
 void Endpoint::on_buddy_evsub_state(pjsua_buddy_id buddy_id,
                                     pjsip_evsub *sub,
                                     pjsip_event *event)
@@ -1129,6 +1161,25 @@ void Endpoint::on_buddy_evsub_state(pjsua_buddy_id buddy_id,
     prm.e.fromPj(*event);
 
     buddy->onBuddyEvSubState(prm);
+}
+
+void Endpoint::on_buddy_evsub_dlg_event_state(pjsua_buddy_id buddy_id,
+                                              pjsip_evsub *sub,
+                                              pjsip_event *event)
+{
+    PJ_UNUSED_ARG(sub);
+
+    Buddy b(buddy_id);
+    Buddy *buddy = b.getOriginalInstance();
+    if (!buddy || !buddy->isValid()) {
+        /* Ignored */
+        return;
+    }
+
+    OnBuddyEvSubStateParam prm;
+    prm.e.fromPj(*event);
+
+    buddy->onBuddyEvSubDlgEventState(prm);
 }
 
 // Call callbacks
@@ -1823,7 +1874,7 @@ void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
         crypto.key   = pj2Str(srtp_opt->crypto[i].key);
         crypto.name  = pj2Str(srtp_opt->crypto[i].name);
         crypto.flags = srtp_opt->crypto[i].flags;
-        prm.cryptos.push_back(crypto);
+        prm.cryptos.push_back(PJSUA2_MOVE(crypto));
     }
     
     call->onCreateMediaTransportSrtp(prm);
@@ -1926,16 +1977,17 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_nat_detect     = &Endpoint::on_nat_detect;
     ua_cfg.cb.on_transport_state = &Endpoint::on_transport_state;
 
-    ua_cfg.cb.on_incoming_call  = &Endpoint::on_incoming_call;
-    ua_cfg.cb.on_reg_started    = &Endpoint::on_reg_started;
-    ua_cfg.cb.on_reg_state2     = &Endpoint::on_reg_state2;
-    ua_cfg.cb.on_incoming_subscribe = &Endpoint::on_incoming_subscribe;
-    ua_cfg.cb.on_pager2         = &Endpoint::on_pager2;
-    ua_cfg.cb.on_pager_status2  = &Endpoint::on_pager_status2;
-    ua_cfg.cb.on_typing2        = &Endpoint::on_typing2;
-    ua_cfg.cb.on_mwi_info       = &Endpoint::on_mwi_info;
-    ua_cfg.cb.on_buddy_state    = &Endpoint::on_buddy_state;
-    ua_cfg.cb.on_buddy_evsub_state = &Endpoint::on_buddy_evsub_state;
+    ua_cfg.cb.on_acc_send_request       = &Endpoint::on_acc_send_request;
+    ua_cfg.cb.on_incoming_call          = &Endpoint::on_incoming_call;
+    ua_cfg.cb.on_reg_started            = &Endpoint::on_reg_started;
+    ua_cfg.cb.on_reg_state2             = &Endpoint::on_reg_state2;
+    ua_cfg.cb.on_incoming_subscribe     = &Endpoint::on_incoming_subscribe;
+    ua_cfg.cb.on_pager2                 = &Endpoint::on_pager2;
+    ua_cfg.cb.on_pager_status2          = &Endpoint::on_pager_status2;
+    ua_cfg.cb.on_typing2                = &Endpoint::on_typing2;
+    ua_cfg.cb.on_mwi_info               = &Endpoint::on_mwi_info;
+    ua_cfg.cb.on_buddy_state            = &Endpoint::on_buddy_state;
+    ua_cfg.cb.on_buddy_evsub_state      = &Endpoint::on_buddy_evsub_state;
     ua_cfg.cb.on_acc_find_for_incoming  = &Endpoint::on_acc_find_for_incoming;
     ua_cfg.cb.on_ip_change_progress     = &Endpoint::on_ip_change_progress;
 
@@ -2287,11 +2339,14 @@ TransportInfo Endpoint::transportGetInfo(TransportId id) const PJSUA2_THROW(Erro
     return tinfo;
 }
 
+#if 0
+// pjsua_transport_set_enable() not implemented
 void Endpoint::transportSetEnable(TransportId id, bool enabled)
                                   PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_transport_set_enable(id, enabled) );
 }
+#endif
 
 void Endpoint::transportClose(TransportId id) PJSUA2_THROW(Error)
 {
@@ -2456,7 +2511,7 @@ CodecInfoVector2 Endpoint::codecEnum2() const PJSUA2_THROW(Error)
     for (unsigned i = 0; i<count; ++i) {
         CodecInfo codec_info;
         codec_info.fromPj(pj_codec[i]);
-        civ2.push_back(codec_info);
+        civ2.push_back(PJSUA2_MOVE(codec_info));
     }
     return civ2;
 }
@@ -2490,34 +2545,69 @@ void Endpoint::codecSetParam(const string &codec_id,
     PJSUA2_CHECK_EXPR( pjsua_codec_set_param(&codec_str, &pj_param) );
 }
 
-#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
 
 CodecOpusConfig Endpoint::getCodecOpusConfig() const PJSUA2_THROW(Error)
 {
-   pjmedia_codec_opus_config opus_cfg;
-   CodecOpusConfig config;
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+    CodecOpusConfig config;
+    pjmedia_codec_opus_config opus_cfg;
 
-   PJSUA2_CHECK_EXPR(pjmedia_codec_opus_get_config(&opus_cfg));
-   config.fromPj(opus_cfg);
-
-   return config;
+    PJSUA2_CHECK_EXPR(pjmedia_codec_opus_get_config(&opus_cfg));
+    config.fromPj(opus_cfg);
+    return config;
+#else
+    PJSUA2_RAISE_ERROR(PJ_ENOTSUP);
+#endif
 }
 
 void Endpoint::setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
                                   PJSUA2_THROW(Error)
 {
-   const pj_str_t codec_id = {(char *)"opus", 4};
-   pjmedia_codec_param param;
-   pjmedia_codec_opus_config new_opus_cfg;
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+    const pj_str_t codec_id = {(char *)"opus", 4};
+    pjmedia_codec_param param;
+    pjmedia_codec_opus_config new_opus_cfg;
+    
+    PJSUA2_CHECK_EXPR(pjsua_codec_get_param(&codec_id, &param));
+    new_opus_cfg = opus_cfg.toPj();
+    
+    PJSUA2_CHECK_EXPR(pjmedia_codec_opus_set_default_param(&new_opus_cfg,
+                                                           &param));
+#else
+    PJ_UNUSED_ARG(opus_cfg);
 
-   PJSUA2_CHECK_EXPR(pjsua_codec_get_param(&codec_id, &param));
-   new_opus_cfg = opus_cfg.toPj();
-
-   PJSUA2_CHECK_EXPR(pjmedia_codec_opus_set_default_param(&new_opus_cfg,
-                                                          &param));
+    PJSUA2_RAISE_ERROR(PJ_ENOTSUP);
+#endif
 }
 
+CodecLyraConfig Endpoint::getCodecLyraConfig() const PJSUA2_THROW(Error)
+{
+#if defined(PJMEDIA_HAS_LYRA_CODEC) && (PJMEDIA_HAS_LYRA_CODEC!=0)
+    CodecLyraConfig config;
+    pjmedia_codec_lyra_config lyra_cfg;
+
+    PJSUA2_CHECK_EXPR(pjmedia_codec_lyra_get_config(&lyra_cfg));
+    config.fromPj(lyra_cfg);
+    return config;
+#else
+    PJSUA2_RAISE_ERROR(PJ_ENOTSUP);
 #endif
+}
+
+void Endpoint::setCodecLyraConfig(const CodecLyraConfig &lyra_cfg)
+                                  PJSUA2_THROW(Error)
+{
+#if defined(PJMEDIA_HAS_LYRA_CODEC) && (PJMEDIA_HAS_LYRA_CODEC!=0)
+    pjmedia_codec_lyra_config new_lyra_cfg;
+    new_lyra_cfg = lyra_cfg.toPj();
+
+    PJSUA2_CHECK_EXPR(pjmedia_codec_lyra_set_config(&new_lyra_cfg));
+#else
+    PJ_UNUSED_ARG(lyra_cfg);
+
+    PJSUA2_RAISE_ERROR(PJ_ENOTSUP);
+#endif
+}
 
 void Endpoint::clearCodecInfoList(CodecInfoVector &codec_list)
 {
@@ -2568,7 +2658,7 @@ CodecInfoVector2 Endpoint::videoCodecEnum2() const PJSUA2_THROW(Error)
     for (unsigned i = 0; i<count; ++i) {
         CodecInfo codec_info;
         codec_info.fromPj(pj_codec[i]);
-        civ2.push_back(codec_info);
+        civ2.push_back(PJSUA2_MOVE(codec_info));
     }
 #endif
     return civ2;
@@ -2661,6 +2751,7 @@ pj_status_t Endpoint::on_auth_create_aka_response_callback(pj_pool_t *pool,
                                            pjsip_digest_credential *auth)
 {
     OnCredAuthParam prm;
+
     prm.digestChallenge.fromPj(*chal);
     prm.credentialInfo.fromPj(*cred);
     prm.method = pj2Str(*method);
@@ -2669,24 +2760,26 @@ pj_status_t Endpoint::on_auth_create_aka_response_callback(pj_pool_t *pool,
     pj_status_t status = Endpoint::instance().onCredAuth(prm);
 
    if (status == PJ_SUCCESS) {
-            pjsip_digest_credential auth_new = prm.digestCredential.toPj();
-            // Duplicate in the pool, so that digestCredential
-            // is allowed to be destructed at the end of the method.
-            pj_strdup(pool, &auth->realm, &auth_new.realm);
-            pj_strdup(pool, &auth->username, &auth_new.username);
-            pj_strdup(pool, &auth->nonce, &auth_new.nonce);
-            pj_strdup(pool, &auth->uri, &auth_new.uri);
-            pj_strdup(pool, &auth->response, &auth_new.response);
-            pj_strdup(pool, &auth->algorithm, &auth_new.algorithm);
-            pj_strdup(pool, &auth->cnonce, &auth_new.cnonce);
-            pj_strdup(pool, &auth->opaque, &auth_new.opaque);
-            pj_strdup(pool, &auth->qop, &auth_new.qop);
-            pj_strdup(pool, &auth->nc, &auth_new.nc);
-            pjsip_param_clone(pool, &auth->other_param, &auth_new.other_param);
+        pjsip_digest_credential auth_new = prm.digestCredential.toPj();
+
+        // Duplicate in the pool, so that digestCredential
+        // is allowed to be destructed at the end of the method.
+        pj_strdup(pool, &auth->realm, &auth_new.realm);
+        pj_strdup(pool, &auth->username, &auth_new.username);
+        pj_strdup(pool, &auth->nonce, &auth_new.nonce);
+        pj_strdup(pool, &auth->uri, &auth_new.uri);
+        pj_strdup(pool, &auth->response, &auth_new.response);
+        pj_strdup(pool, &auth->algorithm, &auth_new.algorithm);
+        pj_strdup(pool, &auth->cnonce, &auth_new.cnonce);
+        pj_strdup(pool, &auth->opaque, &auth_new.opaque);
+        pj_strdup(pool, &auth->qop, &auth_new.qop);
+        pj_strdup(pool, &auth->nc, &auth_new.nc);
+        pjsip_param_clone(pool, &auth->other_param, &auth_new.other_param);
     }
 #if PJSIP_HAS_DIGEST_AKA_AUTH
-   else if (status == PJ_ENOTSUP) {
-            status = pjsip_auth_create_aka_response(pool, chal, cred, method, auth);
+    else if (status == PJ_ENOTSUP) {
+        status = pjsip_auth_create_aka_response(pool, chal, cred, method,
+                                                auth);
     }
 #endif
     return status;

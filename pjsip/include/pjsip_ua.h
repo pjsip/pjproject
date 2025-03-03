@@ -25,6 +25,7 @@
 #include <pjsip-ua/sip_xfer.h>
 #include <pjsip-ua/sip_100rel.h>
 #include <pjsip-ua/sip_timer.h>
+#include <pjsip-ua/sip_siprec.h>
 
 
 #endif  /* __PJSIP_UA_H__ */

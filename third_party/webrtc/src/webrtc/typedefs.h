@@ -14,6 +14,8 @@
 #ifndef WEBRTC_TYPEDEFS_H_
 #define WEBRTC_TYPEDEFS_H_
 
+#include "pj_config.h"
+
 // Processor architecture detection.  For more info on what's defined, see:
 //   http://msdn.microsoft.com/en-us/library/b0084kay.aspx
 //   http://www.agner.org/optimize/calling_conventions.pdf
@@ -47,6 +49,13 @@
 #elif defined(__pnacl__)
 #define WEBRTC_ARCH_32_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
+#elif defined(__riscv) || defined(__riscv__)
+#define WEBRTC_ARCH_LITTLE_ENDIAN
+#if __riscv_xlen == 64
+#define WEBRTC_ARCH_64_BITS
+#else
+#define WEBRTC_ARCH_32_BITS
+#endif
 #else
 #error Please add support for your architecture in typedefs.h
 #endif

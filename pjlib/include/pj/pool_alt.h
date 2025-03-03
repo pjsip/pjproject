@@ -46,6 +46,7 @@ struct pj_pool_t
     char                obj_name[32];
     pj_size_t           used_size;
     pj_pool_callback   *cb;
+    pj_size_t           alignment;
 };
 
 
@@ -68,7 +69,9 @@ PJ_DECL(int) pj_NO_MEMORY_EXCEPTION(void);
  * function.
  */
 #define pj_pool_create(fc,nm,init,inc,cb)   \
-        pj_pool_create_imp(__FILE__, __LINE__, fc, nm, init, inc, cb)
+        pj_pool_create_imp(__FILE__, __LINE__, fc, nm, init, inc, 0, cb)
+#define pj_pool_aligned_create(fc,nm,init,inc,alg,cb)   \
+        pj_pool_create_imp(__FILE__, __LINE__, fc, nm, init, inc, alg, cb)
 
 #define pj_pool_release(pool)               pj_pool_release_imp(pool)
 #define pj_pool_safe_release(pool)          pj_pool_safe_release_imp(pool)
@@ -78,7 +81,9 @@ PJ_DECL(int) pj_NO_MEMORY_EXCEPTION(void);
 #define pj_pool_get_capacity(pool)          pj_pool_get_capacity_imp(pool)
 #define pj_pool_get_used_size(pool)         pj_pool_get_used_size_imp(pool)
 #define pj_pool_alloc(pool,sz)              \
-        pj_pool_alloc_imp(__FILE__, __LINE__, pool, sz)
+        pj_pool_alloc_imp(__FILE__, __LINE__, pool, 0, sz)
+#define pj_pool_aligned_alloc(pool, alignment, sz) \
+        pj_pool_alloc_imp(__FILE__, __LINE__, pool, alignment, sz)
 
 #define pj_pool_calloc(pool,cnt,elem)       \
         pj_pool_calloc_imp(__FILE__, __LINE__, pool, cnt, elem)
@@ -98,6 +103,7 @@ PJ_DECL(pj_pool_t*) pj_pool_create_imp(const char *file, int line,
                                        const char *name,
                                        pj_size_t initial_size,
                                        pj_size_t increment_size,
+                                       pj_size_t alignment,
                                        pj_pool_callback *callback);
 
 /* Release pool */
@@ -123,7 +129,8 @@ PJ_DECL(pj_size_t) pj_pool_get_used_size_imp(pj_pool_t *pool);
 
 /* Allocate memory from the pool */
 PJ_DECL(void*) pj_pool_alloc_imp(const char *file, int line, 
-                                 pj_pool_t *pool, pj_size_t sz);
+                                 pj_pool_t *pool, pj_size_t alignment,
+                                 pj_size_t sz);
 
 /* Allocate memory from the pool and zero the memory */
 PJ_DECL(void*) pj_pool_calloc_imp(const char *file, int line, 

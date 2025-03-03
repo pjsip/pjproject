@@ -474,6 +474,8 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     if (rdata->tp_info.transport->dir == PJSIP_TP_DIR_OUTGOING) {
         pj_strdup(dlg->pool, &dlg->initial_dest,
                   &rdata->tp_info.transport->remote_name.host);
+        PJ_LOG(5, (THIS_FILE, "Saving initial dest %.*s",
+                   (int)dlg->initial_dest.slen, dlg->initial_dest.ptr));
     }
 
     /* Init remote's contact from Contact header.
@@ -619,7 +621,13 @@ on_error:
     }
 
     if (tsx) {
-        pjsip_tsx_terminate(tsx, 500);
+        int st_code;
+
+        st_code = (status == PJSIP_ENOTREQUESTMSG ||
+                   status == PJSIP_EMISSINGHDR ||
+                   status == PJSIP_EINVALIDHDR)? PJSIP_SC_BAD_REQUEST:
+                  PJSIP_SC_INTERNAL_SERVER_ERROR;
+        pjsip_tsx_terminate(tsx, st_code);
         pj_assert(dlg->tsx_count>0);
         --dlg->tsx_count;
     }
@@ -946,6 +954,11 @@ PJ_DEF(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg,
  */
 PJ_DEF(void) pjsip_dlg_inc_lock(pjsip_dialog *dlg)
 {
+    /* Add ref temporarily to avoid possible dialog destroy while waiting
+     * the lock.
+     */
+    pj_grp_lock_add_ref(dlg->grp_lock_);
+
     PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_inc_lock(), sess_count=%d",
               dlg->sess_count));
 
@@ -954,6 +967,9 @@ PJ_DEF(void) pjsip_dlg_inc_lock(pjsip_dialog *dlg)
 
     PJ_LOG(6,(dlg->obj_name, "Leaving pjsip_dlg_inc_lock(), sess_count=%d",
               dlg->sess_count));
+
+    /* Lock has been acquired, dec ref */
+    pj_grp_lock_dec_ref(dlg->grp_lock_);
 }
 
 /* Try to acquire dialog's group lock, but bail out if group lock can not be
@@ -989,8 +1005,8 @@ PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
 {
     PJ_ASSERT_ON_FAIL(dlg!=NULL, return);
 
-    PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_dec_lock(), sess_count=%d",
-              dlg->sess_count));
+    PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_dec_lock(), sess_count=%d, "
+                             "tsx_count=%d", dlg->sess_count, dlg->tsx_count));
 
     pj_assert(dlg->sess_count > 0);
     --dlg->sess_count;
@@ -1222,8 +1238,11 @@ static pj_status_t dlg_create_request_throw( pjsip_dialog *dlg,
     /* Copy the initial destination host to tdata. This information can be
      * used later by transport for transport selection.
      */
-    if (dlg->initial_dest.slen)
+    if (dlg->initial_dest.slen) {
         pj_strdup(tdata->pool, &tdata->dest_info.name, &dlg->initial_dest);
+        PJ_LOG(5, (THIS_FILE, "Setting initial dest %.*s",
+                   (int)dlg->initial_dest.slen, dlg->initial_dest.ptr));
+    }
 
     /* Done. */
     *p_tdata = tdata;
@@ -1625,6 +1644,15 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_response( pjsip_dialog *dlg,
         pj_assert(status == PJ_SUCCESS);
     }
 
+    /* Copy the initial destination host to tdata. This information can be
+     * used later by transport for transport selection.
+     */
+    if (!tdata->dest_info.name.slen && dlg->initial_dest.slen) {
+        pj_strdup(tdata->pool, &tdata->dest_info.name, &dlg->initial_dest);
+        PJ_LOG(5, (THIS_FILE, "Setting initial dest %.*s",
+            (int)dlg->initial_dest.slen, dlg->initial_dest.ptr));
+    }
+
     /* Ask transaction to send the response */
     status = pjsip_tsx_send_msg(tsx, tdata);
 
@@ -1767,9 +1795,14 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
              */
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_str_t reason;
+            int st_code;
 
+            st_code = (status == PJSIP_ENOTREQUESTMSG ||
+                       status == PJSIP_EMISSINGHDR ||
+                       status == PJSIP_EINVALIDHDR)? PJSIP_SC_BAD_REQUEST:
+                      PJSIP_SC_INTERNAL_SERVER_ERROR;
             reason = pj_strerror(status, errmsg, sizeof(errmsg));
-            pjsip_endpt_respond_stateless(dlg->endpt, rdata, 500, &reason,
+            pjsip_endpt_respond_stateless(dlg->endpt, rdata, st_code, &reason,
                                           NULL, NULL);
             goto on_return;
         }
@@ -1800,9 +1833,35 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
                            dlg->remote.contact->uri,
                            contact->uri)))
         {
+            pj_str_t tmp;
+            enum { TMP_LEN=PJSIP_MAX_URL_SIZE };
+            pj_ssize_t len;
+
+            PJ_LOG(4, (dlg->obj_name, "Updating remote contact in "
+                                      "target refresh"));
+
             dlg->remote.contact = (pjsip_contact_hdr*)
                                   pjsip_hdr_clone(dlg->pool, contact);
             dlg->target = dlg->remote.contact->uri;
+
+            /* Update remote info as well. */
+            dlg->remote.info = (pjsip_fromto_hdr*)
+                               pjsip_hdr_clone(dlg->pool, rdata->msg_info.from);
+            pjsip_fromto_hdr_set_to(dlg->remote.info);
+        
+            /* Print the remote info. */
+            tmp.ptr = (char*) pj_pool_alloc(rdata->tp_info.pool, TMP_LEN);
+            len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+                                  dlg->remote.info->uri, tmp.ptr, TMP_LEN);
+            if (len < 1) {
+                tmp.slen=pj_ansi_strxcpy(tmp.ptr, "<-error: uri too long->", TMP_LEN);
+                if (tmp.slen<0)
+                    tmp.slen = pj_ansi_strlen(tmp.ptr);
+            } else
+                tmp.slen = len;
+        
+            /* Save the remote info. */
+            pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
         }
     }
 
@@ -1878,6 +1937,8 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
         {
             pj_strdup(dlg->pool, &dlg->initial_dest,
                       &rdata->tp_info.transport->remote_name.host);
+            PJ_LOG(5, (THIS_FILE, "Saving initial dest %.*s",
+                       (int)dlg->initial_dest.slen, dlg->initial_dest.ptr));
         } else {
             /* Reset the stored remote name if the transport is a server
              * transport.
@@ -2431,4 +2492,10 @@ PJ_DEF(pj_status_t) pjsip_dlg_remove_remote_cap_hdr(pjsip_dialog *dlg,
     pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsip_dlg_set_auth_sess( pjsip_dialog *dlg,
+                                              pjsip_auth_clt_sess *session ) {
+    PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
+    return pjsip_auth_clt_set_parent(&dlg->auth_sess, session);
 }

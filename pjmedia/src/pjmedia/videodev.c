@@ -362,13 +362,13 @@ static pj_status_t lookup_dev(pjmedia_vid_dev_index id,
 
         for (i=0; i<vid_subsys.drv_cnt; ++i) {
             pjmedia_vid_driver *drv = &vid_subsys.drv[i];
-            if (id==PJMEDIA_VID_DEFAULT_CAPTURE_DEV && 
+            if (id==PJMEDIA_VID_DEFAULT_CAPTURE_DEV && drv->f &&
                 drv->cap_dev_idx >= 0) 
             {
                 id = drv->cap_dev_idx;
                 make_global_index(i, &id);
                 break;
-            } else if (id==PJMEDIA_VID_DEFAULT_RENDER_DEV && 
+            } else if (id==PJMEDIA_VID_DEFAULT_RENDER_DEV && drv->f &&
                 drv->rend_dev_idx >= 0) 
             {
                 id = drv->rend_dev_idx;

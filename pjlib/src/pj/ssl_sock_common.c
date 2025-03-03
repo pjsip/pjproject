@@ -107,6 +107,8 @@ PJ_DEF(void) pj_ssl_sock_param_copy( pj_pool_t *pool,
         /* Path name must be null-terminated */
         pj_strdup_with_null(pool, &dst->entropy_path, &src->entropy_path);
     }
+
+    pj_sockopt_params_clone(pool, &dst->sockopt_params, &src->sockopt_params);
 }
 
 
@@ -172,6 +174,10 @@ PJ_DEF(pj_status_t) pj_ssl_cert_get_verify_status_strings(
             break;
         case PJ_SSL_CERT_ECHAIN_TOO_LONG:
             p = "The certificate chain length is too long";
+            break;
+        case PJ_SSL_CERT_EWEAK_SIGNATURE:
+            p = "The certificate signature is created using a weak hashing "
+                "algorithm";
             break;
         case PJ_SSL_CERT_EIDENTITY_NOT_MATCH:
             p = "The server identity does not match to any identities "

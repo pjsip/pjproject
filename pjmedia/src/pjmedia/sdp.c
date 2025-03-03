@@ -572,6 +572,21 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_ssrc( pj_pool_t *pool,
 }
 
 
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pj_pool_t *pool,
+                                                const pj_str_t *label_str)
+{
+    pjmedia_sdp_attr *attr;
+    
+    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+    attr->name = pj_str("label");
+    attr->value.ptr = (char *)pj_pool_alloc(pool, label_str->slen);
+    pj_memcpy(attr->value.ptr, label_str->ptr, label_str->slen);
+    attr->value.slen = label_str->slen;
+
+    return attr;
+}
+
+
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_to_rtpmap(pj_pool_t *pool,
                                                const pjmedia_sdp_attr *attr,
                                                pjmedia_sdp_rtpmap **p_rtpmap)
@@ -802,7 +817,7 @@ PJ_DEF(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media,
 PJ_DEF(int) pjmedia_sdp_attr_print(const pjmedia_sdp_attr *attr,
                                char *buf, pj_size_t size)
 {
-    return print_attr(attr, buf, size);
+    return (int)print_attr(attr, buf, size);
 }
 
 PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone(
@@ -895,9 +910,11 @@ static int print_session(const pjmedia_sdp_session *ses,
     int printed;
 
     /* Check length for v= and o= lines. */
-    if (len < 5+ 
-              2+ses->origin.user.slen+18+
-              ses->origin.net_type.slen+ses->origin.addr.slen + 2)
+    if (len < 5 + 2 + ses->origin.user.slen +
+              20 + 20 + 3 + /* max digits of origin.id and version +
+                             * whitespaces */
+              ses->origin.net_type.slen + ses->origin.addr_type.slen +
+              ses->origin.addr.slen + 2 + 2)
     {
         return -1;
     }
@@ -959,7 +976,7 @@ static int print_session(const pjmedia_sdp_session *ses,
     }
 
     /* Time */
-    if ((end-p) < 24) {
+    if ((end-p) < 2+20+1+20+2) {
         return -1;
     }
     *p++ = 't';

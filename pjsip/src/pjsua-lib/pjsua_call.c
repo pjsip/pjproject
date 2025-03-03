@@ -433,14 +433,20 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 {
     pjmedia_sdp_session *offer = NULL;
     pjsip_inv_session *inv = NULL;
-    pjsua_call *call = &pjsua_var.calls[call_id];
-    pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
-    pjsip_dialog *dlg = call->async_call.dlg;
+    pjsua_call *call;
+    pjsua_acc *acc;
+    pjsip_dialog *dlg;
     unsigned options = 0;
     pjsip_tx_data *tdata;
     pj_bool_t cb_called = PJ_FALSE;
     pjsip_tpselector tp_sel;
     pj_status_t status = (info? info->status: PJ_SUCCESS);
+
+    /* Get call, account, and dialog */
+    PJ_ASSERT_RETURN(call_id != PJSUA_INVALID_ID, PJ_EINVAL);
+    call = &pjsua_var.calls[call_id];
+    acc = &pjsua_var.acc[call->acc_id];
+    dlg = call->async_call.dlg;
 
     PJSUA_LOCK();
 
@@ -881,6 +887,8 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
         goto on_error;
+    } else if (!opt) {
+        opt = &call->opt;
     }
     
     /* Create sound port if none is instantiated, to check if sound device
@@ -954,12 +962,30 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
         goto on_error;
     }
 
+    /*
+     * Use pre defined Call-ID to be sent out with INVITE as opposed
+     * to using a randomly generated Call-ID
+     */
+
+    if( opt->custom_call_id.slen > 0 ){
+        pj_strdup(dlg->pool, &dlg->call_id->id, &opt->custom_call_id);
+        PJ_LOG(4,(THIS_FILE, "Set user defined "
+                             "Call-ID (%.*s)",
+                  (int)dlg->call_id->id.slen, dlg->call_id->id.ptr  ));
+        pj_bzero(&call->opt.custom_call_id,
+                  sizeof(call->opt.custom_call_id));
+    }
+
     /* Increment the dialog's lock otherwise when invite session creation
      * fails the dialog will be destroyed prematurely.
      */
     pjsip_dlg_inc_lock(dlg);
 
     dlg_set_via(dlg, acc);
+
+    if (acc->cfg.use_shared_auth) {
+        pjsip_dlg_set_auth_sess(dlg, &acc->shared_auth_sess);
+    }
 
     /* Calculate call's secure level */
     call->secure_level = get_secure_level(acc_id, dest_uri);
@@ -1327,6 +1353,9 @@ static pj_status_t verify_request(const pjsua_call *call,
 
     if (status == PJ_SUCCESS) {
         unsigned options = 0;
+
+        /* Add SIPREC support to prevent the "bad extension" error */
+        options |= PJSIP_INV_SUPPORT_SIPREC;
 
         /* Verify that we can handle the request. */
         status = pjsip_inv_verify_request3(rdata,
@@ -1786,6 +1815,45 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* Verify that we can handle the request. */
     options |= PJSIP_INV_SUPPORT_100REL;
     options |= PJSIP_INV_SUPPORT_TIMER;
+
+    if(pjsua_var.acc[acc_id].cfg.use_siprec != PJSUA_SIP_SIPREC_INACTIVE){
+        options |= PJSIP_INV_SUPPORT_SIPREC;
+        if(pjsua_var.acc[acc_id].cfg.use_siprec == PJSUA_SIP_SIPREC_MANDATORY){
+            options |= PJSIP_INV_REQUIRE_SIPREC;
+        }
+    }
+
+    /* Check if the INVITE request is a siprec
+     * this function add PJSIP_INV_REQUIRE_SIPREC to options
+     * and returns the value PJ_SUCCESS 
+     */
+    status = pjsip_siprec_verify_request(rdata, &call->siprec_metadata, offer,
+                                &options, NULL, pjsua_var.endpt, &response);
+
+    if(status != PJ_SUCCESS){
+        /*
+         * No we can't handle the incoming INVITE request.
+         */
+        if (response) {
+            pjsip_response_addr res_addr;
+            ret_st_code = response->msg->line.status.code;
+
+            pjsip_get_response_addr(response->pool, rdata, &res_addr);
+            status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, 
+                                               response, NULL, NULL);
+            if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(response);
+
+        } else {
+            /* Respond with 500 (Internal Server Error) */
+            ret_st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+            pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, ret_st_code, 
+                                NULL, NULL, NULL, NULL);
+        }
+
+        goto on_return;
+    }
+
+
     if (pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_MANDATORY)
         options |= PJSIP_INV_REQUIRE_100REL;
     if (pjsua_var.acc[acc_id].cfg.ice_cfg.enable_ice) {
@@ -2029,7 +2097,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
                                       NULL);
                 }               
 
-                if (call->inv->dlg) {
+                if (call->inv && call->inv->dlg) {
                     pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
                 }
                 pjsip_dlg_dec_lock(dlg);
@@ -2141,7 +2209,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      */
     if (dlg->mod_data[pjsua_var.mod.id] == NULL) {
         /* In PJSUA2, on_incoming_call() may be called from 
-         * on_media_transport_created() hence this might already set
+         * on_create_media_transport() hence this might already set
          * to allow notification about fail events via on_call_state() and
          * on_call_tsx_state().
          */
@@ -2167,7 +2235,12 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
          * otherwise hangup the call with 480
          */
         if (pjsua_var.ua_cfg.cb.on_incoming_call) {
-            pjsua_var.ua_cfg.cb.on_incoming_call(acc_id, call_id, rdata);
+            /* For PJSUA2, avoid invoking this callback again when it has been
+             * invoked from on_create_media_transport().
+             */
+            if (call->incoming_data) {
+                pjsua_var.ua_cfg.cb.on_incoming_call(acc_id, call_id, rdata);
+            }
 
             /* Notes:
              * - the call might be reset when it's rejected or hangup
@@ -2178,6 +2251,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
              * answer/hangup should have been delayed (see #1923), 
              * so let's process the answer/hangup now.
              */
+
             if (call->async_call.call_var.inc_call.hangup) {
                 process_pending_call_hangup(call);
             } else if (call->med_ch_cb == NULL && call->inv) {
@@ -3755,7 +3829,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_dtmf(pjsua_call_id call_id,
                        get_dtmf_method_name(param->method)));
 
     if (param->method == PJSUA_DTMF_METHOD_RFC2833) {
-        status = pjsua_call_dial_dtmf(call_id, &param->digits);
+        status = pjsua_call_dial_dtmf2(call_id, &param->digits, param->duration);
     } else if (param->method == PJSUA_DTMF_METHOD_SIP_INFO) {
         const pj_str_t SIP_INFO = pj_str("INFO");
         int i;

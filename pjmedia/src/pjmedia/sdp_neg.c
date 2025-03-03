@@ -1940,15 +1940,18 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg)
                      neg->state == PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER,
                      PJMEDIA_SDPNEG_EINSTATE);
 
-    // No longer needed after #3322.
-    if (0 && neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
+    if (neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
         neg->active_local_sdp) 
     {
         /* Increment next version number. This happens if for example
          * the reinvite offer is rejected by 488. If we don't increment
          * the version here, the next offer will have the same version.
          */
-        neg->active_local_sdp->origin.version++;
+        // No longer needed after #3322.
+        // neg->active_local_sdp->origin.version++;
+
+        /* Revert last sent SDP. */
+        neg->last_sent = neg->active_local_sdp;
     }
 
     /* Revert back initial SDP */

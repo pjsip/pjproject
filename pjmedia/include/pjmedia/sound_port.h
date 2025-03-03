@@ -71,7 +71,15 @@ enum pjmedia_snd_port_option
     /** 
      * Don't start the audio device when creating a sound port.
      */    
-    PJMEDIA_SND_PORT_NO_AUTO_START = 1
+    PJMEDIA_SND_PORT_NO_AUTO_START = 1,
+
+    /**
+     * Sound device uses \ref PJMEDIA_CLOCK instead of native sound device
+     * clock, generally this will be able to reduce jitter and clock drift.
+     *
+     * This option is not applicable for encoded/non-PCM format.
+     */
+    PJMEDIA_SND_PORT_USE_SW_CLOCK  = 2
 };
 
 /**
@@ -87,7 +95,7 @@ typedef struct pjmedia_snd_port_param
     pjmedia_aud_param base;
     
     /**
-     * Sound port creation options.
+     * Sound port creation options (see #pjmedia_snd_port_option).
      */
     unsigned options;
 
@@ -161,7 +169,7 @@ typedef struct pjmedia_snd_port pjmedia_snd_port;
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Set the number of bits per sample. The normal 
  *                          value for this parameter is 16 bits per sample.
- * @param options           Options flag.
+ * @param options           Options flag (see #pjmedia_snd_port_option).
  * @param p_port            Pointer to receive the sound device port instance.
  *
  * @return                  PJ_SUCCESS on success, or the appropriate error
@@ -191,7 +199,7 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Set the number of bits per sample. The normal 
  *                          value for this parameter is 16 bits per sample.
- * @param options           Options flag.
+ * @param options           Options flag (see #pjmedia_snd_port_option).
  * @param p_port            Pointer to receive the sound device port instance.
  *
  * @return                  PJ_SUCCESS on success, or the appropriate error
@@ -220,7 +228,7 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_create_rec(pj_pool_t *pool,
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Set the number of bits per sample. The normal 
  *                          value for this parameter is 16 bits per sample.
- * @param options           Options flag.
+ * @param options           Options flag (see #pjmedia_snd_port_option).
  * @param p_port            Pointer to receive the sound device port instance.
  *
  * @return                  PJ_SUCCESS on success, or the appropriate error

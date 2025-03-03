@@ -31,6 +31,15 @@
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 
+/* Currently SRTP-DTLS requires OpenSSL */
+#if PJMEDIA_SRTP_HAS_DTLS
+#  if PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_OPENSSL
+#    pragma message("DTLS requires OpenSSL, disabling it...")
+#    undef PJMEDIA_SRTP_HAS_DTLS
+#    define PJMEDIA_SRTP_HAS_DTLS 0
+#  endif
+#endif
+
 /* Enable this to test ROC initialization setting. For offerer,
  * it will send packets with ROC 1 and expect to receive ROC 2.
  * For answerer it will be the other way around.
@@ -472,7 +481,7 @@ const char* get_libsrtp_errstr(int err)
         "nonce check failed",               /* err_status_nonce_bad     = 18 */
         "couldn't read data",               /* err_status_read_fail     = 19 */
         "couldn't write data",              /* err_status_write_fail    = 20 */
-        "error pasring data",               /* err_status_parse_err     = 21 */
+        "error parsing data",               /* err_status_parse_err     = 21 */
         "error encoding data",              /* err_status_encode_err    = 22 */
         "error while using semaphores",     /* err_status_semaphore_err = 23 */
         "error while using pfkey"           /* err_status_pfkey_err     = 24 */

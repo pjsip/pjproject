@@ -325,7 +325,7 @@ static int verify_strxcpy(const char *src, int dst_size, int exp_ret,
         }
 
         /* verify not writing pass buffer */
-        for (i=exp_dst?strlen(exp_dst)+1:0; i<(int)sizeof(dst); ++i) {
+        for (i=exp_dst?(int)strlen(exp_dst)+1:0; i<(int)sizeof(dst); ++i) {
             if (dst[i] != GUARD) {
                 PJ_LOG(3,("", "  strxcpy \"%s\", dst_size=%d: overflow at %d",
                               src, dst_size, i));
@@ -561,7 +561,7 @@ static int verify_strxcat(const char *cdst, const char *src, int dst_size,
         }
 
         /* verify not writing past buffer */
-        for (i=exp_dst?strlen(exp_dst)+1:0; i<(int)sizeof(dst); ++i) {
+        for (i=exp_dst?(int)strlen(exp_dst)+1:0; i<(int)sizeof(dst); ++i) {
             if (dst[i] != GUARD) {
                 PJ_LOG(3,("", "  strxcat \"%s\", \"%s\", dst_size=%d: "
                             "overflow at %d",

@@ -79,7 +79,8 @@ pjmedia_clock_src_get_time_msec( const pjmedia_clock_src *clocksrc )
 {
     pj_timestamp ts;
 
-    pjmedia_clock_src_get_current_timestamp(clocksrc, &ts);
+    if (pjmedia_clock_src_get_current_timestamp(clocksrc, &ts) != PJ_SUCCESS)
+        return 0;
 
 #if PJ_HAS_INT64
     if (ts.u64 > PJ_UINT64(0x3FFFFFFFFFFFFF))

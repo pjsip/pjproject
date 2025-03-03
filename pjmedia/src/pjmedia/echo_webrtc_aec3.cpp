@@ -75,8 +75,13 @@ PJ_DEF(pj_status_t) webrtc_aec3_create(pj_pool_t *pool,
     webrtc_ec *echo;
    
     *p_echo = NULL;
-    
+
+#if WEBRTC_LINUX == 1 && defined(WEBRTC_ARCH_ARM_V7)
+    /* Workaround to fix alignment trap issue on Linux ARMv7 machine. */
+    echo = new webrtc_ec();
+#else
     echo = PJ_POOL_ZALLOC_T(pool, webrtc_ec);
+#endif
     PJ_ASSERT_RETURN(echo != NULL, PJ_ENOMEM);
     
     if (clock_rate != 16000 && clock_rate != 32000 && clock_rate != 48000) {
@@ -151,6 +156,10 @@ PJ_DEF(pj_status_t) webrtc_aec3_destroy(void *state )
         delete echo->rend_buf;
         echo->rend_buf = NULL;
     }
+
+#if WEBRTC_LINUX == 1 && defined(WEBRTC_ARCH_ARM_V7)
+    delete echo;
+#endif
 
     return PJ_SUCCESS;
 }

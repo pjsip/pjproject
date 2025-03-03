@@ -571,6 +571,9 @@ static pjsip_uri *create_uri14(pj_pool_t *pool)
     pj_strdup2(pool, &name_addr->display, "This is -. !% *_+`'~ me");
     pj_strdup2(pool, &url->user, "a19A&=+$,;?/,");
     pj_strdup2(pool, &url->passwd, "@a&Zz=+$,");
+#if defined (PJSIP_URI_USE_ORIG_USERPASS) && (PJSIP_URI_USE_ORIG_USERPASS)
+    pj_strdup2(pool, &url->orig_userpass, "a19A&=+$,;?/%2c:%40a&Zz=+$,");
+#endif
     pj_strdup2(pool, &url->host, "my_proxy09.MY-domain.com");
     url->port = 9801;
     return (pjsip_uri*)name_addr;
@@ -1029,11 +1032,13 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     pj_highprec_div(kbytes, 100000);
     elapsed = pj_elapsed_time(&zero, &var.cmp_time);
     avg_cmp = pj_elapsed_usec(&zero, &var.cmp_time);
-    pj_highprec_mul(avg_cmp, AVERAGE_URL_LEN);
-    pj_highprec_div(avg_cmp, var.cmp_len);
-    if (avg_cmp == 0)
-        avg_cmp = 1;
-    avg_cmp = 1000000 / avg_cmp;
+    if (PJ_HIGHPREC_VALUE_IS_ZERO(avg_cmp) || var.cmp_len == 0) {
+        avg_cmp = 0;
+    } else {
+        pj_highprec_mul(avg_cmp, AVERAGE_URL_LEN);
+        pj_highprec_div(avg_cmp, var.cmp_len);
+        avg_cmp = 1000000 / avg_cmp;
+    }
 
     PJ_LOG(3,(THIS_FILE,
               "    %u.%u MB of urls compared in %ld.%03lds (avg=%d urls/sec)",

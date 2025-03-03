@@ -96,6 +96,7 @@ struct pjsip_regc
 
     /* Authorization sessions. */
     pjsip_auth_clt_sess          auth_sess;
+    pjsip_auth_clt_sess         *ext_auth_sess; /**< User defined auth session.     */
 
     /* Auto refresh registration. */
     pj_bool_t                    auto_reg;
@@ -489,6 +490,9 @@ PJ_DEF(pj_status_t) pjsip_regc_release_transport(pjsip_regc *regc)
     if (regc->last_transport) {
         pjsip_transport_dec_ref(regc->last_transport);
         regc->last_transport = NULL;
+    }
+    if (regc->info_transport) {
+        regc->info_transport = NULL;
     }
     return PJ_SUCCESS;
 }
@@ -1552,4 +1556,8 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     return status;
 }
 
-
+PJ_DEF(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
+                                              pjsip_auth_clt_sess *session ) {
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+    return pjsip_auth_clt_set_parent(&regc->auth_sess, session);
+}

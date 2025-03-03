@@ -6,6 +6,8 @@
 	<string>Audio call permission</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Video call permission</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Local network permission</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>

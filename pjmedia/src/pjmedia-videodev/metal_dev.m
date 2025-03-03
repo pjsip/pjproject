@@ -217,7 +217,16 @@ static pj_status_t metal_factory_refresh(pjmedia_vid_dev_factory *f)
     if (@available(macOS 10.14, iOS 12.0, *)) {
         struct metal_dev_info *qdi;
         unsigned l;
-        
+        id<MTLDevice> device;
+
+        device = MTLCreateSystemDefaultDevice();
+        if (!device) {
+            PJ_LOG(3, (THIS_FILE, "No Metal device found"));
+            return PJ_SUCCESS;
+        } else {
+            [device release];
+        }
+
         /* Init output device */
         qdi = &qf->dev_info[qf->dev_count++];
         pj_bzero(qdi, sizeof(*qdi));
@@ -419,6 +428,11 @@ static pj_status_t metal_factory_default_param(pj_pool_t *pool,
         textureCoordBuffer = [device newBufferWithBytes:textureCoordinates
                                      length:sizeof(textureCoordinates)
                                      options:MTLResourceStorageModeShared];
+
+        [pQuadPipelineStateDescriptor release];
+        [fragmentProgram release];
+        [vertexProgram release];
+        [shaderLibrary release];
     }
 
     return self;
@@ -499,6 +513,8 @@ static pj_status_t metal_factory_default_param(pj_pool_t *pool,
      */
     [commandBuffer presentDrawable:drawable];
     [commandBuffer commit];
+
+    [texture release];
 
     stream->is_rendering = PJ_FALSE;
 }
@@ -610,7 +626,6 @@ static pj_status_t metal_factory_create_stream(
     pjmedia_video_format_detail *vfd;
     const pjmedia_video_format_info *vfi;
     metal_fmt_info *mfi;
-    pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
@@ -662,11 +677,6 @@ static pj_status_t metal_factory_create_stream(
     *p_vid_strm = &strm->base;
     
     return PJ_SUCCESS;
-    
-on_error:
-    metal_stream_destroy((pjmedia_vid_dev_stream *)strm);
-    
-    return status;
 }
 
 /* API: Get stream info. */

@@ -242,7 +242,12 @@ typedef struct pj_atomic_t pj_atomic_t;
  * Value type of an atomic variable.
  */
 typedef PJ_ATOMIC_VALUE_TYPE pj_atomic_value_t;
- 
+
+/**
+ * Opaque data type for atomic queue.
+ */
+typedef struct pj_atomic_queue_t pj_atomic_queue_t;
+
 /* ************************************************************************* */
 
 /** Thread handle. */

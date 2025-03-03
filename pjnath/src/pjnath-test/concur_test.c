@@ -226,14 +226,14 @@ static int stun_destroy_test_session(struct stun_test_session *test_sess)
 
 static int stun_destroy_test(void)
 {
-    enum { LOOP = 500 };
+#define ERR(errval) { rc=errval; goto on_return; }
+    enum { LOOP = 10 };
     struct stun_test_session test_sess;
     pj_sockaddr bind_addr;
     int addr_len;
     pj_caching_pool cp;
     pj_pool_t *pool;
     unsigned i;
-    pj_status_t status;
     int rc = 0;
 
     PJ_LOG(3,(THIS_FILE, "  STUN destroy concurrency test"));
@@ -241,53 +241,61 @@ static int stun_destroy_test(void)
     pj_bzero(&test_sess, sizeof(test_sess));
 
     pj_caching_pool_init(&cp, NULL, 0);
-    pool = pj_pool_create(&cp.factory, "testsess", 512, 512, NULL);
+    PJ_TEST_NOT_NULL((pool=pj_pool_create(&cp.factory, "testsess", 
+                                          512, 512, NULL)), NULL, ERR(-10));
 
     pj_stun_config_init(&test_sess.stun_cfg, &cp.factory, 0, NULL, NULL);
 
-    status = pj_timer_heap_create(pool, 1023, &test_sess.stun_cfg.timer_heap);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_timer_heap_create(pool, 1023, 
+                                         &test_sess.stun_cfg.timer_heap),
+                    NULL, ERR(-20));
 
-    status = pj_lock_create_recursive_mutex(pool, NULL, &test_sess.lock);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_lock_create_recursive_mutex(pool, NULL, 
+                                                   &test_sess.lock),
+                    NULL, ERR(-30));
 
-    pj_timer_heap_set_lock(test_sess.stun_cfg.timer_heap, test_sess.lock, PJ_TRUE);
-    pj_assert(status == PJ_SUCCESS);
+    pj_timer_heap_set_lock(test_sess.stun_cfg.timer_heap, test_sess.lock,
+                           PJ_TRUE);
 
-    status = pj_ioqueue_create(pool, PJ_IOQUEUE_MAX_HANDLES, &test_sess.stun_cfg.ioqueue);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_ioqueue_create(pool, PJ_IOQUEUE_MAX_HANDLES,
+                                      &test_sess.stun_cfg.ioqueue),
+                    NULL, ERR(-40));
 
-    pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &test_sess.server_sock);
+    PJ_TEST_SUCCESS(pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0,
+                                   &test_sess.server_sock),
+                    NULL, ERR(-50));
     pj_sockaddr_init(pj_AF_INET(), &bind_addr, NULL, 0);
-    status = pj_sock_bind(test_sess.server_sock, &bind_addr, pj_sockaddr_get_len(&bind_addr));
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_sock_bind(test_sess.server_sock, &bind_addr,
+                                 pj_sockaddr_get_len(&bind_addr)),
+                    NULL, ERR(-60));
 
     /* Set socket to nonblocking to avoid stuck in recv/recvfrom() on concurrent events */
     app_set_sock_nb(test_sess.server_sock);
 
     addr_len = sizeof(bind_addr);
-    status = pj_sock_getsockname(test_sess.server_sock, &bind_addr, &addr_len);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_sock_getsockname(test_sess.server_sock, &bind_addr,
+                                        &addr_len),
+                    NULL, ERR(-70));
 
     test_sess.server_port = pj_sockaddr_get_port(&bind_addr);
 
-    status = pj_event_create(pool, NULL, PJ_TRUE, PJ_FALSE, &test_sess.server_event);
-    pj_assert(status == PJ_SUCCESS);
+    PJ_TEST_SUCCESS(pj_event_create(pool, NULL, PJ_TRUE, PJ_FALSE,
+                                    &test_sess.server_event),
+                    NULL, ERR(-80));
 
     for (i=0; i<SERVER_THREAD_CNT; ++i) {
-        status = pj_thread_create(pool, NULL,
-                                  &server_thread_proc, &test_sess,
-                                  0, 0, &test_sess.server_threads[i]);
-        pj_assert(status == PJ_SUCCESS);
+        PJ_TEST_SUCCESS(pj_thread_create(pool, NULL,
+                                         &server_thread_proc, &test_sess,
+                                         0, 0, &test_sess.server_threads[i]),
+                        NULL, ERR(-90));
     }
 
     for (i=0; i<WORKER_THREAD_CNT; ++i) {
-        status = pj_thread_create(pool, NULL,
-                                  &worker_thread_proc, &test_sess,
-                                  0, 0, &test_sess.worker_threads[i]);
-        pj_assert(status == PJ_SUCCESS);
+        PJ_TEST_SUCCESS(pj_thread_create(pool, NULL,
+                                         &worker_thread_proc, &test_sess,
+                                         0, 0, &test_sess.worker_threads[i]),
+                        NULL, ERR(-100));
     }
-    PJ_UNUSED_ARG(status);
 
     /* Test 1: Main thread calls destroy while callback is processing response */
     PJ_LOG(3,(THIS_FILE, "    Destroy in main thread while callback is running"));
@@ -333,31 +341,37 @@ static int stun_destroy_test(void)
         pj_thread_sleep(10);
     }
 
-    /* Avoid compiler warning */
-    goto on_return;
-
+    rc = 0;
 
 on_return:
     test_sess.thread_quit_flag = PJ_TRUE;
 
     for (i=0; i<SERVER_THREAD_CNT; ++i) {
-        pj_thread_join(test_sess.server_threads[i]);
+        if (test_sess.server_threads[i])
+            pj_thread_join(test_sess.server_threads[i]);
     }
 
     for (i=0; i<WORKER_THREAD_CNT; ++i) {
-        pj_thread_join(test_sess.worker_threads[i]);
+        if (test_sess.worker_threads[i])
+            pj_thread_join(test_sess.worker_threads[i]);
     }
 
-    pj_event_destroy(test_sess.server_event);
-    pj_sock_close(test_sess.server_sock);
-    pj_ioqueue_destroy(test_sess.stun_cfg.ioqueue);
-    pj_timer_heap_destroy(test_sess.stun_cfg.timer_heap);
+    if (test_sess.server_event)
+        pj_event_destroy(test_sess.server_event);
+    if (test_sess.server_sock != PJ_INVALID_SOCKET)
+        pj_sock_close(test_sess.server_sock);
+    if (test_sess.stun_cfg.ioqueue)
+        pj_ioqueue_destroy(test_sess.stun_cfg.ioqueue);
+    if (test_sess.stun_cfg.timer_heap)
+        pj_timer_heap_destroy(test_sess.stun_cfg.timer_heap);
 
-    pj_pool_release(pool);
+    if (pool)
+        pj_pool_release(pool);
     pj_caching_pool_destroy(&cp);
 
     PJ_LOG(3,(THIS_FILE, "    Done. rc=%d", rc));
     return rc;
+#undef ERR
 }
 
 

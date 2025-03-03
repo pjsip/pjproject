@@ -42,6 +42,15 @@ PJ_BEGIN_DECL
  */
 
 /**
+ * This setting controls the maximum number of supported audio devices.
+ *
+ * Default: 64
+ */
+#ifndef PJMEDIA_AUD_DEV_MAX_DEVS
+#   define PJMEDIA_AUD_DEV_MAX_DEVS 64
+#endif
+
+/**
  * This setting controls the buffer length of audio device name.
  *
  * Default: 128 for Windows platforms, 64 for others

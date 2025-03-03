@@ -832,53 +832,34 @@ on_return:
 
 
 #define DO_TEST(expr)       \
-            capture_pjlib_state(&stun_cfg, &pjlib_state); \
+            capture_pjlib_state(&app_sess.stun_cfg, &pjlib_state); \
             ret = expr; \
             if (ret != 0) goto on_return; \
-            ret = check_pjlib_state(&stun_cfg, &pjlib_state); \
+            ret = check_pjlib_state(&app_sess.stun_cfg, &pjlib_state); \
             if (ret != 0) goto on_return;
 
 
 int stun_sock_test(void)
 {
     struct pjlib_state pjlib_state;
-    pj_stun_config stun_cfg;
-    pj_ioqueue_t *ioqueue = NULL;
-    pj_timer_heap_t *timer_heap = NULL;
-    pj_pool_t *pool = NULL;
+    app_sess_t app_sess;
     pj_status_t status;
     int ret = 0;
 
-    pool = pj_pool_create(mem, NULL, 512, 512, NULL);
+    status = create_stun_config(&app_sess);
+    if (status)
+        return -11;
 
-    status = pj_ioqueue_create(pool, 12, &ioqueue);
-    if (status != PJ_SUCCESS) {
-        app_perror("   pj_ioqueue_create()", status);
-        ret = -4;
-        goto on_return;
-    }
+    DO_TEST(timeout_test(&app_sess.stun_cfg, PJ_FALSE, USE_IPV6));
+    DO_TEST(timeout_test(&app_sess.stun_cfg, PJ_TRUE, USE_IPV6));
 
-    status = pj_timer_heap_create(pool, 100, &timer_heap);
-    if (status != PJ_SUCCESS) {
-        app_perror("   pj_timer_heap_create()", status);
-        ret = -8;
-        goto on_return;
-    }
-    
-    pj_stun_config_init(&stun_cfg, mem, 0, ioqueue, timer_heap);
+    DO_TEST(missing_attr_test(&app_sess.stun_cfg, PJ_FALSE, USE_IPV6));
+    DO_TEST(missing_attr_test(&app_sess.stun_cfg, PJ_TRUE, USE_IPV6));
 
-    DO_TEST(timeout_test(&stun_cfg, PJ_FALSE, USE_IPV6));
-    DO_TEST(timeout_test(&stun_cfg, PJ_TRUE, USE_IPV6));
-
-    DO_TEST(missing_attr_test(&stun_cfg, PJ_FALSE, USE_IPV6));
-    DO_TEST(missing_attr_test(&stun_cfg, PJ_TRUE, USE_IPV6));
-
-    DO_TEST(keep_alive_test(&stun_cfg, USE_IPV6));
+    DO_TEST(keep_alive_test(&app_sess.stun_cfg, USE_IPV6));
 
 on_return:
-    if (timer_heap) pj_timer_heap_destroy(timer_heap);
-    if (ioqueue) pj_ioqueue_destroy(ioqueue);
-    if (pool) pj_pool_release(pool);
+    destroy_stun_config(&app_sess);
     return ret;
 }
 

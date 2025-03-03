@@ -75,8 +75,9 @@ struct ContentView: View {
     var body: some View {
         VStack(alignment: .center) {
             HStack(alignment: .center) {
+                Text(pjsip_vars.calling != true ? "Destination:" :
+                     pjsip_vars.vid_win != nil ? "Video" : "")
                 if (!pjsip_vars.calling) {
-                    Text("Destination:")
                     TextField(pjsip_vars.dest, text: $pjsip_vars.dest)
                         .frame(minWidth:0, maxWidth:200)
                 }

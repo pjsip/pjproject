@@ -36,7 +36,6 @@ struct common
     pj_dns_type              type;          /**< Type of this structure.*/
 };
 
-#pragma pack(1)
 struct srv_target
 {
     struct common           common;
@@ -55,7 +54,6 @@ struct srv_target
     unsigned                addr_cnt;
     pj_sockaddr             addr[ADDR_MAX_COUNT];/**< Address family and IP.*/
 };
-#pragma pack()
 
 struct pj_dns_srv_async_query
 {
@@ -107,7 +105,7 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
 {
     pj_size_t len;
     pj_str_t target_name;
-    pj_dns_srv_async_query *query_job;
+    pj_dns_srv_async_query *query_job, *p_q = NULL;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(domain_name && domain_name->slen &&
@@ -156,8 +154,11 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
                                          query_job->dns_state, 0, 
                                          &dns_callback,
                                          query_job, &query_job->q_srv);
+    if (query_job->q_srv)
+        p_q = query_job;
+
     if (status==PJ_SUCCESS && p_query)
-        *p_query = query_job;
+        *p_query = p_q;
 
     return status;
 }
@@ -589,7 +590,9 @@ static void dns_callback(void *user_data,
         query_job->q_srv = NULL;
 
         if (status == PJ_SUCCESS) {
-            if (PJ_DNS_GET_TC(pkt->hdr.flags)) {
+            if (PJ_DNS_RESOLVER_DISCARD_TRUNCATED_ANSWER &&
+                PJ_DNS_GET_TC(pkt->hdr.flags))
+            {
                 /* Got truncated answer, the standard recommends to follow up
                  * the query using TCP. Since we currently don't support it,
                  * just return error.

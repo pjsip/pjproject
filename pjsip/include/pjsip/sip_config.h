@@ -606,6 +606,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
+ /**
+  * If non-zero, SIP parser will parse the user/password part of the URI,
+  * and use it in its original form. Otherwise the parser will unescape it,
+  * and then store and use it in its unescaped form.
+  * 
+  * To store the URI in the original form, set this to Yes/1.
+  *
+  * Default: 0
+  */
+#ifndef PJSIP_URI_USE_ORIG_USERPASS
+#   define PJSIP_URI_USE_ORIG_USERPASS      0
+#endif
+
+
 /**
  * Specify port number should be allowed to appear in To and From
  * header. Note that RFC 3261 disallow this, see Table 1 in section
@@ -1331,10 +1345,25 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 /**
- * Allow client to send multiple Authorization header when receiving multiple 
- * WWW-Authenticate header fields. If this is disabled, the stack will send
- * Authorization header field containing credentials that match the
- * topmost header field.
+ * RFC-7616 and RFC-8760 state that for each realm a UAS requires authentication
+ * for it can send a WWW/Proxy-Authenticate header for each digest algorithm it
+ * supports and for each realm, they must be added in most-preferred to least-
+ * preferred order.  The RFCs also state that the UAS MUST NOT send multiple
+ * WWW/Proxy-Authenticate headers with the same realm and algorithm.
+ *
+ * The RFCs also state that the UAC SHOULD respond to the topmost header
+ * for each realm containing a digest algorithm it supports.  Neither RFC
+ * however, states whether the UAC should send multiple Authorization headers
+ * for the same realm if it can support multiple digest algorithms.  Common
+ * sense dicates though that the UAC should NOT send additional Authorization
+ * headers for the same realm once it's already sent a more preferred one.
+ * The reasoning is simple...  If a UAS sends two WWW-Authenticate headers,
+ * the first for SHA-256 and the second for MD5, a UAC responding to both
+ * completely defeats the purpose of the UAS sending the more secure SHA-256.
+ *
+ * Having said that, if there is some corner case where continuing to send
+ * additional Authorization headers for the same realm is necessary, then
+ * this define can be set to 1 to allow it.
  *
  * Default is 0
  */

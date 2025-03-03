@@ -401,8 +401,8 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
     listener->initial_timeout = cfg->initial_timeout;
     pj_memcpy(&listener->qos_params, &cfg->qos_params,
               sizeof(cfg->qos_params));
-    pj_memcpy(&listener->sockopt_params, &cfg->sockopt_params,
-              sizeof(cfg->sockopt_params));
+    pj_sockopt_params_clone(pool, &listener->sockopt_params,
+                            &cfg->sockopt_params);
 
     pj_ansi_strxcpy(listener->factory.obj_name, "tcptp", 
                     sizeof(listener->factory.obj_name));
@@ -520,7 +520,7 @@ static void lis_on_destroy(void *arg)
     }
 
     if (listener->factory.pool) {
-        PJ_LOG(4,(listener->factory.obj_name,  "SIP TCP transport destroyed"));
+        PJ_LOG(4,(listener->factory.obj_name, "SIP TCP listener destroyed"));
         pj_pool_safe_release(&listener->factory.pool);
     }
 }
@@ -1744,6 +1744,22 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory,
     pj_status_t status = PJ_SUCCESS;
     struct tcp_listener *listener = (struct tcp_listener *)factory;
 
+    /* Just update the published address if currently no listener */
+    if (!listener->asock) {
+        PJ_LOG(3,(factory->obj_name,
+                      "TCP restart requested while no listener created, "
+                      "update the published address only"));
+
+        status = update_factory_addr(listener, a_name);
+        if (status != PJ_SUCCESS)
+            return status;
+
+        /* Set transport info. */
+       update_transport_info(listener);
+
+       return PJ_SUCCESS;
+    }
+
     lis_close(listener);
 
     status = pjsip_tcp_transport_lis_start(factory, local, a_name);
@@ -1753,15 +1769,15 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory,
 
         return status;
     }
-    
+
     status = pjsip_tpmgr_register_tpfactory(listener->tpmgr,
                                             &listener->factory);
     if (status != PJ_SUCCESS) {
         tcp_perror(listener->factory.obj_name,
                    "Unable to register the transport listener", status);
     } else {
-        listener->is_registered = PJ_TRUE;      
-    }    
+        listener->is_registered = PJ_TRUE;
+    }
 
     return status;
 }

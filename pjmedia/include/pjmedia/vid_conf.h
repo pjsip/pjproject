@@ -221,7 +221,7 @@ PJ_DECL(unsigned) pjmedia_vid_conf_get_port_count(pjmedia_vid_conf *vid_conf);
 /**
  * Enumerate occupied slots in the video conference bridge.
  *
- * @param vid_conf              The video conference bridge.
+ * @param vid_conf      The video conference bridge.
  * @param slots         Array of slot to be filled in.
  * @param count         On input, specifies the maximum number of slot
  *                      in the array. On return, it will be filled with
@@ -253,7 +253,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_get_port_info(
  * Enable unidirectional video flow from the specified source slot to
  * the specified sink slot.
  *
- * @param vid_conf              The video conference bridge.
+ * @param vid_conf      The video conference bridge.
  * @param src_slot      Source slot.
  * @param sink_slot     Sink slot.
  * @param opt           The option, for future use, currently this must
@@ -272,7 +272,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_connect_port(
  * Disconnect unidirectional video flow from the specified source to
  * the specified sink slot.
  *
- * @param vid_conf              The video conference bridge.
+ * @param vid_conf      The video conference bridge.
  * @param src_slot      Source slot.
  * @param sink_slot     Sink slot.
  *
@@ -299,6 +299,49 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_disconnect_port(
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_update_port(pjmedia_vid_conf *vid_conf,
                                                   unsigned slot);
+
+
+
+/**
+ * Add port destructor handler.
+ *
+ * Application can use this function to schedule resource release.
+ * Note that application cannot release any app's resources used by the port,
+ * e.g: memory pool, database connection, immediately after removing the port
+ * from the conference bridge as port removal is asynchronous.
+ *
+ * Usually this function is called after adding the port to the conference
+ * bridge.
+ *
+ * @param vid_conf          The video conference bridge.
+ * @param slot              The port slot index.
+ * @param member            A pointer to be passed to the handler.
+ * @param handler           The destroy handler.
+ *
+ * @return                  PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_conf_add_destroy_handler(
+                                            pjmedia_vid_conf* vid_conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler);
+
+
+/**
+ * Remove previously registered destructor handler.
+ *
+ * @param conf              The video conference bridge.
+ * @param slot              The port slot index.
+ * @param member            A pointer to be passed to the handler.
+ * @param handler           The destroy handler.
+ *
+ * @return                  PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_conf_del_destroy_handler(
+                                            pjmedia_vid_conf* vid_conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler);
 
 
 PJ_END_DECL

@@ -563,6 +563,7 @@ int dummy_function()
     pjmedia_stream_pause(NULL, PJMEDIA_DIR_ENCODING);
     pjmedia_stream_resume(NULL, PJMEDIA_DIR_ENCODING);
     pjmedia_stream_dial_dtmf(NULL, NULL);
+    pjmedia_stream_dial_dtmf2(NULL, NULL, 0);
     pjmedia_stream_check_dtmf(NULL);
     pjmedia_stream_get_dtmf(NULL, NULL, NULL);
 #endif

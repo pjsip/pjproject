@@ -62,6 +62,7 @@ pjsip-apps/src/swig/python/pjsua2.py
 pjsip-apps/src/swig/python/pjsua2_wrap.*
 
 # unit tests files
+tests/pjsua/**/__pycache__/
 tests/pjsua/*.pyc
 tests/pjsua/scripts-*/*.pyc
 tests/pjsua/*.log

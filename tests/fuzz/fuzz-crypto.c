@@ -45,7 +45,7 @@ void encode_base64_differential(const uint8_t *Data, size_t Size) {
 
     //OPENSSL
     BIO *bio, *bio_mem;
-    char *ssl_output;
+    char *ssl_output = NULL;
     int  ssl_output_len;
 
     bio = BIO_new(BIO_f_base64());
@@ -58,6 +58,9 @@ void encode_base64_differential(const uint8_t *Data, size_t Size) {
     BIO_flush(bio);
 
     ssl_output_len = BIO_get_mem_data(bio_mem, &ssl_output);
+    if (ssl_output_len <= 0) {
+        abort();
+    }
 
     //Differential
     int result = memcmp(pj_output, ssl_output, ssl_output_len);

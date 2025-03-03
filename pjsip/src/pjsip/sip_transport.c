@@ -52,8 +52,14 @@ static const char *addr_string(const pj_sockaddr_t *addr)
 static const char* print_tpsel_info(const pjsip_tpselector *sel)
 {
     static char tpsel_info_buf[80];
-    if (!sel) return "(null)";
-    if (sel->type==PJSIP_TPSELECTOR_LISTENER)
+
+    if (!sel)
+        return "(null)";
+
+    if (sel->type==PJSIP_TPSELECTOR_NONE)
+        pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
+                         "none, reuse=%d", !sel->disable_connection_reuse);
+    else if (sel->type==PJSIP_TPSELECTOR_LISTENER)
         pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
                          "listener[%s], reuse=%d", sel->u.listener->obj_name,
                          !sel->disable_connection_reuse);
@@ -61,9 +67,13 @@ static const char* print_tpsel_info(const pjsip_tpselector *sel)
         pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
                          "transport[%s], reuse=%d", sel->u.transport->info,
                          !sel->disable_connection_reuse);
+    else if (sel->type==PJSIP_TPSELECTOR_IP_VER)
+        pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
+                         "ip_ver[%d], reuse=%d", sel->u.ip_ver,
+                         !sel->disable_connection_reuse);
     else
         pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
-                         "unknown[%p], reuse=%d", sel->u.ptr,
+                         "unknown %d [%p], reuse=%d", sel->type, sel->u.ptr,
                          !sel->disable_connection_reuse);
     return tpsel_info_buf;
 }
@@ -877,6 +887,12 @@ static void transport_send_callback(pjsip_transport *transport,
 
     PJ_UNUSED_ARG(transport);
 
+    /* Print log on successful sending */
+    if (size > 0) {
+        PJ_LOG(5,(transport->obj_name,
+                  "%s sent successfully", pjsip_tx_data_get_info(tdata)));
+    }
+
     /* Mark pending off so that app can resend/reuse txdata from inside
      * the callback.
      */
@@ -965,6 +981,13 @@ PJ_DEF(pj_status_t) pjsip_transport_send(  pjsip_transport *tr,
 
     if (status != PJ_EPENDING) {
         tdata->is_pending = 0;
+
+        /* Print log on successful sending */
+        if (status == PJ_SUCCESS) {
+            PJ_LOG(5,(tr->obj_name,
+                      "%s sent successfully", pjsip_tx_data_get_info(tdata)));
+        }
+
         pjsip_tx_data_dec_ref(tdata);
     }
 
@@ -1283,8 +1306,10 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
         /* Allocate new entry for the freelist. */
         for (; i < PJSIP_TRANSPORT_ENTRY_ALLOC_CNT; ++i) {
             tp_add = PJ_POOL_ZALLOC_T(mgr->pool, transport);
-            if (!tp_add)
+            if (!tp_add){
+                pj_lock_release(mgr->lock);
                 return PJ_ENOMEM;
+            }  
             pj_list_init(tp_add);
             pj_list_push_back(&mgr->tp_entry_freelist, tp_add);
         }
@@ -1441,11 +1466,14 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
     pj_lock_acquire(tp->lock);
 
     mgr = tp->tpmgr;
-    pj_lock_acquire(mgr->lock);
+
+    // Acquiring manager lock after transport lock may cause deadlock.
+    // And it does not seem necessary as well.
+    //pj_lock_acquire(mgr->lock);
 
     /* Do nothing if transport is being shutdown/destroyed already */
     if (tp->is_shutdown || tp->is_destroying) {
-        pj_lock_release(mgr->lock);
+        //pj_lock_release(mgr->lock);
         pj_lock_release(tp->lock);
         return PJ_SUCCESS;
     }
@@ -1460,7 +1488,7 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
         tp->is_shutdown = PJ_TRUE;
 
     /* Notify application of transport shutdown */
-    state_cb = pjsip_tpmgr_get_state_cb(tp->tpmgr);
+    state_cb = pjsip_tpmgr_get_state_cb(mgr);
     if (state_cb) {
         pjsip_transport_state_info state_info;
 
@@ -1476,7 +1504,7 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
         pjsip_transport_dec_ref(tp);
     }
 
-    pj_lock_release(mgr->lock);
+    //pj_lock_release(mgr->lock);
     pj_lock_release(tp->lock);
 
     return status;
@@ -1883,6 +1911,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
  */
 PJ_DEF(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr)
 {
+    return pjsip_tpmgr_get_transport_count_by_type(mgr, -1);
+}
+
+PJ_DEF(unsigned) pjsip_tpmgr_get_transport_count_by_type(pjsip_tpmgr *mgr,
+                                                         int type)
+{
     pj_hash_iterator_t itr_val;
     pj_hash_iterator_t *itr;
     int nr_of_transports = 0;
@@ -1892,7 +1926,15 @@ PJ_DEF(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr)
     itr = pj_hash_first(mgr->table, &itr_val);
     while (itr) {
         transport *tp_entry = (transport *)pj_hash_this(mgr->table, itr);
-        nr_of_transports += (int)pj_list_size(tp_entry);
+        if (type<0) {
+            nr_of_transports += (int)pj_list_size(tp_entry);
+        } else {
+            transport *node = tp_entry->next;
+            for (; node!=tp_entry; node=node->next) {
+                if (tp_entry->tp->key.type==type)
+                    ++nr_of_transports;
+            }
+        }
         itr = pj_hash_next(mgr->table, itr);
     }
 
@@ -2142,20 +2184,46 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
             msg_status = pjsip_find_msg(current_pkt, remaining_len, PJ_FALSE, 
                                         &msg_fragment_size);
             if (msg_status != PJ_SUCCESS) {
-                if (remaining_len == PJSIP_MAX_PKT_LEN) {
-                    mgr->on_rx_msg(mgr->endpt, PJSIP_ERXOVERFLOW, rdata);
-                    
-                    /* Notify application about the message overflow */
+                pj_status_t dd_status = msg_status;
+
+                if (msg_status == PJSIP_EPARTIALMSG) {
+                    if (remaining_len != PJSIP_MAX_PKT_LEN) {
+                        /* We only get partial message: Not enough data in
+                         * packet.
+                         */
+                        return total_processed;
+                    }
+                    /* Overflow, buffer too small. */
+                    dd_status = PJSIP_ERXOVERFLOW;
+                } else {
+                    /* msg_status == PJSIP_EMISSINGHDR ||
+                       msg_status == PJSIP_EINVALIDHDR
+                     */
+                    char errbuf[128];
+                    pj_str_t errstr;
+
+                    errstr = pjsip_strerror(msg_status, errbuf, sizeof(errbuf) - 1);
+                    errstr.ptr[errstr.slen] = '\0';
+                    PJ_LOG(4, (THIS_FILE, "%s Unable to match whole message: %s",
+                               rdata->tp_info.transport->obj_name, errstr.ptr));
+                }
+
+                if (1) {
+                    mgr->on_rx_msg(mgr->endpt, dd_status, rdata);
+
+                    /* Notify application */
                     if (mgr->tp_drop_data_cb) {
                         pjsip_tp_dropped_data dd;
                         pj_bzero(&dd, sizeof(dd));
                         dd.tp = tr;
                         dd.data = current_pkt;
                         dd.len = msg_fragment_size;
-                        dd.status = PJSIP_ERXOVERFLOW;
+                        dd.status = dd_status;
                         (*mgr->tp_drop_data_cb)(&dd);
                     }
+                }
 
+                if (msg_status == PJSIP_EPARTIALMSG) {
                     if (rdata->tp_info.transport->idle_timer.id == 
                                                          INITIAL_IDLE_TIMER_ID)
                     {
@@ -2168,14 +2236,14 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
                             rdata->tp_info.transport->obj_name));
 
                         pjsip_transport_shutdown(rdata->tp_info.transport);
+                    } else {
+                        PJ_LOG(4, (THIS_FILE, "Insufficient buffer to receive "
+                                              "incoming packet."));
                     }
-                    
-                    /* Exhaust all data. */
-                    return rdata->pkt_info.len;
-                } else {
-                    /* Not enough data in packet. */
-                    return total_processed;
                 }
+
+                /* Exhaust all data. */
+                return rdata->pkt_info.len;
             }
         }
 
@@ -2395,13 +2463,18 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
     pjsip_tpfactory *factory;
     pj_status_t status;
 
-    TRACE_((THIS_FILE,"Acquiring transport type=%s, sel=%s remote=%s:%d",
+    TRACE_((THIS_FILE, "Acquiring transport type=%s, sel=%s remote=%s:%d "
+                       "(%.*s)",
                        pjsip_transport_get_type_name(type),
                        print_tpsel_info(sel),
                        addr_string(remote),
-                       pj_sockaddr_get_port(remote)));
+                       pj_sockaddr_get_port(remote),
+                       tdata? tdata->dest_info.name.slen : 10,
+                       tdata? tdata->dest_info.name.ptr  : "-no tdata-"));
 
     pj_lock_acquire(mgr->lock);
+
+    TRACE_((THIS_FILE, "Acquiring transport got the lock"));
 
     /* If transport is specified, then just use it if it is suitable
      * for the destination.
@@ -2471,6 +2544,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                 (sel->u.ip_ver == PJSIP_TPSELECTOR_USE_IPV6_ONLY &&
                  pjsip_transport_type_get_af(type) != pj_AF_INET6()))
             {
+                pj_lock_release(mgr->lock);
                 TRACE_((THIS_FILE, "Address type in tpsel not matched"));
                 return PJSIP_ETPNOTSUITABLE;
             }
@@ -2480,6 +2554,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
             pj_bzero(&key, sizeof(key));
             key_len = sizeof(key.type) + addr_len;
 
+            TRACE_((THIS_FILE, "Search transport by remote address"));
+
             /* First try to get exact destination. */
             key.type = type;
             pj_memcpy(&key.rem_addr, remote, addr_len);
@@ -2488,6 +2564,10 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                                                 NULL);
             if (tp_entry) {
                 transport *tp_iter = tp_entry;
+
+                TRACE_((THIS_FILE, "Found one, checking further (e.g: "
+                                   "destroying, verify hostname, etc).."));
+
                 do {
                     /* Don't use transport being shutdown/destroyed */
                     if (!tp_iter->tp->is_shutdown &&
@@ -2501,6 +2581,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                             if (pj_stricmp(&tdata->dest_info.name,
                                            &tp_iter->tp->remote_name.host))
                             {
+                                TRACE_((THIS_FILE, "Skipping secure transport "
+                                                   "with different hostname"));
                                 tp_iter = tp_iter->next;
                                 continue;
                             }
@@ -2514,6 +2596,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                                 tp_ref = tp_iter->tp;
                                 break;
                             }
+                            TRACE_((THIS_FILE, "Skipping transport "
+                                               "with different listener"));
                         } else {
                             tp_ref = tp_iter->tp;
                             break;
@@ -2521,6 +2605,9 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                     }
                     tp_iter = tp_iter->next;
                 } while (tp_iter != tp_entry);
+
+                TRACE_((THIS_FILE, "Search by remote address found %s",
+                                   tp_ref? "one" : "none"));
             }
         }
 
@@ -2529,6 +2616,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
         {
             const pj_sockaddr *remote_addr = (const pj_sockaddr*)remote;
 
+            TRACE_((THIS_FILE, "Search loop & datagram transports "
+                               "with address zero"));
 
             /* Ignore address for loop transports. */
             if (type == PJSIP_TRANSPORT_LOOP ||
@@ -2556,14 +2645,19 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                 key_len = sizeof(key.type) + addr_len;
                 tp_entry = (transport *) pj_hash_get(mgr->table, &key,
                                                      key_len, NULL);
-
-                while (tp_entry) {
-                    tp_ref = tp_entry->tp;
-                    if (!tp_ref->is_shutdown && !tp_ref->is_destroying)
-                        break;
-                    tp_entry = tp_entry->next;
+                if (tp_entry) {
+                    transport *tp_iter = tp_entry;
+                    do {
+                        tp_ref = tp_iter->tp;
+                        if (!tp_ref->is_shutdown && !tp_ref->is_destroying)
+                            break;
+                        tp_iter = tp_iter->next;
+                    } while (tp_iter != tp_entry);
                 }
             }
+
+            TRACE_((THIS_FILE, "Search loop & datagram transports found %s",
+                               tp_ref? "one" : "none"));
         }
 
         /* If transport is found and listener is specified, verify listener */

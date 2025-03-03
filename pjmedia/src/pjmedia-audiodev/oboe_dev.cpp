@@ -21,6 +21,7 @@
 
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pj/assert.h>
+#include <pj/atomic_queue.h>
 #include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -38,8 +39,8 @@
 #include <android/log.h>
 #include <oboe/Oboe.h>
 
-#include <atomic>
-
+/* Setting of maximum number of consecutive stream restart attempts. */
+#define MAX_RESTART     3
 
 /* Device info */
 typedef struct aud_dev_info
@@ -418,7 +419,6 @@ static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
 
         f->dev_count++;
 
-    on_skip_dev:
         jni_env->DeleteLocalRef(jdev_info);
     }
 
@@ -525,106 +525,6 @@ static pj_status_t oboe_default_param(pjmedia_aud_dev_factory *ff,
     return PJ_SUCCESS;
 }
 
-
-/* Atomic queue (ring buffer) for single consumer & single producer.
- *
- * Producer invokes 'put(frame)' to put a frame to the back of the queue and
- * consumer invokes 'get(frame)' to get a frame from the head of the queue.
- *
- * For producer, there is write pointer 'ptrWrite' that will be incremented
- * every time a frame is queued to the back of the queue. If the queue is
- * almost full (the write pointer is right before the read pointer) the
- * producer will forcefully discard the oldest frame in the head of the
- * queue by incrementing read pointer.
- *
- * For consumer, there is read pointer 'ptrRead' that will be incremented
- * every time a frame is fetched from the head of the queue, only if the
- * pointer is not modified by producer (in case of queue full).
- */
-class AtomicQueue {
-public:
-
-    AtomicQueue(unsigned max_frame_cnt, unsigned frame_size,
-                const char* name_= "") :
-        maxFrameCnt(max_frame_cnt), frameSize(frame_size),
-        ptrWrite(0), ptrRead(0),
-        buffer(NULL), name(name_)
-    {
-        buffer = new char[maxFrameCnt * frameSize];
-
-        /* Surpress warning when debugging log is disabled */
-        PJ_UNUSED_ARG(name);
-    }
-
-    ~AtomicQueue() {
-        delete [] buffer;
-    }
-
-    /* Get a frame from the head of the queue */
-    bool get(void* frame) {
-        if (ptrRead == ptrWrite)
-            return false;
-
-        unsigned cur_ptr = ptrRead;
-        void *p = &buffer[cur_ptr * frameSize];
-        pj_memcpy(frame, p, frameSize);
-        inc_ptr_read_if_not_yet(cur_ptr);
-
-        //__android_log_print(ANDROID_LOG_INFO, name,
-        //                    "GET: ptrRead=%d ptrWrite=%d\n",
-        //                    ptrRead.load(), ptrWrite.load());
-        return true;
-    }
-
-    /* Put a frame to the back of the queue */
-    void put(void* frame) {
-        unsigned cur_ptr = ptrWrite;
-        void *p = &buffer[cur_ptr * frameSize];
-        pj_memcpy(p, frame, frameSize);
-        unsigned next_ptr = inc_ptr_write(cur_ptr);
-
-        /* Increment read pointer if next write is overlapping (next_ptr == read ptr) */
-        unsigned next_read_ptr = (next_ptr == maxFrameCnt-1)? 0 : (next_ptr+1);
-        ptrRead.compare_exchange_strong(next_ptr, next_read_ptr);
-
-        //__android_log_print(ANDROID_LOG_INFO, name,
-        //                    "PUT: ptrRead=%d ptrWrite=%d\n",
-        //                    ptrRead.load(), ptrWrite.load());
-    }
-
-private:
-
-    unsigned maxFrameCnt;
-    unsigned frameSize;
-    std::atomic<unsigned> ptrWrite;
-    std::atomic<unsigned> ptrRead;
-    char *buffer;
-    const char *name;
-
-    /* Increment read pointer, only if producer not incemented it already.
-     * Producer may increment the read pointer if the write pointer is
-     * right before the read pointer (buffer almost full).
-     */
-    bool inc_ptr_read_if_not_yet(unsigned old_ptr) {
-        unsigned new_ptr = (old_ptr == maxFrameCnt-1)? 0 : (old_ptr+1);
-        return ptrRead.compare_exchange_strong(old_ptr, new_ptr);
-    }
-
-    /* Increment write pointer */
-    unsigned inc_ptr_write(unsigned old_ptr) {
-        unsigned new_ptr = (old_ptr == maxFrameCnt-1)? 0 : (old_ptr+1);
-        if (ptrWrite.compare_exchange_strong(old_ptr, new_ptr))
-            return new_ptr;
-
-        /* Should never happen */
-        pj_assert(!"There is more than one producer!");
-        return old_ptr;
-    }
-
-    AtomicQueue() {}
-};
-
-
 /* Interface to Oboe */
 class MyOboeEngine : oboe::AudioStreamDataCallback,
                      oboe::AudioStreamErrorCallback
@@ -632,7 +532,7 @@ class MyOboeEngine : oboe::AudioStreamDataCallback,
 public:
     MyOboeEngine(struct oboe_aud_stream *stream_, pjmedia_dir dir_)
     : stream(stream_), dir(dir_), oboe_stream(NULL), dir_st(NULL),
-      thread(NULL), thread_quit(PJ_TRUE), queue(NULL),
+      thread(NULL), thread_quit(PJ_TRUE), nrestart(0), queue(NULL),
       err_thread_registered(false), mutex(NULL)
     {
         pj_assert(dir == PJMEDIA_DIR_CAPTURE || dir == PJMEDIA_DIR_PLAYBACK);
@@ -720,8 +620,9 @@ public:
                   "Oboe stream %s queue size=%d frames (latency=%d ms)",
                   dir_st, queue_size, latency));
 
-        queue = new AtomicQueue(queue_size, stream->param.samples_per_frame*2,
-                                dir_st);
+        pj_atomic_queue_create(stream->pool, queue_size,
+                               stream->param.samples_per_frame*2, dir_st,
+                               &queue);
 
         /* Create semaphore */
         if (sem_init(&sem, 0, 0) != 0) {
@@ -816,7 +717,7 @@ public:
 
         if (queue) {
             PJ_LOG(5,(THIS_FILE, "Oboe %s deleting queue", dir_st));
-            delete queue;
+            pj_atomic_queue_destroy(queue);
             queue = NULL;
         }
 
@@ -836,16 +737,17 @@ public:
     {
         if (dir == PJMEDIA_DIR_CAPTURE) {
             /* Put the audio frame to queue */
-            queue->put(audioData);
+            pj_atomic_queue_put(this->queue, audioData);
         } else {
             /* Get audio frame from queue */
-            if (!queue->get(audioData)) {
+            if (pj_atomic_queue_get(this->queue, audioData) != PJ_SUCCESS) {
                 pj_bzero(audioData, stream->param.samples_per_frame*2);
                 __android_log_write(ANDROID_LOG_WARN, THIS_FILE,
                         "Oboe playback got an empty queue");
             }
         }
 
+        this->nrestart = 0;
         sem_post(&sem);
 
         return (thread_quit? oboe::DataCallbackResult::Stop :
@@ -876,12 +778,19 @@ public:
             pj_status_t status;
 
             PJ_LOG(3,(THIS_FILE,
-                      "Oboe stream %s error (%d/%s), "
-                      "trying to restart stream..",
+                      "Oboe stream %s error (%d/%s)",
                       dir_st, result, oboe::convertToText(result)));
 
             Stop();
-            status = Start();
+
+            if (nrestart < MAX_RESTART) {
+                ++nrestart;
+                PJ_LOG(3, (THIS_FILE, "Trying to restart Oboe %s stream #%d",
+                                      dir_st, nrestart));
+                status = Start();
+            } else {
+                status = PJMEDIA_EAUD_SYSERR;
+            }
 
             if (status != PJ_SUCCESS) {
                 pjmedia_event e;
@@ -950,7 +859,7 @@ private:
 
         /* Queue a silent frame to playback buffer */
         if (this_->dir == PJMEDIA_DIR_PLAYBACK) {
-            this_->queue->put(tmp_buf);
+            pj_atomic_queue_put(this_->queue, tmp_buf);
         }
 
         while (1) {
@@ -963,7 +872,8 @@ private:
                 bool stop_stream = false;
 
                 /* Read audio frames from Oboe */
-                while (this_->queue->get(tmp_buf)) {
+                while (pj_atomic_queue_get(this_->queue, tmp_buf) == PJ_SUCCESS)
+                {
                     /* Send audio frame to app via callback rec_cb() */
                     pjmedia_frame frame;
                     frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
@@ -1006,7 +916,7 @@ private:
 
                 /* Send audio frame to Oboe */
                 if (status == PJ_SUCCESS) {
-                    this_->queue->put(tmp_buf);
+                    pj_atomic_queue_put(this_->queue, tmp_buf);
                 } else {
                     /* App wants to stop audio dev stream */
                     break;
@@ -1030,8 +940,9 @@ private:
     const char                  *dir_st;
     pj_thread_t                 *thread;
     volatile pj_bool_t           thread_quit;
+    unsigned                     nrestart;
     sem_t                        sem;
-    AtomicQueue                 *queue;
+    pj_atomic_queue_t           *queue;
     pj_timestamp                 ts;
     bool                         err_thread_registered;
     pj_thread_desc               err_thread_desc;

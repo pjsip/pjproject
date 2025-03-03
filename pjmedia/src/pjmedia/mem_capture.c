@@ -31,6 +31,7 @@
 struct mem_rec
 {
     pjmedia_port     base;
+    pj_pool_t       *pool;
 
     unsigned         options;
 
@@ -54,7 +55,7 @@ static pj_status_t rec_get_frame(pjmedia_port *this_port,
 static pj_status_t rec_on_destroy(pjmedia_port *this_port);
 
 
-PJ_DEF(pj_status_t) pjmedia_mem_capture_create( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_mem_capture_create( pj_pool_t *pool_,
                                                 void *buffer,
                                                 pj_size_t size,
                                                 unsigned clock_rate,
@@ -66,18 +67,26 @@ PJ_DEF(pj_status_t) pjmedia_mem_capture_create( pj_pool_t *pool,
 {
     struct mem_rec *rec;
     const pj_str_t name = { "memrec", 6 };
+    pj_pool_t *pool;
 
     /* Sanity check */
-    PJ_ASSERT_RETURN(pool && buffer && size && clock_rate && channel_count &&
+    PJ_ASSERT_RETURN(pool_ && buffer && size && clock_rate && channel_count &&
                      samples_per_frame && bits_per_sample && p_port,
                      PJ_EINVAL);
 
     /* Can only support 16bit PCM */
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
 
+    /* Create own pool */
+    pool = pj_pool_create(pool_->factory, "memcap", 128, 128, NULL);
+    if (!pool) {
+        PJ_PERROR(1, (THIS_FILE, PJ_ENOMEM, "Mem capture create failed"));
+        return PJ_ENOMEM;
+    }
 
     rec = PJ_POOL_ZALLOC_T(pool, struct mem_rec);
-    PJ_ASSERT_RETURN(rec != NULL, PJ_ENOMEM);
+    PJ_ASSERT_ON_FAIL(rec != NULL, {pj_pool_release(pool); return PJ_ENOMEM;});
+    rec->pool = pool;
 
     /* Create the rec */
     pjmedia_port_info_init(&rec->base.info, &name, SIGNATURE,
@@ -297,6 +306,9 @@ static pj_status_t rec_on_destroy(pjmedia_port *this_port)
         rec->eof = PJ_TRUE;
         (*rec->cb)(this_port, rec->user_data);
     }
+
+    if (rec->pool)
+        pj_pool_safe_release(&rec->pool);
 
     return PJ_SUCCESS;
 }

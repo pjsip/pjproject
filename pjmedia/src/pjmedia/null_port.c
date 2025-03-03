@@ -25,6 +25,12 @@
 
 #define SIGNATURE   PJMEDIA_SIG_PORT_NULL
 
+struct null_port
+{
+    pjmedia_port     base;
+    pj_pool_t       *pool;
+};
+
 static pj_status_t null_get_frame(pjmedia_port *this_port, 
                                   pjmedia_frame *frame);
 static pj_status_t null_put_frame(pjmedia_port *this_port, 
@@ -32,30 +38,36 @@ static pj_status_t null_put_frame(pjmedia_port *this_port,
 static pj_status_t null_on_destroy(pjmedia_port *this_port);
 
 
-PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool_,
                                               unsigned sampling_rate,
                                               unsigned channel_count,
                                               unsigned samples_per_frame,
                                               unsigned bits_per_sample,
                                               pjmedia_port **p_port )
 {
-    pjmedia_port *port;
+    struct null_port *port;
     const pj_str_t name = pj_str("null-port");
+    pj_pool_t *pool;
 
-    PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool_ && p_port, PJ_EINVAL);
 
-    port = PJ_POOL_ZALLOC_T(pool, pjmedia_port);
-    PJ_ASSERT_RETURN(port != NULL, PJ_ENOMEM);
+    /* Create own pool */
+    pool = pj_pool_create(pool_->factory, name.ptr, 128, 128, NULL);
+    PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
 
-    pjmedia_port_info_init(&port->info, &name, SIGNATURE, sampling_rate,
+    port = PJ_POOL_ZALLOC_T(pool, struct null_port);
+    PJ_ASSERT_ON_FAIL(port, {pj_pool_release(pool); return PJ_ENOMEM;});
+    port->pool = pool;
+
+    pjmedia_port_info_init(&port->base.info, &name, SIGNATURE, sampling_rate,
                            channel_count, bits_per_sample, samples_per_frame);
 
-    port->get_frame = &null_get_frame;
-    port->put_frame = &null_put_frame;
-    port->on_destroy = &null_on_destroy;
+    port->base.get_frame = &null_get_frame;
+    port->base.put_frame = &null_put_frame;
+    port->base.on_destroy = &null_on_destroy;
 
 
-    *p_port = port;
+    *p_port = &port->base;
     
     return PJ_SUCCESS;
 }
@@ -95,6 +107,10 @@ static pj_status_t null_get_frame(pjmedia_port *this_port,
  */
 static pj_status_t null_on_destroy(pjmedia_port *this_port)
 {
-    PJ_UNUSED_ARG(this_port);
+    struct null_port* port = (struct null_port*) this_port;
+
+    if (port->pool)
+        pj_pool_safe_release(&port->pool);
+
     return PJ_SUCCESS;
 }

@@ -1389,12 +1389,21 @@ static void turn_on_state(pj_turn_session *sess,
                     &turn_sock->setting.tls_cfg.privkey_buf,
                     &turn_sock->setting.tls_cfg.password,
                     &turn_sock->cert);
+            } else if (turn_sock->setting.tls_cfg.cert_lookup.type !=
+                                                 PJ_SSL_CERT_LOOKUP_NONE &&
+                       turn_sock->setting.tls_cfg.cert_lookup.keyword.slen)
+            {
+                status = pj_ssl_cert_load_from_store(
+                                turn_sock->pool,
+                                &turn_sock->setting.tls_cfg.cert_lookup,
+                                &turn_sock->cert);
             }
             if (status != PJ_SUCCESS) {
                 turn_sock_destroy(turn_sock, status);
                 pj_grp_lock_release(turn_sock->grp_lock);
                 return;
             }
+
             if (turn_sock->cert) {
                 pj_turn_sock_tls_cfg_wipe_keys(&turn_sock->setting.tls_cfg);
             }

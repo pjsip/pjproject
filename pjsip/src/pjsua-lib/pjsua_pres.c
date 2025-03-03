@@ -246,6 +246,9 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
     pj_strncpy(&info->uri, &buddy->uri, sizeof(info->buf_)-total);
     total += info->uri.slen;
 
+    /* acc id */
+    info->acc_id = buddy->acc_id;
+
     /* contact */
     if (total < sizeof(info->buf_)) {
         info->contact.ptr = info->buf_ + total;
@@ -328,7 +331,7 @@ PJ_DEF(pj_status_t)
 pjsua_buddy_get_dlg_event_info( pjsua_buddy_id buddy_id,
                                 pjsua_buddy_dlg_event_info *info)
 {
-    unsigned total=0;
+    pj_ssize_t total=0;
     struct buddy_lock lck;
     pjsua_buddy *buddy;
     pj_status_t status;
@@ -471,6 +474,7 @@ static void reset_buddy(pjsua_buddy_id id)
     pj_bzero(&pjsua_var.buddy[id], sizeof(pjsua_var.buddy[id]));
     pjsua_var.buddy[id].pool = pool;
     pjsua_var.buddy[id].index = id;
+    pjsua_var.buddy[id].acc_id = PJSUA_INVALID_ID;
 }
 
 
@@ -564,6 +568,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
     pjsua_var.buddy[index].host = sip_uri->host;
     pjsua_var.buddy[index].port = sip_uri->port;
     pjsua_var.buddy[index].monitor = cfg->subscribe;
+    pjsua_var.buddy[index].acc_id = cfg->acc_id;
     if (pjsua_var.buddy[index].port == 0)
         pjsua_var.buddy[index].port = 5060;
 
@@ -577,7 +582,12 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
 
     PJSUA_UNLOCK();
 
-    PJ_LOG(4,(THIS_FILE, "Buddy %d added.", index));
+    if (cfg->acc_id != PJSUA_INVALID_ID) {
+        PJ_LOG(4,(THIS_FILE, "Buddy %d added for account %d.", index,
+                             cfg->acc_id));
+    } else {
+        PJ_LOG(4,(THIS_FILE, "Buddy %d added.", index));
+    }
 
     if (cfg->subscribe) {
         pjsua_buddy_subscribe_pres(index, cfg->subscribe);
@@ -668,6 +678,10 @@ PJ_DEF(pj_status_t) pjsua_buddy_subscribe_pres( pjsua_buddy_id buddy_id,
     pj_log_pop_indent();
     return PJ_SUCCESS;
 }
+
+/*
+ * Enable/disable buddy's dialog event monitoring.
+ */
 
 PJ_DEF(pj_status_t) pjsua_buddy_subscribe_dlg_event(pjsua_buddy_id buddy_id,
                                                     pj_bool_t subscribe)
@@ -1683,7 +1697,10 @@ static void buddy_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry)
     PJ_UNUSED_ARG(th);
 
     entry->id = PJ_FALSE;
-    pjsua_buddy_update_pres(buddy->index);
+    if (buddy->presence)
+        pjsua_buddy_update_pres(buddy->index);
+    else
+        pjsua_buddy_update_dlg_event(buddy->index);
 }
 
 /* Reschedule subscription refresh timer or terminate the subscription
@@ -1999,6 +2016,7 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
     pjsip_tpselector tp_sel;
     pj_status_t status;
     const char *sub_str = presence? "presence": "dialog event";
+    pjsip_dialog *dlg;
 
     /* Event subscription callback. */
     pj_bzero(&pres_callback, sizeof(pres_callback));
@@ -2013,7 +2031,13 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
     dlg_event_callback.on_rx_notify = &pjsua_evsub_on_rx_dlg_event_notify;
 
     buddy = &pjsua_var.buddy[buddy_id];
-    acc_id = pjsua_acc_find_for_outgoing(&buddy->uri);
+    acc_id = (buddy->acc_id != PJSUA_INVALID_ID)? buddy->acc_id:
+             pjsua_acc_find_for_outgoing(&buddy->uri);
+    if (!pjsua_acc_is_valid(acc_id)) {
+        PJ_LOG(4,(THIS_FILE, "Buddy %d: subscription failed, account %d is "
+                             "invalid!", buddy_id, acc_id));
+        return;
+    }
 
     acc = &pjsua_var.acc[acc_id];
 
@@ -2111,6 +2135,10 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
         pjsip_dlg_set_route_set(buddy->dlg, &acc->route_set);
     }
 
+    if (acc->cfg.use_shared_auth) {
+        pjsip_dlg_set_auth_sess(buddy->dlg, &acc->shared_auth_sess);
+    }
+
     /* Set credentials */
     if (acc->cred_cnt) {
         pjsip_auth_clt_set_credentials( &buddy->dlg->auth_sess, 
@@ -2140,8 +2168,15 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
         pj_log_pop_indent();
         return;
     }
-
+    buddy->presence = presence;
     pjsua_process_msg_data(tdata, NULL);
+
+    /* Send request. Note that if the send operation fails sync-ly, e.g:
+     * gethostbyname() error, tsx callback may have been invoked which may
+     * get the subscription terminated and the buddy states reset, we need
+     * to be prepared for such scenario here.
+     */
+    dlg = buddy->dlg;
 
     if (presence) {
         status = pjsip_pres_send_request(buddy->sub, tdata);
@@ -2149,8 +2184,9 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
         status = pjsip_dlg_event_send_request(buddy->sub, tdata);
     }
     if (status != PJ_SUCCESS) {
-        pjsip_dlg_dec_lock(buddy->dlg);
-        pjsip_pres_terminate(buddy->sub, PJ_FALSE);
+        pjsip_dlg_dec_lock(dlg);
+        if (buddy->sub)
+            pjsip_pres_terminate(buddy->sub, PJ_FALSE);
         buddy->sub = NULL;
         pjsua_perror(THIS_FILE, "Unable to send initial SUBSCRIBE", 
                      status);
@@ -2159,7 +2195,6 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
         return;
     }
 
-    buddy->presence = presence;
     pjsip_dlg_dec_lock(buddy->dlg);
     if (tmp_pool) pj_pool_release(tmp_pool);
     pj_log_pop_indent();

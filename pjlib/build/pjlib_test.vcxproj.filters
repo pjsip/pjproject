@@ -114,6 +114,9 @@
     <ClCompile Include="..\src\pjlib-test\udp_echo_srv_sync.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjlib-test\unittest_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjlib-test\util.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -121,6 +124,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pjlib-test\ioq_stress_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjlib-test\ioq_iocp_unreg_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

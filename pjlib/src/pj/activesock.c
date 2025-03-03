@@ -513,7 +513,8 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
                 ret = (*asock->cb.on_data_read)(asock, r->pkt, r->size,
                                                 PJ_SUCCESS, &remainder);
                 PJ_ASSERT_ON_FAIL(
-                    !asock->stream_oriented || remainder <= r->size, {
+                    !ret || !asock->stream_oriented || remainder <= r->size,
+                    {
                         PJ_LOG(2, ("",
                                    "App bug! Invalid remainder length from "
                                    "activesock on_data_read()."));
@@ -589,7 +590,8 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
                 ret = (*asock->cb.on_data_read)(asock, r->pkt, r->size,
                                                 status, &remainder);
                 PJ_ASSERT_ON_FAIL(
-                    !asock->stream_oriented || remainder <= r->size, {
+                    !ret || !asock->stream_oriented || remainder <= r->size,
+                    {
                         PJ_LOG(2, ("",
                                    "App bug! Invalid remainder length from "
                                    "activesock on_data_read()."));

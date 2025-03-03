@@ -17,74 +17,45 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "test.h"
-
-#if defined(PJ_SUNOS) && PJ_SUNOS!=0
-
-#include <signal.h>
-static void init_signals()
-{
-    struct sigaction act;
-
-    memset(&act, 0, sizeof(act));
-    act.sa_handler = SIG_IGN;
-
-    sigaction(SIGALRM, &act, NULL);
-}
-
-#elif (PJ_LINUX || PJ_DARWINOS) && defined(PJ_HAS_EXECINFO_H) && PJ_HAS_EXECINFO_H != 0
-
-#include <execinfo.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-static void print_stack(int sig)
-{
-    void *array[16];
-    size_t size;
-
-    size = backtrace(array, 16);
-    fprintf(stderr, "Error: signal %d:\n", sig);
-    backtrace_symbols_fd(array, size, STDERR_FILENO);
-    exit(1);
-}
-
-static void init_signals(void)
-{
-    signal(SIGSEGV, &print_stack);
-    signal(SIGABRT, &print_stack);
-}
-
-#else
-#define init_signals()
-#endif
+#include <pj/argparse.h>
 
 #define boost()
+
+static void usage()
+{
+    puts("Usage:");
+    puts("  pjnath-test [OPTION] [test_to_run] [..]");
+    puts("");
+    puts("where OPTIONS:");
+    puts("");
+    puts("  -h, --help       Show this help screen");
+
+    ut_usage();
+
+    puts("  -i               Ask ENTER before quitting");
+}
 
 int main(int argc, char *argv[])
 {
     int rc;
     int interractive = 0;
-    int no_trap = 0;
 
     boost();
 
-    while (argc > 1) {
-        char *arg = argv[--argc];
-
-        if (*arg=='-' && *(arg+1)=='i') {
-            interractive = 1;
-
-        } else if (*arg=='-' && *(arg+1)=='n') {
-            no_trap = 1;
-        }
+    if (pj_argparse_get_bool(&argc, argv, "-h") ||
+        pj_argparse_get_bool(&argc, argv, "--help"))
+    {
+        usage();
+        return 0;
     }
 
-    if (!no_trap) {
-        init_signals();
-    }
+    ut_app_init0(&test_app.ut_app);
 
-    rc = test_main();
+    interractive = pj_argparse_get_bool(&argc, argv, "-i");
+    if (ut_parse_args(&test_app.ut_app, &argc, argv))
+        return 1;
+
+    rc = test_main(argc, argv);
 
     if (interractive) {
         char s[10];

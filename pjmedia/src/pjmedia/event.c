@@ -15,6 +15,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#include <pjmedia/config.h>
 #include <pjmedia/event.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
@@ -26,7 +27,7 @@
 
 #define THIS_FILE       "event.c"
 
-#define MAX_EVENTS 16
+#define MAX_EVENTS PJMEDIA_EVENT_MAX_EVENTS
 
 /* Enable some tracing */
 // #define EVENT_TRACE

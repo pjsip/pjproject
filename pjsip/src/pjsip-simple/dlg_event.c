@@ -332,11 +332,10 @@ pjsip_dlg_event_parse_dialog_info2(char *body, unsigned body_len,
     pjsip_dlg_info_dialog_info *dialog_info;
     pjsip_dlg_info_dialog *dialog;
 
+    dlgev_st->info_cnt = 0;
     dialog_info = pjsip_dlg_info_parse(pool, body, body_len);
     if (dialog_info == NULL)
         return PJSIP_SIMPLE_EBADPIDF;
-
-    dlgev_st->info_cnt = 0;
 
     dialog = pjsip_dlg_info_dialog_info_get_dialog(dialog_info);
     pj_strdup(pool, &dlgev_st->info[dlgev_st->info_cnt].dialog_info_entity,
@@ -402,6 +401,7 @@ pjsip_dlg_event_parse_dialog_info2(char *body, unsigned body_len,
     } else {
         dlgev_st->info[dlgev_st->info_cnt].dialog_node = NULL;
     }
+    dlgev_st->info_cnt++;
 
     return PJ_SUCCESS;
 }

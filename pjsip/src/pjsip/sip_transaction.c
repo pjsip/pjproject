@@ -2108,6 +2108,8 @@ static void send_msg_callback( pjsip_send_state *send_state,
             tsx_update_transport(tsx, send_state->cur_transport);
 
             /* Update remote address. */
+		    pj_assert(tdata->dest_info.cur_addr <
+		              PJ_ARRAY_SIZE(tdata->dest_info.addr.entry));
             tsx->addr_len = tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr_len;
             pj_memcpy(&tsx->addr, 
                       &tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr,
@@ -2369,6 +2371,8 @@ static void tsx_tp_state_callback( pjsip_transport *tp,
 
         tsx = (pjsip_transaction*)info->user_data;
 
+        tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
+
         /* Post the event for later processing, to avoid deadlock.
          * See https://github.com/pjsip/pjproject/issues/1646
          */
@@ -2516,6 +2520,12 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
         if (status == PJ_EPENDING)
             status = PJ_SUCCESS;
         if (status != PJ_SUCCESS) {
+            char errmsg[PJ_ERR_MSG_SIZE];
+            pj_str_t err;
+
+            err = pj_strerror(status, errmsg, sizeof(errmsg));
+            tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+
             tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
             pj_grp_lock_dec_ref(tsx->grp_lock);
             pjsip_tx_data_dec_ref(tdata);
@@ -2690,6 +2700,13 @@ static pj_status_t tsx_retransmit( pjsip_transaction *tsx, int resched)
     status = tsx_send_msg( tsx, tsx->last_tx);
     if (status != PJ_SUCCESS) {
         return status;
+    }
+
+    /* Cancel retransmission timer if transport is pending. */
+    if (resched && (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT))
+    {
+        tsx_cancel_timer( tsx, &tsx->retransmit_timer );
+        tsx->transport_flag |= TSX_HAS_PENDING_RESCHED;
     }
 
     return PJ_SUCCESS;

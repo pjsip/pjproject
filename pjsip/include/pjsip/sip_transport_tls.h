@@ -118,6 +118,11 @@ typedef struct pjsip_tls_on_verify_param {
     const pj_sockaddr_t *remote_addr;
 
     /**
+     * Describes resolved server addresses.
+     */
+    const pjsip_server_addresses *server_addr;
+
+    /**
      * Describes transport direction.
      */
     pjsip_transport_dir tp_dir;
@@ -187,6 +192,14 @@ typedef struct pjsip_tls_setting
      * this setting will be ignored.
      */
     pj_ssl_cert_buffer privkey_buf;
+
+    /**
+     * Lookup certificate from OS certificate store with specified criteria.
+     *
+     * Currently only used by TLS backend Windows Schannel, please check
+     * pj_ssl_cert_load_from_store() for more info.
+     */
+    pj_ssl_cert_lookup_criteria cert_lookup;
 
     /**
      * Password to open private key.
@@ -474,6 +487,9 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
     pj_strdup(pool, &dst->cert_buf, &src->cert_buf);
     pj_strdup(pool, &dst->privkey_buf, &src->privkey_buf);
 
+    pj_strdup_with_null(pool, &dst->cert_lookup.keyword,
+                              &src->cert_lookup.keyword);
+
     if (src->ciphers_num) {
         unsigned i;
         dst->ciphers = (pj_ssl_cipher*) pj_pool_calloc(pool, src->ciphers_num,
@@ -489,6 +505,8 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
         for (i=0; i<src->curves_num; ++i)
             dst->curves[i] = src->curves[i];
     }
+
+    pj_sockopt_params_clone(pool, &dst->sockopt_params, &src->sockopt_params);
 }
 
 

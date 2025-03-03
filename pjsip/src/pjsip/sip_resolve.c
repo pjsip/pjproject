@@ -51,6 +51,7 @@ struct query
     pjsip_resolver_callback *cb;
     pj_dns_async_query      *object;
     pj_dns_async_query      *object6;
+    pj_grp_lock_t           *grp_lock;
     pj_status_t              last_error;
 
     /* Original request: */
@@ -71,6 +72,7 @@ struct query
 struct pjsip_resolver_t
 {
     pj_dns_resolver *res;
+    pj_grp_lock_t   *grp_lock;
     pjsip_ext_resolver *ext_res;
 };
 
@@ -93,9 +95,18 @@ PJ_DEF(pj_status_t) pjsip_resolver_create( pj_pool_t *pool,
                                            pjsip_resolver_t **p_res)
 {
     pjsip_resolver_t *resolver;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && p_res, PJ_EINVAL);
     resolver = PJ_POOL_ZALLOC_T(pool, pjsip_resolver_t);
+
+    /* Create group lock */
+    status = pj_grp_lock_create(pool, NULL, &resolver->grp_lock);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    pj_grp_lock_add_ref(resolver->grp_lock);
+
     *p_res = resolver;
 
     return PJ_SUCCESS;
@@ -159,6 +170,11 @@ PJ_DEF(void) pjsip_resolver_destroy(pjsip_resolver_t *resolver)
         pj_dns_resolver_destroy(resolver->res, PJ_FALSE);
 #endif
         resolver->res = NULL;
+    }
+
+    if (resolver->grp_lock) {
+        pj_grp_lock_dec_ref(resolver->grp_lock);
+        resolver->grp_lock = NULL;
     }
 }
 
@@ -371,6 +387,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
                       pjsip_transport_get_type_name(type),
                       pjsip_transport_get_type_desc(type)));
 
+            svr_addr.entry[i].name = target->addr.host;
             svr_addr.entry[i].priority = 0;
             svr_addr.entry[i].weight = 0;
             svr_addr.entry[i].type = type;
@@ -393,6 +410,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     query->objname = THIS_FILE;
     query->token = token;
     query->cb = cb;
+    query->grp_lock = resolver->grp_lock;
     query->req.target = *target;
     pj_strdup(pool, &query->req.target.addr.host, &target->addr.host);
 
@@ -423,10 +441,11 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
             query->naptr[0].res_type = pj_str("_sip._tcp.");
         else if (type == PJSIP_TRANSPORT_UDP || type == PJSIP_TRANSPORT_UDP6)
             query->naptr[0].res_type = pj_str("_sip._udp.");
+        else if (type == PJSIP_TRANSPORT_LOOP_DGRAM)
+            query->naptr[0].res_type = pj_str("_sip._udp.");
         else {
             pj_assert(!"Unknown transport type");
             query->naptr[0].res_type = pj_str("_sip._udp.");
-            
         }
 
     } else {
@@ -532,6 +551,8 @@ static void dns_a_callback(void *user_data,
     struct query *query = (struct query*) user_data;
     pjsip_server_addresses *srv = &query->server;
 
+    pj_grp_lock_acquire(query->grp_lock);
+
     /* Reset outstanding job */
     query->object = NULL;
 
@@ -551,6 +572,7 @@ static void dns_a_callback(void *user_data,
             if (rec.addr[i].af != pj_AF_INET())
                 continue;
 
+            srv->entry[srv->count].name = rec.name;
             srv->entry[srv->count].type = query->naptr[0].type;
             srv->entry[srv->count].priority = 0;
             srv->entry[srv->count].weight = 0;
@@ -577,6 +599,8 @@ static void dns_a_callback(void *user_data,
         else
             (*query->cb)(query->last_error, query->token, NULL);
     }
+
+    pj_grp_lock_release(query->grp_lock);
 }
 
 
@@ -589,6 +613,8 @@ static void dns_aaaa_callback(void *user_data,
 {
     struct query *query = (struct query*) user_data;
     pjsip_server_addresses *srv = &query->server;
+
+    pj_grp_lock_acquire(query->grp_lock);
 
     /* Reset outstanding job */
     query->object6 = NULL;
@@ -609,6 +635,7 @@ static void dns_aaaa_callback(void *user_data,
             if (rec.addr[i].af != pj_AF_INET6())
                 continue;
 
+            srv->entry[srv->count].name = rec.name;
             srv->entry[srv->count].type = query->naptr[0].type |
                                           PJSIP_TRANSPORT_IPV6;
             srv->entry[srv->count].priority = 0;
@@ -636,6 +663,8 @@ static void dns_aaaa_callback(void *user_data,
         else
             (*query->cb)(query->last_error, query->token, NULL);
     }
+
+    pj_grp_lock_release(query->grp_lock);
 }
 
 
@@ -666,6 +695,7 @@ static void srv_resolver_cb(void *user_data,
         for (j = 0; j < s->addr_count &&
                     srv.count < PJSIP_MAX_RESOLVED_ADDRESSES; ++j)
         {
+            srv.entry[srv.count].name = rec->entry[i].server.name;
             srv.entry[srv.count].type = query->naptr[0].type;
             srv.entry[srv.count].priority = rec->entry[i].priority;
             srv.entry[srv.count].weight = rec->entry[i].weight;

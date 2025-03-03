@@ -63,6 +63,18 @@ struct AccountRegConfig : public PersistentObject
     bool                registerOnAdd;
 
     /**
+     * Specify whether account modification with Account::modify() should
+     * automatically update registration if necessary, for example if
+     * account credentials change.
+     *
+     * Disable this when immediate registration is not desirable, such as
+     * during IP address change.
+     *
+     * Default: false.
+     */
+    bool                disableRegOnModify;
+
+    /**
      * The optional custom SIP headers to be put in the registration
      * request.
      */
@@ -286,6 +298,19 @@ struct AccountSipConfig : public PersistentObject
      */
     pjsua_ipv6_use      ipv6Use;
 
+    /**
+     * Use a shared authorization session within this account.
+     * This will use the accounts credentials on outgoing requests,
+     * so that less 401/407 Responses will be returned.
+     *
+     * Needs PJSIP_AUTH_AUTO_SEND_NEXT and PJSIP_AUTH_HEADER_CACHING
+     * enabled to work properly, and also will grow usage of the used pool for
+     * the cached headers.
+     *
+     * Default is disabled/false.
+     */
+    bool        useSharedAuth;
+
 public:
     /**
      * Read this object from a container node.
@@ -333,6 +358,14 @@ struct AccountCallConfig : public PersistentObject
     pjsua_sip_timer_use timerUse;
 
     /**
+     * Specify the usage of SIPREC INVITE request. See the
+     * pjsua_sip_siprec_use for possible values.
+     * 
+     * Default: PJSUA_SIP_SIPREC_INACTIVE
+     */
+    pjsua_sip_siprec_use siprecUse;
+
+    /**
      * Specify minimum Session Timer expiration period, in seconds.
      * Must not be lower than 90. Default is 90.
      */
@@ -351,6 +384,7 @@ public:
     AccountCallConfig() : holdType(PJSUA_CALL_HOLD_TYPE_DEFAULT),
                           prackUse(PJSUA_100REL_NOT_USED),
                           timerUse(PJSUA_SIP_TIMER_OPTIONAL),
+                          siprecUse(PJSUA_SIP_SIPREC_INACTIVE),
                           timerMinSESec(90),
                           timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE)
     {}
@@ -570,6 +604,15 @@ struct AccountNatConfig : public PersistentObject
     int                 iceWaitNominationTimeoutMsec;
 
     /**
+     * Specify whether to check the source address of the incoming messages.
+     * The source address will be compared to the remote candidate which has
+     * a completed connectivity check or received a connectivity check.
+     *
+     * Default value is PJ_ICE_SESS_CHECK_SRC_ADDR.
+     */
+    unsigned            iceCheckSrcAddr;
+
+    /**
      * Disable RTCP component.
      *
      * Default: False
@@ -757,6 +800,7 @@ public:
       iceAggressiveNomination(true),
       iceNominatedCheckDelayMsec(PJ_ICE_NOMINATED_CHECK_DELAY),
       iceWaitNominationTimeoutMsec(ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT),
+      iceCheckSrcAddr(PJ_ICE_SESS_CHECK_SRC_ADDR),
       iceNoRtcp(false),
       iceAlwaysUpdate(true),
       turnEnabled(false),
@@ -786,6 +830,37 @@ public:
      */
     virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
+
+/**
+ * This structure contains parameters for Account::sendRequest()
+ */
+struct SendRequestParam
+{
+    /**
+     * Token or arbitrary user data ownd by the application,
+     * which will be passed back in callback Account::onSendRequest().
+     */
+    Token        userData;
+
+    /**
+     * SIP method of the request.
+     */
+    string       method;
+
+    /**
+     * Message body and/or list of headers etc. to be included in
+     * the outgoing request.
+     */
+    SipTxOption  txOption;
+
+public:
+    /**
+     * Default constructor initializes with zero/empty values.
+     */
+    SendRequestParam();
+};
+
+
 
 /**
  * SRTP crypto.
@@ -1714,6 +1789,24 @@ struct OnMwiInfoParam
 };
 
 /**
+ * This structure contains parameters for Account::onSendRequest() callback.
+ */
+struct OnSendRequestParam
+{
+    /**
+     * Token or arbitrary user data owned by the application,
+     * which was passed to Endpoint::sendRquest() function.
+     */
+    Token               userData;
+
+    /**
+     * Transaction event that caused the state change.
+     */
+    SipEvent    e;
+};
+
+
+/**
  * Parameters for presNotify() account method.
  */
 struct PresNotifyParam
@@ -1888,6 +1981,18 @@ public:
      * @return                  Account info.
      */
     AccountInfo getInfo() const PJSUA2_THROW(Error);
+
+    /**
+     * Send arbitrary requests using the account. Application should only use
+     * this function to create auxiliary requests outside dialog, such as
+     * OPTIONS, and use the call or presence API to create dialog related
+     * requests.
+     *
+     * @param prm.method    SIP method of the request.
+     * @param prm.txOption  Optional message body and/or list of headers to be
+     *                      included in outgoing request.
+     */
+    void sendRequest(const pj::SendRequestParam& prm) PJSUA2_THROW(Error);
 
     /**
      * Update registration or perform unregistration. Application normally
@@ -2068,6 +2173,15 @@ public:
      * @param prm           Callback parameter.
      */
     virtual void onInstantMessageStatus(OnInstantMessageStatusParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * Notify application when a transaction started by Account::sendRequest()
+     * has been completed,i.e. when a response has been received.
+     *
+     * @param prm       Callback parameter.
+     */
+    virtual void onSendRequest(OnSendRequestParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
     /**

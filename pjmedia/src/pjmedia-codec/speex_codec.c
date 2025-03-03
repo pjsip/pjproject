@@ -22,7 +22,6 @@
 #include <pjmedia/errno.h>
 #include <pjmedia/endpoint.h>
 #include <pjmedia/port.h>
-#include <speex/speex.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/pool.h>
@@ -34,6 +33,7 @@
  */
 #if defined(PJMEDIA_HAS_SPEEX_CODEC) && PJMEDIA_HAS_SPEEX_CODEC!=0
 
+#include <speex/speex.h>
 
 #define THIS_FILE   "speex_codec.c"
 

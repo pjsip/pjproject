@@ -486,8 +486,10 @@ pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
             break;
 
         codec_info = &endpt->codec_mgr.codec_desc[i].info;
-        pjmedia_codec_mgr_get_default_param(&endpt->codec_mgr, codec_info,
-                                            &codec_param);
+        status = pjmedia_codec_mgr_get_default_param(&endpt->codec_mgr,
+                                                     codec_info, &codec_param);
+        if (status != PJ_SUCCESS)
+            return status;
         fmt = &m->desc.fmt[m->desc.fmt_count++];
         pt = codec_info->pt;
 
@@ -803,8 +805,10 @@ pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
             continue;
         }
 
-        pjmedia_vid_codec_mgr_get_default_param(NULL, &codec_info[i],
-                                                &codec_param);
+        status = pjmedia_vid_codec_mgr_get_default_param(NULL, &codec_info[i],
+                                                         &codec_param);
+        if (status != PJ_SUCCESS)
+            return status;
 
         fmt = &m->desc.fmt[m->desc.fmt_count++];
         fmt->ptr = (char*) pj_pool_alloc(pool, 8);

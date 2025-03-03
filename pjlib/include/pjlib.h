@@ -27,8 +27,10 @@
 
 #include <pj/activesock.h>
 #include <pj/addr_resolv.h>
+#include <pj/argparse.h>
 #include <pj/array.h>
 #include <pj/assert.h>
+#include <pj/atomic_queue.h>
 #include <pj/ctype.h>
 #include <pj/errno.h>
 #include <pj/except.h>
@@ -55,6 +57,7 @@
 #include <pj/string.h>
 #include <pj/timer.h>
 #include <pj/unicode.h>
+#include <pj/unittest.h>
 
 #include <pj/compat/high_precision.h>
 

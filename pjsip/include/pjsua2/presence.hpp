@@ -93,6 +93,14 @@ struct BuddyConfig : public PersistentObject
      */
     bool                 subscribe;
 
+    /**
+     * Specify whether we should immediately subscribe to the buddy's
+     * dialog event, such as for Busy Lamp Field (BLF) feature.
+     * Note that only one subscription (presence or dialog event)
+     * can be active at any time.
+     */
+    bool                 subscribe_dlg_event;
+
 public:
     /**
      * Read this object from a container node.
@@ -126,6 +134,12 @@ struct BuddyInfo
      * been established to the buddy.
      */
     string               contact;
+
+    /**
+     * The account ID associated with this buddy. If not associated
+     * with any account, the value will be PJSUA_INVALID_ID.
+     */
+    pjsua_acc_id         accId;
 
     /**
      * Flag to indicate that we should monitor the presence information for
@@ -173,7 +187,8 @@ public:
      * Default constructor
      */
     BuddyInfo() 
-    : presMonitorEnabled(true),
+    : accId(PJSUA_INVALID_ID),
+      presMonitorEnabled(true),
       subState(PJSIP_EVSUB_STATE_UNKNOWN),
       subTermCode(PJSIP_SC_NULL)
     {}
@@ -238,6 +253,9 @@ public:
      * the instance that calls this create() method as it is only the original
      * instance destructor that will delete the underlying Buddy in PJSUA-LIB.
      *
+     * IMPORTANT: Application must make sure that the Account instance remains
+     * valid for the entire lifetime of the Buddy object.
+     *
      * @param acc               The account for this buddy.
      * @param cfg               The buddy config.
      */
@@ -293,6 +311,40 @@ public:
      void updatePresence(void) PJSUA2_THROW(Error);
      
     /**
+     * Enable/disable buddy's dialog event monitoring. Once buddy's dialog event
+     * is subscribed, application will be informed about buddy's dialog info
+     * status change via \a onBuddyDlgEventState() callback.
+     *
+     * Note that only one subscription (presence or dialog event) can be active
+     * at any time.
+     *
+     * @param subscribe     Specify non-zero to activate dialog event subscription
+     *                      to the specified buddy.
+     *
+     * @return              PJ_SUCCESS on success, or the appropriate error code.
+     */
+    void subscribeDlgEvent(bool subscribe) PJSUA2_THROW(Error);
+
+    /**
+     * Update the dialog event information for the buddy. Although the library
+     * periodically refreshes the dialog event subscription for all buddies, some
+     * application may want to refresh the buddy's dialog event subscription
+     * immediately, and in this case it can use this function to accomplish
+     * this.
+     *
+     * Note that the buddy's dialog event subscription will only be initiated
+     * if dialog event monitoring is enabled for the buddy. See
+     * subscribeDlgEvent() for more info. Also if dialog event
+     * subscription for the buddy is already active, this function will not do
+     * anything.
+     *
+     * Once the dialog event subscription is activated successfully for the buddy,
+     * application will be notified about the buddy's dialog info status in the
+     * onBuddyDlgEventState() callback.
+     */
+    void updateDlgEvent(void) PJSUA2_THROW(Error);
+
+    /**
      * Send instant messaging outside dialog, using this buddy's specified
      * account for route set and authentication.
      *
@@ -320,6 +372,12 @@ public:
      */
     virtual void onBuddyState()
     {}
+    /**
+     * Notify application when the buddy dialog state has changed.
+     * Application may then query the buddy into to get the details.
+     */
+    virtual void onBuddyDlgEventState()
+    {}
 
     /**
      * Notify application when the state of client subscription session
@@ -331,7 +389,14 @@ public:
      */
     virtual void onBuddyEvSubState(OnBuddyEvSubStateParam &prm)
     { PJ_UNUSED_ARG(prm); }
-     
+    /**
+     * Notify application when the state of client subscription session
+     * associated with a buddy dialog state has changed. Application
+     * may use this callback to retrieve more detailed information about the
+     * state changed event.
+     */
+    virtual void onBuddyEvSubDlgEventState(OnBuddyEvSubStateParam &prm)
+    { PJ_UNUSED_ARG(prm); }
 private:
      /**
       * Buddy ID.
