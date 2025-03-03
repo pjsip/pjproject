@@ -11,34 +11,39 @@
 
 #### Copy this script to the main directory of PJSIP
 
-#### VARIABLES CAN BE CHANGE
+#### VARIABLES CAN BE CHANGED
 ### H264 ###
 
-################################## IMPORTANT NOTE #################################
-#####       H264 v2.1.1 doesn't work with NDK19 or newer                      #####
-#####       That's why we're going to use non release branch as a .zip file.  #####
-#####       Additional Note: with this branch also it might be problematic    #####
-#####       That's why we're going to prebuilt binaries.                      #####
-###################################################################################
+################################## IMPORTANT NOTE #############################################
+#####       Usage:                                                                        #####
+#####       1- Put the present script inside the pjproject folder                         #####
+#####       2- chmod +x full-android-builder                                              #####
+#####       3- Run :                                                                      #####
+#####   ./full-android-builder h264 openssl <all|arm64-v8a|armeabi-v7a|x86|x86_64>        #####
+###############################################################################################
 
 dt=$(date '+%d/%m/%Y %H:%M:%S')
 echo "$dt : Beginning build"
 
-# H264 -> v2.1.1 (May21, 2020)
+# H264 -> v2.6.0 (Fev 12, 2025)
 h264_link=https://github.com/cisco/openh264/archive/refs/tags/v2.6.0.zip
 
 ### OPENSSL ###
-# OPENSSL -> 1.1.1k (Mar25, 2021)
+# OPENSSL -> 3.4.1 (Feb 11, 2025)
+# Or BoringSSL -> 0.20250212.0 (Feb 13, 2025)
 openssl_link=https://github.com/openssl/openssl/releases/download/openssl-3.4.1/openssl-3.4.1.tar.gz
 #openssl_link=https://github.com/google/boringssl/releases/download/0.20250212.0/boringssl-0.20250212.0.tar.gz
 
 ### OPUS ###
+# OPUS -> 1.5.2 (Sep 11, 2024)
 opus_link=https://github.com/xiph/opus/releases/download/v1.5.2/opus-1.5.2.tar.gz
+
+### BCG729 ###
+# Latest Master
 bcg729_link=https://github.com/BelledonneCommunications/bcg729/archive/refs/heads/master.zip
 
-### NDK ### (LTS)
-# NDK 22 & 23 can be problematic with OpenSSL. That's why we're going to use LTS version of NDK.
-# NDK -> R27c (Jan, 2021)
+### NDK ###
+# NDK -> R27c (Oct 16, 2024)
 ndk_link=https://dl.google.com/android/repository/android-ndk-r27c-linux.zip
 
 h264_build=true
