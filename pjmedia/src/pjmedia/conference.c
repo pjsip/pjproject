@@ -33,9 +33,164 @@
 #include <pj/log.h>
 #include <pj/pool.h>
 #include <pj/string.h>
+#include <pj/unittest.h>
 
-#if defined(PJ_STACK_IMPLEMENTATION)
-#include <pj/stack.h>
+#if defined(PJ_ATOMIC_SLIST_IMPLEMENTATION)
+#   include <pj/atomic_slist.h>
+#else
+
+//TODO until #4330 is approved, we'll have to include a generic implementation of atomic_slist directly
+
+#   define PJ_ATOMIC_SLIST_ALIGN_PREFIX
+#   define PJ_ATOMIC_SLIST_ALIGN_SUFFIX
+#   define PJ_DECL_ATOMIC_SLIST_MEMBER(type)                       \
+                                       /** Slist @a next. */ \
+                                       type *next 
+
+/**
+ * The opaque data type for atomic slist, which is used as arguments throughout
+ * the atomic slist operations.
+ */
+typedef struct pj_atomic_slist pj_atomic_slist;
+
+/**
+ * The opaque data type for atomic slist item, which is used as item argument
+ * throughout the atomic slist operations.
+ * Real atomic slist's item should have PJ_DECL_ATOMIC_SLIST_MEMBER(type)
+ * as the first member.
+ */
+typedef void pj_atomic_slist_node_t;
+
+/**
+ * This structure describes generic slist node.
+ */
+typedef struct pj_atomic_slist_node
+{
+    PJ_DECL_ATOMIC_SLIST_MEMBER(struct pj_atomic_slist_node);
+} PJ_ATTR_MAY_ALIAS pj_atomic_slist_node; /* may_alias avoids warning with gcc-4.4 -Wall -O2 */
+
+
+struct pj_atomic_slist
+{
+    pj_atomic_slist_node    head;
+    pj_mutex_t             *mutex;
+};
+
+PJ_DEF(pj_status_t) pj_atomic_slist_create(pj_pool_t *pool, pj_atomic_slist **slist)
+{
+    pj_atomic_slist *p_slist;
+    pj_status_t      rc;
+
+    PJ_ASSERT_RETURN(pool && slist, PJ_EINVAL);
+
+    p_slist = PJ_POOL_ZALLOC_T(pool, pj_atomic_slist);
+    if (!p_slist)
+        return PJ_ENOMEM;
+
+    char                name[PJ_MAX_OBJ_NAME];
+    /* Set name. */
+    pj_ansi_snprintf(name, PJ_MAX_OBJ_NAME, "slst%p", p_slist);
+
+    rc = pj_mutex_create_simple(pool, name, &p_slist->mutex);
+    if (rc != PJ_SUCCESS)
+        return rc;
+
+
+    p_slist->head.next = &p_slist->head;
+    *slist = p_slist;
+
+    PJ_LOG(6, (THIS_FILE, "Atomic slist created slst%p", p_slist));
+    return PJ_SUCCESS;
+
+}
+
+
+PJ_DEF(pj_status_t) pj_atomic_slist_destroy(pj_atomic_slist *slist)
+{
+    pj_status_t rc;
+
+    PJ_ASSERT_RETURN(slist, PJ_EINVAL);
+    rc = pj_mutex_destroy(slist->mutex);
+    if (rc == PJ_SUCCESS)
+        PJ_LOG(6, (THIS_FILE, "Atomic slist destroyed slst%p", slist));
+    return rc;
+}
+
+
+PJ_DEF(pj_status_t) pj_atomic_slist_push(pj_atomic_slist *slist, pj_atomic_slist_node_t *node)
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(node && slist, PJ_EINVAL);
+    if ((status = pj_mutex_lock(slist->mutex)) != PJ_SUCCESS) {
+        PJ_PERROR(1, ("pj_atomic_slist_push", status, "Error locking mutex for slist slst%p", slist));
+        return status;
+    }
+    ((pj_atomic_slist_node*)node)->next = slist->head.next;
+    slist->head.next = node;
+    if ((status = pj_mutex_unlock(slist->mutex)) != PJ_SUCCESS)
+        PJ_PERROR(1, ("pj_atomic_slist_push", status, "Error unlocking mutex for slist slst%p", slist));
+
+    return status;
+}
+
+
+PJ_DEF(pj_atomic_slist_node_t*) pj_atomic_slist_pop(pj_atomic_slist *slist)
+{
+    pj_status_t status;
+    pj_atomic_slist_node *node;
+
+    PJ_ASSERT_RETURN(slist, NULL);
+    if ((status = pj_mutex_lock(slist->mutex)) != PJ_SUCCESS) {
+        PJ_PERROR(1, ("pj_atomic_slist_pop", status, "Error locking mutex for slist slst%p", slist));
+        return NULL;
+    }
+
+    if ((node = slist->head.next) != &slist->head) {
+        slist->head.next = node->next;
+        node->next = NULL;
+    } else
+        node = NULL;
+
+    if ((status = pj_mutex_unlock(slist->mutex)) != PJ_SUCCESS)
+        PJ_PERROR(1, ("pj_atomic_slist_pop", status, "Error unlocking mutex for slist slst%p", slist));
+
+    return node;
+}
+
+
+/**
+* Traverse the slist and get it's elements quantity.
+* The return value of pj_atomic_slist_size should not be relied upon in multithreaded applications
+* because the item count can be changed at any time by another thread.
+*/
+PJ_DEF(pj_size_t) pj_atomic_slist_size(/*const*/ pj_atomic_slist *slist)
+{
+    const pj_atomic_slist_node *node;
+    pj_size_t count;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(slist, 0);
+
+    if ((status = pj_mutex_lock(slist->mutex)) != PJ_SUCCESS) {
+        PJ_PERROR(1, ("pj_atomic_slist_size", status, "Error locking mutex for slist slst%p", slist));
+        return 0;
+    }
+
+    for (node = slist->head.next, count = 0; node != node->next; node = node->next)
+        ++count;
+
+    if ((status = pj_mutex_unlock(slist->mutex)) != PJ_SUCCESS)
+        PJ_PERROR(1, ("pj_atomic_slist_size", status, "Error unlocking mutex for slist slst%p", slist));
+
+    return count;
+}
+
+PJ_DEF(void*) pj_atomic_slist_calloc(pj_pool_t *pool, pj_size_t count, pj_size_t elem)
+{
+    return pj_pool_calloc(pool, count, elem);
+}
+
 #endif
 
 #if (!defined(PJMEDIA_CONF_USE_SWITCH_BOARD) || PJMEDIA_CONF_USE_SWITCH_BOARD==0) && \
@@ -122,6 +277,24 @@ static FILE *fhnd_rec;
  * port.
  */
 
+/**
+ * src port RX buffer to mix audiodata at the dest side
+ */
+typedef struct PJ_ATOMIC_SLIST_ALIGN_PREFIX rx_buffer_slist_node {
+    PJ_DECL_ATOMIC_SLIST_MEMBER(struct rx_buffer_slist_node);
+
+    pj_int16_t         *rx_frame_buf;/**< source data to mix                 */
+    unsigned            listener_adj_level; /**< adjustment level for current
+                                             * TX from current RX port       */
+    struct conf_port   *rx_port;     /**< source (RX) port (for debuging)    */
+    pjmedia_frame_type frame_type;   /**< we can't ignore the listener even 
+                                      *   if the transmitter doesn't have a 
+                                      *   frame to transmit. The heartbeat 
+                                      *   frame must be sent anyway.         */
+
+} PJ_ATOMIC_SLIST_ALIGN_SUFFIX rx_buffer_slist_node;
+
+
 
 /**
  * This is a port connected to conference bridge.
@@ -156,7 +329,8 @@ struct conf_port
      */
     unsigned             tx_adj_level;  /**< Adjustment for TX.             */
     unsigned             rx_adj_level;  /**< Adjustment for RX.             */
-    pj_int16_t          *adj_level_buf; /**< The adjustment buffer.         */
+    pj_int16_t          *adj_level_buf; /**< The adjustment buffer.
+                                         *   Works on TX (listener) side!   */
 
     /* Resample, for converting clock rate, if they're different. */
     pjmedia_resample    *rx_resample;
@@ -257,8 +431,8 @@ struct conf_port
                                          * conf->rx_frame_buf_cap used in
                                          * parallel bridge implementation.
                                          */
-    pj_lock_t           *tx_Lock;       /**< Lock to protect mix_buf,mix_adj,
-                                         * last_timestamp, mixed_cnt       */
+    pj_lock_t           *tx_lock;       /**< Lock to protect memory 
+                                         * allocation                      */
 
     pj_timestamp         last_timestamp;/**< last transmited packet
                                          * timestamp. We set this when
@@ -271,6 +445,13 @@ struct conf_port
                                          * that mixed data into this port's 
                                          * mix_buf during the current tick.*/
 
+    pj_atomic_slist     *buff_to_mix;    /**< queue to mix TX (source) data 
+                                          * for current RX (listener) port */
+    pj_atomic_t         *requests_to_mix;/**< counter of requests to data 
+                                          * mixing used to monopolize 
+                                          * mixing operation on RX side    */
+    pj_atomic_slist     *free_node_cache;/**< cache of currently unused 
+                                          * nodes for buff_to_mix          */
 
 #ifdef CONF_DEBUG_EX
     SLOT_TYPE            slot;          /**< SLOT for debug purpose        */
@@ -286,25 +467,9 @@ typedef struct op_entry op_entry;
  * port_slot is an array item, which index is index in ports[] (i.e. ports[] slot)
  * port_slot used to quick find empty slot. Only array index is used for this purpose.
  */
-#if defined(PJ_STACK_IMPLEMENTATION)
-
-typedef struct PJ_STACK_ALIGN_PREFIX port_slot {
-    PJ_DECL_STACK_MEMBER(struct port_slot);
-} PJ_STACK_ALIGN_SUFFIX port_slot;
-
-typedef pj_stack_type    unused_slots_cache; /**< Container to store unused 
-                                              *   port's slots.             */
-
-#else
-
-typedef struct port_slot {
-    PJ_DECL_LIST_MEMBER(struct port_slot);
-} port_slot;
-
-typedef port_slot        unused_slots_cache; /**< Container to store unused
-                                              *   port's slots.             */
-
-#endif
+typedef struct PJ_ATOMIC_SLIST_ALIGN_PREFIX port_slot {
+    PJ_DECL_ATOMIC_SLIST_MEMBER(struct port_slot);
+} PJ_ATOMIC_SLIST_ALIGN_SUFFIX port_slot;
 
 
 /*
@@ -338,7 +503,7 @@ struct pjmedia_conf
     op_entry             *op_queue_free;/**< Queue of free entries.         */
 
 
-    unused_slots_cache  *unused_slots;    /**< Unused port's slots.         */
+    pj_atomic_slist     *unused_slots;    /**< Unused port's slots.         */
     port_slot           *free_port_slots; /**< Persistent array of max_ports
                                            * size used for quick and locking
                                            * free finding unused ports[]
@@ -394,6 +559,14 @@ static void perform_get_frame(pjmedia_conf *conf);
 /* Conf thread pool's thread function.*/
 static int conf_thread(void *arg);
 
+/* mix and perhaps transmit data for listener from conf_port */
+static void  mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener, 
+                              SLOT_TYPE listener_slot,
+                              unsigned listener_adj_level, 
+                              struct conf_port *conf_port,
+                              pj_int16_t *p_in,
+                              pjmedia_frame_type frame_type,
+                              const pj_timestamp *timestamp);
 
 static void destroy_conf_port(struct conf_port *conf_port);
 
@@ -593,6 +766,7 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
     pj_pool_t *pool = NULL;
     char pname[PJ_MAX_OBJ_NAME];
     pj_status_t status = PJ_SUCCESS;
+    rx_buffer_slist_node *free_node;
 
     /* Make sure pool name is NULL terminated */
     pj_assert(name);
@@ -784,17 +958,31 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
     conf_port->last_mix_adj = NORMAL_LEVEL;
 
     if (conf->is_parallel) {
-        conf_port->rx_frame_buf = (pj_int16_t *)pj_pool_zalloc(pool, conf/*_port*/->rx_frame_buf_cap);
-        status = pj_lock_create_simple_mutex(pool, "tx_Lock", &conf_port->tx_Lock);
-        if (status != PJ_SUCCESS)
-            goto on_return;
+        PJ_TEST_NOT_NULL(conf_port->rx_frame_buf = (pj_int16_t*)pj_pool_zalloc(pool, conf->rx_frame_buf_cap), NULL, 
+                         {status = PJ_ENOMEM;goto on_return;});
+        PJ_TEST_SUCCESS(status=pj_lock_create_simple_mutex(pool, "tx_lock", &conf_port->tx_lock), NULL, goto on_return);
     }
+
+    PJ_TEST_SUCCESS(status=pj_atomic_slist_create(pool, &conf_port->free_node_cache), NULL, goto on_return);
+    PJ_TEST_NOT_NULL(free_node = pj_atomic_slist_calloc(pool, 1, sizeof(rx_buffer_slist_node)), NULL, 
+                     {status = PJ_ENOMEM;goto on_return;});
+    PJ_TEST_SUCCESS(status=pj_atomic_slist_push(conf_port->free_node_cache, &free_node), NULL, goto on_return);
+    PJ_TEST_SUCCESS(status=pj_atomic_slist_create(pool, &conf_port->buff_to_mix), NULL, goto on_return);
+    PJ_TEST_SUCCESS(status=pj_atomic_create(pool, 0, &conf_port->requests_to_mix), NULL, goto on_return);
 
     /* Done */
     *p_conf_port = conf_port;
 
 on_return:
     if (status != PJ_SUCCESS) {
+        if (conf_port->tx_lock)
+            PJ_TEST_SUCCESS(pj_lock_destroy(conf_port->tx_lock),NULL,(void)0);
+        if (conf_port->free_node_cache)
+            PJ_TEST_SUCCESS(pj_atomic_slist_destroy(conf_port->free_node_cache),NULL,(void)0);
+        if (conf_port->buff_to_mix)
+            PJ_TEST_SUCCESS(pj_atomic_slist_destroy(conf_port->buff_to_mix),NULL,(void)0);
+        if (conf_port->requests_to_mix)
+            PJ_TEST_SUCCESS(pj_atomic_destroy(conf_port->requests_to_mix),NULL,(void)0);
         if (pool)
             pj_pool_release(pool);
     }
@@ -1072,18 +1260,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool_,
     pj_list_init(conf->op_queue);
     pj_list_init(conf->op_queue_free);
 
-
-#if defined(PJ_STACK_IMPLEMENTATION)
-    status = pj_stack_create(pool, &conf->unused_slots);
+    status = pj_atomic_slist_create(pool, &conf->unused_slots);
     if (status != PJ_SUCCESS) {
         pjmedia_conf_destroy(conf);
         return status;
     }
-#else
-    conf->unused_slots = PJ_POOL_ZALLOC_T(pool, unused_slots_cache);
-    pj_list_init(conf->unused_slots);
-#endif
-    conf->free_port_slots = pj_pool_calloc(pool, conf->max_ports, sizeof(port_slot));
+    conf->free_port_slots = pj_atomic_slist_calloc(pool, conf->max_ports, sizeof(port_slot));
     PJ_ASSERT_ON_FAIL(conf->free_port_slots, {pjmedia_conf_destroy(conf); return PJ_ENOMEM;});
     i = conf->max_ports;
     while (i--) {               /* prepare unused slots to later reservation, reverse order due to FILO */
@@ -1212,11 +1394,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
         }
     }
 
-#if defined(PJ_STACK_IMPLEMENTATION)
-    /* Destroy stack */
+    /* Destroy slist */
     if (conf->unused_slots)
-        pj_stack_destroy(conf->unused_slots);
-#endif
+        pj_atomic_slist_destroy(conf->unused_slots);
 
     /* Destroy mutex */
     if (conf->mutex)
@@ -1416,18 +1596,7 @@ on_return:
 static SLOT_TYPE conf_reserve_port(pjmedia_conf *conf)
 {
     port_slot *pslot;
-#if defined(PJ_STACK_IMPLEMENTATION)
-    pslot = pj_stack_pop(conf->unused_slots);
-#else
-    pj_mutex_lock(conf->mutex);
-    if (!pj_list_empty(conf->unused_slots)) {
-        pslot = conf->unused_slots->next;
-        pj_list_erase(pslot);
-    } else {
-        pslot = NULL;
-    }
-    pj_mutex_unlock(conf->mutex);
-#endif
+    pslot = pj_atomic_slist_pop(conf->unused_slots);
     if (!pslot)
         return INVALID_SLOT;
 
@@ -1444,14 +1613,7 @@ static pj_status_t conf_release_port(pjmedia_conf *conf, SLOT_TYPE slot)
     /* Check arguments */
     PJ_ASSERT_RETURN( conf && slot < conf->max_ports, PJ_EINVAL );
     PJ_ASSERT_RETURN( conf->ports[slot] == NULL, PJ_EINVALIDOP );
-#if defined(PJ_STACK_IMPLEMENTATION)
-    return pj_stack_push( conf->unused_slots, conf->free_port_slots + slot );
-#else
-    pj_mutex_lock(conf->mutex);
-    pj_list_push_front(conf->unused_slots, conf->free_port_slots + slot);
-    pj_mutex_unlock(conf->mutex);
-    return PJ_SUCCESS;
-#endif
+    return pj_atomic_slist_push( conf->unused_slots, conf->free_port_slots + slot );
 }
 
 
@@ -2038,11 +2200,7 @@ on_return:
  */
 PJ_DEF(unsigned) pjmedia_conf_get_port_count(pjmedia_conf *conf)
 {
-#if defined(PJ_STACK_IMPLEMENTATION)
-    return conf->max_ports - pj_stack_size(conf->unused_slots);    //O(1)
-#else
-    return conf->max_ports - pj_list_size(conf->unused_slots);     //O(n)
-#endif
+    return conf->max_ports - pj_atomic_slist_size(conf->unused_slots);
 
 #if 0
     return conf->port_cnt;
@@ -2258,8 +2416,8 @@ static void destroy_conf_port( struct conf_port *conf_port )
         }
     }
 
-    if (conf_port->tx_Lock != NULL)
-        pj_lock_destroy(conf_port->tx_Lock);
+    if (conf_port->tx_lock != NULL)
+        pj_lock_destroy(conf_port->tx_lock);
 
     pj_pool_safe_release(&conf_port->pool);
 }
@@ -3203,12 +3361,16 @@ static void perform_get_frame(pjmedia_conf *conf)
     pjmedia_frame *frame = conf->frame;
 
     while ((i = pj_atomic_dec_and_get(conf->active_ports_idx)) >= 0) {
+        pj_int16_t *p_in;
+        unsigned j;
+        pj_int32_t cj, listener_cnt;  //parallelization requires signed int
+        pjmedia_frame_type frame_type;
+        pj_int32_t level = 0;
         pj_int32_t port_idx = conf->active_ports[i];
         pj_assert((unsigned)port_idx < conf->max_ports);
         struct conf_port *conf_port = conf->ports[port_idx];
         PJ_ASSERT_ON_FAIL(conf_port, continue);
 
-        pj_int16_t *p_in;
         p_in = get_read_buffer(conf_port, frame);
 
         /* Get frame from this port.
@@ -3218,22 +3380,22 @@ static void perform_get_frame(pjmedia_conf *conf)
         if (conf_port->delay_buf != NULL) {
 
             /* Check that correct size is specified. */
-            pj_assert(frame->size == conf/*_port*/->rx_frame_buf_cap);
+            pj_assert(frame->size == conf->rx_frame_buf_cap);
             /* read data to different buffers to different conf_port's parallel processing */
             status = pjmedia_delay_buf_get(conf_port->delay_buf, p_in);
             if (status != PJ_SUCCESS) {
-                conf_port->rx_level = 0;
+                //conf_port->rx_level = 0;
                 TRACE_EX((THIS_FILE, "%s: No frame from the passive port (%.*s, %d, listener_cnt=%d)",
                           pj_thread_get_name(pj_thread_this()),
                           (int)conf_port->name.slen,
                           conf_port->name.ptr,
                           port_idx, conf_port->listener_cnt));
-                continue;
-            }
+                frame_type = PJMEDIA_FRAME_TYPE_NONE;
+                //continue;
+            } else
+                frame_type = PJMEDIA_FRAME_TYPE_AUDIO;
 
         } else {
-
-            pjmedia_frame_type frame_type;
 
             /* Check that correct size is specified. */
             pj_assert(frame->size == conf/*_port */->rx_frame_buf_cap);
@@ -3281,7 +3443,7 @@ static void perform_get_frame(pjmedia_conf *conf)
                                      status));
                 conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
                  */
-                conf_port->rx_level = 0;
+                //conf_port->rx_level = 0;
 
                 TRACE_EX((THIS_FILE, "%s: No frame from the port (%.*s, %d, listener_cnt=%d)",
                           pj_thread_get_name(pj_thread_this()),
@@ -3289,87 +3451,78 @@ static void perform_get_frame(pjmedia_conf *conf)
                           conf_port->name.ptr,
                           port_idx, conf_port->listener_cnt));
 
-                continue;
+                frame_type = PJMEDIA_FRAME_TYPE_NONE;
+                //continue;
             }
-
-#if 0
-            /* Check that the port is not removed when we call get_frame() */
-            if (conf->ports[i] == NULL) {
-                /* if port is removed old conf_port may point to not authorized memory */
-                conf_port->rx_level = 0;
-                continue;
-            }
-#endif      
 
             /* Ignore if we didn't get any frame */
             if (frame_type != PJMEDIA_FRAME_TYPE_AUDIO) {
-                conf_port->rx_level = 0;
+                //conf_port->rx_level = 0;
                 TRACE_EX((THIS_FILE, "%s: frame_type %d != PJMEDIA_FRAME_TYPE_AUDIO from the port (%.*s, %d, listener_cnt=%d)",
                           pj_thread_get_name(pj_thread_this()),
                           frame_type,
                           (int)conf_port->name.slen,
                           conf_port->name.ptr,
                           port_idx, conf_port->listener_cnt));
-                continue;
+                //continue;
             }
         }
 
-        pj_int32_t level = 0;
-        unsigned j;
+        /* Ignore if we didn't get any frame */
+        if (frame_type != PJMEDIA_FRAME_TYPE_AUDIO)
+            conf_port->rx_level = 0;
+        else {
+            /* Adjust the RX level from this port
+            * and calculate the average level at the same time.
+            */
+            if (conf_port->rx_adj_level != NORMAL_LEVEL) {
+                for (j=0; j<conf->samples_per_frame; ++j) {
+                    /* For the level adjustment, we need to store the sample to
+                    * a temporary 32bit integer value to avoid overflowing the
+                    * 16bit sample storage.
+                    */
+                    pj_int32_t itemp;
 
-        /* Adjust the RX level from this port
-         * and calculate the average level at the same time.
-         */
-        if (conf_port->rx_adj_level != NORMAL_LEVEL) {
-            for (j=0; j<conf->samples_per_frame; ++j) {
-                /* For the level adjustment, we need to store the sample to
-                 * a temporary 32bit integer value to avoid overflowing the
-                 * 16bit sample storage.
-                 */
-                pj_int32_t itemp;
+                    itemp = p_in[j];
+                    /*itemp = itemp * adj / NORMAL_LEVEL;*/
+                    /* bad code (signed/unsigned badness):
+                    *  itemp = (itemp * conf_port->rx_adj_level) >> 7;
+                    */
+                    itemp *= conf_port->rx_adj_level;
+                    itemp >>= 7;
 
-                itemp = p_in[j];
-                /*itemp = itemp * adj / NORMAL_LEVEL;*/
-                /* bad code (signed/unsigned badness):
-                 *  itemp = (itemp * conf_port->rx_adj_level) >> 7;
-                 */
-                itemp *= conf_port->rx_adj_level;
-                itemp >>= 7;
+                    /* Clip the signal if it's too loud */
+                    if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+                    else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
 
-                /* Clip the signal if it's too loud */
-                if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
-                else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
-
-                p_in[j] = (pj_int16_t) itemp;
-                level += (p_in[j]>=0 ? p_in[j] : -p_in[j]);
+                    p_in[j] = (pj_int16_t) itemp;
+                    level += (p_in[j]>=0 ? p_in[j] : -p_in[j]);
+                }
+            } else {
+                for (j=0; j<conf->samples_per_frame; ++j) {
+                    level += (p_in[j]>=0 ? p_in[j] : -p_in[j]);
+                }
             }
-        } else {
-            for (j=0; j<conf->samples_per_frame; ++j) {
-                level += (p_in[j]>=0 ? p_in[j] : -p_in[j]);
-            }
+
+            level /= conf->samples_per_frame;
+
+            /* Convert level to 8bit complement ulaw */
+            level = pjmedia_linear2ulaw(level) ^ 0xff;
+
+            /* Put this level to port's last RX level. */
+            conf_port->rx_level = level;
+
+            // Ticket #671: Skipping very low audio signal may cause noise 
+            // to be generated in the remote end by some hardphones.
+            /* Skip processing frame if level is zero */
+            //if (level == 0)
+            //    continue;
         }
-
-        level /= conf->samples_per_frame;
-
-        /* Convert level to 8bit complement ulaw */
-        level = pjmedia_linear2ulaw(level) ^ 0xff;
-
-        /* Put this level to port's last RX level. */
-        conf_port->rx_level = level;
-
-        // Ticket #671: Skipping very low audio signal may cause noise 
-        // to be generated in the remote end by some hardphones.
-        /* Skip processing frame if level is zero */
-        //if (level == 0)
-        //    continue;
-
-        pj_int32_t cj, listener_cnt;  //parallelization requires signed int
 
         /* Add the signal to all listeners. */
         for (cj = 0, listener_cnt = conf_port->listener_cnt; cj < listener_cnt; ++cj) {
-            pj_int32_t *mix_buf;
             struct conf_port *listener;
-            pj_int16_t *p_in_conn_leveled;
+            rx_buffer_slist_node *mix_node;
             SLOT_TYPE listener_slot = conf_port->listener_slots[cj];
 
             listener = conf->ports[listener_slot];
@@ -3388,183 +3541,53 @@ static void perform_get_frame(pjmedia_conf *conf)
                 continue;
             }
 
-            /* apply connection level, if not normal */
-            if (conf_port->listener_adj_level[cj] != NORMAL_LEVEL) {
-                unsigned k = 0;
-                for (; k < conf->samples_per_frame; ++k) {
-                    /* For the level adjustment, we need to store the sample to
-                     * a temporary 32bit integer value to avoid overflowing the
-                     * 16bit sample storage.
-                     */
-                    pj_int32_t itemp;
-
-                    itemp = p_in[k];
-                    /*itemp = itemp * adj / NORMAL_LEVEL;*/
-                    /* bad code (signed/unsigned badness):
-                     *  itemp = (itemp * conf_port->listsener_adj_level) >> 7;
-                     */
-                    itemp *= conf_port->listener_adj_level[cj];
-                    itemp >>= 7;
-
-                    /* Clip the signal if it's too loud */
-                    if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
-                    else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
-
-                    conf_port->adj_level_buf[k] = (pj_int16_t)itemp;
-                }
-
-                /* take the leveled frame */
-                p_in_conn_leveled = conf_port->adj_level_buf;
-            } else {
-                /* take the frame as-is */
-                p_in_conn_leveled = p_in;
+            mix_node = pj_atomic_slist_pop(listener->free_node_cache);
+            pj_assert(mix_node || listener->transmitter_cnt > 1 && conf->is_parallel);
+            pj_assert(conf->is_parallel == (listener->tx_lock != NULL));
+            if (mix_node == NULL && listener->tx_lock) {
+                pj_lock_acquire(listener->tx_lock);
+                /* tx_lock protects listener->pool.
+                 * The only operation that requires lock protection.
+                 */
+                mix_node = pj_atomic_slist_calloc(listener->pool, 1, sizeof(rx_buffer_slist_node));
+                pj_lock_release(listener->tx_lock);
             }
 
-            mix_buf = listener->mix_buf;
-            pj_bool_t ready_to_transmit = PJ_FALSE;
+            PJ_ASSERT_ON_FAIL(mix_node, continue);
 
-            if (listener->transmitter_cnt > 1) {
-                /* Mixing signals,
-                 * and calculate appropriate level adjustment if there is
-                 * any overflowed level in the mixed signal.
+            mix_node->rx_frame_buf = p_in;
+            mix_node->rx_port = conf_port;
+            mix_node->listener_adj_level = conf_port->listener_adj_level[cj];
+            mix_node->frame_type = frame_type;
+            pj_atomic_slist_push(listener->buff_to_mix, mix_node);
+
+            if (pj_atomic_inc_and_get(listener->requests_to_mix) == 1) {
+                /* the first mixer appeared here - mix all for this listener! 
+                 * This thread has monopolized the mixing operations on that listener port.
+                 * Other threads can asynchronously push their data 
+                 * into this listener?s buff_to_mix.
                  */
-                unsigned k, samples_per_frame = conf->samples_per_frame;
-                pj_int32_t mix_buf_min = 0;
-                pj_int32_t mix_buf_max = 0;
+                do {
+                    while ((mix_node = pj_atomic_slist_pop(listener->buff_to_mix)) != NULL) {
 
-                pj_assert(conf->is_parallel == (listener->tx_Lock != NULL));
-                //protect listener->mix_buf, listener->mix_adj, listener->last_timestamp
-                if (listener->tx_Lock)
-                    pj_lock_acquire(listener->tx_Lock);
+                        unsigned listener_adj_level = mix_node->listener_adj_level;
+                        struct conf_port *rx_port = mix_node->rx_port;
+                        pj_int16_t *rx_buf = mix_node->rx_frame_buf;
+                        pjmedia_frame_type rx_frame_type = mix_node->frame_type;
 
-                if (listener->last_timestamp.u64 == frame->timestamp.u64) {
-                    //this frame is NOT from the first transmitter
-                    for (k = 0; k < samples_per_frame; ++k) {
-                        mix_buf[k] += p_in_conn_leveled[k]; // not the first - sum
-                        if (mix_buf[k] < mix_buf_min)
-                            mix_buf_min = mix_buf[k];
-                        if (mix_buf[k] > mix_buf_max)
-                            mix_buf_max = mix_buf[k];
+                        /* return node into free_node_cache ASAP, 
+                         * other threads may reuse it now 
+                         */
+                        pj_atomic_slist_push(listener->free_node_cache, mix_node);
+
+                        /* only one thread at time call mix_and_transmit() for the
+                         * same listener, no addition lock protection required here */
+                        mix_and_transmit(conf,
+                                         listener, listener_slot, listener_adj_level,
+                                         rx_port, rx_buf, rx_frame_type, 
+                                         &frame->timestamp);
                     }
-                    TRACE_EX((THIS_FILE, "%s: listener (%.*s, %d, transmitter_cnt=%d) get (sum) audio from the port (%.*s, %d, listener_cnt=%d)",
-                              pj_thread_get_name(pj_thread_this()),
-                              (int)listener->name.slen,
-                              listener->name.ptr,
-                              listener_slot,
-                              listener->transmitter_cnt,
-                              (int)conf_port->name.slen,
-                              conf_port->name.ptr,
-                              port_idx, conf_port->listener_cnt));
-
-                } else {
-                    //this frame is from the first transmitter
-                    listener->last_timestamp = frame->timestamp;
-
-                    /* We do not want to reset buffer, we just copy the first frame there. */
-                    for (k = 0; k < samples_per_frame; ++k) {
-                        mix_buf[k] = p_in_conn_leveled[k]; // the first - copy
-                        if (mix_buf[k] < mix_buf_min)
-                            mix_buf_min = mix_buf[k];
-                        if (mix_buf[k] > mix_buf_max)
-                            mix_buf_max = mix_buf[k];
-                    }
-                    TRACE_EX((THIS_FILE, "%s: listener %p (%.*s, %d, transmitter_cnt=%d) get (copy) audio from the port %p (%.*s, %d, listener_cnt=%d)",
-                              pj_thread_get_name(pj_thread_this()),
-                              listener,
-                              (int)listener->name.slen,
-                              listener->name.ptr,
-                              listener_slot,
-                              listener->transmitter_cnt,
-                              conf_port,
-                              (int)conf_port->name.slen,
-                              conf_port->name.ptr,
-                              port_idx, conf_port->listener_cnt));
-                }
-
-                /* Check if normalization adjustment needed. */
-                if (mix_buf_min < MIN_LEVEL || mix_buf_max > MAX_LEVEL) {
-                    int tmp_adj;
-
-                    if (-mix_buf_min > mix_buf_max)
-                        mix_buf_max = -mix_buf_min;
-
-                    /* NORMAL_LEVEL * MAX_LEVEL / mix_buf_max; */
-                    tmp_adj = (MAX_LEVEL<<7) / mix_buf_max;
-                    if (tmp_adj < listener->mix_adj)
-                        listener->mix_adj = tmp_adj;
-                }
-
-                if (listener->transmitter_cnt == listener->mixed_cnt + 1) {
-                    ready_to_transmit = PJ_TRUE;
-                    listener->mixed_cnt = 0;
-                } else
-                    ++listener->mixed_cnt;
-
-                pj_assert(conf->is_parallel == (listener->tx_Lock != NULL));
-                if (listener->tx_Lock)
-                    pj_lock_release(listener->tx_Lock);
-
-            } else {
-                //this frame is from the only transmitter
-                pj_assert(listener->transmitter_cnt == 1 && listener->last_timestamp.u64 != frame->timestamp.u64);
-                listener->last_timestamp = frame->timestamp;
-
-                /* Only 1 transmitter:
-                 * just copy the samples to the mix buffer
-                 * no mixing and level adjustment needed
-                 */
-                unsigned k, samples_per_frame = conf->samples_per_frame;
-
-                for (k = 0; k < samples_per_frame; ++k) {
-                    mix_buf[k] = p_in_conn_leveled[k];  // here copying 16 bit value to 32 bit dst
-                }
-                TRACE_EX((THIS_FILE, "%s: listener %p (%.*s, %d, transmitter_cnt=%d)"
-                          " get audio from the (only) port %p (%.*s, %d, listener_cnt=%d) last_timestamp=%llu, timestamp=%llu",
-                          pj_thread_get_name(pj_thread_this()),
-                          listener,
-                          (int)listener->name.slen,
-                          listener->name.ptr,
-                          listener->slot,
-                          listener->transmitter_cnt,
-                          conf_port,
-                          (int)conf_port->name.slen,
-                          conf_port->name.ptr,
-                          conf_port->slot, conf_port->listener_cnt,
-                          listener->last_timestamp.u64, frame->timestamp.u64));
-
-                ready_to_transmit = PJ_TRUE;
-
-            }
-
-            if (ready_to_transmit) {
-                pjmedia_frame_type frm_type;
-                status = write_port(conf, listener, &frame->timestamp, &frm_type);
-#if 0
-                if (status != PJ_SUCCESS) {
-                    /* bennylp: why do we need this????
-                        One thing for sure, put_frame()/write_port() may return
-                        non-successfull status on Win32 if there's temporary glitch
-                        on network interface, so disabling the port here does not
-                        sound like a good idea.
-
-                    PJ_LOG(4,(THIS_FILE, "Port %.*s put_frame() returned %d. "
-                                    "Port is now disabled",
-                                    (int)conf_port->name.slen,
-                                    conf_port->name.ptr,
-                                    status));
-                    conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
-                    */
-                    continue;
-                }
-#endif
-                /* Set the type of frame to be returned to sound playback
-                 * device.
-                 */
-                if (status == PJ_SUCCESS && listener_slot == 0 && listener->tx_level) {
-                    /* MUST set frame type */
-                    conf->frame->type = frm_type;
-                    conf->sound_port = listener;
-                }
+                } while (pj_atomic_dec_and_get(listener->requests_to_mix));
             }
 
         } /* loop the listeners of conf port */
@@ -3592,6 +3615,183 @@ static void perform_get_frame(pjmedia_conf *conf)
 
 }
 
+static void mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener, 
+                             SLOT_TYPE listener_slot,
+                             unsigned listener_adj_level, 
+                             struct conf_port *conf_port,
+                             pj_int16_t *p_in,
+                             pjmedia_frame_type frame_type,
+                             const pj_timestamp *timestamp) 
+{
+    PJ_UNUSED_ARG(conf_port);
+
+    if (frame_type != PJMEDIA_FRAME_TYPE_NONE) {
+        pj_int16_t *p_in_conn_leveled;
+
+        pj_int32_t *mix_buf = listener->mix_buf;
+
+        /* apply connection level, if not normal */
+        if (listener_adj_level != NORMAL_LEVEL) {
+            unsigned k = 0;
+            for (; k < conf->samples_per_frame; ++k) {
+                /* For the level adjustment, we need to store the sample to
+                * a temporary 32bit integer value to avoid overflowing the
+                * 16bit sample storage.
+                */
+                pj_int32_t itemp;
+
+                itemp = p_in[k];
+                /*itemp = itemp * adj / NORMAL_LEVEL;*/
+                /* bad code (signed/unsigned badness):
+                *  itemp = (itemp * conf_port->listsener_adj_level) >> 7;
+                */
+                itemp *= listener_adj_level;
+                itemp >>= 7;
+
+                /* Clip the signal if it's too loud */
+                if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+                else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
+
+                listener->adj_level_buf[k] = (pj_int16_t)itemp;
+            }
+
+            /* take the leveled frame */
+            p_in_conn_leveled = listener->adj_level_buf;
+        } else {
+            /* take the frame as-is */
+            p_in_conn_leveled = p_in;
+        }
+
+        if (listener->transmitter_cnt > 1) {
+            /* Mixing signals,
+            * and calculate appropriate level adjustment if there is
+            * any overflowed level in the mixed signal.
+            */
+            unsigned k, samples_per_frame = conf->samples_per_frame;
+            pj_int32_t mix_buf_min = 0;
+            pj_int32_t mix_buf_max = 0;
+
+            if (listener->last_timestamp.u64 == timestamp->u64) {
+                //this frame is NOT from the first transmitter
+                for (k = 0; k < samples_per_frame; ++k) {
+                    mix_buf[k] += p_in_conn_leveled[k]; // not the first - sum
+                    if (mix_buf[k] < mix_buf_min)
+                        mix_buf_min = mix_buf[k];
+                    if (mix_buf[k] > mix_buf_max)
+                        mix_buf_max = mix_buf[k];
+                }
+                TRACE_EX((THIS_FILE, "%s: listener (%.*s, %d, transmitter_cnt=%d) get (sum) audio from the port (%.*s, %d, listener_cnt=%d)",
+                    pj_thread_get_name(pj_thread_this()),
+                    (int)listener->name.slen,
+                    listener->name.ptr,
+                    listener_slot,
+                    listener->transmitter_cnt,
+                    (int)conf_port->name.slen,
+                    conf_port->name.ptr,
+                    port_idx, conf_port->listener_cnt));
+
+            } else {
+                //this frame is from the first transmitter
+                listener->last_timestamp = *timestamp;
+
+                /* We do not want to reset buffer, we just copy the first frame there. */
+                for (k = 0; k < samples_per_frame; ++k) {
+                    mix_buf[k] = p_in_conn_leveled[k]; // the first - copy
+                    if (mix_buf[k] < mix_buf_min)
+                        mix_buf_min = mix_buf[k];
+                    if (mix_buf[k] > mix_buf_max)
+                        mix_buf_max = mix_buf[k];
+                }
+                TRACE_EX((THIS_FILE, "%s: listener %p (%.*s, %d, transmitter_cnt=%d) get (copy) audio from the port %p (%.*s, %d, listener_cnt=%d)",
+                    pj_thread_get_name(pj_thread_this()),
+                    listener,
+                    (int)listener->name.slen,
+                    listener->name.ptr,
+                    listener_slot,
+                    listener->transmitter_cnt,
+                    conf_port,
+                    (int)conf_port->name.slen,
+                    conf_port->name.ptr,
+                    port_idx, conf_port->listener_cnt));
+            }
+
+            /* Check if normalization adjustment needed. */
+            if (mix_buf_min < MIN_LEVEL || mix_buf_max > MAX_LEVEL) {
+                int tmp_adj;
+
+                if (-mix_buf_min > mix_buf_max)
+                    mix_buf_max = -mix_buf_min;
+
+                /* NORMAL_LEVEL * MAX_LEVEL / mix_buf_max; */
+                tmp_adj = (MAX_LEVEL<<7) / mix_buf_max;
+                if (tmp_adj < listener->mix_adj)
+                    listener->mix_adj = tmp_adj;
+            }
+
+        } else {
+            //this frame is from the only transmitter
+            pj_assert(listener->transmitter_cnt == 1 && listener->last_timestamp.u64 != timestamp->u64);
+            listener->last_timestamp = *timestamp;
+
+            /* Only 1 transmitter:
+            * just copy the samples to the mix buffer
+            * no mixing and level adjustment needed
+            */
+            unsigned k, samples_per_frame = conf->samples_per_frame;
+
+            for (k = 0; k < samples_per_frame; ++k) {
+                mix_buf[k] = p_in_conn_leveled[k];  // here copying 16 bit value to 32 bit dst
+            }
+            TRACE_EX((THIS_FILE, "%s: listener %p (%.*s, %d, transmitter_cnt=%d)"
+                " get audio from the (only) port %p (%.*s, %d, listener_cnt=%d) last_timestamp=%llu, timestamp=%llu",
+                pj_thread_get_name(pj_thread_this()),
+                listener,
+                (int)listener->name.slen,
+                listener->name.ptr,
+                listener->slot,
+                listener->transmitter_cnt,
+                conf_port,
+                (int)conf_port->name.slen,
+                conf_port->name.ptr,
+                conf_port->slot, conf_port->listener_cnt,
+                listener->last_timestamp.u64, timestamp->u64));
+
+        }
+    }
+
+    if (++listener->mixed_cnt == listener->transmitter_cnt) {
+        listener->mixed_cnt = 0;
+
+        pj_status_t status = write_port(conf, listener, timestamp, &frame_type);
+#if 0
+        if (status != PJ_SUCCESS) {
+            /* bennylp: why do we need this????
+            One thing for sure, put_frame()/write_port() may return
+            non-successfull status on Win32 if there's temporary glitch
+            on network interface, so disabling the port here does not
+            sound like a good idea.
+
+            PJ_LOG(4,(THIS_FILE, "Port %.*s put_frame() returned %d. "
+            "Port is now disabled",
+            (int)conf_port->name.slen,
+            conf_port->name.ptr,
+            status));
+            conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
+            */
+            continue;
+        }
+#endif
+        /* Set the type of frame to be returned to sound playback
+        * device.
+        */
+        if (status == PJ_SUCCESS && listener_slot == 0 && listener->tx_level) {
+            /* MUST set frame type */
+            conf->frame->type = frame_type;
+            conf->sound_port = listener;
+        }
+    }
+
+}
 
 #if !DEPRECATED_FOR_TICKET_2234
 /*
