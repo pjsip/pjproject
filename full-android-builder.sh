@@ -1,26 +1,20 @@
 #!/bin/bash
 
-###################################################################
+###########################################################################################################
 #Script Name            : PJSIP Android Builder w/TLS+VIDEO Support
-#Description            : This script builds PJSIP FOR ANDROID w/VIDEO & w/AUDIO & w/TLS/SSL support
-#Args                       : h264 openSSL
+#Description            : This script builds PJSIP FOR ANDROID with OpenH264, OPENSSL, OPUS and BCG729
+#Args                   : h264 openSSL <all|arm64-v8a|armeabi-v7a|x86|x86_64>
 #Author                 : Emre TUFEKCI
 #Email                  : tufekci.emre@tubitak.gov.tr
-###################################################################
+##########################################################################################################
 
-
-#### Copy this script to the main directory of PJSIP
-
-#### VARIABLES CAN BE CHANGED
-### H264 ###
-
-################################## IMPORTANT NOTE #############################################
-#####       Usage:                                                                        #####
-#####       1- Put the present script inside the pjproject folder                         #####
-#####       2- chmod +x full-android-builder                                              #####
-#####       3- Run :                                                                      #####
-#####   ./full-android-builder h264 openssl <all|arm64-v8a|armeabi-v7a|x86|x86_64>        #####
-###############################################################################################
+################################## IMPORTANT NOTE ########################################################
+#####       Usage:                                                                                   #####
+#####       1- Copy the present script inside the pjproject folder                                   #####
+#####       2- chmod +x full-android-builder                                                         #####
+#####       3- Run :                                                                                 #####
+#####   ./full-android-builder h264 openssl <all|arm64-v8a|armeabi-v7a|x86|x86_64>                   #####
+##########################################################################################################
 
 dt=$(date '+%d/%m/%Y %H:%M:%S')
 echo "$dt : Beginning build"
