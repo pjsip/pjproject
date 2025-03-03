@@ -28,6 +28,12 @@
 #   include <CFNetwork/CFHost.h>
 #endif
 
+#if defined(PJ_GETADDRINFO_USE_ANDROID) && PJ_GETADDRINFO_USE_ANDROID!=0
+#include <sys/poll.h>
+#include <resolv.h>
+#include <netdb.h>
+#include <android/multinetwork.h>
+#endif
 PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 {
     struct hostent *he;
@@ -174,6 +180,112 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     CFRelease(hostname);
     
     return status;
+
+#elif defined(PJ_GETADDRINFO_USE_ANDROID) && PJ_GETADDRINFO_USE_ANDROID!=0
+    /* Call getaddrinfo() */
+    pj_bzero(&hint, sizeof(hint));
+    hint.ai_family = af;
+    /* Zero value of ai_socktype means the implementation shall attempt
+     * to resolve the service name for all supported socket types */
+    hint.ai_socktype = SOCK_STREAM;
+
+    //rc = getaddrinfo(nodecopy, NULL, &hint, &res);
+    /* Perform asynchronous DNS resolution */
+    unsigned int netid = NETWORK_UNSPECIFIED; // Use NETWORK_UNSPECIFIED for default network
+    unsigned char answer[NS_PACKETSZ]; // Buffer for the DNS response
+    int rcode = -1;
+    struct addrinfo *result = NULL, *last = NULL;
+
+    // Step 1: Send DNS query
+    int resp_handle = android_res_nquery(netid, nodecopy, ns_c_in, af == PJ_AF_INET ? ns_t_a : af == PJ_AF_INET6 ? ns_t_aaaa : ns_t_a, 0);
+    if (resp_handle < 0) {
+        printf("android_res_nquery() failed\n");
+        return PJ_ERESOLVE;
+    }
+
+    // Step 2: Wait for response using poll()
+    struct pollfd fds;
+    fds.fd = resp_handle;
+    fds.events = POLLIN;
+    int ret = poll(&fds, 1, 5000); // 5-second timeout
+
+    if (ret <= 0) {
+        PJ_LOG(4,("addr_resolv_sock.c","Poll timeout or error"));
+        android_res_cancel(resp_handle);
+        return PJ_ERESOLVE;
+    }
+    // Step 3: Get DNS response
+    int response_size = android_res_nresult(resp_handle, &rcode, answer, sizeof(answer));
+    if (response_size < 0) {
+        PJ_LOG(4,("addr_resolv_sock.c","android_res_nresult() failed"));
+        return PJ_ERESOLVE;
+    }
+
+    // Step 4: Parse the DNS response
+    // Parse DNS response
+    ns_msg msg;
+    ns_rr rr;
+    int num_records, resolved_count = 0;
+
+    if (ns_initparse(answer, response_size, &msg) < 0) {
+        PJ_LOG(4, ("addr_resolv_sock.c", "Failed to parse DNS response"));
+        return PJ_ERESOLVE;
+    }
+
+    num_records = ns_msg_count(msg, ns_s_an);
+    if (num_records == 0) {
+        PJ_LOG(4, ("addr_resolv_sock.c", "No DNS answers found"));
+        return PJ_ERESOLVE;
+    }
+
+    // Process each answer record
+    for (i = 0; i < num_records && resolved_count < *count; i++) {
+        if (ns_parserr(&msg, ns_s_an, i, &rr) < 0) {
+            continue;
+        }
+
+    int type = ns_rr_type(rr);
+    int rdlen = ns_rr_rdlen(rr);
+    const unsigned char *rdata = ns_rr_rdata(rr);
+
+    // We handle A records (IPv4) and AAAA records (IPv6)
+    if ((type == ns_t_a && rdlen == 4) || (type == ns_t_aaaa && rdlen == 16)) {
+
+        // For IPv4, fill a temporary sockaddr_in, for IPv6 fill a sockaddr_in6.
+        if (type == ns_t_a) {
+            struct sockaddr_in addr;
+            pj_bzero(&addr, sizeof(addr));
+            addr.sin_family = PJ_AF_INET;
+            memcpy(&addr.sin_addr, rdata, 4);
+            // Copy the filled sockaddr into pj_addrinfo.ai_addr:
+            pj_memcpy(&ai[resolved_count].ai_addr, &addr, sizeof(addr));
+        } else { // ns_t_aaaa
+            struct sockaddr_in6 addr6;
+            pj_bzero(&addr6, sizeof(addr6));
+            addr6.sin6_family = PJ_AF_INET6;
+            memcpy(&addr6.sin6_addr, rdata, 16);
+            pj_memcpy(&ai[resolved_count].ai_addr, &addr6, sizeof(addr6));
+        }
+
+        // Store canonical name into ai[].ai_canonname.
+        // (You can use pj_ansi_strxcpy which is PJSIP’s safe string copy)
+        pj_ansi_strxcpy(ai[resolved_count].ai_canonname,
+                        nodename->ptr,
+                        sizeof(ai[resolved_count].ai_canonname));
+
+        resolved_count++;
+    }
+}
+
+// Update the count with the number of valid entries found.
+*count = resolved_count;
+
+if (resolved_count == 0) {
+    return PJ_ERESOLVE;
+}
+
+return PJ_SUCCESS;
+
 #else
     /* Call getaddrinfo() */
     pj_bzero(&hint, sizeof(hint));
