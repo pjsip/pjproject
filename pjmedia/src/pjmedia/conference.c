@@ -526,7 +526,11 @@ struct pjmedia_conf
                                            * done only by get_frame() thread.*/
     pj_thread_t        **pool_threads;    /**< Thread pool's threads        */
     pj_barrier_t        *active_thread;   /**< entry barrier                */
+#if 0
     pj_barrier_t        *barrier;         /**< exit barrier                 */
+#endif
+    pj_atomic_t         *active_thread_cnt;/**< active worker thread counter*/
+    pj_event_t          *barrier_evt;     /**< exit barrier                 */
     pj_bool_t            quit_flag;       /**< quit flag for threads        */
     pj_bool_t            running;         /**< thread pool is running       */
     pj_atomic_t         *active_ports_idx;/**< index of the element of the
@@ -1359,7 +1363,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
     /* Destroy thread pool */
     if (conf->pool_threads) {
         pj_thread_t **threads = conf->pool_threads;
-        pj_thread_t **end = threads + (conf->threads - 1);
+        pj_thread_t **end = threads + (conf->threads-1);
         while (threads < end) {
             if (*threads) {
                 pj_thread_join(*threads);
@@ -1371,8 +1375,16 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
     }
     if (conf->active_thread)
         pj_barrier_destroy(conf->active_thread);
+#if 0
     if (conf->barrier)
         pj_barrier_destroy(conf->barrier);
+#endif
+    /* active worker thread counter*/
+    if (conf->active_thread_cnt)
+        PJ_TEST_SUCCESS(pj_atomic_destroy(conf->active_thread_cnt), NULL, (void)0);
+    /* exit barrier event */
+    if (conf->barrier_evt)
+        PJ_TEST_SUCCESS(pj_event_destroy(conf->barrier_evt), NULL, (void)0);
 
 
     /* Destroy sound device port. */
@@ -3228,6 +3240,12 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         }
 
         perform_get_frame(conf);
+
+        if (conf->is_parallel) {
+            /* wait until all worker threads have completed their work */
+            PJ_TEST_SUCCESS(pj_event_wait(conf->barrier_evt),NULL,(void)0);
+            pj_atomic_set(conf->active_thread_cnt, conf->threads-1);
+        }
         pj_assert(pj_atomic_get(conf->active_ports_idx) == -conf->threads);
 
         /* Return sound playback frame. */
@@ -3242,6 +3260,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
             conf->sound_port = NULL;
         }
         conf->frame = NULL;
+
     }
 
     /* Perform any queued operations that need to be synchronized with
@@ -3266,30 +3285,40 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 static pj_status_t thread_pool_start(pjmedia_conf *conf)
 {
-    pj_status_t status;
     int i;
     pj_assert(conf->is_parallel);
 
-    status = pj_barrier_create(conf->pool,
-                               conf->threads,
-                               &conf->active_thread);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    PJ_TEST_SUCCESS(pj_barrier_create(conf->pool,
+                                      conf->threads,
+                                      &conf->active_thread), 
+                    NULL, return tmp_status_);
 
-    status = pj_barrier_create(conf->pool,
-                               conf->threads,
-                               &conf->barrier);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#if 0
+    PJ_TEST_SUCCESS(pj_barrier_create(conf->pool,
+                                      conf->threads,
+                                      &conf->barrier), 
+                    NULL, return tmp_status_);
+#endif
+
+    pj_atomic_value_t    worker_threads = conf->threads-1;
+    /* active worker thread counter*/
+    PJ_TEST_SUCCESS(pj_atomic_create(conf->pool, worker_threads, &conf->active_thread_cnt), 
+                    NULL, return tmp_status_);
+    /* exit barrier event */
+    PJ_TEST_SUCCESS(pj_event_create(conf->pool, "barrier_evt", PJ_FALSE, PJ_FALSE, &conf->barrier_evt), 
+                    NULL, return tmp_status_);
+
 
     /* Thread description's to register threads with pjsip */
-    conf->pool_threads = (pj_thread_t **)pj_pool_calloc(conf->pool, conf->threads - 1, sizeof(pj_thread_t *));
+    conf->pool_threads = (pj_thread_t **)pj_pool_calloc(conf->pool, worker_threads, sizeof(pj_thread_t *));
     PJ_ASSERT_RETURN(conf->pool_threads, PJ_ENOMEM);
 
-    for (i = 0; i < conf->threads - 1; i++) {
+    for (i = 0; i < worker_threads; i++) {
         char        obj_name[PJ_MAX_OBJ_NAME];
         pj_ansi_snprintf(obj_name, sizeof(obj_name), "conf_pool_%d", i);
 
-        status = pj_thread_create(conf->pool, obj_name, &conf_thread, conf, 0, 0, &conf->pool_threads[i]);
-        PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+        PJ_TEST_SUCCESS(pj_thread_create(conf->pool, obj_name, &conf_thread, conf, 0, 0, &conf->pool_threads[i]), 
+                        NULL, return tmp_status_);
     }
 
     conf->running = PJ_TRUE;
@@ -3347,6 +3376,10 @@ static int conf_thread(void *arg)
             }
 
             perform_get_frame(conf);
+
+            /* signal to the get_frame() thread if all worker threads have completed their work */
+            if (!pj_atomic_dec_and_get(conf->active_thread_cnt))
+                PJ_TEST_SUCCESS(pj_event_set(conf->barrier_evt), NULL, (void)0);
         }
     }
 
@@ -3594,6 +3627,7 @@ static void perform_get_frame(pjmedia_conf *conf)
 
     } /* loop of all conf ports */
 
+#if 0
     if (conf->is_parallel) {
         pj_int32_t rc;
         TRACE_EX((THIS_FILE, "%s: timestamp=%llu, ARRIVE AT BARRIER",
@@ -3612,7 +3646,7 @@ static void perform_get_frame(pjmedia_conf *conf)
                   rc));
         PJ_UNUSED_ARG(rc);
     }
-
+#endif //0
 }
 
 static void mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener, 
