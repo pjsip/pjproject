@@ -838,8 +838,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
 PJ_DEF(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
                                               pjsip_auth_clt_sess *parent)
 {
-    PJ_ASSERT_RETURN(sess && parent, PJ_EINVAL);
-    if (parent->lock == NULL) {
+    PJ_ASSERT_RETURN(sess, PJ_EINVAL);
+    if (parent != NULL && parent->lock == NULL) {
         pj_status_t status;
         status = pj_lock_create_simple_mutex( parent->pool,
                                               "auth_clt_parent_lock",
