@@ -838,8 +838,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
 PJ_DEF(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
                                               pjsip_auth_clt_sess *parent)
 {
-    PJ_ASSERT_RETURN(sess && parent, PJ_EINVAL);
-    if (parent->lock == NULL) {
+    PJ_ASSERT_RETURN(sess, PJ_EINVAL);
+    if (parent != NULL && parent->lock == NULL) {
         pj_status_t status;
         status = pj_lock_create_simple_mutex( parent->pool,
                                               "auth_clt_parent_lock",
@@ -907,17 +907,17 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
         }
     }
 
-    if (sess->parent) {
+    if (rhs->parent) {
         pj_status_t status;
 
-        pj_lock_acquire(sess->parent->lock);
+        pj_lock_acquire(rhs->parent->lock);
         sess->parent = PJ_POOL_ZALLOC_T(pool, pjsip_auth_clt_sess);
         if (sess->parent == NULL) {
             status = PJ_ENOMEM;
         } else {
             status = pjsip_auth_clt_clone(pool, sess->parent, rhs->parent);
         }
-        pj_lock_release(sess->parent->lock);
+        pj_lock_release(rhs->parent->lock);
 
         if (status != PJ_SUCCESS)
             return status;

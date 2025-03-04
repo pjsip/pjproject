@@ -96,7 +96,6 @@ struct pjsip_regc
 
     /* Authorization sessions. */
     pjsip_auth_clt_sess          auth_sess;
-    pjsip_auth_clt_sess         *ext_auth_sess; /**< User defined auth session.     */
 
     /* Auto refresh registration. */
     pj_bool_t                    auto_reg;
@@ -1222,6 +1221,9 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
             }
         }
 
+        if (regc->_delete_flag != 0) {
+            pjsip_auth_clt_set_parent(&regc->auth_sess, NULL);
+        }
         status = pjsip_auth_clt_reinit_req( &regc->auth_sess,
                                             rdata, 
                                             tsx->last_tx,  
