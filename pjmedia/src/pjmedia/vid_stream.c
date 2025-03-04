@@ -27,6 +27,7 @@
 #include <pj/compat/socket.h>
 #include <pj/errno.h>
 #include <pj/ioqueue.h>
+#include <pj/list.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
@@ -74,6 +75,12 @@
  */
 typedef pjmedia_channel pjmedia_vid_channel;
 
+/*
+ * Forward declaration of sending thread structures.
+ */
+struct send_stream;
+struct send_manager;
+
 /**
  * This structure describes media stream.
  * A media stream is bidirectional media transmission between two endpoints.
@@ -83,7 +90,7 @@ typedef pjmedia_channel pjmedia_vid_channel;
  */
 struct pjmedia_vid_stream
 {
-    pjmedia_stream_common   base;
+    pjmedia_stream_common    base;
 
     pjmedia_vid_codec_mgr   *codec_mgr;     /**< Codec manager.             */
     pjmedia_vid_stream_info  info;          /**< Stream info.               */
@@ -133,6 +140,8 @@ struct pjmedia_vid_stream
     pj_timestamp             tx_start;
     pj_timestamp             tx_end;
 #endif
+
+    struct send_stream      *send_stream;
 };
 
 /* Prototypes */
@@ -147,6 +156,286 @@ static void on_destroy(void *arg);
 
 
 #include "stream_imp_common.c"
+
+
+/*
+ * RTP send scheduler for rate control.
+ */
+
+/* Sending entry */
+typedef struct send_entry
+{
+    PJ_DECL_LIST_MEMBER(struct send_entry);
+
+    struct send_stream  *stream;
+    void                *buf;
+    pj_size_t            buf_size;
+
+    pj_timestamp         send_ts;
+    pj_timestamp         sent_ts;
+} send_entry;
+
+/* Sending stream */
+typedef struct send_stream
+{
+    struct send_manager *mgr;
+    send_entry           free_list;
+    pj_grp_lock_t       *grp_lock;
+    pjmedia_transport   *tp;
+    pj_pool_t           *pool;
+    pj_size_t            buf_size;
+    const char          *name;
+
+    pj_timestamp         rc_start;
+    pj_size_t            rc_total;
+    unsigned             rc_bandwidth;
+    pj_timestamp         ts_freq;
+    unsigned             rtp_tx_err_cnt;
+
+} send_stream;
+
+/* Sending manager (may be shared by multiple streams in the future) */
+typedef struct send_manager
+{
+    pj_pool_t           *pool;
+    pj_thread_t         *thread;
+    pj_grp_lock_t       *grp_lock;
+    pj_bool_t            is_quitting;
+    send_entry           send_list;
+} send_manager;
+
+/* Sending worker thread. */
+static int send_worker_thread(void* arg)
+{
+    send_manager* mgr = (send_manager*)arg;
+    pj_status_t status;
+
+    while (!mgr->is_quitting) {
+        send_entry *e;
+        send_stream *s;
+        pj_timestamp now;
+
+        /* Find a packet to send */
+        pj_grp_lock_acquire(mgr->grp_lock);
+        pj_get_timestamp(&now);
+        e = mgr->send_list.next;
+        while (e != &mgr->send_list) {
+            if (pj_cmp_timestamp(&now, &e->send_ts) >= 0) {
+                pj_list_erase(e);
+                break;
+            }
+
+            e = e->next;
+        }
+        pj_grp_lock_release(mgr->grp_lock);
+
+        /* No packet to send, just sleep */
+        if (e == &mgr->send_list) {
+            pj_thread_sleep(10);
+            continue;
+        }
+
+        /* Send the packet */
+        s = e->stream;
+        status = pjmedia_transport_send_rtp(s->tp, e->buf, e->buf_size);
+        if (status != PJ_SUCCESS) {
+            if (s->rtp_tx_err_cnt++ == 0)
+                LOGERR_((s->name, status, "Error sending RTP"));
+            else if (s->rtp_tx_err_cnt > SEND_ERR_COUNT_TO_REPORT)
+                s->rtp_tx_err_cnt = 0;
+        }
+
+        pj_grp_lock_acquire(s->grp_lock);
+
+        /* Update or reset total sent */
+        if (status == PJ_SUCCESS) {
+            s->rc_total += e->buf_size;
+            if (s->rc_total > 0xFF000000) {
+                s->rc_total = 0;
+                s->rc_start = now;
+            }
+        }
+
+        /* Put back send buffer to free list */
+        e->sent_ts = now;
+        pj_list_push_back(&s->free_list, e);
+
+        pj_grp_lock_release(s->grp_lock);
+
+        /* Dec ref the stream (ref added in queuing packet) */
+        pj_grp_lock_dec_ref(s->grp_lock);
+
+    }
+
+    return 0;
+}
+
+/* Group lock destructor of send manager */
+static void send_mgr_on_destroy(void *arg)
+{
+    send_manager* mgr = (send_manager*)arg;
+
+    if (mgr->thread) {
+        mgr->is_quitting = PJ_TRUE;
+        pj_thread_join(mgr->thread);
+        pj_thread_destroy(mgr->thread);
+    }
+
+    if (mgr->pool)
+        pj_pool_safe_release(&mgr->pool);
+}
+
+/* Attach send manager to stream.
+ * This may also initialize the specified send manager.
+ */
+static pj_status_t attach_send_manager(send_stream *ss, send_manager *mgr)
+{
+    pj_status_t status = PJ_SUCCESS;
+
+    /* Initialize manager if not yet */
+    if (!mgr->pool) {
+        pj_pool_t *pool;
+
+        /* Create pool */
+        pool = pj_pool_create(ss->pool->factory, "stream_send_mgr",
+                              1024, 1024, NULL);
+        if (!pool)
+            return PJ_ENOMEM;
+
+        mgr->pool = pool;
+        mgr->is_quitting = PJ_FALSE;
+        pj_list_init(&mgr->send_list);
+
+        /* Create group lock */
+        status = pj_grp_lock_create_w_handler(pool, NULL, mgr,
+                                              &send_mgr_on_destroy,
+                                              &mgr->grp_lock);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+
+        /* Create thread */
+        status = pj_thread_create(pool, "send_mgr", &send_worker_thread, mgr,
+                                  0, 0, &mgr->thread);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+    }
+
+on_return:
+    if (status != PJ_SUCCESS) {
+        if (mgr->grp_lock) {
+            /* This should also invoke send_mgr_on_destroy() */
+            pj_grp_lock_destroy(mgr->grp_lock);
+        }
+        return status;
+    }
+
+    ss->mgr = mgr;
+
+    /* Add ref counter */
+    return pj_grp_lock_add_ref(mgr->grp_lock);
+}
+
+/* Detach send manager from stream.
+ * This may destroy the send manager when no stream is using it.
+ */
+static pj_status_t detach_send_manager(send_stream *ss)
+{
+    send_manager *mgr = ss->mgr;
+    send_entry *e;
+
+    /* Remove all packets of this stream from queue */
+    pj_grp_lock_acquire(mgr->grp_lock);
+    e = mgr->send_list.next;
+    while (e != &mgr->send_list) {
+        send_entry *next = e->next;
+        if (e->stream == ss) {
+            send_stream *s = e->stream;
+
+            pj_list_erase(e);
+
+            /* Dec ref the stream (ref added in queuing packet) */
+            pj_grp_lock_dec_ref(s->grp_lock);
+
+            //pj_grp_lock_release(s->grp_lock);
+            //pj_list_push_back(&s->free_list, e);
+            //pj_grp_lock_release(s->grp_lock);
+        }
+        e = next;
+    }
+    pj_grp_lock_release(mgr->grp_lock);
+
+    /* Decrease ref counter */
+    return pj_grp_lock_dec_ref(mgr->grp_lock);
+}
+
+/* Allocate buffer for sending packet */
+static send_entry* get_send_entry(send_stream *ss)
+{
+    send_entry *e;
+    pj_timestamp min_sent_ts, idle_ts;
+
+    /* Find entry which has idled for at least 1/4 seconds */
+    idle_ts.u64 = ss->ts_freq.u64 >> 2;
+
+    pj_get_timestamp(&min_sent_ts);
+    pj_sub_timestamp(&min_sent_ts, &idle_ts);
+
+    pj_grp_lock_acquire(ss->grp_lock);
+    e = ss->free_list.next;
+    while (e != &ss->free_list) {
+        send_entry *next = e->next;
+        if (pj_cmp_timestamp(&min_sent_ts, &e->sent_ts) >= 0) {
+            pj_list_erase(e);
+            break;
+        }
+        e = next;
+    }
+    pj_grp_lock_release(ss->grp_lock);
+
+    if (e != &ss->free_list)
+        return e;
+
+    e = PJ_POOL_ZALLOC_T(ss->pool, send_entry);
+    if (!e)
+        return NULL;
+
+    e->buf = pj_pool_alloc(ss->pool, ss->buf_size);
+    if (!e->buf)
+        return NULL;
+
+    e->buf_size = ss->buf_size;
+    e->stream = ss;
+    return e;
+}
+
+/* Schedule sending an RTP packet to send manager */
+static void send_rtp(send_stream *ss, send_entry *entry)
+{
+    pj_timestamp send_ts;
+
+    /* Calculate earliest sending time allowed by rate control */
+    pj_grp_lock_acquire(ss->grp_lock);
+    if (ss->rc_start.u64 == 0)
+        pj_get_timestamp(&ss->rc_start);
+    entry->send_ts = ss->rc_start;
+    send_ts.u64 = (ss->rc_total + entry->buf_size) * ss->ts_freq.u64 * 8 /
+                  ss->rc_bandwidth;
+    pj_grp_lock_release(ss->grp_lock);
+    pj_add_timestamp(&entry->send_ts, &send_ts);
+
+    /* Queue the packet */
+    pj_grp_lock_acquire(ss->mgr->grp_lock);
+    pj_list_push_back(&ss->mgr->send_list, entry);
+    pj_grp_lock_release(ss->mgr->grp_lock);
+
+    /* Add ref stream to avoid premature destroy of stream */
+    pj_grp_lock_add_ref(ss->grp_lock);
+}
+
+
+/*
+ * Internal functions.
+ */
 
 static void dump_port_info(const pjmedia_vid_channel *chan,
                            const char *event_name)
@@ -434,6 +723,8 @@ static pj_status_t put_frame(pjmedia_port *port,
     pj_timestamp initial_time;
     pj_timestamp now;
     pj_timestamp null_ts ={{0}};
+    send_entry *send_entry = NULL;
+    void *send_buf;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     /* If the interval since last sending packet is greater than
@@ -489,7 +780,18 @@ static pj_status_t put_frame(pjmedia_port *port,
 
     /* Init frame_out buffer. */
     pj_bzero(&frame_out, sizeof(frame_out));
-    frame_out.buf = ((char*)channel->buf) + sizeof(pjmedia_rtp_hdr);
+    if (stream->info.rc_cfg.method == PJMEDIA_VID_STREAM_RC_SEND_THREAD) {
+        send_entry = get_send_entry(stream->send_stream);
+        if (!send_entry) {
+            LOGERR_((channel->port.info.name.ptr, PJ_ENOMEM,
+                    "Cannot allocate send entry"));
+            return PJ_ENOMEM;
+        }
+        send_buf = send_entry->buf;
+    } else {
+        send_buf = channel->buf;
+    }
+    frame_out.buf = ((char*)send_buf) + sizeof(pjmedia_rtp_hdr);
 
     /* Check if need to send keyframe. */
     pj_get_timestamp(&now);
@@ -565,20 +867,26 @@ static pj_status_t put_frame(pjmedia_port *port,
          */
         if (frame_out.size != 0 && c_strm->transport) {
             /* Copy RTP header to the beginning of packet */
-            pj_memcpy(channel->buf, rtphdr, sizeof(pjmedia_rtp_hdr));
+            pj_memcpy(send_buf, rtphdr, sizeof(pjmedia_rtp_hdr));
 
             /* Send the RTP packet to the transport. */
-            status = pjmedia_transport_send_rtp(c_strm->transport,
-                                                (char*)channel->buf,
-                                                frame_out.size +
-                                                    sizeof(pjmedia_rtp_hdr));
-            if (status != PJ_SUCCESS) {
-                if (c_strm->rtp_tx_err_cnt++ == 0) {
-                    LOGERR_((channel->port.info.name.ptr, status,
-                             "Error sending RTP"));
-                }
-                if (c_strm->rtp_tx_err_cnt > SEND_ERR_COUNT_TO_REPORT) {
-                    c_strm->rtp_tx_err_cnt = 0;
+            if (stream->info.rc_cfg.method==PJMEDIA_VID_STREAM_RC_SEND_THREAD)
+            {
+                send_entry->buf_size = frame_out.size+sizeof(pjmedia_rtp_hdr);
+                send_rtp(stream->send_stream, send_entry);
+            } else {
+                status = pjmedia_transport_send_rtp(c_strm->transport,
+                                                    (char*)send_buf,
+                                                    frame_out.size +
+                                                      sizeof(pjmedia_rtp_hdr));
+                if (status != PJ_SUCCESS) {
+                    if (c_strm->rtp_tx_err_cnt++ == 0) {
+                        LOGERR_((channel->port.info.name.ptr, status,
+                                 "Error sending RTP"));
+                    } else
+                    if (c_strm->rtp_tx_err_cnt > SEND_ERR_COUNT_TO_REPORT) {
+                        c_strm->rtp_tx_err_cnt = 0;
+                    }
                 }
             }
             pjmedia_rtcp_tx_rtp(&c_strm->rtcp, (unsigned)frame_out.size);
@@ -592,7 +900,20 @@ static pj_status_t put_frame(pjmedia_port *port,
         /* Next packets use same timestamp */
         rtp_ts_len = 0;
 
+        /* Update frame_out buffer. */
         frame_out.size = 0;
+        if (stream->info.rc_cfg.method == PJMEDIA_VID_STREAM_RC_SEND_THREAD) {
+            send_entry = get_send_entry(stream->send_stream);
+            if (!send_entry) {
+                LOGERR_((channel->port.info.name.ptr, PJ_ENOMEM,
+                        "Cannot allocate send entry"));
+                return PJ_ENOMEM;
+            }
+            send_buf = send_entry->buf;
+        } else {
+            send_buf = channel->buf;
+        }
+        frame_out.buf = ((char*)send_buf) + sizeof(pjmedia_rtp_hdr);
 
         /* Encode more! */
         status = pjmedia_vid_codec_encode_more(stream->codec,
@@ -1379,6 +1700,16 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
                                 &c_strm->rtcp);
     }
 
+    /* Save the stream info */
+    pj_memcpy(&stream->info, info, sizeof(*info));
+    c_strm->si = (pjmedia_stream_info_common *)&stream->info;
+    stream->info.codec_param = pjmedia_vid_codec_param_clone(
+                                                pool, info->codec_param);
+    pjmedia_rtcp_fb_info_dup(pool, &stream->info.loc_rtcp_fb,
+                             &info->loc_rtcp_fb);
+    pjmedia_rtcp_fb_info_dup(pool, &stream->info.rem_rtcp_fb,
+                             &info->rem_rtcp_fb);
+
     /* Allocate outgoing RTCP buffer, should be enough to hold SR/RR, SDES,
      * BYE, Feedback, and XR.
      */
@@ -1460,16 +1791,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     }
 #endif
 
-    /* Save the stream info */
-    pj_memcpy(&stream->info, info, sizeof(*info));
-    c_strm->si = (pjmedia_stream_info_common *)&stream->info;
-    stream->info.codec_param = pjmedia_vid_codec_param_clone(
-                                                pool, info->codec_param);
-    pjmedia_rtcp_fb_info_dup(pool, &stream->info.loc_rtcp_fb,
-                             &info->loc_rtcp_fb);
-    pjmedia_rtcp_fb_info_dup(pool, &stream->info.rem_rtcp_fb,
-                             &info->rem_rtcp_fb);
-
     /* Check if we should send RTCP-FB */
     if (stream->info.rem_rtcp_fb.cap_count) {
         pjmedia_rtcp_fb_info *rfi = &stream->info.rem_rtcp_fb;
@@ -1509,6 +1830,32 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
         }
     }
 
+    /* Initialize send manager for send rate control */
+    if (stream->info.rc_cfg.method == PJMEDIA_VID_STREAM_RC_SEND_THREAD) {
+        send_manager *send_mgr;
+        send_stream *ss;
+
+        send_mgr = PJ_POOL_ZALLOC_T(c_strm->own_pool, send_manager);
+        ss = PJ_POOL_ZALLOC_T(c_strm->own_pool, send_stream);
+        if (!send_mgr || !ss)
+            goto err_cleanup;
+
+        pj_list_init(&ss->free_list);
+        ss->grp_lock = c_strm->grp_lock;
+        ss->tp = c_strm->transport;
+        ss->pool = c_strm->own_pool;
+        ss->buf_size = c_strm->enc->buf_size;
+        ss->ts_freq = stream->ts_freq;
+        ss->rc_bandwidth = stream->info.rc_cfg.bandwidth;
+        ss->name = c_strm->enc->port.info.name.ptr;
+
+        status = attach_send_manager(ss, send_mgr);
+        if (status != PJ_SUCCESS)
+            goto err_cleanup;
+
+        stream->send_stream = ss;
+    }
+
     /* Success! */
     *p_stream = stream;
 
@@ -1539,6 +1886,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
         c_strm->enc->port.put_frame = NULL;
     if (c_strm->dec)
         c_strm->dec->port.get_frame = NULL;
+
+    /* Detach from sending manager */
+    if (stream->send_stream)
+        detach_send_manager(stream->send_stream);
 
 #if TRACE_RC
     {
@@ -1881,7 +2232,7 @@ PJ_DEF(void)
 pjmedia_vid_stream_rc_config_default(pjmedia_vid_stream_rc_config *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
-    cfg->method = PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING;
+    cfg->method = PJMEDIA_VID_STREAM_RC_SEND_THREAD;
 }
 
 

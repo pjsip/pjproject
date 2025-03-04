@@ -91,7 +91,17 @@ typedef enum pjmedia_vid_stream_rc_method
      * invoking the video stream put_frame(), e.g: video capture device thread,
      * will be blocked whenever transmission delay takes place.
      */
-    PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING   = 1
+    PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING   = 1,
+
+    /**
+     * Using a dedicated sending thread. Outgoing RTP packets will be queued
+     * to be sent by a dedicated sending thread to avoid peak bandwidth that
+     * is much higher than specified. Unlike simple blocking, the thread
+     * invoking the video stream put_frame() will not be blocked. This will
+     * generally provide better video latency than the simple blocking method
+     * because of more accurate bitrate calculation.
+     */
+    PJMEDIA_VID_STREAM_RC_SEND_THREAD       = 2
 
 } pjmedia_vid_stream_rc_method;
 
@@ -104,7 +114,7 @@ typedef struct pjmedia_vid_stream_rc_config
     /**
      * Rate control method.
      *
-     * Default: PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING.
+     * Default: PJMEDIA_VID_STREAM_RC_SEND_THREAD.
      */
     pjmedia_vid_stream_rc_method    method;
 
