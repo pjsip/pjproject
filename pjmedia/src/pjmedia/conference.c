@@ -3205,12 +3205,13 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         }
     }
 
+    /* Force frame type NONE */
+    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+
     /* This optimization is mainly intended for debugging. */
     if (upper_bound) {
         pj_atomic_set(conf->active_ports_idx, upper_bound);
 
-        /* Force frame type NONE */
-        frame->type = PJMEDIA_FRAME_TYPE_NONE;
         conf->frame = frame;
         conf->sound_port = NULL;
 
