@@ -3428,7 +3428,13 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     if (dlg && pj_log_get_level() >= 3)
         log_call_dump(call_id);
 
+    /* Stop all media */
     stop_media_session(call_id);
+
+    /* Destroy media synchronizer */
+    if (call->av_sync)
+        pjmedia_av_sync_destroy(call->av_sync);
+    call->av_sync = NULL;
 
     /* Stop trickle ICE timer */
     if (call->trickle_ice.trickling > PJSUA_OP_STATE_NULL) {
@@ -4383,6 +4389,16 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     call->med_cnt = call->med_prov_cnt;
     pj_memcpy(call->media, call->media_prov,
               sizeof(call->media_prov[0]) * call->med_prov_cnt);
+
+    /* Create synchronizer */
+    if ((maudcnt+mvidcnt) > 1 && !call->av_sync) {
+        status = pjmedia_av_sync_create(pjsua_var.med_endpt, NULL,
+                                        &call->av_sync);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(3, (THIS_FILE, status,
+                          "Call %d: Failed to create synchronizer", call_id));
+        }
+    }
 
     /* Process each media stream */
     for (mi=0; mi < call->med_cnt; ++mi) {

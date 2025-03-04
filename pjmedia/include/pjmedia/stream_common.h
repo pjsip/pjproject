@@ -24,6 +24,7 @@
  * @brief Stream common functions.
  */
 
+#include <pjmedia/av_sync.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/jbuf.h>
 #include <pjmedia/sdp.h>
@@ -151,6 +152,11 @@ typedef struct pjmedia_stream_common
     int                      pending_rtcp_fb_nack;  /**< Any pending NACK?  */
     pjmedia_rtcp_fb_nack     rtcp_fb_nack;          /**< TX NACK state.     */
     int                      rtcp_fb_nack_cap_idx;  /**< RX NACK cap idx.   */
+
+    /* Media synchronization */
+    pjmedia_av_sync         *av_sync;               /**< Media sync.        */
+    pjmedia_av_sync_media   *av_sync_media;         /**< Media sync media   */
+
 } pjmedia_stream_common;
 
 
@@ -249,7 +255,6 @@ pjmedia_stream_common_send_rtcp_bye( pjmedia_stream_common *stream );
  * and generally it is not advisable for app to modify them.
  *
  * @param stream        The media stream.
- *
  * @param session_info  The stream session info.
  *
  * @return              PJ_SUCCESS on success.
@@ -257,6 +262,24 @@ pjmedia_stream_common_send_rtcp_bye( pjmedia_stream_common *stream );
 PJ_DECL(pj_status_t)
 pjmedia_stream_common_get_rtp_session_info(pjmedia_stream_common *stream,
                                    pjmedia_stream_rtp_sess_info *session_info);
+
+
+/**
+ * Set or reset media presentation synchronizer. The synchronizer manages
+ * presentation time of media streams in the session, e.g: audio & video.
+ *
+ * Application creates a media synchronizer and assign it to all media streams
+ * whose presentation time to be synchronized using this function.
+ *
+ * @param stream        The media stream.
+ * @param av_sync       The media presentation synchronizer, or NULL to
+ *                      remove this stream from current synchronizer.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_common_set_avsync(pjmedia_stream_common* stream,
+                                 pjmedia_av_sync* av_sync);
 
 
 /* Internal function. */
