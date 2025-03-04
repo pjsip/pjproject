@@ -471,6 +471,7 @@ typedef struct
     unsigned audio_frame_ptime;
     int      snd_auto_close_time;
     unsigned max_media_ports;
+    unsigned conf_threads;
     int      has_ioqueue;
     unsigned thread_cnt;
     unsigned quality;
@@ -534,6 +535,17 @@ static PyMemberDef PyObj_pjsua_media_config_members[] =
         "file player, file recorder, etc), the value must be large enough to "
         "support all of them. However, the larger the value, the more "
         "computations are performed."
+    },
+    {
+        "conf_threads", T_INT,
+        offsetof(PyObj_pjsua_media_config, conf_threads), 0,
+        "Total number of threads that can be used by the conference bridge "
+        "including get_frame() thread. "
+        "This value is used to determine if the conference bridge should be "
+        "implemented as a parallel bridge or not. "
+        "If this value is set to 1, the conference bridge will be implemented "
+        "as a serial bridge, otherwise it will be implemented as a parallel "
+        "bridge. Should not be less than 1."
     },
     {
         "has_ioqueue", T_INT, 
@@ -685,6 +697,7 @@ static void PyObj_pjsua_media_config_import(PyObj_pjsua_media_config *obj,
     obj->audio_frame_ptime  = cfg->audio_frame_ptime;
     obj->snd_auto_close_time= cfg->snd_auto_close_time;
     obj->max_media_ports    = cfg->max_media_ports;
+    obj->conf_threads       = cfg->conf_threads;
     obj->has_ioqueue        = cfg->has_ioqueue;
     obj->thread_cnt         = cfg->thread_cnt;
     obj->quality            = cfg->quality;
@@ -732,6 +745,7 @@ static void PyObj_pjsua_media_config_export(pjsua_media_config *cfg,
     cfg->audio_frame_ptime  = obj->audio_frame_ptime;
     cfg->snd_auto_close_time=obj->snd_auto_close_time;
     cfg->max_media_ports    = obj->max_media_ports;
+    cfg->conf_threads       = obj->conf_threads;
     cfg->has_ioqueue        = obj->has_ioqueue;
     cfg->thread_cnt         = obj->thread_cnt;
     cfg->quality            = obj->quality;
