@@ -41,6 +41,7 @@ void BuddyConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
 
     NODE_READ_STRING   ( this_node, uri);
     NODE_READ_BOOL     ( this_node, subscribe);
+    NODE_READ_BOOL     ( this_node, subscribe_dlg_event);
 }
 
 void BuddyConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -49,6 +50,7 @@ void BuddyConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
 
     NODE_WRITE_STRING  ( this_node, uri);
     NODE_WRITE_BOOL    ( this_node, subscribe);
+    NODE_WRITE_BOOL     ( this_node, subscribe_dlg_event);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -142,6 +144,7 @@ void Buddy::create(Account &account, const BuddyConfig &cfg)
 
     pj_cfg.uri = str2Pj(cfg.uri);
     pj_cfg.subscribe = cfg.subscribe;
+    pj_cfg.subscribe_dlg_event = cfg.subscribe_dlg_event;
     pj_cfg.user_data = (void*)bud;
     pj_cfg.acc_id = account.getId();
     PJSUA2_CHECK_EXPR( pjsua_buddy_add(&pj_cfg, &id) );
@@ -183,7 +186,14 @@ void Buddy::subscribePresence(bool subscribe) PJSUA2_THROW(Error)
     PJSUA2_CHECK_EXPR( pjsua_buddy_subscribe_pres(id, subscribe) );
 }
 
-    
+/*
+ * Enable/disable buddy's dialog event monitoring.
+ */
+void Buddy::subscribeDlgEvent(bool subscribe) PJSUA2_THROW(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_buddy_subscribe_dlg_event(id, subscribe) );
+}
+
 /*
  * Update the presence information for the buddy.
  */
@@ -191,7 +201,15 @@ void Buddy::updatePresence(void) PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_buddy_update_pres(id) );
 }
-     
+
+/*
+ * Update the dialog event information for the buddy.
+ */
+void Buddy::updateDlgEvent(void) PJSUA2_THROW(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_buddy_update_dlg_event(id) );
+}
+
 /*
  * Send instant messaging outside dialog.
  */
