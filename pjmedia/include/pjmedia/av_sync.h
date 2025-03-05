@@ -20,7 +20,7 @@
 
  /**
   * @file av_sync.h
-  * @brief Media Presentation Synchronization.
+  * @brief Inter-media Synchronization.
   */
 #include <pjmedia/types.h>
 
@@ -29,77 +29,88 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJMEDIA_AV_SYNC Media Presentation Synchronization
- * @ingroup PJMEDIA_PORT_CLOCK
- * @brief Synchronize media presentation
+ * @defgroup PJMEDIA_AV_SYNC Inter-media Synchronization
+ * @ingroup PJMEDIA_SESSION
+ * @brief Synchronize presentation time of multiple media in a session.
  * @{
- */
-
-
-/*
- * How it works in general:
- * 1. App creates AV sync using pjmedia_av_sync_create().
- * 2. App adds all media to be synchronized using pjmedia_av_sync_add_media().
- * 3. Each time a media receives an RTCP-SR, update AV sync using
- *    pjmedia_av_sync_update_ref().
- * 4. Each time a media returns a frame to be rendered, e.g: via
- *    port.get_frame(), update AV sync using pjmedia_av_sync_update_pts(),
- *    the function will return a number:
- *    - zero    : nothing to do,
- *    - positive: increase delay as many as the returned number,
- *    - negative: decrease delay as many as the returned number.
  *
- * Logic in pjmedia_av_sync_update_pts():
- * - Calculate the absolute/NTP timestamp of the frame playback based on
-     the reference NTP and the supplied frame RTP timestamp. This timestamp
-     is usually called presentation time (pts).
- * - If pts is the largest or most recent, set it as AV sync's max_ntp.
- *   Otherwise, calculate the difference/delay of this pts to the max_ntp,
- *   then request the media to speed up as much as the delay.
- * - If after some requests the delay is still relatively high, request
- *   the fastest media to slow down instead.
+ * A call session may consist of multiple media, e.g: some audio and some
+ * video, which frequently have different delays when presented in the
+ * receiver side. This module synchronizes all media in the same session
+ * based on NTP timestamp & RTP timestamp info provided by the sender in
+ * RTCP SR.
  *
- * Changes needed in stream:
- * 1. Update ref whenever receive RTCP-SR.
- * 2. Update presentation time whenever returns a frame (to play/render).
- * 3. Add mechanism to calculate current delay & optimal delay from
- *    jitter buffer size.
- * 4. When AV sync requests to speed up, as long as the end delay is
- *    not lower than the optimal delay, do it.
- * 5. When AV sync requests to slow down, do it, i.e: increase and maintain
- *    the jitter buffer size.
+ * Here are steps to use this module:
+ * 1. Create AV sync using #pjmedia_av_sync_create().
+ * 2. Adds all media to be synchronized using #pjmedia_av_sync_add_media().
+ * 3. Call #pjmedia_av_sync_update_ref() each time the media receiving
+ *    an RTCP SR packet.
+ * 4. Call #pjmedia_av_sync_update_pts() each time the media returning
+ *    a frame to be presented, e.g: via port.get_frame(). See more about
+ *    this function below.
+ * 5. Call #pjmedia_av_sync_del_media() when a media is removed from the
+ *    session.
+ * 6. Call #pjmedia_av_sync_destroy() when the session is ended.
+ * 
+ * More about #pjmedia_av_sync_update_pts():
+ * - The function will return non-zero when delay adjustment in the media is
+ *   needed for synchronization. When it returns a positive number, the media
+ *   should increase the delay as many as the returned number, in millisecond.
+ *   When it returns a negative number, the media should try to decrease
+ *   the delay as many as the returned number, in millisecond.
+ *   For example in audio stream, the delay adjustment can managed using
+ *   #pjmedia_jbuf_set_min_delay().
+ * - The function will keep track on the delay adjustment progress, for
+ *   example, after some delay adjustment are requested to a media and
+ *   the delay of the media is still relatively high, it will trigger a
+ *   request to the fastest media to slow down.
  */
 
 
 /**
- * AV sync, opaque.
+ * Inter-media synchronizer, opaque.
  */
 typedef struct pjmedia_av_sync pjmedia_av_sync;
 
 
 /**
- * Media, opaque.
+ * Media synchronization handle, opaque.
  */
 typedef struct pjmedia_av_sync_media pjmedia_av_sync_media;
 
 
 /**
- * Media setting.
+ * Media settings.
  */
 typedef struct {
+    /**
+     * Name of the media
+     */
     char                       *name;
+
+    /**
+     * Media clock rate or sampling rate.
+     */
     unsigned                    clock_rate;
 } pjmedia_av_sync_media_setting;
 
 
 /**
  * Get default settings for media.
+ *
+ * @param setting           The media setting.
  */
 PJ_DECL(void) pjmedia_av_sync_media_setting_default(
                                 pjmedia_av_sync_media_setting *setting);
 
 /**
  * Create media synchronizer.
+ *
+ * @param endpt             The media endpoint.
+ * @param setting           Synchronization setting, must be NULL for now.
+ * @param av_sync           The pointer to receive the media synchronizer.
+ *
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_av_sync_create(
                                 pjmedia_endpt *endpt,
@@ -109,12 +120,21 @@ PJ_DECL(pj_status_t) pjmedia_av_sync_create(
 
 /**
  * Destroy media synchronizer.
+ *
+ * @param av_sync           The media synchronizer.
  */
 PJ_DECL(void) pjmedia_av_sync_destroy(pjmedia_av_sync* av_sync);
 
 
 /**
- * Add media to synchronizer.
+ * Add a media to synchronizer.
+ *
+ * @param av_sync           The media synchronizer.
+ * @param setting           The media setting.
+ * @param av_sync_media     The pointer to receive the media synchronization
+ *                          handle.
+ *
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_av_sync_add_media(
                                 pjmedia_av_sync* av_sync,
@@ -123,7 +143,12 @@ PJ_DECL(pj_status_t) pjmedia_av_sync_add_media(
 
 
 /**
- * Remove media from synchronizer.
+ * Remove a media from synchronizer.
+ *
+ * @param av_sync           The media synchronizer.
+ * @param av_sync_media     The media synchronization handle.
+ *
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_av_sync_del_media(
                                 pjmedia_av_sync *av_sync,
@@ -132,14 +157,22 @@ PJ_DECL(pj_status_t) pjmedia_av_sync_del_media(
 
 /**
  * Update synchronizer about the last presentation timestamp of the specified
- * media.
+ * media. Normally this function is called when media is producing a frame
+ * to be rendered (e.g: to a video renderer or audio device speaker).
+ * The media may be requested to adjust its playback delay by the number
+ * returned by the function, for example audio stream can adjust delay
+ * using #pjmedia_jbuf_set_min_delay().
  *
- * Normally this function is called after a media renderer (video renderer or
- * speaker) invokes get_frame() of the media source (e.g: audio/video stream).
+ * @param av_sync_media     The media synchronization handle.
+ * @param pts               The presentation timestamp.
  *
- * @return      0  : media is in sync, no action is needed.
- *              <0 : speed up presentation by returned value milliseconds.
- *              >0 : slow down presentation by returned value milliseconds.
+ * @return                  0  : no action is needed, because the media is
+ *                               already synchronized or the calculation
+ *                               is not completed (e.g: need more data).
+ *                          <0 : decrease playback delay by returned number,
+ *                               in milliseconds.
+ *                          >0 : increase playback delay by returned number,
+ *                               in milliseconds.
  */
 PJ_DECL(pj_int32_t) pjmedia_av_sync_update_pts(
                                 pjmedia_av_sync_media *av_sync_media,
@@ -147,17 +180,19 @@ PJ_DECL(pj_int32_t) pjmedia_av_sync_update_pts(
 
 
 /**
- * Update synchronizer about the last timestamp reference of the specified
- * media.
+ * Update synchronizer about reference timestamps of the specified media.
+ * Normally this function is called after a media receives RTCP SR packet.
  *
- * Normally this function is called after a media source receive RTCP-SR
- * with info of an NTP timestamp correspoding to an RTP timestamp.
+ * @param av_sync_media     The media synchronization handle.
+ * @param ntp               The NTP timestamp info from RTCP SR.
+ * @param ts                The RTP timestamp info from RTCP SR.
+ *
+ * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_av_sync_update_ref(
                                 pjmedia_av_sync_media *av_sync_media,
                                 const pj_timestamp *ntp,
                                 const pj_timestamp *ts);
-
 
 
 /**

@@ -23,6 +23,7 @@
 #include <pj/list.h>
 #include <pj/os.h>
 
+
 /* Maximum tolerable delay from the fastest/earliest media, in milliseconds.
  * When delay is higher than this setting, some actions will be required,
  * i.e: speed-up or slow-down media playback.
@@ -35,7 +36,7 @@
 #define MAX_DELAY_REQ_CNT               10
 
 /* Enable/disable trace */
-#if 1
+#if 0
 #  define TRACE_(x) PJ_LOG(1, x)
 #else
 #  define TRACE_(x)
@@ -326,7 +327,13 @@ PJ_DEF(pj_int32_t) pjmedia_av_sync_update_pts(
         pj_sub_timestamp(&ntp_diff, &media->last_ntp);
         ms_diff = ntp_to_ms(&ntp_diff);
 
-        /* Smoothen and round down the delay */
+        /* Make sure the delay is sensible, e.g: not exceeding 60s */
+        if (ms_diff > 60000)
+            return 0;
+
+        /* Smoothen (apply weight of 19 for current delay), and round down
+         * the delay to the nearest 10.
+         */
         ms_diff = ((ms_diff + 19 * media->smooth_diff) / 200) * 10;
         media->smooth_diff = ms_diff;
 

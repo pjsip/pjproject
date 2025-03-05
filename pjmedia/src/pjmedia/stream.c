@@ -499,8 +499,9 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                 pj_int32_t delay_req_ms;
 
                 pts.u32.lo = rtp_ts;
-                delay_req_ms = pjmedia_av_sync_update_pts(c_strm->av_sync_media,
-                                                       &pts);
+                delay_req_ms = pjmedia_av_sync_update_pts(
+                                                    c_strm->av_sync_media,
+                                                    &pts);
                 if (delay_req_ms) {
                     /* Delay adjustment is requested */
                     pjmedia_jb_state jb_state;
