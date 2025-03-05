@@ -26,7 +26,6 @@
 #if defined(PJ_GETADDRINFO_USE_CFHOST) && PJ_GETADDRINFO_USE_CFHOST!=0
 #   include <CoreFoundation/CFString.h>
 #   include <CFNetwork/CFHost.h>
-#endif
 
 #elif defined(PJ_GETADDRINFO_USE_ANDROID) && PJ_GETADDRINFO_USE_ANDROID!=0
 #   include <sys/poll.h>
