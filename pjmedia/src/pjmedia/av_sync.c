@@ -27,21 +27,15 @@
  * When delay is higher than this setting, some actions will be required,
  * i.e: speed-up or slow-down media playback.
  */
-#define MAX_DELAY_MS                    150
+#define MAX_DELAY_MS                    50
 
  /* Maximum number of request to a media to speeding up its delay to match
   * to the fastest media, before requesting the fastest media to slow down.
   */
 #define MAX_DELAY_REQ_CNT               10
 
-/* Minimum delay progress after last delay adjustment request. If the progress
- * is less than this, AV sync may request the fastest media to slow down.
- */
-#define MIN_SPEED_UP_PROGRESS_MS        20
-
 /* Enable/disable trace */
-#define TRACE_ENABLED                   1
-#if TRACE_ENABLED
+#if 1
 #  define TRACE_(x) PJ_LOG(1, x)
 #else
 #  define TRACE_(x)
@@ -64,6 +58,7 @@ struct pjmedia_av_sync_media
 
     /* Last presentation timestamp */
     pj_timestamp             last_ntp;          /* Last PTS, in NTP units   */
+    pj_int32_t               smooth_diff;
 
     /* Delay adjustment requested to this media */
     pj_int32_t               last_adj_delay_req; /* Last requested delay    */
@@ -240,6 +235,7 @@ PJ_DEF(pj_status_t) pjmedia_av_sync_del_media(
     media->is_ref_set = PJ_FALSE;
     media->last_adj_delay_req = 0;
     media->adj_delay_req_cnt = 0;
+    media->smooth_diff = 0;
 
     pj_list_push_back(&avs->free_media_list, media);
     pj_grp_lock_release(avs->grp_lock);
@@ -317,7 +313,7 @@ PJ_DEF(pj_int32_t) pjmedia_av_sync_update_pts(
             media->last_adj_delay_req = avs->slowdown_req_ms;
             media->adj_delay_req_cnt = 0;
             avs->slowdown_req_ms = 0;
-            TRACE_((avs->pool->obj_name, "%s requested to slow down %dms",
+            TRACE_((avs->pool->obj_name, "%s is requested to slow down %dms",
                     media->name, media->last_adj_delay_req));
             return media->last_adj_delay_req;
         }
@@ -330,11 +326,15 @@ PJ_DEF(pj_int32_t) pjmedia_av_sync_update_pts(
         pj_sub_timestamp(&ntp_diff, &media->last_ntp);
         ms_diff = ntp_to_ms(&ntp_diff);
 
+        /* Smoothen and round down the delay */
+        ms_diff = ((ms_diff + 19 * media->smooth_diff) / 200) * 10;
+        media->smooth_diff = ms_diff;
+
         /* The delay is tolerable, just return 0 */
-        if (ms_diff < MAX_DELAY_MS) {
+        if (ms_diff <= MAX_DELAY_MS) {
             if (media->last_adj_delay_req) {
                 TRACE_((avs->pool->obj_name,
-                        "%s speed up completed, delay looks good=%ums",
+                        "%s speeds up completed, delay looks good=%ums",
                         media->name, ms_diff));
             }
             /* Reset the request delay & counter */
@@ -344,28 +344,39 @@ PJ_DEF(pj_int32_t) pjmedia_av_sync_update_pts(
         }
 
         /* Check if any speed-up request has been done before */
-        if (media->last_adj_delay_req < 0) {
-            pj_int32_t progress;
-
-            /* Check if the previous delay request has shown some progress */
-            progress = (-media->last_adj_delay_req) - ms_diff;
-            if (progress >= MIN_SPEED_UP_PROGRESS_MS) {
-                /* Yes, let's just request again and wait */
-                TRACE_((avs->pool->obj_name,
-                        "%s speed up in progress, current delay=%ums",
-                        media->name, ms_diff));
-            }
-
+        if (media->last_adj_delay_req) {
             /* Check if request number has reached limit */
-            else if (media->adj_delay_req_cnt >= MAX_DELAY_REQ_CNT) {
+            if (media->adj_delay_req_cnt >= MAX_DELAY_REQ_CNT) {
                 /* After several requests this media still cannot catch up,
                  * signal the synchronizer to slow down the fastest media.
                  */
                 if (avs->slowdown_req_ms < ms_diff)
                     avs->slowdown_req_ms = ms_diff;
 
-                /* Reset the request counter */
+                TRACE_((avs->pool->obj_name,
+                        "%s request limit has been reached, requesting "
+                        "the fastest media to slow down by %ums",
+                        media->name, avs->slowdown_req_ms));
+
+                /* Reset the request counter.
+                 * And still keep requesting for speed up, shouldn't we?
+                 */
                 media->adj_delay_req_cnt = 0;
+            } else {
+                pj_int32_t progress, min_expected;
+
+                /* Check if the previous delay request has shown some
+                 * progress.
+                 */
+                progress = (-media->last_adj_delay_req) - ms_diff;
+                min_expected = -media->last_adj_delay_req /
+                           (MAX_DELAY_REQ_CNT - media->adj_delay_req_cnt + 1);
+                if (progress >= min_expected) {
+                    /* Yes, let's just request again and wait */
+                    TRACE_((avs->pool->obj_name,
+                            "%s speeds up in progress, current delay=%ums",
+                            media->name, ms_diff));
+                }
             }
         } else {
             /* First request to speed up */
@@ -373,11 +384,13 @@ PJ_DEF(pj_int32_t) pjmedia_av_sync_update_pts(
         }
 
         /* Request the media to speed up & increment the counter */
-        TRACE_((avs->pool->obj_name,
-                "%s requested to speed up #%d %ums",
-                media->name, media->adj_delay_req_cnt, ms_diff));
         media->last_adj_delay_req = -(pj_int32_t)ms_diff;
         media->adj_delay_req_cnt++;
+
+        TRACE_((avs->pool->obj_name,
+                "%s is requested to speed up #%d %ums",
+                media->name, media->adj_delay_req_cnt, ms_diff));
+
         return media->last_adj_delay_req;
     }
 

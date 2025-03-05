@@ -491,14 +491,36 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
             if (!use_dec_buf)
                 samples_count += samples_per_frame;
 
-            /* Update synchronizer with presentation time */
+            /* Update synchronizer with presentation time and check if the
+             * synchronizer requests for delay adjustment.
+             */
             if (c_strm->av_sync_media) {
                 pj_timestamp pts = { 0 };
-                pj_int32_t delay_req;
+                pj_int32_t delay_req_ms;
 
                 pts.u32.lo = rtp_ts;
-                delay_req = pjmedia_av_sync_update_pts(c_strm->av_sync_media,
+                delay_req_ms = pjmedia_av_sync_update_pts(c_strm->av_sync_media,
                                                        &pts);
+                if (delay_req_ms) {
+                    /* Delay adjustment is requested */
+                    pjmedia_jb_state jb_state;
+                    int target_delay_ms, cur_delay_ms;
+
+                    /* Increase delay slowly, but decrease delay quickly */
+                    if (delay_req_ms > 0)
+                        delay_req_ms = delay_req_ms * 3 / 4;
+                    else 
+                        delay_req_ms = delay_req_ms * 4 / 3;
+
+                    /* Apply delay request to jitter buffer */
+                    pjmedia_jbuf_get_state(c_strm->jb, &jb_state);
+                    cur_delay_ms = jb_state.min_delay_set * stream->dec_ptime/
+                                   stream->dec_ptime_denum;
+                    target_delay_ms = cur_delay_ms + delay_req_ms;
+                    if (target_delay_ms < 0)
+                        target_delay_ms = 0;
+                    pjmedia_jbuf_set_min_delay(c_strm->jb, target_delay_ms);
+                }
             }
         }
     }

@@ -64,9 +64,9 @@ PJ_BEGIN_DECL
  * 2. Update presentation time whenever returns a frame (to play/render).
  * 3. Add mechanism to calculate current delay & optimal delay from
  *    jitter buffer size.
- * 4. When AV sync request to speed up, as long as the end delay is
+ * 4. When AV sync requests to speed up, as long as the end delay is
  *    not lower than the optimal delay, do it.
- * 5. When AV sync request to slow down, do it, i.e: increase and maintain
+ * 5. When AV sync requests to slow down, do it, i.e: increase and maintain
  *    the jitter buffer size.
  */
 
