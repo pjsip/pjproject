@@ -1984,7 +1984,11 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
             pjsip_route_hdr *r;
             r = (pjsip_route_hdr*) pjsip_hdr_clone(dlg->pool, hdr);
             pjsip_routing_hdr_set_route(r);
-            pj_list_push_back(&dlg->route_set, r);
+            if (dlg->role == PJSIP_ROLE_UAC) {
+                pj_list_push_back(&dlg->route_set, r);
+            } else {
+                pj_list_push_front(&dlg->route_set, r);
+            }
         }
     }
 
