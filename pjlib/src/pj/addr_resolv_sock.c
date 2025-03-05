@@ -23,19 +23,22 @@
 #include <pj/ip_helper.h>
 #include <pj/compat/socket.h>
 
-#if defined(PJ_GETADDRINFO_USE_ANDROID) && PJ_GETADDRINFO_USE_ANDROID!=0
-#include <sys/poll.h>
-#include <resolv.h>
-#include <netdb.h>
-#include <android/multinetwork.h>
-#include <sys/system_properties.h>  // For getting Android Device API Version
-#include <dlfcn.h>
-#endif
-
 #if defined(PJ_GETADDRINFO_USE_CFHOST) && PJ_GETADDRINFO_USE_CFHOST!=0
 #   include <CoreFoundation/CFString.h>
 #   include <CFNetwork/CFHost.h>
 #endif
+
+#elif defined(PJ_GETADDRINFO_USE_ANDROID) && PJ_GETADDRINFO_USE_ANDROID!=0
+#   include <sys/poll.h>
+#   include <resolv.h>
+#   include <netdb.h>
+#   include <android/multinetwork.h>
+#   include <sys/system_properties.h>
+#   include <dlfcn.h>
+#endif
+
+#define THIS_FILE       "addr_resolv_sock.c"
+#define ANDROID_DNS_TIMEOUT_MS       5000
 
 PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 {
@@ -185,80 +188,119 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     return status;
 
 #elif defined(PJ_GETADDRINFO_USE_ANDROID) && PJ_GETADDRINFO_USE_ANDROID!=0
-    typedef int (*android_res_nquery_fn)(unsigned int, const char*, int, int, int);
+    /* Android-specific functions are available in API >= 29
+     * android_res_nquery, android_res_nresult and android_res_cancel
+     * If we directly call the functions, even surrounded by a statement
+     * checking Android API, the older Android devices will throw the error
+     * "dlopen failed: cannot locate symbol "android_res_nquery"
+     * Hence, we prepare pointers and load functions only if API check passes
+     */
+	 
+    /* Define function pointers type for Android DNS functions */
+    typedef int (*android_res_nquery_fn)(
+        unsigned int, const char*, int, int, int);
     typedef int (*android_res_nresult_fn)(int, int*, unsigned char*, int);
     typedef int (*android_res_cancel_fn)(int);
 
+    /* Initialize function pointers to NULL */
     android_res_nquery_fn android_res_nquery_ptr = NULL;
     android_res_nresult_fn android_res_nresult_ptr = NULL;
     android_res_cancel_fn android_res_cancel_ptr = NULL;
+
+    /* Buffer to store the SDK version as a string */
     char sdk_value[8] = "";
+    /* Get the Android SDK version */
     __system_property_get("ro.build.version.sdk", sdk_value);
+
     if (atoi(sdk_value) >= 29) {
+        /* Load the libandroid.so library containing network functions */
         void *libandroid_handle = dlopen("libandroid.so", RTLD_NOW);
         if (libandroid_handle) {
-            android_res_nquery_ptr = (android_res_nquery_fn) dlsym(libandroid_handle, "android_res_nquery");
-            android_res_nresult_ptr = (android_res_nresult_fn) dlsym(libandroid_handle, "android_res_nresult");
-            android_res_cancel_ptr = (android_res_cancel_fn) dlsym(libandroid_handle, "android_res_cancel");
+            /* Get the nquery, nresult and cancel functions from library */
+            android_res_nquery_ptr = (android_res_nquery_fn)
+                                     dlsym(libandroid_handle,
+                                     "android_res_nquery");
+            android_res_nresult_ptr = (android_res_nresult_fn)
+                                     dlsym(libandroid_handle,
+                                     "android_res_nresult");
+            android_res_cancel_ptr = (android_res_cancel_fn)
+                                     dlsym(libandroid_handle,
+                                     "android_res_cancel");
 
-            if (android_res_nquery_ptr && android_res_nresult_ptr && android_res_cancel_ptr) {
-                // Android-specific code using functions available in API >= 29
-                /* Call android_res_nquery and android_res_nresult_ptr */
+            /* Non-null pointers mean DNS functions are properly loaded */
+            if (android_res_nquery_ptr &&
+                android_res_nresult_ptr &&
+                android_res_cancel_ptr) {
                 pj_bzero(&hint, sizeof(hint));
                 hint.ai_family = af;
-                /* Zero value of ai_socktype means the implementation shall attempt
-                 * to resolve the service name for all supported socket types */
+                /* Zero value of ai_socktype means the implementation shall
+                 * attempt to resolve the service name for all supported
+                 * socket types */
                 hint.ai_socktype = SOCK_STREAM;
 
-                /* Perform asynchronous DNS resolution */
-                unsigned int netid = NETWORK_UNSPECIFIED; // Use NETWORK_UNSPECIFIED for default network
-                unsigned char answer[NS_PACKETSZ]; // Buffer for the DNS response
+                /* Perform asynchronous DNS resolution
+                 * Use NETWORK_UNSPECIFIED lets system choose the network */
+                unsigned int netid = NETWORK_UNSPECIFIED;
+				/* Buffer for the DNS response */
+                unsigned char answer[NS_PACKETSZ];
                 int rcode = -1;
                 struct addrinfo *result = NULL, *last = NULL;
 
-                // Step 1: Send DNS query
-                int resp_handle = android_res_nquery_ptr(netid, nodecopy, ns_c_in, af == PJ_AF_INET ? ns_t_a : af == PJ_AF_INET6 ? ns_t_aaaa : ns_t_a, 0);
+                /* Step 1: Send DNS query */
+                int resp_handle = android_res_nquery_ptr(
+                                netid, nodecopy, ns_c_in,
+                                af == PJ_AF_INET ? ns_t_a :
+                                af == PJ_AF_INET6 ? ns_t_aaaa :
+                                ns_t_a,
+                                0);
                 if (resp_handle < 0) {
                     printf("android_res_nquery_ptr() failed\n");
                     return PJ_ERESOLVE;
                 }
 
-                // Step 2: Wait for response using poll()
+                /* Step 2: Wait for response using poll() */
                 struct pollfd fds;
                 fds.fd = resp_handle;
                 fds.events = POLLIN;
-                int ret = poll(&fds, 1, 5000); // 5-second timeout
+                int ret = poll(&fds, 1, ANDROID_DNS_TIMEOUT_MS);
 
                 if (ret <= 0) {
-                    PJ_LOG(4,("addr_resolv_sock.c","Poll timeout or error"));
+                    PJ_LOG(4,(THIS_FILE,"Poll timeout or error"));
                     android_res_cancel_ptr(resp_handle);
                     return PJ_ERESOLVE;
                 }
-                // Step 3: Get DNS response
-                int response_size = android_res_nresult_ptr(resp_handle, &rcode, answer, sizeof(answer));
+                /* Step 3: Get DNS response */
+                int response_size = android_res_nresult_ptr(
+                                  resp_handle, &rcode, answer, sizeof(answer));
                 if (response_size < 0) {
-                    PJ_LOG(4,("addr_resolv_sock.c","android_res_nresult_ptr() failed"));
+                    PJ_LOG(4,(THIS_FILE,
+                              "android_res_nresult_ptr() failed"));
                     return PJ_ERESOLVE;
                 }
 
-                // Step 4: Parse the DNS response
-                // Parse DNS response
+                /* Step 4: Parse the DNS response */
                 ns_msg msg;
                 ns_rr rr;
                 int num_records, resolved_count = 0;
 
                 if (ns_initparse(answer, response_size, &msg) < 0) {
-                    PJ_LOG(4, ("addr_resolv_sock.c", "Failed to parse DNS response"));
+                    PJ_LOG(4,(THIS_FILE,
+                              "Failed to parse DNS response"));
                     return PJ_ERESOLVE;
                 }
 
                 num_records = ns_msg_count(msg, ns_s_an);
                 if (num_records == 0) {
-                    PJ_LOG(4, ("addr_resolv_sock.c", "No DNS %s entries found for %s",af == PJ_AF_INET ? "A" : af == PJ_AF_INET6 ? "AAAA" : "A",nodecopy));
+                    PJ_LOG(4,(THIS_FILE,
+                              "No DNS %s entries found for %s",
+                              af == PJ_AF_INET ? "A" :
+                              af == PJ_AF_INET6 ? "AAAA" :
+                              "A",
+                              nodecopy));
                     return PJ_ERESOLVE;
                 }
 
-                // Process each answer record
+                /* Process each answer record */
                 for (i = 0; i < num_records && resolved_count < *count; i++) {
                     if (ns_parserr(&msg, ns_s_an, i, &rr) < 0) {
                         continue;
@@ -268,47 +310,49 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
                     int rdlen = ns_rr_rdlen(rr);
                     const unsigned char *rdata = ns_rr_rdata(rr);
 
-                    // We handle A records (IPv4) and AAAA records (IPv6)
-                    if ((type == ns_t_a && rdlen == 4) || (type == ns_t_aaaa && rdlen == 16)) {
+                    /* We handle A records (IPv4) and AAAA records (IPv6) */
+                    if ((type == ns_t_a && rdlen == 4) || (type == ns_t_aaaa
+						&& rdlen == 16)) {
 
-                        // For IPv4, fill a temporary sockaddr_in, for IPv6 fill a sockaddr_in6.
+                        /* For IPv4, fill a temporary sockaddr_in */
+                        /* For IPv6 fill a sockaddr_in6. */
                         if (type == ns_t_a) {
                             struct sockaddr_in addr;
                             pj_bzero(&addr, sizeof(addr));
                             addr.sin_family = PJ_AF_INET;
                             memcpy(&addr.sin_addr, rdata, 4);
-                            // Copy the filled sockaddr into pj_addrinfo.ai_addr:
-                            pj_memcpy(&ai[resolved_count].ai_addr, &addr, sizeof(addr));
-                        } else { // ns_t_aaaa
+                            /* Copy the sockaddr into pj_addrinfo.ai_addr */
+                            pj_memcpy(&ai[resolved_count].ai_addr,
+                                      &addr, sizeof(addr));
+                        } else {
+                            /* type == ns_t_aaaa */
                             struct sockaddr_in6 addr6;
                             pj_bzero(&addr6, sizeof(addr6));
                             addr6.sin6_family = PJ_AF_INET6;
                             memcpy(&addr6.sin6_addr, rdata, 16);
-                            pj_memcpy(&ai[resolved_count].ai_addr, &addr6, sizeof(addr6));
+                            pj_memcpy(&ai[resolved_count].ai_addr,
+                                      &addr6, sizeof(addr6));
                         }
 
-                        // Store canonical name into ai[].ai_canonname.
-                        // (You can use pj_ansi_strxcpy which is PJSIP’s safe string copy)
+                        /* Store canonical name into ai[].ai_canonname */
                         pj_ansi_strxcpy(ai[resolved_count].ai_canonname,
                                 nodename->ptr,
                                 sizeof(ai[resolved_count].ai_canonname));
-
                         resolved_count++;
                     }
                 }
 
-            // Update the count with the number of valid entries found.
-            *count = resolved_count;
+                /* Update the count with the number of valid entries found. */
+                *count = resolved_count;
 
-            if (resolved_count == 0) {
-                return PJ_ERESOLVE;
-            }
-
-            return PJ_SUCCESS;
+                if (resolved_count == 0) {
+                    return PJ_ERESOLVE;
+                }
+                return PJ_SUCCESS;
             }
         }
     }
-    // Android fallback to getaddrinfo() for API levels < 29
+    /* Android fallback to getaddrinfo() for API levels < 29 */
     pj_bzero(&hint, sizeof(hint));
     hint.ai_family = af;
     /* Zero value of ai_socktype means the implementation shall attempt
