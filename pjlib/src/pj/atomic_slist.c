@@ -167,8 +167,10 @@ PJ_DEF(pj_size_t) pj_atomic_slist_size(/*const*/ pj_atomic_slist *slist)
         return 0;
     }
 
-    for (node = slist->head.next, count = 0; node != node->next; node = node->next)
+    for (node = slist->head.next, count = 0; node != &slist->head; node = node->next) {
+        pj_assert(node);
         ++count;
+    }
 
     if ((status = pj_mutex_unlock(slist->mutex)) != PJ_SUCCESS)
         PJ_PERROR(1, ("pj_atomic_slist_size", status, "Error unlocking mutex for slist slst%p", slist));

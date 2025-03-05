@@ -35,6 +35,7 @@
   *  - pj_atomic_slist_pop()
   *  - pj_atomic_slist_destroy()
   *  - pj_atomic_slist_calloc()
+  *  - pj_atomic_slist_size()
   *
   * MACROS tested:
   *  - PJ_ATOMIC_SLIST_ALIGN_PREFIX
@@ -188,11 +189,13 @@ int atomic_slist_test()
 
     // newly created slist is empty
     PJ_TEST_EQ(pj_atomic_slist_pop(slist), NULL, NULL, { rc=-25; goto error; });
+    PJ_TEST_EQ(pj_atomic_slist_size(slist), 0, NULL, { rc = -27; goto error; });
 
     // Test push().
     for (i = 0; i < sz; ++i) {
         nodes[i].value = i;
         PJ_TEST_SUCCESS(pj_atomic_slist_push(slist, &nodes[i]), NULL, { rc=-30; goto error; });
+        PJ_TEST_EQ(pj_atomic_slist_size(slist), i+1, NULL, { rc = -35; goto error; });
     }
 
     // test pop().
@@ -200,12 +203,14 @@ int atomic_slist_test()
         --i;
         pj_assert(p->value == i); //FILO !
         PJ_TEST_TRUE(p->value == i && p == nodes+i, NULL, { rc=-40; goto error; });
+        PJ_TEST_EQ(pj_atomic_slist_size(slist), i, NULL, { rc = -45; goto error; });
     }
     PJ_TEST_EQ(i, 0, NULL, { rc=-50; goto error; });
+    PJ_TEST_EQ(pj_atomic_slist_size(slist), 0, NULL, { rc = -55; goto error; });
 
 error:
     if (slist != NULL)
-        PJ_TEST_SUCCESS(pj_atomic_slist_destroy(slist), NULL, if (!rc) rc = -55);
+        PJ_TEST_SUCCESS(pj_atomic_slist_destroy(slist), NULL, if (!rc) rc = -60);
 
     if (pool)
         pj_pool_release(pool);
