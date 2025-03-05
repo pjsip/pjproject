@@ -34,6 +34,7 @@ static void systest_display_settings(void);
 static void systest_play_tone(void);
 static void systest_play_wav1(void);
 static void systest_play_wav2(void);
+static void systest_play_wav_conf(void);
 static void systest_rec_audio(void);
 static void systest_audio_test(void);
 static void systest_latency_test(void);
@@ -47,6 +48,7 @@ static gui_menu menu_wizard =  { "Run test wizard", &systest_wizard };
 static gui_menu menu_playtn = { "Play Tone", &systest_play_tone };
 static gui_menu menu_playwv1 = { "Play WAV File1", &systest_play_wav1 };
 static gui_menu menu_playwv2 = { "Play WAV File2", &systest_play_wav2 };
+static gui_menu menu_playwv_conf = { "Play WAV Files 1+2 (conf)", &systest_play_wav_conf };
 static gui_menu menu_recaud  = { "Record Audio", &systest_rec_audio };
 static gui_menu menu_audtest = { "Device Test", &systest_audio_test };
 static gui_menu menu_calclat = { "Latency Test", &systest_latency_test };
@@ -64,10 +66,11 @@ static gui_menu menu_tests = {
         &menu_playtn,
         &menu_playwv1,
         &menu_playwv2,
+        &menu_playwv_conf,
         &menu_recaud,
         &menu_calclat,
         &menu_sndaec,
-        NULL,
+        //NULL,
         &menu_exit
     }
 };
@@ -285,9 +288,11 @@ static pj_status_t create_player(unsigned path_cnt, const char *paths[],
 /*****************************************************************************
  * test: play WAV file
  */
-static void systest_play_wav(unsigned path_cnt, const char *paths[])
+static void systest_play_wav_impl(unsigned path_cnt, const char *paths[],
+                                  unsigned path_cnt2, const char *paths2[])
 {
     pjsua_player_id play_id = PJSUA_INVALID_ID;
+    pjsua_player_id play_id2 = PJSUA_INVALID_ID;
     enum gui_key key;
     test_item_t *ti;
     const char *title = "WAV File Playback Test";
@@ -297,13 +302,22 @@ static void systest_play_wav(unsigned path_cnt, const char *paths[])
     if (!ti)
         return;
 
-    pj_ansi_snprintf(textbuf, sizeof(textbuf),
-                     "This test will play %s file to "
-                     "the speaker. Please listen carefully for audio "
-                     "impairments such as stutter. Let this test run "
-                     "for a while to make sure that everything is okay."
-                     " Press OK to start, CANCEL to skip",
-                     paths[0]);
+    if (path_cnt2) 
+        pj_ansi_snprintf(textbuf, sizeof(textbuf),
+                         "This test will play the sum of %s and %s files to "
+                         "the speaker. Please listen carefully for audio "
+                         "impairments such as stutter. Let this test run "
+                         "for a while to make sure that everything is okay."
+                         " Press OK to start, CANCEL to skip",
+                         paths[0], paths2[0]);
+    else 
+        pj_ansi_snprintf(textbuf, sizeof(textbuf),
+                         "This test will play %s file to "
+                         "the speaker. Please listen carefully for audio "
+                         "impairments such as stutter. Let this test run "
+                         "for a while to make sure that everything is okay."
+                         " Press OK to start, CANCEL to skip",
+                         paths[0]);
 
     key = gui_msgbox(title, textbuf,
                      WITH_OKCANCEL);
@@ -323,6 +337,16 @@ static void systest_play_wav(unsigned path_cnt, const char *paths[])
     if (status != PJ_SUCCESS)
         goto on_return;
 
+    if (path_cnt2) {
+        status = create_player(path_cnt2, paths2, &play_id2);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+
+        status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id2), 0);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+    }
+
     key = gui_msgbox(title,
                      "WAV file should be playing now in the "
                      "speaker. Press OK to stop. ", WITH_OK);
@@ -333,6 +357,9 @@ static void systest_play_wav(unsigned path_cnt, const char *paths[])
 on_return:
     if (play_id != -1)
         pjsua_player_destroy(play_id);
+
+    if (play_id2 != -1)
+        pjsua_player_destroy(play_id2);
 
     if (status != PJ_SUCCESS) {
         systest_perror("Sorry we've encountered error", status);
@@ -345,6 +372,11 @@ on_return:
             pj_ansi_strxcpy(ti->reason, USER_ERROR, sizeof(ti->reason));
     }
     return;
+}
+
+static void systest_play_wav(unsigned path_cnt, const char *paths[])
+{
+    systest_play_wav_impl(path_cnt, paths, 0, NULL);
 }
 
 static void systest_play_wav1(void)
@@ -361,6 +393,15 @@ static void systest_play_wav2(void)
     systest_play_wav(PJ_ARRAY_SIZE(paths), paths);
 }
 
+static void systest_play_wav_conf(void)
+{
+    const char *paths[] = { add_path(res_path, WAV_PLAYBACK_PATH),
+                            ALT_PATH1 WAV_PLAYBACK_PATH };
+    const char *paths2[] = { add_path(res_path, WAV_TOCK8_PATH),
+                             ALT_PATH1 WAV_TOCK8_PATH};
+    systest_play_wav_impl(PJ_ARRAY_SIZE(paths), paths, 
+                          PJ_ARRAY_SIZE(paths2), paths2);
+}
 
 /*****************************************************************************
  * test: record audio
@@ -1288,6 +1329,7 @@ static void systest_wizard(void)
     systest_display_settings();
     systest_play_tone();
     systest_play_wav1();
+    systest_play_wav_conf();
     systest_rec_audio();
     systest_audio_test();
     systest_latency_test();

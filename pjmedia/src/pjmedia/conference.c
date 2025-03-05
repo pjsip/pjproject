@@ -177,8 +177,10 @@ PJ_DEF(pj_size_t) pj_atomic_slist_size(/*const*/ pj_atomic_slist *slist)
         return 0;
     }
 
-    for (node = slist->head.next, count = 0; node != node->next; node = node->next)
+    for (node = slist->head.next, count = 0; node != &slist->head; node = node->next) {
+        pj_assert(node);
         ++count;
+    }
 
     if ((status = pj_mutex_unlock(slist->mutex)) != PJ_SUCCESS)
         PJ_PERROR(1, ("pj_atomic_slist_size", status, "Error unlocking mutex for slist slst%p", slist));
@@ -970,7 +972,7 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
     PJ_TEST_SUCCESS(status=pj_atomic_slist_create(pool, &conf_port->free_node_cache), NULL, goto on_return);
     PJ_TEST_NOT_NULL(free_node = pj_atomic_slist_calloc(pool, 1, sizeof(rx_buffer_slist_node)), NULL, 
                      {status = PJ_ENOMEM;goto on_return;});
-    PJ_TEST_SUCCESS(status=pj_atomic_slist_push(conf_port->free_node_cache, &free_node), NULL, goto on_return);
+    PJ_TEST_SUCCESS(status=pj_atomic_slist_push(conf_port->free_node_cache, free_node), NULL, goto on_return);
     PJ_TEST_SUCCESS(status=pj_atomic_slist_create(pool, &conf_port->buff_to_mix), NULL, goto on_return);
     PJ_TEST_SUCCESS(status=pj_atomic_create(pool, 0, &conf_port->requests_to_mix), NULL, goto on_return);
 
@@ -3381,6 +3383,7 @@ static int conf_thread(void *arg)
             /* signal to the get_frame() thread if all worker threads have completed their work */
             if (!pj_atomic_dec_and_get(conf->active_thread_cnt))
                 PJ_TEST_SUCCESS(pj_event_set(conf->barrier_evt), NULL, (void)0);
+                //TODO a conditional variable would be preferable here
         }
     }
 
@@ -3599,7 +3602,7 @@ static void perform_get_frame(pjmedia_conf *conf)
                 /* the first mixer appeared here - mix all for this listener! 
                  * This thread has monopolized the mixing operations on that listener port.
                  * Other threads can asynchronously push their data 
-                 * into this listener?s buff_to_mix.
+                 * into this listener's buff_to_mix.
                  */
                 do {
                     while ((mix_node = pj_atomic_slist_pop(listener->buff_to_mix)) != NULL) {
