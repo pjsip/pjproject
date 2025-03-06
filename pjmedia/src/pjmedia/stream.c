@@ -521,6 +521,10 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                     if (target_delay_ms < 0)
                         target_delay_ms = 0;
                     pjmedia_jbuf_set_min_delay(c_strm->jb, target_delay_ms);
+
+                    PJ_LOG(5,(c_strm->port.info.name.ptr,
+                              "Adjust minimal delay to %dms",
+                              target_delay_ms));
                 }
             }
         }

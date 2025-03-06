@@ -37,7 +37,7 @@
 
 /* Enable/disable trace */
 #if 0
-#  define TRACE_(x) PJ_LOG(1, x)
+#  define TRACE_(x) PJ_LOG(5, x)
 #else
 #  define TRACE_(x)
 #endif
@@ -105,7 +105,7 @@ static unsigned ntp_to_ms(const pj_timestamp* ntp)
 static void avs_on_destroy(void* arg)
 {
     pjmedia_av_sync* avs = (pjmedia_av_sync*)arg;
-    TRACE_((avs->pool->obj_name, "%s destroyed", avs->pool->obj_name));
+    PJ_LOG(4, (avs->pool->obj_name, "%s destroyed", avs->pool->obj_name));
     pj_pool_release(avs->pool);
 }
 
@@ -151,7 +151,7 @@ PJ_DEF(pj_status_t) pjmedia_av_sync_create(
     pj_list_init(&avs->media_list);
     pj_list_init(&avs->free_media_list);
 
-    TRACE_((avs->pool->obj_name, "%s created", avs->pool->obj_name));
+    PJ_LOG(4, (avs->pool->obj_name, "%s created", avs->pool->obj_name));
     *av_sync = avs;
     return PJ_SUCCESS;
 
@@ -168,6 +168,7 @@ PJ_DEF(void) pjmedia_av_sync_destroy(pjmedia_av_sync* avs)
 {
     PJ_ASSERT_ON_FAIL(avs, return);
     pj_grp_lock_dec_ref(avs->grp_lock);
+    PJ_LOG(4, (avs->pool->obj_name, "%s destroy requested", avs->pool->obj_name));
 }
 
 
@@ -213,7 +214,7 @@ PJ_DEF(pj_status_t) pjmedia_av_sync_add_media(
     pj_grp_lock_add_ref(avs->grp_lock);
 
     *media = m;
-    TRACE_((avs->pool->obj_name, "Added media %s", m->name));
+    PJ_LOG(4, (avs->pool->obj_name, "Added media %s", m->name));
 
 on_return:
     pj_grp_lock_release(avs->grp_lock);
@@ -241,7 +242,7 @@ PJ_DEF(pj_status_t) pjmedia_av_sync_del_media(
     pj_list_push_back(&avs->free_media_list, media);
     pj_grp_lock_release(avs->grp_lock);
 
-    TRACE_((avs->pool->obj_name, "Removed media %s", media->name));
+    PJ_LOG(4, (avs->pool->obj_name, "Removed media %s", media->name));
     pj_grp_lock_dec_ref(avs->grp_lock);
 
     return PJ_SUCCESS;
@@ -261,6 +262,8 @@ PJ_DEF(pj_status_t) pjmedia_av_sync_update_ref(
     media->ref_ntp = *ntp;
     media->ref_ts  = *ts;
     media->is_ref_set = PJ_TRUE;
+    TRACE_((media->av_sync->pool->obj_name, "%s updates ref ntp=%ull ts=%ull",
+            media->name, ntp->u64, ts->u64));
 
     return PJ_SUCCESS;
 }
