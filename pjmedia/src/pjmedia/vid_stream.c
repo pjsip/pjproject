@@ -1300,10 +1300,9 @@ static pj_status_t get_frame(pjmedia_port *port,
     /* Update synchronizer with presentation time */
     if (c_strm->av_sync_media && frame->type != PJMEDIA_FRAME_TYPE_NONE) {
         pj_timestamp pts = { 0 };
-        pj_int32_t delay_req;
 
         pts = frame->timestamp;
-        delay_req = pjmedia_av_sync_update_pts(c_strm->av_sync_media, &pts);
+        pjmedia_av_sync_update_pts(c_strm->av_sync_media, &pts, NULL);
     }
 
     return PJ_SUCCESS;

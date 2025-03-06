@@ -1734,6 +1734,29 @@
 #undef PJMEDIA_VID_STREAM_CHECK_RTP_PT
 #define PJMEDIA_VID_STREAM_CHECK_RTP_PT      PJMEDIA_STREAM_CHECK_RTP_PT
 
+
+/**
+ * Maximum tolerable presentation lag from the earliest to the latest media,
+ * in milliseconds, in inter-media synchronization. When the delay is
+ * higher than this setting, the media synchronizer will request the slower
+ * media to speed up. And if after a number of speed up requests the delay
+ * is still beyond this setting, the fastest media will be requested to
+ * slow down.
+ *
+ * Default: 45 ms
+ */
+#define PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC   45
+
+
+/**
+  * Maximum number of speed up request to synchronize presentation time,
+  * before a slow down request to the fastest media is issued.
+  *
+  * Default: 10
+  */
+#define PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT      10
+
+
 /**
  * @}
  */

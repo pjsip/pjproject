@@ -499,10 +499,9 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                 pj_int32_t delay_req_ms;
 
                 pts.u32.lo = rtp_ts;
-                delay_req_ms = pjmedia_av_sync_update_pts(
-                                                    c_strm->av_sync_media,
-                                                    &pts);
-                if (delay_req_ms) {
+                status = pjmedia_av_sync_update_pts(c_strm->av_sync_media,
+                                                    &pts, &delay_req_ms);
+                if (status == PJ_SUCCESS && delay_req_ms) {
                     /* Delay adjustment is requested */
                     pjmedia_jb_state jb_state;
                     int target_delay_ms, cur_delay_ms;
@@ -637,11 +636,9 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
             /* Update synchronizer with presentation time */
             if (c_strm->av_sync_media) {
                 pj_timestamp pts = { 0 };
-                pj_int32_t delay_req;
 
                 pts.u32.lo = rtp_ts;
-                delay_req = pjmedia_av_sync_update_pts(c_strm->av_sync_media,
-                                                       &pts);
+                pjmedia_av_sync_update_pts(c_strm->av_sync_media, &pts, NULL);
             }
 
         } else {

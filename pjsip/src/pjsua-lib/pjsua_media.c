@@ -4391,7 +4391,9 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
               sizeof(call->media_prov[0]) * call->med_prov_cnt);
 
     /* Create synchronizer */
-    if ((maudcnt+mvidcnt) > 1 && !call->av_sync) {
+    if ((call->opt.flag & PJSUA_CALL_NO_MEDIA_SYNC)==0 && 
+        (maudcnt+mvidcnt) > 1 && !call->av_sync)
+    {
         status = pjmedia_av_sync_create(pjsua_var.med_endpt, NULL,
                                         &call->av_sync);
         if (status != PJ_SUCCESS) {

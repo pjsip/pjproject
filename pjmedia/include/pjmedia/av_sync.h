@@ -46,24 +46,22 @@ PJ_BEGIN_DECL
  * 3. Call #pjmedia_av_sync_update_ref() each time the media receiving
  *    an RTCP SR packet.
  * 4. Call #pjmedia_av_sync_update_pts() each time the media returning
- *    a frame to be presented, e.g: via port.get_frame(). See more about
- *    this function below.
+ *    a frame to be presented, e.g: via port.get_frame(). The function may
+ *    request the media to adjust its delay.
  * 5. Call #pjmedia_av_sync_del_media() when a media is removed from the
  *    session.
  * 6. Call #pjmedia_av_sync_destroy() when the session is ended.
  * 
- * More about #pjmedia_av_sync_update_pts():
- * - The function will return non-zero when delay adjustment in the media is
- *   needed for synchronization. When it returns a positive number, the media
- *   should increase the delay as many as the returned number, in millisecond.
- *   When it returns a negative number, the media should try to decrease
- *   the delay as many as the returned number, in millisecond.
- *   For example in audio stream, the delay adjustment can managed using
- *   #pjmedia_jbuf_set_min_delay().
- * - The function will keep track on the delay adjustment progress, for
- *   example, after some delay adjustment are requested to a media and
- *   the delay of the media is still relatively high, it will trigger a
- *   request to the fastest media to slow down.
+ * The primary synchronization logic is implemented within the
+ * #pjmedia_av_sync_update_pts() function. This function will calculate
+ * the lag between the calling media to the earliest media and will provide
+ * a feedback to the calling media whether it is in synchronized state,
+ * late, or early so the media can respond accordingly.
+ * Initially this function will try to request slower media to speed up.
+ * If after a specific number of requests (i.e: configurable via
+ * PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT) and the lag is still beyond a tolerable
+ * value (i.e: configurable via PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC), the
+ * function will issue slow down request to the fastest media.
  */
 
 
@@ -107,14 +105,14 @@ PJ_DECL(void) pjmedia_av_sync_media_setting_default(
  * Create media synchronizer.
  *
  * @param endpt             The media endpoint.
- * @param setting           Synchronization setting, must be NULL for now.
+ * @param option            Synchronization option, must be NULL for now.
  * @param av_sync           The pointer to receive the media synchronizer.
  *
  * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_av_sync_create(
                                 pjmedia_endpt *endpt,
-                                const void *setting,
+                                const void *option,
                                 pjmedia_av_sync **av_sync);
 
 
@@ -123,7 +121,7 @@ PJ_DECL(pj_status_t) pjmedia_av_sync_create(
  *
  * @param av_sync           The media synchronizer.
  */
-PJ_DECL(void) pjmedia_av_sync_destroy(pjmedia_av_sync* av_sync);
+PJ_DECL(void) pjmedia_av_sync_destroy(pjmedia_av_sync *av_sync);
 
 
 /**
@@ -138,8 +136,8 @@ PJ_DECL(void) pjmedia_av_sync_destroy(pjmedia_av_sync* av_sync);
  */
 PJ_DECL(pj_status_t) pjmedia_av_sync_add_media(
                                 pjmedia_av_sync* av_sync,
-                                const pjmedia_av_sync_media_setting* setting,
-                                pjmedia_av_sync_media** av_sync_media);
+                                const pjmedia_av_sync_media_setting *setting,
+                                pjmedia_av_sync_media **av_sync_media);
 
 
 /**
@@ -158,25 +156,36 @@ PJ_DECL(pj_status_t) pjmedia_av_sync_del_media(
 /**
  * Update synchronizer about the last presentation timestamp of the specified
  * media. Normally this function is called when media is producing a frame
- * to be rendered (e.g: to a video renderer or audio device speaker).
- * The media may be requested to adjust its playback delay by the number
- * returned by the function, for example audio stream can adjust delay
- * using #pjmedia_jbuf_set_min_delay().
+ * to be rendered (e.g: in port's get_frame() method). Upon returning, the
+ * media may be requested to adjust its delay so it matches to the earliest
+ * or the latest media, i.e: by speeding up or slowing down.
+ *
+ * Initially this function will try to request slower media to speed up.
+ * If after a specific number of requests (i.e: configurable via
+ * PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT) and the lag is still beyond a tolerable
+ * value (i.e: configurable via PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC), the
+ * function will issue slow down request to the fastest media.
+ *
+ * Note that currently audio stream can adjust delay using
+ * #pjmedia_jbuf_set_min_delay(), while video stream does not have the
+ * capability to adjust delay yet.
  *
  * @param av_sync_media     The media synchronization handle.
  * @param pts               The presentation timestamp.
+ * @param adjust_delay      Optional pointer to receive adjustment delay
+ *                          required, in milliseconds, to make this media
+ *                          synchronized to the fastest media.
+ *                          Possible output values are:
+ *                          0 when no action is needed,
+ *                          possitive value when increasing delay is needed,
+ *                          or negative value when decreasing delay is needed.
  *
- * @return                  0  : no action is needed, because the media is
- *                               already synchronized or the calculation
- *                               is not completed (e.g: need more data).
- *                          <0 : decrease playback delay by returned number,
- *                               in milliseconds.
- *                          >0 : increase playback delay by returned number,
- *                               in milliseconds.
+ * @return                  PJ_SUCCESS on success.
  */
-PJ_DECL(pj_int32_t) pjmedia_av_sync_update_pts(
+PJ_DECL(pj_status_t) pjmedia_av_sync_update_pts(
                                 pjmedia_av_sync_media *av_sync_media,
-                                const pj_timestamp *pts);
+                                const pj_timestamp *pts,
+                                pj_int32_t *adjust_delay);
 
 
 /**
