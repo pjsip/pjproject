@@ -2156,7 +2156,7 @@ static void close_snd_dev(void)
     pj_log_push_indent();
 
     /* Cancel sound device idle timer. */
-    if (0 && pjsua_var.snd_idle_timer.id) {
+    if (pjsua_var.snd_idle_timer.id) {
         pjsip_endpt_cancel_timer(pjsua_var.endpt, &pjsua_var.snd_idle_timer);
         pjsua_var.snd_idle_timer.id = PJ_FALSE;
     }
