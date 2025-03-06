@@ -2164,6 +2164,12 @@ static void close_snd_dev(void)
 {
     pj_log_push_indent();
 
+    /* Cancel sound device idle timer. */
+    if (pjsua_var.snd_idle_timer.id) {
+        pjsip_endpt_cancel_timer(pjsua_var.endpt, &pjsua_var.snd_idle_timer);
+        pjsua_var.snd_idle_timer.id = PJ_FALSE;
+    }
+
     /* Notify app */
     if (pjsua_var.snd_is_on && pjsua_var.ua_cfg.cb.on_snd_dev_operation) {
         (*pjsua_var.ua_cfg.cb.on_snd_dev_operation)(0);

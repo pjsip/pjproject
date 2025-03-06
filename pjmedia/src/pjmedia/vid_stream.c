@@ -172,7 +172,6 @@ typedef struct send_entry
     pj_size_t            buf_size;
 
     pj_timestamp         send_ts;
-    pj_timestamp         sent_ts;
 } send_entry;
 
 /* Sending stream */
@@ -192,6 +191,9 @@ typedef struct send_stream
     pj_timestamp         ts_freq;
     unsigned             rtp_tx_err_cnt;
 
+#if TRACE_RC
+    pj_size_t            entry_cnt;
+#endif
 } send_stream;
 
 /* Sending manager (may be shared by multiple streams in the future) */
@@ -236,6 +238,7 @@ static int send_worker_thread(void* arg)
         }
 
         /* Send the packet */
+        e->send_ts = now;
         s = e->stream;
         status = pjmedia_transport_send_rtp(s->tp, e->buf, e->buf_size);
         if (status != PJ_SUCCESS) {
@@ -245,21 +248,9 @@ static int send_worker_thread(void* arg)
                 s->rtp_tx_err_cnt = 0;
         }
 
-        pj_grp_lock_acquire(s->grp_lock);
-
-        /* Update or reset total sent */
-        if (status == PJ_SUCCESS) {
-            s->rc_total += e->buf_size;
-            if (s->rc_total > 0xFF000000) {
-                s->rc_total = 0;
-                s->rc_start = now;
-            }
-        }
-
         /* Put back send buffer to free list */
-        e->sent_ts = now;
+        pj_grp_lock_acquire(s->grp_lock);
         pj_list_push_back(&s->free_list, e);
-
         pj_grp_lock_release(s->grp_lock);
 
         /* Dec ref the stream (ref added in queuing packet) */
@@ -372,10 +363,11 @@ static pj_status_t detach_send_manager(send_stream *ss)
 static send_entry* get_send_entry(send_stream *ss)
 {
     send_entry *e;
+    void *buf;
     pj_timestamp min_sent_ts, idle_ts;
 
-    /* Find entry which has idled for at least 1/4 seconds */
-    idle_ts.u64 = ss->ts_freq.u64 >> 2;
+    /* Find entry which has idled for at least 1/16 seconds */
+    idle_ts.u64 = ss->ts_freq.u64 >> 4;
 
     pj_get_timestamp(&min_sent_ts);
     pj_sub_timestamp(&min_sent_ts, &idle_ts);
@@ -384,27 +376,29 @@ static send_entry* get_send_entry(send_stream *ss)
     e = ss->free_list.next;
     while (e != &ss->free_list) {
         send_entry *next = e->next;
-        if (pj_cmp_timestamp(&min_sent_ts, &e->sent_ts) >= 0) {
+        if (pj_cmp_timestamp(&min_sent_ts, &e->send_ts) >= 0) {
             pj_list_erase(e);
             break;
         }
         e = next;
     }
+
+    if (e == &ss->free_list) {
+        /* Not found, allocate a new one */
+        e = PJ_POOL_ZALLOC_T(ss->pool, send_entry);
+        buf = pj_pool_alloc(ss->pool, ss->buf_size);
+        if (!e || !buf)
+            return NULL;
+
+        e->buf = buf;
+        e->buf_size = ss->buf_size;
+        e->stream = ss;
+#if TRACE_RC
+        ss->entry_cnt++;
+        PJ_LOG(5, (ss->name, "Send entry count=%d", ss->entry_cnt));
+#endif
+    }
     pj_grp_lock_release(ss->grp_lock);
-
-    if (e != &ss->free_list)
-        return e;
-
-    e = PJ_POOL_ZALLOC_T(ss->pool, send_entry);
-    if (!e)
-        return NULL;
-
-    e->buf = pj_pool_alloc(ss->pool, ss->buf_size);
-    if (!e->buf)
-        return NULL;
-
-    e->buf_size = ss->buf_size;
-    e->stream = ss;
     return e;
 }
 
@@ -413,23 +407,31 @@ static void send_rtp(send_stream *ss, send_entry *entry)
 {
     pj_timestamp send_ts;
 
-    /* Calculate earliest sending time allowed by rate control */
     pj_grp_lock_acquire(ss->grp_lock);
+
+    /* Calculate earliest sending time allowed by rate control */
+    ss->rc_total += entry->buf_size;
+    send_ts.u64 = ss->rc_total * ss->ts_freq.u64 * 8 / ss->rc_bandwidth;
     if (ss->rc_start.u64 == 0)
         pj_get_timestamp(&ss->rc_start);
     entry->send_ts = ss->rc_start;
-    send_ts.u64 = (ss->rc_total + entry->buf_size) * ss->ts_freq.u64 * 8 /
-                  ss->rc_bandwidth;
-    pj_grp_lock_release(ss->grp_lock);
     pj_add_timestamp(&entry->send_ts, &send_ts);
+
+    /* Reset counter to avoid overflow in calculating timestamp */
+    if (ss->rc_total > 0xFF000000) {
+        ss->rc_total = 0;
+        ss->rc_start = entry->send_ts;
+    }
+
+    /* Add ref stream to avoid premature destroy of stream */
+    pj_grp_lock_add_ref(ss->grp_lock);
+
+    pj_grp_lock_release(ss->grp_lock);
 
     /* Queue the packet */
     pj_grp_lock_acquire(ss->mgr->grp_lock);
     pj_list_push_back(&ss->mgr->send_list, entry);
     pj_grp_lock_release(ss->mgr->grp_lock);
-
-    /* Add ref stream to avoid premature destroy of stream */
-    pj_grp_lock_add_ref(ss->grp_lock);
 }
 
 
@@ -953,7 +955,7 @@ static pj_status_t put_frame(pjmedia_port *port,
 
 #if TRACE_RC
     /* Trace log for rate control */
-    {
+    if (pkt_cnt) {
         pj_timestamp end_time;
         unsigned total_sleep;
 
