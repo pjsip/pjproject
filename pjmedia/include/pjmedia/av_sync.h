@@ -155,10 +155,10 @@ PJ_DECL(pj_status_t) pjmedia_av_sync_del_media(
 
 /**
  * Update synchronizer about the last presentation timestamp of the specified
- * media. Normally this function is called when media is producing a frame
- * to be rendered (e.g: in port's get_frame() method). Upon returning, the
- * media may be requested to adjust its delay so it matches to the earliest
- * or the latest media, i.e: by speeding up or slowing down.
+ * media. Normally this function is called each time the media produces
+ * a frame to be rendered (e.g: in port's get_frame() method). Upon returning,
+ * the media may be requested to adjust its delay so it matches to the
+ * earliest or the latest media, i.e: by speeding up or slowing down.
  *
  * Initially this function will try to request slower media to speed up.
  * If after a specific number of requests (i.e: configurable via
@@ -190,7 +190,8 @@ PJ_DECL(pj_status_t) pjmedia_av_sync_update_pts(
 
 /**
  * Update synchronizer about reference timestamps of the specified media.
- * Normally this function is called after a media receives RTCP SR packet.
+ * Normally this function is called each time the media receives RTCP SR
+ * packet.
  *
  * @param av_sync_media     The media synchronization handle.
  * @param ntp               The NTP timestamp info from RTCP SR.
