@@ -519,11 +519,22 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                     target_delay_ms = cur_delay_ms + delay_req_ms;
                     if (target_delay_ms < 0)
                         target_delay_ms = 0;
-                    pjmedia_jbuf_set_min_delay(c_strm->jb, target_delay_ms);
 
-                    PJ_LOG(5,(c_strm->port.info.name.ptr,
-                              "Adjust minimal delay to %dms",
-                              target_delay_ms));
+                    /* Just for safety (never see in tests), target delay
+                     * should not exceed 5 seconds.
+                     */
+                    if (target_delay_ms > 5000) {
+                        PJ_LOG(5,(c_strm->port.info.name.ptr,
+                                  "Ignored avsync request for excessive delay"
+                                  " (current=%dms, target=%dms)!",
+                                  cur_delay_ms, target_delay_ms));
+                    } else {
+                        pjmedia_jbuf_set_min_delay(c_strm->jb,
+                                                   target_delay_ms);
+                        PJ_LOG(5,(c_strm->port.info.name.ptr,
+                                  "Adjust audio minimal delay to %dms",
+                                  target_delay_ms));
+                    }
                 }
             }
         }

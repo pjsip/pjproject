@@ -101,6 +101,9 @@ struct pjmedia_vid_stream
     pjmedia_ratio            dec_max_fps;   /**< Max fps of decoding dir.   */
     pjmedia_frame            dec_frame;     /**< Current decoded frame.     */
     unsigned                 dec_delay_cnt; /**< Decoding delay (in frames).*/
+    unsigned                 dec_add_delay_cnt;
+                                            /**< Decoding additional delay
+                                                 for sync (in frames).      */
     unsigned                 dec_max_delay; /**< Decoding max delay (in ts).*/
     pjmedia_event            fmt_event;     /**< Buffered fmt_changed event
                                                  to avoid deadlock          */
@@ -1049,7 +1052,9 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
                     frm_pkt_cnt = cnt;
 
                 /* Is it time to decode? Check with minimum delay setting */
-                if (++frm_cnt == stream->dec_delay_cnt) {
+                if (++frm_cnt == stream->dec_delay_cnt +
+                                 stream->dec_add_delay_cnt)
+                {
                     got_frame = PJ_TRUE;
                     break;
                 }
@@ -1302,9 +1307,55 @@ static pj_status_t get_frame(pjmedia_port *port,
     /* Update synchronizer with presentation time */
     if (c_strm->av_sync_media && frame->type != PJMEDIA_FRAME_TYPE_NONE) {
         pj_timestamp pts = { 0 };
+        pj_int32_t delay_req_ms;
+        pj_status_t status;
 
         pts = frame->timestamp;
-        pjmedia_av_sync_update_pts(c_strm->av_sync_media, &pts, NULL);
+        status = pjmedia_av_sync_update_pts(c_strm->av_sync_media, &pts,
+                                            &delay_req_ms);
+        if (status == PJ_SUCCESS && delay_req_ms) {
+            /* Delay adjustment is requested */
+            int target_delay_ms, cur_delay_ms, target_delay_cnt;
+            unsigned last_add_delay_cnt;
+
+            /* Increase delay slowly, but decrease delay quickly */
+            if (delay_req_ms > 0)
+                delay_req_ms = delay_req_ms * 3 / 4;
+            else 
+                delay_req_ms = delay_req_ms * 4 / 3;
+
+            /* Apply delay request */
+            last_add_delay_cnt = stream->dec_add_delay_cnt;
+            cur_delay_ms = (stream->dec_delay_cnt+stream->dec_add_delay_cnt) *
+                           1000 *
+                           stream->dec_max_fps.denum /
+                           stream->dec_max_fps.num;
+            target_delay_ms = cur_delay_ms + delay_req_ms;
+            target_delay_cnt = target_delay_ms * stream->dec_max_fps.num /
+                               stream->dec_max_fps.denum / 1000;
+            if (target_delay_cnt <= (int)stream->dec_delay_cnt)
+                stream->dec_add_delay_cnt = 0;
+            else
+                stream->dec_add_delay_cnt = target_delay_cnt -
+                                            stream->dec_delay_cnt;
+
+            /* Just for safety (never see in tests), target delay should not
+             * exceed 5 seconds.
+             */
+            if (target_delay_ms > 5000) {
+                stream->dec_add_delay_cnt = last_add_delay_cnt;
+                PJ_LOG(5,(c_strm->port.info.name.ptr,
+                          "Ignored avsync request for excessive delay"
+                          " (current=%dms, target=%dms)!",
+                          cur_delay_ms, target_delay_ms));
+            }
+
+            if (stream->dec_add_delay_cnt != last_add_delay_cnt) {
+                PJ_LOG(5,(c_strm->port.info.name.ptr,
+                          "Adjust video minimal delay to %dms",
+                          target_delay_ms));
+            }
+        }
     }
 
     return PJ_SUCCESS;

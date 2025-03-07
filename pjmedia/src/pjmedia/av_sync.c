@@ -156,7 +156,8 @@ PJ_DEF(void) pjmedia_av_sync_destroy(pjmedia_av_sync* avs)
 {
     PJ_ASSERT_ON_FAIL(avs, return);
     pj_grp_lock_dec_ref(avs->grp_lock);
-    PJ_LOG(4, (avs->pool->obj_name, "%s destroy requested", avs->pool->obj_name));
+    PJ_LOG(4, (avs->pool->obj_name, "%s destroy requested",
+               avs->pool->obj_name));
 }
 
 
