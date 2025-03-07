@@ -4402,6 +4402,12 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
         }
     }
 
+    /* Destroy existing synchronizer if synchronization is cancelled */
+    else if ((call->opt.flag & PJSUA_CALL_NO_MEDIA_SYNC) && call->av_sync) {
+        pjmedia_av_sync_destroy(call->av_sync);
+        call->av_sync = NULL;
+    }
+
     /* Process each media stream */
     for (mi=0; mi < call->med_cnt; ++mi) {
         pjsua_call_media *call_med = &call->media[mi];
