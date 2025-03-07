@@ -166,10 +166,6 @@ PJ_DECL(pj_status_t) pjmedia_av_sync_del_media(
  * value (i.e: configurable via PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC), the
  * function will issue slow down request to the fastest media.
  *
- * Note that currently audio stream can adjust delay using
- * #pjmedia_jbuf_set_min_delay(), while video stream does not have the
- * capability to adjust delay yet.
- *
  * @param av_sync_media     The media synchronization handle.
  * @param pts               The presentation timestamp.
  * @param adjust_delay      Optional pointer to receive adjustment delay
