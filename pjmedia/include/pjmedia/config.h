@@ -1745,7 +1745,9 @@
  *
  * Default: 45 ms
  */
-#define PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC   45
+#ifndef PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC
+#   define PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC    45
+#endif
 
 
 /**
@@ -1754,8 +1756,9 @@
   *
   * Default: 10
   */
-#define PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT      10
-
+#ifndef PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT
+#   define PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT       10
+#endif
 
 /**
  * @}
