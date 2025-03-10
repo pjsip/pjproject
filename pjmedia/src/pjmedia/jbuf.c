@@ -858,12 +858,16 @@ static void jbuf_discard_static(pjmedia_jbuf *jb)
      * so just disable it when progressive discard is active.
      */
     int diff, burst_level;
-    unsigned ref_size;
+    unsigned cur_size;
 
     burst_level = PJ_MAX(jb->jb_eff_level, jb->jb_level);
-    ref_size = PJ_MAX(jb_framelist_eff_size(&jb->jb_framelist),
-                      jb->jb_min_delay);
-    diff = ref_size - burst_level*2;
+    cur_size = jb_framelist_eff_size(&jb->jb_framelist);
+
+    /* Don't discard if delay is lower than or equal to setting */
+    if (cur_size <= jb->jb_min_delay)
+        return;
+
+    diff = cur_size - burst_level*2;
 
     if (diff >= STA_DISC_SAFE_SHRINKING_DIFF) {
         int seq_origin;
@@ -895,18 +899,17 @@ static void jbuf_discard_static(pjmedia_jbuf *jb)
 
 static void jbuf_discard_progressive(pjmedia_jbuf *jb)
 {
-    unsigned ref_size, burst_level, overflow, T, discard_dist;
+    unsigned cur_size, burst_level, overflow, T, discard_dist;
     int last_seq;
 
     /* Should be done in PUT operation */
     if (jb->jb_last_op != JB_OP_PUT)
         return;
 
-    /* Check if latency is longer than burst */
-    ref_size = PJ_MAX(jb_framelist_eff_size(&jb->jb_framelist),
-                      jb->jb_min_delay);
+    /* Check if latency is longer than burst or minimum delay */
+    cur_size = jb_framelist_eff_size(&jb->jb_framelist);
     burst_level = PJ_MAX(jb->jb_eff_level, jb->jb_level);
-    if (ref_size <= burst_level) {
+    if (cur_size <= burst_level || cur_size <= jb->jb_min_delay) {
         /* Reset any scheduled discard */
         jb->jb_discard_dist = 0;
         return;
@@ -924,7 +927,7 @@ static void jbuf_discard_progressive(pjmedia_jbuf *jb)
             (PJMEDIA_JBUF_PRO_DISC_MAX_BURST-PJMEDIA_JBUF_PRO_DISC_MIN_BURST);
 
     /* Calculate current discard distance */
-    overflow = ref_size - burst_level;
+    overflow = cur_size - PJ_MAX(burst_level, jb->jb_min_delay);
     discard_dist = T * jb->jb_frame_ptime_denum / overflow /
                    jb->jb_frame_ptime;
 
@@ -1295,7 +1298,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_set_min_delay(pjmedia_jbuf *jb,
 
     /* Should not be higher than half of jitter buffer capacity */
     if (jb->jb_min_delay > jb->jb_max_count/2)
-        jb->jb_min_delay = jb->jb_max_count/2;
+        jb->jb_min_delay = (unsigned)jb->jb_max_count/2;
 
     return PJ_SUCCESS;
 }

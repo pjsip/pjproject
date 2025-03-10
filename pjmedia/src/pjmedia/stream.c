@@ -528,7 +528,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                                   "Ignored avsync request for excessive delay"
                                   " (current=%dms, target=%dms)!",
                                   cur_delay_ms, target_delay_ms));
-                    } else {
+                    } else if (cur_delay_ms != target_delay_ms) {
                         pjmedia_jbuf_set_min_delay(c_strm->jb,
                                                    target_delay_ms);
                         PJ_LOG(5,(c_strm->port.info.name.ptr,
