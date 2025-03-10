@@ -581,7 +581,7 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
         /* Clear all pending responses */
         clear_all_responses(dd);
 
-        /* Send 500 response */
+        /* Send 504 (Server Time-out) response */
         status = pjsip_inv_end_session(dd->inv, 504, &reason, &tdata);
         if (status == PJ_SUCCESS && tdata) {
             pjsip_dlg_send_response(dd->inv->dlg, 

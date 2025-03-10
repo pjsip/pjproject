@@ -978,10 +978,7 @@ PJ_DEF(void*) pj_thread_local_get(long index)
     //Can't check stack because this function is called
     //by PJ_CHECK_STACK() itself!!!
     //PJ_CHECK_STACK();
-    if (index == -1)
-    {
-        return 0;
-    }
+    PJ_ASSERT_RETURN(index >= 0, NULL);
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     return TlsGetValueRT(index);
 #else
