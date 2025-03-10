@@ -378,6 +378,15 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 
 
 /**
+ * Default redundancy level for text streams. If this macro is set to zero,
+ * it means that there will be no redundancy.
+ */
+#ifndef PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL
+#   define PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL 2
+#endif
+
+
+/**
  * Specify whether timer heap events will be polled by a separate worker
  * thread. If this is set/enabled, a worker thread will be dedicated to
  * poll timer heap events only, and the rest worker thread(s) will poll
@@ -588,6 +597,9 @@ typedef struct pjsua_stream_info
 
         /** Video stream info */
         pjmedia_vid_stream_info vid;
+
+        /** Text stream info */
+        pjmedia_txt_stream_info txt;
     } info;
 
 } pjsua_stream_info;
@@ -1033,6 +1045,28 @@ typedef struct pjsua_dtmf_event {
 
 
 /**
+ * This will contain the information of the callback \a on_rx_text.
+ */
+typedef struct pjsua_txt_stream_data {
+    /**
+     * The sequence of the incoming text block data.
+     */
+    int                 seq;
+
+    /**
+     * The timestamp of the text block data.
+     */
+    unsigned            ts;
+
+    /**
+     * The content of the text block.
+     */
+    pj_str_t            text;
+
+} pjsua_txt_stream_data;
+
+
+/**
  * Call settings.
  */
 typedef struct pjsua_call_setting
@@ -1040,7 +1074,8 @@ typedef struct pjsua_call_setting
     /**
      * Bitmask of #pjsua_call_flag constants.
      *
-     * Default: PJSUA_CALL_INCLUDE_DISABLED_MEDIA
+     * Default: 0
+     * (PJSUA_CALL_INCLUDE_DISABLED_MEDIA is the legacy default value).
      */
     unsigned         flag;
 
@@ -1068,6 +1103,21 @@ typedef struct pjsua_call_setting
      * Default: 1 (if video feature is enabled, otherwise it is zero)
      */
     unsigned         vid_cnt;
+
+    /**
+     * Number of simultaneous active text streams for this call. Setting
+     * this to zero will disable text in this call.
+     *
+     * Default: 0
+     */
+    unsigned         txt_cnt;
+
+    /**
+     * Specifies text stream redundancy level. Set to 0 to disable it.
+     *
+     * Default: PJMEDIA_DEFAULT_REDUNDANCY_LEVEL (2)
+     */
+    unsigned         txt_red_level;
 
     /**
      * Media direction. This setting will only be used if the flag
@@ -1345,6 +1395,15 @@ typedef struct pjsua_callback
      */
     void (*on_dtmf_event)(pjsua_call_id call_id,
                           const pjsua_dtmf_event *event);
+
+    /**
+     * Notify application upon incoming text data from the text stream.
+     *
+     * @param call_id   The call index.
+     * @param data      The text data.
+     */
+    void (*on_call_rx_text)(pjsua_call_id call_id,
+                            const pjsua_txt_stream_data *data);
 
     /**
      * Notify application on call being transferred (i.e. REFER is received).
@@ -5486,6 +5545,9 @@ typedef struct pjsua_call_info
     /** Number of video streams offered by remote */
     unsigned            rem_vid_cnt;
 
+    /** Number of text streams offered by remote */
+    unsigned            rem_txt_cnt;
+
     /** Internal */
     struct {
         char    local_info[PJSIP_MAX_URL_SIZE];
@@ -6318,6 +6380,21 @@ PJ_DECL(pj_status_t) pjsua_call_dial_dtmf2(pjsua_call_id call_id,
  */
 PJ_DECL(pj_status_t) pjsua_call_send_dtmf(pjsua_call_id call_id, 
                                       const pjsua_call_send_dtmf_param *param);
+
+/**
+ * Send real-time text to remote via RTP stream. This only works if the call
+ * has text media.
+ *
+ * @param call_id       Call identification.
+ * @param med_idx       Text media stream index, or -1 to use the first text
+ *                      media.
+ * @param text          The text content to be sent.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_send_text(pjsua_call_id call_id,
+                                          int med_idx,
+                                          const pj_str_t *text);
 
 /**
  * Send instant messaging inside INVITE session.

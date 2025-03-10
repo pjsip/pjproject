@@ -181,6 +181,11 @@ static void usage(void)
 #endif
 
     puts  ("");
+    puts  ("Text Options:");
+    puts  ("  --text              Enable real-time text stream");
+    puts  ("  --text-red=N        Text stream redundancy level (default=2)");
+
+    puts  ("");
     puts  ("Media Transport Options:");
     puts  ("  --use-ice           Enable ICE (default:no)");
     puts  ("  --ice-regular       Use ICE regular nomination (default: aggressive)");
@@ -400,7 +405,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC,
            OPT_DISABLE_STUN, OPT_NO_FORCE_LR,
            OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE,
-           OPT_VIDEO, OPT_EXTRA_AUDIO,
+           OPT_VIDEO, OPT_TEXT, OPT_TEXT_RED, OPT_EXTRA_AUDIO,
            OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI,
            OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE
     };
@@ -540,6 +545,8 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
         { "outb-rid",   1, 0, OPT_OUTB_RID},
         { "video",      0, 0, OPT_VIDEO},
+        { "text",       0, 0, OPT_TEXT},
+        { "text-red",   1, 0, OPT_TEXT_RED},
         { "extra-audio",0, 0, OPT_EXTRA_AUDIO},
         { "vcapture-dev", 1, 0, OPT_VCAPTURE_DEV},
         { "vrender-dev",  1, 0, OPT_VRENDER_DEV},
@@ -1476,6 +1483,12 @@ static pj_status_t parse_args(int argc, char *argv[],
             cfg->vid.in_auto_show = PJ_TRUE;
             cfg->vid.out_auto_transmit = PJ_TRUE;
             break;
+        case OPT_TEXT:
+            cfg->txt_cnt = 1;
+            break;
+        case OPT_TEXT_RED:
+            cfg->txt_red_level = atoi(pj_optarg);
+            break;
         case OPT_EXTRA_AUDIO:
             cfg->aud_cnt++;
             break;
@@ -2093,6 +2106,16 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     }
     for (i=1; i<config->aud_cnt; ++i) {
         pj_strcat2(&cfg, "--extra-audio\n");
+    }
+
+    /* Text */
+    if (config->txt_cnt) {
+        pj_strcat2(&cfg, "--text\n");
+    }
+    if (config->txt_red_level != PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL) {
+        pj_ansi_snprintf(line, sizeof(line), "--text-red %d\n",
+                        (int)config->txt_red_level);
+        pj_strcat2(&cfg, line);
     }
 
     /* SRTP */

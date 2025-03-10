@@ -982,18 +982,19 @@ static pj_status_t get_frame(pjmedia_port *port,
 /*
  * Create media channel.
  */
-static pj_status_t create_channel( pj_pool_t *pool,
-                                   pjmedia_vid_stream *stream,
-                                   pjmedia_dir dir,
-                                   unsigned pt,
-                                   const pjmedia_vid_stream_info *info,
-                                   pjmedia_vid_channel **p_channel)
+static pj_status_t create_vid_channel( pj_pool_t *pool,
+                                       pjmedia_vid_stream *stream,
+                                       pjmedia_dir dir,
+                                       unsigned pt,
+                                       const pjmedia_vid_stream_info *info,
+                                       pjmedia_vid_channel **p_channel)
 {
     enum { M = 32 };
     pjmedia_stream_common *c_strm = &stream->base;
     pjmedia_vid_channel *channel;
     pj_status_t status;
     unsigned min_out_pkt_size;
+    unsigned buf_size = 0;
     pj_str_t name;
     const char *type_name;
     pjmedia_format *fmt;
@@ -1003,9 +1004,24 @@ static pj_status_t create_channel( pj_pool_t *pool,
     pj_assert(info->type == PJMEDIA_TYPE_VIDEO);
     pj_assert(dir == PJMEDIA_DIR_DECODING || dir == PJMEDIA_DIR_ENCODING);
 
-    /* Allocate memory for channel descriptor */
-    channel = PJ_POOL_ZALLOC_T(pool, pjmedia_vid_channel);
-    PJ_ASSERT_RETURN(channel != NULL, PJ_ENOMEM);
+    /* Allocate buffer for outgoing packet. */
+    if (dir == PJMEDIA_DIR_ENCODING) {
+        buf_size = sizeof(pjmedia_rtp_hdr) + c_strm->frame_size;
+
+        /* It should big enough to hold (minimally) RTCP SR with an SDES. */
+        min_out_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
+                            sizeof(pjmedia_rtcp_common) +
+                            (4 + (unsigned)c_strm->cname.slen) +
+                            32;
+
+        if (buf_size < min_out_pkt_size)
+            buf_size = min_out_pkt_size;
+    }
+
+    status = create_channel(pool, c_strm, dir, pt, buf_size,
+                            c_strm->si, &channel);
+    if (status != PJ_SUCCESS)
+        return status;
 
     /* Init vars */
     if (dir==PJMEDIA_DIR_DECODING) {
@@ -1018,45 +1034,6 @@ static pj_status_t create_channel( pj_pool_t *pool,
     name.ptr = (char*) pj_pool_alloc(pool, M);
     name.slen = pj_ansi_snprintf(name.ptr, M, "%s%p", type_name, stream);
     pi = &channel->port.info;
-
-    /* Init channel info. */
-    channel->stream = c_strm;
-    channel->dir = dir;
-    channel->paused = 1;
-    channel->pt = pt;
-
-    /* Allocate buffer for outgoing packet. */
-    if (dir == PJMEDIA_DIR_ENCODING) {
-        channel->buf_size = sizeof(pjmedia_rtp_hdr) + c_strm->frame_size;
-
-        /* It should big enough to hold (minimally) RTCP SR with an SDES. */
-        min_out_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
-                            sizeof(pjmedia_rtcp_common) +
-                            (4 + (unsigned)c_strm->cname.slen) +
-                            32;
-
-        if (channel->buf_size < min_out_pkt_size)
-            channel->buf_size = min_out_pkt_size;
-
-        channel->buf = pj_pool_alloc(pool, channel->buf_size);
-        PJ_ASSERT_RETURN(channel->buf != NULL, PJ_ENOMEM);
-    }
-
-    /* Create RTP and RTCP sessions: */
-    {
-        pjmedia_rtp_session_setting settings;
-
-        settings.flags = (pj_uint8_t)((info->rtp_seq_ts_set << 2) |
-                                      (info->has_rem_ssrc << 4) | 3);
-        settings.default_pt = pt;
-        settings.sender_ssrc = info->ssrc;
-        settings.peer_ssrc = info->rem_ssrc;
-        settings.seq = info->rtp_seq;
-        settings.ts = info->rtp_ts;
-        status = pjmedia_rtp_session_init2(&channel->rtp, settings);
-    }
-    if (status != PJ_SUCCESS)
-        return status;
 
     /* Init port. */
     pjmedia_port_info_init2(pi, &name, SIGNATURE, dir, fmt);
@@ -1277,13 +1254,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     stream->dec_max_fps = vfd_dec->fps;
 
     /* Create decoder channel */
-    status = create_channel( pool, stream, PJMEDIA_DIR_DECODING,
+    status = create_vid_channel( pool, stream, PJMEDIA_DIR_DECODING,
                              info->rx_pt, info, &c_strm->dec);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
     /* Create encoder channel */
-    status = create_channel( pool, stream, PJMEDIA_DIR_ENCODING,
+    status = create_vid_channel( pool, stream, PJMEDIA_DIR_ENCODING,
                              info->tx_pt, info, &c_strm->enc);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
@@ -1669,8 +1646,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_get_stat_jbuf(
                                             const pjmedia_vid_stream *stream,
                                             pjmedia_jb_state *state)
 {
-    PJ_ASSERT_RETURN(stream && state, PJ_EINVAL);
-    return pjmedia_jbuf_get_state(stream->base.jb, state);
+    return pjmedia_stream_common_get_stat_jbuf((pjmedia_stream_common *)stream,
+                                               state);
 }
 
 
@@ -1692,27 +1669,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_get_info(
  */
 PJ_DEF(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream)
 {
-    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
-
-    PJ_ASSERT_RETURN(stream && c_strm->enc && c_strm->dec, PJ_EINVALIDOP);
-
-    if (c_strm->enc && (c_strm->dir & PJMEDIA_DIR_ENCODING)) {
-        c_strm->enc->paused = 0;
-        //pjmedia_snd_stream_start(c_strm->enc->snd_stream);
-        PJ_LOG(4,(c_strm->enc->port.info.name.ptr, "Encoder stream started"));
-    } else {
-        PJ_LOG(4,(c_strm->enc->port.info.name.ptr, "Encoder stream paused"));
-    }
-
-    if (c_strm->dec && (c_strm->dir & PJMEDIA_DIR_DECODING)) {
-        c_strm->dec->paused = 0;
-        //pjmedia_snd_stream_start(c_strm->dec->snd_stream);
-        PJ_LOG(4,(c_strm->dec->port.info.name.ptr, "Decoder stream started"));
-    } else {
-        PJ_LOG(4,(c_strm->dec->port.info.name.ptr, "Decoder stream paused"));
-    }
-
-    return PJ_SUCCESS;
+    return pjmedia_stream_common_start((pjmedia_stream_common *) stream);
 }
 
 

@@ -1285,7 +1285,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                  */
                 const pjmedia_sdp_attr *a;
                 pjmedia_sdp_rtpmap or_;
-                pj_bool_t is_codec = 0;
+                pj_bool_t is_codec = 0, is_tel = 0, is_red = 0;
 
                 /* Get the rtpmap for the payload type in the master. */
                 a = pjmedia_sdp_media_find_attr2(master, "rtpmap", 
@@ -1296,7 +1296,12 @@ static pj_status_t match_offer(pj_pool_t *pool,
                 }
                 pjmedia_sdp_attr_get_rtpmap(a, &or_);
 
-                if (pj_stricmp2(&or_.enc_name, "telephone-event")) {
+                if (!pj_stricmp2(&or_.enc_name, "telephone-event")) {
+                    is_tel = 1;
+                } else if (!pj_stricmp2(&or_.enc_name, "red")) {
+                    is_red = 1;
+                    PJ_UNUSED_ARG(is_red);
+                } else {
                     master_has_codec = 1;
                     if (!answer_with_multiple_codecs && found_matching_codec)
                         continue;
@@ -1352,7 +1357,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                                         break;
                                 if (k == nclockrate)
                                     clockrate[nclockrate++] = or_.clock_rate;
-                            } else {
+                            } else if (is_tel){
                                 unsigned k;
 
                                 /* Keep track of tel-event clock rate,

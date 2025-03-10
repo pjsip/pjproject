@@ -940,6 +940,24 @@
 
 
 /**
+ * This macro declares the payload type for T140 text that is advertised
+ * by PJMEDIA for outgoing SDP.
+ */
+#ifndef PJMEDIA_RTP_PT_T140
+#   define PJMEDIA_RTP_PT_T140 98
+#endif
+
+/**
+ * This macro declares the payload type for redundancy that is advertised
+ * by PJMEDIA for outgoing SDP. Currently, redundancy is only used for
+ * text stream.
+ */
+#ifndef PJMEDIA_RTP_PT_REDUNDANCY
+#   define PJMEDIA_RTP_PT_REDUNDANCY 100
+#endif
+
+
+/**
  * Maximum tones/digits that can be enqueued in the tone generator.
  */
 #ifndef PJMEDIA_TONEGEN_MAX_DIGITS

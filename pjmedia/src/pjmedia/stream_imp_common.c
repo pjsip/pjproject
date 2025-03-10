@@ -184,6 +184,68 @@ on_insuff_buffer:
 #endif /* TRACE_JB */
 
 
+/*
+ * Create media channel.
+ */
+static pj_status_t create_channel( pj_pool_t *pool,
+                                   pjmedia_stream_common *c_strm,
+                                   pjmedia_dir dir,
+                                   unsigned pt,
+                                   unsigned buf_size,
+                                   const pjmedia_stream_info_common *param,
+                                   pjmedia_channel **p_channel)
+{
+    pjmedia_channel *channel;
+    pj_status_t status;
+
+    /* Allocate memory for channel descriptor */
+    channel = PJ_POOL_ZALLOC_T(pool, pjmedia_channel);
+    PJ_ASSERT_RETURN(channel != NULL, PJ_ENOMEM);
+
+    /* Init channel info. */
+    channel->stream = c_strm;
+    channel->dir = dir;
+    channel->paused = 1;
+    channel->pt = pt;
+
+    /* Allocate buffer for outgoing packet. */
+    channel->buf_size = buf_size;
+
+    /* Also include RTP header size (for sending) */
+    channel->buf_size += sizeof(pjmedia_rtp_hdr);
+
+    if (channel->buf_size > PJMEDIA_MAX_MTU -
+                                PJMEDIA_STREAM_RESV_PAYLOAD_LEN)
+    {
+        channel->buf_size = PJMEDIA_MAX_MTU -
+                                PJMEDIA_STREAM_RESV_PAYLOAD_LEN;
+    }
+
+    channel->buf = pj_pool_alloc(pool, channel->buf_size);
+    PJ_ASSERT_RETURN(channel->buf != NULL, PJ_ENOMEM);
+
+    /* Create RTP and RTCP sessions: */
+    {
+        pjmedia_rtp_session_setting settings;
+
+        settings.flags = (pj_uint8_t)((param->rtp_seq_ts_set << 2) |
+                                      (param->has_rem_ssrc << 4) | 3);
+        settings.default_pt = pt;
+        settings.sender_ssrc = param->ssrc;
+        settings.peer_ssrc = param->rem_ssrc;
+        settings.seq = param->rtp_seq;
+        settings.ts = param->rtp_ts;
+        status = pjmedia_rtp_session_init2(&channel->rtp, settings);
+    }
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Done. */
+    *p_channel = channel;
+    return PJ_SUCCESS;
+}
+
+
 static pj_status_t send_rtcp(pjmedia_stream_common *c_strm,
                              pj_bool_t with_sdes,
                              pj_bool_t with_bye,
@@ -455,13 +517,15 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     /* Update RTP session (also checks if RTP session can accept
      * the incoming packet.
      */
-    check_pt = PJMEDIA_STREAM_CHECK_RTP_PT;
+    check_pt = PJMEDIA_STREAM_CHECK_RTP_PT && hdr->pt != c_strm->si->rx_red_pt;
 #ifdef AUDIO_STREAM
     check_pt = check_pt && hdr->pt != stream->rx_event_pt;
 #endif
     pjmedia_rtp_session_update2(&channel->rtp, hdr, &seq_st, check_pt);
 #if !PJMEDIA_STREAM_CHECK_RTP_PT
-    if (!check_pt && hdr->pt != channel->rtp.out_pt) {
+    if (!check_pt && hdr->pt != channel->rtp.out_pt &&
+        hdr->pt != c_strm->si->rx_red_pt)
+    {
 #ifdef AUDIO_STREAM
         if (hdr->pt != stream->rx_event_pt)
 #endif

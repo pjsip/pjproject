@@ -196,8 +196,21 @@ typedef struct pjmedia_stream_rtp_sess_info
 
 
 /**
+ * Start the media stream. This will start the appropriate channels
+ * in the media stream, depending on the media direction that was set
+ * when the stream was created.
+ *
+ * @param stream        The media stream.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_common_start(pjmedia_stream_common *stream);
+
+
+/**
  * Get the stream statistics. See also
- * #pjmedia_stream_get_stat_jbuf()
+ * #pjmedia_stream_common_get_stat_jbuf()
  *
  * @param stream        The media stream.
  * @param stat          Media stream statistics.
@@ -207,6 +220,20 @@ typedef struct pjmedia_stream_rtp_sess_info
 PJ_DECL(pj_status_t)
 pjmedia_stream_common_get_stat( const pjmedia_stream_common *stream,
                                 pjmedia_rtcp_stat *stat);
+
+
+/**
+ * Get current jitter buffer state. See also
+ * #pjmedia_stream_common_get_stat()
+ *
+ * @param stream        The media stream.
+ * @param state         Jitter buffer state.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_common_get_stat_jbuf(const pjmedia_stream_common *stream,
+                                    pjmedia_jb_state *state);
 
 
 /**
@@ -360,6 +387,11 @@ pjmedia_stream_ka_config_default(pjmedia_stream_ka_config *cfg);
 \
     unsigned            tx_pt;      /**< Outgoing codec payload type.       */ \
     unsigned            rx_pt;      /**< Incoming codec payload type.       */ \
+\
+    unsigned            tx_red_pt;  /**< Outgoing pt for redundancy.        */ \
+    int                 tx_red_level;/**< Outgoing redundancy level.        */ \
+    unsigned            rx_red_pt;  /**< Incoming pt for redundancy.        */ \
+    int                 rx_red_level;/**< Incoming redundancy level.        */ \
 \
     pj_uint32_t         ssrc;       /**< RTP SSRC.                          */ \
     pj_str_t            cname;      /**< RTCP CNAME.                        */ \

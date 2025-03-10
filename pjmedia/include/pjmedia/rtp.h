@@ -106,10 +106,33 @@ struct pjmedia_rtp_hdr
 #pragma pack()
 
 /**
+ * The first byte of RTP packet additional header.
+ */
+#pragma pack(1)
+struct pjmedia_rtp_add_hdr_short
+{
+#if defined(PJ_IS_BIG_ENDIAN) && (PJ_IS_BIG_ENDIAN!=0)
+    pj_uint16_t f:1;            /**< F bit (0 means last, 1 has more) */
+    pj_uint16_t pt:7;           /**< payload type                     */
+#else
+    pj_uint16_t pt:7;           /**< payload type                     */
+    pj_uint16_t f:1;            /**< F bit (0 means last, 1 has more) */
+#endif
+};
+#pragma pack()
+
+/**
  * @see pjmedia_rtp_hdr
  */
 typedef struct pjmedia_rtp_hdr pjmedia_rtp_hdr;
 
+/* RTP additional header. */
+typedef pj_uint32_t pjmedia_rtp_add_hdr;
+
+/**
+ * @see pjmedia_rtp_add_hdr_short
+ */
+typedef struct pjmedia_rtp_add_hdr_short pjmedia_rtp_add_hdr_short;
 
 /**
  * RTP extension header.

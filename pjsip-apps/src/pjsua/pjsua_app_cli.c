@@ -59,6 +59,7 @@
 #define CMD_CALL_DUMP_Q             ((CMD_CALL*10)+16)
 #define CMD_CALL_SEND_ARB           ((CMD_CALL*10)+17)
 #define CMD_CALL_LIST               ((CMD_CALL*10)+18)
+#define CMD_CALL_RTT                ((CMD_CALL*10)+19)
 
 /* im & presence level 2 command */
 #define CMD_PRESENCE_ADD_BUDDY      ((CMD_PRESENCE*10)+1)
@@ -1943,6 +1944,28 @@ static pj_status_t cmd_dtmf_2833(pj_cli_cmd_val *cval)
     return PJ_SUCCESS;
 }
 
+/* Send real-time text */
+static pj_status_t cmd_rtt(pj_cli_cmd_val *cval)
+{
+    if (current_call == PJSUA_INVALID_ID) {
+
+        PJ_LOG(3,(THIS_FILE, "No current call"));
+
+    } else {
+        pj_status_t status;
+
+        status = pjsua_call_send_text(current_call, -1, &cval->argv[1]);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "Unable to send text", status);
+        } else {
+            const pj_str_t msg = pj_str("Text enqueued "
+                                        "for transmission\n");
+            pj_cli_sess_write_msg(cval->sess, msg.ptr, msg.slen);
+        }
+    }
+    return PJ_SUCCESS;
+}
+
 /* Send DTMF with SIP Info */
 static pj_status_t cmd_call_info(pj_cli_cmd_val *cval)
 {
@@ -2112,6 +2135,8 @@ pj_status_t cmd_call_handler(pj_cli_cmd_val *cval)
     pjsua_call_setting_default(&call_opt);
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
+    call_opt.txt_cnt = app_config.txt_cnt;
+    call_opt.txt_red_level = app_config.txt_red_level;
     if (app_config.enable_loam) {
         call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
@@ -2154,6 +2179,9 @@ pj_status_t cmd_call_handler(pj_cli_cmd_val *cval)
         break;
     case CMD_CALL_D2833:
         status = cmd_dtmf_2833(cval);
+        break;
+    case CMD_CALL_RTT:
+        status = cmd_rtt(cval);
         break;
     case CMD_CALL_INFO:
         status = cmd_call_info(cval);
@@ -2886,6 +2914,10 @@ static pj_status_t add_call_command(pj_cli_t *c)
         "  <CMD name='d_info' id='1015' sc='*' desc='Send DTMF with SIP INFO'>"
         "    <ARG name='dtmf_to_send' type='string' "
         "     desc='DTMF String to send'/>"
+        "  </CMD>"
+        "  <CMD name='rtt' id='1019' sc='*' desc='Send real-time text via RTP'>"
+        "    <ARG name='text_to_send' type='string' "
+        "     desc='Text to send'/>"
         "  </CMD>"
         "  <CMD name='dump_q' id='1016' sc='dq' desc='Dump (call) quality'/>"
         "  <CMD name='send_arb' id='1017' sc='S' desc='Send arbitrary request'>"

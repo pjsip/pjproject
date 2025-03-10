@@ -325,6 +325,8 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
         pjsua_call_setting_default(&opt);
         opt.aud_cnt = app_config.aud_cnt;
         opt.vid_cnt = app_config.vid.vid_cnt;
+        opt.txt_cnt = app_config.txt_cnt;
+        opt.txt_red_level = app_config.txt_red_level;
 
         pjsua_call_answer2(call_id, &opt, app_config.auto_answer, NULL,
                            NULL);
@@ -345,7 +347,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 
         PJ_LOG(3,(THIS_FILE,
                   "Incoming call for account %d!\n"
-                  "Media count: %d audio & %d video\n"
+                  "Media count: %d audio & %d video & %d text\n"
                   "%s"
                   "From: %.*s\n"
                   "To: %.*s\n"
@@ -353,6 +355,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                   acc_id,
                   call_info.rem_aud_cnt,
                   call_info.rem_vid_cnt,
+                  call_info.rem_txt_cnt,
                   notif_st,
                   (int)call_info.remote_info.slen,
                   call_info.remote_info.ptr,
@@ -586,6 +589,14 @@ static void call_on_dtmf_callback2(pjsua_call_id call_id,
     };    
     PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c%s, using %s method", 
            call_id, info->digit, duration, method));
+}
+
+/* Incoming text stream callback. */
+static void call_on_rx_text(pjsua_call_id call_id,
+                            const pjsua_txt_stream_data *data)
+{
+    PJ_LOG(3, (THIS_FILE, "Incoming text on call %d seq %d: %.*s",
+           call_id, data->seq, (int)data->text.slen, data->text.ptr));
 }
 
 /*
@@ -1464,6 +1475,7 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_call_media_state = &on_call_media_state;
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;
     app_config.cfg.cb.on_dtmf_digit2 = &call_on_dtmf_callback2;
+    app_config.cfg.cb.on_call_rx_text = &call_on_rx_text;
     app_config.cfg.cb.on_call_redirected = &call_on_redirected;
     app_config.cfg.cb.on_reg_state = &on_reg_state;
     app_config.cfg.cb.on_incoming_subscribe = &on_incoming_subscribe;
@@ -2019,6 +2031,8 @@ static pj_status_t app_init(void)
     pjsua_call_setting_default(&call_opt);
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
+    call_opt.txt_cnt = app_config.txt_cnt;
+    call_opt.txt_red_level = app_config.txt_red_level;
     if (app_config.enable_loam) {
         call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
@@ -2093,6 +2107,8 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
         pjsua_call_setting_default(&call_opt);
         call_opt.aud_cnt = app_config.aud_cnt;
         call_opt.vid_cnt = app_config.vid.vid_cnt;
+        call_opt.txt_cnt = app_config.txt_cnt;
+        call_opt.txt_red_level = app_config.txt_red_level;
 
         pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL, 
                              NULL, NULL);

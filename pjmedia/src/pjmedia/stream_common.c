@@ -268,25 +268,19 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_common_from_sdp(
     si->jb_init = si->jb_max = si->jb_min_pre = si->jb_max_pre = -1;
     si->jb_discard_algo = PJMEDIA_JB_DISCARD_PROGRESSIVE;
 
-    if (pjmedia_get_type(&local_m->desc.media) == PJMEDIA_TYPE_AUDIO ||
-        pjmedia_get_type(&local_m->desc.media) == PJMEDIA_TYPE_VIDEO)
-    {
-        /* Get local RTCP-FB info */
-        if (pjmedia_get_type(&local_m->desc.media) == PJMEDIA_TYPE_AUDIO ||
-        pjmedia_get_type(&local_m->desc.media) == PJMEDIA_TYPE_VIDEO)
-        status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, local,
-                                             stream_idx, si->rx_pt,
-                                             &si->loc_rtcp_fb);
-        if (status != PJ_SUCCESS)
-            return status;
+    /* Get local RTCP-FB info */
+    status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, local,
+                                         stream_idx, si->rx_pt,
+                                         &si->loc_rtcp_fb);
+    if (status != PJ_SUCCESS)
+        return status;
 
-        /* Get remote RTCP-FB info */
-        status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, remote,
-                                             stream_idx, si->tx_pt,
-                                             &si->rem_rtcp_fb);
-        if (status != PJ_SUCCESS)
-            return status;
-    }
+    /* Get remote RTCP-FB info */
+    status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, remote,
+                                         stream_idx, si->tx_pt,
+                                         &si->rem_rtcp_fb);
+    if (status != PJ_SUCCESS)
+        return status;
 
     *active = PJ_TRUE;
     return status;
@@ -364,7 +358,7 @@ PJ_DECL(pj_status_t) pjmedia_stream_info_parse_fmtp_data(pj_pool_t *pool,
 
         /* Get token */
         start = p;
-        while (p < p_end && *p != ';') ++p;
+        while (p < p_end && *p != ';' && *p != '/') ++p;
         end = p - 1;
 
         /* Right trim */
@@ -445,6 +439,17 @@ pjmedia_stream_common_reset_stat(pjmedia_stream_common *c_strm)
     pjmedia_rtcp_init_stat(&c_strm->rtcp.stat);
 
     return PJ_SUCCESS;
+}
+
+/*
+ * Get jitter buffer state.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_common_get_stat_jbuf(const pjmedia_stream_common *c_strm,
+                                    pjmedia_jb_state *state)
+{
+    PJ_ASSERT_RETURN(c_strm && state, PJ_EINVAL);
+    return pjmedia_jbuf_get_state(c_strm->jb, state);
 }
 
 /*
@@ -678,4 +683,28 @@ pj_status_t pjmedia_stream_send_rtcp(pjmedia_stream_common *c_strm,
         pj_grp_lock_release(c_strm->transport->grp_lock);
 
     return status;
+}
+
+/*
+ * Start stream.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_common_start(pjmedia_stream_common *c_strm)
+{
+    PJ_ASSERT_RETURN(c_strm && c_strm->enc && c_strm->dec, PJ_EINVALIDOP);
+
+    if (c_strm->enc && (c_strm->dir & PJMEDIA_DIR_ENCODING)) {
+        c_strm->enc->paused = 0;
+        PJ_LOG(4,(c_strm->port.info.name.ptr, "Encoder stream started"));
+    } else {
+        PJ_LOG(4,(c_strm->port.info.name.ptr, "Encoder stream paused"));
+    }
+
+    if (c_strm->dec && (c_strm->dir & PJMEDIA_DIR_DECODING)) {
+        c_strm->dec->paused = 0;
+        PJ_LOG(4,(c_strm->port.info.name.ptr, "Decoder stream started"));
+    } else {
+        PJ_LOG(4,(c_strm->port.info.name.ptr, "Decoder stream paused"));
+    }
+
+    return PJ_SUCCESS;
 }

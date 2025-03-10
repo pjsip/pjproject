@@ -68,6 +68,11 @@ struct pjsua_call_media
             pjmedia_vid_dev_index rdr_dev;  /**< The video-in render device */
         } v;
 
+        /** Text stream */
+        struct {
+            pjmedia_txt_stream  *stream;    /**< The text stream.           */
+        } t;
+
     } strm;
 
     pj_uint32_t          ssrc;      /**< RTP SSRC                           */
@@ -212,6 +217,8 @@ struct pjsua_call
     unsigned             rem_aud_cnt;  /**< No of active audio in last remote
                                             offer.                          */
     unsigned             rem_vid_cnt;  /**< No of active video in last remote
+                                            offer.                          */
+    unsigned             rem_txt_cnt;  /**< No of active text in last remote
                                             offer.                          */
     
     pj_bool_t            rx_reinv_async;/**< on_call_rx_reinvite() async.   */
@@ -968,6 +975,16 @@ void pjsua_vid_win_reset(pjsua_vid_win_id wid);
 #else
 #  define pjsua_vid_win_reset(wid)
 #endif
+
+/*
+ * Text
+ */
+void pjsua_txt_stop_stream(pjsua_call_media *call_med);
+pj_status_t pjsua_txt_channel_update(pjsua_call_media *call_med,
+                                     pj_pool_t *tmp_pool,
+                                     pjmedia_txt_stream_info *si,
+                                     const pjmedia_sdp_session *local_sdp,
+                                     const pjmedia_sdp_session *remote_sdp);
 
 /*
  * Schedule check for the need of re-INVITE/UPDATE after media update
