@@ -1988,6 +1988,8 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_mwi_info               = &Endpoint::on_mwi_info;
     ua_cfg.cb.on_buddy_state            = &Endpoint::on_buddy_state;
     ua_cfg.cb.on_buddy_evsub_state      = &Endpoint::on_buddy_evsub_state;
+    ua_cfg.cb.on_buddy_dlg_event_state  = &Endpoint::on_buddy_dlg_event_state;
+    ua_cfg.cb.on_buddy_evsub_dlg_event_state = &Endpoint::on_buddy_evsub_dlg_event_state;
     ua_cfg.cb.on_acc_find_for_incoming  = &Endpoint::on_acc_find_for_incoming;
     ua_cfg.cb.on_ip_change_progress     = &Endpoint::on_ip_change_progress;
 
