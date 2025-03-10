@@ -1219,8 +1219,18 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
             pjmedia_stream_common *c_strm = (pjmedia_stream_common*)
                                             call_med->strm.v.stream;
             pj_grp_lock_add_ref(c_strm->grp_lock);
-            pjsua_schedule_timer2(&timer_on_start_vid_stream_encoding,
-                                  call_med->strm.v.stream, 500);
+            if (pjsua_schedule_timer2(&timer_on_start_vid_stream_encoding,
+                                      call_med->strm.v.stream,
+                                      PJSUA_VIDEO_STREAM_DELAY_START_ENCODE)
+                != PJ_SUCCESS)
+            {
+                if (PJSUA_VIDEO_STREAM_DELAY_START_ENCODE) {
+                    PJ_LOG(4,(THIS_FILE, "Failed in scheduling video stream "
+                                         "encoding start, start it now."));
+                }
+                /* Just in case there is failure in scheduling */
+                timer_on_start_vid_stream_encoding(call_med->strm.v.stream);
+            }
         }
 
         if (call_med->prev_state == PJSUA_CALL_MEDIA_NONE)
