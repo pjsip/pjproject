@@ -234,29 +234,20 @@ void MainWin::preview()
         delete video_prev_;
         video_prev_ = NULL;
 
-        pjsua_vid_preview_stop(DEFAULT_CAP_DEV);
 
         showStatus("Preview stopped");
         previewButton_->setText(tr("Start &Preview"));
     } else {
         pjsua_vid_win_id wid;
         pjsua_vid_win_info wi;
-        pjsua_vid_preview_param pre_param;
         pj_status_t status;
 
-        pjsua_vid_preview_param_default(&pre_param);
-        pre_param.rend_id = DEFAULT_REND_DEV;
-        pre_param.show = PJ_FALSE;
-
-        status = pjsua_vid_preview_start(DEFAULT_CAP_DEV, &pre_param);
         if (status != PJ_SUCCESS) {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(status, errmsg, sizeof(errmsg));
             QMessageBox::critical(0, "Error creating preview", errmsg);
             return;
         }
-        wid = pjsua_vid_preview_get_win(DEFAULT_CAP_DEV);
-        pjsua_vid_win_get_info(wid, &wi);
 
         video_prev_ = new VidWin(&wi.hwnd);
         video_prev_->putIntoLayout(vbox_left);
@@ -335,7 +326,6 @@ void MainWin::initVideoWindow()
             (ci.media[i].dir & PJMEDIA_DIR_DECODING))
         {
             pjsua_vid_win_info wi;
-            pjsua_vid_win_get_info(ci.media[i].stream.vid.win_in, &wi);
 
             video_= new VidWin(&wi.hwnd);
             video_->putIntoLayout(vbox_left);
