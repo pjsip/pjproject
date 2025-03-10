@@ -4,8 +4,6 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros">
     <TargetCPU>x86_64</TargetCPU>
-	<IncludePath>D:\work\opt\include;D:\work\opt\include\SDL2;C:\Program Files\OpenSSL-Win64\include;$(IncludePath)</IncludePath>
-	<LibraryPath>D:\work\opt\lib;C:\Program Files\OpenSSL-Win64\lib\VC\x64\MT;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup>
     <_ProjectFileVersion>14.0.22823.1</_ProjectFileVersion>
