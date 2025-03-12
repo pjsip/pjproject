@@ -187,49 +187,40 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     return status;
 
 #elif defined(PJ_GETADDRINFO_USE_ANDROID) && PJ_GETADDRINFO_USE_ANDROID!=0
-    /* Android-specific functions are available in API >= 29
-     * android_res_nquery, android_res_nresult and android_res_cancel
-     * If we directly call the functions, even surrounded by a statement
-     * checking Android API, the older Android devices will throw the error
-     * "dlopen failed: cannot locate symbol "android_res_nquery"
-     * Hence, we prepare pointers and load functions only if API check passes
+    /* Unlike Android API functions which can be safeguarded with
+     * __builtin_available, functions from libraries like libc.so
+     * cannot be loaded directly, even surrounded by a statement
+     * checking their availability. ns_initparse and ns_parserr are only
+     * available since Android API 23. This leads to failure of compiling
+     * for Android API 21. Hence, the two functions are dynamically loaded
+     * so that the library can be compiled with the minimal API 21.
+     * Otherwise, PJLIB would only compile with APP_PLATFORM=23 at minimum.
      */
 	 
-    /* Define function pointers type for Android DNS functions */
-    typedef int (*android_res_nquery_fn)(
-        unsigned int, const char*, int, int, int);
-    typedef int (*android_res_nresult_fn)(int, int*, unsigned char*, int);
-    typedef int (*android_res_cancel_fn)(int);
 
-    /* Initialize function pointers to NULL */
-    android_res_nquery_fn android_res_nquery_ptr = NULL;
-    android_res_nresult_fn android_res_nresult_ptr = NULL;
-    android_res_cancel_fn android_res_cancel_ptr = NULL;
-
-    /* Buffer to store the SDK version as a string */
-    char sdk_value[8] = "";
-    /* Get the Android SDK version */
-    __system_property_get("ro.build.version.sdk", sdk_value);
-
-    if (atoi(sdk_value) >= 29) {
-        /* Load the libandroid.so library containing network functions */
-        void *libandroid_handle = dlopen("libandroid.so", RTLD_NOW);
-        if (libandroid_handle) {
-            /* Get the nquery, nresult and cancel functions from library */
-            android_res_nquery_ptr = (android_res_nquery_fn)
-                                     dlsym(libandroid_handle,
-                                     "android_res_nquery");
-            android_res_nresult_ptr = (android_res_nresult_fn)
-                                     dlsym(libandroid_handle,
-                                     "android_res_nresult");
-            android_res_cancel_ptr = (android_res_cancel_fn)
-                                     dlsym(libandroid_handle,
-                                     "android_res_cancel");
+    if (__builtin_available(android 29, *)) {
+        /* Define function pointers type for ns_initparse and ns_parserr.
+         * These functions are in libc.so in Android (Bionic) and not
+         * in libresolv.so like usually in Linux */
+        typedef int (*ns_initparse_fn)(const unsigned char *, int, void *);
+        typedef int (*ns_parserr_fn)(const void *, int, int, void *);
+        /* Initialize function pointers to NULL */
+        ns_initparse_fn ns_initparse_ptr = NULL;
+        ns_parserr_fn ns_parserr_ptr = NULL;
+        /* Load the libc.so library containing network functions */
+        void *libc_handle = dlopen("libc.so", RTLD_NOW);
+        if (libc_handle) {
+            /* Get the ns_initparse, ns_initparse functions from library */
+            ns_initparse_ptr = (ns_initparse_fn)
+                               dlsym(libc_handle,
+                               "ns_initparse");
+            ns_parserr_ptr = (ns_parserr_fn)
+                             dlsym(libc_handle,
+                             "ns_parserr");
 
             /* Non-null pointers mean DNS functions are properly loaded */
-            if (android_res_nquery_ptr &&
-                android_res_nresult_ptr &&
-                android_res_cancel_ptr) {
+            if (ns_initparse_ptr &&
+                ns_parserr_ptr) {
                 pj_bzero(&hint, sizeof(hint));
                 hint.ai_family = af;
                 /* Zero value of ai_socktype means the implementation shall
@@ -246,14 +237,14 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
                 struct addrinfo *result = NULL, *last = NULL;
 
                 /* Step 1: Send DNS query */
-                int resp_handle = android_res_nquery_ptr(
+                int resp_handle = android_res_nquery(
                                 netid, nodecopy, ns_c_in,
                                 af == PJ_AF_INET ? ns_t_a :
                                 af == PJ_AF_INET6 ? ns_t_aaaa :
                                 ns_t_a,
                                 0);
                 if (resp_handle < 0) {
-                    printf("android_res_nquery_ptr() failed\n");
+                    printf("android_res_nquery() failed\n");
                     return PJ_ERESOLVE;
                 }
 
@@ -265,15 +256,15 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
                 if (ret <= 0) {
                     PJ_LOG(4,(THIS_FILE,"Poll timeout or error"));
-                    android_res_cancel_ptr(resp_handle);
+                    android_res_cancel(resp_handle);
                     return PJ_ERESOLVE;
                 }
                 /* Step 3: Get DNS response */
-                int response_size = android_res_nresult_ptr(
+                int response_size = android_res_nresult(
                                   resp_handle, &rcode, answer, sizeof(answer));
                 if (response_size < 0) {
                     PJ_LOG(4,(THIS_FILE,
-                              "android_res_nresult_ptr() failed"));
+                              "android_res_nresult() failed"));
                     return PJ_ERESOLVE;
                 }
 
@@ -282,7 +273,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
                 ns_rr rr;
                 int num_records, resolved_count = 0;
 
-                if (ns_initparse(answer, response_size, &msg) < 0) {
+                if (ns_initparse_ptr(answer, response_size, &msg) < 0) {
                     PJ_LOG(4,(THIS_FILE,
                               "Failed to parse DNS response"));
                     return PJ_ERESOLVE;
@@ -301,7 +292,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
                 /* Process each answer record */
                 for (i = 0; i < num_records && resolved_count < *count; i++) {
-                    if (ns_parserr(&msg, ns_s_an, i, &rr) < 0) {
+                    if (ns_parserr_ptr(&msg, ns_s_an, i, &rr) < 0) {
                         continue;
                     }
 
@@ -319,7 +310,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
                             struct sockaddr_in addr;
                             pj_bzero(&addr, sizeof(addr));
                             addr.sin_family = PJ_AF_INET;
-                            memcpy(&addr.sin_addr, rdata, 4);
+                            pj_memcpy(&addr.sin_addr, rdata, 4);
                             /* Copy the sockaddr into pj_addrinfo.ai_addr */
                             pj_memcpy(&ai[resolved_count].ai_addr,
                                       &addr, sizeof(addr));
@@ -328,7 +319,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
                             struct sockaddr_in6 addr6;
                             pj_bzero(&addr6, sizeof(addr6));
                             addr6.sin6_family = PJ_AF_INET6;
-                            memcpy(&addr6.sin6_addr, rdata, 16);
+                            pj_memcpy(&addr6.sin6_addr, rdata, 16);
                             pj_memcpy(&ai[resolved_count].ai_addr,
                                       &addr6, sizeof(addr6));
                         }
