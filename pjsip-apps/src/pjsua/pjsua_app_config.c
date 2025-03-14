@@ -55,6 +55,12 @@ static void usage(void)
     puts  ("  --realm=string      Set realm");
     puts  ("  --username=string   Set authentication username");
     puts  ("  --password=string   Set authentication password");
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+    puts  ("  --op=string         Set OP value to use in Digest AKA authentication");
+    puts  ("  --amf=string        Set AMF value to use in Digest AKA authentication");
+#endif
+
     puts  ("  --contact=url       Optionally override the Contact information");
     puts  ("  --contact-params=S  Append the specified parameters S in Contact header");
     puts  ("  --contact-uri-params=S  Append the specified parameters S in Contact URI");
@@ -367,7 +373,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY,
            OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
            OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
-           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
+           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD, OPT_OP, OPT_AMF,
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
            OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
@@ -446,6 +452,10 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "realm",      1, 0, OPT_REALM},
         { "username",   1, 0, OPT_USERNAME},
         { "password",   1, 0, OPT_PASSWORD},
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        { "op",   1, 0, OPT_OP},
+        { "amf",   1, 0, OPT_AMF},
+#endif
         { "rereg-delay",1, 0, OPT_REG_RETRY_INTERVAL},
         { "reg-use-proxy", 1, 0, OPT_REG_USE_PROXY},
         { "nameserver", 1, 0, OPT_NAMESERVER},
@@ -908,6 +918,14 @@ static pj_status_t parse_args(int argc, char *argv[],
             cur_acc->cred_info[cur_acc->cred_count].data_type |= PJSIP_CRED_DATA_EXT_AKA;
             cur_acc->cred_info[cur_acc->cred_count].ext.aka.k = pj_str(pj_optarg);
             cur_acc->cred_info[cur_acc->cred_count].ext.aka.cb = &pjsip_auth_create_aka_response;
+            break;
+
+        case OPT_OP:        /* aka op */
+            cur_acc->cred_info[cur_acc->cred_count].ext.aka.op = pj_str(pj_optarg);
+            break;
+
+        case OPT_AMF:       /* aka amf */
+            cur_acc->cred_info[cur_acc->cred_count].ext.aka.amf = pj_str(pj_optarg);
 #endif
             break;
 
