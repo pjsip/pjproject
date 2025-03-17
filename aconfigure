@@ -668,6 +668,8 @@ opencore_amrnb_present
 opencore_amrnb_h_present
 ac_no_opencore_amrwb
 ac_no_opencore_amrnb
+libmbedtls_present
+mbedtls_h_present
 libgnutls_present
 gnutls_h_present
 libcrypto_present
@@ -867,6 +869,7 @@ with_ipp_arch
 enable_android_mediacodec
 with_ssl
 with_gnutls
+with_mbedtls
 enable_darwin_ssl
 enable_ssl
 with_opencore_amrnb
@@ -1625,6 +1628,7 @@ Optional Packages:
                           GnuTLS. To skip OpenSSL finding, use --with-gnutls
                           option instead.
   --with-gnutls=DIR       Specify alternate GnuTLS prefix
+  --with-mbedtls=DIR      Specify alternate MbedTLS prefix
   --with-opencore-amrnb=DIR
                           This option is obsolete and replaced by
                           --with-opencore-amr=DIR
@@ -9683,7 +9687,19 @@ esac
 fi
 
 
-if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno" -a "x$with_gnutls" = "xno"; then
+
+# Check whether --with-mbedtls was given.
+if test ${with_mbedtls+y}
+then :
+  withval=$with_mbedtls;
+else case e in #(
+  e) with_mbedtls=no
+ ;;
+esac
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno" -a "x$with_gnutls" = "xno" -a "x$with_mbedtls" = "xno"; then
     enable_ssl=no
 fi
 
@@ -9775,7 +9791,7 @@ else case e in #(
 printf "%s\n" "Using SSL prefix... $with_ssl" >&6; }
         fi
 
-        if test "x$with_gnutls" = "xno"; then
+        if test "x$with_gnutls" = "xno" -a "x$with_mbedtls" = "xno"; then
             # We still need to check for OpenSSL installations even if
             # we find Darwin SSL above since DTLS requires OpenSSL.
             { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: checking for OpenSSL installations.." >&5
@@ -10135,6 +10151,100 @@ printf "%s\n" "GnuTLS library found, SSL support enabled" >&6; }
             else
                 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: ** No GnuTLS libraries found, disabling SSL support **" >&5
 printf "%s\n" "** No GnuTLS libraries found, disabling SSL support **" >&6; }
+            fi
+
+        fi
+
+        if test "x$ac_ssl_backend" = "x"; then
+            if test "x$with_mbedtls" != "xno" -a "x$with_mbedtls" != "x"; then
+                CFLAGS="$CFLAGS -I$with_mbedtls/include"
+                LDFLAGS="$LDFLAGS -L$with_mbedtls/lib"
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Using MbedTLS prefix... $with_mbedtls" >&5
+printf "%s\n" "Using MbedTLS prefix... $with_mbedtls" >&6; }
+            fi
+
+            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: checking for MbedTLS installations.." >&5
+printf "%s\n" "checking for MbedTLS installations.." >&6; }
+
+
+            ac_fn_c_check_header_compile "$LINENO" "mbedtls/version.h" "ac_cv_header_mbedtls_version_h" "$ac_includes_default"
+if test "x$ac_cv_header_mbedtls_version_h" = xyes
+then :
+  mbedtls_h_present=1
+fi
+
+
+            if test "$PKG_CONFIG" != "none"; then
+                if $PKG_CONFIG --exists mbedtls mbedcrypto mbedx509; then
+                    LIBS="$LIBS `$PKG_CONFIG --libs mbedtls mbedcrypto mbedx509`"
+                    libmbedtls_present=1
+                else
+                    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for mbedtls_version_get_number in -lmbedtls" >&5
+printf %s "checking for mbedtls_version_get_number in -lmbedtls... " >&6; }
+if test ${ac_cv_lib_mbedtls_mbedtls_version_get_number+y}
+then :
+  printf %s "(cached) " >&6
+else case e in #(
+  e) ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmbedtls  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.
+   The 'extern "C"' is for builds by C++ compilers;
+   although this is not generally supported in C code supporting it here
+   has little cost and some practical benefit (sr 110532).  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char mbedtls_version_get_number (void);
+int
+main (void)
+{
+return mbedtls_version_get_number ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_mbedtls_mbedtls_version_get_number=yes
+else case e in #(
+  e) ac_cv_lib_mbedtls_mbedtls_version_get_number=no ;;
+esac
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS ;;
+esac
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mbedtls_mbedtls_version_get_number" >&5
+printf "%s\n" "$ac_cv_lib_mbedtls_mbedtls_version_get_number" >&6; }
+if test "x$ac_cv_lib_mbedtls_mbedtls_version_get_number" = xyes
+then :
+
+                        libmbedtls_present=1 && LIBS="$LIBS -lmbedtls"
+fi
+
+                fi
+            else
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: *** Warning: neither pkg-config nor python is available, disabling mbedtls. ***" >&5
+printf "%s\n" "*** Warning: neither pkg-config nor python is available, disabling mbedtls. ***" >&6; }
+            fi
+
+            if test "x$mbedtls_h_present" = "x1" -a "x$libmbedtls_present" = "x1"; then
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: MbedTLS library found, SSL support enabled" >&5
+printf "%s\n" "MbedTLS library found, SSL support enabled" >&6; }
+                printf "%s\n" "#define PJ_HAS_SSL_SOCK 1" >>confdefs.h
+
+                printf "%s\n" "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_MBEDTLS" >>confdefs.h
+
+                ac_ssl_backend="mbedtls"
+            else
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: ** No MbedTLS libraries found, disabling SSL support **" >&5
+printf "%s\n" "** No MbedTLS libraries found, disabling SSL support **" >&6; }
             fi
 
         fi

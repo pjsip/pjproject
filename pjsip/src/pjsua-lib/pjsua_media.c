@@ -18,6 +18,7 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
+#include <pjmedia/vid_codec_util.h>
 
 
 #define THIS_FILE               "pjsua_media.c"
@@ -3941,14 +3942,41 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
             return PJ_TRUE;
         }
 
-        /* Compare codec param */
-        if (/* old_cp->enc_mtu != new_cp->enc_mtu || */
-            pj_memcmp(&old_cp->enc_fmt.det, &new_cp->enc_fmt.det,
-                      sizeof(pjmedia_video_format_detail)) ||
-            !match_codec_fmtp(&old_cp->dec_fmtp, &new_cp->dec_fmtp) ||
+        /* Compare SDP fmtp for both directions */
+        if (!match_codec_fmtp(&old_cp->dec_fmtp, &new_cp->dec_fmtp) ||
             !match_codec_fmtp(&old_cp->enc_fmtp, &new_cp->enc_fmtp))
         {
             return PJ_TRUE;
+        }
+
+        /* Compare format for encoding only */
+        if (pj_memcmp(&old_cp->enc_fmt.det, &new_cp->enc_fmt.det,
+                      sizeof(pjmedia_video_format_detail)))
+        {
+            /* For H264, resolution may be adjusted to remote's profile-level,
+             * so check if it is different because of the adjusted format.
+             */
+            if (pj_strcmp2(&new_ci->encoding_name, "H264") == 0) {
+                pjmedia_vid_codec_param param = {0};
+                pj_status_t status;
+
+                param.dir = PJMEDIA_DIR_ENCODING;
+                pj_memcpy(&param.enc_fmt, &new_cp->enc_fmt,
+                          sizeof(param.enc_fmt));
+                pj_memcpy(&param.enc_fmtp,&new_cp->enc_fmtp,
+                          sizeof(param.enc_fmtp));
+                status = pjmedia_vid_codec_h264_apply_fmtp(&param);
+                if (status != PJ_SUCCESS)
+                    return PJ_TRUE;
+
+                if (pj_memcmp(&old_cp->enc_fmt.det, &param.enc_fmt.det,
+                              sizeof(pjmedia_video_format_detail)))
+                {
+                    return PJ_TRUE;
+                }
+            } else {
+                return PJ_TRUE;
+            }
         }
     }
 
@@ -3997,20 +4025,18 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
     pj_pool_t *tmp_pool = call->inv->pool_prov;
     pj_status_t status = PJ_SUCCESS;
 
-    pjmedia_stream_info asi;
+    /* Initialize the following variables to avoid warnings from compiler
+     * and code analysis. Actually the function will always init the vars
+     * when the media type is valid/recognized.
+     */
+    pjmedia_stream_info asi = {0};
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
-    pjmedia_vid_stream_info vsi;
+    pjmedia_vid_stream_info vsi = {0};
 #endif
     pjmedia_txt_stream_info tsi;
-    pjmedia_stream_info_common *si;
-    pjsua_stream_info stream_info;
+    pjmedia_stream_info_common *si = NULL;
+    pjsua_stream_info stream_info = {0};
     pj_str_t *enc_name = NULL;
-
-    /* Sanity check. */
-    PJ_ASSERT_RETURN(call_med->type == PJMEDIA_TYPE_AUDIO ||
-                     call_med->type == PJMEDIA_TYPE_VIDEO ||
-                     call_med->type == PJMEDIA_TYPE_TEXT,
-                     PJ_EINVAL);
 
     if (call_med->type == PJMEDIA_TYPE_AUDIO) {
         si = (pjmedia_stream_info_common *)&asi;
@@ -4036,6 +4062,9 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
                                     local_sdp, remote_sdp, mi);
         stream_info.info.txt = tsi;
         enc_name = &tsi.fmt.encoding_name;
+    }
+    else {
+        status = PJMEDIA_EUNSUPMEDIATYPE;
     }
 
     if (status != PJ_SUCCESS) {
@@ -4089,9 +4118,10 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
 
         if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
             call_med->def_dir = call->opt.media_dir[mi];
-            PJ_LOG(4,(THIS_FILE, "Call %d: setting audio media "
+            PJ_LOG(4,(THIS_FILE, "Call %d: setting %s media "
                                  "direction #%d to %d.",
-                                 call_id, mi, call_med->def_dir));
+                                 call_id, pjmedia_type_name(call_med->type), mi,
+                                 call_med->def_dir));
         }
 
         /* If the default direction specifies we do not wish
@@ -4233,7 +4263,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         if (status != PJ_SUCCESS) {
             PJ_PERROR(1,(THIS_FILE, status,
                          "pjmedia_transport_media_start() failed "
-                             "for call_id %d media %d",
+                         "for call_id %d media %d",
                          call_id, mi));
             return status;
         }
@@ -4269,8 +4299,9 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
             }
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(1,(THIS_FILE, status,
-                             "pjsua_aud_channel_update() failed "
-                                 "for call_id %d media %d",
+                             "%s channel_update failed "
+                             "for call_id %d media %d",
+                             pjmedia_type_name(call_med->type),
                              call_id, mi));
                 return status;
             }
@@ -4311,8 +4342,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         }
         len = pj_ansi_snprintf( info+info_len, sizeof(info)-info_len,
                                ", stream #%d: %.*s (%s)", mi,
-                               (enc_name? (int)enc_name->slen: 0),
-                               (enc_name? enc_name->ptr: info),
+                               (int)enc_name->slen, enc_name->ptr,
                                dir);
         if (len > 0)
             info_len += len;
