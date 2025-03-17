@@ -4051,9 +4051,10 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
 
         if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
             call_med->def_dir = call->opt.media_dir[mi];
-            PJ_LOG(4,(THIS_FILE, "Call %d: setting audio media "
+            PJ_LOG(4,(THIS_FILE, "Call %d: setting %s media "
                                  "direction #%d to %d.",
-                                 call_id, mi, call_med->def_dir));
+                                 call_id, pjmedia_type_name(call_med->type), mi,
+                                 call_med->def_dir));
         }
 
         /* If the default direction specifies we do not wish
@@ -4195,7 +4196,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         if (status != PJ_SUCCESS) {
             PJ_PERROR(1,(THIS_FILE, status,
                          "pjmedia_transport_media_start() failed "
-                             "for call_id %d media %d",
+                         "for call_id %d media %d",
                          call_id, mi));
             return status;
         }
@@ -4227,8 +4228,9 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
             }
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(1,(THIS_FILE, status,
-                             "pjsua_aud_channel_update() failed "
-                                 "for call_id %d media %d",
+                             "%s channel_update failed "
+                             "for call_id %d media %d",
+                             pjmedia_type_name(call_med->type),
                              call_id, mi));
                 return status;
             }
