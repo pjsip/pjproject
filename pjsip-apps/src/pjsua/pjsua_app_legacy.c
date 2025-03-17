@@ -1870,6 +1870,15 @@ static void ui_send_rtt()
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send text", status);
     }
+
+    //TODO
+#if 1
+    //test buffering and redundancy
+    pj_str_t abc = pj_str("abc");
+    pj_str_t def = pj_str("defgh");
+    pjsua_call_send_text(current_call, -1, &abc);
+    pjsua_call_send_text(current_call, -1, &def);
+#endif
 }
 
 /*

@@ -246,7 +246,7 @@ pj_status_t pjsua_txt_channel_update(pjsua_call_media *call_med,
         if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_rx_text) {
             pjmedia_txt_stream_set_rx_callback(
                 call_med->strm.t.stream, &rx_text_cb,
-                (void*)(pj_ssize_t)(call->index));
+                (void *)(pj_ssize_t)(call->index), 0);
         }
     }
 

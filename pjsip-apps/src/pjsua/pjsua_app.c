@@ -595,8 +595,15 @@ static void call_on_dtmf_callback2(pjsua_call_id call_id,
 static void call_on_rx_text(pjsua_call_id call_id,
                             const pjsua_txt_stream_data *data)
 {
-    PJ_LOG(3, (THIS_FILE, "Incoming text on call %d seq %d: %.*s",
-           call_id, data->seq, (int)data->text.slen, data->text.ptr));
+    if (data->text.slen == 0) {
+        PJ_LOG(4, (THIS_FILE, "Received empty T140 block with seq %d",
+                              data->seq));
+    } else {
+        PJ_LOG(3, (THIS_FILE, "Incoming text on call %d, seq %d: %.*s "
+                              "(%d bytes)", call_id, data->seq,
+                              (int)data->text.slen, data->text.ptr,
+                              (int)data->text.slen));
+    }
 }
 
 /*

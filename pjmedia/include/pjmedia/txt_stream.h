@@ -175,10 +175,7 @@ pjmedia_txt_stream_send_text(pjmedia_txt_stream *stream, const pj_str_t *text);
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_INLINE(pj_status_t) pjmedia_txt_stream_start(pjmedia_txt_stream *stream)
-{
-    return pjmedia_stream_common_start((pjmedia_stream_common *)stream);
-}
+PJ_DECL(pj_status_t) pjmedia_txt_stream_start(pjmedia_txt_stream *stream);
 
 
 /**
@@ -189,6 +186,7 @@ PJ_INLINE(pj_status_t) pjmedia_txt_stream_start(pjmedia_txt_stream *stream)
  *                      See #pjmedia_txt_stream_data.
  * @param user_data     User data to be returned back when the callback
  *                      is called.
+ * @param option        Option, must be 0 for now.
  *
  * @return              PJ_SUCCESS on success.
  */
@@ -197,7 +195,8 @@ pjmedia_txt_stream_set_rx_callback(pjmedia_txt_stream *stream,
                                    void (*cb)(pjmedia_txt_stream*,
                                               void *user_data,
                                               const pjmedia_txt_stream_data *data),
-                                   void *user_data);
+                                   void *user_data,
+                                   unsigned option);
 
 
 /**

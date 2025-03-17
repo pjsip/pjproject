@@ -1045,7 +1045,7 @@ typedef struct pjsua_dtmf_event {
 
 
 /**
- * This will contain the information of the callback \a on_rx_text.
+ * This will contain the information of the callback \a on_call_rx_text().
  */
 typedef struct pjsua_txt_stream_data {
     /**
@@ -1060,6 +1060,7 @@ typedef struct pjsua_txt_stream_data {
 
     /**
      * The content of the text block.
+     * Note that the text can be empty.
      */
     pj_str_t            text;
 
@@ -1398,6 +1399,7 @@ typedef struct pjsua_callback
 
     /**
      * Notify application upon incoming text data from the text stream.
+     * Note that the received text can be empty.
      *
      * @param call_id   The call index.
      * @param data      The text data.

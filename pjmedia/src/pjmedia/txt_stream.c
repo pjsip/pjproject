@@ -92,13 +92,16 @@ typedef struct pjmedia_txt_stream
 
     pjmedia_clock              *clock;          /**< Clock.                 */
     unsigned                    buf_time;       /**< Buffering time.        */
+    pj_bool_t                   is_idle;        /**< Is idle?               */
 
     pj_timestamp                tx_last_ts;     /**< Timestamp of last tx.  */
     red_buf                     tx_buf[NUM_BUFFERS];/**< Tx buffer.         */
-    unsigned                    tx_buf_idx;     /*< Index to current buffer.*/
+    int                         tx_buf_idx;     /**< Index to current buffer*/
+    int                         tx_nred;        /**< Num of redundant data. */
 
-    pj_timestamp                rx_last_ts;     /**< Timestamp of last rx.  */
     int                         rx_last_seq;    /**< Sequence of last rx.   */
+    pj_bool_t                   is_waiting;     /**< Is waiting?            */
+    pj_timestamp                rx_wait_ts;     /**< Ts of waiting start.   */
 
     /* Incoming text callback. */
     void                      (*cb)(pjmedia_txt_stream *, void *,
@@ -231,6 +234,7 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
     c_strm->jb_last_frm = PJMEDIA_JB_NORMAL_FRAME;
     c_strm->rtcp_fb_nack.pid = -1;
     stream->rx_last_seq = -1;
+    stream->is_idle = PJ_TRUE;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     c_strm->use_ka = info->use_ka;
@@ -251,6 +255,18 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
         *p++ = '.'; *p++ = 'o'; *p++ = 'r'; *p++ = 'g';
         c_strm->cname.slen = p - c_strm->cname.ptr;
     }
+
+    /* Init buffering time and create clock. */
+    stream->buf_time = info->buffer_time;
+    if (stream->buf_time == 0)
+        stream->buf_time = BUFFERING_TIME;
+    cparam.usec_interval = stream->buf_time * 1000;
+    cparam.clock_rate = 1000;
+    status = pjmedia_clock_create2(pool, &cparam,
+                                   PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
+                                   clock_cb, stream, &stream->clock);
+    if (status != PJ_SUCCESS)
+        goto err_cleanup;
 
     /* Create mutex to protect jitter buffer: */
     status = pj_mutex_create_recursive(pool, NULL, &c_strm->jb_mutex);
@@ -317,22 +333,6 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
     if (c_strm->out_rtcp_pkt_size > PJMEDIA_MAX_MTU)
         c_strm->out_rtcp_pkt_size = PJMEDIA_MAX_MTU;
 
-    /* Init buffering time and create clock. */
-    stream->buf_time = info->buffer_time;
-    if (stream->buf_time == 0)
-        stream->buf_time = BUFFERING_TIME;
-    cparam.usec_interval = stream->buf_time * 1000;
-    cparam.clock_rate = 1000;
-    status = pjmedia_clock_create2(pool, &cparam,
-                                   PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
-                                   clock_cb, stream, &stream->clock);
-    if (status != PJ_SUCCESS)
-        goto err_cleanup;
-
-    status = pjmedia_clock_start(stream->clock);
-    if (status != PJ_SUCCESS)
-        goto err_cleanup;
-
     c_strm->out_rtcp_pkt = pj_pool_alloc(pool, c_strm->out_rtcp_pkt_size);
     pj_bzero(&att_param, sizeof(att_param));
     att_param.stream = stream;
@@ -394,6 +394,21 @@ err_cleanup:
     return status;
 }
 
+PJ_DEF(pj_status_t) pjmedia_txt_stream_start(pjmedia_txt_stream *stream)
+{
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
+    pj_status_t status;
+
+    pjmedia_stream_common_start(c_strm);
+    if (!c_strm->enc->paused || !c_strm->dec->paused) {
+        status = pjmedia_clock_start(stream->clock);
+    } else {
+        status = pjmedia_clock_stop(stream->clock);
+    }
+
+    return status;
+}
+
 PJ_DEF(pj_status_t)
 pjmedia_txt_stream_get_info(const pjmedia_txt_stream *stream,
                             pjmedia_txt_stream_info *info)
@@ -404,7 +419,7 @@ pjmedia_txt_stream_get_info(const pjmedia_txt_stream *stream,
     return PJ_SUCCESS;
 }
 
-static void call_cb(pjmedia_txt_stream *stream)
+static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
 {
     pjmedia_stream_common *c_strm = &stream->base;
     char frm_type;
@@ -412,23 +427,34 @@ static void call_cb(pjmedia_txt_stream *stream)
 
     pj_mutex_lock(c_strm->jb_mutex);
 
-    /* Check if we have a packet with the next sequence number. */
-    pjmedia_jbuf_peek_frame(c_strm->jb, 0, NULL, NULL, &frm_type, NULL, NULL,
-                            &next_seq);
-
-    /* If yes, notify user via the callback. */
-    while (frm_type != PJMEDIA_JB_ZERO_EMPTY_FRAME &&
-           (stream->rx_last_seq == -1 ||
-            next_seq == (pj_uint16_t)(stream->rx_last_seq + 1)))
-    {
+    stream->is_waiting = PJ_FALSE;
+    do {
         char frm_buf[BUFFER_SIZE];
         pj_size_t frm_size = sizeof(frm_buf);
         pj_uint32_t ts;
 
+        /* Check if we have a packet with the next sequence number. */
+        pjmedia_jbuf_peek_frame(c_strm->jb, 0, NULL, NULL, &frm_type, NULL, NULL,
+                                &next_seq);
+
+        /* Jitter buffer is empty, just return. */
+        if (frm_type == PJMEDIA_JB_ZERO_EMPTY_FRAME)
+            break;
+
+        if (!now && stream->rx_last_seq != -1 &&
+            next_seq != (pj_uint16_t)(stream->rx_last_seq + 1))
+        {
+            /* If analysis of a received packet reveals a gap in the sequence,
+             * we need to wait for the missing packet(s) to arrive.
+             * The waiting time is determined by MAX_RX_WAITING_TIME,
+             */
+            stream->is_waiting = PJ_TRUE;
+            pj_get_timestamp(&stream->rx_wait_ts);
+            break;
+        }
+
         pjmedia_jbuf_get_frame3(c_strm->jb, frm_buf, &frm_size, &frm_type,
-                                NULL, &ts, NULL);
-        stream->rx_last_seq = next_seq;
-        pj_get_timestamp(&stream->rx_last_ts);
+                                NULL, &ts, &stream->rx_last_seq);
 
         /* Call callback. */
         pj_mutex_unlock(c_strm->jb_mutex);
@@ -445,10 +471,7 @@ static void call_cb(pjmedia_txt_stream *stream)
                     (int)frm_size, frm_buf));
         }
         pj_mutex_lock(c_strm->jb_mutex);
-
-        pjmedia_jbuf_peek_frame(c_strm->jb, 0, NULL, NULL, &frm_type, NULL,
-                                NULL, &next_seq);        
-    }
+    } while (1);
 
     pj_mutex_unlock(c_strm->jb_mutex);
 }
@@ -515,7 +538,7 @@ static pj_status_t decode_red(pjmedia_txt_stream *stream,
 
         ext_seq = (pj_uint16_t)(seq + i - level);
         TRACE_((c_strm->port.info.name.ptr, "Received RTP red, seq: %d, "
-                "%d bytes: %.*s", ext_seq, length, (int)length, buf));
+                "%.*s (%d bytes)", ext_seq, (int)length, buf, length));
         delta = (pj_uint16_t) (stream->rx_last_seq - ext_seq);
         if (delta < MAX_DELTA) {
             /* Redundant packets, do nothing. */
@@ -560,14 +583,14 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     /* Put the primary data into jbuf. */
     payload += red_len;
     payloadlen -= red_len;
-    if (payloadlen > 0 && seq > stream->rx_last_seq) {
+    if (seq > stream->rx_last_seq) {
         pjmedia_jbuf_put_frame(c_strm->jb, payload, payloadlen, seq);
     }
 
     pj_mutex_unlock(c_strm->jb_mutex);
 
     /* Check if we need to call the callback. */
-    call_cb(stream);
+    call_cb(stream, PJ_FALSE);
 
     return PJ_SUCCESS;
 }
@@ -582,7 +605,7 @@ static pj_status_t encode_red(unsigned level, unsigned pt,
     for (i = level; i > 0; i--) {
         pjmedia_rtp_add_hdr_short shdr;
         pjmedia_rtp_add_hdr hdr = 0;
-        int past_idx;
+        int past_idx, offset;
 
         past_idx = (int)rbuf_idx - i;
         if (past_idx < 0) past_idx += NUM_BUFFERS;
@@ -590,8 +613,15 @@ static pj_status_t encode_red(unsigned level, unsigned pt,
         shdr.f = 1;
         shdr.pt = pt;
         /* Timestamp is an offset, not absolute. */
-        hdr = rbuf[rbuf_idx].timestamp - rbuf[past_idx].timestamp;
-        hdr <<= 10;
+        offset = rbuf[rbuf_idx].timestamp - rbuf[past_idx].timestamp;
+        /* 4.1. Redundant data with timestamp offset > 16383 MUST NOT
+         * be included.
+         */
+        if (offset > 16383) {
+            offset = 0;
+            rbuf[past_idx].length = 0;
+        }
+        hdr = offset << 10;
         /* Block length. */
         hdr |= rbuf[past_idx].length;
 
@@ -621,9 +651,7 @@ static pj_status_t encode_red(unsigned level, unsigned pt,
      * recent put last), and finally, the primary data.
      */
     for (i = level; i >= 0; i--) {
-        int idx;
-
-        idx = (int)rbuf_idx - i;
+        int idx = (int)rbuf_idx - i;
         if (idx < 0) idx += NUM_BUFFERS;
 
         if (rbuf[idx].length == 0)
@@ -652,17 +680,23 @@ static pj_status_t send_text(pjmedia_txt_stream *stream,
 
     pj_mutex_lock(c_strm->jb_mutex);
 
-    if (stream->tx_buf[stream->tx_buf_idx].length == 0) {
+    if (stream->is_idle &&
+        stream->tx_buf[stream->tx_buf_idx].length == 0)
+    {
         /* Nothing to send. */
         goto on_return;
     }
 
-    TRACE_((c_strm->port.info.name.ptr, "Sending text %d %.*s",
-            (int)stream->tx_buf[stream->tx_buf_idx].length,
-            (int)stream->tx_buf[stream->tx_buf_idx].length,
-            stream->tx_buf[stream->tx_buf_idx].buf));
+    pt = (stream->si.tx_red_pt && stream->tx_nred)?
+         stream->si.tx_red_pt: channel->pt;
 
-    pt = (stream->si.tx_red_pt)? stream->si.tx_red_pt: channel->pt;
+    TRACE_((c_strm->port.info.name.ptr, "Sending text %.*s (%d bytes), "
+            "pt:%d red:%d",
+            (int)stream->tx_buf[stream->tx_buf_idx].length,
+            stream->tx_buf[stream->tx_buf_idx].buf,
+            (int)stream->tx_buf[stream->tx_buf_idx].length,
+            pt, stream->tx_nred));
+
     status = pjmedia_rtp_encode_rtp( &channel->rtp,
                                      pt, 0,
                                      (int)channel->buf_size, rtp_ts_len,
@@ -674,13 +708,45 @@ static pj_status_t send_text(pjmedia_txt_stream *stream,
     /* Copy RTP header to the beginning of packet */
     pj_memcpy(channel->buf, rtphdr, sizeof(pjmedia_rtp_hdr));
 
+    if (stream->is_idle) {
+        stream->is_idle = PJ_FALSE;
+        /* Set M-bit for the first packet in a session, and the first
+         * packet after an idle period.
+         */
+        ((pjmedia_rtp_hdr *)channel->buf)->m = 1;
+    }
+
     size = channel->buf_size - sizeof(pjmedia_rtp_hdr);
-    status = encode_red(stream->si.tx_red_level, channel->pt,
+    status = encode_red(stream->tx_nred, channel->pt,
                         stream->tx_buf, stream->tx_buf_idx,
                         ((char*)channel->buf) + sizeof(pjmedia_rtp_hdr),
                         &size);
     if (status != PJ_SUCCESS)
         goto on_return;
+
+    if (stream->tx_buf[stream->tx_buf_idx].length == 0) {
+        int i;
+
+        /* We are in idle if:
+         * - no new T.140 data is available for transmission, and
+         * - there's no more redundancy packet to send.
+         */
+        stream->is_idle = PJ_TRUE;
+        for (i = 0; i < stream->tx_nred - 1; i++) {
+            int idx = (int)stream->tx_buf_idx - 1 - i;
+            if (idx < 0) idx += NUM_BUFFERS;
+            if (stream->tx_buf[idx].length != 0) {
+                stream->is_idle = PJ_FALSE;
+                break;
+            }
+        }
+
+        /* If idle, reset redundancy. */
+        if (stream->is_idle) stream->tx_nred = 0;
+    } else if (stream->tx_nred < stream->si.tx_red_level) {
+        /* We have data, increase the number of redundancies. */
+        stream->tx_nred++;
+    }
 
     stream->tx_buf_idx = (stream->tx_buf_idx + 1) % NUM_BUFFERS;
     stream->tx_buf[stream->tx_buf_idx].length = 0;
@@ -733,10 +799,11 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
         send_text(stream, interval);
     }
 
-    interval = pj_elapsed_msec(&stream->rx_last_ts, &now);
-    if (interval + stream->buf_time > MAX_RX_WAITING_TIME) {
-        stream->rx_last_seq = -1;
-        call_cb(stream);
+    if (stream->is_waiting) {
+        interval = pj_elapsed_msec(&stream->rx_wait_ts, &now);
+        if (interval + stream->buf_time > MAX_RX_WAITING_TIME) {
+            call_cb(stream, PJ_TRUE);
+        }
     }
 }
 
@@ -780,11 +847,14 @@ pjmedia_txt_stream_set_rx_callback(pjmedia_txt_stream *stream,
                                    void (*cb)(pjmedia_txt_stream *,
                                               void *user_data,
                                               const pjmedia_txt_stream_data *data),
-                                   void *user_data)
+                                   void *user_data,
+                                   unsigned option)
 {
     pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    PJ_UNUSED_ARG(option);
 
     pj_mutex_lock(c_strm->jb_mutex);
 

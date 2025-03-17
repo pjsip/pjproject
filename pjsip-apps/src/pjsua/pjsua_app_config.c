@@ -183,7 +183,7 @@ static void usage(void)
     puts  ("");
     puts  ("Text Options:");
     puts  ("  --text              Enable real-time text stream");
-    puts  ("  --text-red=N        Text stream redundancy level (default=2)");
+    puts  ("  --text-red=N        Text stream redundancy level (default=0)");
 
     puts  ("");
     puts  ("Media Transport Options:");
