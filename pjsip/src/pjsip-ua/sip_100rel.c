@@ -558,6 +558,7 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
                           struct pj_timer_entry *entry)
 {
     dlg_data *dd;
+    pjsip_transaction* invite_tsx;
     tx_data_list_t *tl;
     pjsip_tx_data *tdata;
     pj_bool_t final;
@@ -568,6 +569,12 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     dd = (dlg_data*) entry->user_data;
 
     entry->id = PJ_FALSE;
+
+    invite_tsx = dd->inv->invite_tsx;
+    if (!invite_tsx) {
+        clear_all_responses(dd);
+        return;
+    }
 
     ++dd->uas_state->retransmit_count;
     if (dd->uas_state->retransmit_count >= 7) {
@@ -582,11 +589,11 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
         /* Clear all pending responses */
         clear_all_responses(dd);
 
-        /* Send 500 response */
-        status = pjsip_inv_end_session(dd->inv, 500, &reason, &tdata);
+        /* Send 504 (Server Time-out) response */
+        status = pjsip_inv_end_session(dd->inv, 504, &reason, &tdata);
         if (status == PJ_SUCCESS && tdata) {
             pjsip_dlg_send_response(dd->inv->dlg, 
-                                    dd->inv->invite_tsx,
+                                    invite_tsx,
                                     tdata);
         }
         return;
@@ -602,14 +609,14 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     if (dd->uas_state->retransmit_count == 1) {
         pj_status_t status;
         
-        status = pjsip_tsx_send_msg(dd->inv->invite_tsx, tdata);
+        status = pjsip_tsx_send_msg(invite_tsx, tdata);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(3, (THIS_FILE, status,
                          "Failed to send message"));
             return;
         }
     } else {
-        pjsip_tsx_retransmit_no_state(dd->inv->invite_tsx, tdata);
+        pjsip_tsx_retransmit_no_state(invite_tsx, tdata);
     }
 
     if (final) {
