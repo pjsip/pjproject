@@ -1831,6 +1831,22 @@ static void write_account_settings(int acc_index, pj_str_t *result)
             pj_strcat2(result, line);
         }
 
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        if (acc_cfg->cred_info[i].ext.aka.op.slen) {
+            pj_ansi_snprintf(line, sizeof(line), "--op %.*s\n",
+                                  (int)acc_cfg->cred_info[i].ext.aka.op.slen,
+                                  acc_cfg->cred_info[i].ext.aka.op.ptr);
+            pj_strcat2(result, line);
+        }
+
+        if (acc_cfg->cred_info[i].ext.aka.amf.slen) {
+            pj_ansi_snprintf(line, sizeof(line), "--amf %.*s\n",
+                                  (int)acc_cfg->cred_info[i].ext.aka.amf.slen,
+                                  acc_cfg->cred_info[i].ext.aka.amf.ptr);
+            pj_strcat2(result, line);
+        }
+#endif
+
         if (i != acc_cfg->cred_count - 1)
             pj_strcat2(result, "--next-cred\n");
     }
