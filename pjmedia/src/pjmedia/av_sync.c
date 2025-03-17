@@ -311,7 +311,8 @@ PJ_DEF(pj_status_t) pjmedia_av_sync_update_pts(
             media->last_adj_delay_req = avs->slowdown_req_ms;
             media->adj_delay_req_cnt = 0;
             avs->slowdown_req_ms = 0;
-            TRACE_((avs->pool->obj_name, "%s is requested to slow down %dms",
+            TRACE_((avs->pool->obj_name,
+                    "%s is requested to slow down by %dms",
                     media->name, media->last_adj_delay_req));
             if (adjust_delay)
                 *adjust_delay = media->last_adj_delay_req;
@@ -341,7 +342,7 @@ PJ_DEF(pj_status_t) pjmedia_av_sync_update_pts(
         if (ms_diff <= PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC) {
             if (media->last_adj_delay_req) {
                 TRACE_((avs->pool->obj_name,
-                        "%s speeds up completed, delay looks good=%ums",
+                        "%s delay looks good now=%ums",
                         media->name, ms_diff));
             }
             /* Reset the request delay & counter */
@@ -358,9 +359,10 @@ PJ_DEF(pj_status_t) pjmedia_av_sync_update_pts(
             {
                 /* After several requests this media still cannot catch up,
                  * signal the synchronizer to slow down the fastest media.
+                 * Slow down slowly: request 3/4 of required.
                  */
-                if (avs->slowdown_req_ms < ms_diff)
-                    avs->slowdown_req_ms = ms_diff;
+                if (avs->slowdown_req_ms < ms_diff * 3/4)
+                    avs->slowdown_req_ms = ms_diff * 3/4;
 
                 TRACE_((avs->pool->obj_name,
                         "%s request limit has been reached, requesting "
@@ -393,13 +395,16 @@ PJ_DEF(pj_status_t) pjmedia_av_sync_update_pts(
             media->adj_delay_req_cnt = 0;
         }
 
-        /* Request the media to speed up & increment the counter */
-        media->last_adj_delay_req = -(pj_int32_t)ms_diff;
+        /* Request the media to speed up & increment the counter
+         * Speed up quickly: request 4/3 of required.
+         */
+        media->last_adj_delay_req = -(pj_int32_t)ms_diff * 4/3;
         media->adj_delay_req_cnt++;
 
         TRACE_((avs->pool->obj_name,
-                "%s is requested to speed up #%d %ums",
-                media->name, media->adj_delay_req_cnt, ms_diff));
+                "%s is requested to speed up #%d by %dms",
+                media->name, media->adj_delay_req_cnt,
+                -media->last_adj_delay_req));
 
         if (adjust_delay)
             *adjust_delay = media->last_adj_delay_req;

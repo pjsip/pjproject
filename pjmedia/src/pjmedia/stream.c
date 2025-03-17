@@ -506,12 +506,6 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                     pjmedia_jb_state jb_state;
                     int target_delay_ms, cur_delay_ms;
 
-                    /* Increase delay slowly, but decrease delay quickly */
-                    if (delay_req_ms > 0)
-                        delay_req_ms = delay_req_ms * 3 / 4;
-                    else 
-                        delay_req_ms = delay_req_ms * 4 / 3;
-
                     /* Apply delay request to jitter buffer */
                     pjmedia_jbuf_get_state(c_strm->jb, &jb_state);
                     cur_delay_ms = jb_state.min_delay_set * stream->dec_ptime/
