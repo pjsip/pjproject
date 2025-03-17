@@ -615,7 +615,7 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
             return;
         }
     } else {
-            pjsip_tsx_retransmit_no_state(dd->inv->invite_tsx, tdata);
+        pjsip_tsx_retransmit_no_state(dd->inv->invite_tsx, tdata);
     }
 
     if (final) {
