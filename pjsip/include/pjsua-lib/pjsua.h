@@ -1109,7 +1109,7 @@ typedef struct pjsua_call_setting
      * Number of simultaneous active text streams for this call. Setting
      * this to zero will disable text in this call.
      *
-     * Default: 0
+     * Default: 1
      */
     unsigned         txt_cnt;
 

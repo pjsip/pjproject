@@ -974,6 +974,8 @@ pjmedia_endpt_create_text_sdp(pjmedia_endpt *endpt,
     pjmedia_endpt_create_sdp_param param;
     pj_status_t status;
 
+    PJ_UNUSED_ARG(endpt);
+
     /* Create and init basic SDP media */
     pjmedia_endpt_create_sdp_param_default(&param);
     m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);

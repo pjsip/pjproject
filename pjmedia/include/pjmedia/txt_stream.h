@@ -73,7 +73,7 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_txt_stream_info
 {
-    PJ_DECL_STREAM_INFO_COMMON_MEMBER();
+    PJ_DECL_STREAM_INFO_COMMON_MEMBER()
 
     pjmedia_codec_info  fmt;        /**< Incoming codec format info.    */
     pjmedia_codec_fmtp  enc_fmtp;   /**< Encoder's fmtp params.         */

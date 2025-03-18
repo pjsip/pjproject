@@ -1472,7 +1472,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                 continue;
 
             pt = pj_strtoul(&preanswer->desc.fmt[i]);
-            status = pjmedia_stream_info_parse_fmtp(pool, answer,
+            status = pjmedia_stream_info_parse_fmtp(pool, preanswer,
                                                     pt, &fmtp);
             if (status != PJ_SUCCESS)
                 break;
@@ -1485,8 +1485,8 @@ static pj_status_t match_offer(pj_pool_t *pool,
                 a = pjmedia_sdp_media_find_attr2(preanswer, "fmtp",
                                                  &preanswer->desc.fmt[i]);
                 if (a) {
-                    unsigned lvl = 0;
-                    for (i = 0; i < a->value.slen; i++) {
+                    int lvl = 0;
+                    for (i = 0; i < (unsigned)a->value.slen; i++) {
                         if (*(a->value.ptr + i) == '/') {
                             if (lvl++ >= o_red_level) {
                                 a->value.slen = i;
