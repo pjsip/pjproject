@@ -6995,6 +6995,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\txt_stream.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\types.c"
 				>
 			</File>
@@ -7685,6 +7689,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\transport_udp.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\txt_stream.h"
 				>
 			</File>
 			<File

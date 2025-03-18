@@ -30,6 +30,7 @@
 static const pj_str_t ID_IN = { "IN", 2 };
 static const pj_str_t ID_IP4 = { "IP4", 3};
 static const pj_str_t ID_IP6 = { "IP6", 3};
+static const pj_str_t ID_RTPMAP = { "rtpmap", 6 };
 
 /*
  * Create stream info from SDP media line.
@@ -410,6 +411,89 @@ PJ_DECL(pj_status_t) pjmedia_stream_info_parse_fmtp_data(pj_pool_t *pool,
 
         /* Next */
         ++p;
+    }
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t parse_redundancy(pj_pool_t *pool,
+                                    const pjmedia_sdp_media *sdp,
+                                    unsigned media_pt,
+                                    unsigned *red_pt,
+                                    int *red_level)
+{
+    static const pj_str_t ID_REDUNDANCY = { "red", 3 };
+    unsigned i, pt = 0;
+    int level = 0;
+    pjmedia_codec_fmtp fmtp;
+    pj_status_t status;
+
+    /* Get payload type for redundancy */
+    for (i = 0; i < sdp->attr_count; ++i) {
+        const pjmedia_sdp_attr *attr;
+        pjmedia_sdp_rtpmap r;
+
+        attr = sdp->attr[i];
+        if (pj_strcmp(&attr->name, &ID_RTPMAP) != 0)
+            continue;
+        if (pjmedia_sdp_attr_get_rtpmap(attr, &r) != PJ_SUCCESS)
+            continue;
+        if (pj_strcmp(&r.enc_name, &ID_REDUNDANCY) == 0) {
+            pt = pj_strtoul(&r.pt);
+            break;
+        }
+    }
+    if (pt == 0)
+        return PJ_ENOTFOUND;
+
+    status = pjmedia_stream_info_parse_fmtp(pool, sdp, pt, &fmtp);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    for (i = 0; i < fmtp.cnt; i++, level++) {
+        unsigned med_pt = pj_strtoul(&fmtp.param[i].val);
+
+        if (med_pt != media_pt)
+            return PJMEDIA_SDP_EINFMTP;
+    }
+
+    *red_pt = pt;
+    *red_level = level - 1;
+
+    return status;
+}
+
+/*
+ * Internal function for parsing redundancy info from the SDP media.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_info_common_parse_redundancy(pjmedia_stream_info_common *si,
+                                            pj_pool_t *pool,
+                                            const pjmedia_sdp_media *local_m,
+                                            const pjmedia_sdp_media *rem_m)
+{
+    pj_status_t status;
+
+    /* Get incoming payload type for redundancy */
+    status = parse_redundancy(pool, local_m, si->rx_pt, &si->rx_red_pt,
+                              &si->rx_red_level);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Get outgoing payload type for redundancy */
+    status = parse_redundancy(pool, rem_m, si->tx_pt, &si->tx_red_pt,
+                              &si->tx_red_level);
+    if (status == PJ_SUCCESS) {
+        if (si->tx_red_level == -1) {
+            /* Remote SDP contains "red" rtpmap but no fmtp, meaning that
+             * they accept our offer but most likely will not send redundancy
+             * from their side.
+             */
+            si->tx_red_level = si->rx_red_level;
+        } else if (si->tx_red_level != si->rx_red_level) {
+            si->tx_red_level = PJ_MIN(si->tx_red_level, si->rx_red_level);
+            si->rx_red_level = si->tx_red_level;
+        }
     }
 
     return PJ_SUCCESS;

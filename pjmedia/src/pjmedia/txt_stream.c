@@ -26,6 +26,7 @@
 #include <pjmedia/sdp_neg.h>
 #include <pjmedia/transport.h>
 #include <pj/assert.h>
+#include <pj/ctype.h>
 #include <pj/errno.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -36,8 +37,7 @@
 #define LOGERR_(expr)                   PJ_PERROR(4,expr)
 #define TRC_(expr)                      PJ_LOG(5,expr)
 
-// TODO
-#if 1
+#if 0
 #   define TRACE_(log)  PJ_LOG(3, log)
 #else
 #   define TRACE_(log)
@@ -50,7 +50,8 @@
 #define BUFFERING_TIME          300
 #define MAX_BUFFERING_TIME      500
 
-/* The default cps (character per second) is 30, but it's over a 10-second
+/* Buffer size to store the characters buffered during BUFFERING_TIME.
+ * The default cps (character per second) is 30, but it's over a 10-second
  * interval, so we need a larger buffer to handle the burst.
  */
 #define BUFFER_SIZE             64
@@ -74,8 +75,6 @@
  */
 #define JBUF_MAX_COUNT          8
 
-
-static const pj_str_t ID_RTPMAP = { "rtpmap", 6 };
 
 /* Buffer to store redundancy and primary data. */
 typedef struct red_buf
@@ -434,8 +433,8 @@ static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
         pj_uint32_t ts;
 
         /* Check if we have a packet with the next sequence number. */
-        pjmedia_jbuf_peek_frame(c_strm->jb, 0, NULL, NULL, &frm_type, NULL, NULL,
-                                &next_seq);
+        pjmedia_jbuf_peek_frame(c_strm->jb, 0, NULL, NULL, &frm_type, NULL,
+                                NULL, &next_seq);
 
         /* Jitter buffer is empty, just return. */
         if (frm_type == PJMEDIA_JB_ZERO_EMPTY_FRAME)
@@ -467,8 +466,8 @@ static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
             data.text.slen = frm_size;
             (*stream->cb)(stream, stream->cb_user_data, &data);
         } else {
-            TRACE_((c_strm->port.info.name.ptr, "Text data %zu: %.*s", frm_size,
-                    (int)frm_size, frm_buf));
+            TRACE_((c_strm->port.info.name.ptr, "Text data %zu: %.*s",
+                    frm_size, (int)frm_size, frm_buf));
         }
         pj_mutex_lock(c_strm->jb_mutex);
     } while (1);
@@ -539,9 +538,10 @@ static pj_status_t decode_red(pjmedia_txt_stream *stream,
         ext_seq = (pj_uint16_t)(seq + i - level);
         TRACE_((c_strm->port.info.name.ptr, "Received RTP red, seq: %d, "
                 "%.*s (%d bytes)", ext_seq, (int)length, buf, length));
+
         delta = (pj_uint16_t) (stream->rx_last_seq - ext_seq);
         if (delta < MAX_DELTA) {
-            /* Redundant packets, do nothing. */
+            /* Redundant packets that we already have in jbuf, do nothing. */
         } else {
             pjmedia_jbuf_put_frame(c_strm->jb, buf, length, ext_seq);
         }
@@ -609,9 +609,11 @@ static pj_status_t encode_red(unsigned level, unsigned pt,
 
         past_idx = (int)rbuf_idx - i;
         if (past_idx < 0) past_idx += NUM_BUFFERS;
+
         /* 1 means not final. */
         shdr.f = 1;
         shdr.pt = pt;
+
         /* Timestamp is an offset, not absolute. */
         offset = rbuf[rbuf_idx].timestamp - rbuf[past_idx].timestamp;
         /* 4.1. Redundant data with timestamp offset > 16383 MUST NOT
@@ -622,6 +624,7 @@ static pj_status_t encode_red(unsigned level, unsigned pt,
             rbuf[past_idx].length = 0;
         }
         hdr = offset << 10;
+
         /* Block length. */
         hdr |= rbuf[past_idx].length;
 
@@ -637,7 +640,7 @@ static pj_status_t encode_red(unsigned level, unsigned pt,
     if (level > 0) {
         pjmedia_rtp_add_hdr_short hdr;
 
-        /* Last RTP additional header, for the current data. */
+        /* Last RTP additional header, for the primary data. */
         hdr.f = 0;
         hdr.pt = pt;
         if (len + sizeof(hdr) > *size)
@@ -763,9 +766,11 @@ static pj_status_t send_text(pjmedia_txt_stream *stream,
 
         /* Update stat */
         pjmedia_rtcp_tx_rtp(&c_strm->rtcp, (unsigned)size);
-        c_strm->rtcp.stat.rtp_tx_last_ts = pj_ntohl(c_strm->enc->rtp.out_hdr.ts);
-        c_strm->rtcp.stat.rtp_tx_last_seq = pj_ntohs(c_strm->enc->rtp.out_hdr.seq);
-    
+        c_strm->rtcp.stat.rtp_tx_last_ts =
+            pj_ntohl(c_strm->enc->rtp.out_hdr.ts);
+        c_strm->rtcp.stat.rtp_tx_last_seq =
+            pj_ntohs(c_strm->enc->rtp.out_hdr.seq);
+
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
         /* Update time of last sending packet. */
         pj_gettimeofday(&c_strm->last_frm_ts_sent);
@@ -780,7 +785,7 @@ on_return:
     return status;
 }
 
-/* Timer callback */
+/* Clock callback */
 static void clock_cb(const pj_timestamp *ts, void *user_data)
 {
     pjmedia_txt_stream *stream = (pjmedia_txt_stream *)user_data;
@@ -799,6 +804,10 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
         send_text(stream, interval);
     }
 
+    /* If we are waiting for the packet gap, and the next clock cb
+     * occurs past the maximum waiting time, call the rx callback
+     * now.
+     */
     if (stream->is_waiting) {
         interval = pj_elapsed_msec(&stream->rx_wait_ts, &now);
         if (interval + stream->buf_time > MAX_RX_WAITING_TIME) {
@@ -837,18 +846,18 @@ pjmedia_txt_stream_send_text(pjmedia_txt_stream *stream, const pj_str_t *text)
         status = send_text(stream, interval);
     }
 
-    pj_mutex_unlock(c_strm->jb_mutex);        
+    pj_mutex_unlock(c_strm->jb_mutex);
 
     return status;
 }
 
-PJ_DEF(pj_status_t)
-pjmedia_txt_stream_set_rx_callback(pjmedia_txt_stream *stream,
-                                   void (*cb)(pjmedia_txt_stream *,
-                                              void *user_data,
-                                              const pjmedia_txt_stream_data *data),
+PJ_DEF(pj_status_t) pjmedia_txt_stream_set_rx_callback(
+                        pjmedia_txt_stream *stream,
+                        void (*cb)(pjmedia_txt_stream *,
                                    void *user_data,
-                                   unsigned option)
+                                   const pjmedia_txt_stream_data *data),
+                        void *user_data,
+                        unsigned option)
 {
     pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
 
@@ -866,84 +875,6 @@ pjmedia_txt_stream_set_rx_callback(pjmedia_txt_stream *stream,
     return PJ_SUCCESS;
 }
 
-static pj_status_t parse_redundancy(pj_pool_t *pool,
-                                    const pjmedia_sdp_media *sdp,
-                                    unsigned media_pt,
-                                    unsigned *red_pt,
-                                    int *red_level)
-{
-    static const pj_str_t ID_REDUNDANCY = { "red", 3 };
-    unsigned i, pt = 0;
-    int level = 0;
-    pjmedia_codec_fmtp fmtp;
-    pj_status_t status;
-
-    /* Get payload type for redundancy */
-    for (i = 0; i < sdp->attr_count; ++i) {
-        const pjmedia_sdp_attr *attr;
-        pjmedia_sdp_rtpmap r;
-
-        attr = sdp->attr[i];
-        if (pj_strcmp(&attr->name, &ID_RTPMAP) != 0)
-            continue;
-        if (pjmedia_sdp_attr_get_rtpmap(attr, &r) != PJ_SUCCESS)
-            continue;
-        if (pj_strcmp(&r.enc_name, &ID_REDUNDANCY) == 0) {
-            pt = pj_strtoul(&r.pt);
-            break;
-        }
-    }
-    if (pt == 0)
-        return PJ_ENOTFOUND;
-
-    status = pjmedia_stream_info_parse_fmtp(pool, sdp, pt, &fmtp);
-    if (status != PJ_SUCCESS)
-        return status;
-
-    for (i = 0; i < fmtp.cnt; i++, level++) {
-        unsigned med_pt = pj_strtoul(&fmtp.param[i].val);
-
-        if (med_pt != media_pt)
-            return PJMEDIA_SDP_EINFMTP;
-    }
-
-    *red_pt = pt;
-    *red_level = level - 1;
-
-    return status;
-}
-
-/*
- * Internal function for parsing redundancy info from the SDP media.
- */
-pj_status_t
-pjmedia_stream_info_parse_redundancy(pjmedia_stream_info_common *si,
-                                     pj_pool_t *pool,
-                                     const pjmedia_sdp_media *local_m,
-                                     const pjmedia_sdp_media *rem_m)
-{
-    pj_status_t status;
-
-    /* Get incoming payload type for redundancy */
-    status = parse_redundancy(pool, local_m, si->rx_pt, &si->rx_red_pt,
-                              &si->rx_red_level);
-    if (status != PJ_SUCCESS)
-        return status;
-
-    /* Get outgoing payload type for redundancy */
-    status = parse_redundancy(pool, rem_m, si->tx_pt, &si->tx_red_pt,
-                              &si->tx_red_level);
-    if (status == PJ_SUCCESS && si->tx_red_level == -1) {
-        /* Remote SDP contains "red" rtpmap but no fmtp, meaning that
-         * they accept our offer but most likely will not send redundancy
-         * from their side.
-         */
-        si->tx_red_level = si->rx_red_level;
-    }
-
-    return PJ_SUCCESS;
-}
-
 /*
  * Internal function for collecting codec info from the SDP media.
  */
@@ -952,12 +883,37 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si,
                                   const pjmedia_sdp_media *local_m,
                                   const pjmedia_sdp_media *rem_m)
 {
+    static const pj_str_t ID_RTPMAP = { "rtpmap", 6 };
+    static const pj_str_t ID_REDUNDANCY = { "red", 3 };
     const pjmedia_sdp_attr *attr;
     pjmedia_sdp_rtpmap *rtpmap;
-    unsigned i, pt = 0;
+    unsigned i, fmti, pt = 0;
     pj_status_t status = PJ_SUCCESS;
 
-    pt = pj_strtoul(&local_m->desc.fmt[0]);
+    /* Find the first pt which is not redundancy */
+    for (fmti = 0; fmti < local_m->desc.fmt_count; ++fmti) {
+        pjmedia_sdp_rtpmap r;
+
+        if (!pj_isdigit(*local_m->desc.fmt[fmti].ptr))
+            return PJMEDIA_EINVALIDPT;
+        pt = pj_strtoul(&local_m->desc.fmt[fmti]);
+
+        attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP,
+                                           &local_m->desc.fmt[fmti]);
+        if (attr == NULL)
+            continue;
+
+        status = pjmedia_sdp_attr_get_rtpmap(attr, &r);
+        if (status != PJ_SUCCESS)
+            continue;
+
+        if (pj_strcmp(&r.enc_name, &ID_REDUNDANCY) != 0)
+            break;
+    }
+    if (fmti >= local_m->desc.fmt_count)
+        return PJMEDIA_EINVALIDPT;
+
+    pt = pj_strtoul(&local_m->desc.fmt[fmti]);
     if (pt < 96)
         return PJMEDIA_EINVALIDPT;
 
@@ -966,7 +922,7 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si,
 
     /* Get codec info. */
     attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP,
-                                       &local_m->desc.fmt[0]);
+                                       &local_m->desc.fmt[fmti]);
     if (attr == NULL)
         return PJMEDIA_EMISSINGRTPMAP;
 
@@ -976,7 +932,7 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si,
 
     /* Build codec format info: */
     si->fmt.type = si->type;
-    si->fmt.pt = pj_strtoul(&local_m->desc.fmt[0]);
+    si->fmt.pt = pj_strtoul(&local_m->desc.fmt[fmti]);
     si->fmt.encoding_name = rtpmap->enc_name;
     si->fmt.clock_rate = rtpmap->clock_rate;
     si->fmt.channel_cnt = 1;
@@ -987,8 +943,8 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si,
     si->tx_pt = 0xFFFF;
     for (i=0; i<rem_m->desc.fmt_count; ++i) {
         if (pjmedia_sdp_neg_fmt_match(pool,
-                                      (pjmedia_sdp_media*)local_m, 0,
-                                      (pjmedia_sdp_media*)rem_m, i, 0) ==
+                                      (pjmedia_sdp_media*)local_m, fmti,
+                                      (pjmedia_sdp_media*)rem_m, i, fmti) ==
             PJ_SUCCESS)
         {
             /* Found matched codec. */
@@ -1052,7 +1008,7 @@ PJ_DEF(pj_status_t) pjmedia_txt_stream_info_from_sdp(
     status = get_codec_info(si, pool, local_m, rem_m);
 
     /* Get redundancy info */
-    pjmedia_stream_info_parse_redundancy(csi, pool, local_m, rem_m);
+    pjmedia_stream_info_common_parse_redundancy(csi, pool, local_m, rem_m);
 
     return status;
 }

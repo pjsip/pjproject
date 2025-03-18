@@ -3024,7 +3024,6 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
         /* Ask pjmedia endpoint to create SDP media line */
         pjmedia_endpt_create_sdp_param_default(&param);
-        param.red_level = call->opt.txt_red_level;
         param.dir = call_med->def_dir;
         switch (call_med->type) {
         case PJMEDIA_TYPE_AUDIO:
@@ -3040,6 +3039,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
             break;
 #endif
         case PJMEDIA_TYPE_TEXT:
+            param.red_level = acc->cfg.txt_red_level;
             status = pjmedia_endpt_create_text_sdp(pjsua_var.med_endpt, pool,
                                                     &tpinfo.sock_info,
                                                     &param, &m);
@@ -3714,9 +3714,9 @@ static void check_srtp_roc(pjsua_call *call,
             new_rem_addr = &new_si_->info.vid.rem_addr;
         }
 #endif
-        else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
-            new_local_addr = &new_si_->info.vid.local_addr;
-            new_rem_addr = &new_si_->info.vid.rem_addr;
+        else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+            new_local_addr = &new_si_->info.txt.local_addr;
+            new_rem_addr = &new_si_->info.txt.rem_addr;
         } else {
             /* Just return for other media type */
             return;

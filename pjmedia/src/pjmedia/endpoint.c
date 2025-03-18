@@ -920,11 +920,11 @@ static pj_status_t create_redundancy_rtpmap(pj_pool_t *pool,
                                             unsigned media_pt)
 {
     const pj_str_t STR_RED = { "red", 3 };
-    char buf[32];
+    enum { MAX_FMTP_STR_LEN = 32 };
+    char buf[MAX_FMTP_STR_LEN];
     pjmedia_sdp_attr *attr;
     pjmedia_sdp_rtpmap rtpmap;
-    unsigned i, len;
-    char *p;
+    unsigned i, len, buf_len = 0;
     pj_str_t *fmt;
 
     pj_bzero(&rtpmap, sizeof(rtpmap));
@@ -944,14 +944,15 @@ static pj_status_t create_redundancy_rtpmap(pj_pool_t *pool,
     attr->name = pj_str("fmtp");
     len = pj_ansi_snprintf(buf, sizeof(buf), "%d %d",
                            red_pt, media_pt);
-    p = buf + len;
+    buf_len = PJ_MIN(buf_len + len, MAX_FMTP_STR_LEN);
+
     /* For redundancy, format parameters is a slash "/"
      * separated list of RTP payload types.
      */
     for (i = 0; i < red_level; i++) {
-        len = pj_ansi_snprintf(p, sizeof(buf) - (p - buf),
+        len = pj_ansi_snprintf(buf + buf_len, MAX_FMTP_STR_LEN - buf_len,
                                "/%d", media_pt);
-        p = p + len;
+        buf_len = PJ_MIN(buf_len + len, MAX_FMTP_STR_LEN);
     }
     attr->value = pj_strdup3(pool, buf);
     m->attr[m->attr_count++] = attr;
@@ -981,6 +982,18 @@ pjmedia_endpt_create_text_sdp(pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
         return status;
 
+    /* The payload types in m line are listed in order of preference,
+     * so if we have redundancy, we should add it first since it's
+     * preferred.
+     */
+    if (options && options->red_level > 0) {
+        status = create_redundancy_rtpmap(pool, m, options->red_level,
+                                          PJMEDIA_RTP_PT_REDUNDANCY, 1000,
+                                          PJMEDIA_RTP_PT_T140);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
     /* Add format and rtpmap for T140 text codec */
     {
         const pj_str_t STR_T140 = { "t140", 4 };
@@ -1001,15 +1014,6 @@ pjmedia_endpt_create_text_sdp(pjmedia_endpt *endpt,
 
         pjmedia_sdp_rtpmap_to_attr(pool, &rtpmap, &attr);
         m->attr[m->attr_count++] = attr;
-    }
-
-    /* Add redundancy. */
-    if (options && options->red_level > 0) {
-        status = create_redundancy_rtpmap(pool, m, options->red_level,
-                                          PJMEDIA_RTP_PT_REDUNDANCY, 1000,
-                                          PJMEDIA_RTP_PT_T140);
-        if (status != PJ_SUCCESS)
-            return status;
     }
 
     *p_m = m;

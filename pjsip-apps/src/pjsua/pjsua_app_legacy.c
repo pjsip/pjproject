@@ -1044,6 +1044,7 @@ static void ui_add_account(pjsua_transport_config *rtp_cfg)
     acc_cfg.cred_info[0].data = pj_str(passwd);
 
     acc_cfg.rtp_cfg = *rtp_cfg;
+    acc_cfg.txt_red_level = app_config.txt_red_level;
     app_config_init_video(&acc_cfg);
 
     status = pjsua_acc_add(&acc_cfg, PJ_TRUE, NULL);
@@ -1871,9 +1872,8 @@ static void ui_send_rtt()
         pjsua_perror(THIS_FILE, "Unable to send text", status);
     }
 
-    //TODO
-#if 1
-    //test buffering and redundancy
+#if 0
+    // For testing buffering and redundancy
     pj_str_t abc = pj_str("abc");
     pj_str_t def = pj_str("defgh");
     pjsua_call_send_text(current_call, -1, &abc);
@@ -1928,7 +1928,6 @@ void legacy_main(void)
         call_opt.aud_cnt = app_config.aud_cnt;
         call_opt.vid_cnt = app_config.vid.vid_cnt;
         call_opt.txt_cnt = app_config.txt_cnt;
-        call_opt.txt_red_level = app_config.txt_red_level;
 
         switch (menuin[0]) {
 

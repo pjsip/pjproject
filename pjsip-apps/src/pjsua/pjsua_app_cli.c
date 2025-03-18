@@ -805,6 +805,7 @@ static pj_status_t cmd_add_account(pj_cli_cmd_val *cval)
     acc_cfg.cred_info[0].data = cval->argv[5];
 
     acc_cfg.rtp_cfg = app_config.rtp_cfg;
+    acc_cfg.txt_red_level = app_config.txt_red_level;
     app_config_init_video(&acc_cfg);
 
     status = pjsua_acc_add(&acc_cfg, PJ_TRUE, NULL);
@@ -2136,7 +2137,6 @@ pj_status_t cmd_call_handler(pj_cli_cmd_val *cval)
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
     call_opt.txt_cnt = app_config.txt_cnt;
-    call_opt.txt_red_level = app_config.txt_red_level;
     if (app_config.enable_loam) {
         call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }

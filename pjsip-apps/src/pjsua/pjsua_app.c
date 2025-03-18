@@ -326,7 +326,6 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
         opt.aud_cnt = app_config.aud_cnt;
         opt.vid_cnt = app_config.vid.vid_cnt;
         opt.txt_cnt = app_config.txt_cnt;
-        opt.txt_red_level = app_config.txt_red_level;
 
         pjsua_call_answer2(call_id, &opt, app_config.auto_answer, NULL,
                            NULL);
@@ -1778,6 +1777,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             pjsua_acc_modify(aid, &acc_cfg);
         }
@@ -1822,6 +1822,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
@@ -1857,6 +1858,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             pjsua_acc_modify(aid, &acc_cfg);
         }
@@ -1887,6 +1889,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
@@ -1926,6 +1929,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(acc_id, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             pjsua_acc_modify(acc_id, &acc_cfg);
         }
@@ -1955,6 +1959,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
@@ -1980,6 +1985,7 @@ static pj_status_t app_init(void)
         app_config.acc_cfg[i].reg_first_retry_interval = 60;
 
         app_config_init_video(&app_config.acc_cfg[i]);
+        app_config.acc_cfg[i].txt_red_level = app_config.txt_red_level;
 
         status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, NULL);
         if (status != PJ_SUCCESS)
@@ -2039,7 +2045,6 @@ static pj_status_t app_init(void)
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
     call_opt.txt_cnt = app_config.txt_cnt;
-    call_opt.txt_red_level = app_config.txt_red_level;
     if (app_config.enable_loam) {
         call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
@@ -2115,7 +2120,6 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
         call_opt.aud_cnt = app_config.aud_cnt;
         call_opt.vid_cnt = app_config.vid.vid_cnt;
         call_opt.txt_cnt = app_config.txt_cnt;
-        call_opt.txt_red_level = app_config.txt_red_level;
 
         pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL, 
                              NULL, NULL);

@@ -565,8 +565,11 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
         goto on_return;
     }
 
-    /* Ignore if payloadlen is zero */
-    if (payloadlen == 0) {
+    /* Ignore if payloadlen is zero.
+     * Exception: text stream needs to accept empty text block to
+     * track sequence number and idle period.
+     */
+    if (c_strm->si->type != PJMEDIA_TYPE_TEXT && payloadlen == 0) {
         pkt_discarded = PJ_TRUE;
         goto on_return;
     }

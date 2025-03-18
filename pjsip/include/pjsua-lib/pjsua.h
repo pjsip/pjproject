@@ -1114,13 +1114,6 @@ typedef struct pjsua_call_setting
     unsigned         txt_cnt;
 
     /**
-     * Specifies text stream redundancy level. Set to 0 to disable it.
-     *
-     * Default: PJMEDIA_DEFAULT_REDUNDANCY_LEVEL (2)
-     */
-    unsigned         txt_red_level;
-
-    /**
      * Media direction. This setting will only be used if the flag
      * PJSUA_CALL_SET_MEDIA_DIR is set, and it will persist for subsequent
      * offers or answers. 
@@ -4372,6 +4365,13 @@ typedef struct pjsua_acc_config
      * Default: CR-LF
      */
     pj_str_t         ka_data;
+
+    /**
+     * Specifies text stream redundancy level. Set to 0 to disable it.
+     *
+     * Default: PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL (2)
+     */
+    int              txt_red_level;
 
     /**
      * Specify whether incoming video should be shown to screen by default.

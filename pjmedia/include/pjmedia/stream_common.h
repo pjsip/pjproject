@@ -459,6 +459,23 @@ pjmedia_stream_info_common_from_sdp(pjmedia_stream_info_common *si,
 
 
 /**
+ * This is internal function for parsing redundancy.
+ *
+ * @param si            Stream info structure to store the result.
+ * @param pool          Pool to allocate memory.
+ * @param local         Local SDP media descriptor.
+ * @param remote        Remote SDP media descriptor.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_info_common_parse_redundancy(pjmedia_stream_info_common *si,
+                                            pj_pool_t *pool,
+                                            const pjmedia_sdp_media *local_m,
+                                            const pjmedia_sdp_media *rem_m);
+
+
+/**
  * This is internal function for parsing SDP format parameter of specific
  * format or payload type, used by stream in generating stream info from SDP.
  *

@@ -19,6 +19,7 @@
 #include <pjmedia/sdp_neg.h>
 #include <pjmedia/sdp.h>
 #include <pjmedia/codec.h>
+#include <pjmedia/stream_common.h>
 #include <pjmedia/vid_codec.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
@@ -1191,6 +1192,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
     pj_bool_t master_has_codec = 0,
               master_has_other = 0,
               found_matching_codec = 0,
+              found_matching_red = 0,
               found_matching_telephone_event = 0,
               found_matching_other = 0;
     unsigned pt_answer_count = 0;
@@ -1198,6 +1200,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
     pj_str_t pt_offer[PJMEDIA_MAX_SDP_FMT];
     pjmedia_sdp_media *answer;
     const pjmedia_sdp_media *master, *slave;
+    int o_red_level = 0;
     unsigned nclockrate = 0, clockrate[PJMEDIA_MAX_SDP_FMT];
     unsigned ntel_clockrate = 0, tel_clockrate[PJMEDIA_MAX_SDP_FMT];
 
@@ -1300,7 +1303,6 @@ static pj_status_t match_offer(pj_pool_t *pool,
                     is_tel = 1;
                 } else if (!pj_stricmp2(&or_.enc_name, "red")) {
                     is_red = 1;
-                    PJ_UNUSED_ARG(is_red);
                 } else {
                     master_has_codec = 1;
                     if (!answer_with_multiple_codecs && found_matching_codec)
@@ -1308,7 +1310,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                     is_codec = 1;
                 }
                 
-                /* Find paylaod in our initial SDP with matching 
+                /* Find payload in our initial SDP with matching
                  * encoding name and clock rate.
                  */
                 for (j=0; j<slave->desc.fmt_count; ++j) {
@@ -1357,7 +1359,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                                         break;
                                 if (k == nclockrate)
                                     clockrate[nclockrate++] = or_.clock_rate;
-                            } else if (is_tel){
+                            } else if (is_tel) {
                                 unsigned k;
 
                                 /* Keep track of tel-event clock rate,
@@ -1371,6 +1373,22 @@ static pj_status_t match_offer(pj_pool_t *pool,
                                 
                                 tel_clockrate[ntel_clockrate++] = or_.clock_rate;
                                 found_matching_telephone_event = 1;
+                            } else if (is_red) {
+                                pjmedia_sdp_media *o_med;
+                                unsigned o_fmt_idx;
+                                pjmedia_codec_fmtp fmtp;
+                                pj_status_t status;
+
+                                o_med = (pjmedia_sdp_media *)offer;
+                                o_fmt_idx = prefer_remote_codec_order? i:j;
+                                pt = pj_strtoul(&o_med->desc.fmt[o_fmt_idx]);
+                                status = pjmedia_stream_info_parse_fmtp(
+                                             pool, o_med, pt, &fmtp);
+                                if (status != PJ_SUCCESS)
+                                    continue;
+
+                                o_red_level = fmtp.cnt - 1;
+                                found_matching_red = 1;
                             }
 
                             pt_offer[pt_answer_count] = 
@@ -1432,6 +1450,56 @@ static pj_status_t match_offer(pj_pool_t *pool,
     }
 
     /* Seems like everything is in order. */
+
+    /* Match offer's redundancy level. */
+    if (found_matching_red) {
+        for (i = 0; i < pt_answer_count; i++) {
+            pjmedia_sdp_attr *a;
+            pjmedia_sdp_rtpmap r;
+            pjmedia_codec_fmtp fmtp;
+            int a_red_level = 0;
+            unsigned pt;
+            pj_status_t status;
+
+            /* Get the rtpmap. */
+            a = pjmedia_sdp_media_find_attr2(preanswer, "rtpmap",
+                                             &preanswer->desc.fmt[i]);
+            pj_assert(a);
+            pjmedia_sdp_attr_get_rtpmap(a, &r);
+
+            /* Only care for redundancy format */
+            if (pj_stricmp2(&r.enc_name, "red"))
+                continue;
+
+            pt = pj_strtoul(&preanswer->desc.fmt[i]);
+            status = pjmedia_stream_info_parse_fmtp(pool, answer,
+                                                    pt, &fmtp);
+            if (status != PJ_SUCCESS)
+                break;
+
+            /* If we support higher redundancy level, reduce it to match
+             * offer.
+             */
+            a_red_level = fmtp.cnt - 1;
+            if (a_red_level > o_red_level) {
+                a = pjmedia_sdp_media_find_attr2(preanswer, "fmtp",
+                                                 &preanswer->desc.fmt[i]);
+                if (a) {
+                    unsigned lvl = 0;
+                    for (i = 0; i < a->value.slen; i++) {
+                        if (*(a->value.ptr + i) == '/') {
+                            if (lvl++ >= o_red_level) {
+                                a->value.slen = i;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            break;
+        }
+    }
 
     /* Remove unwanted telephone-event formats. */
     if (found_matching_telephone_event) {

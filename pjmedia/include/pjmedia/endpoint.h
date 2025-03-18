@@ -80,7 +80,7 @@ typedef struct pjmedia_endpt_create_sdp_param
      *
      * Default: PJMEDIA_DEFAULT_REDUNDANCY_LEVEL
      */
-    unsigned red_level;
+    int         red_level;
 
 } pjmedia_endpt_create_sdp_param;
 

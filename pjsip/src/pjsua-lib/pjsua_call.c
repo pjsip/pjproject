@@ -651,7 +651,6 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
     opt->flag = 0; //PJSUA_CALL_INCLUDE_DISABLED_MEDIA;
     opt->aud_cnt = 1;
     opt->txt_cnt = 1;
-    opt->txt_red_level = PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL;
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     opt->vid_cnt = 1;
