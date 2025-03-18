@@ -111,17 +111,21 @@ static int pool_alignment_test(void)
         /* Test first allocation */
         if (i % 2)
         {
+            /* alignment > pool->alignment */
             ptr = pj_pool_aligned_alloc(pool, POOL_ALIGNMENT_TEST, 1);
             PJ_TEST_TRUE(IS_ALIGNED2(ptr), NULL, { rc=-310; goto on_return; });
 
+            /* alignment < pool->alignment */
             ptr = pj_pool_aligned_alloc(pool2, PJ_POOL_ALIGNMENT, 1);
-            PJ_TEST_TRUE(IS_ALIGNED2(ptr), NULL, { rc=-315; goto on_return; });
+            PJ_TEST_TRUE(IS_ALIGNED(ptr), NULL, { rc=-315; goto on_return; });
         }
         else
         {
+            /* alignment == pool->alignment */
             ptr = pj_pool_alloc(pool, 1);
             PJ_TEST_TRUE(IS_ALIGNED(ptr), NULL, { rc=-320; goto on_return; });
 
+            /* alignment == pool->alignment */
             ptr = pj_pool_alloc(pool2, 1);
             PJ_TEST_TRUE(IS_ALIGNED2(ptr), NULL, { rc=-325; goto on_return; });
         }
@@ -130,14 +134,17 @@ static int pool_alignment_test(void)
         ptr = pj_pool_alloc(pool, 1);
         PJ_TEST_TRUE(IS_ALIGNED(ptr), NULL, { rc=-330; goto on_return; });
 
+        /* alignment > pool->alignment */
         ptr = pj_pool_aligned_alloc(pool, POOL_ALIGNMENT_TEST, 1);
         PJ_TEST_TRUE(IS_ALIGNED2(ptr), NULL, { rc=-335; goto on_return; });
 
+        /* alignment == pool->alignment */
         ptr = pj_pool_alloc(pool2, 1);
         PJ_TEST_TRUE(IS_ALIGNED2(ptr), NULL, { rc=-340; goto on_return; });
 
+        /* alignment < pool->alignment */
         ptr = pj_pool_aligned_alloc(pool2, PJ_POOL_ALIGNMENT, 1);
-        PJ_TEST_TRUE(IS_ALIGNED2(ptr), NULL, { rc=-345; goto on_return; });
+        PJ_TEST_TRUE(IS_ALIGNED(ptr), NULL, { rc=-345; goto on_return; });
 
 
         /* Test allocation after new block is created */
@@ -151,7 +158,7 @@ static int pool_alignment_test(void)
         PJ_TEST_TRUE(IS_ALIGNED2(ptr), NULL, { rc=-360; goto on_return; });
         
         ptr = pj_pool_aligned_alloc(pool2, PJ_POOL_ALIGNMENT, MEMSIZE*2+1);
-        PJ_TEST_TRUE(IS_ALIGNED2(ptr), NULL, { rc=-365; goto on_return; });
+        PJ_TEST_TRUE(IS_ALIGNED(ptr), NULL, { rc=-365; goto on_return; });
 
         /* Reset the pool */
         pj_pool_reset(pool);
