@@ -1952,6 +1952,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
             tsx_update_transport(tsx, send_state->cur_transport);
 
             /* Update remote address. */
+            pj_assert(tdata->dest_info.cur_addr < _countof(tdata->dest_info.addr.entry));
             tsx->addr_len = tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr_len;
             pj_memcpy(&tsx->addr, 
                       &tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr,
@@ -2373,24 +2374,32 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 /*
  * Manually retransmit the last messagewithout updating the transaction state.
  */
-PJ_DEF(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction *tsx,
-                                                  pjsip_tx_data *tdata)
+PJ_DEF(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction* tsx,
+    pjsip_tx_data* tdata)
 {
     pj_status_t status;
 
-    pj_grp_lock_acquire(tsx->grp_lock);
-    if (tdata == NULL) {
-        tdata = tsx->last_tx;
-        pjsip_tx_data_add_ref(tdata);
-    }
-    status = tsx_send_msg(tsx, tdata);
-    pj_grp_lock_release(tsx->grp_lock);
+    if (tsx) {
+        pj_grp_lock_acquire(tsx->grp_lock);
+        if (tdata == NULL) {
+            tdata = tsx->last_tx;
+            pjsip_tx_data_add_ref(tdata);
+        }
+        status = tsx_send_msg(tsx, tdata);
+        pj_grp_lock_release(tsx->grp_lock);
 
-    /* Only decrement reference counter when it returns success.
-     * (This is the specification from the .PDF design document).
-     */
-    if (status == PJ_SUCCESS) {
-        pjsip_tx_data_dec_ref(tdata);
+        /* Only decrement reference counter when it returns success.
+         * (This is the specification from the .PDF design document).
+         */
+        if (status == PJ_SUCCESS) {
+            pjsip_tx_data_dec_ref(tdata);
+        }
+
+    }
+    else {
+     status = PJ_EBUG;
+     if (tdata)
+         pjsip_tx_data_dec_ref(tdata);
     }
 
     return status;

@@ -624,26 +624,38 @@ PJ_DEF(pj_bool_t) pjsip_tx_data_is_valid( pjsip_tx_data *tdata )
 static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
                           const pjsip_msg *msg)
 {
-    char info_buf[128], *info;
+    char info_buf[256], to_uri[PJSIP_MAX_URL_SIZE], *info;
     const pjsip_cseq_hdr *cseq;
+    const pjsip_cid_hdr *cid;
+    const pjsip_to_hdr *to;
     int len;
 
     cseq = (const pjsip_cseq_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
     PJ_ASSERT_RETURN(cseq != NULL, "INVALID MSG");
+    cid = (const pjsip_cid_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
+    to = (const pjsip_to_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
+    len = (to && to->uri) ? pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, to->uri, to_uri, sizeof(to_uri)) : 0;
+    to_uri[((len > 0) && (len < sizeof(to_uri))) ? len : 0] = '\0';
 
     if (msg->type == PJSIP_REQUEST_MSG) {
         len = pj_ansi_snprintf(info_buf, sizeof(info_buf), 
-                               "Request msg %.*s/cseq=%d (%s)",
+                               "Request msg %.*s/cseq=%d%s%.*s%s%s (%s)",
                                (int)msg->line.req.method.name.slen,
                                msg->line.req.method.name.ptr,
-                               cseq->cseq, obj_name);
+                               cseq->cseq,
+                               cid?"/cid=":"", cid?(int)cid->id.slen : 0, cid ? cid->id.ptr : "",
+                               to_uri[0]?"/to=":"", to_uri,
+                               obj_name);
     } else {
         len = pj_ansi_snprintf(info_buf, sizeof(info_buf),
-                               "Response msg %d/%.*s/cseq=%d (%s)",
-                               msg->line.status.code,
-                               (int)cseq->method.name.slen,
-                               cseq->method.name.ptr,
-                               cseq->cseq, obj_name);
+                               "Response msg %d/%.*s/cseq=%d%s%.*s%s%s (%s)",
+                                           msg->line.status.code,
+                                           (int)cseq->method.name.slen,
+                                          cseq->method.name.ptr,
+                               cseq->cseq,
+                               cid?"/cid=":"", cid ? (int)cid->id.slen : 0, cid?cid->id.ptr : "",
+                               to_uri[0]?"/to=":"", to_uri,
+                               obj_name);
     }
 
     if (len < 1 || len >= (int)sizeof(info_buf)) {
@@ -1593,7 +1605,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
     if (!mgr->table)
         return PJ_ENOMEM;
 
-    status = pj_lock_create_recursive_mutex(mgr->pool, "tmgr%p", &mgr->lock);
+    status = pj_lock_create_recursive_mutex(pool, "tmgr%p", &mgr->lock);
     if (status != PJ_SUCCESS)
         return status;
 

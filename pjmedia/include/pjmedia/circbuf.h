@@ -84,9 +84,14 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_create(pj_pool_t *pool,
 {
     pjmedia_circ_buf *cbuf;
 
+	*p_cb = NULL;
+
     cbuf = PJ_POOL_ZALLOC_T(pool, pjmedia_circ_buf);
-    cbuf->buf = (pj_int16_t*) pj_pool_calloc(pool, capacity, 
-                                             sizeof(pj_int16_t));
+	if (!cbuf)
+		return PJ_ENOMEM;
+	cbuf->buf = (pj_int16_t*) pj_pool_calloc(pool, capacity, sizeof(pj_int16_t));
+	if (!cbuf->buf)
+		return PJ_ENOMEM;
     cbuf->capacity = capacity;
     cbuf->start = cbuf->buf;
     cbuf->len = 0;
