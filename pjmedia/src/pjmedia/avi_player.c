@@ -26,6 +26,7 @@
 #include <pjmedia/errno.h>
 #include <pjmedia/wave.h>
 #include <pj/assert.h>
+#include <pj/ctype.h>
 #include <pj/file_access.h>
 #include <pj/file_io.h>
 #include <pj/log.h>
@@ -220,7 +221,9 @@ static void streams_on_destroy(void *arg)
     pj_pool_safe_release(&streams->pool);
 }
 
-const char *get_fname(const char *path)
+
+/* Get filename from path */
+static const char *get_fname(const char *path)
 {
     pj_size_t len = pj_ansi_strlen(path);
     const char *p = path + len - 1;
@@ -850,7 +853,7 @@ static pj_status_t skip_forward(pjmedia_port *this_port, pj_size_t frames)
         fport->pad = (pj_uint8_t)ch.len & 1;
 
         cid = (char *)&ch.id;
-        if (isdigit(cid[0]) && isdigit(cid[1]))
+        if (pj_isdigit(cid[0]) && pj_isdigit(cid[1]))
             stream_id = (cid[0] - '0') * 10 + (cid[1] - '0');
         else
             stream_id = 1000;
