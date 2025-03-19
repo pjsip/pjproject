@@ -702,18 +702,20 @@ static pj_status_t send_text(pjmedia_txt_stream *stream,
     pt = (stream->si.tx_red_pt && stream->tx_nred)?
          stream->si.tx_red_pt: channel->pt;
 
-    TRACE_((c_strm->port.info.name.ptr, "Sending text %.*s (%d bytes), "
-            "pt:%d red:%d",
-            (int)stream->tx_buf[stream->tx_buf_idx].length,
-            stream->tx_buf[stream->tx_buf_idx].buf,
-            (int)stream->tx_buf[stream->tx_buf_idx].length,
-            pt, stream->tx_nred));
-
     status = pjmedia_rtp_encode_rtp( &channel->rtp,
                                      pt, 0,
                                      (int)channel->buf_size, rtp_ts_len,
                                      (const void**)&rtphdr,
                                      &size);
+
+    TRACE_((c_strm->port.info.name.ptr, "Sending text with seq %d, %.*s "
+            "(%d bytes), pt:%d red:%d",
+            pj_ntohs(channel->rtp.out_hdr.seq),
+            (int)stream->tx_buf[stream->tx_buf_idx].length,
+            stream->tx_buf[stream->tx_buf_idx].buf,
+            (int)stream->tx_buf[stream->tx_buf_idx].length,
+            pt, stream->tx_nred));
+
     if (status != PJ_SUCCESS)
         goto on_return;
 
