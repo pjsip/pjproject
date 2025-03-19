@@ -78,6 +78,25 @@ typedef struct pjmedia_av_sync_media pjmedia_av_sync_media;
 
 
 /**
+ * Synchronizer settings.
+ */
+typedef struct {
+    /**
+     * Name of the syncrhonizer
+     */
+    char                       *name;
+
+    /**
+     * Streaming mode. If set to PJ_TRUE, the delay adjustment values will
+     * be smoothened and marked up to prevent possible delay increase on
+     * all media.
+     */
+    pj_bool_t                   is_streaming;
+
+} pjmedia_av_sync_setting;
+
+
+/**
  * Media settings.
  */
 typedef struct {
@@ -87,16 +106,30 @@ typedef struct {
     char                       *name;
 
     /**
+     * Media type.
+     */
+    pjmedia_type                type;
+
+    /**
      * Media clock rate or sampling rate.
      */
     unsigned                    clock_rate;
+
 } pjmedia_av_sync_media_setting;
 
 
 /**
+ * Get default settings for synchronizer.
+ *
+ * @param setting           The synchronizer settings.
+ */
+PJ_DECL(void) pjmedia_av_sync_setting_default(
+                                pjmedia_av_sync_setting *setting);
+
+/**
  * Get default settings for media.
  *
- * @param setting           The media setting.
+ * @param setting           The media settings.
  */
 PJ_DECL(void) pjmedia_av_sync_media_setting_default(
                                 pjmedia_av_sync_media_setting *setting);
@@ -104,15 +137,15 @@ PJ_DECL(void) pjmedia_av_sync_media_setting_default(
 /**
  * Create media synchronizer.
  *
- * @param endpt             The media endpoint.
- * @param option            Synchronization option, must be NULL for now.
+ * @param pool              The memory pool.
+ * @param option            The synchronizer settings.
  * @param av_sync           The pointer to receive the media synchronizer.
  *
  * @return                  PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_av_sync_create(
-                                pjmedia_endpt *endpt,
-                                const void *option,
+                                pj_pool_t *pool,
+                                const pjmedia_av_sync_setting *setting,
                                 pjmedia_av_sync **av_sync);
 
 
@@ -125,10 +158,21 @@ PJ_DECL(void) pjmedia_av_sync_destroy(pjmedia_av_sync *av_sync);
 
 
 /**
+ * Reset synchronization states. Any existing media will NOT be removed,
+ * but their states will be reset.
+ *
+ * @param av_sync           The media synchronizer.
+ *
+ * @return                  PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_av_sync_reset(pjmedia_av_sync *av_sync);
+
+
+/**
  * Add a media to synchronizer.
  *
  * @param av_sync           The media synchronizer.
- * @param setting           The media setting.
+ * @param setting           The media settings.
  * @param av_sync_media     The pointer to receive the media synchronization
  *                          handle.
  *

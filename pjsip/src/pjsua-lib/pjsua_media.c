@@ -4392,15 +4392,25 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     pj_memcpy(call->media, call->media_prov,
               sizeof(call->media_prov[0]) * call->med_prov_cnt);
 
-    /* Create synchronizer */
+    /* Create/reset synchronizer */
     if ((call->opt.flag & PJSUA_CALL_NO_MEDIA_SYNC)==0 && 
-        (maudcnt+mvidcnt) > 1 && !call->av_sync)
+        (maudcnt+mvidcnt) > 1)
     {
-        status = pjmedia_av_sync_create(pjsua_var.med_endpt, NULL,
-                                        &call->av_sync);
-        if (status != PJ_SUCCESS) {
-            PJ_PERROR(3, (THIS_FILE, status,
-                          "Call %d: Failed to create synchronizer", call_id));
+        if (call->av_sync) {
+            pjmedia_av_sync_reset(call->av_sync);
+        } else {
+            pjmedia_av_sync_setting setting;
+            char name[PJ_MAX_OBJ_NAME];
+
+            pj_ansi_snprintf(name, sizeof(name), "avsync-call_%02d", call_id);
+            pjmedia_av_sync_setting_default(&setting);
+            setting.is_streaming = PJ_TRUE;
+            setting.name = name;
+            status = pjmedia_av_sync_create(tmp_pool, &setting, &call->av_sync);
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(3, (THIS_FILE, status,
+                              "Call %d: Failed to create synchronizer", call_id));
+            }
         }
     }
 

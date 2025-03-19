@@ -513,6 +513,7 @@ pjmedia_stream_common_set_avsync(pjmedia_stream_common* stream,
         pjmedia_av_sync_media_setting setting;
 
         pjmedia_av_sync_media_setting_default(&setting);
+        setting.type = stream->si->type;
         if (stream->si->type == PJMEDIA_TYPE_AUDIO) {
             setting.name = "Audio";
             setting.clock_rate = PJMEDIA_PIA_SRATE(&stream->port.info);
