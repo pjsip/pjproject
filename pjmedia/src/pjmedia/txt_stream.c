@@ -93,6 +93,7 @@ typedef struct pjmedia_txt_stream
     unsigned                    buf_time;       /**< Buffering time.        */
     pj_bool_t                   is_idle;        /**< Is idle?               */
 
+    pj_timestamp                rtcp_last_tx;   /**< Last RTCP tx time.     */
     pj_timestamp                tx_last_ts;     /**< Timestamp of last tx.  */
     red_buf                     tx_buf[NUM_BUFFERS];/**< Tx buffer.         */
     int                         tx_buf_idx;     /**< Index to current buffer*/
@@ -569,12 +570,19 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
 
     pj_mutex_lock(c_strm->jb_mutex);
 
+    if (seq_st.status.flag.restart) {
+        stream->rx_last_seq = -1;
+        pjmedia_jbuf_reset(c_strm->jb);
+        PJ_LOG(4, (c_strm->port.info.name.ptr, "Jitter buffer reset"));
+    }
+
     seq = pj_ntohs(hdr->seq);
 
     if (hdr->pt == c_strm->si->rx_red_pt) {
         status = decode_red(stream, c_strm->si->rx_pt, seq,
                             (const char *)payload, payloadlen, &red_len);
         if (status != PJ_SUCCESS) {
+            *pkt_discarded = PJ_TRUE;
             pj_mutex_unlock(c_strm->jb_mutex);
             return status;
         }
@@ -786,12 +794,39 @@ on_return:
     return status;
 }
 
+/**
+ * check_tx_rtcp()
+ * This function is for transmitting periodic RTCP SR/RR report.
+ */
+static void check_tx_rtcp(pjmedia_txt_stream *stream)
+{
+    pjmedia_stream_common *c_strm = &stream->base;
+    pj_timestamp now;
+
+    pj_get_timestamp(&now);
+    if (stream->rtcp_last_tx.u64 == 0) {
+        stream->rtcp_last_tx = now;
+    } else if (pj_elapsed_msec(&stream->rtcp_last_tx, &now) >=
+               c_strm->rtcp_interval)
+    {
+        pj_status_t status;
+
+        status = send_rtcp(c_strm, !c_strm->rtcp_sdes_bye_disabled, PJ_FALSE,
+                           PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE);
+        if (status == PJ_SUCCESS) {
+            stream->rtcp_last_tx = now;
+        }
+    }
+}
+
 /* Clock callback */
 static void clock_cb(const pj_timestamp *ts, void *user_data)
 {
     pjmedia_txt_stream *stream = (pjmedia_txt_stream *)user_data;
     pj_timestamp now;
     unsigned interval;
+
+    PJ_UNUSED_ARG(ts);
 
     pj_get_timestamp(&now);
     interval = pj_elapsed_msec(&stream->tx_last_ts, &now);
@@ -815,6 +850,9 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
             call_cb(stream, PJ_TRUE);
         }
     }
+
+    /* Check if now is the time to transmit RTCP SR/RR report. */
+    check_tx_rtcp(stream);
 }
 
 PJ_DEF(pj_status_t)

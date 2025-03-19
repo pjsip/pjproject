@@ -2915,10 +2915,6 @@ static pj_status_t add_call_command(pj_cli_t *c)
         "    <ARG name='dtmf_to_send' type='string' "
         "     desc='DTMF String to send'/>"
         "  </CMD>"
-        "  <CMD name='rtt' id='1019' sc='*' desc='Send real-time text via RTP'>"
-        "    <ARG name='text_to_send' type='string' "
-        "     desc='Text to send'/>"
-        "  </CMD>"
         "  <CMD name='dump_q' id='1016' sc='dq' desc='Dump (call) quality'/>"
         "  <CMD name='send_arb' id='1017' sc='S' desc='Send arbitrary request'>"
         "    <ARG name='request_method' type='string' desc='Request method'/>"
@@ -2929,6 +2925,10 @@ static pj_status_t add_call_command(pj_cli_t *c)
         "    </ARG>"
         "  </CMD>"
         "  <CMD name='list' id='1018' desc='Show current call'/>"
+        "  <CMD name='rtt' id='1019' sc='rt' desc='Send real-time text via RTP'>"
+        "    <ARG name='text_to_send' type='string' "
+        "     desc='Text to send'/>"
+        "  </CMD>"
         "</CMD>";
 
     pj_str_t xml = pj_str(call_command);
