@@ -581,7 +581,7 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     }
 
     /* Put the primary data into jbuf. */
-    payload += red_len;
+    payload = ((pj_uint8_t*)payload) + red_len;
     payloadlen -= red_len;
     if (seq > stream->rx_last_seq) {
         pjmedia_jbuf_put_frame(c_strm->jb, payload, payloadlen, seq);
@@ -599,7 +599,8 @@ static pj_status_t encode_red(unsigned level, unsigned pt,
                               red_buf *rbuf, unsigned rbuf_idx,
                               char *buf, int *size)
 {
-    int i, len = 0;
+    int i;
+    unsigned len = 0;
 
     /* Encode RTP additional headers for redundancy. */
     for (i = level; i > 0; i--) {
@@ -612,7 +613,7 @@ static pj_status_t encode_red(unsigned level, unsigned pt,
 
         /* 1 means not final. */
         shdr.f = 1;
-        shdr.pt = pt;
+        shdr.pt = (pj_uint16_t)pt;
 
         /* Timestamp is an offset, not absolute. */
         offset = rbuf[rbuf_idx].timestamp - rbuf[past_idx].timestamp;
@@ -628,7 +629,7 @@ static pj_status_t encode_red(unsigned level, unsigned pt,
         /* Block length. */
         hdr |= rbuf[past_idx].length;
 
-        if (len + sizeof(hdr) > *size)
+        if (len + sizeof(hdr) > (unsigned)*size)
             return PJ_ETOOBIG;
         hdr = pj_htonl(hdr);
         pj_memcpy(buf, &hdr, sizeof(hdr));
@@ -642,8 +643,8 @@ static pj_status_t encode_red(unsigned level, unsigned pt,
 
         /* Last RTP additional header, for the primary data. */
         hdr.f = 0;
-        hdr.pt = pt;
-        if (len + sizeof(hdr) > *size)
+        hdr.pt = (pj_uint16_t)pt;
+        if (len + sizeof(hdr) > (unsigned)*size)
             return PJ_ETOOBIG;
         pj_memcpy(buf, &hdr, sizeof(hdr));
         buf += sizeof(hdr);
@@ -659,7 +660,7 @@ static pj_status_t encode_red(unsigned level, unsigned pt,
 
         if (rbuf[idx].length == 0)
             continue;
-        if (len + rbuf[idx].length > *size)
+        if (len + rbuf[idx].length > (unsigned)*size)
             return PJ_ETOOBIG;
         pj_memcpy(buf, rbuf[idx].buf, rbuf[idx].length);
         buf += rbuf[idx].length;
