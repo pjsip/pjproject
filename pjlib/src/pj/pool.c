@@ -70,8 +70,8 @@ static pj_pool_block *pj_pool_create_block( pj_pool_t *pool, pj_size_t size)
     block->buf = ((unsigned char*)block) + sizeof(pj_pool_block);
     block->end = ((unsigned char*)block) + size;
 
-    /* Set the start pointer, aligning it as needed */
-    block->cur = PJ_POOL_ALIGN_PTR(block->buf, pool->alignment);
+    /* Set the start pointer, unaligned! */
+    block->cur = block->buf;
 
     /* Insert in the front of the list. */
     pj_list_insert_after(&pool->block_list, block);
@@ -282,8 +282,8 @@ static void reset_pool(pj_pool_t *pool)
 
     block = pool->block_list.next;
 
-    /* Set the start pointer, aligning it as needed */
-    block->cur = PJ_POOL_ALIGN_PTR(block->buf, pool->alignment);
+    /* Set the start pointer, unaligned! */
+    block->cur = block->buf;
 
     pool->capacity = block->end - (unsigned char*)pool;
 }
