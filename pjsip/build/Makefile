@@ -192,8 +192,8 @@ export TEST_LDFLAGS += $(PJSIP_LDLIB) \
 		       $(PJMEDIA_VIDEODEV_LDLIB) \
 		       $(PJMEDIA_LDLIB) \
 		       $(PJMEDIA_AUDIODEV_LDLIB) \
-		       $(PJLIB_UTIL_LDLIB) \
 		       $(PJNATH_LDLIB) \
+		       $(PJLIB_UTIL_LDLIB) \
 		       $(PJLIB_LDLIB) \
 		       $(_LDFLAGS)
 ifeq ($(EXCLUDE_APP),0)
