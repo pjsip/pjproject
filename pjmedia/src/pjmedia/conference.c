@@ -1293,7 +1293,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
 {
     unsigned i, count=0;
 
-    PJ_ASSERT_RETURN(conf && p_count && ports, PJ_EINVAL);
+    PJ_ASSERT_RETURN(conf && p_count, PJ_EINVAL);
 
     /* Lock mutex */
     pj_mutex_lock(conf->mutex);
@@ -1301,8 +1301,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
     for (i=0; i<conf->max_ports && count<*p_count; ++i) {
         if (!conf->ports[i])
             continue;
-
+		if (ports)
         ports[count++] = i;
+		else
+			count++;
     }
 
     /* Unlock mutex */
@@ -1311,7 +1313,59 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
     *p_count = count;
     return PJ_SUCCESS;
 }
+PJ_DECL(pj_bool_t) pjmedia_conf_compare_port_signature(pjmedia_conf* conf,unsigned conf_slot, pj_uint32_t signature)
+{
+    /* Check arguments */
+    PJ_ASSERT_RETURN(conf, PJ_FALSE);
+    if (conf_slot<0 || conf_slot >= conf->max_ports)
+    {
+        PJ_LOG(4, (THIS_FILE, " pjmedia_conf_compare_port_signature : [conf_slot : %d], [conf->max_ports:%d]",conf_slot, conf->max_ports));
+        return PJ_FALSE;
+    }
+    pjmedia_port_info port_info;
+    if (pjmedia_conf_get_media_port_info(conf, conf_slot, &port_info) != PJ_SUCCESS)
+    {
+        return PJ_FALSE;
+    }
+    return port_info.signature == signature;
+}
+PJ_DEF(pj_status_t) pjmedia_conf_get_media_port_info(pjmedia_conf* conf,unsigned slot, pjmedia_port_info* info)
+{
+    struct conf_port* conf_port;
 
+    /* Check arguments */
+    if (slot < 0 || slot >= conf->max_ports)
+    {
+        PJ_LOG(2, (THIS_FILE, " pjmedia_conf_get_media_port_info : [slot : %d], [conf->max_ports:%d]", slot, conf->max_ports));
+        return PJ_EINVAL;
+    }
+    PJ_ASSERT_RETURN(conf && slot >=0 && slot < conf->max_ports, PJ_EINVAL);
+
+    /* Lock mutex */
+    pj_mutex_lock(conf->mutex);
+
+    /* Port must be valid. */
+    conf_port = conf->ports[slot];
+    if (conf_port == NULL) {
+        pj_mutex_unlock(conf->mutex);
+        return PJ_EINVAL;
+    }
+
+    if (!conf_port->port) {
+        pj_mutex_unlock(conf->mutex);
+        return PJ_EINVAL;
+    }
+    pjmedia_port_info * port_info = &conf_port->port->info;
+    pjmedia_format_copy(&info->fmt, &port_info->fmt);
+    info->name= port_info->name;
+    info->dir= port_info->dir;
+    info->signature= port_info->signature;
+
+    /* Unlock mutex */
+    pj_mutex_unlock(conf->mutex);
+
+    return PJ_SUCCESS;
+}
 /*
  * Get port info
  */
@@ -1718,7 +1772,8 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     *frm_type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     /* Skip port if it is disabled */
-    if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
+    if (cport->tx_setting == PJMEDIA_PORT_DISABLE &&
+		(cport->tx_setting != PJMEDIA_PORT_ENABLE_ALWAYS)) {
         cport->tx_level = 0;
         *frm_type = PJMEDIA_FRAME_TYPE_NONE;
         return PJ_SUCCESS;
@@ -2006,7 +2061,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
         }
 
         /* Also skip if this port doesn't have listeners. */
-        if (conf_port->listener_cnt == 0) {
+	if ((conf_port->listener_cnt == 0) &&
+		(conf_port->rx_setting != PJMEDIA_PORT_ENABLE_ALWAYS)) {
             conf_port->rx_level = 0;
             continue;
         }
@@ -2119,7 +2175,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
             listener = conf->ports[conf_port->listener_slots[cj]];
 
             /* Skip if this listener doesn't want to receive audio */
-            if (listener->tx_setting != PJMEDIA_PORT_ENABLE)
+	    if ((listener->tx_setting != PJMEDIA_PORT_ENABLE) &&
+			(listener->tx_setting != PJMEDIA_PORT_ENABLE_ALWAYS))
                 continue;
 
             mix_buf = listener->mix_buf;
@@ -2301,12 +2358,15 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     PJ_ASSERT_RETURN( port->delay_buf, PJ_EBUG );
 
     /* Skip if this port is muted/disabled. */
-    if (port->rx_setting != PJMEDIA_PORT_ENABLE) {
+	if ((port->rx_setting != PJMEDIA_PORT_ENABLE) &&
+		(port->rx_setting != PJMEDIA_PORT_ENABLE_ALWAYS)) {
         return PJ_SUCCESS;
     }
 
     /* Skip if no port is listening to the microphone */
-    if (port->listener_cnt == 0) {
+	if ((port->listener_cnt == 0) &&
+		(port->rx_setting != PJMEDIA_PORT_ENABLE_ALWAYS))
+    {
         return PJ_SUCCESS;
     }
 

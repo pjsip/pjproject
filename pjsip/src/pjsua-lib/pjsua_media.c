@@ -2788,7 +2788,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                         const pjmedia_sdp_session *s_;
                         pjmedia_sdp_neg_get_active_local(call->inv->neg, &s_);
 
-                        if (mi < s_->media_count) {
+                        if (s_ && mi < s_->media_count) {
                             m = pjmedia_sdp_media_clone(pool, s_->media[mi]);
                             m->desc.port = 0;
                         } else {
