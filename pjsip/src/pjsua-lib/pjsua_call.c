@@ -673,6 +673,17 @@ PJ_DEF(void) pjsua_call_send_dtmf_param_default(
     param->duration = PJSUA_CALL_SEND_DTMF_DURATION_DEFAULT;
 }
 
+/*
+ * Initialize pjsua_call_send_text_param default values.
+ */
+PJ_DEF(void) pjsua_call_send_text_param_default(
+                                             pjsua_call_send_text_param *param)
+{
+    pj_bzero(param, sizeof(*param));
+    param->med_idx = -1;
+}
+
+
 static pj_status_t apply_call_setting(pjsua_call *call,
                                       const pjsua_call_setting *opt,
                                       const pjmedia_sdp_session *rem_sdp)

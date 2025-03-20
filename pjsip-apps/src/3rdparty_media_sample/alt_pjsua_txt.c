@@ -141,9 +141,9 @@ on_return:
  */
 
 /* Send text to remote. */
-PJ_DEF(pj_status_t) pjsua_call_send_text(pjsua_call_id call_id,
-                                         int med_idx,
-                                         const pj_str_t *text)
+PJ_DEF(pj_status_t)
+pjsua_call_send_text(pjsua_call_id call_id,
+                     const pjsua_call_send_text_param *param)
 {
     UNIMPLEMENTED(pjsua_call_send_text)
     return PJ_ENOTSUP;

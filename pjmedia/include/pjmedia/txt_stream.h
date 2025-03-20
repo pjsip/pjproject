@@ -42,9 +42,9 @@ PJ_BEGIN_DECL
  * @brief Text communication via the network
  * @{
  *
- * A text stream is a bidirectional text communication between two
- * endpoints. It corresponds to a text media description ("m=text" line)
- * in SDP session descriptor.
+ * A text stream is a bidirectional real-time text (RTT) communication
+ * between two endpoints as specified in RFC 4103. It corresponds to
+ * a text media description ("m=text" line) in SDP session descriptor.
  *
  * A text stream consists of two unidirectional channels:
  *  - encoding channel, which transmits unidirectional text to remote, and

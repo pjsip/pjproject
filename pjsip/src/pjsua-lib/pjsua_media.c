@@ -2954,7 +2954,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                     break;
                 case PJMEDIA_TYPE_TEXT:
                     m->desc.media = pj_str("text");
-                    m->desc.fmt[0] = pj_str("98");
+                    m->desc.fmt[0] = pj_str("0");
                     break;
                 default:
                     /* This must be us generating re-offer, and some unknown

@@ -1855,7 +1855,7 @@ static void ui_handle_ip_change()
 static void ui_send_rtt()
 {
     char buf[100];
-    pj_str_t text;
+    pjsua_call_send_text_param param;
     pj_status_t status;
 
     if (current_call == PJSUA_INVALID_ID) {
@@ -1866,8 +1866,9 @@ static void ui_send_rtt()
     if (!simple_input("Enter text to send", buf, sizeof(buf)))
         return;
 
-    text = pj_str(buf);
-    status = pjsua_call_send_text(current_call, -1, &text);
+    pjsua_call_send_text_param_default(&param);
+    param.text = pj_str(buf);
+    status = pjsua_call_send_text(current_call, &param);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to send text", status);
     }

@@ -25,17 +25,18 @@
 
 
 /* Send text to remote. */
-PJ_DEF(pj_status_t) pjsua_call_send_text(pjsua_call_id call_id,
-                                         int med_idx,
-                                         const pj_str_t *text)
+PJ_DEF(pj_status_t)
+pjsua_call_send_text(pjsua_call_id call_id,
+                     const pjsua_call_send_text_param *param)
 {
     pjsua_call *call;
     pjsua_call_media *call_med;
     pjsip_dialog *dlg = NULL;
+    int med_idx;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls &&
-                     text, PJ_EINVAL);
+                     param, PJ_EINVAL);
 
     pj_log_push_indent();
 
@@ -44,7 +45,7 @@ PJ_DEF(pj_status_t) pjsua_call_send_text(pjsua_call_id call_id,
         goto on_return;
 
     /* Verify and normalize media index */
-    if (med_idx == -1) {
+    if ((med_idx = param->med_idx) == -1) {
         unsigned i;
 
         for (i = 0; i < call->med_cnt; ++i) {
@@ -75,7 +76,8 @@ PJ_DEF(pj_status_t) pjsua_call_send_text(pjsua_call_id call_id,
         goto on_return;
     }
 
-    status = pjmedia_txt_stream_send_text(call_med->strm.t.stream, text);
+    status = pjmedia_txt_stream_send_text(call_med->strm.t.stream,
+                                          &param->text);
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);

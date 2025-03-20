@@ -5813,6 +5813,28 @@ typedef struct pjsua_call_send_dtmf_param
 
 
 /**
+ * Parameters for sending text. Application should use
+ * #pjsua_call_send_text_param_default() to initialize this structure
+ * with its default values.
+ */
+typedef struct pjsua_call_send_text_param
+{
+    /**
+     * Text media stream index.
+     *
+     * Default: -1 (use the first text media).
+     */
+    int         med_idx;
+
+    /**
+     * The text to be sent.
+     */
+    pj_str_t    text;
+
+} pjsua_call_send_text_param;
+
+
+/**
  * Initialize call settings.
  *
  * @param opt           The call setting to be initialized.
@@ -5834,9 +5856,16 @@ pjsua_call_vid_strm_op_param_default(pjsua_call_vid_strm_op_param *param);
  *
  * @param param         The send DTMF param to be initialized.
  */
-PJ_DECL(void) 
+PJ_DECL(void)
 pjsua_call_send_dtmf_param_default(pjsua_call_send_dtmf_param *param);
 
+/**
+ * Initialize send DTMF param with default values.
+ *
+ * @param param         The send DTMF param to be initialized.
+ */
+PJ_DECL(void) 
+pjsua_call_send_text_param_default(pjsua_call_send_text_param *param);
 
 /**
  * Get maximum number of calls configured in pjsua.
@@ -6406,15 +6435,12 @@ PJ_DECL(pj_status_t) pjsua_call_send_dtmf(pjsua_call_id call_id,
  * has text media.
  *
  * @param call_id       Call identification.
- * @param med_idx       Text media stream index, or -1 to use the first text
- *                      media.
- * @param text          The text content to be sent.
+ * @param param         The send text parameter.
  *
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_call_send_text(pjsua_call_id call_id,
-                                          int med_idx,
-                                          const pj_str_t *text);
+                                          const pjsua_call_send_text_param *param);
 
 /**
  * Send instant messaging inside INVITE session.

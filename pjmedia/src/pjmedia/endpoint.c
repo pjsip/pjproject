@@ -929,7 +929,7 @@ static pj_status_t create_redundancy_rtpmap(pj_pool_t *pool,
 
     pj_bzero(&rtpmap, sizeof(rtpmap));
     fmt = &m->desc.fmt[m->desc.fmt_count++];
-    fmt->ptr = buf;
+    fmt->ptr = (char*) pj_pool_alloc(pool, 8);
     fmt->slen = pj_utoa(red_pt, fmt->ptr);
     rtpmap.pt = *fmt;
 
@@ -999,13 +999,12 @@ pjmedia_endpt_create_text_sdp(pjmedia_endpt *endpt,
     /* Add format and rtpmap for T140 text codec */
     {
         const pj_str_t STR_T140 = { "t140", 4 };
-        char buf[8];
         pjmedia_sdp_rtpmap rtpmap;
         pj_str_t *fmt;
 
         pj_bzero(&rtpmap, sizeof(rtpmap));
         fmt = &m->desc.fmt[m->desc.fmt_count++];
-        fmt->ptr = buf;
+        fmt->ptr = (char*) pj_pool_alloc(pool, 8);
         fmt->slen = pj_utoa(PJMEDIA_RTP_PT_T140, fmt->ptr);
         rtpmap.pt = *fmt;
 

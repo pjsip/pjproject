@@ -840,9 +840,12 @@ void Call::sendDtmf(const CallSendDtmfParam &param) PJSUA2_THROW(Error)
 
 void Call::sendText(const CallSendTextParam &param) PJSUA2_THROW(Error)
 {
-    pj_str_t text = str2Pj(param.text);
+    pjsua_call_send_text_param pj_param;
 
-    PJSUA2_CHECK_EXPR(pjsua_call_send_text(id, param.medIdx, &text));
+    pjsua_call_send_text_param_default(&pj_param);
+    pj_param.text = str2Pj(param.text);
+
+    PJSUA2_CHECK_EXPR(pjsua_call_send_text(id, &pj_param));
 }
 
 void Call::sendInstantMessage(const SendInstantMessageParam& prm)

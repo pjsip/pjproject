@@ -1953,9 +1953,12 @@ static pj_status_t cmd_rtt(pj_cli_cmd_val *cval)
         PJ_LOG(3,(THIS_FILE, "No current call"));
 
     } else {
+        pjsua_call_send_text_param param;
         pj_status_t status;
 
-        status = pjsua_call_send_text(current_call, -1, &cval->argv[1]);
+        pjsua_call_send_text_param_default(&param);
+        param.text = cval->argv[1];
+        status = pjsua_call_send_text(current_call, &param);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Unable to send text", status);
         } else {
