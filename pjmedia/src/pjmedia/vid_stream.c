@@ -1342,7 +1342,8 @@ static pj_status_t create_vid_channel( pj_pool_t *pool,
     }
 
     status = create_channel(pool, c_strm, dir, pt, buf_size,
-                            c_strm->si, &channel);
+                            (pjmedia_stream_info_common *)info,
+                            &channel);
     if (status != PJ_SUCCESS)
         return status;
 

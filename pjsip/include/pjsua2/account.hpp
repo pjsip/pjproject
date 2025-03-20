@@ -1055,7 +1055,7 @@ public:
 };
 
 /**
- * Account media config (applicable for both audio and video). This will be
+ * Account media config (applicable for audio, video, and text). This will be
  * specified in AccountConfig.
  */
 struct AccountMediaConfig : public PersistentObject
@@ -1432,7 +1432,7 @@ struct AccountConfig : public PersistentObject
     AccountNatConfig    natConfig;
 
     /**
-     * Media settings (applicable for both audio and video).
+     * Media settings (applicable for audio, video, and text).
      */
     AccountMediaConfig  mediaConfig;
 

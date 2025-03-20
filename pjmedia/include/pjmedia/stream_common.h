@@ -159,7 +159,7 @@ typedef struct pjmedia_stream_common
  * Media channel is unidirectional flow of media from sender to
  * receiver.
  */
-typedef struct pjmedia_channel
+struct pjmedia_channel
 {
     pjmedia_stream_common  *stream;         /**< Parent stream.             */
     pjmedia_dir             dir;            /**< Channel direction.         */
@@ -169,7 +169,7 @@ typedef struct pjmedia_channel
     void                   *buf;            /**< Output buffer.             */
     unsigned                buf_size;       /**< Size of output buffer.     */
     pjmedia_rtp_session     rtp;            /**< RTP session.               */
-} pjmedia_channel;
+};
 
 
 /**
@@ -427,10 +427,10 @@ pjmedia_stream_ka_config_default(pjmedia_stream_ka_config *cfg);
  * corresponds to one "m=" line in SDP session descriptor, and it has
  * its own RTP/RTCP socket pair.
  */
-typedef struct pjmedia_stream_info_common
+struct pjmedia_stream_info_common
 {
     PJ_DECL_STREAM_INFO_COMMON_MEMBER()
-} pjmedia_stream_info_common;
+};
 
 
 /**
