@@ -717,6 +717,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\src\pjmedia\transport_udp.c" />
+    <ClCompile Include="..\src\pjmedia\txt_stream.c" />
     <ClCompile Include="..\src\pjmedia\types.c" />
     <ClCompile Include="..\src\pjmedia\videodev.c" />
     <ClCompile Include="..\src\pjmedia\vid_codec.c" />
@@ -783,6 +784,7 @@
     <ClInclude Include="..\include\pjmedia\transport_loop.h" />
     <ClInclude Include="..\include\pjmedia\transport_srtp.h" />
     <ClInclude Include="..\include\pjmedia\transport_udp.h" />
+    <ClInclude Include="..\include\pjmedia\txt_stream.h" />
     <ClInclude Include="..\include\pjmedia\types.h" />
     <ClInclude Include="..\include\pjmedia\videodev.h" />
     <ClInclude Include="..\include\pjmedia\vid_codec.h" />

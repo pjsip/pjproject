@@ -145,6 +145,10 @@ typedef struct pjsua_app_config
     app_vid                 vid;
     unsigned                aud_cnt;
 
+    /* Text setting */
+    unsigned                txt_cnt;
+    int                     txt_red_level;
+
     /* AVI to play */
     unsigned                avi_cnt;
     struct {

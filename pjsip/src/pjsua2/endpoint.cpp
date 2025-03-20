@@ -1453,6 +1453,38 @@ void Endpoint::on_dtmf_event(pjsua_call_id call_id,
     Endpoint::instance().utilAddPendingJob(job);
 }
 
+struct PendingOnCallRxTextCallback : public PendingJob
+{
+    int call_id;
+    OnCallRxTextParam prm;
+
+    virtual void execute(bool is_pending)
+    {
+        PJ_UNUSED_ARG(is_pending);
+
+        Call *call = Call::lookup(call_id);
+        if (!call)
+            return;
+
+        call->onCallRxText(prm);
+    }
+};
+
+void Endpoint::on_call_rx_text(pjsua_call_id call_id,
+                               const pjsua_txt_stream_data *data)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+        return;
+    }
+
+    PendingOnCallRxTextCallback *job = new PendingOnCallRxTextCallback;
+    job->call_id = call_id;
+    job->prm.fromPj(*data);
+
+    Endpoint::instance().utilAddPendingJob(job);
+}
+
 void Endpoint::on_call_transfer_request2(pjsua_call_id call_id,
                                          const pj_str_t *dst,
                                          pjsip_status_code *code,
@@ -2004,6 +2036,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     //ua_cfg.cb.on_dtmf_digit             = &Endpoint::on_dtmf_digit;
     //ua_cfg.cb.on_dtmf_digit2            = &Endpoint::on_dtmf_digit2;
     ua_cfg.cb.on_dtmf_event             = &Endpoint::on_dtmf_event;
+    ua_cfg.cb.on_call_rx_text           = &Endpoint::on_call_rx_text;
     ua_cfg.cb.on_call_transfer_request2 = &Endpoint::on_call_transfer_request2;
     ua_cfg.cb.on_call_transfer_status   = &Endpoint::on_call_transfer_status;
     ua_cfg.cb.on_call_replace_request2  = &Endpoint::on_call_replace_request2;

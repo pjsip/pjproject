@@ -245,8 +245,8 @@ static void keystroke_help()
     puts("|  X  Xfer with Replaces       |                          |                   |");
     puts("|  #  Send RFC 2833 DTMF       | cl  List ports           |  d  Dump status   |");
     puts("|  *  Send DTMF with INFO      | cc  Connect port         | dd  Dump detailed |");
-    puts("| dq  Dump curr. call quality  | cd  Disconnect port      | dc  Dump config   |");
-    puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
+    puts("| rt  Send real-time text      | cd  Disconnect port      | dc  Dump config   |");
+    puts("| dq  Dump curr. call quality  |  V  Adjust audio Volume  |  f  Save config   |");
     puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |                   |");
     puts("+-----------------------------------------------------------------------------+");
 #if PJSUA_HAS_VIDEO
@@ -1044,6 +1044,7 @@ static void ui_add_account(pjsua_transport_config *rtp_cfg)
     acc_cfg.cred_info[0].data = pj_str(passwd);
 
     acc_cfg.rtp_cfg = *rtp_cfg;
+    acc_cfg.txt_red_level = app_config.txt_red_level;
     app_config_init_video(&acc_cfg);
 
     status = pjsua_acc_add(&acc_cfg, PJ_TRUE, NULL);
@@ -1851,6 +1852,36 @@ static void ui_handle_ip_change()
     }
 }
 
+static void ui_send_rtt()
+{
+    char buf[100];
+    pjsua_call_send_text_param param;
+    pj_status_t status;
+
+    if (current_call == PJSUA_INVALID_ID) {
+        PJ_LOG(3,(THIS_FILE, "No current call"));
+        return;
+    }
+
+    if (!simple_input("Enter text to send", buf, sizeof(buf)))
+        return;
+
+    pjsua_call_send_text_param_default(&param);
+    param.text = pj_str(buf);
+    status = pjsua_call_send_text(current_call, &param);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to send text", status);
+    }
+
+#if 0
+    // For testing buffering and redundancy
+    pj_str_t abc = pj_str("abc");
+    pj_str_t def = pj_str("defgh");
+    pjsua_call_send_text(current_call, -1, &abc);
+    pjsua_call_send_text(current_call, -1, &def);
+#endif
+}
+
 /*
  * Main "user interface" loop.
  */
@@ -1897,6 +1928,7 @@ void legacy_main(void)
         pjsua_call_setting_default(&call_opt);
         call_opt.aud_cnt = app_config.aud_cnt;
         call_opt.vid_cnt = app_config.vid.vid_cnt;
+        call_opt.txt_cnt = app_config.txt_cnt;
 
         switch (menuin[0]) {
 
@@ -2060,7 +2092,11 @@ void legacy_main(void)
             break;
 
         case 'r':
-            ui_register(menuin);
+            if (menuin[1] == 't') {
+                ui_send_rtt();
+            } else {
+                ui_register(menuin);
+            }
             break;
 
         case 't':

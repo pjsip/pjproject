@@ -1621,90 +1621,6 @@ on_return:
     return status;
 }
 
-
-/*
- * Create media channel.
- */
-static pj_status_t create_channel( pj_pool_t *pool,
-                                   pjmedia_stream *stream,
-                                   pjmedia_dir dir,
-                                   unsigned pt,
-                                   const pjmedia_stream_info *param,
-                                   pjmedia_channel **p_channel)
-{
-    pjmedia_stream_common *c_strm = &stream->base;
-    pjmedia_channel *channel;
-    pj_status_t status;
-
-    /* Allocate memory for channel descriptor */
-
-    channel = PJ_POOL_ZALLOC_T(pool, pjmedia_channel);
-    PJ_ASSERT_RETURN(channel != NULL, PJ_ENOMEM);
-
-    /* Init channel info. */
-
-    channel->stream = c_strm;
-    channel->dir = dir;
-    channel->paused = 1;
-    channel->pt = pt;
-
-
-    /* Allocate buffer for outgoing packet. */
-
-    if (param->type == PJMEDIA_TYPE_AUDIO) {
-        unsigned max_rx_based_size;
-        unsigned max_bps_based_size;
-
-        /* buf buffer is used for sending and receiving, so lets calculate
-         * its size based on both. For receiving, we have c_strm->frame_size,
-         * which is used in configuring jitter buffer frame length.
-         * For sending, it is based on codec max_bps info.
-         */
-        max_rx_based_size = c_strm->frame_size;
-        max_bps_based_size = stream->codec_param.info.max_bps *
-                             PJMEDIA_MAX_FRAME_DURATION_MS / 8 / 1000;
-        channel->buf_size = PJ_MAX(max_rx_based_size, max_bps_based_size);
-
-        /* Also include RTP header size (for sending) */
-        channel->buf_size += sizeof(pjmedia_rtp_hdr);
-
-        if (channel->buf_size > PJMEDIA_MAX_MTU -
-                                    PJMEDIA_STREAM_RESV_PAYLOAD_LEN)
-        {
-            channel->buf_size = PJMEDIA_MAX_MTU -
-                                    PJMEDIA_STREAM_RESV_PAYLOAD_LEN;
-        }
-    } else {
-        return PJ_ENOTSUP;
-    }
-
-    channel->buf = pj_pool_alloc(pool, channel->buf_size);
-    PJ_ASSERT_RETURN(channel->buf != NULL, PJ_ENOMEM);
-
-
-
-    /* Create RTP and RTCP sessions: */
-    {
-        pjmedia_rtp_session_setting settings;
-
-        settings.flags = (pj_uint8_t)((param->rtp_seq_ts_set << 2) |
-                                      (param->has_rem_ssrc << 4) | 3);
-        settings.default_pt = pt;
-        settings.sender_ssrc = param->ssrc;
-        settings.peer_ssrc = param->rem_ssrc;
-        settings.seq = param->rtp_seq;
-        settings.ts = param->rtp_ts;
-        status = pjmedia_rtp_session_init2(&channel->rtp, settings);
-    }
-    if (status != PJ_SUCCESS)
-        return status;
-
-    /* Done. */
-    *p_channel = channel;
-    return PJ_SUCCESS;
-}
-
-
 /*
  * Handle events.
  */
@@ -1753,6 +1669,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pjmedia_audio_format_detail *afd;
     pj_pool_t *own_pool = NULL;
     char *p;
+    unsigned max_rx_based_size;
+    unsigned max_bps_based_size;
+    unsigned buf_size;
     pj_status_t status;
     pjmedia_transport_attach_param att_param;
 
@@ -2125,18 +2044,26 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pjmedia_jbuf_set_adaptive( c_strm->jb, jb_init, jb_min_pre, jb_max_pre);
     pjmedia_jbuf_set_discard(c_strm->jb, info->jb_discard_algo);
 
-    /* Create decoder channel: */
+    /* buf buffer is used for sending and receiving, so lets calculate
+     * its size based on both. For receiving, we have c_strm->frame_size,
+     * which is used in configuring jitter buffer frame length.
+     * For sending, it is based on codec max_bps info.
+     */
+    max_rx_based_size = c_strm->frame_size;
+    max_bps_based_size = stream->codec_param.info.max_bps *
+                         PJMEDIA_MAX_FRAME_DURATION_MS / 8 / 1000;
+    buf_size = PJ_MAX(max_rx_based_size, max_bps_based_size);
 
-    status = create_channel( pool, stream, PJMEDIA_DIR_DECODING,
-                             info->rx_pt, info, &c_strm->dec);
+    /* Create decoder channel: */
+    status = create_channel( pool, c_strm, PJMEDIA_DIR_DECODING,
+                             info->rx_pt, buf_size, c_strm->si, &c_strm->dec);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
 
     /* Create encoder channel: */
-
-    status = create_channel( pool, stream, PJMEDIA_DIR_ENCODING,
-                             info->tx_pt, info, &c_strm->enc);
+    status = create_channel( pool, c_strm, PJMEDIA_DIR_ENCODING,
+                             info->tx_pt, buf_size, c_strm->si, &c_strm->enc);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
@@ -2530,27 +2457,7 @@ PJ_DEF(pjmedia_transport*) pjmedia_stream_get_transport(pjmedia_stream *st)
  */
 PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
 {
-    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
-
-    PJ_ASSERT_RETURN(stream && c_strm->enc && c_strm->dec, PJ_EINVALIDOP);
-
-    if (c_strm->enc && (c_strm->dir & PJMEDIA_DIR_ENCODING)) {
-        c_strm->enc->paused = 0;
-        //pjmedia_snd_stream_start(c_strm->enc->snd_stream);
-        PJ_LOG(4,(c_strm->port.info.name.ptr, "Encoder stream started"));
-    } else {
-        PJ_LOG(4,(c_strm->port.info.name.ptr, "Encoder stream paused"));
-    }
-
-    if (c_strm->dec && (c_strm->dir & PJMEDIA_DIR_DECODING)) {
-        c_strm->dec->paused = 0;
-        //pjmedia_snd_stream_start(c_strm->dec->snd_stream);
-        PJ_LOG(4,(c_strm->port.info.name.ptr, "Decoder stream started"));
-    } else {
-        PJ_LOG(4,(c_strm->port.info.name.ptr, "Decoder stream paused"));
-    }
-
-    return PJ_SUCCESS;
+    return pjmedia_stream_common_start((pjmedia_stream_common *) stream);
 }
 
 /*
@@ -2620,10 +2527,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_stat_xr( const pjmedia_stream *stream,
 PJ_DEF(pj_status_t) pjmedia_stream_get_stat_jbuf(const pjmedia_stream *stream,
                                                  pjmedia_jb_state *state)
 {
-    const pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
-
-    PJ_ASSERT_RETURN(stream && state, PJ_EINVAL);
-    return pjmedia_jbuf_get_state(c_strm->jb, state);
+    return pjmedia_stream_common_get_stat_jbuf((pjmedia_stream_common *)stream,
+                                               state);
 }
 
 /*
