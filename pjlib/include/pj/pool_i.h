@@ -45,9 +45,11 @@ PJ_IDEF(void*) pj_pool_alloc_from_block( pj_pool_block *block, pj_size_t alignme
 {
     unsigned char *ptr;
 
-    pj_assert(PJ_IS_POWER_OF_TWO(alignment) && PJ_IS_ALIGNED(size, alignment));
+    pj_assert(PJ_IS_POWER_OF_TWO(alignment));
     // Size should be already aligned.
     // this code was moved up to pj_pool_aligned_alloc. 
+    // ...and then removed there
+    //
     ///* The operation below is valid for size==0. 
     // * When size==0, the function will return the pointer to the pool
     // * memory address, but no memory will be allocated.
@@ -70,15 +72,18 @@ PJ_IDEF(void*) pj_pool_alloc( pj_pool_t *pool, pj_size_t size)
     return pj_pool_aligned_alloc(pool, 0, size);
 }
 
-PJ_IDECL(void *) pj_pool_aligned_alloc(pj_pool_t *pool, pj_size_t alignment,
-                                       pj_size_t size)
+PJ_IDEF(void*) pj_pool_aligned_alloc(pj_pool_t *pool, pj_size_t alignment,
+                                     pj_size_t size)
 {
     void *ptr;
 
     PJ_ASSERT_RETURN(!alignment || PJ_IS_POWER_OF_TWO(alignment), NULL);
 
-    if (alignment < pool->alignment)
+    if (!alignment)
         alignment = pool->alignment;
+
+#if 0
+    //Rounding up is the compiler's job, not the allocator's.
 
     /* The operation below is valid for size==0. 
      * When size==0, the function will return the pointer to the pool
@@ -88,6 +93,7 @@ PJ_IDECL(void *) pj_pool_aligned_alloc(pj_pool_t *pool, pj_size_t alignment,
         size = (size + alignment) & ~(alignment -1);
     }
     pj_assert(PJ_IS_ALIGNED(size, alignment));
+#endif
 
     ptr = pj_pool_alloc_from_block(pool->block_list.next, 
                                    alignment, size);
@@ -119,12 +125,12 @@ PJ_IDEF(pj_pool_t*) pj_pool_create( pj_pool_factory *f,
     return pj_pool_aligned_create(f, name, initial_size, increment_size, 0, callback);
 }
 
-PJ_IDECL(pj_pool_t *) pj_pool_aligned_create(pj_pool_factory *f,
-                                             const char *name,
-                                             pj_size_t initial_size,
-                                             pj_size_t increment_size,
-                                             pj_size_t alignment,
-                                             pj_pool_callback *callback)
+PJ_IDEF(pj_pool_t*) pj_pool_aligned_create(pj_pool_factory *f,
+                                           const char *name,
+                                           pj_size_t initial_size,
+                                           pj_size_t increment_size,
+                                           pj_size_t alignment,
+                                           pj_pool_callback *callback)
 {
     return (*f->create_pool)(f, name, initial_size, increment_size, alignment, callback);
 }
