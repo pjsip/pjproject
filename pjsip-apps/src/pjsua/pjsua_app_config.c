@@ -57,8 +57,8 @@ static void usage(void)
     puts  ("  --password=string   Set authentication password");
 
 #if PJSIP_HAS_DIGEST_AKA_AUTH
-    puts  ("  --op=string         Set OP value to use in Digest AKA authentication");
-    puts  ("  --amf=string        Set AMF value to use in Digest AKA authentication");
+    puts  ("  --aka-op=string     Set OP value to use in Digest AKA authentication");
+    puts  ("  --aka-amf=string    Set AMF value to use in Digest AKA authentication");
 #endif
 
     puts  ("  --contact=url       Optionally override the Contact information");
@@ -373,7 +373,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY,
            OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
            OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
-           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD, OPT_OP, OPT_AMF,
+           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD, OPT_AKA_OP, OPT_AKA_AMF,
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
            OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
@@ -453,8 +453,8 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "username",   1, 0, OPT_USERNAME},
         { "password",   1, 0, OPT_PASSWORD},
 #if PJSIP_HAS_DIGEST_AKA_AUTH
-        { "op",   1, 0, OPT_OP},
-        { "amf",   1, 0, OPT_AMF},
+        { "aka-op",   1, 0, OPT_AKA_OP},
+        { "aka-amf",   1, 0, OPT_AKA_AMF},
 #endif
         { "rereg-delay",1, 0, OPT_REG_RETRY_INTERVAL},
         { "reg-use-proxy", 1, 0, OPT_REG_USE_PROXY},
@@ -920,11 +920,11 @@ static pj_status_t parse_args(int argc, char *argv[],
             cur_acc->cred_info[cur_acc->cred_count].ext.aka.cb = &pjsip_auth_create_aka_response;
             break;
 
-        case OPT_OP:        /* aka op */
+        case OPT_AKA_OP:    /* aka op */
             cur_acc->cred_info[cur_acc->cred_count].ext.aka.op = pj_str(pj_optarg);
             break;
 
-        case OPT_AMF:       /* aka amf */
+        case OPT_AKA_AMF:   /* aka amf */
             cur_acc->cred_info[cur_acc->cred_count].ext.aka.amf = pj_str(pj_optarg);
 #endif
             break;
@@ -1833,14 +1833,14 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 
 #if PJSIP_HAS_DIGEST_AKA_AUTH
         if (acc_cfg->cred_info[i].ext.aka.op.slen) {
-            pj_ansi_snprintf(line, sizeof(line), "--op %.*s\n",
+            pj_ansi_snprintf(line, sizeof(line), "--aka-op %.*s\n",
                                   (int)acc_cfg->cred_info[i].ext.aka.op.slen,
                                   acc_cfg->cred_info[i].ext.aka.op.ptr);
             pj_strcat2(result, line);
         }
 
         if (acc_cfg->cred_info[i].ext.aka.amf.slen) {
-            pj_ansi_snprintf(line, sizeof(line), "--amf %.*s\n",
+            pj_ansi_snprintf(line, sizeof(line), "--aka-amf %.*s\n",
                                   (int)acc_cfg->cred_info[i].ext.aka.amf.slen,
                                   acc_cfg->cred_info[i].ext.aka.amf.ptr);
             pj_strcat2(result, line);
