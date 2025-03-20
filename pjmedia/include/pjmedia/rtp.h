@@ -106,7 +106,9 @@ struct pjmedia_rtp_hdr
 #pragma pack()
 
 /**
- * The first byte of RTP packet additional header.
+ * Following the RTP header are a number of additional headers, which
+ * can be used for purposes such as redundancy.
+ * This structure contains the first 8-bit of an additional header.
  */
 #pragma pack(1)
 struct pjmedia_rtp_add_hdr_short

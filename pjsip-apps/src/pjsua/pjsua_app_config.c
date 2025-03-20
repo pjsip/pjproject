@@ -2112,7 +2112,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     if (config->txt_cnt) {
         pj_strcat2(&cfg, "--text\n");
     }
-    if (config->txt_red_level != PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL) {
+    if (config->txt_red_level) {
         pj_ansi_snprintf(line, sizeof(line), "--text-red %d\n",
                         (int)config->txt_red_level);
         pj_strcat2(&cfg, line);

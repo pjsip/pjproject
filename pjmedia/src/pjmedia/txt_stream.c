@@ -56,11 +56,10 @@
  */
 #define BUFFER_SIZE             64
 
-/* The recommended redundancy by the RFC is 2, so the number of buffers
- * must be the max redundancy we want to support + one more to store
- * the primary data.
+/* The number of buffers must be the max redundancy we want to support +
+ * plus one more to store the primary data.
  */
-#define NUM_BUFFERS             3
+#define NUM_BUFFERS             PJMEDIA_TXT_STREAM_MAX_RED_LEVELS + 1
 
 /* 5.4. Compensation for Packets Out of Order:
  * If analysis of a received packet reveals a gap in the sequence,

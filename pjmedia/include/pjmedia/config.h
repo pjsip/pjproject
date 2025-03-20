@@ -1630,6 +1630,19 @@
 #  endif
 #endif
 
+/**
+ * Specify the maximum redundancy levels supported by text stream.
+ * A value of 1 provides an adequate protection against an average
+ * packet loss of up to 50%, while 2 can potentially protect
+ * against 66.7%, so typically setting it to a higher value is
+ * rarely necessary.
+ *
+ * Default: 2, as per the recommendation of RFC 4103.
+ */
+#ifndef PJMEDIA_TXT_STREAM_MAX_RED_LEVELS
+#    define PJMEDIA_TXT_STREAM_MAX_RED_LEVELS 2
+#endif
+
 
 /**
  * Specify target value for socket receive buffer size. It will be

@@ -4367,9 +4367,27 @@ typedef struct pjsua_acc_config
     pj_str_t         ka_data;
 
     /**
-     * Specifies text stream redundancy level. Set to 0 to disable it.
+     * Specifies text stream redundancy level, as specified in RFC 4103
+     * and 2198. When redundancy is enabled, each packet transmission
+     * will contain the current text data as well as a number of the
+     * previously transmitted text data to provide levels of redundancy.
+     * This mechanism offers protection against loss of data at the cost
+     * of additional bandwidth required.
      *
-     * Default: PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL (2)
+     * Value is integer indicating redundancy levels, i.e. the number
+     * of previous text data to be included with the current packet.
+     * (0 means disabled/no redundancy).
+     * A value of 1 provides an adequate protection against an average
+     * packet loss of up to 50%, while 2 can potentially protect
+     * against 66.7%.
+     * The maximum value is determined by PJMEDIA_TXT_STREAM_MAX_RED_LEVELS.
+     *
+     * Note that the redundancy level actually used is subject to remote
+     * capability and we will opt to use the lower redundancy value based
+     * on the result of SDP negotiation.
+     *
+     * Default: PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL (2), as per the
+     * recommendation of RFC 4103.
      */
     int              txt_red_level;
 

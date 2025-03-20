@@ -73,12 +73,20 @@ typedef struct pjmedia_endpt_create_sdp_param
     pjmedia_dir dir;
 
     /**
-     * Specifies whether redundancy should be offered in the SDP.
-     * Value is integer, indicating redundancy levels (0 means disabled/
-     * no redundancy).
+     * Specifies whether redundancy should be offered in the SDP,
+     * as specified in RFC 2198. When redundancy is enabled, each
+     * packet transmission will contain the current data as well as
+     * a number of the previously transmitted data to provide levels
+     * of redundancy. This mechanism offers protection against loss
+     * of data at the cost of additional bandwidth required.
+     *
+     * Value is integer indicating redundancy levels, i.e. the number
+     * of previous data to be included with the current packet.
+     * (0 means disabled/no redundancy).
+     *
      * Currently it only applies to text media SDP.
      *
-     * Default: PJMEDIA_DEFAULT_REDUNDANCY_LEVEL
+     * Default: 0
      */
     int         red_level;
 
