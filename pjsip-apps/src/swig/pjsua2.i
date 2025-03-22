@@ -3,7 +3,7 @@
 //
 // Suppress few warnings
 //
-#pragma SWIG nowarn=312		// 312: nested struct (in types.h, sip_auth.h)
+#pragma SWIG nowarn=312        // 312: nested struct (in types.h, sip_auth.h)
 
 //
 // Header section
@@ -13,6 +13,22 @@
 using namespace std;
 using namespace pj;
 %}
+
+//
+// STL stuff.
+//
+%include "std_string.i"
+%include "std_vector.i"
+%include "std_map.i"
+
+// Android string handling
+%include "and_string.i"
+
+%template(StringVector)          std::vector<std::string>;
+%template(IntVector)             std::vector<int>;
+%template(ByteVector)            std::vector<unsigned char>;
+%template(StringToStringMap)     std::map<string, string>;
+
 
 #ifdef SWIGPYTHON
   %feature("director:except") {
@@ -29,7 +45,7 @@ using namespace pj;
 #ifdef SWIGCSHARP
   %typemap(throws, canthrow=1) pj::Error {
     SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, 
-    	(std::string("C++ pj::Error:\n") + $1.info(true).c_str()).c_str());
+        (std::string("C++ pj::Error:\n") + $1.info(true).c_str()).c_str());
     
     return $null;
   }
@@ -51,61 +67,69 @@ using namespace pj;
   %}
 #endif
 
-// Allow C++ exceptions to be handled in Java
 #ifdef SWIGJAVA
+  // Allow C++ exceptions to be handled in Java
   %typemap(throws, throws="java.lang.Exception") pj::Error {
-  jclass excep = jenv->FindClass("java/lang/Exception");
-  if (excep)
-    jenv->ThrowNew(excep, $1.info(true).c_str());
-  return $null;
-}
+    jclass excep = jenv->FindClass("java/lang/Exception");
+    if (excep)
+      jenv->ThrowNew(excep, $1.info(true).c_str());
+    return $null;
+  }
 
   // Force the Error Java class to extend java.lang.Exception
   %typemap(javabase) pj::Error "java.lang.Exception";
 
   %typemap(javacode) pj::Error %{
+    // Override getMessage()
+    public String getMessage() {
+      return getTitle();
+    }
 
-  // Override getMessage()
-  public String getMessage() {
-    return getTitle();
-  }
+    // Disable serialization (check ticket #1868)
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      throw new java.io.NotSerializableException("Check ticket #1868!");
+    }
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException {
+      throw new java.io.NotSerializableException("Check ticket #1868!");
+    }
+  %}
+
+  // map "Token"/"void *" as "long"
+  %apply long long { void* };
+
+  // map "void **" as "long"
+  %apply long long { void** };
+
+  // map "pjmedia_aud_dev_index" as "int"
+  %apply int { pjmedia_aud_dev_index };
   
-  // Disable serialization (check ticket #1868)
-  private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
-    throw new java.io.NotSerializableException("Check ticket #1868!");
-  }
-  private void readObject(java.io.ObjectInputStream in) throws java.io.IOException {
-    throw new java.io.NotSerializableException("Check ticket #1868!");
-  }
+  // map "unsigned char[20]" as "short array" for SslCertInfo.serialNo
+  %include "arrays_java.i"
+  %apply unsigned char[ANY] { unsigned char[20] };
 
-%}
-#endif
+  // Constants from PJSIP libraries
 
+  %include "enumtypeunsafe.swg"
+  %javaconst(1);
 
-// Constants from PJSIP libraries
-
-#ifdef SWIGJAVA
-%include "enumtypeunsafe.swg"
-%javaconst(1);
-
-%pragma(java) jniclasscode=%{
-  static {
-    try {
-	System.loadLibrary("openh264");
-    } catch (UnsatisfiedLinkError e) {
-	System.err.println("Failed to load native library openh264\n" + e);
-	System.out.println("This could be safely ignored if you " +
-			   "don't use OpenH264 video codec.");
+  %pragma(java) jniclasscode=%{
+    static {
+      try {
+        System.loadLibrary("openh264");
+      } catch (UnsatisfiedLinkError e) {
+        System.err.println("Failed to load native library openh264\n" + e);
+        System.out.println("This could be safely ignored if you " +
+                           "don't use OpenH264 video codec.");
+      }
+      try {
+        System.loadLibrary("pjsua2");
+      } catch (UnsatisfiedLinkError e) {
+        System.err.println("Failed to load native library pjsua2\n" + e);
+      }
     }
-    try {
-	System.loadLibrary("pjsua2");
-    } catch (UnsatisfiedLinkError e) {
-	System.err.println("Failed to load native library pjsua2\n" + e);
-    }
-  }
-%}
+  %}
+#endif /* SWIGJAVA */
 
-#endif
 
 %include "symbols.i"
 
@@ -121,6 +145,7 @@ using namespace pj;
 %feature("director") FindBuddyMatch;
 %feature("director") AudioMediaPlayer;
 %feature("director") AudioMediaPort;
+
 // PendingJob is only used on Python
 #ifdef SWIGPYTHON
     %feature("director") PendingJob;
@@ -129,20 +154,6 @@ using namespace pj;
     %ignore pj::Endpoint::utilAddPendingJob;
 #endif
 
-//
-// STL stuff.
-//
-%include "std_string.i"
-%include "std_vector.i"
-%include "std_map.i"
-
-// Android string handling
-%include "and_string.i"
-
-%template(StringVector)			std::vector<std::string>;
-%template(IntVector) 			std::vector<int>;
-%template(ByteVector) 			std::vector<unsigned char>;
-%template(StringToStringMap) 			std::map<string, string>;
 
 //
 // Ignore stuffs in pjsua2
@@ -166,26 +177,26 @@ using namespace pj;
 
 %include "pjsua2/siptypes.hpp"
 
-%template(SockOptVector)		std::vector<pj::SockOpt>;
-%template(SipHeaderVector)		std::vector<pj::SipHeader>;
-%template(AuthCredInfoVector)		std::vector<pj::AuthCredInfo>;
-%template(SrtpCryptoVector)		std::vector<pj::SrtpCrypto>;
-%template(SipMultipartPartVector)	std::vector<pj::SipMultipartPart>;
-%template(BuddyVector)			std::vector<pj::Buddy*>;
-%template(BuddyVector2)			std::vector<pj::Buddy>;
-%template(AudioMediaVector)		std::vector<pj::AudioMedia*>;
-%template(AudioMediaVector2)		std::vector<pj::AudioMedia>;
-%template(VideoMediaVector)		std::vector<pj::VideoMedia>;
-%template(ToneDescVector)		std::vector<pj::ToneDesc>;
-%template(ToneDigitVector)		std::vector<pj::ToneDigit>;
-%template(ToneDigitMapVector)	        std::vector<pj::ToneDigitMapDigit>;
-%template(AudioDevInfoVector)		std::vector<pj::AudioDevInfo*>;
-%template(AudioDevInfoVector2)		std::vector<pj::AudioDevInfo>;
-%template(CodecInfoVector)		std::vector<pj::CodecInfo*>;
-%template(CodecInfoVector2)		std::vector<pj::CodecInfo>;
-%template(VideoDevInfoVector)		std::vector<pj::VideoDevInfo*>;
-%template(VideoDevInfoVector2)		std::vector<pj::VideoDevInfo>;
-%template(CodecFmtpVector)		std::vector<pj::CodecFmtp>;	
+%template(SockOptVector)                std::vector<pj::SockOpt>;
+%template(SipHeaderVector)              std::vector<pj::SipHeader>;
+%template(AuthCredInfoVector)           std::vector<pj::AuthCredInfo>;
+%template(SrtpCryptoVector)             std::vector<pj::SrtpCrypto>;
+%template(SipMultipartPartVector)       std::vector<pj::SipMultipartPart>;
+%template(BuddyVector)                  std::vector<pj::Buddy*>;
+%template(BuddyVector2)                 std::vector<pj::Buddy>;
+%template(AudioMediaVector)             std::vector<pj::AudioMedia*>;
+%template(AudioMediaVector2)            std::vector<pj::AudioMedia>;
+%template(VideoMediaVector)             std::vector<pj::VideoMedia>;
+%template(ToneDescVector)               std::vector<pj::ToneDesc>;
+%template(ToneDigitVector)              std::vector<pj::ToneDigit>;
+%template(ToneDigitMapVector)           std::vector<pj::ToneDigitMapDigit>;
+%template(AudioDevInfoVector)           std::vector<pj::AudioDevInfo*>;
+%template(AudioDevInfoVector2)          std::vector<pj::AudioDevInfo>;
+%template(CodecInfoVector)              std::vector<pj::CodecInfo*>;
+%template(CodecInfoVector2)             std::vector<pj::CodecInfo>;
+%template(VideoDevInfoVector)           std::vector<pj::VideoDevInfo*>;
+%template(VideoDevInfoVector2)          std::vector<pj::VideoDevInfo>;
+%template(CodecFmtpVector)              std::vector<pj::CodecFmtp>;    
 %template(MediaFormatAudioVector)       std::vector<pj::MediaFormatAudio>;
 %template(MediaFormatVideoVector)       std::vector<pj::MediaFormatVideo>;
 %template(CallMediaInfoVector)          std::vector<pj::CallMediaInfo>;
@@ -213,9 +224,9 @@ using namespace pj;
     void setWindow(jobject surface) { $self->window = surface; }
 }
 #else
-%extend pj::WindowHandle {
-    void setWindow(long long hwnd) { $self->window = (void*)hwnd; }
-}
+//%extend pj::WindowHandle {
+//    void setWindow(long long hwnd) { $self->window = (void*)hwnd; }
+//}
 #endif
 
 %include "pjsua2/media.hpp"
@@ -234,13 +245,13 @@ using namespace pj;
 %rename(libDestroy_) pj::Endpoint::libDestroy;
 %typemap(javacode) pj::Endpoint %{
   public void libDestroy(long prmFlags) throws java.lang.Exception {
-	Runtime.getRuntime().gc();
-	libDestroy_(prmFlags);
+    Runtime.getRuntime().gc();
+    libDestroy_(prmFlags);
   }
 
   public void libDestroy() throws java.lang.Exception {
-	Runtime.getRuntime().gc();
-	libDestroy_();
+    Runtime.getRuntime().gc();
+    libDestroy_();
   }
 %}
 #endif

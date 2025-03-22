@@ -298,6 +298,19 @@ struct AccountSipConfig : public PersistentObject
      */
     pjsua_ipv6_use      ipv6Use;
 
+    /**
+     * Use a shared authorization session within this account.
+     * This will use the accounts credentials on outgoing requests,
+     * so that less 401/407 Responses will be returned.
+     *
+     * Needs PJSIP_AUTH_AUTO_SEND_NEXT and PJSIP_AUTH_HEADER_CACHING
+     * enabled to work properly, and also will grow usage of the used pool for
+     * the cached headers.
+     *
+     * Default is disabled/false.
+     */
+    bool        useSharedAuth;
+
 public:
     /**
      * Read this object from a container node.
@@ -345,6 +358,14 @@ struct AccountCallConfig : public PersistentObject
     pjsua_sip_timer_use timerUse;
 
     /**
+     * Specify the usage of SIPREC INVITE request. See the
+     * pjsua_sip_siprec_use for possible values.
+     * 
+     * Default: PJSUA_SIP_SIPREC_INACTIVE
+     */
+    pjsua_sip_siprec_use siprecUse;
+
+    /**
      * Specify minimum Session Timer expiration period, in seconds.
      * Must not be lower than 90. Default is 90.
      */
@@ -363,6 +384,7 @@ public:
     AccountCallConfig() : holdType(PJSUA_CALL_HOLD_TYPE_DEFAULT),
                           prackUse(PJSUA_100REL_NOT_USED),
                           timerUse(PJSUA_SIP_TIMER_OPTIONAL),
+                          siprecUse(PJSUA_SIP_SIPREC_INACTIVE),
                           timerMinSESec(90),
                           timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE)
     {}
@@ -582,6 +604,15 @@ struct AccountNatConfig : public PersistentObject
     int                 iceWaitNominationTimeoutMsec;
 
     /**
+     * Specify whether to check the source address of the incoming messages.
+     * The source address will be compared to the remote candidate which has
+     * a completed connectivity check or received a connectivity check.
+     *
+     * Default value is PJ_ICE_SESS_CHECK_SRC_ADDR.
+     */
+    unsigned            iceCheckSrcAddr;
+
+    /**
      * Disable RTCP component.
      *
      * Default: False
@@ -769,6 +800,7 @@ public:
       iceAggressiveNomination(true),
       iceNominatedCheckDelayMsec(PJ_ICE_NOMINATED_CHECK_DELAY),
       iceWaitNominationTimeoutMsec(ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT),
+      iceCheckSrcAddr(PJ_ICE_SESS_CHECK_SRC_ADDR),
       iceNoRtcp(false),
       iceAlwaysUpdate(true),
       turnEnabled(false),

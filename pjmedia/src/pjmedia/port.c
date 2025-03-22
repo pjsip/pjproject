@@ -232,3 +232,33 @@ PJ_DEF(pj_status_t) pjmedia_port_dec_ref( pjmedia_port *port )
 
     return pj_grp_lock_dec_ref(port->grp_lock);
 }
+
+
+/**
+ * Add destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_port_add_destroy_handler(
+                                            pjmedia_port* port,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    PJ_ASSERT_RETURN(port && handler, PJ_EINVAL);
+    PJ_ASSERT_RETURN(port->grp_lock, PJ_EINVALIDOP);
+
+    return pj_grp_lock_add_handler(port->grp_lock, NULL, member, handler);
+}
+
+
+/**
+ * Remove previously registered destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_port_del_destroy_handler(
+                                            pjmedia_port* port,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    PJ_ASSERT_RETURN(port && handler, PJ_EINVAL);
+    PJ_ASSERT_RETURN(port->grp_lock, PJ_EINVALIDOP);
+
+    return pj_grp_lock_del_handler(port->grp_lock, member, handler);
+}

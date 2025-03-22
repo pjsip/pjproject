@@ -447,6 +447,18 @@ typedef enum pj_ssl_cipher {
     PJ_TLS_DH_anon_WITH_AES_128_CBC_SHA256      = 0x0000006C,
     PJ_TLS_DH_anon_WITH_AES_256_CBC_SHA256      = 0x0000006D,
 
+    PJ_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384  = 0x0000c02c,
+    PJ_TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384    = 0x0000c030,
+    PJ_TLS_DHE_DSS_WITH_AES_256_GCM_SHA384      = 0x000000a3,
+    PJ_TLS_DHE_RSA_WITH_AES_256_GCM_SHA384      = 0x0000009f,
+    PJ_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256  = 0x0000c02b,
+    PJ_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256    = 0x0000c02f,
+
+    /* TLS 1.3 cipher suites */
+    PJ_TLS_AES_128_GCM_SHA256                   = 0x00001301,
+    PJ_TLS_AES_256_GCM_SHA384                   = 0x00001302,
+    PJ_TLS_CHACHA20_POLY1305_SHA256             = 0x00001303,
+
     /* TLS (deprecated) */
     PJ_TLS_RSA_EXPORT_WITH_RC4_40_MD5           = 0x00000003,
     PJ_TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5       = 0x00000006,
@@ -788,27 +800,33 @@ typedef struct pj_ssl_sock_cb
 typedef enum pj_ssl_sock_proto
 {
     /**
-     * Default protocol of backend. 
+     * Default protocol of backend.
+     * Typically this will be set to all supported non-deprecated protocols,
+     * which, currently is TLSv1.2 and TLSv1.3.
      */   
     PJ_SSL_SOCK_PROTO_DEFAULT = 0,
 
     /** 
-     * SSLv2.0 protocol.          
+     * SSLv2.0 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_SSL2    = (1 << 0),
 
     /** 
-     * SSLv3.0 protocol.          
+     * SSLv3.0 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_SSL3    = (1 << 1),
 
     /**
-     * TLSv1.0 protocol.          
+     * TLSv1.0 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_TLS1    = (1 << 2),
 
     /** 
      * TLSv1.1 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_TLS1_1  = (1 << 3),
 
@@ -823,11 +841,14 @@ typedef enum pj_ssl_sock_proto
     PJ_SSL_SOCK_PROTO_TLS1_3  = (1 << 5),
 
     /** 
-     * Certain backend implementation e.g:OpenSSL, has feature to enable all
-     * protocol. 
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_SSL23   = (1 << 16) - 1,
-    PJ_SSL_SOCK_PROTO_ALL = PJ_SSL_SOCK_PROTO_SSL23,
+
+    /**
+     * This will enable all the backend's supported protocols.
+     */
+    PJ_SSL_SOCK_PROTO_ALL     = (1 << 16) - 1,
 
     /**
      * DTLSv1.0 protocol.         

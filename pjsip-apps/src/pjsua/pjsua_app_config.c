@@ -1606,8 +1606,15 @@ static void default_config()
     pjsua_app_config *cfg = &app_config;
 
     pjsua_config_default(&cfg->cfg);
-    pj_ansi_snprintf(tmp, sizeof(tmp), "PJSUA v%s %s", pj_get_version(),
+    pj_ansi_snprintf(tmp, sizeof(tmp), "PJSUA/v%s %s", pj_get_version(),
                     pj_get_sys_info()->info.ptr);
+    /* System info may contain more than one SLASH which doesn't conform
+     * with the RFC 3261, so just replace it with white space.
+     */
+    for (i = sizeof("PJSUA/") + 1; ;i++) {
+        if (tmp[i] == 0) break;
+        if (tmp[i] == '/') tmp[i] = ' ';
+    }
     pj_strdup2_with_null(app_config.pool, &cfg->cfg.user_agent, tmp);
 
     pjsua_logging_config_default(&cfg->log_cfg);

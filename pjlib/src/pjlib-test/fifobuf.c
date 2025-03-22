@@ -85,8 +85,6 @@ static int fifobuf_rolling_test()
     PJ_TEST_EQ(pj_fifobuf_capacity(&fifo), SIZE-SZ, NULL, return -300);
     PJ_TEST_EQ(pj_fifobuf_available_size(&fifo), SIZE-SZ, NULL, return -310);
 
-    pj_srand(0);
-
     /* Repeat the test */
     for (rep=0; rep<REPEAT; rep++) {
         pj_list *chunk;
@@ -107,7 +105,7 @@ static int fifobuf_rolling_test()
 
         /* Free cunks, leave some chunks for the next repeat */
         n = N/4 + (pj_rand() % (N/4));
-        while (pj_list_size(&chunks) > n) {
+        while ((int)pj_list_size(&chunks) > n) {
             chunk = chunks.next;
             pj_list_erase(chunk);
             pj_fifobuf_free(&fifo, chunk);

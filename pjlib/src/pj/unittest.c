@@ -31,6 +31,9 @@ static long tls_id = INVALID_TLS_ID;
 /* When basic runner is used, current test is saved in this global var */
 static pj_test_case *tc_main_thread;
 
+/* Is unit test running */
+static pj_bool_t is_under_test;
+
 /* Forward decls. */
 static void unittest_log_callback(int level, const char *data, int len);
 static int get_completion_line( const pj_test_case *tc, const char *end_line,
@@ -114,14 +117,35 @@ PJ_DEF(void) pj_test_suite_add_case(pj_test_suite *suite, pj_test_case *tc)
     pj_list_push_back(&suite->tests, tc);
 }
 
+/* Own PRNG using Linear congruential generator because rand() yields
+ * difference sequence on different machines even with the same seed.
+ */
+static pj_uint32_t rand_int(pj_uint32_t seed)
+{
+#define M   ((pj_uint32_t)(1<<31))
+#define A   ((pj_uint32_t)1103515245)
+#define C   ((pj_uint32_t)12345)
+
+    return (pj_uint32_t)(((A*seed) + C) % M);
+
+#undef M
+#undef A
+#undef C
+}
+
 /* Shuffle */
 PJ_DEF(void) pj_test_suite_shuffle(pj_test_suite *suite, int seed)
 {
     pj_test_case src, *tc;
+    pj_uint32_t rand;
     unsigned total, movable;
 
-    if (seed >= 0)
-        pj_srand(seed);
+    /* although pj_rand() is not used here, still call pj_srand() to make
+     * RNG used by other parts of the program repeatable. This should be
+     * the only call to pj_srand() in the whole program.
+     */
+    pj_srand(seed);
+    rand = (pj_uint32_t)((seed >= 0) ? seed : pj_rand());
 
     /* Move tests to new list */
     pj_list_init(&src);
@@ -147,10 +171,11 @@ PJ_DEF(void) pj_test_suite_shuffle(pj_test_suite *suite, int seed)
 
     /* Shuffle non KEEP_LAST tests */
     while (movable > 0) {
-        int step = pj_rand() % total;
-        if (step < 0)
-            continue;
-        
+        unsigned step;
+
+        rand = rand_int(rand);
+        step = rand % total;
+
         for (tc=src.next; step>0; tc=tc->next, --step)
             ;
         
@@ -205,9 +230,11 @@ PJ_DEF(void) pj_test_run(pj_test_runner *runner, pj_test_suite *suite)
     }
 
     /* Call the run method to perform runner specific loop */
+    is_under_test = PJ_TRUE;
     pj_get_timestamp(&suite->start_time);
     runner->main(runner);
     pj_get_timestamp(&suite->end_time);
+    is_under_test = PJ_FALSE;
 
     /* Restore logging */
     pj_log_set_log_func(runner->orig_log_writer);
@@ -216,7 +243,10 @@ PJ_DEF(void) pj_test_run(pj_test_runner *runner, pj_test_suite *suite)
 /* Check if we are under test */
 PJ_DEF(pj_bool_t) pj_test_is_under_test(void)
 {
-    return pj_log_get_log_func()==&unittest_log_callback;
+    // Cannot use pj_log_get_log_func() when PJ_LOG_MAX_LEVEL is 0.
+    //return pj_log_get_log_func()==&unittest_log_callback;
+
+    return is_under_test;
 }
 
 /* Calculate statistics */

@@ -331,6 +331,10 @@ struct pj_pool_t
     /** The callback to be called when the pool is unable to allocate memory. */
     pj_pool_callback *callback;
 
+    /** The default alignment of memory block allocated from this pool
+     *  (must be power of 2).                                                 */
+    pj_size_t          alignment;
+
 };
 
 
@@ -347,8 +351,9 @@ struct pj_pool_t
 #endif
 
 /**
- * Create a new pool from the pool factory. This wrapper will call create_pool
- * member of the pool factory.
+ * Create a new pool from the pool factory. This wrapper will call 
+ * pj_pool_aligned_create() with alignment parameter set to 0
+ * which means use the default alignment (PJ_POOL_ALIGNMENT).
  *
  * @param factory           The pool factory.
  * @param name              The name to be assigned to the pool. The name should 
@@ -378,6 +383,47 @@ PJ_IDECL(pj_pool_t*) pj_pool_create(pj_pool_factory *factory,
                                     pj_size_t initial_size, 
                                     pj_size_t increment_size,
                                     pj_pool_callback *callback);
+
+
+/**
+ * Create a new pool from the pool factory. This wrapper will call create_pool
+ * member of the pool factory.
+ *
+ * @param factory           The pool factory.
+ * @param name              The name to be assigned to the pool. The name should
+ *                          not be longer than PJ_MAX_OBJ_NAME (32 chars), or
+ *                          otherwise it will be truncated.
+ * @param initial_size      The size of initial memory blocks taken by the pool.
+ *                          Note that the pool will take 68+20 bytes for
+ *                          administrative area from this block.
+ * @param increment_size    the size of each additional blocks to be allocated
+ *                          when the pool is running out of memory. If user
+ *                          requests memory which is larger than this size, then
+ *                          an error occurs.
+ *                          Note that each time a pool allocates additional block,
+ *                          it needs PJ_POOL_SIZE more to store some
+ *                          administrative info.
+ * @param alignment         the default alignment of memory block allocated 
+ *                          from this pool (must be power of 2).
+ *                          The actual allocation alignment will be at least equal
+ *                          to the alignment argument of the function, 
+ *                          but not less than PJ_POOL_ALIGNMENT. 
+ *                          Value of 0 means use PJ_POOL_ALIGNMENT.
+ * @param callback          Callback to be called when error occurs in the pool.
+ *                          If this value is NULL, then the callback from pool
+ *                          factory policy will be used.
+ *                          Note that when an error occurs during pool creation,
+ *                          the callback itself is not called. Instead, NULL
+ *                          will be returned.
+ *
+ * @return                  The memory pool, or NULL.
+ */
+PJ_IDECL(pj_pool_t*) pj_pool_aligned_create(pj_pool_factory *factory,
+                                            const char *name,
+                                            pj_size_t initial_size,
+                                            pj_size_t increment_size,
+                                            pj_size_t alignment,
+                                            pj_pool_callback *callback);
 
 /**
  * Release the pool back to pool factory.
@@ -448,8 +494,10 @@ PJ_IDECL(pj_size_t) pj_pool_get_used_size( pj_pool_t *pool );
 
 /**
  * Allocate storage with the specified size from the pool.
+ * The allocation will be aligned to the default alignment of the pool.
  * If there's no storage available in the pool, then the pool can allocate more
  * blocks if the increment size is larger than the requested size.
+ * This function will call pj_pool_aligned_alloc() with alignment set to 0.
  *
  * @param pool      the pool.
  * @param size      the requested size.
@@ -459,6 +507,28 @@ PJ_IDECL(pj_size_t) pj_pool_get_used_size( pj_pool_t *pool );
  * @see PJ_POOL_ALLOC_T
  */
 PJ_IDECL(void*) pj_pool_alloc( pj_pool_t *pool, pj_size_t size);
+
+
+/**
+ * Allocate storage with the specified size and alignment from the pool.
+ * If there's no storage available in the pool, then the pool can allocate more
+ * blocks if the increment size is larger than the requested size.
+ *
+ * @param pool      the pool.
+ * @param alignment the requested alignment of the allocation.
+ *                  The actual alignment of the allocation will be at least 
+ *                  equal to the alignment argument of the function, 
+ *                  but not less than the default pool alignment specified 
+ *                  when the pool was created.
+ *                  Value of 0 means use the default alignment of this pool.
+ * @param size      the requested size.
+ *
+ * @return pointer to the allocated memory.
+ *
+ * @see PJ_POOL_ALLOC_T
+ */
+PJ_IDECL(void *) pj_pool_aligned_alloc(pj_pool_t *pool, pj_size_t alignment,
+                                       pj_size_t size);
 
 /**
  * Allocate storage  from the pool, and initialize it to zero.
@@ -523,9 +593,11 @@ PJ_INLINE(void*) pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
  * Internal functions
  */
 /** Internal function */
-PJ_IDECL(void*) pj_pool_alloc_from_block(pj_pool_block *block, pj_size_t size);
+PJ_IDECL(void*) pj_pool_alloc_from_block(pj_pool_block *block, pj_size_t alignment,
+                                         pj_size_t size);
 /** Internal function */
-PJ_DECL(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size);
+PJ_DECL(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t alignment,
+                                     pj_size_t size);
 
 
         
@@ -687,7 +759,11 @@ struct pj_pool_factory
     *                   Note that each time a pool allocates additional block, 
     *                   it needs 20 bytes (equal to sizeof(pj_pool_block)) to 
     *                   store some administrative info.
-    * @param callback   Cllback to be called when error occurs in the pool.
+    * @param alignment  the default alignment of memory block allocated
+    *                   from this pool (must be power of 2).
+    *                   A value of 0 should result in the pool being created 
+    *                   with alignment equal to PJ_POOL_ALIGNMENT.
+    * @param callback   Callback to be called when error occurs in the pool.
     *                   Note that when an error occurs during pool creation, 
     *                   the callback itself is not called. Instead, NULL 
     *                   will be returned.
@@ -698,6 +774,7 @@ struct pj_pool_factory
                                 const char *name,
                                 pj_size_t initial_size, 
                                 pj_size_t increment_size,
+                                pj_size_t alignment,
                                 pj_pool_callback *callback);
 
     /**
@@ -748,6 +825,7 @@ struct pj_pool_factory
  * @param name              Pool name.
  * @param initial_size      Initial size.
  * @param increment_size    Increment size.
+ * @param alignment         Pool alignment.
  * @param callback          Callback.
  * @return                  The pool object, or NULL.
  */
@@ -755,6 +833,7 @@ PJ_DECL(pj_pool_t*) pj_pool_create_int( pj_pool_factory *factory,
                                         const char *name,
                                         pj_size_t initial_size, 
                                         pj_size_t increment_size,
+                                        pj_size_t alignment,
                                         pj_pool_callback *callback);
 
 /**
@@ -762,11 +841,13 @@ PJ_DECL(pj_pool_t*) pj_pool_create_int( pj_pool_factory *factory,
  * @param pool              The pool.
  * @param name              Pool name.
  * @param increment_size    Increment size.
+ * @param alignment         Pool alignment.
  * @param callback          Callback function.
  */
 PJ_DECL(void) pj_pool_init_int( pj_pool_t *pool, 
                                 const char *name,
                                 pj_size_t increment_size,
+                                pj_size_t alignment,
                                 pj_pool_callback *callback);
 
 /**

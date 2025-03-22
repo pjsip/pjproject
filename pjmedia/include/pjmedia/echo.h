@@ -29,14 +29,14 @@
 
 
 /**
- * @defgroup PJMEDIA_Echo_Cancel Accoustic Echo Cancellation API
+ * @defgroup PJMEDIA_Echo_Cancel Acoustic Echo Cancellation API
  * @ingroup PJMEDIA_PORT
  * @brief Echo Cancellation API.
  * @{
  *
  * This section describes API to perform echo cancellation to audio signal.
  * There may be multiple echo canceller implementation in PJMEDIA, ranging
- * from simple echo suppressor to a full Accoustic Echo Canceller/AEC. By 
+ * from simple echo suppressor to a full Acoustic Echo Canceller/AEC. By 
  * using this API, application should be able to use which EC backend to
  * use base on the requirement and capability of the platform.
  */
@@ -71,7 +71,7 @@ typedef enum pjmedia_echo_flag
     /**
      * If PJMEDIA_ECHO_SIMPLE flag is specified during echo canceller
      * creation, then a simple echo suppressor will be used instead of
-     * an accoustic echo cancellation. You can only choose one backend.
+     * an acoustic echo cancellation. You can only choose one backend.
      */
     PJMEDIA_ECHO_SIMPLE = 2,
 
@@ -268,7 +268,7 @@ PJ_DECL(void) pjmedia_echo_stat_default(pjmedia_echo_stat *stat);
  *                          is not known.
  * @param options           Options. If PJMEDIA_ECHO_SIMPLE is specified,
  *                          then a simple echo suppressor implementation 
- *                          will be used instead of an accoustic echo 
+ *                          will be used instead of an acoustic echo 
  *                          cancellation.
  *                          See #pjmedia_echo_flag for other options.
  * @param p_echo            Pointer to receive the Echo Canceller state.
@@ -296,7 +296,7 @@ PJ_DECL(pj_status_t) pjmedia_echo_create(pj_pool_t *pool,
  *                          is not known.
  * @param options           Options. If PJMEDIA_ECHO_SIMPLE is specified,
  *                          then a simple echo suppressor implementation 
- *                          will be used instead of an accoustic echo 
+ *                          will be used instead of an acoustic echo 
  *                          cancellation.
  *                          See #pjmedia_echo_flag for other options.
  * @param p_echo            Pointer to receive the Echo Canceller state.

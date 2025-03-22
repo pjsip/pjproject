@@ -80,7 +80,7 @@ export PJSIP_LDFLAGS += $(PJLIB_UTIL_LDLIB) \
 export PJSIP_UA_SRCDIR = ../src/pjsip-ua
 export PJSIP_UA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			sip_inv.o sip_reg.o sip_replaces.o sip_xfer.o \
-			sip_100rel.o sip_timer.o
+			sip_100rel.o sip_timer.o sip_siprec.o
 export PJSIP_UA_CFLAGS += $(_CFLAGS)
 export PJSIP_UA_CXXFLAGS += $(_CXXFLAGS)
 export PJSIP_UA_LDFLAGS += $(PJSIP_SIMPLE_LDLIB) \
@@ -192,8 +192,8 @@ export TEST_LDFLAGS += $(PJSIP_LDLIB) \
 		       $(PJMEDIA_VIDEODEV_LDLIB) \
 		       $(PJMEDIA_LDLIB) \
 		       $(PJMEDIA_AUDIODEV_LDLIB) \
-		       $(PJLIB_UTIL_LDLIB) \
 		       $(PJNATH_LDLIB) \
+		       $(PJLIB_UTIL_LDLIB) \
 		       $(PJLIB_LDLIB) \
 		       $(_LDFLAGS)
 ifeq ($(EXCLUDE_APP),0)

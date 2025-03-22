@@ -641,7 +641,7 @@
 #endif
 
 /**
- * Perform RTP payload type checking in the audio stream. Normally the peer
+ * Perform RTP payload type checking in the media stream. Normally the peer
  * MUST send RTP with payload type as we specified in our SDP. Certain
  * agents may not be able to follow this hence the only way to have
  * communication is to disable this check.
@@ -705,7 +705,7 @@
 
 
 /**
- * Speex Accoustic Echo Cancellation (AEC).
+ * Speex Acoustic Echo Cancellation (AEC).
  * By default is enabled.
  */
 #ifndef PJMEDIA_HAS_SPEEX_AEC
@@ -735,7 +735,7 @@
 
 
 /**
- * WebRtc Accoustic Echo Cancellation (AEC).
+ * WebRtc Acoustic Echo Cancellation (AEC).
  * By default is disabled.
  */
 #ifndef PJMEDIA_HAS_WEBRTC_AEC
@@ -1100,6 +1100,16 @@
 #   define PJMEDIA_SRTP_DTLS_OSSL_CIPHERS           "DEFAULT"
 #endif
 
+/**
+ * Enabled this to check the source address of ClientHello message coming
+ * from a valid address. See PJ_ICE_SESS_CHECK_SRC_ADDR when ICE is used.
+ *
+ * Default value: 0
+ */
+#ifndef PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR
+#   define PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR       0
+#endif
+
 
 /**
  * Maximum number of SRTP cryptos.
@@ -1224,8 +1234,14 @@
 #endif
 
 
-/* Setting to determine if media transport should switch RTP and RTCP
+/**
+ * Setting to determine if media transport should switch RTP and RTCP
  * remote address to the source address of the packets it receives.
+ * This feature is usually used for handling NAT traversal issues,
+ * also known as symmetric RTP and 'latching' techniques.
+ *
+ * See also run-time options #PJMEDIA_UDP_NO_SRC_ADDR_CHECKING and
+ * #PJMEDIA_ICE_NO_SRC_ADDR_CHECKING.
  *
  * By default it is enabled.
  */
@@ -1706,11 +1722,17 @@
  * agents may not be able to follow this hence the only way to have
  * communication is to disable this check.
  *
- * Default: PJMEDIA_STREAM_CHECK_RTP_PT (follow audio stream's setting)
+ * Note: Since media streams now share some common implementation,
+ * the setting MUST have the same value as PJMEDIA_STREAM_CHECK_RTP_PT.
  */
-#ifndef PJMEDIA_VID_STREAM_CHECK_RTP_PT
-#   define PJMEDIA_VID_STREAM_CHECK_RTP_PT      PJMEDIA_STREAM_CHECK_RTP_PT
+#if defined(PJMEDIA_VID_STREAM_CHECK_RTP_PT) && \
+    PJMEDIA_VID_STREAM_CHECK_RTP_PT != PJMEDIA_STREAM_CHECK_RTP_PT
+#    pragma message("PJMEDIA_VID_STREAM_CHECK_RTP_PT must have the same " \
+                    "value as PJMEDIA_STREAM_CHECK_RTP_PT...")
 #endif
+
+#undef PJMEDIA_VID_STREAM_CHECK_RTP_PT
+#define PJMEDIA_VID_STREAM_CHECK_RTP_PT      PJMEDIA_STREAM_CHECK_RTP_PT
 
 /**
  * @}

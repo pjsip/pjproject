@@ -331,6 +331,7 @@ export APP_LDLIBS := $(PJSUA_LIB_LDLIB) \
         $(PJLIB_LDLIB) \
         @LIBS@
 export APP_LDXXLIBS := $(PJSUA2_LIB_LDLIB) \
+        -lstdc++ \
         $(APP_LDLIBS)
 
 # Here are the variables to use if application is using the library

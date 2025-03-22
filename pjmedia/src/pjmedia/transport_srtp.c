@@ -31,6 +31,15 @@
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 
+/* Currently SRTP-DTLS requires OpenSSL */
+#if PJMEDIA_SRTP_HAS_DTLS
+#  if PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_OPENSSL
+#    pragma message("DTLS requires OpenSSL, disabling it...")
+#    undef PJMEDIA_SRTP_HAS_DTLS
+#    define PJMEDIA_SRTP_HAS_DTLS 0
+#  endif
+#endif
+
 /* Enable this to test ROC initialization setting. For offerer,
  * it will send packets with ROC 1 and expect to receive ROC 2.
  * For answerer it will be the other way around.

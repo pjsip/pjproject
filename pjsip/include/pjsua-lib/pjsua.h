@@ -2141,6 +2141,32 @@ typedef enum pjsua_sip_timer_use
 
 
 /**
+ * This enumeration specifies the usage of SIPREC extension.
+ */
+typedef enum pjsua_sip_siprec_use
+{
+    /**
+     * When this flag is specified, when a SIPREC request is received, it 
+     * returns bad extension error. and SIPREC calls will not be established.
+     */
+    PJSUA_SIP_SIPREC_INACTIVE,
+
+    /**
+     * When this flag is specified, when you want both regular calls and
+     * SIPREC calls to be established.
+     */
+    PJSUA_SIP_SIPREC_OPTIONAL,
+
+    /**
+     * When this flag is specified, when you want only SIPREC calls to
+     * be established, and regular calls are rejected.
+     */
+    PJSUA_SIP_SIPREC_MANDATORY,
+
+} pjsua_sip_siprec_use;
+
+
+/**
  * This constants controls the use of 100rel extension.
  */
 typedef enum pjsua_100rel_use
@@ -2342,6 +2368,15 @@ typedef struct pjsua_config
      * Default: PJSUA_SIP_TIMER_OPTIONAL
      */
     pjsua_sip_timer_use use_timer;
+
+    /**
+     * Specify the usage of SIPREC sessions. See the
+     * #pjsua_sip_siprec_use for possible values. Note that this setting can be
+     * further customized in account configuration (#pjsua_acc_config).
+     *
+     * Default: PJSUA_SIP_SIPREC_INACTIVE
+     */
+    pjsua_sip_siprec_use use_siprec;
 
     /**
      * Handle unsolicited NOTIFY requests containing message waiting 
@@ -4066,6 +4101,14 @@ typedef struct pjsua_acc_config
     pjsua_sip_timer_use use_timer;
 
     /**
+     * Specify the usage of SIPREC sessions. See the
+     * #pjsua_sip_siprec_use for possible values.
+     *
+     * Default: PJSUA_SIP_SIPREC_INACTIVE
+     */
+    pjsua_sip_siprec_use use_siprec;
+
+    /**
      * Specify Session Timer settings, see #pjsip_timer_setting. 
      */
     pjsip_timer_setting timer_setting;
@@ -4617,6 +4660,19 @@ typedef struct pjsua_acc_config
      * Default: PJMEDIA_STREAM_ENABLE_XR
      */
     pj_bool_t           enable_rtcp_xr;
+
+    /**
+     * Use a shared authorization session within this account.
+     * This will use the accounts credentials on outgoing requests,
+     * so that less 401/407 Responses will be returned.
+     *
+     * Needs PJSIP_AUTH_AUTO_SEND_NEXT and PJSIP_AUTH_HEADER_CACHING
+     * enabled to work properly, and also will grow usage of the used pool for
+     * the cached headers.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t        use_shared_auth;
 
 } pjsua_acc_config;
 
@@ -6554,10 +6610,21 @@ typedef struct pjsua_buddy_config
     pj_bool_t   subscribe_dlg_event;
 
     /**
-     * Specify arbitrary application data to be associated with with
+     * Specify arbitrary application data to be associated with
      * the buddy object.
      */
     void       *user_data;
+
+    /**
+     * Specify account to be associated with the buddy object. The account
+     * will be used for creating the subscription.
+     *
+     * IMPORTANT: Account must remain valid throughout the entire lifetime
+     * of the buddy object.
+     *
+     * Default: PJSUA_INVALID_ID (buddy is not associated to any account)
+     */
+    pjsua_acc_id acc_id;
 
 } pjsua_buddy_config;
 
@@ -6602,6 +6669,12 @@ typedef struct pjsua_buddy_info
      * The full URI of the buddy, as specified in the configuration.
      */
     pj_str_t            uri;
+
+    /**
+     * The account ID associated with this buddy. If not associated
+     * with any account, the value will be PJSUA_INVALID_ID.
+     */
+    pjsua_acc_id        acc_id;
 
     /**
      * Buddy's Contact, only available when presence subscription has
@@ -7180,7 +7253,7 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  * pjsua_media_config.snd_use_sw_clock.
  */
 #ifndef PJSUA_DEFAULT_SND_USE_SW_CLOCK
-#   define PJSUA_DEFAULT_SND_USE_SW_CLOCK  PJ_FALSE
+#   define PJSUA_DEFAULT_SND_USE_SW_CLOCK  PJ_TRUE
 #endif
 
 /**
@@ -7247,6 +7320,21 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  */
 #ifndef PJSUA_TRANSPORT_RESTART_DELAY_TIME
 #   define PJSUA_TRANSPORT_RESTART_DELAY_TIME   10
+#endif
+
+
+/**
+ * Specify the delay of video stream start in encoding direction, in
+ * millisecond. Delayed encoding start generally smoothens video stream
+ * initiation by reducing the risk of RTP packet loss in the receiver/decoder
+ * (e.g.: due to the receiver's media transport or stream being unready).
+ * Note that initial video RTP packets usually contain crucial information,
+ * such as video codec parameters and keyframes.
+ * 
+ * Default: 500ms
+ */
+#ifndef PJSUA_VIDEO_STREAM_DELAY_START_ENCODE
+#   define PJSUA_VIDEO_STREAM_DELAY_START_ENCODE   500
 #endif
 
 

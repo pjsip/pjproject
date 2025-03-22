@@ -2493,3 +2493,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_remove_remote_cap_hdr(pjsip_dialog *dlg,
 
     return PJ_SUCCESS;
 }
+
+PJ_DEF(pj_status_t) pjsip_dlg_set_auth_sess( pjsip_dialog *dlg,
+                                              pjsip_auth_clt_sess *session ) {
+    PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
+    return pjsip_auth_clt_set_parent(&dlg->auth_sess, session);
+}

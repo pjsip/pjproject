@@ -70,7 +70,7 @@
  * For UAS, if it wants to support \a 100rel but not to mandate it, 
  * it must specify  #PJSIP_INV_SUPPORT_100REL flag in the \a options 
  * argument when calling  #pjsip_inv_verify_request(), and pass the same 
- * \a options variable when calling #pjsip_inv_verify_request. If UAC had 
+ * \a options variable when calling #pjsip_inv_create_uas. If UAC had 
  * specified \a 100rel in it's list of extensions in \a Require header, 
  * the UAS will send provisional responses reliably. If UAC only listed 
  * \a 100rel in its \a Supported header but not in \a Require header, 
@@ -105,7 +105,7 @@
  * For another requirement, if UAS wants to <b>mandate</b> \a 100rel support,
  * it can specify #PJSIP_INV_REQUIRE_100REL flag when calling 
  * #pjsip_inv_verify_request(), and pass the \a options when calling 
- * #pjsip_inv_verify_request. In this case,
+ * #pjsip_inv_create_uas. In this case,
  * \a 100rel extension will be used if UAC specifies \a 100rel in its
  * \a Supported header. If UAC does not list \a 100rel in \a Supported header,
  * the incoming INVITE request will be rejected with 421 (Extension Required)

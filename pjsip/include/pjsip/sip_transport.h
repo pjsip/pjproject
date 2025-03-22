@@ -1303,6 +1303,19 @@ PJ_DECL(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr);
 
 
 /**
+ * Return number of transports of the specified type currently registered to
+ * the transport manager.
+ *
+ * @param mgr       The transport manager.
+ * @param type      Transport type (can be from pjsip_transport_type_e enum)
+ *
+ * @return          Number of transports.
+ */
+PJ_DECL(unsigned) pjsip_tpmgr_get_transport_count_by_type(pjsip_tpmgr *mgr,
+                                                          int type);
+
+
+/**
  * Destroy a transport manager. Normally application doesn't need to call
  * this function directly, since a transport manager will be created and
  * destroyed automatically by the SIP endpoint.

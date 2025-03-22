@@ -1585,4 +1585,41 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Add destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_add_destroy_handler(
+                                            pjmedia_conf* conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    PJ_UNUSED_ARG(conf);
+    PJ_UNUSED_ARG(slot);
+    PJ_UNUSED_ARG(member);
+    PJ_UNUSED_ARG(handler);
+
+    return PJ_ENOTSUP;
+}
+
+
+/*
+ * Remove previously registered destructor handler.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_del_destroy_handler(
+                                            pjmedia_conf* conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler)
+{
+    PJ_UNUSED_ARG(conf);
+    PJ_UNUSED_ARG(slot);
+    PJ_UNUSED_ARG(member);
+    PJ_UNUSED_ARG(handler);
+
+    return PJ_ENOTSUP;
+}
+
+
 #endif

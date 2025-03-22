@@ -36,6 +36,11 @@
 #include <pj/compat/socket.h>
 #include <pj/rand.h>
 
+
+/* Only build when the backend is using epoll. */
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_EPOLL
+
+
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <errno.h>
@@ -1082,3 +1087,5 @@ PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
 {
     return ioqueue ? (pj_oshandle_t)&ioqueue->epfd : NULL;
 }
+
+#endif /* PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_EPOLL */

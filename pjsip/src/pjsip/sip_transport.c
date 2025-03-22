@@ -1466,11 +1466,14 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
     pj_lock_acquire(tp->lock);
 
     mgr = tp->tpmgr;
-    pj_lock_acquire(mgr->lock);
+
+    // Acquiring manager lock after transport lock may cause deadlock.
+    // And it does not seem necessary as well.
+    //pj_lock_acquire(mgr->lock);
 
     /* Do nothing if transport is being shutdown/destroyed already */
     if (tp->is_shutdown || tp->is_destroying) {
-        pj_lock_release(mgr->lock);
+        //pj_lock_release(mgr->lock);
         pj_lock_release(tp->lock);
         return PJ_SUCCESS;
     }
@@ -1485,7 +1488,7 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
         tp->is_shutdown = PJ_TRUE;
 
     /* Notify application of transport shutdown */
-    state_cb = pjsip_tpmgr_get_state_cb(tp->tpmgr);
+    state_cb = pjsip_tpmgr_get_state_cb(mgr);
     if (state_cb) {
         pjsip_transport_state_info state_info;
 
@@ -1501,7 +1504,7 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
         pjsip_transport_dec_ref(tp);
     }
 
-    pj_lock_release(mgr->lock);
+    //pj_lock_release(mgr->lock);
     pj_lock_release(tp->lock);
 
     return status;
@@ -1908,6 +1911,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
  */
 PJ_DEF(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr)
 {
+    return pjsip_tpmgr_get_transport_count_by_type(mgr, -1);
+}
+
+PJ_DEF(unsigned) pjsip_tpmgr_get_transport_count_by_type(pjsip_tpmgr *mgr,
+                                                         int type)
+{
     pj_hash_iterator_t itr_val;
     pj_hash_iterator_t *itr;
     int nr_of_transports = 0;
@@ -1917,7 +1926,15 @@ PJ_DEF(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr)
     itr = pj_hash_first(mgr->table, &itr_val);
     while (itr) {
         transport *tp_entry = (transport *)pj_hash_this(mgr->table, itr);
-        nr_of_transports += (int)pj_list_size(tp_entry);
+        if (type<0) {
+            nr_of_transports += (int)pj_list_size(tp_entry);
+        } else {
+            transport *node = tp_entry->next;
+            for (; node!=tp_entry; node=node->next) {
+                if (tp_entry->tp->key.type==type)
+                    ++nr_of_transports;
+            }
+        }
         itr = pj_hash_next(mgr->table, itr);
     }
 

@@ -34,6 +34,7 @@ interface MyAppObserver
     abstract void notifyBuddyState(MyBuddy buddy);
     abstract void notifyChangeNetwork();
     abstract void notifyCallMediaEvent(MyCall call, OnCallMediaEventParam prm);
+    abstract void notifyTimer(OnTimerParam prm);
 }
 
 
@@ -314,9 +315,17 @@ class MyAccountConfig
     }
 }
 
+class MyEndpoint extends Endpoint
+{
+    @Override
+    public void onTimer(OnTimerParam prm)
+    {
+        MyApp.observer.notifyTimer(prm);
+    }
+}
 
 class MyApp extends pjsua2 {
-    public static Endpoint ep = new Endpoint();
+    public static MyEndpoint ep = new MyEndpoint();
     public static MyAppObserver observer;
     public ArrayList<MyAccount> accList = new ArrayList<MyAccount>();
 

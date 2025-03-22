@@ -36,7 +36,7 @@ export PJLIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 	os_time_common.o os_info.o pool.o pool_buf.o pool_caching.o pool_dbg.o \
 	rand.o rbtree.o sock_common.o sock_qos_common.o \
 	ssl_sock_common.o ssl_sock_ossl.o ssl_sock_gtls.o ssl_sock_dump.o \
-	ssl_sock_darwin.o string.o timer.o types.o unittest.o
+	ssl_sock_darwin.o ssl_sock_mbedtls.o string.o timer.o types.o unittest.o
 export PJLIB_CFLAGS += $(_CFLAGS)
 export PJLIB_CXXFLAGS += $(_CXXFLAGS)
 export PJLIB_LDFLAGS += $(_LDFLAGS)
@@ -47,7 +47,7 @@ export PJLIB_LDFLAGS += $(_LDFLAGS)
 export TEST_SRCDIR = ../src/pjlib-test
 export TEST_OBJS += activesock.o atomic.o echo_clt.o errno.o exception.o \
 		    fifobuf.o file.o hash_test.o ioq_perf.o ioq_udp.o \
-		    ioq_stress_test.o ioq_unreg.o ioq_tcp.o \
+		    ioq_stress_test.o ioq_unreg.o ioq_tcp.o ioq_iocp_unreg_test.o \
 		    list.o mutex.o os.o pool.o pool_perf.o rand.o rbtree.o \
 		    select.o sleep.o sock.o sock_perf.o ssl_sock.o \
 		    string.o test.o thread.o timer.o timestamp.o \

@@ -122,6 +122,9 @@
   typedef int socklen_t;
 #endif
 
+/* Select I/O queue backend. */
+#undef PJ_IOQUEUE_IMP
+
 /**
  * If this macro is set, it tells select I/O Queue that select() needs to
  * be given correct value of nfds (i.e. largest fd + 1). This requires
@@ -133,9 +136,6 @@
  * Default: 0
  */
 #undef PJ_SELECT_NEEDS_NFDS
-
-/* Was Linux epoll support enabled */
-#undef PJ_HAS_LINUX_EPOLL
 
 /* Is errno a good way to retrieve OS errors?
  */

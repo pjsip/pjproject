@@ -88,10 +88,8 @@ static struct file_reader_port *create_file_port(pj_pool_t *pool)
     struct file_reader_port *port;
 
     port = PJ_POOL_ZALLOC_T(pool, struct file_reader_port);
-    if (!port) {
-        pj_pool_release(pool);
+    if (!port)
         return NULL;
-    }
 
     /* Put in default values.
      * These will be overriden once the file is read.

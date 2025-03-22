@@ -20,10 +20,15 @@ import java.lang.ref.WeakReference
 /* Configs */
 
 // Account ID
-const val ACC_ID_URI    = "sip:localhost"
+const val ACC_DOMAIN = "pjsip.org"
+const val ACC_USER   = "101"
+const val ACC_PASSWD = ""
+const val ACC_ID_URI = "Kotlin <sip:" + ACC_USER + "@" + ACC_DOMAIN + ">"
+const val ACC_REGISTRAR = "sip:sip.pjsip.org;transport=tls"
+const val ACC_PROXY  = "sip:sip.pjsip.org;lr;transport=tls"
 
 // Peer to call
-const val CALL_DST_URI  = "sip:192.168.1.9:6000"
+const val CALL_DST_URI  = "MicroSIP <sip:103@pjsip.org>"
 
 // Camera ID used for video call.
 // Use VidDevManager::enumDev2() to get available cameras & IDs.
@@ -273,8 +278,18 @@ class MainActivity : AppCompatActivity(), android.os.Handler.Callback {
                 g.ep.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_UDP,
                         sipTpConfig)
 
+                g.ep.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TLS,
+                    TransportConfig())
+
                 val accCfg = AccountConfig()
                 accCfg.idUri = ACC_ID_URI
+                accCfg.regConfig.registrarUri = ACC_REGISTRAR
+                accCfg.sipConfig.authCreds.add(
+                    AuthCredInfo("Digest", "*", ACC_USER, 0,
+                        ACC_PASSWD)
+                )
+                accCfg.sipConfig.proxies.add( ACC_PROXY )
+
                 accCfg.videoConfig.autoShowIncoming = true
                 accCfg.videoConfig.autoTransmitOutgoing = true
                 accCfg.videoConfig.defaultCaptureDevice = VIDEO_CAPTURE_DEVICE_ID
@@ -291,6 +306,14 @@ class MainActivity : AppCompatActivity(), android.os.Handler.Callback {
             }
             findViewById<TextView>(R.id.text_info).text = "Library started"
 
+            /* Prioritize AMR-WB */
+            try {
+                g.ep.codecSetPriority("AMR-WB", 255)
+                g.ep.codecSetPriority("AMR/8000", 254)
+            } catch (e: Exception) {
+                println(e)
+            }
+
             /* Fix camera orientation to portrait mode (for front camera) */
             try {
                 g.ep.vidDevManager().setCaptureOrient(VIDEO_CAPTURE_DEVICE_ID,
@@ -306,8 +329,10 @@ class MainActivity : AppCompatActivity(), android.os.Handler.Callback {
                     }
                 }
                 var vcp = g.ep.getVideoCodecParam(codecId)
-                vcp.encFmt.width = 240
-                vcp.encFmt.height = 320
+                vcp.encFmt.width = 480
+                vcp.encFmt.height = 640
+                vcp.encFmt.avgBps = 1024000
+                vcp.encFmt.maxBps = 5000000
                 g.ep.setVideoCodecParam(codecId, vcp)
             } catch (e: Exception) {
                 println(e)

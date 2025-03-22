@@ -130,7 +130,7 @@ void SslCertInfo::fromPj(const pj_ssl_cert_info &info)
         SslCertName cname;
         cname.type = info.subj_alt_name.entry[i].type;
         cname.name = pj2Str(info.subj_alt_name.entry[i].name);
-        subjectAltName.push_back(cname);
+        subjectAltName.push_back(PJSUA2_MOVE(cname));
     }
 }
 
@@ -1132,6 +1132,18 @@ void Endpoint::on_buddy_state(pjsua_buddy_id buddy_id)
     buddy->onBuddyState();
 }
 
+void Endpoint::on_buddy_dlg_event_state(pjsua_buddy_id buddy_id)
+{
+    Buddy b(buddy_id);
+    Buddy *buddy = b.getOriginalInstance();
+    if (!buddy || !buddy->isValid()) {
+        /* Ignored */
+        return;
+    }
+
+    buddy->onBuddyDlgEventState();
+}
+
 void Endpoint::on_buddy_evsub_state(pjsua_buddy_id buddy_id,
                                     pjsip_evsub *sub,
                                     pjsip_event *event)
@@ -1149,6 +1161,25 @@ void Endpoint::on_buddy_evsub_state(pjsua_buddy_id buddy_id,
     prm.e.fromPj(*event);
 
     buddy->onBuddyEvSubState(prm);
+}
+
+void Endpoint::on_buddy_evsub_dlg_event_state(pjsua_buddy_id buddy_id,
+                                              pjsip_evsub *sub,
+                                              pjsip_event *event)
+{
+    PJ_UNUSED_ARG(sub);
+
+    Buddy b(buddy_id);
+    Buddy *buddy = b.getOriginalInstance();
+    if (!buddy || !buddy->isValid()) {
+        /* Ignored */
+        return;
+    }
+
+    OnBuddyEvSubStateParam prm;
+    prm.e.fromPj(*event);
+
+    buddy->onBuddyEvSubDlgEventState(prm);
 }
 
 // Call callbacks
@@ -1843,7 +1874,7 @@ void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
         crypto.key   = pj2Str(srtp_opt->crypto[i].key);
         crypto.name  = pj2Str(srtp_opt->crypto[i].name);
         crypto.flags = srtp_opt->crypto[i].flags;
-        prm.cryptos.push_back(crypto);
+        prm.cryptos.push_back(PJSUA2_MOVE(crypto));
     }
     
     call->onCreateMediaTransportSrtp(prm);
@@ -1957,6 +1988,8 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_mwi_info               = &Endpoint::on_mwi_info;
     ua_cfg.cb.on_buddy_state            = &Endpoint::on_buddy_state;
     ua_cfg.cb.on_buddy_evsub_state      = &Endpoint::on_buddy_evsub_state;
+    ua_cfg.cb.on_buddy_dlg_event_state  = &Endpoint::on_buddy_dlg_event_state;
+    ua_cfg.cb.on_buddy_evsub_dlg_event_state = &Endpoint::on_buddy_evsub_dlg_event_state;
     ua_cfg.cb.on_acc_find_for_incoming  = &Endpoint::on_acc_find_for_incoming;
     ua_cfg.cb.on_ip_change_progress     = &Endpoint::on_ip_change_progress;
 
@@ -2480,7 +2513,7 @@ CodecInfoVector2 Endpoint::codecEnum2() const PJSUA2_THROW(Error)
     for (unsigned i = 0; i<count; ++i) {
         CodecInfo codec_info;
         codec_info.fromPj(pj_codec[i]);
-        civ2.push_back(codec_info);
+        civ2.push_back(PJSUA2_MOVE(codec_info));
     }
     return civ2;
 }
@@ -2627,7 +2660,7 @@ CodecInfoVector2 Endpoint::videoCodecEnum2() const PJSUA2_THROW(Error)
     for (unsigned i = 0; i<count; ++i) {
         CodecInfo codec_info;
         codec_info.fromPj(pj_codec[i]);
-        civ2.push_back(codec_info);
+        civ2.push_back(PJSUA2_MOVE(codec_info));
     }
 #endif
     return civ2;

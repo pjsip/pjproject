@@ -20,6 +20,9 @@
 
 #include <pj/string.h>
 
+#define PJ_POOL_ALIGN_PTR(PTR,ALIGNMENT)    (PTR + (-(pj_ssize_t)(PTR) & (ALIGNMENT-1)))
+#define PJ_IS_POWER_OF_TWO(val)             (((val)>0) && ((val) & ((val)-1))==0)
+#define PJ_IS_ALIGNED(PTR, ALIGNMENT)       (!((pj_ssize_t)(PTR) & ((ALIGNMENT)-1)))
 
 PJ_IDEF(pj_size_t) pj_pool_get_capacity( pj_pool_t *pool )
 {
@@ -37,18 +40,26 @@ PJ_IDEF(pj_size_t) pj_pool_get_used_size( pj_pool_t *pool )
     return used_size;
 }
 
-PJ_IDEF(void*) pj_pool_alloc_from_block( pj_pool_block *block, pj_size_t size )
+PJ_IDEF(void*) pj_pool_alloc_from_block( pj_pool_block *block, pj_size_t alignment,
+                                         pj_size_t size )
 {
-    /* The operation below is valid for size==0. 
-     * When size==0, the function will return the pointer to the pool
-     * memory address, but no memory will be allocated.
-     */
-    if (size & (PJ_POOL_ALIGNMENT-1)) {
-        size = (size + PJ_POOL_ALIGNMENT) & ~(PJ_POOL_ALIGNMENT-1);
-    }
-    if ((pj_size_t)(block->end - block->cur) >= size) {
-        void *ptr = block->cur;
-        block->cur += size;
+    unsigned char *ptr;
+
+    pj_assert(PJ_IS_POWER_OF_TWO(alignment) && PJ_IS_ALIGNED(size, alignment));
+    // Size should be already aligned.
+    // this code was moved up to pj_pool_aligned_alloc. 
+    ///* The operation below is valid for size==0. 
+    // * When size==0, the function will return the pointer to the pool
+    // * memory address, but no memory will be allocated.
+    // */
+    //if (size & (alignment -1)) {
+    //    size = (size + alignment) & ~(alignment -1);
+    //}
+    ptr = PJ_POOL_ALIGN_PTR(block->cur, alignment);
+    if (ptr + size <= block->end &&
+        /* here we check pointer overflow */
+        block->cur <= ptr && ptr <= ptr + size) {
+        block->cur = ptr + size;
         return ptr;
     }
     return NULL;
@@ -56,9 +67,32 @@ PJ_IDEF(void*) pj_pool_alloc_from_block( pj_pool_block *block, pj_size_t size )
 
 PJ_IDEF(void*) pj_pool_alloc( pj_pool_t *pool, pj_size_t size)
 {
-    void *ptr = pj_pool_alloc_from_block(pool->block_list.next, size);
+    return pj_pool_aligned_alloc(pool, 0, size);
+}
+
+PJ_IDECL(void *) pj_pool_aligned_alloc(pj_pool_t *pool, pj_size_t alignment,
+                                       pj_size_t size)
+{
+    void *ptr;
+
+    PJ_ASSERT_RETURN(!alignment || PJ_IS_POWER_OF_TWO(alignment), NULL);
+
+    if (alignment < pool->alignment)
+        alignment = pool->alignment;
+
+    /* The operation below is valid for size==0. 
+     * When size==0, the function will return the pointer to the pool
+     * memory address, but no memory will be allocated.
+     */
+    if (size & (alignment -1)) {
+        size = (size + alignment) & ~(alignment -1);
+    }
+    pj_assert(PJ_IS_ALIGNED(size, alignment));
+
+    ptr = pj_pool_alloc_from_block(pool->block_list.next, 
+                                   alignment, size);
     if (!ptr)
-        ptr = pj_pool_allocate_find(pool, size);
+        ptr = pj_pool_allocate_find(pool, alignment, size);
     return ptr;
 }
 
@@ -82,7 +116,17 @@ PJ_IDEF(pj_pool_t*) pj_pool_create( pj_pool_factory *f,
                                     pj_size_t increment_size,
                                     pj_pool_callback *callback)
 {
-    return (*f->create_pool)(f, name, initial_size, increment_size, callback);
+    return pj_pool_aligned_create(f, name, initial_size, increment_size, 0, callback);
+}
+
+PJ_IDECL(pj_pool_t *) pj_pool_aligned_create(pj_pool_factory *f,
+                                             const char *name,
+                                             pj_size_t initial_size,
+                                             pj_size_t increment_size,
+                                             pj_size_t alignment,
+                                             pj_pool_callback *callback)
+{
+    return (*f->create_pool)(f, name, initial_size, increment_size, alignment, callback);
 }
 
 PJ_IDEF(void) pj_pool_release( pj_pool_t *pool )

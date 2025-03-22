@@ -52,8 +52,6 @@
 
 #define THIS_FILE   "sleep_test"
 
-extern pj_bool_t param_ci_mode;
-
 static int simple_sleep_test(void)
 {
     enum { COUNT = 10 };
@@ -92,7 +90,7 @@ static int simple_sleep_test(void)
 
 static int sleep_duration_test(void)
 {
-    const unsigned MAX_SLIP = param_ci_mode? 200 : 20;
+    const unsigned MAX_SLIP = test_app.param_ci_mode? 200 : 20;
     long duration[] = { 2000, 1000, 500, 200, 100 };
     unsigned i;
     unsigned avg_diff, max_diff;
