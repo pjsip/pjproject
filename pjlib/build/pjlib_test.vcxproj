@@ -789,6 +789,7 @@
     <ClCompile Include="..\src\pjlib-test\sock.c" />
     <ClCompile Include="..\src\pjlib-test\sock_perf.c" />
     <ClCompile Include="..\src\pjlib-test\ssl_sock.c" />
+    <ClCompile Include="..\src\pjlib-test\atomic_slist.c" />
     <ClCompile Include="..\src\pjlib-test\string.c" />
     <ClCompile Include="..\src\pjlib-test\test.c" />
     <ClCompile Include="..\src\pjlib-test\thread.c" />
