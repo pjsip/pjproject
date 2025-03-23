@@ -182,7 +182,7 @@ public class CallPageRenderer : VisualElementRenderer<CallView>, ISurfaceHolderC
                                        incomingView.Holder.Surface.Handle);
                 windHandle = winPtr.ToInt64();
             }
-            vidWH.handle.setWindow(windHandle);
+            vidWH.handle.window = (nint)windHandle;
             try
             {
                 SoftApp.currentCall.vidWin.setWindow(vidWH);

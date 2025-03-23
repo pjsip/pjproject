@@ -56,37 +56,37 @@
       Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCameraInfo2.java')" />
   </ItemGroup>
   <ItemGroup>
-    <AndroidLibrary Include="Platforms\Android\lib\armeabi-v7a\libc++_shared.so"
+    <AndroidNativeLibrary Include="Platforms\Android\lib\armeabi-v7a\libc++_shared.so"
       Condition="Exists('$(ProjectDir)Platforms\Android\lib\armeabi-v7a\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\armeabi-v7a\libpjsua2.so" Condition="Exists('Platforms\Android\lib\armeabi-v7a\libpjsua2.so')">
+    </AndroidNativeLibrary>
+    <AndroidNativeLibrary Include="Platforms\Android\lib\armeabi-v7a\libpjsua2.so" Condition="Exists('Platforms\Android\lib\armeabi-v7a\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\arm64-v8a\libc++_shared.so"
+    </AndroidNativeLibrary>
+    <AndroidNativeLibrary Include="Platforms\Android\lib\arm64-v8a\libc++_shared.so"
       Condition="Exists('Platforms\Android\lib\arm64-v8a\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\arm64-v8a\libpjsua2.so"
+    </AndroidNativeLibrary>
+    <AndroidNativeLibrary Include="Platforms\Android\lib\arm64-v8a\libpjsua2.so"
       Condition="Exists('Platforms\Android\lib\arm64-v8a\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\x86\libc++_shared.so"
+    </AndroidNativeLibrary>
+    <AndroidNativeLibrary Include="Platforms\Android\lib\x86\libc++_shared.so"
       Condition="Exists('Platforms\Android\lib\x86\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\x86\libpjsua2.so"
+    </AndroidNativeLibrary>
+    <AndroidNativeLibrary Include="Platforms\Android\lib\x86\libpjsua2.so"
       Condition="Exists('Platforms\Android\lib\x86\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\x86_64\libc++_shared.so"
+    </AndroidNativeLibrary>
+    <AndroidNativeLibrary Include="Platforms\Android\lib\x86_64\libc++_shared.so"
       Condition="Exists('Platforms\Android\lib\x86_64\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </AndroidLibrary>
-    <AndroidLibrary Include="Platforms\Android\lib\x86_64\libpjsua2.so"
+    </AndroidNativeLibrary>
+    <AndroidNativeLibrary Include="Platforms\Android\lib\x86_64\libpjsua2.so"
       Condition="Exists('Platforms\Android\lib\x86_64\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </AndroidLibrary>
+    </AndroidNativeLibrary>
   </ItemGroup>
 
   <ItemGroup>
@@ -94,7 +94,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
     <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.71" />
   </ItemGroup>
-  <ItemGroup Condition="(($(RuntimeIdentifier.StartsWith('iossimulator-arm64')))">
+  <ItemGroup Condition="($(RuntimeIdentifier.StartsWith('iossimulator-arm64')))">
     <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64/libpjsua2.a"
       Condition="Exists('$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64/libpjsua2.a')">
       <Kind>Static</Kind>
