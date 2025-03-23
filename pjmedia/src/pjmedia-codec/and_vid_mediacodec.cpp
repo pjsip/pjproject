@@ -1062,12 +1062,10 @@ static pj_status_t and_media_codec_open(pjmedia_vid_codec *codec,
         if (status != PJ_SUCCESS)
             return status;
     }
-    if (__builtin_available(android 28, *)) {
-        AMediaCodec_setAsyncNotifyCallback(and_media_data->enc, async_cb,
-                                           and_media_data);
-        AMediaCodec_setAsyncNotifyCallback(and_media_data->dec, async_cb,
-                                           and_media_data);
-    }
+    AMediaCodec_setAsyncNotifyCallback(and_media_data->enc, async_cb,
+                                       and_media_data);
+    AMediaCodec_setAsyncNotifyCallback(and_media_data->dec, async_cb,
+                                       and_media_data);
 
     and_media_data->whole = (param->packing == PJMEDIA_VID_PACKING_WHOLE);
     status = configure_encoder(and_media_data);
