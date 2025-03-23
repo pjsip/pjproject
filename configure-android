@@ -18,9 +18,8 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "Environment variables:"
   echo "  ANDROID_NDK_ROOT Specify the directory of Android NDK to use."
   echo "  APP_PLATFORM     Optionally specify the platform level used, e.g."
-  echo "                   android-9. By default, configure will use the :"
-  echo "                   - maximum platform level detected if ndk < r21"
-  echo "                   - minimum platform level detected if ndk >= r21"
+  echo "                   android-9. By default, configure will use the"
+  echo "                   maximum platform level detected."
   echo "  TARGET_ABI       Optionally specify a single target architecture,"
   echo "                   e.g. armeabi-v7a, arm64-v8a, mips, x86. By default, "
   echo "                   the target architecture is arm64-v8a."
@@ -37,7 +36,6 @@ if test "x${ANDROID_NDK_ROOT}" = "x" || test ! -e ${ANDROID_NDK_ROOT}; then
   echo "$F error: ANDROID_NDK_ROOT env var is not specified or invalid"
   exit 0
 fi
-ENABLE_WEAK_SYMBOLS="-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ -Werror=unguarded-availability"
 
 # The BRE version somehow does not work well on MacOSX
 #NDK_VER=`sed -n -e 's/.*Pkg.Revision *= *\([0-9]\+\).*/\1/p' ${ANDROID_NDK_ROOT}/source.properties`
@@ -46,8 +44,6 @@ NDK_VER=`sed -n -E 's/^Pkg.Revision *= *([0-9]+).*/\1/p' ${ANDROID_NDK_ROOT}/sou
 if test "x$APP_PLATFORM" = "x"; then
   if test -d ${ANDROID_NDK_ROOT}/platforms; then
     APP_PLATFORM=`ls ${ANDROID_NDK_ROOT}/platforms/ | sed 's/android-//' | sort -gr | head -1`
-  elif test -f ${ANDROID_NDK_ROOT}/meta/platforms.json; then
-    APP_PLATFORM=`cat ${ANDROID_NDK_ROOT}/meta/platforms.json  | jq -r ".min"`
   fi
   if test "x$APP_PLATFORM" != "x"; then
     APP_PLATFORM="android-${APP_PLATFORM}"
@@ -288,7 +284,7 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
   export CXX="${NDK_CXX}"
 
   export CPPFLAGS="${CPPFLAGS}"
-  export CFLAGS="${NDK_CFLAGS} ${CFLAGS} ${CPPFLAGS} ${ENABLE_WEAK_SYMBOLS}"
+  export CFLAGS="${NDK_CFLAGS} ${CFLAGS} ${CPPFLAGS}"
   export CXXFLAGS="${NDK_CXXFLAGS} ${CPPFLAGS}"
   export LDFLAGS="${NDK_LDFLAGS} ${LDFLAGS}"
   export LIBS="${LIBS}"
