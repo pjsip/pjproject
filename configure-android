@@ -18,8 +18,9 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "Environment variables:"
   echo "  ANDROID_NDK_ROOT Specify the directory of Android NDK to use."
   echo "  APP_PLATFORM     Optionally specify the platform level used, e.g."
-  echo "                   android-9. By default, configure will use the"
-  echo "                   maximum platform level detected."
+  echo "                   android-9. By default, configure will use the :"
+  echo "                   - maximum platform level detected if ndk < r21"
+  echo "                   - minimum platform level detected if ndk >= r21"
   echo "  TARGET_ABI       Optionally specify a single target architecture,"
   echo "                   e.g. armeabi-v7a, arm64-v8a, mips, x86. By default, "
   echo "                   the target architecture is arm64-v8a."
@@ -44,6 +45,8 @@ NDK_VER=`sed -n -E 's/^Pkg.Revision *= *([0-9]+).*/\1/p' ${ANDROID_NDK_ROOT}/sou
 if test "x$APP_PLATFORM" = "x"; then
   if test -d ${ANDROID_NDK_ROOT}/platforms; then
     APP_PLATFORM=`ls ${ANDROID_NDK_ROOT}/platforms/ | sed 's/android-//' | sort -gr | head -1`
+  elif test -f ${ANDROID_NDK_ROOT}/meta/platforms.json; then
+    APP_PLATFORM=`cat ${ANDROID_NDK_ROOT}/meta/platforms.json  | jq -r ".min"`
   fi
   if test "x$APP_PLATFORM" != "x"; then
     APP_PLATFORM="android-${APP_PLATFORM}"

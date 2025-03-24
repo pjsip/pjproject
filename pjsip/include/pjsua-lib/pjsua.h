@@ -7324,6 +7324,21 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 
 
 /**
+ * Specify the delay of video stream start in encoding direction, in
+ * millisecond. Delayed encoding start generally smoothens video stream
+ * initiation by reducing the risk of RTP packet loss in the receiver/decoder
+ * (e.g.: due to the receiver's media transport or stream being unready).
+ * Note that initial video RTP packets usually contain crucial information,
+ * such as video codec parameters and keyframes.
+ * 
+ * Default: 500ms
+ */
+#ifndef PJSUA_VIDEO_STREAM_DELAY_START_ENCODE
+#   define PJSUA_VIDEO_STREAM_DELAY_START_ENCODE   500
+#endif
+
+
+/**
  * This structure describes media configuration, which will be specified
  * when calling #pjsua_init(). Application MUST initialize this structure
  * by calling #pjsua_media_config_default().

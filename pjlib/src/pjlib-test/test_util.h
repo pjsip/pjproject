@@ -63,9 +63,9 @@ PJ_INLINE(void) ut_app_init0(ut_app_t *ut_app)
 }
 
 /* Call this in test.c before adding test cases */
-PJ_INLINE(pj_status_t) ut_app_init1(ut_app_t *ut_app, pj_pool_factory *mem)
+PJ_INLINE(pj_status_t) ut_app_init1(ut_app_t *ut_app, pj_pool_factory *mem_)
 {
-    ut_app->pool = pj_pool_create(mem, THIS_FILE, 4000, 4000, NULL);
+    ut_app->pool = pj_pool_create(mem_, THIS_FILE, 4000, 4000, NULL);
     PJ_TEST_NOT_NULL(ut_app->pool, NULL, return PJ_ENOMEM);
     pj_test_suite_init(&ut_app->suite);
     return PJ_SUCCESS;
