@@ -37,6 +37,7 @@ if test "x${ANDROID_NDK_ROOT}" = "x" || test ! -e ${ANDROID_NDK_ROOT}; then
   echo "$F error: ANDROID_NDK_ROOT env var is not specified or invalid"
   exit 0
 fi
+ENABLE_WEAK_SYMBOLS="-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ -Werror=unguarded-availability"
 
 # The BRE version somehow does not work well on MacOSX
 #NDK_VER=`sed -n -e 's/.*Pkg.Revision *= *\([0-9]\+\).*/\1/p' ${ANDROID_NDK_ROOT}/source.properties`
@@ -287,7 +288,7 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
   export CXX="${NDK_CXX}"
 
   export CPPFLAGS="${CPPFLAGS}"
-  export CFLAGS="${NDK_CFLAGS} ${CFLAGS} ${CPPFLAGS}"
+  export CFLAGS="${NDK_CFLAGS} ${CFLAGS} ${CPPFLAGS} ${ENABLE_WEAK_SYMBOLS}"
   export CXXFLAGS="${NDK_CXXFLAGS} ${CPPFLAGS}"
   export LDFLAGS="${NDK_LDFLAGS} ${LDFLAGS}"
   export LIBS="${LIBS}"
