@@ -171,6 +171,8 @@ extern pj_bool_t            app_running;
 
 int my_atoi(const char *cs);
 int my_atoi2(const pj_str_t *s);
+int my_hex_string_to_octet_array(const char *hex, int len, char octet[]);
+void my_octet_array_to_hex_string(const char octet[], int len, char hex[]);
 pj_bool_t find_next_call(void);
 pj_bool_t find_prev_call(void);
 void send_request(char *cstr_method, const pj_str_t *dst_uri);
