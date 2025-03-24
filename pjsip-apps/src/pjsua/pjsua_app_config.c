@@ -55,6 +55,12 @@ static void usage(void)
     puts  ("  --realm=string      Set realm");
     puts  ("  --username=string   Set authentication username");
     puts  ("  --password=string   Set authentication password");
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+    puts  ("  --aka-op=hex        Set OP value to use in Digest AKA authentication");
+    puts  ("  --aka-amf=hex       Set AMF value to use in Digest AKA authentication");
+#endif
+
     puts  ("  --contact=url       Optionally override the Contact information");
     puts  ("  --contact-params=S  Append the specified parameters S in Contact header");
     puts  ("  --contact-uri-params=S  Append the specified parameters S in Contact URI");
@@ -367,7 +373,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY,
            OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
            OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
-           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
+           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD, OPT_AKA_OP, OPT_AKA_AMF,
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
            OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
@@ -446,6 +452,10 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "realm",      1, 0, OPT_REALM},
         { "username",   1, 0, OPT_USERNAME},
         { "password",   1, 0, OPT_PASSWORD},
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        { "aka-op",   1, 0, OPT_AKA_OP},
+        { "aka-amf",   1, 0, OPT_AKA_AMF},
+#endif
         { "rereg-delay",1, 0, OPT_REG_RETRY_INTERVAL},
         { "reg-use-proxy", 1, 0, OPT_REG_USE_PROXY},
         { "nameserver", 1, 0, OPT_NAMESERVER},
@@ -908,6 +918,44 @@ static pj_status_t parse_args(int argc, char *argv[],
             cur_acc->cred_info[cur_acc->cred_count].data_type |= PJSIP_CRED_DATA_EXT_AKA;
             cur_acc->cred_info[cur_acc->cred_count].ext.aka.k = pj_str(pj_optarg);
             cur_acc->cred_info[cur_acc->cred_count].ext.aka.cb = &pjsip_auth_create_aka_response;
+            break;
+
+        case OPT_AKA_OP:    /* aka op */
+            {
+                pj_str_t hex = pj_str(pj_optarg);
+                pj_str_t *aka_op = &cur_acc->cred_info[cur_acc->cred_count].ext.aka.op;
+                if (hex.slen/2 <= PJSIP_AKA_OPLEN) {
+                    char* oct = pj_pool_alloc(cfg->pool, hex.slen/2);
+                    int len;
+                    len = my_hex_string_to_octet_array(hex.ptr, hex.slen, oct);
+                    if (len == hex.slen)
+                        pj_strset(aka_op, oct, len/2);
+                }
+                if (aka_op->slen != hex.slen/2) {
+                    PJ_LOG(1,(THIS_FILE, "Error: invalid --aka-op value '%s'",
+                              pj_optarg));
+                    return PJ_EINVAL;
+                }
+            }
+            break;
+
+        case OPT_AKA_AMF:   /* aka amf */
+            {
+                pj_str_t hex = pj_str(pj_optarg);
+                pj_str_t *aka_amf = &cur_acc->cred_info[cur_acc->cred_count].ext.aka.amf;
+                if (hex.slen/2 <= PJSIP_AKA_AMFLEN) {
+                    char* oct = pj_pool_alloc(cfg->pool, hex.slen/2);
+                    int len;
+                    len = my_hex_string_to_octet_array(hex.ptr, hex.slen, oct);
+                    if (len == hex.slen)
+                        pj_strset(aka_amf, oct, len/2);
+                }
+                if (aka_amf->slen != hex.slen/2) {
+                    PJ_LOG(1,(THIS_FILE, "Error: invalid --aka-amf value '%s'",
+                              pj_optarg));
+                    return PJ_EINVAL;
+                }
+            }
 #endif
             break;
 
@@ -1812,6 +1860,30 @@ static void write_account_settings(int acc_index, pj_str_t *result)
                                   acc_cfg->cred_info[i].data.ptr);
             pj_strcat2(result, line);
         }
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        if (acc_cfg->cred_info[i].ext.aka.op.slen) {
+            char hex[PJSIP_AKA_OPLEN * 2];
+            pj_str_t *aka_op = &acc_cfg->cred_info[i].ext.aka.op;
+            pj_assert(aka_op->slen <= PJSIP_AKA_OPLEN);
+            my_octet_array_to_hex_string(aka_op->ptr, aka_op->slen, hex);
+            
+            pj_ansi_snprintf(line, sizeof(line), "--aka-op %.*s\n",
+                                  (int)aka_op->slen*2, hex);
+            pj_strcat2(result, line);
+        }
+
+        if (acc_cfg->cred_info[i].ext.aka.amf.slen) {
+            char hex[PJSIP_AKA_AMFLEN * 2];
+            pj_str_t *aka_amf = &acc_cfg->cred_info[i].ext.aka.amf;
+            pj_assert(aka_amf->slen <= PJSIP_AKA_AMFLEN);
+            my_octet_array_to_hex_string(aka_amf->ptr, aka_amf->slen, hex);
+            
+            pj_ansi_snprintf(line, sizeof(line), "--aka-amf %.*s\n",
+                                  (int)aka_amf->slen*2, hex);
+            pj_strcat2(result, line);
+        }
+#endif
 
         if (i != acc_cfg->cred_count - 1)
             pj_strcat2(result, "--next-cred\n");
