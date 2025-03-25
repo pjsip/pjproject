@@ -9,7 +9,7 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo ""
   echo "where:"
   echo "  --use-ndk-cflags Optional parameter to use the same compilation flags"
-  echo "              	   as the one used by ndk-build. Android NDK r9 or later"   
+  echo "              	   as the one used by ndk-build. Android NDK r9 or later"
   echo "                   is required when using this option."
   echo "  OPTIONS     	   Other options that will be passed directly to"
   echo "                   ./aconfigure script. Run ./aconfigure --help"
@@ -20,7 +20,7 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "  APP_PLATFORM     Optionally specify the platform level used, e.g."
   echo "                   android-9. By default, configure will use the :"
   echo "                   - maximum platform level detected if ndk < r21"
-  echo "                   - minimum platform level detected if ndk >= r21"
+  echo "                   - android-28 if ndk >= r21"
   echo "  TARGET_ABI       Optionally specify a single target architecture,"
   echo "                   e.g. armeabi-v7a, arm64-v8a, mips, x86. By default, "
   echo "                   the target architecture is arm64-v8a."
@@ -47,7 +47,7 @@ if test "x$APP_PLATFORM" = "x"; then
   if test -d ${ANDROID_NDK_ROOT}/platforms; then
     APP_PLATFORM=`ls ${ANDROID_NDK_ROOT}/platforms/ | sed 's/android-//' | sort -gr | head -1`
   elif test -f ${ANDROID_NDK_ROOT}/meta/platforms.json; then
-    APP_PLATFORM=`cat ${ANDROID_NDK_ROOT}/meta/platforms.json  | jq -r ".min"`
+    APP_PLATFORM=`cat ${ANDROID_NDK_ROOT}/meta/platforms.json  | jq -r '.aliases."P"'`
   fi
   if test "x$APP_PLATFORM" != "x"; then
     APP_PLATFORM="android-${APP_PLATFORM}"
@@ -62,7 +62,7 @@ if test "x$TARGET_ABI" = "x"; then
   echo "$F: TARGET_ABI not specified, using ${TARGET_ABI}"
 fi
 
-if test "$TARGET_ABI" = "x86_64" || test "$TARGET_ABI" = "mips64"; then       
+if test "$TARGET_ABI" = "x86_64" || test "$TARGET_ABI" = "mips64"; then
     USR_LIB="/usr/lib64"
 else
     USR_LIB="/usr/lib"
@@ -85,10 +85,10 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
   if test "x${IGNORE_CPPFLAGS}" = "x"; then
     IGNORE_CPPFLAGS="\-M\|\-f*stack\|\-f*alias\|\-\<g\>\|\-DNDEBUG\|\-O\|\-std\="
   fi
-  
-  if test -f ${ANDROID_NDK_ROOT}/build/ndk-build; then    
+
+  if test -f ${ANDROID_NDK_ROOT}/build/ndk-build; then
     NDK_BUILD=${ANDROID_NDK_ROOT}/build/ndk-build
-  else 
+  else
     NDK_BUILD=${ANDROID_NDK_ROOT}/ndk-build
   fi
 
@@ -146,7 +146,7 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
       if test "x`echo $i|grep ${IGNORE_CFLAGS}`" = "x"; then
           if test "${ADD_NDK_TOOLCHAIN}" = "0" -a "x`echo $i|grep '\-gcc-toolchain'`" != "x"; then
             ADD_NDK_TOOLCHAIN="1"
-          elif test "${ADD_NDK_TARGET}" = "0" -a "x`echo $i|grep '\-target'`" != "x"; then          
+          elif test "${ADD_NDK_TARGET}" = "0" -a "x`echo $i|grep '\-target'`" != "x"; then
             ADD_NDK_TARGET="1"
           elif test "${ADD_NDK_TOOLCHAIN}" = "1"; then
             NDK_TOOLCHAIN="$i"
@@ -239,7 +239,7 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
 
   # Get target host from NDK toolchain dir name
   TARGET_HOST=`echo ${NDK_CC} | sed -e 's/.*\/toolchains\/\([^\/]*\).*/\1/'`
-  
+
   # Remove version number suffix (otherwise config.sub will return error, perhaps it just doesn't like the format)
   TARGET_HOST=`echo ${TARGET_HOST} | sed -e 's/\-[0-9\.]*$//'`
 
@@ -299,9 +299,9 @@ else
     echo "$F error: For targets other than 'armeabi', specify --use-ndk-cflags"
     exit 1
   fi
-  
+
   TARGET_HOST="arm-linux-androideabi"
-  
+
   ANDROID_TC_VER=`ls -d ${ANDROID_NDK_ROOT}/toolchains/${TARGET_HOST}-* | sed 's/clang/0/' | sort -gr | head -1`
   ANDROID_TC=`ls -d ${ANDROID_TC_VER}/prebuilt/* | grep -v gdbserver | head -1`
   if test ! -d ${ANDROID_TC}; then
