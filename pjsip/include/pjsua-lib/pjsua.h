@@ -1394,6 +1394,9 @@ typedef struct pjsua_callback
      * Notify application upon incoming text data from the text stream.
      * Note that the received text can be empty.
      *
+     * IMPORTANT: Application shall refrain from invoking call APIs from
+     * within the callback, such as call re-invite or hangup.
+     *
      * @param call_id   The call index.
      * @param data      The text data.
      */

@@ -136,6 +136,8 @@ PJ_DEF(pj_status_t) pjmedia_txt_stream_destroy( pjmedia_txt_stream *stream )
 
     PJ_LOG(4,(c_strm->port.info.name.ptr, "Stream destroying"));
 
+    stream->cb = NULL;
+
     if (stream->clock)
         pjmedia_clock_stop(stream->clock);
 

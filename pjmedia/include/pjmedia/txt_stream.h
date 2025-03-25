@@ -181,6 +181,9 @@ PJ_DECL(pj_status_t) pjmedia_txt_stream_start(pjmedia_txt_stream *stream);
 /**
  * Set callback to be called upon receiving text data.
  *
+ * IMPORTANT: Application shall not destroy the text stream from within
+ * the callback.
+ *
  * @param stream        The text stream.
  * @param cb            Callback to be called upon receiving text data.
  *                      See #pjmedia_txt_stream_data.

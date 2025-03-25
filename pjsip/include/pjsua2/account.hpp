@@ -1314,6 +1314,59 @@ public:
 };
 
 /**
+ * Account text config. This will be specified in AccountConfig.
+ */
+struct AccountTextConfig : public PersistentObject
+{
+    /**
+     * Specifies text stream redundancy level, as specified in RFC 4103
+     * and 2198. When redundancy is enabled, each packet transmission
+     * will contain the current text data as well as a number of the
+     * previously transmitted text data to provide levels of redundancy.
+     * This mechanism offers protection against loss of data at the cost
+     * of additional bandwidth required.
+     *
+     * Value is integer indicating redundancy levels, i.e. the number
+     * of previous text data to be included with the current packet.
+     * (0 means disabled/no redundancy).
+     * A value of 1 provides an adequate protection against an average
+     * packet loss of up to 50%, while 2 can potentially protect
+     * against 66.7%.
+     * The maximum value is determined by PJMEDIA_TXT_STREAM_MAX_RED_LEVELS.
+     *
+     * Note that the redundancy level actually used is subject to remote
+     * capability and we will opt to use the lower redundancy value based
+     * on the result of SDP negotiation.
+     *
+     * Default: PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL (2), as per the
+     * recommendation of RFC 4103.
+     */
+    int              redundancyLevel;
+
+public:
+    /**
+     * Default constructor
+     */
+    AccountTextConfig()
+    : redundancyLevel(PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL)
+    {}
+
+    /**
+     * Read this object from a container node.
+     *
+     * @param node              Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node              Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
+};
+
+/**
  * Account config specific to IP address change.
  */
 typedef struct AccountIpChangeConfig
@@ -1440,6 +1493,11 @@ struct AccountConfig : public PersistentObject
      * Video settings.
      */
     AccountVideoConfig  videoConfig;
+
+    /**
+     * Text settings.
+     */
+    AccountTextConfig   textConfig;
 
     /**
      * IP Change settings.
