@@ -2347,3 +2347,2410 @@ static void stereo_demo()
     pj_assert(status == PJ_SUCCESS);
 }
 #endif
+
+/*****************************************************************************
+ * Media port
+ */
+
+/** Media port identification */
+typedef int pjsua_mport_id;
+
+/**
+ * Size of internal media port record buffer (in ms)
+ */
+#ifndef PJSUA_MPORT_RECORD_BUFFER_SIZE
+#   define PJSUA_MPORT_RECORD_BUFFER_SIZE	1250
+#endif
+
+
+/**
+ * Size of internal media port replay buffer (in ms)
+ */
+#ifndef PJSUA_MPORT_REPLAY_BUFFER_SIZE
+#   define PJSUA_MPORT_REPLAY_BUFFER_SIZE	1250
+#endif
+
+/*****************************************************************************
+* 
+* 
+* 
+*
+ * Low-level media/audio port/channel API (similar to memory players and recorders).
+ */
+
+/**
+ * Create/allocate a media port, and automatically add this port to
+ * the conference bridge so that its connectivity can be controlled
+ * and play, record and/or conferencing operations can be initiated
+ * as necessary.
+ *
+ * @param dir					Media port's direction.
+ * @param enable_vad			Set to true to enable VAD features during record.
+ * @param record_buffer_size	Desired size of internal record buffer (in ms).
+ *								If 0, the default value in mport_record_buffer_size
+ *								will be used instead.
+ * @param record_data_threshold	Threshold, in ms, that should be used to signal
+ *								the record event so that the application can collect
+ *								the recorded data. The record event will signaled
+ *								whilst the available/free space in the record buffer
+ *								is below this threshold. If 0, the default value of
+ *								250 will be used;
+ * @param play_buffer_size		Desired size of internal play buffer (in ms).
+ *								If 0, the default value in mport_replay_buffer_size
+ *								will be used instead.
+ * @param play_data_threshold	Threshold, in ms, that should be used to signal
+ *								the play event so that the application can supply
+ *								additional data. The play event will signaled
+ *								whilst the available/unplayed data in the play buffer
+ *								is below this threshold. If 0, the default value of
+ *								250 will be used;
+ * @param p_id					Pointer to receive media port ID.
+ *
+ * @return						PJ_SUCCESS on success, or the appropriate error
+ *								code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_alloc(pjmedia_dir dir,
+									   pj_bool_t enable_vad,
+									   pj_size_t record_buffer_size,
+									   pj_size_t record_data_threshold,
+									   pj_size_t play_buffer_size,
+									   pj_size_t play_data_threshold,
+									   pjsua_mport_id *p_id);
+
+
+/**
+ * Destroy/free media port, remove it from the bridge, and free
+ * associated resources.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_free(pjsua_mport_id id);
+
+/**
+ * Get conference port ID associated with media port.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			Conference port ID associated with this media port.
+ */
+PJ_DECL(pjsua_conf_port_id) pjsua_mport_get_conf_port(pjsua_mport_id id);
+
+/**
+ * Get the underlying pjmedia_port for the media port.
+ *
+ * @param id		The media port ID.
+ * @param p_port	The media port associated with the player.
+ *
+ * @return			PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_get_port(pjsua_mport_id id,
+										  pjmedia_port **p_port);
+
+/**
+ * Get the media port's direction.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			Direction.
+ */
+PJ_DECL(pjmedia_dir) pjsua_mport_get_dir(pjsua_mport_id id);
+
+/**
+ * Get media port's replay event object. The returned event object is
+ * valid only until pjsua_mport_free() is invoked and must therefore
+ * not be accessed after that point.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			Event object that is signaled when the status of the
+ *					replay operation changes indicating that the
+ *					application should invoke pjsua_mport_play_status().
+ */
+PJ_DECL(pj_event_t *) pjsua_mport_get_play_event(pjsua_mport_id id);
+
+/**
+ * Get media port's record event object. The returned event object is
+ * valid only until pjsua_mport_free() is invoked and must therefore
+ * not be accessed after that point.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			Event object that is signaled when the status of the
+ *					record operation changes indicating that the
+ *					application should invoke pjsua_mport_record_status().
+ */
+PJ_DECL(pj_event_t *) pjsua_mport_get_record_event(pjsua_mport_id id);
+
+/**
+ * Get media port's recognition event object. The returned event object
+ * is valid only until pjsua_mport_free() is invoked and must therefore
+ * not be accessed after that point.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			Event object that is signaled when a recognition
+ *					event is available for collection via
+ *					pjsua_mport_get_recognised().
+ */
+PJ_DECL(pj_event_t *) pjsua_mport_get_recognition_event(pjsua_mport_id id);
+
+/**
+ * Initiate a replay operation. If successful, the replay will continue
+ * until pjsua_mport_play_status() returns with the 'completed' flag set
+ * after all the supplied data is played. Additional data can be periodically
+ * supplied by invoking pjsua_mport_play_put_data() once the play event is
+ * signaled.
+ *
+ * @param id		The media port ID.
+ * @param fmt		Format/ecoding details for the replay data.
+ * @param data		Optional address of initial block of data that should be
+ *					replayed.
+ * @param size		Number of bytes/octets of replay data provided in the
+ *					initial block.
+ * @param count		Address of count that will receive the number of bytes
+ *					of replay data that were copied from the supplied initial
+ *					data block to the internal replay buffer.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_play_start(pjsua_mport_id id,
+											const pjmedia_format *fmt,
+											const void *data,
+											pj_size_t size,
+											pj_size_t *count);
+
+/**
+ * Status information about the play operation.
+ */
+typedef struct pjsua_mport_play_info
+{
+	/**
+	 * Number of samples actually played thus far.
+	 */
+	pj_uint64_t	samples_played;
+
+	/**
+	 * Flag which is set to true if the replay has completed.
+	 */
+	pj_bool_t	completed;
+
+	/**
+	 * Flag which is set to true if an underrun has occurred
+	 * since the last invokation of pjsua_mport_play_status().
+	 */
+	pj_bool_t	underrun;
+
+	/**
+	 * Space, in samples, available in the internal buffer
+	 * for new replay data.
+	 */
+	pj_uint32_t		free_buffer_size;
+
+} pjs_mport_play_info;
+
+/**
+ * Get status info about the current play operation.
+ *
+ * @param id		The media port ID.
+ * @param info		The status.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_play_status(pjsua_mport_id id,
+											 pjs_mport_play_info *info);
+
+/**
+ * Supply the next chunk of data to be replayed. If no data is supplied,
+ * then this taken as an idication that no more data is available and
+ * that the replay should complete when the already buffered data is
+ * replayed.
+ *
+ * @param id		The media port ID.
+ * @param data		Address of next block of data that should be replayed.
+ * @param size		Number of bytes/octets of replay data provided in the
+ *					data block.
+ * @param count		Address of count that will receive the number of bytes
+ *					of replay data that were copied from the supplied data
+ *					block to the internal replay buffer.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_play_put_data(pjsua_mport_id id,
+	const void *data,
+	pj_size_t size,
+	pj_size_t *count);
+
+/**
+ * Stop/abort the current play operation.
+ *
+ * @param id		The file player ID.
+ * @param discard	Flag which should be set to discard any unplayed data
+ *					in the internal replay buffer (i.e., stop immediately).
+ *					If not set, the replay operation will continue until
+ *					all the already internally buffered data is played.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_play_stop(pjsua_mport_id id, pj_bool_t discard);
+
+
+/**
+ * Initiate a record operation. If successful, the record will continue
+ * until pjsua_mport_record_status() returns with the 'completed' flag
+ * set after a completion condition has been met. The recorded data can be
+ * retreived periodically (when the record event is signaled) by invoking
+ * pjsua_mport_record_get_data().
+ *
+ * @param id				The media port ID.
+ * @param fmt				Format/ecoding details for the recorded data.
+ * @param rec_output		Flag which should be set to PJ_TRUE if the
+ *							port's output (player or transmit direction)
+ *							should be recorded. Otherwise, the port's input
+ *							will be recorded.
+ * @param max_duration		Maximum duration, in ms, for the recording. 0
+ *							if no limit.
+ * @param max_samples		Maximum number of samples to record. 0 if no
+ *							limit.
+ * @param max_silence		Max period of silence, in ms, before the
+ *							recording is terminated. 0 if no limit.
+ *@param eliminate_silence	The maximum duration, in ms, of silence to
+ *							record. Silences longer than this are truncated
+ *							to this length. 0 disables silence elimination.
+ *
+ * @return					PJ_SUCCESS on success, or the appropriate error
+ *							code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_record_start(pjsua_mport_id id,
+	const pjmedia_format *fmt,
+	pj_bool_t rec_output,
+	pj_size_t max_duration,
+	pj_size_t max_samples,
+	pj_size_t max_silence,
+	pj_size_t eliminate_silence);
+
+/**
+* Status information about the record operation.
+*/
+typedef enum pjsua_record_end_reason
+{
+	PJSUA_REC_ER_NONE,
+	PJSUA_REC_ER_MAX_SAMPLES,
+	PJSUA_REC_ER_MAX_DURATION,
+	PJSUA_REC_ER_MAX_SILENCE,
+	PJSUA_REC_ER_STOP
+} pjs_record_end_reason;
+typedef struct pjsua_mport_record_info
+{
+	/**
+	 * Total number of samples actually recorded thus far.
+	 */
+	pj_uint64_t	samples_recorded;
+
+	/**
+	 * Flag which is set to true if the record has completed.
+	 */
+	pj_bool_t	completed;
+
+	/**
+	 * Identifies the reason the recording was completed.
+	 */
+	pjs_record_end_reason end_reason;
+
+	/**
+	 * Flag which is set to true if an overrun has occurred
+	 * since the last invokation of pjsua_mport_record_status().
+	 */
+	pj_bool_t	overrun;
+
+	/**
+	 * Number of samples available for immediate retreival from
+	 * the internal record buffer.
+	 */
+	pj_uint32_t		samples_available;
+
+} pjs_mport_record_info;
+
+/**
+ * Get the status of the current record operation.
+ *
+ * @param id		The media port ID.
+ * @param info		The info.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_record_status(pjsua_mport_id id,
+	pjs_mport_record_info *info);
+
+/**
+ * Get the next chunk of data that was recorded.
+ *
+ * @param id		The media port ID.
+ * @param data		Address of buffer that should receive the data.
+ * @param size		Size of data buffer in bytes.
+ * @param count		Address of count that will receive the number of bytes
+ *					of record data that were copied to the supplied buffer.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_record_get_data(pjsua_mport_id id,
+	void *data,
+	pj_size_t size,
+	pj_size_t *count);
+
+/**
+ * Stop/abort the current record operation.
+ *
+ * @param id		The media port ID.
+ * @param discard	Flag which should be set to discard any uncollected
+ *					data in the internal record buffer.
+ *					The media port will continue to be 'reserved' for
+ *					recording purposes until pjsua_mport_record_status()
+ *					returns with the 'completed' flag set.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_record_stop(pjsua_mport_id id, pj_bool_t discard);
+
+
+/**
+ * Initiate a conference operation. If successful, the port's output will
+ * contain the mixed result of the inputs of all the conference's
+ * participants. A play operation can not be active at the same time as
+ * a conference on the same port/channel. The conference will continue
+ * until #pjsua_mport_conf_stop() is invoked. Participants can be added
+ * and removed using #pjsua_mport_conf_add() and
+ * #pjsua_mport_conf_remove() respectively.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_conf_start(pjsua_mport_id id);
+
+/**
+ * Add new participant to the conference on the media port.
+ *
+ * @param id		The media port ID.
+ * @param pid		The media port ID of the participant to add.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_conf_add(pjsua_mport_id id, pjsua_mport_id pid);
+
+/**
+ * Remove participant from the conference on the media port.
+ *
+ * @param id		The media port ID.
+ * @param pid		The media port ID of the participant to remove.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_conf_remove(pjsua_mport_id id, pjsua_mport_id pid);
+
+/**
+ * Stop conference operation.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_conf_stop(pjsua_mport_id id);
+
+
+/**
+* Recognition event types
+*/
+typedef enum pjsua_recognition_type
+{
+	PJSUA_RCG_NONE = 0
+	,PJSUA_RCG_DTMF_RFC2833 = 1
+	,PJSUA_RCG_DTMF_TONE = 2
+	,PJSUA_RCG_DTMF = (PJSUA_RCG_DTMF_RFC2833 | PJSUA_RCG_DTMF_TONE)
+	//,PJSUA_RCG_GRUNT = 4
+	//,PJSUA_RCG_CALL_PROGRESS_TONE = 8
+	//,PJSUA_RCG_TONE = 16
+	//,PJSUA_RCG_LIVE_SPEAKER = 32
+} pjs_recognition_type;
+
+typedef struct pjsua_listen_for_parms {
+	/**
+	 * Bitmask of the detector types that should be activated or
+	 * PJSUA_RCG_NONE to disable all detectors.
+	 *
+	 * PJSUA_RCG_DTMF_RFC2833 does not represent a detector that can
+	 * be activated on the audio stream, however, it allows the
+	 * application's #on_dtmf_digit() callback handler to use the
+	 * same consistent event delivery mechanism for RFC2833 received
+	 * DTMF digits as those received directly as inband tones from
+	 * peers that do not support RFC2833. RFC2833 digits can be
+	 * queued by the application by invoking
+	 * #pjsua_mport_add_rfc2833_dtmf_digit(). If desired,
+	 * PJSUA_RCG_DTMF_TONE can be added to detect inband tones. If
+	 * both RFC2833 and tone based DTMF tone detectors are activated
+	 * (i.e., PJSUA_RCG_DTMF), then the first event queued of either
+	 * type will automatically deactivate the other detector to
+	 * prevent the potential of digit duplication.
+	 *
+	 * PJSUA_RCG_GRUNT activates a grunt detector that generates an
+	 * event whenever the silence state of the audio stream changes
+	 * based on an adaptive noise threshold algorithm.
+	 */
+	unsigned	types;
+
+	//int		grunt_latency;
+	//double	min_noise_level;
+	//double	grunt_threshold;
+} pjs_listen_for_parms;
+
+/**
+ * Start or stop one or more of a series of detectors that can be
+ * activated on a media port. Once a detector is activated, detection
+ * events can be retreived by invoking #pjsua_mport_get_recognised()
+ * after the recognition event, which can be retreived by invoking
+ * #pjsua_mport_get_recognition_event(), is signaled.
+ *
+ * @param id		The media port ID.
+ * @param params	Details of detectors to be activated or NULL to
+ *					disable all detectors.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_mport_listen_for(pjsua_mport_id id, pjs_listen_for_parms* params);
+
+typedef struct pjsua_recognition_info {
+	pjs_recognition_type	type;
+	unsigned				timestamp;
+	unsigned				param0;
+	unsigned				param1;
+} pjs_recognition_info;
+
+/**
+ * Get the next available detection event.
+ *
+ * @param id		The media port ID.
+ * @param info		Details of detected event.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+
+PJ_DECL(pj_status_t) pjsua_mport_get_recognised(pjsua_mport_id id, pjs_recognition_info* info);
+
+/**
+ * Discard any recognition events currently queued in the internal buffer.
+ *
+ * @param id		The media port ID.
+ *
+ * @return			PJ_SUCCESS on success, or the appropriate error code.
+ */
+
+PJ_DECL(pj_status_t) pjsua_mport_discard_recognised(pjsua_mport_id id);
+
+/**
+ * Add a RFC2833 DTMF digit to the internal recognition event queue.
+ *
+ * @param id		The media port ID.
+ * @param digit		The actual digit.
+ * @param timestamp	The RTP timestamp associated with the digit.
+ * @param duration	The duration, in ms, of the digit.
+ *
+ * @return			PJ_SUCCESS on success PJ_EIGNORED if the port is
+ *					not currently listening for RFC2833 digits, or
+ *					the appropriate error code.
+ */
+
+PJ_DECL(pj_status_t) pjsua_mport_add_rfc2833_dtmf_digit(pjsua_mport_id id, char digit, unsigned timestamp, unsigned duration);
+
+
+/**
+ * Media port data.
+ */
+typedef enum pjsua_record_status
+{
+	PJSUA_REC_IDLE,
+	PJSUA_REC_RUNNING,
+	PJSUA_REC_STOPPING
+} pjsua_record_status;
+typedef struct pjsua_mport_record_data
+{
+	pjsua_record_status				status;
+	pjmedia_format_id				fmt_id;
+	pj_size_t						max_samples;
+	pj_size_t						max_duration;
+	pj_size_t						max_silence;
+	pj_size_t						eliminate_silence;
+	pj_uint64_t						samples_seen;
+	pj_uint64_t						samples_recorded;
+	pj_timestamp					vad_timestamp;
+	pjmedia_silence_det				*vad;
+	pjmedia_circ_buf				*buffer;
+	pj_event_t						*event;
+	pj_size_t						buffer_size;
+	pj_size_t						threshold;
+	pj_bool_t						signaled;
+	pj_bool_t						overrun;
+	pj_bool_t						is_silence;
+	pj_bool_t						rec_output;
+	pjs_record_end_reason			er;
+} pjsua_mport_record_data;
+typedef struct pjsua_mport_recognition_data
+{
+	pj_event_t						*event;
+	pj_uint32_t						event_cnt;
+	pjs_listen_for_parms			params;
+	pjs_recognition_info			events[32];
+	pj_bool_t						signaled;
+	pj_bool_t						overrun;
+} pjsua_mport_recognition_data;
+typedef enum pjsua_replay_status
+{
+	PJSUA_REP_IDLE,
+	PJSUA_REP_RUNNING,
+	PJSUA_REP_STOPPING,
+	PJSUA_REP_CONFERENCING
+} pjsua_replay_status;
+typedef struct pjsua_mport_replay_data
+{
+	pjsua_replay_status				status;
+	pjmedia_format_id				fmt_id;
+	pj_uint64_t						samples_played;
+	pj_timestamp					timestamp;
+	pjmedia_circ_buf				*buffer;
+	pj_event_t						*event;
+	pj_size_t						buffer_size;
+	pj_size_t						threshold;
+	pj_bool_t						signaled;
+	pj_bool_t						underrun;
+} pjsua_mport_replay_data;
+typedef struct pjsua_mport_data
+{
+	pjmedia_port					base;
+	pj_pool_t						*pool;
+	pjsua_conf_port_id				slot;
+	pj_uint32_t						participant_cnt;
+	pjsua_mport_id					*participants;
+	pj_uint32_t						listener_cnt;
+	pjsua_mport_id					*listeners;
+	pj_uint32_t						mix_cnt;
+	int								mix_adj;
+	int								last_mix_adj;
+	pj_int32_t						*mix_buf;
+	pjsua_mport_record_data			record_data;
+	pjsua_mport_replay_data			play_data;
+	pjsua_mport_recognition_data	recogntion_data;
+} pjsua_mport_data;
+
+typedef struct pjsua_conf_setting
+{
+    unsigned    channel_count;
+    unsigned    samples_per_frame;
+    unsigned    bits_per_sample;
+} pjsua_conf_setting;
+
+// TODO: implement your own lock
+#define PJSUA_LOCK()
+#define PJSUA_UNLOCK()
+
+struct {
+    pjsua_media_config   media_cfg; /**< Media config.                  */
+    pjsua_conf_setting   mconf_cfg; /**< Additionan conf. bridge. param */
+    pjmedia_conf        *mconf;     /**< Conference bridge.             */
+
+    /* Media ports/channels */
+    unsigned			mport_cnt;	/**< Number of media channels.	*/
+	pjsua_mport_id		mport_id;	/**< Id of last media port that was allocated */
+	pjsua_mport_data	*mport;		/**< Array of media channels.*/
+} pjsua_var;
+
+#define SIGNATURE	PJMEDIA_SIG_CLASS_PORT_AUD('A','P')
+
+#define NORMAL_LEVEL		128
+
+ /* These are settings to control the adaptivity of changes in the
+ * signal level of the ports, so that sudden change in signal level
+ * in the port does not cause misaligned signal (which causes noise).
+ */
+#define ATTACK_A			(pjsua_var.media_cfg.clock_rate / pjsua_var.mconf_cfg.samples_per_frame)
+#define ATTACK_B			1
+#define DECAY_A				0
+#define DECAY_B				1
+
+#define SIMPLE_AGC(last, target) \
+	if (target >= last) \
+		target = (ATTACK_A*(last+1)+ATTACK_B*target)/(ATTACK_A+ATTACK_B); \
+	else \
+		target = (DECAY_A*last+DECAY_B*target)/(DECAY_A+DECAY_B)
+
+#define MAX_LEVEL			(32767)
+#define MIN_LEVEL			(-32768)
+
+#define IS_OVERFLOW(s)		(((s) > MAX_LEVEL) || ((s) < MIN_LEVEL))
+
+
+static void mport_rec_frame(pjsua_mport_data *data, pjmedia_frame *frame)
+{
+	pj_size_t size, avl, count;
+	pj_bool_t is_silence = PJ_FALSE;
+	pj_size_t silence_samples = 0;
+	pj_int16_t *buf = (pj_int16_t *)frame->buf;
+
+	if (data->record_data.status != PJSUA_REC_RUNNING)
+		return;
+
+	if (frame->type == PJMEDIA_FRAME_TYPE_NONE)
+	{
+		count = size = pjsua_var.mconf_cfg.samples_per_frame;
+		buf = (pj_int16_t *)pj_pool_alloc(data->pool, sizeof(*buf) * size);
+		pj_bzero(buf, sizeof(*buf) * size);
+	}
+	else
+	{
+		count = size = (frame->size >> 1);
+	}
+
+	pj_assert(data->record_data.buffer != NULL);
+
+	if (data->record_data.max_samples)
+	{
+		pj_assert(data->record_data.max_samples > data->record_data.samples_recorded);
+		avl = (pj_size_t)((pj_uint64_t)data->record_data.max_samples - data->record_data.samples_recorded);
+		if (count > avl)
+			count = avl;
+	}
+	if (data->record_data.max_duration)
+	{
+		pj_assert(data->record_data.max_duration > data->record_data.samples_seen);
+		avl = data->record_data.max_duration - (pj_size_t)data->record_data.samples_seen;
+		if (count > avl)
+			count = avl;
+	}
+	if ((data->record_data.max_silence || data->record_data.eliminate_silence) && data->record_data.vad)
+	{
+		is_silence = pjmedia_silence_det_detect(data->record_data.vad, (const pj_int16_t *)buf, size, NULL);
+		if (is_silence)
+		{
+			if (!data->record_data.is_silence)
+			{
+				data->record_data.is_silence = PJ_TRUE;
+				data->record_data.vad_timestamp = frame->timestamp;
+			}
+			else
+			{
+				pj_assert(frame->timestamp.u64 > data->record_data.vad_timestamp.u64);
+			}
+			silence_samples = (pj_size_t)(frame->timestamp.u64 - data->record_data.vad_timestamp.u64);
+			if (data->record_data.eliminate_silence)
+			{
+				if ((silence_samples + count) >= data->record_data.eliminate_silence)
+				{
+					count = 0;
+				}
+				else
+				{
+					avl = (data->record_data.eliminate_silence - silence_samples);
+					if (count > avl)
+						count = avl;
+				}
+			}
+			if (data->record_data.max_silence)
+			{
+				pj_assert(data->record_data.max_silence > silence_samples);
+				avl = silence_samples - data->record_data.max_silence;
+				if (count > avl)
+					count = avl;
+			}
+		}
+		else if (data->record_data.is_silence)
+		{
+			data->record_data.is_silence = PJ_FALSE;
+			data->record_data.vad_timestamp = frame->timestamp;
+		}
+	}
+
+	pj_assert(data->record_data.buffer->capacity >= data->record_data.buffer->len);
+	avl = (data->record_data.buffer->capacity - data->record_data.buffer->len);
+	if (count > avl)
+	{
+		if (!data->record_data.overrun)
+		{
+			PJ_LOG(3, (THIS_FILE, "Record buffer overrun for %s: avl=%lu, size=%lu", data->base.info.name.ptr, avl, size));
+			data->record_data.overrun = PJ_TRUE;
+		}
+		if ((data->base.info.fmt.type == PJMEDIA_TYPE_AUDIO) &&
+			(data->base.info.fmt.detail_type == PJMEDIA_FORMAT_DETAIL_AUDIO) &&
+			(data->base.info.fmt.det.aud.channel_count > 1))
+		{
+			// Take account of block size and ensure that only complete blocks are buffered
+			count = avl % data->base.info.fmt.det.aud.channel_count;
+			if (!count)
+				count = avl;
+			else
+				count = avl - count;
+		}
+		else
+		{
+			count = avl;
+		}
+	}
+	if (count)
+	{
+		pjmedia_circ_buf_write(data->record_data.buffer, buf, (unsigned int)count);
+		data->record_data.samples_recorded += count;
+		avl -= count;
+	}
+	data->record_data.samples_seen += size;
+
+	do {
+		if (data->record_data.max_samples && (data->record_data.samples_recorded >= data->record_data.max_samples))
+		{
+			data->record_data.status = PJSUA_REC_STOPPING;
+			data->record_data.er = PJSUA_REC_ER_MAX_SAMPLES;
+			break;
+		}
+		if (data->record_data.max_duration && (data->record_data.samples_seen >= data->record_data.max_duration))
+		{
+			data->record_data.status = PJSUA_REC_STOPPING;
+			data->record_data.er = PJSUA_REC_ER_MAX_DURATION;
+			break;
+		}
+		if (data->record_data.max_silence && ((silence_samples + size) >= data->record_data.max_silence))
+		{
+			data->record_data.status = PJSUA_REC_STOPPING;
+			data->record_data.er = PJSUA_REC_ER_MAX_SILENCE;
+			break;
+		}
+	} while (0);
+
+	// Notify the application to collect the buffered data when the available space
+	// falls below the data threshold or if we've encountered a termination
+	// condition
+	if (!data->record_data.signaled &&
+		((avl < data->record_data.threshold) || (data->record_data.status == PJSUA_REC_STOPPING)))
+	{
+		data->record_data.signaled = PJ_TRUE;
+		pj_event_set(data->record_data.event);
+	}
+
+	if (data->record_data.status == PJSUA_REC_STOPPING)
+	{
+		if (data->record_data.rec_output)
+			pjmedia_conf_configure_port(pjsua_var.mconf, data->slot, PJMEDIA_PORT_NO_CHANGE, PJMEDIA_PORT_ENABLE);
+		else
+			pjmedia_conf_configure_port(pjsua_var.mconf, data->slot, PJMEDIA_PORT_ENABLE, PJMEDIA_PORT_NO_CHANGE);
+	}
+}
+
+static pj_status_t mport_put_frame(pjmedia_port *this_port, pjmedia_frame *frame)
+{
+	PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE, PJ_EINVALIDOP);
+
+	pjsua_mport_data *data = (pjsua_mport_data*) this_port;
+	if ((data->record_data.status == PJSUA_REC_RUNNING) &&
+		!data->record_data.rec_output)
+	{
+		pj_enter_critical_section();
+		mport_rec_frame(data, frame);
+		pj_leave_critical_section();
+	}
+
+	if ((frame->type == PJMEDIA_FRAME_TYPE_AUDIO) &&
+		(frame->size > 0U) &&
+		(data->listener_cnt > 0U))
+	{
+		const pj_size_t samples = frame->size >> 1;
+		pj_assert(samples == pjsua_var.mconf_cfg.samples_per_frame);
+		pj_enter_critical_section();
+		pj_assert(data->listeners != NULL);
+		for (register pj_uint32_t i = 0; i < data->listener_cnt; ++i)
+		{
+			const pjsua_mport_id id = data->listeners[i];
+			pjsua_mport_data *listener;
+			pj_int32_t *mix_buf;
+			pj_int16_t *buf;
+			pj_size_t j;
+			pj_assert((id >= 0) && (id < (pjsua_mport_id)pjsua_var.media_cfg.max_media_ports));
+			listener = &pjsua_var.mport[id];
+			mix_buf = listener->mix_buf;
+			buf = (pj_int16_t *)frame->buf;
+			if (listener->mix_cnt++ > 0)
+			{
+				for (j = 0; j < samples; ++j)
+				{
+					*mix_buf += *buf++;
+					if (IS_OVERFLOW(*mix_buf))
+					{
+						int tmp_adj = (MAX_LEVEL << 7) / *mix_buf;
+						if (tmp_adj < 0)
+							tmp_adj = -tmp_adj;
+						if (tmp_adj < listener->mix_adj)
+							listener->mix_adj = tmp_adj;
+					}
+					mix_buf++;
+				}
+			}
+			else
+			{
+				for (j = 0; j < samples; ++j)
+				{
+					*mix_buf++ = *buf++;
+				}
+			}
+		}
+		pj_leave_critical_section();
+	}
+
+	return PJ_SUCCESS;
+}
+
+static pj_status_t mport_get_frame(pjmedia_port *this_port, pjmedia_frame *frame)
+{
+	pjsua_mport_data *data;
+	pj_size_t i, size, avl, count;
+
+	PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE, PJ_EINVALIDOP);
+
+	data = (pjsua_mport_data*) this_port;
+
+	size = pjsua_var.mconf_cfg.samples_per_frame;
+
+	frame->timestamp.u64 = data->play_data.timestamp.u64;
+	data->play_data.timestamp.u64 += size;
+
+	pj_enter_critical_section();
+
+	if (data->play_data.status <= PJSUA_REP_IDLE)
+	{
+		frame->size = 0;
+		frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	}
+	else if (data->play_data.status == PJSUA_REP_CONFERENCING)
+	{
+		if (data->mix_cnt)
+		{
+			pj_int16_t *buf = (pj_int16_t *)frame->buf;
+			SIMPLE_AGC(data->last_mix_adj, data->mix_adj);
+			data->last_mix_adj = data->mix_adj;
+			pj_assert(data->mix_buf != NULL);
+			if (data->mix_adj != NORMAL_LEVEL)
+			{
+				for (i = 0; i < size; ++i)
+				{
+					pj_int32_t s = data->mix_buf[i];
+					s = (s * data->mix_adj) >> 7;
+					if (s > MAX_LEVEL) s = MAX_LEVEL;
+					else if (s < MIN_LEVEL) s = MIN_LEVEL;
+					*buf++ = (pj_int16_t)s;
+				}
+				data->mix_adj = NORMAL_LEVEL;
+			}
+			else
+			{
+				for (i = 0; i < size; ++i)
+				{
+					*buf++ = (pj_int16_t)data->mix_buf[i];
+				}
+			}
+			data->mix_cnt = 0U;
+			frame->size = size << 1;
+			frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+		}
+		else
+		{
+			frame->size = 0;
+			frame->type = PJMEDIA_FRAME_TYPE_NONE;
+		}
+	}
+	else
+	{
+		pj_assert(data->play_data.buffer != NULL);
+		avl = data->play_data.buffer->len;
+		count = size;
+		if (count > avl)
+		{
+			if (!data->play_data.underrun && (avl || data->play_data.samples_played) && (data->play_data.status == PJSUA_REP_RUNNING))
+			{
+				PJ_LOG(3, (THIS_FILE, "Replay buffer underrun for %s: avl=%lu, size=%lu", this_port->info.name.ptr, avl, size));
+				data->play_data.underrun = PJ_TRUE;
+			}
+			count = avl;
+		}
+		if (count)
+		{
+			pjmedia_circ_buf_read(data->play_data.buffer, (pj_int16_t*)frame->buf, (unsigned int)count);
+			avl -= count;
+			data->play_data.samples_played += count;
+		}
+
+		// Pad with zeroes if necessary
+		if (count < size)
+			pj_bzero((pj_int16_t*)(frame->buf) + count, (size - count) << 1);
+
+		// Notify the application when the remaining data falls below the
+		// threshold or if the replay has completed
+		if (!data->play_data.signaled &&
+			(((data->play_data.status == PJSUA_REP_STOPPING) && !avl) ||
+			((data->play_data.status == PJSUA_REP_RUNNING) && (avl < data->play_data.threshold))))
+		{
+			data->play_data.signaled = PJ_TRUE;
+			pj_event_set(data->play_data.event);
+		}
+
+		frame->size = size << 1;
+		frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+	}
+
+	if ((data->record_data.status == PJSUA_REC_RUNNING) &&
+		data->record_data.rec_output)
+		mport_rec_frame(data, frame);
+
+	pj_leave_critical_section();
+
+	return PJ_SUCCESS;
+}
+
+
+static pj_status_t mport_on_destroy(pjmedia_port *this_port)
+{
+	pjsua_mport_data *data;
+
+	PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE, PJ_EINVALIDOP);
+
+	data = (pjsua_mport_data*) this_port;
+
+	pj_enter_critical_section();
+
+	if (data->record_data.buffer)
+		pjmedia_circ_buf_reset(data->record_data.buffer);
+	if (data->record_data.status == PJSUA_REC_RUNNING)
+		data->record_data.status = PJSUA_REC_STOPPING;
+	if ((data->record_data.status != PJSUA_REC_IDLE) && !data->record_data.signaled && data->record_data.event)
+	{
+		data->record_data.signaled = PJ_TRUE;
+		pj_event_set(data->record_data.event);
+	}
+
+	if (data->play_data.buffer)
+		pjmedia_circ_buf_reset(data->play_data.buffer);
+	if (data->play_data.status == PJSUA_REP_RUNNING)
+		data->play_data.status = PJSUA_REP_STOPPING;
+	if ((data->play_data.status == PJSUA_REP_STOPPING) && !data->play_data.signaled && data->play_data.event)
+	{
+		data->play_data.signaled = PJ_TRUE;
+		pj_event_set(data->play_data.event);
+	}
+
+	pj_leave_critical_section();
+
+	if (data->play_data.status == PJSUA_REP_CONFERENCING)
+		pjsua_mport_conf_stop((pjsua_mport_id)(data - pjsua_var.mport));
+
+	return PJ_SUCCESS;
+}
+
+static pj_status_t init_mport(pjsua_mport_id id)
+{
+	pj_status_t status;
+	char buf[PJ_MAX_OBJ_NAME];
+	pj_str_t name;
+	register pjsua_mport_data *p = &pjsua_var.mport[id];
+	//pj_bzero(p, sizeof(*p));
+	p->slot = PJSUA_INVALID_ID;
+	pj_ansi_snprintf(buf, sizeof(buf), "mp%d", id);
+	buf[sizeof(buf)-1] = '\0';
+	pj_strdup2_with_null(app_config.pool, &name, buf);
+	status = pjmedia_port_info_init(&p->base.info, &name, SIGNATURE, pjsua_var.media_cfg.clock_rate,
+		pjsua_var.mconf_cfg.channel_count, pjsua_var.mconf_cfg.bits_per_sample, pjsua_var.mconf_cfg.samples_per_frame);
+	if (status == PJ_SUCCESS)
+	{
+		p->base.port_data.ldata = id;
+		p->base.put_frame = &mport_put_frame;
+		p->base.get_frame = &mport_get_frame;
+		p->base.on_destroy = &mport_on_destroy;
+	}
+	return status;
+}
+
+static void deinit_mport(pjsua_mport_id id)
+{
+	pjsua_mport_free(id);
+	register pjsua_mport_data *p = &pjsua_var.mport[id];
+	pjmedia_port_destroy(&p->base);
+	p->base.info.signature = 0;
+}
+
+// TODO: call this when destroying library
+static void destroy_mport()
+{
+	if (pjsua_var.mport != NULL)
+	{
+		for (unsigned i = 0U; i < pjsua_var.media_cfg.max_media_ports; ++i)
+			deinit_mport(i);
+		pjsua_var.mport = NULL;
+	}
+	pjsua_var.mport_cnt = 0U;
+}
+
+//#################
+
+PJ_DEF(pj_status_t) pjsua_mport_alloc(pjmedia_dir dir,
+	pj_bool_t enable_vad, pj_size_t record_buffer_size,
+	pj_size_t record_data_threshold, pj_size_t play_buffer_size,
+	pj_size_t play_data_threshold, pjsua_mport_id *p_id)
+{
+	char name[PJ_MAX_OBJ_NAME];
+
+	if ((dir != PJMEDIA_DIR_CAPTURE) && (dir != PJMEDIA_DIR_PLAYBACK) &&
+		(dir != PJMEDIA_DIR_CAPTURE_PLAYBACK))
+		return PJ_EINVAL;
+
+	PJSUA_LOCK();
+
+	if (pjsua_var.mport_cnt >= pjsua_var.media_cfg.max_media_ports)
+	{
+		PJSUA_UNLOCK();
+		return PJ_ETOOMANY;
+	}
+
+	unsigned int id;
+	for (id = 0; id<pjsua_var.media_cfg.max_media_ports; ++id)
+	{
+		register unsigned int tmp = id + pjsua_var.mport_id + 1;
+		if (tmp >= pjsua_var.media_cfg.max_media_ports)
+			tmp -= pjsua_var.media_cfg.max_media_ports;
+		if (pjsua_var.mport[tmp].slot == PJSUA_INVALID_ID)
+		{
+			pjsua_var.mport_id = id = tmp;
+			break;
+		}
+	}
+	if (id == pjsua_var.media_cfg.max_media_ports)
+	{
+		/* This is unexpected */
+		pj_assert(0);
+		PJSUA_UNLOCK();
+		return PJ_EBUG;
+	}
+
+	pj_log_push_indent();
+
+	pj_status_t status = PJ_SUCCESS;
+	register pjsua_mport_data *const p = &pjsua_var.mport[id];
+	p->pool = pjsua_pool_create(p->base.info.name.ptr, 1000, 1000);
+	if (p->pool == NULL)
+	{
+		status = PJ_ENOMEM;
+		goto on_error;
+	}
+
+	name[sizeof(name) - 1] = '\0';
+
+	p->listener_cnt = p->participant_cnt = 0U;
+	p->listeners = p->participants = NULL;
+	p->mix_buf = NULL;
+	p->last_mix_adj = p->mix_adj = NORMAL_LEVEL;
+
+	p->record_data.vad = NULL;
+	p->record_data.buffer_size = 0U;
+	p->record_data.buffer = NULL;
+	p->record_data.event = NULL;
+	p->record_data.signaled = PJ_FALSE;
+	p->record_data.status = PJSUA_REC_IDLE;
+	if (dir & PJMEDIA_DIR_CAPTURE)
+	{
+		if (enable_vad)
+		{
+			status = pjmedia_silence_det_create(p->pool, pjsua_var.media_cfg.clock_rate, pjsua_var.mconf_cfg.samples_per_frame, &p->record_data.vad);
+			if (status != PJ_SUCCESS)
+				goto on_error;
+			status = pjmedia_silence_det_set_name(p->record_data.vad, p->base.info.name.ptr);
+		}
+		if (!record_buffer_size)
+		{
+			record_buffer_size = pjsua_var.media_cfg.mport_record_buffer_size;
+			if (!record_buffer_size)
+				record_buffer_size = 1250;
+		}
+		if (record_buffer_size < 40)
+			record_buffer_size = 40;
+		else if (record_buffer_size > 5000)
+			record_buffer_size = 5000;
+		record_buffer_size = ((record_buffer_size + (pjsua_var.media_cfg.audio_frame_ptime - 1)) / pjsua_var.media_cfg.audio_frame_ptime);
+		p->record_data.buffer_size = record_buffer_size * pjsua_var.mconf_cfg.samples_per_frame;
+		pj_ansi_snprintf(name, sizeof(name)-1, "mp_rec%d", id);
+		status = pj_event_create(p->pool, name, PJ_TRUE, PJ_FALSE, &p->record_data.event);
+		if (status != PJ_SUCCESS)
+			goto on_error;
+		if (!record_data_threshold)
+			record_data_threshold = 250;
+		record_data_threshold = ((record_data_threshold + (pjsua_var.media_cfg.audio_frame_ptime - 1)) / pjsua_var.media_cfg.audio_frame_ptime);
+		if (record_data_threshold > record_buffer_size)
+			record_data_threshold = record_buffer_size;
+		p->record_data.threshold = record_data_threshold * pjsua_var.mconf_cfg.samples_per_frame;
+		pj_ansi_snprintf(name, sizeof(name)-1, "mp_rgn%d", id);
+		status = pj_event_create(p->pool, name, PJ_TRUE, PJ_FALSE, &p->recogntion_data.event);
+		if (status != PJ_SUCCESS)
+			goto on_error;
+	}
+
+	p->play_data.buffer_size = 0U;
+	p->play_data.timestamp.u64 = 0;
+	p->play_data.buffer = NULL;
+	p->play_data.event = NULL;
+	p->play_data.signaled = PJ_FALSE;
+	p->play_data.status = PJSUA_REP_IDLE;
+	if (dir & PJMEDIA_DIR_PLAYBACK)
+	{
+		if (!play_buffer_size)
+		{
+			play_buffer_size = pjsua_var.media_cfg.mport_replay_buffer_size;
+			if (!play_buffer_size)
+				play_buffer_size = 1250;
+		}
+		if (play_buffer_size < 40)
+			play_buffer_size = 40;
+		else if (play_buffer_size > 5000)
+			play_buffer_size = 5000;
+		play_buffer_size = ((play_buffer_size + (pjsua_var.media_cfg.audio_frame_ptime - 1)) / pjsua_var.media_cfg.audio_frame_ptime);
+		p->play_data.buffer_size = play_buffer_size * pjsua_var.mconf_cfg.samples_per_frame;
+		pj_ansi_snprintf(name, sizeof(name)-1, "mp_pla%d", id);
+		status = pj_event_create(p->pool, name, PJ_TRUE, PJ_FALSE, &p->play_data.event);
+		if (status != PJ_SUCCESS)
+			goto on_error;
+		if (!play_data_threshold)
+			play_data_threshold = 250;
+		play_data_threshold = ((play_data_threshold + (pjsua_var.media_cfg.audio_frame_ptime - 1)) / pjsua_var.media_cfg.audio_frame_ptime);
+		if (play_data_threshold > play_buffer_size)
+			play_data_threshold = play_buffer_size;
+		p->play_data.threshold = play_data_threshold * pjsua_var.mconf_cfg.samples_per_frame;
+	}
+
+	status = pjsua_conf_add_port(p->pool, &p->base, &p->slot);
+	if (status != PJ_SUCCESS)
+	{
+		pjsua_perror(THIS_FILE, "Unable to add media port to conference bridge", status);
+		goto on_error;
+	}
+
+	p->base.info.dir = dir;
+
+	++pjsua_var.mport_cnt;
+
+	PJSUA_UNLOCK();
+
+	PJ_LOG(4,(THIS_FILE, "Media port %d allocated: slot=%d", id, p->slot));
+
+	if (p_id)
+		*p_id = id;
+
+	pj_log_pop_indent();
+	return PJ_SUCCESS;
+
+on_error:
+	p->listeners = p->participants = NULL;
+	p->mix_buf = NULL;
+	if (p->recogntion_data.event != NULL)
+	{
+		pj_event_destroy(p->recogntion_data.event);
+		p->recogntion_data.event = NULL;
+	}
+	if (p->record_data.event != NULL)
+	{
+		pj_event_destroy(p->record_data.event);
+		p->record_data.event = NULL;
+	}
+	p->record_data.vad = NULL;
+	p->record_data.buffer = NULL;
+	if (p->play_data.event != NULL)
+	{
+		pj_event_destroy(p->play_data.event);
+		p->play_data.event = NULL;
+	}
+	p->play_data.buffer = NULL;
+	if (p->pool != NULL)
+	{
+		pj_pool_release(p->pool);
+		p->pool = NULL;
+	}
+	p->base.info.dir = PJMEDIA_DIR_NONE;
+	p->slot = PJSUA_INVALID_ID;
+	PJSUA_UNLOCK();
+	pj_log_pop_indent();
+	return status;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_free(pjsua_mport_id id)
+{
+	if ((id < 0) || ((unsigned int)id >= pjsua_var.media_cfg.max_media_ports))
+	{
+		pj_assert(0);
+		return PJ_EINVAL;
+	}
+
+	PJSUA_LOCK();
+
+	pjsua_mport_data *p = &pjsua_var.mport[id];
+
+	if (!p->pool)
+	{
+		PJSUA_UNLOCK();
+		return PJ_SUCCESS;
+	}
+
+	pjsua_mport_conf_stop(id);
+	while (p->listener_cnt > 0)
+		pjsua_mport_conf_remove(p->listeners[p->listener_cnt - 1], id);
+
+	pj_enter_critical_section();
+
+	p->listeners = p->participants = NULL;
+	p->mix_buf = NULL;
+
+	if (p->recogntion_data.event_cnt > 0U)
+	{
+		if (p->recogntion_data.signaled)
+		{
+			p->recogntion_data.signaled = PJ_FALSE;
+			pj_event_reset(p->recogntion_data.event);
+		}
+		p->recogntion_data.event_cnt = 0U;
+	}
+	if (p->record_data.buffer)
+	{
+		pjmedia_circ_buf_reset(p->record_data.buffer);
+		p->record_data.buffer = NULL;
+	}
+	if (p->record_data.status != PJSUA_REC_IDLE)
+	{
+		if ((p->record_data.event != NULL) &&
+			!p->record_data.signaled)
+		{
+			p->record_data.signaled = PJ_TRUE;
+			pj_event_set(p->record_data.event);
+		}
+		p->record_data.status = PJSUA_REC_IDLE;
+	}
+	p->record_data.vad = NULL;
+
+	if (p->play_data.buffer)
+	{
+		pjmedia_circ_buf_reset(p->play_data.buffer);
+		p->play_data.buffer = NULL;
+	}
+	if (p->play_data.status != PJSUA_REP_IDLE)
+	{
+		if ((p->play_data.status != PJSUA_REP_CONFERENCING) &&
+			(p->play_data.event != NULL) &&
+			!p->play_data.signaled)
+		{
+			p->play_data.signaled = PJ_TRUE;
+			pj_event_set(p->play_data.event);
+		}
+		p->play_data.status = PJSUA_REP_IDLE;
+	}
+
+	pj_leave_critical_section();
+
+	if (p->slot != PJSUA_INVALID_ID)
+	{
+		pjsua_conf_remove_port(p->slot);
+		p->slot = PJSUA_INVALID_ID;
+	}
+
+	if (p->recogntion_data.event != NULL)
+	{
+		pj_event_destroy(p->recogntion_data.event);
+		p->recogntion_data.event = NULL;
+		p->recogntion_data.signaled = PJ_FALSE;
+	}
+
+	if (p->record_data.event != NULL)
+	{
+		pj_event_destroy(p->record_data.event);
+		p->record_data.event = NULL;
+		p->record_data.signaled = PJ_FALSE;
+	}
+
+	if (p->play_data.event != NULL)
+	{
+		pj_event_destroy(p->play_data.event);
+		p->play_data.event = NULL;
+		p->play_data.signaled = PJ_FALSE;
+	}
+
+	if (p->pool != NULL)
+	{
+		pj_pool_release(p->pool);
+		p->pool = NULL;
+	}
+
+	p->base.info.dir = PJMEDIA_DIR_NONE;
+
+	pj_assert(pjsua_var.mport_cnt > 0);
+	--pjsua_var.mport_cnt;
+
+	PJSUA_UNLOCK();
+
+	PJ_LOG(4, (THIS_FILE, "Media port %d freed", id));
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pjsua_conf_port_id) pjsua_mport_get_conf_port(pjsua_mport_id id)
+{
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,PJSUA_INVALID_ID);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJSUA_INVALID_ID);
+
+	return pjsua_var.mport[id].slot;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_get_port( pjsua_mport_id id, pjmedia_port **p_port)
+{
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,PJ_EINVAL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
+	PJ_ASSERT_RETURN(p_port != NULL, PJ_EINVAL);
+
+	*p_port = &pjsua_var.mport[id].base;
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pjmedia_dir) pjsua_mport_get_dir(pjsua_mport_id id)
+{
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJMEDIA_DIR_NONE);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJMEDIA_DIR_NONE);
+
+	return pjsua_var.mport[id].base.info.dir;
+}
+
+PJ_DEF(pj_event_t *) pjsua_mport_get_play_event(pjsua_mport_id id)
+{
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,NULL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, NULL);
+
+	return pjsua_var.mport[id].play_data.event;
+}
+
+PJ_DEF(pj_event_t *) pjsua_mport_get_record_event(pjsua_mport_id id)
+{
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,NULL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, NULL);
+
+	return pjsua_var.mport[id].record_data.event;
+}
+
+PJ_DEF(pj_event_t *) pjsua_mport_get_recognition_event(pjsua_mport_id id)
+{
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,NULL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, NULL);
+
+	return pjsua_var.mport[id].recogntion_data.event;
+}
+
+static void add_replay_data(pjmedia_format_id fmt_id,
+	pjmedia_circ_buf *buffer,
+	const void *data,
+	pj_size_t size,
+	pj_size_t *count)
+{
+	pj_int16_t *reg1, *reg2;
+	unsigned reg1cnt, reg2cnt;
+	pj_size_t avl = buffer->capacity - buffer->len;
+	if (avl)
+	{
+		if (fmt_id == PJMEDIA_FORMAT_PCM)
+		{
+			size = size >> 1;
+			if (size > avl)
+				size = avl;
+			pjmedia_circ_buf_write(buffer, (pj_int16_t*)data, (unsigned int)size);
+			size = size << 1;
+		}
+		else
+		{
+			if (size > avl)
+				size = avl;
+			pjmedia_circ_buf_get_write_regions(buffer, &reg1, &reg1cnt, &reg2, &reg2cnt);
+			if (reg1cnt >= size)
+			{
+				switch (fmt_id)
+				{
+				case PJMEDIA_FORMAT_PCMA:
+					pjmedia_alaw_decode(reg1, data, size);
+					break;
+				case PJMEDIA_FORMAT_PCMU:
+					pjmedia_ulaw_decode(reg1, data, size);
+					break;
+				default:
+					pj_assert(0);
+					break;
+				}
+			}
+			else
+			{
+				switch (fmt_id)
+				{
+				case PJMEDIA_FORMAT_PCMA:
+					pjmedia_alaw_decode(reg1, data, reg1cnt);
+					pjmedia_alaw_decode(reg2, (const pj_uint8_t*)data + reg1cnt, size - reg1cnt);
+					break;
+				case PJMEDIA_FORMAT_PCMU:
+					pjmedia_ulaw_decode(reg1, data, reg1cnt);
+					pjmedia_ulaw_decode(reg2, (const pj_uint8_t*)data + reg1cnt, size - reg1cnt);
+					break;
+				default:
+					pj_assert(0);
+					break;
+				}
+			}
+			pjmedia_circ_buf_adv_write_ptr(buffer, (unsigned int)size);
+		}
+		*count = size;
+	}
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_play_start(
+	pjsua_mport_id id,
+	const pjmedia_format *fmt,
+	const void *data,
+	pj_size_t size,
+	pj_size_t *count)
+{
+	pjsua_mport_replay_data *p;
+
+	PJ_ASSERT_RETURN(count != NULL, PJ_EINVAL);
+
+	*count = 0;
+
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,PJ_EINVAL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
+	PJ_ASSERT_RETURN(fmt != NULL, PJ_EINVAL);
+
+	PJSUA_LOCK();
+
+	p = &pjsua_var.mport[id].play_data;
+	if (!(pjsua_var.mport[id].base.info.dir & PJMEDIA_DIR_PLAYBACK))
+	{
+		PJSUA_UNLOCK();
+		return PJ_EINVALIDOP;
+	}
+	if (p->status != PJSUA_REP_IDLE)
+	{
+		PJSUA_UNLOCK();
+		return PJ_EBUSY;
+	}
+	if (((fmt->id != PJMEDIA_FORMAT_PCM) && (fmt->id != PJMEDIA_FORMAT_PCMA) && (fmt->id != PJMEDIA_FORMAT_PCMU)) ||
+		(fmt->det.aud.clock_rate != pjsua_var.media_cfg.clock_rate) ||
+		(fmt->det.aud.channel_count != pjsua_var.media_cfg.channel_count))
+	{
+		PJSUA_UNLOCK();
+		return PJ_ENOTSUP;
+	}
+	if (!p->buffer)
+	{
+		pj_status_t status = pjmedia_circ_buf_create(pjsua_var.mport[id].pool, (unsigned int)p->buffer_size, &p->buffer);
+		if (status != PJ_SUCCESS)
+		{
+			PJSUA_UNLOCK();
+			return status;
+		}
+	}
+
+	pjmedia_circ_buf_reset(p->buffer);
+	if ((data != NULL) && size)
+		add_replay_data(fmt->id, p->buffer, data, size, count);
+	p->samples_played = 0;
+	p->underrun = PJ_FALSE;
+	if (p->buffer->len < p->threshold)
+	{
+		pj_event_set(p->event);
+		p->signaled = PJ_TRUE;
+	}
+	else
+	{
+		pj_event_reset(p->event);
+		p->signaled = PJ_FALSE;
+	}
+	p->fmt_id = fmt->id;
+	p->status = PJSUA_REP_RUNNING;
+
+	PJSUA_UNLOCK();
+
+	PJ_LOG(4, (THIS_FILE, "Started replay on media port %d", id));
+
+	pjmedia_conf_configure_port(pjsua_var.mconf, pjsua_var.mport[id].slot, PJMEDIA_PORT_NO_CHANGE, PJMEDIA_PORT_ENABLE_ALWAYS);
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_play_status(pjsua_mport_id id,
+	pjs_mport_play_info *info)
+{
+	pjsua_mport_replay_data *p;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
+	PJ_ASSERT_RETURN(info != NULL, PJ_EINVAL);
+
+	pj_bzero(info, sizeof(*info));
+
+	pj_enter_critical_section();
+
+	p = &pjsua_var.mport[id].play_data;
+
+	if ((p->status != PJSUA_REP_RUNNING) && (p->status != PJSUA_REP_STOPPING))
+	{
+		pj_leave_critical_section();
+		return PJ_ENOTFOUND;
+	}
+
+	info->samples_played = p->samples_played;
+	info->underrun = p->underrun;
+	if (info->underrun)
+		p->underrun = PJ_FALSE;
+	if (p->status == PJSUA_REP_STOPPING)
+	{
+		if (!p->buffer->len)
+		{
+			if (p->signaled)
+			{
+				pj_event_reset(p->event);
+				p->signaled = PJ_FALSE;
+			}
+			info->completed = PJ_TRUE;
+			p->status = PJSUA_REP_IDLE;
+
+			PJ_LOG(4, (THIS_FILE, "Replay completed on media port %d - %llu samples were played",
+				id, p->samples_played));
+		}
+	}
+	else
+	{
+		info->free_buffer_size = p->buffer->capacity - p->buffer->len;
+	}
+
+	pj_leave_critical_section();
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_play_put_data(pjsua_mport_id id,
+	const void *data,
+	pj_size_t size,
+	pj_size_t *count)
+{
+	pjsua_mport_replay_data *p;
+
+	PJ_ASSERT_RETURN(count != NULL, PJ_EINVAL);
+
+	*count = 0;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
+
+	pj_enter_critical_section();
+
+	p = &pjsua_var.mport[id].play_data;
+
+	if (p->status != PJSUA_REP_RUNNING)
+	{
+		pj_status_t status = (p->status == PJSUA_REP_STOPPING) ? PJ_EEOF : PJ_ENOTFOUND;
+		pj_leave_critical_section();
+		return status;
+	}
+
+	if ((data != NULL) && size)
+	{
+		add_replay_data(p->fmt_id, p->buffer, data, size, count);
+		if (p->buffer->len >= p->threshold)
+		{
+			if (p->signaled)
+			{
+				pj_event_reset(p->event);
+				p->signaled = PJ_FALSE;
+			}
+		}
+		else
+		{
+			if (!p->signaled)
+			{
+				pj_event_set(p->event);
+				p->signaled = PJ_TRUE;
+			}
+		}
+	}
+	else
+	{
+		if (p->buffer->len)
+		{
+			if (p->signaled)
+			{
+				pj_event_reset(p->event);
+				p->signaled = PJ_FALSE;
+			}
+		}
+		else
+		{
+			if (!p->signaled)
+			{
+				pj_event_set(p->event);
+				p->signaled = PJ_TRUE;
+			}
+		}
+		p->status = PJSUA_REP_STOPPING;
+	}
+
+	pj_leave_critical_section();
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_play_stop(pjsua_mport_id id, pj_bool_t discard)
+{
+	pjsua_mport_replay_data *p;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
+
+	pj_enter_critical_section();
+
+	p = &pjsua_var.mport[id].play_data;
+
+	if ((p->status != PJSUA_REP_RUNNING) && (p->status != PJSUA_REP_STOPPING))
+	{
+		pj_leave_critical_section();
+		return PJ_ENOTFOUND;
+	}
+
+	if (discard)
+		p->buffer->len = 0;
+	if (p->buffer->len)
+	{
+		if (p->signaled)
+		{
+			pj_event_reset(p->event);
+			p->signaled = PJ_FALSE;
+		}
+	}
+	else
+	{
+		if (!p->signaled)
+		{
+			pj_event_set(p->event);
+			p->signaled = PJ_TRUE;
+		}
+	}
+	if (p->status == PJSUA_REP_RUNNING)
+		p->status = PJSUA_REP_STOPPING;
+
+	pj_leave_critical_section();
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_record_start(pjsua_mport_id id,
+	const pjmedia_format *fmt,
+	pj_bool_t rec_output,
+	pj_size_t max_duration,
+	pj_size_t max_samples,
+	pj_size_t max_silence,
+	pj_size_t eliminate_silence)
+{
+	pjsua_mport_record_data *p;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
+	PJ_ASSERT_RETURN(fmt != NULL, PJ_EINVAL);
+
+	PJSUA_LOCK();
+
+	p = &pjsua_var.mport[id].record_data;
+	if (!(pjsua_var.mport[id].base.info.dir & PJMEDIA_DIR_CAPTURE))
+	{
+		PJSUA_UNLOCK();
+		return PJ_EINVALIDOP;
+	}
+	if (rec_output && !(pjsua_var.mport[id].base.info.dir & PJMEDIA_DIR_PLAYBACK))
+	{
+		PJSUA_UNLOCK();
+		return PJ_EINVALIDOP;
+	}
+	if (p->status != PJSUA_REC_IDLE)
+	{
+		PJSUA_UNLOCK();
+		return PJ_EBUSY;
+	}
+	if (((fmt->id != PJMEDIA_FORMAT_PCM) && (fmt->id != PJMEDIA_FORMAT_PCMA) && (fmt->id != PJMEDIA_FORMAT_PCMU)) ||
+		(fmt->det.aud.clock_rate != pjsua_var.media_cfg.clock_rate) ||
+		(fmt->det.aud.channel_count != pjsua_var.media_cfg.channel_count))
+	{
+		PJSUA_UNLOCK();
+		return PJ_ENOTSUP;
+	}
+	if (!p->buffer)
+	{
+		pj_status_t status = pjmedia_circ_buf_create(pjsua_var.mport[id].pool, (unsigned int)p->buffer_size, &p->buffer);
+		if (status != PJ_SUCCESS)
+		{
+			PJSUA_UNLOCK();
+			return status;
+		}
+	}
+
+	// Convert all the time based arguments to the corresponding sample counts
+	// and ensure that they are truncated to complete blocks if necessary
+	if (max_duration)
+	{
+		max_duration = max_duration * fmt->det.aud.clock_rate / 1000;
+		max_duration -= (max_duration % fmt->det.aud.channel_count);
+	}
+	if (max_silence)
+	{
+		max_silence = max_silence * fmt->det.aud.clock_rate / 1000;
+		max_silence -= (max_silence % fmt->det.aud.channel_count);
+	}
+	if (eliminate_silence)
+	{
+		eliminate_silence = eliminate_silence * fmt->det.aud.clock_rate / 1000;
+		eliminate_silence -= (eliminate_silence % fmt->det.aud.channel_count);
+	}
+
+	if (p->signaled)
+	{
+		pj_event_reset(p->event);
+		p->signaled = PJ_FALSE;
+	}
+	pjmedia_circ_buf_reset(p->buffer);
+	p->samples_seen = 0;
+	p->samples_recorded = 0;
+	p->vad_timestamp.u64 = 0;
+	p->is_silence = PJ_FALSE;
+	p->overrun = PJ_FALSE;
+	p->er = PJSUA_REC_ER_NONE;
+	p->fmt_id = fmt->id;
+	p->rec_output = rec_output;
+	p->max_samples = max_samples;
+	p->max_duration = max_duration;
+	p->max_silence = max_silence;
+	p->eliminate_silence = eliminate_silence;
+	p->status = PJSUA_REC_RUNNING;
+
+	PJSUA_UNLOCK();
+
+	PJ_LOG(4, (THIS_FILE, "Started recording on media port %d; event=%p", id, p->event));
+
+	if (rec_output)
+		pjmedia_conf_configure_port(pjsua_var.mconf, pjsua_var.mport[id].slot, PJMEDIA_PORT_NO_CHANGE, PJMEDIA_PORT_ENABLE_ALWAYS);
+	else
+		pjmedia_conf_configure_port(pjsua_var.mconf, pjsua_var.mport[id].slot, PJMEDIA_PORT_ENABLE_ALWAYS, PJMEDIA_PORT_NO_CHANGE);
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_record_status(pjsua_mport_id id,
+	pjs_mport_record_info *info)
+{
+	pjsua_mport_record_data *p;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
+	PJ_ASSERT_RETURN(info != NULL, PJ_EINVAL);
+
+	pj_bzero(info, sizeof(*info));
+
+	pj_enter_critical_section();
+
+	p = &pjsua_var.mport[id].record_data;
+
+	if ((p->status != PJSUA_REP_RUNNING) && (p->status != PJSUA_REP_STOPPING))
+	{
+		pj_leave_critical_section();
+		return PJ_ENOTFOUND;
+	}
+
+	info->samples_recorded = p->samples_recorded;
+	info->overrun = p->overrun;
+	if (info->overrun)
+		p->overrun = PJ_FALSE;
+	info->samples_available = p->buffer->len;
+	info->end_reason = p->er;
+	if ((p->status == PJSUA_REC_STOPPING) && !info->samples_available)
+	{
+		if (p->signaled)
+		{
+			pj_event_reset(p->event);
+			p->signaled = PJ_FALSE;
+		}
+		info->completed = PJ_TRUE;
+		p->status = PJSUA_REC_IDLE;
+
+		PJ_LOG(4, (THIS_FILE, "Recording completed on media port %d - %llu samples were recorded",
+			id, p->samples_recorded));
+	}
+
+	pj_leave_critical_section();
+
+	return PJ_SUCCESS;
+}
+
+static void get_record_data(pjmedia_format_id fmt_id,
+	pjmedia_circ_buf *buffer,
+	void *data,
+	pj_size_t size,	/* Size of the data buffer in bytes - not samples! */
+	pj_size_t *count)
+{
+	pj_int16_t *reg1, *reg2;
+	unsigned reg1cnt, reg2cnt;
+	if (buffer->len)
+	{
+		if (fmt_id == PJMEDIA_FORMAT_PCM)
+		{
+			if (size == 1U)
+			{
+				pj_int16_t buf;
+				pjmedia_circ_buf_read(buffer, &buf, 1U);
+				memcpy(data, &buf, 1U);
+			}
+			else
+			{
+				unsigned int samples = (unsigned int)(size >> 1);
+				if (samples > buffer->len)
+				{
+					samples = buffer->len;
+					size = samples << 1;
+				}
+				pjmedia_circ_buf_read(buffer, (pj_int16_t*)data, samples);
+			}
+		}
+		else
+		{
+			if (size > buffer->len)
+				size = buffer->len;
+			pjmedia_circ_buf_get_read_regions(buffer, &reg1, &reg1cnt, &reg2, &reg2cnt);
+			if (reg1cnt >= size)
+			{
+				switch (fmt_id)
+				{
+				case PJMEDIA_FORMAT_PCMA:
+					pjmedia_alaw_encode((pj_uint8_t*)data, reg1, size);
+					break;
+				case PJMEDIA_FORMAT_PCMU:
+					pjmedia_ulaw_encode((pj_uint8_t*)data, reg1, size);
+					break;
+				default:
+					pj_assert(0);
+					break;
+				}
+			}
+			else
+			{
+				switch (fmt_id)
+				{
+				case PJMEDIA_FORMAT_PCMA:
+					pjmedia_alaw_encode((pj_uint8_t*)data, reg1, reg1cnt);
+					pjmedia_alaw_encode((pj_uint8_t*)data + reg1cnt, reg2, size - reg1cnt);
+					break;
+				case PJMEDIA_FORMAT_PCMU:
+					pjmedia_ulaw_encode((pj_uint8_t*)data, reg1, reg1cnt);
+					pjmedia_ulaw_encode((pj_uint8_t*)data + reg1cnt, reg2, size - reg1cnt);
+					break;
+				default:
+					pj_assert(0);
+					break;
+				}
+			}
+			pjmedia_circ_buf_adv_read_ptr(buffer, (unsigned int)size);
+		}
+		*count = size;
+	}
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_record_get_data(pjsua_mport_id id,
+	void *buffer,
+	pj_size_t size,
+	pj_size_t *count)
+{
+	pjsua_mport_record_data *p;
+
+	PJ_ASSERT_RETURN(count != NULL, PJ_EINVAL);
+
+	*count = 0;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
+	PJ_ASSERT_RETURN(buffer && size, PJ_EINVAL);
+
+	pj_enter_critical_section();
+
+	p = &pjsua_var.mport[id].record_data;
+
+	if ((p->status != PJSUA_REC_RUNNING) && (p->status != PJSUA_REC_STOPPING))
+	{
+		pj_leave_critical_section();
+		return PJ_ENOTFOUND;
+	}
+
+	get_record_data(p->fmt_id, p->buffer, buffer, size, count);
+	if ((p->status == PJSUA_REC_RUNNING) &&
+		((p->buffer->capacity - p->buffer->len) >= p->threshold))
+	{
+		if (p->signaled)
+		{
+			pj_event_reset(p->event);
+			p->signaled = PJ_FALSE;
+		}
+	}
+	else
+	{
+		if (!p->signaled)
+		{
+			pj_event_set(p->event);
+			p->signaled = PJ_TRUE;
+		}
+	}
+
+	pj_leave_critical_section();
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_record_stop(pjsua_mport_id id, pj_bool_t discard)
+{
+	pjsua_mport_record_data *p;
+	int rec_output = -1;
+	pj_event_t* signaled_event = NULL;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
+
+	PJ_LOG(4, (THIS_FILE, "Stopping recording on media port %d%s...", id, discard ? " and discarding buffered data" : ""));
+
+	pj_enter_critical_section();
+
+	p = &pjsua_var.mport[id].record_data;
+
+	if ((p->status != PJSUA_REC_RUNNING) && (p->status != PJSUA_REC_STOPPING))
+	{
+		pj_leave_critical_section();
+		return PJ_ENOTFOUND;
+	}
+
+	if (discard)
+		p->buffer->len = 0;
+	if (p->status == PJSUA_REC_RUNNING)
+	{
+		p->er = PJSUA_REC_ER_STOP;
+		p->status = PJSUA_REC_STOPPING;
+		rec_output = p->rec_output;
+	}
+	if (!p->signaled)
+	{
+		signaled_event = p->event;
+		pj_event_set(p->event);
+		p->signaled = PJ_TRUE;
+	}
+
+	pj_leave_critical_section();
+
+	if (rec_output >= 0)
+	{
+		if (rec_output)
+			pjmedia_conf_configure_port(pjsua_var.mconf, pjsua_var.mport[id].slot, PJMEDIA_PORT_NO_CHANGE, PJMEDIA_PORT_ENABLE);
+		else
+			pjmedia_conf_configure_port(pjsua_var.mconf, pjsua_var.mport[id].slot, PJMEDIA_PORT_ENABLE, PJMEDIA_PORT_NO_CHANGE);
+	}
+
+	PJ_LOG(4, (THIS_FILE, "rec_output=%d, event=%p", rec_output, signaled_event));
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_conf_start(pjsua_mport_id id)
+{
+	register pjsua_mport_data *p;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	p = &pjsua_var.mport[id];
+	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
+
+	PJSUA_LOCK();
+
+	if (!(p->base.info.dir & PJMEDIA_DIR_PLAYBACK))
+	{
+		PJSUA_UNLOCK();
+		return PJ_EINVALIDOP;
+	}
+	if (p->play_data.status != PJSUA_REP_IDLE)
+	{
+		PJSUA_UNLOCK();
+		return PJ_EBUSY;
+	}
+	if (!p->participants)
+	{
+		p->participants = (pjsua_mport_id*)pj_pool_zalloc(p->pool, sizeof(pjsua_mport_id) * PJSUA_MAX_CONF_PORTS);
+		if (!p->participants)
+		{
+			PJSUA_UNLOCK();
+			return PJ_ENOMEM;
+		}
+		for (register int i = 0; i < PJSUA_MAX_CONF_PORTS; ++i)
+			p->participants[i] = PJSUA_INVALID_ID;
+	}
+	if (!p->mix_buf)
+	{
+		p->mix_buf = (pj_int32_t*)pj_pool_zalloc(p->pool, pjsua_var.mconf_cfg.samples_per_frame * sizeof(p->mix_buf[0]));
+		if (!p->mix_buf)
+		{
+			PJSUA_UNLOCK();
+			return PJ_ENOMEM;
+		}
+		p->last_mix_adj = NORMAL_LEVEL;
+	}
+
+	p->mix_cnt = 0U;
+	p->mix_adj = NORMAL_LEVEL;
+	p->play_data.status = PJSUA_REP_CONFERENCING;
+
+	PJSUA_UNLOCK();
+
+	PJ_LOG(4, (THIS_FILE, "Started conference on media port %d", id));
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_conf_add(pjsua_mport_id id, pjsua_mport_id pid)
+{
+	register pjsua_mport_data *p, *pp;
+	register int i;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	p = &pjsua_var.mport[id];
+	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
+	PJ_ASSERT_RETURN(pid >= 0 && (unsigned int)pid<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	pp = &pjsua_var.mport[pid];
+	PJ_ASSERT_RETURN(pp->pool != NULL, PJ_EINVAL);
+
+	PJSUA_LOCK();
+
+	if (p->play_data.status != PJSUA_REP_CONFERENCING)
+	{
+		PJSUA_UNLOCK();
+		return PJ_ENOTFOUND;
+	}
+
+	for (i = (int)p->participant_cnt - 1; i >= 0; --i)
+	{
+		if (p->participants[i] == pid)
+		{
+			PJSUA_UNLOCK();
+			return PJ_SUCCESS;
+		}
+	}
+
+	if (p->participant_cnt >= PJSUA_MAX_CONF_PORTS)
+	{
+			PJSUA_UNLOCK();
+			return PJ_ETOOMANY;
+	}
+
+	if (!pp->listeners)
+	{
+		pp->listeners = (pjsua_mport_id*)pj_pool_zalloc(pp->pool, sizeof(pjsua_mport_id) * pjsua_var.media_cfg.max_media_ports);
+		if (!pp->listeners)
+		{
+			PJSUA_UNLOCK();
+			return PJ_ENOMEM;
+		}
+		for (i = 0; i < (int)pjsua_var.media_cfg.max_media_ports; ++i)
+			pp->listeners[i] = PJSUA_INVALID_ID;
+	}
+
+	pj_enter_critical_section();
+
+	p->participants[p->participant_cnt++] = pid;
+
+	for (i = (int)pp->listener_cnt - 1; i >= 0; --i)
+	{
+		if (pp->listeners[i] == id)
+			break;
+	}
+	if (i < 0)
+	{
+		pj_assert(pp->listener_cnt < pjsua_var.media_cfg.max_media_ports);
+		pp->listeners[pp->listener_cnt++] = id;
+	}
+
+	pj_leave_critical_section();
+
+	PJSUA_UNLOCK();
+
+	PJ_LOG(4, (THIS_FILE, "Added media port %d to conference on media port %d", pid, id));
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_conf_remove(pjsua_mport_id id, pjsua_mport_id pid)
+{
+	register pjsua_mport_data *p, *pp;
+	register int i, j;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	p = &pjsua_var.mport[id];
+	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
+	PJ_ASSERT_RETURN(pid >= 0 && (unsigned int)pid<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	pp = &pjsua_var.mport[pid];
+	PJ_ASSERT_RETURN(pp->pool != NULL, PJ_EINVAL);
+
+	PJSUA_LOCK();
+
+	if (p->play_data.status != PJSUA_REP_CONFERENCING)
+	{
+		PJSUA_UNLOCK();
+		return PJ_ENOTFOUND;
+	}
+
+	pj_enter_critical_section();
+
+	for (i = (int)(p->participant_cnt) - 1; i >= 0; --i)
+	{
+		if (p->participants[i] != pid)
+			continue;
+		for (j = (int)(pp->listener_cnt) - 1; j >= 0; --j)
+		{
+			if (pp->listeners[j] == id)
+			{
+				pp->listener_cnt--;
+				if (j == (int)pp->listener_cnt)
+				{
+					pp->listeners[j] = PJSUA_INVALID_ID;
+				}
+				else
+				{
+					pp->listeners[j] = pp->listeners[pp->listener_cnt];
+					pp->listeners[pp->listener_cnt] = PJSUA_INVALID_ID;
+				}
+				break;
+			}
+		}
+		p->participant_cnt--;
+		if (i == (int)p->participant_cnt)
+		{
+			p->participants[i] = PJSUA_INVALID_ID;
+		}
+		else
+		{
+			p->participants[i] = p->participants[p->participant_cnt];
+			p->participants[p->participant_cnt] = PJSUA_INVALID_ID;
+		}
+		break;
+	}
+
+	pj_leave_critical_section();
+
+	PJSUA_UNLOCK();
+
+	if (i < 0)
+		return PJ_ENOTFOUND;
+
+	PJ_LOG(4, (THIS_FILE, "Removed media port %d from conference on media port %d", pid, id));
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_conf_stop(pjsua_mport_id id)
+{
+	register pjsua_mport_data *p;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	p = &pjsua_var.mport[id];
+	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
+
+	PJSUA_LOCK();
+
+	if (p->play_data.status != PJSUA_REP_CONFERENCING)
+	{
+		PJSUA_UNLOCK();
+		return PJ_ENOTFOUND;
+	}
+
+	pj_enter_critical_section();
+
+	for (register int i = (int)(p->participant_cnt) - 1; i >= 0; --i)
+	{
+		register pjsua_mport_data *pp = &pjsua_var.mport[p->participants[i]];
+		for (register int j = (int)(pp->listener_cnt) - 1; j >= 0; --j)
+		{
+			if (pp->listeners[j] == id)
+			{
+				pp->listener_cnt--;
+				if (j == (int)pp->listener_cnt)
+				{
+					pp->listeners[j] = PJSUA_INVALID_ID;
+				}
+				else
+				{
+					pp->listeners[j] = pp->listeners[pp->listener_cnt];
+					pp->listeners[pp->listener_cnt] = PJSUA_INVALID_ID;
+				}
+				break;
+			}
+		}
+		p->participants[i] = PJSUA_INVALID_ID;
+		p->participant_cnt--;
+	}
+
+	p->play_data.status = PJSUA_REP_IDLE;
+
+	pj_leave_critical_section();
+
+	PJSUA_UNLOCK();
+
+	PJ_LOG(4, (THIS_FILE, "Stopped conference on media port %d", id));
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_listen_for(pjsua_mport_id id, pjs_listen_for_parms* params)
+{
+	register pjsua_mport_data *p;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	p = &pjsua_var.mport[id];
+	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
+
+	if (params && (params->types == PJSUA_RCG_NONE))
+		params = NULL;
+
+	PJSUA_LOCK();
+
+	if (!(p->base.info.dir & PJMEDIA_DIR_CAPTURE))
+	{
+		PJSUA_UNLOCK();
+		return PJ_EINVALIDOP;
+	}
+
+	pj_enter_critical_section();
+
+	if (params)
+		p->recogntion_data.params = *params;
+	else
+		p->recogntion_data.params.types = PJSUA_RCG_NONE;
+
+	pj_leave_critical_section();
+
+	PJSUA_UNLOCK();
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_get_recognised(pjsua_mport_id id, pjs_recognition_info* info)
+{
+	register pjsua_mport_data *p;
+
+	PJ_ASSERT_RETURN(info != NULL, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	p = &pjsua_var.mport[id];
+	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
+
+	pj_enter_critical_section();
+
+	if (p->recogntion_data.event_cnt > 0U)
+	{
+		*info = p->recogntion_data.events[0U];
+		pj_array_erase(p->recogntion_data.events, sizeof(p->recogntion_data.events[0]), p->recogntion_data.event_cnt, 0U);
+		if (!--p->recogntion_data.event_cnt)
+		{
+			if (p->recogntion_data.signaled)
+			{
+				pj_event_reset(p->recogntion_data.event);
+				p->recogntion_data.signaled = PJ_FALSE;
+			}
+		}
+	}
+	else
+	{
+		info->type = PJSUA_RCG_NONE;
+	}
+
+	pj_leave_critical_section();
+
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_discard_recognised(pjsua_mport_id id)
+{
+	register pjsua_mport_data *p;
+
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	p = &pjsua_var.mport[id];
+	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
+
+	pj_enter_critical_section();
+
+	if (p->recogntion_data.event_cnt > 0U)
+	{
+		p->recogntion_data.event_cnt = 0U;
+		if (p->recogntion_data.signaled)
+		{
+			pj_event_reset(p->recogntion_data.event);
+			p->recogntion_data.signaled = PJ_FALSE;
+		}
+	}
+
+	pj_leave_critical_section();
+
+	return PJ_SUCCESS;
+}
+
+static pj_status_t pjsua_mport_add_recognition_event(pjsua_mport_id id, const pjs_recognition_info* ri)
+{
+	register pjsua_mport_data *p;
+
+	PJ_ASSERT_RETURN(ri != NULL && ri->type != PJSUA_RCG_NONE, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	p = &pjsua_var.mport[id];
+	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
+
+	register pj_status_t pje = PJ_SUCCESS;
+
+	pj_enter_critical_section();
+
+	if (!(ri->type & p->recogntion_data.params.types))
+	{
+		pje = PJ_EIGNORED;
+	}
+	else
+	{
+		if ((ri->type & PJSUA_RCG_DTMF) &&
+			((p->recogntion_data.params.types & PJSUA_RCG_DTMF) == PJSUA_RCG_DTMF))
+			p->recogntion_data.params.types &=
+				~(!(ri->type & PJSUA_RCG_DTMF_RFC2833) ? PJSUA_RCG_DTMF_RFC2833 : PJSUA_RCG_DTMF_TONE);
+		if (p->recogntion_data.event_cnt >= PJ_ARRAY_SIZE(p->recogntion_data.events))
+		{
+			pje = PJ_ETOOMANY;
+		}
+		else
+		{
+			p->recogntion_data.events[p->recogntion_data.event_cnt++] = *ri;
+			if (!p->recogntion_data.signaled)
+			{
+				pj_event_set(p->recogntion_data.event);
+				p->recogntion_data.signaled = PJ_TRUE;
+			}
+		}
+	}
+
+	pj_leave_critical_section();
+
+	return pje;
+}
+
+PJ_DEF(pj_status_t) pjsua_mport_add_rfc2833_dtmf_digit(pjsua_mport_id id, char digit, unsigned timestamp, unsigned duration)
+{
+	pjs_recognition_info ri;
+	ri.type = PJSUA_RCG_DTMF_RFC2833;
+	ri.timestamp = timestamp;
+	ri.param0 = (unsigned)(pj_uint8_t)digit;
+	ri.param1 = duration;
+	return pjsua_mport_add_recognition_event(id, &ri);
+}
