@@ -213,7 +213,19 @@ PJ_DECL(pjmedia_port*) pjmedia_conf_get_master_port(pjmedia_conf *conf);
 PJ_DECL(pj_status_t) pjmedia_conf_set_port0_name(pjmedia_conf *conf,
                                                  const pj_str_t *name);
 
+/**
+ * compare signature of the port with the signature of the port in the conference bridge
+ *
+ * if the conf_slot is not found, return PJ_FALSE
+ *
+ * @param conf          The conference bridge.
+ * @param conf_slot     conference bridge slot
+ * @param signature     signature of the port
+ *
+ * @return              PJ_TRUE if the signature of the port is the same as the signature of the port in the conference bridge
+ */
 
+PJ_DECL(pj_bool_t) pjmedia_conf_compare_port_signature(pjmedia_conf* conf, unsigned conf_slot, pj_uint32_t signature);
 /**
  * Add media port to the conference bridge.
  *
@@ -453,7 +465,18 @@ PJ_DECL(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 PJ_DECL(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
                                               unsigned ports[],
                                               unsigned *count );
-
+/**
+ * Get port info.
+ *
+ * @param conf          The conference bridge.
+ * @param slot          Port index.
+ * @param info          Pointer to receive the info.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_get_media_port_info(pjmedia_conf* conf,
+    unsigned slot,
+    pjmedia_port_info* info);
 
 /**
  * Get port info.
