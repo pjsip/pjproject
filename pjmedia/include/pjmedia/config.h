@@ -940,6 +940,24 @@
 
 
 /**
+ * This macro declares the payload type for T140 text that is advertised
+ * by PJMEDIA for outgoing SDP.
+ */
+#ifndef PJMEDIA_RTP_PT_T140
+#   define PJMEDIA_RTP_PT_T140 98
+#endif
+
+/**
+ * This macro declares the payload type for redundancy that is advertised
+ * by PJMEDIA for outgoing SDP. Currently, redundancy is only used for
+ * text stream.
+ */
+#ifndef PJMEDIA_RTP_PT_REDUNDANCY
+#   define PJMEDIA_RTP_PT_REDUNDANCY 100
+#endif
+
+
+/**
  * Maximum tones/digits that can be enqueued in the tone generator.
  */
 #ifndef PJMEDIA_TONEGEN_MAX_DIGITS
@@ -1610,6 +1628,19 @@
 #  else
 #     define PJMEDIA_MAX_VID_PAYLOAD_SIZE     (PJMEDIA_MAX_MTU - 20)
 #  endif
+#endif
+
+/**
+ * Specify the maximum redundancy levels supported by text stream.
+ * A value of 1 provides an adequate protection against an average
+ * packet loss of up to 50%, while 2 can potentially protect
+ * against 66.7%, so typically setting it to a higher value is
+ * rarely necessary.
+ *
+ * Default: 2, as per the recommendation of RFC 4103.
+ */
+#ifndef PJMEDIA_TXT_STREAM_MAX_RED_LEVELS
+#    define PJMEDIA_TXT_STREAM_MAX_RED_LEVELS 2
 #endif
 
 

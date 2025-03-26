@@ -2111,6 +2111,8 @@ private:
                                const pjsua_dtmf_info *info);
     static void on_dtmf_event(pjsua_call_id call_id,
                               const pjsua_dtmf_event *event);
+    static void on_call_rx_text(pjsua_call_id call_id,
+                                const pjsua_txt_stream_data *data);
     static void on_call_transfer_request(pjsua_call_id call_id,
                                          const pj_str_t *dst,
                                          pjsip_status_code *code);
