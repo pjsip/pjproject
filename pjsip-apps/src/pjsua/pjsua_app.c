@@ -2941,21 +2941,18 @@ typedef struct pjsua_mport_data
 	pjsua_mport_recognition_data	recogntion_data;
 } pjsua_mport_data;
 
-typedef struct pjsua_conf_setting
-{
-    unsigned    channel_count;
-    unsigned    samples_per_frame;
-    unsigned    bits_per_sample;
-} pjsua_conf_setting;
-
 // TODO: implement your own lock
 #define PJSUA_LOCK()
 #define PJSUA_UNLOCK()
 
+// TODO: implement this in pjsua-lib
+#define pjmedia_conf_configure_port(a, b, c, d)
+
+#define SPF(a) (a.clock_rate * a.channel_count * a.audio_frame_ptime / 1000)
+#define BPS(a) (16)
+
 struct {
-    pjsua_media_config   media_cfg; /**< Media config.                  */
-    pjsua_conf_setting   mconf_cfg; /**< Additionan conf. bridge. param */
-    pjmedia_conf        *mconf;     /**< Conference bridge.             */
+    //pjmedia_conf        *mconf;     /**< Conference bridge.             */
 
     /* Media ports/channels */
     unsigned			mport_cnt;	/**< Number of media channels.	*/
@@ -2971,7 +2968,7 @@ struct {
  * signal level of the ports, so that sudden change in signal level
  * in the port does not cause misaligned signal (which causes noise).
  */
-#define ATTACK_A			(pjsua_var.media_cfg.clock_rate / pjsua_var.mconf_cfg.samples_per_frame)
+#define ATTACK_A			(app_config.media_cfg.clock_rate / SPF(app_config.media_cfg))
 #define ATTACK_B			1
 #define DECAY_A				0
 #define DECAY_B				1
@@ -3000,7 +2997,7 @@ static void mport_rec_frame(pjsua_mport_data *data, pjmedia_frame *frame)
 
 	if (frame->type == PJMEDIA_FRAME_TYPE_NONE)
 	{
-		count = size = pjsua_var.mconf_cfg.samples_per_frame;
+		count = size = SPF(app_config.media_cfg);
 		buf = (pj_int16_t *)pj_pool_alloc(data->pool, sizeof(*buf) * size);
 		pj_bzero(buf, sizeof(*buf) * size);
 	}
@@ -3159,7 +3156,7 @@ static pj_status_t mport_put_frame(pjmedia_port *this_port, pjmedia_frame *frame
 		(data->listener_cnt > 0U))
 	{
 		const pj_size_t samples = frame->size >> 1;
-		pj_assert(samples == pjsua_var.mconf_cfg.samples_per_frame);
+		pj_assert(samples == SPF(app_config.media_cfg));
 		pj_enter_critical_section();
 		pj_assert(data->listeners != NULL);
 		for (register pj_uint32_t i = 0; i < data->listener_cnt; ++i)
@@ -3169,7 +3166,7 @@ static pj_status_t mport_put_frame(pjmedia_port *this_port, pjmedia_frame *frame
 			pj_int32_t *mix_buf;
 			pj_int16_t *buf;
 			pj_size_t j;
-			pj_assert((id >= 0) && (id < (pjsua_mport_id)pjsua_var.media_cfg.max_media_ports));
+			pj_assert((id >= 0) && (id < (pjsua_mport_id)app_config.media_cfg.max_media_ports));
 			listener = &pjsua_var.mport[id];
 			mix_buf = listener->mix_buf;
 			buf = (pj_int16_t *)frame->buf;
@@ -3212,7 +3209,7 @@ static pj_status_t mport_get_frame(pjmedia_port *this_port, pjmedia_frame *frame
 
 	data = (pjsua_mport_data*) this_port;
 
-	size = pjsua_var.mconf_cfg.samples_per_frame;
+	size = SPF(app_config.media_cfg);
 
 	frame->timestamp.u64 = data->play_data.timestamp.u64;
 	data->play_data.timestamp.u64 += size;
@@ -3359,8 +3356,8 @@ static pj_status_t init_mport(pjsua_mport_id id)
 	pj_ansi_snprintf(buf, sizeof(buf), "mp%d", id);
 	buf[sizeof(buf)-1] = '\0';
 	pj_strdup2_with_null(app_config.pool, &name, buf);
-	status = pjmedia_port_info_init(&p->base.info, &name, SIGNATURE, pjsua_var.media_cfg.clock_rate,
-		pjsua_var.mconf_cfg.channel_count, pjsua_var.mconf_cfg.bits_per_sample, pjsua_var.mconf_cfg.samples_per_frame);
+	status = pjmedia_port_info_init(&p->base.info, &name, SIGNATURE, app_config.media_cfg.clock_rate,
+		app_config.media_cfg.channel_count, BPS(app_config.media_cfg), SPF(app_config.media_cfg));
 	if (status == PJ_SUCCESS)
 	{
 		p->base.port_data.ldata = id;
@@ -3384,7 +3381,7 @@ static void destroy_mport()
 {
 	if (pjsua_var.mport != NULL)
 	{
-		for (unsigned i = 0U; i < pjsua_var.media_cfg.max_media_ports; ++i)
+		for (unsigned i = 0U; i < app_config.media_cfg.max_media_ports; ++i)
 			deinit_mport(i);
 		pjsua_var.mport = NULL;
 	}
@@ -3406,25 +3403,25 @@ PJ_DEF(pj_status_t) pjsua_mport_alloc(pjmedia_dir dir,
 
 	PJSUA_LOCK();
 
-	if (pjsua_var.mport_cnt >= pjsua_var.media_cfg.max_media_ports)
+	if (pjsua_var.mport_cnt >= app_config.media_cfg.max_media_ports)
 	{
 		PJSUA_UNLOCK();
 		return PJ_ETOOMANY;
 	}
 
 	unsigned int id;
-	for (id = 0; id<pjsua_var.media_cfg.max_media_ports; ++id)
+	for (id = 0; id<app_config.media_cfg.max_media_ports; ++id)
 	{
 		register unsigned int tmp = id + pjsua_var.mport_id + 1;
-		if (tmp >= pjsua_var.media_cfg.max_media_ports)
-			tmp -= pjsua_var.media_cfg.max_media_ports;
+		if (tmp >= app_config.media_cfg.max_media_ports)
+			tmp -= app_config.media_cfg.max_media_ports;
 		if (pjsua_var.mport[tmp].slot == PJSUA_INVALID_ID)
 		{
 			pjsua_var.mport_id = id = tmp;
 			break;
 		}
 	}
-	if (id == pjsua_var.media_cfg.max_media_ports)
+	if (id == app_config.media_cfg.max_media_ports)
 	{
 		/* This is unexpected */
 		pj_assert(0);
@@ -3460,14 +3457,14 @@ PJ_DEF(pj_status_t) pjsua_mport_alloc(pjmedia_dir dir,
 	{
 		if (enable_vad)
 		{
-			status = pjmedia_silence_det_create(p->pool, pjsua_var.media_cfg.clock_rate, pjsua_var.mconf_cfg.samples_per_frame, &p->record_data.vad);
+			status = pjmedia_silence_det_create(p->pool, app_config.media_cfg.clock_rate, SPF(app_config.media_cfg), &p->record_data.vad);
 			if (status != PJ_SUCCESS)
 				goto on_error;
 			status = pjmedia_silence_det_set_name(p->record_data.vad, p->base.info.name.ptr);
 		}
 		if (!record_buffer_size)
 		{
-			record_buffer_size = pjsua_var.media_cfg.mport_record_buffer_size;
+			record_buffer_size = app_config.media_cfg.mport_record_buffer_size;
 			if (!record_buffer_size)
 				record_buffer_size = 1250;
 		}
@@ -3475,18 +3472,18 @@ PJ_DEF(pj_status_t) pjsua_mport_alloc(pjmedia_dir dir,
 			record_buffer_size = 40;
 		else if (record_buffer_size > 5000)
 			record_buffer_size = 5000;
-		record_buffer_size = ((record_buffer_size + (pjsua_var.media_cfg.audio_frame_ptime - 1)) / pjsua_var.media_cfg.audio_frame_ptime);
-		p->record_data.buffer_size = record_buffer_size * pjsua_var.mconf_cfg.samples_per_frame;
+		record_buffer_size = ((record_buffer_size + (app_config.media_cfg.audio_frame_ptime - 1)) / app_config.media_cfg.audio_frame_ptime);
+		p->record_data.buffer_size = record_buffer_size * SPF(app_config.media_cfg);
 		pj_ansi_snprintf(name, sizeof(name)-1, "mp_rec%d", id);
 		status = pj_event_create(p->pool, name, PJ_TRUE, PJ_FALSE, &p->record_data.event);
 		if (status != PJ_SUCCESS)
 			goto on_error;
 		if (!record_data_threshold)
 			record_data_threshold = 250;
-		record_data_threshold = ((record_data_threshold + (pjsua_var.media_cfg.audio_frame_ptime - 1)) / pjsua_var.media_cfg.audio_frame_ptime);
+		record_data_threshold = ((record_data_threshold + (app_config.media_cfg.audio_frame_ptime - 1)) / app_config.media_cfg.audio_frame_ptime);
 		if (record_data_threshold > record_buffer_size)
 			record_data_threshold = record_buffer_size;
-		p->record_data.threshold = record_data_threshold * pjsua_var.mconf_cfg.samples_per_frame;
+		p->record_data.threshold = record_data_threshold * SPF(app_config.media_cfg);
 		pj_ansi_snprintf(name, sizeof(name)-1, "mp_rgn%d", id);
 		status = pj_event_create(p->pool, name, PJ_TRUE, PJ_FALSE, &p->recogntion_data.event);
 		if (status != PJ_SUCCESS)
@@ -3503,7 +3500,7 @@ PJ_DEF(pj_status_t) pjsua_mport_alloc(pjmedia_dir dir,
 	{
 		if (!play_buffer_size)
 		{
-			play_buffer_size = pjsua_var.media_cfg.mport_replay_buffer_size;
+			play_buffer_size = app_config.media_cfg.mport_replay_buffer_size;
 			if (!play_buffer_size)
 				play_buffer_size = 1250;
 		}
@@ -3511,18 +3508,18 @@ PJ_DEF(pj_status_t) pjsua_mport_alloc(pjmedia_dir dir,
 			play_buffer_size = 40;
 		else if (play_buffer_size > 5000)
 			play_buffer_size = 5000;
-		play_buffer_size = ((play_buffer_size + (pjsua_var.media_cfg.audio_frame_ptime - 1)) / pjsua_var.media_cfg.audio_frame_ptime);
-		p->play_data.buffer_size = play_buffer_size * pjsua_var.mconf_cfg.samples_per_frame;
+		play_buffer_size = ((play_buffer_size + (app_config.media_cfg.audio_frame_ptime - 1)) / app_config.media_cfg.audio_frame_ptime);
+		p->play_data.buffer_size = play_buffer_size * SPF(app_config.media_cfg);
 		pj_ansi_snprintf(name, sizeof(name)-1, "mp_pla%d", id);
 		status = pj_event_create(p->pool, name, PJ_TRUE, PJ_FALSE, &p->play_data.event);
 		if (status != PJ_SUCCESS)
 			goto on_error;
 		if (!play_data_threshold)
 			play_data_threshold = 250;
-		play_data_threshold = ((play_data_threshold + (pjsua_var.media_cfg.audio_frame_ptime - 1)) / pjsua_var.media_cfg.audio_frame_ptime);
+		play_data_threshold = ((play_data_threshold + (app_config.media_cfg.audio_frame_ptime - 1)) / app_config.media_cfg.audio_frame_ptime);
 		if (play_data_threshold > play_buffer_size)
 			play_data_threshold = play_buffer_size;
-		p->play_data.threshold = play_data_threshold * pjsua_var.mconf_cfg.samples_per_frame;
+		p->play_data.threshold = play_data_threshold * SPF(app_config.media_cfg);
 	}
 
 	status = pjsua_conf_add_port(p->pool, &p->base, &p->slot);
@@ -3581,7 +3578,7 @@ on_error:
 
 PJ_DEF(pj_status_t) pjsua_mport_free(pjsua_mport_id id)
 {
-	if ((id < 0) || ((unsigned int)id >= pjsua_var.media_cfg.max_media_ports))
+	if ((id < 0) || ((unsigned int)id >= app_config.media_cfg.max_media_ports))
 	{
 		pj_assert(0);
 		return PJ_EINVAL;
@@ -3698,7 +3695,7 @@ PJ_DEF(pj_status_t) pjsua_mport_free(pjsua_mport_id id)
 
 PJ_DEF(pjsua_conf_port_id) pjsua_mport_get_conf_port(pjsua_mport_id id)
 {
-	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,PJSUA_INVALID_ID);
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<app_config.media_cfg.max_media_ports,PJSUA_INVALID_ID);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJSUA_INVALID_ID);
 
 	return pjsua_var.mport[id].slot;
@@ -3706,7 +3703,7 @@ PJ_DEF(pjsua_conf_port_id) pjsua_mport_get_conf_port(pjsua_mport_id id)
 
 PJ_DEF(pj_status_t) pjsua_mport_get_port( pjsua_mport_id id, pjmedia_port **p_port)
 {
-	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,PJ_EINVAL);
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<app_config.media_cfg.max_media_ports,PJ_EINVAL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
 	PJ_ASSERT_RETURN(p_port != NULL, PJ_EINVAL);
 
@@ -3717,7 +3714,7 @@ PJ_DEF(pj_status_t) pjsua_mport_get_port( pjsua_mport_id id, pjmedia_port **p_po
 
 PJ_DEF(pjmedia_dir) pjsua_mport_get_dir(pjsua_mport_id id)
 {
-	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJMEDIA_DIR_NONE);
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<app_config.media_cfg.max_media_ports, PJMEDIA_DIR_NONE);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJMEDIA_DIR_NONE);
 
 	return pjsua_var.mport[id].base.info.dir;
@@ -3725,7 +3722,7 @@ PJ_DEF(pjmedia_dir) pjsua_mport_get_dir(pjsua_mport_id id)
 
 PJ_DEF(pj_event_t *) pjsua_mport_get_play_event(pjsua_mport_id id)
 {
-	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,NULL);
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<app_config.media_cfg.max_media_ports,NULL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, NULL);
 
 	return pjsua_var.mport[id].play_data.event;
@@ -3733,7 +3730,7 @@ PJ_DEF(pj_event_t *) pjsua_mport_get_play_event(pjsua_mport_id id)
 
 PJ_DEF(pj_event_t *) pjsua_mport_get_record_event(pjsua_mport_id id)
 {
-	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,NULL);
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<app_config.media_cfg.max_media_ports,NULL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, NULL);
 
 	return pjsua_var.mport[id].record_data.event;
@@ -3741,7 +3738,7 @@ PJ_DEF(pj_event_t *) pjsua_mport_get_record_event(pjsua_mport_id id)
 
 PJ_DEF(pj_event_t *) pjsua_mport_get_recognition_event(pjsua_mport_id id)
 {
-	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,NULL);
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<app_config.media_cfg.max_media_ports,NULL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, NULL);
 
 	return pjsua_var.mport[id].recogntion_data.event;
@@ -3822,7 +3819,7 @@ PJ_DEF(pj_status_t) pjsua_mport_play_start(
 
 	*count = 0;
 
-	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<pjsua_var.media_cfg.max_media_ports,PJ_EINVAL);
+	PJ_ASSERT_RETURN(id>=0&&(unsigned int)id<app_config.media_cfg.max_media_ports,PJ_EINVAL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
 	PJ_ASSERT_RETURN(fmt != NULL, PJ_EINVAL);
 
@@ -3840,8 +3837,8 @@ PJ_DEF(pj_status_t) pjsua_mport_play_start(
 		return PJ_EBUSY;
 	}
 	if (((fmt->id != PJMEDIA_FORMAT_PCM) && (fmt->id != PJMEDIA_FORMAT_PCMA) && (fmt->id != PJMEDIA_FORMAT_PCMU)) ||
-		(fmt->det.aud.clock_rate != pjsua_var.media_cfg.clock_rate) ||
-		(fmt->det.aud.channel_count != pjsua_var.media_cfg.channel_count))
+		(fmt->det.aud.clock_rate != app_config.media_cfg.clock_rate) ||
+		(fmt->det.aud.channel_count != app_config.media_cfg.channel_count))
 	{
 		PJSUA_UNLOCK();
 		return PJ_ENOTSUP;
@@ -3888,7 +3885,7 @@ PJ_DEF(pj_status_t) pjsua_mport_play_status(pjsua_mport_id id,
 {
 	pjsua_mport_replay_data *p;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
 	PJ_ASSERT_RETURN(info != NULL, PJ_EINVAL);
 
@@ -3945,7 +3942,7 @@ PJ_DEF(pj_status_t) pjsua_mport_play_put_data(pjsua_mport_id id,
 
 	*count = 0;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
 
 	pj_enter_critical_section();
@@ -4009,7 +4006,7 @@ PJ_DEF(pj_status_t) pjsua_mport_play_stop(pjsua_mport_id id, pj_bool_t discard)
 {
 	pjsua_mport_replay_data *p;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
 
 	pj_enter_critical_section();
@@ -4058,7 +4055,7 @@ PJ_DEF(pj_status_t) pjsua_mport_record_start(pjsua_mport_id id,
 {
 	pjsua_mport_record_data *p;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
 	PJ_ASSERT_RETURN(fmt != NULL, PJ_EINVAL);
 
@@ -4081,8 +4078,8 @@ PJ_DEF(pj_status_t) pjsua_mport_record_start(pjsua_mport_id id,
 		return PJ_EBUSY;
 	}
 	if (((fmt->id != PJMEDIA_FORMAT_PCM) && (fmt->id != PJMEDIA_FORMAT_PCMA) && (fmt->id != PJMEDIA_FORMAT_PCMU)) ||
-		(fmt->det.aud.clock_rate != pjsua_var.media_cfg.clock_rate) ||
-		(fmt->det.aud.channel_count != pjsua_var.media_cfg.channel_count))
+		(fmt->det.aud.clock_rate != app_config.media_cfg.clock_rate) ||
+		(fmt->det.aud.channel_count != app_config.media_cfg.channel_count))
 	{
 		PJSUA_UNLOCK();
 		return PJ_ENOTSUP;
@@ -4152,7 +4149,7 @@ PJ_DEF(pj_status_t) pjsua_mport_record_status(pjsua_mport_id id,
 {
 	pjsua_mport_record_data *p;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
 	PJ_ASSERT_RETURN(info != NULL, PJ_EINVAL);
 
@@ -4276,7 +4273,7 @@ PJ_DEF(pj_status_t) pjsua_mport_record_get_data(pjsua_mport_id id,
 
 	*count = 0;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
 	PJ_ASSERT_RETURN(buffer && size, PJ_EINVAL);
 
@@ -4320,7 +4317,7 @@ PJ_DEF(pj_status_t) pjsua_mport_record_stop(pjsua_mport_id id, pj_bool_t discard
 	int rec_output = -1;
 	pj_event_t* signaled_event = NULL;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	PJ_ASSERT_RETURN(pjsua_var.mport[id].pool != NULL, PJ_EINVAL);
 
 	PJ_LOG(4, (THIS_FILE, "Stopping recording on media port %d%s...", id, discard ? " and discarding buffered data" : ""));
@@ -4369,7 +4366,7 @@ PJ_DEF(pj_status_t) pjsua_mport_conf_start(pjsua_mport_id id)
 {
 	register pjsua_mport_data *p;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	p = &pjsua_var.mport[id];
 	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
 
@@ -4398,7 +4395,7 @@ PJ_DEF(pj_status_t) pjsua_mport_conf_start(pjsua_mport_id id)
 	}
 	if (!p->mix_buf)
 	{
-		p->mix_buf = (pj_int32_t*)pj_pool_zalloc(p->pool, pjsua_var.mconf_cfg.samples_per_frame * sizeof(p->mix_buf[0]));
+		p->mix_buf = (pj_int32_t*)pj_pool_zalloc(p->pool, SPF(app_config.media_cfg) * sizeof(p->mix_buf[0]));
 		if (!p->mix_buf)
 		{
 			PJSUA_UNLOCK();
@@ -4423,10 +4420,10 @@ PJ_DEF(pj_status_t) pjsua_mport_conf_add(pjsua_mport_id id, pjsua_mport_id pid)
 	register pjsua_mport_data *p, *pp;
 	register int i;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	p = &pjsua_var.mport[id];
 	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
-	PJ_ASSERT_RETURN(pid >= 0 && (unsigned int)pid<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(pid >= 0 && (unsigned int)pid<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	pp = &pjsua_var.mport[pid];
 	PJ_ASSERT_RETURN(pp->pool != NULL, PJ_EINVAL);
 
@@ -4455,13 +4452,13 @@ PJ_DEF(pj_status_t) pjsua_mport_conf_add(pjsua_mport_id id, pjsua_mport_id pid)
 
 	if (!pp->listeners)
 	{
-		pp->listeners = (pjsua_mport_id*)pj_pool_zalloc(pp->pool, sizeof(pjsua_mport_id) * pjsua_var.media_cfg.max_media_ports);
+		pp->listeners = (pjsua_mport_id*)pj_pool_zalloc(pp->pool, sizeof(pjsua_mport_id) * app_config.media_cfg.max_media_ports);
 		if (!pp->listeners)
 		{
 			PJSUA_UNLOCK();
 			return PJ_ENOMEM;
 		}
-		for (i = 0; i < (int)pjsua_var.media_cfg.max_media_ports; ++i)
+		for (i = 0; i < (int)app_config.media_cfg.max_media_ports; ++i)
 			pp->listeners[i] = PJSUA_INVALID_ID;
 	}
 
@@ -4476,7 +4473,7 @@ PJ_DEF(pj_status_t) pjsua_mport_conf_add(pjsua_mport_id id, pjsua_mport_id pid)
 	}
 	if (i < 0)
 	{
-		pj_assert(pp->listener_cnt < pjsua_var.media_cfg.max_media_ports);
+		pj_assert(pp->listener_cnt < app_config.media_cfg.max_media_ports);
 		pp->listeners[pp->listener_cnt++] = id;
 	}
 
@@ -4494,10 +4491,10 @@ PJ_DEF(pj_status_t) pjsua_mport_conf_remove(pjsua_mport_id id, pjsua_mport_id pi
 	register pjsua_mport_data *p, *pp;
 	register int i, j;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	p = &pjsua_var.mport[id];
 	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
-	PJ_ASSERT_RETURN(pid >= 0 && (unsigned int)pid<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(pid >= 0 && (unsigned int)pid<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	pp = &pjsua_var.mport[pid];
 	PJ_ASSERT_RETURN(pp->pool != NULL, PJ_EINVAL);
 
@@ -4561,7 +4558,7 @@ PJ_DEF(pj_status_t) pjsua_mport_conf_stop(pjsua_mport_id id)
 {
 	register pjsua_mport_data *p;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	p = &pjsua_var.mport[id];
 	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
 
@@ -4614,7 +4611,7 @@ PJ_DEF(pj_status_t) pjsua_mport_listen_for(pjsua_mport_id id, pjs_listen_for_par
 {
 	register pjsua_mport_data *p;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	p = &pjsua_var.mport[id];
 	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
 
@@ -4648,7 +4645,7 @@ PJ_DEF(pj_status_t) pjsua_mport_get_recognised(pjsua_mport_id id, pjs_recognitio
 	register pjsua_mport_data *p;
 
 	PJ_ASSERT_RETURN(info != NULL, PJ_EINVAL);
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	p = &pjsua_var.mport[id];
 	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
 
@@ -4681,7 +4678,7 @@ PJ_DEF(pj_status_t) pjsua_mport_discard_recognised(pjsua_mport_id id)
 {
 	register pjsua_mport_data *p;
 
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	p = &pjsua_var.mport[id];
 	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
 
@@ -4707,7 +4704,7 @@ static pj_status_t pjsua_mport_add_recognition_event(pjsua_mport_id id, const pj
 	register pjsua_mport_data *p;
 
 	PJ_ASSERT_RETURN(ri != NULL && ri->type != PJSUA_RCG_NONE, PJ_EINVAL);
-	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<pjsua_var.media_cfg.max_media_ports, PJ_EINVAL);
+	PJ_ASSERT_RETURN(id >= 0 && (unsigned int)id<app_config.media_cfg.max_media_ports, PJ_EINVAL);
 	p = &pjsua_var.mport[id];
 	PJ_ASSERT_RETURN(p->pool != NULL, PJ_EINVAL);
 
