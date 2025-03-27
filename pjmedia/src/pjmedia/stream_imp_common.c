@@ -382,6 +382,14 @@ static void on_rx_rtcp( void *data,
     }
 
     pjmedia_rtcp_rx_rtcp(&c_strm->rtcp, pkt, bytes_read);
+
+    /* Update synchronizer with reference time from RTCP-SR */
+    if (c_strm->av_sync_media && c_strm->rtcp.rx_lsr_ts) {
+        pj_timestamp ntp = {0}, ts = {0};
+        ntp = c_strm->rtcp.rx_lsr_ntp;
+        ts.u32.lo = c_strm->rtcp.rx_lsr_ts;
+        pjmedia_av_sync_update_ref(c_strm->av_sync_media, &ntp, &ts);
+    }
 }
 
 /*
@@ -654,6 +662,10 @@ static void on_destroy(void *arg)
         pjmedia_jbuf_destroy(c_strm->jb);
         c_strm->jb = NULL;
     }
+
+    /* Destroy media synchronizer */
+    if (c_strm->av_sync && c_strm->av_sync_media)
+        pjmedia_stream_common_set_avsync(c_strm, NULL);
 
 #if TRACE_JB
     if (TRACE_JB_OPENED(c_strm)) {

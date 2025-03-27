@@ -5663,7 +5663,12 @@ typedef enum pjsua_call_flag
     /**
      * Set media direction as specified in pjsua_call_setting.media_dir.
      */
-    PJSUA_CALL_SET_MEDIA_DIR = 128
+    PJSUA_CALL_SET_MEDIA_DIR = 128,
+
+    /**
+     * Disable inter-media synchronization.
+     */
+    PJSUA_CALL_NO_MEDIA_SYNC = 256
 
 } pjsua_call_flag;
 

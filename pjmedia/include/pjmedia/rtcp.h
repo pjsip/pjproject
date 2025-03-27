@@ -263,6 +263,10 @@ typedef struct pjmedia_rtcp_session
 
     pj_uint32_t             rx_lsr;     /**< NTP ts in last SR received     */
     pj_timestamp            rx_lsr_time;/**< Time when last SR is received  */
+    pj_uint32_t             rx_lsr_ts;  /**< RTP ts in last SR received     */
+    pj_timestamp            rx_lsr_ntp; /**< Original/64bit NTP ts in last
+                                             SR received                    */
+
     pj_uint32_t             peer_ssrc;  /**< Peer SSRC                      */
     
     pjmedia_rtcp_stat       stat;       /**< Bidirectional stream stat.     */

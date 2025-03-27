@@ -101,6 +101,9 @@ struct pjmedia_vid_stream
     pjmedia_ratio            dec_max_fps;   /**< Max fps of decoding dir.   */
     pjmedia_frame            dec_frame;     /**< Current decoded frame.     */
     unsigned                 dec_delay_cnt; /**< Decoding delay (in frames).*/
+    unsigned                 dec_add_delay_cnt;
+                                            /**< Decoding additional delay
+                                                 for sync (in frames).      */
     unsigned                 dec_max_delay; /**< Decoding max delay (in ts).*/
     pjmedia_event            fmt_event;     /**< Buffered fmt_changed event
                                                  to avoid deadlock          */
@@ -353,6 +356,7 @@ static pj_status_t detach_send_manager(send_stream *ss)
         }
         e = next;
     }
+    ss->mgr = NULL;
     pj_grp_lock_release(mgr->grp_lock);
 
     /* Decrease ref counter */
@@ -373,6 +377,13 @@ static send_entry* get_send_entry(send_stream *ss)
     pj_sub_timestamp(&min_sent_ts, &idle_ts);
 
     pj_grp_lock_acquire(ss->grp_lock);
+
+    /* Make sure send manager has not been detached */
+    if (ss->mgr == NULL) {
+        pj_grp_lock_release(ss->grp_lock);
+        return NULL;
+    }
+
     e = ss->free_list.next;
     while (e != &ss->free_list) {
         send_entry *next = e->next;
@@ -408,6 +419,12 @@ static void send_rtp(send_stream *ss, send_entry *entry)
     pj_timestamp send_ts;
 
     pj_grp_lock_acquire(ss->grp_lock);
+
+    /* Make sure send manager has not been detached */
+    if (ss->mgr == NULL) {
+        pj_grp_lock_release(ss->grp_lock);
+        return;
+    }
 
     /* Calculate earliest sending time allowed by rate control */
     ss->rc_total += entry->buf_size;
@@ -646,9 +663,11 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
             }
 
             if (can_decode) {
+                pj_size_t old_size = stream->dec_frame.size;
+
                 stream->dec_frame.size = stream->dec_max_size;
                 if (decode_frame(stream, &stream->dec_frame) != PJ_SUCCESS) {
-                    stream->dec_frame.size = 0;
+                    stream->dec_frame.size = old_size;
                 }
             }
         }
@@ -1049,7 +1068,9 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
                     frm_pkt_cnt = cnt;
 
                 /* Is it time to decode? Check with minimum delay setting */
-                if (++frm_cnt == stream->dec_delay_cnt) {
+                if (++frm_cnt == stream->dec_delay_cnt +
+                                 stream->dec_add_delay_cnt)
+                {
                     got_frame = PJ_TRUE;
                     break;
                 }
@@ -1298,6 +1319,95 @@ static pj_status_t get_frame(pjmedia_port *port,
     }
 
     pj_grp_lock_release( c_strm->grp_lock );
+
+    /* Update synchronizer with presentation time */
+    if (c_strm->av_sync_media && frame->type != PJMEDIA_FRAME_TYPE_NONE) {
+        pj_timestamp pts = { 0 };
+        pj_int32_t delay_req_ms;
+        pj_status_t status;
+
+        pts = frame->timestamp;
+        status = pjmedia_av_sync_update_pts(c_strm->av_sync_media, &pts,
+                                            &delay_req_ms);
+        if (status == PJ_SUCCESS && delay_req_ms) {
+            /* Delay adjustment is requested */
+            int target_delay_ms, cur_delay_ms, target_delay_cnt;
+            unsigned last_add_delay_cnt;
+
+            /* Apply delay request */
+            last_add_delay_cnt = stream->dec_add_delay_cnt;
+            cur_delay_ms = (stream->dec_delay_cnt+stream->dec_add_delay_cnt) *
+                           1000 *
+                           stream->dec_max_fps.denum /
+                           stream->dec_max_fps.num;
+            target_delay_ms = cur_delay_ms + delay_req_ms;
+            target_delay_cnt = target_delay_ms * stream->dec_max_fps.num /
+                               stream->dec_max_fps.denum / 1000;
+            if (target_delay_cnt <= (int)stream->dec_delay_cnt)
+                stream->dec_add_delay_cnt = 0;
+            else
+                stream->dec_add_delay_cnt = target_delay_cnt -
+                                            stream->dec_delay_cnt;
+
+            /* Just for safety (never see in tests), target delay should not
+             * exceed 5 seconds.
+             */
+            if (target_delay_ms > 5000) {
+                stream->dec_add_delay_cnt = last_add_delay_cnt;
+                PJ_LOG(5,(c_strm->port.info.name.ptr,
+                          "Ignored avsync request for excessive delay"
+                          " (current=%dms, target=%dms)!",
+                          cur_delay_ms, target_delay_ms));
+            }
+
+            if (stream->dec_add_delay_cnt != last_add_delay_cnt) {
+                PJ_LOG(5,(c_strm->port.info.name.ptr,
+                          "Adjust video minimal delay to (%d+%d) frames",
+                          stream->dec_delay_cnt, stream->dec_add_delay_cnt));
+            }
+
+            /* When requested to speed-up, try to skip frames */
+            if (delay_req_ms < 0) {
+                enum { MAX_SKIP_MS = 500 };
+                unsigned cnt = 0, max_cnt;
+
+                /* Translate milliseconds to number of frames to drop,
+                 * apply upper limit to avoid blocking too long.
+                 */
+                max_cnt = PJ_MIN(-delay_req_ms, MAX_SKIP_MS) *
+                          stream->dec_max_fps.num /
+                          stream->dec_max_fps.denum / 1000;
+                
+                /* Round up one frame, the decoded frame will be played later
+                 * in the next get_frame().
+                 */
+                max_cnt++;
+
+                while (cnt < max_cnt) {
+                    pj_size_t old_size;
+
+                    pj_grp_lock_acquire( c_strm->grp_lock );
+                    old_size = stream->dec_frame.size;
+                    stream->dec_frame.size = stream->dec_max_size;
+                    if (decode_frame(stream, &stream->dec_frame)==PJ_SUCCESS)
+                    {
+                        cnt++;
+                    } else {
+                        /* Revert dec_frame to last successful decoding */
+                        stream->dec_frame.size = old_size;
+                        pj_grp_lock_release( c_strm->grp_lock );
+                        break;
+                    }
+                    pj_grp_lock_release( c_strm->grp_lock );
+                }
+
+                if (cnt) {
+                    PJ_LOG(5,(c_strm->port.info.name.ptr,
+                              "Skipped %d frames to reduce delay", cnt));
+                }
+            }
+        }
+    }
 
     return PJ_SUCCESS;
 }
@@ -1868,8 +1978,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
         c_strm->dec->port.get_frame = NULL;
 
     /* Detach from sending manager */
-    if (stream->send_stream)
+    if (stream->send_stream) {
+        pj_grp_lock_acquire(c_strm->grp_lock);
         detach_send_manager(stream->send_stream);
+        pj_grp_lock_release(c_strm->grp_lock);
+    }
 
 #if TRACE_RC
     {

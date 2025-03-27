@@ -671,6 +671,15 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
             goto on_return;
         }
 
+        /* Add stream to synchronizer */
+        if (call->av_sync) {
+            status = pjmedia_stream_common_set_avsync(
+                            (pjmedia_stream_common*)call_med->strm.a.stream,
+                            call->av_sync);
+            if (status != PJ_SUCCESS)
+                goto on_return;
+        }
+
         /* Start stream */
         status = pjmedia_stream_start(call_med->strm.a.stream);
         if (status != PJ_SUCCESS) {
