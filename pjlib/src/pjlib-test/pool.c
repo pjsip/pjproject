@@ -306,6 +306,7 @@ int pool_test(void)
 {
     enum { LOOP = 2 };
     int rc;
+    int loop;
 
 #if PJ_HAS_POOL_ALT_API == 0
     rc = capacity_test();
@@ -319,7 +320,6 @@ int pool_test(void)
     if (rc) return rc;
 
 #if PJ_HAS_POOL_ALT_API == 0
-    int loop;
     for (loop=0; loop<LOOP; ++loop) {
         /* Test that the pool should grow automaticly. */
         rc = drain_test(SIZE, SIZE);
@@ -337,7 +337,7 @@ int pool_test(void)
         return rc;
 #endif  //PJ_HAS_POOL_ALT_API == 0
 
-
+    PJ_UNUSED_ARG(loop);
     return 0;
 }
 
