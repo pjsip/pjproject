@@ -493,7 +493,9 @@ public class MainActivity extends Activity
     {
        if (BuildConfig.IS_TEST) {
            // On ciTest build, don't allow any normal input
-           if (view.getTag() == null || view.getTag().equals(BuildConfig.TEST_TAG)) {
+           if (view.getTag() == null ||
+              !view.getTag().equals(BuildConfig.TEST_TAG))
+           {
                return;
            }
        }
@@ -599,7 +601,9 @@ public class MainActivity extends Activity
     {
        if (BuildConfig.IS_TEST) {
            // On ciTest build, don't allow any normal input
-           if (view.getTag() == null || view.getTag().equals(BuildConfig.TEST_TAG)) {
+           if (view.getTag() == null ||
+               !view.getTag().equals(BuildConfig.TEST_TAG))
+           {
                return;
            }
        }

@@ -17,6 +17,7 @@
  */
 package org.pjsip.pjsua2.app;
 
+import org.junit.Assert;
 import org.pjsip.pjsua2.*;
 import org.pjsip.pjsua2.app.BuildConfig;
 
@@ -25,13 +26,14 @@ import java.util.HashMap;
 
 import android.Manifest;
 import android.content.Context;
+import android.os.Environment;
 import android.util.Log;
 import android.util.SparseBooleanArray;
 import android.widget.ListView;
-import android.os.Environment;
 
 import androidx.test.espresso.IdlingRegistry;
 import androidx.test.espresso.IdlingResource;
+import androidx.test.espresso.NoMatchingViewException;
 import androidx.test.ext.junit.rules.ActivityScenarioRule;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -45,6 +47,8 @@ import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
+import static androidx.test.espresso.matcher.ViewMatchers.Visibility;
+import static androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility;
 import static org.hamcrest.Matchers.anything;
 
 import org.junit.After;
@@ -61,7 +65,6 @@ class Holder<T> {
 @RunWith(AndroidJUnit4.class)
 public class Pjsua2Test {
     final static String TAG = "PJSUA2Test";
-    final static String FILE_NAME = "pjsua2test_screenshot.png";
 
     private UiDevice device;
 
@@ -87,7 +90,14 @@ public class Pjsua2Test {
         assertEquals(BuildConfig.APPLICATION_ID, appContext.getPackageName());
     }
 
-    private void takeScreenshot() throws Exception {
+    private void checkIsDisplayed(int viewId, String viewName) {
+        try {
+            onView(withId(viewId)).check(matches(isDisplayed()));
+        } catch (NoMatchingViewException e) {
+            Assert.fail("View with ID R.id." + viewName + " was not found");
+        }
+    }
+    private void takeScreenshot(String fileName) throws Exception {
         UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
         File path = new File(Environment.getExternalStoragePublicDirectory(
                              Environment.DIRECTORY_PICTURES).getAbsolutePath(),
@@ -98,8 +108,8 @@ public class Pjsua2Test {
                 return;
             }
         }
-        System.out.println("Taking screenshot to : " + path.getAbsolutePath() + "//" + FILE_NAME);
-        device.takeScreenshot(new File(path, FILE_NAME));
+        System.out.println("Taking screenshot to : " + path.getAbsolutePath() + "//" + fileName);
+        device.takeScreenshot(new File(path, fileName));
     }
 
     @Test
@@ -108,6 +118,8 @@ public class Pjsua2Test {
 
         localUri += ":" + Integer.toString(BuildConfig.SIP_PORT);
         Log.d(TAG, "Starting addBuddy()");
+
+        checkIsDisplayed(R.id.buttonAddBuddy, "buttonAddBuddy");
 
         activityScenarioRule.getScenario().onActivity(activity -> {
             activity.findViewById(R.id.buttonAddBuddy).setTag(BuildConfig.TEST_TAG);
@@ -130,12 +142,14 @@ public class Pjsua2Test {
     @Test
     public void callBuddy() {
         ListView listView;
-        final Holder<ListView> holder = new Holder<>();
+        final Holder<ListView> lvHolder = new Holder<>();
 
         Log.d(TAG, "Starting callBuddy()");
 
         String localUri = "sip:localhost";
         localUri += ":" + Integer.toString(BuildConfig.SIP_PORT);
+
+        checkIsDisplayed(R.id.listViewBuddy, "listViewBuddy");
 
         onData(anything())
             .inAdapterView(withId(R.id.listViewBuddy))
@@ -144,9 +158,9 @@ public class Pjsua2Test {
 
         // Retrieve the ListView and the checked item position
         activityScenarioRule.getScenario().onActivity(activity -> {
-            holder.value = activity.findViewById(R.id.listViewBuddy);
+            lvHolder.value = activity.findViewById(R.id.listViewBuddy);
         });
-        listView = holder.value;
+        listView = lvHolder.value;
         assert(listView != null);
         listView.setTag(BuildConfig.TEST_TAG);
 
@@ -172,11 +186,21 @@ public class Pjsua2Test {
         Log.d(TAG, "Selected URI is: " + checkedURI);
         assertEquals(localUri, checkedURI);
 
+        checkIsDisplayed(R.id.buttonCall, "buttonCall");
+        activityScenarioRule.getScenario().onActivity(activity -> {
+            activity.findViewById(R.id.buttonCall).setTag(BuildConfig.TEST_TAG);
+        });
         onView(withId(R.id.buttonCall)).perform(click());
 
         try {
             Thread.sleep(4000);
-            takeScreenshot();
+            checkIsDisplayed(R.id.surfaceIncomingVideo, "surfaceIncomingVideo");
+
+            onView(withId(R.id.surfaceIncomingVideo))
+                  .check(matches(withEffectiveVisibility(Visibility.VISIBLE)));
+
+            takeScreenshot("make_call_sc.png");
+
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         };
