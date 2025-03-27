@@ -3343,6 +3343,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\av_sync.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\avi_player.c"
 				>
 			</File>
@@ -7493,6 +7497,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\audiodev.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\av_sync.h"
 				>
 			</File>
 			<File
