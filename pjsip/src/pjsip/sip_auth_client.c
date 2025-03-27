@@ -727,7 +727,8 @@ static pjsip_cached_auth *find_cached_auth( pjsip_auth_clt_sess *sess,
                                             const pj_str_t *realm,
                                             pjsip_auth_algorithm_type algorithm_type)
 {
-    pjsip_cached_auth * pauth = NULL;
+    pjsip_cached_auth *auth, *pauth = NULL;
+
     if (sess->parent) {
         pj_lock_acquire(sess->parent->lock);
         pauth = find_cached_auth(sess->parent, realm, algorithm_type);
@@ -737,11 +738,13 @@ static pjsip_cached_auth *find_cached_auth( pjsip_auth_clt_sess *sess,
         return pauth;
     }
 
-    pjsip_cached_auth *auth = sess->cached_auth.next;
+    auth = sess->cached_auth.next;
     while (auth != &sess->cached_auth) {
         if (pj_stricmp(&auth->realm, realm) == 0
             && auth->challenge_algorithm_type == algorithm_type)
+        {
             return auth;
+        }
         auth = auth->next;
     }
 
