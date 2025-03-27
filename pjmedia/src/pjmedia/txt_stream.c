@@ -938,7 +938,6 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si,
 
         if (!pj_isdigit(*local_m->desc.fmt[fmti].ptr))
             return PJMEDIA_EINVALIDPT;
-        pt = pj_strtoul(&local_m->desc.fmt[fmti]);
 
         attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP,
                                            &local_m->desc.fmt[fmti]);
@@ -1005,10 +1004,6 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si,
     /* Get local fmtp for our decoder. */
     pjmedia_stream_info_parse_fmtp(pool, local_m, si->rx_pt,
                                    &si->dec_fmtp);
-
-
-    if (status != PJ_SUCCESS && si->dir != PJMEDIA_DIR_NONE)
-        return status;
 
     return PJ_SUCCESS;
 }
