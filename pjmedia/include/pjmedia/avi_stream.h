@@ -45,7 +45,13 @@ enum pjmedia_avi_file_player_option
      * Tell the file player to return NULL frame when the whole
      * file has been played.
      */
-    PJMEDIA_AVI_FILE_NO_LOOP = 1
+    PJMEDIA_AVI_FILE_NO_LOOP = 1,
+
+    /**
+     * Set the file player to permit independent playback of audio and
+     * video streams without synchronization.
+     */
+    PJMEDIA_AVI_FILE_NO_SYNC = 2
 };
 
 /**
@@ -64,9 +70,16 @@ typedef struct pjmedia_avi_streams pjmedia_avi_streams;
  * reading AVI file with uncompressed video format and 
  * 16 bit PCM or compressed G.711 A-law/U-law audio format.
  *
+ * By default, avi streams will loop the file playback and synchronize
+ * audio and video streams. To change this behavior, use the flags parameter.
+ *
+ * When synchronization is enabled, the file player will wait for all
+ * media streams to reach the end of file before rewinding the file.
+ *
  * @param pool          Pool to create the streams.
  * @param filename      File name to open.
- * @param flags         Avi streams creation flags.
+ * @param flags         Avi streams creation flags, bitmask combination of
+ *                      #pjmedia_avi_file_player_option.
  * @param p_streams     Pointer to receive the avi streams instance.
  *
  * @return              PJ_SUCCESS on success.

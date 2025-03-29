@@ -340,8 +340,11 @@ static pj_status_t get_codec_info_from_sdp(pjmedia_endpt *endpt,
     pj_status_t status;
 
     type = pjmedia_get_type(&m->desc.media);
-    if (type != PJMEDIA_TYPE_AUDIO && type != PJMEDIA_TYPE_VIDEO)
+    if (type != PJMEDIA_TYPE_AUDIO && type != PJMEDIA_TYPE_VIDEO &&
+        type != PJMEDIA_TYPE_TEXT)
+    {
         return PJMEDIA_EUNSUPMEDIATYPE;
+    }
 
     codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
     for (j = 0; j < m->desc.fmt_count && cnt < *sci_cnt; ++j) {

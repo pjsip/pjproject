@@ -101,6 +101,9 @@ struct pjmedia_vid_stream
     pjmedia_ratio            dec_max_fps;   /**< Max fps of decoding dir.   */
     pjmedia_frame            dec_frame;     /**< Current decoded frame.     */
     unsigned                 dec_delay_cnt; /**< Decoding delay (in frames).*/
+    unsigned                 dec_add_delay_cnt;
+                                            /**< Decoding additional delay
+                                                 for sync (in frames).      */
     unsigned                 dec_max_delay; /**< Decoding max delay (in ts).*/
     pjmedia_event            fmt_event;     /**< Buffered fmt_changed event
                                                  to avoid deadlock          */
@@ -353,6 +356,7 @@ static pj_status_t detach_send_manager(send_stream *ss)
         }
         e = next;
     }
+    ss->mgr = NULL;
     pj_grp_lock_release(mgr->grp_lock);
 
     /* Decrease ref counter */
@@ -373,6 +377,13 @@ static send_entry* get_send_entry(send_stream *ss)
     pj_sub_timestamp(&min_sent_ts, &idle_ts);
 
     pj_grp_lock_acquire(ss->grp_lock);
+
+    /* Make sure send manager has not been detached */
+    if (ss->mgr == NULL) {
+        pj_grp_lock_release(ss->grp_lock);
+        return NULL;
+    }
+
     e = ss->free_list.next;
     while (e != &ss->free_list) {
         send_entry *next = e->next;
@@ -408,6 +419,12 @@ static void send_rtp(send_stream *ss, send_entry *entry)
     pj_timestamp send_ts;
 
     pj_grp_lock_acquire(ss->grp_lock);
+
+    /* Make sure send manager has not been detached */
+    if (ss->mgr == NULL) {
+        pj_grp_lock_release(ss->grp_lock);
+        return;
+    }
 
     /* Calculate earliest sending time allowed by rate control */
     ss->rc_total += entry->buf_size;
@@ -646,9 +663,11 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
             }
 
             if (can_decode) {
+                pj_size_t old_size = stream->dec_frame.size;
+
                 stream->dec_frame.size = stream->dec_max_size;
                 if (decode_frame(stream, &stream->dec_frame) != PJ_SUCCESS) {
-                    stream->dec_frame.size = 0;
+                    stream->dec_frame.size = old_size;
                 }
             }
         }
@@ -1049,7 +1068,9 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
                     frm_pkt_cnt = cnt;
 
                 /* Is it time to decode? Check with minimum delay setting */
-                if (++frm_cnt == stream->dec_delay_cnt) {
+                if (++frm_cnt == stream->dec_delay_cnt +
+                                 stream->dec_add_delay_cnt)
+                {
                     got_frame = PJ_TRUE;
                     break;
                 }
@@ -1299,24 +1320,114 @@ static pj_status_t get_frame(pjmedia_port *port,
 
     pj_grp_lock_release( c_strm->grp_lock );
 
+    /* Update synchronizer with presentation time */
+    if (c_strm->av_sync_media && frame->type != PJMEDIA_FRAME_TYPE_NONE) {
+        pj_timestamp pts = { 0 };
+        pj_int32_t delay_req_ms;
+        pj_status_t status;
+
+        pts = frame->timestamp;
+        status = pjmedia_av_sync_update_pts(c_strm->av_sync_media, &pts,
+                                            &delay_req_ms);
+        if (status == PJ_SUCCESS && delay_req_ms) {
+            /* Delay adjustment is requested */
+            int target_delay_ms, cur_delay_ms, target_delay_cnt;
+            unsigned last_add_delay_cnt;
+
+            /* Apply delay request */
+            last_add_delay_cnt = stream->dec_add_delay_cnt;
+            cur_delay_ms = (stream->dec_delay_cnt+stream->dec_add_delay_cnt) *
+                           1000 *
+                           stream->dec_max_fps.denum /
+                           stream->dec_max_fps.num;
+            target_delay_ms = cur_delay_ms + delay_req_ms;
+            target_delay_cnt = target_delay_ms * stream->dec_max_fps.num /
+                               stream->dec_max_fps.denum / 1000;
+            if (target_delay_cnt <= (int)stream->dec_delay_cnt)
+                stream->dec_add_delay_cnt = 0;
+            else
+                stream->dec_add_delay_cnt = target_delay_cnt -
+                                            stream->dec_delay_cnt;
+
+            /* Just for safety (never see in tests), target delay should not
+             * exceed 5 seconds.
+             */
+            if (target_delay_ms > 5000) {
+                stream->dec_add_delay_cnt = last_add_delay_cnt;
+                PJ_LOG(5,(c_strm->port.info.name.ptr,
+                          "Ignored avsync request for excessive delay"
+                          " (current=%dms, target=%dms)!",
+                          cur_delay_ms, target_delay_ms));
+            }
+
+            if (stream->dec_add_delay_cnt != last_add_delay_cnt) {
+                PJ_LOG(5,(c_strm->port.info.name.ptr,
+                          "Adjust video minimal delay to (%d+%d) frames",
+                          stream->dec_delay_cnt, stream->dec_add_delay_cnt));
+            }
+
+            /* When requested to speed-up, try to skip frames */
+            if (delay_req_ms < 0) {
+                enum { MAX_SKIP_MS = 500 };
+                unsigned cnt = 0, max_cnt;
+
+                /* Translate milliseconds to number of frames to drop,
+                 * apply upper limit to avoid blocking too long.
+                 */
+                max_cnt = PJ_MIN(-delay_req_ms, MAX_SKIP_MS) *
+                          stream->dec_max_fps.num /
+                          stream->dec_max_fps.denum / 1000;
+                
+                /* Round up one frame, the decoded frame will be played later
+                 * in the next get_frame().
+                 */
+                max_cnt++;
+
+                while (cnt < max_cnt) {
+                    pj_size_t old_size;
+
+                    pj_grp_lock_acquire( c_strm->grp_lock );
+                    old_size = stream->dec_frame.size;
+                    stream->dec_frame.size = stream->dec_max_size;
+                    if (decode_frame(stream, &stream->dec_frame)==PJ_SUCCESS)
+                    {
+                        cnt++;
+                    } else {
+                        /* Revert dec_frame to last successful decoding */
+                        stream->dec_frame.size = old_size;
+                        pj_grp_lock_release( c_strm->grp_lock );
+                        break;
+                    }
+                    pj_grp_lock_release( c_strm->grp_lock );
+                }
+
+                if (cnt) {
+                    PJ_LOG(5,(c_strm->port.info.name.ptr,
+                              "Skipped %d frames to reduce delay", cnt));
+                }
+            }
+        }
+    }
+
     return PJ_SUCCESS;
 }
 
 /*
  * Create media channel.
  */
-static pj_status_t create_channel( pj_pool_t *pool,
-                                   pjmedia_vid_stream *stream,
-                                   pjmedia_dir dir,
-                                   unsigned pt,
-                                   const pjmedia_vid_stream_info *info,
-                                   pjmedia_vid_channel **p_channel)
+static pj_status_t create_vid_channel( pj_pool_t *pool,
+                                       pjmedia_vid_stream *stream,
+                                       pjmedia_dir dir,
+                                       unsigned pt,
+                                       const pjmedia_vid_stream_info *info,
+                                       pjmedia_vid_channel **p_channel)
 {
     enum { M = 32 };
     pjmedia_stream_common *c_strm = &stream->base;
     pjmedia_vid_channel *channel;
     pj_status_t status;
     unsigned min_out_pkt_size;
+    unsigned buf_size = 0;
     pj_str_t name;
     const char *type_name;
     pjmedia_format *fmt;
@@ -1326,9 +1437,25 @@ static pj_status_t create_channel( pj_pool_t *pool,
     pj_assert(info->type == PJMEDIA_TYPE_VIDEO);
     pj_assert(dir == PJMEDIA_DIR_DECODING || dir == PJMEDIA_DIR_ENCODING);
 
-    /* Allocate memory for channel descriptor */
-    channel = PJ_POOL_ZALLOC_T(pool, pjmedia_vid_channel);
-    PJ_ASSERT_RETURN(channel != NULL, PJ_ENOMEM);
+    /* Allocate buffer for outgoing packet. */
+    if (dir == PJMEDIA_DIR_ENCODING) {
+        buf_size = sizeof(pjmedia_rtp_hdr) + c_strm->frame_size;
+
+        /* It should big enough to hold (minimally) RTCP SR with an SDES. */
+        min_out_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
+                            sizeof(pjmedia_rtcp_common) +
+                            (4 + (unsigned)c_strm->cname.slen) +
+                            32;
+
+        if (buf_size < min_out_pkt_size)
+            buf_size = min_out_pkt_size;
+    }
+
+    status = create_channel(pool, c_strm, dir, pt, buf_size,
+                            (pjmedia_stream_info_common *)info,
+                            &channel);
+    if (status != PJ_SUCCESS)
+        return status;
 
     /* Init vars */
     if (dir==PJMEDIA_DIR_DECODING) {
@@ -1341,45 +1468,6 @@ static pj_status_t create_channel( pj_pool_t *pool,
     name.ptr = (char*) pj_pool_alloc(pool, M);
     name.slen = pj_ansi_snprintf(name.ptr, M, "%s%p", type_name, stream);
     pi = &channel->port.info;
-
-    /* Init channel info. */
-    channel->stream = c_strm;
-    channel->dir = dir;
-    channel->paused = 1;
-    channel->pt = pt;
-
-    /* Allocate buffer for outgoing packet. */
-    if (dir == PJMEDIA_DIR_ENCODING) {
-        channel->buf_size = sizeof(pjmedia_rtp_hdr) + c_strm->frame_size;
-
-        /* It should big enough to hold (minimally) RTCP SR with an SDES. */
-        min_out_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
-                            sizeof(pjmedia_rtcp_common) +
-                            (4 + (unsigned)c_strm->cname.slen) +
-                            32;
-
-        if (channel->buf_size < min_out_pkt_size)
-            channel->buf_size = min_out_pkt_size;
-
-        channel->buf = pj_pool_alloc(pool, channel->buf_size);
-        PJ_ASSERT_RETURN(channel->buf != NULL, PJ_ENOMEM);
-    }
-
-    /* Create RTP and RTCP sessions: */
-    {
-        pjmedia_rtp_session_setting settings;
-
-        settings.flags = (pj_uint8_t)((info->rtp_seq_ts_set << 2) |
-                                      (info->has_rem_ssrc << 4) | 3);
-        settings.default_pt = pt;
-        settings.sender_ssrc = info->ssrc;
-        settings.peer_ssrc = info->rem_ssrc;
-        settings.seq = info->rtp_seq;
-        settings.ts = info->rtp_ts;
-        status = pjmedia_rtp_session_init2(&channel->rtp, settings);
-    }
-    if (status != PJ_SUCCESS)
-        return status;
 
     /* Init port. */
     pjmedia_port_info_init2(pi, &name, SIGNATURE, dir, fmt);
@@ -1600,13 +1688,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     stream->dec_max_fps = vfd_dec->fps;
 
     /* Create decoder channel */
-    status = create_channel( pool, stream, PJMEDIA_DIR_DECODING,
+    status = create_vid_channel( pool, stream, PJMEDIA_DIR_DECODING,
                              info->rx_pt, info, &c_strm->dec);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
     /* Create encoder channel */
-    status = create_channel( pool, stream, PJMEDIA_DIR_ENCODING,
+    status = create_vid_channel( pool, stream, PJMEDIA_DIR_ENCODING,
                              info->tx_pt, info, &c_strm->enc);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
@@ -1890,8 +1978,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
         c_strm->dec->port.get_frame = NULL;
 
     /* Detach from sending manager */
-    if (stream->send_stream)
+    if (stream->send_stream) {
+        pj_grp_lock_acquire(c_strm->grp_lock);
         detach_send_manager(stream->send_stream);
+        pj_grp_lock_release(c_strm->grp_lock);
+    }
 
 #if TRACE_RC
     {
@@ -2022,8 +2113,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_get_stat_jbuf(
                                             const pjmedia_vid_stream *stream,
                                             pjmedia_jb_state *state)
 {
-    PJ_ASSERT_RETURN(stream && state, PJ_EINVAL);
-    return pjmedia_jbuf_get_state(stream->base.jb, state);
+    return pjmedia_stream_common_get_stat_jbuf((pjmedia_stream_common *)stream,
+                                               state);
 }
 
 
@@ -2045,27 +2136,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_get_info(
  */
 PJ_DEF(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream)
 {
-    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
-
-    PJ_ASSERT_RETURN(stream && c_strm->enc && c_strm->dec, PJ_EINVALIDOP);
-
-    if (c_strm->enc && (c_strm->dir & PJMEDIA_DIR_ENCODING)) {
-        c_strm->enc->paused = 0;
-        //pjmedia_snd_stream_start(c_strm->enc->snd_stream);
-        PJ_LOG(4,(c_strm->enc->port.info.name.ptr, "Encoder stream started"));
-    } else {
-        PJ_LOG(4,(c_strm->enc->port.info.name.ptr, "Encoder stream paused"));
-    }
-
-    if (c_strm->dec && (c_strm->dir & PJMEDIA_DIR_DECODING)) {
-        c_strm->dec->paused = 0;
-        //pjmedia_snd_stream_start(c_strm->dec->snd_stream);
-        PJ_LOG(4,(c_strm->dec->port.info.name.ptr, "Decoder stream started"));
-    } else {
-        PJ_LOG(4,(c_strm->dec->port.info.name.ptr, "Decoder stream paused"));
-    }
-
-    return PJ_SUCCESS;
+    return pjmedia_stream_common_start((pjmedia_stream_common *) stream);
 }
 
 

@@ -281,7 +281,8 @@ struct CallSetting
     /**
      * Bitmask of pjsua_call_flag constants.
      *
-     * Default: PJSUA_CALL_INCLUDE_DISABLED_MEDIA
+     * Default: 0
+     * (PJSUA_CALL_INCLUDE_DISABLED_MEDIA is the legacy default value).
      */
     unsigned        flag;
     
@@ -309,6 +310,14 @@ struct CallSetting
      * Default: 1 (if video feature is enabled, otherwise it is zero)
      */
     unsigned        videoCount;
+
+    /**
+     * Number of simultaneous active text streams for this call. Setting
+     * this to zero will disable text in this call.
+     *
+     * Default: 1
+     */
+    unsigned        textCount;
 
     /**
      * Media direction. This setting will only be used if the flag
@@ -553,6 +562,11 @@ struct CallInfo
      */
     unsigned            remVideoCount;
 
+    /**
+     * Number of text streams offered by remote
+     */
+    unsigned            remTextCount;
+
 public:
     /**
      * Default constructor
@@ -564,7 +578,8 @@ public:
                  lastStatusCode(PJSIP_SC_NULL),
                  remOfferer(false),
                  remAudioCount(0),
-                 remVideoCount(0)
+                 remVideoCount(0),
+                 remTextCount(0)
     {}
 
     /**
@@ -917,6 +932,35 @@ struct OnDtmfEventParam
      * an event with PJMEDIA_STREAM_DTMF_IS_END for every event.
      */
     unsigned            flags;
+};
+
+/**
+ * This structure contains parameters for Call::onCallRxText()
+ * callback.
+ */
+struct OnCallRxTextParam
+{
+    /**
+     * The sequence of the incoming text block data.
+     */
+    int                 seq;
+
+    /**
+     * The timestamp of the text block data.
+     */
+    unsigned            ts;
+
+    /**
+     * The content of the text block.
+     * Note that the text can be empty.
+     */
+    string              text;
+
+public:
+    /**
+     * Convert from pjsip
+     */
+    void fromPj(const pjsua_txt_stream_data &prm);
 };
 
 /**
@@ -1384,6 +1428,32 @@ public:
 };
 
 /**
+ * This structure contains parameters for Call::sendText()
+ */
+struct CallSendTextParam
+{
+    /**
+     * Specify the text media stream index. This can be set to -1 to denote
+     * the first text stream in the call.
+     *
+     * Default: -1 (first text stream)
+     */
+    int     medIdx;
+
+    /**
+     * The text data to be sent.
+     */
+    string  text;
+
+public:
+    /**
+     * Default constructor initializes with default value.
+     */
+    CallSendTextParam();
+};
+
+
+/**
  * Call.
  */
 class Call
@@ -1714,6 +1784,14 @@ public:
     void sendDtmf(const CallSendDtmfParam &param) PJSUA2_THROW(Error);
     
     /**
+     * Send real-time text to remote via RTP stream. This only works if
+     * the call has text media.
+     *
+     * @param param     The send text parameter.
+     */
+    void sendText(const CallSendTextParam &param) PJSUA2_THROW(Error);
+
+    /**
      * Send instant messaging inside INVITE session.
      *
      * @param prm.contentType
@@ -1967,6 +2045,15 @@ public:
      * @param prm       Callback parameter.
      */
     virtual void onDtmfEvent(OnDtmfEventParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * Notify application upon incoming text data from the text stream.
+     * Note that the received text can be empty.
+     *
+     * @param prm       Callback parameter.
+     */
+    virtual void onCallRxText(OnCallRxTextParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
     /**

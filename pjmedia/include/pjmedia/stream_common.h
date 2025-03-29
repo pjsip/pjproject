@@ -24,6 +24,7 @@
  * @brief Stream common functions.
  */
 
+#include <pjmedia/av_sync.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/jbuf.h>
 #include <pjmedia/sdp.h>
@@ -151,6 +152,11 @@ typedef struct pjmedia_stream_common
     int                      pending_rtcp_fb_nack;  /**< Any pending NACK?  */
     pjmedia_rtcp_fb_nack     rtcp_fb_nack;          /**< TX NACK state.     */
     int                      rtcp_fb_nack_cap_idx;  /**< RX NACK cap idx.   */
+
+    /* Media synchronization */
+    pjmedia_av_sync         *av_sync;               /**< Media sync.        */
+    pjmedia_av_sync_media   *av_sync_media;         /**< Media sync media   */
+
 } pjmedia_stream_common;
 
 
@@ -159,7 +165,7 @@ typedef struct pjmedia_stream_common
  * Media channel is unidirectional flow of media from sender to
  * receiver.
  */
-typedef struct pjmedia_channel
+struct pjmedia_channel
 {
     pjmedia_stream_common  *stream;         /**< Parent stream.             */
     pjmedia_dir             dir;            /**< Channel direction.         */
@@ -169,7 +175,7 @@ typedef struct pjmedia_channel
     void                   *buf;            /**< Output buffer.             */
     unsigned                buf_size;       /**< Size of output buffer.     */
     pjmedia_rtp_session     rtp;            /**< RTP session.               */
-} pjmedia_channel;
+};
 
 
 /**
@@ -196,8 +202,21 @@ typedef struct pjmedia_stream_rtp_sess_info
 
 
 /**
+ * Start the media stream. This will start the appropriate channels
+ * in the media stream, depending on the media direction that was set
+ * when the stream was created.
+ *
+ * @param stream        The media stream.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_common_start(pjmedia_stream_common *stream);
+
+
+/**
  * Get the stream statistics. See also
- * #pjmedia_stream_get_stat_jbuf()
+ * #pjmedia_stream_common_get_stat_jbuf()
  *
  * @param stream        The media stream.
  * @param stat          Media stream statistics.
@@ -207,6 +226,20 @@ typedef struct pjmedia_stream_rtp_sess_info
 PJ_DECL(pj_status_t)
 pjmedia_stream_common_get_stat( const pjmedia_stream_common *stream,
                                 pjmedia_rtcp_stat *stat);
+
+
+/**
+ * Get current jitter buffer state. See also
+ * #pjmedia_stream_common_get_stat()
+ *
+ * @param stream        The media stream.
+ * @param state         Jitter buffer state.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_common_get_stat_jbuf(const pjmedia_stream_common *stream,
+                                    pjmedia_jb_state *state);
 
 
 /**
@@ -249,7 +282,6 @@ pjmedia_stream_common_send_rtcp_bye( pjmedia_stream_common *stream );
  * and generally it is not advisable for app to modify them.
  *
  * @param stream        The media stream.
- *
  * @param session_info  The stream session info.
  *
  * @return              PJ_SUCCESS on success.
@@ -257,6 +289,24 @@ pjmedia_stream_common_send_rtcp_bye( pjmedia_stream_common *stream );
 PJ_DECL(pj_status_t)
 pjmedia_stream_common_get_rtp_session_info(pjmedia_stream_common *stream,
                                    pjmedia_stream_rtp_sess_info *session_info);
+
+
+/**
+ * Set or reset media presentation synchronizer. The synchronizer manages
+ * presentation time of media streams in the session, e.g: audio & video.
+ *
+ * Application creates a media synchronizer and assign it to all media streams
+ * whose presentation time to be synchronized using this function.
+ *
+ * @param stream        The media stream.
+ * @param av_sync       The media presentation synchronizer, or NULL to
+ *                      remove this stream from current synchronizer.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_common_set_avsync(pjmedia_stream_common* stream,
+                                 pjmedia_av_sync* av_sync);
 
 
 /* Internal function. */
@@ -361,6 +411,11 @@ pjmedia_stream_ka_config_default(pjmedia_stream_ka_config *cfg);
     unsigned            tx_pt;      /**< Outgoing codec payload type.       */ \
     unsigned            rx_pt;      /**< Incoming codec payload type.       */ \
 \
+    unsigned            tx_red_pt;  /**< Outgoing pt for redundancy.        */ \
+    int                 tx_red_level;/**< Outgoing redundancy level.        */ \
+    unsigned            rx_red_pt;  /**< Incoming pt for redundancy.        */ \
+    int                 rx_red_level;/**< Incoming redundancy level.        */ \
+\
     pj_uint32_t         ssrc;       /**< RTP SSRC.                          */ \
     pj_str_t            cname;      /**< RTCP CNAME.                        */ \
     pj_bool_t           has_rem_ssrc;/**<Has remote RTP SSRC?               */ \
@@ -395,10 +450,10 @@ pjmedia_stream_ka_config_default(pjmedia_stream_ka_config *cfg);
  * corresponds to one "m=" line in SDP session descriptor, and it has
  * its own RTP/RTCP socket pair.
  */
-typedef struct pjmedia_stream_info_common
+struct pjmedia_stream_info_common
 {
     PJ_DECL_STREAM_INFO_COMMON_MEMBER()
-} pjmedia_stream_info_common;
+};
 
 
 /**
@@ -424,6 +479,23 @@ pjmedia_stream_info_common_from_sdp(pjmedia_stream_info_common *si,
                                     const pjmedia_sdp_session *remote,
                                     unsigned stream_idx,
                                     pj_bool_t *active);
+
+
+/**
+ * This is internal function for parsing redundancy.
+ *
+ * @param si            Stream info structure to store the result.
+ * @param pool          Pool to allocate memory.
+ * @param local         Local SDP media descriptor.
+ * @param remote        Remote SDP media descriptor.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_info_common_parse_redundancy(pjmedia_stream_info_common *si,
+                                            pj_pool_t *pool,
+                                            const pjmedia_sdp_media *local_m,
+                                            const pjmedia_sdp_media *rem_m);
 
 
 /**
