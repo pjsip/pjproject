@@ -90,30 +90,58 @@ public class Pjsua2Test {
         assertEquals(BuildConfig.APPLICATION_ID, appContext.getPackageName());
     }
 
-    private void checkIsDisplayed(int viewId, String viewName) {
+    private static void checkIsDisplayed(final int viewId, final String viewName) {
         try {
             onView(withId(viewId)).check(matches(isDisplayed()));
         } catch (NoMatchingViewException e) {
             Assert.fail("View with ID R.id." + viewName + " was not found");
         }
     }
-    private void takeScreenshot(String fileName) throws Exception {
-        UiDevice device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+
+    public static void waitForView(final int viewId,
+                                   final long timeoutInMillis,
+                                   final boolean isDisplayed) throws Exception
+    {
+        long startTime = System.currentTimeMillis();
+        long endTime = startTime + timeoutInMillis;
+
+        while (System.currentTimeMillis() < endTime) {
+            try {
+                if (isDisplayed) {
+                    onView(withId(viewId)).check(matches(isDisplayed()));
+                } else {
+                    onView(withId(viewId)).check(matches(
+                                  withEffectiveVisibility(Visibility.VISIBLE)));
+                }
+                return;
+            } catch (NoMatchingViewException | AssertionError e) {
+                Thread.sleep(100);
+            }
+        }
+
+        throw new Exception("View with ID " + viewId + " not visible within " +
+                             timeoutInMillis + " milliseconds");
+    }
+    private void takeScreenshot(final String fileName) throws Exception {
+        UiDevice device = UiDevice.getInstance(
+                                  InstrumentationRegistry.getInstrumentation());
         File path = new File(Environment.getExternalStoragePublicDirectory(
                              Environment.DIRECTORY_PICTURES).getAbsolutePath(),
                        "screenshots");
         if (!path.exists()) {
             if (!path.mkdirs()) {
-                System.err.println("Failed to create "+ path.getAbsolutePath() +  " directory");
+                System.err.println("Failed to create "+ path.getAbsolutePath() +
+                                   " directory");
                 return;
             }
         }
-        System.out.println("Taking screenshot to : " + path.getAbsolutePath() + "//" + fileName);
+        System.out.println("Taking screenshot to : " + path.getAbsolutePath() +
+                            "//" + fileName);
         device.takeScreenshot(new File(path, fileName));
     }
 
     @Test
-    public void addBuddy() {
+    public void addBuddy() throws Exception{
         String localUri = "sip:localhost";
 
         localUri += ":" + Integer.toString(BuildConfig.SIP_PORT);
@@ -127,20 +155,17 @@ public class Pjsua2Test {
         onView(withId(R.id.buttonAddBuddy)).perform(click());
 
         Log.d(TAG, "Wait for the dialog to be shown");
-        try {
-            Thread.sleep(500);
-        } catch (Exception e) {
-            Log.e(TAG,  e.getMessage());
-        };
+        waitForView(R.id.editTextUri, 3000, true);
 
         Log.d(TAG, "Change the buddy URI");
         onView(withId(R.id.editTextUri)).perform(replaceText(localUri));
 
         Log.d(TAG, "Click confirm");
         onView(withText("OK")).perform(click());
+        Log.d(TAG, "Done addBuddy()");
     }
     @Test
-    public void callBuddy() {
+    public void callBuddy() throws Exception{
         ListView listView;
         final Holder<ListView> lvHolder = new Holder<>();
 
@@ -192,18 +217,17 @@ public class Pjsua2Test {
         });
         onView(withId(R.id.buttonCall)).perform(click());
 
+        Log.d(TAG, "Wait for the incoming video to be shown");
+        waitForView(R.id.surfaceIncomingVideo, 10000, false);
+
+        onView(withId(R.id.surfaceIncomingVideo))
+              .check(matches(withEffectiveVisibility(Visibility.VISIBLE)));
         try {
-            Thread.sleep(4000);
-            checkIsDisplayed(R.id.surfaceIncomingVideo, "surfaceIncomingVideo");
-
-            onView(withId(R.id.surfaceIncomingVideo))
-                  .check(matches(withEffectiveVisibility(Visibility.VISIBLE)));
-
             takeScreenshot("make_call_sc.png");
-
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         };
+        Log.d(TAG, "Done callBuddy()");
     }
 
 }
