@@ -1,25 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TableLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:padding = "20dp"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-	<TableRow>
-        <TextView android:text="Buddy URI">
-        </TextView>  
-
-	    <EditText
-	        android:id="@+id/editTextUri"
-	        android:layout_weight="1"
-	        android:inputType="textUri|textEmailAddress" >
+   xmlns:android="http://schemas.android.com/apk/res/android"
+   android:padding = "20dp"
+   android:layout_width="match_parent"
+   android:layout_height="match_parent">
 
-	        <requestFocus />
-	    </EditText>
-    </TableRow>
-	<TableRow>
-        <CheckBox
-            android:id="@+id/checkBoxSubscribe"
-            android:layout_column="1"
-            android:text="Subscribe presence" />
-    </TableRow>
+   <TableRow>
+      <TextView android:text="Buddy URI">
+      </TextView>
+
+      <EditText
+         android:id="@+id/editTextUri"
+         android:layout_weight="1"
+         android:importantForAccessibility="no"
+         android:inputType="textUri|textEmailAddress">
+         <requestFocus />
+      </EditText>
+   </TableRow>
+   <TableRow>
+      <CheckBox
+         android:id="@+id/checkBoxSubscribe"
+         android:layout_column="1"
+         android:text="Subscribe presence" />
+   </TableRow>
 </TableLayout>
