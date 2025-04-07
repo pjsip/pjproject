@@ -115,7 +115,7 @@ AC_CHECK_LIB(winmm,puts)
 AC_CHECK_LIB(socket,puts)
 AC_CHECK_LIB(rt,puts)
 AC_CHECK_LIB(m,sin)
-AC_CHECK_PROGS(PKG_CONFIG,$host_cpu-$host_os-pkg-config $host-pkg-config pkg-config "python pkgconfig.py",none)
+AC_CHECK_PROGS(PKG_CONFIG,$host_cpu-$host_os-pkg-config $host-pkg-config pkg-config,none)
 
 dnl
 dnl libuuid
