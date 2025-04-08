@@ -518,6 +518,7 @@ static void on_call_video_state(pjsua_call_info *ci, unsigned mi,
 
     arrange_window(ci->media[mi].stream.vid.win_in);
 
+#if PJMEDIA_HAS_VIDEO
     if (app_config.avi_auto_rec &&
         app_config.avi_vid_slot != PJSUA_INVALID_ID)
     {
@@ -527,6 +528,7 @@ static void on_call_video_state(pjsua_call_info *ci, unsigned mi,
         if (pid != PJSUA_INVALID_ID)
             pjsua_vid_conf_connect(pid, app_config.avi_vid_slot, NULL);
     }
+#endif
 
     PJ_UNUSED_ARG(has_error);
 }
@@ -2259,11 +2261,13 @@ static pj_status_t app_destroy(void)
     }
 
     /* Close avi writer */
+#if PJMEDIA_HAS_VIDEO
     if (app_config.avi_vid_slot != PJSUA_INVALID_ID) {
         pjsua_vid_conf_remove_port(app_config.avi_vid_slot);
         pjmedia_port_destroy(app_config.avi_vid_port);
         app_config.avi_vid_slot = PJSUA_INVALID_ID;
     }
+#endif
     if (app_config.avi_aud_slot != PJSUA_INVALID_ID) {
         pjsua_conf_remove_port(app_config.avi_aud_slot);
         pjmedia_port_destroy(app_config.avi_aud_port);
