@@ -320,6 +320,15 @@
 #endif
 
 /**
+ * Enable G.722 passthrough codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_PASSTHROUGH_CODEC_G722
+#   define PJMEDIA_HAS_PASSTHROUGH_CODEC_G722   1
+#endif
+
+/**
  * Enable G.729 passthrough codec.
  *
  * Default: 1
@@ -370,6 +379,14 @@
  */
 #ifndef PJMEDIA_HAS_G7221_CODEC
 #   define PJMEDIA_HAS_G7221_CODEC              0
+#endif
+
+/* If passthrough and G.722 is enabled, disable the software
+ * G.722 codec
+ */
+#if PJMEDIA_HAS_PASSTHROUGH_CODECS && PJMEDIA_HAS_PASSTHROUGH_CODEC_G722
+#   undef PJMEDIA_HAS_G722_CODEC
+#   define PJMEDIA_HAS_G722_CODEC               0
 #endif
 
 /**
