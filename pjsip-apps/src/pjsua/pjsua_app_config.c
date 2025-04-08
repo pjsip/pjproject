@@ -184,6 +184,10 @@ static void usage(void)
     puts  ("  --vrender-dev=id    Video render device ID (default=-2)");
     puts  ("  --play-avi=FILE     Load this AVI as virtual capture device");
     puts  ("  --auto-play-avi     Automatically play the AVI media to call");
+    puts  ("  --rec-avi=FILE      Record video to AVI file");
+    puts  ("  --rec-avi-size=N    Maximum AVI recording file size");
+    puts  ("  --rec-avi-audio     Include audio in the AVI recording");
+    puts  ("  --auto-rec-avi      Automatically record video");
 #endif
 
     puts  ("");
@@ -413,6 +417,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE,
            OPT_VIDEO, OPT_TEXT, OPT_TEXT_RED, OPT_EXTRA_AUDIO,
            OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI,
+           OPT_REC_AVI, OPT_REC_AVI_SIZE, OPT_REC_AVI_AUDIO, OPT_AUTO_REC_AVI,
            OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE
     };
     struct pj_getopt_option long_options[] = {
@@ -562,6 +567,10 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "vrender-dev",  1, 0, OPT_VRENDER_DEV},
         { "play-avi",   1, 0, OPT_PLAY_AVI},
         { "auto-play-avi", 0, 0, OPT_AUTO_PLAY_AVI},
+        { "rec-avi",   1, 0, OPT_REC_AVI},
+        { "rec-avi-size",   1, 0, OPT_REC_AVI_SIZE},
+        { "rec-avi-audio", 0, 0, OPT_REC_AVI_AUDIO},
+        { "auto-rec-avi", 0, 0, OPT_AUTO_REC_AVI},
         { "use-cli",    0, 0, OPT_USE_CLI},
         { "cli-telnet-port", 1, 0, OPT_CLI_TELNET_PORT},
         { "no-cli-console", 0, 0, OPT_DISABLE_CLI_CONSOLE},
@@ -1563,6 +1572,22 @@ static pj_status_t parse_args(int argc, char *argv[],
             app_config.avi_auto_play = PJ_TRUE;
             break;
 
+        case OPT_REC_AVI:
+            app_config.avi_rec = pj_str(pj_optarg);
+            break;
+
+        case OPT_REC_AVI_SIZE:
+            app_config.avi_rec_size = atoi(pj_optarg);
+            break;
+
+        case OPT_REC_AVI_AUDIO:
+            app_config.avi_rec_audio = PJ_TRUE;
+            break;
+
+        case OPT_AUTO_REC_AVI:
+            app_config.avi_auto_rec = PJ_TRUE;
+            break;
+
         case OPT_USE_CLI:
             cfg->use_cli = PJ_TRUE;
             break;
@@ -1697,6 +1722,8 @@ static void default_config()
     cfg->playback_lat = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
     cfg->ringback_slot = PJSUA_INVALID_ID;
     cfg->ring_slot = PJSUA_INVALID_ID;
+    cfg->avi_vid_slot = PJSUA_INVALID_ID;
+    cfg->avi_aud_slot = PJSUA_INVALID_ID;
 
     for (i=0; i<PJ_ARRAY_SIZE(cfg->acc_cfg); ++i)
         pjsua_acc_config_default(&cfg->acc_cfg[i]);
@@ -2333,6 +2360,24 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     }
     if (config->avi_auto_play) {
         pj_ansi_snprintf(line, sizeof(line), "--auto-play-avi\n");
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_rec.slen) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi %s\n",
+                         config->avi_rec.ptr);
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_rec_size) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi-size %d\n",
+                         config->avi_rec_size);
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_rec_audio) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi-audio\n");
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_auto_rec) {
+        pj_ansi_snprintf(line, sizeof(line), "--auto-rec-avi\n");
         pj_strcat2(&cfg, line);
     }
 

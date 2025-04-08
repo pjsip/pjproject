@@ -159,6 +159,16 @@ typedef struct pjsua_app_config
     pj_bool_t               avi_auto_play;
     int                     avi_def_idx;
 
+    /* AVI recording */
+    pj_str_t                avi_rec;
+    pj_uint32_t             avi_rec_size;
+    pj_bool_t               avi_rec_audio;
+    pj_bool_t               avi_auto_rec;
+    pjsua_conf_port_id      avi_vid_slot;
+    pjmedia_port           *avi_vid_port;
+    pjsua_conf_port_id      avi_aud_slot;
+    pjmedia_port           *avi_aud_port;
+
     /* CLI setting */
     pj_bool_t               use_cli;
     cli_cfg_t               cli_cfg;
