@@ -3351,6 +3351,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\avi_writer.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\bidirectional.c"
 				>
 				<FileConfiguration
