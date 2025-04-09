@@ -23,7 +23,6 @@
  * @brief AVI file player.
  */
 #include <pjmedia/port.h>
-#include <pjmedia/av_sync.h>
 
 
 PJ_BEGIN_DECL
