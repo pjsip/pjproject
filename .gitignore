@@ -87,3 +87,5 @@ tests/fuzz/*.o
 cov-int/
 getversion.mak
 configure.out
+*/Platforms/iOS/pjsua2/*
+*/Platforms/iOS/lib/*
