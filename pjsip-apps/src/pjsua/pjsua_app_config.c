@@ -183,7 +183,7 @@ static void usage(void)
     puts  ("  --vcapture-dev=id   Video capture device ID (default=-1)");
     puts  ("  --vrender-dev=id    Video render device ID (default=-2)");
     puts  ("  --play-avi=FILE     Load this AVI as virtual capture device.");
-    puts  ("                      This can be specified multiple times.")
+    puts  ("                      This can be specified multiple times.");
     puts  ("  --auto-play-avi     Automatically play the AVI media to call");
     puts  ("  --rec-avi=FILE      Record video to AVI file");
     puts  ("  --rec-avi-size=N    Maximum AVI recording file size");
