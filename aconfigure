@@ -11147,6 +11147,9 @@ printf "%s\n" "Checking if libwebrtc is disabled...no" >&6; }
                         ac_webrtc_instset=neon
                         ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
                     ;;
+                    loongarch*)
+                        ac_webrtc_instset=generic
+                    ;;
                     riscv*)
                         ac_webrtc_instset=generic
                     ;;
@@ -11289,6 +11292,9 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
                         arm-apple-darwin*)
                             ac_webrtc_aec3_instset=neon
                             ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+                        ;;
+                        loongarch*)
+                            ac_webrtc_aec3_instset=generic
                         ;;
                         riscv*)
                             ac_webrtc_aec3_instset=generic
