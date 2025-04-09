@@ -60,42 +60,8 @@
 #   define TRACE_(x)
 #endif
 
-#if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
-    static void data_to_host(void *data, pj_uint8_t bits, unsigned count)
-    {
-        unsigned i;
-
-        count /= (bits == 32? 4 : 2);
-
-        if (bits == 32) {
-            pj_int32_t *data32 = (pj_int32_t *)data;
-            for (i=0; i<count; ++i)
-                data32[i] = pj_swap32(data32[i]);
-        } else {
-            pj_int16_t *data16 = (pj_int16_t *)data;
-            for (i=0; i<count; ++i)
-                data16[i] = pj_swap16(data16[i]);
-        }
-
-    }
-    static void data_to_host2(void *data, pj_uint8_t nsizes,
-                              pj_uint8_t *sizes)
-    {
-        unsigned i;
-        pj_int8_t *datap = (pj_int8_t *)data;
-        for (i = 0; i < nsizes; i++) {
-            data_to_host(datap, 32, sizes[i]);
-            datap += sizes[i++];
-            if (i >= nsizes)
-                break;
-            data_to_host(datap, 16, sizes[i]);
-            datap += sizes[i];
-        }
-    }
-#else
-#   define data_to_host(data, bits, count)
-#   define data_to_host2(data, nsizes, sizes)
-#endif
+#define data_to_host pjmedia_avi_swap_data
+#define data_to_host2 pjmedia_avi_swap_data2
 
 typedef struct avi_fmt_info
 {
@@ -117,16 +83,14 @@ static avi_fmt_info avi_fmts[] =
     {PJMEDIA_FORMAT_PACK('D','X','5','0'), PJMEDIA_FORMAT_MPEG4}
 };
 
-struct pjmedia_avi_streams
+typedef struct avi_reader_streams
 {
-    pj_pool_t       *pool;
-    unsigned         num_streams;
-    pjmedia_port   **streams;
+    pjmedia_avi_streams base;
 
     /* AV synchronization */
     pjmedia_av_sync *avsync;
     pj_size_t        eof_cnt;
-};
+} avi_reader_streams;
 
 struct avi_reader_port
 {
@@ -148,7 +112,7 @@ struct avi_reader_port
     /* AV synchronization */
     pjmedia_av_sync_media *avsync_media;
     pj_size_t        slow_down_frm;
-    pjmedia_avi_streams *avi_streams;
+    avi_reader_streams *avi_streams;
 
     pj_status_t    (*cb)(pjmedia_port*, void*);
     pj_bool_t        subscribed;
@@ -214,11 +178,11 @@ static pj_status_t file_read3(pj_oshandle_t fd, void *data, pj_ssize_t size,
 
 static void streams_on_destroy(void *arg)
 {
-    pjmedia_avi_streams *streams = (pjmedia_avi_streams*)arg;
+    avi_reader_streams *streams = (avi_reader_streams *)arg;
 
     if (streams->avsync)
         pjmedia_av_sync_destroy(streams->avsync);
-    pj_pool_safe_release(&streams->pool);
+    pj_pool_safe_release(&streams->base.pool);
 }
 
 
@@ -245,6 +209,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool_,
                                   unsigned options,
                                   pjmedia_avi_streams **p_streams)
 {
+    avi_reader_streams *streams = NULL;
     pjmedia_avi_hdr avi_hdr;
     struct avi_reader_port *fport[PJMEDIA_AVI_MAX_NUM_STREAMS];
     pj_off_t pos;
@@ -596,7 +561,8 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool_,
     }
 
     /* Done. */
-    *p_streams = pj_pool_calloc(pool, 1, sizeof(pjmedia_avi_streams));
+    streams = pj_pool_calloc(pool, 1, sizeof(avi_reader_streams));
+    *p_streams = (pjmedia_avi_streams *)streams;
     (*p_streams)->num_streams = nstr;
     (*p_streams)->streams = pj_pool_calloc(pool, (*p_streams)->num_streams,
                                            sizeof(pjmedia_port *));
@@ -615,7 +581,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool_,
         if (status != PJ_SUCCESS)
             goto on_error;
 
-        (*p_streams)->avsync = avsync;
+        streams->avsync = avsync;
 
         for (i = 0; i < nstr; i++) {
             pjmedia_av_sync_media_setting med_setting;
@@ -640,7 +606,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool_,
                 goto on_error;
 
             /* Set pointer to AVI streams */
-            fport[i]->avi_streams = *p_streams;
+            fport[i]->avi_streams = streams;
         }
     }
 
@@ -667,12 +633,12 @@ on_error:
             pjmedia_port_destroy(&fport[i]->base);
     }
     
-    if (*p_streams && (*p_streams)->avsync) {
+    if (streams && streams->avsync) {
         for (i = 0; i < nstr; i++) {
             if (fport[i]->avsync_media)
                 pjmedia_av_sync_del_media(NULL, fport[i]->avsync_media);
         }
-        pjmedia_av_sync_destroy((*p_streams)->avsync);
+        pjmedia_av_sync_destroy(streams->avsync);
     }
 
     pj_pool_release(pool);
@@ -1006,9 +972,10 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
 
         /* If synchronized, wait all streams to EOF before rewinding */
         if (fport->avsync_media) {
-            pjmedia_avi_streams *avi_streams = fport->avi_streams;
+            avi_reader_streams *avi_streams = fport->avi_streams;
             
-            rewind_now = (avi_streams->eof_cnt % avi_streams->num_streams)==0;
+            rewind_now = (avi_streams->eof_cnt %
+                          avi_streams->base.num_streams)==0;
             if (rewind_now) {
                 pj_timestamp ts_zero = {{0}};
                 pjmedia_av_sync_update_ref(fport->avsync_media,
@@ -1222,10 +1189,11 @@ on_error2:
 
         /* Reset AV sync on the last stream encountering EOF */
         if (fport->avsync_media) {
-            pjmedia_avi_streams* avi_streams = fport->avi_streams;
+            avi_reader_streams *avi_streams = fport->avi_streams;
 
             if (avi_streams->avsync &&
-                (++avi_streams->eof_cnt % avi_streams->num_streams == 0))
+                (++avi_streams->eof_cnt %
+                 avi_streams->base.num_streams == 0))
             {
                 pjmedia_av_sync_reset(avi_streams->avsync);
             }

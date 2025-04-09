@@ -20,6 +20,9 @@
     <ClCompile Include="..\src\pjmedia\avi_player.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjmedia\avi_writer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjmedia\bidirectional.c">
       <Filter>Source Files</Filter>
     </ClCompile>

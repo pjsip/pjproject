@@ -610,6 +610,7 @@
     <ClCompile Include="..\src\pjmedia\alaw_ulaw_table.c" />
     <ClCompile Include="..\src\pjmedia\audiodev.c" />
     <ClCompile Include="..\src\pjmedia\avi_player.c" />
+    <ClCompile Include="..\src\pjmedia\avi_writer.c" />
     <ClCompile Include="..\src\pjmedia\av_sync.c" />
     <ClCompile Include="..\src\pjmedia\bidirectional.c" />
     <ClCompile Include="..\src\pjmedia\clock_thread.c" />

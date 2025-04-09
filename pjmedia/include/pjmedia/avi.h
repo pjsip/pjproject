@@ -191,6 +191,48 @@ typedef struct pjmedia_avi_subchunk
 } pjmedia_avi_subchunk;
 
 
+/**
+ * Internal function to normalize data from AVI's little endian to host
+ * byte order and vice versa.
+ */
+#if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
+    static void pjmedia_avi_swap_data(void *data, pj_uint8_t bits,
+                                      unsigned count)
+    {
+        unsigned i;
+
+        count /= (bits == 32? 4 : 2);
+
+        if (bits == 32) {
+            pj_int32_t *data32 = (pj_int32_t *)data;
+            for (i = 0; i < count; ++i)
+                data32[i] = pj_swap32(data32[i]);
+        } else if (bits == 16) {
+            pj_int16_t *data16 = (pj_int16_t *)data;
+            for (i = 0; i < count; ++i)
+                data16[i] = pj_swap16(data16[i]);
+        }
+
+    }
+    static void pjmedia_avi_swap_data2(void *data, pj_uint8_t nsizes,
+                                       pj_uint8_t *sizes)
+    {
+        unsigned i;
+        pj_int8_t *datap = (pj_int8_t *)data;
+        for (i = 0; i < nsizes; i++) {
+            pjmedia_avi_swap_data(datap, 32, sizes[i]);
+            datap += sizes[i++];
+            if (i >= nsizes)
+                break;
+            pjmedia_avi_swap_data(datap, 16, sizes[i]);
+            datap += sizes[i];
+        }
+    }
+#else
+#   define pjmedia_avi_swap_data(data, bits, count)
+#   define pjmedia_avi_swap_data2(data, nsizes, sizes)
+#endif
+
 PJ_END_DECL
 
 /**
