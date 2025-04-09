@@ -389,7 +389,7 @@ struct pjsip_rx_data
         /** Start of msg buffer. */
         char                    *msg_buf;
 
-        /** Length fo message. */
+        /** Length of message. */
         int                      len;
 
         /** The parsed message, if any. */
