@@ -100,10 +100,13 @@ static int pool_alignment_test(void)
                           512,
                           0,
                           &null_callback);
+    /* request almost all reserved space */
     ptr = pj_pool_alloc(pool, 512 - sizeof(pj_pool_t) - sizeof(pj_pool_block) - 4);
     PJ_TEST_NOT_NULL(ptr, NULL, return -301);
-    /* request more memory than is left in the current block */
-    ptr = pj_pool_aligned_alloc(pool, 256, 1);
+    /* request more memory than is left in the current block 
+     * extra large alignment should goes out of block
+     */
+    ptr = pj_pool_aligned_alloc(pool, 512, 1);
     pj_pool_release(pool);
     PJ_TEST_EQ(ptr, NULL, NULL, return -302);
 
