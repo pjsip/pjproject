@@ -95,6 +95,18 @@ static int pool_alignment_test(void)
     pj_pool_release(pool);
     PJ_TEST_NOT_NULL(ptr, NULL, return -300);
 
+    /* Create a non-expandable pool */
+    pool = pj_pool_create(mem, NULL,
+                          512,
+                          0,
+                          &null_callback);
+    ptr = pj_pool_alloc(pool, 512 - sizeof(pj_pool_t) - sizeof(pj_pool_block) - 4);
+    PJ_TEST_NOT_NULL(ptr, NULL, return -301);
+    /* request more memory than is left in the current block */
+    ptr = pj_pool_aligned_alloc(pool, 256, 1);
+    pj_pool_release(pool);
+    PJ_TEST_EQ(ptr, NULL, NULL, return -302);
+
     pool = pj_pool_create(mem, NULL, PJ_POOL_SIZE+MEMSIZE, MEMSIZE, NULL);
     PJ_TEST_NOT_NULL(pool, NULL, return -304);
 
