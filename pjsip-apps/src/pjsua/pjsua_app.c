@@ -325,6 +325,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
         pjsua_call_setting_default(&opt);
         opt.aud_cnt = app_config.aud_cnt;
         opt.vid_cnt = app_config.vid.vid_cnt;
+        opt.txt_cnt = app_config.txt_cnt;
 
         pjsua_call_answer2(call_id, &opt, app_config.auto_answer, NULL,
                            NULL);
@@ -345,7 +346,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 
         PJ_LOG(3,(THIS_FILE,
                   "Incoming call for account %d!\n"
-                  "Media count: %d audio & %d video\n"
+                  "Media count: %d audio & %d video & %d text\n"
                   "%s"
                   "From: %.*s\n"
                   "To: %.*s\n"
@@ -353,6 +354,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                   acc_id,
                   call_info.rem_aud_cnt,
                   call_info.rem_vid_cnt,
+                  call_info.rem_txt_cnt,
                   notif_st,
                   (int)call_info.remote_info.slen,
                   call_info.remote_info.ptr,
@@ -419,6 +421,13 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
         /* Automatically record conversation, if desired */
         if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
             pjsua_conf_connect(call_conf_slot, app_config.rec_port);
+        }
+
+        /* Record audio into AVI, if desired */
+        if (app_config.avi_auto_rec && app_config.avi_rec_audio &&
+            app_config.avi_aud_slot != PJSUA_INVALID_ID)
+        {
+            pjsua_conf_connect(call_conf_slot, app_config.avi_aud_slot);
         }
 
         /* Stream a file, if desired */
@@ -488,6 +497,14 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
                 pjsua_conf_connect(call_conf_slot, app_config.rec_port);
                 pjsua_conf_connect(0, app_config.rec_port);
             }
+
+            /* Record audio into AVI, if desired */
+            if (app_config.avi_auto_rec && app_config.avi_rec_audio &&
+                app_config.avi_aud_slot != PJSUA_INVALID_ID)
+            {
+                pjsua_conf_connect(call_conf_slot, app_config.avi_aud_slot);
+                pjsua_conf_connect(0, app_config.avi_aud_slot);
+            }
         }
     }
 }
@@ -500,6 +517,18 @@ static void on_call_video_state(pjsua_call_info *ci, unsigned mi,
         return;
 
     arrange_window(ci->media[mi].stream.vid.win_in);
+
+#if PJMEDIA_HAS_VIDEO
+    if (app_config.avi_auto_rec &&
+        app_config.avi_vid_slot != PJSUA_INVALID_ID)
+    {
+        pjsua_conf_port_id pid;
+
+        pid = pjsua_call_get_vid_conf_port(ci->id, PJMEDIA_DIR_DECODING);
+        if (pid != PJSUA_INVALID_ID)
+            pjsua_vid_conf_connect(pid, app_config.avi_vid_slot, NULL);
+    }
+#endif
 
     PJ_UNUSED_ARG(has_error);
 }
@@ -586,6 +615,21 @@ static void call_on_dtmf_callback2(pjsua_call_id call_id,
     };    
     PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c%s, using %s method", 
            call_id, info->digit, duration, method));
+}
+
+/* Incoming text stream callback. */
+static void call_on_rx_text(pjsua_call_id call_id,
+                            const pjsua_txt_stream_data *data)
+{
+    if (data->text.slen == 0) {
+        PJ_LOG(4, (THIS_FILE, "Received empty T140 block with seq %d",
+                              data->seq));
+    } else {
+        PJ_LOG(3, (THIS_FILE, "Incoming text on call %d, seq %d: %.*s "
+                              "(%d bytes)", call_id, data->seq,
+                              (int)data->text.slen, data->text.ptr,
+                              (int)data->text.slen));
+    }
 }
 
 /*
@@ -1199,6 +1243,15 @@ static void hangup_timeout_callback(pj_timer_heap_t *timer_heap,
     pjsua_call_hangup_all();
 }
 
+static void avi_writer_cb(pjmedia_avi_streams *streams,
+                          void *usr_data)
+{
+    PJ_UNUSED_ARG(streams);
+    PJ_UNUSED_ARG(usr_data);
+
+    PJ_LOG(4, (THIS_FILE, "AVI recording has completed"));
+}
+
 /*
  * A simple registrar, invoked by default_mod_on_rx_request()
  */
@@ -1464,6 +1517,7 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_call_media_state = &on_call_media_state;
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;
     app_config.cfg.cb.on_dtmf_digit2 = &call_on_dtmf_callback2;
+    app_config.cfg.cb.on_call_rx_text = &call_on_rx_text;
     app_config.cfg.cb.on_call_redirected = &call_on_redirected;
     app_config.cfg.cb.on_reg_state = &on_reg_state;
     app_config.cfg.cb.on_incoming_subscribe = &on_incoming_subscribe;
@@ -1658,6 +1712,47 @@ static pj_status_t app_init(void)
 
     }
 
+    if (app_config.avi_rec.slen) {
+#if PJMEDIA_HAS_VIDEO
+        pjmedia_format fmt[2];
+        pjmedia_avi_streams *streams;
+        pjmedia_port *aviw_port;
+
+        pjmedia_format_init_video(&fmt[0], PJMEDIA_FORMAT_I420,
+                                  320, 240, 15, 1);
+        pjmedia_format_init_audio(&fmt[1], PJMEDIA_FORMAT_PCM,
+                                  app_config.media_cfg.clock_rate,
+                                  app_config.media_cfg.channel_count,
+                                  16,
+                                  app_config.media_cfg.audio_frame_ptime*1000,
+                                  0, 0);
+        status = pjmedia_avi_writer_create_streams(app_config.pool,
+                                                   app_config.avi_rec.ptr,
+                                                   app_config.avi_rec_size,
+                                                   2, fmt, 0, &streams);
+        pj_assert(status == PJ_SUCCESS);
+
+        pjmedia_avi_streams_set_cb(streams, NULL, &avi_writer_cb);
+
+        app_config.avi_vid_port = (pjmedia_port *)
+                                  pjmedia_avi_streams_get_stream(streams, 0);
+        status = pjsua_vid_conf_add_port(app_config.pool,
+                                         app_config.avi_vid_port, NULL,
+                                         &app_config.avi_vid_slot);
+        pj_assert(status == PJ_SUCCESS);
+
+        if (app_config.avi_rec_audio) {
+            app_config.avi_aud_port = (pjmedia_port *)
+                                      pjmedia_avi_streams_get_stream(streams,
+                                                                     1);
+            status = pjsua_conf_add_port(app_config.pool,
+                                         app_config.avi_aud_port,
+                                         &app_config.avi_aud_slot);
+            pj_assert(status == PJ_SUCCESS);
+        }
+#endif
+    }
+
     /* Create AVI player virtual devices */
     if (app_config.avi_cnt) {
 #if PJMEDIA_HAS_VIDEO && PJMEDIA_VIDEO_DEV_HAS_AVI
@@ -1759,6 +1854,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             pjsua_acc_modify(aid, &acc_cfg);
         }
@@ -1803,6 +1899,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
@@ -1838,6 +1935,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             pjsua_acc_modify(aid, &acc_cfg);
         }
@@ -1868,6 +1966,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
@@ -1907,6 +2006,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(acc_id, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             pjsua_acc_modify(acc_id, &acc_cfg);
         }
@@ -1936,6 +2036,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
@@ -1961,6 +2062,7 @@ static pj_status_t app_init(void)
         app_config.acc_cfg[i].reg_first_retry_interval = 60;
 
         app_config_init_video(&app_config.acc_cfg[i]);
+        app_config.acc_cfg[i].txt_red_level = app_config.txt_red_level;
 
         status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, NULL);
         if (status != PJ_SUCCESS)
@@ -2019,6 +2121,7 @@ static pj_status_t app_init(void)
     pjsua_call_setting_default(&call_opt);
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
+    call_opt.txt_cnt = app_config.txt_cnt;
     if (app_config.enable_loam) {
         call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
@@ -2093,6 +2196,7 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
         pjsua_call_setting_default(&call_opt);
         call_opt.aud_cnt = app_config.aud_cnt;
         call_opt.vid_cnt = app_config.vid.vid_cnt;
+        call_opt.txt_cnt = app_config.txt_cnt;
 
         pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL, 
                              NULL, NULL);
@@ -2154,6 +2258,20 @@ static pj_status_t app_destroy(void)
             app_config.avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
         }
 #endif
+    }
+
+    /* Close avi writer */
+#if PJMEDIA_HAS_VIDEO
+    if (app_config.avi_vid_slot != PJSUA_INVALID_ID) {
+        pjsua_vid_conf_remove_port(app_config.avi_vid_slot);
+        pjmedia_port_destroy(app_config.avi_vid_port);
+        app_config.avi_vid_slot = PJSUA_INVALID_ID;
+    }
+#endif
+    if (app_config.avi_aud_slot != PJSUA_INVALID_ID) {
+        pjsua_conf_remove_port(app_config.avi_aud_slot);
+        pjmedia_port_destroy(app_config.avi_aud_port);
+        app_config.avi_aud_slot = PJSUA_INVALID_ID;
     }
 
     /* Close ringback port */
@@ -2223,6 +2341,8 @@ static pj_status_t app_destroy(void)
     pj_bzero(&app_config, sizeof(app_config));
     app_config.wav_id = PJSUA_INVALID_ID;
     app_config.rec_id = PJSUA_INVALID_ID;
+    app_config.avi_vid_slot = PJSUA_INVALID_ID;
+    app_config.avi_aud_slot = PJSUA_INVALID_ID;
 
     if (use_cli) {    
         app_config.use_cli = use_cli;

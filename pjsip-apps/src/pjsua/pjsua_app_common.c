@@ -64,6 +64,31 @@ int my_atoi2(const pj_str_t *str)
     }
 }
 
+int my_hex_string_to_octet_array(const char *hex, int len, char octet[])
+{
+     int i;
+     for (i = 0; i < len; i+=2) {
+         int tmp;
+         if (i+1 >= len || !pj_isxdigit(hex[i]) || !pj_isxdigit(hex[i+1]))
+             return i;
+         tmp  = pj_hex_digit_to_val((unsigned char)hex[i]) << 4;
+         tmp |= pj_hex_digit_to_val((unsigned char)hex[i+1]);
+         octet[i/2] = (char)(tmp & 0xFF);
+     }
+     return len;
+}
+
+void my_octet_array_to_hex_string(const char octet[], int len, char hex[])
+{
+     int i;
+     char *p = hex;
+     for (i = 0; i<len; ++i) {
+         pj_val_to_hex_digit(octet[i], p);
+         p += 2;
+     }
+}
+
+
 /*
  * Find next call when current call is disconnected or when user
  * press ']'

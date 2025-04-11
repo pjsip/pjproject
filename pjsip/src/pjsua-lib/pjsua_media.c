@@ -2401,6 +2401,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 {
     const pj_str_t STR_AUDIO = { "audio", 5 };
     const pj_str_t STR_VIDEO = { "video", 5 };
+    const pj_str_t STR_TEXT  = { "text", 4 };
     pjsua_call *call = &pjsua_var.calls[call_id];
     pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
     pj_uint8_t maudidx[PJSUA_MAX_CALL_MEDIA];
@@ -2409,6 +2410,9 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     pj_uint8_t mvididx[PJSUA_MAX_CALL_MEDIA];
     unsigned mvidcnt = PJ_ARRAY_SIZE(mvididx);
     unsigned mtotvidcnt = PJ_ARRAY_SIZE(mvididx);
+    pj_uint8_t mtxtidx[PJSUA_MAX_CALL_MEDIA];
+    unsigned mtxtcnt = PJ_ARRAY_SIZE(mtxtidx);
+    unsigned mtottxtcnt = PJ_ARRAY_SIZE(mtxtidx);
     unsigned mi;
     pj_bool_t pending_med_tp = PJ_FALSE;
     pj_bool_t reinit = PJ_FALSE;
@@ -2494,8 +2498,11 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
         PJ_UNUSED_ARG(STR_VIDEO);
 #endif
 
-        if (maudcnt + mvidcnt == 0) {
-            /* Expecting audio or video in the offer */
+        sort_media(rem_sdp, &STR_TEXT, acc->cfg.use_srtp,
+                   mtxtidx, &mtxtcnt, &mtottxtcnt);
+
+        if (maudcnt + mvidcnt + mtxtcnt == 0) {
+            /* Expecting media in the offer */
             if (sip_err_code)
                 *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
             status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE_HERE);
@@ -2513,6 +2520,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
         call->rem_offerer = PJ_TRUE;
         call->rem_aud_cnt = maudcnt;
         call->rem_vid_cnt = mvidcnt;
+        call->rem_txt_cnt = mtxtcnt;
 
     } else {
 
@@ -2542,6 +2550,9 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
             sort_media2(call->media_prov, sort_check_tp, call->med_prov_cnt,
                         PJMEDIA_TYPE_VIDEO, mvididx, &mvidcnt, &mtotvidcnt);
 
+            sort_media2(call->media_prov, sort_check_tp, call->med_prov_cnt,
+                        PJMEDIA_TYPE_TEXT, mtxtidx, &mtxtcnt, &mtottxtcnt);
+
             /* Call setting may add or remove media. Adding media is done by
              * enabling any disabled/port-zeroed media first, then adding new
              * media whenever needed. Removing media is done by disabling
@@ -2570,6 +2581,17 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
             }
             mvidcnt = call->opt.vid_cnt;
 
+            /* Check if we need to add new text */
+            if (mtxtcnt < call->opt.txt_cnt &&
+                mtottxtcnt < call->opt.txt_cnt)
+            {
+                for (mi = 0; mi < call->opt.txt_cnt - mtottxtcnt; ++mi)
+                    mtxtidx[mtxtcnt++] = (pj_uint8_t)call->med_prov_cnt++;
+
+                mtottxtcnt = call->opt.txt_cnt;
+            }
+            mtxtcnt = call->opt.txt_cnt;
+
             /* In case of media reinit, 'med_prov_cnt' may be decreased
              * because the new call->opt says so. As media count should
              * never decrease, we should verify 'med_prov_cnt' to be
@@ -2591,7 +2613,11 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
             for (mi=0; mi<mvidcnt; ++mi) {
                 mvididx[mi] = (pj_uint8_t)(maudcnt + mi);
             }
-            call->med_prov_cnt = maudcnt + mvidcnt;
+            mtxtcnt = mtottxtcnt = call->opt.txt_cnt;
+            for (mi=0; mi<mtxtcnt; ++mi) {
+                mtxtidx[mi] = (pj_uint8_t)(maudcnt + mvidcnt + mi);
+            }
+            call->med_prov_cnt = maudcnt + mvidcnt + mtxtcnt;
 
             /* Need to publish supported media? */
             if (call->opt.flag & PJSUA_CALL_INCLUDE_DISABLED_MEDIA) {
@@ -2605,6 +2631,10 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
                     mvididx[0] = (pj_uint8_t)call->med_prov_cnt++;
                 }
 #endif
+                if (mtottxtcnt == 0) {
+                    mtottxtcnt = 1;
+                    mtxtidx[0] = (pj_uint8_t)call->med_prov_cnt++;
+                }
             }
         }
 
@@ -2649,6 +2679,13 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
             media_type = PJMEDIA_TYPE_VIDEO;
             if (call->opt.vid_cnt &&
                 pj_memchr(mvididx, mi, mvidcnt * sizeof(mvididx[0])))
+            {
+                enabled = PJ_TRUE;
+            }
+        } else if (pj_memchr(mtxtidx, mi, mtottxtcnt * sizeof(mtxtidx[0]))) {
+            media_type = PJMEDIA_TYPE_TEXT;
+            if (call->opt.txt_cnt &&
+                pj_memchr(mtxtidx, mi, mtxtcnt * sizeof(mtxtidx[0])))
             {
                 enabled = PJ_TRUE;
             }
@@ -2915,6 +2952,10 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                     m->desc.media = pj_str("video");
                     m->desc.fmt[0] = pj_str("31");
                     break;
+                case PJMEDIA_TYPE_TEXT:
+                    m->desc.media = pj_str("text");
+                    m->desc.fmt[0] = pj_str("0");
+                    break;
                 default:
                     /* This must be us generating re-offer, and some unknown
                      * media may exist, so just clone from active local SDP
@@ -2997,6 +3038,12 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                                                     &param, &m);
             break;
 #endif
+        case PJMEDIA_TYPE_TEXT:
+            param.red_level = acc->cfg.txt_red_level;
+            status = pjmedia_endpt_create_text_sdp(pjsua_var.med_endpt, pool,
+                                                    &tpinfo.sock_info,
+                                                    &param, &m);
+            break;
         default:
             pj_assert(!"Invalid call_med media type");
             status = PJ_EBUG;
@@ -3296,6 +3343,9 @@ static void stop_media_stream(pjsua_call *call, unsigned med_idx)
         pjsua_vid_stop_stream(call_med);
     }
 #endif
+    else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+        pjsua_txt_stop_stream(call_med);
+    }
 
     PJ_LOG(4,(THIS_FILE, "Media stream call%02d:%d is destroyed",
                          call->index, med_idx));
@@ -3334,6 +3384,9 @@ static void stop_media_stream(pjsua_call *call, unsigned med_idx)
             prov_med->strm.v.stream     = call_med->strm.v.stream;
         }
 #endif
+        else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+            prov_med->strm.t.stream     = call_med->strm.t.stream;
+        }
     }
 
     pj_log_pop_indent();
@@ -3428,7 +3481,13 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     if (dlg && pj_log_get_level() >= 3)
         log_call_dump(call_id);
 
+    /* Stop all media */
     stop_media_session(call_id);
+
+    /* Destroy media synchronizer */
+    if (call->av_sync)
+        pjmedia_av_sync_destroy(call->av_sync);
+    call->av_sync = NULL;
 
     /* Stop trickle ICE timer */
     if (call->trickle_ice.trickling > PJSUA_OP_STATE_NULL) {
@@ -3561,6 +3620,7 @@ static void check_srtp_roc(pjsua_call *call,
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     pjmedia_vid_stream_info vid_si;
 #endif
+    pjmedia_txt_stream_info txt_si;
     pj_bool_t local_change = PJ_FALSE, rem_change = PJ_FALSE;
     pjmedia_srtp_setting setting;
 
@@ -3628,6 +3688,14 @@ static void check_srtp_roc(pjsua_call *call,
             }
         }
 #endif
+        else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+            /* Get current active text stream info */
+            if (call_med->strm.t.stream) {
+                pjmedia_txt_stream_get_info(call_med->strm.t.stream, &txt_si);
+                prev_local_addr = &txt_si.local_addr;
+                prev_rem_addr = &txt_si.rem_addr;
+            }
+        }
     }
     
 #if 0
@@ -3652,7 +3720,10 @@ static void check_srtp_roc(pjsua_call *call,
             new_rem_addr = &new_si_->info.vid.rem_addr;
         }
 #endif
-        else {
+        else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+            new_local_addr = &new_si_->info.txt.local_addr;
+            new_rem_addr = &new_si_->info.txt.rem_addr;
+        } else {
             /* Just return for other media type */
             return;
         }
@@ -3968,6 +4039,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     pjmedia_vid_stream_info vsi = {0};
 #endif
+    pjmedia_txt_stream_info tsi;
     pjmedia_stream_info_common *si = NULL;
     pjsua_stream_info stream_info = {0};
     pj_str_t *enc_name = NULL;
@@ -3989,6 +4061,13 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         stream_info.info.vid = vsi;
         enc_name = &vsi.codec_info.encoding_name;
 #endif
+    } else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+        si = (pjmedia_stream_info_common *)&tsi;
+        status = pjmedia_txt_stream_info_from_sdp(
+                                    &tsi, tmp_pool, pjsua_var.med_endpt,
+                                    local_sdp, remote_sdp, mi);
+        stream_info.info.txt = tsi;
+        enc_name = &tsi.fmt.encoding_name;
     }
     else {
         status = PJMEDIA_EUNSUPMEDIATYPE;
@@ -4210,15 +4289,19 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         /* Update audio channel */
         if (media_changed) {
             if (call_med->type == PJMEDIA_TYPE_AUDIO) {
-            status = pjsua_aud_channel_update(call_med,
-                                              call->inv->pool, &asi,
-                                              local_sdp, remote_sdp);
+                status = pjsua_aud_channel_update(call_med,
+                                                  call->inv->pool, &asi,
+                                                  local_sdp, remote_sdp);
             } else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
-            status = pjsua_vid_channel_update(call_med,
-                                              call->inv->pool, &vsi,
-                                              local_sdp, remote_sdp);
+                status = pjsua_vid_channel_update(call_med,
+                                                  call->inv->pool, &vsi,
+                                                  local_sdp, remote_sdp);
 #endif
+            } else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+                status = pjsua_txt_channel_update(call_med,
+                                                  call->inv->pool, &tsi,
+                                                  local_sdp, remote_sdp);
             }
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(1,(THIS_FILE, status,
@@ -4289,12 +4372,16 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
     const pj_str_t STR_AUDIO = { "audio", 5 };
     const pj_str_t STR_VIDEO = { "video", 5 };
+    const pj_str_t STR_TEXT  = { "text", 4 };
     pj_uint8_t maudidx[PJSUA_MAX_CALL_MEDIA];
     unsigned maudcnt = PJ_ARRAY_SIZE(maudidx);
     unsigned mtotaudcnt = PJ_ARRAY_SIZE(maudidx);
     pj_uint8_t mvididx[PJSUA_MAX_CALL_MEDIA];
     unsigned mvidcnt = PJ_ARRAY_SIZE(mvididx);
     unsigned mtotvidcnt = PJ_ARRAY_SIZE(mvididx);
+    pj_uint8_t mtxtidx[PJSUA_MAX_CALL_MEDIA];
+    unsigned mtxtcnt = PJ_ARRAY_SIZE(mvididx);
+    unsigned mtottxtcnt = PJ_ARRAY_SIZE(mvididx);
     pj_bool_t need_renego_sdp = PJ_FALSE;
 
     if (pjsua_get_state() != PJSUA_STATE_RUNNING)
@@ -4324,6 +4411,8 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     PJ_UNUSED_ARG(STR_VIDEO);
     mvidcnt = mtotvidcnt = 0;
 #endif
+    sort_media(local_sdp, &STR_TEXT, acc->cfg.use_srtp,
+               mtxtidx, &mtxtcnt, &mtottxtcnt);
 
     /* We need to re-nego SDP or modify our answer when:
      * - media count exceeds the configured limit,
@@ -4331,7 +4420,8 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
      *   codecs)
      */
     if (!pjmedia_sdp_neg_was_answer_remote(call->inv->neg) &&
-        ((maudcnt > call->opt.aud_cnt || mvidcnt > call->opt.vid_cnt) ||
+        ((maudcnt > call->opt.aud_cnt || mvidcnt > call->opt.vid_cnt ||
+          mtxtcnt > call->opt.txt_cnt) ||
         (acc->cfg.rtcp_fb_cfg.cap_count)))
     {
         pjmedia_sdp_session *local_sdp_renego = NULL;
@@ -4360,17 +4450,20 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
          * answer, no media count limitation applied as we didn't know yet
          * which media would pass the SDP negotiation.
          */
-        if (maudcnt > call->opt.aud_cnt || mvidcnt > call->opt.vid_cnt)
+        if (maudcnt > call->opt.aud_cnt || mvidcnt > call->opt.vid_cnt ||
+            mtxtcnt > call->opt.txt_cnt)
         {
             maudcnt = PJ_MIN(maudcnt, call->opt.aud_cnt);
             mvidcnt = PJ_MIN(mvidcnt, call->opt.vid_cnt);
+            mtxtcnt = PJ_MIN(mtxtcnt, call->opt.txt_cnt);
 
             for (mi=0; mi < local_sdp_renego->media_count; ++mi) {
                 pjmedia_sdp_media *m = local_sdp_renego->media[mi];
 
                 if (m->desc.port == 0 ||
                     pj_memchr(maudidx, mi, maudcnt*sizeof(maudidx[0])) ||
-                    pj_memchr(mvididx, mi, mvidcnt*sizeof(mvididx[0])))
+                    pj_memchr(mvididx, mi, mvidcnt*sizeof(mvididx[0])) ||
+                    pj_memchr(mtxtidx, mi, mtxtcnt*sizeof(mtxtidx[0])))
                 {
                     continue;
                 }
@@ -4385,6 +4478,34 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     call->med_cnt = call->med_prov_cnt;
     pj_memcpy(call->media, call->media_prov,
               sizeof(call->media_prov[0]) * call->med_prov_cnt);
+
+    /* Create/reset synchronizer */
+    if ((call->opt.flag & PJSUA_CALL_NO_MEDIA_SYNC)==0 && 
+        (maudcnt+mvidcnt) > 1)
+    {
+        if (call->av_sync) {
+            pjmedia_av_sync_reset(call->av_sync);
+        } else {
+            pjmedia_av_sync_setting setting;
+            char name[PJ_MAX_OBJ_NAME];
+
+            pj_ansi_snprintf(name, sizeof(name), "avsync-call_%02d", call_id);
+            pjmedia_av_sync_setting_default(&setting);
+            setting.is_streaming = PJ_TRUE;
+            setting.name = name;
+            status = pjmedia_av_sync_create(tmp_pool, &setting, &call->av_sync);
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(3, (THIS_FILE, status,
+                              "Call %d: Failed to create synchronizer", call_id));
+            }
+        }
+    }
+
+    /* Destroy existing synchronizer if synchronization is cancelled */
+    else if ((call->opt.flag & PJSUA_CALL_NO_MEDIA_SYNC) && call->av_sync) {
+        pjmedia_av_sync_destroy(call->av_sync);
+        call->av_sync = NULL;
+    }
 
     /* Process each media stream */
     for (mi=0; mi < call->med_cnt; ++mi) {
@@ -4428,6 +4549,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
             if (status != PJ_SUCCESS)
                 goto on_check_med_status;
 #endif
+        } else if (call_med->type==PJMEDIA_TYPE_TEXT) {
+            status = apply_med_update(call_med, local_sdp, remote_sdp,
+                                      &need_renego_sdp);
+            if (status != PJ_SUCCESS)
+                goto on_check_med_status;
         } else {
             status = PJMEDIA_EUNSUPMEDIATYPE;
         }

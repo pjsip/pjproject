@@ -170,8 +170,9 @@ PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
 #define PJMEDIA_SIG_CLASS_PORT_VID(c,d) PJMEDIA_SIG_CLASS_PORT('V',c,d)
 #define PJMEDIA_SIG_IS_CLASS_PORT_VID(s) ((s)>>24=='P' && (((s)>>16)&0xff)=='V')
 
-/** AVI player signature. */
+/** AVI player and writer signature. */
 #define PJMEDIA_SIG_PORT_VID_AVI_PLAYER PJMEDIA_SIG_CLASS_PORT_VID('A','V')
+#define PJMEDIA_SIG_PORT_VID_AVI_WRITER PJMEDIA_SIG_CLASS_PORT_VID('A','W')
 #define PJMEDIA_SIG_PORT_VID_STREAM     PJMEDIA_SIG_CLASS_PORT_VID('S','T')
 #define PJMEDIA_SIG_PORT_VID_TEE        PJMEDIA_SIG_CLASS_PORT_VID('T','E')
 

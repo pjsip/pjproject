@@ -186,6 +186,13 @@ codec_desc[] =
     },
 #   endif
 
+#   if PJMEDIA_HAS_PASSTHROUGH_CODEC_G722
+    {1, "G722",     PJMEDIA_RTP_PT_G722,      PJMEDIA_FORMAT_G722,
+                    16000, 1,  160,
+                    64000, 64000, 2, 1, 1
+    },
+#   endif
+
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_G729
     {1, "G729",     PJMEDIA_RTP_PT_G729,      PJMEDIA_FORMAT_G729,
                     8000, 1,  80,
@@ -684,10 +691,7 @@ static pj_status_t codec_open( pjmedia_codec *codec,
 {
     codec_private_t *codec_data = (codec_private_t*) codec->codec_data;
     struct codec_desc *desc = &codec_desc[codec_data->codec_idx];
-    pj_pool_t *pool;
     int i, j;
-
-    pool = codec_data->pool;
 
     /* Cache samples per frame value */
     codec_data->samples_per_frame = desc->samples_per_frame;
@@ -770,7 +774,7 @@ static pj_status_t codec_open( pjmedia_codec *codec,
             }
         }
 
-        s = PJ_POOL_ZALLOC_T(pool, amr_settings_t);
+        s = PJ_POOL_ZALLOC_T(codec_data->pool, amr_settings_t);
         codec_data->codec_setting = s;
 
         s->enc_mode = enc_mode;
@@ -839,7 +843,7 @@ static pj_status_t codec_open( pjmedia_codec *codec,
          */
         if (enc_fmtp_mode != dec_fmtp_mode) {
             enc_fmtp_mode = dec_fmtp_mode = DEFAULT_MODE;
-            PJ_LOG(4,(pool->obj_name, 
+            PJ_LOG(4,(codec_data->pool->obj_name, 
                       "Normalized iLBC encoder and decoder modes to %d", 
                       DEFAULT_MODE));
         }

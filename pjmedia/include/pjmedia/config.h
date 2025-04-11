@@ -940,6 +940,24 @@
 
 
 /**
+ * This macro declares the payload type for T140 text that is advertised
+ * by PJMEDIA for outgoing SDP.
+ */
+#ifndef PJMEDIA_RTP_PT_T140
+#   define PJMEDIA_RTP_PT_T140 98
+#endif
+
+/**
+ * This macro declares the payload type for redundancy that is advertised
+ * by PJMEDIA for outgoing SDP. Currently, redundancy is only used for
+ * text stream.
+ */
+#ifndef PJMEDIA_RTP_PT_REDUNDANCY
+#   define PJMEDIA_RTP_PT_REDUNDANCY 100
+#endif
+
+
+/**
  * Maximum tones/digits that can be enqueued in the tone generator.
  */
 #ifndef PJMEDIA_TONEGEN_MAX_DIGITS
@@ -1612,6 +1630,19 @@
 #  endif
 #endif
 
+/**
+ * Specify the maximum redundancy levels supported by text stream.
+ * A value of 1 provides an adequate protection against an average
+ * packet loss of up to 50%, while 2 can potentially protect
+ * against 66.7%, so typically setting it to a higher value is
+ * rarely necessary.
+ *
+ * Default: 2, as per the recommendation of RFC 4103.
+ */
+#ifndef PJMEDIA_TXT_STREAM_MAX_RED_LEVELS
+#    define PJMEDIA_TXT_STREAM_MAX_RED_LEVELS 2
+#endif
+
 
 /**
  * Specify target value for socket receive buffer size. It will be
@@ -1733,6 +1764,32 @@
 
 #undef PJMEDIA_VID_STREAM_CHECK_RTP_PT
 #define PJMEDIA_VID_STREAM_CHECK_RTP_PT      PJMEDIA_STREAM_CHECK_RTP_PT
+
+
+/**
+ * Maximum tolerable presentation lag from the earliest to the latest media,
+ * in milliseconds, in inter-media synchronization. When the delay is
+ * higher than this setting, the media synchronizer will request the slower
+ * media to speed up. And if after a number of speed up requests the delay
+ * is still beyond this setting, the fastest media will be requested to
+ * slow down.
+ *
+ * Default: 45 ms
+ */
+#ifndef PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC
+#   define PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC    45
+#endif
+
+
+/**
+  * Maximum number of speed up request to synchronize presentation time,
+  * before a slow down request to the fastest media is issued.
+  *
+  * Default: 10
+  */
+#ifndef PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT
+#   define PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT       10
+#endif
 
 /**
  * @}

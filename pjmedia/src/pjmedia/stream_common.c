@@ -30,6 +30,7 @@
 static const pj_str_t ID_IN = { "IN", 2 };
 static const pj_str_t ID_IP4 = { "IP4", 3};
 static const pj_str_t ID_IP6 = { "IP6", 3};
+static const pj_str_t ID_RTPMAP = { "rtpmap", 6 };
 
 /*
  * Create stream info from SDP media line.
@@ -268,25 +269,19 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_common_from_sdp(
     si->jb_init = si->jb_max = si->jb_min_pre = si->jb_max_pre = -1;
     si->jb_discard_algo = PJMEDIA_JB_DISCARD_PROGRESSIVE;
 
-    if (pjmedia_get_type(&local_m->desc.media) == PJMEDIA_TYPE_AUDIO ||
-        pjmedia_get_type(&local_m->desc.media) == PJMEDIA_TYPE_VIDEO)
-    {
-        /* Get local RTCP-FB info */
-        if (pjmedia_get_type(&local_m->desc.media) == PJMEDIA_TYPE_AUDIO ||
-        pjmedia_get_type(&local_m->desc.media) == PJMEDIA_TYPE_VIDEO)
-        status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, local,
-                                             stream_idx, si->rx_pt,
-                                             &si->loc_rtcp_fb);
-        if (status != PJ_SUCCESS)
-            return status;
+    /* Get local RTCP-FB info */
+    status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, local,
+                                         stream_idx, si->rx_pt,
+                                         &si->loc_rtcp_fb);
+    if (status != PJ_SUCCESS)
+        return status;
 
-        /* Get remote RTCP-FB info */
-        status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, remote,
-                                             stream_idx, si->tx_pt,
-                                             &si->rem_rtcp_fb);
-        if (status != PJ_SUCCESS)
-            return status;
-    }
+    /* Get remote RTCP-FB info */
+    status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, remote,
+                                         stream_idx, si->tx_pt,
+                                         &si->rem_rtcp_fb);
+    if (status != PJ_SUCCESS)
+        return status;
 
     *active = PJ_TRUE;
     return status;
@@ -364,7 +359,7 @@ PJ_DECL(pj_status_t) pjmedia_stream_info_parse_fmtp_data(pj_pool_t *pool,
 
         /* Get token */
         start = p;
-        while (p < p_end && *p != ';') ++p;
+        while (p < p_end && *p != ';' && *p != '/') ++p;
         end = p - 1;
 
         /* Right trim */
@@ -421,6 +416,89 @@ PJ_DECL(pj_status_t) pjmedia_stream_info_parse_fmtp_data(pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+static pj_status_t parse_redundancy(pj_pool_t *pool,
+                                    const pjmedia_sdp_media *sdp,
+                                    unsigned media_pt,
+                                    unsigned *red_pt,
+                                    int *red_level)
+{
+    static const pj_str_t ID_REDUNDANCY = { "red", 3 };
+    unsigned i, pt = 0;
+    int level = 0;
+    pjmedia_codec_fmtp fmtp;
+    pj_status_t status;
+
+    /* Get payload type for redundancy */
+    for (i = 0; i < sdp->attr_count; ++i) {
+        const pjmedia_sdp_attr *attr;
+        pjmedia_sdp_rtpmap r;
+
+        attr = sdp->attr[i];
+        if (pj_strcmp(&attr->name, &ID_RTPMAP) != 0)
+            continue;
+        if (pjmedia_sdp_attr_get_rtpmap(attr, &r) != PJ_SUCCESS)
+            continue;
+        if (pj_strcmp(&r.enc_name, &ID_REDUNDANCY) == 0) {
+            pt = pj_strtoul(&r.pt);
+            break;
+        }
+    }
+    if (pt == 0)
+        return PJ_ENOTFOUND;
+
+    status = pjmedia_stream_info_parse_fmtp(pool, sdp, pt, &fmtp);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    for (i = 0; i < fmtp.cnt; i++, level++) {
+        unsigned med_pt = pj_strtoul(&fmtp.param[i].val);
+
+        if (med_pt != media_pt)
+            return PJMEDIA_SDP_EINFMTP;
+    }
+
+    *red_pt = pt;
+    *red_level = level - 1;
+
+    return status;
+}
+
+/*
+ * Internal function for parsing redundancy info from the SDP media.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_info_common_parse_redundancy(pjmedia_stream_info_common *si,
+                                            pj_pool_t *pool,
+                                            const pjmedia_sdp_media *local_m,
+                                            const pjmedia_sdp_media *rem_m)
+{
+    pj_status_t status;
+
+    /* Get incoming payload type for redundancy */
+    status = parse_redundancy(pool, local_m, si->rx_pt, &si->rx_red_pt,
+                              &si->rx_red_level);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Get outgoing payload type for redundancy */
+    status = parse_redundancy(pool, rem_m, si->tx_pt, &si->tx_red_pt,
+                              &si->tx_red_level);
+    if (status == PJ_SUCCESS) {
+        if (si->tx_red_level == -1) {
+            /* Remote SDP contains "red" rtpmap but no fmtp, meaning that
+             * they accept our offer but most likely will not send redundancy
+             * from their side.
+             */
+            si->tx_red_level = si->rx_red_level;
+        } else if (si->tx_red_level != si->rx_red_level) {
+            si->tx_red_level = PJ_MIN(si->tx_red_level, si->rx_red_level);
+            si->rx_red_level = si->tx_red_level;
+        }
+    }
+
+    return PJ_SUCCESS;
+}
+
 /*
  * Get stream statistics.
  */
@@ -445,6 +523,17 @@ pjmedia_stream_common_reset_stat(pjmedia_stream_common *c_strm)
     pjmedia_rtcp_init_stat(&c_strm->rtcp.stat);
 
     return PJ_SUCCESS;
+}
+
+/*
+ * Get jitter buffer state.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_common_get_stat_jbuf(const pjmedia_stream_common *c_strm,
+                                    pjmedia_jb_state *state)
+{
+    PJ_ASSERT_RETURN(c_strm && state, PJ_EINVAL);
+    return pjmedia_jbuf_get_state(c_strm->jb, state);
 }
 
 /*
@@ -487,6 +576,49 @@ pjmedia_stream_common_get_rtp_session_info(pjmedia_stream_common *c_strm,
     session_info->rtcp = &c_strm->rtcp;
     return PJ_SUCCESS;
 }
+
+
+/*
+ * Set media presentation synchronizer.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_common_set_avsync(pjmedia_stream_common* stream,
+                                 pjmedia_av_sync* av_sync)
+{
+    pj_status_t status = PJ_SUCCESS;
+
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    /* First, remove existing */
+    if (stream->av_sync && stream->av_sync_media) {
+        status = pjmedia_av_sync_del_media(stream->av_sync,
+                                           stream->av_sync_media);
+        stream->av_sync = NULL;
+        stream->av_sync_media = NULL;
+    }
+
+    /* Then set a new or reset */
+    if (av_sync) {
+        pjmedia_av_sync_media_setting setting;
+
+        pjmedia_av_sync_media_setting_default(&setting);
+        setting.type = stream->si->type;
+        if (stream->si->type == PJMEDIA_TYPE_AUDIO) {
+            setting.name = "Audio";
+            setting.clock_rate = PJMEDIA_PIA_SRATE(&stream->port.info);
+        } else if (stream->si->type == PJMEDIA_TYPE_VIDEO) {
+            setting.name = "Video";
+            setting.clock_rate = 90000;
+        }
+
+        stream->av_sync = av_sync;
+        status = pjmedia_av_sync_add_media(av_sync, &setting,
+                                           &stream->av_sync_media);
+    }
+
+    return status;
+}
+
 
 static pj_status_t build_rtcp_fb(pjmedia_stream_common *c_strm, void *buf,
                                  pj_size_t *length)
@@ -678,4 +810,28 @@ pj_status_t pjmedia_stream_send_rtcp(pjmedia_stream_common *c_strm,
         pj_grp_lock_release(c_strm->transport->grp_lock);
 
     return status;
+}
+
+/*
+ * Start stream.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_common_start(pjmedia_stream_common *c_strm)
+{
+    PJ_ASSERT_RETURN(c_strm && c_strm->enc && c_strm->dec, PJ_EINVALIDOP);
+
+    if (c_strm->enc && (c_strm->dir & PJMEDIA_DIR_ENCODING)) {
+        c_strm->enc->paused = 0;
+        PJ_LOG(4,(c_strm->port.info.name.ptr, "Encoder stream started"));
+    } else {
+        PJ_LOG(4,(c_strm->port.info.name.ptr, "Encoder stream paused"));
+    }
+
+    if (c_strm->dec && (c_strm->dir & PJMEDIA_DIR_DECODING)) {
+        c_strm->dec->paused = 0;
+        PJ_LOG(4,(c_strm->port.info.name.ptr, "Decoder stream started"));
+    } else {
+        PJ_LOG(4,(c_strm->port.info.name.ptr, "Decoder stream paused"));
+    }
+
+    return PJ_SUCCESS;
 }

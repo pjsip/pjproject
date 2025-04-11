@@ -451,7 +451,8 @@ typedef enum pjmedia_vid_packing
 typedef enum pjmedia_vid_stream_rc_method
 {
   PJMEDIA_VID_STREAM_RC_NONE = 0,
-  PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING = 1
+  PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING = 1,
+  PJMEDIA_VID_STREAM_RC_SEND_THREAD = 2
 } pjmedia_vid_stream_rc_method;
 
 enum pjmedia_file_writer_option
@@ -932,7 +933,8 @@ typedef enum pjsua_call_flag
   PJSUA_CALL_REINIT_MEDIA = 16,
   PJSUA_CALL_UPDATE_VIA = 32,
   PJSUA_CALL_UPDATE_TARGET = 64,
-  PJSUA_CALL_SET_MEDIA_DIR = 128
+  PJSUA_CALL_SET_MEDIA_DIR = 128,
+  PJSUA_CALL_NO_MEDIA_SYNC = 256
 } pjsua_call_flag;
 
 typedef enum pjsua_create_media_transport_flag

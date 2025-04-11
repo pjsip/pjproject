@@ -145,6 +145,10 @@ typedef struct pjsua_app_config
     app_vid                 vid;
     unsigned                aud_cnt;
 
+    /* Text setting */
+    unsigned                txt_cnt;
+    int                     txt_red_level;
+
     /* AVI to play */
     unsigned                avi_cnt;
     struct {
@@ -154,6 +158,16 @@ typedef struct pjsua_app_config
     } avi[PJSUA_APP_MAX_AVI];
     pj_bool_t               avi_auto_play;
     int                     avi_def_idx;
+
+    /* AVI recording */
+    pj_str_t                avi_rec;
+    pj_uint32_t             avi_rec_size;
+    pj_bool_t               avi_rec_audio;
+    pj_bool_t               avi_auto_rec;
+    pjsua_conf_port_id      avi_vid_slot;
+    pjmedia_port           *avi_vid_port;
+    pjsua_conf_port_id      avi_aud_slot;
+    pjmedia_port           *avi_aud_port;
 
     /* CLI setting */
     pj_bool_t               use_cli;
@@ -171,6 +185,8 @@ extern pj_bool_t            app_running;
 
 int my_atoi(const char *cs);
 int my_atoi2(const pj_str_t *s);
+int my_hex_string_to_octet_array(const char *hex, int len, char octet[]);
+void my_octet_array_to_hex_string(const char octet[], int len, char hex[]);
 pj_bool_t find_next_call(void);
 pj_bool_t find_prev_call(void);
 void send_request(char *cstr_method, const pj_str_t *dst_uri);
