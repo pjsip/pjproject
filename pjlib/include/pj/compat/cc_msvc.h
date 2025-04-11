@@ -80,8 +80,20 @@ typedef unsigned __int64 pj_uint64_t;
 
 #define PJ_UNREACHED(x)         
 
-#define PJ_ALIGN_DATA(declaration, alignment) __declspec(align(alignment)) declaration
-
+/*
+* Usage example:
+* 
+* typedef struct PJ_ALIGN_DATA_PREFIX(8) a { int value; } PJ_ALIGN_DATA_SUFFIX(8) a;
+* typedef struct PJ_ALIGN_DATA(a{ int value; }, 8) a;
+* 
+* Both options are equivalent, but perhaps the first is a little more readable than the second.
+*/
+//#define PJ_ALIGN_DATA(declaration, alignment) __declspec(align(alignment)) declaration
+//#pragma warning(disable:4324)   // structure padded due to align()
+//#define PJ_ALIGN_DATA(declaration, alignment) __pragma(warning(push)) __pragma(warning(disable:4324)) __declspec(align(alignment)) declaration __pragma(warning(pop))
+#define PJ_ALIGN_DATA_PREFIX(alignment) __pragma(warning(push)) __pragma(warning(disable:4324)) __declspec(align(alignment))
+#define PJ_ALIGN_DATA_SUFFIX(alignment) __pragma(warning(pop))
+#define PJ_ALIGN_DATA(declaration, alignment) PJ_ALIGN_DATA_PREFIX(alignment) declaration PJ_ALIGN_DATA_SUFFIX(alignment)
 
 #endif  /* __PJ_COMPAT_CC_MSVC_H__ */
 
