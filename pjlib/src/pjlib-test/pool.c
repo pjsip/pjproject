@@ -42,6 +42,10 @@
 #define THIS_FILE   "pool.c"
 #define SIZE        4096
 
+#ifndef PJ_IS_ALIGNED
+#   define PJ_IS_ALIGNED(PTR, ALIGNMENT)       (!((pj_ssize_t)(PTR) & ((ALIGNMENT)-1)))
+#endif
+
 /* Normally we should throw exception when memory alloc fails.
  * Here we do nothing so that the flow will go back to original caller,
  * which will test the result using NULL comparison. Normally caller will
@@ -78,7 +82,7 @@ static int capacity_test(void)
 /* Test that the alignment works. */
 static int pool_alignment_test(void)
 {
-    pj_pool_t *pool, *pool2;
+    pj_pool_t *pool = NULL, *pool2 = NULL;
     void *ptr;
     enum { MEMSIZE = 64, LOOP = 100, POOL_ALIGNMENT_TEST = 4*PJ_POOL_ALIGNMENT };
     unsigned i;
@@ -95,22 +99,38 @@ static int pool_alignment_test(void)
     pj_pool_release(pool);
     PJ_TEST_NOT_NULL(ptr, NULL, return -300);
 
-#if 0
-    //TODO: try to reproduce situation when PJ_POOL_ALIGN_PTR(block->cur, alignment) > block->end
-    /* Create a non-expandable pool */
-    pool = pj_pool_create(mem, NULL,
-                          512,
-                          0,
-                          &null_callback);
+    /* Test to reproduce the situation when PJ_POOL_ALIGN_PTR(block->cur, alignment) > block->end */
+    /* Create a non-expandable pool of small capacity */
+    pool = pj_pool_aligned_create(mem, NULL,
+                                  50 + sizeof(pj_pool_t) + sizeof(pj_pool_block),
+                                  0, 4,
+                                  &null_callback);
+    PJ_TEST_NOT_NULL(pool, NULL, return -301);
 
-    /* request only 1 byte with extra large alignment which should goes out of block */
-    ptr = pj_pool_aligned_alloc(pool, 4096, 1);
+    /* find alignment more than capacity to ensure PJ_POOL_ALIGN_PTR(block->cur, alignment) > block->end */
+    pj_size_t capacity = pj_pool_get_capacity(pool);
+    pj_ssize_t alignment = (pj_ssize_t)pool->alignment;
+    while (alignment > 0 && alignment <= (pj_ssize_t)capacity)
+        alignment <<= 1;
+    if (alignment > 0) {
+        ptr = pj_pool_alloc(pool, 0);   /* ptr == block->cur */
+        PJ_TEST_NOT_NULL(ptr, NULL, { rc=-302; goto on_return; });
+        if (PJ_IS_ALIGNED(ptr, alignment)) {
+            /* if block->cur is already aligned, move it to break the alignment */
+            ptr = pj_pool_alloc(pool, 4);
+            PJ_TEST_NOT_NULL(ptr, NULL, { rc=-303; goto on_return; });
+        }
+        /* PJ_POOL_ALIGN_PTR(block->cur, alignment) != block->cur and we can check our address arithmetic.
+         * Now PJ_POOL_ALIGN_PTR(block->cur, alignment) should be > block->end.
+         * We should not be able to allocate anything with this alignment.
+         */
+        ptr = pj_pool_aligned_alloc(pool, alignment, 0);
+        PJ_TEST_EQ(ptr, NULL, NULL, { rc=-304; goto on_return; });
+    }
     pj_pool_release(pool);
-    PJ_TEST_EQ(ptr, NULL, NULL, return -302);
-#endif
 
-    pool = pj_pool_create(mem, NULL, PJ_POOL_SIZE+MEMSIZE, MEMSIZE, NULL);
-    PJ_TEST_NOT_NULL(pool, NULL, return -304);
+     pool = pj_pool_create(mem, NULL, PJ_POOL_SIZE+MEMSIZE, MEMSIZE, NULL);
+    PJ_TEST_NOT_NULL(pool, NULL, return -305);
 
     pool2 = pj_pool_aligned_create(mem, NULL, PJ_POOL_SIZE + MEMSIZE, MEMSIZE,
                                    POOL_ALIGNMENT_TEST, NULL);
@@ -182,8 +202,10 @@ static int pool_alignment_test(void)
 
     /* Done */
 on_return:
-    pj_pool_release(pool);
-    pj_pool_release(pool2);
+    if (pool)
+        pj_pool_release(pool);
+    if (pool2)
+        pj_pool_release(pool2);
 
     return rc;
 }
