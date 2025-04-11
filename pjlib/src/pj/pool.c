@@ -70,8 +70,8 @@ static pj_pool_block *pj_pool_create_block( pj_pool_t *pool, pj_size_t size)
     block->buf = ((unsigned char*)block) + sizeof(pj_pool_block);
     block->end = ((unsigned char*)block) + size;
 
-    /* Set the start pointer, aligning it as needed */
-    block->cur = PJ_POOL_ALIGN_PTR(block->buf, pool->alignment);
+    /* Set the start pointer, unaligned! */
+    block->cur = block->buf;
 
     /* Insert in the front of the list. */
     pj_list_insert_after(&pool->block_list, block);
@@ -98,7 +98,7 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t alignment,
     unsigned i = 0;
 
     PJ_CHECK_STACK();
-    pj_assert(PJ_IS_POWER_OF_TWO(alignment) && PJ_IS_ALIGNED(size, alignment));
+    pj_assert(PJ_IS_POWER_OF_TWO(alignment));
 
     while (block != &pool->block_list) {
         p = pj_pool_alloc_from_block(block, alignment, size);
@@ -134,7 +134,7 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t alignment,
     if (pool->increment_size < 
             sizeof(pj_pool_block)+ /*block header, itself may be unaligned*/
             alignment-1 + /* gap [0:alignment-1] to align first allocation*/
-            size)                  /* allocation size, already aligned    */
+            size)                  /* allocation size (NOT aligned!)      */
     {
         pj_size_t count;
         count = (pool->increment_size + 
@@ -180,7 +180,7 @@ PJ_DEF(void) pj_pool_init_int(pj_pool_t *pool,
 
     pool->increment_size = increment_size;
     pool->callback = callback;
-    pool->alignment = (alignment < PJ_POOL_ALIGNMENT) ? PJ_POOL_ALIGNMENT : alignment;
+    pool->alignment = !alignment ? PJ_POOL_ALIGNMENT : alignment;
 
     if (name) {
         char *p = pj_ansi_strchr(name, '%');
@@ -216,9 +216,6 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
                      NULL);
     PJ_ASSERT_RETURN(!alignment || PJ_IS_POWER_OF_TWO(alignment), NULL);
 
-    if (alignment < PJ_POOL_ALIGNMENT)
-        alignment = PJ_POOL_ALIGNMENT;
-
     /* If callback is NULL, set calback from the policy */
     if (callback == NULL)
         callback = f->policy.callback;
@@ -240,8 +237,8 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
     block->buf = ((unsigned char*)block) + sizeof(pj_pool_block);
     block->end = buffer + initial_size;
 
-    /* Set the start pointer, aligning it as needed */
-    block->cur = PJ_POOL_ALIGN_PTR(block->buf, alignment);
+    /* Set the start pointer, unaligned! */
+    block->cur = block->buf;
 
     pj_list_insert_after(&pool->block_list, block);
 
@@ -285,8 +282,8 @@ static void reset_pool(pj_pool_t *pool)
 
     block = pool->block_list.next;
 
-    /* Set the start pointer, aligning it as needed */
-    block->cur = PJ_POOL_ALIGN_PTR(block->buf, pool->alignment);
+    /* Set the start pointer, unaligned! */
+    block->cur = block->buf;
 
     pool->capacity = block->end - (unsigned char*)pool;
 }

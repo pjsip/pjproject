@@ -69,7 +69,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_imp( const char *file, int line,
     PJ_UNUSED_ARG(initial_size);
     PJ_UNUSED_ARG(increment_size);
 
-    if (alignment < PJ_POOL_ALIGNMENT)
+    if (!alignment)
         alignment = PJ_POOL_ALIGNMENT;
 
     PJ_ASSERT_RETURN(IS_POWER_OF_TWO(alignment), NULL);
@@ -174,7 +174,7 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
     PJ_UNUSED_ARG(file);
     PJ_UNUSED_ARG(line);
 
-    if (alignment < pool->alignment)
+    if (!alignment)
         alignment = pool->alignment;
         
     PJ_ASSERT_RETURN(IS_POWER_OF_TWO(alignment), NULL);
