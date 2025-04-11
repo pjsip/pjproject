@@ -59,15 +59,24 @@
 
 #define DEFAULT_WIDTH           352
 #define DEFAULT_HEIGHT          288
+// #define DEFAULT_WIDTH           1920
+// #define DEFAULT_HEIGHT          1080
 
 #define DEFAULT_FPS             15
 #define DEFAULT_AVG_BITRATE     256000
 #define DEFAULT_MAX_BITRATE     256000
+// #define DEFAULT_FPS             30
+// #define DEFAULT_AVG_BITRATE     1024000
+// #define DEFAULT_MAX_BITRATE     2048000
 
 #define SPS_PPS_BUF_SIZE        64
+// #define SPS_PPS_BUF_SIZE        1024
+
 
 #define MAX_RX_WIDTH            1280
 #define MAX_RX_HEIGHT           800
+// #define MAX_RX_WIDTH            1920
+// #define MAX_RX_HEIGHT           1080
 
 /* Maximum duration from one key frame to the next (in seconds). */
 #define KEYFRAME_INTERVAL       1
@@ -1306,6 +1315,7 @@ static pj_status_t and_media_codec_encode_more(pjmedia_vid_codec *codec,
 static int write_yuv(pj_uint8_t *buf,
                      unsigned dst_len,
                      unsigned char* input,
+                     int input_len,
                      int stride_len,
                      int iWidth,
                      int iHeight)
@@ -1316,9 +1326,16 @@ static int write_yuv(pj_uint8_t *buf,
     int   i;
     unsigned char*  pPtr = NULL;
 
+    // PJ_LOG(4,(THIS_FILE, "write_yuv stride_len:[%d]iWidth:[%d],iHeight:[%d]",
+    //     stride_len,iWidth,iHeight));
+   
     req_size = (iWidth * iHeight) + (iWidth / 2 * iHeight / 2) +
                (iWidth / 2 * iHeight / 2);
-    if (dst_len < req_size)
+
+    // PJ_LOG(4,(THIS_FILE, "write_yuv dst_len:[%d]，req_size:[%d],input_len:[%d]",
+        // dst_len,req_size,input_len));
+
+    if (dst_len < req_size||input_len<req_size)
         return -1;
 
     pPtr = input;
@@ -1490,9 +1507,11 @@ static pj_status_t and_media_decode(pjmedia_vid_codec *codec,
         PJ_LOG(4,(THIS_FILE, "Decoder getOutputBuffer failed"));
         return status;
     }
+    
     len = write_yuv((pj_uint8_t *)output->buf,
                     output->size,
                     output_buf,
+                    output_size,
                     and_media_data->dec_stride_len,
                     and_media_data->prm->dec_fmt.det.vid.size.w,
                     and_media_data->prm->dec_fmt.det.vid.size.h);
