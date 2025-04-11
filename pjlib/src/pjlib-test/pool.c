@@ -83,7 +83,7 @@ static int capacity_test(void)
 static int pool_alignment_test(void)
 {
     pj_pool_t *pool = NULL, *pool2 = NULL;
-    void *ptr;
+    unsigned char *ptr;
     enum { MEMSIZE = 64, LOOP = 100, POOL_ALIGNMENT_TEST = 4*PJ_POOL_ALIGNMENT };
     unsigned i;
     int rc = 0;
@@ -110,31 +110,51 @@ static int pool_alignment_test(void)
                                   &null_callback);
     PJ_TEST_NOT_NULL(pool, NULL, return -301);
 
-    /* find alignment more than capacity to ensure PJ_POOL_ALIGN_PTR(block->cur, alignment) > block->end */
-    capacity = pj_pool_get_capacity(pool);
-    alignment = (pj_ssize_t)pool->alignment;
-    while (alignment > 0 && alignment <= (pj_ssize_t)capacity)
-        alignment <<= 1;
+    ///* find alignment more than capacity to ensure PJ_POOL_ALIGN_PTR(block->cur, alignment) > block->end */
+    //capacity = pj_pool_get_capacity(pool);
+    //alignment = (pj_ssize_t)pool->alignment;
+    //while (alignment > 0 && alignment <= (pj_ssize_t)capacity)
+    //    alignment <<= 1;
 
+    //if (alignment > 0) {
+    //    ptr = pj_pool_alloc(pool, 0);   /* ptr == block->cur */
+    //    PJ_TEST_NOT_NULL(ptr, NULL, { rc=-302; goto on_return; });
+    //    if (PJ_IS_ALIGNED(ptr, alignment)) {
+    //        /* if block->cur is already aligned, move it to break the alignment */
+    //        ptr = pj_pool_alloc(pool, 4);
+    //        PJ_TEST_NOT_NULL(ptr, NULL, { rc=-303; goto on_return; });
+    //    }
+    //    /* PJ_POOL_ALIGN_PTR(block->cur, alignment) != block->cur and we can check our address arithmetic.
+    //     * Now PJ_POOL_ALIGN_PTR(block->cur, alignment) should be > block->end.
+    //     * We should not be able to allocate anything with this alignment.
+    //     */
+    //    ptr = pj_pool_aligned_alloc(pool, alignment, 0);
+    //    pj_ansi_snprintf(msg, sizeof(msg), 
+    //                     "alignment=%ld, capacity=%lu, block->buf=%p, ptr==block->cur=%p, block->end=%p", 
+    //                     alignment, capacity, pool->block_list.next->buf,pool->block_list.next->cur,pool->block_list.next->end);
+    //    PJ_TEST_EQ(ptr, NULL, msg, { rc=-304; goto on_return; });
+
+    //}
+
+    ptr = pj_pool_alloc(pool, 0);           /* ptr == block->cur */
+    PJ_TEST_NOT_NULL(ptr, NULL, { rc=-302; goto on_return; });
+
+    /* find alignment more than capacity to ensure PJ_POOL_ALIGN_PTR(block->cur, alignment) > block->end */
+    capacity = pj_pool_get_capacity(pool);  /* ptr + capacity >= block->end */
+    alignment = (pj_ssize_t)pool->alignment;
+    while (alignment > 0 && (((pj_size_t)(ptr+capacity)) & ~(alignment-1)) > (pj_size_t)ptr)
+        alignment <<= 1;
     if (alignment > 0) {
-        ptr = pj_pool_alloc(pool, 0);   /* ptr == block->cur */
-        PJ_TEST_NOT_NULL(ptr, NULL, { rc=-302; goto on_return; });
-        if (PJ_IS_ALIGNED(ptr, alignment)) {
-            /* if block->cur is already aligned, move it to break the alignment */
-            ptr = pj_pool_alloc(pool, 4);
-            PJ_TEST_NOT_NULL(ptr, NULL, { rc=-303; goto on_return; });
-        }
-        /* PJ_POOL_ALIGN_PTR(block->cur, alignment) != block->cur and we can check our address arithmetic.
-         * Now PJ_POOL_ALIGN_PTR(block->cur, alignment) should be > block->end.
+        /* Now PJ_POOL_ALIGN_PTR(block->cur, alignment) should be > block->end.
          * We should not be able to allocate anything with this alignment.
          */
         ptr = pj_pool_aligned_alloc(pool, alignment, 0);
         pj_ansi_snprintf(msg, sizeof(msg), 
-                         "alignment=%ld, capacity=%lu, block->buf=%p, ptr==block->cur=%p, block->end=%p", 
-                         alignment, capacity, pool->block_list.next->buf,pool->block_list.next->cur,pool->block_list.next->end);
+            "alignment=%ld, capacity=%lu, block->buf=%p, ptr==block->cur=%p, block->end=%p", 
+            alignment, capacity, pool->block_list.next->buf,pool->block_list.next->cur,pool->block_list.next->end);
         PJ_TEST_EQ(ptr, NULL, msg, { rc=-304; goto on_return; });
-
     }
+
     pj_pool_release(pool);
 
     pool = pj_pool_create(mem, NULL, PJ_POOL_SIZE+MEMSIZE, MEMSIZE, NULL);
