@@ -88,6 +88,8 @@ static int pool_alignment_test(void)
     unsigned i;
     int rc = 0;
     char msg[1024];
+    pj_size_t capacity;
+    pj_ssize_t alignment;
 
     PJ_LOG(3,("test", "...alignment test"));
 
@@ -109,10 +111,11 @@ static int pool_alignment_test(void)
     PJ_TEST_NOT_NULL(pool, NULL, return -301);
 
     /* find alignment more than capacity to ensure PJ_POOL_ALIGN_PTR(block->cur, alignment) > block->end */
-    pj_size_t capacity = pj_pool_get_capacity(pool);
-    pj_ssize_t alignment = (pj_ssize_t)pool->alignment;
+    capacity = pj_pool_get_capacity(pool);
+    alignment = (pj_ssize_t)pool->alignment;
     while (alignment > 0 && alignment <= (pj_ssize_t)capacity)
         alignment <<= 1;
+
     if (alignment > 0) {
         ptr = pj_pool_alloc(pool, 0);   /* ptr == block->cur */
         PJ_TEST_NOT_NULL(ptr, NULL, { rc=-302; goto on_return; });
@@ -127,7 +130,7 @@ static int pool_alignment_test(void)
          */
         ptr = pj_pool_aligned_alloc(pool, alignment, 0);
         pj_ansi_snprintf(msg, sizeof(msg), 
-                         "alignment=%d, capacity=%u, block->buf=%p, ptr==block->cur=%p, block->end=%p", 
+                         "alignment=%ld, capacity=%lu, block->buf=%p, ptr==block->cur=%p, block->end=%p", 
                          alignment, capacity, pool->block_list.next->buf,pool->block_list.next->cur,pool->block_list.next->end);
         PJ_TEST_EQ(ptr, NULL, msg, { rc=-304; goto on_return; });
 
