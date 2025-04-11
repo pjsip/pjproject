@@ -87,6 +87,7 @@ static int pool_alignment_test(void)
     enum { MEMSIZE = 64, LOOP = 100, POOL_ALIGNMENT_TEST = 4*PJ_POOL_ALIGNMENT };
     unsigned i;
     int rc = 0;
+    char msg[1024];
 
     PJ_LOG(3,("test", "...alignment test"));
 
@@ -125,11 +126,13 @@ static int pool_alignment_test(void)
          * We should not be able to allocate anything with this alignment.
          */
         ptr = pj_pool_aligned_alloc(pool, alignment, 0);
-        PJ_TEST_EQ(ptr, NULL, NULL, { rc=-304; goto on_return; });
+        pj_ansi_snprintf(msg, sizeof(msg), "alignment=%d, capacity=%u, ptr=%p, block->buf=%p, block->cur=%p, block->end=%p", alignment, capacity, ptr,pool->block_list.next->buf,pool->block_list.next->cur,pool->block_list.next->end);
+        PJ_TEST_EQ(ptr, NULL, msg, { rc=-304; goto on_return; });
+
     }
     pj_pool_release(pool);
 
-     pool = pj_pool_create(mem, NULL, PJ_POOL_SIZE+MEMSIZE, MEMSIZE, NULL);
+    pool = pj_pool_create(mem, NULL, PJ_POOL_SIZE+MEMSIZE, MEMSIZE, NULL);
     PJ_TEST_NOT_NULL(pool, NULL, return -305);
 
     pool2 = pj_pool_aligned_create(mem, NULL, PJ_POOL_SIZE + MEMSIZE, MEMSIZE,
