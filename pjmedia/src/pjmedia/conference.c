@@ -3180,21 +3180,26 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                  *  condition is:
                  * (conf_port->last_timestamp.u64 != frame->timestamp.u64)
                  */
-                if (conf_port->last_timestamp.u64 == frame->timestamp.u64) {   //this port have not yet received data on this timer tick
-                    // enforce "this frame is from the first transmitter" condition
-                    //we usually shouldn't come here
+                if (conf_port->last_timestamp.u64 == frame->timestamp.u64) {   
+                    /* This port have not yet received data on this timer tick.
+                     * Enforce "this frame is from the first transmitter" condition.
+                     * We usually shouldn't come here
+                     */
                     conf_port->last_timestamp.u64 = (frame->timestamp.u64 ? PJ_UINT64(0) : (pj_uint64_t)-1);
                 }
                 pj_assert(conf_port->last_timestamp.u64 != frame->timestamp.u64);
+
+                /* This assertion checks that sink was not skipped on previous tick. */
+                pj_assert(!conf_port->mixed_cnt);
             }
 
-            /* Skip if we're not allowed to receive from this port. */
-            if (conf_port->rx_setting == PJMEDIA_PORT_DISABLE) {
-                conf_port->rx_level = 0;
-                continue;
-            }
-
-            /* Also skip if this port doesn't have listeners. */
+            /* Skip only if this port is not connected to any sink 
+             * (if this port doesn't have listeners).
+             * Although we will not read data from a disabled port, 
+             * we cannot skip the port even if we're not allowed to
+             * receive data from this port. Otherwise, sinks, even 
+             * listening on more than 1 port, will still not transmit any data.
+             */
             if (conf_port->listener_cnt == 0) {
                 conf_port->rx_level = 0;
                 continue;
@@ -3410,11 +3415,15 @@ static void perform_get_frame(pjmedia_conf *conf)
 
         p_in = get_read_buffer(conf_port, frame);
 
+        /* Skip if we're not allowed to receive from this port. */
+        if (conf_port->rx_setting == PJMEDIA_PORT_DISABLE) {
+            frame_type = PJMEDIA_FRAME_TYPE_NONE;
+        }
         /* Get frame from this port.
          * For passive ports, get the frame from the delay_buf.
          * For other ports, get the frame from the port. 
          */
-        if (conf_port->delay_buf != NULL) {
+        else if (conf_port->delay_buf != NULL) {
 
             /* Check that correct size is specified. */
             pj_assert(frame->size == conf->rx_frame_buf_cap);
