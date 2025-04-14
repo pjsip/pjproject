@@ -57,7 +57,7 @@ PJ_IDEF(void*) pj_pool_alloc_from_block( pj_pool_block *block, pj_size_t alignme
     //}
     ptr = PJ_POOL_ALIGN_PTR(block->cur, alignment);
     if (block->cur <= ptr && /* check pointer overflow */
-        (pj_size_t)(block->end - ptr) >= size) /* check available size */
+        block->end - ptr >= (pj_ssize_t)size) /* check available size */
     {
         block->cur = ptr + size;
         return ptr;
