@@ -698,7 +698,14 @@ static pj_status_t open_playback (struct alsa_stream* stream,
         format = SND_PCM_FORMAT_S16_LE;
         break;
     }
-    snd_pcm_hw_params_set_format (stream->pb_pcm, params, format);
+    result = snd_pcm_hw_params_set_format (stream->pb_pcm, params, format);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to set format %d for "
+            "playback device '%s', err: %s", format,
+            stream->af->devs[param->rec_id].name, snd_strerror(result)));
+
+        return PJMEDIA_EAUD_SYSERR;
+    }    
 
     /* Set number of channels */
     TRACE_((THIS_FILE, "open_playback: set channels: %d",
@@ -836,7 +843,14 @@ static pj_status_t open_capture (struct alsa_stream* stream,
         format = SND_PCM_FORMAT_S16_LE;
         break;
     }
-    snd_pcm_hw_params_set_format (stream->ca_pcm, params, format);
+    result = snd_pcm_hw_params_set_format (stream->ca_pcm, params, format);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to set format %d for "
+            "capture device '%s', err: %s", format,
+            stream->af->devs[param->rec_id].name, snd_strerror(result)));
+
+        return PJMEDIA_EAUD_SYSERR;
+    }
 
     /* Set number of channels */
     TRACE_((THIS_FILE, "open_capture: set channels: %d",
@@ -1098,7 +1112,7 @@ static pj_status_t alsa_stream_start (pjmedia_aud_stream *s)
 
     if (stream->param.dir & PJMEDIA_DIR_CAPTURE) {
         status = pj_thread_create (stream->pool,
-                                   "alsasound_playback",
+                                   "alsasound_capture",
                                    ca_thread_func,
                                    stream,
                                    0, //ZERO,
