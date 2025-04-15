@@ -967,9 +967,10 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
             }
 
             if (can_decode) {
+                pj_size_t old_size = stream->dec_frame.size;
                 stream->dec_frame.size = stream->dec_max_size;
                 if (decode_frame(stream, &stream->dec_frame) != PJ_SUCCESS) {
-                    stream->dec_frame.size = 0;
+                    stream->dec_frame.size = old_size;
                 }
             }
         }
