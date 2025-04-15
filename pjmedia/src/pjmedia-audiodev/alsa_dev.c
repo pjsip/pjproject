@@ -704,6 +704,7 @@ static pj_status_t open_playback (struct alsa_stream* stream,
             "playback device '%s', err: %s", format,
             stream->af->devs[param->rec_id].name, snd_strerror(result)));
 
+        snd_pcm_close (stream->pb_pcm);
         return PJMEDIA_EAUD_SYSERR;
     }    
 
@@ -849,6 +850,7 @@ static pj_status_t open_capture (struct alsa_stream* stream,
             "capture device '%s', err: %s", format,
             stream->af->devs[param->rec_id].name, snd_strerror(result)));
 
+        snd_pcm_close (stream->ca_pcm);
         return PJMEDIA_EAUD_SYSERR;
     }
 
