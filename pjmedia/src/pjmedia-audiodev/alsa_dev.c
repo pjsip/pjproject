@@ -788,7 +788,7 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     snd_pcm_hw_params_set_buffer_size_near (stream->pb_pcm, params,
                                             &tmp_buf_size);
     if (result < 0) {
-        PJ_LOG (3,(THIS_FILE, "Unable to set period size: %d for "
+        PJ_LOG (3,(THIS_FILE, "Warning: unable to set period size: %d for "
                   "playback device '%s', err: %s", (int)tmp_buf_size,
                   stream->af->devs[param->play_id].name, snd_strerror(result)));
     }
@@ -980,7 +980,7 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     result = snd_pcm_hw_params_set_buffer_size_near (stream->ca_pcm, params,
                                                      &tmp_buf_size);
     if (result < 0) {
-        PJ_LOG (3,(THIS_FILE, "Unable to set period size: %d for "
+        PJ_LOG (3,(THIS_FILE, "Warning: unable to set period size: %d for "
                    "capture device '%s', err: %s", (int)tmp_buf_size,
                    stream->af->devs[param->rec_id].name, snd_strerror(result)));
     }
