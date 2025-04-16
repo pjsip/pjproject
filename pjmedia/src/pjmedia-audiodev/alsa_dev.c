@@ -785,14 +785,12 @@ static pj_status_t open_playback (struct alsa_stream* stream,
         tmp_buf_size = (rate / 1000) * PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
     if (tmp_buf_size < tmp_period_size * 2)
         tmp_buf_size = tmp_period_size * 2;
-    result = snd_pcm_hw_params_set_buffer_size_near (stream->pb_pcm, params,
-                                                     &tmp_buf_size);
+    snd_pcm_hw_params_set_buffer_size_near (stream->pb_pcm, params,
+                                            &tmp_buf_size);
     if (result < 0) {
         PJ_LOG (3,(THIS_FILE, "Unable to set period size: %d for "
                   "playback device '%s', err: %s", (int)tmp_buf_size,
                   stream->af->devs[param->play_id].name, snd_strerror(result)));
-
-        goto on_error;
     }
 
     stream->param.output_latency_ms = tmp_buf_size / (rate / 1000);
@@ -985,8 +983,6 @@ static pj_status_t open_capture (struct alsa_stream* stream,
         PJ_LOG (3,(THIS_FILE, "Unable to set period size: %d for "
                    "capture device '%s', err: %s", (int)tmp_buf_size,
                    stream->af->devs[param->rec_id].name, snd_strerror(result)));
-
-        goto on_error;
     }
 
     stream->param.input_latency_ms = tmp_buf_size / (rate / 1000);
