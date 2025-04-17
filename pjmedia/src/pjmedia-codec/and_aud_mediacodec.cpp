@@ -1093,8 +1093,12 @@ static pj_status_t and_media_codec_open(pjmedia_codec *codec,
                    s->dec_setting.octet_aligned, s->dec_setting.reorder));
     }
 #endif
-    AMediaCodec_setAsyncNotifyCallback(codec_data->enc, async_cb, codec_data);
-    AMediaCodec_setAsyncNotifyCallback(codec_data->dec, async_cb, codec_data);
+    if (__builtin_available(android 28, *)) {
+        AMediaCodec_setAsyncNotifyCallback(codec_data->enc,
+                                           async_cb, codec_data);
+        AMediaCodec_setAsyncNotifyCallback(codec_data->dec,
+                                           async_cb, codec_data);
+    }
 
     status = configure_codec(codec_data, PJ_TRUE);
     if (status != PJ_SUCCESS) {
