@@ -735,11 +735,24 @@
 
 
 /**
- * WebRtc Acoustic Echo Cancellation (AEC).
+ * WebRTC Acoustic Echo Cancellation (AEC).
+ * Please check https://github.com/pjsip/pjproject/issues/1888 for more info.
+ *
  * By default is disabled.
  */
 #ifndef PJMEDIA_HAS_WEBRTC_AEC
 #   define PJMEDIA_HAS_WEBRTC_AEC               0
+#endif
+
+/**
+ * WebRTC Acoustic Echo Cancellation 3 (WebRTC AEC3).
+ * Please check https://github.com/pjsip/pjproject/pull/2722 and
+ * https://github.com/pjsip/pjproject/pull/2775 for more info.
+ *
+ * By default is disabled.
+ */
+#ifndef PJMEDIA_HAS_WEBRTC_AEC3
+#   define PJMEDIA_HAS_WEBRTC_AEC3              0
 #endif
 
 /**
