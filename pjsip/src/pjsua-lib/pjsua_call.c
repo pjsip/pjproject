@@ -573,11 +573,15 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     if (status != PJ_SUCCESS) {
         cb_called = PJ_TRUE;
 
-        /* Upon failure to send first request, the invite
-         * session would have been cleared.
+        /* If call inv hasn't been cleared from on_call_state(DISCONNECTED),
+         * we clear it here.
          */
-        call->inv = NULL;
-        --pjsua_var.call_cnt;
+        if (call->inv) {
+            pjsip_inv_terminate(inv, PJSIP_SC_OK, PJ_FALSE);
+            --pjsua_var.call_cnt;
+        }
+
+        call->inv = inv = NULL;
         goto on_error;
     }
 
