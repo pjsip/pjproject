@@ -576,7 +576,8 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
         /* Upon failure to send first request, the invite
          * session would have been cleared.
          */
-        call->inv = inv = NULL;
+        call->inv = NULL;
+        --pjsua_var.call_cnt;
         goto on_error;
     }
 
