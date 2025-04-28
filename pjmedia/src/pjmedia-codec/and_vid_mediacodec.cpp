@@ -1386,7 +1386,7 @@ static pj_status_t and_media_decode(pjmedia_vid_codec *codec,
 {
     pj_status_t status = PJ_SUCCESS;
     pj_size_t output_size;
-    int len;
+    int len = 0;
     media_status_t am_status;
     and_med_buf_info buf_info;
     pj_uint8_t *output_buf;
@@ -1490,12 +1490,16 @@ static pj_status_t and_media_decode(pjmedia_vid_codec *codec,
         PJ_LOG(4,(THIS_FILE, "Decoder getOutputBuffer failed"));
         return status;
     }
-    len = write_yuv((pj_uint8_t *)output->buf,
-                    output->size,
-                    output_buf,
-                    and_media_data->dec_stride_len,
-                    and_media_data->prm->dec_fmt.det.vid.size.w,
-                    and_media_data->prm->dec_fmt.det.vid.size.h);
+    if (output->size >= and_media_data->prm->dec_fmt.det.vid.size.w *
+        and_media_data->prm->dec_fmt.det.vid.size.h * 3 / 2)
+    {
+        len = write_yuv((pj_uint8_t *)output->buf,
+                        output->size,
+                        output_buf,
+                        and_media_data->dec_stride_len,
+                        and_media_data->prm->dec_fmt.det.vid.size.w,
+                        and_media_data->prm->dec_fmt.det.vid.size.h);
+    }
 
     am_status = AMediaCodec_releaseOutputBuffer(and_media_data->dec,
                                                 buf_info.index, 0);
