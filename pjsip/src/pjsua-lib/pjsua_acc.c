@@ -2767,7 +2767,12 @@ static pj_status_t pjsua_regc_init(int acc_id)
     /* Set credentials
      */
     if (acc->cred_cnt) {
-        pjsip_regc_set_credentials( acc->regc, acc->cred_cnt, acc->cred);
+        status = pjsip_regc_set_credentials( acc->regc, acc->cred_cnt, acc->cred);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE,
+                         "Cannot set credentials for registration",
+                         status);
+        }
     }
 
     /* Set delay before registration refresh */
