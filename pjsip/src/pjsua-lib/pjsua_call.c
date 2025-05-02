@@ -3074,7 +3074,9 @@ on_return:
      * pjsua_call_on_state_changed() to be called and call to be reset,
      * so we need to check for call->inv as well.
      */
-    if (status != PJ_SUCCESS && call->inv) {
+    if (status != PJ_SUCCESS && status != PJSIP_ESESSIONTERMINATED &&
+        call->inv)
+    {
         pj_time_val delay;
 
         /* Schedule a retry */
