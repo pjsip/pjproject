@@ -1508,8 +1508,8 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
         return status;
 
     /* Create input circular buffer mutex */
-    status = pj_lock_create_simple_mutex(pool, pool->obj_name,
-                                         &ssock->circ_buf_input_mutex);
+    status = pj_lock_create_recursive_mutex(pool, pool->obj_name,
+                                            &ssock->circ_buf_input_mutex);
     if (status != PJ_SUCCESS)
         return status;
 
