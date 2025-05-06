@@ -2782,7 +2782,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
                                             acc->cred);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE,
-                         "Cannot setting credentials for registration",
+                         "Failed setting credentials for registration",
                          status);
             goto on_return;
         }
