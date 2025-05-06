@@ -2900,7 +2900,8 @@ static pj_status_t pjsua_regc_init(int acc_id)
         status = pjsip_regc_add_headers(acc->regc, &hdr_list);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE,
-                         "Failed setting registration outbound headers",
+                         "Failed setting registration outbound support "
+                         "indication",
                          status);
             goto on_return;
         }
