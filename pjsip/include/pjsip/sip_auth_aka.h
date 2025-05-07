@@ -129,7 +129,7 @@ PJ_BEGIN_DECL
 /**
  * Length of permanent/subscriber Key (K) in bytes.
  */
-#define PJSIP_AKA_KLEN          16
+#define PJSIP_AKA_KLEN          32
 
 /**
  * Length of AKA authentication code in bytes.
