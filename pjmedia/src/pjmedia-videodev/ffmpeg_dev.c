@@ -55,9 +55,11 @@
 # include <libavutil/pixdesc.h>
 #endif
 
-#define MAX_DEV_CNT     8
+#define MAX_DEV_CNT      8
+#define MAX_DEV_NAME_LEN 80
 
 #ifndef PJMEDIA_USE_OLD_FFMPEG
+#  define av_free_packet av_packet_unref
 #  define av_close_input_stream(ctx) avformat_close_input(&ctx)
 #endif
 
@@ -303,8 +305,6 @@ static pj_status_t ffmpeg_factory_destroy(pjmedia_vid_dev_factory *f)
 #   pragma warning(pop)
 #endif
 
-#define MAX_DEV_NAME_LEN 80
-
 static pj_status_t dshow_enum_devices(unsigned *dev_cnt,
                                       char dev_names[][MAX_DEV_NAME_LEN])
 {
@@ -449,10 +449,17 @@ static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
                 continue;
 
             for(i = 0; i < ctx->nb_streams; i++) {
+#if LIBAVFORMAT_VER_AT_LEAST(59,0)
+                if (ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+                    codec = ctx->streams[i]->codecpar;
+                    break;
+                }
+#else
                 if (ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
                     codec = ctx->streams[i]->codec;
                     break;
                 }
+#endif
             }
             if (!codec) {
                 av_close_input_stream(ctx);
