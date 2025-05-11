@@ -21,19 +21,17 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>MinimumOSVersion</key>
-	<string>8.0</string>
+	<string>12.2</string>
 	<key>CFBundleDisplayName</key>
-	<string>pjsua2xamarin</string>
+	<string>pjsua2maui</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.teluu.pjsua2xamarin</string>
+	<string>com.teluu.pjsua2maui</string>
 	<key>CFBundleVersion</key>
 	<string>1.0</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>CFBundleName</key>
-	<string>pjsua2xamarin</string>
-	<key>XSAppIconAssets</key>
-	<string>Assets.xcassets/AppIcon.appiconset</string>
+	<string>pjsua2maui</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera permission required</string>
 	<key>NSMicrophoneUsageDescription</key>
