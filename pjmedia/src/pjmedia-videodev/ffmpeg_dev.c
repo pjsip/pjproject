@@ -411,7 +411,11 @@ static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
         unsigned dev_cnt = MAX_DEV_CNT;
         unsigned dev_idx;
 
+#if LIBAVFORMAT_VER_AT_LEAST(60, 21)
+        if ((p->flags & AVFMT_NOFILE)==0) {
+#else
         if ((p->flags & AVFMT_NOFILE)==0 || p->read_probe) {
+#endif
             goto next_format;
         }
 
