@@ -1216,6 +1216,34 @@
 #  define PJ_JNI_HAS_JNI_ONLOAD             PJ_ANDROID
 #endif
 
+/**
+ * pj_atomic_slist implementation.
+ * Select one of these implementations in PJ_ATOMIC_SLIST_IMPLEMENTATION.
+ */
+ /** Using os independent "cross-platform" implementation */
+#define PJ_ATOMIC_SLIST_GENERIC             0
+
+ /** Using Windows's single linked list */
+#define PJ_ATOMIC_SLIST_WIN32               1
+
+/**
+ * Select which pj_atomic_slist implementation to use. Currently pjlib supports
+ * PJ_ATOMIC_SLIST_GENERIC, which uses internal pjsip os independent 
+ * "cross-platform" implementation, and 
+ * PJ_ATOMIC_SLIST_WIN32, which uses Windows's single linked list.
+ * The last option is very fast, but is supported on Windows platform only.
+ *
+ * Default is PJ_ATOMIC_SLIST_WIN32 on Windows platform, 
+ *            otherwise PJ_ATOMIC_SLIST_GENERIC.
+ */
+#ifndef PJ_ATOMIC_SLIST_IMPLEMENTATION
+#   ifdef PJ_WIN32
+#       define PJ_ATOMIC_SLIST_IMPLEMENTATION   PJ_ATOMIC_SLIST_WIN32
+#   else
+#       define PJ_ATOMIC_SLIST_IMPLEMENTATION   PJ_ATOMIC_SLIST_GENERIC
+#   endif // PJ_WIN32
+#endif  //PJ_ATOMIC_SLIST_IMPLEMENTATION
+
 
 /** @} */
 
