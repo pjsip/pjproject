@@ -170,7 +170,7 @@ PJ_BEGIN_DECL
  * the credential.
  *
  * @param pool      Pool to allocate memory.
- * @param chal      The authentication challenge sent by server in 401
+ * @param chal      The authentication challenge sent by server in 407
  *                  or 401 response, as either Proxy-Authenticate or
  *                  WWW-Authenticate header.
  * @param cred      The credential to be used.
