@@ -68,7 +68,7 @@ public class PjAudioDevInfo {
 
             pj_adi = new PjAudioDevInfo();
             pj_adi.id = adi.getId();
-            pj_adi.name = DevTypeStr(adi.getType()) + " - " + adi.getProductName().toString();
+            pj_adi.name = DevTypeStr(adi.getType()) + " - " + adi.getProductName().toString() + " - " + adi.getAddress();
             pj_adi.direction = 0;
             if (adi.isSource()) pj_adi.direction |= 1;
             if (adi.isSink())   pj_adi.direction |= 2;
