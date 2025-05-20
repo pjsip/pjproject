@@ -65,7 +65,6 @@ public class PjAudioDevInfo {
         Log.i("Oboe", "Enumerating AudioManager devices..");
         for (AudioDeviceInfo adi: devs) {
             LogDevInfo(adi);
-
             pj_adi = new PjAudioDevInfo();
             pj_adi.id = adi.getId();
             pj_adi.name = DevTypeStr(adi.getType()) + " - " + adi.getProductName().toString() + " - " + adi.getAddress();
