@@ -579,9 +579,9 @@ public:
             }
         }
 
-        if(PJMEDIA_OBOE_USE_LOWLATENCY){
+        if (PJMEDIA_OBOE_USE_LOWLATENCY) {
             performance_mode= oboe::PerformanceMode::LowLatency;
-        }else{
+        } else {
             performance_mode = oboe::PerformanceMode::None;
         }
         
