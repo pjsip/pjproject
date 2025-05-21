@@ -8165,6 +8165,18 @@ PJ_DECL(pj_status_t) pjsua_conf_connect2(pjsua_conf_port_id source,
 PJ_DECL(pj_status_t) pjsua_conf_disconnect(pjsua_conf_port_id source,
                                            pjsua_conf_port_id sink);
 
+/**
+ * Change TX and RX settings for the port.
+ *
+ * @param slot         Port number/slot in the conference bridge.
+ * @param tx           Settings for the transmission TO this port.
+ * @param rx           Settings for the receipt FROM this port.
+ *
+ * @return             PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_conf_configure_port(pjsua_conf_port_id slot,
+                                               pjmedia_port_op tx,
+                                               pjmedia_port_op rx);
 
 /**
  * Adjust the signal level to be transmitted from the bridge to the 
