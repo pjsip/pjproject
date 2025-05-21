@@ -24,6 +24,7 @@ import android.os.Build;
 import android.util.Log;
 import android.util.SparseArray;
 import java.util.Arrays;
+import java.util.HashMap;
 
 public class PjAudioDevInfo {
 
@@ -62,12 +63,24 @@ public class PjAudioDevInfo {
 
         AudioManager am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
         AudioDeviceInfo[] devs = am.getDevices(AudioManager.GET_DEVICES_ALL);
+
+        HashMap<String, Integer> micNamesCounterMap = new HashMap<>();
+        for (AudioDeviceInfo adi : devs) {
+            micNamesCounterMap.merge(adi.getProductName().toString(), 1, Integer::sum);
+        }
+
         Log.i("Oboe", "Enumerating AudioManager devices..");
         for (AudioDeviceInfo adi: devs) {
             LogDevInfo(adi);
+            String productName = adi.getProductName().toString();
+            StringBuilder nameStringBuilder = new StringBuilder().append(DevTypeStr(adi.getType())).append(" - ").append(productName);
+            Integer micNameCounter = micNamesCounterMap.get(productName);
+            if (micNameCounter != null && micNameCounter > 1) {
+                nameStringBuilder.append(" - ").append(adi.getId());
+            }
             pj_adi = new PjAudioDevInfo();
             pj_adi.id = adi.getId();
-            pj_adi.name = DevTypeStr(adi.getType()) + " - " + adi.getProductName().toString() + " - " + adi.getAddress();
+            pj_adi.name = nameStringBuilder.toString();
             pj_adi.direction = 0;
             if (adi.isSource()) pj_adi.direction |= 1;
             if (adi.isSink())   pj_adi.direction |= 2;
