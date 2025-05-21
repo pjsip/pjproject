@@ -176,13 +176,6 @@
 #   endif
 #endif
 
-/**
- * Specify wheather LowLatency is used for Oboe as performance mode.
- * Default: 1
- */
-#ifndef PJMEDIA_OBOE_USE_LOWLATENCY
-#   define PJMEDIA_OBOE_USE_LOWLATENCY  1
-#endif
 
 /*
  * Types of WSOLA backend algorithm.
