@@ -1136,6 +1136,18 @@ void Endpoint::on_buddy_state(pjsua_buddy_id buddy_id)
     buddy->onBuddyState();
 }
 
+void Endpoint::on_buddy_dlg_event_state(pjsua_buddy_id buddy_id)
+{
+    Buddy b(buddy_id);
+    Buddy *buddy = b.getOriginalInstance();
+    if (!buddy || !buddy->isValid()) {
+        /* Ignored */
+        return;
+    }
+
+    buddy->onBuddyDlgEventState();
+}
+
 void Endpoint::on_buddy_evsub_state(pjsua_buddy_id buddy_id,
                                     pjsip_evsub *sub,
                                     pjsip_event *event)
@@ -1153,6 +1165,25 @@ void Endpoint::on_buddy_evsub_state(pjsua_buddy_id buddy_id,
     prm.e.fromPj(*event);
 
     buddy->onBuddyEvSubState(prm);
+}
+
+void Endpoint::on_buddy_evsub_dlg_event_state(pjsua_buddy_id buddy_id,
+                                              pjsip_evsub *sub,
+                                              pjsip_event *event)
+{
+    PJ_UNUSED_ARG(sub);
+
+    Buddy b(buddy_id);
+    Buddy *buddy = b.getOriginalInstance();
+    if (!buddy || !buddy->isValid()) {
+        /* Ignored */
+        return;
+    }
+
+    OnBuddyEvSubStateParam prm;
+    prm.e.fromPj(*event);
+
+    buddy->onBuddyEvSubDlgEventState(prm);
 }
 
 // Call callbacks
@@ -1422,6 +1453,38 @@ void Endpoint::on_dtmf_event(pjsua_call_id call_id,
     job->prm.digit = string(buf);
     job->prm.duration = event->duration;
     job->prm.flags = event->flags;
+
+    Endpoint::instance().utilAddPendingJob(job);
+}
+
+struct PendingOnCallRxTextCallback : public PendingJob
+{
+    int call_id;
+    OnCallRxTextParam prm;
+
+    virtual void execute(bool is_pending)
+    {
+        PJ_UNUSED_ARG(is_pending);
+
+        Call *call = Call::lookup(call_id);
+        if (!call)
+            return;
+
+        call->onCallRxText(prm);
+    }
+};
+
+void Endpoint::on_call_rx_text(pjsua_call_id call_id,
+                               const pjsua_txt_stream_data *data)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+        return;
+    }
+
+    PendingOnCallRxTextCallback *job = new PendingOnCallRxTextCallback;
+    job->call_id = call_id;
+    job->prm.fromPj(*data);
 
     Endpoint::instance().utilAddPendingJob(job);
 }
@@ -1961,6 +2024,8 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_mwi_info               = &Endpoint::on_mwi_info;
     ua_cfg.cb.on_buddy_state            = &Endpoint::on_buddy_state;
     ua_cfg.cb.on_buddy_evsub_state      = &Endpoint::on_buddy_evsub_state;
+    ua_cfg.cb.on_buddy_dlg_event_state  = &Endpoint::on_buddy_dlg_event_state;
+    ua_cfg.cb.on_buddy_evsub_dlg_event_state = &Endpoint::on_buddy_evsub_dlg_event_state;
     ua_cfg.cb.on_acc_find_for_incoming  = &Endpoint::on_acc_find_for_incoming;
     ua_cfg.cb.on_ip_change_progress     = &Endpoint::on_ip_change_progress;
 
@@ -1975,6 +2040,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     //ua_cfg.cb.on_dtmf_digit             = &Endpoint::on_dtmf_digit;
     //ua_cfg.cb.on_dtmf_digit2            = &Endpoint::on_dtmf_digit2;
     ua_cfg.cb.on_dtmf_event             = &Endpoint::on_dtmf_event;
+    ua_cfg.cb.on_call_rx_text           = &Endpoint::on_call_rx_text;
     ua_cfg.cb.on_call_transfer_request2 = &Endpoint::on_call_transfer_request2;
     ua_cfg.cb.on_call_transfer_status   = &Endpoint::on_call_transfer_status;
     ua_cfg.cb.on_call_replace_request2  = &Endpoint::on_call_replace_request2;

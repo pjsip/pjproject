@@ -394,6 +394,28 @@
 #   define PJ_ICE_NOMINATED_CHECK_DELAY             (4*PJ_STUN_RTO_VALUE)
 #endif
 
+/**
+ * Specify whether to check the source address of the incoming messages.
+ * The source address will be compared to the remote candidate which has
+ * a completed connectivity check or received a connectivity check.
+ * 
+ * Default: 1 (yes)
+ */
+#ifndef PJ_ICE_SESS_CHECK_SRC_ADDR
+#   define PJ_ICE_SESS_CHECK_SRC_ADDR               1
+#endif
+
+ /**
+  * If ICE source address check is enabled, any incoming data is allowed
+  * from all possible remote candidates until ICE is completed. Use this 
+  * configuration to specify the time to wait before setting the remote
+  * address to a fix address.
+  *
+  * Defalut: 1000ms 
+  */
+#ifndef PJ_ICE_SESS_SET_RADDR_DELAY
+#   define PJ_ICE_SESS_SET_RADDR_DELAY             1000
+#endif
 
 /**
  * Minimum interval value to be used for sending STUN keep-alive on the ICE

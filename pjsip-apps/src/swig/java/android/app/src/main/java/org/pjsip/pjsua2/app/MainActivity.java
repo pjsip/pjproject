@@ -32,6 +32,7 @@ import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -42,7 +43,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
-import android.support.v4.app.ActivityCompat;
+import androidx.core.app.ActivityCompat;
 
 import org.pjsip.PjCameraInfo2;
 import org.pjsip.pjsua2.AccountConfig;
@@ -51,10 +52,17 @@ import org.pjsip.pjsua2.AuthCredInfoVector;
 import org.pjsip.pjsua2.BuddyConfig;
 import org.pjsip.pjsua2.CallInfo;
 import org.pjsip.pjsua2.CallOpParam;
+import org.pjsip.pjsua2.IntVector;
 import org.pjsip.pjsua2.OnCallMediaEventParam;
+import org.pjsip.pjsua2.OnTimerParam;
 import org.pjsip.pjsua2.StringVector;
+import org.pjsip.pjsua2.pjmedia_dir;
 import org.pjsip.pjsua2.pjsip_inv_state;
+import org.pjsip.pjsua2.pjsip_role_e;
 import org.pjsip.pjsua2.pjsip_status_code;
+import org.pjsip.pjsua2.app.R;
+import org.pjsip.pjsua2.app.BuildConfig;
+import org.pjsip.pjsua2.pjsua_call_flag;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,6 +73,8 @@ public class MainActivity extends Activity
 {
     public static MyApp app = null;
     public static MyCall currentCall = null;
+    // for ciTest build only
+    public static MyCall incomingCall = null;
     public static MyAccount account = null;
     public static AccountConfig accCfg = null;
     public static MyBroadcastReceiver receiver = null;
@@ -167,7 +177,8 @@ public class MainActivity extends Activity
                 } catch (InterruptedException e) {}
             }
 
-            app.init(this, getFilesDir().getAbsolutePath());
+            app.init(this, getFilesDir().getAbsolutePath(), false,
+                     BuildConfig.SIP_PORT, BuildConfig.IS_TEST);
         }
 
         if (app.accList.size() == 0) {
@@ -176,6 +187,7 @@ public class MainActivity extends Activity
             accCfg.getNatConfig().setIceEnabled(true);
             accCfg.getVideoConfig().setAutoTransmitOutgoing(true);
             accCfg.getVideoConfig().setAutoShowIncoming(true);
+            accCfg.getVideoConfig().setDefaultCaptureDevice(app.defVidCapDev);
             account = app.addAcc(accCfg);
         } else {
             account = app.accList.get(0);
@@ -219,6 +231,15 @@ public class MainActivity extends Activity
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (receiver != null) {
+            unregisterReceiver(receiver);
+            receiver = null;
+        }
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
         // Inflate the menu; this adds items to the action bar
@@ -231,11 +252,11 @@ public class MainActivity extends Activity
     public boolean onOptionsItemSelected(MenuItem item)
     {
         switch (item.getItemId()) {
-            case R.id.action_acc_config:
+            case R.id.action_acc_config :
                 dlgAccountSetting();
                 break;
 
-            case R.id.action_quit:
+            case R.id.action_quit :
                 Message m = Message.obtain(handler, 0);
                 m.sendToTarget();
                 break;
@@ -258,10 +279,19 @@ public class MainActivity extends Activity
             android.os.Process.killProcess(android.os.Process.myPid());
 
         } else if (m.what == MSG_TYPE.CALL_STATE) {
-
+            int callId;
+            MyCall curCall;
             CallInfo ci = (CallInfo) m.obj;
-
-            if (currentCall == null || ci == null || ci.getId() != currentCall.getId()) {
+            if (!BuildConfig.IS_TEST ||
+                ci.getRole() == pjsip_role_e.PJSIP_ROLE_UAC)
+            {
+                curCall = currentCall;
+            } else {
+                curCall = incomingCall;
+            }
+            if ((!BuildConfig.IS_TEST && currentCall == null) || ci == null ||
+                ci.getId() != curCall.getId())
+            {
                 System.out.println("Call state event received, but call info is invalid");
                 return true;
             }
@@ -274,10 +304,14 @@ public class MainActivity extends Activity
 
             if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED)
             {
-                currentCall.delete();
-                currentCall = null;
+                if (curCall == currentCall) {
+                    currentCall.delete();
+                    currentCall = null;
+                } else if (curCall == incomingCall) {
+                    incomingCall.delete();
+                    incomingCall = null;
+                }
             }
-
         } else if (m.what == MSG_TYPE.CALL_MEDIA_STATE) {
 
             /* Forward the message to CallActivity */
@@ -323,8 +357,10 @@ public class MainActivity extends Activity
             final MyCall call = (MyCall) m.obj;
             CallOpParam prm = new CallOpParam(true);
 
-            /* Only one call at anytime */
-            if (currentCall != null) {
+            /* Only one call at anytime for demo mode */
+            if ((!BuildConfig.IS_TEST && currentCall != null) ||
+               (BuildConfig.IS_TEST && currentCall == null))
+            {
                 prm.setStatusCode(pjsip_status_code.PJSIP_SC_BUSY_HERE);
                 try {
                     call.hangup(prm);
@@ -335,13 +371,21 @@ public class MainActivity extends Activity
             }
 
             /* Answer with ringing */
-            prm.setStatusCode(pjsip_status_code.PJSIP_SC_RINGING);
+            if (BuildConfig.IS_TEST) {
+                prm.setStatusCode(pjsip_status_code.PJSIP_SC_OK);
+            } else {
+                prm.setStatusCode(pjsip_status_code.PJSIP_SC_RINGING);
+            }
             try {
                 call.answer(prm);
             } catch (Exception e) {}
 
-            currentCall = call;
-            showCallActivity();
+            if (BuildConfig.IS_TEST) {
+                incomingCall = call;
+            } else {
+                currentCall = call;
+                showCallActivity();
+            }
 
         } else if (m.what == MSG_TYPE.CHANGE_NETWORK) {
             app.handleNetworkChange();
@@ -447,6 +491,15 @@ public class MainActivity extends Activity
 
     public void makeCall(View view)
     {
+       if (BuildConfig.IS_TEST) {
+           // On ciTest build, don't allow any normal input
+           if (view.getTag() == null ||
+              !view.getTag().equals(BuildConfig.TEST_TAG))
+           {
+               return;
+           }
+       }
+
         if (buddyListSelectedIdx == -1)
             return;
 
@@ -546,6 +599,14 @@ public class MainActivity extends Activity
 
     public void addBuddy(View view)
     {
+       if (BuildConfig.IS_TEST) {
+           // On ciTest build, don't allow any normal input
+           if (view.getTag() == null ||
+               !view.getTag().equals(BuildConfig.TEST_TAG))
+           {
+               return;
+           }
+       }
         dlgAddEditBuddy(null);
     }
 
@@ -662,6 +723,12 @@ public class MainActivity extends Activity
 
     public void notifyCallMediaEvent(MyCall call, OnCallMediaEventParam prm)
     {
+        CallInfo ci;
+        try {
+            ci = call.getInfo();
+        } catch (Exception e) {
+            return;
+        }
         /* Forward the message to CallActivity */
         if (CallActivity.handler_ != null) {
             Message m = Message.obtain(CallActivity.handler_,

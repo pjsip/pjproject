@@ -46,6 +46,17 @@
 #define INCLUDE_EXCEPTION_TEST      GROUP_LIBC
 #define INCLUDE_RAND_TEST           GROUP_LIBC
 #define INCLUDE_LIST_TEST           GROUP_DATA_STRUCTURE
+#define INCLUDE_ATOMIC_SLIST_TEST   GROUP_DATA_STRUCTURE
+
+/* define this macro to control multithreaded testing for other platforms */
+#ifndef INCLUDE_MT_ATOMIC_SLIST_TEST
+#   ifdef PJ_WIN32
+#       define INCLUDE_MT_ATOMIC_SLIST_TEST INCLUDE_ATOMIC_SLIST_TEST
+#   else
+#       define INCLUDE_MT_ATOMIC_SLIST_TEST 0
+#   endif
+#endif
+
 #define INCLUDE_HASH_TEST           GROUP_DATA_STRUCTURE
 #define INCLUDE_POOL_TEST           GROUP_LIBC
 #define INCLUDE_POOL_PERF_TEST      (GROUP_LIBC && WITH_BENCHMARK)
@@ -90,6 +101,8 @@ extern int timestamp_test(void);
 extern int exception_test(void);
 extern int rand_test(void);
 extern int list_test(void);
+extern int atomic_slist_test(void);
+extern int atomic_slist_mt_test(void);
 extern int hash_test(void);
 extern int log_test(void);
 extern int os_test(void);

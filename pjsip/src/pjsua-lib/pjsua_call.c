@@ -573,9 +573,14 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     if (status != PJ_SUCCESS) {
         cb_called = PJ_TRUE;
 
-        /* Upon failure to send first request, the invite
-         * session would have been cleared.
+        /* If call inv hasn't been cleared from on_call_state(DISCONNECTED),
+         * we clear it here.
          */
+        if (call->inv) {
+            pjsip_inv_terminate(inv, PJSIP_SC_OK, PJ_FALSE);
+            --pjsua_var.call_cnt;
+        }
+
         call->inv = inv = NULL;
         goto on_error;
     }
@@ -648,8 +653,9 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
     pj_assert(opt);
 
     pj_bzero(opt, sizeof(*opt));
-    opt->flag = PJSUA_CALL_INCLUDE_DISABLED_MEDIA;
+    opt->flag = 0; //PJSUA_CALL_INCLUDE_DISABLED_MEDIA;
     opt->aud_cnt = 1;
+    opt->txt_cnt = 1;
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     opt->vid_cnt = 1;
@@ -671,6 +677,17 @@ PJ_DEF(void) pjsua_call_send_dtmf_param_default(
     pj_bzero(param, sizeof(*param));
     param->duration = PJSUA_CALL_SEND_DTMF_DURATION_DEFAULT;
 }
+
+/*
+ * Initialize pjsua_call_send_text_param default values.
+ */
+PJ_DEF(void) pjsua_call_send_text_param_default(
+                                             pjsua_call_send_text_param *param)
+{
+    pj_bzero(param, sizeof(*param));
+    param->med_idx = -1;
+}
+
 
 static pj_status_t apply_call_setting(pjsua_call *call,
                                       const pjsua_call_setting *opt,
@@ -1210,6 +1227,7 @@ pj_status_t create_temp_sdp(pj_pool_t *pool,
 {
     const pj_str_t STR_AUDIO = { "audio", 5 };
     const pj_str_t STR_VIDEO = { "video", 5 };
+    const pj_str_t STR_TEXT  = { "text", 4 };
     const pj_str_t STR_IP6 = { "IP6", 3};
 
     pjmedia_sdp_session *sdp;
@@ -1274,6 +1292,14 @@ pj_status_t create_temp_sdp(pj_pool_t *pool,
 #else       
             m = pjmedia_sdp_media_clone_deactivate(pool, rem_sdp->media[i]);
 #endif      
+        } else if (pj_stricmp(&rem_sdp->media[i]->desc.media, &STR_TEXT)==0) {
+            m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+            status = pjmedia_endpt_create_text_sdp(pjsua_var.med_endpt,
+                                                   pool, &sock_info, 0, &m);
+
+            if (status != PJ_SUCCESS)
+                return status;
+
         } else {
             m = pjmedia_sdp_media_clone_deactivate(pool, rem_sdp->media[i]);
         }
@@ -2499,6 +2525,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     if (call->rem_offerer) {
         info->rem_aud_cnt = call->rem_aud_cnt;
         info->rem_vid_cnt = call->rem_vid_cnt;
+        info->rem_txt_cnt = call->rem_txt_cnt;
     }
 
     /* Build array of active media info */
@@ -2531,6 +2558,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
                 cap_dev = call_med->strm.v.cap_dev;
             }
             info->media[info->media_cnt].stream.vid.cap_dev = cap_dev;
+        } else if (call_med->type == PJMEDIA_TYPE_TEXT) {
         } else {
             continue;
         }
@@ -2567,6 +2595,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
                 cap_dev = call_med->strm.v.cap_dev;
             }
             info->prov_media[info->prov_media_cnt].stream.vid.cap_dev=cap_dev;
+        } else if (call_med->type == PJMEDIA_TYPE_TEXT) {
         } else {
             continue;
         }
@@ -3045,7 +3074,9 @@ on_return:
      * pjsua_call_on_state_changed() to be called and call to be reset,
      * so we need to check for call->inv as well.
      */
-    if (status != PJ_SUCCESS && call->inv) {
+    if (status != PJ_SUCCESS && status != PJSIP_ESESSIONTERMINATED &&
+        call->inv)
+    {
         pj_time_val delay;
 
         /* Schedule a retry */
@@ -4114,6 +4145,7 @@ static pj_bool_t is_non_av_fmt(const pjmedia_sdp_media *m,
                                const pj_str_t *fmt)
 {
     const pj_str_t STR_TEL = {"telephone-event", 15};
+    const pj_str_t STR_RED = {"red", 3};
     unsigned pt;
 
     pt = pj_strtoul(fmt);
@@ -4130,9 +4162,12 @@ static pj_bool_t is_non_av_fmt(const pjmedia_sdp_media *m,
         /* Get the format name */
         a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "rtpmap", fmt);
         if (a && pjmedia_sdp_attr_get_rtpmap(a, &rtpmap)==PJ_SUCCESS) {
-            /* Check for telephone-event */
-            if (pj_stricmp(&rtpmap.enc_name, &STR_TEL)==0)
+            /* Check for telephone-event and redundancy*/
+            if (pj_stricmp(&rtpmap.enc_name, &STR_TEL)==0 ||
+                pj_stricmp(&rtpmap.enc_name, &STR_RED)==0)
+            {
                 return PJ_TRUE;
+            }
         } else {
             /* Invalid SDP, should not reach here */
             pj_assert(!"SDP should have been validated!");
@@ -6795,3 +6830,124 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
     return op;
 }
 
+#if defined(PJSUA_MEDIA_HAS_PJMEDIA) && PJSUA_MEDIA_HAS_PJMEDIA != 0
+
+/*
+ * Get media stream info for the specified media index.
+ */
+PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
+                                                unsigned med_idx,
+                                                pjsua_stream_info *psi)
+{
+    pjsua_call *call;
+    pjsua_call_media *call_med;
+    pj_status_t status = PJ_EINVAL;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(psi, PJ_EINVAL);
+
+    PJSUA_LOCK();
+
+    call = &pjsua_var.calls[call_id];
+
+    if (med_idx >= call->med_cnt)
+        goto on_return;
+
+    call_med = &call->media[med_idx];
+
+    if ((call_med->type == PJMEDIA_TYPE_AUDIO && !call_med->strm.a.stream) ||
+        (call_med->type == PJMEDIA_TYPE_VIDEO && !call_med->strm.v.stream) ||
+        (call_med->type == PJMEDIA_TYPE_TEXT && !call_med->strm.t.stream))
+    {
+        goto on_return;
+    }
+
+    psi->type = call_med->type;
+    switch (call_med->type) {
+    case PJMEDIA_TYPE_AUDIO:
+        status = pjmedia_stream_get_info(call_med->strm.a.stream,
+                                         &psi->info.aud);
+        break;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    case PJMEDIA_TYPE_VIDEO:
+        status = pjmedia_vid_stream_get_info(call_med->strm.v.stream,
+                                             &psi->info.vid);
+        break;
+#endif
+    case PJMEDIA_TYPE_TEXT:
+        status = pjmedia_txt_stream_get_info(call_med->strm.t.stream,
+                                             &psi->info.txt);
+        break;
+    default:
+        status = PJMEDIA_EINVALIMEDIATYPE;
+        break;
+    }
+
+on_return:
+    PJSUA_UNLOCK();
+    return status;
+}
+
+
+/*
+ *  Get media stream statistic for the specified media index.
+ */
+PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
+                                                unsigned med_idx,
+                                                pjsua_stream_stat *stat)
+{
+    pjsua_call *call;
+    pjsua_call_media *call_med;
+    pjmedia_stream_common *c_strm = NULL;
+    pj_status_t status = PJ_EINVAL;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(stat, PJ_EINVAL);
+
+    PJSUA_LOCK();
+
+    call = &pjsua_var.calls[call_id];
+
+    if (med_idx >= call->med_cnt)
+        goto on_return;
+
+    call_med = &call->media[med_idx];
+
+    if ((call_med->type == PJMEDIA_TYPE_AUDIO && !call_med->strm.a.stream) ||
+        (call_med->type == PJMEDIA_TYPE_VIDEO && !call_med->strm.v.stream) ||
+        (call_med->type == PJMEDIA_TYPE_TEXT && !call_med->strm.t.stream))
+    {
+        goto on_return;
+    }
+
+    switch (call_med->type) {
+    case PJMEDIA_TYPE_AUDIO:
+        c_strm = (pjmedia_stream_common *)call_med->strm.a.stream;
+        break;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    case PJMEDIA_TYPE_VIDEO:
+        c_strm = (pjmedia_stream_common *)call_med->strm.v.stream;
+        break;
+#endif
+    case PJMEDIA_TYPE_TEXT:
+        c_strm = (pjmedia_stream_common *)call_med->strm.t.stream;
+        break;
+    default:
+        status = PJMEDIA_EINVALIMEDIATYPE;
+        break;
+    }
+
+    if (c_strm) {
+        status = pjmedia_stream_common_get_stat(c_strm, &stat->rtcp);
+        if (status == PJ_SUCCESS)
+            status = pjmedia_stream_common_get_stat_jbuf(c_strm, &stat->jbuf);
+    }
+
+on_return:
+    PJSUA_UNLOCK();
+    return status;
+}
+
+#endif

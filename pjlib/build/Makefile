@@ -31,12 +31,13 @@ export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 #
 export PJLIB_SRCDIR = ../src/pj
 export PJLIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-	activesock.o array.o atomic_queue.o config.o ctype.o errno.o except.o \
+	activesock.o array.o atomic_slist.o atomic_queue.o config.o ctype.o \
+	errno.o except.o \
 	fifobuf.o guid.o hash.o ip_helper_generic.o list.o lock.o log.o \
 	os_time_common.o os_info.o pool.o pool_buf.o pool_caching.o pool_dbg.o \
 	rand.o rbtree.o sock_common.o sock_qos_common.o \
 	ssl_sock_common.o ssl_sock_ossl.o ssl_sock_gtls.o ssl_sock_dump.o \
-	ssl_sock_darwin.o string.o timer.o types.o unittest.o
+	ssl_sock_darwin.o ssl_sock_mbedtls.o string.o timer.o types.o unittest.o
 export PJLIB_CFLAGS += $(_CFLAGS)
 export PJLIB_CXXFLAGS += $(_CXXFLAGS)
 export PJLIB_LDFLAGS += $(_LDFLAGS)
@@ -45,7 +46,8 @@ export PJLIB_LDFLAGS += $(_LDFLAGS)
 # Defines for building test application
 #
 export TEST_SRCDIR = ../src/pjlib-test
-export TEST_OBJS += activesock.o atomic.o echo_clt.o errno.o exception.o \
+export TEST_OBJS += activesock.o atomic.o atomic_slist.o \
+		    echo_clt.o errno.o exception.o \
 		    fifobuf.o file.o hash_test.o ioq_perf.o ioq_udp.o \
 		    ioq_stress_test.o ioq_unreg.o ioq_tcp.o ioq_iocp_unreg_test.o \
 		    list.o mutex.o os.o pool.o pool_perf.o rand.o rbtree.o \

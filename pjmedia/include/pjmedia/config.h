@@ -641,7 +641,7 @@
 #endif
 
 /**
- * Perform RTP payload type checking in the audio stream. Normally the peer
+ * Perform RTP payload type checking in the media stream. Normally the peer
  * MUST send RTP with payload type as we specified in our SDP. Certain
  * agents may not be able to follow this hence the only way to have
  * communication is to disable this check.
@@ -735,11 +735,24 @@
 
 
 /**
- * WebRtc Acoustic Echo Cancellation (AEC).
+ * WebRTC Acoustic Echo Cancellation (AEC).
+ * Please check https://github.com/pjsip/pjproject/issues/1888 for more info.
+ *
  * By default is disabled.
  */
 #ifndef PJMEDIA_HAS_WEBRTC_AEC
 #   define PJMEDIA_HAS_WEBRTC_AEC               0
+#endif
+
+/**
+ * WebRTC Acoustic Echo Cancellation 3 (WebRTC AEC3).
+ * Please check https://github.com/pjsip/pjproject/pull/2722 and
+ * https://github.com/pjsip/pjproject/pull/2775 for more info.
+ *
+ * By default is disabled.
+ */
+#ifndef PJMEDIA_HAS_WEBRTC_AEC3
+#   define PJMEDIA_HAS_WEBRTC_AEC3              0
 #endif
 
 /**
@@ -940,6 +953,24 @@
 
 
 /**
+ * This macro declares the payload type for T140 text that is advertised
+ * by PJMEDIA for outgoing SDP.
+ */
+#ifndef PJMEDIA_RTP_PT_T140
+#   define PJMEDIA_RTP_PT_T140 98
+#endif
+
+/**
+ * This macro declares the payload type for redundancy that is advertised
+ * by PJMEDIA for outgoing SDP. Currently, redundancy is only used for
+ * text stream.
+ */
+#ifndef PJMEDIA_RTP_PT_REDUNDANCY
+#   define PJMEDIA_RTP_PT_REDUNDANCY 100
+#endif
+
+
+/**
  * Maximum tones/digits that can be enqueued in the tone generator.
  */
 #ifndef PJMEDIA_TONEGEN_MAX_DIGITS
@@ -1100,6 +1131,16 @@
 #   define PJMEDIA_SRTP_DTLS_OSSL_CIPHERS           "DEFAULT"
 #endif
 
+/**
+ * Enabled this to check the source address of ClientHello message coming
+ * from a valid address. See PJ_ICE_SESS_CHECK_SRC_ADDR when ICE is used.
+ *
+ * Default value: 0
+ */
+#ifndef PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR
+#   define PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR       0
+#endif
+
 
 /**
  * Maximum number of SRTP cryptos.
@@ -1224,8 +1265,14 @@
 #endif
 
 
-/* Setting to determine if media transport should switch RTP and RTCP
+/**
+ * Setting to determine if media transport should switch RTP and RTCP
  * remote address to the source address of the packets it receives.
+ * This feature is usually used for handling NAT traversal issues,
+ * also known as symmetric RTP and 'latching' techniques.
+ *
+ * See also run-time options #PJMEDIA_UDP_NO_SRC_ADDR_CHECKING and
+ * #PJMEDIA_ICE_NO_SRC_ADDR_CHECKING.
  *
  * By default it is enabled.
  */
@@ -1596,6 +1643,19 @@
 #  endif
 #endif
 
+/**
+ * Specify the maximum redundancy levels supported by text stream.
+ * A value of 1 provides an adequate protection against an average
+ * packet loss of up to 50%, while 2 can potentially protect
+ * against 66.7%, so typically setting it to a higher value is
+ * rarely necessary.
+ *
+ * Default: 2, as per the recommendation of RFC 4103.
+ */
+#ifndef PJMEDIA_TXT_STREAM_MAX_RED_LEVELS
+#    define PJMEDIA_TXT_STREAM_MAX_RED_LEVELS 2
+#endif
+
 
 /**
  * Specify target value for socket receive buffer size. It will be
@@ -1706,10 +1766,42 @@
  * agents may not be able to follow this hence the only way to have
  * communication is to disable this check.
  *
- * Default: PJMEDIA_STREAM_CHECK_RTP_PT (follow audio stream's setting)
+ * Note: Since media streams now share some common implementation,
+ * the setting MUST have the same value as PJMEDIA_STREAM_CHECK_RTP_PT.
  */
-#ifndef PJMEDIA_VID_STREAM_CHECK_RTP_PT
-#   define PJMEDIA_VID_STREAM_CHECK_RTP_PT      PJMEDIA_STREAM_CHECK_RTP_PT
+#if defined(PJMEDIA_VID_STREAM_CHECK_RTP_PT) && \
+    PJMEDIA_VID_STREAM_CHECK_RTP_PT != PJMEDIA_STREAM_CHECK_RTP_PT
+#    pragma message("PJMEDIA_VID_STREAM_CHECK_RTP_PT must have the same " \
+                    "value as PJMEDIA_STREAM_CHECK_RTP_PT...")
+#endif
+
+#undef PJMEDIA_VID_STREAM_CHECK_RTP_PT
+#define PJMEDIA_VID_STREAM_CHECK_RTP_PT      PJMEDIA_STREAM_CHECK_RTP_PT
+
+
+/**
+ * Maximum tolerable presentation lag from the earliest to the latest media,
+ * in milliseconds, in inter-media synchronization. When the delay is
+ * higher than this setting, the media synchronizer will request the slower
+ * media to speed up. And if after a number of speed up requests the delay
+ * is still beyond this setting, the fastest media will be requested to
+ * slow down.
+ *
+ * Default: 45 ms
+ */
+#ifndef PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC
+#   define PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC    45
+#endif
+
+
+/**
+  * Maximum number of speed up request to synchronize presentation time,
+  * before a slow down request to the fastest media is issued.
+  *
+  * Default: 10
+  */
+#ifndef PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT
+#   define PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT       10
 #endif
 
 /**

@@ -2098,6 +2098,11 @@ private:
     static void on_buddy_evsub_state(pjsua_buddy_id buddy_id,
                                      pjsip_evsub *sub,
                                      pjsip_event *event);
+    static void on_buddy_dlg_event_state(pjsua_buddy_id buddy_id);
+    static void on_buddy_evsub_dlg_event_state(pjsua_buddy_id buddy_id,
+                                               pjsip_evsub *sub,
+                                               pjsip_event *event);
+
     // Call callbacks
     static void on_call_state(pjsua_call_id call_id, pjsip_event *e);
     static void on_call_tsx_state(pjsua_call_id call_id,
@@ -2120,6 +2125,8 @@ private:
                                const pjsua_dtmf_info *info);
     static void on_dtmf_event(pjsua_call_id call_id,
                               const pjsua_dtmf_event *event);
+    static void on_call_rx_text(pjsua_call_id call_id,
+                                const pjsua_txt_stream_data *data);
     static void on_call_transfer_request(pjsua_call_id call_id,
                                          const pj_str_t *dst,
                                          pjsip_status_code *code);

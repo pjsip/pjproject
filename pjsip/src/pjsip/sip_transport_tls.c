@@ -402,6 +402,7 @@ static pj_status_t update_factory_addr(struct tls_listener *listener,
         }
 
         /* Copy the address */
+        listener->factory.has_addr_name = PJ_TRUE;
         listener->factory.addr_name = *addr_name;
         pj_strdup(listener->factory.pool, &listener->factory.addr_name.host,
                   &addr_name->host);
@@ -922,7 +923,10 @@ static pj_status_t tls_create( struct tls_listener *listener,
         pj_sockaddr_cp(&tls->base.local_addr, local);
     }
     
-    sockaddr_to_host_port(pool, &tls->base.local_name, &tls->base.local_addr);
+    /* Use listener's published address, if any. */
+    tls->base.has_addr_name = listener->factory.has_addr_name;
+    tls->base.local_name = listener->factory.addr_name;
+
     if (tls->remote_name.slen) {
         tls->base.remote_name.host = tls->remote_name;
         tls->base.remote_name.port = pj_sockaddr_get_port(remote);
@@ -931,9 +935,10 @@ static pj_status_t tls_create( struct tls_listener *listener,
     }
 
     if (addr) {
+        unsigned i;
         pj_memcpy( &tls->server_addr, addr,
                    sizeof(pjsip_server_addresses));
-        for (int i = 0; i < addr->count; ++i) {
+        for (i = 0; i < addr->count; ++i) {
             pj_strdup(pool, &tls->server_addr.entry[i].name, &addr->entry[i].name);
         }
     }
@@ -1365,8 +1370,15 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                                      new_port);
             }
 
-            sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
-                                  &tls->base.local_addr);
+            /* Only update published address if not specified, otherwise
+             * only update the port.
+             */
+            if (!tls->base.has_addr_name) {
+                sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
+                                      &tls->base.local_addr);
+            } else {
+                tls->base.local_name.port = new_port;
+            }
         }
 
         PJ_LOG(4,(tls->base.obj_name, 

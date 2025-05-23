@@ -406,6 +406,7 @@ void AccountNatConfig::readObject(const ContainerNode &node)
     NODE_READ_BOOL    ( this_node, iceAggressiveNomination);
     NODE_READ_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
     NODE_READ_INT     ( this_node, iceWaitNominationTimeoutMsec);
+    NODE_READ_INT     ( this_node, iceCheckSrcAddr);
     NODE_READ_BOOL    ( this_node, iceNoRtcp);
     NODE_READ_BOOL    ( this_node, iceAlwaysUpdate);
     NODE_READ_BOOL    ( this_node, turnEnabled);
@@ -442,6 +443,7 @@ void AccountNatConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_BOOL    ( this_node, iceAggressiveNomination);
     NODE_WRITE_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
     NODE_WRITE_INT     ( this_node, iceWaitNominationTimeoutMsec);
+    NODE_WRITE_INT     ( this_node, iceCheckSrcAddr);
     NODE_WRITE_BOOL    ( this_node, iceNoRtcp);
     NODE_WRITE_BOOL    ( this_node, iceAlwaysUpdate);
     NODE_WRITE_BOOL    ( this_node, turnEnabled);
@@ -538,6 +540,23 @@ void AccountVideoConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_UNSIGNED( this_node, rateControlBandwidth);
     NODE_WRITE_UNSIGNED( this_node, startKeyframeCount);
     NODE_WRITE_UNSIGNED( this_node, startKeyframeInterval);
+}
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountTextConfig::readObject(const ContainerNode &node)
+                                   PJSUA2_THROW(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountTextConfig");
+
+    NODE_READ_INT    ( this_node, redundancyLevel);
+}
+
+void AccountTextConfig::writeObject(ContainerNode &node) const
+                                    PJSUA2_THROW(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountTextConfig");
+
+    NODE_WRITE_INT   ( this_node, redundancyLevel);
 }
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -671,6 +690,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
                             natConfig.iceNominatedCheckDelayMsec;
     ret.ice_cfg.ice_opt.controlled_agent_want_nom_timeout =
                             natConfig.iceWaitNominationTimeoutMsec;
+    ret.ice_cfg.ice_opt.check_src_addr = natConfig.iceCheckSrcAddr;
     ret.ice_cfg.ice_no_rtcp     = natConfig.iceNoRtcp;
     ret.ice_cfg.ice_always_update = natConfig.iceAlwaysUpdate;
 
@@ -725,6 +745,9 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.vid_stream_rc_cfg.bandwidth = videoConfig.rateControlBandwidth;
     ret.vid_stream_sk_cfg.count = videoConfig.startKeyframeCount;
     ret.vid_stream_sk_cfg.interval = videoConfig.startKeyframeInterval;
+
+    // AccountTextConfig
+    ret.txt_red_level           = textConfig.redundancyLevel;
 
     // AccountIpChangeConfig
     ret.ip_change_cfg.shutdown_tp = ipChangeConfig.shutdownTp;
@@ -842,6 +865,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
                         prm.ice_cfg.ice_opt.nominated_check_delay;
         natConfig.iceWaitNominationTimeoutMsec =
                         prm.ice_cfg.ice_opt.controlled_agent_want_nom_timeout;
+        natConfig.iceCheckSrcAddr = prm.ice_cfg.ice_opt.check_src_addr;
         natConfig.iceNoRtcp     = PJ2BOOL(prm.ice_cfg.ice_no_rtcp);
         natConfig.iceAlwaysUpdate = PJ2BOOL(prm.ice_cfg.ice_always_update);
     } else {
@@ -856,6 +880,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
                         mcfg->ice_opt.nominated_check_delay;
         natConfig.iceWaitNominationTimeoutMsec =
                         mcfg->ice_opt.controlled_agent_want_nom_timeout;
+        natConfig.iceCheckSrcAddr = mcfg->ice_opt.check_src_addr;
         natConfig.iceNoRtcp     = PJ2BOOL(mcfg->ice_no_rtcp);
         natConfig.iceAlwaysUpdate = PJ2BOOL(mcfg->ice_always_update);
     }
@@ -924,6 +949,9 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     videoConfig.rateControlBandwidth    = prm.vid_stream_rc_cfg.bandwidth;
     videoConfig.startKeyframeCount      = prm.vid_stream_sk_cfg.count;
     videoConfig.startKeyframeInterval   = prm.vid_stream_sk_cfg.interval;
+
+    // AccountTextConfig
+    textConfig.redundancyLevel          = prm.txt_red_level;
 
     // AccountIpChangeConfig
     ipChangeConfig.shutdownTp = PJ2BOOL(prm.ip_change_cfg.shutdown_tp);

@@ -137,12 +137,6 @@ static void exit_app(void)
 #include <pjsua-lib/pjsua.h>
 #include <pjmedia_audiodev.h>
 
-//UNDONE
-PJ_DECL(pj_status_t) pjsua_conf_configure_port(pjsua_conf_port_id slot,
-                                               pjmedia_port_op tx,
-                                               pjmedia_port_op rx);
-//UNDONE
-
 typedef struct systest_t
 {
     pjsua_config            ua_cfg;

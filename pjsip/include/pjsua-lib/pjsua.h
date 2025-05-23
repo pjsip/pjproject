@@ -378,6 +378,15 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 
 
 /**
+ * Default redundancy level for text streams. If this macro is set to zero,
+ * it means that there will be no redundancy.
+ */
+#ifndef PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL
+#   define PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL 2
+#endif
+
+
+/**
  * Specify whether timer heap events will be polled by a separate worker
  * thread. If this is set/enabled, a worker thread will be dedicated to
  * poll timer heap events only, and the rest worker thread(s) will poll
@@ -588,6 +597,9 @@ typedef struct pjsua_stream_info
 
         /** Video stream info */
         pjmedia_vid_stream_info vid;
+
+        /** Text stream info */
+        pjmedia_txt_stream_info txt;
     } info;
 
 } pjsua_stream_info;
@@ -1033,6 +1045,29 @@ typedef struct pjsua_dtmf_event {
 
 
 /**
+ * This will contain the information of the callback \a on_call_rx_text().
+ */
+typedef struct pjsua_txt_stream_data {
+    /**
+     * The sequence of the incoming text block data.
+     */
+    int                 seq;
+
+    /**
+     * The timestamp of the text block data.
+     */
+    unsigned            ts;
+
+    /**
+     * The content of the text block.
+     * Note that the text can be empty.
+     */
+    pj_str_t            text;
+
+} pjsua_txt_stream_data;
+
+
+/**
  * Call settings.
  */
 typedef struct pjsua_call_setting
@@ -1040,7 +1075,8 @@ typedef struct pjsua_call_setting
     /**
      * Bitmask of #pjsua_call_flag constants.
      *
-     * Default: PJSUA_CALL_INCLUDE_DISABLED_MEDIA
+     * Default: 0
+     * (PJSUA_CALL_INCLUDE_DISABLED_MEDIA is the legacy default value).
      */
     unsigned         flag;
 
@@ -1068,6 +1104,14 @@ typedef struct pjsua_call_setting
      * Default: 1 (if video feature is enabled, otherwise it is zero)
      */
     unsigned         vid_cnt;
+
+    /**
+     * Number of simultaneous active text streams for this call. Setting
+     * this to zero will disable text in this call.
+     *
+     * Default: 1
+     */
+    unsigned         txt_cnt;
 
     /**
      * Media direction. This setting will only be used if the flag
@@ -1345,6 +1389,19 @@ typedef struct pjsua_callback
      */
     void (*on_dtmf_event)(pjsua_call_id call_id,
                           const pjsua_dtmf_event *event);
+
+    /**
+     * Notify application upon incoming text data from the text stream.
+     * Note that the received text can be empty.
+     *
+     * IMPORTANT: Application shall refrain from invoking call APIs from
+     * within the callback, such as call re-invite or hangup.
+     *
+     * @param call_id   The call index.
+     * @param data      The text data.
+     */
+    void (*on_call_rx_text)(pjsua_call_id call_id,
+                            const pjsua_txt_stream_data *data);
 
     /**
      * Notify application on call being transferred (i.e. REFER is received).
@@ -4313,6 +4370,31 @@ typedef struct pjsua_acc_config
     pj_str_t         ka_data;
 
     /**
+     * Specifies text stream redundancy level, as specified in RFC 4103
+     * and 2198. When redundancy is enabled, each packet transmission
+     * will contain the current text data as well as a number of the
+     * previously transmitted text data to provide levels of redundancy.
+     * This mechanism offers protection against loss of data at the cost
+     * of additional bandwidth required.
+     *
+     * Value is integer indicating redundancy levels, i.e. the number
+     * of previous text data to be included with the current packet.
+     * (0 means disabled/no redundancy).
+     * A value of 1 provides an adequate protection against an average
+     * packet loss of up to 50%, while 2 can potentially protect
+     * against 66.7%.
+     * The maximum value is determined by PJMEDIA_TXT_STREAM_MAX_RED_LEVELS.
+     *
+     * Note that the redundancy level actually used is subject to remote
+     * capability and we will opt to use the lower redundancy value based
+     * on the result of SDP negotiation.
+     *
+     * Default: PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL (2), as per the
+     * recommendation of RFC 4103.
+     */
+    int              txt_red_level;
+
+    /**
      * Specify whether incoming video should be shown to screen by default.
      * This applies to incoming call (INVITE), incoming re-INVITE, and
      * incoming UPDATE requests.
@@ -5486,6 +5568,9 @@ typedef struct pjsua_call_info
     /** Number of video streams offered by remote */
     unsigned            rem_vid_cnt;
 
+    /** Number of text streams offered by remote */
+    unsigned            rem_txt_cnt;
+
     /** Internal */
     struct {
         char    local_info[PJSIP_MAX_URL_SIZE];
@@ -5578,7 +5663,12 @@ typedef enum pjsua_call_flag
     /**
      * Set media direction as specified in pjsua_call_setting.media_dir.
      */
-    PJSUA_CALL_SET_MEDIA_DIR = 128
+    PJSUA_CALL_SET_MEDIA_DIR = 128,
+
+    /**
+     * Disable inter-media synchronization.
+     */
+    PJSUA_CALL_NO_MEDIA_SYNC = 256
 
 } pjsua_call_flag;
 
@@ -5731,6 +5821,28 @@ typedef struct pjsua_call_send_dtmf_param
 
 
 /**
+ * Parameters for sending text. Application should use
+ * #pjsua_call_send_text_param_default() to initialize this structure
+ * with its default values.
+ */
+typedef struct pjsua_call_send_text_param
+{
+    /**
+     * Text media stream index.
+     *
+     * Default: -1 (use the first text media).
+     */
+    int         med_idx;
+
+    /**
+     * The text to be sent.
+     */
+    pj_str_t    text;
+
+} pjsua_call_send_text_param;
+
+
+/**
  * Initialize call settings.
  *
  * @param opt           The call setting to be initialized.
@@ -5752,9 +5864,16 @@ pjsua_call_vid_strm_op_param_default(pjsua_call_vid_strm_op_param *param);
  *
  * @param param         The send DTMF param to be initialized.
  */
-PJ_DECL(void) 
+PJ_DECL(void)
 pjsua_call_send_dtmf_param_default(pjsua_call_send_dtmf_param *param);
 
+/**
+ * Initialize send DTMF param with default values.
+ *
+ * @param param         The send DTMF param to be initialized.
+ */
+PJ_DECL(void) 
+pjsua_call_send_text_param_default(pjsua_call_send_text_param *param);
 
 /**
  * Get maximum number of calls configured in pjsua.
@@ -6318,6 +6437,18 @@ PJ_DECL(pj_status_t) pjsua_call_dial_dtmf2(pjsua_call_id call_id,
  */
 PJ_DECL(pj_status_t) pjsua_call_send_dtmf(pjsua_call_id call_id, 
                                       const pjsua_call_send_dtmf_param *param);
+
+/**
+ * Send real-time text to remote via RTP stream. This only works if the call
+ * has text media.
+ *
+ * @param call_id       Call identification.
+ * @param param         The send text parameter.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_send_text(pjsua_call_id call_id,
+                                          const pjsua_call_send_text_param *param);
 
 /**
  * Send instant messaging inside INVITE session.
@@ -7324,6 +7455,21 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 
 
 /**
+ * Specify the delay of video stream start in encoding direction, in
+ * millisecond. Delayed encoding start generally smoothens video stream
+ * initiation by reducing the risk of RTP packet loss in the receiver/decoder
+ * (e.g.: due to the receiver's media transport or stream being unready).
+ * Note that initial video RTP packets usually contain crucial information,
+ * such as video codec parameters and keyframes.
+ * 
+ * Default: 500ms
+ */
+#ifndef PJSUA_VIDEO_STREAM_DELAY_START_ENCODE
+#   define PJSUA_VIDEO_STREAM_DELAY_START_ENCODE   500
+#endif
+
+
+/**
  * This structure describes media configuration, which will be specified
  * when calling #pjsua_init(). Application MUST initialize this structure
  * by calling #pjsua_media_config_default().
@@ -8033,6 +8179,18 @@ PJ_DECL(pj_status_t) pjsua_conf_connect2(pjsua_conf_port_id source,
 PJ_DECL(pj_status_t) pjsua_conf_disconnect(pjsua_conf_port_id source,
                                            pjsua_conf_port_id sink);
 
+/**
+ * Change TX and RX settings for the port.
+ *
+ * @param slot         Port number/slot in the conference bridge.
+ * @param tx           Settings for the transmission TO this port.
+ * @param rx           Settings for the receipt FROM this port.
+ *
+ * @return             PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_conf_configure_port(pjsua_conf_port_id slot,
+                                               pjmedia_port_op tx,
+                                               pjmedia_port_op rx);
 
 /**
  * Adjust the signal level to be transmitted from the bridge to the 

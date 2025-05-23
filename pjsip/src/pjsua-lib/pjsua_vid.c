@@ -1065,6 +1065,17 @@ on_error:
     return status;
 }
 
+
+static void timer_on_start_vid_stream_encoding(void *user_data)
+{
+    pjmedia_vid_stream *vid_strm = (pjmedia_vid_stream*)user_data;
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common*)vid_strm;
+
+    pjmedia_vid_stream_resume(vid_strm, PJMEDIA_DIR_ENCODING);
+    pj_grp_lock_dec_ref(c_strm->grp_lock);
+}
+
+
 /* Internal function: update video channel after SDP negotiation.
  * Warning: do not use temporary/flip-flop pool, e.g: inv->pool_prov,
  *          for creating stream, etc, as after SDP negotiation and when
@@ -1185,6 +1196,15 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
         if (status != PJ_SUCCESS)
             goto on_error;
 
+        /* Add stream to synchronizer */
+        if (call->av_sync) {
+            status = pjmedia_stream_common_set_avsync(
+                            (pjmedia_stream_common*)call_med->strm.v.stream,
+                            call->av_sync);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+        }
+
         /* Subscribe to video stream events */
         pjmedia_event_subscribe(NULL, &call_media_on_event,
                                 call_med, call_med->strm.v.stream);
@@ -1193,6 +1213,34 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
         status = pjmedia_vid_stream_start(call_med->strm.v.stream);
         if (status != PJ_SUCCESS)
             goto on_error;
+
+        /* Temporarily pause the encoding to avoid early RTP packet lost
+         * because media transports are being setup/attached to streams
+         * and CPU may be spiking after SDP nego.
+         */
+        status = pjmedia_vid_stream_pause(call_med->strm.v.stream,
+                                          PJMEDIA_DIR_ENCODING);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        /* Schedule start stream encoding */
+        if (acc->cfg.vid_out_auto_transmit) {
+            pjmedia_stream_common *c_strm = (pjmedia_stream_common*)
+                                            call_med->strm.v.stream;
+            pj_grp_lock_add_ref(c_strm->grp_lock);
+            if (pjsua_schedule_timer2(&timer_on_start_vid_stream_encoding,
+                                      call_med->strm.v.stream,
+                                      PJSUA_VIDEO_STREAM_DELAY_START_ENCODE)
+                != PJ_SUCCESS)
+            {
+                if (PJSUA_VIDEO_STREAM_DELAY_START_ENCODE) {
+                    PJ_LOG(4,(THIS_FILE, "Failed in scheduling video stream "
+                                         "encoding start, start it now."));
+                }
+                /* Just in case there is failure in scheduling */
+                timer_on_start_vid_stream_encoding(call_med->strm.v.stream);
+            }
+        }
 
         if (call_med->prev_state == PJSUA_CALL_MEDIA_NONE)
             pjmedia_vid_stream_send_rtcp_sdes(call_med->strm.v.stream);
@@ -1308,13 +1356,6 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 
             pj_log_pop_indent();
         }
-    }
-
-    if (!acc->cfg.vid_out_auto_transmit && call_med->strm.v.stream) {
-        status = pjmedia_vid_stream_pause(call_med->strm.v.stream,
-                                          PJMEDIA_DIR_ENCODING);
-        if (status != PJ_SUCCESS)
-            goto on_error;
     }
 
     pj_log_pop_indent();

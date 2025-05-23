@@ -115,12 +115,16 @@ typedef enum pjmedia_echo_flag
     /**
      * If PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR flag is specified, the echo
      * canceller will also apply noise suppressor method to reduce noise.
+     *
+     * Currently this is only effective on WebRTC AEC & WebRTC AEC3 backends.
      */
     PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR = 128,
 
     /**
      * If PJMEDIA_ECHO_USE_GAIN_CONTROLLER flag is specified, the echo
      * canceller will also apply automatic gain control.
+     *
+     * Currently this is only effective on WebRTC AEC3 backend.
      */
     PJMEDIA_ECHO_USE_GAIN_CONTROLLER = 256,
     
@@ -135,6 +139,8 @@ typedef enum pjmedia_echo_flag
      * Use conservative aggressiveness setting for the echo canceller
      * algorithm. This setting is mutually exclusive with the other
      * aggressiveness settings.
+     *
+     * Currently this is only effective on WebRTC AEC backend.
      */
     PJMEDIA_ECHO_AGGRESSIVENESS_CONSERVATIVE = 0x1000,
     
@@ -142,6 +148,8 @@ typedef enum pjmedia_echo_flag
      * Use moderate aggressiveness setting for the echo canceller algorithm. 
      * This setting is mutually exclusive with the other aggressiveness
      * settings.
+     *
+     * Currently this is only effective on WebRTC AEC backend.
      */
     PJMEDIA_ECHO_AGGRESSIVENESS_MODERATE = 0x2000,
     
@@ -149,6 +157,8 @@ typedef enum pjmedia_echo_flag
      * Use aggressive aggressiveness setting for the echo canceller
      * algorithm. This setting is mutually exclusive with the other
      * aggressiveness settings.
+     *
+     * Currently this is only effective on WebRTC AEC backend.
      */
     PJMEDIA_ECHO_AGGRESSIVENESS_AGGRESSIVE = 0x3000,
     
