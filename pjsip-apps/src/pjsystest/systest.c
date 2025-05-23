@@ -66,6 +66,23 @@ static gui_menu menu_tests = {
         &menu_playtn,
         &menu_playwv1,
         &menu_playwv2,
+        &menu_recaud,
+        &menu_calclat,
+        &menu_sndaec,
+        NULL,
+        &menu_exit
+    }
+};
+
+static gui_menu menu_tests_conf = {
+    "Tests", NULL,
+    10,
+    {
+        &menu_wizard,
+        &menu_audtest,
+        &menu_playtn,
+        &menu_playwv1,
+        &menu_playwv2,
         &menu_playwv_conf,
         &menu_recaud,
         &menu_calclat,
@@ -88,7 +105,16 @@ static gui_menu root_menu = {
     "Root", NULL, 2, {&menu_tests, &menu_options}
 };
 
+static gui_menu root_menu_conf = {
+    "Root", NULL, 2, {&menu_tests_conf, &menu_options}
+};
+
 /*****************************************************************/
+
+static gui_menu* get_root_menu(void)
+{
+    return gui_is_console() ? &root_menu_conf : &root_menu;
+}
 
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 PJ_INLINE(char *) add_path(const char *path, const char *fname)
@@ -110,6 +136,12 @@ static void exit_app(void)
 
 #include <pjsua-lib/pjsua.h>
 #include <pjmedia_audiodev.h>
+
+//UNDONE
+PJ_DECL(pj_status_t) pjsua_conf_configure_port(pjsua_conf_port_id slot,
+                                               pjmedia_port_op tx,
+                                               pjmedia_port_op rx);
+//UNDONE
 
 typedef struct systest_t
 {
@@ -293,6 +325,8 @@ static void systest_play_wav_impl(unsigned path_cnt, const char *paths[],
 {
     pjsua_player_id play_id = PJSUA_INVALID_ID;
     pjsua_player_id play_id2 = PJSUA_INVALID_ID;
+    pjmedia_port_op player1_active = PJMEDIA_PORT_ENABLE;
+    pjmedia_port_op player2_active = PJMEDIA_PORT_ENABLE;
     enum gui_key key;
     test_item_t *ti;
     const char *title = "WAV File Playback Test";
@@ -304,7 +338,8 @@ static void systest_play_wav_impl(unsigned path_cnt, const char *paths[],
 
     if (path_cnt2) 
         pj_ansi_snprintf(textbuf, sizeof(textbuf),
-                         "This test will play the sum of %s and %s files to "
+                         "This test will play the sum of %s (voice) "
+                         "and %s (metronome) files to "
                          "the speaker. Please listen carefully for audio "
                          "impairments such as stutter. Let this test run "
                          "for a while to make sure that everything is okay."
@@ -333,24 +368,63 @@ static void systest_play_wav_impl(unsigned path_cnt, const char *paths[],
     if (status != PJ_SUCCESS)
         goto on_return;
 
+    if (path_cnt2) {
+        status = create_player(path_cnt2, paths2, &play_id2);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+    }
+
     status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id), 0);
     if (status != PJ_SUCCESS)
         goto on_return;
 
     if (path_cnt2) {
-        status = create_player(path_cnt2, paths2, &play_id2);
-        if (status != PJ_SUCCESS)
-            goto on_return;
-
         status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id2), 0);
         if (status != PJ_SUCCESS)
             goto on_return;
-    }
 
-    key = gui_msgbox(title,
-                     "WAV file should be playing now in the "
-                     "speaker. Press OK to stop. ", WITH_OK);
-    PJ_UNUSED_ARG(key);
+        /* Connect the two players */
+        do {
+            char msg[1024];
+            pj_ansi_snprintf(msg, sizeof(msg),
+                             "%s should be playing now in the "
+                             "speaker. Press %c:YES to switch the voice %s, "
+                             "%c:NO to switch the metronome %s or "
+                             "%c:CANCEL to stop. ", 
+                             player1_active==PJMEDIA_PORT_ENABLE && 
+                             player2_active==PJMEDIA_PORT_ENABLE ? 
+                                      "The sum of the voice and the metronome":
+                             player1_active==PJMEDIA_PORT_ENABLE ? "The voice":
+                             player2_active==PJMEDIA_PORT_ENABLE ? 
+                                                   "The metronome" : "Nothing",
+                             KEY_YES, 
+                             player1_active == PJMEDIA_PORT_ENABLE? "off":"on",
+                             KEY_NO, 
+                             player2_active == PJMEDIA_PORT_ENABLE? "off":"on", 
+                             KEY_CANCEL);
+            key = gui_msgbox(title,msg, WITH_YESNO);
+
+            if (key == KEY_YES) {
+                player1_active = player1_active==PJMEDIA_PORT_ENABLE ? PJMEDIA_PORT_DISABLE:PJMEDIA_PORT_ENABLE;
+                status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id),
+                                                   PJMEDIA_PORT_NO_CHANGE, player1_active);
+                if (status != PJ_SUCCESS)
+                    goto on_return;
+            } else if (key == KEY_NO) {
+                player2_active = player2_active==PJMEDIA_PORT_ENABLE ? PJMEDIA_PORT_DISABLE:PJMEDIA_PORT_ENABLE;
+                status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id2),
+                                                   PJMEDIA_PORT_NO_CHANGE, player2_active);
+                if (status != PJ_SUCCESS)
+                    goto on_return;
+            }
+        } while (key == KEY_YES || key == KEY_NO);
+
+    } else {
+        key = gui_msgbox(title,
+                         "WAV file should be playing now in the "
+                         "speaker. Press OK to stop. ", WITH_OK);
+        //PJ_UNUSED_ARG(key);
+    }
 
     status = PJ_SUCCESS;
 
@@ -1303,7 +1377,7 @@ int systest_init(void)
         return status;
     }
 
-    status = gui_init(&root_menu);
+    status = gui_init(get_root_menu());
     if (status != 0)
         goto on_return;
 
@@ -1329,7 +1403,8 @@ static void systest_wizard(void)
     systest_display_settings();
     systest_play_tone();
     systest_play_wav1();
-    systest_play_wav_conf();
+    if (gui_is_console())
+        systest_play_wav_conf();
     systest_rec_audio();
     systest_audio_test();
     systest_latency_test();
@@ -1340,7 +1415,7 @@ static void systest_wizard(void)
 
 int systest_run(void)
 {
-    gui_start(&root_menu);
+    gui_start(get_root_menu());
     return 0;
 }
 

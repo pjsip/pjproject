@@ -1243,6 +1243,19 @@ PJ_DEF(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
                                          tx_level, rx_level);
 }
 
+/*
+ * Configure the port to be either transmitter or receiver.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_configure_port(pjsua_conf_port_id slot,
+                                              pjmedia_port_op tx,
+                                              pjmedia_port_op rx)
+{
+    PJ_ASSERT_RETURN(slot >= 0, PJ_EINVAL);
+
+    return pjmedia_conf_configure_port(pjsua_var.mconf, slot,
+                                       tx, rx);
+}
+
 /*****************************************************************************
  * File player.
  */

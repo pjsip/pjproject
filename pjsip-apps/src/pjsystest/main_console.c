@@ -130,6 +130,11 @@ void gui_sleep(unsigned sec)
     pj_thread_sleep(sec * 1000);
 }
 
+pj_bool_t gui_is_console(void)
+{
+    return PJ_TRUE;
+}
+
 int main()
 {
     pj_log_set_level(1);

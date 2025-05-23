@@ -64,6 +64,9 @@ enum gui_key gui_msgbox(const char *title, const char *message, enum gui_flag fl
 /* AUX: sleep */
 void gui_sleep(unsigned sec);
 
+/* Check if we are running in console mode */
+pj_bool_t gui_is_console(void);
+
 
 PJ_END_DECL
 
