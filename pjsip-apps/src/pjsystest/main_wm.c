@@ -413,11 +413,6 @@ void gui_destroy(void)
     }
 }
 
-pj_bool_t gui_is_console(void)
-{
-    return PJ_FALSE;
-}
-
 
 int WINAPI WinMain(
     HINSTANCE hInstance,

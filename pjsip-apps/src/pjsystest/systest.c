@@ -28,6 +28,7 @@ char        fpath[PATH_LENGTH];
 
 #define USER_ERROR  "User used said not okay"
 
+
 static void systest_wizard(void);
 static void systest_list_audio_devs(void);
 static void systest_display_settings(void);
@@ -41,8 +42,26 @@ static void systest_latency_test(void);
 static void systest_aec_test(void);
 static void exit_app(void);
 
+static void systest_enable_sound(void);
+static void systest_disable_sound(void);
+static void systest_mute_sound(void);
+
+static void systest_enable_player1(void);
+static void systest_disable_player1(void);
+static void systest_mute_player1(void);
+static void systest_connect_player1(void);
+static void systest_disconnect_player1(void);
+
+static void systest_enable_player2(void);
+static void systest_disable_player2(void);
+static void systest_mute_player2(void);
+static void systest_connect_player2(void);
+static void systest_disconnect_player2(void);
+
+
 /* Menus */
 static gui_menu menu_exit = { "Exit", &exit_app };
+static gui_menu submenu_exit = { "Return", &gui_destroy };
 
 static gui_menu menu_wizard =  { "Run test wizard", &systest_wizard };
 static gui_menu menu_playtn = { "Play Tone", &systest_play_tone };
@@ -56,6 +75,22 @@ static gui_menu menu_sndaec = { "AEC/AES Test", &systest_aec_test };
 
 static gui_menu menu_listdev = { "View Devices", &systest_list_audio_devs };
 static gui_menu menu_getsets = { "View Settings", &systest_display_settings };
+
+static gui_menu menu_enable_sound = { "Enable", &systest_enable_sound };
+static gui_menu menu_disable_sound = { "Disable", &systest_disable_sound };
+static gui_menu menu_mute_sound = { "Mute", &systest_mute_sound };
+
+static gui_menu menu_enable1 = { "Enable", &systest_enable_player1 };
+static gui_menu menu_disable1 = { "Disable", &systest_disable_player1 };
+static gui_menu menu_mute1 = { "Mute", &systest_mute_player1 };
+static gui_menu menu_connect1 = { "Connect", &systest_connect_player1 };
+static gui_menu menu_disconnect1 = { "Disconnect", &systest_disconnect_player1 };
+
+static gui_menu menu_enable2 = { "Enable", &systest_enable_player2 };
+static gui_menu menu_disable2 = { "Disable", &systest_disable_player2 };
+static gui_menu menu_mute2 = { "Mute", &systest_mute_player2 };
+static gui_menu menu_connect2 = { "Connect", &systest_connect_player2 };
+static gui_menu menu_disconnect2 = { "Disconnect", &systest_disconnect_player2 };
 
 static gui_menu menu_tests = {
     "Tests", NULL,
@@ -88,7 +123,7 @@ static gui_menu menu_tests_conf = {
         &menu_calclat,
         &menu_sndaec,
         //NULL,
-        &menu_exit
+        //&menu_exit
     }
 };
 
@@ -101,20 +136,57 @@ static gui_menu menu_options = {
     }
 };
 
-static gui_menu root_menu = {
-    "Root", NULL, 2, {&menu_tests, &menu_options}
+static gui_menu menu_sound_conf = {
+    "Sound", NULL,
+    2,
+    {
+        //&menu_enable_sound,
+        &menu_disable_sound,
+        &menu_mute_sound
+    }
 };
 
-static gui_menu root_menu_conf = {
-    "Root", NULL, 2, {&menu_tests_conf, &menu_options}
+static gui_menu menu_player1_conf = {
+    "Voice", NULL,
+    3,
+    {
+        //&menu_enable1,
+        &menu_disable1,
+        &menu_mute1,
+        //&menu_connect1,
+        &menu_disconnect1
+    }
+};
+
+static gui_menu menu_player2_conf = {
+    "Metronome", NULL,
+    3,
+    {
+        //&menu_enable2,
+        &menu_disable2,
+        &menu_mute2,
+        //&menu_connect2,
+        &menu_disconnect2
+    }
+};
+
+static gui_menu submenu_tests_conf = {
+    "Conference", NULL,
+    5,
+    {
+        &menu_sound_conf,
+        &menu_player1_conf,
+        &menu_player2_conf,
+        NULL,
+        &submenu_exit
+    }
+};
+
+static gui_menu root_menu = {
+    "Root", NULL, 2, {&menu_tests, &menu_options, &menu_exit, &menu_tests_conf}
 };
 
 /*****************************************************************/
-
-static gui_menu* get_root_menu(void)
-{
-    return gui_is_console() ? &root_menu_conf : &root_menu;
-}
 
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 PJ_INLINE(char *) add_path(const char *path, const char *fname)
@@ -133,7 +205,6 @@ static void exit_app(void)
     gui_destroy();
 }
 
-
 #include <pjsua-lib/pjsua.h>
 #include <pjmedia_audiodev.h>
 
@@ -151,6 +222,13 @@ static char textbuf[600];
 /* Device ID to test */
 int systest_cap_dev_id = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
 int systest_play_dev_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+
+pjsua_player_id play_id1 = PJSUA_INVALID_ID;
+pjsua_player_id play_id2 = PJSUA_INVALID_ID;
+pjmedia_port_op player1_active = PJMEDIA_PORT_ENABLE;
+pjmedia_port_op player2_active = PJMEDIA_PORT_ENABLE;
+pjmedia_port_op sound_active = PJMEDIA_PORT_ENABLE;
+
 
 static void systest_perror(const char *title, pj_status_t status)
 {
@@ -314,13 +392,213 @@ static pj_status_t create_player(unsigned path_cnt, const char *paths[],
 /*****************************************************************************
  * test: play WAV file
  */
+
+static void rebuild_sound_menu(void)
+{
+    int i = 0;
+    if (sound_active != PJMEDIA_PORT_ENABLE)
+        menu_sound_conf.submenus[i++] = &menu_enable_sound;
+    if (sound_active != PJMEDIA_PORT_DISABLE)
+        menu_sound_conf.submenus[i++] = &menu_disable_sound;
+    if (sound_active != PJMEDIA_PORT_MUTE)
+        menu_sound_conf.submenus[i++] = &menu_mute_sound;
+}
+
+static void rebuild_player1_menu(void)
+{
+    int i = 0;
+    if (player1_active != PJMEDIA_PORT_ENABLE)
+        menu_player1_conf.submenus[i++] = &menu_enable1;
+    if (player1_active != PJMEDIA_PORT_DISABLE)
+        menu_player1_conf.submenus[i++] = &menu_disable1;
+    if (player1_active != PJMEDIA_PORT_MUTE)
+        menu_player1_conf.submenus[i++] = &menu_mute1;
+}
+
+static void rebuild_player2_menu(void)
+{
+    int i = 0;
+    if (player2_active != PJMEDIA_PORT_ENABLE)
+        menu_player2_conf.submenus[i++] = &menu_enable2;
+    if (player2_active != PJMEDIA_PORT_DISABLE)
+        menu_player2_conf.submenus[i++] = &menu_disable2;
+    if (player2_active != PJMEDIA_PORT_MUTE)
+        menu_player2_conf.submenus[i++] = &menu_mute2;
+}
+
+static void systest_enable_sound(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(0, 
+                                       PJMEDIA_PORT_ENABLE,
+                                       PJMEDIA_PORT_NO_CHANGE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        sound_active = PJMEDIA_PORT_ENABLE;
+        rebuild_sound_menu();
+    }
+}
+
+static void systest_disable_sound(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(0,
+                                       PJMEDIA_PORT_DISABLE,
+                                       PJMEDIA_PORT_NO_CHANGE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        sound_active = PJMEDIA_PORT_DISABLE;
+        rebuild_sound_menu();
+    }
+}
+
+static void systest_mute_sound(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(0,
+                                       PJMEDIA_PORT_MUTE,
+                                       PJMEDIA_PORT_NO_CHANGE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        sound_active = PJMEDIA_PORT_MUTE;
+        rebuild_sound_menu();
+    }
+}
+
+static void systest_enable_player1(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id1),
+                                       PJMEDIA_PORT_NO_CHANGE, 
+                                       PJMEDIA_PORT_ENABLE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        player1_active = PJMEDIA_PORT_ENABLE;
+        rebuild_player1_menu();
+    }
+}
+
+static void systest_disable_player1(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id1),
+                                       PJMEDIA_PORT_NO_CHANGE, 
+                                       PJMEDIA_PORT_DISABLE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        player1_active = PJMEDIA_PORT_DISABLE;
+        rebuild_player1_menu();
+    }
+}
+
+static void systest_mute_player1(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id1),
+                                       PJMEDIA_PORT_NO_CHANGE,
+                                       PJMEDIA_PORT_MUTE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        player1_active = PJMEDIA_PORT_MUTE;
+        rebuild_player1_menu();
+    }
+}
+
+static void systest_connect_player1(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id1), 0);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else
+        menu_player1_conf.submenus[2] = &menu_disconnect1;
+}
+
+static void systest_disconnect_player1(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_disconnect(pjsua_player_get_conf_port(play_id1), 0);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else
+        menu_player1_conf.submenus[2] = &menu_connect1;
+}
+
+
+static void systest_enable_player2(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id2),
+                                       PJMEDIA_PORT_NO_CHANGE, 
+                                       PJMEDIA_PORT_ENABLE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        player2_active = PJMEDIA_PORT_ENABLE;
+        rebuild_player2_menu();
+    }
+}
+
+static void systest_disable_player2(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id2),
+                                       PJMEDIA_PORT_NO_CHANGE, 
+                                       PJMEDIA_PORT_DISABLE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        player2_active = PJMEDIA_PORT_DISABLE;
+        rebuild_player2_menu();
+    }
+}
+
+static void systest_mute_player2(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id2),
+                                       PJMEDIA_PORT_NO_CHANGE, 
+                                       PJMEDIA_PORT_MUTE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        player2_active = PJMEDIA_PORT_MUTE;
+        rebuild_player2_menu();
+    }
+}
+
+static void systest_connect_player2(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id2), 0);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else
+        menu_player2_conf.submenus[2] = &menu_disconnect2;
+}
+
+static void systest_disconnect_player2(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_disconnect(pjsua_player_get_conf_port(play_id2), 0);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else
+        menu_player2_conf.submenus[2] = &menu_connect2;
+}
+
+
 static void systest_play_wav_impl(unsigned path_cnt, const char *paths[],
                                   unsigned path_cnt2, const char *paths2[])
 {
-    pjsua_player_id play_id = PJSUA_INVALID_ID;
-    pjsua_player_id play_id2 = PJSUA_INVALID_ID;
-    pjmedia_port_op player1_active = PJMEDIA_PORT_ENABLE;
-    pjmedia_port_op player2_active = PJMEDIA_PORT_ENABLE;
+    play_id1 = PJSUA_INVALID_ID;
+    play_id2 = PJSUA_INVALID_ID;
     enum gui_key key;
     test_item_t *ti;
     const char *title = "WAV File Playback Test";
@@ -358,60 +636,33 @@ static void systest_play_wav_impl(unsigned path_cnt, const char *paths[],
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
 
     /* WAV port */
-    status = create_player(path_cnt, paths, &play_id);
+    status = create_player(path_cnt, paths, &play_id1);
     if (status != PJ_SUCCESS)
         goto on_return;
+    player1_active = PJMEDIA_PORT_ENABLE;
 
     if (path_cnt2) {
         status = create_player(path_cnt2, paths2, &play_id2);
         if (status != PJ_SUCCESS)
             goto on_return;
+        player2_active = PJMEDIA_PORT_ENABLE;
     }
 
-    status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id), 0);
+    status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id1), 0);
     if (status != PJ_SUCCESS)
         goto on_return;
 
     if (path_cnt2) {
+        /* Connect the two players */
         status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id2), 0);
         if (status != PJ_SUCCESS)
             goto on_return;
 
-        /* Connect the two players */
-        do {
-            char msg[1024];
-            pj_ansi_snprintf(msg, sizeof(msg),
-                             "%s should be playing now in the "
-                             "speaker. Press %c:YES to switch the voice %s, "
-                             "%c:NO to switch the metronome %s or "
-                             "%c:CANCEL to stop. ", 
-                             player1_active==PJMEDIA_PORT_ENABLE && 
-                             player2_active==PJMEDIA_PORT_ENABLE ? 
-                                      "The sum of the voice and the metronome":
-                             player1_active==PJMEDIA_PORT_ENABLE ? "The voice":
-                             player2_active==PJMEDIA_PORT_ENABLE ? 
-                                                   "The metronome" : "Nothing",
-                             KEY_YES, 
-                             player1_active == PJMEDIA_PORT_ENABLE? "off":"on",
-                             KEY_NO, 
-                             player2_active == PJMEDIA_PORT_ENABLE? "off":"on", 
-                             KEY_CANCEL);
-            key = gui_msgbox(title,msg, WITH_YESNO);
-
-            if (key == KEY_YES) {
-                player1_active = player1_active==PJMEDIA_PORT_ENABLE ? PJMEDIA_PORT_DISABLE:PJMEDIA_PORT_ENABLE;
-                status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id),
-                                                   PJMEDIA_PORT_NO_CHANGE, player1_active);
-                if (status != PJ_SUCCESS)
-                    goto on_return;
-            } else if (key == KEY_NO) {
-                player2_active = player2_active==PJMEDIA_PORT_ENABLE ? PJMEDIA_PORT_DISABLE:PJMEDIA_PORT_ENABLE;
-                status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id2),
-                                                   PJMEDIA_PORT_NO_CHANGE, player2_active);
-                if (status != PJ_SUCCESS)
-                    goto on_return;
-            }
-        } while (key == KEY_YES || key == KEY_NO);
+        /* Show the conference menu, so that user can switch between the two players. */
+        rebuild_sound_menu();
+        rebuild_player1_menu();
+        rebuild_player2_menu();
+        gui_start(&submenu_tests_conf);
 
     } else {
         key = gui_msgbox(title,
@@ -423,8 +674,8 @@ static void systest_play_wav_impl(unsigned path_cnt, const char *paths[],
     status = PJ_SUCCESS;
 
 on_return:
-    if (play_id != -1)
-        pjsua_player_destroy(play_id);
+    if (play_id1 != -1)
+        pjsua_player_destroy(play_id1);
 
     if (play_id2 != -1)
         pjsua_player_destroy(play_id2);
@@ -1371,7 +1622,7 @@ int systest_init(void)
         return status;
     }
 
-    status = gui_init(get_root_menu());
+    status = gui_init(&root_menu);
     if (status != 0)
         goto on_return;
 
@@ -1397,8 +1648,6 @@ static void systest_wizard(void)
     systest_display_settings();
     systest_play_tone();
     systest_play_wav1();
-    if (gui_is_console())
-        systest_play_wav_conf();
     systest_rec_audio();
     systest_audio_test();
     systest_latency_test();
@@ -1409,7 +1658,7 @@ static void systest_wizard(void)
 
 int systest_run(void)
 {
-    gui_start(get_root_menu());
+    gui_start(&root_menu);
     return 0;
 }
 
