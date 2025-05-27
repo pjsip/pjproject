@@ -2524,11 +2524,11 @@ public:
                             - clock rate/chan count/ptime:the conf bridge settings
      * @param options       Optional options.
      */
-    void createRecorder(const string& file_name,
-                        long max_size = 0,
-                        MediaFormatVideo *vid_fmt = 0,
-                        MediaFormatAudio *aud_fmt = 0,
-                        unsigned options = 0) PJSUA2_THROW(Error);
+    void createVideoRecorder(const string& file_name,
+                             long max_size = 0,
+                             MediaFormatVideo *vid_fmt = 0,
+                             MediaFormatAudio *aud_fmt = 0,
+                             unsigned options = 0) PJSUA2_THROW(Error);
 
     /**
      * Enumerate video media port.

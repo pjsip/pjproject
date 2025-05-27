@@ -74,7 +74,7 @@ static void init_data()
     }
 #if PJSUA_HAS_VIDEO
     for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_recorder); ++i) {
-        reset_avi_recorder_data(i);
+        pjsua_reset_avi_recorder_data(i);
     }
 #endif
 

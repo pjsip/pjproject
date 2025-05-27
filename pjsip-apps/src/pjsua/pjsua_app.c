@@ -1247,7 +1247,7 @@ static void avi_writer_cb(pjsua_avi_rec_id id, void *user_data)
 {
     PJ_UNUSED_ARG(user_data);
 
-    PJ_LOG(4, (THIS_FILE, "AVI recorder %d, recording has completed", id));
+    PJ_LOG(4, (THIS_FILE, "AVI recorder %d: recording has completed", id));
 }
 
 /*

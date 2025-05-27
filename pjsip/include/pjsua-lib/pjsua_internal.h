@@ -413,7 +413,7 @@ typedef struct pjsua_file_data
 /**
  * AVI recorder data.
  */
-typedef struct pjsua_avi_recoder_data
+typedef struct pjsua_avi_recorder_data
 {
     pj_pool_t               *pool;
     pjmedia_avi_streams     *avi_streams;
@@ -971,7 +971,7 @@ char *get_basename(const char *path, unsigned len);
 /*
  * Internal function to reset avi recorder data
  */
-void reset_avi_recorder_data(pjsua_avi_rec_id id);
+void pjsua_reset_avi_recorder_data(pjsua_avi_rec_id id);
 
 /*
  * Audio

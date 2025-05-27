@@ -3091,7 +3091,7 @@ static void avi_writer_cb(pjmedia_avi_streams *streams,
     pjsua_avi_rec_id id;
     PJ_UNUSED_ARG(streams);
     id = (pjsua_avi_rec_id)(pj_ssize_t)usr_data;
-    if (id < 0 || id > PJ_ARRAY_SIZE(pjsua_var.avi_recorder))
+    if (id < 0 || id >= PJ_ARRAY_SIZE(pjsua_var.avi_recorder))
         return;
 
     pj_log_push_indent();
@@ -3102,7 +3102,7 @@ static void avi_writer_cb(pjmedia_avi_streams *streams,
     pj_log_pop_indent();
 }
 
-void reset_avi_recorder_data(pjsua_avi_rec_id id)
+void pjsua_reset_avi_recorder_data(pjsua_avi_rec_id id)
 {
     pjsua_var.avi_recorder[id].aud_port = NULL;
     pjsua_var.avi_recorder[id].vid_port = NULL;
@@ -3303,7 +3303,7 @@ PJ_DEF(pj_status_t) pjsua_avi_recorder_destroy(pjsua_avi_rec_id id)
         if (pjsua_var.avi_recorder[id].aud_port)
             pjmedia_port_destroy(pjsua_var.avi_recorder[id].aud_port);
 
-        reset_avi_recorder_data(id);
+        pjsua_reset_avi_recorder_data(id);
         pjsua_var.avi_rec_cnt--;
     }
     PJSUA_UNLOCK();

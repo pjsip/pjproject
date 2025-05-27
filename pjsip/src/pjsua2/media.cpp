@@ -1978,11 +1978,11 @@ VideoRecorder::~VideoRecorder()
 #endif
 }
 
-void VideoRecorder::createRecorder(const string& file_name,
-                                   long max_size,
-                                   MediaFormatVideo *vid_fmt,
-                                   MediaFormatAudio *aud_fmt,
-                                   unsigned options) PJSUA2_THROW(Error)
+void VideoRecorder::createVideoRecorder(const string& file_name,
+                                        long max_size,
+                                        MediaFormatVideo *vid_fmt,
+                                        MediaFormatAudio *aud_fmt,
+                                        unsigned options) PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
     if (recorderId != PJSUA_INVALID_ID) {
