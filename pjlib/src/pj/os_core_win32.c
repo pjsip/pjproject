@@ -1651,6 +1651,9 @@ PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags)
         BOOL rc = SleepConditionVariableCS(&barrier->cond, &barrier->mutex, INFINITE);
         LeaveCriticalSection(&barrier->mutex);
         if (rc)
+            /* Returning PJ_FALSE in this case (a successful return from 
+             * SleepConditionVariableCS) is intentional.
+             */
             return PJ_FALSE;
         else
             return pj_get_os_error();
@@ -1663,16 +1666,16 @@ PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags)
         barrier->waiting = 0;
         /* Release all threads waiting on the semaphore */
         if (barrier->count == 1 || 
-            ReleaseSemaphore(barrier->cond, barrier->count-1, &previousCount)) {
+            ReleaseSemaphore(barrier->cond, barrier->count-1, &previousCount))
+        {
             PJ_ASSERT_RETURN(previousCount == 0, PJ_EBUG);
             return PJ_TRUE;
-        }
-        else
+        } else {
             return pj_get_os_error();
+        }
     }
 
-    DWORD rc = WaitForSingleObject(barrier->cond, INFINITE);
-    if (rc == WAIT_OBJECT_0)
+    if (WaitForSingleObject(barrier->cond, INFINITE) == WAIT_OBJECT_0)
         return PJ_FALSE;
     else
         return pj_get_os_error();

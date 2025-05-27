@@ -1110,7 +1110,7 @@ PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t *event);
 /**
  * Flags that control the behavior of the barrier.
  * Only supported on Windows platform starting from Windows 8.
- * Otherwize, the flags are ignored.
+ * Otherwise, the flags are ignored.
  */
 enum pj_barrier_flags {
     /**
