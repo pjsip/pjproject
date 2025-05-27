@@ -2496,7 +2496,7 @@ public:
     /**
      * Constructor.
      */
-    class VideoRecorder();
+    VideoRecorder();
 
     /**
      * Create an avi recorder and automatically add a audio/video port
