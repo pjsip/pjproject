@@ -8423,7 +8423,7 @@ PJ_DECL(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id);
   * the audio/video conference bridge. User can connect the audio/video port
   * from a source port to store the uncompressed video and 16 bit PCM audio.
   * The recorder currently supports YUY2/I420/RGB24 video format and 
-  * PCM/PCMA/PCMU audio format.
+  * PCM audio format.
   * 
   * Note: Uncompressed video can lead to significant file size growth.
   * 

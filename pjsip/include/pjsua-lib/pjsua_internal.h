@@ -966,7 +966,7 @@ void print_call(const char *title,
                 int call_id,
                 char *buf, pj_size_t size);
 
-char *get_basename(const char *path, unsigned len);
+char *pjsua_get_basename(const char *path, unsigned len);
 
 /*
  * Internal function to reset avi recorder data

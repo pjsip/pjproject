@@ -2503,7 +2503,7 @@ public:
      * the audio/video conference bridge. User can connect the audio/video port
      * from a source port to store the uncompressed video and 16 bit PCM audio.
      * The recorder currently supports YUY2/I420/RGB24 video format and
-     * PCM/PCMA/PCMU audio format.
+     * PCM audio format.
      *
      * Note: Uncompressed video can lead to significant file size growth.
      *
@@ -2526,8 +2526,8 @@ public:
      */
     void createVideoRecorder(const string& file_name,
                              long max_size = 0,
-                             MediaFormatVideo *vid_fmt = 0,
-                             MediaFormatAudio *aud_fmt = 0,
+                             MediaFormatVideo *vid_fmt = NULL,
+                             MediaFormatAudio *aud_fmt = NULL,
                              unsigned options = 0) PJSUA2_THROW(Error);
 
     /**

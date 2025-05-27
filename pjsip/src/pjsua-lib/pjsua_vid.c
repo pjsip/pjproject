@@ -3162,7 +3162,7 @@ PJ_DEF(pj_status_t) pjsua_avi_recorder_create(const pj_str_t *filename,
         goto on_return;
     }
 
-    pool = pjsua_pool_create(get_basename(filename->ptr,
+    pool = pjsua_pool_create(pjsua_get_basename(filename->ptr,
                              (unsigned)filename->slen), 1000, 1000);
     if (!pool) {
         status = PJ_ENOMEM;

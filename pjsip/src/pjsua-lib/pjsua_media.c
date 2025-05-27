@@ -33,7 +33,7 @@
 
 static void stop_media_stream(pjsua_call *call, unsigned med_idx);
 
-char *get_basename(const char* path, unsigned len)
+char *pjsua_get_basename(const char* path, unsigned len)
 {
     char* p = ((char*)path) + len;
 

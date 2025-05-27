@@ -1188,8 +1188,8 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
-                             1000);
+    pool = pjsua_pool_create(pjsua_get_basename(path, (unsigned)filename->slen),
+                             1000, 1000);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_error;
@@ -1531,8 +1531,8 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
-                             1000);
+    pool = pjsua_pool_create(pjsua_get_basename(path, (unsigned)filename->slen),
+                             1000, 1000);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_return;
