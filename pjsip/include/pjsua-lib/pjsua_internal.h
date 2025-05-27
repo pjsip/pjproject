@@ -410,6 +410,21 @@ typedef struct pjsua_file_data
     unsigned         slot;
 } pjsua_file_data;
 
+/**
+ * AVI recorder data.
+ */
+typedef struct pjsua_avi_recoder_data
+{
+    pj_pool_t               *pool;
+    pjmedia_avi_streams     *avi_streams;
+    pjsua_conf_port_id       aud_slot;
+    pjsua_conf_port_id       vid_slot;
+    pjmedia_port            *aud_port;
+    pjmedia_port            *vid_port;
+    void                    (*cb)(pjsua_avi_rec_id id,
+                                  void *user_data);
+    void                    *user_data;
+} pjsua_avi_recorder_data;
 
 /**
  * Additional parameters for conference bridge.
@@ -595,6 +610,13 @@ struct pjsua_data
     /* File recorders: */
     unsigned             rec_cnt;   /**< Number of file recorders.      */
     pjsua_file_data      recorder[PJSUA_MAX_RECORDERS];/**< Array of recs.*/
+
+#if PJSUA_HAS_VIDEO
+    /* File recorders: */
+    unsigned                  avi_rec_cnt;   /**< Number of avi recorders.    */
+    pjsua_avi_recorder_data   avi_recorder[PJSUA_MAX_AVI_RECORDERS];/**< Array 
+                                                             of avi recorders.*/
+#endif
 
     /* Video windows */
 #if PJSUA_HAS_VIDEO
@@ -943,6 +965,13 @@ const char *good_number(char *buf, unsigned buf_size, pj_int32_t val);
 void print_call(const char *title,
                 int call_id,
                 char *buf, pj_size_t size);
+
+char *get_basename(const char *path, unsigned len);
+
+/*
+ * Internal function to reset avi recorder data
+ */
+void reset_avi_recorder_data(pjsua_avi_rec_id id);
 
 /*
  * Audio

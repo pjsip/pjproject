@@ -273,6 +273,9 @@ typedef int pjsua_player_id;
 /** File recorder identification */
 typedef int pjsua_recorder_id;
 
+/** AVI recorder identification */
+typedef int pjsua_avi_rec_id;
+
 /** Conference port identification */
 typedef int pjsua_conf_port_id;
 
@@ -7430,12 +7433,18 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 
 
 /**
- * The maximum file player.
+ * The maximum file recorder.
  */
 #ifndef PJSUA_MAX_RECORDERS
 #   define PJSUA_MAX_RECORDERS          32
 #endif
 
+ /**
+  * The maximum avi file recorder.
+  */
+#ifndef PJSUA_MAX_AVI_RECORDERS
+#   define PJSUA_MAX_AVI_RECORDERS          4
+#endif
 
 /**
  * Enable/disable "c=" line in SDP session level. Set to zero to disable it.
@@ -8404,6 +8413,95 @@ PJ_DECL(pj_status_t) pjsua_recorder_get_port(pjsua_recorder_id id,
  */
 PJ_DECL(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id);
 
+
+/*****************************************************************************
+ * AVI writer.
+ */
+
+ /**
+  * Create an avi recorder and automatically add a audio/video port
+  * the audio/video conference bridge. User can connect the audio/video port
+  * from a source port to store the uncompressed video and 16 bit PCM audio.
+  * The recorder currently supports YUY2/I420/RGB24 video format and 
+  * PCM/PCMA/PCMU audio format.
+  * 
+  * Note: Uncompressed video can lead to significant file size growth.
+  * 
+  * @param filename      The filename to be played. Currently only
+  *                      AVI files are supported. Filename's length must be
+  *                      smaller than PJ_MAXPATH.
+  *                      Filename's length must be smaller than PJ_MAXPATH.
+  * @param max_size      Maximum file size.
+  * @param vid_fmt       The video format. If this is not set (NULL), the
+                         format will be set to:
+                         - format:PJMEDIA_FORMAT_I420
+                         - size:320x240
+                         - fps:15
+  * @param aud_fmt       The audio format. If this is not set (NULL), the
+                         format will be set to:
+                         - format:PJMEDIA_FORMAT_PCM
+                         - bits_per_sample:16
+                         - clock rate/chan count/ptime:the conf bridge settings
+  * @param options       Optional options.
+  * @param id            Pointer to receive avi recorder instance.
+  *
+  * @return              PJ_SUCCESS on success, or the appropriate error code.
+  */
+PJ_DECL(pj_status_t) pjsua_avi_recorder_create(const pj_str_t *filename,
+                                               pj_ssize_t max_size,
+                                               const pjmedia_format *vid_fmt,
+                                               const pjmedia_format *aud_fmt,
+                                               unsigned options,
+                                               pjsua_avi_rec_id *id);
+
+/**
+ * Get the conference port identification associated with the recorder.
+ *
+ * @param id            The recorder id.
+ * @param strm_type     The stream type.
+ *
+ * @return              The video/audio conference port ID.
+ */
+PJ_DECL(pjsua_conf_port_id) pjsua_avi_recorder_get_conf_port(
+                                                        pjsua_avi_rec_id id,
+                                                        pjmedia_type strm_type);
+
+/**
+ * Get the media port for the avi recorder based on the media type.
+ *
+ * @param id            The recorder ID.
+ * @param strm_type     The stream type.
+ * @param p_port        The media port associated with the avi recorder.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_avi_recorder_get_port(pjsua_avi_rec_id id,
+                                                 pjmedia_type strm_type,
+                                                 pjmedia_port **p_port);
+
+/**
+ * Register a callback to be called when the file size has reached the
+ * max size.
+ * 
+ * @param id            The recorder ID.
+ * @param user_data     User data to be specified in the callback, and will be
+ *                      given on the callback.
+ * @param cb            Callback to be called.
+ */
+PJ_DECL(pj_status_t) pjsua_avi_recorder_set_cb(pjsua_avi_rec_id id,
+                                            void *user_data,
+                                            void(*cb)(pjsua_avi_rec_id rec_id, 
+                                                      void *usr_data));
+
+/**
+ * Destroy the avi recorder, remove the media port from the bridge, and free
+ * resources associated with the avi recorder.
+ *
+ * @param id            The avi recorder ID.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_avi_recorder_destroy(pjsua_avi_rec_id id);
 
 /*****************************************************************************
  * Sound devices.
