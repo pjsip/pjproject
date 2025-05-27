@@ -3091,7 +3091,7 @@ static void avi_writer_cb(pjmedia_avi_streams *streams,
     pjsua_avi_rec_id id;
     PJ_UNUSED_ARG(streams);
     id = (pjsua_avi_rec_id)(pj_ssize_t)usr_data;
-    if (id < 0 || id > PJ_ARRAY_SIZE(pjsua_var.avi_recorder))
+    if (id < 0 || id >= PJ_ARRAY_SIZE(pjsua_var.avi_recorder))
         return;
 
     pj_log_push_indent();
