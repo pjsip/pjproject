@@ -1753,7 +1753,7 @@ static void op_update_port(pjmedia_vid_conf *vid_conf,
         pjmedia_vid_conf_op_info info = { 0 };
 
         pj_log_push_indent();
-        info.op_type = PJMEDIA_VID_CONF_OP_DISCONNECT_PORTS;
+        info.op_type = PJMEDIA_VID_CONF_OP_UPDATE_PORT;
         info.op_param = *prm;
         (*vid_conf->cb)(&info);
         pj_log_pop_indent();
