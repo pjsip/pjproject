@@ -1145,19 +1145,6 @@ PJ_DEF(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
  * File player.
  */
 
-static char* get_basename(const char *path, unsigned len)
-{
-    char *p = ((char*)path) + len;
-
-    if (len==0)
-        return p;
-
-    for (--p; p!=path && *p!='/' && *p!='\\'; ) --p;
-
-    return (p==path) ? p : p+1;
-}
-
-
 /*
  * Create a file player, and automatically connect this player to
  * the conference bridge.
@@ -1201,8 +1188,8 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
-                             1000);
+    pool = pjsua_pool_create(pjsua_get_basename(path, (unsigned)filename->slen),
+                             1000, 1000);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_error;
@@ -1544,8 +1531,8 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
-                             1000);
+    pool = pjsua_pool_create(pjsua_get_basename(path, (unsigned)filename->slen),
+                             1000, 1000);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_return;

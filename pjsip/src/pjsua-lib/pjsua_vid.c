@@ -170,6 +170,15 @@ pj_status_t pjsua_vid_subsys_destroy(void)
             pjsua_var.win[i].pool = NULL;
         }
     }
+    /* Destroy avi file recorders */
+    for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_recorder); ++i) {
+        if (pjsua_var.avi_recorder[i].avi_streams != NULL)
+        {
+            PJ_LOG(2, (THIS_FILE, "Destructor for avi recorder id=%d "
+                       "is not called", i));
+            pjsua_avi_recorder_destroy(i);
+        }
+    }
 
     if (pjsua_var.vid_conf) {
         pjmedia_vid_conf_destroy(pjsua_var.vid_conf);
@@ -3065,6 +3074,243 @@ on_return:
     return port_id;
 }
 
+/*****************************************************************************
+ * AVI recordder.
+ */
+
+#define AVI_REC_FILE_MAX_SIZE   5  /* 5Mb */
+#define AVI_REC_FILE_FMT        PJMEDIA_FORMAT_I420
+#define AVI_REC_FILE_WIDTH      320
+#define AVI_REC_FILE_HEIGHT     240
+#define AVI_REC_FILE_FPS_NUM    15
+#define AVI_REC_FILE_FPS_DENUM  1
+
+static void avi_writer_cb(pjmedia_avi_streams *streams,
+                          void *usr_data)
+{
+    pjsua_avi_rec_id id;
+    PJ_UNUSED_ARG(streams);
+    id = (pjsua_avi_rec_id)(pj_ssize_t)usr_data;
+    if (id < 0 || id >= PJ_ARRAY_SIZE(pjsua_var.avi_recorder))
+        return;
+
+    pj_log_push_indent();
+    if (pjsua_var.avi_recorder[id].cb) {
+        (*pjsua_var.avi_recorder[id].cb)(id, 
+                                        pjsua_var.avi_recorder[id].user_data);
+    }
+    pj_log_pop_indent();
+}
+
+void pjsua_reset_avi_recorder_data(pjsua_avi_rec_id id)
+{
+    pjsua_var.avi_recorder[id].aud_port = NULL;
+    pjsua_var.avi_recorder[id].vid_port = NULL;
+    pjsua_var.avi_recorder[id].aud_slot = PJSUA_INVALID_ID;
+    pjsua_var.avi_recorder[id].vid_slot = PJSUA_INVALID_ID;
+    pjsua_var.avi_recorder[id].avi_streams = NULL;
+    pjsua_var.avi_recorder[id].cb = NULL;
+    pjsua_var.avi_recorder[id].user_data = NULL;
+}
+
+PJ_DEF(pj_status_t) pjsua_avi_recorder_create(const pj_str_t *filename,
+                                              pj_ssize_t max_size,
+                                              const pjmedia_format *vid_fmt,
+                                              const pjmedia_format *aud_fmt,
+                                              unsigned options,
+                                              pjsua_avi_rec_id *id)
+{
+    pjmedia_format fmt[2];
+    pjmedia_avi_streams *streams;
+    pj_pool_t *pool = NULL;
+    pjmedia_port *aviw_port;
+    pj_status_t status = PJ_SUCCESS;
+    unsigned avi_id;
+
+    /* Filename must present */
+    PJ_ASSERT_RETURN(filename != NULL, PJ_EINVAL);
+
+    if (filename->slen >= PJ_MAXPATH)
+        return PJ_ENAMETOOLONG;
+    if (filename->slen < 4)
+        return PJ_EINVALIDOP;
+
+    if (max_size <= 0)
+        max_size = AVI_REC_FILE_MAX_SIZE * 1000000;
+
+    PJ_LOG(4, (THIS_FILE, "Creating avi recorder %.*s..",
+               (int)filename->slen, filename->ptr));
+
+    pj_log_push_indent();
+
+    if (pjsua_var.avi_rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.avi_recorder)) {
+        pj_log_pop_indent();
+        return PJ_ETOOMANY;
+    }
+
+    PJSUA_LOCK();
+
+    for (avi_id = 0; avi_id <
+         PJ_ARRAY_SIZE(pjsua_var.avi_recorder); ++avi_id)
+    {
+        if (pjsua_var.avi_recorder[avi_id].avi_streams == NULL)
+            break;
+    }
+
+    if (avi_id == PJ_ARRAY_SIZE(pjsua_var.avi_recorder)) {
+        status = PJ_ETOOMANY;
+        goto on_return;
+    }
+
+    pool = pjsua_pool_create(pjsua_get_basename(filename->ptr,
+                             (unsigned)filename->slen), 1000, 1000);
+    if (!pool) {
+        status = PJ_ENOMEM;
+        goto on_return;
+    }
+    pjsua_var.avi_recorder[avi_id].pool = pool;
+
+    if (!vid_fmt) {
+        pjmedia_format_init_video(&fmt[0], AVI_REC_FILE_FMT,
+                                AVI_REC_FILE_WIDTH, AVI_REC_FILE_HEIGHT,
+                                AVI_REC_FILE_FPS_NUM, AVI_REC_FILE_FPS_DENUM);
+    } else {
+        fmt[0] = *vid_fmt;
+    }
+
+    if (!aud_fmt) {
+        pjmedia_format_init_audio(&fmt[1], PJMEDIA_FORMAT_PCM,
+                                  pjsua_var.media_cfg.clock_rate,
+                                  pjsua_var.media_cfg.channel_count,
+                                  16,
+                                  pjsua_var.media_cfg.audio_frame_ptime * 1000,
+                                  0, 0);
+    } else {
+        fmt[1] = *aud_fmt;
+    }
+    status = pjmedia_avi_writer_create_streams(pool, filename->ptr, max_size,
+                                               2, fmt, options, &streams);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    aviw_port = (pjmedia_port*)pjmedia_avi_streams_get_stream(streams, 0);
+    if (aviw_port) {
+        status = pjsua_vid_conf_add_port(pjsua_var.avi_recorder[avi_id].pool,
+                                    aviw_port, NULL,
+                                    &pjsua_var.avi_recorder[avi_id].vid_slot);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+
+        pjsua_var.avi_recorder[avi_id].vid_port = aviw_port;
+    }
+
+    aviw_port = (pjmedia_port*)pjmedia_avi_streams_get_stream(streams, 1);
+    if (aviw_port) {
+        status = pjsua_conf_add_port(pjsua_var.avi_recorder[avi_id].pool, aviw_port,
+                                     &pjsua_var.avi_recorder[avi_id].aud_slot);
+
+        if (status != PJ_SUCCESS)
+            goto on_return;
+
+        pjsua_var.avi_recorder[avi_id].aud_port = aviw_port;
+    }
+    pjsua_var.avi_recorder[avi_id].avi_streams = streams;
+    pjsua_var.avi_rec_cnt++;
+    *id = avi_id;
+
+    PJ_LOG(4, (THIS_FILE, "AVI Recorder created, id=%d", avi_id));
+
+on_return:
+    PJSUA_UNLOCK();
+    if (pool) pj_pool_release(pool);
+    pj_log_pop_indent();
+    return status;
+}
+
+PJ_DEF(pjsua_conf_port_id) pjsua_avi_recorder_get_conf_port(
+                                                        pjsua_avi_rec_id id,
+                                                        pjmedia_type strm_type)
+{
+    PJ_ASSERT_RETURN(id >= 0 && id < (int)PJ_ARRAY_SIZE(pjsua_var.avi_recorder),
+                     PJSUA_INVALID_ID);
+
+    switch (strm_type) {
+    case PJMEDIA_TYPE_AUDIO:
+        return pjsua_var.avi_recorder[id].aud_slot;
+    case PJMEDIA_TYPE_VIDEO:
+        return pjsua_var.avi_recorder[id].vid_slot;
+    default:
+        return PJSUA_INVALID_ID;
+    }
+}
+
+PJ_DEF(pj_status_t) pjsua_avi_recorder_get_port(pjsua_avi_rec_id id,
+                                                pjmedia_type strm_type,
+                                                pjmedia_port **p_port)
+{
+    pj_status_t status = PJ_SUCCESS;
+    PJ_ASSERT_RETURN(id >= 0 && id < (int)PJ_ARRAY_SIZE(pjsua_var.avi_recorder),
+                     PJSUA_INVALID_ID);
+
+    switch (strm_type) {
+    case PJMEDIA_TYPE_AUDIO:
+        p_port = &pjsua_var.avi_recorder[id].aud_port;
+    case PJMEDIA_TYPE_VIDEO:
+        p_port = &pjsua_var.avi_recorder[id].vid_port;
+    default:
+        status = PJ_ENOTFOUND;
+    }
+    return status;
+}
+
+PJ_DEF(pj_status_t) pjsua_avi_recorder_set_cb(pjsua_avi_rec_id id,
+                                              void *user_data,
+                                              void(*cb)(pjsua_avi_rec_id rec_id,
+                                                        void *usr_data))
+{
+    PJ_ASSERT_RETURN(id >= 0 && id < (int)PJ_ARRAY_SIZE(pjsua_var.avi_recorder),
+                     PJSUA_INVALID_ID);
+
+    if (pjsua_var.avi_recorder[id].avi_streams) {
+        pjsua_var.avi_recorder[id].cb = cb;
+        pjsua_var.avi_recorder[id].user_data = user_data;
+        pjmedia_avi_streams_set_cb(pjsua_var.avi_recorder[id].avi_streams, 
+                                   (void*)id, &avi_writer_cb);
+    }
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsua_avi_recorder_destroy(pjsua_avi_rec_id id)
+{
+    PJ_ASSERT_RETURN(id >= 0 && id < (int)PJ_ARRAY_SIZE(pjsua_var.avi_recorder),
+                     PJSUA_INVALID_ID);
+
+    PJ_LOG(4, (THIS_FILE, "Destroying avi recorder %d..", id));
+    pj_log_push_indent();
+    PJSUA_LOCK();
+
+    if (pjsua_var.avi_recorder[id].avi_streams != NULL) {
+        if (pjsua_var.vid_conf)
+            pjsua_vid_conf_remove_port(pjsua_var.avi_recorder[id].vid_slot);
+
+        if (pjsua_var.avi_recorder[id].vid_port)
+            pjmedia_port_destroy(pjsua_var.avi_recorder[id].vid_port);
+
+        if (pjsua_var.mconf)
+            pjsua_conf_remove_port(pjsua_var.avi_recorder[id].aud_slot);
+
+        if (pjsua_var.avi_recorder[id].aud_port)
+            pjmedia_port_destroy(pjsua_var.avi_recorder[id].aud_port);
+
+        pjsua_reset_avi_recorder_data(id);
+        pjsua_var.avi_rec_cnt--;
+    }
+    PJSUA_UNLOCK();
+    pj_log_pop_indent();
+
+    return PJ_SUCCESS;
+}
 
 #endif /* PJSUA_HAS_VIDEO */
 
