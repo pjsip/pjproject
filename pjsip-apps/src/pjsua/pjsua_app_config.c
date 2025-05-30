@@ -1723,6 +1723,7 @@ static void default_config()
     cfg->playback_lat = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
     cfg->ringback_slot = PJSUA_INVALID_ID;
     cfg->ring_slot = PJSUA_INVALID_ID;
+    cfg->avi_rec_id = PJSUA_INVALID_ID;
     cfg->avi_vid_slot = PJSUA_INVALID_ID;
     cfg->avi_aud_slot = PJSUA_INVALID_ID;
 

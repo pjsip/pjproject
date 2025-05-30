@@ -1101,7 +1101,7 @@ PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t *event);
   * @{
   * This module provides abstraction to pj_barrier_t - synchronization barrier.
   * It allows threads to block until all participating threads have reached
-  * the barrier,ensuring synchronization at specific points in execution.
+  * the barrier, ensuring synchronization at specific points in execution.
   * pj_barrier_t provides a barrier mechanism for synchronizing threads in 
   * a multithreaded application, similar to 
   * the POSIX pthread_barrier_wait or Windows EnterSynchronizationBarrier.
@@ -1110,7 +1110,7 @@ PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t *event);
 /**
  * Flags that control the behavior of the barrier.
  * Only supported on Windows platform starting from Windows 8.
- * Otherwize, the flags are ignored.
+ * Otherwise, the flags are ignored.
  */
 enum pj_barrier_flags {
     /**

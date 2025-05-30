@@ -2487,6 +2487,84 @@ private:
     friend class Endpoint;
 };
 
+/**
+ * Video AVI Recorder.
+ */
+class VideoRecorder
+{
+public:
+    /**
+     * Constructor.
+     */
+    VideoRecorder();
+
+    /**
+     * Create an avi recorder and automatically add a audio/video port
+     * the audio/video conference bridge. User can connect the audio/video port
+     * from a source port to store the uncompressed video and 16 bit PCM audio.
+     * The recorder currently supports YUY2/I420/RGB24 video format and
+     * PCM audio format.
+     *
+     * Note: Uncompressed video can lead to significant file size growth.
+     *
+     * @param filename      The filename to be played. Currently only
+     *                      AVI files are supported. Filename's length must be
+     *                      smaller than PJ_MAXPATH.
+     *                      Filename's length must be smaller than PJ_MAXPATH.
+     * @param max_size      Maximum file size.
+     * @param vid_fmt       The video format. If this is not set (NULL), the
+                            format will be set to:
+                            - format:PJMEDIA_FORMAT_I420
+                            - size:320x240
+                            - fps:15
+     * @param aud_fmt       The audio format. If this is not set (NULL), the
+                            format will be set to:
+                            - format:PJMEDIA_FORMAT_PCM
+                            - bits_per_sample:16
+                            - clock rate/chan count/ptime:the conf bridge settings
+     * @param options       Optional options.
+     */
+    void createVideoRecorder(const string& file_name,
+                             long max_size = 0,
+                             MediaFormatVideo *vid_fmt = NULL,
+                             MediaFormatAudio *aud_fmt = NULL,
+                             unsigned options = 0) PJSUA2_THROW(Error);
+
+    /**
+     * Enumerate video media port.
+     *
+     * @return          The list of audio media port.
+     */
+    VideoMedia getVideoMedia() PJSUA2_THROW(Error);
+
+    /**
+     * Enumerate audio media port.
+     *
+     * @return          The list of video media port.
+     */
+    AudioMedia getAudioMedia() PJSUA2_THROW(Error);
+
+    /**
+     * Register a callback to be called when the file size has reached the
+     * max size.
+     */
+    virtual void onMaxSize()
+    {
+    }
+
+    virtual ~VideoRecorder();
+
+private:
+    /**
+     * Recorder Id.
+     */
+    int recorderId;
+
+    /**
+     *  Low level callback
+     */
+    static void max_size_cb(pjsua_recorder_id id, void *usr_data);
+};
 
 /*************************************************************************
 * Codec management

@@ -1963,6 +1963,103 @@ VidDevManager::~VidDevManager()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+VideoRecorder::VideoRecorder()
+: recorderId(PJSUA_INVALID_ID)
+{
+
+}
+
+VideoRecorder::~VideoRecorder()
+{
+#if PJSUA_HAS_VIDEO
+    if (recorderId != PJSUA_INVALID_ID) {
+        pjsua_avi_recorder_destroy(recorderId);
+    }
+#endif
+}
+
+void VideoRecorder::createVideoRecorder(const string& file_name,
+                                        long max_size,
+                                        MediaFormatVideo *vid_fmt,
+                                        MediaFormatAudio *aud_fmt,
+                                        unsigned options) PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    if (recorderId != PJSUA_INVALID_ID) {
+        PJSUA2_RAISE_ERROR(PJ_EEXISTS);
+    }
+    pjmedia_format vidfmt;
+    pjmedia_format audfmt;
+
+    pj_str_t pj_name = str2Pj(file_name);
+    if (vid_fmt)
+        vidfmt = vid_fmt->toPj();
+    if (aud_fmt)
+        audfmt = aud_fmt->toPj();
+
+    PJSUA2_CHECK_EXPR(pjsua_avi_recorder_create(&pj_name, 
+                                                max_size,
+                                                vid_fmt?&vidfmt:NULL,
+                                                aud_fmt?&audfmt:NULL,
+                                                options, 
+                                                &recorderId));
+
+    pjsua_avi_recorder_set_cb(recorderId, this, &max_size_cb);
+#else
+    PJ_UNUSED_ARG(file_name);
+    PJ_UNUSED_ARG(max_size);
+    PJ_UNUSED_ARG(vid_fmt);
+    PJ_UNUSED_ARG(aud_fmt);
+    PJ_UNUSED_ARG(options);
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}
+
+VideoMedia VideoRecorder::getVideoMedia() PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    pjsua_conf_port_id port_id = pjsua_avi_recorder_get_conf_port(recorderId,
+                                                            PJMEDIA_TYPE_VIDEO);
+
+    if (port_id == PJSUA_INVALID_ID)
+        PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+
+    VideoMediaHelper vm;
+    vm.setPortId(port_id);
+
+    return vm;
+#else
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}
+
+AudioMedia VideoRecorder::getAudioMedia() PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    pjsua_conf_port_id port_id = pjsua_avi_recorder_get_conf_port(recorderId,
+                                                            PJMEDIA_TYPE_AUDIO);
+
+    if (port_id == PJSUA_INVALID_ID)
+        PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+
+    AudioMediaHelper vm;
+    vm.setPortId(port_id);
+
+    return vm;
+#else
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}
+
+void VideoRecorder::max_size_cb(pjsua_recorder_id id, void *usr_data)
+{
+    PJ_UNUSED_ARG(id);
+
+    VideoRecorder *vid_rec = (VideoRecorder*)usr_data;
+    vid_rec->onMaxSize();
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 /** 
  * Utility class for converting CodecFmtpVector to and from pjmedia_codec_fmtp. 
