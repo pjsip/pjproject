@@ -585,6 +585,60 @@ static void on_call_media_state(pjsua_call_id call_id)
 #endif
 }
 
+static void conf_op_completed(const pjmedia_conf_op_info *info)
+{
+    switch (info->op_type) {
+    case PJMEDIA_CONF_OP_CONNECT_PORTS:
+    case PJMEDIA_CONF_OP_DISCONNECT_PORTS: 
+        {
+            unsigned src_port = info->op_param.connect_ports.src;
+            unsigned dst_port = info->op_param.connect_ports.sink;
+            PJ_LOG(4, (THIS_FILE, "Conf port[%d] %s transmitting to port[%d]",
+                src_port, info->op_type == PJMEDIA_CONF_OP_CONNECT_PORTS ?
+                "start" : "stop", dst_port));
+        }
+        break;
+    case PJMEDIA_CONF_OP_ADD_PORT:
+    case PJMEDIA_CONF_OP_REMOVE_PORT:
+        {
+            unsigned port = info->op_param.add_port.port;
+            PJ_LOG(4, (THIS_FILE, "%s port[%d]",
+                       info->op_type == PJMEDIA_CONF_OP_ADD_PORT?
+                       "Added":"Removed", port));
+        }
+        break;
+    };
+}
+
+#if PJMEDIA_HAS_VIDEO
+
+static void vid_conf_op_completed(const pjmedia_vid_conf_op_info *info)
+{
+    switch (info->op_type) {
+    case PJMEDIA_VID_CONF_OP_CONNECT_PORTS:
+    case PJMEDIA_VID_CONF_OP_DISCONNECT_PORTS:
+        {
+            unsigned src_port = info->op_param.connect_ports.src;
+            unsigned dst_port = info->op_param.connect_ports.sink;
+            PJ_LOG(4, (THIS_FILE, "Vid conf port[%d] %s transmitting to "
+                       "port[%d]", src_port, 
+                       info->op_type == PJMEDIA_CONF_OP_CONNECT_PORTS ?
+                       "start" : "stop", dst_port));
+        }
+    break;
+    case PJMEDIA_VID_CONF_OP_ADD_PORT:
+    case PJMEDIA_VID_CONF_OP_REMOVE_PORT:
+        {
+            unsigned port = info->op_param.add_port.port;
+            PJ_LOG(4, (THIS_FILE, "%s vid port[%d]",
+                       info->op_type == PJMEDIA_CONF_OP_ADD_PORT?
+                       "Added":"Removed", port));
+        }
+        break;
+    };
+}
+
+#endif
 /*
  * DTMF callback.
  */
@@ -1537,6 +1591,13 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_snd_dev_operation = &on_snd_dev_operation;
     app_config.cfg.cb.on_call_media_event = &on_call_media_event;
     app_config.cfg.cb.on_ip_change_progress = &on_ip_change_progress;
+#if 0
+    app_config.cfg.cb.on_conf_op_completed = &conf_op_completed;
+#ifdef PJSUA_HAS_VIDEO
+    app_config.cfg.cb.on_vid_conf_op_completed = &vid_conf_op_completed;
+#endif
+#endif
+
 #ifdef TRANSPORT_ADAPTER_SAMPLE
     app_config.cfg.cb.on_create_media_transport = &on_create_media_transport;
 #endif

@@ -244,6 +244,89 @@ void IpChangeParam::fromPj(const pjsua_ip_change_param &param)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void OnConfOpCompletedParam::fromPj(const pjmedia_conf_op_info& info)
+{
+    opType = info.op_type;
+    switch (opType) {
+    case PJMEDIA_CONF_OP_ADD_PORT:
+    {
+        AudioMediaHelper am;
+        am.setPortId(info.op_param.add_port.port);
+        opData.push_back(PJSUA2_MOVE(am));
+    }
+    break;
+    case PJMEDIA_CONF_OP_REMOVE_PORT:
+    {
+        AudioMediaHelper am;
+        am.setPortId(info.op_param.remove_port.port);
+        opData.push_back(PJSUA2_MOVE(am));
+    }
+    break;
+    case PJMEDIA_CONF_OP_CONNECT_PORTS:
+    {
+        AudioMediaHelper src_am;
+        AudioMediaHelper dst_am;
+        src_am.setPortId(info.op_param.connect_ports.src);
+        opData.push_back(PJSUA2_MOVE(src_am));
+        dst_am.setPortId(info.op_param.connect_ports.sink);
+        opData.push_back(PJSUA2_MOVE(dst_am));
+    }
+    break;
+    case PJMEDIA_CONF_OP_DISCONNECT_PORTS:
+    {
+        AudioMediaHelper src_am;
+        AudioMediaHelper dst_am;
+        src_am.setPortId(info.op_param.disconnect_ports.src);
+        opData.push_back(PJSUA2_MOVE(src_am));
+        dst_am.setPortId(info.op_param.disconnect_ports.sink);
+        opData.push_back(PJSUA2_MOVE(dst_am));
+    }
+    break;
+    }
+}
+
+void OnVidConfOpCompletedParam::fromPj(const pjmedia_vid_conf_op_info& info)
+{
+    opType = info.op_type;
+    switch (opType) {
+    case PJMEDIA_CONF_OP_ADD_PORT:
+    {
+        VideoMediaHelper am;
+        am.setPortId(info.op_param.add_port.port);
+        opData.push_back(PJSUA2_MOVE(am));
+    }
+    break;
+    case PJMEDIA_CONF_OP_REMOVE_PORT:
+    {
+        VideoMediaHelper am;
+        am.setPortId(info.op_param.remove_port.port);
+        opData.push_back(PJSUA2_MOVE(am));
+    }
+    break;
+    case PJMEDIA_CONF_OP_CONNECT_PORTS:
+    {
+        VideoMediaHelper src_am;
+        VideoMediaHelper dst_am;
+        src_am.setPortId(info.op_param.connect_ports.src);
+        opData.push_back(PJSUA2_MOVE(src_am));
+        dst_am.setPortId(info.op_param.connect_ports.sink);
+        opData.push_back(PJSUA2_MOVE(dst_am));
+    }
+    break;
+    case PJMEDIA_CONF_OP_DISCONNECT_PORTS:
+    {
+        VideoMediaHelper src_am;
+        VideoMediaHelper dst_am;
+        src_am.setPortId(info.op_param.disconnect_ports.src);
+        opData.push_back(PJSUA2_MOVE(src_am));
+        dst_am.setPortId(info.op_param.disconnect_ports.sink);
+        opData.push_back(PJSUA2_MOVE(dst_am));
+    }
+    break;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 UaConfig::UaConfig()
 : mainThreadOnly(false)
 {
@@ -2053,6 +2136,8 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_stun_resolution_complete = 
         &Endpoint::stun_resolve_cb;
     ua_cfg.cb.on_rejected_incoming_call = &Endpoint::on_rejected_incoming_call;
+    ua_cfg.cb.on_conf_op_completed      = &Endpoint::on_conf_op_completed;
+    ua_cfg.cb.on_vid_conf_op_completed  = &Endpoint::on_vid_conf_op_completed;
 
     /* Init! */
     PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );
@@ -2833,4 +2918,20 @@ void Endpoint::on_rejected_incoming_call(
         prm.rdata.fromPj(*param->rdata);
 
     Endpoint::instance().onRejectedIncomingCall(prm);
+}
+
+void Endpoint::on_conf_op_completed(const pjmedia_conf_op_info *info)
+{
+    OnConfOpCompletedParam prm;
+    prm.fromPj(*info);
+
+    Endpoint::instance().onConfOpCompleted(prm);
+}
+
+void Endpoint::on_vid_conf_op_completed(const pjmedia_vid_conf_op_info *info)
+{
+    OnVidConfOpCompletedParam prm;
+    prm.fromPj(*info);
+
+    Endpoint::instance().onVidConfOpCompleted(prm);
 }

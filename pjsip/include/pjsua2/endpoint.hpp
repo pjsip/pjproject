@@ -483,6 +483,52 @@ struct OnRejectedIncomingCallParam
 };
 
 /**
+ *  Parameter of Endpoint::onConfOpCompleted() callback.
+ */
+struct OnConfOpCompletedParam {
+    /**
+     * The Operation type.
+     */
+    pjmedia_conf_op_type opType;
+
+    /**
+     * Represents the AudioMedia associated with the operation.
+     * For operations involving multiple AudioMedia instances
+     * (e.g., startTransmit/stopTransmit), the first AudioMedia serves
+     * as the source.
+     */
+    AudioMediaVector2    opData;
+public:
+    /**
+     * Convert from pjsip.
+     */
+    void fromPj(const pjmedia_conf_op_info &info);
+};
+
+/**
+ *  Parameter of Endpoint::onVidConfOpCompleted() callback.
+ */
+struct OnVidConfOpCompletedParam {
+    /**
+     * The Operation type.
+     */
+    pjmedia_vid_conf_op_type opType;
+
+    /**
+     * Represents the VideoMedia associated with the operation.
+     * For operations involving multiple VideoMedia instances
+     * (e.g., startTransmit/stopTransmit), the first VideoMedia serves
+     * as the source.
+     */
+    VideoMediaVector         opData;
+public:
+    /**
+     * Convert from pjsip.
+     */
+    void fromPj(const pjmedia_vid_conf_op_info &info);
+};
+
+/**
  * This structure describes authentication challenge used in Proxy-Authenticate
  * or WWW-Authenticate for digest authentication scheme.
  */
@@ -1992,6 +2038,12 @@ public:
     virtual void onRejectedIncomingCall(OnRejectedIncomingCallParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
+    virtual void onConfOpCompleted(OnConfOpCompletedParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    virtual void onVidConfOpCompleted(OnVidConfOpCompletedParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
 private:
     static Endpoint             *instance_;     // static instance
     LogWriter                   *writer;        // Custom writer, if any
@@ -2185,6 +2237,9 @@ private:
 
     static void on_rejected_incoming_call(
                                       const pjsua_on_rejected_incoming_call_param *param);
+
+    static void on_conf_op_completed(const pjmedia_conf_op_info *info);
+    static void on_vid_conf_op_completed(const pjmedia_vid_conf_op_info *info);
 
     friend class Account;
 

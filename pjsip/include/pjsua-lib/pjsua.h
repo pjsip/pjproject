@@ -2162,6 +2162,21 @@ typedef struct pjsua_callback
      */
     pjsua_on_rejected_incoming_call_cb on_rejected_incoming_call;
 
+    /**
+     * This callback will be invoked when a port operation has been successfully
+     * completed. This callback will most likely be called from media threads,
+     * thus application must not perform heavy processing in this callback.
+     */
+    pjmedia_conf_op_cb on_conf_op_completed;
+
+    /**
+     * This callback will be invoked when a video port operation has been
+     * successfully completed. This callback will most likely be called from
+     * media threads, thus application must not perform heavy processing in
+     * this callback.
+     */
+    pjmedia_vid_conf_op_cb on_vid_conf_op_completed;
+
 } pjsua_callback;
 
 
@@ -8075,6 +8090,10 @@ PJ_DECL(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id port_id,
  * media ports that are created by PJSUA-LIB (such as calls, file player,
  * or file recorder), PJSUA-LIB will automatically add the port to
  * the bridge.
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * \a on_conf_op_completed to receive notification upon succesfull
+ * completion.
  *
  * @param pool          Pool to use.
  * @param port          Media port to be added to the bridge.
@@ -8092,6 +8111,10 @@ PJ_DECL(pj_status_t) pjsua_conf_add_port(pj_pool_t *pool,
  * Remove arbitrary slot from the conference bridge. Application should only
  * call this function if it registered the port manually with previous call
  * to #pjsua_conf_add_port().
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * \a on_conf_op_completed to receive notification upon succesfull
+ * completion.
  *
  * @param port_id       The slot id of the port to be removed.
  *
@@ -8110,6 +8133,10 @@ PJ_DECL(pj_status_t) pjsua_conf_remove_port(pjsua_conf_port_id port_id);
  * If bidirectional media flow is desired, application needs to call
  * this function twice, with the second one having the arguments
  * reversed.
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * \a on_conf_op_completed to receive notification upon succesfull
+ * completion.
  *
  * @param source        Port ID of the source media/transmitter.
  * @param sink          Port ID of the destination media/received.
@@ -8141,6 +8168,10 @@ PJ_DECL(pj_status_t) pjsua_conf_connect(pjsua_conf_port_id source,
  * If bidirectional media flow is desired, application needs to call
  * this function twice, with the second one having the arguments
  * reversed.
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * \a on_conf_op_completed to receive notification upon succesfull
+ * completion.
  *
  * @param source        Port ID of the source media/transmitter.
  * @param sink          Port ID of the destination media/received.
@@ -8157,6 +8188,10 @@ PJ_DECL(pj_status_t) pjsua_conf_connect2(pjsua_conf_port_id source,
 /**
  * Disconnect media flow from the source to destination port.
  *
+ * This operation executes asynchronously, use the callback set from
+ * \a on_conf_op_completed to receive notification upon succesfull
+ * completion.
+ * 
  * @param source        Port ID of the source media/transmitter.
  * @param sink          Port ID of the destination media/received.
  *
@@ -9348,6 +9383,10 @@ PJ_DECL(pj_status_t) pjsua_vid_conf_get_port_info(
  * Application can use this function to add the media port that it creates.
  * For media ports that are created by PJSUA-LIB (such as calls, AVI player),
  * PJSUA-LIB will automatically add the port to the bridge.
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * \a on_vid_conf_op_completed to receive notification upon succesfull
+ * completion.
  *
  * @param pool          Pool to use.
  * @param port          Media port to be added to the bridge.
@@ -9367,6 +9406,10 @@ PJ_DECL(pj_status_t) pjsua_vid_conf_add_port(pj_pool_t *pool,
  * Remove arbitrary slot from the video conference bridge. Application should
  * only call this function if it registered the port manually with previous
  * call to #pjsua_vid_conf_add_port().
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * \a on_vid_conf_op_completed to receive notification upon succesfull
+ * completion.
  *
  * @param port_id       The slot id of the port to be removed.
  *
@@ -9386,6 +9429,10 @@ PJ_DECL(pj_status_t) pjsua_vid_conf_remove_port(pjsua_conf_port_id port_id);
  * If bidirectional media flow is desired, application needs to call
  * this function twice, with the second one having the arguments
  * reversed.
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * \a on_vid_conf_op_completed to receive notification upon succesfull
+ * completion.
  *
  * @param source        Port ID of the source media/transmitter.
  * @param sink          Port ID of the destination media/received.
@@ -9401,6 +9448,10 @@ PJ_DECL(pj_status_t) pjsua_vid_conf_connect(pjsua_conf_port_id source,
 /**
  * Disconnect video flow from the source to destination port.
  *
+ * This operation executes asynchronously, use the callback set from
+ * \a on_vid_conf_op_completed to receive notification upon succesfull
+ * completion.
+ * 
  * @param source        Port ID of the source media/transmitter.
  * @param sink          Port ID of the destination media/received.
  *
@@ -9416,6 +9467,10 @@ PJ_DECL(pj_status_t) pjsua_vid_conf_disconnect(pjsua_conf_port_id source,
  * a video stream decoder learns that incoming video size or frame rate
  * has changed, video conference needs to be informed to update its
  * internal states.
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * \a on_vid_conf_op_completed to receive notification upon succesfull
+ * completion.
  *
  * @param port_id       The slot id of the port to be updated.
  *
