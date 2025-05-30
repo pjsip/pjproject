@@ -89,10 +89,7 @@ pj_status_t gui_start(gui_menu *menu)
         for (i=0; i<menu->submenu_cnt; ++i) {
             char menu_id[11];
             pj_ansi_snprintf(menu_id, sizeof(menu_id), "%u", i);
-            if (!menu->submenus[i])
-                puts("");
-            else
-                print_menu("", menu_id, menu->submenus[i]);
+            print_menu("", menu_id, menu->submenus[i]);
         }
         puts("");
         printf("Enter the menu number: ");
