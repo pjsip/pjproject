@@ -72,7 +72,12 @@ PJ_BEGIN_DECL
  * Default value: 1 - serial bridge
  */
 #ifndef PJMEDIA_CONF_THREADS
-#   define PJMEDIA_CONF_THREADS  1
+#   if PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_USE_BRIDGE_MT_MODE
+#       define PJMEDIA_CONF_THREADS  4 /**< Default number of threads
+                                                 for conference bridge.       */
+#   else
+#       define PJMEDIA_CONF_THREADS  1
+#   endif
 #endif
 
 /**

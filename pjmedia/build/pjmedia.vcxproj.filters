@@ -37,6 +37,9 @@
     </ClCompile>
     <ClCompile Include="..\src\pjmedia\conference.c">
       <Filter>Source Files</Filter>
+    </ClCompile>      
+    <ClCompile Include="..\src\pjmedia\conf_thread.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pjmedia\converter.c">
       <Filter>Source Files</Filter>
@@ -240,6 +243,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pjmedia\av_sync.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjmedia\stream_imp_common.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

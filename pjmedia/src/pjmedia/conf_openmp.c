@@ -35,8 +35,10 @@
 #include <pj/stack.h>
 #endif
 
-#if (!defined(PJMEDIA_CONF_USE_SWITCH_BOARD) || PJMEDIA_CONF_USE_SWITCH_BOARD==0) && \
-    (defined(PJMEDIA_CONF_USE_OPENMP) && PJMEDIA_CONF_USE_OPENMP == 1)
+#define PJMEDIA_CONF_USE_OPENMP 3
+#define PJ_CONF_BRIDGE_MAX_THREADS 8
+
+#if PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_USE_OPENMP
 
 #ifndef PJ_CONF_BRIDGE_MAX_THREADS
 #   define PJ_CONF_BRIDGE_MAX_THREADS  1
@@ -980,9 +982,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool,
                                          pjmedia_conf **p_conf)
 {
     return pjmedia_conf_create(pool, 
-                               param.max_slots, param.sampling_rate, 
-                               param.channel_count, param.samples_per_frame, 
-                               param.bits_per_sample, param.options, p_conf);
+                               param->max_slots, param->sampling_rate, 
+                               param->channel_count, param->samples_per_frame, 
+                               param->bits_per_sample, param->options, p_conf);
 }
 
 /*
@@ -4318,4 +4320,4 @@ PJ_DEF(pj_status_t) pjmedia_conf_del_destroy_handler(
 }
 
 
-#endif  //PJMEDIA_CONF_USE_OPENMP
+#endif  /* PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_USE_OPENMP */
