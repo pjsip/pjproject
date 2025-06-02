@@ -716,8 +716,11 @@ static pj_status_t op_remove_port(pjmedia_vid_conf *vid_conf,
         p.disconnect_ports.src = slot;
         p.disconnect_ports.sink = cport->listener_slots[0];
         status = op_disconnect_ports(vid_conf, &p);
-        if (status != PJ_SUCCESS)
-            return status;
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (THIS_FILE, status,
+                          "Fail to stop transmission from port %d to port %d",
+                          slot, cport->listener_slots[0]));
+        }
     }
 
     /* Disconnect transmitters -> slot */
@@ -726,8 +729,11 @@ static pj_status_t op_remove_port(pjmedia_vid_conf *vid_conf,
         p.disconnect_ports.src = cport->transmitter_slots[0];
         p.disconnect_ports.sink = slot;
         status = op_disconnect_ports(vid_conf, &p);
-        if (status != PJ_SUCCESS)
-            return status;
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (THIS_FILE, status,
+                          "Fail to stop transmission from port %d to port %d",
+                          cport->listener_slots[0], slot));
+        }
     }
 
     /* Remove the port. */

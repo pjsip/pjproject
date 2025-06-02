@@ -287,7 +287,7 @@ PJ_DECL(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 PJ_DECL(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf );
 
 /**
- * Register the callback to be called when a port operation has been successfully
+ * Register the callback to be called when a port operation has been
  * completed.
  * 
  * The callback will most likely be called from media threads,

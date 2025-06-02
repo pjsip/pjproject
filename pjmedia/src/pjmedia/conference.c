@@ -889,7 +889,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 PJ_DEF(pj_status_t) pjmedia_conf_set_op_cb(pjmedia_conf *conf,
                                            pjmedia_conf_op_cb cb)
 {
-    PJ_ASSERT_RETURN(conf && cb, PJ_EINVAL);
+    PJ_ASSERT_RETURN(conf, PJ_EINVAL);
 
     pj_mutex_lock(conf->mutex);
     conf->cb = cb;
@@ -1408,7 +1408,6 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
     unsigned src_slot, sink_slot;
     struct conf_port *src_port = NULL, *dst_port = NULL;
     int i;
-    pj_status_t status = PJ_SUCCESS;
 
     /* Ports must be valid. */
     src_slot = prm->disconnect_ports.src;
@@ -1479,12 +1478,18 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
              */
             for (j=src_port->listener_cnt-1; j>=0; --j) {
                 if (src_port->listener_slots[j] == sink_slot) {
+                    pj_status_t status;
                     pjmedia_conf_op_param op_prm = {0};
+
                     op_prm.disconnect_ports.src = i;
                     op_prm.disconnect_ports.sink = sink_slot;
                     status = op_disconnect_ports(conf, &op_prm);
-                    if (status != PJ_SUCCESS)
-                        return status;
+                    if (status != PJ_SUCCESS) {
+                        PJ_PERROR(4, (THIS_FILE, status,
+                                      "Fail to stop transmission from port "
+                                      "%d to port %d", 
+                                      i, sink_slot));
+                    }
                     break;
                 }
             }
@@ -1502,18 +1507,24 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
          * will keep decreasing.
          */
         for (i=src_port->listener_cnt-1; i>=0; --i) {
+            pj_status_t status;
             pjmedia_conf_op_param op_prm = {0};
+
             op_prm.disconnect_ports.src = src_slot;
             op_prm.disconnect_ports.sink = src_port->listener_slots[i];
             status = op_disconnect_ports(conf, &op_prm);
-            if (status != PJ_SUCCESS)
-                return status;
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(4, (THIS_FILE, status,
+                              "Fail to stop transmission from port "
+                              "%d to port %d",
+                              src_slot, src_port->listener_slots[i]));
+            }
         }
 
     /* Invalid ports */
     } else {
-        status = PJ_EINVAL;
-        pj_assert(!"Invalid ports specified in conf disconnect");
+        PJ_ASSERT_RETURN(!"Invalid ports specified in conf disconnect", 
+                         PJ_EINVAL);
     }
 
     /* Pause sound dev when there is no connection, the pause should be done
@@ -1524,7 +1535,7 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
     if (conf->connect_cnt == 0) {
         pause_sound(conf);
     }
-    return status;
+    return PJ_SUCCESS;
 }
 
 /*
@@ -1715,9 +1726,21 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 
             /* Cancel op */
             if (cancel_op) {
+                pjmedia_conf_op_info op_info = { 0 };
+
+                op_info.op_type = cancel_op->type;
+                op_info.op_param = cancel_op->param;
+
                 pj_list_erase(cancel_op);
                 cancel_op->type = PJMEDIA_CONF_OP_UNKNOWN;
                 pj_list_push_back(conf->op_queue_free, cancel_op);
+
+                if (conf->cb) {
+                    pj_log_push_indent();
+                    op_info.status = PJ_ECANCELLED;
+                    (*conf->cb)(&op_info);
+                    pj_log_pop_indent();
+                }
             }
         }
 
@@ -1732,7 +1755,19 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 
             /* Remove it */
             prm.remove_port.port = port;
-            op_remove_port(conf, &prm);
+            status = op_remove_port(conf, &prm);
+
+            if (conf->cb) {
+                pjmedia_conf_op_info op_info = { 0 };
+
+                pj_log_push_indent();
+                op_info.op_type = PJMEDIA_CONF_OP_REMOVE_PORT;
+                op_info.status = status;
+                op_info.op_param = prm;
+
+                (*conf->cb)(&op_info);
+                pj_log_pop_indent();
+            }
 
             pj_log_pop_indent();
             return PJ_SUCCESS;
@@ -1788,17 +1823,21 @@ static pj_status_t op_remove_port(pjmedia_conf *conf,
     op_prm.disconnect_ports.src = INVALID_SLOT;
     op_prm.disconnect_ports.sink = port;
     status = op_disconnect_ports(conf, &op_prm);
-    if (status != PJ_SUCCESS)
-        return status;
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(4, (THIS_FILE, status,
+                      "Fail to stop transmission from any->%d", port));
+    }
 
     /* disconnect port from all sinks to which it is transmitting to */
     pj_bzero(&op_prm, sizeof(op_prm));
     op_prm.disconnect_ports.src = port;
     op_prm.disconnect_ports.sink = INVALID_SLOT;
     status = op_disconnect_ports(conf, &op_prm);
-    if (status != PJ_SUCCESS)
-        return status;
-
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(4, (THIS_FILE, status,
+                      "Fail to stop transmission from %d->any", port));
+    }
+    
     /* Destroy resample if this conf port has it. */
     if (conf_port->rx_resample) {
         pjmedia_resample_destroy(conf_port->rx_resample);
