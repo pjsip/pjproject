@@ -143,11 +143,16 @@ typedef struct op_entry {
 } op_entry;
 
 /* Prototypes of synchronized operation */
-static void op_add_port(pjmedia_vid_conf *vid_conf, const pjmedia_vid_conf_op_param *prm);
-static void op_remove_port(pjmedia_vid_conf *conf, const pjmedia_vid_conf_op_param *prm);
-static void op_connect_ports(pjmedia_vid_conf *conf, const pjmedia_vid_conf_op_param *prm);
-static void op_disconnect_ports(pjmedia_vid_conf *conf, const pjmedia_vid_conf_op_param *prm);
-static void op_update_port(pjmedia_vid_conf *conf, const pjmedia_vid_conf_op_param *prm);
+static pj_status_t op_add_port(pjmedia_vid_conf *vid_conf, 
+                               const pjmedia_vid_conf_op_param *prm);
+static pj_status_t op_remove_port(pjmedia_vid_conf *conf,
+                                  const pjmedia_vid_conf_op_param *prm);
+static pj_status_t op_connect_ports(pjmedia_vid_conf *conf,
+                                    const pjmedia_vid_conf_op_param *prm);
+static pj_status_t op_disconnect_ports(pjmedia_vid_conf *conf,
+                                       const pjmedia_vid_conf_op_param *prm);
+static pj_status_t op_update_port(pjmedia_vid_conf *conf,
+                                  const pjmedia_vid_conf_op_param *prm);
 
 static op_entry* get_free_op_entry(pjmedia_vid_conf *conf)
 {
@@ -173,6 +178,7 @@ static void handle_op_queue(pjmedia_vid_conf *conf)
         op_entry* op;
         pjmedia_vid_conf_op_type type;
         pjmedia_vid_conf_op_param param;
+        pj_status_t status;
 
         pj_mutex_lock(conf->mutex);
 
@@ -197,24 +203,36 @@ static void handle_op_queue(pjmedia_vid_conf *conf)
         /* Process op */
         switch (type) {
             case PJMEDIA_VID_CONF_OP_ADD_PORT:
-                op_add_port(conf, &param);
+                status = op_add_port(conf, &param);
                 break;
             case PJMEDIA_VID_CONF_OP_REMOVE_PORT:
-                op_remove_port(conf, &param);
+                status = op_remove_port(conf, &param);
                 break;
             case PJMEDIA_VID_CONF_OP_CONNECT_PORTS:
-                op_connect_ports(conf, &param);
+                status = op_connect_ports(conf, &param);
                 break;
             case PJMEDIA_VID_CONF_OP_DISCONNECT_PORTS:
-                op_disconnect_ports(conf, &param);
+                status = op_disconnect_ports(conf, &param);
                 break;
             case PJMEDIA_VID_CONF_OP_UPDATE_PORT:
-                op_update_port(conf, &param);
+                status = op_update_port(conf, &param);
                 break;
             default:
+                status = PJ_EINVALIDOP;
                 pj_assert(!"Invalid sync-op in video conference");
                 break;
         }
+        if (conf->cb) {
+            pjmedia_vid_conf_op_info info = { 0 };
+
+            pj_log_push_indent();
+            info.op_type = type;
+            info.status = status;
+            info.op_param = param;
+            (*conf->cb)(&info);
+            pj_log_pop_indent();
+        }
+
     }
 }
 
@@ -611,33 +629,25 @@ on_error:
 }
 
 
-static void op_add_port(pjmedia_vid_conf *vid_conf,
-                        const pjmedia_vid_conf_op_param *prm)
+static pj_status_t op_add_port(pjmedia_vid_conf *vid_conf,
+                               const pjmedia_vid_conf_op_param *prm)
 {
     unsigned slot = prm->add_port.port;
     vconf_port *cport = vid_conf->ports[slot];
 
     /* Port must be valid and flagged as new. */
     if (!cport || !cport->is_new)
-        return;
+        return PJ_EINVAL;
 
     /* Activate newly added port */
     cport->is_new = PJ_FALSE;
     ++vid_conf->port_cnt;
 
-    if (vid_conf->cb) {
-        pjmedia_vid_conf_op_info info = { 0 };
-
-        pj_log_push_indent();
-        info.op_type = PJMEDIA_VID_CONF_OP_ADD_PORT;
-        info.op_param = *prm;
-        (*vid_conf->cb)(&info);
-        pj_log_pop_indent();
-    }
-
     PJ_LOG(4,(THIS_FILE,"Added video port %d (%.*s), port count=%d",
               cport->idx, (int)cport->name.slen, cport->name.ptr,
               vid_conf->port_cnt));
+
+    return PJ_SUCCESS;
 }
 
 
@@ -691,11 +701,12 @@ on_return:
 }
 
 
-static void op_remove_port(pjmedia_vid_conf *vid_conf,
-                           const pjmedia_vid_conf_op_param *prm)
+static pj_status_t op_remove_port(pjmedia_vid_conf *vid_conf,
+                                  const pjmedia_vid_conf_op_param *prm)
 {
     unsigned slot = prm->remove_port.port;
     vconf_port *cport = vid_conf->ports[slot];
+    pj_status_t status;
 
     pj_assert(cport);
 
@@ -704,7 +715,9 @@ static void op_remove_port(pjmedia_vid_conf *vid_conf,
         pjmedia_vid_conf_op_param p;
         p.disconnect_ports.src = slot;
         p.disconnect_ports.sink = cport->listener_slots[0];
-        op_disconnect_ports(vid_conf, &p);
+        status = op_disconnect_ports(vid_conf, &p);
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
     /* Disconnect transmitters -> slot */
@@ -712,7 +725,9 @@ static void op_remove_port(pjmedia_vid_conf *vid_conf,
         pjmedia_vid_conf_op_param p;
         p.disconnect_ports.src = cport->transmitter_slots[0];
         p.disconnect_ports.sink = slot;
-        op_disconnect_ports(vid_conf, &p);
+        status = op_disconnect_ports(vid_conf, &p);
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
     /* Remove the port. */
@@ -722,16 +737,6 @@ static void op_remove_port(pjmedia_vid_conf *vid_conf,
 
     if (!cport->is_new)
         --vid_conf->port_cnt;
-
-    if (vid_conf->cb) {
-        pjmedia_vid_conf_op_info info = { 0 };
-
-        pj_log_push_indent();
-        info.op_type = PJMEDIA_VID_CONF_OP_REMOVE_PORT;
-        info.op_param = *prm;
-        (*vid_conf->cb)(&info);
-        pj_log_pop_indent();
-    }
 
     PJ_LOG(4,(THIS_FILE,"Removed video port %d (%.*s), port count=%d",
               slot, (int)cport->name.slen, cport->name.ptr,
@@ -744,14 +749,13 @@ static void op_remove_port(pjmedia_vid_conf *vid_conf,
     pj_pool_safe_release(&cport->pool);
 
     if (AUTO_STOP_CLOCK && vid_conf->connect_cnt == 0) {
-        pj_status_t status;
-
         /* Warning: will stuck if this is called from the clock thread */
         status = pjmedia_clock_stop(vid_conf->clock);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(3, (THIS_FILE, status, "Failed to stop clock"));
         }
     }
+    return PJ_SUCCESS;
 }
 
 /*
@@ -903,8 +907,8 @@ on_return:
     return status;
 }
 
-static void op_connect_ports(pjmedia_vid_conf *vid_conf,
-                             const pjmedia_vid_conf_op_param *prm)
+static pj_status_t op_connect_ports(pjmedia_vid_conf *vid_conf,
+                                    const pjmedia_vid_conf_op_param *prm)
 {
     unsigned src_slot, sink_slot;
     vconf_port *src_port, *dst_port;
@@ -918,10 +922,21 @@ static void op_connect_ports(pjmedia_vid_conf *vid_conf,
     pj_assert(src_port && src_port->port && src_port->port->get_frame);
     pj_assert(dst_port && dst_port->port && dst_port->port->put_frame);
 
+    if (!src_port || !dst_port) {
+        PJ_PERROR(3, (THIS_FILE, PJ_EINVAL,
+                      "Failed connecting %d->%d, make sure video ports are valid",
+                      src_slot, sink_slot));
+        return PJ_EINVAL;
+    }
+
     /* Check if connection has been made */
     for (i=0; i<src_port->listener_cnt; ++i) {
-        if (src_port->listener_slots[i] == sink_slot)
-            return;
+        if (src_port->listener_slots[i] == sink_slot) {
+            PJ_LOG(3, (THIS_FILE, "Video ports connection %d->%d already exists",
+                       src_slot, sink_slot));
+            return PJ_EEXISTS;
+
+        }
     }
 
     /* Connect ports */
@@ -933,16 +948,6 @@ static void op_connect_ports(pjmedia_vid_conf *vid_conf,
 
     update_render_state(vid_conf, dst_port);
 
-    if (vid_conf->cb) {
-        pjmedia_vid_conf_op_info info = { 0 };
-
-        pj_log_push_indent();
-        info.op_type = PJMEDIA_VID_CONF_OP_CONNECT_PORTS;
-        info.op_param = *prm;
-        (*vid_conf->cb)(&info);
-        pj_log_pop_indent();
-    }
-
     PJ_LOG(4,(THIS_FILE,"Port %d (%.*s) transmitting to port %d (%.*s)",
               src_slot,
               (int)src_port->name.slen,
@@ -950,6 +955,8 @@ static void op_connect_ports(pjmedia_vid_conf *vid_conf,
               sink_slot,
               (int)dst_port->name.slen,
               dst_port->name.ptr));
+
+    return PJ_SUCCESS;
 }
 
 /*
@@ -1012,8 +1019,8 @@ on_return:
     return status;
 }
 
-static void op_disconnect_ports(pjmedia_vid_conf *vid_conf,
-                                const pjmedia_vid_conf_op_param *prm)
+static pj_status_t op_disconnect_ports(pjmedia_vid_conf *vid_conf,
+                                       const pjmedia_vid_conf_op_param *prm)
 {
     unsigned src_slot, sink_slot;
     vconf_port *src_port, *dst_port;
@@ -1037,7 +1044,7 @@ static void op_disconnect_ports(pjmedia_vid_conf *vid_conf,
     }
 
     if (i == src_port->listener_cnt || j == dst_port->transmitter_cnt)
-        return;
+        return PJ_EINVAL;
 
     pj_assert(src_port->listener_cnt > 0 && 
               src_port->listener_cnt < vid_conf->opt.max_slot_cnt);
@@ -1072,16 +1079,6 @@ static void op_disconnect_ports(pjmedia_vid_conf *vid_conf,
         }
     }
 
-    if (vid_conf->cb) {
-        pjmedia_vid_conf_op_info info = {0};
-
-        pj_log_push_indent();
-        info.op_type = PJMEDIA_VID_CONF_OP_DISCONNECT_PORTS;
-        info.op_param = *prm;
-        (*vid_conf->cb)(&info);
-        pj_log_pop_indent();
-    }
-
     PJ_LOG(4,(THIS_FILE,
               "Port %d (%.*s) stop transmitting to port %d (%.*s)",
               src_slot,
@@ -1090,6 +1087,8 @@ static void op_disconnect_ports(pjmedia_vid_conf *vid_conf,
               sink_slot,
               (int)dst_port->name.slen,
               dst_port->name.ptr));
+
+    return PJ_SUCCESS;
 }
 
 
@@ -1632,8 +1631,8 @@ on_return:
 }
 
 
-static void op_update_port(pjmedia_vid_conf *vid_conf,
-                           const pjmedia_vid_conf_op_param *prm)
+static pj_status_t op_update_port(pjmedia_vid_conf *vid_conf,
+                                  const pjmedia_vid_conf_op_param *prm)
 {
     unsigned slot = prm->update_port.port;
     vconf_port *cport = vid_conf->ports[slot];
@@ -1686,7 +1685,7 @@ static void op_update_port(pjmedia_vid_conf *vid_conf,
             PJ_LOG(1,(THIS_FILE, "pjmedia_vid_conf_update_port(): "
                                  "unrecognized format %04X",
                                  new_fmt->id));
-            return;
+            return PJ_EINVAL;
         }
 
         pj_bzero(&vafp, sizeof(vafp));
@@ -1697,7 +1696,7 @@ static void op_update_port(pjmedia_vid_conf *vid_conf,
                          "pjmedia_vid_conf_update_port(): "
                          "Failed to apply format %04X",
                         new_fmt->id));
-            return;
+            return status;
         }
         if (cport->port->put_frame) {
             if (cport->put_buf_size < vafp.framebytes) {
@@ -1749,17 +1748,9 @@ static void op_update_port(pjmedia_vid_conf *vid_conf,
     /* Update cport format info */
     cport->format = *new_fmt;
 
-    if (vid_conf->cb) {
-        pjmedia_vid_conf_op_info info = { 0 };
-
-        pj_log_push_indent();
-        info.op_type = PJMEDIA_VID_CONF_OP_UPDATE_PORT;
-        info.op_param = *prm;
-        (*vid_conf->cb)(&info);
-        pj_log_pop_indent();
-    }
-
     PJ_LOG(4,(THIS_FILE, "Video port %d updated", slot));
+
+    return PJ_SUCCESS;
 }
 
 

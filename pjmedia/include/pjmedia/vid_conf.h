@@ -78,6 +78,7 @@ typedef enum pjmedia_vid_conf_op_type
      * The update port operation.
      */
     PJMEDIA_VID_CONF_OP_UPDATE_PORT
+
 } pjmedia_vid_conf_op_type;
 
 /**
@@ -89,37 +90,43 @@ typedef union pjmedia_vid_conf_op_param
      * The information for adding port operation.
      */
     struct {
-        unsigned port;
+        unsigned port;      /**< The port id.                           */
     } add_port;
 
     /**
      * The information for removing port operation.
      */
     struct {
-        unsigned port;
+        unsigned port;      /**< The port id.                           */
     } remove_port;
 
     /**
      * The information for connecting port operation.
      */
     struct {
-        unsigned src;
-        unsigned sink;
+        unsigned src;       /**< The source port id. For multiple port
+                                 operation, this will be set to -1.     */
+        unsigned sink;      /**< The destination port id. For multiple
+                                 port operation, this will be set
+                                 to -1.                                 */
     } connect_ports;
 
     /**
      * The information for disconnecting port operation.
      */
     struct {
-        unsigned src;
-        unsigned sink;
+        unsigned src;       /**< The source port id. For multiple port
+                                 operation, this will be set to -1.     */
+        unsigned sink;      /**< The destination port id. For multiple
+                                 port operation, this will be set
+                                 to -1.                                 */
     } disconnect_ports;
 
     /**
      * The information for updating port operation.
      */
     struct {
-        unsigned port;
+        unsigned port;      /**< The port id.                           */
     } update_port;
 
 } pjmedia_vid_conf_op_param;
@@ -135,9 +142,15 @@ typedef struct pjmedia_vid_conf_op_info
     pjmedia_vid_conf_op_type    op_type;
 
     /**
+     * The operation return status.
+     */
+    pj_status_t                 status;
+
+    /**
      * The operation data.
      */
     pjmedia_vid_conf_op_param   op_param;
+
 } pjmedia_vid_conf_op_info;
 
 /**
@@ -277,7 +290,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf);
  * succesfully completed.
  * 
  * The callback will most likely be called from media threads,
- * thus application must not perform heavy processing in this callback.
+ * thus application must not perform long/blocking processing in this callback.
  *
  * @param vid_conf      The video conference.
  * @param cb            Callback to be called.

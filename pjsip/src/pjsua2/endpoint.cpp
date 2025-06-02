@@ -244,83 +244,59 @@ void IpChangeParam::fromPj(const pjsua_ip_change_param &param)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void OnConfOpCompletedParam::fromPj(const pjmedia_conf_op_info& info)
+void OnAudioMediaOpCompletedParam::fromPj(const pjmedia_conf_op_info &info)
 {
     opType = info.op_type;
     switch (opType) {
     case PJMEDIA_CONF_OP_ADD_PORT:
     {
-        AudioMediaHelper am;
-        am.setPortId(info.op_param.add_port.port);
-        opData.push_back(PJSUA2_MOVE(am));
+        opData.push_back(info.op_param.add_port.port);
     }
     break;
     case PJMEDIA_CONF_OP_REMOVE_PORT:
     {
-        AudioMediaHelper am;
-        am.setPortId(info.op_param.remove_port.port);
-        opData.push_back(PJSUA2_MOVE(am));
+        opData.push_back(info.op_param.remove_port.port);
     }
     break;
     case PJMEDIA_CONF_OP_CONNECT_PORTS:
     {
-        AudioMediaHelper src_am;
-        AudioMediaHelper dst_am;
-        src_am.setPortId(info.op_param.connect_ports.src);
-        opData.push_back(PJSUA2_MOVE(src_am));
-        dst_am.setPortId(info.op_param.connect_ports.sink);
-        opData.push_back(PJSUA2_MOVE(dst_am));
+        opData.push_back(info.op_param.connect_ports.src);
+        opData.push_back(info.op_param.connect_ports.sink);
     }
     break;
     case PJMEDIA_CONF_OP_DISCONNECT_PORTS:
     {
-        AudioMediaHelper src_am;
-        AudioMediaHelper dst_am;
-        src_am.setPortId(info.op_param.disconnect_ports.src);
-        opData.push_back(PJSUA2_MOVE(src_am));
-        dst_am.setPortId(info.op_param.disconnect_ports.sink);
-        opData.push_back(PJSUA2_MOVE(dst_am));
+        opData.push_back(info.op_param.disconnect_ports.src);
+        opData.push_back(info.op_param.disconnect_ports.sink);
     }
     break;
     }
 }
 
-void OnVidConfOpCompletedParam::fromPj(const pjmedia_vid_conf_op_info& info)
+void OnVideoMediaOpCompletedParam::fromPj(const pjmedia_vid_conf_op_info &info)
 {
     opType = info.op_type;
     switch (opType) {
     case PJMEDIA_CONF_OP_ADD_PORT:
     {
-        VideoMediaHelper am;
-        am.setPortId(info.op_param.add_port.port);
-        opData.push_back(PJSUA2_MOVE(am));
+        opData.push_back(info.op_param.add_port.port);
     }
     break;
     case PJMEDIA_CONF_OP_REMOVE_PORT:
     {
-        VideoMediaHelper am;
-        am.setPortId(info.op_param.remove_port.port);
-        opData.push_back(PJSUA2_MOVE(am));
+        opData.push_back(info.op_param.remove_port.port);
     }
     break;
     case PJMEDIA_CONF_OP_CONNECT_PORTS:
     {
-        VideoMediaHelper src_am;
-        VideoMediaHelper dst_am;
-        src_am.setPortId(info.op_param.connect_ports.src);
-        opData.push_back(PJSUA2_MOVE(src_am));
-        dst_am.setPortId(info.op_param.connect_ports.sink);
-        opData.push_back(PJSUA2_MOVE(dst_am));
+        opData.push_back(info.op_param.connect_ports.src);
+        opData.push_back(info.op_param.connect_ports.sink);
     }
     break;
     case PJMEDIA_CONF_OP_DISCONNECT_PORTS:
     {
-        VideoMediaHelper src_am;
-        VideoMediaHelper dst_am;
-        src_am.setPortId(info.op_param.disconnect_ports.src);
-        opData.push_back(PJSUA2_MOVE(src_am));
-        dst_am.setPortId(info.op_param.disconnect_ports.sink);
-        opData.push_back(PJSUA2_MOVE(dst_am));
+        opData.push_back(info.op_param.disconnect_ports.src);
+        opData.push_back(info.op_param.disconnect_ports.sink);
     }
     break;
     }
@@ -2922,16 +2898,16 @@ void Endpoint::on_rejected_incoming_call(
 
 void Endpoint::on_conf_op_completed(const pjmedia_conf_op_info *info)
 {
-    OnConfOpCompletedParam prm;
+    OnAudioMediaOpCompletedParam prm;
     prm.fromPj(*info);
 
-    Endpoint::instance().onConfOpCompleted(prm);
+    Endpoint::instance().onAudioMediaOpCompleted(prm);
 }
 
 void Endpoint::on_vid_conf_op_completed(const pjmedia_vid_conf_op_info *info)
 {
-    OnVidConfOpCompletedParam prm;
+    OnVideoMediaOpCompletedParam prm;
     prm.fromPj(*info);
 
-    Endpoint::instance().onVidConfOpCompleted(prm);
+    Endpoint::instance().onVideoMediaOpCompleted(prm);
 }

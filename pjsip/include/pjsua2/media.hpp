@@ -297,6 +297,11 @@ public:
      * If bidirectional media flow is desired, application needs to call
      * this method twice, with the second one called from the opposite source
      * media.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
+
      *
      * @param sink              The destination Media.
      */
@@ -323,6 +328,10 @@ public:
      * If bidirectional media flow is desired, application needs to call
      * this method twice, with the second one called from the opposite source
      * media.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * @param sink              The destination Media.
      * @param param             The parameter.
@@ -333,6 +342,10 @@ public:
 
     /**
      *  Stop media flow to destination/sink port.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * @param sink              The destination media.
      *
@@ -413,6 +426,10 @@ protected:
      * This method needs to be called by descendants of this class to register
      * the media port created to the conference bridge and Endpoint's
      * media list.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * param port  The media port to be registered to the conference bridge.
      *
@@ -423,6 +440,10 @@ protected:
      * This method needs to be called by descendants of this class to register
      * the media port created to the conference bridge and Endpoint's
      * media list.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * param port  The media port to be registered to the conference bridge.
      * param pool  The memory pool.
@@ -436,6 +457,10 @@ protected:
      * the media port from the conference bridge and Endpoint's media list.
      * Descendant should only call this method if it has registered the media
      * with the previous call to registerMediaPort().
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
      */
     void unregisterMediaPort() PJSUA2_THROW(Error);
 
@@ -1780,6 +1805,10 @@ public:
      * If bidirectional media flow is desired, application needs to call
      * this method twice, with the second one called from the opposite source
      * media.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onVideoMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * @param sink              The destination Media.
      * @param param             The parameter.
@@ -1791,6 +1820,10 @@ public:
     /**
      *  Stop media flow to destination/sink port.
      *
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onVideoMediaOpCompleted() to receive notification upon
+     * completion.
+     * 
      * @param sink              The destination media.
      *
      */
@@ -1803,6 +1836,10 @@ public:
      * has changed, video conference needs to be informed to update its
      * internal states.
      *
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onVideoMediaOpCompleted() to receive notification upon
+     * completion.
+     * 
      */
     void update() const PJSUA2_THROW(Error);
 
@@ -1831,6 +1868,10 @@ protected:
      * This method needs to be called by descendants of this class to register
      * the media port created to the conference bridge and Endpoint's
      * media list.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onVideoMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * param port  The media port to be registered to the conference bridge.
      * param pool  The memory pool.
@@ -1842,6 +1883,11 @@ protected:
      * the media port from the conference bridge and Endpoint's media list.
      * Descendant should only call this method if it has registered the media
      * with the previous call to registerMediaPort().
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onVideoMediaOpCompleted() to receive notification upon
+     * completion.
+     * 
      */
     void unregisterMediaPort();
 };

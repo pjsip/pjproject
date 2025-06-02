@@ -117,7 +117,8 @@ typedef enum pjmedia_conf_op_type
     /**
      * The disconnect ports (stop transmit) operation.
      */
-    PJMEDIA_CONF_OP_DISCONNECT_PORTS,
+    PJMEDIA_CONF_OP_DISCONNECT_PORTS
+
 } pjmedia_conf_op_type;
 
 /**
@@ -129,31 +130,37 @@ typedef union pjmedia_conf_op_param
      * The information for adding port operation.
      */
     struct {
-        unsigned port;
+        unsigned port;      /**< The port id.                           */
     } add_port;
 
     /**
      * The information for removing port operation.
      */
     struct {
-        unsigned port;
+        unsigned port;      /**< The port id.                           */
     } remove_port;
 
     /**
      * The information for connecting port operation.
      */
     struct {
-        unsigned src;
-        unsigned sink;
-        int adj_level;
+        unsigned src;       /**< The source port id. For multiple port 
+                                 operation, this will be set to -1.     */
+        unsigned sink;      /**< The destination port id. For multiple 
+                                 port operation, this will be set 
+                                 to -1.                                 */
+        int adj_level;      /**< The adjustment level.                  */
     } connect_ports;
 
     /**
      * The information for disconnecting port operation.
      */
     struct {
-        unsigned src;
-        unsigned sink;
+        unsigned src;       /**< The source port id. For multiple port
+                                 operation, this will be set to -1.     */
+        unsigned sink;      /**< The destination port id. For multiple
+                                 port operation, this will be set
+                                 to -1.                                 */
     } disconnect_ports;
 
 } pjmedia_conf_op_param;
@@ -169,9 +176,15 @@ typedef struct pjmedia_conf_op_info
     pjmedia_conf_op_type    op_type;
 
     /**
+     * The operation return status.
+     */
+    pj_status_t             status;
+
+    /**
      * The operation data.
      */
     pjmedia_conf_op_param   op_param;
+
 } pjmedia_conf_op_info;
 
 /**
@@ -278,9 +291,9 @@ PJ_DECL(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf );
  * completed.
  * 
  * The callback will most likely be called from media threads,
- * thus application must not perform heavy processing in this callback.
+ * thus application must not perform long/blocking processing in this callback.
  * 
- * @param vid_conf      The video conference.
+ * @param conf          The conference bridge.
  * @param cb            Callback to be called.
  *
  * @return              PJ_SUCCESS on success.

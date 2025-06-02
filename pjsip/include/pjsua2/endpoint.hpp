@@ -483,21 +483,32 @@ struct OnRejectedIncomingCallParam
 };
 
 /**
- *  Parameter of Endpoint::onConfOpCompleted() callback.
+ *  Parameter of Endpoint::onAudioMediaOpCompleted() callback.
  */
-struct OnConfOpCompletedParam {
+struct OnAudioMediaOpCompletedParam {
     /**
-     * The Operation type.
+     * The operation type.
      */
     pjmedia_conf_op_type opType;
 
     /**
-     * Represents the AudioMedia associated with the operation.
-     * For operations involving multiple AudioMedia instances
-     * (e.g., startTransmit/stopTransmit), the first AudioMedia serves
-     * as the source.
+     * The operation status.
      */
-    AudioMediaVector2    opData;
+    pj_status_t         status;
+
+    /**
+     * Represents the AudioMedia's port id associated with the operation.
+     * The first port id will serves as the source port id for operations
+     * involving destination AudioMedia. (e.g.: startTransmit/stopTransmit).
+     * 
+     * The port id will be set to -1, to represents multiple source/destination
+     * port.
+     * 
+     * App can use \a AudioMediaHelper to get the AudioMedia instance based on
+     * the port id.
+     */
+    UnsignedVector    opData;
+
 public:
     /**
      * Convert from pjsip.
@@ -506,21 +517,33 @@ public:
 };
 
 /**
- *  Parameter of Endpoint::onVidConfOpCompleted() callback.
+ *  Parameter of Endpoint::onVideoMediaOpCompleted() callback.
  */
-struct OnVidConfOpCompletedParam {
+struct OnVideoMediaOpCompletedParam {
     /**
      * The Operation type.
      */
     pjmedia_vid_conf_op_type opType;
 
     /**
-     * Represents the VideoMedia associated with the operation.
-     * For operations involving multiple VideoMedia instances
+     * The operation status.
+     */
+    pj_status_t         status;
+
+    /**
+     * Represents the VideoMedia's port id associated with the operation.
+     * For operations involving source and destination VideoMedia instances
      * (e.g., startTransmit/stopTransmit), the first VideoMedia serves
      * as the source.
+     * 
+     * The port id will be set to -1, to represents multiple source/destination
+     * port.
+     *
+     * App can use \a VIdeoMediaHelper to get the VideoMedia instance based on
+     * the port id.
      */
-    VideoMediaVector         opData;
+    UnsignedVector         opData;
+
 public:
     /**
      * Convert from pjsip.
@@ -2038,10 +2061,26 @@ public:
     virtual void onRejectedIncomingCall(OnRejectedIncomingCallParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
-    virtual void onConfOpCompleted(OnConfOpCompletedParam &prm)
+    /**
+     * This callback will be invoked when an AudioMedia operation has been
+     * completed. This callback will most likely be called from media threads,
+     * thus application must not perform long/blocking processing in this
+     * callback.
+     * 
+     * @param prm       Callback parameters.
+     */
+    virtual void onAudioMediaOpCompleted(OnAudioMediaOpCompletedParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
-    virtual void onVidConfOpCompleted(OnVidConfOpCompletedParam &prm)
+    /**
+     * This callback will be invoked when a VideoMedia operation has been
+     * completed. This callback will most likely be called from media threads,
+     * thus application must not perform long/blocking processing in this
+     * callback.
+     * 
+     * @param prm       Callback parameters.
+     */
+    virtual void onVideoMediaOpCompleted(OnVideoMediaOpCompletedParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
 private:
