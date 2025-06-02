@@ -247,6 +247,7 @@ void IpChangeParam::fromPj(const pjsua_ip_change_param &param)
 void OnAudioMediaOpCompletedParam::fromPj(const pjmedia_conf_op_info &info)
 {
     opType = info.op_type;
+    status = info.status;
     switch (opType) {
     case PJMEDIA_CONF_OP_ADD_PORT:
     {
@@ -276,6 +277,7 @@ void OnAudioMediaOpCompletedParam::fromPj(const pjmedia_conf_op_info &info)
 void OnVideoMediaOpCompletedParam::fromPj(const pjmedia_vid_conf_op_info &info)
 {
     opType = info.op_type;
+    status = info.status;
     switch (opType) {
     case PJMEDIA_CONF_OP_ADD_PORT:
     {
