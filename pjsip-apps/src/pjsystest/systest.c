@@ -594,10 +594,10 @@ static void systest_play_wav_impl(unsigned path_cnt, const char *paths[],
     status = PJ_SUCCESS;
 
 on_return:
-    if (play_id1 != -1)
+    if (play_id1 != PJSUA_INVALID_ID)
         pjsua_player_destroy(play_id1);
 
-    if (play_id2 != -1)
+    if (play_id2 != PJSUA_INVALID_ID)
         pjsua_player_destroy(play_id2);
 
     if (status != PJ_SUCCESS) {
