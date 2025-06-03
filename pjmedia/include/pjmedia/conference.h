@@ -144,11 +144,8 @@ typedef union pjmedia_conf_op_param
      * The information for connecting port operation.
      */
     struct {
-        unsigned src;       /**< The source port id. For multiple port 
-                                 operation, this will be set to -1.     */
-        unsigned sink;      /**< The destination port id. For multiple 
-                                 port operation, this will be set 
-                                 to -1.                                 */
+        unsigned src;       /**< The source port id.                    */
+        unsigned sink;      /**< The destination port id.               */
         int adj_level;      /**< The adjustment level.                  */
     } connect_ports;
 

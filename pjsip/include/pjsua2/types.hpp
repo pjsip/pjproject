@@ -52,9 +52,6 @@ typedef std::vector<std::string> StringVector;
 /** Array of integers */
 typedef std::vector<int> IntVector;
 
-/** Array of unsigned integers */
-typedef std::vector<unsigned> UnsignedVector;
-
 /** Array of bytes */
 typedef std::vector<unsigned char> ByteVector;
 

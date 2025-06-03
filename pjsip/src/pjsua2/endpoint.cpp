@@ -251,24 +251,26 @@ void OnAudioMediaOpCompletedParam::fromPj(const pjmedia_conf_op_info &info)
     switch (opType) {
     case PJMEDIA_CONF_OP_ADD_PORT:
     {
-        opData.push_back(info.op_param.add_port.port);
+        opParam.addInfo.mediaId = info.op_param.add_port.port;
     }
     break;
     case PJMEDIA_CONF_OP_REMOVE_PORT:
     {
-        opData.push_back(info.op_param.remove_port.port);
+        opParam.removeInfo.mediaId = info.op_param.remove_port.port;
     }
     break;
     case PJMEDIA_CONF_OP_CONNECT_PORTS:
     {
-        opData.push_back(info.op_param.connect_ports.src);
-        opData.push_back(info.op_param.connect_ports.sink);
+        opParam.connectInfo.mediaId = info.op_param.connect_ports.src;
+        opParam.connectInfo.targetMediaId = info.op_param.connect_ports.sink;
+        opParam.connectInfo.adjLevel = info.op_param.connect_ports.adj_level;
     }
     break;
     case PJMEDIA_CONF_OP_DISCONNECT_PORTS:
     {
-        opData.push_back(info.op_param.disconnect_ports.src);
-        opData.push_back(info.op_param.disconnect_ports.sink);
+        opParam.disconnectInfo.mediaId = info.op_param.disconnect_ports.src;
+        opParam.disconnectInfo.targetMediaId = 
+                                            info.op_param.disconnect_ports.sink;
     }
     break;
     }
@@ -279,26 +281,32 @@ void OnVideoMediaOpCompletedParam::fromPj(const pjmedia_vid_conf_op_info &info)
     opType = info.op_type;
     status = info.status;
     switch (opType) {
-    case PJMEDIA_CONF_OP_ADD_PORT:
+    case PJMEDIA_VID_CONF_OP_ADD_PORT:
     {
-        opData.push_back(info.op_param.add_port.port);
+        opParam.addInfo.mediaId = info.op_param.add_port.port;
     }
     break;
-    case PJMEDIA_CONF_OP_REMOVE_PORT:
+    case PJMEDIA_VID_CONF_OP_REMOVE_PORT:
     {
-        opData.push_back(info.op_param.remove_port.port);
+        opParam.removeInfo.mediaId = info.op_param.remove_port.port;
     }
     break;
-    case PJMEDIA_CONF_OP_CONNECT_PORTS:
+    case PJMEDIA_VID_CONF_OP_CONNECT_PORTS:
     {
-        opData.push_back(info.op_param.connect_ports.src);
-        opData.push_back(info.op_param.connect_ports.sink);
+        opParam.connectInfo.mediaId = info.op_param.connect_ports.src;
+        opParam.connectInfo.targetMediaId = info.op_param.connect_ports.sink;
     }
     break;
-    case PJMEDIA_CONF_OP_DISCONNECT_PORTS:
+    case PJMEDIA_VID_CONF_OP_DISCONNECT_PORTS:
     {
-        opData.push_back(info.op_param.disconnect_ports.src);
-        opData.push_back(info.op_param.disconnect_ports.sink);
+        opParam.disconnectInfo.mediaId = info.op_param.disconnect_ports.src;
+        opParam.disconnectInfo.targetMediaId =
+                                            info.op_param.disconnect_ports.sink;
+    }
+    break;
+    case PJMEDIA_VID_CONF_OP_UPDATE_PORT:
+    {
+        opParam.updateInfo.mediaId = info.op_param.update_port.port;
     }
     break;
     }
