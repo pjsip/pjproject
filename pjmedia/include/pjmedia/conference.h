@@ -37,7 +37,8 @@
  * route the audio flow and mix the audio signal when required.
  *
  * Some more information about the media flow when conference bridge is
- * used is described in http://www.pjsip.org/trac/wiki/media-flow .
+ * used is described in
+ * https://docs.pjsip.org/en/latest/specific-guides/media/audio_flow.html .
  */
 
 PJ_BEGIN_DECL
