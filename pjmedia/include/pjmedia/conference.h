@@ -90,7 +90,7 @@ typedef struct pjmedia_conf_port_info
 } pjmedia_conf_port_info;
 
 /** 
- * Synchronized operation type enumeration.
+ * Conference operation type enumeration.
  */
 typedef enum pjmedia_conf_op_type
 {
@@ -122,7 +122,7 @@ typedef enum pjmedia_conf_op_type
 } pjmedia_conf_op_type;
 
 /**
- * Synchronized operation parameter.
+ * Conference operation parameter.
  */
 typedef union pjmedia_conf_op_param
 {
@@ -188,10 +188,10 @@ typedef struct pjmedia_conf_op_info
 } pjmedia_conf_op_info;
 
 /**
-  * The callback type to be called upon the successful completion 
-  * of a conference port operation.
+  * The callback type to be called upon the completion of a conference 
+  * port operation.
   *
-  * @param param      The conference op callback param.
+  * @param info      The conference op callback param.
   *
   */
 typedef void (*pjmedia_conf_op_cb)(const pjmedia_conf_op_info *info);
@@ -294,7 +294,8 @@ PJ_DECL(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf );
  * thus application must not perform long/blocking processing in this callback.
  * 
  * @param conf          The conference bridge.
- * @param cb            Callback to be called.
+ * @param cb            Callback to be called. Set this to NULL to unregister
+ *                      the callback.
  *
  * @return              PJ_SUCCESS on success.
  */
@@ -347,8 +348,7 @@ PJ_DECL(pj_status_t) pjmedia_conf_set_port0_name(pjmedia_conf *conf,
  * port, allowing media to flow to/from the port.
  * 
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_conf_set_op_cb() to receive notification upon succesfull
- * completion.
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
  *
  * @param conf          The conference bridge.
  * @param pool          Pool to allocate buffers for this port.
@@ -451,8 +451,7 @@ PJ_DECL(pj_status_t) pjmedia_conf_configure_port( pjmedia_conf *conf,
  * pjmedia_conf_adjust_tx_level().
  * 
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_conf_set_op_cb() to receive notification upon succesfull
- * completion.
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
  *
  * @param conf          The conference bridge.
  * @param src_slot      Source slot.
@@ -479,8 +478,7 @@ PJ_DECL(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
  * Note that the operation will be done asynchronously, so application
  * should not assume that the port will no longer receive/send audio frame
  * after this function has returned. Use the callback set from
- * #pjmedia_conf_set_op_cb() to receive notification upon succesfull
- * completion.
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
  *
  * @param conf          The conference bridge.
  * @param src_slot      Source slot.
@@ -499,8 +497,7 @@ PJ_DECL(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
  * Note that the operation will be done asynchronously, so application
  * should not assume that the port will no longer receive/send audio frame
  * after this function has returned. Use the callback set from
- * #pjmedia_conf_set_op_cb() to receive notification upon succesfull
- * completion.
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
  *
  * @param conf          The conference bridge.
  * @param sink_slot     Sink slot.
@@ -518,8 +515,7 @@ pjmedia_conf_disconnect_port_from_sources( pjmedia_conf *conf,
  * Note that the operation will be done asynchronously, so application
  * should not assume that the port will no longer receive/send audio frame
  * after this function has returned. Use the callback set from
- * #pjmedia_conf_set_op_cb() to receive notification upon succesfull
- * completion.
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
  *
  * @param conf          The conference bridge.
  * @param src_slot      Source slot.
@@ -564,8 +560,7 @@ PJ_DECL(unsigned) pjmedia_conf_get_connect_count(pjmedia_conf *conf);
  * can schedule the resource release via #pjmedia_conf_add_destroy_handler().
  * 
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_conf_set_op_cb() to receive notification upon succesfull
- * completion.
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
  *
  * @param conf          The conference bridge.
  * @param slot          The port index to be removed.

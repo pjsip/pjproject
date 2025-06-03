@@ -1537,7 +1537,6 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_snd_dev_operation = &on_snd_dev_operation;
     app_config.cfg.cb.on_call_media_event = &on_call_media_event;
     app_config.cfg.cb.on_ip_change_progress = &on_ip_change_progress;
-
 #ifdef TRANSPORT_ADAPTER_SAMPLE
     app_config.cfg.cb.on_create_media_transport = &on_create_media_transport;
 #endif

@@ -45,7 +45,7 @@ PJ_BEGIN_DECL
 typedef struct pjmedia_vid_conf pjmedia_vid_conf;
 
 /**
- * Synchronized operation type enumeration.
+ * Video conference operation type enumeration.
  */
 typedef enum pjmedia_vid_conf_op_type
 {
@@ -82,7 +82,7 @@ typedef enum pjmedia_vid_conf_op_type
 } pjmedia_vid_conf_op_type;
 
 /**
- * Synchronized operation parameter.
+ * Video conference operation parameter.
  */
 typedef union pjmedia_vid_conf_op_param
 {
@@ -304,8 +304,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_set_op_cb(pjmedia_vid_conf *vid_conf,
  * Add a media port to the video conference bridge.
  *
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_vid_conf_set_op_cb() to receive notification upon succesfull
- * completion.
+ * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
  * 
  * @param vid_conf      The video conference bridge.
  * @param pool          The memory pool, the brige will create new pool
@@ -333,8 +332,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_add_port(pjmedia_vid_conf *vid_conf,
  * Remove a media port from the video conference bridge.
  * 
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_vid_conf_set_op_cb() to receive notification upon succesfull
- * completion.
+ * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
  *
  * @param vid_conf      The video conference bridge.
  * @param slot          The media port's slot index to be removed.
@@ -393,8 +391,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_get_port_info(
  * the specified sink slot.
  * 
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_vid_conf_set_op_cb() to receive notification upon succesfull
- * completion.
+ * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
  *
  * @param vid_conf      The video conference bridge.
  * @param src_slot      Source slot.
@@ -416,8 +413,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_connect_port(
  * the specified sink slot.
  * 
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_vid_conf_set_op_cb() to receive notification upon succesfull
- * completion.
+ * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
  *
  * @param vid_conf      The video conference bridge.
  * @param src_slot      Source slot.
@@ -439,8 +435,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_disconnect_port(
  * internal states.
  * 
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_vid_conf_set_op_cb() to receive notification upon succesfull
- * completion.
+ * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
  *
  * @param vid_conf      The video conference bridge.
  * @param slot          The media port's slot index to be updated.
