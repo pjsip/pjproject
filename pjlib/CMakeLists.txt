@@ -1,0 +1,551 @@
+# ##############################################################################
+# Options
+
+include(CMakeDependentOption)
+
+# Floating point support
+option(PJLIB_WITH_FLOATING_POINT "Enable floating point support" ON)
+
+# I/O queue backend
+pj_option(PJLIB_WITH_IOQUEUE "I/O Queue implementation backend"
+  DEFAULT select
+  ALLOWED_VALUES select kqueue epoll iocp
+)
+
+# Use `libuuid` for `UUID` handling implementation
+cmake_dependent_option(PJLIB_WITH_LIBUUID
+  "Enable libuuid (Linux only)" ON
+  "LINUX" OFF
+)
+
+# Enable SSL support with the selected implementation backend
+pj_option(PJLIB_WITH_SSL "Enable SSL support"
+  DEFAULT openssl
+  ALLOWED_VALUES openssl gnutls mbedtls darwin apple schannel
+)
+
+# ##############################################################################
+# Target
+
+add_library(pjlib
+  src/pj/activesock.c
+  src/pj/addr_resolv_sock.c
+  src/pj/array.c
+  src/pj/atomic_queue.cpp
+  src/pj/atomic_slist.c
+  src/pj/config.c
+  src/pj/ctype.c
+  src/pj/errno.c
+  src/pj/except.c
+  src/pj/fifobuf.c
+  src/pj/guid.c
+  src/pj/hash.c
+  src/pj/ioqueue_dummy.c
+  src/pj/ioqueue_epoll.c
+  src/pj/ioqueue_kqueue.c
+  src/pj/ioqueue_select.c
+  src/pj/ip_helper_generic.c
+  src/pj/list.c
+  src/pj/lock.c
+  src/pj/log.c
+  src/pj/log_writer_stdout.c
+  src/pj/os_info.c
+  src/pj/os_time_common.c
+  src/pj/os_timestamp_common.c
+  src/pj/pool.c
+  src/pj/pool_buf.c
+  src/pj/pool_caching.c
+  src/pj/pool_dbg.c
+  src/pj/pool_policy_malloc.c
+  src/pj/rand.c
+  src/pj/rbtree.c
+  src/pj/sock_bsd.c
+  src/pj/sock_common.c
+  src/pj/sock_qos_common.c
+  src/pj/sock_qos_bsd.c
+  src/pj/sock_qos_darwin.c
+  src/pj/sock_select.c
+  src/pj/ssl_sock_common.c
+  src/pj/ssl_sock_darwin.c
+  src/pj/ssl_sock_dump.c
+  src/pj/ssl_sock_gtls.c
+  src/pj/ssl_sock_mbedtls.c
+  src/pj/ssl_sock_ossl.c
+  src/pj/string.c
+  src/pj/timer.c
+  src/pj/types.c
+  src/pj/unittest.c
+)
+
+# system APIs
+if(WIN32 OR CYGWIN OR MIGW)
+  target_sources(pjlib
+    PRIVATE
+      src/pj/file_io_win32.c
+      src/pj/guid_win32.c
+      src/pj/os_core_win32.c
+      src/pj/os_error_win32.c
+      src/pj/os_time_win32.c
+      src/pj/os_timestamp_win32.c
+      src/pj/sock_qos_bsd.c
+      src/pj/unicode_win32.c
+  )
+else()
+  target_sources(pjlib
+    PRIVATE
+      src/pj/file_access_unistd.c
+      src/pj/file_io_ansi.c
+      src/pj/os_core_unix.c
+      src/pj/os_error_unix.c
+      src/pj/os_time_unix.c
+      src/pj/os_timestamp_posix.c
+  )
+endif()
+
+# Apple-specific
+if(APPLE)
+  target_sources(pjlib
+    PRIVATE
+      src/pj/os_core_darwin.m
+      src/pj/ssl_sock_apple.m
+      $<$<BOOL:${IOS}>:src/pj/os_info_iphone.m>
+  )
+endif()
+
+# UUID
+if(ANDROID)
+  target_sources(pjlib PRIVATE src/pj/guid_android.c)
+elseif(APPLE)
+  target_sources(pjlib PRIVATE src/pj/guid_darwin.c)
+elseif(BSD)
+  target_sources(pjlib PRIVATE src/pj/guid_bsd.c)
+elseif(WIN32 OR CYGWIN OR MINGW)
+  target_sources(pjlib PRIVATE src/pj/file_access_win32.c)
+elseif(NOT PJLIB_WITH_LIBUUID)
+  target_sources(pjlib PRIVATE src/pj/guid_simple.c)
+endif()
+
+target_include_directories(pjlib
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+
+# ##############################################################################
+# Dependencies
+
+# math library
+target_link_libraries(pjlib PRIVATE m)
+
+# win32 libraries
+if(WIN32 OR CYGWIN OR WIN32)
+  target_link_libraries(pjlib PRIVATE wsock32 ws2 ole32 winmm)
+endif()
+
+# threading library
+find_package(Threads)
+if(Threads_FOUND)
+  target_link_libraries(pjlib PRIVATE Threads::Threads)
+endif()
+
+# uuid
+if(PJLIB_WITH_LIBUUID)
+  find_package(UUID)
+  if(UUID_FOUND)
+    target_link_libraries(pjlib PRIVATE UUID::UUID)
+    target_sources(pjlib PRIVATE src/pj/guid_uuid.c)
+  else()
+    set(PJLIB_WITH_LIBUUID OFF "Enable libuuid (not found)" FORCE)
+    target_sources(pjlib PRIVATE src/pj/guid_simple.c)
+  endif()
+endif()
+
+# ssl
+if(PJLIB_WITH_SSL STREQUAL "openssl")
+  find_package(OpenSSL REQUIRED COMPONENTS Crypto SSL)
+  target_link_libraries(pjlib PRIVATE OpenSSL::Crypto OpenSSL::SSL)
+elseif(PJLIB_WITH_SSL STREQUAL "gnutls")
+  message(FATAL_ERROR "TODO")
+elseif(PJLIB_WITH_SSL STREQUAL "mbedtls")
+  message(FATAL_ERROR "TODO")
+elseif(PJLIB_WITH_SSL STREQUAL "darwin")
+  message(FATAL_ERROR "TODO")
+elseif(PJLIB_WITH_SSL STREQUAL "darwin")
+  message(FATAL_ERROR "TODO")
+elseif(PJLIB_WITH_SSL STREQUAL "apple")
+  message(FATAL_ERROR "TODO")
+elseif(PJLIB_WITH_SSL STREQUAL "schannel")
+  message(FATAL_ERROR "TODO")
+endif()
+
+# ##############################################################################
+# Configuration
+
+# source `.cm` files directories
+set(PJLIB_CONFIG_TEMPLATE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(PJLIB_CONFIG_TEMPLATE_DIR "${PJLIB_CONFIG_TEMPLATE_ROOT}/pj/compat")
+
+# generated `.h` files directories
+set(PJLIB_CONFIG_INCLUDE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/include")
+set(PJLIB_CONFIG_INCLUDE_DIR "${PJLIB_CONFIG_INCLUDE_ROOT}/pj/compat")
+
+# architecture configuration files
+set(PJLIB_CONFIG_ARCH_TEMPLATE "${PJLIB_CONFIG_TEMPLATE_DIR}/m_auto.h.cm")
+set(PJLIB_CONFIG_ARCH_HEADER "${PJLIB_CONFIG_INCLUDE_DIR}/m_auto.h")
+
+# operating system configuration files
+set(PJLIB_CONFIG_OS_TEMPLATE "${PJLIB_CONFIG_TEMPLATE_DIR}/os_auto.h.cm")
+set(PJLIB_CONFIG_OS_HEADER "${PJLIB_CONFIG_INCLUDE_DIR}/os_auto.h")
+
+# Do not attempt to guess default configuration
+target_compile_definitions(pjlib PUBLIC PJ_AUTOCONF=1)
+
+# architecture
+block(SCOPE_FOR VARIABLES)
+  # processor architecture
+  set(PJ_M_NAME "${CMAKE_SYSTEM_PROCESSOR}")
+
+  # endianness detection
+  include(TestBigEndian)
+  test_big_endian(WORDS_BIGENDIAN )
+
+  # write configured header
+  configure_file("${PJLIB_CONFIG_ARCH_TEMPLATE}" "${PJLIB_CONFIG_ARCH_HEADER}")
+endblock()
+
+# operating system
+block(SCOPE_FOR VARIABLES)
+  #
+  # os detection
+  #
+
+  string(TOLOWER ${CMAKE_SYSTEM_NAME} PJ_OS_NAME)
+
+  if(ANDROID)
+    set(PJ_ANDROID 1)
+  elseif(WIN32 OR CYGWIN OR MINGW)
+    set(PJ_WIN32 1)
+    set(PJ_WIN32_WINNT 0x0501)
+    set(WIN32_LEAN_AND_MEAN)
+
+    if(CMAKE_SYSTEM_NAME MATCHES "^.*_64-w64-mingw.*$")
+      set(PJ_WIN64 1)
+    endif()
+  elseif(APPLE)
+    set(PJ_DARWINOS 1)
+  elseif(LINUX)
+    set(PJ_LINUX 1)
+  elseif(BSD)
+    set(PJ_BSD 1)
+  else()
+    # manual system name checks
+    string(TOLOWER "${CMAKE_SYSTEM_NAME}" _system_name_lower)
+    if(PJ_OS_NAME MATCHES ".*rtems.*")
+      set(PJ_RTEMS 1)
+    elseif(PJ_OS_NAME STREQUAL "^.*(sunos|solaris).*$")
+      set(PJ_SUNOS 1)
+    endif()
+  endif()
+
+  set(PJ_HAS_ERRNO_VAR 1)
+  set(PJ_HAS_HIGH_RES_TIMER 1)
+  set(PJ_HAS_MALLOC 1)
+  set(PJ_NATIVE_STRING_IS_UNICODE 0)
+  set(PJ_ATOMIC_VALUE_TYPE "long")
+
+  #
+  # headers
+  #
+
+  include(CheckIncludeFile)
+  check_include_file(arpa/inet.h PJ_HAS_ARPA_INET_H)
+  check_include_file(assert.h PJ_HAS_ASSERT_H)
+  check_include_file(ctype.h PJ_HAS_CTYPE_H)
+
+  if(WIN32 OR CYGWIN OR MINGW)
+    set(PJ_HAS_ERRNO_H 0)
+  else()
+    check_include_file(errno.h PJ_HAS_ERRNO_H)
+  endif()
+
+  check_include_file(fcntl.h PJ_HAS_FCNTL_H)
+  check_include_file(ifaddrs.h PJ_HAS_IFADDRS_H)
+  check_include_file(limits.h PJ_HAS_LIMITS_H)
+  check_include_file(linux/socket.h PJ_HAS_LINUX_SOCKET_H)
+  check_include_file(malloc.h PJ_HAS_MALLOC_H)
+  check_include_file(netdb.h PJ_HAS_NETDB_H)
+  check_include_file(netinet/in_systm.h PJ_HAS_NETINET_IN_SYSTM_H)
+  check_include_file(netinet/in.h PJ_HAS_NETINET_IN_H)
+  check_include_file(netinet/ip.h PJ_HAS_NETINET_IP_H)
+  check_include_file(netinet/tcp.h PJ_HAS_NETINET_TCP_H)
+  check_include_file(net/if.h PJ_HAS_NET_IF_H)
+  check_include_file(semaphore.h PJ_HAS_SEMAPHORE_H)
+  check_include_file(setjmp.h PJ_HAS_SETJMP_H)
+  check_include_file(stdarg.h PJ_HAS_STDARG_H)
+  check_include_file(stddef.h PJ_HAS_STDDEF_H)
+  check_include_file(stdio.h PJ_HAS_STDIO_H)
+  check_include_file(stdint.h PJ_HAS_STDINT_H)
+  check_include_file(stdlib.h PJ_HAS_STDLIB_H)
+  check_include_file(string.h PJ_HAS_STRING_H)
+  check_include_file(inttypes.h PJ_HAS_INTTYPES_H)
+  check_include_file(sys/ioctl.h PJ_HAS_SYS_IOCTL_H)
+  check_include_file(sys/select.h PJ_HAS_SYS_SELECT_H)
+  check_include_file(sys/socket.h PJ_HAS_SYS_SOCKET_H)
+  check_include_file(sys/time.h PJ_HAS_SYS_TIME_H)
+  check_include_file(sys/timeb.h PJ_HAS_SYS_TIMEB_H)
+  check_include_file(sys/types.h PJ_HAS_SYS_TYPES_H)
+  check_include_file(sys/filio.h PJ_HAS_SYS_FILIO_H)
+  check_include_file(sys/sockio.h PJ_HAS_SYS_SOCKIO_H)
+  check_include_file(sys/utsname.h PJ_HAS_SYS_UTSNAME_H)
+  check_include_file(time.h PJ_HAS_TIME_H)
+  check_include_file(unistd.h PJ_HAS_UNISTD_H)
+  check_include_file(execinfo.h PJ_HAS_EXECINFO_H)
+
+  if(WIN32 OR CYGWIN OR MINGW)
+    check_include_file(winsock.h PJ_HAS_WINSOCK_H)
+    check_include_file(winsock2.h PJ_HAS_WINSOCK2_H)
+    check_include_file(mswsock.h PJ_HAS_MSWSOCK_H)
+    check_include_file(ws2tcpip.h PJ_HAS_WS2TCPIP_H)
+  endif()
+
+  if(ANDROID)
+    set(PJ_HAS_ANDROID_ALARM_H 1)
+  endif()
+
+  #
+  # functions
+  #
+
+  include(CheckSymbolExists)
+  check_symbol_exists(localtime_r time.h PJ_HAS_LOCALTIME_R)
+  check_symbol_exists(getifaddrs ifaddrs.h PJ_HAS_IFADDRS_H)
+  check_symbol_exists(inet_aton arpa/inet.h PJ_SOCK_HAS_INET_ATON)
+  check_symbol_exists(inet_pton arpa/inet.h PJ_SOCK_HAS_INET_PTON)
+  check_symbol_exists(inet_ntop arpa/inet.h PJ_SOCK_HAS_INET_NTOP)
+  check_symbol_exists(getaddrinfo netdb.h PJ_SOCK_HAS_GETADDRINFO)
+  check_symbol_exists(socketpair sys/socket.h PJ_SOCK_HAS_SOCKETPAIR)
+
+  #
+  # compilation checks
+  #
+
+  include(CheckSourceCompiles)
+
+  # determine if sockaddr_in has sin_len member
+  check_source_compiles(C [=[
+    #include <sys/types.h>
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+
+    int main(void) {
+        struct sockaddr_in a;
+        a.sin_len=0;
+        return 0;
+    }
+  ]=] PJ_SOCKADDR_HAS_LEN)
+
+  # determine if socklen_t is available
+  check_source_compiles(C [=[
+    #include <sys/types.h>
+    #include <sys/socket.h>
+
+    int main(void) {
+        socklen_t xxx = 0;
+        return 0;
+    }
+  ]=] PJ_HAS_SOCKLEN_T)
+
+  # determine if IPV6_V6ONLY is available
+  check_source_compiles(C [=[
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+
+    int main(void) {
+        int opt = IPV6_V6ONLY;
+        return 0;
+    }
+  ]=] PJ_SOCK_HAS_IPV6_V6ONLY)
+
+  # determine if SO_ERROR is available
+  if(WIN32 OR CYGWIN OR MINGW)
+    set(PJ_HAS_SO_ERROR 1)
+  else()
+    check_source_compiles(C [=[
+      #include <sys/types.h>
+      #include <sys/socket.h>
+      #include <netinet/in.h>
+      #include <arpa/inet.h>
+
+      int main(void) {
+          int i=SO_ERROR;
+          return 0;
+      }
+    ]=] PJ_HAS_SO_ERROR)
+  endif()
+
+  #
+  # pthread capabilities
+  #
+
+  if(UNIX)
+    check_include_file(pthread.h PJ_HAS_PTHREAD_H)
+    check_include_file(pthread_np.h PJ_HAS_PTHREAD_NP_H)
+  endif()
+
+  if(PJ_HAS_PTHREAD_H)
+    # determine if RW-mutex is available
+    check_source_compiles(C [=[
+      #include <pthread.h>
+
+      int main(void) {
+          pthread_rwlock_t *x;
+          return 0;
+      }
+    ]=] _has_pthread_rwlock)
+
+    # if rwmutex is not detected, check again but this time with
+    # _POSIX_READER_WRITER_LOCKS defined (newlib needs this)
+    if(NOT _has_pthread_rwlock)
+      check_source_compiles(C [=[
+        #include <pthread.h>
+
+        int main(void) {
+            pthread_rwlock_t *x;
+            return 0;
+        }
+      ]=] _has_pthread_rwlock)
+    endif()
+
+    if(_has_pthread_rwlock)
+      set(PJ_EMULATE_RWMUTEX 0)
+    else()
+      set(PJ_EMULATE_RWMUTEX 1)
+    endif()
+
+    unset(_has_pthread_rwlock)
+
+    # do we have pthread_mutexattr_settype()?
+    check_source_compiles(C [=[
+      #include <pthread.h>
+
+      int main(void) {
+          pthread_mutexattr_settype(0, PTHREAD_MUTEX_FAST_NP);
+          return 0;
+      }
+    ]=] PJ_HAS_PTHREAD_MUTEXATTR_SETTYPE)
+
+    # does pthread_mutexattr_t has "recursive" member?
+    check_source_compiles(C [=[
+      #include <pthread.h>
+
+      int main(void) {
+          pthread_mutexattr_t attr;
+          attr.recursive=1;
+          return 0;
+      }
+    ]=] PJ_PTHREAD_MUTEXATTR_T_HAS_RECURSIVE)
+  endif()
+
+
+  if(PJ_HAS_PTHREAD_NP_H)
+    check_symbol_exists(pthread_setname_np pthread_np.h
+      PJ_HAS_PTHREAD_SETNAME_NP
+    )
+    check_symbol_exists(pthread_set_name_np pthread_np.h
+      PJ_HAS_PTHREAD_SET_NAME_NP
+    )
+  endif()
+
+  #
+  # manual checks
+  #
+
+  # Determine if select() requires nfds to be filled up with
+  # correct value (max_fd+1). If zero, nfds will be filled up with
+  # PJ_FD_SETSIZE
+  if(PJ_RTEMS)
+    set(PJ_SELECT_NEEDS_NFDS 1)
+  else()
+    set(PJ_SELECT_NEEDS_NFDS 0)
+  endif()
+
+  # Determine if pj_thread_create() should enforce thread stack size when
+  # creating thread. Default is zero, to allow OS to allocate appropriate
+  # thread's stack size.
+  if(PJ_RTEMS)
+    set(PJ_THREAD_SET_STACK_SIZE 1)
+  else()
+    set(PJ_THREAD_SET_STACK_SIZE 0)
+  endif()
+
+  # Determine if pj_thread_create() should allocate thread's stack from
+  # the pool. Default is zero, to let OS allocate thread's stack.
+  if(PJ_RTEMS)
+    set(PJ_THREAD_ALLOCATE_STACK 1)
+  else()
+    set(PJ_THREAD_ALLOCATE_STACK 0)
+  endif()
+
+  # This value specifies the value set in errno by the OS when a non-blocking
+  # socket recv() can not return immediate data.
+  if(WIN32 OR CYGWIN OR MINGW)
+    set(PJ_BLOCKING_ERROR_VAL WSAEWOULDBLOCK)
+  else()
+    set(PJ_BLOCKING_ERROR_VAL EAGAIN)
+  endif()
+
+  # This value specifies the value set in errno by the OS when a non-blocking
+  # socket connect() can not get connected immediately.
+  if(WIN32 OR CYGWIN OR MINGW)
+    set(PJ_BLOCKING_CONNECT_ERROR_VAL WSAEWOULDBLOCK)
+  else()
+    set(PJ_BLOCKING_CONNECT_ERROR_VAL EINPROGRESS)
+  endif()
+
+  #
+  # configuration checks
+  #
+
+  # floating point support
+  if(PJ_WITH_FLOATING_POINT)
+    set(PJ_HAS_FLOATING_POINT 1)
+  else()
+    set(PJ_HAS_FLOATING_POINT 0)
+  endif()
+
+  # i/o queue implementation
+  if(NOT PJLIB_WITH_IOQUEUE STREQUAL "")
+    string(TOUPPER "PJ_IOQUEUE_IMP_${PJLIB_WITH_IOQUEUE}" PJ_IOQUEUE_IMP)
+  else()
+    set(PJ_IOQUEUE_IMP "PJ_IOQUEUE_IMP_NONE")
+  endif()
+
+  # ssl
+  if(NOT PJLIB_WITH_SSL STREQUAL "")
+    set(PJ_HAS_SSL_SOCK 1)
+    string(TOUPPER "PJ_SSL_SOCK_IMP_${PJLIB_WITH_SSL}" PJ_SSL_SOCK_IMP)
+  else()
+    set(PJ_HAS_SSL_SOCK 0)
+    set(PJ_HAS_SSL_SOCK_IMP "PJ_SSL_SOCK_IMP_NONE")
+  endif()
+
+  # write configured header
+  configure_file(
+    "${PJLIB_CONFIG_OS_TEMPLATE}"
+    "${PJLIB_CONFIG_OS_HEADER}"
+  )
+endblock()
+
+# generate a dummy `pj/config_site.h` if it does not exist
+if(NOT EXISTS "${PJLIB_TEMPLATE_INCLUDE_ROOT}/pj/config_site.h")
+  file(TOUCH "${PJLIB_CONFIG_INCLUDE_ROOT}/pj/config_site.h")
+else()
+  file(DELETE "${PJLIB_CONFIG_INCLUDE_ROOT}/pj/config_site.h")
+endif()
+
+# add generated files include directory
+target_include_directories(pjlib AFTER
+  PUBLIC
+    ${PJLIB_CONFIG_INCLUDE_ROOT}
+)
