@@ -697,6 +697,8 @@ static void systest_rec_audio(void)
     pjsua_recorder_destroy(rec_id);
     rec_id = PJSUA_INVALID_ID;
 
+    gui_sleep(1);    //HACK! waiting for the recorder to close!
+
     status = pjsua_player_create(&filename, 0, &play_id);
     if (status != PJ_SUCCESS)
         goto on_return;
