@@ -2395,7 +2395,7 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
      * be no way this callback could be called while another thread is
      * sending a message.
      */
-    // Deadlock does happen, see #...
+    // Deadlock does happen, see #4453.
     // So now, to avoid deadlock, we'll try to acquire the group lock first,
     // and if it fails, we'll schedule the processing via timer.
     status = pj_grp_lock_tryacquire(tsx->grp_lock);
