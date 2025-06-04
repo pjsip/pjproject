@@ -1159,7 +1159,10 @@ static void systest_display_settings(void)
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Audio switching: %s\r\n",
-            (PJMEDIA_CONF_USE_SWITCH_BOARD ? "Switchboard" : "Conf bridge"));
+                     (PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_SWITCH_BOARD_BACKEND ? 
+                         "Switchboard" : 
+                      PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND ? 
+                         "Conf bridge" : "Parallel conf bridge"));
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Snd buff count: %d\r\n",

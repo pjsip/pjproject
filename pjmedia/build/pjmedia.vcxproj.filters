@@ -37,7 +37,7 @@
     </ClCompile>
     <ClCompile Include="..\src\pjmedia\conference.c">
       <Filter>Source Files</Filter>
-    </ClCompile>      
+    </ClCompile>
     <ClCompile Include="..\src\pjmedia\conf_thread.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -237,9 +237,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pjmedia\echo_webrtc_aec3.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\pjmedia\conf_openmp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pjmedia\av_sync.c">

@@ -31,7 +31,7 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
-#if PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_USE_BRIDGE_ST_MODE
+#if PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND
 
 /* CONF_DEBUG enables detailed operation of the conference bridge.
  * Beware that it prints large amounts of logs (several lines per frame).
@@ -2937,4 +2937,4 @@ PJ_DEF(pj_status_t) pjmedia_conf_del_destroy_handler(
 }
 
 
-#endif   /* PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_USE_BRIDGE_ST_MODE */
+#endif   /* PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND */
