@@ -277,7 +277,9 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_create(
 
 
 /**
- * Destroy video conference bridge.
+ * Destroy video conference bridge. This will also remove any video port,
+ * thus application might get notified from the callback set from 
+ * #pjmedia_vid_conf_set_op_cb().
  *
  * @param vid_conf      The video conference bridge.
  *
@@ -287,13 +289,14 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf);
 
 /**
  * Register the callback to be called when a video port operation has been
- * succesfully completed.
+ * completed.
  * 
  * The callback will most likely be called from media threads,
  * thus application must not perform long/blocking processing in this callback.
  *
  * @param vid_conf      The video conference.
- * @param cb            Callback to be called.
+ * @param cb            Callback to be called. Set this to NULL to unregister
+ *                      the callback.
  *
  * @return              PJ_SUCCESS on success.
  */

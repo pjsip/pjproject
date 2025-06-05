@@ -861,9 +861,21 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
     /* Remove all ports (may destroy them too). */
     for (i=0; i<conf->max_ports; ++i) {
         if (conf->ports[i]) {
+            pj_status_t status;
             pjmedia_conf_op_param oprm = {0};
             oprm.remove_port.port = i;
-            op_remove_port(conf, &oprm);
+            status = op_remove_port(conf, &oprm);
+            if (conf->cb) {
+                pjmedia_conf_op_info op_info = { 0 };
+
+                pj_log_push_indent();
+                op_info.op_type = PJMEDIA_CONF_OP_REMOVE_PORT;
+                op_info.status = status;
+                op_info.op_param = oprm;
+
+                (*conf->cb)(&op_info);
+                pj_log_pop_indent();
+            }
         }
     }
 

@@ -358,9 +358,21 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf)
     /* Remove any registered ports (at least to cleanup their pool) */
     for (i=0; i < vid_conf->opt.max_slot_cnt; ++i) {
         if (vid_conf->ports[i]) {
+            pj_status_t status;
             pjmedia_vid_conf_op_param prm;
             prm.remove_port.port = i;
-            op_remove_port(vid_conf, &prm);
+            status = op_remove_port(vid_conf, &prm);
+
+            if (vid_conf->cb) {
+                pjmedia_vid_conf_op_info info = { 0 };
+
+                pj_log_push_indent();
+                info.op_type = PJMEDIA_VID_CONF_OP_REMOVE_PORT;
+                info.status = status;
+                info.op_param = prm;
+                (*vid_conf->cb)(&info);
+                pj_log_pop_indent();
+            }
         }
     }
 

@@ -275,7 +275,8 @@ PJ_DECL(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 
 
 /**
- * Destroy conference bridge.
+ * Destroy conference bridge. This will also remove any port, thus application
+ * might get notified from the callback set from #pjmedia_conf_set_op_cb(). 
  *
  * @param conf              The conference bridge.
  *
