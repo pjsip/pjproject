@@ -2398,7 +2398,8 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
     // Deadlock does happen, see #4453.
     // So now, to avoid deadlock, we'll try to acquire the group lock first,
     // and if it fails, we'll schedule the processing via timer.
-    status = pj_grp_lock_tryacquire(tsx->grp_lock);
+    //status = pj_grp_lock_tryacquire(tsx->grp_lock);
+    status = PJ_EUNKNOWN;
     if (status != PJ_SUCCESS) {
         pj_time_val delay = { 0, 0 };
         struct tp_cb_param *param = NULL;
