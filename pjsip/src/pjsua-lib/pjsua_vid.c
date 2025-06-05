@@ -143,6 +143,12 @@ pj_status_t pjsua_vid_subsys_init(void)
         }
     }
 
+    /* Set vid conf operation callback. */
+    if (pjsua_var.ua_cfg.cb.on_vid_conf_op_completed) {
+        pjmedia_vid_conf_set_op_cb(pjsua_var.vid_conf,
+                                 pjsua_var.ua_cfg.cb.on_vid_conf_op_completed);
+    }
+
     pj_log_pop_indent();
     return PJ_SUCCESS;
 
@@ -2994,6 +3000,10 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_update_port(pjsua_conf_port_id id)
     return pjmedia_vid_conf_update_port(pjsua_var.vid_conf, id);
 }
 
+PJ_DEF(pj_status_t) pjsua_vid_conf_set_op_cb(pjmedia_vid_conf_op_cb cb)
+{
+    return pjmedia_vid_conf_set_op_cb(pjsua_var.vid_conf, cb);
+}
 
 /*
  * Get the video window associated with the call.
