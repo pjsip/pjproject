@@ -2534,6 +2534,70 @@ private:
 };
 
 /**
+ * Video AVI Player.
+ */
+class VideoPlayer
+{
+public:
+    /**
+     * Constructor.
+     */
+    class VideoPlayer();
+
+    /**
+     * Create an avi file player, and automatically add this player to
+     * the audio/video conference bridge. The player will create a virtual
+     * video device and audio/video media port based on the streams contained
+     * in the file.
+     * The maximum number of stream is limited to PJSUA_MAX_AVI_NUM_STREAMS
+     * and the video stream is limited to one stream.
+     *
+     * @param filename      The filename to be played. Currently only
+     *                      AVI files are supported. The video stream is using
+     *                      YUY2/I420/RGB24 format and the audio stream is using
+     *                      16bit PCM format.
+     *                      Filename's length must be smaller than PJ_MAXPATH.
+     *
+     */
+    void createVideoPlayer(const string &file_name) PJSUA2_THROW(Error);
+
+    /**
+     * Enumerate all audio media port.
+     *
+     * @return          The list of audio media port.
+     */
+    AudioMediaVector2 mediaEnumPorts() PJSUA2_THROW(Error);
+
+    /**
+     * Enumerate all video media port.
+     *
+     * @return          The list of video media port.
+     */
+    VideoMediaVector mediaEnumVidPorts() PJSUA2_THROW(Error);
+
+    /**
+     * Get the video device index of the avi player. Application can use this
+     * index as the video source/capture device.
+     *
+     * @return          The video device index.
+     */
+    int getVideoDevId() PJSUA2_THROW(Error);
+
+    /**
+     * Destructor. This will unregister the audio/video port from the
+     * audio/video conference bridge.
+     */
+    virtual ~VideoPlayer();
+
+private:
+    /**
+     * Player Id.
+     */
+    int playerId;
+
+};
+
+/**
  * Video AVI Recorder.
  */
 class VideoRecorder

@@ -1961,6 +1961,108 @@ VidDevManager::~VidDevManager()
     clearVideoDevList();
 #endif
 }
+///////////////////////////////////////////////////////////////////////////////
+VideoPlayer::VideoPlayer()
+: playerId(PJSUA_INVALID_ID)
+{
+#if !PJSUA_HAS_VIDEO
+    PJ_UNUSED_ARG(playerId);
+#endif
+}
+
+VideoPlayer::~VideoPlayer()
+{
+#if PJSUA_HAS_VIDEO
+    if (playerId != PJSUA_INVALID_ID) {
+        pjsua_avi_player_destroy(playerId);
+    }
+#endif
+}
+
+void VideoPlayer::createVideoPlayer(const string& file_name) PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    if (playerId != PJSUA_INVALID_ID) {
+        PJSUA2_RAISE_ERROR(PJ_EEXISTS);
+    }
+    pj_str_t pj_name = str2Pj(file_name);
+
+    PJSUA2_CHECK_EXPR(pjsua_avi_player_create(&pj_name, &playerId));
+#else
+    PJ_UNUSED_ARG(file_name);
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}
+
+AudioMediaVector2 VideoPlayer::mediaEnumPorts() PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    AudioMediaVector2 amv2;
+    unsigned i, count;
+
+    count = pjsua_avi_player_get_num_stream(playerId, PJMEDIA_TYPE_AUDIO);
+
+    for (i = 0; i < count; ++i) {
+        AudioMediaHelper am;
+
+        pjsua_conf_port_id port_id = pjsua_avi_player_get_conf_port(playerId,
+                                                         PJMEDIA_TYPE_AUDIO, i);
+        if (port_id != PJSUA_INVALID_ID)
+            continue;
+
+        am.setPortId(port_id);
+        amv2.push_back(am);
+    }
+    if (amv2.size() == 0)
+        PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+
+    return amv2;
+#else
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}
+
+VideoMediaVector VideoPlayer::mediaEnumVidPorts() PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    VideoMediaVector vmv;
+    unsigned i, count;
+
+    count = pjsua_avi_player_get_num_stream(playerId, PJMEDIA_TYPE_VIDEO);
+
+    for (i = 0; i < count; ++i) {
+        VideoMediaHelper vm;
+
+        pjsua_conf_port_id port_id = pjsua_avi_player_get_conf_port(playerId,
+                                                         PJMEDIA_TYPE_VIDEO, i);
+        if (port_id != PJSUA_INVALID_ID)
+            continue;
+
+        vm.setPortId(port_id);
+        vmv.push_back(vm);
+    }
+    if (vmv.size() == 0)
+        PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+
+    return vmv;
+
+#else
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}
+
+int VideoPlayer::getVideoDevId() PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    pjmedia_vid_dev_index vid_idx = pjsua_avi_player_get_vid_dev(playerId);
+    if (vid_idx == PJMEDIA_VID_INVALID_DEV)
+        PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+
+    return vid_idx;
+#else
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 VideoRecorder::VideoRecorder()
