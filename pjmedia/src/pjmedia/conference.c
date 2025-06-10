@@ -634,6 +634,9 @@ static pj_status_t create_pasv_port( pjmedia_conf *conf,
     if (status != PJ_SUCCESS)
         return status;
 
+    //TODO: potential bug! Is this intended? delay_buf is created in 
+    //a different pool than conf_port. need poll = conf_port->pool?
+
     /* Passive port has delay buf. */
     ptime = conf->samples_per_frame * 1000 / conf->clock_rate / 
             conf->channel_count;
@@ -645,6 +648,7 @@ static pj_status_t create_pasv_port( pjmedia_conf *conf,
                                       0, /* options */
                                       &conf_port->delay_buf);
     if (status != PJ_SUCCESS)
+        //TODO: resource leak! Newly created conf_port is leaked here.
         return status;
 
     *p_conf_port = conf_port;
@@ -698,6 +702,7 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
         }
 
         if (status != PJ_SUCCESS)
+            //TODO: resource leak! Newly created conf_port is leaked here.
             return status;
 
         strm = pjmedia_snd_port_get_snd_stream(conf->snd_dev_port);
@@ -1435,9 +1440,9 @@ static void op_disconnect_ports(pjmedia_conf *conf,
         }
 
         pj_assert(src_port->listener_cnt > 0 &&
-                  src_port->listener_cnt < conf->max_ports);
+                  src_port->listener_cnt <= conf->max_ports);
         pj_assert(dst_port->transmitter_cnt > 0 &&
-                  dst_port->transmitter_cnt < conf->max_ports);
+                  dst_port->transmitter_cnt <= conf->max_ports);
         pj_array_erase(src_port->listener_slots, sizeof(SLOT_TYPE),
                        src_port->listener_cnt, i);
         pj_array_erase(src_port->listener_adj_level, sizeof(unsigned),
