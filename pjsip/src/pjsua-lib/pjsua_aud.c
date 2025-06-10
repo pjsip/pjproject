@@ -336,6 +336,12 @@ pj_status_t pjsua_aud_subsys_init()
                                       &pjsua_var.null_port);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Set conf operation callback. */
+    if (pjsua_var.ua_cfg.cb.on_conf_op_completed) {
+        pjmedia_conf_set_op_cb(pjsua_var.mconf,
+                               pjsua_var.ua_cfg.cb.on_conf_op_completed);
+    }
+
     return status;
 
 on_error:
@@ -1153,6 +1159,10 @@ PJ_DEF(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
                                          tx_level, rx_level);
 }
 
+PJ_DEF(pj_status_t) pjsua_conf_set_op_cb(pjmedia_conf_op_cb cb)
+{
+    return pjmedia_conf_set_op_cb(pjsua_var.mconf, cb);
+}
 
 /*****************************************************************************
  * File player.
