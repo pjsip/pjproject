@@ -2542,7 +2542,7 @@ public:
     /**
      * Constructor.
      */
-    class VideoPlayer();
+    VideoPlayer();
 
     /**
      * Create an avi file player, and automatically add this player to
