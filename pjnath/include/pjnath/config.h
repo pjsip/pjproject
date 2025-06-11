@@ -230,10 +230,10 @@
 /**
  * Default timeout value (in seconds) for TURN TLS connection.
  *
- * Default: 5 seconds
+ * Default: 10 seconds
  */
 #ifndef PJ_TURN_TLS_DEFAULT_TIMEOUT
-#   define PJ_TURN_TLS_DEFAULT_TIMEOUT              5
+#   define PJ_TURN_TLS_DEFAULT_TIMEOUT              10
 #endif
 
 /* **************************************************************************
