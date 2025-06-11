@@ -227,6 +227,16 @@
 #   define PJ_TURN_MAX_TCP_CONN_CNT                 8
 #endif
 
+/**
+ * Specify default value of TURN TLS socket connection timeout in contacting
+ * TURN server.
+ *
+ * Default: 10 seconds
+ */
+#ifndef PJ_TURN_SSL_SOCK_DEFAULT_TIMEOUT
+#   define PJ_TURN_SSL_SOCK_DEFAULT_TIMEOUT         10
+#endif
+
 /* **************************************************************************
  * ICE CONFIGURATION
  */
