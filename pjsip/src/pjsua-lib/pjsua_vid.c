@@ -3111,7 +3111,7 @@ void pjsua_reset_avi_player_data(pjsua_avi_player_id id)
     for (; i < PJ_ARRAY_SIZE(pjsua_var.avi_player[id].port); ++i) {
         pjsua_var.avi_player[id].port[i] = NULL;
         pjsua_var.avi_player[id].slot[i] = PJSUA_INVALID_ID;
-        pjsua_var.avi_player[id].slot[i] = PJMEDIA_TYPE_NONE;
+        pjsua_var.avi_player[id].type[i] = PJMEDIA_TYPE_NONE;
     }
 }
 

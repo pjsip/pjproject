@@ -2007,7 +2007,7 @@ AudioMediaVector2 VideoPlayer::mediaEnumPorts() PJSUA2_THROW(Error)
 
         pjsua_conf_port_id port_id = pjsua_avi_player_get_conf_port(playerId,
                                                          PJMEDIA_TYPE_AUDIO, i);
-        if (port_id != PJSUA_INVALID_ID)
+        if (port_id == PJSUA_INVALID_ID)
             continue;
 
         am.setPortId(port_id);
@@ -2035,7 +2035,7 @@ VideoMediaVector VideoPlayer::mediaEnumVidPorts() PJSUA2_THROW(Error)
 
         pjsua_conf_port_id port_id = pjsua_avi_player_get_conf_port(playerId,
                                                          PJMEDIA_TYPE_VIDEO, i);
-        if (port_id != PJSUA_INVALID_ID)
+        if (port_id == PJSUA_INVALID_ID)
             continue;
 
         vm.setPortId(port_id);
