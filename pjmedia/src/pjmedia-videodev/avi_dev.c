@@ -276,7 +276,7 @@ static void reset_dev_info(struct avi_dev_info *adi)
     }
 
     if (adi->pool)
-        pj_pool_safe_release(&adi->pool);
+        pj_pool_release(adi->pool);
 
     pj_bzero(adi, sizeof(*adi));
 
@@ -671,10 +671,8 @@ static pj_status_t avi_dev_strm_destroy(pjmedia_vid_dev_stream *strm)
 
     avi_dev_strm_stop(strm);
 
-    if (stream->adi) {
-        stream->adi->strm = NULL;
-        stream->adi = NULL;
-    }
+    stream->adi->strm = NULL;
+    stream->adi = NULL;
     pj_pool_release(stream->pool);
 
     return PJ_SUCCESS;
