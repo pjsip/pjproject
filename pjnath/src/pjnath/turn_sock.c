@@ -217,7 +217,7 @@ PJ_DEF(void) pj_turn_sock_tls_cfg_default(pj_turn_sock_tls_cfg *tls_cfg)
     pj_bzero(tls_cfg, sizeof(*tls_cfg));
     pj_ssl_sock_param_default(&tls_cfg->ssock_param);
     tls_cfg->ssock_param.proto = PJ_TURN_TLS_DEFAULT_PROTO;
-    tls_cfg->ssock_param.timeout.sec = PJ_TURN_TLS_DEFAULT_TIMEOUT;
+    tls_cfg->ssock_param.timeout.sec = PJ_TURN_SSL_SOCK_DEFAULT_TIMEOUT;
 }
 
 PJ_DEF(void) pj_turn_sock_tls_cfg_dup(pj_pool_t *pool,
