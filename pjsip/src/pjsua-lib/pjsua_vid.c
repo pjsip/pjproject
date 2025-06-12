@@ -177,7 +177,12 @@ pj_status_t pjsua_vid_subsys_destroy(void)
         }
     }
 
-    /* Destroy avi file players */
+    if (pjsua_var.vid_conf) {
+        pjmedia_vid_conf_destroy(pjsua_var.vid_conf);
+        pjsua_var.vid_conf = NULL;
+    }
+
+    /* Destroy avi file players. */
     for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_player); ++i) {
         if (pjsua_var.avi_player[i].avi_streams != NULL)
         {
@@ -197,11 +202,6 @@ pj_status_t pjsua_vid_subsys_destroy(void)
                        "is not called", i));
             pjsua_avi_recorder_destroy(i);
         }
-    }
-
-    if (pjsua_var.vid_conf) {
-        pjmedia_vid_conf_destroy(pjsua_var.vid_conf);
-        pjsua_var.vid_conf = NULL;
     }
 
     pjmedia_vid_dev_subsys_shutdown();
@@ -3376,7 +3376,7 @@ PJ_DECL(pj_status_t) pjsua_avi_player_destroy(pjsua_avi_player_id id)
                 }
             }
         }
-        // All of the video/audio ports will be destroyed here
+        // All of the video/audio ports will be destroyed here.
         status = pjmedia_avi_dev_free(pjsua_var.avi_player[id].vid_dev_id);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4, (THIS_FILE, status,
