@@ -70,7 +70,7 @@ static FILE *fhnd_rec;
 #endif
 
 
-#define THIS_FILE       "conference.c"
+#define THIS_FILE           "conf_thread.c"
 
 #define RX_BUF_COUNT        PJMEDIA_SOUND_BUFFER_COUNT
 
