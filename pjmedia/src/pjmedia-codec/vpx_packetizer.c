@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2020 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-codec/vpx_packetizer.h>
 #include <pjmedia/errno.h>
@@ -102,17 +102,21 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
     bits[0] = 0;
     if (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP8) {
         bits[0] = 0x80;
+
+        /* Set S: Start of VP8 partition. */
+        if (*bits_pos == 0) {
+            bits[0] |= 0x10;
+            /* Increment the pictureId when the S-bit is present */
+            ((pjmedia_vpx_packetizer *)pktz)->picture_id++;
+        }
+
         bits[1] = 0x80;
         bits[2] = ((pktz->picture_id & 0x7f00) >> 8) | 0x80;
         bits[3] = pktz->picture_id & 0xff;
 
         /* Set N: Non-reference frame */
         if (!is_keyframe) bits[0] |= 0x20;
-        /* Set S: Start of VP8 partition. */
-        if (*bits_pos == 0) {
-            bits[0] |= 0x10;
-            ((pjmedia_vpx_packetizer *)pktz)->picture_id++;
-        }
+
     } else if (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP9) {
         /* Set P: Inter-picture predicted frame */
         if (!is_keyframe) bits[0] |= 0x40;
