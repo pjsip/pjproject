@@ -73,6 +73,10 @@ static void init_data()
         pjsua_vid_win_reset(i);
     }
 #if PJSUA_HAS_VIDEO
+    for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_player); ++i) {
+        pjsua_reset_avi_player_data(i);
+    }
+
     for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_recorder); ++i) {
         pjsua_reset_avi_recorder_data(i);
     }
