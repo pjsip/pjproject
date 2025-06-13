@@ -182,7 +182,11 @@ pj_status_t pjsua_vid_subsys_destroy(void)
         pjsua_var.vid_conf = NULL;
     }
 
-    /* Destroy avi file players. */
+    /* Destroy avi file players. To safely release the resources, all ports
+     * created by the player needed to be disconnected from other ports.
+     * Disconnecting and removing the ports from the conference will
+     * be done from #pjmedia_vid_conf_destroy() above.
+     */
     for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_player); ++i) {
         if (pjsua_var.avi_player[i].avi_streams != NULL)
         {

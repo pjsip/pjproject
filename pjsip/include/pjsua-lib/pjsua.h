@@ -8536,7 +8536,11 @@ PJ_DECL(pj_status_t) pjsua_avi_player_get_port(pjsua_player_id id,
 
 /**
  * Close the avi file, remove the media streams from the bridge, and free
- * resources associated with the avi player.
+ * resources associated with the avi player. This API will try to remove the
+ * ports before freeing the resources. However, since the operation is done
+ * asynchronously, it might return PJ_EBUSY when the ports are still in use.
+ * In this case, application can retry calling this API after the port removal
+ * is done.
  *
  * @param id            The avi player ID.
  *
