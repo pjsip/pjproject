@@ -3181,11 +3181,11 @@ static void add_port_to_conf(pjsua_avi_player_id avi_id,
     *num_stream = num_strm;
 }
 
-PJ_DEF(pj_status_t) pjsua_avi_player_create(const pj_str_t* filename,
-                                            pjsua_avi_player_id* id)
+PJ_DEF(pj_status_t) pjsua_avi_player_create(const pj_str_t *filename,
+                                            pjsua_avi_player_id *id)
 {
     pj_status_t status = PJ_SUCCESS;
-    pj_pool_t* pool = NULL;
+    pj_pool_t *pool = NULL;
     pjmedia_avi_dev_param avdp;
     pjmedia_vid_dev_index avid;
     unsigned avi_id;
@@ -3298,7 +3298,8 @@ PJ_DEF(unsigned) pjsua_avi_player_get_num_stream(pjsua_avi_player_id id,
 
 #define AUD_IDX(id, strm_idx)    (pjsua_var.avi_player[id].vid_cnt+strm_idx)
 
-PJ_DEF(pjsua_conf_port_id) pjsua_avi_player_get_conf_port(pjsua_player_id id,
+PJ_DEF(pjsua_conf_port_id) pjsua_avi_player_get_conf_port(
+                                                        pjsua_avi_player_id id,
                                                         pjmedia_type strm_type,
                                                         unsigned strm_idx)
 {
@@ -3322,7 +3323,7 @@ PJ_DEF(pjsua_conf_port_id) pjsua_avi_player_get_conf_port(pjsua_player_id id,
     }
 }
 
-PJ_DEF(pj_status_t) pjsua_avi_player_get_port(pjsua_player_id id,
+PJ_DEF(pj_status_t) pjsua_avi_player_get_port(pjsua_avi_player_id id,
                                               pjmedia_type strm_type,
                                               unsigned strm_idx,
                                               pjmedia_port **p_port)

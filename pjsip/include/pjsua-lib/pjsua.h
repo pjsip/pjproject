@@ -8484,7 +8484,7 @@ PJ_DECL(pj_status_t) pjsua_avi_player_create(const pj_str_t *filename,
  * Get the video device index of the avi player. Application can use this index
  * as the video source/capture device.
  *
- * @param id            The player id.
+ * @param id            The avi player id.
  *
  * @return              The video device id or PJMEDIA_VID_INVALID_DEV if the
  *                      player doesn't have a video device.
@@ -8495,7 +8495,7 @@ PJ_DECL(pjmedia_vid_dev_index) pjsua_avi_player_get_vid_dev(
 /**
  * Get the number of streams created by the avi player.
  *
- * @param id            The player id.
+ * @param id            The avi player id.
  * @param strm_type     The stream type.
  *
  * @return              The number of media stream of the avi player.
@@ -8506,21 +8506,22 @@ PJ_DECL(unsigned) pjsua_avi_player_get_num_stream(pjsua_avi_player_id id,
 /**
  * Get conference port ID associated with avi player based on the media type.
  *
- * @param id            The player id.
+ * @param id            The avi player id.
  *
  * @param strm_type     The stream type.
  * @param strm_idx      The stream index.
  *
  * @return              The video/audio conference port id.
  */
-PJ_DECL(pjsua_conf_port_id) pjsua_avi_player_get_conf_port(pjsua_player_id id,
+PJ_DECL(pjsua_conf_port_id) pjsua_avi_player_get_conf_port(
+                                                        pjsua_avi_player_id id,
                                                         pjmedia_type strm_type,
                                                         unsigned strm_idx);
 
 /**
  * Get the media port for the avi player based on the media type.
  *
- * @param id            The player id.
+ * @param id            The avi player id.
  *
  * @param strm_type     The stream type.
  * @param strm_idx      The stream index.
@@ -8529,7 +8530,7 @@ PJ_DECL(pjsua_conf_port_id) pjsua_avi_player_get_conf_port(pjsua_player_id id,
  * @return              The PJ_SUCCESS on success,or the appropriate error code.
  *
  */
-PJ_DECL(pj_status_t) pjsua_avi_player_get_port(pjsua_player_id id,
+PJ_DECL(pj_status_t) pjsua_avi_player_get_port(pjsua_avi_player_id id,
                                                pjmedia_type strm_type,
                                                unsigned strm_idx,
                                                pjmedia_port **p_port);
