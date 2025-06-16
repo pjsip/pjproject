@@ -123,6 +123,11 @@ struct pjsua_call_media
  */
 #define PJSUA_MAX_CALL_MEDIA            PJMEDIA_MAX_SDP_MEDIA
 
+ /**
+  * Maximum number of streams from an avi player.
+  */
+#define PJSUA_MAX_AVI_NUM_STREAMS       PJMEDIA_AVI_MAX_NUM_STREAMS
+
 /* Call answer's list. */
 typedef struct call_answer
 {
@@ -411,6 +416,22 @@ typedef struct pjsua_file_data
 } pjsua_file_data;
 
 /**
+ * AVI player data.
+ */
+typedef struct pjsua_avi_player_data
+{
+    pj_pool_t                 *pool;
+    pjmedia_avi_streams       *avi_streams;
+    unsigned                   vid_cnt;
+    unsigned                   aud_cnt;
+    pjmedia_vid_dev_index      vid_dev_id;
+    pjsua_conf_port_id         slot[PJSUA_MAX_AVI_NUM_STREAMS];
+    pjmedia_port              *port[PJSUA_MAX_AVI_NUM_STREAMS];
+    pjmedia_type               type[PJSUA_MAX_AVI_NUM_STREAMS];
+
+} pjsua_avi_player_data;
+
+/**
  * AVI recorder data.
  */
 typedef struct pjsua_avi_recorder_data
@@ -612,7 +633,13 @@ struct pjsua_data
     pjsua_file_data      recorder[PJSUA_MAX_RECORDERS];/**< Array of recs.*/
 
 #if PJSUA_HAS_VIDEO
-    /* File recorders: */
+    /* AVI file players: */
+    pjmedia_vid_dev_factory *avi_factory;      /**< AVI player factory.       */
+    unsigned                 avi_player_cnt;    /**< Number of avi players.   */
+    pjsua_avi_player_data    avi_player[PJSUA_MAX_AVI_PLAYERS];/**< Array of
+                                                                 avi players. */
+
+    /* AVI file recorders: */
     unsigned                  avi_rec_cnt;   /**< Number of avi recorders.    */
     pjsua_avi_recorder_data   avi_recorder[PJSUA_MAX_AVI_RECORDERS];/**< Array 
                                                              of avi recorders.*/
@@ -967,6 +994,11 @@ void print_call(const char *title,
                 char *buf, pj_size_t size);
 
 char *pjsua_get_basename(const char *path, unsigned len);
+
+/*
+ * Internal function to reset avi player data
+ */
+void pjsua_reset_avi_player_data(pjsua_avi_player_id id);
 
 /*
  * Internal function to reset avi recorder data

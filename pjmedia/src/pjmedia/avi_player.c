@@ -557,7 +557,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool_,
         pj_ansi_snprintf(port_name, sizeof(port_name), "%s-of-%s",
                          pjmedia_type_name(fport[i]->base.info.fmt.type),
                          get_fname(filename));
-        pj_strdup2(pool, &fport[i]->base.info.name, port_name);
+        pj_strdup2_with_null(pool, &fport[i]->base.info.name, port_name);
     }
 
     /* Done. */
@@ -653,6 +653,21 @@ pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams *streams)
 {
     pj_assert(streams);
     return streams->num_streams;
+}
+
+PJ_DEF(unsigned)
+pjmedia_avi_streams_get_num_streams_by_media(pjmedia_avi_streams *streams,
+                                             pjmedia_type media_type)
+{
+    unsigned i = 0;
+    unsigned num_strm = 0;
+
+    pj_assert(streams);
+    for (; i < streams->num_streams; i++)
+        if (streams->streams[i]->info.fmt.type == media_type)
+            ++num_strm;
+
+    return num_strm;
 }
 
 PJ_DEF(pjmedia_avi_stream *)
