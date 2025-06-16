@@ -3338,12 +3338,14 @@ PJ_DEF(pj_status_t) pjsua_avi_player_get_port(pjsua_player_id id,
                          PJSUA_INVALID_ID);
 
         *p_port = pjsua_var.avi_player[id].port[AUD_IDX(id, strm_idx)];
+        break;
     case PJMEDIA_TYPE_VIDEO:
         PJ_ASSERT_RETURN(strm_idx >= 0 &&
                          strm_idx < pjsua_var.avi_player[id].vid_cnt,
                          PJSUA_INVALID_ID);
 
         *p_port = pjsua_var.avi_player[id].port[strm_idx];
+        break;
     default:
         status = PJ_ENOTFOUND;
     }
@@ -3385,6 +3387,9 @@ PJ_DECL(pj_status_t) pjsua_avi_player_destroy(pjsua_avi_player_id id)
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4, (THIS_FILE, status,
                          "Fail destroying avi file player %d", id));
+
+            PJSUA_UNLOCK();
+            pj_log_pop_indent();
             return status;
         }
 
