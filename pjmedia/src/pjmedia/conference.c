@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/conference.h>
 #include <pjmedia/alaw_ulaw.h>
@@ -25,6 +25,7 @@
 #include <pjmedia/silencedet.h>
 #include <pjmedia/sound_port.h>
 #include <pjmedia/stereo.h>
+#include <pj/os.h>
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/log.h>
@@ -93,6 +94,369 @@ static FILE *fhnd_rec;
 #define MIN_LEVEL   (-32768)
 
 #define IS_OVERFLOW(s) ((s > MAX_LEVEL) || (s < MIN_LEVEL))
+
+#ifndef PJMEDIA_CONF_USE_MULTI_THREADING
+#define PJMEDIA_CONF_USE_MULTI_THREADING 0
+#endif
+
+#ifndef PJ_HAS_THREAD_AFFINITY
+#define PJ_HAS_THREAD_AFFINITY 0
+#endif
+
+#ifndef PJMEDIA_CONF_USE_SIMD
+#define PJMEDIA_CONF_USE_SIMD 0
+#endif
+
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+#ifndef PJMEDIA_CONF_CACHE_LINE_SIZE
+#define PJMEDIA_CONF_CACHE_LINE_SIZE 64
+#endif
+
+#ifndef PJMEDIA_CONF_THREAD_POOL_SIZE
+#define PJMEDIA_CONF_THREAD_POOL_SIZE 8
+#endif
+
+#ifndef PJMEDIA_CONF_USE_NUMA
+#define PJMEDIA_CONF_USE_NUMA 0
+#endif
+
+#ifndef PJMEDIA_CONF_USE_WORK_STEALING
+#define PJMEDIA_CONF_USE_WORK_STEALING 0
+#endif
+
+#ifndef PJMEDIA_CONF_REBALANCE_ACTIVE_ONLY
+#define PJMEDIA_CONF_REBALANCE_ACTIVE_ONLY 1
+#endif
+
+#ifndef PJMEDIA_CONF_USE_WORK_STEALING
+#define PJMEDIA_CONF_USE_WORK_STEALING 1
+#endif
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+
+#ifndef PJMEDIA_CONF_WORK_QUEUE_SIZE
+#define PJMEDIA_CONF_WORK_QUEUE_SIZE 256
+#endif
+
+#ifndef PJMEDIA_CONF_STEAL_THRESHOLD
+#define PJMEDIA_CONF_STEAL_THRESHOLD 25  /* Steal when queue < 25% full */
+#endif
+
+#ifndef PJMEDIA_CONF_STEAL_ATTEMPTS
+#define PJMEDIA_CONF_STEAL_ATTEMPTS 3    /* Try N victims before giving up */
+#endif
+
+/* Work item structure */
+typedef struct work_item {
+    unsigned port_idx;
+    pj_atomic_t *taken;  /* Atomic flag to prevent double-processing */
+} work_item;
+
+/* Lock-free work queue for each worker */
+typedef struct work_queue {
+    work_item *items;
+    unsigned capacity;
+    pj_atomic_t *head;      /* Producer index */
+    pj_atomic_t *tail;      /* Consumer index */
+    pj_atomic_t *size;      /* Current size for quick checks */
+
+    /* Cache line padding */
+    char pad[PJMEDIA_CONF_CACHE_LINE_SIZE -
+             (sizeof(void*) + sizeof(unsigned) + 3*sizeof(pj_atomic_t*))];
+} work_queue;
+
+#endif /* PJMEDIA_CONF_USE_WORK_STEALING */
+#endif /* PJMEDIA_CONF_USE_MULTI_THREADING */
+
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+  #if !defined(PJ_HAS_BARRIER) || PJ_HAS_BARRIER == 0
+    #error "Multi-threaded conference support requires PJ_HAS_BARRIER"
+  #endif
+#endif
+
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+#if (!defined(PJ_HAS_THREAD_AFFINITY) || PJ_HAS_THREAD_AFFINITY == 0)
+    #if defined(PJ_LINUX) && PJ_LINUX != 0
+        #include <pthread.h>
+        #include <sched.h>
+    #elif defined(PJ_DARWINOS) && PJ_DARWINOS != 0
+        #include <pthread.h>
+    #endif
+#endif
+
+/* Platform-specific includes */
+#if defined(PJ_LINUX) || defined(PJ_ANDROID)
+    #include <sys/prctl.h>
+#endif
+
+#if defined(PJ_DARWIN)
+    #include <sys/types.h>
+    #include <sys/sysctl.h>
+#endif
+
+#if defined(PJ_WIN32)
+    #include <windows.h>
+#endif
+
+#if defined(PJMEDIA_CONF_USE_NUMA) && PJMEDIA_CONF_USE_NUMA != 0
+    #if defined(PJ_LINUX)
+        #include <dirent.h>
+        #include <unistd.h>
+        #include <sys/syscall.h>
+
+        /* Linux NUMA memory policy flags */
+        #define MPOL_DEFAULT     0
+        #define MPOL_PREFERRED   1
+        #define MPOL_BIND        2
+        #define MPOL_INTERLEAVE  3
+
+        /* NUMA system calls */
+        static long numa_mbind(void *addr, unsigned long len, int mode,
+                              const unsigned long *nodemask, unsigned long maxnode,
+                              unsigned flags)
+        {
+            return syscall(SYS_mbind, addr, len, mode, nodemask, maxnode, flags);
+        }
+
+        static long numa_set_mempolicy(int mode, const unsigned long *nodemask,
+                                      unsigned long maxnode)
+        {
+            return syscall(SYS_set_mempolicy, mode, nodemask, maxnode);
+        }
+
+        /* Check if NUMA is available */
+        static pj_bool_t numa_available(void)
+        {
+            DIR *dir = opendir("/sys/devices/system/node");
+            if (dir) {
+                struct dirent *entry;
+                int node_count = 0;
+
+                while ((entry = readdir(dir)) != NULL) {
+                    if (strncmp(entry->d_name, "node", 4) == 0) {
+                        node_count++;
+                    }
+                }
+                closedir(dir);
+
+                return node_count > 1 ? PJ_TRUE : PJ_FALSE;
+            }
+            return PJ_FALSE;
+        }
+
+        /* Get number of NUMA nodes */
+        static int numa_max_node(void)
+        {
+            DIR *dir = opendir("/sys/devices/system/node");
+            int max_node = 0;
+
+            if (dir) {
+                struct dirent *entry;
+                while ((entry = readdir(dir)) != NULL) {
+                    if (strncmp(entry->d_name, "node", 4) == 0) {
+                        int node_id;
+                        if (sscanf(entry->d_name, "node%d", &node_id) == 1) {
+                            if (node_id > max_node)
+                                max_node = node_id;
+                        }
+                    }
+                }
+                closedir(dir);
+            }
+            return max_node;
+        }
+
+        /* Get NUMA node for CPU */
+        static int numa_node_of_cpu(int cpu)
+        {
+            char path[256];
+            FILE *f;
+            int node = 0;
+            int n;
+            int max_node = numa_max_node();
+
+            for (n = 0; n <= max_node; n++) {
+                pj_ansi_snprintf(path, sizeof(path),
+                                "/sys/devices/system/node/node%d/cpulist", n);
+                f = fopen(path, "r");
+                if (f) {
+                    char buffer[4096];
+                    if (fgets(buffer, sizeof(buffer), f)) {
+                        /* Parse CPU ranges like "0-3,8-11" */
+                        char *p = buffer;
+                        while (*p) {
+                            int start, end;
+                            if (sscanf(p, "%d-%d", &start, &end) == 2) {
+                                if (cpu >= start && cpu <= end) {
+                                    fclose(f);
+                                    return n;
+                                }
+                                while (*p && *p != ',') p++;
+                            } else if (sscanf(p, "%d", &start) == 1) {
+                                if (cpu == start) {
+                                    fclose(f);
+                                    return n;
+                                }
+                                while (*p && *p != ',') p++;
+                            }
+                            if (*p == ',') p++;
+                        }
+                    }
+                    fclose(f);
+                }
+            }
+            return node;
+        }
+
+        /* Set preferred NUMA node */
+        static void numa_set_preferred(int node)
+        {
+            if (node < 0) {
+                /* Reset to default policy */
+                numa_set_mempolicy(MPOL_DEFAULT, NULL, 0);
+            } else {
+                unsigned long nodemask[16] = {0};
+                unsigned long maxnode = sizeof(nodemask) * 8;
+
+                /* Set bit for preferred node */
+                nodemask[node / (sizeof(unsigned long) * 8)] =
+                    1UL << (node % (sizeof(unsigned long) * 8));
+
+                numa_set_mempolicy(MPOL_PREFERRED, nodemask, maxnode);
+            }
+        }
+
+        /* Get current preferred NUMA node (simplified) */
+        static int numa_preferred(void)
+        {
+            /* Return -1 to indicate default policy */
+            return -1;
+        }
+
+        /* Set local memory allocation */
+        static void numa_set_localalloc(void)
+        {
+            numa_set_mempolicy(MPOL_DEFAULT, NULL, 0);
+        }
+
+        #define HAS_NUMA_SUPPORT 1
+
+    #elif defined(PJ_WIN32)
+        #include <windows.h>
+
+        static pj_bool_t numa_available(void)
+        {
+            ULONG highest_node_number = 0;
+            if (!GetNumaHighestNodeNumber(&highest_node_number)) {
+                return PJ_FALSE;
+            }
+            return highest_node_number > 0 ? PJ_TRUE : PJ_FALSE;
+        }
+
+        static int numa_max_node(void)
+        {
+            ULONG highest_node_number = 0;
+            if (GetNumaHighestNodeNumber(&highest_node_number)) {
+                return (int)highest_node_number;
+            }
+            return 0;
+        }
+
+        static int numa_node_of_cpu(int cpu)
+        {
+            UCHAR node_number = 0;
+            if (GetNumaProcessorNode((UCHAR)cpu, &node_number)) {
+                return (int)node_number;
+            }
+            return 0;
+        }
+
+        static void numa_set_preferred(int node)
+        {
+            /* Windows doesn't have direct equivalent */
+            PJ_UNUSED_ARG(node);
+        }
+
+        static int numa_preferred(void) { return -1; }
+        static void numa_set_localalloc(void) { }
+
+        #define HAS_NUMA_SUPPORT 1
+    #else
+        /* Fallback for other platforms */
+        static pj_bool_t numa_available(void) { return PJ_FALSE; }
+        static int numa_max_node(void) { return 0; }
+        static int numa_node_of_cpu(int cpu) { PJ_UNUSED_ARG(cpu); return 0; }
+        static void numa_set_preferred(int node) { PJ_UNUSED_ARG(node); }
+        static int numa_preferred(void) { return -1; }
+        static void numa_set_localalloc(void) { }
+
+        #define HAS_NUMA_SUPPORT 0
+    #endif
+#endif
+
+/* SIMD support */
+#if defined(PJMEDIA_CONF_USE_SIMD) && PJMEDIA_CONF_USE_SIMD != 0
+    #include <immintrin.h>
+    #define SIMD_ALIGNMENT 32
+    #define IS_ALIGNED(ptr, align) (((uintptr_t)(ptr) & ((align) - 1)) == 0)
+#endif
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+/* Define memory barrier for different platforms */
+#if defined(__GNUC__) && (defined(__i386__) || defined(__x86_64__))
+    #define MEMORY_BARRIER() __asm__ __volatile__("mfence" ::: "memory")
+#elif defined(__GNUC__)
+    #define MEMORY_BARRIER() __sync_synchronize()
+#elif defined(_MSC_VER)
+    #include <windows.h>
+    #define MEMORY_BARRIER() MemoryBarrier()
+#else
+    /* Fallback - compiler barrier only */
+    #define MEMORY_BARRIER() do { volatile int dummy = 0; (void)dummy; } while(0)
+#endif
+
+#endif /* PJMEDIA_CONF_USE_WORK_STEALING */
+#endif  /* PJMEDIA_CONF_USE_MULTI_THREADING */
+
+/* Multi-threading types */
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+/* Worker thread context */
+typedef struct worker_context {
+    pjmedia_conf       *conf;
+    unsigned            worker_id;
+    unsigned            cpu_id;
+    pj_thread_t        *thread;
+
+    /* Performance counters */
+    pj_atomic_t        *frames_processed;
+    pj_atomic_t        *ports_processed;
+    pj_timestamp        last_work_time;
+
+    /* Work assignment */
+    unsigned            port_start;
+    unsigned            port_end;
+    pj_bool_t           active;
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+    work_queue         *local_queue;
+    pj_atomic_t        *steal_attempts;
+    pj_atomic_t        *successful_steals;
+    unsigned            victim_idx;      /* Next victim to steal from */
+#endif /* PJMEDIA_CONF_USE_WORK_STEALING */
+
+    /* Cache-line padding */
+    char                pad[PJMEDIA_CONF_CACHE_LINE_SIZE];
+} worker_context;
+
+/* Load balancing statistics */
+typedef struct load_stats {
+    pj_uint32_t         avg_processing_ns;
+    pj_uint32_t         peak_processing_ns;
+    unsigned            ports_assigned;
+    pj_timestamp        last_rebalance;
+} load_stats;
+
+#endif /* PJMEDIA_CONF_USE_MULTI_THREADING */
 
 
 /*
@@ -225,7 +589,21 @@ struct conf_port
 
     pj_bool_t            is_new;        /**< Newly added port, avoid read/write
                                              data from/to.                  */
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+    /* Cache-line alignment for multi-threading */
+    pj_uint8_t          cache_pad1[PJMEDIA_CONF_CACHE_LINE_SIZE];
+
+    /* Per-port processing statistics */
+    pj_atomic_t        *processing_count;
+    pj_timestamp        last_process_time;
+
+    /* Thread affinity hint */
+    unsigned            preferred_cpu;
+
+    pj_uint8_t          cache_pad2[PJMEDIA_CONF_CACHE_LINE_SIZE];
+#endif /* PJMEDIA_CONF_USE_MULTI_THREADING */
 };
+
 
 
 /* Forward declarations */
@@ -255,6 +633,36 @@ struct pjmedia_conf
     op_entry             *op_queue;     /**< Queue of operations.           */
     op_entry             *op_queue_free;/**< Queue of free entries.         */
     pjmedia_conf_op_cb    cb;           /**< OP callback.                   */
+
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+    /* Worker thread management */
+    worker_context     *workers;
+    unsigned            worker_count;
+    pj_sem_t          **worker_sems;
+    pj_atomic_t        *workers_ready;
+    pj_atomic_t        *frame_generation;
+
+    /* Load balancing */
+    load_stats         *worker_loads;
+    pj_timestamp        last_rebalance;
+    unsigned            rebalance_interval_ms;
+    pj_lock_t          *rebalance_lock;
+
+    /* CPU topology */
+    unsigned            total_cpus;
+    unsigned           *cpu_to_numa;
+    pj_bool_t          *cpu_available;
+
+    /* Synchronization */
+    pj_barrier_t       *phase_barrier;      /* PJSIP barrier for phase sync */
+    pj_atomic_t        *processing_phase;   /* Keep this for state tracking */
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+    /* Work stealing statistics */
+    pj_atomic_t        *total_steals;
+    pj_atomic_t        *total_steal_attempts;
+#endif /* PJMEDIA_CONF_USE_WORK_STEALING */
+#endif /* PJMEDIA_CONF_USE_MULTI_THREADING */
 };
 
 
@@ -270,6 +678,160 @@ static pj_status_t get_frame_pasv(pjmedia_port *this_port,
                                   pjmedia_frame *frame);
 static pj_status_t destroy_port_pasv(pjmedia_port *this_port);
 #endif
+
+/* Helper for aligned allocation */
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+static void* pj_pool_alloc_aligned(pj_pool_t *pool, pj_size_t size,
+                                   pj_size_t alignment)
+{
+    void *mem;
+    pj_size_t aligned_size;
+
+    /* Calculate aligned size */
+    aligned_size = size + alignment - 1;
+
+    /* Allocate memory */
+    mem = pj_pool_alloc(pool, aligned_size);
+    if (!mem)
+        return NULL;
+
+    /* Align the pointer */
+    return (void*)(((uintptr_t)mem + alignment - 1) & ~(alignment - 1));
+}
+
+#if defined(PJMEDIA_CONF_USE_SIMD) && PJMEDIA_CONF_USE_SIMD != 0
+static void* alloc_aligned_buffer(pj_pool_t *pool, size_t size, size_t alignment)
+{
+    void *ptr;
+    ptr = pj_pool_alloc_aligned(pool, size, alignment);
+    if (!ptr) return NULL;
+
+    /* Zero-initialize for safety */
+    pj_bzero(ptr, size);
+    return ptr;
+}
+#endif /* PJMEDIA_CONF_USE_SIMD */
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+/* Initialize work queue */
+static pj_status_t init_work_queue(pj_pool_t *pool, work_queue **queue)
+{
+    work_queue *q;
+    unsigned i;
+
+    /* Allocate aligned for cache performance */
+    q = (work_queue*)pj_pool_alloc_aligned(pool, sizeof(work_queue),
+                                           PJMEDIA_CONF_CACHE_LINE_SIZE);
+    if (!q) return PJ_ENOMEM;
+
+    q->capacity = PJMEDIA_CONF_WORK_QUEUE_SIZE;
+    q->items = (work_item*)pj_pool_calloc(pool, q->capacity, sizeof(work_item));
+    if (!q->items) return PJ_ENOMEM;
+
+    /* Initialize atomic flags */
+    for (i = 0; i < q->capacity; i++) {
+        pj_atomic_create(pool, 0, &q->items[i].taken);
+    }
+
+    pj_atomic_create(pool, 0, &q->head);
+    pj_atomic_create(pool, 0, &q->tail);
+    pj_atomic_create(pool, 0, &q->size);
+
+    *queue = q;
+    return PJ_SUCCESS;
+}
+
+/* Push work to local queue (single producer) */
+static pj_bool_t push_work(work_queue *queue, unsigned port_idx)
+{
+    pj_uint32_t head, next_head, tail;
+
+    head = pj_atomic_get(queue->head);
+    tail = pj_atomic_get(queue->tail);
+    next_head = (head + 1) % queue->capacity;
+
+    /* Check if queue is full */
+    if (next_head == tail)
+        return PJ_FALSE;
+
+    queue->items[head].port_idx = port_idx;
+    pj_atomic_set(queue->items[head].taken, 0);
+
+    /* Memory barrier to ensure item is written before updating head */
+    MEMORY_BARRIER();
+
+    pj_atomic_set(queue->head, next_head);
+    pj_atomic_inc(queue->size);
+
+    return PJ_TRUE;
+}
+
+/* Pop work from local queue (owner thread) */
+static pj_bool_t pop_local_work(work_queue *queue, unsigned *port_idx)
+{
+    pj_uint32_t tail, head;
+
+    tail = pj_atomic_get(queue->tail);
+    head = pj_atomic_get(queue->head);
+
+    if (tail == head)
+        return PJ_FALSE;
+
+    *port_idx = queue->items[tail].port_idx;
+
+    pj_atomic_set(queue->tail, (tail + 1) % queue->capacity);
+    pj_atomic_dec(queue->size);
+
+    return PJ_TRUE;
+}
+
+/* Steal work from another worker's queue */
+static pj_bool_t steal_work(work_queue *victim_queue, unsigned *port_idx)
+{
+    pj_uint32_t tail;
+
+    /* Quick check if worth trying */
+    if (pj_atomic_get(victim_queue->size) == 0)
+        return PJ_FALSE;
+
+    /* Try to steal from tail - simpler approach without cmpxchg */
+    tail = pj_atomic_get(victim_queue->tail);
+
+    /* Check if queue is empty */
+    if (tail == pj_atomic_get(victim_queue->head))
+        return PJ_FALSE;
+
+    /* Try to claim the item at tail */
+    if (pj_atomic_get(victim_queue->items[tail].taken) == 0) {
+        /* Mark as taken first */
+        pj_atomic_set(victim_queue->items[tail].taken, 1);
+
+        /* Double-check it's still available */
+        if (tail == pj_atomic_get(victim_queue->tail)) {
+            /* Successfully stolen */
+            *port_idx = victim_queue->items[tail].port_idx;
+
+            /* Advance tail */
+            pj_atomic_set(victim_queue->tail, (tail + 1) % victim_queue->capacity);
+            pj_atomic_dec(victim_queue->size);
+
+            return PJ_TRUE;
+        }
+    }
+
+    return PJ_FALSE;
+}
+
+/* Check if we should attempt work stealing */
+static pj_bool_t should_steal_work(work_queue *queue)
+{
+    pj_uint32_t size = pj_atomic_get(queue->size);
+    pj_uint32_t threshold = (queue->capacity * PJMEDIA_CONF_STEAL_THRESHOLD) / 100;
+    return size < threshold;
+}
+
+#endif /* PJMEDIA_CONF_USE_WORK_STEALING */
+#endif /* PJMEDIA_CONF_USE_MULTI_THREADING */
 
 
 /* As we don't hold mutex in the clock/get_frame(), some conference operations
@@ -294,6 +856,29 @@ static pj_status_t op_connect_ports(pjmedia_conf *conf,
                                     const pjmedia_conf_op_param *prm);
 static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
                                        const pjmedia_conf_op_param *prm);
+
+/* Standard required prototypes */
+static pj_status_t read_port(pjmedia_conf *conf,
+                            struct conf_port *cport,
+                            pj_int16_t *frame,
+                            pj_size_t count,
+                            pjmedia_frame_type *type);
+static pj_status_t write_port(pjmedia_conf *conf,
+                             struct conf_port *cport,
+                             const pj_timestamp *timestamp,
+                             pjmedia_frame_type *frm_type);
+
+/* Multi-threading specific prototypes */
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+static pj_status_t init_cpu_topology(pjmedia_conf *conf);
+static pj_status_t pin_thread_to_cpu(unsigned cpu_id);
+static int worker_thread_proc(void *arg);
+static void process_ports_range(pjmedia_conf *conf, unsigned start_port,
+                               unsigned end_port, worker_context *ctx);
+static void rebalance_worker_loads(pjmedia_conf *conf);
+static unsigned select_cpu_for_worker(pjmedia_conf *conf, unsigned worker_id);
+static pj_status_t get_frame_mt(pjmedia_port *this_port, pjmedia_frame *frame);
+#endif /* PJMEDIA_CONF_USE_MULTI_THREADING */
 
 static op_entry* get_free_op_entry(pjmedia_conf *conf)
 {
@@ -397,6 +982,31 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
     char pname[PJ_MAX_OBJ_NAME];
     pj_status_t status = PJ_SUCCESS;
 
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+#if defined(PJMEDIA_CONF_USE_NUMA) && PJMEDIA_CONF_USE_NUMA != 0 && defined(HAS_NUMA_SUPPORT) && HAS_NUMA_SUPPORT != 0
+    /* Save current NUMA policy */
+    int saved_numa_preferred = -1;
+    pj_bool_t numa_policy_set = PJ_FALSE;
+
+    if (numa_available()) {
+        saved_numa_preferred = numa_preferred();
+
+        /* Use round-robin across NUMA nodes for initial allocation */
+        static pj_atomic_t *numa_rr_counter = NULL;
+        if (!numa_rr_counter) {
+            pj_atomic_create(parent_pool, 0, &numa_rr_counter);
+        }
+
+        int num_nodes = numa_max_node() + 1;
+        if (num_nodes > 1) {
+            int node = pj_atomic_inc_and_get(numa_rr_counter) % num_nodes;
+            numa_set_preferred(node);
+            numa_policy_set = PJ_TRUE;
+        }
+    }
+#endif /* PJMEDIA_CONF_USE_NUMA */
+#endif /* PJMEDIA_CONF_USE_MULTI_THREADING */
+
     /* Make sure pool name is NULL terminated */
     pj_assert(name);
     pj_ansi_strxcpy2(pname, name, sizeof(pname));
@@ -471,8 +1081,15 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
     }
 
     /* Create adjustment level buffer. */
-    conf_port->adj_level_buf = (pj_int16_t*) pj_pool_zalloc(pool, 
+#if defined(PJMEDIA_CONF_USE_SIMD) && PJMEDIA_CONF_USE_SIMD != 0
+    conf_port->adj_level_buf = (pj_int16_t*)
+        alloc_aligned_buffer(pool,
+                            conf->samples_per_frame * sizeof(pj_int16_t),
+                            SIMD_ALIGNMENT);
+#else
+    conf_port->adj_level_buf = (pj_int16_t*) pj_pool_zalloc(pool,
                                conf->samples_per_frame * sizeof(pj_int16_t));
+#endif
     PJ_ASSERT_ON_FAIL(conf_port->adj_level_buf,
                       {status = PJ_ENOMEM; goto on_return;});
 
@@ -560,36 +1177,86 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
             conf_port->rx_buf_cap *= conf->channel_count;
 
         conf_port->rx_buf_count = 0;
+#if defined(PJMEDIA_CONF_USE_SIMD) && PJMEDIA_CONF_USE_SIMD != 0
+        conf_port->rx_buf = (pj_int16_t*)
+                            alloc_aligned_buffer(pool,
+                                                conf_port->rx_buf_cap * sizeof(conf_port->rx_buf[0]),
+                                                SIMD_ALIGNMENT);
+#else
         conf_port->rx_buf = (pj_int16_t*)
                             pj_pool_alloc(pool, conf_port->rx_buf_cap *
                                                 sizeof(conf_port->rx_buf[0]));
+#endif
         PJ_ASSERT_ON_FAIL(conf_port->rx_buf,
                           {status = PJ_ENOMEM; goto on_return;});
 
         /* Create TX buffer. */
         conf_port->tx_buf_cap = conf_port->rx_buf_cap;
         conf_port->tx_buf_count = 0;
+#if defined(PJMEDIA_CONF_USE_SIMD) && PJMEDIA_CONF_USE_SIMD != 0
+        conf_port->tx_buf = (pj_int16_t*)
+                            alloc_aligned_buffer(pool,
+                                                conf_port->tx_buf_cap * sizeof(conf_port->tx_buf[0]),
+                                                SIMD_ALIGNMENT);
+#else
         conf_port->tx_buf = (pj_int16_t*)
                             pj_pool_alloc(pool, conf_port->tx_buf_cap *
                                                 sizeof(conf_port->tx_buf[0]));
+#endif
         PJ_ASSERT_ON_FAIL(conf_port->tx_buf,
                           {status = PJ_ENOMEM; goto on_return;});
     }
 
-
     /* Create mix buffer. */
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+#if defined(PJMEDIA_CONF_USE_SIMD) && PJMEDIA_CONF_USE_SIMD != 0
+    /* Use aligned allocation for better cache and SIMD performance */
+    conf_port->mix_buf = (pj_int32_t*)
+        alloc_aligned_buffer(pool,
+                            conf->samples_per_frame * sizeof(pj_int32_t),
+                            SIMD_ALIGNMENT);
+#else
+    /* Use aligned allocation for better cache performance */
+    conf_port->mix_buf = (pj_int32_t*)
+        pj_pool_alloc_aligned(pool,
+                             conf->samples_per_frame * sizeof(pj_int32_t),
+                             32);
+#endif /* PJMEDIA_CONF_USE_SIMD */
+    /* Initialize NUMA preference to none - will be set when port is assigned */
+    conf_port->preferred_cpu = 0;
+#else
+    /* Standard allocation */
     conf_port->mix_buf = (pj_int32_t*)
                          pj_pool_zalloc(pool, conf->samples_per_frame *
                                               sizeof(conf_port->mix_buf[0]));
+#endif
+
     PJ_ASSERT_ON_FAIL(conf_port->mix_buf,
                       {status = PJ_ENOMEM; goto on_return;});
     conf_port->last_mix_adj = NORMAL_LEVEL;
 
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+#if defined(PJMEDIA_CONF_USE_NUMA) && PJMEDIA_CONF_USE_NUMA != 0 && defined(HAS_NUMA_SUPPORT) && HAS_NUMA_SUPPORT != 0
+    /* Restore NUMA policy */
+    if (numa_policy_set && numa_available()) {
+        numa_set_localalloc();
+    }
+#endif
+#endif
 
     /* Done */
     *p_conf_port = conf_port;
 
 on_return:
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+#if defined(PJMEDIA_CONF_USE_NUMA) && PJMEDIA_CONF_USE_NUMA != 0 && defined(HAS_NUMA_SUPPORT) && HAS_NUMA_SUPPORT != 0
+    /* Make sure we restore NUMA policy on error too */
+    if (numa_policy_set && numa_available()) {
+        numa_set_localalloc();
+    }
+#endif
+#endif
+
     if (status != PJ_SUCCESS) {
         if (pool)
             pj_pool_release(pool);
@@ -705,6 +1372,1109 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+/* Multi-threading specific functions */
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+
+static pj_status_t conf_thread_set_affinity(unsigned cpu_mask)
+{
+#if defined(PJ_HAS_THREAD_AFFINITY) && PJ_HAS_THREAD_AFFINITY != 0
+    return pj_thread_set_affinity(pj_thread_this(), cpu_mask);
+#elif defined(PJ_LINUX) || defined(PJ_DARWIN)
+    /* Fallback to pthread for Linux/macOS */
+    cpu_set_t cpuset;
+    pthread_t thread = pthread_self();
+    int cpu_id = 0;
+
+    CPU_ZERO(&cpuset);
+    while (cpu_mask) {
+        if (cpu_mask & 1) {
+            CPU_SET(cpu_id, &cpuset);
+        }
+        cpu_mask >>= 1;
+        cpu_id++;
+    }
+
+    if (pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset) != 0) {
+        return PJ_RETURN_OS_ERROR(errno);
+    }
+    return PJ_SUCCESS;
+#else
+    /* Platform doesn't support thread affinity */
+    PJ_UNUSED_ARG(cpu_mask);
+    return PJ_ENOTSUP;
+#endif
+}
+
+/* Thread naming compatibility layer */
+static void conf_thread_set_name(const char *name)
+{
+    /* Platform-specific naming */
+#if defined(PJ_LINUX) || defined(PJ_ANDROID)
+    prctl(PR_SET_NAME, name);
+#elif defined(PJ_DARWIN)
+    pthread_setname_np(name);
+#endif
+}
+
+static int worker_thread_proc(void *arg)
+{
+    worker_context *ctx = (worker_context*)arg;
+    pjmedia_conf *conf = ctx->conf;
+    pj_status_t status;
+    char thread_name[32];
+
+    /* Pin to CPU */
+    status = pin_thread_to_cpu(ctx->cpu_id);
+    if (status != PJ_SUCCESS && status != PJ_ENOTSUP) {
+        PJ_LOG(3,(THIS_FILE, "Worker %u: CPU pinning failed", ctx->worker_id));
+    }
+
+#if defined(PJMEDIA_CONF_USE_NUMA) && PJMEDIA_CONF_USE_NUMA != 0 && defined(HAS_NUMA_SUPPORT) && HAS_NUMA_SUPPORT != 0
+    /* Set NUMA allocation policy for this thread */
+    if (numa_available()) {
+        int node = numa_node_of_cpu(ctx->cpu_id);
+        numa_set_preferred(node);
+        PJ_LOG(5,(THIS_FILE, "Worker %u: NUMA node %d preferred",
+                  ctx->worker_id, node));
+    }
+#endif
+
+    /* Set thread name using compatibility layer */
+    pj_ansi_snprintf(thread_name, sizeof(thread_name), "conf_work_%u",
+                     ctx->worker_id);
+    conf_thread_set_name(thread_name);
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+    PJ_LOG(4,(THIS_FILE, "Worker %u started on CPU %u (work stealing enabled)",
+              ctx->worker_id, ctx->cpu_id));
+#else
+    PJ_LOG(4,(THIS_FILE, "Worker %u started on CPU %u",
+              ctx->worker_id, ctx->cpu_id));
+#endif
+
+    while (ctx->active) {
+        /* Wait for work signal */
+        pj_sem_wait(conf->worker_sems[ctx->worker_id]);
+
+        if (!ctx->active)
+            break;
+
+        /* Process assigned ports */
+        process_ports_range(conf, ctx->port_start, ctx->port_end, ctx);
+
+        /* Signal completion */
+        pj_atomic_inc(conf->workers_ready);
+    }
+
+    return 0;
+}
+
+/* Replace the old pin_thread_to_cpu function */
+static pj_status_t pin_thread_to_cpu(unsigned cpu_id)
+{
+    /* Convert CPU ID to mask */
+    unsigned cpu_mask = 1U << cpu_id;
+    pj_status_t status = conf_thread_set_affinity(cpu_mask);
+
+    if (status != PJ_SUCCESS && status != PJ_ENOTSUP) {
+        PJ_LOG(3,(THIS_FILE, "Failed to pin thread to CPU %u: %d",
+                  cpu_id, status));
+    } else if (status == PJ_SUCCESS) {
+        PJ_LOG(5,(THIS_FILE, "Thread pinned to CPU %u", cpu_id));
+    }
+
+    return status;
+}
+
+static pj_status_t init_cpu_topology(pjmedia_conf *conf)
+{
+    int i;
+
+#if defined(PJ_LINUX) || defined(PJ_ANDROID)
+    conf->total_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(PJ_WIN32)
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    conf->total_cpus = sysinfo.dwNumberOfProcessors;
+#elif defined(PJ_DARWIN)
+    size_t len = sizeof(conf->total_cpus);
+    int mib[2] = { CTL_HW, HW_NCPU };
+    sysctl(mib, 2, &conf->total_cpus, &len, NULL, 0);
+#else
+    /* Default to 1 CPU if we can't detect */
+    conf->total_cpus = 1;
+#endif
+
+    if (conf->total_cpus < 1)
+        conf->total_cpus = 1;
+
+    conf->cpu_to_numa = pj_pool_calloc(conf->pool, conf->total_cpus,
+                                       sizeof(unsigned));
+    conf->cpu_available = pj_pool_calloc(conf->pool, conf->total_cpus,
+                                         sizeof(pj_bool_t));
+
+    /* Detect NUMA topology */
+#if defined(PJMEDIA_CONF_USE_NUMA) && PJMEDIA_CONF_USE_NUMA != 0 && defined(HAS_NUMA_SUPPORT) && HAS_NUMA_SUPPORT != 0
+    if (numa_available()) {
+        for (i = 0; i < conf->total_cpus; i++) {
+            conf->cpu_to_numa[i] = numa_node_of_cpu(i);
+            conf->cpu_available[i] = PJ_TRUE;
+        }
+        PJ_LOG(4,(THIS_FILE, "NUMA topology detected: %d CPUs across nodes",
+                  conf->total_cpus));
+    } else
+#endif
+    {
+        /* Non-NUMA system */
+        for (i = 0; i < conf->total_cpus; i++) {
+            conf->cpu_to_numa[i] = 0;
+            conf->cpu_available[i] = PJ_TRUE;
+        }
+        PJ_LOG(4,(THIS_FILE, "Non-NUMA system: %d CPUs detected",
+                  conf->total_cpus));
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+static unsigned select_cpu_for_worker(pjmedia_conf *conf, unsigned worker_id)
+{
+    unsigned cpu_id;
+    unsigned cpus_per_worker;
+
+    /* Distribute workers across CPUs */
+    cpus_per_worker = conf->total_cpus / conf->worker_count;
+    cpu_id = worker_id * cpus_per_worker;
+
+    return cpu_id % conf->total_cpus;
+}
+
+#if defined(PJMEDIA_CONF_USE_SIMD) && PJMEDIA_CONF_USE_SIMD != 0
+
+/* Include cpuid header */
+#ifdef __GNUC__
+#include <cpuid.h>
+#endif
+
+/* Check if CPU supports AVX2 */
+static pj_bool_t cpu_has_avx2(void)
+{
+    static int has_avx2 = -1;
+
+    if (has_avx2 == -1) {
+#ifdef __GNUC__
+        unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
+        if (__get_cpuid_max(0, NULL) >= 7) {
+            __cpuid_count(7, 0, eax, ebx, ecx, edx);
+            has_avx2 = (ebx & (1 << 5)) ? 1 : 0;
+        } else {
+            has_avx2 = 0;
+        }
+#else
+        /* Assume AVX2 is available if SIMD is enabled */
+        has_avx2 = 1;
+#endif
+    }
+
+    return has_avx2 ? PJ_TRUE : PJ_FALSE;
+}
+
+/* Enable AVX2 for these functions */
+#ifdef __GNUC__
+#pragma GCC push_options
+#pragma GCC target("avx2")
+#elif defined(_MSC_VER)
+/* MSVC doesn't need special attributes for intrinsics */
+#endif
+
+/* Helper to mix audio using AVX2 SIMD instructions */
+static void mix_audio_simd(pj_int32_t *mix_buf, const pj_int16_t *input,
+                          unsigned samples_per_frame)
+{
+    unsigned k = 0;
+
+    /* Only use SIMD if CPU supports AVX2 */
+    if (!cpu_has_avx2()) {
+        /* Fallback to scalar implementation */
+        for (k = 0; k < samples_per_frame; k++) {
+            mix_buf[k] += input[k];
+        }
+        return;
+    }
+
+    /* Process 8 samples at a time with AVX2 */
+    if (IS_ALIGNED(mix_buf, SIMD_ALIGNMENT)) {
+        for (; k + 7 < samples_per_frame; k += 8) {
+            /* Load 8 16-bit samples and convert to 32-bit */
+            __m128i input_16 = _mm_loadu_si128((const __m128i*)&input[k]);
+            __m256i input_32 = _mm256_cvtepi16_epi32(input_16);
+
+            /* Load existing mix buffer values */
+            __m256i mix = _mm256_load_si256((const __m256i*)&mix_buf[k]);
+
+            /* Add input to mix buffer */
+            mix = _mm256_add_epi32(mix, input_32);
+
+            /* Store back to mix buffer */
+            _mm256_store_si256((__m256i*)&mix_buf[k], mix);
+        }
+    }
+
+    /* Handle remaining samples */
+    for (; k < samples_per_frame; k++) {
+        mix_buf[k] += input[k];
+    }
+}
+
+/* Helper for level adjustment with SIMD */
+static void adjust_level_simd(pj_int16_t *output, const pj_int16_t *input,
+                             unsigned samples_per_frame, int adj_level)
+{
+    unsigned k = 0;
+
+    /* Only use SIMD if CPU supports AVX2 */
+    if (!cpu_has_avx2()) {
+        /* Fallback to scalar implementation */
+        for (k = 0; k < samples_per_frame; k++) {
+            pj_int32_t itemp = input[k];
+            itemp *= adj_level;
+            itemp >>= 7;
+            if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+            else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
+            output[k] = (pj_int16_t)itemp;
+        }
+        return;
+    }
+
+    __m256i adj_vector = _mm256_set1_epi32(adj_level);
+
+    /* Process 8 samples at a time */
+    for (; k + 7 < samples_per_frame; k += 8) {
+        /* Load 8 16-bit samples and convert to 32-bit */
+        __m128i input_16 = _mm_loadu_si128((const __m128i*)&input[k]);
+        __m256i input_32 = _mm256_cvtepi16_epi32(input_16);
+
+        /* Multiply by adjustment level */
+        input_32 = _mm256_mullo_epi32(input_32, adj_vector);
+
+        /* Shift right by 7 (divide by 128) */
+        input_32 = _mm256_srai_epi32(input_32, 7);
+
+        /* Clamp to 16-bit range */
+        input_32 = _mm256_max_epi32(input_32, _mm256_set1_epi32(MIN_LEVEL));
+        input_32 = _mm256_min_epi32(input_32, _mm256_set1_epi32(MAX_LEVEL));
+
+        /* Convert back to 16-bit and store - use pack instead of cvt */
+        /* Pack 32-bit to 16-bit with signed saturation */
+        __m256i zero = _mm256_setzero_si256();
+        __m256i packed = _mm256_packs_epi32(input_32, zero);
+        __m256i result = _mm256_permute4x64_epi64(packed, 0xD8);
+        _mm_storeu_si128((__m128i*)&output[k], _mm256_castsi256_si128(result));
+    }
+
+    /* Handle remaining samples */
+    for (; k < samples_per_frame; k++) {
+        pj_int32_t itemp = input[k];
+        itemp *= adj_level;
+        itemp >>= 7;
+        if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+        else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
+        output[k] = (pj_int16_t)itemp;
+    }
+}
+
+/* Helper to find min/max using SIMD */
+static void find_minmax_simd(const pj_int32_t *mix_buf, unsigned samples_per_frame,
+                            pj_int32_t *mix_buf_min, pj_int32_t *mix_buf_max)
+{
+    unsigned k,i;
+
+    /* Only use SIMD if CPU supports AVX2 */
+    if (!cpu_has_avx2()) {
+        /* Fallback to scalar implementation */
+        for (k = 0; k < samples_per_frame; k++) {
+            if (mix_buf[k] < *mix_buf_min) *mix_buf_min = mix_buf[k];
+            if (mix_buf[k] > *mix_buf_max) *mix_buf_max = mix_buf[k];
+        }
+        return;
+    }
+
+    __m256i vmin = _mm256_set1_epi32(0);
+    __m256i vmax = _mm256_set1_epi32(0);
+
+    for (k = 0; k + 7 < samples_per_frame; k += 8) {
+        __m256i mix_vals = _mm256_load_si256((const __m256i*)&mix_buf[k]);
+        vmin = _mm256_min_epi32(vmin, mix_vals);
+        vmax = _mm256_max_epi32(vmax, mix_vals);
+    }
+
+    /* Extract min/max from vectors */
+    int min_array[8], max_array[8];
+    _mm256_storeu_si256((__m256i*)min_array, vmin);
+    _mm256_storeu_si256((__m256i*)max_array, vmax);
+
+    for (i = 0; i < 8; i++) {
+        if (min_array[i] < *mix_buf_min) *mix_buf_min = min_array[i];
+        if (max_array[i] > *mix_buf_max) *mix_buf_max = max_array[i];
+    }
+
+    /* Check remaining samples */
+    for (; k < samples_per_frame; k++) {
+        if (mix_buf[k] < *mix_buf_min) *mix_buf_min = mix_buf[k];
+        if (mix_buf[k] > *mix_buf_max) *mix_buf_max = mix_buf[k];
+    }
+}
+
+/* Helper to copy samples with SIMD */
+static void copy_samples_simd(pj_int32_t *mix_buf, const pj_int16_t *input,
+                             unsigned samples_per_frame)
+{
+    unsigned k = 0;
+
+    /* Only use SIMD if CPU supports AVX2 */
+    if (!cpu_has_avx2()) {
+        /* Fallback to scalar implementation */
+        for (k = 0; k < samples_per_frame; k++) {
+            mix_buf[k] = input[k];
+        }
+        return;
+    }
+
+    if (IS_ALIGNED(mix_buf, SIMD_ALIGNMENT)) {
+        for (; k + 7 < samples_per_frame; k += 8) {
+            __m128i input_16 = _mm_loadu_si128((const __m128i*)&input[k]);
+            __m256i input_32 = _mm256_cvtepi16_epi32(input_16);
+            _mm256_store_si256((__m256i*)&mix_buf[k], input_32);
+        }
+    }
+    /* Handle remaining samples */
+    for (; k < samples_per_frame; k++) {
+        mix_buf[k] = input[k];
+    }
+}
+
+/* Restore compiler options */
+#ifdef __GNUC__
+#pragma GCC pop_options
+#endif
+
+#else /* !PJMEDIA_CONF_USE_SIMD */
+
+/* Stub implementations when SIMD is disabled */
+static inline void mix_audio_simd(pj_int32_t *mix_buf, const pj_int16_t *input,
+                                 unsigned samples_per_frame)
+{
+    unsigned k;
+    for (k = 0; k < samples_per_frame; k++) {
+        mix_buf[k] += input[k];
+    }
+}
+
+static inline void adjust_level_simd(pj_int16_t *output, const pj_int16_t *input,
+                                    unsigned samples_per_frame, int adj_level)
+{
+    unsigned k;
+    for (k = 0; k < samples_per_frame; k++) {
+        pj_int32_t itemp = input[k];
+        itemp *= adj_level;
+        itemp >>= 7;
+        if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+        else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
+        output[k] = (pj_int16_t)itemp;
+    }
+}
+
+static inline void find_minmax_simd(const pj_int32_t *mix_buf, unsigned samples_per_frame,
+                                   pj_int32_t *mix_buf_min, pj_int32_t *mix_buf_max)
+{
+    unsigned k;
+    for (k = 0; k < samples_per_frame; k++) {
+        if (mix_buf[k] < *mix_buf_min) *mix_buf_min = mix_buf[k];
+        if (mix_buf[k] > *mix_buf_max) *mix_buf_max = mix_buf[k];
+    }
+}
+
+static inline void copy_samples_simd(pj_int32_t *mix_buf, const pj_int16_t *input,
+                                    unsigned samples_per_frame)
+{
+    unsigned k;
+    for (k = 0; k < samples_per_frame; k++) {
+        mix_buf[k] = input[k];
+    }
+}
+
+#endif /* !PJMEDIA_CONF_USE_SIMD */
+
+static void process_ports_range(pjmedia_conf *conf,
+                               unsigned start_port,
+                               unsigned end_port,
+                               worker_context *ctx)
+{
+    unsigned i, j;
+    pj_timestamp start_ts, end_ts;
+    pj_uint32_t processed = 0;
+    pj_int16_t *frame_buf;
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+    unsigned port_idx;
+    pj_bool_t has_work;
+    pj_bool_t use_work_stealing = PJ_TRUE;
+
+    /* Populate work queue if work stealing is enabled */
+    if (ctx && ctx->local_queue) {
+        /* Clear queue first */
+        pj_atomic_set(ctx->local_queue->head, 0);
+        pj_atomic_set(ctx->local_queue->tail, 0);
+        pj_atomic_set(ctx->local_queue->size, 0);
+
+        /* Add ports to work queue */
+        for (i = start_port; i < end_port && i < conf->max_ports; i++) {
+            struct conf_port *conf_port = conf->ports[i];
+            if (!conf_port || conf_port->is_new)
+                continue;
+            if (conf_port->rx_setting == PJMEDIA_PORT_DISABLE)
+                continue;
+            if (conf_port->listener_cnt == 0)
+                continue;
+
+            if (!push_work(ctx->local_queue, i)) {
+                /* Queue full, fall back to normal processing */
+                use_work_stealing = PJ_FALSE;
+                break;
+            }
+        }
+    } else {
+        use_work_stealing = PJ_FALSE;
+    }
+#endif
+
+    /* Allocate frame buffer for this worker */
+    frame_buf = alloca(conf->samples_per_frame * sizeof(pj_int16_t));
+
+    pj_get_timestamp(&start_ts);
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+    if (use_work_stealing) {
+        /* Work stealing mode */
+        do {
+            has_work = pop_local_work(ctx->local_queue, &port_idx);
+
+            if (!has_work && should_steal_work(ctx->local_queue)) {
+                /* Try stealing from other workers */
+                unsigned attempts = 0;
+
+                while (attempts < PJMEDIA_CONF_STEAL_ATTEMPTS) {
+                    worker_context *victim;
+
+                    /* Round-robin victim selection */
+                    ctx->victim_idx = (ctx->victim_idx + 1) % conf->worker_count;
+                    if (ctx->victim_idx == ctx->worker_id) {
+                        ctx->victim_idx = (ctx->victim_idx + 1) % conf->worker_count;
+                    }
+
+                    victim = &conf->workers[ctx->victim_idx];
+
+                    if (victim->local_queue &&
+                        steal_work(victim->local_queue, &port_idx)) {
+                        has_work = PJ_TRUE;
+                        pj_atomic_inc(ctx->successful_steals);
+                        pj_atomic_inc(conf->total_steals);
+                        break;
+                    }
+
+                    attempts++;
+                    pj_atomic_inc(ctx->steal_attempts);
+                    pj_atomic_inc(conf->total_steal_attempts);
+                }
+            }
+
+            if (has_work) {
+                i = port_idx;
+                /* Process single port */
+                struct conf_port *conf_port = conf->ports[i];
+                pj_int32_t level = 0;
+
+                /* Skip empty or new ports */
+                if (!conf_port || conf_port->is_new)
+                    continue;
+
+                processed++;
+
+                /* Skip if we're not allowed to receive from this port */
+                if (conf_port->rx_setting == PJMEDIA_PORT_DISABLE) {
+                    conf_port->rx_level = 0;
+                    continue;
+                }
+
+                /* Also skip if this port doesn't have listeners */
+                if (conf_port->listener_cnt == 0) {
+                    conf_port->rx_level = 0;
+                    continue;
+                }
+
+                /* Get frame from this port */
+                if (conf_port->delay_buf != NULL) {
+                    pj_status_t status;
+
+                    status = pjmedia_delay_buf_get(conf_port->delay_buf,
+                                                  (pj_int16_t*)frame_buf);
+                    if (status != PJ_SUCCESS) {
+                        conf_port->rx_level = 0;
+                        continue;
+                    }
+
+                } else {
+                    pj_status_t status;
+                    pjmedia_frame_type frame_type;
+
+                    status = read_port(conf, conf_port, (pj_int16_t*)frame_buf,
+                                      conf->samples_per_frame, &frame_type);
+
+                    if (status != PJ_SUCCESS) {
+                        conf_port->rx_level = 0;
+                        continue;
+                    }
+
+                    /* Check that the port is not removed when we call get_frame() */
+                    if (conf->ports[i] == NULL) {
+                        conf_port->rx_level = 0;
+                        continue;
+                    }
+
+                    /* Ignore if we didn't get any frame */
+                    if (frame_type != PJMEDIA_FRAME_TYPE_AUDIO) {
+                        conf_port->rx_level = 0;
+                        continue;
+                    }
+                }
+
+                /* Calculate and adjust RX level */
+                if (conf_port->rx_adj_level != NORMAL_LEVEL) {
+                    for (j = 0; j < conf->samples_per_frame; ++j) {
+                        pj_int32_t itemp = frame_buf[j];
+
+                        /* Adjust the level */
+                        itemp *= conf_port->rx_adj_level;
+                        itemp >>= 7;
+
+                        /* Clip the signal if it's too loud */
+                        if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+                        else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
+
+                        frame_buf[j] = (pj_int16_t) itemp;
+                        level += (frame_buf[j] >= 0 ? frame_buf[j] : -frame_buf[j]);
+                    }
+                } else {
+                    for (j = 0; j < conf->samples_per_frame; ++j) {
+                        level += (frame_buf[j] >= 0 ? frame_buf[j] : -frame_buf[j]);
+                    }
+                }
+
+                level /= conf->samples_per_frame;
+
+                /* Convert level to 8bit complement ulaw */
+                level = pjmedia_linear2ulaw(level) ^ 0xff;
+
+                /* Put this level to port's last RX level */
+                conf_port->rx_level = level;
+
+                /* Mix the audio to all listeners */
+                for (j = 0; j < conf_port->listener_cnt; ++j) {
+                    struct conf_port *listener;
+                    pj_int32_t *mix_buf;
+                    pj_int16_t *p_in_conn_leveled;
+
+                    listener = conf->ports[conf_port->listener_slots[j]];
+
+                    /* Skip if this listener doesn't want to receive audio */
+                    if (!listener || listener->tx_setting != PJMEDIA_PORT_ENABLE)
+                        continue;
+
+                    /* In work stealing mode, we can process any port */
+
+                    mix_buf = listener->mix_buf;
+
+                    /* apply connection level, if not normal */
+                    if (conf_port->listener_adj_level[j] != NORMAL_LEVEL) {
+#if defined(PJMEDIA_CONF_USE_SIMD) && PJMEDIA_CONF_USE_SIMD != 0
+                        /* Use SIMD for level adjustment */
+                        adjust_level_simd(conf_port->adj_level_buf, frame_buf,
+                                         conf->samples_per_frame,
+                                         conf_port->listener_adj_level[j]);
+#else
+                        unsigned k;
+                        /* Mix with level adjustment */
+                        for (k = 0; k < conf->samples_per_frame; ++k) {
+                            pj_int32_t itemp = frame_buf[k];
+
+                            itemp *= conf_port->listener_adj_level[j];
+                            itemp >>= 7;
+
+                            /* Clip the signal if needed */
+                            if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+                            else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
+
+                            /* Accumulate to mix buffer */
+                            conf_port->adj_level_buf[k] = (pj_int16_t)itemp;
+                        }
+#endif
+                        /* take the leveled frame */
+                        p_in_conn_leveled = conf_port->adj_level_buf;
+                    } else {
+                        /* take the frame as-is */
+                        p_in_conn_leveled = frame_buf;
+                    }
+
+                    if (listener->transmitter_cnt > 1) {
+                        /* Mixing signals */
+                        pj_int32_t mix_buf_min = 0;
+                        pj_int32_t mix_buf_max = 0;
+
+#if defined(PJMEDIA_CONF_USE_SIMD) && PJMEDIA_CONF_USE_SIMD != 0
+                        /* Use SIMD mixing */
+                        mix_audio_simd(mix_buf, p_in_conn_leveled, conf->samples_per_frame);
+
+                        /* Find min/max for overflow detection using SIMD */
+                        find_minmax_simd(mix_buf, conf->samples_per_frame,
+                                        &mix_buf_min, &mix_buf_max);
+#else
+                        unsigned k;
+                        /* Mix without level adjustment */
+                        for (k = 0; k < conf->samples_per_frame; ++k) {
+                            mix_buf[k] += p_in_conn_leveled[k];
+                        }
+
+                        /* Check for overflow and adjust mix_adj if needed */
+                        for (k = 0; k < conf->samples_per_frame; ++k) {
+                            if (mix_buf[k] < mix_buf_min)
+                                mix_buf_min = mix_buf[k];
+                            if (mix_buf[k] > mix_buf_max)
+                                mix_buf_max = mix_buf[k];
+                        }
+#endif
+
+                        /* Check if normalization adjustment needed */
+                        if (mix_buf_min < MIN_LEVEL || mix_buf_max > MAX_LEVEL) {
+                            int tmp_adj;
+
+                            if (-mix_buf_min > mix_buf_max)
+                                mix_buf_max = -mix_buf_min;
+
+                            /* NORMAL_LEVEL * MAX_LEVEL / mix_buf_max */
+                            tmp_adj = (MAX_LEVEL << 7) / mix_buf_max;
+                            if (tmp_adj < listener->mix_adj)
+                                listener->mix_adj = tmp_adj;
+                        }
+                    } else {
+                        /* Only 1 transmitter */
+#if defined(PJMEDIA_CONF_USE_SIMD) && PJMEDIA_CONF_USE_SIMD != 0
+                        /* Use SIMD copy for aligned buffers */
+                        copy_samples_simd(mix_buf, p_in_conn_leveled, conf->samples_per_frame);
+#else
+                        unsigned k;
+                        for (k = 0; k < conf->samples_per_frame; ++k) {
+                            mix_buf[k] = p_in_conn_leveled[k];
+                        }
+#endif
+                    }
+                }
+            }
+        } while (has_work);
+    } else {
+        /* Work stealing disabled - fall back to traditional processing */
+#endif
+        /* Traditional range-based processing */
+        for (i = start_port; i < end_port && i < conf->max_ports; i++) {
+            struct conf_port *conf_port = conf->ports[i];
+            pj_int32_t level = 0;
+            unsigned k;
+
+            /* Skip empty or new ports */
+            if (!conf_port || conf_port->is_new)
+                continue;
+
+            processed++;
+
+            /* Skip if we're not allowed to receive from this port */
+            if (conf_port->rx_setting == PJMEDIA_PORT_DISABLE) {
+                conf_port->rx_level = 0;
+                continue;
+            }
+
+            /* Also skip if this port doesn't have listeners */
+            if (conf_port->listener_cnt == 0) {
+                conf_port->rx_level = 0;
+                continue;
+            }
+
+            /* Get frame from this port */
+            if (conf_port->delay_buf != NULL) {
+                pj_status_t status;
+
+                status = pjmedia_delay_buf_get(conf_port->delay_buf,
+                                              (pj_int16_t*)frame_buf);
+                if (status != PJ_SUCCESS) {
+                    conf_port->rx_level = 0;
+                    continue;
+                }
+
+            } else {
+                pj_status_t status;
+                pjmedia_frame_type frame_type;
+
+                status = read_port(conf, conf_port, (pj_int16_t*)frame_buf,
+                                  conf->samples_per_frame, &frame_type);
+
+                if (status != PJ_SUCCESS) {
+                    conf_port->rx_level = 0;
+                    continue;
+                }
+
+                /* Check that the port is not removed when we call get_frame() */
+                if (conf->ports[i] == NULL) {
+                    conf_port->rx_level = 0;
+                    continue;
+                }
+
+                /* Ignore if we didn't get any frame */
+                if (frame_type != PJMEDIA_FRAME_TYPE_AUDIO) {
+                    conf_port->rx_level = 0;
+                    continue;
+                }
+            }
+
+            /* Calculate and adjust RX level */
+            if (conf_port->rx_adj_level != NORMAL_LEVEL) {
+                for (j = 0; j < conf->samples_per_frame; ++j) {
+                    pj_int32_t itemp = frame_buf[j];
+
+                    /* Adjust the level */
+                    itemp *= conf_port->rx_adj_level;
+                    itemp >>= 7;
+
+                    /* Clip the signal if it's too loud */
+                    if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+                    else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
+
+                    frame_buf[j] = (pj_int16_t) itemp;
+                    level += (frame_buf[j] >= 0 ? frame_buf[j] : -frame_buf[j]);
+                }
+            } else {
+                for (j = 0; j < conf->samples_per_frame; ++j) {
+                    level += (frame_buf[j] >= 0 ? frame_buf[j] : -frame_buf[j]);
+                }
+            }
+
+            level /= conf->samples_per_frame;
+
+            /* Convert level to 8bit complement ulaw */
+            level = pjmedia_linear2ulaw(level) ^ 0xff;
+
+            /* Put this level to port's last RX level */
+            conf_port->rx_level = level;
+
+            /* Add the signal to all listeners */
+            for (j = 0; j < conf_port->listener_cnt; ++j) {
+                struct conf_port *listener;
+                pj_int32_t *mix_buf;
+                pj_int16_t *p_in_conn_leveled;
+
+                listener = conf->ports[conf_port->listener_slots[j]];
+
+                /* Skip if this listener doesn't want to receive audio */
+                if (!listener || listener->tx_setting != PJMEDIA_PORT_ENABLE)
+                    continue;
+
+                /* Skip if listener is not in our processing range */
+                if (conf_port->listener_slots[j] < start_port ||
+                    conf_port->listener_slots[j] >= end_port)
+                    continue;
+
+                mix_buf = listener->mix_buf;
+
+                /* apply connection level, if not normal */
+                if (conf_port->listener_adj_level[j] != NORMAL_LEVEL) {
+                    for (k = 0; k < conf->samples_per_frame; ++k) {
+                        pj_int32_t itemp = frame_buf[k];
+
+                        itemp *= conf_port->listener_adj_level[j];
+                        itemp >>= 7;
+
+                        /* Clip the signal if it's too loud */
+                        if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+                        else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
+
+                        conf_port->adj_level_buf[k] = (pj_int16_t)itemp;
+                    }
+
+                    /* take the leveled frame */
+                    p_in_conn_leveled = conf_port->adj_level_buf;
+                } else {
+                    /* take the frame as-is */
+                    p_in_conn_leveled = frame_buf;
+                }
+
+                if (listener->transmitter_cnt > 1) {
+                    /* Mixing signals */
+                    pj_int32_t mix_buf_min = 0;
+                    pj_int32_t mix_buf_max = 0;
+
+                    /* Mix without level adjustment */
+                    for (k = 0; k < conf->samples_per_frame; ++k) {
+                        mix_buf[k] += p_in_conn_leveled[k];
+                    }
+
+                    /* Check for overflow and adjust mix_adj if needed */
+                    for (k = 0; k < conf->samples_per_frame; ++k) {
+                        if (mix_buf[k] < mix_buf_min)
+                            mix_buf_min = mix_buf[k];
+                        if (mix_buf[k] > mix_buf_max)
+                            mix_buf_max = mix_buf[k];
+                    }
+
+                    /* Check if normalization adjustment needed */
+                    if (mix_buf_min < MIN_LEVEL || mix_buf_max > MAX_LEVEL) {
+                        int tmp_adj;
+
+                        if (-mix_buf_min > mix_buf_max)
+                            mix_buf_max = -mix_buf_min;
+
+                        /* NORMAL_LEVEL * MAX_LEVEL / mix_buf_max */
+                        tmp_adj = (MAX_LEVEL << 7) / mix_buf_max;
+                        if (tmp_adj < listener->mix_adj)
+                            listener->mix_adj = tmp_adj;
+                    }
+                } else {
+                    /* Only 1 transmitter */
+                    for (k = 0; k < conf->samples_per_frame; ++k) {
+                        mix_buf[k] = p_in_conn_leveled[k];
+                    }
+                }
+            }
+        }
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+    }
+#endif
+
+    /* Synchronization barrier */
+    {
+        pj_status_t barrier_status;
+
+        barrier_status = pj_barrier_wait(conf->phase_barrier, 0);
+
+        if (barrier_status == 1) {
+            TRACE_((THIS_FILE, "Worker %u: barrier serial thread",
+                    ctx ? ctx->worker_id : 999));
+        } else if (barrier_status != PJ_SUCCESS) {
+            PJ_LOG(3,(THIS_FILE, "Worker %u: barrier wait failed: %d",
+                    ctx ? ctx->worker_id : 999, barrier_status));
+        }
+    }
+
+    /* Write to all ports in this range */
+    for (i = start_port; i < end_port && i < conf->max_ports; i++) {
+        struct conf_port *conf_port = conf->ports[i];
+        pjmedia_frame_type frm_type;
+        pj_status_t status;
+
+        if (!conf_port || conf_port->is_new)
+            continue;
+
+        pj_timestamp ts;
+        ts.u64 = pj_atomic_get(conf->frame_generation) * conf->samples_per_frame;
+
+        status = write_port(conf, conf_port, &ts, &frm_type);
+        if (status != PJ_SUCCESS) {
+            /* Log error but continue processing other ports */
+            PJ_LOG(4,(THIS_FILE, "Worker %u: write_port failed for port %u",
+                      ctx ? ctx->worker_id : 999, i));
+        }
+    }
+
+    pj_get_timestamp(&end_ts);
+
+    /* Update performance statistics */
+    if (ctx) {
+        pj_uint32_t elapsed_ns = pj_elapsed_usec(&start_ts, &end_ts) * 1000;
+        pj_atomic_add(ctx->frames_processed, 1);
+        pj_atomic_add(ctx->ports_processed, processed);
+
+        /* Update load statistics for rebalancing */
+        if (conf->worker_loads) {
+            load_stats *stats = &conf->worker_loads[ctx->worker_id];
+            /* Exponential moving average */
+            stats->avg_processing_ns = (stats->avg_processing_ns * 7 + elapsed_ns) / 8;
+            if (elapsed_ns > stats->peak_processing_ns)
+                stats->peak_processing_ns = elapsed_ns;
+            stats->ports_assigned = end_port - start_port;
+        }
+    }
+}
+
+static void rebalance_worker_loads(pjmedia_conf *conf)
+{
+    unsigned i;
+    unsigned total_active_ports = 0;
+    unsigned ports_per_worker;
+    unsigned current_port = 0;
+    pj_timestamp now;
+
+    pj_get_timestamp(&now);
+
+    /* Check if it's time to rebalance */
+    if (pj_elapsed_msec(&conf->last_rebalance, &now) < conf->rebalance_interval_ms)
+        return;
+
+    pj_lock_acquire(conf->rebalance_lock);
+
+    /* Count active ports */
+    for (i = 0; i < conf->max_ports; i++) {
+        if (conf->ports[i] && !conf->ports[i]->is_new &&
+            conf->ports[i]->rx_setting != PJMEDIA_PORT_DISABLE) {
+            total_active_ports++;
+        }
+    }
+
+    if (total_active_ports == 0) {
+        pj_lock_release(conf->rebalance_lock);
+        return;
+    }
+
+    /* Equal distribution */
+    ports_per_worker = (total_active_ports + conf->worker_count - 1) /
+                      conf->worker_count;
+
+    for (i = 0; i < conf->worker_count; i++) {
+        conf->workers[i].port_start = current_port;
+        current_port += ports_per_worker;
+        if (current_port > conf->max_ports)
+            current_port = conf->max_ports;
+        conf->workers[i].port_end = current_port;
+    }
+
+    conf->last_rebalance = now;
+    pj_lock_release(conf->rebalance_lock);
+}
+
+static void write_output_frame(pjmedia_conf *conf, pjmedia_frame *frame)
+{
+    pjmedia_frame_type speaker_frame_type = PJMEDIA_FRAME_TYPE_AUDIO;
+
+    /* Return sound playback frame from port 0 */
+    if (conf->ports[0] && conf->ports[0]->tx_level) {
+        TRACE_((THIS_FILE, "write to audio, count=%d",
+                           conf->samples_per_frame));
+        pjmedia_copy_samples((pj_int16_t*)frame->buf,
+                            (const pj_int16_t*)conf->ports[0]->mix_buf,
+                            conf->samples_per_frame);
+    } else {
+        /* Force frame type NONE */
+        speaker_frame_type = PJMEDIA_FRAME_TYPE_NONE;
+        pjmedia_zero_samples((pj_int16_t*)frame->buf, conf->samples_per_frame);
+    }
+
+    /* Sset frame type */
+    frame->type = speaker_frame_type;
+}
+
+static pj_status_t get_frame_mt(pjmedia_port *this_port,
+                               pjmedia_frame *frame)
+{
+    pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
+    unsigned i;
+
+    /* Handle queued operations synchronously */
+    if (!pj_list_empty(conf->op_queue)) {
+        handle_op_queue(conf);
+    }
+
+    /* Rebalance if needed */
+    rebalance_worker_loads(conf);
+
+    /* Increment frame generation */
+    pj_atomic_inc(conf->frame_generation);
+
+    /* Reset worker ready count */
+    pj_atomic_set(conf->workers_ready, 0);
+
+    /* Reset port buffers */
+    for (i = 0; i < conf->max_ports; i++) {
+        struct conf_port *conf_port = conf->ports[i];
+
+        if (!conf_port || conf_port->is_new)
+            continue;
+
+        /* Skip if we're not allowed to transmit to this port */
+        if (conf_port->tx_setting != PJMEDIA_PORT_ENABLE)
+            continue;
+
+        /* Reset buffer and auto adjustment level */
+        conf_port->mix_adj = NORMAL_LEVEL;
+        if (conf_port->transmitter_cnt) {
+            pj_bzero(conf_port->mix_buf,
+                     conf->samples_per_frame * sizeof(conf_port->mix_buf[0]));
+        }
+    }
+
+    /* Signal all workers to start */
+    for (i = 0; i < conf->worker_count; i++) {
+        pj_sem_post(conf->worker_sems[i]);
+    }
+
+    {
+        pj_status_t barrier_status;
+        barrier_status = pj_barrier_wait(conf->phase_barrier, 0);
+        if (barrier_status == 1) {
+            TRACE_((THIS_FILE, "Main thread is barrier serial thread"));
+        } else if (barrier_status < 0) {
+            PJ_LOG(3,(THIS_FILE, "Main thread: barrier wait error: %d",
+                    barrier_status));
+        }
+    }
+
+    /* Wait for all workers to complete */
+    while (pj_atomic_get(conf->workers_ready) < conf->worker_count) {
+        pj_thread_sleep(0); /* Yield CPU */
+    }
+
+    /* Final mixing and output (single-threaded for now) */
+    write_output_frame(conf, frame);
+
+    return PJ_SUCCESS;
+}
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+
+PJ_DEF(pj_status_t) pjmedia_conf_get_work_stealing_stats(pjmedia_conf *conf,
+                                                        pj_uint32_t *total_steals,
+                                                        pj_uint32_t *total_attempts,
+                                                        unsigned *per_worker_steals,
+                                                        unsigned *per_worker_attempts)
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(conf, PJ_EINVAL);
+
+    if (total_steals)
+        *total_steals = pj_atomic_get(conf->total_steals);
+
+    if (total_attempts)
+        *total_attempts = pj_atomic_get(conf->total_steal_attempts);
+
+    if (per_worker_steals && per_worker_attempts) {
+        for (i = 0; i < conf->worker_count; i++) {
+            per_worker_steals[i] = pj_atomic_get(conf->workers[i].successful_steals);
+            per_worker_attempts[i] = pj_atomic_get(conf->workers[i].steal_attempts);
+        }
+    }
+
+    return PJ_SUCCESS;
+}
+
+#endif /* PJMEDIA_CONF_USE_WORK_STEALING */
+#endif /* PJMEDIA_CONF_USE_MULTI_THREADING */
+
 /*
  * Create conference bridge.
  */
@@ -807,11 +2577,138 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool_,
     pj_list_init(conf->op_queue);
     pj_list_init(conf->op_queue_free);
 
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+        unsigned i;
+
+        /* Initialize CPU topology */
+        status = init_cpu_topology(conf);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        /* Determine worker count */
+        conf->worker_count = PJMEDIA_CONF_THREAD_POOL_SIZE;
+        if (conf->worker_count > conf->total_cpus)
+            conf->worker_count = conf->total_cpus;
+
+        /* Allocate worker contexts */
+        conf->workers = pj_pool_calloc(pool, conf->worker_count,
+                                      sizeof(worker_context));
+        conf->worker_sems = pj_pool_calloc(pool, conf->worker_count,
+                                          sizeof(pj_sem_t*));
+        conf->worker_loads = pj_pool_calloc(pool, conf->worker_count,
+                                           sizeof(load_stats));
+
+        /* Create synchronization primitives */
+        status = pj_atomic_create(pool, 0, &conf->workers_ready);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        status = pj_atomic_create(pool, 0, &conf->frame_generation);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        status = pj_barrier_create(pool, conf->worker_count + 1,
+                                  &conf->phase_barrier);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(3,(THIS_FILE, "Failed to create phase barrier"));
+            goto on_error;
+        }
+
+        status = pj_atomic_create(pool, 0, &conf->processing_phase);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+
+        status = pj_lock_create_recursive_mutex(pool, "rebalance",
+                                               &conf->rebalance_lock);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+        /* Initialize work stealing statistics */
+        status = pj_atomic_create(pool, 0, &conf->total_steals);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        status = pj_atomic_create(pool, 0, &conf->total_steal_attempts);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+#endif /* PJMEDIA_CONF_USE_WORK_STEALING */
+
+        /* Initialize workers */
+        for (i = 0; i < conf->worker_count; i++) {
+            worker_context *ctx = &conf->workers[i];
+
+            ctx->conf = conf;
+            ctx->worker_id = i;
+            ctx->cpu_id = select_cpu_for_worker(conf, i);
+            ctx->active = PJ_TRUE;
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+            /* Initialize work stealing for this worker */
+            status = init_work_queue(pool, &ctx->local_queue);
+            if (status != PJ_SUCCESS) {
+                PJ_LOG(3,(THIS_FILE, "Failed to init work queue for worker %u", i));
+                goto on_error;
+            }
+
+            pj_atomic_create(pool, 0, &ctx->steal_attempts);
+            pj_atomic_create(pool, 0, &ctx->successful_steals);
+            ctx->victim_idx = i;  /* Start with different victims */
+#endif /* PJMEDIA_CONF_USE_WORK_STEALING */
+
+            /* Create worker semaphore */
+            status = pj_sem_create(pool, NULL, 0, 1, &conf->worker_sems[i]);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+
+            /* Create performance counters */
+            pj_atomic_create(pool, 0, &ctx->frames_processed);
+            pj_atomic_create(pool, 0, &ctx->ports_processed);
+
+            /* Start worker thread */
+            status = pj_thread_create(pool, "conf_worker",
+                                     &worker_thread_proc,
+                                     ctx, 0, 0, &ctx->thread);
+            if (status != PJ_SUCCESS) {
+                unsigned j;
+                for (j = 0; j < i; j++) {
+                    conf->workers[j].active = PJ_FALSE;
+                    pj_sem_post(conf->worker_sems[j]);
+                    pj_thread_join(conf->workers[j].thread);
+                }
+                PJ_LOG(3,(THIS_FILE, "Failed to create worker thread %u", i));
+                goto on_error;
+            }
+        }
+
+        /* Set rebalance interval */
+        conf->rebalance_interval_ms = 50; /* Rebalance every 50ms */
+        pj_get_timestamp(&conf->last_rebalance);
+
+        /* Override get_frame function for MT */
+        conf->master_port->get_frame = &get_frame_mt;
+
+#if defined(PJMEDIA_CONF_USE_WORK_STEALING) && PJMEDIA_CONF_USE_WORK_STEALING != 0
+        PJ_LOG(4,(THIS_FILE, "Conference bridge created with %u worker threads "
+                  "and work stealing enabled", conf->worker_count));
+#else
+        PJ_LOG(4,(THIS_FILE, "Conference bridge created with %u worker threads",
+                  conf->worker_count));
+#endif
+#endif /* PJMEDIA_CONF_USE_MULTI_THREADING */
+
     /* Done */
 
     *p_conf = conf;
 
     return PJ_SUCCESS;
+
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+on_error:
+    pjmedia_conf_destroy(conf);
+    return status;
+#endif
 }
 
 
@@ -878,6 +2775,36 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
             }
         }
     }
+
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+        /* Stop all worker threads */
+        for (i = 0; i < conf->worker_count; i++) {
+            conf->workers[i].active = PJ_FALSE;
+            pj_sem_post(conf->worker_sems[i]);
+        }
+
+        /* Wait for workers to exit */
+        for (i = 0; i < conf->worker_count; i++) {
+            if (conf->workers[i].thread) {
+                pj_thread_join(conf->workers[i].thread);
+                pj_thread_destroy(conf->workers[i].thread);
+            }
+        }
+
+        /* Cleanup synchronization objects */
+        if (conf->phase_barrier)
+            pj_barrier_destroy(conf->phase_barrier);
+
+        if (conf->rebalance_lock)
+            pj_lock_destroy(conf->rebalance_lock);
+
+        /* Destroy semaphores */
+        for (i = 0; i < conf->worker_count; i++) {
+            if (conf->worker_sems && conf->worker_sems[i])
+                pj_sem_destroy(conf->worker_sems[i]);
+        }
+
+#endif
 
     if (conf->cb) {
         conf->cb = NULL;
@@ -1039,6 +2966,21 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
     /* Put the port, but don't add port counter yet */
     conf->ports[index] = conf_port;
     //conf->port_cnt++;
+
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+#if defined(PJMEDIA_CONF_USE_NUMA) && PJMEDIA_CONF_USE_NUMA != 0 && defined(HAS_NUMA_SUPPORT) && HAS_NUMA_SUPPORT != 0
+    if (conf->cpu_to_numa && numa_available()) {
+        int num_nodes = numa_max_node() + 1;
+        if (num_nodes > 1) {
+            int numa_node = index % num_nodes;
+            conf_port->preferred_cpu = numa_node * (conf->total_cpus / num_nodes);
+
+            PJ_LOG(5,(THIS_FILE, "Port %d assigned NUMA node %d preference",
+                      index, numa_node));
+        }
+    }
+#endif
+#endif
 
     /* Queue the operation */
     ope = get_free_op_entry(conf);
@@ -2559,6 +4501,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                              pjmedia_frame *frame)
 {
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
+
+#if defined(PJMEDIA_CONF_USE_MULTI_THREADING) && PJMEDIA_CONF_USE_MULTI_THREADING != 0
+    return get_frame_mt(this_port, frame);
+#endif
+
     pjmedia_frame_type speaker_frame_type = PJMEDIA_FRAME_TYPE_NONE;
     unsigned ci, cj, i, j;
     pj_int16_t *p_in;
