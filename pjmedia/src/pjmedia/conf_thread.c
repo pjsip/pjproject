@@ -257,6 +257,11 @@ struct conf_port
     pj_bool_t            is_new;        /**< Newly added port, 
                                          * remove it synchronously.        */
 
+    pj_bool_t            is_active_listener;/**< Port was added into
+                                             * active_listener[] and must
+                                             * be removed from this array 
+                                             * in op_remove_port()         */
+
     /* parallel conference bridge support                                  */
     pj_int16_t          *rx_frame_buf;  /**< The RX buffer of size (in bytes)
                                          * conf->rx_frame_buf_cap used in
@@ -917,6 +922,7 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     /* sound device (from 0 SLOT) to 0 idx, others to next idx */
     pj_assert(!conf->upper_bound_reg);
     conf->active_listener[conf->upper_bound_reg++] = 0;
+    conf_port->is_active_listener = PJ_TRUE;
 
     return PJ_SUCCESS;
 }
@@ -1490,13 +1496,17 @@ static pj_status_t op_add_port(pjmedia_conf *conf,
      * In an IVR scenario this can reduce the size of active_listener[] 
      * by up to two times
      */
-    if (cport->port && cport->port->put_frame)
+    if (cport->port && cport->port->put_frame) {
         conf->active_listener[conf->upper_bound_reg++] = port;
+        cport->is_active_listener = PJ_TRUE;
+    }
 
     ++conf->port_cnt;
 
     PJ_LOG(4,(THIS_FILE, "Added port %d (%.*s), port count=%d",
               port, (int)cport->name.slen, cport->name.ptr, conf->port_cnt));
+
+    pj_assert(conf->port_cnt >= conf->upper_bound_reg);
 
     return PJ_SUCCESS;
 }
@@ -1865,7 +1875,7 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
 {
     SLOT_TYPE src_slot, sink_slot;
     struct conf_port *src_port = NULL, *dst_port = NULL;
-    int i;
+    pj_uint32_t idx;
 
     /* Ports must be valid. */
     src_slot = prm->disconnect_ports.src;
@@ -1879,11 +1889,11 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
     /* Disconnect source -> sink */
     if (src_port && dst_port) {
         /* Check if connection has been made */
-        for (i=0; i<(int)src_port->listener_cnt; ++i) {
-            if (src_port->listener_slots[i] == sink_slot)
+        for (idx=0; idx<src_port->listener_cnt; ++idx) {
+            if (src_port->listener_slots[idx] == sink_slot)
                 break;
         }
-        if (i == (int)src_port->listener_cnt) {
+        if (idx == src_port->listener_cnt) {
             PJ_LOG(3,(THIS_FILE, "Ports connection %d->%d does not exist",
                       src_slot, sink_slot));
             return PJ_EINVAL;
@@ -1894,14 +1904,13 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
         pj_assert(dst_port->transmitter_cnt > 0 &&
                   dst_port->transmitter_cnt <= conf->max_ports);
         pj_array_erase(src_port->listener_slots, sizeof(SLOT_TYPE),
-                       src_port->listener_cnt, i);
+                       src_port->listener_cnt, idx);
         pj_array_erase(src_port->listener_adj_level, sizeof(unsigned),
-                       src_port->listener_cnt, i);
+                       src_port->listener_cnt, idx);
         --conf->connect_cnt;
         --dst_port->transmitter_cnt;
 
         if (!--src_port->listener_cnt) {
-            pj_uint32_t idx;
             pj_assert(conf->upper_bound);
             for(idx=0; idx<conf->upper_bound; ++idx) {
                 if (conf->active_ports[idx] == src_slot) {
@@ -1943,29 +1952,31 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
              * potentially decrease due to src_slot being removed from 
              * active_ports[]
              */
-            for (i=conf->upper_bound-1; i>=0; --i) {
-                int j;
+            idx = conf->upper_bound;
+            while(idx--) {
+                pj_uint32_t j;
 
-                src_slot = conf->active_ports[i];
+                src_slot = conf->active_ports[idx];
                 src_port = conf->ports[src_slot];
                 pj_assert(src_port && src_port->listener_cnt);
 
                 /* We need to iterate backwards since the listener count
                  * can potentially decrease.
                  */
-                for (j=src_port->listener_cnt-1; j>=0; --j) {
+                j = src_port->listener_cnt; 
+                while(j--) {
                     if (src_port->listener_slots[j] == sink_slot) {
                         pj_status_t status;
                         pjmedia_conf_op_param op_prm = {0};
 
-                        op_prm.disconnect_ports.src = i;
+                        op_prm.disconnect_ports.src = src_slot;
                         op_prm.disconnect_ports.sink = sink_slot;
                         status = op_disconnect_ports(conf, &op_prm);
                         if (status != PJ_SUCCESS) {
                             PJ_PERROR(4, (THIS_FILE, status,
                                 "Fail to stop transmission from port "
-                                "%d to port %d", 
-                                i, sink_slot));
+                                "%u to port %u", 
+                                src_slot, sink_slot));
                         }
                         break;
                     }
@@ -1985,18 +1996,20 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
         /* We need to iterate backwards since the listener count
          * will keep decreasing.
          */
-        for (i=src_port->listener_cnt-1; i>=0; --i) {
+        idx = src_port->listener_cnt;
+        while(idx--) {
             pj_status_t status;
             pjmedia_conf_op_param op_prm = {0};
 
+            sink_slot = src_port->listener_slots[idx];
             op_prm.disconnect_ports.src = src_slot;
-            op_prm.disconnect_ports.sink = src_port->listener_slots[i];
+            op_prm.disconnect_ports.sink = sink_slot;
             status = op_disconnect_ports(conf, &op_prm);
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(4, (THIS_FILE, status,
                               "Fail to stop transmission from port "
                               "%d to port %d",
-                              src_slot, src_port->listener_slots[i]));
+                              src_slot, sink_slot));
             }
         }
         pj_assert( !src_port->listener_cnt );
@@ -2324,26 +2337,27 @@ static pj_status_t op_remove_port(pjmedia_conf *conf,
     conf->ports[port] = NULL;
     //pj_mutex_unlock(conf->mutex);
 
-    if (!conf_port->is_new) {
-        if (conf_port->port && conf_port->port->put_frame) {
-            pj_uint32_t idx;
-            pj_assert(conf->upper_bound_reg > 1);
-            for (idx = 0; idx < conf->upper_bound_reg; ++idx) {
-                if (conf->active_listener[idx] == port) {
-                    pj_array_erase(conf->active_listener, sizeof(SLOT_TYPE),
-                        conf->upper_bound_reg, idx);
-                    --conf->upper_bound_reg;
-                    break;
-                }
-            }
-        }
-
+    if (!conf_port->is_new)
         --conf->port_cnt;
 
-        PJ_LOG(4, (THIS_FILE, "Removed port %d (%.*s), port count=%d",
-                   port, (int)conf_port->name.slen, conf_port->name.ptr,
-                   conf->port_cnt));
+    if (conf_port->is_active_listener) {
+        pj_uint32_t idx;
+        pj_assert(conf->upper_bound_reg);
+        for (idx = 0; idx < conf->upper_bound_reg; ++idx) {
+            if (conf->active_listener[idx] == port) {
+                pj_array_erase(conf->active_listener, sizeof(SLOT_TYPE),
+                    conf->upper_bound_reg, idx);
+                --conf->upper_bound_reg;
+                break;
+            }
+        }
     }
+
+    PJ_LOG(4, (THIS_FILE, "Removed port %d (%.*s), port count=%d",
+               port, (int)conf_port->name.slen, conf_port->name.ptr,
+               conf->port_cnt));
+
+    pj_assert(conf->port_cnt >= conf->upper_bound_reg);
 
     /* Return conf_port slot to unused slots cache. */
     conf_release_port( conf, port );
@@ -3545,9 +3559,9 @@ static void perform_get_frame(pjmedia_conf *conf)
     }
 
     /* Step 3
-    * Time for all ports to transmit whatever they have in their
-    * buffer.
-    */
+     * Time for all ports to transmit whatever they have in their
+     * buffer.
+     */
     while ((i = pj_atomic_dec_and_get(conf->listener_counter)) >= 0) {
         SLOT_TYPE port_idx = conf->active_listener[i];
         struct conf_port *listener = conf->ports[port_idx];

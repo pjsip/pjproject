@@ -289,7 +289,13 @@ typedef struct pjmedia_conf_param
      * including get_frame() thread. worker_threads is the number of conference
      * bridge threads excluding get_frame() thread. 
      * As a general rule worker_threads is 1 less than PJMEDIA_CONF_THREADS.
-     * This value will not be used for switchboard.
+     * This value is ignored by all conference backends except for the 
+     * multithreaded conference bridge backend
+     * (PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND).
+     * 
+     * The total number of conference bridge threads can be configured at the
+     * pjsua level using the pjsua_media_config::conf_threads parameter, or at
+     * the pjsua2 level using the pjsua2::MediaConfig::confThreads parameter.
      */
     unsigned worker_threads;
 } pjmedia_conf_param;

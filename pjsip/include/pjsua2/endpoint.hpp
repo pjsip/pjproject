@@ -1193,7 +1193,9 @@ public:
      * If this value is set to 1, the conference bridge will be implemented as a
      * serial bridge, otherwise it will be implemented as a parallel bridge.
      * Should not be less than 1.
-     * This value will not be used for switchboard.
+     * This value is ignored by all conference backends except for the 
+     * multithreaded conference bridge backend
+     * (PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND).
      *
      * Default value: PJMEDIA_CONF_THREADS
      */

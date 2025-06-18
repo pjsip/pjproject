@@ -1259,8 +1259,13 @@
  * Choose which conference backend implementation to use.
  * It is not enough to choose PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND for
  * real parallelism. For this purpose, the programmer must
- * - define PJMEDIA_CONF_THREADS with a value > 1
+ * - define PJMEDIA_CONF_THREADS with a value > 1 (and optionally 
+ *   define PJMEDIA_CONF_BACKEND to PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND),
+ *   This option allows pjmedia_conf_create() to create a parallel conference
+ *   and so convert any existing serial conference to parallel conference 
+ *   without changing the code.
  * OR
+ * - define PJMEDIA_CONF_BACKEND to PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND and
  * - use pjmedia_conf_create2() with pjmedia_conf_param::worker_threads
  * initialized to a value > 0.
  *
