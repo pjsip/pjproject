@@ -1738,6 +1738,11 @@ static void default_config()
     cfg->aud_cnt = 1;
 
     cfg->avi_def_idx = PJSUA_INVALID_ID;
+    for (i = 0; i < PJ_ARRAY_SIZE(cfg->avi); ++i) {
+        cfg->avi[i].slot = PJSUA_INVALID_ID;
+        cfg->avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
+        cfg->avi[i].p_id = PJSUA_INVALID_ID;
+    }
 
     cfg->use_cli = PJ_FALSE;
     cfg->cli_cfg.cli_fe = CLI_FE_CONSOLE;

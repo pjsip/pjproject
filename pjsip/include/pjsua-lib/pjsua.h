@@ -273,6 +273,9 @@ typedef int pjsua_player_id;
 /** File recorder identification */
 typedef int pjsua_recorder_id;
 
+/** AVI player identification */
+typedef int pjsua_avi_player_id;
+
 /** AVI recorder identification */
 typedef int pjsua_avi_rec_id;
 
@@ -7457,6 +7460,13 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 #endif
 
  /**
+  * The maximum avi file player.
+  */
+#ifndef PJSUA_MAX_AVI_PLAYERS
+#   define PJSUA_MAX_AVI_PLAYERS        4
+#endif
+
+ /**
   * The maximum avi file recorder.
   */
 #ifndef PJSUA_MAX_AVI_RECORDERS
@@ -8444,6 +8454,100 @@ PJ_DECL(pj_status_t) pjsua_recorder_get_port(pjsua_recorder_id id,
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id);
+
+
+/*****************************************************************************
+ * AVI player.
+ */
+
+ /**
+  * Create an avi file player, and automatically add this player to
+  * the audio/video conference bridge. The player will create a virtual
+  * video device and audio/video media port based on the streams contained
+  * in the file.
+  * The maximum number of stream is limited to PJSUA_MAX_AVI_NUM_STREAMS
+  * and the video stream is limited to one stream.
+  *
+  * @param filename      The filename to be played. Currently only
+  *                      AVI files are supported. The video stream is using
+  *                      YUY2/I420/RGB24 (uncompressed) format and the audio
+  *                      stream is using 16 bit PCM format.
+  *                      Filename's length must be smaller than PJ_MAXPATH.
+  * @param p_id          Pointer to receive player ID.
+  *
+  * @return              PJ_SUCCESS on success, or the appropriate error code.
+  */
+PJ_DECL(pj_status_t) pjsua_avi_player_create(const pj_str_t *filename,
+                                             pjsua_avi_player_id *id);
+
+/**
+ * Get the video device index of the avi player. Application can use this index
+ * as the video source/capture device.
+ *
+ * @param id            The avi player id.
+ *
+ * @return              The video device id or PJMEDIA_VID_INVALID_DEV if the
+ *                      player doesn't have a video device.
+ */
+PJ_DECL(pjmedia_vid_dev_index) pjsua_avi_player_get_vid_dev(
+                                                        pjsua_avi_player_id id);
+
+/**
+ * Get the number of streams created by the avi player.
+ *
+ * @param id            The avi player id.
+ * @param strm_type     The stream type.
+ *
+ * @return              The number of media stream of the avi player.
+ */
+PJ_DECL(unsigned) pjsua_avi_player_get_num_stream(pjsua_avi_player_id id,
+                                                  pjmedia_type strm_type);
+
+/**
+ * Get conference port ID associated with avi player based on the media type.
+ *
+ * @param id            The avi player id.
+ *
+ * @param strm_type     The stream type.
+ * @param strm_idx      The stream index.
+ *
+ * @return              The video/audio conference port id.
+ */
+PJ_DECL(pjsua_conf_port_id) pjsua_avi_player_get_conf_port(
+                                                        pjsua_avi_player_id id,
+                                                        pjmedia_type strm_type,
+                                                        unsigned strm_idx);
+
+/**
+ * Get the media port for the avi player based on the media type.
+ *
+ * @param id            The avi player id.
+ *
+ * @param strm_type     The stream type.
+ * @param strm_idx      The stream index.
+ * @param p_port        The media port port associated with the avi player.
+ *
+ * @return              The PJ_SUCCESS on success,or the appropriate error code.
+ *
+ */
+PJ_DECL(pj_status_t) pjsua_avi_player_get_port(pjsua_avi_player_id id,
+                                               pjmedia_type strm_type,
+                                               unsigned strm_idx,
+                                               pjmedia_port **p_port);
+
+/**
+ * Close the avi file, remove the media streams from the bridge, and free
+ * resources associated with the avi player. This API will try to remove the
+ * ports before freeing the resources. However, since the operation is done
+ * asynchronously, it might return PJ_EBUSY when the ports are still in use.
+ * In this case, application can retry calling this API after the port removal
+ * is done.
+ *
+ * @param id            The avi player ID.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_avi_player_destroy(pjsua_avi_player_id id);
 
 
 /*****************************************************************************

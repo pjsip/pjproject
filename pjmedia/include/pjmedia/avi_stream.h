@@ -107,6 +107,18 @@ PJ_DECL(unsigned)
 pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams *streams);
 
 /**
+ * Get the number of AVI stream with a certain media type.
+ *
+ * @param streams       The AVI streams.
+ * @param media_type    The media type of the stream.
+ *
+ * @return              The number of AVI stream.
+ */
+PJ_DECL(unsigned)
+pjmedia_avi_streams_get_num_streams_by_media(pjmedia_avi_streams *streams,
+                                             pjmedia_type media_type);
+
+/**
  * Return the idx-th stream of the AVI streams.
  *
  * @param streams       The AVI streams.
