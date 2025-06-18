@@ -141,6 +141,7 @@ struct pjsip_transaction
     int                         retransmit_count;/**< Retransmission count. */
     pj_timer_entry              retransmit_timer;/**< Retransmit timer.     */
     pj_timer_entry              timeout_timer;  /**< Timeout timer.         */
+    pj_timer_entry              misc_timer;     /**< Miscellaneous timer.   */
 
     /** Module specific data. */
     void                       *mod_data[PJSIP_MAX_MODULE];
