@@ -1244,48 +1244,6 @@
 #   endif // PJ_WIN32
 #endif  //PJ_ATOMIC_SLIST_IMPLEMENTATION
 
-/**
- * Conference switch/bridge backend implementations.
- * Select one of these implementations in PJMEDIA_CONF_BACKEND.
- */
-/* Conference switch board backend */
-#define PJMEDIA_CONF_SWITCH_BOARD_BACKEND 0
-/* Conference bridge sequential backend */
-#define PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND 1
-/* Multithreaded conference bridge backend */
-#define PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND 2
-
-/**
- * Choose which conference backend implementation to use.
- * It is not enough to choose PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND for
- * real parallelism. For this purpose, the programmer must
- * - define PJMEDIA_CONF_THREADS with a value > 1 (and optionally 
- *   define PJMEDIA_CONF_BACKEND to PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND),
- *   This option allows pjmedia_conf_create() to create a parallel conference
- *   and so convert any existing serial conference to parallel conference 
- *   without changing the code.
- * OR
- * - define PJMEDIA_CONF_BACKEND to PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND and
- * - use pjmedia_conf_create2() with pjmedia_conf_param::worker_threads
- * initialized to a value > 0.
- *
- * Default is PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND, 
- * however 
- * if PJMEDIA_CONF_USE_SWITCH_BOARD macro was defined, project system
- *   selects PJMEDIA_CONF_SWITCH_BOARD_BACKEND by default,
- * otherwise if PJMEDIA_CONF_THREADS macro was defined, project system 
- *   selects PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND by default.
- */
-#ifndef PJMEDIA_CONF_BACKEND
-#   if defined(PJMEDIA_CONF_USE_SWITCH_BOARD) && PJMEDIA_CONF_USE_SWITCH_BOARD!=0
-#       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_SWITCH_BOARD_BACKEND
-#   elif defined(PJMEDIA_CONF_THREADS)
-#       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND
-#   else
-#       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND
-#   endif 
-#endif  //PJMEDIA_CONF_BACKEND
-
 /** @} */
 
 /********************************************************************

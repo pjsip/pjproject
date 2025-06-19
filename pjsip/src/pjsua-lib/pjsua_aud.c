@@ -188,6 +188,7 @@ pj_status_t pjsua_aud_subsys_init()
 #if PJMEDIA_HAS_PASSTHROUGH_CODECS
     pjmedia_format ext_fmts[32];
 #endif
+    pjmedia_conf_param param;
 
     /* To suppress warning about unused var when all codecs are disabled */
     PJ_UNUSED_ARG(codec_id);
@@ -297,7 +298,6 @@ pj_status_t pjsua_aud_subsys_init()
         opt |= PJMEDIA_CONF_USE_LINEAR;
     }
 
-    pjmedia_conf_param param;
     pjmedia_conf_param_default(&param);
 
     param.max_slots = pjsua_var.media_cfg.max_media_ports;
