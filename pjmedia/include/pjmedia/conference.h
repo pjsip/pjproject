@@ -61,6 +61,7 @@ PJ_BEGIN_DECL
  */
 #define PJMEDIA_CONF_SWITCH_SIGNATURE   PJMEDIA_SIG_PORT_CONF_SWITCH
 
+
 /**
  * Opaque type for conference bridge.
  */
