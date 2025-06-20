@@ -1233,6 +1233,17 @@
 #endif
 
 
+ /**
+  * Specify whether SRTP needs to handle condition that remote/local
+  * may change SSRC when SRTP is restarted.
+  *
+  * Default: enabled.
+  */
+#ifndef PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART
+#   define PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART        1
+#endif
+
+
 /**
  * Let the library handle libsrtp initialization and deinitialization.
  * Application may want to disable this and manually perform libsrtp
