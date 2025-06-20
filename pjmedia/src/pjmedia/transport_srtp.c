@@ -987,9 +987,8 @@ static pj_status_t create_srtp_ctx(transport_srtp *srtp,
                                   setting->tx_roc.ssrc,
                                   setting->tx_roc.roc);
         PJ_LOG(4, (THIS_FILE, "Initializing SRTP TX ROC to SSRC %d with "
-                   "ROC %d %s\n", setting->tx_roc.ssrc,
-                   setting->tx_roc.roc,
-                   (err == srtp_err_status_ok)? "succeeded": "failed"));
+                   "ROC %d : %s\n", setting->tx_roc.ssrc,
+                   setting->tx_roc.roc, get_libsrtp_errstr(err)));
     }
     ctx->tx_policy = *tx;
     pj_strset(&ctx->tx_policy.key,  ctx->tx_key, tx->key.slen);
@@ -1039,9 +1038,9 @@ static pj_status_t create_srtp_ctx(transport_srtp *srtp,
                                   setting->rx_roc.ssrc,
                                   setting->rx_roc.roc);
         PJ_LOG(4, (THIS_FILE, "Initializing SRTP RX ROC from SSRC %d with "
-                   "ROC %d %s\n",
+                   "ROC %d : %s\n",
                    setting->rx_roc.ssrc, setting->rx_roc.roc,
-                   (err == srtp_err_status_ok)? "succeeded": "failed"));
+                   get_libsrtp_errstr(err)));
     }
     ctx->rx_policy = *rx;
     pj_strset(&ctx->rx_policy.key,  ctx->rx_key, rx->key.slen);
@@ -1393,19 +1392,53 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 
 #if TEST_ROC
     if (srtp->setting.tx_roc.ssrc == 0) {
-        srtp_err_status_t status;
-        status = srtp_set_stream_roc(srtp->srtp_ctx.srtp_tx_ctx, srtp->tx_ssrc,
-                                     (srtp->offerer_side? 1: 2));
-        if (status == srtp_err_status_ok) {
+        err = srtp_set_stream_roc(srtp->srtp_ctx.srtp_tx_ctx, srtp->tx_ssrc,
+                                  (srtp->offerer_side? 1: 2));
+        if (err == srtp_err_status_ok) {
             srtp->setting.tx_roc.ssrc = srtp->tx_ssrc;
             srtp->setting.tx_roc.roc = (srtp->offerer_side? 1: 2);
-            PJ_LOG(4, (THIS_FILE, "Setting TX ROC to SSRC %d to %d",
-                   srtp->tx_ssrc, srtp->setting.tx_roc.roc));
         }
+        PJ_LOG(4, (THIS_FILE, "Setting TX ROC to SSRC %d to %d : %s",
+               srtp->tx_ssrc, (srtp->offerer_side ? 1 : 2),
+               get_libsrtp_errstr(err)));
     }
 #endif
 
     err = srtp_protect(srtp->srtp_ctx.srtp_tx_ctx, srtp->rtp_tx_buffer, &len);
+
+#if PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART
+    /**
+     * This should not happen since currently the library does not change the 
+     * SSRC after restart.
+     */
+    if ((err == srtp_err_status_no_ctx) &&
+        (srtp->setting.tx_roc.ssrc != srtp->tx_ssrc))
+    {
+        pjmedia_srtp_crypto tx, rx;
+
+        tx = srtp->srtp_ctx.tx_policy;
+        rx = srtp->srtp_ctx.rx_policy;
+
+        PJ_LOG(5, (srtp->pool->obj_name, "Failed protect SRTP, SSRC changed "
+               "(%d->%d)", srtp->setting.tx_roc.ssrc,
+               ntohl(((pjmedia_rtp_hdr*)pkt)->ssrc)));
+
+        srtp->setting.tx_roc.ssrc = srtp->tx_ssrc;
+
+        pjmedia_transport_srtp_stop((pjmedia_transport*)srtp);
+
+        status = pjmedia_transport_srtp_start((pjmedia_transport*)srtp,
+                                              &tx, &rx);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (srtp->pool->obj_name, status, 
+                          "Failed to restart SRTP."));
+        } else if (!srtp->bypass_srtp) {
+            err = srtp_protect(srtp->srtp_ctx.srtp_tx_ctx,
+                               (pj_uint8_t*)pkt, &len);
+        }
+    }
+#endif
+
     pj_lock_release(srtp->mutex);
 
     if (err == srtp_err_status_ok) {
@@ -1552,6 +1585,7 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
     void (*cb)(void*, void*, pj_ssize_t) = NULL;
     void (*cb2)(pjmedia_tp_cb_param*) = NULL;
     void *cb_data = NULL;
+    pj_uint32_t rec_ssrc;
 
     if (srtp->bypass_srtp) {
         if (srtp->rtp_cb2) {
@@ -1612,27 +1646,22 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
             return;
         }
     }
-
+    rec_ssrc = ntohl(((pjmedia_rtp_hdr*)pkt)->ssrc);
 #if TEST_ROC
     if (srtp->setting.rx_roc.ssrc == 0) {
         srtp_err_status_t status;
         
-        srtp->rx_ssrc = ntohl(((pjmedia_rtp_hdr*)pkt)->ssrc);
-        status = srtp_set_stream_roc(srtp->srtp_ctx.srtp_rx_ctx, srtp->rx_ssrc,
+        status = srtp_set_stream_roc(srtp->srtp_ctx.srtp_rx_ctx, rec_ssrc,
                                      (srtp->offerer_side? 2: 1));
         if (status == srtp_err_status_ok) {     
-            srtp->setting.rx_roc.ssrc = srtp->rx_ssrc;
+            srtp->setting.rx_roc.ssrc = rec_ssrc;
             srtp->setting.rx_roc.roc = (srtp->offerer_side? 2: 1);
-
-            PJ_LOG(4, (THIS_FILE, "Setting RX ROC from SSRC %d to %d",
-                                  srtp->rx_ssrc, srtp->setting.rx_roc.roc));
-        } else {
-            PJ_LOG(4, (THIS_FILE, "Setting RX ROC %s",
-                       get_libsrtp_errstr(status)));
         }
+        PJ_LOG(4, (THIS_FILE, "Setting RX ROC from SSRC %d to %d: %s",
+               rec_ssrc, (srtp->offerer_side ? 2 : 1),
+               get_libsrtp_errstr(status)));
     }
 #endif
-    
     err = srtp_unprotect(srtp->srtp_ctx.srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
 
 #if PJMEDIA_SRTP_CHECK_RTP_SEQ_ON_RESTART
@@ -1667,7 +1696,7 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
                                  (pj_uint8_t*)pkt, &len);
         }
     }
-#if PJMEDIA_SRTP_CHECK_ROC_ON_RESTART
+#if PJMEDIA_SRTP_CHECK_ROC_ON_RESTART || PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART
     else
 #endif
 #endif
@@ -1695,6 +1724,39 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
                                  &len);
         }
     }
+#if PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART
+    else
+#endif
+#endif
+
+#if PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART
+    if (srtp->probation_cnt > 0 && (err == srtp_err_status_no_ctx) &&
+        (srtp->setting.rx_roc.ssrc != rec_ssrc))
+    {
+        pjmedia_srtp_crypto tx, rx;
+        pj_status_t status;
+
+        tx = srtp->srtp_ctx.tx_policy;
+        rx = srtp->srtp_ctx.rx_policy;
+
+        PJ_LOG(5, (srtp->pool->obj_name, "Failed to unprotect SRTP, "
+               "SSRC changed (%d->%d)", srtp->setting.rx_roc.ssrc,
+                ntohl(((pjmedia_rtp_hdr*)pkt)->ssrc)));
+
+        srtp->setting.rx_roc.ssrc = rec_ssrc;
+
+        pjmedia_transport_srtp_stop((pjmedia_transport*)srtp);
+
+        status = pjmedia_transport_srtp_start((pjmedia_transport*)srtp,
+                                               &tx, &rx);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(5, (srtp->pool->obj_name, "Failed to restart SRTP, err=%s",
+                   get_libsrtp_errstr(err)));
+        } else if (!srtp->bypass_srtp) {
+            err = srtp_unprotect(srtp->srtp_ctx.srtp_rx_ctx,
+                                 (pj_uint8_t*)pkt, &len);
+        }
+    }
 #endif
 
     if (err != srtp_err_status_ok) {
@@ -1707,7 +1769,7 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
         cb_data = srtp->user_data;
 
         /* Save SSRC after successful SRTP unprotect */
-        srtp->rx_ssrc = ntohl(((pjmedia_rtp_hdr*)pkt)->ssrc);
+        srtp->rx_ssrc = rec_ssrc;
     }
 
     pj_lock_release(srtp->mutex);
