@@ -3584,10 +3584,10 @@ PJ_DEF(pj_status_t) pjsua_avi_recorder_get_port(pjsua_avi_rec_id id,
 
     switch (strm_type) {
     case PJMEDIA_TYPE_AUDIO:
-        p_port = &pjsua_var.avi_recorder[id].aud_port;
+        *p_port = pjsua_var.avi_recorder[id].aud_port;
         break;
     case PJMEDIA_TYPE_VIDEO:
-        p_port = &pjsua_var.avi_recorder[id].vid_port;
+        *p_port = pjsua_var.avi_recorder[id].vid_port;
         break;
     default:
         *p_port = NULL;
