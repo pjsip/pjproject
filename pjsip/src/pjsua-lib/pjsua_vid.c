@@ -3305,7 +3305,7 @@ PJ_DEF(pjsua_conf_port_id) pjsua_avi_player_get_conf_port(
 {
     PJ_ASSERT_RETURN(id >= 0 && id < (int)PJ_ARRAY_SIZE(pjsua_var.avi_player),
                      PJSUA_INVALID_ID);
-    PJ_ASSERT_RETURN(strm_idx >= 0, PJSUA_INVALID_ID);
+    PJ_ASSERT_RETURN(strm_idx < PJSUA_MAX_AVI_NUM_STREAMS, PJSUA_INVALID_ID);
 
     switch (strm_type) {
     case PJMEDIA_TYPE_AUDIO:
@@ -3330,19 +3330,18 @@ PJ_DEF(pj_status_t) pjsua_avi_player_get_port(pjsua_avi_player_id id,
 {
     pj_status_t status = PJ_SUCCESS;
     PJ_ASSERT_RETURN(id >= 0 && id < (int)PJ_ARRAY_SIZE(pjsua_var.avi_player),
-        PJ_EINVAL);
+                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(strm_idx < PJSUA_MAX_AVI_NUM_STREAMS, PJSUA_INVALID_ID);
 
     switch (strm_type) {
     case PJMEDIA_TYPE_AUDIO:
-        PJ_ASSERT_RETURN(strm_idx >= 0 &&
-                         strm_idx < pjsua_var.avi_player[id].aud_cnt, 
+        PJ_ASSERT_RETURN(strm_idx < pjsua_var.avi_player[id].aud_cnt, 
                          PJSUA_INVALID_ID);
 
         *p_port = pjsua_var.avi_player[id].port[AUD_IDX(id, strm_idx)];
         break;
     case PJMEDIA_TYPE_VIDEO:
-        PJ_ASSERT_RETURN(strm_idx >= 0 &&
-                         strm_idx < pjsua_var.avi_player[id].vid_cnt,
+        PJ_ASSERT_RETURN(strm_idx < pjsua_var.avi_player[id].vid_cnt,
                          PJSUA_INVALID_ID);
 
         *p_port = pjsua_var.avi_player[id].port[strm_idx];
@@ -3356,7 +3355,7 @@ PJ_DEF(pj_status_t) pjsua_avi_player_get_port(pjsua_avi_player_id id,
 PJ_DECL(pj_status_t) pjsua_avi_player_destroy(pjsua_avi_player_id id)
 {
     PJ_ASSERT_RETURN(id >= 0 && id < (int)PJ_ARRAY_SIZE(pjsua_var.avi_player),
-        PJ_EINVAL);
+                     PJ_EINVAL);
 
     PJ_LOG(4, (THIS_FILE, "Destroying avi file player %d..", id));
     pj_log_push_indent();
@@ -3518,7 +3517,8 @@ PJ_DEF(pj_status_t) pjsua_avi_recorder_create(const pj_str_t *filename,
     } else {
         fmt[1] = *aud_fmt;
     }
-    status = pjmedia_avi_writer_create_streams(pool, filename->ptr, max_size,
+    status = pjmedia_avi_writer_create_streams(pool, filename->ptr,
+                                               (pj_uint32_t)max_size,
                                                2, fmt, options, &streams);
     if (status != PJ_SUCCESS)
         goto on_return;
@@ -3585,10 +3585,14 @@ PJ_DEF(pj_status_t) pjsua_avi_recorder_get_port(pjsua_avi_rec_id id,
     switch (strm_type) {
     case PJMEDIA_TYPE_AUDIO:
         p_port = &pjsua_var.avi_recorder[id].aud_port;
+        break;
     case PJMEDIA_TYPE_VIDEO:
         p_port = &pjsua_var.avi_recorder[id].vid_port;
+        break;
     default:
+        *p_port = NULL;
         status = PJ_ENOTFOUND;
+        break;
     }
     return status;
 }
@@ -3605,7 +3609,7 @@ PJ_DEF(pj_status_t) pjsua_avi_recorder_set_cb(pjsua_avi_rec_id id,
         pjsua_var.avi_recorder[id].cb = cb;
         pjsua_var.avi_recorder[id].user_data = user_data;
         pjmedia_avi_streams_set_cb(pjsua_var.avi_recorder[id].avi_streams, 
-                                   (void*)id, &avi_writer_cb);
+                                   (void*)(intptr_t)id, &avi_writer_cb);
     }
 
     return PJ_SUCCESS;
