@@ -3145,6 +3145,8 @@ void pjsua_process_msg_data(pjsip_tx_data *tdata,
 {
     pj_bool_t allow_body;
     const pjsip_hdr *hdr;
+    const pjsip_hdr *orig_max_fwd_hdr = NULL;
+    const pjsip_hdr *last_add_max_fwd_hdr = NULL;
 
     /* Always add User-Agent */
     if (pjsua_var.ua_cfg.user_agent.slen && 
@@ -3161,14 +3163,40 @@ void pjsua_process_msg_data(pjsip_tx_data *tdata,
     if (!msg_data)
         return;
 
+    orig_max_fwd_hdr = pjsip_hdr_find(&tdata->msg->hdr, PJSIP_H_MAX_FORWARDS, NULL);
+    if (orig_max_fwd_hdr != NULL)
+    {
+        PJ_LOG(2, (__FILE__, "Header found: %.*s", (int)orig_max_fwd_hdr->name.slen, orig_max_fwd_hdr->name));
+    }
+
     hdr = msg_data->hdr_list.next;
     while (hdr && hdr != &msg_data->hdr_list) {
         pjsip_hdr *new_hdr;
 
-        new_hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hdr);
-        pjsip_msg_add_hdr(tdata->msg, new_hdr);
+        /* Skip adding user-defined Max-Forwards header for the moment if there already is one in the message
+           (from endpoint configuration) */
+        if (orig_max_fwd_hdr && (pj_stricmp(&orig_max_fwd_hdr->name, &hdr->name) == 0))
+        {
+            last_add_max_fwd_hdr = hdr;
+        }
+        else
+        {
+            /* Otherwise add all additional headers unconditionally */
+            new_hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hdr);
+            pjsip_msg_add_hdr(tdata->msg, new_hdr);
+        }
 
         hdr = hdr->next;
+    }
+
+    /* Replace the found Max-Forwards header with the user-defined one, if both are present at this point */
+    if (orig_max_fwd_hdr && last_add_max_fwd_hdr) {
+        pjsip_hdr *new_hdr;
+
+        new_hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, last_add_max_fwd_hdr);
+        new_hdr->name = orig_max_fwd_hdr->name;
+        pjsip_msg_add_hdr(tdata->msg, new_hdr);
+        pj_list_erase(orig_max_fwd_hdr);
     }
 
     allow_body = (tdata->msg->body == NULL);
