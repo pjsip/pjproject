@@ -664,6 +664,8 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
             si->jb_discard_algo = prm.stream_info.info.aud.jb_discard_algo;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
             si->use_ka = prm.stream_info.info.aud.use_ka;
+
+            si->ka_cfg = prm.stream_info.info.aud.ka_cfg;
 #endif
             si->rtcp_sdes_bye_disabled = prm.stream_info.info.aud.rtcp_sdes_bye_disabled;
             si->rx_event_pt = prm.stream_info.info.aud.rx_event_pt;
