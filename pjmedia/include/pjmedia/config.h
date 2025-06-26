@@ -120,6 +120,64 @@
 #   define PJMEDIA_CONF_USE_AGC             1
 #endif
 
+/**
+ * Conference switch/bridge backend implementations.
+ * Select one of these implementations in PJMEDIA_CONF_BACKEND.
+ */
+/** Conference switch board backend */
+#define PJMEDIA_CONF_SWITCH_BOARD_BACKEND 0
+/** Conference bridge sequential backend */
+#define PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND 1
+/** Multithreaded conference bridge backend */
+#define PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND 2
+
+/**
+ * Choose which conference backend implementation to use.
+ * 
+ * In order to use parallel conference bridge with real parallelism,
+ * users need to:
+ * 1. define PJMEDIA_CONF_BACKEND to PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND
+ * and at least one of the following:
+ * 2.1. define PJMEDIA_CONF_THREADS with a value > 1
+ *   This option allows pjmedia_conf_create() to create a parallel conference
+ *   and so convert any existing serial conference to parallel conference 
+ *   without changing the code.
+ * OR
+ * 2.2. use pjmedia_conf_create2() with pjmedia_conf_param::worker_threads
+ * initialized to a value > 0.
+ *
+ * Default is PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND, 
+ * however 
+ * if PJMEDIA_CONF_USE_SWITCH_BOARD macro was defined, project system
+ *   selects PJMEDIA_CONF_SWITCH_BOARD_BACKEND by default,
+ * otherwise if PJMEDIA_CONF_THREADS macro was defined, project system 
+ *   selects PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND by default.
+ */
+#ifndef PJMEDIA_CONF_BACKEND
+#   if defined(PJMEDIA_CONF_USE_SWITCH_BOARD) && PJMEDIA_CONF_USE_SWITCH_BOARD!=0
+#       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_SWITCH_BOARD_BACKEND
+#   elif defined(PJMEDIA_CONF_THREADS)
+#       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND
+#   else
+#       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND
+#   endif 
+#endif  //PJMEDIA_CONF_BACKEND
+
+ /**
+ * The default value for the total number of threads, including get_frame()
+ * thread, that can be used by the conference bridge.
+ * This value is used to determine if the conference bridge should be
+ * implemented as a parallel bridge or not.
+ * If this value is set to 1, the conference bridge will be implemented as a
+ * serial bridge, otherwise it will be implemented as a parallel bridge.
+ * PJMEDIA_CONF_THREADS should not be less than 1.
+ *
+ * Default value: 1 - serial bridge
+ */
+#ifndef PJMEDIA_CONF_THREADS
+#   define PJMEDIA_CONF_THREADS  1
+#endif
+
 
 /*
  * Types of sound stream backends.
