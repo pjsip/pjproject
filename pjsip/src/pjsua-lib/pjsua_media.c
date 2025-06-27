@@ -4123,7 +4123,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         }
 
         if (call->audio_idx==-1 && status==PJ_SUCCESS &&
-            si->dir != PJMEDIA_DIR_NONE)
+            call_med->tp && local_sdp->media[mi]->desc.port != 0)
         {
             call->audio_idx = mi;
         }

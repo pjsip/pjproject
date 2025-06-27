@@ -2569,6 +2569,10 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
         info->media_status = call->media[call->audio_idx].state;
         info->media_dir = call->media[call->audio_idx].dir;
         info->conf_slot = call->media[call->audio_idx].strm.a.conf_slot;
+    } else {
+        info->media_status = PJSUA_CALL_MEDIA_NONE;
+        info->media_dir = PJMEDIA_DIR_NONE;
+        info->conf_slot = PJSUA_INVALID_ID;
     }
 
     /* Build array of provisional media info */
