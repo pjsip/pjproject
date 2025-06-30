@@ -370,6 +370,9 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         jbDiscardAlgo = info.info.aud.jb_discard_algo;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
         useKa = PJ2BOOL(info.info.aud.use_ka);
+        startCountKa = info.info.aud.start_ka_count;
+        startIntervalKA =  info.info.aud.start_ka_interval;
+        intervalKa = info.info.aud.ka_interval;
 #endif
         rtcpSdesByeDisabled = PJ2BOOL(info.info.aud.rtcp_sdes_bye_disabled);
     } else if (type == PJMEDIA_TYPE_VIDEO) {
@@ -391,6 +394,9 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         jbDiscardAlgo = PJMEDIA_JB_DISCARD_NONE;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
         useKa = PJ2BOOL(info.info.vid.use_ka);
+        startCountKa = info.info.vid.start_ka_count;
+        startIntervalKA =  info.info.vid.start_ka_interval;
+        intervalKa = info.info.vid.ka_interval;
 #endif
         rtcpSdesByeDisabled = PJ2BOOL(info.info.vid.rtcp_sdes_bye_disabled);
     } else if (type == PJMEDIA_TYPE_TEXT) {
@@ -411,6 +417,9 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         jbDiscardAlgo = PJMEDIA_JB_DISCARD_NONE;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
         useKa = PJ2BOOL(info.info.txt.use_ka);
+        startCountKa = info.info.txt.start_ka_count;
+        startIntervalKA =  info.info.txt.start_ka_interval;
+        intervalKa = info.info.txt.ka_interval;
 #endif
         rtcpSdesByeDisabled = PJ2BOOL(info.info.txt.rtcp_sdes_bye_disabled);
     }
