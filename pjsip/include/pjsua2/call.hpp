@@ -698,7 +698,7 @@ struct StreamInfo
     /**
      * Keepalive interval after the stream is created.
      */
-    unsigned startIntervalKA
+    unsigned startIntervalKa;
 
     /**
      *  Keepalive sending interval.
@@ -2018,7 +2018,7 @@ public:
      * (as opposed to onStreamCreated(), which is called *after* the session
      * has been created). The application may change
      * some stream info parameter values, i.e: jbInit, jbMinPre, jbMaxPre,
-     * jbMax, useKa, startCountKa, startIntervalKA, intervalKa,
+     * jbMax, useKa, startCountKa, startIntervalKa, intervalKa,
      * rtcpSdesByeDisabled, jbDiscardAlgo (audio), vidCodecParam.encFmt (video).
      *
      * @param prm       Callback parameter.
