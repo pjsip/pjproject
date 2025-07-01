@@ -601,6 +601,13 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
 
 on_return:
     if (status != PJ_SUCCESS) {
+        /* Destroy resample if this conf port has it. */
+        if (conf_port->rx_resample)
+            pjmedia_resample_destroy(conf_port->rx_resample);
+
+        if (conf_port->tx_resample)
+            pjmedia_resample_destroy(conf_port->tx_resample);
+
         if (pool)
             pj_pool_release(pool);
     }
