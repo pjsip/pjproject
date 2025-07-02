@@ -539,7 +539,9 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
          */
         if ( 0 != (port_ptime * conf_port->clock_rate *
                     conf_port->channel_count % 1000) ) {
-            status = PJ_ENOTSUP;
+            PJ_LOG(3,(THIS_FILE,
+                   "Cannot create conf port: incompatible sample rate/ptime"));
+            status = PJMEDIA_ENOTCOMPATIBLE;
             goto on_return;
         }
 
