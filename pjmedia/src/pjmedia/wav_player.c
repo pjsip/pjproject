@@ -423,7 +423,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool_,
     * 220.5 samples per frame.
     */
     if (0 != (ptime * wave_hdr.fmt_hdr.sample_rate *
-              wave_hdr.fmt_hdr.nchan % 1000)) {
+              wave_hdr.fmt_hdr.nchan % 1000)) 
+    {
         pj_file_close(fport->fd);
         PJ_LOG(3,(THIS_FILE,
               "Cannot create wav player port: incompatible sample rate/ptime"));

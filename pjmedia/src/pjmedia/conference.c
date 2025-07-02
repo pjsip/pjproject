@@ -537,8 +537,9 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
          * One such case would be for example 10ms @ 22050Hz which would yield
          * 220.5 samples per frame.
          */
-        if ( 0 != (port_ptime * conf_port->clock_rate *
-                    conf_port->channel_count % 1000) ) {
+        if (0 != (port_ptime * conf_port->clock_rate *
+                  conf_port->channel_count % 1000))
+        {
             PJ_LOG(3,(THIS_FILE,
                    "Cannot create conf port: incompatible sample rate/ptime"));
             status = PJMEDIA_ENOTCOMPATIBLE;
