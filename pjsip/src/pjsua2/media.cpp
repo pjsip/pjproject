@@ -140,7 +140,7 @@ AudioMediaTransmitParam::AudioMediaTransmitParam()
 }
 
 AudioMedia::AudioMedia() 
-: Media(PJMEDIA_TYPE_AUDIO), id(PJSUA_INVALID_ID), mediaCachingPool{},
+: Media(PJMEDIA_TYPE_AUDIO), id(PJSUA_INVALID_ID), mediaCachingPool({{{0}}}),
   mediaPool(NULL)
 {
 }
