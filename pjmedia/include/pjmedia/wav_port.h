@@ -83,6 +83,13 @@ typedef struct pjmedia_wav_player_info
  * Create a media port to play streams from a WAV file. WAV player port
  * supports for reading WAV file with uncompressed 16 bit PCM format or 
  * compressed G.711 A-law/U-law format.
+ * 
+ * Note: The ptime value must be compatible with the WAV file's sample rate.
+ * If the combination results in a fractional number of samples per frame,
+ * port creation will fail.
+ * For example, a sample rate of 22050 Hz and a frame duration (ptime) of 10 ms
+ * will result in 220.5 samples per frame, which is not an integer, 
+ * so port creation will fail.
  *
  * @param pool          Pool to create memory buffers for this port.
  * @param filename      File name to open.

@@ -531,6 +531,22 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
         conf_ptime = conf->samples_per_frame / conf->channel_count *
             1000 / conf->clock_rate;
 
+        /* Check compatibility of sample rate and ptime.
+         * Some combinations result in a fractional number of samples per frame
+         * which we do not support.
+         * One such case would be for example 10ms @ 22050Hz which would yield
+         * 220.5 samples per frame.
+         */
+        if (0 != (port_ptime * conf_port->clock_rate *
+                  conf_port->channel_count % 1000))
+        {
+            PJ_LOG(3,(THIS_FILE,
+                   "Cannot create conf port: incompatible sample rate/ptime"));
+            status = PJMEDIA_ENOTCOMPATIBLE;
+            goto on_return;
+        }
+
+
         /* Calculate the size (in ptime) for the port buffer according to
          * this formula:
          *   - if either ptime is an exact multiple of the other, then use
@@ -591,6 +607,13 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
 
 on_return:
     if (status != PJ_SUCCESS) {
+        /* Destroy resample if this conf port has it. */
+        if (conf_port->rx_resample)
+            pjmedia_resample_destroy(conf_port->rx_resample);
+
+        if (conf_port->tx_resample)
+            pjmedia_resample_destroy(conf_port->tx_resample);
+
         if (pool)
             pj_pool_release(pool);
     }
