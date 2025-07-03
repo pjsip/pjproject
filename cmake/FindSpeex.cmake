@@ -22,7 +22,7 @@ find_library(Speex_LIBRARY
 )
 mark_as_advanced(Speex_LIBRARY)
 
-if(DEFINED PC_Speex_VERSION AND PC_Speex_VERSION NOT STREQUAL "")
+if(DEFINED PC_Speex_VERSION AND NOT PC_Speex_VERSION STREQUAL "")
   set(Speex_VERSION "${PC_Speex_VERSION}")
 elseif(Speex_INCLUDE_DIR)
   cmake_path(APPEND _speex_header "${UPNP_INCLUDE_DIR}" speex.h)
