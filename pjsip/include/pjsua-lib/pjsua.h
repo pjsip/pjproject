@@ -1311,7 +1311,7 @@ typedef struct pjsua_callback
      * (as opposed to on_stream_created() and on_stream_created2() which are
      * called *after* the session has been created). The application may change
      * some stream info parameter values, i.e: jb_init, jb_min_pre, jb_max_pre,
-     * jb_max, use_ka, rtcp_sdes_bye_disabled, jb_discard_algo (audio),
+     * jb_max, use_ka, ka_cfg, rtcp_sdes_bye_disabled, jb_discard_algo (audio),
      * rx_event_pt (audio), codec_param->enc_fmt (video).
      *
      * @param call_id       Call identification.
