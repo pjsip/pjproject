@@ -324,6 +324,12 @@ pj_status_t pjsua_aud_subsys_init()
                                       &pjsua_var.null_port);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Set conf operation callback. */
+    if (pjsua_var.ua_cfg.cb.on_conf_op_completed) {
+        pjmedia_conf_set_op_cb(pjsua_var.mconf,
+                               pjsua_var.ua_cfg.cb.on_conf_op_completed);
+    }
+
     return status;
 
 on_error:
@@ -1141,22 +1147,14 @@ PJ_DEF(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
                                          tx_level, rx_level);
 }
 
+PJ_DEF(pj_status_t) pjsua_conf_set_op_cb(pjmedia_conf_op_cb cb)
+{
+    return pjmedia_conf_set_op_cb(pjsua_var.mconf, cb);
+}
+
 /*****************************************************************************
  * File player.
  */
-
-static char* get_basename(const char *path, unsigned len)
-{
-    char *p = ((char*)path) + len;
-
-    if (len==0)
-        return p;
-
-    for (--p; p!=path && *p!='/' && *p!='\\'; ) --p;
-
-    return (p==path) ? p : p+1;
-}
-
 
 /*
  * Create a file player, and automatically connect this player to
@@ -1201,8 +1199,8 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
-                             1000);
+    pool = pjsua_pool_create(pjsua_get_basename(path, (unsigned)filename->slen),
+                             1000, 1000);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_error;
@@ -1544,8 +1542,8 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
-                             1000);
+    pool = pjsua_pool_create(pjsua_get_basename(path, (unsigned)filename->slen),
+                             1000, 1000);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_return;

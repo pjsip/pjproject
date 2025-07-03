@@ -344,7 +344,7 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
         status = pjmedia_vid_codec_decode(decoder, 1, &read_frame,
                                           (unsigned)write_frame.size, 
                                           &write_frame);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS || write_frame.size == 0)
             return;
     } else {
         write_frame = read_frame;
@@ -666,8 +666,10 @@ static int main_func(int argc, char *argv[])
 
         /* Create file player */
         status = create_file_player(pool, play_file.file_name, &play_port);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            app_perror(THIS_FILE, "Error opening file", status);
             goto on_exit;
+        }
 
         /* Collect format info */
         file_vfd = pjmedia_format_get_video_format_detail(&play_port->info.fmt,
@@ -677,12 +679,10 @@ static int main_func(int argc, char *argv[])
                    pjmedia_fourcc_name(play_port->info.fmt.id, fmt_name),
                    (1.0*file_vfd->fps.num/file_vfd->fps.denum)));
 
-        /* Allocate file read buffer */
-        play_file.read_buf_size = PJMEDIA_MAX_VIDEO_ENC_FRAME_SIZE;
-        play_file.read_buf = pj_pool_zalloc(pool, play_file.read_buf_size);
-
         /* Create decoder, if the file and the stream uses different codec */
-        if (codec_info->fmt_id != (pjmedia_format_id)play_port->info.fmt.id) {
+        if (codec_info->dec_fmt_id[0] != 
+            (pjmedia_format_id)play_port->info.fmt.id)
+        {
             const pjmedia_video_format_info *dec_vfi;
             pjmedia_video_apply_fmt_param dec_vafp = {0};
             const pjmedia_vid_codec_info *codec_info2;
@@ -690,6 +690,7 @@ static int main_func(int argc, char *argv[])
 
             /* Find decoder */
             status = pjmedia_vid_codec_mgr_get_codec_info2(NULL,
+                                                           (pjmedia_format_id)
                                                            play_port->info.fmt.id,
                                                            &codec_info2);
             if (status != PJ_SUCCESS)
@@ -712,6 +713,7 @@ static int main_func(int argc, char *argv[])
                 goto on_exit;
 
             codec_param2.dir = PJMEDIA_DIR_DECODING;
+            codec_param2.packing = PJMEDIA_VID_PACKING_WHOLE;
             status = play_decoder->op->open(play_decoder, &codec_param2);
             if (status != PJ_SUCCESS)
                 goto on_exit;
@@ -726,9 +728,30 @@ static int main_func(int argc, char *argv[])
             dec_vafp.size = file_vfd->size;
             (*dec_vfi->apply_fmt)(dec_vfi, &dec_vafp);
 
+            /* Allocate file read buffer */
+            play_file.read_buf_size = PJMEDIA_MAX_VIDEO_ENC_FRAME_SIZE;
+            play_file.read_buf = pj_pool_zalloc(pool, play_file.read_buf_size);
+
             /* Allocate buffer to receive decoder output */
             play_file.dec_buf_size = dec_vafp.framebytes;
             play_file.dec_buf = pj_pool_zalloc(pool, play_file.dec_buf_size);
+        } else {
+            const pjmedia_video_format_info *dec_vfi;
+            pjmedia_video_apply_fmt_param dec_vafp = {0};
+
+            /* Get decoder format info and apply param */
+            dec_vfi = pjmedia_get_video_format_info(NULL,
+                                                    play_port->info.fmt.id);
+            if (!dec_vfi || !dec_vfi->apply_fmt) {
+                status = PJ_ENOTSUP;
+                goto on_exit;
+            }
+            dec_vafp.size = file_vfd->size;
+            (*dec_vfi->apply_fmt)(dec_vfi, &dec_vafp);
+
+            /* Allocate file read buffer */
+            play_file.read_buf_size = dec_vafp.framebytes;
+            play_file.read_buf = pj_pool_zalloc(pool, play_file.read_buf_size);
         }
 
         /* Create player clock */
@@ -934,6 +957,10 @@ static int main_func(int argc, char *argv[])
 
     /* Start deinitialization: */
 on_exit:
+
+    if (status != PJ_SUCCESS) {
+        app_perror(THIS_FILE, "Something wrong", status);
+    }
 
     /* Stop video devices */
     if (capture)

@@ -33,6 +33,18 @@
 
 static void stop_media_stream(pjsua_call *call, unsigned med_idx);
 
+char *pjsua_get_basename(const char* path, unsigned len)
+{
+    char* p = ((char*)path) + len;
+
+    if (len == 0)
+        return p;
+
+    for (--p; p != path && *p != '/' && *p != '\\'; ) --p;
+
+    return (p == path) ? p : p + 1;
+}
+
 static void pjsua_media_config_dup(pj_pool_t *pool,
                                    pjsua_media_config *dst,
                                    const pjsua_media_config *src)
@@ -4111,7 +4123,7 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
         }
 
         if (call->audio_idx==-1 && status==PJ_SUCCESS &&
-            si->dir != PJMEDIA_DIR_NONE)
+            call_med->tp && local_sdp->media[mi]->desc.port != 0)
         {
             call->audio_idx = mi;
         }

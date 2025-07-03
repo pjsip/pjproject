@@ -297,7 +297,7 @@ static pj_status_t resume_sound( pjmedia_conf *conf )
 }
 
 
-/**
+/*
  * Destroy conference bridge.
  */
 PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
@@ -308,6 +308,20 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
     pj_mutex_destroy(conf->mutex);
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Register the callback to be called when a port operation has been
+ * completed.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_set_op_cb(pjmedia_conf *conf,
+                                           pjmedia_conf_op_cb cb)
+{
+    PJ_UNUSED_ARG(conf);
+    PJ_UNUSED_ARG(cb);
+
+    return PJ_ENOTSUP;
 }
 
 

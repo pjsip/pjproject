@@ -37,7 +37,8 @@
  * route the audio flow and mix the audio signal when required.
  *
  * Some more information about the media flow when conference bridge is
- * used is described in http://www.pjsip.org/trac/wiki/media-flow .
+ * used is described in
+ * https://docs.pjsip.org/en/latest/specific-guides/media/audio_flow.html .
  */
 
 PJ_BEGIN_DECL
@@ -89,6 +90,109 @@ typedef struct pjmedia_conf_port_info
     int                 rx_adj_level;       /**< Rx level adjustment.       */
 } pjmedia_conf_port_info;
 
+/** 
+ * Conference operation type enumeration.
+ */
+typedef enum pjmedia_conf_op_type
+{
+    /**
+     * The operation is unknown.
+     */
+    PJMEDIA_CONF_OP_UNKNOWN,
+
+    /**
+     * The adding port operation.
+     */
+    PJMEDIA_CONF_OP_ADD_PORT,
+
+    /**
+     * The remove port operation.
+     */
+    PJMEDIA_CONF_OP_REMOVE_PORT,
+
+    /**
+     * The connect ports (start transmit) operation.
+     */
+    PJMEDIA_CONF_OP_CONNECT_PORTS,
+
+    /**
+     * The disconnect ports (stop transmit) operation.
+     */
+    PJMEDIA_CONF_OP_DISCONNECT_PORTS
+
+} pjmedia_conf_op_type;
+
+/**
+ * Conference operation parameter.
+ */
+typedef union pjmedia_conf_op_param
+{
+    /**
+     * The information for adding port operation.
+     */
+    struct {
+        unsigned port;      /**< The port id.                           */
+    } add_port;
+
+    /**
+     * The information for removing port operation.
+     */
+    struct {
+        unsigned port;      /**< The port id.                           */
+    } remove_port;
+
+    /**
+     * The information for connecting port operation.
+     */
+    struct {
+        unsigned src;       /**< The source port id.                    */
+        unsigned sink;      /**< The destination port id.               */
+        int adj_level;      /**< The adjustment level.                  */
+    } connect_ports;
+
+    /**
+     * The information for disconnecting port operation.
+     */
+    struct {
+        unsigned src;       /**< The source port id. For multiple port
+                                 operation, this will be set to -1.     */
+        unsigned sink;      /**< The destination port id. For multiple
+                                 port operation, this will be set
+                                 to -1.                                 */
+    } disconnect_ports;
+
+} pjmedia_conf_op_param;
+
+/**
+ * This will contain the information of the conference operation.
+ */
+typedef struct pjmedia_conf_op_info
+{
+    /**
+     * The operation type.
+     */
+    pjmedia_conf_op_type    op_type;
+
+    /**
+     * The operation return status.
+     */
+    pj_status_t             status;
+
+    /**
+     * The operation data.
+     */
+    pjmedia_conf_op_param   op_param;
+
+} pjmedia_conf_op_info;
+
+/**
+  * The callback type to be called upon the completion of a conference 
+  * port operation.
+  *
+  * @param info      The conference op callback param.
+  *
+  */
+typedef void (*pjmedia_conf_op_cb)(const pjmedia_conf_op_info *info);
 
 /**
  * Conference port options. The values here can be combined in bitmask to
@@ -172,7 +276,8 @@ PJ_DECL(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 
 
 /**
- * Destroy conference bridge.
+ * Destroy conference bridge. This will also remove any port, thus application
+ * might get notified from the callback set from #pjmedia_conf_set_op_cb(). 
  *
  * @param conf              The conference bridge.
  *
@@ -180,6 +285,21 @@ PJ_DECL(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
  */
 PJ_DECL(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf );
 
+/**
+ * Register the callback to be called when a port operation has been
+ * completed.
+ * 
+ * The callback will most likely be called from media threads,
+ * thus application must not perform long/blocking processing in this callback.
+ * 
+ * @param conf          The conference bridge.
+ * @param cb            Callback to be called. Set this to NULL to unregister
+ *                      the callback.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_conf_set_op_cb(pjmedia_conf *conf,
+                                            pjmedia_conf_op_cb cb);
 
 /**
  * Get the master port interface of the conference bridge. The master port
@@ -225,6 +345,16 @@ PJ_DECL(pj_status_t) pjmedia_conf_set_port0_name(pjmedia_conf *conf,
  * Once the media port is connected to other port(s) in the bridge,
  * the bridge will continuosly call get_frame() and put_frame() to the
  * port, allowing media to flow to/from the port.
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
+ * 
+ * Note: Sample rate and ptime (frame duration) settings must be compatible.
+ * Configurations resulting in a fractional number of samples per frame
+ * are not supported and will cause the function to fail.
+ * For example, a sample rate of 22050 Hz and a frame duration (ptime) of 10 ms
+ * will result in 220.5 samples per frame, which is not an integer, 
+ * so port creation will fail.
  *
  * @param conf          The conference bridge.
  * @param pool          Pool to allocate buffers for this port.
@@ -324,7 +454,10 @@ PJ_DECL(pj_status_t) pjmedia_conf_configure_port( pjmedia_conf *conf,
  * signal from the source will be adjusted with the level specified
  * in pjmedia_conf_adjust_rx_level(), then with the level specified
  * via this API, and finally with the level specified to the sink's
- * pjmedia_conf_adjust_tx_level(). 
+ * pjmedia_conf_adjust_tx_level().
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
  *
  * @param conf          The conference bridge.
  * @param src_slot      Source slot.
@@ -350,7 +483,8 @@ PJ_DECL(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
  *
  * Note that the operation will be done asynchronously, so application
  * should not assume that the port will no longer receive/send audio frame
- * after this function has returned.
+ * after this function has returned. Use the callback set from
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
  *
  * @param conf          The conference bridge.
  * @param src_slot      Source slot.
@@ -368,7 +502,8 @@ PJ_DECL(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
  *
  * Note that the operation will be done asynchronously, so application
  * should not assume that the port will no longer receive/send audio frame
- * after this function has returned.
+ * after this function has returned. Use the callback set from
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
  *
  * @param conf          The conference bridge.
  * @param sink_slot     Sink slot.
@@ -385,7 +520,8 @@ pjmedia_conf_disconnect_port_from_sources( pjmedia_conf *conf,
  *
  * Note that the operation will be done asynchronously, so application
  * should not assume that the port will no longer receive/send audio frame
- * after this function has returned.
+ * after this function has returned. Use the callback set from
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
  *
  * @param conf          The conference bridge.
  * @param src_slot      Source slot.
@@ -428,6 +564,9 @@ PJ_DECL(unsigned) pjmedia_conf_get_connect_count(pjmedia_conf *conf);
  * If the port uses any app's resources, application should maintain
  * the resources validity until the port is completely removed. Application
  * can schedule the resource release via #pjmedia_conf_add_destroy_handler().
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * #pjmedia_conf_set_op_cb() to receive notification upon completion.
  *
  * @param conf          The conference bridge.
  * @param slot          The port index to be removed.
