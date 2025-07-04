@@ -195,3 +195,65 @@ target_link_libraries(pjsua2
     pjsip-ua
     pjsua-lib
 )
+
+# ##############################################################################
+# Test application
+
+if(BIULD_TESTING)
+  #
+  # pjsip test application
+  #
+
+  add_executable(pjsip-test
+    src/test/dlg_core_test.c
+    src/test/dns_test.c
+    src/test/msg_err_test.c
+    src/test/msg_logger.c
+    src/test/msg_test.c
+    src/test/multipart_test.c
+    src/test/regc_test.c
+    src/test/test.c
+    src/test/transport_loop_test.c
+    src/test/transport_tcp_test.c
+    src/test/transport_test.c
+    src/test/transport_udp_test.c
+    src/test/tsx_basic_test.c
+    src/test/tsx_bench.c
+    src/test/tsx_uac_test.c
+    src/test/tsx_uas_test.c
+    src/test/txdata_test.c
+    src/test/uri_test.c
+    src/test/inv_offer_answer_test.c
+    src/test/${PJ_TEST_MAIN}
+  )
+
+  target_link_libraries(pjsip-test
+    PRIVATE
+      pjlib
+      pjlib-util
+      pjsip
+      pjsip-simple
+      pjsip-ua
+  )
+
+  add_test(NAME pjsip-test COMMAND pjsip-test)
+
+
+  #
+  # pjsua test application
+  #
+
+  add_executable(pjsua2-test src/pjsua2-test/main.cpp)
+
+  target_link_libraries(pjsua2-test
+    PRIVATE
+      pjlib
+      pjlib-util
+      pjmedia
+      pjmedia-audiodev
+      pjmedia-videodev
+      pjsua2
+  )
+
+  add_test(NAME pjsua2-test COMMAND pjsua2-test)
+endif()

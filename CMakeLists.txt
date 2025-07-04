@@ -9,11 +9,21 @@ project(pjproject
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # ##############################################################################
-# Options
+# Testing support
 
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  include(CTest)
+endif()
 
-)
-
+if(BUILD_TESTING)
+  if(WIN32)
+    set(PJ_TEST_MAIN "main_win32.c")
+  elseif(CMAKE_SYSTEM_NAME MATCHES "rtems")
+    set(PJ_TEST_MAIN "main_rtems.c")
+  else()
+    set(PJ_TEST_MAIN "main.c")
+  endif()
+endif()
 
 # ##############################################################################
 # Sub-directories

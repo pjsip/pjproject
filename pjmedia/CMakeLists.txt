@@ -755,3 +755,34 @@ target_include_directories(pjsdp
 #
 
 target_link_libraries(pjsdp PRIVATE pjlib pjlib-util)
+
+# ##############################################################################
+#  Test application
+
+if(BIULD_TESTING)
+  add_executable(pjmedia-test
+    src/test/codec_vectors.c
+    src/test/jbuf_test.c
+    src/test/main.c
+    src/test/mips_test.c
+    src/test/vid_codec_test.c
+    src/test/vid_dev_test.c
+    src/test/vid_port_test.c
+    src/test/rtp_test.c
+    src/test/test.c
+    src/test/sdp_neg_test.c
+  )
+
+  target_link_libraries(pjmedia-test
+    PRIVATE
+      pjlib
+      pjlib-util
+      pjnath
+      pjmedia
+      pjmedia-codec
+      pjmedia-audiodev
+      pjmedia-videodev
+  )
+
+  add_test(NAME pjmedia-test COMMAND pjmedia-test)
+endif()

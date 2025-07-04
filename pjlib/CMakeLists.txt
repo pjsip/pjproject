@@ -1,6 +1,7 @@
 # ##############################################################################
 # Options
 
+include(Pj/Option)
 include(CMakeDependentOption)
 
 # Floating point support
@@ -255,7 +256,7 @@ block(SCOPE_FOR VARIABLES)
     set(PJ_WIN32_WINNT 0x0501)
     set(WIN32_LEAN_AND_MEAN)
 
-    if(CMAKE_SYSTEM_NAME MATCHES "^.*_64-w64-mingw.*$")
+    if(CMAKE_SYSTEM_NAME MATCHES "_64-w64-mingw")
       set(PJ_WIN64 1)
     endif()
   elseif(APPLE)
@@ -267,9 +268,9 @@ block(SCOPE_FOR VARIABLES)
   else()
     # manual system name checks
     string(TOLOWER "${CMAKE_SYSTEM_NAME}" _system_name_lower)
-    if(PJ_OS_NAME MATCHES ".*rtems.*")
+    if(PJ_OS_NAME MATCHES "rtems")
       set(PJ_RTEMS 1)
-    elseif(PJ_OS_NAME STREQUAL "^.*(sunos|solaris).*$")
+    elseif(PJ_OS_NAME STREQUAL "sunos|solaris")
       set(PJ_SUNOS 1)
     endif()
   endif()
@@ -569,3 +570,52 @@ target_include_directories(pjlib AFTER
   PUBLIC
     ${PJLIB_CONFIG_INCLUDE_ROOT}
 )
+
+# ##############################################################################
+# pjlib test application
+
+if(PJ_BUILD_TESTS)
+  add_executable(pjlib-test
+    src/pjlib-test/activesock.c
+    src/pjlib-test/atomic.c
+    src/pjlib-test/atomic_slist.c
+    src/pjlib-test/echo_clt.c
+    src/pjlib-test/errno.c
+    src/pjlib-test/exception.c
+    src/pjlib-test/fifobuf.c
+    src/pjlib-test/file.c
+    src/pjlib-test/hash_test.c
+    src/pjlib-test/ioq_perf.c
+    src/pjlib-test/ioq_udp.c
+    src/pjlib-test/ioq_stress_test.c
+    src/pjlib-test/ioq_unreg.c
+    src/pjlib-test/ioq_tcp.c
+    src/pjlib-test/ioq_iocp_unreg_test.c
+    src/pjlib-test/list.c
+    src/pjlib-test/mutex.c
+    src/pjlib-test/os.c
+    src/pjlib-test/pool.c
+    src/pjlib-test/pool_perf.c
+    src/pjlib-test/rand.c
+    src/pjlib-test/rbtree.c
+    src/pjlib-test/select.c
+    src/pjlib-test/sleep.c
+    src/pjlib-test/sock.c
+    src/pjlib-test/sock_perf.c
+    src/pjlib-test/ssl_sock.c
+    src/pjlib-test/string.c
+    src/pjlib-test/test.c
+    src/pjlib-test/thread.c
+    src/pjlib-test/timer.c
+    src/pjlib-test/timestamp.c
+    src/pjlib-test/udp_echo_srv_sync.c
+    src/pjlib-test/udp_echo_srv_ioqueue.c
+    src/pjlib-test/unittest_test.c
+    src/pjlib-test/util.c
+    src/pjlib-test/${PJ_TEST_MAIN}
+  )
+
+  target_link_libraries(pjlib-test PRIVATE pjlib)
+
+  add_test(NAME pjlib-test COMMAND pjlib-test)
+endif()

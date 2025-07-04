@@ -38,3 +38,23 @@ target_include_directories(pjlib-util
 # Dependencies
 
 target_link_libraries(pjlib-util PUBLIC pjlib)
+
+# ##############################################################################
+# Test application
+
+if(BUILD_TESTING)
+  add_executable(pjlib-util-test
+    src/pjlib-util-test/xml.c
+    src/pjlib-util-test/encryption.c
+    src/pjlib-util-test/stun.c
+    src/pjlib-util-test/resolver_test.c
+    src/pjlib-util-test/test.c
+    src/pjlib-util-test/json_test.c
+    src/pjlib-util-test/http_client.c
+    src/pjlib-util-test/${PJ_TEST_MAIN}
+  )
+
+  target_link_libraries(pjlib-util-test PRIVATE pjlib pjlib-util)
+
+  add_test(NAME pjlib-util-test COMMAND pjlib-util-test)
+endif()

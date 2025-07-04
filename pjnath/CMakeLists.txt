@@ -45,3 +45,47 @@ if(PJNATH_WITH_UPNP)
     set(PJLIB_WITH_LIBUUID OFF "Enable UPnP support (not found)" FORCE)
   endif()
 endif()
+
+# ##############################################################################
+# Client application
+
+add_executable(pjturn-client EXCLUDE_FROM_ALL
+  src/pjturn-client/client_main.c
+)
+
+target_link_libraries(pjturn-client PRIVATE pjlib pjlib-util pjnath)
+
+# ##############################################################################
+# Server application
+
+add_executable(pjturn-srv EXCLUDE_FROM_ALL
+  src/pjturn-srv/allocation.c
+  src/pjturn-srv/auth.c
+  src/pjturn-srv/listener_udp.c
+  src/pjturn-srv/listener_tcp.c
+  src/pjturn-srv/server.c
+  src/pjturn-srv/main.c
+)
+
+target_link_libraries(pjturn-srv PRIVATE pjlib pjlib-util pjnath)
+
+# ##############################################################################
+# Test application
+
+if(BUILD_TESTING)
+  add_executable(pjnath-test
+    src/pjnath-test/ice_test.c
+    src/pjnath-test/stun.c
+    src/pjnath-test/sess_auth.c
+    src/pjnath-test/server.c
+    src/pjnath-test/concur_test.c
+    src/pjnath-test/stun_sock_test.c
+    src/pjnath-test/turn_sock_test.c
+    src/pjnath-test/test.c
+    src/pjnath-test/${PJ_TEST_MAIN}
+  )
+
+  target_link_libraries(pjnath-test PRIVATE pjlib pjlib-util pjnath)
+
+  add_test(NAME pjnath-test COMMAND pjnath-test)
+endif()
