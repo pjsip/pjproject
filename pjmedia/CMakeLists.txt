@@ -47,11 +47,12 @@ endif()
 # Acoustic Echo Cancellation (AEC)
 #
 
-# WebRTC Acoustic Echo Cancellation (AEC)
+# Speex Acoustic Echo Cancellation (AEC)
 cmake_dependent_option(PJMEDIA_WITH_SPEEX_AEC
   "Enable Speex Acoustic Echo Cancellation (AEC) support" ON
   "TARGET Pj::Dep::Speex" OFF
 )
+import_if_or_set(PJMEDIA_WITH_SPEEX_AEC OFF SpeexDSP)
 
 # WebRTC Acoustic Echo Cancellation (AEC)
 cmake_dependent_option(PJMEDIA_WITH_WEBRTC_AEC
@@ -459,7 +460,7 @@ target_link_libraries(pjmedia
     $<$<STREQUAL:${PJMEDIA_WITH_RESAMPLE},speex>:Pj::Dep::Speex>
 
     # aec
-    $<$<BOOL:${PJMEDIA_WITH_SPEEX_AEC}>:Pj::Dep::Speex>
+    $<$<BOOL:${PJMEDIA_WITH_SPEEX_AEC}>:Pj::Dep::Speex;SpeexDSP::SpeexDSP>
     $<$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC}>:Pj::Dep::WebRTC>
     $<$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC3}>:Pj::Dep::WebRTC::AEC3>
 
