@@ -1,6 +1,5 @@
 # ##############################################################################
 # Target
-# ##############################################################################
 
 add_library(webrtc
   src/webrtc/modules/audio_processing/aec/aec_core.c
@@ -41,7 +40,6 @@ target_include_directories(webrtc
 )
 
 include(DetectWebRTCParameters)
-target_link_libraries(webrtc PUBLIC WebRTC::Options)
 
 # Include SIMD source files
 get_target_property(_arch_simd WebRTC::Options WEBRTC_ARCH_SIMD)
@@ -89,3 +87,12 @@ else()
     )
 endif()
 
+# ##############################################################################
+# Dependencies
+
+# copmile options
+target_link_libraries(webrtc PUBLIC WebRTC::Options)
+
+# math library
+find_library(MATH_LIBRARY m REQUIRED)
+target_link_libraries(webrtc PRIVATE "${MATH_LIBRARY}")

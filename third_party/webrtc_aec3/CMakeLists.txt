@@ -1,6 +1,5 @@
 # ##############################################################################
 # Target
-# ##############################################################################
 
 add_library(webrtc_aec3
   src/absl/types/bad_optional_access.cc
@@ -154,7 +153,6 @@ set_target_properties(webrtc_aec3 PROPERTIES
 )
 
 include(DetectWebRTCParameters)
-target_link_libraries(webrtc_aec3 PUBLIC WebRTC::Options)
 
 # Include SIMD source files
 get_target_property(_arch_simd WebRTC::Options WEBRTC_ARCH_SIMD)
@@ -181,3 +179,12 @@ endif()
 
 # Suppress `-Wreturn-type`
 target_compile_options(webrtc_aec3 PRIVATE -Wno-return-type)
+# ##############################################################################
+# Dependencies
+
+# copmile options
+target_link_libraries(webrtc_aec3 PUBLIC WebRTC::Options)
+
+# math library
+find_library(MATH_LIBRARY m REQUIRED)
+target_link_libraries(webrtc_aec3 PUBLIC "${MATH_LIBRARY}")

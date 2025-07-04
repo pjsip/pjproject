@@ -1,6 +1,5 @@
 # ##############################################################################
 # Target
-# ##############################################################################
 
 add_library(ilbc
   FrameClassify.c
@@ -33,3 +32,10 @@ target_include_directories(ilbc
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:.>
 )
+
+# ##############################################################################
+# Dependencies
+
+# math library
+find_library(MATH_LIBRARY m REQUIRED)
+target_link_libraries(ilbc PRIVATE "${MATH_LIBRARY}")

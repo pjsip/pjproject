@@ -58,3 +58,7 @@ target_compile_definitions(speex PRIVATE HAVE_CONFIG_H=1)
 
 # pjlib - for config & log overrides
 target_link_libraries(speex PRIVATE pjlib)
+
+# math library
+find_library(MATH_LIBRARY m REQUIRED)
+target_link_libraries(speex PUBLIC "${MATH_LIBRARY}")

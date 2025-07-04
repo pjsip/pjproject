@@ -477,6 +477,12 @@ target_link_libraries(pjmedia
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVDEVICE}>:FFMPEG::avdevice>
 )
 
+# math library
+find_library(MATH_LIBRARY m)
+if(MATH_LIBRARY)
+  target_link_libraries(pjmedia PRIVATE "${MATH_LIBRARY}")
+endif()
+
 # ##############################################################################
 # pjmedia-codec
 

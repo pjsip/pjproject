@@ -1,6 +1,5 @@
 # ##############################################################################
 # Target
-# ##############################################################################
 
 add_library(yuv
   source/compare.cc
@@ -74,5 +73,13 @@ if(USING_GCC OR USING_CLANG)
     target_compile_options(yuv PRIVATE -Wno-memset-elt-size)
   endif()
 elseif(USING_MSVC)
+elseif(MSVC)
   target_compile_options(yuv PRIVATE /Oy)
 endif()
+
+# ##############################################################################
+# Dependencies
+
+# math library
+find_library(MATH_LIBRARY m REQUIRED)
+target_link_libraries(yuv PRIVATE "${MATH_LIBRARY}")

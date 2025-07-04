@@ -49,3 +49,7 @@ target_include_directories(g7221 PUBLIC "${g7221_interface_root}")
 
 # pjlib - for config
 target_link_libraries(g7221 PRIVATE pjlib)
+
+# math library
+find_library(MATH_LIBRARY m REQUIRED)
+target_link_libraries(g7221 PUBLIC "${MATH_LIBRARY}")

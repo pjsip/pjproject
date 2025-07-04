@@ -136,7 +136,14 @@ target_include_directories(pjlib
 # Dependencies
 
 # math library
-target_link_libraries(pjlib PRIVATE m)
+find_library(MATH_LIBRARY m)
+if(NOT MATH_LIBRARY)
+  if(MATH_LIBRARY)
+    target_link_libraries(pjlib PUBLIC m)
+  elseif(PJLIB_WITH_FLOATING_POINT)
+    pj_force_set(PJLIB_WITH_FLOATING_POINT OFF "math library not found")
+  endif()
+endif()
 
 # win32 libraries
 if(WIN32 OR CYGWIN OR WIN32)
@@ -156,7 +163,7 @@ if(PJLIB_WITH_LIBUUID)
     target_link_libraries(pjlib PRIVATE UUID::UUID)
     target_sources(pjlib PRIVATE src/pj/guid_uuid.c)
   else()
-    set(PJLIB_WITH_LIBUUID OFF "Enable libuuid (not found)" FORCE)
+    pj_force_set(PJLIB_WITH_LIBUUID OFF "libuuid not found")
     target_sources(pjlib PRIVATE src/pj/guid_simple.c)
   endif()
 endif()
@@ -574,7 +581,7 @@ target_include_directories(pjlib AFTER
 # ##############################################################################
 # pjlib test application
 
-if(PJ_BUILD_TESTS)
+if(BUILD_TESTING)
   add_executable(pjlib-test
     src/pjlib-test/activesock.c
     src/pjlib-test/atomic.c
