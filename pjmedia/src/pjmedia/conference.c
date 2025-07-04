@@ -392,7 +392,7 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
                                      const pj_str_t *name,
                                      struct conf_port **p_conf_port)
 {
-    struct conf_port *conf_port;
+    struct conf_port *conf_port = NULL;
     pj_pool_t *pool = NULL;
     char pname[PJ_MAX_OBJ_NAME];
     pj_status_t status = PJ_SUCCESS;
@@ -608,10 +608,10 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
 on_return:
     if (status != PJ_SUCCESS) {
         /* Destroy resample if this conf port has it. */
-        if (conf_port->rx_resample)
+        if (conf_port && conf_port->rx_resample)
             pjmedia_resample_destroy(conf_port->rx_resample);
 
-        if (conf_port->tx_resample)
+        if (conf_port && conf_port->tx_resample)
             pjmedia_resample_destroy(conf_port->tx_resample);
 
         if (pool)
