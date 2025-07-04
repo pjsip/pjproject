@@ -40,7 +40,7 @@
 #cmakedefine01 WORDS_BIGENDIAN
 #endif
 
-#ifdef WORDS_BIGENDIAN
+#if defined(WORDS_BIGENDIAN) && WORDS_BIGENDIAN == 1
 #define PJ_IS_LITTLE_ENDIAN 0
 #define PJ_IS_BIG_ENDIAN 1
 #else
