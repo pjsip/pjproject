@@ -202,12 +202,39 @@ target_compile_definitions(pjlib PUBLIC PJ_AUTOCONF=1)
 
 # architecture
 block(SCOPE_FOR VARIABLES)
-  # processor architecture
-  set(PJ_M_NAME "${CMAKE_SYSTEM_PROCESSOR}")
+  include(Pj/DetectArch)
+  pj_detect_arch(arch)
+
+  # architecture name
+  set(PJ_M_NAME "${arch}")
+
+  # architecture macros
+  target_compile_definitions(pjlib PUBLIC
+    $<$<STREQUAL:${arch},"i386">:PJ_M_I386=1>
+    $<$<STREQUAL:${arch},"x86_64">:PJ_M_X86_64=1>
+    $<$<STREQUAL:${arch},"ia64">:PJ_M_IA64=1>
+    $<$<STREQUAL:${arch},"m68k">:PJ_M_M68K=1>
+    $<$<STREQUAL:${arch},"alpha">:PJ_M_ALPHA=1>
+    $<$<STREQUAL:${arch},"mips64">:PJ_M_MIPS=1>
+    $<$<STREQUAL:${arch},"mips">:PJ_M_MIPS=1>
+    $<$<STREQUAL:${arch},"sparc">:PJ_M_SPARC=1>
+    $<$<STREQUAL:${arch},"arm64">:PJ_M_ARM64=1>
+    $<$<STREQUAL:${arch},"armv7">:PJ_M_ARMV7=1>
+    $<$<STREQUAL:${arch},"armv4">:PJ_M_ARMV4=1>
+    $<$<STREQUAL:${arch},"powerpc">:PJ_M_POWERPC=1>
+    $<$<STREQUAL:${arch},"nios2">:PJ_M_NIOS2=1>
+  )
 
   # endianness detection
   include(TestBigEndian)
-  test_big_endian(WORDS_BIGENDIAN )
+  test_big_endian(WORDS_BIGENDIAN)
+
+  # floating point support
+  if(PJLIB_WITH_FLOATING_POINT)
+    set(PJ_HAS_FLOATING_POINT 1)
+  else()
+    set(PJ_HAS_FLOATING_POINT 0)
+  endif()
 
   # write configured header
   configure_file("${PJLIB_CONFIG_ARCH_TEMPLATE}" "${PJLIB_CONFIG_ARCH_HEADER}")
@@ -506,13 +533,6 @@ block(SCOPE_FOR VARIABLES)
   #
   # configuration checks
   #
-
-  # floating point support
-  if(PJ_WITH_FLOATING_POINT)
-    set(PJ_HAS_FLOATING_POINT 1)
-  else()
-    set(PJ_HAS_FLOATING_POINT 0)
-  endif()
 
   # i/o queue implementation
   if(NOT PJLIB_WITH_IOQUEUE STREQUAL "")
