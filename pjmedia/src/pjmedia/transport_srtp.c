@@ -1699,8 +1699,9 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
         status = pjmedia_transport_srtp_start((pjmedia_transport*)srtp,
                                               &tx, &rx);
         if (status != PJ_SUCCESS) {
-            PJ_LOG(4,(srtp->pool->obj_name, "Failed to restart SRTP, err=%s",
-                      get_libsrtp_errstr(err)));
+            PJ_PERROR(4, (srtp->pool->obj_name, status,
+                          "Failed to restart SRTP, err=%s",
+                          get_libsrtp_errstr(err)));
         } else if (!srtp->bypass_srtp) {
             err = srtp_unprotect(srtp->srtp_ctx.srtp_rx_ctx,
                                  (pj_uint8_t*)pkt, &len);
