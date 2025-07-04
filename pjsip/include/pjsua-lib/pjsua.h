@@ -2670,6 +2670,9 @@ struct pjsua_msg_data
      * headers to the list by creating the header, either from the heap/pool
      * or from temporary local variable, and add the header using
      * linked list operation. See pjsua_app.c for some sample codes.
+     *
+     * Application may override Max-Forwards header value (the default is
+     * #PJSIP_MAX_FORWARDS_VALUE) by adding a Max-Forwards header here.
      */
     pjsip_hdr   hdr_list;
 
