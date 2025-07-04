@@ -3711,10 +3711,10 @@ static void check_srtp_roc(pjsua_call *call,
     }
     
 #if 0
-    PJ_LOG(4, (THIS_FILE, "SRTP TX ROC %d %d",
+    PJ_LOG(4, (THIS_FILE, "SRTP TX ROC %u %d",
                           call_med->prev_srtp_info.tx_roc.ssrc,
                           call_med->prev_srtp_info.tx_roc.roc));
-    PJ_LOG(4, (THIS_FILE, "SRTP RX ROC %d %d",
+    PJ_LOG(4, (THIS_FILE, "SRTP RX ROC %u %d",
                           call_med->prev_srtp_info.rx_roc.ssrc,
                           call_med->prev_srtp_info.rx_roc.roc));
 #endif
