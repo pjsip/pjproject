@@ -237,13 +237,13 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WASAPI
 
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV
   "Enable video device support" ON
-  "PJMEDIA_HAS_VIDEO" OFF
+  "PJMEDIA_WITH_VIDEO" OFF
 )
 
 # AVI backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_AVI
   "Enable AVI video device backend" ON
-  "PJMEDIA_WITH_VIDEODEV;ANDROID OR IOS" OFF
+  "PJMEDIA_WITH_VIDEODEV" OFF
 )
 
 # OpenGL backend
@@ -413,9 +413,9 @@ target_compile_definitions(pjmedia
 
     # aec
     PJMEDIA_HAS_SPEEX_AEC=$<BOOL:${PJMEDIA_WITH_SPEEX_AEC}>
-    PJMEDIA_HAS_WEBRTC_AEC=$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC}>
+    PJMEDIA_HAS_LIBWEBRTC=$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC}>
     PJMEDIA_WEBRTC_AEC_USE_MOBILE=$<OR:$<BOOL:${ANDROID}>,$<BOOL:${WINDOWS_PHONE}>>
-    PJMEDIA_HAS_WEBRTC_AEC3=$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC3}>
+    PJMEDIA_HAS_LIBWEBRTC_AEC3=$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC3}>
 
     # video
     PJMEDIA_HAS_VIDEO=$<BOOL:${PJMEDIA_WITH_VIDEO}>
@@ -433,11 +433,15 @@ if(PJMEDIA_WITH_SRTP)
   include(Pj/Dependency)
   pj_dependency_is_external(Pj::Dep::SRTP srtp_external)
   if(srtp_external)
+    get_target_property(srtp_version_major Pj::Dep::SRTP SRTP_VERSION_MAJOR)
+    get_target_property(srtp_has_deinit Pj::Dep::SRTP SRTP_HAS_DEINIT)
+    get_target_property(srtp_has_shutdown Pj::Dep::SRTP SRTP_HAS_SHUTDOWN)
+
     target_compile_definitions(pjmedia
       PRIVATE
-        PJMEDIA_EXTERNAL_SRTP=$<TARGET_PROPERTY:Pj::Dep::SRTP,SRTP_VERSION_MAJOR>
-        PJMEDIA_SRTP_HAS_DEINIT=$<TARGET_PROPERTY:Pj::Dep::SRTP,SRTP_HAS_DEINIT>
-        PJMEDIA_SRTP_HAS_SHUTDOWN=$<TARGET_PROPERTY:Pj::Dep::SRTP,SRTP_HAS_SHUTDOWN>
+        PJMEDIA_EXTERNAL_SRTP=${srtp_version_major}
+        PJMEDIA_SRTP_HAS_DEINIT=${srtp_has_deinit}
+        PJMEDIA_SRTP_HAS_SHUTDOWN=${srtp_has_shutdown}
     )
   endif()
 endif()
@@ -589,7 +593,7 @@ target_link_libraries(pjmedia-codec
     # video codecs
     $<$<BOOL:${PJMEDIA_WITH_VPX_CODEC}>:VPX::VPX>
     $<$<BOOL:${PJMEDIA_WITH_OPEN_H264_CODEC}>:OpenH264::OpenH264>
-    $<$<BOOL:${PJMEDIA_HAS_LIBAVFORMAT}>:FMPEG::avformat>
+    $<$<BOOL:${PJMEDIA_HAS_LIBAVFORMAT}>:FFMPEG::avformat>
 )
 
 # ##############################################################################
@@ -721,7 +725,7 @@ target_link_libraries(pjmedia-videodev
 
     # video backends
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>:OpenGL::GL;OpenGL::GLES2>
-    $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_FFMPEG}>:FMPEG::avdevice>
+    $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_FFMPEG}>:FFMPEG::avdevice>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_SDL}>:SDL2::SDL2>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_V4L2}>:V4L2::V4L2>
     # TODO: add remaining APIs' dependencies
