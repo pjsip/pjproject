@@ -53,26 +53,15 @@ target_include_directories(yuv
     $<INSTALL_INTERFACE:include>
 )
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  set(USING_GCC ON)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
-  set(USING_CLANG ON)
-elseif(CCMAKE_XX_COMPILER_ID STREQUAL "MSVC")
-  set(USING_MSVC ON)
-endif()
-
-if(USING_GCC OR USING_CLANG)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_compile_options(yuv
     PRIVATE
       -fomit-frame-pointer
       -fno-strict-aliasing
-      -Wno-unknown-warning-option
+      -Wno-memset-elt-size
       -Wno-pragmas
+      -Wno-unknown-warning-option
   )
-  if (USING_CLANG)
-    target_compile_options(yuv PRIVATE -Wno-memset-elt-size)
-  endif()
-elseif(USING_MSVC)
 elseif(MSVC)
   target_compile_options(yuv PRIVATE /Oy)
 endif()

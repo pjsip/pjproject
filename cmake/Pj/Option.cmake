@@ -90,4 +90,3 @@ function(pj_force_set variable value)
     message(STATUS "[!] ${ARGV2}. setting ${variable} to ${value}")
   endif()
 endfunction()
-

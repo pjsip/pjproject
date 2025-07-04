@@ -147,10 +147,13 @@ target_include_directories(webrtc_aec3
     $<INSTALL_INTERFACE:src>
 )
 
-set_target_properties(webrtc_aec3 PROPERTIES
-  CXX_STANDARD 17
-  CXX_STANDARD_REQUIRED ON
-)
+# at least C++17 is required
+target_compile_features(webrtc_aec3 PRIVATE cxx_std_17)
+
+# Suppress `-Wreturn-type`
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(webrtc_aec3 PRIVATE -Wno-return-type)
+endif()
 
 include(DetectWebRTCParameters)
 
@@ -177,8 +180,6 @@ elseif(_arch_simd STREQUAL "sse2")
   )
 endif()
 
-# Suppress `-Wreturn-type`
-target_compile_options(webrtc_aec3 PRIVATE -Wno-return-type)
 # ##############################################################################
 # Dependencies
 
