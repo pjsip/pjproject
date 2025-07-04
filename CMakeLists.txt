@@ -11,25 +11,7 @@ list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # ##############################################################################
 # Options
 
-include(Pj/Option)
 
-#
-# PJLIB options
-#
-
-#
-# PJNATH options
-#
-
-
-#
-# PJMEDIA options
-#
-
-# Include Speex support (codec, resampling, aec)
-pj_option(PJ_WITH_SPEEX
-  DEFAULT "bundled"
-  ALLOWED_VALUES bundled system
 )
 
 
@@ -39,16 +21,10 @@ pj_option(PJ_WITH_SPEEX
 # base library
 add_subdirectory(pjlib)
 
-# bundled third_party
-
-
-# include(Dependencies)
+# third-party libraries
 add_subdirectory(third_party)
 
-# third-party libraries
-# add_subdirectory(third_party)
-
-# project components
+# remaning libraries
 add_subdirectory(pjlib-util)
 add_subdirectory(pjnath)
 add_subdirectory(pjmedia)
