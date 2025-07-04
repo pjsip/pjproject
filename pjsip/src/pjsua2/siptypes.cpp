@@ -794,7 +794,12 @@ void SipTxOption::toPj(pjsua_msg_data &msg_data) const
          * PJSIP_H_MAX_FORWARDS as PJSUA will compare the header type
          * instead of the string name.
          */
-        if (headers[i].hName == pjsip_hdr_names[PJSIP_H_MAX_FORWARDS].name) {
+        if ((headers[i].hName.size() ==
+             pjsip_hdr_names[PJSIP_H_MAX_FORWARDS].name_len) &&
+            (pj_ansi_strnicmp(headers[i].hName.c_str(),
+                              pjsip_hdr_names[PJSIP_H_MAX_FORWARDS].name,
+                              headers[i].hName.size()) == 0))
+        {
             pjsip_max_fwd_hdr *tmp = (pjsip_max_fwd_hdr*)&pj_hdr;
 
             pj_assert(sizeof(pjsip_generic_string_hdr) >=

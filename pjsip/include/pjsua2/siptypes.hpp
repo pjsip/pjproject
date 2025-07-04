@@ -1000,7 +1000,7 @@ struct SipTxOption
      * Additional message headers to be included in the outgoing message.
      *
      * Application may override Max-Forwards header value (the default is
-     * #PJSIP_MAX_FORWARDS_VALUE), by adding a Max-Forwards header here.
+     * #PJSIP_MAX_FORWARDS_VALUE) by adding a Max-Forwards header here.
      */
     SipHeaderVector         headers;
 
