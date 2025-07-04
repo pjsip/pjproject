@@ -96,6 +96,10 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
         pjsua_var.media_cfg.max_media_ports = pjsua_var.ua_cfg.max_calls + 2;
     }
 
+    if (pjsua_var.media_cfg.conf_threads < 1) {
+        pjsua_var.media_cfg.conf_threads = 1;
+    }
+
     /* Create media endpoint. */
     status = pjmedia_endpt_create(&pjsua_var.cp.factory, 
                                   pjsua_var.media_cfg.has_ioqueue? NULL :
