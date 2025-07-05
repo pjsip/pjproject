@@ -869,37 +869,6 @@ target_link_libraries(pjmedia-videodev
 )
 
 # ##############################################################################
-#  pjsdp
-
-add_library(pjsdp
-  src/pjmedia/errno.c
-  src/pjmedia/sdp.c
-  src/pjmedia/sdp_cmp.c
-  src/pjmedia/sdp_neg.c
-)
-
-target_include_directories(pjsdp
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
-
-# add config headers from `pjmedia`
-target_sources(pjsdp
-  PUBLIC
-    FILE_SET config_headers TYPE HEADERS
-    BASE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/include"
-    FILES
-      $<TARGET_PROPERTY:pjmedia,HEADER_SET_config_headers>
-)
-
-#
-# pjsdp - dependencies
-#
-
-target_link_libraries(pjsdp PRIVATE pjlib pjlib-util)
-
-# ##############################################################################
 #  Test application
 
 if(BIULD_TESTING)
