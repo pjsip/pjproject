@@ -44,11 +44,26 @@ add_library(speex
 )
 
 target_include_directories(speex
-  PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../build/speex>
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
+)
+
+# link config files from `../build/speex/build` to binary directory
+foreach(inc IN ITEMS config.h speex)
+  if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/include/${inc}")
+    file(CREATE_LINK
+      "${CMAKE_CURRENT_SOURCE_DIR}/../build/speex/${inc}"
+      "${CMAKE_CURRENT_BINARY_DIR}/include/${inc}"
+      SYMBOLIC
+      COPY_ON_ERROR
+    )
+  endif()
+endforeach()
+
+target_include_directories(speex
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
 )
 
 target_compile_definitions(speex PRIVATE HAVE_CONFIG_H=1)

@@ -756,6 +756,15 @@ target_include_directories(pjsdp
     $<INSTALL_INTERFACE:include>
 )
 
+# add config headers from `pjmedia`
+target_sources(pjsdp
+  PUBLIC
+    FILE_SET config_headers TYPE HEADERS
+    BASE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/include"
+    FILES
+      $<TARGET_PROPERTY:pjmedia,HEADER_SET_config_headers>
+)
+
 #
 # pjsdp - dependencies
 #
