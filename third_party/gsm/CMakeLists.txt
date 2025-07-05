@@ -1,9 +1,7 @@
 # ##############################################################################
 # Target
-# ##############################################################################
 
-add_library(
-  gsm
+add_library(gsm
   src/add.c
   src/code.c
   src/decode.c
@@ -19,7 +17,8 @@ add_library(
   src/preprocess.c
   src/rpe.c
   src/short_term.c
-  src/table.c)
+  src/table.c
+)
 
 target_include_directories(gsm
   PRIVATE
@@ -29,4 +28,9 @@ target_include_directories(gsm
     $<INSTALL_INTERFACE:inc>
 )
 
-target_compile_definitions(gsm PRIVATE SASR WAV49 NeedFunctionPrototypes=1)
+target_compile_definitions(gsm
+  PRIVATE
+    SASR=1
+    WAV49=1
+    NeedFunctionPrototypes=1
+)

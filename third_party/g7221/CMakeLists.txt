@@ -42,7 +42,11 @@ foreach(g7221_include IN LISTS g7221_includes)
   endif()
 endforeach()
 
-target_include_directories(g7221 PUBLIC "${g7221_interface_root}")
+target_include_directories(g7221
+  PUBLIC
+    $<BUILD_INTERFACE:${g7221_interface_root}>
+    $<INSTALL_INTERFACE:include>
+)
 
 # ##############################################################################
 # Dependencies
