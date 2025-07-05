@@ -371,36 +371,86 @@ add_library(pjmedia
   src/pjmedia/videodev.c
 )
 
-target_include_directories(pjmedia
+# headers
+target_sources(pjmedia
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+    FILE_SET HEADERS
+    BASE_DIRS
+      include
+    FILES
+      include/pjmedia.h
+      include/pjmedia/alaw_ulaw.h
+      include/pjmedia/audiodev.h
+      include/pjmedia/av_sync.h
+      include/pjmedia/avi.h
+      include/pjmedia/avi_stream.h
+      include/pjmedia/bidirectional.h
+      include/pjmedia/circbuf.h
+      include/pjmedia/clock.h
+      include/pjmedia/codec.h
+      include/pjmedia/conference.h
+      include/pjmedia/config.h
+      include/pjmedia/config_auto.h.cm
+      include/pjmedia/config_auto.h.in
+      include/pjmedia/converter.h
+      include/pjmedia/delaybuf.h
+      include/pjmedia/doxygen.h
+      include/pjmedia/echo.h
+      include/pjmedia/echo_port.h
+      include/pjmedia/endpoint.h
+      include/pjmedia/errno.h
+      include/pjmedia/event.h
+      include/pjmedia/format.h
+      include/pjmedia/frame.h
+      include/pjmedia/g711.h
+      include/pjmedia/jbuf.h
+      include/pjmedia/master_port.h
+      include/pjmedia/mem_port.h
+      include/pjmedia/null_port.h
+      include/pjmedia/plc.h
+      include/pjmedia/port.h
+      include/pjmedia/resample.h
+      include/pjmedia/rtcp.h
+      include/pjmedia/rtcp_fb.h
+      include/pjmedia/rtcp_xr.h
+      include/pjmedia/rtp.h
+      include/pjmedia/sdp.h
+      include/pjmedia/sdp_neg.h
+      include/pjmedia/session.h
+      include/pjmedia/signatures.h
+      include/pjmedia/silencedet.h
+      include/pjmedia/sound.h
+      include/pjmedia/sound_port.h
+      include/pjmedia/splitcomb.h
+      include/pjmedia/stereo.h
+      include/pjmedia/stream.h
+      include/pjmedia/stream_common.h
+      include/pjmedia/symbian_sound_aps.h
+      include/pjmedia/tonegen.h
+      include/pjmedia/transport.h
+      include/pjmedia/transport_adapter_sample.h
+      include/pjmedia/transport_ice.h
+      include/pjmedia/transport_loop.h
+      include/pjmedia/transport_srtp.h
+      include/pjmedia/transport_udp.h
+      include/pjmedia/txt_stream.h
+      include/pjmedia/types.h
+      include/pjmedia/vid_codec.h
+      include/pjmedia/vid_codec_util.h
+      include/pjmedia/vid_conf.h
+      include/pjmedia/vid_port.h
+      include/pjmedia/vid_stream.h
+      include/pjmedia/vid_tee.h
+      include/pjmedia/videodev.h
+      include/pjmedia/wav_playlist.h
+      include/pjmedia/wav_port.h
+      include/pjmedia/wave.h
+      include/pjmedia/wsola.h
 )
 
 #
 # pjmedia - configuration
 #
-
-# definitions header
-block(SCOPE_FOR VARIABLES)
-  # G711 codec
-  set(PJMEDIA_HAS_G711_CODEC ${PJMEDIA_WITH_G711_CODEC})
-
-  # write configured header
-  configure_file(
-    include/pjmedia/config_auto.h.cm
-    include/pjmedia/config_auto.h
-  )
-
-  # add generated file to headers file set
-  target_sources(pjmedia
-    PUBLIC
-      FILE_SET config_headers TYPE HEADERS
-      BASE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/include"
-      FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/include/pjmedia/config_auto.h"
-  )
-endblock()
 
 # compile definitions
 target_compile_definitions(pjmedia
@@ -445,6 +495,28 @@ if(PJMEDIA_WITH_SRTP)
     )
   endif()
 endif()
+
+# definitions header
+block(SCOPE_FOR VARIABLES)
+  # G711 codec
+  set(PJMEDIA_HAS_G711_CODEC ${PJMEDIA_WITH_G711_CODEC})
+
+  # write configured header
+  configure_file(
+    include/pjmedia/config_auto.h.cm
+    include/pjmedia/config_auto.h
+  )
+endblock()
+
+# add generated file to headers file set
+target_sources(pjmedia
+  PUBLIC
+    FILE_SET config_headers TYPE HEADERS
+    BASE_DIRS
+      "${CMAKE_CURRENT_BINARY_DIR}/include"
+    FILES
+      "${CMAKE_CURRENT_BINARY_DIR}/include/pjmedia/config_auto.h"
+)
 
 #
 # pjmedia - dependencies
@@ -511,15 +583,62 @@ add_library(pjmedia-codec
   src/pjmedia-codec/vpx.c
 )
 
-target_include_directories(pjmedia-codec
+# headers
+target_sources(pjmedia-codec
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+    FILE_SET HEADERS
+      BASE_DIRS
+        include
+      FILES
+        include/pjmedia-codec.h
+        include/pjmedia-codec/amr_helper.h
+        include/pjmedia-codec/amr_sdp_match.h
+        include/pjmedia-codec/and_aud_mediacodec.h
+        include/pjmedia-codec/and_vid_mediacodec.h
+        include/pjmedia-codec/audio_codecs.h
+        include/pjmedia-codec/bcg729.h
+        include/pjmedia-codec/config.h
+        include/pjmedia-codec/config_auto.h.cm
+        include/pjmedia-codec/config_auto.h.in
+        include/pjmedia-codec/ffmpeg_vid_codecs.h
+        include/pjmedia-codec/g722.h
+        include/pjmedia-codec/g7221.h
+        include/pjmedia-codec/g7221_sdp_match.h
+        include/pjmedia-codec/gsm.h
+        include/pjmedia-codec/h263_packetizer.h
+        include/pjmedia-codec/h264_packetizer.h
+        include/pjmedia-codec/ilbc.h
+        include/pjmedia-codec/ipp_codecs.h
+        include/pjmedia-codec/l16.h
+        include/pjmedia-codec/lyra.h
+        include/pjmedia-codec/opencore_amr.h
+        include/pjmedia-codec/openh264.h
+        include/pjmedia-codec/opus.h
+        include/pjmedia-codec/passthrough.h
+        include/pjmedia-codec/silk.h
+        include/pjmedia-codec/speex.h
+        include/pjmedia-codec/types.h
+        include/pjmedia-codec/vid_toolbox.h
+        include/pjmedia-codec/vpx.h
+        include/pjmedia-codec/vpx_packetizer.h
+
 )
 
 #
 # pjmedia-codec - configuration
 #
+
+# lyra codec models path
+if(PJMEDIA_WITH_LYRA)
+  get_target_property(lyra_model_path Lyra::Lyra LYRA_PREFIX)
+  if(lyra_model_path)
+    cmake_path(APPEND lyra_model_path "model_coeffs")
+    target_compile_definitions(pjmedia-codec
+      PRIVATE
+        "PJMEDIA_CODEC_LYRA_DEFAULT_MODEL_PATH=${lyra_model_path}"
+    )
+  endif()
+endif()
 
 # definitions header
 block(SCOPE_FOR VARIABLES)
@@ -551,28 +670,17 @@ block(SCOPE_FOR VARIABLES)
     include/pjmedia-codec/config_auto.h.cm
     include/pjmedia-codec/config_auto.h
   )
-
-  # add generated file to headers file set
-  target_sources(pjmedia-codec
-    PUBLIC
-      FILE_SET config_headers TYPE HEADERS
-      BASE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/include"
-      FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/include/pjmedia-codec/config_auto.h"
-  )
 endblock()
 
-# lyra codec models path
-if(PJMEDIA_WITH_LYRA)
-  get_target_property(lyra_model_path Lyra::Lyra LYRA_PREFIX)
-  if(lyra_model_path)
-    cmake_path(APPEND lyra_model_path "model_coeffs")
-    target_compile_definitions(pjmedia-codec
-      PRIVATE
-        "PJMEDIA_CODEC_LYRA_DEFAULT_MODEL_PATH=${lyra_model_path}"
-    )
-  endif()
-endif()
+# add generated file to headers file set
+target_sources(pjmedia-codec
+  PUBLIC
+    FILE_SET config_headers TYPE HEADERS
+    BASE_DIRS
+      "${CMAKE_CURRENT_BINARY_DIR}/include"
+    FILES
+      "${CMAKE_CURRENT_BINARY_DIR}/include/pjmedia-codec/config_auto.h"
+)
 
 #
 # pjmedia-codec - dependencies
@@ -619,10 +727,20 @@ add_library(pjmedia-audiodev
   $<$<BOOL:${APPLE}>:src/pjmedia-audiodev/coreaudio_dev.m>
 )
 
-target_include_directories(pjmedia-audiodev
+# headers
+target_sources(pjmedia-audiodev
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+    FILE_SET HEADERS
+    BASE_DIRS
+      include
+    FILES
+      include/pjmedia_audiodev.h
+      include/pjmedia-audiodev/alsa.h
+      include/pjmedia-audiodev/audiodev.h
+      include/pjmedia-audiodev/audiodev_imp.h
+      include/pjmedia-audiodev/audiotest.h
+      include/pjmedia-audiodev/config.h
+      include/pjmedia-audiodev/errno.h
 )
 
 #
@@ -687,10 +805,20 @@ add_library(pjmedia-videodev
   $<$<NOT:$<BOOL:${APPLE}>>:src/pjmedia-videodev/sdl_dev.c>
 )
 
-target_include_directories(pjmedia-videodev
+# headers
+target_sources(pjmedia-videodev
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+    FILE_SET HEADERS
+      BASE_DIRS
+        include
+      FILES
+        include/pjmedia_videodev.h
+        include/pjmedia-videodev/avi_dev.h
+        include/pjmedia-videodev/config.h
+        include/pjmedia-videodev/errno.h
+        include/pjmedia-videodev/opengl_dev.h
+        include/pjmedia-videodev/videodev.h
+        include/pjmedia-videodev/videodev_imp.h
 )
 
 #

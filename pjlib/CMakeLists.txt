@@ -78,6 +78,96 @@ add_library(pjlib
   src/pj/unittest.c
 )
 
+# headers
+target_sources(pjlib
+  PUBLIC
+    FILE_SET HEADERS
+      BASE_DIRS
+        include
+      FILES
+        include/pjlib.h
+        include/pj/activesock.h
+        include/pj/addr_resolv.h
+        include/pj/argparse.h
+        include/pj/array.h
+        include/pj/assert.h
+        include/pj/atomic_queue.h
+        include/pj/atomic_slist.h
+        include/pj/compat/assert.h
+        include/pj/compat/cc_armcc.h
+        include/pj/compat/cc_clang.h
+        include/pj/compat/cc_codew.h
+        include/pj/compat/cc_gcc.h
+        include/pj/compat/cc_gcce.h
+        include/pj/compat/cc_msvc.h
+        include/pj/compat/cc_mwcc.h
+        include/pj/compat/ctype.h
+        include/pj/compat/errno.h
+        include/pj/compat/high_precision.h
+        include/pj/compat/limits.h
+        include/pj/compat/m_alpha.h
+        include/pj/compat/m_armv4.h
+        include/pj/compat/m_i386.h
+        include/pj/compat/m_m68k.h
+        include/pj/compat/m_powerpc.h
+        include/pj/compat/m_sparc.h
+        include/pj/compat/m_x86_64.h
+        include/pj/compat/malloc.h
+        include/pj/compat/os_darwinos.h
+        include/pj/compat/os_linux.h
+        include/pj/compat/os_palmos.h
+        include/pj/compat/os_rtems.h
+        include/pj/compat/os_sunos.h
+        include/pj/compat/os_symbian.h
+        include/pj/compat/os_win32.h
+        include/pj/compat/os_win32_wince.h
+        include/pj/compat/os_winphone8.h
+        include/pj/compat/os_winuwp.h
+        include/pj/compat/rand.h
+        include/pj/compat/setjmp.h
+        include/pj/compat/size_t.h
+        include/pj/compat/socket.h
+        include/pj/compat/stdarg.h
+        include/pj/compat/stdfileio.h
+        include/pj/compat/string.h
+        include/pj/compat/time.h
+        include/pj/config.h
+        include/pj/ctype.h
+        include/pj/doxygen.h
+        include/pj/errno.h
+        include/pj/except.h
+        include/pj/fifobuf.h
+        include/pj/file_access.h
+        include/pj/file_io.h
+        include/pj/guid.h
+        include/pj/hash.h
+        include/pj/ioqueue.h
+        include/pj/ip_helper.h
+        include/pj/limits.h
+        include/pj/list.h
+        include/pj/list_i.h
+        include/pj/lock.h
+        include/pj/log.h
+        include/pj/math.h
+        include/pj/os.h
+        include/pj/pool.h
+        include/pj/pool_alt.h
+        include/pj/pool_buf.h
+        include/pj/pool_i.h
+        include/pj/rand.h
+        include/pj/rbtree.h
+        include/pj/sock.h
+        include/pj/sock_qos.h
+        include/pj/sock_select.h
+        include/pj/ssl_sock.h
+        include/pj/string.h
+        include/pj/string_i.h
+        include/pj/timer.h
+        include/pj/types.h
+        include/pj/unicode.h
+        include/pj/unittest.h
+)
+
 # system APIs
 if(WIN32 OR CYGWIN OR MIGW)
   target_sources(pjlib
@@ -125,12 +215,6 @@ elseif(WIN32 OR CYGWIN OR MINGW)
 elseif(NOT PJLIB_WITH_LIBUUID)
   target_sources(pjlib PRIVATE src/pj/guid_simple.c)
 endif()
-
-target_include_directories(pjlib
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-)
 
 # ##############################################################################
 # Dependencies
@@ -189,22 +273,6 @@ endif()
 # ##############################################################################
 # Configuration
 
-# source `.cm` files directories
-set(PJLIB_CONFIG_TEMPLATE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/include")
-set(PJLIB_CONFIG_TEMPLATE_DIR "${PJLIB_CONFIG_TEMPLATE_ROOT}/pj/compat")
-
-# generated `.h` files directories
-set(PJLIB_CONFIG_INCLUDE_ROOT "${CMAKE_CURRENT_BINARY_DIR}/include")
-set(PJLIB_CONFIG_INCLUDE_DIR "${PJLIB_CONFIG_INCLUDE_ROOT}/pj/compat")
-
-# architecture configuration files
-set(PJLIB_CONFIG_ARCH_TEMPLATE "${PJLIB_CONFIG_TEMPLATE_DIR}/m_auto.h.cm")
-set(PJLIB_CONFIG_ARCH_HEADER "${PJLIB_CONFIG_INCLUDE_DIR}/m_auto.h")
-
-# operating system configuration files
-set(PJLIB_CONFIG_OS_TEMPLATE "${PJLIB_CONFIG_TEMPLATE_DIR}/os_auto.h.cm")
-set(PJLIB_CONFIG_OS_HEADER "${PJLIB_CONFIG_INCLUDE_DIR}/os_auto.h")
-
 # Do not attempt to guess default configuration
 target_compile_definitions(pjlib PUBLIC PJ_AUTOCONF=1)
 
@@ -245,7 +313,11 @@ block(SCOPE_FOR VARIABLES)
   endif()
 
   # write configured header
-  configure_file("${PJLIB_CONFIG_ARCH_TEMPLATE}" "${PJLIB_CONFIG_ARCH_HEADER}")
+  configure_file(
+    include/pj/compat/m_auto.h.cm
+    include/pj/compat/m_auto.h
+    @ONLY
+  )
 endblock()
 
 # operating system
@@ -560,22 +632,28 @@ block(SCOPE_FOR VARIABLES)
 
   # write configured header
   configure_file(
-    "${PJLIB_CONFIG_OS_TEMPLATE}"
-    "${PJLIB_CONFIG_OS_HEADER}"
+    include/pj/compat/os_auto.h.cm
+    include/pj/compat/os_auto.h
+    @ONLY
   )
 endblock()
 
 # generate a dummy `pj/config_site.h` if it does not exist
-if(NOT EXISTS "${PJLIB_TEMPLATE_INCLUDE_ROOT}/pj/config_site.h")
-  file(TOUCH "${PJLIB_CONFIG_INCLUDE_ROOT}/pj/config_site.h")
-else()
-  file(DELETE "${PJLIB_CONFIG_INCLUDE_ROOT}/pj/config_site.h")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site.h")
+  file(TOUCH "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site.h")
 endif()
 
-# add generated files include directory
-target_include_directories(pjlib AFTER
+# add generated files includes
+target_sources(pjlib
   PUBLIC
-    ${PJLIB_CONFIG_INCLUDE_ROOT}
+    FILE_SET config_headers TYPE HEADERS
+      BASE_DIRS
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_BINARY_DIR}/include"
+      FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site.h"
+        "${CMAKE_CURRENT_BINARY_DIR}/include/pj/compat/m_auto.h"
+        "${CMAKE_CURRENT_BINARY_DIR}/include/pj/compat/os_auto.h"
 )
 
 # ##############################################################################
@@ -626,3 +704,4 @@ if(BUILD_TESTING)
 
   add_test(NAME pjlib-test COMMAND pjlib-test)
 endif()
+

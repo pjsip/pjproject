@@ -28,10 +28,41 @@ add_library(pjlib-util
   src/pjlib-util/xml.c
 )
 
-target_include_directories(pjlib-util
+# headers
+target_sources(pjlib-util
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+    FILE_SET HEADERS
+    BASE_DIRS
+      include
+    FILES
+      include/pjlib-util.h
+      include/pjlib-util/base64.h
+      include/pjlib-util/cli.h
+      include/pjlib-util/cli_console.h
+      include/pjlib-util/cli_imp.h
+      include/pjlib-util/cli_telnet.h
+      include/pjlib-util/config.h
+      include/pjlib-util/crc32.h
+      include/pjlib-util/dns.h
+      include/pjlib-util/dns_server.h
+      include/pjlib-util/errno.h
+      include/pjlib-util/getopt.h
+      include/pjlib-util/hmac_md5.h
+      include/pjlib-util/hmac_sha1.h
+      include/pjlib-util/http_client.h
+      include/pjlib-util/json.h
+      include/pjlib-util/md5.h
+      include/pjlib-util/pcap.h
+      include/pjlib-util/resolver.h
+      include/pjlib-util/scanner.h
+      include/pjlib-util/scanner_cis_bitwise.h
+      include/pjlib-util/scanner_cis_uint.h
+      include/pjlib-util/sha1.h
+      include/pjlib-util/srv_resolver.h
+      include/pjlib-util/string.h
+      include/pjlib-util/stun_simple.h
+      include/pjlib-util/types.h
+      include/pjlib-util/xml.h
 )
 
 # ##############################################################################
