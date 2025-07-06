@@ -27,10 +27,35 @@ add_library(ilbc
   syntFilter.c
 )
 
-target_include_directories(ilbc
+# headers
+target_sources(ilbc
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:.>
+    FILE_SET HEADERS
+      FILES
+        anaFilter.h
+        constants.h
+        createCB.h
+        doCPLC.h
+        enhancer.h
+        filter.h
+        FrameClassify.h
+        gainquant.h
+        getCBvec.h
+        helpfun.h
+        hpInput.h
+        hpOutput.h
+        iCBConstruct.h
+        iCBSearch.h
+        iLBC_decode.h
+        iLBC_define.h
+        iLBC_encode.h
+        LPCdecode.h
+        LPCencode.h
+        lsf.h
+        packing.h
+        StateConstructW.h
+        StateSearchW.h
+        syntFilter.h
 )
 
 # ##############################################################################

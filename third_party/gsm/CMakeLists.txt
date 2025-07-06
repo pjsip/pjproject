@@ -20,12 +20,27 @@ add_library(gsm
   src/table.c
 )
 
-target_include_directories(gsm
-  PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../build/gsm>
+# headers
+target_sources(gsm
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>
-    $<INSTALL_INTERFACE:inc>
+    FILE_SET HEADERS
+      BASE_DIRS
+        inc
+      FILES
+        inc/config.h
+        inc/gsm.h
+        inc/private.h
+        inc/proto.h
+        inc/toast.h
+        inc/unproto.h
+)
+
+# ##############################################################################
+# Configuration
+
+target_include_directories(gsm BEFORE
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/../build/gsm"
 )
 
 target_compile_definitions(gsm

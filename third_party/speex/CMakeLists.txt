@@ -43,30 +43,30 @@ add_library(speex
   libspeex/window.c
 )
 
-target_include_directories(speex
+# headers
+target_sources(speex
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+    FILE_SET HEADERS
+      BASE_DIRS
+        include
+        "${CMAKE_CURRENT_SOURCE_DIR}/../build/speex"
+      FILES
+        include/speex/speex.h
+        include/speex/speex_bits.h
+        include/speex/speex_buffer.h
+        include/speex/speex_callbacks.h
+        include/speex/speex_config_types.h.in
+        include/speex/speex_echo.h
+        include/speex/speex_header.h
+        include/speex/speex_jitter.h
+        include/speex/speex_preprocess.h
+        include/speex/speex_resampler.h
+        include/speex/speex_stereo.h
+        include/speex/speex_types.h
+        include/speex/speexdsp_types.h
+
+        "${CMAKE_CURRENT_SOURCE_DIR}/../build/speex/speex/speex_config_types.h"
 )
-
-# link config files from `../build/speex/build` to binary directory
-foreach(inc IN ITEMS config.h speex)
-  if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/include/${inc}")
-    file(CREATE_LINK
-      "${CMAKE_CURRENT_SOURCE_DIR}/../build/speex/${inc}"
-      "${CMAKE_CURRENT_BINARY_DIR}/include/${inc}"
-      SYMBOLIC
-      COPY_ON_ERROR
-    )
-  endif()
-endforeach()
-
-target_include_directories(speex
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
-)
-
-target_compile_definitions(speex PRIVATE HAVE_CONFIG_H=1)
 
 # ##############################################################################
 # Dependencies
@@ -77,3 +77,13 @@ target_link_libraries(speex PRIVATE pjlib)
 # math library
 find_library(MATH_LIBRARY m REQUIRED)
 target_link_libraries(speex PUBLIC "${MATH_LIBRARY}")
+
+# ##############################################################################
+# Configuration
+
+target_include_directories(speex BEFORE
+  PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/../build/speex"
+)
+
+target_compile_definitions(speex PRIVATE HAVE_CONFIG_H=1)

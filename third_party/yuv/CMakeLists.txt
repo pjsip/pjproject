@@ -47,10 +47,34 @@ add_library(yuv
   source/video_common.cc
 )
 
-target_include_directories(yuv
+# headers
+target_sources(yuv
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+    FILE_SET HEADERS
+    BASE_DIRS
+      include
+    FILES
+      include/libyuv.h
+      include/libyuv/basic_types.h
+      include/libyuv/compare.h
+      include/libyuv/compare_row.h
+      include/libyuv/convert.h
+      include/libyuv/convert_argb.h
+      include/libyuv/convert_from.h
+      include/libyuv/convert_from_argb.h
+      include/libyuv/cpu_id.h
+      include/libyuv/macros_msa.h
+      include/libyuv/mjpeg_decoder.h
+      include/libyuv/planar_functions.h
+      include/libyuv/rotate.h
+      include/libyuv/rotate_argb.h
+      include/libyuv/rotate_row.h
+      include/libyuv/row.h
+      include/libyuv/scale.h
+      include/libyuv/scale_argb.h
+      include/libyuv/scale_row.h
+      include/libyuv/version.h
+      include/libyuv/video_common.h
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")

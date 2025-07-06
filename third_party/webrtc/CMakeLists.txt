@@ -33,16 +33,10 @@ add_library(webrtc
   src/webrtc/common_audio/signal_processing/vector_scaling_operations.c
 )
 
-target_include_directories(webrtc
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<INSTALL_INTERFACE:src>
-)
-
 include(DetectWebRTCParameters)
-
-# Include SIMD source files
 get_target_property(_arch_simd WebRTC::Options WEBRTC_ARCH_SIMD)
+
+# include SIMD source files
 if(_arch_simd STREQUAL "neon")
   target_sources(webrtc
     PRIVATE
@@ -56,7 +50,6 @@ if(_arch_simd STREQUAL "neon")
       src/webrtc/common_audio/signal_processing/downsample_fast_neon.c
       src/webrtc/common_audio/signal_processing/min_max_operations_neon.c
   )
-  target_compile_definitions(webrtc PRIVATE WEBRTC_HAS_NEON)
 elseif(_arch_simd STREQUAL "sse2")
   target_sources(webrtc
     PRIVATE
@@ -77,7 +70,6 @@ elseif(_arch_simd STREQUAL "mips")
       src/webrtc/common_audio/signal_processing/downsample_fast_mips.c
       src/webrtc/common_audio/signal_processing/min_max_operations_mips.c
   )
-  target_compile_definitions(webrtc PRIVATE MIPS_FPU_LE)
 else()
   target_sources(webrtc
     PRIVATE
@@ -87,11 +79,56 @@ else()
     )
 endif()
 
+# headers
+target_sources(webrtc
+  PUBLIC
+    FILE_SET HEADERS
+      BASE_DIRS
+        src
+      FILES
+        src/pj_config.h
+        src/webrtc/common_audio/fft4g.h
+        src/webrtc/common_audio/ring_buffer.h
+        src/webrtc/common_audio/signal_processing/complex_fft_tables.h
+        src/webrtc/common_audio/signal_processing/include/real_fft.h
+        src/webrtc/common_audio/signal_processing/include/signal_processing_library.h
+        src/webrtc/common_audio/signal_processing/include/spl_inl.h
+        src/webrtc/common_audio/signal_processing/include/spl_inl_armv7.h
+        src/webrtc/common_audio/signal_processing/include/spl_inl_mips.h
+        src/webrtc/common_audio/signal_processing/resample_by_2_internal.h
+        src/webrtc/common_audio/wav_file.h
+        src/webrtc/modules/audio_processing/aec/aec_common.h
+        src/webrtc/modules/audio_processing/aec/aec_core.h
+        src/webrtc/modules/audio_processing/aec/aec_core_internal.h
+        src/webrtc/modules/audio_processing/aec/aec_rdft.h
+        src/webrtc/modules/audio_processing/aec/aec_resampler.h
+        src/webrtc/modules/audio_processing/aec/echo_cancellation_internal.h
+        src/webrtc/modules/audio_processing/aec/include/echo_cancellation.h
+        src/webrtc/modules/audio_processing/aecm/aecm_core.h
+        src/webrtc/modules/audio_processing/aecm/aecm_defines.h
+        src/webrtc/modules/audio_processing/aecm/include/echo_control_mobile.h
+        src/webrtc/modules/audio_processing/logging/aec_logging.h
+        src/webrtc/modules/audio_processing/logging/aec_logging_file_handling.h
+        src/webrtc/modules/audio_processing/ns/defines.h
+        src/webrtc/modules/audio_processing/ns/include/noise_suppression.h
+        src/webrtc/modules/audio_processing/ns/include/noise_suppression_x.h
+        src/webrtc/modules/audio_processing/ns/ns_core.h
+        src/webrtc/modules/audio_processing/ns/nsx_core.h
+        src/webrtc/modules/audio_processing/ns/nsx_defines.h
+        src/webrtc/modules/audio_processing/ns/windows_private.h
+        src/webrtc/modules/audio_processing/utility/delay_estimator.h
+        src/webrtc/modules/audio_processing/utility/delay_estimator_internal.h
+        src/webrtc/modules/audio_processing/utility/delay_estimator_wrapper.h
+        src/webrtc/system_wrappers/interface/compile_assert_c.h
+        src/webrtc/system_wrappers/interface/cpu_features_wrapper.h
+        src/webrtc/typedefs.h
+)
+
 # ##############################################################################
 # Dependencies
 
 # copmile options
-target_link_libraries(webrtc PUBLIC WebRTC::Options)
+target_link_libraries(webrtc PRIVATE WebRTC::Options)
 
 # math library
 find_library(MATH_LIBRARY m REQUIRED)

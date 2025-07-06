@@ -141,18 +141,32 @@ add_library(webrtc_aec3
   src/third_party/pffft/src/pffft.c
 )
 
-target_include_directories(webrtc_aec3
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<INSTALL_INTERFACE:src>
+# headers
+file(GLOB_RECURSE WEBRTC_AEC3_HEADERS
+  RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+  LIST_DIRECTORIES FALSE
+  "*.h"
 )
 
-# at least C++17 is required
+target_sources(webrtc_aec3
+  PUBLIC
+    FILE_SET HEADERS
+      BASE_DIRS
+        src
+      FILES
+        ${WEBRTC_AEC3_HEADERS}
+)
+
+# require C++17 support
 target_compile_features(webrtc_aec3 PRIVATE cxx_std_17)
 
-# Suppress `-Wreturn-type`
+# Suppress warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  target_compile_options(webrtc_aec3 PRIVATE -Wno-return-type)
+  target_compile_options(webrtc_aec3
+    PRIVATE
+      -Wno-return-type
+      -Wno-deprecated-builtins
+  )
 endif()
 
 include(DetectWebRTCParameters)
@@ -184,8 +198,8 @@ endif()
 # Dependencies
 
 # copmile options
-target_link_libraries(webrtc_aec3 PUBLIC WebRTC::Options)
+target_link_libraries(webrtc_aec3 PRIVATE WebRTC::Options)
 
 # math library
 find_library(MATH_LIBRARY m REQUIRED)
-target_link_libraries(webrtc_aec3 PUBLIC "${MATH_LIBRARY}")
+target_link_libraries(webrtc_aec3 PRIVATE "${MATH_LIBRARY}")

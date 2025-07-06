@@ -29,23 +29,33 @@ if(NOT EXISTS "${g7221_interface_dir}")
 endif()
 
 # link files
-set(g7221_includes common encode decode)
-
-foreach(g7221_include IN LISTS g7221_includes)
+foreach(g7221_include IN ITEMS common encode decode)
   if(NOT EXISTS "${g7221_interface_dir}/${g7221_include}")
     file(CREATE_LINK
       "${CMAKE_CURRENT_SOURCE_DIR}/${g7221_include}"
       "${g7221_interface_dir}/${g7221_include}"
       SYMBOLIC
-      COPY_ON_ERROR
     )
   endif()
 endforeach()
 
-target_include_directories(g7221
+target_sources(g7221
   PUBLIC
-    $<BUILD_INTERFACE:${g7221_interface_root}>
-    $<INSTALL_INTERFACE:include>
+    FILE_SET HEADERS
+      BASE_DIRS
+        "${g7221_interface_root}"
+      FILES
+        "${g7221_interface_dir}/common/basic_op.h"
+        "${g7221_interface_dir}/common/basic_op_i.h"
+        "${g7221_interface_dir}/common/config.h"
+        "${g7221_interface_dir}/common/count.h"
+        "${g7221_interface_dir}/common/defs.h"
+        "${g7221_interface_dir}/common/huff_def.h"
+        "${g7221_interface_dir}/common/huff_tab.h"
+        "${g7221_interface_dir}/common/tables.h"
+        "${g7221_interface_dir}/common/typedef.h"
+        "${g7221_interface_dir}/decode/dct4_s.h"
+        "${g7221_interface_dir}/encode/dct4_a.h"
 )
 
 # ##############################################################################
@@ -56,4 +66,4 @@ target_link_libraries(g7221 PRIVATE pjlib)
 
 # math library
 find_library(MATH_LIBRARY m REQUIRED)
-target_link_libraries(g7221 PUBLIC "${MATH_LIBRARY}")
+target_link_libraries(g7221 PRIVATE "${MATH_LIBRARY}")
