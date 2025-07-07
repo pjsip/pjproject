@@ -559,12 +559,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
         if (status != PJ_SUCCESS)
             status = pj_sockaddr_init(pj_AF_INET6(), &ns->addr, &servers[i], 
                                       (pj_uint16_t)(ports ? ports[i] : PORT));
-        if (status != PJ_SUCCESS) {
-            pj_grp_lock_release(resolver->grp_lock);
-            return PJLIB_UTIL_EDNSINNSADDR;
-        }
 
-        ns->state = STATE_ACTIVE;
+        ns->state = (status == PJ_SUCCESS) ? STATE_ACTIVE : STATE_BAD;
         ns->state_expiry = now;
         ns->rt_delay.sec = 10;
     }
