@@ -18,9 +18,8 @@ mark_as_advanced(UPNP_INCLUDE_DIR)
 find_library(UPNP_UPNP_LIBRARY
   NAMES
     upnp
-    libupnp 
+    libupnp
   HINTS
-    ${UPNP_ROOT}
     ${PC_UPNP_LIBDIR}
     ${PC_UPNP_LIBRARY_DIRS}
 )
@@ -29,9 +28,8 @@ mark_as_advanced(UPNP_UPNP_LIBRARY)
 find_library(UPNP_IXML_LIBRARY
   NAMES
     ixml
-    libixml 
+    libixml
   HINTS
-    ${UPNP_ROOT}
     ${PC_UPNP_LIBDIR}
     ${PC_UPNP_LIBRARY_DIRS}
 )

@@ -3,6 +3,12 @@
 
 # Include UPnP (Universal Plug and Play) support
 option(PJNATH_WITH_UPNP "Enable UPnP support" ON)
+if(PJNATH_WITH_UPNP)
+  find_package(UPNP)
+  if(NOT UPNP_FOUND)
+    set(PJNATH_WITH_UPNP OFF CACHE BOOL "Enable UPnP support (not found)" FORCE)
+  endif()
+endif()
 
 # ##############################################################################
 # Target
@@ -55,14 +61,9 @@ target_link_libraries(pjnath PRIVATE pjlib pjlib-util)
 
 # upnp
 if(PJNATH_WITH_UPNP)
-  find_package(UPNP)
-  if(UPNP_FOUND)
-    target_sources(pjnath PRIVATE src/pjnath/upnp.c)
-    target_link_libraries(pjnath PRIVATE UPNP::UPNP)
-    target_compile_definitions(pjnath PUBLIC PJNATH_HAS_UPNP=1)
-  else()
-    set(PJLIB_WITH_LIBUUID OFF "Enable UPnP support (not found)" FORCE)
-  endif()
+  target_sources(pjnath PRIVATE src/pjnath/upnp.c)
+  target_link_libraries(pjnath PRIVATE UPNP::UPNP)
+  target_compile_definitions(pjnath PUBLIC PJNATH_HAS_UPNP=1)
 endif()
 
 # ##############################################################################
