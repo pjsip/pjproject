@@ -153,6 +153,7 @@ typedef struct pjsua_app_config
     unsigned                avi_cnt;
     struct {
         pj_str_t                path;
+        pjsua_avi_player_id     p_id;
         pjmedia_vid_dev_index   dev_id;
         pjsua_conf_port_id      slot;
     } avi[PJSUA_APP_MAX_AVI];

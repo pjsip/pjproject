@@ -479,6 +479,13 @@ PJ_DECL(pj_status_t) pjmedia_conf_set_port0_name(pjmedia_conf *conf,
  * 
  * This operation executes asynchronously, use the callback set from
  * #pjmedia_conf_set_op_cb() to receive notification upon completion.
+ * 
+ * Note: Sample rate and ptime (frame duration) settings must be compatible.
+ * Configurations resulting in a fractional number of samples per frame
+ * are not supported and will cause the function to fail.
+ * For example, a sample rate of 22050 Hz and a frame duration (ptime) of 10 ms
+ * will result in 220.5 samples per frame, which is not an integer, 
+ * so port creation will fail.
  *
  * @param conf          The conference bridge.
  * @param pool          Pool to allocate buffers for this port.

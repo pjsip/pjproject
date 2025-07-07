@@ -73,6 +73,10 @@ static void init_data()
         pjsua_vid_win_reset(i);
     }
 #if PJSUA_HAS_VIDEO
+    for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_player); ++i) {
+        pjsua_reset_avi_player_data(i);
+    }
+
     for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_recorder); ++i) {
         pjsua_reset_avi_recorder_data(i);
     }
@@ -3161,6 +3165,29 @@ void pjsua_process_msg_data(pjsip_tx_data *tdata,
     hdr = msg_data->hdr_list.next;
     while (hdr && hdr != &msg_data->hdr_list) {
         pjsip_hdr *new_hdr;
+
+        /* For Max-Forwards header, just update the value of the existing
+         * header. In case it does not exist, clone the header as usual.
+         */
+        if (hdr->type == PJSIP_H_MAX_FORWARDS) {
+            pjsip_max_fwd_hdr *orig_hdr;
+
+            orig_hdr = pjsip_hdr_find(&tdata->msg->hdr, PJSIP_H_MAX_FORWARDS,
+                                      NULL);
+            if (orig_hdr != NULL) {
+                pj_uint32_t orig_value = orig_hdr->ivalue;
+                pj_uint32_t new_value  =
+                                    ((const pjsip_max_fwd_hdr*)hdr)->ivalue;
+
+                orig_hdr->ivalue = new_value;
+                PJ_LOG(4, (THIS_FILE,
+                           "Overriding Max-Forwards header value: %u -> %u",
+                           orig_value, new_value));
+
+                hdr = hdr->next;
+                continue;
+            }
+        }
 
         new_hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hdr);
         pjsip_msg_add_hdr(tdata->msg, new_hdr);

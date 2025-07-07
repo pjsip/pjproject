@@ -70,6 +70,19 @@
 static FILE *fhnd_rec;
 #endif
 
+/* "Perfect" buffer alignment for vectorization (for SIMD instruction set)
+ * Compilers can optimize code significantly if all data buffers are correctly 
+ * aligned for the instruction set being used. The easiest way to ensure that 
+ * all port buffers of a conference bridge are aligned is to set the default 
+ * pool alignment at the port level.
+ * 
+ * It is unknown whether compilers exist in the real world 
+ * that check this data alignment.
+ * 
+ * Comment this definition to use the PJSIP default alignment.
+ */
+#define SIMD_ALIGNMENT  32
+
 #define CONF_CHECK_SUCCESS(expr, err_action) \
             { \
                 pj_status_t tmp_status_ = (expr); \
@@ -594,9 +607,15 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
     pj_assert(name);
     pj_ansi_strxcpy2(pname, name, sizeof(pname));
 
-    /* Create own pool */
-    /* replace pool to control it's lifetime */
+    /* Create own pool
+     * replace pool to control it's lifetime 
+     */
+#ifdef SIMD_ALIGNMENT
+    pool = pj_pool_aligned_create(parent_pool->factory, pname, 500, 500, 
+                                  SIMD_ALIGNMENT, NULL);
+#else
     pool = pj_pool_create(parent_pool->factory, pname, 500, 500, NULL);
+#endif
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_return;
@@ -724,6 +743,21 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
             1000 / conf_port->sampling_rate;
         conf_ptime = conf->samples_per_frame / conf->channel_count *
             1000 / conf->sampling_rate;
+
+        /* Check compatibility of sample rate and ptime.
+         * Some combinations result in a fractional number of samples per frame
+         * which we do not support.
+         * One such case would be for example 10ms @ 22050Hz which would yield
+         * 220.5 samples per frame.
+         */
+        if (0 != (port_ptime * conf_port->sampling_rate *
+                  conf_port->channel_count % 1000))
+        {
+            PJ_LOG(3,(THIS_FILE,
+                   "Cannot create conf port: incompatible sample rate/ptime"));
+            status = PJMEDIA_ENOTCOMPATIBLE;
+            goto on_return;
+        }
 
         /* Calculate the size (in ptime) for the port buffer according to
          * this formula:

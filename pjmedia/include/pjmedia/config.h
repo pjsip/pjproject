@@ -1270,6 +1270,17 @@
 
 
 /**
+ * Specify whether SRTP needs to handle condition that remote changes SSRC
+ * when SRTP is restarted.
+ *
+ * Default: enabled.
+ */
+#ifndef PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART
+#   define PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART    1
+#endif
+
+
+/**
  * Specify whether SRTP needs to handle condition that old packets with
  * incorect RTP seq are still coming when SRTP is restarted.
  *
