@@ -254,12 +254,23 @@ endif()
 
 # ssl
 if(PJLIB_WITH_SSL STREQUAL "openssl")
-  find_package(OpenSSL REQUIRED COMPONENTS Crypto SSL)
-  target_link_libraries(pjlib PRIVATE OpenSSL::Crypto OpenSSL::SSL)
+  find_package(OpenSSL COMPONENTS Crypto SSL)
+  if(OPENSSL_FOUND)
+    target_link_libraries(pjlib PRIVATE OpenSSL::Crypto OpenSSL::SSL)
+  else()
+    pj_force_set(PJLIB_WITH_SSL "" "OpenSSL not found")
+  endif()
 elseif(PJLIB_WITH_SSL STREQUAL "gnutls")
-  message(FATAL_ERROR "TODO")
+  find_package(GnuTLS REQUIRED)
+  target_link_libraries(pjlib PRIVATE GnuTLS::GnuTLS)
 elseif(PJLIB_WITH_SSL STREQUAL "mbedtls")
-  message(FATAL_ERROR "TODO")
+  find_package(MbedTLS CONFIG REQUIRED)
+  target_link_libraries(pjlib
+    PRIVATE
+      MbedTLS::mbedtls
+      MbedTLS::mbedcrypto
+      MbedTLS::mbedx509
+  )
 elseif(PJLIB_WITH_SSL STREQUAL "darwin")
   message(FATAL_ERROR "TODO")
 elseif(PJLIB_WITH_SSL STREQUAL "darwin")
@@ -704,4 +715,3 @@ if(BUILD_TESTING)
 
   add_test(NAME pjlib-test COMMAND pjlib-test)
 endif()
-
