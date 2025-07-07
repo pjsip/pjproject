@@ -1216,6 +1216,8 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
             si->jb_max = prm.stream_info.info.vid.jb_max;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
             si->use_ka = prm.stream_info.info.vid.use_ka;
+
+            si->ka_cfg = prm.stream_info.info.vid.ka_cfg;
 #endif
             si->rtcp_sdes_bye_disabled = prm.stream_info.info.vid.rtcp_sdes_bye_disabled;
             si->codec_param->enc_fmt = prm.stream_info.info.vid.codec_param->enc_fmt;
