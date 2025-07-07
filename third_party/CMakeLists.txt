@@ -41,7 +41,7 @@ set(DEP_WebRTC_SUBDIR "webrtc")
 list(APPEND DEPS WebRTC)
 
 # WebRTC_AEC3
-set(DEP_WebRTC_AEC3_HELP  "WebRTC implementation provider")
+set(DEP_WebRTC_AEC3_HELP   "WebRTC AEC3 implementation provider")
 set(DEP_WebRTC_AEC3_SUBDIR "webrtc_aec3")
 list(APPEND DEPS WebRTC_AEC3)
 
