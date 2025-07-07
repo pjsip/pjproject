@@ -62,7 +62,7 @@ cmake_dependent_option(PJMEDIA_WITH_WEBRTC_AEC
 
 cmake_dependent_option(PJMEDIA_WITH_WEBRTC_AEC3
   "Enable WebRTC Acoustic Echo Cancellation 3 (WebRTC AEC3) support" ON
-  "TARGET Pj::Dep::WebRTC::AEC3" OFF
+  "TARGET Pj::Dep::WebRTC_AEC3" OFF
 )
 
 #
@@ -480,9 +480,8 @@ target_compile_definitions(pjmedia
 
 # external srtp values
 if(PJMEDIA_WITH_SRTP)
-  include(Pj/Dependency)
-  pj_dependency_is_external(Pj::Dep::SRTP srtp_external)
-  if(srtp_external)
+  get_target_property(srtp_provider Pj::Dep::SRTP PJ_DEP_PROVIDER)
+  if(srtp_provider STREQUAL "system")
     get_target_property(srtp_version_major Pj::Dep::SRTP SRTP_VERSION_MAJOR)
     get_target_property(srtp_has_deinit Pj::Dep::SRTP SRTP_HAS_DEINIT)
     get_target_property(srtp_has_shutdown Pj::Dep::SRTP SRTP_HAS_SHUTDOWN)
@@ -538,7 +537,7 @@ target_link_libraries(pjmedia
     # aec
     $<$<BOOL:${PJMEDIA_WITH_SPEEX_AEC}>:Pj::Dep::Speex;SpeexDSP::SpeexDSP>
     $<$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC}>:Pj::Dep::WebRTC>
-    $<$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC3}>:Pj::Dep::WebRTC::AEC3>
+    $<$<BOOL:${PJMEDIA_WITH_WEBRTC_AEC3}>:Pj::Dep::WebRTC_AEC3>
 
     # video
     $<$<BOOL:${PJMEDIA_WITH_LIBYUV}>:Pj::Dep::YUV>

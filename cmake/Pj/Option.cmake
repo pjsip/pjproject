@@ -1,10 +1,6 @@
 function(pj_option variable help_text)
-  #
-  # argument handling
-  #
-
   # parse options
-  set(options REQUIRED MULTI_VALUE)
+  set(options REQUIRED)
   set(oneValueArgs DEFAULT)
   set(multiValueArgs ALLOWED_VALUES)
   cmake_parse_arguments(PARSE_ARGV 2 arg
@@ -13,13 +9,8 @@ function(pj_option variable help_text)
     "${multiValueArgs}"
   )
 
-  #
-  # option defintion
-  #
-
   # setup doc string
   if(arg_ALLOWED_VALUES)
-    # prepare choices
     string(REPLACE ";" "|" optChoices "${arg_ALLOWED_VALUES}")
     if(arg_REQUIRED)
       set(optChoices "<${optChoices}>")
@@ -27,7 +18,6 @@ function(pj_option variable help_text)
       set(optChoices "[${optChoices}]")
     endif()
 
-    # update help text
     if(help_text)
       set(help_text "${help_text}: ${optChoices}")
     else()
@@ -39,34 +29,16 @@ function(pj_option variable help_text)
   set(${variable} "${arg_DEFAULT}" CACHE STRING "${help_text}")
   set_property(CACHE "${variable}" PROPERTY STRINGS ${arg_ALLOWED_VALUES})
 
-  #
-  # Option value validation
-  #
-
+  # validate option value
   set(value "${${variable}}")
-
   if(value)
-    if(arg_ALLOWED_VALUES)
-      if(arg_MULTI_VALUE)
-        foreach(v IN LISTS value)
-          if(NOT v IN_LIST arg_ALLOWED_VALUES)
-            message(FATAL_ERROR
-              "Illegal value for ${variable}: \
-               ${v} in (${value}), allowed: ${OPT_ALLOWED_VALUES}")
-          endif()
-        endforeach()
-      else()
-        if(NOT value IN_LIST arg_ALLOWED_VALUES)
-          message(FATAL_ERROR
-            "Illegal value for ${variable}: \
-             ${value}, allowed: ${OPT_ALLOWED_VALUES}")
-        endif()
-      endif()
+    if(arg_ALLOWED_VALUES AND NOT value IN_LIST arg_ALLOWED_VALUES)
+      message(FATAL_ERROR "Illegal value for ${variable}: \
+                           ${value}, allowed: ${arg_ALLOWED_VALUES}")
     endif()
   elseif(arg_REQUIRED)
     message(FATAL_ERROR "Option '${variable}' is required")
   endif()
-
 endfunction()
 
 function(pj_force_set variable value)
