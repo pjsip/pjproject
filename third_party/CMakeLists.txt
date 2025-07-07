@@ -77,7 +77,7 @@ foreach(dep IN LISTS DEPS)
 
   # import dependency
   if(${dep_option_name} STREQUAL "bundled")
-    add_subdirectory(${DEP_${dep}_SUBDIR})
+    add_subdirectory(${DEP_${dep}_SUBDIR} EXCLUDE_FROM_ALL)
     set(dep_target ${DEP_${dep}_SUBDIR})
     list(APPEND install_subdirs ${DEP_${dep}_SUBDIR})
   elseif(${dep_option_name} STREQUAL "system")
