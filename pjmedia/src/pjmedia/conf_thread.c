@@ -845,14 +845,25 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
 
 on_return:
     if (status != PJ_SUCCESS) {
-        if (conf_port->tx_lock)
-            CONF_CHECK_SUCCESS(pj_lock_destroy(conf_port->tx_lock),(void)0);
-        if (conf_port->free_node_cache)
-            CONF_CHECK_SUCCESS(pj_atomic_slist_destroy(conf_port->free_node_cache),(void)0);
-        if (conf_port->buff_to_mix)
-            CONF_CHECK_SUCCESS(pj_atomic_slist_destroy(conf_port->buff_to_mix),(void)0);
-        if (conf_port->requests_to_mix)
-            CONF_CHECK_SUCCESS(pj_atomic_destroy(conf_port->requests_to_mix),(void)0);
+        if (conf_port) {
+            /* Destroy resample if this conf port has it. */
+            if (conf_port->rx_resample)
+                pjmedia_resample_destroy(conf_port->rx_resample);
+
+            if (conf_port->tx_resample)
+                pjmedia_resample_destroy(conf_port->tx_resample);
+
+            if (conf_port->tx_lock)
+                CONF_CHECK_SUCCESS(pj_lock_destroy(conf_port->tx_lock),(void)0);
+            if (conf_port->free_node_cache)
+                CONF_CHECK_SUCCESS(pj_atomic_slist_destroy(conf_port->free_node_cache),(void)0);
+            if (conf_port->buff_to_mix)
+                CONF_CHECK_SUCCESS(pj_atomic_slist_destroy(conf_port->buff_to_mix),(void)0);
+            if (conf_port->requests_to_mix)
+                CONF_CHECK_SUCCESS(pj_atomic_destroy(conf_port->requests_to_mix),(void)0);
+
+            //TODO grp_lock ?
+        }
         if (pool)
             pj_pool_release(pool);
     }
