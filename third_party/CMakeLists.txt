@@ -77,7 +77,7 @@ foreach(dep IN LISTS DEPS)
 
   # import dependency
   if(${dep_option_name} STREQUAL "bundled")
-    add_subdirectory(${DEP_${dep}_SUBDIR} EXCLUDE_FROM_ALL)
+    add_subdirectory(${DEP_${dep}_SUBDIR})
     set(dep_target ${DEP_${dep}_SUBDIR})
     list(APPEND install_subdirs ${DEP_${dep}_SUBDIR})
   elseif(${dep_option_name} STREQUAL "system")
@@ -92,10 +92,14 @@ foreach(dep IN LISTS DEPS)
   endif()
 
   # set provider property on target
-  set_property(TARGET ${dep_target} PROPERTY PJ_DEP_PROVIDER ${dep_option_name})
+  if(dep_target)
+    set_target_properties(${dep_target} PROPERTIES
+      PJ_DEP_PROVIDER ${dep_option_name}
+    )
+    add_library(Pj::Dep::${dep} ALIAS ${dep_target})
+  endif()
 
   # add alias
-  add_library(Pj::Dep::${dep} ALIAS ${dep_target})
 endforeach()
 
 # install selected sub-diriectories
