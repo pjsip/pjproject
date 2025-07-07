@@ -68,6 +68,7 @@ add_subdirectory(pjsip-apps)
 
 set(install_targets
   pjlib
+  pjlib++
   pjlib-util
   pjnath
   pjmedia

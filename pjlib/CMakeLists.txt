@@ -715,3 +715,47 @@ if(BUILD_TESTING)
 
   add_test(NAME pjlib-test COMMAND pjlib-test)
 endif()
+
+# ##############################################################################
+# pjlib++
+
+add_library(pjlib++ INTERFACE)
+
+# headers
+target_sources(pjlib++
+  INTERFACE
+    FILE_SET HEADERS
+      BASE_DIRS
+        include/
+      FILES
+        include/pjlib++.hpp
+        include/pjlib++/file.hpp
+        include/pjlib++/hash.hpp
+        include/pjlib++/list.hpp
+        include/pjlib++/lock.hpp
+        include/pjlib++/os.hpp
+        include/pjlib++/pool.hpp
+        include/pjlib++/proactor.hpp
+        include/pjlib++/scanner.hpp
+        include/pjlib++/sock.hpp
+        include/pjlib++/string.hpp
+        include/pjlib++/timer.hpp
+        include/pjlib++/tree.hpp
+        include/pjlib++/types.hpp
+)
+
+# dependencies
+target_link_libraries(pjlib++ INTERFACE pjlib)
+
+# ##############################################################################
+# pjlib++ test application
+
+if(BUILD_TESTING AND FALSE) # does not compile
+  add_executable(pjlib++-test
+    src/pjlib++-test/main.cpp
+  )
+
+  target_link_libraries(pjlib++-test PRIVATE pjlib++)
+
+  add_test(NAME pjlib++-test COMMAND pjlib++-test)
+endif()
