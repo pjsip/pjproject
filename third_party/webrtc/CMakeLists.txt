@@ -34,10 +34,11 @@ add_library(webrtc
 )
 
 include(DetectWebRTCParameters)
-get_target_property(_arch_simd WebRTC::Options WEBRTC_ARCH_SIMD)
+target_compile_options(webrtc PRIVATE ${WEBRTC_COMPILE_OPTIONS})
+target_compile_definitions(webrtc PRIVATE ${WEBRTC_COMPILE_DEFINITIONS})
 
 # include SIMD source files
-if(_arch_simd STREQUAL "neon")
+if(WEBRTC_ARCH_SIMD STREQUAL "neon")
   target_sources(webrtc
     PRIVATE
       src/webrtc/modules/audio_processing/aec/aec_core_neon.c
@@ -50,7 +51,7 @@ if(_arch_simd STREQUAL "neon")
       src/webrtc/common_audio/signal_processing/downsample_fast_neon.c
       src/webrtc/common_audio/signal_processing/min_max_operations_neon.c
   )
-elseif(_arch_simd STREQUAL "sse2")
+elseif(WEBRTC_ARCH_SIMD STREQUAL "sse2")
   target_sources(webrtc
     PRIVATE
       src/webrtc/modules/audio_processing/aec/aec_core_sse2.c
@@ -59,7 +60,7 @@ elseif(_arch_simd STREQUAL "sse2")
       src/webrtc/modules/audio_processing/ns/nsx_core_c.c
       src/webrtc/system_wrappers/source/cpu_features.cc
   )
-elseif(_arch_simd STREQUAL "mips")
+elseif(WEBRTC_ARCH_SIMD STREQUAL "mips")
   target_sources(webrtc
     PRIVATE
       src/webrtc/modules/audio_processing/aec/aec_core_mips.c
@@ -126,9 +127,6 @@ target_sources(webrtc
 
 # ##############################################################################
 # Dependencies
-
-# copmile options
-target_link_libraries(webrtc PRIVATE WebRTC::Options)
 
 # math library
 find_library(MATH_LIBRARY m REQUIRED)

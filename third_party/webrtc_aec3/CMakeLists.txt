@@ -170,16 +170,17 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 
 include(DetectWebRTCParameters)
+target_compile_options(webrtc_aec3 PRIVATE ${WEBRTC_COMPILE_OPTIONS})
+target_compile_definitions(webrtc_aec3 PRIVATE ${WEBRTC_COMPILE_DEFINITIONS})
 
 # Include SIMD source files
-get_target_property(_arch_simd WebRTC::Options WEBRTC_ARCH_SIMD)
-if(_arch_simd STREQUAL "neon")
+if(WEBRTC_ARCH_SIMD STREQUAL "neon")
   target_sources(webrtc_aec3
     PRIVATE
       src/common_audio/resampler/sinc_resampler_neon.cc
       src/common_audio/third_party/ooura/fft_size_128/ooura_fft_neon.cc
   )
-elseif(_arch_simd STREQUAL "sse2")
+elseif(WEBRTC_ARCH_SIMD STREQUAL "sse2")
   target_sources(webrtc_aec3
     PRIVATE
       src/common_audio/resampler/sinc_resampler_sse.cc
@@ -196,9 +197,6 @@ endif()
 
 # ##############################################################################
 # Dependencies
-
-# copmile options
-target_link_libraries(webrtc_aec3 PRIVATE WebRTC::Options)
 
 # math library
 find_library(MATH_LIBRARY m REQUIRED)
