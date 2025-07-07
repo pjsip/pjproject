@@ -1657,8 +1657,8 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 #endif
 
 #if PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART
-    /* This could happen if remote changes ssrc, such as on IP address change
-     * scenario.
+    /* This could happen if remote changes ssrc, such as due to media
+     * restart.
      */
     if (srtp->probation_cnt > 0 && err == srtp_err_status_no_ctx) {
         need_restart = PJ_TRUE;
