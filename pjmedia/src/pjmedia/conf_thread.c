@@ -616,20 +616,20 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
 #else
     pool = pj_pool_create(parent_pool->factory, pname, 500, 500, NULL);
 #endif
-    if (!pool) {
-        status = PJ_ENOMEM;
-        goto on_return;
-    }
+    if (!pool)
+        return PJ_ENOMEM;
 
     /* Create port. */
     conf_port = PJ_POOL_ZALLOC_T(pool, struct conf_port);
-    PJ_ASSERT_ON_FAIL(conf_port, {status = PJ_ENOMEM; goto on_return;});
+    //PJ_ASSERT_ON_FAIL(conf_port, {status = PJ_ENOMEM; goto on_return;});
     conf_port->pool = pool;
 
     /* Increment port ref count to avoid premature destroy due to
      * asynchronous port removal.
      */
     if (port) {
+        conf_port->port = port;
+
         if (!port->grp_lock) {
             /* Create group lock if it does not have one */
             pjmedia_port_init_grp_lock(port, pool, NULL);
@@ -845,27 +845,11 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
 
 on_return:
     if (status != PJ_SUCCESS) {
-        if (conf_port) {
-            /* Destroy resample if this conf port has it. */
-            if (conf_port->rx_resample)
-                pjmedia_resample_destroy(conf_port->rx_resample);
-
-            if (conf_port->tx_resample)
-                pjmedia_resample_destroy(conf_port->tx_resample);
-
-            if (conf_port->tx_lock)
-                CONF_CHECK_SUCCESS(pj_lock_destroy(conf_port->tx_lock),(void)0);
-            if (conf_port->free_node_cache)
-                CONF_CHECK_SUCCESS(pj_atomic_slist_destroy(conf_port->free_node_cache),(void)0);
-            if (conf_port->buff_to_mix)
-                CONF_CHECK_SUCCESS(pj_atomic_slist_destroy(conf_port->buff_to_mix),(void)0);
-            if (conf_port->requests_to_mix)
-                CONF_CHECK_SUCCESS(pj_atomic_destroy(conf_port->requests_to_mix),(void)0);
-
-            //TODO grp_lock ?
-        }
-        if (pool)
-            pj_pool_release(pool);
+        /* Decrease conf port ref count */
+        if (conf_port->port && conf_port->port->grp_lock)
+            pj_grp_lock_dec_ref(conf_port->port->grp_lock);
+        else
+            destroy_conf_port(conf_port);
     }
 
     return status;
@@ -2477,6 +2461,13 @@ static void destroy_conf_port( struct conf_port *conf_port )
 
     if (conf_port->tx_lock != NULL)
         pj_lock_destroy(conf_port->tx_lock);
+
+    if (conf_port->free_node_cache)
+        pj_atomic_slist_destroy(conf_port->free_node_cache);
+    if (conf_port->buff_to_mix)
+        pj_atomic_slist_destroy(conf_port->buff_to_mix);
+    if (conf_port->requests_to_mix)
+        pj_atomic_destroy(conf_port->requests_to_mix);
 
     pj_pool_safe_release(&conf_port->pool);
 }
