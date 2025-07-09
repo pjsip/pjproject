@@ -408,7 +408,7 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
 
     /* Create port. */
     conf_port = PJ_POOL_ZALLOC_T(pool, struct conf_port);
-    //PJ_ASSERT_ON_FAIL(conf_port, {status = PJ_ENOMEM; goto on_return;});
+    PJ_ASSERT_ON_FAIL(conf_port, {pj_pool_release(pool); return PJ_ENOMEM;});
     conf_port->pool = pool;
 
     /* Increment port ref count to avoid premature destroy due to
