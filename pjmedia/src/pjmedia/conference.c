@@ -403,14 +403,12 @@ static pj_status_t create_conf_port( pj_pool_t *parent_pool,
 
     /* Create own pool */
     pool = pj_pool_create(parent_pool->factory, pname, 500, 500, NULL);
-    if (!pool) {
-        status = PJ_ENOMEM;
-        goto on_return;
-    }
+    if (!pool)
+        return PJ_ENOMEM;
 
     /* Create port. */
     conf_port = PJ_POOL_ZALLOC_T(pool, struct conf_port);
-    PJ_ASSERT_ON_FAIL(conf_port, {status = PJ_ENOMEM; goto on_return;});
+    PJ_ASSERT_ON_FAIL(conf_port, {pj_pool_release(pool); return PJ_ENOMEM;});
     conf_port->pool = pool;
 
     /* Increment port ref count to avoid premature destroy due to
@@ -614,8 +612,11 @@ on_return:
         if (conf_port && conf_port->tx_resample)
             pjmedia_resample_destroy(conf_port->tx_resample);
 
-        if (pool)
+        if (port && port->grp_lock) {
+            pj_grp_lock_dec_ref(port->grp_lock);
+        } else if (pool) {
             pj_pool_release(pool);
+        }
     }
 
     return status;
