@@ -1379,7 +1379,7 @@ static pj_status_t verify_request(const pjsua_call *call,
 
     if (status == PJ_SUCCESS) {
         unsigned options = 0;
-        pjsip_tx_data *resp = NULL;
+        pjsip_tx_data *tx_data_resp = NULL;
 
         /* Add SIPREC support to prevent the "bad extension" error */
         options |= PJSIP_INV_SUPPORT_SIPREC;
@@ -1388,20 +1388,20 @@ static pj_status_t verify_request(const pjsua_call *call,
         status = pjsip_inv_verify_request3(rdata,
                                            call->inv->pool_prov, &options, 
                                            offer, answer, NULL, 
-                                           pjsua_var.endpt, &resp);
+                                           pjsua_var.endpt, &tx_data_resp);
         if (status != PJ_SUCCESS) {
             /*
              * No we can't handle the incoming INVITE request.
              */
             pjsua_perror(THIS_FILE, "Request verification failed", status);
 
-            if (resp)
-                err_code = resp->msg->line.status.code;
+            if (tx_data_resp)
+                err_code = tx_data_resp->msg->line.status.code;
             else
                 err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
 
             if (response)
-                *response = resp;
+                *response = tx_data_resp;
         }
     }
 
