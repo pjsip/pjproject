@@ -571,6 +571,22 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool_,
             goto on_error;
         }
         
+        /* Check compatibility of sample rate and ptime.
+         * Some combinations result in a fractional number of samples per frame
+         * which we do not support.
+         * One such case would be for example 10ms @ 22050Hz which would yield
+         * 220.5 samples per frame.
+         */
+        if (0 != (ptime * wavehdr.fmt_hdr.sample_rate *
+                  wavehdr.fmt_hdr.nchan % 1000))
+        {
+            PJ_LOG(3,(THIS_FILE,
+                  "Cannot create wav playlist port: incompatible sample "
+                  "rate/ptime"));
+            status = PJMEDIA_ENOTCOMPATIBLE;
+            goto on_error;
+        }
+
         /* It seems like we have a valid WAVE file. */
         
         /* Update port info if we don't have one, otherwise check
