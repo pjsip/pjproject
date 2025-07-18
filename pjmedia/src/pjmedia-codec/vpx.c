@@ -274,7 +274,7 @@ static pj_status_t vpx_default_attr(pjmedia_vid_codec_factory *factory,
     attr->dec_fmtp.param[0].name = pj_str((char*)"max-fr");
     attr->dec_fmtp.param[0].val = pj_str((char*)"30");
     attr->dec_fmtp.param[1].name = pj_str((char*)" max-fs");
-    attr->dec_fmtp.param[1].val = pj_str((char*)"580");
+    attr->dec_fmtp.param[1].val = pj_str((char*)"3600");
 
     /* Bitrate */
     attr->enc_fmt.det.vid.avg_bps = DEFAULT_AVG_BITRATE;
