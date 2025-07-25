@@ -55,6 +55,9 @@ pjsip-apps/src/swig/java/android/app/src/main/jniLibs/
 
 # SWIG CSharp/Xamarin stuff
 pjsip-apps/src/swig/csharp/pjsua2xamarin/
+pjsip-apps/src/swig/csharp/sample/SimplePjsua2CS/pjsua2
+pjsip-apps/src/swig/csharp/sample/SimplePjsua2CS/obj
+pjsip-apps/src/swig/csharp/sample/SimplePjsua2CS/*.user
 
 # SWIG Python stuff
 pjsip-apps/src/swig/python/build/
