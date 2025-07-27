@@ -221,12 +221,10 @@ endif()
 
 # math library
 find_library(MATH_LIBRARY m)
-if(NOT MATH_LIBRARY)
-  if(MATH_LIBRARY)
-    target_link_libraries(pjlib PUBLIC m)
-  elseif(PJLIB_WITH_FLOATING_POINT)
-    pj_force_set(PJLIB_WITH_FLOATING_POINT OFF "math library not found")
-  endif()
+if(MATH_LIBRARY)
+  target_link_libraries(pjlib PUBLIC m)
+elseif(PJLIB_WITH_FLOATING_POINT)
+  pj_force_set(PJLIB_WITH_FLOATING_POINT OFF "math library not found")
 endif()
 
 # win32 libraries
