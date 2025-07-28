@@ -235,7 +235,7 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WMME
 # Windows Audio Session API (WASAPI) backend
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WASAPI
   "Enable WASAPI audio device backend" ON
-  "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW" OFF
+  "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW;CMAKE_SYSTEM_NAME MATCHES 'WindowsStore' OR CMAKE_SYSTEM_NAME MATCHES 'WindowsPhone'" OFF
 )
 
 #
@@ -732,7 +732,7 @@ add_library(pjmedia-audiodev
   src/pjmedia-audiodev/errno.c
   src/pjmedia-audiodev/null_dev.c
   src/pjmedia-audiodev/oboe_dev.cpp
-  src/pjmedia-audiodev/wasapi_dev.cpp
+  $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_WASAPI}>:src/pjmedia-audiodev/wasapi_dev.cpp>
   src/pjmedia-audiodev/wmme_dev.c
 
   $<$<BOOL:${APPLE}>:src/pjmedia-audiodev/coreaudio_dev.m>
