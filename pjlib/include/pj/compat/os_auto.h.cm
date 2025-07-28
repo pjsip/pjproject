@@ -118,6 +118,7 @@
 #cmakedefine01 PJ_HAS_SOCKLEN_T
 
 #if !defined(socklen_t) && (!defined(PJ_HAS_SOCKLEN_T) || PJ_HAS_SOCKLEN_T==0)
+# undef PJ_HAS_SOCKLEN_T
 # define PJ_HAS_SOCKLEN_T  1
   typedef int socklen_t;
 #endif
