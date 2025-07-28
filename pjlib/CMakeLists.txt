@@ -3,6 +3,7 @@
 
 include(Pj/Option)
 include(CMakeDependentOption)
+include(CheckIncludeFile)
 
 # Floating point support
 option(PJLIB_WITH_FLOATING_POINT "Enable floating point support" ON)
@@ -229,9 +230,28 @@ if (NOT (WIN32 OR CYGWIN OR MIGW))
   endif()
 endif()
 
+if(WIN32 OR CYGWIN OR MINGW)
+  check_include_file(winsock.h PJ_HAS_WINSOCK_H)
+  check_include_file(winsock2.h PJ_HAS_WINSOCK2_H)
+  check_include_file(mswsock.h PJ_HAS_MSWSOCK_H)
+  check_include_file(ws2tcpip.h PJ_HAS_WS2TCPIP_H)
+endif()
+
 # win32 libraries
 if(WIN32 OR CYGWIN OR WIN32)
-  target_link_libraries(pjlib PRIVATE wsock32 ws2 ole32 winmm)
+  target_link_libraries(pjlib PRIVATE
+    ole32
+    winmm
+  )
+  if (PJ_HAS_WINSOCK2_H)
+    target_link_libraries(pjlib PRIVATE
+      ws2_32
+    )
+  elseif(PJ_HAS_WINSOCK_H)
+    target_link_libraries(pjlib PRIVATE
+      wsock32
+    )
+  endif()
 endif()
 
 # threading library
@@ -380,7 +400,6 @@ block(SCOPE_FOR VARIABLES)
   # headers
   #
 
-  include(CheckIncludeFile)
   check_include_file(arpa/inet.h PJ_HAS_ARPA_INET_H)
   check_include_file(assert.h PJ_HAS_ASSERT_H)
   check_include_file(ctype.h PJ_HAS_CTYPE_H)
@@ -423,13 +442,6 @@ block(SCOPE_FOR VARIABLES)
   check_include_file(time.h PJ_HAS_TIME_H)
   check_include_file(unistd.h PJ_HAS_UNISTD_H)
   check_include_file(execinfo.h PJ_HAS_EXECINFO_H)
-
-  if(WIN32 OR CYGWIN OR MINGW)
-    check_include_file(winsock.h PJ_HAS_WINSOCK_H)
-    check_include_file(winsock2.h PJ_HAS_WINSOCK2_H)
-    check_include_file(mswsock.h PJ_HAS_MSWSOCK_H)
-    check_include_file(ws2tcpip.h PJ_HAS_WS2TCPIP_H)
-  endif()
 
   if(ANDROID)
     set(PJ_HAS_ANDROID_ALARM_H 1)
