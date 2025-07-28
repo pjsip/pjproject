@@ -169,6 +169,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   )
 endif()
 
+if (MSVC)
+  target_compile_definitions(webrtc_aec3
+    PRIVATE
+      NOMINMAX
+  )
+endif()
+
 include(DetectWebRTCParameters)
 target_compile_options(webrtc_aec3 PRIVATE ${WEBRTC_COMPILE_OPTIONS})
 target_compile_definitions(webrtc_aec3 PRIVATE ${WEBRTC_COMPILE_DEFINITIONS})
