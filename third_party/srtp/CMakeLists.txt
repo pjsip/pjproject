@@ -3,7 +3,10 @@
 
 option(SRTP_WITH_OPENSSL "Build SRTP with OpenSSL support" ON)
 if(SRTP_WITH_OPENSSL)
-  find_package(OpenSSL COMPONENTS Crypto SSL)
+  find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
+  if(NOT OPENSSL_FOUND)
+    find_package(OpenSSL COMPONENTS Crypto SSL)
+  endif()
   if(OPENSSL_FOUND)
     # check GCM support
     include(CheckCSourceCompiles)

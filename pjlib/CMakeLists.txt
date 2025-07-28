@@ -254,7 +254,10 @@ endif()
 
 # ssl
 if(PJLIB_WITH_SSL STREQUAL "openssl")
-  find_package(OpenSSL COMPONENTS Crypto SSL)
+  find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
+  if(NOT OPENSSL_FOUND)
+    find_package(OpenSSL COMPONENTS Crypto SSL)
+  endif()
   if(OPENSSL_FOUND)
     target_link_libraries(pjlib PRIVATE OpenSSL::Crypto OpenSSL::SSL)
   else()
