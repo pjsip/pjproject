@@ -240,6 +240,7 @@
 /* Has pthread_set_name_np() ? */
 #cmakedefine01 PJ_HAS_PTHREAD_SET_NAME_NP
 
+#cmakedefine NOMINMAX @NOMINMAX@
+
 
 #endif  /* __PJ_COMPAT_OS_AUTO_H__ */
-
