@@ -64,6 +64,8 @@ target_sources(g7221
 # pjlib - for config
 target_link_libraries(g7221 PRIVATE pjlib)
 
-# math library
-find_library(MATH_LIBRARY m REQUIRED)
-target_link_libraries(g7221 PRIVATE "${MATH_LIBRARY}")
+if (NOT (WIN32 OR CYGWIN OR MIGW))
+  # math library
+  find_library(MATH_LIBRARY m REQUIRED)
+  target_link_libraries(g7221 PRIVATE "${MATH_LIBRARY}")
+endif()

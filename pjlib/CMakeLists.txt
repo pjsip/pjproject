@@ -219,12 +219,14 @@ endif()
 # ##############################################################################
 # Dependencies
 
-# math library
-find_library(MATH_LIBRARY m)
-if(MATH_LIBRARY)
-  target_link_libraries(pjlib PUBLIC m)
-elseif(PJLIB_WITH_FLOATING_POINT)
-  pj_force_set(PJLIB_WITH_FLOATING_POINT OFF "math library not found")
+if (NOT (WIN32 OR CYGWIN OR MIGW))
+  # math library
+  find_library(MATH_LIBRARY m)
+  if(MATH_LIBRARY)
+    target_link_libraries(pjlib PUBLIC m)
+  elseif(PJLIB_WITH_FLOATING_POINT)
+    pj_force_set(PJLIB_WITH_FLOATING_POINT OFF "math library not found")
+  endif()
 endif()
 
 # win32 libraries

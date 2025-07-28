@@ -74,9 +74,11 @@ target_sources(speex
 # pjlib - for config & log overrides
 target_link_libraries(speex PRIVATE pjlib)
 
-# math library
-find_library(MATH_LIBRARY m REQUIRED)
-target_link_libraries(speex PUBLIC "${MATH_LIBRARY}")
+if (NOT (WIN32 OR CYGWIN OR MIGW))
+  # math library
+  find_library(MATH_LIBRARY m REQUIRED)
+  target_link_libraries(speex PUBLIC "${MATH_LIBRARY}")
+endif()
 
 # ##############################################################################
 # Configuration

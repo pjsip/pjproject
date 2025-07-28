@@ -128,6 +128,8 @@ target_sources(webrtc
 # ##############################################################################
 # Dependencies
 
-# math library
-find_library(MATH_LIBRARY m REQUIRED)
-target_link_libraries(webrtc PRIVATE "${MATH_LIBRARY}")
+if (NOT (WIN32 OR CYGWIN OR MIGW))
+  # math library
+  find_library(MATH_LIBRARY m REQUIRED)
+  target_link_libraries(webrtc PRIVATE "${MATH_LIBRARY}")
+endif()

@@ -61,6 +61,8 @@ target_sources(ilbc
 # ##############################################################################
 # Dependencies
 
-# math library
-find_library(MATH_LIBRARY m REQUIRED)
-target_link_libraries(ilbc PRIVATE "${MATH_LIBRARY}")
+if (NOT (WIN32 OR CYGWIN OR MIGW))
+  # math library
+  find_library(MATH_LIBRARY m REQUIRED)
+  target_link_libraries(ilbc PRIVATE "${MATH_LIBRARY}")
+endif()
