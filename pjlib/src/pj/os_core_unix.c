@@ -146,6 +146,18 @@ struct pj_event_t
 };
 #endif  /* PJ_HAS_EVENT_OBJ */
 
+struct pj_barrier_t {
+#if defined(_POSIX_BARRIERS) && _POSIX_BARRIERS >= 200112L
+    /* pthread_barrier is supported. */
+    pthread_barrier_t barrier;
+#else
+    /* pthread_barrier is not supported. */
+    pj_mutex_t          mutex;
+    pthread_cond_t      cond;
+    unsigned            count;
+    unsigned            trip_count;
+#endif
+};
 
 /*
  * Flag and reference counter for PJLIB instance.
@@ -2079,6 +2091,122 @@ PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
 }
 
 #endif  /* PJ_HAS_EVENT_OBJ */
+
+///////////////////////////////////////////////////////////////////////////////
+#if defined(_POSIX_BARRIERS) && _POSIX_BARRIERS >= 200112L
+    /* pthread_barrier is supported. */
+
+/**
+ * Barrier object.
+ */
+PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) 
+{
+    pj_barrier_t *barrier;
+    int rc;
+    PJ_ASSERT_RETURN(pool && p_barrier, PJ_EINVAL);
+    barrier = (pj_barrier_t *)pj_pool_zalloc(pool, sizeof(pj_barrier_t));
+    if (barrier == NULL)
+        return PJ_ENOMEM;
+    rc = pthread_barrier_init(&barrier->barrier, NULL, trip_count);
+    if (rc == 0)
+        *p_barrier = barrier;
+    return PJ_STATUS_FROM_OS(rc);
+}
+
+/**
+ * Wait on the barrier.
+ */
+PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) 
+{
+    PJ_UNUSED_ARG(flags);
+    int rc = pthread_barrier_wait(&barrier->barrier);
+    switch (rc) {
+    case 0:
+        return PJ_FALSE;
+    case PTHREAD_BARRIER_SERIAL_THREAD:
+        return PJ_TRUE;
+    default:
+        return PJ_STATUS_FROM_OS(rc);
+    }
+}
+
+/**
+ * Destroy the barrier.
+ */
+PJ_DEF(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier) 
+{
+    int status = pthread_barrier_destroy(&barrier->barrier);
+    return PJ_STATUS_FROM_OS(status);
+}
+
+#else   // _POSIX_BARRIERS
+    /* pthread_barrier is not supported. */
+
+/**
+ * Barrier object.
+ */
+PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier)
+{
+    pj_barrier_t *barrier;
+    pj_status_t status;
+    int rc;
+
+    PJ_ASSERT_RETURN(pool && p_barrier, PJ_EINVAL);
+    barrier = (pj_barrier_t*)pj_pool_zalloc(pool, sizeof(pj_barrier_t));
+    if (barrier == NULL)
+        return PJ_ENOMEM;
+
+    rc = pthread_cond_init(&barrier->cond, NULL);
+    if ((status = PJ_STATUS_FROM_OS(rc)) == PJ_SUCCESS) {
+        status = init_mutex(&barrier->mutex, "barrier%p", PJ_MUTEX_SIMPLE);
+        if (status != PJ_SUCCESS) {
+            rc = pthread_cond_destroy(&barrier->cond);
+            pj_assert(!rc);
+        } else {
+            barrier->count = 0;
+            barrier->trip_count = trip_count;
+            *p_barrier = barrier;
+        }
+    }
+    return status;
+}
+
+/**
+ * Wait on the barrier.
+ */
+PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) 
+{
+    PJ_UNUSED_ARG(flags);
+
+    pj_bool_t is_last = PJ_FALSE;
+    int status;
+
+    pthread_mutex_lock(&barrier->mutex.mutex);
+    if (++barrier->count >= barrier->trip_count) {
+        barrier->count = 0;
+        status = pthread_cond_broadcast(&barrier->cond);
+        is_last = PJ_TRUE;
+    } else {
+        status = pthread_cond_wait(&barrier->cond, &barrier->mutex.mutex);
+    }
+    pthread_mutex_unlock(&barrier->mutex.mutex);
+
+    return !status ? is_last : PJ_STATUS_FROM_OS(status);
+}
+
+/**
+ * Destroy the barrier.
+ */
+PJ_DEF(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier) 
+{
+    int status = pthread_cond_destroy(&barrier->cond);
+    pj_assert(!status);
+    PJ_UNUSED_ARG(status);
+    return pj_mutex_destroy(&barrier->mutex);
+}
+
+#endif  // _POSIX_BARRIERS
+
 
 ///////////////////////////////////////////////////////////////////////////////
 #if defined(PJ_TERM_HAS_COLOR) && PJ_TERM_HAS_COLOR != 0

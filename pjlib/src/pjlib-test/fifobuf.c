@@ -105,7 +105,7 @@ static int fifobuf_rolling_test()
 
         /* Free cunks, leave some chunks for the next repeat */
         n = N/4 + (pj_rand() % (N/4));
-        while (pj_list_size(&chunks) > n) {
+        while ((int)pj_list_size(&chunks) > n) {
             chunk = chunks.next;
             pj_list_erase(chunk);
             pj_fifobuf_free(&fifo, chunk);

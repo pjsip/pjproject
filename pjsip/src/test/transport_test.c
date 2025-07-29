@@ -707,10 +707,11 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 
     /* Start threads! */
     for (i=0; i<THREADS; ++i) {
-        pj_time_val delay = {0, i*10};
+        pj_time_val delay = {0, 0};
         pj_thread_resume(g_rt[tid].rt_test_data[i].thread);
 
         /* Schedule first message transmissions. */
+        delay.msec = i*10;
         g_rt[tid].rt_test_data[i].tx_timer.user_data = (void*)(pj_ssize_t)1;
         pjsip_endpt_schedule_timer(endpt, &g_rt[tid].rt_test_data[i].tx_timer, &delay);
     }

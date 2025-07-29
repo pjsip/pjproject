@@ -34,19 +34,34 @@ static void systest_display_settings(void);
 static void systest_play_tone(void);
 static void systest_play_wav1(void);
 static void systest_play_wav2(void);
+static void systest_play_wav_conf(void);
 static void systest_rec_audio(void);
 static void systest_audio_test(void);
 static void systest_latency_test(void);
 static void systest_aec_test(void);
 static void exit_app(void);
 
+static void systest_enable_sound(void);
+static void systest_disable_sound(void);
+static void systest_mute_sound(void);
+
+static void systest_configure_player1(void);
+static void systest_connect_player1(void);
+static void systest_disconnect_player1(void);
+
+static void systest_configure_player2(void);
+static void systest_connect_player2(void);
+static void systest_disconnect_player2(void);
+
 /* Menus */
 static gui_menu menu_exit = { "Exit", &exit_app };
+static gui_menu submenu_exit = { "Return", &gui_destroy };
 
 static gui_menu menu_wizard =  { "Run test wizard", &systest_wizard };
 static gui_menu menu_playtn = { "Play Tone", &systest_play_tone };
 static gui_menu menu_playwv1 = { "Play WAV File1", &systest_play_wav1 };
 static gui_menu menu_playwv2 = { "Play WAV File2", &systest_play_wav2 };
+static gui_menu menu_playwv_conf = { "Play WAV Files 1+2 (conf)", &systest_play_wav_conf };
 static gui_menu menu_recaud  = { "Record Audio", &systest_rec_audio };
 static gui_menu menu_audtest = { "Device Test", &systest_audio_test };
 static gui_menu menu_calclat = { "Latency Test", &systest_latency_test };
@@ -54,6 +69,18 @@ static gui_menu menu_sndaec = { "AEC/AES Test", &systest_aec_test };
 
 static gui_menu menu_listdev = { "View Devices", &systest_list_audio_devs };
 static gui_menu menu_getsets = { "View Settings", &systest_display_settings };
+
+static gui_menu menu_enable_sound = { "Enable", &systest_enable_sound };
+static gui_menu menu_disable_sound = { "Disable", &systest_disable_sound };
+static gui_menu menu_mute_sound = { "Mute", &systest_mute_sound };
+
+static gui_menu menu_configure1 = { "Disable", &systest_configure_player1 };
+static gui_menu menu_connect1 = { "Connect", &systest_connect_player1 };
+static gui_menu menu_disconnect1 = { "Disconnect", &systest_disconnect_player1 };
+
+static gui_menu menu_configure2 = { "Disable", &systest_configure_player2 };
+static gui_menu menu_connect2 = { "Connect", &systest_connect_player2 };
+static gui_menu menu_disconnect2 = { "Disconnect", &systest_disconnect_player2 };
 
 static gui_menu menu_tests = {
     "Tests", NULL,
@@ -72,6 +99,24 @@ static gui_menu menu_tests = {
     }
 };
 
+static gui_menu menu_tests_conf = {
+    "Tests", NULL,
+    10,
+    {
+        &menu_wizard,
+        &menu_audtest,
+        &menu_playtn,
+        &menu_playwv1,
+        &menu_playwv2,
+        &menu_playwv_conf,
+        &menu_recaud,
+        &menu_calclat,
+        &menu_sndaec,
+        //NULL,
+        //&menu_exit
+    }
+};
+
 static gui_menu menu_options = {
     "Options", NULL,
     2,
@@ -81,8 +126,47 @@ static gui_menu menu_options = {
     }
 };
 
+static gui_menu menu_sound_conf = {
+    "Sound", NULL,
+    2,
+    {
+        //&menu_enable_sound,
+        &menu_disable_sound,
+        &menu_mute_sound
+    }
+};
+
+static gui_menu menu_player1_conf = {
+    "Voice", NULL,
+    2,
+    {
+        &menu_configure1,
+        &menu_disconnect1
+    }
+};
+
+static gui_menu menu_player2_conf = {
+    "Metronome", NULL,
+    2,
+    {
+        &menu_configure2,
+        &menu_disconnect2
+    }
+};
+
+static gui_menu submenu_tests_conf = {
+    "Conference", NULL,
+    4,
+    {
+        &menu_sound_conf,
+        &menu_player1_conf,
+        &menu_player2_conf,
+        &submenu_exit
+    }
+};
+
 static gui_menu root_menu = {
-    "Root", NULL, 2, {&menu_tests, &menu_options}
+    "Root", NULL, 2, {&menu_tests, &menu_options, &menu_exit, &menu_tests_conf}
 };
 
 /*****************************************************************/
@@ -122,6 +206,13 @@ static char textbuf[600];
 /* Device ID to test */
 int systest_cap_dev_id = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
 int systest_play_dev_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+
+pjsua_player_id play_id1 = PJSUA_INVALID_ID;
+pjsua_player_id play_id2 = PJSUA_INVALID_ID;
+pjmedia_port_op player1_active = PJMEDIA_PORT_ENABLE;
+pjmedia_port_op player2_active = PJMEDIA_PORT_ENABLE;
+pjmedia_port_op sound_active = PJMEDIA_PORT_ENABLE;
+
 
 static void systest_perror(const char *title, pj_status_t status)
 {
@@ -285,9 +376,146 @@ static pj_status_t create_player(unsigned path_cnt, const char *paths[],
 /*****************************************************************************
  * test: play WAV file
  */
-static void systest_play_wav(unsigned path_cnt, const char *paths[])
+
+static void rebuild_sound_menu(void)
 {
-    pjsua_player_id play_id = PJSUA_INVALID_ID;
+    int i = 0;
+    if (sound_active != PJMEDIA_PORT_ENABLE)
+        menu_sound_conf.submenus[i++] = &menu_enable_sound;
+    if (sound_active != PJMEDIA_PORT_DISABLE)
+        menu_sound_conf.submenus[i++] = &menu_disable_sound;
+    if (sound_active != PJMEDIA_PORT_MUTE)
+        menu_sound_conf.submenus[i++] = &menu_mute_sound;
+}
+
+static void rebuild_player1_menu(void)
+{
+    pj_ansi_strxcpy(menu_configure1.title, 
+                    player1_active != PJMEDIA_PORT_DISABLE ? "Disable" : "Enable",
+                    sizeof(menu_configure1.title));
+}
+
+static void rebuild_player2_menu(void)
+{
+    pj_ansi_strxcpy(menu_configure2.title, 
+                    player2_active != PJMEDIA_PORT_DISABLE ? "Disable" : "Enable",
+                    sizeof(menu_configure2.title));
+}
+
+static void systest_enable_sound(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(0, 
+                                       PJMEDIA_PORT_ENABLE,
+                                       PJMEDIA_PORT_NO_CHANGE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        sound_active = PJMEDIA_PORT_ENABLE;
+        rebuild_sound_menu();
+    }
+}
+
+static void systest_disable_sound(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(0,
+                                       PJMEDIA_PORT_DISABLE,
+                                       PJMEDIA_PORT_NO_CHANGE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        sound_active = PJMEDIA_PORT_DISABLE;
+        rebuild_sound_menu();
+    }
+}
+
+static void systest_mute_sound(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_configure_port(0,
+                                       PJMEDIA_PORT_MUTE,
+                                       PJMEDIA_PORT_NO_CHANGE);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else {
+        sound_active = PJMEDIA_PORT_MUTE;
+        rebuild_sound_menu();
+    }
+}
+
+static void systest_configure_player1(void)
+{
+    pj_status_t status;
+    player1_active = player1_active==PJMEDIA_PORT_DISABLE ? PJMEDIA_PORT_ENABLE : PJMEDIA_PORT_DISABLE;
+    status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id1),
+                                       PJMEDIA_PORT_NO_CHANGE, 
+                                       player1_active);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else
+        rebuild_player1_menu();
+}
+
+static void systest_connect_player1(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id1), 0);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else
+        menu_player1_conf.submenus[1] = &menu_disconnect1;
+}
+
+static void systest_disconnect_player1(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_disconnect(pjsua_player_get_conf_port(play_id1), 0);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else
+        menu_player1_conf.submenus[1] = &menu_connect1;
+}
+
+static void systest_configure_player2(void)
+{
+    pj_status_t status;
+    player2_active = player2_active==PJMEDIA_PORT_DISABLE ? PJMEDIA_PORT_ENABLE : PJMEDIA_PORT_DISABLE;
+    status = pjsua_conf_configure_port(pjsua_player_get_conf_port(play_id2),
+        PJMEDIA_PORT_NO_CHANGE, 
+        player2_active);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else
+        rebuild_player2_menu();
+}
+
+static void systest_connect_player2(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id2), 0);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else
+        menu_player2_conf.submenus[1] = &menu_disconnect2;
+}
+
+static void systest_disconnect_player2(void)
+{
+    pj_status_t status;
+    status = pjsua_conf_disconnect(pjsua_player_get_conf_port(play_id2), 0);
+    if (status != PJ_SUCCESS)
+        gui_destroy();
+    else
+        menu_player2_conf.submenus[1] = &menu_connect2;
+}
+
+
+static void systest_play_wav_impl(unsigned path_cnt, const char *paths[],
+                                  unsigned path_cnt2, const char *paths2[])
+{
+    play_id1 = PJSUA_INVALID_ID;
+    play_id2 = PJSUA_INVALID_ID;
     enum gui_key key;
     test_item_t *ti;
     const char *title = "WAV File Playback Test";
@@ -297,13 +525,23 @@ static void systest_play_wav(unsigned path_cnt, const char *paths[])
     if (!ti)
         return;
 
-    pj_ansi_snprintf(textbuf, sizeof(textbuf),
-                     "This test will play %s file to "
-                     "the speaker. Please listen carefully for audio "
-                     "impairments such as stutter. Let this test run "
-                     "for a while to make sure that everything is okay."
-                     " Press OK to start, CANCEL to skip",
-                     paths[0]);
+    if (path_cnt2) 
+        pj_ansi_snprintf(textbuf, sizeof(textbuf),
+                         "This test will play the sum of %s (voice) "
+                         "and %s (metronome) files to "
+                         "the speaker. Please listen carefully for audio "
+                         "impairments such as stutter. Let this test run "
+                         "for a while to make sure that everything is okay."
+                         " Press OK to start, CANCEL to skip",
+                         paths[0], paths2[0]);
+    else 
+        pj_ansi_snprintf(textbuf, sizeof(textbuf),
+                         "This test will play %s file to "
+                         "the speaker. Please listen carefully for audio "
+                         "impairments such as stutter. Let this test run "
+                         "for a while to make sure that everything is okay."
+                         " Press OK to start, CANCEL to skip",
+                         paths[0]);
 
     key = gui_msgbox(title, textbuf,
                      WITH_OKCANCEL);
@@ -315,24 +553,52 @@ static void systest_play_wav(unsigned path_cnt, const char *paths[])
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
 
     /* WAV port */
-    status = create_player(path_cnt, paths, &play_id);
+    status = create_player(path_cnt, paths, &play_id1);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+    player1_active = PJMEDIA_PORT_ENABLE;
+
+    if (path_cnt2) {
+        status = create_player(path_cnt2, paths2, &play_id2);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+        player2_active = PJMEDIA_PORT_ENABLE;
+    }
+
+    status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id1), 0);
     if (status != PJ_SUCCESS)
         goto on_return;
 
-    status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id), 0);
-    if (status != PJ_SUCCESS)
-        goto on_return;
+    if (path_cnt2) {
+        /* Connect the two players */
+        status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id2), 0);
+        if (status != PJ_SUCCESS)
+            goto on_return;
 
-    key = gui_msgbox(title,
-                     "WAV file should be playing now in the "
-                     "speaker. Press OK to stop. ", WITH_OK);
-    PJ_UNUSED_ARG(key);
+        /* Show the conference menu, so that user can switch between the two players. */
+        rebuild_sound_menu();
+        rebuild_player1_menu();
+        menu_player1_conf.submenus[1] = &menu_disconnect1;
+        rebuild_player2_menu();
+        menu_player2_conf.submenus[1] = &menu_disconnect2;
+        gui_start(&submenu_tests_conf);
+        systest_enable_sound();
+
+    } else {
+        key = gui_msgbox(title,
+                         "WAV file should be playing now in the "
+                         "speaker. Press OK to stop. ", WITH_OK);
+        //PJ_UNUSED_ARG(key);
+    }
 
     status = PJ_SUCCESS;
 
 on_return:
-    if (play_id != -1)
-        pjsua_player_destroy(play_id);
+    if (play_id1 != PJSUA_INVALID_ID)
+        pjsua_player_destroy(play_id1);
+
+    if (play_id2 != PJSUA_INVALID_ID)
+        pjsua_player_destroy(play_id2);
 
     if (status != PJ_SUCCESS) {
         systest_perror("Sorry we've encountered error", status);
@@ -345,6 +611,11 @@ on_return:
             pj_ansi_strxcpy(ti->reason, USER_ERROR, sizeof(ti->reason));
     }
     return;
+}
+
+static void systest_play_wav(unsigned path_cnt, const char *paths[])
+{
+    systest_play_wav_impl(path_cnt, paths, 0, NULL);
 }
 
 static void systest_play_wav1(void)
@@ -361,6 +632,15 @@ static void systest_play_wav2(void)
     systest_play_wav(PJ_ARRAY_SIZE(paths), paths);
 }
 
+static void systest_play_wav_conf(void)
+{
+    const char *paths[] = { add_path(res_path, WAV_PLAYBACK_PATH),
+                            ALT_PATH1 WAV_PLAYBACK_PATH };
+    const char *paths2[] = { add_path(res_path, WAV_TOCK8_PATH),
+                             ALT_PATH1 WAV_TOCK8_PATH};
+    systest_play_wav_impl(PJ_ARRAY_SIZE(paths), paths, 
+                          PJ_ARRAY_SIZE(paths2), paths2);
+}
 
 /*****************************************************************************
  * test: record audio
@@ -416,6 +696,8 @@ static void systest_rec_audio(void)
     rec_slot = PJSUA_INVALID_ID;
     pjsua_recorder_destroy(rec_id);
     rec_id = PJSUA_INVALID_ID;
+
+    gui_sleep(1);    //HACK! waiting for the recorder to close!
 
     status = pjsua_player_create(&filename, 0, &play_id);
     if (status != PJ_SUCCESS)
@@ -1159,7 +1441,10 @@ static void systest_display_settings(void)
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Audio switching: %s\r\n",
-            (PJMEDIA_CONF_USE_SWITCH_BOARD ? "Switchboard" : "Conf bridge"));
+                     (PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_SWITCH_BOARD_BACKEND ? 
+                         "Switchboard" : 
+                      PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND ? 
+                         "Conf bridge" : "Parallel conf bridge"));
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Snd buff count: %d\r\n",

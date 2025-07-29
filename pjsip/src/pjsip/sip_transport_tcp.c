@@ -290,6 +290,7 @@ static pj_status_t update_factory_addr(struct tcp_listener *listener,
         }
 
         /* Copy the address */
+        listener->factory.has_addr_name = PJ_TRUE;
         listener->factory.addr_name = *addr_name;
         pj_strdup(listener->factory.pool, &listener->factory.addr_name.host,
                   &addr_name->host);
@@ -674,7 +675,11 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
 
     tcp->base.addr_len = pj_sockaddr_get_len(remote);
     pj_sockaddr_cp(&tcp->base.local_addr, local);
-    sockaddr_to_host_port(pool, &tcp->base.local_name, local);
+
+    /* Use listener's published address, if any. */
+    tcp->base.has_addr_name = listener->factory.has_addr_name;
+    tcp->base.local_name = listener->factory.addr_name;
+
     sockaddr_to_host_port(pool, &tcp->base.remote_name, remote);
     tcp->base.dir = is_server? PJSIP_TP_DIR_INCOMING : PJSIP_TP_DIR_OUTGOING;
 
@@ -1078,8 +1083,16 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                 pj_sockaddr_get_port(&local_addr) != 0)
             {
                 pj_sockaddr_cp(tp_addr, &local_addr);
-                sockaddr_to_host_port(tcp->base.pool, &tcp->base.local_name,
-                                      &local_addr);
+                /* Only update published address if not specified, otherwise
+                 * only update the port.
+                 */
+                if (!tcp->base.has_addr_name) {
+                    sockaddr_to_host_port(tcp->base.pool, &tcp->base.local_name,
+                                          &local_addr);
+                } else {
+                    tcp->base.local_name.port =
+                        pj_sockaddr_get_port(&local_addr);
+                }
             }
         }
         

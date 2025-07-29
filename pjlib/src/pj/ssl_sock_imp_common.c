@@ -1174,9 +1174,16 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     }
 
     /* Start SSL handshake */
+    /* Prevent data race with on_data_read() until ssl_do_handshake()
+     * completes.
+     */
+    if (ssock->circ_buf_input_mutex)
+        pj_lock_acquire(ssock->circ_buf_input_mutex);
     ssock->ssl_state = SSL_STATE_HANDSHAKING;
     ssl_set_state(ssock, PJ_TRUE);
     status = ssl_do_handshake(ssock);
+    if (ssock->circ_buf_input_mutex)
+        pj_lock_release(ssock->circ_buf_input_mutex);
 
 on_return:
     if (ssock && status != PJ_EPENDING) {
@@ -1501,8 +1508,8 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
         return status;
 
     /* Create input circular buffer mutex */
-    status = pj_lock_create_simple_mutex(pool, pool->obj_name,
-                                         &ssock->circ_buf_input_mutex);
+    status = pj_lock_create_recursive_mutex(pool, pool->obj_name,
+                                            &ssock->circ_buf_input_mutex);
     if (status != PJ_SUCCESS)
         return status;
 

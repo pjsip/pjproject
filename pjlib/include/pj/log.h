@@ -274,6 +274,13 @@ pj_status_t pj_log_init(void);
 #  define pj_log_set_log_func(func)
 
 /**
+ * Get the current log output function that is used to write log messages.
+ *
+ * @return          Current log output function.
+ */
+#  define pj_log_get_log_func() NULL
+
+/**
  * Write to log.
  *
  * @param sender    Source of the message.

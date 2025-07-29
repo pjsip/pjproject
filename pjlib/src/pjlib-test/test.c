@@ -37,12 +37,14 @@
 pj_pool_factory *mem;
 
 struct test_app_t test_app = {
-    .param_echo_sock_type = 0,
-    .param_echo_server    = ECHO_SERVER_ADDRESS,
-    .param_echo_port      = ECHO_SERVER_START_PORT,
-    .param_log_decor      = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-                            PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
-    .param_ci_mode        = PJ_FALSE,
+    {0},                                /* .ut_app */
+    0,                                  /* .param_echo_sock_type */
+    ECHO_SERVER_ADDRESS,                /* .param_echo_server */
+    ECHO_SERVER_START_PORT,             /* .param_echo_port */
+    PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
+        PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
+                                        /* .param_log_decor */
+    PJ_FALSE,                           /* .param_ci_mode */
 };
 
 int null_func()
@@ -155,6 +157,14 @@ static pj_test_stat essential_tests(int argc, char *argv[])
 
 #if INCLUDE_LIST_TEST
     ADD_TEST( list_test, 0);
+#endif
+
+#if INCLUDE_ATOMIC_SLIST_TEST
+    ADD_TEST( atomic_slist_test, 0);
+#endif
+
+#if INCLUDE_MT_ATOMIC_SLIST_TEST
+    ADD_TEST( atomic_slist_mt_test, PJ_TEST_EXCLUSIVE|PJ_TEST_FUNC_NO_ARG|PJ_TEST_LOG_NO_CACHE);
 #endif
 
 #if INCLUDE_POOL_TEST
@@ -342,6 +352,10 @@ static int features_tests(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, ssl_sock_test, 0);
 #endif
 
+#if INCLUDE_IOCP_UNREG_TEST
+    UT_ADD_TEST(&test_app.ut_app, iocp_unregister_test, 0);
+#endif
+
 
 #undef ADD_TEST
 
@@ -368,6 +382,18 @@ int test_inner(int argc, char *argv[])
     pj_log_set_decor(test_app.param_log_decor);
     pj_bzero(&stat, sizeof(pj_test_stat));
 
+#if 0
+    unsigned decor = pj_log_get_decor();
+    pj_log_set_decor(PJ_LOG_HAS_THREAD_ID | PJ_LOG_HAS_SENDER | decor);
+    pj_log_set_level(5);
+#if defined(PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE) && (PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE==1) && (WINVER >= 0x0500)
+    LCID locale = GetThreadLocale();
+    BOOL res = SetThreadLocale(MAKELCID(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), SORT_DEFAULT));
+    PJ_UNUSED_ARG(res);
+#endif
+#endif
+
+
     rc = pj_init();
     if (rc != 0) {
         app_perror("pj_init() error!!", rc);
@@ -387,7 +413,7 @@ int test_inner(int argc, char *argv[])
         }
     }
 
-    if (argc-1 > 0 && stat.nruns==argc-1) {
+    if (argc-1 > 0 && (int)stat.nruns==argc-1) {
         /* cmdline specifies test(s) to run, and the number of runs
          * matches that. That means all requested tests have been run.
          */

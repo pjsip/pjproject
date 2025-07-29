@@ -46,6 +46,17 @@
 #define INCLUDE_EXCEPTION_TEST      GROUP_LIBC
 #define INCLUDE_RAND_TEST           GROUP_LIBC
 #define INCLUDE_LIST_TEST           GROUP_DATA_STRUCTURE
+#define INCLUDE_ATOMIC_SLIST_TEST   GROUP_DATA_STRUCTURE
+
+/* define this macro to control multithreaded testing for other platforms */
+#ifndef INCLUDE_MT_ATOMIC_SLIST_TEST
+#   ifdef PJ_WIN32
+#       define INCLUDE_MT_ATOMIC_SLIST_TEST INCLUDE_ATOMIC_SLIST_TEST
+#   else
+#       define INCLUDE_MT_ATOMIC_SLIST_TEST 0
+#   endif
+#endif
+
 #define INCLUDE_HASH_TEST           GROUP_DATA_STRUCTURE
 #define INCLUDE_POOL_TEST           GROUP_LIBC
 #define INCLUDE_POOL_PERF_TEST      (GROUP_LIBC && WITH_BENCHMARK)
@@ -65,6 +76,7 @@
 #define INCLUDE_IOQUEUE_STRESS_TEST (PJ_HAS_THREADS && GROUP_NETWORK)
 #define INCLUDE_UDP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_TCP_IOQUEUE_TEST    GROUP_NETWORK
+#define INCLUDE_IOCP_UNREG_TEST     GROUP_NETWORK
 #define INCLUDE_ACTIVESOCK_TEST     GROUP_NETWORK
 #define INCLUDE_SSLSOCK_TEST        (PJ_HAS_SSL_SOCK && GROUP_NETWORK)
 #define INCLUDE_IOQUEUE_PERF_TEST   (PJ_HAS_THREADS && GROUP_NETWORK && WITH_BENCHMARK)
@@ -89,6 +101,8 @@ extern int timestamp_test(void);
 extern int exception_test(void);
 extern int rand_test(void);
 extern int list_test(void);
+extern int atomic_slist_test(void);
+extern int atomic_slist_mt_test(void);
 extern int hash_test(void);
 extern int log_test(void);
 extern int os_test(void);
@@ -114,6 +128,7 @@ extern int tcp_ioqueue_test(void);
 extern int ioqueue_perf_test0(void);
 extern int ioqueue_perf_test1(void);
 extern int ioqueue_stress_test(void);
+extern int iocp_unregister_test(void);
 extern int activesock_test(void);
 extern int file_test(void);
 extern int ssl_sock_test(void);

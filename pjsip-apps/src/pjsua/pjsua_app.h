@@ -44,8 +44,8 @@ typedef struct pjsua_app_cfg_t
 
     /** 
      * Tell app that CLI (and pjsua) is (re)started.
-     * msg will contain start error message such as “Telnet to X:Y”,
-     * “failed to start pjsua lib”, “port busy”..
+     * msg will contain start error message such as "Telnet to X:Y",
+     * "failed to start pjsua lib", "port busy"..
      */
     void (*on_started)(pj_status_t status, const char* title);
 
