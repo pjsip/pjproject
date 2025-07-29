@@ -1221,6 +1221,9 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
             }
         }
 
+        if (regc->_delete_flag != 0) {
+            pjsip_auth_clt_set_parent(&regc->auth_sess, NULL);
+        }
         status = pjsip_auth_clt_reinit_req( &regc->auth_sess,
                                             rdata, 
                                             tsx->last_tx,  
@@ -1555,4 +1558,8 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     return status;
 }
 
-
+PJ_DEF(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
+                                              pjsip_auth_clt_sess *session ) {
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+    return pjsip_auth_clt_set_parent(&regc->auth_sess, session);
+}

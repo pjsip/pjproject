@@ -366,6 +366,14 @@ PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( pjsua_call_id call_id,
     return PJ_ENOTSUP;
 }
 
+PJ_DEF(pj_status_t) pjsua_call_dial_dtmf2( pjsua_call_id call_id,
+                                          const pj_str_t *digits,
+                                          unsigned duration)
+{
+    UNIMPLEMENTED(pjsua_call_dial_dtmf2)
+    return PJ_ENOTSUP;
+}
+
 /*****************************************************************************
  * Below are auxiliary API that we don't support (feel free to implement them
  * with the other media stack)

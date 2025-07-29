@@ -682,6 +682,7 @@
     <ClCompile Include="..\src\pjsua-lib\pjsua_im.c" />
     <ClCompile Include="..\src\pjsua-lib\pjsua_media.c" />
     <ClCompile Include="..\src\pjsua-lib\pjsua_pres.c" />
+    <ClCompile Include="..\src\pjsua-lib\pjsua_txt.c" />
     <ClCompile Include="..\src\pjsua-lib\pjsua_vid.c" />
   </ItemGroup>
   <ItemGroup>

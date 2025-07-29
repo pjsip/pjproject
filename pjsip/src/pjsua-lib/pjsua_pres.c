@@ -675,6 +675,10 @@ PJ_DEF(pj_status_t) pjsua_buddy_subscribe_pres( pjsua_buddy_id buddy_id,
     return PJ_SUCCESS;
 }
 
+/*
+ * Enable/disable buddy's dialog event monitoring.
+ */
+
 PJ_DEF(pj_status_t) pjsua_buddy_subscribe_dlg_event(pjsua_buddy_id buddy_id,
                                                     pj_bool_t subscribe)
 {
@@ -2125,6 +2129,10 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
     /* Set route-set */
     if (!pj_list_empty(&acc->route_set)) {
         pjsip_dlg_set_route_set(buddy->dlg, &acc->route_set);
+    }
+
+    if (acc->cfg.use_shared_auth) {
+        pjsip_dlg_set_auth_sess(buddy->dlg, &acc->shared_auth_sess);
     }
 
     /* Set credentials */

@@ -492,6 +492,7 @@ static pjmedia_port* init_conf_port(unsigned nb_participant,
     pjmedia_conf *conf;
     unsigned i, nport = 1;
     pj_status_t status;
+    pjmedia_conf_param param;
 
     PJ_UNUSED_ARG(flags);
 
@@ -499,9 +500,21 @@ static pjmedia_port* init_conf_port(unsigned nb_participant,
     pj_bzero(te->pdata, sizeof(te->pdata));
 
     /* Create conf */
-    status = pjmedia_conf_create(pool, 2+nb_participant*2, clock_rate, 
-                                 channel_count, samples_per_frame, 16, 
-                                 PJMEDIA_CONF_NO_DEVICE, &conf);
+    pjmedia_conf_param_default(&param);
+
+    param.max_slots = 2+nb_participant*2;
+    param.sampling_rate = clock_rate;
+    param.channel_count = channel_count;
+    param.samples_per_frame = samples_per_frame;
+    param.bits_per_sample = 16;
+    param.options = PJMEDIA_CONF_NO_DEVICE;
+    param.worker_threads = 0;
+
+    status = pjmedia_conf_create2(pool, &param, &conf);
+
+    //status = pjmedia_conf_create(pool, 2+nb_participant*2, clock_rate, 
+    //                             channel_count, samples_per_frame, 16, 
+    //                             PJMEDIA_CONF_NO_DEVICE, &conf);
     if (status != PJ_SUCCESS)
         return NULL;
     te->pdata[0] = conf;
@@ -2349,6 +2362,7 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
     pj_int16_t pcm[32000 * PTIME / 1000];
     pjmedia_port *gen_port;
     pj_status_t status;
+    pj_uint64_t u64;
 
     samples_per_frame = clock_rate * PTIME / 1000;
 
@@ -2373,8 +2387,9 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
     }
 
     pj_get_timestamp(&t0);
-    for (j=0; j<DURATION*clock_rate/samples_per_frame/1000; ++j) {
+    for (j=0, u64 = t0.u64; j<DURATION*clock_rate/samples_per_frame/1000; ++j, u64 += samples_per_frame) {
         pjmedia_frame frm;
+        frm.timestamp.u64 = u64;
 
         if (e->valid_op==OP_GET_PUT) {
             frm.buf = (void*)pcm;

@@ -553,6 +553,7 @@ public:
         }
 
         int dev_id = 0;
+        oboe::PerformanceMode performance_mode;
         oboe::AudioStreamBuilder sb;
 
         pj_mutex_lock(mutex);
@@ -577,12 +578,20 @@ public:
                 dev_id = stream->f->dev_info[stream->param.play_id].id;
             }
         }
+
+        if (PJMEDIA_OBOE_USE_LOWLATENCY) {
+            performance_mode= oboe::PerformanceMode::LowLatency;
+        } else {
+            performance_mode = oboe::PerformanceMode::None;
+        }
+        
         sb.setDeviceId(dev_id);
         sb.setSampleRate(stream->param.clock_rate);
         sb.setChannelCount(stream->param.channel_count);
-        sb.setPerformanceMode(oboe::PerformanceMode::LowLatency);
+        sb.setPerformanceMode(performance_mode);
         sb.setFormat(oboe::AudioFormat::I16);
         sb.setUsage(oboe::Usage::VoiceCommunication);
+        sb.setInputPreset(oboe::InputPreset::VoiceCommunication);
         sb.setContentType(oboe::ContentType::Speech);
         sb.setDataCallback(this);
         sb.setErrorCallback(this);

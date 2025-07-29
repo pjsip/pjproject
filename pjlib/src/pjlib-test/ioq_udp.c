@@ -940,7 +940,6 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     pj_timestamp t1, t2, t_elapsed;
     int rc=0, i;    /* i must be signed */
     pj_str_t temp;
-    char errbuf[PJ_ERR_MSG_SIZE];
 
     TRACE__((THIS_FILE, "   bench test %d", inactive_sock_count));
 
@@ -1161,8 +1160,7 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     return rc;
 
 on_error:
-    pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf));
-    PJ_LOG(1,(THIS_FILE, "...ERROR: %s", errbuf));
+    PJ_PERROR(1,(THIS_FILE, pj_get_netos_error(), "...ERROR"));
     if (ssock >= 0)
         pj_sock_close(ssock);
     if (csock >= 0)

@@ -20,6 +20,9 @@
     <ClCompile Include="..\src\pjmedia\avi_player.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjmedia\avi_writer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjmedia\bidirectional.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -33,6 +36,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pjmedia\conference.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjmedia\conf_thread.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pjmedia\converter.c">
@@ -170,6 +176,9 @@
     <ClCompile Include="..\src\pjmedia\transport_udp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjmedia\txt_stream.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjmedia\types.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -228,6 +237,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pjmedia\echo_webrtc_aec3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjmedia\av_sync.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjmedia\stream_imp_common.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -376,6 +391,9 @@
     <ClInclude Include="..\include\pjmedia\transport_udp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pjmedia\txt_stream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\pjmedia\types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -416,6 +434,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pjmedia\vid_conf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjmedia\av_sync.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

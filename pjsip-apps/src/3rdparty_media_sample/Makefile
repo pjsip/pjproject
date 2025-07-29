@@ -9,7 +9,7 @@ export _CFLAGS 	:= $(PJ_CFLAGS) $(CFLAGS)
 export _CXXFLAGS:= $(PJ_CXXFLAGS)
 export _LDFLAGS := $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS)
 
-OBJS = alt_pjsua_aud.o alt_pjsua_vid.o pjsua_app.o main.o pjsua_app_cli.o pjsua_app_common.o pjsua_app_config.o pjsua_app_legacy.o
+OBJS = alt_pjsua_aud.o alt_pjsua_txt.o alt_pjsua_vid.o pjsua_app.o main.o pjsua_app_cli.o pjsua_app_common.o pjsua_app_config.o pjsua_app_legacy.o
 
 all: alt_pjsua
 

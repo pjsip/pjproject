@@ -1119,10 +1119,12 @@ int ice_test(void *p)
 
     rc = 0;
     if (test_id >= ICE_TEST_START_ARRAY) {
-        i = test_id - ICE_TEST_START_ARRAY;
-        struct sess_cfg_t *cfg = &sess_cfg[i];
+        struct sess_cfg_t *cfg;
         unsigned delay[] = { 50, 2000 };
         unsigned d;
+
+        i = test_id - ICE_TEST_START_ARRAY;
+        cfg = &sess_cfg[i];
 
         PJ_LOG(3,(THIS_FILE, "  %s", cfg->title));
 

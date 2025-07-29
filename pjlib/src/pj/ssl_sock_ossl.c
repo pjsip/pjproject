@@ -1573,7 +1573,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
             PJ_LOG(4,(ssock->pool->obj_name,
                       "CA certificates loaded from %s",
                       (cert->CA_file.slen?cert->CA_file.ptr:"buffer")));
-        } else {
+        } else if (cert->CA_file.slen > 0 || cert->CA_buf.slen > 0) {
             PJ_LOG(1,(ssock->pool->obj_name,
                       "Error reading CA certificates from %s",
                       (cert->CA_file.slen?cert->CA_file.ptr:"buffer")));
@@ -1842,7 +1842,9 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
      * SSL_CTX_set_ciphersuites() is for TLSv1.3.
      */
     ret = SSL_CTX_set_cipher_list(ossock->ossl_ctx, buf);
+#if !USING_BORINGSSL
     ret2 = SSL_CTX_set_ciphersuites(ossock->ossl_ctx, buf);
+#endif
     if (ret < 1 && ret2 < 1) {
         PJ_LOG(4, (THIS_FILE, "Failed setting cipher list %s",
                               cipher_list.ptr));

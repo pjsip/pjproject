@@ -120,6 +120,64 @@
 #   define PJMEDIA_CONF_USE_AGC             1
 #endif
 
+/**
+ * Conference switch/bridge backend implementations.
+ * Select one of these implementations in PJMEDIA_CONF_BACKEND.
+ */
+/** Conference switch board backend */
+#define PJMEDIA_CONF_SWITCH_BOARD_BACKEND 0
+/** Conference bridge sequential backend */
+#define PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND 1
+/** Multithreaded conference bridge backend */
+#define PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND 2
+
+/**
+ * Choose which conference backend implementation to use.
+ * 
+ * In order to use parallel conference bridge with real parallelism,
+ * users need to:
+ * 1. define PJMEDIA_CONF_BACKEND to PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND
+ * and at least one of the following:
+ * 2.1. define PJMEDIA_CONF_THREADS with a value > 1
+ *   This option allows pjmedia_conf_create() to create a parallel conference
+ *   and so convert any existing serial conference to parallel conference 
+ *   without changing the code.
+ * OR
+ * 2.2. use pjmedia_conf_create2() with pjmedia_conf_param::worker_threads
+ * initialized to a value > 0.
+ *
+ * Default is PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND, 
+ * however 
+ * if PJMEDIA_CONF_USE_SWITCH_BOARD macro was defined, project system
+ *   selects PJMEDIA_CONF_SWITCH_BOARD_BACKEND by default,
+ * otherwise if PJMEDIA_CONF_THREADS macro was defined, project system 
+ *   selects PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND by default.
+ */
+#ifndef PJMEDIA_CONF_BACKEND
+#   if defined(PJMEDIA_CONF_USE_SWITCH_BOARD) && PJMEDIA_CONF_USE_SWITCH_BOARD!=0
+#       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_SWITCH_BOARD_BACKEND
+#   elif defined(PJMEDIA_CONF_THREADS)
+#       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND
+#   else
+#       define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND
+#   endif 
+#endif  //PJMEDIA_CONF_BACKEND
+
+ /**
+ * The default value for the total number of threads, including get_frame()
+ * thread, that can be used by the conference bridge.
+ * This value is used to determine if the conference bridge should be
+ * implemented as a parallel bridge or not.
+ * If this value is set to 1, the conference bridge will be implemented as a
+ * serial bridge, otherwise it will be implemented as a parallel bridge.
+ * PJMEDIA_CONF_THREADS should not be less than 1.
+ *
+ * Default value: 1 - serial bridge
+ */
+#ifndef PJMEDIA_CONF_THREADS
+#   define PJMEDIA_CONF_THREADS  1
+#endif
+
 
 /*
  * Types of sound stream backends.
@@ -641,7 +699,7 @@
 #endif
 
 /**
- * Perform RTP payload type checking in the audio stream. Normally the peer
+ * Perform RTP payload type checking in the media stream. Normally the peer
  * MUST send RTP with payload type as we specified in our SDP. Certain
  * agents may not be able to follow this hence the only way to have
  * communication is to disable this check.
@@ -705,7 +763,7 @@
 
 
 /**
- * Speex Accoustic Echo Cancellation (AEC).
+ * Speex Acoustic Echo Cancellation (AEC).
  * By default is enabled.
  */
 #ifndef PJMEDIA_HAS_SPEEX_AEC
@@ -735,11 +793,24 @@
 
 
 /**
- * WebRtc Accoustic Echo Cancellation (AEC).
+ * WebRTC Acoustic Echo Cancellation (AEC).
+ * Please check https://github.com/pjsip/pjproject/issues/1888 for more info.
+ *
  * By default is disabled.
  */
 #ifndef PJMEDIA_HAS_WEBRTC_AEC
 #   define PJMEDIA_HAS_WEBRTC_AEC               0
+#endif
+
+/**
+ * WebRTC Acoustic Echo Cancellation 3 (WebRTC AEC3).
+ * Please check https://github.com/pjsip/pjproject/pull/2722 and
+ * https://github.com/pjsip/pjproject/pull/2775 for more info.
+ *
+ * By default is disabled.
+ */
+#ifndef PJMEDIA_HAS_WEBRTC_AEC3
+#   define PJMEDIA_HAS_WEBRTC_AEC3              0
 #endif
 
 /**
@@ -940,6 +1011,24 @@
 
 
 /**
+ * This macro declares the payload type for T140 text that is advertised
+ * by PJMEDIA for outgoing SDP.
+ */
+#ifndef PJMEDIA_RTP_PT_T140
+#   define PJMEDIA_RTP_PT_T140 98
+#endif
+
+/**
+ * This macro declares the payload type for redundancy that is advertised
+ * by PJMEDIA for outgoing SDP. Currently, redundancy is only used for
+ * text stream.
+ */
+#ifndef PJMEDIA_RTP_PT_REDUNDANCY
+#   define PJMEDIA_RTP_PT_REDUNDANCY 100
+#endif
+
+
+/**
  * Maximum tones/digits that can be enqueued in the tone generator.
  */
 #ifndef PJMEDIA_TONEGEN_MAX_DIGITS
@@ -1100,6 +1189,16 @@
 #   define PJMEDIA_SRTP_DTLS_OSSL_CIPHERS           "DEFAULT"
 #endif
 
+/**
+ * Enabled this to check the source address of ClientHello message coming
+ * from a valid address. See PJ_ICE_SESS_CHECK_SRC_ADDR when ICE is used.
+ *
+ * Default value: 0
+ */
+#ifndef PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR
+#   define PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR       0
+#endif
+
 
 /**
  * Maximum number of SRTP cryptos.
@@ -1171,6 +1270,17 @@
 
 
 /**
+ * Specify whether SRTP needs to handle condition that remote changes SSRC
+ * when SRTP is restarted.
+ *
+ * Default: enabled.
+ */
+#ifndef PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART
+#   define PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART    1
+#endif
+
+
+/**
  * Specify whether SRTP needs to handle condition that old packets with
  * incorect RTP seq are still coming when SRTP is restarted.
  *
@@ -1224,8 +1334,14 @@
 #endif
 
 
-/* Setting to determine if media transport should switch RTP and RTCP
+/**
+ * Setting to determine if media transport should switch RTP and RTCP
  * remote address to the source address of the packets it receives.
+ * This feature is usually used for handling NAT traversal issues,
+ * also known as symmetric RTP and 'latching' techniques.
+ *
+ * See also run-time options #PJMEDIA_UDP_NO_SRC_ADDR_CHECKING and
+ * #PJMEDIA_ICE_NO_SRC_ADDR_CHECKING.
  *
  * By default it is enabled.
  */
@@ -1596,6 +1712,19 @@
 #  endif
 #endif
 
+/**
+ * Specify the maximum redundancy levels supported by text stream.
+ * A value of 1 provides an adequate protection against an average
+ * packet loss of up to 50%, while 2 can potentially protect
+ * against 66.7%, so typically setting it to a higher value is
+ * rarely necessary.
+ *
+ * Default: 2, as per the recommendation of RFC 4103.
+ */
+#ifndef PJMEDIA_TXT_STREAM_MAX_RED_LEVELS
+#    define PJMEDIA_TXT_STREAM_MAX_RED_LEVELS 2
+#endif
+
 
 /**
  * Specify target value for socket receive buffer size. It will be
@@ -1706,10 +1835,42 @@
  * agents may not be able to follow this hence the only way to have
  * communication is to disable this check.
  *
- * Default: PJMEDIA_STREAM_CHECK_RTP_PT (follow audio stream's setting)
+ * Note: Since media streams now share some common implementation,
+ * the setting MUST have the same value as PJMEDIA_STREAM_CHECK_RTP_PT.
  */
-#ifndef PJMEDIA_VID_STREAM_CHECK_RTP_PT
-#   define PJMEDIA_VID_STREAM_CHECK_RTP_PT      PJMEDIA_STREAM_CHECK_RTP_PT
+#if defined(PJMEDIA_VID_STREAM_CHECK_RTP_PT) && \
+    PJMEDIA_VID_STREAM_CHECK_RTP_PT != PJMEDIA_STREAM_CHECK_RTP_PT
+#    pragma message("PJMEDIA_VID_STREAM_CHECK_RTP_PT must have the same " \
+                    "value as PJMEDIA_STREAM_CHECK_RTP_PT...")
+#endif
+
+#undef PJMEDIA_VID_STREAM_CHECK_RTP_PT
+#define PJMEDIA_VID_STREAM_CHECK_RTP_PT      PJMEDIA_STREAM_CHECK_RTP_PT
+
+
+/**
+ * Maximum tolerable presentation lag from the earliest to the latest media,
+ * in milliseconds, in inter-media synchronization. When the delay is
+ * higher than this setting, the media synchronizer will request the slower
+ * media to speed up. And if after a number of speed up requests the delay
+ * is still beyond this setting, the fastest media will be requested to
+ * slow down.
+ *
+ * Default: 45 ms
+ */
+#ifndef PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC
+#   define PJMEDIA_AVSYNC_MAX_TOLERABLE_LAG_MSEC    45
+#endif
+
+
+/**
+  * Maximum number of speed up request to synchronize presentation time,
+  * before a slow down request to the fastest media is issued.
+  *
+  * Default: 10
+  */
+#ifndef PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT
+#   define PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT       10
 #endif
 
 /**

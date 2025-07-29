@@ -195,6 +195,19 @@ typedef struct pj_hash_iterator_t
     pj_hash_entry   *entry;     /**< Internal entry.     */
 } pj_hash_iterator_t;
 
+/**
+ * The opaque data type for atomic slist, which is used as arguments throughout
+ * the atomic slist operations.
+ */
+typedef struct pj_atomic_slist pj_atomic_slist;
+
+/**
+ * The opaque data type for atomic slist item, which is used as item argument
+ * throughout the atomic slist operations.
+ * Real atomic slist's item should have PJ_DECL_ATOMIC_SLIST_MEMBER(type)
+ * as the first member.
+ */
+typedef void pj_atomic_slist_node_t;
 
 /**
  * Forward declaration for memory pool factory.
@@ -267,6 +280,9 @@ typedef struct pj_sem_t pj_sem_t;
 
 /** Event object. */
 typedef struct pj_event_t pj_event_t;
+
+/** Barrier object. */
+typedef struct pj_barrier_t pj_barrier_t;
 
 /** Unidirectional stream pipe object. */
 typedef struct pj_pipe_t pj_pipe_t;

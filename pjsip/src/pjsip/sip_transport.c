@@ -1466,11 +1466,14 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
     pj_lock_acquire(tp->lock);
 
     mgr = tp->tpmgr;
-    pj_lock_acquire(mgr->lock);
+
+    // Acquiring manager lock after transport lock may cause deadlock.
+    // And it does not seem necessary as well.
+    //pj_lock_acquire(mgr->lock);
 
     /* Do nothing if transport is being shutdown/destroyed already */
     if (tp->is_shutdown || tp->is_destroying) {
-        pj_lock_release(mgr->lock);
+        //pj_lock_release(mgr->lock);
         pj_lock_release(tp->lock);
         return PJ_SUCCESS;
     }
@@ -1485,7 +1488,7 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
         tp->is_shutdown = PJ_TRUE;
 
     /* Notify application of transport shutdown */
-    state_cb = pjsip_tpmgr_get_state_cb(tp->tpmgr);
+    state_cb = pjsip_tpmgr_get_state_cb(mgr);
     if (state_cb) {
         pjsip_transport_state_info state_info;
 
@@ -1501,7 +1504,7 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
         pjsip_transport_dec_ref(tp);
     }
 
-    pj_lock_release(mgr->lock);
+    //pj_lock_release(mgr->lock);
     pj_lock_release(tp->lock);
 
     return status;

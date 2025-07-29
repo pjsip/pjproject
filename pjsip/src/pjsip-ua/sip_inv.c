@@ -2772,6 +2772,9 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(   pjsip_inv_session *inv,
     if (status != PJ_SUCCESS)
         goto on_return;
 
+    /* Put the dialog of the session in tdata's mod_data */
+    last_res->mod_data[inv->dlg->ua->id] = inv->dlg;
+
     /* Modify last response. */
     status = pjsip_dlg_modify_response(inv->dlg, last_res, st_code, st_text);
     if (status != PJ_SUCCESS) {

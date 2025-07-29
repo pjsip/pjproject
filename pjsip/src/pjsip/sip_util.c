@@ -1030,7 +1030,7 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
          tdata->tp_sel.type == PJSIP_TPSELECTOR_LISTENER) &&
         tdata->tp_sel.u.ptr)
     {
-        pjsip_transport_type_e tp_type;
+        pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
 
         if (tdata->tp_sel.type == PJSIP_TPSELECTOR_TRANSPORT)
             tp_type = tdata->tp_sel.u.transport->key.type;
@@ -1369,8 +1369,12 @@ stateless_send_resolver_callback( pj_status_t status,
 
     /* Copy server addresses */
     if (addr && addr != &tdata->dest_info.addr) {
+        unsigned i;
         pj_memcpy( &tdata->dest_info.addr, addr, 
                    sizeof(pjsip_server_addresses));
+        for (i = 0; i < addr->count; ++i) {
+            pj_strdup(tdata->pool, &tdata->dest_info.addr.entry[i].name, &addr->entry[i].name);
+        }
     }
     pj_assert(tdata->dest_info.addr.count != 0);
 
@@ -1801,6 +1805,7 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
                                        const pjsip_server_addresses *addr )
 {
     pjsip_send_state *send_state = (pjsip_send_state*) token;
+    unsigned i;
 
     if (status != PJ_SUCCESS) {
         if (send_state->app_cb) {
@@ -1832,6 +1837,11 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
 
     /* Update address in send_state. */
     pj_memcpy(&send_state->tdata->dest_info.addr, addr, sizeof(*addr));
+    for (i = 0; i < send_state->tdata->dest_info.addr.count; ++i) {
+        pj_strdup(send_state->tdata->pool,
+                  &send_state->tdata->dest_info.addr.entry[i].name,
+                  &addr->entry[i].name);
+    }
 
     /* Send response using the transoprt. */
     status = pjsip_transport_send( send_state->cur_transport, 

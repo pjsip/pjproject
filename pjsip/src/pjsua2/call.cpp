@@ -204,6 +204,11 @@ void CallSendDtmfParam::fromPj(const pjsua_call_send_dtmf_param &param)
     this->digits    = pj2Str(param.digits);
 }
 
+CallSendTextParam::CallSendTextParam()
+{
+    medIdx = -1;
+}
+
 CallSetting::CallSetting(bool useDefaultValues)
 {
     if (useDefaultValues) {
@@ -216,13 +221,14 @@ CallSetting::CallSetting(bool useDefaultValues)
         reqKeyframeMethod   = 0;
         audioCount          = 0;
         videoCount          = 0;
+        textCount           = 0;
     }
 }
 
 bool CallSetting::isEmpty() const
 {
     return (flag == 0 && reqKeyframeMethod == 0 && audioCount == 0 &&
-            videoCount == 0);
+            videoCount == 0 && textCount == 0);
 }
 
 void CallSetting::fromPj(const pjsua_call_setting &prm)
@@ -233,6 +239,7 @@ void CallSetting::fromPj(const pjsua_call_setting &prm)
     this->reqKeyframeMethod = prm.req_keyframe_method;
     this->audioCount        = prm.aud_cnt;
     this->videoCount        = prm.vid_cnt;
+    this->textCount         = prm.txt_cnt;
     this->mediaDir.clear();
     this->customCallId      = pj2Str(prm.custom_call_id);
 
@@ -259,6 +266,7 @@ pjsua_call_setting CallSetting::toPj() const
     setting.req_keyframe_method = this->reqKeyframeMethod;
     setting.aud_cnt             = this->audioCount;
     setting.vid_cnt             = this->videoCount;
+    setting.txt_cnt             = this->textCount;
     for (mi = 0; mi < this->mediaDir.size(); mi++) {
         setting.media_dir[mi] = (pjmedia_dir)this->mediaDir[mi];
     }
@@ -320,6 +328,7 @@ void CallInfo::fromPj(const pjsua_call_info &pci)
     remOfferer          = PJ2BOOL(pci.rem_offerer);
     remAudioCount       = pci.rem_aud_cnt;
     remVideoCount       = pci.rem_vid_cnt;
+    remTextCount        = pci.rem_txt_cnt;
     
     for (mi = 0; mi < pci.media_cnt; mi++) {
         CallMediaInfo med;
@@ -361,6 +370,9 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         jbDiscardAlgo = info.info.aud.jb_discard_algo;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
         useKa = PJ2BOOL(info.info.aud.use_ka);
+        startCountKa = info.info.aud.ka_cfg.start_count;
+        startIntervalKa =  info.info.aud.ka_cfg.start_interval;
+        intervalKa = info.info.aud.ka_cfg.ka_interval;
 #endif
         rtcpSdesByeDisabled = PJ2BOOL(info.info.aud.rtcp_sdes_bye_disabled);
     } else if (type == PJMEDIA_TYPE_VIDEO) {
@@ -382,8 +394,34 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         jbDiscardAlgo = PJMEDIA_JB_DISCARD_NONE;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
         useKa = PJ2BOOL(info.info.vid.use_ka);
+        startCountKa = info.info.vid.ka_cfg.start_count;
+        startIntervalKa =  info.info.vid.ka_cfg.start_interval;
+        intervalKa = info.info.vid.ka_cfg.ka_interval;
 #endif
         rtcpSdesByeDisabled = PJ2BOOL(info.info.vid.rtcp_sdes_bye_disabled);
+    } else if (type == PJMEDIA_TYPE_TEXT) {
+        proto = info.info.txt.proto;
+        dir = info.info.txt.dir;
+        pj_sockaddr_print(&info.info.txt.rem_addr, straddr, sizeof(straddr), 3);
+        remoteRtpAddress = straddr;
+        pj_sockaddr_print(&info.info.txt.rem_rtcp, straddr, sizeof(straddr), 3);
+        remoteRtcpAddress = straddr;
+        txPt = info.info.txt.tx_pt;
+        rxPt = info.info.txt.rx_pt;
+        codecName = pj2Str(info.info.txt.fmt.encoding_name);
+        codecClockRate = info.info.txt.fmt.clock_rate;
+        jbInit = info.info.txt.jb_init;
+        jbMinPre = info.info.txt.jb_min_pre;
+        jbMaxPre = info.info.txt.jb_max_pre;
+        jbMax = info.info.txt.jb_max;
+        jbDiscardAlgo = PJMEDIA_JB_DISCARD_NONE;
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
+        useKa = PJ2BOOL(info.info.txt.use_ka);
+        startCountKa = info.info.txt.ka_cfg.start_count;
+        startIntervalKa =  info.info.txt.ka_cfg.start_interval;
+        intervalKa = info.info.txt.ka_cfg.ka_interval;
+#endif
+        rtcpSdesByeDisabled = PJ2BOOL(info.info.txt.rtcp_sdes_bye_disabled);
     }
 }
 
@@ -391,6 +429,13 @@ void StreamStat::fromPj(const pjsua_stream_stat &prm)
 {
     rtcp.fromPj(prm.rtcp);
     jbuf.fromPj(prm.jbuf);
+}
+
+void OnCallRxTextParam::fromPj(const pjsua_txt_stream_data &prm)
+{
+    seq = prm.seq;
+    ts = prm.ts;
+    text = pj2Str(prm.text);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -802,6 +847,15 @@ void Call::sendDtmf(const CallSendDtmfParam &param) PJSUA2_THROW(Error)
     PJSUA2_CHECK_EXPR(pjsua_call_send_dtmf(id, &pj_param));
 }
 
+void Call::sendText(const CallSendTextParam &param) PJSUA2_THROW(Error)
+{
+    pjsua_call_send_text_param pj_param;
+
+    pjsua_call_send_text_param_default(&pj_param);
+    pj_param.text = str2Pj(param.text);
+
+    PJSUA2_CHECK_EXPR(pjsua_call_send_text(id, &pj_param));
+}
 
 void Call::sendInstantMessage(const SendInstantMessageParam& prm)
     PJSUA2_THROW(Error)

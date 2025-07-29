@@ -1967,8 +1967,14 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
         /* Check decoding result, e.g: see if the format got changed,
          * keyframe found/missing.
          */
+#if LIBAVUTIL_VER_AT_LEAST(58,7)
         status = check_decode_result(codec, &input->timestamp,
-                                     avframe.key_frame);
+                !!(avframe.flags & AV_FRAME_FLAG_KEY));
+#else
+        status = check_decode_result(codec, &input->timestamp,
+                avframe.key_frame);
+#endif
+                                     /* avframe.key_frame); */
         if (status != PJ_SUCCESS) {
             ffmpeg_frame_unref(&avframe);
             return status;

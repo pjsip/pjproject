@@ -114,7 +114,7 @@ export PJSUA_LIB_SRCDIR = ../src/pjsua-lib
 export PJSUA_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			pjsua_acc.o pjsua_call.o pjsua_core.o \
 			pjsua_im.o pjsua_media.o pjsua_pres.o \
-			pjsua_dump.o pjsua_aud.o pjsua_vid.o
+			pjsua_dump.o pjsua_aud.o pjsua_txt.o pjsua_vid.o
 export PJSUA_LIB_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA_LIB_CXXFLAGS += $(_CXXFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA_LIB_LDFLAGS += $(PJSIP_UA_LDLIB) \
@@ -192,8 +192,8 @@ export TEST_LDFLAGS += $(PJSIP_LDLIB) \
 		       $(PJMEDIA_VIDEODEV_LDLIB) \
 		       $(PJMEDIA_LDLIB) \
 		       $(PJMEDIA_AUDIODEV_LDLIB) \
-		       $(PJLIB_UTIL_LDLIB) \
 		       $(PJNATH_LDLIB) \
+		       $(PJLIB_UTIL_LDLIB) \
 		       $(PJLIB_LDLIB) \
 		       $(_LDFLAGS)
 ifeq ($(EXCLUDE_APP),0)

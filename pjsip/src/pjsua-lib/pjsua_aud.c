@@ -130,116 +130,6 @@ pjsua_call_aud_stream_modify_codec_param(pjsua_call_id call_id,
 
 
 /*
- * Get media stream info for the specified media index.
- */
-PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
-                                                unsigned med_idx,
-                                                pjsua_stream_info *psi)
-{
-    pjsua_call *call;
-    pjsua_call_media *call_med;
-    pj_status_t status = PJ_EINVAL;
-
-    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
-                     PJ_EINVAL);
-    PJ_ASSERT_RETURN(psi, PJ_EINVAL);
-
-    PJSUA_LOCK();
-
-    call = &pjsua_var.calls[call_id];
-
-    if (med_idx >= call->med_cnt)
-        goto on_return;
-
-    call_med = &call->media[med_idx];
-
-    if ((call_med->type == PJMEDIA_TYPE_AUDIO && !call_med->strm.a.stream) ||
-        (call_med->type == PJMEDIA_TYPE_VIDEO && !call_med->strm.v.stream))
-    {
-        goto on_return;
-    }
-
-    psi->type = call_med->type;
-    switch (call_med->type) {
-    case PJMEDIA_TYPE_AUDIO:
-        status = pjmedia_stream_get_info(call_med->strm.a.stream,
-                                         &psi->info.aud);
-        break;
-#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
-    case PJMEDIA_TYPE_VIDEO:
-        status = pjmedia_vid_stream_get_info(call_med->strm.v.stream,
-                                             &psi->info.vid);
-        break;
-#endif
-    default:
-        status = PJMEDIA_EINVALIMEDIATYPE;
-        break;
-    }
-
-on_return:
-    PJSUA_UNLOCK();
-    return status;
-}
-
-
-/*
- *  Get media stream statistic for the specified media index.
- */
-PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
-                                                unsigned med_idx,
-                                                pjsua_stream_stat *stat)
-{
-    pjsua_call *call;
-    pjsua_call_media *call_med;
-    pj_status_t status = PJ_EINVAL;
-
-    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
-                     PJ_EINVAL);
-    PJ_ASSERT_RETURN(stat, PJ_EINVAL);
-
-    PJSUA_LOCK();
-
-    call = &pjsua_var.calls[call_id];
-
-    if (med_idx >= call->med_cnt)
-        goto on_return;
-
-    call_med = &call->media[med_idx];
-
-    if ((call_med->type == PJMEDIA_TYPE_AUDIO && !call_med->strm.a.stream) ||
-        (call_med->type == PJMEDIA_TYPE_VIDEO && !call_med->strm.v.stream))
-    {
-        goto on_return;
-    }
-
-    switch (call_med->type) {
-    case PJMEDIA_TYPE_AUDIO:
-        status = pjmedia_stream_get_stat(call_med->strm.a.stream,
-                                         &stat->rtcp);
-        if (status == PJ_SUCCESS)
-            status = pjmedia_stream_get_stat_jbuf(call_med->strm.a.stream,
-                                                  &stat->jbuf);
-        break;
-#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
-    case PJMEDIA_TYPE_VIDEO:
-        status = pjmedia_vid_stream_get_stat(call_med->strm.v.stream,
-                                             &stat->rtcp);
-        if (status == PJ_SUCCESS)
-            status = pjmedia_vid_stream_get_stat_jbuf(call_med->strm.v.stream,
-                                                  &stat->jbuf);
-        break;
-#endif
-    default:
-        status = PJMEDIA_EINVALIMEDIATYPE;
-        break;
-    }
-
-on_return:
-    PJSUA_UNLOCK();
-    return status;
-}
-
-/*
  * Send DTMF digits to remote using RFC 2833 payload formats.
  */
 PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( pjsua_call_id call_id,
@@ -298,6 +188,7 @@ pj_status_t pjsua_aud_subsys_init()
 #if PJMEDIA_HAS_PASSTHROUGH_CODECS
     pjmedia_format ext_fmts[32];
 #endif
+    pjmedia_conf_param param;
 
     /* To suppress warning about unused var when all codecs are disabled */
     PJ_UNUSED_ARG(codec_id);
@@ -407,14 +298,25 @@ pj_status_t pjsua_aud_subsys_init()
         opt |= PJMEDIA_CONF_USE_LINEAR;
     }
 
+    pjmedia_conf_param_default(&param);
+
+    param.max_slots = pjsua_var.media_cfg.max_media_ports;
+    param.sampling_rate = pjsua_var.media_cfg.clock_rate;
+    param.channel_count = pjsua_var.mconf_cfg.channel_count;
+    param.samples_per_frame = pjsua_var.mconf_cfg.samples_per_frame;
+    param.bits_per_sample = pjsua_var.mconf_cfg.bits_per_sample;
+    param.options = opt;
+    param.worker_threads = pjsua_var.media_cfg.conf_threads-1;
+
     /* Init conference bridge. */
-    status = pjmedia_conf_create(pjsua_var.pool,
-                                 pjsua_var.media_cfg.max_media_ports,
-                                 pjsua_var.media_cfg.clock_rate,
-                                 pjsua_var.mconf_cfg.channel_count,
-                                 pjsua_var.mconf_cfg.samples_per_frame,
-                                 pjsua_var.mconf_cfg.bits_per_sample,
-                                 opt, &pjsua_var.mconf);
+    status = pjmedia_conf_create2(pjsua_var.pool, &param, &pjsua_var.mconf);
+    //status = pjmedia_conf_create(pjsua_var.pool,
+    //                             pjsua_var.media_cfg.max_media_ports,
+    //                             pjsua_var.media_cfg.clock_rate,
+    //                             pjsua_var.mconf_cfg.channel_count,
+    //                             pjsua_var.mconf_cfg.samples_per_frame,
+    //                             pjsua_var.mconf_cfg.bits_per_sample,
+    //                             opt, &pjsua_var.mconf);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Error creating conference bridge",
                      status);
@@ -433,6 +335,12 @@ pj_status_t pjsua_aud_subsys_init()
                                       pjsua_var.mconf_cfg.bits_per_sample,
                                       &pjsua_var.null_port);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
+    /* Set conf operation callback. */
+    if (pjsua_var.ua_cfg.cb.on_conf_op_completed) {
+        pjmedia_conf_set_op_cb(pjsua_var.mconf,
+                               pjsua_var.ua_cfg.cb.on_conf_op_completed);
+    }
 
     return status;
 
@@ -768,6 +676,8 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
             si->jb_discard_algo = prm.stream_info.info.aud.jb_discard_algo;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
             si->use_ka = prm.stream_info.info.aud.use_ka;
+
+            si->ka_cfg = prm.stream_info.info.aud.ka_cfg;
 #endif
             si->rtcp_sdes_bye_disabled = prm.stream_info.info.aud.rtcp_sdes_bye_disabled;
             si->rx_event_pt = prm.stream_info.info.aud.rx_event_pt;
@@ -779,6 +689,15 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                                        &call_med->strm.a.stream);
         if (status != PJ_SUCCESS) {
             goto on_return;
+        }
+
+        /* Add stream to synchronizer */
+        if (call->av_sync) {
+            status = pjmedia_stream_common_set_avsync(
+                            (pjmedia_stream_common*)call_med->strm.a.stream,
+                            call->av_sync);
+            if (status != PJ_SUCCESS)
+                goto on_return;
         }
 
         /* Start stream */
@@ -1190,6 +1109,17 @@ PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
     return status;
 }
 
+/*
+ * Change TX and RX settings for the port.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_configure_port( pjsua_conf_port_id slot,
+                                               pjmedia_port_op tx,
+                                               pjmedia_port_op rx)
+{
+    PJ_ASSERT_RETURN(slot >= 0, PJ_EINVAL);
+
+    return pjmedia_conf_configure_port(pjsua_var.mconf, slot, tx, rx);
+}
 
 /*
  * Adjust the signal level to be transmitted from the bridge to the
@@ -1231,22 +1161,14 @@ PJ_DEF(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
                                          tx_level, rx_level);
 }
 
+PJ_DEF(pj_status_t) pjsua_conf_set_op_cb(pjmedia_conf_op_cb cb)
+{
+    return pjmedia_conf_set_op_cb(pjsua_var.mconf, cb);
+}
+
 /*****************************************************************************
  * File player.
  */
-
-static char* get_basename(const char *path, unsigned len)
-{
-    char *p = ((char*)path) + len;
-
-    if (len==0)
-        return p;
-
-    for (--p; p!=path && *p!='/' && *p!='\\'; ) --p;
-
-    return (p==path) ? p : p+1;
-}
-
 
 /*
  * Create a file player, and automatically connect this player to
@@ -1291,8 +1213,8 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
-                             1000);
+    pool = pjsua_pool_create(pjsua_get_basename(path, (unsigned)filename->slen),
+                             1000, 1000);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_error;
@@ -1634,8 +1556,8 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
-                             1000);
+    pool = pjsua_pool_create(pjsua_get_basename(path, (unsigned)filename->slen),
+                             1000, 1000);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_return;
@@ -2154,6 +2076,12 @@ on_error:
 static void close_snd_dev(void)
 {
     pj_log_push_indent();
+
+    /* Cancel sound device idle timer. */
+    if (pjsua_var.snd_idle_timer.id) {
+        pjsip_endpt_cancel_timer(pjsua_var.endpt, &pjsua_var.snd_idle_timer);
+        pjsua_var.snd_idle_timer.id = PJ_FALSE;
+    }
 
     /* Notify app */
     if (pjsua_var.snd_is_on && pjsua_var.ua_cfg.cb.on_snd_dev_operation) {

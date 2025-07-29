@@ -6,6 +6,8 @@
 #include <pj/string.h>
 #include <pj/unittest.h>
 
+#include <stdio.h>
+
 /* Overrideable max tests */
 #ifndef UT_MAX_TESTS
 #  define UT_MAX_TESTS  16
@@ -48,6 +50,12 @@ typedef struct ut_app_t
 /* Call this in main.c before parsing arguments */
 PJ_INLINE(void) ut_app_init0(ut_app_t *ut_app)
 {
+    /* Disable buffering because sometimes output is not captured/shown
+     * (by cirunner) if the test program crashes too soon.
+     */
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+
     pj_bzero(ut_app, sizeof(*ut_app));
     ut_app->prm_logging_policy = PJ_TEST_FAILED_TESTS;
     ut_app->prm_nthreads = -1;
@@ -55,9 +63,9 @@ PJ_INLINE(void) ut_app_init0(ut_app_t *ut_app)
 }
 
 /* Call this in test.c before adding test cases */
-PJ_INLINE(pj_status_t) ut_app_init1(ut_app_t *ut_app, pj_pool_factory *mem)
+PJ_INLINE(pj_status_t) ut_app_init1(ut_app_t *ut_app, pj_pool_factory *mem_)
 {
-    ut_app->pool = pj_pool_create(mem, THIS_FILE, 4000, 4000, NULL);
+    ut_app->pool = pj_pool_create(mem_, THIS_FILE, 4000, 4000, NULL);
     PJ_TEST_NOT_NULL(ut_app->pool, NULL, return PJ_ENOMEM);
     pj_test_suite_init(&ut_app->suite);
     return PJ_SUCCESS;
@@ -148,11 +156,12 @@ PJ_INLINE(void) ut_list_tests(ut_app_t *ut_app, const char *title)
 PJ_INLINE(pj_status_t) ut_run_tests(ut_app_t *ut_app, const char *title,
                                     int argc, char *argv[])
 {
-    pj_test_runner_param runner_prm;
-    pj_test_runner_param_default(&runner_prm);
     pj_test_runner *runner;
     pj_test_stat stat;
     pj_status_t status;
+    pj_test_runner_param runner_prm;
+
+    pj_test_runner_param_default(&runner_prm);
 
     if (ut_app->prm_shuffle) {
         PJ_LOG(3,(THIS_FILE, "Shuffling tests, random seed=%d",

@@ -61,6 +61,9 @@ typedef enum pjmedia_type
     /** The media is video. */
     PJMEDIA_TYPE_VIDEO,
 
+    /** The media is text. */
+    PJMEDIA_TYPE_TEXT,
+
     /** The media is application. */
     PJMEDIA_TYPE_APPLICATION,
 

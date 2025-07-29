@@ -43,7 +43,7 @@ static struct cap_info
     DEFINE_CAP("meter-out",   "Output meter"),
     DEFINE_CAP("route-in",    "Input routing"),
     DEFINE_CAP("route-out",   "Output routing"),
-    DEFINE_CAP("aec",         "Accoustic echo cancellation"),
+    DEFINE_CAP("aec",         "Acoustic echo cancellation"),
     DEFINE_CAP("aec-tail",    "Tail length setting for AEC"),
     DEFINE_CAP("vad",         "Voice activity detection"),
     DEFINE_CAP("cng",         "Comfort noise generation"),
