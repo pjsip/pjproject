@@ -205,7 +205,7 @@ endif()
 # ##############################################################################
 # Dependencies
 
-if (NOT (WIN32 OR CYGWIN OR MIGW))
+if (NOT (WIN32 OR CYGWIN OR MINGW))
   # math library
   find_library(MATH_LIBRARY m REQUIRED)
   target_link_libraries(webrtc_aec3 PRIVATE "${MATH_LIBRARY}")

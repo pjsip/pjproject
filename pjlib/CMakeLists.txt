@@ -170,7 +170,7 @@ target_sources(pjlib
 )
 
 # system APIs
-if(WIN32 OR CYGWIN OR MIGW)
+if(WIN32 OR CYGWIN OR MINGW)
   target_sources(pjlib
     PRIVATE
       src/pj/file_io_win32.c
@@ -220,7 +220,7 @@ endif()
 # ##############################################################################
 # Dependencies
 
-if (NOT (WIN32 OR CYGWIN OR MIGW))
+if (NOT (WIN32 OR CYGWIN OR MINGW))
   # math library
   find_library(MATH_LIBRARY m)
   if(MATH_LIBRARY)
