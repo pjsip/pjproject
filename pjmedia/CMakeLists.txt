@@ -732,7 +732,7 @@ add_library(pjmedia-audiodev
   src/pjmedia-audiodev/errno.c
   src/pjmedia-audiodev/null_dev.c
   src/pjmedia-audiodev/oboe_dev.cpp
-  $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_WASAPI}>:src/pjmedia-audiodev/wasapi_dev.cpp>
+  src/pjmedia-audiodev/wasapi_dev.cpp
   src/pjmedia-audiodev/wmme_dev.c
 
   $<$<BOOL:${APPLE}>:src/pjmedia-audiodev/coreaudio_dev.m>
