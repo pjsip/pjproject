@@ -742,19 +742,19 @@ target_sources(pjlib++
         include/
       FILES
         include/pjlib++.hpp
-        include/pjlib++/file.hpp
-        include/pjlib++/hash.hpp
-        include/pjlib++/list.hpp
-        include/pjlib++/lock.hpp
-        include/pjlib++/os.hpp
-        include/pjlib++/pool.hpp
-        include/pjlib++/proactor.hpp
-        include/pjlib++/scanner.hpp
-        include/pjlib++/sock.hpp
-        include/pjlib++/string.hpp
-        include/pjlib++/timer.hpp
-        include/pjlib++/tree.hpp
-        include/pjlib++/types.hpp
+        include/pj++/file.hpp
+        include/pj++/hash.hpp
+        include/pj++/list.hpp
+        include/pj++/lock.hpp
+        include/pj++/os.hpp
+        include/pj++/pool.hpp
+        include/pj++/proactor.hpp
+        include/pj++/scanner.hpp
+        include/pj++/sock.hpp
+        include/pj++/string.hpp
+        include/pj++/timer.hpp
+        include/pj++/tree.hpp
+        include/pj++/types.hpp
 )
 
 # dependencies
