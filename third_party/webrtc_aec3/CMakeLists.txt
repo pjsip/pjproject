@@ -202,4 +202,6 @@ if (NOT (WIN32 OR CYGWIN OR MINGW))
   # math library
   find_library(MATH_LIBRARY m REQUIRED)
   target_link_libraries(webrtc_aec3 PRIVATE "${MATH_LIBRARY}")
+elseif(NOT CMAKE_SYSTEM_NAME MATCHES "Windows(Store|Phone)")
+  target_link_libraries(webrtc_aec3 PRIVATE winmm)
 endif()
