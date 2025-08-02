@@ -43,13 +43,6 @@ elseif(PJMEDIA_WITH_RESAMPLE STREQUAL "speex")
   endif()
 endif()
 
-if(PJLIB_WITH_SSL STREQUAL "openssl")
-  find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
-  if(NOT OPENSSL_FOUND)
-    find_package(OpenSSL COMPONENTS Crypto SSL)
-  endif()
-endif()
-
 #
 # Acoustic Echo Cancellation (AEC)
 #
@@ -532,7 +525,7 @@ target_sources(pjmedia
 target_link_libraries(pjmedia
   PRIVATE
     # project
-    pjlib pjlib-util pjnath
+    pjlib pjlib-ssl pjlib-util pjnath
 
     # srtp
     $<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>
@@ -554,9 +547,6 @@ target_link_libraries(pjmedia
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVCODEC}>:FFMPEG::avcodec>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVFORMAT}>:FFMPEG::avformat>
     $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVDEVICE}>:FFMPEG::avdevice>
-
-    $<$<AND:$<BOOL:${PJMEDIA_WITH_SRTP}>,$<STREQUAL:${PJLIB_WITH_SSL},openssl>>:OpenSSL::Crypto>
-    $<$<AND:$<BOOL:${PJMEDIA_WITH_SRTP}>,$<STREQUAL:${PJLIB_WITH_SSL},openssl>>:OpenSSL::SSL>
 )
 
 if (NOT (WIN32 OR CYGWIN OR MINGW))

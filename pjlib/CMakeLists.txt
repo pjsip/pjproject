@@ -267,23 +267,24 @@ if(PJLIB_WITH_LIBUUID)
 endif()
 
 # ssl
+add_library(pjlib-ssl INTERFACE) # a target to expose SSL deps
 if(PJLIB_WITH_SSL STREQUAL "openssl")
   find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
   if(NOT OPENSSL_FOUND)
     find_package(OpenSSL COMPONENTS Crypto SSL)
   endif()
   if(OPENSSL_FOUND)
-    target_link_libraries(pjlib PRIVATE OpenSSL::Crypto OpenSSL::SSL)
+    target_link_libraries(pjlib-ssl INTERFACE OpenSSL::Crypto OpenSSL::SSL)
   else()
     pj_force_set(PJLIB_WITH_SSL "" "OpenSSL not found")
   endif()
 elseif(PJLIB_WITH_SSL STREQUAL "gnutls")
   find_package(GnuTLS REQUIRED)
-  target_link_libraries(pjlib PRIVATE GnuTLS::GnuTLS)
+  target_link_libraries(pjlib-ssl INTERFACE GnuTLS::GnuTLS)
 elseif(PJLIB_WITH_SSL STREQUAL "mbedtls")
   find_package(MbedTLS CONFIG REQUIRED)
-  target_link_libraries(pjlib
-    PRIVATE
+  target_link_libraries(pjlib-ssl
+    INTERFACE
       MbedTLS::mbedtls
       MbedTLS::mbedcrypto
       MbedTLS::mbedx509
@@ -297,6 +298,7 @@ elseif(PJLIB_WITH_SSL STREQUAL "apple")
 elseif(PJLIB_WITH_SSL STREQUAL "schannel")
   message(FATAL_ERROR "TODO")
 endif()
+target_link_libraries(pjlib PRIVATE pjlib-ssl)
 
 # ##############################################################################
 # Configuration

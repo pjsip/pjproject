@@ -9,13 +9,6 @@ cmake_dependent_option(PJSIP_WITH_TLS
   "PJLIB_WITH_SSL" OFF
 )
 
-if(PJLIB_WITH_SSL STREQUAL "openssl")
-  find_package(OpenSSL COMPONENTS Crypto CONFIG)
-  if(NOT OPENSSL_FOUND)
-    find_package(OpenSSL COMPONENTS Crypto)
-  endif()
-endif()
-
 # ##############################################################################
 # pjsip
 
@@ -90,9 +83,8 @@ target_sources(pjsip
 target_link_libraries(pjsip
   PRIVATE
     pjlib
+    pjlib-ssl
     pjlib-util
-
-    $<$<STREQUAL:${PJLIB_WITH_SSL},openssl>:OpenSSL::Crypto>
 )
 
 # configuration
