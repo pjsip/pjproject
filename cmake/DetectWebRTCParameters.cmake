@@ -3,7 +3,7 @@ pj_detect_arch(arch)
 pj_detect_arch_simd_ext(simd_inst simd_flags)
 
 set(WEBRTC_ARCH "${arch}")
-set(WEBRTC_ARCH_SIMD "${arch}")
+set(WEBRTC_ARCH_SIMD "${simd_inst}")
 set(WEBRTC_COMPILE_OPTIONS ${simd_flags})
 set(WEBRTC_COMPILE_DEFINITIONS WEBRTC_APM_DEBUG_DUMP=0)
 
