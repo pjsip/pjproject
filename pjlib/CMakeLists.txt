@@ -3,7 +3,6 @@
 
 include(Pj/Option)
 include(CMakeDependentOption)
-include(CheckIncludeFile)
 
 # Floating point support
 option(PJLIB_WITH_FLOATING_POINT "Enable floating point support" ON)
@@ -230,6 +229,8 @@ if (NOT (WIN32 OR CYGWIN OR MINGW))
   endif()
 endif()
 
+include(CheckIncludeFile)
+
 if(WIN32 OR CYGWIN OR MINGW)
   check_include_file(winsock.h PJ_HAS_WINSOCK_H)
   check_include_file(winsock2.h PJ_HAS_WINSOCK2_H)
@@ -242,16 +243,9 @@ if(WIN32 OR CYGWIN OR WIN32)
   target_link_libraries(pjlib PRIVATE
     ole32
     winmm
+
+    $<IF:$<BOOL:PJ_HAS_WINSOCK2_H>,ws2_32,$<$<BOOL:PJ_HAS_WINSOCK_H>:wsock32>>
   )
-  if (PJ_HAS_WINSOCK2_H)
-    target_link_libraries(pjlib PRIVATE
-      ws2_32
-    )
-  elseif(PJ_HAS_WINSOCK_H)
-    target_link_libraries(pjlib PRIVATE
-      wsock32
-    )
-  endif()
 endif()
 
 # threading library
