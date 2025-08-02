@@ -46,7 +46,7 @@ endif()
 if(PJLIB_WITH_SSL STREQUAL "openssl")
   find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
   if(NOT OPENSSL_FOUND)
-      find_package(OpenSSL COMPONENTS Crypto SSL)
+    find_package(OpenSSL COMPONENTS Crypto SSL)
   endif()
 endif()
 
@@ -235,8 +235,9 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WMME
 # Windows Audio Session API (WASAPI) backend
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_WASAPI
   "Enable WASAPI audio device backend" ON
-  [[PJMEDIA_WITH_AUDIODEV AND (WIN32 OR CYGWIN OR MINGW) AND CMAKE_SYSTEM_NAME MATCHES "Windows(Store|Phone)"]] OFF
+  "PJMEDIA_WITH_AUDIODEV;WIN32 OR CYGWIN OR MINGW" OFF
 )
+import_if_or_set(PJMEDIA_WITH_AUDIODEV_WASAPI OFF WASAPI)
 
 #
 # Video device
@@ -632,7 +633,6 @@ target_sources(pjmedia-codec
         include/pjmedia-codec/vid_toolbox.h
         include/pjmedia-codec/vpx.h
         include/pjmedia-codec/vpx_packetizer.h
-
 )
 
 #
