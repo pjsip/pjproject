@@ -101,6 +101,7 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
     /* Set payload header */
     bits[0] = 0;
     if (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP8) {
+        /* For VP8, use 4 bytes payload desc, see #4515 for more info */
         bits[0] = 0x80;
 
         /* Set S: Start of VP8 partition. */
