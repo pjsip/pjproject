@@ -102,8 +102,10 @@ PJ_DEF(void) pjsip_dump_config(void)
                PJSIP_MAX_TIMED_OUT_ENTRIES));
     PJ_LOG(3, (id, " PJSIP_TRANSPORT_IDLE_TIME                          : %d", 
                PJSIP_TRANSPORT_IDLE_TIME));
-    PJ_LOG(3, (id, " PJSIP_TRANSPORT_SERVER_IDLE_TIME                   : %d", 
+    PJ_LOG(3, (id, " PJSIP_TRANSPORT_SERVER_IDLE_TIME                   : %d",
                PJSIP_TRANSPORT_SERVER_IDLE_TIME));
+    PJ_LOG(3, (id, " PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST             : %d",
+               PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST));
     PJ_LOG(3, (id, " PJSIP_MAX_TRANSPORT_USAGE                          : %d", 
                PJSIP_MAX_TRANSPORT_USAGE));
     PJ_LOG(3, (id, " PJSIP_TCP_TRANSPORT_BACKLOG                        : %d", 
@@ -250,9 +252,9 @@ PJ_DEF(void) pjsip_dump_config(void)
                pjsip_cfg()->regc.check_contact));
     PJ_LOG(3, (id, " pjsip_cfg()->regc.add_xuid_param                   : %d", 
                pjsip_cfg()->regc.add_xuid_param));
-    PJ_LOG(3, (id, " pjsip_cfg()->tcp.keep_alive_interval               : %d", 
+    PJ_LOG(3, (id, " pjsip_cfg()->tcp.keep_alive_interval               : %ld", 
                pjsip_cfg()->tcp.keep_alive_interval));
-    PJ_LOG(3, (id, " pjsip_cfg()->tls.keep_alive_interval               : %d", 
+    PJ_LOG(3, (id, " pjsip_cfg()->tls.keep_alive_interval               : %ld", 
                pjsip_cfg()->tls.keep_alive_interval));
 }
 

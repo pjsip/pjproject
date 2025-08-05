@@ -173,12 +173,21 @@ int platform_strerror( pj_os_err_type os_errcode,
 
 
     if (!len) {
+        DWORD   dwLanguageId;
+#if defined(PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE) && \
+    (PJ_STRERROR_USE_WIN_GET_THREAD_LOCALE==1) && (WINVER >= 0x0500)
+        /* current thread language */
+        dwLanguageId = LANGIDFROMLCID(GetThreadLocale());
+#else
+        /* LANG_USER_DEFAULT - User default language */
+        dwLanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
+#endif
 #if PJ_NATIVE_STRING_IS_UNICODE
         len = FormatMessage( FORMAT_MESSAGE_FROM_SYSTEM 
                              | FORMAT_MESSAGE_IGNORE_INSERTS,
                              NULL,
                              os_errcode,
-                             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+                             dwLanguageId,
                              wbuf,
                              PJ_ARRAY_SIZE(wbuf),
                              NULL);
@@ -190,7 +199,7 @@ int platform_strerror( pj_os_err_type os_errcode,
                              | FORMAT_MESSAGE_IGNORE_INSERTS,
                              NULL,
                              os_errcode,
-                             MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+                             dwLanguageId,
                              buf,
                              (int)bufsize,
                              NULL);

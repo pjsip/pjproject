@@ -127,6 +127,9 @@ static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt,
         return PJLIB_UTIL_EDNSINNAMEPTR;
     }
 
+    if (start >= max)
+        return PJLIB_UTIL_EDNSINNAMEPTR;
+
     *name_len = *parsed_len = 0;
     p = start;
     while (*p) {
@@ -198,6 +201,9 @@ static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt,
         /* Too many name recursion */
         return PJLIB_UTIL_EDNSINNAMEPTR;
     }
+
+    if (start >= max)
+        return PJLIB_UTIL_EDNSINNAMEPTR;
 
     p = start;
     while (*p) {
@@ -359,10 +365,14 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
 
     /* Parse some well known records */
     if (rr->type == PJ_DNS_TYPE_A) {
+        if (p + 4 > max)
+            return PJLIB_UTIL_EDNSINSIZE;
         pj_memcpy(&rr->rdata.a.ip_addr, p, 4);
         p += 4;
 
     } else if (rr->type == PJ_DNS_TYPE_AAAA) {
+        if (p + 16 > max)
+            return PJLIB_UTIL_EDNSINSIZE;
         pj_memcpy(&rr->rdata.aaaa.ip_addr, p, 16);
         p += 16;
 
@@ -388,6 +398,8 @@ static pj_status_t parse_rr(pj_dns_parsed_rr *rr, pj_pool_t *pool,
         p += name_part_len;
 
     } else if (rr->type == PJ_DNS_TYPE_SRV) {
+        if (p + 6 > max)
+            return PJLIB_UTIL_EDNSINSIZE;
 
         /* Priority */
         pj_memcpy(&rr->rdata.srv.prio, p, 2);

@@ -34,6 +34,7 @@ export ILBC_OBJS = FrameClassify.o LPCdecode.o LPCencode.o \
 		   iLBC_decode.o iLBC_encode.o lsf.o \
 		   packing.o syntFilter.o
 export ILBC_CFLAGS = $(_CFLAGS)
+export ILBC_LDFLAGS = $(_LDFLAGS)
 
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 

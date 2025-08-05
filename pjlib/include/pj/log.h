@@ -59,7 +59,7 @@ PJ_BEGIN_DECL
  * \section pj_log_quick_sample_sec Examples
  *
  * For examples, see:
- *  - @ref page_pjlib_samples_log_c.
+ *  - Simple Log sample: \src{pjlib/src/pjlib-samples/log.c}
  *
  */
 
@@ -274,6 +274,13 @@ pj_status_t pj_log_init(void);
 #  define pj_log_set_log_func(func)
 
 /**
+ * Get the current log output function that is used to write log messages.
+ *
+ * @return          Current log output function.
+ */
+#  define pj_log_get_log_func() NULL
+
+/**
  * Write to log.
  *
  * @param sender    Source of the message.
@@ -399,7 +406,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 1
     #define pj_log_wrapper_1(arg)       pj_log_1 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_1(const char *src, const char *format, ...);
+    PJ_DECL(void) pj_log_1(const char *src, const char *format, ...)
+                  PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_1(arg)
 #endif
@@ -413,7 +421,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 2
     #define pj_log_wrapper_2(arg)       pj_log_2 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_2(const char *src, const char *format, ...);
+    PJ_DECL(void) pj_log_2(const char *src, const char *format, ...)
+                  PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_2(arg)
 #endif
@@ -427,7 +436,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 3
     #define pj_log_wrapper_3(arg)       pj_log_3 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_3(const char *src, const char *format, ...);
+    PJ_DECL(void) pj_log_3(const char *src, const char *format, ...)
+                  PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_3(arg)
 #endif
@@ -441,7 +451,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 4
     #define pj_log_wrapper_4(arg)       pj_log_4 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_4(const char *src, const char *format, ...);
+    PJ_DECL(void) pj_log_4(const char *src, const char *format, ...)
+                  PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_4(arg)
 #endif
@@ -455,7 +466,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 5
     #define pj_log_wrapper_5(arg)       pj_log_5 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_5(const char *src, const char *format, ...);
+    PJ_DECL(void) pj_log_5(const char *src, const char *format, ...)
+                  PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_5(arg)
 #endif
@@ -469,7 +481,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 6
     #define pj_log_wrapper_6(arg)       pj_log_6 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_6(const char *src, const char *format, ...);
+    PJ_DECL(void) pj_log_6(const char *src, const char *format, ...)
+                  PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_6(arg)
 #endif

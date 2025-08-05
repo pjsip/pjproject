@@ -39,7 +39,6 @@
 #include <pj/compat/socket.h>
 
 #define THIS_FILE           "test_udp"
-#define PORT                51233
 #define LOOP                2
 ///#define LOOP             2
 #define BUF_MIN_SIZE        32
@@ -130,6 +129,7 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     pj_sock_t ssock=-1, csock=-1;
     pj_sockaddr_in addr, dst_addr;
     int addrlen;
+    unsigned short port;
     pj_pool_t *pool = NULL;
     char *send_buf, *recv_buf;
     pj_ioqueue_t *ioque = NULL;
@@ -141,6 +141,8 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     pj_str_t temp;
     pj_bool_t send_pending, recv_pending;
     pj_status_t rc;
+    pj_str_t ioque_name;
+    pj_str_t ioqueue_type;
 
     pj_set_os_error(PJ_SUCCESS);
 
@@ -167,16 +169,34 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     TRACE_("bind socket...");
     pj_bzero(&addr, sizeof(addr));
     addr.sin_family = pj_AF_INET();
-    addr.sin_port = pj_htons(PORT);
     if (pj_sock_bind(ssock, &addr, sizeof(addr))) {
         status=-10; goto on_error;
     }
+
+    // Get address
+    addrlen = sizeof(addr);
+    PJ_TEST_SUCCESS(pj_sock_getsockname(ssock, &addr, &addrlen), NULL,
+                    {status=-15; goto on_error;});
+    port = pj_sockaddr_get_port(&addr);
 
     // Create I/O Queue.
     TRACE_("create ioqueue...");
     rc = pj_ioqueue_create2(pool, PJ_IOQUEUE_MAX_HANDLES, cfg, &ioque);
     if (rc != PJ_SUCCESS) {
         status=-20; goto on_error;
+    }
+
+    ioque_name = pj_str((char*)pj_ioqueue_name());
+    if (pj_strncmp(&ioque_name, pj_cstr(&ioqueue_type, "epoll"), 5) == 0 ||
+        pj_strncmp(&ioque_name, pj_cstr(&ioqueue_type, "kqueue"), 6) == 0 ||
+        pj_strncmp(&ioque_name, pj_cstr(&ioqueue_type, "iocp"), 4) == 0) {
+      if (pj_ioqueue_get_os_handle(ioque) == NULL) {
+        PJ_LOG(1,(
+          THIS_FILE,
+          "...pj_ioqueue_os_handle() unexpectedly returned NULL"
+        ));
+        status=-21; goto on_error;
+      }
     }
 
     // Register server and client socket.
@@ -227,7 +247,7 @@ static int compliance_test(const pj_ioqueue_cfg *cfg)
     // Set destination address to send the packet.
     TRACE_("set destination address...");
     temp = pj_str("127.0.0.1");
-    if ((rc=pj_sockaddr_in_init(&dst_addr, &temp, PORT)) != 0) {
+    if ((rc=pj_sockaddr_in_init(&dst_addr, &temp, port)) != 0) {
         app_perror("...error: unable to resolve 127.0.0.1", rc);
         status=-290; goto on_error;
     }
@@ -358,7 +378,6 @@ static void on_read_complete(pj_ioqueue_key_t *key,
  */ 
 static int unregister_test(const pj_ioqueue_cfg *cfg)
 {
-    enum { RPORT = 50000, SPORT = 50001 };
     pj_pool_t *pool;
     pj_ioqueue_t *ioqueue;
     pj_sock_t ssock;
@@ -388,14 +407,14 @@ static int unregister_test(const pj_ioqueue_cfg *cfg)
     }
 
     /* Create sender socket */
-    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, SPORT, &ssock);
+    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, -1, &ssock);
     if (status != PJ_SUCCESS) {
         app_perror("Error initializing socket", status);
         return -120;
     }
 
     /* Create receiver socket. */
-    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, RPORT, &rsock);
+    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, -1, &rsock);
     if (status != PJ_SUCCESS) {
         app_perror("Error initializing socket", status);
         return -130;
@@ -437,7 +456,7 @@ static int unregister_test(const pj_ioqueue_cfg *cfg)
     addr.sin_addr = pj_inet_addr2("127.0.0.1");
 
     /* Init buffer to send */
-    pj_ansi_strcpy(sendbuf, "Hello0123");
+    pj_ansi_strxcpy(sendbuf, "Hello0123", sizeof(sendbuf));
 
     /* Send one packet. */
     bytes = sizeof(sendbuf);
@@ -528,7 +547,7 @@ static int unregister_test(const pj_ioqueue_cfg *cfg)
      * Second stage of the test. Register another socket. Then unregister using
      * the previous key.
      */
-    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, RPORT, &rsock2);
+    status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, -1, &rsock2);
     if (status != PJ_SUCCESS) {
         app_perror("Error initializing socket (2)", status);
         return -330;
@@ -776,16 +795,16 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
     pool = pj_pool_create(mem, "test", 4000, 4000, NULL);
     if (!pool) {
         app_perror("Unable to create pool", PJ_ENOMEM);
-        return -100;
+        return -1100;
     }
 
-    CHECK(-110, app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0,
+    CHECK(-1110, app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0,
           &ssock, &csock));
-    CHECK(-120, pj_ioqueue_create2(pool, 2, cfg, &ioqueue));
+    CHECK(-1120, pj_ioqueue_create2(pool, 2, cfg, &ioqueue));
 
     pj_bzero(&cb, sizeof(cb));
     cb.on_read_complete = &on_read_complete2;
-    CHECK(-130, pj_ioqueue_register_sock(pool, ioqueue, ssock, &recv_packet_count,
+    CHECK(-1130, pj_ioqueue_register_sock(pool, ioqueue, ssock, &recv_packet_count,
                                          &cb, &skey));
 
     /* spawn parallel recv()s */
@@ -794,7 +813,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
         pj_ioqueue_op_key_init(&recv_ops[i], sizeof(pj_ioqueue_op_key_t));
         recv_ops[i].user_data = &recv_datas[i];
         recv_datas[i].len = sizeof(packet_t);
-        CHECK(-140, pj_ioqueue_recv(skey, &recv_ops[i], &recv_datas[i].buffer,
+        CHECK(-1140, pj_ioqueue_recv(skey, &recv_ops[i], &recv_datas[i].buffer,
                                     &recv_datas[i].len, 0));
     }
 
@@ -806,7 +825,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
         arg->id = i;
         arg->timeout = TIMEOUT_SECS;
 
-        CHECK(-150, pj_thread_create(pool, "parallel_thread",
+        CHECK(-1150, pj_thread_create(pool, "parallel_thread",
                                      parallel_worker_thread, arg,
                                      0, 0,&threads[i]));
     }
@@ -828,7 +847,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
             TRACE__((THIS_FILE, "......(was async sent)"));
         } else if (status != PJ_SUCCESS) {
             PJ_PERROR(1,(THIS_FILE, status, "......send error"));
-            retcode = -160;
+            retcode = -1160;
             goto on_return;
         }
     }
@@ -841,8 +860,8 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
 
     /* Wait until all threads quits */
     for (i=0; i<ASYNC_CNT; ++i) {
-        CHECK(-170, pj_thread_join(threads[i]));
-        CHECK(-180, pj_thread_destroy(threads[i]));
+        CHECK(-1170, pj_thread_join(threads[i]));
+        CHECK(-1180, pj_thread_destroy(threads[i]));
     }
 
     /* Display thread statistics */
@@ -869,7 +888,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
     if (recv_packet_count != ASYNC_CNT) {
         PJ_LOG(1,(THIS_FILE, "....error: rx packet count is %d (expecting %d)",
                   recv_packet_count, ASYNC_CNT));
-        retcode = -500;
+        retcode = -1190;
     }
     if (threads_total.wakeup_cnt > ASYNC_CNT+async_send) {
         PJ_LOG(3,(THIS_FILE, "....info: total wakeup count is %d "
@@ -911,6 +930,7 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
 {
     pj_sock_t ssock=-1, csock=-1;
     pj_sockaddr_in addr;
+    unsigned short port;
     pj_pool_t *pool = NULL;
     pj_sock_t *inactive_sock=NULL;
     pj_ioqueue_op_key_t *inactive_read_op;
@@ -920,7 +940,6 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     pj_timestamp t1, t2, t_elapsed;
     int rc=0, i;    /* i must be signed */
     pj_str_t temp;
-    char errbuf[PJ_ERR_MSG_SIZE];
 
     TRACE__((THIS_FILE, "   bench test %d", inactive_sock_count));
 
@@ -945,9 +964,14 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     // Bind server socket.
     pj_bzero(&addr, sizeof(addr));
     addr.sin_family = pj_AF_INET();
-    addr.sin_port = pj_htons(PORT);
-    if (pj_sock_bind(ssock, &addr, sizeof(addr)))
-        goto on_error;
+    PJ_TEST_SUCCESS(pj_sock_bind(ssock, &addr, sizeof(addr)), NULL,
+                    goto on_error);
+
+    // Get bound port
+    i = sizeof(addr);
+    PJ_TEST_SUCCESS(pj_sock_getsockname(ssock, &addr, &i), NULL,
+                    goto on_error);
+    port = pj_sockaddr_get_port(&addr);
 
     pj_assert(inactive_sock_count+2 <= PJ_IOQUEUE_MAX_HANDLES);
 
@@ -1019,7 +1043,7 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     }
 
     // Set destination address to send the packet.
-    pj_sockaddr_in_init(&addr, pj_cstr(&temp, "127.0.0.1"), PORT);
+    pj_sockaddr_in_init(&addr, pj_cstr(&temp, "127.0.0.1"), port);
 
     // Test loop.
     t_elapsed.u64 = 0;
@@ -1136,11 +1160,10 @@ static int bench_test(const pj_ioqueue_cfg *cfg, int bufsize,
     return rc;
 
 on_error:
-    PJ_LOG(1,(THIS_FILE, "...ERROR: %s", 
-              pj_strerror(pj_get_netos_error(), errbuf, sizeof(errbuf))));
-    if (ssock)
+    PJ_PERROR(1,(THIS_FILE, pj_get_netos_error(), "...ERROR"));
+    if (ssock >= 0)
         pj_sock_close(ssock);
-    if (csock)
+    if (csock >= 0)
         pj_sock_close(csock);
     for (i=0; i<inactive_sock_count && inactive_sock && 
               inactive_sock[i]!=PJ_INVALID_SOCKET; ++i) 
@@ -1216,7 +1239,7 @@ static int udp_ioqueue_test_imp(const pj_ioqueue_cfg *cfg)
 int udp_ioqueue_test()
 {
     pj_ioqueue_epoll_flag epoll_flags[] = {
-#if PJ_HAS_LINUX_EPOLL
+#if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
         PJ_IOQUEUE_EPOLL_AUTO,
         PJ_IOQUEUE_EPOLL_EXCLUSIVE,
         PJ_IOQUEUE_EPOLL_ONESHOT,
@@ -1226,9 +1249,9 @@ int udp_ioqueue_test()
 #endif
     };
     pj_bool_t concurs[] = { PJ_TRUE, PJ_FALSE };
-    int i, rc, err = 0;
+    int i, rc;
 
-    for (i=0; i<PJ_ARRAY_SIZE(epoll_flags); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(epoll_flags); ++i) {
         pj_ioqueue_cfg cfg;
 
         pj_ioqueue_cfg_default(&cfg);
@@ -1238,11 +1261,11 @@ int udp_ioqueue_test()
                    pj_ioqueue_name(), cfg.epoll_flags));
 
         rc = udp_ioqueue_test_imp(&cfg);
-        if (rc != 0 && err==0)
-            err = rc;
+        if (rc) return rc;
+
     }
 
-    for (i=0; i<PJ_ARRAY_SIZE(concurs); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(concurs); ++i) {
         pj_ioqueue_cfg cfg;
 
         pj_ioqueue_cfg_default(&cfg);
@@ -1252,12 +1275,11 @@ int udp_ioqueue_test()
                    pj_ioqueue_name(), cfg.default_concurrency));
 
         rc = udp_ioqueue_test_imp(&cfg);
-        if (rc != 0 && err==0)
-            err = rc;
+        if (rc) return rc;
     }
 
 #if PJ_HAS_THREADS
-    for (i=0; i<PJ_ARRAY_SIZE(epoll_flags); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(epoll_flags); ++i) {
         pj_ioqueue_cfg cfg;
 
         pj_ioqueue_cfg_default(&cfg);
@@ -1267,13 +1289,12 @@ int udp_ioqueue_test()
                    pj_ioqueue_name(), cfg.epoll_flags));
 
         rc = parallel_recv_test(&cfg);
-        if (rc != 0 && err==0)
-            err = rc;
+        if (rc) return rc;
 
     }
 #endif
 
-    return err;
+    return 0;
 }
 
 #else

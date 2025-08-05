@@ -269,6 +269,12 @@ PJ_DEF(pj_status_t) pjsip_100rel_create_prack( pjsip_inv_session *inv,
     }
     rseq = (pj_uint32_t) pj_strtoul(&rseq_hdr->hvalue);
 
+    if (rseq < 1) {
+        PJ_LOG(4, (dd->inv->dlg->obj_name,
+                   "Ignoring 100rel response RSeq header value less than 1"));
+        return PJ_EIGNORED;
+    }
+
     /* Find UAC state for the specified call leg */
     uac_state = dd->uac_state_list;
     while (uac_state) {
@@ -381,8 +387,9 @@ static void clear_all_responses(dlg_data *dd)
 
     tl = dd->uas_state->tx_data_list.next;
     while (tl != &dd->uas_state->tx_data_list) {
+        tx_data_list_t *tl_next = tl->next;
         pjsip_tx_data_dec_ref(tl->tdata);
-        tl = tl->next;
+        tl = tl_next;
     }
     pj_list_init(&dd->uas_state->tx_data_list);
 }
@@ -483,12 +490,6 @@ PJ_DEF(pj_status_t) pjsip_100rel_on_rx_prack( pjsip_inv_session *inv,
         return PJSIP_ENOTINITIALIZED;
     }
 
-    /* Always reply with 200/OK for PRACK */
-    status = pjsip_dlg_create_response(inv->dlg, rdata, 200, NULL, &tdata);
-    if (status == PJ_SUCCESS) {
-        status = pjsip_dlg_send_response(inv->dlg, tsx, tdata);
-    }
-
     /* Ignore if we don't have pending transmission */
     if (dd->uas_state == NULL || pj_list_empty(&dd->uas_state->tx_data_list)) {
         PJ_LOG(4,(dd->inv->dlg->obj_name, 
@@ -557,6 +558,7 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
                           struct pj_timer_entry *entry)
 {
     dlg_data *dd;
+    pjsip_transaction* invite_tsx;
     tx_data_list_t *tl;
     pjsip_tx_data *tdata;
     pj_bool_t final;
@@ -567,6 +569,12 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     dd = (dlg_data*) entry->user_data;
 
     entry->id = PJ_FALSE;
+
+    invite_tsx = dd->inv->invite_tsx;
+    if (!invite_tsx) {
+        clear_all_responses(dd);
+        return;
+    }
 
     ++dd->uas_state->retransmit_count;
     if (dd->uas_state->retransmit_count >= 7) {
@@ -581,11 +589,11 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
         /* Clear all pending responses */
         clear_all_responses(dd);
 
-        /* Send 500 response */
-        status = pjsip_inv_end_session(dd->inv, 500, &reason, &tdata);
+        /* Send 504 (Server Time-out) response */
+        status = pjsip_inv_end_session(dd->inv, 504, &reason, &tdata);
         if (status == PJ_SUCCESS && tdata) {
             pjsip_dlg_send_response(dd->inv->dlg, 
-                                    dd->inv->invite_tsx,
+                                    invite_tsx,
                                     tdata);
         }
         return;
@@ -601,14 +609,14 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     if (dd->uas_state->retransmit_count == 1) {
         pj_status_t status;
         
-        status = pjsip_tsx_send_msg(dd->inv->invite_tsx, tdata);
+        status = pjsip_tsx_send_msg(invite_tsx, tdata);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(3, (THIS_FILE, status,
                          "Failed to send message"));
             return;
         }
     } else {
-        pjsip_tsx_retransmit_no_state(dd->inv->invite_tsx, tdata);
+        pjsip_tsx_retransmit_no_state(invite_tsx, tdata);
     }
 
     if (final) {
@@ -862,8 +870,9 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
             status = PJ_SUCCESS;
             
             PJ_LOG(4,(dd->inv->dlg->obj_name, 
-                      "Reliable %d response enqueued (%d pending)", 
-                      code, pj_list_size(&dd->uas_state->tx_data_list)));
+                      "Reliable %d response enqueued (%lu pending)", 
+                      code, (unsigned long)
+                      pj_list_size(&dd->uas_state->tx_data_list)));
             
         } else {
             pj_list_push_back(&dd->uas_state->tx_data_list, tl);

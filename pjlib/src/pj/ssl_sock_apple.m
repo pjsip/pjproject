@@ -297,7 +297,7 @@ pj_status_t ssl_network_event_poll()
 
         if (ssock->is_closing || !ssock->pool ||
             (!ssock->is_server && !assock->connection) ||
-            (ssock->is_server && !assock->listener))
+            (ssock->is_server && !assock->listener && !assock->connection))
         {
             PJ_LOG(3, (THIS_FILE, "Warning: Discarding SSL event type %d of "
                        "a closing socket %p", event->type, ssock));
@@ -543,8 +543,8 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
             pj_bzero(&key_params, sizeof(key_params));
             key_params.version = SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION;
             key_params.passphrase = password;
-    
-            for (i = 0; i < PJ_ARRAY_SIZE(ext_format); i++) {
+
+            for (i = 0; i < (CFIndex)PJ_ARRAY_SIZE(ext_format); i++) {
                 items = NULL;
                 err = SecItemImport(cert_data, NULL, &ext_format[i],
                                     &ext_type, 0, &key_params, NULL, &items);
@@ -576,6 +576,7 @@ static pj_status_t create_identity_from_cert(applessl_sock_t *assock,
                 identity = (SecIdentityRef)
                            CFDictionaryGetValue((CFDictionaryRef) item,
                                                 kSecImportItemIdentity);
+                CFRetain(identity);
                 break;
             }
 #if !TARGET_OS_IPHONE
@@ -735,6 +736,7 @@ static pj_status_t network_send(pj_ssl_sock_t *ssock,
                                 pj_ssize_t *size,
                                 unsigned flags)
 {
+    PJ_UNUSED_ARG(flags);
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
     dispatch_data_t content;
 
@@ -802,10 +804,8 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
             if (is_complete &&
                 (context == NULL || nw_content_context_get_is_final(context)))
             {
-                return;
-            }
-
-            if (error != NULL) {
+                status = PJ_EEOF;
+            } else if (error != NULL) {
                 errno = nw_error_get_error_code(error);
                 if (errno == 89) {
                     /* Since error 89 is network intentionally cancelled by
@@ -821,7 +821,7 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
             dispatch_block_t schedule_next_receive = 
             ^{
                 /* If there was no error in receiving, request more data. */
-                if (!error && !is_complete && assock->connection) {
+                if (!error && !is_complete && status != PJ_EEOF) {
                     network_start_read(ssock, async_count, buff_size,
                                        readbuf, flags);
                 }
@@ -832,6 +832,8 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
                     ^(dispatch_data_t region, size_t offset,
                       const void *buffer, size_t inSize)
                 {
+                    PJ_UNUSED_ARG(region);
+                    PJ_UNUSED_ARG(offset);
                     /* This block can be invoked multiple times,
                      * each for every contiguous memory region in the content.
                      */
@@ -922,9 +924,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 
     /* Set min and max protocol version */
     if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
-        ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1 |
-                             PJ_SSL_SOCK_PROTO_TLS1_1 |
-                             PJ_SSL_SOCK_PROTO_TLS1_2 |
+        ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1_2 |
                              PJ_SSL_SOCK_PROTO_TLS1_3;
     }
 
@@ -991,16 +991,18 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
         }
         
         sec_protocol_options_set_tls_renegotiation_enabled(sec_options,
-                                                           true);
+                                            ssock->param.enable_renegotiation);
         /* This must be disabled, otherwise server may think this is
          * a resumption of a previously closed connection, and our
          * verify block may never be invoked!
          */
         sec_protocol_options_set_tls_resumption_enabled(sec_options, false);
         
-        /* SSL verification options */
-        sec_protocol_options_set_peer_authentication_required(sec_options,
-            true);
+        /* SSL peer authentication options */
+        if (ssock->is_server && ssock->param.require_client_cert) {
+            sec_protocol_options_set_peer_authentication_required(sec_options,
+                                                                  true);
+        }
 
         /* Handshake flow:
          * 1. Server's challenge block, provide server's trust
@@ -1013,6 +1015,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
             ^(sec_protocol_metadata_t metadata,
               sec_protocol_challenge_complete_t complete)
         {
+            PJ_UNUSED_ARG(metadata);
             complete(assock->identity);
         }, assock->queue);
         
@@ -1161,10 +1164,8 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
             errno = nw_error_get_error_code(error);
             warn("Connection failed %p", assock);
             status = PJ_STATUS_FROM_OS(errno);
-#if SSL_DEBUG
-            PJ_LOG(3, (THIS_FILE, "SSL state and errno %d %d", state, errno));
-#endif
-            call_cb = PJ_TRUE;  
+            if (ssock->ssl_state == SSL_STATE_HANDSHAKING)
+                call_cb = PJ_TRUE;
         }
 
         if (state == nw_connection_state_ready) {
@@ -1388,20 +1389,21 @@ static pj_status_t network_start_connect(pj_ssl_sock_t *ssock,
 static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
 {
     applessl_sock_t *assock;
-    
+
     /* Create event manager */
     if (event_manager_create() != PJ_SUCCESS)
         return NULL;
     
     assock = PJ_POOL_ZALLOC_T(pool, applessl_sock_t);    
 
-    assock->queue = dispatch_queue_create("ssl_queue", DISPATCH_QUEUE_SERIAL);
+    assock->queue = dispatch_queue_create("ssl_queue",
+                                          DISPATCH_QUEUE_CONCURRENT);
     assock->ev_semaphore = dispatch_semaphore_create(0);    
     if (!assock->queue || !assock->ev_semaphore) {
         ssl_destroy(&assock->base);
         return NULL;
     }
-        
+
     return (pj_ssl_sock_t *)assock;
 }
 
@@ -1410,6 +1412,12 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     /* Nothing to do here. SSL has been configured before connection
      * is started.
      */
+    PJ_UNUSED_ARG(ssock);
+
+    /* Suppress warnings */
+    PJ_UNUSED_ARG(circ_reset);
+    PJ_UNUSED_ARG(circ_read_cancel);
+
     return PJ_SUCCESS;
 }
 
@@ -1421,7 +1429,6 @@ static void close_connection(applessl_sock_t *assock)
         
         assock->connection = nil;
         nw_connection_force_cancel(conn);
-        nw_release(conn);
 
         /* We need to wait until the connection is at cancelled state,
          * otherwise events will still be delivered even though we
@@ -1438,6 +1445,9 @@ static void close_connection(applessl_sock_t *assock)
             PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL connection "
                                   "%p %d", assock, assock->con_state));
         }
+
+        nw_connection_set_state_changed_handler(conn, nil);
+        nw_release(conn);
 
 #if SSL_DEBUG
         PJ_LOG(3, (THIS_FILE, "SSL connection %p closed", assock));
@@ -1761,8 +1771,8 @@ static void ssl_ciphers_populate(void)
     };
     if (!ssl_cipher_num) {
         unsigned i;
-        
-        ssl_cipher_num = sizeof(ciphers)/sizeof(ciphers[0]);
+
+        ssl_cipher_num = PJ_ARRAY_SIZE(ciphers);
         for (i = 0; i < ssl_cipher_num; i++) {
             ssl_ciphers[i].id = (pj_ssl_cipher)ciphers[i];
             ssl_ciphers[i].name = sslGetCipherSuiteString(ciphers[i]);
@@ -1791,7 +1801,7 @@ static void get_info_and_cn(CFArrayRef array, CFMutableStringRef info,
     int i, n;
 
     *cn = NULL;
-    for(i = 0; i < sizeof(keys)/sizeof(keys[0]);  i++) {
+    for(i = 0; i < (int)PJ_ARRAY_SIZE(keys); i++) {
         for (n = 0 ; n < CFArrayGetCount(array); n++) {
             CFDictionaryRef dict;
             CFTypeRef dictkey;
@@ -2152,7 +2162,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
     /* Nothing to do here, just return EPENDING. Handshake has
      * automatically been performed when starting a connection.
      */
-
+    PJ_UNUSED_ARG(ssock);
     return PJ_EPENDING;
 }
 
@@ -2169,7 +2179,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
     }
 
     circ_buf_size = circ_size(&ssock->circ_buf_input);
-    read_size = PJ_MIN(circ_buf_size, *size);
+    read_size = PJ_MIN(circ_buf_size, (pj_size_t)*size);
 
     circ_read(&ssock->circ_buf_input, data, read_size);
 

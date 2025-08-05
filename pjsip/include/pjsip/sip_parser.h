@@ -51,7 +51,7 @@ PJ_BEGIN_DECL
 #define PJSIP_MIN_Q1000             0           /**< For limit checks */
 #define PJSIP_MAX_Q1000             PJ_MAXINT32 / 1000/**< For limit checks */
 #define PJSIP_MIN_EXPIRES           0           /**< For limit checks */
-#define PJSIP_MAX_EXPIRES           ((pj_uint32_t)0xFFFFFFFFUL)/**< for chk */
+//#define PJSIP_MAX_EXPIRES           ((pj_uint32_t)0xFFFFFFFFUL)/**< for chk */
 #define PJSIP_MIN_CSEQ              0           /**< For limit checks */
 #define PJSIP_MAX_CSEQ              PJ_MAXINT32 /**< For limit checks */
 #define PJSIP_MIN_RETRY_AFTER       0           /**< For limit checks */

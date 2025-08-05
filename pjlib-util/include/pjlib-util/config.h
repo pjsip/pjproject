@@ -195,6 +195,16 @@
 #endif
 
 
+/**
+ * Specifies whether DNS resolver should discard truncated answer.
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJ_DNS_RESOLVER_DISCARD_TRUNCATED_ANSWER
+#   define PJ_DNS_RESOLVER_DISCARD_TRUNCATED_ANSWER     1
+#endif
+
+
 /* **************************************************************************
  * SCANNER CONFIGURATION
  */

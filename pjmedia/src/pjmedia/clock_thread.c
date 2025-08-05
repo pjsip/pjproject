@@ -43,8 +43,8 @@ PJ_DEF(pj_status_t) pjmedia_clock_src_init( pjmedia_clock_src *clocksrc,
 }
 
 /* API: Update clock source */
-PJ_DECL(pj_status_t) pjmedia_clock_src_update( pjmedia_clock_src *clocksrc,
-                                               const pj_timestamp *timestamp )
+PJ_DEF(pj_status_t) pjmedia_clock_src_update( pjmedia_clock_src *clocksrc,
+                                              const pj_timestamp *timestamp )
 {
     PJ_ASSERT_RETURN(clocksrc, PJ_EINVAL);
 
@@ -79,7 +79,8 @@ pjmedia_clock_src_get_time_msec( const pjmedia_clock_src *clocksrc )
 {
     pj_timestamp ts;
 
-    pjmedia_clock_src_get_current_timestamp(clocksrc, &ts);
+    if (pjmedia_clock_src_get_current_timestamp(clocksrc, &ts) != PJ_SUCCESS)
+        return 0;
 
 #if PJ_HAS_INT64
     if (ts.u64 > PJ_UINT64(0x3FFFFFFFFFFFFF))
@@ -218,7 +219,15 @@ PJ_DEF(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock)
     clock->running = PJ_TRUE;
     clock->quitting = PJ_FALSE;
 
-    if ((clock->options & PJMEDIA_CLOCK_NO_ASYNC) == 0 && !clock->thread) {
+    if ((clock->options & PJMEDIA_CLOCK_NO_ASYNC) == 0) {
+        if (clock->thread) {
+            /* This is probably the leftover thread that failed to
+             * be cleaned up during the last clock stoppage.
+             */
+            pj_thread_destroy(clock->thread);
+            clock->thread = NULL;
+        }
+
         status = pj_thread_create(clock->pool, "clock", &clock_thread, clock,
                                   0, 0, &clock->thread);
         if (status != PJ_SUCCESS) {
@@ -247,7 +256,13 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
             clock->thread = NULL;
             pj_pool_reset(clock->pool);
         } else {
-            clock->quitting = PJ_FALSE;
+            /* We are probably called from the clock thread itself.
+             * Do not cancel the thread's quitting though, since it
+             * may cause the clock thread to run indefinitely.
+             */ 
+            // clock->quitting = PJ_FALSE;
+            
+            return PJ_EBUSY;
         }
     }
 

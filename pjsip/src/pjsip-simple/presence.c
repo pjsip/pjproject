@@ -83,7 +83,9 @@ struct pjsip_pres
     pjsip_pres_status    status;        /**< Presence status.               */
     pj_pool_t           *tmp_pool;      /**< Pool for tmp_status            */
     pjsip_pres_status    tmp_status;    /**< Temp, before NOTIFY is answred.*/
+    pj_bool_t            is_ts_valid;   /**< Is tmp_status valid?           */
     pjsip_evsub_user     user_cb;       /**< The user callback.             */
+    pj_mutex_t          *mutex;         /**< Mutex.                         */
 };
 
 
@@ -212,6 +214,11 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uac( pjsip_dialog *dlg,
     pres->sub = sub;
     if (user_cb)
         pj_memcpy(&pres->user_cb, user_cb, sizeof(pjsip_evsub_user));
+
+    status = pj_mutex_create_recursive(dlg->pool, "pres_mutex",
+                                       &pres->mutex);
+    if (status != PJ_SUCCESS)
+        goto on_return;
 
     pj_ansi_snprintf(obj_name, PJ_MAX_OBJ_NAME, "pres%p", dlg->pool);
     pres->status_pool = pj_pool_create(dlg->pool->factory, obj_name, 
@@ -389,13 +396,23 @@ PJ_DEF(pj_status_t) pjsip_pres_get_status( pjsip_evsub *sub,
     pres = (pjsip_pres*) pjsip_evsub_get_mod_data(sub, mod_presence.id);
     PJ_ASSERT_RETURN(pres!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
 
-    if (pres->tmp_status._is_valid) {
-        PJ_ASSERT_RETURN(pres->tmp_pool!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
+    if (pres->mutex)
+        pj_mutex_lock(pres->mutex);
+
+    if (pres->is_ts_valid) {
+        PJ_ASSERT_ON_FAIL(pres->tmp_pool!=NULL,
+                          {if (pres->mutex) pj_mutex_unlock(pres->mutex);
+                           return PJSIP_SIMPLE_ENOPRESENCE;});
         pj_memcpy(status, &pres->tmp_status, sizeof(pjsip_pres_status));
     } else {
-        PJ_ASSERT_RETURN(pres->status_pool!=NULL, PJSIP_SIMPLE_ENOPRESENCE);
+        PJ_ASSERT_ON_FAIL(pres->status_pool!=NULL,
+                          {if (pres->mutex) pj_mutex_unlock(pres->mutex);
+                           return PJSIP_SIMPLE_ENOPRESENCE;});
         pj_memcpy(status, &pres->status, sizeof(pjsip_pres_status));
     }
+
+    if (pres->mutex)
+        pj_mutex_unlock(pres->mutex);
 
     return PJ_SUCCESS;
 }
@@ -628,6 +645,10 @@ static void pres_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
             pj_pool_release(pres->tmp_pool);
             pres->tmp_pool = NULL;
         }
+        if (pres->mutex) {
+            pj_mutex_destroy(pres->mutex);
+            pres->mutex = NULL;
+        }
     }
 }
 
@@ -772,6 +793,11 @@ static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
         status = PJSIP_SIMPLE_EBADCONTENT;
     }
 
+    /* If application calls pres_get_status(), redirect the call to
+     * retrieve the temporary status.
+     */
+    pres->is_ts_valid = (status == PJ_SUCCESS? PJ_TRUE: PJ_FALSE);
+
     if (status != PJ_SUCCESS) {
         /* Unsupported or bad Content-Type */
         if (PJSIP_PRES_BAD_CONTENT_RESPONSE >= 300) {
@@ -804,11 +830,6 @@ static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
             status = PJ_SUCCESS;
         }
     }
-
-    /* If application calls pres_get_status(), redirect the call to
-     * retrieve the temporary status.
-     */
-    pres->tmp_status._is_valid = PJ_TRUE;
 
     return PJ_SUCCESS;
 }
@@ -845,10 +866,11 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
          * "tuple_node" in pjsip_pres_status to NULL.
          */
         unsigned i;
+        pj_mutex_lock(pres->mutex);
         for (i=0; i<pres->status.info_cnt; ++i) {
             pres->status.info[i].tuple_node = NULL;
         }
-
+        pj_mutex_unlock(pres->mutex);
 #elif 0
         /* This has just been changed. Previously, we treat incoming NOTIFY
          * with no message body as having the presence subscription closed.
@@ -859,7 +881,7 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
 #else
         unsigned i;
         /* Subscription is terminated. Consider contact is offline */
-        pres->tmp_status._is_valid = PJ_TRUE;
+        pres->is_ts_valid = PJ_TRUE;
         for (i=0; i<pres->tmp_status.info_cnt; ++i)
             pres->tmp_status.info[i].basic_open = PJ_FALSE;
 #endif
@@ -875,6 +897,8 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
     /* If application responded NOTIFY with 2xx, copy temporary status
      * to main status, and mark the temporary status as invalid.
      */
+    pj_mutex_lock(pres->mutex);
+
     if ((*p_st_code)/100 == 2) {
         pj_pool_t *tmp;
 
@@ -886,8 +910,10 @@ static void pres_on_evsub_rx_notify( pjsip_evsub *sub,
         pres->status_pool = tmp;
     }
 
-    pres->tmp_status._is_valid = PJ_FALSE;
+    pres->is_ts_valid = PJ_FALSE;
     pj_pool_reset(pres->tmp_pool);
+
+    pj_mutex_unlock(pres->mutex);
 
     /* Done */
 }

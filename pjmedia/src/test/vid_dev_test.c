@@ -240,7 +240,7 @@ static int loopback_test(void)
         if ((cdi.dir & PJMEDIA_DIR_CAPTURE) == 0)
             continue;
 
-        for (j=i+1; j<count; ++j) {
+        for (j=0; j<count; ++j) {
             pjmedia_vid_dev_info rdi;
             unsigned k;
 

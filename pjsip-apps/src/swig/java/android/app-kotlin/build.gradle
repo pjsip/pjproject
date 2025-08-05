@@ -4,12 +4,14 @@ plugins {
 }
 
 android {
-    compileSdkVersion 29
+    compileSdk 33
+
+    buildFeatures.buildConfig true
 
     defaultConfig {
         applicationId "org.pjsip.pjsua2.app_kotlin"
         minSdkVersion 23
-        targetSdkVersion 29
+        targetSdkVersion 33
         versionCode 1
         versionName "1.0"
     }
@@ -20,6 +22,18 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+    flavorDimensions "version"
+    productFlavors {
+        demo {
+            isDefault true
+            dimension "version"
+            buildConfigField "int", "SIP_PORT", "6000"
+        }
+        ciTest {
+            dimension "version"
+            buildConfigField "int", "SIP_PORT", "6677"
+        }
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
@@ -27,12 +41,13 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    namespace 'org.pjsip.pjsua2.app_kotlin'
 }
 
 dependencies {
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'com.android.support:appcompat-v7:28.0.0'
-    implementation 'com.android.support.constraint:constraint-layout:2.0.4'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'     
     implementation project(path: ':pjsua2')
 }

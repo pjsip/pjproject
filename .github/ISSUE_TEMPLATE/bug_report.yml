@@ -1,24 +1,26 @@
-name: Bug Report
+name: Bug report
 description: File a bug report
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report!
+        Thank you for filing a bug report with us. We appreciate your effort in helping us improve our software.
+        
+        **IMPORTANT**: Please note that this form is **strictly** for reporting bugs, and as such, any questions or inquiries that are not related to bugs will be closed. We apologize for any inconvenience this may cause and appreciate your understanding in keeping our bug reporting system focused and efficient.
   - type: textarea
     id: bug-desc
     attributes:
       label: Describe the bug
       description: A clear and concise description of what the bug is.
       placeholder: |
-        E.g: Assertion in answering an incoming video call with response code 183.
+        E.g: Assertion when answering an incoming video call with response code 183.
     validations:
       required: true
   - type: textarea
     id: bug-repro
     attributes:
       label: Steps to reproduce
-      description: Describe how to reproduce the bug using sample apps such as [pjsua app](https://www.pjsip.org/pjsua.htm), [pjsua2 android](https://trac.pjsip.org/repos/wiki/Getting-Started/Android#Tryingoursampleapplicationandcreatingyourown), [iOS ipjsua](https://trac.pjsip.org/repos/wiki/Getting-Started/iPhone#BuildingPJSIP), or [other sample apps](https://github.com/pjsip/pjproject/tree/master/pjsip-apps/src/samples).
+      description: Describe how to reproduce the bug using sample apps such as [pjsua app](https://www.pjsip.org/pjsua.htm), [pjsua2 android](https://docs.pjsip.org/en/latest/get-started/android/build_instructions.html#building-and-running-pjsua2-sample-application), [iOS ipjsua](https://docs.pjsip.org/en/latest/get-started/ios/build_instructions.html#building-pjsip), or [other sample apps](https://github.com/pjsip/pjproject/tree/master/pjsip-apps/src/samples).
       placeholder: |
         E.g:
         1. run pjsua app with parameter: `--video --registrar sip:some.sip.registrar ...`
@@ -31,9 +33,9 @@ body:
     id: version
     attributes:
       label: PJSIP version
-      description: What PJSIP version are you using?
+      description: What PJSIP version are you using? (We suggest testing with the latest version to ensure that the bug is still present and has not been resolved.)
       placeholder: |
-        E.g: 2.11
+        E.g: 2.13
     validations:
       required: true
   - type: textarea

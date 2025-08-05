@@ -50,7 +50,8 @@ typedef struct pj_dns_server pj_dns_server;
  *                  registered to.
  * @param af        Address family of the server socket (valid values
  *                  are pj_AF_INET() for IPv4 and pj_AF_INET6() for IPv6).
- * @param port      The UDP port to listen.
+ * @param port      The UDP port to listen. Specify zero to bind to any
+ *                  port.
  * @param flags     Flags, currently must be zero.
  * @param p_srv     Pointer to receive the DNS server instance.
  *
@@ -64,6 +65,17 @@ PJ_DECL(pj_status_t) pj_dns_server_create(pj_pool_factory *pf,
                                           unsigned port,
                                           unsigned flags,
                                           pj_dns_server **p_srv);
+
+/**
+ * Get the DNS server address
+ *
+ * @param srv	    The DNS server instance.
+ * @param addr      It will be filled with the server's bound address.
+ *
+ * @return	    PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_dns_server_get_addr(pj_dns_server *srv,
+                                            pj_sockaddr *bound_addr);
 
 /**
  * Destroy DNS server instance.

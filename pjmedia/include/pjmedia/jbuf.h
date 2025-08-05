@@ -102,6 +102,7 @@ typedef struct pjmedia_jb_state
     unsigned    min_prefetch;       /**< Minimum allowed prefetch, in frms. */
     unsigned    max_prefetch;       /**< Maximum allowed prefetch, in frms. */
     unsigned    max_count;          /**< Jitter buffer capacity, in frames. */
+    unsigned    min_delay_set;      /**< Minimum delay setting, in frames.  */
 
     /* Status */
     unsigned    burst;              /**< Current burst level, in frames     */
@@ -170,13 +171,27 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
 /**
  * Set the jitter buffer's frame duration.
  *
- * @param jb            The jitter buffer
- * @param ptime         Frame duration.
+ * @param jb            The jitter buffer.
+ * @param ptime         Frame ptime.
  *
  * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_jbuf_set_ptime( pjmedia_jbuf *jb,
                                              unsigned ptime);
+
+
+/**
+ * Set the jitter buffer's frame duration.
+ *
+ * @param jb            The jitter buffer.
+ * @param ptime         Frame ptime.
+ * @param ptime_denum   Frame ptime denumerator.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_jbuf_set_ptime2(pjmedia_jbuf *jb,
+                                             unsigned ptime,
+                                             unsigned ptime_denum);
 
 
 /**
@@ -459,6 +474,20 @@ PJ_DECL(pj_bool_t) pjmedia_jbuf_is_full(const pjmedia_jbuf *jb);
 PJ_DECL(pj_status_t) pjmedia_jbuf_get_state( const pjmedia_jbuf *jb,
                                              pjmedia_jb_state *state );
 
+
+/**
+ * Set minimum delay of the jitter buffer. Normally jitter buffer tries to
+ * maintain the optimal delay calculated based on current burst level.
+ * When the minimum delay is set, the jitter buffer will adjust the delay to
+ * the greater of the optimal delay and the minimum delay.
+ *
+ * @param jb            The jitter buffer.
+ * @param min_delay     The minimum delay, in millisecond.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_jbuf_set_min_delay(pjmedia_jbuf *jb,
+                                                unsigned min_delay);
 
 
 PJ_END_DECL

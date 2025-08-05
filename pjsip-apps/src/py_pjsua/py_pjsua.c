@@ -1259,7 +1259,10 @@ static PyObject *py_pjsua_transport_get_info(PyObject *pSelf, PyObject *pArgs)
 
 /*
  * py_pjsua_transport_set_enable
+ * NOTE: This function is commented out because pjsua_transport_set_enable
+ * has been deprecated and is no longer available in the PJSUA API.
  */
+/*
 static PyObject *py_pjsua_transport_set_enable
 (PyObject *pSelf, PyObject *pArgs)
 {
@@ -1277,6 +1280,7 @@ static PyObject *py_pjsua_transport_set_enable
     
     return Py_BuildValue("i",status);
 }
+*/
 
 /*
  * py_pjsua_transport_close
@@ -1312,6 +1316,11 @@ static char pjsua_transport_get_info_doc[] =
     "void py_pjsua.transport_get_info "
     "(py_pjsua.Transport_ID id, py_pjsua.Transport_Info info) "
     "Get information about transports.";
+/*
+ * NOTE: pjsua_transport_set_enable_doc is commented out because the
+ * corresponding function has been deprecated and is no longer available.
+ */
+/*
 static char pjsua_transport_set_enable_doc[] =
     "void py_pjsua.transport_set_enable "
     "(py_pjsua.Transport_ID id, int enabled) "
@@ -1320,6 +1329,7 @@ static char pjsua_transport_set_enable_doc[] =
     "Disabling a transport does not necessarily close the socket, "
     "it will only discard incoming messages and prevent the transport "
     "from being used to send outgoing messages.";
+*/
 static char pjsua_transport_close_doc[] =
     "void py_pjsua.transport_close (py_pjsua.Transport_ID id, int force) "
     "Close the transport. If transport is forcefully closed, "
@@ -5266,10 +5276,16 @@ static PyMethodDef py_pjsua_methods[] =
         "transport_get_info", py_pjsua_transport_get_info, METH_VARARGS,
         pjsua_transport_get_info_doc
     },
+    /*
+     * NOTE: transport_set_enable is commented out because the underlying
+     * pjsua_transport_set_enable function has been deprecated.
+     */
+    /*
     {
         "transport_set_enable", py_pjsua_transport_set_enable, METH_VARARGS,
         pjsua_transport_set_enable_doc
     },
+    */
     {
        "transport_close", py_pjsua_transport_close, METH_VARARGS,
         pjsua_transport_close_doc

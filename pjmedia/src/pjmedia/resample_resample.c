@@ -24,13 +24,11 @@
 #include <pj/log.h>
 #include <pj/pool.h>
 
+#define THIS_FILE   "resample.c"
 
 #if PJMEDIA_RESAMPLE_IMP==PJMEDIA_RESAMPLE_LIBRESAMPLE
 
 #include <third_party/resample/include/resamplesubs.h>
-
-#define THIS_FILE   "resample.c"
-
 
 
 struct pjmedia_resample
@@ -90,6 +88,8 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
          *   resample->xoff = large_filter ? 32 : 6;
          */
         resample->xoff = res_GetXOFF(resample->factor, (char)large_filter);
+        if (resample->xoff * 2 >= samples_per_frame)
+            resample->xoff = samples_per_frame / 2 - 1;
     } else {
         resample->xoff = 1;
     }
@@ -156,7 +156,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
      * So here comes the trick.
      *
      * First of all, because of the history and lookahead requirement, 
-     * resample->buffer need to accomodate framesize+2*xoff samples in its
+     * resample->buffer need to accommodate framesize+2*xoff samples in its
      * buffer. This is done when the buffer is created.
      *
      * On the first run, the input frame (supplied by application) is
@@ -174,8 +174,8 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
      *     | 0000 | 0000 |  frame0...   |
      *     +------+------+--------------+
      *     ^      ^      ^              ^
-         *     0    xoff  2*xoff       size+2*xoff 
-         *
+     *     0    xoff  2*xoff       size+2*xoff
+     *
      * (Note again: resample algorithm is called at resample->buffer+xoff)
      *
      * At the end of the run, 2*xoff samples from the end of 
@@ -202,7 +202,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
      *     | frm0 | frm0 |  frame1...   |
      *     +------+------+--------------+
      *     ^      ^      ^              ^
-         *     0    xoff  2*xoff       size+2*xoff 
+     *     0    xoff  2*xoff       size+2*xoff 
      *
      * As you can see from above diagram, the resampling algorithm is
      * actually called from the last xoff part of previous frame (frm0).
@@ -318,6 +318,8 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     PJ_UNUSED_ARG(samples_per_frame);
     PJ_UNUSED_ARG(p_resample);
 
+    PJ_LOG(3, (THIS_FILE, "No resampler created (sample rate conversion is "
+                          "disabled or no resample implementation selected)"));
     return PJ_EINVALIDOP;
 }
 

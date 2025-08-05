@@ -254,11 +254,17 @@ int main(int argc, char *argv[])
                 break;
 
             status = pjmedia_echo_capture(ec, (short*)rec_frame.buf, 0);
+            if (status != PJ_SUCCESS) {
+                app_perror(THIS_FILE, "pjmedia_echo_capture()", status);
+                break;
+            }
 
             //status = pjmedia_echo_cancel(ec, (short*)rec_frame.buf, 
             //                       (short*)play_frame.buf, 0, NULL);
 
-            pjmedia_port_put_frame(wav_out, &rec_frame);
+            status = pjmedia_port_put_frame(wav_out, &rec_frame);
+            if (status != PJ_SUCCESS)
+                break;
         }
 
         pjmedia_wav_player_port_set_pos(wav_play, 0);

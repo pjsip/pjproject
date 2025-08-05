@@ -111,9 +111,9 @@ typedef struct pjsip_cfg_t
         pj_bool_t disable_tcp_switch;
 
         /**
-         * Disable automatic switching to TLS if target-URI does not use
-         * "sips" scheme nor TLS transport, even when request-URI uses
-         * "sips" scheme.
+         * Disable automatic switching to secure transport (such as TLS)
+         * if target-URI does not use "sips" scheme nor secure transport,
+         * even when request-URI uses "sips" scheme.
          *
          * Default is PJSIP_DONT_SWITCH_TO_TLS.
          */
@@ -397,9 +397,13 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * As specified RFC 3261 section 8.1.2, when request-URI uses "sips" scheme,
  * TLS must always be used regardless of the target-URI scheme or transport
  * type.
+ * Update: Newer RFCs, such as RFC 5630 and 7118, expands this by allowing
+ * the use of other transports as long as the SIP resource designated by
+ * the target SIPS URI is contacted securely.
  *
- * This option will specify whether the behavior of automatic switching to TLS
- * should be disabled, i.e: regard the target-URI scheme or transport type.
+ * This option will specify whether the behavior of automatic switching to secure
+ * transport (such as TLS) should be disabled, i.e: regard the target-URI scheme
+ * or transport type.
  *
  * This option can also be controlled at run-time by the \a disable_tls_switch
  * setting in pjsip_cfg_t.
@@ -602,6 +606,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
+ /**
+  * If non-zero, SIP parser will parse the user/password part of the URI,
+  * and use it in its original form. Otherwise the parser will unescape it,
+  * and then store and use it in its unescaped form.
+  * 
+  * To store the URI in the original form, set this to Yes/1.
+  *
+  * Default: 0
+  */
+#ifndef PJSIP_URI_USE_ORIG_USERPASS
+#   define PJSIP_URI_USE_ORIG_USERPASS      0
+#endif
+
+
 /**
  * Specify port number should be allowed to appear in To and From
  * header. Note that RFC 3261 disallow this, see Table 1 in section
@@ -671,6 +689,25 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_TRANSPORT_SERVER_IDLE_TIME     600
 #endif
 
+
+/**
+ * The initial timeout interval for incoming TCP/TLS transports
+ * (i.e. server side) in the event that no valid SIP message is received
+ * following a successful connection. The value is in seconds.
+ * Disable the timeout by setting it to 0.
+ *
+ * Note that even if this is disabled, the connection might still get closed
+ * when it is idle or not referred anymore. Have a look at \a
+ * PJSIP_TRANSPORT_SERVER_IDLE_TIME.
+ * 
+ * Notes:
+ * - keep-alive packet is not considered as a valid message.
+ *
+ * Default: 0
+*/
+#ifndef PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST
+#   define PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST     0
+#endif
 
 /**
  * Maximum number of usages for a transport before a new transport is
@@ -782,14 +819,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
- * Initial timeout interval to be applied to incoming transports (i.e. server
- * side) when no data received after a successful connection. Value is in
- * seconds. Disable the timeout by setting it to 0.
+ * The initial timeout interval for incoming TCP transports
+ * (i.e. server side) in the event that no valid SIP message is received
+ * following a successful connection. The value is in seconds.
+ * Disable the timeout by setting it to 0.
  *
- * Note that even when this is disable, the connection might still get closed
+ * Note that even if this is disabled, the connection might still get closed
  * when it is idle or not referred anymore. Have a look at \a
- * PJSIP_TRANSPORT_SERVER_IDLE_TIME
+ * PJSIP_TRANSPORT_SERVER_IDLE_TIME.
  *
+ * Notes:
+ * - keep-alive packet is not considered as a valid message.
+ * - This macro is specific to TCP usage and takes precedence over
+ *   a\ PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST when both are set.
+ * 
  * Default: 0 (disabled)
  */
 #ifndef PJSIP_TCP_INITIAL_TIMEOUT
@@ -903,6 +946,14 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 # endif
 #endif
 
+/**
+ * Specify the default expiration time for dialog event subscription.
+ *
+ * Default: 600 seconds (10 minutes)
+ */
+#ifndef PJSIP_DLG_EVENT_DEFAULT_EXPIRES
+#   define PJSIP_DLG_EVENT_DEFAULT_EXPIRES       600
+#endif
 
 /**
  * Specify the maximum number of timer entries initially allocated by
@@ -920,7 +971,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Initial memory block for the endpoint.
  */
 #ifndef PJSIP_POOL_LEN_ENDPT
-#   define PJSIP_POOL_LEN_ENDPT         (4000)
+#   define PJSIP_POOL_LEN_ENDPT         (16000)
 #endif
 
 /**
@@ -1094,9 +1145,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #define PJSIP_MAX_HNAME_LEN             64
 
 /** Dialog's pool setting. */
-#define PJSIP_POOL_LEN_DIALOG           1200
+#define PJSIP_POOL_LEN_DIALOG           4000
 /** Dialog's pool setting. */
-#define PJSIP_POOL_INC_DIALOG           512
+#define PJSIP_POOL_INC_DIALOG           4000
 
 /** Maximum header types. */
 #define PJSIP_MAX_HEADER_TYPES          72
@@ -1294,10 +1345,25 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 /**
- * Allow client to send multiple Authorization header when receiving multiple 
- * WWW-Authenticate header fields. If this is disabled, the stack will send
- * Authorization header field containing credentials that match the
- * topmost header field.
+ * RFC-7616 and RFC-8760 state that for each realm a UAS requires authentication
+ * for it can send a WWW/Proxy-Authenticate header for each digest algorithm it
+ * supports and for each realm, they must be added in most-preferred to least-
+ * preferred order.  The RFCs also state that the UAS MUST NOT send multiple
+ * WWW/Proxy-Authenticate headers with the same realm and algorithm.
+ *
+ * The RFCs also state that the UAC SHOULD respond to the topmost header
+ * for each realm containing a digest algorithm it supports.  Neither RFC
+ * however, states whether the UAC should send multiple Authorization headers
+ * for the same realm if it can support multiple digest algorithms.  Common
+ * sense dicates though that the UAC should NOT send additional Authorization
+ * headers for the same realm once it's already sent a more preferred one.
+ * The reasoning is simple...  If a UAS sends two WWW-Authenticate headers,
+ * the first for SHA-256 and the second for MD5, a UAC responding to both
+ * completely defeats the purpose of the UAS sending the more secure SHA-256.
+ *
+ * Having said that, if there is some corner case where continuing to send
+ * additional Authorization headers for the same realm is necessary, then
+ * this define can be set to 1 to allow it.
  *
  * Default is 0
  */
@@ -1386,6 +1452,17 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_PRES_BAD_CONTENT_RESPONSE
 #   define PJSIP_PRES_BAD_CONTENT_RESPONSE      488
+#endif
+
+
+/**
+ * Specify the status code value to respond to bad message body in NOTIFY
+ * request for dialog event.
+ *
+ * Default: 488 (Not Acceptable Here)
+ */
+#ifndef PJSIP_DLG_EVENT_BAD_CONTENT_RESPONSE
+#   define PJSIP_DLG_EVENT_BAD_CONTENT_RESPONSE  488
 #endif
 
 

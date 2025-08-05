@@ -479,7 +479,7 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
         /* Calculate RR arrival time for DLRR */
         pj_get_timestamp(&sess->rx_lrr_time);
 
-        TRACE_((sess->name, "Rx RTCP SR: ntp_ts=%p", sess->rx_lrr,
+        TRACE_((sess->name, "Rx RTCP SR: ntp_ts=%x",
                (pj_uint32_t)(sess->rx_lrr_time.u64*65536/
                              sess->rtcp_session->ts_freq.u64)));
     }
@@ -516,8 +516,8 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
             eedelay *= 1000;
         }
 
-        TRACE_((sess->name, "Rx RTCP XR DLRR: lrr=%p, dlrr=%p (%d:%03dms), "
-                           "now=%p, rtt=%p",
+        TRACE_((sess->name, "Rx RTCP XR DLRR: lrr=%x, dlrr=%x (%d:%03dms), "
+                           "now=%x, rtt=%x",
                 lrr, dlrr, dlrr/65536, (dlrr%65536)*1000/65536,
                 now, (pj_uint32_t)eedelay));
         
@@ -549,7 +549,7 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
             }
         } else {
             PJ_LOG(5, (sess->name, "Internal RTCP NTP clock skew detected: "
-                                   "lrr=%p, now=%p, dlrr=%p (%d:%03dms), "
+                                   "lrr=%x, now=%x, dlrr=%x (%d:%03dms), "
                                    "diff=%d",
                                    lrr, now, dlrr, dlrr/65536,
                                    (dlrr%65536)*1000/65536,

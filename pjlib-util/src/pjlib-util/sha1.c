@@ -203,7 +203,7 @@ PJ_DEF(void) pj_sha1_init(pj_sha1_context* context)
 
 /* Run your data through this. */
 PJ_DEF(void) pj_sha1_update(pj_sha1_context* context, 
-                            const pj_uint8_t* data, const pj_size_t len)
+                            const pj_uint8_t* data, pj_size_t len)
 {
     pj_size_t i, j;
 

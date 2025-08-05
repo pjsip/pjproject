@@ -493,7 +493,7 @@ pjmedia_sdp_neg_was_answer_remote(pjmedia_sdp_neg *neg);
  * Get the current remote SDP offer or answer. Application can only 
  * call this function in state PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER or
  * PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, or otherwise there won't be remote 
- * SDP offer/answer. Calling this  function will not change the state 
+ * SDP offer/answer. Calling this function will not change the state 
  * of the negotiator.
  *
  * @param neg           The SDP negotiator instance.

@@ -402,10 +402,6 @@ static int compliance_test_0(const pj_ioqueue_cfg *cfg)
                 return -52;
             }
             pending_op -= status;
-
-            if (pending_op == 0) {
-                status = 0;
-            }
         }
     }
 
@@ -891,7 +887,7 @@ on_error:
         if (client[i].key != NULL) {
             pj_ioqueue_unregister(client[i].key);
             client[i].key = NULL;
-            server[i].sock = PJ_INVALID_SOCKET;
+            client[i].sock = PJ_INVALID_SOCKET;
         } else if (client[i].sock != PJ_INVALID_SOCKET) {
             pj_sock_close(client[i].sock);
             client[i].sock = PJ_INVALID_SOCKET;
@@ -950,7 +946,7 @@ int tcp_ioqueue_test()
 {
     pj_ioqueue_epoll_flag epoll_flags[] = {
         PJ_IOQUEUE_EPOLL_AUTO,
-#if PJ_HAS_LINUX_EPOLL
+#if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
         PJ_IOQUEUE_EPOLL_EXCLUSIVE,
         PJ_IOQUEUE_EPOLL_ONESHOT,
         0
@@ -959,7 +955,7 @@ int tcp_ioqueue_test()
     pj_bool_t concurs[] = { PJ_TRUE, PJ_FALSE };
     int i, rc;
 
-    for (i=0; i<PJ_ARRAY_SIZE(epoll_flags); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(epoll_flags); ++i) {
         pj_ioqueue_cfg cfg;
 
         pj_ioqueue_cfg_default(&cfg);
@@ -973,7 +969,7 @@ int tcp_ioqueue_test()
             return rc;
     }
 
-    for (i=0; i<PJ_ARRAY_SIZE(concurs); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(concurs); ++i) {
         pj_ioqueue_cfg cfg;
 
         pj_ioqueue_cfg_default(&cfg);

@@ -112,6 +112,7 @@ struct pj_ssl_sock_t
     pj_ioqueue_op_key_t   shutdown_op_key;
     pj_timer_entry        timer;
     pj_status_t           verify_status;
+    pj_status_t           handshake_status;
 
     pj_bool_t             is_closing;
     unsigned long         last_err;
@@ -151,6 +152,7 @@ struct pj_ssl_sock_t
  */
 struct pj_ssl_cert_t
 {
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
     pj_str_t CA_file;
     pj_str_t CA_path;
     pj_str_t cert_file;
@@ -161,6 +163,9 @@ struct pj_ssl_cert_t
     pj_ssl_cert_buffer CA_buf;
     pj_ssl_cert_buffer cert_buf;
     pj_ssl_cert_buffer privkey_buf;
+#else
+    pj_ssl_cert_lookup_criteria criteria;
+#endif
 };
 
 /* ssl available ciphers */
@@ -204,29 +209,39 @@ static pj_status_t flush_delayed_send(pj_ssl_sock_t *ssock);
 static pj_status_t circ_init(pj_pool_factory *factory,
                              circ_buf_t *cb, pj_size_t cap);
 static void circ_deinit(circ_buf_t *cb);
+static void circ_reset(circ_buf_t* cb);
 static pj_bool_t circ_empty(const circ_buf_t *cb);
 static pj_size_t circ_size(const circ_buf_t *cb);
 static void circ_read(circ_buf_t *cb, pj_uint8_t *dst, pj_size_t len);
+static void circ_read_cancel(circ_buf_t* cb, pj_size_t len);
 static pj_status_t circ_write(circ_buf_t *cb,
                               const pj_uint8_t *src, pj_size_t len);
 
 inline static pj_bool_t io_empty(pj_ssl_sock_t *ssock, circ_buf_t *cb)
 {
+    PJ_UNUSED_ARG(ssock);
     return circ_empty(cb);
 }
 inline static pj_size_t io_size(pj_ssl_sock_t *ssock, circ_buf_t *cb)
 {
+    PJ_UNUSED_ARG(ssock);
     return circ_size(cb);
 }
-inline static void io_reset(pj_ssl_sock_t *ssock, circ_buf_t *cb) {}
+inline static void io_reset(pj_ssl_sock_t *ssock, circ_buf_t *cb)
+{
+    PJ_UNUSED_ARG(ssock);
+    PJ_UNUSED_ARG(cb);
+}
 inline static void io_read(pj_ssl_sock_t *ssock, circ_buf_t *cb,
                            pj_uint8_t *dst, pj_size_t len)
 {
-    return circ_read(cb, dst, len);
+    PJ_UNUSED_ARG(ssock);
+    circ_read(cb, dst, len);
 }
 inline static pj_status_t io_write(pj_ssl_sock_t *ssock, circ_buf_t *cb,
                             const pj_uint8_t *src, pj_size_t len)
 {
+    PJ_UNUSED_ARG(ssock);
     return circ_write(cb, src, len);
 }
 

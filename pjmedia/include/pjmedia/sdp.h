@@ -370,6 +370,18 @@ PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_ssrc(pj_pool_t *pool,
                                                         const pj_str_t *cname);
 
 
+/**
+ * Create a=label attribute.
+ *
+ * @param pool          Pool to create the attribute.
+ * @param attr          Attribute to create.
+ *
+ * @return              SDP label attribute.
+ */
+PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pj_pool_t *pool,
+                                                const pj_str_t *label_str);
+
+
 /* **************************************************************************
  * SDP CONNECTION INFO
  ****************************************************************************
@@ -383,6 +395,8 @@ struct pjmedia_sdp_conn
     pj_str_t    net_type;       /**< Network type ("IN").               */
     pj_str_t    addr_type;      /**< Address type ("IP4", "IP6").       */
     pj_str_t    addr;           /**< The address.                       */
+    pj_uint8_t  ttl;            /**< Multicast address TTL              */
+    pj_uint8_t  no_addr;        /**< Multicast number of addresses      */
 };
 
 
@@ -491,7 +505,7 @@ typedef struct pjmedia_sdp_media pjmedia_sdp_media;
  * @param buf       The buffer.
  * @param size      The buffer length.
  *
- * @return          the length printed, or -1 if the buffer is too
+ * @return          The length printed, or -1 if the buffer is too
  *                  short.
  */
 PJ_DECL(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media, char *buf, pj_size_t size);
@@ -507,6 +521,18 @@ PJ_DECL(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media, char *buf, 
 PJ_DECL(pjmedia_sdp_media*) 
 pjmedia_sdp_media_clone( pj_pool_t *pool, 
                          const pjmedia_sdp_media *rhs);
+
+/**
+ * Print attribute to a buffer.
+ *
+ * @param attr      The attribute.
+ * @param buf       The buffer.
+ * @param size      The buffer length.
+ *
+ * @return          The length printed, or -1 if the buffer is too
+ *                  short.
+ */
+PJ_DECL(int) pjmedia_sdp_attr_print(const pjmedia_sdp_attr *attr, char *buf, pj_size_t size);
 
 /**
  * Find the first occurence of the specified attribute name in the media 
@@ -667,8 +693,8 @@ struct pjmedia_sdp_session
     struct
     {
         pj_str_t    user;           /**< User                           */
-        pj_uint32_t id;             /**< Session ID                     */
-        pj_uint32_t version;        /**< Session version                */
+        pj_uint_t   id;             /**< Session ID                     */
+        pj_uint_t   version;        /**< Session version                */
         pj_str_t    net_type;       /**< Network type ("IN")            */
         pj_str_t    addr_type;      /**< Address type ("IP4", "IP6")    */
         pj_str_t    addr;           /**< The address.                   */
@@ -683,8 +709,8 @@ struct pjmedia_sdp_session
     /** Session time (t= line)  */
     struct
     {
-        pj_uint32_t start;          /**< Start time.                    */
-        pj_uint32_t stop;           /**< Stop time.                     */
+        pj_uint_t start;            /**< Start time.                    */
+        pj_uint_t stop;             /**< Stop time.                     */
     } time;
 
     unsigned           attr_count;              /**< Number of attributes.  */
@@ -779,7 +805,13 @@ pjmedia_sdp_session_clone( pj_pool_t *pool,
 
 
 /**
- * Compare two SDP session for equality.
+ * Compare two SDP session for equality, by comparing:
+ * - the fields origin, subject, connection, time
+ * - the attributes direction, fmtp, and rtpmap
+ * - the media descriptions (see #pjmedia_sdp_media_cmp())
+ *
+ * The function will also call the callback
+ * \a pjmedia_sdp_session_cmp_cb() if registered.
  *
  * @param sd1       The first SDP session to compare.
  * @param sd2       The second SDP session to compare.
@@ -788,10 +820,44 @@ pjmedia_sdp_session_clone( pj_pool_t *pool,
  * @return          PJ_SUCCESS when both SDPs are equal, or otherwise
  *                  the status code indicates which part of the session
  *                  descriptors are not equal.
+ *                  If \a pjmedia_sdp_session_cmp_cb() is registered,
+ *                  will return the status output parameter of the callback.
  */
 PJ_DECL(pj_status_t) pjmedia_sdp_session_cmp(const pjmedia_sdp_session *sd1,
                                              const pjmedia_sdp_session *sd2,
                                              unsigned option);
+
+
+/**
+ * The declaration of customized SDP session comparison callback. See
+ * #pjmedia_sdp_session_register_cmp_cb() for more info.
+ *
+ * @param sd1       The first SDP session to compare.
+ * @param sd2       The second SDP session to compare.
+ * @param option    Must be zero for now.
+ * @param status    Status code to be returned for the SDP comparison result
+ *                  (PJ_SUCCESS meaning both SDPs are equal).
+ *                  On input, it contains the return status of
+ *                  #pjmedia_sdp_session_cmp().
+ */
+typedef void (*pjmedia_sdp_session_cmp_cb)(const pjmedia_sdp_session *sd1,
+                                           const pjmedia_sdp_session *sd2,
+                                           unsigned option,
+                                           pj_status_t *status);
+
+
+/**
+ * Register customized SDP session comparison callback. The callback will
+ * be called by #pjmedia_sdp_session_cmp().
+ * To unregister, just call this function with parameter cb set to NULL.
+ *
+ * @param cb            The customized SDP session comparison callback or
+ *                      NULL to unregister the callback.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_sdp_session_register_cmp_cb(pjmedia_sdp_session_cmp_cb cb);
 
 
 /**

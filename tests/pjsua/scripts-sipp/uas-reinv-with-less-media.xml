@@ -100,7 +100,7 @@
       From: sipp  <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
       To[$3]
       Call-ID: [call_id]
-      Cseq: 1 ACK
+      Cseq: 2 ACK
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       Content-Length: 0

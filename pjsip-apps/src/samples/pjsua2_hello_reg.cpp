@@ -42,7 +42,7 @@ int main()
     acfg.idUri = "sip:test@sip.pjsip.org";
     acfg.regConfig.registrarUri = "sip:sip.pjsip.org";
     AuthCredInfo cred("digest", "*", "test", 0, "secret");
-    acfg.sipConfig.authCreds.push_back( cred );
+    acfg.sipConfig.authCreds.push_back( PJSUA2_MOVE(cred) );
 
     // Create the account
     MyAccount *acc = new MyAccount;

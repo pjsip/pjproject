@@ -33,6 +33,7 @@
 #ifndef __PJSIP_SIMPLE_H__
 #define __PJSIP_SIMPLE_H__
 
+#include <pjsip-simple/dlg_event.h>
 #include <pjsip-simple/evsub.h>
 #include <pjsip-simple/evsub_msg.h>
 #include <pjsip-simple/iscomposing.h>

@@ -98,7 +98,8 @@ typedef struct pjmedia_codec_opus_config
 {
     unsigned   sample_rate; /**< Sample rate in Hz.                     */
     unsigned   channel_cnt; /**< Number of channels.                    */
-    unsigned   frm_ptime;   /**< Frame time in msec.                    */
+    unsigned   frm_ptime;   /**< Frame ptime in msec.                   */
+    unsigned   frm_ptime_denum;/**< Frame ptime denumerator, can be zero*/
     unsigned   bit_rate;    /**< Encoder bit rate in bps.               */
     unsigned   packet_loss; /**< Encoder's expected packet loss pct.    */
     unsigned   complexity;  /**< Encoder complexity, 0-10(10 is highest)*/

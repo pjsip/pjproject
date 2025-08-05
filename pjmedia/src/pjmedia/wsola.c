@@ -632,11 +632,15 @@ static void expand(pjmedia_wsola *wsola, unsigned needed)
         templ = reg1 + reg1_len - wsola->hanning_size;
         CHECK_(templ - reg1 >= wsola->hist_size);
 
-        start = find_pitch(templ, 
-                           templ - wsola->expand_sr_max_dist, 
-                           templ - wsola->expand_sr_min_dist,
-                           wsola->templ_size, 
-                           1);
+        if ((wsola->options & PJMEDIA_WSOLA_NO_PLC) == 0) {
+            start = find_pitch(templ,
+                               templ - wsola->expand_sr_max_dist,
+                               templ - wsola->expand_sr_min_dist,
+                               wsola->templ_size,
+                               1);
+        } else {
+            start = PJ_MAX(templ - needed + generated, reg1);
+        }
 
         /* Should we make sure that "start" is really aligned to
          * channel #0, in case of stereo? Probably not necessary, as
@@ -683,6 +687,7 @@ static void expand(pjmedia_wsola *wsola, unsigned needed)
         generated += dist;
 
         if (generated >= needed) {
+            PJ_UNUSED_ARG(rep);
             TRACE_((THIS_FILE, "WSOLA frame expanded after %d iterations", 
                     rep));
             break;
@@ -734,6 +739,7 @@ static unsigned compress(pjmedia_wsola *wsola, pj_int16_t *buf, unsigned count,
         samples_del += dist;
 
         if (samples_del >= del_cnt) {
+            PJ_UNUSED_ARG(rep);
             TRACE_((THIS_FILE, 
                     "Erased %d of %d requested after %d iteration(s)",
                     samples_del, del_cnt, rep));

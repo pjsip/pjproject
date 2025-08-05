@@ -34,12 +34,17 @@
 #include "modules/audio_processing/ns/noise_suppressor.h"
 #include "modules/audio_processing/gain_controller2.h"
 #include "modules/audio_processing/audio_buffer.h"
+#include "rtc_base/logging.h"
 
 using namespace webrtc;
 
 #include "echo_internal.h"
 
 #define THIS_FILE               "echo_webrtc_aec3.cpp"
+
+#define TRACE_WEBRTC            0
+
+class PjLogSink;
 
 typedef struct webrtc_ec
 {
@@ -58,8 +63,43 @@ typedef struct webrtc_ec
     GainController2 *agc;
     AudioBuffer     *cap_buf;
     AudioBuffer     *rend_buf;
+
+    PjLogSink       *log_sink;
 } webrtc_ec;
 
+
+class PjLogSink : public rtc::LogSink
+{
+public:
+    void OnLogMessage(const std::string& message,
+                      rtc::LoggingSeverity severity) override
+    {
+        /* Trim new line */
+        std::string s = message;
+        s.erase(s.find_last_not_of("\n\r")+1);
+
+        switch (severity) {
+        case rtc::LoggingSeverity::LS_ERROR:
+            PJ_LOG(3, ("webrtc-aec3", "%s", s.c_str()));
+            break;
+        case rtc::LoggingSeverity::LS_WARNING:
+            PJ_LOG(4,("webrtc-aec3", "%s", s.c_str()));
+            break;
+        default:
+            PJ_LOG(5,("webrtc-aec3", "%s", s.c_str()));
+            break;
+        }
+    }
+
+    void OnLogMessage(const std::string& message) override
+    {
+        /* Trim new line */
+        std::string s = message;
+        s.erase(s.find_last_not_of("\n\r")+1);
+
+        PJ_LOG(5,("webrtc-aec3", "%s", s.c_str()));
+    }
+};
 
 /*
  * Create the AEC.
@@ -75,8 +115,13 @@ PJ_DEF(pj_status_t) webrtc_aec3_create(pj_pool_t *pool,
     webrtc_ec *echo;
    
     *p_echo = NULL;
-    
+
+#if WEBRTC_LINUX == 1 && defined(WEBRTC_ARCH_ARM_V7)
+    /* Workaround to fix alignment trap issue on Linux ARMv7 machine. */
+    echo = new webrtc_ec();
+#else
     echo = PJ_POOL_ZALLOC_T(pool, webrtc_ec);
+#endif
     PJ_ASSERT_RETURN(echo != NULL, PJ_ENOMEM);
     
     if (clock_rate != 16000 && clock_rate != 32000 && clock_rate != 48000) {
@@ -90,6 +135,12 @@ PJ_DEF(pj_status_t) webrtc_aec3_create(pj_pool_t *pool,
     echo->clock_rate = clock_rate;
     echo->frame_length = clock_rate/100;
     echo->num_bands = clock_rate/16000;
+
+#if TRACE_WEBRTC
+    echo->log_sink = new PjLogSink();
+    rtc::LogMessage::AddLogToStream(echo->log_sink,
+                                    rtc::LoggingSeverity::LS_INFO);
+#endif
     
     echo->aec = new EchoCanceller3(EchoCanceller3Config(), clock_rate,
                                    channel_count, channel_count);
@@ -104,6 +155,7 @@ PJ_DEF(pj_status_t) webrtc_aec3_create(pj_pool_t *pool,
         /* Valid values are 6, 12, 18, 21 dB */
         cfg.target_level = NsConfig::SuppressionLevel::k12dB;
         echo->ns = new NoiseSuppressor(cfg, clock_rate, channel_count);
+        PJ_LOG(5, (THIS_FILE, "WebRTC AEC3 has noise suppressor enabled"));
     }
 
     if (options & PJMEDIA_ECHO_USE_GAIN_CONTROLLER) {
@@ -112,8 +164,10 @@ PJ_DEF(pj_status_t) webrtc_aec3_create(pj_pool_t *pool,
         
         AudioProcessing::Config::GainController2 cfg;
         cfg.adaptive_digital.enabled = true;
-        if (GainController2::Validate(cfg))
+        if (GainController2::Validate(cfg)) {
             echo->agc->ApplyConfig(cfg);
+            PJ_LOG(5, (THIS_FILE, "WebRTC AEC3 has AGC enabled"));
+        }
     }
 
     /* Done */
@@ -152,6 +206,16 @@ PJ_DEF(pj_status_t) webrtc_aec3_destroy(void *state )
         echo->rend_buf = NULL;
     }
 
+    if (echo->log_sink) {
+        rtc::LogMessage::RemoveLogToStream(echo->log_sink);
+        delete echo->log_sink;
+        echo->log_sink = NULL;
+    }
+
+#if WEBRTC_LINUX == 1 && defined(WEBRTC_ARCH_ARM_V7)
+    delete echo;
+#endif
+
     return PJ_SUCCESS;
 }
 
@@ -188,7 +252,7 @@ PJ_DEF(pj_status_t) webrtc_aec3_cancel_echo(void *state,
     PJ_ASSERT_RETURN(echo && rec_frm && play_frm, PJ_EINVAL);
 
     for (i = 0; i < echo->samples_per_frame;
-         i += echo->frame_length)
+         i += (echo->frame_length * echo->channel_count))
     {
         StreamConfig scfg(echo->clock_rate, echo->channel_count);
 

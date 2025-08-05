@@ -26,7 +26,18 @@
 #if defined(PJ_GETADDRINFO_USE_CFHOST) && PJ_GETADDRINFO_USE_CFHOST!=0
 #   include <CoreFoundation/CFString.h>
 #   include <CFNetwork/CFHost.h>
+
+#elif defined(PJ_GETADDRINFO_USE_ANDROID) && PJ_GETADDRINFO_USE_ANDROID!=0
+#   include <sys/poll.h>
+#   include <resolv.h>
+#   include <netdb.h>
+#   include <android/multinetwork.h>
+#   include <sys/system_properties.h>
+#   include <dlfcn.h>
 #endif
+
+#define THIS_FILE       "addr_resolv_sock.c"
+#define ANDROID_DNS_TIMEOUT_MS       5000
 
 PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 {
@@ -146,7 +157,8 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
                     continue;
 
                 /* Store canonical name */
-                pj_ansi_strcpy(ai[i].ai_canonname, nodecopy);
+                pj_ansi_strxcpy(ai[i].ai_canonname, nodecopy, 
+                                sizeof(ai[i].ai_canonname));
                 
                 /* Store address */
                 addr_size = sizeof(*addr);
@@ -173,6 +185,232 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     CFRelease(hostname);
     
     return status;
+
+#elif defined(PJ_GETADDRINFO_USE_ANDROID) && PJ_GETADDRINFO_USE_ANDROID!=0
+    /* Unlike Android API functions which can be safeguarded with
+     * __builtin_available, functions from libraries like libc.so
+     * cannot be loaded directly, even surrounded by a statement
+     * checking their availability. ns_initparse and ns_parserr are only
+     * available since Android API 23. This leads to failure of compiling
+     * for Android API 21. Hence, the two functions are dynamically loaded
+     * so that the library can be compiled with the minimal API 21.
+     * Otherwise, PJLIB would only compile with APP_PLATFORM=23 at minimum.
+     */
+	 
+
+    if (__builtin_available(android 29, *)) {
+        /* Define function pointers type for ns_initparse and ns_parserr.
+         * These functions are in libc.so in Android (Bionic) and not
+         * in libresolv.so like usually in Linux */
+        typedef int (*ns_initparse_fn)(const unsigned char *, int, void *);
+        typedef int (*ns_parserr_fn)(const void *, int, int, void *);
+        /* Initialize function pointers to NULL */
+        ns_initparse_fn ns_initparse_ptr = NULL;
+        ns_parserr_fn ns_parserr_ptr = NULL;
+        /* Load the libc.so library containing network functions */
+        void *libc_handle = dlopen("libc.so", RTLD_NOW);
+        if (libc_handle) {
+            /* Get the ns_initparse, ns_initparse functions from library */
+            ns_initparse_ptr = (ns_initparse_fn)
+                               dlsym(libc_handle,
+                               "ns_initparse");
+            ns_parserr_ptr = (ns_parserr_fn)
+                             dlsym(libc_handle,
+                             "ns_parserr");
+
+            /* Non-null pointers mean DNS functions are properly loaded */
+            if (ns_initparse_ptr &&
+                ns_parserr_ptr) {
+                pj_bzero(&hint, sizeof(hint));
+                hint.ai_family = af;
+                /* Zero value of ai_socktype means the implementation shall
+                 * attempt to resolve the service name for all supported
+                 * socket types */
+                hint.ai_socktype = SOCK_STREAM;
+
+                /* Perform asynchronous DNS resolution
+                 * Use NETWORK_UNSPECIFIED lets system choose the network */
+                unsigned int netid = NETWORK_UNSPECIFIED;
+				/* Buffer for the DNS response */
+                unsigned char answer[NS_PACKETSZ];
+                int rcode = -1;
+                struct addrinfo *result = NULL, *last = NULL;
+
+                /* Step 1: Send DNS query */
+                int resp_handle = android_res_nquery(
+                                netid, nodecopy, ns_c_in,
+                                af == PJ_AF_INET ? ns_t_a :
+                                af == PJ_AF_INET6 ? ns_t_aaaa :
+                                ns_t_a,
+                                0);
+                if (resp_handle < 0) {
+                    printf("android_res_nquery() failed\n");
+                    return PJ_ERESOLVE;
+                }
+
+                /* Step 2: Wait for response using poll() */
+                struct pollfd fds;
+                fds.fd = resp_handle;
+                fds.events = POLLIN;
+                int ret = poll(&fds, 1, ANDROID_DNS_TIMEOUT_MS);
+
+                if (ret <= 0) {
+                    PJ_LOG(4,(THIS_FILE,"Poll timeout or error"));
+                    android_res_cancel(resp_handle);
+                    return PJ_ERESOLVE;
+                }
+                /* Step 3: Get DNS response */
+                int response_size = android_res_nresult(
+                                  resp_handle, &rcode, answer, sizeof(answer));
+                if (response_size < 0) {
+                    PJ_LOG(4,(THIS_FILE,
+                              "android_res_nresult() failed"));
+                    return PJ_ERESOLVE;
+                }
+
+                /* Step 4: Parse the DNS response */
+                ns_msg msg;
+                ns_rr rr;
+                int num_records, resolved_count = 0;
+
+                if (ns_initparse_ptr(answer, response_size, &msg) < 0) {
+                    PJ_LOG(4,(THIS_FILE,
+                              "Failed to parse DNS response"));
+                    return PJ_ERESOLVE;
+                }
+
+                num_records = ns_msg_count(msg, ns_s_an);
+                if (num_records == 0) {
+                    PJ_LOG(4,(THIS_FILE,
+                              "No DNS %s entries found for %s",
+                              af == PJ_AF_INET ? "A" :
+                              af == PJ_AF_INET6 ? "AAAA" :
+                              "A",
+                              nodecopy));
+                    return PJ_ERESOLVE;
+                }
+
+                /* Process each answer record */
+                for (i = 0; i < num_records && resolved_count < *count; i++) {
+                    if (ns_parserr_ptr(&msg, ns_s_an, i, &rr) < 0) {
+                        continue;
+                    }
+
+                    int type = ns_rr_type(rr);
+                    int rdlen = ns_rr_rdlen(rr);
+                    const unsigned char *rdata = ns_rr_rdata(rr);
+
+                    /* We handle A records (IPv4) and AAAA records (IPv6) */
+                    if ((type == ns_t_a && rdlen == 4) || (type == ns_t_aaaa
+						&& rdlen == 16)) {
+
+                        /* For IPv4, fill a temporary sockaddr_in */
+                        /* For IPv6 fill a sockaddr_in6. */
+                        if (type == ns_t_a) {
+                            struct sockaddr_in addr;
+                            pj_bzero(&addr, sizeof(addr));
+                            addr.sin_family = PJ_AF_INET;
+                            pj_memcpy(&addr.sin_addr, rdata, 4);
+                            /* Copy the sockaddr into pj_addrinfo.ai_addr */
+                            pj_memcpy(&ai[resolved_count].ai_addr,
+                                      &addr, sizeof(addr));
+                        } else {
+                            /* type == ns_t_aaaa */
+                            struct sockaddr_in6 addr6;
+                            pj_bzero(&addr6, sizeof(addr6));
+                            addr6.sin6_family = PJ_AF_INET6;
+                            pj_memcpy(&addr6.sin6_addr, rdata, 16);
+                            pj_memcpy(&ai[resolved_count].ai_addr,
+                                      &addr6, sizeof(addr6));
+                        }
+
+                        /* Store canonical name into ai[].ai_canonname */
+                        pj_ansi_strxcpy(ai[resolved_count].ai_canonname,
+                                nodename->ptr,
+                                sizeof(ai[resolved_count].ai_canonname));
+                        resolved_count++;
+                    }
+                }
+
+                /* Update the count with the number of valid entries found. */
+                *count = resolved_count;
+
+                if (resolved_count == 0) {
+                    return PJ_ERESOLVE;
+                }
+                return PJ_SUCCESS;
+            }
+        }
+    }
+    /* Android fallback to getaddrinfo() for API levels < 29 */
+    pj_bzero(&hint, sizeof(hint));
+    hint.ai_family = af;
+    /* Zero value of ai_socktype means the implementation shall attempt
+     * to resolve the service name for all supported socket types */
+    hint.ai_socktype = 0;
+
+    rc = getaddrinfo(nodecopy, NULL, &hint, &res);
+    if (rc != 0)
+        return PJ_ERESOLVE;
+
+    orig_res = res;
+
+    /* Enumerate each item in the result */
+    for (i=0; i<*count && res; res=res->ai_next) {
+        unsigned j;
+        pj_bool_t duplicate_found = PJ_FALSE;
+
+        /* Ignore unwanted address families */
+        if (af!=PJ_AF_UNSPEC && res->ai_family != af)
+            continue;
+
+        if (res->ai_socktype != pj_SOCK_DGRAM() &&
+            res->ai_socktype != pj_SOCK_STREAM() &&
+            /* It is possible that the result's sock type
+             * is unspecified.
+             */
+            res->ai_socktype != 0)
+            {
+            continue;
+            }
+
+        /* Add current address in the resulting list if there
+         * is no duplicates only. */
+        for (j = 0; j < i; j++) {
+            if (!pj_sockaddr_cmp(&ai[j].ai_addr, res->ai_addr)) {
+                duplicate_found = PJ_TRUE;
+                break;
+            }
+        }
+        if (duplicate_found) {
+            continue;
+        }
+
+        /* Store canonical name (possibly truncating the name) */
+        if (res->ai_canonname) {
+            pj_ansi_strxcpy(ai[i].ai_canonname, res->ai_canonname,
+                            sizeof(ai[i].ai_canonname));
+        } else {
+            pj_ansi_strxcpy(ai[i].ai_canonname, nodecopy,
+                            sizeof(ai[i].ai_canonname));
+        }
+
+        /* Store address */
+        PJ_ASSERT_ON_FAIL(res->ai_addrlen <= sizeof(pj_sockaddr), continue);
+        pj_memcpy(&ai[i].ai_addr, res->ai_addr, res->ai_addrlen);
+        PJ_SOCKADDR_RESET_LEN(&ai[i].ai_addr);
+
+        /* Next slot */
+        ++i;
+    }
+
+    *count = i;
+
+    freeaddrinfo(orig_res);
+
+    /* Done */
+    return (*count > 0? PJ_SUCCESS : PJ_ERESOLVE);
+
 #else
     /* Call getaddrinfo() */
     pj_bzero(&hint, sizeof(hint));
@@ -220,11 +458,11 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
         /* Store canonical name (possibly truncating the name) */
         if (res->ai_canonname) {
-            pj_ansi_strncpy(ai[i].ai_canonname, res->ai_canonname,
+            pj_ansi_strxcpy(ai[i].ai_canonname, res->ai_canonname,
                             sizeof(ai[i].ai_canonname));
-            ai[i].ai_canonname[sizeof(ai[i].ai_canonname)-1] = '\0';
         } else {
-            pj_ansi_strcpy(ai[i].ai_canonname, nodecopy);
+            pj_ansi_strxcpy(ai[i].ai_canonname, nodecopy,
+                            sizeof(ai[i].ai_canonname));
         }
 
         /* Store address */
@@ -303,9 +541,8 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
         pj_bzero(ai, max_count * sizeof(pj_addrinfo));
 
         for (i=0; he.h_addr_list[i] && *count<max_count; ++i) {
-            pj_ansi_strncpy(ai[*count].ai_canonname, he.h_name,
+            pj_ansi_strxcpy(ai[*count].ai_canonname, he.h_name,
                             sizeof(ai[*count].ai_canonname));
-            ai[*count].ai_canonname[sizeof(ai[*count].ai_canonname)-1] = '\0';
 
             ai[*count].ai_addr.ipv4.sin_family = PJ_AF_INET;
             pj_memcpy(&ai[*count].ai_addr.ipv4.sin_addr,

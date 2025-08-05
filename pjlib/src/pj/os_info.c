@@ -70,26 +70,26 @@
 #endif
 
 
-static char *ver_info(pj_uint32_t ver, char *buf)
+static char *ver_info(pj_uint32_t ver, char *buf, unsigned buf_size)
 {
-    pj_size_t len;
-
     if (ver == 0) {
         *buf = '\0';
         return buf;
     }
 
-    sprintf(buf, "-%u.%u",
+    pj_ansi_snprintf(buf, buf_size, "-%u.%u",
             (ver & 0xFF000000) >> 24,
             (ver & 0x00FF0000) >> 16);
-    len = strlen(buf);
 
     if (ver & 0xFFFF) {
-        sprintf(buf+len, ".%u", (ver & 0xFF00) >> 8);
-        len = strlen(buf);
+        char tmp[20];
+
+        pj_ansi_snprintf(tmp, sizeof(tmp), ".%u", (ver & 0xFF00) >> 8);
+        pj_ansi_strxcat(buf, tmp, buf_size);
 
         if (ver & 0x00FF) {
-            sprintf(buf+len, ".%u", (ver & 0xFF));
+            pj_ansi_snprintf(tmp, sizeof(tmp), ".%u", (ver & 0xFF));
+            pj_ansi_strxcat(buf, tmp, buf_size);
         }
     }
 
@@ -330,12 +330,12 @@ get_sdk_info:
         cnt = pj_ansi_snprintf(tmp, sizeof(tmp),
                                "%s%s%s%s%s%s%s",
                                si.os_name.ptr,
-                               ver_info(si.os_ver, os_ver),
+                               ver_info(si.os_ver, os_ver, sizeof(os_ver)),
                                (si.machine.slen ? "/" : ""),
                                si.machine.ptr,
                                (si.sdk_name.slen ? "/" : ""),
                                si.sdk_name.ptr,
-                               ver_info(si.sdk_ver, sdk_ver));
+                               ver_info(si.sdk_ver, sdk_ver, sizeof(sdk_ver)));
         if (cnt > 0 && cnt < (int)sizeof(tmp)) {
             ALLOC_CP_STR(tmp, info);
         }

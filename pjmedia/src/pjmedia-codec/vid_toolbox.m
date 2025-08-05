@@ -35,19 +35,15 @@
 
 #if (defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE)
 #import <UIKit/UIKit.h>
-
-#  define DEFAULT_WIDTH         352
-#  define DEFAULT_HEIGHT        288
-#else
-#  define DEFAULT_WIDTH         720
-#  define DEFAULT_HEIGHT        480
 #endif
 
+#define DEFAULT_WIDTH           720
+#define DEFAULT_HEIGHT          480
 #define DEFAULT_FPS             15
-#define DEFAULT_AVG_BITRATE     256000
-#define DEFAULT_MAX_BITRATE     256000
+#define DEFAULT_AVG_BITRATE     384000
+#define DEFAULT_MAX_BITRATE     512000
 
-#define MAX_RX_WIDTH            1200
+#define MAX_RX_WIDTH            1280
 #define MAX_RX_HEIGHT           800
 
 #define SPS_PPS_BUF_SIZE        32
@@ -168,7 +164,7 @@ typedef struct vtool_codec_data
     pj_uint8_t                  *dec_buf;
     unsigned                     dec_buf_size;
     CMFormatDescriptionRef       dec_format;
-    OSStatus             dec_status;
+    OSStatus                     dec_status;
 
     unsigned                     dec_sps_size;
     unsigned                     dec_pps_size;
@@ -358,7 +354,7 @@ static pj_status_t vtool_alloc_codec(pjmedia_vid_codec_factory *factory,
 
     *p_codec = NULL;
 
-    pool = pj_pool_create(vtool_factory.pf, "vtool%p", 512, 512, NULL);
+    pool = pj_pool_create(vtool_factory.pf, "vtool%p", 16000, 4000, NULL);
     if (!pool)
         return PJ_ENOMEM;
 
@@ -558,20 +554,28 @@ static OSStatus create_encoder(vtool_codec_data *vtool_data)
 
     ret = VTSessionCopySupportedPropertyDictionary(vtool_data->enc,
                                                    &supported_prop);
-    if (ret == noErr &&
-        CFDictionaryContainsKey(supported_prop,
+    if (ret == noErr) {
+        if (CFDictionaryContainsKey(supported_prop,
                                 kVTCompressionPropertyKey_MaxH264SliceBytes))
-    {
-        /* kVTCompressionPropertyKey_MaxH264SliceBytes is not yet supported
-         * by Apple. We leave it here for possible future enhancements.
-        SET_PROPERTY(vtool_data->enc,
-                     kVTCompressionPropertyKey_MaxH264SliceBytes,
-                     // param->enc_mtu - NAL_HEADER_ADD_0X30BYTES
-                     (__bridge CFTypeRef)@(param->enc_mtu - 50));
-         */
+        {
+            /* kVTCompressionPropertyKey_MaxH264SliceBytes is not yet supported
+             * by Apple. We leave it here for possible future enhancements.
+            SET_PROPERTY(vtool_data->enc,
+                         kVTCompressionPropertyKey_MaxH264SliceBytes,
+                         // param->enc_mtu - NAL_HEADER_ADD_0X30BYTES
+                         (__bridge CFTypeRef)@(param->enc_mtu - 50));
+             */
+        }
+
+        CFRelease(supported_prop);
     }
 
     VTCompressionSessionPrepareToEncodeFrames(vtool_data->enc);
+
+    PJ_LOG(4, (THIS_FILE, "Video Toolbox encoder bitrate initialized to "
+                          "%d avg bps and %d max bps",
+                          param->enc_fmt.det.vid.avg_bps,
+                          param->enc_fmt.det.vid.max_bps));
 
     return ret;
 }
@@ -737,10 +741,36 @@ static pj_status_t vtool_codec_close(pjmedia_vid_codec *codec)
 static pj_status_t vtool_codec_modify(pjmedia_vid_codec *codec,
                                       const pjmedia_vid_codec_param *param)
 {
+    struct vtool_codec_data *vtool_data;
+    OSStatus ret;
+
     PJ_ASSERT_RETURN(codec && param, PJ_EINVAL);
-    PJ_UNUSED_ARG(codec);
-    PJ_UNUSED_ARG(param);
-    return PJ_EINVALIDOP;
+
+    vtool_data = (vtool_codec_data*) codec->codec_data;
+
+    SET_PROPERTY(vtool_data->enc,
+                 kVTCompressionPropertyKey_AverageBitRate,
+                 (__bridge CFTypeRef)@(param->enc_fmt.det.vid.avg_bps));
+    if (ret != noErr)
+        return PJMEDIA_CODEC_EUNSUP;
+
+    vtool_data->prm->enc_fmt.det.vid.avg_bps = param->enc_fmt.det.vid.avg_bps;
+
+    SET_PROPERTY(vtool_data->enc,
+                 kVTCompressionPropertyKey_DataRateLimits,
+                 ((__bridge CFArrayRef) // [Bytes, second]
+                 @[@(param->enc_fmt.det.vid.max_bps >> 3), @(1)]));
+    if (ret == noErr) {
+        vtool_data->prm->enc_fmt.det.vid.max_bps =
+            param->enc_fmt.det.vid.max_bps;
+
+        PJ_LOG(4, (THIS_FILE, "Video Toolbox encoder bitrate is modified to "
+                              "%d avg bps and %d max bps",
+                              param->enc_fmt.det.vid.avg_bps,
+                              param->enc_fmt.det.vid.max_bps));
+    }
+
+    return PJ_SUCCESS;
 }
 
 static pj_status_t vtool_codec_get_param(pjmedia_vid_codec *codec,
@@ -1015,7 +1045,7 @@ static void decode_cb(void *decompressionOutputRefCon,
                       CMTime presentationDuration)
 {
     struct vtool_codec_data *vtool_data;
-    pj_size_t width, height, len;
+    pj_size_t width, height, len = 0;
     
     /* This callback can be called from another, unregistered thread.
      * So do not call pjlib functions here.
@@ -1041,7 +1071,12 @@ static void decode_cb(void *decompressionOutputRefCon,
         vtool_data->dec_fmt_change = PJ_FALSE;
     }
 
-    len = process_i420(imageBuffer, (pj_uint8_t *)vtool_data->dec_frame->buf);
+    if (vtool_data->dec_frame->size >= width * height * 3 / 2) {
+        len = process_i420(imageBuffer,
+                           (pj_uint8_t *)vtool_data->dec_frame->buf);
+    } else {
+        vtool_data->dec_status = (OSStatus)PJMEDIA_CODEC_EFRMTOOSHORT;
+    }
     vtool_data->dec_frame->size = len;
 
     CVPixelBufferUnlockBaseAddress(imageBuffer,0);
@@ -1127,7 +1162,7 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
     const int code_size = PJ_ARRAY_SIZE(start_code);
     pj_bool_t has_frame = PJ_FALSE;
     unsigned buf_pos, whole_len = 0;
-    unsigned i, frm_cnt;
+    unsigned i;
     pj_status_t status = PJ_SUCCESS;
     pj_bool_t decode_whole = DECODE_WHOLE;
     OSStatus ret;
@@ -1198,7 +1233,7 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
      * Step 2: parse the individual NAL and give to decoder
      */
     buf_pos = 0;
-    for ( frm_cnt=0; ; ++frm_cnt) {
+    while (1) {
         uint32_t frm_size, nalu_type, data_length;
         unsigned char *start;
 
@@ -1281,6 +1316,7 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
             
             if (ret == noErr) {
                 vtool_data->dec_frame = output;
+                vtool_data->dec_frame->size = out_size;
                 ret = VTDecompressionSessionDecodeFrame(
                           vtool_data->dec, sample_buf, 0,
                           NULL, NULL);
@@ -1318,8 +1354,9 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
                 }
 
                 if ((ret != noErr) || (vtool_data->dec_status != noErr)) {
-            char *ret_err = (ret != noErr)?"decode err":"cb err";
-            OSStatus err_code = (ret != noErr)?ret:vtool_data->dec_status;
+                    char *ret_err = (ret != noErr)?"decode err":"cb err";
+                    OSStatus err_code = (ret != noErr)? ret:
+                                        vtool_data->dec_status;
 
                     PJ_LOG(5,(THIS_FILE, "Failed to decode frame %d of size "
                                  "%d %s:%d", nalu_type, frm_size, ret_err,
@@ -1370,8 +1407,8 @@ on_return:
                               PJMEDIA_EVENT_PUBLISH_DEFAULT);
 
         PJ_LOG(5,(THIS_FILE, "Decode couldn't produce picture, "
-                  "input nframes=%d, concatenated size=%d bytes",
-                  count, whole_len));
+                  "input nframes=%lu, concatenated size=%d bytes",
+                  (unsigned long)count, whole_len));
 
         output->type = PJMEDIA_FRAME_TYPE_NONE;
         output->size = 0;

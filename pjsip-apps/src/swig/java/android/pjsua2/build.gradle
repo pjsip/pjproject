@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    compileSdkVersion 29
+    compileSdk 33
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 29
+        targetSdkVersion 33
 
 
         ndk {
@@ -19,8 +19,7 @@ android {
                 arguments "-DANDROID_STL=c++_shared"
             }
         }
-
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
 
@@ -34,5 +33,6 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    namespace 'org.pjsip.pjsua2'
 }
 

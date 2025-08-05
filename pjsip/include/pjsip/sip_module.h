@@ -41,7 +41,7 @@ PJ_BEGIN_DECL
  * structure, and register the structure to PJSIP with 
  * #pjsip_endpt_register_module().
  *
- * The <A HREF="/docs.htm">PJSIP Developer's Guide</A>
+ * The <A HREF="/en/latest/api/pjsip/guide.html">PJSIP Developer's Guide</A>
  * has a thorough discussion on this subject, and readers are encouraged
  * to read the document for more information.
  */
@@ -148,7 +148,7 @@ struct pjsip_module
      * @param tdata     The outgoing request message.
      *
      * @return          Module should return PJ_SUCCESS in all cases. 
-     *                  If non-zero (or PJ_FALSE) is returned, the message 
+     *                  If non-zero is returned, the message 
      *                  will not be sent.
      */
     pj_status_t (*on_tx_request)(pjsip_tx_data *tdata);
@@ -160,7 +160,7 @@ struct pjsip_module
      * @param tdata     The outgoing response message.
      *
      * @return          Module should return PJ_SUCCESS in all cases. 
-     *                  If non-zero (or PJ_FALSE) is returned, the message 
+     *                  If non-zero is returned, the message 
      *                  will not be sent.
      */
     pj_status_t (*on_tx_response)(pjsip_tx_data *tdata);

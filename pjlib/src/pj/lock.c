@@ -469,8 +469,8 @@ PJ_DEF(pj_status_t) pj_grp_lock_create_w_handler( pj_pool_t *pool,
 
     status = pj_grp_lock_create(pool, cfg, p_grp_lock);
     if (status == PJ_SUCCESS) {
-        pj_pool_t *pool = (*p_grp_lock)->pool;
-        grp_lock_add_handler(*p_grp_lock, pool, member, handler, PJ_FALSE);
+        pj_pool_t *grppool = (*p_grp_lock)->pool;
+        grp_lock_add_handler(*p_grp_lock, grppool, member, handler, PJ_FALSE);
     }
     
     return status;

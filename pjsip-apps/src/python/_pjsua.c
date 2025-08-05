@@ -1247,7 +1247,10 @@ static PyObject *py_pjsua_transport_get_info(PyObject *pSelf, PyObject *pArgs)
 
 /*
  * py_pjsua_transport_set_enable
+ * NOTE: This function is commented out because pjsua_transport_set_enable
+ * has been deprecated and is no longer available in the PJSUA API.
  */
+/*
 static PyObject *py_pjsua_transport_set_enable(PyObject *pSelf, 
                                                PyObject *pArgs)
 {
@@ -1264,6 +1267,7 @@ static PyObject *py_pjsua_transport_set_enable(PyObject *pSelf,
 
     return Py_BuildValue("i", status);
 }
+*/
 
 /*
  * py_pjsua_transport_close
@@ -1298,6 +1302,11 @@ static char pjsua_transport_get_info_doc[] =
     "void _pjsua.transport_get_info "
     "(_pjsua.Transport_ID id, _pjsua.Transport_Info info) "
     "Get information about transports.";
+/*
+ * NOTE: pjsua_transport_set_enable_doc is commented out because the
+ * corresponding function has been deprecated and is no longer available.
+ */
+/*
 static char pjsua_transport_set_enable_doc[] =
     "void _pjsua.transport_set_enable "
     "(_pjsua.Transport_ID id, int enabled) "
@@ -1306,6 +1315,7 @@ static char pjsua_transport_set_enable_doc[] =
     "Disabling a transport does not necessarily close the socket, "
     "it will only discard incoming messages and prevent the transport "
     "from being used to send outgoing messages.";
+*/
 static char pjsua_transport_close_doc[] =
     "void _pjsua.transport_close (_pjsua.Transport_ID id, int force) "
     "Close the transport. If transport is forcefully closed, "
@@ -3863,8 +3873,7 @@ static PyObject *py_pj_parse_simple_sip(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     
-    strncpy(tmp, arg_uri, sizeof(tmp));
-    tmp[sizeof(tmp)-1] = '\0';
+    pj_ansi_strxcpy(tmp, arg_uri, sizeof(tmp));
 
     pool = pjsua_pool_create("py_pj_parse_simple_sip", 512, 512);
     uri = pjsip_parse_uri(pool, tmp, strlen(tmp), 0);
@@ -4062,10 +4071,16 @@ static PyMethodDef py_pjsua_methods[] =
         "transport_get_info", py_pjsua_transport_get_info, METH_VARARGS,
         pjsua_transport_get_info_doc
     },
+    /*
+     * NOTE: transport_set_enable is commented out because the underlying
+     * pjsua_transport_set_enable function has been deprecated.
+     */
+    /*
     {
         "transport_set_enable", py_pjsua_transport_set_enable, METH_VARARGS,
         pjsua_transport_set_enable_doc
     },
+    */
     {
        "transport_close", py_pjsua_transport_close, METH_VARARGS,
         pjsua_transport_close_doc
