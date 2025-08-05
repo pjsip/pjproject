@@ -147,6 +147,9 @@ static void cleanup()
 #if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC != 0
     pjmedia_codec_ffmpeg_vid_deinit();
 #endif
+#if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
+    pjmedia_codec_vpx_vid_deinit();
+#endif
 #if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
     pjmedia_codec_openh264_vid_deinit();
 #endif
@@ -503,6 +506,8 @@ static pj_status_t event_cb(pjmedia_event *event, void *user_data)
             break;
         }
     }
+
+    return PJ_SUCCESS;
 }
 
 
@@ -519,7 +524,6 @@ static void pcap2avi(const struct args *args)
         unsigned         payload_len;
     } pkt0;
 
-    //pjmedia_vid_codec_mgr *cmgr;
     const pjmedia_vid_codec_info *ci;
     pjmedia_vid_codec_param param;
     pjmedia_avi_streams *avi_streams = NULL;
@@ -544,8 +548,6 @@ static void pcap2avi(const struct args *args)
     /* Read first packet */
     read_rtp(pkt0.buffer, sizeof(pkt0.buffer), &pkt0.rtp,
              &pkt0.payload, &pkt0.payload_len, PJ_FALSE);
-
-    //cmgr = pjmedia_vid_codec_mgr_instance();
 
     /* Get codec info and param for the specified payload type */
     app.pt = pkt0.rtp->pt;
@@ -580,15 +582,14 @@ static void pcap2avi(const struct args *args)
     /* Loop reading PCAP and writing AVI file */
     for (;;) {
         struct pkt pkt1;
-        pj_timestamp ts;
-        pjmedia_frame frame = {0}, out_frame = {0};
-        long samples_cnt, ts_gap;
+        pjmedia_frame frame, out_frame;
 
+        pj_bzero(&out_frame, sizeof(out_frame));
         out_frame.buf = buf;
         out_frame.size = MAX_BUF_SIZE;
-        ts.u64 = 0;
 
         /* Decode and write to WAV file */
+        pj_bzero(&frame, sizeof(frame));
         frame.buf = pkt0.payload;
         frame.size = pkt0.payload_len;
         T( pjmedia_vid_codec_decode(app.vcodec, 1, &frame,
@@ -619,10 +620,6 @@ static void pcap2avi(const struct args *args)
                       &pkt1.payload, &pkt1.payload_len, PJ_TRUE)) {
             break;
         }
-
-        /* Fill in the gap (if any) between pkt0 and pkt1 */
-        ts_gap = pj_ntohl(pkt1.rtp->ts) - pj_ntohl(pkt0.rtp->ts) -
-                 samples_cnt;
 
         /* Next */
         pkt0 = pkt1;
@@ -796,6 +793,9 @@ int main(int argc, char *argv[])
 
 #if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
     T( pjmedia_codec_openh264_vid_init(NULL, &app.cp.factory) );
+#endif
+#if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
+    T( pjmedia_codec_vpx_vid_init(NULL, &app.cp.factory) );
 #endif
 #if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC != 0
     T( pjmedia_codec_ffmpeg_vid_init(NULL, &app.cp.factory) );
