@@ -398,85 +398,6 @@ typedef struct pjsua_file_data
 
 
 /**
- * Media port data.
- */
-typedef enum pjsua_record_status
-{
-	PJSUA_REC_IDLE,
-	PJSUA_REC_RUNNING,
-	PJSUA_REC_STOPPING
-} pjsua_record_status;
-typedef struct pjsua_mport_record_data
-{
-	pjsua_record_status				status;
-	pjmedia_format_id				fmt_id;
-	pj_size_t						max_samples;
-	pj_size_t						max_duration;
-	pj_size_t						max_silence;
-	pj_size_t						eliminate_silence;
-	pj_uint64_t						samples_seen;
-	pj_uint64_t						samples_recorded;
-	pj_timestamp					vad_timestamp;
-	pjmedia_silence_det				*vad;
-	pjmedia_circ_buf				*buffer;
-	pj_event_t						*event;
-	pj_size_t						buffer_size;
-	pj_size_t						threshold;
-	pj_bool_t						signaled;
-	pj_bool_t						overrun;
-	pj_bool_t						is_silence;
-	pj_bool_t						rec_output;
-	pjs_record_end_reason			er;
-} pjsua_mport_record_data;
-typedef struct pjsua_mport_recognition_data
-{
-	pj_event_t						*event;
-	pj_uint32_t						event_cnt;
-	pjs_listen_for_parms			params;
-	pjs_recognition_info			events[32];
-	pj_bool_t						signaled;
-	pj_bool_t						overrun;
-} pjsua_mport_recognition_data;
-typedef enum pjsua_replay_status
-{
-	PJSUA_REP_IDLE,
-	PJSUA_REP_RUNNING,
-	PJSUA_REP_STOPPING,
-	PJSUA_REP_CONFERENCING
-} pjsua_replay_status;
-typedef struct pjsua_mport_replay_data
-{
-	pjsua_replay_status				status;
-	pjmedia_format_id				fmt_id;
-	pj_uint64_t						samples_played;
-	pj_timestamp					timestamp;
-	pjmedia_circ_buf				*buffer;
-	pj_event_t						*event;
-	pj_size_t						buffer_size;
-	pj_size_t						threshold;
-	pj_bool_t						signaled;
-	pj_bool_t						underrun;
-} pjsua_mport_replay_data;
-typedef struct pjsua_mport_data
-{
-	pjmedia_port					base;
-	pj_pool_t						*pool;
-	pjsua_conf_port_id				slot;
-	pj_uint32_t						participant_cnt;
-	pjsua_mport_id					*participants;
-	pj_uint32_t						listener_cnt;
-	pjsua_mport_id					*listeners;
-	pj_uint32_t						mix_cnt;
-	int								mix_adj;
-	int								last_mix_adj;
-	pj_int32_t						*mix_buf;
-	pjsua_mport_record_data			record_data;
-	pjsua_mport_replay_data			play_data;
-	pjsua_mport_recognition_data	recogntion_data;
-} pjsua_mport_data;
-
-
-/**
  * Additional parameters for conference bridge.
  */
 typedef struct pjsua_conf_setting
@@ -527,7 +448,6 @@ typedef struct pjsua_vid_win
     pjmedia_vid_port            *vp_rend;       /**< Renderer vidport   */
     pjsua_conf_port_id           cap_slot;      /**< Capturer conf slot */
     pjsua_conf_port_id           rend_slot;     /**< Renderer conf slot */
-    pjmedia_port		*tee;		/**< Video tee		*/
     pjmedia_vid_dev_index        preview_cap_id;/**< Capture dev id     */
     pj_bool_t                    preview_running;/**< Preview is started*/
     pj_bool_t                    is_native;     /**< Preview is by dev  */
@@ -662,10 +582,6 @@ struct pjsua_data
     unsigned             rec_cnt;   /**< Number of file recorders.      */
     pjsua_file_data      recorder[PJSUA_MAX_RECORDERS];/**< Array of recs.*/
 
-    /* Media ports/channels */
-    unsigned			mport_cnt;	/**< Number of media channels.	*/
-	pjsua_mport_id		mport_id;	/**< Id of last media port that was allocated */
-	pjsua_mport_data	*mport;		/**< Array of media channels.*/
 
     /* Video windows */
 #if PJSUA_HAS_VIDEO

@@ -408,8 +408,6 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->channel_count = 1;
     cfg->audio_frame_ptime = PJSUA_DEFAULT_AUDIO_FRAME_PTIME;
     cfg->max_media_ports = PJSUA_MAX_CONF_PORTS;
-	cfg->mport_record_buffer_size = PJSUA_MPORT_RECORD_BUFFER_SIZE;
-	cfg->mport_replay_buffer_size = PJSUA_MPORT_REPLAY_BUFFER_SIZE;
     cfg->has_ioqueue = PJ_TRUE;
     cfg->thread_cnt = 1;
     cfg->quality = PJSUA_DEFAULT_CODEC_QUALITY;
