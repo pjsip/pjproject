@@ -46,7 +46,9 @@ static const char *USAGE =
 "\n"
 "Options for RTP packet processing:\n"
 ""
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 "  --video                Video mode\n"
+#endif
 "  --codec=codec_id       The codec ID formatted \"name/clock-rate/channel-count\"\n"
 "                         must be specified for codec with dynamic PT,\n"
 "                         e.g: \"Speex/8000\"\n"
@@ -129,14 +131,18 @@ static void cleanup()
         cmgr = pjmedia_endpt_get_codec_mgr(app.mept);
         pjmedia_codec_mgr_dealloc_codec(cmgr, app.codec);
     }
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     if (app.vcodec) {
         pjmedia_vid_codec_close(app.vcodec);
         pjmedia_vid_codec_mgr_dealloc_codec(NULL, app.vcodec);
     }
+#endif
     if (app.aud_strm) {
         pjmedia_aud_stream_stop(app.aud_strm);
         pjmedia_aud_stream_destroy(app.aud_strm);
     }
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
 #if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC != 0
     pjmedia_codec_ffmpeg_vid_deinit();
@@ -150,7 +156,9 @@ static void cleanup()
     pjmedia_converter_mgr_destroy(NULL);
     pjmedia_vid_codec_mgr_destroy(pjmedia_vid_codec_mgr_instance());
 
-   if (app.mept) pjmedia_endpt_destroy(app.mept);
+#endif
+
+    if (app.mept) pjmedia_endpt_destroy(app.mept);
     if (app.pool) pj_pool_release(app.pool);
     pj_caching_pool_destroy(&app.cp);
     pj_shutdown();
@@ -482,6 +490,8 @@ static void pcap2wav(const struct args *args)
 
 static pj_status_t event_cb(pjmedia_event *event, void *user_data)
 {
+    PJ_UNUSED_ARG(user_data);
+
     if (event->epub == app.vcodec) {
         /* This is codec event */
         switch (event->type) {
@@ -498,6 +508,7 @@ static pj_status_t event_cb(pjmedia_event *event, void *user_data)
 
 static void pcap2avi(const struct args *args)
 {
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     const pj_str_t AVI = {".avi", 4};
     enum { MAX_BUF_SIZE = 100 * 1024 * 1024 };
     struct pkt
@@ -621,6 +632,10 @@ static void pcap2avi(const struct args *args)
 
     if (avi_streams && avi_streams->streams[0])
         pjmedia_port_destroy(avi_streams->streams[0]);
+
+#else
+    PJ_UNUSED_ARG(args);
+#endif
 }
 
 
@@ -654,7 +669,9 @@ int main(int argc, char *argv[])
         { "dst-ip",         1, 0, OPT_DST_IP },
         { "src-port",       1, 0, OPT_SRC_PORT },
         { "dst-port",       1, 0, OPT_DST_PORT },
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
         { "video",          0, 0, OPT_VIDEO },
+#endif
         { "codec",          1, 0, OPT_CODEC },
         { "play-dev-id",    1, 0, OPT_PLAY_DEV_ID },
         { "codec-fmtp",     1, 0, OPT_CODEC_FMTP },
@@ -721,9 +738,11 @@ int main(int argc, char *argv[])
         case OPT_CODEC:
             args.codec = pj_str(pj_optarg);
             break;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
         case OPT_VIDEO:
             args.video = PJ_TRUE;
             break;
+#endif
         case OPT_PLAY_DEV_ID:
             args.dev_id = atoi(pj_optarg);
             break;
@@ -766,6 +785,8 @@ int main(int argc, char *argv[])
     T( pjlib_util_init() );
     T( pjmedia_endpt_create(&app.cp.factory, NULL, 0, &app.mept) );
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
     /* Video subsystem init */
     T( pjmedia_vid_dev_subsys_init(&app.cp.factory) );
     T( pjmedia_converter_mgr_create(app.pool, NULL) );
@@ -778,6 +799,8 @@ int main(int argc, char *argv[])
 #endif
 #if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC != 0
     T( pjmedia_codec_ffmpeg_vid_init(NULL, &app.cp.factory) );
+#endif
+
 #endif
 
     T( pj_pcap_open(app.pool, input.ptr, &app.pcap) );
