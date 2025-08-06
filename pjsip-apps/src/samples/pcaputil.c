@@ -499,9 +499,18 @@ static pj_status_t event_cb(pjmedia_event *event, void *user_data)
         /* This is codec event */
         switch (event->type) {
         case PJMEDIA_EVENT_FMT_CHANGED:
-            app.vfmt = event->data.fmt_changed.new_fmt;
-            return PJ_SUCCESS;
+        {
+            pjmedia_format *fmt = &event->data.fmt_changed.new_fmt;
 
+            /* The event may only provide width & height, re-initialize format
+             * with fps, bps, etc.
+             */
+            pjmedia_format_init_video(&app.vfmt,
+                                      fmt->id,
+                                      fmt->det.vid.size.w,
+                                      fmt->det.vid.size.h,
+                                      25, 1);
+        }
         default:
             break;
         }
@@ -598,8 +607,6 @@ static void pcap2avi(const struct args *args)
             if (!avi_streams && app.vfmt.id == PJMEDIA_FORMAT_I420) {
                 /* Open AVI file */
                 if (pj_stristr(&args->wav_filename, &AVI)) {
-                    app.vfmt.det.vid.fps.num = 25;
-                    app.vfmt.det.vid.fps.denum = 1;
                     T( pjmedia_avi_writer_create_streams(app.pool,
                                                          args->wav_filename.ptr,
                                                          1000 * 1024 * 1024, /* max file size */
