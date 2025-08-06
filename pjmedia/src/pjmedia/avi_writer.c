@@ -143,7 +143,7 @@ static void close_avi_file(avi_writer_streams *streams)
         goto on_return;
 
 on_return:
-    pj_file_close(streams->fd);
+    pj_file_close(fd);
     if (status != PJ_SUCCESS) {
         pj_perror(2, THIS_FILE, status,
                   "Error updating length & frame count in AVI header");
@@ -417,7 +417,7 @@ pjmedia_avi_writer_create_streams(pj_pool_t *pool_,
             avi_hdr.strl_hdr[i].codec = format[i].id;
             avi_hdr.strl_hdr[i].rate = afd->clock_rate;
             avi_hdr.strl_hdr[i].scale = 1;
-            avi_hdr.strl_hdr[i].quality = 0xffffffff;
+            avi_hdr.strl_hdr[i].quality = (pj_uint32_t)-1;
             avi_hdr.strl_hdr[i].buf_size = 0;
             avi_hdr.strl_hdr[i].sample_size = afd->bits_per_sample / 8;
             avi_hdr.strl_hdr[i].length = 0; /* will be filled later */
