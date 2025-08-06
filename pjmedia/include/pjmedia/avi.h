@@ -181,6 +181,8 @@ struct pjmedia_avi_hdr
  */
 typedef struct pjmedia_avi_hdr pjmedia_avi_hdr;
 
+#pragma pack(4)
+
 /**
  * This structure describes generic RIFF subchunk header.
  */
@@ -190,6 +192,7 @@ typedef struct pjmedia_avi_subchunk
     pj_uint32_t     len;                /**< Length following this field    */
 } pjmedia_avi_subchunk;
 
+#pragma pack()
 
 /**
  * Internal function to normalize data from AVI's little endian to host
