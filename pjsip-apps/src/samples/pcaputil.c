@@ -491,6 +491,7 @@ static void pcap2wav(const struct args *args)
 }
 
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 static pj_status_t event_cb(pjmedia_event *event, void *user_data)
 {
     PJ_UNUSED_ARG(user_data);
@@ -518,6 +519,7 @@ static pj_status_t event_cb(pjmedia_event *event, void *user_data)
 
     return PJ_SUCCESS;
 }
+#endif
 
 
 static void pcap2avi(const struct args *args)
