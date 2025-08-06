@@ -500,18 +500,19 @@ static pj_status_t event_cb(pjmedia_event *event, void *user_data)
         /* This is codec event */
         switch (event->type) {
         case PJMEDIA_EVENT_FMT_CHANGED:
-        {
-            pjmedia_format *fmt = &event->data.fmt_changed.new_fmt;
+            {
+                pjmedia_format *fmt = &event->data.fmt_changed.new_fmt;
 
-            /* The event may only provide width & height, re-initialize format
-             * with fps, bps, etc.
-             */
-            pjmedia_format_init_video(&app.vfmt,
-                                      fmt->id,
-                                      fmt->det.vid.size.w,
-                                      fmt->det.vid.size.h,
-                                      25, 1);
-        }
+                /* The event may only provide width & height, re-initialize
+                 * format with fps, bps, etc.
+                 */
+                pjmedia_format_init_video(&app.vfmt,
+                                          fmt->id,
+                                          fmt->det.vid.size.w,
+                                          fmt->det.vid.size.h,
+                                          25, 1);
+            }
+            break;
         default:
             break;
         }
@@ -599,7 +600,7 @@ static void pcap2avi(const struct args *args)
         out_frame.buf = buf;
         out_frame.size = MAX_BUF_SIZE;
 
-        /* Decode and write to WAV file */
+        /* Decode and write to AVI file */
         pj_bzero(&frame, sizeof(frame));
         frame.buf = pkt0.payload;
         frame.size = pkt0.payload_len;
