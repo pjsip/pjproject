@@ -67,7 +67,7 @@ struct avi_port
     avi_writer_streams *streams;
 };
 
-static pj_status_t write_headers(avi_writer_streams *streams)
+static pj_status_t write_headers(pj_oshandle_t fd, avi_writer_streams *streams)
 {
     unsigned i;
     pj_ssize_t size;
@@ -75,7 +75,7 @@ static pj_status_t write_headers(avi_writer_streams *streams)
 
     /* Write AVI header. */
     size = sizeof(riff_hdr_t) + sizeof(avih_hdr_t);
-    status = pj_file_write(streams->fd, &streams->avi_hdr, &size);
+    status = pj_file_write(fd, &streams->avi_hdr, &size);
     if (status != PJ_SUCCESS)
         return status;
     streams->total += size;
@@ -83,7 +83,7 @@ static pj_status_t write_headers(avi_writer_streams *streams)
     /* Write stream headers. */
     for (i = 0; i < streams->base.num_streams; i++) {
         size = sizeof(strl_hdr_t);
-        status = pj_file_write(streams->fd, &streams->avi_hdr.strl_hdr[i],
+        status = pj_file_write(fd, &streams->avi_hdr.strl_hdr[i],
                                &size);
         if (status != PJ_SUCCESS)
             return status;
@@ -91,7 +91,7 @@ static pj_status_t write_headers(avi_writer_streams *streams)
 
         size = streams->base.streams[i]->info.fmt.type == PJMEDIA_TYPE_AUDIO?
                sizeof(strf_audio_hdr_t): sizeof(strf_video_hdr_t);
-        status = pj_file_write(streams->fd, &streams->avi_hdr.strf_hdr[i],
+        status = pj_file_write(fd, &streams->avi_hdr.strf_hdr[i],
                                &size);
         if (status != PJ_SUCCESS)
             return status;
@@ -99,6 +99,55 @@ static pj_status_t write_headers(avi_writer_streams *streams)
     }
 
     return PJ_SUCCESS;
+}
+
+static void close_avi_file(avi_writer_streams *streams)
+{
+    pj_off_t file_size;
+    unsigned i;
+    pj_status_t status;
+    pj_oshandle_t fd;
+
+    /* First, reset file handle, best effort in handling race conditions */
+    fd = streams->fd;
+    streams->fd = (pj_oshandle_t)(pj_ssize_t)-1;
+
+    /* Already closed. */
+    if (fd == (pj_oshandle_t)(pj_ssize_t)-1)
+        return;
+
+    /* Set AVI header's file length and total frames. */
+    status = pj_file_getpos(fd, &file_size);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    streams->avi_hdr.riff_hdr.file_len = (pj_uint32_t)
+                                         (file_size - 8);
+    pjmedia_avi_swap_data(&streams->avi_hdr.riff_hdr.file_len,
+                          sizeof(pj_uint32_t), 32);
+    streams->avi_hdr.avih_hdr.tot_frames = (pj_uint32_t)streams->frame_cnt;
+    pjmedia_avi_swap_data(&streams->avi_hdr.avih_hdr.tot_frames,
+                            sizeof(pj_uint32_t), 32);
+
+    for (i = 0; i < streams->base.num_streams; i++) {
+        pjmedia_avi_swap_data(&streams->avi_hdr.strl_hdr[i].length,
+                                sizeof(pj_uint32_t), 32);
+    }
+
+    /* Rewrite headers. */
+    status = pj_file_setpos(fd, 0, PJ_SEEK_SET);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+    status = write_headers(fd, streams);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+on_return:
+    pj_file_close(fd);
+    if (status != PJ_SUCCESS) {
+        pj_perror(2, THIS_FILE, status,
+                  "Error updating length & frame count in AVI header");
+    }
 }
 
 static pj_status_t file_on_event(pjmedia_event *event,
@@ -140,41 +189,10 @@ static pj_status_t avi_put_frame(pjmedia_port *this_port,
     if (fport->streams->total + frame->size + sizeof(pjmedia_avi_subchunk) >
         fport->streams->max_size)
     {
-        pj_off_t file_size;
-        unsigned i;
-
         PJ_LOG(4, (THIS_FILE, "AVI writer max size %zu reached",
                               fport->streams->max_size));
 
-        /* Set AVI header's file length and total frames. */
-        status = pj_file_getpos(fport->streams->fd, &file_size);
-        if (status != PJ_SUCCESS)
-            goto on_return;
-
-        fport->streams->avi_hdr.riff_hdr.file_len = (pj_uint32_t)
-                                                    (file_size - 8);
-        pjmedia_avi_swap_data(&fport->streams->avi_hdr.riff_hdr.file_len,
-                              sizeof(pj_uint32_t), 32);
-        fport->streams->avi_hdr.avih_hdr.tot_frames =fport->streams->frame_cnt;
-        pjmedia_avi_swap_data(&fport->streams->avi_hdr.avih_hdr.tot_frames,
-                              sizeof(pj_uint32_t), 32);
-
-        for (i = 0; i < fport->streams->base.num_streams; i++) {
-            pjmedia_avi_swap_data(&fport->streams->avi_hdr.strl_hdr[i].length,
-                                  sizeof(pj_uint32_t), 32);
-        }
-
-        /* Rewrite headers. */
-        status = pj_file_setpos(fport->streams->fd, 0, PJ_SEEK_SET);
-        if (status != PJ_SUCCESS)
-            goto on_return;
-        status = write_headers(fport->streams);
-        if (status != PJ_SUCCESS)
-            goto on_return;
-
-        /* Close file. */
-        pj_file_close(fport->streams->fd);
-        fport->streams->fd = (pj_oshandle_t)(pj_ssize_t)-1;
+        close_avi_file(fport->streams);
 
         /* Call callback. */
         if (fport->streams->cb2) {
@@ -202,8 +220,10 @@ static pj_status_t avi_put_frame(pjmedia_port *this_port,
     /* Write subchunk header. */
     ch.id = 0;
     ((char *)&ch.id)[0] = '0';
-    ((char *)&ch.id)[1] = '0' + fport->stream_id;
-    ch.len = frame->size;
+    ((char *)&ch.id)[1] = '0' + (char)fport->stream_id;
+    ((char *)&ch.id)[2] = 'd';
+    ((char *)&ch.id)[3] = 'b';
+    ch.len = (pj_uint32_t)frame->size;
     size = sizeof(ch);
     pjmedia_avi_swap_data(&ch, sizeof(ch), 32);
 
@@ -246,11 +266,7 @@ static void streams_on_destroy(void *arg)
         streams->subscribed = PJ_FALSE;
     }
 
-    if (streams->fd != (pj_oshandle_t) (pj_ssize_t)-1) {
-        pj_file_close(streams->fd);
-        streams->fd = (pj_oshandle_t)(pj_ssize_t)-1;
-    }
-
+    close_avi_file(streams);
     pj_pool_safe_release(&streams->base.pool);
 }
 
@@ -401,7 +417,7 @@ pjmedia_avi_writer_create_streams(pj_pool_t *pool_,
             avi_hdr.strl_hdr[i].codec = format[i].id;
             avi_hdr.strl_hdr[i].rate = afd->clock_rate;
             avi_hdr.strl_hdr[i].scale = 1;
-            avi_hdr.strl_hdr[i].quality = -1;
+            avi_hdr.strl_hdr[i].quality = (pj_uint32_t)-1;
             avi_hdr.strl_hdr[i].buf_size = 0;
             avi_hdr.strl_hdr[i].sample_size = afd->bits_per_sample / 8;
             avi_hdr.strl_hdr[i].length = 0; /* will be filled later */
@@ -410,11 +426,12 @@ pjmedia_avi_writer_create_streams(pj_pool_t *pool_,
             strf_hdr->strf = SET_TAG(PJMEDIA_AVI_STRF_TAG);
             strf_hdr->strf_size = sizeof(strf_audio_hdr_t) - 8;
             strf_hdr->fmt_tag = 1; /* 1 for PCM */
-            strf_hdr->nchannels = afd->channel_count;
+            strf_hdr->nchannels = (pj_uint16_t)afd->channel_count;
             strf_hdr->sample_rate = afd->clock_rate;
-            strf_hdr->block_align = afd->channel_count * afd->bits_per_sample / 8;
+            strf_hdr->block_align = (pj_uint16_t)(afd->channel_count *
+                                                  afd->bits_per_sample / 8);
             strf_hdr->bytes_per_sec = strf_hdr->sample_rate * strf_hdr->block_align;
-            strf_hdr->bits_per_sample = afd->bits_per_sample;
+            strf_hdr->bits_per_sample = (pj_uint16_t)afd->bits_per_sample;
 
             /* Normalize header to AVI's little endian. */
             pjmedia_avi_swap_data(&avi_hdr.strl_hdr[i], sizeof(strl_hdr_t), 32);
@@ -434,7 +451,7 @@ pjmedia_avi_writer_create_streams(pj_pool_t *pool_,
         goto on_error;
 
     /* Write headers. */
-    status = write_headers(streams);
+    status = write_headers(streams->fd, streams);
     if (status != PJ_SUCCESS)
         goto on_error;
 
