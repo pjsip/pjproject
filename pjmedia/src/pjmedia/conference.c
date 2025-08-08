@@ -1483,10 +1483,12 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
             return PJ_EINVAL;
         }
 
+        /* Sanity checks */
         pj_assert(src_port->listener_cnt > 0 &&
                   src_port->listener_cnt <= conf->max_ports);
         pj_assert(dst_port->transmitter_cnt > 0 &&
                   dst_port->transmitter_cnt <= conf->max_ports);
+
         pj_array_erase(src_port->listener_slots, sizeof(SLOT_TYPE),
                        src_port->listener_cnt, i);
         pj_array_erase(src_port->listener_adj_level, sizeof(unsigned),
@@ -1863,7 +1865,7 @@ static pj_status_t op_remove_port(pjmedia_conf *conf,
     /* Port must be valid. */
     conf_port = conf->ports[port];
     if (conf_port == NULL) {
-        PJ_PERROR(3, (THIS_FILE, PJ_ENOTFOUND, "Remove port failed"));
+        PJ_PERROR(3, (THIS_FILE, PJ_EINVAL, "Remove port failed"));
         return PJ_EINVAL;
     }
 
