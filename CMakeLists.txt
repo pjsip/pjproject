@@ -70,6 +70,7 @@ add_subdirectory(pjsip-apps)
 
 set(install_targets
   pjlib
+  pjlib-ssl
   pjlib++
   pjlib-util
   pjnath
