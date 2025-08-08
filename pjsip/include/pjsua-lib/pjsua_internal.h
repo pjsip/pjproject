@@ -580,7 +580,7 @@ struct pjsua_data
     /* Calls: */
     pjsua_config         ua_cfg;                /**< UA config.         */
     unsigned             call_cnt;              /**< Call counter.      */
-    pjsua_call           calls[PJSUA_MAX_CALLS];/**< Calls array.       */
+    pjsua_call		*calls;			/**< Calls array.	*/
     pjsua_call_id        next_call_id;          /**< Next call id to use*/
 
     /* Buddy; */
@@ -632,6 +632,8 @@ struct pjsua_data
     unsigned             rec_cnt;   /**< Number of file recorders.      */
     pjsua_file_data      recorder[PJSUA_MAX_RECORDERS];/**< Array of recs.*/
 
+<<<<<<< HEAD
+=======
 #if PJSUA_HAS_VIDEO
     /* AVI file players: */
     pjmedia_vid_dev_factory *avi_factory;      /**< AVI player factory.       */
@@ -644,6 +646,7 @@ struct pjsua_data
     pjsua_avi_recorder_data   avi_recorder[PJSUA_MAX_AVI_RECORDERS];/**< Array 
                                                              of avi recorders.*/
 #endif
+>>>>>>> upstream/master
 
     /* Video windows */
 #if PJSUA_HAS_VIDEO

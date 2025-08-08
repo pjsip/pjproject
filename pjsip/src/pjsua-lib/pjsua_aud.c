@@ -23,6 +23,7 @@
 
 #define THIS_FILE               "pjsua_aud.c"
 
+
 /*****************************************************************************
  *
  * Prototypes
@@ -40,6 +41,7 @@ static pj_status_t create_aud_param(pjmedia_aud_param *param,
                                     unsigned samples_per_frame,
                                     unsigned bits_per_sample,
                                     pj_bool_t use_default_settings);
+
 
 /*****************************************************************************
  *
@@ -172,11 +174,6 @@ on_return:
     return status;
 }
 
-
-/*****************************************************************************
- *
- * Audio media with PJMEDIA backend
- */
 
 /* Init pjmedia audio subsystem */
 pj_status_t pjsua_aud_subsys_init()
