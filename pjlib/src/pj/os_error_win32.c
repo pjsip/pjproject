@@ -145,7 +145,9 @@ int platform_strerror( pj_os_err_type os_errcode,
     PJ_DECL_UNICODE_TEMP_BUF(wbuf,128);
 
     pj_assert(buf != NULL);
-    pj_assert(bufsize >= 0);
+
+    if (bufsize == 0)
+        return 0;
 
     /*
      * MUST NOT check stack here.
