@@ -1665,7 +1665,7 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
                     pj_memcpy(bits_out, pkt->data, pkt->size);
                     bits_out += pkt->size;
                     out_size += pkt->size;
-                    av_packet_unref(&avpacket);
+                    av_packet_unref(pkt);
                 }
             }
             av_packet_free(&pkt);
