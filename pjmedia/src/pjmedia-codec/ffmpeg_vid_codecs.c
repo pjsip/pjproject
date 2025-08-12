@@ -1592,6 +1592,7 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
     AVFrame avframe;
     AVPacket avpacket;
     int err, got_packet;
+    pj_bool_t has_key_frame = PJ_FALSE;
     //AVRational src_timebase;
     /* For some reasons (e.g: SSE/MMX usage), the avcodec_encode_video() must
      * have stack aligned to 16 bytes. Let's try to be safe by preparing the
@@ -1667,6 +1668,8 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
                         pj_memcpy(bits_out, pkt->data, pkt->size);
                         bits_out += pkt->size;
                     }
+                    if (pkt->flags & AV_PKT_FLAG_KEY)
+                        has_key_frame = PJ_TRUE;
                     av_packet_unref(pkt);
                 }
             }
@@ -1685,24 +1688,20 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
     err = avcodec_encode_video2(ff->enc_ctx, &avpacket, &avframe, &got_packet);
     if (!err && got_packet)
         err = avpacket.size;
+    has_key_frame = avpacket.flags & AV_PKT_FLAG_KEY;
 #else
     PJ_UNUSED_ARG(got_packet);
     err = avcodec_encode_video(ff->enc_ctx, avpacket.data, avpacket.size, &avframe);
+    has_key_frame = ff->enc_ctx->coded_frame->key_frame;
 #endif
 
     if (err < 0) {
         print_ffmpeg_err(err);
         return PJMEDIA_CODEC_EFAILED;
     } else {
-        pj_bool_t has_key_frame = PJ_FALSE;
         output->size = err;
         output->bit_info = 0;
 
-#if LIBAVCODEC_VER_AT_LEAST(54,15)
-        has_key_frame = (avpacket.flags & AV_PKT_FLAG_KEY);
-#else
-        has_key_frame = ff->enc_ctx->coded_frame->key_frame;
-#endif
         if (has_key_frame)
             output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
     }
