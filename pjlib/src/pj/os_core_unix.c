@@ -693,6 +693,9 @@ static void *thread_main(void *param)
     rec->stk_start = (char*)&rec;
 #endif
 
+    /* Store the thread. */
+    rec->thread = pthread_self();
+
     /* Set current thread id. */
     rc = pj_thread_local_set(thread_tls_id, rec);
     if (rc != PJ_SUCCESS) {
