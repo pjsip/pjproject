@@ -735,7 +735,6 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 {
 #if PJ_HAS_THREADS
     pj_thread_t *rec;
-    pthread_t thread;
     pthread_attr_t thread_attr;
     void *stack_addr;
     int rc;
@@ -810,7 +809,7 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     /* Create the thread. */
     rec->proc = proc;
     rec->arg = arg;
-    rc = pthread_create( &thread, &thread_attr, &thread_main, rec);
+    rc = pthread_create( &rec->thread, &thread_attr, &thread_main, rec);
     if (rc != 0) {
         pthread_attr_destroy(&thread_attr);
         return PJ_RETURN_OS_ERROR(rc);
