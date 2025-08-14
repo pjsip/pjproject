@@ -1967,7 +1967,7 @@ PJ_DECL(pj_bool_t) pjmedia_conf_compare_port_signature(pjmedia_conf* conf,unsign
 {
     /* Check arguments */
     PJ_ASSERT_RETURN(conf, PJ_FALSE);
-    if (conf_slot<0 || conf_slot >= conf->max_ports)
+    if (conf_slot >= conf->max_ports)
     {
         PJ_LOG(4, (THIS_FILE, " pjmedia_conf_compare_port_signature : [conf_slot : %d], [conf->max_ports:%d]",conf_slot, conf->max_ports));
         return PJ_FALSE;
@@ -1984,12 +1984,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_media_port_info(pjmedia_conf* conf,unsigned
     struct conf_port* conf_port;
 
     /* Check arguments */
-    if (slot < 0 || slot >= conf->max_ports)
+    if (slot >= conf->max_ports)
     {
         PJ_LOG(2, (THIS_FILE, " pjmedia_conf_get_media_port_info : [slot : %d], [conf->max_ports:%d]", slot, conf->max_ports));
         return PJ_EINVAL;
     }
-    PJ_ASSERT_RETURN(conf && slot >=0 && slot < conf->max_ports, PJ_EINVAL);
+    PJ_ASSERT_RETURN(conf && slot < conf->max_ports, PJ_EINVAL);
 
     /* Lock mutex */
     pj_mutex_lock(conf->mutex);
