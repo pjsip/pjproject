@@ -231,7 +231,14 @@ typedef enum pjmedia_port_op
     /**
      * Enable TX and RX to/from this port.
      */
-    PJMEDIA_PORT_ENABLE
+    PJMEDIA_PORT_ENABLE,
+
+    /**
+     * Enable TX and RX to/from this port and invoke get_frame() and
+     * put_frame() even if there are no connections/listeners or non-
+     * silence audio frames respectively.
+     */
+    PJMEDIA_PORT_ENABLE_ALWAYS
 
 } pjmedia_port_op;
 
