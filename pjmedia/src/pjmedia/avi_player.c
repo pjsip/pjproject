@@ -830,6 +830,32 @@ static pj_status_t skip_forward(pjmedia_port *this_port, pj_size_t frames)
         if (status != PJ_SUCCESS)
             return status;
             
+        if (!ch.len ||    /* prevent infinite loop */
+            !ch.id)       /* highly likely that the file is invalid */
+        {
+            char fourcc_name[5];
+            pj_uint32_t sig = ch.id;
+            pj_off_t pos;
+            pj_file_getpos(fport->fd, &pos);
+            if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+                PJ_LOG(2, (THIS_FILE,
+                           "%.*s. Zero length chunk of type %s found at offset=%lu (skip_forward)",
+                           (int)fport->base.info.name.slen,
+                           fport->base.info.name.ptr,
+                           pjmedia_fourcc_name(ch.id, fourcc_name),
+                           (unsigned long)pos));
+
+            else 
+                PJ_LOG(2, (THIS_FILE,
+                           "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu (skip_forward)",
+                           (int)fport->base.info.name.slen,
+                           fport->base.info.name.ptr,
+                           ch.id, ch.len,
+                           (unsigned long)pos));
+
+            return PJMEDIA_ENOTVALIDWAVE;
+        }
+
         PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len, return PJ_EINVAL);
         fport->pad = (pj_uint8_t)ch.len & 1;
 
@@ -1099,6 +1125,30 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
                 goto on_error2;
             }
             
+            if (!ch.len ||    /* prevent infinite loop */
+                !ch.id)       /* highly likely that the file is invalid */
+            {
+                char fourcc_name[5];
+                pj_uint32_t sig = ch.id;
+                if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+                    PJ_LOG(2, (THIS_FILE,
+                               "%.*s. Zero length chunk of type %s found at offset=%lu (avi_get_frame)",
+                               (int)fport->base.info.name.slen,
+                               fport->base.info.name.ptr,
+                               pjmedia_fourcc_name(ch.id, fourcc_name),
+                               (unsigned long)pos));
+
+                else 
+                    PJ_LOG(2, (THIS_FILE,
+                               "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu (avi_get_frame)",
+                               (int)fport->base.info.name.slen,
+                               fport->base.info.name.ptr,
+                               ch.id, ch.len,
+                               (unsigned long)pos));
+
+                return PJMEDIA_ENOTVALIDWAVE;
+            }
+
             PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len, 
                                          status = PJ_EINVAL;  goto on_error2;);
             ch_len = ch.len;
