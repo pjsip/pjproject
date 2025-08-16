@@ -1414,7 +1414,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
                                            const pj_str_t *port_name,
                                            unsigned *p_port )
 {
-    struct conf_port *conf_port;
+    struct conf_port *conf_port = NULL;
     SLOT_TYPE index = INVALID_SLOT;
     pj_status_t status = PJ_SUCCESS;
 
@@ -1493,6 +1493,14 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 
 on_return:
     if (status != PJ_SUCCESS) {
+        if (conf_port) {
+            /* Decrease conf port ref count */
+            if (conf_port->port && conf_port->port->grp_lock)
+                pj_grp_lock_dec_ref(conf_port->port->grp_lock);
+            else
+                destroy_conf_port(conf_port);
+        }
+
         if (index != INVALID_SLOT) {
             conf->ports[index] = NULL;
             conf_release_port( conf, index );
@@ -2356,7 +2364,7 @@ static pj_status_t op_remove_port(pjmedia_conf *conf,
     /* Port must be valid. */
     conf_port = conf->ports[port];
     if (conf_port == NULL) {
-        PJ_PERROR(3, (THIS_FILE, PJ_ENOTFOUND, "Remove port failed"));
+        PJ_PERROR(3, (THIS_FILE, PJ_EINVAL, "Remove port failed"));
         return PJ_EINVAL;
     }
 
