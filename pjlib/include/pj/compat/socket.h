@@ -26,9 +26,7 @@
 
 #if defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H != 0
 #  include <winsock2.h>
-#endif
-
-#if defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H != 0
+#elif defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H != 0
 #  include <winsock.h>
 #endif
 
