@@ -838,20 +838,21 @@ static pj_status_t skip_forward(pjmedia_port *this_port, pj_size_t frames)
             pj_off_t pos;
             pj_file_getpos(fport->fd, &pos);
             if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+            {
                 PJ_LOG(2, (THIS_FILE,
                            "%.*s. Zero length chunk of type %s found at offset=%lu (skip_forward)",
                            (int)fport->base.info.name.slen,
                            fport->base.info.name.ptr,
                            pjmedia_fourcc_name(ch.id, fourcc_name),
                            (unsigned long)pos));
-
-            else 
+            } else {
                 PJ_LOG(2, (THIS_FILE,
                            "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu (skip_forward)",
                            (int)fport->base.info.name.slen,
                            fport->base.info.name.ptr,
                            ch.id, ch.len,
                            (unsigned long)pos));
+            }
 
             return PJMEDIA_ENOTVALIDWAVE;
         }
@@ -1131,22 +1132,23 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
                 char fourcc_name[5];
                 pj_uint32_t sig = ch.id;
                 if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+                {
                     PJ_LOG(2, (THIS_FILE,
                                "%.*s. Zero length chunk of type %s found at offset=%lu (avi_get_frame)",
                                (int)fport->base.info.name.slen,
                                fport->base.info.name.ptr,
                                pjmedia_fourcc_name(ch.id, fourcc_name),
                                (unsigned long)pos));
-
-                else 
+                } else {
                     PJ_LOG(2, (THIS_FILE,
                                "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu (avi_get_frame)",
                                (int)fport->base.info.name.slen,
                                fport->base.info.name.ptr,
                                ch.id, ch.len,
                                (unsigned long)pos));
-
-                return PJMEDIA_ENOTVALIDWAVE;
+                }
+                status = PJMEDIA_ENOTVALIDWAVE;
+                goto on_error2;
             }
 
             PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len, 
