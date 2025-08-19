@@ -1142,6 +1142,7 @@ static void apply_answer_symmetric_pt(pj_pool_t *pool,
      */
     for (i = 0; i < pt_cnt; ++i) {
         pjmedia_sdp_attr *a;
+        pj_bool_t is_red = PJ_FALSE;
 
         /* Skip if the PTs are the same already, e.g: static PT. */
         if (pj_strcmp(&pt_answer[i], &pt_offer[i]) == 0)
@@ -1153,18 +1154,64 @@ static void apply_answer_symmetric_pt(pj_pool_t *pool,
         /* Also update payload type in rtpmap */
         a = pjmedia_sdp_media_find_attr2(answer, "rtpmap", &pt_answer[i]);
         if (a) {
+            pjmedia_sdp_rtpmap r;
+
             rewrite_pt(pool, &a->value, &pt_answer[i], &pt_offer[i]);
             /* Temporarily remove the attribute in case the new payload
              * type is being used by another format in the media.
              */
             pjmedia_sdp_media_remove_attr(answer, a);
             a_tmp[a_tmp_cnt++] = a;
+
+            pjmedia_sdp_attr_get_rtpmap(a, &r);
+            if (!pj_stricmp2(&r.enc_name, "red")) {
+                is_red = PJ_TRUE;
+            }
         }
 
         /* Also update payload type in fmtp */
         a = pjmedia_sdp_media_find_attr2(answer, "fmtp", &pt_answer[i]);
         if (a) {
-            rewrite_pt(pool, &a->value, &pt_answer[i], &pt_offer[i]);
+            if (is_red) {
+                enum { MAX_FMTP_STR_LEN = 32 };
+                pjmedia_codec_fmtp fmtp;
+                pj_status_t status;
+                unsigned pt_o=0, pt_a=0, buf_len=0;
+                char buf[MAX_FMTP_STR_LEN];
+
+                pt_o = pj_strtoul(&pt_offer[i]);
+                pt_a = pj_strtoul(&pt_answer[i]);
+                buf_len = pj_ansi_snprintf(buf, MAX_FMTP_STR_LEN, "%d ", pt_o);
+                status = pjmedia_stream_info_parse_fmtp(pool, answer, pt_a, 
+                                                        &fmtp);
+
+                if (status == PJ_SUCCESS) {
+                    unsigned len = 0;
+                    unsigned j, k;
+                    pj_str_t new_fmtp;
+
+                    /* Update the fmtp redundancy PT. */
+                    for (j = 0; j < fmtp.cnt; ++j) {
+                        pt_o = pj_strtoul(&fmtp.param[j].val);
+                        for (k = 0; k < pt_cnt ;++k) {
+                            if (!pj_stricmp(&fmtp.param[j].val, &pt_answer[k])){
+                                pt_o = pj_strtoul(&pt_offer[k]);
+                                break;
+                            }
+                        }
+                        len = pj_ansi_snprintf(buf + buf_len,
+                                               MAX_FMTP_STR_LEN - buf_len,
+                                               (j==0)?"%d":"/%d", pt_o);
+                        buf_len = PJ_MIN(buf_len + len,
+                                         MAX_FMTP_STR_LEN);
+                    }
+                    new_fmtp.ptr = buf;
+                    new_fmtp.slen = buf_len;
+                    rewrite_pt(pool, &a->value, &a->value, &new_fmtp);
+                }
+            } else {
+                rewrite_pt(pool, &a->value, &pt_answer[i], &pt_offer[i]);
+            }
             /* Temporarily remove the attribute in case the new payload
              * type is being used by another format in the media.
              */
