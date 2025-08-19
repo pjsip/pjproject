@@ -54,7 +54,7 @@
 #else
 #   define LOG_MUTEX(expr)  PJ_LOG(6,expr)
 #endif
-#   define LOG_MUTEX_WARN(expr)  PJ_PERROR(3,expr)
+#   define LOG_MUTEX_WARN(expr)  PJ_PERROR(1,expr)
 #define THIS_FILE       "os_core_win32.c"
 
 /*
@@ -1634,3 +1634,43 @@ PJ_DEF(pj_status_t) pj_set_cloexec_flag(int fd)
     PJ_UNUSED_ARG(fd);
     return PJ_ENOTSUP;
 }
+
+//////////////////////////////////////////////////////////////////////////
+typedef void(__cdecl* LPFNOUTPUTLN)(PVOID pcv, LPCSTR format, ...);
+static void __cdecl pfnWriteLn(PVOID pcv, const char* format, ...)
+{
+    va_list argptr;
+    va_start(argptr, format);
+    pj_log(pcv, 4, format, argptr);
+    va_end(argptr);
+}
+
+void LogThreadContext(const char* pcv)
+{
+    typedef HANDLE(WINAPI* LPFNDUMPTHREADCONTEXT)(DWORD dwThreadId, PCONTEXT pCtx, LPFNOUTPUTLN pfnWriteLn, PVOID pcv);
+    static LPFNDUMPTHREADCONTEXT lpfnDumpThreadContext = NULL;
+    HMODULE hTrcLogDll = NULL;
+    if (lpfnDumpThreadContext == NULL)
+    {
+        hTrcLogDll = LoadLibraryA("TrcLog64D.dll");
+        if (hTrcLogDll != NULL)
+        {
+            lpfnDumpThreadContext = (LPFNDUMPTHREADCONTEXT)GetProcAddress(hTrcLogDll, "DumpThreadContext");
+
+        }
+        if (lpfnDumpThreadContext == NULL)
+        {
+            SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
+            return;
+        }
+    }
+
+    unsigned long id = GetCurrentThreadId();
+
+    CONTEXT ctx;
+    ctx.ContextFlags = CONTEXT_FULL;
+    RtlCaptureContext(&ctx);
+    lpfnDumpThreadContext(id, &ctx, pfnWriteLn, (PVOID)pcv);
+
+}
+
