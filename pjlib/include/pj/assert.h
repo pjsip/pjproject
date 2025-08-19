@@ -45,24 +45,25 @@
  *
  * @param expr      The expression to be evaluated.
  */
-#ifndef _DEBUG  
-#ifndef pj_assert
-#include "pj/log.h"
-#include <string.h>
-#ifdef _WIN32
-#define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
-#else
-#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-#endif
-#define pj_assert(expr) \
-        do { \
-                if (!(expr)) { PJ_LOG(1,(__FILENAME__, "Assert failed: " #expr)); } \
-        } while (0)
-#endif
-#else
-#ifndef pj_assert
-#   define pj_assert(expr)   assert(expr)
-#endif
+#if PJ_DEBUG==0
+
+#   ifndef pj_assert
+#       include "pj/os.h"
+#       include "pj/log.h"
+#       define pj_assert(expr) \
+            do { \
+                if (!(expr)) { \
+                    if (pj_thread_is_registered()) \
+                        PJ_LOG(1, (__FILE__, "Assert failed: %s", #expr)); \
+                } \
+            } while (0)
+#   endif
+
+#else /* PJ_DEBUG != 0 */
+
+#   ifndef pj_assert
+#       define pj_assert(expr)   assert(expr)
+#   endif
 #endif
 
 /**
