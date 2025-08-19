@@ -2466,6 +2466,7 @@ struct conf_call
 {
     pjmedia_conf         *conf;
     pjmedia_endpt        *endpt;
+    unsigned              nstream;
     pjmedia_stream      **stream;
 };
 
@@ -2474,7 +2475,10 @@ static void deinit_conf_call(struct test_entry *te)
     unsigned i;
     struct conf_call *cc = (struct conf_call *)te->pdata[0];
 
-    for (i = 0; i < PJ_ARRAY_SIZE(cc->stream); i++) {
+    if (cc->conf)
+        pjmedia_conf_destroy(cc->conf);
+
+    for (i = 0; i < cc->nstream; i++) {
         pjmedia_transport *tp;
 
         if (!cc->stream[i])
@@ -2484,9 +2488,6 @@ static void deinit_conf_call(struct test_entry *te)
         pjmedia_stream_destroy(cc->stream[i]);
         pjmedia_transport_close(tp);
     }
-
-    if (cc->conf)
-        pjmedia_conf_destroy(cc->conf);
 
     if (cc->endpt)
         pjmedia_endpt_destroy(cc->endpt);
@@ -2516,6 +2517,7 @@ static pjmedia_port* init_conf_call(unsigned nb_participant,
 
     cc = PJ_POOL_ZALLOC_T(pool, struct conf_call);
     cc->stream = pj_pool_calloc(pool, nb_participant, sizeof(cc->stream[0]));
+    cc->nstream = nb_participant;
     te->pdata[0] = cc;
 
     status = pjmedia_endpt_create2(mem, NULL, 0, &endpt);
