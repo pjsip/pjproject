@@ -2500,6 +2500,10 @@ static pjmedia_port* init_conf_call(unsigned nb_participant,
                                     unsigned clock_rate,
                                     unsigned channel_count,
                                     unsigned samples_per_frame,
+                                    pj_bool_t srtp_enabled,
+                                    pj_bool_t srtp_80,
+                                    pj_bool_t srtp_auth,
+                                    pj_bool_t no_parallel,
                                     unsigned flags,
                                     struct test_entry *te)
 {
@@ -2537,10 +2541,11 @@ static pjmedia_port* init_conf_call(unsigned nb_participant,
     param.channel_count = channel_count;
     param.samples_per_frame = samples_per_frame;
     param.bits_per_sample = 16;
-    param.options = PJMEDIA_CONF_NO_DEVICE;
+    param.options = PJMEDIA_CONF_NO_DEVICE | PJMEDIA_CONF_SMALL_FILTER;
 
-    // Set to zero to disable parallel processing
-    //param.worker_threads = 0;
+    /* Set worker thread to zero to disable parallel processing */
+    if (no_parallel)
+        param.worker_threads = 0;
 
     status = pjmedia_conf_create2(pool, &param, &conf);
     if (status != PJ_SUCCESS)
@@ -2553,7 +2558,8 @@ static pjmedia_port* init_conf_call(unsigned nb_participant,
         unsigned slot;
 
         /* Create stream port */
-        stream = create_call_stream(endpt, pool, codec, 0, 0, 0, 0);
+        stream = create_call_stream(endpt, pool, codec,
+                                    srtp_enabled, srtp_80, srtp_auth, 0);
         if (!stream)
             return NULL;
 
@@ -2580,8 +2586,8 @@ static pjmedia_port* init_conf_call(unsigned nb_participant,
 }
 
 /***************************************************************************/
-/* Benchmark conf with 50 call using PCMU codec */
-static pjmedia_port* conf50_pcmu_test_init(pj_pool_t *pool,
+/* Benchmark conf with 100 call using PCMU codec */
+static pjmedia_port* conf100_pcmu_test_init(pj_pool_t *pool,
                                            unsigned clock_rate,
                                            unsigned channel_count,
                                            unsigned samples_per_frame,
@@ -2589,13 +2595,29 @@ static pjmedia_port* conf50_pcmu_test_init(pj_pool_t *pool,
                                            struct test_entry *te)
 {
     PJ_UNUSED_ARG(flags);
-    return init_conf_call(50, "pcmu", pool, clock_rate, channel_count, 
-                          samples_per_frame, flags, te);
+    return init_conf_call(100, "pcmu", pool, clock_rate, channel_count, 
+                          samples_per_frame, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                          PJ_FALSE, flags, te);
 }
 
 /***************************************************************************/
-/* Benchmark conf with 250 call using PCMU codec */
-static pjmedia_port* conf250_pcmu_test_init(pj_pool_t *pool,
+/* Benchmark conf with 100 call using PCMU codec, parallel disabled */
+static pjmedia_port* conf100_pcmu_noparallel_test_init(pj_pool_t *pool,
+                                           unsigned clock_rate,
+                                           unsigned channel_count,
+                                           unsigned samples_per_frame,
+                                           unsigned flags,
+                                           struct test_entry *te)
+{
+    PJ_UNUSED_ARG(flags);
+    return init_conf_call(100, "pcmu", pool, clock_rate, channel_count, 
+                          samples_per_frame, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                          PJ_TRUE, flags, te);
+}
+
+/***************************************************************************/
+/* Benchmark conf with 100 call using Speex codec */
+static pjmedia_port* conf100_speex_test_init(pj_pool_t *pool,
                                             unsigned clock_rate,
                                             unsigned channel_count,
                                             unsigned samples_per_frame,
@@ -2603,22 +2625,24 @@ static pjmedia_port* conf250_pcmu_test_init(pj_pool_t *pool,
                                             struct test_entry *te)
 {
     PJ_UNUSED_ARG(flags);
-    return init_conf_call(250, "pcmu", pool, clock_rate, channel_count, 
-                          samples_per_frame, flags, te);
+    return init_conf_call(100, "speex", pool, clock_rate, channel_count, 
+                          samples_per_frame, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                          PJ_FALSE, flags, te);
 }
 
 /***************************************************************************/
-/* Benchmark conf with 1000 call using PCMU codec */
-static pjmedia_port* conf1000_pcmu_test_init(pj_pool_t *pool,
-                                            unsigned clock_rate,
-                                            unsigned channel_count,
-                                            unsigned samples_per_frame,
-                                            unsigned flags,
-                                            struct test_entry *te)
+/* Benchmark conf with 100 call using PCMU codec, SRTP 80 bit with auth */
+static pjmedia_port* conf100_pcmu_srtp80auth_test_init(pj_pool_t *pool,
+                                                       unsigned clock_rate,
+                                                       unsigned channel_count,
+                                                       unsigned samples_per_frame,
+                                                       unsigned flags,
+                                                       struct test_entry *te)
 {
     PJ_UNUSED_ARG(flags);
-    return init_conf_call(1000, "pcmu", pool, clock_rate, channel_count, 
-                          samples_per_frame, flags, te);
+    return init_conf_call(100, "pcmu", pool, clock_rate, channel_count, 
+                          samples_per_frame, PJ_TRUE, PJ_TRUE, PJ_TRUE,
+                          PJ_FALSE, flags, te);
 }
 
 
@@ -2733,9 +2757,11 @@ int mips_test(void)
         { "conference bridge with 4 ports", OP_GET_PUT, K8|K16, &conf4_test_init},
         { "conference bridge with 8 ports", OP_GET_PUT, K8|K16, &conf8_test_init},
         { "conference bridge with 16 ports", OP_GET_PUT, K8|K16, &conf16_test_init},
-        { "conference bridge with 50 PCMU calls", OP_PUT_GET, K8, &conf50_pcmu_test_init},
-        { "conference bridge with 250 PCMU calls", OP_PUT_GET, K8, &conf250_pcmu_test_init},
-        { "conference bridge with 1000 PCMU calls", OP_PUT_GET, K8, &conf1000_pcmu_test_init},
+        { "conf bridge 100 calls - PCMU", OP_PUT_GET, K8, &conf100_pcmu_test_init},
+        { "conf bridge 100 calls - PCMU, no parallel", OP_PUT_GET, K8, &conf100_pcmu_noparallel_test_init},
+        { "conf bridge 100 calls - PCMU, resample (small)", OP_PUT_GET, K16, &conf100_pcmu_test_init},
+        { "conf bridge 100 calls - Speex", OP_PUT_GET, K16, &conf100_speex_test_init},
+        { "conf bridge 100 calls - PCMU, SRTP 80bit+auth", OP_PUT_GET, K8, &conf100_pcmu_srtp80auth_test_init},
         { "upsample+downsample - linear", OP_GET, K8|K16, &linear_resample},
         { "upsample+downsample - small filter", OP_GET, K8|K16, &small_filt_resample},
         { "upsample+downsample - large filter", OP_GET, K8|K16, &large_filt_resample},
@@ -2805,8 +2831,10 @@ int mips_test(void)
 #if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
         { "codec encode/decode - AMR-WB", OP_PUT, K16, &amrwb_encode_decode},
 #endif
-#if PJMEDIA_HAS_L16_CODEC
+#if PJMEDIA_HAS_L16_CODEC && PJMEDIA_CODEC_L16_HAS_8KHZ_MONO
         { "codec encode/decode - L16/8000/1", OP_PUT, K8, &l16_8_encode_decode},
+#endif
+#if PJMEDIA_HAS_L16_CODEC && PJMEDIA_CODEC_L16_HAS_16KHZ_MONO
         { "codec encode/decode - L16/16000/1", OP_PUT, K16, &l16_16_encode_decode},
 #endif
 #if PJMEDIA_HAS_G711_CODEC
@@ -2842,9 +2870,9 @@ int mips_test(void)
     unsigned i, c, clks[3] = {K8, K16, K32}, clock_rates[3] = {8000, 16000, 32000};
 
     PJ_LOG(3,(THIS_FILE, "MIPS test, with CPU=%dMhz, %6.1f MIPS", CPU_MHZ, CPU_IPS / 1000000));
-    PJ_LOG(3,(THIS_FILE, "Clock  Item                                      Time     CPU    MIPS"));
-    PJ_LOG(3,(THIS_FILE, " Rate                                           (usec)    (%%)       "));
-    PJ_LOG(3,(THIS_FILE, "----------------------------------------------------------------------"));
+    PJ_LOG(3,(THIS_FILE, "Clock  Item                                                        Time       CPU    MIPS"));
+    PJ_LOG(3,(THIS_FILE, " Rate                                                             (usec)      (%%)       "));
+    PJ_LOG(3,(THIS_FILE, "-----------------------------------------------------------------------------------------"));
 
     for (c=0; c<PJ_ARRAY_SIZE(clock_rates); ++c) {
         for (i=0; i<PJ_ARRAY_SIZE(entries); ++i) {
@@ -2888,7 +2916,7 @@ int mips_test(void)
 
             mips_val = (float)(CPU_IPS * usec / 1000000.0 / 1000000);
             cpu_pct = (float)(100.0 * usec / 1000000);
-            PJ_LOG(3,(THIS_FILE, "%2dKHz %-38s % 8d %8.3f %7.2f", 
+            PJ_LOG(3,(THIS_FILE, "%2dKHz %-55s % 10d %8.3f %7.2f", 
                       clock_rate/1000, e->title, usec, cpu_pct, mips_val));
 
         }
