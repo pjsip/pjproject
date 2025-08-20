@@ -644,7 +644,7 @@ PJ_DEF(pj_bool_t) pjsip_tx_data_is_valid( pjsip_tx_data *tdata )
 static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
                           const pjsip_msg *msg)
 {
-    char info_buf[256], to_uri[PJSIP_MAX_URL_SIZE], * info;
+    char info_buf[256], to_uri[PJSIP_MAX_URL_SIZE], *info;
     const pjsip_cseq_hdr *cseq;
     const pjsip_cid_hdr* cid;
     const pjsip_to_hdr* to;
@@ -655,27 +655,57 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
     cid = (const pjsip_cid_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
     to = (const pjsip_to_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
     len = (to && to->uri) ? pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, to->uri, to_uri, sizeof(to_uri)) : 0;
-    to_uri[((len > 0) && (len < sizeof(to_uri))) ? len : 0] = '\0';
+    if (len > 0 && len < (int)sizeof(to_uri)) {
+        to_uri[len] = '\0';
+    }
+    else {
+        to_uri[0] = '\0';
+    }
+
+    char cseq_info[32] = { 0 };
+    char cid_info[64] = { 0 };
+    char to_info[PJSIP_MAX_URL_SIZE + 8] = { 0 };
 
     if (msg->type == PJSIP_REQUEST_MSG) {
-        len = pj_ansi_snprintf(info_buf, sizeof(info_buf), 
-                   "Request msg %.*s/cseq=%d%s%.*s%s%s (%s)",
-                               (int)msg->line.req.method.name.slen,
-                               msg->line.req.method.name.ptr,
-                               cseq->cseq,
-                               cid ? "/cid=" : "", cid ? (int)cid->id.slen : 0, cid ? cid->id.ptr : "",
-                               to_uri[0] ? "/to=" : "", to_uri,
-                               obj_name);
-    } else {
+        pj_ansi_snprintf(cseq_info, sizeof(cseq_info), "cseq=%d", cseq->cseq);
+
+        if (cid && cid->id.slen > 0) {
+            pj_ansi_snprintf(cid_info, sizeof(cid_info), "/cid=%.*s", (int)cid->id.slen, cid->id.ptr);
+        }
+
+        if (to_uri[0]) {
+            pj_ansi_snprintf(to_info, sizeof(to_info), "/to=%s", to_uri);
+        }
+
         len = pj_ansi_snprintf(info_buf, sizeof(info_buf),
-                   "Response msg %d/%.*s/cseq=%d%s%.*s%s%s (%s)",
-                               msg->line.status.code,
-                               (int)cseq->method.name.slen,
-                               cseq->method.name.ptr,
-                    cseq->cseq,
-                    cid ? "/cid=" : "", cid ? (int)cid->id.slen : 0, cid ? cid->id.ptr : "",
-                    to_uri[0] ? "/to=" : "", to_uri,
-                    obj_name);
+            "Request msg %.*s/%s%s%s (%s)",
+            (int)msg->line.req.method.name.slen,
+            msg->line.req.method.name.ptr,
+            cseq_info,
+            cid_info,
+            to_info,
+            obj_name);
+    } else {
+        
+        pj_ansi_snprintf(cseq_info, sizeof(cseq_info), "cseq=%d", cseq->cseq);
+
+        if (cid && cid->id.slen > 0) {
+            pj_ansi_snprintf(cid_info, sizeof(cid_info), "/cid=%.*s", (int)cid->id.slen, cid->id.ptr);
+        }
+
+        if (to_uri[0]) {
+            pj_ansi_snprintf(to_info, sizeof(to_info), "/to=%s", to_uri);
+        }
+
+        len = pj_ansi_snprintf(info_buf, sizeof(info_buf),
+            "Response msg %d/%.*s/%s%s%s (%s)",
+            msg->line.status.code,
+            (int)cseq->method.name.slen,
+            cseq->method.name.ptr,
+            cseq_info,
+            cid_info,
+            to_info,
+            obj_name);
     }
 
     if (len < 1 || len >= (int)sizeof(info_buf)) {
