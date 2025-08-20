@@ -1202,8 +1202,14 @@ static void apply_answer_symmetric_pt(pj_pool_t *pool,
                         len = pj_ansi_snprintf(buf + buf_len,
                                                MAX_FMTP_STR_LEN - buf_len,
                                                (j==0)?"%d":"/%d", pt_o);
-                        buf_len = PJ_MIN(buf_len + len,
-                                         MAX_FMTP_STR_LEN);
+
+                        if (len >= MAX_FMTP_STR_LEN - buf_len) {
+                            /* Truncation occurred, stop processing further. */
+                            buf_len = MAX_FMTP_STR_LEN;
+                            break;
+                        } else {
+                            buf_len += len;
+                        }
                     }
                     new_fmtp.ptr = buf;
                     new_fmtp.slen = buf_len;
