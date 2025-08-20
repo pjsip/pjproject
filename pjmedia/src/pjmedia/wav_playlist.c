@@ -539,6 +539,34 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool_,
                 break;
             }
             
+            if (!subchunk.len ||    /* prevent infinite loop */
+                !subchunk.id)       /* highly likely that the file is invalid */
+            {
+                char fourcc_name[5];
+                pj_uint32_t sig = subchunk.id;
+                pj_off_t fpos;
+                pj_file_getpos(fport->fd_list[index], &fpos);
+                if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+                {
+                    PJ_LOG(2, (THIS_FILE,
+                               "%.*s. Zero length chunk of type %s found at offset=%lu",
+                               (int)file_list[index].slen,
+                               file_list[index].ptr,
+                               pjmedia_fourcc_name(subchunk.id, fourcc_name),
+                               (unsigned long)fpos));
+                } else {
+                    PJ_LOG(2, (THIS_FILE,
+                               "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu",
+                               (int)file_list[index].slen,
+                               file_list[index].ptr,
+                               subchunk.id, subchunk.len,
+                               (unsigned long)fpos));
+                }
+                status = PJMEDIA_ENOTVALIDWAVE;
+                goto on_error;
+
+            }
+
             /* Otherwise skip the chunk contents */
             PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len, 
                                status = PJMEDIA_ENOTVALIDWAVE; goto on_error;);

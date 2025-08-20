@@ -204,6 +204,32 @@ static pj_status_t read_wav_until(struct file_reader_port *fport,
             break;
         }
 
+        if (!subchunk.len ||    /* prevent infinite loop */
+            !subchunk.id)       /* highly likely that the file is invalid */
+        {
+            char fourcc_name[5];
+            pj_uint32_t sig = subchunk.id;
+            pj_off_t fpos;
+            pj_file_getpos(fport->fd, &fpos);
+            if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+            {
+                PJ_LOG(2, (THIS_FILE,
+                           "%.*s. Zero length chunk of type %s found at offset=%lu (read_wav_until)",
+                           (int)fport->base.info.name.slen,
+                           fport->base.info.name.ptr,
+                           pjmedia_fourcc_name(subchunk.id, fourcc_name),
+                           (unsigned long)fpos));
+            } else {
+                PJ_LOG(2, (THIS_FILE,
+                           "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu (read_wav_until)",
+                           (int)fport->base.info.name.slen,
+                           fport->base.info.name.ptr,
+                           subchunk.id, subchunk.len,
+                           (unsigned long)fpos));
+            }
+            return PJMEDIA_ENOTVALIDWAVE;
+        }
+
         /* Otherwise skip the chunk contents */
         PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len,
                                          return PJMEDIA_ENOTVALIDWAVE;);
