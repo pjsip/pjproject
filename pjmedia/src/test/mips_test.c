@@ -2757,11 +2757,15 @@ int mips_test(void)
         { "conference bridge with 4 ports", OP_GET_PUT, K8|K16, &conf4_test_init},
         { "conference bridge with 8 ports", OP_GET_PUT, K8|K16, &conf8_test_init},
         { "conference bridge with 16 ports", OP_GET_PUT, K8|K16, &conf16_test_init},
+#if PJMEDIA_HAS_G711_CODEC
         { "conf bridge 100 calls - PCMU", OP_PUT_GET, K8, &conf100_pcmu_test_init},
         { "conf bridge 100 calls - PCMU, no parallel", OP_PUT_GET, K8, &conf100_pcmu_noparallel_test_init},
-        { "conf bridge 100 calls - PCMU, resample (small)", OP_PUT_GET, K16, &conf100_pcmu_test_init},
-        { "conf bridge 100 calls - Speex", OP_PUT_GET, K16, &conf100_speex_test_init},
         { "conf bridge 100 calls - PCMU, SRTP 80bit+auth", OP_PUT_GET, K8, &conf100_pcmu_srtp80auth_test_init},
+        { "conf bridge 100 calls - PCMU, resample (small)", OP_PUT_GET, K16, &conf100_pcmu_test_init},
+#endif
+#if PJMEDIA_HAS_SPEEX_CODEC
+        { "conf bridge 100 calls - Speex", OP_PUT_GET, K16, &conf100_speex_test_init},
+#endif
         { "upsample+downsample - linear", OP_GET, K8|K16, &linear_resample},
         { "upsample+downsample - small filter", OP_GET, K8|K16, &small_filt_resample},
         { "upsample+downsample - large filter", OP_GET, K8|K16, &large_filt_resample},
