@@ -2352,6 +2352,301 @@ static pjmedia_port* delaybuf_n20(pj_pool_t *pool,
 
 
 /***************************************************************************/
+
+static pjmedia_stream* create_call_stream(  pjmedia_endpt *endpt,
+                                            pj_pool_t *pool,
+                                            const char *codec,
+                                            pj_bool_t srtp_enabled,
+                                            pj_bool_t srtp_80,
+                                            pj_bool_t srtp_auth,
+                                            unsigned flags)
+{
+    pj_str_t codec_id;
+    pjmedia_stream *stream;
+    pjmedia_transport *transport;
+    const pjmedia_codec_info *ci[1];
+    unsigned count;
+    pjmedia_codec_param codec_param;
+    pjmedia_stream_info si;
+    pj_status_t status;
+
+#if !PJMEDIA_HAS_SRTP
+    PJ_UNUSED_ARG(srtp_enabled);
+    PJ_UNUSED_ARG(srtp_80);
+    PJ_UNUSED_ARG(srtp_auth);
+#endif
+
+    PJ_UNUSED_ARG(flags);
+
+    codec_id = pj_str((char*)codec);
+
+    count = 1;
+    status = pjmedia_codec_mgr_find_codecs_by_id(pjmedia_endpt_get_codec_mgr(endpt),
+                                                 &codec_id, &count, ci, NULL);
+    if (status != PJ_SUCCESS)
+        return NULL;
+
+    status = pjmedia_codec_mgr_get_default_param(pjmedia_endpt_get_codec_mgr(endpt),
+                                                 ci[0], &codec_param);
+    if (status != PJ_SUCCESS)
+        return NULL;
+
+    /* Create stream info */
+    pj_bzero(&si, sizeof(si));
+    si.type = PJMEDIA_TYPE_AUDIO;
+    si.proto = PJMEDIA_TP_PROTO_RTP_AVP;
+    si.dir = PJMEDIA_DIR_ENCODING_DECODING;
+    pj_sockaddr_in_init(&si.rem_addr.ipv4, NULL, 4000);
+    pj_sockaddr_in_init(&si.rem_rtcp.ipv4, NULL, 4001);
+    pj_memcpy(&si.fmt, ci[0], sizeof(pjmedia_codec_info));
+    si.param = NULL;
+    si.tx_pt = ci[0]->pt;
+    si.tx_event_pt = 101;
+    si.rx_event_pt = 101;
+    si.ssrc = pj_rand();
+    si.jb_init = si.jb_min_pre = si.jb_max_pre = si.jb_max = -1;
+    si.jb_discard_algo = PJMEDIA_JB_DISCARD_PROGRESSIVE;
+
+    /* Create loop transport */
+    status = pjmedia_transport_loop_create(endpt, &transport);
+    if (status != PJ_SUCCESS)
+        return NULL;
+
+#if PJMEDIA_HAS_SRTP
+    if (srtp_enabled) {
+        pjmedia_srtp_setting opt;
+        pjmedia_srtp_crypto crypto;
+        pjmedia_transport *srtp;
+
+        pjmedia_srtp_setting_default(&opt);
+        opt.close_member_tp = PJ_TRUE;
+        opt.use = PJMEDIA_SRTP_MANDATORY;
+
+        status = pjmedia_transport_srtp_create(endpt, transport, &opt,
+                                               &srtp);
+        if (status != PJ_SUCCESS)
+            return NULL;
+
+        pj_bzero(&crypto, sizeof(crypto));
+        if (srtp_80) {
+            crypto.key = pj_str("123456789012345678901234567890");
+            crypto.name = pj_str("AES_CM_128_HMAC_SHA1_80");
+        } else {
+            crypto.key = pj_str("123456789012345678901234567890");
+            crypto.name = pj_str("AES_CM_128_HMAC_SHA1_32");
+        }
+
+        if (!srtp_auth)
+            crypto.flags = PJMEDIA_SRTP_NO_AUTHENTICATION;
+
+        status = pjmedia_transport_srtp_start(srtp, &crypto, &crypto);
+        if (status != PJ_SUCCESS)
+            return NULL;
+
+        transport = srtp;
+    }
+#endif
+
+    /* Create stream */
+    status = pjmedia_stream_create(endpt, pool, &si, transport, NULL, 
+                                   &stream);
+    if (status != PJ_SUCCESS)
+        return NULL;
+
+    /* Start stream */
+    status = pjmedia_stream_start(stream);
+    if (status != PJ_SUCCESS)
+        return NULL;
+
+    return stream;
+}
+
+
+struct conf_call
+{
+    pjmedia_conf         *conf;
+    pjmedia_endpt        *endpt;
+    unsigned              nstream;
+    pjmedia_stream      **stream;
+};
+
+static void deinit_conf_call(struct test_entry *te)
+{
+    unsigned i;
+    struct conf_call *cc = (struct conf_call *)te->pdata[0];
+
+    if (cc->conf)
+        pjmedia_conf_destroy(cc->conf);
+
+    for (i = 0; i < cc->nstream; i++) {
+        pjmedia_transport *tp;
+
+        if (!cc->stream[i])
+            break;
+
+        tp = pjmedia_stream_get_transport(cc->stream[i]);
+        pjmedia_stream_destroy(cc->stream[i]);
+        pjmedia_transport_close(tp);
+    }
+
+    if (cc->endpt)
+        pjmedia_endpt_destroy(cc->endpt);
+
+}
+
+static pjmedia_port* init_conf_call(unsigned nb_participant,
+                                    const char *codec,
+                                    pj_pool_t *pool,
+                                    unsigned clock_rate,
+                                    unsigned channel_count,
+                                    unsigned samples_per_frame,
+                                    pj_bool_t srtp_enabled,
+                                    pj_bool_t srtp_80,
+                                    pj_bool_t srtp_auth,
+                                    pj_bool_t no_parallel,
+                                    unsigned flags,
+                                    struct test_entry *te)
+{
+    struct conf_call* cc;
+    pjmedia_endpt *endpt;
+    pjmedia_conf *conf;
+    unsigned i;
+    pj_status_t status;
+    pjmedia_conf_param param;
+
+    PJ_UNUSED_ARG(flags);
+
+    te->custom_deinit = &deinit_conf_call;
+    pj_bzero(te->pdata, sizeof(te->pdata));
+
+    cc = PJ_POOL_ZALLOC_T(pool, struct conf_call);
+    cc->stream = pj_pool_calloc(pool, nb_participant, sizeof(cc->stream[0]));
+    cc->nstream = nb_participant;
+    te->pdata[0] = cc;
+
+    status = pjmedia_endpt_create2(mem, NULL, 0, &endpt);
+    if (status != PJ_SUCCESS)
+        return NULL;
+    cc->endpt = endpt;
+
+    status = pjmedia_codec_register_audio_codecs(endpt, NULL);
+    if (status != PJ_SUCCESS)
+        return NULL;
+
+    /* Create conf */
+    pjmedia_conf_param_default(&param);
+
+    param.max_slots = nb_participant+1;
+    param.sampling_rate = clock_rate;
+    param.channel_count = channel_count;
+    param.samples_per_frame = samples_per_frame;
+    param.bits_per_sample = 16;
+    param.options = PJMEDIA_CONF_NO_DEVICE | PJMEDIA_CONF_SMALL_FILTER;
+
+    /* Set worker thread to zero to disable parallel processing */
+    if (no_parallel)
+        param.worker_threads = 0;
+
+    status = pjmedia_conf_create2(pool, &param, &conf);
+    if (status != PJ_SUCCESS)
+        return NULL;
+    cc->conf = conf;
+
+    for (i=0; i<nb_participant; ++i) {
+        pjmedia_stream *stream;
+        pjmedia_port *port;
+        unsigned slot;
+
+        /* Create stream port */
+        stream = create_call_stream(endpt, pool, codec,
+                                    srtp_enabled, srtp_80, srtp_auth, 0);
+        if (!stream)
+            return NULL;
+
+        cc->stream[i] = stream;
+
+        /* Add port */
+        pjmedia_stream_get_port(stream, &port);
+        status = pjmedia_conf_add_port(conf, pool, port, NULL, &slot);
+        if (status != PJ_SUCCESS)
+            return NULL;
+
+        /* Connect stream port to sound dev */
+        status = pjmedia_conf_connect_port(conf, slot, 0, 0);
+        if (status != PJ_SUCCESS)
+            return NULL;
+
+        /* Connect sound to stream port */
+        status = pjmedia_conf_connect_port(conf, 0, slot, 0);
+        if (status != PJ_SUCCESS)
+            return NULL;
+    }
+
+    return pjmedia_conf_get_master_port(conf);
+}
+
+/***************************************************************************/
+/* Benchmark conf with 100 call using PCMU codec */
+static pjmedia_port* conf100_pcmu_test_init(pj_pool_t *pool,
+                                           unsigned clock_rate,
+                                           unsigned channel_count,
+                                           unsigned samples_per_frame,
+                                           unsigned flags,
+                                           struct test_entry *te)
+{
+    PJ_UNUSED_ARG(flags);
+    return init_conf_call(100, "pcmu", pool, clock_rate, channel_count, 
+                          samples_per_frame, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                          PJ_FALSE, flags, te);
+}
+
+/***************************************************************************/
+/* Benchmark conf with 100 call using PCMU codec, parallel disabled */
+static pjmedia_port* conf100_pcmu_noparallel_test_init(pj_pool_t *pool,
+                                           unsigned clock_rate,
+                                           unsigned channel_count,
+                                           unsigned samples_per_frame,
+                                           unsigned flags,
+                                           struct test_entry *te)
+{
+    PJ_UNUSED_ARG(flags);
+    return init_conf_call(100, "pcmu", pool, clock_rate, channel_count, 
+                          samples_per_frame, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                          PJ_TRUE, flags, te);
+}
+
+/***************************************************************************/
+/* Benchmark conf with 100 call using Speex codec */
+static pjmedia_port* conf100_speex_test_init(pj_pool_t *pool,
+                                            unsigned clock_rate,
+                                            unsigned channel_count,
+                                            unsigned samples_per_frame,
+                                            unsigned flags,
+                                            struct test_entry *te)
+{
+    PJ_UNUSED_ARG(flags);
+    return init_conf_call(100, "speex", pool, clock_rate, channel_count, 
+                          samples_per_frame, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                          PJ_FALSE, flags, te);
+}
+
+/***************************************************************************/
+/* Benchmark conf with 100 call using PCMU codec, SRTP 80 bit with auth */
+static pjmedia_port* conf100_pcmu_srtp80auth_test_init(pj_pool_t *pool,
+                                                       unsigned clock_rate,
+                                                       unsigned channel_count,
+                                                       unsigned samples_per_frame,
+                                                       unsigned flags,
+                                                       struct test_entry *te)
+{
+    PJ_UNUSED_ARG(flags);
+    return init_conf_call(100, "pcmu", pool, clock_rate, channel_count, 
+                          samples_per_frame, PJ_TRUE, PJ_TRUE, PJ_TRUE,
+                          PJ_FALSE, flags, te);
+}
+
+
+/***************************************************************************/
 /* Run test entry, return elapsed time */
 static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
 {
@@ -2457,11 +2752,20 @@ int mips_test(void)
 {
     struct test_entry entries[] = {
         { "get from memplayer", OP_GET, K8|K16, &gen_port_test_init},
-        { "conference bridge with 1 call", OP_GET_PUT, K8|K16, &conf1_test_init},
-        { "conference bridge with 2 calls", OP_GET_PUT, K8|K16, &conf2_test_init},
-        { "conference bridge with 4 calls", OP_GET_PUT, K8|K16, &conf4_test_init},
-        { "conference bridge with 8 calls", OP_GET_PUT, K8|K16, &conf8_test_init},
-        { "conference bridge with 16 calls", OP_GET_PUT, K8|K16, &conf16_test_init},
+        { "conference bridge with 1 port", OP_GET_PUT, K8|K16, &conf1_test_init},
+        { "conference bridge with 2 ports", OP_GET_PUT, K8|K16, &conf2_test_init},
+        { "conference bridge with 4 ports", OP_GET_PUT, K8|K16, &conf4_test_init},
+        { "conference bridge with 8 ports", OP_GET_PUT, K8|K16, &conf8_test_init},
+        { "conference bridge with 16 ports", OP_GET_PUT, K8|K16, &conf16_test_init},
+#if PJMEDIA_HAS_G711_CODEC
+        { "conf bridge 100 calls - PCMU", OP_PUT_GET, K8, &conf100_pcmu_test_init},
+        { "conf bridge 100 calls - PCMU, no parallel", OP_PUT_GET, K8, &conf100_pcmu_noparallel_test_init},
+        { "conf bridge 100 calls - PCMU, SRTP 80bit+auth", OP_PUT_GET, K8, &conf100_pcmu_srtp80auth_test_init},
+        { "conf bridge 100 calls - PCMU, resample (small)", OP_PUT_GET, K16, &conf100_pcmu_test_init},
+#endif
+#if PJMEDIA_HAS_SPEEX_CODEC
+        { "conf bridge 100 calls - Speex", OP_PUT_GET, K16, &conf100_speex_test_init},
+#endif
         { "upsample+downsample - linear", OP_GET, K8|K16, &linear_resample},
         { "upsample+downsample - small filter", OP_GET, K8|K16, &small_filt_resample},
         { "upsample+downsample - large filter", OP_GET, K8|K16, &large_filt_resample},
@@ -2531,8 +2835,10 @@ int mips_test(void)
 #if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
         { "codec encode/decode - AMR-WB", OP_PUT, K16, &amrwb_encode_decode},
 #endif
-#if PJMEDIA_HAS_L16_CODEC
+#if PJMEDIA_HAS_L16_CODEC && PJMEDIA_CODEC_L16_HAS_8KHZ_MONO
         { "codec encode/decode - L16/8000/1", OP_PUT, K8, &l16_8_encode_decode},
+#endif
+#if PJMEDIA_HAS_L16_CODEC && PJMEDIA_CODEC_L16_HAS_16KHZ_MONO
         { "codec encode/decode - L16/16000/1", OP_PUT, K16, &l16_16_encode_decode},
 #endif
 #if PJMEDIA_HAS_G711_CODEC
@@ -2562,14 +2868,15 @@ int mips_test(void)
 #if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
         { "stream TX/RX - AMR-WB", OP_PUT_GET, K16, &create_stream_amrwb},
 #endif
+
     };
 
     unsigned i, c, clks[3] = {K8, K16, K32}, clock_rates[3] = {8000, 16000, 32000};
 
     PJ_LOG(3,(THIS_FILE, "MIPS test, with CPU=%dMhz, %6.1f MIPS", CPU_MHZ, CPU_IPS / 1000000));
-    PJ_LOG(3,(THIS_FILE, "Clock  Item                                      Time     CPU    MIPS"));
-    PJ_LOG(3,(THIS_FILE, " Rate                                           (usec)    (%%)       "));
-    PJ_LOG(3,(THIS_FILE, "----------------------------------------------------------------------"));
+    PJ_LOG(3,(THIS_FILE, "Clock  Item                                                        Time       CPU    MIPS"));
+    PJ_LOG(3,(THIS_FILE, " Rate                                                             (usec)      (%%)       "));
+    PJ_LOG(3,(THIS_FILE, "-----------------------------------------------------------------------------------------"));
 
     for (c=0; c<PJ_ARRAY_SIZE(clock_rates); ++c) {
         for (i=0; i<PJ_ARRAY_SIZE(entries); ++i) {
@@ -2613,7 +2920,7 @@ int mips_test(void)
 
             mips_val = (float)(CPU_IPS * usec / 1000000.0 / 1000000);
             cpu_pct = (float)(100.0 * usec / 1000000);
-            PJ_LOG(3,(THIS_FILE, "%2dKHz %-38s % 8d %8.3f %7.2f", 
+            PJ_LOG(3,(THIS_FILE, "%2dKHz %-55s % 10d %8.3f %7.2f", 
                       clock_rate/1000, e->title, usec, cpu_pct, mips_val));
 
         }
