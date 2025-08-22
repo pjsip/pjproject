@@ -17,11 +17,12 @@ Always reference these instructions first and fallback to search or bash command
   - `make pjmedia-test` - media framework tests, takes 5+ minutes. NEVER CANCEL. Set timeout to 600+ seconds.
   - `make pjsip-test` - SIP stack tests, takes 5+ minutes. NEVER CANCEL. Set timeout to 600+ seconds.
   - `make pjsua-test` - high-level API tests (Python-based), takes 5+ minutes. NEVER CANCEL. Set timeout to 600+ seconds.
+- Get target architecture name:
+  - `make infotarget` - returns target name (e.g., x86_64-pc-linux-gnu)
 - Run main PJSUA application:
   - `./pjsip-apps/bin/pjsua-x86_64-pc-linux-gnu --help` - show all options
   - `./pjsip-apps/bin/pjsua-x86_64-pc-linux-gnu --null-audio --no-cli-console` - basic test run
-- Get target architecture name:
-  - `make infotarget` - returns target name (e.g., x86_64-pc-linux-gnu)
+  - Note: pjsua binary name depends on the target architecture name
 
 ## Coding Style
 
@@ -76,7 +77,7 @@ The following are outputs from frequently run commands. Reference them instead o
 
 After running `make`:
 - `pjsip-apps/bin/pjsua-x86_64-pc-linux-gnu` - Main SIP user agent application
-- `pjsip-apps/bin/pjsystest-x86_64-pc-linux-gnu` - System test application
+- `pjsip-apps/bin/pjsystest-x86_64-pc-linux-gnu` - Audio system test application
 - `pjsip-apps/bin/samples/x86_64-pc-linux-gnu/` - Various sample applications
 
 ### Test Executables Built
@@ -100,6 +101,7 @@ The configure script supports many options. Key ones:
 
 - Python-based test framework in `tests/pjsua/`
 - Use `cd tests/pjsua && python3 run.py MODULE CONFIG` for individual tests
+- Example: `cd tests/pjsua && python3 run.py mod_run.py scripts-run/100_simple.py`
 - Use `cd tests/pjsua && python3 runall.py` for complete test suite
 - Test modules include: mod_run, mod_call, mod_pres, mod_sendto, mod_media_playrec
 
