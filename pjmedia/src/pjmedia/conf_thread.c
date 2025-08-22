@@ -2550,6 +2550,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->bits_per_sample = conf->bits_per_sample;
     info->tx_adj_level = conf_port->tx_adj_level - NORMAL_LEVEL;
     info->rx_adj_level = conf_port->rx_adj_level - NORMAL_LEVEL;
+    if (conf_port->port) {
+        info->dir = conf_port->port->info.dir;
+        info->signature = conf_port->port->info.signature;
+    } else {
+        info->dir = PJMEDIA_DIR_NONE;
+        info->signature = PJMEDIA_SIG_PORT_CONF;
+    }
 
     /* Unlock mutex */
     pj_mutex_unlock(conf->mutex);
