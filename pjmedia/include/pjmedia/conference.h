@@ -73,6 +73,8 @@ typedef struct pjmedia_conf pjmedia_conf;
 typedef struct pjmedia_conf_port_info
 {
     unsigned            slot;               /**< Slot number.               */
+    pjmedia_dir         dir;                /**< Port direction.            */
+    pjmedia_obj_sig     signature;          /**< Port signature.            */
     pj_str_t            name;               /**< Port name.                 */
     pjmedia_format      format;             /**< Format.                    */
     pjmedia_port_op     tx_setting;         /**< Transmit settings.         */
@@ -88,8 +90,6 @@ typedef struct pjmedia_conf_port_info
     unsigned            bits_per_sample;    /**< Bits per sample.           */
     int                 tx_adj_level;       /**< Tx level adjustment.       */
     int                 rx_adj_level;       /**< Rx level adjustment.       */
-    pjmedia_dir         dir;                /**< Port direction.            */
-    pjmedia_obj_sig     signature;          /**< Port signature.            */
 } pjmedia_conf_port_info;
 
 /** 
