@@ -646,6 +646,9 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
 {
 #if PJSIP_MSG_INFO_HAS_EXTRA_DETAILS
     char info_buf[256], *info;
+    const pjsip_cid_hdr *call_id;
+    const pjsip_to_hdr *to_hdr;
+    char to_buf[64];
 #else
     char info_buf[128], *info;
 #endif
@@ -657,9 +660,6 @@ static char *get_msg_info(pj_pool_t *pool, const char *obj_name,
 
 #if PJSIP_MSG_INFO_HAS_EXTRA_DETAILS
     /* Get additional headers for extra details */
-    const pjsip_cid_hdr *call_id;
-    const pjsip_to_hdr *to_hdr;
-    char to_buf[64];
     
     call_id = (const pjsip_cid_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
     to_hdr = (const pjsip_to_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
