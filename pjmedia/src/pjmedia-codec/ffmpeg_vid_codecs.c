@@ -1662,13 +1662,21 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
                     break;
                 }
                 if (err >= 0) {
-                    pj_memcpy(bits_out, pkt->data, pkt->size);
-                    bits_out += pkt->size;
                     out_size += pkt->size;
+                    if (out_size <= output_buf_len) {
+                        pj_memcpy(bits_out, pkt->data, pkt->size);
+                        bits_out += pkt->size;
+                    }
                     av_packet_unref(pkt);
                 }
             }
             av_packet_free(&pkt);
+            if (out_size > output_buf_len) {
+                PJ_LOG(2, (THIS_FILE,
+                    "Output frame size (%u) exceeds buffer size (%u)",
+                     out_size, output_buf_len));
+                return PJ_ETOOSMALL;
+            }
         }
     }
 
