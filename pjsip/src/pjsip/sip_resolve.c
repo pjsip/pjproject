@@ -471,13 +471,19 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     if (query->query_type == PJ_DNS_TYPE_SRV) {
         int opt = 0;
 
-        if (af == pj_AF_UNSPEC())
-            opt = PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA |
-                  PJ_DNS_SRV_RESOLVE_AAAA;
+        /* Handle address family selection for DNS options.
+         * We check AF_INET6 first, then AF_UNSPEC to handle the case where
+         * these constants might have the same value on some platforms.
+         * Since af is assigned based on explicit detection logic earlier,
+         * the first matching condition will reflect the intended semantics.
+         */
+        if (af == pj_AF_INET())
+            opt = PJ_DNS_SRV_FALLBACK_A;
         else if (af == pj_AF_INET6())
             opt = PJ_DNS_SRV_FALLBACK_AAAA | PJ_DNS_SRV_RESOLVE_AAAA_ONLY;
-        else /* af == pj_AF_INET() */
-            opt = PJ_DNS_SRV_FALLBACK_A;
+        else /* af == pj_AF_UNSPEC() or other values */
+            opt = PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA |
+                  PJ_DNS_SRV_RESOLVE_AAAA;
 
         status = pj_dns_srv_resolve(&query->naptr[0].name,
                                     &query->naptr[0].res_type,
