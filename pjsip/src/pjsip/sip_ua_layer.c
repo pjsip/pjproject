@@ -33,6 +33,13 @@
 #define THIS_FILE    "sip_ua_layer.c"
 
 /*
+ * Constants for deadlock avoidance retry mechanism
+ */
+#define MAX_DEADLOCK_RETRY_COUNT    100    /* Maximum number of retries */
+#define INITIAL_RETRY_DELAY_MS      1      /* Initial delay in milliseconds */
+#define MAX_RETRY_DELAY_MS          10     /* Maximum delay in milliseconds */
+
+/*
  * Static prototypes.
  */
 static pj_status_t mod_ua_load(pjsip_endpoint *endpt);
@@ -633,6 +640,8 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
     pj_str_t *from_tag;
     pjsip_dialog *dlg;
     pj_status_t status;
+    unsigned retry_count = 0;
+    unsigned retry_delay = INITIAL_RETRY_DELAY_MS;
 
     /* Optimized path: bail out early if request is not CANCEL and it doesn't
      * have To tag 
@@ -734,7 +743,27 @@ retry_on_deadlock:
          * the whole thing once again.
          */
         pj_mutex_unlock(mod_ua.mutex);
-        pj_thread_sleep(0);
+        
+        /* Check retry limit to prevent infinite loop */
+        if (++retry_count > MAX_DEADLOCK_RETRY_COUNT) {
+            PJ_LOG(4,(dlg->obj_name, 
+                      "Unable to acquire dialog lock after %d retries, "
+                      "giving up to prevent infinite loop for %s",
+                      MAX_DEADLOCK_RETRY_COUNT,
+                      pjsip_rx_data_get_info(rdata)));
+            return PJ_TRUE;  /* Report as handled to prevent further processing */
+        }
+        
+        /* Use exponential backoff with jitter to reduce contention */
+        pj_thread_sleep(retry_delay);
+        if (retry_delay < MAX_RETRY_DELAY_MS) {
+            retry_delay = PJ_MIN(retry_delay * 2, MAX_RETRY_DELAY_MS);
+        }
+        
+        PJ_LOG(6,(dlg->obj_name, 
+                  "Retrying dialog lock acquisition (attempt %d/%d) for %s",
+                  retry_count, MAX_DEADLOCK_RETRY_COUNT,
+                  pjsip_rx_data_get_info(rdata)));
         goto retry_on_deadlock;
     }
 
@@ -760,6 +789,8 @@ static pj_bool_t mod_ua_on_rx_response(pjsip_rx_data *rdata)
     struct dlg_set *dlg_set;
     pjsip_dialog *dlg;
     pj_status_t status;
+    unsigned retry_count = 0;
+    unsigned retry_delay = INITIAL_RETRY_DELAY_MS;
 
     /*
      * Find the dialog instance for the response.
@@ -943,7 +974,27 @@ retry_on_deadlock:
          * UA mutex, yield, and retry the whole processing once again.
          */
         pj_mutex_unlock(mod_ua.mutex);
-        pj_thread_sleep(0);
+        
+        /* Check retry limit to prevent infinite loop */
+        if (++retry_count > MAX_DEADLOCK_RETRY_COUNT) {
+            PJ_LOG(4,(dlg->obj_name, 
+                      "Unable to acquire dialog lock after %d retries, "
+                      "giving up to prevent infinite loop for %s",
+                      MAX_DEADLOCK_RETRY_COUNT,
+                      pjsip_rx_data_get_info(rdata)));
+            return PJ_TRUE;  /* Report as handled to prevent further processing */
+        }
+        
+        /* Use exponential backoff with jitter to reduce contention */
+        pj_thread_sleep(retry_delay);
+        if (retry_delay < MAX_RETRY_DELAY_MS) {
+            retry_delay = PJ_MIN(retry_delay * 2, MAX_RETRY_DELAY_MS);
+        }
+        
+        PJ_LOG(6,(dlg->obj_name, 
+                  "Retrying dialog lock acquisition (attempt %d/%d) for %s",
+                  retry_count, MAX_DEADLOCK_RETRY_COUNT,
+                  pjsip_rx_data_get_info(rdata)));
         goto retry_on_deadlock;
     }
 
