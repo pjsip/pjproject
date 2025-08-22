@@ -28,6 +28,7 @@
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/log.h>
+#include <pj/math.h>
 
 
 #define THIS_FILE    "sip_ua_layer.c"
