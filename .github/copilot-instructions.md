@@ -23,6 +23,12 @@ Always reference these instructions first and fallback to search or bash command
 - Get target architecture name:
   - `make infotarget` - returns target name (e.g., x86_64-pc-linux-gnu)
 
+## Coding Style
+
+- Follow the official PJSIP coding style guidelines: https://docs.pjsip.org/en/latest/get-started/coding-style.html
+- The coding style covers naming conventions, indentation, formatting, and other code organization principles
+- Consistent style is essential for maintainability across the large PJSIP codebase
+
 ## Validation
 
 - ALWAYS run through at least one complete validation scenario after making changes.
