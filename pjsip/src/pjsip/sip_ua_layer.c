@@ -751,6 +751,22 @@ retry_on_deadlock:
                       "giving up to prevent infinite loop for %s",
                       MAX_DEADLOCK_RETRY_COUNT,
                       pjsip_rx_data_get_info(rdata)));
+            
+            /* Send 500 Internal Server Error with Retry-After header */
+            if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
+                pjsip_retry_after_hdr *retry_after_hdr;
+                
+                /* Create Retry-After header with 1 second */
+                retry_after_hdr = pjsip_retry_after_hdr_create(rdata->tp_info.pool, 1);
+                
+                /* Send error response */
+                pjsip_endpt_respond_stateless(mod_ua.endpt, rdata, 
+                                              PJSIP_SC_INTERNAL_SERVER_ERROR, 
+                                              NULL, 
+                                              (const pjsip_hdr*)retry_after_hdr, 
+                                              NULL);
+            }
+            
             return PJ_TRUE;  /* Report as handled to prevent further processing */
         }
         
