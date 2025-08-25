@@ -1575,6 +1575,19 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 /**
+ * Specify whether message info will include additional details such as
+ * Call-ID and To header information in the log output. When enabled,
+ * the message info string will contain more detailed information to
+ * help with debugging and monitoring.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJSIP_MSG_INFO_HAS_EXTRA_DETAILS
+#   define PJSIP_MSG_INFO_HAS_EXTRA_DETAILS    0
+#endif
+
+
+/**
  * Dump configuration to log with verbosity equal to info(3).
  */
 PJ_DECL(void) pjsip_dump_config(void);
