@@ -1010,7 +1010,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 }
 
 PJ_DEF(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool_, 
-                                         pjmedia_conf_param *param, 
+                                         const pjmedia_conf_param *param, 
                                          pjmedia_conf **p_conf)
 {
     pj_pool_t *pool;

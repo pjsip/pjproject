@@ -210,13 +210,13 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 }
 
 PJ_DEF(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool,
-                                         pjmedia_conf_param *param,
+                                         const pjmedia_conf_param *param,
                                          pjmedia_conf **p_conf)
 {
     return pjmedia_conf_create(pool,
-                               param.max_slots, param.sampling_rate,
-                               param.channel_count, param.samples_per_frame,
-                               param.bits_per_sample, param.options, p_conf);
+                               param->max_slots, param->sampling_rate,
+                               param->channel_count, param->samples_per_frame,
+                               param->bits_per_sample, param->options, p_conf);
 }
 
 /*
