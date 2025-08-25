@@ -112,11 +112,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_common_from_sdp(
             rem_af = pj_AF_INET();
         } else if (pj_stricmp(&rem_conn->addr_type, &ID_IP6)==0) {
             rem_af = pj_AF_INET6();
+        } else {
+            /* Unsupported address family */
+            return PJ_EAFNOTSUP;
         }
-    }
-
-    if (rem_af==pj_AF_UNSPEC()) {
-        /* Unsupported address family */
+    } else {
+        /* Unsupported network type */
         return PJ_EAFNOTSUP;
     }
 
@@ -143,11 +144,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_common_from_sdp(
             local_af = pj_AF_INET();
         } else if (pj_stricmp(&local_conn->addr_type, &ID_IP6)==0) {
             local_af = pj_AF_INET6();
+        } else {
+            /* Unsupported address family */
+            return PJ_SUCCESS;
         }
-    }
-
-    if (local_af==pj_AF_UNSPEC()) {
-        /* Unsupported address family */
+    } else {
+        /* Unsupported network type */
         return PJ_SUCCESS;
     }
 
