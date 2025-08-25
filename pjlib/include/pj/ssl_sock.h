@@ -150,6 +150,7 @@ typedef enum pj_ssl_cert_name_type
     PJ_SSL_CERT_NAME_IP
 } pj_ssl_cert_name_type;
 
+
 /**
  * Field type for looking up SSL certificate in the certificate stores.
  */
@@ -185,6 +186,7 @@ typedef enum pj_ssl_cert_lookup_type
 
 } pj_ssl_cert_lookup_type;
 
+
 /**
  * Describe structure of certificate lookup criteria.
  */
@@ -201,6 +203,61 @@ typedef struct pj_ssl_cert_lookup_criteria
     pj_str_t                keyword;
 
 } pj_ssl_cert_lookup_criteria;
+
+
+/**
+ * The SSL certificate buffer.
+ */
+typedef pj_str_t pj_ssl_cert_buffer;
+
+
+/**
+ * Data type of the direct SSL certificate.
+ */
+typedef enum pj_ssl_cert_direct_type
+{
+    /**
+     * No data.
+     */
+    PJ_SSL_CERT_DIRECT_NONE = 0,
+
+    /**
+     * Data is OpenSSL EVP_PKEY.
+     */
+    PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY = 1,
+
+    /**
+     * Data is OpenSSL X509 certificate.
+     */
+    PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT = 2,
+
+} pj_ssl_cert_direct_type;
+
+
+/**
+ * The direct SSL certificate. Instead of loading certificate from file,
+ * buffer, or OS certificate store, application can provide direct access
+ * to the backend specific certificate data using this structure.
+ */
+typedef struct pj_ssl_cert_direct
+{
+    /**
+     * Bit flag of the type of direct certificate data, see
+     * \ref pj_ssl_cert_direct_type.
+     */
+    unsigned type;
+    
+    /**
+     * Pointer to backend specific private key object, e.g: OpenSSL EVP_PKEY.
+     */
+    void *privkey;
+
+    /**
+     * Pointer to backend specific certificate object, e.g: OpenSSL X509.
+     */
+    void *cert;
+
+} pj_ssl_cert_direct;
 
 
 /**
@@ -254,10 +311,6 @@ typedef struct pj_ssl_cert_info {
 
 } pj_ssl_cert_info;
 
-/**
- * The SSL certificate buffer.
- */
-typedef pj_str_t pj_ssl_cert_buffer;
 
 /**
  * Create credential from files. TLS server application can provide multiple
@@ -331,6 +384,7 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
                                         const pj_str_t *privkey_pass,
                                         pj_ssl_cert_t **p_cert);
 
+
 /**
  * Create credential from OS certificate store, this function will lookup
  * certificate using the specified criterias.
@@ -354,6 +408,26 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_store(
                                 pj_pool_t *pool,
                                 const pj_ssl_cert_lookup_criteria *criteria,
                                 pj_ssl_cert_t **p_cert);
+
+
+/**
+ * Create credential from the backend specific objects.
+ *
+ * For example, application can use OpenSSL ENGINE to load a private key from
+ * a hardware device, and then provide the EVP_PKEY instance to be used by
+ * OpenSSL backend via this function.
+ *
+ * @param pool              The pool.
+ * @param criteria          The lookup criteria.
+ * @param p_cert            Pointer to credential instance to be created.
+ *
+ * @return                  PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_load_direct(
+                                pj_pool_t *pool,
+                                pj_ssl_cert_direct *cert_direct,
+                                pj_ssl_cert_t **p_cert);
+
 
 /**
  * Dump SSL certificate info.
