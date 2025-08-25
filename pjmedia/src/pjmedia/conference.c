@@ -735,7 +735,7 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 }
 
 PJ_DEF(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool,
-                                         pjmedia_conf_param *param,
+                                         const pjmedia_conf_param *param,
                                          pjmedia_conf **p_conf)
 {
     PJ_ASSERT_RETURN(param, PJ_EINVAL);
