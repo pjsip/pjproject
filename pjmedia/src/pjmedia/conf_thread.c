@@ -2535,9 +2535,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->name = conf_port->name;
     if (conf_port->port) {
         pjmedia_format_copy(&info->format, &conf_port->port->info.fmt);
+        info->dir = conf_port->port->info.dir;
+        info->signature = conf_port->port->info.signature;
     } else {
         pj_bzero(&info->format, sizeof(info->format));
         info->format.id = (pj_uint32_t)PJMEDIA_FORMAT_INVALID;
+        info->dir = PJMEDIA_DIR_NONE;
+        info->signature = PJMEDIA_SIG_PORT_CONF;
     }
     info->tx_setting = conf_port->tx_setting;
     info->rx_setting = conf_port->rx_setting;

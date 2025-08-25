@@ -904,6 +904,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->format = conf_port->port->info.fmt;
     info->tx_adj_level = conf_port->tx_adj_level - NORMAL_LEVEL;
     info->rx_adj_level = conf_port->rx_adj_level - NORMAL_LEVEL;
+    info->dir = conf_port->port->info.dir;
+    info->signature = conf_port->port->info.signature;
 
     /* Unlock mutex */
     pj_mutex_unlock(conf->mutex);
