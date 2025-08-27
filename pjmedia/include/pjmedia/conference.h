@@ -404,7 +404,7 @@ PJ_DECL(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
  * @return                  PJ_SUCCESS if conference bridge can be created.
  */
 PJ_DECL(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool,
-                                          pjmedia_conf_param *param,
+                                          const pjmedia_conf_param *param,
                                           pjmedia_conf **p_conf);
 
 
