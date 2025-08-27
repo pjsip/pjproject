@@ -93,6 +93,8 @@ static pj_status_t ioqueue_init_key( pj_pool_t *pool,
     pj_list_init(&key->accept_list);
     key->connecting = 0;
 #endif
+    pj_list_init(&key->read_cb_list);
+    key->inside_read_callback = PJ_FALSE;
 
     /* Save callback. */
     pj_memcpy(&key->cb, cb, sizeof(pj_ioqueue_callback));
@@ -503,7 +505,6 @@ pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
     if (key_has_pending_read(h)) {
         struct read_operation *read_op;
         pj_ssize_t bytes_read;
-        pj_bool_t has_lock;
 
         /* Get one pending read operation from the list. */
         read_op = h->read_list.next;
@@ -590,30 +591,56 @@ pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
 #endif
         }
 
-        /* Unlock; from this point we don't need to hold key's mutex
-         * (unless concurrency is disabled, which in this case we should
-         * hold the mutex while calling the callback) */
-        if (h->allow_concurrent) {
-            /* concurrency may be changed while we're in the callback, so
-             * save it to a flag.
+        read_op->bytes_read = bytes_read;
+
+        if (!h->allow_concurrent) {
+            /* If we're not allowing concurrency, we must prevent
+             * re-entrancy in the callback.
              */
-            has_lock = PJ_FALSE;
-            pj_ioqueue_unlock_key(h);
-            PJ_RACE_ME(5);
-        } else {
-            has_lock = PJ_TRUE;
+            if (h->inside_read_callback) {
+                /* Another thread is in the read callback for this key,
+                 * just queue this read_op, that thread will invoke the
+                 * callback later.
+                 */
+                pj_list_push_back(&h->read_cb_list, read_op);
+                pj_ioqueue_unlock_key(h);
+                return PJ_TRUE;
+            }
         }
 
+invoke_cb:
+
+        /* Set the flag indicating we are in the read callback */
+        h->inside_read_callback = PJ_TRUE;
+
+        /* Do not hold mutex while invoking callback */
+        pj_ioqueue_unlock_key(h);
+        PJ_RACE_ME(5);
+
+
         /* Call callback. */
+        /* Note that concurrency may be changed while we're in the callback. */
         if (h->cb.on_read_complete && !IS_CLOSING(h)) {
             (*h->cb.on_read_complete)(h, 
                                       (pj_ioqueue_op_key_t*)read_op,
-                                      bytes_read);
+                                      read_op->bytes_read);
         }
 
-        if (has_lock) {
+        /* Check if there is any pending read callback for this key. */
+        pj_ioqueue_lock_key(h);
+        if (IS_CLOSING(h)) {
             pj_ioqueue_unlock_key(h);
+            return PJ_TRUE;
         }
+        if (!pj_list_empty(&h->read_cb_list)) {
+            read_op = h->read_cb_list.next;
+            pj_list_erase(read_op);
+            goto invoke_cb;
+        }
+
+        /* Clear the callback flag */
+        h->inside_read_callback = PJ_FALSE;
+        pj_ioqueue_unlock_key(h);
 
     } else {
         /*
@@ -1352,7 +1379,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
     pj_list_init(&key->read_list);
     pj_list_init(&key->write_list);
     pj_list_init(&key->accept_list);
+    pj_list_init(&key->read_cb_list);
     key->connecting = 0;
+    key->inside_read_callback = PJ_FALSE;
 
     /* Remove key from sets */
     ioqueue_remove_from_set2(key->ioqueue, key,

@@ -52,6 +52,7 @@ struct read_operation
     unsigned                flags;
     pj_sockaddr_t          *rmt_addr;
     int                    *rmt_addrlen;
+    pj_ssize_t              bytes_read;
 };
 
 struct write_operation
@@ -104,6 +105,7 @@ union operation_key
     pj_grp_lock_t          *grp_lock;               \
     pj_lock_t              *lock;                   \
     pj_bool_t               inside_callback;        \
+    pj_bool_t               inside_read_callback;   \
     pj_bool_t               destroy_requested;      \
     pj_bool_t               allow_concurrent;       \
     pj_sock_t               fd;                     \
@@ -114,6 +116,7 @@ union operation_key
     struct read_operation   read_list;              \
     struct write_operation  write_list;             \
     struct accept_operation accept_list;            \
+    struct read_operation   read_cb_list;           \
     UNREG_FIELDS
 
 
