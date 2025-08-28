@@ -1061,12 +1061,16 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(atomic_var, PJ_ENOMEM);
 
-#if EMULATE_ATOMICS
+#if HAS_STD_ATOMICS
+    atomic_init(&atomic_var->value, initial);
+#elif EMULATE_ATOMICS
     rc = pj_mutex_create(pool, "atm%p", PJ_MUTEX_SIMPLE, &atomic_var->mutex);
     if (rc != PJ_SUCCESS)
         return rc;
-#endif
     atomic_var->value = initial;
+#else
+    atomic_var->value = initial;
+#endif
 
     *ptr_atomic = atomic_var;
     return PJ_SUCCESS;
@@ -1102,15 +1106,17 @@ PJ_DEF(void) pj_atomic_set(pj_atomic_t *atomic_var, pj_atomic_value_t value)
     PJ_CHECK_STACK();
     PJ_ASSERT_ON_FAIL(atomic_var, return);
 
-#if EMULATE_ATOMICS
+#if HAS_STD_ATOMICS
+    atomic_store(&atomic_var->value, value);
+#elif EMULATE_ATOMICS
     status = pj_mutex_lock( atomic_var->mutex );
     if (status != PJ_SUCCESS) {
         return;
     }
-#endif
     atomic_var->value = value;
-#if EMULATE_ATOMICS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    atomic_var->value = value;
 #endif
 }
 
@@ -1123,13 +1129,16 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var)
 
     PJ_CHECK_STACK();
 
-#if EMULATE_ATOMICS
+#if HAS_STD_ATOMICS
+    oldval = atomic_load(&atomic_var->value);
+#elif EMULATE_ATOMICS
     pj_mutex_lock( atomic_var->mutex );
-#endif
     oldval = atomic_var->value;
-#if EMULATE_ATOMICS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    oldval = atomic_var->value;
 #endif
+
     return oldval;
 }
 
@@ -1142,12 +1151,14 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var)
 
     PJ_CHECK_STACK();
 
-#if EMULATE_ATOMICS
+#if HAS_STD_ATOMICS
+    new_value = atomic_fetch_add(&atomic_var->value, 1) + 1;
+#elif EMULATE_ATOMICS
     pj_mutex_lock( atomic_var->mutex );
-#endif
     new_value = ++atomic_var->value;
-#if EMULATE_ATOMICS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    new_value = ++atomic_var->value;
 #endif
 
     return new_value;
@@ -1170,12 +1181,14 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var)
 
     PJ_CHECK_STACK();
 
-#if EMULATE_ATOMICS
+#if HAS_STD_ATOMICS
+    new_value = atomic_fetch_sub(&atomic_var->value, 1) - 1;
+#elif EMULATE_ATOMICS
     pj_mutex_lock( atomic_var->mutex );
-#endif
     new_value = --atomic_var->value;
-#if EMULATE_ATOMICS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    new_value = --atomic_var->value;
 #endif
 
     return new_value;
@@ -1198,15 +1211,14 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
 {
     pj_atomic_value_t new_value;
 
-#if EMULATE_ATOMICS
-    pj_mutex_lock(atomic_var->mutex);
-#endif
-
-    atomic_var->value += value;
-    new_value = atomic_var->value;
-
-#if EMULATE_ATOMICS
-    pj_mutex_unlock(atomic_var->mutex);
+#if HAS_STD_ATOMICS
+    new_value = atomic_fetch_add(&atomic_var->value, value) + value;
+#elif EMULATE_ATOMICS
+    pj_mutex_lock( atomic_var->mutex );
+    new_value = atomic_var->value += value;
+    pj_mutex_unlock( atomic_var->mutex);
+#else
+    new_value = atomic_var->value += value;
 #endif
 
     return new_value;
