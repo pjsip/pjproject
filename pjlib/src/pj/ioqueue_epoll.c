@@ -669,7 +669,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     /* Wait for any read callback to complete. Note that this function may be
      * called from the callback.
      */
-    while (1) {
+    while (0) {
         pj_bool_t wait;
 
         pj_ioqueue_lock_key(key);

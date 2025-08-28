@@ -197,8 +197,8 @@ PJ_INLINE(int) key_has_pending_connect(pj_ioqueue_key_t *key)
  * Report occurence of an event in the key to be processed by the
  * framework.
  */
-pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
-                                        pj_ioqueue_key_t *h)
+static pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
+                                               pj_ioqueue_key_t *h)
 {
     pj_status_t rc;
 
@@ -431,8 +431,8 @@ pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
     return PJ_TRUE;
 }
 
-pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
-                                       pj_ioqueue_key_t *h )
+static pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
+                                              pj_ioqueue_key_t *h )
 {
     pj_status_t rc;
 
@@ -656,8 +656,8 @@ invoke_cb:
 }
 
 
-pj_bool_t ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
-                                            pj_ioqueue_key_t *h )
+static pj_bool_t ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
+                                                   pj_ioqueue_key_t *h )
 {
     pj_bool_t has_lock;
     pj_status_t rc;
