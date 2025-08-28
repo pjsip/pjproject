@@ -31,14 +31,21 @@ make
 
 **CRITICAL: All test commands take significant time. NEVER CANCEL. Set timeouts appropriately:**
 
-- `make pjlib-test` -- takes 5m41s. NEVER CANCEL. Set timeout to 600+ seconds.
+- `make pjlib-test` -- takes 5m41s. NEVER CANCEL. Set timeout to 600+ seconds. May have 1 SSL test failure in sandboxed environments (normal).
 - `make pjlib-util-test` -- takes 3m3s. NEVER CANCEL. Set timeout to 300+ seconds.  
 - `make pjmedia-test` -- takes 33s. NEVER CANCEL. Set timeout to 120+ seconds.
 - `make pjnath-test` -- takes 10+ minutes. NEVER CANCEL. Set timeout to 900+ seconds.
-- `make pjsip-test` -- takes 2-5 minutes. NEVER CANCEL. Set timeout to 600+ seconds.
-- `make pjsua-test` -- takes 10+ minutes. NEVER CANCEL. Set timeout to 900+ seconds.
+- `make pjsip-test` -- takes 10+ minutes. NEVER CANCEL. Set timeout to 900+ seconds.
+- `make pjsua-test` -- takes 10+ minutes. NEVER CANCEL. Set timeout to 900+ seconds. Some network-dependent tests may fail in restricted environments.
 
-**Run all tests:** `make run_test` (from self-test.mak) -- takes 20+ minutes total. NEVER CANCEL. Set timeout to 1800+ seconds.
+**Alternative individual test commands:**
+- `pjlib/bin/pjlib-test-x86_64-pc-linux-gnu` -- direct executable
+- `pjlib-util/bin/pjlib-util-test-x86_64-pc-linux-gnu` -- direct executable  
+- `pjmedia/bin/pjmedia-test-x86_64-pc-linux-gnu` -- direct executable
+- `pjnath/bin/pjnath-test-x86_64-pc-linux-gnu` -- direct executable
+- `pjsip/bin/pjsip-test-x86_64-pc-linux-gnu` -- direct executable
+
+**Run all tests:** `make selftest` or `make run_test` (from self-test.mak) -- takes 30+ minutes total. NEVER CANCEL. Set timeout to 2400+ seconds.
 
 ### Running Applications
 
@@ -109,29 +116,44 @@ echo "CP" | timeout 10 pjsip-apps/bin/pjsua-x86_64-pc-linux-gnu --null-audio --c
 
 **Test executables locations:**
 ```
-pjlib/bin/pjlib-test-x86_64-pc-linux-gnu
-pjlib-util/bin/pjlib-util-test-x86_64-pc-linux-gnu  
-pjnath/bin/pjnath-test-x86_64-pc-linux-gnu
-pjmedia/bin/pjmedia-test-x86_64-pc-linux-gnu
-pjsip/bin/pjsip-test-x86_64-pc-linux-gnu
+pjlib/bin/pjlib-test-x86_64-pc-linux-gnu          # Core library tests
+pjlib-util/bin/pjlib-util-test-x86_64-pc-linux-gnu # Utility tests (XML, DNS, HTTP)
+pjnath/bin/pjnath-test-x86_64-pc-linux-gnu       # NAT traversal tests (STUN/TURN/ICE)  
+pjmedia/bin/pjmedia-test-x86_64-pc-linux-gnu     # Media framework tests
+pjsip/bin/pjsip-test-x86_64-pc-linux-gnu         # SIP stack tests
+pjsip/bin/pjsua2-test-x86_64-pc-linux-gnu        # High-level C++ API tests
 ```
 
-## Troubleshooting
+**Sample applications:**
+```
+pjsip-apps/bin/pjsua-x86_64-pc-linux-gnu                    # Main SIP user agent
+pjsip-apps/bin/pjsystest-x86_64-pc-linux-gnu               # System testing tool
+pjsip-apps/bin/samples/x86_64-pc-linux-gnu/stereotest      # Audio testing
+pjsip-apps/bin/samples/x86_64-pc-linux-gnu/aectest         # Echo cancellation test
+pjsip-apps/bin/samples/x86_64-pc-linux-gnu/vid_codec_test  # Video codec test
+```
+
+**Troubleshooting**
 
 **Build issues:**
-- SSL test failures are expected in sandboxed environments
+- SSL test failures are expected in sandboxed environments (pjlib-test may show 1 SSL failure)
+- Network test failures are expected in restricted environments (affects pjsua-test registration tests)
 - Missing dependencies: install with system package manager (apt-get, yum, etc.)
 - Cross-compilation: edit `build.mak` manually (see README-configure)
+- For dependency issues: run `make distclean && ./configure && make dep && make`
 
-**Common test failures:**
-- SSL/network tests may fail in restricted environments (this is normal)
+**Common test failures (NORMAL in restricted environments):**
+- SSL/TLS tests fail without internet access (pjlib SSL test, pjsua HTTPS tests)
+- SIP registration tests fail without SIP server access  
 - Audio tests require `--null-audio` in headless environments
-- Some pjsua tests may fail due to network restrictions (registration tests)
+- DNS resolution tests may timeout in sandboxed environments
+- These failures don't indicate broken functionality
 
 **Performance notes:**
 - Default build includes debug symbols (`-g`) 
-- Use `CFLAGS="-O2 -DNDEBUG"` for release builds
+- Use `CFLAGS="-O2 -DNDEBUG" ./configure` for release builds
 - Tests with timing dependencies may be sensitive to system load
+- Some tests use UDP/TCP loopback which may trigger firewall warnings
 
 ## Platform-Specific Notes
 
