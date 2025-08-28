@@ -1579,10 +1579,8 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     if (pjsip_cfg()->tls.keep_alive_interval) {
         pj_time_val delay = {0};
         delay.sec = pjsip_cfg()->tls.keep_alive_interval;
-        pjsip_endpt_schedule_timer(listener->endpt,
-                                   &tls->ka_timer,
-                                   &delay);
-        tls->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                              &delay, PJ_TRUE, tls->grp_lock);
         pj_gettimeofday(&tls->last_activity);
     }
 
@@ -2113,9 +2111,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     if (pjsip_cfg()->tls.keep_alive_interval) {
         pj_time_val delay = {0};            
         delay.sec = pjsip_cfg()->tls.keep_alive_interval;
-        pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
-                                   &delay);
-        tls->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                              &delay, PJ_TRUE, tls->grp_lock);
         pj_gettimeofday(&tls->last_activity);
     }
 
@@ -2150,9 +2147,8 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
         delay.sec = pjsip_cfg()->tls.keep_alive_interval - now.sec;
         delay.msec = 0;
 
-        pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
-                                   &delay);
-        tls->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                              &delay, PJ_TRUE, tls->grp_lock);
         return;
     }
 
@@ -2180,9 +2176,8 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     delay.sec = pjsip_cfg()->tls.keep_alive_interval;
     delay.msec = 0;
 
-    pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
-                               &delay);
-    tls->ka_timer.id = PJ_TRUE;
+    pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                          &delay, PJ_TRUE, tls->grp_lock);
 }
 
 

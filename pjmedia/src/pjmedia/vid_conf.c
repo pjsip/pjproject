@@ -720,7 +720,12 @@ static pj_status_t op_remove_port(pjmedia_vid_conf *vid_conf,
     vconf_port *cport = vid_conf->ports[slot];
     pj_status_t status;
 
-    pj_assert(cport);
+    /* Port must be valid. */
+    if (!cport) {
+        PJ_PERROR(3, (THIS_FILE, PJ_EINVAL,
+                      "Failed removing port %d, invalid video port", slot));
+        return PJ_EINVAL;
+    }
 
     /* Disconnect slot -> listeners */
     while (cport->listener_cnt) {
@@ -937,12 +942,13 @@ static pj_status_t op_connect_ports(pjmedia_vid_conf *vid_conf,
     sink_slot = prm->connect_ports.sink;
     src_port = vid_conf->ports[src_slot];
     dst_port = vid_conf->ports[sink_slot];
-    pj_assert(src_port && src_port->port && src_port->port->get_frame);
-    pj_assert(dst_port && dst_port->port && dst_port->port->put_frame);
 
-    if (!src_port || !dst_port) {
+    if (!src_port || !dst_port ||
+        !src_port->port || !dst_port->port ||
+        !src_port->port->get_frame || !dst_port->port->put_frame)
+    {
         PJ_PERROR(3, (THIS_FILE, PJ_EINVAL,
-                      "Failed connecting %d->%d, make sure video ports are valid",
+                      "Failed connecting %d->%d, invalid video ports",
                       src_slot, sink_slot));
         return PJ_EINVAL;
     }
@@ -1049,7 +1055,12 @@ static pj_status_t op_disconnect_ports(pjmedia_vid_conf *vid_conf,
     sink_slot = prm->disconnect_ports.sink;
     src_port = vid_conf->ports[src_slot];
     dst_port = vid_conf->ports[sink_slot];
-    pj_assert(src_port && dst_port);
+    if (!src_port || !dst_port) {
+        PJ_PERROR(3, (THIS_FILE, PJ_EINVAL,
+                      "Failed disconnecting %d->%d, invalid video ports",
+                      src_slot, sink_slot));
+        return PJ_EINVAL;
+    }
 
     /* Check if connection has been made */
     for (i=0; i<src_port->listener_cnt; ++i) {
@@ -1064,6 +1075,7 @@ static pj_status_t op_disconnect_ports(pjmedia_vid_conf *vid_conf,
     if (i == src_port->listener_cnt || j == dst_port->transmitter_cnt)
         return PJ_EINVAL;
 
+    /* Sanity check: the number of listeners and transmitters. */
     pj_assert(src_port->listener_cnt > 0 && 
               src_port->listener_cnt < vid_conf->opt.max_slot_cnt);
     pj_assert(dst_port->transmitter_cnt > 0 && 
@@ -1658,7 +1670,11 @@ static pj_status_t op_update_port(pjmedia_vid_conf *vid_conf,
     pjmedia_format *new_fmt;
 
     /* Port must be valid. */
-    pj_assert(cport);
+    if (!cport) {
+        PJ_PERROR(3, (THIS_FILE, PJ_EINVAL,
+                      "Failed updating port %d, invalid video port", slot));
+        return PJ_EINVAL;
+    }
 
     /* Get the old & new formats */
     old_fmt = &cport->format;

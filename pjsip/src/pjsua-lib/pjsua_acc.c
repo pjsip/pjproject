@@ -1470,8 +1470,8 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.call_hold_type = cfg->call_hold_type;
 
     /* Unregister first */
-    if (unreg_first && !cfg->disable_reg_on_modify) {
-        if (acc->regc) {
+    if (unreg_first) {
+        if (acc->regc && !cfg->disable_reg_on_modify) {
             status = pjsua_acc_set_registration(acc->index, PJ_FALSE);
             if (status != PJ_SUCCESS) {
                 pjsua_perror(THIS_FILE, "Ignored failure in unregistering the "

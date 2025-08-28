@@ -29,7 +29,7 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
-#if defined(PJMEDIA_CONF_USE_SWITCH_BOARD) && PJMEDIA_CONF_USE_SWITCH_BOARD!=0
+#if PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_SWITCH_BOARD_BACKEND
 
 /* CONF_DEBUG enables detailed operation of the conference bridge.
  * Beware that it prints large amounts of logs (several lines per frame).
@@ -207,6 +207,16 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 
     PJ_LOG(5,(THIS_FILE, "Sound device successfully created for port 0"));
     return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_conf_create2(pj_pool_t *pool,
+                                         const pjmedia_conf_param *param,
+                                         pjmedia_conf **p_conf)
+{
+    return pjmedia_conf_create(pool,
+                               param->max_slots, param->sampling_rate,
+                               param->channel_count, param->samples_per_frame,
+                               param->bits_per_sample, param->options, p_conf);
 }
 
 /*
@@ -894,6 +904,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->format = conf_port->port->info.fmt;
     info->tx_adj_level = conf_port->tx_adj_level - NORMAL_LEVEL;
     info->rx_adj_level = conf_port->rx_adj_level - NORMAL_LEVEL;
+    info->dir = conf_port->port->info.dir;
+    info->signature = conf_port->port->info.signature;
 
     /* Unlock mutex */
     pj_mutex_unlock(conf->mutex);
@@ -1636,4 +1648,4 @@ PJ_DEF(pj_status_t) pjmedia_conf_del_destroy_handler(
 }
 
 
-#endif
+#endif /* PJMEDIA_CONF_BACKEND == PJMEDIA_CONF_SWITCH_BOARD_BACKEND */

@@ -46,7 +46,15 @@ enum pjmedia_file_player_option
      * Tell the file player to return NULL frame when the whole
      * file has been played.
      */
-    PJMEDIA_FILE_NO_LOOP = 1
+    PJMEDIA_FILE_NO_LOOP = 1,
+
+    /**
+     * Disable mutex protection for getting/setting the player's position.
+     * If the application does not access the file position, enabling this
+     * option may improve performance by avoiding unnecessary locking on
+     * each frame retrieval.
+     */
+    PJMEDIA_FILE_NO_LOCK = 2
 };
 
 
@@ -135,10 +143,12 @@ PJ_DECL(pj_ssize_t) pjmedia_wav_player_get_len(pjmedia_port *port);
 
 /**
  * Set the file play position of WAV player.
- * @b Safety: This function can only be called when the player is not running
+ *
+ * @b Safety: if the player is created with PJMEDIA_FILE_NO_LOCK option,
+ * this function can only be called when the player is not running
  * (that is: get_frame() is not being called).
  *
- * @sa pjmedia_conf_configure_port
+ * @sa PJMEDIA_FILE_NO_LOCK
  *
  * @param port          The file player port.
  * @param offset        Playback position in bytes, relative to the start of
@@ -152,10 +162,12 @@ PJ_DECL(pj_status_t) pjmedia_wav_player_port_set_pos( pjmedia_port *port,
 
 /**
  * Get the file play position of WAV player, in bytes.
- * @b Safety: This function can only be called when the player is not running
+ *
+ * @b Safety: if the player is created with PJMEDIA_FILE_NO_LOCK option,
+ * this function can only be called when the player is not running
  * (that is: get_frame() is not being called).
  *
- * @sa pjmedia_conf_configure_port
+ * @sa PJMEDIA_FILE_NO_LOCK
  *
  * @param port          The file player port.
  *
