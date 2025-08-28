@@ -92,7 +92,6 @@ union operation_key
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 #   define UNREG_FIELDS                 \
         unsigned            ref_count;  \
-        pj_bool_t           closing;    \
         pj_time_val         free_time;  \
         
 #else
@@ -104,8 +103,8 @@ union operation_key
     pj_ioqueue_t           *ioqueue;                \
     pj_grp_lock_t          *grp_lock;               \
     pj_lock_t              *lock;                   \
-    pj_bool_t               inside_callback;        \
-    pj_bool_t               inside_read_callback;   \
+    pj_bool_t               closing;                \
+    pj_thread_t            *read_callback_thread;   \
     pj_bool_t               destroy_requested;      \
     pj_bool_t               allow_concurrent;       \
     pj_sock_t               fd;                     \

@@ -554,43 +554,41 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
      */
     pj_lock_release(ioqueue->lock);
 
-#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Mark key is closing. */
     key->closing = 1;
 
+    pj_ioqueue_unlock_key(key);
+
+    /* Wait for any read callback to complete */
+    while (1) {
+        pj_bool_t wait;
+
+        pj_ioqueue_lock_key(key);
+        wait = (key->read_callback_thread != pj_thread_this());
+        pj_ioqueue_unlock_key(key);
+        if (!wait)
+            break;
+
+        pj_thread_sleep(10);
+    }
+
+    /* At this point, read callback should be completely ceased
+     * as any ongoing read callback must have been completed and
+     * closing flag has been set.
+     */
+
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Decrement counter. */
     decrement_counter(key);
+#else
+    /* Destroy the key lock */
+    pj_lock_destroy(key->lock);
+#endif
 
     /* Done. */
     if (key->grp_lock) {
-        /* just dec_ref and unlock. we will set grp_lock to NULL
-         * elsewhere */
-        pj_grp_lock_t *grp_lock = key->grp_lock;
-        // Don't set grp_lock to NULL otherwise the other thread
-        // will crash. Just leave it as dangling pointer, but this
-        // should be safe
-        //key->grp_lock = NULL;
-        pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
-        pj_grp_lock_release(grp_lock);
-    } else {
-        pj_ioqueue_unlock_key(key);
+        pj_grp_lock_dec_ref_dbg(key->grp_lock, "ioqueue", 0);
     }
-#else
-    if (key->grp_lock) {
-        /* set grp_lock to NULL and unlock */
-        pj_grp_lock_t *grp_lock = key->grp_lock;
-        // Don't set grp_lock to NULL otherwise the other thread
-        // will crash. Just leave it as dangling pointer, but this
-        // should be safe
-        //key->grp_lock = NULL;
-        pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
-        pj_grp_lock_release(grp_lock);
-    } else {
-        pj_ioqueue_unlock_key(key);
-    }
-
-    pj_lock_destroy(key->lock);
-#endif
 
     return PJ_SUCCESS;
 }
