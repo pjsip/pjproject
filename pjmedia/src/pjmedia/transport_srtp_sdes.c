@@ -585,8 +585,15 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 }
 
 
+/* Fill local crypto array from local SDP.
+ * If as_offerer is true, the crypto will be put in the array based on
+ * their tag number. Note that as offerer, we generate the tag number
+ * from 0..N, so the tag number is always inline with array index.
+ * As answerer, the crypto will be put sequentially in the array.
+ */
 static pj_status_t fill_local_crypto(pj_pool_t *pool,
-                                     const pjmedia_sdp_media *m_loc, 
+                                     const pjmedia_sdp_media *m_loc,
+                                     pj_bool_t as_offerer,
                                      pjmedia_srtp_crypto loc_crypto[],
                                      int *count)
 {
@@ -613,7 +620,11 @@ static pj_status_t fill_local_crypto(pj_pool_t *pool,
         if (loc_tag <= 0 || loc_tag > *count)
             return PJMEDIA_SRTP_ESDPINCRYPTOTAG;
 
-        loc_crypto[loc_tag-1] = tmp_crypto;
+        if (as_offerer) {
+            loc_crypto[loc_tag-1] = tmp_crypto;
+        } else {
+            loc_crypto[crypto_count] = tmp_crypto;
+        }
         ++crypto_count;
     }
     *count = crypto_count;
@@ -670,7 +681,8 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
             return PJ_SUCCESS;
 
         /* Get the local crypto. */
-        fill_local_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
+        fill_local_crypto(srtp->pool, m_loc, PJ_FALSE,
+                          loc_crypto, &loc_cryto_cnt);
 
         if (loc_cryto_cnt == 0)
             return PJ_SUCCESS;
@@ -687,7 +699,7 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
                     (pj_stricmp(&srtp->setting.crypto[i].key,
                                  &loc_crypto[0].key) != 0))
                 {
-                    pj_strdup(pool, &srtp->setting.crypto[i].key,
+                    pj_strdup(srtp->pool, &srtp->setting.crypto[i].key,
                               &loc_crypto[0].key);
                 }
             }
@@ -714,13 +726,15 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
             //DEACTIVATE_MEDIA(pool, m_loc);
             //return PJMEDIA_SDP_EINPROTO;
         //}
-        fill_local_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
+        fill_local_crypto(srtp->pool, m_loc, PJ_TRUE,
+                          loc_crypto, &loc_cryto_cnt);
     } else if (srtp->setting.use == PJMEDIA_SRTP_MANDATORY) {
         if (srtp->peer_use != PJMEDIA_SRTP_MANDATORY) {
             DEACTIVATE_MEDIA(pool, m_loc);
             return PJMEDIA_SDP_EINPROTO;
         }
-        fill_local_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
+        fill_local_crypto(srtp->pool, m_loc, PJ_TRUE,
+                          loc_crypto, &loc_cryto_cnt);
     }
 
     /* find supported crypto-suite, get the tag, and assign policy_local */
