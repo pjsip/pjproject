@@ -588,7 +588,7 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 /* Fill local crypto array from local SDP.
  * If as_offerer is true, the crypto will be put in the array based on
  * their tag number. Note that as offerer, we generate the tag number
- * from 0..N, so the tag number is always inline with array index.
+ * from 0..N, so the tag number minus one is always inline with array index.
  * As answerer, the crypto will be put sequentially in the array.
  */
 static pj_status_t fill_local_crypto(pj_pool_t *pool,
@@ -621,11 +621,14 @@ static pj_status_t fill_local_crypto(pj_pool_t *pool,
             return PJMEDIA_SRTP_ESDPINCRYPTOTAG;
 
         if (as_offerer) {
-            loc_crypto[loc_tag-1] = tmp_crypto;
+            if (loc_tag <= *count)
+                loc_crypto[loc_tag-1] = tmp_crypto;
         } else {
             loc_crypto[crypto_count] = tmp_crypto;
         }
-        ++crypto_count;
+        
+        if (++crypto_count >= *count)
+            break;
     }
     *count = crypto_count;
     return status;
