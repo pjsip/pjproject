@@ -621,8 +621,7 @@ static pj_status_t fill_local_crypto(pj_pool_t *pool,
             return PJMEDIA_SRTP_ESDPINCRYPTOTAG;
 
         if (as_offerer) {
-            if (loc_tag <= *count)
-                loc_crypto[loc_tag-1] = tmp_crypto;
+            loc_crypto[loc_tag-1] = tmp_crypto;
         } else {
             loc_crypto[crypto_count] = tmp_crypto;
         }
