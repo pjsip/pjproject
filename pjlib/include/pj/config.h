@@ -812,6 +812,21 @@
 
 
 /**
+ * This setting ensures that the read callback is invoked without holding
+ * the key mutex, even when concurrency is disabled.
+ *
+ * Note: This may introduce a race condition between key unregistration
+ * and the read callback. As a result, the application might still receive
+ * a read callback after pj_ioqueue_unregister() has returned.
+ *
+ * Default: 0 (disabled).
+ */
+#ifndef PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#   define PJ_IOQUUEUE_CALLBACK_NO_LOCK    0
+#endif
+
+
+/**
  * Determine if FD_SETSIZE is changeable/set-able. If so, then we will
  * set it to PJ_IOQUEUE_MAX_HANDLES. Currently we detect this by checking
  * for Winsock.

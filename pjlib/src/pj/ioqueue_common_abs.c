@@ -500,6 +500,7 @@ static pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
     if (key_has_pending_read(h)) {
         struct read_operation *read_op;
         pj_ssize_t bytes_read;
+        pj_bool_t has_lock;
 
         /* Get one pending read operation from the list. */
         read_op = h->read_list.next;
@@ -588,7 +589,18 @@ static pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
 
         read_op->bytes_read = bytes_read;
 
-        if (!h->allow_concurrent) {
+        /* Unlock; from this point we don't need to hold key's mutex
+         * (unless concurrency is disabled, which in this case we should
+         * hold the mutex while calling the callback) */
+        if (h->allow_concurrent) {
+            /* concurrency may be changed while we're in the callback, so
+             * save it to a flag.
+             */
+            has_lock = PJ_FALSE;
+            pj_ioqueue_unlock_key(h);
+            PJ_RACE_ME(5);
+        } else {
+#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
             /* If we're not allowing concurrency, we must prevent
              * re-entrancy in the callback.
              */
@@ -601,19 +613,22 @@ static pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
                 pj_ioqueue_unlock_key(h);
                 return PJ_TRUE;
             }
-        }
+
+            /* Save the thread invoking the read callback.
+             * Note that when threading is disabled or concurrency is allowed,
+             * this will always be NULL.
+             */
+            h->read_callback_thread = pj_thread_this();
 
 invoke_cb:
-
-        /* Save the thread invoking the read callback.
-         * Note that when threading is disabled, this will always be NULL.
-         */
-        h->read_callback_thread = pj_thread_this();
-
-        /* Do not hold mutex while invoking callback */
-        pj_ioqueue_unlock_key(h);
+            /* Do not hold mutex while invoking callback */
+            pj_ioqueue_unlock_key(h);
+            PJ_UNUSED_ARG(has_lock);
+#else
+            has_lock = PJ_TRUE;
+#endif
+        }
         PJ_RACE_ME(5);
-
 
         /* Call callback. */
         /* Note that concurrency may be changed while we're in the callback. */
@@ -623,13 +638,12 @@ invoke_cb:
                                       read_op->bytes_read);
         }
 
+#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
         /* Check if there is any pending read callback for this key. */
         pj_ioqueue_lock_key(h);
 
-        /* Clear the callback thread */
-        h->read_callback_thread = NULL;
-
         if (IS_CLOSING(h)) {
+            h->read_callback_thread = NULL;
             pj_ioqueue_unlock_key(h);
             return PJ_TRUE;
         }
@@ -639,7 +653,14 @@ invoke_cb:
             goto invoke_cb;
         }
 
+        /* Clear the callback thread */
+        h->read_callback_thread = NULL;
         pj_ioqueue_unlock_key(h);
+#else
+        if (has_lock) {
+            pj_ioqueue_unlock_key(h);
+        }
+#endif
 
     } else {
         /*
