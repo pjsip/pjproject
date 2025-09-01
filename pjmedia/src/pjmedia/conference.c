@@ -1051,6 +1051,213 @@ on_return:
     return status;
 }
 
+/*
+ * Replace stream port in the conference bridge.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_replace_port(pjmedia_conf* conf,
+    pj_pool_t* pool,
+    pjmedia_port* strm_port,
+    unsigned slot)
+{
+    struct conf_port* conf_port;
+    pjmedia_port* old_port;
+    pj_status_t status;
+    PJ_LOG(4, (THIS_FILE, "pjmedia_conf_replace_port [conf_slot:%d]", slot));
+    PJ_ASSERT_RETURN(conf && pool && strm_port && slot < conf->max_ports, PJ_EINVAL);
+
+    /* For this version of PJMEDIA, channel(s) number MUST be:
+     * - same between port & conference bridge.
+     * - monochannel on port or conference bridge.
+     */
+    if (PJMEDIA_PIA_CCNT(&strm_port->info) != conf->channel_count &&
+        (PJMEDIA_PIA_CCNT(&strm_port->info) != 1 &&
+            conf->channel_count != 1))
+    {
+        pj_assert(!"Number of channels mismatch");
+        return PJMEDIA_ENCCHANNEL;
+    }
+
+    pj_mutex_lock(conf->mutex);
+
+    /* Old port must be valid. */
+    conf_port = conf->ports[slot];
+    if (conf_port == NULL) {
+        pj_mutex_unlock(conf->mutex);
+        return PJ_EINVAL;
+    }
+
+    /* Disable port whilst configuration is updated */
+    conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
+    conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
+
+    // Save old media port
+    old_port = conf_port->port;
+    conf_port->port = NULL;
+
+    /* Save some port's infos, for convenience. */
+    if (strm_port) {
+        pjmedia_audio_format_detail* afd;
+        afd = pjmedia_format_get_audio_format_detail(&strm_port->info.fmt, 1);
+        conf_port->clock_rate = afd->clock_rate;
+        conf_port->samples_per_frame = PJMEDIA_AFD_SPF(afd);
+        conf_port->channel_count = afd->channel_count;
+    }
+    else {
+        conf_port->clock_rate = conf->clock_rate;
+        conf_port->samples_per_frame = conf->samples_per_frame;
+        conf_port->channel_count = conf->channel_count;
+    }
+
+    /* If port's clock rate is different than conference's clock rate,
+     * create a resample sessions.
+     */
+    if (conf_port->clock_rate != conf->clock_rate) {
+        pj_bool_t high_quality;
+        pj_bool_t large_filter;
+
+        high_quality = ((conf->options & PJMEDIA_CONF_USE_LINEAR) == 0);
+        large_filter = ((conf->options & PJMEDIA_CONF_SMALL_FILTER) == 0);
+
+        /* Create resample for rx buffer. */
+        status = pjmedia_resample_create(pool,
+            high_quality,
+            large_filter,
+            conf->channel_count,
+            conf_port->clock_rate,/* Rate in */
+            conf->clock_rate, /* Rate out */
+            conf->samples_per_frame *
+            conf_port->clock_rate /
+            conf->clock_rate,
+            &conf_port->rx_resample);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+
+        /* Create resample for tx buffer. */
+        status = pjmedia_resample_create(pool,
+            high_quality,
+            large_filter,
+            conf->channel_count,
+            conf->clock_rate,  /* Rate in */
+            conf_port->clock_rate, /* Rate out */
+            conf->samples_per_frame,
+            &conf_port->tx_resample);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+    }
+    else {
+        conf_port->rx_resample = NULL;
+        conf_port->tx_resample = NULL;
+    }
+
+    /*
+     * Initialize rx and tx buffer, only when port's samples per frame or
+     * port's clock rate or channel number is different then the conference
+     * bridge settings.
+     */
+    if (conf_port->clock_rate != conf->clock_rate ||
+        conf_port->channel_count != conf->channel_count ||
+        conf_port->samples_per_frame != conf->samples_per_frame)
+    {
+        unsigned port_ptime, conf_ptime, buff_ptime;
+
+        port_ptime = conf_port->samples_per_frame / conf_port->channel_count *
+            1000 / conf_port->clock_rate;
+        conf_ptime = conf->samples_per_frame / conf->channel_count *
+            1000 / conf->clock_rate;
+
+        /* Calculate the size (in ptime) for the port buffer according to
+         * this formula:
+         *   - if either ptime is an exact multiple of the other, then use
+         *     the larger ptime (e.g. 20ms and 40ms, use 40ms).
+         *   - if not, then the ptime is sum of both ptimes (e.g. 20ms
+         *     and 30ms, use 50ms)
+         */
+        if (port_ptime > conf_ptime) {
+            buff_ptime = port_ptime;
+            if (port_ptime % conf_ptime)
+                buff_ptime += conf_ptime;
+        }
+        else {
+            buff_ptime = conf_ptime;
+            if (conf_ptime % port_ptime)
+                buff_ptime += port_ptime;
+        }
+
+        /* Create RX buffer. */
+        //conf_port->rx_buf_cap = (unsigned)(conf_port->samples_per_frame +
+        //				   conf->samples_per_frame * 
+        //				   conf_port->clock_rate * 1.0 /
+        //				   conf->clock_rate + 0.5);
+        conf_port->rx_buf_cap = conf_port->clock_rate * buff_ptime / 1000;
+        if (conf_port->channel_count > conf->channel_count)
+            conf_port->rx_buf_cap *= conf_port->channel_count;
+        else
+            conf_port->rx_buf_cap *= conf->channel_count;
+
+        conf_port->rx_buf_count = 0;
+        conf_port->rx_buf = (pj_int16_t*)
+            pj_pool_alloc(pool, conf_port->rx_buf_cap *
+                sizeof(conf_port->rx_buf[0]));
+        if (!conf_port->rx_buf) {
+            status = PJ_ENOMEM;
+            PJ_LOG(2, (THIS_FILE, "pjmedia_conf_replace_port: conf_port->rx_buf alloc failed [conf_slot:%d]", slot));
+            goto on_return;
+        }
+
+        /* Create TX buffer. */
+        conf_port->tx_buf_cap = conf_port->rx_buf_cap;
+        conf_port->tx_buf_count = 0;
+        conf_port->tx_buf = (pj_int16_t*)
+            pj_pool_alloc(pool, conf_port->tx_buf_cap *
+                sizeof(conf_port->tx_buf[0]));
+        if (!conf_port->tx_buf) {
+            status = PJ_ENOMEM;
+            PJ_LOG(2, (THIS_FILE, "pjmedia_conf_replace_port: conf_port->tx_buf alloc failed [conf_slot:%d]", slot));
+            goto on_return;
+        }
+    }
+    else {
+        conf_port->rx_buf_cap = 0;
+        conf_port->rx_buf_count = 0;
+        conf_port->rx_buf = NULL;
+        conf_port->tx_buf_cap = 0;
+        conf_port->tx_buf_count = 0;
+        conf_port->tx_buf = NULL;
+    }
+
+    /* Put the port. */
+    conf_port->port = strm_port;
+
+    /* Default has tx and rx enabled. */
+    conf_port->rx_setting = PJMEDIA_PORT_ENABLE;
+    conf_port->tx_setting = PJMEDIA_PORT_ENABLE;
+
+    /* Done. */
+    status = PJ_SUCCESS;
+
+on_return:
+    /* Destroy old pjmedia port if this conf port not a passive port,
+     * i.e: has delay buf.
+     */
+    if (old_port)
+    {
+        if (/*conf_port->delay_buf ||*/ old_port->info.signature != PJMEDIA_SIG_PORT_NULL)
+        {
+            PJ_LOG(4, (THIS_FILE, "pjmedia_conf_replace_port::distroy old port "));
+            pjmedia_port_destroy(old_port);
+            old_port = NULL;
+        }
+    }
+
+    pj_mutex_unlock(conf->mutex);
+
+    if (status != PJ_SUCCESS)
+    {
+        PJ_LOG(2, (THIS_FILE, "pjmedia_conf_replace_port failed [conf_slot:%d]", slot));
+    }
+    return status;
+}
+
 
 static void op_add_port(pjmedia_conf *conf, const op_param *prm)
 {
@@ -1828,7 +2035,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
 {
     unsigned i, count=0;
 
-    PJ_ASSERT_RETURN(conf && p_count && ports, PJ_EINVAL);
+    PJ_ASSERT_RETURN(conf && p_count, PJ_EINVAL);
 
     /* Lock mutex */
     pj_mutex_lock(conf->mutex);
@@ -1836,8 +2043,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
     for (i=0; i<conf->max_ports && count<*p_count; ++i) {
         if (!conf->ports[i])
             continue;
-
-        ports[count++] = i;
+        if(ports)
+            ports[count++] = i;
+        else
+            count++;
     }
 
     /* Unlock mutex */
@@ -1846,6 +2055,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
     *p_count = count;
     return PJ_SUCCESS;
 }
+
 
 /*
  * Get port info

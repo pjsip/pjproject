@@ -130,6 +130,8 @@ struct pjmedia_stream
     pj_uint32_t              ts_vad_disabled;/**< TS when VAD was disabled. */
     pj_uint32_t              tx_duration;   /**< TX duration in timestamp.  */
 
+    pj_mutex_t* jb_mutex;
+
     unsigned                 soft_start_cnt;/**< Stream soft start counter */
 
     pj_int16_t              *zero_frame;    /**< Zero frame buffer.         */
@@ -2769,6 +2771,25 @@ on_return:
     return status;
 }
 
+/*
+ * Get number of DTMF digits in the stream's transmit queue.
+ */
+PJ_DEF(pj_status_t) pjmedia_get_queued_dtmf_digits(pjmedia_stream* stream,
+    unsigned* digits)
+{
+    /* By convention we use jitter buffer mutex to access DTMF
+     * queue.
+     */
+    PJ_ASSERT_RETURN(stream && digits, PJ_EINVAL);
+
+    pj_mutex_lock(stream->jb_mutex);
+
+    *digits = (unsigned)stream->tx_dtmf_count;
+
+    pj_mutex_unlock(stream->jb_mutex);
+
+    return PJ_SUCCESS;
+}
 
 /*
  * See if we have DTMF digits in the rx buffer.

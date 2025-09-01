@@ -173,6 +173,9 @@ struct pjsua_call
                                     /**< Is media update successful?        */
     pj_bool_t            hanging_up;/**< Is call in the process of hangup?  */
 
+    pjmedia_port* null_port;
+    pjsua_conf_port_id conf_slot; /**< Slot # in conference bridge.    */
+    int			 conf_idx; /**< Index of audio stream that was added to the conference.	    */
     int                  audio_idx; /**< First active audio media.          */
     pj_mutex_t          *med_ch_mutex;/**< Media channel callback's mutex.  */
     pjsua_med_tp_state_cb   med_ch_cb;/**< Media channel callback.          */
@@ -535,7 +538,7 @@ struct pjsua_data
     /* Calls: */
     pjsua_config         ua_cfg;                /**< UA config.         */
     unsigned             call_cnt;              /**< Call counter.      */
-    pjsua_call           calls[PJSUA_MAX_CALLS];/**< Calls array.       */
+    pjsua_call           *calls;/**< Calls array.       */
     pjsua_call_id        next_call_id;          /**< Next call id to use*/
 
     /* Buddy; */
@@ -859,6 +862,11 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg);
  * Start call subsystem.
  */
 pj_status_t pjsua_call_subsys_start(void);
+
+/**
+ * Destroy pjsua call subsystem.
+ */
+pj_status_t pjsua_call_subsys_destroy(void);
 
 /**
  * Init media subsystems.

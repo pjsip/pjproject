@@ -327,6 +327,9 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_detect( pjmedia_silence_det *sd,
                                               pj_int32_t *p_level)
 {
     pj_uint32_t level;
+
+    if (!p_level && (sd->mode == VAD_MODE_NONE))
+        return PJ_FALSE;
     
     /* Calculate average signal level. */
     level = pjmedia_calc_avg_signal(samples, count);
