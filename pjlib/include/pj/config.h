@@ -816,13 +816,13 @@
  * the key mutex, even when concurrency is disabled.
  *
  * Note: This may introduce a race condition between key unregistration
- * and the read callback. As a result, the application might still receive
- * a read callback after pj_ioqueue_unregister() has returned.
+ * and the read callback. Therefore, the application must be prepared
+ * to handle a read callback even after pj_ioqueue_unregister() has returned.
  *
  * Default: 0 (disabled).
  */
 #ifndef PJ_IOQUUEUE_CALLBACK_NO_LOCK
-#   define PJ_IOQUUEUE_CALLBACK_NO_LOCK    0
+#   define PJ_IOQUUEUE_CALLBACK_NO_LOCK 1
 #endif
 
 
