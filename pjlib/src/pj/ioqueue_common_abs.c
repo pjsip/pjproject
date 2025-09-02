@@ -501,6 +501,9 @@ static pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
         struct read_operation *read_op;
         pj_ssize_t bytes_read;
         pj_bool_t has_lock;
+        void (*on_read_complete)(pj_ioqueue_key_t *key,
+                                 pj_ioqueue_op_key_t *op_key,
+                                 pj_ssize_t bytes_read);
 
         /* Get one pending read operation from the list. */
         read_op = h->read_list.next;
@@ -588,6 +591,7 @@ static pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
         }
 
         read_op->bytes_read = bytes_read;
+        on_read_complete = h->cb.on_read_complete;
 
         /* Unlock; from this point we don't need to hold key's mutex
          * (unless concurrency is disabled, which in this case we should
@@ -632,10 +636,10 @@ invoke_cb:
 
         /* Call callback. */
         /* Note that concurrency may be changed while we're in the callback. */
-        if (h->cb.on_read_complete && !IS_CLOSING(h)) {
-            (*h->cb.on_read_complete)(h, 
-                                      (pj_ioqueue_op_key_t*)read_op,
-                                      read_op->bytes_read);
+        if (!IS_CLOSING(h) && on_read_complete) {
+            (*on_read_complete)(h,
+                                (pj_ioqueue_op_key_t*)read_op,
+                                read_op->bytes_read);
         }
 
 #if PJ_IOQUUEUE_CALLBACK_NO_LOCK
