@@ -822,7 +822,7 @@
  * Default: 0 (disabled).
  */
 #ifndef PJ_IOQUUEUE_CALLBACK_NO_LOCK
-#   define PJ_IOQUUEUE_CALLBACK_NO_LOCK 1
+#   define PJ_IOQUUEUE_CALLBACK_NO_LOCK 0
 #endif
 
 

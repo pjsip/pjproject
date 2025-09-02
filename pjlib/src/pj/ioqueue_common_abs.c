@@ -628,11 +628,11 @@ invoke_cb:
             /* Do not hold mutex while invoking callback */
             pj_ioqueue_unlock_key(h);
             PJ_UNUSED_ARG(has_lock);
+            PJ_RACE_ME(5);
 #else
             has_lock = PJ_TRUE;
 #endif
         }
-        PJ_RACE_ME(5);
 
         /* Call callback. */
         /* Note that concurrency may be changed while we're in the callback. */
