@@ -55,10 +55,9 @@ tutorial. The paragraphs below explain basic tasks on using this module.
 
 
 """
-import sys
-if sys.version_info[0] >= 3:
+try:
     import _thread as thread
-else:
+except ImportError:
     import thread
 import _pjsua
 import threading
@@ -2966,6 +2965,6 @@ def _Trace(args):
     if enable_trace:
         print("** ", end='')
         for arg in args:
-            print(arg, end='')
+            print(arg, end=' ')
         print( " **" )
 
