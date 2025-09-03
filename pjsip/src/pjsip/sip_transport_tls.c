@@ -671,7 +671,20 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
         if (status != PJ_SUCCESS) {
             PJ_PERROR(2,(listener->factory.obj_name, status,
                          "Failed to set TLS credentials from store"));
-            goto on_error;    
+            goto on_error;
+        }
+    }
+
+    if (listener->tls_setting.cert_direct.type != PJ_SSL_CERT_DIRECT_NONE) {
+        status = pj_ssl_cert_load_direct(
+                                pool,
+                                &listener->tls_setting.cert_direct,
+                                &listener->cert);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set direct TLS credentials"));
+            goto on_error;
+        }
     }
 
     /* Register to transport manager */

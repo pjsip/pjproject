@@ -1429,6 +1429,23 @@ static void turn_on_state(pj_turn_session *sess,
                 }
             }
 
+            /* Set direct SSL/TLS credentials */
+            if (turn_sock->setting.tls_cfg.cert_direct.type !=
+                PJ_SSL_CERT_DIRECT_NONE)
+            {
+                status = pj_ssl_cert_load_direct(
+                                turn_sock->pool,
+                                &turn_sock->setting.tls_cfg.cert_direct,
+                                &turn_sock->cert);
+                if (status != PJ_SUCCESS) {
+                    PJ_PERROR(2,(turn_sock->obj_name, status,
+                                 "Failed to set direct TLS credentials"));
+                    turn_sock_destroy(turn_sock, status);
+                    pj_grp_lock_release(turn_sock->grp_lock);
+                    return;
+                }
+            }
+
             if (turn_sock->cert) {
                 pj_turn_sock_tls_cfg_wipe_keys(&turn_sock->setting.tls_cfg);
             }
