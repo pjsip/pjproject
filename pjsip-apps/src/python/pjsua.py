@@ -2966,5 +2966,5 @@ def _Trace(args):
         print("** ", end='')
         for arg in args:
             print(arg, end=' ')
-        print( " **" )
+        print(" **")
 
