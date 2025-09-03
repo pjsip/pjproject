@@ -2536,7 +2536,7 @@ static PyObject *py_pjsua_playlist_create(PyObject *pSelf, PyObject *pArgs)
 
     count = 0;
     for (count=0; count<PyList_Size(pFileList) && 
-                  count<PJ_ARRAY_SIZE(files); ++count) 
+                  count<(int)PJ_ARRAY_SIZE(files); ++count) 
     {
         files[count] = PyString_ToPJ(PyList_GetItem(pFileList, count));
     }
@@ -4438,6 +4438,21 @@ static PyMethodDef py_pjsua_methods[] =
 };
 
 
+#if PY_MAJOR_VERSION > 2
+static struct PyModuleDef py_pjsua_module =
+{
+    PyModuleDef_HEAD_INIT,
+    "_pjsua", /* name of module */
+    "PJSUA-lib module for python\n", /* module documentation, may be NULL */
+    -1,   /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+    py_pjsua_methods,
+    NULL,                /* m_reload */
+    NULL,                /* m_traverse */
+    NULL,                /* m_clear */
+    NULL,                /* m_free */
+};
+#endif
+
 
 /*
  * Mapping C structs from and to Python objects & initializing object
@@ -4453,30 +4468,30 @@ init_pjsua(void)
     PyEval_InitThreads();
 
     if (PyType_Ready(&PyTyp_pjsua_callback) < 0)
-        return;
+        return INIT_RETURN;
     if (PyType_Ready(&PyTyp_pjsua_config) < 0)
-        return;
+        return INIT_RETURN;
     if (PyType_Ready(&PyTyp_pjsua_logging_config) < 0)
-        return;
+        return INIT_RETURN;
     if (PyType_Ready(&PyTyp_pjsua_msg_data) < 0)
-        return;
+        return INIT_RETURN;
     PyTyp_pjsua_media_config.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyTyp_pjsua_media_config) < 0)
-        return;
+        return INIT_RETURN;
     PyTyp_pjsip_cred_info.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyTyp_pjsip_cred_info) < 0)
-        return;
+        return INIT_RETURN;
     PyTyp_pjsip_rx_data.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyTyp_pjsip_rx_data) < 0)
-        return;
+        return INIT_RETURN;
 
     /* LIB TRANSPORT */
 
     if (PyType_Ready(&PyTyp_pjsua_transport_config) < 0)
-        return;
+        return INIT_RETURN;
     
     if (PyType_Ready(&PyTyp_pjsua_transport_info) < 0)
-        return;
+        return INIT_RETURN;
     
     /* END OF LIB TRANSPORT */
 
@@ -4484,48 +4499,48 @@ init_pjsua(void)
 
     
     if (PyType_Ready(&PyTyp_pjsua_acc_config) < 0)
-        return;
+        return INIT_RETURN;
     if (PyType_Ready(&PyTyp_pjsua_acc_info) < 0)
-        return;
+        return INIT_RETURN;
 
     /* END OF LIB ACCOUNT */
 
     /* LIB BUDDY */
 
     if (PyType_Ready(&PyTyp_pjsua_buddy_config) < 0)
-        return;
+        return INIT_RETURN;
     if (PyType_Ready(&PyTyp_pjsua_buddy_info) < 0)
-        return;
+        return INIT_RETURN;
 
     /* END OF LIB BUDDY */
 
     /* LIB MEDIA */
   
     if (PyType_Ready(&PyTyp_pjsua_codec_info) < 0)
-        return;
+        return INIT_RETURN;
 
     if (PyType_Ready(&PyTyp_pjsua_conf_port_info) < 0)
-        return;
+        return INIT_RETURN;
 
     if (PyType_Ready(&PyTyp_pjmedia_snd_dev_info) < 0)
-        return;
+        return INIT_RETURN;
 
     PyTyp_pjmedia_codec_param_info.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyTyp_pjmedia_codec_param_info) < 0)
-        return;
+        return INIT_RETURN;
     PyTyp_pjmedia_codec_param_setting.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyTyp_pjmedia_codec_param_setting) < 0)
-        return;
+        return INIT_RETURN;
 
     if (PyType_Ready(&PyTyp_pjmedia_codec_param) < 0)
-        return;
+        return INIT_RETURN;
 
     /* END OF LIB MEDIA */
 
     /* LIB CALL */
 
     if (PyType_Ready(&PyTyp_pjsua_call_info) < 0)
-        return;
+        return INIT_RETURN;
 
     /* END OF LIB CALL */
 
@@ -4624,4 +4639,6 @@ init_pjsua(void)
     /* Skip it.. */
 
 #undef ADD_CONSTANT
+
+    return INIT_RETURN;
 }
