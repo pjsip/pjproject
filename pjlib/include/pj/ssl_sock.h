@@ -323,7 +323,9 @@ typedef struct pj_ssl_cert_info {
  * @param cert_file     The file of certificate.
  * @param privkey_file  The file of private key.
  * @param privkey_pass  The password of private key, if any.
- * @param p_cert        Pointer to credential instance to be created.
+ * @param p_cert        Pointer to credential instance.
+ *                      If NULL, new credential instances will be created,
+ *                      otherwise the specified instance will be used.
  *
  * @return              PJ_SUCCESS when successful.
  */
@@ -350,7 +352,9 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
  * @param cert_file     The file of certificate.
  * @param privkey_file  The file of private key.
  * @param privkey_pass  The password of private key, if any.
- * @param p_cert        Pointer to credential instance to be created.
+ * @param p_cert        Pointer to credential instance.
+ *                      If NULL, new credential instances will be created,
+ *                      otherwise the specified instance will be used.
  *
  * @return              PJ_SUCCESS when successful.
  */
@@ -373,7 +377,9 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files2(
  * @param cert_buf      The buffer of certificate.
  * @param privkey_buf   The buffer of private key.
  * @param privkey_pass  The password of private key, if any.
- * @param p_cert        Pointer to credential instance to be created.
+ * @param p_cert        Pointer to credential instance.
+ *                      If NULL, new credential instances will be created,
+ *                      otherwise the specified instance will be used.
  *
  * @return              PJ_SUCCESS when successful.
  */
@@ -398,11 +404,13 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
  * trusted CA certificates in Current User store only (will not check CA
  * certificates in the Local Machine store).
  *
- * @param pool              The pool.
- * @param criteria          The lookup criteria.
- * @param p_cert            Pointer to credential instance to be created.
+ * @param pool          The pool.
+ * @param criteria      The lookup criteria.
+ * @param p_cert        Pointer to credential instance.
+ *                      If NULL, new credential instances will be created,
+ *                      otherwise the specified instance will be used.
  *
- * @return                  PJ_SUCCESS when successful.
+ * @return              PJ_SUCCESS when successful.
  */
 PJ_DECL(pj_status_t) pj_ssl_cert_load_from_store(
                                 pj_pool_t *pool,
@@ -417,11 +425,13 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_store(
  * a hardware device, and then provide the EVP_PKEY instance to be used by
  * OpenSSL backend via this function.
  *
- * @param pool              The pool.
- * @param criteria          The lookup criteria.
- * @param p_cert            Pointer to credential instance to be created.
+ * @param pool          The pool.
+ * @param criteria      The lookup criteria.
+ * @param p_cert        Pointer to credential instance.
+ *                      If NULL, new credential instances will be created,
+ *                      otherwise the specified instance will be used.
  *
- * @return                  PJ_SUCCESS when successful.
+ * @return              PJ_SUCCESS when successful.
  */
 PJ_DECL(pj_status_t) pj_ssl_cert_load_direct(
                                 pj_pool_t *pool,

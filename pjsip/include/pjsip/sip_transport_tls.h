@@ -202,6 +202,14 @@ typedef struct pjsip_tls_setting
     pj_ssl_cert_lookup_criteria cert_lookup;
 
     /**
+     * TLS credentials using backend specific objects.
+     *
+     * Currently only used by TLS backend OpenSSL, please check
+     * pj_ssl_cert_load_direct() for more info.
+     */
+    pj_ssl_cert_direct cert_direct;
+
+    /**
      * Password to open private key.
      */
     pj_str_t    password;

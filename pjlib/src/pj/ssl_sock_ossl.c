@@ -1237,6 +1237,10 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 
     /* Apply credentials */
     if (cert) {
+        pj_bool_t CA_loaded = PJ_FALSE;
+        pj_bool_t cert_loaded = PJ_FALSE;
+        pj_bool_t privkey_loaded = PJ_FALSE;
+
         /* Load CA list if one is specified. */
         if (cert->CA_file.slen || cert->CA_path.slen) {
 
@@ -1261,6 +1265,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
                 ossock->ossl_ctx = NULL;
                 return status;
             } else {
+                CA_loaded = PJ_TRUE;
                 PJ_LOG(4,(ssock->pool->obj_name,
                           "CA certificates loaded from '%s%s%s'",
                           cert->CA_file.ptr,
@@ -1292,6 +1297,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
                 ossock->ossl_ctx = NULL;
                 return status;
             } else {
+                cert_loaded = PJ_TRUE;
                 PJ_LOG(4,(ssock->pool->obj_name,
                           "Certificate chain loaded from '%s'",
                           cert->cert_file.ptr));
@@ -1314,6 +1320,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
                 ossock->ossl_ctx = NULL;
                 return status;
             } else {
+                privkey_loaded = PJ_TRUE;
                 PJ_LOG(4,(ssock->pool->obj_name,
                           "Private key loaded from '%s'",
                           cert->privkey_file.ptr));
@@ -1331,7 +1338,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
         }
 
         /* Load from buffer. */
-        if (cert->cert_buf.slen) {
+        if (cert->cert_buf.slen && !cert_loaded) {
             BIO *cbio;
             X509 *xcert = NULL;
             
@@ -1351,6 +1358,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
                         ossock->ossl_ctx = NULL;
                         return status;
                     } else {
+                        cert_loaded = PJ_TRUE;
                         PJ_LOG(4,(ssock->pool->obj_name,
                                   "Certificate chain loaded from buffer"));
                     }
@@ -1360,7 +1368,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
             }       
         }
 
-        if (cert->CA_buf.slen) {
+        if (cert->CA_buf.slen && !CA_loaded) {
             BIO *cbio = BIO_new_mem_buf((void*)cert->CA_buf.ptr,
                                         cert->CA_buf.slen);
             X509_STORE *cts = SSL_CTX_get_cert_store(ctx);
@@ -1390,6 +1398,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 #endif
                         }
                     }
+                    CA_loaded = (cnt > 0);
                     PJ_LOG(4,(ssock->pool->obj_name,
                               "CA certificates loaded from buffer (cnt=%d)",
                               cnt));
@@ -1399,7 +1408,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
             }
         }
 
-        if (cert->privkey_buf.slen) {
+        if (cert->privkey_buf.slen && !privkey_loaded) {
             BIO *kbio;      
             EVP_PKEY *pkey = NULL;
 
@@ -1420,6 +1429,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
                         ossock->ossl_ctx = NULL;
                         return status;
                     } else {
+                        privkey_loaded = PJ_TRUE;
                         PJ_LOG(4,(ssock->pool->obj_name,
                                   "Private key loaded from buffer"));
                     }
@@ -1435,7 +1445,44 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
                 BIO_free(kbio);
             }       
         }
+
+        if ((cert->direct.type && PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY) &&
+             cert->direct.privkey && !privkey_loaded)
+        {
+            EVP_PKEY *pkey = (EVP_PKEY*)cert->direct.privkey;
+            rc = SSL_CTX_use_PrivateKey(ctx, pkey);
+            if (rc != 1) {
+                status = GET_SSL_STATUS(ssock);
+                PJ_PERROR(1,(ssock->pool->obj_name, status,
+                             "Error setting direct private key"));
+                SSL_CTX_free(ctx);
+                ossock->ossl_ctx = NULL;
+                return status;
+            } else {
+                privkey_loaded = PJ_TRUE;
+                PJ_LOG(4,(ssock->pool->obj_name, "Direct private key set"));
+            }
+        }
+
+        if ((cert->direct.type && PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT) &&
+             cert->direct.cert && !cert_loaded)
+        {
+            X509 *xcert = (X509*)cert->direct.cert;
+            rc = SSL_CTX_use_certificate(ctx, xcert);
+            if (rc != 1) {
+                status = GET_SSL_STATUS(ssock);
+                PJ_PERROR(1,(ssock->pool->obj_name, status,
+                             "Error setting direct certificate"));
+                SSL_CTX_free(ctx);
+                ossock->ossl_ctx = NULL;
+                return status;
+            } else {
+                cert_loaded = PJ_TRUE;
+                PJ_LOG(4,(ssock->pool->obj_name, "Direct certificate set"));
+            }
+        }
     }
+
 
     if (ssock->is_server) {
         char *p = NULL;

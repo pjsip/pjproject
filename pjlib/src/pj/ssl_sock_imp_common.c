@@ -2341,20 +2341,31 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files2(pj_pool_t *pool,
 #if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
     pj_ssl_cert_t *cert;
 
-    PJ_ASSERT_RETURN(pool && (CA_file || CA_path) && cert_file &&
-                     privkey_file,
+    PJ_ASSERT_RETURN(pool && p_cert &&
+                     (CA_file || CA_path || cert_file || privkey_file),
                      PJ_EINVAL);
 
-    cert = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
+    cert = *p_cert;
+    if (!cert)
+        cert = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
+    if (!cert)
+        return PJ_ENOMEM;
+
     if (CA_file) {
         pj_strdup_with_null(pool, &cert->CA_file, CA_file);
     }
     if (CA_path) {
         pj_strdup_with_null(pool, &cert->CA_path, CA_path);
     }
-    pj_strdup_with_null(pool, &cert->cert_file, cert_file);
-    pj_strdup_with_null(pool, &cert->privkey_file, privkey_file);
-    pj_strdup_with_null(pool, &cert->privkey_pass, privkey_pass);
+    if (cert_file) {
+        pj_strdup_with_null(pool, &cert->cert_file, cert_file);
+    }
+    if (privkey_file) {
+        pj_strdup_with_null(pool, &cert->privkey_file, privkey_file);
+    }
+    if (privkey_pass) {
+        pj_strdup_with_null(pool, &cert->privkey_pass, privkey_pass);
+    }
 
     *p_cert = cert;
 
@@ -2381,13 +2392,28 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
 #if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
     pj_ssl_cert_t *cert;
 
-    PJ_ASSERT_RETURN(pool && CA_buf && cert_buf && privkey_buf, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool && p_cert &&
+                     (CA_buf || cert_buf || privkey_buf),
+                     PJ_EINVAL);
 
-    cert = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
-    pj_strdup(pool, &cert->CA_buf, CA_buf);
-    pj_strdup(pool, &cert->cert_buf, cert_buf);
-    pj_strdup(pool, &cert->privkey_buf, privkey_buf);
-    pj_strdup_with_null(pool, &cert->privkey_pass, privkey_pass);
+    cert = *p_cert;
+    if (!cert)
+        cert = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
+    if (!cert)
+        return PJ_ENOMEM;
+
+    if (CA_buf) {
+        pj_strdup(pool, &cert->CA_buf, CA_buf);
+    }
+    if (cert_buf) {
+        pj_strdup(pool, &cert->cert_buf, cert_buf);
+    }
+    if (privkey_buf) {
+        pj_strdup(pool, &cert->privkey_buf, privkey_buf);
+    }
+    if (privkey_pass) {
+        pj_strdup_with_null(pool, &cert->privkey_pass, privkey_pass);
+    }
 
     *p_cert = cert;
 
@@ -2412,9 +2438,14 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_store(
 #if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_SCHANNEL)
     pj_ssl_cert_t *cert;
 
-    PJ_ASSERT_RETURN(pool && criteria && p_cert, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool && p_cert && criteria, PJ_EINVAL);
 
-    cert = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
+    cert = *p_cert;
+    if (!cert)
+        cert = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
+    if (!cert)
+        return PJ_ENOMEM;
+
     pj_memcpy(&cert->criteria, criteria, sizeof(*criteria));
     pj_strdup_with_null(pool, &cert->criteria.keyword, &criteria->keyword);
 
@@ -2424,6 +2455,36 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_store(
 #else
     PJ_UNUSED_ARG(pool);
     PJ_UNUSED_ARG(criteria);
+    PJ_UNUSED_ARG(p_cert);
+    return PJ_ENOTSUP;
+#endif
+}
+
+
+PJ_DEF(pj_status_t) pj_ssl_cert_load_direct(
+                                pj_pool_t *pool,
+                                pj_ssl_cert_direct *cert_direct,
+                                pj_ssl_cert_t **p_cert)
+{
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+    pj_ssl_cert_t *cert;
+
+    PJ_ASSERT_RETURN(pool && p_cert && cert_direct, PJ_EINVAL);
+
+    cert = *p_cert;
+    if (!cert)
+        cert = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
+    if (!cert)
+        return PJ_ENOMEM;
+
+    cert->direct = *cert_direct;
+
+    *p_cert = cert;
+
+    return PJ_SUCCESS;
+#else
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(cert_direct);
     PJ_UNUSED_ARG(p_cert);
     return PJ_ENOTSUP;
 #endif
