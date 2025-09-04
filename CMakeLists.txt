@@ -10,6 +10,21 @@ project(pjproject
 # project modules
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+# experimental warning notice
+option(PJ_SKIP_EXPERIMENTAL_NOTICE OFF)
+if (NOT PJ_SKIP_EXPERIMENTAL_NOTICE)
+  message(WARNING
+    " ****************************************************\n"
+    " * Building `pjproject` with CMake is experimental  *\n"
+    " * -------------------------------------------------*\n"
+    " * Tested platforms:                                *\n"
+    " * - Linux x86_64                                   *\n"
+    " ****************************************************\n"
+    "Set `PJ_SKIP_EXPERIMENTAL_NOTICE=ON` to disable this warning"
+    ""
+  )
+endif()
+
 # ##############################################################################
 # Testing support
 
