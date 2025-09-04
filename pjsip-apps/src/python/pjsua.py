@@ -55,8 +55,11 @@ tutorial. The paragraphs below explain basic tasks on using this module.
 
 
 """
+try:
+    import _thread as thread
+except ImportError:
+    import thread
 import _pjsua
-import thread
 import threading
 import weakref
 import time
@@ -2960,8 +2963,8 @@ def _worker_thread_main(arg):
 def _Trace(args):
     global enable_trace
     if enable_trace:
-        print "** ",
+        print("** ", end='')
         for arg in args:
-            print arg,
-        print " **"
+            print(arg, end=' ')
+        print(" **")
 
