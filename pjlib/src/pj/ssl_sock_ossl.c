@@ -1446,7 +1446,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
             }       
         }
 
-        if ((cert->direct.type && PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY) &&
+        if ((cert->direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY) &&
              cert->direct.privkey && !privkey_loaded)
         {
             EVP_PKEY *pkey = (EVP_PKEY*)cert->direct.privkey;
@@ -1464,7 +1464,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
             }
         }
 
-        if ((cert->direct.type && PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT) &&
+        if ((cert->direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT) &&
              cert->direct.cert && !cert_loaded)
         {
             X509 *xcert = (X509*)cert->direct.cert;
