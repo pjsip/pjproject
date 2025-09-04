@@ -324,8 +324,9 @@ typedef struct pj_ssl_cert_info {
  * @param privkey_file  The file of private key.
  * @param privkey_pass  The password of private key, if any.
  * @param p_cert        Pointer to credential instance.
- *                      If NULL, new credential instances will be created,
- *                      otherwise the specified instance will be used.
+ *                      If the credential instance is NULL, a new credential
+ *                      instances will be created, otherwise the specified
+ *                      credential instance will be used.
  *
  * @return              PJ_SUCCESS when successful.
  */
@@ -353,8 +354,9 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
  * @param privkey_file  The file of private key.
  * @param privkey_pass  The password of private key, if any.
  * @param p_cert        Pointer to credential instance.
- *                      If NULL, new credential instances will be created,
- *                      otherwise the specified instance will be used.
+ *                      If the credential instance is NULL, a new credential
+ *                      instances will be created, otherwise the specified
+ *                      credential instance will be used.
  *
  * @return              PJ_SUCCESS when successful.
  */
@@ -378,8 +380,9 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files2(
  * @param privkey_buf   The buffer of private key.
  * @param privkey_pass  The password of private key, if any.
  * @param p_cert        Pointer to credential instance.
- *                      If NULL, new credential instances will be created,
- *                      otherwise the specified instance will be used.
+ *                      If the credential instance is NULL, a new credential
+ *                      instances will be created, otherwise the specified
+ *                      credential instance will be used.
  *
  * @return              PJ_SUCCESS when successful.
  */
@@ -407,8 +410,9 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
  * @param pool          The pool.
  * @param criteria      The lookup criteria.
  * @param p_cert        Pointer to credential instance.
- *                      If NULL, new credential instances will be created,
- *                      otherwise the specified instance will be used.
+ *                      If the credential instance is NULL, a new credential
+ *                      instances will be created, otherwise the specified
+ *                      credential instance will be used.
  *
  * @return              PJ_SUCCESS when successful.
  */
@@ -423,13 +427,16 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_store(
  *
  * For example, application can use OpenSSL ENGINE to load a private key from
  * a hardware device, and then provide the EVP_PKEY instance to be used by
- * OpenSSL backend via this function.
+ * OpenSSL backend via this function. Application should maintain the
+ * objects lifetime until the credential instance is no longer used
+ * (e.g: SSL socket is destroyed).
  *
  * @param pool          The pool.
  * @param criteria      The lookup criteria.
  * @param p_cert        Pointer to credential instance.
- *                      If NULL, new credential instances will be created,
- *                      otherwise the specified instance will be used.
+ *                      If the credential instance is NULL, a new credential
+ *                      instances will be created, otherwise the specified
+ *                      credential instance will be used.
  *
  * @return              PJ_SUCCESS when successful.
  */

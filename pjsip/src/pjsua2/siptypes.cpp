@@ -203,13 +203,13 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.cert_lookup.keyword = str2Pj(this->certLookupKeyword);
     
     if (this->certDirect &&
-        (this->credDirectType && PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT))
+        (this->credDirectType & PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT))
     {
         ts.cert_direct.type |= PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT;
         ts.cert_direct.cert = this->certDirect;
     }
     if (this->privKeyDirect &&
-        (this->credDirectType && PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY))
+        (this->credDirectType & PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY))
     {
         ts.cert_direct.type |= PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY;
         ts.cert_direct.privkey = this->privKeyDirect;
