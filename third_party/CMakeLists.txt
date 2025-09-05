@@ -35,15 +35,17 @@ set(DEP_SRTP_SUBDIR  "srtp")
 set(DEP_SRTP_PACKAGE "SRTP")
 list(APPEND DEPS SRTP)
 
-# WebRTC
-set(DEP_WebRTC_HELP  "WebRTC implementation provider")
-set(DEP_WebRTC_SUBDIR "webrtc")
-list(APPEND DEPS WebRTC)
+if(NOT APPLE)
+  # WebRTC
+  set(DEP_WebRTC_HELP  "WebRTC implementation provider")
+  set(DEP_WebRTC_SUBDIR "webrtc")
+  list(APPEND DEPS WebRTC)
 
-# WebRTC_AEC3
-set(DEP_WebRTC_AEC3_HELP   "WebRTC AEC3 implementation provider")
-set(DEP_WebRTC_AEC3_SUBDIR "webrtc_aec3")
-list(APPEND DEPS WebRTC_AEC3)
+  # WebRTC_AEC3
+  set(DEP_WebRTC_AEC3_HELP   "WebRTC AEC3 implementation provider")
+  set(DEP_WebRTC_AEC3_SUBDIR "webrtc_aec3")
+  list(APPEND DEPS WebRTC_AEC3)
+endif()
 
 # YUV
 set(DEP_YUV_HELP    "libyuv codec implementation provider")
