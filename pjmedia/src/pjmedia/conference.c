@@ -2046,7 +2046,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
         if(ports)
             ports[count++] = i;
         else
-            count++;
+            count++;   // if port is NULL, only return the number of active slots.
     }
 
     /* Unlock mutex */

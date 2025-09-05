@@ -328,6 +328,7 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_detect( pjmedia_silence_det *sd,
 {
     pj_uint32_t level;
 
+    /* If VAD is disabled, return false */
     if (!p_level && (sd->mode == VAD_MODE_NONE))
         return PJ_FALSE;
     
