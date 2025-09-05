@@ -219,33 +219,35 @@ endif()
 # ##############################################################################
 # Dependencies
 
-if (NOT (WIN32 OR CYGWIN OR MINGW))
-  # math library
+# win32
+include(CheckIncludeFile)
+if(WIN32 OR CYGWIN OR MINGW)
+  check_include_file(winsock.h PJ_HAS_WINSOCK_H)
+  check_include_file(winsock2.h PJ_HAS_WINSOCK2_H)
+  check_include_file(mswsock.h PJ_HAS_MSWSOCK_H)
+  check_include_file(ws2tcpip.h PJ_HAS_WS2TCPIP_H)
+
+  target_link_libraries(pjlib PRIVATE ole32 winmm)
+  if(PJ_HAS_WINSOCK2_H)
+    target_link_libraries(pjlib PRIVATE ws2_32)
+  elseif(PJ_HAS_WINSOCK_H)
+    target_link_libraries(pjlib PRIVATE wsock32)
+  endif()
+endif()
+
+# apple
+if(APPLE)
+  target_link_libraries(pjlib PRIVAE "-framework CoreFoundation")
+endif()
+
+# math library
+if(NOT (WIN32 OR CYGWIN OR MINGW))
   find_library(MATH_LIBRARY m)
   if(MATH_LIBRARY)
     target_link_libraries(pjlib PUBLIC m)
   elseif(PJLIB_WITH_FLOATING_POINT)
     pj_force_set(PJLIB_WITH_FLOATING_POINT OFF "math library not found")
   endif()
-endif()
-
-include(CheckIncludeFile)
-
-if(WIN32 OR CYGWIN OR MINGW)
-  check_include_file(winsock.h PJ_HAS_WINSOCK_H)
-  check_include_file(winsock2.h PJ_HAS_WINSOCK2_H)
-  check_include_file(mswsock.h PJ_HAS_MSWSOCK_H)
-  check_include_file(ws2tcpip.h PJ_HAS_WS2TCPIP_H)
-endif()
-
-# win32 libraries
-if(WIN32 OR CYGWIN OR WIN32)
-  target_link_libraries(pjlib PRIVATE
-    ole32
-    winmm
-
-    $<IF:$<BOOL:PJ_HAS_WINSOCK2_H>,ws2_32,$<$<BOOL:PJ_HAS_WINSOCK_H>:wsock32>>
-  )
 endif()
 
 # threading library
