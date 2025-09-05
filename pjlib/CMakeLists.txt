@@ -237,7 +237,10 @@ endif()
 
 # apple
 if(APPLE)
-  target_link_libraries(pjlib PRIVAE "-framework CoreFoundation")
+  find_library(CoreFoundation_LIBRARY CoreFoundation)
+  if (CoreFoundation_LIBRARY)
+    target_link_libraries(pjlib PRIVAE "${CoreFoundation_LIBRARY}")
+  endif()
 endif()
 
 # math library
