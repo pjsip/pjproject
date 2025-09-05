@@ -16,12 +16,11 @@ if (NOT PJ_SKIP_EXPERIMENTAL_NOTICE)
   message(WARNING
     " ****************************************************\n"
     " * Building `pjproject` with CMake is experimental  *\n"
-    " * -------------------------------------------------*\n"
+    " *--------------------------------------------------*\n"
     " * Tested platforms:                                *\n"
     " * - Linux x86_64                                   *\n"
     " ****************************************************\n"
     "Set `PJ_SKIP_EXPERIMENTAL_NOTICE=ON` to disable this warning"
-    ""
   )
 endif()
 
