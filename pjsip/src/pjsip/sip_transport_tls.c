@@ -402,6 +402,7 @@ static pj_status_t update_factory_addr(struct tls_listener *listener,
         }
 
         /* Copy the address */
+        listener->factory.has_addr_name = PJ_TRUE;
         listener->factory.addr_name = *addr_name;
         pj_strdup(listener->factory.pool, &listener->factory.addr_name.host,
                   &addr_name->host);
@@ -922,7 +923,10 @@ static pj_status_t tls_create( struct tls_listener *listener,
         pj_sockaddr_cp(&tls->base.local_addr, local);
     }
     
-    sockaddr_to_host_port(pool, &tls->base.local_name, &tls->base.local_addr);
+    /* Use listener's published address, if any. */
+    tls->base.has_addr_name = listener->factory.has_addr_name;
+    tls->base.local_name = listener->factory.addr_name;
+
     if (tls->remote_name.slen) {
         tls->base.remote_name.host = tls->remote_name;
         tls->base.remote_name.port = pj_sockaddr_get_port(remote);
@@ -1366,8 +1370,15 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                                      new_port);
             }
 
-            sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
-                                  &tls->base.local_addr);
+            /* Only update published address if not specified, otherwise
+             * only update the port.
+             */
+            if (!tls->base.has_addr_name) {
+                sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
+                                      &tls->base.local_addr);
+            } else {
+                tls->base.local_name.port = new_port;
+            }
         }
 
         PJ_LOG(4,(tls->base.obj_name, 
@@ -1568,10 +1579,8 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     if (pjsip_cfg()->tls.keep_alive_interval) {
         pj_time_val delay = {0};
         delay.sec = pjsip_cfg()->tls.keep_alive_interval;
-        pjsip_endpt_schedule_timer(listener->endpt,
-                                   &tls->ka_timer,
-                                   &delay);
-        tls->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                              &delay, PJ_TRUE, tls->grp_lock);
         pj_gettimeofday(&tls->last_activity);
     }
 
@@ -2102,9 +2111,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     if (pjsip_cfg()->tls.keep_alive_interval) {
         pj_time_val delay = {0};            
         delay.sec = pjsip_cfg()->tls.keep_alive_interval;
-        pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
-                                   &delay);
-        tls->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                              &delay, PJ_TRUE, tls->grp_lock);
         pj_gettimeofday(&tls->last_activity);
     }
 
@@ -2139,9 +2147,8 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
         delay.sec = pjsip_cfg()->tls.keep_alive_interval - now.sec;
         delay.msec = 0;
 
-        pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
-                                   &delay);
-        tls->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                              &delay, PJ_TRUE, tls->grp_lock);
         return;
     }
 
@@ -2169,9 +2176,8 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     delay.sec = pjsip_cfg()->tls.keep_alive_interval;
     delay.msec = 0;
 
-    pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
-                               &delay);
-    tls->ka_timer.id = PJ_TRUE;
+    pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                          &delay, PJ_TRUE, tls->grp_lock);
 }
 
 

@@ -610,10 +610,13 @@
     <ClCompile Include="..\src\pjmedia\alaw_ulaw_table.c" />
     <ClCompile Include="..\src\pjmedia\audiodev.c" />
     <ClCompile Include="..\src\pjmedia\avi_player.c" />
+    <ClCompile Include="..\src\pjmedia\avi_writer.c" />
+    <ClCompile Include="..\src\pjmedia\av_sync.c" />
     <ClCompile Include="..\src\pjmedia\bidirectional.c" />
     <ClCompile Include="..\src\pjmedia\clock_thread.c" />
     <ClCompile Include="..\src\pjmedia\codec.c" />
     <ClCompile Include="..\src\pjmedia\conference.c" />
+    <ClCompile Include="..\src\pjmedia\conf_thread.c" />
     <ClCompile Include="..\src\pjmedia\conf_switch.c" />
     <ClCompile Include="..\src\pjmedia\converter.c" />
     <ClCompile Include="..\src\pjmedia\converter_libswscale.c" />
@@ -658,6 +661,32 @@
     <ClCompile Include="..\src\pjmedia\stereo_port.c" />
     <ClCompile Include="..\src\pjmedia\stream.c" />
     <ClCompile Include="..\src\pjmedia\stream_common.c" />
+    <ClCompile Include="..\src\pjmedia\stream_imp_common.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\src\pjmedia\stream_info.c" />
     <ClCompile Include="..\src\pjmedia\tonegen.c" />
     <ClCompile Include="..\src\pjmedia\transport_adapter_sample.c" />
@@ -717,6 +746,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\src\pjmedia\transport_udp.c" />
+    <ClCompile Include="..\src\pjmedia\txt_stream.c" />
     <ClCompile Include="..\src\pjmedia\types.c" />
     <ClCompile Include="..\src\pjmedia\videodev.c" />
     <ClCompile Include="..\src\pjmedia\vid_codec.c" />
@@ -738,6 +768,7 @@
     <ClInclude Include="..\include\pjmedia\audiodev.h" />
     <ClInclude Include="..\include\pjmedia\avi.h" />
     <ClInclude Include="..\include\pjmedia\avi_stream.h" />
+    <ClInclude Include="..\include\pjmedia\av_sync.h" />
     <ClInclude Include="..\include\pjmedia\bidirectional.h" />
     <ClInclude Include="..\include\pjmedia\circbuf.h" />
     <ClInclude Include="..\include\pjmedia\clock.h" />
@@ -783,6 +814,7 @@
     <ClInclude Include="..\include\pjmedia\transport_loop.h" />
     <ClInclude Include="..\include\pjmedia\transport_srtp.h" />
     <ClInclude Include="..\include\pjmedia\transport_udp.h" />
+    <ClInclude Include="..\include\pjmedia\txt_stream.h" />
     <ClInclude Include="..\include\pjmedia\types.h" />
     <ClInclude Include="..\include\pjmedia\videodev.h" />
     <ClInclude Include="..\include\pjmedia\vid_codec.h" />

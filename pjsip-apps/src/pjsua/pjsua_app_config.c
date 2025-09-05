@@ -55,6 +55,12 @@ static void usage(void)
     puts  ("  --realm=string      Set realm");
     puts  ("  --username=string   Set authentication username");
     puts  ("  --password=string   Set authentication password");
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+    puts  ("  --aka-op=hex        Set OP value to use in Digest AKA authentication");
+    puts  ("  --aka-amf=hex       Set AMF value to use in Digest AKA authentication");
+#endif
+
     puts  ("  --contact=url       Optionally override the Contact information");
     puts  ("  --contact-params=S  Append the specified parameters S in Contact header");
     puts  ("  --contact-uri-params=S  Append the specified parameters S in Contact URI");
@@ -176,9 +182,19 @@ static void usage(void)
     puts  ("  --video             Enable video");
     puts  ("  --vcapture-dev=id   Video capture device ID (default=-1)");
     puts  ("  --vrender-dev=id    Video render device ID (default=-2)");
-    puts  ("  --play-avi=FILE     Load this AVI as virtual capture device");
+    puts  ("  --play-avi=FILE     Load this AVI as virtual capture device.");
+    puts  ("                      This can be specified multiple times.");
     puts  ("  --auto-play-avi     Automatically play the AVI media to call");
+    puts  ("  --rec-avi=FILE      Record video to AVI file");
+    puts  ("  --rec-avi-size=N    Maximum AVI recording file size");
+    puts  ("  --rec-avi-audio     Include audio in the AVI recording");
+    puts  ("  --auto-rec-avi      Automatically record video");
 #endif
+
+    puts  ("");
+    puts  ("Text Options:");
+    puts  ("  --text              Enable real-time text stream");
+    puts  ("  --text-red=N        Text stream redundancy level (default=0)");
 
     puts  ("");
     puts  ("Media Transport Options:");
@@ -367,7 +383,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY,
            OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
            OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
-           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
+           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD, OPT_AKA_OP, OPT_AKA_AMF,
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
            OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
@@ -400,8 +416,9 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC,
            OPT_DISABLE_STUN, OPT_NO_FORCE_LR,
            OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE,
-           OPT_VIDEO, OPT_EXTRA_AUDIO,
+           OPT_VIDEO, OPT_TEXT, OPT_TEXT_RED, OPT_EXTRA_AUDIO,
            OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI,
+           OPT_REC_AVI, OPT_REC_AVI_SIZE, OPT_REC_AVI_AUDIO, OPT_AUTO_REC_AVI,
            OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE
     };
     struct pj_getopt_option long_options[] = {
@@ -446,6 +463,10 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "realm",      1, 0, OPT_REALM},
         { "username",   1, 0, OPT_USERNAME},
         { "password",   1, 0, OPT_PASSWORD},
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        { "aka-op",   1, 0, OPT_AKA_OP},
+        { "aka-amf",   1, 0, OPT_AKA_AMF},
+#endif
         { "rereg-delay",1, 0, OPT_REG_RETRY_INTERVAL},
         { "reg-use-proxy", 1, 0, OPT_REG_USE_PROXY},
         { "nameserver", 1, 0, OPT_NAMESERVER},
@@ -540,11 +561,17 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
         { "outb-rid",   1, 0, OPT_OUTB_RID},
         { "video",      0, 0, OPT_VIDEO},
+        { "text",       0, 0, OPT_TEXT},
+        { "text-red",   1, 0, OPT_TEXT_RED},
         { "extra-audio",0, 0, OPT_EXTRA_AUDIO},
         { "vcapture-dev", 1, 0, OPT_VCAPTURE_DEV},
         { "vrender-dev",  1, 0, OPT_VRENDER_DEV},
         { "play-avi",   1, 0, OPT_PLAY_AVI},
         { "auto-play-avi", 0, 0, OPT_AUTO_PLAY_AVI},
+        { "rec-avi",   1, 0, OPT_REC_AVI},
+        { "rec-avi-size",   1, 0, OPT_REC_AVI_SIZE},
+        { "rec-avi-audio", 0, 0, OPT_REC_AVI_AUDIO},
+        { "auto-rec-avi", 0, 0, OPT_AUTO_REC_AVI},
         { "use-cli",    0, 0, OPT_USE_CLI},
         { "cli-telnet-port", 1, 0, OPT_CLI_TELNET_PORT},
         { "no-cli-console", 0, 0, OPT_DISABLE_CLI_CONSOLE},
@@ -908,6 +935,44 @@ static pj_status_t parse_args(int argc, char *argv[],
             cur_acc->cred_info[cur_acc->cred_count].data_type |= PJSIP_CRED_DATA_EXT_AKA;
             cur_acc->cred_info[cur_acc->cred_count].ext.aka.k = pj_str(pj_optarg);
             cur_acc->cred_info[cur_acc->cred_count].ext.aka.cb = &pjsip_auth_create_aka_response;
+            break;
+
+        case OPT_AKA_OP:    /* aka op */
+            {
+                pj_str_t hex = pj_str(pj_optarg);
+                pj_str_t *aka_op = &cur_acc->cred_info[cur_acc->cred_count].ext.aka.op;
+                if (hex.slen/2 <= PJSIP_AKA_OPLEN) {
+                    char* oct = pj_pool_alloc(cfg->pool, hex.slen/2);
+                    int len;
+                    len = my_hex_string_to_octet_array(hex.ptr, hex.slen, oct);
+                    if (len == hex.slen)
+                        pj_strset(aka_op, oct, len/2);
+                }
+                if (aka_op->slen != hex.slen/2) {
+                    PJ_LOG(1,(THIS_FILE, "Error: invalid --aka-op value '%s'",
+                              pj_optarg));
+                    return PJ_EINVAL;
+                }
+            }
+            break;
+
+        case OPT_AKA_AMF:   /* aka amf */
+            {
+                pj_str_t hex = pj_str(pj_optarg);
+                pj_str_t *aka_amf = &cur_acc->cred_info[cur_acc->cred_count].ext.aka.amf;
+                if (hex.slen/2 <= PJSIP_AKA_AMFLEN) {
+                    char* oct = pj_pool_alloc(cfg->pool, hex.slen/2);
+                    int len;
+                    len = my_hex_string_to_octet_array(hex.ptr, hex.slen, oct);
+                    if (len == hex.slen)
+                        pj_strset(aka_amf, oct, len/2);
+                }
+                if (aka_amf->slen != hex.slen/2) {
+                    PJ_LOG(1,(THIS_FILE, "Error: invalid --aka-amf value '%s'",
+                              pj_optarg));
+                    return PJ_EINVAL;
+                }
+            }
 #endif
             break;
 
@@ -1476,6 +1541,12 @@ static pj_status_t parse_args(int argc, char *argv[],
             cfg->vid.in_auto_show = PJ_TRUE;
             cfg->vid.out_auto_transmit = PJ_TRUE;
             break;
+        case OPT_TEXT:
+            cfg->txt_cnt = 1;
+            break;
+        case OPT_TEXT_RED:
+            cfg->txt_red_level = atoi(pj_optarg);
+            break;
         case OPT_EXTRA_AUDIO:
             cfg->aud_cnt++;
             break;
@@ -1500,6 +1571,22 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_AUTO_PLAY_AVI:
             app_config.avi_auto_play = PJ_TRUE;
+            break;
+
+        case OPT_REC_AVI:
+            app_config.avi_rec = pj_str(pj_optarg);
+            break;
+
+        case OPT_REC_AVI_SIZE:
+            app_config.avi_rec_size = atoi(pj_optarg);
+            break;
+
+        case OPT_REC_AVI_AUDIO:
+            app_config.avi_rec_audio = PJ_TRUE;
+            break;
+
+        case OPT_AUTO_REC_AVI:
+            app_config.avi_auto_rec = PJ_TRUE;
             break;
 
         case OPT_USE_CLI:
@@ -1636,6 +1723,9 @@ static void default_config()
     cfg->playback_lat = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
     cfg->ringback_slot = PJSUA_INVALID_ID;
     cfg->ring_slot = PJSUA_INVALID_ID;
+    cfg->avi_rec_id = PJSUA_INVALID_ID;
+    cfg->avi_vid_slot = PJSUA_INVALID_ID;
+    cfg->avi_aud_slot = PJSUA_INVALID_ID;
 
     for (i=0; i<PJ_ARRAY_SIZE(cfg->acc_cfg); ++i)
         pjsua_acc_config_default(&cfg->acc_cfg[i]);
@@ -1648,6 +1738,11 @@ static void default_config()
     cfg->aud_cnt = 1;
 
     cfg->avi_def_idx = PJSUA_INVALID_ID;
+    for (i = 0; i < PJ_ARRAY_SIZE(cfg->avi); ++i) {
+        cfg->avi[i].slot = PJSUA_INVALID_ID;
+        cfg->avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
+        cfg->avi[i].p_id = PJSUA_INVALID_ID;
+    }
 
     cfg->use_cli = PJ_FALSE;
     cfg->cli_cfg.cli_fe = CLI_FE_CONSOLE;
@@ -1812,6 +1907,30 @@ static void write_account_settings(int acc_index, pj_str_t *result)
                                   acc_cfg->cred_info[i].data.ptr);
             pj_strcat2(result, line);
         }
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        if (acc_cfg->cred_info[i].ext.aka.op.slen) {
+            char hex[PJSIP_AKA_OPLEN * 2];
+            pj_str_t *aka_op = &acc_cfg->cred_info[i].ext.aka.op;
+            pj_assert(aka_op->slen <= PJSIP_AKA_OPLEN);
+            my_octet_array_to_hex_string(aka_op->ptr, aka_op->slen, hex);
+            
+            pj_ansi_snprintf(line, sizeof(line), "--aka-op %.*s\n",
+                                  (int)aka_op->slen*2, hex);
+            pj_strcat2(result, line);
+        }
+
+        if (acc_cfg->cred_info[i].ext.aka.amf.slen) {
+            char hex[PJSIP_AKA_AMFLEN * 2];
+            pj_str_t *aka_amf = &acc_cfg->cred_info[i].ext.aka.amf;
+            pj_assert(aka_amf->slen <= PJSIP_AKA_AMFLEN);
+            my_octet_array_to_hex_string(aka_amf->ptr, aka_amf->slen, hex);
+            
+            pj_ansi_snprintf(line, sizeof(line), "--aka-amf %.*s\n",
+                                  (int)aka_amf->slen*2, hex);
+            pj_strcat2(result, line);
+        }
+#endif
 
         if (i != acc_cfg->cred_count - 1)
             pj_strcat2(result, "--next-cred\n");
@@ -2095,6 +2214,16 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         pj_strcat2(&cfg, "--extra-audio\n");
     }
 
+    /* Text */
+    if (config->txt_cnt) {
+        pj_strcat2(&cfg, "--text\n");
+    }
+    if (config->txt_red_level) {
+        pj_ansi_snprintf(line, sizeof(line), "--text-red %d\n",
+                        (int)config->txt_red_level);
+        pj_strcat2(&cfg, line);
+    }
+
     /* SRTP */
 #if PJMEDIA_HAS_SRTP
     if (app_config.cfg.use_srtp != PJSUA_DEFAULT_USE_SRTP) {
@@ -2238,6 +2367,24 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     }
     if (config->avi_auto_play) {
         pj_ansi_snprintf(line, sizeof(line), "--auto-play-avi\n");
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_rec.slen) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi %s\n",
+                         config->avi_rec.ptr);
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_rec_size) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi-size %d\n",
+                         config->avi_rec_size);
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_rec_audio) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi-audio\n");
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_auto_rec) {
+        pj_ansi_snprintf(line, sizeof(line), "--auto-rec-avi\n");
         pj_strcat2(&cfg, line);
     }
 

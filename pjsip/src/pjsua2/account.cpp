@@ -543,6 +543,23 @@ void AccountVideoConfig::writeObject(ContainerNode &node) const
 }
 ///////////////////////////////////////////////////////////////////////////////
 
+void AccountTextConfig::readObject(const ContainerNode &node)
+                                   PJSUA2_THROW(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountTextConfig");
+
+    NODE_READ_INT    ( this_node, redundancyLevel);
+}
+
+void AccountTextConfig::writeObject(ContainerNode &node) const
+                                    PJSUA2_THROW(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountTextConfig");
+
+    NODE_WRITE_INT   ( this_node, redundancyLevel);
+}
+///////////////////////////////////////////////////////////////////////////////
+
 void AccountIpChangeConfig::readObject(const ContainerNode &node)
                                        PJSUA2_THROW(Error)
 {
@@ -728,6 +745,9 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.vid_stream_rc_cfg.bandwidth = videoConfig.rateControlBandwidth;
     ret.vid_stream_sk_cfg.count = videoConfig.startKeyframeCount;
     ret.vid_stream_sk_cfg.interval = videoConfig.startKeyframeInterval;
+
+    // AccountTextConfig
+    ret.txt_red_level           = textConfig.redundancyLevel;
 
     // AccountIpChangeConfig
     ret.ip_change_cfg.shutdown_tp = ipChangeConfig.shutdownTp;
@@ -929,6 +949,9 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     videoConfig.rateControlBandwidth    = prm.vid_stream_rc_cfg.bandwidth;
     videoConfig.startKeyframeCount      = prm.vid_stream_sk_cfg.count;
     videoConfig.startKeyframeInterval   = prm.vid_stream_sk_cfg.interval;
+
+    // AccountTextConfig
+    textConfig.redundancyLevel          = prm.txt_red_level;
 
     // AccountIpChangeConfig
     ipChangeConfig.shutdownTp = PJ2BOOL(prm.ip_change_cfg.shutdown_tp);

@@ -78,7 +78,7 @@ PJ_DEF(pj_status_t) pjmedia_converter_mgr_create(pj_pool_t *pool,
 
 PJ_DEF(pjmedia_converter_mgr*) pjmedia_converter_mgr_instance(void)
 {
-    pj_assert(converter_manager_instance != NULL);
+//    pj_assert(converter_manager_instance != NULL);
     return converter_manager_instance;
 }
 

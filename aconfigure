@@ -5395,7 +5395,7 @@ then :
 
 fi
 
-for ac_prog in $host_cpu-$host_os-pkg-config $host-pkg-config pkg-config "python pkgconfig.py"
+for ac_prog in $host_cpu-$host_os-pkg-config $host-pkg-config pkg-config
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -11081,7 +11081,7 @@ printf "%s\n" "Checking if libwebrtc is disabled...no" >&6; }
         case $target in
             *-apple-darwin_ios*)
                 case $target in
-                    arm64*)
+                    arm64* | aarch64*)
                         ac_webrtc_instset=neon
                         ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
                     ;;
@@ -11146,6 +11146,9 @@ printf "%s\n" "Checking if libwebrtc is disabled...no" >&6; }
                     arm-apple-darwin*)
                         ac_webrtc_instset=neon
                         ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
+                    ;;
+                    loongarch*)
+                        ac_webrtc_instset=generic
                     ;;
                     riscv*)
                         ac_webrtc_instset=generic
@@ -11231,7 +11234,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
             case $target in
                 *-apple-darwin_ios*)
                     case $target in
-                        arm64*)
+                        arm64* | aarch64*)
                             ac_webrtc_aec3_instset=neon
                             ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
                         ;;
@@ -11289,6 +11292,9 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
                         arm-apple-darwin*)
                             ac_webrtc_aec3_instset=neon
                             ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+                        ;;
+                        loongarch*)
+                            ac_webrtc_aec3_instset=generic
                         ;;
                         riscv*)
                             ac_webrtc_aec3_instset=generic

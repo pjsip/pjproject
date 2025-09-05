@@ -72,8 +72,17 @@ static void init_data()
     for (i=0; i<PJSUA_MAX_VID_WINS; ++i) {
         pjsua_vid_win_reset(i);
     }
-}
+#if PJSUA_HAS_VIDEO
+    for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_player); ++i) {
+        pjsua_reset_avi_player_data(i);
+    }
 
+    for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_recorder); ++i) {
+        pjsua_reset_avi_recorder_data(i);
+    }
+#endif
+
+}
 
 PJ_DEF(void) pjsua_logging_config_default(pjsua_logging_config *cfg)
 {
@@ -340,6 +349,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->lock_codec = 1;
     cfg->ka_interval = 15;
     cfg->ka_data = pj_str("\r\n");
+    cfg->txt_red_level = PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL;
     cfg->vid_cap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     cfg->vid_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
 #if PJMEDIA_HAS_VIDEO
@@ -419,6 +429,7 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->channel_count = 1;
     cfg->audio_frame_ptime = PJSUA_DEFAULT_AUDIO_FRAME_PTIME;
     cfg->max_media_ports = PJSUA_MAX_CONF_PORTS;
+    cfg->conf_threads = PJMEDIA_CONF_THREADS;
     cfg->has_ioqueue = PJ_TRUE;
     cfg->thread_cnt = 1;
     cfg->quality = PJSUA_DEFAULT_CODEC_QUALITY;
@@ -3172,6 +3183,29 @@ void pjsua_process_msg_data(pjsip_tx_data *tdata,
     hdr = msg_data->hdr_list.next;
     while (hdr && hdr != &msg_data->hdr_list) {
         pjsip_hdr *new_hdr;
+
+        /* For Max-Forwards header, just update the value of the existing
+         * header. In case it does not exist, clone the header as usual.
+         */
+        if (hdr->type == PJSIP_H_MAX_FORWARDS) {
+            pjsip_max_fwd_hdr *orig_hdr;
+
+            orig_hdr = pjsip_hdr_find(&tdata->msg->hdr, PJSIP_H_MAX_FORWARDS,
+                                      NULL);
+            if (orig_hdr != NULL) {
+                pj_uint32_t orig_value = orig_hdr->ivalue;
+                pj_uint32_t new_value  =
+                                    ((const pjsip_max_fwd_hdr*)hdr)->ivalue;
+
+                orig_hdr->ivalue = new_value;
+                PJ_LOG(4, (THIS_FILE,
+                           "Overriding Max-Forwards header value: %u -> %u",
+                           orig_value, new_value));
+
+                hdr = hdr->next;
+                continue;
+            }
+        }
 
         new_hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hdr);
         pjsip_msg_add_hdr(tdata->msg, new_hdr);

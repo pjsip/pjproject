@@ -603,6 +603,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     pj_ioqueue_key_t *rec;
     u_long value;
     int rc;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && ioqueue && cb && key, PJ_EINVAL);
 
@@ -642,9 +643,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     pj_memcpy(&rec->cb, cb, sizeof(pj_ioqueue_callback));
 
     /* Set concurrency for this handle */
-    rc = pj_ioqueue_set_concurrency(rec, ioqueue->default_concurrency);
-    if (rc != PJ_SUCCESS)
-        return rc;
+    status = pj_ioqueue_set_concurrency(rec, ioqueue->default_concurrency);
+    if (status != PJ_SUCCESS)
+        return status;
 
 #if PJ_HAS_TCP
     rec->connecting = 0;
@@ -664,14 +665,17 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     /* Create group lock if not specified */
     if (!grp_lock) {
-        pj_status_t status;
         status = pj_grp_lock_create_w_handler(rec->pool, NULL, rec,
                                               &key_on_destroy, &grp_lock);
-        if (status != PJ_SUCCESS) {
-            key_on_destroy(rec);
-            return status;
-        }
+    } else {
+        status = pj_grp_lock_add_handler(grp_lock, rec->pool, rec,
+                                         &key_on_destroy);
     }
+    if (status != PJ_SUCCESS) {
+        key_on_destroy(rec);
+        return status;
+    }
+
     rec->grp_lock = grp_lock;
 
     /* Set initial reference count to 1 */
@@ -801,7 +805,7 @@ static struct pending_op *alloc_pending_op(pj_ioqueue_key_t *key,
     /* Link app op key to pending-op */
     op_key->internal__[PENDING_OP_POS(op_key)] = op;
 
-    TRACE((THIS_FILE, "ALLOC   op key %p (cnt=%d) op %p", key, ref_cnt, op));
+    TRACE((THIS_FILE, "ALLOC   op key %p (cnt=%d) op %p", key, ref_cnt-1, op));
 
     return op;
 }
@@ -818,7 +822,7 @@ static void release_pending_op(pj_ioqueue_key_t *key, struct pending_op *op)
     ref_cnt = pj_grp_lock_get_ref(key->grp_lock);
     pj_ioqueue_unlock_key(key);
 
-    TRACE((THIS_FILE, "RELEASE op key %p (cnt=%d) op %p", key, ref_cnt, op));
+    TRACE((THIS_FILE, "RELEASE op key %p (cnt=%d) op %p", key, ref_cnt-1, op));
 }
 
 static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)

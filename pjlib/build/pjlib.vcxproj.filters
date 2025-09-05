@@ -230,6 +230,9 @@
     <ClCompile Include="..\src\pj\os_rwmutex.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pj\atomic_slist.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\pj\ioqueue_common_abs.h">
@@ -335,6 +338,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pj\ssl_sock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\atomic_slist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pj\string.h">

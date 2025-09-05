@@ -215,6 +215,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
     pjmedia_channel *channel = c_strm->dec;
     unsigned samples_count, samples_per_frame, samples_required;
     pj_int16_t *p_out_samp;
+    pj_uint32_t rtp_ts = 0;
     pj_status_t status;
 
 
@@ -272,8 +273,8 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
         }
 
         /* Get frame from jitter buffer. */
-        pjmedia_jbuf_get_frame2(c_strm->jb, channel->buf, &frame_size,
-                                &frame_type, &bit_info);
+        pjmedia_jbuf_get_frame3(c_strm->jb, channel->buf, &frame_size,
+                                &frame_type, &bit_info, &rtp_ts, NULL);
 
 #if TRACE_JB
         trace_jb_get(c_strm, frame_type, frame_size);
@@ -491,6 +492,47 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
             }
             if (!use_dec_buf)
                 samples_count += samples_per_frame;
+
+            /* Update synchronizer with presentation time and check if the
+             * synchronizer requests for delay adjustment.
+             */
+            if (c_strm->av_sync_media) {
+                pj_timestamp pts = { 0 };
+                pj_int32_t delay_req_ms;
+
+                pts.u32.lo = rtp_ts;
+                status = pjmedia_av_sync_update_pts(c_strm->av_sync_media,
+                                                    &pts, &delay_req_ms);
+                if (status == PJ_SUCCESS && delay_req_ms) {
+                    /* Delay adjustment is requested */
+                    pjmedia_jb_state jb_state;
+                    int target_delay_ms, cur_delay_ms;
+
+                    /* Apply delay request to jitter buffer */
+                    pjmedia_jbuf_get_state(c_strm->jb, &jb_state);
+                    cur_delay_ms = jb_state.min_delay_set * stream->dec_ptime/
+                                   stream->dec_ptime_denum;
+                    target_delay_ms = cur_delay_ms + delay_req_ms;
+                    if (target_delay_ms < 0)
+                        target_delay_ms = 0;
+
+                    /* Just for safety (never see in tests), target delay
+                     * should not exceed 5 seconds.
+                     */
+                    if (target_delay_ms > 5000) {
+                        PJ_LOG(5,(c_strm->port.info.name.ptr,
+                                  "Ignored avsync request for excessive delay"
+                                  " (current=%dms, target=%dms)!",
+                                  cur_delay_ms, target_delay_ms));
+                    } else if (cur_delay_ms != target_delay_ms) {
+                        pjmedia_jbuf_set_min_delay(c_strm->jb,
+                                                   target_delay_ms);
+                        PJ_LOG(5,(c_strm->port.info.name.ptr,
+                                  "Adjust audio minimal delay to %dms",
+                                  target_delay_ms));
+                    }
+                }
+            }
         }
     }
 
@@ -524,6 +566,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
     pjmedia_channel *channel = c_strm->dec;
     pjmedia_frame_ext *f = (pjmedia_frame_ext*)frame;
     unsigned samples_per_frame, samples_required;
+    pj_uint32_t rtp_ts = 0;
     pj_status_t status;
 
     /* Return no frame if channel is paused */
@@ -555,8 +598,8 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
         pj_mutex_lock( c_strm->jb_mutex );
 
         /* Get frame from jitter buffer. */
-        pjmedia_jbuf_get_frame2(c_strm->jb, channel->buf, &frame_size,
-                                &frame_type, &bit_info);
+        pjmedia_jbuf_get_frame3(c_strm->jb, channel->buf, &frame_size,
+                                &frame_type, &bit_info, &rtp_ts, NULL);
 
 #if TRACE_JB
         trace_jb_get(c_strm, frame_type, frame_size);
@@ -595,6 +638,40 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
                 c_strm->jb_last_frm_cnt = 1;
             } else {
                 c_strm->jb_last_frm_cnt++;
+            }
+
+            /* Update synchronizer with presentation time */
+            if (c_strm->av_sync_media) {
+                pj_timestamp pts = { 0 };
+                pj_int32_t delay_req_ms;
+
+                pts.u32.lo = rtp_ts;
+                status = pjmedia_av_sync_update_pts(c_strm->av_sync_media,
+                                                    &pts, &delay_req_ms);
+                if (status == PJ_SUCCESS && delay_req_ms) {
+                    /* Delay adjustment is requested */
+                    pjmedia_jb_state jb_state;
+                    int target_delay_ms, cur_delay_ms;
+
+                    /* Increase delay slowly, but decrease delay quickly */
+                    if (delay_req_ms > 0)
+                        delay_req_ms = delay_req_ms * 3 / 4;
+                    else 
+                        delay_req_ms = delay_req_ms * 4 / 3;
+
+                    /* Apply delay request to jitter buffer */
+                    pjmedia_jbuf_get_state(c_strm->jb, &jb_state);
+                    cur_delay_ms = jb_state.min_delay_set * stream->dec_ptime/
+                                   stream->dec_ptime_denum;
+                    target_delay_ms = cur_delay_ms + delay_req_ms;
+                    if (target_delay_ms < 0)
+                        target_delay_ms = 0;
+                    pjmedia_jbuf_set_min_delay(c_strm->jb, target_delay_ms);
+
+                    PJ_LOG(5,(c_strm->port.info.name.ptr,
+                              "Adjust minimal delay to %dms",
+                              target_delay_ms));
+                }
             }
 
         } else {
@@ -1406,21 +1483,20 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
                                     pj_bool_t *pkt_discarded)
 {
     pjmedia_stream *stream = (pjmedia_stream*) c_strm;
+    pj_timestamp ts;
     pj_status_t status = PJ_SUCCESS;
+
+    /* Get the timestamp from the RTP header */
+    ts.u64 = pj_ntohl(hdr->ts);
 
     /* Handle incoming DTMF. */
     if (hdr->pt == stream->rx_event_pt) {
-        pj_timestamp ts;
-
         /* Ignore out-of-order packet as it will be detected as new
          * digit. Also ignore duplicate packet as it serves no use.
          */
         if (seq_st.status.flag.outorder || seq_st.status.flag.dup) {
             goto on_return;
         }
-
-        /* Get the timestamp of the event */
-        ts.u64 = pj_ntohl(hdr->ts);
 
         handle_incoming_dtmf(stream, &ts, payload, payloadlen);
         goto on_return;
@@ -1440,14 +1516,10 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
          * to ask the codec to "parse" the payload into multiple frames.
          */
         enum { MAX = 16 };
-        pj_timestamp ts;
         unsigned i, count = MAX;
         unsigned ts_span;
         pjmedia_frame frames[MAX];
         pj_bzero(frames, sizeof(frames[0]) * MAX);
-
-        /* Get the timestamp of the first sample */
-        ts.u64 = pj_ntohl(hdr->ts);
 
         /* Parse the payload. */
         status = pjmedia_codec_parse(stream->codec, (void*)payload,
@@ -1589,8 +1661,9 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
             pj_bool_t discarded;
 
             ext_seq = (unsigned)(frames[i].timestamp.u64 / ts_span);
-            pjmedia_jbuf_put_frame2(c_strm->jb, frames[i].buf, frames[i].size,
-                                    frames[i].bit_info, ext_seq, &discarded);
+            pjmedia_jbuf_put_frame3(c_strm->jb, frames[i].buf, frames[i].size,
+                                    frames[i].bit_info, ext_seq, ts.u32.lo,
+                                    &discarded);
             if (discarded)
                 *pkt_discarded = PJ_TRUE;
         }
@@ -1622,90 +1695,6 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
 on_return:
     return status;
 }
-
-
-/*
- * Create media channel.
- */
-static pj_status_t create_channel( pj_pool_t *pool,
-                                   pjmedia_stream *stream,
-                                   pjmedia_dir dir,
-                                   unsigned pt,
-                                   const pjmedia_stream_info *param,
-                                   pjmedia_channel **p_channel)
-{
-    pjmedia_stream_common *c_strm = &stream->base;
-    pjmedia_channel *channel;
-    pj_status_t status;
-
-    /* Allocate memory for channel descriptor */
-
-    channel = PJ_POOL_ZALLOC_T(pool, pjmedia_channel);
-    PJ_ASSERT_RETURN(channel != NULL, PJ_ENOMEM);
-
-    /* Init channel info. */
-
-    channel->stream = c_strm;
-    channel->dir = dir;
-    channel->paused = 1;
-    channel->pt = pt;
-
-
-    /* Allocate buffer for outgoing packet. */
-
-    if (param->type == PJMEDIA_TYPE_AUDIO) {
-        unsigned max_rx_based_size;
-        unsigned max_bps_based_size;
-
-        /* buf buffer is used for sending and receiving, so lets calculate
-         * its size based on both. For receiving, we have c_strm->frame_size,
-         * which is used in configuring jitter buffer frame length.
-         * For sending, it is based on codec max_bps info.
-         */
-        max_rx_based_size = c_strm->frame_size;
-        max_bps_based_size = stream->codec_param.info.max_bps *
-                             PJMEDIA_MAX_FRAME_DURATION_MS / 8 / 1000;
-        channel->buf_size = PJ_MAX(max_rx_based_size, max_bps_based_size);
-
-        /* Also include RTP header size (for sending) */
-        channel->buf_size += sizeof(pjmedia_rtp_hdr);
-
-        if (channel->buf_size > PJMEDIA_MAX_MTU -
-                                    PJMEDIA_STREAM_RESV_PAYLOAD_LEN)
-        {
-            channel->buf_size = PJMEDIA_MAX_MTU -
-                                    PJMEDIA_STREAM_RESV_PAYLOAD_LEN;
-        }
-    } else {
-        return PJ_ENOTSUP;
-    }
-
-    channel->buf = pj_pool_alloc(pool, channel->buf_size);
-    PJ_ASSERT_RETURN(channel->buf != NULL, PJ_ENOMEM);
-
-
-
-    /* Create RTP and RTCP sessions: */
-    {
-        pjmedia_rtp_session_setting settings;
-
-        settings.flags = (pj_uint8_t)((param->rtp_seq_ts_set << 2) |
-                                      (param->has_rem_ssrc << 4) | 3);
-        settings.default_pt = pt;
-        settings.sender_ssrc = param->ssrc;
-        settings.peer_ssrc = param->rem_ssrc;
-        settings.seq = param->rtp_seq;
-        settings.ts = param->rtp_ts;
-        status = pjmedia_rtp_session_init2(&channel->rtp, settings);
-    }
-    if (status != PJ_SUCCESS)
-        return status;
-
-    /* Done. */
-    *p_channel = channel;
-    return PJ_SUCCESS;
-}
-
 
 /*
  * Handle events.
@@ -1755,6 +1744,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pjmedia_audio_format_detail *afd;
     pj_pool_t *own_pool = NULL;
     char *p;
+    unsigned max_rx_based_size;
+    unsigned max_bps_based_size;
+    unsigned buf_size;
     pj_status_t status;
     pjmedia_transport_attach_param att_param;
 
@@ -2127,18 +2119,26 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pjmedia_jbuf_set_adaptive( c_strm->jb, jb_init, jb_min_pre, jb_max_pre);
     pjmedia_jbuf_set_discard(c_strm->jb, info->jb_discard_algo);
 
-    /* Create decoder channel: */
+    /* buf buffer is used for sending and receiving, so lets calculate
+     * its size based on both. For receiving, we have c_strm->frame_size,
+     * which is used in configuring jitter buffer frame length.
+     * For sending, it is based on codec max_bps info.
+     */
+    max_rx_based_size = c_strm->frame_size;
+    max_bps_based_size = stream->codec_param.info.max_bps *
+                         PJMEDIA_MAX_FRAME_DURATION_MS / 8 / 1000;
+    buf_size = PJ_MAX(max_rx_based_size, max_bps_based_size);
 
-    status = create_channel( pool, stream, PJMEDIA_DIR_DECODING,
-                             info->rx_pt, info, &c_strm->dec);
+    /* Create decoder channel: */
+    status = create_channel( pool, c_strm, PJMEDIA_DIR_DECODING,
+                             info->rx_pt, buf_size, c_strm->si, &c_strm->dec);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
 
     /* Create encoder channel: */
-
-    status = create_channel( pool, stream, PJMEDIA_DIR_ENCODING,
-                             info->tx_pt, info, &c_strm->enc);
+    status = create_channel( pool, c_strm, PJMEDIA_DIR_ENCODING,
+                             info->tx_pt, buf_size, c_strm->si, &c_strm->enc);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
@@ -2532,27 +2532,7 @@ PJ_DEF(pjmedia_transport*) pjmedia_stream_get_transport(pjmedia_stream *st)
  */
 PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
 {
-    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
-
-    PJ_ASSERT_RETURN(stream && c_strm->enc && c_strm->dec, PJ_EINVALIDOP);
-
-    if (c_strm->enc && (c_strm->dir & PJMEDIA_DIR_ENCODING)) {
-        c_strm->enc->paused = 0;
-        //pjmedia_snd_stream_start(c_strm->enc->snd_stream);
-        PJ_LOG(4,(c_strm->port.info.name.ptr, "Encoder stream started"));
-    } else {
-        PJ_LOG(4,(c_strm->port.info.name.ptr, "Encoder stream paused"));
-    }
-
-    if (c_strm->dec && (c_strm->dir & PJMEDIA_DIR_DECODING)) {
-        c_strm->dec->paused = 0;
-        //pjmedia_snd_stream_start(c_strm->dec->snd_stream);
-        PJ_LOG(4,(c_strm->port.info.name.ptr, "Decoder stream started"));
-    } else {
-        PJ_LOG(4,(c_strm->port.info.name.ptr, "Decoder stream paused"));
-    }
-
-    return PJ_SUCCESS;
+    return pjmedia_stream_common_start((pjmedia_stream_common *) stream);
 }
 
 /*
@@ -2622,10 +2602,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_stat_xr( const pjmedia_stream *stream,
 PJ_DEF(pj_status_t) pjmedia_stream_get_stat_jbuf(const pjmedia_stream *stream,
                                                  pjmedia_jb_state *state)
 {
-    const pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
-
-    PJ_ASSERT_RETURN(stream && state, PJ_EINVAL);
-    return pjmedia_jbuf_get_state(c_strm->jb, state);
+    return pjmedia_stream_common_get_stat_jbuf((pjmedia_stream_common *)stream,
+                                               state);
 }
 
 /*

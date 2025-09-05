@@ -205,7 +205,7 @@ static pj_status_t xioctl(int fh, int request, void *arg)
         r = v4l2_ioctl(fh, request, arg);
     } while (r==-1 && c++<RETRY && ((errno==EINTR) || (errno==EAGAIN)));
 
-    return (r == -1) ? pj_get_os_error() : PJ_SUCCESS;
+    return (r == -1) ? pj_get_os_error() : (r < 0 ? PJ_STATUS_FROM_OS(-r) : PJ_SUCCESS);
 }
 
 static vid4lin_fmt_map* get_v4l2_format_info(pjmedia_format_id id)

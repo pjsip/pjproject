@@ -483,6 +483,210 @@ struct OnRejectedIncomingCallParam
 };
 
 /**
+ * This structure describes audio media's register/add of operation info.
+ */
+struct AudioMediaAddInfo
+{
+    unsigned                mediaId;     /**< The media port id.              */
+};
+
+/**
+ * This structure describes audio media's unregister/remove of operation info.
+ */
+struct AudioMediaRemoveInfo
+{
+    unsigned                mediaId;     /**< The media port id.              */
+};
+
+/**
+ * This structure describes an audio media's start transmit/connect operation
+ * info.
+ */
+struct AudioMediaConnectInfo
+{
+    unsigned                mediaId;       /**< The source media port id.     */
+    unsigned                targetMediaId; /**< The destination media port id.*/
+    int                     adjLevel;      /**< The adjustment level.         */
+};
+
+/**
+ * This structure describes an audio media's stop transmit/disconnect operation
+ * info.
+ */
+struct AudioMediaDisconnectInfo
+{
+    unsigned                mediaId;      /**< The source media port id.
+                                               For multiple port operation,
+                                               this will be set to - 1.       */
+    unsigned                targetMediaId; /**< The destination media port id.
+                                               For multiple port operation,
+                                               this will be set to - 1.       */
+};
+
+/**
+ * Audio media operation parameter.
+ */
+typedef union AudioMediaOpParam
+{
+    /**
+     * The information for adding audio media operation.
+     */
+    AudioMediaAddInfo           addInfo;
+
+    /**
+     * The information for removing audio media operation.
+     */
+    AudioMediaRemoveInfo        removeInfo;
+
+    /**
+     * The information for start transmitting/connecting audio media operation.
+     */
+    AudioMediaConnectInfo       connectInfo;
+
+    /**
+     * The information for stop transmitting/disconnecting audio media
+     * operation.
+     */
+    AudioMediaDisconnectInfo    disconnectInfo;
+
+} AudioMediaOpParam;
+
+/**
+ *  Parameter of Endpoint::onAudioMediaOpCompleted() callback.
+ */
+struct OnAudioMediaOpCompletedParam {
+    /**
+     * The operation type.
+     */
+    pjmedia_conf_op_type opType;
+
+    /**
+     * The operation status.
+     */
+    pj_status_t         status;
+
+    /**
+     * The audio media operation information.
+     * 
+     * App can use \a AudioMediaHelper to get the AudioMedia instance based on
+     * the audio media port id.
+     */
+    AudioMediaOpParam    opParam;
+
+public:
+    /**
+     * Convert from pjsip.
+     */
+    void fromPj(const pjmedia_conf_op_info &info);
+};
+
+/**
+ * This structure describes video media's register/add of operation info.
+ */
+struct VideoMediaAddInfo
+{
+    unsigned                mediaId;     /**< The media port id.              */
+};
+
+/**
+ * This structure describes video media's unregister/remove of operation info.
+ */
+struct VideoMediaRemoveInfo
+{
+    unsigned                mediaId;     /**< The media port id.              */
+};
+
+/**
+ * This structure describes an video media's start transmit/connect operation
+ * info.
+ */
+struct VideoMediaConnectInfo
+{
+    unsigned                mediaId;       /**< The source media port id.     */
+    unsigned                targetMediaId; /**< The destination media port id.*/
+};
+
+/**
+ * This structure describes an video media's stop transmit/disconnect operation
+ * info.
+ */
+struct VideoMediaDisconnectInfo
+{
+    unsigned                mediaId;       /**< The source media port id.     */
+    unsigned                targetMediaId; /**< The destination media port id.*/
+};
+
+/**
+ * This structure describes an video media's update operation info.
+ */
+struct VideoMediaUpdateInfo
+{
+    unsigned                mediaId;       /**< The media port id.            */
+};
+
+/**
+ * Video media operation parameter.
+ */
+typedef union VideoMediaOpParam
+{
+    /**
+     * The information for adding video media operation.
+     */
+    VideoMediaAddInfo           addInfo;
+
+    /**
+     * The information for removing video media operation.
+     */
+    VideoMediaRemoveInfo        removeInfo;
+
+    /**
+     * The information for start transmitting/connecting video media operation.
+     */
+    VideoMediaConnectInfo       connectInfo;
+
+    /**
+     * The information for stop transmitting/disconnecting video media
+     * operation.
+     */
+    VideoMediaDisconnectInfo    disconnectInfo;
+
+    /**
+     * The information for updating video media operation.
+     */
+    VideoMediaUpdateInfo        updateInfo;
+
+} VideoMediaOpParam;
+
+/**
+ *  Parameter of Endpoint::onVideoMediaOpCompleted() callback.
+ */
+struct OnVideoMediaOpCompletedParam {
+    /**
+     * The operation type.
+     */
+    pjmedia_vid_conf_op_type opType;
+
+    /**
+     * The operation status.
+     */
+    pj_status_t              status;
+
+    /**
+     * Represents the VideoMedia's port id associated with the operation.
+     * 
+     * App can use \a VIdeoMediaHelper to get the VideoMedia instance based on
+     * the video media port id.
+     */
+    VideoMediaOpParam        opParam;
+
+public:
+    /**
+     * Convert from pjsip.
+     */
+    void fromPj(const pjmedia_vid_conf_op_info &info);
+};
+
+/**
  * This structure describes authentication challenge used in Proxy-Authenticate
  * or WWW-Authenticate for digest authentication scheme.
  */
@@ -980,6 +1184,22 @@ public:
      * Default value: PJSUA_MAX_CONF_PORTS
      */
     unsigned            maxMediaPorts;
+
+    /**
+     * Total number of threads that can be used by the conference bridge
+     * including get_frame() thread.
+     * This value is used to determine if the conference bridge should be
+     * implemented as a parallel bridge or not.
+     * If this value is set to 1, the conference bridge will be implemented as a
+     * serial bridge, otherwise it will be implemented as a parallel bridge.
+     * Should not be less than 1.
+     * This value is ignored by all conference backends except for the 
+     * multithreaded conference bridge backend
+     * (PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND).
+     *
+     * Default value: PJMEDIA_CONF_THREADS
+     */
+    unsigned            confThreads;
 
     /**
      * Specify whether the media manager should manage its own
@@ -1992,6 +2212,28 @@ public:
     virtual void onRejectedIncomingCall(OnRejectedIncomingCallParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
+    /**
+     * This callback will be invoked when an AudioMedia operation has been
+     * completed. This callback will most likely be called from media threads,
+     * thus application must not perform long/blocking processing in this
+     * callback.
+     * 
+     * @param prm       Callback parameters.
+     */
+    virtual void onAudioMediaOpCompleted(OnAudioMediaOpCompletedParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * This callback will be invoked when a VideoMedia operation has been
+     * completed. This callback will most likely be called from media threads,
+     * thus application must not perform long/blocking processing in this
+     * callback.
+     * 
+     * @param prm       Callback parameters.
+     */
+    virtual void onVideoMediaOpCompleted(OnVideoMediaOpCompletedParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
 private:
     static Endpoint             *instance_;     // static instance
     LogWriter                   *writer;        // Custom writer, if any
@@ -2111,6 +2353,8 @@ private:
                                const pjsua_dtmf_info *info);
     static void on_dtmf_event(pjsua_call_id call_id,
                               const pjsua_dtmf_event *event);
+    static void on_call_rx_text(pjsua_call_id call_id,
+                                const pjsua_txt_stream_data *data);
     static void on_call_transfer_request(pjsua_call_id call_id,
                                          const pj_str_t *dst,
                                          pjsip_status_code *code);
@@ -2183,6 +2427,9 @@ private:
 
     static void on_rejected_incoming_call(
                                       const pjsua_on_rejected_incoming_call_param *param);
+
+    static void on_conf_op_completed(const pjmedia_conf_op_info *info);
+    static void on_vid_conf_op_completed(const pjmedia_vid_conf_op_info *info);
 
     friend class Account;
 
