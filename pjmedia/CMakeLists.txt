@@ -211,6 +211,7 @@ cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_COREAUDIO
   "Enable CoreAudio audio device backend" ON
   "PJMEDIA_WITH_AUDIODEV;APPLE" OFF
 )
+import_if_or_set(PJMEDIA_WITH_AUDIODEV_COREAUDIO OFF CoreAudio)
 
 # Advanced Linux Sound Architecture (ALSA) backend
 cmake_dependent_option(PJMEDIA_WITH_AUDIODEV_ALSA
@@ -779,6 +780,7 @@ target_link_libraries(pjmedia-audiodev
 
     # audio backends
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>:ALSA::ALSA>
+    $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_COREAUDIO}>:CoreAudio::CoreAudio>
     # TODO: add remaining APIs' dependencies
 )
 
