@@ -1814,6 +1814,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     pjsip_contact_hdr *contact_hdr;
     char host_addr_buf[PJ_INET6_ADDRSTRLEN+10];
     char via_addr_buf[PJ_INET6_ADDRSTRLEN+10];
+    pj_str_t recv_addr_str;
+    char recv_addr_buf[PJ_INET6_ADDRSTRLEN+10];
     const pj_str_t STR_CONTACT = { "Contact", 7 };
 
     tp = param->rdata->tp_info.transport;
@@ -1835,6 +1837,18 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         via_addr = &via->recvd_param;
     else
         via_addr = &via->sent_by.host;
+
+    status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, via_addr, 
+                               &recv_addr);
+    /* Even though against the RFC, some registrars may put port number in
+     * via received param. Just ignore the port.
+     */
+    if (status == PJ_SUCCESS && pj_sockaddr_get_port(&recv_addr) != 0) {
+        pj_sockaddr_set_port(&recv_addr, 0);
+        pj_sockaddr_print(&recv_addr, recv_addr_buf, sizeof(recv_addr_buf), 0);
+        recv_addr_str = pj_str(recv_addr_buf);
+        via_addr = &recv_addr_str;
+    }
 
     /* If allow_via_rewrite is enabled, we save the Via "received" address
      * from the response, if either of the following condition is met:
@@ -1918,10 +1932,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
      */
     status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, &uri->host, 
                                &contact_addr);
-    if (status == PJ_SUCCESS)
-        status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, via_addr, 
-                                   &recv_addr);
-    if (status == PJ_SUCCESS) {
+    if (status == PJ_SUCCESS && pj_sockaddr_has_addr(&recv_addr)) {
         /* Compare the addresses as sockaddr according to the ticket above,
          * but only if they have the same family (ipv4 vs ipv4, or
          * ipv6 vs ipv6).
