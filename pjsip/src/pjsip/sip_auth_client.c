@@ -40,7 +40,6 @@
 #  include <openssl/sha.h>
 #  include <openssl/evp.h>
 #  include <openssl/md5.h>
-#  include <openssl/sha.h>
 
 #  if OPENSSL_VERSION_NUMBER < 0x10100000L
 #    define EVP_MD_CTX_new() EVP_MD_CTX_create()
@@ -48,7 +47,6 @@
 #  endif
 
 #  ifdef _MSC_VER
-#    include <openssl/opensslv.h>
 #    if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #      pragma comment(lib, "libcrypto")
 #    else
