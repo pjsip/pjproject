@@ -239,7 +239,7 @@ endif()
 if(APPLE)
   find_library(CoreFoundation_LIBRARY CoreFoundation)
   if (CoreFoundation_LIBRARY)
-    target_link_libraries(pjlib PRIVAE "${CoreFoundation_LIBRARY}")
+    target_link_libraries(pjlib PRIVATE "${CoreFoundation_LIBRARY}")
   endif()
 endif()
 
