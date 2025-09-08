@@ -173,6 +173,10 @@ struct pjsua_call
                                     /**< Is media update successful?        */
     pj_bool_t            hanging_up;/**< Is call in the process of hangup?  */
 
+    pjmedia_port* null_port;
+    pjsua_conf_port_id conf_slot; /**< Slot # in conference bridge.    */
+    int			 conf_idx; /**< Index of audio stream that was added to the conference.	    */
+
     int                  audio_idx; /**< First active audio media.          */
     pj_mutex_t          *med_ch_mutex;/**< Media channel callback's mutex.  */
     pjsua_med_tp_state_cb   med_ch_cb;/**< Media channel callback.          */
