@@ -3333,6 +3333,27 @@ on_return:
 
 
 /*
+ * Get number of DTMF digits in the stream's transmit queue.
+ */
+PJ_DEF(pj_status_t) pjmedia_get_queued_dtmf_digits(pjmedia_stream* stream,
+    unsigned* digits)
+{
+    /* By convention we use jitter buffer mutex to access DTMF
+     * queue.
+     */
+    PJ_ASSERT_RETURN(stream && digits, PJ_EINVAL);
+
+    pj_mutex_lock(stream->jb_mutex);
+
+    *digits = (unsigned)stream->tx_dtmf_count;
+
+    pj_mutex_unlock(stream->jb_mutex);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * See if we have DTMF digits in the rx buffer.
  */
 PJ_DEF(pj_bool_t) pjmedia_stream_check_dtmf(pjmedia_stream *stream)

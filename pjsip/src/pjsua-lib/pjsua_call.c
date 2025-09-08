@@ -273,6 +273,17 @@ pj_status_t pjsua_call_subsys_start(void)
 
 
 /*
+* Destroy call subsystem.
+*/
+pj_status_t pjsua_call_subsys_destroy(void)
+{
+    pjsua_var.ua_cfg.max_calls = 0U;
+    pjsua_var.calls = NULL;
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Get maximum number of calls configured in pjsua.
  */
 PJ_DEF(unsigned) pjsua_call_get_max_count(void)
@@ -831,6 +842,18 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
                                          const pjsua_msg_data *msg_data,
                                          pjsua_call_id *p_call_id)
 {
+    return pjsua_call_make_call2(acc_id, dest_uri, opt, user_data, msg_data, p_call_id, NULL, NULL);
+}
+
+PJ_DEF(pj_status_t) pjsua_call_make_call2(pjsua_acc_id acc_id,
+                                          const pj_str_t * dest_uri,
+                                          const pjsua_call_setting * opt,
+                                          void* user_data,
+                                          const pjsua_msg_data * msg_data,
+                                          pjsua_call_id * p_call_id,
+                                          const pj_str_t * src_uri,
+                                          const pj_str_t * contact_uri)
+{
     pj_pool_t *tmp_pool = NULL;
     pjsip_dialog *dlg = NULL;
     pjsua_acc *acc;
@@ -848,6 +871,15 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
     PJ_LOG(4,(THIS_FILE, "Making call with acc #%d to %.*s", acc_id,
               (int)dest_uri->slen, dest_uri->ptr));
+
+    if (src_uri)
+    {
+        PJ_LOG(4, (THIS_FILE, "src_uri %.*s", (int)src_uri->slen, src_uri->ptr));
+    }
+    if (contact_uri)
+    {
+        PJ_LOG(4, (THIS_FILE, "contact_uri %.*s", (int)contact_uri->slen, contact_uri->ptr));
+    }
 
     pj_log_push_indent();
 
@@ -923,6 +955,26 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
             status = PJSIP_EINVALIDREQURI;
             goto on_error;
         }
+
+        if (src_uri && src_uri->slen) {
+            pj_strdup_with_null(tmp_pool, &dup, src_uri);
+            uri = pjsip_parse_uri(tmp_pool, dup.ptr, dup.slen, 0);
+            if (uri == NULL)
+            {
+                PJ_LOG(2, (THIS_FILE, "invalid src_uri"));
+                src_uri = NULL;
+            }
+        }
+
+        if (contact_uri && contact_uri->slen) {
+            pj_strdup_with_null(tmp_pool, &dup, contact_uri);
+            uri = pjsip_parse_uri(tmp_pool, dup.ptr, dup.slen, 0);
+            if (uri == NULL)
+            {
+                PJ_LOG(2, (THIS_FILE, "invalid contact_uri"));
+                contact_uri = NULL;
+            }
+        }
     }
 
     /* Mark call start time. */
@@ -934,7 +986,10 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     /* Create suitable Contact header unless a Contact header has been
      * set in the account.
      */
-    if (acc->contact.slen) {
+    if (contact_uri && contact_uri->slen) {
+        contact = *contact_uri;
+    }
+    else if (acc->contact.slen) {
         contact = acc->contact;
     } else {
         status = pjsua_acc_create_uac_contact(tmp_pool, &contact,
@@ -946,9 +1001,19 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
         }
     }
 
+    pj_str_t from;
+    if (src_uri && src_uri->slen)
+    {
+        from = *src_uri;
+    }
+    else
+    {
+        from = acc->cfg.id;
+    }
+
     /* Create outgoing dialog: */
     status = pjsip_dlg_create_uac( pjsip_ua_instance(),
-                                   &acc->cfg.id, &contact,
+                                   &from, &contact,
                                    dest_uri,
                                    (msg_data && msg_data->target_uri.slen?
                                     &msg_data->target_uri: dest_uri),

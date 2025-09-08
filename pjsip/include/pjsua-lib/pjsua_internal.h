@@ -530,7 +530,7 @@ struct pjsua_data
     /* Calls: */
     pjsua_config         ua_cfg;                /**< UA config.         */
     unsigned             call_cnt;              /**< Call counter.      */
-    pjsua_call           calls[PJSUA_MAX_CALLS];/**< Calls array.       */
+    pjsua_call           *calls;/**< Calls array.       */
     pjsua_call_id        next_call_id;          /**< Next call id to use*/
 
     /* Buddy; */
@@ -853,6 +853,11 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg);
  * Start call subsystem.
  */
 pj_status_t pjsua_call_subsys_start(void);
+
+/**
+ * Destroy pjsua call subsystem.
+ */
+pj_status_t pjsua_call_subsys_destroy(void);
 
 /**
  * Init media subsystems.
