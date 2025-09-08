@@ -35,6 +35,7 @@ foreach(g7221_include IN ITEMS common encode decode)
       "${CMAKE_CURRENT_SOURCE_DIR}/${g7221_include}"
       "${g7221_interface_dir}/${g7221_include}"
       SYMBOLIC
+      COPY_ON_ERROR
     )
   endif()
 endforeach()
