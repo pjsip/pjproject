@@ -1593,7 +1593,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
     if (!mgr->table)
         return PJ_ENOMEM;
 
-    status = pj_lock_create_recursive_mutex(mgr->pool, "tmgr%p", &mgr->lock);
+    status = pj_lock_create_recursive_mutex(pool, "tmgr%p", &mgr->lock);
     if (status != PJ_SUCCESS)
         return status;
 

@@ -1293,7 +1293,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
 {
     unsigned i, count=0;
 
-    PJ_ASSERT_RETURN(conf && p_count && ports, PJ_EINVAL);
+    PJ_ASSERT_RETURN(conf && p_count, PJ_EINVAL);
 
     /* Lock mutex */
     pj_mutex_lock(conf->mutex);
@@ -1302,7 +1302,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
         if (!conf->ports[i])
             continue;
 
-        ports[count++] = i;
+        if (ports)
+            ports[count++] = i;
+        else
+            count++;   // if port is NULL, only return the number of active slots.
     }
 
     /* Unlock mutex */
