@@ -31,12 +31,20 @@ endif()
 # link files
 foreach(g7221_include IN ITEMS common encode decode)
   if(NOT EXISTS "${g7221_interface_dir}/${g7221_include}")
-    file(CREATE_LINK
-      "${CMAKE_CURRENT_SOURCE_DIR}/${g7221_include}"
-      "${g7221_interface_dir}/${g7221_include}"
-      SYMBOLIC
-      COPY_ON_ERROR
-    )
+    if (WIN32 OR MINGW OR CYGWIN)
+      file(COPY
+        "${CMAKE_CURRENT_SOURCE_DIR}/${g7221_include}"
+        DESTINATION "${g7221_interface_dir}"
+        FILES_MATCHING PATTERN "*.h"
+      )
+    else()
+      file(CREATE_LINK
+        "${CMAKE_CURRENT_SOURCE_DIR}/${g7221_include}"
+        "${g7221_interface_dir}/${g7221_include}"
+        SYMBOLIC
+        COPY_ON_ERROR
+      )
+    endif()
   endif()
 endforeach()
 
