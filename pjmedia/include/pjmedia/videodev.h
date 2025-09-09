@@ -59,6 +59,11 @@ typedef enum pjmedia_vid_dev_hwnd_type
     PJMEDIA_VID_DEV_HWND_TYPE_WINDOWS,
 
     /**
+     * Native view on Cocoa Mac.
+     */
+    PJMEDIA_VID_DEV_HWND_TYPE_COCOA,
+
+    /**
      * Native view on iOS.
      */
     PJMEDIA_VID_DEV_HWND_TYPE_IOS,

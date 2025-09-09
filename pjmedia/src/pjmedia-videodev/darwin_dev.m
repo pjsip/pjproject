@@ -36,13 +36,8 @@
 
 #define THIS_FILE               "darwin_dev.m"
 #define DEFAULT_CLOCK_RATE      90000
-#if TARGET_OS_IPHONE
-    #define DEFAULT_WIDTH       352
-    #define DEFAULT_HEIGHT      288
-#else
-    #define DEFAULT_WIDTH       1280
-    #define DEFAULT_HEIGHT      720
-#endif
+#define DEFAULT_WIDTH           640
+#define DEFAULT_HEIGHT          480
 #define DEFAULT_FPS             15
 
 /* Define whether we should maintain the aspect ratio when rotating the image.
@@ -144,7 +139,6 @@ struct darwin_stream
     AVCaptureVideoDataOutput    *video_output;
     VOutDelegate                *vout_delegate;
     dispatch_queue_t             queue;
-    AVCaptureVideoPreviewLayer  *prev_layer;
     
     pj_bool_t            is_running;
 #if TARGET_OS_IPHONE
@@ -153,6 +147,8 @@ struct darwin_stream
     pj_size_t            render_buf_size;
     CGDataProviderRef    render_data_provider;
     UIView              *render_view;
+    AVCaptureVideoPreviewLayer  *prev_layer;
+    UIView                      *prev_view;
 #endif
 
     pj_timestamp         frame_ts;
@@ -236,6 +232,7 @@ static void set_preset_str()
 #endif
 }
 
+#if TARGET_OS_IPHONE
 static void dispatch_sync_on_main_queue(void (^block)(void))
 {
     if ([NSThread isMainThread]) {
@@ -244,6 +241,7 @@ static void dispatch_sync_on_main_queue(void (^block)(void))
         dispatch_sync(dispatch_get_main_queue(), block);
     }
 }
+#endif
 
 /****************************************************************************
  * Factory operations
@@ -256,7 +254,7 @@ pjmedia_vid_dev_factory* pjmedia_darwin_factory(pj_pool_factory *pf)
     struct darwin_factory *f;
     pj_pool_t *pool;
 
-    pool = pj_pool_create(pf, "darwin video", 512, 512, NULL);
+    pool = pj_pool_create(pf, "darwin video", 8000, 4000, NULL);
     f = PJ_POOL_ZALLOC_T(pool, struct darwin_factory);
     f->pf = pf;
     f->pool = pool;
@@ -304,8 +302,8 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
     /* Init output device */
     qdi = &qf->dev_info[qf->dev_count++];
     pj_bzero(qdi, sizeof(*qdi));
-    pj_ansi_strncpy(qdi->info.name, "UIView", sizeof(qdi->info.name));
-    pj_ansi_strncpy(qdi->info.driver, "iOS", sizeof(qdi->info.driver));
+    pj_ansi_strxcpy(qdi->info.name, "UIView", sizeof(qdi->info.name));
+    pj_ansi_strxcpy(qdi->info.driver, "iOS", sizeof(qdi->info.driver));
     qdi->info.dir = PJMEDIA_DIR_RENDER;
     qdi->info.has_callback = PJ_FALSE;
 #endif
@@ -315,23 +313,34 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
     if (NSClassFromString(@"AVCaptureSession")) {
         NSArray *dev_list = NULL;
 
-#if (TARGET_OS_IPHONE && defined(__IPHONE_10_0)) || \
-    (TARGET_OS_OSX && defined(__MAC_10_15))
-        if (__builtin_available(macOS 10.15, iOS 10.0, *)) {
+        if (@available(macOS 10.15, iOS 10.0, *)) {
             /* Starting in iOS 10 and macOS 10.15, [AVCaptureDevice devices]
              * is deprecated and replaced by AVCaptureDeviceDiscoverySession.
              */
             AVCaptureDeviceDiscoverySession *dds;
-            NSArray<AVCaptureDeviceType> *dev_types =
-                @[AVCaptureDeviceTypeBuiltInWideAngleCamera
-#if TARGET_OS_OSX && defined(__MAC_10_15)
-                  , AVCaptureDeviceTypeExternalUnknown
-#endif
+            NSMutableArray<AVCaptureDeviceType> *dev_types =
+                [NSMutableArray arrayWithCapacity:5];
+
+            [dev_types addObject:AVCaptureDeviceTypeBuiltInWideAngleCamera];
 #if TARGET_OS_IPHONE && defined(__IPHONE_10_0)
-                  , AVCaptureDeviceTypeBuiltInDuoCamera
-                  , AVCaptureDeviceTypeBuiltInTelephotoCamera
+            // Deprecated in iOS 10.2
+            // AVCaptureDeviceTypeBuiltInDuoCamera
+            [dev_types addObject:AVCaptureDeviceTypeBuiltInTelephotoCamera];
 #endif
-                  ];
+
+#if (TARGET_OS_IPHONE && defined(__IPHONE_17_0)) || \
+    (TARGET_OS_OSX && defined(__MAC_14_0))
+            if (@available(macOS 14.0, iOS 17.0, *)) {
+                [dev_types addObject:AVCaptureDeviceTypeExternal];
+            } else {
+#   if (TARGET_OS_OSX && __MAC_OS_X_VERSION_MIN_REQUIRED < 140000)
+                [dev_types addObject:AVCaptureDeviceTypeExternalUnknown];
+#   endif
+            }
+
+#elif TARGET_OS_OSX
+            [dev_types addObject:AVCaptureDeviceTypeExternalUnknown];
+#endif
 
             dds = [AVCaptureDeviceDiscoverySession
                    discoverySessionWithDeviceTypes:dev_types
@@ -340,13 +349,11 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
 
             dev_list = [dds devices];
         } else {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_15
+#if (TARGET_OS_OSX && __MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_15) || \
+    (TARGET_OS_IPHONE &&  __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_10_0)
             dev_list = [AVCaptureDevice devices];
 #endif
         }
-#else
-        dev_list = [AVCaptureDevice devices];
-#endif
 
         for (AVCaptureDevice *device in dev_list) {
             if (![device hasMediaType:AVMediaTypeVideo] ||
@@ -363,9 +370,11 @@ static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
 
             qdi = &qf->dev_info[qf->dev_count++];
             pj_bzero(qdi, sizeof(*qdi));
-            pj_ansi_strncpy(qdi->info.name, [device.localizedName UTF8String],
+            pj_ansi_strxcpy(qdi->info.name, 
+                            [device.localizedName UTF8String],
                             sizeof(qdi->info.name));
-            pj_ansi_strncpy(qdi->info.driver, "AVF", sizeof(qdi->info.driver));
+            pj_ansi_strxcpy(qdi->info.driver, "AVF", 
+                            sizeof(qdi->info.driver));
             qdi->info.dir = PJMEDIA_DIR_CAPTURE;
             qdi->info.has_callback = PJ_FALSE;
 #if TARGET_OS_IPHONE
@@ -1018,11 +1027,18 @@ static pj_status_t darwin_stream_get_cap(pjmedia_vid_dev_stream *s,
 
     switch (cap) {
 #if TARGET_OS_IPHONE
+        case PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW:
+        {
+            pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd *) pval;
+            hwnd->type = PJMEDIA_VID_DEV_HWND_TYPE_IOS;
+            hwnd->info.ios.window = (void *)strm->prev_view;
+            return PJ_SUCCESS;
+        }
         case PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW:
         {
-            pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd*) pval;
-            hwnd->type = PJMEDIA_VID_DEV_HWND_TYPE_NONE;
-            hwnd->info.ios.window = (void*)strm->render_view;
+            pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd *) pval;
+            hwnd->type = PJMEDIA_VID_DEV_HWND_TYPE_IOS;
+            hwnd->info.ios.window = (void *)strm->render_view;
             return PJ_SUCCESS;
         }
 #endif /* TARGET_OS_IPHONE */
@@ -1031,6 +1047,32 @@ static pj_status_t darwin_stream_get_cap(pjmedia_vid_dev_stream *s,
     }
     
     return PJMEDIA_EVID_INVCAP;
+}
+
+static pj_bool_t set_orientation(struct darwin_stream *strm)
+{
+#if (TARGET_OS_OSX && __MAC_OS_X_VERSION_MIN_REQUIRED < 140000) || \
+    (TARGET_OS_IPHONE && __IPHONE_OS_VERSION_MIN_REQUIRED < 170000)
+
+    const AVCaptureVideoOrientation cap_ori[4] =
+    {
+        AVCaptureVideoOrientationLandscapeLeft,      /* NATURAL */
+        AVCaptureVideoOrientationPortrait,           /* 90DEG   */
+        AVCaptureVideoOrientationLandscapeRight,     /* 180DEG  */
+        AVCaptureVideoOrientationPortraitUpsideDown, /* 270DEG  */
+    };
+    AVCaptureConnection *vidcon;
+
+    vidcon = [strm->video_output
+              connectionWithMediaType:AVMediaTypeVideo];
+    if ([vidcon isVideoOrientationSupported]) {
+        vidcon.videoOrientation = cap_ori[strm->param.orient-1];
+        return PJ_TRUE;
+    }
+
+#endif
+
+    return PJ_FALSE;
 }
 
 /* API: set capability */
@@ -1043,6 +1085,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
     switch (cap) {
+#if TARGET_OS_IPHONE
         /* Native preview */
         case PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW:
         {
@@ -1053,7 +1096,8 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                 if (strm->prev_layer) {
                     CALayer *prev_layer = strm->prev_layer;
                     dispatch_sync_on_main_queue(^{
-                        [prev_layer removeFromSuperlayer];
+                        if ([prev_layer superlayer])
+                            [prev_layer removeFromSuperlayer];
                         [prev_layer release];
                     });
                     strm->prev_layer = nil;
@@ -1072,29 +1116,34 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             if (!strm->cap_session)
                 return PJ_EINVALIDOP;
             
-#if TARGET_OS_IPHONE
             /* Preview layer instantiation should be in main thread! */
             dispatch_sync_on_main_queue(^{
-                /* Create view, if none */
-                if (!strm->render_view)
-                    darwin_init_view(strm);
-            
                 /* Create preview layer */
-                AVCaptureVideoPreviewLayer *prev_layer =
-                            [[AVCaptureVideoPreviewLayer alloc]
-                             initWithSession:strm->cap_session];
-                
-                /* Attach preview layer to a UIView */
-                prev_layer.videoGravity = AVLayerVideoGravityResize;
-                prev_layer.frame = strm->render_view.bounds;
-                [strm->render_view.layer addSublayer:prev_layer];
-                strm->prev_layer = prev_layer;
+                strm->prev_layer = [[AVCaptureVideoPreviewLayer alloc]
+                                   initWithSession:strm->cap_session];
+                strm->prev_layer.videoGravity =
+                    AVLayerVideoGravityResizeAspectFill;
+
+                /* Create preview view and init it at smaller size than
+                 * the actual video.
+                 */
+                if (!strm->prev_view) {
+                    CGRect rect;
+                    rect = CGRectMake(0, 0, strm->param.fmt.det.vid.size.w/2,
+                                      strm->param.fmt.det.vid.size.h/2);
+                    strm->prev_view = [[UIView alloc] initWithFrame:rect];
+                }
+
+                /* Add the preview layer as sublayer */
+                strm->prev_layer.frame = strm->prev_view.bounds;
+                [strm->prev_view.layer addSublayer:strm->prev_layer];
+
             });
             PJ_LOG(4, (THIS_FILE, "Native preview initialized"));
-#endif
             
             return PJ_SUCCESS;
         }
+#endif
 
         /* Fast switch */
         case PJMEDIA_VID_DEV_CAP_SWITCH:
@@ -1198,8 +1247,6 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                 r.size = CGSizeMake(strm->param.disp_size.w,
                                     strm->param.disp_size.h);
                 strm->render_view.bounds = r;
-                if (strm->prev_layer)
-                    strm->prev_layer.frame = r;
             });
             return PJ_SUCCESS;
         }
@@ -1230,6 +1277,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
         case PJMEDIA_VID_DEV_CAP_ORIENTATION:
         {
             pjmedia_orient orient = *(pjmedia_orient *)pval;
+            pj_bool_t support_ori = PJ_FALSE;
 
             pj_assert(orient >= PJMEDIA_ORIENT_UNKNOWN &&
                       orient <= PJMEDIA_ORIENT_ROTATE_270DEG);
@@ -1251,30 +1299,35 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
 
                 return PJ_SUCCESS;
             }
-        
-            const AVCaptureVideoOrientation cap_ori[4] =
-            {
-                AVCaptureVideoOrientationLandscapeLeft,      /* NATURAL */
-                AVCaptureVideoOrientationPortrait,           /* 90DEG   */
-                AVCaptureVideoOrientationLandscapeRight,     /* 180DEG  */
-                AVCaptureVideoOrientationPortraitUpsideDown, /* 270DEG  */
-            };
-            AVCaptureConnection *vidcon;
-            pj_bool_t support_ori = PJ_TRUE;
-            
+
             pj_assert(strm->param.dir == PJMEDIA_DIR_CAPTURE);
-            
+
             if (!strm->video_output)
                 return PJMEDIA_EVID_NOTREADY;
 
-            vidcon = [strm->video_output 
-                      connectionWithMediaType:AVMediaTypeVideo];
-            if ([vidcon isVideoOrientationSupported]) {
-                vidcon.videoOrientation = cap_ori[strm->param.orient-1];
+#if (TARGET_OS_IPHONE && defined(__IPHONE_17_0)) || \
+    (TARGET_OS_OSX && defined(__MAC_14_0))
+            if (@available(macOS 14.0, iOS 17.0, *)) {
+
+                const CGFloat cap_ori[4] = { 0, 90, 180, 270};
+                AVCaptureConnection *vidcon;
+
+                vidcon = [strm->video_output
+                          connectionWithMediaType:AVMediaTypeVideo];
+                if ([vidcon isVideoRotationAngleSupported:
+                            cap_ori[strm->param.orient-1]])
+                {
+                    vidcon.videoRotationAngle = cap_ori[strm->param.orient-1];
+                    support_ori = PJ_TRUE;
+                }
+
             } else {
-                support_ori = PJ_FALSE;
+                support_ori = set_orientation(strm);
             }
-            
+#else
+            support_ori = set_orientation(strm);
+#endif
+
             if (!strm->conv.conv) {
                 pj_status_t status;
                 pjmedia_rect_size orig_size;
@@ -1449,6 +1502,15 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
 
         [stream->render_view release];
         stream->render_view = nil;
+    }
+
+    if (stream->prev_view) {
+        [stream->prev_view
+            performSelectorOnMainThread:@selector(removeFromSuperview)
+            withObject:nil waitUntilDone:YES];
+
+        [stream->prev_view release];
+        stream->prev_view = nil;
     }
     
     if (stream->render_data_provider) {

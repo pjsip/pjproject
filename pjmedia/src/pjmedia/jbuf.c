@@ -98,6 +98,7 @@ struct pjmedia_jbuf
     pj_str_t        jb_name;            /**< jitter buffer name             */
     pj_size_t       jb_frame_size;      /**< frame size                     */
     unsigned        jb_frame_ptime;     /**< frame duration.                */
+    unsigned        jb_frame_ptime_denum;/**< frame duration denumerator.   */
     pj_size_t       jb_max_count;       /**< capacity of jitter buffer,
                                              in frames                      */
     int             jb_init_prefetch;   /**< Initial prefetch               */
@@ -109,6 +110,7 @@ struct pjmedia_jbuf
                                              calculation                    */
     int             jb_min_shrink_gap;  /**< How often can we shrink        */
     discard_algo    jb_discard_algo;    /**< Discard algorithm              */
+    unsigned        jb_min_delay;       /**< Minimum delay, in frames       */
 
     /* Buffer */
     jb_framelist_t  jb_framelist;       /**< the buffer                     */
@@ -608,6 +610,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
     pj_strdup_with_null(pool, &jb->jb_name, name);
     jb->jb_frame_size    = frame_size;
     jb->jb_frame_ptime   = ptime;
+    jb->jb_frame_ptime_denum = 1;
     jb->jb_prefetch      = PJ_MIN(PJMEDIA_JB_DEFAULT_INIT_DELAY,max_count*4/5);
     jb->jb_min_prefetch  = 0;
     jb->jb_max_prefetch  = max_count*4/5;
@@ -629,12 +632,20 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
 PJ_DEF(pj_status_t) pjmedia_jbuf_set_ptime( pjmedia_jbuf *jb,
                                             unsigned ptime)
 {
+    return pjmedia_jbuf_set_ptime2(jb, ptime, 1);
+}
+
+PJ_DEF(pj_status_t) pjmedia_jbuf_set_ptime2(pjmedia_jbuf *jb,
+                                            unsigned ptime,
+                                            unsigned ptime_denum)
+{
     PJ_ASSERT_RETURN(jb, PJ_EINVAL);
 
     jb->jb_frame_ptime    = ptime;
-    jb->jb_min_shrink_gap = PJMEDIA_JBUF_DISC_MIN_GAP / ptime;
-    jb->jb_max_burst      = (int)PJ_MAX(MAX_BURST_MSEC / ptime,
-                                   jb->jb_max_count*3/4);
+    jb->jb_frame_ptime_denum = ptime_denum;
+    jb->jb_min_shrink_gap = PJMEDIA_JBUF_DISC_MIN_GAP * ptime_denum / ptime;
+    jb->jb_max_burst      = (int)PJ_MAX(MAX_BURST_MSEC * ptime_denum / ptime,
+                                        jb->jb_max_count*3/4);
 
     return PJ_SUCCESS;
 }
@@ -847,9 +858,16 @@ static void jbuf_discard_static(pjmedia_jbuf *jb)
      * so just disable it when progressive discard is active.
      */
     int diff, burst_level;
+    unsigned cur_size;
 
     burst_level = PJ_MAX(jb->jb_eff_level, jb->jb_level);
-    diff = jb_framelist_eff_size(&jb->jb_framelist) - burst_level*2;
+    cur_size = jb_framelist_eff_size(&jb->jb_framelist);
+
+    /* Don't discard if delay is lower than or equal to setting */
+    if (cur_size <= jb->jb_min_delay)
+        return;
+
+    diff = cur_size - burst_level*2;
 
     if (diff >= STA_DISC_SAFE_SHRINKING_DIFF) {
         int seq_origin;
@@ -888,10 +906,10 @@ static void jbuf_discard_progressive(pjmedia_jbuf *jb)
     if (jb->jb_last_op != JB_OP_PUT)
         return;
 
-    /* Check if latency is longer than burst */
+    /* Check if latency is longer than burst or minimum delay */
     cur_size = jb_framelist_eff_size(&jb->jb_framelist);
     burst_level = PJ_MAX(jb->jb_eff_level, jb->jb_level);
-    if (cur_size <= burst_level) {
+    if (cur_size <= burst_level || cur_size <= jb->jb_min_delay) {
         /* Reset any scheduled discard */
         jb->jb_discard_dist = 0;
         return;
@@ -909,8 +927,9 @@ static void jbuf_discard_progressive(pjmedia_jbuf *jb)
             (PJMEDIA_JBUF_PRO_DISC_MAX_BURST-PJMEDIA_JBUF_PRO_DISC_MIN_BURST);
 
     /* Calculate current discard distance */
-    overflow = cur_size - burst_level;
-    discard_dist = T / overflow / jb->jb_frame_ptime;
+    overflow = cur_size - PJ_MAX(burst_level, jb->jb_min_delay);
+    discard_dist = T * jb->jb_frame_ptime_denum / overflow /
+                   jb->jb_frame_ptime;
 
     /* Get last seq number in the JB */
     last_seq = jb_framelist_origin(&jb->jb_framelist) +
@@ -1135,6 +1154,10 @@ PJ_DEF(void) pjmedia_jbuf_get_frame3(pjmedia_jbuf *jb,
 
         jb->jb_empty++;
 
+    } else if (jb_framelist_eff_size(&jb->jb_framelist) < jb->jb_min_delay) {
+        *p_frame_type = PJMEDIA_JB_MISSING_FRAME;
+        if (size)
+            *size = 0;
     } else {
 
         pjmedia_jb_frame_type ftype = PJMEDIA_JB_NORMAL_FRAME;
@@ -1161,7 +1184,8 @@ PJ_DEF(void) pjmedia_jbuf_get_frame3(pjmedia_jbuf *jb,
                 /* We've just retrieved one frame, so add one to cur_size */
                 cur_size = jb_framelist_eff_size(&jb->jb_framelist) + 1;
                 pj_math_stat_update(&jb->jb_delay,
-                                    cur_size*jb->jb_frame_ptime);
+                                    cur_size * jb->jb_frame_ptime /
+                                    jb->jb_frame_ptime_denum);
             }
         } else {
             /* Jitter buffer is empty */
@@ -1193,6 +1217,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_state( const pjmedia_jbuf *jb,
     state->min_prefetch = jb->jb_min_prefetch;
     state->max_prefetch = jb->jb_max_prefetch;
     state->max_count = (unsigned)jb->jb_max_count;
+    state->min_delay_set = jb->jb_min_delay;
 
     state->burst = jb->jb_eff_level;
     state->prefetch = jb->jb_prefetch;
@@ -1257,4 +1282,23 @@ PJ_DEF(unsigned) pjmedia_jbuf_remove_frame(pjmedia_jbuf *jb,
     }
 
     return count;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_jbuf_set_min_delay(pjmedia_jbuf *jb,
+                                               unsigned min_delay)
+{
+    PJ_ASSERT_RETURN(jb, PJ_EINVAL);
+
+    /* Convert milliseconds to frames */
+    min_delay *= jb->jb_frame_ptime_denum;
+    jb->jb_min_delay = min_delay / jb->jb_frame_ptime;
+    if (min_delay % jb->jb_frame_ptime)
+        jb->jb_min_delay++;
+
+    /* Should not be higher than half of jitter buffer capacity */
+    if (jb->jb_min_delay > jb->jb_max_count/2)
+        jb->jb_min_delay = (unsigned)jb->jb_max_count/2;
+
+    return PJ_SUCCESS;
 }

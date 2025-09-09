@@ -281,7 +281,7 @@ pjmedia_vid_dev_factory* pjmedia_sdl_factory(pj_pool_factory *pf)
     struct sdl_factory *f;
     pj_pool_t *pool;
 
-    pool = pj_pool_create(pf, "sdl video", 1000, 1000, NULL);
+    pool = pj_pool_create(pf, "sdl video", 4000, 4000, NULL);
     f = PJ_POOL_ZALLOC_T(pool, struct sdl_factory);
     f->pf = pf;
     f->pool = pool;
@@ -493,22 +493,22 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
 
     ddi = &sf->dev_info[0];
     pj_bzero(ddi, sizeof(*ddi));
-    strncpy(ddi->info.name, "SDL renderer", sizeof(ddi->info.name));
-    ddi->info.name[sizeof(ddi->info.name)-1] = '\0';
+    pj_ansi_strxcpy(ddi->info.name, "SDL renderer", 
+                    sizeof(ddi->info.name));
     ddi->info.fmt_cnt = PJ_ARRAY_SIZE(sdl_fmts);
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     ddi = &sf->dev_info[OPENGL_DEV_IDX];
     pj_bzero(ddi, sizeof(*ddi));
-    strncpy(ddi->info.name, "SDL openGL renderer", sizeof(ddi->info.name));
-    ddi->info.name[sizeof(ddi->info.name)-1] = '\0';
+    pj_ansi_strxcpy(ddi->info.name, "SDL openGL renderer", 
+                    sizeof(ddi->info.name));
     ddi->info.fmt_cnt = 1;
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 
     for (i = 0; i < sf->dev_count; i++) {
         ddi = &sf->dev_info[i];
-        strncpy(ddi->info.driver, "SDL", sizeof(ddi->info.driver));
-        ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
+        pj_ansi_strxcpy(ddi->info.driver, "SDL", 
+                        sizeof(ddi->info.driver));
         ddi->info.dir = PJMEDIA_DIR_RENDER;
         ddi->info.has_callback = PJ_FALSE;
         ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT |
@@ -632,7 +632,7 @@ static sdl_fmt_info* get_sdl_format_info(pjmedia_format_id id)
 {
     unsigned i;
 
-    for (i = 0; i < sizeof(sdl_fmts)/sizeof(sdl_fmts[0]); i++) {
+    for (i = 0; i < PJ_ARRAY_SIZE(sdl_fmts); i++) {
         if (sdl_fmts[i].fmt_id == id)
             return &sdl_fmts[i];
     }
@@ -948,7 +948,7 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 
     stream->frame = frame;
     job_queue_post_job(stream->sf->jq, put_frame, strm, 0, &status);
-    
+
     return status;
 }
 
@@ -1162,6 +1162,8 @@ static pj_status_t set_cap(void *data)
     pjmedia_vid_dev_cap cap = scap->cap;
     const void *pval = scap->pval.cpval;
 
+    PJ_ASSERT_RETURN(data && strm, PJ_EINVAL);
+
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
         /**
          * Setting window's position when the window is hidden also sets
@@ -1237,7 +1239,7 @@ static pj_status_t set_cap(void *data)
 
         status = sdl_create_window(strm, PJ_TRUE, sdl_info->sdl_format, hwnd);
         PJ_PERROR(4, (THIS_FILE, status,
-                      "Re-initializing SDL with native window %d",
+                      "Re-initializing SDL with native window %p",
                       hwnd->info.window));
         return status;  
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
@@ -1460,12 +1462,15 @@ static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
     job jb;
     int tail;
 
-    if (jq->is_quitting)
-        return PJ_EBUSY;
+    if (jq->is_quitting) {
+        jb.retval = PJ_EBUSY;
+        goto on_return;
+    }
 
     jb.func = func;
     jb.data = data;
     jb.flags = flags;
+    jb.retval = PJ_SUCCESS;
 
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
     PJ_UNUSED_ARG(tail);
@@ -1485,10 +1490,10 @@ static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
         jq->is_full = PJ_TRUE;
         PJ_LOG(4, (THIS_FILE, "SDL job queue is full, increasing "
                               "the queue size."));
+        pj_mutex_unlock(jq->mutex);
         pj_sem_post(jq->sem);
         /* Wait until our posted job is completed. */
         pj_sem_wait(jq->job_sem[tail]);
-        pj_mutex_unlock(jq->mutex);
     } else {
         pj_mutex_unlock(jq->mutex);
         pj_sem_post(jq->sem);
@@ -1497,9 +1502,11 @@ static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
     }
 #endif /* PJ_DARWINOS */
 
-    *retval = jb.retval;
+on_return:
+    if (retval)
+        *retval = jb.retval;
 
-    return PJ_SUCCESS;
+    return jb.retval;
 }
 
 static pj_status_t job_queue_destroy(job_queue *jq)

@@ -1,12 +1,15 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 29
+    compileSdk 33
+    buildFeatures.buildConfig true
+
 
     defaultConfig {
         applicationId "org.pjsip.pjsua2.app"
         minSdkVersion 23
-        targetSdkVersion 29
+        targetSdkVersion 33
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -15,8 +18,34 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
+    flavorDimensions "version"
+    productFlavors {
+        demo {
+            isDefault true
+            dimension "version"
+            buildConfigField "int", "SIP_PORT", "6000"
+            buildConfigField "boolean", "IS_TEST", "false"
+            buildConfigField "String", "TEST_TAG", "\"demo\""
+        }
+        ciTest {
+            dimension "version"
+            buildConfigField "int", "SIP_PORT", "6677"
+            buildConfigField "boolean", "IS_TEST", "true"
+            buildConfigField "String", "TEST_TAG", "\"ciTest\""
+        }
+    }
+    namespace 'org.pjsip.pjsua2.app'
 }
 
 dependencies {
     implementation project(path: ':pjsua2')
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-idling-resource:3.5.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.ext:junit-ktx:1.1.5'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test:rules:1.5.0'
+    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
+    testImplementation 'junit:junit:4.12'
 }

@@ -20,7 +20,7 @@
 
 /* Redirect libsrtp error to PJ_LOG */
 
-srtp_err_reporting_level_t err_level = srtp_err_level_error;
+static srtp_err_reporting_level_t err_level = srtp_err_level_error;
 
 void srtp_err_report(srtp_err_reporting_level_t priority, const char *format, ...)
 {

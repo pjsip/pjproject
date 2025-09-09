@@ -113,7 +113,7 @@ PJ_DEF(pj_status_t) pjmedia_h263_packetize(pjmedia_h263_packetizer *pktz,
                                            pj_uint8_t *bits,
                                            pj_size_t bits_len,
                                            unsigned *pos,
-                                           const pj_uint8_t **payload,
+                                           pj_uint8_t **payload,
                                            pj_size_t *payload_len)
 {
     pj_uint8_t *p, *end;

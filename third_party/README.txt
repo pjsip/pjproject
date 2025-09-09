@@ -15,4 +15,4 @@ speex:		SVN -r12832
 gsm:		gsm-1.0.12
 ilbc:		from RFC
 resample:	lib-resample, I think version 1.7
-srtp		libsrtp-1.5.4
+srtp		libsrtp-2.5.0

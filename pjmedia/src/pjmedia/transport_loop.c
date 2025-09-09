@@ -45,8 +45,9 @@ struct transport_loop
     pjmedia_transport   base;           /**< Base transport.                */
 
     pj_pool_t          *pool;           /**< Memory pool                    */
+    unsigned            max_attach_cnt; /**< Max number of attachments      */
     unsigned            user_cnt;       /**< Number of attachments          */
-    struct tp_user      users[4];       /**< Array of users.                */
+    struct tp_user     *users;          /**< Array of users.                */
     pj_bool_t           disable_rx;     /**< Disable RX.                    */
 
     pjmedia_loop_tp_setting setting;    /**< Setting.                       */
@@ -129,6 +130,7 @@ static pjmedia_transport_op transport_udp_op =
     &transport_attach2
 };
 
+static void tp_loop_on_destroy(void *arg);
 
 /**
  * Initialize loopback media transport setting with its default values.
@@ -138,6 +140,7 @@ PJ_DEF(void) pjmedia_loop_tp_setting_default(pjmedia_loop_tp_setting *opt)
     pj_bzero(opt, sizeof(pjmedia_loop_tp_setting));
     
     opt->af = pj_AF_INET();
+    opt->max_attach_cnt = 4;
 }
 
 
@@ -148,9 +151,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_loop_create(pjmedia_endpt *endpt,
                                                   pjmedia_transport **p_tp)
 {
     pjmedia_loop_tp_setting opt;
-    
-    pj_bzero(&opt, sizeof(opt));
-    opt.af = pj_AF_INET();
+
+    pjmedia_loop_tp_setting_default(&opt);
 
     return pjmedia_transport_loop_create2(endpt, &opt, p_tp);
 }
@@ -163,6 +165,8 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
 {
     struct transport_loop *tp;
     pj_pool_t *pool;
+    pj_grp_lock_t *grp_lock;
+    pj_status_t status;
 
     /* Sanity check */
     PJ_ASSERT_RETURN(endpt && p_tp, PJ_EINVAL);
@@ -178,6 +182,15 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
     tp->base.op = &transport_udp_op;
     tp->base.type = PJMEDIA_TRANSPORT_TYPE_UDP;
 
+    /* Create group lock */
+    status = pj_grp_lock_create(pool, NULL, &grp_lock);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    tp->base.grp_lock = grp_lock;
+    pj_grp_lock_add_ref(grp_lock);
+    pj_grp_lock_add_handler(grp_lock, pool, tp, &tp_loop_on_destroy);
+
     if (opt) {
         tp->setting = *opt;
     } else {
@@ -186,11 +199,17 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
     if (tp->setting.addr.slen) {
         pj_strdup(pool, &tp->setting.addr, &opt->addr);
     } else {
-        pj_strset2(&tp->setting.addr, (opt->af == pj_AF_INET())?
+        pj_strset2(&tp->setting.addr, (tp->setting.af == pj_AF_INET())?
                                        "127.0.0.1": "::1");
     }
     if (tp->setting.port == 0)
         tp->setting.port = 4000;
+
+    /* alloc users array */
+    tp->max_attach_cnt = tp->setting.max_attach_cnt;
+    if (tp->max_attach_cnt == 0)
+        tp->max_attach_cnt = 1;
+    tp->users = (struct tp_user *)pj_pool_calloc(pool, tp->max_attach_cnt, sizeof(struct tp_user));
 
     /* Done */
     *p_tp = &tp->base;
@@ -215,17 +234,25 @@ PJ_DEF(pj_status_t) pjmedia_transport_loop_disable_rx( pjmedia_transport *tp,
     return PJ_ENOTFOUND;
 }
 
+
+static void tp_loop_on_destroy(void *arg)
+{
+    struct transport_loop *loop = (struct transport_loop*) arg;
+
+    PJ_LOG(4, (loop->base.name, "Loop transport destroyed"));
+    pj_pool_release(loop->pool);
+}
+
+
 /**
  * Close loopback transport.
  */
 static pj_status_t transport_destroy(pjmedia_transport *tp)
 {
-    struct transport_loop *loop = (struct transport_loop*) tp;
-
     /* Sanity check */
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
-    pj_pool_release(loop->pool);
+    pj_grp_lock_dec_ref(tp->grp_lock);
 
     return PJ_SUCCESS;
 }
@@ -274,8 +301,7 @@ static pj_status_t tp_attach(   pjmedia_transport *tp,
         PJ_ASSERT_RETURN(loop->users[i].user_data != user_data,
                          PJ_EINVALIDOP);
     }
-    PJ_ASSERT_RETURN(loop->user_cnt != PJ_ARRAY_SIZE(loop->users), 
-                     PJ_ETOOMANY);
+    PJ_ASSERT_RETURN(loop->user_cnt != loop->max_attach_cnt, PJ_ETOOMANY);
 
     PJ_UNUSED_ARG(rem_rtcp);
     PJ_UNUSED_ARG(rtcp_addr);
@@ -372,6 +398,8 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
         }
     }
 
+    pj_grp_lock_add_ref(tp->grp_lock);
+
     /* Distribute to users */
     for (i=0; i<loop->user_cnt; ++i) {
         if (loop->users[i].rx_disabled) continue;
@@ -388,6 +416,8 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
                                      size);
         }
     }
+
+    pj_grp_lock_dec_ref(tp->grp_lock);
 
     return PJ_SUCCESS;
 }
@@ -414,12 +444,16 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
     PJ_UNUSED_ARG(addr_len);
     PJ_UNUSED_ARG(addr);
 
+    pj_grp_lock_add_ref(tp->grp_lock);
+
     /* Distribute to users */
     for (i=0; i<loop->user_cnt; ++i) {
         if (!loop->users[i].rx_disabled && loop->users[i].rtcp_cb)
             (*loop->users[i].rtcp_cb)(loop->users[i].user_data, (void*)pkt,
                                       size);
     }
+
+    pj_grp_lock_dec_ref(tp->grp_lock);
 
     return PJ_SUCCESS;
 }

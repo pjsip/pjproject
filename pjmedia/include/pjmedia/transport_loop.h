@@ -87,6 +87,11 @@ typedef struct pjmedia_loop_tp_setting
      */
     pj_bool_t   disable_rx;
 
+    /*
+     * Max number of attachments
+     */
+    unsigned max_attach_cnt;
+
 } pjmedia_loop_tp_setting;
 
 

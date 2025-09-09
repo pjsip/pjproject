@@ -26,6 +26,7 @@
 #include <pj/pool.h>
 #include <pj/assert.h>
 #include <pj/log.h>
+#include <pj/math.h>
 #include <pjlib-util/string.h>
 
 PJ_DEF_DATA(const pjsip_method) pjsip_invite_method =
@@ -641,8 +642,7 @@ PJ_DEF(const pj_str_t*) pjsip_get_status_text(int code)
         init_status_phrase();
     }
 
-    return (code>=100 && 
-            code<(int)(sizeof(status_phrase)/sizeof(status_phrase[0]))) ? 
+    return (code>=100 && code<(int)PJ_ARRAY_SIZE(status_phrase)) ?
         &status_phrase[code] : &status_phrase[0];
 }
 
@@ -771,13 +771,13 @@ PJ_DEF(pjsip_generic_string_hdr*) pjsip_generic_string_hdr_init(pj_pool_t *pool,
     if (hnames) {
         pj_strdup(pool, &dup_hname, hnames);
     } else {
-        dup_hname.slen = 0;
+        pj_bzero(&dup_hname, sizeof(pj_str_t));
     }
 
     if (hvalue) {
         pj_strdup(pool, &dup_hval, hvalue);
     } else {
-        dup_hval.slen = 0;
+        pj_bzero(&dup_hval, sizeof(pj_str_t));
     }
 
     pjsip_generic_string_hdr_init2(hdr, &dup_hname, &dup_hval);
@@ -899,8 +899,11 @@ static int pjsip_generic_int_hdr_print( pjsip_generic_int_hdr *hdr,
 static pjsip_generic_int_hdr* pjsip_generic_int_hdr_clone( pj_pool_t *pool, 
                                                    const pjsip_generic_int_hdr *rhs)
 {
-    pjsip_generic_int_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_generic_int_hdr);
-    pj_memcpy(hdr, rhs, sizeof(*hdr));
+    pjsip_generic_int_hdr *hdr;
+
+    hdr = pjsip_generic_int_hdr_create(pool, &rhs->name, rhs->ivalue);
+    hdr->type = rhs->type;
+
     return hdr;
 }
 
@@ -980,10 +983,12 @@ static pjsip_generic_array_hdr* pjsip_generic_array_hdr_clone( pj_pool_t *pool,
                                                  const pjsip_generic_array_hdr *rhs)
 {
     unsigned i;
-    pjsip_generic_array_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_generic_array_hdr);
+    pjsip_generic_array_hdr *hdr;
 
-    pj_memcpy(hdr, rhs, sizeof(*hdr));
-    for (i=0; i<rhs->count; ++i) {
+    hdr = pjsip_generic_array_hdr_create(pool, &rhs->name);
+    hdr->type = rhs->type;
+    hdr->count = PJ_MIN(rhs->count, PJSIP_GENERIC_ARRAY_MAX_COUNT);
+    for (i=0; i<hdr->count; ++i) {
         pj_strdup(pool, &hdr->values[i], &rhs->values[i]);
     }
 
@@ -1289,7 +1294,7 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
                 return -1;
 
             /*
-            printed = sprintf(buf, ";q=%u.%03u",
+            printed = pj_ansi_snprintf(buf, size, ";q=%u.%03u",
                                    hdr->q1000/1000, hdr->q1000 % 1000);
              */
             pj_memcpy(buf, ";q=", 3);
@@ -2162,11 +2167,18 @@ PJ_DEF(pjsip_warning_hdr*) pjsip_warning_hdr_create(  pj_pool_t *pool,
 {
     const pj_str_t str_warning = { "Warning", 7 };
     pj_str_t hvalue;
+    unsigned buflen;
 
-    hvalue.ptr = (char*) pj_pool_alloc(pool, 10 +               /* code */
-                                             host->slen + 2 +   /* host */
-                                             text->slen + 2);   /* text */
-    hvalue.slen = pj_ansi_sprintf(hvalue.ptr, "%u %.*s \"%.*s\"",
+    PJ_ASSERT_RETURN(pool && host && text, NULL);
+    PJ_ASSERT_RETURN(host->slen >= 0 && text->slen >= 0, NULL);
+
+    buflen = 10 +                          /* code */
+             (unsigned)host->slen + 2 +    /* host */
+             (unsigned)text->slen + 2;     /* text */
+
+    hvalue.ptr = (char*) pj_pool_alloc(pool, buflen);
+    hvalue.slen = pj_ansi_snprintf(hvalue.ptr, buflen,
+                                   "%u %.*s \"%.*s\"",
                                   code, (int)host->slen, host->ptr,
                                   (int)text->slen, text->ptr);
 

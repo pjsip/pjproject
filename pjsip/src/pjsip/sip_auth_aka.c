@@ -147,9 +147,10 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
         aka_cred.data.ptr = (char*)res;
         aka_cred.data.slen = PJSIP_AKA_RESLEN;
 
-        status = pjsip_auth_create_digest(&auth->response, &chal->nonce, 
+        status = pjsip_auth_create_digest2(&auth->response, &chal->nonce,
                                  &auth->nc, &auth->cnonce, &auth->qop, 
-                                 &auth->uri, &chal->realm, &aka_cred, method);  
+                                 &auth->uri, &chal->realm, &aka_cred, method,
+                                 PJSIP_AUTH_ALGORITHM_MD5);
 
     } else if (aka_version == 2) {
 
@@ -186,9 +187,10 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
                          aka_cred.data.ptr, &len);
         aka_cred.data.slen = hmac64_len;
 
-        status = pjsip_auth_create_digest(&auth->response, &chal->nonce, 
+        status = pjsip_auth_create_digest2(&auth->response, &chal->nonce,
                                  &auth->nc, &auth->cnonce, &auth->qop, 
-                                 &auth->uri, &chal->realm, &aka_cred, method);
+                                 &auth->uri, &chal->realm, &aka_cred, method,
+                                 PJSIP_AUTH_ALGORITHM_MD5);
 
     } else {
         pj_assert(!"Bug!");

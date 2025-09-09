@@ -23,51 +23,52 @@
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="Call state" />
-    
-	<LinearLayout 
+
+    <LinearLayout
+        android:id="@+id/top_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">    
-        
-        <LinearLayout 
+        android:orientation="horizontal">
+
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_weight=".50">    
-	    	    
+            android:layout_weight=".50"
+            android:orientation="vertical">
+
             <Button
                 android:id="@+id/buttonAccept"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:onClick="acceptCall"
                 android:text="Accept" />
-		
+
             <Button
                 android:id="@+id/buttonHangup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:onClick="hangupCall"
                 android:text="Reject" />
-		    
-            <Button
-                android:id="@+id/buttonShowPreview"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"		        
-                android:onClick="showPreview"
-                android:text="@+string/show_preview" />
-	    
+
         </LinearLayout>
+
+    </LinearLayout>
+
+    <RelativeLayout
+        android:id="@+id/bottom_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <SurfaceView
+            android:id="@+id/surfaceIncomingVideo"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
         <SurfaceView
             android:id="@+id/surfacePreviewCapture"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight=".50" />			    
-	    
-    </LinearLayout>
-   
-    <SurfaceView
-       	android:id="@+id/surfaceIncomingVideo"
-       	android:layout_width="match_parent"
-       	android:layout_height="match_parent" />
-	
+            android:layout_height="0dp" />
+    </RelativeLayout>
+
 </LinearLayout>

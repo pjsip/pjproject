@@ -22,6 +22,10 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 
+/* Only build when the backend is using Windows UWP socket. */
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_UWP
+
+
 #include <ppltasks.h>
 #include <string>
 
@@ -362,3 +366,10 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioq,
     return 0;
 }
 
+PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
+{
+    PJ_UNUSED_ARG(ioqueue);
+    return NULL;
+}
+
+#endif /* PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_UWP */

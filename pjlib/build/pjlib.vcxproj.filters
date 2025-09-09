@@ -173,6 +173,9 @@
     <ClCompile Include="..\src\pj\unicode_win32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pj\unittest.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pj\addr_resolv_linux_kernel.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>
@@ -221,6 +224,15 @@
     <ClCompile Include="..\src\pj\ssl_sock_imp_common.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pj\ssl_sock_schannel.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_rwmutex.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\atomic_slist.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\pj\ioqueue_common_abs.h">
@@ -230,6 +242,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pj\addr_resolv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\argparse.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pj\array.h">
@@ -325,6 +340,9 @@
     <ClInclude Include="..\include\pj\ssl_sock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pj\atomic_slist.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\pj\string.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -335,6 +353,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pj\unicode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\unittest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pj\compat\assert.h">

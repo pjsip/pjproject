@@ -631,10 +631,41 @@ static pj_status_t oh264_codec_close(pjmedia_vid_codec *codec)
 static pj_status_t oh264_codec_modify(pjmedia_vid_codec *codec,
                                       const pjmedia_vid_codec_param *param)
 {
+    struct oh264_codec_data *oh264_data;
+    int rc;
+    SBitrateInfo bitrate;
+
     PJ_ASSERT_RETURN(codec && param, PJ_EINVAL);
-    PJ_UNUSED_ARG(codec);
-    PJ_UNUSED_ARG(param);
-    return PJ_EINVALIDOP;
+
+    oh264_data = (oh264_codec_data*) codec->codec_data;
+
+    bitrate.iLayer = SPATIAL_LAYER_ALL;
+    bitrate.iBitrate = param->enc_fmt.det.vid.avg_bps;
+    rc = oh264_data->enc->SetOption (ENCODER_OPTION_BITRATE, &bitrate);
+    if (rc != cmResultSuccess) {
+        PJ_LOG(4,(THIS_FILE, "OpenH264 encoder SetOption bitrate failed, "
+                             "rc=%d", rc));
+        return PJMEDIA_CODEC_EUNSUP;
+    }
+
+    oh264_data->prm->enc_fmt.det.vid.avg_bps = param->enc_fmt.det.vid.avg_bps;
+
+    bitrate.iBitrate = param->enc_fmt.det.vid.max_bps;
+    rc = oh264_data->enc->SetOption (ENCODER_OPTION_MAX_BITRATE, &bitrate);
+    if (rc != cmResultSuccess) {
+        PJ_LOG(4,(THIS_FILE, "OpenH264 encoder SetOption max bitrate failed, "
+                             "rc=%d", rc));
+    } else {
+        oh264_data->prm->enc_fmt.det.vid.max_bps =
+            param->enc_fmt.det.vid.max_bps;
+
+        PJ_LOG(4, (THIS_FILE, "OpenH264 encoder bitrate is modified to "
+                              "%d avg bps and %d max bps",
+                              param->enc_fmt.det.vid.avg_bps,
+                              param->enc_fmt.det.vid.max_bps));
+    }
+
+    return PJ_SUCCESS;
 }
 
 static pj_status_t oh264_codec_get_param(pjmedia_vid_codec *codec,
@@ -985,7 +1016,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
     pj_bool_t has_frame = PJ_FALSE;
     pj_bool_t kf_requested = PJ_FALSE;
     unsigned buf_pos, whole_len = 0;
-    unsigned i, frm_cnt;
+    unsigned i;
     pj_status_t status = PJ_SUCCESS;
     DECODING_STATE ret;
 
@@ -1051,7 +1082,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
      * Step 2: parse the individual NAL and give to decoder
      */
     buf_pos = 0;
-    for ( frm_cnt=0; ; ++frm_cnt) {
+    while (1) {
         unsigned frm_size;
         unsigned char *start;
 
@@ -1150,8 +1181,8 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
         output->timestamp = packets[0].timestamp;
 
         PJ_LOG(5,(THIS_FILE, "Decode couldn't produce picture, "
-                  "input nframes=%d, concatenated size=%d bytes, ret=%d",
-                  count, whole_len, ret));
+                  "input nframes=%lu, concatenated size=%d bytes, ret=%d",
+                  (unsigned long)count, whole_len, ret));
     }
 
     return status;

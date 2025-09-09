@@ -147,7 +147,7 @@ PJ_DEF(void) pj_dns_dump_packet(const pj_dns_parsed_packet *res)
     PJ_LOG(3,(THIS_FILE, " Nb of answer RR: %d", res->hdr.anscount));
     PJ_LOG(3,(THIS_FILE, " Nb of authority RR: %d", res->hdr.nscount));
     PJ_LOG(3,(THIS_FILE, " Nb of additional RR: %d", res->hdr.arcount));
-    PJ_LOG(3,(THIS_FILE, ""));
+    PJ_LOG(3,(THIS_FILE, " "));
 
     /* Dump queries */
     if (res->hdr.qdcount) {
@@ -156,7 +156,7 @@ PJ_DEF(void) pj_dns_dump_packet(const pj_dns_parsed_packet *res)
         for (i=0; i<res->hdr.qdcount; ++i) {
             dump_query(i, &res->q[i]);
         }
-        PJ_LOG(3,(THIS_FILE, ""));
+        PJ_LOG(3,(THIS_FILE, " "));
     }
 
     /* Dump answers */
@@ -166,7 +166,7 @@ PJ_DEF(void) pj_dns_dump_packet(const pj_dns_parsed_packet *res)
         for (i=0; i<res->hdr.anscount; ++i) {
             dump_answer(i, &res->ans[i]);
         }
-        PJ_LOG(3,(THIS_FILE, ""));
+        PJ_LOG(3,(THIS_FILE, " "));
     }
 
     /* Dump NS sections */
@@ -176,7 +176,7 @@ PJ_DEF(void) pj_dns_dump_packet(const pj_dns_parsed_packet *res)
         for (i=0; i<res->hdr.nscount; ++i) {
             dump_answer(i, &res->ns[i]);
         }
-        PJ_LOG(3,(THIS_FILE, ""));
+        PJ_LOG(3,(THIS_FILE, " "));
     }
 
     /* Dump Additional info sections */
@@ -186,7 +186,7 @@ PJ_DEF(void) pj_dns_dump_packet(const pj_dns_parsed_packet *res)
         for (i=0; i<res->hdr.arcount; ++i) {
             dump_answer(i, &res->arr[i]);
         }
-        PJ_LOG(3,(THIS_FILE, ""));
+        PJ_LOG(3,(THIS_FILE, " "));
     }
 
 }

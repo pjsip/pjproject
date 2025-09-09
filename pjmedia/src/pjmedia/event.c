@@ -15,6 +15,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#include <pjmedia/config.h>
 #include <pjmedia/event.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
@@ -26,7 +27,7 @@
 
 #define THIS_FILE       "event.c"
 
-#define MAX_EVENTS 16
+#define MAX_EVENTS PJMEDIA_EVENT_MAX_EVENTS
 
 /* Enable some tracing */
 // #define EVENT_TRACE
@@ -104,7 +105,9 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
     pj_status_t err = PJ_SUCCESS;
     esub * sub = mgr->esub_list.next;
     pjmedia_event *ev = &ev_queue->events[ev_queue->head];
+#ifdef EVENT_TRACE
     unsigned i = 0;
+#endif
 
     while (sub != &mgr->esub_list) {
         *next_sub = sub->next;
@@ -138,7 +141,9 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
             }
         }
         sub = *next_sub;
+#ifdef EVENT_TRACE
         i++;
+#endif
     }
     *next_sub = NULL;
 
@@ -239,6 +244,8 @@ PJ_DEF(void) pjmedia_event_mgr_destroy(pjmedia_event_mgr *mgr)
         mgr->is_quitting = PJ_TRUE;
         pj_sem_post(mgr->sem);
         pj_thread_join(mgr->thread);
+        pj_thread_destroy(mgr->thread);
+        mgr->thread = NULL;
     }
 
     if (mgr->sem) {
@@ -281,7 +288,9 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
                                              void *epub)
 {
     esub *sub;
+#ifdef EVENT_TRACE
     unsigned i = 0;
+#endif
 
     PJ_ASSERT_RETURN(cb, PJ_EINVAL);
 
@@ -303,7 +312,9 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
             return PJ_SUCCESS;
         }
         sub = next;
+#ifdef EVENT_TRACE
         i++;
+#endif
     }
 
     if (mgr->free_esub_list.next != &mgr->free_esub_list) {

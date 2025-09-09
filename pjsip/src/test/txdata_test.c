@@ -468,7 +468,7 @@ static int txdata_test_uri_params(void)
     }
     msgbuf[len] = '\0';
 
-    PJ_LOG(5,(THIS_FILE, "%d bytes request created:--begin-msg--\n"
+    PJ_LOG(5,(THIS_FILE, "%ld bytes request created:--begin-msg--\n"
                          "%s\n"
                          "--end-msg--", len, msgbuf));
 
@@ -636,7 +636,7 @@ static int create_request_bench(pj_timestamp *p_elapsed)
     pj_status_t status;
 
     pj_str_t str_target = pj_str("sip:someuser@someprovider.com");
-    pj_str_t str_from = pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
+    pj_str_t str_from = pj_str("\"Local User\" <sip:txdata_test@serviceprovider.com>");
     pj_str_t str_to = pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
     pj_str_t str_contact = str_from;
 
@@ -695,7 +695,7 @@ static int create_response_bench(pj_timestamp *p_elapsed)
 
     /* Create the request first. */
     pj_str_t str_target = pj_str("sip:someuser@someprovider.com");
-    pj_str_t str_from = pj_str("\"Local User\" <sip:localuser@serviceprovider.com>");
+    pj_str_t str_from = pj_str("\"Local User\" <sip:txdata_test@serviceprovider.com>");
     pj_str_t str_to = pj_str("\"Remote User\" <sip:remoteuser@serviceprovider.com>");
     pj_str_t str_contact = str_from;
 

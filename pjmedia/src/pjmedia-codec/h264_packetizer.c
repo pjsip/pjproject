@@ -172,7 +172,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
         //pj_assert(!"MTU too small for H.264 single NAL packetization mode");
         PJ_LOG(2,(THIS_FILE,
                   "MTU too small for H.264 (required=%u, MTU=%u)",
-                  nal_end - nal_start, pktz->cfg.mtu));
+                  (unsigned)(nal_end - nal_start), pktz->cfg.mtu));
         return PJ_ETOOSMALL;
     }
 
@@ -437,6 +437,9 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
         while (q < q_end && p < p_end) {
             pj_uint16_t tmp_nal_size;
 
+            if (p + pktz->cfg.unpack_nal_start > p_end)
+                return PJ_EINVAL;
+
             /* Write NAL unit start code */
             pj_memcpy(p, nal_start_code, pktz->cfg.unpack_nal_start);
             p += pktz->cfg.unpack_nal_start;
@@ -444,7 +447,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
             /* Get NAL unit size */
             tmp_nal_size = (*q << 8) | *(q+1);
             q += 2;
-            if (q + tmp_nal_size > q_end) {
+            if (p + tmp_nal_size > p_end || q + tmp_nal_size > q_end) {
                 /* Invalid bitstream, discard the rest of the payload */
                 return PJ_EINVAL;
             }
@@ -463,6 +466,8 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 #if DBG_UNPACKETIZE
         PJ_LOG(3, ("h264unpack", "Unpacked %d H264 NAL units (len=%d)",
                    cnt, payload_len));
+#else
+        PJ_UNUSED_ARG(cnt);
 #endif
 
     }

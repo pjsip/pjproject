@@ -555,24 +555,24 @@ static char* print_binary(const pj_uint8_t *data, unsigned data_len)
 {
     static char buf[1500];
     unsigned length = sizeof(buf);
-    char *p = buf;
+    char *p = buf, *end = buf+sizeof(buf);
     unsigned i;
 
     for (i=0; i<data_len;) {
         unsigned j;
 
-        pj_ansi_snprintf(p, 1500-(p-buf), 
+        pj_ansi_snprintf(p, end-p, 
                          "%04d-%04d   ",
                          i, (i+20 < data_len) ? i+20 : data_len);
         p += 12;
 
         for (j=0; j<20 && i<data_len && p<(buf+length-10); ++j, ++i) {
-            pj_ansi_sprintf(p, "%02x ", (*data) & 0xFF);
+            pj_ansi_snprintf(p, end-p, "%02x ", (*data) & 0xFF);
             p += 3;
             data++;
         }
 
-        pj_ansi_sprintf(p, "\n");
+        pj_ansi_snprintf(p, end-p, "\n");
         p++;
     }
 
@@ -615,7 +615,7 @@ static int fingerprint_test_vector()
         char print[1500];
         pj_str_t key;
 
-        PJ_LOG(3,(THIS_FILE, "    Running test %d/%d", i, 
+        PJ_LOG(3,(THIS_FILE, "    Running test %d/%lu", i, 
                   PJ_ARRAY_SIZE(test_vectors)));
 
         v = &test_vectors[i];

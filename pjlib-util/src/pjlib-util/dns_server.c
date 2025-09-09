@@ -52,6 +52,7 @@ struct pj_dns_server
     pj_pool_t           *pool;
     pj_pool_factory     *pf;
     pj_activesock_t     *asock;
+    pj_sockaddr          bound_addr;
     pj_ioqueue_op_key_t  send_key;
     struct rr            rr_list;
 };
@@ -76,6 +77,7 @@ PJ_DEF(pj_status_t) pj_dns_server_create( pj_pool_factory *pf,
     pj_dns_server *srv;
     pj_sockaddr sock_addr;
     pj_activesock_cb sock_cb;
+    pj_activesock_cfg sock_cfg;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pf && ioqueue && p_srv && flags==0, PJ_EINVAL);
@@ -90,12 +92,14 @@ PJ_DEF(pj_status_t) pj_dns_server_create( pj_pool_factory *pf,
     pj_bzero(&sock_addr, sizeof(sock_addr));
     sock_addr.addr.sa_family = (pj_uint16_t)af;
     pj_sockaddr_set_port(&sock_addr, (pj_uint16_t)port);
-    
+
     pj_bzero(&sock_cb, sizeof(sock_cb));
     sock_cb.on_data_recvfrom = &on_data_recvfrom;
+    pj_activesock_cfg_default(&sock_cfg);
 
-    status = pj_activesock_create_udp(pool, &sock_addr, NULL, ioqueue,
-                                      &sock_cb, srv, &srv->asock, NULL);
+    status = pj_activesock_create_udp(pool, &sock_addr, &sock_cfg, ioqueue,
+                                      &sock_cb, srv, &srv->asock,
+                                      &srv->bound_addr);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -111,6 +115,15 @@ PJ_DEF(pj_status_t) pj_dns_server_create( pj_pool_factory *pf,
 on_error:
     pj_dns_server_destroy(srv);
     return status;
+}
+
+
+PJ_DEF(pj_status_t) pj_dns_server_get_addr(pj_dns_server *srv,
+                                           pj_sockaddr *bound_addr)
+{
+    PJ_ASSERT_RETURN(srv && bound_addr, PJ_EINVAL);
+    pj_memcpy(bound_addr, &srv->bound_addr, sizeof(*bound_addr));
+    return PJ_SUCCESS;
 }
 
 

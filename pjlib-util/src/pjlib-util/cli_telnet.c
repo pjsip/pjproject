@@ -935,7 +935,7 @@ static pj_bool_t handle_backspace(cli_telnet_sess *sess, unsigned char *data)
             echo[0] = *data;
             telnet_sess_send2(sess, echo, 5);
         } else {
-            const static unsigned char echo[3] = {0x08, 0x20, 0x08};
+            unsigned char echo[3] = {0x08, 0x20, 0x08};
             telnet_sess_send2(sess, echo, 3);
         }
         return PJ_TRUE;
@@ -1169,8 +1169,8 @@ static pj_bool_t handle_up_down(cli_telnet_sess *sess, pj_bool_t is_up)
         /* Send data */
         pj_strcat(&send_data, history);
         telnet_sess_send(sess, &send_data);
-        pj_ansi_strncpy((char*)&sess->rcmd->rbuf, history->ptr, history->slen);
-        sess->rcmd->rbuf[history->slen] = 0;
+        pj_ansi_strxcpy2((char*)sess->rcmd->rbuf, history, 
+                         sizeof(sess->rcmd->rbuf));
         sess->rcmd->len = (unsigned)history->slen;
         sess->rcmd->cur_pos = sess->rcmd->len;
         return PJ_TRUE;
@@ -1803,6 +1803,7 @@ static pj_status_t telnet_start(cli_telnet_fe *fe)
     unsigned msec;
 
     /* Start telnet daemon */
+    fe->asock = NULL;
     status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock);
 
     if (status != PJ_SUCCESS)

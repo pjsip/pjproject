@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    xmlns="http://xamarin.com/schemas/2014/forms"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewModels="clr-namespace:pjsua2xamarin"
+    x:Class="pjsua2xamarin.BuddyConfigPage">
+
+    <ContentPage.BindingContext>
+        <viewModels:BuddyConfigViewModel/>
+    </ContentPage.BindingContext>
+
+	<ContentPage.Content>
+		<StackLayout VerticalOptions="FillAndExpand"
+					 HorizontalOptions="FillAndExpand"
+					 x:DataType="viewModels:BuddyConfigViewModel">
+			<StackLayout VerticalOptions="CenterAndExpand" HorizontalOptions="FillAndExpand" Orientation="Vertical">
+				<StackLayout Orientation="Horizontal" VerticalOptions="Center" HorizontalOptions="FillAndExpand">
+					<Label Text="Buddy Id" HorizontalOptions="Start" VerticalOptions="Center"/>
+					<Entry Text="{Binding buddyConfig.uri}" HorizontalOptions="FillAndExpand" VerticalOptions="Center"/>
+				</StackLayout>
+				<StackLayout Orientation="Horizontal" VerticalOptions="Center">
+					<Label Text="Subscribe" HorizontalOptions="Start" />
+					<Switch IsToggled="{Binding buddyConfig.subscribe}" HorizontalOptions="Start" />
+				</StackLayout>
+			</StackLayout>
+			<Grid
+				ColumnDefinitions="50*, 50*"
+				HorizontalOptions="FillAndExpand">
+
+					<Button Text="Ok" Grid.Column="0" Clicked="Ok_Clicked"/>
+					<Button Text="Cancel" Grid.Column="1" Clicked="Cancel_Clicked"/>
+
+			</Grid>
+		</StackLayout>
+	</ContentPage.Content>
+</ContentPage>
+

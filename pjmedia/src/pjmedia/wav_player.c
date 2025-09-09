@@ -55,7 +55,10 @@
 struct file_reader_port
 {
     pjmedia_port     base;
+    pj_pool_t       *pool;
     unsigned         options;
+    pj_lock_t       *lock;
+
     pjmedia_wave_fmt_tag fmt_tag;
     pj_uint16_t      bytes_per_sample;
     pj_bool_t        eof;
@@ -176,10 +179,74 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
 }
 
 
+/* Read the WAVE file until we find chunk with certain ID */
+static pj_status_t read_wav_until(struct file_reader_port *fport,
+                                  pj_uint32_t id,
+                                  pjmedia_wave_subchunk *chunk)
+{
+    for (;;) {
+        pjmedia_wave_subchunk subchunk;
+        pj_ssize_t size_read = 8;
+        pj_off_t size_to_read;
+        pj_status_t status;
+
+        status = pj_file_read(fport->fd, &subchunk, &size_read);
+        if (status != PJ_SUCCESS || size_read != 8)
+            return PJMEDIA_EWAVETOOSHORT;
+
+        *chunk = subchunk;
+
+        /* Normalize endianness */
+        PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(&subchunk);
+
+        /* Break if this is chunk that contains the desired ID */
+        if (subchunk.id == id) {
+            break;
+        }
+
+        if (!subchunk.len ||    /* prevent infinite loop */
+            !subchunk.id)       /* highly likely that the file is invalid */
+        {
+            char fourcc_name[5];
+            pj_uint32_t sig = subchunk.id;
+            pj_off_t fpos;
+            pj_file_getpos(fport->fd, &fpos);
+            if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+            {
+                PJ_LOG(2, (THIS_FILE,
+                           "%.*s. Zero length chunk of type %s found at offset=%lu (read_wav_until)",
+                           (int)fport->base.info.name.slen,
+                           fport->base.info.name.ptr,
+                           pjmedia_fourcc_name(subchunk.id, fourcc_name),
+                           (unsigned long)fpos));
+            } else {
+                PJ_LOG(2, (THIS_FILE,
+                           "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu (read_wav_until)",
+                           (int)fport->base.info.name.slen,
+                           fport->base.info.name.ptr,
+                           subchunk.id, subchunk.len,
+                           (unsigned long)fpos));
+            }
+            return PJMEDIA_ENOTVALIDWAVE;
+        }
+
+        /* Otherwise skip the chunk contents */
+        PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len,
+                                         return PJMEDIA_ENOTVALIDWAVE;);
+        size_to_read = subchunk.len;
+
+        status = pj_file_setpos(fport->fd, size_to_read, PJ_SEEK_CUR);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
+    return PJ_SUCCESS;
+}
+
 /*
  * Create WAVE player port.
  */
-PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool_,
                                                      const char *filename,
                                                      unsigned ptime,
                                                      unsigned options,
@@ -189,20 +256,23 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     pjmedia_wave_hdr wave_hdr;
     pj_ssize_t size_read;
     pj_off_t size_to_read;
-    struct file_reader_port *fport;
+    struct file_reader_port *fport = NULL;
     pjmedia_audio_format_detail *ad;
     pj_off_t pos;
     pj_str_t name;
     unsigned samples_per_frame;
+    pjmedia_wave_subchunk chunk;
     pj_status_t status = PJ_SUCCESS;
+    pj_pool_t *pool = NULL;
 
 
     /* Check arguments. */
-    PJ_ASSERT_RETURN(pool && filename && p_port, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool_ && filename && p_port, PJ_EINVAL);
 
     /* Check the file really exists. */
     if (!pj_file_exists(filename)) {
-        return PJ_ENOTFOUND;
+        status = PJ_ENOTFOUND;
+        goto on_error;
     }
 
     /* Normalize ptime */
@@ -213,36 +283,58 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     if (buff_size < 1) buff_size = PJMEDIA_FILE_PORT_BUFSIZE;
 
 
+    /* Create own pool */
+    pool = pj_pool_create(pool_->factory, filename, 500, 500, NULL);
+    if (!pool) {
+        status = PJ_ENOMEM;
+        goto on_error;
+    }
+
     /* Create fport instance. */
     fport = create_file_port(pool);
     if (!fport) {
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
+    fport->pool = pool;
 
+    /* Create lock */
+    if (options & PJMEDIA_FILE_NO_LOCK) {
+        status = pj_lock_create_null_mutex(pool, "wav_play", &fport->lock);
+    } else {
+        status = pj_lock_create_simple_mutex(pool, "wav_play", &fport->lock);
+    }
+    if (status != PJ_SUCCESS) {
+        goto on_error;
+    }
 
     /* Get the file size. */
     fport->fsize = pj_file_size(filename);
 
     /* Size must be more than WAVE header size */
-    if (fport->fsize <= sizeof(pjmedia_wave_hdr)) {
-        return PJMEDIA_ENOTVALIDWAVE;
+    if (fport->fsize <= (pj_off_t)sizeof(pjmedia_wave_hdr)) {
+        status = PJMEDIA_ENOTVALIDWAVE;
+        goto on_error;
     }
 
     /* Open file. */
-    status = pj_file_open( pool, filename, PJ_O_RDONLY, &fport->fd);
+    status = pj_file_open(pool, filename, PJ_O_RDONLY | PJ_O_CLOEXEC,
+                          &fport->fd);
     if (status != PJ_SUCCESS)
-        return status;
+        goto on_error;
 
-    /* Read the file header plus fmt header only. */
-    size_to_read = size_read = sizeof(wave_hdr) - 8;
+
+    /* Read the RIFF file header only. */
+    size_to_read = size_read = sizeof(wave_hdr.riff_hdr);
     status = pj_file_read( fport->fd, &wave_hdr, &size_read);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-        return status;
+        goto on_error;
     }
     if (size_read != size_to_read) {
         pj_file_close(fport->fd);
-        return PJMEDIA_ENOTVALIDWAVE;
+        status = PJMEDIA_ENOTVALIDWAVE;
+        goto on_error;
     }
 
     /* Normalize WAVE header fields values from little-endian to host
@@ -252,17 +344,35 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     
     /* Validate WAVE file. */
     if (wave_hdr.riff_hdr.riff != PJMEDIA_RIFF_TAG ||
-        wave_hdr.riff_hdr.wave != PJMEDIA_WAVE_TAG ||
-        wave_hdr.fmt_hdr.fmt != PJMEDIA_FMT_TAG)
+        wave_hdr.riff_hdr.wave != PJMEDIA_WAVE_TAG)
     {
         pj_file_close(fport->fd);
         TRACE_((THIS_FILE, 
-                "actual value|expected riff=%x|%x, wave=%x|%x fmt=%x|%x",
+                "actual value|expected riff=%x|%x, wave=%x|%x",
                 wave_hdr.riff_hdr.riff, PJMEDIA_RIFF_TAG,
-                wave_hdr.riff_hdr.wave, PJMEDIA_WAVE_TAG,
-                wave_hdr.fmt_hdr.fmt, PJMEDIA_FMT_TAG));
-        return PJMEDIA_ENOTVALIDWAVE;
+                wave_hdr.riff_hdr.wave, PJMEDIA_WAVE_TAG));
+        status = PJMEDIA_ENOTVALIDWAVE;
+        goto on_error;
     }
+
+    /* Read the WAVE file until we find 'fmt ' chunk. */
+    status = read_wav_until(fport, PJMEDIA_FMT_TAG, &chunk);
+    if (status != PJ_SUCCESS) {
+        pj_file_close(fport->fd);
+        goto on_error;
+    }
+
+    pj_memcpy(&wave_hdr.fmt_hdr, &chunk, sizeof(chunk));
+
+    /* Read the rest of `fmt ` chunk. */
+    size_read = sizeof(wave_hdr.fmt_hdr) - sizeof(chunk);
+    status = pj_file_read(fport->fd, &wave_hdr.fmt_hdr.fmt_tag, &size_read);
+    if (status != PJ_SUCCESS) {
+        pj_file_close(fport->fd);
+        goto on_error;
+    }
+
+    pjmedia_wave_hdr_file_to_host(&wave_hdr);
 
     /* Validate format and its attributes (i.e: bits per sample, block align) */
     switch (wave_hdr.fmt_hdr.fmt_tag) {
@@ -286,7 +396,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-        return status;
+        goto on_error;
     }
 
     fport->fmt_tag = (pjmedia_wave_fmt_tag)wave_hdr.fmt_hdr.fmt_tag;
@@ -303,41 +413,19 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
         status = pj_file_setpos(fport->fd, size_to_read, PJ_SEEK_CUR);
         if (status != PJ_SUCCESS) {
             pj_file_close(fport->fd);
-            return status;
+            goto on_error;
         }
     }
 
-    /* Repeat reading the WAVE file until we have 'data' chunk */
-    for (;;) {
-        pjmedia_wave_subchunk subchunk;
-        size_read = 8;
-        status = pj_file_read(fport->fd, &subchunk, &size_read);
-        if (status != PJ_SUCCESS || size_read != 8) {
-            pj_file_close(fport->fd);
-            return PJMEDIA_EWAVETOOSHORT;
-        }
-
-        /* Normalize endianness */
-        PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(&subchunk);
-
-        /* Break if this is "data" chunk */
-        if (subchunk.id == PJMEDIA_DATA_TAG) {
-            wave_hdr.data_hdr.data = PJMEDIA_DATA_TAG;
-            wave_hdr.data_hdr.len = subchunk.len;
-            break;
-        }
-
-        /* Otherwise skip the chunk contents */
-        PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len, 
-                      pj_file_close(fport->fd); return PJMEDIA_ENOTVALIDWAVE;);
-        size_to_read = subchunk.len;
-
-        status = pj_file_setpos(fport->fd, size_to_read, PJ_SEEK_CUR);
-        if (status != PJ_SUCCESS) {
-            pj_file_close(fport->fd);
-            return status;
-        }
+    /* Read the WAVE file until we find 'data ' chunk */
+    status = read_wav_until(fport, PJMEDIA_DATA_TAG, &chunk);
+    if (status != PJ_SUCCESS) {
+        pj_file_close(fport->fd);
+        goto on_error;
     }
+
+    PJMEDIA_WAVE_NORMALIZE_SUBCHUNK(&chunk);
+    pj_memcpy(&wave_hdr.data_hdr, &chunk, sizeof(chunk));
 
     /* Current file position now points to start of data */
     status = pj_file_getpos(fport->fd, &pos);
@@ -359,10 +447,27 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
                                 wave_hdr.fmt_hdr.nchan / 1000)
     {
         pj_file_close(fport->fd);
-        return PJMEDIA_EWAVETOOSHORT;
+        status = PJMEDIA_EWAVETOOSHORT;
+        goto on_error;
     }
 
     /* It seems like we have a valid WAVE file. */
+
+    /* Check compatibility of sample rate and ptime.
+     * Some combinations result in a fractional number of samples per frame
+     * which we do not support.
+     * One such case would be for example 10ms @ 22050Hz which would yield
+     * 220.5 samples per frame.
+     */
+    if (0 != (ptime * wave_hdr.fmt_hdr.sample_rate *
+              wave_hdr.fmt_hdr.nchan % 1000)) 
+    {
+        pj_file_close(fport->fd);
+        PJ_LOG(3,(THIS_FILE,
+              "Cannot create wav player port: incompatible sample rate/ptime"));
+        status = PJMEDIA_ENOTCOMPATIBLE;
+        goto on_error;
+    }
 
     /* Initialize */
     fport->options = options;
@@ -393,16 +498,18 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     /* samples_per_frame must be smaller than bufsize (because get_frame()
      * doesn't handle this case).
      */
-    if (samples_per_frame * fport->bytes_per_sample >= fport->bufsize) {
+    if (samples_per_frame * fport->bytes_per_sample > fport->bufsize) {
         pj_file_close(fport->fd);
-        return PJ_EINVAL;
+        status = PJ_EINVAL;
+        goto on_error;
     }
 
     /* Create buffer. */
     fport->buf = (char*) pj_pool_alloc(pool, fport->bufsize);
     if (!fport->buf) {
         pj_file_close(fport->fd);
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
  
     fport->readpos = fport->buf;
@@ -414,7 +521,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     status = fill_buffer(fport);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
-        return status;
+        goto on_error;
     }
 
     /* Done. */
@@ -433,6 +540,18 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
               (unsigned long)(fport->fsize / 1000)));
 
     return PJ_SUCCESS;
+
+on_error:
+    if (fport && fport->lock)
+        pj_lock_destroy(fport->lock);
+
+    if (pool)
+        pj_pool_release(pool);
+
+    PJ_PERROR(1,(THIS_FILE, status,
+                 "Failed creating file player '%s'", filename));
+
+    return status;
 }
 
 
@@ -501,7 +620,7 @@ PJ_DEF(pj_ssize_t) pjmedia_wav_player_get_len(pjmedia_port *port)
 PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
                                                     pj_uint32_t bytes )
 {
-    struct file_reader_port *fport;
+    struct file_reader_port *fport = (struct file_reader_port*) port;
     pj_status_t status;
 
     /* Sanity check */
@@ -510,24 +629,25 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
     /* Check that this is really a player port */
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVALIDOP);
 
-
-    fport = (struct file_reader_port*) port;
-
     /* Check that this offset does not pass the audio-data (in case of
      * extra chunk after audio data chunk
      */
     PJ_ASSERT_RETURN(bytes < fport->data_len, PJ_EINVAL);
 
+    pj_lock_acquire(fport->lock);
     fport->fpos = fport->start_data + bytes;
     fport->data_left = fport->data_len - bytes;
     pj_file_setpos( fport->fd, fport->fpos, PJ_SEEK_SET);
 
     fport->eof = PJ_FALSE;
     status = fill_buffer(fport);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        pj_lock_release(fport->lock);
         return status;
+    }
 
     fport->readpos = fport->buf;
+    pj_lock_release(fport->lock);
 
     return PJ_SUCCESS;
 }
@@ -538,8 +658,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
  */
 PJ_DEF(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port )
 {
-    struct file_reader_port *fport;
-    pj_size_t payload_pos;
+    struct file_reader_port *fport = (struct file_reader_port*) port;
+    pj_size_t payload_pos, pos;
 
     /* Sanity check */
     PJ_ASSERT_RETURN(port, -PJ_EINVAL);
@@ -547,15 +667,17 @@ PJ_DEF(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port )
     /* Check that this is really a player port */
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
 
-    fport = (struct file_reader_port*) port;
-
+    pj_lock_acquire(fport->lock);
     payload_pos = (pj_size_t)(fport->fpos - fport->start_data);
     if (payload_pos == 0)
-        return 0;
+        pos = 0;
     else if (payload_pos >= fport->bufsize)
-        return payload_pos - fport->bufsize + (fport->readpos - fport->buf);
+        pos = payload_pos - fport->bufsize + (fport->readpos - fport->buf);
     else
-        return (fport->readpos - fport->buf) % payload_pos;
+        pos = (fport->readpos - fport->buf) % payload_pos;
+    pj_lock_release(fport->lock);
+
+    return pos;
 }
 
 
@@ -643,6 +765,8 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
     pj_assert(fport->base.info.signature == SIGNATURE);
     pj_assert(frame->size <= fport->bufsize);
 
+    pj_lock_acquire(fport->lock);
+
     /* EOF is set and readpos already passed the eofpos */
     if (fport->eof && fport->readpos >= fport->eofpos) {
         PJ_LOG(5,(THIS_FILE, "File port %.*s EOF",
@@ -682,10 +806,14 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
             frame->type = PJMEDIA_FRAME_TYPE_NONE;
             frame->size = 0;
             
+            pj_lock_release(fport->lock);
             return (no_loop? PJ_EEOF: PJ_SUCCESS);
 
         } else if (fport->cb) {
+            /* Release lock during callback to avoid deadlock */
+            pj_lock_release(fport->lock);
             status = (*fport->cb)(this_port, fport->base.port_data.pdata);
+            pj_lock_acquire(fport->lock);
         }
 
         /* If callback returns non PJ_SUCCESS or 'no loop' is specified,
@@ -696,6 +824,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
         {
             frame->type = PJMEDIA_FRAME_TYPE_NONE;
             frame->size = 0;
+            pj_lock_release(fport->lock);
             return PJ_EEOF;
         }
 
@@ -738,6 +867,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
                 frame->type = PJMEDIA_FRAME_TYPE_NONE;
                 frame->size = 0;
                 fport->readpos = fport->buf + fport->bufsize;
+                pj_lock_release(fport->lock);
                 return status;
             }
         }
@@ -766,6 +896,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
                           frame_size - endread);
             }
 
+            pj_lock_release(fport->lock);
             return PJ_SUCCESS;
         }
 
@@ -775,6 +906,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
             frame->type = PJMEDIA_FRAME_TYPE_NONE;
             frame->size = 0;
             fport->readpos = fport->buf + fport->bufsize;
+            pj_lock_release(fport->lock);
             return status;
         }
 
@@ -803,6 +935,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
         }
     }
 
+    pj_lock_release(fport->lock);
     return PJ_SUCCESS;
 }
 
@@ -821,6 +954,12 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
         pjmedia_event_unsubscribe(NULL, &file_on_event, fport, fport);
         fport->subscribed = PJ_FALSE;
     }
+
+    if (fport->lock)
+        pj_lock_destroy(fport->lock);
+
+    if (fport->pool)
+        pj_pool_safe_release(&fport->pool);
 
     return PJ_SUCCESS;
 }

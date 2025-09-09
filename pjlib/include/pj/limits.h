@@ -47,4 +47,11 @@
 /** Minimum value for unsigned long. */
 #define PJ_MAXULONG     ULONG_MAX
 
+/** Maximum value for generic unsigned integer. */
+#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+#  define PJ_MAXUINT    0xffffffffffffffffULL
+#else
+#  define PJ_MAXUINT    0xffffffff
+#endif
+
 #endif  /* __PJ_LIMITS_H__ */

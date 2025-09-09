@@ -294,12 +294,18 @@ static pjsip_hdr* parse_hdr_sub_state( pjsip_parse_ctx *ctx )
 /*
  * Register header parsers.
  */
-PJ_DEF(void) pjsip_evsub_init_parser(void)
+PJ_DEF(pj_status_t) pjsip_evsub_init_parser(void)
 {
-    pjsip_register_hdr_parser( "Event", "o",
-                               &parse_hdr_event);
+    pj_status_t status;
 
-    pjsip_register_hdr_parser( "Subscription-State", NULL, 
-                               &parse_hdr_sub_state);
+    status = pjsip_register_hdr_parser( "Event", "o",
+                                        &parse_hdr_event);
+    PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+
+    status = pjsip_register_hdr_parser( "Subscription-State", NULL, 
+                                        &parse_hdr_sub_state);
+    PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
+    
+    return PJ_SUCCESS;
 }
 

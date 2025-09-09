@@ -83,6 +83,10 @@ enum pjmedia_audio_pt
     PJMEDIA_RTP_PT_G7221_RSV1,                  /**< G722.1 reserve         */
     PJMEDIA_RTP_PT_G7221_RSV2,                  /**< G722.1 reserve         */
     PJMEDIA_RTP_PT_OPUS,                        /**< OPUS                   */
+    PJMEDIA_RTP_PT_LYRA_8,                      /**< LYRA @ 8KHz            */
+    PJMEDIA_RTP_PT_LYRA_16,                     /**< LYRA @ 16KHz           */
+    PJMEDIA_RTP_PT_LYRA_32,                     /**< LYRA @ 32KHz           */
+    PJMEDIA_RTP_PT_LYRA_48,                     /**< LYRA @ 48KHz           */
 #if PJMEDIA_CODEC_L16_HAS_8KHZ_MONO
     PJMEDIA_RTP_PT_L16_8KHZ_MONO,               /**< L16 @ 8KHz, mono       */
 #endif
@@ -126,10 +130,10 @@ enum pjmedia_video_pt
 
      PJMEDIA_RTP_PT_VP8,        /* used by VPX                */
      PJMEDIA_RTP_PT_VP8_RSV1,   /* used by MediaCodec         */
-     PJMEDIA_RTP_PT_VP8_RSV2,
+     PJMEDIA_RTP_PT_VP8_RSV2,   /* used by ffmpeg avcodec     */
      PJMEDIA_RTP_PT_VP9,        /* used by VPX                */
      PJMEDIA_RTP_PT_VP9_RSV1,   /* used by MediaCodec         */
-     PJMEDIA_RTP_PT_VP9_RSV2,
+     PJMEDIA_RTP_PT_VP9_RSV2,   /* used by ffmpeg avcodec     */
 
      /* Caution!
       * Ensure the value of the last pt above is <= 127.

@@ -227,6 +227,9 @@ PJ_DEF(void) pjmedia_rtcp_init2( pjmedia_rtcp_session *sess,
     /* Set clock rate */
     sess->clock_rate = settings->clock_rate;
     sess->pkt_size = settings->samples_per_frame;
+    sess->dec_pkt_size = settings->dec_samples_per_frame?
+                         settings->dec_samples_per_frame:
+                         settings->samples_per_frame;
 
     /* Init common RTCP SR header */
     sr_pkt->common.version = 2;
@@ -257,6 +260,29 @@ PJ_DEF(void) pjmedia_rtcp_init2( pjmedia_rtcp_session *sess,
     pjmedia_rtcp_init_stat(&sess->stat);
 
     /* RR will be initialized on receipt of the first RTP packet. */
+}
+
+
+/*
+ * Update RTCP session.
+ */
+PJ_DEF(void) pjmedia_rtcp_update(pjmedia_rtcp_session *sess,
+                                 const pjmedia_rtcp_session_setting *settings)
+{
+    if (settings->name)
+        sess->name = settings->name;
+    if (settings->clock_rate)
+        sess->clock_rate = settings->clock_rate;
+    if (settings->samples_per_frame)
+        sess->pkt_size = settings->samples_per_frame;
+    if (settings->dec_samples_per_frame)
+        sess->dec_pkt_size = settings->dec_samples_per_frame;
+    if (sess->rtp_ts_base)
+        sess->rtp_ts_base = settings->rtp_ts_base;
+    if (settings->ssrc) {
+        sess->rtcp_rr_pkt.common.ssrc = pj_htonl(settings->ssrc);
+        sess->rtcp_fb_com.rtcp_common.ssrc = pj_htonl(settings->ssrc);
+    }
 }
 
 
@@ -343,26 +369,36 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
         return;
     }
 
-    /* Only mark "good" packets */
-    ++sess->received;
+    /* Only mark "good" packets. Do this after we're no longer in probation. */
+    if (!seq_st.status.flag.probation)
+        ++sess->received;
 
-    /* Calculate loss periods. */
-    if (seq_st.diff > 1) {
-        unsigned count = seq_st.diff - 1;
-        unsigned period;
+    /* Calculate packet lost and loss periods. */
+    if (!seq_st.status.flag.probation && !seq_st.status.flag.outorder) {
+        unsigned count = 0, loss = 0;
+        pj_uint32_t last_seq, expected;
 
-        period = count * sess->pkt_size * 1000 / sess->clock_rate;
-        period *= 1000;
+        last_seq = sess->seq_ctrl.max_seq +
+                   (sess->seq_ctrl.cycles & 0xFFFF0000L);
+        expected = last_seq - sess->seq_ctrl.base_seq;
 
-        /* Update packet lost. 
-         * The packet lost number will also be updated when we're sending
-         * outbound RTCP RR.
-         */
-        sess->stat.rx.loss += (seq_st.diff - 1);
-        TRACE_((sess->name, "%d packet(s) lost", seq_st.diff - 1));
+        if (expected > sess->received)
+            loss = expected - sess->received;
+
+        if (loss > sess->stat.rx.loss)
+            count = loss - sess->stat.rx.loss;
+
+        sess->stat.rx.loss = loss;
 
         /* Update loss period stat */
-        pj_math_stat_update(&sess->stat.rx.loss_period, period);
+        if (count > 0) {
+            unsigned period;
+
+            TRACE_((sess->name, "%d packet(s) lost", count));
+            period = count * sess->dec_pkt_size * 1000 / sess->clock_rate;
+            period *= 1000;
+            pj_math_stat_update(&sess->stat.rx.loss_period, period);
+        }
     }
 
 
@@ -538,6 +574,11 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
         sess->rx_lsr = ((pj_ntohl(sr->ntp_sec) & 0x0000FFFF) << 16) | 
                        ((pj_ntohl(sr->ntp_frac) >> 16) & 0xFFFF);
 
+        /* Save RTP & NTP timestamps of RTCP packet */
+        sess->rx_lsr_ts = pj_ntohl(sr->rtp_ts);
+        sess->rx_lsr_ntp.u32.hi = pj_ntohl(sr->ntp_sec);
+        sess->rx_lsr_ntp.u32.lo = pj_ntohl(sr->ntp_frac);
+
         /* Calculate SR arrival time for DLSR */
         pj_get_timestamp(&sess->rx_lsr_time);
 
@@ -627,8 +668,8 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
             eedelay *= 1000;
         }
 
-        TRACE_((sess->name, "Rx RTCP RR: lsr=%p, dlsr=%p (%d:%03dms), "
-                           "now=%p, rtt=%p",
+        TRACE_((sess->name, "Rx RTCP RR: lsr=%u, dlsr=%u (%u:%03ums), "
+                           "now=%u, rtt=%u",
                 lsr, dlsr, dlsr/65536, (dlsr%65536)*1000/65536,
                 now, (pj_uint32_t)eedelay));
         
@@ -669,7 +710,7 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
 
         } else {
             PJ_LOG(5, (sess->name, "Internal RTCP NTP clock skew detected: "
-                                   "lsr=%p, now=%p, dlsr=%p (%d:%03dms), "
+                                   "lsr=%u, now=%u, dlsr=%u (%u:%03ums), "
                                    "diff=%d",
                                    lsr, now, dlsr, dlsr/65536,
                                    (dlsr%65536)*1000/65536,
@@ -787,7 +828,7 @@ static void parse_rtcp_bye(pjmedia_rtcp_session *sess,
 
     /* Just print RTCP BYE log */
     PJ_LOG(5, (sess->name, "Received RTCP BYE, reason: %.*s",
-               reason.slen, reason.ptr));
+               (int)reason.slen, reason.ptr));
 }
 
 
@@ -907,7 +948,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
      * sent RTCP SR.
      */
     if (sess->stat.tx.pkt != pj_ntohl(sess->rtcp_sr_pkt.sr.sender_pcount)) {
-        pj_time_val ts_time;
+        //pj_time_val ts_time;
         pj_uint32_t rtp_ts;
 
         /* So we should send RTCP SR */
@@ -927,11 +968,13 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
         sr->ntp_frac = pj_htonl(ntp.lo);
 
         /* Fill in RTP timestamp (corresponds to NTP timestamp) in SR. */
-        ts_time.sec = ntp.hi - sess->tv_base.sec - JAN_1970;
-        ts_time.msec = (long)(ntp.lo * 1000.0 / 0xFFFFFFFF);
-        rtp_ts = sess->rtp_ts_base +
-                 (pj_uint32_t)(sess->clock_rate*ts_time.sec) +
-                 (pj_uint32_t)(sess->clock_rate*ts_time.msec/1000);
+        // Use real last transmitted RTP timestamp instead of calculated one.
+        //ts_time.sec = ntp.hi - sess->tv_base.sec - JAN_1970;
+        //ts_time.msec = (long)(ntp.lo * 1000.0 / 0xFFFFFFFF);
+        //rtp_ts = sess->rtp_ts_base +
+        //         (pj_uint32_t)(sess->clock_rate*ts_time.sec) +
+        //         (pj_uint32_t)(sess->clock_rate*ts_time.msec/1000);
+        rtp_ts = sess->stat.rtp_tx_last_ts;
         sr->rtp_ts = pj_htonl(rtp_ts);
 
         TRACE_((sess->name, "TX RTCP SR: ntp_ts=%p", 
@@ -1023,8 +1066,8 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
         dlsr = (pj_uint32_t)(ts.u64 - lsr_time);
         rr->dlsr = pj_htonl(dlsr);
 
-        TRACE_((sess->name,"Tx RTCP RR: lsr=%p, lsr_time=%p, now=%p, dlsr=%p"
-                           "(%ds:%03dms)",
+        TRACE_((sess->name,"Tx RTCP RR: lsr=%u, lsr_time=%u, now=%u, dlsr=%u"
+                           "(%us:%03ums)",
                            lsr, 
                            (pj_uint32_t)lsr_time,
                            (pj_uint32_t)ts.u64, 

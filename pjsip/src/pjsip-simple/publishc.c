@@ -777,7 +777,6 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
             return PJ_EBUSY;
         }
     }
-    pj_mutex_unlock(pubc->mutex);
 
     /* If via_addr is set, use this address for the Via header. */
     if (pubc->via_addr.host.slen > 0) {
@@ -798,6 +797,9 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
      * may be called even before send_request() returns!
      */
     ++pubc->pending_tsx;
+
+    pj_mutex_unlock(pubc->mutex);
+
     status = pjsip_endpt_send_request(pubc->endpt, tdata, -1, pubc, 
                                       &tsx_callback);
     if (status!=PJ_SUCCESS) {

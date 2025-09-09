@@ -55,6 +55,12 @@ static void usage(void)
     puts  ("  --realm=string      Set realm");
     puts  ("  --username=string   Set authentication username");
     puts  ("  --password=string   Set authentication password");
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+    puts  ("  --aka-op=hex        Set OP value to use in Digest AKA authentication");
+    puts  ("  --aka-amf=hex       Set AMF value to use in Digest AKA authentication");
+#endif
+
     puts  ("  --contact=url       Optionally override the Contact information");
     puts  ("  --contact-params=S  Append the specified parameters S in Contact header");
     puts  ("  --contact-uri-params=S  Append the specified parameters S in Contact URI");
@@ -81,8 +87,8 @@ static void usage(void)
             PJSIP_SESS_TIMER_DEF_SE);
     puts  ("  --timer-min-se=N    Session timers minimum expiration period, in secs (def:90)");
     puts  ("  --outb-rid=string   Set SIP outbound reg-id (default:1)");
-    puts  ("  --auto-update-nat=N Where N is 0 or 1 to enable/disable SIP traversal behind");
-    puts  ("                      symmetric NAT (default 1)");
+    puts  ("  --auto-update-nat=N Enable/disable SIP traversal behind symmetric NAT (def: 1)");
+    puts  ("                      0: disabled, 1:enabled with exception, 2: fully enabled");
     puts  ("  --disable-stun      Disable STUN for this account");
     puts  ("  --next-cred         Add another credentials");
     puts  ("");
@@ -91,9 +97,10 @@ static void usage(void)
     puts  ("");
     puts  ("Transport Options:");
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
-    puts  ("  --ipv6              Use IPv6 instead for SIP and media.");
+    puts  ("  --ipv6              Create SIP IPv6 transports.");
 #endif
     puts  ("  --set-qos           Enable QoS tagging for SIP and media.");
+    puts  ("  --no-mci            Disable message composition indication (RFC 3994)");
     puts  ("  --local-port=port   Set TCP/UDP port. This implicitly enables both ");
     puts  ("                      TCP and UDP transports on the specified port, unless");
     puts  ("                      if TCP or UDP is disabled.");
@@ -166,7 +173,7 @@ static void usage(void)
     puts  ("                      Specify N=-1 to disable this feature.");
     puts  ("                      Specify N=0 for instant close when unused.");
     puts  ("  --no-tones          Disable audible tones");
-    puts  ("  --jb-max-size       Specify jitter buffer maximum size, in frames (default=-1)");
+    puts  ("  --jb-max-size       Specify jitter buffer maximum size, in msec (default=-1)");
     puts  ("  --extra-audio       Add one more audio stream");
 
 #if PJSUA_HAS_VIDEO
@@ -175,9 +182,19 @@ static void usage(void)
     puts  ("  --video             Enable video");
     puts  ("  --vcapture-dev=id   Video capture device ID (default=-1)");
     puts  ("  --vrender-dev=id    Video render device ID (default=-2)");
-    puts  ("  --play-avi=FILE     Load this AVI as virtual capture device");
+    puts  ("  --play-avi=FILE     Load this AVI as virtual capture device.");
+    puts  ("                      This can be specified multiple times.");
     puts  ("  --auto-play-avi     Automatically play the AVI media to call");
+    puts  ("  --rec-avi=FILE      Record video to AVI file");
+    puts  ("  --rec-avi-size=N    Maximum AVI recording file size");
+    puts  ("  --rec-avi-audio     Include audio in the AVI recording");
+    puts  ("  --auto-rec-avi      Automatically record video");
 #endif
+
+    puts  ("");
+    puts  ("Text Options:");
+    puts  ("  --text              Enable real-time text stream");
+    puts  ("  --text-red=N        Text stream redundancy level (default=0)");
 
     puts  ("");
     puts  ("Media Transport Options:");
@@ -366,7 +383,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY,
            OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
            OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
-           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
+           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD, OPT_AKA_OP, OPT_AKA_AMF,
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
            OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
@@ -392,15 +409,16 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_TLS_NEG_TIMEOUT, OPT_TLS_CIPHER,
            OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
            OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES, OPT_JB_MAX_SIZE,
-           OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6, OPT_QOS,
+           OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6, OPT_QOS, OPT_MCI,
 #ifdef _IONBF
            OPT_STDOUT_NO_BUF,
 #endif
            OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC,
            OPT_DISABLE_STUN, OPT_NO_FORCE_LR,
            OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE,
-           OPT_VIDEO, OPT_EXTRA_AUDIO,
+           OPT_VIDEO, OPT_TEXT, OPT_TEXT_RED, OPT_EXTRA_AUDIO,
            OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI,
+           OPT_REC_AVI, OPT_REC_AVI_SIZE, OPT_REC_AVI_AUDIO, OPT_AUTO_REC_AVI,
            OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE
     };
     struct pj_getopt_option long_options[] = {
@@ -445,6 +463,10 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "realm",      1, 0, OPT_REALM},
         { "username",   1, 0, OPT_USERNAME},
         { "password",   1, 0, OPT_PASSWORD},
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        { "aka-op",   1, 0, OPT_AKA_OP},
+        { "aka-amf",   1, 0, OPT_AKA_AMF},
+#endif
         { "rereg-delay",1, 0, OPT_REG_RETRY_INTERVAL},
         { "reg-use-proxy", 1, 0, OPT_REG_USE_PROXY},
         { "nameserver", 1, 0, OPT_NAMESERVER},
@@ -533,16 +555,23 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "ipv6",        0, 0, OPT_IPV6},
 #endif
         { "set-qos",     0, 0, OPT_QOS},
+        { "no-mci",     0, 0, OPT_MCI},
         { "use-timer",  1, 0, OPT_TIMER},
         { "timer-se",   1, 0, OPT_TIMER_SE},
         { "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
         { "outb-rid",   1, 0, OPT_OUTB_RID},
         { "video",      0, 0, OPT_VIDEO},
+        { "text",       0, 0, OPT_TEXT},
+        { "text-red",   1, 0, OPT_TEXT_RED},
         { "extra-audio",0, 0, OPT_EXTRA_AUDIO},
         { "vcapture-dev", 1, 0, OPT_VCAPTURE_DEV},
         { "vrender-dev",  1, 0, OPT_VRENDER_DEV},
         { "play-avi",   1, 0, OPT_PLAY_AVI},
         { "auto-play-avi", 0, 0, OPT_AUTO_PLAY_AVI},
+        { "rec-avi",   1, 0, OPT_REC_AVI},
+        { "rec-avi-size",   1, 0, OPT_REC_AVI_SIZE},
+        { "rec-avi-audio", 0, 0, OPT_REC_AVI_AUDIO},
+        { "auto-rec-avi", 0, 0, OPT_AUTO_REC_AVI},
         { "use-cli",    0, 0, OPT_USE_CLI},
         { "cli-telnet-port", 1, 0, OPT_CLI_TELNET_PORT},
         { "no-cli-console", 0, 0, OPT_DISABLE_CLI_CONSOLE},
@@ -906,6 +935,44 @@ static pj_status_t parse_args(int argc, char *argv[],
             cur_acc->cred_info[cur_acc->cred_count].data_type |= PJSIP_CRED_DATA_EXT_AKA;
             cur_acc->cred_info[cur_acc->cred_count].ext.aka.k = pj_str(pj_optarg);
             cur_acc->cred_info[cur_acc->cred_count].ext.aka.cb = &pjsip_auth_create_aka_response;
+            break;
+
+        case OPT_AKA_OP:    /* aka op */
+            {
+                pj_str_t hex = pj_str(pj_optarg);
+                pj_str_t *aka_op = &cur_acc->cred_info[cur_acc->cred_count].ext.aka.op;
+                if (hex.slen/2 <= PJSIP_AKA_OPLEN) {
+                    char* oct = pj_pool_alloc(cfg->pool, hex.slen/2);
+                    int len;
+                    len = my_hex_string_to_octet_array(hex.ptr, hex.slen, oct);
+                    if (len == hex.slen)
+                        pj_strset(aka_op, oct, len/2);
+                }
+                if (aka_op->slen != hex.slen/2) {
+                    PJ_LOG(1,(THIS_FILE, "Error: invalid --aka-op value '%s'",
+                              pj_optarg));
+                    return PJ_EINVAL;
+                }
+            }
+            break;
+
+        case OPT_AKA_AMF:   /* aka amf */
+            {
+                pj_str_t hex = pj_str(pj_optarg);
+                pj_str_t *aka_amf = &cur_acc->cred_info[cur_acc->cred_count].ext.aka.amf;
+                if (hex.slen/2 <= PJSIP_AKA_AMFLEN) {
+                    char* oct = pj_pool_alloc(cfg->pool, hex.slen/2);
+                    int len;
+                    len = my_hex_string_to_octet_array(hex.ptr, hex.slen, oct);
+                    if (len == hex.slen)
+                        pj_strset(aka_amf, oct, len/2);
+                }
+                if (aka_amf->slen != hex.slen/2) {
+                    PJ_LOG(1,(THIS_FILE, "Error: invalid --aka-amf value '%s'",
+                              pj_optarg));
+                    return PJ_EINVAL;
+                }
+            }
 #endif
             break;
 
@@ -1466,10 +1533,19 @@ static pj_status_t parse_args(int argc, char *argv[],
             cfg->udp_cfg.qos_params.flags = PJ_QOS_PARAM_HAS_DSCP;
             cfg->udp_cfg.qos_params.dscp_val = 0x18;
             break;
+        case OPT_MCI:
+            cfg->no_mci = PJ_TRUE;
+            break;
         case OPT_VIDEO:
             cfg->vid.vid_cnt = 1;
             cfg->vid.in_auto_show = PJ_TRUE;
             cfg->vid.out_auto_transmit = PJ_TRUE;
+            break;
+        case OPT_TEXT:
+            cfg->txt_cnt = 1;
+            break;
+        case OPT_TEXT_RED:
+            cfg->txt_red_level = atoi(pj_optarg);
             break;
         case OPT_EXTRA_AUDIO:
             cfg->aud_cnt++;
@@ -1495,6 +1571,22 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_AUTO_PLAY_AVI:
             app_config.avi_auto_play = PJ_TRUE;
+            break;
+
+        case OPT_REC_AVI:
+            app_config.avi_rec = pj_str(pj_optarg);
+            break;
+
+        case OPT_REC_AVI_SIZE:
+            app_config.avi_rec_size = atoi(pj_optarg);
+            break;
+
+        case OPT_REC_AVI_AUDIO:
+            app_config.avi_rec_audio = PJ_TRUE;
+            break;
+
+        case OPT_AUTO_REC_AVI:
+            app_config.avi_auto_rec = PJ_TRUE;
             break;
 
         case OPT_USE_CLI:
@@ -1601,8 +1693,15 @@ static void default_config()
     pjsua_app_config *cfg = &app_config;
 
     pjsua_config_default(&cfg->cfg);
-    pj_ansi_sprintf(tmp, "PJSUA v%s %s", pj_get_version(),
+    pj_ansi_snprintf(tmp, sizeof(tmp), "PJSUA/v%s %s", pj_get_version(),
                     pj_get_sys_info()->info.ptr);
+    /* System info may contain more than one SLASH which doesn't conform
+     * with the RFC 3261, so just replace it with white space.
+     */
+    for (i = sizeof("PJSUA/") + 1; ;i++) {
+        if (tmp[i] == 0) break;
+        if (tmp[i] == '/') tmp[i] = ' ';
+    }
     pj_strdup2_with_null(app_config.pool, &cfg->cfg.user_agent, tmp);
 
     pjsua_logging_config_default(&cfg->log_cfg);
@@ -1624,6 +1723,9 @@ static void default_config()
     cfg->playback_lat = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
     cfg->ringback_slot = PJSUA_INVALID_ID;
     cfg->ring_slot = PJSUA_INVALID_ID;
+    cfg->avi_rec_id = PJSUA_INVALID_ID;
+    cfg->avi_vid_slot = PJSUA_INVALID_ID;
+    cfg->avi_aud_slot = PJSUA_INVALID_ID;
 
     for (i=0; i<PJ_ARRAY_SIZE(cfg->acc_cfg); ++i)
         pjsua_acc_config_default(&cfg->acc_cfg[i]);
@@ -1636,6 +1738,11 @@ static void default_config()
     cfg->aud_cnt = 1;
 
     cfg->avi_def_idx = PJSUA_INVALID_ID;
+    for (i = 0; i < PJ_ARRAY_SIZE(cfg->avi); ++i) {
+        cfg->avi[i].slot = PJSUA_INVALID_ID;
+        cfg->avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
+        cfg->avi[i].p_id = PJSUA_INVALID_ID;
+    }
 
     cfg->use_cli = PJ_FALSE;
     cfg->cli_cfg.cli_fe = CLI_FE_CONSOLE;
@@ -1693,13 +1800,13 @@ static void write_account_settings(int acc_index, pj_str_t *result)
     pjsua_acc_config *acc_cfg = &app_config.acc_cfg[acc_index];
 
 
-    pj_ansi_sprintf(line, "\n#\n# Account %d:\n#\n", acc_index);
+    pj_ansi_snprintf(line, sizeof(line), "\n#\n# Account %d:\n#\n", acc_index);
     pj_strcat2(result, line);
 
 
     /* Identity */
     if (acc_cfg->id.slen) {
-        pj_ansi_sprintf(line, "--id %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--id %.*s\n",
                         (int)acc_cfg->id.slen,
                         acc_cfg->id.ptr);
         pj_strcat2(result, line);
@@ -1707,19 +1814,19 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 
     /* Registrar server */
     if (acc_cfg->reg_uri.slen) {
-        pj_ansi_sprintf(line, "--registrar %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--registrar %.*s\n",
                               (int)acc_cfg->reg_uri.slen,
                               acc_cfg->reg_uri.ptr);
         pj_strcat2(result, line);
 
-        pj_ansi_sprintf(line, "--reg-timeout %u\n",
+        pj_ansi_snprintf(line, sizeof(line), "--reg-timeout %u\n",
                               acc_cfg->reg_timeout);
         pj_strcat2(result, line);
     }
 
     /* Contact */
     if (acc_cfg->force_contact.slen) {
-        pj_ansi_sprintf(line, "--contact %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--contact %.*s\n",
                         (int)acc_cfg->force_contact.slen,
                         acc_cfg->force_contact.ptr);
         pj_strcat2(result, line);
@@ -1727,7 +1834,7 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 
     /* Contact header parameters */
     if (acc_cfg->contact_params.slen) {
-        pj_ansi_sprintf(line, "--contact-params %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--contact-params %.*s\n",
                         (int)acc_cfg->contact_params.slen,
                         acc_cfg->contact_params.ptr);
         pj_strcat2(result, line);
@@ -1735,7 +1842,7 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 
     /* Contact URI parameters */
     if (acc_cfg->contact_uri_params.slen) {
-        pj_ansi_sprintf(line, "--contact-uri-params %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--contact-uri-params %.*s\n",
                         (int)acc_cfg->contact_uri_params.slen,
                         acc_cfg->contact_uri_params.ptr);
         pj_strcat2(result, line);
@@ -1744,7 +1851,7 @@ static void write_account_settings(int acc_index, pj_str_t *result)
     /*  */
     if (acc_cfg->allow_contact_rewrite!=1)
     {
-        pj_ansi_sprintf(line, "--auto-update-nat %i\n",
+        pj_ansi_snprintf(line, sizeof(line), "--auto-update-nat %i\n",
                         (int)acc_cfg->allow_contact_rewrite);
         pj_strcat2(result, line);
     }
@@ -1758,13 +1865,13 @@ static void write_account_settings(int acc_index, pj_str_t *result)
         {
             use_srtp = 3;
         }
-        pj_ansi_sprintf(line, "--use-srtp %i\n", use_srtp);
+        pj_ansi_snprintf(line, sizeof(line), "--use-srtp %i\n", use_srtp);
         pj_strcat2(result, line);
     }
     if (acc_cfg->srtp_secure_signaling !=
         PJSUA_DEFAULT_SRTP_SECURE_SIGNALING)
     {
-        pj_ansi_sprintf(line, "--srtp-secure %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--srtp-secure %d\n",
                         acc_cfg->srtp_secure_signaling);
         pj_strcat2(result, line);
     }
@@ -1772,7 +1879,7 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 
     /* Proxy */
     for (i=0; i<acc_cfg->proxy_cnt; ++i) {
-        pj_ansi_sprintf(line, "--proxy %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--proxy %.*s\n",
                               (int)acc_cfg->proxy[i].slen,
                               acc_cfg->proxy[i].ptr);
         pj_strcat2(result, line);
@@ -1781,25 +1888,49 @@ static void write_account_settings(int acc_index, pj_str_t *result)
     /* Credentials */
     for (i=0; i<acc_cfg->cred_count; ++i) {
         if (acc_cfg->cred_info[i].realm.slen) {
-            pj_ansi_sprintf(line, "--realm %.*s\n",
+            pj_ansi_snprintf(line, sizeof(line), "--realm %.*s\n",
                                   (int)acc_cfg->cred_info[i].realm.slen,
                                   acc_cfg->cred_info[i].realm.ptr);
             pj_strcat2(result, line);
         }
 
         if (acc_cfg->cred_info[i].username.slen) {
-            pj_ansi_sprintf(line, "--username %.*s\n",
+            pj_ansi_snprintf(line, sizeof(line), "--username %.*s\n",
                                   (int)acc_cfg->cred_info[i].username.slen,
                                   acc_cfg->cred_info[i].username.ptr);
             pj_strcat2(result, line);
         }
 
         if (acc_cfg->cred_info[i].data.slen) {
-            pj_ansi_sprintf(line, "--password %.*s\n",
+            pj_ansi_snprintf(line, sizeof(line), "--password %.*s\n",
                                   (int)acc_cfg->cred_info[i].data.slen,
                                   acc_cfg->cred_info[i].data.ptr);
             pj_strcat2(result, line);
         }
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        if (acc_cfg->cred_info[i].ext.aka.op.slen) {
+            char hex[PJSIP_AKA_OPLEN * 2];
+            pj_str_t *aka_op = &acc_cfg->cred_info[i].ext.aka.op;
+            pj_assert(aka_op->slen <= PJSIP_AKA_OPLEN);
+            my_octet_array_to_hex_string(aka_op->ptr, aka_op->slen, hex);
+            
+            pj_ansi_snprintf(line, sizeof(line), "--aka-op %.*s\n",
+                                  (int)aka_op->slen*2, hex);
+            pj_strcat2(result, line);
+        }
+
+        if (acc_cfg->cred_info[i].ext.aka.amf.slen) {
+            char hex[PJSIP_AKA_AMFLEN * 2];
+            pj_str_t *aka_amf = &acc_cfg->cred_info[i].ext.aka.amf;
+            pj_assert(aka_amf->slen <= PJSIP_AKA_AMFLEN);
+            my_octet_array_to_hex_string(aka_amf->ptr, aka_amf->slen, hex);
+            
+            pj_ansi_snprintf(line, sizeof(line), "--aka-amf %.*s\n",
+                                  (int)aka_amf->slen*2, hex);
+            pj_strcat2(result, line);
+        }
+#endif
 
         if (i != acc_cfg->cred_count - 1)
             pj_strcat2(result, "--next-cred\n");
@@ -1807,14 +1938,14 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 
     /* reg-use-proxy */
     if (acc_cfg->reg_use_proxy != 3) {
-        pj_ansi_sprintf(line, "--reg-use-proxy %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--reg-use-proxy %d\n",
                               acc_cfg->reg_use_proxy);
         pj_strcat2(result, line);
     }
 
     /* rereg-delay */
     if (acc_cfg->reg_retry_interval != PJSUA_REG_RETRY_INTERVAL) {
-        pj_ansi_sprintf(line, "--rereg-delay %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--rereg-delay %d\n",
                               acc_cfg->reg_retry_interval);
         pj_strcat2(result, line);
     }
@@ -1826,17 +1957,17 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 
     /* Session Timer extension */
     if (acc_cfg->use_timer) {
-        pj_ansi_sprintf(line, "--use-timer %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--use-timer %d\n",
                               acc_cfg->use_timer);
         pj_strcat2(result, line);
     }
     if (acc_cfg->timer_setting.min_se != 90) {
-        pj_ansi_sprintf(line, "--timer-min-se %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--timer-min-se %d\n",
                               acc_cfg->timer_setting.min_se);
         pj_strcat2(result, line);
     }
     if (acc_cfg->timer_setting.sess_expires != PJSIP_SESS_TIMER_DEF_SE) {
-        pj_ansi_sprintf(line, "--timer-se %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--timer-se %d\n",
                               acc_cfg->timer_setting.sess_expires);
         pj_strcat2(result, line);
     }
@@ -1863,7 +1994,7 @@ static void write_account_settings(int acc_index, pj_str_t *result)
         pj_strcat2(result, "--ice-regular\n");
 
     if (acc_cfg->ice_cfg.ice_opt.trickle > 0) {
-        pj_ansi_sprintf(line, "--ice-trickle %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--ice-trickle %d\n",
                         acc_cfg->ice_cfg.ice_opt.trickle);
         pj_strcat2(result, line);
     }
@@ -1872,7 +2003,7 @@ static void write_account_settings(int acc_index, pj_str_t *result)
         pj_strcat2(result, "--use-turn\n");
 
     if (acc_cfg->ice_cfg.ice_max_host_cands >= 0) {
-        pj_ansi_sprintf(line, "--ice_max_host_cands %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--ice_max_host_cands %d\n",
                         acc_cfg->ice_cfg.ice_max_host_cands);
         pj_strcat2(result, line);
     }
@@ -1881,7 +2012,7 @@ static void write_account_settings(int acc_index, pj_str_t *result)
         pj_strcat2(result, "--ice-no-rtcp\n");
 
     if (acc_cfg->turn_cfg.turn_server.slen) {
-        pj_ansi_sprintf(line, "--turn-srv %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--turn-srv %.*s\n",
                         (int)acc_cfg->turn_cfg.turn_server.slen,
                         acc_cfg->turn_cfg.turn_server.ptr);
         pj_strcat2(result, line);
@@ -1891,14 +2022,14 @@ static void write_account_settings(int acc_index, pj_str_t *result)
         pj_strcat2(result, "--turn-tcp\n");
 
     if (acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.username.slen) {
-        pj_ansi_sprintf(line, "--turn-user %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--turn-user %.*s\n",
                         (int)acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.username.slen,
                         acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.username.ptr);
         pj_strcat2(result, line);
     }
 
     if (acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.data.slen) {
-        pj_ansi_sprintf(line, "--turn-passwd %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--turn-passwd %.*s\n",
                         (int)acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.data.slen,
                         acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.data.ptr);
         pj_strcat2(result, line);
@@ -1925,16 +2056,16 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 
     /* Logging. */
     pj_strcat2(&cfg, "#\n# Logging options:\n#\n");
-    pj_ansi_sprintf(line, "--log-level %d\n",
+    pj_ansi_snprintf(line, sizeof(line), "--log-level %d\n",
                     config->log_cfg.level);
     pj_strcat2(&cfg, line);
 
-    pj_ansi_sprintf(line, "--app-log-level %d\n",
+    pj_ansi_snprintf(line, sizeof(line), "--app-log-level %d\n",
                     config->log_cfg.console_level);
     pj_strcat2(&cfg, line);
 
     if (config->log_cfg.log_filename.slen) {
-        pj_ansi_sprintf(line, "--log-file %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--log-file %.*s\n",
                         (int)config->log_cfg.log_filename.slen,
                         config->log_cfg.log_filename.ptr);
         pj_strcat2(&cfg, line);
@@ -1957,7 +2088,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 
     /* Nameservers */
     for (i=0; i<config->cfg.nameserver_count; ++i) {
-        pj_ansi_sprintf(line, "--nameserver %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--nameserver %.*s\n",
                               (int)config->cfg.nameserver[i].slen,
                               config->cfg.nameserver[i].ptr);
         pj_strcat2(&cfg, line);
@@ -1965,7 +2096,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 
     /* Outbound proxy */
     for (i=0; i<config->cfg.outbound_proxy_cnt; ++i) {
-        pj_ansi_sprintf(line, "--outbound %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--outbound %.*s\n",
                               (int)config->cfg.outbound_proxy[i].slen,
                               config->cfg.outbound_proxy[i].ptr);
         pj_strcat2(&cfg, line);
@@ -1979,13 +2110,19 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         pj_strcat2(&cfg, "--set-qos\n");
     }
 
+    /* Message Composition Indication */
+    if (config->no_mci) {
+        pj_strcat2(&cfg, "--no-mci\n");
+    }
+
     /* UDP Transport. */
-    pj_ansi_sprintf(line, "--local-port %d\n", config->udp_cfg.port);
+    pj_ansi_snprintf(line, sizeof(line), "--local-port %d\n",
+                     config->udp_cfg.port);
     pj_strcat2(&cfg, line);
 
     /* IP address, if any. */
     if (config->udp_cfg.public_addr.slen) {
-        pj_ansi_sprintf(line, "--ip-addr %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--ip-addr %.*s\n",
                         (int)config->udp_cfg.public_addr.slen,
                         config->udp_cfg.public_addr.ptr);
         pj_strcat2(&cfg, line);
@@ -1993,7 +2130,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 
     /* Bound IP address, if any. */
     if (config->udp_cfg.bound_addr.slen) {
-        pj_ansi_sprintf(line, "--bound-addr %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--bound-addr %.*s\n",
                         (int)config->udp_cfg.bound_addr.slen,
                         config->udp_cfg.bound_addr.ptr);
         pj_strcat2(&cfg, line);
@@ -2011,7 +2148,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 
     /* STUN */
     for (i=0; i<config->cfg.stun_srv_cnt; ++i) {
-        pj_ansi_sprintf(line, "--stun-srv %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--stun-srv %.*s\n",
                         (int)config->cfg.stun_srv[i].slen,
                         config->cfg.stun_srv[i].ptr);
         pj_strcat2(&cfg, line);
@@ -2022,26 +2159,26 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     if (config->use_tls)
         pj_strcat2(&cfg, "--use-tls\n");
     if (config->udp_cfg.tls_setting.ca_list_file.slen) {
-        pj_ansi_sprintf(line, "--tls-ca-file %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--tls-ca-file %.*s\n",
                         (int)config->udp_cfg.tls_setting.ca_list_file.slen,
                         config->udp_cfg.tls_setting.ca_list_file.ptr);
         pj_strcat2(&cfg, line);
     }
     if (config->udp_cfg.tls_setting.cert_file.slen) {
-        pj_ansi_sprintf(line, "--tls-cert-file %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--tls-cert-file %.*s\n",
                         (int)config->udp_cfg.tls_setting.cert_file.slen,
                         config->udp_cfg.tls_setting.cert_file.ptr);
         pj_strcat2(&cfg, line);
     }
     if (config->udp_cfg.tls_setting.privkey_file.slen) {
-        pj_ansi_sprintf(line, "--tls-privkey-file %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--tls-privkey-file %.*s\n",
                         (int)config->udp_cfg.tls_setting.privkey_file.slen,
                         config->udp_cfg.tls_setting.privkey_file.ptr);
         pj_strcat2(&cfg, line);
     }
 
     if (config->udp_cfg.tls_setting.password.slen) {
-        pj_ansi_sprintf(line, "--tls-password %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--tls-password %.*s\n",
                         (int)config->udp_cfg.tls_setting.password.slen,
                         config->udp_cfg.tls_setting.password.ptr);
         pj_strcat2(&cfg, line);
@@ -2054,13 +2191,13 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         pj_strcat2(&cfg, "--tls-verify-client\n");
 
     if (config->udp_cfg.tls_setting.timeout.sec) {
-        pj_ansi_sprintf(line, "--tls-neg-timeout %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--tls-neg-timeout %d\n",
                         (int)config->udp_cfg.tls_setting.timeout.sec);
         pj_strcat2(&cfg, line);
     }
 
     for (i=0; i<config->udp_cfg.tls_setting.ciphers_num; ++i) {
-        pj_ansi_sprintf(line, "--tls-cipher 0x%06X # %s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--tls-cipher 0x%06X # %s\n",
                         config->udp_cfg.tls_setting.ciphers[i],
                         pj_ssl_cipher_name(config->udp_cfg.tls_setting.ciphers[i]));
         pj_strcat2(&cfg, line);
@@ -2077,6 +2214,16 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         pj_strcat2(&cfg, "--extra-audio\n");
     }
 
+    /* Text */
+    if (config->txt_cnt) {
+        pj_strcat2(&cfg, "--text\n");
+    }
+    if (config->txt_red_level) {
+        pj_ansi_snprintf(line, sizeof(line), "--text-red %d\n",
+                        (int)config->txt_red_level);
+        pj_strcat2(&cfg, line);
+    }
+
     /* SRTP */
 #if PJMEDIA_HAS_SRTP
     if (app_config.cfg.use_srtp != PJSUA_DEFAULT_USE_SRTP) {
@@ -2086,19 +2233,19 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         {
             use_srtp = 3;
         }
-        pj_ansi_sprintf(line, "--use-srtp %d\n", use_srtp);
+        pj_ansi_snprintf(line, sizeof(line), "--use-srtp %d\n", use_srtp);
         pj_strcat2(&cfg, line);
     }
     if (app_config.cfg.srtp_secure_signaling !=
         PJSUA_DEFAULT_SRTP_SECURE_SIGNALING)
     {
-        pj_ansi_sprintf(line, "--srtp-secure %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--srtp-secure %d\n",
                         app_config.cfg.srtp_secure_signaling);
         pj_strcat2(&cfg, line);
     }
     if (app_config.srtp_keying >= 0 && app_config.srtp_keying <= 1)
     {
-        pj_ansi_sprintf(line, "--srtp-keying %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--srtp-keying %d\n",
                         app_config.srtp_keying);
         pj_strcat2(&cfg, line);
     }
@@ -2114,33 +2261,35 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     if (config->auto_conf)
         pj_strcat2(&cfg, "--auto-conf\n");
     for (i=0; i<config->wav_count; ++i) {
-        pj_ansi_sprintf(line, "--play-file %s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--play-file %s\n",
                         config->wav_files[i].ptr);
         pj_strcat2(&cfg, line);
     }
     for (i=0; i<config->tone_count; ++i) {
-        pj_ansi_sprintf(line, "--play-tone %d,%d,%d,%d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--play-tone %d,%d,%d,%d\n",
                         config->tones[i].freq1, config->tones[i].freq2,
                         config->tones[i].on_msec, config->tones[i].off_msec);
         pj_strcat2(&cfg, line);
     }
     if (config->rec_file.slen) {
-        pj_ansi_sprintf(line, "--rec-file %s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--rec-file %s\n",
                         config->rec_file.ptr);
         pj_strcat2(&cfg, line);
     }
     if (config->auto_rec)
         pj_strcat2(&cfg, "--auto-rec\n");
     if (config->capture_dev != PJSUA_INVALID_ID) {
-        pj_ansi_sprintf(line, "--capture-dev %d\n", config->capture_dev);
+        pj_ansi_snprintf(line, sizeof(line), "--capture-dev %d\n",
+                         config->capture_dev);
         pj_strcat2(&cfg, line);
     }
     if (config->playback_dev != PJSUA_INVALID_ID) {
-        pj_ansi_sprintf(line, "--playback-dev %d\n", config->playback_dev);
+        pj_ansi_snprintf(line, sizeof(line), "--playback-dev %d\n",
+                         config->playback_dev);
         pj_strcat2(&cfg, line);
     }
     if (config->media_cfg.snd_auto_close_time != -1) {
-        pj_ansi_sprintf(line, "--snd-auto-close %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--snd-auto-close %d\n",
                         config->media_cfg.snd_auto_close_time);
         pj_strcat2(&cfg, line);
     }
@@ -2148,28 +2297,30 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         pj_strcat2(&cfg, "--no-tones\n");
     }
     if (config->media_cfg.jb_max != -1) {
-        pj_ansi_sprintf(line, "--jb-max-size %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--jb-max-size %d\n",
                         config->media_cfg.jb_max);
         pj_strcat2(&cfg, line);
     }
 
     /* Sound device latency */
     if (config->capture_lat != PJMEDIA_SND_DEFAULT_REC_LATENCY) {
-        pj_ansi_sprintf(line, "--capture-lat %d\n", config->capture_lat);
+        pj_ansi_snprintf(line, sizeof(line), "--capture-lat %d\n",
+                         config->capture_lat);
         pj_strcat2(&cfg, line);
     }
     if (config->playback_lat != PJMEDIA_SND_DEFAULT_PLAY_LATENCY) {
-        pj_ansi_sprintf(line, "--playback-lat %d\n", config->playback_lat);
+        pj_ansi_snprintf(line, sizeof(line), "--playback-lat %d\n",
+                         config->playback_lat);
         pj_strcat2(&cfg, line);
     }
 
     /* Media clock rate. */
     if (config->media_cfg.clock_rate != PJSUA_DEFAULT_CLOCK_RATE) {
-        pj_ansi_sprintf(line, "--clock-rate %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--clock-rate %d\n",
                         config->media_cfg.clock_rate);
         pj_strcat2(&cfg, line);
     } else {
-        pj_ansi_sprintf(line, "#using default --clock-rate %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "#using default --clock-rate %d\n",
                         config->media_cfg.clock_rate);
         pj_strcat2(&cfg, line);
     }
@@ -2177,48 +2328,69 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     if (config->media_cfg.snd_clock_rate &&
         config->media_cfg.snd_clock_rate != config->media_cfg.clock_rate)
     {
-        pj_ansi_sprintf(line, "--snd-clock-rate %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--snd-clock-rate %d\n",
                         config->media_cfg.snd_clock_rate);
         pj_strcat2(&cfg, line);
     }
 
     /* Stereo mode. */
     if (config->media_cfg.channel_count == 2) {
-        pj_ansi_sprintf(line, "--stereo\n");
+        pj_ansi_snprintf(line, sizeof(line), "--stereo\n");
         pj_strcat2(&cfg, line);
     }
 
     /* quality */
     if (config->media_cfg.quality != PJSUA_DEFAULT_CODEC_QUALITY) {
-        pj_ansi_sprintf(line, "--quality %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--quality %d\n",
                         config->media_cfg.quality);
         pj_strcat2(&cfg, line);
     } else {
-        pj_ansi_sprintf(line, "#using default --quality %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "#using default --quality %d\n",
                         config->media_cfg.quality);
         pj_strcat2(&cfg, line);
     }
 
     if (config->vid.vcapture_dev != PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
-        pj_ansi_sprintf(line, "--vcapture-dev %d\n", config->vid.vcapture_dev);
+        pj_ansi_snprintf(line, sizeof(line), "--vcapture-dev %d\n",
+                         config->vid.vcapture_dev);
         pj_strcat2(&cfg, line);
     }
     if (config->vid.vrender_dev != PJMEDIA_VID_DEFAULT_RENDER_DEV) {
-        pj_ansi_sprintf(line, "--vrender-dev %d\n", config->vid.vrender_dev);
+        pj_ansi_snprintf(line, sizeof(line), "--vrender-dev %d\n",
+                         config->vid.vrender_dev);
         pj_strcat2(&cfg, line);
     }
     for (i=0; i<config->avi_cnt; ++i) {
-        pj_ansi_sprintf(line, "--play-avi %s\n", config->avi[i].path.ptr);
+        pj_ansi_snprintf(line, sizeof(line), "--play-avi %s\n",
+                         config->avi[i].path.ptr);
         pj_strcat2(&cfg, line);
     }
     if (config->avi_auto_play) {
-        pj_ansi_sprintf(line, "--auto-play-avi\n");
+        pj_ansi_snprintf(line, sizeof(line), "--auto-play-avi\n");
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_rec.slen) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi %s\n",
+                         config->avi_rec.ptr);
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_rec_size) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi-size %d\n",
+                         config->avi_rec_size);
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_rec_audio) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi-audio\n");
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_auto_rec) {
+        pj_ansi_snprintf(line, sizeof(line), "--auto-rec-avi\n");
         pj_strcat2(&cfg, line);
     }
 
     /* ptime */
     if (config->media_cfg.ptime) {
-        pj_ansi_sprintf(line, "--ptime %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--ptime %d\n",
                         config->media_cfg.ptime);
         pj_strcat2(&cfg, line);
     }
@@ -2230,61 +2402,61 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 
     /* ec-tail */
     if (config->media_cfg.ec_tail_len != PJSUA_DEFAULT_EC_TAIL_LEN) {
-        pj_ansi_sprintf(line, "--ec-tail %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--ec-tail %d\n",
                         config->media_cfg.ec_tail_len);
         pj_strcat2(&cfg, line);
     } else {
-        pj_ansi_sprintf(line, "#using default --ec-tail %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "#using default --ec-tail %d\n",
                         config->media_cfg.ec_tail_len);
         pj_strcat2(&cfg, line);
     }
 
     /* ec-opt */
     if (config->media_cfg.ec_options != 0) {
-        pj_ansi_sprintf(line, "--ec-opt %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--ec-opt %d\n",
                         config->media_cfg.ec_options);
         pj_strcat2(&cfg, line);
     }
 
     /* ilbc-mode */
     if (config->media_cfg.ilbc_mode != PJSUA_DEFAULT_ILBC_MODE) {
-        pj_ansi_sprintf(line, "--ilbc-mode %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--ilbc-mode %d\n",
                         config->media_cfg.ilbc_mode);
         pj_strcat2(&cfg, line);
     } else {
-        pj_ansi_sprintf(line, "#using default --ilbc-mode %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "#using default --ilbc-mode %d\n",
                         config->media_cfg.ilbc_mode);
         pj_strcat2(&cfg, line);
     }
 
     /* RTP drop */
     if (config->media_cfg.tx_drop_pct) {
-        pj_ansi_sprintf(line, "--tx-drop-pct %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--tx-drop-pct %d\n",
                         config->media_cfg.tx_drop_pct);
         pj_strcat2(&cfg, line);
 
     }
     if (config->media_cfg.rx_drop_pct) {
-        pj_ansi_sprintf(line, "--rx-drop-pct %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--rx-drop-pct %d\n",
                         config->media_cfg.rx_drop_pct);
         pj_strcat2(&cfg, line);
 
     }
 
     /* Start RTP port. */
-    pj_ansi_sprintf(line, "--rtp-port %d\n",
+    pj_ansi_snprintf(line, sizeof(line), "--rtp-port %d\n",
                     config->rtp_cfg.port);
     pj_strcat2(&cfg, line);
 
     /* Disable codec */
     for (i=0; i<config->codec_dis_cnt; ++i) {
-        pj_ansi_sprintf(line, "--dis-codec %s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--dis-codec %s\n",
                     config->codec_dis[i].ptr);
         pj_strcat2(&cfg, line);
     }
     /* Add codec. */
     for (i=0; i<config->codec_cnt; ++i) {
-        pj_ansi_sprintf(line, "--add-codec %s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--add-codec %s\n",
                     config->codec_arg[i].ptr);
         pj_strcat2(&cfg, line);
     }
@@ -2293,26 +2465,26 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 
     /* Auto-answer. */
     if (config->auto_answer != 0) {
-        pj_ansi_sprintf(line, "--auto-answer %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--auto-answer %d\n",
                         config->auto_answer);
         pj_strcat2(&cfg, line);
     }
 
     /* accept-redirect */
     if (config->redir_op != PJSIP_REDIRECT_ACCEPT_REPLACE) {
-        pj_ansi_sprintf(line, "--accept-redirect %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--accept-redirect %d\n",
                         config->redir_op);
         pj_strcat2(&cfg, line);
     }
 
     /* Max calls. */
-    pj_ansi_sprintf(line, "--max-calls %d\n",
+    pj_ansi_snprintf(line, sizeof(line), "--max-calls %d\n",
                     config->cfg.max_calls);
     pj_strcat2(&cfg, line);
 
     /* Uas-duration. */
     if (config->duration != PJSUA_APP_NO_LIMIT_DURATION) {
-        pj_ansi_sprintf(line, "--duration %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--duration %d\n",
                         config->duration);
         pj_strcat2(&cfg, line);
     }
@@ -2335,7 +2507,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 
     /* Add buddies. */
     for (i=0; i<config->buddy_cnt; ++i) {
-        pj_ansi_sprintf(line, "--add-buddy %.*s\n",
+        pj_ansi_snprintf(line, sizeof(line), "--add-buddy %.*s\n",
                               (int)config->buddy_cfg[i].uri.slen,
                               config->buddy_cfg[i].uri.ptr);
         pj_strcat2(&cfg, line);
@@ -2349,17 +2521,17 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     }
     /* Session Timer extension */
     if (config->cfg.use_timer) {
-        pj_ansi_sprintf(line, "--use-timer %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--use-timer %d\n",
                               config->cfg.use_timer);
         pj_strcat2(&cfg, line);
     }
     if (config->cfg.timer_setting.min_se != 90) {
-        pj_ansi_sprintf(line, "--timer-min-se %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--timer-min-se %d\n",
                               config->cfg.timer_setting.min_se);
         pj_strcat2(&cfg, line);
     }
     if (config->cfg.timer_setting.sess_expires != PJSIP_SESS_TIMER_DEF_SE) {
-        pj_ansi_sprintf(line, "--timer-se %d\n",
+        pj_ansi_snprintf(line, sizeof(line), "--timer-se %d\n",
                               config->cfg.timer_setting.sess_expires);
         pj_strcat2(&cfg, line);
     }

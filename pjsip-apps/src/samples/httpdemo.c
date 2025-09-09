@@ -94,7 +94,7 @@ static void on_complete(pj_http_req *hreq, pj_status_t status,
         PJ_PERROR(1, (THIS_FILE, status, "HTTP request completed with error"));
         return;
     }
-    PJ_LOG(3, (THIS_FILE, "Data completed: %d bytes", resp->size));
+    PJ_LOG(3, (THIS_FILE, "Data completed: %ld bytes", resp->size));
     if (resp->size > 0 && resp->data) {
 #ifdef VERBOSE
         printf("%.*s\n", (int)resp->size, (char *)resp->data);

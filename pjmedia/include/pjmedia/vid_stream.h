@@ -91,7 +91,17 @@ typedef enum pjmedia_vid_stream_rc_method
      * invoking the video stream put_frame(), e.g: video capture device thread,
      * will be blocked whenever transmission delay takes place.
      */
-    PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING   = 1
+    PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING   = 1,
+
+    /**
+     * Using a dedicated sending thread. Outgoing RTP packets will be queued
+     * to be sent by a dedicated sending thread to avoid peak bandwidth that
+     * is much higher than specified. Unlike simple blocking, the thread
+     * invoking the video stream put_frame() will not be blocked. This will
+     * generally provide better video latency than the simple blocking method
+     * because of more accurate bitrate calculation.
+     */
+    PJMEDIA_VID_STREAM_RC_SEND_THREAD       = 2
 
 } pjmedia_vid_stream_rc_method;
 
@@ -104,7 +114,7 @@ typedef struct pjmedia_vid_stream_rc_config
     /**
      * Rate control method.
      *
-     * Default: PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING.
+     * Default: PJMEDIA_VID_STREAM_RC_SEND_THREAD.
      */
     pjmedia_vid_stream_rc_method    method;
 
@@ -148,53 +158,10 @@ typedef struct pjmedia_vid_stream_sk_config
  */
 typedef struct pjmedia_vid_stream_info
 {
-    pjmedia_type        type;       /**< Media type (audio, video)          */
-    pjmedia_tp_proto    proto;      /**< Transport protocol (RTP/AVP, etc.) */
-    pjmedia_dir         dir;        /**< Media direction.                   */
-    pj_sockaddr         local_addr; /**< Local RTP address                  */
-    pj_sockaddr         rem_addr;   /**< Remote RTP address                 */
-    pj_sockaddr         rem_rtcp;   /**< Optional remote RTCP address. If
-                                         sin_family is zero, the RTP address
-                                         will be calculated from RTP.       */
-    pj_bool_t           rtcp_mux;   /**< Use RTP and RTCP multiplexing.     */
-    pjmedia_rtcp_fb_info loc_rtcp_fb; /**< Local RTCP-FB info.              */
-    pjmedia_rtcp_fb_info rem_rtcp_fb; /**< Remote RTCP-FB info.             */
-    unsigned            tx_pt;      /**< Outgoing codec paylaod type.       */
-    unsigned            rx_pt;      /**< Incoming codec paylaod type.       */
-    pj_uint32_t         ssrc;       /**< RTP SSRC.                          */
-    pj_str_t            cname;      /**< RTCP CNAME.                        */
-    pj_bool_t           has_rem_ssrc;/**<Has remote RTP SSRC?               */
-    pj_uint32_t         rem_ssrc;   /**< Remote RTP SSRC.                   */
-    pj_str_t            rem_cname;  /**< Remote RTCP CNAME.                 */
-    pj_uint32_t         rtp_ts;     /**< Initial RTP timestamp.             */
-    pj_uint16_t         rtp_seq;    /**< Initial RTP sequence number.       */
-    pj_uint8_t          rtp_seq_ts_set;
-                                    /**< Bitmask flags if initial RTP sequence 
-                                         and/or timestamp for sender are set.
-                                         bit 0/LSB : sequence flag 
-                                         bit 1     : timestamp flag         */
-    int                 jb_init;    /**< Jitter buffer init delay in msec.  
-                                         (-1 for default).                  */
-    int                 jb_min_pre; /**< Jitter buffer minimum prefetch
-                                         delay in msec (-1 for default).    */
-    int                 jb_max_pre; /**< Jitter buffer maximum prefetch
-                                         delay in msec (-1 for default).    */
-    int                 jb_max;     /**< Jitter buffer max delay in msec.   */
-
-#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
-    pj_bool_t           use_ka;     /**< Stream keep-alive and NAT hole punch
-                                         (see #PJMEDIA_STREAM_ENABLE_KA)
-                                         is enabled?                        */
-    pjmedia_stream_ka_config ka_cfg;
-                                    /**< Stream send kep-alive settings.    */
-#endif
+    PJ_DECL_STREAM_INFO_COMMON_MEMBER()
 
     pjmedia_vid_codec_info   codec_info;  /**< Incoming codec format info.  */
     pjmedia_vid_codec_param *codec_param; /**< Optional codec param.        */
-
-    pj_bool_t           rtcp_sdes_bye_disabled; 
-                                    /**< Disable automatic sending of RTCP
-                                         SDES and BYE.                      */
 
     pjmedia_vid_stream_rc_config rc_cfg;
                                     /**< Stream send rate control settings. */
@@ -388,6 +355,24 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_get_info(
  * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream);
+
+
+/**
+ * Modify the video stream's codec parameter after the codec is opened.
+ * Note that not all codec backends support modifying parameters during
+ * runtime and only certain parameters can be changed.
+ *
+ * Currently, only Video Toolbox and OpenH264 backends support runtime
+ * adjustment of encoding bitrate (avg_bps and max_bps).
+ *
+ * @param stream        The video stream.
+ * @param param         The new codec parameter.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_vid_stream_modify_codec_param(pjmedia_vid_stream *stream,
+                                      const pjmedia_vid_codec_param *param);
 
 
 /**

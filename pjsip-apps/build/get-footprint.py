@@ -83,7 +83,7 @@ compile_flags = [
     ['HAS_PJNATH_ICE',		'PJNATH ICE'],
 
     # PJMEDIA
-    ['HAS_PJMEDIA_EC',		'PJMEDIA accoustic echo cancellation'],
+    ['HAS_PJMEDIA_EC',		'PJMEDIA acoustic echo cancellation'],
     ['HAS_PJMEDIA_SND_DEV',	'PJMEDIA sound device backend (platform specific)'],
     ['HAS_PJMEDIA_SILENCE_DET',	'PJMEDIA Adaptive silence detector'],
     ['HAS_PJMEDIA',		'PJMEDIA endpoint'],

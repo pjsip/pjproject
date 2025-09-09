@@ -32,6 +32,9 @@
 #include <pj/sock.h>
 #include <pj/string.h>
 
+/* Only build when the backend is using kqueue. */
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_KQUEUE
+
 #include <sys/event.h>
 
 #define os_kqueue_open kqueue
@@ -119,7 +122,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     pj_ioqueue_t *ioqueue;
     pj_status_t rc;
     pj_lock_t *lock;
-    int i;
+    pj_size_t i;
 
     /* Check that arguments are valid. */
     PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL && max_fd > 0,
@@ -195,6 +198,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
         ioqueue_destroy(ioqueue);
         return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
+
+    /* set close-on-exec flag */
+    pj_set_cloexec_flag(ioqueue->kfd);
 
     PJ_LOG(4,
            ("pjlib", "%s I/O Queue created (%p)", pj_ioqueue_name(), ioqueue));
@@ -588,6 +594,7 @@ PJ_DEF(int) pj_ioqueue_poll(pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     };
     struct kevent events[MAX_EVENTS];
     struct queue queue[MAX_EVENTS];
+    pj_timestamp t1, t2;
 
     PJ_CHECK_STACK();
 
@@ -598,8 +605,11 @@ PJ_DEF(int) pj_ioqueue_poll(pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
     TRACE_((THIS_FILE, "start kqueue wait, msec=%d",
             xtimeout.tv_sec * 1000 + xtimeout.tv_nsec / 1000000));
+
+    pj_get_timestamp(&t1);
     count =
         os_kqueue_wait(ioqueue->kfd, NULL, 0, events, MAX_EVENTS, &xtimeout);
+    pj_get_timestamp(&t2);
     if (count == 0) {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
         /* Check the closing keys only when there's no activity and when there
@@ -699,8 +709,28 @@ PJ_DEF(int) pj_ioqueue_poll(pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
             pj_grp_lock_dec_ref_dbg(queue[i].key->grp_lock, "ioqueue", 0);
     }
 
+    if (!event_cnt) {
+        /* We need to sleep in order to avoid busy polling.
+         * Limit the duration of the sleep, as doing pj_thread_sleep() for
+         * a long time is very inefficient. The main objective here is just
+         * to avoid busy loop.
+         */
+        long msec = xtimeout.tv_sec * 1000 + xtimeout.tv_nsec / 1000000;
+        long delay = msec - pj_elapsed_usec(&t1, &t2)/1000;
+        if (delay > 10) delay = 10;
+        if (delay > 0)
+            pj_thread_sleep(delay);
+    }
+
     TRACE_((THIS_FILE, "     poll: count=%d events=%d processed=%d", count,
             event_cnt, processed_cnt));
 
     return processed_cnt;
 }
+
+PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
+{
+    return ioqueue ? (pj_oshandle_t)&ioqueue->kfd : NULL;
+}
+
+#endif /* PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_KQUEUE */

@@ -149,7 +149,7 @@ static const char* dump_codec_info(const pjmedia_vid_codec_info *info)
     char *p = str;
 
     /* Raw format ids */
-    for (i=0; (i<info->dec_fmt_id_cnt) && (p-str+5<sizeof(str)); ++i) {
+    for (i=0; (i<info->dec_fmt_id_cnt) && (p-str+5<(int)sizeof(str)); ++i) {
         pj_memcpy(p, &info->dec_fmt_id[i], 4);
         p += 4;
         *p++ = ' ';
@@ -173,7 +173,7 @@ static int enum_codecs()
 
     for (i = 0; i < cnt; ++i) {
         PJ_LOG(3, (THIS_FILE, "  %-16.*s %c%c %s",
-                   info[i].encoding_name.slen, info[i].encoding_name.ptr,
+                   (int)info[i].encoding_name.slen, info[i].encoding_name.ptr,
                    (info[i].dir & PJMEDIA_DIR_ENCODING? 'E' : ' '),
                    (info[i].dir & PJMEDIA_DIR_DECODING? 'D' : ' '),
                    dump_codec_info(&info[i])));
@@ -200,6 +200,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
     char codec_name[5];
     pj_status_t status;
     int rc = 0;
+    unsigned i, count;
 
     switch (packing) {
     case PJMEDIA_VID_PACKING_PACKETS:
@@ -268,10 +269,30 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
     cap_idx = CAPTURE_DEV;
 #endif
 
-    /* Lookup SDL renderer */
-    status = pjmedia_vid_dev_lookup("SDL", "SDL renderer", &rdr_idx);
-    if (status != PJ_SUCCESS) {
-        rc = 207; goto on_return;
+    /* Lookup renderer */
+    rdr_idx = PJMEDIA_VID_INVALID_DEV;
+    count = pjmedia_vid_dev_count();
+    for (i = 0; i < count; ++i) {
+        pjmedia_vid_dev_info cdi;
+
+        status = pjmedia_vid_dev_get_info(i, &cdi);
+        if (status != PJ_SUCCESS) {
+            rc = 211;
+            goto on_return;
+        }
+
+        /* Only interested with render device */
+        if ((cdi.dir & PJMEDIA_DIR_RENDER) != 0) {
+            rdr_idx = i;
+            break;
+        }
+    }
+    if (rdr_idx == PJMEDIA_VID_INVALID_DEV) {
+        PJ_LOG(3, (THIS_FILE, "Unable to find renderer device"));
+        /* We may be on a machine that doesn't have access to a renderer
+         * device, don't fail the test.
+         */
+        rc = 0; goto on_return;
     }
 
     /* Prepare codec */
@@ -395,7 +416,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 
     PJ_LOG(3, (THIS_FILE, "    starting codec test: %s<->%.*s %dx%d",
         pjmedia_fourcc_name(codec_param.dec_fmt.id, codec_name),
-        codec_info->encoding_name.slen,
+        (int)codec_info->encoding_name.slen,
         codec_info->encoding_name.ptr,
         codec_param.dec_fmt.det.vid.size.w,
         codec_param.dec_fmt.det.vid.size.h

@@ -108,6 +108,19 @@ typedef pj_int64_t pj_off_t;
 typedef pj_ssize_t pj_off_t;
 #endif
 
+/**
+ * Generic unsigned integer types.
+ *
+ * This is a 64 bit unsigned integer if the system support it, otherwise
+ * this is a 32 bit unsigned integer.
+ */
+#if defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+typedef pj_uint64_t pj_uint_t;
+#else
+typedef pj_uint32_t pj_uint_t;
+#endif
+
+
 /* ************************************************************************* */
 /*
  * Data structure types.
@@ -182,6 +195,19 @@ typedef struct pj_hash_iterator_t
     pj_hash_entry   *entry;     /**< Internal entry.     */
 } pj_hash_iterator_t;
 
+/**
+ * The opaque data type for atomic slist, which is used as arguments throughout
+ * the atomic slist operations.
+ */
+typedef struct pj_atomic_slist pj_atomic_slist;
+
+/**
+ * The opaque data type for atomic slist item, which is used as item argument
+ * throughout the atomic slist operations.
+ * Real atomic slist's item should have PJ_DECL_ATOMIC_SLIST_MEMBER(type)
+ * as the first member.
+ */
+typedef void pj_atomic_slist_node_t;
 
 /**
  * Forward declaration for memory pool factory.
@@ -229,7 +255,12 @@ typedef struct pj_atomic_t pj_atomic_t;
  * Value type of an atomic variable.
  */
 typedef PJ_ATOMIC_VALUE_TYPE pj_atomic_value_t;
- 
+
+/**
+ * Opaque data type for atomic queue.
+ */
+typedef struct pj_atomic_queue_t pj_atomic_queue_t;
+
 /* ************************************************************************* */
 
 /** Thread handle. */
@@ -249,6 +280,9 @@ typedef struct pj_sem_t pj_sem_t;
 
 /** Event object. */
 typedef struct pj_event_t pj_event_t;
+
+/** Barrier object. */
+typedef struct pj_barrier_t pj_barrier_t;
 
 /** Unidirectional stream pipe object. */
 typedef struct pj_pipe_t pj_pipe_t;
@@ -284,6 +318,17 @@ typedef int pj_exception_id_t;
  * Length of object names.
  */
 #define PJ_MAX_OBJ_NAME 32
+
+/** 
+ * We need to tell the compiler that the function takes printf style
+ * arguments, so the compiler can check the code more carefully and
+ * generate the appropriate warnings, if necessary.
+ */
+#if defined(__GNUC__) || defined(__clang__)
+#  define PJ_PRINT_FUNC_DECOR(idx) __attribute__((format (printf, idx, idx+1)))
+#else
+#  define PJ_PRINT_FUNC_DECOR(idx)
+#endif
 
 /* ************************************************************************* */
 /*

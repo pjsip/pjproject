@@ -20,7 +20,7 @@ all clean dep depend print:
 	done
 
 distclean realclean:
-	for dir in $(DIRS); do \
+	for dir in $(DIRS) pjsip-apps/src/swig pjsip-apps/src/pjsua/android/jni; do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
 		    true; \
 		else \
@@ -57,7 +57,7 @@ doc:
 
 clean-doc:
 	for dir in pjlib pjlib-util pjnath pjmedia pjsip; do \
-		rm -rf ./$${dir}/docs/html ./$${dir}/docs/xml ./$${dir}/docs/latex ./$${dir}/docs/$${dir}.tag; \
+		rm -rf $${dir}/docs/$${PJ_VERSION}; \
 	done
 
 LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \
@@ -104,25 +104,28 @@ xhdrid:
 selftest: pjlib-test pjlib-util-test pjnath-test pjmedia-test pjsip-test pjsua-test
 
 pjlib-test: pjlib/bin/pjlib-test-$(TARGET_NAME)
-	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME)
+	cd pjlib/build && $(CI_RUNNER) ../bin/pjlib-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjlib-util-test: pjlib-util/bin/pjlib-util-test-$(TARGET_NAME)
-	cd pjlib-util/build && ../bin/pjlib-util-test-$(TARGET_NAME)
+	cd pjlib-util/build && $(CI_RUNNER) ../bin/pjlib-util-test-$(TARGET_NAME) $(CI_ARGS)
 
 pjnath-test: pjnath/bin/pjnath-test-$(TARGET_NAME)
-	cd pjnath/build && ../bin/pjnath-test-$(TARGET_NAME)
+	cd pjnath/build && $(CI_RUNNER) ../bin/pjnath-test-$(TARGET_NAME) $(CI_ARGS)
 
 pjmedia-test: pjmedia/bin/pjmedia-test-$(TARGET_NAME)
-	cd pjmedia/build && ../bin/pjmedia-test-$(TARGET_NAME)
+	cd pjmedia/build && $(CI_RUNNER) ../bin/pjmedia-test-$(TARGET_NAME) $(CI_ARGS)
 
 pjsip-test: pjsip/bin/pjsip-test-$(TARGET_NAME)
-	cd pjsip/build && ../bin/pjsip-test-$(TARGET_NAME)
+	cd pjsip/build && $(CI_RUNNER) ../bin/pjsip-test-$(TARGET_NAME) $(CI_ARGS)
 
 pjsua-test: cmp_wav
-	cd tests/pjsua && python runall.py
+	cd tests/pjsua && python runall.py -t 2
 
 cmp_wav:
-	cd tests/pjsua/tools && make
+	$(MAKE) -C tests/pjsua/tools
+
+fuzz:
+	$(MAKE) -C tests/fuzz
 
 install:
 	mkdir -p $(DESTDIR)$(libdir)/
@@ -155,3 +158,6 @@ uninstall:
 	rmdir $(DESTDIR)$(includedir) 2> /dev/null || true
 	$(RM) $(addprefix $(DESTDIR)$(libdir)/,$(notdir $(APP_LIBXX_FILES)))
 	rmdir $(DESTDIR)$(libdir) 2> /dev/null || true
+
+infotarget:
+	@echo $(TARGET_NAME)

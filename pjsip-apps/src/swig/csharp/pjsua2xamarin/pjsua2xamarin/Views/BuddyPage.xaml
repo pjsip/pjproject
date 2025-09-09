@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+			 xmlns:viewModels="clr-namespace:pjsua2xamarin"
+             x:Class="pjsua2xamarin.BuddyPage">
+
+    <ContentPage.BindingContext>
+        <viewModels:BuddyViewModel/>
+    </ContentPage.BindingContext>
+
+	<ContentPage.ToolbarItems>
+		<ToolbarItem Text="Settings"
+					 Clicked="Settings_Clicked"/>
+		<ToolbarItem Text="Quit"
+					 Clicked="Quit_Clicked"/>
+	</ContentPage.ToolbarItems>
+	<ContentPage.Content>
+		<StackLayout VerticalOptions="FillAndExpand"
+					 HorizontalOptions="Start">
+			<StackLayout VerticalOptions="CenterAndExpand">
+				<ListView x:Name="BuddiesListView"
+						  ItemsSource="{Binding Buddies}"
+						  VerticalOptions="FillAndExpand"
+						  HasUnevenRows="true"
+						  SelectedItem="{Binding SelectedBuddy}"
+						  RefreshCommand="{Binding LoadBuddiesCommand}"
+						  IsPullToRefreshEnabled="true"
+						  IsRefreshing="{Binding IsBusy, Mode=OneWay}"
+						  CachingStrategy="RecycleElement">
+					<ListView.ItemTemplate>
+						<DataTemplate x:DataType="viewModels:MyBuddy">
+							<TextCell Text="{Binding cfg.uri}"/>
+						</DataTemplate>
+					</ListView.ItemTemplate>
+				</ListView>
+			</StackLayout>
+			<StackLayout Orientation="Horizontal"
+						 VerticalOptions="End">
+
+				<Grid
+				 ColumnDefinitions="25*, 25*, 25*, 25*"
+				 HorizontalOptions="FillAndExpand">
+
+					<Button Text="Call" Grid.Column="0" Clicked="Call_Clicked"/>
+					<Button Text="Add" Grid.Column="1" Clicked="Add_Clicked"/>
+					<Button Text="Edit" Grid.Column="2" Clicked="Edit_Clicked"/>
+					<Button Text="Remove" Grid.Column="3" Clicked="Delete_Clicked"/>
+
+				</Grid>
+			</StackLayout>
+		</StackLayout>
+	</ContentPage.Content>
+</ContentPage>
+

@@ -26,12 +26,18 @@ SWIG_FLAGS=-I../../../../pjlib/include \
 SRC_DIR=../../../../pjsip/include
 SRCS=$(SRC_DIR)/pjsua2/endpoint.hpp $(SRC_DIR)/pjsua2/types.hpp
 
-#USE_THREADS = -threads -DSWIG_NO_EXPORT_ITERATOR_METHODS
-SWIG_FLAGS += -w312 $(USE_THREADS)
+GEN_DOC = -doxygen
+USE_THREADS = -threads
+# In SWIG 4.2 the build will fail if we use this flag
+#-DSWIG_NO_EXPORT_ITERATOR_METHODS
+SWIG_FLAGS += -w312 $(USE_THREADS) $(GEN_DOC)
 
 .PHONY: all install uninstall
 
 all: $(PYTHON_SO)
+
+wheel: pjsua2_wrap.cpp setup.py $(GCC_EXE)
+	$(PYTHON_EXE) setup.py bdist_wheel $(PYTHON_SETUP_FLAGS)
 
 $(PYTHON_SO): pjsua2_wrap.cpp setup.py $(GCC_EXE)
 	$(PYTHON_EXE) setup.py build $(PYTHON_SETUP_FLAGS)
@@ -53,4 +59,3 @@ install:
 uninstall:
 	rm -f $(PYTHON_PKG_DIR)/pjsua2*
 	rm -f $(PYTHON_PKG_DIR)/_pjsua2*
-
