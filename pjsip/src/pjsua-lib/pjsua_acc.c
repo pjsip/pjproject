@@ -2026,7 +2026,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
                  PJSIP_TRANSPORT_SECURE;
         
         /* Enclose IPv6 address in square brackets */
-        if (tp->key.type & PJSIP_TRANSPORT_IPV6) {
+        if (pj_strchr(&via_addr, ':')) {
             beginquote = "[";
             endquote = "]";
         } else {
@@ -3930,7 +3930,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
         return status;
 
     /* Enclose IPv6 address in square brackets */
-    if (tp_type & PJSIP_TRANSPORT_IPV6) {
+    if (pj_strchr(&addr.host, ':')) {
         beginquote = "[";
         endquote = "]";
     } else {
@@ -4143,7 +4143,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     }
 
     /* Enclose IPv6 address in square brackets */
-    if (tp_type & PJSIP_TRANSPORT_IPV6) {
+    if (pj_strchr(&local_addr, ':')) {
         beginquote = "[";
         endquote = "]";
     } else {
