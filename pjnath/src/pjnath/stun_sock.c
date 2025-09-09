@@ -226,7 +226,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
                             &stun_sock_destructor);
 
     /* Create socket and bind socket */
-    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &stun_sock->sock_fd);
+    status = pj_sock_socket(af, pj_SOCK_DGRAM() | pj_SOCK_CLOEXEC(), 0, &stun_sock->sock_fd);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -282,11 +282,8 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
     if (cfg->port_range && cfg->port_range < max_bind_retry)
         max_bind_retry = cfg->port_range;
     pj_sockaddr_init(af, &bound_addr, NULL, 0);
-    if (cfg->bound_addr.addr.sa_family == pj_AF_INET() || 
-        cfg->bound_addr.addr.sa_family == pj_AF_INET6())
-    {
+    if (pj_sockaddr_has_addr(&cfg->bound_addr.addr))
         pj_sockaddr_cp(&bound_addr, &cfg->bound_addr);
-    }
     status = pj_sock_bind_random(stun_sock->sock_fd, &bound_addr,
                                  cfg->port_range, max_bind_retry);
     if (status != PJ_SUCCESS)
@@ -551,7 +548,7 @@ PJ_DEF(void*) pj_stun_sock_get_user_data(pj_stun_sock *stun_sock)
 }
 
 /* Get group lock */
-PJ_DECL(pj_grp_lock_t *) pj_stun_sock_get_grp_lock(pj_stun_sock *stun_sock)
+PJ_DEF(pj_grp_lock_t *) pj_stun_sock_get_grp_lock(pj_stun_sock *stun_sock)
 {
     PJ_ASSERT_RETURN(stun_sock, NULL);
     return stun_sock->grp_lock;

@@ -17,7 +17,11 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
 #
-from distutils.core import setup, Extension
+try:
+   from setuptools import setup, Extension
+except ImportError:
+   from distutils.core import setup, Extension
+
 import os
 import sys
 import platform
@@ -29,7 +33,12 @@ pj_version_minor=""
 pj_version_rev=""
 pj_version_suffix=""
 write=sys.stdout.write
-f = open('../../../../version.mak', 'r')
+
+# This is needed for building wheels, because pip moves files to a temporary folder
+path_version_relative = '../../../../version.mak'
+path_version_by_env = os.path.join(os.environ.get("PJDIR", ""), "version.mak")
+path_version = path_version_relative if os.path.exists(path_version_relative) else path_version_by_env
+f = open(path_version, 'r')
 for line in f:
     tokens=""
     if line.find("export PJ_VERSION_MAJOR") != -1:
@@ -58,7 +67,7 @@ pj_version = pj_version_major + "." + pj_version_minor
 if pj_version_rev:
     pj_version += "." + pj_version_rev
 if pj_version_suffix:
-    pj_version += "-" + pj_version_suffix
+    pj_version += pj_version_suffix
 
 #print 'PJ_VERSION = "'+ pj_version + '"'
 
@@ -109,5 +118,3 @@ setup(name="pjsua2",
                     ],
       py_modules=["pjsua2"]
      )
-
-

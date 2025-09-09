@@ -55,6 +55,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_nack(
     /* Build RTCP-FB NACK header */
     hdr = (pjmedia_rtcp_fb_common*)buf;
     pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->ssrc_src = pj_htonl(session->peer_ssrc);
     hdr->rtcp_common.pt = RTCP_RTPFB;
     hdr->rtcp_common.count = 1; /* FMT = 1 */
     hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));
@@ -97,6 +98,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_pli(
     /* Build RTCP-FB PLI header */
     hdr = (pjmedia_rtcp_fb_common*)buf;
     pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->ssrc_src = pj_htonl(session->peer_ssrc);
     hdr->rtcp_common.pt = RTCP_PSFB;
     hdr->rtcp_common.count = 1; /* FMT = 1 */
     hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));
@@ -131,6 +133,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_sli(
     /* Build RTCP-FB SLI header */
     hdr = (pjmedia_rtcp_fb_common*)buf;
     pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->ssrc_src = pj_htonl(session->peer_ssrc);
     hdr->rtcp_common.pt = RTCP_PSFB;
     hdr->rtcp_common.count = 2; /* FMT = 2 */
     hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));
@@ -157,7 +160,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_sli(
 
 
 /*
- * Build an RTCP-FB Slice Loss Indication (SLI) packet.
+ * Build an RTCP-FB Reference Picture Selection Indicationn (RPSI) packet.
  */
 PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_rpsi(
                                             pjmedia_rtcp_session *session, 
@@ -180,6 +183,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_rpsi(
     /* Build RTCP-FB RPSI header */
     hdr = (pjmedia_rtcp_fb_common*)buf;
     pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->ssrc_src = pj_htonl(session->peer_ssrc);
     hdr->rtcp_common.pt = RTCP_PSFB;
     hdr->rtcp_common.count = 3; /* FMT = 3 */
     hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));
@@ -336,8 +340,11 @@ static pj_status_t get_codec_info_from_sdp(pjmedia_endpt *endpt,
     pj_status_t status;
 
     type = pjmedia_get_type(&m->desc.media);
-    if (type != PJMEDIA_TYPE_AUDIO && type != PJMEDIA_TYPE_VIDEO)
+    if (type != PJMEDIA_TYPE_AUDIO && type != PJMEDIA_TYPE_VIDEO &&
+        type != PJMEDIA_TYPE_TEXT)
+    {
         return PJMEDIA_EUNSUPMEDIATYPE;
+    }
 
     codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
     for (j = 0; j < m->desc.fmt_count && cnt < *sci_cnt; ++j) {
@@ -700,7 +707,8 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_sli(
         return PJ_ETOOSMALL;
     }
 
-    cnt = pj_ntohs((pj_uint16_t)hdr->rtcp_common.length) - 2;
+    cnt = pj_ntohs((pj_uint16_t)hdr->rtcp_common.length);
+    if (cnt > 2) cnt -= 2; else cnt = 0;
     if (length < (cnt+3)*4)
         return PJ_ETOOSMALL;
 
@@ -751,7 +759,9 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_rpsi(
         return PJ_ETOOSMALL;
     }
 
-    rpsi_len = (pj_ntohs((pj_uint16_t)hdr->rtcp_common.length)-2) * 4;
+    rpsi_len = pj_ntohs((pj_uint16_t)hdr->rtcp_common.length);
+    if (rpsi_len > 2) rpsi_len -= 2; else rpsi_len = 0;
+    rpsi_len *= 4;
     if (length < rpsi_len + 12)
         return PJ_ETOOSMALL;
 

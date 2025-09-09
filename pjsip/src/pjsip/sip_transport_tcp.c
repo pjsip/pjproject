@@ -124,8 +124,6 @@ struct tcp_transport
     /* Group lock to be used by TCP transport and ioqueue key */
     pj_grp_lock_t           *grp_lock;
 
-    /* Initial timer. */
-    pj_timer_entry           initial_timer;
 };
 
 
@@ -235,7 +233,8 @@ PJ_DEF(void) pjsip_tcp_transport_cfg_default(pjsip_tcp_transport_cfg *cfg,
     pj_sockaddr_init(cfg->af, &cfg->bind_addr, NULL, 0);
     cfg->async_cnt = 1;
     cfg->reuse_addr = PJSIP_TCP_TRANSPORT_REUSEADDR;
-    cfg->initial_timeout = PJSIP_TCP_INITIAL_TIMEOUT;
+    cfg->initial_timeout = (PJSIP_TCP_INITIAL_TIMEOUT!=0)?
+              PJSIP_TCP_INITIAL_TIMEOUT:PJSIP_TRANSPORT_SERVER_IDLE_TIME_FIRST;
 }
 
 
@@ -274,17 +273,24 @@ static pj_status_t update_factory_addr(struct tcp_listener *listener,
         pj_sockaddr tmp;
         int af = pjsip_transport_type_get_af(listener->factory.type);
 
-        /* Verify that address given in a_name (if any) is valid */
-        status = pj_sockaddr_init(af, &tmp, &addr_name->host,
-                                  (pj_uint16_t)addr_name->port);
-        if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
-            (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+        tmp.addr.sa_family = (pj_uint16_t)af;
+
+        /* Validate IP address only */
+        if (pj_inet_pton(af, &addr_name->host, pj_sockaddr_get_addr(&tmp)) == PJ_SUCCESS)
         {
-            /* Invalid address */
-            return PJ_EINVAL;
+            /* Verify that address given in a_name (if any) is valid */
+            status = pj_sockaddr_init(af, &tmp, &addr_name->host,
+                                      (pj_uint16_t)addr_name->port);
+            if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
+                (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+            {
+                /* Invalid address */
+                return PJ_EINVAL;
+            }
         }
 
         /* Copy the address */
+        listener->factory.has_addr_name = PJ_TRUE;
         listener->factory.addr_name = *addr_name;
         pj_strdup(listener->factory.pool, &listener->factory.addr_name.host,
                   &addr_name->host);
@@ -396,12 +402,14 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
     listener->initial_timeout = cfg->initial_timeout;
     pj_memcpy(&listener->qos_params, &cfg->qos_params,
               sizeof(cfg->qos_params));
-    pj_memcpy(&listener->sockopt_params, &cfg->sockopt_params,
-              sizeof(cfg->sockopt_params));
+    pj_sockopt_params_clone(pool, &listener->sockopt_params,
+                            &cfg->sockopt_params);
 
-    pj_ansi_strcpy(listener->factory.obj_name, "tcptp");
+    pj_ansi_strxcpy(listener->factory.obj_name, "tcptp", 
+                    sizeof(listener->factory.obj_name));
     if (listener->factory.type==PJSIP_TRANSPORT_TCP6)
-        pj_ansi_strcat(listener->factory.obj_name, "6");
+        pj_ansi_strxcat(listener->factory.obj_name, "6",
+                        sizeof(listener->factory.obj_name));
 
     status = pj_lock_create_recursive_mutex(pool, listener->factory.obj_name,
                                             &listener->factory.lock);
@@ -513,7 +521,7 @@ static void lis_on_destroy(void *arg)
     }
 
     if (listener->factory.pool) {
-        PJ_LOG(4,(listener->factory.obj_name,  "SIP TCP transport destroyed"));
+        PJ_LOG(4,(listener->factory.obj_name, "SIP TCP listener destroyed"));
         pj_pool_safe_release(&listener->factory.pool);
     }
 }
@@ -597,9 +605,6 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
 /* TCP keep-alive timer callback */
 static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e);
 
-/* TCP initial timer callback */
-static void tcp_initial_timer(pj_timer_heap_t *th, pj_timer_entry *e);
-
 /* Clean up TCP resources */
 static void tcp_on_destroy(void *arg);
 
@@ -670,7 +675,11 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
 
     tcp->base.addr_len = pj_sockaddr_get_len(remote);
     pj_sockaddr_cp(&tcp->base.local_addr, local);
-    sockaddr_to_host_port(pool, &tcp->base.local_name, local);
+
+    /* Use listener's published address, if any. */
+    tcp->base.has_addr_name = listener->factory.has_addr_name;
+    tcp->base.local_name = listener->factory.addr_name;
+
     sockaddr_to_host_port(pool, &tcp->base.remote_name, remote);
     tcp->base.dir = is_server? PJSIP_TP_DIR_INCOMING : PJSIP_TP_DIR_OUTGOING;
 
@@ -680,6 +689,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     tcp->base.do_shutdown = &tcp_shutdown;
     tcp->base.destroy = &tcp_destroy_transport;
     tcp->base.factory = &listener->factory;
+    tcp->base.initial_timeout = listener->initial_timeout;
 
     /* Create group lock */
     status = pj_grp_lock_create_w_handler(pool, NULL, tcp, &tcp_on_destroy,
@@ -722,18 +732,10 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     pj_ioqueue_op_key_init(&tcp->ka_op_key.key, sizeof(pj_ioqueue_op_key_t));
     pj_strdup(tcp->base.pool, &tcp->ka_pkt, &ka_pkt);
 
-    /* Initialize initial timer. */
     if (is_server && listener->initial_timeout) {
-        pj_time_val delay = { 0 };
-
-        tcp->initial_timer.user_data = (void*)tcp;
-        tcp->initial_timer.cb = &tcp_initial_timer;
-        
-        delay.sec = listener->initial_timeout;
-        pjsip_endpt_schedule_timer(listener->endpt, 
-                                    &tcp->initial_timer, 
-                                    &delay);
-        tcp->initial_timer.id = PJ_TRUE;
+        /* Initialize initial timer. */
+        pjsip_transport_add_ref(&tcp->base);
+        pjsip_transport_dec_ref(&tcp->base);
     }
 
     /* Done setting up basic transport. */
@@ -838,12 +840,6 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
     if (tcp->ka_timer.id) {
         pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->ka_timer);
         tcp->ka_timer.id = PJ_FALSE;
-    }
-
-    /* Stop initial timer. */
-    if (tcp->initial_timer.id) {
-        pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->initial_timer);
-        tcp->initial_timer.id = PJ_FALSE;
     }
 
     /* Cancel all delayed transmits */
@@ -1004,7 +1000,8 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     listener = (struct tcp_listener*)factory;
 
     /* Create socket */
-    status = pj_sock_socket(rem_addr->addr.sa_family, pj_SOCK_STREAM(),
+    status = pj_sock_socket(rem_addr->addr.sa_family,
+                            pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(),
                             0, &sock);
     if (status != PJ_SUCCESS)
         return status;
@@ -1016,9 +1013,13 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                                 "outgoing SIP TCP socket");
 
     /* Apply socket options, if specified */
-    if (listener->sockopt_params.cnt)
+    if (listener->sockopt_params.cnt) {
         status = pj_sock_setsockopt_params(sock, &listener->sockopt_params);
-
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (listener->factory.obj_name, status,
+                          "Warning: error applying socket options"));
+        }
+    }
 
     /* Bind to listener's address and any port */
     pj_bzero(&local_addr, sizeof(local_addr));
@@ -1082,8 +1083,16 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                 pj_sockaddr_get_port(&local_addr) != 0)
             {
                 pj_sockaddr_cp(tp_addr, &local_addr);
-                sockaddr_to_host_port(tcp->base.pool, &tcp->base.local_name,
-                                      &local_addr);
+                /* Only update published address if not specified, otherwise
+                 * only update the port.
+                 */
+                if (!tcp->base.has_addr_name) {
+                    sockaddr_to_host_port(tcp->base.pool, &tcp->base.local_name,
+                                          &local_addr);
+                } else {
+                    tcp->base.local_name.port =
+                        pj_sockaddr_get_port(&local_addr);
+                }
             }
         }
         
@@ -1133,12 +1142,15 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 
     PJ_LOG(4,(listener->factory.obj_name, 
               "TCP listener %s: got incoming TCP connection "
-              "from %s, sock=%d",
+              "from %s, sock=%ld",
               pj_addr_str_print(&listener->factory.addr_name.host, 
                                 listener->factory.addr_name.port, addr_buf, 
                                 sizeof(addr_buf), 1),
               pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
               sock));
+
+    /* Set close-on-exec flag */
+    pj_set_cloexec_flag((int)sock);
 
     /* Apply QoS, if specified */
     status = pj_sock_apply_qos2(sock, listener->qos_type, 
@@ -1147,8 +1159,13 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
                                 "incoming SIP TCP socket");
 
     /* Apply socket options, if specified */
-    if (listener->sockopt_params.cnt)
+    if (listener->sockopt_params.cnt) {
         status = pj_sock_setsockopt_params(sock, &listener->sockopt_params);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (listener->factory.obj_name, status,
+                          "Warning: error applying socket options"));
+        }
+    }
 
     /* tcp_create() expect pj_sockaddr, so copy src_addr to temporary var,
      * just in case.
@@ -1170,32 +1187,34 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
     status = tcp_create( listener, NULL, sock, PJ_TRUE,
                          &tmp_dst_addr, &tmp_src_addr, &tcp);
     if (status == PJ_SUCCESS) {
+        /* Notify application of transport state accepted */
+        state_cb = pjsip_tpmgr_get_state_cb(tcp->base.tpmgr);
+        if (state_cb) {
+            pjsip_transport_state_info state_info;
+
+            pj_bzero(&state_info, sizeof(state_info));
+            (*state_cb)(&tcp->base, PJSIP_TP_STATE_CONNECTED, &state_info);
+        }
+
+        if (tcp->base.is_shutdown || tcp->base.is_destroying) {
+            return PJ_TRUE;
+        }
+
+        /* Start keep-alive timer */
+        if (pjsip_cfg()->tcp.keep_alive_interval) {
+            pj_time_val delay = { 0 };
+            delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
+            pjsip_endpt_schedule_timer_w_grp_lock(tcp->base.endpt,
+                                                  &tcp->ka_timer,
+                                                  &delay, PJ_TRUE,
+                                                  tcp->grp_lock);
+            pj_gettimeofday(&tcp->last_activity);
+        }
+
         status = tcp_start_read(tcp);
         if (status != PJ_SUCCESS) {
             PJ_LOG(3,(tcp->base.obj_name, "New transport cancelled"));
             tcp_destroy(&tcp->base, status);
-        } else {
-            if (tcp->base.is_shutdown || tcp->base.is_destroying) {
-                return PJ_TRUE;
-            }
-            /* Start keep-alive timer */
-            if (pjsip_cfg()->tcp.keep_alive_interval) {
-                pj_time_val delay = { 0 };
-                delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
-                pjsip_endpt_schedule_timer(listener->endpt, 
-                                           &tcp->ka_timer, 
-                                           &delay);
-                tcp->ka_timer.id = PJ_TRUE;
-                pj_gettimeofday(&tcp->last_activity);
-            }
-            /* Notify application of transport state accepted */
-            state_cb = pjsip_tpmgr_get_state_cb(tcp->base.tpmgr);
-            if (state_cb) {
-                pjsip_transport_state_info state_info;
-
-                pj_bzero(&state_info, sizeof(state_info));
-                (*state_cb)(&tcp->base, PJSIP_TP_STATE_CONNECTED, &state_info);
-            }
         }
     }
 
@@ -1238,7 +1257,7 @@ static pj_bool_t on_data_sent(pj_activesock_t *asock,
     if (bytes_sent <= 0) {
         pj_status_t status;
 
-        PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%d", 
+        PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%ld", 
                   bytes_sent));
 
         status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
@@ -1343,7 +1362,7 @@ static pj_status_t tcp_send_msg(pjsip_transport *transport,
             /* Shutdown transport on closure/errors */
             if (size <= 0) {
 
-                PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%d", 
+                PJ_LOG(5,(tcp->base.obj_name, "TCP send() error, sent=%ld", 
                           size));
 
                 if (status == PJ_SUCCESS) 
@@ -1369,12 +1388,6 @@ static pj_status_t tcp_shutdown(pjsip_transport *transport)
     if (tcp->ka_timer.id) {
         pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->ka_timer);
         tcp->ka_timer.id = PJ_FALSE;
-    }
-
-    /* Stop initial timer. */
-    if (tcp->initial_timer.id) {
-        pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->initial_timer);
-        tcp->initial_timer.id = PJ_FALSE;
     }
 
     return PJ_SUCCESS;
@@ -1403,11 +1416,6 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
     if (tcp->is_closing) {
         tcp->is_closing++;
         return PJ_FALSE;
-    }
-
-    if (tcp->initial_timer.id) {
-        pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->initial_timer);
-        tcp->initial_timer.id = PJ_FALSE;
     }
 
     /* Houston, we have packet! Report the packet to transport manager
@@ -1563,9 +1571,8 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     if (pjsip_cfg()->tcp.keep_alive_interval) {
         pj_time_val delay = { 0 };
         delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
-        pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
-                                   &delay);
-        tcp->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tcp->base.endpt, &tcp->ka_timer,
+                                              &delay, PJ_TRUE, tcp->grp_lock);
         pj_gettimeofday(&tcp->last_activity);
     }
 
@@ -1594,9 +1601,8 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
         delay.sec = pjsip_cfg()->tcp.keep_alive_interval - now.sec;
         delay.msec = 0;
 
-        pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
-                                   &delay);
-        tcp->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tcp->base.endpt, &tcp->ka_timer,
+                                              &delay, PJ_TRUE, tcp->grp_lock);
         return;
     }
 
@@ -1622,21 +1628,10 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
     delay.msec = 0;
 
-    pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
-                               &delay);
-    tcp->ka_timer.id = PJ_TRUE;
+    pjsip_endpt_schedule_timer_w_grp_lock(tcp->base.endpt, &tcp->ka_timer,
+                                          &delay, PJ_TRUE, tcp->grp_lock);
 }
 
-/* Transport keep-alive timer callback */
-static void tcp_initial_timer(pj_timer_heap_t *th, pj_timer_entry *e)
-{
-    pj_status_t status = PJ_ETIMEDOUT;
-    struct tcp_transport *tcp = (struct tcp_transport*) e->user_data;
-
-    PJ_UNUSED_ARG(th);
-
-    tcp_init_shutdown(tcp, status);
-}
 
 PJ_DEF(pj_sock_t) pjsip_tcp_transport_get_socket(pjsip_transport *transport)
 {
@@ -1669,7 +1664,7 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
     af = pjsip_transport_type_get_af(listener->factory.type);
 
     /* Create socket */
-    status = pj_sock_socket(af, pj_SOCK_STREAM(), 0, &sock);
+    status = pj_sock_socket(af, pj_SOCK_STREAM() | pj_SOCK_CLOEXEC(), 0, &sock);
     if (status != PJ_SUCCESS)
         goto on_error;
 
@@ -1691,8 +1686,13 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
     }
 
     /* Apply socket options, if specified */
-    if (listener->sockopt_params.cnt)
+    if (listener->sockopt_params.cnt) {
         status = pj_sock_setsockopt_params(sock, &listener->sockopt_params);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4, (listener->factory.obj_name, status,
+                          "Warning: error applying socket options"));
+        }
+    }
 
     status = pj_sock_bind(sock, listener_addr, addr_len);
     if (status != PJ_SUCCESS)
@@ -1754,6 +1754,22 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory,
     pj_status_t status = PJ_SUCCESS;
     struct tcp_listener *listener = (struct tcp_listener *)factory;
 
+    /* Just update the published address if currently no listener */
+    if (!listener->asock) {
+        PJ_LOG(3,(factory->obj_name,
+                      "TCP restart requested while no listener created, "
+                      "update the published address only"));
+
+        status = update_factory_addr(listener, a_name);
+        if (status != PJ_SUCCESS)
+            return status;
+
+        /* Set transport info. */
+       update_transport_info(listener);
+
+       return PJ_SUCCESS;
+    }
+
     lis_close(listener);
 
     status = pjsip_tcp_transport_lis_start(factory, local, a_name);
@@ -1763,15 +1779,15 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory,
 
         return status;
     }
-    
+
     status = pjsip_tpmgr_register_tpfactory(listener->tpmgr,
                                             &listener->factory);
     if (status != PJ_SUCCESS) {
         tcp_perror(listener->factory.obj_name,
                    "Unable to register the transport listener", status);
     } else {
-        listener->is_registered = PJ_TRUE;      
-    }    
+        listener->is_registered = PJ_TRUE;
+    }
 
     return status;
 }

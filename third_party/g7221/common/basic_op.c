@@ -1529,7 +1529,7 @@ LIBG7221_DEF(Word16) i_mult (Word16 a, Word16 b)
 #ifdef ORIGINAL_G7231
    return a*b ;
 #else
-   Word32 register c=a*b;
+   register Word32 c=a*b;
 #if (WMOPS)
     multiCounter[currCounter].i_mult++;
 #endif

@@ -57,6 +57,7 @@
 struct playlist_port
 {
     pjmedia_port     base;
+    pj_pool_t       *pool;
     unsigned         options;
     pj_bool_t        eof;
     pj_uint32_t      bufsize;
@@ -292,7 +293,7 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
 /*
  * Create wave list player.
  */
-PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
+PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool_,
                                                 const pj_str_t *port_label,
                                                 const pj_str_t file_list[],
                                                 int file_count,
@@ -304,15 +305,16 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     struct playlist_port *fport;
     pjmedia_audio_format_detail *afd;
     pj_off_t pos;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
     int index;
     pj_bool_t has_wave_info = PJ_FALSE;
     pj_str_t tmp_port_label;
     char filename[PJ_MAXPATH];  /* filename for open operations.    */
+    pj_pool_t *pool = NULL;
 
 
     /* Check arguments. */
-    PJ_ASSERT_RETURN(pool && file_list && file_count && p_port, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool_ && file_list && file_count && p_port, PJ_EINVAL);
 
     /* Normalize port_label */
     if (port_label == NULL || port_label->slen == 0) {
@@ -343,11 +345,18 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     if (ptime == 0)
         ptime = 20;
 
+    /* Create own pool */
+    pool = pj_pool_create(pool_->factory, port_label->ptr, 1024, 1024, NULL);
+    PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
+
     /* Create fport instance. */
     fport = create_file_list_port(pool, port_label);
     if (!fport) {
+        PJ_PERROR(4,(THIS_FILE, PJ_ENOMEM, "WAV playlist create failed"));
         return PJ_ENOMEM;
     }
+
+    fport->pool = pool;
 
     afd = pjmedia_format_get_audio_format_detail(&fport->base.info.fmt, 1);
 
@@ -359,42 +368,48 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     fport->fd_list = (pj_oshandle_t*)
                      pj_pool_zalloc(pool, sizeof(pj_oshandle_t)*file_count);
     if (!fport->fd_list) {
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
 
     /* Create file size list */
     fport->fsize_list = (pj_off_t*)
                         pj_pool_alloc(pool, sizeof(pj_off_t)*file_count);
     if (!fport->fsize_list) {
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
 
     /* Create start of WAVE data list */
     fport->start_data_list = (unsigned*)
                              pj_pool_alloc(pool, sizeof(unsigned)*file_count);
     if (!fport->start_data_list) {
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
 
     /* Create data len list */
     fport->data_len_list = (unsigned*)
                              pj_pool_alloc(pool, sizeof(unsigned)*file_count);
     if (!fport->data_len_list) {
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
 
     /* Create data left list */
     fport->data_left_list = (unsigned*)
                              pj_pool_alloc(pool, sizeof(unsigned)*file_count);
     if (!fport->data_left_list) {
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
 
     /* Create file position list */
     fport->fpos_list = (pj_off_t*)
                        pj_pool_alloc(pool, sizeof(pj_off_t)*file_count);
     if (!fport->fpos_list) {
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
 
     /* Create file buffer once for this operation.
@@ -406,7 +421,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     /* Create buffer. */
     fport->buf = (char*) pj_pool_alloc(pool, fport->bufsize);
     if (!fport->buf) {
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
+        goto on_error;
     }
 
     /* Initialize port */
@@ -428,15 +444,15 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
         /* Get the file size. */
         fport->current_file = index;
         fport->fsize_list[index] = pj_file_size(filename);
-        
+
         /* Size must be more than WAVE header size */
-        if (fport->fsize_list[index] <= sizeof(pjmedia_wave_hdr)) {
+        if (fport->fsize_list[index] <= (pj_off_t)sizeof(pjmedia_wave_hdr)) {
             status = PJMEDIA_ENOTVALIDWAVE;
             goto on_error;
         }
         
         /* Open file. */
-        status = pj_file_open( pool, filename, PJ_O_RDONLY, 
+        status = pj_file_open( pool, filename, PJ_O_RDONLY | PJ_O_CLOEXEC, 
                                &fport->fd_list[index]);
         if (status != PJ_SUCCESS)
             goto on_error;
@@ -523,6 +539,34 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
                 break;
             }
             
+            if (!subchunk.len ||    /* prevent infinite loop */
+                !subchunk.id)       /* highly likely that the file is invalid */
+            {
+                char fourcc_name[5];
+                pj_uint32_t sig = subchunk.id;
+                pj_off_t fpos;
+                pj_file_getpos(fport->fd_list[index], &fpos);
+                if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+                {
+                    PJ_LOG(2, (THIS_FILE,
+                               "%.*s. Zero length chunk of type %s found at offset=%lu",
+                               (int)file_list[index].slen,
+                               file_list[index].ptr,
+                               pjmedia_fourcc_name(subchunk.id, fourcc_name),
+                               (unsigned long)fpos));
+                } else {
+                    PJ_LOG(2, (THIS_FILE,
+                               "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu",
+                               (int)file_list[index].slen,
+                               file_list[index].ptr,
+                               subchunk.id, subchunk.len,
+                               (unsigned long)fpos));
+                }
+                status = PJMEDIA_ENOTVALIDWAVE;
+                goto on_error;
+
+            }
+
             /* Otherwise skip the chunk contents */
             PJ_CHECK_OVERFLOW_UINT32_TO_LONG(subchunk.len, 
                                status = PJMEDIA_ENOTVALIDWAVE; goto on_error;);
@@ -555,6 +599,22 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
             goto on_error;
         }
         
+        /* Check compatibility of sample rate and ptime.
+         * Some combinations result in a fractional number of samples per frame
+         * which we do not support.
+         * One such case would be for example 10ms @ 22050Hz which would yield
+         * 220.5 samples per frame.
+         */
+        if (0 != (ptime * wavehdr.fmt_hdr.sample_rate *
+                  wavehdr.fmt_hdr.nchan % 1000))
+        {
+            PJ_LOG(3,(THIS_FILE,
+                  "Cannot create wav playlist port: incompatible sample "
+                  "rate/ptime"));
+            status = PJMEDIA_ENOTCOMPATIBLE;
+            goto on_error;
+        }
+
         /* It seems like we have a valid WAVE file. */
         
         /* Update port info if we don't have one, otherwise check
@@ -628,11 +688,22 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     
     return PJ_SUCCESS;
 
+
 on_error:
-    for (index=0; index<file_count; ++index) {
-        if (fport->fd_list[index] != 0)
-            pj_file_close(fport->fd_list[index]);
+
+    if (fport->fd_list) {
+        for (index=0; index<file_count; ++index) {
+            if (fport->fd_list[index] != 0)
+                pj_file_close(fport->fd_list[index]);
+        }
     }
+
+    if (pool)
+        pj_pool_release(pool);
+
+    PJ_PERROR(1,(THIS_FILE, status,
+                 "Failed creating WAV playlist '%.*s'",
+                 (int)port_label->slen, port_label->ptr));
 
     return status;
 }
@@ -774,6 +845,9 @@ static pj_status_t file_list_on_destroy(pjmedia_port *this_port)
 
     for (index=0; index<fport->max_file; index++)
         pj_file_close(fport->fd_list[index]);
+
+    if (fport->pool)
+        pj_pool_safe_release(&fport->pool);
 
     return PJ_SUCCESS;
 }

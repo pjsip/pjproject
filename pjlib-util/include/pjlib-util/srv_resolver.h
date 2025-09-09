@@ -181,7 +181,7 @@ typedef void pj_dns_srv_resolver_cb(void *user_data,
  * @param cb            Pointer to callback function to receive the
  *                      notification when the resolution process completes.
  * @param p_query       Optional pointer to receive the query object, if one
- *                      was started. If this pointer is specified, a NULL may
+ *                      was started. If this pointer is specified, a NULL will
  *                      be returned if response cache is available immediately.
  *
  * @return              PJ_SUCCESS on success, or the appropriate error code.

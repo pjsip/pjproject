@@ -1,6 +1,11 @@
 import pjsua2 as pj
 import sys
 import time
+from collections import deque
+import struct
+import gc
+from random import randint
+import threading
 
 write=sys.stdout.write
 
@@ -72,6 +77,41 @@ class MyLogWriter(pj.LogWriter):
     def write(self, entry):
         write("This is Python:" + entry.msg + "\r\n")
 
+class AMP(pj.AudioMediaPort):
+    frames = deque()
+
+    def onFrameRequested(self, frame):
+        if len(self.frames):
+            # Get a frame from the queue and pass it to PJSIP
+            frame_ = self.frames.popleft()
+            frame.type = pj.PJMEDIA_TYPE_AUDIO
+            frame.buf = frame_
+
+    def onFrameReceived(self, frame):
+        frame_ = pj.ByteVector()
+        for i in range(frame.buf.size()):
+            if (i % 2 == 1):
+                # Convert it to signed 16-bit integer
+                x = frame.buf[i] << 8 | frame.buf[i-1]
+                x = struct.unpack('<h', struct.pack('<H', x))[0]
+
+                # Amplify the signal by 50% and clip it
+                x = int(x * 1.5)
+                if (x > 32767):
+                    x = 32767
+                else:
+                    if (x < -32768):
+                        x = -32768
+
+                # Convert it to unsigned 16-bit integer
+                x = struct.unpack('<H', struct.pack('<h', x))[0]
+
+                # Put it back in the vector in little endian order
+                frame_.append(x & 0xff)
+                frame_.append((x & 0xff00) >> 8)
+
+        self.frames.append(frame_)
+
 #
 # Testing log writer callback
 #
@@ -100,6 +140,21 @@ def ua_run_ua_test():
     ep.libInit(ep_cfg)
     ep.libStart()
 
+    # Sample custom audio media port
+    # Note: threading must be enabled
+    amp = AMP()
+    fmt = pj.MediaFormatAudio()
+    fmt.type = pj.PJMEDIA_TYPE_AUDIO
+    fmt.clockRate = 16000
+    fmt.channelCount = 1
+    fmt.bitsPerSample = 16
+    fmt.frameTimeUsec = 20000
+    amp.createPort("amp", fmt)
+    ep.audDevManager().getCaptureDevMedia().startTransmit(amp)
+    amp.startTransmit(ep.audDevManager().getPlaybackDevMedia())
+
+    time.sleep(3)
+    del amp
     write("************* Endpoint started ok, now shutting down... *************" + "\r\n")
     ep.libDestroy()
 
@@ -158,6 +213,69 @@ def ua_tonegen_test():
 
     ep.libDestroy()
 
+class RandomIntVal():
+    def __init__(self):
+        self.value = randint(0, 100000)
+
+class TestJob(pj.PendingJob):
+    def __init__(self):
+        super().__init__()
+        self.val = RandomIntVal()
+        print("Job created id:", id(self), "value:", self.val.value)
+
+    def execute(self, is_pending):
+        print("Executing job value:", self.val.value, is_pending)
+
+    def __del__(self):
+        print("Job deleted id:", id(self), "value:", self.val.value)
+
+def add_new_job1(ep):
+    print("Creating job 1")
+    job = TestJob()
+    print("Adding job 1")
+    ep.utilAddPendingJob(job)
+
+# Function to be executed in a separate thread
+def add_new_job2(ep):
+    ep.libRegisterThread("thread")
+    print("Creating job 2")
+    job = TestJob()
+    print("Adding job 2")
+    ep.utilAddPendingJob(job)
+
+def ua_pending_job_test():
+    write("PendingJob test.." + "\r\n")
+    ep_cfg = pj.EpConfig()
+    ep_cfg.uaConfig.threadCnt = 0
+    ep_cfg.uaConfig.mainThreadOnly = True
+
+    ep = pj.Endpoint()
+    ep.libCreate()
+    ep.libInit(ep_cfg)
+    ep.libStart()
+
+    # test 1
+    # adding job from a separate function
+    add_new_job1(ep)
+
+    # test 2
+    # adding job from a different thread
+    my_thread = threading.Thread(target=add_new_job2, args=(ep,))
+    my_thread.start()
+
+    time.sleep(1)
+    print("Collecting gc 1")
+    gc.collect()
+
+    print("Handling events")
+    for _ in range(100):
+        ep.libHandleEvents(10)
+
+    print("Collecting gc 2")
+    gc.collect()
+
+    ep.libDestroy()
+
 #
 # main()
 #
@@ -167,6 +285,7 @@ if __name__ == "__main__":
     ua_run_log_test()
     ua_run_ua_test()
     ua_tonegen_test()
+    ua_pending_job_test()
     sys.exit(0)
 
 

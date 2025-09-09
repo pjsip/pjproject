@@ -307,8 +307,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_silk_set_config(
     unsigned i;
 
     /* Look up in factory modes table */
-    for (i = 0; i < sizeof(silk_factory.silk_param)/
-                    sizeof(silk_factory.silk_param[0]); ++i)
+    for (i = 0; i < PJ_ARRAY_SIZE(silk_factory.silk_param); ++i)
     {
         if (silk_factory.silk_param[i].clock_rate == clock_rate) {
             int quality = PJMEDIA_CODEC_SILK_DEFAULT_QUALITY;
@@ -473,7 +472,8 @@ static pj_status_t silk_enum_codecs(pjmedia_codec_factory *factory,
     max = *count;
     *count = 0;
 
-    for (i = 0; i<PJ_ARRAY_SIZE(silk_factory.silk_param) && *count<max; ++i)
+    for (i = 0; i<(int)PJ_ARRAY_SIZE(silk_factory.silk_param) && *count<max;
+         ++i)
     {
         silk_param *sp = &silk_factory.silk_param[i];
 
@@ -700,7 +700,7 @@ static pj_status_t  silk_codec_modify(pjmedia_codec *codec,
     PJ_UNUSED_ARG(codec);
     PJ_UNUSED_ARG(attr);
 
-    return PJ_SUCCESS;
+    return PJ_ENOTSUP;
 }
 
 

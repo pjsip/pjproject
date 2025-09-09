@@ -204,7 +204,7 @@ static int vidport_test(void)
                     continue;
 
                 /* Check various formats to test format conversion. */
-                for (l = 0; l < PJ_ARRAY_SIZE(test_fmts); ++l) {
+                for (l = 0; l < (int)PJ_ARRAY_SIZE(test_fmts); ++l) {
                     pjmedia_format fmt;
 
                     PJ_LOG(3,(THIS_FILE,

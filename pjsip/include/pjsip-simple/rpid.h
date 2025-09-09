@@ -106,8 +106,9 @@ PJ_DECL(void) pjrpid_element_dup(pj_pool_t *pool, pjrpid_element *dst,
  * Add RPID element information into existing PIDF document. This will also
  * add the appropriate XML namespace attributes into the presence's XML
  * node, if the attributes are not already present, and also a <note> element
- * to the first <tuple> element of the PIDF document, if a <note> element
- * is not present.
+ * if it is not present. The <note> element is added to the first <tuple>
+ * element of the PIDF document, or if there is no <tuple> element found,
+ * to the root <presence> element of the document.
  *
  * @param pres      The PIDF presence document.
  * @param pool      Pool.

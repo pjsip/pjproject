@@ -28,15 +28,14 @@ export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 		   $(APP_LDFLAGS) $(LDFLAGS) 
 
 # libcrypt.a (the crypto engine) 
-ciphers = crypto/cipher/cipher.o crypto/cipher/null_cipher.o      \
+ciphers = crypto/cipher/cipher.o crypto/cipher/null_cipher.o crypto/cipher/cipher_test_cases.o     \
           $(CIPHERS_SRC)
 
-hashes  = crypto/hash/null_auth.o crypto/hash/auth.o $(HASHES_SRC)
+hashes  = crypto/hash/null_auth.o crypto/hash/auth.o crypto/hash/auth_test_cases.o $(HASHES_SRC)
 
-replay  = crypto/replay/rdb.o crypto/replay/rdbx.o               \
-          crypto/replay/ut_sim.o 
+replay  = crypto/replay/rdb.o crypto/replay/rdbx.o
 
-math    = crypto/math/datatypes.o crypto/math/stat.o
+math    = crypto/math/datatypes.o
 
 ust     = crypto/ust/ust.o 
 
@@ -47,7 +46,7 @@ err     = pjlib/srtp_err.o
 kernel  = crypto/kernel/crypto_kernel.o  crypto/kernel/alloc.o   \
           crypto/kernel/key.o $(rng) $(err) # $(ust) 
 
-srtpobj = srtp/srtp.o srtp/ekt.o
+srtpobj = srtp/srtp.o
 
 cryptobj =  $(ciphers) $(hashes) $(math) $(stat) $(kernel) $(replay)
 

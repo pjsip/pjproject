@@ -20,8 +20,8 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "  ARCH       Optional flags to specify target architecture, e.g."
   echo "             ARCH=\"-arch armv7\". Default is arm64."
   echo "  MIN_IOS    Optional flags to specify minimum supported iOS"
-  echo "             versions, e.g. MIN_IOS=\"-miphoneos-version-min=10.0\". "
-  echo "             Default is 7.0."
+  echo "             versions, e.g. MIN_IOS=\"-miphoneos-version-min=11.0\". "
+  echo "             Default is 11.0."
   echo ""
   exit 0
 fi
@@ -123,7 +123,7 @@ if test "${ARCH_VAL}" = "arm64e"; then
 fi 
 
 if test "${MIN_IOS}" = ""; then
-  MIN_IOS_VER="7.0"
+  MIN_IOS_VER="11.0"
   echo "$F: MIN_IOS is not specified, choosing ${MIN_IOS_VER}"
   MIN_IOS="-miphoneos-version-min=${MIN_IOS_VER}"
 fi

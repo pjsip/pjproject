@@ -151,7 +151,7 @@ int main()
     pj_cli_telnet_cfg tcfg;
     pj_str_t xml;
     pj_status_t status;
-    int i;        
+    unsigned i;
 
     pj_init();
     pj_caching_pool_init(&cp, NULL, 0);
@@ -172,8 +172,8 @@ int main()
     /*
      * Register some commands.
      */
-    for (i = 0; i < sizeof(cmd_xmls)/sizeof(cmd_xmls[0]); i++) {
-        xml = pj_str(cmd_xmls[i].xml);  
+    for (i = 0; i < PJ_ARRAY_SIZE(cmd_xmls); i++) {
+        xml = pj_str(cmd_xmls[i].xml);
         status = pj_cli_add_cmd_from_xml(cli, NULL, &xml, 
                                          cmd_xmls[i].handler, NULL,
                                          get_codec_list);
@@ -250,7 +250,7 @@ pj_status_t app_main(pj_cli_t *c)
         if (status != PJ_SUCCESS)
             break;
 
-        //pj_ansi_strcpy(cmdline, "sayhello {Teluu Inc.}");     
+        //pj_ansi_strxcpy(cmdline, "sayhello {Teluu Inc.}", sizeof(cmdline));
         if (status == PJ_CLI_EEXIT) {
             /* exit is called */
             break;

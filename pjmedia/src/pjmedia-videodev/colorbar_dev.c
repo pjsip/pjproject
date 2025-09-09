@@ -175,7 +175,7 @@ pjmedia_vid_dev_factory* pjmedia_cbar_factory(pj_pool_factory *pf)
     struct cbar_factory *f;
     pj_pool_t *pool;
 
-    pool = pj_pool_create(pf, "cbar video", 512, 512, NULL);
+    pool = pj_pool_create(pf, "cbar video", 4000, 4000, NULL);
     f = PJ_POOL_ZALLOC_T(pool, struct cbar_factory);
     f->pf = pf;
     f->pool = pool;
@@ -201,16 +201,15 @@ static pj_status_t cbar_factory_init(pjmedia_vid_dev_factory *f)
     /* Passive capturer */
     ddi = &cf->dev_info[0];
     pj_bzero(ddi, sizeof(*ddi));
-    pj_ansi_strncpy(ddi->info.name, "Colorbar generator",
+    pj_ansi_strxcpy(ddi->info.name, "Colorbar generator",
                     sizeof(ddi->info.name));
-    ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
-    pj_ansi_strncpy(ddi->info.driver, "Colorbar", sizeof(ddi->info.driver));
-    ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
+    pj_ansi_strxcpy(ddi->info.driver, "Colorbar", 
+                    sizeof(ddi->info.driver));
     ddi->info.dir = PJMEDIA_DIR_CAPTURE;
     ddi->info.has_callback = PJ_FALSE;
 
     ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
-    ddi->info.fmt_cnt = sizeof(cbar_fmts)/sizeof(cbar_fmts[0]);
+    ddi->info.fmt_cnt = PJ_ARRAY_SIZE(cbar_fmts);
     for (i = 0; i < ddi->info.fmt_cnt; i++) {
         pjmedia_format *fmt = &ddi->info.fmt[i];
         pjmedia_format_init_video(fmt, cbar_fmts[i].fmt_id,
@@ -221,16 +220,15 @@ static pj_status_t cbar_factory_init(pjmedia_vid_dev_factory *f)
     /* Active capturer */
     ddi = &cf->dev_info[1];
     pj_bzero(ddi, sizeof(*ddi));
-    pj_ansi_strncpy(ddi->info.name, "Colorbar-active",
+    pj_ansi_strxcpy(ddi->info.name, "Colorbar-active",
                     sizeof(ddi->info.name));
-    ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
-    pj_ansi_strncpy(ddi->info.driver, "Colorbar", sizeof(ddi->info.driver));
-    ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
+    pj_ansi_strxcpy(ddi->info.driver, "Colorbar", 
+                    sizeof(ddi->info.driver));
     ddi->info.dir = PJMEDIA_DIR_CAPTURE;
     ddi->info.has_callback = PJ_TRUE;
 
     ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
-    ddi->info.fmt_cnt = sizeof(cbar_fmts)/sizeof(cbar_fmts[0]);
+    ddi->info.fmt_cnt = PJ_ARRAY_SIZE(cbar_fmts);
     for (i = 0; i < ddi->info.fmt_cnt; i++) {
         pjmedia_format *fmt = &ddi->info.fmt[i];
         pjmedia_format_init_video(fmt, cbar_fmts[i].fmt_id,
@@ -313,7 +311,7 @@ static const struct cbar_fmt_info* get_cbar_fmt_info(pjmedia_format_id id)
 {
     unsigned i;
 
-    for (i = 0; i < sizeof(cbar_fmts)/sizeof(cbar_fmts[0]); i++) {
+    for (i = 0; i < PJ_ARRAY_SIZE(cbar_fmts); i++) {
         if (cbar_fmts[i].fmt_id == id)
             return &cbar_fmts[i];
     }

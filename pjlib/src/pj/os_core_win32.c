@@ -54,7 +54,7 @@
 #else
 #   define LOG_MUTEX(expr)  PJ_LOG(6,expr)
 #endif
-
+#   define LOG_MUTEX_WARN(expr)  PJ_PERROR(3,expr)
 #define THIS_FILE       "os_core_win32.c"
 
 /*
@@ -121,6 +121,28 @@ struct pj_atomic_t
 {
     long value;
 };
+
+/*
+ * Implementation of pj_barrier_t.
+ */
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+struct pj_barrier_t {
+    SYNCHRONIZATION_BARRIER sync_barrier;
+};
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+struct pj_barrier_t {
+    CRITICAL_SECTION        mutex;
+    CONDITION_VARIABLE      cond;
+    unsigned                count;
+    unsigned                waiting;
+};
+#else
+struct pj_barrier_t {
+    HANDLE                  cond;   /* Semaphore */
+    LONG                    count;  /* Number of threads required to pass the barrier */
+    LONG                    waiting;/* Number of threads waiting at the barrier */
+};
+#endif
 
 /*
  * Flag and reference counter for PJLIB instance.
@@ -480,7 +502,8 @@ static void set_thread_display_name(const char *name)
     PJ_LOG(5, (THIS_FILE, "SetThreadDescription:%p, name:%s", fn, name));
     if (fn) {
         wchar_t wname[PJ_MAX_OBJ_NAME];
-        pj_ansi_to_unicode(name, pj_ansi_strlen(name), wname, PJ_MAX_OBJ_NAME);
+        pj_ansi_to_unicode(name, (int)pj_ansi_strlen(name), wname,
+                           PJ_MAX_OBJ_NAME);
         fn(GetCurrentThread(), wname);
         return;
     }
@@ -581,8 +604,7 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     if (strchr(thread_name, '%')) {
         pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
     } else {
-        pj_ansi_strncpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
-        rec->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_strxcpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
     }
 
     PJ_LOG(6, (rec->obj_name, "Thread created"));
@@ -919,6 +941,7 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
  */
 PJ_DEF(pj_status_t) pj_thread_local_alloc(long *index)
 {
+    DWORD tls_index;
     PJ_ASSERT_RETURN(index != NULL, PJ_EINVAL);
 
     //Can't check stack because this function is called in the
@@ -926,15 +949,17 @@ PJ_DEF(pj_status_t) pj_thread_local_alloc(long *index)
     //PJ_CHECK_STACK();
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
-    *index = TlsAllocRT();
+    tls_index = TlsAllocRT();
 #else
-    *index = TlsAlloc();
+    tls_index = TlsAlloc();
 #endif
 
-    if (*index == TLS_OUT_OF_INDEXES)
+    if (tls_index == TLS_OUT_OF_INDEXES)
         return PJ_RETURN_OS_ERROR(GetLastError());
-    else
+    else {
+        *index = (long)tls_index;
         return PJ_SUCCESS;
+    }
 }
 
 /*
@@ -978,6 +1003,7 @@ PJ_DEF(void*) pj_thread_local_get(long index)
     //Can't check stack because this function is called
     //by PJ_CHECK_STACK() itself!!!
     //PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(index >= 0, NULL);
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     return TlsGetValueRT(index);
 #else
@@ -1015,8 +1041,7 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name)
     if (strchr(name, '%')) {
         pj_ansi_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
     } else {
-        pj_ansi_strncpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
-        mutex->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_strxcpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
     }
 
     PJ_LOG(6, (mutex->obj_name, "Mutex created"));
@@ -1093,10 +1118,15 @@ PJ_DEF(pj_status_t) pj_mutex_lock(pj_mutex_t *mutex)
         status = PJ_STATUS_FROM_OS(GetLastError());
 
 #endif
-    LOG_MUTEX((mutex->obj_name, 
-              (status==PJ_SUCCESS ? "Mutex acquired by thread %s" : "FAILED by %s"),
-              pj_thread_this()->obj_name));
-
+    if (status == PJ_SUCCESS) {
+        LOG_MUTEX((mutex->obj_name, 
+                   "Mutex acquired by thread %s",
+                   pj_thread_this()->obj_name));
+    } else {
+        LOG_MUTEX_WARN((mutex->obj_name, status,
+                        "Failed to acquire mutex by thread %s",
+                        pj_thread_this()->obj_name));
+    }
 #if PJ_DEBUG
     if (status == PJ_SUCCESS) {
         mutex->owner = pj_thread_this();
@@ -1266,8 +1296,7 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
     if (strchr(name, '%')) {
         pj_ansi_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
     } else {
-        pj_ansi_strncpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
-        sem->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_strxcpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
     }
 
     LOG_MUTEX((sem->obj_name, "Semaphore created"));
@@ -1279,6 +1308,7 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
 static pj_status_t pj_sem_wait_for(pj_sem_t *sem, unsigned timeout)
 {
     DWORD result;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
@@ -1296,16 +1326,15 @@ static pj_status_t pj_sem_wait_for(pj_sem_t *sem, unsigned timeout)
         LOG_MUTEX((sem->obj_name, "Semaphore acquired by thread %s", 
                                   pj_thread_this()->obj_name));
     } else {
-        LOG_MUTEX((sem->obj_name, "Semaphore: thread %s FAILED to acquire", 
-                                  pj_thread_this()->obj_name));
+        if (result == WAIT_TIMEOUT)
+            status = PJ_ETIMEDOUT;
+        else
+            status = PJ_RETURN_OS_ERROR(GetLastError());
+        LOG_MUTEX_WARN((sem->obj_name, status, "Semaphore: thread %s failed "
+                        "to acquire", pj_thread_this()->obj_name));
     }
 
-    if (result==WAIT_OBJECT_0)
-        return PJ_SUCCESS;
-    else if (result==WAIT_TIMEOUT)
-        return PJ_ETIMEDOUT;
-    else
-        return PJ_RETURN_OS_ERROR(GetLastError());
+    return status;
 }
 
 /*
@@ -1407,8 +1436,7 @@ PJ_DEF(pj_status_t) pj_event_create( pj_pool_t *pool,
     if (strchr(name, '%')) {
         pj_ansi_snprintf(event->obj_name, PJ_MAX_OBJ_NAME, name, event);
     } else {
-        pj_ansi_strncpy(event->obj_name, name, PJ_MAX_OBJ_NAME);
-        event->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+        pj_ansi_strxcpy(event->obj_name, name, PJ_MAX_OBJ_NAME);
     }
 
     PJ_LOG(6, (event->obj_name, "Event created"));
@@ -1542,6 +1570,119 @@ PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
 #endif  /* PJ_HAS_EVENT_OBJ */
 
 ///////////////////////////////////////////////////////////////////////////////
+
+/*
+ * pj_barrier_create()
+ */
+PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) 
+{
+    pj_barrier_t *barrier;
+    PJ_ASSERT_RETURN(pool && p_barrier, PJ_EINVAL);
+    barrier = (pj_barrier_t *)pj_pool_zalloc(pool, sizeof(pj_barrier_t));
+    if (barrier == NULL)
+        return PJ_ENOMEM;
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+    if (InitializeSynchronizationBarrier(&barrier->sync_barrier, trip_count, -1)) {
+        *p_barrier = barrier;
+        return PJ_SUCCESS;
+    } else
+        return pj_get_os_error();
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+    InitializeCriticalSection(&barrier->mutex);
+    InitializeConditionVariable(&barrier->cond);
+    barrier->count = trip_count;
+    barrier->waiting = 0;
+    *p_barrier = barrier;
+    return PJ_SUCCESS;
+#else
+    barrier->cond = CreateSemaphore(NULL,
+                                    0,          /* initial count */
+                                    trip_count, /* max count */
+                                    NULL);
+    if (!barrier->cond)
+        return pj_get_os_error();
+    barrier->count = trip_count;
+    barrier->waiting = 0;
+    *p_barrier = barrier;
+    return PJ_SUCCESS;
+#endif
+}
+
+/*
+ * pj_barrier_destroy()
+ */
+PJ_DEF(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier) 
+{
+    PJ_ASSERT_RETURN(barrier, PJ_EINVAL);
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+    DeleteSynchronizationBarrier(&barrier->sync_barrier);
+    return PJ_SUCCESS;
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+    DeleteCriticalSection(&barrier->mutex);
+    return PJ_SUCCESS;
+#else
+    if (CloseHandle(barrier->cond))
+        return PJ_SUCCESS;
+    else
+        return pj_get_os_error();
+#endif
+}
+
+/*
+ * pj_barrier_wait()
+ */
+PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) 
+{
+    PJ_ASSERT_RETURN(barrier, PJ_EINVAL);
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+    DWORD dwFlags = ((flags & PJ_BARRIER_FLAGS_BLOCK_ONLY) ? SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY : 0) |
+        ((flags & PJ_BARRIER_FLAGS_SPIN_ONLY) ? SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY : 0) |
+        ((flags & PJ_BARRIER_FLAGS_NO_DELETE) ? SYNCHRONIZATION_BARRIER_FLAGS_NO_DELETE : 0);
+    return EnterSynchronizationBarrier(&barrier->sync_barrier, dwFlags);
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+    PJ_UNUSED_ARG(flags);
+    EnterCriticalSection(&barrier->mutex);
+    if (++barrier->waiting == barrier->count) {
+        barrier->waiting = 0;
+        LeaveCriticalSection(&barrier->mutex);
+        WakeAllConditionVariable(&barrier->cond);
+        return PJ_TRUE;
+    } else {
+        BOOL rc = SleepConditionVariableCS(&barrier->cond, &barrier->mutex, INFINITE);
+        LeaveCriticalSection(&barrier->mutex);
+        if (rc)
+            /* Returning PJ_FALSE in this case (a successful return from 
+             * SleepConditionVariableCS) is intentional.
+             */
+            return PJ_FALSE;
+        else
+            return pj_get_os_error();
+    }
+#else
+    PJ_UNUSED_ARG(flags);
+
+    if (InterlockedIncrement(&barrier->waiting) == barrier->count) {
+        LONG previousCount = 0;
+        barrier->waiting = 0;
+        /* Release all threads waiting on the semaphore */
+        if (barrier->count == 1 || 
+            ReleaseSemaphore(barrier->cond, barrier->count-1, &previousCount))
+        {
+            PJ_ASSERT_RETURN(previousCount == 0, PJ_EBUG);
+            return PJ_TRUE;
+        } else {
+            return pj_get_os_error();
+        }
+    }
+
+    if (WaitForSingleObject(barrier->cond, INFINITE) == WAIT_OBJECT_0)
+        return PJ_FALSE;
+    else
+        return pj_get_os_error();
+#endif
+}
+
+///////////////////////////////////////////////////////////////////////////////
 #if defined(PJ_TERM_HAS_COLOR) && PJ_TERM_HAS_COLOR != 0
 /*
  * Terminal color
@@ -1619,4 +1760,13 @@ PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
 {
     PJ_UNUSED_ARG(flags);
     return (*main_func)(argc, argv);
+}
+
+/*
+ * Set file descriptor close-on-exec flag
+ */
+PJ_DEF(pj_status_t) pj_set_cloexec_flag(int fd)
+{
+    PJ_UNUSED_ARG(fd);
+    return PJ_ENOTSUP;
 }

@@ -90,17 +90,19 @@ static int simple_sleep_test(void)
 
 static int sleep_duration_test(void)
 {
-    enum { MIS = 20};
-    unsigned duration[] = { 2000, 1000, 500, 200, 100 };
+    const unsigned MAX_SLIP = test_app.param_ci_mode? 200 : 20;
+    long duration[] = { 2000, 1000, 500, 200, 100 };
     unsigned i;
+    unsigned avg_diff, max_diff;
     pj_status_t rc;
 
     PJ_LOG(3,(THIS_FILE, "..running sleep duration test"));
 
     /* Test pj_thread_sleep() and pj_gettimeofday() */
-    for (i=0; i<PJ_ARRAY_SIZE(duration); ++i) {
+    for (i=0, avg_diff=0, max_diff=0; i<PJ_ARRAY_SIZE(duration); ++i) {
         pj_time_val start, stop;
-        pj_uint32_t msec;
+        long msec;
+        unsigned diff;
 
         /* Mark start of test. */
         rc = pj_gettimeofday(&start);
@@ -118,6 +120,10 @@ static int sleep_duration_test(void)
 
         /* Mark end of test. */
         rc = pj_gettimeofday(&stop);
+        if (rc != PJ_SUCCESS) {
+            app_perror("...error: pj_gettimeofday()", rc);
+            return -22;
+        }
 
         /* Calculate duration (store in stop). */
         PJ_TIME_VAL_SUB(stop, start);
@@ -126,23 +132,27 @@ static int sleep_duration_test(void)
         msec = PJ_TIME_VAL_MSEC(stop);
 
         /* Check if it's within range. */
-        if (msec < duration[i] * (100-MIS)/100 ||
-            msec > duration[i] * (100+MIS)/100)
-        {
+        diff = PJ_ABS(msec - duration[i]);
+        avg_diff = ((avg_diff * i) + diff) / (i+1);
+        max_diff = diff>max_diff ? diff : max_diff;
+        if (diff > MAX_SLIP) {
             PJ_LOG(3,(THIS_FILE, 
-                      "...error: slept for %d ms instead of %d ms "
-                      "(outside %d%% err window)",
-                      msec, duration[i], MIS));
-            return -30;
+                      "...error: slept for %ld ms instead of %ld ms "
+                      "(outside %d msec tolerance)",
+                      msec, duration[i], MAX_SLIP));
         }
     }
-
+    PJ_LOG(3,(THIS_FILE, "...avg/max slippage: %d/%d ms", 
+              avg_diff, max_diff));
+    if (max_diff > MAX_SLIP)
+        return -30;
 
     /* Test pj_thread_sleep() and pj_get_timestamp() and friends */
-    for (i=0; i<PJ_ARRAY_SIZE(duration); ++i) {
+    for (i=0, avg_diff=0, max_diff=0; i<PJ_ARRAY_SIZE(duration); ++i) {
         pj_time_val t1, t2;
         pj_timestamp start, stop;
-        pj_uint32_t msec;
+        long msec;
+        unsigned diff;
 
         pj_thread_sleep(0);
 
@@ -179,22 +189,25 @@ static int sleep_duration_test(void)
         msec = pj_elapsed_msec(&start, &stop);
 
         /* Check if it's within range. */
-        if (msec < duration[i] * (100-MIS)/100 ||
-            msec > duration[i] * (100+MIS)/100)
-        {
+        diff = PJ_ABS(msec - duration[i]);
+        avg_diff = ((avg_diff * i) + diff) / (i+1);
+        max_diff = diff>max_diff ? diff : max_diff;
+        if (diff > MAX_SLIP) {
             PJ_LOG(3,(THIS_FILE, 
-                      "...error: slept for %d ms instead of %d ms "
-                      "(outside %d%% err window)",
-                      msec, duration[i], MIS));
+                      "...error: slept for %ld ms instead of %ld ms "
+                      "(outside %d msec tolerance)",
+                      msec, duration[i], MAX_SLIP));
             PJ_TIME_VAL_SUB(t2, t1);
             PJ_LOG(3,(THIS_FILE, 
                       "...info: gettimeofday() reported duration is "
-                      "%d msec",
+                      "%ld msec",
                       PJ_TIME_VAL_MSEC(t2)));
-
-            return -76;
         }
     }
+    PJ_LOG(3,(THIS_FILE, "...avg/max slippage: %d/%d ms", 
+              avg_diff, max_diff));
+    if (max_diff > MAX_SLIP)
+        return -76;
 
     /* All done. */
     return 0;

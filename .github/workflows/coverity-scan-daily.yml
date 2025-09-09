@@ -1,0 +1,19 @@
+# Scheduled scan, only runs on master (see
+# https://stackoverflow.com/a/58800550)
+
+name: "Coverity Scan (Daily)"
+
+on:
+  schedule:
+    - cron: '0 12 * * *'   # Daily at 12:00 UTC
+
+jobs:
+  ubuntu-full-bundle:
+    if: github.repository == 'pjsip/pjproject'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: run.sh
+        run: tests/coverity-scan/run.sh
+        env:
+          COV_TOKEN: ${{ secrets.PJSIP_COVERITY_SCAN_TOKEN }}

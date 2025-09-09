@@ -77,8 +77,8 @@ static const char *decode_caps(unsigned caps)
             const char *capname;
             capname = pjmedia_aud_dev_cap_name((pjmedia_aud_dev_cap)(1 << i), 
                                                NULL);
-            strcat(text, capname);
-            strcat(text, " ");
+            pj_ansi_strxcat(text, capname, sizeof(text));
+            pj_ansi_strxcat(text, " ", sizeof(text));
         }
     }
 
@@ -122,30 +122,31 @@ static void show_dev_info(unsigned index)
 
             switch (info.ext_fmt[i].id) {
             case PJMEDIA_FORMAT_L16:
-                strcat(formats, "L16/");
+                pj_ansi_strxcat(formats, "L16/", sizeof(formats));
                 break;
             case PJMEDIA_FORMAT_PCMA:
-                strcat(formats, "PCMA/");
+                pj_ansi_strxcat(formats, "PCMA/", sizeof(formats));
                 break;
             case PJMEDIA_FORMAT_PCMU:
-                strcat(formats, "PCMU/");
+                pj_ansi_strxcat(formats, "PCMU/", sizeof(formats));
                 break;
             case PJMEDIA_FORMAT_AMR:
-                strcat(formats, "AMR/");
+                pj_ansi_strxcat(formats, "AMR/", sizeof(formats));
                 break;
             case PJMEDIA_FORMAT_G729:
-                strcat(formats, "G729/");
+                pj_ansi_strxcat(formats, "G729/", sizeof(formats));
                 break;
             case PJMEDIA_FORMAT_ILBC:
-                strcat(formats, "ILBC/");
+                pj_ansi_strxcat(formats, "ILBC/", sizeof(formats));
                 break;
             default:
-                strcat(formats, "unknown/");
+                pj_ansi_strxcat(formats, "unknown/", sizeof(formats));
                 break;
             }
-            sprintf(bitrate, "%u", info.ext_fmt[i].det.aud.avg_bps);
-            strcat(formats, bitrate);
-            strcat(formats, " ");
+            pj_ansi_snprintf(bitrate, sizeof(bitrate), "%u",
+                             info.ext_fmt[i].det.aud.avg_bps);
+            pj_ansi_strxcat(formats, bitrate, sizeof(formats));
+            pj_ansi_strxcat(formats, " ", sizeof(formats));
         }
     }
     PJ_LOG(3, (THIS_FILE, H": %s", "Extended formats", formats));

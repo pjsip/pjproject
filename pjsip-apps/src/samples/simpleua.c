@@ -180,7 +180,7 @@ static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
      *  has lower priority than transport layer.
      */
 
-    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s %s:%d:\n"
+    PJ_LOG(4,(THIS_FILE, "TX %ld bytes %s to %s %s:%d:\n"
                          "%.*s\n"
                          "--end msg--",
                          (tdata->buf.cur - tdata->buf.start),
@@ -459,7 +459,7 @@ int main(int argc, char *argv[])
         }
         pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
 
-        pj_ansi_sprintf(temp, "<sip:simpleuac@%s:%d>", 
+        pj_ansi_snprintf(temp, sizeof(temp), "<sip:simpleuac@%s:%d>", 
                         hostip, SIP_PORT);
         local_uri = pj_str(temp);
 
@@ -743,7 +743,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     }
     pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
 
-    pj_ansi_sprintf(temp, "<sip:simpleuas@%s:%d>", 
+    pj_ansi_snprintf(temp, sizeof(temp), "<sip:simpleuas@%s:%d>", 
                     hostip, SIP_PORT);
     local_uri = pj_str(temp);
 
@@ -896,7 +896,11 @@ static void call_on_media_update( pjsip_inv_session *inv,
     }
 
     /* Start the UDP media transport */
-    pjmedia_transport_media_start(g_med_transport[0], 0, 0, 0, 0);
+    status = pjmedia_transport_media_start(g_med_transport[0], 0, 0, 0, 0);
+    if (status != PJ_SUCCESS) {
+        app_perror( THIS_FILE, "Unable to start UDP media transport", status);
+        return;
+    }
 
     /* Get the media port interface of the audio stream. 
      * Media port interface is basicly a struct containing get_frame() and
@@ -904,10 +908,14 @@ static void call_on_media_update( pjsip_inv_session *inv,
      * the port interface to conference bridge, or directly to a sound
      * player/recorder device.
      */
-    pjmedia_stream_get_port(g_med_stream, &media_port);
+    status = pjmedia_stream_get_port(g_med_stream, &media_port);
+    if (status != PJ_SUCCESS) {
+        app_perror( THIS_FILE, "Unable to create media port interface of the audio stream", status);
+        return;
+    }
 
     /* Create sound port */
-    pjmedia_snd_port_create(inv->pool,
+    status = pjmedia_snd_port_create(inv->pool,
                             PJMEDIA_AUD_DEFAULT_CAPTURE_DEV,
                             PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV,
                             PJMEDIA_PIA_SRATE(&media_port->info),/* clock rate      */
@@ -1078,5 +1086,4 @@ static void call_on_media_update( pjsip_inv_session *inv,
 
     /* Done with media. */
 }
-
 

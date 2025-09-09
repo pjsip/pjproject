@@ -59,8 +59,7 @@ PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
         return NULL;
 
     pj_bzero(oi, sizeof(*oi));
-    pj_ansi_strncpy(oi->name, di.name, sizeof(oi->name));
-    oi->name[sizeof(oi->name)-1] = '\0';
+    pj_ansi_strxcpy(oi->name, di.name, sizeof(oi->name));
     oi->input_count = di.input_count;
     oi->output_count = di.output_count;
     oi->default_samples_per_sec = di.default_samples_per_sec;

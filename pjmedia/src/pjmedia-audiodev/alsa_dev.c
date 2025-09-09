@@ -23,6 +23,7 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pjmedia/errno.h>
+#include <pjmedia-audiodev/alsa.h>
 
 #if defined(PJMEDIA_AUDIO_DEV_HAS_ALSA) && PJMEDIA_AUDIO_DEV_HAS_ALSA
 
@@ -42,7 +43,7 @@
 #define ALSASOUND_CAPTURE               2
 #define MAX_SOUND_CARDS                 5
 #define MAX_SOUND_DEVICES_PER_CARD      5
-#define MAX_DEVICES                     32
+#define MAX_DEVICES                     PJMEDIA_AUD_DEV_MAX_DEVS
 #define MAX_MIX_NAME_LEN                64 
 
 /* Set to 1 to enable tracing */
@@ -101,7 +102,12 @@ struct alsa_factory
     pjmedia_aud_dev_info         devs[MAX_DEVICES];
     char                         pb_mixer_name[MAX_MIX_NAME_LEN];
     char                         cap_mixer_name[MAX_MIX_NAME_LEN];
+
+    unsigned                     custom_dev_cnt;
+    pj_str_t                     custom_dev[MAX_DEVICES];
 };
+
+static pjmedia_aud_dev_factory *default_factory;
 
 struct alsa_stream
 {
@@ -193,7 +199,7 @@ static void alsa_error_handler (const char *file,
     }
 
     va_start (arg, fmt);
-    if (index < sizeof(err_msg)-1) {
+    if (index < (int)sizeof(err_msg)-1) {
         len = vsnprintf( err_msg+index, sizeof(err_msg)-index, fmt, arg);
         if (len < 1 || len >= (int)sizeof(err_msg)-index)
             len = sizeof(err_msg)-index-1;
@@ -201,7 +207,7 @@ static void alsa_error_handler (const char *file,
         err_msg[index] = '\0';
     }
     va_end(arg);
-    if (err && index < sizeof(err_msg)-1) {
+    if (err && index < (int)sizeof(err_msg)-1) {
         len = snprintf( err_msg+index, sizeof(err_msg)-index, ": %s",
                         snd_strerror(err));
         if (len < 1 || len >= (int)sizeof(err_msg)-index)
@@ -258,7 +264,7 @@ static pj_status_t add_dev (struct alsa_factory *af, const char *dev_name)
     pj_bzero(adi, sizeof(*adi));
 
     /* Set device name */
-    strncpy(adi->name, dev_name, sizeof(adi->name));
+    pj_ansi_strxcpy(adi->name, dev_name, sizeof(adi->name));
 
     /* Check the number of playback channels */
     adi->output_count = (pb_result>=0) ? 1 : 0;
@@ -270,7 +276,7 @@ static pj_status_t add_dev (struct alsa_factory *af, const char *dev_name)
     adi->default_samples_per_sec = 8000;
 
     /* Driver name */
-    strcpy(adi->driver, "ALSA");
+    pj_ansi_strxcpy(adi->driver, "ALSA", sizeof(adi->driver));
 
     ++af->dev_cnt;
 
@@ -311,17 +317,15 @@ static void get_mixer_name(struct alsa_factory *af)
         {
             if (snd_mixer_selem_has_playback_volume(elem))
             {
-                pj_ansi_strncpy(af->pb_mixer_name, elemname,
-                                sizeof(af->pb_mixer_name));
-                af->pb_mixer_name[sizeof(af->pb_mixer_name)-1] = 0;
+                pj_ansi_strxcpy(af->pb_mixer_name, elemname,
+                                     sizeof(af->pb_mixer_name));
                 TRACE_((THIS_FILE, "Playback mixer name: %s",
                         af->pb_mixer_name));
             }
             if (snd_mixer_selem_has_capture_volume(elem))
             {
-                pj_ansi_strncpy(af->cap_mixer_name, elemname,
-                                sizeof(af->cap_mixer_name));
-                af->cap_mixer_name[sizeof(af->cap_mixer_name)-1] = 0;
+                pj_ansi_strxcpy(af->cap_mixer_name, elemname,
+                                     sizeof(af->cap_mixer_name));
                 TRACE_((THIS_FILE, "Capture mixer name: %s",
                         af->cap_mixer_name));
             }
@@ -354,6 +358,9 @@ static pj_status_t alsa_factory_init(pjmedia_aud_dev_factory *f)
     if (PJ_SUCCESS != status)
         return status;
 
+    if (!default_factory)
+        default_factory = f;
+
     PJ_LOG(4,(THIS_FILE, "ALSA initialized"));
     return PJ_SUCCESS;
 }
@@ -363,6 +370,9 @@ static pj_status_t alsa_factory_init(pjmedia_aud_dev_factory *f)
 static pj_status_t alsa_factory_destroy(pjmedia_aud_dev_factory *f)
 {
     struct alsa_factory *af = (struct alsa_factory*)f;
+
+    if (default_factory == f)
+        default_factory = NULL;
 
     if (af->pool)
         pj_pool_release(af->pool);
@@ -389,18 +399,14 @@ static pj_status_t alsa_factory_refresh(pjmedia_aud_dev_factory *f)
 
     TRACE_((THIS_FILE, "pjmedia_snd_init: Enumerate sound devices"));
 
-    if (af->pool != NULL) {
-        pj_pool_release(af->pool);
-        af->pool = NULL;
-    }
-
-    af->pool = pj_pool_create(af->pf, "alsa_aud", 256, 256, NULL);
     af->dev_cnt = 0;
 
-    /* Enumerate sound devices */
-    err = snd_device_name_hint(-1, "pcm", (void***)&hints);
-    if (err != 0)
-        return PJMEDIA_EAUD_SYSERR;
+    if (af->custom_dev_cnt == 0) {
+        /* Enumerate sound devices */
+        err = snd_device_name_hint(-1, "pcm", (void***)&hints);
+        if (err != 0)
+            return PJMEDIA_EAUD_SYSERR;
+    }
 
 #if ENABLE_TRACING
     snd_lib_error_set_handler(alsa_error_handler);
@@ -409,15 +415,22 @@ static pj_status_t alsa_factory_refresh(pjmedia_aud_dev_factory *f)
     snd_lib_error_set_handler(null_alsa_error_handler);
 #endif
 
-    n = hints;
-    while (*n != NULL) {
-        char *name = snd_device_name_get_hint(*n, "NAME");
-        if (name != NULL) {
-            if (0 != strcmp("null", name))
-                add_dev(af, name);
-            free(name);
+    if (af->custom_dev_cnt == 0) {
+        n = hints;
+        while (*n != NULL) {
+            char *name = snd_device_name_get_hint(*n, "NAME");
+            if (name != NULL) {
+                if (0 != strcmp("null", name))
+                    add_dev(af, name);
+                free(name);
+            }
+            n++;
         }
-        n++;
+    } else {
+        unsigned i;
+        for (i = 0; i < af->custom_dev_cnt; ++i) {
+            add_dev(af, af->custom_dev[i].ptr);
+        }
     }
 
     /* Get the mixer name */
@@ -428,7 +441,9 @@ static pj_status_t alsa_factory_refresh(pjmedia_aud_dev_factory *f)
      */
     snd_lib_error_set_handler(alsa_error_handler);
 
-    err = snd_device_name_free_hint((void**)hints);
+    if (af->custom_dev_cnt == 0) {
+        err = snd_device_name_free_hint((void**)hints);
+    }
 
     PJ_LOG(4,(THIS_FILE, "ALSA driver found %d devices", af->dev_cnt));
 
@@ -451,7 +466,7 @@ static pj_status_t alsa_factory_get_dev_info(pjmedia_aud_dev_factory *f,
 {
     struct alsa_factory *af = (struct alsa_factory*)f;
 
-    PJ_ASSERT_RETURN(index>=0 && index<af->dev_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(index<af->dev_cnt, PJ_EINVAL);
 
     pj_memcpy(info, &af->devs[index], sizeof(*info));
     info->caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
@@ -470,7 +485,7 @@ static pj_status_t alsa_factory_default_param(pjmedia_aud_dev_factory *f,
     struct alsa_factory *af = (struct alsa_factory*)f;
     pjmedia_aud_dev_info *adi;
 
-    PJ_ASSERT_RETURN(index>=0 && index<af->dev_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(index<af->dev_cnt, PJ_EINVAL);
 
     adi = &af->devs[index];
 
@@ -637,7 +652,7 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     snd_pcm_uframes_t tmp_buf_size;
     snd_pcm_uframes_t tmp_period_size;
 
-    if (param->play_id < 0 || param->play_id >= stream->af->dev_cnt)
+    if (param->play_id < 0 || param->play_id >= (int)stream->af->dev_cnt)
         return PJMEDIA_EAUD_INVDEV;
 
     /* Open PCM for playback */
@@ -647,18 +662,36 @@ static pj_status_t open_playback (struct alsa_stream* stream,
                            stream->af->devs[param->play_id].name,
                            SND_PCM_STREAM_PLAYBACK,
                            0);
-    if (result < 0)
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to open playback device '%s', err: %s",
+                  stream->af->devs[param->play_id].name, snd_strerror(result)));
+
         return PJMEDIA_EAUD_SYSERR;
+    }
 
     /* Allocate a hardware parameters object. */
     snd_pcm_hw_params_alloca (&params);
 
     /* Fill it in with default values. */
-    snd_pcm_hw_params_any (stream->pb_pcm, params);
+    result = snd_pcm_hw_params_any (stream->pb_pcm, params);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to get configuration for "
+            "playback device '%s', err: %s",
+            stream->af->devs[param->play_id].name, snd_strerror(result)));
+
+        goto on_error;
+    }
 
     /* Set interleaved mode */
-    snd_pcm_hw_params_set_access (stream->pb_pcm, params,
-                                  SND_PCM_ACCESS_RW_INTERLEAVED);
+    result = snd_pcm_hw_params_set_access (stream->pb_pcm, params,
+                                           SND_PCM_ACCESS_RW_INTERLEAVED);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to set interleaved mode for "
+                  "playback device '%s', err: %s",
+                  stream->af->devs[param->play_id].name, snd_strerror(result)));
+
+        goto on_error;
+    }
 
     /* Set format */
     switch (param->bits_per_sample) {
@@ -683,7 +716,14 @@ static pj_status_t open_playback (struct alsa_stream* stream,
         format = SND_PCM_FORMAT_S16_LE;
         break;
     }
-    snd_pcm_hw_params_set_format (stream->pb_pcm, params, format);
+    result = snd_pcm_hw_params_set_format (stream->pb_pcm, params, format);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to set format %d for "
+            "playback device '%s', err: %s", format,
+            stream->af->devs[param->play_id].name, snd_strerror(result)));
+
+        goto on_error;
+    }
 
     /* Set number of channels */
     TRACE_((THIS_FILE, "open_playback: set channels: %d",
@@ -692,16 +732,26 @@ static pj_status_t open_playback (struct alsa_stream* stream,
                                              param->channel_count);
     if (result < 0) {
         PJ_LOG (3,(THIS_FILE, "Unable to set a channel count of %d for "
-                   "playback device '%s'", param->channel_count,
-                   stream->af->devs[param->play_id].name));
-        snd_pcm_close (stream->pb_pcm);
-        return PJMEDIA_EAUD_SYSERR;
+                   "playback device '%s', err: %s", param->channel_count,
+                   stream->af->devs[param->play_id].name,snd_strerror(result)));
+
+        goto on_error;
     }
 
     /* Set clock rate */
     rate = param->clock_rate;
     TRACE_((THIS_FILE, "open_playback: set clock rate: %d", rate));
-    snd_pcm_hw_params_set_rate_near (stream->pb_pcm, params, &rate, NULL);
+    result = snd_pcm_hw_params_set_rate_near (stream->pb_pcm, params,
+                                              &rate, NULL);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to set clock rate: %d for "
+                    "playback device '%s', err: %s", param->clock_rate,
+                    stream->af->devs[param->play_id].name,
+                    snd_strerror(result)));
+
+        goto on_error;
+    }
+
     TRACE_((THIS_FILE, "open_playback: clock rate set to: %d", rate));
 
     /* Set period size to samples_per_frame frames. */
@@ -710,13 +760,21 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     TRACE_((THIS_FILE, "open_playback: set period size: %d",
             stream->pb_frames));
     tmp_period_size = stream->pb_frames;
-    snd_pcm_hw_params_set_period_size_near (stream->pb_pcm, params,
-                                            &tmp_period_size, NULL);
+    result = snd_pcm_hw_params_set_period_size_near (stream->pb_pcm, params,
+                                                     &tmp_period_size, NULL);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to set period size: %d for "
+                  "playback device '%s', err: %s", (int)stream->pb_frames,
+                  stream->af->devs[param->play_id].name, snd_strerror(result)));
+
+        goto on_error;
+    }
+
     /* Commenting this as it may cause the number of samples per frame
      * to be incorrest.
-     */  
+     */
     // stream->pb_frames = tmp_period_size > stream->pb_frames ?
-    //                  tmp_period_size : stream->pb_frames;                                                                                
+    //                  tmp_period_size : stream->pb_frames;
     TRACE_((THIS_FILE, "open_playback: period size set to: %d",
             tmp_period_size));
 
@@ -729,6 +787,12 @@ static pj_status_t open_playback (struct alsa_stream* stream,
         tmp_buf_size = tmp_period_size * 2;
     snd_pcm_hw_params_set_buffer_size_near (stream->pb_pcm, params,
                                             &tmp_buf_size);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Warning: unable to set period size: %d for "
+                  "playback device '%s', err: %s", (int)tmp_buf_size,
+                  stream->af->devs[param->play_id].name, snd_strerror(result)));
+    }
+
     stream->param.output_latency_ms = tmp_buf_size / (rate / 1000);
 
     /* Set our buffer */
@@ -744,8 +808,11 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     /* Activate the parameters */
     result = snd_pcm_hw_params (stream->pb_pcm, params);
     if (result < 0) {
-        snd_pcm_close (stream->pb_pcm);
-        return PJMEDIA_EAUD_SYSERR;
+        PJ_LOG (3,(THIS_FILE, "Unable to activate the param for "
+                  "playback device '%s', err: %s",
+                  stream->af->devs[param->play_id].name, snd_strerror(result)));
+
+        goto on_error;
     }
 
     if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
@@ -755,13 +822,17 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     }
 
     PJ_LOG (5,(THIS_FILE, "Opened device alsa(%s) for playing, sample rate=%d"
-               ", ch=%d, bits=%d, period size=%d frames, latency=%d ms",
+               ", ch=%d, bits=%d, period size=%ld frames, latency=%d ms",
                stream->af->devs[param->play_id].name,
                rate, param->channel_count,
                param->bits_per_sample, stream->pb_frames,
                (int)stream->param.output_latency_ms));
 
     return PJ_SUCCESS;
+
+on_error:
+    snd_pcm_close (stream->pb_pcm);
+    return PJMEDIA_EAUD_SYSERR;
 }
 
 
@@ -775,28 +846,46 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     snd_pcm_uframes_t tmp_buf_size;
     snd_pcm_uframes_t tmp_period_size;
 
-    if (param->rec_id < 0 || param->rec_id >= stream->af->dev_cnt)
+    if (param->rec_id < 0 || param->rec_id >= (int)stream->af->dev_cnt)
         return PJMEDIA_EAUD_INVDEV;
 
     /* Open PCM for capture */
     PJ_LOG (5,(THIS_FILE, "open_capture: Open capture device '%s'",
                stream->af->devs[param->rec_id].name));
     result = snd_pcm_open (&stream->ca_pcm,
-                            stream->af->devs[param->rec_id].name,
+                           stream->af->devs[param->rec_id].name,
                            SND_PCM_STREAM_CAPTURE,
                            0);
-    if (result < 0)
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to open capture device '%s', err: %s",
+                   stream->af->devs[param->rec_id].name, snd_strerror(result)));
+
         return PJMEDIA_EAUD_SYSERR;
+    }
 
     /* Allocate a hardware parameters object. */
     snd_pcm_hw_params_alloca (&params);
 
     /* Fill it in with default values. */
-    snd_pcm_hw_params_any (stream->ca_pcm, params);
+    result = snd_pcm_hw_params_any (stream->ca_pcm, params);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to get configuration for "
+            "capture device '%s', err: %s",
+            stream->af->devs[param->rec_id].name, snd_strerror(result)));
+
+        goto on_error;
+    }
 
     /* Set interleaved mode */
-    snd_pcm_hw_params_set_access (stream->ca_pcm, params,
-                                  SND_PCM_ACCESS_RW_INTERLEAVED);
+    result = snd_pcm_hw_params_set_access (stream->ca_pcm, params,
+                                           SND_PCM_ACCESS_RW_INTERLEAVED);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to set interleaved mode for "
+                  "capture device '%s', err: %s",
+                   stream->af->devs[param->rec_id].name, snd_strerror(result)));
+
+        goto on_error;
+    }
 
     /* Set format */
     switch (param->bits_per_sample) {
@@ -821,7 +910,14 @@ static pj_status_t open_capture (struct alsa_stream* stream,
         format = SND_PCM_FORMAT_S16_LE;
         break;
     }
-    snd_pcm_hw_params_set_format (stream->ca_pcm, params, format);
+    result = snd_pcm_hw_params_set_format (stream->ca_pcm, params, format);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to set format %d for "
+            "capture device '%s', err: %s", format,
+            stream->af->devs[param->rec_id].name, snd_strerror(result)));
+
+        goto on_error;
+    }
 
     /* Set number of channels */
     TRACE_((THIS_FILE, "open_capture: set channels: %d",
@@ -830,16 +926,25 @@ static pj_status_t open_capture (struct alsa_stream* stream,
                                              param->channel_count);
     if (result < 0) {
         PJ_LOG (3,(THIS_FILE, "Unable to set a channel count of %d for "
-                   "capture device '%s'", param->channel_count,
-                   stream->af->devs[param->rec_id].name));
-        snd_pcm_close (stream->ca_pcm);
-        return PJMEDIA_EAUD_SYSERR;
-    }
+                    "capture device '%s', err: %s", param->channel_count,
+                    stream->af->devs[param->rec_id].name,snd_strerror(result)));
 
+        goto on_error;
+    }
     /* Set clock rate */
     rate = param->clock_rate;
     TRACE_((THIS_FILE, "open_capture: set clock rate: %d", rate));
-    snd_pcm_hw_params_set_rate_near (stream->ca_pcm, params, &rate, NULL);
+    result = snd_pcm_hw_params_set_rate_near (stream->ca_pcm, params, &rate,
+                                              NULL);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to set clock rate: %d for "
+                    "capture device '%s', err: %s", param->clock_rate,
+                    stream->af->devs[param->rec_id].name,
+                    snd_strerror(result)));
+
+        goto on_error;
+    }
+
     TRACE_((THIS_FILE, "open_capture: clock rate set to: %d", rate));
 
     /* Set period size to samples_per_frame frames. */
@@ -848,8 +953,15 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     TRACE_((THIS_FILE, "open_capture: set period size: %d",
             stream->ca_frames));
     tmp_period_size = stream->ca_frames;
-    snd_pcm_hw_params_set_period_size_near (stream->ca_pcm, params,
-                                            &tmp_period_size, NULL);
+    result = snd_pcm_hw_params_set_period_size_near (stream->ca_pcm, params,
+                                                     &tmp_period_size, NULL);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Unable to set period size: %d for "
+                   "capture device '%s', err: %s", (int)stream->ca_frames,
+                   stream->af->devs[param->rec_id].name, snd_strerror(result)));
+
+        goto on_error;
+    }
     /* Commenting this as it may cause the number of samples per frame
      * to be incorrest.
      */
@@ -865,8 +977,14 @@ static pj_status_t open_capture (struct alsa_stream* stream,
         tmp_buf_size = (rate / 1000) * PJMEDIA_SND_DEFAULT_REC_LATENCY;
     if (tmp_buf_size < tmp_period_size * 2)
         tmp_buf_size = tmp_period_size * 2;
-    snd_pcm_hw_params_set_buffer_size_near (stream->ca_pcm, params,
-                                            &tmp_buf_size);
+    result = snd_pcm_hw_params_set_buffer_size_near (stream->ca_pcm, params,
+                                                     &tmp_buf_size);
+    if (result < 0) {
+        PJ_LOG (3,(THIS_FILE, "Warning: unable to set period size: %d for "
+                   "capture device '%s', err: %s", (int)tmp_buf_size,
+                   stream->af->devs[param->rec_id].name, snd_strerror(result)));
+    }
+
     stream->param.input_latency_ms = tmp_buf_size / (rate / 1000);
 
     /* Set our buffer */
@@ -882,8 +1000,11 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     /* Activate the parameters */
     result = snd_pcm_hw_params (stream->ca_pcm, params);
     if (result < 0) {
-        snd_pcm_close (stream->ca_pcm);
-        return PJMEDIA_EAUD_SYSERR;
+        PJ_LOG (3,(THIS_FILE, "Unable to activate the param for "
+                   "capture device '%s', err: %s",
+                   stream->af->devs[param->rec_id].name, snd_strerror(result)));
+
+        goto on_error;
     }
 
     if (param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING) {
@@ -893,13 +1014,17 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     }
 
     PJ_LOG (5,(THIS_FILE, "Opened device alsa(%s) for capture, sample rate=%d"
-               ", ch=%d, bits=%d, period size=%d frames, latency=%d ms",
+               ", ch=%d, bits=%d, period size=%ld frames, latency=%d ms",
                stream->af->devs[param->rec_id].name,
                rate, param->channel_count,
                param->bits_per_sample, stream->ca_frames,
                (int)stream->param.input_latency_ms));
 
     return PJ_SUCCESS;
+
+on_error:
+    snd_pcm_close (stream->ca_pcm);
+    return PJMEDIA_EAUD_SYSERR;
 }
 
 
@@ -1083,7 +1208,7 @@ static pj_status_t alsa_stream_start (pjmedia_aud_stream *s)
 
     if (stream->param.dir & PJMEDIA_DIR_CAPTURE) {
         status = pj_thread_create (stream->pool,
-                                   "alsasound_playback",
+                                   "alsasound_capture",
                                    ca_thread_func,
                                    stream,
                                    0, //ZERO,
@@ -1156,5 +1281,42 @@ static pj_status_t alsa_stream_destroy (pjmedia_aud_stream *s)
 
     return PJ_SUCCESS;
 }
+
+
+/*
+ * Manually set ALSA devices.
+ */
+PJ_DEF(pj_status_t) pjmedia_aud_alsa_set_devices( pjmedia_aud_dev_factory *f,
+                                                  unsigned count,
+                                                  const char* names[] )
+{
+    struct alsa_factory *af = (struct alsa_factory*)f;
+
+    if (!af)
+        af = (struct alsa_factory*)default_factory;
+
+    PJ_ASSERT_RETURN(af, PJ_EINVAL);
+    PJ_ASSERT_RETURN(count <= MAX_DEVICES, PJ_ETOOMANY);
+
+    PJ_LOG(4,(THIS_FILE, "ALSA driver set manually %d devices", count));
+
+    if (af->pool != NULL) {
+        pj_pool_release(af->pool);
+        af->pool = NULL;
+    }
+
+    if (count > 0) {
+        unsigned i;
+        af->pool = pj_pool_create(af->pf, "alsa_custom_dev", 256, 256, NULL);
+
+        for (i = 0; i < count; ++i) {
+            pj_strdup2_with_null(af->pool, &af->custom_dev[i], names[i]);
+        }
+    }
+    af->custom_dev_cnt = count;
+
+    return pjmedia_aud_dev_refresh();
+}
+
 
 #endif  /* PJMEDIA_AUDIO_DEV_HAS_ALSA */

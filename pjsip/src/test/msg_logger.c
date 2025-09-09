@@ -45,7 +45,7 @@ static pj_bool_t on_rx_msg(pjsip_rx_data *rdata)
 static pj_status_t on_tx_msg(pjsip_tx_data *tdata)
 {
     if (msg_log_enabled) {
-        PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s:%s:%d:\n"
+        PJ_LOG(4,(THIS_FILE, "TX %ld bytes %s to %s:%s:%d:\n"
                              "%.*s\n"
                              "--end msg--",
                              (tdata->buf.cur - tdata->buf.start),
@@ -53,7 +53,7 @@ static pj_status_t on_tx_msg(pjsip_tx_data *tdata)
                              tdata->tp_info.transport->type_name,
                              tdata->tp_info.dst_name,
                              tdata->tp_info.dst_port,
-                             (tdata->buf.cur - tdata->buf.start),
+                             (int)(tdata->buf.cur - tdata->buf.start),
                              tdata->buf.start));
     }
     return PJ_SUCCESS;

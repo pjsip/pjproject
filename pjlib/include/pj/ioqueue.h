@@ -186,9 +186,9 @@ PJ_BEGIN_DECL
  *
  * For some examples on how to use the I/O Queue, please see:
  *
- *  - \ref page_pjlib_ioqueue_tcp_test
- *  - \ref page_pjlib_ioqueue_udp_test
- *  - \ref page_pjlib_ioqueue_perf_test
+ *  - I/O Queue TCP test: \src{pjlib/src/pjlib-test/ioq_tcp.c}
+ *  - I/O Queue UDP test: \src{pjlib/src/pjlib-test/ioq_udp.c}
+ *  - I/O Queue Performance test: \src{pjlib/src/pjlib-test/ioq_perf.c}
  */
 
 
@@ -929,6 +929,20 @@ PJ_DECL(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
                                         pj_uint32_t flags,
                                         const pj_sockaddr_t *addr,
                                         int addrlen);
+
+
+/**
+ * Get the underlying OS handle associated with an ioqueue instance.
+ *
+ * @param ioqueue        The ioqueue instance.
+ *
+ * @return          The OS handle associated with the instance.
+ *                  For epoll/kqueue this will be a pointer to the file
+ *                  descriptor. For all other platforms, this will be a pointer
+ *                  to a platform-specific handle.
+ *                  If no handle is available, NULL will be returned.
+ */
+PJ_DECL(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue );
 
 
 /**

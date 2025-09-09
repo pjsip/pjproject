@@ -71,6 +71,7 @@ typedef struct pjsip_tcp_transport_cfg
     /**
      * Optional published address, which is the address to be
      * advertised as the address of this SIP transport. 
+     * It can be set using IP address or hostname.
      * By default the bound address will be used as the published address.
      */
     pjsip_host_port     addr_name;
@@ -114,7 +115,8 @@ typedef struct pjsip_tcp_transport_cfg
 
     /**
      * Intial timeout interval to be applied to incoming transports 
-     * (i.e. server side) when no data received after a successful connection.
+     * (i.e. server side) when no valid data received after a successful
+     * connection.
      *
      * Default: PJSIP_TCP_INITIAL_TIMEOUT
      */
@@ -181,6 +183,7 @@ PJ_DECL(pj_status_t) pjsip_tcp_transport_start(pjsip_endpoint *endpt,
  *                      selected by the operating system.
  * @param a_name        Optional published address, which is the address to be
  *                      advertised as the address of this SIP transport. 
+ *                      It can be set using IP address or hostname.
  *                      If this argument is NULL, then the bound address
  *                      will be used as the published address.
  * @param async_cnt     Number of simultaneous asynchronous accept()
@@ -248,6 +251,7 @@ PJ_DECL(pj_sock_t) pjsip_tcp_transport_get_socket(pjsip_transport *transport);
  *                      selected by the operating system.
  *
  * @param a_name        The published address for the listener. 
+ *                      It can be set using IP address or hostname.
  *                      If this argument is NULL, then the bound address will 
  *                      be used as the published address.
  *
@@ -272,6 +276,7 @@ PJ_DECL(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
  *                      selected by the operating system.
  *
  * @param a_name        The published address for the listener. 
+ *                      It can be set using IP address or hostname.
  *                      If this argument is NULL, then the bound address will
  *                      be used as the published address.
  *

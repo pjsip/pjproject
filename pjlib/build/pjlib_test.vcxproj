@@ -717,6 +717,7 @@
     <ClCompile Include="..\src\pjlib-test\fifobuf.c" />
     <ClCompile Include="..\src\pjlib-test\file.c" />
     <ClCompile Include="..\src\pjlib-test\hash_test.c" />
+    <ClCompile Include="..\src\pjlib-test\ioq_iocp_unreg_test.c" />
     <ClCompile Include="..\src\pjlib-test\ioq_perf.c" />
     <ClCompile Include="..\src\pjlib-test\ioq_stress_test.c" />
     <ClCompile Include="..\src\pjlib-test\ioq_tcp.c" />
@@ -788,6 +789,7 @@
     <ClCompile Include="..\src\pjlib-test\sock.c" />
     <ClCompile Include="..\src\pjlib-test\sock_perf.c" />
     <ClCompile Include="..\src\pjlib-test\ssl_sock.c" />
+    <ClCompile Include="..\src\pjlib-test\atomic_slist.c" />
     <ClCompile Include="..\src\pjlib-test\string.c" />
     <ClCompile Include="..\src\pjlib-test\test.c" />
     <ClCompile Include="..\src\pjlib-test\thread.c" />
@@ -795,6 +797,7 @@
     <ClCompile Include="..\src\pjlib-test\timestamp.c" />
     <ClCompile Include="..\src\pjlib-test\udp_echo_srv_ioqueue.c" />
     <ClCompile Include="..\src\pjlib-test\udp_echo_srv_sync.c" />
+    <ClCompile Include="..\src\pjlib-test\unittest_test.c" />
     <ClCompile Include="..\src\pjlib-test\util.c" />
   </ItemGroup>
   <ItemGroup>

@@ -49,9 +49,9 @@ PJ_BEGIN_DECL
  *
  * For some examples on how to use the socket API, please see:
  *
- *  - \ref page_pjlib_sock_test
- *  - \ref page_pjlib_select_test
- *  - \ref page_pjlib_sock_perf_test
+ *  - Socket test: \src{pjlib/src/pjlib-test/sock.c}
+ *  - Socket Select() test: \src{pjlib/src/pjlib-test/select.c}
+ *  - Socket Performance test: \src{pjlib/src/pjlib-test/sock_perf.c}
  */
 
 
@@ -140,6 +140,9 @@ extern const pj_uint16_t PJ_SOCK_RAW;
 /** Reliably-delivered messages.  @see pj_SOCK_RDM() */
 extern const pj_uint16_t PJ_SOCK_RDM;
 
+/** The close-on-exec flag. @see pj_SOCK_CLOEXEC() */
+extern const int PJ_SOCK_CLOEXEC;
+
 
 /*
  * Accessor functions for various constants. These functions are provided
@@ -155,6 +158,8 @@ extern const pj_uint16_t PJ_SOCK_RDM;
     PJ_DECL(int) pj_SOCK_RAW(void);
     /** Get #PJ_SOCK_RDM constant */
     PJ_DECL(int) pj_SOCK_RDM(void);
+    /** Get #PJ_SOCK_CLOEXEC constant */
+    PJ_DECL(int) pj_SOCK_CLOEXEC(void);
 #else
     /** Get #PJ_SOCK_STREAM constant */
 #   define pj_SOCK_STREAM() PJ_SOCK_STREAM
@@ -164,6 +169,8 @@ extern const pj_uint16_t PJ_SOCK_RDM;
 #   define pj_SOCK_RAW()    PJ_SOCK_RAW
     /** Get #PJ_SOCK_RDM constant */
 #   define pj_SOCK_RDM()    PJ_SOCK_RDM
+    /** Get #PJ_SOCK_CLOEXEC constant */
+#   define pj_SOCK_CLOEXEC() PJ_SOCK_CLOEXEC
 #endif
 
 
@@ -1509,6 +1516,19 @@ PJ_DECL(pj_status_t) pj_sock_shutdown( pj_sock_t sockfd,
  *
  *****************************************************************************
  */
+
+/**
+ * Deep clone the socket options.
+ *
+ * @param pool      The pool.
+ * @param dst       Destination socket options.
+ * @param src       Source socket options.
+ *
+ * @return          PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pj_sockopt_params_clone(pj_pool_t *pool,
+                                             pj_sockopt_params *dst,
+                                             const pj_sockopt_params *src);
 
 /**
  * Print socket address string. This method will enclose the address string 

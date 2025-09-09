@@ -33,6 +33,8 @@ interface MyAppObserver
     abstract void notifyCallMediaState(MyCall call);
     abstract void notifyBuddyState(MyBuddy buddy);
     abstract void notifyChangeNetwork();
+    abstract void notifyCallMediaEvent(MyCall call, OnCallMediaEventParam prm);
+    abstract void notifyTimer(OnTimerParam prm);
 }
 
 
@@ -51,10 +53,14 @@ class MyCall extends Call
     public VideoWindow vidWin;
     public VideoPreview vidPrev;
 
+    public boolean vidPrevStarted;
+
     MyCall(MyAccount acc, int call_id)
     {
         super(acc, call_id);
         vidWin = null;
+        vidPrev = null;
+        vidPrevStarted = false;
     }
 
     @Override
@@ -65,6 +71,9 @@ class MyCall extends Call
             if (ci.getState() == 
                 pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED)
             {
+                if (vidPrevStarted)
+                    vidPrev.stop();
+
                 MyApp.ep.utilLogWrite(3, "MyCall", this.dump(true, ""));
             }
         } catch (Exception e) {
@@ -90,6 +99,7 @@ class MyCall extends Call
 
         for (int i = 0; i < cmiv.size(); i++) {
             CallMediaInfo cmi = cmiv.get(i);
+
             if (cmi.getType() == pjmedia_type.PJMEDIA_TYPE_AUDIO &&
                 (cmi.getStatus() == 
                         pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE ||
@@ -109,16 +119,55 @@ class MyCall extends Call
                     continue;
                 }
             } else if (cmi.getType() == pjmedia_type.PJMEDIA_TYPE_VIDEO &&
-                       cmi.getStatus() == 
-                            pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE &&
-                       cmi.getVideoIncomingWindowId() != pjsua2.INVALID_ID)
+                       cmi.getStatus() == pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE)
             {
-                vidWin = new VideoWindow(cmi.getVideoIncomingWindowId());
-                vidPrev = new VideoPreview(cmi.getVideoCapDev());
+                if (MyApp.isTest && ci.getRole() == pjsip_role_e.PJSIP_ROLE_UAS)
+                {
+                    return;
+                }
+                /* If videoPreview was started, stop it first in case capture device has changed */
+                if (vidPrevStarted) {
+                    try {
+                        vidPrevStarted = false;
+                        vidPrev.stop();
+                        vidPrev.delete();
+                        vidPrev = null;
+                    } catch (Exception e) {}
+                }
+
+                if (cmi.getVideoIncomingWindowId() != pjsua2.INVALID_ID)
+                    vidWin = new VideoWindow(cmi.getVideoIncomingWindowId());
+
+                if ((cmi.getDir() & pjmedia_dir.PJMEDIA_DIR_ENCODING) != 0) {
+                    vidPrev = new VideoPreview(cmi.getVideoCapDev());
+                    if (!vidPrevStarted) {
+                        try {
+                            vidPrev.start(new VideoPreviewOpParam());
+                            vidPrevStarted = true;
+                        } catch (Exception e) {
+                            System.out.println("Failed start video preview" +
+                                e.getMessage());
+                            continue;
+                        }
+                    }
+                }
             }
         }
 
         MyApp.observer.notifyCallMediaState(this);
+    }
+
+    @Override
+    public void onCallMediaEvent(OnCallMediaEventParam prm) {
+        CallInfo ci;
+        try {
+            ci = getInfo();
+        } catch (Exception e) {
+            return;
+        }
+        if (!MyApp.isTest || ci.getRole() == pjsip_role_e.PJSIP_ROLE_UAC) {
+            MyApp.observer.notifyCallMediaEvent(this, prm);
+        }
     }
 }
 
@@ -279,10 +328,19 @@ class MyAccountConfig
     }
 }
 
+class MyEndpoint extends Endpoint
+{
+    @Override
+    public void onTimer(OnTimerParam prm)
+    {
+        MyApp.observer.notifyTimer(prm);
+    }
+}
 
 class MyApp extends pjsua2 {
-    public static Endpoint ep = new Endpoint();
+    public static MyEndpoint ep = new MyEndpoint();
     public static MyAppObserver observer;
+    public static boolean isTest = false;
     public ArrayList<MyAccount> accList = new ArrayList<MyAccount>();
 
     private ArrayList<MyAccountConfig> accCfgs =
@@ -295,19 +353,32 @@ class MyApp extends pjsua2 {
     private MyLogWriter logWriter;
 
     private final String configName = "pjsua2.json";
-    private final int SIP_PORT  = 6000;
     private final int LOG_LEVEL = 4;
+    private int SIP_PORT  = 6000;
+    int defVidCapDev =pjmedia_vid_dev_std_index.PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
 
     public void init(MyAppObserver obs, String app_dir)
     {
-        init(obs, app_dir, false);
+        init(obs, app_dir, false, SIP_PORT, false);
     }
 
     public void init(MyAppObserver obs, String app_dir,
                      boolean own_worker_thread)
     {
+        init(obs, app_dir, own_worker_thread, SIP_PORT, false);
+    }
+
+    public void init(MyAppObserver obs, String app_dir,
+                     boolean own_worker_thread, int sip_port, boolean is_test)
+    {
         observer = obs;
         appDir = app_dir;
+        isTest = is_test;
+
+        SIP_PORT = sip_port;
+
+        System.out.println("Initializing the library as " + (is_test?
+                           "test":"demo"));
 
         /* Create endpoint */
         try {
@@ -320,7 +391,7 @@ class MyApp extends pjsua2 {
         /* Load config */
         String configPath = appDir + "/" + configName;
         File f = new File(configPath);
-        if (f.exists()) {
+        if (f.exists() && !isTest) {
             loadConfig(configPath);
         } else {
             /* Set 'default' values */
@@ -381,6 +452,25 @@ class MyApp extends pjsua2 {
         }
 
         try {
+            /* Setting socket option parameters (uncomment this if needed). */
+            /*
+            final int SOL_SOCKET = 1;
+            final int SOL_TCP = 6;
+
+            final int SO_KEEPALIVE = 9;
+            final int TCP_KEEPIDLE = 4;
+            final int TCP_KEEPINTVL = 5;
+            final int TCP_KEEPCNT = 6;
+
+            SockOptVector soVector = new SockOptVector();
+            soVector.add(new SockOpt(SOL_SOCKET, SO_KEEPALIVE, 1));
+            soVector.add(new SockOpt(SOL_TCP, TCP_KEEPIDLE, 1));
+            soVector.add(new SockOpt(SOL_TCP, TCP_KEEPINTVL, 5));
+            soVector.add(new SockOpt(SOL_TCP, TCP_KEEPCNT, 1));
+
+            sipTpConfig.getTlsConfig().getSockOptParams().setSockOpts(soVector);
+             */
+
             sipTpConfig.setPort(SIP_PORT+1);
             ep.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_TLS,
                                sipTpConfig);
@@ -390,6 +480,27 @@ class MyApp extends pjsua2 {
 
         /* Set SIP port back to default for JSON saved config */
         sipTpConfig.setPort(SIP_PORT);
+
+        if (isTest) {
+            try {
+                VideoDevInfoVector2 vidVector =
+                                            MyApp.ep.vidDevManager().enumDev2();
+                for (int i = 0; i < vidVector.size(); i++) {
+                    VideoDevInfo devInfo = vidVector.get(i);
+
+                    if (devInfo.getName().equalsIgnoreCase(
+                                        "Colorbar generator"))
+                    {
+                        defVidCapDev = i;
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println(e);
+            }
+        }
+        System.out.println("Use vid index=" + Integer.toString(defVidCapDev) +
+                           " as default capture device");
 
         /* Create accounts. */
         for (int i = 0; i < accCfgs.size(); i++) {
@@ -403,7 +514,7 @@ class MyApp extends pjsua2 {
             /* Enable SRTP optional mode and without requiring SIP TLS transport */
             my_cfg.accCfg.getMediaConfig().setSrtpUse(pjmedia_srtp_use.PJMEDIA_SRTP_OPTIONAL);
             my_cfg.accCfg.getMediaConfig().setSrtpSecureSignaling(0);
-
+            my_cfg.accCfg.getVideoConfig().setDefaultCaptureDevice(defVidCapDev);
             MyAccount acc = addAcc(my_cfg.accCfg);
             if (acc == null)
                 continue;
@@ -420,6 +531,24 @@ class MyApp extends pjsua2 {
             ep.libStart();
         } catch (Exception e) {
             return;
+        }
+
+        /* Also adjust encoding size in H264 to portrait 240x320 */
+        try {
+            CodecInfoVector2 codecs = ep.videoCodecEnum2();
+            String codecId = "H264/";
+            for (CodecInfo c : codecs) {
+                if (c.getCodecId().startsWith(codecId)) {
+                    codecId = c.getCodecId();
+                    break;
+                }
+            }
+            VidCodecParam vcp = ep.getVideoCodecParam(codecId);
+            vcp.getEncFmt().setWidth(240);
+            vcp.getEncFmt().setHeight(320);
+            ep.setVideoCodecParam(codecId, vcp);
+        } catch (Exception e) {
+            System.out.println(e);
         }
     }
 
@@ -538,8 +667,10 @@ class MyApp extends pjsua2 {
 
     public void deinit()
     {
-        String configPath = appDir + "/" + configName;
-        saveConfig(configPath);
+        if (!isTest) {
+            String configPath = appDir + "/" + configName;
+            saveConfig(configPath);
+        }
 
         /* Try force GC to avoid late destroy of PJ objects as they should be
         * deleted before lib is destroyed.
@@ -558,5 +689,5 @@ class MyApp extends pjsua2 {
         */
         ep.delete();
         ep = null;
-    } 
+    }
 }

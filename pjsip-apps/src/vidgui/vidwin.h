@@ -29,7 +29,7 @@ class VidWin : public QWidget
 public:
     VidWin(const pjmedia_vid_dev_hwnd *hwnd,
            QWidget* parent = 0,
-           Qt::WindowFlags f = 0);
+           Qt::WindowFlags f = (Qt::WindowFlags)0);
     virtual ~VidWin();
     QSize sizeHint() const { return size_hint; }
 

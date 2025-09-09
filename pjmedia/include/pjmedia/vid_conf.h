@@ -44,6 +44,123 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_vid_conf pjmedia_vid_conf;
 
+/**
+ * Video conference operation type enumeration.
+ */
+typedef enum pjmedia_vid_conf_op_type
+{
+    /**
+     * The operation is unknown.
+     */
+    PJMEDIA_VID_CONF_OP_UNKNOWN,
+
+    /**
+     * The adding port operation.
+     */
+    PJMEDIA_VID_CONF_OP_ADD_PORT,
+
+    /**
+     * The remove port operation.
+     */
+    PJMEDIA_VID_CONF_OP_REMOVE_PORT,
+
+    /**
+     * The connect ports (start transmit) operation.
+     */
+    PJMEDIA_VID_CONF_OP_CONNECT_PORTS,
+
+    /**
+     * The disconnect ports (stop transmit) operation.
+     */
+    PJMEDIA_VID_CONF_OP_DISCONNECT_PORTS,
+
+    /**
+     * The update port operation.
+     */
+    PJMEDIA_VID_CONF_OP_UPDATE_PORT
+
+} pjmedia_vid_conf_op_type;
+
+/**
+ * Video conference operation parameter.
+ */
+typedef union pjmedia_vid_conf_op_param
+{
+    /**
+     * The information for adding port operation.
+     */
+    struct {
+        unsigned port;      /**< The port id.                           */
+    } add_port;
+
+    /**
+     * The information for removing port operation.
+     */
+    struct {
+        unsigned port;      /**< The port id.                           */
+    } remove_port;
+
+    /**
+     * The information for connecting port operation.
+     */
+    struct {
+        unsigned src;       /**< The source port id. For multiple port
+                                 operation, this will be set to -1.     */
+        unsigned sink;      /**< The destination port id. For multiple
+                                 port operation, this will be set
+                                 to -1.                                 */
+    } connect_ports;
+
+    /**
+     * The information for disconnecting port operation.
+     */
+    struct {
+        unsigned src;       /**< The source port id. For multiple port
+                                 operation, this will be set to -1.     */
+        unsigned sink;      /**< The destination port id. For multiple
+                                 port operation, this will be set
+                                 to -1.                                 */
+    } disconnect_ports;
+
+    /**
+     * The information for updating port operation.
+     */
+    struct {
+        unsigned port;      /**< The port id.                           */
+    } update_port;
+
+} pjmedia_vid_conf_op_param;
+
+/**
+ * This will contain the information of the conference operation.
+ */
+typedef struct pjmedia_vid_conf_op_info
+{
+    /**
+     * The operation type.
+     */
+    pjmedia_vid_conf_op_type    op_type;
+
+    /**
+     * The operation return status.
+     */
+    pj_status_t                 status;
+
+    /**
+     * The operation data.
+     */
+    pjmedia_vid_conf_op_param   op_param;
+
+} pjmedia_vid_conf_op_info;
+
+/**
+  * The callback type to be called upon the successful completion
+  * of a conference port operation.
+  *
+  * @param param      The conference op callback param.
+  *
+  */
+typedef void (*pjmedia_vid_conf_op_cb)(const pjmedia_vid_conf_op_info *info);
 
 /**
  * Enumeration of video conference layout mode.
@@ -160,7 +277,9 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_create(
 
 
 /**
- * Destroy video conference bridge.
+ * Destroy video conference bridge. This will also remove any video port,
+ * thus application might get notified from the callback set from 
+ * #pjmedia_vid_conf_set_op_cb().
  *
  * @param vid_conf      The video conference bridge.
  *
@@ -168,10 +287,28 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_create(
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf);
 
+/**
+ * Register the callback to be called when a video port operation has been
+ * completed.
+ * 
+ * The callback will most likely be called from media threads,
+ * thus application must not perform long/blocking processing in this callback.
+ *
+ * @param vid_conf      The video conference.
+ * @param cb            Callback to be called. Set this to NULL to unregister
+ *                      the callback.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_conf_set_op_cb(pjmedia_vid_conf *vid_conf,
+                                                pjmedia_vid_conf_op_cb cb);
 
 /**
  * Add a media port to the video conference bridge.
  *
+ * This operation executes asynchronously, use the callback set from
+ * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
+ * 
  * @param vid_conf      The video conference bridge.
  * @param pool          The memory pool, the brige will create new pool
  *                      based on this pool factory for this media port.
@@ -196,6 +333,9 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_add_port(pjmedia_vid_conf *vid_conf,
 
 /**
  * Remove a media port from the video conference bridge.
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
  *
  * @param vid_conf      The video conference bridge.
  * @param slot          The media port's slot index to be removed.
@@ -221,7 +361,7 @@ PJ_DECL(unsigned) pjmedia_vid_conf_get_port_count(pjmedia_vid_conf *vid_conf);
 /**
  * Enumerate occupied slots in the video conference bridge.
  *
- * @param vid_conf              The video conference bridge.
+ * @param vid_conf      The video conference bridge.
  * @param slots         Array of slot to be filled in.
  * @param count         On input, specifies the maximum number of slot
  *                      in the array. On return, it will be filled with
@@ -252,8 +392,11 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_get_port_info(
 /**
  * Enable unidirectional video flow from the specified source slot to
  * the specified sink slot.
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
  *
- * @param vid_conf              The video conference bridge.
+ * @param vid_conf      The video conference bridge.
  * @param src_slot      Source slot.
  * @param sink_slot     Sink slot.
  * @param opt           The option, for future use, currently this must
@@ -271,8 +414,11 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_connect_port(
 /**
  * Disconnect unidirectional video flow from the specified source to
  * the specified sink slot.
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
  *
- * @param vid_conf              The video conference bridge.
+ * @param vid_conf      The video conference bridge.
  * @param src_slot      Source slot.
  * @param sink_slot     Sink slot.
  *
@@ -290,6 +436,9 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_disconnect_port(
  * a video stream decoder learns that incoming video size or frame rate
  * has changed, video conference needs to be informed to update its
  * internal states.
+ * 
+ * This operation executes asynchronously, use the callback set from
+ * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
  *
  * @param vid_conf      The video conference bridge.
  * @param slot          The media port's slot index to be updated.
@@ -299,6 +448,49 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_disconnect_port(
  */
 PJ_DECL(pj_status_t) pjmedia_vid_conf_update_port(pjmedia_vid_conf *vid_conf,
                                                   unsigned slot);
+
+
+
+/**
+ * Add port destructor handler.
+ *
+ * Application can use this function to schedule resource release.
+ * Note that application cannot release any app's resources used by the port,
+ * e.g: memory pool, database connection, immediately after removing the port
+ * from the conference bridge as port removal is asynchronous.
+ *
+ * Usually this function is called after adding the port to the conference
+ * bridge.
+ *
+ * @param vid_conf          The video conference bridge.
+ * @param slot              The port slot index.
+ * @param member            A pointer to be passed to the handler.
+ * @param handler           The destroy handler.
+ *
+ * @return                  PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_conf_add_destroy_handler(
+                                            pjmedia_vid_conf* vid_conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler);
+
+
+/**
+ * Remove previously registered destructor handler.
+ *
+ * @param conf              The video conference bridge.
+ * @param slot              The port slot index.
+ * @param member            A pointer to be passed to the handler.
+ * @param handler           The destroy handler.
+ *
+ * @return                  PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_conf_del_destroy_handler(
+                                            pjmedia_vid_conf* vid_conf,
+                                            unsigned slot,
+                                            void* member,
+                                            pj_grp_lock_handler handler);
 
 
 PJ_END_DECL

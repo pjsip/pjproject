@@ -542,12 +542,9 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(resolver && count && servers, PJ_EINVAL);
-    PJ_ASSERT_RETURN(count < PJ_DNS_RESOLVER_MAX_NS, PJ_EINVAL);
+    PJ_ASSERT_RETURN(count <= PJ_DNS_RESOLVER_MAX_NS, PJ_ETOOMANY);
 
     pj_grp_lock_acquire(resolver->grp_lock);
-
-    if (count > PJ_DNS_RESOLVER_MAX_NS)
-        count = PJ_DNS_RESOLVER_MAX_NS;
 
     resolver->ns_count = 0;
     pj_bzero(resolver->ns, sizeof(resolver->ns));
@@ -803,7 +800,7 @@ static void init_res_key(struct res_key *key, int type, const pj_str_t *name)
     key->qtype = (pj_uint16_t)type;
 
     len = name->slen;
-    if (len > PJ_MAX_HOSTNAME) len = PJ_MAX_HOSTNAME;
+    if (len >= PJ_MAX_HOSTNAME) len = PJ_MAX_HOSTNAME - 1;
 
     /* Copy key, in lowercase */
     for (i=0; i<len; ++i) {
@@ -919,6 +916,12 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
              */
             cache->ref_cnt++;
             pj_grp_lock_release(resolver->grp_lock);
+
+            /* Since we're returning an answer from cache,
+             * there is no query object to return.
+             */
+            if (p_query)
+                *p_query = NULL;
 
             /* This cached response is still valid. Just return this
              * response to caller.
@@ -1136,8 +1139,8 @@ PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
         rec->alias.ptr = &rec->buf_[bufstart];
         rec->alias.slen = alias.slen;
 
-        bufstart += alias.slen;
-        bufleft -= alias.slen;
+        // bufstart += alias.slen;
+        // bufleft -= alias.slen;
     }
 
     /* Get the IP addresses. */
@@ -1254,8 +1257,8 @@ PJ_DEF(pj_status_t) pj_dns_parse_addr_response(
         rec->alias.ptr = &rec->buf_[bufstart];
         rec->alias.slen = alias.slen;
 
-        bufstart += alias.slen;
-        bufleft -= alias.slen;
+        // bufstart += alias.slen;
+        // bufleft -= alias.slen;
     }
 
     /* Get the IP addresses. */
@@ -1703,7 +1706,6 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                                  sizeof(resolver->tmp_pool));
 
     /* Parse DNS response */
-    status = -1;
     dns_pkt = NULL;
     PJ_TRY {
         status = pj_dns_parse_packet(pool, rx_pkt, 
@@ -1835,7 +1837,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_add_entry( pj_dns_resolver *resolver,
 
     /* Make sure there are answers in the packet */
     PJ_ASSERT_RETURN((pkt->hdr.anscount && pkt->ans) ||
-                      (pkt->hdr.qdcount && pkt->q),
+                      (pkt->hdr.qdcount && pkt->q && !pkt->hdr.anscount),
                      PJLIB_UTIL_EDNSNOANSWERREC);
 
     pj_grp_lock_acquire(resolver->grp_lock);
@@ -1844,15 +1846,15 @@ PJ_DEF(pj_status_t) pj_dns_resolver_add_entry( pj_dns_resolver *resolver,
     pj_bzero(&key, sizeof(struct res_key));
     if (pkt->hdr.anscount) {
         /* Make sure name is not too long. */
-        PJ_ASSERT_RETURN(pkt->ans[0].name.slen < PJ_MAX_HOSTNAME, 
-                         PJ_ENAMETOOLONG);
+        PJ_ASSERT_ON_FAIL(pkt->ans[0].name.slen < PJ_MAX_HOSTNAME, 
+                  { pj_grp_lock_release(resolver->grp_lock); return PJ_ENAMETOOLONG; });
 
         init_res_key(&key, pkt->ans[0].type, &pkt->ans[0].name);
 
     } else {
         /* Make sure name is not too long. */
-        PJ_ASSERT_RETURN(pkt->q[0].name.slen < PJ_MAX_HOSTNAME, 
-                         PJ_ENAMETOOLONG);
+        PJ_ASSERT_ON_FAIL(pkt->q[0].name.slen < PJ_MAX_HOSTNAME, 
+                  { pj_grp_lock_release(resolver->grp_lock); return PJ_ENAMETOOLONG; });
 
         init_res_key(&key, pkt->q[0].type, &pkt->q[0].name);
     }
@@ -1905,7 +1907,7 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
         struct nameserver *ns = &resolver->ns[i];
 
         PJ_LOG(3,(resolver->name.ptr,
-                  "   NS %d: %s:%d (state=%s until %ds, rtt=%d ms)",
+                  "   NS %d: %s:%d (state=%s until %lds, rtt=%ld ms)",
                   i,
                   pj_sockaddr_print(&ns->addr, addr, sizeof(addr), 2),
                   pj_sockaddr_get_port(&ns->addr),
@@ -1945,13 +1947,13 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
             it = pj_hash_next(resolver->hquerybyid, it);
         }
     }
-    PJ_LOG(3,(resolver->name.ptr, "  Nb. of pending query free nodes: %u",
-              pj_list_size(&resolver->query_free_nodes)));
-    PJ_LOG(3,(resolver->name.ptr, "  Nb. of timer entries: %u",
-              pj_timer_heap_count(resolver->timer)));
-    PJ_LOG(3,(resolver->name.ptr, "  Pool capacity: %d, used size: %d",
-              pj_pool_get_capacity(resolver->pool),
-              pj_pool_get_used_size(resolver->pool)));
+    PJ_LOG(3,(resolver->name.ptr, "  Nb. of pending query free nodes: %lu",
+              (unsigned long)pj_list_size(&resolver->query_free_nodes)));
+    PJ_LOG(3,(resolver->name.ptr, "  Nb. of timer entries: %lu",
+              (unsigned long)pj_timer_heap_count(resolver->timer)));
+    PJ_LOG(3,(resolver->name.ptr, "  Pool capacity: %lu, used size: %lu",
+              (unsigned long)pj_pool_get_capacity(resolver->pool),
+              (unsigned long)pj_pool_get_used_size(resolver->pool)));
 
     pj_grp_lock_release(resolver->grp_lock);
 #endif

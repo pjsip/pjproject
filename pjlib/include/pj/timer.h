@@ -61,7 +61,7 @@ PJ_BEGIN_DECL
  *
  * For some examples on how to use the timer heap, please see the link below.
  *
- *  - \ref page_pjlib_timer_test
+ *  - Timer test: \src{pjlib/src/pjlib-test/timer.c}
  */
 
 

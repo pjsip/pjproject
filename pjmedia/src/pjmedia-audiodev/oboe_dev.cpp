@@ -21,11 +21,13 @@
 
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pj/assert.h>
+#include <pj/atomic_queue.h>
 #include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pjmedia/circbuf.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/event.h>
 
 #if defined(PJMEDIA_AUDIO_DEV_HAS_OBOE) &&  PJMEDIA_AUDIO_DEV_HAS_OBOE != 0
 
@@ -37,8 +39,8 @@
 #include <android/log.h>
 #include <oboe/Oboe.h>
 
-#include <atomic>
-
+/* Setting of maximum number of consecutive stream restart attempts. */
+#define MAX_RESTART     3
 
 /* Device info */
 typedef struct aud_dev_info
@@ -199,12 +201,6 @@ static struct jni_objs_t
 } jobjs;
 
 
-/* Declare JNI JVM helper from PJLIB OS */
-extern "C" {
-    pj_bool_t pj_jni_attach_jvm(JNIEnv **jni_env);
-    void pj_jni_dettach_jvm(pj_bool_t attached);
-}
-
 #define GET_CLASS(class_path, class_name, cls) \
     cls = jni_env->FindClass(class_path); \
     if (cls == NULL || jni_env->ExceptionCheck()) { \
@@ -258,7 +254,7 @@ static pj_status_t jni_init_ids()
 {
     JNIEnv *jni_env;
     pj_status_t status = PJ_SUCCESS;
-    pj_bool_t with_attach = pj_jni_attach_jvm(&jni_env);
+    pj_bool_t with_attach = pj_jni_attach_jvm((void **)&jni_env);
 
     /* PjAudioDevInfo class info */
     GET_CLASS(PJ_AUDDEV_INFO_CLASS_PATH, "PjAudioDevInfo", jobjs.dev_info.cls);
@@ -292,7 +288,7 @@ static pj_status_t jni_init_ids()
                    jobjs.activity_thread.m_get_app);
 
 on_return:
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
     return status;
 }
 
@@ -304,7 +300,7 @@ on_return:
 static void jni_deinit_ids()
 {
     JNIEnv *jni_env;
-    pj_bool_t with_attach = pj_jni_attach_jvm(&jni_env);
+    pj_bool_t with_attach = pj_jni_attach_jvm((void **)&jni_env);
 
     if (jobjs.dev_info.cls) {
         jni_env->DeleteGlobalRef(jobjs.dev_info.cls);
@@ -316,7 +312,7 @@ static void jni_deinit_ids()
         jobjs.activity_thread.cls = NULL;
     }
 
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
 }
 
 static jobject get_global_context(JNIEnv *jni_env)
@@ -364,7 +360,7 @@ static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
     f->dev_count = 0;
     pj_pool_reset(f->dev_pool);
 
-    with_attach = pj_jni_attach_jvm(&jni_env);
+    with_attach = pj_jni_attach_jvm((void **)&jni_env);
 
     jobject context = get_global_context(jni_env);
     if (context == NULL) {
@@ -413,13 +409,16 @@ static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
         base_adi->caps = 0;
 
         /* Get name info */
-        jstring jstrtmp = (jstring)jni_env->GetObjectField(jdev_info, jobjs.dev_info.f_name);
+        jstring jstrtmp = (jstring)
+                          jni_env->GetObjectField(jdev_info,
+                                                  jobjs.dev_info.f_name);
         const char *strtmp = jni_env->GetStringUTFChars(jstrtmp, NULL);
-        pj_ansi_strncpy(base_adi->name, strtmp, sizeof(base_adi->name));
+        pj_ansi_strxcpy(base_adi->name, strtmp, sizeof(base_adi->name));
+        pj_ansi_strxcpy(base_adi->driver, DRIVER_NAME,
+                        sizeof(base_adi->driver));
 
         f->dev_count++;
 
-    on_skip_dev:
         jni_env->DeleteLocalRef(jdev_info);
     }
 
@@ -441,7 +440,7 @@ on_return:
     if (context)
         jni_env->DeleteLocalRef(context);
 
-    pj_jni_dettach_jvm(with_attach);
+    pj_jni_detach_jvm(with_attach);
     return status;
 }
 
@@ -526,106 +525,6 @@ static pj_status_t oboe_default_param(pjmedia_aud_dev_factory *ff,
     return PJ_SUCCESS;
 }
 
-
-/* Atomic queue (ring buffer) for single consumer & single producer.
- *
- * Producer invokes 'put(frame)' to put a frame to the back of the queue and
- * consumer invokes 'get(frame)' to get a frame from the head of the queue.
- *
- * For producer, there is write pointer 'ptrWrite' that will be incremented
- * every time a frame is queued to the back of the queue. If the queue is
- * almost full (the write pointer is right before the read pointer) the
- * producer will forcefully discard the oldest frame in the head of the
- * queue by incrementing read pointer.
- *
- * For consumer, there is read pointer 'ptrRead' that will be incremented
- * every time a frame is fetched from the head of the queue, only if the
- * pointer is not modified by producer (in case of queue full).
- */
-class AtomicQueue {
-public:
-
-    AtomicQueue(unsigned max_frame_cnt, unsigned frame_size,
-                const char* name_= "") :
-        maxFrameCnt(max_frame_cnt), frameSize(frame_size),
-        ptrWrite(0), ptrRead(0),
-        buffer(NULL), name(name_)
-    {
-        buffer = new char[maxFrameCnt * frameSize];
-
-        /* Surpress warning when debugging log is disabled */
-        PJ_UNUSED_ARG(name);
-    }
-
-    ~AtomicQueue() {
-        delete [] buffer;
-    }
-
-    /* Get a frame from the head of the queue */
-    bool get(void* frame) {
-        if (ptrRead == ptrWrite)
-            return false;
-
-        unsigned cur_ptr = ptrRead;
-        void *p = &buffer[cur_ptr * frameSize];
-        pj_memcpy(frame, p, frameSize);
-        inc_ptr_read_if_not_yet(cur_ptr);
-
-        //__android_log_print(ANDROID_LOG_INFO, name,
-        //                    "GET: ptrRead=%d ptrWrite=%d\n",
-        //                    ptrRead.load(), ptrWrite.load());
-        return true;
-    }
-
-    /* Put a frame to the back of the queue */
-    void put(void* frame) {
-        unsigned cur_ptr = ptrWrite;
-        void *p = &buffer[cur_ptr * frameSize];
-        pj_memcpy(p, frame, frameSize);
-        unsigned next_ptr = inc_ptr_write(cur_ptr);
-
-        /* Increment read pointer if next write is overlapping (next_ptr == read ptr) */
-        unsigned next_read_ptr = (next_ptr == maxFrameCnt-1)? 0 : (next_ptr+1);
-        ptrRead.compare_exchange_strong(next_ptr, next_read_ptr);
-
-        //__android_log_print(ANDROID_LOG_INFO, name,
-        //                    "PUT: ptrRead=%d ptrWrite=%d\n",
-        //                    ptrRead.load(), ptrWrite.load());
-    }
-
-private:
-
-    unsigned maxFrameCnt;
-    unsigned frameSize;
-    std::atomic<unsigned> ptrWrite;
-    std::atomic<unsigned> ptrRead;
-    char *buffer;
-    const char *name;
-
-    /* Increment read pointer, only if producer not incemented it already.
-     * Producer may increment the read pointer if the write pointer is
-     * right before the read pointer (buffer almost full).
-     */
-    bool inc_ptr_read_if_not_yet(unsigned old_ptr) {
-        unsigned new_ptr = (old_ptr == maxFrameCnt-1)? 0 : (old_ptr+1);
-        return ptrRead.compare_exchange_strong(old_ptr, new_ptr);
-    }
-
-    /* Increment write pointer */
-    unsigned inc_ptr_write(unsigned old_ptr) {
-        unsigned new_ptr = (old_ptr == maxFrameCnt-1)? 0 : (old_ptr+1);
-        if (ptrWrite.compare_exchange_strong(old_ptr, new_ptr))
-            return new_ptr;
-
-        /* Should never happen */
-        pj_assert(!"There is more than one producer!");
-        return old_ptr;
-    }
-
-    AtomicQueue() {}
-};
-
-
 /* Interface to Oboe */
 class MyOboeEngine : oboe::AudioStreamDataCallback,
                      oboe::AudioStreamErrorCallback
@@ -633,7 +532,7 @@ class MyOboeEngine : oboe::AudioStreamDataCallback,
 public:
     MyOboeEngine(struct oboe_aud_stream *stream_, pjmedia_dir dir_)
     : stream(stream_), dir(dir_), oboe_stream(NULL), dir_st(NULL),
-      thread(NULL), thread_quit(PJ_TRUE), queue(NULL),
+      thread(NULL), thread_quit(PJ_TRUE), nrestart(0), queue(NULL),
       err_thread_registered(false), mutex(NULL)
     {
         pj_assert(dir == PJMEDIA_DIR_CAPTURE || dir == PJMEDIA_DIR_PLAYBACK);
@@ -654,6 +553,7 @@ public:
         }
 
         int dev_id = 0;
+        oboe::PerformanceMode performance_mode;
         oboe::AudioStreamBuilder sb;
 
         pj_mutex_lock(mutex);
@@ -678,12 +578,20 @@ public:
                 dev_id = stream->f->dev_info[stream->param.play_id].id;
             }
         }
+
+        if (PJMEDIA_OBOE_USE_LOWLATENCY) {
+            performance_mode= oboe::PerformanceMode::LowLatency;
+        } else {
+            performance_mode = oboe::PerformanceMode::None;
+        }
+        
         sb.setDeviceId(dev_id);
         sb.setSampleRate(stream->param.clock_rate);
         sb.setChannelCount(stream->param.channel_count);
-        sb.setPerformanceMode(oboe::PerformanceMode::LowLatency);
+        sb.setPerformanceMode(performance_mode);
         sb.setFormat(oboe::AudioFormat::I16);
         sb.setUsage(oboe::Usage::VoiceCommunication);
+        sb.setInputPreset(oboe::InputPreset::VoiceCommunication);
         sb.setContentType(oboe::ContentType::Speech);
         sb.setDataCallback(this);
         sb.setErrorCallback(this);
@@ -721,8 +629,9 @@ public:
                   "Oboe stream %s queue size=%d frames (latency=%d ms)",
                   dir_st, queue_size, latency));
 
-        queue = new AtomicQueue(queue_size, stream->param.samples_per_frame*2,
-                                dir_st);
+        pj_atomic_queue_create(stream->pool, queue_size,
+                               stream->param.samples_per_frame*2, dir_st,
+                               &queue);
 
         /* Create semaphore */
         if (sem_init(&sem, 0, 0) != 0) {
@@ -817,7 +726,7 @@ public:
 
         if (queue) {
             PJ_LOG(5,(THIS_FILE, "Oboe %s deleting queue", dir_st));
-            delete queue;
+            pj_atomic_queue_destroy(queue);
             queue = NULL;
         }
 
@@ -837,16 +746,17 @@ public:
     {
         if (dir == PJMEDIA_DIR_CAPTURE) {
             /* Put the audio frame to queue */
-            queue->put(audioData);
+            pj_atomic_queue_put(this->queue, audioData);
         } else {
             /* Get audio frame from queue */
-            if (!queue->get(audioData)) {
+            if (pj_atomic_queue_get(this->queue, audioData) != PJ_SUCCESS) {
                 pj_bzero(audioData, stream->param.samples_per_frame*2);
                 __android_log_write(ANDROID_LOG_WARN, THIS_FILE,
                         "Oboe playback got an empty queue");
             }
         }
 
+        this->nrestart = 0;
         sem_post(&sem);
 
         return (thread_quit? oboe::DataCallbackResult::Stop :
@@ -874,13 +784,40 @@ public:
 
         /* Make sure stop request has not been made */
         if (!thread_quit) {
+            pj_status_t status;
+
             PJ_LOG(3,(THIS_FILE,
-                      "Oboe stream %s error (%d/%s), "
-                      "trying to restart stream..",
+                      "Oboe stream %s error (%d/%s)",
                       dir_st, result, oboe::convertToText(result)));
 
             Stop();
-            Start();
+
+            if (nrestart < MAX_RESTART) {
+                ++nrestart;
+                PJ_LOG(3, (THIS_FILE, "Trying to restart Oboe %s stream #%d",
+                                      dir_st, nrestart));
+                status = Start();
+            } else {
+                status = PJMEDIA_EAUD_SYSERR;
+            }
+
+            if (status != PJ_SUCCESS) {
+                pjmedia_event e;
+
+                PJ_PERROR(3,(THIS_FILE, status, "Oboe stream restart failed"));
+
+                /* Broadcast Oboe error */
+                pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR, &ts,
+                                   &stream->base);
+                e.data.aud_dev_err.dir = dir;
+                e.data.aud_dev_err.status = status;
+                e.data.aud_dev_err.id = (dir == PJMEDIA_DIR_PLAYBACK)?
+                                        stream->param.play_id :
+                                        stream->param.rec_id;
+
+                pjmedia_event_publish(NULL, &stream->base, &e,
+                                      PJMEDIA_EVENT_PUBLISH_DEFAULT);
+            }
         }
 
         pj_mutex_unlock(mutex);
@@ -931,7 +868,7 @@ private:
 
         /* Queue a silent frame to playback buffer */
         if (this_->dir == PJMEDIA_DIR_PLAYBACK) {
-            this_->queue->put(tmp_buf);
+            pj_atomic_queue_put(this_->queue, tmp_buf);
         }
 
         while (1) {
@@ -944,7 +881,8 @@ private:
                 bool stop_stream = false;
 
                 /* Read audio frames from Oboe */
-                while (this_->queue->get(tmp_buf)) {
+                while (pj_atomic_queue_get(this_->queue, tmp_buf) == PJ_SUCCESS)
+                {
                     /* Send audio frame to app via callback rec_cb() */
                     pjmedia_frame frame;
                     frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
@@ -987,7 +925,7 @@ private:
 
                 /* Send audio frame to Oboe */
                 if (status == PJ_SUCCESS) {
-                    this_->queue->put(tmp_buf);
+                    pj_atomic_queue_put(this_->queue, tmp_buf);
                 } else {
                     /* App wants to stop audio dev stream */
                     break;
@@ -1011,8 +949,9 @@ private:
     const char                  *dir_st;
     pj_thread_t                 *thread;
     volatile pj_bool_t           thread_quit;
+    unsigned                     nrestart;
     sem_t                        sem;
-    AtomicQueue                 *queue;
+    pj_atomic_queue_t           *queue;
     pj_timestamp                 ts;
     bool                         err_thread_registered;
     pj_thread_desc               err_thread_desc;
