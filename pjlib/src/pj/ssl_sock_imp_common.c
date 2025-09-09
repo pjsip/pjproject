@@ -1576,7 +1576,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_close(pj_ssl_sock_t *ssock)
     /* Wipe out cert & key buffer. */
     if (ssock->cert) {
         pj_ssl_cert_wipe_keys(ssock->cert);
-        ssock->cert = NULL;
+        //ssock->cert = NULL;
     }
 
     if (ssock->param.grp_lock) {
@@ -2514,6 +2514,23 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
     pj_strdup(pool, &cert_->CA_buf, &cert->CA_buf);
     pj_strdup(pool, &cert_->cert_buf, &cert->cert_buf);
     pj_strdup(pool, &cert_->privkey_buf, &cert->privkey_buf);
+
+    /* For OpenSSL version >= 3.0, add ref EVP_PKEY & X509 */
+#   if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) && \
+       (OPENSSL_VERSION_NUMBER >= 0x30000000L)
+    if ((cert_->direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY) &&
+        cert_->direct.privkey)
+    {
+        EVP_PKEY_up_ref(cert_->direct.privkey);
+    }
+
+    if ((cert_->direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT) &&
+        cert_->direct.cert)
+    {
+        X509_up_ref(cert_->direct.cert);
+    }
+#   endif
+
 #else
     pj_strdup_with_null(pool, &cert_->criteria.keyword,
                         &cert->criteria.keyword);
