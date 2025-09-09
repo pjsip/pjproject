@@ -602,42 +602,53 @@ static int pass_cb(char *buf, int size, int rwflag, void *u)
 }
 
 static pj_status_t load_cert_direct(pj_pool_t *pool,
+                                    pj_bool_t with_cert,
+                                    pj_bool_t with_privkey,
                                     pj_ssl_cert_t **p_cert)
 {
     BIO *in;
-    EVP_PKEY *key;
-    X509* x;
     pj_ssl_cert_direct cd;
 
     PJ_UNUSED_ARG(pool);
 
-    /* Load private key */
-    in = BIO_new_file(CERT_PRIVKEY_FILE, "r");
-    if (!in)
-        return PJ_ENOTFOUND;
+    /* Init credential */
+    pj_bzero(&cd, sizeof(cd));
 
-    key = PEM_read_bio_PrivateKey(in, NULL, &pass_cb, NULL);
-    BIO_free(in);
-    if (!key)
-        return PJ_EINVAL;
+    /* Load private key */
+    if (with_privkey) {
+        EVP_PKEY *key = NULL;
+
+        in = BIO_new_file(CERT_PRIVKEY_FILE, "r");
+        if (!in)
+            return PJ_ENOTFOUND;
+
+        key = PEM_read_bio_PrivateKey(in, NULL, &pass_cb, NULL);
+        BIO_free(in);
+        if (!key)
+            return PJ_EINVAL;
+        
+        cd.type |= PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY;
+        cd.privkey = key;
+    }
 
     /* Load certificate */
-    in = BIO_new_file(CERT_FILE, "r");
-    if (!in)
-        return PJ_ENOTFOUND;
+    if (with_cert) {
+        X509* x = NULL;
 
-    x = PEM_read_bio_X509(in, NULL, 0, NULL);
-    BIO_free(in);
-    if (!x)
-        return PJ_EINVAL;
+        in = BIO_new_file(CERT_FILE, "r");
+        if (!in)
+            return PJ_ENOTFOUND;
+
+        x = PEM_read_bio_X509(in, NULL, 0, NULL);
+        BIO_free(in);
+        if (!x)
+            return PJ_EINVAL;
+
+        cd.type |= PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT;
+        cd.cert = x;
+    }
 
     /* Create credential */
-    pj_bzero(&cd, sizeof(cd));
-    cd.type = PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY |
-              PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT;
-    cd.privkey = key;
-    cd.cert = x;
-
     return pj_ssl_cert_load_direct(pool, &cd, p_cert);
 }
 #else
@@ -737,10 +748,11 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
         /* Certificate & private key is not loaded from files, but directly
          * using OpenSSL objects.
          */
+        status = load_cert_direct(pool, PJ_TRUE, PJ_TRUE, &cert);
+
+        /* Skip setting privkey & certificate files below */
         privkey_file.slen = 0;
-        privkey_pass.slen = 0;
         cert_file.slen = 0;
-        status = load_cert_direct(pool, &cert);
 #   endif
 
         status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
@@ -1484,6 +1496,18 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
         pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
 
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
+
+#   if TEST_LOAD_DIRECT && (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+        /* Certificate & private key is not loaded from files, but directly
+         * using OpenSSL objects.
+         */
+        status = load_cert_direct(pool, PJ_TRUE, PJ_TRUE, &cert);
+
+        /* Skip setting privkey & certificate files below */
+        privkey_file.slen = 0;
+        cert_file.slen = 0;
+#   endif
+
         status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
                                              &privkey_file, &privkey_pass,
                                              &cert);
