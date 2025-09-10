@@ -56,16 +56,13 @@ def ua_data_test():
     # Copy the content of a ByteVector to a bytearray/memoryview
     #
     bv = pj.ByteVector()
-    ba = bytearray([1,2,3])
-    bv.assign_from_bytes(ba)
+    bv.assign_from_bytes(bytearray([1, 2, 3]))
     assert bv.size() == 3
-    assert bv[0] == 1 and bv[2] == 3
+    assert bv[0] == 1 and bv[1] == 2 and bv[2] == 3
 
-    ba2 = bytearray(bv.size())
-    bv.copy_to_bytearray(ba2)
-    assert len(ba2) == 3
-    assert ba2[0] == 1
-    assert ba2[0] == 1 and ba2[2] == 3
+    ba = memoryview(bytearray(5))
+    bv.copy_to_bytearray(ba[1:])
+    assert ba == b'\x00\x01\x02\x03\x00'
 
 #
 # Exception test
