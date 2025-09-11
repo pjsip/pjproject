@@ -317,6 +317,7 @@ if(BUILD_TESTING)
     PRIVATE
       pjlib
       pjlib-util
+      pjmedia
       pjsip
       pjsip-simple
       pjsip-ua
@@ -331,9 +332,11 @@ if(BUILD_TESTING)
     PRIVATE
       pjlib
       pjlib-util
+      pjnath
       pjmedia
       pjmedia-audiodev
       pjmedia-videodev
+      pjsip
       pjsua2
   )
 
