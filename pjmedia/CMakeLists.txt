@@ -874,7 +874,7 @@ target_link_libraries(pjmedia-videodev
 # ##############################################################################
 #  Test application
 
-if(BIULD_TESTING)
+if(BUILD_TESTING)
   add_executable(pjmedia-test
     src/test/codec_vectors.c
     src/test/jbuf_test.c

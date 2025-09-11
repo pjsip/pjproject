@@ -288,7 +288,7 @@ target_link_libraries(pjsua2
 # ##############################################################################
 # Test application
 
-if(BIULD_TESTING)
+if(BUILD_TESTING)
   # pjsip test application
   add_executable(pjsip-test
     src/test/dlg_core_test.c
