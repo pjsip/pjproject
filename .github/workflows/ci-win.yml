@@ -700,7 +700,7 @@ jobs:
       run: |
         cd pjlib/bin
         $args = $env:CI_WIN_ARGS -split ' '
-        ./pjlib-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
+        ./pjlib-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE -l 3 --log-no-cache
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}

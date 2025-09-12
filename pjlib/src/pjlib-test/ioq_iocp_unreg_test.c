@@ -80,7 +80,7 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
     (void)asock;
     (void)src_addr;
     (void)addr_len;
-    PJ_LOG(3, (THIS_FILE, "on_data_recvfrom() data:%.*s, status:%d",
+    PJ_LOG(4, (THIS_FILE, "on_data_recvfrom() data:%.*s, status:%d",
                           (int)size, (char *)data, status));
     ++recv_cnt;
     return PJ_TRUE;
