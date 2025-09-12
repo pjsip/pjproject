@@ -909,7 +909,7 @@ static unsigned ioqueue_dispatch_read_event_no_lock(pj_ioqueue_key_t* h,
 
         /* Invoke the callback or return */
         if (on_read_complete) {
-            (*on_read_complete)(h, (pj_ioqueue_op_key_t*)read_op,
+            (*on_read_complete)(h, read_op->app_op_key,
                                 read_op->pending_key.overlapped.bytes_read);
 
             release_pending_op(h, read_op);
@@ -1009,6 +1009,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
                  * callback later.
                  */
                 op->pending_key.overlapped.bytes_read = size_status;
+                pj_list_erase(op);
                 pj_list_push_back(&key->read_cb_list, op);
                 pj_ioqueue_unlock_key(key);
                 return PJ_TRUE;
