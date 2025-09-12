@@ -896,6 +896,7 @@ static unsigned ioqueue_dispatch_read_event_no_lock(pj_ioqueue_key_t* h,
             read_op = h->read_cb_list.next;
             pj_list_erase(read_op);
             on_read_complete = h->cb.on_read_complete;
+            OPKEY_OPERATION(read_op->app_op_key) = 0;
         } else {
             /* No more pending callback or maximum event number is reached.
              * Clear the callback thread and return.
@@ -998,35 +999,40 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
          * (and save the lock status to local var since app may change
          * concurrency setting while in the callback) */
         if (key->allow_concurrent == PJ_FALSE) {
-            pj_ioqueue_lock_key(key);
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
-            /* If we're not allowing concurrency, we must prevent
-             * re-entrancy in the callback.
-             */
-            if (key->read_callback_thread) {
-                /* Another thread is in the read callback for this key,
-                 * just queue this read_op, that thread will invoke the
-                 * callback later.
-                 */
-                op->pending_key.overlapped.bytes_read = size_status;
-                pj_list_erase(op);
-                pj_list_push_back(&key->read_cb_list, op);
-                pj_ioqueue_unlock_key(key);
-                return PJ_TRUE;
-            }
-
-            /* Save the thread invoking the read callback.
-             * Note that when threading is disabled or concurrency is allowed,
-             * this will always be NULL.
-             */
-            key->read_callback_thread = pj_thread_this();
-
-            /* Do not hold mutex while invoking callback */
-            has_lock = PJ_FALSE;
-            pj_ioqueue_unlock_key(key);
-            PJ_RACE_ME(5);
-#else
             has_lock = PJ_TRUE;
+            pj_ioqueue_lock_key(key);
+
+#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+            if (operation == PJ_IOQUEUE_OP_READ ||
+                operation == PJ_IOQUEUE_OP_RECV ||
+                operation == PJ_IOQUEUE_OP_RECV_FROM)
+            {
+                /* If we're not allowing concurrency, we must prevent
+                 * re-entrancy in the callback.
+                 */
+                if (key->read_callback_thread) {
+                    /* Another thread is in the read callback for this key,
+                     * just queue this read_op, that thread will invoke the
+                     * callback later.
+                     */
+                    op->pending_key.overlapped.bytes_read = size_status;
+                    pj_list_erase(op);
+                    pj_list_push_back(&key->read_cb_list, op);
+                    pj_ioqueue_unlock_key(key);
+                    return PJ_TRUE;
+                }
+
+                /* Save the thread invoking the read callback.
+                 * Note that when threading is disabled or concurrency is
+                 * allowed, this will always be NULL.
+                 */
+                key->read_callback_thread = pj_thread_this();
+
+                /* Do not hold mutex while invoking callback */
+                has_lock = PJ_FALSE;
+                pj_ioqueue_unlock_key(key);
+                PJ_RACE_ME(5);
+            }
 #endif
         } else {
             has_lock = PJ_FALSE;
@@ -1099,8 +1105,13 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
         release_pending_op(key, op);
 
 #if PJ_IOQUUEUE_CALLBACK_NO_LOCK
-        /* If we have more pending read callback, process it now */
-        ioqueue_dispatch_read_event_no_lock(key, 0);
+        if (operation == PJ_IOQUEUE_OP_READ ||
+            operation == PJ_IOQUEUE_OP_RECV ||
+            operation == PJ_IOQUEUE_OP_RECV_FROM)
+        {
+            /* If we have more pending read callback, process it now */
+            ioqueue_dispatch_read_event_no_lock(key, 0);
+        }
 #endif
 
         decrement_counter(key);
