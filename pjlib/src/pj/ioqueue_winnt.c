@@ -34,6 +34,9 @@
 #if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
 
 
+/* Test config (temporary) */
+#define PJ_IOQUUEUE_CALLBACK_NO_LOCK 1
+
 #define THIS_FILE "ioq_winnt"
 
 #if defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H != 0
@@ -86,6 +89,10 @@ typedef struct ioqueue_overlapped
     WSABUF                 wsabuf;
     pj_sockaddr_in         dummy_addr;
     int                    dummy_addrlen;
+
+#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+    pj_ssize_t             bytes_read;
+#endif
 } ioqueue_overlapped;
 
 #if PJ_HAS_TCP
@@ -162,6 +169,11 @@ struct pj_ioqueue_key_t
     pj_bool_t           closing;
     struct pending_op   pending_list;
     struct pending_op   free_pending_list;
+
+#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+    pj_thread_t        *read_callback_thread;
+    struct pending_op   read_cb_list;
+#endif
 };
 
 /*
@@ -482,6 +494,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
         pj_list_init(&key->pending_list);
         pj_list_init(&key->free_pending_list);
 
+#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+        pj_list_init(&key->read_cb_list);
+#endif
+
         pj_list_push_back(&ioqueue->free_list, key);
     }
     ioqueue->max_fd = max_fd;
@@ -742,6 +758,11 @@ static void key_on_destroy(void *data) {
     pj_assert(pj_list_empty(&key->pending_list));
     pj_list_init(&key->free_pending_list);
 
+#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+    pj_assert(pj_list_empty(&key->read_cb_list));
+    pj_list_init(&key->read_cb_list);
+#endif
+
     /* Return key to free list */
     pj_lock_acquire(ioqueue->lock);
     pj_list_erase(key);
@@ -827,7 +848,20 @@ static void release_pending_op(pj_ioqueue_key_t *key, struct pending_op *op)
 
 static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
 {
+    /* Cancel any outstanding op */
     BOOL rc = fnCancelIoEx(key->hnd, NULL);
+
+#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+    /* Cancel any outstanding callback */
+    pj_ioqueue_lock_key(key);
+    while (!pj_list_empty(&key->read_cb_list)) {
+        struct pending_op *op = key->read_cb_list.next;
+        pj_list_erase(op);
+        pj_list_push_back(&key->free_pending_list, op);
+        decrement_counter(key);
+    }
+    pj_ioqueue_unlock_key(key);
+#endif
 
     if (rc == 0) {
         DWORD dwError = WSAGetLastError();
@@ -840,6 +874,54 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
     TRACE((THIS_FILE, "CANCEL key %p success", key));
     return PJ_SUCCESS;
 }
+
+#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+static unsigned ioqueue_dispatch_read_event_no_lock(pj_ioqueue_key_t* h,
+                                                    unsigned max_event)
+{
+    unsigned event_cnt = 0;
+
+    while (1) {
+        struct pending_op *read_op = NULL;
+        void (*on_read_complete)(pj_ioqueue_key_t *key,
+                                 pj_ioqueue_op_key_t *op_key,
+                                 pj_ssize_t bytes_read);
+
+        /* Check if there is any pending read callback for this key. */
+        pj_ioqueue_lock_key(h);
+
+        if (!h->closing && !pj_list_empty(&h->read_cb_list) &&
+            (max_event == 0 || event_cnt < max_event))
+        {
+            read_op = h->read_cb_list.next;
+            pj_list_erase(read_op);
+            on_read_complete = h->cb.on_read_complete;
+        } else {
+            /* No more pending callback or maximum event number is reached.
+             * Clear the callback thread and return.
+             */
+            h->read_callback_thread = NULL;
+            on_read_complete = NULL;
+        }
+
+        pj_ioqueue_unlock_key(h);
+        PJ_RACE_ME(5);
+
+        /* Invoke the callback or return */
+        if (on_read_complete) {
+            (*on_read_complete)(h, (pj_ioqueue_op_key_t*)read_op,
+                                read_op->pending_key.overlapped.bytes_read);
+
+            release_pending_op(h, read_op);
+            ++event_cnt;
+        } else {
+            break;
+        }
+    }
+
+    return event_cnt;
+}
+#endif
 
 /*
  * Poll the I/O Completion Port, execute callback, 
@@ -917,7 +999,34 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
          * concurrency setting while in the callback) */
         if (key->allow_concurrent == PJ_FALSE) {
             pj_ioqueue_lock_key(key);
+#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+            /* If we're not allowing concurrency, we must prevent
+             * re-entrancy in the callback.
+             */
+            if (key->read_callback_thread) {
+                /* Another thread is in the read callback for this key,
+                 * just queue this read_op, that thread will invoke the
+                 * callback later.
+                 */
+                op->pending_key.overlapped.bytes_read = size_status;
+                pj_list_push_back(&key->read_cb_list, op);
+                pj_ioqueue_unlock_key(key);
+                return PJ_TRUE;
+            }
+
+            /* Save the thread invoking the read callback.
+             * Note that when threading is disabled or concurrency is allowed,
+             * this will always be NULL.
+             */
+            key->read_callback_thread = pj_thread_this();
+
+            /* Do not hold mutex while invoking callback */
+            has_lock = PJ_FALSE;
+            pj_ioqueue_unlock_key(key);
+            PJ_RACE_ME(5);
+#else
             has_lock = PJ_TRUE;
+#endif
         } else {
             has_lock = PJ_FALSE;
         }
@@ -987,6 +1096,12 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
             pj_ioqueue_unlock_key(key);
 
         release_pending_op(key, op);
+
+#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+        /* If we have more pending read callback, process it now */
+        ioqueue_dispatch_read_event_no_lock(key, 0);
+#endif
+
         decrement_counter(key);
 
         return PJ_TRUE;
