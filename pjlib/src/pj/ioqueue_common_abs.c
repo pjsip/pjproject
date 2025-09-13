@@ -29,10 +29,6 @@
 
 #define PENDING_RETRY   2
 
-/* Test config (temporary) */
-#define PJ_IOQUUEUE_CALLBACK_NO_LOCK 1
-
-
 PJ_DEF(void) pj_ioqueue_cfg_default(pj_ioqueue_cfg *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));

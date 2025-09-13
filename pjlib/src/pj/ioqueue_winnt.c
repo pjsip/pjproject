@@ -33,10 +33,6 @@
 /* Only build when the backend is Windows I/O Completion Ports. */
 #if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
 
-
-/* Test config (temporary) */
-#define PJ_IOQUUEUE_CALLBACK_NO_LOCK 1
-
 #define THIS_FILE "ioq_winnt"
 
 #if defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H != 0

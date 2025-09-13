@@ -666,27 +666,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     pj_ioqueue_unlock_key(key);
 
-    /* Wait for any read callback to complete. Note that this function may be
-     * called from the callback.
-     */
-    while (0) {
-        pj_bool_t wait;
-
-        pj_ioqueue_lock_key(key);
-        wait = (key->read_callback_thread &&
-                key->read_callback_thread != pj_thread_this());
-        pj_ioqueue_unlock_key(key);
-        if (!wait)
-            break;
-
-        pj_thread_sleep(10);
-    }
-
-    /* At this point, read callback should be completely ceased
-     * as any ongoing read callback must have been completed and
-     * closing flag has been set.
-     */
-
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Decrement counter. */
     decrement_counter(key);
