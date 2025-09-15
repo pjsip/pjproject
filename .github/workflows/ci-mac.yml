@@ -462,7 +462,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUUEUE_CALLBACK_NO_LOCK 1\n" >> config_site.h
     - name: configure
-      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
       run: $MAKE_FAST
     - name: disable firewall
