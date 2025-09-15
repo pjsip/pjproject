@@ -3873,9 +3873,17 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
              * we are on NAT64 and already obtained the address
              * from STUN above.
              */
-            if (update_addr)
+
+            if (update_addr) {
                 pj_strdup(pool, &addr->host, &tp->local_name.host);
-            addr->port = tp->local_name.port;
+            
+                addr->port = tp->local_name.port;
+                tp_type = tp->key.type;
+
+                if (pj_strchr(&tp->local_name.host, ':')) {
+                    tp_type |= PJSIP_TRANSPORT_IPV6;
+                }
+            }
         }
 
         /* Here the transport's ref counter WILL reach zero. But the
