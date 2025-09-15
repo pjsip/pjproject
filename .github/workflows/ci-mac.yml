@@ -453,22 +453,22 @@ jobs:
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installmac.sh
+    - name: install dependencies
+      run: brew install openssl opencore-amr sipp
+    - name: set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUUEUE_CALLBACK_NO_LOCK 1\n" >> config_site.h
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure
     - name: make
       run: $MAKE_FAST
-    - name: pjlib-test
-      run: make pjlib-test
-    - name: install dependencies
-      run: brew install sipp
-    - name: set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: pjlib-test
+      run: make pjlib-test
     - name: pjsua-test
       run: make pjsua-test
     - name: upload artifacts on failure

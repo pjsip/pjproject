@@ -400,7 +400,7 @@ jobs:
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y sip-tester
+      run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJ_IOQUUEUE_CALLBACK_NO_LOCK 1" >> config_site.h
     - name: configure
