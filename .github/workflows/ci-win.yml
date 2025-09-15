@@ -708,3 +708,55 @@ jobs:
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
+
+  iocp-cb-no-lock:
+    runs-on: windows-latest
+    name: iocp-cb-no-lock / pjlib,pjsua
+    steps:
+    - uses: actions/checkout@master
+    - name: config site
+      run: |
+        echo "" > pjlib\include\pj\config_site.h
+        Add-Content config_site.h "#define PJ_IOQUUEUE_CALLBACK_NO_LOCK 1"
+        Add-Content config_site.h "#define PJ_IOQUEUE_IMP PJ_IOQUEUE_IMP_IOCP"
+      shell: powershell
+    - name: check VsDevCmd.bat
+      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      shell: cmd
+    - name: MSBuild
+      working-directory: .
+      run: |
+        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
+      shell: cmd
+    - name: pjlib-test
+      run: |
+        cd pjlib/bin
+        $args = $env:CI_WIN_ARGS -split ' '
+        ./pjlib-test-i386-Win32-vc14-Release.exe $args $env:CI_MODE
+      shell: powershell
+    - name: set up Python 3.10 for pjsua test
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: install SIPp
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/sipp-3.2-win.zip" -OutFile ".\sipp.zip"
+        Expand-Archive -LiteralPath .\sipp.zip -DestinationPath .
+        cd sipp
+        Add-Content ..\sipp_dir.txt $pwd.Path
+        cd ..
+      shell: powershell
+    - name: python pjsua tests
+      run: |
+        $env:SIPP_DIR = Get-Content .\sipp_dir.txt
+        $env:PATH+=";$env:SIPP_DIR"
+        cd tests/pjsua
+        echo python runall.py
+      shell: powershell
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts

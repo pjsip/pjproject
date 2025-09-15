@@ -443,3 +443,37 @@ jobs:
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
+
+  ioq-cb-no-lock:
+    runs-on: macos-latest
+    name: ioq-cb-no-lock / pjlib,pjsua
+    steps:
+    - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUUEUE_CALLBACK_NO_LOCK 1\n" >> config_site.h
+    - name: configure
+      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure
+    - name: make
+      run: $MAKE_FAST
+    - name: pjlib-test
+      run: make pjlib-test
+    - name: install dependencies
+      run: brew install sipp
+    - name: set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: pjsua-test
+      run: make pjsua-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
