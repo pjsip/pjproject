@@ -3689,6 +3689,10 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     addr->host = tfla2_prm.ret_addr;
     addr->port = tfla2_prm.ret_port;
 
+    if (pj_strchr(&addr->host, ':')) {
+        tp_type |= PJSIP_TRANSPORT_IPV6;
+    }
+
     /* If we are behind NAT64, use the Contact and Via address from
      * the UDP6 transport, which should be obtained from STUN.
      */
@@ -3703,6 +3707,9 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
         if (status == PJ_SUCCESS) {
             update_addr = PJ_FALSE;
             addr->host = tfla2_prm2.ret_addr;
+            if (pj_strchr(&addr->host, ':')) {
+                tp_type |= PJSIP_TRANSPORT_IPV6;
+            }
             pj_strdup(acc->pool, &acc->via_addr.host, &addr->host);
             acc->via_addr.port = addr->port;
             acc->via_tp = (pjsip_transport *)tfla2_prm.ret_tp;
@@ -3723,6 +3730,9 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
                               &pjsua_var.tpdata[i].data.tp->local_name.host);
                     addr->port = (pj_uint16_t)
                                  pjsua_var.tpdata[i].data.tp->local_name.port;
+                    if (pj_strchr(&addr->host, ':')) {
+                        tp_type |= PJSIP_TRANSPORT_IPV6;
+                    }
                 }
                 break;
             }
@@ -3880,9 +3890,9 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
                 addr->port = tp->local_name.port;
                 tp_type = tp->key.type;
 
-                if (pj_strchr(&tp->local_name.host, ':')) {
+                 if (pj_strchr(&addr->host, ':')) {
                     tp_type |= PJSIP_TRANSPORT_IPV6;
-                }
+                 }
             }
         }
 
