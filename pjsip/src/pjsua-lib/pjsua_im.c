@@ -146,6 +146,21 @@ pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
     return PJ_TRUE;
 }
 
+static pj_bool_t is_typing_indication(pjsip_rx_data *rdata)
+{
+    PJ_ASSERT_RETURN(rdata, PJ_FALSE);
+    PJ_ASSERT_RETURN(rdata->msg_info.msg, PJ_FALSE);
+
+    pjsip_msg_body *body = rdata->msg_info.msg->body;
+
+    if (body && pj_stricmp(&body->content_type.type, &STR_MIME_APP)==0 &&
+        pj_stricmp(&body->content_type.subtype, &STR_MIME_ISCOMPOSING)==0)
+    {
+        return PJ_TRUE;
+    }
+    return PJ_FALSE;
+}
+
 /**
  * Private: process pager message.
  *          This may trigger pjsua_ui_on_pager() or pjsua_ui_on_typing().
@@ -178,8 +193,7 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
         contact.slen = 0;
     }
 
-    if (body && pj_stricmp(&body->content_type.type, &STR_MIME_APP)==0 &&
-        pj_stricmp(&body->content_type.subtype, &STR_MIME_ISCOMPOSING)==0)
+    if (is_typing_indication(rdata) == PJ_TRUE)
     {
         /* Expecting typing indication */
         pj_status_t status;
@@ -273,6 +287,7 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
  */
 static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
 {
+    pjsua_acc_id acc_id = PJSUA_INVALID_ID;
     pj_str_t from, to;
     pjsip_accept_hdr *accept_hdr;
     pjsip_msg *msg;
@@ -304,13 +319,30 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
         return PJ_TRUE;
     }
     
-    /* Respond with 200 first, so that remote doesn't retransmit in case
-     * the UI takes too long to process the message. 
-     */
-    pjsip_endpt_respond( pjsua_var.endpt, NULL, rdata, 200, NULL,
-                         NULL, NULL, NULL);
+    acc_id = pjsua_acc_find_for_incoming(rdata);
+    
+    if (acc_id != PJSUA_INVALID_ID && pjsua_var.acc[acc_id].cfg.auto_process_sip_message == PJ_FALSE
+            && is_typing_indication(rdata) == PJ_FALSE) {
+        pjsip_transaction *tsx;
+        pj_status_t status;
 
-    /* For the source URI, we use Contact header if present, since
+        status = pjsip_tsx_create_uas(&mod_pjsua_im, rdata, &tsx);
+        if (status != PJ_SUCCESS) {
+            /* Fall back to immediate response if UAS creation fails */
+            pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 500, NULL,
+                               NULL, NULL, NULL);
+            return PJ_TRUE;
+        }
+
+        pjsip_tsx_recv_msg(tsx, rdata);
+    }
+    else
+    {
+        /* Respond with 200 OK */
+        pjsip_endpt_respond( pjsua_var.endpt, NULL, rdata, 200, NULL,
+                             NULL, NULL, NULL);
+    }
+     /* For the source URI, we use Contact header if present, since
      * Contact header contains the port number information. If this is
      * not available, then use From header.
      */
@@ -331,7 +363,7 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
         to = pj_str("<--URI is too long-->");
 
     /* Process pager. */
-    pjsua_im_process_pager(-1, &from, &to, rdata);
+    pjsua_im_process_pager(PJSUA_INVALID_ID, &from, &to, rdata);
 
     /* Done. */
     return PJ_TRUE;

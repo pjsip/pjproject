@@ -311,6 +311,17 @@ struct AccountSipConfig : public PersistentObject
      */
     bool        useSharedAuth;
 
+    /**
+     * Configure SIP MESSAGE processing behavior for this account.
+     * When set to true, incoming SIP MESSAGE requests will create UAS 
+     * transactions allowing for deferred responses. When set to false,
+     * incoming SIP MESSAGE requests will be responded to immediately
+     * with a 200 OK response (legacy behavior).
+     *
+     * Default: false (immediate response for backward compatibility)
+     */
+    bool        processSipMessageAsync;
+
 public:
     /**
      * Read this object from a container node.

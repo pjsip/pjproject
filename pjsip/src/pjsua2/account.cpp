@@ -282,6 +282,7 @@ void AccountSipConfig::readObject(const ContainerNode &node)
     NODE_READ_STRING    (this_node, authInitialAlgorithm);
     NODE_READ_INT       (this_node, transportId);
     NODE_READ_BOOL      (this_node, useSharedAuth);
+    NODE_READ_BOOL      (this_node, processSipMessageAsync);
 
     ContainerNode creds_node = this_node.readArray("authCreds");
     authCreds.resize(0);
@@ -305,6 +306,7 @@ void AccountSipConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_STRING   (this_node, authInitialAlgorithm);
     NODE_WRITE_INT      (this_node, transportId);
     NODE_WRITE_BOOL     (this_node, useSharedAuth);
+    NODE_WRITE_BOOL     (this_node, processSipMessageAsync);
 
     ContainerNode creds_node = this_node.writeNewArray("authCreds");
     for (unsigned i=0; i<authCreds.size(); ++i) {
@@ -645,14 +647,15 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     for (i=0; i<sipConfig.proxies.size(); ++i) {
         ret.proxy[ret.proxy_cnt++] = str2Pj(sipConfig.proxies[i]);
     }
-    ret.force_contact           = str2Pj(sipConfig.contactForced);
-    ret.contact_params          = str2Pj(sipConfig.contactParams);
-    ret.contact_uri_params      = str2Pj(sipConfig.contactUriParams);
-    ret.auth_pref.initial_auth  = sipConfig.authInitialEmpty;
-    ret.auth_pref.algorithm     = str2Pj(sipConfig.authInitialAlgorithm);
-    ret.transport_id            = sipConfig.transportId;
-    ret.ipv6_sip_use            = sipConfig.ipv6Use;
-    ret.use_shared_auth         = sipConfig.useSharedAuth;
+    ret.force_contact             = str2Pj(sipConfig.contactForced);
+    ret.contact_params            = str2Pj(sipConfig.contactParams);
+    ret.contact_uri_params        = str2Pj(sipConfig.contactUriParams);
+    ret.auth_pref.initial_auth    = sipConfig.authInitialEmpty;
+    ret.auth_pref.algorithm       = str2Pj(sipConfig.authInitialAlgorithm);
+    ret.transport_id              = sipConfig.transportId;
+    ret.ipv6_sip_use              = sipConfig.ipv6Use;
+    ret.use_shared_auth           = sipConfig.useSharedAuth;
+    ret.process_sip_message_async = sipConfig.processSipMessageAsync;
 
     // AccountCallConfig
     ret.call_hold_type          = callConfig.holdType;
@@ -814,14 +817,15 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     for (i=0; i<prm.proxy_cnt; ++i) {
         sipConfig.proxies.push_back(pj2Str(prm.proxy[i]));
     }
-    sipConfig.contactForced     = pj2Str(prm.force_contact);
-    sipConfig.contactParams     = pj2Str(prm.contact_params);
-    sipConfig.contactUriParams  = pj2Str(prm.contact_uri_params);
-    sipConfig.authInitialEmpty  = PJ2BOOL(prm.auth_pref.initial_auth);
-    sipConfig.authInitialAlgorithm = pj2Str(prm.auth_pref.algorithm);
-    sipConfig.transportId       = prm.transport_id;
-    sipConfig.ipv6Use           = prm.ipv6_sip_use;
-    sipConfig.useSharedAuth     = PJ2BOOL(prm.use_shared_auth);
+    sipConfig.contactForced          = pj2Str(prm.force_contact);
+    sipConfig.contactParams          = pj2Str(prm.contact_params);
+    sipConfig.contactUriParams       = pj2Str(prm.contact_uri_params);
+    sipConfig.authInitialEmpty       = PJ2BOOL(prm.auth_pref.initial_auth);
+    sipConfig.authInitialAlgorithm   = pj2Str(prm.auth_pref.algorithm);
+    sipConfig.transportId            = prm.transport_id;
+    sipConfig.ipv6Use                = prm.ipv6_sip_use;
+    sipConfig.useSharedAuth          = PJ2BOOL(prm.use_shared_auth);
+    sipConfig.processSipMessageAsync = PJ2BOOL(prm.process_sip_message_async);
 
     // AccountCallConfig
     callConfig.holdType         = prm.call_hold_type;
