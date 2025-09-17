@@ -432,7 +432,7 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_store(
  * (e.g: SSL socket is destroyed).
  *
  * @param pool          The pool.
- * @param criteria      The lookup criteria.
+ * @param cert_direct   The backend specific objects.
  * @param p_cert        Pointer to credential instance.
  *                      If the credential instance is NULL, a new credential
  *                      instances will be created, otherwise the specified
