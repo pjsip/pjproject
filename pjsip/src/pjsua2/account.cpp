@@ -1120,6 +1120,13 @@ void Account::sendRequest(const pj::SendRequestParam& prm) PJSUA2_THROW(Error)
     PJSUA2_CHECK_EXPR(pjsua_acc_send_request(id, &dest_uri, &method, NULL, prm.userData, &msg_data));
 }
 
+void Account::sendInstantMessageResponse(const pj::SendInstantMessageResponseParam& prm) PJSUA2_THROW(Error)
+{
+    const auto reason = str2Pj(prm.reason);
+    PJSUA2_CHECK_EXPR(pjsua_im_respond_message(prm.deferredResponse.data, prm.deferredResponse.transaction,
+       static_cast<pj_status_t>(prm.code), &reason, nullptr));
+}
+
 void Account::setRegistration(bool renew) PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_acc_set_registration(id, renew) );

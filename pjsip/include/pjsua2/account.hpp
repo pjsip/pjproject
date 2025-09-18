@@ -871,8 +871,6 @@ public:
     SendRequestParam();
 };
 
-
-
 /**
  * SRTP crypto.
  */
@@ -1942,6 +1940,127 @@ public:
     virtual ~FindBuddyMatch() {}
 };
 
+/**
+ * This class is used to store the received parsed SIP MESSAGE request and
+ * its transaction for use in sendInstantMessageResponse().
+ */
+class DeferredResponse
+{
+    friend class Account;
+public:
+    /**
+     * Constructor that clones the rx_data and keeps a non-owning pointer
+     * to the transaction.
+     * @param param        The instant message parameters from the callback.
+     */
+    explicit DeferredResponse(const OnInstantMessageParam& param) : transaction{pjsip_rdata_get_tsx(static_cast<pjsip_rx_data*>(param.rdata.pjRxData))}
+    {
+       auto status = pjsip_rx_data_clone(static_cast<pjsip_rx_data*>(param.rdata.pjRxData), 0, &data);
+       if (status != PJ_SUCCESS) {
+          throw Error(status, "DeferredResponse","Unable to clone rx_data", std::string{}, 0);
+       }
+    }
+ 
+    /**
+     * Constructs an empty object. Must be assigned to before use.
+     */
+    DeferredResponse() : transaction{nullptr}
+    {};
+
+     /**
+      * Copy constructor.
+      */
+    DeferredResponse(const DeferredResponse& deferredResponse)
+    {
+        transaction = deferredResponse.transaction;
+        auto status = pjsip_rx_data_clone(deferredResponse.data, 0, &data);
+        if (status != PJ_SUCCESS) {
+            throw Error(status, "DeferredResponse","Unable to clone rx_data", std::string{}, 0);
+        }
+    }
+
+    /**
+     * Copy assignment operator.
+     */
+    DeferredResponse& operator=(const DeferredResponse& deferredResponse)
+    {
+        if (this != &deferredResponse) {
+            transaction = deferredResponse.transaction;
+            if(data) {
+                pjsip_rx_data_free_cloned(data);
+            }
+            auto status = pjsip_rx_data_clone(deferredResponse.data, 0, &data);
+            if (status != PJ_SUCCESS) {
+                throw Error(status, "DeferredResponse","Unable to clone rx_data", std::string{}, 0);
+            }
+        }
+        return *this;
+    }
+
+    /**
+     * Move constructor.
+     */
+    DeferredResponse(DeferredResponse&& deferredResponse) noexcept : transaction{deferredResponse.transaction}, data{deferredResponse.data}
+    {
+        deferredResponse.data = nullptr;
+        deferredResponse.transaction = nullptr;
+    }
+
+    /**
+     * Move assignment operator.
+     */
+    DeferredResponse& operator=(DeferredResponse&& deferredResponse) noexcept
+    {
+       if (this != &deferredResponse) {
+            transaction = deferredResponse.transaction;
+            data = deferredResponse.data;
+            deferredResponse.data = nullptr;
+            deferredResponse.transaction = nullptr;
+       }
+       return *this;
+    }
+
+    /**
+     * Destructor that frees the cloned rx_data.
+     */
+    ~DeferredResponse(){
+        if(data) {
+            pjsip_rx_data_free_cloned(data);
+        }
+    }
+
+private:
+    /**
+     * Non-owning pointer to the transaction.
+     */
+    pjsip_transaction* transaction;
+
+    /**
+     * Owning pointer to the cloned rx_data.
+     */
+    pjsip_rx_data* data = nullptr;
+};
+
+/**
+ * Parameters for Account::sendInstantMessageResponse().
+ */
+struct SendInstantMessageResponseParam
+{
+    /**
+     * Deferred response object, which is valid until the response is sent.
+     */
+    DeferredResponse deferredResponse;
+
+    /**
+     * Status code of the response.
+     */
+    int         code;
+
+    /**
+     * Optional reason phrase of the response.
+     */
+    string      reason;
+};
 
 /**
  * Account.
@@ -2062,6 +2181,14 @@ public:
      *                      included in outgoing request.
      */
     void sendRequest(const pj::SendRequestParam& prm) PJSUA2_THROW(Error);
+
+    /**
+     * Send instant-message response. A DeferredResponse object must be
+     * provided to identify the incoming MESSAGE request to respond to.
+     *
+     * @param prm               The response's parameters.
+     */
+    void sendInstantMessageResponse(const pj::SendInstantMessageResponseParam& prm) PJSUA2_THROW(Error);
 
     /**
      * Update registration or perform unregistration. Application normally
