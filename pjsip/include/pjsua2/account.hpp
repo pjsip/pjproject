@@ -312,15 +312,15 @@ struct AccountSipConfig : public PersistentObject
     bool        useSharedAuth;
 
     /**
-     * Configure SIP MESSAGE processing behavior for this account.
-     * When set to true, incoming SIP MESSAGE requests will create UAS 
-     * transactions allowing for deferred responses. When set to false,
-     * incoming SIP MESSAGE requests will be responded to immediately
-     * with a 200 OK response (legacy behavior).
+     * Configure automatic SIP-MESSAGE processing behavior for this account.
+     * When set to true, incoming SIP MESSAGE requests will be responded to
+     * immediately with a 200 OK response (legacy behavior). When set to false,
+     * incoming SIP MESSAGE requests will create UAS transactions allowing for
+     * deferred responses, cf. Account::sendResponse() and DeferredResponse.
      *
-     * Default: false (immediate response for backward compatibility)
+     * Default: true (automatic response for backward compatibility)
      */
-    bool        processSipMessageAsync;
+    bool        autoRespondSipMessage;
 
 public:
     /**
@@ -870,8 +870,6 @@ public:
      */
     SendRequestParam();
 };
-
-
 
 /**
  * SRTP crypto.
@@ -1942,6 +1940,86 @@ public:
     virtual ~FindBuddyMatch() {}
 };
 
+/**
+ * This class is used to store the received parsed SIP MESSAGE request and
+ * its transaction for use in sendResponse().
+ */
+class DeferredResponse
+{
+    friend class Account;
+public:
+    /**
+     * Constructor that clones the rx_data and keeps a non-owning pointer
+     * to the transaction.
+     * @param param        The instant message parameters from the callback.
+     */
+    explicit
+    DeferredResponse(const OnInstantMessageParam& param) PJSUA2_THROW(Error);
+
+    /**
+     * Constructs an empty object. Must be assigned to before use.
+     */
+    DeferredResponse();
+
+     /**
+      * Copies the deferred response object by cloning the rx_data.
+      */
+    DeferredResponse(const DeferredResponse& deferredResponse)
+        PJSUA2_THROW(Error);
+
+    /**
+     * Copies the deferred response object by cloning the rx_data.
+     */
+    DeferredResponse& operator=(const DeferredResponse& deferredResponse)
+        PJSUA2_THROW(Error);
+
+    /**
+     * Moves the deferred response object.
+     */
+    DeferredResponse(DeferredResponse&& deferredResponse) noexcept;
+
+    /**
+     * Moves the deferred response object.
+     */
+    DeferredResponse& operator=(DeferredResponse&& deferredResponse) noexcept;
+
+    /**
+     * Destructor that frees possible cloned rx_data.
+     */
+    virtual ~DeferredResponse();
+
+private:
+    /**
+     * Non-owning pointer to the registered transaction.
+     */
+    pjsip_transaction* transaction;
+
+    /**
+     * Owning pointer to the cloned rx_data.
+     */
+    pjsip_rx_data* data = nullptr;
+};
+
+/**
+ * Parameters for Account::sendResponse().
+ */
+struct SendResponseParam
+{
+    /**
+     * Deferred response object, which is valid until the response is sent.
+     */
+    DeferredResponse deferredResponse;
+
+    /**
+     * Status code of the response.
+     */
+    int         code;
+
+    /**
+     * Optional reason phrase of the response.
+     */
+    string      reason;
+};
 
 /**
  * Account.
@@ -2062,6 +2140,19 @@ public:
      *                      included in outgoing request.
      */
     void sendRequest(const pj::SendRequestParam& prm) PJSUA2_THROW(Error);
+
+    /**
+     * Send response for incoming request that was deferred earlier
+     * using DeferredResponse object.
+     *
+     * @param prm                   The response's parameters.
+     * @param prm.deferredResponse  The deferred response object
+     *                              identifying the incoming request to
+     *                              respond to.
+     * @param prm.code              The status code of the response.
+     * @param prm.reason            Optional reason phrase of the response.
+     */
+    void sendResponse(const pj::SendResponseParam& prm) PJSUA2_THROW(Error);
 
     /**
      * Update registration or perform unregistration. Application normally

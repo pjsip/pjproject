@@ -27,6 +27,76 @@ using namespace std;
 #define THIS_FILE               "account.cpp"
 
 ///////////////////////////////////////////////////////////////////////////////
+// DeferredResponse implementation
+
+DeferredResponse::DeferredResponse(const OnInstantMessageParam& param) 
+    : transaction{pjsip_rdata_get_tsx(static_cast<pjsip_rx_data*>(param.rdata.pjRxData))}
+{
+    auto status = pjsip_rx_data_clone(static_cast<pjsip_rx_data*>(param.rdata.pjRxData),
+                                      0, &data);
+    if (status != PJ_SUCCESS) {
+        throw Error(status, "DeferredResponse","Unable to clone rx_data",
+                    std::string{}, 0);
+    }
+}
+
+DeferredResponse::DeferredResponse() : transaction{nullptr}
+{
+}
+
+DeferredResponse::DeferredResponse(const DeferredResponse& deferredResponse)
+{
+    transaction = deferredResponse.transaction;
+    auto status = pjsip_rx_data_clone(deferredResponse.data, 0, &data);
+    if (status != PJ_SUCCESS) {
+        throw Error(status, "DeferredResponse","Unable to clone rx_data",
+                    std::string{}, 0);
+    }
+}
+
+DeferredResponse& DeferredResponse::operator=(const DeferredResponse& deferredResponse)
+{
+    if (this != &deferredResponse) {
+        transaction = deferredResponse.transaction;
+        if(data) {
+            pjsip_rx_data_free_cloned(data);
+        }
+        auto status = pjsip_rx_data_clone(deferredResponse.data, 0, &data);
+        if (status != PJ_SUCCESS) {
+            throw Error(status, "DeferredResponse","Unable to clone rx_data",
+                        std::string{}, 0);
+        }
+    }
+    return *this;
+}
+
+DeferredResponse::DeferredResponse(DeferredResponse&& deferredResponse) noexcept 
+    : transaction{deferredResponse.transaction}, data{deferredResponse.data}
+{
+    deferredResponse.data = nullptr;
+    deferredResponse.transaction = nullptr;
+}
+
+DeferredResponse& DeferredResponse::operator=(DeferredResponse&& deferredResponse)
+    noexcept
+{
+    if (this != &deferredResponse) {
+        transaction = deferredResponse.transaction;
+        data = deferredResponse.data;
+        deferredResponse.data = nullptr;
+        deferredResponse.transaction = nullptr;
+    }
+    return *this;
+}
+
+DeferredResponse::~DeferredResponse()
+{
+    if(data) {
+        pjsip_rx_data_free_cloned(data);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 void RtcpFbCap::fromPj(const pjmedia_rtcp_fb_cap &prm)
 {
@@ -282,7 +352,7 @@ void AccountSipConfig::readObject(const ContainerNode &node)
     NODE_READ_STRING    (this_node, authInitialAlgorithm);
     NODE_READ_INT       (this_node, transportId);
     NODE_READ_BOOL      (this_node, useSharedAuth);
-    NODE_READ_BOOL      (this_node, processSipMessageAsync);
+    NODE_READ_BOOL      (this_node, autoRespondSipMessage);
 
     ContainerNode creds_node = this_node.readArray("authCreds");
     authCreds.resize(0);
@@ -306,7 +376,7 @@ void AccountSipConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_STRING   (this_node, authInitialAlgorithm);
     NODE_WRITE_INT      (this_node, transportId);
     NODE_WRITE_BOOL     (this_node, useSharedAuth);
-    NODE_WRITE_BOOL     (this_node, processSipMessageAsync);
+    NODE_WRITE_BOOL     (this_node, autoRespondSipMessage);
 
     ContainerNode creds_node = this_node.writeNewArray("authCreds");
     for (unsigned i=0; i<authCreds.size(); ++i) {
@@ -655,7 +725,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.transport_id              = sipConfig.transportId;
     ret.ipv6_sip_use              = sipConfig.ipv6Use;
     ret.use_shared_auth           = sipConfig.useSharedAuth;
-    ret.process_sip_message_async = sipConfig.processSipMessageAsync;
+    ret.auto_repond_sip_message = sipConfig.autoRespondSipMessage;
 
     // AccountCallConfig
     ret.call_hold_type          = callConfig.holdType;
@@ -825,7 +895,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     sipConfig.transportId            = prm.transport_id;
     sipConfig.ipv6Use                = prm.ipv6_sip_use;
     sipConfig.useSharedAuth          = PJ2BOOL(prm.use_shared_auth);
-    sipConfig.processSipMessageAsync = PJ2BOOL(prm.process_sip_message_async);
+    sipConfig.autoRespondSipMessage = PJ2BOOL(prm.auto_repond_sip_message);
 
     // AccountCallConfig
     callConfig.holdType         = prm.call_hold_type;
@@ -1117,7 +1187,17 @@ void Account::sendRequest(const pj::SendRequestParam& prm) PJSUA2_THROW(Error)
     pjsua_msg_data msg_data;
     prm.txOption.toPj(msg_data);
 
-    PJSUA2_CHECK_EXPR(pjsua_acc_send_request(id, &dest_uri, &method, NULL, prm.userData, &msg_data));
+    PJSUA2_CHECK_EXPR(pjsua_acc_send_request(id, &dest_uri, &method, NULL,
+                                             prm.userData, &msg_data));
+}
+
+void Account::sendResponse(const pj::SendResponseParam& prm) PJSUA2_THROW(Error)
+{
+    const auto reason = str2Pj(prm.reason);
+    PJSUA2_CHECK_EXPR(pjsua_acc_send_response(id, prm.deferredResponse.data,
+                                              prm.deferredResponse.transaction,
+                                              static_cast<pj_status_t>(prm.code),
+                                              &reason, nullptr));
 }
 
 void Account::setRegistration(bool renew) PJSUA2_THROW(Error)
