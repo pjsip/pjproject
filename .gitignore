@@ -92,3 +92,6 @@ getversion.mak
 configure.out
 */Platforms/iOS/pjsua2/*
 */Platforms/iOS/lib/*
+
+# temp output dir
+output_temp
