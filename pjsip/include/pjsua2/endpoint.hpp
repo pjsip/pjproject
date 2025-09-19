@@ -1545,6 +1545,19 @@ public:
      */
     void libDestroy(unsigned prmFlags=0) PJSUA2_THROW(Error);
 
+    /**
+     * Get the file descriptor associated with pjsua's SIP IO queue, if any.
+     * Returns an integer >= 0 if the IO queue is implemented with epoll or
+     * kqueue, otherwise returns -1.
+     */
+    int libGetSipIoQueueFd();
+
+    /**
+     * Get the file descriptor associated with pjsua's media IO queue, if any.
+     * Returns an integer >= 0 if the IO queue is implemented with epoll or
+     * kqueue, otherwise returns -1.
+     */
+    int libGetMediaIoQueueFd();
 
     /*************************************************************************
      * Utilities
