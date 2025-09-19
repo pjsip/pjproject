@@ -1365,6 +1365,7 @@ static void turn_on_state(pj_turn_session *sess,
             pj_memcpy(&param.qos_params, &turn_sock->setting.qos_params,
                       sizeof(param.qos_params));
 
+            /* Set SSL/TLS credentials from files */
             if (turn_sock->setting.tls_cfg.cert_file.slen ||
                 turn_sock->setting.tls_cfg.ca_list_file.slen ||
                 turn_sock->setting.tls_cfg.ca_list_path.slen ||
@@ -1379,9 +1380,19 @@ static void turn_on_state(pj_turn_session *sess,
                     &turn_sock->setting.tls_cfg.password,
                     &turn_sock->cert);
 
-            } else if (turn_sock->setting.tls_cfg.ca_buf.slen ||
-                       turn_sock->setting.tls_cfg.cert_buf.slen ||
-                       turn_sock->setting.tls_cfg.privkey_buf.slen)
+                if (status != PJ_SUCCESS) {
+                    PJ_PERROR(2,(turn_sock->obj_name, status,
+                                 "Failed to set TLS credentials from files"));
+                    turn_sock_destroy(turn_sock, status);
+                    pj_grp_lock_release(turn_sock->grp_lock);
+                    return;
+                }
+            }
+            
+            /* Set SSL/TLS credentials from buffer */
+            if (turn_sock->setting.tls_cfg.ca_buf.slen ||
+                turn_sock->setting.tls_cfg.cert_buf.slen ||
+                turn_sock->setting.tls_cfg.privkey_buf.slen)
             {
                 status = pj_ssl_cert_load_from_buffer(
                     turn_sock->pool,
@@ -1390,19 +1401,49 @@ static void turn_on_state(pj_turn_session *sess,
                     &turn_sock->setting.tls_cfg.privkey_buf,
                     &turn_sock->setting.tls_cfg.password,
                     &turn_sock->cert);
-            } else if (turn_sock->setting.tls_cfg.cert_lookup.type !=
+
+                if (status != PJ_SUCCESS) {
+                    PJ_PERROR(2,(turn_sock->obj_name, status,
+                                 "Failed to set TLS credentials from buffer"));
+                    turn_sock_destroy(turn_sock, status);
+                    pj_grp_lock_release(turn_sock->grp_lock);
+                    return;
+                }
+            }
+            
+            /* Set SSL/TLS credentials from OS store */
+            if (turn_sock->setting.tls_cfg.cert_lookup.type !=
                                                  PJ_SSL_CERT_LOOKUP_NONE &&
-                       turn_sock->setting.tls_cfg.cert_lookup.keyword.slen)
+                turn_sock->setting.tls_cfg.cert_lookup.keyword.slen)
             {
                 status = pj_ssl_cert_load_from_store(
                                 turn_sock->pool,
                                 &turn_sock->setting.tls_cfg.cert_lookup,
                                 &turn_sock->cert);
+                if (status != PJ_SUCCESS) {
+                    PJ_PERROR(2,(turn_sock->obj_name, status,
+                                 "Failed to set TLS credentials from store"));
+                    turn_sock_destroy(turn_sock, status);
+                    pj_grp_lock_release(turn_sock->grp_lock);
+                    return;
+                }
             }
-            if (status != PJ_SUCCESS) {
-                turn_sock_destroy(turn_sock, status);
-                pj_grp_lock_release(turn_sock->grp_lock);
-                return;
+
+            /* Set direct SSL/TLS credentials */
+            if (turn_sock->setting.tls_cfg.cert_direct.type !=
+                PJ_SSL_CERT_DIRECT_NONE)
+            {
+                status = pj_ssl_cert_load_direct(
+                                turn_sock->pool,
+                                &turn_sock->setting.tls_cfg.cert_direct,
+                                &turn_sock->cert);
+                if (status != PJ_SUCCESS) {
+                    PJ_PERROR(2,(turn_sock->obj_name, status,
+                                 "Failed to set direct TLS credentials"));
+                    turn_sock_destroy(turn_sock, status);
+                    pj_grp_lock_release(turn_sock->grp_lock);
+                    return;
+                }
             }
 
             if (turn_sock->cert) {

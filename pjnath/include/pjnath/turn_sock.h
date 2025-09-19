@@ -219,17 +219,25 @@ typedef struct pj_turn_sock_tls_cfg
     pj_ssl_cert_buffer privkey_buf;
 
     /**
-     * Password to open private key.
-     */
-    pj_str_t    password;
-
-    /**
      * Lookup certificate from OS certificate store with specified criteria.
      *
      * Currently only used by TLS backend Windows Schannel, please check
      * pj_ssl_cert_load_from_store() for more info.
      */
     pj_ssl_cert_lookup_criteria cert_lookup;
+
+    /**
+     * TLS credentials using backend specific objects.
+     *
+     * Currently only used by TLS backend OpenSSL, please check
+     * pj_ssl_cert_load_direct() for more info.
+     */
+    pj_ssl_cert_direct cert_direct;
+
+    /**
+     * Password to open private key.
+     */
+    pj_str_t    password;
 
     /**
      * The ssl socket parameter.
