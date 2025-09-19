@@ -715,10 +715,12 @@ PJ_DECL(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
  * Enumerate occupied ports in the bridge.
  *
  * @param conf          The conference bridge.
- * @param ports         Array of port numbers to be filled in.
- * @param count         On input, specifies the maximum number of ports
- *                      in the array. On return, it will be filled with
- *                      the actual number of ports.
+ * @param ports         Optional array of port numbers to be filled in.
+ * @param count         If ports array is specified, on input, specifies
+ *                      the maximum number of ports in the array.
+ *                      Regardless of whether ports array is specified,
+ *                      on return, it will be filled with the actual
+ *                      number of ports.
  *
  * @return              PJ_SUCCESS on success.
  */
