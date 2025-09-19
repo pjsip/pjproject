@@ -50,6 +50,20 @@ def ua_data_test():
         write(s  + "\r\n")
     write("\r\n")
 
+    #
+    # ByteVector
+    # Assign bytes/bytearray/memoryview to a ByteVector
+    # Copy the content of a ByteVector to a bytearray/memoryview
+    #
+    bv = pj.ByteVector()
+    bv.assign_from_bytes(bytearray([1, 2, 3]))
+    assert bv.size() == 3
+    assert bv[0] == 1 and bv[1] == 2 and bv[2] == 3
+
+    ba = memoryview(bytearray(5))
+    bv.copy_to_bytearray(ba[1:])
+    assert ba == b'\x00\x01\x02\x03\x00'
+
 #
 # Exception test
 #
