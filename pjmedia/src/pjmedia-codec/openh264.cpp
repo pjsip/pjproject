@@ -43,6 +43,8 @@
      defined(__ANDROID__)
 #  define DEFAULT_WIDTH         352
 #  define DEFAULT_HEIGHT        288
+// #define DEFAULT_WIDTH           1920
+// #define DEFAULT_HEIGHT          1080
 #else
 #  define DEFAULT_WIDTH         720
 #  define DEFAULT_HEIGHT        480
@@ -51,9 +53,14 @@
 #define DEFAULT_FPS             15
 #define DEFAULT_AVG_BITRATE     256000
 #define DEFAULT_MAX_BITRATE     256000
+// #define DEFAULT_FPS             30
+// #define DEFAULT_AVG_BITRATE     1024000
+// #define DEFAULT_MAX_BITRATE     2048000
 
 #define MAX_RX_WIDTH            1200
 #define MAX_RX_HEIGHT           800
+// #define MAX_RX_WIDTH            1920
+// #define MAX_RX_HEIGHT           1080
 
 /* OpenH264 default PT */
 #define OH264_PT                PJMEDIA_RTP_PT_H264
