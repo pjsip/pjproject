@@ -63,7 +63,9 @@ using namespace pj;
         SWIG_Python_RaiseOrModifyTypeError("bytearray too small");
         return;
       }
-      memcpy(view.buf, $self->data(), $self->size());
+      if ($self->size() > 0) {
+        memcpy(view.buf, $self->data(), $self->size());
+      }
       PyBuffer_Release(&view);
     }
   }
