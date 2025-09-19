@@ -4782,6 +4782,21 @@ typedef struct pjsua_acc_config
      */
     pj_bool_t        use_shared_auth;
 
+    /**
+    * Specify how to process incoming SIP MESSAGE requests.
+    *
+    * When set to PJ_TRUE (asynchronous processing), incoming MESSAGE requests
+    * will create UAS transactions and defer response sending. Applications
+    * must use pjsua_im_respond_message() to send responses manually.
+    *
+    * When set to PJ_FALSE (immediate processing), incoming MESSAGE requests
+    * will be responded to immediately with SIP 200 OK (legacy behavior).
+    *
+    * Default: PJ_FALSE (immediate response for backward compatibility)
+    */
+    pj_bool_t        process_sip_message_async;
+
+
 } pjsua_acc_config;
 
 
@@ -7283,6 +7298,26 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
                                      pj_bool_t is_typing,
                                      const pjsua_msg_data *msg_data);
 
+/**
+ * Send response to incoming MESSAGE request using the UAS transaction.
+ * This function should be used when the application wants to send a deferred
+ * response to an incoming MESSAGE request that was processed by a UAS transaction.
+ *
+ * @param rdata         The incoming MESSAGE request data (from on_pager2 callback).
+ * @param st_code       Status code to be sent (e.g., 200 for OK, 400 for
+ *                      Bad Request, etc.).
+ * @param st_text       Optional status text. If NULL, default status text
+ *                      for the status code will be used.
+ * @param hdr_list      Optional list of headers to be added to the response.
+ * @param body          Optional message body for the response.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_im_respond_message(pjsip_rx_data *rdata,
+                                              pjsip_transaction *tsx,
+                                              int st_code,
+                                              const pj_str_t *st_text,
+                                              const pjsip_hdr *hdr_list);
 
 
 /**
