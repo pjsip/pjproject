@@ -573,9 +573,14 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     if (status != PJ_SUCCESS) {
         cb_called = PJ_TRUE;
 
-        /* Upon failure to send first request, the invite
-         * session would have been cleared.
+        /* If call inv hasn't been cleared from on_call_state(DISCONNECTED),
+         * we clear it here.
          */
+        if (call->inv) {
+            pjsip_inv_terminate(inv, PJSIP_SC_OK, PJ_FALSE);
+            --pjsua_var.call_cnt;
+        }
+
         call->inv = inv = NULL;
         goto on_error;
     }
@@ -2564,6 +2569,10 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
         info->media_status = call->media[call->audio_idx].state;
         info->media_dir = call->media[call->audio_idx].dir;
         info->conf_slot = call->media[call->audio_idx].strm.a.conf_slot;
+    } else {
+        info->media_status = PJSUA_CALL_MEDIA_NONE;
+        info->media_dir = PJMEDIA_DIR_NONE;
+        info->conf_slot = PJSUA_INVALID_ID;
     }
 
     /* Build array of provisional media info */
@@ -3069,7 +3078,9 @@ on_return:
      * pjsua_call_on_state_changed() to be called and call to be reset,
      * so we need to check for call->inv as well.
      */
-    if (status != PJ_SUCCESS && call->inv) {
+    if (status != PJ_SUCCESS && status != PJSIP_ESESSIONTERMINATED &&
+        call->inv)
+    {
         pj_time_val delay;
 
         /* Schedule a retry */

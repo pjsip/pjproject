@@ -188,6 +188,7 @@ pj_status_t pjsua_aud_subsys_init()
 #if PJMEDIA_HAS_PASSTHROUGH_CODECS
     pjmedia_format ext_fmts[32];
 #endif
+    pjmedia_conf_param param;
 
     /* To suppress warning about unused var when all codecs are disabled */
     PJ_UNUSED_ARG(codec_id);
@@ -297,14 +298,25 @@ pj_status_t pjsua_aud_subsys_init()
         opt |= PJMEDIA_CONF_USE_LINEAR;
     }
 
+    pjmedia_conf_param_default(&param);
+
+    param.max_slots = pjsua_var.media_cfg.max_media_ports;
+    param.sampling_rate = pjsua_var.media_cfg.clock_rate;
+    param.channel_count = pjsua_var.mconf_cfg.channel_count;
+    param.samples_per_frame = pjsua_var.mconf_cfg.samples_per_frame;
+    param.bits_per_sample = pjsua_var.mconf_cfg.bits_per_sample;
+    param.options = opt;
+    param.worker_threads = pjsua_var.media_cfg.conf_threads-1;
+
     /* Init conference bridge. */
-    status = pjmedia_conf_create(pjsua_var.pool,
-                                 pjsua_var.media_cfg.max_media_ports,
-                                 pjsua_var.media_cfg.clock_rate,
-                                 pjsua_var.mconf_cfg.channel_count,
-                                 pjsua_var.mconf_cfg.samples_per_frame,
-                                 pjsua_var.mconf_cfg.bits_per_sample,
-                                 opt, &pjsua_var.mconf);
+    status = pjmedia_conf_create2(pjsua_var.pool, &param, &pjsua_var.mconf);
+    //status = pjmedia_conf_create(pjsua_var.pool,
+    //                             pjsua_var.media_cfg.max_media_ports,
+    //                             pjsua_var.media_cfg.clock_rate,
+    //                             pjsua_var.mconf_cfg.channel_count,
+    //                             pjsua_var.mconf_cfg.samples_per_frame,
+    //                             pjsua_var.mconf_cfg.bits_per_sample,
+    //                             opt, &pjsua_var.mconf);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Error creating conference bridge",
                      status);
@@ -323,6 +335,12 @@ pj_status_t pjsua_aud_subsys_init()
                                       pjsua_var.mconf_cfg.bits_per_sample,
                                       &pjsua_var.null_port);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
+    /* Set conf operation callback. */
+    if (pjsua_var.ua_cfg.cb.on_conf_op_completed) {
+        pjmedia_conf_set_op_cb(pjsua_var.mconf,
+                               pjsua_var.ua_cfg.cb.on_conf_op_completed);
+    }
 
     return status;
 
@@ -658,6 +676,8 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
             si->jb_discard_algo = prm.stream_info.info.aud.jb_discard_algo;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
             si->use_ka = prm.stream_info.info.aud.use_ka;
+
+            si->ka_cfg = prm.stream_info.info.aud.ka_cfg;
 #endif
             si->rtcp_sdes_bye_disabled = prm.stream_info.info.aud.rtcp_sdes_bye_disabled;
             si->rx_event_pt = prm.stream_info.info.aud.rx_event_pt;
@@ -1089,6 +1109,17 @@ PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
     return status;
 }
 
+/*
+ * Change TX and RX settings for the port.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_configure_port( pjsua_conf_port_id slot,
+                                               pjmedia_port_op tx,
+                                               pjmedia_port_op rx)
+{
+    PJ_ASSERT_RETURN(slot >= 0, PJ_EINVAL);
+
+    return pjmedia_conf_configure_port(pjsua_var.mconf, slot, tx, rx);
+}
 
 /*
  * Adjust the signal level to be transmitted from the bridge to the
@@ -1130,22 +1161,14 @@ PJ_DEF(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
                                          tx_level, rx_level);
 }
 
+PJ_DEF(pj_status_t) pjsua_conf_set_op_cb(pjmedia_conf_op_cb cb)
+{
+    return pjmedia_conf_set_op_cb(pjsua_var.mconf, cb);
+}
+
 /*****************************************************************************
  * File player.
  */
-
-static char* get_basename(const char *path, unsigned len)
-{
-    char *p = ((char*)path) + len;
-
-    if (len==0)
-        return p;
-
-    for (--p; p!=path && *p!='/' && *p!='\\'; ) --p;
-
-    return (p==path) ? p : p+1;
-}
-
 
 /*
  * Create a file player, and automatically connect this player to
@@ -1190,8 +1213,8 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
-                             1000);
+    pool = pjsua_pool_create(pjsua_get_basename(path, (unsigned)filename->slen),
+                             1000, 1000);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_error;
@@ -1533,8 +1556,8 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
     pj_memcpy(path, filename->ptr, filename->slen);
     path[filename->slen] = '\0';
 
-    pool = pjsua_pool_create(get_basename(path, (unsigned)filename->slen), 1000, 
-                             1000);
+    pool = pjsua_pool_create(pjsua_get_basename(path, (unsigned)filename->slen),
+                             1000, 1000);
     if (!pool) {
         status = PJ_ENOMEM;
         goto on_return;

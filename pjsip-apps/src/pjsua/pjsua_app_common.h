@@ -153,6 +153,7 @@ typedef struct pjsua_app_config
     unsigned                avi_cnt;
     struct {
         pj_str_t                path;
+        pjsua_avi_player_id     p_id;
         pjmedia_vid_dev_index   dev_id;
         pjsua_conf_port_id      slot;
     } avi[PJSUA_APP_MAX_AVI];
@@ -160,14 +161,13 @@ typedef struct pjsua_app_config
     int                     avi_def_idx;
 
     /* AVI recording */
+    pjsua_avi_rec_id        avi_rec_id;
     pj_str_t                avi_rec;
     pj_uint32_t             avi_rec_size;
     pj_bool_t               avi_rec_audio;
     pj_bool_t               avi_auto_rec;
     pjsua_conf_port_id      avi_vid_slot;
-    pjmedia_port           *avi_vid_port;
     pjsua_conf_port_id      avi_aud_slot;
-    pjmedia_port           *avi_aud_port;
 
     /* CLI setting */
     pj_bool_t               use_cli;

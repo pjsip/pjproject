@@ -8,6 +8,7 @@ pjnath/ice_session.h            pj_ice_sess_trickle
 pjnath/nat_detect.h             pj_stun_nat_type
 pjnath/turn_session.h           pj_turn_tp_type
 
+pjmedia/conference              pjmedia_conf_op_type
 pjmedia/echo.h                  pjmedia_echo_flag
 pjmedia/event.h                 pjmedia_event_type
 pjmedia/format.h                pjmedia_format_id
@@ -19,6 +20,7 @@ pjmedia/transport_srtp.h        pjmedia_srtp_use pjmedia_srtp_crypto_option pjme
 pjmedia/types.h                 pjmedia_type pjmedia_dir pjmedia_tp_proto pjmedia_orient
 pjmedia/videodev.h              pjmedia_vid_dev_hwnd_type
 pjmedia/vid_codec.h             pjmedia_vid_packing
+pjmedia/vid_conf.h              pjmedia_vid_conf_op_type
 pjmedia/vid_stream.h            pjmedia_vid_stream_rc_method
 pjmedia/wav_port.h              pjmedia_file_writer_option pjmedia_file_player_option
 

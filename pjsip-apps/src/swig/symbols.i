@@ -230,6 +230,15 @@ typedef enum pj_turn_tp_type
   PJ_TURN_TP_TLS = 56
 } pj_turn_tp_type;
 
+typedef enum pjmedia_conf_op_type
+{
+    PJMEDIA_CONF_OP_UNKNOWN,
+    PJMEDIA_CONF_OP_ADD_PORT,
+    PJMEDIA_CONF_OP_REMOVE_PORT,
+    PJMEDIA_CONF_OP_CONNECT_PORTS,
+    PJMEDIA_CONF_OP_DISCONNECT_PORTS,
+} pjmedia_conf_op_type;
+
 typedef enum pjmedia_echo_flag
 {
   PJMEDIA_ECHO_DEFAULT = 0,
@@ -447,6 +456,16 @@ typedef enum pjmedia_vid_packing
   PJMEDIA_VID_PACKING_PACKETS = 1,
   PJMEDIA_VID_PACKING_WHOLE = 2
 } pjmedia_vid_packing;
+
+typedef enum pjmedia_vid_conf_op_type
+{
+    PJMEDIA_VID_CONF_OP_UNKNOWN,
+    PJMEDIA_VID_CONF_OP_ADD_PORT,
+    PJMEDIA_VID_CONF_OP_REMOVE_PORT,
+    PJMEDIA_VID_CONF_OP_CONNECT_PORTS,
+    PJMEDIA_VID_CONF_OP_DISCONNECT_PORTS,
+    PJMEDIA_VID_CONF_OP_UPDATE_PORT
+} pjmedia_vid_conf_op_type;
 
 typedef enum pjmedia_vid_stream_rc_method
 {

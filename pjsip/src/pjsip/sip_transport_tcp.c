@@ -290,6 +290,7 @@ static pj_status_t update_factory_addr(struct tcp_listener *listener,
         }
 
         /* Copy the address */
+        listener->factory.has_addr_name = PJ_TRUE;
         listener->factory.addr_name = *addr_name;
         pj_strdup(listener->factory.pool, &listener->factory.addr_name.host,
                   &addr_name->host);
@@ -674,7 +675,11 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
 
     tcp->base.addr_len = pj_sockaddr_get_len(remote);
     pj_sockaddr_cp(&tcp->base.local_addr, local);
-    sockaddr_to_host_port(pool, &tcp->base.local_name, local);
+
+    /* Use listener's published address, if any. */
+    tcp->base.has_addr_name = listener->factory.has_addr_name;
+    tcp->base.local_name = listener->factory.addr_name;
+
     sockaddr_to_host_port(pool, &tcp->base.remote_name, remote);
     tcp->base.dir = is_server? PJSIP_TP_DIR_INCOMING : PJSIP_TP_DIR_OUTGOING;
 
@@ -1078,8 +1083,16 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                 pj_sockaddr_get_port(&local_addr) != 0)
             {
                 pj_sockaddr_cp(tp_addr, &local_addr);
-                sockaddr_to_host_port(tcp->base.pool, &tcp->base.local_name,
-                                      &local_addr);
+                /* Only update published address if not specified, otherwise
+                 * only update the port.
+                 */
+                if (!tcp->base.has_addr_name) {
+                    sockaddr_to_host_port(tcp->base.pool, &tcp->base.local_name,
+                                          &local_addr);
+                } else {
+                    tcp->base.local_name.port =
+                        pj_sockaddr_get_port(&local_addr);
+                }
             }
         }
         
@@ -1191,10 +1204,10 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
         if (pjsip_cfg()->tcp.keep_alive_interval) {
             pj_time_val delay = { 0 };
             delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
-            pjsip_endpt_schedule_timer(listener->endpt,
-                                       &tcp->ka_timer,
-                                       &delay);
-            tcp->ka_timer.id = PJ_TRUE;
+            pjsip_endpt_schedule_timer_w_grp_lock(tcp->base.endpt,
+                                                  &tcp->ka_timer,
+                                                  &delay, PJ_TRUE,
+                                                  tcp->grp_lock);
             pj_gettimeofday(&tcp->last_activity);
         }
 
@@ -1558,9 +1571,8 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     if (pjsip_cfg()->tcp.keep_alive_interval) {
         pj_time_val delay = { 0 };
         delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
-        pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
-                                   &delay);
-        tcp->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tcp->base.endpt, &tcp->ka_timer,
+                                              &delay, PJ_TRUE, tcp->grp_lock);
         pj_gettimeofday(&tcp->last_activity);
     }
 
@@ -1589,9 +1601,8 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
         delay.sec = pjsip_cfg()->tcp.keep_alive_interval - now.sec;
         delay.msec = 0;
 
-        pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
-                                   &delay);
-        tcp->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tcp->base.endpt, &tcp->ka_timer,
+                                              &delay, PJ_TRUE, tcp->grp_lock);
         return;
     }
 
@@ -1617,9 +1628,8 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
     delay.msec = 0;
 
-    pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
-                               &delay);
-    tcp->ka_timer.id = PJ_TRUE;
+    pjsip_endpt_schedule_timer_w_grp_lock(tcp->base.endpt, &tcp->ka_timer,
+                                          &delay, PJ_TRUE, tcp->grp_lock);
 }
 
 

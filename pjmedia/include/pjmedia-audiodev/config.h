@@ -98,6 +98,14 @@ PJ_BEGIN_DECL
 #endif
 
 /**
+ * Specify wheather LowLatency is used for Oboe as performance mode.
+ * Default: 1
+ */
+#ifndef PJMEDIA_OBOE_USE_LOWLATENCY
+#   define PJMEDIA_OBOE_USE_LOWLATENCY  1
+#endif
+
+/**
  * This setting controls whether BlackBerry 10 (BB10) audio support
  * should be included.
  */

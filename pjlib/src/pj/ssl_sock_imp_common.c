@@ -602,6 +602,9 @@ static pj_status_t flush_circ_buf_output(pj_ssl_sock_t *ssock,
     wdata->flags = flags;
     io_read(ssock, &ssock->circ_buf_output, (pj_uint8_t *)&wdata->data, len);
 
+    /* Ticket #4533: Lock before write_mutex release, make sure send order is correct */
+    pj_lock_acquire(ssock->asock_send_mutex);
+
     /* Ticket #1573: Don't hold mutex while calling PJLIB socket send(). */
     pj_lock_release(ssock->write_mutex);
 
@@ -622,6 +625,8 @@ static pj_status_t flush_circ_buf_output(pj_ssl_sock_t *ssock,
                                       ssock->addr_len);
     }
 #endif
+
+    pj_lock_release(ssock->asock_send_mutex);
 
     if (status != PJ_EPENDING) {
         /* When the sending is not pending, remove the wdata from send
@@ -733,6 +738,11 @@ static void ssl_on_destroy(void *arg)
         pj_lock_destroy(ssock->circ_buf_output_mutex);
         ssock->circ_buf_output_mutex = NULL;
         ssock->write_mutex = NULL;
+    }
+
+    if (ssock->asock_send_mutex) {
+        pj_lock_destroy(ssock->asock_send_mutex);
+        ssock->asock_send_mutex = NULL;
     }
 
     /* Secure release pool, i.e: all memory blocks will be zeroed first */
@@ -1174,9 +1184,16 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     }
 
     /* Start SSL handshake */
+    /* Prevent data race with on_data_read() until ssl_do_handshake()
+     * completes.
+     */
+    if (ssock->circ_buf_input_mutex)
+        pj_lock_acquire(ssock->circ_buf_input_mutex);
     ssock->ssl_state = SSL_STATE_HANDSHAKING;
     ssl_set_state(ssock, PJ_TRUE);
     status = ssl_do_handshake(ssock);
+    if (ssock->circ_buf_input_mutex)
+        pj_lock_release(ssock->circ_buf_input_mutex);
 
 on_return:
     if (ssock && status != PJ_EPENDING) {
@@ -1501,8 +1518,14 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
         return status;
 
     /* Create input circular buffer mutex */
-    status = pj_lock_create_simple_mutex(pool, pool->obj_name,
-                                         &ssock->circ_buf_input_mutex);
+    status = pj_lock_create_recursive_mutex(pool, pool->obj_name,
+                                            &ssock->circ_buf_input_mutex);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Create active socket send mutex */
+    status = pj_lock_create_recursive_mutex(pool, pool->obj_name,
+                                            &ssock->asock_send_mutex);
     if (status != PJ_SUCCESS)
         return status;
 

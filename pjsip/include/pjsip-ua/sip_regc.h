@@ -127,15 +127,6 @@ struct pjsip_regc_info
  */
 typedef struct pjsip_regc_info pjsip_regc_info;
 
-
-/**
- * Get the module instance for client registration module.
- *
- * @return          client registration module.
- */
-PJ_DECL(pjsip_module*) pjsip_regc_get_module(void);
-
-
 /**
  * Create client registration structure.
  *

@@ -1,0 +1,7 @@
+This Python pjsua module is now deprecated. Please use PJSUA2 SWIG binding instead.
+
+For more information on building and using the PJSUA2 Python module, please see:
+https://docs.pjsip.org/en/latest/pjsua2/building.html#building-python-swig-module
+
+The PJSUA2 Python module provides a more modern and actively maintained Python API
+for PJSIP functionality.

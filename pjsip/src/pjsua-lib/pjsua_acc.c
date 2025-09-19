@@ -1470,8 +1470,8 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.call_hold_type = cfg->call_hold_type;
 
     /* Unregister first */
-    if (unreg_first && !cfg->disable_reg_on_modify) {
-        if (acc->regc) {
+    if (unreg_first) {
+        if (acc->regc && !cfg->disable_reg_on_modify) {
             status = pjsua_acc_set_registration(acc->index, PJ_FALSE);
             if (status != PJ_SUCCESS) {
                 pjsua_perror(THIS_FILE, "Ignored failure in unregistering the "
@@ -1814,6 +1814,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     pjsip_contact_hdr *contact_hdr;
     char host_addr_buf[PJ_INET6_ADDRSTRLEN+10];
     char via_addr_buf[PJ_INET6_ADDRSTRLEN+10];
+    pj_str_t recv_addr_str;
+    char recv_addr_buf[PJ_INET6_ADDRSTRLEN+10];
     const pj_str_t STR_CONTACT = { "Contact", 7 };
 
     tp = param->rdata->tp_info.transport;
@@ -1835,6 +1837,18 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         via_addr = &via->recvd_param;
     else
         via_addr = &via->sent_by.host;
+
+    status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, via_addr, 
+                               &recv_addr);
+    /* Even though against the RFC, some registrars may put port number in
+     * via received param. Just ignore the port.
+     */
+    if (status == PJ_SUCCESS && pj_sockaddr_get_port(&recv_addr) != 0) {
+        pj_sockaddr_set_port(&recv_addr, 0);
+        pj_sockaddr_print(&recv_addr, recv_addr_buf, sizeof(recv_addr_buf), 0);
+        recv_addr_str = pj_str(recv_addr_buf);
+        via_addr = &recv_addr_str;
+    }
 
     /* If allow_via_rewrite is enabled, we save the Via "received" address
      * from the response, if either of the following condition is met:
@@ -1918,10 +1932,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
      */
     status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, &uri->host, 
                                &contact_addr);
-    if (status == PJ_SUCCESS)
-        status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, via_addr, 
-                                   &recv_addr);
-    if (status == PJ_SUCCESS) {
+    if (status == PJ_SUCCESS && pj_sockaddr_has_addr(&recv_addr)) {
         /* Compare the addresses as sockaddr according to the ticket above,
          * but only if they have the same family (ipv4 vs ipv4, or
          * ipv6 vs ipv6).
@@ -2728,10 +2739,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
             pjsua_perror(THIS_FILE, "Unable to generate suitable Contact header"
                                     " for registration", 
                          status);
-            destroy_regc(acc, PJ_TRUE);
-            pj_pool_release(pool);
-            acc->regc = NULL;
-            return status;
+            goto on_return;
         }
 
         pj_strdup_with_null(acc->pool, &acc->contact, &tmp_contact);
@@ -2748,37 +2756,72 @@ static pj_status_t pjsua_regc_init(int acc_id)
         pjsua_perror(THIS_FILE, 
                      "Client registration initialization error", 
                      status);
-        destroy_regc(acc, PJ_TRUE);
-        pj_pool_release(pool);
-
-        return status;
+        goto on_return;
     }
 
-    pjsip_regc_set_reg_tsx_cb(acc->regc, regc_tsx_cb);
+    status = pjsip_regc_set_reg_tsx_cb(acc->regc, regc_tsx_cb);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, 
+                     "Failed setting registration callback",
+                     status);
+        goto on_return;
+    }
 
     /* Set client registration's transport based on acc's config. */
     pjsua_init_tpselector(acc_id, &tp_sel);
-    pjsip_regc_set_transport(acc->regc, &tp_sel);
-
-    if (acc->cfg.use_shared_auth) {
-        pjsip_regc_set_auth_sess(acc->regc, &acc->shared_auth_sess);
+    status = pjsip_regc_set_transport(acc->regc, &tp_sel);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, 
+                     "Failed setting registration transport",
+                     status);
+        goto on_return;
     }
 
-    /* Set credentials
-     */
+    if (acc->cfg.use_shared_auth) {
+        status = pjsip_regc_set_auth_sess(acc->regc, &acc->shared_auth_sess);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, 
+                         "Failed setting registration shared auth session",
+                         status);
+            goto on_return;
+        }
+    }
+
+    /* Set credentials */
     if (acc->cred_cnt) {
-        pjsip_regc_set_credentials( acc->regc, acc->cred_cnt, acc->cred);
+        status = pjsip_regc_set_credentials(acc->regc, acc->cred_cnt,
+                                            acc->cred);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE,
+                         "Failed setting credentials for registration",
+                         status);
+            goto on_return;
+        }
     }
 
     /* Set delay before registration refresh */
-    pjsip_regc_set_delay_before_refresh(acc->regc,
+    status = pjsip_regc_set_delay_before_refresh(
+                                        acc->regc,
                                         acc->cfg.reg_delay_before_refresh);
+    if (status != PJ_SUCCESS) {
+        /* Maybe too big, it will fallback to the default setting,
+         * just print warning.
+         */
+        pjsua_perror(THIS_FILE,
+                     "Warning: failed setting registration refresh delay",
+                     status);
+    }
 
     /* Set authentication preference */
-    pjsip_regc_set_prefs(acc->regc, &acc->cfg.auth_pref);
+    status = pjsip_regc_set_prefs(acc->regc, &acc->cfg.auth_pref);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE,
+                     "Failed setting registration auth preference",
+                     status);
+        goto on_return;
+    }
 
-    /* Set route-set
-     */
+    /* Set route-set */
     if (acc->cfg.reg_use_proxy) {
         pjsip_route_hdr route_set;
         const pjsip_route_hdr *r;
@@ -2807,12 +2850,25 @@ static pj_status_t pjsua_regc_init(int acc_id)
             }
         }
 
-        if (!pj_list_empty(&route_set))
-            pjsip_regc_set_route_set( acc->regc, &route_set );
+        if (!pj_list_empty(&route_set)) {
+            status = pjsip_regc_set_route_set( acc->regc, &route_set );
+            if (status != PJ_SUCCESS) {
+                pjsua_perror(THIS_FILE,
+                             "Failed setting registration route set",
+                             status);
+                goto on_return;
+            }
+        }
     }
 
     /* Add custom request headers specified in the account config */
-    pjsip_regc_add_headers(acc->regc, &acc->cfg.reg_hdr_list);
+    status = pjsip_regc_add_headers(acc->regc, &acc->cfg.reg_hdr_list);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE,
+                        "Failed setting registration custom headers",
+                        status);
+        goto on_return;
+    }
 
     /* Add other request headers. */
     if (pjsua_var.ua_cfg.user_agent.slen) {
@@ -2826,7 +2882,15 @@ static pj_status_t pjsua_regc_init(int acc_id)
                                             &pjsua_var.ua_cfg.user_agent);
         pj_list_push_back(&hdr_list, (pjsip_hdr*)h);
 
-        pjsip_regc_add_headers(acc->regc, &hdr_list);
+        status = pjsip_regc_add_headers(acc->regc, &hdr_list);
+        if (status != PJ_SUCCESS) {
+            /* Informational header, just print warning */
+            pjsua_perror(THIS_FILE,
+                            "Warning: failed setting registration "
+                            "user-agent header",
+                            status);
+            status = PJ_SUCCESS;
+        }
     }
 
     /* If SIP outbound is used, add "Supported: outbound, path header" */
@@ -2844,12 +2908,26 @@ static pj_status_t pjsua_regc_init(int acc_id)
         hsup->values[0] = pj_str("outbound");
         hsup->values[1] = pj_str("path");
 
-        pjsip_regc_add_headers(acc->regc, &hdr_list);
+        status = pjsip_regc_add_headers(acc->regc, &hdr_list);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE,
+                         "Failed setting registration outbound support "
+                         "indication",
+                         status);
+            goto on_return;
+        }
     }
 
-    pj_pool_release(pool);
+on_return:
+    if (status != PJ_SUCCESS) {
+        if (acc->regc)
+            destroy_regc(acc, PJ_TRUE);
 
-    return PJ_SUCCESS;
+        pjsua_perror(THIS_FILE, "Error initializing client registration",
+                     status);
+    }
+    pj_pool_release(pool);
+    return status;
 }
 
 pj_bool_t pjsua_sip_acc_is_using_ipv6(pjsua_acc_id acc_id)

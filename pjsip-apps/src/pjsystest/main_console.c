@@ -49,7 +49,10 @@ enum gui_key gui_msgbox(const char *title, const char *message, enum gui_flag fl
 
 pj_status_t gui_init(gui_menu *menu)
 {
-    PJ_UNUSED_ARG(menu);
+    //PJ_UNUSED_ARG(menu);
+    menu->submenus[0] = menu->submenus[3];/* replace the 1st submenu with    */
+    ++menu->submenu_cnt;                /* the 4th and add Exit menu         */
+    ++menu->submenus[1]->submenu_cnt;   /*add empty string to the 2nd submenu*/
     return PJ_SUCCESS;
 }
 
@@ -116,6 +119,8 @@ pj_status_t gui_start(gui_menu *menu)
         if (choice && choice->handler)
             (*choice->handler)();
     }
+
+    console_quit = PJ_FALSE;
 
     return PJ_SUCCESS;
 }

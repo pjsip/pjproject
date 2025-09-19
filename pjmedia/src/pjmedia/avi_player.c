@@ -557,7 +557,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool_,
         pj_ansi_snprintf(port_name, sizeof(port_name), "%s-of-%s",
                          pjmedia_type_name(fport[i]->base.info.fmt.type),
                          get_fname(filename));
-        pj_strdup2(pool, &fport[i]->base.info.name, port_name);
+        pj_strdup2_with_null(pool, &fport[i]->base.info.name, port_name);
     }
 
     /* Done. */
@@ -653,6 +653,21 @@ pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams *streams)
 {
     pj_assert(streams);
     return streams->num_streams;
+}
+
+PJ_DEF(unsigned)
+pjmedia_avi_streams_get_num_streams_by_media(pjmedia_avi_streams *streams,
+                                             pjmedia_type media_type)
+{
+    unsigned i = 0;
+    unsigned num_strm = 0;
+
+    pj_assert(streams);
+    for (; i < streams->num_streams; i++)
+        if (streams->streams[i]->info.fmt.type == media_type)
+            ++num_strm;
+
+    return num_strm;
 }
 
 PJ_DEF(pjmedia_avi_stream *)
@@ -815,6 +830,33 @@ static pj_status_t skip_forward(pjmedia_port *this_port, pj_size_t frames)
         if (status != PJ_SUCCESS)
             return status;
             
+        if (!ch.len ||    /* prevent infinite loop */
+            !ch.id)       /* highly likely that the file is invalid */
+        {
+            char fourcc_name[5];
+            pj_uint32_t sig = ch.id;
+            pj_off_t pos;
+            pj_file_getpos(fport->fd, &pos);
+            if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+            {
+                PJ_LOG(2, (THIS_FILE,
+                           "%.*s. Zero length chunk of type %s found at offset=%lu (skip_forward)",
+                           (int)fport->base.info.name.slen,
+                           fport->base.info.name.ptr,
+                           pjmedia_fourcc_name(ch.id, fourcc_name),
+                           (unsigned long)pos));
+            } else {
+                PJ_LOG(2, (THIS_FILE,
+                           "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu (skip_forward)",
+                           (int)fport->base.info.name.slen,
+                           fport->base.info.name.ptr,
+                           ch.id, ch.len,
+                           (unsigned long)pos));
+            }
+
+            return PJMEDIA_ENOTVALIDWAVE;
+        }
+
         PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len, return PJ_EINVAL);
         fport->pad = (pj_uint8_t)ch.len & 1;
 
@@ -1084,6 +1126,31 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
                 goto on_error2;
             }
             
+            if (!ch.len ||    /* prevent infinite loop */
+                !ch.id)       /* highly likely that the file is invalid */
+            {
+                char fourcc_name[5];
+                pj_uint32_t sig = ch.id;
+                if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+                {
+                    PJ_LOG(2, (THIS_FILE,
+                               "%.*s. Zero length chunk of type %s found at offset=%lu (avi_get_frame)",
+                               (int)fport->base.info.name.slen,
+                               fport->base.info.name.ptr,
+                               pjmedia_fourcc_name(ch.id, fourcc_name),
+                               (unsigned long)pos));
+                } else {
+                    PJ_LOG(2, (THIS_FILE,
+                               "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu (avi_get_frame)",
+                               (int)fport->base.info.name.slen,
+                               fport->base.info.name.ptr,
+                               ch.id, ch.len,
+                               (unsigned long)pos));
+                }
+                status = PJMEDIA_ENOTVALIDWAVE;
+                goto on_error2;
+            }
+
             PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len, 
                                          status = PJ_EINVAL;  goto on_error2;);
             ch_len = ch.len;

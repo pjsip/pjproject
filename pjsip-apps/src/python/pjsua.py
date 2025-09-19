@@ -55,8 +55,11 @@ tutorial. The paragraphs below explain basic tasks on using this module.
 
 
 """
+try:
+    import _thread as thread
+except ImportError:
+    import thread
 import _pjsua
-import thread
 import threading
 import weakref
 import time
@@ -604,17 +607,22 @@ class Transport:
             self._lib._err_check("info()", self, -1, "Invalid transport")
         return TransportInfo(ti)
 
+    # NOTE: enable() and disable() methods are commented out because the underlying
+    # pjsua_transport_set_enable function has been deprecated and is no longer available.
+    # Please use PJSUA2 SWIG binding for modern transport management functionality.
+    """
     def enable(self):
-        """Enable this transport."""
+        \"\"\"Enable this transport.\"\"\"
         lck = self._lib.auto_lock()
         err = _pjsua.transport_set_enable(self._id, True)
         self._lib._err_check("enable()", self, err)
 
     def disable(self):
-        """Disable this transport."""
+        \"\"\"Disable this transport.\"\"\"
         lck = self._lib.auto_lock()
         err = _pjsua.transport_set_enable(self._id, 0)
         self._lib._err_check("disable()", self, err)
+    """
 
     def close(self, force=False):
         """Close and destroy this transport.
@@ -2955,8 +2963,8 @@ def _worker_thread_main(arg):
 def _Trace(args):
     global enable_trace
     if enable_trace:
-        print "** ",
+        print("** ", end='')
         for arg in args:
-            print arg,
-        print " **"
+            print(arg, end=' ')
+        print(" **")
 

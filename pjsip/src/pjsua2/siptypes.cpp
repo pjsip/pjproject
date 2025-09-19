@@ -17,6 +17,7 @@
  */
 #include <pjsua2/types.hpp>
 #include <pjsua2/siptypes.hpp>
+#include <pjsip/print_util.h>       /* For pjsip_hdr_names */
 #include "util.hpp"
 
 using namespace pj;
@@ -788,6 +789,24 @@ void SipTxOption::toPj(pjsua_msg_data &msg_data) const
     pj_list_init(&msg_data.hdr_list);
     for (i = 0; i < headers.size(); i++) {
         pjsip_generic_string_hdr& pj_hdr = headers[i].toPj();
+        
+        /* If the header is Max-Forwards, the header type needs to be
+         * PJSIP_H_MAX_FORWARDS as PJSUA will compare the header type
+         * instead of the string name.
+         */
+        if ((headers[i].hName.size() ==
+             pjsip_hdr_names[PJSIP_H_MAX_FORWARDS].name_len) &&
+            (pj_ansi_strnicmp(headers[i].hName.c_str(),
+                              pjsip_hdr_names[PJSIP_H_MAX_FORWARDS].name,
+                              headers[i].hName.size()) == 0))
+        {
+            pjsip_max_fwd_hdr *tmp = (pjsip_max_fwd_hdr*)&pj_hdr;
+
+            pj_assert(sizeof(pjsip_generic_string_hdr) >=
+                      sizeof(pjsip_max_fwd_hdr));
+            pjsip_max_fwd_hdr_init(NULL, tmp, std::stoi(headers[i].hValue));
+        }
+
         pj_list_push_back(&msg_data.hdr_list, &pj_hdr);
     }
 

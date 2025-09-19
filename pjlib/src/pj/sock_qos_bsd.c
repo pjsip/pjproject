@@ -42,7 +42,7 @@ PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
     if (param->flags & PJ_QOS_PARAM_HAS_DSCP) {
         /* We need to know if the socket is IPv4 or IPv6 */
         pj_sockaddr sa;
-        int salen = sizeof(salen);
+        int salen = sizeof(sa);
 
         /* Value is dscp_val << 2 */
         int val = (param->dscp_val << 2);
@@ -104,7 +104,7 @@ PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
     pj_status_t last_err = PJ_ENOTSUP;
     int val = 0, optlen;
     pj_sockaddr sa;
-    int salen = sizeof(salen);
+    int salen = sizeof(sa);
     pj_status_t status;
 
     pj_bzero(p_param, sizeof(*p_param));

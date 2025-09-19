@@ -353,39 +353,6 @@ PJ_DECL(void) pjsip_endpt_release_pool( pjsip_endpoint *endpt,
                                         pj_pool_t *pool );
 
 /**
- * Find transaction in endpoint's transaction table by the transaction's key.
- * This function normally is only used by modules. The key for a transaction
- * can be created by calling #pjsip_tsx_create_key.
- *
- * @param endpt     The endpoint instance.
- * @param key       Transaction key, as created with #pjsip_tsx_create_key.
- *
- * @return          The transaction, or NULL if it's not found.
- */
-PJ_DECL(pjsip_transaction*) pjsip_endpt_find_tsx( pjsip_endpoint *endpt,
-                                                  const pj_str_t *key );
-
-/**
- * Register the transaction to the endpoint's transaction table.
- * This function should only be used internally by the stack.
- *
- * @param endpt     The SIP endpoint.
- * @param tsx       The transaction.
- */
-PJ_DECL(void) pjsip_endpt_register_tsx( pjsip_endpoint *endpt,
-                                        pjsip_transaction *tsx);
-
-/**
- * Forcefull destroy the transaction. This function should only be used
- * internally by the stack.
- *
- * @param endpt     The endpoint.
- * @param tsx       The transaction to destroy.
- */
-PJ_DECL(void) pjsip_endpt_destroy_tsx( pjsip_endpoint *endpt,
-                                      pjsip_transaction *tsx);
-
-/**
  * Create a new transmit data buffer.
  * This function, like all other endpoint functions, is thread safe.
  *
@@ -699,15 +666,6 @@ PJ_DECL(void) pjsip_endpt_log_error( pjsip_endpoint *endpt,
                 if ((tracing))          \
                     PJ_LOG(4,expr);     \
             } while (0)
-
-/*
- * Internal functions.
- */
-/**
- * Internal: receive transaction events from transactions and put in the
- * event queue to be processed later.
- */
-void pjsip_endpt_send_tsx_event( pjsip_endpoint *endpt, pjsip_event *evt );
 
 PJ_END_DECL
 

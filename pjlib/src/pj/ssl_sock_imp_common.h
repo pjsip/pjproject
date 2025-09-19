@@ -138,6 +138,7 @@ struct pj_ssl_sock_t
                                              * data is queuing in wbio.     */
     write_data_t          send_pending; /* list of pending write to network */
     pj_lock_t            *write_mutex;  /* protect write BIO and send_buf   */
+    pj_lock_t            *asock_send_mutex; /* protect send order */
 
     circ_buf_t            circ_buf_input;
     pj_lock_t            *circ_buf_input_mutex;

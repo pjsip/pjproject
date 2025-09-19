@@ -55,8 +55,14 @@ PJ_END_DECL
 int platform_strerror( pj_os_err_type os_errcode, 
                        char *buf, pj_size_t bufsize)
 {
-    const char *syserr = strerror(os_errcode);
-    pj_size_t len = syserr ? strlen(syserr) : 0;
+    const char *syserr;
+    pj_size_t len;
+
+    if (bufsize == 0)
+        return 0;
+
+    syserr = strerror(os_errcode);
+    len = syserr ? strlen(syserr) : 0;
 
     if (len >= bufsize) len = bufsize - 1;
     if (len > 0)
@@ -64,5 +70,3 @@ int platform_strerror( pj_os_err_type os_errcode,
     buf[len] = '\0';
     return len;
 }
-
-

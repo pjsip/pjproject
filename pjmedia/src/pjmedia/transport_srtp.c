@@ -986,7 +986,7 @@ static pj_status_t create_srtp_ctx(transport_srtp *srtp,
         err = srtp_set_stream_roc(ctx->srtp_tx_ctx,
                                   setting->tx_roc.ssrc,
                                   setting->tx_roc.roc);
-        PJ_LOG(4, (THIS_FILE, "Initializing SRTP TX ROC to SSRC %d with "
+        PJ_LOG(4, (THIS_FILE, "Initializing SRTP TX ROC to SSRC %u with "
                    "ROC %d %s\n", setting->tx_roc.ssrc,
                    setting->tx_roc.roc,
                    (err == srtp_err_status_ok)? "succeeded": "failed"));
@@ -1038,7 +1038,7 @@ static pj_status_t create_srtp_ctx(transport_srtp *srtp,
         err = srtp_set_stream_roc(ctx->srtp_rx_ctx,
                                   setting->rx_roc.ssrc,
                                   setting->rx_roc.roc);
-        PJ_LOG(4, (THIS_FILE, "Initializing SRTP RX ROC from SSRC %d with "
+        PJ_LOG(4, (THIS_FILE, "Initializing SRTP RX ROC from SSRC %u with "
                    "ROC %d %s\n",
                    setting->rx_roc.ssrc, setting->rx_roc.roc,
                    (err == srtp_err_status_ok)? "succeeded": "failed"));
@@ -1399,7 +1399,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
         if (status == srtp_err_status_ok) {
             srtp->setting.tx_roc.ssrc = srtp->tx_ssrc;
             srtp->setting.tx_roc.roc = (srtp->offerer_side? 1: 2);
-            PJ_LOG(4, (THIS_FILE, "Setting TX ROC to SSRC %d to %d",
+            PJ_LOG(4, (THIS_FILE, "Setting TX ROC to SSRC %u to %d",
                    srtp->tx_ssrc, srtp->setting.tx_roc.roc));
         }
     }
@@ -1549,6 +1549,8 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
     pj_ssize_t size = param->size;
     int len = (int)size;
     srtp_err_status_t err;
+    pj_bool_t need_restart = PJ_FALSE, need_retry = PJ_FALSE;
+    pj_uint32_t rx_ssrc;
     void (*cb)(void*, void*, pj_ssize_t) = NULL;
     void (*cb2)(pjmedia_tp_cb_param*) = NULL;
     void *cb_data = NULL;
@@ -1624,7 +1626,7 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
             srtp->setting.rx_roc.ssrc = srtp->rx_ssrc;
             srtp->setting.rx_roc.roc = (srtp->offerer_side? 2: 1);
 
-            PJ_LOG(4, (THIS_FILE, "Setting RX ROC from SSRC %d to %d",
+            PJ_LOG(4, (THIS_FILE, "Setting RX ROC from SSRC %u to %d",
                                   srtp->rx_ssrc, srtp->setting.rx_roc.roc));
         } else {
             PJ_LOG(4, (THIS_FILE, "Setting RX ROC %s",
@@ -1635,22 +1637,59 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
     
     err = srtp_unprotect(srtp->srtp_ctx.srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
 
+    rx_ssrc = ntohl(((pjmedia_rtp_hdr*)pkt)->ssrc);
+
 #if PJMEDIA_SRTP_CHECK_RTP_SEQ_ON_RESTART
+    /* Handle such condition that stream is updated (RTP seq is reinited
+     * & SRTP is restarted), but some old packets are still coming
+     * so SRTP is learning wrong RTP seq. While the newly inited RTP seq
+     * comes, SRTP thinks the RTP seq is replayed, so srtp_unprotect()
+     * will return err_status_replay_*. Restarting SRTP can resolve this.
+     */
     if (srtp->probation_cnt > 0 &&
         (err == srtp_err_status_replay_old ||
          err == srtp_err_status_replay_fail))
     {
-        /* Handle such condition that stream is updated (RTP seq is reinited
-         * & SRTP is restarted), but some old packets are still coming
-         * so SRTP is learning wrong RTP seq. While the newly inited RTP seq
-         * comes, SRTP thinks the RTP seq is replayed, so srtp_unprotect()
-         * will return err_status_replay_*. Restarting SRTP can resolve this.
+        need_restart = PJ_TRUE;
+        PJ_LOG(5, (srtp->pool->obj_name, "Restarting SRTP err=%s",
+                   get_libsrtp_errstr(err)));
+    }
+#endif
+
+#if PJMEDIA_SRTP_CHECK_SSRC_ON_RESTART
+    /* This could happen if remote changes ssrc, such as due to media
+     * restart.
+     */
+    if (srtp->probation_cnt > 0 && err == srtp_err_status_no_ctx) {
+        need_restart = PJ_TRUE;
+        PJ_LOG(5, (srtp->pool->obj_name, "Restarting SRTP err=%s ssrc=%u",
+                   get_libsrtp_errstr(err), rx_ssrc));
+    }
+#endif
+
+#if PJMEDIA_SRTP_CHECK_ROC_ON_RESTART
+    if (srtp->probation_cnt > 0 && err == srtp_err_status_auth_fail &&
+        srtp->setting.prev_rx_roc.ssrc != 0 &&
+        srtp->setting.prev_rx_roc.ssrc == srtp->setting.rx_roc.ssrc &&
+        srtp->setting.prev_rx_roc.roc != srtp->setting.rx_roc.roc)
+    {
+        need_retry = PJ_TRUE;
+    }
+#endif
+
+    if (need_restart) {
+        /* Handle such condition that stream is updated and SRTP is restarted,
+         * but some old packets are still coming so SRTP is learning wrong SSRC
+         * or RTP seq. Restarting SRTP can resolve this.
          */
         pjmedia_srtp_crypto tx, rx;
         pj_status_t status;
 
         tx = srtp->srtp_ctx.tx_policy;
         rx = srtp->srtp_ctx.rx_policy;
+        /* If SRTP cannot find the context, reset the SSRC. */
+        if (err == srtp_err_status_no_ctx)
+            srtp->setting.rx_roc.ssrc = 0;
 
         /* Stop SRTP first, otherwise srtp_start() will maintain current
          * roll-over counter.
@@ -1660,24 +1699,15 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
         status = pjmedia_transport_srtp_start((pjmedia_transport*)srtp,
                                               &tx, &rx);
         if (status != PJ_SUCCESS) {
-            PJ_LOG(5,(srtp->pool->obj_name, "Failed to restart SRTP, err=%s",
-                      get_libsrtp_errstr(err)));
+            PJ_PERROR(4, (srtp->pool->obj_name, status,
+                          "Failed to restart SRTP, err=%s",
+                          get_libsrtp_errstr(err)));
         } else if (!srtp->bypass_srtp) {
             err = srtp_unprotect(srtp->srtp_ctx.srtp_rx_ctx,
                                  (pj_uint8_t*)pkt, &len);
         }
-    }
-#if PJMEDIA_SRTP_CHECK_ROC_ON_RESTART
-    else
-#endif
-#endif
 
-#if PJMEDIA_SRTP_CHECK_ROC_ON_RESTART
-    if (srtp->probation_cnt > 0 && err == srtp_err_status_auth_fail &&
-        srtp->setting.prev_rx_roc.ssrc != 0 &&
-        srtp->setting.prev_rx_roc.ssrc == srtp->setting.rx_roc.ssrc &&
-        srtp->setting.prev_rx_roc.roc != srtp->setting.rx_roc.roc)
-    {
+    } else if (need_retry) {
         unsigned roc, new_roc;
         srtp_err_status_t status;
 
@@ -1695,19 +1725,18 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
                                  &len);
         }
     }
-#endif
 
     if (err != srtp_err_status_ok) {
         PJ_LOG(5,(srtp->pool->obj_name,
-                  "Failed to unprotect SRTP, pkt size=%ld, err=%s",
-                  size, get_libsrtp_errstr(err)));
+                  "Failed to unprotect SRTP, pkt size=%ld, SSRC=%u, err=%s",
+                  size, rx_ssrc, get_libsrtp_errstr(err)));
     } else {
         cb = srtp->rtp_cb;
         cb2 = srtp->rtp_cb2;
         cb_data = srtp->user_data;
 
         /* Save SSRC after successful SRTP unprotect */
-        srtp->rx_ssrc = ntohl(((pjmedia_rtp_hdr*)pkt)->ssrc);
+        srtp->rx_ssrc = rx_ssrc;
     }
 
     pj_lock_release(srtp->mutex);

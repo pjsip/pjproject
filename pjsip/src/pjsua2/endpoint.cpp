@@ -244,6 +244,61 @@ void IpChangeParam::fromPj(const pjsua_ip_change_param &param)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void OnAudioMediaOpCompletedParam::fromPj(const pjmedia_conf_op_info &info)
+{
+    opType = info.op_type;
+    status = info.status;
+    switch (opType) {
+    case PJMEDIA_CONF_OP_ADD_PORT:
+        opParam.addInfo.mediaId = info.op_param.add_port.port;
+        break;
+    case PJMEDIA_CONF_OP_REMOVE_PORT:
+        opParam.removeInfo.mediaId = info.op_param.remove_port.port;
+        break;
+    case PJMEDIA_CONF_OP_CONNECT_PORTS:
+        opParam.connectInfo.mediaId = info.op_param.connect_ports.src;
+        opParam.connectInfo.targetMediaId = info.op_param.connect_ports.sink;
+        opParam.connectInfo.adjLevel = info.op_param.connect_ports.adj_level;
+        break;
+    case PJMEDIA_CONF_OP_DISCONNECT_PORTS:
+        opParam.disconnectInfo.mediaId = info.op_param.disconnect_ports.src;
+        opParam.disconnectInfo.targetMediaId = 
+                                         info.op_param.disconnect_ports.sink;
+        break;
+    default:
+        break;
+    }
+}
+
+void OnVideoMediaOpCompletedParam::fromPj(const pjmedia_vid_conf_op_info &info)
+{
+    opType = info.op_type;
+    status = info.status;
+    switch (opType) {
+    case PJMEDIA_VID_CONF_OP_ADD_PORT:
+        opParam.addInfo.mediaId = info.op_param.add_port.port;
+        break;
+    case PJMEDIA_VID_CONF_OP_REMOVE_PORT:
+        opParam.removeInfo.mediaId = info.op_param.remove_port.port;
+        break;
+    case PJMEDIA_VID_CONF_OP_CONNECT_PORTS:
+        opParam.connectInfo.mediaId = info.op_param.connect_ports.src;
+        opParam.connectInfo.targetMediaId = info.op_param.connect_ports.sink;
+        break;
+    case PJMEDIA_VID_CONF_OP_DISCONNECT_PORTS:
+        opParam.disconnectInfo.mediaId = info.op_param.disconnect_ports.src;
+        opParam.disconnectInfo.targetMediaId =
+                                         info.op_param.disconnect_ports.sink;
+        break;
+    case PJMEDIA_VID_CONF_OP_UPDATE_PORT:
+        opParam.updateInfo.mediaId = info.op_param.update_port.port;
+        break;
+    default:
+        break;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 UaConfig::UaConfig()
 : mainThreadOnly(false)
 {
@@ -437,6 +492,7 @@ void MediaConfig::fromPj(const pjsua_media_config &mc)
     this->channelCount = mc.channel_count;
     this->audioFramePtime = mc.audio_frame_ptime;
     this->maxMediaPorts = mc.max_media_ports;
+    this->confThreads = mc.conf_threads;
     this->hasIoqueue = PJ2BOOL(mc.has_ioqueue);
     this->threadCnt = mc.thread_cnt;
     this->quality = mc.quality;
@@ -470,6 +526,7 @@ pjsua_media_config MediaConfig::toPj() const
     mcfg.channel_count = this->channelCount;
     mcfg.audio_frame_ptime = this->audioFramePtime;
     mcfg.max_media_ports = this->maxMediaPorts;
+    mcfg.conf_threads = this->confThreads;
     mcfg.has_ioqueue = this->hasIoqueue;
     mcfg.thread_cnt = this->threadCnt;
     mcfg.quality = this->quality;
@@ -502,6 +559,7 @@ void MediaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_UNSIGNED( this_node, channelCount);
     NODE_READ_UNSIGNED( this_node, audioFramePtime);
     NODE_READ_UNSIGNED( this_node, maxMediaPorts);
+    NODE_READ_UNSIGNED( this_node, confThreads);
     NODE_READ_BOOL    ( this_node, hasIoqueue);
     NODE_READ_UNSIGNED( this_node, threadCnt);
     NODE_READ_UNSIGNED( this_node, quality);
@@ -533,6 +591,7 @@ void MediaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_UNSIGNED( this_node, channelCount);
     NODE_WRITE_UNSIGNED( this_node, audioFramePtime);
     NODE_WRITE_UNSIGNED( this_node, maxMediaPorts);
+    NODE_WRITE_UNSIGNED( this_node, confThreads);
     NODE_WRITE_BOOL    ( this_node, hasIoqueue);
     NODE_WRITE_UNSIGNED( this_node, threadCnt);
     NODE_WRITE_UNSIGNED( this_node, quality);
@@ -2053,6 +2112,8 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_stun_resolution_complete = 
         &Endpoint::stun_resolve_cb;
     ua_cfg.cb.on_rejected_incoming_call = &Endpoint::on_rejected_incoming_call;
+    ua_cfg.cb.on_conf_op_completed      = &Endpoint::on_conf_op_completed;
+    ua_cfg.cb.on_vid_conf_op_completed  = &Endpoint::on_vid_conf_op_completed;
 
     /* Init! */
     PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );
@@ -2833,4 +2894,20 @@ void Endpoint::on_rejected_incoming_call(
         prm.rdata.fromPj(*param->rdata);
 
     Endpoint::instance().onRejectedIncomingCall(prm);
+}
+
+void Endpoint::on_conf_op_completed(const pjmedia_conf_op_info *info)
+{
+    OnAudioMediaOpCompletedParam prm;
+    prm.fromPj(*info);
+
+    Endpoint::instance().onAudioMediaOpCompleted(prm);
+}
+
+void Endpoint::on_vid_conf_op_completed(const pjmedia_vid_conf_op_info *info)
+{
+    OnVideoMediaOpCompletedParam prm;
+    prm.fromPj(*info);
+
+    Endpoint::instance().onVideoMediaOpCompleted(prm);
 }

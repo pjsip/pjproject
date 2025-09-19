@@ -146,6 +146,7 @@ PJ_DEF(pj_ssize_t) pj_strtok2(const pj_str_t *str, const char *delim,
 PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
 {
     const char *s, *ends;
+    char first;
 
     PJ_ASSERT_RETURN(str->slen >= 0 && substr->slen >= 0, NULL);
 
@@ -160,8 +161,9 @@ PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
 
     s = str->ptr;
     ends = str->ptr + str->slen - substr->slen;
+    first = substr->ptr[0];
     for (; s<=ends; ++s) {
-        if (pj_ansi_strncmp(s, substr->ptr, substr->slen)==0)
+        if (s[0] == first && pj_memcmp(s, substr->ptr, substr->slen) == 0)
             return (char*)s;
     }
     return NULL;
@@ -171,6 +173,7 @@ PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
 PJ_DEF(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr)
 {
     const char *s, *ends;
+    char first;
 
     PJ_ASSERT_RETURN(str->slen >= 0 && substr->slen >= 0, NULL);
 
@@ -185,8 +188,9 @@ PJ_DEF(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr)
 
     s = str->ptr;
     ends = str->ptr + str->slen - substr->slen;
+    first = pj_tolower(substr->ptr[0]);
     for (; s<=ends; ++s) {
-        if (pj_ansi_strnicmp(s, substr->ptr, substr->slen)==0)
+        if (pj_tolower(s[0]) == first && pj_ansi_strnicmp(s, substr->ptr, substr->slen) == 0)
             return (char*)s;
     }
     return NULL;

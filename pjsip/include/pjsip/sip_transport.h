@@ -856,6 +856,7 @@ struct pjsip_transport
 
     int                     addr_len;       /**< Length of addresses.       */
     pj_sockaddr             local_addr;     /**< Bound address.             */
+    pj_bool_t               has_addr_name;  /**< Has config published name? */
     pjsip_host_port         local_name;     /**< Published name (eg. STUN). */
     pjsip_host_port         remote_name;    /**< Remote address name.       */
     pjsip_transport_dir     dir;            /**< Connection direction.      */
@@ -1082,6 +1083,7 @@ struct pjsip_tpfactory
     char                   *info;           /**< Transport info/description.*/
 
     pj_sockaddr             local_addr;     /**< Bound address.         */
+    pj_bool_t               has_addr_name;  /**< Has published name?    */
     pjsip_host_port         addr_name;      /**< Published name.        */
 
     /**
