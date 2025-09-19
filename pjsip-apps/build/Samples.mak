@@ -48,8 +48,7 @@ SAMPLES := auddemo \
 	   vid_codec_test \
 	   vid_streamutil
 
-PJSUA2_SAMPLES := pjsua2_demo \
-		pjsua2_hello_reg
+PJSUA2_SAMPLES = pjsua2_demo pjsua2_hello_reg
 
 ifeq ($(EXCLUDE_APP),0)
 EXES := $(foreach file, $(SAMPLES), $(file)$(HOST_EXE))
