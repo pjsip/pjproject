@@ -1335,9 +1335,10 @@ static int write_yuv(pj_uint8_t *buf,
     // PJ_LOG(4,(THIS_FILE, "write_yuv dst_len:[%d]，req_size:[%d],input_len:[%d]",
         // dst_len,req_size,input_len));
 
+    
     if (dst_len < req_size||input_len<req_size)
         return -1;
-
+    
     pPtr = input;
     for (i = 0; i < iHeight && (dst + iWidth < max); i++) {
         pj_memcpy(dst, pPtr, iWidth);
@@ -1511,21 +1512,15 @@ static pj_status_t and_media_decode(pjmedia_vid_codec *codec,
         and_media_data->prm->dec_fmt.det.vid.size.h * 3 / 2)
     {
         len = write_yuv((pj_uint8_t *)output->buf,
-                        output->size,
-                        output_buf,
-                        and_media_data->dec_stride_len,
-                        and_media_data->prm->dec_fmt.det.vid.size.w,
-                        and_media_data->prm->dec_fmt.det.vid.size.h);
-    }
-    
-    len = write_yuv((pj_uint8_t *)output->buf,
                     output->size,
                     output_buf,
                     output_size,
                     and_media_data->dec_stride_len,
                     and_media_data->prm->dec_fmt.det.vid.size.w,
-                    and_media_data->prm->dec_fmt.det.vid.size.h);
-
+                    and_media_data->prm->dec_fmt.det.vid.size.h);                
+    }
+    
+    
     am_status = AMediaCodec_releaseOutputBuffer(and_media_data->dec,
                                                 buf_info.index, 0);
 
