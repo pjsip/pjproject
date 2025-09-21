@@ -856,7 +856,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
             continue;
 
         if (ports)
-             ports[count] = i;
+            ports[count] = i;
         count++;
     }
 
