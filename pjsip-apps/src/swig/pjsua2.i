@@ -40,6 +40,35 @@ using namespace pj;
       //Py_Exit(1);
     }
   }
+
+  %extend std::vector<unsigned char> {
+    void assign_from_bytes(PyObject* obj) {
+      Py_buffer view;
+      if (PyObject_GetBuffer(obj, &view, PyBUF_SIMPLE) != 0) {
+        SWIG_Python_RaiseOrModifyTypeError("expected a bytes-like object (bytes, bytearray, memoryview)");
+        return;
+      }
+      $self->assign((unsigned char*)view.buf, (unsigned char*)view.buf + view.len);
+      PyBuffer_Release(&view);
+    }
+    void copy_to_bytearray(PyObject* obj) {
+      // Not using return value here, because in SWIG, using return value will cause one more copy
+      Py_buffer view;
+      if (PyObject_GetBuffer(obj, &view, PyBUF_WRITABLE) != 0) {
+        SWIG_Python_RaiseOrModifyTypeError("expected a writable bytes-like object (bytearray, memoryview)");
+        return;
+      }
+      if (view.len < (Py_ssize_t)$self->size()) {
+        PyBuffer_Release(&view);
+        SWIG_Python_RaiseOrModifyTypeError("bytearray too small");
+        return;
+      }
+      if ($self->size() > 0) {
+        memcpy(view.buf, $self->data(), $self->size());
+      }
+      PyBuffer_Release(&view);
+    }
+  }
 #endif
 
 #ifdef SWIGCSHARP
