@@ -92,39 +92,45 @@ class MyLogWriter(pj.LogWriter):
         write("This is Python:" + entry.msg + "\r\n")
 
 class AMP(pj.AudioMediaPort):
-    frames = deque()
+    buffers = deque()
 
     def onFrameRequested(self, frame):
-        if len(self.frames):
-            # Get a frame from the queue and pass it to PJSIP
-            frame_ = self.frames.popleft()
+        if len(self.buffers):
+            # Get a buffer from the queue
+            buffer_out = self.buffers.popleft()
+            # Copy the buffer to PJSIP's frame
             frame.type = pj.PJMEDIA_TYPE_AUDIO
-            frame.buf = frame_
+            frame.buf.assign_from_bytes(buffer_out)
 
     def onFrameReceived(self, frame):
-        frame_ = pj.ByteVector()
-        for i in range(frame.buf.size()):
+        # Get the incoming audio buffer from PJSIP's frame
+        buffer_in = bytearray(frame.buf.size())
+        frame.buf.copy_to_bytearray(buffer_in)
+        # Prepare an output buffer
+        buffer_out = bytearray(len(buffer_in))
+
+        # Now you can process these byte arrays directly, e.g. use numpy
+        for i in range(len(buffer_in)):
             if (i % 2 == 1):
                 # Convert it to signed 16-bit integer
-                x = frame.buf[i] << 8 | frame.buf[i-1]
+                x = buffer_in[i] << 8 | buffer_in[i-1]
                 x = struct.unpack('<h', struct.pack('<H', x))[0]
 
                 # Amplify the signal by 50% and clip it
                 x = int(x * 1.5)
-                if (x > 32767):
+                if x > 32767:
                     x = 32767
-                else:
-                    if (x < -32768):
-                        x = -32768
+                elif x < -32768:
+                    x = -32768
 
                 # Convert it to unsigned 16-bit integer
                 x = struct.unpack('<H', struct.pack('<h', x))[0]
 
-                # Put it back in the vector in little endian order
-                frame_.append(x & 0xff)
-                frame_.append((x & 0xff00) >> 8)
+                # Put it in the output buffer in little endian order
+                buffer_out[i-1] = (x & 0xff)
+                buffer_out[i] = (x & 0xff00) >> 8
 
-        self.frames.append(frame_)
+        self.buffers.append(buffer_out)
 
 #
 # Testing log writer callback
