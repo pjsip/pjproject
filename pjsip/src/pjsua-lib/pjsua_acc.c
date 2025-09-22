@@ -3888,10 +3888,11 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
                 pj_strdup(pool, &addr->host, &tp->local_name.host);
                 tp_type = tp->key.type;
 
-                 if (pj_strchr(&addr->host, ':')) {
+                if (pj_strchr(&addr->host, ':')) {
                     tp_type |= PJSIP_TRANSPORT_IPV6;
-                 }
+                }
             }
+            addr->port = tp->local_name.port;
         }
 
         /* Here the transport's ref counter WILL reach zero. But the
