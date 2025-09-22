@@ -49,6 +49,7 @@ pjsip-apps/src/pjsua/ios-swift/Libraries/
 pjsip-apps/src/pjsua2/ios-swift-pjsua2/Libraries/
 
 # SWIG Java/Android stuff
+.gradle
 pjsip-apps/src/swig/java/android/app/src/main/java/org/pjsip/pjsua2/*.java
 pjsip-apps/src/swig/java/android/app/src/main/java/org/pjsip/PjCamera*.java
 pjsip-apps/src/swig/java/android/app/src/main/jniLibs/
@@ -60,12 +61,14 @@ pjsip-apps/src/swig/csharp/sample/SimplePjsua2CS/obj
 pjsip-apps/src/swig/csharp/sample/SimplePjsua2CS/*.user
 
 # SWIG Python stuff
+__pycache__
 pjsip-apps/src/swig/python/build/
+pjsip-apps/src/swig/python/dist/
 pjsip-apps/src/swig/python/pjsua2.py
 pjsip-apps/src/swig/python/pjsua2_wrap.*
+pjsip-apps/src/swig/python/pjsua2.egg-info
 
 # unit tests files
-tests/pjsua/**/__pycache__/
 tests/pjsua/*.pyc
 tests/pjsua/scripts-*/*.pyc
 tests/pjsua/*.log
