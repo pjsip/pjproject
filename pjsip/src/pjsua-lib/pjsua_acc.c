@@ -3886,8 +3886,6 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
 
             if (update_addr) {
                 pj_strdup(pool, &addr->host, &tp->local_name.host);
-            
-                addr->port = tp->local_name.port;
                 tp_type = tp->key.type;
 
                  if (pj_strchr(&addr->host, ':')) {
