@@ -1550,14 +1550,14 @@ public:
      * Returns an integer >= 0 if the IO queue is implemented with epoll or
      * kqueue, otherwise returns -1.
      */
-    int libGetSipIoQueueFd();
+    int libGetSipIoqueueFd();
 
     /**
      * Get the file descriptor associated with pjsua's media IO queue, if any.
      * Returns an integer >= 0 if the IO queue is implemented with epoll or
      * kqueue, otherwise returns -1.
      */
-    int libGetMediaIoQueueFd();
+    int libGetMediaIoqueueFd();
 
     /*************************************************************************
      * Utilities
