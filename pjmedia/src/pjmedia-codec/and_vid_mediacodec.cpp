@@ -1306,6 +1306,7 @@ static pj_status_t and_media_codec_encode_more(pjmedia_vid_codec *codec,
 static int write_yuv(pj_uint8_t *buf,
                      unsigned dst_len,
                      unsigned char* input,
+                     int input_len,
                      int stride_len,
                      int iWidth,
                      int iHeight)
