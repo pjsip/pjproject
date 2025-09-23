@@ -35,7 +35,7 @@ set(DEP_SRTP_SUBDIR  "srtp")
 set(DEP_SRTP_PACKAGE "SRTP")
 list(APPEND DEPS SRTP)
 
-if(NOT APPLE)
+if(NOT (APPLE OR MINGW OR CYGWIN))
   # WebRTC
   set(DEP_WebRTC_HELP  "WebRTC implementation provider")
   set(DEP_WebRTC_SUBDIR "webrtc")
