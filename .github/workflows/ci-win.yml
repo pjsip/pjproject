@@ -26,6 +26,31 @@ jobs:
         Write-Host "Installing Windows SDK with debugging tools..."
         Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
         Write-Host "Windows SDK debugging tools installation completed"
+        
+        # Debug: Check if cdb.exe was installed
+        $cdbPath = "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe"
+        Write-Host "Checking for cdb.exe at: $cdbPath"
+        if (Test-Path $cdbPath) {
+            Write-Host "SUCCESS: cdb.exe found at expected location"
+        } else {
+            Write-Host "ERROR: cdb.exe not found at expected location"
+            # Try to find where it might be
+            $possiblePaths = @(
+                "C:\Program Files\Windows Kits\10\Debuggers\x64\cdb.exe",
+                "C:\Program Files (x86)\Windows Kits\10\Debuggers\x86\cdb.exe",
+                "C:\Program Files\Windows Kits\10\Debuggers\x86\cdb.exe"
+            )
+            foreach ($path in $possiblePaths) {
+                if (Test-Path $path) {
+                    Write-Host "FOUND: cdb.exe at alternative location: $path"
+                }
+            }
+            # List what's in the Kits directory
+            if (Test-Path "C:\Program Files (x86)\Windows Kits\10") {
+                Write-Host "Contents of C:\Program Files (x86)\Windows Kits\10:"
+                Get-ChildItem "C:\Program Files (x86)\Windows Kits\10" -Recurse -Name "cdb.exe" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  Found: $_" }
+            }
+        }
       shell: powershell
     - name: install cirunner
       run: |
