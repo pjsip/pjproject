@@ -623,7 +623,8 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
     pj_grp_lock_add_handler(listener->grp_lock, pool, listener,
                             &lis_on_destroy);
 
-    /* Check if certificate/CA list for SSL socket is set */
+    /* Set SSL/TLS credentials */
+
     if (listener->tls_setting.cert_file.slen ||
         listener->tls_setting.ca_list_file.slen ||
         listener->tls_setting.ca_list_path.slen || 
@@ -636,11 +637,16 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                         &listener->tls_setting.privkey_file,
                         &listener->tls_setting.password,
                         &listener->cert);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set TLS credentials from files"));
             goto on_error;
-    } else if (listener->tls_setting.ca_buf.slen ||
-               listener->tls_setting.cert_buf.slen||
-               listener->tls_setting.privkey_buf.slen)
+        }
+    }
+    
+    if (listener->tls_setting.ca_buf.slen ||
+        listener->tls_setting.cert_buf.slen||
+        listener->tls_setting.privkey_buf.slen)
     {
         status = pj_ssl_cert_load_from_buffer(pool,
                         &listener->tls_setting.ca_buf,
@@ -648,18 +654,37 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                         &listener->tls_setting.privkey_buf,
                         &listener->tls_setting.password,
                         &listener->cert);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set TLS credentials from buffer"));
             goto on_error;    
-    } else if (listener->tls_setting.cert_lookup.type !=
-                                                PJ_SSL_CERT_LOOKUP_NONE &&
-               listener->tls_setting.cert_lookup.keyword.slen)
+        }
+    }
+    
+    if (listener->tls_setting.cert_lookup.type != PJ_SSL_CERT_LOOKUP_NONE &&
+        listener->tls_setting.cert_lookup.keyword.slen)
     {
         status = pj_ssl_cert_load_from_store(
                                 pool,
                                 &listener->tls_setting.cert_lookup,
                                 &listener->cert);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set TLS credentials from store"));
             goto on_error;
+        }
+    }
+
+    if (listener->tls_setting.cert_direct.type != PJ_SSL_CERT_DIRECT_NONE) {
+        status = pj_ssl_cert_load_direct(
+                                pool,
+                                &listener->tls_setting.cert_direct,
+                                &listener->cert);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set direct TLS credentials"));
+            goto on_error;
+        }
     }
 
     /* Register to transport manager */
