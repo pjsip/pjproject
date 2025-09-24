@@ -18,38 +18,43 @@ jobs:
     - uses: actions/checkout@master
     - name: install Windows Debugging Tools
       run: |
-        # Download and install Windows SDK with debugging tools
-        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
-        $output = "winsdksetup.exe"
-        Write-Host "Downloading Windows SDK installer..."
-        Invoke-WebRequest -Uri $url -OutFile $output
-        Write-Host "Installing Windows SDK with debugging tools..."
-        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
-        Write-Host "Windows SDK debugging tools installation completed"
+        # Try chocolatey first (faster and more reliable)
+        Write-Host "Installing debugging tools via chocolatey..."
+        try {
+            choco install windbg -y --no-progress
+            Write-Host "Chocolatey installation completed"
+        } catch {
+            Write-Host "Chocolatey installation failed, trying Windows SDK installer..."
+            # Fallback to Windows SDK installer
+            $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
+            $output = "winsdksetup.exe"
+            Write-Host "Downloading Windows SDK installer..."
+            Invoke-WebRequest -Uri $url -OutFile $output
+            Write-Host "Installing Windows SDK with debugging tools..."
+            Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsPerformanceToolkit"
+            Write-Host "Windows SDK debugging tools installation completed"
+        }
         
         # Debug: Check if cdb.exe was installed
-        $cdbPath = "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe"
-        Write-Host "Checking for cdb.exe at: $cdbPath"
-        if (Test-Path $cdbPath) {
-            Write-Host "SUCCESS: cdb.exe found at expected location"
-        } else {
-            Write-Host "ERROR: cdb.exe not found at expected location"
-            # Try to find where it might be
-            $possiblePaths = @(
-                "C:\Program Files\Windows Kits\10\Debuggers\x64\cdb.exe",
-                "C:\Program Files (x86)\Windows Kits\10\Debuggers\x86\cdb.exe",
-                "C:\Program Files\Windows Kits\10\Debuggers\x86\cdb.exe"
-            )
-            foreach ($path in $possiblePaths) {
-                if (Test-Path $path) {
-                    Write-Host "FOUND: cdb.exe at alternative location: $path"
-                }
+        $possiblePaths = @(
+            "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe",
+            "C:\Program Files\Windows Kits\10\Debuggers\x64\cdb.exe",
+            "C:\Program Files (x86)\Windows Kits\10\Debuggers\x86\cdb.exe",
+            "C:\Program Files\Windows Kits\10\Debuggers\x86\cdb.exe",
+            "C:\tools\windbg\cdb.exe"
+        )
+        $found = $false
+        foreach ($path in $possiblePaths) {
+            if (Test-Path $path) {
+                Write-Host "SUCCESS: cdb.exe found at: $path"
+                $found = $true
+                break
             }
-            # List what's in the Kits directory
-            if (Test-Path "C:\Program Files (x86)\Windows Kits\10") {
-                Write-Host "Contents of C:\Program Files (x86)\Windows Kits\10:"
-                Get-ChildItem "C:\Program Files (x86)\Windows Kits\10" -Recurse -Name "cdb.exe" -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  Found: $_" }
-            }
+        }
+        if (-not $found) {
+            Write-Host "ERROR: cdb.exe not found at any expected location"
+            # Search more broadly
+            Get-ChildItem "C:\" -Recurse -Name "cdb.exe" -ErrorAction SilentlyContinue | Select-Object -First 5 | ForEach-Object { Write-Host "  Found: $_" }
         }
       shell: powershell
     - name: install cirunner
