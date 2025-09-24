@@ -16,6 +16,10 @@ jobs:
     name: Default / build only
     steps:
     - uses: actions/checkout@master
+    - name: Install Windows Debugging Tools
+      run: |
+        choco install windbg --yes --no-progress
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -61,6 +65,10 @@ jobs:
     name: OpenSSL / pjlib,util,pjmedia
     steps:
     - uses: actions/checkout@master
+    - name: Install Windows Debugging Tools
+      run: |
+        choco install windbg --yes --no-progress
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -129,6 +137,10 @@ jobs:
     name: OpenSSL / pjsip,pjsua
     steps:
     - uses: actions/checkout@master
+    - name: Install Windows Debugging Tools
+      run: |
+        choco install windbg --yes --no-progress
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -213,6 +225,10 @@ jobs:
     name: OpenSSL / pjnath
     steps:
     - uses: actions/checkout@master
+    - name: Install Windows Debugging Tools
+      run: |
+        choco install windbg --yes --no-progress
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -267,6 +283,10 @@ jobs:
     name: GnuTLS / build only
     steps:
     - uses: actions/checkout@master
+    - name: Install Windows Debugging Tools
+      run: |
+        choco install windbg --yes --no-progress
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -316,6 +336,10 @@ jobs:
     name: VPX+SChannel / pjlib,util,pjmedia,pjnath
     steps:
     - uses: actions/checkout@master
+    - name: Install Windows Debugging Tools
+      run: |
+        choco install windbg --yes --no-progress
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -427,6 +451,10 @@ jobs:
     name: VPX+SChannel / pjsua
     steps:
     - uses: actions/checkout@master
+    - name: Install Windows Debugging Tools
+      run: |
+        choco install windbg --yes --no-progress
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -531,6 +559,10 @@ jobs:
     name: VPX+SChannel / pjsip
     steps:
     - uses: actions/checkout@master
+    - name: Install Windows Debugging Tools
+      run: |
+        choco install windbg --yes --no-progress
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -610,6 +642,10 @@ jobs:
     name: FFMPEG / build only
     steps:
     - uses: actions/checkout@master
+    - name: Install Windows Debugging Tools
+      run: |
+        choco install windbg --yes --no-progress
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
