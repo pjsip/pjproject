@@ -18,14 +18,12 @@ jobs:
     - uses: actions/checkout@master
     - name: install Windows Debugging Tools
       run: |
-        # Download and install Windows SDK with debugging tools
-        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
-        $output = "winsdksetup.exe"
-        Write-Host "Downloading Windows SDK installer..."
-        Invoke-WebRequest -Uri $url -OutFile $output
-        Write-Host "Installing Windows SDK with debugging tools..."
-        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
-        Write-Host "Windows SDK debugging tools installation completed"
+        # Install Windows SDK debugging tools using Visual Studio Build Tools
+        Write-Host "Installing debugging tools..."
+        # Download and run the Windows SDK installer
+        Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=2196127" -OutFile "winsdksetup.exe"
+        .\winsdksetup.exe /quiet /norestart /features OptionId.WindowsDesktopDebuggers
+        Write-Host "Installation complete"
       shell: powershell
     - name: install cirunner
       run: |
