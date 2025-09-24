@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
       run: |
-        choco install windbg --yes --no-progress
+        choco install windows-sdk-10-version-2004-windbg --yes --no-progress
       shell: powershell
     - name: install cirunner
       run: |
@@ -67,7 +67,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
       run: |
-        choco install windbg --yes --no-progress
+        choco install windows-sdk-10-version-2004-windbg --yes --no-progress
       shell: powershell
     - name: install cirunner
       run: |
@@ -139,7 +139,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
       run: |
-        choco install windbg --yes --no-progress
+        choco install windows-sdk-10-version-2004-windbg --yes --no-progress
       shell: powershell
     - name: install cirunner
       run: |
@@ -227,7 +227,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
       run: |
-        choco install windbg --yes --no-progress
+        choco install windows-sdk-10-version-2004-windbg --yes --no-progress
       shell: powershell
     - name: install cirunner
       run: |
@@ -285,7 +285,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
       run: |
-        choco install windbg --yes --no-progress
+        choco install windows-sdk-10-version-2004-windbg --yes --no-progress
       shell: powershell
     - name: install cirunner
       run: |
@@ -338,7 +338,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
       run: |
-        choco install windbg --yes --no-progress
+        choco install windows-sdk-10-version-2004-windbg --yes --no-progress
       shell: powershell
     - name: install cirunner
       run: |
@@ -453,7 +453,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
       run: |
-        choco install windbg --yes --no-progress
+        choco install windows-sdk-10-version-2004-windbg --yes --no-progress
       shell: powershell
     - name: install cirunner
       run: |
@@ -561,7 +561,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
       run: |
-        choco install windbg --yes --no-progress
+        choco install windows-sdk-10-version-2004-windbg --yes --no-progress
       shell: powershell
     - name: install cirunner
       run: |
@@ -644,7 +644,7 @@ jobs:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
       run: |
-        choco install windbg --yes --no-progress
+        choco install windows-sdk-10-version-2004-windbg --yes --no-progress
       shell: powershell
     - name: install cirunner
       run: |
