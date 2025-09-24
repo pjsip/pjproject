@@ -16,6 +16,17 @@ jobs:
     name: Default / build only
     steps:
     - uses: actions/checkout@master
+    - name: install Windows Debugging Tools
+      run: |
+        # Download and install Windows SDK with debugging tools
+        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
+        $output = "winsdksetup.exe"
+        Write-Host "Downloading Windows SDK installer..."
+        Invoke-WebRequest -Uri $url -OutFile $output
+        Write-Host "Installing Windows SDK with debugging tools..."
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Write-Host "Windows SDK debugging tools installation completed"
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -61,6 +72,17 @@ jobs:
     name: OpenSSL / pjlib,util,pjmedia
     steps:
     - uses: actions/checkout@master
+    - name: install Windows Debugging Tools
+      run: |
+        # Download and install Windows SDK with debugging tools
+        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
+        $output = "winsdksetup.exe"
+        Write-Host "Downloading Windows SDK installer..."
+        Invoke-WebRequest -Uri $url -OutFile $output
+        Write-Host "Installing Windows SDK with debugging tools..."
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Write-Host "Windows SDK debugging tools installation completed"
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -129,6 +151,17 @@ jobs:
     name: OpenSSL / pjsip,pjsua
     steps:
     - uses: actions/checkout@master
+    - name: install Windows Debugging Tools
+      run: |
+        # Download and install Windows SDK with debugging tools
+        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
+        $output = "winsdksetup.exe"
+        Write-Host "Downloading Windows SDK installer..."
+        Invoke-WebRequest -Uri $url -OutFile $output
+        Write-Host "Installing Windows SDK with debugging tools..."
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Write-Host "Windows SDK debugging tools installation completed"
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -213,6 +246,17 @@ jobs:
     name: OpenSSL / pjnath
     steps:
     - uses: actions/checkout@master
+    - name: install Windows Debugging Tools
+      run: |
+        # Download and install Windows SDK with debugging tools
+        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
+        $output = "winsdksetup.exe"
+        Write-Host "Downloading Windows SDK installer..."
+        Invoke-WebRequest -Uri $url -OutFile $output
+        Write-Host "Installing Windows SDK with debugging tools..."
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Write-Host "Windows SDK debugging tools installation completed"
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -267,6 +311,17 @@ jobs:
     name: GnuTLS / build only
     steps:
     - uses: actions/checkout@master
+    - name: install Windows Debugging Tools
+      run: |
+        # Download and install Windows SDK with debugging tools
+        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
+        $output = "winsdksetup.exe"
+        Write-Host "Downloading Windows SDK installer..."
+        Invoke-WebRequest -Uri $url -OutFile $output
+        Write-Host "Installing Windows SDK with debugging tools..."
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Write-Host "Windows SDK debugging tools installation completed"
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -316,6 +371,17 @@ jobs:
     name: VPX+SChannel / pjlib,util,pjmedia,pjnath
     steps:
     - uses: actions/checkout@master
+    - name: install Windows Debugging Tools
+      run: |
+        # Download and install Windows SDK with debugging tools
+        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
+        $output = "winsdksetup.exe"
+        Write-Host "Downloading Windows SDK installer..."
+        Invoke-WebRequest -Uri $url -OutFile $output
+        Write-Host "Installing Windows SDK with debugging tools..."
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Write-Host "Windows SDK debugging tools installation completed"
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -427,6 +493,17 @@ jobs:
     name: VPX+SChannel / pjsua
     steps:
     - uses: actions/checkout@master
+    - name: install Windows Debugging Tools
+      run: |
+        # Download and install Windows SDK with debugging tools
+        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
+        $output = "winsdksetup.exe"
+        Write-Host "Downloading Windows SDK installer..."
+        Invoke-WebRequest -Uri $url -OutFile $output
+        Write-Host "Installing Windows SDK with debugging tools..."
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Write-Host "Windows SDK debugging tools installation completed"
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -531,6 +608,17 @@ jobs:
     name: VPX+SChannel / pjsip
     steps:
     - uses: actions/checkout@master
+    - name: install Windows Debugging Tools
+      run: |
+        # Download and install Windows SDK with debugging tools
+        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
+        $output = "winsdksetup.exe"
+        Write-Host "Downloading Windows SDK installer..."
+        Invoke-WebRequest -Uri $url -OutFile $output
+        Write-Host "Installing Windows SDK with debugging tools..."
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Write-Host "Windows SDK debugging tools installation completed"
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
@@ -610,6 +698,17 @@ jobs:
     name: FFMPEG / build only
     steps:
     - uses: actions/checkout@master
+    - name: install Windows Debugging Tools
+      run: |
+        # Download and install Windows SDK with debugging tools
+        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
+        $output = "winsdksetup.exe"
+        Write-Host "Downloading Windows SDK installer..."
+        Invoke-WebRequest -Uri $url -OutFile $output
+        Write-Host "Installing Windows SDK with debugging tools..."
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Write-Host "Windows SDK debugging tools installation completed"
+      shell: powershell
     - name: install cirunner
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
