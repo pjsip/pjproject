@@ -18,43 +18,40 @@ jobs:
     - uses: actions/checkout@master
     - name: install Windows Debugging Tools
       run: |
-        # Try chocolatey first (faster and more reliable)
-        Write-Host "Installing debugging tools via chocolatey..."
-        try {
-            choco install windbg -y --no-progress
-            Write-Host "Chocolatey installation completed"
-        } catch {
-            Write-Host "Chocolatey installation failed, trying Windows SDK installer..."
-            # Fallback to Windows SDK installer
-            $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
-            $output = "winsdksetup.exe"
-            Write-Host "Downloading Windows SDK installer..."
-            Invoke-WebRequest -Uri $url -OutFile $output
-            Write-Host "Installing Windows SDK with debugging tools..."
-            Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsPerformanceToolkit"
-            Write-Host "Windows SDK debugging tools installation completed"
-        }
+        # Install Windows SDK with Debugging Tools (Windows Performance Toolkit)
+        Write-Host "Downloading Windows SDK installer..."
+        $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
+        $output = "winsdksetup.exe"
+        Invoke-WebRequest -Uri $url -OutFile $output
         
-        # Debug: Check if cdb.exe was installed
-        $possiblePaths = @(
-            "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe",
-            "C:\Program Files\Windows Kits\10\Debuggers\x64\cdb.exe",
-            "C:\Program Files (x86)\Windows Kits\10\Debuggers\x86\cdb.exe",
-            "C:\Program Files\Windows Kits\10\Debuggers\x86\cdb.exe",
-            "C:\tools\windbg\cdb.exe"
-        )
-        $found = $false
-        foreach ($path in $possiblePaths) {
-            if (Test-Path $path) {
-                Write-Host "SUCCESS: cdb.exe found at: $path"
-                $found = $true
-                break
+        Write-Host "Installing Windows SDK with debugging tools..."
+        # Use the Windows Performance Toolkit feature which includes cdb.exe
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsPerformanceToolkit"
+        Write-Host "Windows SDK installation completed"
+        
+        # Check if cdb.exe was installed and is accessible
+        $expectedPath = "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe"
+        if (Test-Path $expectedPath) {
+            Write-Host "SUCCESS: cdb.exe found at expected location: $expectedPath"
+        } else {
+            Write-Host "WARNING: cdb.exe not found at expected location, searching..."
+            # Search in common locations
+            $searchPaths = @(
+                "C:\Program Files\Windows Kits\10\Debuggers\x64\cdb.exe",
+                "C:\Program Files (x86)\Windows Kits\10\Debuggers\x86\cdb.exe", 
+                "C:\Program Files\Windows Kits\10\Debuggers\x86\cdb.exe"
+            )
+            $found = $false
+            foreach ($path in $searchPaths) {
+                if (Test-Path $path) {
+                    Write-Host "Found cdb.exe at: $path"
+                    $found = $true
+                }
             }
-        }
-        if (-not $found) {
-            Write-Host "ERROR: cdb.exe not found at any expected location"
-            # Search more broadly
-            Get-ChildItem "C:\" -Recurse -Name "cdb.exe" -ErrorAction SilentlyContinue | Select-Object -First 5 | ForEach-Object { Write-Host "  Found: $_" }
+            if (-not $found) {
+                Write-Host "Searching entire system for cdb.exe..."
+                Get-ChildItem "C:\" -Recurse -Name "cdb.exe" -ErrorAction SilentlyContinue | Select-Object -First 3 | ForEach-Object { Write-Host "  Found: $_" }
+            }
         }
       shell: powershell
     - name: install cirunner
@@ -104,14 +101,41 @@ jobs:
     - uses: actions/checkout@master
     - name: install Windows Debugging Tools
       run: |
-        # Download and install Windows SDK with debugging tools
+        # Install Windows SDK with Debugging Tools (Windows Performance Toolkit)
+        Write-Host "Downloading Windows SDK installer..."
         $url = "https://go.microsoft.com/fwlink/p/?linkid=2196127"
         $output = "winsdksetup.exe"
-        Write-Host "Downloading Windows SDK installer..."
         Invoke-WebRequest -Uri $url -OutFile $output
+        
         Write-Host "Installing Windows SDK with debugging tools..."
-        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
-        Write-Host "Windows SDK debugging tools installation completed"
+        # Use the Windows Performance Toolkit feature which includes cdb.exe
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsPerformanceToolkit"
+        Write-Host "Windows SDK installation completed"
+        
+        # Check if cdb.exe was installed and is accessible
+        $expectedPath = "C:\Program Files (x86)\Windows Kits\10\Debuggers\x64\cdb.exe"
+        if (Test-Path $expectedPath) {
+            Write-Host "SUCCESS: cdb.exe found at expected location: $expectedPath"
+        } else {
+            Write-Host "WARNING: cdb.exe not found at expected location, searching..."
+            # Search in common locations
+            $searchPaths = @(
+                "C:\Program Files\Windows Kits\10\Debuggers\x64\cdb.exe",
+                "C:\Program Files (x86)\Windows Kits\10\Debuggers\x86\cdb.exe", 
+                "C:\Program Files\Windows Kits\10\Debuggers\x86\cdb.exe"
+            )
+            $found = $false
+            foreach ($path in $searchPaths) {
+                if (Test-Path $path) {
+                    Write-Host "Found cdb.exe at: $path"
+                    $found = $true
+                }
+            }
+            if (-not $found) {
+                Write-Host "Searching entire system for cdb.exe..."
+                Get-ChildItem "C:\" -Recurse -Name "cdb.exe" -ErrorAction SilentlyContinue | Select-Object -First 3 | ForEach-Object { Write-Host "  Found: $_" }
+            }
+        }
       shell: powershell
     - name: install cirunner
       run: |
@@ -189,7 +213,7 @@ jobs:
         Write-Host "Downloading Windows SDK installer..."
         Invoke-WebRequest -Uri $url -OutFile $output
         Write-Host "Installing Windows SDK with debugging tools..."
-        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsPerformanceToolkit"
         Write-Host "Windows SDK debugging tools installation completed"
       shell: powershell
     - name: install cirunner
@@ -284,7 +308,7 @@ jobs:
         Write-Host "Downloading Windows SDK installer..."
         Invoke-WebRequest -Uri $url -OutFile $output
         Write-Host "Installing Windows SDK with debugging tools..."
-        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsPerformanceToolkit"
         Write-Host "Windows SDK debugging tools installation completed"
       shell: powershell
     - name: install cirunner
@@ -349,7 +373,7 @@ jobs:
         Write-Host "Downloading Windows SDK installer..."
         Invoke-WebRequest -Uri $url -OutFile $output
         Write-Host "Installing Windows SDK with debugging tools..."
-        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsPerformanceToolkit"
         Write-Host "Windows SDK debugging tools installation completed"
       shell: powershell
     - name: install cirunner
@@ -409,7 +433,7 @@ jobs:
         Write-Host "Downloading Windows SDK installer..."
         Invoke-WebRequest -Uri $url -OutFile $output
         Write-Host "Installing Windows SDK with debugging tools..."
-        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsPerformanceToolkit"
         Write-Host "Windows SDK debugging tools installation completed"
       shell: powershell
     - name: install cirunner
@@ -531,7 +555,7 @@ jobs:
         Write-Host "Downloading Windows SDK installer..."
         Invoke-WebRequest -Uri $url -OutFile $output
         Write-Host "Installing Windows SDK with debugging tools..."
-        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsPerformanceToolkit"
         Write-Host "Windows SDK debugging tools installation completed"
       shell: powershell
     - name: install cirunner
@@ -646,7 +670,7 @@ jobs:
         Write-Host "Downloading Windows SDK installer..."
         Invoke-WebRequest -Uri $url -OutFile $output
         Write-Host "Installing Windows SDK with debugging tools..."
-        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsPerformanceToolkit"
         Write-Host "Windows SDK debugging tools installation completed"
       shell: powershell
     - name: install cirunner
@@ -736,7 +760,7 @@ jobs:
         Write-Host "Downloading Windows SDK installer..."
         Invoke-WebRequest -Uri $url -OutFile $output
         Write-Host "Installing Windows SDK with debugging tools..."
-        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsDesktopDebuggers"
+        Start-Process -Wait -FilePath ".\$output" -ArgumentList "/quiet", "/norestart", "/features", "OptionId.WindowsPerformanceToolkit"
         Write-Host "Windows SDK debugging tools installation completed"
       shell: powershell
     - name: install cirunner
