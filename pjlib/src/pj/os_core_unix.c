@@ -45,6 +45,16 @@
 #include <unistd.h>         // getpid()
 #include <errno.h>          // errno
 
+#if PJ_HAS_THREADS
+#  if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L \
+                                && !defined(__STDC_NO_ATOMICS__)
+#    define HAS_STD_ATOMICS 1
+#    include <stdatomic.h>
+#  else
+#    define EMULATE_ATOMICS 1
+#  endif
+#endif
+
 #include <pthread.h>
 #if defined(PJ_HAS_PTHREAD_NP_H) && PJ_HAS_PTHREAD_NP_H != 0
 #  include <pthread_np.h>
@@ -101,8 +111,14 @@ struct pj_thread_t
 
 struct pj_atomic_t
 {
+#if HAS_STD_ATOMICS
+    _Atomic pj_atomic_value_t value;
+#elif EMULATE_ATOMICS
     pj_mutex_t         *mutex;
     pj_atomic_value_t   value;
+#else
+    pj_atomic_value_t   value;
+#endif
 };
 
 struct pj_mutex_t
@@ -1045,12 +1061,16 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(atomic_var, PJ_ENOMEM);
 
-#if PJ_HAS_THREADS
+#if HAS_STD_ATOMICS
+    atomic_init(&atomic_var->value, initial);
+#elif EMULATE_ATOMICS
     rc = pj_mutex_create(pool, "atm%p", PJ_MUTEX_SIMPLE, &atomic_var->mutex);
     if (rc != PJ_SUCCESS)
         return rc;
-#endif
     atomic_var->value = initial;
+#else
+    atomic_var->value = initial;
+#endif
 
     *ptr_atomic = atomic_var;
     return PJ_SUCCESS;
@@ -1064,8 +1084,8 @@ PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
     pj_status_t status;
 
     PJ_ASSERT_RETURN(atomic_var, PJ_EINVAL);
-    
-#if PJ_HAS_THREADS
+
+#if EMULATE_ATOMICS
     status = pj_mutex_destroy( atomic_var->mutex );
     if (status == PJ_SUCCESS) {
         atomic_var->mutex = NULL;
@@ -1086,15 +1106,17 @@ PJ_DEF(void) pj_atomic_set(pj_atomic_t *atomic_var, pj_atomic_value_t value)
     PJ_CHECK_STACK();
     PJ_ASSERT_ON_FAIL(atomic_var, return);
 
-#if PJ_HAS_THREADS
+#if HAS_STD_ATOMICS
+    atomic_store(&atomic_var->value, value);
+#elif EMULATE_ATOMICS
     status = pj_mutex_lock( atomic_var->mutex );
     if (status != PJ_SUCCESS) {
         return;
     }
-#endif
     atomic_var->value = value;
-#if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    atomic_var->value = value;
 #endif
 }
 
@@ -1107,13 +1129,16 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var)
 
     PJ_CHECK_STACK();
 
-#if PJ_HAS_THREADS
+#if HAS_STD_ATOMICS
+    oldval = atomic_load(&atomic_var->value);
+#elif EMULATE_ATOMICS
     pj_mutex_lock( atomic_var->mutex );
-#endif
     oldval = atomic_var->value;
-#if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    oldval = atomic_var->value;
 #endif
+
     return oldval;
 }
 
@@ -1126,12 +1151,14 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var)
 
     PJ_CHECK_STACK();
 
-#if PJ_HAS_THREADS
+#if HAS_STD_ATOMICS
+    new_value = atomic_fetch_add(&atomic_var->value, 1) + 1;
+#elif EMULATE_ATOMICS
     pj_mutex_lock( atomic_var->mutex );
-#endif
     new_value = ++atomic_var->value;
-#if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    new_value = ++atomic_var->value;
 #endif
 
     return new_value;
@@ -1154,12 +1181,14 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var)
 
     PJ_CHECK_STACK();
 
-#if PJ_HAS_THREADS
+#if HAS_STD_ATOMICS
+    new_value = atomic_fetch_sub(&atomic_var->value, 1) - 1;
+#elif EMULATE_ATOMICS
     pj_mutex_lock( atomic_var->mutex );
-#endif
     new_value = --atomic_var->value;
-#if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    new_value = --atomic_var->value;
 #endif
 
     return new_value;
@@ -1182,15 +1211,14 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
 {
     pj_atomic_value_t new_value;
 
-#if PJ_HAS_THREADS
-    pj_mutex_lock(atomic_var->mutex);
-#endif
-
-    atomic_var->value += value;
-    new_value = atomic_var->value;
-
-#if PJ_HAS_THREADS
-    pj_mutex_unlock(atomic_var->mutex);
+#if HAS_STD_ATOMICS
+    new_value = atomic_fetch_add(&atomic_var->value, value) + value;
+#elif EMULATE_ATOMICS
+    pj_mutex_lock( atomic_var->mutex );
+    new_value = atomic_var->value += value;
+    pj_mutex_unlock( atomic_var->mutex);
+#else
+    new_value = atomic_var->value += value;
 #endif
 
     return new_value;
