@@ -714,6 +714,10 @@ jobs:
     name: iocp-cb-no-lock / pjlib,pjsua
     steps:
     - uses: actions/checkout@master
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installwindows.ps1
     - name: config site
       run: |
         cd pjlib/include/pj; cp config_site_test.h config_site.h
