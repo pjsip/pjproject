@@ -756,6 +756,20 @@ jobs:
         set LIB=%LIB%;%OPENSSL_DIR%\lib
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+    - name: pjlib-test
+      run: |
+        $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
+        $env:PATH+=";$env:OPENSSL_DIR\bin"
+        cd pjlib/bin
+        Invoke-Expression "$env:CI_RUNNER ./pjlib-test-i386-Win32-vc14-Release.exe $env:CI_MODE $env:CI_WIN_ARGS udp_ioqueue_test tcp_ioqueue_test ioqueue_stress_test udp_ioqueue_unreg_test ioqueue_perf_test0 ioqueue_perf_test1 activesock_test ssl_sock_test iocp_unregister_test"
+      shell: powershell
+    - name: pjsip-test
+      run: |
+        $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
+        $env:PATH+=";$env:OPENSSL_DIR\bin"
+        cd pjsip/bin
+        Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS resolve_test inv_offer_answer_test transport_udp_test transport_tcp_test regc_test tsx_destroy_test"
+      shell: powershell
     - name: build test tools cmp_wav
       run: |
         set /P OPENSSL_DIR=<openssl_dir.txt
