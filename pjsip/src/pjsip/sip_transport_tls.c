@@ -1955,7 +1955,14 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     tp_addr = &tls->base.local_addr;
     pj_sockaddr_cp((pj_sockaddr_t*)&addr, 
                    (pj_sockaddr_t*)&ssl_info.local_addr);
-    if (pj_sockaddr_cmp(tp_addr, &addr) != 0) {
+    /* Only update if the address family is the same. This is because
+     * some SSL backend (such as Apple) may return IPv6 effective local
+     * address in a NAT64 network even though initially initialized
+     * with IPv4.
+     */
+    if (tp_addr->addr.sa_family == addr.addr.sa_family &&
+        pj_sockaddr_cmp(tp_addr, &addr) != 0)
+    {
         pj_sockaddr_cp(tp_addr, &addr);
         sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
                               tp_addr);
