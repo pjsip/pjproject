@@ -4782,6 +4782,21 @@ typedef struct pjsua_acc_config
      */
     pj_bool_t        use_shared_auth;
 
+    /**
+    * Specify how to automatically process incoming SIP MESSAGE requests.
+    *
+    * When set to PJ_TRUE (automatic processing), incoming MESSAGE requests
+    * will be responded to immediately with SIP 200 OK (legacy behavior).
+    *
+    * When set to PJ_FALSE (manual processing), incoming MESSAGE requests
+    * will create UAS transactions and defer response sending. Applications
+    * must use pjsua_acc_send_response() to send responses manually.
+    *
+    * Default: PJ_TRUE (automatic response for backward compatibility)
+    */
+    pj_bool_t        auto_process_sip_message;
+
+
 } pjsua_acc_config;
 
 
@@ -5115,6 +5130,33 @@ PJ_DECL(pj_status_t) pjsua_acc_get_config(pjsua_acc_id acc_id,
  */
 PJ_DECL(pj_status_t) pjsua_acc_modify(pjsua_acc_id acc_id,
                                       const pjsua_acc_config *acc_cfg);
+
+/**
+ * Send response to incoming request (e.g. SIP MESSAGE) that was
+ * processed by a UAS transaction.
+ *
+ * This function can be used when the application wants to defer a
+ * response to an incoming request that was processed by 
+ * a UAS transaction.
+ *
+ * @param acc_id        The account that will send the response.
+ * @param rdata         The received request data.
+ * @param tsx           The UAS transaction that was created for the
+ *                      incoming request.
+ * @param st_code       Status code to be sent (e.g., 200 for OK, 400 for
+ *                      Bad Request, etc.).
+ * @param st_text       Optional status text. If NULL, default status text
+ *                      for the status code will be used.
+ * @param hdr_list      Optional list of headers to be added to the response.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_send_response(pjsua_acc_id acc_id,
+                                             pjsip_rx_data *rdata,
+                                             pjsip_transaction *tsx,
+                                             int st_code,
+                                             const pj_str_t *st_text,
+                                             const pjsip_hdr *hdr_list);
 
 /**
  * Send arbitrary out-of-dialog requests from an account, e.g. OPTIONS.
@@ -7282,7 +7324,6 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
                                      const pj_str_t *to, 
                                      pj_bool_t is_typing,
                                      const pjsua_msg_data *msg_data);
-
 
 
 /**
