@@ -864,10 +864,11 @@ PJ_DEF(unsigned) pjsua_conf_get_max_ports(void)
  */
 PJ_DEF(unsigned) pjsua_conf_get_active_ports(void)
 {
-    unsigned count = pjsua_var.media_cfg.max_media_ports;
+    unsigned ports[PJSUA_MAX_CONF_PORTS];
+    unsigned count = PJ_ARRAY_SIZE(ports);
     pj_status_t status;
 
-    status = pjmedia_conf_enum_ports(pjsua_var.mconf, NULL, &count);
+    status = pjmedia_conf_enum_ports(pjsua_var.mconf, ports, &count);
     if (status != PJ_SUCCESS)
         count = 0;
 

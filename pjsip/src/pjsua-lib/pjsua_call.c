@@ -155,6 +155,7 @@ static pj_status_t call_inv_end_session(pjsua_call *call,
 static void reset_call(pjsua_call_id id)
 {
     pjsua_call *call = &pjsua_var.calls[id];
+    unsigned i;
 
     if (call->incoming_data) {
         pjsip_rx_data_free_cloned(call->incoming_data);
@@ -165,7 +166,7 @@ static void reset_call(pjsua_call_id id)
     call->last_text.ptr = call->last_text_buf_;
     call->cname.ptr = call->cname_buf;
     call->cname.slen = sizeof(call->cname_buf);
-    for (unsigned i=0; i<PJ_ARRAY_SIZE(call->media); ++i) {
+    for (i=0; i<PJ_ARRAY_SIZE(call->media); ++i) {
         pjsua_call_media *call_med = &call->media[i];
         call_med->ssrc = pj_rand();
         call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
@@ -646,6 +647,8 @@ void pjsua_call_cleanup_flag(pjsua_call_setting *opt)
  */
 PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
 {
+    unsigned i;
+
     pj_assert(opt);
 
     pj_bzero(opt, sizeof(*opt));
@@ -658,7 +661,7 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
                                PJSUA_VID_REQ_KEYFRAME_RTCP_PLI;
 #endif
 
-    for (unsigned i = 0; i < PJMEDIA_MAX_SDP_MEDIA; i++) {
+    for (i = 0; i < PJMEDIA_MAX_SDP_MEDIA; i++) {
         opt->media_dir[i] = PJMEDIA_DIR_ENCODING_DECODING;
     }
 }
@@ -2751,15 +2754,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
             answer->msg_data = pjsua_msg_data_clone(call->inv->pool_prov,
                                                     msg_data);
         }
-        if (call->async_call.call_var.inc_call.answers.prev) {
-            pj_list_push_back(&call->async_call.call_var.inc_call.answers,
-                answer);
-        }
-        else {
-            if (status == PJ_SUCCESS) status = PJ_EBUG;
-            pjsua_perror(THIS_FILE, "Error answering call without a media transport", status);
-        }
-
+       
         PJSUA_UNLOCK();
         if (dlg) pjsip_dlg_dec_lock(dlg);
         pj_log_pop_indent();
