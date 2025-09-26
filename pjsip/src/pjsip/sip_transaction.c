@@ -2389,8 +2389,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction *tsx,
     pj_grp_lock_release(tsx->grp_lock);
 
     /* Only decrement reference counter when it returns success.
-    * (This is the specification from the .PDF design document).
-    */
+     * (This is the specification from the .PDF design document).
+     */
     if (status == PJ_SUCCESS) {
         pjsip_tx_data_dec_ref(tdata);
     }

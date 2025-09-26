@@ -3165,8 +3165,7 @@ static void stop_media_stream(pjsua_call *call, unsigned med_idx)
 static void stop_media_session(pjsua_call_id call_id)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
-    unsigned mi;
-    
+    unsigned mi;   
     for (mi=0; mi<call->med_cnt; ++mi) {
         stop_media_stream(call, mi);
     }

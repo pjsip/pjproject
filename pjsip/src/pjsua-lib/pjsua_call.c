@@ -2754,6 +2754,8 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
             answer->msg_data = pjsua_msg_data_clone(call->inv->pool_prov,
                                                     msg_data);
         }
+        pj_list_push_back(&call->async_call.call_var.inc_call.answers,
+            answer);
        
         PJSUA_UNLOCK();
         if (dlg) pjsip_dlg_dec_lock(dlg);
