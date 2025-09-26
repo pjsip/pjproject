@@ -389,3 +389,37 @@ jobs:
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
+
+  ioq-epoll-cb-no-lock:
+    runs-on: ubuntu-latest
+    name: ioq-epoll-cb-no-lock / pjlib,pjsua
+    steps:
+    - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1" >> config_site.h
+    - name: configure
+      run: CFLAGS="-g -fPIC" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure --enable-epoll
+    - name: make
+      run: $MAKE_FAST
+    - name: pjlib-test
+      run: cd pjlib/build && ../bin/pjlib-test-`make -s -C ../.. infotarget` $CI_MODE $CI_ARGS udp_ioqueue_test tcp_ioqueue_test ioqueue_stress_test udp_ioqueue_unreg_test ioqueue_perf_test0 ioqueue_perf_test1 activesock_test ssl_sock_test iocp_unregister_test
+    - name: pjsip-test
+      run: cd pjsip/build && ../bin/pjsip-test-`make -s -C ../.. infotarget` $CI_ARGS resolve_test inv_offer_answer_test transport_udp_test transport_tcp_test regc_test tsx_destroy_test
+    - name: set up Python 3.10 for pjsua test
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+    - name: pjsua-test
+      run: make pjsua-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
