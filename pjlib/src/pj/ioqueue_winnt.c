@@ -86,7 +86,7 @@ typedef struct ioqueue_overlapped
     pj_sockaddr_in         dummy_addr;
     int                    dummy_addrlen;
 
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
     pj_ssize_t             bytes_read;
 #endif
 } ioqueue_overlapped;
@@ -166,7 +166,7 @@ struct pj_ioqueue_key_t
     struct pending_op   pending_list;
     struct pending_op   free_pending_list;
 
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
     pj_thread_t        *read_callback_thread;
     struct pending_op   read_cb_list;
 #endif
@@ -490,7 +490,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
         pj_list_init(&key->pending_list);
         pj_list_init(&key->free_pending_list);
 
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
         pj_list_init(&key->read_cb_list);
 #endif
 
@@ -754,7 +754,7 @@ static void key_on_destroy(void *data) {
     pj_assert(pj_list_empty(&key->pending_list));
     pj_list_init(&key->free_pending_list);
 
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
     pj_assert(pj_list_empty(&key->read_cb_list));
     pj_list_init(&key->read_cb_list);
 #endif
@@ -847,7 +847,7 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
     /* Cancel any outstanding op */
     BOOL rc = fnCancelIoEx(key->hnd, NULL);
 
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
     /* Cancel any outstanding callback */
     pj_ioqueue_lock_key(key);
     while (!pj_list_empty(&key->read_cb_list)) {
@@ -872,7 +872,7 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
     return PJ_SUCCESS;
 }
 
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
 static unsigned ioqueue_dispatch_read_event_no_lock(pj_ioqueue_key_t* h,
                                                     unsigned max_event)
 {
@@ -999,7 +999,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
             has_lock = PJ_TRUE;
             pj_ioqueue_lock_key(key);
 
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
             if (operation == PJ_IOQUEUE_OP_READ ||
                 operation == PJ_IOQUEUE_OP_RECV ||
                 operation == PJ_IOQUEUE_OP_RECV_FROM)
@@ -1101,7 +1101,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
 
         release_pending_op(key, op);
 
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
         if (operation == PJ_IOQUEUE_OP_READ ||
             operation == PJ_IOQUEUE_OP_RECV ||
             operation == PJ_IOQUEUE_OP_RECV_FROM)

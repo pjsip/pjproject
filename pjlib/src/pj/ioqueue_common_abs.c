@@ -432,7 +432,7 @@ static pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
 }
 
 
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
 static unsigned ioqueue_dispatch_read_event_no_lock(pj_ioqueue_key_t* h,
                                                     unsigned max_event)
 {
@@ -651,7 +651,7 @@ static pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
             pj_ioqueue_unlock_key(h);
             PJ_RACE_ME(5);
         } else {
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
             /* If we're not allowing concurrency, we must prevent
              * re-entrancy in the callback.
              */
@@ -692,7 +692,7 @@ static pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
             pj_ioqueue_unlock_key(h);
         }
 
-#if PJ_IOQUUEUE_CALLBACK_NO_LOCK
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
         /* If we have more pending read callback, process it now */
         ioqueue_dispatch_read_event_no_lock(h, 0);
 #endif
