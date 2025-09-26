@@ -856,6 +856,7 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
         pj_list_push_back(&key->free_pending_list, op);
         decrement_counter(key);
     }
+    key->read_callback_thread = NULL;
     pj_ioqueue_unlock_key(key);
 #endif
 
