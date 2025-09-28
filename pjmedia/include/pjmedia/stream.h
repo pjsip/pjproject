@@ -422,8 +422,7 @@ PJ_DECL(pj_status_t) pjmedia_stream_dial_dtmf(pjmedia_stream *stream,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_get_queued_dtmf_digits(pjmedia_stream* stream,
-    unsigned* digits);
+PJ_DECL(unsigned) pjmedia_get_queued_dtmf_digits(pjmedia_stream* stream);
 
 
 /**

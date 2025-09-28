@@ -2403,6 +2403,19 @@ struct pjsua_msg_data
     pj_str_t    target_uri;
 
     /**
+    * Optional local URI (i.e. From header). If NULL, the account ID
+    * \a pjsua_acc_config.id is used for the From header. This field is
+    * currently used only by pjsua_call_make_call() and pjsua_im_send().
+    */
+    pj_str_t    local_uri;
+
+
+    /*
+    to support different contact_uri values per call
+   */
+    pj_str_t contact_uri;
+
+    /**
      * Additional message headers as linked list. Application can add
      * headers to the list by creating the header, either from the heap/pool
      * or from temporary local variable, and add the header using
@@ -2468,17 +2481,6 @@ PJ_DECL(pjsua_msg_data*) pjsua_msg_data_clone(pj_pool_t *pool,
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_create(void);
-
-
-/**
- * Instantiate pjsua application. Application must call this function before
- * calling any other functions, to make sure that the underlying libraries
- * are properly initialized. Once this function has returned success,
- * application must call pjsua_destroy() before quitting.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_create2(const pjsua_logging_config* log_cfg);
 
 
 /** Forward declaration */

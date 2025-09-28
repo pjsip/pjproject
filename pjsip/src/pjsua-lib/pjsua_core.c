@@ -152,6 +152,9 @@ PJ_DEF(void) pjsua_msg_data_init(pjsua_msg_data *msg_data)
     pj_list_init(&msg_data->hdr_list);
     pjsip_media_type_init(&msg_data->multipart_ctype, NULL, NULL);
     pj_list_init(&msg_data->multipart_parts);
+
+    msg_data->contact_uri.slen = 0;
+    msg_data->contact_uri.ptr = NULL;
 }
 
 PJ_DEF(pjsua_msg_data*) pjsua_msg_data_clone(pj_pool_t *pool,
@@ -167,6 +170,7 @@ PJ_DEF(pjsua_msg_data*) pjsua_msg_data_clone(pj_pool_t *pool,
     PJ_ASSERT_RETURN(msg_data != NULL, NULL);
 
     pj_strdup(pool, &msg_data->target_uri, &rhs->target_uri);
+    pj_strdup(pool, &msg_data->local_uri, &rhs->local_uri);
 
     pj_list_init(&msg_data->hdr_list);
     hdr = rhs->hdr_list.next;
@@ -887,35 +891,19 @@ static void init_random_seed(void)
     pj_srand(seed);
 }
 
+
 /*
  * Instantiate pjsua application.
  */
-PJ_DECL(pj_status_t) pjsua_create(void)
-{
-    return pjsua_create2(NULL);
-}
-
-PJ_DEF(pj_status_t) pjsua_create2(const pjsua_logging_config* log_cfg)
+PJ_DEF(pj_status_t) pjsua_create(void)
 {
     pj_status_t status;
 
     /* Init pjsua data */
     init_data();
 
-    if (log_cfg) {
-        /* Save custom logging config */
-        pj_memcpy(&pjsua_var.log_cfg, log_cfg, sizeof(*log_cfg));
-        pj_bzero(&pjsua_var.log_cfg.log_filename, sizeof(pjsua_var.log_cfg.log_filename));
-    }
-    else {
-
-        /* Set default logging settings */
-        pjsua_logging_config_default(&pjsua_var.log_cfg);
-    }
-
-    pj_log_set_log_func((log_cfg && log_cfg->cb && !log_cfg->log_filename.slen) ? log_cfg->cb : &log_writer);
-    pj_log_set_decor(pjsua_var.log_cfg.decor);
-    pj_log_set_level(pjsua_var.log_cfg.level);
+    /* Set default logging settings */
+    pjsua_logging_config_default(&pjsua_var.log_cfg);
 
     /* Init PJLIB: */
     status = pj_init();
@@ -965,10 +953,10 @@ PJ_DEF(pj_status_t) pjsua_create2(const pjsua_logging_config* log_cfg)
         pj_shutdown();
         return status;
     }
-    
+
     /* Create mutex */
-    status = pj_mutex_create_recursive(pjsua_var.pool, "pjsua", 
-                                       &pjsua_var.mutex);
+    status = pj_mutex_create_recursive(pjsua_var.pool, "pjsua",
+        &pjsua_var.mutex);
     if (status != PJ_SUCCESS) {
         pj_log_pop_indent();
         pjsua_perror(THIS_FILE, "Unable to create mutex", status);
@@ -979,9 +967,9 @@ PJ_DEF(pj_status_t) pjsua_create2(const pjsua_logging_config* log_cfg)
     /* Must create SIP endpoint to initialize SIP parser. The parser
      * is needed for example when application needs to call pjsua_verify_url().
      */
-    status = pjsip_endpt_create(&pjsua_var.cp.factory, 
-                                pj_gethostname()->ptr, 
-                                &pjsua_var.endpt);
+    status = pjsip_endpt_create(&pjsua_var.cp.factory,
+        pj_gethostname()->ptr,
+        &pjsua_var.endpt);
     if (status != PJ_SUCCESS) {
         pj_log_pop_indent();
         pjsua_perror(THIS_FILE, "Unable to create endpoint", status);
@@ -995,8 +983,8 @@ PJ_DEF(pj_status_t) pjsua_create2(const pjsua_logging_config* log_cfg)
     pj_list_init(&pjsua_var.event_list);
 
     /* Create timer mutex */
-    status = pj_mutex_create_recursive(pjsua_var.pool, "pjsua_timer", 
-                                       &pjsua_var.timer_mutex);
+    status = pj_mutex_create_recursive(pjsua_var.pool, "pjsua_timer",
+        &pjsua_var.timer_mutex);
     if (status != PJ_SUCCESS) {
         pj_log_pop_indent();
         pjsua_perror(THIS_FILE, "Unable to create mutex", status);
@@ -1008,6 +996,15 @@ PJ_DEF(pj_status_t) pjsua_create2(const pjsua_logging_config* log_cfg)
     pj_log_pop_indent();
     return PJ_SUCCESS;
 }
+
+
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
+/* UPnP callback. */
+static void upnp_cb(pj_status_t status)
+{
+    pjsua_var.upnp_status = status;
+}
+#endif
 
 
 #if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
@@ -2102,7 +2099,8 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
     }
 
     /* Destroy call subsystem (to free call array, etc) */
-    pjsua_call_subsys_destroy();
+    pjsua_var.ua_cfg.max_calls = 0U;
+    pjsua_var.calls = NULL;
 
 #if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
     /* Deinitialize UPnP */

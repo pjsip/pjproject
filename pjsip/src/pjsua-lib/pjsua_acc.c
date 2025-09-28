@@ -2936,25 +2936,7 @@ on_retry_unreg:
         
         //pjsua_process_msg_data(tdata, NULL);
         status = pjsip_regc_send( regc, tdata );
-        if (status == PJSIP_EBUSY)
-        {
-            PJ_LOG(3, (THIS_FILE, "Acc %d: %s could not be sent using the current registration client because it is busy; creating a new client", acc_id, renew ? "Registration" : "Unregistration"));
-            status = pjsua_regc_init(acc_id);
-            if (status == PJ_SUCCESS)
-            {
-                if (!regc)
-                {
-                    status = PJ_EINVALIDOP;
-                }
-                else
-                {
-                    if (renew)
-                        goto on_retry_reg;
-                    status = pjsip_regc_unregister_all(regc, &tdata);
-                    goto on_retry_unreg;
-                }
-            }
-        }
+        
         PJSUA_LOCK();
         if (pjsip_regc_dec_ref(regc) == PJ_EGONE) {
             /* regc has been deleted. */
