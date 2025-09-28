@@ -23,8 +23,9 @@ extern "C"
 int main(int argc, char *argv[])
 {
     Endpoint ep;
-
     EpConfig epCfg;
+    PJ_UNUSED_ARG(argc);
+    PJ_UNUSED_ARG(argv);
 
     epCfg.uaConfig.userAgent = "pjsua++-test";
 

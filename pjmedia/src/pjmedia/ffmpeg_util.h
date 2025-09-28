@@ -49,6 +49,18 @@
                                                (LIBAVCODEC_VERSION_MAJOR == major && \
                                                 LIBAVCODEC_VERSION_MINOR >= minor))
 
+#define LIBAVFORMAT_VER_AT_LEAST(major,minor)  (LIBAVFORMAT_VERSION_MAJOR > major || \
+                                                (LIBAVFORMAT_VERSION_MAJOR == major && \
+                                                 LIBAVFORMAT_VERSION_MINOR >= minor))
+
+#define LIBAVUTIL_VER_AT_LEAST(major,minor)  (LIBAVUTIL_VERSION_MAJOR > major || \
+                                              (LIBAVUTIL_VERSION_MAJOR == major && \
+                                               LIBAVUTIL_VERSION_MINOR >= minor))
+
+#if LIBAVCODEC_VER_AT_LEAST(60,39)
+#   define avcodec_close(x)     ((void)0)
+#endif
+
 void pjmedia_ffmpeg_add_ref();
 void pjmedia_ffmpeg_dec_ref();
 

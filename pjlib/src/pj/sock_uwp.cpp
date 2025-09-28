@@ -55,6 +55,7 @@ const pj_uint16_t PJ_SOCK_STREAM= SOCK_STREAM;
 const pj_uint16_t PJ_SOCK_DGRAM = SOCK_DGRAM;
 const pj_uint16_t PJ_SOCK_RAW   = SOCK_RAW;
 const pj_uint16_t PJ_SOCK_RDM   = SOCK_RDM;
+const int PJ_SOCK_CLOEXEC = 0;
 
 /*
 * Socket level values.

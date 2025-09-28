@@ -25,6 +25,14 @@
 #include <pj/errno.h>
 #include <pj/unicode.h>
 
+#if 0
+    /* Enable some tracing */
+    #include <pj/log.h>
+    #define TRACE_(arg) PJ_LOG(4,arg)
+#else
+    #define TRACE_(arg)
+#endif
+
 #define THIS_FILE       "sock_bsd.c"
 
 /*
@@ -54,6 +62,27 @@ const pj_uint16_t PJ_SOCK_STREAM= SOCK_STREAM;
 const pj_uint16_t PJ_SOCK_DGRAM = SOCK_DGRAM;
 const pj_uint16_t PJ_SOCK_RAW   = SOCK_RAW;
 const pj_uint16_t PJ_SOCK_RDM   = SOCK_RDM;
+
+#if defined(SOCK_CLOEXEC)
+const int PJ_SOCK_CLOEXEC = SOCK_CLOEXEC;
+#elif defined(PJ_WIN32) || defined(PJ_WIN64)
+const int PJ_SOCK_CLOEXEC = 0;
+#else
+/*
+ * On some unix-like platforms (eg. macos), SOCK_CLOEXEC is not defined,
+ * It can use #pj_set_cloexec_flag() to set socket close-on-exec flag.
+ *
+ * Set PJ_SOCK_CLOEXEC to a non-zero value,
+ * together with the macro SOCK_CLOEXEC to determine whether it should
+ * set socket close-on-exec flag.
+ *  #if !defined(SOCK_CLOEXEC)
+ *       if (type & pj_SOCK_CLOEXEC() == pj_SOCK_CLOEXEC()) {
+ *             // set close-on-exec flag
+ *       }
+ *  #endif
+ */
+const int PJ_SOCK_CLOEXEC = 02000000;
+#endif
 
 /*
  * Socket level values.
@@ -531,6 +560,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
                                    int proto, 
                                    pj_sock_t *sock)
 {
+    int type0 = type;
 
     PJ_CHECK_STACK();
 
@@ -538,13 +568,21 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     PJ_ASSERT_RETURN(sock!=NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(PJ_INVALID_SOCKET==-1, 
                      (*sock=PJ_INVALID_SOCKET, PJ_EINVAL));
-    
+
+#if !defined(SOCK_CLOEXEC)
+    if ((type0 & pj_SOCK_CLOEXEC()) == pj_SOCK_CLOEXEC())
+        type &= ~pj_SOCK_CLOEXEC();
+#else
+    PJ_UNUSED_ARG(type0);
+#endif
+
     *sock = socket(af, type, proto);
+    TRACE_((THIS_FILE, "Created new socket of type %d: %ld", type, *sock));
     if (*sock == PJ_INVALID_SOCKET)
         return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
         pj_int32_t val = 1;
-        if (type == pj_SOCK_STREAM()) {
+        if ((type & 0xF) == pj_SOCK_STREAM()) {
             pj_sock_setsockopt(*sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
                                &val, sizeof(val));
         }
@@ -556,10 +594,15 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 #endif
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
-        if (type == pj_SOCK_DGRAM()) {
+        if ((type & 0xF) == pj_SOCK_DGRAM()) {
             pj_sock_setsockopt(*sock, pj_SOL_SOCKET(), SO_NOSIGPIPE, 
                                &val, sizeof(val));
         }
+#endif
+
+#if !defined(SOCK_CLOEXEC)
+        if ((type0 & pj_SOCK_CLOEXEC()) == pj_SOCK_CLOEXEC())
+            pj_set_cloexec_flag((int)(*sock));
 #endif
         return PJ_SUCCESS;
     }
@@ -701,6 +744,11 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
     
     CHECK_ADDR_LEN(to, tolen);
 
+#ifdef MSG_NOSIGNAL
+    /* Suppress SIGPIPE. See https://github.com/pjsip/pjproject/issues/1538 */
+    flags |= MSG_NOSIGNAL;
+#endif
+
     *len = sendto(sock, (const char*)buf, (int)(*len), flags, 
                   (const struct sockaddr*)to, tolen);
 
@@ -793,6 +841,8 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt( pj_sock_t sock,
                      (const char*)optval, optlen);
 #else
     status = setsockopt(sock, level, optname, (const char*)optval, optlen);
+    TRACE_((THIS_FILE, "setsockopt %ld level:%d name:%d val:%d(%d)->%d", sock,
+            level, optname, *((const char *)optval), optlen, status));
 #endif
 
     if (status != 0)

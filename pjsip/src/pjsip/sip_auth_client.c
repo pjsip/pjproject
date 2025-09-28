@@ -31,22 +31,22 @@
 #include <pj/guid.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
+#include <pj/lock.h>
 
 
-#if PJ_HAS_SSL_SOCK && PJ_SSL_SOCK_IMP==PJ_SSL_SOCK_IMP_OPENSSL
-#  if !defined(PJSIP_AUTH_HAS_DIGEST_SHA256)
-#    define PJSIP_AUTH_HAS_DIGEST_SHA256    1
-#  endif
-#else
-#  undef  PJSIP_AUTH_HAS_DIGEST_SHA256
-#  define PJSIP_AUTH_HAS_DIGEST_SHA256      0
-#endif
-
-#if PJSIP_AUTH_HAS_DIGEST_SHA256
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    PJ_SSL_SOCK_IMP==PJ_SSL_SOCK_IMP_OPENSSL
+#  include <openssl/opensslv.h>
 #  include <openssl/sha.h>
-#  if OPENSSL_VERSION_NUMBER >= 0x30000000L
-#     include <openssl/evp.h>
+#  include <openssl/evp.h>
+#  include <openssl/md5.h>
+#  include <openssl/sha.h>
+
+#  if OPENSSL_VERSION_NUMBER < 0x10100000L
+#    define EVP_MD_CTX_new() EVP_MD_CTX_create()
+#    define EVP_MD_CTX_free(ctx) EVP_MD_CTX_destroy(ctx)
 #  endif
+
 #  ifdef _MSC_VER
 #    include <openssl/opensslv.h>
 #    if OPENSSL_VERSION_NUMBER >= 0x10100000L
@@ -56,11 +56,47 @@
 #      pragma comment(lib, "ssleay32")
 #    endif
 #  endif
-#endif
 
+#  define DEFINE_HASH_CONTEXT EVP_MD_CTX* mdctx
+
+#else
+#define HAVE_NO_OPENSSL 1
+#define MD5_DIGEST_LENGTH (PJSIP_MD5STRLEN / 2)
+#define SHA256_DIGEST_LENGTH (PJSIP_SHA256STRLEN / 2)
 /* A macro just to get rid of type mismatch between char and unsigned char */
 #define MD5_APPEND(pms,buf,len) pj_md5_update(pms, (const pj_uint8_t*)buf, \
                                               (unsigned)len)
+#define EVP_MD char
+#define EVP_MD_CTX pj_md5_context;
+#define DEFINE_HASH_CONTEXT pj_md5_context pmc; pj_md5_context* mdctx = &pmc
+
+#define EVP_get_digestbyname(digest_name) (digest_name)
+#define EVP_MD_CTX_new() &pmc
+#define EVP_DigestInit_ex(mdctx, md, _unused) (void)md; pj_md5_init(mdctx)
+#define EVP_DigestUpdate(mdctx, data, len) MD5_APPEND(mdctx, data, len)
+#define EVP_DigestFinal_ex(mdctx, digest, _unused) pj_md5_final(mdctx, digest)
+#define EVP_MD_CTX_free(mdctx)
+#endif
+
+const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
+/*    TYPE                             IANA name            OpenSSL name */
+/*      Raw digest byte length  Hex representation length                */
+    { PJSIP_AUTH_ALGORITHM_NOT_SET,    {"", 0},             "",
+        0,                      0},
+    { PJSIP_AUTH_ALGORITHM_MD5,        {"MD5", 3},          "MD5",
+        MD5_DIGEST_LENGTH,      MD5_DIGEST_LENGTH * 2},
+    { PJSIP_AUTH_ALGORITHM_SHA256,     {"SHA-256", 7},      "SHA256",
+        SHA256_DIGEST_LENGTH,   SHA256_DIGEST_LENGTH * 2},
+    { PJSIP_AUTH_ALGORITHM_SHA512_256, {"SHA-512-256", 11}, "SHA512-256",
+        SHA256_DIGEST_LENGTH,   SHA256_DIGEST_LENGTH * 2},
+    { PJSIP_AUTH_ALGORITHM_AKAV1_MD5,  {"AKAv1-MD5", 9},    "",
+        MD5_DIGEST_LENGTH,      MD5_DIGEST_LENGTH * 2},
+    { PJSIP_AUTH_ALGORITHM_AKAV2_MD5,  {"AKAv2-MD5", 9},    "",
+        MD5_DIGEST_LENGTH,      MD5_DIGEST_LENGTH * 2},
+    { PJSIP_AUTH_ALGORITHM_COUNT,      {"", 0},             "",
+        0,                      0},
+};
+
 
 /* Logging. */
 #define THIS_FILE   "sip_auth_client.c"
@@ -70,9 +106,20 @@
 #  define AUTH_TRACE_(expr)
 #endif
 
-#define PASSWD_MASK         0x000F
-#define EXT_MASK            0x00F0
-
+#define DO_ON_PARENT_LOCKED(sess, call) \
+    do { \
+        pj_status_t on_parent = PJ_SUCCESS; \
+        pj_bool_t with_parent = PJ_FALSE; \
+        if (sess->parent) { \
+            pj_lock_acquire(sess->parent->lock); \
+            with_parent = PJ_TRUE; \
+            on_parent = call; \
+            pj_lock_release(sess->parent->lock); \
+        } \
+        if (with_parent) { \
+            return on_parent; \
+        } \
+    } while(0)
 
 static void dup_bin(pj_pool_t *pool, pj_str_t *dst, const pj_str_t *src)
 {
@@ -96,8 +143,9 @@ PJ_DEF(void) pjsip_cred_info_dup(pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->scheme, &src->scheme);
     pj_strdup_with_null(pool, &dst->username, &src->username);
     pj_strdup_with_null(pool, &dst->data, &src->data);
+    dst->algorithm_type = src->algorithm_type;
 
-    if ((dst->data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
+    if (PJSIP_CRED_DATA_IS_AKA(dst)) {
         dup_bin(pool, &dst->ext.aka.k, &src->ext.aka.k);
         dup_bin(pool, &dst->ext.aka.op, &src->ext.aka.op);
         dup_bin(pool, &dst->ext.aka.amf, &src->ext.aka.amf);
@@ -120,8 +168,10 @@ PJ_DEF(int) pjsip_cred_info_cmp(const pjsip_cred_info *cred1,
     if (result) goto on_return;
     result = (cred1->data_type != cred2->data_type);
     if (result) goto on_return;
+    result = cred1->algorithm_type != cred2->algorithm_type;
+    if (result) goto on_return;
 
-    if ((cred1->data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
+    if (PJSIP_CRED_DATA_IS_AKA(cred1)) {
         result = pj_strcmp(&cred1->ext.aka.k, &cred2->ext.aka.k);
         if (result) goto on_return;
         result = pj_strcmp(&cred1->ext.aka.op, &cred2->ext.aka.op);
@@ -162,158 +212,105 @@ static void digestNtoStr(const unsigned char digest[], int n, char *output)
  * Create response digest based on the parameters and store the
  * digest ASCII in 'result'.
  */
-PJ_DEF(pj_status_t) pjsip_auth_create_digest( pj_str_t *result,
-                                              const pj_str_t *nonce,
-                                              const pj_str_t *nc,
-                                              const pj_str_t *cnonce,
-                                              const pj_str_t *qop,
-                                              const pj_str_t *uri,
-                                              const pj_str_t *realm,
-                                              const pjsip_cred_info *cred_info,
-                                              const pj_str_t *method)
+PJ_DEF(pj_status_t) pjsip_auth_create_digest2( pj_str_t *result,
+                                               const pj_str_t *nonce,
+                                               const pj_str_t *nc,
+                                               const pj_str_t *cnonce,
+                                               const pj_str_t *qop,
+                                               const pj_str_t *uri,
+                                               const pj_str_t *realm,
+                                               const pjsip_cred_info *cred_info,
+                                               const pj_str_t *method,
+                                               const pjsip_auth_algorithm_type algorithm_type)
 {
-    char ha1[PJSIP_MD5STRLEN];
-    char ha2[PJSIP_MD5STRLEN];
-    unsigned char digest[16];
-    pj_md5_context pms;
+    const pjsip_auth_algorithm *algorithm = NULL;
+    unsigned digest_len = 0;
+    unsigned digest_strlen = 0;
+    char ha1[PJSIP_AUTH_MAX_DIGEST_BUFFER_LENGTH * 2];
+    char ha2[PJSIP_AUTH_MAX_DIGEST_BUFFER_LENGTH * 2];
+    unsigned char digest[PJSIP_AUTH_MAX_DIGEST_BUFFER_LENGTH];
+    unsigned dig_len = 0;
+    const EVP_MD* md;
+    DEFINE_HASH_CONTEXT;
 
-    pj_assert(result->slen >= PJSIP_MD5STRLEN);
+    PJ_ASSERT_RETURN(result && nonce && uri && realm && cred_info && method, PJ_EINVAL);
+    pj_bzero(result->ptr, result->slen);
 
-    AUTH_TRACE_((THIS_FILE, "Begin creating digest"));
+    algorithm = pjsip_auth_get_algorithm_by_type(algorithm_type);
+    if (!algorithm) {
+        PJ_LOG(4, (THIS_FILE, "The algorithm_type is invalid"));
+        return PJ_ENOTSUP;
+    }
 
-    if ((cred_info->data_type & PASSWD_MASK) == PJSIP_CRED_DATA_PLAIN_PASSWD) {
-        /***
-         *** ha1 = MD5(username ":" realm ":" password)
-         ***/
-        pj_md5_init(&pms);
-        MD5_APPEND( &pms, cred_info->username.ptr, cred_info->username.slen);
-        MD5_APPEND( &pms, ":", 1);
-        MD5_APPEND( &pms, realm->ptr, realm->slen);
-        MD5_APPEND( &pms, ":", 1);
-        MD5_APPEND( &pms, cred_info->data.ptr, cred_info->data.slen);
-        pj_md5_final(&pms, digest);
+    if (!pjsip_auth_is_algorithm_supported(algorithm->algorithm_type)) {
+        PJ_LOG(4, (THIS_FILE,
+                "The algorithm (%.*s) referenced by algorithm_type is not supported",
+                (int)algorithm->iana_name.slen, algorithm->iana_name.ptr));
+        return PJ_ENOTSUP;
+    }
 
-        digestNtoStr(digest, 16, ha1);
-
-    } else if ((cred_info->data_type & PASSWD_MASK) == PJSIP_CRED_DATA_DIGEST) {
-        if (cred_info->data.slen != 32) {
-            pj_assert(!"Invalid cred_info data length");
-            pj_bzero(result->ptr, result->slen);
-            result->slen = 0;
-            return PJ_EINVAL;
-        }
-        pj_memcpy( ha1, cred_info->data.ptr, cred_info->data.slen );
-    } else {
-        pj_assert(!"Invalid data_type");
-        pj_bzero(result->ptr, result->slen);
-        result->slen = 0;
+    if (qop && !(nc && cnonce)) {
+        PJ_LOG(4, (THIS_FILE, "nc and cnonce are required if qop is specified"));
         return PJ_EINVAL;
     }
 
-    AUTH_TRACE_((THIS_FILE, "  ha1=%.32s", ha1));
+    digest_len = algorithm->digest_length;
+    digest_strlen = algorithm->digest_str_length;
+    dig_len = digest_len;
 
-    /***
-     *** ha2 = MD5(method ":" req_uri)
-     ***/
-    pj_md5_init(&pms);
-    MD5_APPEND( &pms, method->ptr, method->slen);
-    MD5_APPEND( &pms, ":", 1);
-    MD5_APPEND( &pms, uri->ptr, uri->slen);
-    pj_md5_final(&pms, digest);
-    digestNtoStr(digest, 16, ha2);
-
-    AUTH_TRACE_((THIS_FILE, "  ha2=%.32s", ha2));
-
-    /***
-     *** When qop is not used:
-     ***    response = MD5(ha1 ":" nonce ":" ha2)
-     ***
-     *** When qop=auth is used:
-     ***    response = MD5(ha1 ":" nonce ":" nc ":" cnonce ":" qop ":" ha2)
-     ***/
-    pj_md5_init(&pms);
-    MD5_APPEND( &pms, ha1, PJSIP_MD5STRLEN);
-    MD5_APPEND( &pms, ":", 1);
-    MD5_APPEND( &pms, nonce->ptr, nonce->slen);
-    if (qop && qop->slen != 0) {
-        MD5_APPEND( &pms, ":", 1);
-        MD5_APPEND( &pms, nc->ptr, nc->slen);
-        MD5_APPEND( &pms, ":", 1);
-        MD5_APPEND( &pms, cnonce->ptr, cnonce->slen);
-        MD5_APPEND( &pms, ":", 1);
-        MD5_APPEND( &pms, qop->ptr, qop->slen);
+    if (result->slen < (pj_ssize_t)digest_strlen) {
+        PJ_LOG(4, (THIS_FILE,
+                "The length of the result buffer must be at least %d bytes "
+                "for algorithm %.*s", digest_strlen,
+                (int)algorithm->iana_name.slen, algorithm->iana_name.ptr));
+        return PJ_EINVAL;
     }
-    MD5_APPEND( &pms, ":", 1);
-    MD5_APPEND( &pms, ha2, PJSIP_MD5STRLEN);
+    result->slen = 0;
 
-    /* This is the final response digest. */
-    pj_md5_final(&pms, digest);
+    if (!PJSIP_CRED_DATA_IS_PASSWD(cred_info) && !PJSIP_CRED_DATA_IS_DIGEST(cred_info)) {
+        PJ_LOG(4, (THIS_FILE,
+                "cred_info->data_type must be PJSIP_CRED_DATA_PLAIN_PASSWD "
+                "or PJSIP_CRED_DATA_DIGEST"));
+        return PJ_EINVAL;
+    }
 
-    /* Convert digest to string and store in chal->response. */
-    result->slen = PJSIP_MD5STRLEN;
-    digestNtoStr(digest, 16, result->ptr);
+    if (PJSIP_CRED_DATA_IS_DIGEST(cred_info)) {
+        pjsip_auth_algorithm_type cred_algorithm_type = cred_info->algorithm_type;
 
-    AUTH_TRACE_((THIS_FILE, "  digest=%.32s", result->ptr));
-    AUTH_TRACE_((THIS_FILE, "Digest created"));
-    return PJ_SUCCESS;
-}
+        if (cred_algorithm_type == PJSIP_AUTH_ALGORITHM_NOT_SET) {
+            cred_algorithm_type = algorithm_type;
+        } else if (cred_algorithm_type != algorithm_type) {
+            PJ_LOG(4,(THIS_FILE,
+                    "The algorithm specified in the cred_info (%.*s) "
+                    "doesn't match the algorithm requested for hashing (%.*s)",
+                    (int)pjsip_auth_algorithms[cred_algorithm_type].iana_name.slen,
+                    pjsip_auth_algorithms[cred_algorithm_type].iana_name.ptr,
+                    (int)pjsip_auth_algorithms[algorithm_type].iana_name.slen,
+                    pjsip_auth_algorithms[algorithm_type].iana_name.ptr));
+            return PJ_EINVAL;
+        }
+        PJ_ASSERT_RETURN(cred_info->data.slen >= (pj_ssize_t)digest_strlen,
+                         PJ_EINVAL);
+    }
 
-
-/*
- * Create response SHA-256 digest based on the parameters and store the
- * digest ASCII in 'result'.
- */
-PJ_DEF(pj_status_t) pjsip_auth_create_digestSHA256(pj_str_t *result,
-                                            const pj_str_t *nonce,
-                                            const pj_str_t *nc,
-                                            const pj_str_t *cnonce,
-                                            const pj_str_t *qop,
-                                            const pj_str_t *uri,
-                                            const pj_str_t *realm,
-                                            const pjsip_cred_info *cred_info,
-                                            const pj_str_t *method)
-{
-#if PJSIP_AUTH_HAS_DIGEST_SHA256
-
-    char ha1[PJSIP_SHA256STRLEN];
-    char ha2[PJSIP_SHA256STRLEN];
-    unsigned char digest[32];
-
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-    SHA256_CTX pms;
-#else
-    EVP_MD_CTX* mdctx;
-    const EVP_MD* md;
-    unsigned dig_len;
-#endif
-
-    pj_assert(result->slen >= PJSIP_SHA256STRLEN);
-
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-    md = EVP_get_digestbyname("SHA256");
+    md = EVP_get_digestbyname(algorithm->openssl_name);
     if (md == NULL) {
+        /* Shouldn't happen since it was checked above */
         return PJ_ENOTSUP;
     }
-#endif
 
-    AUTH_TRACE_((THIS_FILE, "Begin creating digest"));
+    AUTH_TRACE_((THIS_FILE, "Begin creating %.*s digest",
+            (int)algorithm->iana_name.slen, algorithm->iana_name.ptr));
 
-    if ((cred_info->data_type & PASSWD_MASK) == PJSIP_CRED_DATA_PLAIN_PASSWD)
+    if (PJSIP_CRED_DATA_IS_PASSWD(cred_info))
     {
+        AUTH_TRACE_((THIS_FILE, " Using plain text password for %.*s digest",
+                (int)algorithm->iana_name.slen, algorithm->iana_name.ptr));
         /***
-         *** ha1 = SHA256(username ":" realm ":" password)
+         *** ha1 = (digest)(username ":" realm ":" password)
          ***/
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-        SHA256_Init(&pms);
-        SHA256_Update( &pms, cred_info->username.ptr,
-                       cred_info->username.slen);
-        SHA256_Update( &pms, ":", 1);
-        SHA256_Update( &pms, realm->ptr, realm->slen);
-        SHA256_Update( &pms, ":", 1);
-        SHA256_Update( &pms, cred_info->data.ptr, cred_info->data.slen);
-        SHA256_Final(digest, &pms);
-#else
         mdctx = EVP_MD_CTX_new();
+
         EVP_DigestInit_ex(mdctx, md, NULL);
         EVP_DigestUpdate(mdctx, cred_info->username.ptr, cred_info->username.slen);
         EVP_DigestUpdate(mdctx, ":", 1);
@@ -323,37 +320,19 @@ PJ_DEF(pj_status_t) pjsip_auth_create_digestSHA256(pj_str_t *result,
 
         EVP_DigestFinal_ex(mdctx, digest, &dig_len);
         EVP_MD_CTX_free(mdctx);
-#endif
-        digestNtoStr(digest, 32, ha1);
+        digestNtoStr(digest, dig_len, ha1);
 
-    } else if ((cred_info->data_type & PASSWD_MASK) == PJSIP_CRED_DATA_DIGEST)
-    {
-        if (cred_info->data.slen != 64) {
-            pj_assert(!"Invalid cred_info data length");
-            pj_bzero(result->ptr, result->slen);
-            result->slen = 0;
-            return PJ_EINVAL;
-        }
-        pj_memcpy( ha1, cred_info->data.ptr, cred_info->data.slen );
     } else {
-        pj_assert(!"Invalid data_type");
-        pj_bzero(result->ptr, result->slen);
-        result->slen = 0;
-        return PJ_EINVAL;
+        AUTH_TRACE_((THIS_FILE, " Using pre computed digest for %.*s digest",
+                (int)algorithm->iana_name.slen, algorithm->iana_name.ptr));
+        pj_memcpy( ha1, cred_info->data.ptr, cred_info->data.slen );
     }
 
-    AUTH_TRACE_((THIS_FILE, " ha1=%.64s", ha1));
+    AUTH_TRACE_((THIS_FILE, " ha1=%.*s", algorithm->digest_str_length, ha1));
 
     /***
-     *** ha2 = SHA256(method ":" req_uri)
+     *** ha2 = (digest)(method ":" req_uri)
      ***/
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-    SHA256_Init(&pms);
-    SHA256_Update( &pms, method->ptr, method->slen);
-    SHA256_Update( &pms, ":", 1);
-    SHA256_Update( &pms, uri->ptr, uri->slen);
-    SHA256_Final( digest, &pms);
-#else
     mdctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(mdctx, md, NULL);
     EVP_DigestUpdate(mdctx, method->ptr, method->slen);
@@ -361,40 +340,20 @@ PJ_DEF(pj_status_t) pjsip_auth_create_digestSHA256(pj_str_t *result,
     EVP_DigestUpdate(mdctx, uri->ptr, uri->slen);
     EVP_DigestFinal_ex(mdctx, digest, &dig_len);
     EVP_MD_CTX_free(mdctx);
-#endif
-    digestNtoStr(digest, 32, ha2);
+    digestNtoStr(digest, dig_len, ha2);
 
-    AUTH_TRACE_((THIS_FILE, " ha2=%.64s", ha2));
+    AUTH_TRACE_((THIS_FILE, " ha2=%.*s", algorithm->digest_str_length, ha2));
 
     /***
      *** When qop is not used:
-     ***   response = SHA256(ha1 ":" nonce ":" ha2)
+     ***   response = (digest)(ha1 ":" nonce ":" ha2)
      ***
      *** When qop=auth is used:
-     ***   response = SHA256(ha1 ":" nonce ":" nc ":" cnonce ":" qop ":" ha2)
+     ***   response = (digest)(ha1 ":" nonce ":" nc ":" cnonce ":" qop ":" ha2)
      ***/
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-    SHA256_Init(&pms);
-    SHA256_Update( &pms, ha1, PJSIP_SHA256STRLEN);
-    SHA256_Update( &pms, ":", 1);
-    SHA256_Update( &pms, nonce->ptr, nonce->slen);
-    if (qop && qop->slen != 0) {
-        SHA256_Update( &pms, ":", 1);
-        SHA256_Update( &pms, nc->ptr, nc->slen);
-        SHA256_Update( &pms, ":", 1);
-        SHA256_Update( &pms, cnonce->ptr, cnonce->slen);
-        SHA256_Update( &pms, ":", 1);
-        SHA256_Update( &pms, qop->ptr, qop->slen);
-    }
-    SHA256_Update( &pms, ":", 1);
-    SHA256_Update( &pms, ha2, PJSIP_SHA256STRLEN);
-
-    /* This is the final response digest. */
-    SHA256_Final(digest, &pms);
-#else
     mdctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(mdctx, md, NULL);
-    EVP_DigestUpdate(mdctx, ha1, PJSIP_SHA256STRLEN);
+    EVP_DigestUpdate(mdctx, ha1, digest_strlen);
     EVP_DigestUpdate(mdctx, ":", 1);
     EVP_DigestUpdate(mdctx, nonce->ptr, nonce->slen);
     if (qop && qop->slen != 0) {
@@ -406,30 +365,138 @@ PJ_DEF(pj_status_t) pjsip_auth_create_digestSHA256(pj_str_t *result,
         EVP_DigestUpdate(mdctx, qop->ptr, qop->slen);
     }
     EVP_DigestUpdate(mdctx, ":", 1);
-    EVP_DigestUpdate(mdctx, ha2, PJSIP_SHA256STRLEN);
+    EVP_DigestUpdate(mdctx, ha2, digest_strlen);
 
     EVP_DigestFinal_ex(mdctx, digest, &dig_len);
     EVP_MD_CTX_free(mdctx);
-#endif
+
     /* Convert digest to string and store in chal->response. */
-    result->slen = PJSIP_SHA256STRLEN;
-    digestNtoStr(digest, 32, result->ptr);
+    result->slen = digest_strlen;
+    digestNtoStr(digest, digest_len, result->ptr);
 
-    AUTH_TRACE_((THIS_FILE, " digest=%.64s", result->ptr));
-    AUTH_TRACE_((THIS_FILE, "Digest created"));
+    AUTH_TRACE_((THIS_FILE, "%.*s digest=%.*s",
+            (int)algorithm->iana_name.slen, algorithm->iana_name.ptr,
+            (int)result->slen, result->ptr));
 
-#else
-    PJ_UNUSED_ARG(result);
-    PJ_UNUSED_ARG(nonce);
-    PJ_UNUSED_ARG(nc);
-    PJ_UNUSED_ARG(cnonce);
-    PJ_UNUSED_ARG(qop);
-    PJ_UNUSED_ARG(uri);
-    PJ_UNUSED_ARG(realm);
-    PJ_UNUSED_ARG(cred_info);
-    PJ_UNUSED_ARG(method);
-#endif
     return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjsip_auth_create_digest( pj_str_t *result,
+                                              const pj_str_t *nonce,
+                                              const pj_str_t *nc,
+                                              const pj_str_t *cnonce,
+                                              const pj_str_t *qop,
+                                              const pj_str_t *uri,
+                                              const pj_str_t *realm,
+                                              const pjsip_cred_info *cred_info,
+                                              const pj_str_t *method)
+{
+    PJ_ASSERT_RETURN(cred_info, PJ_EINVAL);
+    PJ_ASSERT_RETURN(!PJSIP_CRED_DATA_IS_AKA(cred_info), PJ_EINVAL);
+
+    return pjsip_auth_create_digest2(result, nonce, nc, cnonce,
+            qop, uri, realm, cred_info, method,
+            PJSIP_AUTH_ALGORITHM_MD5);
+}
+
+
+/*
+ * Create response SHA-256 digest based on the parameters and store the
+ * digest ASCII in 'result'.
+ * \deprecated Use pjsip_auth_create_digest2 with
+ *     algorithm_type = PJSIP_AUTH_ALGORITHM_SHA256.
+ */
+PJ_DEF(pj_status_t) pjsip_auth_create_digestSHA256(pj_str_t *result,
+                                            const pj_str_t *nonce,
+                                            const pj_str_t *nc,
+                                            const pj_str_t *cnonce,
+                                            const pj_str_t *qop,
+                                            const pj_str_t *uri,
+                                            const pj_str_t *realm,
+                                            const pjsip_cred_info *cred_info,
+                                            const pj_str_t *method)
+{
+    PJ_ASSERT_RETURN(cred_info, PJ_EINVAL);
+    PJ_ASSERT_RETURN(!PJSIP_CRED_DATA_IS_AKA(cred_info), PJ_EINVAL);
+
+    return pjsip_auth_create_digest2(result, nonce, nc, cnonce,
+            qop, uri, realm, cred_info, method,
+            PJSIP_AUTH_ALGORITHM_SHA256);
+}
+
+
+PJ_DEF(const pjsip_auth_algorithm *) pjsip_auth_get_algorithm_by_type(
+    pjsip_auth_algorithm_type algorithm_type)
+{
+    if (algorithm_type > PJSIP_AUTH_ALGORITHM_NOT_SET
+        && algorithm_type < PJSIP_AUTH_ALGORITHM_COUNT) {
+        return &pjsip_auth_algorithms[algorithm_type];
+    }
+    return NULL;
+}
+
+
+PJ_DEF(const pjsip_auth_algorithm *) pjsip_auth_get_algorithm_by_iana_name(
+    const pj_str_t *iana_name)
+{
+    int i;
+
+    if (!iana_name) {
+        return NULL;
+    }
+
+    if (iana_name->slen == 0) {
+        return &pjsip_auth_algorithms[PJSIP_AUTH_ALGORITHM_MD5];
+    }
+
+#ifdef HAVE_NO_OPENSSL
+    i = PJSIP_AUTH_ALGORITHM_MD5;
+    if (pj_stricmp(iana_name, &pjsip_auth_algorithms[i].iana_name) == 0) {
+        return &pjsip_auth_algorithms[i];
+    }
+#else
+    for (i = PJSIP_AUTH_ALGORITHM_NOT_SET + 1; i < PJSIP_AUTH_ALGORITHM_COUNT; i++) {
+        if (pj_stricmp(iana_name, &pjsip_auth_algorithms[i].iana_name) == 0) {
+            return &pjsip_auth_algorithms[i];
+        }
+    }
+#endif
+    return NULL;
+}
+
+
+PJ_DEF(pj_bool_t) pjsip_auth_is_algorithm_supported(
+    pjsip_auth_algorithm_type algorithm_type)
+{
+    const pjsip_auth_algorithm *algorithm = NULL;
+
+    if (algorithm_type <= PJSIP_AUTH_ALGORITHM_NOT_SET
+        || algorithm_type >= PJSIP_AUTH_ALGORITHM_COUNT) {
+        return PJ_FALSE;
+    }
+    algorithm = &pjsip_auth_algorithms[algorithm_type];
+
+    /*
+     * If the openssl_name is empty there's no need to check
+     * if OpenSSL supports it.
+     */
+    if (algorithm->openssl_name[0] == '\0') {
+        return PJ_TRUE;
+    }
+
+#ifdef HAVE_NO_OPENSSL
+    return (algorithm_type == PJSIP_AUTH_ALGORITHM_MD5);
+#else
+    {
+        const EVP_MD* md;
+        md = EVP_get_digestbyname(algorithm->openssl_name);
+        if (md == NULL) {
+            return PJ_FALSE;
+        }
+        return PJ_TRUE;
+    }
+#endif
 }
 
 
@@ -471,7 +538,7 @@ static pj_bool_t has_auth_qop( pj_pool_t *pool, const pj_str_t *qop_offer)
  * password and method param) should be supplied in the argument.
  *
  * The resulting digest will be stored in cred->response.
- * The pool is used to allocate 32 bytes to store the digest in cred->response.
+ * The pool is used to allocate enough bytes to store the digest in cred->response.
  */
 static pj_status_t respond_digest( pj_pool_t *pool,
                                    pjsip_digest_credential *cred,
@@ -480,31 +547,13 @@ static pj_status_t respond_digest( pj_pool_t *pool,
                                    const pjsip_cred_info *cred_info,
                                    const pj_str_t *cnonce,
                                    pj_uint32_t nc,
-                                   const pj_str_t *method)
+                                   const pj_str_t *method,
+                                   const pjsip_auth_algorithm_type challenge_algorithm_type)
 {
-    const pj_str_t pjsip_AKAv1_MD5_STR = { "AKAv1-MD5", 9 };
-    pj_bool_t algo_sha256 = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
 
-    /* Check if algo is sha256 */
-#if PJSIP_AUTH_HAS_DIGEST_SHA256
-    algo_sha256 = (pj_stricmp(&chal->algorithm, &pjsip_SHA256_STR)==0);
-#endif
-
-    /* Check algorithm is supported. We support MD5, AKAv1-MD5, and SHA256. */
-    if (chal->algorithm.slen==0 ||
-        (algo_sha256 ||
-         pj_stricmp(&chal->algorithm, &pjsip_MD5_STR)==0 ||
-         pj_stricmp(&chal->algorithm, &pjsip_AKAv1_MD5_STR)==0))
-    {
-        PJ_LOG(4,(THIS_FILE, "Digest algorithm is \"%.*s\"",
-                  chal->algorithm.slen, chal->algorithm.ptr));
-    }
-    else {
-        PJ_LOG(4,(THIS_FILE, "Unsupported digest algorithm \"%.*s\"",
-                  chal->algorithm.slen, chal->algorithm.ptr));
-        return PJSIP_EINVALIDALGORITHM;
-    }
+    AUTH_TRACE_((THIS_FILE, "Begin responding to %.*s challenge",
+        (int)chal->algorithm.slen, chal->algorithm.ptr));
 
     /* Build digest credential from arguments. */
     pj_strdup(pool, &cred->username, &cred_info->username);
@@ -515,29 +564,23 @@ static pj_status_t respond_digest( pj_pool_t *pool,
     pj_strdup(pool, &cred->opaque, &chal->opaque);
 
     /* Allocate memory. */
-    cred->response.slen = algo_sha256? PJSIP_SHA256STRLEN : PJSIP_MD5STRLEN;
+    cred->response.slen = pjsip_auth_algorithms[challenge_algorithm_type].digest_str_length;
     cred->response.ptr = (char*) pj_pool_alloc(pool, cred->response.slen);
 
     if (chal->qop.slen == 0) {
         /* Server doesn't require quality of protection. */
 
-        if ((cred_info->data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
+        if (PJSIP_CRED_DATA_IS_AKA(cred_info)) {
             /* Call application callback to create the response digest */
             return (*cred_info->ext.aka.cb)(pool, chal, cred_info,
                                             method, cred);
         }
         else {
             /* Convert digest to string and store in chal->response. */
-            if (algo_sha256) {
-                status = pjsip_auth_create_digestSHA256(
-                                          &cred->response, &cred->nonce, NULL,
-                                          NULL,  NULL, uri, &chal->realm,
-                                          cred_info, method);
-            } else {
-                status = pjsip_auth_create_digest( &cred->response, 
-                                          &cred->nonce, NULL, NULL, NULL, uri, 
-                                          &chal->realm, cred_info, method);
-            }
+            status = pjsip_auth_create_digest2(
+                                      &cred->response, &cred->nonce, NULL,
+                                      NULL,  NULL, uri, &chal->realm,
+                                      cred_info, method, challenge_algorithm_type);
         }
 
     } else if (has_auth_qop(pool, &chal->qop)) {
@@ -555,33 +598,25 @@ static pj_status_t respond_digest( pj_pool_t *pool,
             pj_strdup(pool, &cred->cnonce, &dummy_cnonce);
         }
 
-        if ((cred_info->data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
+        if (PJSIP_CRED_DATA_IS_AKA(cred_info)) {
             /* Call application callback to create the response digest */
             return (*cred_info->ext.aka.cb)(pool, chal, cred_info,
                                             method, cred);
         }
         else {
             /* Convert digest to string and store in chal->response. */
-            if (algo_sha256) {
-                status = pjsip_auth_create_digestSHA256(
-                                          &cred->response, &cred->nonce,
-                                          &cred->nc, &cred->cnonce,
-                                          &pjsip_AUTH_STR, uri,
-                                          &chal->realm, cred_info,
-                                          method);
-            } else {
-                status = pjsip_auth_create_digest( &cred->response, 
-                                          &cred->nonce, &cred->nc, 
-                                          &cred->cnonce, &pjsip_AUTH_STR, 
-                                          uri, &chal->realm, 
-                                          cred_info, method);
-            }
+            status = pjsip_auth_create_digest2(
+                                      &cred->response, &cred->nonce,
+                                      &cred->nc, &cred->cnonce,
+                                      &pjsip_AUTH_STR, uri,
+                                      &chal->realm, cred_info,
+                                      method, challenge_algorithm_type);
         }
 
     } else {
         /* Server requires quality protection that we don't support. */
         PJ_LOG(4,(THIS_FILE, "Unsupported qop offer %.*s",
-                  chal->qop.slen, chal->qop.ptr));
+                  (int)chal->qop.slen, chal->qop.ptr));
         return PJSIP_EINVALIDQOP;
     }
 
@@ -689,12 +724,27 @@ static void update_digest_session( pjsip_cached_auth *cached_auth,
 
 /* Find cached authentication in the list for the specified realm. */
 static pjsip_cached_auth *find_cached_auth( pjsip_auth_clt_sess *sess,
-                                            const pj_str_t *realm )
+                                            const pj_str_t *realm,
+                                            pjsip_auth_algorithm_type algorithm_type)
 {
-    pjsip_cached_auth *auth = sess->cached_auth.next;
+    pjsip_cached_auth *auth, *pauth = NULL;
+
+    if (sess->parent) {
+        pj_lock_acquire(sess->parent->lock);
+        pauth = find_cached_auth(sess->parent, realm, algorithm_type);
+        pj_lock_release(sess->parent->lock);
+    }
+    if (pauth != NULL) {
+        return pauth;
+    }
+
+    auth = sess->cached_auth.next;
     while (auth != &sess->cached_auth) {
-        if (pj_stricmp(&auth->realm, realm) == 0)
+        if (pj_stricmp(&auth->realm, realm) == 0
+            && auth->challenge_algorithm_type == algorithm_type)
+        {
             return auth;
+        }
         auth = auth->next;
     }
 
@@ -704,14 +754,51 @@ static pjsip_cached_auth *find_cached_auth( pjsip_auth_clt_sess *sess,
 /* Find credential to use for the specified realm and auth scheme. */
 static const pjsip_cred_info* auth_find_cred( const pjsip_auth_clt_sess *sess,
                                               const pj_str_t *realm,
-                                              const pj_str_t *auth_scheme)
+                                              const pj_str_t *auth_scheme,
+                                              const pjsip_auth_algorithm_type algorithm_type)
 {
     unsigned i;
     int wildcard = -1;
+    const pjsip_cred_info * ptr = NULL;
 
     PJ_UNUSED_ARG(auth_scheme);
 
+    if (sess->parent) {
+        pj_lock_acquire(sess->parent->lock);
+        ptr = auth_find_cred(sess->parent, realm, auth_scheme, algorithm_type);
+        pj_lock_release(sess->parent->lock);
+    }
+    if (ptr != NULL) {
+        return ptr;
+    }
+
     for (i=0; i<sess->cred_cnt; ++i) {
+        switch(sess->cred_info[i].data_type) {
+        case PJSIP_CRED_DATA_PLAIN_PASSWD:
+            /* PLAIN_PASSWD creds can be used for any algorithm other than AKA */
+            if (algorithm_type != PJSIP_AUTH_ALGORITHM_AKAV1_MD5
+                    && algorithm_type != PJSIP_AUTH_ALGORITHM_AKAV2_MD5) {
+                break;
+            }
+            continue;
+        case PJSIP_CRED_DATA_DIGEST:
+            /* Digest creds can only be used if the algorithms match */
+            if (sess->cred_info[i].algorithm_type == algorithm_type) {
+                break;
+            }
+            continue;
+        case PJSIP_CRED_DATA_EXT_AKA:
+            /* AKA creds can only be used for AKA algorithm */
+            if (algorithm_type == PJSIP_AUTH_ALGORITHM_AKAV1_MD5
+                    || algorithm_type == PJSIP_AUTH_ALGORITHM_AKAV2_MD5) {
+                break;
+            }
+            continue;
+        }
+        /*
+         * We've determined that the credential can be used for the
+         * specified algorithm, now check the realm.
+         */
         if (pj_stricmp(&sess->cred_info[i].realm, realm) == 0)
             return &sess->cred_info[i];
         else if (sess->cred_info[i].realm.slen == 1 &&
@@ -746,6 +833,24 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
     sess->cred_info = NULL;
     pj_list_init(&sess->cached_auth);
 
+    sess->parent = NULL;
+    sess->lock = NULL;
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
+                                              pjsip_auth_clt_sess *parent)
+{
+    PJ_ASSERT_RETURN(sess, PJ_EINVAL);
+    if (parent != NULL && parent->lock == NULL) {
+        pj_status_t status;
+        status = pj_lock_create_simple_mutex( parent->pool,
+                                              "auth_clt_parent_lock",
+                                              &parent->lock );
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+    sess->parent = parent;
     return PJ_SUCCESS;
 }
 
@@ -763,7 +868,12 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_deinit(pjsip_auth_clt_sess *sess)
         auth = auth->next;
     }
 
-    return PJ_SUCCESS;
+    sess->parent = NULL;
+    if (sess->lock) {
+        return pj_lock_destroy(sess->lock);
+    } else {
+        return PJ_SUCCESS;
+    }
 }
 
 
@@ -789,6 +899,31 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
                   &rhs->cred_info[i].username);
         sess->cred_info[i].data_type = rhs->cred_info[i].data_type;
         pj_strdup(pool, &sess->cred_info[i].data, &rhs->cred_info[i].data);
+        if (PJSIP_CRED_DATA_IS_DIGEST(&rhs->cred_info[i])) {
+            sess->cred_info[i].algorithm_type = rhs->cred_info[i].algorithm_type;
+        }
+        if (PJSIP_CRED_DATA_IS_AKA(&rhs->cred_info[i])) {
+            pj_strdup(pool, &sess->cred_info[i].ext.aka.k, &rhs->cred_info[i].ext.aka.k);
+            pj_strdup(pool, &sess->cred_info[i].ext.aka.op, &rhs->cred_info[i].ext.aka.op);
+            pj_strdup(pool, &sess->cred_info[i].ext.aka.amf, &rhs->cred_info[i].ext.aka.amf);
+            sess->cred_info[i].ext.aka.cb = rhs->cred_info[i].ext.aka.cb;
+        }
+    }
+
+    if (rhs->parent) {
+        pj_status_t status;
+
+        pj_lock_acquire(rhs->parent->lock);
+        sess->parent = PJ_POOL_ZALLOC_T(pool, pjsip_auth_clt_sess);
+        if (sess->parent == NULL) {
+            status = PJ_ENOMEM;
+        } else {
+            status = pjsip_auth_clt_clone(pool, sess->parent, rhs->parent);
+        }
+        pj_lock_release(rhs->parent->lock);
+
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
     /* TODO note:
@@ -810,6 +945,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
                                                     const pjsip_cred_info *c)
 {
     PJ_ASSERT_RETURN(sess && c, PJ_EINVAL);
+    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_set_credentials(sess->parent, cred_cnt, c));
 
     if (cred_cnt == 0) {
         sess->cred_cnt = 0;
@@ -823,7 +959,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
             /* When data_type is PJSIP_CRED_DATA_EXT_AKA,
              * callback must be specified.
              */
-            if ((c[i].data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
+            if (PJSIP_CRED_DATA_IS_AKA(&c[i])) {
 
 #if !PJSIP_HAS_DIGEST_AKA_AUTH
                 if (!PJSIP_HAS_DIGEST_AKA_AUTH) {
@@ -860,6 +996,16 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_credentials( pjsip_auth_clt_sess *sess,
             pj_strdup(sess->pool, &sess->cred_info[i].realm, &c[i].realm);
             pj_strdup(sess->pool, &sess->cred_info[i].username, &c[i].username);
             pj_strdup(sess->pool, &sess->cred_info[i].data, &c[i].data);
+            /*
+             * If the data type is DIGEST and an auth algorithm isn't set,
+             * default it to MD5.
+             */
+            if (PJSIP_CRED_DATA_IS_DIGEST(&c[i]) &&
+                c[i].algorithm_type == PJSIP_AUTH_ALGORITHM_NOT_SET) {
+                sess->cred_info[i].algorithm_type = PJSIP_AUTH_ALGORITHM_MD5;
+            } else {
+                sess->cred_info[i].algorithm_type = c[i].algorithm_type;
+            }
         }
         sess->cred_cnt = cred_cnt;
     }
@@ -875,6 +1021,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_prefs(pjsip_auth_clt_sess *sess,
                                              const pjsip_auth_clt_pref *p)
 {
     PJ_ASSERT_RETURN(sess && p, PJ_EINVAL);
+    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_set_prefs(sess->parent, p));
 
     pj_memcpy(&sess->pref, p, sizeof(*p));
     pj_strdup(sess->pool, &sess->pref.algorithm, &p->algorithm);
@@ -892,7 +1039,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_get_prefs(pjsip_auth_clt_sess *sess,
                                              pjsip_auth_clt_pref *p)
 {
     PJ_ASSERT_RETURN(sess && p, PJ_EINVAL);
-
+    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_get_prefs(sess->parent, p));
     pj_memcpy(p, &sess->pref, sizeof(pjsip_auth_clt_pref));
     return PJ_SUCCESS;
 }
@@ -909,7 +1056,8 @@ static pj_status_t auth_respond( pj_pool_t *req_pool,
                                  const pjsip_method *method,
                                  pj_pool_t *sess_pool,
                                  pjsip_cached_auth *cached_auth,
-                                 pjsip_authorization_hdr **p_h_auth)
+                                 pjsip_authorization_hdr **p_h_auth,
+                                 const pjsip_auth_algorithm_type challenge_algorithm_type)
 {
     pjsip_authorization_hdr *hauth;
     char tmp[PJSIP_MAX_URL_SIZE];
@@ -968,7 +1116,7 @@ static pj_status_t auth_respond( pj_pool_t *req_pool,
         hauth->scheme = pjsip_DIGEST_STR;
         status = respond_digest( pool, &hauth->credential.digest,
                                  &hdr->challenge.digest, &uri_str, cred_info,
-                                 cnonce, nc, &method->name);
+                                 cnonce, nc, &method->name, challenge_algorithm_type);
         if (status != PJ_SUCCESS)
             return status;
 
@@ -1041,14 +1189,15 @@ static pj_status_t new_auth_for_req( pjsip_tx_data *tdata,
     PJ_ASSERT_RETURN(tdata && sess && auth, PJ_EINVAL);
     PJ_ASSERT_RETURN(auth->last_chal != NULL, PJSIP_EAUTHNOPREVCHAL);
 
-    cred = auth_find_cred( sess, &auth->realm, &auth->last_chal->scheme );
+    cred = auth_find_cred( sess, &auth->realm, &auth->last_chal->scheme,
+            auth->challenge_algorithm_type );
     if (!cred)
         return PJSIP_ENOCREDENTIAL;
 
     status = auth_respond( tdata->pool, auth->last_chal,
                            tdata->msg->line.req.uri,
                            cred, &tdata->msg->line.req.method,
-                           sess->pool, auth, &hauth);
+                           sess->pool, auth, &hauth, auth->challenge_algorithm_type);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -1063,15 +1212,50 @@ static pj_status_t new_auth_for_req( pjsip_tx_data *tdata,
 
 
 /* Find credential in list of (Proxy-)Authorization headers */
-static pjsip_authorization_hdr* get_header_for_realm(const pjsip_hdr *hdr_list,
-                                                     const pj_str_t *realm)
+static pjsip_authorization_hdr* get_header_for_cred_info(
+                                const pjsip_hdr *hdr_list,
+                                const pjsip_cred_info *cred_info)
 {
     pjsip_authorization_hdr *h;
 
     h = (pjsip_authorization_hdr*)hdr_list->next;
     while (h != (pjsip_authorization_hdr*)hdr_list) {
-        if (pj_stricmp(&h->credential.digest.realm, realm)==0)
+        /* If the realm doesn't match, just skip */
+        if (pj_stricmp(&h->credential.digest.realm, &cred_info->realm) != 0) {
+            h = h->next;
+            continue;
+        }
+
+        switch (cred_info->data_type) {
+        case PJSIP_CRED_DATA_PLAIN_PASSWD:
+            /*
+            * If cred_info->data_type is PLAIN_PASSWD, then we can use the header
+            * regardless of algorithm.
+            */
             return h;
+        case PJSIP_CRED_DATA_DIGEST:
+            /*
+             * If cred_info->data_type is DIGEST, then we need to check if the
+             * algorithms match.
+             */
+            if (pj_stricmp(&h->credential.digest.algorithm,
+                &pjsip_auth_algorithms[cred_info->algorithm_type].iana_name) == 0) {
+                return h;
+            }
+            break;
+        case PJSIP_CRED_DATA_EXT_AKA:
+            /*
+             * If cred_info->data_type is EXT_AKA, then we need to check if the
+             * challenge algorithm is AKAv1-MD5 or AKAv2-MD5.
+             */
+            if (pj_stricmp(&h->credential.digest.algorithm,
+                        &pjsip_auth_algorithms[PJSIP_AUTH_ALGORITHM_AKAV1_MD5].iana_name) == 0
+                || pj_stricmp(&h->credential.digest.algorithm,
+                        &pjsip_auth_algorithms[PJSIP_AUTH_ALGORITHM_AKAV2_MD5].iana_name) == 0) {
+                return h;
+            }
+            break;
+        }
         h = h->next;
     }
 
@@ -1092,6 +1276,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
     PJ_ASSERT_RETURN(tdata->msg->type==PJSIP_REQUEST_MSG,
                      PJSIP_ENOTREQUESTMSG);
 
+
+    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_init_req(sess->parent, tdata));
     /* Init list */
     pj_list_init(&added);
 
@@ -1148,7 +1334,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
             pj_status_t status;
 
             cred = auth_find_cred(sess, &auth->realm,
-                                  &auth->last_chal->scheme);
+                                  &auth->last_chal->scheme,
+                                  auth->challenge_algorithm_type);
             if (!cred) {
                 auth = auth->next;
                 continue;
@@ -1158,7 +1345,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
                                    tdata->msg->line.req.uri,
                                    cred,
                                    &tdata->msg->line.req.method,
-                                   sess->pool, auth, &hauth);
+                                   sess->pool, auth, &hauth,
+                                   auth->challenge_algorithm_type);
             if (status != PJ_SUCCESS)
                 return status;
 
@@ -1201,7 +1389,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
             pjsip_cred_info *c = &sess->cred_info[i];
             pjsip_authorization_hdr *h;
 
-            h = get_header_for_realm(&added, &c->realm);
+            h = get_header_for_cred_info(&added, c);
             if (h) {
                 pj_list_erase(h);
                 pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)h);
@@ -1223,8 +1411,14 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
                         pj_strdup(tdata->pool, &hs->credential.digest.realm,
                                   &c->realm);
                         pj_strdup(tdata->pool,&hs->credential.digest.uri, &uri);
-                        pj_strdup(tdata->pool, &hs->credential.digest.algorithm,
-                                  &sess->pref.algorithm);
+
+                        if (c->algorithm_type == PJSIP_AUTH_ALGORITHM_NOT_SET) {
+                            pj_strdup(tdata->pool, &hs->credential.digest.algorithm,
+                                &sess->pref.algorithm);
+                        } else {
+                            pj_strdup(tdata->pool, &hs->credential.digest.algorithm,
+                                &pjsip_auth_algorithms[c->algorithm_type].iana_name);
+                        }
                 }
 
                 pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hs);
@@ -1270,7 +1464,8 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
                                  pjsip_tx_data *tdata,
                                  pjsip_auth_clt_sess *sess,
                                  pjsip_cached_auth *cached_auth,
-                                 pjsip_authorization_hdr **h_auth)
+                                 pjsip_authorization_hdr **h_auth,
+                                 const pjsip_auth_algorithm_type challenge_algorithm_type)
 {
     const pjsip_cred_info *cred;
     pjsip_authorization_hdr *sent_auth = NULL;
@@ -1298,15 +1493,26 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
                     hdr = hdr->next;
                     pj_list_erase(sent_auth);
                     continue;
-                } else
-                if (pj_stricmp(&sent_auth->scheme, &pjsip_DIGEST_STR)==0 &&
-                    pj_stricmp(&sent_auth->credential.digest.algorithm,
-                               &hchal->challenge.digest.algorithm)!=0)
-                {
-                    /* Same 'digest' scheme but different algo */
-                    hdr = hdr->next;
-                    continue;
                 } else {
+#if defined(PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER) && \
+            PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER!=0
+                    /*
+                     * Keep sending additional headers if the the algorithm
+                     * is different.
+                     * WARNING:  See the comment in sip_config.h regarding
+                     * how using this option could be a security risk if
+                     * a header with a more secure digest algorithm has already
+                     * been sent.
+                     */
+                    if (pj_stricmp(&sent_auth->scheme, &pjsip_DIGEST_STR)==0 &&
+                        pj_stricmp(&sent_auth->credential.digest.algorithm,
+                                   &hchal->challenge.digest.algorithm)!=0)
+                    {
+                        /* Same 'digest' scheme but different algo */
+                        hdr = hdr->next;
+                        continue;
+                    } else
+#endif
                     /* Found previous authorization attempt */
                     break;
                 }
@@ -1320,6 +1526,9 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
      */
     if (hdr != &tdata->msg->hdr) {
         pj_bool_t stale;
+
+        /* Check sent_auth != NULL */
+        PJ_ASSERT_RETURN(sent_auth, PJ_EBUG);
 
         /* Detect "stale" state */
         stale = hchal->challenge.digest.stale;
@@ -1338,9 +1547,9 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
              */
             PJ_LOG(4, (THIS_FILE, "Authorization failed for %.*s@%.*s: "
                        "server rejected with stale=false",
-                       sent_auth->credential.digest.username.slen,
+                       (int)sent_auth->credential.digest.username.slen,
                        sent_auth->credential.digest.username.ptr,
-                       sent_auth->credential.digest.realm.slen,
+                       (int)sent_auth->credential.digest.realm.slen,
                        sent_auth->credential.digest.realm.ptr));
             return PJSIP_EFAILEDCREDENTIAL;
         }
@@ -1352,9 +1561,9 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
              */
             PJ_LOG(4, (THIS_FILE, "Authorization failed for %.*s@%.*s: "
                        "maximum number of stale retries exceeded",
-                       sent_auth->credential.digest.username.slen,
+                       (int)sent_auth->credential.digest.username.slen,
                        sent_auth->credential.digest.username.ptr,
-                       sent_auth->credential.digest.realm.slen,
+                       (int)sent_auth->credential.digest.realm.slen,
                        sent_auth->credential.digest.realm.ptr));
             return PJSIP_EAUTHSTALECOUNT;
         }
@@ -1367,21 +1576,26 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
 
     /* Find credential to be used for the challenge. */
     cred = auth_find_cred( sess, &hchal->challenge.common.realm,
-                           &hchal->scheme);
+                           &hchal->scheme, challenge_algorithm_type);
     if (!cred) {
         const pj_str_t *realm = &hchal->challenge.common.realm;
+        AUTH_TRACE_((THIS_FILE, "No cred for for %.*s",
+            (int)hchal->challenge.digest.algorithm.slen, hchal->challenge.digest.algorithm.ptr));
+
         PJ_LOG(4,(THIS_FILE,
-                  "Unable to set auth for %s: can not find credential for %.*s/%.*s",
+                  "Unable to set auth for %s: can not find credential for "
+                  "%.*s/%.*s %.*s",
                   tdata->obj_name,
-                  realm->slen, realm->ptr,
-                  hchal->scheme.slen, hchal->scheme.ptr));
+                  (int)realm->slen, realm->ptr,
+                  (int)hchal->scheme.slen, hchal->scheme.ptr,
+                  (int)hchal->challenge.digest.algorithm.slen, hchal->challenge.digest.algorithm.ptr));
         return PJSIP_ENOCREDENTIAL;
     }
 
     /* Respond to authorization challenge. */
     status = auth_respond( req_pool, hchal, uri, cred,
                            &tdata->msg->line.req.method,
-                           sess->pool, cached_auth, h_auth);
+                           sess->pool, cached_auth, h_auth, challenge_algorithm_type);
     return status;
 }
 
@@ -1415,6 +1629,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
                      rdata->msg_info.msg->line.status.code == 407,
                      PJSIP_EINVALIDSTATUS);
 
+    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_reinit_req(sess->parent, rdata, old_request, new_request));
+
     tdata = old_request;
     tdata->auth_retry = PJ_FALSE;
 
@@ -1429,6 +1645,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
         pjsip_cached_auth *cached_auth;
         const pjsip_www_authenticate_hdr *hchal;
         pjsip_authorization_hdr *hauth;
+        const pjsip_auth_algorithm *algorithm;
 
         /* Find WWW-Authenticate or Proxy-Authenticate header. */
         while (hdr != &rdata->msg_info.msg->hdr &&
@@ -1443,10 +1660,29 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
         hchal = (const pjsip_www_authenticate_hdr*)hdr;
         ++chal_cnt;
 
+        /* At the current time, "digest" scheme is the only one supported. */
+        if (pj_stricmp(&hchal->scheme, &pjsip_DIGEST_STR) != 0) {
+            AUTH_TRACE_((THIS_FILE, "Skipped header for scheme %.*s",
+                (int)hchal->scheme.slen, hchal->scheme.ptr));
+            last_auth_err = PJSIP_EINVALIDAUTHSCHEME;
+            hdr = hdr->next;
+            continue;
+        }
+
+        algorithm = pjsip_auth_get_algorithm_by_iana_name(&hchal->challenge.digest.algorithm);
+        if (!algorithm) {
+            AUTH_TRACE_((THIS_FILE, "Skipped header for algorithm %.*s",
+                (int)algorithm->iana_name.slen, algorithm->iana_name.ptr));
+            last_auth_err = PJSIP_EINVALIDALGORITHM;
+            hdr = hdr->next;
+            continue;
+        }
+
         /* Find authentication session for this realm, create a new one
          * if not present.
          */
-        cached_auth = find_cached_auth(sess, &hchal->challenge.common.realm);
+        cached_auth = find_cached_auth(sess, &hchal->challenge.common.realm,
+            algorithm->algorithm_type);
         if (!cached_auth) {
             cached_auth = PJ_POOL_ZALLOC_T(sess->pool, pjsip_cached_auth);
             cached_auth->pool = pjsip_endpt_create_pool(sess->endpt,
@@ -1456,6 +1692,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
             pj_strdup(cached_auth->pool, &cached_auth->realm,
                       &hchal->challenge.common.realm);
             cached_auth->is_proxy = (hchal->type == PJSIP_H_PROXY_AUTHENTICATE);
+            cached_auth->challenge_algorithm_type = algorithm->algorithm_type;
 #           if (PJSIP_AUTH_HEADER_CACHING)
             {
                 pj_list_init(&cached_auth->cached_hdr);
@@ -1468,9 +1705,12 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
          * authorization session.
          */
         status = process_auth(tdata->pool, hchal, tdata->msg->line.req.uri,
-                              tdata, sess, cached_auth, &hauth);
+                              tdata, sess, cached_auth, &hauth, algorithm->algorithm_type);
         if (status != PJ_SUCCESS) {
             last_auth_err = status;
+            AUTH_TRACE_((THIS_FILE, "Skipped header for realm %.*s algorithm %.*s",
+                (int)hchal->challenge.common.realm.slen, hchal->challenge.common.realm.ptr,
+                (int)algorithm->iana_name.slen, algorithm->iana_name.ptr));
 
             /* Process next header. */
             hdr = hdr->next;
@@ -1489,11 +1729,6 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
         /* Process next header. */
         hdr = hdr->next;
         auth_cnt++;
-
-#if defined(PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER) && \
-            PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER==0
-        break;
-#endif
     }
 
     /* Check if challenge is present */

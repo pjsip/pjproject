@@ -40,8 +40,8 @@ PJ_BEGIN_DECL
  * \section pj_except_sample_sec Quick Example
  *
  * For the impatient, take a look at some examples:
- *  - @ref page_pjlib_samples_except_c
- *  - @ref page_pjlib_exception_test
+ *  - Exception Handling sample: \src{pjlib/src/pjlib-samples/except.c}
+ *  - Exception Handling test: \src{pjlib/src/pjlib-test/exception.c}
  *
  * \section pj_except_except Exception Handling
  *
@@ -217,8 +217,8 @@ PJ_BEGIN_DECL
  * \section pj_except_examples_sec Examples
  *
  * For some examples on how to use the exception construct, please see:
- *  - @ref page_pjlib_samples_except_c
- *  - @ref page_pjlib_exception_test
+ *  - Exception Handling sample: \src{pjlib/src/pjlib-samples/except.c}
+ *  - Exception Handling test: \src{pjlib/src/pjlib-test/exception.c}
  */
 
 /**

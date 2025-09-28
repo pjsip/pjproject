@@ -117,22 +117,15 @@ struct pjsip_regc_info
     pj_bool_t   auto_reg;   /**< Will register automatically?               */
     unsigned    interval;   /**< Registration interval (seconds).           */
     unsigned    next_reg;   /**< Time until next registration (seconds).    */
-    pjsip_transport *transport; /**< Last transport used.                   */
+    pjsip_transport *transport; /**< Last transport used, for informational
+                                     purpose only (e.g: comparing pointers),
+                                     the transport may be invalid already.  */
 };
 
 /**
  * @see pjsip_regc_info
  */
 typedef struct pjsip_regc_info pjsip_regc_info;
-
-
-/**
- * Get the module instance for client registration module.
- *
- * @return          client registration module.
- */
-PJ_DECL(pjsip_module*) pjsip_regc_get_module(void);
-
 
 /**
  * Create client registration structure.
@@ -485,6 +478,20 @@ PJ_DECL(pj_status_t) pjsip_regc_update_expires( pjsip_regc *regc,
  */
 PJ_DECL(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata);
 
+
+/**
+ * set a shared auth session to be used by this register client.
+ * This will try to reuse authorization headers from another source
+ * (e.g. subscribe dialog).
+ *
+ * If available, the internal auth session will be ignored.
+ * To reset client registration, pass NULL as session parameter.
+ *
+ * @param regc     The client registration structure.
+ * @param session  Pointer to the external session.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
+                                              pjsip_auth_clt_sess *session );
 
 PJ_END_DECL
 

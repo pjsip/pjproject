@@ -142,6 +142,13 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
         return status;
 #endif
 
+#if PJMEDIA_HAS_LYRA_CODEC
+    /* Register Lyra */
+    status = pjmedia_codec_lyra_init(endpt);
+    if (status != PJ_SUCCESS)
+        return status;
+#endif
+
     return PJ_SUCCESS;
 }
 

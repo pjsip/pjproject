@@ -64,6 +64,21 @@ PJ_BEGIN_DECL
 PJ_DECL(pj_status_t) pj_base64_encode(const pj_uint8_t *input, int in_len,
                                      char *output, int *out_len);
 
+/**
+ * Encode a buffer into base64 (URL and Filename Safe) encoding.
+ *
+ * @param input     The input buffer.
+ * @param in_len    Size of the input buffer.
+ * @param output    Output buffer. Caller must allocate this buffer with
+ *                  the appropriate size.
+ * @param out_len   On entry, it specifies the length of the output buffer. 
+ *                  Upon return, this will be filled with the actual
+ *                  length of the output buffer.
+ *
+ * @return          PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pj_base64url_encode(const pj_uint8_t *input, int in_len,
+                                         char *output, int *out_len);
 
 /**
  * Decode base64 string.
@@ -78,6 +93,18 @@ PJ_DECL(pj_status_t) pj_base64_encode(const pj_uint8_t *input, int in_len,
 PJ_DECL(pj_status_t) pj_base64_decode(const pj_str_t *input, 
                                       pj_uint8_t *out, int *out_len);
 
+/**
+ * Decode base64 (URL and Filename Safe) string.
+ *
+ * @param input     Input string.
+ * @param out       Buffer to store the output. Caller must allocate
+ *                  this buffer with the appropriate size.
+ * @param out_len   On entry, it specifies the length of the output buffer. 
+ *                  Upon return, this will be filled with the actual
+ *                  length of the output.
+ */
+PJ_DECL(pj_status_t) pj_base64url_decode(const pj_str_t *input, 
+                                         pj_uint8_t *out, int *out_len);
 
 
 /**

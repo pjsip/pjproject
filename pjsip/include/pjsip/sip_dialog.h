@@ -160,11 +160,13 @@ struct pjsip_dialog
     pj_bool_t           uac_has_2xx;/**< UAC has received 2xx response?     */
     pj_bool_t           secure;     /**< Use secure transport?              */
     pj_bool_t           add_allow;  /**< Add Allow header in requests?      */
+    pj_bool_t           ack_sent;   /**< ACK has been sent?                 */
     pjsip_cid_hdr      *call_id;    /**< Call-ID header.                    */
     pjsip_route_hdr     route_set;  /**< Route set.                         */
     pj_bool_t           route_set_frozen; /**< Route set has been set.      */
     pjsip_auth_clt_sess auth_sess;  /**< Client authentication session.     */
-    pj_str_t            initial_dest;/**< Initial destination host.         */
+    pj_str_t            initial_dest;/**< Initial destination host (used for
+                                          verifying remote TLS cert).       */
 
     /** Session counter. */
     int                 sess_count; /**< Number of sessions.                */
@@ -738,7 +740,8 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_response( pjsip_dialog *dlg,
  *
  * @param dlg               The dialog.
  * @param tdata             The transmit data buffer containing response
- *                          message to be modified.
+ *                          message to be modified. Upon successful return,
+ *                          the reference count will be incremented.
  * @param st_code           New status code to be set.
  * @param st_text           Optional string for custom status reason text.
  *
@@ -900,7 +903,19 @@ PJ_DECL(pj_status_t) pjsip_dlg_update_remote_cap(pjsip_dialog *dlg,
                                                  const pjsip_msg *msg,
                                                  pj_bool_t strict);
 
-
+/**
+ * set a shared auth session to be used by this dialog.
+ * This will try to reuse authorization headers from another source
+ * (e.g. register).
+ *
+ * If available, the internal auth session will be ignored.
+ * To reset client registration, pass NULL as session parameter.
+ *
+ * @param dlg      The dialog
+ * @param session  Pointer to the external session
+ */
+PJ_DECL(pj_status_t) pjsip_dlg_set_auth_sess(pjsip_dialog *dlg,
+                                             pjsip_auth_clt_sess *session);
 
 /**
  * @}
@@ -922,7 +937,6 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg,
 /** Internal */
 void pjsip_dlg_on_rx_response( pjsip_dialog *dlg,
                                pjsip_rx_data *rdata );
-
 
 
 PJ_END_DECL

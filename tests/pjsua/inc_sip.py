@@ -88,7 +88,10 @@ class Dialog:
 
 	def trace(self, txt):
 		if self.trace_enabled:
-			print str(time.strftime("%H:%M:%S ")) + txt
+			try:
+				print(str(time.strftime("%H:%M:%S ")) + txt)
+			except UnicodeEncodeError:
+				print((str(time.strftime("%H:%M:%S ")) + txt).encode('utf-8'))
 
 	def update_fields(self, msg):
 		if self.tcp:
@@ -157,7 +160,7 @@ class Dialog:
 		if not dst_addr:
 			dst_addr = (self.dst_addr, self.dst_port)
 		self.trace("============== TX MSG to " + str(dst_addr) + " ============= \n" + msg)
-		self.sock.sendto(msg, 0, dst_addr)
+		self.sock.sendto(msg.encode('utf-8'), 0, dst_addr)
 
 	def wait_msg_from(self, timeout):
 		endtime = time.time() + timeout
@@ -167,29 +170,30 @@ class Dialog:
 			readset = select([self.sock], [], [], 1)
 			if len(readset[0]) < 1 or not self.sock in readset[0]:
 				if len(readset[0]) < 1:
-					print "select() timeout (will wait for " + str(int(endtime - time.time())) + "more secs)"
+					print("select() timeout (will wait for " + str(int(endtime - time.time())) + "more secs)")
 				elif not self.sock in readset[0]:
-					print "select() alien socket"
+					print("select() alien socket")
 				else:
-					print "select other error"
+					print("select other error")
 				continue
 			try:
 				msg, src_addr = self.sock.recvfrom(4096)
 				break
 			except:
-				print "recv() exception: ", sys.exc_info()[0]
+				print("recv() exception: ", sys.exc_info()[0])
 				continue
-
-		if msg=="":
+		
+		msgstr = msg.decode('utf-8')
+		if msgstr=="":
 			return "", None
 		if self.last_request=="INVITE" and self.rem_tag=="":
-			self.rem_tag = get_tag(msg, "To")
+			self.rem_tag = get_tag(msgstr, "To")
 			self.rem_tag = self.rem_tag.rstrip("\r\n;")
 			if self.rem_tag != "":
 				self.rem_tag = ";tag=" + self.rem_tag
 			self.trace("=== rem_tag:" + self.rem_tag)
-		self.trace("=========== RX MSG from " + str(src_addr) +  " ===========\n" + msg)
-		return (msg, src_addr)
+		self.trace("=========== RX MSG from " + str(src_addr) +  " ===========\n" + msgstr)
+		return (msgstr, src_addr)
 	
 	def wait_msg(self, timeout):
 		return self.wait_msg_from(timeout)[0]
@@ -263,7 +267,7 @@ class SendtoCfg:
 		     resp_inc=[], resp_exc=[], use_tcp=False,
 		     extra_headers="", body="", complete_msg="",
 		     enable_buffer = False):
-	 	self.complete_msg = complete_msg
+		self.complete_msg = complete_msg
 		self.sdp = sdp
 		self.resp_code = resp_code
 		self.resp_include = resp_inc

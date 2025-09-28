@@ -31,7 +31,6 @@
 #endif
 
 #define LOG(expr)                   PJ_LOG(6,expr)
-#define ALIGN_PTR(PTR,ALIGNMENT)    (PTR + (-(pj_ssize_t)(PTR) & (ALIGNMENT-1)))
 
 PJ_DEF_DATA(int) PJ_NO_MEMORY_EXCEPTION;
 
@@ -52,8 +51,9 @@ static pj_pool_block *pj_pool_create_block( pj_pool_t *pool, pj_size_t size)
     PJ_CHECK_STACK();
     pj_assert(size >= sizeof(pj_pool_block));
 
-    LOG((pool->obj_name, "create_block(sz=%u), cur.cap=%u, cur.used=%u", 
-         size, pool->capacity, pj_pool_get_used_size(pool)));
+    LOG((pool->obj_name, "create_block(sz=%lu), cur.cap=%lu, cur.used=%lu", 
+         (unsigned long)size, (unsigned long)pool->capacity,
+         (unsigned long)pj_pool_get_used_size(pool)));
 
     /* Request memory from allocator. */
     block = (pj_pool_block*) 
@@ -70,8 +70,8 @@ static pj_pool_block *pj_pool_create_block( pj_pool_t *pool, pj_size_t size)
     block->buf = ((unsigned char*)block) + sizeof(pj_pool_block);
     block->end = ((unsigned char*)block) + size;
 
-    /* Set the start pointer, aligning it as needed */
-    block->cur = ALIGN_PTR(block->buf, PJ_POOL_ALIGNMENT);
+    /* Set the start pointer, unaligned! */
+    block->cur = block->buf;
 
     /* Insert in the front of the list. */
     pj_list_insert_after(&pool->block_list, block);
@@ -84,30 +84,44 @@ static pj_pool_block *pj_pool_create_block( pj_pool_t *pool, pj_size_t size)
 /*
  * Allocate memory chunk for user from available blocks.
  * This will iterate through block list to find space to allocate the chunk.
- * If no space is available in all the blocks, a new block might be created
- * (depending on whether the pool is allowed to resize).
+ * If no space is available in all the blocks (or
+ * PJ_POOL_MAX_SEARCH_BLOCK_COUNT blocks if the config is > 0),
+ * a new block might be created (depending on whether the pool is allowed
+ * to resize).
  */
-PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
+PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t alignment, 
+                                    pj_size_t size)
 {
     pj_pool_block *block = pool->block_list.next;
     void *p;
     pj_size_t block_size;
+    unsigned i = 0;
 
     PJ_CHECK_STACK();
+    pj_assert(PJ_IS_POWER_OF_TWO(alignment));
 
     while (block != &pool->block_list) {
-        p = pj_pool_alloc_from_block(block, size);
+        p = pj_pool_alloc_from_block(block, alignment, size);
         if (p != NULL)
             return p;
+
+#if PJ_POOL_MAX_SEARCH_BLOCK_COUNT > 0
+        if (i >= PJ_POOL_MAX_SEARCH_BLOCK_COUNT) {
+            break;
+        }
+#endif
+
+        i++;
         block = block->next;
     }
     /* No available space in all blocks. */
 
     /* If pool is configured NOT to expand, return error. */
     if (pool->increment_size == 0) {
-        LOG((pool->obj_name, "Can't expand pool to allocate %u bytes "
-             "(used=%u, cap=%u)",
-             size, pj_pool_get_used_size(pool), pool->capacity));
+        LOG((pool->obj_name, "Can't expand pool to allocate %lu bytes "
+             "(used=%lu, cap=%lu)",
+             (unsigned long)size, (unsigned long)pj_pool_get_used_size(pool),
+             (unsigned long)pool->capacity));
         (*pool->callback)(pool, size);
         return NULL;
     }
@@ -118,27 +132,30 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
      * the block.
      */
     if (pool->increment_size < 
-            size + sizeof(pj_pool_block) + PJ_POOL_ALIGNMENT) 
+            sizeof(pj_pool_block)+ /*block header, itself may be unaligned*/
+            alignment-1 + /* gap [0:alignment-1] to align first allocation*/
+            size)                  /* allocation size (NOT aligned!)      */
     {
         pj_size_t count;
-        count = (size + pool->increment_size + sizeof(pj_pool_block) +
-                 PJ_POOL_ALIGNMENT) / 
+        count = (pool->increment_size + 
+                 sizeof(pj_pool_block) + alignment-1 + size) /
                 pool->increment_size;
         block_size = count * pool->increment_size;
-
     } else {
         block_size = pool->increment_size;
     }
 
     LOG((pool->obj_name, 
-         "%u bytes requested, resizing pool by %u bytes (used=%u, cap=%u)",
-         size, block_size, pj_pool_get_used_size(pool), pool->capacity));
+         "%lu bytes requested, resizing pool by %lu bytes (used=%lu, cap=%lu)",
+         (unsigned long)size, (unsigned long)block_size,
+         (unsigned long)pj_pool_get_used_size(pool),
+         (unsigned long)pool->capacity));
 
     block = pj_pool_create_block(pool, block_size);
     if (!block)
         return NULL;
 
-    p = pj_pool_alloc_from_block(block, size);
+    p = pj_pool_alloc_from_block(block, alignment, size);
     pj_assert(p != NULL);
 #if PJ_DEBUG
     if (p == NULL) {
@@ -151,23 +168,28 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
 /*
  * Internal function to initialize pool.
  */
-PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool, 
-                                const char *name,
-                                pj_size_t increment_size,
-                                pj_pool_callback *callback)
+PJ_DEF(void) pj_pool_init_int(pj_pool_t *pool,
+                              const char *name,
+                              pj_size_t increment_size,
+                              pj_size_t alignment,
+                              pj_pool_callback *callback)
 {
+
     PJ_CHECK_STACK();
+    pj_assert(!alignment || PJ_IS_POWER_OF_TWO(alignment));
 
     pool->increment_size = increment_size;
     pool->callback = callback;
+    pool->alignment = !alignment ? PJ_POOL_ALIGNMENT : alignment;
 
     if (name) {
-        if (strchr(name, '%') != NULL) {
+        char *p = pj_ansi_strchr(name, '%');
+        if (p && *(p+1)=='p' && *(p+2)=='\0') {
+            /* Special name with "%p" suffix */
             pj_ansi_snprintf(pool->obj_name, sizeof(pool->obj_name), 
                              name, pool);
         } else {
-            pj_ansi_strncpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
-            pool->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
+            pj_ansi_strxcpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
         }
     } else {
         pool->obj_name[0] = '\0';
@@ -180,6 +202,7 @@ PJ_DEF(void) pj_pool_init_int(  pj_pool_t *pool,
 PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
                                        pj_size_t initial_size, 
                                        pj_size_t increment_size,
+                                       pj_size_t alignment,
                                        pj_pool_callback *callback)
 {
     pj_pool_t *pool;
@@ -191,6 +214,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
     /* Size must be at least sizeof(pj_pool)+sizeof(pj_pool_block) */
     PJ_ASSERT_RETURN(initial_size >= sizeof(pj_pool_t)+sizeof(pj_pool_block),
                      NULL);
+    PJ_ASSERT_RETURN(!alignment || PJ_IS_POWER_OF_TWO(alignment), NULL);
 
     /* If callback is NULL, set calback from the policy */
     if (callback == NULL)
@@ -213,17 +237,18 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
     block->buf = ((unsigned char*)block) + sizeof(pj_pool_block);
     block->end = buffer + initial_size;
 
-    /* Set the start pointer, aligning it as needed */
-    block->cur = ALIGN_PTR(block->buf, PJ_POOL_ALIGNMENT);
+    /* Set the start pointer, unaligned! */
+    block->cur = block->buf;
 
     pj_list_insert_after(&pool->block_list, block);
 
-    pj_pool_init_int(pool, name, increment_size, callback);
+    pj_pool_init_int(pool, name, increment_size, alignment, callback);
 
     /* Pool initial capacity and used size */
     pool->capacity = initial_size;
 
-    LOG((pool->obj_name, "pool created, size=%u", pool->capacity));
+    LOG((pool->obj_name, "pool created, size=%lu",
+                         (unsigned long)pool->capacity));
     return pool;
 }
 
@@ -257,8 +282,8 @@ static void reset_pool(pj_pool_t *pool)
 
     block = pool->block_list.next;
 
-    /* Set the start pointer, aligning it as needed */
-    block->cur = ALIGN_PTR(block->buf, PJ_POOL_ALIGNMENT);
+    /* Set the start pointer, unaligned! */
+    block->cur = block->buf;
 
     pool->capacity = block->end - (unsigned char*)pool;
 }
@@ -268,9 +293,10 @@ static void reset_pool(pj_pool_t *pool)
  */
 PJ_DEF(void) pj_pool_reset(pj_pool_t *pool)
 {
-    LOG((pool->obj_name, "reset(): cap=%d, used=%d(%d%%)", 
-        pool->capacity, pj_pool_get_used_size(pool), 
-        pj_pool_get_used_size(pool)*100/pool->capacity));
+    LOG((pool->obj_name, "reset(): cap=%lu, used=%lu(%lu%%)", 
+        (unsigned long)pool->capacity,
+        (unsigned long)pj_pool_get_used_size(pool), 
+        (unsigned long)(pj_pool_get_used_size(pool)*100/pool->capacity)));
 
     reset_pool(pool);
 }
@@ -282,9 +308,10 @@ PJ_DEF(void) pj_pool_destroy_int(pj_pool_t *pool)
 {
     pj_size_t initial_size;
 
-    LOG((pool->obj_name, "destroy(): cap=%d, used=%d(%d%%), block0=%p-%p", 
-        pool->capacity, pj_pool_get_used_size(pool), 
-        pj_pool_get_used_size(pool)*100/pool->capacity,
+    LOG((pool->obj_name, "destroy(): cap=%lu, used=%lu(%lu%%), block0=%p-%p", 
+        (unsigned long)pool->capacity,
+        (unsigned long)pj_pool_get_used_size(pool),
+        (unsigned long)(pj_pool_get_used_size(pool)*100/pool->capacity),
         ((pj_pool_block*)pool->block_list.next)->buf, 
         ((pj_pool_block*)pool->block_list.next)->end));
 

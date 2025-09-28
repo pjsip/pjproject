@@ -28,14 +28,15 @@
 PJ_DEF(pj_status_t) pj_time_decode(const pj_time_val *tv, pj_parsed_time *pt)
 {
     struct tm local_time;
+    time_t sec = tv->sec; // time_t might be 64 bit even when long int is 32 bit, (time_t*) dangerous
 
     PJ_CHECK_STACK();
 
 #if defined(PJ_HAS_LOCALTIME_R) && PJ_HAS_LOCALTIME_R != 0
-    localtime_r((time_t*)&tv->sec, &local_time);
+    localtime_r(&sec, &local_time);
 #else
     /* localtime() is NOT thread-safe. */
-    local_time = *localtime((time_t*)&tv->sec);
+    local_time = *localtime(&sec);
 #endif
 
     pt->year = local_time.tm_year+1900;
@@ -70,9 +71,6 @@ PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv)
 
     return PJ_SUCCESS;
 }
-
-#endif /* !PJ_WIN32 */
-
 
 static int get_tz_offset_secs()
 {
@@ -110,4 +108,4 @@ PJ_DEF(pj_status_t) pj_time_gmt_to_local(pj_time_val *tv)
     return PJ_SUCCESS;
 }
 
-
+#endif /* !PJ_WIN32 */

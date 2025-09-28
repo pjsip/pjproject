@@ -242,9 +242,17 @@ typedef struct pj_activesock_cfg
      * error is reported after partial data has been sent. Also setting
      * this will disable the ioqueue concurrency for the socket.
      *
-     * Default value is 1.
+     * Default value is PJ_TRUE.
      */
     pj_bool_t whole_data;
+
+    /**
+     * If this option is specified, set close-on-exec flag for socket.
+     * This option is only used by #pj_activesock_create_udp()
+     *
+     * Default value is PJ_TRUE.
+    */
+    pj_bool_t sock_cloexec;
 
 } pj_activesock_cfg;
 

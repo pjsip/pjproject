@@ -29,10 +29,6 @@
 #include <pj/sock.h>
 #include <pj/log.h>
 
-extern int param_echo_sock_type;
-extern const char *param_echo_server;
-extern int param_echo_port;
-
 #include <bsp.h>
 
 #define CONFIGURE_USE_IMFS_AS_BASE_FILESYSTEM
@@ -299,9 +295,9 @@ initialize_network()
     result = write(fd, "hosts,bind\n", 11);
     result = close(fd);
     fd = open("/etc/hosts", O_RDWR | O_CREAT, 0744);
-    result = write(fd, "127.0.0.1       localhost\n", 41);
+    result = write(fd, "127.0.0.1       localhost\n", 26);
     result = write(fd, ip_address_string, strlen(ip_address_string));
-    result = write(fd, "        pjsip-test\n", 32); 
+    result = write(fd, "        pjsip-test\n", 19); 
     result = close(fd);
 
     netdriver_config.ip_address = ip_address_string;

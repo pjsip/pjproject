@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/pool.h>
+#include <pj/assert.h>
 #include <pj/string.h>
 
 #if PJ_HAS_POOL_ALT_API
@@ -41,7 +42,7 @@
 /* Uncomment this to enable TRACE_ */
 //#undef TRACE_
 
-
+#define IS_POWER_OF_TWO(val)    (((val)>0) && ((val) & ((val)-1))==0)
 
 PJ_DEF_DATA(int) PJ_NO_MEMORY_EXCEPTION;
 
@@ -57,6 +58,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_imp( const char *file, int line,
                                        const char *name,
                                        pj_size_t initial_size,
                                        pj_size_t increment_size,
+                                       pj_size_t alignment,
                                        pj_pool_callback *callback)
 {
     pj_pool_t *pool;
@@ -67,20 +69,32 @@ PJ_DEF(pj_pool_t*) pj_pool_create_imp( const char *file, int line,
     PJ_UNUSED_ARG(initial_size);
     PJ_UNUSED_ARG(increment_size);
 
+    if (!alignment)
+        alignment = PJ_POOL_ALIGNMENT;
+
+    PJ_ASSERT_RETURN(IS_POWER_OF_TWO(alignment), NULL);
+
     pool = malloc(sizeof(struct pj_pool_t));
     if (!pool)
         return NULL;
 
     if (name) {
-        pj_ansi_strncpy(pool->obj_name, name, sizeof(pool->obj_name));
-        pool->obj_name[sizeof(pool->obj_name)-1] = '\0';
+        char *p = pj_ansi_strchr(name, '%');
+        if (p && *(p+1)=='p' && *(p+2)=='\0') {
+            /* Special name with "%p" suffix */
+            pj_ansi_snprintf(pool->obj_name, sizeof(pool->obj_name),
+                             name, pool);
+        } else {
+            pj_ansi_strxcpy(pool->obj_name, name, PJ_MAX_OBJ_NAME);
+        }
     } else {
-        strcpy(pool->obj_name, "altpool");
+        pj_ansi_strxcpy(pool->obj_name, "altpool", sizeof(pool->obj_name));
     }
 
     pool->factory = NULL;
     pool->first_mem = NULL;
     pool->used_size = 0;
+    pool->alignment = alignment;
     pool->cb = callback;
 
     return pool;
@@ -151,14 +165,27 @@ PJ_DEF(pj_size_t) pj_pool_get_used_size_imp(pj_pool_t *pool)
 
 /* Allocate memory from the pool */
 PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line, 
-                                 pj_pool_t *pool, pj_size_t sz)
+                                 pj_pool_t *pool, pj_size_t alignment,
+                                 pj_size_t sz)
 {
     struct pj_pool_mem *mem;
+    char               *buf;
 
     PJ_UNUSED_ARG(file);
     PJ_UNUSED_ARG(line);
 
-    mem = malloc(sz + sizeof(struct pj_pool_mem));
+    if (!alignment)
+        alignment = pool->alignment;
+        
+    PJ_ASSERT_RETURN(IS_POWER_OF_TWO(alignment), NULL);
+
+    /* obey alignment request from user */
+    if (sz & (alignment - 1)) {
+        sz = (sz + alignment) & ~(alignment - 1);
+    }
+    mem = malloc(sz +                /* allocation size, already aligned      */
+                 alignment-1 +       /*gap [0:alignment-1] to align allocation*/
+                 sizeof(struct pj_pool_mem)); /*block header, may be unaligned*/
     if (!mem) {
         if (pool->cb)
             (*pool->cb)(pool, sz);
@@ -171,24 +198,26 @@ PJ_DEF(void*) pj_pool_alloc_imp( const char *file, int line,
 #ifdef TRACE_
     {
         char msg[120];
-        pj_ansi_sprintf(msg, "Mem %X (%d+%d bytes) allocated by %s:%d\r\n",
-                        mem, sz, sizeof(struct pj_pool_mem), 
+        pj_ansi_snprintf(msg, sizeof(msg),
+                        "Mem %X (%u+%u bytes) allocated by %s:%d\r\n",
+                        (unsigned)(intptr_t)mem, (unsigned)sz,
+                        (unsigned)sizeof(struct pj_pool_mem),
                         file, line);
         TRACE_(msg);
     }
 #endif
-
-    return ((char*)mem) + sizeof(struct pj_pool_mem);
+    buf = ((char*)mem) + sizeof(struct pj_pool_mem);
+    return (buf + (-(pj_ssize_t)buf & (alignment-1)));
 }
 
 /* Allocate memory from the pool and zero the memory */
-PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line, 
-                                  pj_pool_t *pool, unsigned cnt, 
+PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line,
+                                  pj_pool_t *pool, unsigned cnt,
                                   unsigned elemsz)
 {
     void *mem;
 
-    mem = pj_pool_alloc_imp(file, line, pool, cnt*elemsz);
+    mem = pj_pool_alloc_imp(file, line, pool, 0, cnt*elemsz);
     if (!mem)
         return NULL;
 
@@ -200,7 +229,7 @@ PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line,
 PJ_DEF(void*) pj_pool_zalloc_imp( const char *file, int line, 
                                   pj_pool_t *pool, pj_size_t sz)
 {
-    return pj_pool_calloc_imp(file, line, pool, 1, sz); 
+    return pj_pool_calloc_imp(file, line, pool, 1, (unsigned)sz); 
 }
 
 

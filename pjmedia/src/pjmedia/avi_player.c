@@ -21,10 +21,12 @@
  */
 #include <pjmedia/avi_stream.h>
 #include <pjmedia/alaw_ulaw.h>
+#include <pjmedia/av_sync.h>
 #include <pjmedia/avi.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/wave.h>
 #include <pj/assert.h>
+#include <pj/ctype.h>
 #include <pj/file_access.h>
 #include <pj/file_io.h>
 #include <pj/log.h>
@@ -42,7 +44,7 @@
 #define AVISF_DISABLED          0x00000001
 #define AVISF_VIDEO_PALCHANGES  0x00010000
 
-#define AVI_EOF 0xFFEEFFEE
+#define AVI_EOF (int)0xFFEEFFEE
 
 //#define COMPARE_TAG(doc_tag, tag) (doc_tag==*((pj_uint32_t*)avi_tags[tag]))
 #define COMPARE_TAG(doc_tag, tag) \
@@ -58,42 +60,8 @@
 #   define TRACE_(x)
 #endif
 
-#if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
-    static void data_to_host(void *data, pj_uint8_t bits, unsigned count)
-    {
-        unsigned i;
-
-        count /= (bits == 32? 4 : 2);
-
-        if (bits == 32) {
-            pj_int32_t *data32 = (pj_int32_t *)data;
-            for (i=0; i<count; ++i)
-                data32[i] = pj_swap32(data32[i]);
-        } else {
-            pj_int16_t *data16 = (pj_int16_t *)data;
-            for (i=0; i<count; ++i)
-                data16[i] = pj_swap16(data16[i]);
-        }
-
-    }
-    static void data_to_host2(void *data, pj_uint8_t nsizes,
-                              pj_uint8_t *sizes)
-    {
-        unsigned i;
-        pj_int8_t *datap = (pj_int8_t *)data;
-        for (i = 0; i < nsizes; i++) {
-            data_to_host(datap, 32, sizes[i]);
-            datap += sizes[i++];
-            if (i >= nsizes)
-                break;
-            data_to_host(datap, 16, sizes[i]);
-            datap += sizes[i];
-        }
-    }
-#else
-#   define data_to_host(data, bits, count)
-#   define data_to_host2(data, nsizes, sizes)
-#endif
+#define data_to_host pjmedia_avi_swap_data
+#define data_to_host2 pjmedia_avi_swap_data2
 
 typedef struct avi_fmt_info
 {
@@ -115,11 +83,14 @@ static avi_fmt_info avi_fmts[] =
     {PJMEDIA_FORMAT_PACK('D','X','5','0'), PJMEDIA_FORMAT_MPEG4}
 };
 
-struct pjmedia_avi_streams
+typedef struct avi_reader_streams
 {
-    unsigned        num_streams;
-    pjmedia_port  **streams;
-};
+    pjmedia_avi_streams base;
+
+    /* AV synchronization */
+    pjmedia_av_sync *avsync;
+    pj_size_t        eof_cnt;
+} avi_reader_streams;
 
 struct avi_reader_port
 {
@@ -127,7 +98,6 @@ struct avi_reader_port
     unsigned         stream_id;
     unsigned         options;
     pjmedia_format_id fmt_id;
-    unsigned         usec_per_frame;
     pj_uint16_t      bits_per_sample;
     pj_bool_t        eof;
     pj_off_t         fsize;
@@ -135,19 +105,26 @@ struct avi_reader_port
     pj_uint8_t       pad;
     pj_oshandle_t    fd;
     pj_ssize_t       size_left;
+
+    pj_size_t        frame_cnt;
     pj_timestamp     next_ts;
+
+    /* AV synchronization */
+    pjmedia_av_sync_media *avsync_media;
+    pj_size_t        slow_down_frm;
+    avi_reader_streams *avi_streams;
 
     pj_status_t    (*cb)(pjmedia_port*, void*);
     pj_bool_t        subscribed;
     void           (*cb2)(pjmedia_port*, void*);
 };
 
-
 static pj_status_t avi_get_frame(pjmedia_port *this_port, 
                                  pjmedia_frame *frame);
 static pj_status_t avi_on_destroy(pjmedia_port *this_port);
 
-static struct avi_reader_port *create_avi_port(pj_pool_t *pool)
+static struct avi_reader_port *create_avi_port(pj_pool_t *pool,
+                                               pj_grp_lock_t *grp_lock)
 {
     const pj_str_t name = pj_str("file");
     struct avi_reader_port *port;
@@ -166,6 +143,8 @@ static struct avi_reader_port *create_avi_port(pj_pool_t *pool)
     port->base.get_frame = &avi_get_frame;
     port->base.on_destroy = &avi_on_destroy;
 
+    pjmedia_port_init_grp_lock(&port->base, pool, grp_lock);
+
     return port;
 }
 
@@ -183,8 +162,9 @@ static pj_status_t file_read3(pj_oshandle_t fd, void *data, pj_ssize_t size,
     /* Normalize AVI header fields values from little-endian to host
      * byte order.
      */
-    if (bits > 0)
+    if (bits > 0) {
         data_to_host(data, bits, size_read);
+    }
 
     if (size_read != size_to_read) {
         if (psz_read)
@@ -195,49 +175,93 @@ static pj_status_t file_read3(pj_oshandle_t fd, void *data, pj_ssize_t size,
     return status;
 }
 
+
+static void streams_on_destroy(void *arg)
+{
+    avi_reader_streams *streams = (avi_reader_streams *)arg;
+
+    if (streams->avsync)
+        pjmedia_av_sync_destroy(streams->avsync);
+    pj_pool_safe_release(&streams->base.pool);
+}
+
+
+/* Get filename from path */
+static const char *get_fname(const char *path)
+{
+    pj_size_t len = pj_ansi_strlen(path);
+    const char *p = path + len - 1;
+
+    while (p > path) {
+        if (*p == '\\' || *p == '/' || *p == ':')
+            return p + 1;
+        --p;
+    }
+    return p;
+}
+
 /*
  * Create AVI player port.
  */
 PJ_DEF(pj_status_t)
-pjmedia_avi_player_create_streams(pj_pool_t *pool,
+pjmedia_avi_player_create_streams(pj_pool_t *pool_,
                                   const char *filename,
                                   unsigned options,
                                   pjmedia_avi_streams **p_streams)
 {
+    avi_reader_streams *streams = NULL;
     pjmedia_avi_hdr avi_hdr;
     struct avi_reader_port *fport[PJMEDIA_AVI_MAX_NUM_STREAMS];
     pj_off_t pos;
     unsigned i, nstr = 0;
+    pj_pool_t *pool = NULL;
+    pj_grp_lock_t *grp_lock = NULL;
     pj_status_t status = PJ_SUCCESS;
 
     /* Check arguments. */
-    PJ_ASSERT_RETURN(pool && filename && p_streams, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool_ && filename && p_streams, PJ_EINVAL);
 
     /* Check the file really exists. */
     if (!pj_file_exists(filename)) {
         return PJ_ENOTFOUND;
     }
 
+    /* Create own pool */
+    pool = pj_pool_create(pool_->factory, "aviplayer", 500, 500, NULL);
+    PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
+
+    /* Create group lock */
+    status = pj_grp_lock_create(pool, NULL, &grp_lock);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+
     /* Create fport instance. */
-    fport[0] = create_avi_port(pool);
+    fport[0] = create_avi_port(pool, grp_lock);
     if (!fport[0]) {
-        return PJ_ENOMEM;
+        /* Destroy group lock here to avoid leak */
+        pj_grp_lock_destroy(grp_lock);
+        grp_lock = NULL;
+
+        status = PJ_ENOMEM;
+        goto on_error;
     }
 
     /* Get the file size. */
     fport[0]->fsize = pj_file_size(filename);
 
     /* Size must be more than AVI header size */
-    if (fport[0]->fsize <= sizeof(riff_hdr_t) + sizeof(avih_hdr_t) + 
-                           sizeof(strl_hdr_t))
+    if (fport[0]->fsize <= (pj_off_t)(sizeof(riff_hdr_t) + sizeof(avih_hdr_t) +
+                                      sizeof(strl_hdr_t)))
     {
-        return PJMEDIA_EINVALIMEDIATYPE;
+        status = PJMEDIA_EINVALIMEDIATYPE;
+        goto on_error;
     }
 
     /* Open file. */
-    status = pj_file_open(pool, filename, PJ_O_RDONLY, &fport[0]->fd);
+    status = pj_file_open(pool, filename, PJ_O_RDONLY | PJ_O_CLOEXEC,
+                          &fport[0]->fd);
     if (status != PJ_SUCCESS)
-        return status;
+        goto on_error;
 
     /* Read the RIFF + AVIH header. */
     status = file_read(fport[0]->fd, &avi_hdr,
@@ -303,16 +327,15 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
             goto on_error;
 
         /* Normalize the endian */
-        if (elem == sizeof(strf_video_hdr_t))
+        if (elem == sizeof(strf_video_hdr_t)) {
             data_to_host2(&avi_hdr.strf_hdr[i],
-                          sizeof(strf_video_hdr_sizes)/
-                          sizeof(strf_video_hdr_sizes[0]),
+                          PJ_ARRAY_SIZE(strf_video_hdr_sizes),
                           strf_video_hdr_sizes);
-        else if (elem == sizeof(strf_audio_hdr_t))
+        } else if (elem == sizeof(strf_audio_hdr_t)) {
             data_to_host2(&avi_hdr.strf_hdr[i],
-                          sizeof(strf_audio_hdr_sizes)/
-                          sizeof(strf_audio_hdr_sizes[0]),
+                          PJ_ARRAY_SIZE(strf_audio_hdr_sizes),
                           strf_audio_hdr_sizes);
+        }
 
         /* Skip the remainder of the header */
         size_to_read = avi_hdr.strl_hdr[i].list_sz - (sizeof(strl_hdr_t) -
@@ -395,7 +418,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
             }
 
             fmt_id = avi_hdr.strl_hdr[i].codec;
-            for (j = sizeof(avi_fmts)/sizeof(avi_fmts[0])-1; j >= 0; j--) {
+            for (j = (int)PJ_ARRAY_SIZE(avi_fmts)-1; j >= 0; j--) {
                 /* Check supported video formats here */
                 if (fmt_id == avi_fmts[j].fmt_id) {
                     if (avi_fmts[j].eff_fmt_id)
@@ -434,14 +457,14 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
 
         if (nstr > 0) {
             /* Create fport instance. */
-            fport[nstr] = create_avi_port(pool);
+            fport[nstr] = create_avi_port(pool, grp_lock);
             if (!fport[nstr]) {
                 status = PJ_ENOMEM;
                 goto on_error;
             }
 
             /* Open file. */
-            status = pj_file_open(pool, filename, PJ_O_RDONLY,
+            status = pj_file_open(pool, filename, PJ_O_RDONLY | PJ_O_CLOEXEC,
                                   &fport[nstr]->fd);
             if (status != PJ_SUCCESS)
                 goto on_error;
@@ -466,6 +489,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
 
     for (i = 0; i < nstr; i++) {
         strl_hdr_t *strl_hdr = &avi_hdr.strl_hdr[fport[i]->stream_id];
+        char port_name[PJ_MAX_OBJ_NAME];
 
         /* Initialize */
         fport[i]->options = options;
@@ -483,7 +507,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
                 strl_hdr->codec);
 
             fport[i]->bits_per_sample = (vfi ? vfi->bpp : 0);
-            fport[i]->usec_per_frame = avi_hdr.avih_hdr.usec_per_frame;
+            //fport[i]->usec_per_frame = avi_hdr.avih_hdr.usec_per_frame;
             pjmedia_format_init_video(&fport[i]->base.info.fmt,
                                       fport[i]->fmt_id,
                                       strf_hdr->biWidth,
@@ -511,7 +535,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
                 &avi_hdr.strf_hdr[fport[i]->stream_id].strf_audio_hdr;
 
             fport[i]->bits_per_sample = strf_hdr->bits_per_sample;
-            fport[i]->usec_per_frame = avi_hdr.avih_hdr.usec_per_frame;
+            //fport[i]->usec_per_frame = avi_hdr.avih_hdr.usec_per_frame;
             pjmedia_format_init_audio(&fport[i]->base.info.fmt,
                                       fport[i]->fmt_id,
                                       strf_hdr->sample_rate,
@@ -530,16 +554,68 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
             }
         }
 
-        pj_strdup2(pool, &fport[i]->base.info.name, filename);
+        pj_ansi_snprintf(port_name, sizeof(port_name), "%s-of-%s",
+                         pjmedia_type_name(fport[i]->base.info.fmt.type),
+                         get_fname(filename));
+        pj_strdup2_with_null(pool, &fport[i]->base.info.name, port_name);
     }
 
     /* Done. */
-    *p_streams = pj_pool_alloc(pool, sizeof(pjmedia_avi_streams));
+    streams = pj_pool_calloc(pool, 1, sizeof(avi_reader_streams));
+    *p_streams = (pjmedia_avi_streams *)streams;
     (*p_streams)->num_streams = nstr;
     (*p_streams)->streams = pj_pool_calloc(pool, (*p_streams)->num_streams,
                                            sizeof(pjmedia_port *));
     for (i = 0; i < nstr; i++)
         (*p_streams)->streams[i] = &fport[i]->base;
+
+    /* Create AV synchronizer, if not disabled */
+    if ((options & PJMEDIA_AVI_FILE_NO_SYNC) == 0) {
+        pjmedia_av_sync *avsync;
+        pj_timestamp ts_zero = {{0}};
+        pjmedia_av_sync_setting setting;
+
+        pjmedia_av_sync_setting_default(&setting);
+        setting.name = (char*) get_fname(filename);
+        status = pjmedia_av_sync_create(pool, &setting, &avsync);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        streams->avsync = avsync;
+
+        for (i = 0; i < nstr; i++) {
+            pjmedia_av_sync_media_setting med_setting;
+
+            pjmedia_av_sync_media_setting_default(&med_setting);
+            med_setting.type = fport[i]->base.info.fmt.type;
+            med_setting.name = (char*)pjmedia_type_name(med_setting.type);
+            if (med_setting.type == PJMEDIA_TYPE_AUDIO) {
+                med_setting.clock_rate = PJMEDIA_PIA_SRATE(&fport[i]->base.info);
+            } else if (med_setting.type == PJMEDIA_TYPE_VIDEO) {
+                med_setting.clock_rate = VIDEO_CLOCK_RATE;
+            }
+            status = pjmedia_av_sync_add_media(avsync, &med_setting,
+                                               &fport[i]->avsync_media);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+
+            /* Set reference timestamps to zeroes */
+            status = pjmedia_av_sync_update_ref(fport[i]->avsync_media,
+                                                &ts_zero, &ts_zero);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+
+            /* Set pointer to AVI streams */
+            fport[i]->avi_streams = streams;
+        }
+    }
+
+    status = pj_grp_lock_add_handler(grp_lock, NULL, *p_streams,
+                                     &streams_on_destroy);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+
+    (*p_streams)->pool = pool;
 
     PJ_LOG(4,(THIS_FILE, 
               "AVI file player '%.*s' created with "
@@ -551,9 +627,22 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
     return PJ_SUCCESS;
 
 on_error:
-    fport[0]->base.on_destroy(&fport[0]->base);
-    for (i = 1; i < nstr; i++)
-        fport[i]->base.on_destroy(&fport[i]->base);
+    if (grp_lock) {
+        pjmedia_port_destroy(&fport[0]->base);
+        for (i = 1; i < nstr; i++)
+            pjmedia_port_destroy(&fport[i]->base);
+    }
+    
+    if (streams && streams->avsync) {
+        for (i = 0; i < nstr; i++) {
+            if (fport[i]->avsync_media)
+                pjmedia_av_sync_del_media(NULL, fport[i]->avsync_media);
+        }
+        pjmedia_av_sync_destroy(streams->avsync);
+    }
+
+    pj_pool_release(pool);
+
     if (status == AVI_EOF)
         return PJMEDIA_EINVALIMEDIATYPE;
     return status;
@@ -564,6 +653,21 @@ pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams *streams)
 {
     pj_assert(streams);
     return streams->num_streams;
+}
+
+PJ_DEF(unsigned)
+pjmedia_avi_streams_get_num_streams_by_media(pjmedia_avi_streams *streams,
+                                             pjmedia_type media_type)
+{
+    unsigned i = 0;
+    unsigned num_strm = 0;
+
+    pj_assert(streams);
+    for (; i < streams->num_streams; i++)
+        if (streams->streams[i]->info.fmt.type == media_type)
+            ++num_strm;
+
+    return num_strm;
 }
 
 PJ_DEF(pjmedia_avi_stream *)
@@ -681,6 +785,135 @@ static pj_status_t file_on_event(pjmedia_event *event,
 }
 
 
+static pj_status_t skip_forward(pjmedia_port *this_port, pj_size_t frames)
+{
+    struct avi_reader_port *fport = (struct avi_reader_port*)this_port;
+    pj_status_t status = PJ_SUCCESS;
+    pj_ssize_t remainder = frames;
+    pjmedia_type type = fport->base.info.fmt.type;
+    pj_bool_t is_pcm = PJ_FALSE;
+
+    /* For audio, skip current chunk first */
+    if (type == PJMEDIA_TYPE_AUDIO) {
+        is_pcm = (fport->fmt_id!=PJMEDIA_FORMAT_PCMA &&
+                  fport->fmt_id!=PJMEDIA_FORMAT_PCMU);
+        if (fport->size_left > 0) {
+            pj_ssize_t seek_size = is_pcm? frames * 2 : frames;
+            seek_size = PJ_MIN(seek_size, fport->size_left);
+            status = pj_file_setpos(fport->fd, seek_size, PJ_SEEK_CUR);
+            if (status != PJ_SUCCESS)
+                return status;
+
+            fport->size_left -= seek_size;
+            remainder -= (seek_size / (is_pcm? 2 : 1));
+
+            fport->frame_cnt += (seek_size / (is_pcm? 2 : 1));
+            fport->next_ts.u64 = fport->frame_cnt;
+        }
+    }
+
+    while (remainder) {
+        pjmedia_avi_subchunk ch = {0, 0};
+        unsigned stream_id;
+        char *cid;
+
+        /* Need to skip new chunk */
+        pj_assert(fport->size_left == 0);
+
+        /* Data is padded to the nearest WORD boundary */
+        if (fport->pad) {
+            status = pj_file_setpos(fport->fd, fport->pad, PJ_SEEK_CUR);
+            fport->pad = 0;
+        }
+
+        status = file_read(fport->fd, &ch, sizeof(pjmedia_avi_subchunk));
+        if (status != PJ_SUCCESS)
+            return status;
+            
+        if (!ch.len ||    /* prevent infinite loop */
+            !ch.id)       /* highly likely that the file is invalid */
+        {
+            char fourcc_name[5];
+            pj_uint32_t sig = ch.id;
+            pj_off_t pos;
+            pj_file_getpos(fport->fd, &pos);
+            if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+            {
+                PJ_LOG(2, (THIS_FILE,
+                           "%.*s. Zero length chunk of type %s found at offset=%lu (skip_forward)",
+                           (int)fport->base.info.name.slen,
+                           fport->base.info.name.ptr,
+                           pjmedia_fourcc_name(ch.id, fourcc_name),
+                           (unsigned long)pos));
+            } else {
+                PJ_LOG(2, (THIS_FILE,
+                           "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu (skip_forward)",
+                           (int)fport->base.info.name.slen,
+                           fport->base.info.name.ptr,
+                           ch.id, ch.len,
+                           (unsigned long)pos));
+            }
+
+            return PJMEDIA_ENOTVALIDWAVE;
+        }
+
+        PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len, return PJ_EINVAL);
+        fport->pad = (pj_uint8_t)ch.len & 1;
+
+        cid = (char *)&ch.id;
+        if (pj_isdigit(cid[0]) && pj_isdigit(cid[1]))
+            stream_id = (cid[0] - '0') * 10 + (cid[1] - '0');
+        else
+            stream_id = 1000;
+
+        /* We are only interested in data with our stream id */
+        if (stream_id != fport->stream_id) {
+            if (COMPARE_TAG(ch.id, PJMEDIA_AVI_LIST_TAG))
+                PJ_LOG(5, (THIS_FILE, "Unsupported LIST tag found in "
+                                        "the movi data."));
+            else if (COMPARE_TAG(ch.id, PJMEDIA_AVI_RIFF_TAG)) {
+                PJ_LOG(3, (THIS_FILE, "Unsupported format: multiple "
+                        "AVIs in a single file."));
+                return PJ_ENOTSUP;
+            }
+
+            status = pj_file_setpos(fport->fd, ch.len, PJ_SEEK_CUR);
+            continue;
+        }
+
+        /* Found new chunk */
+        fport->size_left = ch.len;
+        if (type == PJMEDIA_TYPE_AUDIO) {
+            pj_ssize_t seek_size = remainder * (is_pcm? 2 : 1);
+            seek_size = PJ_MIN(seek_size, fport->size_left);
+            status = pj_file_setpos(fport->fd, seek_size, PJ_SEEK_CUR);
+            if (status != PJ_SUCCESS)
+                return status;
+
+            fport->size_left -= seek_size;
+            remainder -= (seek_size / (is_pcm? 2 : 1));
+
+            fport->frame_cnt += (seek_size / (is_pcm? 2 : 1));
+            fport->next_ts.u64 = fport->frame_cnt;
+        } else {
+            status = pj_file_setpos(fport->fd, fport->size_left, PJ_SEEK_CUR);
+            if (status != PJ_SUCCESS)
+                return status;
+            fport->size_left = 0;
+            remainder -= 1;
+
+            fport->frame_cnt++;
+            fport->next_ts.u64 = ((pj_uint64_t)fport->frame_cnt *
+                                  VIDEO_CLOCK_RATE *
+                                  fport->base.info.fmt.det.vid.fps.denum/
+                                  fport->base.info.fmt.det.vid.fps.num);
+        }
+    } /* while (remainder) */
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Get frame from file.
  */
@@ -690,73 +923,163 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
     struct avi_reader_port *fport = (struct avi_reader_port*)this_port;
     pj_status_t status = PJ_SUCCESS;
     pj_ssize_t size_read = 0, size_to_read = 0;
+    pjmedia_port_info* port_info = &fport->base.info;
 
     pj_assert(fport->base.info.signature == SIGNATURE);
 
-    /* We encountered end of file */
-    if (fport->eof) {
-        PJ_LOG(5,(THIS_FILE, "File port %.*s EOF",
-                  (int)fport->base.info.name.slen,
-                  fport->base.info.name.ptr));
-
-        /* Call callback, if any */
-        if (fport->cb2) {
-            pj_bool_t no_loop = (fport->options & PJMEDIA_AVI_FILE_NO_LOOP);
-
-            if (!fport->subscribed) {
-                status = pjmedia_event_subscribe(NULL, &file_on_event,
-                                                 fport, fport);
-                fport->subscribed = (status == PJ_SUCCESS)? PJ_TRUE:
-                                    PJ_FALSE;
-            }
-
-            if (fport->subscribed && fport->eof != 2) {
-                pjmedia_event event;
-
-                if (no_loop) {
-                    /* To prevent the callback from being called repeatedly */
-                    fport->eof = 2;
-                } else {
-                    fport->eof = PJ_FALSE;
-                    pj_file_setpos(fport->fd, fport->start_data, PJ_SEEK_SET);
-                }
-
-                pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
-                                   NULL, fport);
-                pjmedia_event_publish(NULL, fport, &event,
-                                      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
-            }
-            
-            /* Should not access player port after this since
-             * it might have been destroyed by the callback.
-             */
+    /* Synchronize media */
+    if (fport->avsync_media && !fport->eof) {
+        pj_int32_t adjust_delay;
+        
+        /* Just return if we are increasing delay */
+        if (fport->slow_down_frm) {
+            fport->slow_down_frm--;
             frame->type = PJMEDIA_FRAME_TYPE_NONE;
             frame->size = 0;
-            
-            return (no_loop? PJ_EEOF: PJ_SUCCESS);
+            return PJ_SUCCESS;
+        }
 
-        } else if (fport->cb) {
-            status = (*fport->cb)(this_port, fport->base.port_data.pdata);
+        status = pjmedia_av_sync_update_pts(fport->avsync_media,
+                                            &fport->next_ts, &adjust_delay);
+        if (status == PJ_SUCCESS && adjust_delay) {
+            pj_ssize_t frames = 0;
+
+            /* If speed up is requested for more than 1 seconds,
+             * the stream may just be resumed, fast forward.
+             */
+            if (adjust_delay < -1000) {
+                PJ_LOG(4,(THIS_FILE, "%.*s: %s need to fast forward by %dms",
+                          (int)fport->base.info.name.slen,
+                          fport->base.info.name.ptr,
+                          pjmedia_type_name(port_info->fmt.type),
+                          -adjust_delay));
+
+                if (fport->base.info.fmt.type == PJMEDIA_TYPE_AUDIO) {
+                    frames = -adjust_delay *
+                             port_info->fmt.det.aud.clock_rate /
+                             1000;
+                } else {
+                    frames = -adjust_delay *
+                             port_info->fmt.det.vid.fps.num /
+                             port_info->fmt.det.vid.fps.denum / 1000;
+                }
+                status = skip_forward(this_port, frames);
+                if (status != PJ_SUCCESS)
+                    goto on_error2;
+            }
+
+            /* Otherwise it is a small adjustment, apply for video stream only
+             * so the audio playback remains smooth.
+             */
+            else if (port_info->fmt.type == PJMEDIA_TYPE_VIDEO) {
+                pj_bool_t slowdown = adjust_delay > 0;
+
+                adjust_delay = PJ_ABS(adjust_delay);
+                frames = adjust_delay *
+                         port_info->fmt.det.vid.fps.num /
+                         port_info->fmt.det.vid.fps.denum / 1000;
+
+                if (slowdown) {
+                    PJ_LOG(4, (THIS_FILE,
+                               "%.*s: video need to slow down by %dms",
+                               (int)port_info->name.slen,
+                               port_info->name.ptr,
+                               adjust_delay));
+                    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+                    frame->size = 0;
+
+                    /* Increase delay */
+                    fport->slow_down_frm = frames;
+                    return PJ_SUCCESS;
+                }
+                
+                PJ_LOG(4,(THIS_FILE, "%.*s: video need to speed up by %dms",
+                                     (int)port_info->name.slen,
+                                     port_info->name.ptr,
+                                     -adjust_delay));
+                status = skip_forward(this_port, (frames? frames : 1));
+                if (status != PJ_SUCCESS)
+                    goto on_error2;
+            }
+        }
+    }
+
+    /* Set the frame timestamp */
+    frame->timestamp.u64 = fport->next_ts.u64;
+
+    /* We encountered end of file */
+    if (fport->eof) {
+        pj_bool_t no_loop = (fport->options & PJMEDIA_AVI_FILE_NO_LOOP);
+        pj_bool_t rewind_now = PJ_TRUE;
+
+        /* If synchronized, wait all streams to EOF before rewinding */
+        if (fport->avsync_media) {
+            avi_reader_streams *avi_streams = fport->avi_streams;
+            
+            rewind_now = (avi_streams->eof_cnt %
+                          avi_streams->base.num_streams)==0;
+            if (rewind_now) {
+                pj_timestamp ts_zero = {{0}};
+                pjmedia_av_sync_update_ref(fport->avsync_media,
+                                           &ts_zero, &ts_zero);
+            }
+        }
+
+        /* Call callback, if any */
+        if (fport->eof != 2) {
+
+            /* To prevent the callback from being called repeatedly */
+            fport->eof = 2;
+
+            if (fport->cb2) {
+                if (!fport->subscribed) {
+                    status = pjmedia_event_subscribe(NULL, &file_on_event,
+                                                     fport, fport);
+                    fport->subscribed = (status == PJ_SUCCESS)? PJ_TRUE:
+                                        PJ_FALSE;
+                }
+
+                if (fport->subscribed)  {
+                    pjmedia_event event;
+
+                    pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
+                                       NULL, fport);
+                    pjmedia_event_publish(NULL, fport, &event,
+                                          PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+                }
+            
+                /* Should not access player port after this since
+                 * it might have been destroyed by the callback.
+                 */
+                frame->type = PJMEDIA_FRAME_TYPE_NONE;
+                frame->size = 0;
+                status = PJ_SUCCESS;
+
+            } else if (fport->cb) {
+                status = (*fport->cb)(this_port, fport->base.port_data.pdata);
+            }
         }
 
         /* If callback returns non PJ_SUCCESS or 'no loop' is specified,
          * return immediately (and don't try to access player port since
          * it might have been destroyed by the callback).
          */
-        if ((status != PJ_SUCCESS) ||
-            (fport->options & PJMEDIA_AVI_FILE_NO_LOOP)) 
-        {
+        if (status != PJ_SUCCESS || no_loop || !rewind_now) {
             frame->type = PJMEDIA_FRAME_TYPE_NONE;
             frame->size = 0;
-            return PJ_EEOF;
+            return (no_loop? PJ_EEOF : status);
         }
 
-        /* Rewind file */
-        PJ_LOG(5,(THIS_FILE, "File port %.*s rewinding..",
-                  (int)fport->base.info.name.slen,
-                  fport->base.info.name.ptr));
-        fport->eof = PJ_FALSE;
-        pj_file_setpos(fport->fd, fport->start_data, PJ_SEEK_SET);
+        if (rewind_now) {
+            PJ_LOG(5,(THIS_FILE, "AVI player port %.*s rewinding..",
+                      (int)fport->base.info.name.slen,
+                      fport->base.info.name.ptr));
+
+            pj_file_setpos(fport->fd, fport->start_data, PJ_SEEK_SET);
+            fport->eof = PJ_FALSE;
+            fport->frame_cnt = 0;
+            fport->next_ts.u64 = 0;
+        }
     }
 
     /* For PCMU/A audio stream, reduce frame size to half (temporarily). */
@@ -803,6 +1126,31 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
                 goto on_error2;
             }
             
+            if (!ch.len ||    /* prevent infinite loop */
+                !ch.id)       /* highly likely that the file is invalid */
+            {
+                char fourcc_name[5];
+                pj_uint32_t sig = ch.id;
+                if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+                {
+                    PJ_LOG(2, (THIS_FILE,
+                               "%.*s. Zero length chunk of type %s found at offset=%lu (avi_get_frame)",
+                               (int)fport->base.info.name.slen,
+                               fport->base.info.name.ptr,
+                               pjmedia_fourcc_name(ch.id, fourcc_name),
+                               (unsigned long)pos));
+                } else {
+                    PJ_LOG(2, (THIS_FILE,
+                               "%.*s. Invalid chunk of type=0x%08X with length=%u found at offset=%lu (avi_get_frame)",
+                               (int)fport->base.info.name.slen,
+                               fport->base.info.name.ptr,
+                               ch.id, ch.len,
+                               (unsigned long)pos));
+                }
+                status = PJMEDIA_ENOTVALIDWAVE;
+                goto on_error2;
+            }
+
             PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len, 
                                          status = PJ_EINVAL;  goto on_error2;);
             ch_len = ch.len;
@@ -863,7 +1211,7 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
         break;
 
     } while(1);
-    frame->timestamp.u64 = fport->next_ts.u64;
+
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO) {
 
         /* Decode PCMU/A frame */
@@ -891,37 +1239,45 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
             frame->size <<= 1;
         }
 
-        if (fport->usec_per_frame) {
-            fport->next_ts.u64 += (fport->usec_per_frame *
-                                   fport->base.info.fmt.det.aud.clock_rate /
-                                   1000000);
-        } else {
-            fport->next_ts.u64 += (frame->size *
-                                   fport->base.info.fmt.det.aud.clock_rate /
-                                   (fport->base.info.fmt.det.aud.avg_bps / 8));
-        }
+        fport->frame_cnt += (frame->size >> 1);
+        fport->next_ts.u64 = fport->frame_cnt;
     } else {
-        if (fport->usec_per_frame) {
-            fport->next_ts.u64 += (fport->usec_per_frame * VIDEO_CLOCK_RATE /
-                                   1000000);
-        } else {
-            fport->next_ts.u64 += (frame->size * VIDEO_CLOCK_RATE /
-                                   (fport->base.info.fmt.det.vid.avg_bps / 8));
-        }
+        fport->frame_cnt++;
+        fport->next_ts.u64 = ((pj_uint64_t)fport->frame_cnt *
+                              VIDEO_CLOCK_RATE *
+                              fport->base.info.fmt.det.vid.fps.denum/
+                              fport->base.info.fmt.det.vid.fps.num);
     }
 
     return PJ_SUCCESS;
 
 on_error2:
-    if (status == AVI_EOF) {
+    if (status == AVI_EOF && !fport->eof) {
+
+        /* Reset AV sync on the last stream encountering EOF */
+        if (fport->avsync_media) {
+            avi_reader_streams *avi_streams = fport->avi_streams;
+
+            if (avi_streams->avsync &&
+                (++avi_streams->eof_cnt %
+                 avi_streams->base.num_streams == 0))
+            {
+                pjmedia_av_sync_reset(avi_streams->avsync);
+            }
+        }
+
         fport->eof = PJ_TRUE;
+
+        PJ_LOG(5,(THIS_FILE, "AVI player port %.*s EOF",
+                  (int)fport->base.info.name.slen,
+                  fport->base.info.name.ptr));
 
         size_to_read -= size_read;
         if (size_to_read == (pj_ssize_t)frame->size) {
             /* Frame is empty */
             frame->type = PJMEDIA_FRAME_TYPE_NONE;
             frame->size = 0;
-            return PJ_EEOF;           
+            return PJ_EEOF;
         }
         pj_bzero((char *)frame->buf + frame->size - size_to_read,
                  size_to_read);
@@ -929,7 +1285,9 @@ on_error2:
         return PJ_SUCCESS;
     }
 
-    return status;
+    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+    frame->size = 0;
+    return (status==AVI_EOF? PJ_EEOF : status);
 }
 
 /*
@@ -948,6 +1306,12 @@ static pj_status_t avi_on_destroy(pjmedia_port *this_port)
 
     if (fport->fd != (pj_oshandle_t) (pj_ssize_t)-1)
         pj_file_close(fport->fd);
+
+    if (fport->avsync_media) {
+        pjmedia_av_sync_del_media(NULL, fport->avsync_media);
+        fport->avsync_media = NULL;
+    }
+
     return PJ_SUCCESS;
 }
 

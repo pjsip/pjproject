@@ -136,8 +136,8 @@ PJ_DECL(const pj_sys_info*) pj_get_sys_info(void);
  * \section pj_thread_examples_sec Examples
  *
  * For examples, please see:
- *  - \ref page_pjlib_thread_test
- *  - \ref page_pjlib_sleep_test
+ *  - Thread test: \src{pjlib/src/pjlib-test/thread.c}
+ *  - Sleep, Time, and Timestamp test: \src{pjlib/src/pjlib-test/sleep.c}
  *
  */
 
@@ -387,6 +387,49 @@ PJ_DECL(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
 
 /* **************************************************************************/
 /**
+ * @defgroup PJ_JNI Java Native Interface specific
+ * @ingroup PJ_OS
+ * @{
+ * Functionalities specific to JNI.
+ * Currently only implemented on Android OS, but may be extended to other
+ * platforms in the future.
+ *
+ */
+
+/**
+ * Set the Java Virtual Machine environment variable.
+ * Note that applications typically do not need to call this function unless
+ * PJ_JNI_HAS_JNI_ONLOAD is disabled.
+ *
+ * @param jvm           The Java Virtual Machine environment.
+ */
+PJ_DECL(void) pj_jni_set_jvm(void *jvm);
+
+/**
+ * Attach the current thread to a Java Virtual Machine.
+ *
+ * @param jni_env       Output parameter to store the JNI interface pointer.
+ *
+ * @return              PJ_TRUE if the attachment is successful,
+ *                      PJ_FALSE if otherwise.
+ */
+PJ_DECL(pj_bool_t) pj_jni_attach_jvm(void **jni_env);
+
+/**
+ * Detach the current thread from a Java Virtual Machine.
+ *
+ * @param attached      Specify whether the current thread is attached
+ *                      to a JVM.
+ */
+PJ_DECL(void) pj_jni_detach_jvm(pj_bool_t attached);
+
+
+/**
+ * @}
+ */
+
+/* **************************************************************************/
+/**
  * @defgroup PJ_SYMBIAN_OS Symbian OS Specific
  * @ingroup PJ_OS
  * @{
@@ -565,7 +608,7 @@ PJ_DECL(void*) pj_thread_local_get(long index);
  * \section pj_atomic_examples_sec Examples
  *
  * For some example codes, please see:
- *  - @ref page_pjlib_atomic_test
+ *  - Atomic Variable test: \src{pjlib/src/pjlib-test/atomic.c}
  */
 
 
@@ -1050,6 +1093,108 @@ PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t *event);
  */
 #endif  /* PJ_HAS_EVENT_OBJ */
 
+
+ /* **************************************************************************/
+ /**
+  * @defgroup PJ_BARRIER_SEC Barrier sections.
+  * @ingroup PJ_OS
+  * @{
+  * This module provides abstraction to pj_barrier_t - synchronization barrier.
+  * It allows threads to block until all participating threads have reached
+  * the barrier, ensuring synchronization at specific points in execution.
+  * pj_barrier_t provides a barrier mechanism for synchronizing threads in 
+  * a multithreaded application, similar to 
+  * the POSIX pthread_barrier_wait or Windows EnterSynchronizationBarrier.
+  */
+
+/**
+ * Flags that control the behavior of the barrier.
+ * Only supported on Windows platform starting from Windows 8.
+ * Otherwise, the flags are ignored.
+ */
+enum pj_barrier_flags {
+    /**
+     * Specifies that the thread entering the barrier should block
+     * immediately until the last thread enters the barrier. 
+     */
+    PJ_BARRIER_FLAGS_BLOCK_ONLY = 1,
+
+    /**
+     * Specifies that the thread entering the barrier should spin until
+     * the last thread enters the barrier,
+     * even if the spinning thread exceeds the barrier's maximum spin count.
+     */
+    PJ_BARRIER_FLAGS_SPIN_ONLY = 2,
+
+    /**
+     * Specifies that the function can skip the work required to ensure
+     * that it is safe to delete the barrier, which can improve performance.
+     * All threads that enter this barrier must specify the flag;
+     * otherwise, the flag is ignored.
+     * This flag should be used only if the barrier will never be deleted.
+     * "Never" means "when some thread is waiting on this barrier".
+     */
+    PJ_BARRIER_FLAGS_NO_DELETE = 4
+};
+
+/**
+ * Create a barrier object.
+ * pj_barrier_create() creates a barrier object that can be used to synchronize
+ * threads. The barrier object is initialized with a thread count that
+ * specifies the number of threads that must call pj_barrier_wait()
+ * before any are allowed to proceed.
+ * 
+ * @param pool          The pool to allocate the barrier object.
+ * @param thread_count  The number of threads that must call pj_barrier_wait()
+ *                      before any are allowed to proceed.
+ * @param p_barrier     Pointer to hold the barrier object upon return.
+ *
+ * @return              PJ_SUCCESS on success, or the error code.
+ * 
+ * @warning             The behavior of the barrier is undefined if more
+ *                      threads than thread_count arrive at the barrier.
+ */
+PJ_DECL(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned thread_count, 
+                                       pj_barrier_t **p_barrier);
+
+/**
+ * Destroy a barrier object.
+ * pj_barrier_destroy() destroys a barrier object and releases any resources
+ * associated with the barrier.
+ * 
+ * @param barrier       The barrier to destroy.
+ * 
+ * @return              PJ_SUCCESS on success, or the error code.
+ */
+PJ_DECL(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier);
+
+/** 
+ * Wait for all threads to reach the barrier.
+ * pj_barrier_wait() allows threads to block until all participating threads
+ * have reached the barrier, ensuring synchronization at specific points in
+ * execution. It provides a barrier mechanism for synchronizing threads in 
+ * a multithreaded application, similar to the POSIX pthread_barrier_wait 
+ * or Windows EnterSynchronizationBarrier.
+ * 
+ * @param barrier       The barrier to wait on.
+ * @param flags         Flags that control the behavior of the barrier
+ *                      (combination of pj_barrier_flags), default 0.
+ * 
+ * @return              Returns PJ_TRUE for a single (arbitrary) thread
+ *                      synchronized at the barrier and PJ_FALSE for each
+ *                      of the other threads. Otherwise, an error number 
+ *                      shall be returned to indicate the error.
+ *
+ * @warning             The behavior of the barrier is undefined if more
+ *                      threads arrive at the barrier than the thread_count
+ *                      specified when the barrier was created.
+ */
+PJ_DECL(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags);
+
+  /**
+  * @}
+  */
+
 /* **************************************************************************/
 /**
  * @addtogroup PJ_TIME Time Data Type and Manipulation.
@@ -1060,7 +1205,7 @@ PJ_DECL(pj_status_t) pj_event_destroy(pj_event_t *event);
  * \section pj_time_examples_sec Examples
  *
  * For examples, please see:
- *  - \ref page_pjlib_sleep_test
+ *  - Sleep, Time, and Timestamp test: \src{pjlib/src/pjlib-test/sleep.c}
  */
 
 /**
@@ -1163,8 +1308,8 @@ PJ_DECL(pj_color_t) pj_term_get_color(void);
  * \section pj_timestamp_examples_sec Examples
  *
  * For examples, please see:
- *  - \ref page_pjlib_sleep_test
- *  - \ref page_pjlib_timestamp_test
+ *  - Sleep, Time, and Timestamp test: \src{pjlib/src/pjlib-test/sleep.c}
+ *  - Timestamp test: \src{pjlib/src/pjlib-test/timestamp.c}
  */
 
 /*
@@ -1474,6 +1619,17 @@ PJ_DECL(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
  * @return          PJ_SUCCESS or the appropriate error code.
  */
 pj_status_t pj_thread_init(void);
+
+
+/* **************************************************************************/
+/**
+ * Set file descriptor close-on-exec flag
+ *
+ * @param fd    The file descriptor
+ * @return      on success, PJ_SUCCESS
+ *
+ */
+PJ_DECL(pj_status_t) pj_set_cloexec_flag(int fd);
 
 
 PJ_END_DECL

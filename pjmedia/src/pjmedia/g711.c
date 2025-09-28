@@ -156,12 +156,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_g711_init(pjmedia_endpt *endpt)
     pj_list_init(&g711_factory.codec_list);
 
     /* Create pool */
-    g711_factory.pool = pjmedia_endpt_create_pool(endpt, "g711", 4000, 4000);
+    g711_factory.pool = pjmedia_endpt_create_pool(endpt, "g711", 1000, 4000);
     if (!g711_factory.pool)
         return PJ_ENOMEM;
 
     /* Create mutex. */
-    status = pj_mutex_create_simple(g711_factory.pool, "g611", 
+    status = pj_mutex_create_simple(g711_factory.pool, "g711",
                                     &g711_factory.mutex);
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -395,6 +395,9 @@ static pj_status_t g711_dealloc_codec(pjmedia_codec_factory *factory,
     PJ_UNUSED_ARG(i);
     PJ_UNUSED_ARG(priv);
 #endif
+
+    /*  Re-init silence_period */
+    pj_set_timestamp32(&priv->last_tx, 0, 0);
 
     /* Lock mutex. */
     pj_mutex_lock(g711_factory.mutex);

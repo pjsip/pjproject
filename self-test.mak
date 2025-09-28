@@ -23,17 +23,17 @@ CPP_DIR=pjlib pjlib-util pjnath pjmedia pjsip
 .PHONY: build_test distclean rm_build_mak build_mak everything pjlib_test pjlib_util_test pjnath_test pjsip_test cpp_prep cpp_test cpp_post pjsua_test
 
 distclean:
-	make distclean
+	$(MAKE) distclean
 
 rm_build_mak:
 	rm -f build.mak
 
 build_mak:
 	./configure
-	make dep
+	$(MAKE) dep
 
 everything: 
-	make
+	$(MAKE)
 
 pjlib_test:
 	cd pjlib/bin && ./pjlib-test-`../../config.guess`
@@ -49,14 +49,14 @@ pjsip_test:
 
 cpp_prep:
 	for dir in $(CPP_DIR); do \
-		make -C $$dir/build clean; \
+		$(MAKE) -C $$dir/build clean; \
 	done
 
 cpp_test:
-	make -f c++-build.mak
+	$(MAKE) -f c++-build.mak
 
 cpp_post:
-	make -f c++-build.mak clean
+	$(MAKE) -f c++-build.mak clean
 
 pjsua_test: pjsua_config_file pjsua_local_port0 pjsua_ip_addr pjsua_no_tcp pjsua_no_udp pjsua_outbound pjsua_use_ice pjsua_add_codec pjsua_clock_rate pjsua_play_file pjsua_play_tone pjsua_rec_file pjsua_rtp_port pjsua_quality pjsua_ptime pjsua_ectail
 	@echo pjsua_test completed successfully

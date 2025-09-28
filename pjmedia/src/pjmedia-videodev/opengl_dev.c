@@ -376,8 +376,8 @@ static pj_status_t opengl_factory_init(pjmedia_vid_dev_factory *f)
     qf->dev_count = 0;
     qdi = &qf->dev_info[qf->dev_count++];
     pj_bzero(qdi, sizeof(*qdi));
-    strcpy(qdi->info.name, "OpenGL renderer");
-    strcpy(qdi->info.driver, "OpenGL");
+    pj_ansi_strxcpy(qdi->info.name, "OpenGL renderer", sizeof(qdi->info.name));
+    pj_ansi_strxcpy(qdi->info.driver, "OpenGL", sizeof(qdi->info.driver));
     qdi->info.dir = PJMEDIA_DIR_RENDER;
     qdi->info.has_callback = PJ_FALSE;
     qdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;

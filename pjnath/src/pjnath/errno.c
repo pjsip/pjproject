@@ -193,15 +193,15 @@ PJ_DEF(void) pjnath_perror(const char *sender, const char *title,
                            pj_status_t status)
 {
 #if PJNATH_ERROR_LEVEL==1
-    PJ_PERROR(1,(sender, status, title));
+    PJ_PERROR(1,(sender, status, "%s", title));
 #elif PJNATH_ERROR_LEVEL==2
-    PJ_PERROR(2,(sender, status, title));
+    PJ_PERROR(2,(sender, status, "%s", title));
 #elif PJNATH_ERROR_LEVEL==3
-    PJ_PERROR(3,(sender, status, title));
+    PJ_PERROR(3,(sender, status, "%s", title));
 #elif PJNATH_ERROR_LEVEL==4
-    PJ_PERROR(4,(sender, status, title));
+    PJ_PERROR(4,(sender, status, "%s", title));
 #elif PJNATH_ERROR_LEVEL==5
-    PJ_PERROR(5,(sender, status, title));
+    PJ_PERROR(5,(sender, status, "%s", title));
 #else
 # error Invalid PJNATH_ERROR_LEVEL value
 #endif

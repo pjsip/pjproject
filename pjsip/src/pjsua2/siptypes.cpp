@@ -17,6 +17,7 @@
  */
 #include <pjsua2/types.hpp>
 #include <pjsua2/siptypes.hpp>
+#include <pjsip/print_util.h>       /* For pjsip_hdr_names */
 #include "util.hpp"
 
 using namespace pj;
@@ -82,7 +83,7 @@ void readSipHeaders( const ContainerNode &node,
         ContainerNode header_node = headers_node.readContainer("header");
         hdr.hName = header_node.readString("hname");
         hdr.hValue = header_node.readString("hvalue");
-        headers.push_back(hdr);
+        headers.push_back(PJSUA2_MOVE(hdr));
     }
 }
 
@@ -102,7 +103,8 @@ void writeSipHeaders(ContainerNode &node,
 ///////////////////////////////////////////////////////////////////////////////
 
 AuthCredInfo::AuthCredInfo()
-: scheme("digest"), realm("*"), dataType(0)
+: scheme("digest"), realm("*"), dataType(0),
+  algoType(PJSIP_AUTH_ALGORITHM_NOT_SET)
 {
 }
 
@@ -112,7 +114,8 @@ AuthCredInfo::AuthCredInfo(const string &param_scheme,
                            const int param_data_type,
                            const string param_data)
 : scheme(param_scheme), realm(param_realm), username(param_user_name),
-  dataType(param_data_type), data(param_data)
+  dataType(param_data_type), data(PJSUA2_MOVE(param_data)),
+  algoType(PJSIP_AUTH_ALGORITHM_NOT_SET)
 {
 }
 
@@ -151,6 +154,7 @@ void AuthCredInfo::fromPj(const pjsip_cred_info &prm)
     username    = pj2Str(prm.username);
     dataType    = prm.data_type;
     data        = pj2Str(prm.data);
+    algoType    = prm.algorithm_type;
     akaK        = pj2Str(prm.ext.aka.k);
     akaOp       = pj2Str(prm.ext.aka.op);
     akaAmf      = pj2Str(prm.ext.aka.amf);
@@ -159,11 +163,12 @@ void AuthCredInfo::fromPj(const pjsip_cred_info &prm)
 pjsip_cred_info AuthCredInfo::toPj() const
 {
     pjsip_cred_info ret;
-    ret.realm   = str2Pj(realm);
-    ret.scheme  = str2Pj(scheme);
+    ret.realm           = str2Pj(realm);
+    ret.scheme          = str2Pj(scheme);
     ret.username        = str2Pj(username);
     ret.data_type       = dataType;
-    ret.data    = str2Pj(data);
+    ret.data            = str2Pj(data);
+    ret.algorithm_type  = algoType;
     ret.ext.aka.k       = str2Pj(akaK);
     ret.ext.aka.op      = str2Pj(akaOp);
     ret.ext.aka.amf     = str2Pj(akaAmf);
@@ -192,6 +197,8 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.ca_buf           = str2Pj(this->CaBuf);
     ts.cert_buf         = str2Pj(this->certBuf);
     ts.privkey_buf      = str2Pj(this->privKeyBuf);
+    ts.cert_lookup.type = this->certLookupType;
+    ts.cert_lookup.keyword = str2Pj(this->certLookupKeyword);
     ts.method           = this->method;
     ts.ciphers_num      = (unsigned)this->ciphers.size();
     ts.proto            = this->proto;
@@ -207,6 +214,9 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.qos_type         = this->qosType;
     ts.qos_params       = this->qosParams;
     ts.qos_ignore_error = this->qosIgnoreError;
+    ts.sockopt_params   = this->sockOptParams.toPj();
+    ts.sockopt_ignore_error = this->sockOptIgnoreError;
+    ts.enable_renegotiation = this->enableRenegotiation;
 
     return ts;
 }
@@ -220,6 +230,8 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->CaBuf         = pj2Str(prm.ca_buf);
     this->certBuf       = pj2Str(prm.cert_buf);
     this->privKeyBuf    = pj2Str(prm.privkey_buf);
+    this->certLookupType= prm.cert_lookup.type;
+    this->certLookupKeyword = pj2Str(prm.cert_lookup.keyword);
     this->method        = (pjsip_ssl_method)prm.method;
     this->proto         = prm.proto;
     // The following will only work if sizeof(enum)==sizeof(int)
@@ -232,6 +244,9 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->qosType       = prm.qos_type;
     this->qosParams     = prm.qos_params;
     this->qosIgnoreError = PJ2BOOL(prm.qos_ignore_error);
+    this->sockOptParams.fromPj(prm.sockopt_params);
+    this->sockOptIgnoreError = PJ2BOOL(prm.sockopt_ignore_error);
+    this->enableRenegotiation = PJ2BOOL(prm.enable_renegotiation);
 }
 
 void TlsConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
@@ -254,6 +269,10 @@ void TlsConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_NUM_T   ( this_node, pj_qos_type, qosType);
     readQosParams     ( this_node, qosParams);
     NODE_READ_BOOL    ( this_node, qosIgnoreError);
+    NODE_READ_OBJ     ( this_node, sockOptParams);
+    NODE_READ_BOOL    ( this_node, sockOptIgnoreError);
+    NODE_READ_NUM_T   ( this_node, pj_ssl_cert_lookup_type, certLookupType);
+    NODE_READ_STRING  ( this_node, certLookupKeyword);
 }
 
 void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -276,6 +295,105 @@ void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_NUM_T   ( this_node, pj_qos_type, qosType);
     writeQosParams     ( this_node, qosParams);
     NODE_WRITE_BOOL    ( this_node, qosIgnoreError);
+    NODE_WRITE_OBJ     ( this_node, sockOptParams);
+    NODE_WRITE_BOOL    ( this_node, sockOptIgnoreError);
+    NODE_WRITE_NUM_T   ( this_node, pj_ssl_cert_lookup_type, certLookupType);
+    NODE_WRITE_STRING  ( this_node, certLookupKeyword);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+SockOpt::SockOpt()
+{
+    pj_bzero(this, sizeof(*this));
+}
+
+SockOpt::SockOpt(int level, int optName, int optVal)
+{
+    pj_bzero(this, sizeof(*this));
+    this->level = level;
+    this->optName = optName;
+    setOptValInt(optVal);
+}
+
+void SockOpt::setOptValInt(int opt_val)
+{
+    optVal = &optValInt;
+    optLen = sizeof(int);
+    optValInt = opt_val;
+}
+
+SockOptParams::SockOptParams()
+{
+}
+
+pj_sockopt_params SockOptParams::toPj() const
+{
+    pj_sockopt_params sop;
+    unsigned i;
+
+    pj_bzero(&sop, sizeof(sop));
+    sop.cnt = (unsigned)this->sockOpts.size();
+    if (sop.cnt > PJ_MAX_SOCKOPT_PARAMS)
+        sop.cnt = PJ_MAX_SOCKOPT_PARAMS;
+    for (i = 0; i < sop.cnt; ++i) {
+        sop.options[i].level = this->sockOpts[i].level;
+        sop.options[i].optname = this->sockOpts[i].optName;
+        sop.options[i].optval = this->sockOpts[i].optVal;
+        sop.options[i].optlen = this->sockOpts[i].optLen;
+    }
+
+    return sop;
+}
+
+void SockOptParams::fromPj(const pj_sockopt_params &prm)
+{
+    unsigned i;
+
+    this->sockOpts.clear();
+    for (i = 0; i < prm.cnt; ++i) {
+        SockOpt so;
+        so.level = prm.options[i].level;
+        so.optName = prm.options[i].optname;
+        if (prm.options[i].optlen == sizeof(int)) {
+            so.setOptValInt(*((int *)prm.options[i].optval));
+        }
+        this->sockOpts.push_back(PJSUA2_MOVE(so));
+    }
+}
+
+void SockOptParams::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
+{
+    ContainerNode array_node = node.readArray("sockOptParams");
+    sockOpts.resize(0);
+    while (array_node.hasUnread()) {
+        ContainerNode so_node = array_node.readContainer("sockOpt");
+        SockOpt so;
+        so.level = so_node.readInt("level");
+        so.optName = so_node.readInt("optName");
+        so.optLen = so_node.readInt("optLen");
+        if (so.optLen == sizeof(int)) {
+            int optVal = so_node.readInt("optVal");
+            so.setOptValInt(optVal);
+        }
+        sockOpts.push_back(PJSUA2_MOVE(so));
+    }
+}
+
+void SockOptParams::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
+{
+    ContainerNode array_node = node.writeNewArray("sockOptParams");
+    for (unsigned i=0; i<sockOpts.size(); ++i) {
+        ContainerNode so_node = array_node.writeNewContainer("sockOpt");
+        string so_val((char*)sockOpts[i].optVal,
+                      sockOpts[i].optLen > 0? sockOpts[i].optLen : 0);
+        so_node.writeInt("level", sockOpts[i].level);
+        so_node.writeInt("optName", sockOpts[i].optName);
+        so_node.writeInt("optLen", sockOpts[i].optLen);
+        if (sockOpts[i].optLen == sizeof(int)) {
+            so_node.writeInt("optVal", sockOpts[i].optValInt);
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -297,6 +415,7 @@ void TransportConfig::fromPj(const pjsua_transport_config &prm)
     this->tlsConfig.fromPj(prm.tls_setting);
     this->qosType       = prm.qos_type;
     this->qosParams     = prm.qos_params;
+    this->sockOptParams.fromPj(prm.sockopt_params);
 }
 
 pjsua_transport_config TransportConfig::toPj() const
@@ -312,6 +431,7 @@ pjsua_transport_config TransportConfig::toPj() const
     tc.tls_setting      = this->tlsConfig.toPj();
     tc.qos_type         = this->qosType;
     tc.qos_params       = this->qosParams;
+    tc.sockopt_params   = this->sockOptParams.toPj();
 
     return tc;
 }
@@ -327,6 +447,7 @@ void TransportConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_NUM_T     ( this_node, pj_qos_type, qosType);
     readQosParams       ( this_node, qosParams);
     NODE_READ_OBJ       ( this_node, tlsConfig);
+    NODE_READ_OBJ       ( this_node, sockOptParams);
 }
 
 void TransportConfig::writeObject(ContainerNode &node) const
@@ -341,6 +462,7 @@ void TransportConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_NUM_T     ( this_node, pj_qos_type, qosType);
     writeQosParams       ( this_node, qosParams);
     NODE_WRITE_OBJ       ( this_node, tlsConfig);
+    NODE_WRITE_OBJ       ( this_node, sockOptParams);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -407,6 +529,15 @@ pjsip_media_type SipMediaType::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
+SipHeader::SipHeader()
+{
+    pj_str_t dummy;
+
+    // Init pjHdr with null string to suppress warning
+    pj_bzero(&dummy, sizeof(dummy));
+    pjsip_generic_string_hdr_init2(&pjHdr, &dummy, &dummy);
+}
+
 void SipHeader::fromPj(const pjsip_hdr *hdr) PJSUA2_THROW(Error)
 {
     char *buf = NULL;
@@ -464,6 +595,13 @@ pjsip_generic_string_hdr &SipHeader::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
+SipMultipartPart::SipMultipartPart()
+{
+    pj_bzero(&pjMpp, sizeof(pjMpp));
+    pj_bzero(&pjMsgBody, sizeof(pjMsgBody));
+    pj_list_init(&pjMpp.hdr);
+}
+
 void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
                               PJSUA2_THROW(Error)
 {
@@ -472,7 +610,7 @@ void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
     while (pj_hdr != &prm.hdr) {
         SipHeader sh;
         sh.fromPj(pj_hdr);
-        headers.push_back(sh);
+        headers.push_back(PJSUA2_MOVE(sh));
         pj_hdr = pj_hdr->next;
     }
 
@@ -481,6 +619,10 @@ void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
     
     contentType.fromPj(prm.body->content_type);
     body = string((char*)prm.body->data, prm.body->len);
+
+    pj_list_init(&pjMpp.hdr);
+    pjMpp.body = NULL;
+    pj_bzero(&pjMsgBody, sizeof(pjMsgBody));
 }
 
 pjsip_multipart_part& SipMultipartPart::toPj() const
@@ -600,8 +742,8 @@ TsxStateEvent::TsxStateEvent()
 
 bool SipTxOption::isEmpty() const
 {
-    return (targetUri == "" && headers.size() == 0 && contentType == "" &&
-            msgBody == "" && multipartContentType.type == "" &&
+    return (targetUri == "" && localUri == "" &&  headers.size() == 0 &&
+            contentType == "" && msgBody == "" && multipartContentType.type == "" &&
             multipartContentType.subType == "" && multipartParts.size() == 0);
 }
 
@@ -609,12 +751,14 @@ void SipTxOption::fromPj(const pjsua_msg_data &prm) PJSUA2_THROW(Error)
 {
     targetUri = pj2Str(prm.target_uri);
 
+    localUri = pj2Str(prm.local_uri);
+
     headers.clear();
     pjsip_hdr* pj_hdr = prm.hdr_list.next;
     while (pj_hdr != &prm.hdr_list) {
         SipHeader sh;
         sh.fromPj(pj_hdr);
-        headers.push_back(sh);
+        headers.push_back(PJSUA2_MOVE(sh));
         pj_hdr = pj_hdr->next;
     }
 
@@ -627,7 +771,7 @@ void SipTxOption::fromPj(const pjsua_msg_data &prm) PJSUA2_THROW(Error)
     while (pj_mp != &prm.multipart_parts) {
         SipMultipartPart smp;
         smp.fromPj(*pj_mp);
-        multipartParts.push_back(smp);
+        multipartParts.push_back(PJSUA2_MOVE(smp));
         pj_mp = pj_mp->next;
     }
 }
@@ -640,9 +784,29 @@ void SipTxOption::toPj(pjsua_msg_data &msg_data) const
 
     msg_data.target_uri = str2Pj(targetUri);
 
+    msg_data.local_uri = str2Pj(localUri);
+
     pj_list_init(&msg_data.hdr_list);
     for (i = 0; i < headers.size(); i++) {
         pjsip_generic_string_hdr& pj_hdr = headers[i].toPj();
+        
+        /* If the header is Max-Forwards, the header type needs to be
+         * PJSIP_H_MAX_FORWARDS as PJSUA will compare the header type
+         * instead of the string name.
+         */
+        if ((headers[i].hName.size() ==
+             pjsip_hdr_names[PJSIP_H_MAX_FORWARDS].name_len) &&
+            (pj_ansi_strnicmp(headers[i].hName.c_str(),
+                              pjsip_hdr_names[PJSIP_H_MAX_FORWARDS].name,
+                              headers[i].hName.size()) == 0))
+        {
+            pjsip_max_fwd_hdr *tmp = (pjsip_max_fwd_hdr*)&pj_hdr;
+
+            pj_assert(sizeof(pjsip_generic_string_hdr) >=
+                      sizeof(pjsip_max_fwd_hdr));
+            pjsip_max_fwd_hdr_init(NULL, tmp, std::stoi(headers[i].hValue));
+        }
+
         pj_list_push_back(&msg_data.hdr_list, &pj_hdr);
     }
 

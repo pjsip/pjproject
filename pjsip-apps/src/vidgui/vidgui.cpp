@@ -292,7 +292,7 @@ void MainWin::call()
         char uri[256];
         pjsua_call_setting call_setting;
 
-        pj_ansi_strncpy(uri, dst.toUtf8().data(), sizeof(uri));
+        pj_ansi_strxcpy(uri, dst.toUtf8().data(), sizeof(uri));
         pj_str_t uri2 = pj_str((char*)uri);
 
         pj_assert(currentCall_ == -1);
@@ -658,7 +658,7 @@ static void simple_registrar(pjsip_rx_data *rdata)
     srv->hvalue = pj_str((char*)"pjsua simple registrar");
     pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)srv);
 
-    pj_status_t status = pjsip_endpt_send_response2(pjsua_get_pjsip_endpt(),
+    status = pjsip_endpt_send_response2(pjsua_get_pjsip_endpt(),
                                rdata, tdata, NULL, NULL);
     if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
 }

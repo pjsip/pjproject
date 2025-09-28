@@ -267,6 +267,7 @@ static void strtoi_validate(const pj_str_t *str, int min_val,
 
     if (!str || !value) {
         on_str_parse_error(str, PJ_EINVAL);
+        return;
     }
     status = pj_strtol2(str, &retval);
     if (status != PJ_EINVAL) {
@@ -594,12 +595,10 @@ PJ_INLINE(int) compare_handler( const handler_rec *r1,
         return 1;
 
     /* Compare length. */
-    /*
     if (r1->hname_len < name_len)
         return -1;
     if (r1->hname_len > name_len)
         return 1;
-     */
 
     /* Equal length and equal hash. compare the strings. */
     return pj_memcmp(r1->hname, name, name_len);
@@ -938,6 +937,8 @@ PJ_DEF(pj_status_t) pjsip_find_msg( const char *buf, pj_size_t size,
 
     /* Found Content-Length? */
     if (content_length == -1) {
+        /* As per RFC3261 7.4.2, 7.5, 20.14, Content-Length is mandatory over TCP. */
+        PJ_LOG(2, (THIS_FILE, "Field Content-Length not found!"));
         return status;
     }
 
@@ -1530,7 +1531,17 @@ static void* int_parse_sip_url( pj_scanner *scanner,
     }
 
     if (int_is_next_user(scanner)) {
+#if defined (PJSIP_URI_USE_ORIG_USERPASS) && (PJSIP_URI_USE_ORIG_USERPASS)
+        char *start = scanner->curptr;
+        pj_str_t orig;
+#endif
+
         int_parse_user_pass(scanner, pool, &url->user, &url->passwd);
+
+#if defined (PJSIP_URI_USE_ORIG_USERPASS) && (PJSIP_URI_USE_ORIG_USERPASS)
+        pj_strset3(&orig, start, scanner->curptr - 1);
+        pj_strdup(pool, &url->orig_userpass, &orig);
+#endif
     }
 
     /* Get host:port */
@@ -1905,10 +1916,12 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
             hdr->expires = pj_strtoul(&pvalue);
             if (hdr->expires == PJSIP_EXPIRES_NOT_SPECIFIED)
                 hdr->expires--;
-            if (hdr->expires > PJSIP_MAX_EXPIRES)
-                hdr->expires = PJSIP_MAX_EXPIRES;
+            //if (hdr->expires > PJSIP_MAX_EXPIRES)
+            //    hdr->expires = PJSIP_MAX_EXPIRES;
+#if PJSIP_MIN_EXPIRES > 0
             if (hdr->expires < PJSIP_MIN_EXPIRES)
                 hdr->expires = PJSIP_MIN_EXPIRES;
+#endif
         } else {
             pjsip_param *p = PJ_POOL_ALLOC_T(pool, pjsip_param);
             p->name = pname;
@@ -2423,7 +2436,7 @@ PJ_DEF(pj_status_t) pjsip_parse_headers( pj_pool_t *pool, char *input,
                                          unsigned options)
 {
     enum { STOP_ON_ERROR = 1 };
-    pj_str_t hname;
+    pj_str_t hname = {0, 0};
     pj_scanner scanner;
     pjsip_parse_ctx ctx;
 

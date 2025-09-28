@@ -63,7 +63,7 @@ struct write_operation
     pj_size_t               size;
     pj_ssize_t              written;
     unsigned                flags;
-    pj_sockaddr_in          rmt_addr;
+    pj_sockaddr             rmt_addr;
     int                     rmt_addrlen;
 };
 

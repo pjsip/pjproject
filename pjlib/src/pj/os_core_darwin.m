@@ -23,6 +23,7 @@
 PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
                        unsigned flags)
 {
+    PJ_UNUSED_ARG(flags);
     return (*main_func)(argc, argv);
 }
 
@@ -79,7 +80,8 @@ PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
     pthread_t thread;
     run_app_t param;
     NSAutoreleasePool *pool;
-    
+    PJ_UNUSED_ARG(flags);
+
     pool = [[NSAutoreleasePool alloc] init];
     [NSApplication sharedApplication];
     [DeadThread enterMultiThreadedMode];
@@ -89,6 +91,7 @@ PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
     param.main_func = main_func;
     if (pthread_create(&thread, NULL, &main_thread, &param) == 0) {
         CFRunLoopRun();
+        pthread_join(thread, NULL);
     }
     
     PJ_UNUSED_ARG(pool);

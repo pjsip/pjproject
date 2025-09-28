@@ -55,9 +55,11 @@
 # include <libavutil/pixdesc.h>
 #endif
 
-#define MAX_DEV_CNT     8
+#define MAX_DEV_CNT      8
+#define MAX_DEV_NAME_LEN 80
 
 #ifndef PJMEDIA_USE_OLD_FFMPEG
+#  define av_free_packet av_packet_unref
 #  define av_close_input_stream(ctx) avformat_close_input(&ctx)
 #endif
 
@@ -303,8 +305,6 @@ static pj_status_t ffmpeg_factory_destroy(pjmedia_vid_dev_factory *f)
 #   pragma warning(pop)
 #endif
 
-#define MAX_DEV_NAME_LEN 80
-
 static pj_status_t dshow_enum_devices(unsigned *dev_cnt,
                                       char dev_names[][MAX_DEV_NAME_LEN])
 {
@@ -411,7 +411,11 @@ static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
         unsigned dev_cnt = MAX_DEV_CNT;
         unsigned dev_idx;
 
+#if LIBAVFORMAT_VER_AT_LEAST(60, 21)
+        if ((p->flags & AVFMT_NOFILE)==0) {
+#else
         if ((p->flags & AVFMT_NOFILE)==0 || p->read_probe) {
+#endif
             goto next_format;
         }
 
@@ -449,10 +453,17 @@ static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
                 continue;
 
             for(i = 0; i < ctx->nb_streams; i++) {
+#if LIBAVFORMAT_VER_AT_LEAST(59,0)
+                if (ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+                    codec = ctx->streams[i]->codecpar;
+                    break;
+                }
+#else
                 if (ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
                     codec = ctx->streams[i]->codec;
                     break;
                 }
+#endif
             }
             if (!codec) {
                 av_close_input_stream(ctx);
@@ -467,7 +478,7 @@ static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
 
             info = &ff->dev_info[ff->dev_count++];
             pj_bzero(info, sizeof(*info));
-            pj_ansi_strncpy(info->base.name, "default", 
+            pj_ansi_strxcpy(info->base.name, "default", 
                             sizeof(info->base.name));
             pj_ansi_snprintf(info->base.driver, sizeof(info->base.driver),
                              "ffmpeg %s", p->name);

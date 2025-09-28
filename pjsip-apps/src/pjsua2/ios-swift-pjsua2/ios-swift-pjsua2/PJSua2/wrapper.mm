@@ -20,14 +20,11 @@
 #import "wrapper.h"
 #import "CustomPJSUA2.hpp"
 
-
 /**
  Create a object from .hpp class & wrapper to be able to use it via Swift
  */
 @implementation CPPWrapper
 PJSua2 pjsua2;
-
-
 
 //Lib
 /**
@@ -45,20 +42,19 @@ PJSua2 pjsua2;
     pjsua2.deleteLib();
 }
 
-
-
 //Account
 /**
  Create Account via following config(string username, string password, string ip, string port)
  */
--(void) createAccountWrapper :(NSString*) usernameNS :(NSString*) passwordNS :(NSString*) ipNS :(NSString*) portNS
+-(void) createAccountWrapper :(NSString*) usernameNS :(NSString*) passwordNS
+                             :(NSString*) registrarNS :(NSString*) portNS
 {
     std::string username = std::string([[usernameNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string password = std::string([[passwordNS componentsSeparatedByString:@"*"][0] UTF8String]);
-    std::string ip = std::string([[ipNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    std::string registrar = std::string([[registrarNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string port = std::string([[portNS componentsSeparatedByString:@"*"][0] UTF8String]);
     
-    pjsua2.createAccount(username, password, ip, port);
+    pjsua2.createAccount(username, password, registrar, port);
 }
 
 /**
@@ -66,41 +62,6 @@ PJSua2 pjsua2;
  */
 -(void) unregisterAccountWrapper {
     return pjsua2.unregisterAccount();
-}
-
-
-
-//Register State Info
-/**
- Get register state true / false
- */
--(bool) registerStateInfoWrapper {
-    return pjsua2.registerStateInfo();
-}
-
-
-
-// Factory method to create NSString from C++ string
-/**
- Get caller id for incoming call, checks account currently registered (ai.regIsActive)
- */
-- (NSString*) incomingCallInfoWrapper {
-    NSString* result = [NSString stringWithUTF8String:pjsua2.incomingCallInfo().c_str()];
-    return result;
-}
-
-/**
- Listener (When we have incoming call, this function pointer will notify swift.)
- */
-- (void)incoming_call_wrapper: (void(*)())function {
-    pjsua2.incoming_call(function);
-}
-
-/**
- Listener (When we have changes on the call state, this function pointer will notify swift.)
- */
-- (void)call_listener_wrapper: (void(*)(int))function {
-    pjsua2.call_listener(function);
 }
 
 /**
@@ -132,7 +93,7 @@ PJSua2 pjsua2;
 }
 
 /**
- Make outgoing call (string dest_uri) -> e.g. makeCall(sip:<SIP_USERNAME@SIP_IP:SIP_PORT>)
+ Make outgoing call (string dest_uri) -> e.g. makeCall(sip:<SIP_USERNAME@SIP_URI:SIP_PORT>)
  */
 -(void) outgoingCallWrapper :(NSString*) dest_uriNS
 {
@@ -140,5 +101,43 @@ PJSua2 pjsua2;
     pjsua2.outgoingCall(dest_uri);
 }
 
-@end
+// Factory method to create NSString from C++ string
+/**
+ Get caller id for incoming call, checks account currently registered (ai.regIsActive)
+ */
+- (NSString*) incomingCallInfoWrapper {
+    NSString* result = [NSString stringWithUTF8String:pjsua2.incomingCallInfo().c_str()];
+    return result;
+}
 
+/**
+ Listener (When we have incoming call, this function pointer will notify swift.)
+ */
+- (void)incoming_call_wrapper: (void(*)())function {
+    pjsua2.incoming_call(function);
+}
+
+/**
+ Listener (When we have changes on the call state, this function pointer will notify swift.)
+ */
+- (void)call_listener_wrapper: (void(*)(int))function {
+    pjsua2.call_listener(function);
+}
+
+/**
+ Listener (When we have changes on the acc reg state, this function pointer will notify swift.)
+ (Runs swift code from C++)
+ */
+-(void) acc_listener_wrapper: (void(*)(bool))function {
+    pjsua2.acc_listener(function);
+}
+
+/**
+ Listener (When we have video, this function pointer will notify swift.)
+ (Runs swift code from C++)
+ */
+-(void) update_video_wrapper: (void(*)(void *))function {
+    pjsua2.update_video(function);
+}
+
+@end

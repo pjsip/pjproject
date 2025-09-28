@@ -178,7 +178,8 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
                     break;
             }
 
-            PJ_LOG(1,(THIS_FILE,"     failed: mismatch at pos %d", pos+i));
+            PJ_LOG(1,(THIS_FILE,"     failed: mismatch at pos %lu",
+                      (unsigned long)(pos+i)));
             rc = -200;
             break;
         }
@@ -578,7 +579,7 @@ int codec_test_vectors(void)
     unsigned i;
     pj_status_t status;
 
-    status = pjmedia_endpt_create(mem, NULL, 0, &endpt);
+    status = pjmedia_endpt_create2(mem, NULL, 0, &endpt);
     if (status != PJ_SUCCESS)
         return -5;
 
@@ -587,7 +588,7 @@ int codec_test_vectors(void)
 #if PJMEDIA_HAS_G7221_CODEC
     status = pjmedia_codec_g7221_init(endpt);
     if (status != PJ_SUCCESS) {
-        pjmedia_endpt_destroy(endpt);
+        pjmedia_endpt_destroy2(endpt);
         return -7;
     }
 
@@ -634,7 +635,7 @@ int codec_test_vectors(void)
     if (pj_file_exists(TMP_OUT))
         pj_file_delete(TMP_OUT);
 
-    pjmedia_endpt_destroy(endpt);
+    pjmedia_endpt_destroy2(endpt);
     return rc_final;
 }
 

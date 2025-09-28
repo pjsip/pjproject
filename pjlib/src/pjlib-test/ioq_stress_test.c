@@ -20,7 +20,8 @@
 
 #define THIS_FILE       "ioq_stress_test.c"
 #define MAX_THREADS     16
-#define TRACE(log)      PJ_LOG(3,log)
+//#define TRACE(log)      PJ_LOG(3,log)
+#define TRACE(log)
 #define MAX_ASYNC       16
 
 #define RETCODE_CONNECT_FAILED  650
@@ -162,9 +163,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                            });
 
         if (bytes_read != -12345 && bytes_read <= 0 && !IGNORE_ERROR(-bytes_read)) {
-            TRACE((THIS_FILE, "op_key:%p: stopping due to read=%d",
+            TRACE((THIS_FILE, "op_key:%p: stopping due to read=%ld",
                                op_key, bytes_read));
-            PJ_PERROR(1,(THIS_FILE, (pj_status_t)-bytes_read, "%d is", -bytes_read));
+            PJ_PERROR(1,(THIS_FILE, (pj_status_t)-bytes_read, "%ld is", -bytes_read));
             okud->server.status = (bytes_read == 0)? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
                                   (pj_status_t)-bytes_read;
             break;
@@ -182,7 +183,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                 for (p=start; p!=end; ++p) {
                     counter = test->state.cnt[SERVER]++;
                     if (*p != counter && test->cfg.sock_type==pj_SOCK_STREAM()) {
-                        PJ_LOG(3,(THIS_FILE, "  Error: TCP RX sequence mismatch at idx=%d. Expecting %d, got %d",
+                        PJ_LOG(3,(THIS_FILE, "  Error: TCP RX sequence mismatch at idx=%ld. Expecting %d, got %d",
                                   p-start, counter, *p));
                         test->state.retcode = 412;
                         okud->server.status = PJ_EBUG;
@@ -196,7 +197,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                              * order? (tested on Linux epoll). Or could there be
                              * bug somewhere?
                              */
-                            PJ_LOG(3,(THIS_FILE, "  UDP RX sequence mismatch at idx=%d. Expecting %d, got %d",
+                            PJ_LOG(3,(THIS_FILE, "  UDP RX sequence mismatch at idx=%ld. Expecting %d, got %d",
                                       p-start, counter, *p));
                             //test->state.retcode = 413;
                             //okud->server.status = PJ_EBUG;
@@ -256,7 +257,7 @@ static void on_write_complete(pj_ioqueue_key_t *key,
                        });
 
     if (bytes_sent != -12345 && bytes_sent <= 0 && !IGNORE_ERROR(-bytes_sent)) {
-        TRACE((THIS_FILE, "op_key:%p: stopping due to sent=%d",
+        TRACE((THIS_FILE, "op_key:%p: stopping due to sent=%ld",
                            op_key, bytes_sent));
         okud->client.status = (bytes_sent == 0)? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
                               (pj_status_t)-bytes_sent;
@@ -332,7 +333,7 @@ static void on_accept_complete(pj_ioqueue_key_t *key,
     status = pj_ioqueue_register_sock2(test->state.pool,
                                        test->state.ioq,
                                        test->state.socks[SERVER],
-                                       test->state.grp_lock,
+                                       NULL, //test->state.grp_lock,
                                        test,
                                        &test_cb,
                                        &test->state.keys[SERVER]);
@@ -445,7 +446,8 @@ static int worker_thread(void *p)
             op_key_user_data *okud = &test->state.okuds[CLIENT][i];
             pj_lock_acquire((pj_lock_t*)test->state.grp_lock);
             if (!pj_ioqueue_is_pending(test->state.keys[CLIENT],
-                                       &okud->client.send_op)) {
+                                       &okud->client.send_op))
+            {
                 on_write_complete(test->state.keys[CLIENT],
                                   &okud->client.send_op, -12345);
             }
@@ -459,10 +461,13 @@ static int worker_thread(void *p)
         }
     }
 
-    /* Flush events. Check if polling is blocked (it should). */
+    /* Flush events. Check if polling is blocked (for ioq select, it should,
+     * but for epoll and kqueue backends, the blocking duration is just minimal
+     * to avoid busy loop).
+     */
     if (test->state.retcode==test->cfg.expected_ret_code) {
         pj_timestamp t0, t1;
-        unsigned i, msec;
+        unsigned i, msec, duration;
 
         pj_get_timestamp(&t0);
         for (i=0; i<10; ++i) {
@@ -472,9 +477,12 @@ static int worker_thread(void *p)
         }
         pj_get_timestamp(&t1);
         msec = pj_elapsed_msec(&t0, &t1);
-        if (msec <= 500) {
+        duration = (!pj_ansi_strcmp(pj_ioqueue_name(), "select"))? 500: 200;
+        if (msec <= duration) {
             test->state.retcode = 5000;
-            PJ_LOG(1,(THIS_FILE, "Error: pj_ioqueue_poll is not blocking"));
+            PJ_LOG(1,(THIS_FILE, "Error: pj_ioqueue_poll is not blocking, "
+                                 "time elapsed: %d, no events: %d",
+                                 msec, n_events));
         }
     }
 
@@ -522,7 +530,7 @@ static int perform_single_pass(test_desc *test)
         CHECK(24, pj_ioqueue_register_sock2(test->state.pool,
                                             test->state.ioq,
                                             test->state.listen_sock,
-                                            test->state.grp_lock,
+                                            NULL, //test->state.grp_lock,
                                             test,
                                             &test_cb,
                                             &test->state.listen_key));
@@ -552,7 +560,7 @@ static int perform_single_pass(test_desc *test)
         CHECK(33, pj_ioqueue_register_sock2(test->state.pool,
                                             test->state.ioq,
                                             test->state.socks[SERVER],
-                                            test->state.grp_lock,
+                                            NULL, //test->state.grp_lock,
                                             test,
                                             &test_cb,
                                             &test->state.keys[SERVER]));
@@ -597,10 +605,18 @@ static int perform_single_pass(test_desc *test)
                                      pj_SO_RCVBUF(),
                                      &value, sizeof(value)));
     }
+
+    /* We cannot use the global group lock for registering keys (here and
+     * all below) because currently IOCP key uses the group lock handler for
+     * releasing its resources including the key itself. If the key is not
+     * released (the global group lock destroy is done very late) and
+     * as the ioqueue capacity for the tests are quite limited (~4-6 keys),
+     * ioqueue will get full quickly and tests will fail.
+     */
     CHECK(42, pj_ioqueue_register_sock2(test->state.pool,
                                         test->state.ioq,
                                         test->state.socks[CLIENT],
-                                        test->state.grp_lock,
+                                        NULL, //test->state.grp_lock,
                                         test,
                                         &test_cb,
                                         &test->state.keys[CLIENT]));
@@ -728,8 +744,10 @@ static int perform_test(test_desc *test)
 on_return:
     if (test->state.ioq)
         pj_ioqueue_destroy(test->state.ioq);
-    pj_grp_lock_dec_ref(test->state.grp_lock);
-    test->state.grp_lock = NULL;
+    if (test->state.grp_lock) {
+        pj_grp_lock_dec_ref(test->state.grp_lock);
+        test->state.grp_lock = NULL;
+    }
     if (test->state.pool)
         pj_pool_release(test->state.pool);
 
@@ -760,7 +778,7 @@ static test_desc tests[128] = {
         .cfg.n_clients = 1,
         .cfg.repeat = 4
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
         .cfg.title = "basic udp (single thread, EPOLLEXCLUSIVE)",
         .cfg.max_fd = 4,
@@ -822,12 +840,11 @@ static test_desc tests[128] = {
         .cfg.n_clients = 1,
         .cfg.repeat = 4
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
         .cfg.title = "basic tcp (single thread, EPOLLEXCLUSIVE)",
         .cfg.max_fd = 6,
         .cfg.allow_concur = 1,
-        .cfg.epoll_flags = PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
         .cfg.epoll_flags = PJ_IOQUEUE_EPOLL_EXCLUSIVE,
         .cfg.sock_type = SOCK_STREAM,
         .cfg.n_threads = 0,
@@ -885,7 +902,7 @@ static test_desc tests[128] = {
         .cfg.n_clients = 1,
         .cfg.repeat = 2
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
         .cfg.title = "failed tcp connect (EPOLLEXCLUSIVE)",
         .cfg.expected_ret_code = RETCODE_CONNECT_FAILED,
@@ -972,7 +989,7 @@ static test_desc tests[128] = {
         .cfg.n_clients = MAX_ASYNC,
         .cfg.repeat = 4
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     /* EPOLLEXCLUSIVE (udp).
      */
     {
@@ -1043,7 +1060,7 @@ static test_desc tests[128] = {
         .cfg.n_clients = MAX_ASYNC,
         .cfg.repeat = 4
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
         .cfg.title = "tcp (multithreads, EPOLLEXCLUSIVE)",
         .cfg.max_fd = 6,
@@ -1113,7 +1130,7 @@ static test_desc tests[128] = {
         .cfg.n_clients = MAX_ASYNC,
         .cfg.repeat = 4
     },
-    #if PJ_HAS_LINUX_EPOLL
+    #if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
     {
         .cfg.title = "tcp (multithreads, sequenced, concur=0, EPOLLEXCLUSIVE)",
         .cfg.max_fd = 6,
@@ -1223,7 +1240,7 @@ int ioqueue_stress_test(void)
     test_cb.on_accept_complete = on_accept_complete;
     test_cb.on_connect_complete = on_connect_complete;
 
-    for (i=0; i<PJ_ARRAY_SIZE(tests); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(tests); ++i) {
         int r;
 
         test_desc *test = &tests[i];

@@ -22,6 +22,7 @@
 #include <pj/errno.h>
 #include <pj/ip_helper.h>
 #include <pj/os.h>
+#include <pj/pool.h>
 #include <pj/addr_resolv.h>
 #include <pj/rand.h>
 #include <pj/string.h>
@@ -205,7 +206,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
                                          const pj_str_t *str_addr,
                                          pj_uint16_t port)
 {
-    PJ_ASSERT_RETURN(addr, (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+    PJ_ASSERT_RETURN(addr, PJ_EINVAL);
 
     PJ_SOCKADDR_RESET_LEN(addr);
     addr->sin_family = PJ_AF_INET;
@@ -730,6 +731,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_parse( int af, unsigned options,
     return status;
 }
 
+
 /* Resolve the IP address of local machine */
 PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 {
@@ -1068,6 +1070,21 @@ PJ_DEF(pj_status_t) pj_getipinterface(int af,
         return PJ_ENOTFOUND;
     }
 
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+    /* Check if the local address is link-local but the destination
+     * is not link-local.
+     */
+    if (af == pj_AF_INET6() &&
+        IN6_IS_ADDR_LINKLOCAL(&itf_addr->ipv6.sin6_addr) &&
+        (!IN6_IS_ADDR_LINKLOCAL(&dst_addr.ipv6.sin6_addr)))
+    {
+        TRACE_((THIS_FILE, "Local interface address is link-local and "
+                           "the destination host is external"));
+
+        return PJ_ENOTFOUND;
+    }
+#endif
+
     if (p_dst_addr)
         *p_dst_addr = dst_addr;
 
@@ -1190,6 +1207,29 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_sobuf( pj_sock_t sockfd,
 }
 
 
+PJ_DEF(pj_status_t) pj_sockopt_params_clone(pj_pool_t *pool,
+                                            pj_sockopt_params *dst,
+                                            const pj_sockopt_params *src)
+{
+    unsigned int i;
+
+    PJ_ASSERT_RETURN(pool && src && dst, PJ_EINVAL);
+
+    pj_memcpy(dst, src, sizeof(pj_sockopt_params));
+    for (i = 0; i < dst->cnt && i < PJ_MAX_SOCKOPT_PARAMS; ++i) {
+        if (dst->options[i].optlen == 0) {
+            dst->options[i].optval = NULL;
+            continue;
+        }
+        dst->options[i].optval = pj_pool_alloc(pool, dst->options[i].optlen);
+        pj_memcpy(dst->options[i].optval, src->options[i].optval,
+                  dst->options[i].optlen);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 PJ_DEF(char *) pj_addr_str_print( const pj_str_t *host_str, int port, 
                                   char *buf, int size, unsigned flag)
 {
@@ -1238,18 +1278,27 @@ static pj_status_t socketpair_imp(int family,
     pj_str_t loopback;
     pj_sockaddr sa;
     int salen;
+    int type0 = type;
 
 #if PJ_HAS_TCP
-    PJ_ASSERT_RETURN(type == pj_SOCK_DGRAM() || type == pj_SOCK_STREAM(),
+    PJ_ASSERT_RETURN((type & 0xF) == pj_SOCK_DGRAM() ||
+                     (type & 0xF) == pj_SOCK_STREAM(),
                      PJ_EINVAL);
 #else
-    PJ_ASSERT_RETURN(type == pj_SOCK_DGRAM(), PJ_EINVAL);
+    PJ_ASSERT_RETURN((type & 0xF) == pj_SOCK_DGRAM(), PJ_EINVAL);
 #endif
 
     PJ_ASSERT_RETURN(family == pj_AF_INET() || family == pj_AF_INET6(),
                      PJ_EINVAL);
 
     loopback = family == pj_AF_INET() ? pj_str("127.0.0.1") : pj_str("::1");
+
+#if !defined(SOCK_CLOEXEC)
+    if ((type0 & pj_SOCK_CLOEXEC()) == pj_SOCK_CLOEXEC())
+        type &= ~pj_SOCK_CLOEXEC();
+#else
+    PJ_UNUSED_ARG(type0);
+#endif
 
     /* listen */
     status = pj_sock_socket(family, type, protocol, &lfd);
@@ -1267,7 +1316,7 @@ static pj_status_t socketpair_imp(int family,
         goto on_error;
 
 #if PJ_HAS_TCP
-    if (type == pj_SOCK_STREAM()) {
+    if ((type & 0xF) == pj_SOCK_STREAM()) {
         status = pj_sock_listen(lfd, 1);
         if (status != PJ_SUCCESS)
             goto on_error;
@@ -1282,7 +1331,7 @@ static pj_status_t socketpair_imp(int family,
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    if (type == pj_SOCK_DGRAM()) {
+    if ((type & 0xF) == pj_SOCK_DGRAM()) {
         status = pj_sock_getsockname(cfd, &sa, &salen);
         if (status != PJ_SUCCESS)
             goto on_error;
@@ -1293,7 +1342,7 @@ static pj_status_t socketpair_imp(int family,
         sv[1] = cfd;
     }
 #if PJ_HAS_TCP
-    else if (type == pj_SOCK_STREAM()) {
+    else if ((type & 0xF) == pj_SOCK_STREAM()) {
         pj_sock_t newfd = PJ_INVALID_SOCKET;
         status = pj_sock_accept(lfd, &newfd, NULL, NULL);
         if (status != PJ_SUCCESS)
@@ -1301,6 +1350,13 @@ static pj_status_t socketpair_imp(int family,
         pj_sock_close(lfd);
         sv[0] = newfd;
         sv[1] = cfd;
+    }
+#endif
+
+#if !defined(SOCK_CLOEXEC)
+    if ((type0 & pj_SOCK_CLOEXEC()) == pj_SOCK_CLOEXEC()) {
+        pj_set_cloexec_flag((int)sv[0]);
+        pj_set_cloexec_flag((int)sv[1]);
     }
 #endif
 
@@ -1322,13 +1378,19 @@ PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
 {
     int status;
     int tmp_sv[2];
+    int type0 = type;
 
     PJ_CHECK_STACK();
+
+#if !defined(SOCK_CLOEXEC)
+    if ((type0 & pj_SOCK_CLOEXEC()) == pj_SOCK_CLOEXEC())
+        type &= ~pj_SOCK_CLOEXEC();
+#endif
 
     status = socketpair(family, type, protocol, tmp_sv);
     if (status != PJ_SUCCESS) {
         if (errno == EOPNOTSUPP) {
-            return socketpair_imp(family, type, protocol, sv);
+            return socketpair_imp(family, type0, protocol, sv);
         }
         status = PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
         return status;
@@ -1347,6 +1409,116 @@ PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
     return socketpair_imp(family, type, protocol, sv);
 }
 #endif
+
+
+/* Check IP address type. */
+PJ_DEF(pj_bool_t) pj_check_addr_type(const pj_sockaddr *addr, unsigned type)
+{
+    int af;
+
+    PJ_ASSERT_RETURN(addr && type, PJ_EINVAL);
+    PJ_ASSERT_RETURN(addr->addr.sa_family == PJ_AF_INET ||
+                     addr->addr.sa_family == PJ_AF_INET6, PJ_EINVAL);
+
+    af = addr->addr.sa_family;
+
+    if (af == PJ_AF_INET) {
+        enum {
+            /* Disabled: 0.0.0.0/8 */
+            ADDR4_DISABLED = 0x00000000,
+            MASK4_DISABLED = 0xFF000000,
+            /* Loopback: 127.0.0.0/8 */
+            ADDR4_LOOPBACK = 0x7f000000,
+            MASK4_LOOPBACK = 0xFF000000,
+            /* Link-local: 169.254.0.0/16 */
+            ADDR4_LINKLOCAL = 0xa9fe0000,
+            MASK4_LINKLOCAL = 0xFFFF0000,
+            /* Multicast: 224.0.0.0/3 */
+            ADDR4_MULTICAST = 0xE0000000,
+            MASK4_MULTICAST = 0xF0000000,
+        };
+
+        pj_uint32_t a = pj_ntohl(addr->ipv4.sin_addr.s_addr);
+
+        if ((type & PJ_ADDR_TYPE_DISABLED) &&
+            (a & (pj_uint32_t)MASK4_DISABLED)==(pj_uint32_t)ADDR4_DISABLED)
+        {
+            return PJ_TRUE;
+        }
+
+        if ((type & PJ_ADDR_TYPE_LOOPBACK) &&
+            (a & (pj_uint32_t)MASK4_LOOPBACK)==(pj_uint32_t)ADDR4_LOOPBACK)
+        {
+            return PJ_TRUE;
+        }
+
+        if ((type & PJ_ADDR_TYPE_LINK_LOCAL) &&
+            (a & (pj_uint32_t)MASK4_LINKLOCAL)==(pj_uint32_t)ADDR4_LINKLOCAL)
+        {
+            return PJ_TRUE;
+        }
+
+        if (type & PJ_ADDR_TYPE_PRIVATE) {
+            pj_uint8_t b1 = (pj_uint8_t)(a >> 24);
+            pj_uint8_t b2 = (pj_uint8_t)((a >> 16) & 0x0ff);;
+
+            /* 10.0.0.0/8 */
+            if (b1 == 10)
+                return PJ_TRUE;
+
+            /* 172.16.0.0/12 or 172.16.0.0-172.31.255.255 */
+            if ((b1 == 172) && (b2 >= 16) && (b2 <= 31))
+                return PJ_TRUE;
+
+            /* 192.168.0.0/16 */
+            if ((b1 == 192) && (b2 == 168))
+                return PJ_TRUE;
+        }
+
+        if ((type & PJ_ADDR_TYPE_MULTICAST) &&
+            (a & (pj_uint32_t)MASK4_MULTICAST)==(pj_uint32_t)ADDR4_MULTICAST)
+        {
+            return PJ_TRUE;
+        }
+
+    } else /* if (af == PJ_AF_INET6) */ {
+
+        if (type & PJ_ADDR_TYPE_DISABLED) {
+            /* ::/128 */
+            pj_uint8_t saddr[16] = {0x0,0x0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            if (pj_memcmp(saddr, &addr->ipv6.sin6_addr, 16) == 0)
+                return PJ_TRUE;
+        }
+
+        if (type & PJ_ADDR_TYPE_LOOPBACK) {
+            /* ::1/128 */
+            pj_uint8_t saddr[16] = {0x0,0x0,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
+            if (pj_memcmp(saddr, &addr->ipv6.sin6_addr, 16) == 0)
+                return PJ_TRUE;
+        }
+
+        if (type & PJ_ADDR_TYPE_LINK_LOCAL) {
+            /* fe80::/64 */
+            pj_uint8_t saddr[16] = {0xfe,0x80,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+            if (pj_memcmp(saddr, &addr->ipv6.sin6_addr, 8) == 0)
+                return PJ_TRUE;
+        }
+
+        if (type & PJ_ADDR_TYPE_PRIVATE) {
+            /* fc00::/7 */
+            if ((addr->ipv6.sin6_addr.s6_addr[0] & 0xfe) == 0xfc)
+                return PJ_TRUE;
+        }
+
+        if (type & PJ_ADDR_TYPE_MULTICAST) {
+            /* ff00::/8 */
+            if (addr->ipv6.sin6_addr.s6_addr[0] == 0xff)
+                return PJ_TRUE;
+        }
+    }
+
+    return PJ_FALSE;
+}
 
 
 /* Only need to implement these in DLL build */
@@ -1400,6 +1572,11 @@ PJ_DEF(int) pj_SOCK_RAW(void)
 PJ_DEF(int) pj_SOCK_RDM(void)
 {
     return PJ_SOCK_RDM;
+}
+
+PJ_DEF(int) pj_SOCK_CLOEXEC(void)
+{
+    return PJ_SOCK_CLOEXEC;
 }
 
 PJ_DEF(pj_uint16_t) pj_SOL_SOCKET(void)

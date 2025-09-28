@@ -224,6 +224,14 @@ typedef struct pj_turn_sock_tls_cfg
     pj_str_t    password;
 
     /**
+     * Lookup certificate from OS certificate store with specified criteria.
+     *
+     * Currently only used by TLS backend Windows Schannel, please check
+     * pj_ssl_cert_load_from_store() for more info.
+     */
+    pj_ssl_cert_lookup_criteria cert_lookup;
+
+    /**
      * The ssl socket parameter.
      * These fields are used by TURN TLS:
      * - proto
@@ -237,6 +245,7 @@ typedef struct pj_turn_sock_tls_cfg
      * - timeout
      * - sockopt_params
      * - sockopt_ignore_error
+     * - enable_renegotiation
      */
     pj_ssl_sock_param ssock_param;
 
@@ -354,8 +363,8 @@ typedef struct pj_turn_sock_cfg
     unsigned so_sndbuf_size;
 
     /**
-     * This specifies TLS settings for TLS transport. It is only be used
-     * when this TLS is used to connect to the TURN server.
+     * This specifies TLS settings for TLS transport. It's only applicable when
+     * TLS is used to connect to the TURN server.
      */
     pj_turn_sock_tls_cfg tls_cfg;
 

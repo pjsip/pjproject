@@ -36,6 +36,11 @@
 #include <pj/compat/socket.h>
 #include <pj/rand.h>
 
+
+/* Only build when the backend is using epoll. */
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_EPOLL
+
+
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <errno.h>
@@ -49,7 +54,7 @@
 #define os_ioctl                ioctl
 #define os_read                 read
 #define os_close                close
-#define os_epoll_create         epoll_create
+#define os_epoll_create         epoll_create1
 #define os_epoll_ctl            epoll_ctl
 #define os_epoll_wait           epoll_wait
 
@@ -163,11 +168,11 @@ static unsigned detect_epoll_support()
     return epoll_support;
 #endif
 
-    epfd = os_epoll_create(5);
+    epfd = os_epoll_create(EPOLL_CLOEXEC);
     if (epfd < 0)
         goto on_error;
 
-    evfd = eventfd(0, 0);
+    evfd = eventfd(0, EFD_CLOEXEC);
     if (evfd < 0)
         goto on_error;
 
@@ -282,7 +287,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     const unsigned type_mask = PJ_IOQUEUE_EPOLL_EXCLUSIVE |
                                PJ_IOQUEUE_EPOLL_ONESHOT;
     unsigned epoll_support, valid_types;
-    int i;
+    pj_size_t i;
 
     /* Check that arguments are valid. */
     PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL && 
@@ -374,13 +379,13 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     if (rc != PJ_SUCCESS)
         return rc;
 
-    ioqueue->epfd = os_epoll_create(max_fd);
+    ioqueue->epfd = os_epoll_create(EPOLL_CLOEXEC);
     if (ioqueue->epfd < 0) {
         pj_lock_acquire(ioqueue->lock);
         ioqueue_destroy(ioqueue);
         return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
-    
+
     /*ioqueue->events = pj_pool_calloc(pool, max_fd, sizeof(struct epoll_event));
     PJ_ASSERT_RETURN(ioqueue->events != NULL, PJ_ENOMEM);
 
@@ -1078,3 +1083,9 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     return processed_cnt;
 }
 
+PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
+{
+    return ioqueue ? (pj_oshandle_t)&ioqueue->epfd : NULL;
+}
+
+#endif /* PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_EPOLL */

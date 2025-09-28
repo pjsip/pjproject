@@ -90,7 +90,7 @@ static int timestamp_accuracy()
         PJ_LOG(3,(THIS_FILE, "....error: timestamp drifted by %d usec after "
                              "%d msec", 
                              (pj_uint32_t)(diff * 1000000 / freq.u64), 
-                             msec));
+                             (int)msec));
         return -2000;
 
     /* Otherwise just print warning if timestamp drifted by >1 usec */
@@ -98,7 +98,7 @@ static int timestamp_accuracy()
         PJ_LOG(3,(THIS_FILE, "....warning: timestamp drifted by %d usec after "
                              "%d msec", 
                              (pj_uint32_t)(diff * 1000000 / freq.u64), 
-                             msec));
+                             (int)msec));
     } else {
         PJ_LOG(3,(THIS_FILE, "....good. Timestamp is accurate down to"
                              " nearest usec."));
@@ -125,7 +125,7 @@ int timestamp_test(void)
         return -1000;
     }
 
-    PJ_LOG(3,(THIS_FILE, "....frequency: hiword=%lu loword=%lu", 
+    PJ_LOG(3,(THIS_FILE, "....frequency: hiword=%u loword=%u", 
                         freq.u32.hi, freq.u32.lo));
 
     PJ_LOG(3,(THIS_FILE, "...checking if time can run backwards (pls wait).."));

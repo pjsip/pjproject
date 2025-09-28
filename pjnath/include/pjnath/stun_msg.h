@@ -442,6 +442,7 @@ typedef enum pj_stun_status
 
    \endverbatim
  */
+#pragma pack(1)
 typedef struct pj_stun_msg_hdr
 {
     /**
@@ -473,6 +474,7 @@ typedef struct pj_stun_msg_hdr
     pj_uint8_t          tsx_id[12];
 
 } pj_stun_msg_hdr;
+#pragma pack()
 
 
 /**
@@ -490,6 +492,7 @@ typedef struct pj_stun_msg_hdr
 
    \endverbatim
  */
+#pragma pack(1)
 typedef struct pj_stun_attr_hdr
 {
     /**
@@ -506,6 +509,7 @@ typedef struct pj_stun_attr_hdr
     pj_uint16_t         length;
 
 } pj_stun_attr_hdr;
+#pragma pack()
 
 
 /**
