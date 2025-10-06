@@ -282,8 +282,13 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
     if (cfg->port_range && cfg->port_range < max_bind_retry)
         max_bind_retry = cfg->port_range;
     pj_sockaddr_init(af, &bound_addr, NULL, 0);
-    if (pj_sockaddr_has_addr(&cfg->bound_addr.addr))
+    if (pj_sockaddr_has_addr(&cfg->bound_addr.addr) || 
+        ((cfg->bound_addr.addr.sa_family == pj_AF_INET() ||
+          cfg->bound_addr.addr.sa_family == pj_AF_INET6()) &&
+            pj_sockaddr_get_port(&cfg->bound_addr) != 0))
+    {
         pj_sockaddr_cp(&bound_addr, &cfg->bound_addr);
+    }
     status = pj_sock_bind_random(stun_sock->sock_fd, &bound_addr,
                                  cfg->port_range, max_bind_retry);
     if (status != PJ_SUCCESS)
