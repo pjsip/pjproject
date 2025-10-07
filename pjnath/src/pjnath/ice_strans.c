@@ -723,7 +723,6 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
                     comp->cand_cnt+=1;
                     cand_cnt++;
                     max_cand_cnt--;
-                
                     pj_ice_calc_foundation(ice_st->pool, &cand->foundation,
                                            cand->type, &cand->base_addr);
 
