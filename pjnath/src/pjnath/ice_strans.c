@@ -730,7 +730,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
                      * address family
                      */
                     if (comp->ice_st->cfg.af != pj_AF_UNSPEC() &&
-                        addr->addr.sa_family == comp->ice_st->cfg.af &&
+                        cand->addr.addr.sa_family == comp->ice_st->cfg.af &&
                         comp->cand_list[comp->default_cand].base_addr.addr.
                                                 sa_family != ice_st->cfg.af)
                     {
