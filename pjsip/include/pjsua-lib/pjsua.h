@@ -3894,6 +3894,17 @@ typedef struct pjsua_ice_config
     int                 ice_max_host_cands;
 
     /**
+     * Optional configuration for manually specifying host candidates.
+     * Useful for applications that need to assign a specific IP address
+     * as the host candidate. The candidate will use the same port as
+     * the automatic/base host candidate.
+     *
+     * Note that this setting will be used only when STUN server is
+     * not configured.
+     */
+    pj_sockaddr         ice_manual_host[PJ_ICE_MAX_STUN];
+
+    /**
      * ICE session options.
      */
     pj_ice_sess_options ice_opt;

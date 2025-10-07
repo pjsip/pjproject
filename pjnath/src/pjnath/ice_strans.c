@@ -653,6 +653,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
             pj_bool_t cand_duplicate = PJ_FALSE;
             char addrinfo[PJ_INET6_ADDRSTRLEN+10];
             const pj_sockaddr *addr = &stun_sock_info.aliases[i];
+            pj_bool_t manual_host_added = PJ_FALSE;
 
             if (max_cand_cnt==0) {
                 PJ_LOG(4,(ice_st->obj_name, "Too many host candidates"));
@@ -684,6 +685,70 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
                 const pj_in6_addr *a = &addr->ipv6.sin6_addr;
                 if (a->s6_addr[0] == 0xFE && (a->s6_addr[1] & 0xC0) == 0x80)
                     continue;
+            }
+
+            /* Add manual host candidates when STUN is not used. */
+            if (stun_cfg->server.slen == 0 &&
+                !manual_host_added &&
+                pj_sockaddr_has_addr(&stun_cfg->manual_host[0]))
+            {
+                manual_host_added = PJ_TRUE;
+
+                for (j=0; j<PJ_ARRAY_SIZE(stun_cfg->manual_host) &&
+                          max_cand_cnt && cand_cnt < stun_cfg->max_host_cands;
+                     j++)
+                {
+
+                    /* Only add the same address family */
+                    if (stun_cfg->manual_host[j].addr.sa_family !=
+                        stun_cfg->af ||
+                        !pj_sockaddr_has_addr(&stun_cfg->manual_host[j]))
+                    {
+                        continue;
+                    }
+
+                    cand = &comp->cand_list[comp->cand_cnt];
+
+                    cand->type = PJ_ICE_CAND_TYPE_HOST;
+                    cand->status = PJ_SUCCESS;
+                    cand->local_pref = (pj_uint16_t)(HOST_PREF - cand_cnt);
+                    cand->transport_id = CREATE_TP_ID(TP_STUN, idx);
+                    cand->comp_id = (pj_uint8_t) comp->comp_id;
+                    pj_sockaddr_cp(&cand->addr, &stun_cfg->manual_host[j]);
+                    pj_sockaddr_set_port(&cand->addr,
+                                         pj_sockaddr_get_port(addr));
+                    pj_sockaddr_cp(&cand->base_addr, &cand->addr);
+                    pj_bzero(&cand->rel_addr, sizeof(cand->rel_addr));
+
+                    comp->cand_cnt+=1;
+                    cand_cnt++;
+                    max_cand_cnt--;
+                
+                    pj_ice_calc_foundation(ice_st->pool, &cand->foundation,
+                                           cand->type, &cand->base_addr);
+
+                    /* Set default candidate with the preferred default
+                     * address family
+                     */
+                    if (comp->ice_st->cfg.af != pj_AF_UNSPEC() &&
+                        addr->addr.sa_family == comp->ice_st->cfg.af &&
+                        comp->cand_list[comp->default_cand].base_addr.addr.
+                                                sa_family != ice_st->cfg.af)
+                    {
+                        comp->default_cand = (unsigned)
+                                             (cand - comp->cand_list);
+                    }
+
+                    PJ_LOG(4,(ice_st->obj_name,
+                              "Comp %d/%d: host candidate %s (tpid=%d) added",
+                              comp->comp_id, comp->cand_cnt-1, 
+                              pj_sockaddr_print(&cand->addr, addrinfo,
+                                                sizeof(addrinfo), 3),
+                                                cand->transport_id));
+                }
+
+                if (max_cand_cnt == 0 || cand_cnt >= stun_cfg->max_host_cands)
+                    break;
             }
 
             cand = &comp->cand_list[comp->cand_cnt];
