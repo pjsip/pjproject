@@ -1304,52 +1304,42 @@ static pj_status_t and_media_codec_encode_more(pjmedia_vid_codec *codec,
 }
 
 static int write_yuv(pj_uint8_t *buf,
-                     unsigned dst_len,
-                     unsigned char* input,
-                     int stride_len,
-                     int iWidth,
-                     int iHeight)
+                     pj_int32_t buf_len, // from "and_med_buf_info.size", it is "pj_int32_t"
+                     pj_uint8_t *input,
+                     pj_size_t input_len,
+                     unsigned stride_len,
+                     unsigned input_width,
+                     unsigned input_height)
 {
-    unsigned req_size;
     pj_uint8_t *dst = buf;
-    pj_uint8_t *max = dst + dst_len;
-    int   i;
-    unsigned char*  pPtr = NULL;
+    pj_uint8_t *input_ptr = input;
+    pj_size_t req_buf_size = input_width * input_height * 3 / 2;
+    pj_size_t req_input_size = stride_len * input_height * 3 / 2;
+    unsigned half_stride = stride_len / 2;
+    unsigned half_width = input_width / 2;
+    unsigned half_height = input_height / 2;
+    unsigned i;
 
-    req_size = (iWidth * iHeight) + (iWidth / 2 * iHeight / 2) +
-               (iWidth / 2 * iHeight / 2);
-    if (dst_len < req_size)
+    if (buf_len < req_buf_size || input_len < req_input_size)
         return -1;
 
-    pPtr = input;
-    for (i = 0; i < iHeight && (dst + iWidth < max); i++) {
-        pj_memcpy(dst, pPtr, iWidth);
-        pPtr += stride_len;
-        dst += iWidth;
+    for (i = 0; i < input_height; i++) {
+        pj_memcpy(dst, input_ptr, input_width);
+        input_ptr += stride_len;
+        dst += input_width;
     }
 
-    if (i < iHeight)
-        return -1;
-
-    iHeight = iHeight / 2;
-    iWidth = iWidth / 2;
-    for (i = 0; i < iHeight && (dst + iWidth <= max); i++) {
-        pj_memcpy(dst, pPtr, iWidth);
-        pPtr += stride_len/2;
-        dst += iWidth;
+    for (i = 0; i < half_height; i++) {
+        pj_memcpy(dst, input_ptr, half_width);
+        input_ptr += half_stride;
+        dst += half_width;
     }
 
-    if (i < iHeight)
-        return -1;
-
-    for (i = 0; i < iHeight && (dst + iWidth <= max); i++) {
-        pj_memcpy(dst, pPtr, iWidth);
-        pPtr += stride_len/2;
-        dst += iWidth;
+    for (i = 0; i < half_height; i++) {
+        pj_memcpy(dst, input_ptr, half_width);
+        input_ptr += half_stride;
+        dst += half_width;
     }
-
-    if (i < iHeight)
-        return -1;
 
     return dst - buf;
 }
@@ -1490,16 +1480,14 @@ static pj_status_t and_media_decode(pjmedia_vid_codec *codec,
         PJ_LOG(4,(THIS_FILE, "Decoder getOutputBuffer failed"));
         return status;
     }
-    if (output->size >= and_media_data->prm->dec_fmt.det.vid.size.w *
-        and_media_data->prm->dec_fmt.det.vid.size.h * 3 / 2)
-    {
-        len = write_yuv((pj_uint8_t *)output->buf,
-                        output->size,
-                        output_buf,
-                        and_media_data->dec_stride_len,
-                        and_media_data->prm->dec_fmt.det.vid.size.w,
-                        and_media_data->prm->dec_fmt.det.vid.size.h);
-    }
+
+    len = write_yuv((pj_uint8_t *)output->buf,
+                    output->size,
+                    output_buf, // android media output buffer, here it is used as input for our "output" buffer
+                    output_size, // size of android media output buffer
+                    and_media_data->dec_stride_len,
+                    and_media_data->prm->dec_fmt.det.vid.size.w,
+                    and_media_data->prm->dec_fmt.det.vid.size.h);
 
     am_status = AMediaCodec_releaseOutputBuffer(and_media_data->dec,
                                                 buf_info.index, 0);
