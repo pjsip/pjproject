@@ -184,6 +184,7 @@ using namespace pj;
     %ignore pj::Endpoint::utilAddPendingJob;
 #endif
 
+%copyctor pj::OnCallMediaEventParam;
 
 //
 // Ignore stuffs in pjsua2

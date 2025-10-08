@@ -24,6 +24,8 @@ import org.pjsip.pjsua2.app.BuildConfig;
 import java.io.File;
 import java.util.HashMap;
 
+import java.util.concurrent.TimeUnit;
+
 import android.Manifest;
 import android.content.Context;
 import android.os.Environment;
@@ -31,6 +33,7 @@ import android.util.Log;
 import android.util.SparseBooleanArray;
 import android.widget.ListView;
 
+import androidx.test.espresso.IdlingPolicies;
 import androidx.test.espresso.IdlingRegistry;
 import androidx.test.espresso.IdlingResource;
 import androidx.test.espresso.NoMatchingViewException;
@@ -65,6 +68,7 @@ class Holder<T> {
 @RunWith(AndroidJUnit4.class)
 public class Pjsua2Test {
     final static String TAG = "PJSUA2Test";
+    final static int TIMEOUT_RESOURCE = 10;
 
     private UiDevice device;
 
@@ -88,6 +92,19 @@ public class Pjsua2Test {
         Context appContext =
             InstrumentationRegistry.getInstrumentation().getTargetContext();
         assertEquals(BuildConfig.APPLICATION_ID, appContext.getPackageName());
+
+        activityScenarioRule.getScenario().onActivity(activity -> {
+            IdlingRegistry.getInstance().register(activity.getIdlingResource());
+        });
+
+        IdlingPolicies.setIdlingResourceTimeout(TIMEOUT_RESOURCE, TimeUnit.SECONDS);
+    }
+
+    @After
+    public void unregisterIdlingResource() {
+        activityScenarioRule.getScenario().onActivity(activity -> {
+            IdlingRegistry.getInstance().unregister(activity.getIdlingResource());
+        });
     }
 
     private static void checkIsDisplayed(final int viewId, final String viewName) {
@@ -99,28 +116,22 @@ public class Pjsua2Test {
     }
 
     public static void waitForView(final int viewId,
-                                   final long timeoutInMillis,
                                    final boolean isDisplayed) throws Exception
     {
-        long startTime = System.currentTimeMillis();
-        long endTime = startTime + timeoutInMillis;
-
-        while (System.currentTimeMillis() < endTime) {
-            try {
-                if (isDisplayed) {
-                    onView(withId(viewId)).check(matches(isDisplayed()));
-                } else {
-                    onView(withId(viewId)).check(matches(
-                                  withEffectiveVisibility(Visibility.VISIBLE)));
-                }
-                return;
-            } catch (NoMatchingViewException | AssertionError e) {
-                Thread.sleep(100);
+        try {
+            if (isDisplayed) {
+                onView(withId(viewId)).check(matches(isDisplayed()));
+            } else {
+                onView(withId(viewId)).check(matches(
+                              withEffectiveVisibility(Visibility.VISIBLE)));
             }
+            return;
+        } catch (NoMatchingViewException | AssertionError e) {
+            System.out.println("Exception in waitForView " + e.getMessage());
         }
 
-        throw new Exception("View with ID " + viewId + " not visible within " +
-                             timeoutInMillis + " milliseconds");
+        throw new Exception("View with ID " + viewId + " not visible after " +
+                            TIMEOUT_RESOURCE + " seconds");
     }
     private void takeScreenshot(final String fileName) throws Exception {
         UiDevice device = UiDevice.getInstance(
@@ -155,7 +166,7 @@ public class Pjsua2Test {
         onView(withId(R.id.buttonAddBuddy)).perform(click());
 
         Log.d(TAG, "Wait for the dialog to be shown");
-        waitForView(R.id.editTextUri, 3000, true);
+        waitForView(R.id.editTextUri, true);
 
         Log.d(TAG, "Change the buddy URI");
         onView(withId(R.id.editTextUri)).perform(replaceText(localUri));
@@ -218,7 +229,7 @@ public class Pjsua2Test {
         onView(withId(R.id.buttonCall)).perform(click());
 
         Log.d(TAG, "Wait for the incoming video to be shown");
-        waitForView(R.id.surfaceIncomingVideo, 10000, false);
+        waitForView(R.id.surfaceIncomingVideo, false);
 
         onView(withId(R.id.surfaceIncomingVideo))
               .check(matches(withEffectiveVisibility(Visibility.VISIBLE)));
