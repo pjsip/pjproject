@@ -71,6 +71,9 @@ typedef void *Token;
  */
 typedef string SocketAddress;
 
+/** Array of socket address */
+typedef StringVector SocketAddressVector;
+
 /**
  * Transport ID is an integer.
  */

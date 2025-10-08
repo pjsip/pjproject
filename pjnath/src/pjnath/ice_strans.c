@@ -687,14 +687,13 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
                     continue;
             }
 
-            /* Add manual host candidates when STUN is not used. */
-            if (stun_cfg->server.slen == 0 &&
-                !manual_host_added &&
-                pj_sockaddr_has_addr(&stun_cfg->manual_host[0]))
-            {
+            /* Add manual host candidates. */
+            if (!manual_host_added && stun_cfg->manual_host_cnt) {
                 manual_host_added = PJ_TRUE;
 
-                for (j=0; j<PJ_ARRAY_SIZE(stun_cfg->manual_host) &&
+                pj_assert(stun_cfg->manual_host_cnt < PJ_ARRAY_SIZE(
+                                                      stun_cfg->manual_host));
+                for (j=0; j<stun_cfg->manual_host_cnt &&
                           max_cand_cnt && cand_cnt < stun_cfg->max_host_cands;
                      j++)
                 {
@@ -717,7 +716,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
                     pj_sockaddr_cp(&cand->addr, &stun_cfg->manual_host[j]);
                     pj_sockaddr_set_port(&cand->addr,
                                          pj_sockaddr_get_port(addr));
-                    pj_sockaddr_cp(&cand->base_addr, &cand->addr);
+                    pj_sockaddr_cp(&cand->base_addr, addr);
                     pj_bzero(&cand->rel_addr, sizeof(cand->rel_addr));
 
                     comp->cand_cnt+=1;

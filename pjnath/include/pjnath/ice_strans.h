@@ -248,15 +248,17 @@ typedef struct pj_ice_strans_stun_cfg
     unsigned             max_host_cands;
 
     /**
-     * Optional configuration for manually specifying host candidates.
-     * Useful for applications that need to assign a specific IP address
-     * as the host candidate. The candidate will use the same port as
-     * the automatic/base host candidate.
-     *
-     * Note that this setting will be used only when STUN server is
-     * not configured.
+     * Number of manual host candidates. This must be equal or less than
+     * \a max_host_cands.
      */
-    pj_sockaddr          manual_host[PJ_ICE_MAX_STUN];
+    unsigned             manual_host_cnt;
+
+    /**
+     * Optional configuration to manually specify host candidates.
+     * Each candidate will use the same port as the automatic/base host
+     * candidate.
+     */
+    pj_sockaddr          manual_host[PJ_ICE_ST_MAX_CAND];
 
     /**
      * Include loopback addresses in the host candidates.
