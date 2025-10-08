@@ -778,6 +778,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
                                      pj_bool_t allow_asym)
 {
     unsigned i;
+    pj_bool_t is_audio;
 
     /* Check that the media type match our offer. */
 
@@ -785,6 +786,8 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
         /* The media type in the answer is different than the offer! */
         return PJMEDIA_SDPNEG_EINVANSMEDIA;
     }
+
+    is_audio = (pj_strcmp2(&offer->desc.media, "audio") == 0);
 
     /* Check if remote has rejected our offer */
     if (answer->desc.port == 0) {
@@ -886,6 +889,10 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
                 }
                 pjmedia_sdp_attr_get_rtpmap(a, &or_);
 
+                /* For audio, channel count is 1 if not specified */
+                if (is_audio && or_.param.slen == 0)
+                    or_.param = pj_str("1");
+
                 /* Find paylaod in answer SDP with matching 
                  * encoding name and clock rate.
                  */
@@ -896,13 +903,16 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
                         pjmedia_sdp_rtpmap ar;
                         pjmedia_sdp_attr_get_rtpmap(a, &ar);
 
+                        /* For audio, channel count is 1 if not specified */
+                        if (is_audio && ar.param.slen == 0)
+                            ar.param = pj_str("1");
+
                         /* See if encoding name, clock rate, and channel
                          * count match 
                          */
                         if (!pj_stricmp(&or_.enc_name, &ar.enc_name) &&
                             or_.clock_rate == ar.clock_rate &&
-                            (pj_stricmp(&or_.param, &ar.param)==0 ||
-                             (ar.param.slen==1 && *ar.param.ptr=='1')))
+                            (pj_stricmp(&or_.param, &ar.param)==0))
                         {
                             /* Call custom format matching callbacks */
                             if (custom_fmt_match(pool, &or_.enc_name,
