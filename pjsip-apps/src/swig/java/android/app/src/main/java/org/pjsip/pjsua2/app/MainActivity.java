@@ -44,6 +44,7 @@ import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
 import androidx.core.app.ActivityCompat;
+import androidx.test.espresso.idling.CountingIdlingResource;
 
 import org.pjsip.PjCameraInfo2;
 import org.pjsip.pjsua2.AccountConfig;
@@ -85,6 +86,13 @@ public class MainActivity extends Activity
     private int buddyListSelectedIdx = -1;
     ArrayList<Map<String, String>> buddyList;
     private String lastRegStatus = "";
+
+    private static CountingIdlingResource idlingResource =
+        new CountingIdlingResource("TestResource");
+
+    public static CountingIdlingResource getIdlingResource() {
+        return idlingResource;
+    }
 
     private final Handler handler = new Handler(this);
     public class MSG_TYPE
@@ -524,6 +532,9 @@ public class MainActivity extends Activity
 
         currentCall = call;
         showCallActivity();
+        if (BuildConfig.IS_TEST) {
+            idlingResource.increment();
+        }
     }
 
     private void dlgAddEditBuddy(BuddyConfig initial)
@@ -731,8 +742,9 @@ public class MainActivity extends Activity
         }
         /* Forward the message to CallActivity */
         if (CallActivity.handler_ != null) {
+            OnCallMediaEventParam cpParam = new OnCallMediaEventParam(prm);
             Message m = Message.obtain(CallActivity.handler_,
-                MSG_TYPE.CALL_MEDIA_EVENT, prm);
+                MSG_TYPE.CALL_MEDIA_EVENT, cpParam);
             m.sendToTarget();
         }
     }

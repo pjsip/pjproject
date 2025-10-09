@@ -331,6 +331,10 @@ public class CallActivity extends Activity
 
                 remoteVideoHandler.setVideoWindow(cmi.getVideoWindow());
                 setupIncomingVideoLayout();
+                if (BuildConfig.IS_TEST) {
+                    if (!MainActivity.getIdlingResource().isIdleNow())
+                        MainActivity.getIdlingResource().decrement();
+                }
             }
 
         } else {
