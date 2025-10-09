@@ -2070,7 +2070,7 @@ AC_ARG_ENABLE(android-mediacodec,
     [
         case $target in
             *android*)
-                AC_CHECK_LIB(mediandk, AMediaCodec_setAsyncNotifyCallback, [
+                AC_CHECK_LIB(mediandk, AMediaCodec_createDecoderByType, [
                     ac_pjmedia_has_amediacodec=1 && LIBS="-lmediandk $LIBS"])
 
                 if test "x$ac_pjmedia_has_amediacodec" = "x1"; then
