@@ -9595,9 +9595,9 @@ else case e in #(
   e)
         case $target in
             *android*)
-                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for AMediaCodec_createDecoderByType in -lmediandk" >&5
-printf %s "checking for AMediaCodec_createDecoderByType in -lmediandk... " >&6; }
-if test ${ac_cv_lib_mediandk_AMediaCodec_createDecoderByType+y}
+                { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for AMediaCodec_setAsyncNotifyCallback in -lmediandk" >&5
+printf %s "checking for AMediaCodec_setAsyncNotifyCallback in -lmediandk... " >&6; }
+if test ${ac_cv_lib_mediandk_AMediaCodec_setAsyncNotifyCallback+y}
 then :
   printf %s "(cached) " >&6
 else case e in #(
@@ -9615,20 +9615,20 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char AMediaCodec_createDecoderByType (void);
+char AMediaCodec_setAsyncNotifyCallback (void);
 int
 main (void)
 {
-return AMediaCodec_createDecoderByType ();
+return AMediaCodec_setAsyncNotifyCallback ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_lib_mediandk_AMediaCodec_createDecoderByType=yes
+  ac_cv_lib_mediandk_AMediaCodec_setAsyncNotifyCallback=yes
 else case e in #(
-  e) ac_cv_lib_mediandk_AMediaCodec_createDecoderByType=no ;;
+  e) ac_cv_lib_mediandk_AMediaCodec_setAsyncNotifyCallback=no ;;
 esac
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
@@ -9636,9 +9636,9 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
 LIBS=$ac_check_lib_save_LIBS ;;
 esac
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" >&5
-printf "%s\n" "$ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" >&6; }
-if test "x$ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" = xyes
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mediandk_AMediaCodec_setAsyncNotifyCallback" >&5
+printf "%s\n" "$ac_cv_lib_mediandk_AMediaCodec_setAsyncNotifyCallback" >&6; }
+if test "x$ac_cv_lib_mediandk_AMediaCodec_setAsyncNotifyCallback" = xyes
 then :
 
                     ac_pjmedia_has_amediacodec=1 && LIBS="-lmediandk $LIBS"
