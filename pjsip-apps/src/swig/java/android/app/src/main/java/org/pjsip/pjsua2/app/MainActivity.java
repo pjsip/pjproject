@@ -506,7 +506,6 @@ public class MainActivity extends Activity
            {
                return;
            }
-           idlingResource.increment();
        }
 
         if (buddyListSelectedIdx == -1)
@@ -533,6 +532,9 @@ public class MainActivity extends Activity
 
         currentCall = call;
         showCallActivity();
+        if (BuildConfig.IS_TEST) {
+            idlingResource.increment();
+        }
     }
 
     private void dlgAddEditBuddy(BuddyConfig initial)

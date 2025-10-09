@@ -127,7 +127,7 @@ public class Pjsua2Test {
             }
             return;
         } catch (NoMatchingViewException | AssertionError e) {
-            System.out.println("Exception in waitForView " + e.getMessage());
+           Log.e(TAG, "Exception in waitForView " + e.getMessage());
         }
 
         throw new Exception("View with ID " + viewId + " not visible after " +
@@ -141,13 +141,13 @@ public class Pjsua2Test {
                        "screenshots");
         if (!path.exists()) {
             if (!path.mkdirs()) {
-                System.err.println("Failed to create "+ path.getAbsolutePath() +
-                                   " directory");
+                Log.e(TAG, "Failed to create "+ path.getAbsolutePath() +
+                      " directory");
                 return;
             }
         }
-        System.out.println("Taking screenshot to : " + path.getAbsolutePath() +
-                            "//" + fileName);
+        Log.d(TAG, "Taking screenshot to : " + path.getAbsolutePath() +
+              "//" + fileName);
         device.takeScreenshot(new File(path, fileName));
     }
 
