@@ -110,6 +110,31 @@ enum pj_log_decoration
                                 } while (0)
 
 /**
+ * Write log message.
+ *
+ * @param LVL       The logging verbosity level. Lower number indicates higher
+ *                  importance, with level zero indicates fatal error. Variable
+ *                  argument is not permited, the argument may be a numeral 
+ *                  constant or a numeral value macros.
+ * @param src       The first argument is the sender.
+ * @param format    The second argument is 'printf' like format string and 
+ *                  the following arguments are variable number of 
+ *                  arguments suitable for the format string.
+ *
+ * Sample:
+ * \verbatim
+#ifdef PJ_DEBUG
+#    define MY_LOG_LEVEL 2
+#else
+#    define MY_LOG_LEVEL 6
+#endif
+   PJ_LOG_(MY_LOG_LEVEL, __FILE__, "current value is %d", value);
+   \endverbatim
+ * @hideinitializer
+ */
+#define PJ_LOG_(LVL, src, format, ...) PJ_LOG(LVL,(src, format, __VA_ARGS__))
+
+/**
  * Signature for function to be registered to the logging subsystem to
  * write the actual log message to some output device.
  *
