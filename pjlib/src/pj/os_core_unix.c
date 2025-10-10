@@ -844,6 +844,90 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 #endif
 }
 
+PJ_DEF(pj_status_t) pj_thread_create2( const char *thread_name,
+                                       pj_thread_proc *proc, 
+                                       void *arg,
+                                       pj_size_t stack_size, 
+                                       void *stack_addr,
+                                       pj_thread_t *thread )
+{
+#if PJ_HAS_THREADS
+    pj_thread_t *rec = thread;
+    pthread_attr_t thread_attr;
+    int rc;
+
+    PJ_UNUSED_ARG(stack_addr);
+
+    PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(proc && thread, PJ_EINVAL);
+
+    if (thread == pj_thread_this())
+        return PJ_ECANCELLED;
+
+    /* Set name. */
+    if (!thread_name)
+        thread_name = "thr%p";
+
+    if (strchr(thread_name, '%')) {
+        pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
+    } else {
+        pj_ansi_strxcpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
+    }
+
+    /* Set default stack size */
+    if (stack_size == 0)
+        stack_size = PJ_THREAD_DEFAULT_STACK_SIZE;
+
+#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
+    rec->stk_size = stack_size;
+    rec->stk_max_usage = 0;
+#endif
+
+    /* Init thread attributes */
+    pthread_attr_init(&thread_attr);
+
+#if defined(PJ_THREAD_SET_STACK_SIZE) && PJ_THREAD_SET_STACK_SIZE!=0
+    /* Set thread's stack size */
+    rc = pthread_attr_setstacksize(&thread_attr, stack_size);
+    if (rc != 0) {
+        pthread_attr_destroy(&thread_attr);
+        return PJ_RETURN_OS_ERROR(rc);
+    }
+#endif  /* PJ_THREAD_SET_STACK_SIZE */
+
+
+#if defined(PJ_THREAD_ALLOCATE_STACK) && PJ_THREAD_ALLOCATE_STACK!=0
+    /* Allocate memory for the stack */
+    PJ_ASSERT_RETURN(stack_addr, PJ_EINVAL);
+
+    rc = pthread_attr_setstackaddr(&thread_attr, stack_addr);
+    if (rc != 0) {
+        pthread_attr_destroy(&thread_attr);
+        return PJ_RETURN_OS_ERROR(rc);
+    }
+#endif  /* PJ_THREAD_ALLOCATE_STACK */
+
+
+    /* Create the thread. */
+    rec->proc = proc;
+    rec->arg = arg;
+    rc = pthread_create( &rec->thread, &thread_attr, &thread_main, rec);
+    if (rc != 0) {
+        pthread_attr_destroy(&thread_attr);
+        return PJ_RETURN_OS_ERROR(rc);
+    }
+
+    /* Destroy thread attributes */
+    pthread_attr_destroy(&thread_attr);
+
+    PJ_LOG(6, (rec->obj_name, "Thread created"));
+    return PJ_SUCCESS;
+#else
+    pj_assert(!"Threading is disabled!");
+    return PJ_EINVALIDOP;
+#endif
+}
+
 /*
  * pj_thread-get_name()
  */
@@ -938,11 +1022,38 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
 }
 
 /*
+ * pj_thread_detach()
+ */
+PJ_DEF(pj_status_t) pj_thread_detach()
+{
+#if PJ_HAS_THREADS
+    pj_status_t status;
+    int result;
+    pj_thread_t *rec;
+    PJ_CHECK_STACK();
+
+    rec = pj_thread_this();
+    PJ_ASSERT_RETURN(rec, PJ_EBUG);
+    
+    if ((status = pj_thread_destroy(rec)) != PJ_SUCCESS)
+        return status;
+    else if ((result = pthread_detach(rec->thread)) != 0)
+        return PJ_RETURN_OS_ERROR(result);
+    else
+        return pj_thread_local_set(thread_tls_id, NULL);
+#else
+    pj_assert(!"No multithreading support!");
+    return PJ_EINVALIDOP;
+#endif
+}
+
+/*
  * pj_thread_destroy()
  */
 PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *p)
 {
     PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(p, PJ_EINVAL);
 
     /* Destroy mutex used to suspend thread */
     if (p->suspended_mutex) {

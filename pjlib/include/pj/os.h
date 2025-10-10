@@ -203,6 +203,33 @@ PJ_DECL(pj_status_t) pj_thread_create(  pj_pool_t *pool,
                                         pj_thread_t **thread );
 
 /**
+ * Create a new thread, use preallocated space for thread descriptor
+ * and thread stack.
+ * To avoid pool allocation, function does not support suspended thread.
+ * 
+ *
+ * @param thread_name   The optional name to be assigned to the thread.
+ * @param proc          Thread entry function.
+ * @param arg           Argument to be passed to the thread entry function.
+ * @param stack_size    The size of the stack for the new thread, or ZERO or
+ *                      PJ_THREAD_DEFAULT_STACK_SIZE to let the 
+ *                      library choose the reasonable size for the stack. 
+ * @param stack_addr    Preallocated space of size stack_size for the stack
+ *                      for the new thread, used if PJ_THREAD_ALLOCATE_STACK
+ *                      macro defined and is not 0. Otherwise ignored.
+ * @param thread        Pointer to preallocated thread descriptor to hold
+ *                      the newly created thread.
+ *
+ * @return              PJ_SUCCESS on success, or the error code.
+ */
+PJ_DECL(pj_status_t) pj_thread_create2( const char *thread_name,
+                                        pj_thread_proc *proc, 
+                                        void *arg,
+                                        pj_size_t stack_size, 
+                                        void *stack_addr,
+                                        pj_thread_t *thread );
+
+/**
  * Register a thread that was created by external or native API to PJLIB.
  * This function must be called in the context of the thread being registered.
  * When the thread is created by external function or API call,
@@ -323,6 +350,23 @@ PJ_DECL(pj_thread_t*) pj_thread_this(void);
  * @return PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pj_thread_join(pj_thread_t *thread);
+
+
+/**
+ * Detach pjsip library from the current thread without terminating 
+ * the OS thread, frees the resources allocated by pjlib for the calling thread,
+ * including freeing the tls slot in which pj_thread_t is stored.
+ * However, the memory allocated for the pj_thread_t itself will only be released
+ * when the pool used to create the thread is destroyed.
+ * 
+ * An application should call this function when leaving threads created by 
+ * an external module (e.g. audio thread, threads from an external thread pool, 
+ * etc). Such a thread is registered with pj_thread_register() and detached 
+ * with pj_thread_detach() when finished using.
+ *
+ * @return PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pj_thread_detach();
 
 
 /**
