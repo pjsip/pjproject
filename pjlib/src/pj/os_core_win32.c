@@ -872,7 +872,10 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
 PJ_DEF(pj_status_t) pj_thread_detach()
 {
     pj_status_t status;
-    pj_thread_t *rec = pj_thread_this();
+    pj_thread_t *rec;
+    PJ_CHECK_STACK();
+
+    rec = pj_thread_this();
     PJ_ASSERT_RETURN(rec, PJ_EBUG);
 
     if ((status = pj_thread_destroy(rec)) != PJ_SUCCESS)
@@ -924,7 +927,13 @@ PJ_DEF(void) pj_thread_check_stack(const char *file, int line)
 {
     char stk_ptr;
     pj_uint32_t usage;
-    pj_thread_t *thread = pj_thread_this();
+    pj_thread_t *thread;
+
+    /* may be called after pj_thread_detach() */
+    if (!pj_thread_is_registered())
+        return;
+
+    thread = pj_thread_this();
 
     pj_assert(thread);
 

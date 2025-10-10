@@ -1116,7 +1116,13 @@ PJ_DEF(void) pj_thread_check_stack(const char *file, int line)
 {
     char stk_ptr;
     pj_uint32_t usage;
-    pj_thread_t *thread = pj_thread_this();
+    pj_thread_t *thread;
+
+    /* may be called after pj_thread_detach() */
+    if (!pj_thread_is_registered())
+        return;
+
+    thread = pj_thread_this();
 
     /* Calculate current usage. */
     usage = (&stk_ptr > thread->stk_start) ? &stk_ptr - thread->stk_start :
