@@ -431,7 +431,7 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 1
     #define pj_log_wrapper_1(arg)       pj_log_1 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_1(PJ_PRINT_PARAM_DECOR PJ_PRINT_PARAM_DECOR const char *src, const char *format, ...)
+    PJ_DECL(void) pj_log_1(PJ_PRINT_PARAM_DECOR const char *src, const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_1(arg)
