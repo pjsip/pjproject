@@ -42,12 +42,15 @@ OPENH264_LDFLAGS = @ac_openh264_ldflags@
 VPX_CFLAGS = @ac_vpx_cflags@
 VPX_LDFLAGS = @ac_vpx_ldflags@
 
+# Android MediaCodec
+AMEDIACODEC_CFLAGS = @ac_mediacodec_cflags@
+
 
 # PJMEDIA features exclusion
 export CFLAGS += @ac_no_small_filter@ @ac_no_large_filter@ @ac_no_speex_aec@ \
                  $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(DSHOW_CFLAGS) $(QT_CFLAGS) \
                  $(DARWIN_CFLAGS) $(ANDROID_CFLAGS) \
-                 $(OPENH264_CFLAGS) $(VPX_CFLAGS) $(OBOE_CFLAGS)
+                 $(OPENH264_CFLAGS) $(VPX_CFLAGS) $(OBOE_CFLAGS) $(AMEDIACODEC_CFLAGS)
 export LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) $(DSHOW_LDFLAGS) \
                   $(OPENH264_LDFLAGS) $(VPX_LDFLAGS) $(OBOE_LDFLAGS)
 
@@ -151,7 +154,6 @@ ifeq ($(AC_NO_ANDROID_MEDIACODEC),1)
 export CFLAGS += -DPJMEDIA_HAS_ANDROID_MEDIACODEC=0
 else
 export CODEC_OBJS += and_aud_mediacodec.o and_vid_mediacodec.o
-export CFLAGS += -D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ -Werror=unguarded-availability
 endif
 
 ifeq ($(AC_NO_LYRA_CODEC),1)
