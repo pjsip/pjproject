@@ -114,7 +114,7 @@ enum pj_log_decoration
  *
  * @param LVL       The logging verbosity level. Lower number indicates higher
  *                  importance, with level zero indicates fatal error. Variable
- *                  argument is not permited, the argument may be a numeral 
+ *                  argument is not permitted, the argument may be a numeral 
  *                  constant or a numeral value macros.
  * @param src       The first argument is the sender.
  * @param format    The second argument is 'printf' like format string and 
