@@ -336,7 +336,7 @@ static pj_bool_t is_logging_suspended(void)
 }
 
 PJ_DEF(void) pj_log( const char *sender, int level, 
-                     const char *format, va_list marker)
+                    PJ_PRINT_PARAM_DECOR const char *format, va_list marker)
 {
     pj_time_val now;
     pj_parsed_time ptime;
@@ -510,7 +510,7 @@ PJ_DEF(void) pj_log_0(const char *obj, const char *format, ...)
 }
 */
 
-PJ_DEF(void) pj_log_1(const char *obj, const char *format, ...)
+PJ_DEF(void) pj_log_1(const char *obj, PJ_PRINT_PARAM_DECOR const char *format, ...)
 {
     va_list arg;
     va_start(arg, format);
@@ -520,7 +520,7 @@ PJ_DEF(void) pj_log_1(const char *obj, const char *format, ...)
 #endif  /* PJ_LOG_MAX_LEVEL >= 1 */
 
 #if PJ_LOG_MAX_LEVEL >= 2
-PJ_DEF(void) pj_log_2(const char *obj, const char *format, ...)
+PJ_DEF(void) pj_log_2(const char *obj, PJ_PRINT_PARAM_DECOR const char *format, ...)
 {
     va_list arg;
     va_start(arg, format);
@@ -530,7 +530,7 @@ PJ_DEF(void) pj_log_2(const char *obj, const char *format, ...)
 #endif
 
 #if PJ_LOG_MAX_LEVEL >= 3
-PJ_DEF(void) pj_log_3(const char *obj, const char *format, ...)
+PJ_DEF(void) pj_log_3(const char *obj, PJ_PRINT_PARAM_DECOR const char *format, ...)
 {
     va_list arg;
     va_start(arg, format);
@@ -540,7 +540,7 @@ PJ_DEF(void) pj_log_3(const char *obj, const char *format, ...)
 #endif
 
 #if PJ_LOG_MAX_LEVEL >= 4
-PJ_DEF(void) pj_log_4(const char *obj, const char *format, ...)
+PJ_DEF(void) pj_log_4(const char *obj, PJ_PRINT_PARAM_DECOR const char *format, ...)
 {
     va_list arg;
     va_start(arg, format);
@@ -550,7 +550,7 @@ PJ_DEF(void) pj_log_4(const char *obj, const char *format, ...)
 #endif
 
 #if PJ_LOG_MAX_LEVEL >= 5
-PJ_DEF(void) pj_log_5(const char *obj, const char *format, ...)
+PJ_DEF(void) pj_log_5(const char *obj, PJ_PRINT_PARAM_DECOR const char *format, ...)
 {
     va_list arg;
     va_start(arg, format);
@@ -560,7 +560,7 @@ PJ_DEF(void) pj_log_5(const char *obj, const char *format, ...)
 #endif
 
 #if PJ_LOG_MAX_LEVEL >= 6
-PJ_DEF(void) pj_log_6(const char *obj, const char *format, ...)
+PJ_DEF(void) pj_log_6(const char *obj, PJ_PRINT_PARAM_DECOR const char *format, ...)
 {
     va_list arg;
     va_start(arg, format);

@@ -330,6 +330,17 @@ typedef int pj_exception_id_t;
 #  define PJ_PRINT_FUNC_DECOR(idx)
 #endif
 
+/** 
+ * We need to tell the compiler that the function arguments is of printf
+ * style, so the compiler can check the code more carefully and
+ * generate the appropriate warnings, if necessary.
+ */
+#if defined(_In_z_) && defined(_Printf_format_string_)
+#  define PJ_PRINT_PARAM_DECOR _In_z_ _Printf_format_string_
+#else
+#  define PJ_PRINT_PARAM_DECOR
+#endif
+
 /* ************************************************************************* */
 /*
  * General.
