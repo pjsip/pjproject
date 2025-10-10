@@ -191,6 +191,52 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
                                 } while (0)
 
 /**
+ * A utility macro to print error message pertaining to the specified error 
+ * code to the log. This macro will construct the error message title 
+ * according to the 'title_fmt' argument, and add the error string pertaining
+ * to the error code after the title string. A colon (':') will be added 
+ * automatically between the title and the error string.
+ *
+ * This function is similar to pj_perror() function, but has the advantage
+ * that the function call can be omitted from the link process if the
+ * log level argument is below PJ_LOG_MAX_LEVEL threshold.
+ *
+ * Note that the title string constructed from the title_fmt will be built on
+ * a string buffer which size is PJ_PERROR_TITLE_BUF_SIZE, which normally is
+ * allocated from the stack. By default this buffer size is small (around
+ * 120 characters). Application MUST ensure that the constructed title string
+ * will not exceed this limit, since not all platforms support truncating
+ * the string.
+ *
+ * @see pj_perror()
+ *
+ * @param LVL       The logging verbosity level, valid values are 0-6. Lower
+ *                  number indicates higher importance, with level zero 
+ *                  indicates fatal error. Variable argument is not permited, 
+ *                  the argument may be a numeral constant or a numeral value 
+ *                  macros.
+ * @param arg       Enclosed 'printf' like arguments, with the following
+ *                  arguments:
+ * @param sender    the sender (NULL terminated string),
+ * @param status    the error code (pj_status_t)
+ * @param title_fmt the printf style format string, and optional variable 
+ *                  number of arguments suitable for the format string.
+ *
+ * Sample:
+ * \verbatim
+ #ifdef PJ_DEBUG
+ #    define MY_ERROR_LEVEL 1
+ #else
+ #    define MY_ERROR_LEVEL 2
+ #endif
+    PJ_PERROR_(MY_ERROR_LEVEL, __FILE__, PJ_EBUSY, "Error making %s", "coffee");
+   \endverbatim
+ * @hideinitializer
+ */
+#define PJ_PERROR_(LVL, sender, status, title_fmt, ...) \
+                   PJ_PERROR(LVL,(sender,status,title_fmt, __VA_ARGS__))
+
+/**
  * A utility function to print error message pertaining to the specified error 
  * code to the log. This function will construct the error message title 
  * according to the 'title_fmt' argument, and add the error string pertaining
@@ -213,7 +259,7 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
  * @see PJ_PERROR()
  */
 PJ_DECL(void) pj_perror(int log_level, const char *sender, pj_status_t status,
-                        const char *title_fmt, ...)
+                        PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
                         PJ_PRINT_FUNC_DECOR(4);
 
 
@@ -512,7 +558,7 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_1(arg)    pj_perror_1 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_1(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...)
+                              PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
                               PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_1(arg)
@@ -528,7 +574,7 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_2(arg)    pj_perror_2 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_2(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...)
+                              PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
                               PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_2(arg)
@@ -544,7 +590,7 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_3(arg)    pj_perror_3 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_3(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...)
+                              PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
                               PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_3(arg)
@@ -560,7 +606,7 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_4(arg)    pj_perror_4 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_4(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...)
+                              PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
                               PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_4(arg)
@@ -576,7 +622,7 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_5(arg)    pj_perror_5 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_5(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...)
+                              PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
                               PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_5(arg)
@@ -592,7 +638,7 @@ void pj_errno_clear_handlers(void);
     #define pj_perror_wrapper_6(arg)    pj_perror_6 arg
     /** Internal function. */
     PJ_DECL(void) pj_perror_6(const char *sender, pj_status_t status, 
-                              const char *title_fmt, ...)
+                              PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
                               PJ_PRINT_FUNC_DECOR(3);
 #else
     #define pj_perror_wrapper_6(arg)
