@@ -398,6 +398,8 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
                                         PJSUA_CALL_UPDATE_VIA;
     cfg->enable_rtcp_xr = (PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR);
     cfg->use_shared_auth = PJ_FALSE;
+
+    cfg->auto_repond_sip_message = PJ_TRUE;
 }
 
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
