@@ -524,7 +524,7 @@ static void load_set_thread_description()
       (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8!=0)
 
     /* Windows Server 2016, Windows 10 LTSB 2016 and Windows 10 version 1607: SetThreadDescription is only available by 
-     * Run Time Dynamic Linking in KernelBase.dll.
+     * Runtime Dynamic Linking in KernelBase.dll.
      */
     LPCTSTR module[] = {TEXT("Kernel32.dll"), TEXT("KernelBase.dll")};
     size_t i;
