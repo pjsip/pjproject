@@ -212,7 +212,7 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
  *
  * @param LVL       The logging verbosity level, valid values are 0-6. Lower
  *                  number indicates higher importance, with level zero 
- *                  indicates fatal error. Variable argument is not permited, 
+ *                  indicates fatal error. Variable argument is not permitted, 
  *                  the argument may be a numeral constant or a numeral value 
  *                  macros.
  * @param arg       Enclosed 'printf' like arguments, with the following
