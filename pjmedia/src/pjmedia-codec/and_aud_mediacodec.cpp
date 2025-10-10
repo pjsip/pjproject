@@ -50,7 +50,7 @@
 #define AND_MEDIA_KEY_MIME               "mime"
 
 #define BUFFER_MAX_ITEM         16
-
+#define API_AT_LEAST(x) __builtin_available(android x, *)
 typedef struct and_med_buf_info {
     pj_int32_t index;
     pj_int32_t size;
@@ -493,6 +493,15 @@ PJ_DEF(pj_status_t) pjmedia_codec_and_media_aud_init( pjmedia_endpt *endpt )
     pjmedia_codec_mgr *codec_mgr;
     pj_str_t codec_name;
     pj_status_t status;
+    int api_level = android_get_device_api_level();
+
+    if (api_level < 28) {
+        PJ_LOG(4,(THIS_FILE, "Minimum API level 28,"
+                  "Android MediaCodec cannot work with API level %d",
+                  api_level));
+
+        return PJ_SUCCESS;
+    }
 
     if (and_media_factory.pool != NULL) {
         /* Already initialized. */
@@ -987,10 +996,6 @@ static pj_status_t and_media_codec_open(pjmedia_codec *codec,
     codec_data->vad_enabled = (attr->setting.vad != 0);
     codec_data->plc_enabled = (attr->setting.plc != 0);
     and_media_data->clock_rate = attr->info.clock_rate;
-    AMediaCodecOnAsyncNotifyCallback async_cb = {&and_med_on_input_avail,
-                                                 &and_med_on_output_avail,
-                                                 &and_med_on_format_changed,
-                                                 &and_med_on_error};
 
 #if PJMEDIA_HAS_AND_MEDIA_AMRNB
     if (and_media_data->codec_id == AND_AUD_CODEC_AMRNB ||
@@ -1093,8 +1098,18 @@ static pj_status_t and_media_codec_open(pjmedia_codec *codec,
                    s->dec_setting.octet_aligned, s->dec_setting.reorder));
     }
 #endif
-    AMediaCodec_setAsyncNotifyCallback(codec_data->enc, async_cb, codec_data);
-    AMediaCodec_setAsyncNotifyCallback(codec_data->dec, async_cb, codec_data);
+
+    if (API_AT_LEAST(28)) {
+        AMediaCodecOnAsyncNotifyCallback async_cb = {&and_med_on_input_avail,
+                                                     &and_med_on_output_avail,
+                                                     &and_med_on_format_changed,
+                                                     &and_med_on_error};
+
+        AMediaCodec_setAsyncNotifyCallback(codec_data->enc, async_cb,
+                                           codec_data);
+        AMediaCodec_setAsyncNotifyCallback(codec_data->dec, async_cb,
+                                           codec_data);
+    }
 
     status = configure_codec(codec_data, PJ_TRUE);
     if (status != PJ_SUCCESS) {

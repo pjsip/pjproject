@@ -678,6 +678,7 @@ openssl_h_present
 ac_ssl_backend
 ac_ssl_has_aes_gcm
 ac_no_ssl
+ac_mediacodec_cflags
 ac_no_mediacodec
 ac_vpx_ldflags
 ac_vpx_cflags
@@ -9581,6 +9582,7 @@ fi
 
 
 
+
 # Check whether --enable-android-mediacodec was given.
 if test ${enable_android_mediacodec+y}
 then :
@@ -9650,10 +9652,14 @@ fi
 printf "%s\n" "Checking if Android AMediaCodec library is available... yes" >&6; }
                     printf "%s\n" "#define PJMEDIA_HAS_ANDROID_MEDIACODEC 1" >>confdefs.h
 
+                    ac_mediacodec_cflags="-DPJMEDIA_HAS_ANDROID_MEDIACODEC=1 -D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__ -Werror=unguarded-availability"
                 else
                     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if Android AMediaCodec library is available... no" >&5
 printf "%s\n" "Checking if Android AMediaCodec library is available... no" >&6; }
                 fi
+            ;;
+            *)
+                ac_no_mediacodec=1
             ;;
         esac
 
