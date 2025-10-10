@@ -733,4 +733,9 @@ PJ_DEF(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue )
     return ioqueue ? (pj_oshandle_t)&ioqueue->kfd : NULL;
 }
 
+PJ_DEF(int) pj_ioqueue_get_os_fd( pj_ioqueue_t *ioqueue )
+{
+    return ioqueue ? ioqueue->kfd : -1;
+}
+
 #endif /* PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_KQUEUE */
