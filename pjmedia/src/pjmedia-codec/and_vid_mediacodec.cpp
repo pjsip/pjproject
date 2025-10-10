@@ -77,6 +77,7 @@
 #define AND_MED_VP9_PT          PJMEDIA_RTP_PT_VP9_RSV1
 
 #define BUFFER_MAX_ITEM         16
+#define API_AT_LEAST(x) __builtin_available(android x, *)
 
 typedef struct and_med_buf_info {
     pj_int32_t index;
@@ -566,6 +567,15 @@ PJ_DEF(pj_status_t) pjmedia_codec_and_media_vid_init(
 {
     const pj_str_t h264_name = { (char*)"H264", 4};
     pj_status_t status;
+    int api_level = android_get_device_api_level();
+
+    if (api_level < 28) {
+        PJ_LOG(4,(THIS_FILE, "Minimum API level 28,"
+                  "Android MediaCodec cannot work with API level %d",
+                  api_level));
+
+        return PJ_SUCCESS;
+    }
 
     if (and_media_factory.pool != NULL) {
         /* Already initialized. */
@@ -1048,10 +1058,6 @@ static pj_status_t and_media_codec_open(pjmedia_vid_codec *codec,
     pjmedia_vid_codec_param *param;
     pj_status_t status = PJ_SUCCESS;
 
-    AMediaCodecOnAsyncNotifyCallback async_cb = {&and_med_on_input_avail,
-                                                 &and_med_on_output_avail,
-                                                 &and_med_on_format_changed,
-                                                 &and_med_on_error};
     and_media_data = (and_media_codec_data*) codec->codec_data;
     and_media_data->prm = pjmedia_vid_codec_param_clone( and_media_data->pool,
                                                      codec_param);
@@ -1062,11 +1068,18 @@ static pj_status_t and_media_codec_open(pjmedia_vid_codec *codec,
         if (status != PJ_SUCCESS)
             return status;
     }
-    AMediaCodec_setAsyncNotifyCallback(and_media_data->enc, async_cb,
-                                       and_media_data);
-    AMediaCodec_setAsyncNotifyCallback(and_media_data->dec, async_cb,
-                                       and_media_data);
 
+    if (API_AT_LEAST(28)) {
+        AMediaCodecOnAsyncNotifyCallback async_cb = {&and_med_on_input_avail,
+                                                     &and_med_on_output_avail,
+                                                     &and_med_on_format_changed,
+                                                     &and_med_on_error};
+
+        AMediaCodec_setAsyncNotifyCallback(and_media_data->enc, async_cb,
+                                           and_media_data);
+        AMediaCodec_setAsyncNotifyCallback(and_media_data->dec, async_cb,
+                                           and_media_data);
+    }
     and_media_data->whole = (param->packing == PJMEDIA_VID_PACKING_WHOLE);
     status = configure_encoder(and_media_data);
     if (status != PJ_SUCCESS) {
