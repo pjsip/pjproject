@@ -837,34 +837,33 @@ void call_update_contact(pjsua_call *call, pj_str_t **new_contact)
 }
 
 
-
 /*
  * Make outgoing call to the specified URI using the specified account.
  */
 PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
-                                         const pj_str_t *dest_uri,
-                                         const pjsua_call_setting *opt,
-                                         void *user_data,
-                                         const pjsua_msg_data *msg_data,
-                                         pjsua_call_id *p_call_id)
+    const pj_str_t* dest_uri,
+    const pjsua_call_setting* opt,
+    void* user_data,
+    const pjsua_msg_data* msg_data,
+    pjsua_call_id* p_call_id)
 {
-    pj_pool_t *tmp_pool = NULL;
-    pjsip_dialog *dlg = NULL;
-    pjsua_acc *acc;
-    pjsua_call *call = NULL;
+    pj_pool_t* tmp_pool = NULL;
+    pjsip_dialog* dlg = NULL;
+    pjsua_acc* acc;
+    pjsua_call* call = NULL;
     int call_id = -1;
     pj_str_t contact;
     pj_status_t status;
 
     /* Check that account is valid */
-    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
-                     PJ_EINVAL);
+    PJ_ASSERT_RETURN(acc_id >= 0 && acc_id < (int)PJ_ARRAY_SIZE(pjsua_var.acc),
+        PJ_EINVAL);
 
     /* Check arguments */
     PJ_ASSERT_RETURN(dest_uri, PJ_EINVAL);
 
-    PJ_LOG(4,(THIS_FILE, "Making call with acc #%d to %.*s", acc_id,
-              (int)dest_uri->slen, dest_uri->ptr));
+    PJ_LOG(4, (THIS_FILE, "Making call with acc #%d to %.*s", acc_id,
+        (int)dest_uri->slen, dest_uri->ptr));
 
     pj_log_push_indent();
 
@@ -873,7 +872,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     acc = &pjsua_var.acc[acc_id];
     if (!acc->valid) {
         pjsua_perror(THIS_FILE, "Unable to make call because account "
-                     "is not valid", PJ_EINVALIDOP);
+            "is not valid", PJ_EINVALIDOP);
         status = PJ_EINVALIDOP;
         goto on_error;
     }
@@ -907,14 +906,14 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     } else if (!opt) {
         opt = &call->opt;
     }
-    
+
     /* Create sound port if none is instantiated, to check if sound device
      * can be used. But only do this with the conference bridge, as with
      * audio switchboard (i.e. APS-Direct), we can only open the sound
      * device once the correct format has been known
      */
-    if (!pjsua_var.is_mswitch && pjsua_var.snd_port==NULL &&
-        pjsua_var.null_snd==NULL && !pjsua_var.no_snd && call->opt.aud_cnt > 0)
+    if (!pjsua_var.is_mswitch && pjsua_var.snd_port == NULL &&
+        pjsua_var.null_snd == NULL && !pjsua_var.no_snd && call->opt.aud_cnt > 0)
     {
         status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
         if (status != PJ_SUCCESS)
@@ -930,7 +929,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
      * when pjsua_acc_create_uac_contact() fails.
      */
     if (1) {
-        pjsip_uri *uri;
+        pjsip_uri* uri;
         pj_str_t dup;
 
         pj_strdup_with_null(tmp_pool, &dup, dest_uri);
@@ -938,9 +937,27 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
         if (uri == NULL) {
             pjsua_perror(THIS_FILE, "Unable to make call",
-                         PJSIP_EINVALIDREQURI);
+                PJSIP_EINVALIDREQURI);
             status = PJSIP_EINVALIDREQURI;
             goto on_error;
+        }
+
+        if (msg_data && msg_data->local_uri.slen) {
+            pj_strdup_with_null(tmp_pool, &dup, &msg_data->local_uri);
+            uri = pjsip_parse_uri(tmp_pool, dup.ptr, dup.slen, 0);
+            if (uri == NULL)
+            {
+                PJ_LOG(2, (THIS_FILE, "invalid src_uri"));
+            }
+        }
+
+        if (msg_data && msg_data->contact_uri.slen) {
+            pj_strdup_with_null(tmp_pool, &dup, &msg_data->contact_uri);
+            uri = pjsip_parse_uri(tmp_pool, dup.ptr, dup.slen, 0);
+            if (uri == NULL)
+            {
+                PJ_LOG(2, (THIS_FILE, "invalid contact_uri"));
+            }
         }
     }
 
@@ -953,27 +970,39 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     /* Create suitable Contact header unless a Contact header has been
      * set in the account.
      */
+    if (msg_data && msg_data->contact_uri.slen) {
+        contact = msg_data->contact_uri;
+    }
     if (acc->contact.slen) {
         contact = acc->contact;
-    } else {
+    }
+    else {
         status = pjsua_acc_create_uac_contact(tmp_pool, &contact,
-                                              acc_id, dest_uri);
+            acc_id, dest_uri);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Unable to generate Contact header",
-                         status);
+                status);
             goto on_error;
         }
     }
 
+    pj_str_t from;
+    if (msg_data && msg_data->local_uri.slen)
+    {
+        from = msg_data->local_uri;
+    }
+    else
+    {
+        from = acc->cfg.id;
+    }
+
     /* Create outgoing dialog: */
-    status = pjsip_dlg_create_uac( pjsip_ua_instance(),
-                                   (msg_data && msg_data->local_uri.slen?
-                                    &msg_data->local_uri: &acc->cfg.id),
-                                   &contact,
-                                   dest_uri,
-                                   (msg_data && msg_data->target_uri.slen?
-                                    &msg_data->target_uri: dest_uri),
-                                   &dlg);
+    status = pjsip_dlg_create_uac(pjsip_ua_instance(),
+        &acc->cfg.id, &contact,
+        dest_uri,
+        (msg_data && msg_data->target_uri.slen ?
+            &msg_data->target_uri : dest_uri),
+        &dlg);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Dialog creation failed", status);
         goto on_error;
@@ -1015,7 +1044,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
      */
     if (msg_data) {
         call->async_call.call_var.out_call.msg_data = pjsua_msg_data_clone(
-                                                          dlg->pool, msg_data);
+            dlg->pool, msg_data);
     }
     call->async_call.dlg = dlg;
 
@@ -1028,15 +1057,16 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
         /* Init media channel */
         status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
-                                          call->secure_level, dlg->pool,
-                                          NULL, NULL, PJ_TRUE,
-                                          &on_make_call_med_tp_complete);
+            call->secure_level, dlg->pool,
+            NULL, NULL, PJ_TRUE,
+            &on_make_call_med_tp_complete);
     }
     if (status == PJ_SUCCESS) {
         status = on_make_call_med_tp_complete(call->index, NULL);
         if (status != PJ_SUCCESS)
             goto on_error;
-    } else if (status != PJ_EPENDING) {
+    }
+    else if (status != PJ_EPENDING) {
         pjsua_perror(THIS_FILE, "Error initializing media channel", status);
         pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
         goto on_error;

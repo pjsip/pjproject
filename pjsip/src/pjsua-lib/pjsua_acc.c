@@ -1493,6 +1493,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     if (update_reg && !cfg->disable_reg_on_modify) {
         /* If accounts has registration enabled, start registration */
         if (acc->cfg.reg_uri.slen) {
+            pjsip_regc_destroy(acc->regc);
             status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
             if (status != PJ_SUCCESS) {
                 pjsua_perror(THIS_FILE, "Failed to register with new account "
@@ -3060,6 +3061,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
             goto on_return;
         }
 
+on_retry_reg:
         status = pjsip_regc_register(pjsua_var.acc[acc_id].regc,
                                      PJSUA_REG_AUTO_REG_REFRESH,
                                      &tdata);
@@ -3097,6 +3099,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
         status = pjsip_regc_unregister(pjsua_var.acc[acc_id].regc, &tdata);
     }
 
+on_retry_unreg:
     if (status == PJ_SUCCESS) {
         pjsip_regc *regc = pjsua_var.acc[acc_id].regc;
 
@@ -3686,7 +3689,10 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
         return status;
 
     /* Set this as default return value. This may be changed below. */
-    addr->host = tfla2_prm.ret_addr;
+    if (acc->cfg.rtp_cfg.public_addr.slen > 0)
+        addr->host = acc->cfg.rtp_cfg.public_addr;
+    else
+        addr->host = tfla2_prm.ret_addr;
     addr->port = tfla2_prm.ret_port;
 
     if (pj_strchr(&addr->host, ':')) {
