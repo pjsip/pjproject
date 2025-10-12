@@ -558,6 +558,18 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
                        ff->param->enc_mtu));
         }
 
+        /* openh264 settings */
+        if (!AV_OPT_SET_INT(ctx->priv_data, "profile", ctx->profile))
+        {
+            PJ_LOG(3, (THIS_FILE, "Failed to set openh264 H264 profile to '%d'",
+                ctx->profile));
+        }
+        if (!AV_OPT_SET_INT(ctx->priv_data, "max_nal_size", ff->param->enc_mtu))
+        {
+            PJ_LOG(3, (THIS_FILE, "Failed to set openh264 H264 max NAL size to %d",
+                ff->param->enc_mtu));
+        }
+
         /* Apply intra-refresh */
         if (!AV_OPT_SET_INT(ctx->priv_data, "intra-refresh", 1))
         {
