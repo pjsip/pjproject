@@ -1048,6 +1048,16 @@ PJ_DEF(pj_status_t) pj_thread_detach()
 }
 
 /*
+ * pj_thread_attach()
+ */
+PJ_DEF(pj_status_t) pj_thread_attach(const char *cstr_thread_name,
+                                     pj_thread_desc desc,
+                                     pj_thread_t **thread_ptr)
+{
+    return pj_thread_register(cstr_thread_name, desc, thread_ptr);
+}
+
+/*
  * pj_thread_destroy()
  */
 PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *p)

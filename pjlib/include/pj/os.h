@@ -368,6 +368,28 @@ PJ_DECL(pj_status_t) pj_thread_join(pj_thread_t *thread);
  */
 PJ_DECL(pj_status_t) pj_thread_detach();
 
+/**
+ * Register a thread that was created by external or native API to PJLIB.
+ * 
+ * This function is a complete copy of pj_thread_register(), with the only
+ * difference being that on Windows it returns a pj_thread_t suitable for
+ * waiting for the thread to terminate. This function should only be used 
+ * if the application requires calling pj_thread_join() for the current thread;
+ * otherwise, use pj_thread_register().
+ *
+ * @param thread_name   The optional name to be assigned to the thread.
+ * @param desc          Thread descriptor, which must be available throughout 
+ *                      the lifetime of the thread.
+ * @param thread        Pointer to hold the created thread handle.
+ *
+ * @return              PJ_SUCCESS on success, or the error code.
+ * 
+ * @see pj_thread_register()
+ */
+PJ_DECL(pj_status_t) pj_thread_attach ( const char *thread_name,
+                                        pj_thread_desc desc,
+                                        pj_thread_t **thread);
+
 
 /**
  * Destroy thread and release resources allocated for the thread.

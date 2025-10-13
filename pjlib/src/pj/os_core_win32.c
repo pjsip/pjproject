@@ -884,6 +884,25 @@ PJ_DEF(pj_status_t) pj_thread_detach()
         return pj_thread_local_set(thread_tls_id, NULL);
 }
 
+PJ_DEF(pj_status_t) pj_thread_attach(const char *cstr_thread_name,
+                                     pj_thread_desc desc,
+                                     pj_thread_t **thread_ptr)
+{
+    pj_status_t status;
+    if ((status = pj_thread_register(cstr_thread_name, desc, thread_ptr)) == PJ_SUCCESS &&
+        !DuplicateHandle(GetCurrentProcess(),
+                         (*thread_ptr)->hthread,
+                         GetCurrentProcess(),
+                         &(*thread_ptr)->hthread,
+                         0, FALSE,
+                         DUPLICATE_CLOSE_SOURCE | DUPLICATE_SAME_ACCESS))
+    {
+            status = pj_get_os_error();
+    }
+    return status;
+}
+
+
 /*
  * pj_thread_destroy()
  */
