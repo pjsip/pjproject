@@ -431,7 +431,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 1
     #define pj_log_wrapper_1(arg)       pj_log_1 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_1(const char *src, PJ_PRINT_PARAM_DECOR const char *format, ...)
+    PJ_DECL(void) pj_log_1(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_1(arg)
@@ -446,7 +447,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 2
     #define pj_log_wrapper_2(arg)       pj_log_2 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_2(const char *src, PJ_PRINT_PARAM_DECOR const char *format, ...)
+    PJ_DECL(void) pj_log_2(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_2(arg)
@@ -461,7 +463,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 3
     #define pj_log_wrapper_3(arg)       pj_log_3 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_3(const char *src, PJ_PRINT_PARAM_DECOR const char *format, ...)
+    PJ_DECL(void) pj_log_3(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_3(arg)
@@ -476,7 +479,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 4
     #define pj_log_wrapper_4(arg)       pj_log_4 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_4(const char *src, PJ_PRINT_PARAM_DECOR const char *format, ...)
+    PJ_DECL(void) pj_log_4(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_4(arg)
@@ -491,7 +495,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 5
     #define pj_log_wrapper_5(arg)       pj_log_5 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_5(const char *src, PJ_PRINT_PARAM_DECOR const char *format, ...)
+    PJ_DECL(void) pj_log_5(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_5(arg)
@@ -506,7 +511,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 6
     #define pj_log_wrapper_6(arg)       pj_log_6 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_6(const char *src, PJ_PRINT_PARAM_DECOR const char *format, ...)
+    PJ_DECL(void) pj_log_6(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_6(arg)

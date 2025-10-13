@@ -226,7 +226,8 @@ static void invoke_log(const char *sender, int level,
 
 static void pj_perror_imp(int log_level, const char *sender, 
                           pj_status_t status,
-                          PJ_PRINT_PARAM_DECOR const char *title_fmt, va_list marker)
+                          PJ_PRINT_PARAM_DECOR const char *title_fmt, 
+                          va_list marker)
 {
     char titlebuf[PJ_PERROR_TITLE_BUF_SIZE];
     char errmsg[PJ_ERR_MSG_SIZE];
