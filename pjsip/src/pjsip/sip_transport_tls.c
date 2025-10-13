@@ -803,6 +803,8 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
        return PJ_SUCCESS;
     }
 
+    lis_close(listener);
+
     /* Update TLS settings if provided */
     if (opt) {
         /* Wipe old certificate keys for security */
@@ -865,8 +867,6 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
             }
         }
     }
-
-    lis_close(listener);
 
     status = pjsip_tls_transport_lis_start(factory, local, a_name);
     if (status != PJ_SUCCESS) { 
