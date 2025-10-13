@@ -4751,3 +4751,55 @@ void pjsua_acc_end_ip_change(pjsua_acc *acc)
     }
     PJSUA_UNLOCK();
 }
+
+/*
+ * Send response to incoming SIP MESSAGE request.
+ */
+PJ_DEF(pj_status_t) pjsua_acc_send_response(pjsua_acc_id acc_id,
+                                            pjsip_rx_data *rdata,
+                                            pjsip_transaction *tsx,
+                                            int st_code,
+                                            const pj_str_t *st_text,
+                                            const pjsua_msg_data *msg_data)
+{
+    pjsip_tx_data *tdata = NULL;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(rdata != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(st_code >= 200 && st_code < 700, PJ_EINVAL);
+    PJ_UNUSED_ARG(acc_id);
+
+    if (!tsx) {
+        PJ_LOG(1,(THIS_FILE, "UAS transaction not found for MESSAGE response"));
+        return PJ_ENOTFOUND;
+    }
+
+    PJ_ASSERT_RETURN(tsx->role == PJSIP_ROLE_UAS, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsip_method_cmp(&tsx->method, &pjsip_message_method) == 0,
+                     PJ_EINVAL);
+
+    status = pjsip_endpt_create_response(pjsua_var.endpt, rdata,
+                                        st_code, st_text, &tdata);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to create response", status);
+        return status;
+    }
+
+    if (msg_data) {
+        pjsip_hdr *hdr;
+        for (hdr = &msg_data->hdr_list; hdr && hdr != &msg_data->hdr_list;
+             hdr=hdr->next) {
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)pjsip_hdr_clone(
+                                                    tdata->pool, hdr));
+        }
+    }
+
+    status = pjsip_tsx_send_msg(tsx, tdata);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to send response", status);
+        pjsip_tx_data_dec_ref(tdata);
+        return status;
+    }
+
+    return PJ_SUCCESS;
+}
