@@ -1037,8 +1037,8 @@ PJ_DEF(pj_status_t) pj_thread_detach()
     
     if ((status = pj_thread_destroy(rec)) != PJ_SUCCESS)
         return status;
-    else if ((result = pthread_detach(rec->thread)) != 0)
-        return PJ_RETURN_OS_ERROR(result);
+    //else if ((result = pthread_detach(rec->thread)) != 0)
+    //    return PJ_RETURN_OS_ERROR(result);
     else
         return pj_thread_local_set(thread_tls_id, NULL);
 #else
