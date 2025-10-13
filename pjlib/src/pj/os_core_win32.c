@@ -293,7 +293,7 @@ PJ_DEF(void) pj_shutdown()
     /* Free PJLIB TLS */
     if (thread_tls_id != -1) {
         if (pj_thread_this() == (pj_thread_t*)main_thread)
-            pj_thread_detach();
+            pj_thread_unregister();
         pj_thread_local_free(thread_tls_id);
         thread_tls_id = -1;
     }
@@ -636,6 +636,13 @@ static unsigned WINAPI thread_main(void *param)
     return result;
 }
 
+static pj_status_t create_thread(const char *thread_name,
+                                 pj_thread_proc *proc,
+                                 void *arg,
+                                 pj_size_t stack_size,
+                                 DWORD dwflags,
+                                 pj_thread_t *rec);
+
 /*
  * pj_thread_create(...)
  */
@@ -649,10 +656,7 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 {
     DWORD dwflags = 0;
     pj_thread_t *rec;
-
-#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
-    PJ_UNUSED_ARG(stack_size);
-#endif
+    pj_status_t status;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(pool && proc && thread_ptr, PJ_EINVAL);
@@ -666,70 +670,45 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     if (!rec)
         return PJ_ENOMEM;
 
-    /* Set name. */
-    if (!thread_name)
-        thread_name = "thr%p";
-
-    if (strchr(thread_name, '%')) {
-        pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
-    } else {
-        pj_ansi_strxcpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
+    status = create_thread(thread_name, proc, arg, stack_size, dwflags, rec);
+    if (status == PJ_SUCCESS) {
+        /* Success! */
+        *thread_ptr = rec;
     }
-
-    PJ_LOG(6, (rec->obj_name, "Thread created"));
-
-#if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
-    rec->stk_size = stack_size ? (pj_uint32_t)stack_size : 0xFFFFFFFFUL;
-    rec->stk_max_usage = 0;
-#endif
-
-    /* Create the thread. */
-    rec->proc = proc;
-    rec->arg = arg;
-
-#ifdef _MSC_VER
-    rec->idthread = 0;
-    rec->hthread = (HANDLE)_beginthreadex(NULL, stack_size,
-                                          thread_main, rec,
-                                          dwflags, (unsigned*)&rec->idthread);
-#elif defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
-    rec->hthread = CreateThreadRT(NULL, 0,
-                                  thread_main, rec,
-                                  dwflags, NULL);
-#else
-    rec->hthread = CreateThread(NULL, stack_size,
-                                thread_main, rec,
-                                dwflags, &rec->idthread);
-#endif
-
-    if (rec->hthread == NULL)
-        return PJ_RETURN_OS_ERROR(GetLastError());
-
-    /* Success! */
-    *thread_ptr = rec;
-    return PJ_SUCCESS;
+    return status;
 }
 
 PJ_DEF(pj_status_t) pj_thread_create2(const char *thread_name,
-                                      pj_thread_proc *proc, 
+                                      pj_thread_proc *proc,
                                       void *arg,
-                                      pj_size_t stack_size, 
+                                      pj_size_t stack_size,
                                       void *stack_addr,
-                                      pj_thread_t *thread )
+                                      pj_thread_t *thread)
 {
-    DWORD dwflags = 0;
-    pj_thread_t *rec = thread;
+    PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(proc && thread, PJ_EINVAL);
+    PJ_UNUSED_ARG(stack_addr);
+
+    if (thread == pj_thread_this())
+        return PJ_ECANCELLED;
+
+    return create_thread(thread_name, proc, arg, stack_size, 0, thread);
+}
+
+static pj_status_t create_thread(const char *thread_name,
+                                 pj_thread_proc *proc,
+                                 void *arg,
+                                 pj_size_t stack_size,
+                                 DWORD dwflags,
+                                 pj_thread_t *rec)
+{
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     PJ_UNUSED_ARG(stack_size);
 #endif
-    PJ_UNUSED_ARG(stack_addr);
 
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(proc && thread, PJ_EINVAL);
-
-    if (thread == pj_thread_this())
-        return PJ_ECANCELLED;
+    PJ_ASSERT_RETURN(proc && rec, PJ_EINVAL);
 
     /* Set name. */
     if (!thread_name)
@@ -867,9 +846,9 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
 }
 
 /*
- * pj_thread_detach()
+ * pj_thread_unregister()
  */
-PJ_DEF(pj_status_t) pj_thread_detach()
+PJ_DEF(pj_status_t) pj_thread_unregister()
 {
     pj_status_t status;
     pj_thread_t *rec;
@@ -948,7 +927,7 @@ PJ_DEF(void) pj_thread_check_stack(const char *file, int line)
     pj_uint32_t usage;
     pj_thread_t *thread;
 
-    /* may be called after pj_thread_detach() */
+    /* may be called after pj_thread_unregister() */
     if (!pj_thread_is_registered())
         return;
 
