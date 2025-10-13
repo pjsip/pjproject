@@ -55,7 +55,7 @@
 typedef unsigned long counter_t;
 #define counter_fmt "%lu"
 static volatile int quit_flag=0;
-static volatile int detach_test_flag=0;
+static volatile int unregister_test_flag=0;
 
 #if 0
 #   define TRACE__(args)        PJ_LOG(3,args)
@@ -119,11 +119,11 @@ static int thread_proc(void *data)
     /* reregister on the initial thread descriptor to check 
      * reregistered descriptor is joinable
      */
-    for (; detach_test_flag; --detach_test_flag) {
-        rc = pj_thread_detach();
+    for (; unregister_test_flag; --unregister_test_flag) {
+        rc = pj_thread_unregister();
         if (rc != PJ_SUCCESS) {
-            app_perror("...error in pj_thread_detach", rc);
-            detach_test_flag = 0;
+            app_perror("...error in pj_thread_unregister", rc);
+            unregister_test_flag = 0;
             return rc;
         }
 
@@ -132,7 +132,7 @@ static int thread_proc(void *data)
                               &this_thread);
         if (rc != PJ_SUCCESS) {
             app_perror("...error in pj_thread_attach", rc);
-            detach_test_flag = 0;
+            unregister_test_flag = 0;
             return rc;
         }
     }
@@ -169,7 +169,7 @@ static int simple_thread(const char *title, unsigned flags)
 
     quit_flag = 0;
 
-    detach_test_flag = MAX_REREGISTER;
+    unregister_test_flag = flags ? 0 : MAX_REREGISTER;
 
     TRACE__((THIS_FILE, "    Creating thread 0.."));
     rc = pj_thread_create(pool, "thread", (pj_thread_proc*)&thread_proc,
@@ -207,7 +207,7 @@ static int simple_thread(const char *title, unsigned flags)
     pj_thread_sleep(1500);
 
     quit_flag = 1;
-    while (detach_test_flag) {
+    while (unregister_test_flag) {
         pj_thread_sleep(0);
     }
 
@@ -242,7 +242,7 @@ static int timeslice_test(void)
     pj_status_t rc;
 
     quit_flag = 0;
-    detach_test_flag = 0;
+    unregister_test_flag = 0;
 
     pool = pj_pool_create(mem, NULL, 4000, 4000, NULL);
     if (!pool)
@@ -324,13 +324,18 @@ static int timeslice_test(void)
      * Check that all threads had equal proportion of processing.
      */
     lowest = highest = counter[0];
+    /* Check that all threads are running. */
+    if (counter[0] == 0) {
+        PJ_LOG(3,(THIS_FILE, "....ERROR! Thread 0 was not running!"));
+        return -70;
+    }
     for (i=1; i<NUM_THREADS; ++i) {
 
         /* Check that all threads are running. */
         if (counter[i] == i) {
             PJ_LOG(3,(THIS_FILE, "....ERROR! Thread %d-th was not running!",
                       i));
-            return -70;
+            return -75;
         }
 
         if (counter[i] < lowest)
