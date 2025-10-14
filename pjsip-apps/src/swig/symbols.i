@@ -186,6 +186,13 @@ typedef enum pj_ssl_cert_lookup_type
   PJ_SSL_CERT_LOOKUP_FRIENDLY_NAME
 } pj_ssl_cert_lookup_type;
 
+typedef enum pj_ssl_cert_direct_type
+{
+  PJ_SSL_CERT_DIRECT_NONE = 0,
+  PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY = 1,
+  PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT = 2
+} pj_ssl_cert_direct_type;
+
 typedef int pj_status_t;
 
 enum pj_constants_
@@ -232,11 +239,11 @@ typedef enum pj_turn_tp_type
 
 typedef enum pjmedia_conf_op_type
 {
-    PJMEDIA_CONF_OP_UNKNOWN,
-    PJMEDIA_CONF_OP_ADD_PORT,
-    PJMEDIA_CONF_OP_REMOVE_PORT,
-    PJMEDIA_CONF_OP_CONNECT_PORTS,
-    PJMEDIA_CONF_OP_DISCONNECT_PORTS,
+  PJMEDIA_CONF_OP_UNKNOWN,
+  PJMEDIA_CONF_OP_ADD_PORT,
+  PJMEDIA_CONF_OP_REMOVE_PORT,
+  PJMEDIA_CONF_OP_CONNECT_PORTS,
+  PJMEDIA_CONF_OP_DISCONNECT_PORTS
 } pjmedia_conf_op_type;
 
 typedef enum pjmedia_echo_flag
@@ -286,6 +293,7 @@ typedef enum pjmedia_format_id
   PJMEDIA_FORMAT_PCMU = ((('W' << 24) | ('A' << 16)) | ('L' << 8)) | 'u',
   PJMEDIA_FORMAT_ULAW = PJMEDIA_FORMAT_PCMU,
   PJMEDIA_FORMAT_AMR = ((('R' << 24) | ('M' << 16)) | ('A' << 8)) | ' ',
+  PJMEDIA_FORMAT_G722 = ((('2' << 24) | ('2' << 16)) | ('7' << 8)) | 'G',
   PJMEDIA_FORMAT_G729 = ((('9' << 24) | ('2' << 16)) | ('7' << 8)) | 'G',
   PJMEDIA_FORMAT_ILBC = ((('C' << 24) | ('B' << 16)) | ('L' << 8)) | 'I',
   PJMEDIA_FORMAT_RGB24 = ((('3' << 24) | ('B' << 16)) | ('G' << 8)) | 'R',
@@ -397,6 +405,7 @@ typedef enum pjmedia_type
   PJMEDIA_TYPE_NONE,
   PJMEDIA_TYPE_AUDIO,
   PJMEDIA_TYPE_VIDEO,
+  PJMEDIA_TYPE_TEXT,
   PJMEDIA_TYPE_APPLICATION,
   PJMEDIA_TYPE_UNKNOWN
 } pjmedia_type;
@@ -459,12 +468,12 @@ typedef enum pjmedia_vid_packing
 
 typedef enum pjmedia_vid_conf_op_type
 {
-    PJMEDIA_VID_CONF_OP_UNKNOWN,
-    PJMEDIA_VID_CONF_OP_ADD_PORT,
-    PJMEDIA_VID_CONF_OP_REMOVE_PORT,
-    PJMEDIA_VID_CONF_OP_CONNECT_PORTS,
-    PJMEDIA_VID_CONF_OP_DISCONNECT_PORTS,
-    PJMEDIA_VID_CONF_OP_UPDATE_PORT
+  PJMEDIA_VID_CONF_OP_UNKNOWN,
+  PJMEDIA_VID_CONF_OP_ADD_PORT,
+  PJMEDIA_VID_CONF_OP_REMOVE_PORT,
+  PJMEDIA_VID_CONF_OP_CONNECT_PORTS,
+  PJMEDIA_VID_CONF_OP_DISCONNECT_PORTS,
+  PJMEDIA_VID_CONF_OP_UPDATE_PORT
 } pjmedia_vid_conf_op_type;
 
 typedef enum pjmedia_vid_stream_rc_method
@@ -483,7 +492,8 @@ enum pjmedia_file_writer_option
 
 enum pjmedia_file_player_option
 {
-  PJMEDIA_FILE_NO_LOOP = 1
+  PJMEDIA_FILE_NO_LOOP = 1,
+  PJMEDIA_FILE_NO_LOCK = 2
 };
 
 typedef enum pjmedia_aud_dev_route
