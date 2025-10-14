@@ -2659,11 +2659,17 @@ struct pjsua_msg_data
     pj_str_t    target_uri;
 
     /**
-     * Optional local URI (i.e. From header). If NULL, the account ID
-     * \a pjsua_acc_config.id is used for the From header. This field is
-     * currently used only by pjsua_call_make_call() and pjsua_im_send().
-     */
+    * Optional local URI (i.e. From header). If NULL, the account ID
+    * \a pjsua_acc_config.id is used for the From header. This field is
+    * currently used only by pjsua_call_make_call() and pjsua_im_send().
+    */
     pj_str_t    local_uri;
+
+
+    /*
+    to support different contact_uri values per call
+   */
+    pj_str_t contact_uri;
 
     /**
      * Additional message headers as linked list. Application can add
@@ -6480,6 +6486,18 @@ PJ_DECL(pj_status_t) pjsua_call_dial_dtmf(pjsua_call_id call_id,
                                           const pj_str_t *digits);
 
 /**
+* Get number of digits in the DTMF transmit queue.
+ *
+ * @param call_id	Call identification.
+ * @param digits	Receives the number of digits currently queued for
+ *					transmission using RFC 2833 payload formats
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_get_queued_dtmf_digits(pjsua_call_id call_id,
+    unsigned* digits);
+
+/**
  * Send DTMF digits to remote using RFC 2833 payload formats. Use 
  * #pjsua_call_send_dtmf() to send DTMF using SIP INFO or other method in 
  * \a pjsua_dtmf_method. App can use \a on_dtmf_digit() or \a on_dtmf_digit2() 
@@ -6497,6 +6515,7 @@ PJ_DECL(pj_status_t) pjsua_call_dial_dtmf(pjsua_call_id call_id,
 PJ_DECL(pj_status_t) pjsua_call_dial_dtmf2(pjsua_call_id call_id, 
                                           const pj_str_t *digits,
                                           unsigned duration);
+
 
 /**
  * Send DTMF digits to remote. Use this method to send DTMF using the method in
