@@ -22,6 +22,8 @@
 #include <pj/assert.h>
 #include <pj/string.h>
 
+#if PJ_FILE_IO == PJ_FILE_IO_WIN32
+
 #include <windows.h>
 
 #ifndef INVALID_SET_FILE_POINTER
@@ -82,17 +84,12 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     HANDLE hFile;
     DWORD dwDesiredAccess = 0;
     DWORD dwShareMode = 0;
-    DWORD dwCreationDisposition = 0;
+    DWORD dwCreationDisposition = OPEN_EXISTING;
     DWORD dwFlagsAndAttributes = 0;
 
     PJ_UNUSED_ARG(pool);
 
     PJ_ASSERT_RETURN(pathname!=NULL, PJ_EINVAL);
-
-    if ((flags & PJ_O_CLOEXEC) == PJ_O_CLOEXEC) {
-        /* Win32 not support cloexec flag, should remove it */
-        flags &= ~(PJ_O_CLOEXEC & 0xF);
-    }
 
     if ((flags & PJ_O_WRONLY) == PJ_O_WRONLY) {
         dwDesiredAccess |= GENERIC_WRITE;
@@ -106,16 +103,16 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
              */
             dwDesiredAccess |= FILE_APPEND_DATA;
 #endif
-            dwCreationDisposition |= OPEN_ALWAYS;
+            dwCreationDisposition = OPEN_ALWAYS;
         } else {
             dwDesiredAccess &= ~(FILE_APPEND_DATA);
-            dwCreationDisposition |= CREATE_ALWAYS;
+            dwCreationDisposition = CREATE_ALWAYS;
         }
     }
     if ((flags & PJ_O_RDONLY) == PJ_O_RDONLY) {
         dwDesiredAccess |= GENERIC_READ;
-        if (flags == PJ_O_RDONLY)
-            dwCreationDisposition |= OPEN_EXISTING;
+        //if (flags == PJ_O_RDONLY)
+        //    dwCreationDisposition |= OPEN_EXISTING;
     }
 
     if (dwDesiredAccess == 0) {
@@ -124,17 +121,26 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     }
 
     dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-    
-    dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
+
+    if ((flags & PJ_O_SEQUENTIAL) == PJ_O_SEQUENTIAL) {
+        dwFlagsAndAttributes |= FILE_FLAG_SEQUENTIAL_SCAN;
+    }
+    if ((flags & PJ_O_RANDOM) == PJ_O_RANDOM) {
+        dwFlagsAndAttributes |= FILE_FLAG_RANDOM_ACCESS;
+    }
+    if ((flags & PJ_O_ASYNC) == PJ_O_ASYNC) {
+        dwFlagsAndAttributes |= FILE_FLAG_OVERLAPPED;
+    }
+    if (!dwFlagsAndAttributes) dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8  
     hFile = CreateFile2(PJ_STRING_TO_NATIVE(pathname,
-                        wpathname, sizeof(wpathname)),
+                                            wpathname, sizeof(wpathname)),
                         dwDesiredAccess, dwShareMode, dwCreationDisposition,
                         NULL);
 #else
     hFile = CreateFile(PJ_STRING_TO_NATIVE(pathname,
-                       wpathname, sizeof(wpathname)),
+                                           wpathname, sizeof(wpathname)),
                        dwDesiredAccess, dwShareMode, NULL,
                        dwCreationDisposition, dwFlagsAndAttributes, NULL);
 #endif
@@ -142,7 +148,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     if (hFile == INVALID_HANDLE_VALUE) {
         DWORD lastErr = GetLastError(); 
         *fd = 0;
-        return PJ_RETURN_OS_ERROR(lastErr);
+        return lastErr == ERROR_FILE_NOT_FOUND ? PJ_ENOTFOUND : PJ_RETURN_OS_ERROR(lastErr);
     }
 
     if ((flags & PJ_O_APPEND) == PJ_O_APPEND) {
@@ -242,21 +248,13 @@ PJ_DEF(pj_status_t) pj_file_setpos( pj_oshandle_t fd,
         return PJ_EINVAL;
     }
 
-    if (set_file_pointer(fd, offset, &newPos, dwMoveMethod) != PJ_SUCCESS) {
-        return PJ_RETURN_OS_ERROR(GetLastError());
-    }
-
-    return PJ_SUCCESS;
+    return set_file_pointer(fd, offset, &newPos, dwMoveMethod);
 }
 
 PJ_DEF(pj_status_t) pj_file_getpos( pj_oshandle_t fd,
                                     pj_off_t *pos)
 {
-    if (set_file_pointer(fd, 0, pos, FILE_CURRENT) != PJ_SUCCESS) {
-        return PJ_RETURN_OS_ERROR(GetLastError());
-    }
-
-    return PJ_SUCCESS;
+    return set_file_pointer(fd, 0, pos, FILE_CURRENT);
 }
 
 PJ_DEF(pj_status_t) pj_file_flush(pj_oshandle_t fd)
@@ -273,3 +271,4 @@ PJ_DEF(pj_status_t) pj_file_flush(pj_oshandle_t fd)
 
     return PJ_SUCCESS;
 }
+#endif //PJ_FILE_IO == PJ_FILE_IO_WIN32
