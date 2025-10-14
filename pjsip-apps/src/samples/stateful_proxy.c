@@ -271,12 +271,20 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
         uas_data2 = (struct uas_data*) invite_uas->mod_data[mod_tu.id];
         if (uas_data2->uac_tsx && uas_data2->uac_tsx->status_code < 200) {
             pjsip_tx_data *cancel;
+            pj_status_t status;
 
             pj_grp_lock_acquire(uas_data2->uac_tsx->grp_lock);
 
-            pjsip_endpt_create_cancel(global.endpt, uas_data2->uac_tsx->last_tx,
-                                      &cancel);
-            pjsip_endpt_send_request(global.endpt, cancel, -1, NULL, NULL);
+            status = pjsip_endpt_create_cancel(global.endpt, uas_data2->uac_tsx->last_tx,
+                                               &cancel);
+            if (status == PJ_SUCCESS) {
+                status = pjsip_endpt_send_request(global.endpt, cancel, -1, NULL, NULL);
+                if (status != PJ_SUCCESS) {
+                    PJ_LOG(4,(THIS_FILE, "Failed to send CANCEL request (%d)", status));
+                }
+            } else {
+                PJ_LOG(4,(THIS_FILE, "Failed to create CANCEL request (%d)", status));
+            }
 
             pj_grp_lock_release(uas_data2->uac_tsx->grp_lock);
         }

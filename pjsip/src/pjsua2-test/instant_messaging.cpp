@@ -105,7 +105,12 @@ InstantMessagingTests::~InstantMessagingTests()
     senderAcc.reset();
     receiverAcc.reset();
 
-    ep.libDestroy();
+    try {
+        ep.libDestroy();
+    } catch (const pj::Error& e) {
+        // Log the error but don't rethrow from destructor
+        std::cerr << "Error during libDestroy: " << e.reason << std::endl;
+    }
 }
 
 void InstantMessagingTests::immediateResponse()
