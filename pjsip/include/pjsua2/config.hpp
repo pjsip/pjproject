@@ -76,6 +76,24 @@
 #endif
 
 /**
+ * std::make_unique() is only supported from C++14.
+ * Provide C++11 compatible version.
+ */
+#if (defined(_MSVC_LANG) && _MSVC_LANG >= 201402L) || \
+    (__cplusplus >= 201402L)
+    #define PJSUA2_MAKE_UNIQUE std::make_unique
+#else
+    #define PJSUA2_MAKE_UNIQUE pj::pjsua2_make_unique
+    
+    namespace pj {
+        template<typename T, typename... Args>
+        std::unique_ptr<T> pjsua2_make_unique(Args&&... args) {
+            return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+        }
+    }
+#endif
+
+/**
  * @}  PJSUA2_CFG
  */
 

@@ -28,6 +28,9 @@
 
 using namespace pj;
 
+// Definition of static member
+TestState InstantMessagingTests::testState;
+
 ReceiverAccount::ReceiverAccount()
 {
 }
@@ -113,7 +116,7 @@ void InstantMessagingTests::immediateResponse()
     receiverCfg.idUri = "sip:receiver@localhost:5060";
     receiverCfg.sipConfig.autoRespondSipMessage = PJ_TRUE;
 
-    receiverAcc = std::make_unique<ReceiverAccount>();
+    receiverAcc = PJSUA2_MAKE_UNIQUE<ReceiverAccount>();
     receiverAcc->create(receiverCfg);
     std::cout << "*** Receiver account created: " << receiverCfg.idUri << "\n";
 
@@ -121,7 +124,7 @@ void InstantMessagingTests::immediateResponse()
     senderCfg.idUri = "sip:sender@localhost:5060";
     senderCfg.sipConfig.autoRespondSipMessage = PJ_TRUE;
 
-    senderAcc = std::make_unique<SenderAccount>();
+    senderAcc = PJSUA2_MAKE_UNIQUE<SenderAccount>();
     senderAcc->create(senderCfg);
     std::cout << "*** Sender account created: " << senderCfg.idUri << "\n";
 
@@ -132,7 +135,7 @@ void InstantMessagingTests::immediateResponse()
     buddyCfg.subscribe = false;
     buddyCfg.subscribe_dlg_event = false;
 
-    senderBuddy = std::make_unique<Buddy>();
+    senderBuddy = PJSUA2_MAKE_UNIQUE<Buddy>();
     senderBuddy->create(*senderAcc, buddyCfg);
 
     const std::string testMessage = "Hello world!";
@@ -167,7 +170,7 @@ void InstantMessagingTests::deferredResponse()
     receiverCfg.idUri = "sip:receiver@localhost:5060";
     receiverCfg.sipConfig.autoRespondSipMessage = PJ_FALSE;
 
-    receiverAcc = std::make_unique<ReceiverAccount>();
+    receiverAcc = PJSUA2_MAKE_UNIQUE<ReceiverAccount>();
     receiverAcc->create(receiverCfg);
     std::cout << "*** Receiver account created: " << receiverCfg.idUri << "\n";
 
@@ -175,7 +178,7 @@ void InstantMessagingTests::deferredResponse()
     senderCfg.idUri = "sip:sender@localhost:5060";
     senderCfg.sipConfig.autoRespondSipMessage = PJ_FALSE;
 
-    senderAcc = std::make_unique<SenderAccount>();
+    senderAcc = PJSUA2_MAKE_UNIQUE<SenderAccount>();
     senderAcc->create(senderCfg);
     std::cout << "*** Sender account created: " << senderCfg.idUri << "\n";
 
@@ -186,7 +189,7 @@ void InstantMessagingTests::deferredResponse()
     buddyCfg.subscribe = false;
     buddyCfg.subscribe_dlg_event = false;
 
-    senderBuddy = std::make_unique<Buddy>();
+    senderBuddy = PJSUA2_MAKE_UNIQUE<Buddy>();
     senderBuddy->create(*senderAcc, buddyCfg);
 
     const std::string testMessage = "Hello world!";
