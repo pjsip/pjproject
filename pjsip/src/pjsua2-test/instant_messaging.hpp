@@ -79,7 +79,7 @@ struct TestState {
  */
 class InstantMessagingTests
 {
-    inline static TestState testState;
+    static TestState testState;
     friend class ReceiverAccount;
     friend class SenderAccount;
 
