@@ -2651,6 +2651,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction *tsx,
 {
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
+
     pj_grp_lock_acquire(tsx->grp_lock);
     if (tdata == NULL) {
         tdata = tsx->last_tx;
@@ -2665,7 +2667,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction *tsx,
     if (status == PJ_SUCCESS) {
         pjsip_tx_data_dec_ref(tdata);
     }
-
+   
     return status;
 }
 
