@@ -216,7 +216,9 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     if (pjsua_var.ua_cfg.max_calls > PJSUA_MAX_CALLS) 
         pjsua_var.ua_cfg.max_calls = PJSUA_MAX_CALLS;
     
-    pjsua_var.calls = (pjsua_call*)pj_pool_zalloc(pjsua_var.pool, sizeof(pjsua_call) * pjsua_var.ua_cfg.max_calls);
+    pjsua_var.calls = (pjsua_call *)pj_pool_zalloc(pjsua_var.pool,
+                                                   sizeof(pjsua_call) *
+                                                   pjsua_var.ua_cfg.max_calls);
     if (!pjsua_var.calls)
         return PJ_ENOMEM;
 
