@@ -125,8 +125,6 @@ PJ_DEF(void) pj_caching_pool_destroy( pj_caching_pool *cp )
         pj_status_t status;
         pj_lock_destroy(cp->lock);
         status = pj_lock_create_null_mutex(NULL, "cachingpool", &cp->lock);
-        /* This mostly serves to silent coverity warning about unchecked 
-         * return value. There's not much we can do if it fails during destruction. */
         PJ_ASSERT_ON_FAIL(status==PJ_SUCCESS, return);
     }
 }
