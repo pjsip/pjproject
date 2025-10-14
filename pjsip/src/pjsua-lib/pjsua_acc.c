@@ -4786,8 +4786,8 @@ PJ_DEF(pj_status_t) pjsua_acc_send_response(pjsua_acc_id acc_id,
     }
 
     if (msg_data) {
-        pjsip_hdr *hdr;
-        for (hdr = &msg_data->hdr_list; hdr && hdr != &msg_data->hdr_list;
+        const pjsip_hdr *hdr;
+        for (hdr = msg_data->hdr_list.next; hdr && hdr != &msg_data->hdr_list;
              hdr=hdr->next) {
             pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)pjsip_hdr_clone(
                                                     tdata->pool, hdr));

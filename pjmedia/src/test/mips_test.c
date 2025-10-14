@@ -1013,6 +1013,7 @@ static pj_status_t init_l16_default(pjmedia_endpt *endpt)
     return pjmedia_codec_l16_init(endpt, 0);
 }
 
+#if PJMEDIA_CODEC_L16_HAS_8KHZ_MONO
 /* L16/8000/1 benchmark */
 static pjmedia_port* l16_8_encode_decode(pj_pool_t *pool,
                                          unsigned clock_rate,
@@ -1026,7 +1027,9 @@ static pjmedia_port* l16_8_encode_decode(pj_pool_t *pool,
                                clock_rate, channel_count,
                                samples_per_frame, flags, te);
 }
+#endif
 
+#if PJMEDIA_CODEC_L16_HAS_16KHZ_MONO
 /* L16/16000/1 benchmark */
 static pjmedia_port* l16_16_encode_decode(pj_pool_t *pool,
                                           unsigned clock_rate,
@@ -1040,6 +1043,7 @@ static pjmedia_port* l16_16_encode_decode(pj_pool_t *pool,
                                clock_rate, channel_count,
                                samples_per_frame, flags, te);
 }
+#endif
 #endif
 
 /***************************************************************************/
