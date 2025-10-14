@@ -550,13 +550,13 @@ static void set_thread_display_name(const char *name)
 
     if (pSetThreadDescription) {
         wchar_t wname[PJ_MAX_OBJ_NAME];
+        HRESULT hr;
         pj_ansi_to_unicode(name, pj_ansi_strlen(name), wname, PJ_MAX_OBJ_NAME);
 
         /* Set thread name by SetThreadDescription (if support) */
-        HRESULT hr = pSetThreadDescription(GetCurrentThread(), wname);
+        hr = pSetThreadDescription(GetCurrentThread(), wname);
         pj_assert(SUCCEEDED(hr));
         PJ_UNUSED_ARG(hr);
-        //PJ_LOG(6, (THIS_FILE, "SetThreadDescription:%p, name:%s", pSetThreadDescription, name));
 
 #if 0
         PWSTR  data;
@@ -574,7 +574,6 @@ static void set_thread_display_name(const char *name)
          * 
          * So additionally let's set a thread name by throwing an exception.
          */
-        //return;
     }
 
     /* Set thread name by throwing an exception */
