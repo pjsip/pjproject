@@ -234,6 +234,9 @@ PJ_DECL(pj_off_t) pj_file_size_by_handle(pj_oshandle_t fh)
 
 #else
 
+#if    (defined(PJ_HAS_UNISTD_H) && PJ_HAS_UNISTD_H != 0)
+#   define _fileno(f) fileno(f)
+#endif
     struct stat buf;
     int fd, result;
 
