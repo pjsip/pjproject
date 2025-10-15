@@ -3154,12 +3154,15 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_restart(pjsua_transport_id id,
 
     tp_type = pjsua_var.tpdata[id].type & ~PJSIP_TRANSPORT_IPV6;
  
+    /* Common variables used by all transport types */
+    pj_sockaddr bind_addr;
+    pjsip_host_port addr_name;
+    int af;
+    
     if ((tp_type == PJSIP_TRANSPORT_TLS) || (tp_type == PJSIP_TRANSPORT_TCP)) {
-        pj_sockaddr bind_addr;
-        pjsip_host_port addr_name;
         pjsip_tpfactory *factory = pjsua_var.tpdata[id].data.factory;
         
-        int af = pjsip_transport_type_get_af(factory->type);
+        af = pjsip_transport_type_get_af(factory->type);
 
         /* Initialize bind address */
         pj_sockaddr_init(af, &bind_addr, NULL, 0);
@@ -3196,11 +3199,9 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_restart(pjsua_transport_id id,
         }
 #endif  
     } else if (tp_type == PJSIP_TRANSPORT_UDP) {
-        pj_sockaddr bind_addr;
-        pjsip_host_port addr_name;
         pjsip_transport *transport = pjsua_var.tpdata[id].data.tp;
         
-        int af = pjsip_transport_type_get_af(transport->key.type);
+        af = pjsip_transport_type_get_af(transport->key.type);
 
         /* Initialize bind address */
         pj_sockaddr_init(af, &bind_addr, NULL, 0);
