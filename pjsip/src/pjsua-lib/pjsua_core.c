@@ -3139,6 +3139,73 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_start(pjsua_transport_id id,
 }
 
 
+PJ_DEF(pj_status_t) pjsua_transport_lis_restart(pjsua_transport_id id,
+                                               const pjsua_transport_config *cfg,
+                                               const pjsip_tls_setting *tls_opt)
+{
+    pj_status_t status = PJ_SUCCESS;
+    pjsip_transport_type_e tp_type;
+
+    /* Make sure id is in range. */
+    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.tpdata), 
+                     PJ_EINVAL);
+
+    /* Make sure that transport exists */
+    PJ_ASSERT_RETURN(pjsua_var.tpdata[id].data.ptr != NULL, PJ_EINVAL);
+
+    tp_type = pjsua_var.tpdata[id].type & ~PJSIP_TRANSPORT_IPV6;
+ 
+    if ((tp_type == PJSIP_TRANSPORT_TLS) || (tp_type == PJSIP_TRANSPORT_TCP)) {
+        pj_sockaddr bind_addr;
+        pjsip_host_port addr_name;
+        pjsip_tpfactory *factory = pjsua_var.tpdata[id].data.factory;
+        
+        int af = pjsip_transport_type_get_af(factory->type);
+
+        /* Initialize bind address */
+        pj_sockaddr_init(af, &bind_addr, NULL, 0);
+        
+        if (cfg->port)
+            pj_sockaddr_set_port(&bind_addr, (pj_uint16_t)cfg->port);
+
+        if (cfg->bound_addr.slen) {
+            status = pj_sockaddr_set_str_addr(af, 
+                                              &bind_addr,
+                                              &cfg->bound_addr);
+            if (status != PJ_SUCCESS) {
+                pjsua_perror(THIS_FILE, 
+                             "Unable to resolve transport bound address", 
+                             status);
+                return status;
+            }
+        }
+
+        /* Set published name */
+        pj_bzero(&addr_name, sizeof(pjsip_host_port));
+        if (cfg->public_addr.slen)
+            addr_name.host = cfg->public_addr;
+
+        if (tp_type == PJSIP_TRANSPORT_TCP) {
+            status = pjsip_tcp_transport_restart(factory, &bind_addr,
+                                                 &addr_name);
+        }
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+        else {
+            /* Use the new restart2 function for TLS to support settings update */
+            status = pjsip_tls_transport_restart2(factory, tls_opt, &bind_addr,
+                                                  &addr_name); 
+        }
+#endif  
+    } else if (tp_type == PJSIP_TRANSPORT_UDP) {
+        /* UDP transports don't have listeners to restart */
+        status = PJ_EINVAL;
+    } else {
+        status = PJ_EINVAL;
+    }
+    return status;
+}
+
+
 /*
  * Add additional headers etc in msg_data specified by application
  * when sending requests.
