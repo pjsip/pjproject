@@ -111,8 +111,6 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     }
     if ((flags & PJ_O_RDONLY) == PJ_O_RDONLY) {
         dwDesiredAccess |= GENERIC_READ;
-        //if (flags == PJ_O_RDONLY)
-        //    dwCreationDisposition |= OPEN_EXISTING;
     }
 
     if (dwDesiredAccess == 0) {
