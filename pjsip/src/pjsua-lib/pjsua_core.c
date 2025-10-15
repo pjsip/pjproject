@@ -3140,8 +3140,7 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_start(pjsua_transport_id id,
 
 
 PJ_DEF(pj_status_t) pjsua_transport_lis_restart(pjsua_transport_id id,
-                                               const pjsua_transport_config *cfg,
-                                               const pjsip_tls_setting *tls_opt)
+                                               const pjsua_transport_config *cfg)
 {
     pj_status_t status = PJ_SUCCESS;
     pjsip_transport_type_e tp_type;
@@ -3192,7 +3191,7 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_restart(pjsua_transport_id id,
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
         else {
             /* Use the new restart2 function for TLS to support settings update */
-            status = pjsip_tls_transport_restart2(factory, tls_opt, &bind_addr,
+            status = pjsip_tls_transport_restart2(factory, &cfg->tls_setting, &bind_addr,
                                                   &addr_name); 
         }
 #endif  
