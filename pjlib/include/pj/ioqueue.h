@@ -944,6 +944,7 @@ PJ_DECL(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
  */
 PJ_DECL(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue );
 
+
 /**
  * @}
  */
