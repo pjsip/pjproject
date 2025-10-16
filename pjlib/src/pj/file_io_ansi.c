@@ -240,13 +240,15 @@ PJ_DECL(pj_off_t) pj_file_size_by_handle(pj_oshandle_t fh)
     struct stat buf;
     int fd, result;
 
-    if ((fd = _fileno((FILE*)fh)) == -1)
+    fd = _fileno((FILE*)fh);
+    if (fd == -1)
         return -1;
-    else if ((result = fstat( fd, &buf )) != 0)
-        return -1;
-    else
-        return buf.st_size;
 
+    result = fstat(fd, &buf);
+    if (result != 0)
+        return -1;
+
+    return buf.st_size;
 #endif
 }
 
