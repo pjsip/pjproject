@@ -1546,9 +1546,11 @@ public:
     void libDestroy(unsigned prmFlags=0) PJSUA2_THROW(Error);
 
     /**
-     * Get the ioqueue handle associated with pjsua's SIP IO queue, if any.
-     * Returns an integer >= 0 if the IO queue is implemented with epoll or
-     * kqueue, otherwise returns -1.
+     * Get the OS handle pointer associated with pjsua's SIP IO queue.
+     * For epoll/kqueue backends the returned value points to a POSIX file
+     * descriptor. For all other backends the returned value points to a
+     * platform-specific handle. If the backend does not expose a handle
+     * NULL is returned.
      */
     pj_oshandle_t libGetSipIoqueueHandle();
 
