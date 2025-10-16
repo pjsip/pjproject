@@ -29,6 +29,11 @@ using namespace pj;
 %template(ByteVector)            std::vector<unsigned char>;
 %template(StringToStringMap)     std::map<string, string>;
 
+// simplifies handling of void* pointer across
+// all language bindings
+%typemap(out) pj_oshandle_t {
+  $result = SWIG_From_unsigned_SS_long_SS_long(reinterpret_cast<uintptr_t>($1));
+}
 
 #ifdef SWIGPYTHON
   %feature("director:except") {
