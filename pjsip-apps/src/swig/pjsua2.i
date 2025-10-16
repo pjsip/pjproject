@@ -31,6 +31,10 @@ using namespace pj;
 
 // simplifies handling of void* pointer across
 // all language bindings
+%include <stdint.i>
+
+%types(unsigned long long);
+
 %typemap(out) pj_oshandle_t {
   $result = SWIG_From_unsigned_SS_long_SS_long(reinterpret_cast<uintptr_t>($1));
 }
