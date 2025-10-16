@@ -766,6 +766,15 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
                                                 const pj_sockaddr *local,
                                                 const pjsip_host_port *a_name)
 {
+    return pjsip_tls_transport_restart2(factory, NULL, local, a_name);
+}
+
+
+PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
+                                                 const pjsip_tls_setting *opt,
+                                                 const pj_sockaddr *local,
+                                                 const pjsip_host_port *a_name)
+{
     pj_status_t status = PJ_SUCCESS;
     struct tls_listener *listener = (struct tls_listener *)factory;
 
@@ -774,6 +783,15 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
         PJ_LOG(3,(factory->obj_name,
                       "TLS restart requested while no listener created, "
                       "update the published address only"));
+
+        /* Update TLS settings if provided */
+        if (opt) {
+            /* Wipe old certificate keys for security */
+            pjsip_tls_setting_wipe_keys(&listener->tls_setting);
+            
+            /* Copy new settings */
+            pjsip_tls_setting_copy(listener->factory.pool, &listener->tls_setting, opt);
+        }
 
         status = update_factory_addr(listener, a_name);
         if (status != PJ_SUCCESS)
@@ -786,6 +804,69 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
     }
 
     lis_close(listener);
+
+    /* Update TLS settings if provided */
+    if (opt) {
+        /* Wipe old certificate keys for security */
+        pjsip_tls_setting_wipe_keys(&listener->tls_setting);
+        
+        /* Copy new settings */
+        pjsip_tls_setting_copy(listener->factory.pool, &listener->tls_setting, opt);
+        
+        /* Free old certificate if present */
+        if (listener->cert) {
+            pj_ssl_cert_wipe_keys(listener->cert);
+            listener->cert = NULL;
+        }
+        
+        /* Load new certificate based on updated settings */
+        if (listener->tls_setting.cert_file.slen ||
+            listener->tls_setting.ca_list_file.slen ||
+            listener->tls_setting.ca_list_path.slen || 
+            listener->tls_setting.privkey_file.slen) 
+        {
+            status = pj_ssl_cert_load_from_files2(listener->factory.pool,
+                            &listener->tls_setting.ca_list_file,
+                            &listener->tls_setting.ca_list_path,
+                            &listener->tls_setting.cert_file,
+                            &listener->tls_setting.privkey_file,
+                            &listener->tls_setting.password,
+                            &listener->cert);
+            if (status != PJ_SUCCESS) {
+                tls_perror(listener->factory.obj_name,
+                           "Failed to load certificate from files", status, NULL);
+                return status;
+            }
+        } else if (listener->tls_setting.ca_buf.slen ||
+                   listener->tls_setting.cert_buf.slen ||
+                   listener->tls_setting.privkey_buf.slen)
+        {
+            status = pj_ssl_cert_load_from_buffer(listener->factory.pool,
+                            &listener->tls_setting.ca_buf,
+                            &listener->tls_setting.cert_buf,
+                            &listener->tls_setting.privkey_buf,
+                            &listener->tls_setting.password,
+                            &listener->cert);
+            if (status != PJ_SUCCESS) {
+                tls_perror(listener->factory.obj_name,
+                           "Failed to load certificate from buffer", status, NULL);
+                return status;
+            }
+        } else if (listener->tls_setting.cert_lookup.type !=
+                                                    PJ_SSL_CERT_LOOKUP_NONE &&
+                   listener->tls_setting.cert_lookup.keyword.slen)
+        {
+            status = pj_ssl_cert_load_from_store(
+                                    listener->factory.pool,
+                                    &listener->tls_setting.cert_lookup,
+                                    &listener->cert);
+            if (status != PJ_SUCCESS) {
+                tls_perror(listener->factory.obj_name,
+                           "Failed to load certificate from store", status, NULL);
+                return status;
+            }
+        }
+    }
 
     status = pjsip_tls_transport_lis_start(factory, local, a_name);
     if (status != PJ_SUCCESS) { 

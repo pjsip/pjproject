@@ -3595,6 +3595,24 @@ PJ_DECL(pj_status_t) pjsua_transport_lis_start( pjsua_transport_id id,
 
 
 /**
+ * Restart the listener of the transport. This will close the listener socket
+ * and recreate it. For TLS transports, TLS settings can be specified in the
+ * transport config to update certificates, keys, and other TLS parameters 
+ * during runtime. For UDP transports, this will restart the transport with
+ * new settings.
+ *
+ * @param id            Transport ID.
+ * @param cfg           The new transport config used by the listener. 
+ *                      For TCP/TLS: port, public_addr, bound_addr, and tls_setting
+ *                      are used. For UDP: port, public_addr, and bound_addr are used.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_transport_lis_restart( pjsua_transport_id id,
+                                                  const pjsua_transport_config *cfg);
+
+
+/**
  * @}
  */
 
