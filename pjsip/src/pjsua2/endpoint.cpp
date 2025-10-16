@@ -2251,20 +2251,6 @@ pj_oshandle_t Endpoint::libGetSipIoqueueHandle()
     return pj_ioqueue_get_os_handle(ioq);
 }
 
-int Endpoint::libGetSipIoqueueFd()
-{
-    pjsip_endpoint* endp = pjsua_get_pjsip_endpt();
-    pj_ioqueue_t* ioq = pjsip_endpt_get_ioqueue(endp);
-    return pj_ioqueue_get_os_fd(ioq);
-}
-
-int Endpoint::libGetMediaIoqueueFd()
-{
-    pjmedia_endpt* endp = pjsua_get_pjmedia_endpt();
-    pj_ioqueue_t* ioq = pjmedia_endpt_get_ioqueue(endp);
-    return pj_ioqueue_get_os_fd(ioq);
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 /*
  * Endpoint Utilities

@@ -945,19 +945,6 @@ PJ_DECL(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
 PJ_DECL(pj_oshandle_t) pj_ioqueue_get_os_handle( pj_ioqueue_t *ioqueue );
 
 /**
- * Get the file descriptor associated with an ioqueue instance.
- *
- * @param ioqueue        The ioqueue instance.
- *
- * @return          The OS file descriptor associated with the instance.
-*                   This value will >= 0 on platforms where the ioqueue
-*                   has a descriptor usable with select, poll, epoll,
-*                   or kqueue. For all other platforms, or if no handle
-*                   is available, -1 will be returned.
- */
-PJ_DECL(int) pj_ioqueue_get_os_fd( pj_ioqueue_t *ioqueue );
-
-/**
  * @}
  */
 
