@@ -1048,13 +1048,16 @@ static pj_status_t parse_setup_finger_attr(dtls_srtp *ds,
     if (!a)
         return PJMEDIA_SRTP_ESDPAMBIGUEANS;
 
-    if (pj_stristr(&a->value, &ID_PASSIVE) ||
-        (rem_as_offerer && pj_stristr(&a->value, &ID_ACTPASS)))
-    {
-        /* Remote offers/answers 'passive' (or offers 'actpass'), so we are
-         * the client.
-         */
+    if (pj_stristr(&a->value, &ID_PASSIVE)) {
+        /* Remote offers/answers 'passive' so we are the client. */
         ds->setup = DTLS_SETUP_ACTIVE;
+    } else if (rem_as_offerer && pj_stristr(&a->value, &ID_ACTPASS)) {
+        /* If remote offers 'actpass' and our setup is unknown,
+         * we choose the role as the client, otherwise we maintain
+         * the current setup to avoid establishing new DTLS connection.
+         */
+        if (ds->setup == DTLS_SETUP_UNKNOWN)
+            ds->setup = DTLS_SETUP_ACTIVE;
     } else if (pj_stristr(&a->value, &ID_ACTIVE)) {
         /* Remote offers/answers 'active' so we are the server. */
         ds->setup = DTLS_SETUP_PASSIVE;
