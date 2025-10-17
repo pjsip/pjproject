@@ -1054,7 +1054,9 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
                                       pj_atomic_value_t initial,
                                       pj_atomic_t **ptr_atomic)
 {
+#if EMULATE_ATOMICS
     pj_status_t rc;
+#endif
     pj_atomic_t *atomic_var;
 
     atomic_var = PJ_POOL_ZALLOC_T(pool, pj_atomic_t);
@@ -1081,7 +1083,9 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
 {
+#if EMULATE_ATOMICS
     pj_status_t status;
+#endif
 
     PJ_ASSERT_RETURN(atomic_var, PJ_EINVAL);
 
@@ -1101,7 +1105,9 @@ PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
  */
 PJ_DEF(void) pj_atomic_set(pj_atomic_t *atomic_var, pj_atomic_value_t value)
 {
+#if EMULATE_ATOMICS
     pj_status_t status;
+#endif
 
     PJ_CHECK_STACK();
     PJ_ASSERT_ON_FAIL(atomic_var, return);

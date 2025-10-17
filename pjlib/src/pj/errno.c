@@ -215,7 +215,8 @@ PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
 }
 
 #if PJ_LOG_MAX_LEVEL >= 1
-static void invoke_log(const char *sender, int level, const char *format, ...)
+static void invoke_log(const char *sender, int level, 
+                       PJ_PRINT_PARAM_DECOR const char *format, ...)
 {
     va_list arg;
     va_start(arg, format);
@@ -225,7 +226,8 @@ static void invoke_log(const char *sender, int level, const char *format, ...)
 
 static void pj_perror_imp(int log_level, const char *sender, 
                           pj_status_t status,
-                          const char *title_fmt, va_list marker)
+                          PJ_PRINT_PARAM_DECOR const char *title_fmt, 
+                          va_list marker)
 {
     char titlebuf[PJ_PERROR_TITLE_BUF_SIZE];
     char errmsg[PJ_ERR_MSG_SIZE];
@@ -233,6 +235,12 @@ static void pj_perror_imp(int log_level, const char *sender,
 
     /* Build the title */
     len = pj_ansi_vsnprintf(titlebuf, sizeof(titlebuf), title_fmt, marker);
+    if (len < 0) {
+    	/* if you see this message in your log, please increase or set
+    	   PJ_PERROR_TITLE_BUF_SIZE in your config_site.h */
+        len = pj_ansi_snprintf(titlebuf, sizeof(titlebuf),
+                               "<pj_perror_imp error: msg too long>");
+    }
     if (len < 0 || len >= (int)sizeof(titlebuf))
         pj_ansi_strxcpy(titlebuf, "Error", sizeof(titlebuf));
 
@@ -244,7 +252,7 @@ static void pj_perror_imp(int log_level, const char *sender,
 }
 
 PJ_DEF(void) pj_perror(int log_level, const char *sender, pj_status_t status,
-                       const char *title_fmt, ...)
+                       PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -253,7 +261,7 @@ PJ_DEF(void) pj_perror(int log_level, const char *sender, pj_status_t status,
 }
 
 PJ_DEF(void) pj_perror_1(const char *sender, pj_status_t status,
-                         const char *title_fmt, ...)
+                         PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -263,7 +271,7 @@ PJ_DEF(void) pj_perror_1(const char *sender, pj_status_t status,
 
 #else /* #if PJ_LOG_MAX_LEVEL >= 1 */
 PJ_DEF(void) pj_perror(int log_level, const char *sender, pj_status_t status,
-                       const char *title_fmt, ...)
+                       PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
 {
 }
 #endif  /* #if PJ_LOG_MAX_LEVEL >= 1 */
@@ -271,7 +279,7 @@ PJ_DEF(void) pj_perror(int log_level, const char *sender, pj_status_t status,
 
 #if PJ_LOG_MAX_LEVEL >= 2
 PJ_DEF(void) pj_perror_2(const char *sender, pj_status_t status,
-                         const char *title_fmt, ...)
+                         PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -282,7 +290,7 @@ PJ_DEF(void) pj_perror_2(const char *sender, pj_status_t status,
 
 #if PJ_LOG_MAX_LEVEL >= 3
 PJ_DEF(void) pj_perror_3(const char *sender, pj_status_t status,
-                         const char *title_fmt, ...)
+                         PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -293,7 +301,7 @@ PJ_DEF(void) pj_perror_3(const char *sender, pj_status_t status,
 
 #if PJ_LOG_MAX_LEVEL >= 4
 PJ_DEF(void) pj_perror_4(const char *sender, pj_status_t status,
-                         const char *title_fmt, ...)
+                         PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -304,7 +312,7 @@ PJ_DEF(void) pj_perror_4(const char *sender, pj_status_t status,
 
 #if PJ_LOG_MAX_LEVEL >= 5
 PJ_DEF(void) pj_perror_5(const char *sender, pj_status_t status,
-                         const char *title_fmt, ...)
+                         PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);
@@ -315,7 +323,7 @@ PJ_DEF(void) pj_perror_5(const char *sender, pj_status_t status,
 
 #if PJ_LOG_MAX_LEVEL >= 6
 PJ_DEF(void) pj_perror_6(const char *sender, pj_status_t status,
-                         const char *title_fmt, ...)
+                         PJ_PRINT_PARAM_DECOR const char *title_fmt, ...)
 {
     va_list marker;
     va_start(marker, title_fmt);

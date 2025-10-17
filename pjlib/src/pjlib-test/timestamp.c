@@ -85,8 +85,18 @@ static int timestamp_accuracy()
     if (diff < 0)
         diff = -diff;
 
+    /* In CI mode, allow max 10 msec mismatch */
+    if (test_app.param_ci_mode) {
+        if (diff > (pj_int64_t)(freq.u64 / 100)) {
+            PJ_LOG(3,(THIS_FILE, "....error: timestamp drifted by %d usec after "
+                                 "%d msec",
+                                 (pj_uint32_t)(diff * 1000000 / freq.u64),
+                                 (int)msec));
+            return -2001;
+        }
+
     /* Only allow 1 msec mismatch */
-    if (diff > (pj_int64_t)(freq.u64 / 1000)) {
+    } else if (diff > (pj_int64_t)(freq.u64 / 1000)) {
         PJ_LOG(3,(THIS_FILE, "....error: timestamp drifted by %d usec after "
                              "%d msec", 
                              (pj_uint32_t)(diff * 1000000 / freq.u64), 

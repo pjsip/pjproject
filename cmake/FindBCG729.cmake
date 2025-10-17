@@ -1,0 +1,48 @@
+find_package(PkgConfig QUIET)
+if(PKG_CONFIG_FOUND)
+  pkg_search_module(PC_BCG729 bcg729 libbcg729)
+  set(BCG729_VERSION ${PC_BCG729_VERSION})
+endif()
+
+find_path(BCG729_INCLUDE_DIR
+  NAMES
+    "bcg729/encoder.h"
+  HINTS
+    ${PC_BCG729_INCLUDEDIR}
+    ${PC_BCG729_INCLUDE_DIRS}
+)
+mark_as_advanced(BCG729_INCLUDE_DIR)
+
+find_library(BCG729_LIBRARY
+  NAMES
+    bcg729
+    libbcg729
+  HINTS
+    ${PC_BCG729_LIBDIR}
+    ${PC_BCG729_LIBRARY_DIRS}
+)
+mark_as_advanced(BCG729_LIBRARY)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(BCG729
+  REQUIRED_VARS
+    BCG729_LIBRARY
+    BCG729_INCLUDE_DIR
+  VERSION_VAR
+    BCG729_VERSION
+)
+
+if(BCG729_FOUND)
+  set(BCG729_LIBRARIES ${BCG729_LIBRARY})
+  set(BCG729_INCLUDE_DIRS ${BCG729_INCLUDE_DIR})
+  set(BCG729_DEFINITIONS ${PC_BCG729_CFLAGS_OTHER})
+
+  if(NOT TARGET BCG729::BCG729)
+    add_library(BCG729::BCG729 UNKNOWN IMPORTED)
+    set_target_properties(BCG729::BCG729 PROPERTIES
+      IMPORTED_LOCATION "${BCG729_LIBRARIES}"
+      INTERFACE_INCLUDE_DIRECTORIES "${BCG729_INCLUDE_DIRS}"
+      INTERFACE_COMPILE_OPTIONS "${BCG729_DEFINITIONS}"
+    )
+  endif()
+endif()

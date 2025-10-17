@@ -3595,6 +3595,24 @@ PJ_DECL(pj_status_t) pjsua_transport_lis_start( pjsua_transport_id id,
 
 
 /**
+ * Restart the listener of the transport. This will close the listener socket
+ * and recreate it. For TLS transports, TLS settings can be specified in the
+ * transport config to update certificates, keys, and other TLS parameters 
+ * during runtime. For UDP transports, this will restart the transport with
+ * new settings.
+ *
+ * @param id            Transport ID.
+ * @param cfg           The new transport config used by the listener. 
+ *                      For TCP/TLS: port, public_addr, bound_addr, and tls_setting
+ *                      are used. For UDP: port, public_addr, and bound_addr are used.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_transport_lis_restart( pjsua_transport_id id,
+                                                  const pjsua_transport_config *cfg);
+
+
+/**
  * @}
  */
 
@@ -4782,6 +4800,28 @@ typedef struct pjsua_acc_config
      */
     pj_bool_t        use_shared_auth;
 
+    /**
+    * Specify whether incoming SIP MESSAGE requests are responded
+    * automatically.
+    *
+    * If set to PJ_TRUE (automatic response), incoming MESSAGE requests
+    * will be responded to immediately with SIP 200 OK (legacy behavior).
+    *
+    * If set to PJ_FALSE, incoming MESSAGE requests will create UAS
+    * transactions supporting explicit responses and defering responses.
+    *
+    * The application may either respond immediately in the on_pager() or
+    * on_pager2() callbacks by using pjsua_acc_send_response(), or defer the
+    * response to later time. In the latter case, the application must clone the
+    * rx_data by calling pjsip_rx_data_clone() within on_pager() or on_pager2()
+    * callbacks. The cloned rx_data and the pointer to the transaction can then
+    * be used later for pjsua_acc_send_response().
+    *
+    * Default: PJ_TRUE (automatic response for backward compatibility)
+    */
+    pj_bool_t        auto_repond_sip_message;
+
+
 } pjsua_acc_config;
 
 
@@ -5117,6 +5157,34 @@ PJ_DECL(pj_status_t) pjsua_acc_modify(pjsua_acc_id acc_id,
                                       const pjsua_acc_config *acc_cfg);
 
 /**
+ * Send response to incoming request (e.g. SIP MESSAGE) that was
+ * processed by a UAS transaction.
+ *
+ * This function can be used when the application wants to defer a
+ * response to an incoming request that was processed by 
+ * a UAS transaction.
+ *
+ * @param acc_id        The account that will send the response.
+ * @param rdata         The received request data.
+ * @param tsx           The UAS transaction that was created for the incoming
+ *                      request.
+ * @param st_code       Status code to be sent (e.g., 200 for OK, 400 for 
+ *                      Bad Request, etc.).
+ * @param st_text       Optional status text. If NULL, default status text for
+ *                      the status code will be used.
+ * @param msg_data      Optional headers etc. to be added to the outgoing
+ *                      response, or NULL if no custom header is desired.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_send_response(pjsua_acc_id acc_id,
+                                             pjsip_rx_data *rdata,
+                                             pjsip_transaction *tsx,
+                                             int st_code,
+                                             const pj_str_t *st_text,
+                                             const pjsua_msg_data *msg_data);
+
+/**
  * Send arbitrary out-of-dialog requests from an account, e.g. OPTIONS.
  * The application should use the call or presence API to create
  * dialog-related requests.
@@ -5125,7 +5193,8 @@ PJ_DECL(pj_status_t) pjsua_acc_modify(pjsua_acc_id acc_id,
  * @param dest_uri      URI to be put into the To header (normally is the same
  *                      as the target URI).
  * @param method        The SIP method of the request.
- * @param options       This is for future use (currently only NULL is supported).
+ * @param options       This is for future use (currently only NULL is
+ *                      supported).
  * @param token         Arbitrary token (user data owned by the application)
  *                      to be passed back to the application in callback
  *                      on_acc_send_request().
@@ -7282,7 +7351,6 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
                                      const pj_str_t *to, 
                                      pj_bool_t is_typing,
                                      const pjsua_msg_data *msg_data);
-
 
 
 /**

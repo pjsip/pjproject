@@ -122,8 +122,10 @@ PJ_DEF(void) pj_caching_pool_destroy( pj_caching_pool *cp )
     }
 
     if (cp->lock) {
+        pj_status_t status;
         pj_lock_destroy(cp->lock);
-        pj_lock_create_null_mutex(NULL, "cachingpool", &cp->lock);
+        status = pj_lock_create_null_mutex(NULL, "cachingpool", &cp->lock);
+        PJ_ASSERT_ON_FAIL(status==PJ_SUCCESS, return);
     }
 }
 
