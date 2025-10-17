@@ -207,7 +207,9 @@ PJ_DEF(pj_status_t) pj_file_flush(pj_oshandle_t fd)
  */
 PJ_DECL(pj_off_t) pj_file_size_by_handle(pj_oshandle_t fh)
 {
-#if 0
+#if !defined(PJ_HAS_SYS_STAT_H) && PJ_HAS_SYS_STAT_H == 0
+
+    // fallback implementation: seek to end of file
     // ineffective, not thread safe (because it changes file pointer),
     // but better than nothing.
     // use fstat() instead
