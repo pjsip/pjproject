@@ -233,6 +233,9 @@
     <ClCompile Include="..\src\pj\atomic_slist.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pj\file_access_unistd.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\pj\ioqueue_common_abs.h">
@@ -455,6 +458,9 @@
       <Filter>Header Files\compat</Filter>
     </ClInclude>
     <ClInclude Include="..\src\pj\ssl_sock_imp_common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\argparse.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
