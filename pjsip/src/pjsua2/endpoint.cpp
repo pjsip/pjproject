@@ -2244,6 +2244,13 @@ void Endpoint::libDestroy(unsigned flags) PJSUA2_THROW(Error)
     PJSUA2_CHECK_RAISE_ERROR(status);
 }
 
+pj_oshandle_t Endpoint::libGetSipIoqueueHandle() 
+{
+    pjsip_endpoint* endp = pjsua_get_pjsip_endpt();
+    pj_ioqueue_t* ioq = pjsip_endpt_get_ioqueue(endp);
+    return pj_ioqueue_get_os_handle(ioq);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /*
  * Endpoint Utilities

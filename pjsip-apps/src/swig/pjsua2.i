@@ -29,7 +29,6 @@ using namespace pj;
 %template(ByteVector)            std::vector<unsigned char>;
 %template(StringToStringMap)     std::map<string, string>;
 
-
 #ifdef SWIGPYTHON
   %feature("director:except") {
     if( $error != NULL ) {
@@ -40,6 +39,12 @@ using namespace pj;
       //Py_Exit(1);
     }
   }
+
+  %typemap(out) void* {
+    $result = PyLong_FromVoidPtr($1);
+  }
+
+  %apply void* { pj_oshandle_t };
 
   %extend std::vector<unsigned char> {
     void assign_from_bytes(PyObject* obj) {
