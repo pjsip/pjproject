@@ -28,7 +28,9 @@
 #if defined(PJ_HAS_SYS_TYPES_H) && PJ_HAS_SYS_TYPES_H != 0
 #include <sys/types.h>
 #endif
+#if defined(PJ_HAS_SYS_STAT_H) && PJ_HAS_SYS_STAT_H != 0
 #include <sys/stat.h>
+#endif
 
 #if PJ_FILE_IO == PJ_FILE_IO_ANSI
 
