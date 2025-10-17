@@ -29,16 +29,6 @@ using namespace pj;
 %template(ByteVector)            std::vector<unsigned char>;
 %template(StringToStringMap)     std::map<string, string>;
 
-// simplifies handling of void* pointer across
-// all language bindings
-%include <stdint.i>
-
-%types(unsigned long long);
-
-%typemap(out) pj_oshandle_t {
-  $result = SWIG_From_unsigned_SS_long_SS_long(reinterpret_cast<uintptr_t>($1));
-}
-
 #ifdef SWIGPYTHON
   %feature("director:except") {
     if( $error != NULL ) {
@@ -49,6 +39,13 @@ using namespace pj;
       //Py_Exit(1);
     }
   }
+
+  %typemap(out) void* {
+    $result = PyLong_FromVoidPtr($1);
+  }
+
+  %apply void* { pj_oshandle_t };
+
 #endif
 
 #ifdef SWIGCSHARP
