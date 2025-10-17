@@ -1267,6 +1267,13 @@ static pj_status_t create_ice_media_transport(
 
             /* Configure max packet size */
             ice_cfg.stun_tp[i].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+
+            /* Configure manual host candidates */
+            ice_cfg.stun_tp[i].manual_host_cnt =
+                                        acc_cfg->ice_cfg.ice_manual_host_cnt;
+            pj_memcpy(&ice_cfg.stun_tp[i].manual_host,
+                      &acc_cfg->ice_cfg.ice_manual_host,
+                      sizeof(ice_cfg.stun_tp[i].manual_host));
         }
     }
 

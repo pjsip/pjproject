@@ -3912,6 +3912,19 @@ typedef struct pjsua_ice_config
     int                 ice_max_host_cands;
 
     /**
+     * Number of manual host candidates. This must be equal or less than
+     * \a ice_max_host_cands.
+     */
+    unsigned            ice_manual_host_cnt;
+
+    /**
+     * Optional configuration to manually specify host candidates.
+     * Each candidate will use the same port as the automatic/base host
+     * candidate.
+     */
+    pj_sockaddr         ice_manual_host[PJ_ICE_ST_MAX_CAND];
+
+    /**
      * ICE session options.
      */
     pj_ice_sess_options ice_opt;

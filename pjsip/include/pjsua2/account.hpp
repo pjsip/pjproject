@@ -585,6 +585,14 @@ struct AccountNatConfig : public PersistentObject
     int                 iceMaxHostCands;
 
     /**
+     * Optional configuration to manually specify host candidates.
+     * Each candidate will use the same port as the automatic/base host
+     * candidate. The number of entries in this array must be equal or less
+     * than \a iceMaxHostCands.
+     */
+    SocketAddressVector iceManualHost;
+
+    /**
      * Specify whether to use aggressive nomination.
      *
      * Default: True
