@@ -492,6 +492,11 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
  * Socket is stopped
  */
 #define PJ_ESOCKETSTOP      (PJ_ERRNO_START_STATUS + 24)/* 70024 */
+/**
+ * @hideinitializer
+ * Try again
+ */
+#define PJ_ETRYAGAIN        (PJ_ERRNO_START_STATUS + 25)/* 70025 */
 
 /** @} */   /* pj_errnum */
 

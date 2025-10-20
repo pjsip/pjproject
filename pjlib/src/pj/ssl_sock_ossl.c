@@ -2487,10 +2487,10 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
             }
         }
         
-        /* Return PJ_EEOF when SSL needs renegotiation */
+        /* Return PJ_ETRYAGAIN when SSL needs renegotiation */
         if (!SSL_is_init_finished(ossock->ossl_ssl)) {
             pj_lock_release(ssock->write_mutex);
-            return PJ_EEOF;
+            return PJ_ETRYAGAIN;
         }
     }
 
@@ -2518,7 +2518,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
         int err;
         err = SSL_get_error(ossock->ossl_ssl, *nwritten);
         if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_NONE) {
-            status = PJ_EEOF;
+            status = PJ_ETRYAGAIN;
         } else {
             /* Some problem occured */
             status = STATUS_FROM_SSL_ERR2("Write", ssock, *nwritten,

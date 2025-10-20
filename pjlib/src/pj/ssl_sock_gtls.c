@@ -1194,7 +1194,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
         /* Nothing more to read */
         return PJ_SUCCESS;
     } else if (decrypted_size == GNUTLS_E_REHANDSHAKE) {
-        return PJ_EEOF;
+        return PJ_ETRYAGAIN;
     } else if (decrypted_size == GNUTLS_E_AGAIN ||
                decrypted_size == GNUTLS_E_INTERRUPTED ||
                !gnutls_error_is_fatal(decrypted_size))
