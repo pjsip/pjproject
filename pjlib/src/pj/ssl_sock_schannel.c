@@ -1539,14 +1539,14 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
         /* Set SSL state as handshaking & reset handshake status */
         ssock->ssl_state = SSL_STATE_HANDSHAKING;
         ssock->handshake_status = PJ_EUNKNOWN;
-        status = PJ_EEOF;
+        status = PJ_ETRYAGAIN;
     }
 
     else if (ss == SEC_I_CONTEXT_EXPIRED)
     {
         PJ_LOG(3, (SNAME(ssock), "TLS connection closed"));
         //status = sec_err_to_pj(ss);
-        status = PJ_ECANCELLED;
+        status = PJ_EEOF;
     }
 
     else {

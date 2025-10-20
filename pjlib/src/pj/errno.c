@@ -78,7 +78,8 @@ static const struct
     PJ_BUILD_ERR(PJ_EIPV6NOTSUP,   "IPv6 is not supported"),
     PJ_BUILD_ERR(PJ_EAFNOTSUP,     "Unsupported address family"),
     PJ_BUILD_ERR(PJ_EGONE,         "Object no longer exists"),
-    PJ_BUILD_ERR(PJ_ESOCKETSTOP,   "Socket is in bad state")
+    PJ_BUILD_ERR(PJ_ESOCKETSTOP,   "Socket is in bad state"),
+    PJ_BUILD_ERR(PJ_ETRYAGAIN,     "Try again")
 };
 #endif  /* PJ_HAS_ERROR_STRING */
 
