@@ -497,6 +497,7 @@ void AccountNatConfig::readObject(const ContainerNode &node)
     NODE_READ_UNSIGNED( this_node, udpKaIntervalSec);
     NODE_READ_STRING  ( this_node, udpKaData);
     NODE_READ_INT     ( this_node, contactUseSrcPort);
+    NODE_READ_STRINGV ( this_node, iceManualHost);
 }
 
 void AccountNatConfig::writeObject(ContainerNode &node) const
@@ -534,6 +535,7 @@ void AccountNatConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_UNSIGNED( this_node, udpKaIntervalSec);
     NODE_WRITE_STRING  ( this_node, udpKaData);
     NODE_WRITE_INT     ( this_node, contactUseSrcPort);
+    NODE_WRITE_STRINGV  (this_node, iceManualHost);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -758,6 +760,25 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.ice_cfg.enable_ice      = natConfig.iceEnabled;
     ret.ice_cfg.ice_opt.trickle = natConfig.iceTrickle;
     ret.ice_cfg.ice_max_host_cands = natConfig.iceMaxHostCands;
+    ret.ice_cfg.ice_manual_host_cnt = 0;
+    if (natConfig.iceManualHost.size() >
+                            PJ_ARRAY_SIZE(ret.ice_cfg.ice_manual_host))
+    {
+        PJSUA2_RAISE_ERROR(PJ_ETOOMANY);
+    }
+    for (i=0; i<natConfig.iceManualHost.size(); ++i) {
+        pj_str_t tmp = pj_str(const_cast<char*>
+                              (natConfig.iceManualHost[i].c_str()));
+        pj_sockaddr* addr =
+                &ret.ice_cfg.ice_manual_host[ret.ice_cfg.ice_manual_host_cnt];
+        if (pj_sockaddr_set_str_addr(pj_AF_INET(),  addr, &tmp)==PJ_SUCCESS ||
+            pj_sockaddr_set_str_addr(pj_AF_INET6(), addr, &tmp)==PJ_SUCCESS)
+        {
+            ret.ice_cfg.ice_manual_host_cnt++;
+        } else {
+            PJSUA2_RAISE_ERROR(PJ_EINVAL);
+        }
+    }
     ret.ice_cfg.ice_opt.aggressive = natConfig.iceAggressiveNomination;
     ret.ice_cfg.ice_opt.nominated_check_delay =
                             natConfig.iceNominatedCheckDelayMsec;
@@ -933,6 +954,14 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         natConfig.iceEnabled = PJ2BOOL(prm.ice_cfg.enable_ice);
         natConfig.iceTrickle = prm.ice_cfg.ice_opt.trickle;
         natConfig.iceMaxHostCands = prm.ice_cfg.ice_max_host_cands;
+        natConfig.iceManualHost.clear();
+        for (i=0; i<prm.ice_cfg.ice_manual_host_cnt; ++i) {
+            char buf[PJ_INET6_ADDRSTRLEN];
+            const pj_sockaddr *addr = &prm.ice_cfg.ice_manual_host[i];
+            if (pj_sockaddr_print(addr, buf, sizeof(buf), 0) != NULL) {
+                natConfig.iceManualHost.push_back(std::string(buf));
+            }
+        }
         natConfig.iceAggressiveNomination =
                         PJ2BOOL(prm.ice_cfg.ice_opt.aggressive);
         natConfig.iceNominatedCheckDelayMsec =
