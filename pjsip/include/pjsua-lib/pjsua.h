@@ -3361,7 +3361,7 @@ typedef struct pjsua_transport_config
 
     /**
      * This specifies TLS settings for TLS transport. 
-     * It’s only used when creating a SIP TLS transport.
+     * It's only used when creating a SIP TLS transport.
      */
     pjsip_tls_setting   tls_setting;
 
@@ -3953,7 +3953,7 @@ typedef struct pjsua_turn_config
     pj_stun_auth_cred   turn_auth_cred;
 
     /**
-     * This specifies TLS settings for TURN TLS. It’s only applicable when
+     * This specifies TLS settings for TURN TLS. It's only applicable when
      * TLS is used to connect to the TURN server.
      */
     pj_turn_sock_tls_cfg turn_tls_setting;
@@ -7795,7 +7795,7 @@ struct pjsua_media_config
     pj_stun_auth_cred   turn_auth_cred;
 
     /**
-     * This specifies TLS settings for TLS transport. It’s only applicable
+     * This specifies TLS settings for TLS transport. It's only applicable
      * when TLS is used to connect to the TURN server.
      */
     pj_turn_sock_tls_cfg turn_tls_setting;
