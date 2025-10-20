@@ -854,7 +854,7 @@ static pj_bool_t ssock_on_data_read (pj_ssl_sock_t *ssock,
 
             } else if (status_ == PJ_SUCCESS) {
                 break;
-            } else if (status_ == PJ_EEOF) {
+            } else if (status_ == PJ_ETRYAGAIN) {
                 status = ssl_do_handshake(ssock);
                 if (status == PJ_SUCCESS) {
                     /* Renegotiation completed */
@@ -1817,7 +1817,7 @@ static pj_status_t ssl_send (pj_ssl_sock_t *ssock,
     if (status == PJ_SUCCESS && nwritten == size) {
         /* All data written, flush write buffer to network socket */
         status = flush_circ_buf_output(ssock, send_key, size, flags);
-    } else if (status == PJ_EEOF) {
+    } else if (status == PJ_ETRYAGAIN) {
         /* Re-negotiation is on progress, flush re-negotiation data */
         status = flush_circ_buf_output(ssock, &ssock->handshake_op_key, 0, 0);
         if (status == PJ_SUCCESS || status == PJ_EPENDING) {

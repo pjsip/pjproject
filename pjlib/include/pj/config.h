@@ -812,6 +812,21 @@
 
 
 /**
+ * This setting ensures that the read callback is invoked without holding
+ * the key mutex, even when concurrency is disabled.
+ *
+ * Note: This may introduce a race condition between key unregistration
+ * and the read callback. Therefore, the application must be prepared
+ * to handle a read callback even after pj_ioqueue_unregister() has returned.
+ *
+ * Default: 0 (disabled).
+ */
+#ifndef PJ_IOQUEUE_CALLBACK_NO_LOCK
+#   define PJ_IOQUEUE_CALLBACK_NO_LOCK  0
+#endif
+
+
+/**
  * Determine if FD_SETSIZE is changeable/set-able. If so, then we will
  * set it to PJ_IOQUEUE_MAX_HANDLES. Currently we detect this by checking
  * for Winsock.
@@ -1244,6 +1259,27 @@
 #   endif // PJ_WIN32
 #endif  //PJ_ATOMIC_SLIST_IMPLEMENTATION
 
+/**
+ * File I/O backend implementation.
+ * Select one of these implementations in PJ_FILE_IO.
+ * By default, PJ_FILE_IO_WIN32 is selected on Windows platform,
+ * otherwise PJ_FILE_IO_ANSI is selected.
+ * 
+ * select ioqueue supports both backend under Windows, but IOCP
+ * supports Win32 file I/O only.
+ */
+#define PJ_FILE_IO_WIN32 0  /* Using Win32 file I/O  */
+#define PJ_FILE_IO_ANSI 1   /* Using ANSI C file I/O */
+
+#ifndef PJ_FILE_IO
+#   ifdef PJ_WIN32
+#       define PJ_FILE_IO   PJ_FILE_IO_WIN32
+#   else
+#       define PJ_FILE_IO   PJ_FILE_IO_ANSI
+#   endif // PJ_WIN32
+#elif PJ_FILE_IO == PJ_FILE_IO_ANSI && PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
+#   error IOCP ioqueue does not support ANSI file backend
+#endif  //PJ_FILE_IO
 
 /** @} */
 

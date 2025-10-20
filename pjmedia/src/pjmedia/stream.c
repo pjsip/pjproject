@@ -2688,7 +2688,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf2( pjmedia_stream *stream,
 
     pj_mutex_lock(c_strm->jb_mutex);
 
-    if (stream->tx_dtmf_count+digit_char->slen >=
+    if (stream->tx_dtmf_count+digit_char->slen >
         (long)PJ_ARRAY_SIZE(stream->tx_dtmf_buf))
     {
         status = PJ_ETOOMANY;

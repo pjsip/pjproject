@@ -209,17 +209,22 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     const pj_str_t str_trickle_ice = { "trickle-ice", 11 };
     pj_status_t status;
 
-    /* Init calls array. */
-    for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.calls); ++i)
-        reset_call(i);
-
     /* Copy config */
     pjsua_config_dup(pjsua_var.pool, &pjsua_var.ua_cfg, cfg);
 
     /* Verify settings */
-    if (pjsua_var.ua_cfg.max_calls >= PJSUA_MAX_CALLS) {
+    if (pjsua_var.ua_cfg.max_calls > PJSUA_MAX_CALLS) 
         pjsua_var.ua_cfg.max_calls = PJSUA_MAX_CALLS;
-    }
+    
+    pjsua_var.calls = (pjsua_call *)pj_pool_zalloc(pjsua_var.pool,
+                                                   sizeof(pjsua_call) *
+                                                   pjsua_var.ua_cfg.max_calls);
+    if (!pjsua_var.calls)
+        return PJ_ENOMEM;
+
+    /* Init calls array. */
+    for (i = 0U; i < pjsua_var.ua_cfg.max_calls; ++i)
+        reset_call(i);
 
     /* Check the route URI's and force loose route if required */
     for (i=0; i<pjsua_var.ua_cfg.outbound_proxy_cnt; ++i) {
@@ -2971,8 +2976,8 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
                                                     msg_data);
         }
         pj_list_push_back(&call->async_call.call_var.inc_call.answers,
-                          answer);
-
+            answer);
+       
         PJSUA_UNLOCK();
         if (dlg) pjsip_dlg_dec_lock(dlg);
         pj_log_pop_indent();

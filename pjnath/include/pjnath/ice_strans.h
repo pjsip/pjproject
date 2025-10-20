@@ -248,6 +248,19 @@ typedef struct pj_ice_strans_stun_cfg
     unsigned             max_host_cands;
 
     /**
+     * Number of manual host candidates. This must be equal or less than
+     * \a max_host_cands.
+     */
+    unsigned             manual_host_cnt;
+
+    /**
+     * Optional configuration to manually specify host candidates.
+     * Each candidate will use the same port as the automatic/base host
+     * candidate.
+     */
+    pj_sockaddr          manual_host[PJ_ICE_ST_MAX_CAND];
+
+    /**
      * Include loopback addresses in the host candidates.
      *
      * Default: PJ_FALSE

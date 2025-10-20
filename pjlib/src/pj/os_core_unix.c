@@ -736,33 +736,21 @@ static void *thread_main(void *param)
 
     return result;
 }
-#endif
 
-/*
- * pj_thread_create(...)
- */
-PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
-                                      const char *thread_name,
-                                      pj_thread_proc *proc,
-                                      void *arg,
-                                      pj_size_t stack_size,
-                                      unsigned flags,
-                                      pj_thread_t **ptr_thread)
+static pj_status_t create_thread(const char *thread_name,
+                                 pj_thread_proc *proc,
+                                 void *arg,
+                                 pj_size_t stack_size,
+                                 void *stack_addr,
+                                 pj_thread_t *rec)
 {
-#if PJ_HAS_THREADS
-    pj_thread_t *rec;
     pthread_attr_t thread_attr;
-    void *stack_addr;
     int rc;
 
     PJ_UNUSED_ARG(stack_addr);
 
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(pool && proc && ptr_thread, PJ_EINVAL);
-
-    /* Create thread record and assign name for the thread */
-    rec = (struct pj_thread_t*) pj_pool_zalloc(pool, sizeof(pj_thread_t));
-    PJ_ASSERT_RETURN(rec, PJ_ENOMEM);
+    PJ_ASSERT_RETURN(proc && rec, PJ_EINVAL);
 
     /* Set name. */
     if (!thread_name)
@@ -783,19 +771,6 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     rec->stk_max_usage = 0;
 #endif
 
-    /* Emulate suspended thread with mutex. */
-    if (flags & PJ_THREAD_SUSPENDED) {
-        rc = pj_mutex_create_simple(pool, NULL, &rec->suspended_mutex);
-        if (rc != PJ_SUCCESS) {
-            return rc;
-        }
-
-        pj_mutex_lock(rec->suspended_mutex);
-    } else {
-        pj_assert(rec->suspended_mutex == NULL);
-    }
-
-
     /* Init thread attributes */
     pthread_attr_init(&thread_attr);
 
@@ -811,8 +786,7 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 
 #if defined(PJ_THREAD_ALLOCATE_STACK) && PJ_THREAD_ALLOCATE_STACK!=0
     /* Allocate memory for the stack */
-    stack_addr = pj_pool_alloc(pool, stack_size);
-    PJ_ASSERT_RETURN(stack_addr, PJ_ENOMEM);
+    PJ_ASSERT_RETURN(stack_addr, PJ_EINVAL);
 
     rc = pthread_attr_setstackaddr(&thread_attr, stack_addr);
     if (rc != 0) {
@@ -834,10 +808,85 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     /* Destroy thread attributes */
     pthread_attr_destroy(&thread_attr);
 
-    *ptr_thread = rec;
-
     PJ_LOG(6, (rec->obj_name, "Thread created"));
     return PJ_SUCCESS;
+
+}
+
+#endif
+
+/*
+ * pj_thread_create(...)
+ */
+PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
+                                      const char *thread_name,
+                                      pj_thread_proc *proc,
+                                      void *arg,
+                                      pj_size_t stack_size,
+                                      unsigned flags,
+                                      pj_thread_t **ptr_thread)
+{
+#if PJ_HAS_THREADS
+    pj_status_t status;
+    pj_thread_t *rec;
+    void *stack_addr = NULL;
+    int rc;
+
+    PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(pool && proc && ptr_thread, PJ_EINVAL);
+
+    /* Create thread record and assign name for the thread */
+    rec = (struct pj_thread_t*) pj_pool_zalloc(pool, sizeof(pj_thread_t));
+    PJ_ASSERT_RETURN(rec, PJ_ENOMEM);
+
+#if defined(PJ_THREAD_ALLOCATE_STACK) && PJ_THREAD_ALLOCATE_STACK!=0
+    /* Allocate memory for the stack */
+    stack_addr = pj_pool_alloc(pool, stack_size);
+    PJ_ASSERT_RETURN(stack_addr, PJ_ENOMEM);
+#endif  /* PJ_THREAD_ALLOCATE_STACK */
+
+    /* Emulate suspended thread with mutex. */
+    if (flags & PJ_THREAD_SUSPENDED) {
+        rc = pj_mutex_create_simple(pool, NULL, &rec->suspended_mutex);
+        if (rc != PJ_SUCCESS) {
+            return rc;
+        }
+
+        pj_mutex_lock(rec->suspended_mutex);
+    } else {
+        pj_assert(rec->suspended_mutex == NULL);
+    }
+
+    status = create_thread(thread_name, proc, arg, stack_size, stack_addr, rec);
+    if (status == PJ_SUCCESS) {
+        /* Success! */
+        *ptr_thread = rec;
+    }
+    return status;
+
+#else
+    pj_assert(!"Threading is disabled!");
+    return PJ_EINVALIDOP;
+#endif
+}
+
+PJ_DEF(pj_status_t) pj_thread_create2( const char *thread_name,
+                                       pj_thread_proc *proc, 
+                                       void *arg,
+                                       pj_size_t stack_size, 
+                                       void *stack_addr,
+                                       pj_thread_t *thread )
+{
+#if PJ_HAS_THREADS
+
+    PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(proc && thread, PJ_EINVAL);
+
+    if (thread == pj_thread_this())
+        return PJ_ECANCELLED;
+
+    return create_thread(thread_name, proc, arg, stack_size, stack_addr, thread);
+
 #else
     pj_assert(!"Threading is disabled!");
     return PJ_EINVALIDOP;
@@ -938,11 +987,48 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
 }
 
 /*
+ * pj_thread_unregister()
+ */
+PJ_DEF(pj_status_t) pj_thread_unregister()
+{
+#if PJ_HAS_THREADS
+    pj_status_t status;
+    //int result;
+    pj_thread_t *rec;
+    PJ_CHECK_STACK();
+
+    rec = pj_thread_this();
+    PJ_ASSERT_RETURN(rec, PJ_EBUG);
+    
+    if ((status = pj_thread_destroy(rec)) != PJ_SUCCESS)
+        return status;
+    //else if ((result = pthread_detach(rec->thread)) != 0)
+    //    return PJ_RETURN_OS_ERROR(result);
+    else
+        return pj_thread_local_set(thread_tls_id, NULL);
+#else
+    pj_assert(!"No multithreading support!");
+    return PJ_EINVALIDOP;
+#endif
+}
+
+/*
+ * pj_thread_attach()
+ */
+PJ_DEF(pj_status_t) pj_thread_attach(const char *cstr_thread_name,
+                                     pj_thread_desc desc,
+                                     pj_thread_t **thread_ptr)
+{
+    return pj_thread_register(cstr_thread_name, desc, thread_ptr);
+}
+
+/*
  * pj_thread_destroy()
  */
 PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *p)
 {
     PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(p, PJ_EINVAL);
 
     /* Destroy mutex used to suspend thread */
     if (p->suspended_mutex) {
@@ -1005,7 +1091,13 @@ PJ_DEF(void) pj_thread_check_stack(const char *file, int line)
 {
     char stk_ptr;
     pj_uint32_t usage;
-    pj_thread_t *thread = pj_thread_this();
+    pj_thread_t *thread;
+
+    /* may be called after pj_thread_unregister() */
+    if (!pj_thread_is_registered())
+        return;
+
+    thread = pj_thread_this();
 
     /* Calculate current usage. */
     usage = (&stk_ptr > thread->stk_start) ? &stk_ptr - thread->stk_start :
@@ -1054,7 +1146,9 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
                                       pj_atomic_value_t initial,
                                       pj_atomic_t **ptr_atomic)
 {
+#if EMULATE_ATOMICS
     pj_status_t rc;
+#endif
     pj_atomic_t *atomic_var;
 
     atomic_var = PJ_POOL_ZALLOC_T(pool, pj_atomic_t);
@@ -1081,7 +1175,9 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
 {
+#if EMULATE_ATOMICS
     pj_status_t status;
+#endif
 
     PJ_ASSERT_RETURN(atomic_var, PJ_EINVAL);
 
@@ -1101,7 +1197,9 @@ PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
  */
 PJ_DEF(void) pj_atomic_set(pj_atomic_t *atomic_var, pj_atomic_value_t value)
 {
+#if EMULATE_ATOMICS
     pj_status_t status;
+#endif
 
     PJ_CHECK_STACK();
     PJ_ASSERT_ON_FAIL(atomic_var, return);

@@ -110,6 +110,31 @@ enum pj_log_decoration
                                 } while (0)
 
 /**
+ * Write log message.
+ *
+ * @param LVL       The logging verbosity level. Lower number indicates higher
+ *                  importance, with level zero indicates fatal error. Variable
+ *                  argument is not permitted, the argument may be a numeral 
+ *                  constant or a numeral value macros.
+ * @param src       The first argument is the sender.
+ * @param format    The second argument is 'printf' like format string and 
+ *                  the following arguments are variable number of 
+ *                  arguments suitable for the format string.
+ *
+ * Sample:
+ * \verbatim
+#ifdef PJ_DEBUG
+#    define MY_LOG_LEVEL 2
+#else
+#    define MY_LOG_LEVEL 6
+#endif
+   PJ_LOG_(MY_LOG_LEVEL, __FILE__, "current value is %d", value);
+   \endverbatim
+ * @hideinitializer
+ */
+#define PJ_LOG_(LVL, src, format, ...) PJ_LOG(LVL,(src, format, __VA_ARGS__))
+
+/**
  * Signature for function to be registered to the logging subsystem to
  * write the actual log message to some output device.
  *
@@ -143,7 +168,7 @@ PJ_DECL(void) pj_log_write(int level, const char *buffer, int len);
  * @param marker    Marker.
  */
 PJ_DECL(void) pj_log(const char *sender, int level, 
-                     const char *format, va_list marker);
+                     PJ_PRINT_PARAM_DECOR const char *format, va_list marker);
 
 /**
  * Change log output function. The front-end logging functions will call
@@ -406,7 +431,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 1
     #define pj_log_wrapper_1(arg)       pj_log_1 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_1(const char *src, const char *format, ...)
+    PJ_DECL(void) pj_log_1(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_1(arg)
@@ -421,7 +447,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 2
     #define pj_log_wrapper_2(arg)       pj_log_2 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_2(const char *src, const char *format, ...)
+    PJ_DECL(void) pj_log_2(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_2(arg)
@@ -436,7 +463,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 3
     #define pj_log_wrapper_3(arg)       pj_log_3 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_3(const char *src, const char *format, ...)
+    PJ_DECL(void) pj_log_3(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_3(arg)
@@ -451,7 +479,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 4
     #define pj_log_wrapper_4(arg)       pj_log_4 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_4(const char *src, const char *format, ...)
+    PJ_DECL(void) pj_log_4(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_4(arg)
@@ -466,7 +495,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 5
     #define pj_log_wrapper_5(arg)       pj_log_5 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_5(const char *src, const char *format, ...)
+    PJ_DECL(void) pj_log_5(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_5(arg)
@@ -481,7 +511,8 @@ pj_status_t pj_log_init(void);
 #if PJ_LOG_MAX_LEVEL >= 6
     #define pj_log_wrapper_6(arg)       pj_log_6 arg
     /** Internal function. */
-    PJ_DECL(void) pj_log_6(const char *src, const char *format, ...)
+    PJ_DECL(void) pj_log_6(const char *src, 
+                           PJ_PRINT_PARAM_DECOR const char *format, ...)
                   PJ_PRINT_FUNC_DECOR(2);
 #else
     #define pj_log_wrapper_6(arg)

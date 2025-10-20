@@ -67,6 +67,15 @@ PJ_DECL(pj_bool_t) pj_file_exists(const char *filename);
 PJ_DECL(pj_off_t) pj_file_size(const char *filename);
 
 /**
+ * Returns the size of the file.
+ *
+ * @param fh            The file handle (or FILE* for ansi file backend).
+ *
+ * @return              The file size in bytes or -1 on error.
+ */
+PJ_DECL(pj_off_t) pj_file_size_by_handle(pj_oshandle_t fh);
+
+/**
  * Delete a file.
  *
  * @param filename      The filename.

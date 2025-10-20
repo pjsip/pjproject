@@ -580,7 +580,7 @@ struct pjsua_data
     /* Calls: */
     pjsua_config         ua_cfg;                /**< UA config.         */
     unsigned             call_cnt;              /**< Call counter.      */
-    pjsua_call           *calls;/**< Calls array.       */
+    pjsua_call          *calls;                 /**< Calls array.       */
     pjsua_call_id        next_call_id;          /**< Next call id to use*/
 
     /* Buddy; */

@@ -2168,8 +2168,11 @@ static void send_msg_callback( pjsip_send_state *send_state,
 
         /* Also stop processing if transaction has been flagged with
          * pending destroy (https://github.com/pjsip/pjproject/issues/906)
+         * or if transaction is cancelled by app.
          */
-        if ((!*cont) || (tsx->transport_flag & TSX_HAS_PENDING_DESTROY)) {
+        if ((!*cont) || (tsx->transport_flag & TSX_HAS_PENDING_DESTROY) ||
+            -sent == PJ_ECANCELLED)
+        {
             char errmsg[PJ_ERR_MSG_SIZE];
             pjsip_status_code sc;
             pj_str_t err;
@@ -2193,10 +2196,13 @@ static void send_msg_callback( pjsip_send_state *send_state,
              * since with 503 normally client should try again.
              * See https://github.com/pjsip/pjproject/issues/870
              */
-            if (-sent==PJ_ERESOLVE || -sent==PJLIB_UTIL_EDNS_NXDOMAIN)
+            if (-sent==PJ_ERESOLVE || -sent==PJLIB_UTIL_EDNS_NXDOMAIN ||
+                -sent==PJ_ECANCELLED)
+            {
                 sc = PJSIP_SC_BAD_GATEWAY;
-            else
+            } else {
                 sc = PJSIP_SC_TSX_TRANSPORT_ERROR;
+            }
 
             /* For UAC tsx, we directly terminate the transaction.
              * For UAS tsx, we terminate the transaction for 502 error,
@@ -2645,6 +2651,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction *tsx,
 {
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
+
     pj_grp_lock_acquire(tsx->grp_lock);
     if (tdata == NULL) {
         tdata = tsx->last_tx;
@@ -2659,7 +2667,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction *tsx,
     if (status == PJ_SUCCESS) {
         pjsip_tx_data_dec_ref(tdata);
     }
-
+   
     return status;
 }
 
