@@ -2520,7 +2520,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
         if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_NONE) {
             status = PJ_ETRYAGAIN;
         } else {
-            /* Some problem occured */
+            /* Some problem occurred */
             status = STATUS_FROM_SSL_ERR2("Write", ssock, *nwritten,
                                           err, size);
         }
