@@ -25,13 +25,21 @@
 #if defined(PJ_HAS_FCNTL_H) && PJ_HAS_FCNTL_H != 0
 #include <fcntl.h>
 #endif
+#if defined(PJ_HAS_SYS_TYPES_H) && PJ_HAS_SYS_TYPES_H != 0
+#include <sys/types.h>
+#endif
+#if defined(PJ_HAS_SYS_STAT_H) && PJ_HAS_SYS_STAT_H != 0
+#include <sys/stat.h>
+#endif
+
+#if PJ_FILE_IO == PJ_FILE_IO_ANSI
 
 PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
                                   const char *pathname, 
                                   unsigned flags,
                                   pj_oshandle_t *fd)
 {
-    char mode[8];
+    char mode[10];
     char *p = mode;
 
     PJ_ASSERT_RETURN(pathname && fd, PJ_EINVAL);
@@ -66,6 +74,19 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
         return PJ_EINVAL;
 
     *p++ = 'b';
+
+#if defined(_O_SEQUENTIAL)
+    /* MSVC: file access is primarily sequential */
+    if ((flags & PJ_O_SEQUENTIAL) == PJ_O_SEQUENTIAL) 
+        *p++ = 'S';
+#endif
+
+#if defined(_O_RANDOM)
+    /* MSVC: file access is primarily random */
+    if ((flags & PJ_O_RANDOM) == PJ_O_RANDOM) 
+        *p++ = 'R';
+#endif
+
     *p++ = '\0';
 
     *fd = fopen(pathname, mode);
@@ -182,3 +203,57 @@ PJ_DEF(pj_status_t) pj_file_flush(pj_oshandle_t fd)
 
     return PJ_SUCCESS;
 }
+
+/*
+ * pj_file_size_by_handle()
+ */
+PJ_DECL(pj_off_t) pj_file_size_by_handle(pj_oshandle_t fh)
+{
+#if !defined(PJ_HAS_SYS_STAT_H) && PJ_HAS_SYS_STAT_H == 0
+
+    // fallback implementation: seek to end of file
+    // ineffective, not thread safe (because it changes file pointer),
+    // but better than nothing.
+    // use fstat() instead
+
+    pj_off_t size = -1, pos;
+
+    PJ_ASSERT_RETURN(fh, -1);
+
+    /* get initial file pointer */
+    if (pj_file_getpos(fh, &pos) != PJ_SUCCESS)
+        return -1;
+
+    if (pj_file_setpos(fh, 0, PJ_SEEK_END) != PJ_SUCCESS ||/* seek to end of file */
+        pj_file_getpos(fh, &size) != PJ_SUCCESS)           /* get current file pointer */
+    {
+        size = -1;
+    }
+    
+    /* seek back to reset file pointer */
+    if (pj_file_setpos(fh, pos, PJ_SEEK_SET) != PJ_SUCCESS)
+        return -1;
+
+    return size;
+
+#else
+
+#if    (defined(PJ_HAS_UNISTD_H) && PJ_HAS_UNISTD_H != 0)
+#   define _fileno(f) fileno(f)
+#endif
+    struct stat buf;
+    int fd, result;
+
+    fd = _fileno((FILE*)fh);
+    if (fd == -1)
+        return -1;
+
+    result = fstat(fd, &buf);
+    if (result != 0)
+        return -1;
+
+    return buf.st_size;
+#endif
+}
+
+#endif //PJ_FILE_IO == PJ_FILE_IO_ANSI
