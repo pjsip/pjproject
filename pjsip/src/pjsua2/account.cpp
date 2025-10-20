@@ -698,8 +698,8 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
                               (natConfig.iceManualHost[i].c_str()));
         pj_sockaddr* addr =
                 &ret.ice_cfg.ice_manual_host[ret.ice_cfg.ice_manual_host_cnt];
-        if (pj_inet_pton(pj_AF_INET(), &tmp, addr) == PJ_SUCCESS ||
-            pj_inet_pton(pj_AF_INET6(), &tmp, addr) == PJ_SUCCESS)
+        if (pj_sockaddr_set_str_addr(pj_AF_INET(),  addr, &tmp)==PJ_SUCCESS ||
+            pj_sockaddr_set_str_addr(pj_AF_INET6(), addr, &tmp)==PJ_SUCCESS)
         {
             ret.ice_cfg.ice_manual_host_cnt++;
         } else {
