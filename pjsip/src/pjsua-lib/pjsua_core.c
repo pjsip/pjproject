@@ -1012,7 +1012,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 
     /* Create mutex */
     status = pj_mutex_create_recursive(pjsua_var.pool, "pjsua",
-        &pjsua_var.mutex);
+                                       &pjsua_var.mutex);
     if (status != PJ_SUCCESS) {
         pj_log_pop_indent();
         pjsua_perror(THIS_FILE, "Unable to create mutex", status);
@@ -1024,8 +1024,8 @@ PJ_DEF(pj_status_t) pjsua_create(void)
      * is needed for example when application needs to call pjsua_verify_url().
      */
     status = pjsip_endpt_create(&pjsua_var.cp.factory,
-        pj_gethostname()->ptr,
-        &pjsua_var.endpt);
+                                pj_gethostname()->ptr,
+                                &pjsua_var.endpt);
     if (status != PJ_SUCCESS) {
         pj_log_pop_indent();
         pjsua_perror(THIS_FILE, "Unable to create endpoint", status);
@@ -1040,7 +1040,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 
     /* Create timer mutex */
     status = pj_mutex_create_recursive(pjsua_var.pool, "pjsua_timer",
-        &pjsua_var.timer_mutex);
+                                       &pjsua_var.timer_mutex);
     if (status != PJ_SUCCESS) {
         pj_log_pop_indent();
         pjsua_perror(THIS_FILE, "Unable to create mutex", status);

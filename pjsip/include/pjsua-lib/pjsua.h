@@ -2665,7 +2665,6 @@ struct pjsua_msg_data
     */
     pj_str_t    local_uri;
 
-
     /*
     to support different contact_uri values per call
    */

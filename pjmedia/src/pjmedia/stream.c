@@ -134,6 +134,8 @@ struct pjmedia_stream
 
     pj_int16_t              *zero_frame;    /**< Zero frame buffer.         */
 
+    pj_mutex_t* jb_mutex;
+
     /* RFC 2833 DTMF transmission queue: */
     unsigned                 dtmf_duration; /**< DTMF duration(in timestamp)*/
     int                      tx_event_pt;   /**< Outgoing pt for dtmf.      */

@@ -196,8 +196,9 @@ PJ_DEF(pj_status_t) pjsua_call_get_queued_dtmf_digits(pjsua_call_id call_id,
         goto on_return;
     }
 
-    status = pjmedia_get_queued_dtmf_digits(
-        call->media[call->audio_idx].strm.a.stream, digits);
+    *digits = pjmedia_get_queued_dtmf_digits(
+        call->media[call->audio_idx].strm.a.stream);
+    status = PJ_SUCCESS;    
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
