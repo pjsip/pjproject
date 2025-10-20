@@ -967,7 +967,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     /* Reset first response time */
     call->res_time.sec = 0;
 
-    /* Create suitable Contact header unless a Contact header has been
+    /* Create suitable Contact header unless a Contact hesader has been
      * set in the account.
      */
     if (msg_data && msg_data->contact_uri.slen) {

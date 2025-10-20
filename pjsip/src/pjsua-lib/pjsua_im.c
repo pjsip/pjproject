@@ -560,10 +560,10 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     status = pjsip_endpt_create_request(pjsua_var.endpt, 
                                         &pjsip_message_method,
                                         (msg_data && msg_data->target_uri.slen? 
-                                         &msg_data->target_uri: to),
-                                         (msg_data && msg_data->local_uri.slen ?
-                                         &msg_data->local_uri : &acc->cfg.id),
-                                         to, NULL, NULL, -1, NULL, &tdata);
+                                        &msg_data->target_uri : to),
+                                        (msg_data && msg_data->local_uri.slen ?
+                                        &msg_data->local_uri : &acc->cfg.id),
+                                        to, NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
         pjsua_perror(THIS_FILE, "Unable to create request", status);
         return status;
