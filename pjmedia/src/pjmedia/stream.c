@@ -2849,8 +2849,7 @@ PJ_DEF(unsigned) pjmedia_get_queued_dtmf_digits(pjmedia_stream *stream)
     pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
     unsigned count;
 
-    if (!stream)
-        return 0;
+    PJ_ASSERT_RETURN(stream, 0);
 
     /* By convention, we use jitter buffer's mutex to access DTMF
      * digits resources.
