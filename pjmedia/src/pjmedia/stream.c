@@ -2842,32 +2842,24 @@ PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_event_callback(pjmedia_stream *strea
 }
 
 /*
- * Get the number of queued DTMF digits.
+ * Get the number of queued DTMF digits for transmission.
  */
-PJ_DEF(pj_status_t) pjmedia_get_queued_dtmf_digits(pjmedia_stream *stream,
-                                                   unsigned *tx_count,
-                                                   unsigned *rx_count)
+PJ_DEF(unsigned) pjmedia_get_queued_dtmf_digits(pjmedia_stream *stream)
 {
     pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
+    unsigned count;
 
-    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+    if (!stream)
+        return 0;
 
     /* By convention, we use jitter buffer's mutex to access DTMF
      * digits resources.
      */
     pj_mutex_lock(c_strm->jb_mutex);
-
-    if (tx_count) {
-        *tx_count = stream->tx_dtmf_count;
-    }
-
-    if (rx_count) {
-        *rx_count = stream->rx_dtmf_count;
-    }
-
+    count = stream->tx_dtmf_count;
     pj_mutex_unlock(c_strm->jb_mutex);
 
-    return PJ_SUCCESS;
+    return count;
 }
 
 /*

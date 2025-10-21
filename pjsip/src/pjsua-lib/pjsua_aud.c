@@ -173,35 +173,31 @@ on_return:
 }
 
 /*
- * Get the number of queued DTMF digits for the call.
+ * Get the number of queued DTMF digits for transmission in the call.
  */
-PJ_DEF(pj_status_t) pjsua_call_get_queued_dtmf_digits(pjsua_call_id call_id,
-                                                      unsigned *tx_count,
-                                                      unsigned *rx_count)
+PJ_DEF(unsigned) pjsua_call_get_queued_dtmf_digits(pjsua_call_id call_id)
 {
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
     pj_status_t status;
+    unsigned count = 0;
 
-    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
-                     PJ_EINVAL);
+    if (call_id < 0 || call_id >= (int)pjsua_var.ua_cfg.max_calls)
+        return 0;
 
     status = acquire_call("pjsua_call_get_queued_dtmf_digits()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
 
     if (!pjsua_call_has_media(call_id)) {
-        PJ_LOG(3,(THIS_FILE, "Media is not established yet!"));
-        status = PJ_EINVALIDOP;
         goto on_return;
     }
 
-    status = pjmedia_get_queued_dtmf_digits(
-                call->media[call->audio_idx].strm.a.stream, tx_count, rx_count);
+    count = pjmedia_get_queued_dtmf_digits(call->media[call->audio_idx].strm.a.stream);
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
-    return status;
+    return count;
 }
 
 
