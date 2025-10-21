@@ -6547,6 +6547,18 @@ PJ_DECL(pj_status_t) pjsua_call_send_dtmf(pjsua_call_id call_id,
                                       const pjsua_call_send_dtmf_param *param);
 
 /**
+ * Get the number of queued DTMF digits for transmission in the call.
+ *
+ * @param call_id       Call identification.
+ * @param digits        On return, will contain the number of DTMF digits
+ *                      queued for transmission.
+ *
+ * @return              PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_get_queued_dtmf_digits(pjsua_call_id call_id,
+                                                       unsigned *digits);
+
+/**
  * Send real-time text to remote via RTP stream. This only works if the call
  * has text media.
  *

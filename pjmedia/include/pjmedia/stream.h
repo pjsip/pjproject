@@ -454,6 +454,17 @@ pjmedia_stream_set_dtmf_event_callback(pjmedia_stream *stream,
 
 
 /**
+ * Get the number of queued DTMF digits for transmission.
+ *
+ * @param stream        The media stream.
+ *
+ * @return              Number of DTMF digits queued for transmission,
+ *                      or 0 if stream is NULL.
+ */
+PJ_DECL(unsigned) pjmedia_get_queued_dtmf_digits(pjmedia_stream *stream);
+
+
+/**
  * Send RTCP SDES for the media stream.
  *
  * @param stream        The media stream.

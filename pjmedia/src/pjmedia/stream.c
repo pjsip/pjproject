@@ -2842,6 +2842,26 @@ PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_event_callback(pjmedia_stream *strea
 }
 
 /*
+ * Get the number of queued DTMF digits for transmission.
+ */
+PJ_DEF(unsigned) pjmedia_get_queued_dtmf_digits(pjmedia_stream *stream)
+{
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
+    unsigned count;
+
+    PJ_ASSERT_RETURN(stream, 0);
+
+    /* By convention, we use jitter buffer's mutex to access DTMF
+     * digits resources.
+     */
+    pj_mutex_lock(c_strm->jb_mutex);
+    count = stream->tx_dtmf_count;
+    pj_mutex_unlock(c_strm->jb_mutex);
+
+    return count;
+}
+
+/*
  * Send RTCP SDES.
  */
 PJ_DEF(pj_status_t)
