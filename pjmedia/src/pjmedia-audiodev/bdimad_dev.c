@@ -542,6 +542,9 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
         return;
 
 on_break:
+    if (strm->rec_thread_initialized) {
+        pj_thread_unregister();
+    }
     strm->rec_thread_exited = 1;    
 }
 
@@ -662,6 +665,9 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
         return samples;
 
 on_break:
+    if (strm->play_thread_initialized) {
+        pj_thread_unregister();
+    }
     strm->play_thread_exited = 1;
     return 0;
 }

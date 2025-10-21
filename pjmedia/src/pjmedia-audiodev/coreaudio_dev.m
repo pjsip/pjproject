@@ -895,6 +895,9 @@ static OSStatus resample_callback(void                       *inRefCon,
     return noErr;
 
 on_break:
+    if (strm->rec_thread_initialized) {
+        pj_thread_unregister();
+    }
     return -1;
 }
 
@@ -1012,6 +1015,9 @@ static OSStatus input_callback(void                       *inRefCon,
     return noErr;
 
 on_break:
+    if (strm->rec_thread_initialized) {
+        pj_thread_unregister();
+    }
     return -1;
 }
 
@@ -1155,6 +1161,9 @@ static OSStatus output_renderer(void                       *inRefCon,
     return noErr;
 
 on_break:
+    if (stream->play_thread_initialized) {
+        pj_thread_unregister();
+    }
     return -1;
 }
 
@@ -1276,6 +1285,11 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
         }
     }
     pj_mutex_unlock(cf_instance->mutex);
+    
+    /* Unregister the thread when exiting */
+    if (pj_thread_is_registered()) {
+        pj_thread_unregister();
+    }
 }
 
 #endif

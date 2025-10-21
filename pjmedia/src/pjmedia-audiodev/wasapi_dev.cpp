@@ -1303,6 +1303,11 @@ HRESULT AudioActivator::ActivateCompleted(
         } 
     }     
     
+    /* Unregister thread before exiting */
+    if (pj_thread_is_registered()) {
+        pj_thread_unregister();
+    }
+    
     task_completed.set(aud_client);
     return hr;
 }

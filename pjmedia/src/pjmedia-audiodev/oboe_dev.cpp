@@ -820,6 +820,11 @@ public:
             }
         }
 
+        /* Unregister thread before exiting */
+        if (err_thread_registered && pj_thread_is_registered()) {
+            pj_thread_unregister();
+        }
+
         pj_mutex_unlock(mutex);
     }
 

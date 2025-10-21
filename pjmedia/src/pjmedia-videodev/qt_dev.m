@@ -357,6 +357,10 @@ static qt_fmt_info* get_qt_format_info(pjmedia_format_id id)
 
     if (!strm->is_running) {
         strm->cap_exited = PJ_TRUE;
+        /* Unregister thread when exiting */
+        if (strm->cap_thread_initialized && pj_thread_is_registered()) {
+            pj_thread_unregister();
+        }
         return;
     }
     
@@ -368,8 +372,13 @@ static qt_fmt_info* get_qt_format_info(pjmedia_format_id id)
         PJ_LOG(5,(THIS_FILE, "Capture thread started"));
     }
     
-    if (!videoFrame)
+    if (!videoFrame) {
+        /* Unregister thread when exiting */
+        if (strm->cap_thread_initialized && pj_thread_is_registered()) {
+            pj_thread_unregister();
+        }
         return;
+    }
     
     frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
     frame.buf = [sampleBuffer bytesForAllSamples];
@@ -381,6 +390,11 @@ static qt_fmt_info* get_qt_format_info(pjmedia_format_id id)
         (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &frame);
     
     strm->cap_frame_ts.u64 += strm->cap_ts_inc;
+    
+    /* Unregister thread when exiting */
+    if (strm->cap_thread_initialized && pj_thread_is_registered()) {
+        pj_thread_unregister();
+    }
 }
 
 - (void)run_func

@@ -606,8 +606,13 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
 
         status = pj_thread_register("ds_cap", strm->cap_thread_desc, 
                                     &strm->cap_thread);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            /* Unregister thread when exiting early */
+            if (strm->cap_thread_initialized && pj_thread_is_registered()) {
+                pj_thread_unregister();
+            }
             return;
+        }
         strm->cap_thread_initialized = 1;
         PJ_LOG(5,(THIS_FILE, "Capture thread started"));
     }
@@ -642,6 +647,11 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
 
     if (strm->vid_cb.capture_cb)
         (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &frame);
+    
+    /* Unregister thread when exiting */
+    if (strm->cap_thread_initialized && pj_thread_is_registered()) {
+        pj_thread_unregister();
+    }
 }
 
 /* API: Put frame from stream */

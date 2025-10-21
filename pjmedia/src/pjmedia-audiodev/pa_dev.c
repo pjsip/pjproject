@@ -266,6 +266,9 @@ static int PaRecorderCallback(const void *input,
         return paContinue;
 
 on_break:
+    if (stream->rec_thread_initialized) {
+        pj_thread_unregister();
+    }
     stream->rec_thread_exited = 1;
     return paAbort;
 }
@@ -388,6 +391,9 @@ static int PaPlayerCallback( const void *input,
         return paContinue;
 
 on_break:
+    if (stream->play_thread_initialized) {
+        pj_thread_unregister();
+    }
     stream->play_thread_exited = 1;
     return paAbort;
 }

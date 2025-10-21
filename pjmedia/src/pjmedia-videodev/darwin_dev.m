@@ -565,6 +565,11 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
     PJ_LOG(3, (THIS_FILE, "Capture session runtime error: %s, %s",
                [error.localizedDescription UTF8String],
                [error.localizedFailureReason UTF8String]));
+    
+    /* Unregister thread when exiting notification handler */
+    if (pj_thread_is_registered()) {
+        pj_thread_unregister();
+    }
 }
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput 

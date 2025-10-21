@@ -208,6 +208,11 @@ void bqPlayerCallback(W_SLBufferQueueItf bq, void *context)
         
         stream->playerBufIdx %= NUM_BUFFERS;
     }
+    
+    /* Unregister thread when exiting callback */
+    if (stream->play_thread_initialized && pj_thread_is_registered()) {
+        pj_thread_unregister();
+    }
 }
 
 /* This callback handler is called every time a buffer finishes recording */
@@ -253,6 +258,11 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
         }
         
         stream->recordBufIdx %= NUM_BUFFERS;
+    }
+    
+    /* Unregister thread when exiting callback */
+    if (stream->rec_thread_initialized && pj_thread_is_registered()) {
+        pj_thread_unregister();
     }
 }
 
