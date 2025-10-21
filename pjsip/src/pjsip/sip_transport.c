@@ -503,11 +503,7 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
     tdata = PJ_POOL_ZALLOC_T(pool, pjsip_tx_data);
     tdata->pool = pool;
     tdata->mgr = mgr;
-    {
-        char temp_name[PJ_MAX_OBJ_NAME];
-        pj_ansi_snprintf(temp_name, sizeof(temp_name), "tdta%p", tdata);
-        pj_ansi_strxcpy(tdata->obj_name, temp_name, sizeof(tdata->obj_name));
-    }
+    pj_ansi_snprintf(tdata->obj_name, sizeof(tdata->obj_name), "tdta%p", tdata);
     pj_memcpy(pool->obj_name, tdata->obj_name, sizeof(pool->obj_name));
 
     status = pj_atomic_create(tdata->pool, 0, &tdata->ref_cnt);

@@ -1507,9 +1507,7 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
         name = "mtx%p";
     }
     if (strchr(name, '%')) {
-        char temp_name[PJ_MAX_OBJ_NAME];
-        pj_ansi_snprintf(temp_name, PJ_MAX_OBJ_NAME, name, mutex);
-        pj_ansi_strxcpy(mutex->obj_name, temp_name, PJ_MAX_OBJ_NAME);
+        pj_ansi_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
     } else {
         pj_ansi_strxcpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
     }
@@ -1930,9 +1928,7 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
         name = "sem%p";
     }
     if (strchr(name, '%')) {
-        char temp_name[PJ_MAX_OBJ_NAME];
-        pj_ansi_snprintf(temp_name, PJ_MAX_OBJ_NAME, name, sem);
-        pj_ansi_strxcpy(sem->obj_name, temp_name, PJ_MAX_OBJ_NAME);
+        pj_ansi_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
     } else {
         pj_ansi_strxcpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
     }
