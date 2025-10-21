@@ -959,6 +959,18 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
                 goto on_error;
             }
         }
+
+        /* Verify local URI if provided */
+        if (msg_data && msg_data->local_uri.slen) {
+            pj_strdup_with_null(tmp_pool, &dup, &msg_data->local_uri);
+            uri = pjsip_parse_uri(tmp_pool, dup.ptr, dup.slen, 0);
+            if (uri == NULL) {
+                pjsua_perror(THIS_FILE, "Invalid local URI",
+                             PJSIP_EINVALIDREQURI);
+                status = PJSIP_EINVALIDREQURI;
+                goto on_error;
+            }
+        }
     }
 
     /* Mark call start time. */
