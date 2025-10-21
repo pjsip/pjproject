@@ -185,7 +185,8 @@ PJ_DEF(pj_status_t) pjsua_call_get_queued_dtmf_digits(pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls &&
                      digits, PJ_EINVAL);
 
-    status = acquire_call("pjsua_call_get_queued_dtmf_digits()", call_id, &call, &dlg);
+    status = acquire_call("pjsua_call_get_queued_dtmf_digits()", call_id, 
+                          &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
 
