@@ -947,6 +947,30 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
             status = PJSIP_EINVALIDREQURI;
             goto on_error;
         }
+
+        /* Verify contact URI if provided */
+        if (msg_data && msg_data->contact_uri.slen) {
+            pj_strdup_with_null(tmp_pool, &dup, &msg_data->contact_uri);
+            uri = pjsip_parse_uri(tmp_pool, dup.ptr, dup.slen, 0);
+            if (uri == NULL) {
+                pjsua_perror(THIS_FILE, "Invalid contact URI",
+                             PJSIP_EINVALIDREQURI);
+                status = PJSIP_EINVALIDREQURI;
+                goto on_error;
+            }
+        }
+
+        /* Verify local URI if provided */
+        if (msg_data && msg_data->local_uri.slen) {
+            pj_strdup_with_null(tmp_pool, &dup, &msg_data->local_uri);
+            uri = pjsip_parse_uri(tmp_pool, dup.ptr, dup.slen, 0);
+            if (uri == NULL) {
+                pjsua_perror(THIS_FILE, "Invalid local URI",
+                             PJSIP_EINVALIDREQURI);
+                status = PJSIP_EINVALIDREQURI;
+                goto on_error;
+            }
+        }
     }
 
     /* Mark call start time. */
@@ -956,9 +980,11 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     call->res_time.sec = 0;
 
     /* Create suitable Contact header unless a Contact header has been
-     * set in the account.
+     * set in the account or message data.
      */
-    if (acc->contact.slen) {
+    if (msg_data && msg_data->contact_uri.slen) {
+        contact = msg_data->contact_uri;
+    } else if (acc->contact.slen) {
         contact = acc->contact;
     } else {
         status = pjsua_acc_create_uac_contact(tmp_pool, &contact,

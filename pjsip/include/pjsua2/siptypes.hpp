@@ -997,6 +997,14 @@ struct SipTxOption
     string                  localUri;
 
     /**
+     * Optional contact URI to be used for this call. If empty (""), the
+     * contact will be generated automatically based on the account
+     * configuration. At the moment this field is only used when sending
+     * initial INVITE requests.
+     */
+    string                  contactUri;
+
+    /**
      * Additional message headers to be included in the outgoing message.
      *
      * Application may override Max-Forwards header value (the default is

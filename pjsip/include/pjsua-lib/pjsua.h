@@ -2666,6 +2666,13 @@ struct pjsua_msg_data
     pj_str_t    local_uri;
 
     /**
+     * Optional contact URI to be used for this call. If NULL, the contact
+     * will be generated automatically based on the account configuration.
+     * This field is currently used only by pjsua_call_make_call().
+     */
+    pj_str_t    contact_uri;
+
+    /**
      * Additional message headers as linked list. Application can add
      * headers to the list by creating the header, either from the heap/pool
      * or from temporary local variable, and add the header using
