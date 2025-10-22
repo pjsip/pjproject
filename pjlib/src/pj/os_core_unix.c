@@ -746,6 +746,7 @@ static pj_status_t create_thread(const char *thread_name,
 {
     pthread_attr_t thread_attr;
     int rc;
+    const char *ch;
 
     PJ_UNUSED_ARG(stack_addr);
 
@@ -756,10 +757,9 @@ static pj_status_t create_thread(const char *thread_name,
     if (!thread_name)
         thread_name = "thr%p";
 
-    if (strchr(thread_name, '%')) {
-        char temp_name[PJ_MAX_OBJ_NAME];
-        pj_ansi_snprintf(temp_name, PJ_MAX_OBJ_NAME, thread_name, rec);
-        pj_ansi_strxcpy(rec->obj_name, temp_name, PJ_MAX_OBJ_NAME);
+    ch = pj_ansi_strchr(thread_name, '%');
+    if (ch && *(ch+1) == 'p') {
+        pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
     } else {
         pj_ansi_strxcpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
     }

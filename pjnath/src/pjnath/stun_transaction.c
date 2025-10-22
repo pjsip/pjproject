@@ -92,11 +92,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_create(pj_stun_config *cfg,
     tsx->destroy_timer.cb = &destroy_timer_callback;
     tsx->destroy_timer.user_data = tsx;
 
-    {
-        char temp_name[PJ_MAX_OBJ_NAME];
-        pj_ansi_snprintf(temp_name, sizeof(temp_name), "utsx%p", tsx);
-        pj_ansi_strxcpy(tsx->obj_name, temp_name, sizeof(tsx->obj_name));
-    }
+    pj_ansi_snprintf(tsx->obj_name, sizeof(tsx->obj_name), "utsx%p", tsx);
 
     *p_tsx = tsx;
 
