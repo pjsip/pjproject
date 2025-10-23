@@ -1155,16 +1155,26 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     void *frame_buf, *data_buf;
     
     strm->frame_ts.u64 += strm->ts_inc;
-    if (!strm->vid_cb.capture_cb)
+    if (!strm->vid_cb.capture_cb) {
+        /* Unregister thread when exiting early */
+        if (strm->thread_initialized && pj_thread_is_registered()) {
+            pj_thread_unregister();
+        }
         return;
+    }
 
     if (strm->thread_initialized == 0 || !pj_thread_is_registered()) {
         pj_status_t status;
         pj_bzero(strm->thread_desc, sizeof(pj_thread_desc));
         status = pj_thread_register("and_cam", strm->thread_desc,
                                     &strm->thread);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            /* Unregister thread when exiting early */
+            if (strm->thread_initialized && pj_thread_is_registered()) {
+                pj_thread_unregister();
+            }
             return;
+        }
         strm->thread_initialized = 1;
         PJ_LOG(5,(THIS_FILE, "Android camera thread registered"));
     }
@@ -1365,6 +1375,11 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     }
 
     (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &f);
+    
+    /* Unregister thread when exiting */
+    if (strm->thread_initialized && pj_thread_is_registered()) {
+        pj_thread_unregister();
+    }
 }
 
 #else
@@ -1380,16 +1395,26 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
     void *frame_buf, *data_buf;
     
     strm->frame_ts.u64 += strm->ts_inc;
-    if (!strm->vid_cb.capture_cb)
+    if (!strm->vid_cb.capture_cb) {
+        /* Unregister thread when exiting early */
+        if (strm->thread_initialized && pj_thread_is_registered()) {
+            pj_thread_unregister();
+        }
         return;
+    }
 
     if (strm->thread_initialized == 0 || !pj_thread_is_registered()) {
         pj_status_t status;
         pj_bzero(strm->thread_desc, sizeof(pj_thread_desc));
         status = pj_thread_register("and_cam", strm->thread_desc,
                                     &strm->thread);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            /* Unregister thread when exiting early */
+            if (strm->thread_initialized && pj_thread_is_registered()) {
+                pj_thread_unregister();
+            }
             return;
+        }
         strm->thread_initialized = 1;
         PJ_LOG(5,(THIS_FILE, "Android camera thread registered"));
     }
@@ -1483,6 +1508,11 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
 
     (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &f);
     (*env)->ReleaseByteArrayElements(env, data, data_buf, JNI_ABORT);
+    
+    /* Unregister thread when exiting */
+    if (strm->thread_initialized && pj_thread_is_registered()) {
+        pj_thread_unregister();
+    }
 }
 
 #endif /* USE_CAMERA2 */
