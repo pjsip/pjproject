@@ -2698,6 +2698,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
             {
                 enabled = PJ_TRUE;
             }
+#if PJMEDIA_HAS_VIDEO
         } else if (pj_memchr(mvididx, mi, mtotvidcnt * sizeof(mvididx[0]))) {
             media_type = PJMEDIA_TYPE_VIDEO;
             if (call->opt.vid_cnt &&
@@ -2705,6 +2706,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
             {
                 enabled = PJ_TRUE;
             }
+#endif
         } else if (pj_memchr(mtxtidx, mi, mtottxtcnt * sizeof(mtxtidx[0]))) {
             media_type = PJMEDIA_TYPE_TEXT;
             if (call->opt.txt_cnt &&
