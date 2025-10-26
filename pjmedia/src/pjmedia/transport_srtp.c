@@ -1892,11 +1892,6 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
             srtp->keying_cnt--;
             keying_status = st;
             continue;
-        } else if (srtp->offerer_side) {
-            /* Currently we can send one keying only in outgoing offer */
-            srtp->keying[0] = srtp->keying[i];
-            srtp->keying_cnt = 1;
-            break;
         }
 
         ++i;
@@ -2002,11 +1997,10 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
         srtp->keying_cnt = 0;
     }
 
-    if (srtp->keying_cnt != 0) {
-        /* At this point for now, keying count should be 1 */
-        pj_assert(srtp->keying_cnt == 1);
+    /* Multiple keying methods are supported. */
+    for (i=0; i < srtp->keying_cnt; i++) {
         PJ_LOG(4, (srtp->pool->obj_name, "SRTP uses keying method %s",
-                   ((int)srtp->keying[0]->type==PJMEDIA_SRTP_KEYING_SDES?
+                   ((int)srtp->keying[i]->type==PJMEDIA_SRTP_KEYING_SDES?
                     "SDES":"DTLS-SRTP")));
     }
 
@@ -2026,9 +2020,6 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     unsigned i;
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
-
-    /* At this point for now, keying count should be 0 or 1 */
-    pj_assert(srtp->keying_cnt <= 1);
 
     srtp->started = PJ_TRUE;
 
