@@ -392,10 +392,13 @@ PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
 PJ_DEF(pj_status_t) pj_thread_set_prio_max(pj_thread_t *thread,
                                            pj_thread_prio_param *opt)
 {
-    PJ_UNUSED_ARG(thread);
+    PJ_UNUSED_ARG(opt);
+    pj_status_t status = PJ_SUCCESS;
     int max = pj_thread_get_prio_max(thread);
     if (max > 0)
-        pj_thread_set_prio(thread, max);
+        status = pj_thread_set_prio(thread, max);
+    
+    return status;
 }
 
 /*
