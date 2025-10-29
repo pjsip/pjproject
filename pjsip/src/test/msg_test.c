@@ -948,6 +948,7 @@ static int hdr_test_from(pjsip_hdr *h);
 static int hdr_test_proxy_authenticate(pjsip_hdr *h);
 static int hdr_test_record_route(pjsip_hdr *h);
 static int hdr_test_supported(pjsip_hdr *h);
+static int hdr_test_supported_with_leading_comma(pjsip_hdr *h);
 static int hdr_test_to(pjsip_hdr *h);
 static int hdr_test_via(pjsip_hdr *h);
 static int hdr_test_via_ipv6_1(pjsip_hdr *h);
@@ -1129,13 +1130,23 @@ struct hdr_test_t
         "Supported", "k",
         "",
         &hdr_test_supported,
+        0
+    },
+
+    {
+        /* Supported with leading comma (buggy MizuDroid format) */
+        "Supported", "k",
+        ",outbound",
+        &hdr_test_supported_with_leading_comma,
+        HDR_FLAG_DONT_PRINT
     },
 
     {
         /* To */
         "To", "t",
         NAME_ADDR ";" GENERIC_PARAM,
-        &hdr_test_to
+        &hdr_test_to,
+        0
     },
 
     {
@@ -1731,6 +1742,26 @@ static int hdr_test_supported(pjsip_hdr *h)
 
     if (hdr->count != 0)
         return -2320;
+
+    return 0;
+}
+
+/*
+    ",outbound"
+    Test for handling leading comma (buggy MizuDroid format)
+ */
+static int hdr_test_supported_with_leading_comma(pjsip_hdr *h)
+{
+    pjsip_supported_hdr *hdr = (pjsip_supported_hdr*)h;
+
+    if (h->type != PJSIP_H_SUPPORTED)
+        return -2330;
+
+    if (hdr->count != 1)
+        return -2331;
+
+    if (pj_strcmp2(&hdr->values[0], "outbound") != 0)
+        return -2332;
 
     return 0;
 }
