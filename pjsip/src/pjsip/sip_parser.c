@@ -1799,7 +1799,7 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
         hdr->count++;
     }
 
-    while ((hdr->count < PJSIP_GENERIC_ARRAY_MAX_COUNT) &&
+    while ((hdr->count < PJ_ARRAY_SIZE(hdr->values)) &&
            (*scanner->curptr == ','))
     {
         pj_scan_get_char(scanner);

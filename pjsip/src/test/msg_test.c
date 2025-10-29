@@ -1129,8 +1129,7 @@ struct hdr_test_t
         /* Empty Supported */
         "Supported", "k",
         "",
-        &hdr_test_supported,
-        0
+        &hdr_test_supported
     },
 
     {
@@ -1145,8 +1144,7 @@ struct hdr_test_t
         /* To */
         "To", "t",
         NAME_ADDR ";" GENERIC_PARAM,
-        &hdr_test_to,
-        0
+        &hdr_test_to
     },
 
     {
