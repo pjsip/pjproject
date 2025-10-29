@@ -566,6 +566,9 @@ PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt)
     }
 #endif
 
+#if defined(PJMEDIA_SRTP_HAS_SDES) && (PJMEDIA_SRTP_HAS_SDES != 0)
+    sdes_init();
+#endif
 #if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
     dtls_init();
 #endif
@@ -623,6 +626,9 @@ static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt)
 
 #if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
     dtls_deinit();
+#endif
+#if defined(PJMEDIA_SRTP_HAS_SDES) && (PJMEDIA_SRTP_HAS_SDES != 0)
+    sdes_deinit();
 #endif
 
     libsrtp_initialized = PJ_FALSE;

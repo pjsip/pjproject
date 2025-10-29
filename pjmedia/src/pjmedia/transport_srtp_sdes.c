@@ -38,6 +38,13 @@
     #include <Security/SecRandom.h>
 #endif
 
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+    #include "mbedtls/entropy.h"
+    #include "mbedtls/ctr_drbg.h"
+    static mbedtls_ctr_drbg_context sdes_mbedtls_ctr_drbg;
+    static mbedtls_entropy_context sdes_mbedtls_entropy;
+#endif
+
 #include <pj/rand.h>
 
 
@@ -75,6 +82,39 @@ static pjmedia_transport_op sdes_op =
     NULL
 };
 
+static pj_status_t sdes_init()
+{
+#if defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0) && \
+      (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+    int ret;
+    const char* pers = "pjsip_sdes";
+
+    /* Initialize contexts */
+    mbedtls_ctr_drbg_init(&sdes_mbedtls_ctr_drbg);
+    mbedtls_entropy_init(&sdes_mbedtls_entropy);
+
+    /* Seed */
+    ret = mbedtls_ctr_drbg_seed(&sdes_mbedtls_ctr_drbg, mbedtls_entropy_func,
+                                &sdes_mbedtls_entropy,
+                                (const unsigned char *)pers, strlen(pers));
+    if (ret != 0) {
+        PJ_LOG(1, (THIS_FILE, "Failed to mbedtls_ctr_drbg_seed, "
+                              "ret = -0x%04X", -ret));
+        return PJ_EUNKNOWN;
+    }
+#endif
+    return PJ_SUCCESS;
+}
+
+static void sdes_deinit()
+{
+#if defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0) && \
+      (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+    /* Free entropy and random generator */
+    mbedtls_entropy_free(&sdes_mbedtls_entropy);
+    mbedtls_ctr_drbg_free(&sdes_mbedtls_ctr_drbg);
+#endif
+}
 
 static pj_status_t sdes_create(transport_srtp *srtp,
                                pjmedia_transport **p_keying)
@@ -143,6 +183,16 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
                                          crypto_suites[cs_idx].cipher_key_len,
                                          &key);
             if (err != errSecSuccess) {
+                PJ_LOG(4,(THIS_FILE, "Failed generating random key "
+                          "(native err=%d)", err));
+                return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
+            }
+#elif defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0) && \
+      (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_MBEDTLS)
+            int err = mbedtls_ctr_drbg_random(&sdes_mbedtls_ctr_drbg,
+                                              (unsigned char*)key,
+                                              crypto_suites[cs_idx].cipher_key_len);
+            if (err != 0) {
                 PJ_LOG(4,(THIS_FILE, "Failed generating random key "
                           "(native err=%d)", err));
                 return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
