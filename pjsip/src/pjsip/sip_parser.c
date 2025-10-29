@@ -1763,6 +1763,8 @@ PJ_DEF(void) pjsip_parse_end_hdr_imp( pj_scanner *scanner )
 static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
                                      pj_scanner *scanner)
 {
+    pj_str_t elem;
+
     /* Some header fields allow empty elements in the value:
      *   Accept, Allow, Supported
      */
@@ -1778,11 +1780,13 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
         return;
     }
 
-    /* Skip leading comma if present (handle buggy implementations) */
-    if (*scanner->curptr == ',') {
+    /* Parse array elements, skipping any empty elements (for buggy clients).
+     * Scanner is configured with PJ_SCAN_AUTOSKIP_WS_HEADER, so whitespace
+     * is automatically skipped after getting comma or element.
+     */
+    while (*scanner->curptr == ',') {
+        /* Skip leading/consecutive commas */
         pj_scan_get_char(scanner);
-        pj_scan_skip_whitespace(scanner);
-        /* If we're now at EOF or newline, we're done */
         if (pj_scan_is_eof(scanner) || 
             *scanner->curptr == '\r' || *scanner->curptr == '\n') 
         {
@@ -1790,30 +1794,35 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
         }
     }
 
-    /* Only parse element if we're not at a comma or newline */
-    if (*scanner->curptr != ',' && 
-        *scanner->curptr != '\r' && *scanner->curptr != '\n') 
-    {
-        pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, 
-                     &hdr->values[hdr->count]);
-        hdr->count++;
+    /* Get first element if not at end of line */
+    if (*scanner->curptr != '\r' && *scanner->curptr != '\n') {
+        pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, &elem);
+        if (elem.slen > 0) {
+            hdr->values[hdr->count++] = elem;
+        }
     }
 
-    while ((hdr->count < PJ_ARRAY_SIZE(hdr->values)) &&
-           (*scanner->curptr == ','))
+    /* Parse remaining elements */
+    while (hdr->count < PJ_ARRAY_SIZE(hdr->values) &&
+           *scanner->curptr == ',')
     {
         pj_scan_get_char(scanner);
-        pj_scan_skip_whitespace(scanner);
-        /* Skip empty element (another comma or end of line) */
+        
+        /* Skip any consecutive commas or check for end */
+        while (*scanner->curptr == ',') {
+            pj_scan_get_char(scanner);
+        }
+        
         if (pj_scan_is_eof(scanner) || 
-            *scanner->curptr == ',' ||
             *scanner->curptr == '\r' || *scanner->curptr == '\n') 
         {
-            continue;
+            break;
         }
-        pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, 
-                     &hdr->values[hdr->count]);
-        hdr->count++;
+        
+        pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, &elem);
+        if (elem.slen > 0) {
+            hdr->values[hdr->count++] = elem;
+        }
     }
 
 end:
