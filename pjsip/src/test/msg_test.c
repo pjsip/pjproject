@@ -948,6 +948,10 @@ static int hdr_test_from(pjsip_hdr *h);
 static int hdr_test_proxy_authenticate(pjsip_hdr *h);
 static int hdr_test_record_route(pjsip_hdr *h);
 static int hdr_test_supported(pjsip_hdr *h);
+static int hdr_test_supported_with_leading_comma(pjsip_hdr *h);
+static int hdr_test_supported_with_trailing_comma(pjsip_hdr *h);
+static int hdr_test_supported_with_multiple_commas(pjsip_hdr *h);
+static int hdr_test_supported_with_middle_commas(pjsip_hdr *h);
 static int hdr_test_to(pjsip_hdr *h);
 static int hdr_test_via(pjsip_hdr *h);
 static int hdr_test_via_ipv6_1(pjsip_hdr *h);
@@ -1128,7 +1132,39 @@ struct hdr_test_t
         /* Empty Supported */
         "Supported", "k",
         "",
-        &hdr_test_supported,
+        &hdr_test_supported
+    },
+
+    {
+        /* Supported with leading comma (buggy MizuDroid format) */
+        "Supported", "k",
+        ",outbound",
+        &hdr_test_supported_with_leading_comma,
+        HDR_FLAG_DONT_PRINT
+    },
+
+    {
+        /* Supported with trailing comma */
+        "Supported", "k",
+        "outbound,",
+        &hdr_test_supported_with_trailing_comma,
+        HDR_FLAG_DONT_PRINT
+    },
+
+    {
+        /* Supported with multiple consecutive commas at beginning */
+        "Supported", "k",
+        ",,,outbound,path",
+        &hdr_test_supported_with_multiple_commas,
+        HDR_FLAG_DONT_PRINT
+    },
+
+    {
+        /* Supported with multiple consecutive commas in middle */
+        "Supported", "k",
+        "outbound,,,path",
+        &hdr_test_supported_with_middle_commas,
+        HDR_FLAG_DONT_PRINT
     },
 
     {
@@ -1731,6 +1767,92 @@ static int hdr_test_supported(pjsip_hdr *h)
 
     if (hdr->count != 0)
         return -2320;
+
+    return 0;
+}
+
+/*
+    ",outbound"
+    Test for handling leading comma (buggy MizuDroid format)
+ */
+static int hdr_test_supported_with_leading_comma(pjsip_hdr *h)
+{
+    pjsip_supported_hdr *hdr = (pjsip_supported_hdr*)h;
+
+    if (h->type != PJSIP_H_SUPPORTED)
+        return -2330;
+
+    if (hdr->count != 1)
+        return -2331;
+
+    if (pj_strcmp2(&hdr->values[0], "outbound") != 0)
+        return -2332;
+
+    return 0;
+}
+
+/*
+    "outbound,"
+    Test for handling trailing comma
+ */
+static int hdr_test_supported_with_trailing_comma(pjsip_hdr *h)
+{
+    pjsip_supported_hdr *hdr = (pjsip_supported_hdr*)h;
+
+    if (h->type != PJSIP_H_SUPPORTED)
+        return -2340;
+
+    if (hdr->count != 1)
+        return -2341;
+
+    if (pj_strcmp2(&hdr->values[0], "outbound") != 0)
+        return -2342;
+
+    return 0;
+}
+
+/*
+    ",,,outbound,path"
+    Test for handling multiple consecutive commas at beginning
+ */
+static int hdr_test_supported_with_multiple_commas(pjsip_hdr *h)
+{
+    pjsip_supported_hdr *hdr = (pjsip_supported_hdr*)h;
+
+    if (h->type != PJSIP_H_SUPPORTED)
+        return -2350;
+
+    if (hdr->count != 2)
+        return -2351;
+
+    if (pj_strcmp2(&hdr->values[0], "outbound") != 0)
+        return -2352;
+
+    if (pj_strcmp2(&hdr->values[1], "path") != 0)
+        return -2353;
+
+    return 0;
+}
+
+/*
+    "outbound,,,path"
+    Test for handling multiple consecutive commas in middle
+ */
+static int hdr_test_supported_with_middle_commas(pjsip_hdr *h)
+{
+    pjsip_supported_hdr *hdr = (pjsip_supported_hdr*)h;
+
+    if (h->type != PJSIP_H_SUPPORTED)
+        return -2360;
+
+    if (hdr->count != 2)
+        return -2361;
+
+    if (pj_strcmp2(&hdr->values[0], "outbound") != 0)
+        return -2362;
+
+    if (pj_strcmp2(&hdr->values[1], "path") != 0)
+        return -2363;
 
     return 0;
 }
