@@ -413,6 +413,11 @@ static pj_status_t handle_event(void *data)
         pj_mutex_unlock(sf->mutex);
     }
 
+    /* Unregister thread when exiting */
+    if (pj_thread_is_registered()) {
+        pj_thread_unregister();
+    }
+
     return PJ_SUCCESS;
 }
 
