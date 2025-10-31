@@ -389,6 +389,17 @@ PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
     return THREAD_PRIORITY_TIME_CRITICAL;
 }
 
+PJ_DEF(pj_status_t) pj_thread_set_prio_max(pj_thread_t *thread,
+                                           pj_thread_prio_param *opt)
+{
+    PJ_UNUSED_ARG(opt);
+    pj_status_t status = PJ_SUCCESS;
+    int max = pj_thread_get_prio_max(thread);
+    if (max > 0)
+        status = pj_thread_set_prio(thread, max);
+    
+    return status;
+}
 
 /*
  * Get native thread handle

@@ -580,26 +580,26 @@ static int ca_thread_func (void *arg)
     void* user_data            = stream->user_data;
     char* buf                  = stream->ca_buf;
     pj_timestamp tstamp;
+    pj_status_t status;
     int result;
-    struct sched_param param;
-    pthread_t* thid;
+    pj_thread_prio_param param;
+    int policy = SCHED_RR;
 
-    thid = (pthread_t*) pj_thread_get_os_handle (pj_thread_this());
-    param.sched_priority = sched_get_priority_max (SCHED_RR);
+    param.flag = PJ_THREAD_USE_EXPLICIT_POLICY;
+    param.opt_val = &policy;
     PJ_LOG (5,(THIS_FILE, "ca_thread_func(%u): Set thread priority "
                           "for audio capture thread.",
                           (unsigned)syscall(SYS_gettid)));
-    result = pthread_setschedparam (*thid, SCHED_RR, &param);
-    if (result) {
-        if (result == EPERM)
+    status = pj_thread_set_prio_max(pj_thread_this(), &param);
+    if (status != PJ_SUCCESS) {
+        if (PJ_STATUS_TO_OS(status) == EPERM)
             PJ_LOG (5,(THIS_FILE, "Unable to increase thread priority, "
                                   "root access needed."));
         else
             PJ_LOG (5,(THIS_FILE, "Unable to increase thread priority, "
                                   "error: %d",
-                                  result));
+                                  PJ_STATUS_TO_OS(status)));
     }
-
     pj_bzero (buf, size);
     tstamp.u64 = 0;
 
