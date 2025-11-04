@@ -88,7 +88,7 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
                                           pj_uint8_t **payload,
                                           pj_size_t *payload_len)
 {
-    unsigned payload_desc_size = 4;
+    unsigned payload_desc_size = (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP8? 4: 1);
     unsigned max_size = pktz->cfg.mtu - payload_desc_size;
     unsigned remaining_size = (unsigned)bits_len - *bits_pos;
     unsigned out_size = (unsigned)*payload_len;
@@ -101,7 +101,7 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
     /* Set payload header */
     bits[0] = 0;
     if (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP8) {
-        /* For VP8, use 4 bytes payload desc, see #4515 for more info */
+        /* For VP8, use 4 bytes payload desc, see #4659 for more info */
         bits[0] = 0x80;
 
         /* Set S: Start of VP8 partition. */
