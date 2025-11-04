@@ -194,13 +194,6 @@ static unsigned atexit_count;
 static void (*atexit_func[32])(void);
 
 static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type);
-static pj_status_t thread_get_policy(pj_thread_t *thread,
-                                     pj_thread_prio_param *opt,
-                                     int *policy);
-static int thread_get_prio_max(int policy);
-static pj_status_t thread_set_prio(pj_thread_t *thread, int policy, int prio);
-
-
 
 /*
  * pj_init(void).
@@ -466,19 +459,6 @@ PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
 #endif
 }
 
-static pj_status_t thread_set_prio(pj_thread_t *thread, int policy, int prio)
-{
-    struct sched_param param;
-    int rc;
-
-    param.sched_priority = prio;
-
-    rc = pthread_setschedparam(thread->thread, policy, &param);
-    if (rc != 0)
-        return PJ_RETURN_OS_ERROR(rc);
-
-    return PJ_SUCCESS;
-}
 
 /*
  * Set the thread priority.
@@ -493,12 +473,22 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
     return set_android_thread_priority(prio);
 
 #  else
-    int policy;
-    pj_status_t status = thread_get_policy(thread, NULL, &policy);
-    if (status != PJ_SUCCESS)
-        return status;
 
-    return thread_set_prio(thread, policy, prio);
+    struct sched_param param;
+    int policy;
+    int rc;
+
+    rc = pthread_getschedparam (thread->thread, &policy, &param);
+    if (rc != 0)
+        return PJ_RETURN_OS_ERROR(rc);
+
+    param.sched_priority = prio;
+
+    rc = pthread_setschedparam(thread->thread, policy, &param);
+    if (rc != 0)
+        return PJ_RETURN_OS_ERROR(rc);
+
+    return PJ_SUCCESS;
 
 #  endif /* PJ_ANDROID */
 
@@ -541,60 +531,23 @@ PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
  */
 PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
 {
+    struct sched_param param;
     int policy;
-    pj_status_t status = thread_get_policy(thread, NULL, &policy);
-    if (status != PJ_SUCCESS) {
+    int rc;
+
+    rc = pthread_getschedparam(thread->thread, &policy, &param);
+    if (rc != 0)
         return -1;
-    }
-    return thread_get_prio_max(policy);
-}
 
-static pj_status_t thread_get_policy(pj_thread_t *thread,
-                                     pj_thread_prio_param *opt,
-                                     int *policy)
-{
-    pj_thread_prio_flag flag = PJ_THREAD_USE_CURRENT_POLICY;
-    if (opt) {
-        flag = opt->flag;
-    }
-    if (flag == PJ_THREAD_USE_CURRENT_POLICY) {
-        struct sched_param param;
-        int rc;
-
-        rc = pthread_getschedparam(thread->thread, policy, &param);
-        if (rc != 0)
-            return PJ_RETURN_OS_ERROR(rc);
-    } else {
-        *policy = *((int*)opt->opt_val);
-    }
-
-    return PJ_SUCCESS;
-}
-
-static int thread_get_prio_max(int policy)
-{
 #if defined(_POSIX_PRIORITY_SCHEDULING)
     return sched_get_priority_max(policy);
 #elif defined __OpenBSD__
     /* Thread prio min/max are declared in OpenBSD private hdr */
     return 31;
 #else
-    pj_assert("thread_get_prio_max() not supported!");
+    pj_assert("pj_thread_get_prio_max() not supported!");
     return 0;
 #endif
-}
-
-PJ_DEF(pj_status_t) pj_thread_set_prio_max(pj_thread_t *thread,
-                                           pj_thread_prio_param *opt)
-{
-    int policy, prio;
-
-    pj_status_t status = thread_get_policy(thread, opt, &policy);
-    if (status != PJ_SUCCESS)
-        return status;
-
-    prio = thread_get_prio_max(policy);
-    return thread_set_prio(thread, policy, prio);
 }
 
 

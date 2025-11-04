@@ -562,14 +562,6 @@ PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
     return 1;
 }
 
-PJ_DEF(pj_status_t) pj_thread_set_prio_max(pj_thread_t *thread,
-                                           pj_thread_prio_param *opt)
-{
-    PJ_UNUSED_ARG(thread);
-    PJ_UNUSED_ARG(opt);
-    return PJ_SUCCESS;
-}
-
 
 /*
  * pj_thread_get_os_handle()

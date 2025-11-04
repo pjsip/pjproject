@@ -25,10 +25,6 @@
 #include <pj/string.h>
 #include <pj/compat/high_precision.h>
 
-#define THIS_FILE   "clock_thread.c"
-/* Set this to set the clock thread policy. Applicable only for Posix thread.*/
-#define CLOCK_THREAD_POLICY 0
-
 /* API: Init clock source */
 PJ_DEF(pj_status_t) pjmedia_clock_src_init( pjmedia_clock_src *clocksrc,
                                             pjmedia_type media_type,
@@ -361,21 +357,9 @@ static int clock_thread(void *arg)
 
     /* Set thread priority to maximum unless not wanted. */
     if ((clock->options & PJMEDIA_CLOCK_NO_HIGHEST_PRIO) == 0) {
-        pj_thread_prio_param param;
-        pj_status_t status;
-
-#if (CLOCK_THREAD_POLICY == 0)
-        param.flag = PJ_THREAD_USE_CURRENT_POLICY;
-#else
-        int sched_policy = CLOCK_THREAD_POLICY;
-        param.flag = PJ_THREAD_USE_EXPLICIT_POLICY;
-        param.opt_val = &sched_policy;
-#endif
-        status = pj_thread_set_prio_max(pj_thread_this(), &param);
-        if (status != PJ_SUCCESS) {
-            pj_perror(4, THIS_FILE, status,
-                      "Failed setting maximum thread prioriy");
-        }
+        int max = pj_thread_get_prio_max(pj_thread_this());
+        if (max > 0)
+            pj_thread_set_prio(pj_thread_this(), max);
     }
 
     /* Get the first tick */

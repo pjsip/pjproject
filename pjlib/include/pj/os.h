@@ -52,32 +52,6 @@ typedef enum pj_sys_info_flag
 
 } pj_sys_info_flag;
 
-/**
- * These enumeration contains the flag when setting thread's priority.
- *
- */
-typedef enum pj_thread_prio_flag
-{
-    /**
-     * For Posix thread, the priority is based on the current thread's policy.
-     */
-    PJ_THREAD_USE_CURRENT_POLICY,
-
-    /**
-     * For Posix thread, the priority is based on the specific policy. Set the
-     * policy from the pj_thread_prio_param.opt_val;
-     */
-    PJ_THREAD_USE_EXPLICIT_POLICY
-} pj_thread_prio_flag;
-
-/**
- * This structure contains the parameter to set the thread priority.
- */
-typedef struct pj_thread_prio_param
-{
-    pj_thread_prio_flag      flag;
-    void                    *opt_val;
-} pj_thread_prio_param;
 
 /**
  * This structure contains information about the system. Use #pj_get_sys_info()
@@ -365,20 +339,6 @@ PJ_DECL(int) pj_thread_get_prio_min(pj_thread_t *thread);
  */
 PJ_DECL(int) pj_thread_get_prio_max(pj_thread_t *thread);
 
-/**
- * Set the thread priority. The priority will use the maximum possible value.
- *
- * For Android, this function will only set the priority of the calling thread
- * (the thread param must be set to NULL or the calling thread handle).
- *
- * @param thread        Thread handle.
- * @param opt           Thread priority option. Currently it's only for Posix
- *                      thread, otherwise you can set this to NULL.
- *
- * @return              PJ_SUCCESS on success or the error code.
- */
-PJ_DECL(pj_status_t) pj_thread_set_prio_max(pj_thread_t *thread,
-                                            pj_thread_prio_param *opt);
 
 /**
  * Return native handle from pj_thread_t for manipulation using native
