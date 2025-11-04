@@ -374,7 +374,7 @@ static int clock_thread(void *arg)
         status = pj_thread_set_prio_max(pj_thread_this(), &param);
         if (status != PJ_SUCCESS) {
             pj_perror(4, THIS_FILE, status,
-                      "Failed setting maximum thread priority");
+                      "Failed setting maximum thread prioriy");
         }
     }
 
