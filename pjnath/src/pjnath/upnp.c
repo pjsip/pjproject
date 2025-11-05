@@ -527,12 +527,7 @@ static int client_cb(Upnp_EventType event_type, const void *event,
         TRACE_("Unhandled UPnP client callback %d", event_type);
         break;
     }
-
-    /* Unregister thread when exiting callback */
-    if (pj_thread_is_registered()) {
-        pj_thread_unregister();
-    }
-
+    
     return UPNP_E_SUCCESS;
 }
 

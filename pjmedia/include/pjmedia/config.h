@@ -1873,6 +1873,22 @@
 #   define PJMEDIA_AVSYNC_MAX_SPEEDUP_REQ_CNT       10
 #endif
 
+
+/**
+ * Enable automatic thread unregistration in media device callbacks.
+ * When enabled, threads created by external libraries (audio/video drivers)
+ * will automatically call pj_thread_unregister() when exiting callback
+ * functions. This ensures proper cleanup of thread-local storage.
+ *
+ * Note: This setting only affects pjmedia audio and video device callbacks,
+ * not other parts of the library.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+#   define PJMEDIA_UNREGISTER_MEDIA_CB_THREADS      1
+#endif
+
 /**
  * @}
  */

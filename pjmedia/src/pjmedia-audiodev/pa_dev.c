@@ -167,6 +167,9 @@ static int PaRecorderCallback(const void *input,
     struct pa_aud_stream *stream = (struct pa_aud_stream*) userData;
     pj_status_t status = 0;
     unsigned nsamples;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
     PJ_UNUSED_ARG(output);
     PJ_UNUSED_ARG(timeInfo);
@@ -190,6 +193,9 @@ static int PaRecorderCallback(const void *input,
         status = pj_thread_register("pa_rec", stream->rec_thread_desc, 
                                     &stream->rec_thread);
         stream->rec_thread_initialized = 1;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
         PJ_LOG(5,(THIS_FILE, "Recorder thread started"));
     }
 
@@ -266,9 +272,11 @@ static int PaRecorderCallback(const void *input,
         return paContinue;
 
 on_break:
-    if (stream->rec_thread_initialized) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
+#endif
     stream->rec_thread_exited = 1;
     return paAbort;
 }
@@ -283,6 +291,9 @@ static int PaPlayerCallback( const void *input,
     struct pa_aud_stream *stream = (struct pa_aud_stream*) userData;
     pj_status_t status = 0;
     unsigned nsamples_req = frameCount * stream->channel_count;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
     PJ_UNUSED_ARG(input);
     PJ_UNUSED_ARG(timeInfo);
@@ -306,6 +317,9 @@ static int PaPlayerCallback( const void *input,
         status = pj_thread_register("portaudio", stream->play_thread_desc,
                                     &stream->play_thread);
         stream->play_thread_initialized = 1;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
         PJ_LOG(5,(THIS_FILE, "Player thread started"));
     }
 
@@ -391,9 +405,11 @@ static int PaPlayerCallback( const void *input,
         return paContinue;
 
 on_break:
-    if (stream->play_thread_initialized) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
+#endif
     stream->play_thread_exited = 1;
     return paAbort;
 }

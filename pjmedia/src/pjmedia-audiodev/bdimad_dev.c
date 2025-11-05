@@ -443,7 +443,10 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
     pjmedia_frame frame;
     unsigned nsamples;    
 
-    struct bd_stream *strm = (struct bd_stream*)user_data;    
+    struct bd_stream *strm = (struct bd_stream*)user_data;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
     if(!strm->go) 
         goto on_break;
@@ -465,6 +468,9 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
             goto on_break;
 
         strm->rec_thread_initialized = 1;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
         PJ_LOG(5,(THIS_FILE, "Recorder thread started"));
     }
     
@@ -542,9 +548,11 @@ void bdimad_CaptureCallback(void *buffer, int samples, void *user_data)
         return;
 
 on_break:
-    if (strm->rec_thread_initialized) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
+#endif
     strm->rec_thread_exited = 1;    
 }
 
@@ -555,6 +563,9 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
     pjmedia_frame frame;
     struct bd_stream *strm = (struct bd_stream*)user_data;
     unsigned nsamples_req = samples * strm->channel_count;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
     if(!strm->go) 
         goto on_break;
@@ -576,6 +587,9 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
             goto on_break;
 
         strm->play_thread_initialized = 1;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
         PJ_LOG(5,(THIS_FILE, "Player thread started"));
     }
 
@@ -665,9 +679,11 @@ int bdimad_PlaybackCallback(void *buffer, int samples, void *user_data)
         return samples;
 
 on_break:
-    if (strm->play_thread_initialized) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
+#endif
     strm->play_thread_exited = 1;
     return 0;
 }
