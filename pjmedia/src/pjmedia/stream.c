@@ -64,7 +64,7 @@
 #   define PJMEDIA_STREAM_INC   4000
 #endif
 
-/* Number of DTMF E bit transmissions */
+/* Default number of DTMF E bit transmissions */
 #define DTMF_EBIT_RETRANSMIT_CNT        3
 
 /*  Number of send error before repeat the report. */
@@ -139,6 +139,15 @@ struct pjmedia_stream
     int                      tx_event_pt;   /**< Outgoing pt for dtmf.      */
     int                      tx_dtmf_count; /**< # of digits in tx dtmf buf.*/
     struct dtmf              tx_dtmf_buf[32];/**< Outgoing dtmf queue.      */
+    pj_uint32_t              tx_dtmf_pause_dur;
+                                            /**< Outgoing DTMF full pause
+                                                 (in timestamp).            */
+    pj_int8_t                tx_dtmf_vol;   /**< Outgoing DTMF volume.      */
+    pj_uint32_t              tx_dtmf_ebit_rep_cnt;
+                                            /**< Outgoing DTMF end bit
+                                                 packet repetition count.   */
+    pj_uint32_t              tx_dtmf_pause_rem;
+                                            /**< Outgoing DTMF rem. pause.  */
 
     /* Incoming DTMF: */
     int                      rx_event_pt;   /**< Incoming pt for dtmf.      */
@@ -785,7 +794,7 @@ static void create_dtmf_payload(pjmedia_stream *stream,
         digit->duration = duration;
 
     event->event = (pj_uint8_t)digit->event;
-    event->e_vol = 10;
+    event->e_vol = PJ_ABS(stream->tx_dtmf_vol);
     event->duration = pj_htons((pj_uint16_t)digit->duration);
 
     if (forced_last) {
@@ -795,7 +804,7 @@ static void create_dtmf_payload(pjmedia_stream *stream,
     if (digit->duration >= duration) {
         event->e_vol |= 0x80;
 
-        if (++digit->ebit_cnt >= DTMF_EBIT_RETRANSMIT_CNT) {
+        if (++digit->ebit_cnt >= (1U + stream->tx_dtmf_ebit_rep_cnt)) {
             *last = 1;
 
             /* Prepare next digit. */
@@ -805,11 +814,28 @@ static void create_dtmf_payload(pjmedia_stream *stream,
                            stream->tx_dtmf_count, 0);
             --stream->tx_dtmf_count;
 
+            /* add pause after each completed digit */
+            stream->tx_dtmf_pause_rem = stream->tx_dtmf_pause_dur;
+
             pj_mutex_unlock(c_strm->jb_mutex);
         }
     }
 
     frame_out->size = 4;
+}
+
+
+/*
+ * Process (count down) DTMF pause
+ */
+static void process_dtmf_pause(pjmedia_stream *stream)
+{
+    if (stream->tx_dtmf_pause_rem > stream->rtp_tx_ts_len_per_pkt) {
+        stream->tx_dtmf_pause_rem -= stream->rtp_tx_ts_len_per_pkt;
+    }
+    else {
+        stream->tx_dtmf_pause_rem = 0U;
+    }
 }
 
 
@@ -1021,10 +1047,11 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     frame_out.buf = ((char*)channel->buf) + sizeof(pjmedia_rtp_hdr);
     frame_out.size = 0;
 
-    /* If we have DTMF digits in the queue, transmit the digits.
+    /* If we have DTMF digits in the queue (and no pause is remaining), transmit
+     * the digits.
      * Otherwise encode the PCM buffer.
      */
-    if (stream->tx_dtmf_count) {
+    if (stream->tx_dtmf_count && (stream->tx_dtmf_pause_rem == 0U)) {
         int first=0, last=0;
 
         create_dtmf_payload(stream, &frame_out, 0, &first, &last);
@@ -1046,7 +1073,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
              * RTP packets.
              */
             inc_timestamp = stream->dtmf_duration +
-                            ((DTMF_EBIT_RETRANSMIT_CNT-1) *
+                            ((stream->tx_dtmf_ebit_rep_cnt) *
                              stream->rtp_tx_ts_len_per_pkt)
                             - rtp_ts_len;
         }
@@ -1068,6 +1095,9 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
                (c_strm->dir & PJMEDIA_DIR_ENCODING))
     {
         pjmedia_frame silence_frame;
+
+        /* process a possibly ongoing DTMF pause */
+        process_dtmf_pause(stream);
 
         pj_bzero(&silence_frame, sizeof(silence_frame));
         silence_frame.buf = stream->zero_frame;
@@ -1098,6 +1128,9 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
                 frame->buf != NULL) ||
                (frame->type == PJMEDIA_FRAME_TYPE_EXTENDED))
     {
+        /* process a possibly ongoing DTMF pause */
+        process_dtmf_pause(stream);
+
         /* Encode! */
         status = pjmedia_codec_encode( stream->codec, frame,
                                        channel->buf_size -
@@ -2018,12 +2051,17 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     /* Disable PLC until a "NORMAL" frame is gotten from the jitter buffer. */
     stream->plc_cnt = stream->max_plc_cnt;
 
+    /* TX DTMF is just initialized with default values here */
 #if defined(PJMEDIA_DTMF_DURATION_MSEC) && (PJMEDIA_DTMF_DURATION_MSEC > 0)
     stream->dtmf_duration = PJMEDIA_DTMF_DURATION_MSEC *
                             afd->clock_rate / 1000;
 #else
     stream->dtmf_duration = PJMEDIA_DTMF_DURATION;
 #endif
+    stream->tx_dtmf_pause_dur = 0U;
+    stream->tx_dtmf_vol = -10;
+    stream->tx_dtmf_ebit_rep_cnt = (DTMF_EBIT_RETRANSMIT_CNT - 1U);
+    stream->tx_dtmf_pause_rem = 0U;
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
     stream->rtp_rx_check_cnt = 50;
@@ -2657,6 +2695,47 @@ PJ_DEF(pj_status_t) pjmedia_stream_resume( pjmedia_stream *stream,
 
     return PJ_SUCCESS;
 }
+
+
+/*
+ * Configure TX DTMF
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_conf_tx_dtmf(pjmedia_stream *stream,
+                                                pj_uint32_t duration_ms,
+                                                pj_uint32_t pause_ms,
+                                                pj_uint8_t pt,
+                                                pj_int8_t vol,
+                                                pj_uint32_t ebit_rep_cnt)
+{
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
+    pjmedia_audio_format_detail *afd;
+
+    PJ_ASSERT_RETURN(stream &&
+                     (duration_ms <= 1000U) &&
+                     (pause_ms <= 1000U) &&
+                     (vol <= 0) &&
+                     (ebit_rep_cnt <= 7U), PJ_EINVAL);
+
+    /* By convention we use jitter buffer mutex to access DTMF queue. */
+    pj_mutex_lock(c_strm->jb_mutex);
+
+    afd = pjmedia_format_get_audio_format_detail(&c_strm->port.info.fmt, 1);
+
+    /* convert durations to timestamps */
+    stream->dtmf_duration = duration_ms * afd->clock_rate / 1000U;
+    stream->tx_dtmf_pause_dur = pause_ms * afd->clock_rate / 1000U;
+
+    /* take other configuration parameters as they are */
+    stream->tx_event_pt = pt;
+    stream->tx_dtmf_vol = vol;
+    stream->tx_dtmf_ebit_rep_cnt = ebit_rep_cnt;
+
+    /* Unlock jitter buffer mutex. */
+    pj_mutex_unlock(c_strm->jb_mutex);
+
+    return PJ_SUCCESS;
+}
+
 
 /*
  * Dial DTMF

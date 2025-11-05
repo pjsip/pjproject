@@ -337,7 +337,26 @@ PJ_DECL(pj_status_t) pjmedia_stream_resume(pjmedia_stream *stream,
                                            pjmedia_dir dir);
 
 /**
- * Transmit DTMF to this stream. The DTMF will be transmitted uisng
+ * (Re-)Configure DTMF transmission of this stream.
+ *
+ * @param stream        The media stream.
+ * @param duration_ms   Event duration in milliseconds.
+ * @param pause_ms      Pause between events in milliseconds.
+ * @param pt            Payload type to use.
+ * @param vol           Volume to use.
+ * @param ebit_rep_cnt  Number of additional packet repetitions of the end bit.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_conf_tx_dtmf(pjmedia_stream *stream,
+                                                 pj_uint32_t duration_ms,
+                                                 pj_uint32_t pause_ms,
+                                                 pj_uint8_t pt,
+                                                 pj_int8_t vol,
+                                                 pj_uint32_t ebit_rep_cnt);
+
+/**
+ * Transmit DTMF to this stream. The DTMF will be transmitted using
  * RTP telephone-events as described in RFC 2833. This operation is
  * only valid for audio stream.
  *
