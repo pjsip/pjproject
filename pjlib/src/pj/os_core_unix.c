@@ -194,7 +194,7 @@ static unsigned atexit_count;
 static void (*atexit_func[32])(void);
 
 static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type);
-static int get_prio_max(pj_thread_t *thread, pj_bool_t max_policy);
+static int get_prio_max(pj_thread_t *thread);
 static pj_status_t set_prio(pj_thread_t *thread, int prio, 
                             pj_bool_t max_policy);
 /*
@@ -475,8 +475,11 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
     return set_android_thread_priority(prio);
 
 #  else
+    pj_status_t status = PJ_EUNKNOWN;
 
-    pj_status_t status = set_prio(thread, prio, PJ_TRUE);
+    if (prio > 0)
+        status = set_prio(thread, prio, PJ_TRUE);
+
     if (status != PJ_SUCCESS)
         status = set_prio(thread, prio, PJ_FALSE);
 
@@ -538,7 +541,7 @@ static pj_status_t set_prio(pj_thread_t *thread, int prio,
     return PJ_SUCCESS;    
 }
 
-static int get_prio_max(pj_thread_t *thread, pj_bool_t max_policy)
+static int get_prio_max(pj_thread_t *thread)
 {
     int ori_policy, policy;
     int prio;
@@ -549,7 +552,7 @@ static int get_prio_max(pj_thread_t *thread, pj_bool_t max_policy)
     if (rc != 0)
         return -1;
  
-    policy = max_policy?SCHED_RR:ori_policy;
+    policy = SCHED_RR;
     prio = sched_get_priority_max(policy);
     
     /* Make sure the priority is usable. */
@@ -557,7 +560,7 @@ static int get_prio_max(pj_thread_t *thread, pj_bool_t max_policy)
 
     rc = pthread_setschedparam(thread->thread, policy, &param);
     if (rc != 0)
-        return -1;
+        return sched_get_priority_max(ori_policy);
     
     /* Revert the original policy/param. */
     rc = pthread_setschedparam(thread->thread, ori_policy, &ori_param);
@@ -571,11 +574,7 @@ static int get_prio_max(pj_thread_t *thread, pj_bool_t max_policy)
 PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
 {
 #if defined(_POSIX_PRIORITY_SCHEDULING)
-    int prio = get_prio_max(thread, PJ_TRUE);
-    if (prio < 0) {
-        prio = get_prio_max(thread, PJ_FALSE);
-    }
-    return prio;
+    return get_prio_max(thread);
 #elif defined __OpenBSD__
     /* Thread prio min/max are declared in OpenBSD private hdr */
     return 31;
