@@ -1287,6 +1287,9 @@ HRESULT AudioActivator::ActivateCompleted(
     HRESULT hr = S_OK, hr2 = S_OK;
     IUnknown *aud_interface = NULL;
     IAudioClient2 *aud_client = NULL;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
     hr = pAsyncOp->GetActivateResult(&hr2, &aud_interface);
     if (SUCCEEDED(hr) && SUCCEEDED(hr2)) {
@@ -1299,14 +1302,19 @@ HRESULT AudioActivator::ActivateCompleted(
 
             if (!pj_thread_is_registered()) {
                 pj_thread_register("activator", thread_desc, &act_thread);
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+                thread_registered_here = PJ_TRUE;
+#endif
             }       
         } 
     }     
     
     /* Unregister thread before exiting */
-    if (pj_thread_is_registered()) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
+#endif
     
     task_completed.set(aud_client);
     return hr;

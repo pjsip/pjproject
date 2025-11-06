@@ -765,6 +765,9 @@ public:
 
     void onErrorAfterClose(oboe::AudioStream *oboeStream, oboe::Result result)
     {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
         __android_log_print(ANDROID_LOG_INFO, THIS_FILE,
                             "Oboe %s got onErrorAfterClose(%d)",
                             dir_st, result);
@@ -777,6 +780,9 @@ public:
             pj_thread_register("oboe_err_thread", err_thread_desc,
                                &tmp_thread);
             err_thread_registered = true;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+            thread_registered_here = PJ_TRUE;
+#endif
         }
 
         /* Just try to restart */
@@ -821,9 +827,11 @@ public:
         }
 
         /* Unregister thread before exiting */
-        if (err_thread_registered && pj_thread_is_registered()) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        if (thread_registered_here) {
             pj_thread_unregister();
         }
+#endif
 
         pj_mutex_unlock(mutex);
     }

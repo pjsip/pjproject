@@ -170,6 +170,9 @@ void bqPlayerCallback(W_SLBufferQueueItf bq, void *context)
     struct opensl_aud_stream *stream = (struct opensl_aud_stream*) context;
     SLresult result;
     int status;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
     pj_assert(context != NULL);
     pj_assert(bq == stream->playerBufQ);
@@ -180,6 +183,9 @@ void bqPlayerCallback(W_SLBufferQueueItf bq, void *context)
         status = pj_thread_register("opensl_play", stream->play_thread_desc,
                                     &stream->play_thread);
         stream->play_thread_initialized = 1;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
         PJ_LOG(5, (THIS_FILE, "Player thread started"));
     }
     
@@ -210,9 +216,11 @@ void bqPlayerCallback(W_SLBufferQueueItf bq, void *context)
     }
     
     /* Unregister thread when exiting callback */
-    if (stream->play_thread_initialized && pj_thread_is_registered()) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
+#endif
 }
 
 /* This callback handler is called every time a buffer finishes recording */
@@ -221,6 +229,9 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
     struct opensl_aud_stream *stream = (struct opensl_aud_stream*) context;
     SLresult result;
     int status;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
     pj_assert(context != NULL);
     pj_assert(bq == stream->recordBufQ);
@@ -232,6 +243,9 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
                                     &stream->rec_thread);
         PJ_UNUSED_ARG(status);  /* Unused for now.. */
         stream->rec_thread_initialized = 1;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
         PJ_LOG(5, (THIS_FILE, "Recorder thread started")); 
     }
     
@@ -261,9 +275,11 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
     }
     
     /* Unregister thread when exiting callback */
-    if (stream->rec_thread_initialized && pj_thread_is_registered()) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
+#endif
 }
 
 pj_status_t opensl_to_pj_error(SLresult code)
