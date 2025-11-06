@@ -552,6 +552,9 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
 
 - (void)session_runtime_error:(NSNotification *)notification
 {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
     // This function is called from NSNotificationCenter.
     // Make sure the thread is registered.
     if (!pj_thread_is_registered()) {
@@ -559,6 +562,9 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
         static pj_thread_desc thread_desc;
         pj_bzero(thread_desc, sizeof(pj_thread_desc));
         pj_thread_register("NSNotificationCenter", thread_desc, &thread);
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
     }
 
     NSError *error = notification.userInfo[AVCaptureSessionErrorKey];
@@ -567,9 +573,11 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
                [error.localizedFailureReason UTF8String]));
     
     /* Unregister thread when exiting notification handler */
-    if (pj_thread_is_registered()) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
+#endif
 }
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput 

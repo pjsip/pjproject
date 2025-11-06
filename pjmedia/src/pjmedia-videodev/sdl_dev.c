@@ -336,9 +336,16 @@ static pj_status_t handle_event(void *data)
 {
     struct sdl_factory *sf = (struct sdl_factory*)data;
     SDL_Event sevent;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
-    if (!pj_thread_is_registered())
+    if (!pj_thread_is_registered()) {
         pj_thread_register("sdl_ev", sf->thread_desc, &sf->ev_thread);
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
+    }
 
     while (SDL_PollEvent(&sevent)) {
         struct sdl_stream *strm = NULL;
@@ -414,9 +421,11 @@ static pj_status_t handle_event(void *data)
     }
 
     /* Unregister thread when exiting */
-    if (pj_thread_is_registered()) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
+#endif
 
     return PJ_SUCCESS;
 }

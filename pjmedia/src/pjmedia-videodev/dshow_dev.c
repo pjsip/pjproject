@@ -594,6 +594,9 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
 {
     struct dshow_stream *strm = (struct dshow_stream*)user_data;
     pjmedia_frame frame = {0};
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
     if (strm->quit_flag) {
         strm->cap_thread_exited = PJ_TRUE;
@@ -608,12 +611,17 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
                                     &strm->cap_thread);
         if (status != PJ_SUCCESS) {
             /* Unregister thread when exiting early */
-            if (strm->cap_thread_initialized && pj_thread_is_registered()) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+            if (thread_registered_here) {
                 pj_thread_unregister();
             }
+#endif
             return;
         }
         strm->cap_thread_initialized = 1;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
         PJ_LOG(5,(THIS_FILE, "Capture thread started"));
     }
 
@@ -649,9 +657,11 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
         (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &frame);
     
     /* Unregister thread when exiting */
-    if (strm->cap_thread_initialized && pj_thread_is_registered()) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
+#endif
 }
 
 /* API: Put frame from stream */
