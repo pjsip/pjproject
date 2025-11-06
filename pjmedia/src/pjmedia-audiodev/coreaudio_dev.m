@@ -754,11 +754,15 @@ static OSStatus resample_callback(void                       *inRefCon,
 {
     struct coreaudio_stream *strm = (struct coreaudio_stream*)inRefCon;
     OSStatus ostatus;
+    OSStatus ret_status = noErr;
     pj_status_t status = 0;
     unsigned nsamples;
     AudioBufferList *buf = strm->audio_buf;
     pj_int16_t *input;
     UInt32 resampleSize;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
     pj_assert(!strm->quit_flag);
 
@@ -775,6 +779,9 @@ static OSStatus resample_callback(void                       *inRefCon,
         status = pj_thread_register("ca_rec", strm->rec_thread_desc,
                                     &strm->rec_thread);
         strm->rec_thread_initialized = 1;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
         PJ_LOG(5,(THIS_FILE, "Recorder thread started, (%i frames)", 
                   inNumberFrames));
     }
@@ -865,6 +872,7 @@ static OSStatus resample_callback(void                       *inRefCon,
                                                       &ab,
                                                       NULL);
             if (ostatus != noErr) {
+                ret_status = -1;
                 goto on_break;
             }       
             
@@ -892,13 +900,15 @@ static OSStatus resample_callback(void                       *inRefCon,
                                     strm->param.channel_count;
     }
 
-    return noErr;
+    goto on_break;
 
 on_break:
-    if (strm->rec_thread_initialized) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
-    return -1;
+#endif
+    return ret_status;
 }
 
 static OSStatus input_callback(void                       *inRefCon,
@@ -910,10 +920,14 @@ static OSStatus input_callback(void                       *inRefCon,
 {
     struct coreaudio_stream *strm = (struct coreaudio_stream*)inRefCon;
     OSStatus ostatus;
+    OSStatus ret_status = noErr;
     pj_status_t status = 0;
     unsigned nsamples;
     AudioBufferList *buf = strm->audio_buf;
     pj_int16_t *input;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
     pj_assert(!strm->quit_flag);
 
@@ -930,6 +944,9 @@ static OSStatus input_callback(void                       *inRefCon,
         status = pj_thread_register("ca_rec", strm->rec_thread_desc,
                                     &strm->rec_thread);
         strm->rec_thread_initialized = 1;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
         PJ_LOG(5,(THIS_FILE, "Recorder thread started, (%i frames)",
                   inNumberFrames));
     }
@@ -947,6 +964,7 @@ static OSStatus input_callback(void                       *inRefCon,
 
     if (ostatus != noErr) {
         PJ_LOG(5, (THIS_FILE, "Core audio unit render error %i", ostatus));
+        ret_status = -1;
         goto on_break;
     }
     input = (pj_int16_t *)buf->mBuffers[0].mData;
@@ -1012,13 +1030,15 @@ static OSStatus input_callback(void                       *inRefCon,
         strm->rec_buf_count += inNumberFrames * strm->param.channel_count;
      }
 
-    return noErr;
+    goto on_break;
 
 on_break:
-    if (strm->rec_thread_initialized) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
-    return -1;
+#endif
+    return ret_status;
 }
 
 /* Copy 16-bit signed int samples to a destination buffer, which can be
@@ -1053,12 +1073,16 @@ static OSStatus output_renderer(void                       *inRefCon,
                                 AudioBufferList            *ioData)
 {
     struct coreaudio_stream *stream = (struct coreaudio_stream*)inRefCon;
+    OSStatus ret_status = noErr;
     pj_status_t status = 0;
     unsigned nsamples_req = inNumberFrames * stream->param.channel_count;
     void *output = ioData->mBuffers[0].mData;
     unsigned elmt_size = ioData->mBuffers[0].mDataByteSize / inNumberFrames /
                          stream->param.channel_count;
     unsigned output_pos = 0;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
 
     pj_assert(!stream->quit_flag);
 
@@ -1075,6 +1099,9 @@ static OSStatus output_renderer(void                       *inRefCon,
         status = pj_thread_register("coreaudio", stream->play_thread_desc,
                                     &stream->play_thread);
         stream->play_thread_initialized = 1;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
         PJ_LOG(5,(THIS_FILE, "Player thread started, (%i frames)",
                   inNumberFrames));
     }
@@ -1092,7 +1119,7 @@ static OSStatus output_renderer(void                       *inRefCon,
                                  stream->play_buf_count);
             nsamples_req = 0;
 
-            return noErr;
+            goto on_break;
         }
 
         /* samples buffered < requested by sound device */
@@ -1122,8 +1149,10 @@ static OSStatus output_renderer(void                       *inRefCon,
                 frame.buf = stream->play_buf;
             }
             status = (*stream->play_cb)(stream->user_data, &frame);
-            if (status != PJ_SUCCESS)
+            if (status != PJ_SUCCESS) {
+                ret_status = -1;
                 goto on_break;
+            }
 
             if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
                 pj_bzero(frame.buf, frame.size);
@@ -1138,8 +1167,10 @@ static OSStatus output_renderer(void                       *inRefCon,
         } else {
             frame.buf = stream->play_buf;
             status = (*stream->play_cb)(stream->user_data, &frame);
-            if (status != PJ_SUCCESS)
+            if (status != PJ_SUCCESS) {
+                ret_status = -1;
                 goto on_break;
+            }
 
             if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
                 pj_bzero(frame.buf, frame.size);
@@ -1158,13 +1189,15 @@ static OSStatus output_renderer(void                       *inRefCon,
                                       stream->param.channel_count;
     }
 
-    return noErr;
+    goto on_break;
 
 on_break:
-    if (stream->play_thread_initialized) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
-    return -1;
+#endif
+    return ret_status;
 }
 
 #if !COREAUDIO_MAC && USE_AUDIO_SESSION_API != 0
@@ -1224,6 +1257,9 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
     pj_status_t status;
     static pj_thread_desc thread_desc;
     pj_thread_t *thread;
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    pj_bool_t thread_registered_here = PJ_FALSE;
+#endif
     
     /* Register the thread with PJLIB, this is must for any external threads
      * which need to use the PJLIB framework.
@@ -1231,14 +1267,23 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
     if (!pj_thread_is_registered()) {
         pj_bzero(thread_desc, sizeof(pj_thread_desc));
         status = pj_thread_register("intListener", thread_desc, &thread);
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        thread_registered_here = PJ_TRUE;
+#endif
     }
     
     PJ_LOG(3, (THIS_FILE, "Session interrupted! --- %s ---",
            inInterruption == kAudioSessionBeginInterruption ?
            "Begin Interruption" : "End Interruption"));
 
-    if (!cf_instance)
+    if (!cf_instance) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+        if (thread_registered_here) {
+            pj_thread_unregister();
+        }
+#endif
         return;
+    }
     
     pj_mutex_lock(cf_instance->mutex);
     itBegin = &cf_instance->streams;
@@ -1287,9 +1332,11 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
     pj_mutex_unlock(cf_instance->mutex);
     
     /* Unregister the thread when exiting */
-    if (pj_thread_is_registered()) {
+#if PJMEDIA_UNREGISTER_MEDIA_CB_THREADS
+    if (thread_registered_here) {
         pj_thread_unregister();
     }
+#endif
 }
 
 #endif
