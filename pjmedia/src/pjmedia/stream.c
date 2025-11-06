@@ -2698,14 +2698,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_resume( pjmedia_stream *stream,
 
 
 /*
- * Configure TX DTMF
+ * Set DTMF transmission options of this stream
  */
-PJ_DEF(pj_status_t) pjmedia_stream_conf_tx_dtmf(pjmedia_stream *stream,
-                                                pj_uint32_t duration_ms,
-                                                pj_uint32_t pause_ms,
-                                                pj_uint8_t pt,
-                                                pj_int8_t vol,
-                                                pj_uint32_t ebit_rep_cnt)
+PJ_DEF(pj_status_t)
+pjmedia_stream_set_tx_dtmf_options(pjmedia_stream *stream,
+                                   pj_uint32_t duration_ms,
+                                   pj_uint32_t pause_ms,
+                                   pj_uint8_t pt,
+                                   pj_int8_t vol,
+                                   pj_uint32_t ebit_rep_cnt)
 {
     pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
     pjmedia_audio_format_detail *afd;
@@ -2713,7 +2714,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_conf_tx_dtmf(pjmedia_stream *stream,
     PJ_ASSERT_RETURN(stream &&
                      (duration_ms <= 1000U) &&
                      (pause_ms <= 1000U) &&
-                     (vol <= 0) &&
+                     (vol >= -63) && (vol <= 0) &&
                      (ebit_rep_cnt <= 7U), PJ_EINVAL);
 
     /* By convention we use jitter buffer mutex to access DTMF queue. */
@@ -2725,7 +2726,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_conf_tx_dtmf(pjmedia_stream *stream,
     stream->dtmf_duration = duration_ms * afd->clock_rate / 1000U;
     stream->tx_dtmf_pause_dur = pause_ms * afd->clock_rate / 1000U;
 
-    /* take other configuration parameters as they are */
+    /* take other options as they are */
     stream->tx_event_pt = pt;
     stream->tx_dtmf_vol = vol;
     stream->tx_dtmf_ebit_rep_cnt = ebit_rep_cnt;

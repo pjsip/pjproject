@@ -337,23 +337,25 @@ PJ_DECL(pj_status_t) pjmedia_stream_resume(pjmedia_stream *stream,
                                            pjmedia_dir dir);
 
 /**
- * (Re-)Configure DTMF transmission of this stream.
+ * Set DTMF transmission options of this stream.
  *
  * @param stream        The media stream.
- * @param duration_ms   Event duration in milliseconds.
- * @param pause_ms      Pause between events in milliseconds.
+ * @param duration_ms   Event duration in milliseconds (0..1000).
+ * @param pause_ms      Pause between events in milliseconds (0..1000).
  * @param pt            Payload type to use.
- * @param vol           Volume to use.
- * @param ebit_rep_cnt  Number of additional packet repetitions of the end bit.
+ * @param vol           Volume to use (-63..0).
+ * @param ebit_rep_cnt  Number of additional packet repetitions of the end bit
+ *                      (0..7).
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_stream_conf_tx_dtmf(pjmedia_stream *stream,
-                                                 pj_uint32_t duration_ms,
-                                                 pj_uint32_t pause_ms,
-                                                 pj_uint8_t pt,
-                                                 pj_int8_t vol,
-                                                 pj_uint32_t ebit_rep_cnt);
+PJ_DECL(pj_status_t)
+pjmedia_stream_set_tx_dtmf_options(pjmedia_stream *stream,
+                                   pj_uint32_t duration_ms,
+                                   pj_uint32_t pause_ms,
+                                   pj_uint8_t pt,
+                                   pj_int8_t vol,
+                                   pj_uint32_t ebit_rep_cnt);
 
 /**
  * Transmit DTMF to this stream. The DTMF will be transmitted using
