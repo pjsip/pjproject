@@ -354,10 +354,10 @@ static int test_resolve(const char *title,
 
     while (result.status == 0x12345678) {
         int i = 0;
-        pj_time_val timeout = { 1, 0 };
+        pj_time_val wait_timeout = { 1, 0 };
         pj_time_val now;
 
-        pjsip_endpt_handle_events(endpt, &timeout);
+        pjsip_endpt_handle_events(endpt, &wait_timeout);
         if (i == 1)
             pj_dns_resolver_dump(pjsip_endpt_get_resolver(endpt), PJ_TRUE);
 
