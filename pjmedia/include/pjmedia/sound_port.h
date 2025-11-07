@@ -293,8 +293,7 @@ PJ_DECL(pjmedia_aud_stream*) pjmedia_snd_port_get_snd_stream(
  * the change request to the device and it will be up to the device whether
  * to support the request. If software AEC is being used (the software EC
  * will be used if the device does not support AEC), this function will
- * change the software EC settings and if the AEC is currently running,
- * the settings will only be applied for future use.
+ * change the software EC settings.
  *
  * @param snd_port          The sound device port.
  * @param pool              Pool to re-create the echo canceller if necessary.

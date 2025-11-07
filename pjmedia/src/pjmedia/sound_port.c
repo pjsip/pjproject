@@ -754,6 +754,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
         }
 
     } else {
+        pj_bool_t restart_stream = PJ_FALSE;
+
         /* We use software EC */
 
         /* Check if there is change in parameters */
@@ -771,16 +773,14 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
         PJ_ASSERT_RETURN(prm.ext_fmt.id == PJMEDIA_FORMAT_PCM,
                          PJ_EINVALIDOP);
 
-        /* If AEC is currently running, just modify the settings for
-         * future use.
-         */
+        /* Destroy AEC */
         if (snd_port->ec_state) {
-            snd_port->ec_options = options;
-            snd_port->ec_tail_len = tail_ms;
+            /* Stop the stream first to prevent race condition. */
+            restart_stream = PJ_TRUE;
+            pjmedia_aud_stream_stop(snd_port->aud_stream);
 
-            PJ_LOG(4,(THIS_FILE, "AEC settings modified, tail length=%d ms, "
-                                 "options=%d", tail_ms, options));
-            return status;
+            pjmedia_echo_destroy(snd_port->ec_state);
+            snd_port->ec_state = NULL;
         }
 
         if (tail_ms != 0) {
@@ -811,6 +811,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 
         snd_port->ec_options = options;
         snd_port->ec_tail_len = tail_ms;
+
+        if (restart_stream)
+            pjmedia_aud_stream_start(snd_port->aud_stream);
     }
 
     return status;

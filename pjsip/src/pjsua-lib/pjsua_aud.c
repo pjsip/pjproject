@@ -2472,13 +2472,9 @@ PJ_DEF(pj_status_t) pjsua_set_ec(unsigned tail_ms, unsigned options)
     pjsua_var.media_cfg.ec_tail_len = tail_ms;
     pjsua_var.media_cfg.ec_options = options;
 
-    if (pjsua_var.snd_port) {
+    if (pjsua_var.snd_port)
         status = pjmedia_snd_port_set_ec(pjsua_var.snd_port, pjsua_var.pool,
                                          tail_ms, options);
-    } else {
-        PJ_LOG(4,(THIS_FILE, "EC settings modified, tail length=%d ms, "
-                             "options=%d", tail_ms, options));
-    }
 
     PJSUA_UNLOCK();
     return status;
