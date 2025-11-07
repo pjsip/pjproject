@@ -76,7 +76,7 @@ struct dtmf
     int             event;
     pj_uint32_t     duration;
     pj_uint32_t     send_duration;
-    int             ebit_cnt;               /**< # of E bit transmissions   */
+    unsigned        ebit_cnt;               /**< # of E bit transmissions   */
 };
 
 

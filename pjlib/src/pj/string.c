@@ -146,7 +146,7 @@ PJ_DEF(pj_ssize_t) pj_strtok2(const pj_str_t *str, const char *delim,
 PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
 {
     const char *s, *ends;
-    char first;
+    int first;
 
     PJ_ASSERT_RETURN(str->slen >= 0 && substr->slen >= 0, NULL);
 
