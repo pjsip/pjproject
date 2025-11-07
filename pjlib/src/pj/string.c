@@ -173,7 +173,7 @@ PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
 PJ_DEF(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr)
 {
     const char *s, *ends;
-    char first;
+    int first;
 
     PJ_ASSERT_RETURN(str->slen >= 0 && substr->slen >= 0, NULL);
 
