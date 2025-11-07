@@ -1798,8 +1798,6 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
 {
     unsigned i, j;
 
-    PJ_UNUSED_ARG(pool);
-
     for (i = 0; i < sess->media_count; ++i) {
         pjmedia_type med_type;
         unsigned count;
@@ -1941,7 +1939,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
             }
 
             if (new_pt != 0 && new_pt != (pj_int8_t)pt) {
-                rewrite_pt2(neg->pool_active, (pj_str_t *)&attr->value,
+                rewrite_pt2(pool, (pj_str_t *)&attr->value,
                             pt, new_pt);
             } else {
                 new_pt = (pj_int8_t)pt;
@@ -1986,7 +1984,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
             if (new_pt == 0 || new_pt == pt)
                 continue;
 
-            rewrite_pt2(neg->pool_active, (pj_str_t *)&attr->value,
+            rewrite_pt2(pool, (pj_str_t *)&attr->value,
                         pt, new_pt);
         }
 
@@ -2003,7 +2001,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
             if (new_pt == 0 || new_pt == pt)
                 continue;
 
-            rewrite_pt2(neg->pool_active, &sdp_m->desc.fmt[j],
+            rewrite_pt2(pool, &sdp_m->desc.fmt[j],
                         pt, new_pt);
         }
     }
