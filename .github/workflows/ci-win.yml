@@ -35,7 +35,7 @@ jobs:
       shell: powershell
     - name: config site
       run:
-        type nul > pjlib/include/pj/config_site.h
+        cd pjlib/include/pj; cp config_site_test.h config_site.h
       shell: cmd
     - name: MSBuild
       run: |
@@ -308,7 +308,7 @@ jobs:
       shell: cmd
     - name: config site
       run: |
-        echo "" > pjlib\include\pj\config_site.h
+        cd pjlib/include/pj; cp config_site_test.h config_site.h
         Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
         Add-Content config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_GNUTLS"
       shell: powershell
@@ -682,7 +682,7 @@ jobs:
       shell: cmd
     - name: config site
       run: |
-        echo "" > pjlib\include\pj\config_site.h
+        cd pjlib/include/pj; cp config_site_test.h config_site.h
         Add-Content config_site.h "#define PJMEDIA_HAS_VIDEO 1"
         Add-Content config_site.h "#define PJMEDIA_HAS_FFMPEG 1"
         Add-Content config_site.h "#define PJMEDIA_HAS_FFMPEG_VID_CODEC 1"

@@ -22,6 +22,8 @@ jobs:
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installmac.sh
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
       run: ./configure
     - name: make
