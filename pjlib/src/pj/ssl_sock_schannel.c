@@ -1430,7 +1430,8 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
     pj_uint8_t* data_ = NULL;
     SECURITY_STATUS ss;
     pj_status_t status = PJ_SUCCESS;
-    int i, need = *size, requested = *size;
+    int i, requested = *size;
+    pj_size_t need = (pj_size_t)*size;
 
     /* Avoid compile warning of unused debugging var */
     PJ_UNUSED_ARG(requested);
@@ -1442,7 +1443,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
     if (need <= size_) {
         /* Got all from the decrypted buffer */
         circ_read(&sch_ssock->decrypted_buf, data, need);
-        *size = need;
+        *size = (int)need;
         LOG_DEBUG1(SNAME(ssock),
                    "Read %d: returned all from decrypted buffer.", requested);
         pj_lock_release(ssock->circ_buf_input_mutex);
@@ -1498,7 +1499,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t* ssock, void* data, int* size)
             if (need <= len) {
                 /* All requested fulfilled, may have excess */
                 pj_memcpy((pj_uint8_t*)data + *size, p, need);
-                *size += need;
+                *size += (int)need;
                 len -= need;
                 p += need;
 
@@ -1575,7 +1576,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t* ssock, const void* data,
         pj_uint8_t *p_header, *p_data, *p_trailer;
         pj_ssize_t write_len, out_size;
 
-        write_len = PJ_MIN(size-total, sch_ssock->strm_sizes.cbMaximumMessage);
+        write_len = PJ_MIN((pj_size_t)(size-total), sch_ssock->strm_sizes.cbMaximumMessage);
         p_header  = sch_ssock->write_buf;
         p_data    = p_header + sch_ssock->strm_sizes.cbHeader;
         p_trailer = p_data + write_len;
