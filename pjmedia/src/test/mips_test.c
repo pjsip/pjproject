@@ -1008,10 +1008,13 @@ static pjmedia_port* amrwb_encode_decode(pj_pool_t *pool,
 #endif  /* PJMEDIA_HAS_OPENCORE_AMRWB_CODEC */
 
 #if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC!=0
+
+#if PJMEDIA_CODEC_L16_HAS_8KHZ_MONO || PJMEDIA_CODEC_L16_HAS_16KHZ_MONO
 static pj_status_t init_l16_default(pjmedia_endpt *endpt)
 {
     return pjmedia_codec_l16_init(endpt, 0);
 }
+#endif
 
 #if PJMEDIA_CODEC_L16_HAS_8KHZ_MONO
 /* L16/8000/1 benchmark */

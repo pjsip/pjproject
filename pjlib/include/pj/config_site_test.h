@@ -1,5 +1,9 @@
+/* To suppress warning: label ‘TODO*’ defined but not used [-Wunused-label] */
+#define PJ_TODO(x)
+
 /* Temp workaround for MacOS rwmutex deadlock */
 #if defined(PJ_DARWINOS) && PJ_DARWINOS
+    #undef PJ_EMULATE_RWMUTEX
     #define PJ_EMULATE_RWMUTEX  1
 #endif
 

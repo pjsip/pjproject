@@ -66,7 +66,7 @@ static void print_menu(const char *indent, char *menu_id, gui_menu *menu)
     printf("%s%s: %s\n", indent, menu_id, menu->title);
 
     for (i=0; i<menu->submenu_cnt; ++i) {
-        char child_id[10];
+        char child_id[32];
 
         pj_ansi_snprintf(child_id, sizeof(child_id), "%s%u", menu_id, i);
 
