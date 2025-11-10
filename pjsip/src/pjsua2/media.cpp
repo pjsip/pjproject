@@ -2114,6 +2114,7 @@ void VideoRecorder::createVideoRecorder(const string& file_name,
     PJ_UNUSED_ARG(vid_fmt);
     PJ_UNUSED_ARG(aud_fmt);
     PJ_UNUSED_ARG(options);
+    PJ_UNUSED_ARG(recorderId);
     PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
 #endif
 }
