@@ -36,7 +36,7 @@ jobs:
     - name: config site
       run:
         cd pjlib/include/pj; cp config_site_test.h config_site.h
-      shell: cmd
+      shell: powershell
     - name: MSBuild
       run: |
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -682,7 +682,7 @@ jobs:
       shell: cmd
     - name: config site
       run: |
-        cd pjlib/include/pj; cp config_site_test.h config_site.h
+        echo "" > pjlib\include\pj\config_site.h
         Add-Content config_site.h "#define PJMEDIA_HAS_VIDEO 1"
         Add-Content config_site.h "#define PJMEDIA_HAS_FFMPEG 1"
         Add-Content config_site.h "#define PJMEDIA_HAS_FFMPEG_VID_CODEC 1"
