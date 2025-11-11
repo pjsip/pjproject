@@ -66,7 +66,7 @@ int my_atoi2(const pj_str_t *str)
 
 pj_ssize_t my_hex_string_to_octet_array(const char *hex, pj_ssize_t len, char octet[])
 {
-     int i;
+     pj_ssize_t i;
      for (i = 0; i < len; i+=2) {
          int tmp;
          if (i+1 >= len || !pj_isxdigit(hex[i]) || !pj_isxdigit(hex[i+1]))
@@ -80,7 +80,7 @@ pj_ssize_t my_hex_string_to_octet_array(const char *hex, pj_ssize_t len, char oc
 
 void my_octet_array_to_hex_string(const char octet[], pj_ssize_t len, char hex[])
 {
-     int i;
+     pj_ssize_t i;
      char *p = hex;
      for (i = 0; i<len; ++i) {
          pj_val_to_hex_digit(octet[i], p);
