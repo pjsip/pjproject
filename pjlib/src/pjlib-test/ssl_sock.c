@@ -32,7 +32,13 @@
 #define CERT_PRIVKEY_FILE           CERT_DIR "privkey.pem"
 #define CERT_PRIVKEY_PASS           "privkeypass"
 
-#define TEST_LOAD_FROM_FILES 1
+#define TEST_LOAD_FROM_FILES        1
+
+/* Test direct certificate loading.
+ * For OpenSSL backend only and TEST_LOAD_FROM_FILES must be 1.
+ */
+#define TEST_LOAD_DIRECT            1
+
 
 #if INCLUDE_SSLSOCK_TEST
 
@@ -576,6 +582,79 @@ static pj_status_t load_cert_from_store(pj_pool_t *pool,
 
 #endif
 
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+
+#include <openssl/bio.h>
+#include <openssl/pem.h>
+
+static int pass_cb(char *buf, int size, int rwflag, void *u)
+{
+    pj_str_t pass = pj_str(CERT_PRIVKEY_PASS);
+
+    PJ_UNUSED_ARG(rwflag);
+    PJ_UNUSED_ARG(u);
+
+    if (pass.slen > size)
+        pass.slen = size;
+    pj_memcpy(buf, pass.ptr, pass.slen);
+
+    return (int)pass.slen;
+}
+
+static pj_status_t load_cert_direct(pj_pool_t *pool,
+                                    pj_bool_t with_cert,
+                                    pj_bool_t with_privkey,
+                                    pj_ssl_cert_t **p_cert)
+{
+    BIO *in;
+    pj_ssl_cert_direct cd;
+
+    PJ_UNUSED_ARG(pool);
+
+    /* Init credential */
+    pj_bzero(&cd, sizeof(cd));
+
+    /* Load private key */
+    if (with_privkey) {
+        EVP_PKEY *key = NULL;
+
+        in = BIO_new_file(CERT_PRIVKEY_FILE, "r");
+        if (!in)
+            return PJ_ENOTFOUND;
+
+        key = PEM_read_bio_PrivateKey(in, NULL, &pass_cb, NULL);
+        BIO_free(in);
+        if (!key)
+            return PJ_EINVAL;
+        
+        cd.type |= PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY;
+        cd.privkey = key;
+    }
+
+    /* Load certificate */
+    if (with_cert) {
+        X509* x = NULL;
+
+        in = BIO_new_file(CERT_FILE, "r");
+        if (!in)
+            return PJ_ENOTFOUND;
+
+        x = PEM_read_bio_X509(in, NULL, 0, NULL);
+        BIO_free(in);
+        if (!x)
+            return PJ_EINVAL;
+
+        cd.type |= PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT;
+        cd.cert = x;
+    }
+
+    /* Create credential */
+    return pj_ssl_cert_load_direct(pool, &cd, p_cert);
+}
+#else
+#   define load_cert_direct(pool,p_cert)
+#endif
+
 static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
                      pj_ssl_cipher srv_cipher, pj_ssl_cipher cli_cipher,
                      pj_bool_t req_client_cert, pj_bool_t client_provide_cert)
@@ -664,6 +743,18 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 #endif
 
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
+
+#   if TEST_LOAD_DIRECT && (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+        /* Certificate & private key is not loaded from files, but directly
+         * using OpenSSL objects.
+         */
+        status = load_cert_direct(pool, PJ_TRUE, PJ_TRUE, &cert);
+
+        /* Skip setting privkey & certificate files below */
+        privkey_file.slen = 0;
+        cert_file.slen = 0;
+#   endif
+
         status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
                                              &privkey_file, &privkey_pass,
                                              &cert);
@@ -763,10 +854,16 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
         if (!client_provide_cert) {
             pj_str_t ca_file = pj_str(CERT_CA_FILE);
             pj_str_t null_str = pj_str("");
+            pj_ssl_cert_direct cert_direct;
 
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
+            /* Reset any certificate & private keys previously set */
             status = pj_ssl_cert_load_from_files(pool, &ca_file, &null_str, 
                                                  &null_str, &null_str, &cert);
+
+            /* Also reset any direct backend objects */
+            pj_bzero(&cert_direct, sizeof(cert_direct));
+            pj_ssl_cert_load_direct(pool, &cert_direct, &cert);
 #else
             pj_ssl_cert_buffer null_buf, ca_buf;
 
@@ -1399,6 +1496,18 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
         pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
 
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
+
+#   if TEST_LOAD_DIRECT && (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+        /* Certificate & private key is not loaded from files, but directly
+         * using OpenSSL objects.
+         */
+        status = load_cert_direct(pool, PJ_TRUE, PJ_TRUE, &cert);
+
+        /* Skip setting privkey & certificate files below */
+        privkey_file.slen = 0;
+        cert_file.slen = 0;
+#   endif
+
         status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
                                              &privkey_file, &privkey_pass,
                                              &cert);

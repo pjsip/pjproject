@@ -154,16 +154,20 @@ struct pj_ssl_sock_t
 struct pj_ssl_cert_t
 {
 #if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
+    /* Certificate files. */
     pj_str_t CA_file;
     pj_str_t CA_path;
     pj_str_t cert_file;
     pj_str_t privkey_file;
     pj_str_t privkey_pass;
 
-    /* Certificate buffer. */
+    /* Certificate buffers. */
     pj_ssl_cert_buffer CA_buf;
     pj_ssl_cert_buffer cert_buf;
     pj_ssl_cert_buffer privkey_buf;
+
+    /* Certificate direct (backend specific instances). */
+    pj_ssl_cert_direct direct;
 #else
     pj_ssl_cert_lookup_criteria criteria;
 #endif

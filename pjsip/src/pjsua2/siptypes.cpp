@@ -178,7 +178,9 @@ pjsip_cred_info AuthCredInfo::toPj() const
 ///////////////////////////////////////////////////////////////////////////////
 
 TlsConfig::TlsConfig() : method(PJSIP_SSL_UNSPECIFIED_METHOD),
-                         qosType(PJ_QOS_TYPE_BEST_EFFORT)
+                         qosType(PJ_QOS_TYPE_BEST_EFFORT),
+                         credDirectType(0),
+                         certDirect(NULL), privKeyDirect(NULL)
 {
     pjsip_tls_setting ts;
     pjsip_tls_setting_default(&ts);
@@ -199,6 +201,20 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.privkey_buf      = str2Pj(this->privKeyBuf);
     ts.cert_lookup.type = this->certLookupType;
     ts.cert_lookup.keyword = str2Pj(this->certLookupKeyword);
+    
+    if (this->certDirect &&
+        (this->credDirectType & PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT))
+    {
+        ts.cert_direct.type |= PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT;
+        ts.cert_direct.cert = this->certDirect;
+    }
+    if (this->privKeyDirect &&
+        (this->credDirectType & PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY))
+    {
+        ts.cert_direct.type |= PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY;
+        ts.cert_direct.privkey = this->privKeyDirect;
+    }
+
     ts.method           = this->method;
     ts.ciphers_num      = (unsigned)this->ciphers.size();
     ts.proto            = this->proto;
@@ -232,6 +248,26 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->privKeyBuf    = pj2Str(prm.privkey_buf);
     this->certLookupType= prm.cert_lookup.type;
     this->certLookupKeyword = pj2Str(prm.cert_lookup.keyword);
+    this->credDirectType= 0;
+
+    if (prm.cert_direct.cert &&
+        (prm.cert_direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT))
+    {
+        this->credDirectType |= PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT; 
+        this->certDirect = prm.cert_direct.cert;
+    } else {
+        this->certDirect = NULL;
+    }
+
+    if (prm.cert_direct.privkey &&
+        (prm.cert_direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY))
+    {
+        this->credDirectType |= PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY; 
+        this->privKeyDirect = prm.cert_direct.privkey;
+    } else {
+        this->privKeyDirect = NULL;
+    }
+
     this->method        = (pjsip_ssl_method)prm.method;
     this->proto         = prm.proto;
     // The following will only work if sizeof(enum)==sizeof(int)
