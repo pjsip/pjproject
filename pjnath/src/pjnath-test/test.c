@@ -240,7 +240,7 @@ static int test_inner(int argc, char *argv[])
 
 #if INCLUDE_ICE_TEST
     for (i=0; i<ICE_TEST_START_ARRAY+ICE_TEST_ARRAY_COUNT; ++i)
-        UT_ADD_TEST1(&test_app.ut_app, ice_test, (void*)(long)i, 0);
+        UT_ADD_TEST1(&test_app.ut_app, ice_test, (void*)(intptr_t)i, 0);
 #endif
 
 #if INCLUDE_TRICKLE_ICE_TEST
@@ -248,9 +248,9 @@ static int test_inner(int argc, char *argv[])
 #endif
 
 #if INCLUDE_TURN_SOCK_TEST
-    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(long)0, 0);
-    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(long)1, 0);
-    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(long)2, 0);
+    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(intptr_t)0, 0);
+    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(intptr_t)1, 0);
+    UT_ADD_TEST1(&test_app.ut_app, turn_sock_test, (void*)(intptr_t)2, 0);
 #endif
 
 #if INCLUDE_CONCUR_TEST

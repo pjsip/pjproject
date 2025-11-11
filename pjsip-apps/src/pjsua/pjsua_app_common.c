@@ -64,7 +64,7 @@ int my_atoi2(const pj_str_t *str)
     }
 }
 
-int my_hex_string_to_octet_array(const char *hex, int len, char octet[])
+pj_ssize_t my_hex_string_to_octet_array(const char *hex, pj_ssize_t len, char octet[])
 {
      int i;
      for (i = 0; i < len; i+=2) {
@@ -78,7 +78,7 @@ int my_hex_string_to_octet_array(const char *hex, int len, char octet[])
      return len;
 }
 
-void my_octet_array_to_hex_string(const char octet[], int len, char hex[])
+void my_octet_array_to_hex_string(const char octet[], pj_ssize_t len, char hex[])
 {
      int i;
      char *p = hex;

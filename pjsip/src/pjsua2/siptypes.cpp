@@ -177,10 +177,10 @@ pjsip_cred_info AuthCredInfo::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
-TlsConfig::TlsConfig() : method(PJSIP_SSL_UNSPECIFIED_METHOD),
-                         qosType(PJ_QOS_TYPE_BEST_EFFORT),
-                         credDirectType(0),
-                         certDirect(NULL), privKeyDirect(NULL)
+TlsConfig::TlsConfig() : credDirectType(0),
+                         privKeyDirect(NULL), certDirect(NULL),
+                         method(PJSIP_SSL_UNSPECIFIED_METHOD),
+                         qosType(PJ_QOS_TYPE_BEST_EFFORT)                         
 {
     pjsip_tls_setting ts;
     pjsip_tls_setting_default(&ts);

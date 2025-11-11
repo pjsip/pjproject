@@ -131,7 +131,8 @@ static int pool_alignment_test(void)
     ptr = pj_pool_aligned_alloc(pool, alignment, 0);
     pj_ansi_snprintf(msg, sizeof(msg), 
         "alignment=%ld, capacity=%lu, block->buf=%p, ptr==block->cur=%p, block->end=%p", 
-        alignment, capacity, pool->block_list.next->buf,pool->block_list.next->cur,pool->block_list.next->end);
+        (long)alignment, (unsigned long)capacity, pool->block_list.next->buf,
+        pool->block_list.next->cur,pool->block_list.next->end);
     PJ_TEST_EQ(ptr, NULL, msg, { rc=-304; goto on_return; });
 
     pj_pool_release(pool);

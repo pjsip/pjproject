@@ -217,14 +217,14 @@ struct response
 static unsigned get_tsx_tid(const pjsip_transaction *tsx)
 {
     pj_assert(tsx_user.id >= 0);
-    return (unsigned)(long)tsx->mod_data[tsx_user.id];
+    return (unsigned)(uintptr_t)tsx->mod_data[tsx_user.id];
 }
 
 
 static void init_tsx(pjsip_transaction *tsx, unsigned tid)
 {
     pj_assert(tsx_user.id >= 0);
-    tsx->mod_data[tsx_user.id] = (void*)(long)tid;
+    tsx->mod_data[tsx_user.id] = (void*)(uintptr_t)tid;
 
     /* Must select specific transport to use for loop */
     if (g[tid].test_param->type == PJSIP_TRANSPORT_LOOP_DGRAM) {

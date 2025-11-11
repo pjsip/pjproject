@@ -346,9 +346,9 @@ int test_main(int argc, char *argv[])
     pj_assert(tsx_test[0].type == PJSIP_TRANSPORT_LOOP_DGRAM);
 
     for (i = 0; i < tsx_test_cnt; ++i) {
-        UT_ADD_TEST1(&test_app.ut_app, tsx_basic_test, (void*)(long)i, 0);
-        UT_ADD_TEST1(&test_app.ut_app, tsx_uac_test, (void*)(long)i, 0);
-        UT_ADD_TEST1(&test_app.ut_app, tsx_uas_test, (void*)(long)i, 0);
+        UT_ADD_TEST1(&test_app.ut_app, tsx_basic_test, (void*)(intptr_t)i, 0);
+        UT_ADD_TEST1(&test_app.ut_app, tsx_uac_test, (void*)(intptr_t)i, 0);
+        UT_ADD_TEST1(&test_app.ut_app, tsx_uas_test, (void*)(intptr_t)i, 0);
     }
 #endif
 

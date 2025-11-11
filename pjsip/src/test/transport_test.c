@@ -180,7 +180,7 @@ static pj_bool_t my_on_rx_response(pjsip_rx_data *rdata)
 static void send_msg_callback(pjsip_send_state *stateless_data,
                               pj_ssize_t sent, pj_bool_t *cont)
 {
-    unsigned tid = (unsigned)(long)stateless_data->token;
+    unsigned tid = (unsigned)(uintptr_t)stateless_data->token;
     pj_assert(tid < PJSIP_TRANSPORT_START_OTHER);
 
     if (sent < 1) {
@@ -274,7 +274,8 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     /* Send the message (statelessly). */
     PJ_LOG(3,(THIS_FILE, "Sending request to %.*s", 
                          (int)target.slen, target.ptr));
-    status = pjsip_endpt_send_request_stateless( endpt, tdata, (void*)(long)tid,
+    status = pjsip_endpt_send_request_stateless( endpt, tdata,
+                                                 (void*)(uintptr_t)tid,
                                                  &send_msg_callback);
     if (status != PJ_SUCCESS) {
         /* Immediate error! */
@@ -592,7 +593,7 @@ static int rt_worker_thread(void *arg)
     int i;
     pj_time_val poll_delay = { 0, 10 };
 
-    tid = (unsigned)(long)arg;
+    tid = (unsigned)(uintptr_t)arg;
     pj_assert(tid < PJSIP_TRANSPORT_START_OTHER);
 
     /* Sleep to allow main threads to run. */

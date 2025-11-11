@@ -943,7 +943,7 @@ static pj_status_t parse_args(int argc, char *argv[],
                 pj_str_t *aka_op = &cur_acc->cred_info[cur_acc->cred_count].ext.aka.op;
                 if (hex.slen/2 <= PJSIP_AKA_OPLEN) {
                     char* oct = pj_pool_alloc(cfg->pool, hex.slen/2);
-                    int len;
+                    pj_ssize_t len;
                     len = my_hex_string_to_octet_array(hex.ptr, hex.slen, oct);
                     if (len == hex.slen)
                         pj_strset(aka_op, oct, len/2);
@@ -962,7 +962,7 @@ static pj_status_t parse_args(int argc, char *argv[],
                 pj_str_t *aka_amf = &cur_acc->cred_info[cur_acc->cred_count].ext.aka.amf;
                 if (hex.slen/2 <= PJSIP_AKA_AMFLEN) {
                     char* oct = pj_pool_alloc(cfg->pool, hex.slen/2);
-                    int len;
+                    pj_ssize_t len;
                     len = my_hex_string_to_octet_array(hex.ptr, hex.slen, oct);
                     if (len == hex.slen)
                         pj_strset(aka_amf, oct, len/2);

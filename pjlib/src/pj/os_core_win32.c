@@ -551,7 +551,8 @@ static void set_thread_display_name(const char *name)
     if (pSetThreadDescription) {
         wchar_t wname[PJ_MAX_OBJ_NAME];
         HRESULT hr;
-        pj_ansi_to_unicode(name, pj_ansi_strlen(name), wname, PJ_MAX_OBJ_NAME);
+        pj_ansi_to_unicode(name, (int)pj_ansi_strlen(name), wname,
+                           PJ_MAX_OBJ_NAME);
 
         /* Set thread name by SetThreadDescription (if support) */
         hr = pSetThreadDescription(GetCurrentThread(), wname);
@@ -732,7 +733,7 @@ static pj_status_t create_thread(const char *thread_name,
 
 #ifdef _MSC_VER
     rec->idthread = 0;
-    rec->hthread = (HANDLE)_beginthreadex(NULL, stack_size,
+    rec->hthread = (HANDLE)_beginthreadex(NULL, (unsigned)stack_size,
                                           thread_main, rec,
                                           dwflags, (unsigned*)&rec->idthread);
 #elif defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
