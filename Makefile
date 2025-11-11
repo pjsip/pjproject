@@ -40,6 +40,12 @@ distclean realclean:
 	done
 	$(HOST_RM) config.log
 	$(HOST_RM) config.status
+	$(subst @@,$(subst /,$(HOST_PSEP),pjlib/lib),$(HOST_RMDIR))
+	$(subst @@,$(subst /,$(HOST_PSEP),pjlib-util/lib),$(HOST_RMDIR))
+	$(subst @@,$(subst /,$(HOST_PSEP),pjnath/lib),$(HOST_RMDIR))
+	$(subst @@,$(subst /,$(HOST_PSEP),pjmedia/lib),$(HOST_RMDIR))
+	$(subst @@,$(subst /,$(HOST_PSEP),pjsip/lib),$(HOST_RMDIR))
+	$(subst @@,$(subst /,$(HOST_PSEP),third_party/lib),$(HOST_RMDIR))
 
 lib:
 	for dir in $(LIB_DIRS); do \
