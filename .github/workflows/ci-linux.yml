@@ -390,9 +390,9 @@ jobs:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
 
-  ioq-epoll-cb-no-lock:
+  ioq-epoll-cb-no-lock-conf-thread:
     runs-on: ubuntu-latest
-    name: ioq-epoll-cb-no-lock / pjlib,pjsua
+    name: ioq-epoll-cb-no-lock-conf-thread / pjlib,pjsua
     steps:
     - uses: actions/checkout@v2
     - name: install cirunner
@@ -402,7 +402,7 @@ jobs:
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1" >> config_site.h
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1\n#define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND\n#define PJMEDIA_CONF_THREADS 4" >> config_site.h
     - name: configure
       run: CFLAGS="-g -fPIC" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure --enable-epoll
     - name: make
