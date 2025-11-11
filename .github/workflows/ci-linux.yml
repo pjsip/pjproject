@@ -402,7 +402,7 @@ jobs:
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1\n#define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND\n#define PJMEDIA_CONF_THREADS 4" >> config_site.h
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1\n#define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND\n#define PJMEDIA_CONF_THREADS 4" >> config_site.h
     - name: configure
       run: CFLAGS="-g -fPIC" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure --enable-epoll
     - name: make
