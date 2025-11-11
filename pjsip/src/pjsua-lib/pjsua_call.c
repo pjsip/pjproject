@@ -4141,9 +4141,11 @@ PJ_DEF(void) pjsua_call_hangup_all(void)
     // This may deadlock, see https://github.com/pjsip/pjproject/issues/1305
     //PJSUA_LOCK();
 
-    for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
-        if (pjsua_var.calls[i].inv)
-            pjsua_call_hangup(i, 0, NULL, NULL);
+    if (pjsua_var.calls) {
+        for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
+            if (pjsua_var.calls[i].inv)
+                pjsua_call_hangup(i, 0, NULL, NULL);
+        }
     }
 
     //PJSUA_UNLOCK();
