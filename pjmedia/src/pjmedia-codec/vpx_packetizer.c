@@ -35,6 +35,7 @@ struct pjmedia_vpx_packetizer
 {
     /* Current settings */
     pjmedia_vpx_packetizer_cfg cfg;
+    unsigned int picture_id;
 };
 
 /*
@@ -78,7 +79,7 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetizer_create(
 }
 
 /*
- * Generate an RTP payload from H.264 frame bitstream, in-place processing.
+ * Generate an RTP payload from vpx frame bitstream, in-place processing.
  */
 PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
                                           pj_size_t bits_len,
@@ -87,7 +88,7 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
                                           pj_uint8_t **payload,
                                           pj_size_t *payload_len)
 {
-    unsigned payload_desc_size = 1;
+    unsigned payload_desc_size = (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP8? 4: 1);
     unsigned max_size = pktz->cfg.mtu - payload_desc_size;
     unsigned remaining_size = (unsigned)bits_len - *bits_pos;
     unsigned out_size = (unsigned)*payload_len;
@@ -100,10 +101,24 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
     /* Set payload header */
     bits[0] = 0;
     if (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP8) {
+        /* For VP8, use 4 bytes payload desc, see #4659 for more info */
+        bits[0] = 0x80;
+
+        /* Set S: Start of VP8 partition. */
+        if (*bits_pos == 0) {
+            bits[0] |= 0x10;
+            /* Increment the picture_id when the S-bit is present */
+            ((pjmedia_vpx_packetizer *)pktz)->picture_id++;
+        }
+
+        /* Set Extended Control Bits ILTK */
+        bits[1] = 0x80;
+        /* Add dual-octet picture_id */
+        bits[2] = ((pktz->picture_id & 0x7f00) >> 8) | 0x80;
+        bits[3] = pktz->picture_id & 0xff;
+
         /* Set N: Non-reference frame */
         if (!is_keyframe) bits[0] |= 0x20;
-        /* Set S: Start of VP8 partition. */
-        if (*bits_pos == 0) bits[0] |= 0x10;
     } else if (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP9) {
         /* Set P: Inter-picture predicted frame */
         if (!is_keyframe) bits[0] |= 0x40;

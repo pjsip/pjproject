@@ -660,7 +660,9 @@ static pj_status_t vpx_codec_encode_more(pjmedia_vid_codec *codec,
     vpx_data = (vpx_codec_data*) codec->codec_data;
     
     if (vpx_data->enc_processed < vpx_data->enc_frame_size) {
-        unsigned payload_desc_size = 1;
+        /* For VP8, use 4 bytes payload desc, see #4659 for more info */
+        unsigned payload_desc_size = (vpx_data->prm->enc_fmt.id==PJMEDIA_FORMAT_VP8)? 4 : 1;
+        
         pj_size_t payload_len = out_size;
         pj_uint8_t *p = (pj_uint8_t *)output->buf;
 
