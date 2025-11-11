@@ -10,7 +10,13 @@ ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
 endif
 
+# Create library directories to avoid linker warnings about missing search paths
+.PHONY: create_lib_dirs
+create_lib_dirs:
+	@mkdir -p pjlib/lib pjlib-util/lib pjnath/lib pjmedia/lib pjsip/lib third_party/lib
+
 all clean dep depend print:
+	@mkdir -p pjlib/lib pjlib-util/lib pjnath/lib pjmedia/lib pjsip/lib third_party/lib
 	for dir in $(DIRS); do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
 		    true; \
@@ -31,6 +37,7 @@ distclean realclean:
 	$(HOST_RM) config.status
 
 lib:
+	@mkdir -p pjlib/lib pjlib-util/lib pjnath/lib pjmedia/lib pjsip/lib third_party/lib
 	for dir in $(LIB_DIRS); do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir lib; then \
 		    true; \
