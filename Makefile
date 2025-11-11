@@ -11,7 +11,7 @@ MAKE_FLAGS := MINSIZE=1
 endif
 
 # Create library directories to avoid linker warnings about missing search paths
-all dep depend:
+all:
 	@mkdir -p pjlib/lib pjlib-util/lib pjnath/lib pjmedia/lib pjsip/lib third_party/lib
 	for dir in $(DIRS); do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
@@ -21,7 +21,7 @@ all dep depend:
 		fi; \
 	done
 
-clean print:
+dep depend clean print:
 	for dir in $(DIRS); do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
 		    true; \
