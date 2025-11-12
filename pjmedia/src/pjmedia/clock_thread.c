@@ -357,9 +357,17 @@ static int clock_thread(void *arg)
 
     /* Set thread priority to maximum unless not wanted. */
     if ((clock->options & PJMEDIA_CLOCK_NO_HIGHEST_PRIO) == 0) {
-        int max = pj_thread_get_prio_max(pj_thread_this());
-        if (max > 0)
-            pj_thread_set_prio(pj_thread_this(), max);
+        pj_thread_t *this_thread = pj_thread_this();
+        int max = pj_thread_get_prio_max(this_thread);
+        if (max > 0) {
+            pj_status_t status;
+
+            status = pj_thread_set_prio(this_thread, max);
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(5, (pj_thread_get_name(this_thread), status,
+                          "Unable to increase thread priority to %d", max));
+            }
+        }
     }
 
     /* Get the first tick */

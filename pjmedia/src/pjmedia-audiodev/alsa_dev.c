@@ -527,7 +527,24 @@ static int pb_thread_func (void *arg)
     void* user_data            = stream->user_data;
     char* buf                  = stream->pb_buf;
     pj_timestamp tstamp;
+    struct sched_param param;
+    pthread_t* thid;    
     int result;
+
+    thid = (pthread_t*) pj_thread_get_os_handle (pj_thread_this());
+    param.sched_priority = sched_get_priority_max (SCHED_RR);
+    PJ_LOG (5,(THIS_FILE, "pb_thread_func(%u): Set thread priority "
+                          "for audio playback thread.",
+                          (unsigned)syscall(SYS_gettid)));
+    result = pthread_setschedparam (*thid, SCHED_RR, &param);
+    if (result) {
+        if (result == EPERM)
+            PJ_LOG (5,(THIS_FILE, "Unable to increase playback thread "
+                                  "priority, root access needed."));
+        else
+            PJ_LOG (5,(THIS_FILE, "Unable to increase playback thread "
+                                  "priority, error: %d", result));
+    }    
 
     pj_bzero (buf, size);
     tstamp.u64 = 0;
@@ -592,12 +609,11 @@ static int ca_thread_func (void *arg)
     result = pthread_setschedparam (*thid, SCHED_RR, &param);
     if (result) {
         if (result == EPERM)
-            PJ_LOG (5,(THIS_FILE, "Unable to increase thread priority, "
-                                  "root access needed."));
+            PJ_LOG (5,(THIS_FILE, "Unable to increase capture thread "
+                                  "priority, root access needed."));
         else
-            PJ_LOG (5,(THIS_FILE, "Unable to increase thread priority, "
-                                  "error: %d",
-                                  result));
+            PJ_LOG (5,(THIS_FILE, "Unable to increase capture thread "
+                                  "priority, error: %d", result));
     }
 
     pj_bzero (buf, size);
