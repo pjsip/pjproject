@@ -35,7 +35,7 @@ jobs:
       shell: powershell
     - name: config site
       run:
-        type nul > pjlib/include/pj/config_site.h
+        cd pjlib/include/pj; echo '#define PJ_TODO(x)' > config_site.h
       shell: cmd
     - name: MSBuild
       run: |
@@ -90,7 +90,7 @@ jobs:
       shell: cmd
     - name: config site
       run:
-        echo '#define PJ_TODO(x)' > pjlib/include/pj/config_site.h; Add-Content pjlib/include/pj/config_site.h "#define PJ_HAS_SSL_SOCK 1"
+        cd pjlib/include/pj; cp config_site_test.h config_site.h; Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
       shell: powershell
     - name: check VsDevCmd.bat
       run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -170,7 +170,7 @@ jobs:
       shell: powershell
     - name: config site
       run:
-        echo '#define PJ_TODO(x)' > pjlib/include/pj/config_site.h; Add-Content pjlib/include/pj/config_site.h "#define PJ_HAS_SSL_SOCK 1"
+        cd pjlib/include/pj; cp config_site_test.h config_site.h; Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
       shell: powershell
     - name: check VsDevCmd.bat
       run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -250,7 +250,7 @@ jobs:
       shell: cmd
     - name: config site
       run:
-        echo '#define PJ_TODO(x)' > pjlib/include/pj/config_site.h; Add-Content pjlib/include/pj/config_site.h "#define PJ_HAS_SSL_SOCK 1"
+        cd pjlib/include/pj; cp config_site_test.h config_site.h; Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
       shell: powershell
     - name: check VsDevCmd.bat
       run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -308,9 +308,9 @@ jobs:
       shell: cmd
     - name: config site
       run: |
-        echo "" > pjlib\include\pj\config_site.h
-        Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
-        Add-Content config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_GNUTLS"
+        cd pjlib/include/pj; echo '#define PJ_TODO(x)' > config_site.h
+        Add-Content pjlib/include/pj/config_site.h "#define PJ_HAS_SSL_SOCK 1"
+        Add-Content pjlib/include/pj/config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_GNUTLS"
       shell: powershell
     - name: check VsDevCmd.bat
       run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -376,15 +376,15 @@ jobs:
       shell: cmd
     - name: config site
       run: |
-        echo '#define PJ_TODO(x)' > pjlib/include/pj/config_site.h
-        Add-Content pjlib/include/pj/config_site.h "#define PJ_HAS_SSL_SOCK 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_SCHANNEL"
-        Add-Content pjlib/include/pj/config_site.h "#undef PJMEDIA_SRTP_HAS_DTLS"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_VIDEO 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_DSHOW 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_LIBYUV 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
+        cd pjlib/include/pj; cp config_site_test.h config_site.h
+        Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
+        Add-Content config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_SCHANNEL"
+        Add-Content config_site.h "#undef PJMEDIA_SRTP_HAS_DTLS"
+        Add-Content config_site.h "#define PJMEDIA_HAS_VIDEO 1"
+        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_DSHOW 1"
+        Add-Content config_site.h "#define PJMEDIA_HAS_LIBYUV 1"
+        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
+        Add-Content config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
       shell: powershell
     - name: check VsDevCmd.bat
       run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -499,15 +499,15 @@ jobs:
       shell: powershell
     - name: config site
       run: |
-        echo '#define PJ_TODO(x)' > pjlib/include/pj/config_site.h
-        Add-Content pjlib/include/pj/config_site.h "#define PJ_HAS_SSL_SOCK 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_SCHANNEL"
-        Add-Content pjlib/include/pj/config_site.h "#undef PJMEDIA_SRTP_HAS_DTLS"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_VIDEO 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_DSHOW 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_LIBYUV 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
+        cd pjlib/include/pj; cp config_site_test.h config_site.h
+        Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
+        Add-Content config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_SCHANNEL"
+        Add-Content config_site.h "#undef PJMEDIA_SRTP_HAS_DTLS"
+        Add-Content config_site.h "#define PJMEDIA_HAS_VIDEO 1"
+        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_DSHOW 1"
+        Add-Content config_site.h "#define PJMEDIA_HAS_LIBYUV 1"
+        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
+        Add-Content config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
       shell: powershell
     - name: check VsDevCmd.bat
       run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -599,15 +599,15 @@ jobs:
       shell: cmd
     - name: config site
       run: |
-        echo '#define PJ_TODO(x)' > pjlib/include/pj/config_site.h
-        Add-Content pjlib/include/pj/config_site.h "#define PJ_HAS_SSL_SOCK 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_SCHANNEL"
-        Add-Content pjlib/include/pj/config_site.h "#undef PJMEDIA_SRTP_HAS_DTLS"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_VIDEO 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_DSHOW 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_LIBYUV 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
+        cd pjlib/include/pj; cp config_site_test.h config_site.h
+        Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
+        Add-Content config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_SCHANNEL"
+        Add-Content config_site.h "#undef PJMEDIA_SRTP_HAS_DTLS"
+        Add-Content config_site.h "#define PJMEDIA_HAS_VIDEO 1"
+        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_DSHOW 1"
+        Add-Content config_site.h "#define PJMEDIA_HAS_LIBYUV 1"
+        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
+        Add-Content config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
       shell: powershell
     - name: check VsDevCmd.bat
       run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -682,12 +682,12 @@ jobs:
       shell: cmd
     - name: config site
       run: |
-        echo "" > pjlib\include\pj\config_site.h
-        Add-Content config_site.h "#define PJMEDIA_HAS_VIDEO 1"
-        Add-Content config_site.h "#define PJMEDIA_HAS_FFMPEG 1"
-        Add-Content config_site.h "#define PJMEDIA_HAS_FFMPEG_VID_CODEC 1"
-        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_FFMPEG 1"
-        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
+        cd pjlib/include/pj; echo '#define PJ_TODO(x)' > config_site.h
+        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_VIDEO 1"
+        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_FFMPEG 1"
+        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_FFMPEG_VID_CODEC 1"
+        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_FFMPEG 1"
+        Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
       shell: powershell
     - name: check VsDevCmd.bat
       run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -716,7 +716,7 @@ jobs:
     - uses: actions/checkout@master
     - name: config site
       run:
-        echo '#define PJ_TODO(x)' > pjlib/include/pj/config_site.h; Add-Content pjlib/include/pj/config_site.h "#define PJ_IOQUEUE_IMP PJ_IOQUEUE_IMP_IOCP"
+        cd pjlib/include/pj; cp config_site_test.h config_site.h; Add-Content config_site.h "#define PJ_IOQUEUE_IMP PJ_IOQUEUE_IMP_IOCP"
       shell: powershell
     - name: check VsDevCmd.bat
       run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -760,10 +760,10 @@ jobs:
         cirunner/installwindows.ps1
     - name: config site
       run: |
-        echo '#define PJ_TODO(x)' > pjlib/include/pj/config_site.h
-        Add-Content pjlib/include/pj/config_site.h "#define PJ_HAS_SSL_SOCK 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1"
-        Add-Content pjlib/include/pj/config_site.h "#define PJ_IOQUEUE_IMP PJ_IOQUEUE_IMP_IOCP"
+        cd pjlib/include/pj; cp config_site_test.h config_site.h
+        Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
+        Add-Content config_site.h "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1"
+        Add-Content config_site.h "#define PJ_IOQUEUE_IMP PJ_IOQUEUE_IMP_IOCP"
       shell: powershell
     - name: get openssl
       run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/openssl-1.1.1s-win.zip" -OutFile ".\openssl.zip"
