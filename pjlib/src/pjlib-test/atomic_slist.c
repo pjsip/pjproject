@@ -336,7 +336,7 @@ static int worker_thread(void* p) {
                             break;
                        });
             slot->owner = pj_thread_this();     /* slot reserved successfully */
-            slot_id = slot - test->state.slots;
+            slot_id = (unsigned)(slot - test->state.slots);
             reserved_slots[reserved_count++] = slot_id;
             ++n_events;
         }

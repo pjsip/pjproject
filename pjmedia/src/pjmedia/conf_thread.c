@@ -1522,7 +1522,7 @@ static SLOT_TYPE conf_reserve_port(pjmedia_conf *conf)
     if (!pslot)
         return INVALID_SLOT;
 
-    SLOT_TYPE slot = pslot - conf->free_port_slots;
+    SLOT_TYPE slot = (SLOT_TYPE)(pslot - conf->free_port_slots);
     pj_assert( slot < conf->max_ports && conf->ports[slot] == NULL );
     return slot;
 }

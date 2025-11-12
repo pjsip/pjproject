@@ -785,7 +785,7 @@ static pj_status_t init_openssl(void)
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
     && OPENSSL_VERSION_NUMBER >= 0x1000200fL
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL
-        ssl_curves_num = EC_get_builtin_curves(NULL, 0);
+        ssl_curves_num = (unsigned)EC_get_builtin_curves(NULL, 0);
 #else
 
 #if USING_BORINGSSL
@@ -1076,7 +1076,13 @@ static int xname_cmp(const X509_NAME **a, const X509_NAME **b) {
 #if !defined(OPENSSL_NO_DH)
 
 static void set_option(const pj_ssl_sock_t* ssock, SSL_CTX* ctx) {
-    unsigned long options = SSL_OP_CIPHER_SERVER_PREFERENCE |
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && PJ_HAS_INT64
+    uint64_t options;
+#else
+    unsigned long options;
+#endif
+
+    options = SSL_OP_CIPHER_SERVER_PREFERENCE |
 #if !defined(OPENSSL_NO_ECDH) && OPENSSL_VERSION_NUMBER >= 0x10000000L
         SSL_OP_SINGLE_ECDH_USE |
 #endif
@@ -1343,7 +1349,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
             X509 *xcert = NULL;
             
             cbio = BIO_new_mem_buf((void*)cert->cert_buf.ptr,
-                                   cert->cert_buf.slen);
+                                   (int)cert->cert_buf.slen);
             if (cbio != NULL) {
                 xcert = PEM_read_bio_X509(cbio, NULL, 0, NULL);
                 if (xcert != NULL) {
@@ -1370,7 +1376,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 
         if (cert->CA_buf.slen && !CA_loaded) {
             BIO *cbio = BIO_new_mem_buf((void*)cert->CA_buf.ptr,
-                                        cert->CA_buf.slen);
+                                        (int)cert->CA_buf.slen);
             X509_STORE *cts = SSL_CTX_get_cert_store(ctx);
 
             if (cbio && cts) {
@@ -1413,7 +1419,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
             EVP_PKEY *pkey = NULL;
 
             kbio = BIO_new_mem_buf((void*)cert->privkey_buf.ptr,
-                                   cert->privkey_buf.slen);
+                                   (int)cert->privkey_buf.slen);
             if (kbio != NULL) {
                 pkey = PEM_read_bio_PrivateKey(kbio, NULL, &password_cb,
                                                cert);
@@ -1581,7 +1587,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
             X509_NAME *xn = NULL;
             STACK_OF(X509_NAME) *sk = NULL;
             BIO *new_bio = BIO_new_mem_buf((void*)cert->CA_buf.ptr,
-                                           cert->CA_buf.slen);
+                                           (int)cert->CA_buf.slen);
 
             sk = sk_X509_NAME_new(xname_cmp);
 
@@ -2586,7 +2592,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
         } else {
             /* Some problem occurred */
             status = STATUS_FROM_SSL_ERR2("Write", ssock, *nwritten,
-                                          err, size);
+                                          err, (int)size);
         }
     } else if (*nwritten < size) {
         /* nwritten < size, shouldn't happen, unless write BIO cannot hold 

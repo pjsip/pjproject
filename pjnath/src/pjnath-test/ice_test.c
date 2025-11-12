@@ -905,7 +905,7 @@ static int perform_test(const char *title,
 
 int ice_test(void *p)
 {
-    unsigned test_id = (unsigned)(long)p;
+    unsigned test_id = (unsigned)(uintptr_t)p;
     app_sess_t app_sess;
     unsigned i;
     int rc;

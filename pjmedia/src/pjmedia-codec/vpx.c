@@ -600,7 +600,7 @@ static pj_status_t vpx_codec_encode_begin(pjmedia_vid_codec *codec,
         if (pkt->kind == VPX_CODEC_CX_FRAME_PKT) {
             /* We have a valid frame packet */
             vpx_data->enc_frame_whole = pkt->data.frame.buf;
-            vpx_data->enc_frame_size = pkt->data.frame.sz;
+            vpx_data->enc_frame_size = (unsigned)pkt->data.frame.sz;
             vpx_data->enc_processed = 0;
             if (pkt->data.frame.flags & VPX_FRAME_IS_KEY)
                 vpx_data->enc_frame_is_keyframe = PJ_TRUE;
@@ -686,7 +686,7 @@ static pj_status_t vpx_codec_encode_more(pjmedia_vid_codec *codec,
         if (vpx_data->enc_frame_is_keyframe) {
             output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
         }
-        vpx_data->enc_processed += payload_len;
+        vpx_data->enc_processed += (unsigned)payload_len;
         *has_more = (vpx_data->enc_processed < vpx_data->enc_frame_size);
     }
 
@@ -728,13 +728,13 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
             pj_memcpy( vpx_data->dec_buf + whole_len,
                        (pj_uint8_t*)packets[i].buf,
                        packets[i].size);
-            whole_len += packets[i].size;
+            whole_len += (unsigned)packets[i].size;
         }
 
     } else {
         for (i = 0; i < count; ++i) {
             unsigned desc_len;
-            unsigned packet_size = packets[i].size;
+            unsigned packet_size = (unsigned)packets[i].size;
             pj_status_t status;
 
             status = pjmedia_vpx_unpacketize(vpx_data->pktz, packets[i].buf,

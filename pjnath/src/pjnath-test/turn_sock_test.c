@@ -536,7 +536,7 @@ static int destroy_test(pj_stun_config  *stun_cfg,
 
 int turn_sock_test(void *p)
 {
-    unsigned n = (int)(long)p;
+    unsigned n = (int)(intptr_t)p;
     app_sess_t app_sess;
     pj_turn_tp_type tp_type = PJ_TURN_TP_UDP;
     int i, rc = 0;

@@ -208,14 +208,14 @@ static void finish_test(unsigned tid)
 static unsigned get_tsx_tid(const pjsip_transaction *tsx)
 {
     pj_assert(tsx_user.id >= 0);
-    return (unsigned)(long)tsx->mod_data[tsx_user.id];
+    return (unsigned)(uintptr_t)tsx->mod_data[tsx_user.id];
 }
 
 /* Set test ID to transaction instance */
 static void set_tsx_tid(pjsip_transaction *tsx, unsigned tid)
 {
     pj_assert(tsx_user.id >= 0);
-    tsx->mod_data[tsx_user.id] = (void*)(long)tid;
+    tsx->mod_data[tsx_user.id] = (void*)(uintptr_t)tid;
 }
 
 /*

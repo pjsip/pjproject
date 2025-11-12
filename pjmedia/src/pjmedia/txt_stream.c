@@ -879,7 +879,7 @@ pjmedia_txt_stream_send_text(pjmedia_txt_stream *stream, const pj_str_t *text)
     pj_memcpy(stream->tx_buf[stream->tx_buf_idx].buf +
               stream->tx_buf[stream->tx_buf_idx].length,
               text->ptr, text->slen);
-    stream->tx_buf[stream->tx_buf_idx].length += text->slen;
+    stream->tx_buf[stream->tx_buf_idx].length += (unsigned)text->slen;
 
     /* Decide if we should send the text immediately or just buffer it. */
     pj_get_timestamp(&now);
