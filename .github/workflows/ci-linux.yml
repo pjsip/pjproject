@@ -50,7 +50,7 @@ jobs:
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
+      run: echo "#define PJ_TODO(x)" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-g -fPIC" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure
     - name: make
@@ -96,7 +96,7 @@ jobs:
     - name: install dependencies
       run: sudo apt-get install -y libopencore-amrnb-dev
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
+      run: echo "#define PJ_TODO(x)" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
@@ -126,7 +126,7 @@ jobs:
     - name: install dependencies
       run: sudo apt-get install -y libopencore-amrnb-dev
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
+      run: echo "#define PJ_TODO(x)" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
@@ -221,7 +221,7 @@ jobs:
     - name: build openh264
       run: cd openh264 && $MAKE_FAST && sudo make install && sudo ldconfig
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
+      run: echo -e "#define PJ_TODO(x)\n#define PJMEDIA_HAS_VIDEO 1" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-g -fPIC -DHAS_VID_CODEC_TEST=0" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure
     - name: make
@@ -281,7 +281,7 @@ jobs:
     - name: build openh264
       run: cd openh264 && $MAKE_FAST && sudo make install && sudo ldconfig
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
+      run: echo -e "#define PJ_TODO(x)\n#define PJMEDIA_HAS_VIDEO 1" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
@@ -318,7 +318,7 @@ jobs:
     - name: build openh264
       run: cd openh264 && $MAKE_FAST && sudo make install && sudo ldconfig
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
+      run: echo -e "#define PJ_TODO(x)\n#define PJMEDIA_HAS_VIDEO 1" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
@@ -402,7 +402,7 @@ jobs:
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1\n#define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND\n#define PJMEDIA_CONF_THREADS 4" >> config_site.h
+      run: echo -e "#define PJ_TODO(x)\n#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1\n#define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND\n#define PJMEDIA_CONF_THREADS 4" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-g -fPIC" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure --enable-epoll
     - name: make
