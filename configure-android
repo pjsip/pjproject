@@ -21,6 +21,7 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "                   android-9. By default, configure will use the :"
   echo "                   - maximum platform level detected if ndk < r21"
   echo "                   - minimum platform level detected if ndk >= r21"
+  echo "                     (will use 23 if minimum platform level < 23)"
   echo "  TARGET_ABI       Optionally specify a single target architecture,"
   echo "                   e.g. armeabi-v7a, arm64-v8a, mips, x86. By default, "
   echo "                   the target architecture is arm64-v8a."
@@ -54,6 +55,9 @@ if test "x$APP_PLATFORM" = "x"; then
     fi
   fi
   if test "x$APP_PLATFORM" != "x"; then
+    if [ "$APP_PLATFORM" -lt "23" ]; then
+      APP_PLATFORM="23"
+    fi
     APP_PLATFORM="android-${APP_PLATFORM}"
   else
     APP_PLATFORM="latest"
