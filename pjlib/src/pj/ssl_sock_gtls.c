@@ -350,7 +350,7 @@ out:
 
 /* gnutls_handshake() and gnutls_record_send() will call this function to
  * send/write (encrypted) data */
-static ssize_t tls_data_push(gnutls_transport_ptr_t ptr,
+static pj_ssize_t tls_data_push(gnutls_transport_ptr_t ptr,
                              const void *data, size_t len)
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)ptr;
@@ -372,7 +372,7 @@ static ssize_t tls_data_push(gnutls_transport_ptr_t ptr,
 
 /* gnutls_handshake() and gnutls_record_recv() will call this function to
  * receive/read (encrypted) data */
-static ssize_t tls_data_pull(gnutls_transport_ptr_t ptr,
+static pj_ssize_t tls_data_pull(gnutls_transport_ptr_t ptr,
                              void *data, pj_size_t len)
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)ptr;
