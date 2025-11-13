@@ -34,8 +34,8 @@ jobs:
         Add-Content ..\..\swig_path.txt $pwd.Path
       shell: powershell
     - name: config site
-      run:
-        type nul > pjlib/include/pj/config_site.h
+      run: |
+        echo #define PJ_TODO(x) > pjlib\include\pj\config_site.h
       shell: cmd
     - name: MSBuild
       run: |
@@ -308,9 +308,9 @@ jobs:
       shell: cmd
     - name: config site
       run: |
-        echo "" > pjlib\include\pj\config_site.h
-        Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
-        Add-Content config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_GNUTLS"
+        echo '#define PJ_TODO(x)' > pjlib/include/pj/config_site.h
+        Add-Content pjlib/include/pj/config_site.h "#define PJ_HAS_SSL_SOCK 1"
+        Add-Content pjlib/include/pj/config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_GNUTLS"
       shell: powershell
     - name: check VsDevCmd.bat
       run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
@@ -637,77 +637,78 @@ jobs:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
 
-  build-win-vid-ffmpeg:
-    runs-on: windows-latest
-    name: FFMPEG / build only
-    steps:
-    - uses: actions/checkout@master
-    - name: Install Windows Debugging Tools
-      run: |
-        choco install windows-sdk-10-version-2004-windbg --yes --no-progress
-      shell: powershell
-    - name: install cirunner
-      run: |
-        git clone --depth 1 https://github.com/pjsip/cirunner.git
-        cirunner/installwindows.ps1
-    - name: get ffmpeg
-      run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/ffmpeg-5.1.2-win.zip" -Outfile "ffmpeg.zip"
-      shell: powershell
-    - name: expand ffmpeg
-      run: |
-        Expand-Archive -LiteralPath .\ffmpeg.zip -DestinationPath .; pwd
-        cd ffmpeg_build
-        Add-Content ..\ffmpeg_dir.txt $pwd.Path
-      shell: powershell
-    - name: check ffmpeg folder
-      run: |
-        set /P FFMPEG_DIR=<ffmpeg_dir.txt
-        dir "%FFMPEG_DIR%\include"
-        dir "%FFMPEG_DIR%\lib"
-      shell: cmd
-    - name: get sdl
-      run: Invoke-WebRequest -Uri "https://github.com/libsdl-org/SDL/releases/download/release-2.26.2/SDL2-devel-2.26.2-VC.zip" -Outfile ".\sdl.zip"
-      shell: powershell
-    - name: expand sdl
-      run: |
-        Expand-Archive -LiteralPath .\sdl.zip -DestinationPath .\sdl_build\; pwd
-        cd sdl_build\SDL2-2.26.2
-        Add-Content ..\..\sdl_dir.txt $pwd.Path
-      shell: powershell
-    - name: check sdl folder
-      run: |
-        set /P SDL_DIR=<sdl_dir.txt
-        dir "%SDL_DIR%\include\SDL"
-        dir "%SDL_DIR%\lib\x86"
-      shell: cmd
-    - name: config site
-      run: |
-        echo "" > pjlib\include\pj\config_site.h
-        Add-Content config_site.h "#define PJMEDIA_HAS_VIDEO 1"
-        Add-Content config_site.h "#define PJMEDIA_HAS_FFMPEG 1"
-        Add-Content config_site.h "#define PJMEDIA_HAS_FFMPEG_VID_CODEC 1"
-        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_FFMPEG 1"
-        Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
-      shell: powershell
-    - name: check VsDevCmd.bat
-      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
-      shell: cmd
-    - name: MSBuild
-      working-directory: .
-      run: |
-        set /P FFMPEG_DIR=<ffmpeg_dir.txt        
-        set /P LIBSDL_DIR=<sdl_dir.txt
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
-        set INCLUDE=%INCLUDE%;%LIBFFMPEG_DIR%\include;%SDL_DIR%\include
-        set LIB=%LIB%;%FFMPEG_DIR%\lib;%SDL_DIR%\lib\x86
-        msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
-      shell: cmd
-    - name: upload artifacts on failure
-      if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
-        path: artifacts
+  # Temporarily disabled due to ffmpeg library build issues
+  # build-win-vid-ffmpeg:
+  #   runs-on: windows-latest
+  #   name: FFMPEG / build only
+  #   steps:
+  #   - uses: actions/checkout@master
+  #   - name: Install Windows Debugging Tools
+  #     run: |
+  #       choco install windows-sdk-10-version-2004-windbg --yes --no-progress
+  #     shell: powershell
+  #   - name: install cirunner
+  #     run: |
+  #       git clone --depth 1 https://github.com/pjsip/cirunner.git
+  #       cirunner/installwindows.ps1
+  #   - name: get ffmpeg
+  #     run: Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/ffmpeg-5.1.2-win.zip" -Outfile "ffmpeg.zip"
+  #     shell: powershell
+  #   - name: expand ffmpeg
+  #     run: |
+  #       Expand-Archive -LiteralPath .\ffmpeg.zip -DestinationPath .; pwd
+  #       cd ffmpeg_build
+  #       Add-Content ..\ffmpeg_dir.txt $pwd.Path
+  #     shell: powershell
+  #   - name: check ffmpeg folder
+  #     run: |
+  #       set /P FFMPEG_DIR=<ffmpeg_dir.txt
+  #       dir "%FFMPEG_DIR%\include"
+  #       dir "%FFMPEG_DIR%\lib"
+  #     shell: cmd
+  #   - name: get sdl
+  #     run: Invoke-WebRequest -Uri "https://github.com/libsdl-org/SDL/releases/download/release-2.26.2/SDL2-devel-2.26.2-VC.zip" -Outfile ".\sdl.zip"
+  #     shell: powershell
+  #   - name: expand sdl
+  #     run: |
+  #       Expand-Archive -LiteralPath .\sdl.zip -DestinationPath .\sdl_build\; pwd
+  #       cd sdl_build\SDL2-2.26.2
+  #       Add-Content ..\..\sdl_dir.txt $pwd.Path
+  #     shell: powershell
+  #   - name: check sdl folder
+  #     run: |
+  #       set /P SDL_DIR=<sdl_dir.txt
+  #       dir "%SDL_DIR%\include\SDL"
+  #       dir "%SDL_DIR%\lib\x86"
+  #     shell: cmd
+  #   - name: config site
+  #     run: |
+  #       echo '#define PJ_TODO(x)' > pjlib/include/pj/config_site.h
+  #       Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_VIDEO 1"
+  #       Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_FFMPEG 1"
+  #       Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_HAS_FFMPEG_VID_CODEC 1"
+  #       Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_FFMPEG 1"
+  #       Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
+  #     shell: powershell
+  #   - name: check VsDevCmd.bat
+  #     run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+  #     shell: cmd
+  #   - name: MSBuild
+  #     working-directory: .
+  #     run: |
+  #       set /P FFMPEG_DIR=<ffmpeg_dir.txt        
+  #       set /P SDL_DIR=<sdl_dir.txt
+  #       call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+  #       set INCLUDE=%INCLUDE%;%FFMPEG_DIR%\include;%SDL_DIR%\include
+  #       set LIB=%LIB%;%FFMPEG_DIR%\lib;%SDL_DIR%\lib\x86
+  #       msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
+  #     shell: cmd
+  #   - name: upload artifacts on failure
+  #     if: ${{ failure() }}
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+  #       path: artifacts
 
   iocp:
     runs-on: windows-latest

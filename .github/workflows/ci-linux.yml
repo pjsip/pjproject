@@ -22,6 +22,8 @@ jobs:
       run: |
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: configure
       run: ./configure
     - name: make
@@ -151,6 +153,8 @@ jobs:
         cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get install -y swig
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --disable-ssl
     - name: make
@@ -182,6 +186,8 @@ jobs:
         cirunner/installlinux.sh
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y --fix-missing swig libgnutls28-dev
+    - name: config site
+      run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=/usr/
     - name: make
@@ -353,7 +359,7 @@ jobs:
     - name: build ffmpeg
       run: cd FFmpeg && $MAKE_FAST && sudo make install
     - name: config site
-      run: echo -e "#define PJMEDIA_HAS_VIDEO 1\n" > pjlib/include/pj/config_site.h
+      run: echo -e "#define PJ_TODO(x)\n#define PJMEDIA_HAS_VIDEO 1\n" > pjlib/include/pj/config_site.h
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure
     - name: make

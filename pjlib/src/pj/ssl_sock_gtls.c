@@ -307,10 +307,10 @@ static int tls_cert_verify_cb(gnutls_session_t session)
         gnutls_x509_crt_t cert;
         unsigned int cert_list_size;
         const gnutls_datum_t *cert_list;
-        int ret;
+        int ret2;
 
-        ret = gnutls_x509_crt_init(&cert);
-        if (ret < 0)
+        ret2 = gnutls_x509_crt_init(&cert);
+        if (ret2 < 0)
             goto out;
 
         cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
@@ -350,7 +350,7 @@ out:
 
 /* gnutls_handshake() and gnutls_record_send() will call this function to
  * send/write (encrypted) data */
-static ssize_t tls_data_push(gnutls_transport_ptr_t ptr,
+static pj_ssize_t tls_data_push(gnutls_transport_ptr_t ptr,
                              const void *data, size_t len)
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)ptr;
@@ -372,7 +372,7 @@ static ssize_t tls_data_push(gnutls_transport_ptr_t ptr,
 
 /* gnutls_handshake() and gnutls_record_recv() will call this function to
  * receive/read (encrypted) data */
-static ssize_t tls_data_pull(gnutls_transport_ptr_t ptr,
+static pj_ssize_t tls_data_pull(gnutls_transport_ptr_t ptr,
                              void *data, pj_size_t len)
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)ptr;
@@ -974,8 +974,8 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
     tls_cert_get_cn(&ci->subject.info, &ci->subject.cn);
 
     /* Validity */
-    ci->validity.end.sec = gnutls_x509_crt_get_expiration_time(cert);
-    ci->validity.start.sec = gnutls_x509_crt_get_activation_time(cert);
+    ci->validity.end.sec = (long)gnutls_x509_crt_get_expiration_time(cert);
+    ci->validity.start.sec = (long)gnutls_x509_crt_get_activation_time(cert);
     ci->validity.gmt = 0;
 
     /* Subject Alternative Name extension */
