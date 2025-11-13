@@ -331,6 +331,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
             PJ_UNUSED_ARG(cert_file);
             PJ_UNUSED_ARG(privkey_file);
             PJ_UNUSED_ARG(privkey_pass);
+            PJ_UNUSED_ARG(cert);
 #endif
             test_srv->ssl_srv_sock = ssock_serv;
 

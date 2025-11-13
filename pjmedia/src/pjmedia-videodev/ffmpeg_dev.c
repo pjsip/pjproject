@@ -67,7 +67,7 @@
 typedef struct ffmpeg_dev_info
 {
     pjmedia_vid_dev_info         base;
-    AVInputFormat               *host_api;
+    const AVInputFormat         *host_api;
     const char                  *def_devname;
 } ffmpeg_dev_info;
 
@@ -173,7 +173,7 @@ static void print_ffmpeg_log(void* ptr, int level, const char* fmt, va_list vl)
 
 
 static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
-                                       AVInputFormat *ifmt,
+                                       const AVInputFormat *ifmt,
                                        const char *dev_name,
                                        const pjmedia_vid_dev_param *param)
 {

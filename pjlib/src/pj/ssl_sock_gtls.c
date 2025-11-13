@@ -307,10 +307,10 @@ static int tls_cert_verify_cb(gnutls_session_t session)
         gnutls_x509_crt_t cert;
         unsigned int cert_list_size;
         const gnutls_datum_t *cert_list;
-        int ret;
+        int ret2;
 
-        ret = gnutls_x509_crt_init(&cert);
-        if (ret < 0)
+        ret2 = gnutls_x509_crt_init(&cert);
+        if (ret2 < 0)
             goto out;
 
         cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
