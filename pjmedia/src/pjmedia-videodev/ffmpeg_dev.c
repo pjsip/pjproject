@@ -181,6 +181,8 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
     AVDictionary *format_opts = NULL;
     char buf[128];
     enum AVPixelFormat av_fmt;
+    
+    PJ_UNUSED_ARG(buf);
 #else
     AVFormatParameters fp;
 #endif
@@ -391,7 +393,7 @@ static pj_status_t dshow_enum_devices(unsigned *dev_cnt,
 static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
 {
     ffmpeg_factory *ff = (ffmpeg_factory*)f;
-    AVInputFormat *p;
+    const AVInputFormat *p;
 
     av_log_set_callback(&print_ffmpeg_log);
     av_log_set_level(AV_LOG_ERROR);

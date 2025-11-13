@@ -50,7 +50,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
       run: $MAKE_FAST
     - name: disable firewall
@@ -84,7 +84,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
       run: $MAKE_FAST
     - name: disable firewall
@@ -114,7 +114,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
       run: $MAKE_FAST
     - name: disable firewall
@@ -144,7 +144,7 @@ jobs:
     - name: install dependencies
       run: brew install openssl swig
     - name: configure
-      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl)" CXXFLAGS="-fPIC" ./configure
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: make
@@ -188,7 +188,7 @@ jobs:
     - name: install dependencies
       run: brew install openssl
     - name: configure
-      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl)" CXXFLAGS="-fPIC" ./configure
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: make
@@ -294,7 +294,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -DHAS_VID_CODEC_TEST=0 -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -DHAS_VID_CODEC_TEST=0 -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
       run: $MAKE_FAST
     - name: set up Python
@@ -330,7 +330,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
       run: $MAKE_FAST
     - name: disable firewall
@@ -360,7 +360,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb)" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb)" ./configure
     - name: make
       run: $MAKE_FAST
     - name: disable firewall
@@ -396,7 +396,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJMEDIA_HAS_VIDEO 1\n" >> config_site.h
     - name: configure
-      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl)" CXXFLAGS="-fPIC" ./configure
     - name: make
       run: $MAKE_FAST
     - name: set up Python
@@ -428,7 +428,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJMEDIA_HAS_VIDEO 1\n#define PJMEDIA_HAS_VID_TOOLBOX_CODEC 1\n" >> config_site.h
     - name: configure
-      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="$(pkg-config --cflags openssl) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl)" CXXFLAGS="-fPIC" ./configure
     - name: make
       run: $MAKE_FAST
     - name: set up Python
@@ -464,7 +464,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1\n" >> config_site.h
     - name: configure
-      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L openssl)/lib $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
       run: $MAKE_FAST
     - name: disable firewall

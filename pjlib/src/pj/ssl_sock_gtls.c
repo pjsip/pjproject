@@ -974,8 +974,8 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
     tls_cert_get_cn(&ci->subject.info, &ci->subject.cn);
 
     /* Validity */
-    ci->validity.end.sec = gnutls_x509_crt_get_expiration_time(cert);
-    ci->validity.start.sec = gnutls_x509_crt_get_activation_time(cert);
+    ci->validity.end.sec = (long)gnutls_x509_crt_get_expiration_time(cert);
+    ci->validity.start.sec = (long)gnutls_x509_crt_get_activation_time(cert);
     ci->validity.gmt = 0;
 
     /* Subject Alternative Name extension */

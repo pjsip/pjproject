@@ -519,6 +519,7 @@ PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
 #endif
 }
 
+#if !defined(PJ_ANDROID) || PJ_ANDROID == 0
 static pj_status_t set_prio(pj_thread_t *thread, int prio, 
                             pj_bool_t max_policy)
 {
@@ -540,6 +541,7 @@ static pj_status_t set_prio(pj_thread_t *thread, int prio,
 
     return PJ_SUCCESS;    
 }
+#endif /* !PJ_ANDROID */
 
 static int get_prio_max(pj_thread_t *thread)
 {
