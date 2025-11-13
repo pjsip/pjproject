@@ -1403,6 +1403,9 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         acc->next_rtp_port = 0;
     }
 
+    /* Text settings. */
+    acc->cfg.txt_red_level = cfg->txt_red_level;
+
     if (pj_stricmp(&acc->cfg.rtp_cfg.public_addr, &cfg->rtp_cfg.public_addr) ||
         pj_stricmp(&acc->cfg.rtp_cfg.bound_addr, &cfg->rtp_cfg.bound_addr))
     {
