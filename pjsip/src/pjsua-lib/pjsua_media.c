@@ -2427,13 +2427,13 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     const pj_str_t STR_TEXT  = { "text", 4 };
     pjsua_call *call = &pjsua_var.calls[call_id];
     pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
-    pj_uint8_t maudidx[PJSUA_MAX_CALL_MEDIA];
+    pj_uint8_t maudidx[PJSUA_MAX_CALL_MEDIA] = {0};
     unsigned maudcnt = PJ_ARRAY_SIZE(maudidx);
     unsigned mtotaudcnt = PJ_ARRAY_SIZE(maudidx);
-    pj_uint8_t mvididx[PJSUA_MAX_CALL_MEDIA];
+    pj_uint8_t mvididx[PJSUA_MAX_CALL_MEDIA] = {0};
     unsigned mvidcnt = PJ_ARRAY_SIZE(mvididx);
     unsigned mtotvidcnt = PJ_ARRAY_SIZE(mvididx);
-    pj_uint8_t mtxtidx[PJSUA_MAX_CALL_MEDIA];
+    pj_uint8_t mtxtidx[PJSUA_MAX_CALL_MEDIA] = {0};
     unsigned mtxtcnt = PJ_ARRAY_SIZE(mtxtidx);
     unsigned mtottxtcnt = PJ_ARRAY_SIZE(mtxtidx);
     unsigned mi;
@@ -4396,15 +4396,15 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     const pj_str_t STR_AUDIO = { "audio", 5 };
     const pj_str_t STR_VIDEO = { "video", 5 };
     const pj_str_t STR_TEXT  = { "text", 4 };
-    pj_uint8_t maudidx[PJSUA_MAX_CALL_MEDIA];
+    pj_uint8_t maudidx[PJSUA_MAX_CALL_MEDIA] = {0};
     unsigned maudcnt = PJ_ARRAY_SIZE(maudidx);
     unsigned mtotaudcnt = PJ_ARRAY_SIZE(maudidx);
-    pj_uint8_t mvididx[PJSUA_MAX_CALL_MEDIA];
+    pj_uint8_t mvididx[PJSUA_MAX_CALL_MEDIA] = {0};
     unsigned mvidcnt = PJ_ARRAY_SIZE(mvididx);
     unsigned mtotvidcnt = PJ_ARRAY_SIZE(mvididx);
-    pj_uint8_t mtxtidx[PJSUA_MAX_CALL_MEDIA];
-    unsigned mtxtcnt = PJ_ARRAY_SIZE(mvididx);
-    unsigned mtottxtcnt = PJ_ARRAY_SIZE(mvididx);
+    pj_uint8_t mtxtidx[PJSUA_MAX_CALL_MEDIA] = {0};
+    unsigned mtxtcnt = PJ_ARRAY_SIZE(mtxtidx);
+    unsigned mtottxtcnt = PJ_ARRAY_SIZE(mtxtidx);
     pj_bool_t need_renego_sdp = PJ_FALSE;
 
     if (pjsua_get_state() != PJSUA_STATE_RUNNING)
