@@ -31,8 +31,7 @@
 #endif
 
 #if defined(__GNUC__)
-#  pragma GCC diagnostic ignored "-Wunknown-warning-option"
-#  pragma GCC diagnostic ignored "-Wdeprecated-builtins"
+#  pragma GCC diagnostic ignored "-Wdeprecated"
 #endif
 
 #include "modules/audio_processing/aec3/echo_canceller3.h"
