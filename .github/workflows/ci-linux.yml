@@ -54,7 +54,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g -fPIC" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure
+      run: CFLAGS="-g -fPIC" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure --enable-libwebrtc-aec3
     - name: make
       run: $MAKE_FAST
     - name: swig bindings
