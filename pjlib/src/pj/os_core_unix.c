@@ -194,9 +194,6 @@ static unsigned atexit_count;
 static void (*atexit_func[32])(void);
 
 static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type);
-static int get_prio_max(pj_thread_t *thread);
-static pj_status_t set_prio(pj_thread_t *thread, int prio, 
-                            pj_bool_t max_policy);
 /*
  * pj_init(void).
  * Init PJLIB!
@@ -461,6 +458,29 @@ PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
 #endif
 }
 
+#if !defined(PJ_ANDROID) || PJ_ANDROID == 0
+static pj_status_t set_prio(pj_thread_t *thread, int prio, 
+                            pj_bool_t max_policy)
+{
+    int policy;
+    int rc;
+    struct sched_param param;
+
+    if (max_policy) {
+        policy = SCHED_RR;
+    } else {
+        rc = pthread_getschedparam (thread->thread, &policy, &param);
+        if (rc != 0)
+            return PJ_RETURN_OS_ERROR(rc);
+    }
+    param.sched_priority = prio;
+    rc = pthread_setschedparam(thread->thread, policy, &param);
+    if (rc != 0)
+        return PJ_RETURN_OS_ERROR(rc);
+
+    return PJ_SUCCESS;    
+}
+#endif /* !PJ_ANDROID */
 
 /*
  * Set the thread priority.
@@ -519,29 +539,6 @@ PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
 #endif
 }
 
-#if !defined(PJ_ANDROID) || PJ_ANDROID == 0
-static pj_status_t set_prio(pj_thread_t *thread, int prio, 
-                            pj_bool_t max_policy)
-{
-    int policy;
-    int rc;
-    struct sched_param param;
-
-    if (max_policy) {
-        policy = SCHED_RR;
-    } else {
-        rc = pthread_getschedparam (thread->thread, &policy, &param);
-        if (rc != 0)
-            return PJ_RETURN_OS_ERROR(rc);
-    }
-    param.sched_priority = prio;
-    rc = pthread_setschedparam(thread->thread, policy, &param);
-    if (rc != 0)
-        return PJ_RETURN_OS_ERROR(rc);
-
-    return PJ_SUCCESS;    
-}
-#endif /* !PJ_ANDROID */
 
 static int get_prio_max(pj_thread_t *thread)
 {

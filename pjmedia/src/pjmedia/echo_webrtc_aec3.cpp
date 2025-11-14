@@ -30,6 +30,10 @@
 #    pragma warning(disable: 4244)    // Possible loss of data
 #endif
 
+#if defined(__GNUC__)
+#  pragma GCC diagnostic ignored "-Wdeprecated"
+#endif
+
 #include "modules/audio_processing/aec3/echo_canceller3.h"
 #include "modules/audio_processing/ns/noise_suppressor.h"
 #include "modules/audio_processing/gain_controller2.h"
