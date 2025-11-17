@@ -16,7 +16,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjsua2/endpoint.hpp>
-#include <pjsua2/account.hpp>
 #include <pjsua2/call.hpp>
 #include <pjsua2/presence.hpp>
 #include <algorithm>
