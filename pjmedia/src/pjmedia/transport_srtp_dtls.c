@@ -1584,7 +1584,9 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
         if (status != PJ_SUCCESS)
             goto on_return;
 
-        /* Add attribute a=setup:active/passive if we are client/server. */
+        /* Add attribute a=setup:active/passive if we are client/server. 
+         * (PJSIP version 2.15)
+         */
         a = pjmedia_sdp_attr_create(ds->pool, ID_SETUP.ptr,
                     (ds->setup==DTLS_SETUP_ACTIVE? &ID_ACTIVE:&ID_PASSIVE));
         pjmedia_sdp_media_add_attr(m_loc, a);
