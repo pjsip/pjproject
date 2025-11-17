@@ -23,6 +23,7 @@
  * @brief PJSUA2 Call manipulation
  */
 #include <pjsua-lib/pjsua.h>
+#include <pjsua2/account.hpp>
 #include <pjsua2/media.hpp>
 
 /** PJSUA2 API is inside pj namespace */
