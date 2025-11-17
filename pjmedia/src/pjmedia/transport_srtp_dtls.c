@@ -1299,6 +1299,7 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
         pjmedia_transport_get_info(ds->srtp->member_tp, &info);
 
         if (idx == RTP_CHANNEL &&
+            pj_sockaddr_has_addr(&info.src_rtp_name) &&
             pj_sockaddr_cmp(&ds->rem_addr, &info.src_rtp_name))
         {
             pj_sockaddr_cp(&ds->rem_addr, &info.src_rtp_name);
