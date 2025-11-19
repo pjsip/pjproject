@@ -44,7 +44,7 @@ struct pjmedia_snd_port
     pjmedia_dir          dir;
     pjmedia_port        *port;
     pj_bool_t            aud_started;
-    pj_bool_t            in_aud_callback;
+    volatile pj_bool_t   in_aud_callback;
 
     /* Use clock */
     pjmedia_clock       *clock;
@@ -466,7 +466,9 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
     /* Start sound stream. */
     if (!(snd_port->options & PJMEDIA_SND_PORT_NO_AUTO_START)) {
         status = pjmedia_aud_stream_start(snd_port->aud_stream);
-        snd_port->aud_started = PJ_TRUE;
+        if (status == PJ_SUCCESS) {
+            snd_port->aud_started = PJ_TRUE;
+        }
     }
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -809,6 +811,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
             if (snd_port->aud_started) {
                 restart_stream = PJ_TRUE;
                 pjmedia_aud_stream_stop(snd_port->aud_stream);
+                snd_port->aud_started = PJ_FALSE;
 
                 /* Callback may still be running, wait for it */
                 while (snd_port->in_aud_callback) {
