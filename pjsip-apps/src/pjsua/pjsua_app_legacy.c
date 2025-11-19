@@ -1089,11 +1089,6 @@ static void ui_delete_account()
     }
 }
 
-static void ui_unset_loam_mode()
-{
-    app_config.enable_loam = PJ_FALSE;
-}
-
 static void ui_call_hold()
 {
     if (current_call != -1) {
