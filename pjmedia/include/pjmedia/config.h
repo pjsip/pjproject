@@ -130,6 +130,8 @@
 #define PJMEDIA_CONF_SERIAL_BRIDGE_BACKEND 1
 /** Multithreaded conference bridge backend */
 #define PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND 2
+/** Conference bridge synchronous sequential backend */
+#define PJMEDIA_CONF_SYNC_SERIAL_BRIDGE_BACKEND 3
 
 /**
  * Choose which conference backend implementation to use.
