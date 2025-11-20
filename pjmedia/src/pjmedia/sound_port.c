@@ -43,6 +43,8 @@ struct pjmedia_snd_port
     pjmedia_aud_stream  *aud_stream;
     pjmedia_dir          dir;
     pjmedia_port        *port;
+    pj_bool_t            aud_started;
+    volatile pj_bool_t   in_aud_callback;
 
     /* Use clock */
     pjmedia_clock       *clock;
@@ -85,6 +87,8 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
     const unsigned required_size = (unsigned)frame->size;
     pj_status_t status;
 
+    snd_port->in_aud_callback = PJ_TRUE;
+
     port = snd_port->port;
     if (port == NULL)
         goto no_frame;
@@ -122,6 +126,7 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
     if (snd_port->on_play_frame)
         (*snd_port->on_play_frame)(snd_port->user_data, frame);
 
+    snd_port->in_aud_callback = PJ_FALSE;
     return PJ_SUCCESS;
 
 no_frame:
@@ -145,6 +150,7 @@ no_frame:
     if (snd_port->on_play_frame)
         (*snd_port->on_play_frame)(snd_port->user_data, frame);
 
+    snd_port->in_aud_callback = PJ_FALSE;
     return PJ_SUCCESS;
 }
 
@@ -158,6 +164,8 @@ static pj_status_t rec_cb(void *user_data, pjmedia_frame *frame)
     pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
 
+    snd_port->in_aud_callback = PJ_TRUE;
+
     /* Invoke preview callback */
     if (snd_port->on_rec_frame)
         (*snd_port->on_rec_frame)(snd_port->user_data, frame);
@@ -168,8 +176,10 @@ static pj_status_t rec_cb(void *user_data, pjmedia_frame *frame)
     }
 
     port = snd_port->port;
-    if (port == NULL)
+    if (port == NULL) {
+        snd_port->in_aud_callback = PJ_FALSE;
         return PJ_SUCCESS;
+    }
 
     if (snd_port->options & PJMEDIA_SND_PORT_USE_SW_CLOCK) {
         pjmedia_delay_buf_put(snd_port->cap_dbuf, frame->buf);
@@ -178,6 +188,7 @@ static pj_status_t rec_cb(void *user_data, pjmedia_frame *frame)
         pjmedia_port_put_frame(port, frame);
     }
 
+    snd_port->in_aud_callback = PJ_FALSE;
     return PJ_SUCCESS;
 }
 
@@ -191,8 +202,11 @@ static pj_status_t play_cb_ext(void *user_data, pjmedia_frame *frame)
     pjmedia_port *port = snd_port->port;
     pj_status_t status;
 
+    snd_port->in_aud_callback = PJ_TRUE;
+
     if (port == NULL) {
         frame->type = PJMEDIA_FRAME_TYPE_NONE;
+        snd_port->in_aud_callback = PJ_FALSE;
         return PJ_SUCCESS;
     }
 
@@ -206,6 +220,7 @@ static pj_status_t play_cb_ext(void *user_data, pjmedia_frame *frame)
     if (snd_port->on_play_frame)
         (*snd_port->on_play_frame)(snd_port->user_data, frame);
 
+    snd_port->in_aud_callback = PJ_FALSE;
     return PJ_SUCCESS;
 }
 
@@ -219,16 +234,21 @@ static pj_status_t rec_cb_ext(void *user_data, pjmedia_frame *frame)
     pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
 
+    snd_port->in_aud_callback = PJ_TRUE;
+
     /* Invoke preview callback */
     if (snd_port->on_rec_frame)
         (*snd_port->on_rec_frame)(snd_port->user_data, frame);
 
     port = snd_port->port;
-    if (port == NULL)
+    if (port == NULL) {
+        snd_port->in_aud_callback = PJ_FALSE;
         return PJ_SUCCESS;
+    }
 
     pjmedia_port_put_frame(port, frame);
 
+    snd_port->in_aud_callback = PJ_FALSE;
     return PJ_SUCCESS;
 }
 
@@ -446,6 +466,9 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
     /* Start sound stream. */
     if (!(snd_port->options & PJMEDIA_SND_PORT_NO_AUTO_START)) {
         status = pjmedia_aud_stream_start(snd_port->aud_stream);
+        if (status == PJ_SUCCESS) {
+            snd_port->aud_started = PJ_TRUE;
+        }
     }
     if (status != PJ_SUCCESS)
         goto on_error;
@@ -775,12 +798,28 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 
         /* Destroy AEC */
         if (snd_port->ec_state) {
-            /* Stop the stream first to prevent race condition. */
-            restart_stream = PJ_TRUE;
-            pjmedia_aud_stream_stop(snd_port->aud_stream);
+            pjmedia_echo_state* ec_state = snd_port->ec_state;
 
-            pjmedia_echo_destroy(snd_port->ec_state);
+            /* Reset EC states first, so the callback won't use it.
+             * In case the callback is running and using it, we will wait
+             * for the callback to complete before destroying EC below.
+             */
+            snd_port->ec_suspended = PJ_TRUE;
             snd_port->ec_state = NULL;
+
+            /* Stop the stream first to prevent race condition. */
+            if (snd_port->aud_started) {
+                restart_stream = PJ_TRUE;
+                pjmedia_aud_stream_stop(snd_port->aud_stream);
+                snd_port->aud_started = PJ_FALSE;
+
+                /* Callback may still be running, wait for it */
+                while (snd_port->in_aud_callback) {
+                    pj_thread_sleep(1);
+                }
+            }
+
+            pjmedia_echo_destroy(ec_state);
         }
 
         if (tail_ms != 0) {

@@ -7931,11 +7931,14 @@ struct pjsua_media_config
      * Optional callback for audio frame preview right before queued to
      * the speaker.
      * Notes:
-     * - application MUST NOT block or perform long operation in the callback
-     *   as the callback may be executed in sound device thread
-     * - when using software echo cancellation, application MUST NOT modify
+     * - Application MUST NOT block or perform long operation in the callback
+     *   as the callback may be executed in sound device thread.
+     * - When using software echo cancellation, application MUST NOT modify
      *   the audio data from within the callback, otherwise the echo canceller
      *   will not work properly.
+     * - Application MUST NOT stop or switch the audio device, or modify
+     *   audio device settings (e.g: by calling #pjsua_set_ec()) from
+     *   within this callback.
      */
     void (*on_aud_prev_play_frame)(pjmedia_frame *frame);
 
@@ -7944,11 +7947,14 @@ struct pjsua_media_config
      * before being processed by any media component such as software echo
      * canceller.
      * Notes:
-     * - application MUST NOT block or perform long operation in the callback
-     *   as the callback may be executed in sound device thread
-     * - when using software echo cancellation, application MUST NOT modify
+     * - Application MUST NOT block or perform long operation in the callback
+     *   as the callback may be executed in sound device thread.
+     * - When using software echo cancellation, application MUST NOT modify
      *   the audio data from within the callback, otherwise the echo canceller
      *   will not work properly.
+     * - Application MUST NOT stop or switch the audio device, or modify
+     *   audio device settings (e.g: by calling #pjsua_set_ec()) from
+     *   within this callback.
      */
     void (*on_aud_prev_rec_frame)(pjmedia_frame *frame);
 };
