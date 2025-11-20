@@ -1184,7 +1184,6 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
     pjmedia_frame *inframe;
     int frm_size;
 
-    PJ_UNUSED_ARG(output_buf_len);
     pj_mutex_lock (opus_data->mutex);
 
     if (opus_data->dec_frame_index == -1) {
@@ -1194,6 +1193,10 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
                             opus_data->dec_ptime_denum / 1000;
         output->type = PJMEDIA_FRAME_TYPE_AUDIO;
         output->size = samples_per_frame << 1;
+        if (output->size > output_buf_len) {
+            pj_assert(!"Buffer too small");
+            output->size = output_buf_len;
+        }
         pjmedia_zero_samples((pj_int16_t*)output->buf, samples_per_frame);
         pj_mutex_unlock (opus_data->mutex);
 

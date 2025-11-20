@@ -114,8 +114,8 @@ struct pjmedia_stream
     unsigned                 dec_buf_count; /**< Number of samples in the
                                                  decoding buffer.           */
 
-    pj_uint16_t              dec_ptime;     /**< Decoder frame ptime in ms. */
-    pj_uint8_t               dec_ptime_denum;/**< Decoder ptime denum.      */
+    volatile pj_uint16_t     dec_ptime;     /**< Decoder frame ptime in ms. */
+    volatile pj_uint8_t      dec_ptime_denum;/**< Decoder ptime denum.      */
     pj_bool_t                detect_ptime_change;
                                             /**< Detect decode ptime change */
 
@@ -209,6 +209,106 @@ static void on_rx_rtcp( void *data,
 
 #include "stream_imp_common.c"
 
+
+/* Generate synthetic samples using PLC or zero-fill.
+ * This function may leave samples in the decoder buffer.
+ * Return 1 if PLC is invoked, otherwise return 0.
+ */
+static int synthesize_samples(pjmedia_stream *stream,
+                              unsigned samples_required,
+                              unsigned samples_per_decode,
+                              pjmedia_frame* frame_out)
+{
+    pjmedia_frame frame_out_;
+    unsigned samples_count = 0;
+    pj_status_t status;
+
+    /* Verify the output frame size */
+    if (samples_required > frame_out->size / 2) {
+        PJ_LOG(5, (stream->base.port.info.name.ptr,
+                   "Bad params in synthesize samples: "
+                   "required=%u decode=%u, buf-size=%u",
+                   samples_required, samples_per_decode, frame_out->size/2));
+        pjmedia_zero_samples(frame_out->buf, (unsigned)frame_out->size/2);
+        return 0;
+    }
+
+    /* Zero-fill when:
+     * - PLC is not supported/active, or
+     * - PLC limit has been reached.
+     */
+    if (!stream->codec->op->recover ||
+        !stream->codec_param.setting.plc ||
+        stream->plc_cnt >= stream->max_plc_cnt)
+    {
+        pjmedia_zero_samples(frame_out->buf, samples_required);
+        return 0;
+    }
+
+    /* Decode to decoder buffer when samples_per_decode > samples_required */
+    if (samples_per_decode > samples_required) {
+        ++stream->plc_cnt;
+        frame_out_.buf  = stream->dec_buf;
+        frame_out_.size = stream->dec_buf_size;
+        status = pjmedia_codec_recover(stream->codec,
+                                        (unsigned)frame_out_.size,
+                                        &frame_out_);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(5, (stream->base.port.info.name.ptr, status,
+                          "Codec recover failed"));
+            pjmedia_zero_samples(frame_out->buf, samples_required);
+            return 1;
+        }
+
+        /* Copy samples from the decoder buffer */
+        if (frame_out_.size / 2 > samples_required) {
+            pjmedia_copy_samples(frame_out->buf, stream->dec_buf,
+                                 samples_required);
+
+            /* Leave the rest in the decoder buffer */
+            stream->dec_buf_pos = samples_required;
+            stream->dec_buf_count = (unsigned)frame_out_.size / 2;
+        } else {
+            /* Not enough samples generated, copy whatever we have */
+            unsigned samples_avail = (unsigned)frame_out_.size / 2;
+            pjmedia_copy_samples(frame_out->buf, stream->dec_buf,
+                                 samples_avail);
+            pjmedia_zero_samples((pj_int16_t*)frame_out->buf + samples_avail,
+                                 samples_required - samples_avail);
+        }
+
+        return 1;
+    }
+
+    /* Decode directly to output frame */
+    frame_out_ = *frame_out;
+    do {
+        ++stream->plc_cnt;
+        status = pjmedia_codec_recover(stream->codec,
+                                       (unsigned)frame_out_.size,
+                                       &frame_out_);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(5, (stream->base.port.info.name.ptr, status,
+                          "Codec recover failed"));
+            break;
+        }
+
+        samples_count += (unsigned)frame_out_.size / 2;
+        frame_out_.buf = (pj_int16_t*)frame_out->buf + samples_count;
+        frame_out_.size = frame_out->size - samples_count*2;
+    } while (samples_count < samples_required &&
+             stream->plc_cnt < stream->max_plc_cnt);
+
+    /* Fill the rest with zeroes after PLC fails or over limit */
+    if (samples_count < samples_required) {
+        pjmedia_zero_samples((pj_int16_t*)frame_out->buf + samples_count,
+                             samples_required - samples_count);
+    }
+
+    return 1;
+}
+
+
 /*
  * play_callback()
  *
@@ -265,6 +365,11 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
         pj_size_t frame_size = channel->buf_size;
         pj_uint32_t bit_info;
 
+        /* Get samples from the decoder buffer first, if any.
+         * The decoder buffer is currently only used by Opus when
+         * the stream frame is smaller than the decoder frame,
+         * e.g: stream frame is 20ms while decoder frame is 60ms.
+         */
         if (stream->dec_buf && stream->dec_buf_pos < stream->dec_buf_count) {
             unsigned nsamples_req = samples_required - samples_count;
             unsigned nsamples_avail = stream->dec_buf_count -
@@ -288,36 +393,25 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 #endif
 
         if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
+            pjmedia_frame frame_out;
+            unsigned samples_needed;
+            pj_bool_t plc_invoked;
 
-            /* Activate PLC */
-            if (stream->codec->op->recover &&
-                stream->codec_param.setting.plc &&
-                stream->plc_cnt < stream->max_plc_cnt)
-            {
-                pjmedia_frame frame_out;
+            frame_out.buf = p_out_samp + samples_count;
+            frame_out.size = frame->size - samples_count*2;
 
-                frame_out.buf = p_out_samp + samples_count;
-                frame_out.size = frame->size - samples_count*2;
-                status = pjmedia_codec_recover(stream->codec,
-                                               (unsigned)frame_out.size,
-                                               &frame_out);
-
-                ++stream->plc_cnt;
-
-            } else {
-                status = -1;
-            }
-
-            if (status != PJ_SUCCESS) {
-                /* Either PLC failed or PLC not supported/enabled */
-                pjmedia_zero_samples(p_out_samp + samples_count,
-                                     samples_required - samples_count);
-            }
+            /* Generate only a frame (samples_per_frame) */
+            samples_needed = samples_required - samples_count;
+            if (samples_needed > samples_per_frame)
+                samples_needed = samples_per_frame;
+            plc_invoked = synthesize_samples(stream, samples_needed,
+                                             samples_per_frame, &frame_out);
+            samples_count += samples_needed;
 
             if (frame_type != c_strm->jb_last_frm) {
                 /* Report changing frame type event */
                 PJ_LOG(5,(c_strm->port.info.name.ptr, "Frame lost%s!",
-                          (status == PJ_SUCCESS? ", recovered":"")));
+                          (plc_invoked? ", recovered":"")));
 
                 c_strm->jb_last_frm = frame_type;
                 c_strm->jb_last_frm_cnt = 1;
@@ -325,7 +419,6 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                 c_strm->jb_last_frm_cnt++;
             }
 
-            samples_count += samples_per_frame;
         } else if (frame_type == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
 
             const char *with_plc = "";
@@ -338,36 +431,20 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
             //lost and not the subsequent ones.
             //if (frame_type != c_strm->jb_last_frm) {
             if (1) {
-                /* Activate PLC to smoothen the missing frame */
-                if (stream->codec->op->recover &&
-                    stream->codec_param.setting.plc &&
-                    stream->plc_cnt < stream->max_plc_cnt)
+                pjmedia_frame frame_out;
+                unsigned samples_needed;
+
+                frame_out.buf = p_out_samp + samples_count;
+                frame_out.size = frame->size - samples_count*2;
+
+                /* Generate all required (may be multiple frames) */
+                samples_needed = samples_required - samples_count;
+                if (synthesize_samples(stream, samples_needed,
+                                       samples_per_frame, &frame_out))
                 {
-                    pjmedia_frame frame_out;
-
-                    do {
-                        frame_out.buf = p_out_samp + samples_count;
-                        frame_out.size = frame->size - samples_count*2;
-                        status = pjmedia_codec_recover(stream->codec,
-                                                       (unsigned)frame_out.size,
-                                                       &frame_out);
-                        if (status != PJ_SUCCESS)
-                            break;
-
-                        samples_count += samples_per_frame;
-                        ++stream->plc_cnt;
-
-                    } while (samples_count < samples_required &&
-                             stream->plc_cnt < stream->max_plc_cnt);
-
                     with_plc = ", plc invoked";
                 }
-            }
-
-            if (samples_count < samples_required) {
-                pjmedia_zero_samples(p_out_samp + samples_count,
-                                     samples_required - samples_count);
-                samples_count = samples_required;
+                samples_count += samples_needed;
             }
 
             if (c_strm->jb_last_frm != frame_type) {
@@ -389,40 +466,23 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
         } else if (frame_type != PJMEDIA_JB_NORMAL_FRAME) {
 
             const char *with_plc = "";
+            pjmedia_frame frame_out;
+            unsigned samples_needed;
 
             /* It can only be PJMEDIA_JB_ZERO_PREFETCH frame */
             pj_assert(frame_type == PJMEDIA_JB_ZERO_PREFETCH_FRAME);
 
-            /* Always activate PLC when it's available.. */
-            if (stream->codec->op->recover &&
-                stream->codec_param.setting.plc &&
-                stream->plc_cnt < stream->max_plc_cnt)
+            frame_out.buf = p_out_samp + samples_count;
+            frame_out.size = frame->size - samples_count*2;
+
+            /* Generate all required (may be multiple frames) */
+            samples_needed = samples_required - samples_count;
+            if (synthesize_samples(stream, samples_needed,
+                                    samples_per_frame, &frame_out))
             {
-                pjmedia_frame frame_out;
-
-                do {
-                    frame_out.buf = p_out_samp + samples_count;
-                    frame_out.size = frame->size - samples_count*2;
-                    status = pjmedia_codec_recover(stream->codec,
-                                                   (unsigned)frame_out.size,
-                                                   &frame_out);
-                    if (status != PJ_SUCCESS)
-                        break;
-                    samples_count += samples_per_frame;
-
-                    ++stream->plc_cnt;
-
-                } while (samples_count < samples_required &&
-                         stream->plc_cnt < stream->max_plc_cnt);
-
                 with_plc = ", plc invoked";
             }
-
-            if (samples_count < samples_required) {
-                pjmedia_zero_samples(p_out_samp + samples_count,
-                                     samples_required - samples_count);
-                samples_count = samples_required;
-            }
+            samples_count += samples_needed;
 
             if (c_strm->jb_last_frm != frame_type) {
                 pjmedia_jb_state jb_state;
@@ -455,6 +515,10 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
             frame_out.buf = p_out_samp + samples_count;
             frame_out.size = frame->size - samples_count*BYTES_PER_SAMPLE;
+
+            /* Check if we need to use the decode buffer, i.e: codec is opus
+             * and the decoded frame is larger than the stream frame.
+             */
             if (stream->dec_buf &&
                 bit_info * sizeof(pj_int16_t) > frame_out.size)
             {
@@ -476,9 +540,13 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
                 if (use_dec_buf) {
                     pjmedia_zero_samples(stream->dec_buf,
                                          stream->dec_buf_count);
+                    stream->dec_buf_count = 0;
                 } else {
+                    unsigned samples_needed = samples_required - samples_count;
+                    if (samples_needed > frame_out.size / 2)
+                        samples_needed = (unsigned)frame_out.size / 2;
                     pjmedia_zero_samples(p_out_samp + samples_count,
-                                         samples_per_frame);
+                                         samples_needed);
                 }
             } else if (use_dec_buf) {
                 stream->dec_buf_count = (unsigned)frame_out.size /
