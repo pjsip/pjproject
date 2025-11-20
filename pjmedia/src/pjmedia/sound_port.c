@@ -852,7 +852,10 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
         snd_port->ec_tail_len = tail_ms;
 
         if (restart_stream)
-            pjmedia_aud_stream_start(snd_port->aud_stream);
+            status = pjmedia_aud_stream_start(snd_port->aud_stream);
+            if (status == PJ_SUCCESS) {
+                snd_port->aud_started = PJ_TRUE;
+            }
     }
 
     return status;
