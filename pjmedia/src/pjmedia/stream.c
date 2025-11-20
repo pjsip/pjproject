@@ -228,7 +228,8 @@ static int synthesize_samples(pjmedia_stream *stream,
         PJ_LOG(5, (stream->base.port.info.name.ptr,
                    "Bad params in synthesize samples: "
                    "required=%u decode=%u, buf-size=%u",
-                   samples_required, samples_per_decode, frame_out->size/2));
+                   samples_required, samples_per_decode,
+                   (unsigned)frame_out->size/2));
         pjmedia_zero_samples(frame_out->buf, (unsigned)frame_out->size/2);
         return 0;
     }
