@@ -919,7 +919,8 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
     pj_memcpy(tmp_buf, pkt, pkt_size);
 
     opus_repacketizer_init(opus_data->dec_packer);
-    opus_repacketizer_cat(opus_data->dec_packer, tmp_buf, pkt_size);
+    opus_repacketizer_cat(opus_data->dec_packer, tmp_buf,
+                          (opus_int32)pkt_size);
 
     num_frames = opus_repacketizer_get_nb_frames(opus_data->dec_packer);
     if (num_frames == 0) {
@@ -950,7 +951,8 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
             unsigned ptime_denum = 1;
 
             nsamples = opus_packet_get_nb_samples(frames[i].buf,
-                                                  frames[i].size,
+                                                  (opus_int32)frames[i].size,
+                                                  (opus_int32)
                                                   opus_data->cfg.sample_rate);
             if (nsamples <= 0) {
                 PJ_LOG(5, (THIS_FILE, "Parse failed to get samples number! "
@@ -1124,7 +1126,7 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
      * then frame_size needs to be exactly the duration of audio that
      * is missing.
      */
-    frm_size = output->size / (sizeof(opus_int16) *
+    frm_size = (int)output->size / (sizeof(opus_int16) *
                opus_data->cfg.channel_cnt);
     if (inframe->type != PJMEDIA_FRAME_TYPE_AUDIO || fec) {
         frm_size = PJ_MIN((unsigned)frm_size,
@@ -1134,9 +1136,9 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
     }
     decoded_samples = opus_decode( opus_data->dec,
                                    inframe->type==PJMEDIA_FRAME_TYPE_AUDIO ?
-                                   inframe->buf : NULL,
+                                        inframe->buf : NULL,
                                    inframe->type==PJMEDIA_FRAME_TYPE_AUDIO ?
-                                   inframe->size : 0,
+                                        (opus_int32)inframe->size : 0,
                                    (opus_int16*)output->buf,
                                    frm_size,
                                    fec);
@@ -1204,7 +1206,7 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
     }
 
     inframe = &opus_data->dec_frame[opus_data->dec_frame_index];
-    frm_size = output->size / (sizeof(opus_int16) *
+    frm_size = (int)output->size / (sizeof(opus_int16) *
                opus_data->cfg.channel_cnt);
     if (inframe->type != PJMEDIA_FRAME_TYPE_AUDIO) {
         frm_size = PJ_MIN((unsigned)frm_size, opus_data->cfg.sample_rate *
@@ -1213,9 +1215,9 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
     }
     decoded_samples = opus_decode(opus_data->dec,
                                   inframe->type==PJMEDIA_FRAME_TYPE_AUDIO ?
-                                  inframe->buf : NULL,
+                                        inframe->buf : NULL,
                                   inframe->type==PJMEDIA_FRAME_TYPE_AUDIO ?
-                                  inframe->size : 0,
+                                        (opus_int32)inframe->size : 0,
                                   (opus_int16*)output->buf,
                                   frm_size,
                                   0);
