@@ -330,9 +330,15 @@ export APP_LDLIBS := $(PJSUA_LIB_LDLIB) \
         $(APP_THIRD_PARTY_EXT)\
         $(PJLIB_LDLIB) \
         @LIBS@
+
+ifeq ($(findstring darwin,$(TARGET_NAME)),darwin)
+export APP_LDXXLIBS := $(PJSUA2_LIB_LDLIB) \
+        $(APP_LDLIBS)
+else
 export APP_LDXXLIBS := $(PJSUA2_LIB_LDLIB) \
         -lstdc++ \
         $(APP_LDLIBS)
+endif
 
 # Here are the variables to use if application is using the library
 # from within the source distribution
