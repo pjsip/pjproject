@@ -220,16 +220,17 @@ static int synthesize_samples(pjmedia_stream *stream,
                               pjmedia_frame* frame_out)
 {
     pjmedia_frame frame_out_;
-    unsigned samples_count = 0;
+    unsigned samples_count = 0, out_buf_len;
     pj_status_t status;
 
     /* Verify the output frame size */
-    if (samples_required > frame_out->size / 2) {
+    out_buf_len = (unsigned)frame_out->size / 2;
+    if (samples_required > out_buf_len) {
         PJ_LOG(5, (stream->base.port.info.name.ptr,
                    "Bad params in synthesize samples: "
                    "required=%u decode=%u, buf-size=%u",
-                   samples_required, samples_per_decode, frame_out->size/2));
-        pjmedia_zero_samples(frame_out->buf, (unsigned)frame_out->size/2);
+                   samples_required, samples_per_decode, out_buf_len));
+        pjmedia_zero_samples(frame_out->buf, out_buf_len);
         return 0;
     }
 
@@ -246,7 +247,7 @@ static int synthesize_samples(pjmedia_stream *stream,
     }
 
     /* Decode to decoder buffer when samples_per_decode > samples_required */
-    if (samples_per_decode > samples_required) {
+    if (stream->dec_buf && samples_per_decode > samples_required) {
         ++stream->plc_cnt;
         frame_out_.buf  = stream->dec_buf;
         frame_out_.size = stream->dec_buf_size;
@@ -393,7 +394,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 #endif
 
         if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
-            pjmedia_frame frame_out;
+            pjmedia_frame frame_out = {0};
             unsigned samples_needed;
             pj_bool_t plc_invoked;
 
@@ -431,7 +432,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
             //lost and not the subsequent ones.
             //if (frame_type != c_strm->jb_last_frm) {
             if (1) {
-                pjmedia_frame frame_out;
+                pjmedia_frame frame_out = {0}   ;
                 unsigned samples_needed;
 
                 frame_out.buf = p_out_samp + samples_count;
@@ -466,7 +467,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
         } else if (frame_type != PJMEDIA_JB_NORMAL_FRAME) {
 
             const char *with_plc = "";
-            pjmedia_frame frame_out;
+            pjmedia_frame frame_out = {0};
             unsigned samples_needed;
 
             /* It can only be PJMEDIA_JB_ZERO_PREFETCH frame */
