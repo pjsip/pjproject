@@ -432,7 +432,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
             //lost and not the subsequent ones.
             //if (frame_type != c_strm->jb_last_frm) {
             if (1) {
-                pjmedia_frame frame_out = {0}   ;
+                pjmedia_frame frame_out = {0};
                 unsigned samples_needed;
 
                 frame_out.buf = p_out_samp + samples_count;
