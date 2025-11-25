@@ -4161,9 +4161,11 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
         sd_param.include_udp = PJ_FALSE;
 
         PJ_LOG(4,(THIS_FILE, "IP change shutting down transports.."));
+        PJSUA_LOCK();
         status = pjsip_tpmgr_shutdown_all(
                                     pjsip_endpt_get_tpmgr(pjsua_var.endpt),
                                     &sd_param);
+        PJSUA_UNLOCK();
 
         /* Provide dummy info instead of NULL info to avoid possible crash
          * (if app does not check).
