@@ -88,6 +88,10 @@
 #define CMD_MEDIA_ADJUST_VOL        ((CMD_MEDIA*10)+4)
 #define CMD_MEDIA_CODEC_PRIO        ((CMD_MEDIA*10)+5)
 #define CMD_MEDIA_SPEAKER_TOGGLE    ((CMD_MEDIA*10)+6)
+#define CMD_MEDIA_PLAY_START        ((CMD_MEDIA*10)+7)
+#define CMD_MEDIA_PLAY_STOP         ((CMD_MEDIA*10)+8)
+#define CMD_MEDIA_REC_START         ((CMD_MEDIA*10)+9)
+#define CMD_MEDIA_REC_STOP          ((CMD_MEDIA*10)+10)
 
 /* status & config level 2 command */
 #define CMD_CONFIG_DUMP_STAT        ((CMD_CONFIG*10)+1)
@@ -1359,6 +1363,343 @@ static pj_status_t cmd_set_codec_prio(pj_cli_cmd_val *cval)
     return status;
 }
 
+/*
+ * Helper functions for dynamic playback and recording control
+ */
+
+/* Forward declarations */
+static pj_status_t stop_playback(void);
+static pj_status_t stop_recording(void);
+
+/**
+ * Start dynamic playback - will start immediately if call active,
+ * or queue for when call is established (like --auto-play)
+ */
+static pj_status_t start_playback(const char *filename)
+{
+    pj_status_t status;
+    pjsua_player_id player_id;
+    pjsua_conf_port_id player_port;
+    pjsua_conf_port_id call_conf_slot;
+    pjsua_call_id call_id;
+    pjsua_call_info call_info;
+    unsigned mi;
+    pj_str_t file;
+
+    /* Check if auto-play is active */
+    if (app_config.auto_play) {
+        PJ_LOG(2, (THIS_FILE,
+                   "Cannot use dynamic playback: --auto-play is active"));
+        return PJ_EBUSY;
+    }
+
+    /* Check if playback already active */
+    if (app_config.dyn_player_active) {
+        PJ_LOG(3, (THIS_FILE, "Playback already active, stopping first..."));
+        stop_playback();
+    }
+
+    /* Store filename in permanent storage */
+    pj_ansi_strncpy(app_config.dyn_play_filename, filename, PJ_MAXPATH);
+    app_config.dyn_play_filename[PJ_MAXPATH-1] = '\0';
+    app_config.dyn_player_active = PJ_TRUE;
+
+    /* Check if there's an active call */
+    call_id = current_call;
+    if (call_id == PJSUA_INVALID_ID) {
+        PJ_LOG(3, (THIS_FILE,
+                   "No active call, playback queued for call setup"));
+        return PJ_SUCCESS;
+    }
+
+    /* Get call info */
+    status = pjsua_call_get_info(call_id, &call_info);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(2, (THIS_FILE, "Failed to get call info"));
+        return status;
+    }
+
+    /* Check if call is confirmed and has audio */
+    if (call_info.state != PJSIP_INV_STATE_CONFIRMED) {
+        PJ_LOG(3, (THIS_FILE,
+                   "Call not confirmed, playback queued for call setup"));
+        return PJ_SUCCESS;
+    }
+
+    /* Find audio media */
+    call_conf_slot = PJSUA_INVALID_ID;
+    for (mi = 0; mi < call_info.media_cnt; ++mi) {
+        if (call_info.media[mi].type == PJMEDIA_TYPE_AUDIO &&
+            call_info.media[mi].status == PJSUA_CALL_MEDIA_ACTIVE)
+        {
+            call_conf_slot = call_info.media[mi].stream.aud.conf_slot;
+            break;
+        }
+    }
+
+    if (call_conf_slot == PJSUA_INVALID_ID) {
+        PJ_LOG(3, (THIS_FILE,
+                   "No active audio, playback queued for media setup"));
+        return PJ_SUCCESS;
+    }
+
+    /* Create player */
+    file = pj_str((char*)filename);
+    status = pjsua_player_create(&file, 0, &player_id);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(2, (THIS_FILE, "Failed to create player: %d", status));
+        app_config.dyn_player_active = PJ_FALSE;
+        return status;
+    }
+
+    /* Get player port */
+    player_port = pjsua_player_get_conf_port(player_id);
+
+    /* Connect player to call */
+    status = pjsua_conf_connect(player_port, call_conf_slot);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(2, (THIS_FILE, "Failed to connect player to call: %d", status));
+        pjsua_player_destroy(player_id);
+        app_config.dyn_player_active = PJ_FALSE;
+        return status;
+    }
+
+    /* Disconnect microphone from call (like --auto-play does) */
+    pjsua_conf_disconnect(0, call_conf_slot);
+
+    /* Save state */
+    app_config.dyn_player_id = player_id;
+    app_config.dyn_player_port = player_port;
+    app_config.dyn_player_call = call_id;
+
+    PJ_LOG(3, (THIS_FILE, "Playback started: %s", filename));
+    return PJ_SUCCESS;
+}
+
+/**
+ * Stop dynamic playback
+ */
+static pj_status_t stop_playback(void)
+{
+    pj_status_t status = PJ_SUCCESS;
+
+    if (!app_config.dyn_player_active) {
+        PJ_LOG(3, (THIS_FILE, "No active playback"));
+        return PJ_EINVAL;
+    }
+
+    /* If player was created (not just queued), destroy it */
+    if (app_config.dyn_player_id != PJSUA_INVALID_ID) {
+        /* Disconnect from call and reconnect mic (if call still active) */
+        if (app_config.dyn_player_call != PJSUA_INVALID_ID) {
+            pjsua_call_info call_info;
+            pj_status_t st;
+
+            st = pjsua_call_get_info(app_config.dyn_player_call, &call_info);
+            if (st == PJ_SUCCESS) {
+                unsigned mi;
+                for (mi = 0; mi < call_info.media_cnt; ++mi) {
+                    if (call_info.media[mi].type == PJMEDIA_TYPE_AUDIO &&
+                        call_info.media[mi].status == PJSUA_CALL_MEDIA_ACTIVE)
+                    {
+                        pjsua_conf_port_id slot;
+
+                        slot = call_info.media[mi].stream.aud.conf_slot;
+                        pjsua_conf_disconnect(app_config.dyn_player_port,
+                                              slot);
+                        /* Reconnect microphone */
+                        pjsua_conf_connect(0, slot);
+                        break;
+                    }
+                }
+            }
+        }
+
+        /* Destroy player */
+        status = pjsua_player_destroy(app_config.dyn_player_id);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(2, (THIS_FILE, "Failed to destroy player: %d", status));
+        }
+    }
+
+    /* Reset state */
+    app_config.dyn_player_id = PJSUA_INVALID_ID;
+    app_config.dyn_player_port = PJSUA_INVALID_ID;
+    app_config.dyn_player_call = PJSUA_INVALID_ID;
+    app_config.dyn_player_active = PJ_FALSE;
+    app_config.dyn_play_filename[0] = '\0';
+
+    PJ_LOG(3, (THIS_FILE, "Playback stopped"));
+    return status;
+}
+
+/**
+ * Start dynamic recording - will start immediately if call active,
+ * or queue for when call is established (like --auto-rec)
+ */
+static pj_status_t start_recording(const char *filename)
+{
+    pj_status_t status;
+    pjsua_recorder_id rec_id;
+    pjsua_conf_port_id rec_port;
+    pjsua_conf_port_id call_conf_slot;
+    pjsua_call_id call_id;
+    pjsua_call_info call_info;
+    unsigned mi;
+    pj_str_t file;
+
+    /* Check if auto-rec is active */
+    if (app_config.auto_rec) {
+        PJ_LOG(2, (THIS_FILE,
+                   "Cannot use dynamic recording: --auto-rec is active"));
+        return PJ_EBUSY;
+    }
+
+    /* Check if recording already active */
+    if (app_config.dyn_rec_active) {
+        PJ_LOG(3, (THIS_FILE, "Recording already active, stopping first..."));
+        stop_recording();
+    }
+
+    /* Store filename in permanent storage */
+    pj_ansi_strncpy(app_config.dyn_rec_filename, filename, PJ_MAXPATH);
+    app_config.dyn_rec_filename[PJ_MAXPATH-1] = '\0';
+    app_config.dyn_rec_active = PJ_TRUE;
+
+    /* Check if there's an active call */
+    call_id = current_call;
+    if (call_id == PJSUA_INVALID_ID) {
+        PJ_LOG(3, (THIS_FILE,
+                   "No active call, recording queued for call setup"));
+        return PJ_SUCCESS;
+    }
+
+    /* Get call info */
+    status = pjsua_call_get_info(call_id, &call_info);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(2, (THIS_FILE, "Failed to get call info"));
+        return status;
+    }
+
+    /* Check if call is confirmed and has audio */
+    if (call_info.state != PJSIP_INV_STATE_CONFIRMED) {
+        PJ_LOG(3, (THIS_FILE,
+                   "Call not confirmed, recording queued for call setup"));
+        return PJ_SUCCESS;
+    }
+
+    /* Find audio media */
+    call_conf_slot = PJSUA_INVALID_ID;
+    for (mi = 0; mi < call_info.media_cnt; ++mi) {
+        if (call_info.media[mi].type == PJMEDIA_TYPE_AUDIO &&
+            call_info.media[mi].status == PJSUA_CALL_MEDIA_ACTIVE)
+        {
+            call_conf_slot = call_info.media[mi].stream.aud.conf_slot;
+            break;
+        }
+    }
+
+    if (call_conf_slot == PJSUA_INVALID_ID) {
+        PJ_LOG(3, (THIS_FILE,
+                   "No active audio, recording queued for media setup"));
+        return PJ_SUCCESS;
+    }
+
+    /* Create recorder (will overwrite existing files) */
+    file = pj_str((char*)filename);
+    status = pjsua_recorder_create(&file, 0, NULL, 0, 0, &rec_id);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(2, (THIS_FILE, "Failed to create recorder: %d", status));
+        app_config.dyn_rec_active = PJ_FALSE;
+        return status;
+    }
+
+    /* Get recorder port */
+    rec_port = pjsua_recorder_get_conf_port(rec_id);
+
+    /* Connect call to recorder */
+    status = pjsua_conf_connect(call_conf_slot, rec_port);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(2, (THIS_FILE, "Failed to connect to recorder: %d", status));
+        pjsua_recorder_destroy(rec_id);
+        app_config.dyn_rec_active = PJ_FALSE;
+        return status;
+    }
+
+    /* Connect microphone to recorder */
+    status = pjsua_conf_connect(0, rec_port);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(2, (THIS_FILE, "Failed to connect mic to recorder: %d", status));
+        /* Continue anyway, we at least have call audio */
+    }
+
+    /* Save state */
+    app_config.dyn_rec_id = rec_id;
+    app_config.dyn_rec_port = rec_port;
+    app_config.dyn_rec_call = call_id;
+
+    PJ_LOG(3, (THIS_FILE, "Recording started: %s", filename));
+    return PJ_SUCCESS;
+}
+
+/**
+ * Stop dynamic recording
+ */
+static pj_status_t stop_recording(void)
+{
+    pj_status_t status = PJ_SUCCESS;
+
+    if (!app_config.dyn_rec_active) {
+        PJ_LOG(3, (THIS_FILE, "No active recording"));
+        return PJ_EINVAL;
+    }
+
+    /* If recorder was created (not just queued), destroy it */
+    if (app_config.dyn_rec_id != PJSUA_INVALID_ID) {
+        /* Disconnect from call (if still active) */
+        if (app_config.dyn_rec_call != PJSUA_INVALID_ID) {
+            pjsua_call_info call_info;
+            pj_status_t st;
+
+            st = pjsua_call_get_info(app_config.dyn_rec_call, &call_info);
+            if (st == PJ_SUCCESS) {
+                unsigned mi;
+                for (mi = 0; mi < call_info.media_cnt; ++mi) {
+                    if (call_info.media[mi].type == PJMEDIA_TYPE_AUDIO &&
+                        call_info.media[mi].status == PJSUA_CALL_MEDIA_ACTIVE)
+                    {
+                        pjsua_conf_port_id slot;
+
+                        slot = call_info.media[mi].stream.aud.conf_slot;
+                        pjsua_conf_disconnect(slot,
+                                              app_config.dyn_rec_port);
+                        break;
+                    }
+                }
+            }
+        }
+
+        /* Disconnect microphone */
+        pjsua_conf_disconnect(0, app_config.dyn_rec_port);
+
+        /* Destroy recorder */
+        status = pjsua_recorder_destroy(app_config.dyn_rec_id);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(2, (THIS_FILE, "Failed to destroy recorder: %d", status));
+        }
+    }
+
+    /* Reset state */
+    app_config.dyn_rec_id = PJSUA_INVALID_ID;
+    app_config.dyn_rec_port = PJSUA_INVALID_ID;
+    app_config.dyn_rec_call = PJSUA_INVALID_ID;
+    app_config.dyn_rec_active = PJ_FALSE;
+    app_config.dyn_rec_filename[0] = '\0';
+
+    PJ_LOG(3, (THIS_FILE, "Recording stopped"));
+    return status;
+}
+
 /* Conference/media command handler */
 pj_status_t cmd_media_handler(pj_cli_cmd_val *cval)
 {
@@ -1404,6 +1745,90 @@ pj_status_t cmd_media_handler(pj_cli_cmd_val *cval)
             status = pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
                                            &route, PJ_TRUE);
             PJ_PERROR(4,(THIS_FILE, status, "Result"));
+        }
+        break;
+    case CMD_MEDIA_PLAY_START:
+        {
+            pj_cli_sess *sess = cval->sess;
+            char filename_buf[PJ_MAXPATH];
+
+            if (cval->argc < 2) {
+                pj_cli_sess_write_msg(sess, "Error: filename required\r\n", 26);
+                return PJ_EINVAL;
+            }
+
+            /* Safely copy and null-terminate the filename */
+            if (cval->argv[1].slen >= PJ_MAXPATH) {
+                pj_cli_sess_write_msg(sess, "Error: filename too long\r\n", 27);
+                return PJ_EINVAL;
+            }
+            pj_memcpy(filename_buf, cval->argv[1].ptr, cval->argv[1].slen);
+            filename_buf[cval->argv[1].slen] = '\0';
+
+            status = start_playback(filename_buf);
+            if (status == PJ_SUCCESS) {
+                pj_cli_sess_write_msg(sess, "Playback started\r\n", 18);
+            } else {
+                char msg[128];
+                pj_ansi_snprintf(msg, sizeof(msg),
+                                 "Playback failed: %d\r\n", status);
+                pj_cli_sess_write_msg(sess, msg, pj_ansi_strlen(msg));
+            }
+        }
+        break;
+    case CMD_MEDIA_PLAY_STOP:
+        {
+            pj_cli_sess *sess = cval->sess;
+            status = stop_playback();
+            if (status == PJ_SUCCESS) {
+                pj_cli_sess_write_msg(sess, "Playback stopped\r\n", 18);
+            } else {
+                char msg[128];
+                pj_ansi_snprintf(msg, sizeof(msg), "Stop failed: %d\r\n", status);
+                pj_cli_sess_write_msg(sess, msg, pj_ansi_strlen(msg));
+            }
+        }
+        break;
+    case CMD_MEDIA_REC_START:
+        {
+            pj_cli_sess *sess = cval->sess;
+            char filename_buf[PJ_MAXPATH];
+
+            if (cval->argc < 2) {
+                pj_cli_sess_write_msg(sess, "Error: filename required\r\n", 26);
+                return PJ_EINVAL;
+            }
+
+            /* Safely copy and null-terminate the filename */
+            if (cval->argv[1].slen >= PJ_MAXPATH) {
+                pj_cli_sess_write_msg(sess, "Error: filename too long\r\n", 27);
+                return PJ_EINVAL;
+            }
+            pj_memcpy(filename_buf, cval->argv[1].ptr, cval->argv[1].slen);
+            filename_buf[cval->argv[1].slen] = '\0';
+
+            status = start_recording(filename_buf);
+            if (status == PJ_SUCCESS) {
+                pj_cli_sess_write_msg(sess, "Recording started\r\n", 19);
+            } else {
+                char msg[128];
+                pj_ansi_snprintf(msg, sizeof(msg),
+                                 "Recording failed: %d\r\n", status);
+                pj_cli_sess_write_msg(sess, msg, pj_ansi_strlen(msg));
+            }
+        }
+        break;
+    case CMD_MEDIA_REC_STOP:
+        {
+            pj_cli_sess *sess = cval->sess;
+            status = stop_recording();
+            if (status == PJ_SUCCESS) {
+                pj_cli_sess_write_msg(sess, "Recording stopped\r\n", 19);
+            } else {
+                char msg[128];
+                pj_ansi_snprintf(msg, sizeof(msg), "Stop failed: %d\r\n", status);
+                pj_cli_sess_write_msg(sess, msg, pj_ansi_strlen(msg));
+            }
         }
         break;
     }
@@ -3068,6 +3493,14 @@ static pj_status_t add_media_command(pj_cli_t *c)
         "    <ARG name='codec_id' type='choice' id='9904' desc='Codec Id'/>"
         "    <ARG name='priority' type='int' desc='Codec Priority'/>"
         "  </CMD>"
+        "  <CMD name='play_start' id='4007' desc='Start playing WAV file to call'>"
+        "    <ARG name='filename' type='string' desc='WAV file path'/>"
+        "  </CMD>"
+        "  <CMD name='play_stop' id='4008' desc='Stop playback'/>"
+        "  <CMD name='rec_start' id='4009' desc='Start recording call'>"
+        "    <ARG name='filename' type='string' desc='Output file path'/>"
+        "  </CMD>"
+        "  <CMD name='rec_stop' id='4010' desc='Stop recording'/>"
         "</CMD>";
 
     pj_str_t xml = pj_str(media_command);
