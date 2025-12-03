@@ -264,7 +264,7 @@ PJ_DECL(pj_status_t) pj_thread_register ( const char *thread_name,
  *
  * @return PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pj_thread_unregister();
+PJ_DECL(pj_status_t) pj_thread_unregister(void);
 
 /**
  * Register a thread that was created by external or native API to PJLIB.
