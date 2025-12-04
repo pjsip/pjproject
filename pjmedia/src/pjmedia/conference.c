@@ -254,6 +254,7 @@ struct pjmedia_conf
 
     op_entry             *op_queue;     /**< Queue of operations.           */
     op_entry             *op_queue_free;/**< Queue of free entries.         */
+    void                 *op_user_data; /**< User data for OP callback.     */
     pjmedia_conf_op_cb    cb;           /**< OP callback.                   */
 };
 
@@ -366,6 +367,7 @@ static void handle_op_queue(pjmedia_conf *conf)
             pj_log_push_indent();
             info.op_type = type;
             info.status = status;
+            info.user_data = conf->op_user_data;
             info.op_param = param;
             (*conf->cb)(&info);
             pj_log_pop_indent();
@@ -911,6 +913,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
                 pj_log_push_indent();
                 op_info.op_type = PJMEDIA_CONF_OP_REMOVE_PORT;
                 op_info.status = status;
+                op_info.user_data = conf->op_user_data;
                 op_info.op_param = oprm;
 
                 (*conf->cb)(&op_info);
@@ -941,10 +944,18 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 PJ_DEF(pj_status_t) pjmedia_conf_set_op_cb(pjmedia_conf *conf,
                                            pjmedia_conf_op_cb cb)
 {
+    return pjmedia_conf_set_op_cb2(conf, NULL, cb);
+}
+
+PJ_DEF(pj_status_t) pjmedia_conf_set_op_cb2(pjmedia_conf* conf,
+                                            void *user_data,
+                                            pjmedia_conf_op_cb cb)
+{
     PJ_ASSERT_RETURN(conf, PJ_EINVAL);
 
     pj_mutex_lock(conf->mutex);
     conf->cb = cb;
+    conf->op_user_data = user_data;
     pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
@@ -1784,6 +1795,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 
                 op_info.op_type = cancel_op->type;
                 op_info.op_param = cancel_op->param;
+                op_info.user_data = conf->op_user_data;
 
                 pj_list_erase(cancel_op);
                 cancel_op->type = PJMEDIA_CONF_OP_UNKNOWN;
@@ -1817,6 +1829,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
                 pj_log_push_indent();
                 op_info.op_type = PJMEDIA_CONF_OP_REMOVE_PORT;
                 op_info.status = status;
+                op_info.user_data = conf->op_user_data;
                 op_info.op_param = prm;
 
                 (*conf->cb)(&op_info);

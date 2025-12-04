@@ -334,6 +334,21 @@ PJ_DEF(pj_status_t) pjmedia_conf_set_op_cb(pjmedia_conf *conf,
     return PJ_ENOTSUP;
 }
 
+/*
+ * Register the callback to be called when a port operation has been
+ * completed.
+ */
+PJ_DEF(pj_status_t) pjmedia_conf_set_op_cb2(pjmedia_conf *conf,
+                                            void *user_data,
+                                            pjmedia_conf_op_cb cb)
+{
+    PJ_UNUSED_ARG(conf);
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(cb);
+
+    return PJ_ENOTSUP;
+}
+
 
 /*
  * Destroy the master port (will destroy the conference)

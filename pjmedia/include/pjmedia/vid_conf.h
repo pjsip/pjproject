@@ -147,6 +147,11 @@ typedef struct pjmedia_vid_conf_op_info
     pj_status_t                 status;
 
     /**
+     * The operation user data.
+     */
+    void                       *user_data;
+
+    /**
      * The operation data.
      */
     pjmedia_vid_conf_op_param   op_param;
@@ -279,7 +284,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_create(
 /**
  * Destroy video conference bridge. This will also remove any video port,
  * thus application might get notified from the callback set from 
- * #pjmedia_vid_conf_set_op_cb().
+ * #pjmedia_vid_conf_set_op_cb()/#pjmedia_vid_conf_set_op_cb2().
  *
  * @param vid_conf      The video conference bridge.
  *
@@ -304,10 +309,29 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_set_op_cb(pjmedia_vid_conf *vid_conf,
                                                 pjmedia_vid_conf_op_cb cb);
 
 /**
+ * Register the callback to be called when a video port operation has been
+ * completed.
+ *
+ * The callback will most likely be called from media threads,
+ * thus application must not perform long/blocking processing in this callback.
+ *
+ * @param vid_conf      The video conference.
+ * @param user_data     User data to be specified in the callback.
+ * @param cb            Callback to be called. Set this to NULL to unregister
+ *                      the callback.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_conf_set_op_cb2(pjmedia_vid_conf* vid_conf,
+                                                 void *user_data,
+                                                 pjmedia_vid_conf_op_cb cb);
+
+/**
  * Add a media port to the video conference bridge.
  *
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
+ * #pjmedia_vid_conf_set_op_cb()/#pjmedia_vid_conf_set_op_cb2() to receive
+ * notification upon completion.
  * 
  * @param vid_conf      The video conference bridge.
  * @param pool          The memory pool, the brige will create new pool
@@ -335,7 +359,8 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_add_port(pjmedia_vid_conf *vid_conf,
  * Remove a media port from the video conference bridge.
  * 
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
+ * #pjmedia_vid_conf_set_op_cb()/#pjmedia_vid_conf_set_op_cb2() to receive
+ * notification upon completion.
  *
  * @param vid_conf      The video conference bridge.
  * @param slot          The media port's slot index to be removed.
@@ -394,7 +419,8 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_get_port_info(
  * the specified sink slot.
  * 
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
+ * #pjmedia_vid_conf_set_op_cb()/#pjmedia_vid_conf_set_op_cb2() to receive
+ * notification upon completion.
  *
  * @param vid_conf      The video conference bridge.
  * @param src_slot      Source slot.
@@ -416,7 +442,8 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_connect_port(
  * the specified sink slot.
  * 
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
+ * #pjmedia_vid_conf_set_op_cb()/#pjmedia_vid_conf_set_op_cb2() to receive
+ * notification upon completion.
  *
  * @param vid_conf      The video conference bridge.
  * @param src_slot      Source slot.
@@ -438,7 +465,8 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_disconnect_port(
  * internal states.
  * 
  * This operation executes asynchronously, use the callback set from
- * #pjmedia_vid_conf_set_op_cb() to receive notification upon completion.
+ * #pjmedia_vid_conf_set_op_cb()/#pjmedia_vid_conf_set_op_cb2() to receive
+ * notification upon completion.
  *
  * @param vid_conf      The video conference bridge.
  * @param slot          The media port's slot index to be updated.

@@ -63,7 +63,8 @@ struct pjmedia_vid_conf
 
     op_entry             *op_queue;     /**< Queue of operations.           */
     op_entry             *op_queue_free;/**< Queue of free entries.         */
-    pjmedia_vid_conf_op_cb cb;         /**< OP callback.                   */
+    void                 *op_user_data; /**< User data for OP callback.     */
+    pjmedia_vid_conf_op_cb cb;          /**< OP callback.                   */
 };
 
 
@@ -228,6 +229,7 @@ static void handle_op_queue(pjmedia_vid_conf *conf)
             pj_log_push_indent();
             info.op_type = type;
             info.status = status;
+            info.user_data = conf->op_user_data;
             info.op_param = param;
             (*conf->cb)(&info);
             pj_log_pop_indent();
@@ -369,6 +371,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf)
                 pj_log_push_indent();
                 info.op_type = PJMEDIA_VID_CONF_OP_REMOVE_PORT;
                 info.status = status;
+                info.user_data = vid_conf->op_user_data;
                 info.op_param = prm;
                 (*vid_conf->cb)(&info);
                 pj_log_pop_indent();
@@ -399,10 +402,18 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf)
 PJ_DEF(pj_status_t) pjmedia_vid_conf_set_op_cb(pjmedia_vid_conf *vid_conf,
                                                pjmedia_vid_conf_op_cb cb)
 {
-    PJ_ASSERT_RETURN(vid_conf && cb, PJ_EINVAL);
+    return pjmedia_vid_conf_set_op_cb2(vid_conf, NULL, cb);
+}
+
+PJ_DEF(pj_status_t) pjmedia_vid_conf_set_op_cb2(pjmedia_vid_conf* vid_conf,
+                                                void *user_data,
+                                                pjmedia_vid_conf_op_cb cb)
+{
+    PJ_ASSERT_RETURN(vid_conf, PJ_EINVAL);
 
     pj_mutex_lock(vid_conf->mutex);
     vid_conf->cb = cb;
+    vid_conf->op_user_data = user_data;
     pj_mutex_unlock(vid_conf->mutex);
 
     return PJ_SUCCESS;
