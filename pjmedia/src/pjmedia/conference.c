@@ -226,7 +226,7 @@ struct conf_port
     pj_bool_t            is_new;        /**< Newly added port, avoid read/write
                                              data from/to.                  */
     pj_bool_t            removing;      /**< Port is being removed, avoid
-                                             queing connect/disconnect/etc. */
+                                             queuing connect/disconnect/etc. */
 };
 
 
@@ -1841,8 +1841,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     if (ope) {
         ope->type = PJMEDIA_CONF_OP_REMOVE_PORT;
         ope->param.remove_port.port = port;
-        conf_port->removing = PJ_TRUE;
         pj_list_push_back(conf->op_queue, ope);
+        conf_port->removing = PJ_TRUE;
 
         PJ_LOG(4,(THIS_FILE, "Remove port %d queued", port));
     } else {
