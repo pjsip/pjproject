@@ -78,6 +78,12 @@ add_library(pjlib
   src/pj/unittest.c
 )
 
+# Ensure generated headers are found before source headers
+target_include_directories(pjlib
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+)
+
 # headers
 target_sources(pjlib
   PUBLIC
@@ -677,8 +683,8 @@ target_sources(pjlib
   PUBLIC
     FILE_SET config_headers TYPE HEADERS
       BASE_DIRS
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
         "${CMAKE_CURRENT_BINARY_DIR}/include"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
       FILES
         "${CMAKE_CURRENT_SOURCE_DIR}/include/pj/config_site.h"
         "${CMAKE_CURRENT_BINARY_DIR}/include/pj/compat/m_auto.h"
@@ -729,7 +735,7 @@ if(BUILD_TESTING)
     src/pjlib-test/${PJ_TEST_MAIN}
   )
 
-  target_link_libraries(pjlib-test PRIVATE pjlib)
+  target_link_libraries(pjlib-test PRIVATE pjlib pjlib-ssl)
 
   add_test(NAME pjlib-test COMMAND pjlib-test)
 endif()
