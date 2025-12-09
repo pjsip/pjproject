@@ -524,12 +524,12 @@ target_sources(pjmedia
 #
 
 target_link_libraries(pjmedia
+  PUBLIC
+    # srtp - PUBLIC to propagate shared library dependency to consumers
+    $<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>
   PRIVATE
     # project
     pjlib pjlib-ssl pjlib-util pjnath
-
-    # srtp
-    $<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>
 
     # resampling backend
     $<$<STREQUAL:${PJMEDIA_WITH_RESAMPLE},libresample>:Pj::Dep::Resample>

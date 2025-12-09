@@ -7,9 +7,11 @@ function(_srtp_find version)
   # version-specific names
   if(version EQUAL 2)
     set(libs libsrtp2 srtp2)
+    set(shared_libs libsrtp2.dylib libsrtp2.so srtp2.dylib srtp2.so)
     set(headers srtp2/srtp.h)
   else()
     set(libs libsrtp srtp)
+    set(shared_libs libsrtp.dylib libsrtp.so srtp.dylib srtp.so)
     set(headers srtp/srtp.h)
   endif()
 
@@ -26,10 +28,11 @@ function(_srtp_find version)
       ${PC_SRTP_INCLUDE_DIRS}
     )
 
+  # Prefer shared libraries over static
   find_library(SRTP_LIBRARY
     NAMES
-      libsrtp2
-      srtp2
+      ${shared_libs}
+      ${libs}
     HINTS
       ${PC_SRTP_LIBDIR}
       ${PC_SRTP_LIBRARY_DIRS}
@@ -82,7 +85,7 @@ if(SRTP_FOUND)
   endblock()
 
   if(NOT TARGET SRTP::SRTP)
-    add_library(SRTP::SRTP UNKNOWN IMPORTED)
+    add_library(SRTP::SRTP UNKNOWN IMPORTED GLOBAL)
     set_target_properties(SRTP::SRTP PROPERTIES
       IMPORTED_LOCATION "${SRTP_LIBRARIES}"
       INTERFACE_INCLUDE_DIRECTORIES "${SRTP_INCLUDE_DIRS}"
