@@ -901,5 +901,5 @@ if(BUILD_TESTING)
       pjmedia-videodev
   )
 
-  add_test(NAME pjmedia-test COMMAND pjmedia-test)
+  add_test(NAME pjmedia-test COMMAND pjmedia-test WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build")
 endif()

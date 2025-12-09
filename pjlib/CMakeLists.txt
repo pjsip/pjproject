@@ -737,7 +737,7 @@ if(BUILD_TESTING)
 
   target_link_libraries(pjlib-test PRIVATE pjlib pjlib-ssl)
 
-  add_test(NAME pjlib-test COMMAND pjlib-test)
+  add_test(NAME pjlib-test COMMAND pjlib-test WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/pjlib-test")
 endif()
 
 # ##############################################################################
