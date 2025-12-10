@@ -1925,15 +1925,15 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
         send_manager *send_mgr;
         send_stream *ss;
 
-        send_mgr = PJ_POOL_ZALLOC_T(c_strm->own_pool, send_manager);
-        ss = PJ_POOL_ZALLOC_T(c_strm->own_pool, send_stream);
+        send_mgr = PJ_POOL_ZALLOC_T(pool, send_manager);
+        ss = PJ_POOL_ZALLOC_T(pool, send_stream);
         if (!send_mgr || !ss)
             goto err_cleanup;
 
         pj_list_init(&ss->free_list);
         ss->grp_lock = c_strm->grp_lock;
         ss->tp = c_strm->transport;
-        ss->pool = c_strm->own_pool;
+        ss->pool = pool;
         ss->buf_size = c_strm->enc->buf_size;
         ss->ts_freq = stream->ts_freq;
         ss->rc_bandwidth = stream->info.rc_cfg.bandwidth;
