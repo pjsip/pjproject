@@ -226,6 +226,7 @@ static void handle_op_queue(pjmedia_vid_conf *conf)
             pjmedia_vid_conf_op_info info = { 0 };
 
             pj_log_push_indent();
+            info.vid_conf = conf;
             info.op_type = type;
             info.status = status;
             info.op_param = param;
@@ -367,6 +368,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf)
                 pjmedia_vid_conf_op_info info = { 0 };
 
                 pj_log_push_indent();
+                info.vid_conf = vid_conf;
                 info.op_type = PJMEDIA_VID_CONF_OP_REMOVE_PORT;
                 info.status = status;
                 info.op_param = prm;

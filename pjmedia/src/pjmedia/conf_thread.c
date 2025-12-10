@@ -1288,6 +1288,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
                 pjmedia_conf_op_info op_info = { 0 };
 
                 pj_log_push_indent();
+                op_info.conf = conf;
                 op_info.op_type = PJMEDIA_CONF_OP_REMOVE_PORT;
                 op_info.status = status;
                 op_info.op_param = oprm;
@@ -2290,6 +2291,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 
                 if (conf->cb) {
                     pj_log_push_indent();
+                    op_info.conf = conf;
                     op_info.status = PJ_ECANCELLED;
                     (*conf->cb)(&op_info);
                     pj_log_pop_indent();
@@ -2314,6 +2316,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
                 pjmedia_conf_op_info op_info = { 0 };
 
                 pj_log_push_indent();
+                op_info.conf = conf;
                 op_info.op_type = PJMEDIA_CONF_OP_REMOVE_PORT;
                 op_info.status = status;
                 op_info.op_param = prm;
