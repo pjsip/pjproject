@@ -171,6 +171,11 @@ typedef union pjmedia_conf_op_param
 typedef struct pjmedia_conf_op_info
 {
     /**
+     * The conference instance.
+     */
+    pjmedia_conf           *conf;
+
+    /**
      * The operation type.
      */
     pjmedia_conf_op_type    op_type;
