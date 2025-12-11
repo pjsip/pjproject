@@ -96,7 +96,7 @@ foreach(dep IN LISTS DEPS)
   # set provider property on target
   if(dep_target)
     set_target_properties(${dep_target} PROPERTIES
-      PJ_DEP_PROVIDER ${dep_option_name}
+      PJ_DEP_PROVIDER ${${dep_option_name}}
     )
     add_library(Pj::Dep::${dep} ALIAS ${dep_target})
   endif()

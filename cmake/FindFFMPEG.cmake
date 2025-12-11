@@ -93,11 +93,17 @@ function(_ffmpeg_find_component component)
 
   if(NOT TARGET "FFMPEG::${component}")
     add_library("FFMPEG::${component}" UNKNOWN IMPORTED)
+    # Build the list of dependency targets with FFMPEG:: prefix
+    set(_dep_targets)
+    foreach(_dep IN LISTS arg_NEEDS)
+      list(APPEND _dep_targets "FFMPEG::${_dep}")
+    endforeach()
     set_target_properties("FFMPEG::${component}" PROPERTIES
       IMPORTED_LOCATION "${FFMPEG_${component}_LIBRARY}"
       INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_${component}_INCLUDE_DIR}"
-      IMPORTED_LINK_INTERFACE_LIBRARIES "${arg_NEEDS}"
+      INTERFACE_LINK_LIBRARIES "${_dep_targets}"
     )
+    unset(_dep_targets)
   endif()
 
 
