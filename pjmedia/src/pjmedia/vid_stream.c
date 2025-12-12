@@ -269,12 +269,6 @@ static void send_mgr_on_destroy(void *arg)
 {
     send_manager* mgr = (send_manager*)arg;
 
-    if (mgr->thread) {
-        mgr->is_quitting = PJ_TRUE;
-        pj_thread_join(mgr->thread);
-        pj_thread_destroy(mgr->thread);
-    }
-
     if (mgr->pool)
         pj_pool_safe_release(&mgr->pool);
 }
@@ -358,6 +352,13 @@ static pj_status_t detach_send_manager(send_stream *ss)
     }
     ss->mgr = NULL;
     pj_grp_lock_release(mgr->grp_lock);
+
+    /* Stop send manager thread */
+    if (mgr->thread) {
+        mgr->is_quitting = PJ_TRUE;
+        pj_thread_join(mgr->thread);
+        pj_thread_destroy(mgr->thread);
+    }
 
     /* Decrease ref counter */
     return pj_grp_lock_dec_ref(mgr->grp_lock);
