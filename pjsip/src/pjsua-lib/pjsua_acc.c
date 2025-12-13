@@ -2030,8 +2030,9 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         
         /* Enclose IPv6 address in square brackets */
         if (tp->key.type & PJSIP_TRANSPORT_IPV6) {
-            beginquote = "[";
-            endquote = "]";
+            // beginquote = "[";
+            // endquote = "]";
+            beginquote = endquote = "";
         } else {
             beginquote = endquote = "";
         }
