@@ -2029,7 +2029,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
                  PJSIP_TRANSPORT_SECURE;
         
         /* Enclose IPv6 address in square brackets */
-        if (tp->key.type & PJSIP_TRANSPORT_IPV6) {
+        if ((tp->key.type & PJSIP_TRANSPORT_IPV6) && via_addr->ptr[0] != '[') {
             beginquote = "[";
             endquote = "]";
         } else {
