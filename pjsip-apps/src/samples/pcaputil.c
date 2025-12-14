@@ -24,6 +24,12 @@
 /* Ignore gap >30s */
 #define GAP_IGNORE_SECONDS 30
 
+/* RTP-vs-wallclock discrepancy threshold for timestamp discontinuity (1s) */
+#define MAX_MARKER_GAP_MS 1000
+
+/* Minimum wall-clock excess over RTP gap to trigger marker adjustment (ms) */
+#define MIN_MARKER_GAP_MS 150
+
 static const char *USAGE =
 "pcaputil [options] INPUT OUTPUT\n"
 "\n"
@@ -335,6 +341,8 @@ static void pcap2wav(const struct args *args)
     pjmedia_codec_param param;
     unsigned samples_per_frame;
     pj_status_t status;
+    pj_int64_t max_marker_gap_diff;
+    pj_int64_t min_marker_gap_diff;
 
     /* Initialize all codecs */
     T( pjmedia_codec_register_audio_codecs(app.mept, NULL) );
@@ -416,6 +424,16 @@ static void pcap2wav(const struct args *args)
         err_exit("invalid output file", PJ_EINVAL);
     }
 
+    /* Minimum RTP excess over wall-clock gap to detect a timestamp
+     * discontinuity, pre-scaled: MAX_MARKER_GAP_MS * clock_rate * 1e6.
+     */
+    max_marker_gap_diff = (pj_int64_t)MAX_MARKER_GAP_MS * param.info.clock_rate * 1000000;
+
+    /* Minimum wall-clock excess over RTP gap to trigger adjustment,
+     * pre-scaled: MIN_MARKER_GAP_MS * clock_rate * 1e6.
+     */
+    min_marker_gap_diff = (pj_int64_t)MIN_MARKER_GAP_MS * param.info.clock_rate * 1000000;
+
     /* Loop reading PCAP and writing WAV file */
     for (;;) {
         struct rtp_packet pkt1;
@@ -423,6 +441,7 @@ static void pcap2wav(const struct args *args)
         short pcm[PJMEDIA_MAX_MTU];
         unsigned i, frame_cnt;
         long samples_cnt, ts_gap;
+        pj_bool_t gap_too_large, ts_discontinuity;
 
         pj_assert(sizeof(pcm) >= samples_per_frame);
 
@@ -456,7 +475,27 @@ static void pcap2wav(const struct args *args)
         /* Fill in the gap (if any) between pkt0 and pkt1 */
         ts_gap = pkt1.rtp_ts - pkt0.rtp_ts - samples_cnt;
 
-        if (ts_gap <= (long)param.info.clock_rate * GAP_IGNORE_SECONDS) { /* Ignore gap >30s */
+        if (pkt1.rtp->m) {
+            /* Skip gap-filling if the marker bit is set but the RTP gap exceeds the
+             * wall-clock gap by more than 1s (indicating a timestamp discontinuity
+             * rather than a real pause).
+             *
+             * Comparison (avoiding division):
+             *   ts_gap/clock_rate - 1s > pcap_ns_gap / 1e9
+             *   => ts_gap * 1e9 - 1s * clock_rate * 1e9 > pcap_ns_gap * clock_rate
+             */
+            const pj_int64_t ts_gap_s = ts_gap * 1000000000LL;
+            const pj_int64_t wallclock_gap =
+                (pj_int64_t)(pkt1.packet_ts.u64 - pkt0.packet_ts.u64) * param.info.clock_rate;
+            ts_discontinuity = ts_gap_s - max_marker_gap_diff >= wallclock_gap;
+        } else {
+            ts_discontinuity = PJ_FALSE;
+        }
+
+        /* Skip gap-filling if gap exceeds 30s, or on discontinuity */
+        gap_too_large = ts_gap > (long)param.info.clock_rate * GAP_IGNORE_SECONDS;
+
+        if (!gap_too_large && !ts_discontinuity) {
             while (ts_gap >= (long)samples_per_frame) {
                 pcm_frame.buf = pcm;
                 pcm_frame.size = samples_per_frame * 2;
