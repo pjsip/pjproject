@@ -140,7 +140,7 @@ PJ_DEF(pj_status_t) pj_pcap_open(pj_pool_t *pool,
         file->swap = PJ_FALSE;
     } else if (file->hdr.magic_number == 0xd4c3b2a1) {
         file->swap = PJ_TRUE;
-        file->hdr.network = pj_ntohl(file->hdr.network);
+        file->hdr.network = pj_swap32(file->hdr.network);
     } else {
         /* Not PCAP file */
         pj_file_close(file->fd);
@@ -248,10 +248,10 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 
         /* Swap byte ordering */
         if (file->swap) {
-            tmp.rec.incl_len = pj_ntohl(tmp.rec.incl_len);
-            tmp.rec.orig_len = pj_ntohl(tmp.rec.orig_len);
-            tmp.rec.ts_sec = pj_ntohl(tmp.rec.ts_sec);
-            tmp.rec.ts_usec = pj_ntohl(tmp.rec.ts_usec);
+            tmp.rec.incl_len = pj_swap32(tmp.rec.incl_len);
+            tmp.rec.orig_len = pj_swap32(tmp.rec.orig_len);
+            tmp.rec.ts_sec = pj_swap32(tmp.rec.ts_sec);
+            tmp.rec.ts_usec = pj_swap32(tmp.rec.ts_usec);
         }
 
         /* Read link layer header */
