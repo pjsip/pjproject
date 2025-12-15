@@ -244,8 +244,6 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
             return status;
         }
 
-        rec_incl = tmp.rec.incl_len;
-
         /* Swap byte ordering */
         if (file->swap) {
             tmp.rec.incl_len = pj_ntohl(tmp.rec.incl_len);
@@ -253,6 +251,8 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
             tmp.rec.ts_sec = pj_ntohl(tmp.rec.ts_sec);
             tmp.rec.ts_usec = pj_ntohl(tmp.rec.ts_usec);
         }
+
+        rec_incl = tmp.rec.incl_len;
 
         /* Read link layer header */
         switch (file->hdr.network) {
