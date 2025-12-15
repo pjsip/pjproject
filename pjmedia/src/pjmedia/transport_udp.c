@@ -485,7 +485,11 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
         udp->rtcp_sock = PJ_INVALID_SOCKET;
     }
 
-    pj_grp_lock_dec_ref(tp->grp_lock);
+    if (tp->grp_lock) {
+        pj_grp_lock_dec_ref(tp->grp_lock);
+    } else {
+        transport_on_destroy(tp);
+    }
 
     return PJ_SUCCESS;
 }
