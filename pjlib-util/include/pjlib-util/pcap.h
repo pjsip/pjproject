@@ -176,6 +176,30 @@ PJ_DECL(pj_status_t) pj_pcap_set_filter(pj_pcap_file *file,
  * @param udp_payload_size  On input, specify the size of the buffer.
  *                          On output, it will be filled with the actual size
  *                          of the payload as read from the packet.
+ * @param ts                Optional pointer to receive the timestamp of
+ *                          the packet in nanoseconds.
+ *
+ * @return          PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_pcap_read_udp_with_timestamp(
+    pj_pcap_file *file,
+    pj_pcap_udp_hdr *udp_hdr,
+    pj_uint8_t *udp_payload,
+    pj_size_t *udp_payload_size,
+    pj_timestamp *ts
+);
+
+
+/**
+ * Read UDP payload from the next packet in the PCAP file. Optionally it
+ * can return the UDP header, if caller supplies it.
+ *
+ * @param file              PCAP file handle.
+ * @param udp_hdr           Optional buffer to receive UDP header.
+ * @param udp_payload       Buffer to receive the UDP payload.
+ * @param udp_payload_size  On input, specify the size of the buffer.
+ *                          On output, it will be filled with the actual size
+ *                          of the payload as read from the packet.
  *
  * @return          PJ_SUCCESS on success, or the appropriate error code.
  */

@@ -142,6 +142,8 @@ PJ_DEF(pj_status_t) pj_pcap_open(pj_pool_t *pool,
         file->swap = PJ_TRUE;
         file->hdr.network = pj_ntohl(file->hdr.network);
     } else {
+        /* If we add support for nanosecond pcap, adapt timestamp handling below */
+
         /* Not PCAP file */
         pj_file_close(file->fd);
         return PJ_EINVALIDOP;
@@ -207,6 +209,19 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
                                      pj_uint8_t *udp_payload,
                                      pj_size_t *udp_payload_size)
 {
+
+    return pj_pcap_read_udp_with_timestamp(file, udp_hdr, udp_payload,
+                                           udp_payload_size, NULL);
+}
+
+PJ_DEF(pj_status_t) pj_pcap_read_udp_with_timestamp(
+    pj_pcap_file *file,
+    pj_pcap_udp_hdr *udp_hdr,
+    pj_uint8_t *udp_payload,
+    pj_size_t *udp_payload_size,
+    pj_timestamp *ts
+)
+{
     PJ_ASSERT_RETURN(file && udp_payload && udp_payload_size, PJ_EINVAL);
     PJ_ASSERT_RETURN(*udp_payload_size, PJ_EINVAL);
 
@@ -253,6 +268,10 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
         }
 
         rec_incl = tmp.rec.incl_len;
+        if (ts) {
+            /* If we add support for nanosecond pcap, this should be adapted accordingly */
+            ts->u64 = 1000000000ull * tmp.rec.ts_sec + 1000ull * tmp.rec.ts_usec;
+        }
 
         /* Read link layer header */
         switch (file->hdr.network) {

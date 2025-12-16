@@ -191,7 +191,8 @@ static int read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
                     pjmedia_rtp_hdr **rtp,
                     pj_uint8_t **payload,
                     unsigned *payload_size,
-                    pj_bool_t check_pt)
+                    pj_bool_t check_pt,
+                    pj_timestamp *ts)
 {
     pj_status_t status;
 
@@ -208,7 +209,7 @@ static int read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
         const void *p;
         pjmedia_rtp_status seq_st;
 
-        status = pj_pcap_read_udp(app.pcap, NULL, buf, &sz);
+        status = pj_pcap_read_udp_with_timestamp(app.pcap, NULL, buf, &sz, ts);
         if (status != PJ_SUCCESS) {
             if (status == PJ_EEOF)
                 return PJ_FALSE;
@@ -328,6 +329,7 @@ static void pcap2wav(const struct args *args)
         pjmedia_rtp_hdr *rtp;
         pj_uint8_t      *payload;
         unsigned         payload_len;
+        pj_timestamp     ts;
     } pkt0;
 
     pjmedia_codec_mgr *cmgr;
@@ -356,7 +358,7 @@ static void pcap2wav(const struct args *args)
 
     /* Read first packet */
     read_rtp(pkt0.buffer, sizeof(pkt0.buffer), &pkt0.rtp,
-             &pkt0.payload, &pkt0.payload_len, PJ_FALSE);
+             &pkt0.payload, &pkt0.payload_len, PJ_FALSE, &pkt0.ts);
 
     cmgr = pjmedia_endpt_get_codec_mgr(app.mept);
 
@@ -420,7 +422,6 @@ static void pcap2wav(const struct args *args)
     /* Loop reading PCAP and writing WAV file */
     for (;;) {
         struct pkt pkt1;
-        pj_timestamp ts;
         pjmedia_frame frames[16], pcm_frame;
         short pcm[PJMEDIA_MAX_MTU];
         unsigned i, frame_cnt;
@@ -429,10 +430,9 @@ static void pcap2wav(const struct args *args)
         pj_assert(sizeof(pcm) >= samples_per_frame);
 
         /* Parse first packet */
-        ts.u64 = 0;
         frame_cnt = PJ_ARRAY_SIZE(frames);
         T( pjmedia_codec_parse(app.codec, pkt0.payload, pkt0.payload_len,
-                                &ts, &frame_cnt, frames) );
+                                &pkt0.ts, &frame_cnt, frames) );
 
         /* Decode and write to WAV file */
         samples_cnt = 0;
@@ -453,7 +453,7 @@ static void pcap2wav(const struct args *args)
 
         /* Read next packet */
         if (!read_rtp(pkt1.buffer, sizeof(pkt1.buffer), &pkt1.rtp,
-                      &pkt1.payload, &pkt1.payload_len, PJ_TRUE)) {
+                      &pkt1.payload, &pkt1.payload_len, PJ_TRUE, &pkt1.ts)) {
             break;
         }
 
@@ -534,6 +534,7 @@ static void pcap2avi(const struct args *args)
         pjmedia_rtp_hdr *rtp;
         pj_uint8_t      *payload;
         unsigned         payload_len;
+        pj_timestamp     ts;
     } pkt0;
 
     const pjmedia_vid_codec_info *ci;
@@ -559,7 +560,7 @@ static void pcap2avi(const struct args *args)
 
     /* Read first packet */
     read_rtp(pkt0.buffer, sizeof(pkt0.buffer), &pkt0.rtp,
-             &pkt0.payload, &pkt0.payload_len, PJ_FALSE);
+             &pkt0.payload, &pkt0.payload_len, PJ_FALSE, &pkt0.ts);
 
     /* Get codec info and param for the specified payload type */
     app.pt = pkt0.rtp->pt;
@@ -627,7 +628,7 @@ static void pcap2avi(const struct args *args)
 
         /* Read next packet */
         if (!read_rtp(pkt1.buffer, sizeof(pkt1.buffer), &pkt1.rtp,
-                      &pkt1.payload, &pkt1.payload_len, PJ_TRUE)) {
+                      &pkt1.payload, &pkt1.payload_len, PJ_TRUE, &pkt1.ts)) {
             break;
         }
 
