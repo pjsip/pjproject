@@ -290,7 +290,7 @@ jobs:
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installmac.sh
     - name: install dependencies
-      run: brew install openssl openh264 libvpx opencore-amr swig sipp 
+      run: brew install openssl openh264 libvpx opencore-amr swig sipp
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
@@ -481,3 +481,23 @@ jobs:
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
+
+  cmake-build:
+    runs-on: macos-latest
+    name: CMake / ${{ matrix.build_type }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: brew install openssl
+    - name: configure
+      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+    - name: build
+      run: cmake --build build -j $(sysctl -n hw.ncpu)
+    - name: check
+      run: |
+        file build/pjsip-apps/pjsua
+        otool -L build/pjsip-apps/pjsua

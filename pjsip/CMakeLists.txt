@@ -326,7 +326,10 @@ if(BUILD_TESTING)
   add_test(NAME pjsip-test COMMAND pjsip-test)
 
   # pjsua test application
-  add_executable(pjsua2-test src/pjsua2-test/main.cpp)
+  add_executable(pjsua2-test
+    src/pjsua2-test/main.cpp
+    src/pjsua2-test/instant_messaging.cpp
+  )
 
   target_link_libraries(pjsua2-test
     PRIVATE

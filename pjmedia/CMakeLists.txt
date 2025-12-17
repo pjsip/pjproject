@@ -524,12 +524,12 @@ target_sources(pjmedia
 #
 
 target_link_libraries(pjmedia
+  PUBLIC
+    # srtp - PUBLIC to propagate shared library dependency to consumers
+    $<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>
   PRIVATE
     # project
     pjlib pjlib-ssl pjlib-util pjnath
-
-    # srtp
-    $<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>
 
     # resampling backend
     $<$<STREQUAL:${PJMEDIA_WITH_RESAMPLE},libresample>:Pj::Dep::Resample>
@@ -709,7 +709,9 @@ target_link_libraries(pjmedia-codec
     # video codecs
     $<$<BOOL:${PJMEDIA_WITH_VPX_CODEC}>:VPX::VPX>
     $<$<BOOL:${PJMEDIA_WITH_OPEN_H264_CODEC}>:OpenH264::OpenH264>
-    $<$<BOOL:${PJMEDIA_HAS_LIBAVFORMAT}>:FFMPEG::avformat>
+    $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVFORMAT}>:FFMPEG::avformat>
+    $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVCODEC}>:FFMPEG::avcodec>
+    $<$<BOOL:${PJMEDIA_WITH_FFMPEG_AVUTIL}>:FFMPEG::avutil>
 )
 
 # ##############################################################################

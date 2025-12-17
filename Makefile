@@ -40,6 +40,11 @@ distclean realclean:
 	done
 	$(HOST_RM) config.log
 	$(HOST_RM) config.status
+	$(HOST_RM) pjlib/include/pj/compat/os_auto.h
+	$(HOST_RM) pjlib/include/pj/compat/m_auto.h
+	$(HOST_RM) pjmedia/include/pjmedia/config_auto.h
+	$(HOST_RM) pjmedia/include/pjmedia-codec/config_auto.h
+	$(HOST_RM) pjsip/include/pjsip/sip_autoconf.h
 	$(subst @@,$(subst /,$(HOST_PSEP),pjlib/lib),$(HOST_RMDIR))
 	$(subst @@,$(subst /,$(HOST_PSEP),pjlib-util/lib),$(HOST_RMDIR))
 	$(subst @@,$(subst /,$(HOST_PSEP),pjnath/lib),$(HOST_RMDIR))

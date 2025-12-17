@@ -429,3 +429,23 @@ jobs:
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
+
+  cmake-build:
+    runs-on: ubuntu-latest
+    name: CMake / ${{ matrix.build_type }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev
+    - name: configure
+      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+    - name: build
+      run: cmake --build build -j $(nproc)
+    - name: check
+      run: |
+        file build/pjsip-apps/pjsua
+        ldd build/pjsip-apps/pjsua

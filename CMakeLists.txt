@@ -19,6 +19,7 @@ if (NOT PJ_SKIP_EXPERIMENTAL_NOTICE)
     " *--------------------------------------------------*\n"
     " * Tested platforms:                                *\n"
     " * - Linux x86_64                                   *\n"
+    " * - macOS                                          *\n"
     " ****************************************************\n"
     "Set `PJ_SKIP_EXPERIMENTAL_NOTICE=ON` to disable this warning"
   )
