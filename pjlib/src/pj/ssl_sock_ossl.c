@@ -1719,28 +1719,30 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     return PJ_SUCCESS;
 }
 
+static void ssl_free_cert(pj_ssl_cert_t *cert)
+{
+    /* For OpenSSL version >= 3.0, dec ref EVP_PKEY & X509 */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    if (cert && cert->direct.privkey &&
+        (cert->direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY))
+    {
+        EVP_PKEY_free(cert->direct.privkey);
+        cert->direct.privkey = NULL;
+    }
+
+    if (cert && cert->direct.cert &&
+        (cert->direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT))
+    {
+        X509_free(cert->direct.cert);
+        cert->direct.cert = NULL;
+    }
+#endif
+}
 
 /* Destroy SSL context and instance */
 static void ssl_destroy(pj_ssl_sock_t *ssock)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
-
-    /* For OpenSSL version >= 3.0, dec ref EVP_PKEY & X509 */
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-    if (ssock->cert && ssock->cert->direct.privkey &&
-        (ssock->cert->direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY))
-    {
-        EVP_PKEY_free(ssock->cert->direct.privkey);
-        ssock->cert->direct.privkey = NULL;
-    }
-
-    if (ssock->cert && ssock->cert->direct.cert &&
-        (ssock->cert->direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT))
-    {
-        X509_free(ssock->cert->direct.cert);
-        ssock->cert->direct.cert = NULL;
-    }
-#endif
 
     /* Destroy SSL instance */
     if (ossock->ossl_ssl) {

@@ -2315,6 +2315,10 @@ PJ_DEF(void) pj_ssl_cert_wipe_keys(pj_ssl_cert_t *cert)
         cert->criteria.type = PJ_SSL_CERT_LOOKUP_NONE;
         wipe_buf(&cert->criteria.keyword);
 #endif
+
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+        ssl_free_cert(cert);
+#endif
     }
 }
 
