@@ -434,7 +434,7 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_store(
  * In OpenSSL version 3, the SSL socket utilizes the reference counting
  * feature to manage object lifetimes. Specifically,
  * pj_ssl_sock_set_certificate() increments the reference count and
- * pj_ssl_close() decrements it.
+ * pj_ssl_sock_close() decrements it.
  *
  * @param pool          The pool.
  * @param cert_direct   The backend specific objects.

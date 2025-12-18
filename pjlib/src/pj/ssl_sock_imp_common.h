@@ -272,6 +272,9 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock);
 static void ssl_ciphers_populate();
 static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock);
 static void ssl_update_certs_info(pj_ssl_sock_t *ssock);
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+static void ssl_free_cert(pj_ssl_cert_t *cert);
+#endif
 
 /* SSL session functions */
 static void ssl_set_state(pj_ssl_sock_t *ssock, pj_bool_t is_server);
