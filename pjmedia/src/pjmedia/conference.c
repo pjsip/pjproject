@@ -225,6 +225,8 @@ struct conf_port
 
     pj_bool_t            is_new;        /**< Newly added port, avoid read/write
                                              data from/to.                  */
+    pj_bool_t            removing;      /**< Port is being removed, avoid
+                                             queuing connect/disconnect/etc. */
 };
 
 
@@ -1250,9 +1252,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_configure_port( pjmedia_conf *conf,
 
     pj_mutex_lock(conf->mutex);
 
-    /* Port must be valid. */
+    /* Port must be valid and not being removed. */
     conf_port = conf->ports[slot];
-    if (conf_port == NULL) {
+    if (conf_port == NULL || conf_port->removing) {
         pj_mutex_unlock(conf->mutex);
         return PJ_EINVAL;
     }
@@ -1301,10 +1303,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 
     pj_mutex_lock(conf->mutex);
 
-    /* Ports must be valid. */
+    /* Ports must be valid and not being removed. */
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
-    if (!src_port || !dst_port) {
+    if (!src_port || !dst_port || src_port->removing || dst_port->removing) {
         status = PJ_EINVAL;
         goto on_return;
     }
@@ -1420,10 +1422,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 
     pj_mutex_lock(conf->mutex);
 
-    /* Ports must be valid. */
+    /* Ports must be valid and not being removed. */
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
-    if (!src_port || !dst_port) {
+    if (!src_port || !dst_port || src_port->removing || dst_port->removing) {
         status = PJ_EINVAL;
         goto on_return;
     }
@@ -1467,10 +1469,16 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
     src_slot = prm->disconnect_ports.src;
     sink_slot = prm->disconnect_ports.sink;
 
-    if (src_slot != INVALID_SLOT)
+    if (src_slot != INVALID_SLOT) {
         src_port = conf->ports[src_slot];
-    if (sink_slot != INVALID_SLOT)
+        if (!src_port)
+            return PJ_EINVAL;
+    }
+    if (sink_slot != INVALID_SLOT) {
         dst_port = conf->ports[sink_slot];
+        if (!dst_port)
+            return PJ_EINVAL;
+    }
 
     /* Disconnect source -> sink */
     if (src_port && dst_port) {
@@ -1614,9 +1622,9 @@ pjmedia_conf_disconnect_port_from_sources( pjmedia_conf *conf,
 
     pj_mutex_lock(conf->mutex);
 
-    /* Ports must be valid. */
+    /* Ports must be valid and not being removed. */
     dst_port = conf->ports[sink_slot];
-    if (!dst_port) {
+    if (!dst_port || dst_port->removing) {
         status = PJ_EINVAL;
         goto on_return;
     }
@@ -1670,9 +1678,9 @@ pjmedia_conf_disconnect_port_from_sinks( pjmedia_conf *conf,
 
     pj_mutex_lock(conf->mutex);
 
-    /* Port must be valid. */
+    /* Port must be valid and not being removed. */
     src_port = conf->ports[src_slot];
-    if (!src_port) {
+    if (!src_port || src_port->removing) {
         status = PJ_EINVAL;
         goto on_return;
     }
@@ -1739,9 +1747,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 
     pj_mutex_lock(conf->mutex);
 
-    /* Port must be valid. */
+    /* Port must be valid and not being removed. */
     conf_port = conf->ports[port];
-    if (conf_port == NULL) {
+    if (!conf_port || conf_port->removing) {
         status = PJ_EINVAL;
         goto on_return;
     }
@@ -1837,6 +1845,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
         ope->type = PJMEDIA_CONF_OP_REMOVE_PORT;
         ope->param.remove_port.port = port;
         pj_list_push_back(conf->op_queue, ope);
+        conf_port->removing = PJ_TRUE;
 
         PJ_LOG(4,(THIS_FILE, "Remove port %d queued", port));
     } else {
