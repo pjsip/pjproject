@@ -1960,6 +1960,7 @@ static void op_remove_port2(pjmedia_conf *conf,
 {
     unsigned port = prm->remove_port.port;
     struct conf_port *conf_port;
+    unsigned port_cnt;
 
     pj_mutex_lock(conf->mutex);
 
@@ -1967,6 +1968,7 @@ static void op_remove_port2(pjmedia_conf *conf,
     if (conf_port == NULL) {
         /* Already freed, perhaps by concurrent operation */
         pj_mutex_unlock(conf->mutex);
+        PJ_LOG(4,(THIS_FILE,"Port %d already freed", port));
         return;
     }
 
@@ -1976,10 +1978,12 @@ static void op_remove_port2(pjmedia_conf *conf,
     if (!conf_port->is_new)
         --conf->port_cnt;
 
+    port_cnt = conf->port_cnt;
+
     pj_mutex_unlock(conf->mutex);
 
     PJ_LOG(4,(THIS_FILE,"Removed port %d, port count=%d",
-              port, conf->port_cnt));
+              port, port_cnt));
 }
 
 
