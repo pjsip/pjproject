@@ -292,6 +292,8 @@ static pj_status_t op_add_port(pjmedia_conf *conf,
                                const pjmedia_conf_op_param *prm);
 static pj_status_t op_remove_port(pjmedia_conf *conf,
                                   const pjmedia_conf_op_param *prm);
+static void op_remove_port2(pjmedia_conf *conf,
+                            const pjmedia_conf_op_param *prm);
 static pj_status_t op_connect_ports(pjmedia_conf *conf,
                                     const pjmedia_conf_op_param *prm);
 static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
@@ -372,6 +374,11 @@ static void handle_op_queue(pjmedia_conf *conf)
             info.op_param = param;
             (*conf->cb)(&info);
             pj_log_pop_indent();
+        }
+
+        /* Free the conf slot after callback for remove port operation */
+        if (type == PJMEDIA_CONF_OP_REMOVE_PORT) {
+            op_remove_port2(conf, &param);
         }
     }
 }
@@ -1926,17 +1933,8 @@ static pj_status_t op_remove_port(pjmedia_conf *conf,
         conf_port->port = NULL;
     }
 
-    /* Remove the port. */
-    pj_mutex_lock(conf->mutex);
-    conf->ports[port] = NULL;
-    pj_mutex_unlock(conf->mutex);
-
-    if (!conf_port->is_new)
-        --conf->port_cnt;
-
-    PJ_LOG(4,(THIS_FILE,"Removed port %d (%.*s), port count=%d",
-              port, (int)conf_port->name.slen, conf_port->name.ptr,
-              conf->port_cnt));
+    PJ_LOG(4,(THIS_FILE,"Removing port %d (%.*s)",
+              port, (int)conf_port->name.slen, conf_port->name.ptr));
 
     /* Decrease conf port ref count */
     if (conf_port->port && conf_port->port->grp_lock)
@@ -1945,6 +1943,38 @@ static pj_status_t op_remove_port(pjmedia_conf *conf,
         conf_port_on_destroy(conf_port);
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Free the conf slot after port removal. This is called after the
+ * removal callback to ensure port IDs remain unique.
+ */
+static void op_remove_port2(pjmedia_conf *conf,
+                            const pjmedia_conf_op_param *prm)
+{
+    unsigned port = prm->remove_port.port;
+    struct conf_port *conf_port;
+
+    pj_mutex_lock(conf->mutex);
+
+    conf_port = conf->ports[port];
+    if (conf_port == NULL) {
+        /* Already freed, perhaps by concurrent operation */
+        pj_mutex_unlock(conf->mutex);
+        return;
+    }
+
+    /* Free the slot */
+    conf->ports[port] = NULL;
+
+    if (!conf_port->is_new)
+        --conf->port_cnt;
+
+    pj_mutex_unlock(conf->mutex);
+
+    PJ_LOG(4,(THIS_FILE,"Removed port %d, port count=%d",
+              port, conf->port_cnt));
 }
 
 
