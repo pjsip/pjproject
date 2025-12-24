@@ -819,10 +819,10 @@
  * and the read callback. Therefore, the application must be prepared
  * to handle a read callback even after pj_ioqueue_unregister() has returned.
  *
- * Default: 0 (disabled).
+ * Default: 1 (enabled).
  */
 #ifndef PJ_IOQUEUE_CALLBACK_NO_LOCK
-#   define PJ_IOQUEUE_CALLBACK_NO_LOCK  0
+#   define PJ_IOQUEUE_CALLBACK_NO_LOCK  1
 #endif
 
 
