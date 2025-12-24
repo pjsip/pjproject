@@ -927,6 +927,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
                 (*conf->cb)(&op_info);
                 pj_log_pop_indent();
             }
+            /* Free the conf slot after callback */
+            op_remove_port2(conf, &oprm);
         }
     }
 
@@ -1840,6 +1842,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
                 (*conf->cb)(&op_info);
                 pj_log_pop_indent();
             }
+
+            /* Free the conf slot after callback */
+            op_remove_port2(conf, &prm);
 
             pj_log_pop_indent();
             return PJ_SUCCESS;
