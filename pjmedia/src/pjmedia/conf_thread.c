@@ -2417,6 +2417,26 @@ static pj_status_t op_remove_port(pjmedia_conf *conf,
 
     pj_assert( !is_port_connected( conf_port ) );
 
+    /* Update port count before destroying */
+    if (!conf_port->is_new)
+        --conf->port_cnt;
+
+    /* Remove from active_listener array if needed */
+    if (conf_port->is_active_listener) {
+        pj_uint32_t idx;
+        pj_assert(conf->upper_bound_reg);
+        for (idx = 0; idx < conf->upper_bound_reg; ++idx) {
+            if (conf->active_listener[idx] == port) {
+                pj_array_erase(conf->active_listener, sizeof(SLOT_TYPE),
+                    conf->upper_bound_reg, idx);
+                --conf->upper_bound_reg;
+                break;
+            }
+        }
+    }
+
+    pj_assert(conf->port_cnt >= conf->upper_bound_reg);
+
     PJ_LOG(4, (THIS_FILE, "Removing port %d (%.*s)",
                port, (int)conf_port->name.slen, conf_port->name.ptr));
 
@@ -2439,7 +2459,6 @@ static void op_remove_port2(pjmedia_conf *conf,
 {
     unsigned port = prm->remove_port.port;
     struct conf_port *conf_port;
-    unsigned port_cnt;
 
     //pj_mutex_lock(conf->mutex);
 
@@ -2454,30 +2473,10 @@ static void op_remove_port2(pjmedia_conf *conf,
     /* Remove the port. */
     conf->ports[port] = NULL;
 
-    if (!conf_port->is_new)
-        --conf->port_cnt;
-
-    if (conf_port->is_active_listener) {
-        pj_uint32_t idx;
-        pj_assert(conf->upper_bound_reg);
-        for (idx = 0; idx < conf->upper_bound_reg; ++idx) {
-            if (conf->active_listener[idx] == port) {
-                pj_array_erase(conf->active_listener, sizeof(SLOT_TYPE),
-                    conf->upper_bound_reg, idx);
-                --conf->upper_bound_reg;
-                break;
-            }
-        }
-    }
-
-    port_cnt = conf->port_cnt;
-
     //pj_mutex_unlock(conf->mutex);
 
     PJ_LOG(4, (THIS_FILE, "Removed port %d, port count=%d",
-               port, port_cnt));
-
-    pj_assert(conf->port_cnt >= conf->upper_bound_reg);
+               port, conf->port_cnt));
 
     /* Return conf_port slot to unused slots cache. */
     conf_release_port( conf, port );

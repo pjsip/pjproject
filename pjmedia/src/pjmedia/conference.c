@@ -1938,6 +1938,10 @@ static pj_status_t op_remove_port(pjmedia_conf *conf,
         conf_port->port = NULL;
     }
 
+    /* Update port count before destroying */
+    if (!conf_port->is_new)
+        --conf->port_cnt;
+
     PJ_LOG(4,(THIS_FILE,"Removing port %d (%.*s)",
               port, (int)conf_port->name.slen, conf_port->name.ptr));
 
@@ -1960,7 +1964,6 @@ static void op_remove_port2(pjmedia_conf *conf,
 {
     unsigned port = prm->remove_port.port;
     struct conf_port *conf_port;
-    unsigned port_cnt;
 
     pj_mutex_lock(conf->mutex);
 
@@ -1975,15 +1978,10 @@ static void op_remove_port2(pjmedia_conf *conf,
     /* Free the slot */
     conf->ports[port] = NULL;
 
-    if (!conf_port->is_new)
-        --conf->port_cnt;
-
-    port_cnt = conf->port_cnt;
-
     pj_mutex_unlock(conf->mutex);
 
     PJ_LOG(4,(THIS_FILE,"Removed port %d, port count=%d",
-              port, port_cnt));
+              port, conf->port_cnt));
 }
 
 
