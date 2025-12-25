@@ -764,18 +764,8 @@ static pj_status_t op_remove_port(pjmedia_vid_conf *vid_conf,
         }
     }
 
-    /* Update port count before destroying */
-    if (!cport->is_new)
-        --vid_conf->port_cnt;
-
     PJ_LOG(4,(THIS_FILE,"Removing video port %d (%.*s)",
               slot, (int)cport->name.slen, cport->name.ptr));
-
-    /* Decrease port ref count */
-    pjmedia_port_dec_ref(cport->port);
-
-    /* Release pool */
-    pj_pool_safe_release(&cport->pool);
 
     if (AUTO_STOP_CLOCK && vid_conf->connect_cnt == 0) {
         /* Warning: will stuck if this is called from the clock thread */
@@ -811,10 +801,20 @@ static void op_remove_port2(pjmedia_vid_conf *vid_conf,
     /* Remove the port. */
     vid_conf->ports[slot] = NULL;
 
+    /* Update port count */
+    if (!cport->is_new)
+        --vid_conf->port_cnt;
+
     pj_mutex_unlock(vid_conf->mutex);
 
     PJ_LOG(4,(THIS_FILE,"Removed video port %d, port count=%d",
               slot, vid_conf->port_cnt));
+
+    /* Decrease port ref count and destroy */
+    pjmedia_port_dec_ref(cport->port);
+
+    /* Release pool */
+    pj_pool_safe_release(&cport->pool);
 }
 
 /*
