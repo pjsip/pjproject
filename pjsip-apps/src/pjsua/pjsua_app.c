@@ -498,6 +498,7 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
             } else {
                 PJ_LOG(2, (THIS_FILE, "Failed to auto-start recording: %d", status));
                 app_config.dyn_rec_active = PJ_FALSE;
+                app_config.dyn_rec_filename[0] = '\0';
             }
         }
 
@@ -548,6 +549,7 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
             } else {
                 PJ_LOG(2, (THIS_FILE, "Failed to auto-start playback: %d", status));
                 app_config.dyn_player_active = PJ_FALSE;
+                app_config.dyn_play_filename[0] = '\0';
             }
         }
 

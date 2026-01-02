@@ -1416,6 +1416,8 @@ static pj_status_t start_playback(const char *filename)
     status = pjsua_call_get_info(call_id, &call_info);
     if (status != PJ_SUCCESS) {
         PJ_LOG(2, (THIS_FILE, "Failed to get call info"));
+        app_config.dyn_player_active = PJ_FALSE;
+        app_config.dyn_play_filename[0] = '\0';
         return status;
     }
 
@@ -1449,6 +1451,7 @@ static pj_status_t start_playback(const char *filename)
     if (status != PJ_SUCCESS) {
         PJ_LOG(2, (THIS_FILE, "Failed to create player: %d", status));
         app_config.dyn_player_active = PJ_FALSE;
+        app_config.dyn_play_filename[0] = '\0';
         return status;
     }
 
@@ -1461,6 +1464,7 @@ static pj_status_t start_playback(const char *filename)
         PJ_LOG(2, (THIS_FILE, "Failed to connect player to call: %d", status));
         pjsua_player_destroy(player_id);
         app_config.dyn_player_active = PJ_FALSE;
+        app_config.dyn_play_filename[0] = '\0';
         return status;
     }
 
@@ -1578,6 +1582,8 @@ static pj_status_t start_recording(const char *filename)
     status = pjsua_call_get_info(call_id, &call_info);
     if (status != PJ_SUCCESS) {
         PJ_LOG(2, (THIS_FILE, "Failed to get call info"));
+        app_config.dyn_rec_active = PJ_FALSE;
+        app_config.dyn_rec_filename[0] = '\0';
         return status;
     }
 
@@ -1611,6 +1617,7 @@ static pj_status_t start_recording(const char *filename)
     if (status != PJ_SUCCESS) {
         PJ_LOG(2, (THIS_FILE, "Failed to create recorder: %d", status));
         app_config.dyn_rec_active = PJ_FALSE;
+        app_config.dyn_rec_filename[0] = '\0';
         return status;
     }
 
@@ -1623,6 +1630,7 @@ static pj_status_t start_recording(const char *filename)
         PJ_LOG(2, (THIS_FILE, "Failed to connect to recorder: %d", status));
         pjsua_recorder_destroy(rec_id);
         app_config.dyn_rec_active = PJ_FALSE;
+        app_config.dyn_rec_filename[0] = '\0';
         return status;
     }
 
