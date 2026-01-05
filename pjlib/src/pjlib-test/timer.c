@@ -205,6 +205,9 @@ static int test_timer_heap(void)
  */
 #define RANDOMIZED_TEST 1
 
+#ifndef __has_feature
+    #define __has_feature(x) 0
+#endif
 #if defined(__SANITIZE_ADDRESS__) || \
     (defined(__has_feature) && __has_feature(address_sanitizer))
     #define ASAN_ENABLED 1
