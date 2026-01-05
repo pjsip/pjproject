@@ -608,6 +608,9 @@ static pj_status_t load_cert_direct(pj_pool_t *pool,
 {
     BIO *in;
     pj_ssl_cert_direct cd;
+    EVP_PKEY *key = NULL;
+    X509 *x = NULL;
+    pj_status_t status;
 
     PJ_UNUSED_ARG(pool);
 
@@ -616,8 +619,6 @@ static pj_status_t load_cert_direct(pj_pool_t *pool,
 
     /* Load private key */
     if (with_privkey) {
-        EVP_PKEY *key = NULL;
-
         in = BIO_new_file(CERT_PRIVKEY_FILE, "r");
         if (!in)
             return PJ_ENOTFOUND;
@@ -633,23 +634,40 @@ static pj_status_t load_cert_direct(pj_pool_t *pool,
 
     /* Load certificate */
     if (with_cert) {
-        X509* x = NULL;
-
         in = BIO_new_file(CERT_FILE, "r");
-        if (!in)
+        if (!in) {
+            if (key)
+                EVP_PKEY_free(key);
             return PJ_ENOTFOUND;
+        }
 
         x = PEM_read_bio_X509(in, NULL, 0, NULL);
         BIO_free(in);
-        if (!x)
+        if (!x) {
+            if (key)
+                EVP_PKEY_free(key);
             return PJ_EINVAL;
+        }
 
         cd.type |= PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT;
         cd.cert = x;
     }
 
     /* Create credential */
-    return pj_ssl_cert_load_direct(pool, &cd, p_cert);
+    status = pj_ssl_cert_load_direct(pool, &cd, p_cert);
+
+    /* For OpenSSL >= 3.0, pj_ssl_sock_set_certificate() will call
+     * X509_up_ref() and EVP_PKEY_up_ref(), so we need to free our
+     * references here to avoid memory leaks.
+     */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    if (x)
+        X509_free(x);
+    if (key)
+        EVP_PKEY_free(key);
+#endif
+
+    return status;
 }
 #else
 #   define load_cert_direct(pool,p_cert)
