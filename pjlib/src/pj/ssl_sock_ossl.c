@@ -873,10 +873,11 @@ static pj_status_t init_openssl(void)
          * SSL_free(), perhaps it is safer to obey this, the leak amount seems
          * to be relatively small (<500 bytes) and should occur once only in
          * the library lifetime.
+         * Update 2026: reenabled since OpenSSL 1.0.x has been EOL since 2019.
+         */
 #if OPENSSL_VERSION_NUMBER >= 0x10101000L
         SSL_SESSION_free(ssl_sess);
 #endif
-         */
 
         SSL_CTX_free(ctx);
     }
