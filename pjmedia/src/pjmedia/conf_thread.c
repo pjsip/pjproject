@@ -2417,6 +2417,20 @@ static pj_status_t op_remove_port(pjmedia_conf *conf,
 
     pj_assert( !is_port_connected( conf_port ) );
 
+    /* Remove from active_listener array if needed */
+    if (conf_port->is_active_listener) {
+        pj_uint32_t idx;
+        pj_assert(conf->upper_bound_reg);
+        for (idx = 0; idx < conf->upper_bound_reg; ++idx) {
+            if (conf->active_listener[idx] == port) {
+                pj_array_erase(conf->active_listener, sizeof(SLOT_TYPE),
+                    conf->upper_bound_reg, idx);
+                --conf->upper_bound_reg;
+                break;
+            }
+        }
+    }
+
     PJ_LOG(4, (THIS_FILE, "Removing port %d (%.*s)",
                port, (int)conf_port->name.slen, conf_port->name.ptr));
 
@@ -2450,20 +2464,6 @@ static void op_remove_port2(pjmedia_conf *conf,
     /* Update port count */
     if (!conf_port->is_new)
         --conf->port_cnt;
-
-    /* Remove from active_listener array if needed */
-    if (conf_port->is_active_listener) {
-        pj_uint32_t idx;
-        pj_assert(conf->upper_bound_reg);
-        for (idx = 0; idx < conf->upper_bound_reg; ++idx) {
-            if (conf->active_listener[idx] == port) {
-                pj_array_erase(conf->active_listener, sizeof(SLOT_TYPE),
-                    conf->upper_bound_reg, idx);
-                --conf->upper_bound_reg;
-                break;
-            }
-        }
-    }
 
     pj_assert(conf->port_cnt >= conf->upper_bound_reg);
 
