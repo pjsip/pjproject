@@ -10,6 +10,7 @@ env:
   CI_MODE: --ci-mode
   # Setting CI_RUNNER to empty should disable cirunner
   CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 -o ${{ github.workspace }}/artifacts --
+  SAN_OPTIONS: LSAN_OPTIONS=suppressions=../../tests/sanitizers/lsan.supp
   MAKE_FAST: make -j 3
 jobs:
   default-build:
