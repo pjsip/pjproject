@@ -767,6 +767,8 @@ int encryption_benchmark()
                    ((unsigned)(bytes) % (1024 * 1024)) / 1024));
     }
 
+    pj_pool_release(pool);
+
     return 0;
 }
 
