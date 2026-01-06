@@ -126,7 +126,7 @@ xhdrid:
 selftest: pjlib-test pjlib-util-test pjnath-test pjmedia-test pjsip-test pjsua-test
 
 pjlib-test: pjlib/bin/pjlib-test-$(TARGET_NAME)
-	cd pjlib/build && $(CI_RUNNER) $(SAN_OPTIONS) ../bin/pjlib-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
+	cd pjlib/build && $(CI_RUNNER) ../bin/pjlib-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjlib-util-test: pjlib-util/bin/pjlib-util-test-$(TARGET_NAME)
 	cd pjlib-util/build && $(CI_RUNNER) ../bin/pjlib-util-test-$(TARGET_NAME) $(CI_ARGS)

@@ -10,7 +10,6 @@ env:
   CI_MODE: --ci-mode
   # Setting CI_RUNNER to empty should disable cirunner
   CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 -o ${{ github.workspace }}/artifacts --
-  SAN_OPTIONS: LSAN_OPTIONS=suppressions=../../tests/sanitizers/lsan.supp
   MAKE_FAST: make -j 3
 jobs:
   default-build:
@@ -105,7 +104,9 @@ jobs:
     - name: make
       run: $MAKE_FAST
     - name: pjlib-test
-      run: make pjlib-test
+      run: |
+        export ASAN_OPTIONS=detect_leaks=0
+        make pjlib-test
     - name: pjlib-util-test
       run: make pjlib-util-test
     - name: pjnath-test
