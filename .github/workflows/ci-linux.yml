@@ -105,7 +105,7 @@ jobs:
       run: $MAKE_FAST
     - name: pjlib-test
       run: |
-        export ASAN_OPTIONS=detect_leaks=0
+        export LSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/lsan.supp"
         make pjlib-test
     - name: pjlib-util-test
       run: make pjlib-util-test
