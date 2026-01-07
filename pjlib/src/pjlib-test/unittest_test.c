@@ -618,9 +618,14 @@ int unittest_parallel_test()
                       NULL, return -1);
 
     /* Create mutex to protect parallel_msg writes */
+    parallel_msg_mutex = NULL;
     PJ_TEST_SUCCESS(pj_mutex_create_simple(pool, "parallel_msg", 
                                            &parallel_msg_mutex),
-                    NULL, { pj_pool_release(pool); return -2; });
+                    NULL, { 
+                        parallel_msg_mutex = NULL;
+                        pj_pool_release(pool); 
+                        return -2; 
+                    });
     parallel_msg[0] = '\0'; /* Reset message buffer */
 
     for (i=0; i<MAX_TESTS; ++i) {

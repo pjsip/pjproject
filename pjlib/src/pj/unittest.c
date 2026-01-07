@@ -560,11 +560,14 @@ static void run_test_case(pj_test_runner *runner, int tid, pj_test_case *tc,
     if (tc->result == PJ_EPENDING)
         tc->result = -12345;
 
-    /* Protect write to tc->result to avoid race with readers */
+    /* Synchronize tc->result write with mutex to ensure visibility to readers.
+     * The writes to tc->result above must happen before we acquire the mutex,
+     * and the mutex unlock provides a memory barrier that makes these writes
+     * visible to other threads that read tc->result while holding the same
+     * mutex (e.g., in get_first_running()).
+     */
     if (mutex) {
         pj_mutex_lock(mutex);
-        /* result was already written above, but we need this critical
-         * section to ensure memory visibility to other threads */
         if (tc->result && runner->prm.stop_on_error)
             runner->stopping = PJ_TRUE;
         pj_mutex_unlock(mutex);
