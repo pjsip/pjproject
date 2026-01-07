@@ -563,11 +563,20 @@ struct parallel_param_t
 };
 
 static char parallel_msg[128];
+static pj_mutex_t *parallel_msg_mutex = NULL;
+
 static int parallel_func(void *arg)
 {
     struct parallel_param_t *prm = (struct parallel_param_t*)arg;
     pj_thread_sleep(prm->sleep);
+    
+    /* Protect write to shared parallel_msg buffer */
+    if (parallel_msg_mutex)
+        pj_mutex_lock(parallel_msg_mutex);
     pj_ansi_strxcat(parallel_msg, prm->id, sizeof(parallel_msg));
+    if (parallel_msg_mutex)
+        pj_mutex_unlock(parallel_msg_mutex);
+    
     return 0;
 }
 
@@ -608,6 +617,12 @@ int unittest_parallel_test()
     PJ_TEST_NOT_NULL((pool=pj_pool_create( mem, NULL, 4000, 4000, NULL)),
                       NULL, return -1);
 
+    /* Create mutex to protect parallel_msg writes */
+    PJ_TEST_SUCCESS(pj_mutex_create_simple(pool, "parallel_msg", 
+                                           &parallel_msg_mutex),
+                    NULL, { pj_pool_release(pool); return -2; });
+    parallel_msg[0] = '\0'; /* Reset message buffer */
+
     for (i=0; i<MAX_TESTS; ++i) {
         char test_name[32];
         pj_ansi_snprintf(test_name, sizeof(test_name), "%s %s",
@@ -628,6 +643,13 @@ int unittest_parallel_test()
 
     pj_test_run(runner, &suite);
     pj_test_runner_destroy(runner);
+
+    /* Cleanup mutex */
+    if (parallel_msg_mutex) {
+        pj_mutex_destroy(parallel_msg_mutex);
+        parallel_msg_mutex = NULL;
+    }
+
     pj_pool_release(pool);
 
     PJ_TEST_STREQ(pj_cstr(&stmp0, parallel_msg), pj_cstr(&stmp1, correct_msg),

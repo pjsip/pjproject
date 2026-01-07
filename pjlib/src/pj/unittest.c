@@ -515,8 +515,15 @@ static int get_completion_line( const pj_test_case *tc, const char *end_line,
 /* This is the main function to run a single test case. It may
  * be used by the basic runner, which has no threads (=no TLS),
  * no fifobuf, no pool, or by multiple threads.
+ * 
+ * @param runner    The test runner
+ * @param tid       Thread ID for logging
+ * @param tc        The test case to run
+ * @param mutex     Optional mutex for protecting shared test case fields.
+ *                  Pass NULL for single-threaded runners.
  */
-static void run_test_case(pj_test_runner *runner, int tid, pj_test_case *tc)
+static void run_test_case(pj_test_runner *runner, int tid, pj_test_case *tc,
+                          pj_mutex_t *mutex)
 {
     char tcname[64];
 
@@ -531,7 +538,13 @@ static void run_test_case(pj_test_runner *runner, int tid, pj_test_case *tc)
     /* Set the test case being worked on by this thread */
     set_current_test_case(tc);
 
+    /* Protect assignment to tc->runner if we're in multi-threaded mode */
+    if (mutex)
+        pj_mutex_lock(mutex);
     tc->runner = runner;
+    if (mutex)
+        pj_mutex_unlock(mutex);
+
     pj_get_timestamp(&tc->start_time);
 
     /* Call the test case's function */
@@ -547,8 +560,18 @@ static void run_test_case(pj_test_runner *runner, int tid, pj_test_case *tc)
     if (tc->result == PJ_EPENDING)
         tc->result = -12345;
 
-    if (tc->result && runner->prm.stop_on_error)
-        runner->stopping = PJ_TRUE;
+    /* Protect write to tc->result to avoid race with readers */
+    if (mutex) {
+        pj_mutex_lock(mutex);
+        /* result was already written above, but we need this critical
+         * section to ensure memory visibility to other threads */
+        if (tc->result && runner->prm.stop_on_error)
+            runner->stopping = PJ_TRUE;
+        pj_mutex_unlock(mutex);
+    } else {
+        if (tc->result && runner->prm.stop_on_error)
+            runner->stopping = PJ_TRUE;
+    }
 
     pj_get_timestamp(&tc->end_time);
     runner->on_test_complete(runner, tc);
@@ -596,7 +619,7 @@ static void basic_runner_main(pj_test_runner *runner)
          tc != &runner->suite->tests && !runner->stopping; 
          tc = tc->next)
     {
-        run_test_case(runner, 0, tc);
+        run_test_case(runner, 0, tc, NULL);
     }
 }
 
@@ -738,7 +761,7 @@ static int text_runner_thread_proc(void *arg)
 
         status = text_runner_get_next_test_case(runner, &tc);
         if (status==PJ_SUCCESS) {
-            run_test_case(&runner->base, tid, tc);
+            run_test_case(&runner->base, tid, tc, runner->mutex);
         } else if (status==PJ_EPENDING) {
             /* Yeah sleep, but the "correct" solution is probably an order of
              * magnitute more complicated, so this is good I think.
