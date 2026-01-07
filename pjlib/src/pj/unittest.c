@@ -568,12 +568,13 @@ static void run_test_case(pj_test_runner *runner, int tid, pj_test_case *tc,
      */
     if (mutex) {
         pj_mutex_lock(mutex);
-        if (tc->result && runner->prm.stop_on_error)
-            runner->stopping = PJ_TRUE;
+    }
+    
+    if (tc->result && runner->prm.stop_on_error)
+        runner->stopping = PJ_TRUE;
+    
+    if (mutex) {
         pj_mutex_unlock(mutex);
-    } else {
-        if (tc->result && runner->prm.stop_on_error)
-            runner->stopping = PJ_TRUE;
     }
 
     pj_get_timestamp(&tc->end_time);
