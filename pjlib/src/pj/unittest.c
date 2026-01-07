@@ -548,33 +548,37 @@ static void run_test_case(pj_test_runner *runner, int tid, pj_test_case *tc,
     pj_get_timestamp(&tc->start_time);
 
     /* Call the test case's function */
-    if (tc->flags & PJ_TEST_FUNC_NO_ARG) {
-        /* Function without argument */
-        typedef int (*func_t)(void);
-        func_t func = (func_t)tc->test_func;
-        tc->result = func();
-    } else {
-        tc->result = tc->test_func(tc->arg);
-    }
+    {
+        int result;
+        if (tc->flags & PJ_TEST_FUNC_NO_ARG) {
+            /* Function without argument */
+            typedef int (*func_t)(void);
+            func_t func = (func_t)tc->test_func;
+            result = func();
+        } else {
+            result = tc->test_func(tc->arg);
+        }
 
-    if (tc->result == PJ_EPENDING)
-        tc->result = -12345;
+        if (result == PJ_EPENDING)
+            result = -12345;
 
-    /* Synchronize tc->result write with mutex to ensure visibility to readers.
-     * The writes to tc->result above must happen before we acquire the mutex,
-     * and the mutex unlock provides a memory barrier that makes these writes
-     * visible to other threads that read tc->result while holding the same
-     * mutex (e.g., in get_first_running()).
-     */
-    if (mutex) {
-        pj_mutex_lock(mutex);
-    }
-    
-    if (tc->result && runner->prm.stop_on_error)
-        runner->stopping = PJ_TRUE;
-    
-    if (mutex) {
-        pj_mutex_unlock(mutex);
+        /* Protect write to tc->result to avoid race with readers.
+         * The actual test function is called outside the mutex to avoid
+         * serializing test execution, but the write to tc->result must
+         * be protected because other threads read it while holding the
+         * mutex (e.g., in get_first_running()).
+         */
+        if (mutex) {
+            pj_mutex_lock(mutex);
+        }
+        
+        tc->result = result;
+        if (tc->result && runner->prm.stop_on_error)
+            runner->stopping = PJ_TRUE;
+        
+        if (mutex) {
+            pj_mutex_unlock(mutex);
+        }
     }
 
     pj_get_timestamp(&tc->end_time);
