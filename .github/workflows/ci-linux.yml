@@ -54,7 +54,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g -fPIC" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure --enable-libwebrtc-aec3
+      run: CFLAGS="-g -fPIC -fsanitize=address" CXXFLAGS="-g -fPIC -fsanitize=address" LDFLAGS="-rdynamic -fsanitize=address" ./configure --enable-libwebrtc-aec3
     - name: make
       run: $MAKE_FAST
     - name: swig bindings
@@ -100,11 +100,13 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
+      run: CFLAGS="-g -fsanitize=address" CXXFLAGS="-fsanitize=address" LDFLAGS="-rdynamic -fsanitize=address" ./configure
     - name: make
       run: $MAKE_FAST
     - name: pjlib-test
-      run: make pjlib-test
+      run: |
+        export LSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/lsan.supp"
+        make pjlib-test
     - name: pjlib-util-test
       run: make pjlib-util-test
     - name: pjnath-test
@@ -130,7 +132,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
+      run: CFLAGS="-g -fsanitize=address" CXXFLAGS="-fsanitize=address" LDFLAGS="-rdynamic -fsanitize=address" ./configure
     - name: make
       run: $MAKE_FAST
     - name: pjsip-test
