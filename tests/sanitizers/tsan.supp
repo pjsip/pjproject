@@ -11,6 +11,10 @@ race:*
 # - rt_on_rx_response ../src/test/transport_test.c
 deadlock:endpt_on_tx_msg
 
+# Lock-order-inversion endpt_on_rx_msg ../src/pjsip/sip_endpoint.c with:
+# - pjsip_tsx_send_msg ../src/pjsip/sip_transaction.c
+deadlock:endpt_on_rx_msg
+
 # Lock-order-inversion stateless_send_transport_cb ../src/pjsip/sip_util.c with:
 # - pj_activesock_start_connect ../src/pj/activesock.c
 # - tp_state_callback ../src/pjsip/sip_transport.c
@@ -24,3 +28,11 @@ deadlock:transport_tcp_test
 # Lock-order-inversion destroy_transport ../src/pjsip/sip_transport.c with:
 # - udp_shutdown ../src/pjsip/sip_transport_udp.c
 deadlock:destroy_transport
+
+# Lock-order-inversion lis_destroy ../src/pjsip/sip_transport_tcp.c with:
+# - pjsip_transport_register ../src/pjsip/sip_transport.c
+deadlock:lis_destroy
+
+# Lock-order inversion pjmedia_codec_mgr_unregister_factory ../src/pjmedia/codec.c with:
+# - pjmedia_codec_mgr_alloc_codec ../src/pjmedia/codec.c
+deadlock:pjmedia_codec_mgr_unregister_factory
