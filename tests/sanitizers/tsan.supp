@@ -1,0 +1,2 @@
+# Thread Sanitizer suppressions for PJSIP
+# Add suppressions here if needed when TSan detects false positives
