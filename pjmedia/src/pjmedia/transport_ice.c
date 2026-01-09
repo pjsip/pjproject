@@ -775,6 +775,19 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 }
 
 
+/*
+ * Public wrapper for parse_cand with parameter validation.
+ */
+PJ_DEF(pj_status_t) pjmedia_ice_parse_cand(pj_pool_t *pool,
+                                           const pj_str_t *cand_str,
+                                           pj_ice_sess_cand *cand)
+{
+    PJ_ASSERT_RETURN(cand_str && cand, PJ_EINVAL);
+
+    return parse_cand("", pool, cand_str, cand);
+}
+
+
 /* Disable ICE when SDP from remote doesn't contain a=candidate line */
 static void set_no_ice(struct transport_ice *tp_ice, const char *reason,
                        pj_status_t err)
