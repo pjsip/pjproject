@@ -263,9 +263,13 @@ jobs:
     - name: reinstall cirunner
       run: cirunner/installlinux.sh
     - name: pjmedia-test
-      run: make pjmedia-test
+      run: |
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
+        make pjmedia-test
     - name: pjsua-test
-      run: make pjsua-test
+      run: |
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
+        make pjsua-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
@@ -298,11 +302,17 @@ jobs:
     - name: reinstall cirunner
       run: cirunner/installlinux.sh
     - name: pjlib-test
-      run: make pjlib-test
+      run: |
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
+        make pjlib-test
     - name: pjlib-util-test
-      run: make pjlib-util-test
+      run: |
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
+        make pjlib-util-test
     - name: pjnath-test
-      run: make pjnath-test
+      run: |
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
+        make pjnath-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
@@ -335,7 +345,9 @@ jobs:
     - name: reinstall cirunner
       run: cirunner/installlinux.sh
     - name: pjsip-test
-      run: make pjsip-test
+      run: |
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
+        make pjsip-test
     - name: upload artifacts on failure
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
