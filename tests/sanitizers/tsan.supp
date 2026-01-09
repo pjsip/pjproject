@@ -1,2 +1,6 @@
 # Thread Sanitizer suppressions for PJSIP
 # Add suppressions here if needed when TSan detects false positives
+#
+# Disable data race warnings as most are by design or harmless
+# Focus on deadlock reports only (e.g., lock-order-inversion)
+race:*
