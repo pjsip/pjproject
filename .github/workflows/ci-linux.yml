@@ -242,6 +242,7 @@ jobs:
         python-version: '3.10'
     - name: capture pjsua capabilities
       run: |
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
         cat << EOF | pjsip-apps/bin/pjsua-`make infotarget` --log-level 3 > pjsua-caps
         Cp
         xx

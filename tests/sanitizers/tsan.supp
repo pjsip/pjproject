@@ -4,3 +4,23 @@
 # Disable data race warnings as most are by design or harmless
 # Focus on deadlock reports only (e.g., lock-order-inversion)
 race:*
+
+# Lock-order-inversion with:
+# - pjsip_tsx_layer_find_tsx ../src/pjsip/sip_transaction
+# - pjsip_tsx_recv_msg ../src/pjsip/sip_transaction
+# r- t_on_rx_response ../src/test/transport_test
+deadlock:endpt_on_tx_msg ../src/pjsip/sip_endpoint
+
+# Lock-order-inversion with:
+# - pj_activesock_start_connect ../src/pj/activesock
+# - tp_state_callback ../src/pjsip/sip_transport
+# - rt_on_rx_response ../src/test/transport_test
+deadlock:stateless_send_transport_cb ../src/pjsip/sip_util
+
+# Lock-order-inversion with:
+# - tp_state_callback ../src/pjsip/sip_transport
+deadlock:transport_tcp_test ../src/test/transport_tcp_test
+
+# Lock-order-inversion with:
+# - udp_shutdown ../src/pjsip/sip_transport_udp
+deadlock:destroy_transport ../src/pjsip/sip_transport
