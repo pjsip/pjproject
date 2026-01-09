@@ -291,7 +291,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-g -fsanitize=thread" CXXFLAGS="-fsanitize=thread" LDFLAGS="-rdynamic -fsanitize=thread" ./configure
+      run: CFLAGS="-g -fsanitize=thread" CXXFLAGS="-g -fsanitize=thread" LDFLAGS="-rdynamic -fsanitize=thread" ./configure
     - name: make
       run: $MAKE_FAST
       # one of the step above has changed core_pattern, restore it
@@ -328,7 +328,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-g -fsanitize=thread" CXXFLAGS="-fsanitize=thread" LDFLAGS="-rdynamic -fsanitize=thread" ./configure
+      run: CFLAGS="-g -fsanitize=thread" CXXFLAGS="-g -fsanitize=thread" LDFLAGS="-rdynamic -fsanitize=thread" ./configure
     - name: make
       run: $MAKE_FAST
       # one of the step above has changed core_pattern, restore it
