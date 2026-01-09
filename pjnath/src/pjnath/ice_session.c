@@ -3374,44 +3374,31 @@ static void handle_incoming_check(pj_ice_sess *ice,
         rcand = &ice->rcand[i];
     }
 
-#if 0
-    /* Find again the local candidate by matching the base address
-     * with the local candidates in the checklist. Checks may have
-     * been pruned before, so it's possible that if we use the lcand
-     * as it is, we wouldn't be able to find the check in the checklist
-     * and we will end up creating a new check unnecessarily.
+    /* Find a local candidate with matching component ID and transport ID.
+     * We search in ice->lcand (all known local candidates) rather than
+     * the checklist, because the checklist may be empty if no remote
+     * candidates have been received yet (e.g., trickle ICE with no
+     * candidates sent). This allows us to process incoming binding requests
+     * and create triggered checks even with an empty checklist.
      */
-    for (i=0; i<ice->clist.count; ++i) {
-        pj_ice_sess_check *c = &ice->clist.checks[i];
-        if (/*c->lcand == lcand ||*/
-            pj_sockaddr_cmp(&c->lcand->base_addr, &lcand->base_addr)==0)
+    for (i=0; i<ice->lcand_cnt; ++i) {
+        pj_ice_sess_cand *c = &ice->lcand[i];
+        if (c->comp_id == rcheck->comp_id &&
+            c->transport_id == rcheck->transport_id)
         {
-            lcand = c->lcand;
-            break;
-        }
-    }
-#else
-    /* Just get candidate with the highest priority and same transport ID
-     * for the specified  component ID in the checklist.
-     */
-    for (i=0; i<ice->clist.count; ++i) {
-        pj_ice_sess_check *c = &ice->clist.checks[i];
-        if (c->lcand->comp_id == rcheck->comp_id &&
-            c->lcand->transport_id == rcheck->transport_id) 
-        {
-            lcand = c->lcand;
-            break;
+            /* Prefer higher priority candidate */
+            if (lcand == NULL || c->prio > lcand->prio)
+                lcand = c;
         }
     }
     if (lcand == NULL) {
         /* Should not happen, but just in case remote is sending a
          * Binding request for a component which it doesn't have.
          */
-        LOG4((ice->obj_name, 
+        LOG4((ice->obj_name,
              "Received Binding request but no local candidate is found!"));
         return;
     }
-#endif
 
     /* 
      * Create candidate pair for this request. 
