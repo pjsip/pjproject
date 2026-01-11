@@ -14,7 +14,7 @@ if(SRTP_WITH_OPENSSL)
 
     cmake_push_check_state(RESET)
       set(CMAKE_REQUIRED_INCLUDES "${OPENSSL_INCLUDE_DIR}")
-      set(CMAKE_REQUIRED_LIBRARIES "${OPENSSL_LIBRARIES}")
+      set(CMAKE_REQUIRED_LIBRARIES "${OPENSSL_CRYPTO_LIBRARIES}")
       check_c_source_compiles([=[
         #include <openssl/evp.h>
 
