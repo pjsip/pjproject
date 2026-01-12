@@ -119,7 +119,7 @@ struct pj_atomic_t
 #else
     pj_atomic_value_t   value;
 #endif
-};
+} PJ_ALIGN_DATA_SUFFIX(8);
 
 struct pj_mutex_t
 {
