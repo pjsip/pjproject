@@ -5,7 +5,6 @@ on:
       - 'master'
   pull_request:
     types: [opened, synchronize, reopened]
-    
 env:
   CI_ARGS: -w 3 --shuffle --stdout-buf 1
   CI_MODE: --ci-mode
@@ -55,7 +54,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g -fPIC -fsanitize=address --coverage -O0" CXXFLAGS="-g -fPIC -fsanitize=address --coverage -O0" LDFLAGS="-rdynamic -fsanitize=address --coverage" ./configure --enable-libwebrtc-aec3 --prefix=${{ github.workspace }}/install
+      run: CFLAGS="-g -fPIC -fsanitize=address --coverage -O0" CXXFLAGS="-g -fPIC -fsanitize=address --coverage -O0" LDFLAGS="-rdynamic -fsanitize=address --coverage" ./configure --enable-libwebrtc-aec3 --enable-shared --prefix=${{ github.workspace }}/install
     - name: make
       run: $MAKE_FAST
     - name: install
@@ -100,7 +99,7 @@ jobs:
         doxygen_path: ${{ github.workspace }}/docs/xml
         xml: true
         compile: gcc
-        api_source: headers
+        api_source: shared-libs
     - name: upload artifacts on failure
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
