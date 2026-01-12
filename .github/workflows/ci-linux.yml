@@ -50,7 +50,7 @@ jobs:
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev doxygen
+      run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev doxygen lcov
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
@@ -99,6 +99,7 @@ jobs:
         doxygen_path: ${{ github.workspace }}/docs/xml
         xml: true
         compile: gcc
+        api_source: headers
     - name: upload artifacts on failure
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
