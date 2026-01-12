@@ -5,6 +5,7 @@ on:
       - 'master'
   pull_request:
     types: [opened, synchronize, reopened]
+    
 env:
   CI_ARGS: -w 3 --shuffle --stdout-buf 1
   CI_MODE: --ci-mode
