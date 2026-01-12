@@ -214,13 +214,17 @@ PJ_DEF(pj_status_t) pjmedia_codec_g711_deinit(void)
         return PJ_EINVALIDOP;
     }
 
+    /* Release the factory mutex before calling unregister to avoid lock
+     * order inversion with codec manager mutex.
+     */
+    pj_mutex_unlock(g711_factory.mutex);
+
     /* Unregister G711 codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &g711_factory.base);
     g711_factory.endpt = NULL;
 
     /* Destroy mutex. */
-    pj_mutex_unlock(g711_factory.mutex);
     pj_mutex_destroy(g711_factory.mutex);
     g711_factory.mutex = NULL;
 
