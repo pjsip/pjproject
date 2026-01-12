@@ -383,12 +383,16 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_deinit(void)
         return PJ_EINVALIDOP;
     }
 
+    /* Release the factory mutex before calling unregister to avoid lock
+     * order inversion with codec manager mutex.
+     */
+    pj_mutex_unlock(spx_factory.mutex);
+
     /* Unregister Speex codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &spx_factory.base);
     
     /* Destroy mutex. */
-    pj_mutex_unlock(spx_factory.mutex);
     pj_mutex_destroy(spx_factory.mutex);
     spx_factory.mutex = NULL;
 
