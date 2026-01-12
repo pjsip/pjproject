@@ -76,7 +76,6 @@ jobs:
         api_key: ${{ secrets.APICOV_KEY }}
         doxygen_path: ${{ github.workspace }}/docs/xml
         xml: true
-        compile: gcc
         api_source: shared-libs
     - name: upload artifacts on failure
       if: ${{ failure() }}
