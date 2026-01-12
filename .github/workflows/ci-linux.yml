@@ -50,13 +50,15 @@ jobs:
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
+      run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev doxygen
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g -fPIC -fsanitize=address" CXXFLAGS="-g -fPIC -fsanitize=address" LDFLAGS="-rdynamic -fsanitize=address" ./configure --enable-libwebrtc-aec3
+      run: CFLAGS="-g -fPIC -fsanitize=address --coverage -O0" CXXFLAGS="-g -fPIC -fsanitize=address --coverage -O0" LDFLAGS="-rdynamic -fsanitize=address --coverage" ./configure --enable-libwebrtc-aec3 --prefix=${{ github.workspace }}/install
     - name: make
       run: $MAKE_FAST
+    - name: install
+      run: make install
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
     - name: set up Python 3.10 for pjsua test
@@ -79,6 +81,24 @@ jobs:
       run: make pjmedia-test
     - name: pjsua-test
       run: make pjsua-test
+    - name: generate doxygen documentation
+      run: |
+        PJ_VERSION=$(make -s infotarget | sed 's/.*PJ_VERSION=//')
+        mkdir -p ${{ github.workspace }}/docs/xml
+        cd pjlib && doxygen docs/doxygen.cfg && cp -r docs/$PJ_VERSION/xml/* ${{ github.workspace }}/docs/xml/ 2>/dev/null || true
+        cd ../pjlib-util && doxygen docs/doxygen.cfg && cp -r docs/$PJ_VERSION/xml/* ${{ github.workspace }}/docs/xml/ 2>/dev/null || true
+        cd ../pjmedia && doxygen docs/doxygen.cfg && cp -r docs/$PJ_VERSION/xml/* ${{ github.workspace }}/docs/xml/ 2>/dev/null || true
+        cd ../pjsip && doxygen docs/doxygen.cfg && cp -r docs/$PJ_VERSION/xml/* ${{ github.workspace }}/docs/xml/ 2>/dev/null || true
+        cd ../pjnath && doxygen docs/doxygen.cfg && cp -r docs/$PJ_VERSION/xml/* ${{ github.workspace }}/docs/xml/ 2>/dev/null || true
+    - name: Run ApiCov analysis
+      uses: codesa-ai/ApiCov@v0.3.24-pre
+      with:
+        root_path: ${{ github.workspace }}
+        install_path: ${{ github.workspace }}/install
+        api_key: ${{ secrets.APICOV_KEY }}
+        doxygen_path: ${{ github.workspace }}/docs/xml
+        xml: true
+        compile: gcc
     - name: upload artifacts on failure
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
