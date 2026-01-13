@@ -408,7 +408,7 @@ block(SCOPE_FOR VARIABLES)
   else()
     set(PJ_POOL_ALIGNMENT 4)
   endif()
-  
+
   #
   # headers
   #
