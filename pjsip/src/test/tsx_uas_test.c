@@ -1734,6 +1734,8 @@ static int tsx_transport_failure_test(unsigned tid)
         }
     }
 
+    pjsip_endpt_stop_handle_events(endpt);
+
     return 0;
 }
 

@@ -1181,6 +1181,8 @@ static int perform_tsx_test(unsigned tid, int dummy, char *target_uri,
         }
     }
 
+    pjsip_endpt_stop_handle_events(endpt);
+
     if (g[tid].test_complete < 0) {
         tsx = pjsip_tsx_layer_find_tsx(&tsx_key, PJ_TRUE);
         if (tsx) {

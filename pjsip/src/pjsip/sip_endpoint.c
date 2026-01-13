@@ -107,14 +107,8 @@ struct pjsip_endpoint
 };
 
 
-#if defined(PJSIP_SAFE_MODULE) && PJSIP_SAFE_MODULE!=0
-#   define LOCK_MODULE_ACCESS(ept)      pj_rwmutex_lock_read(ept->mod_mutex)
-#   define UNLOCK_MODULE_ACCESS(ept)    pj_rwmutex_unlock_read(ept->mod_mutex)
-#else
-#   define LOCK_MODULE_ACCESS(endpt)
-#   define UNLOCK_MODULE_ACCESS(endpt)
-#endif
-
+#define LOCK_MODULE_ACCESS(ept)      pj_rwmutex_lock_read(ept->mod_mutex)
+#define UNLOCK_MODULE_ACCESS(ept)    pj_rwmutex_unlock_read(ept->mod_mutex)
 
 
 /*
@@ -925,7 +919,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_process_rx_data( pjsip_endpoint *endpt,
         pj_log_push_indent();
     }
 
-    if (endpt->mod_reg_unreg) {
+    if (PJSIP_SAFE_MODULE || endpt->mod_reg_unreg) {
         use_lock = PJ_TRUE;
         LOCK_MODULE_ACCESS(endpt);
     }
@@ -1147,7 +1141,7 @@ static pj_status_t endpt_on_tx_msg( pjsip_endpoint *endpt,
     pjsip_module *mod;
 
     /* Distribute to modules, starting from modules with LOWEST priority */
-    if (endpt->mod_reg_unreg) {
+    if (PJSIP_SAFE_MODULE || endpt->mod_reg_unreg) {
         use_lock = PJ_TRUE;
         LOCK_MODULE_ACCESS(endpt);
     }
@@ -1409,4 +1403,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_atexit( pjsip_endpoint *endpt,
     pj_mutex_unlock(endpt->mutex);
 
     return PJ_SUCCESS;
+}
+
+/** Internal */
+void pjsip_endpt_stop_handle_events(pjsip_endpoint *endpt)
+{
+    endpt->mod_running = PJ_FALSE;
+    endpt->mod_reg_unreg = PJ_FALSE;
 }
