@@ -18,8 +18,10 @@ import wave
 import shutil
 import inc_const as const
 import inc_util as util
+import numpy as np
 
 from inc_cfg import *
+from pesq import pesq
 
 # Load configuration
 cfg_file = util.load_module_from_file("cfg_file", ARGS[1])
@@ -31,7 +33,7 @@ PESQ_DEFAULT_THRESHOLD = 3.4    # Default minimum acceptable PESQ MOS value
 USE_PYTHON_PESQ = 1             # Use python's pesq
 ENABLE_VISQOL = 1               # Enable Visqol
 VISQOL_DEFAULT_THRESHOLD = 4.4  # Default minimum acceptable Visqol MOS value
-VISQOL_MODEL_FILE = "tools/model/mod.tflite"# Visqol model file
+VISQOL_MODEL_FILE = "tools/model/mod.tflite" # Visqol model file
 
 # PESQ params
 pesq_sample_rate_opt = ""		# Sample rate option for PESQ
@@ -66,12 +68,12 @@ def test_func(t):
 
     # Get clock rate of the output
     mo_clock_rate = re.compile("\.(\d+)\.wav").search(output_filename)
-    if (mo_clock_rate==None):
+    if (mo_clock_rate is None):
         raise TestError("Cannot compare input & output, incorrect output filename format")
     clock_rate = mo_clock_rate.group(1)
     # Get channel count of the output
     channel_count = 1
-    if re.search("--stereo", ua2.inst_param.arg) != None:
+    if re.search("--stereo", ua2.inst_param.arg) is not None:
         channel_count = 2
     # Get matched input file from output file
     # (PESQ evaluates only files whose same clock rate & channel count)
@@ -165,8 +167,6 @@ def run_visqol(input_filename, output_filename):
         raise
 
 def read_wav_to_array(filename):
-    import numpy as np
-
     with wave.open(filename, 'rb') as wf:
         rate = wf.getframerate()
         if rate != 8000 and rate != 16000:
@@ -190,14 +190,12 @@ def post_func(t):
     endpt = t.process[0]
 
     # Get threshold
-    if (cfg_file.pesq_threshold != None) and (cfg_file.pesq_threshold > -0.5 ):
+    if (cfg_file.pesq_threshold is not None and cfg_file.pesq_threshold > -0.5 ):
         pesq_threshold = cfg_file.pesq_threshold
     else:
         pesq_threshold = PESQ_DEFAULT_THRESHOLD
 
     if (USE_PYTHON_PESQ == 1):
-        from pesq import pesq
-
         # print("Input file " + input_filename)
         # print("Output file " + output_filename)
         # Evaluate the PESQ MOS value
@@ -221,7 +219,7 @@ def post_func(t):
 
         # Parse ouput
         mo_pesq_out = re.compile("Prediction[^=]+=\s+([\-\d\.]+)\s*").search(pesq_out[0])
-        if (mo_pesq_out == None):
+        if (mo_pesq_out is None):
             raise TestError("Failed to fetch PESQ result")
 
         pesq_res = mo_pesq_out.group(1)
