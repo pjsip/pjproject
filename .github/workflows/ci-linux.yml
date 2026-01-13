@@ -63,6 +63,16 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.10'
+    - name: Install PESQ and Dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install numpy cython
+        python -m pip install pesq scipy
+    - name: Download and Unzip Visqol
+      run: |
+        curl -L "https://github.com/pjsip/third_party_libs/raw/main/visqol_ubuntu.zip" -o visqol.zip
+        unzip -o visqol.zip -d tests/pjsua/tools
+        chmod +x tests/pjsua/tools/visqol
     - name: capture pjsua capabilities
       run: |
         cat << EOF | pjsip-apps/bin/pjsua-`make infotarget` --log-level 3 > pjsua-caps
@@ -240,6 +250,16 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
+    - name: Install PESQ and Dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install numpy cython
+        python -m pip install pesq scipy
+    - name: Download and Unzip Visqol
+      run: |
+        curl -L "https://github.com/pjsip/third_party_libs/raw/main/visqol_ubuntu.zip" -o visqol.zip
+        unzip -o visqol.zip -d tests/pjsua/tools
+        chmod +x tests/pjsua/tools/visqol
     - name: capture pjsua capabilities
       run: |
         export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
@@ -436,6 +456,16 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.10'
+    - name: Install PESQ and Dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install numpy cython
+        python -m pip install pesq scipy
+    - name: Download and Unzip Visqol
+      run: |
+        curl -L "https://github.com/pjsip/third_party_libs/raw/main/visqol_ubuntu.zip" -o visqol.zip
+        unzip -o visqol.zip -d tests/pjsua/tools
+        chmod +x tests/pjsua/tools/visqol
     - name: pjsua-test
       run: make pjsua-test
     - name: upload artifacts on failure

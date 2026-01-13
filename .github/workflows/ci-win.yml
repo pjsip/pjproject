@@ -135,6 +135,8 @@ jobs:
   openssl-2:
     runs-on: windows-latest
     name: OpenSSL / pjsip,pjsua
+    env:
+      PYTHONUTF8: 1  # This forces Python to use UTF-8
     steps:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
@@ -193,10 +195,21 @@ jobs:
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+    - name: get test tool visqol
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/visqol_win.zip" -OutFile ".\visqol_win.zip"
+        Expand-Archive -LiteralPath .\visqol_win.zip -DestinationPath tests\pjsua\tools
+      shell: powershell
     - name: set up Python 3.10 for pjsua test
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
+    - name: Install PESQ and Dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install numpy cython
+        python -m pip install pesq scipy
+      shell: cmd
     - name: pjsip-test
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
@@ -211,7 +224,7 @@ jobs:
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         $env:PATH+=";$env:SIPP_DIR"
         cd tests/pjsua
-        echo python runall.py
+        python runall.py
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
@@ -334,6 +347,8 @@ jobs:
   vid-libvpx-schannel-1:
     runs-on: windows-latest
     name: VPX+SChannel / pjlib,util,pjmedia,pjnath
+    env:
+      PYTHONUTF8: 1  # This forces Python to use UTF-8
     steps:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
@@ -411,6 +426,11 @@ jobs:
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+    - name: get test tool visqol
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/visqol_win.zip" -OutFile ".\visqol_win.zip"
+        Expand-Archive -LiteralPath .\visqol_win.zip -DestinationPath tests\pjsua\tools
+      shell: powershell
     - name: pjlib-test
       run: |
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
@@ -449,6 +469,8 @@ jobs:
   vid-libvpx-schannel-2:
     runs-on: windows-latest
     name: VPX+SChannel / pjsua
+    env:
+      PYTHONUTF8: 1  # This forces Python to use UTF-8
     steps:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
@@ -534,6 +556,11 @@ jobs:
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+    - name: get test tool visqol
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/visqol_win.zip" -OutFile ".\visqol_win.zip"
+        Expand-Archive -LiteralPath .\visqol_win.zip -DestinationPath tests\pjsua\tools
+      shell: powershell
     - name: set up Python 3.10 for pjsua test
       uses: actions/setup-python@v4
       with:
@@ -545,7 +572,7 @@ jobs:
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         $env:PATH+=";$env:SIPP_DIR"
         cd tests/pjsua
-        echo python runall.py
+        python runall.py
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
@@ -749,6 +776,8 @@ jobs:
   iocp-cb-no-lock:
     runs-on: windows-latest
     name: iocp-cb-no-lock / pjlib,pjsua
+    env:
+      PYTHONUTF8: 1  # This forces Python to use UTF-8
     steps:
     - uses: actions/checkout@master
     - name: Install Windows Debugging Tools
@@ -824,6 +853,11 @@ jobs:
         call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+    - name: get test tool visqol
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/pjsip/third_party_libs/raw/main/visqol_win.zip" -OutFile ".\visqol_win.zip"
+        Expand-Archive -LiteralPath .\visqol_win.zip -DestinationPath tests\pjsua\tools
+      shell: powershell
     - name: set up Python 3.10 for pjsua test
       uses: actions/setup-python@v4
       with:
@@ -835,7 +869,7 @@ jobs:
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         $env:PATH+=";$env:SIPP_DIR"
         cd tests/pjsua
-        echo python runall.py
+        python runall.py
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}

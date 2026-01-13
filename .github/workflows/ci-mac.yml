@@ -81,6 +81,16 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
+    - name: Install PESQ and Dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install numpy cython
+        python -m pip install pesq scipy
+    - name: Download and Unzip Visqol
+      run: |
+        curl -L "https://github.com/pjsip/third_party_libs/raw/main/visqol_mac.zip" -o visqol.zip
+        unzip -o visqol.zip -d tests/pjsua/tools
+        chmod +x tests/pjsua/tools/visqol
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
@@ -301,6 +311,16 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
+    - name: Install PESQ and Dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install numpy cython
+        python -m pip install pesq scipy
+    - name: Download and Unzip Visqol
+      run: |
+        curl -L "https://github.com/pjsip/third_party_libs/raw/main/visqol_mac.zip" -o visqol.zip
+        unzip -o visqol.zip -d tests/pjsua/tools
+        chmod +x tests/pjsua/tools/visqol
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
     - name: disable firewall
@@ -461,6 +481,16 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
+    - name: Install PESQ and Dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install numpy cython
+        python -m pip install pesq scipy
+    - name: Download and Unzip Visqol
+      run: |
+        curl -L "https://github.com/pjsip/third_party_libs/raw/main/visqol_mac.zip" -o visqol.zip
+        unzip -o visqol.zip -d tests/pjsua/tools
+        chmod +x tests/pjsua/tools/visqol
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1\n" >> config_site.h
     - name: configure

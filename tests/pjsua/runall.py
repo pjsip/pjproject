@@ -18,6 +18,7 @@ tests = []
 excluded_tests = [
     "svn",
     "pyc",
+    "__pycache__",
     "scripts-call/150_srtp_2_1",                     # SRTP optional 'cannot' call SRTP mandatory
     "scripts-call/150_srtp_2_3.py",                  # disabled because #1267 wontfix
     "scripts-call/301_ice_public_a.py",              # Unreliable, proxy returns 408 sometimes
@@ -26,7 +27,6 @@ excluded_tests = [
     "scripts-media-playrec/100_resample_lf_8_11.py", # related to clock-rate 11 kHz problem
     "scripts-media-playrec/100_resample_lf_8_22.py", # related to clock-rate 22 kHz problem
     "scripts-media-playrec/100_resample_lf_11",      # related to clock-rate 11 kHz problem
-    "pesq",                                          # temporarily disabling all pesq related test due to unreliability
     # TODO check all tests below for false negatives
     "call_305_ice_comp_1_2",
     "scripts-sendto/155_err_sdp_bad_syntax",
@@ -192,6 +192,7 @@ for pat in excluded_tests:
 
 # Now run the tests
 total_cnt = len(tests)
+print("Total tests : " + str(total_cnt))
 for t in tests:
     if resume_script!="" and t.find(resume_script)==-1:
         print("Skipping " + t +"..")
