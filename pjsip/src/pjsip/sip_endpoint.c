@@ -90,6 +90,12 @@ struct pjsip_endpoint
     /** Module list, sorted by priority. */
     pjsip_module         module_list;
 
+    /** Is the module running (receiving/sending msg)? */
+    pj_bool_t            mod_running;
+
+    /** Is there module reg/unreg while running? */
+    pj_bool_t            mod_reg_unreg;
+
     /** Capability header list. */
     pjsip_hdr            cap_hdr;
 
@@ -165,6 +171,19 @@ PJ_DEF(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
 
     pj_rwmutex_lock_write(endpt->mod_mutex);
 
+    if (endpt->mod_running && !endpt->mod_reg_unreg) {
+        PJ_LOG(2, (THIS_FILE, "Warning: Module \"%.*s\" registered during "
+                              "operation. Enable PJSIP_SAFE_MODULE to prevent "
+                              "race condition.",
+                              (int)mod->name.slen, mod->name.ptr));
+
+        endpt->mod_reg_unreg = PJ_TRUE;
+        /* Give some time to allow pjsip_endpt_process_rx_data() and
+         * endpt_on_tx_msg() to complete.
+         */
+        pj_thread_sleep(100);
+    }
+
     /* Make sure that this module has not been registered. */
     PJ_ASSERT_ON_FAIL(  pj_list_find_node(&endpt->module_list, mod) == NULL,
                         {status = PJ_EEXISTS; goto on_return;});
@@ -235,6 +254,14 @@ PJ_DEF(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
     pj_status_t status;
 
     pj_rwmutex_lock_write(endpt->mod_mutex);
+
+    if (endpt->mod_running && !endpt->mod_reg_unreg) {
+        endpt->mod_reg_unreg = PJ_TRUE;
+        /* Give some time to allow pjsip_endpt_process_rx_data() and
+         * endpt_on_tx_msg() to complete.
+         */
+        pj_thread_sleep(100);
+    }
 
     /* Make sure the module exists in the list. */
     PJ_ASSERT_ON_FAIL(  pj_list_find_node(&endpt->module_list, mod) == mod,
@@ -876,7 +903,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_process_rx_data( pjsip_endpoint *endpt,
     pjsip_msg *msg;
     pjsip_process_rdata_param def_prm;
     pjsip_module *mod;
-    pj_bool_t handled = PJ_FALSE;
+    pj_bool_t handled = PJ_FALSE, use_lock = PJ_FALSE;;
     unsigned i;
     pj_status_t status;
 
@@ -898,7 +925,13 @@ PJ_DEF(pj_status_t) pjsip_endpt_process_rx_data( pjsip_endpoint *endpt,
         pj_log_push_indent();
     }
 
-    LOCK_MODULE_ACCESS(endpt);
+    if (endpt->mod_reg_unreg) {
+        use_lock = PJ_TRUE;
+        LOCK_MODULE_ACCESS(endpt);
+    }
+
+    if (!endpt->mod_running)
+        endpt->mod_running = PJ_TRUE;
 
     /* Find start module */
     if (p->start_mod) {
@@ -952,7 +985,9 @@ on_return:
     if (p_handled)
         *p_handled = handled;
 
-    UNLOCK_MODULE_ACCESS(endpt);
+    if (use_lock) {
+        UNLOCK_MODULE_ACCESS(endpt);
+    }
     if (!p->silent) {
         pj_log_pop_indent();
     }
@@ -1108,10 +1143,17 @@ static pj_status_t endpt_on_tx_msg( pjsip_endpoint *endpt,
                                     pjsip_tx_data *tdata )
 {
     pj_status_t status = PJ_SUCCESS;
+    pj_bool_t use_lock = PJ_FALSE;
     pjsip_module *mod;
 
     /* Distribute to modules, starting from modules with LOWEST priority */
-    LOCK_MODULE_ACCESS(endpt);
+    if (endpt->mod_reg_unreg) {
+        use_lock = PJ_TRUE;
+        LOCK_MODULE_ACCESS(endpt);
+    }
+
+    if (!endpt->mod_running)
+        endpt->mod_running = PJ_TRUE;
 
     mod = endpt->module_list.prev;
     if (tdata->msg->type == PJSIP_REQUEST_MSG) {
@@ -1133,7 +1175,9 @@ static pj_status_t endpt_on_tx_msg( pjsip_endpoint *endpt,
         }
     }
 
-    UNLOCK_MODULE_ACCESS(endpt);
+    if (use_lock) {
+        UNLOCK_MODULE_ACCESS(endpt);
+    }
 
     return status;
 }
