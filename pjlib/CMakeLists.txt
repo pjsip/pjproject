@@ -403,6 +403,12 @@ block(SCOPE_FOR VARIABLES)
   set(PJ_NATIVE_STRING_IS_UNICODE 0)
   set(PJ_ATOMIC_VALUE_TYPE "long")
 
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(PJ_POOL_ALIGNMENT 8)
+  else()
+    set(PJ_POOL_ALIGNMENT 4)
+  endif()
+
   #
   # headers
   #
