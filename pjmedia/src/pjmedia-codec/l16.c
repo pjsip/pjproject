@@ -222,13 +222,17 @@ PJ_DEF(pj_status_t) pjmedia_codec_l16_deinit(void)
         return PJ_EINVALIDOP;
     }
 
+    /* Release the factory mutex before calling unregister to avoid lock
+     * order inversion with codec manager mutex.
+     */
+    pj_mutex_unlock(l16_factory.mutex);
+
     /* Unregister L16 codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &l16_factory.base);
     l16_factory.endpt = NULL;
 
     /* Destroy mutex. */
-    pj_mutex_unlock(l16_factory.mutex);
     pj_mutex_destroy(l16_factory.mutex);
     l16_factory.mutex = NULL;
 

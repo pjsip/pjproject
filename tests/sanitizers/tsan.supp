@@ -32,7 +32,3 @@ deadlock:destroy_transport
 # Lock-order-inversion lis_destroy ../src/pjsip/sip_transport_tcp.c with:
 # - pjsip_transport_register ../src/pjsip/sip_transport.c
 deadlock:lis_destroy
-
-# Lock-order inversion pjmedia_codec_mgr_unregister_factory ../src/pjmedia/codec.c with:
-# - pjmedia_codec_mgr_alloc_codec ../src/pjmedia/codec.c
-deadlock:pjmedia_codec_mgr_unregister_factory

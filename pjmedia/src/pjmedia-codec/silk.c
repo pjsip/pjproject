@@ -358,13 +358,17 @@ PJ_DEF(pj_status_t) pjmedia_codec_silk_deinit(void)
         return PJ_EINVALIDOP;
     }
 
+    /* Release the factory mutex before calling unregister to avoid lock
+     * order inversion with codec manager mutex.
+     */
+    pj_mutex_unlock(silk_factory.mutex);
+
     /* Unregister silk codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &silk_factory.base);
     silk_factory.endpt = NULL;
 
     /* Destroy mutex. */
-    pj_mutex_unlock(silk_factory.mutex);
     pj_mutex_destroy(silk_factory.mutex);
     silk_factory.mutex = NULL;
 

@@ -482,12 +482,16 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_deinit(void)
         return PJ_EINVALIDOP;
     }
 
+    /* Release the factory mutex before calling unregister to avoid lock
+     * order inversion with codec manager mutex.
+     */
+    pj_mutex_unlock(codec_factory.mutex);
+
     /* Unregister G722.1 codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &codec_factory.base);
     
     /* Destroy mutex. */
-    pj_mutex_unlock(codec_factory.mutex);
     pj_mutex_destroy(codec_factory.mutex);
     codec_factory.mutex = NULL;
 
