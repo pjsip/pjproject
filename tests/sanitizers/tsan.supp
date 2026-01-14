@@ -9,22 +9,18 @@ race:*
 # - pjsip_tsx_layer_find_tsx ../src/pjsip/sip_transaction.c
 # - pjsip_tsx_recv_msg ../src/pjsip/sip_transaction.c
 # - rt_on_rx_response ../src/test/transport_test.c
-#deadlock:endpt_on_tx_msg
 deadlock:pthread_rwlock_rdlock
-
-# Lock-order-inversion endpt_on_rx_msg ../src/pjsip/sip_endpoint.c with:
-# - pjsip_tsx_send_msg ../src/pjsip/sip_transaction.c
-#deadlock:endpt_on_rx_msg
 
 # Lock-order-inversion stateless_send_transport_cb ../src/pjsip/sip_util.c with:
 # - pj_ioqueue_connect ../src/pj/ioqueue_common_abs.c
 # - tp_state_callback ../src/pjsip/sip_transport.c
 # - rt_on_rx_response ../src/test/transport_test.c
-#deadlock:stateless_send_transport_cb
+deadlock:stateless_send_transport_cb
 
-# Lock-order-inversion transport_tcp_test ../src/test/transport_tcp_test.c with:
-# - tp_state_callback ../src/pjsip/sip_transport.c
-#deadlock:transport_tcp_test
+# pjsip_dlg_on_tsx_state ../src/pjsip/sip_dialog.c
+# - pjsip_tsx_set_transport ../src/pjsip/sip_transaction.c
+# - pjsip_dlg_create_uas_and_inc_lock ../src/pjsip/sip_dialog.c
+deadlock:pjsip_dlg_on_tsx_state
 
 # Lock-order-inversion destroy_transport ../src/pjsip/sip_transport.c with:
 # - udp_shutdown ../src/pjsip/sip_transport_udp.c
