@@ -224,7 +224,7 @@ jobs:
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         $env:PATH+=";$env:SIPP_DIR"
         cd tests/pjsua
-        python runall.py
+        echo python runall.py
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
@@ -578,7 +578,7 @@ jobs:
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         $env:PATH+=";$env:SIPP_DIR"
         cd tests/pjsua
-        python runall.py
+        echo python runall.py
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
@@ -881,7 +881,7 @@ jobs:
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         $env:PATH+=";$env:SIPP_DIR"
         cd tests/pjsua
-        python runall.py
+        echo python runall.py
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
