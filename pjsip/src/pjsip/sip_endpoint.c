@@ -897,7 +897,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_process_rx_data( pjsip_endpoint *endpt,
     pjsip_msg *msg;
     pjsip_process_rdata_param def_prm;
     pjsip_module *mod;
-    pj_bool_t handled = PJ_FALSE, use_lock = PJ_FALSE;;
+    pj_bool_t handled = PJ_FALSE, use_lock = PJ_FALSE;
     unsigned i;
     pj_status_t status;
 
