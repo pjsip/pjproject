@@ -322,6 +322,8 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
 
     } while (1);
 
+    pjsip_endpt_stop_handle_events(endpt);
+
     if (status == PJ_SUCCESS) {
         unsigned usec_rt;
         usec_rt = pj_elapsed_usec(&sr_g[tid].my_send_time, &sr_g[tid].my_recv_time);
@@ -607,6 +609,8 @@ static int rt_worker_thread(void *arg)
     for (i=0; i<100; ++i) {
         pjsip_endpt_handle_events(endpt, &poll_delay);
     }
+
+    pjsip_endpt_stop_handle_events(endpt);
 
     return 0;
 }

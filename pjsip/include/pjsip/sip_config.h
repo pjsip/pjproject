@@ -558,7 +558,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * access module.
  */
 #ifndef PJSIP_SAFE_MODULE
-#   define PJSIP_SAFE_MODULE            1
+#   define PJSIP_SAFE_MODULE            0
 #endif
 
 

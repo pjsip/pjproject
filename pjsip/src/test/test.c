@@ -66,6 +66,8 @@ void flush_events(unsigned duration)
         if (PJ_TIME_VAL_GTE(now, stop_time))
             break;
     }
+
+    pjsip_endpt_stop_handle_events(endpt);
 }
 
 /* Wait until there is no loop transport instance */

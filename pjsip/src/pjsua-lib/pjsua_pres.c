@@ -2691,6 +2691,12 @@ pj_status_t pjsua_pres_init()
                      status);
     }
 
+    if (pjsua_var.ua_cfg.enable_unsolicited_mwi) {
+        status = enable_unsolicited_mwi();
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.buddy); ++i) {
         reset_buddy(i);
     }
@@ -2714,12 +2720,6 @@ pj_status_t pjsua_pres_start(void)
         pjsip_endpt_schedule_timer(pjsua_var.endpt, &pjsua_var.pres_timer,
                                    &pres_interval);
         pjsua_var.pres_timer.id = PJ_TRUE;
-    }
-
-    if (pjsua_var.ua_cfg.enable_unsolicited_mwi) {
-        pj_status_t status = enable_unsolicited_mwi();
-        if (status != PJ_SUCCESS)
-            return status;
     }
 
     return PJ_SUCCESS;

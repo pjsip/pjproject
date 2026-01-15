@@ -365,6 +365,8 @@ static int test_resolve(const char *title,
         PJ_TEST_TRUE(PJ_TIME_VAL_LT(now, timeout), NULL, return 12345678);
     }
 
+    pjsip_endpt_stop_handle_events(endpt);
+
     if (result.status != PJ_SUCCESS) {
         app_perror("  pjsip_endpt_resolve() error", result.status);
         return result.status;
@@ -451,6 +453,8 @@ static int round_robin_test(pj_pool_t *pool)
             if (ii == 1)
                 pj_dns_resolver_dump(pjsip_endpt_get_resolver(endpt), PJ_TRUE);
         }
+
+        pjsip_endpt_stop_handle_events(endpt);
 
         /* Find which server was "hit" */
         for (j=0; j<PJ_ARRAY_SIZE(server_hit); ++j) {
