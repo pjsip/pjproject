@@ -5,22 +5,20 @@
 # Focus on deadlock reports only (e.g., lock-order-inversion)
 race:*
 
-# Lock-order-inversion endpt_on_tx_msg ../src/pjsip/sip_endpoint.c with:
-# - pjsip_tsx_layer_find_tsx ../src/pjsip/sip_transaction.c
-# - pjsip_tsx_recv_msg ../src/pjsip/sip_transaction.c
-# - rt_on_rx_response ../src/test/transport_test.c
-deadlock:pthread_rwlock_rdlock
-
 # Lock-order-inversion stateless_send_transport_cb ../src/pjsip/sip_util.c with:
 # - pj_ioqueue_connect ../src/pj/ioqueue_common_abs.c
 # - tp_state_callback ../src/pjsip/sip_transport.c
 # - rt_on_rx_response ../src/test/transport_test.c
 deadlock:stateless_send_transport_cb
 
-# pjsip_dlg_on_tsx_state ../src/pjsip/sip_dialog.c
+# Lock-order-inversion pjsip_dlg_on_tsx_state ../src/pjsip/sip_dialog.c with:
 # - pjsip_tsx_set_transport ../src/pjsip/sip_transaction.c
 # - pjsip_dlg_create_uas_and_inc_lock ../src/pjsip/sip_dialog.c
 deadlock:pjsip_dlg_on_tsx_state
+
+# Lock-order-inversion mod_tsx_layer_stop ../src/pjsip/sip_transaction.c with:
+# - mod_tsx_layer_register_tsx ../src/pjsip/sip_transaction.c
+deadlock:mod_tsx_layer_stop
 
 # Lock-order-inversion destroy_transport ../src/pjsip/sip_transport.c with:
 # - udp_shutdown ../src/pjsip/sip_transport_udp.c
@@ -29,3 +27,40 @@ deadlock:destroy_transport
 # Lock-order-inversion lis_destroy ../src/pjsip/sip_transport_tcp.c with:
 # - pjsip_transport_register ../src/pjsip/sip_transport.c
 deadlock:lis_destroy
+
+#=============================================================================
+# Lock-order-inversion in pjsip_endpoint
+# Example stack trace:
+# Mutex of pjsip_endpoint acquired here while holding mutex of pjsip_tsx:
+#1 pj_rwmutex_lock_read ../src/pj/os_core_unix.c:1830
+#2 endpt_on_tx_msg ../src/pjsip/sip_endpoint.c:1114
+#3 pjsip_transport_send ../src/pjsip/sip_transport.c:1010
+#4 stateless_send_transport_cb ../src/pjsip/sip_util.c:1305
+#5 stateless_send_resolver_callback ../src/pjsip/sip_util.c:1444
+#6 pjsip_resolve ../src/pjsip/sip_resolve.c:399
+#7 pjsip_endpt_resolve ../src/pjsip/sip_endpoint.c:1205
+#8 pjsip_endpt_send_request_stateless ../src/pjsip/sip_util.c:1513
+#9 tsx_send_msg ../src/pjsip/sip_transaction.c:2597
+#10 tsx_on_state_null ../src/pjsip/sip_transaction.c:2869
+#11 pjsip_tsx_send_msg ../src/pjsip/sip_transaction.c:2021
+#
+# Mutex of pjsip_tsx acquired here while holding mutex of pjsip_endpoint:
+#4 pj_grp_lock_acquire ../src/pj/lock.c:486
+#5 pjsip_tsx_recv_msg ../src/pjsip/sip_transaction.c:2058
+#6 mod_tsx_layer_on_rx_response ../src/pjsip/sip_transaction.c:1044
+#7 pjsip_endpt_process_rx_data ../src/pjsip/sip_endpoint.c:975
+#8 endpt_on_rx_msg ../src/pjsip/sip_endpoint.c:1119
+#9 pjsip_tpmgr_receive_packet ../src/pjsip/sip_transport.c:2465
+#
+# Note that this is actually safe since pjsip_endpt_process_rx_data() and
+# endpt_on_tx_msg() use a read lock. If you want to avoid the warning,
+# app can register all modules first by calling pjsip_endpt_register_module()
+# during startup, before calling pjsip_endpt_handle_events(). Alternatively,
+# you can enable the suppression below.
+#
+# deadlock:pj_rwmutex_lock_read
+#
+# Note that you shouldn't use deadlock:endpt_on_tx_msg or
+# deadlock:endpt_on_rx_msg as this will basically filter all message
+# processing threads, and may potentially suppress genuine deadlock issue.
+#=============================================================================

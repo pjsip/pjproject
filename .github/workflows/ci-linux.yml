@@ -345,8 +345,16 @@ jobs:
       # one of the step above has changed core_pattern, restore it
     - name: reinstall cirunner
       run: cirunner/installlinux.sh
-    - name: pjsip-test
+    - name: pjsip-test serial
+      # when using no worker thread, pjsip_endpt is safe without suppression
       run: |
+        export CI_ARGS="-w 0 --shuffle --stdout-buf 1 tsx_basic_test tsx_uac_test tsx_uas_test"
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
+        make pjsip-test
+    - name: pjsip-test parallel
+      # when using multiple worker threads, add pjsip_endpt suppression
+      run: |
+        echo "deadlock:pj_rwmutex_lock_read" >> tests/sanitizers/tsan.supp
         export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
         make pjsip-test
     - name: upload artifacts on failure
