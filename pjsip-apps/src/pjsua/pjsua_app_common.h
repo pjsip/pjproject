@@ -119,6 +119,21 @@ typedef struct pjsua_app_config
     pj_bool_t               auto_rec;
     pjsua_recorder_id       rec_id;
     pjsua_conf_port_id      rec_port;
+
+    /* Dynamic playback control */
+    pjsua_player_id         dyn_player_id;
+    pjsua_conf_port_id      dyn_player_port;
+    pjsua_call_id           dyn_player_call;
+    pj_bool_t               dyn_player_active;
+    char                    dyn_play_filename[PJ_MAXPATH];
+
+    /* Dynamic recording control */
+    pjsua_recorder_id       dyn_rec_id;
+    pjsua_conf_port_id      dyn_rec_port;
+    pjsua_call_id           dyn_rec_call;
+    pj_bool_t               dyn_rec_active;
+    char                    dyn_rec_filename[PJ_MAXPATH];
+
     unsigned                auto_answer;
     unsigned                duration;
 

@@ -1716,6 +1716,16 @@ static void default_config()
     cfg->rec_id = PJSUA_INVALID_ID;
     cfg->wav_port = PJSUA_INVALID_ID;
     cfg->rec_port = PJSUA_INVALID_ID;
+    cfg->dyn_player_id = PJSUA_INVALID_ID;
+    cfg->dyn_player_port = PJSUA_INVALID_ID;
+    cfg->dyn_player_call = PJSUA_INVALID_ID;
+    cfg->dyn_player_active = PJ_FALSE;
+    cfg->dyn_play_filename[0] = '\0';
+    cfg->dyn_rec_id = PJSUA_INVALID_ID;
+    cfg->dyn_rec_port = PJSUA_INVALID_ID;
+    cfg->dyn_rec_call = PJSUA_INVALID_ID;
+    cfg->dyn_rec_active = PJ_FALSE;
+    cfg->dyn_rec_filename[0] = '\0';
     cfg->mic_level = cfg->speaker_level = 1.0;
     cfg->capture_dev = PJSUA_INVALID_ID;
     cfg->playback_dev = PJSUA_INVALID_ID;
