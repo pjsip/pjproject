@@ -83,10 +83,10 @@ def test_func(t):
         else:
             input_filename = re.sub("\.\d+\.wav", "." + str(channel_count) + "."+clock_rate+".wav", input_filename)
 
-    if (clock_rate != "8") & (clock_rate != "16"):
+    if (clock_rate != "8") and (clock_rate != "16"):
         raise TestError("PESQ only works on clock rate 8kHz or 16kHz, clock rate used = "+clock_rate+ "kHz")
 
-    if (ENABLE_VISQOL == 1) & (clock_rate != "16"):
+    if (ENABLE_VISQOL == 1) and (clock_rate != "16"):
         print("VISQOL only works on clock rate 16kHz, clock rate used = "+ clock_rate +"kHz, disabling VISQOL")
         ENABLE_VISQOL = 0
 
@@ -196,8 +196,6 @@ def post_func(t):
         pesq_threshold = PESQ_DEFAULT_THRESHOLD
 
     if (USE_PYTHON_PESQ == 1):
-        # print("Input file " + input_filename)
-        # print("Output file " + output_filename)
         # Evaluate the PESQ MOS value
         in_rate, in_data = read_wav_to_array(input_filename)
         out_rate, out_data = read_wav_to_array(output_filename)
@@ -217,7 +215,7 @@ def post_func(t):
         pesq_proc = subprocess.Popen(fullcmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
         pesq_out  = pesq_proc.communicate()
 
-        # Parse ouput
+        # Parse output
         mo_pesq_out = re.compile("Prediction[^=]+=\s+([\-\d\.]+)\s*").search(pesq_out[0])
         if (mo_pesq_out is None):
             raise TestError("Failed to fetch PESQ result")
