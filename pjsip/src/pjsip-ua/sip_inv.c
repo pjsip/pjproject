@@ -2118,6 +2118,11 @@ static void cleanup_allow_sup_hdr(unsigned inv_option,
         if (sup_hdr)
             remove_val_from_array_hdr(sup_hdr, &STR_100REL);
     }
+
+    if ((inv_option & PJSIP_INV_SUPPORT_SIPREC) == 0 && sup_hdr) {
+        const pj_str_t STR_SIPREC = { "siprec", 6 };
+        remove_val_from_array_hdr(sup_hdr, &STR_SIPREC);
+    }
 }
 
 /*
