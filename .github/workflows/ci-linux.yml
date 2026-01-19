@@ -69,7 +69,7 @@ jobs:
         cd ../pjsip && doxygen docs/doxygen.cfg && cp -r docs/$PJ_VERSION/xml/* ${{ github.workspace }}/docs/xml/ 2>/dev/null || true
         cd ../pjnath && doxygen docs/doxygen.cfg && cp -r docs/$PJ_VERSION/xml/* ${{ github.workspace }}/docs/xml/ 2>/dev/null || true
     - name: Run ApiCov analysis
-      uses: codesa-ai/ApiCov@v0.3.24-pre
+      uses: codesa-ai/ApiCov@miloserdow/parse-linking-flags
       with:
         root_path: ${{ github.workspace }}
         install_path: ${{ github.workspace }}/install
