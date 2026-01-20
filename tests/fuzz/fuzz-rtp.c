@@ -197,8 +197,10 @@ static void test_multiple_packets(pjmedia_rtp_session *session,
         status = pjmedia_rtp_decode_rtp(session, data + offset, pkt_size,
                                         &hdr, &payload, &payloadlen);
         if (status == PJ_SUCCESS && hdr != NULL) {
+            /* Intentionally ignore seq_st here; we only exercise the
+             * RTP session sequence/loss update logic for fuzzing.
+             */
             pjmedia_rtp_session_update(session, hdr, &seq_st);
-
         }
         
         offset += pkt_size;
