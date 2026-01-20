@@ -26,8 +26,8 @@
 /*
  * Minimum input length calculation:
  *   - Bytes 0-4: Session config (PT + SSRC)
- *   - Bytes 5-16: First RTP packet for decode_rtp test (12 bytes min)
- *   - Bytes 17-28: Second RTP packet for decode_rtp2 test (12 bytes min)
+ *   - Bytes 5-16: First RTP packet for decode_rtp test (12 bytes)
+ *   - Bytes 17-28: Second RTP packet for decode_rtp2 test (12 bytes)
  *   - Bytes 29-35: Encode test parameters (7 bytes)
  *   - Bytes 36+: Multi-packet simulation
  * 
@@ -42,8 +42,8 @@ pj_pool_factory *mem;
 /* Fixed Input byte offsets */
 #define OFFSET_PT           0   /* Byte 0: Payload Type (7 bits) */
 #define OFFSET_SSRC         1   /* Bytes 1-4: SSRC (32 bits) */
-#define OFFSET_DECODE1      5   /* Bytes 5-16: First packet for decode_rtp test (12+ bytes) */
-#define OFFSET_DECODE2      17  /* Bytes 17-28: Second packet for decode_rtp2 test (12+ bytes) */
+#define OFFSET_DECODE1      5   /* Bytes 5-16: First packet for decode_rtp test (12 bytes) */
+#define OFFSET_DECODE2      17  /* Bytes 17-28: Second packet for decode_rtp2 test (12 bytes) */
 #define OFFSET_ENCODE       29  /* Bytes 29-35: Encode parameters (7 bytes) */
 #define OFFSET_MULTI_PKT    36  /* Bytes 36+: Multiple packet simulation */
 
