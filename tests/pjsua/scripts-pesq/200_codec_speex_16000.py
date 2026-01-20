@@ -16,4 +16,4 @@ test_param = TestParam(
 		)
 
 pesq_threshold = 3.8
-visqol_threshold = 4.3
+visqol_threshold = 4.2

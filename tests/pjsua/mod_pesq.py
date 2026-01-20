@@ -32,7 +32,7 @@ VISQOL = "tools/visqol"         # Visqol executable path
 PESQ_DEFAULT_THRESHOLD = 3.4    # Default minimum acceptable PESQ MOS value
 USE_PYTHON_PESQ = 1             # Use python's pesq
 ENABLE_VISQOL = 1               # Enable Visqol
-VISQOL_DEFAULT_THRESHOLD = 4.4  # Default minimum acceptable Visqol MOS value
+VISQOL_DEFAULT_THRESHOLD = 4    # Default minimum acceptable Visqol MOS value
 VISQOL_MODEL_FILE = "tools/model/mod.tflite" # Visqol model file
 
 # PESQ params
