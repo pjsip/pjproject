@@ -16,10 +16,6 @@ deadlock:stateless_send_transport_cb
 # - pjsip_dlg_create_uas_and_inc_lock ../src/pjsip/sip_dialog.c
 deadlock:pjsip_dlg_on_tsx_state
 
-# Lock-order-inversion mod_tsx_layer_stop ../src/pjsip/sip_transaction.c with:
-# - mod_tsx_layer_register_tsx ../src/pjsip/sip_transaction.c
-deadlock:mod_tsx_layer_stop
-
 # Lock-order-inversion destroy_transport ../src/pjsip/sip_transport.c with:
 # - udp_shutdown ../src/pjsip/sip_transport_udp.c
 deadlock:destroy_transport
