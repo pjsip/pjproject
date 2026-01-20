@@ -254,7 +254,7 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     pj_caching_pool caching_pool;
 
     if (Size < kMinInputLength || Size > kMaxInputLength) {
-        return 0;
+        return 1;
     }
 
     /* Init */
