@@ -1407,6 +1407,11 @@ static pj_status_t start_playback(pjsua_call_id call_id, const char *filename)
             return PJ_SUCCESS;
         }
     } else {
+        if (call_id < 0 || call_id >= (int)PJSUA_MAX_CALLS) {
+            PJ_LOG(2, (THIS_FILE, "Invalid call_id %d (valid range: -1 or 0-%d)",
+                      call_id, PJSUA_MAX_CALLS-1));
+            return PJ_EINVAL;
+        }
         if (!pjsua_call_is_active(call_id)) {
             PJ_LOG(2, (THIS_FILE, "Call %d is not active", call_id));
             return PJ_EINVAL;
@@ -1505,6 +1510,11 @@ static pj_status_t stop_playback(pjsua_call_id call_id)
     if (call_id == -1) {
         target_call = app_config.dyn_player_call;
     } else {
+        if (call_id < 0 || call_id >= (int)PJSUA_MAX_CALLS) {
+            PJ_LOG(2, (THIS_FILE, "Invalid call_id %d (valid range: -1 or 0-%d)",
+                      call_id, PJSUA_MAX_CALLS-1));
+            return PJ_EINVAL;
+        }
         target_call = call_id;
     }
 
@@ -1596,6 +1606,11 @@ static pj_status_t start_recording(pjsua_call_id call_id, const char *filename)
             return PJ_SUCCESS;
         }
     } else {
+        if (call_id < 0 || call_id >= (int)PJSUA_MAX_CALLS) {
+            PJ_LOG(2, (THIS_FILE, "Invalid call_id %d (valid range: -1 or 0-%d)",
+                      call_id, PJSUA_MAX_CALLS-1));
+            return PJ_EINVAL;
+        }
         if (!pjsua_call_is_active(call_id)) {
             PJ_LOG(2, (THIS_FILE, "Call %d is not active", call_id));
             return PJ_EINVAL;
@@ -1698,6 +1713,11 @@ static pj_status_t stop_recording(pjsua_call_id call_id)
     if (call_id == -1) {
         target_call = app_config.dyn_rec_call;
     } else {
+        if (call_id < 0 || call_id >= (int)PJSUA_MAX_CALLS) {
+            PJ_LOG(2, (THIS_FILE, "Invalid call_id %d (valid range: -1 or 0-%d)",
+                      call_id, PJSUA_MAX_CALLS-1));
+            return PJ_EINVAL;
+        }
         target_call = call_id;
     }
 

@@ -57,6 +57,10 @@ for f in os.listdir("scripts-run"):
 for f in os.listdir("scripts-call"):
     tests.append("mod_call.py scripts-call/" + f)
 
+# Add call wav tests (playwav/recwav)
+for f in os.listdir("scripts-call-wav"):
+    tests.append("mod_call_playrec.py scripts-call-wav/" + f)
+
 # Add presence tests
 for f in os.listdir("scripts-pres"):
     tests.append("mod_pres.py scripts-pres/" + f)
