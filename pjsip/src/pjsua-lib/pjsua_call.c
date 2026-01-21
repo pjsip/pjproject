@@ -1884,6 +1884,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         }
     }
 
+#if PJSUA_HAS_SIPREC
+
     /* Check if the INVITE request is a siprec
      * this function add PJSIP_INV_REQUIRE_SIPREC to options
      * and returns the value PJ_SUCCESS 
@@ -1914,6 +1916,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         goto on_return;
     }
 
+#endif
 
     if (pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_MANDATORY)
         options |= PJSIP_INV_REQUIRE_100REL;

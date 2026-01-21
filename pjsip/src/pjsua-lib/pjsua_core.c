@@ -1178,9 +1178,11 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     status = pjsip_timer_init_module(pjsua_var.endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+#if PJSUA_HAS_SIPREC
     /* Initialize siprec support */
     status = pjsip_siprec_init_module(pjsua_var.endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
 
     /* Initialize and register PJSUA application module. */
     {
