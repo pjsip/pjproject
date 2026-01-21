@@ -3871,6 +3871,21 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
             status = pjsip_100rel_tx_response(inv, tdata);
         } else 
         {
+            const pjsip_hdr *hdr;
+            pjsip_supported_hdr *sup_hdr = NULL;
+
+            /* Add Supported header */
+            hdr = pjsip_endpt_get_capability(inv->dlg->endpt,
+                                             PJSIP_H_SUPPORTED, NULL);
+            if (hdr) {
+                sup_hdr = (pjsip_supported_hdr*)
+                           pjsip_hdr_shallow_clone(tdata->pool, hdr);
+                pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sup_hdr);
+            }
+
+            /* Cleanup Allow & Supported headers from disabled extensions */
+            cleanup_allow_sup_hdr(inv->options, NULL, NULL, sup_hdr);
+
             status = pjsip_dlg_send_response(inv->dlg, inv->invite_tsx, tdata);
         }
 
