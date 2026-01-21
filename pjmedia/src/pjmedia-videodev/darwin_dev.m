@@ -39,6 +39,8 @@
 #define DEFAULT_WIDTH           640
 #define DEFAULT_HEIGHT          480
 #define DEFAULT_FPS             15
+/* When camera orientation is changed, will level relative to gravity */
+#define USE_HORIZON_LEVEL       1
 
 /* Define whether we should maintain the aspect ratio when rotating the image.
  * For more details, please refer to util.h.
@@ -149,6 +151,8 @@ struct darwin_stream
     UIView              *render_view;
     AVCaptureVideoPreviewLayer  *prev_layer;
     UIView                      *prev_view;
+
+    void                *rotation_coord;
 #endif
 
     pj_timestamp         frame_ts;
@@ -840,7 +844,6 @@ static pj_status_t darwin_factory_create_stream(
                 break;
             }
         }
-        
         strm->cap_session.sessionPreset = darwin_sizes[i].preset_str;
         
         /* If the requested size is portrait (or landscape), we make
@@ -963,8 +966,13 @@ static pj_status_t darwin_factory_create_stream(
         if ((param->flags & PJMEDIA_VID_DEV_CAP_ORIENTATION) ||
             (vfd->size.h > vfd->size.w))
         {
-            if (param->orient == PJMEDIA_ORIENT_UNKNOWN)
+            if (param->orient == PJMEDIA_ORIENT_UNKNOWN) {
+#if (USE_HORIZON_LEVEL)
+                param->orient = PJMEDIA_ORIENT_ROTATE_90DEG;
+#else
                 param->orient = PJMEDIA_ORIENT_NATURAL;
+#endif
+            }
             darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
                                &param->orient);
         }
@@ -1308,16 +1316,39 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
 #if (TARGET_OS_IPHONE && defined(__IPHONE_17_0)) || \
     (TARGET_OS_OSX && defined(__MAC_14_0))
             if (@available(macOS 14.0, iOS 17.0, *)) {
-
-                const CGFloat cap_ori[4] = { 0, 90, 180, 270};
                 AVCaptureConnection *vidcon;
+                const CGFloat cap_ori[4] = { 0, 90, 180, 270};
+                int rotation = cap_ori[strm->param.orient-1];
 
+#if (USE_HORIZON_LEVEL)
+                AVCaptureDeviceRotationCoordinator *coord = nil;
+                if (strm->rotation_coord) {
+                    coord = (AVCaptureDeviceRotationCoordinator *)
+                                                        strm->rotation_coord;
+
+                    /* Check if device is switched */
+                    if (coord.device != strm->dev_input.device) {
+                        coord = nil;
+                    }
+                }
+
+                if (!coord) {
+                    coord = [[AVCaptureDeviceRotationCoordinator alloc]
+                              initWithDevice:strm->dev_input.device
+                              previewLayer:nil];
+
+                    strm->rotation_coord = coord;
+                }
+                if (coord) {
+                    rotation = coord.videoRotationAngleForHorizonLevelCapture;
+                }
+
+#endif
                 vidcon = [strm->video_output
                           connectionWithMediaType:AVMediaTypeVideo];
-                if ([vidcon isVideoRotationAngleSupported:
-                            cap_ori[strm->param.orient-1]])
+                if ([vidcon isVideoRotationAngleSupported:rotation])
                 {
-                    vidcon.videoRotationAngle = cap_ori[strm->param.orient-1];
+                    vidcon.videoRotationAngle = rotation;
                     support_ori = PJ_TRUE;
                 }
 
