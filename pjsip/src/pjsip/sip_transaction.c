@@ -806,23 +806,25 @@ static pj_status_t mod_tsx_layer_stop(void)
 
     PJ_LOG(4,(THIS_FILE, "Stopping transaction layer module"));
 
-    pj_mutex_lock(mod_tsx_layer.mutex);
-
     /* Destroy all transactions. */
-    it = pj_hash_first(mod_tsx_layer.htable, &it_buf);
-    while (it) {
-        pjsip_transaction *tsx = (pjsip_transaction*) 
-                                 pj_hash_this(mod_tsx_layer.htable, it);
-        pj_hash_iterator_t *next = pj_hash_next(mod_tsx_layer.htable, it);
+    do {
+        pjsip_transaction *tsx = NULL;
+
+        pj_mutex_lock(mod_tsx_layer.mutex);
+
+        it = pj_hash_first(mod_tsx_layer.htable, &it_buf);
+        if (it) {
+            tsx = (pjsip_transaction *)pj_hash_this(mod_tsx_layer.htable, it);
+            if (tsx) mod_tsx_layer_unregister_tsx(tsx);
+        }
+
+        pj_mutex_unlock(mod_tsx_layer.mutex);
+
         if (tsx) {
             pjsip_tsx_terminate(tsx, PJSIP_SC_SERVICE_UNAVAILABLE);
-            mod_tsx_layer_unregister_tsx(tsx);
             tsx_shutdown(tsx);
         }
-        it = next;
-    }
-
-    pj_mutex_unlock(mod_tsx_layer.mutex);
+    } while (it);
 
     PJ_LOG(4,(THIS_FILE, "Stopped transaction layer module"));
 
