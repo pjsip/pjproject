@@ -39,7 +39,9 @@
 #define DEFAULT_WIDTH           640
 #define DEFAULT_HEIGHT          480
 #define DEFAULT_FPS             15
-/* When camera orientation is changed, will level relative to gravity */
+/* When the camera orientation changes, maintain horizon-level capture
+ * relative to gravity.
+ */
 #define USE_HORIZON_LEVEL       1
 
 /* Define whether we should maintain the aspect ratio when rotating the image.
@@ -151,10 +153,7 @@ struct darwin_stream
     UIView              *render_view;
     AVCaptureVideoPreviewLayer  *prev_layer;
     UIView                      *prev_view;
-
-    void                *rotation_coord;
 #endif
-
     pj_timestamp         frame_ts;
     unsigned             ts_inc;
 };
@@ -968,10 +967,12 @@ static pj_status_t darwin_factory_create_stream(
         {
             if (param->orient == PJMEDIA_ORIENT_UNKNOWN) {
 #if (USE_HORIZON_LEVEL)
-                param->orient = PJMEDIA_ORIENT_ROTATE_90DEG;
-#else
-                param->orient = PJMEDIA_ORIENT_NATURAL;
+                /* Handle sending portrait. */
+                if (vfd->size.h > vfd->size.w)
+                    param->orient = PJMEDIA_ORIENT_ROTATE_90DEG;
+                else
 #endif
+                param->orient = PJMEDIA_ORIENT_NATURAL;
             }
             darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
                                &param->orient);
@@ -1321,28 +1322,14 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                 int rotation = cap_ori[strm->param.orient-1];
 
 #if (USE_HORIZON_LEVEL)
-                AVCaptureDeviceRotationCoordinator *coord = nil;
-                if (strm->rotation_coord) {
-                    coord = (AVCaptureDeviceRotationCoordinator *)
-                                                        strm->rotation_coord;
-
-                    /* Check if device is switched */
-                    if (coord.device != strm->dev_input.device) {
-                        coord = nil;
-                    }
-                }
-
-                if (!coord) {
-                    coord = [[AVCaptureDeviceRotationCoordinator alloc]
-                              initWithDevice:strm->dev_input.device
-                              previewLayer:nil];
-
-                    strm->rotation_coord = coord;
-                }
+                AVCaptureDeviceRotationCoordinator *coord =
+                    [[AVCaptureDeviceRotationCoordinator alloc]
+                     initWithDevice:strm->dev_input.device
+                     previewLayer:nil];
                 if (coord) {
                     rotation = coord.videoRotationAngleForHorizonLevelCapture;
+                    [coord release];
                 }
-
 #endif
                 vidcon = [strm->video_output
                           connectionWithMediaType:AVMediaTypeVideo];
