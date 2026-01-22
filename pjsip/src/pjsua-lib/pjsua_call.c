@@ -1877,6 +1877,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     options |= PJSIP_INV_SUPPORT_100REL;
     options |= PJSIP_INV_SUPPORT_TIMER;
 
+#if PJSUA_HAS_SIPREC
+
     if(pjsua_var.acc[acc_id].cfg.use_siprec != PJSUA_SIP_SIPREC_INACTIVE){
         options |= PJSIP_INV_SUPPORT_SIPREC;
         if(pjsua_var.acc[acc_id].cfg.use_siprec == PJSUA_SIP_SIPREC_MANDATORY){
@@ -1914,6 +1916,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         goto on_return;
     }
 
+#endif
 
     if (pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_MANDATORY)
         options |= PJSIP_INV_REQUIRE_100REL;

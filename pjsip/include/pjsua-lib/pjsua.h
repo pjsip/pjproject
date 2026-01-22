@@ -452,6 +452,20 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #   define PJSUA_DETECT_MERGED_REQUESTS  1
 #endif
 
+
+/**
+ * Is session record (siprec) enabled.
+ *
+ * This feature is not fully implemented yet. Currently it only signals and
+ * verifies siprec capability in Supported & Required headers in INVITE.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJSUA_HAS_SIPREC
+#   define PJSUA_HAS_SIPREC              0
+#endif
+
+
 /**
  * This enumeration represents pjsua state.
  */
