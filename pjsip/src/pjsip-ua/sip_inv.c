@@ -3871,21 +3871,6 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
             status = pjsip_100rel_tx_response(inv, tdata);
         } else 
         {
-            const pjsip_hdr *hdr;
-            pjsip_supported_hdr *sup_hdr = NULL;
-
-            /* Add Supported header */
-            hdr = pjsip_endpt_get_capability(inv->dlg->endpt,
-                                             PJSIP_H_SUPPORTED, NULL);
-            if (hdr) {
-                sup_hdr = (pjsip_supported_hdr*)
-                           pjsip_hdr_shallow_clone(tdata->pool, hdr);
-                pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sup_hdr);
-            }
-
-            /* Cleanup Allow & Supported headers from disabled extensions */
-            cleanup_allow_sup_hdr(inv->options, NULL, NULL, sup_hdr);
-
             status = pjsip_dlg_send_response(inv->dlg, inv->invite_tsx, tdata);
         }
 
@@ -5856,6 +5841,42 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
             /* Invoke Session Timers */
             pjsip_timer_update_resp(inv, tdata);
+
+            /* Add the Allow and Supported headers here.
+             * If omitted, the dialog will insert them automatically,
+             * but without removing entries from disabled extensions.
+             */            
+            {
+                const pjsip_hdr *hdr;
+                pjsip_allow_hdr *allow_hdr = NULL;
+                pjsip_supported_hdr *sup_hdr = NULL;
+
+                if (dlg->add_allow &&
+                    !pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL))
+                {
+                    hdr = pjsip_endpt_get_capability(dlg->endpt,
+                                                     PJSIP_H_ALLOW, NULL);
+                    if (hdr) {
+                        allow_hdr = (pjsip_allow_hdr*)
+                                    pjsip_hdr_clone(tdata->pool, hdr);
+                        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)allow_hdr);
+                    }
+                }
+
+                if (!pjsip_msg_find_hdr(tdata->msg, PJSIP_H_SUPPORTED, NULL))
+                {
+                    hdr = pjsip_endpt_get_capability(inv->dlg->endpt,
+                                                     PJSIP_H_SUPPORTED, NULL);
+                    if (hdr) {
+                        sup_hdr = (pjsip_supported_hdr*)
+                                  pjsip_hdr_clone(tdata->pool, hdr);
+                        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sup_hdr);
+                    }
+                }
+
+                /* Cleanup the Supported headers from disabled extensions */
+                cleanup_allow_sup_hdr(inv->options, NULL, allow_hdr, sup_hdr);
+            }
 
             /* Send 2xx regardless of the status of negotiation */
             status = pjsip_inv_send_msg(inv, tdata);
