@@ -2080,7 +2080,8 @@ static void cleanup_allow_sup_hdr(unsigned inv_option,
     /* If all extensions are enabled, nothing to do */
     if ((inv_option & PJSIP_INV_SUPPORT_100REL) &&
         (inv_option & PJSIP_INV_SUPPORT_TIMER) &&
-        (inv_option & PJSIP_INV_SUPPORT_TRICKLE_ICE))
+        (inv_option & PJSIP_INV_SUPPORT_TRICKLE_ICE) &&
+        (inv_option & PJSIP_INV_SUPPORT_SIPREC))
     {
         return;
     }
