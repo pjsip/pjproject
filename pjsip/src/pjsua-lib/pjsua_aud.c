@@ -2667,6 +2667,10 @@ PJ_DEF(pj_status_t) pjsua_ext_snd_dev_create( pjmedia_snd_port_param *param,
     if (status != PJ_SUCCESS)
         goto on_return;
 
+    /* Subscribe to audio device events */
+    pjmedia_event_subscribe(NULL, &on_media_event, NULL,
+                           pjmedia_snd_port_get_snd_stream(snd->snd_port));
+
     /* Finally */
     *p_snd = snd;
     PJ_LOG(4,(THIS_FILE, "Extra sound device created"));
@@ -2696,6 +2700,14 @@ PJ_DEF(pj_status_t) pjsua_ext_snd_dev_destroy(pjsua_ext_snd_dev *snd)
 
     /* Destroy all components */
     if (snd->snd_port) {
+        pjmedia_aud_stream *strm;
+        
+        /* Unsubscribe from audio device events */
+        strm = pjmedia_snd_port_get_snd_stream(snd->snd_port);
+        if (strm) {
+            pjmedia_event_unsubscribe(NULL, &on_media_event, NULL, strm);
+        }
+        
         pjmedia_snd_port_disconnect(snd->snd_port);
         pjmedia_snd_port_destroy(snd->snd_port);
         snd->snd_port = NULL;

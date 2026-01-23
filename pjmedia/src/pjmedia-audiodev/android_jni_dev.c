@@ -28,6 +28,7 @@
 #include <pj/os.h>
 #include <pj/string.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/event.h>
 
 #if defined(PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI) && \
     PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI != 0
@@ -221,8 +222,24 @@ static int AndroidRecorderCallback(void *userData)
         status = (*stream->rec_cb)(stream->user_data, &frame);
         (*jni_env)->ReleaseShortArrayElements(jni_env, inputBuffer, buf,
                                               JNI_ABORT);
-        if (status != PJ_SUCCESS || stream->quit_flag)
+        if (status != PJ_SUCCESS || stream->quit_flag) {
+            if (status != PJ_SUCCESS && !stream->quit_flag) {
+                pjmedia_event e;
+                
+                PJ_PERROR(3, (THIS_FILE, status, "Android JNI recorder callback stopped due to error"));
+                
+                /* Broadcast Android JNI record error */
+                pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
+                                  &stream->rec_timestamp, &stream->base);
+                e.data.aud_dev_err.dir = PJMEDIA_DIR_CAPTURE;
+                e.data.aud_dev_err.status = status;
+                e.data.aud_dev_err.id = stream->param.rec_id;
+                
+                pjmedia_event_publish(NULL, &stream->base, &e,
+                                     PJMEDIA_EVENT_PUBLISH_DEFAULT);
+            }
             break;
+        }
 
         stream->rec_timestamp.u64 += stream->param.samples_per_frame /
                                      stream->param.channel_count;
@@ -305,8 +322,24 @@ static int AndroidTrackCallback(void *userData)
         frame.bit_info = 0;
         
         status = (*stream->play_cb)(stream->user_data, &frame);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            if (!stream->quit_flag) {
+                pjmedia_event e;
+                
+                PJ_PERROR(3, (THIS_FILE, status, "Android JNI playback callback stopped due to error"));
+                
+                /* Broadcast Android JNI playback error */
+                pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
+                                  &stream->play_timestamp, &stream->base);
+                e.data.aud_dev_err.dir = PJMEDIA_DIR_PLAYBACK;
+                e.data.aud_dev_err.status = status;
+                e.data.aud_dev_err.id = stream->param.play_id;
+                
+                pjmedia_event_publish(NULL, &stream->base, &e,
+                                     PJMEDIA_EVENT_PUBLISH_DEFAULT);
+            }
             continue;
+        }
         
         if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
             pj_bzero(frame.buf, frame.size);
