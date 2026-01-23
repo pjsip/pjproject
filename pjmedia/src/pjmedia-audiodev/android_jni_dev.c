@@ -222,8 +222,8 @@ static int AndroidRecorderCallback(void *userData)
         status = (*stream->rec_cb)(stream->user_data, &frame);
         (*jni_env)->ReleaseShortArrayElements(jni_env, inputBuffer, buf,
                                               JNI_ABORT);
-        if (status != PJ_SUCCESS) {
-            if (!stream->quit_flag) {
+        if (status != PJ_SUCCESS || stream->quit_flag) {
+            if (status != PJ_SUCCESS && !stream->quit_flag) {
                 pjmedia_event e;
                 
                 PJ_PERROR(3, (THIS_FILE, status, "Android JNI recorder callback stopped due to error"));
@@ -240,8 +240,6 @@ static int AndroidRecorderCallback(void *userData)
             }
             break;
         }
-        if (stream->quit_flag)
-            break;
 
         stream->rec_timestamp.u64 += stream->param.samples_per_frame /
                                      stream->param.channel_count;

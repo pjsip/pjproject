@@ -211,11 +211,14 @@ void bqPlayerCallback(W_SLBufferQueueItf bq, void *context)
                 pjmedia_event_publish(NULL, &stream->base, &e,
                                      PJMEDIA_EVENT_PUBLISH_DEFAULT);
             }
-            return;
         }
         
-        if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
-            pj_bzero(buf, stream->playerBufferSize);
+        if (status != PJ_SUCCESS || frame.type != PJMEDIA_FRAME_TYPE_AUDIO) {
+            if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
+                pj_bzero(buf, stream->playerBufferSize);
+            if (status != PJ_SUCCESS)
+                return;
+        }
         
         stream->play_timestamp.u64 += stream->param.samples_per_frame /
                                       stream->param.channel_count;
