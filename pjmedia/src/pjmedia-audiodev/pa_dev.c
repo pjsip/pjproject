@@ -21,6 +21,7 @@
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/string.h>
+#include <pjmedia/event.h>
 
 #if PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
 
@@ -266,6 +267,21 @@ static int PaRecorderCallback(const void *input,
         return paContinue;
 
 on_break:
+    if (status != PJ_SUCCESS && !stream->quit_flag) {
+        pjmedia_event e;
+        
+        PJ_PERROR(3, (THIS_FILE, status, "PortAudio recorder callback stopped due to error"));
+        
+        /* Broadcast PortAudio recorder error */
+        pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
+                          &stream->rec_timestamp, &stream->base);
+        e.data.aud_dev_err.dir = PJMEDIA_DIR_CAPTURE;
+        e.data.aud_dev_err.status = status;
+        e.data.aud_dev_err.id = stream->rec_id;
+        
+        pjmedia_event_publish(NULL, &stream->base, &e,
+                             PJMEDIA_EVENT_PUBLISH_DEFAULT);
+    }
     stream->rec_thread_exited = 1;
     return paAbort;
 }
@@ -388,6 +404,21 @@ static int PaPlayerCallback( const void *input,
         return paContinue;
 
 on_break:
+    if (status != PJ_SUCCESS && !stream->quit_flag) {
+        pjmedia_event e;
+        
+        PJ_PERROR(3, (THIS_FILE, status, "PortAudio playback callback stopped due to error"));
+        
+        /* Broadcast PortAudio playback error */
+        pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
+                          &stream->play_timestamp, &stream->base);
+        e.data.aud_dev_err.dir = PJMEDIA_DIR_PLAYBACK;
+        e.data.aud_dev_err.status = status;
+        e.data.aud_dev_err.id = stream->play_id;
+        
+        pjmedia_event_publish(NULL, &stream->base, &e,
+                             PJMEDIA_EVENT_PUBLISH_DEFAULT);
+    }
     stream->play_thread_exited = 1;
     return paAbort;
 }
