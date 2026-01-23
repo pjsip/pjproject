@@ -2080,7 +2080,8 @@ static void cleanup_allow_sup_hdr(unsigned inv_option,
     /* If all extensions are enabled, nothing to do */
     if ((inv_option & PJSIP_INV_SUPPORT_100REL) &&
         (inv_option & PJSIP_INV_SUPPORT_TIMER) &&
-        (inv_option & PJSIP_INV_SUPPORT_TRICKLE_ICE))
+        (inv_option & PJSIP_INV_SUPPORT_TRICKLE_ICE) &&
+        (inv_option & PJSIP_INV_SUPPORT_SIPREC))
     {
         return;
     }
@@ -2117,6 +2118,11 @@ static void cleanup_allow_sup_hdr(unsigned inv_option,
             remove_val_from_array_hdr(allow_hdr, &STR_PRACK);
         if (sup_hdr)
             remove_val_from_array_hdr(sup_hdr, &STR_100REL);
+    }
+
+    if ((inv_option & PJSIP_INV_SUPPORT_SIPREC) == 0 && sup_hdr) {
+        const pj_str_t STR_SIPREC = { "siprec", 6 };
+        remove_val_from_array_hdr(sup_hdr, &STR_SIPREC);
     }
 }
 
@@ -5836,6 +5842,42 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
             /* Invoke Session Timers */
             pjsip_timer_update_resp(inv, tdata);
+
+            /* Add the Allow and Supported headers here.
+             * If omitted, the dialog will insert them automatically,
+             * but without removing entries from disabled extensions.
+             */            
+            {
+                const pjsip_hdr *hdr;
+                pjsip_allow_hdr *allow_hdr = NULL;
+                pjsip_supported_hdr *sup_hdr = NULL;
+
+                if (dlg->add_allow &&
+                    !pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ALLOW, NULL))
+                {
+                    hdr = pjsip_endpt_get_capability(dlg->endpt,
+                                                     PJSIP_H_ALLOW, NULL);
+                    if (hdr) {
+                        allow_hdr = (pjsip_allow_hdr*)
+                                    pjsip_hdr_clone(tdata->pool, hdr);
+                        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)allow_hdr);
+                    }
+                }
+
+                if (!pjsip_msg_find_hdr(tdata->msg, PJSIP_H_SUPPORTED, NULL))
+                {
+                    hdr = pjsip_endpt_get_capability(inv->dlg->endpt,
+                                                     PJSIP_H_SUPPORTED, NULL);
+                    if (hdr) {
+                        sup_hdr = (pjsip_supported_hdr*)
+                                  pjsip_hdr_clone(tdata->pool, hdr);
+                        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sup_hdr);
+                    }
+                }
+
+                /* Cleanup the Supported headers from disabled extensions */
+                cleanup_allow_sup_hdr(inv->options, NULL, allow_hdr, sup_hdr);
+            }
 
             /* Send 2xx regardless of the status of negotiation */
             status = pjsip_inv_send_msg(inv, tdata);
