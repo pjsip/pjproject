@@ -19,6 +19,7 @@
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
+#include <pjmedia/event.h>
 
 #if PJMEDIA_AUDIO_DEV_HAS_COREAUDIO
 
@@ -1012,6 +1013,21 @@ static OSStatus input_callback(void                       *inRefCon,
     return noErr;
 
 on_break:
+    if (status != PJ_SUCCESS && !strm->quit_flag) {
+        pjmedia_event e;
+        
+        PJ_PERROR(3, (THIS_FILE, status, "CoreAudio input callback stopped due to error"));
+        
+        /* Broadcast CoreAudio input error */
+        pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
+                          &strm->rec_timestamp, &strm->base);
+        e.data.aud_dev_err.dir = PJMEDIA_DIR_CAPTURE;
+        e.data.aud_dev_err.status = status;
+        e.data.aud_dev_err.id = strm->param.rec_id;
+        
+        pjmedia_event_publish(NULL, &strm->base, &e,
+                             PJMEDIA_EVENT_PUBLISH_DEFAULT);
+    }
     return -1;
 }
 
@@ -1155,6 +1171,21 @@ static OSStatus output_renderer(void                       *inRefCon,
     return noErr;
 
 on_break:
+    if (status != PJ_SUCCESS && !stream->quit_flag) {
+        pjmedia_event e;
+        
+        PJ_PERROR(3, (THIS_FILE, status, "CoreAudio output callback stopped due to error"));
+        
+        /* Broadcast CoreAudio output error */
+        pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
+                          &stream->play_timestamp, &stream->base);
+        e.data.aud_dev_err.dir = PJMEDIA_DIR_PLAYBACK;
+        e.data.aud_dev_err.status = status;
+        e.data.aud_dev_err.id = stream->param.play_id;
+        
+        pjmedia_event_publish(NULL, &stream->base, &e,
+                             PJMEDIA_EVENT_PUBLISH_DEFAULT);
+    }
     return -1;
 }
 
