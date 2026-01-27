@@ -1239,7 +1239,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
 
     accept_op = (struct accept_operation*)op_key;
     PJ_ASSERT_RETURN(accept_op->op == PJ_IOQUEUE_OP_NONE, PJ_EPENDING);
-    accept_op->op = PJ_IOQUEUE_OP_NONE;
 
     /* Fast track:
      *  See if there's new connection available immediately.
@@ -1267,6 +1266,20 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
         }
     }
 
+    pj_ioqueue_lock_key(key);
+    /* Check again. Handle may have been closed after the previous check
+     * in multithreaded app. If we add bad handle to the set it will
+     * corrupt the ioqueue set. See #913
+     */
+    if (IS_CLOSING(key)) {
+        pj_ioqueue_unlock_key(key);
+        return PJ_ECANCELLED;
+    }
+
+    /* Also check accept_op->op again, this time while holding lock. */
+    PJ_ASSERT_ON_FAIL(accept_op->op == PJ_IOQUEUE_OP_NONE,
+                      {pj_ioqueue_unlock_key(key); return PJ_ECANCELLED;});
+
     /*
      * No connection is available immediately.
      * Schedule accept() operation to be completed when there is incoming
@@ -1278,15 +1291,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     accept_op->addrlen= addrlen;
     accept_op->local_addr = local;
 
-    pj_ioqueue_lock_key(key);
-    /* Check again. Handle may have been closed after the previous check
-     * in multithreaded app. If we add bad handle to the set it will
-     * corrupt the ioqueue set. See #913
-     */
-    if (IS_CLOSING(key)) {
-        pj_ioqueue_unlock_key(key);
-        return PJ_ECANCELLED;
-    }
     pj_list_insert_before(&key->accept_list, accept_op);
     ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
     pj_ioqueue_unlock_key(key);
