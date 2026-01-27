@@ -805,7 +805,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
 
     read_op = (struct read_operation*)op_key;
     PJ_ASSERT_RETURN(read_op->op == PJ_IOQUEUE_OP_NONE, PJ_EPENDING);
-    read_op->op = PJ_IOQUEUE_OP_NONE;
 
     /* Try to see if there's data immediately available. 
      */
@@ -830,15 +829,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
 
     flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
 
-    /*
-     * No data is immediately available.
-     * Must schedule asynchronous operation to the ioqueue.
-     */
-    read_op->op = PJ_IOQUEUE_OP_RECV;
-    read_op->buf = buffer;
-    read_op->size = *length;
-    read_op->flags = flags;
-
     pj_ioqueue_lock_key(key);
     /* Check again. Handle may have been closed after the previous check
      * in multithreaded app. If we add bad handle to the set it will
@@ -848,6 +838,19 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
         pj_ioqueue_unlock_key(key);
         return PJ_ECANCELLED;
     }
+
+    /* Also check read_op->op again, this time while holding lock. */
+    PJ_ASSERT_ON_FAIL(read_op->op == PJ_IOQUEUE_OP_NONE,
+                      {pj_ioqueue_unlock_key(key); return PJ_EPENDING;});
+    /*
+     * No data is immediately available.
+     * Must schedule asynchronous operation to the ioqueue.
+     */
+    read_op->op = PJ_IOQUEUE_OP_RECV;
+    read_op->buf = buffer;
+    read_op->size = *length;
+    read_op->flags = flags;
+
     pj_list_insert_before(&key->read_list, read_op);
     ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
     pj_ioqueue_unlock_key(key);
