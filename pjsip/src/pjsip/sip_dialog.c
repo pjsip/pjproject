@@ -556,14 +556,6 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     }
     dlg->route_set_frozen = PJ_TRUE;
 
-    /* Increment the dialog's lock since tsx may cause the dialog to be
-     * destroyed prematurely (such as in case of transport error).
-     */
-    if (inc_lock) {
-        pjsip_dlg_inc_lock(dlg);
-        lock_incremented = PJ_TRUE;
-    }
-
     /* Create tsx lock first so we can lock it before creating
      * the transaction. This is to avoid deadlock by preventing
      * the newly created transaction to process messages before
@@ -575,6 +567,14 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 
     pj_grp_lock_add_ref(tsx_lock);
     pj_grp_lock_acquire(tsx_lock);
+
+    /* Increment the dialog's lock since tsx may cause the dialog to be
+     * destroyed prematurely (such as in case of transport error).
+     */
+    if (inc_lock) {
+        pjsip_dlg_inc_lock(dlg);
+        lock_incremented = PJ_TRUE;
+    }
 
     /* Create UAS transaction for this request. */
     status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
@@ -1726,7 +1726,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_respond(  pjsip_dialog *dlg,
  */
 void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 {
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
     pjsip_transaction *tsx = NULL;
     pj_grp_lock_t *tsx_lock = NULL;
     pj_bool_t processed = PJ_FALSE;
@@ -1735,6 +1735,21 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     PJ_LOG(5,(dlg->obj_name, "Received %s",
               pjsip_rx_data_get_info(rdata)));
     pj_log_push_indent();
+
+    if (pjsip_rdata_get_tsx(rdata) == NULL &&
+        rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD)
+    {
+        /* Create tsx lock first so we can lock it before creating
+         * the transaction. This is to avoid deadlock by preventing
+         * the newly created transaction to process messages before
+         * this function returns.
+         */
+        status = pj_grp_lock_create(dlg->pool, NULL, &tsx_lock);
+        if (status == PJ_SUCCESS) {
+            pj_grp_lock_add_ref(tsx_lock);
+            pj_grp_lock_acquire(tsx_lock);
+        }
+    }
 
     /* Lock dialog and increment session. */
     pjsip_dlg_inc_lock(dlg);
@@ -1777,15 +1792,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     if (pjsip_rdata_get_tsx(rdata) == NULL &&
         rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD)
     {
-        /* Create tsx lock first so we can lock it before creating
-         * the transaction. This is to avoid deadlock by preventing
-         * the newly created transaction to process messages before
-         * this function returns.
-         */
-        status = pj_grp_lock_create(dlg->pool, NULL, &tsx_lock);
         if (status == PJ_SUCCESS) {
-            pj_grp_lock_add_ref(tsx_lock);
-            pj_grp_lock_acquire(tsx_lock);
             status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
         }
 
@@ -2240,8 +2247,8 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
               tsx->obj_name, pjsip_tsx_state_str(tsx->state)));
     pj_log_push_indent();
 
-    /* Lock the dialog and increment session. */
-    pjsip_dlg_inc_lock(dlg);
+    /* Prevent dialog from premature destruction. */
+    pj_grp_lock_add_ref(dlg->grp_lock_);
 
     /* Pass to dialog usages. */
     for (i=0; i<dlg->usage_cnt; ++i) {
@@ -2261,12 +2268,17 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
         tsx->mod_data[dlg->ua->id] == dlg)
     {
         pj_assert(dlg->tsx_count>0);
+
+        pj_grp_lock_acquire(dlg->grp_lock_);
+
         --dlg->tsx_count;
         tsx->mod_data[dlg->ua->id] = NULL;
+
+        pj_grp_lock_release(dlg->grp_lock_);
     }
 
-    /* Unlock dialog and dec session, may destroy dialog. */
-    pjsip_dlg_dec_lock(dlg);
+    /* Dec ref, may destroy dialog. */
+    pj_grp_lock_dec_ref(dlg->grp_lock_);
     pj_log_pop_indent();
 }
 
