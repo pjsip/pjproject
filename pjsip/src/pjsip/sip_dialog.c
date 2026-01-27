@@ -2240,6 +2240,9 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
               tsx->obj_name, pjsip_tsx_state_str(tsx->state)));
     pj_log_push_indent();
 
+    /* Lock the dialog and increment session. */
+    pjsip_dlg_inc_lock(dlg);
+
     /* Pass to dialog usages. */
     for (i=0; i<dlg->usage_cnt; ++i) {
 
@@ -2258,17 +2261,12 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
         tsx->mod_data[dlg->ua->id] == dlg)
     {
         pj_assert(dlg->tsx_count>0);
-
-        /* Lock the dialog and increment session. */
-        pjsip_dlg_inc_lock(dlg);
-
         --dlg->tsx_count;
         tsx->mod_data[dlg->ua->id] = NULL;
-
-        /* Unlock dialog and dec session, may destroy dialog. */
-        pjsip_dlg_dec_lock(dlg);
     }
 
+    /* Unlock dialog and dec session, may destroy dialog. */
+    pjsip_dlg_dec_lock(dlg);
     pj_log_pop_indent();
 }
 
