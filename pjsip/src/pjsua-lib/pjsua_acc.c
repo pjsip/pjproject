@@ -4495,6 +4495,9 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
                "by IP change", (int)acc->cfg.id.slen,
                acc->cfg.id.ptr, (need_unreg ? "un-" : "")));
 
+    /* Prepare for contact rewrite */
+    acc->contact_rewritten = PJ_FALSE;
+
     status = pjsua_acc_set_registration(acc->index, !need_unreg);
     if ((status != PJ_SUCCESS)
         && (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT))
