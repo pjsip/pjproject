@@ -879,7 +879,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
 
     read_op = (struct read_operation*)op_key;
     PJ_ASSERT_RETURN(read_op->op == PJ_IOQUEUE_OP_NONE, PJ_EPENDING);
-    read_op->op = PJ_IOQUEUE_OP_NONE;
 
     /* Try to see if there's data immediately available. 
      */
@@ -905,6 +904,19 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
 
     flags &= ~(PJ_IOQUEUE_ALWAYS_ASYNC);
 
+    pj_ioqueue_lock_key(key);
+    /* Check again. Handle may have been closed after the previous check
+     * in multithreaded app. If we add bad handle to the set it will
+     * corrupt the ioqueue set. See #913
+     */
+    if (IS_CLOSING(key)) {
+        pj_ioqueue_unlock_key(key);
+        return PJ_ECANCELLED;
+    }
+
+    /* Also check read_op->op again, this time while holding lock. */
+    PJ_ASSERT_ON_FAIL(read_op->op == PJ_IOQUEUE_OP_NONE,
+                      {pj_ioqueue_unlock_key(key); return PJ_EPENDING;});
     /*
      * No data is immediately available.
      * Must schedule asynchronous operation to the ioqueue.
@@ -916,15 +928,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
     read_op->rmt_addr = addr;
     read_op->rmt_addrlen = addrlen;
 
-    pj_ioqueue_lock_key(key);
-    /* Check again. Handle may have been closed after the previous check
-     * in multithreaded app. If we add bad handle to the set it will
-     * corrupt the ioqueue set. See #913
-     */
-    if (IS_CLOSING(key)) {
-        pj_ioqueue_unlock_key(key);
-        return PJ_ECANCELLED;
-    }
     pj_list_insert_before(&key->read_list, read_op);
     ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
     pj_ioqueue_unlock_key(key);
@@ -1024,12 +1027,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
         return PJ_EBUSY;
     }
 
-    write_op->op = PJ_IOQUEUE_OP_SEND;
-    write_op->buf = (char*)data;
-    write_op->size = *length;
-    write_op->written = 0;
-    write_op->flags = flags;
-    
     pj_ioqueue_lock_key(key);
     /* Check again. Handle may have been closed after the previous check
      * in multithreaded app. If we add bad handle to the set it will
@@ -1039,6 +1036,19 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
         pj_ioqueue_unlock_key(key);
         return PJ_ECANCELLED;
     }
+
+    /* Also check write_op->op again, this time while holding lock. */
+    if (write_op->op) {
+        pj_ioqueue_unlock_key(key);
+        return PJ_EBUSY;
+    }
+
+    write_op->op = PJ_IOQUEUE_OP_SEND;
+    write_op->buf = (char*)data;
+    write_op->size = *length;
+    write_op->written = 0;
+    write_op->flags = flags;
+
     pj_list_insert_before(&key->write_list, write_op);
     ioqueue_add_to_set(key->ioqueue, key, WRITEABLE_EVENT);
     pj_ioqueue_unlock_key(key);
@@ -1172,14 +1182,6 @@ retry_on_restart:
         return PJ_EBUSY;
     }
 
-    write_op->op = PJ_IOQUEUE_OP_SEND_TO;
-    write_op->buf = (char*)data;
-    write_op->size = *length;
-    write_op->written = 0;
-    write_op->flags = flags;
-    pj_memcpy(&write_op->rmt_addr, addr, addrlen);
-    write_op->rmt_addrlen = addrlen;
-    
     pj_ioqueue_lock_key(key);
     /* Check again. Handle may have been closed after the previous check
      * in multithreaded app. If we add bad handle to the set it will
@@ -1189,6 +1191,21 @@ retry_on_restart:
         pj_ioqueue_unlock_key(key);
         return PJ_ECANCELLED;
     }
+
+    /* Also check write_op->op again, this time while holding lock. */
+    if (write_op->op) {
+        pj_ioqueue_unlock_key(key);
+        return PJ_EBUSY;
+    }
+
+    write_op->op = PJ_IOQUEUE_OP_SEND_TO;
+    write_op->buf = (char*)data;
+    write_op->size = *length;
+    write_op->written = 0;
+    write_op->flags = flags;
+    pj_memcpy(&write_op->rmt_addr, addr, addrlen);
+    write_op->rmt_addrlen = addrlen;
+
     pj_list_insert_before(&key->write_list, write_op);
     ioqueue_add_to_set(key->ioqueue, key, WRITEABLE_EVENT);
     pj_ioqueue_unlock_key(key);
