@@ -95,7 +95,6 @@ static pj_status_t create_srtp_transport(pjmedia_endpt *endpt,
 
     status = pjmedia_transport_srtp_create(endpt, *loop_tp, &srtp_opt, srtp_tp);
     if (status != PJ_SUCCESS) {
-        pjmedia_transport_close(*loop_tp);
         return status;
     }
 
