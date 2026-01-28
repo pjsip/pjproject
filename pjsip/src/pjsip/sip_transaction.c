@@ -1727,8 +1727,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas2(pjsip_module *tsx_user,
 
 
     /* Lock transaction. */
-    if (!grp_lock)
-        pj_grp_lock_acquire(tsx->grp_lock);
+    pj_grp_lock_acquire(tsx->grp_lock);
 
     /* Role is UAS */
     tsx->role = PJSIP_ROLE_UAS;
@@ -1816,8 +1815,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas2(pjsip_module *tsx_user,
     rdata->endpt_info.mod_data[mod_tsx_layer.mod.id] = tsx;
 
     /* Unlock transaction and return. */
-    if (!grp_lock)
-        pj_grp_lock_release(tsx->grp_lock);
+    pj_grp_lock_release(tsx->grp_lock);
 
     pj_log_push_indent();
     PJ_LOG(5,(tsx->obj_name, "Transaction created for %s",
