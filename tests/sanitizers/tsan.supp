@@ -40,11 +40,11 @@ deadlock:pjsip_dlg_on_tsx_state
 
 # Lock-order-inversion destroy_transport ../src/pjsip/sip_transport.c with:
 # - udp_shutdown ../src/pjsip/sip_transport_udp.c
-deadlock:destroy_transport
+#deadlock:destroy_transport
 
 # Lock-order-inversion lis_destroy ../src/pjsip/sip_transport_tcp.c with:
 # - pjsip_transport_register ../src/pjsip/sip_transport.c
-deadlock:lis_destroy
+#deadlock:lis_destroy
 
 #=============================================================================
 # Lock-order-inversion in pjsip_endpoint
