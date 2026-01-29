@@ -1411,8 +1411,8 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
 
     TRACE_((THIS_FILE, "Transport %s is being destroyed", tp->obj_name));
 
-    pj_lock_acquire(tp->lock);
     pj_lock_acquire(mgr->lock);
+    pj_lock_acquire(tp->lock);
 
     /*
      * Unregister timer, if any.
@@ -1477,8 +1477,8 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
                               "not found in the hash table", tp->obj_name));
     }
 
-    pj_lock_release(mgr->lock);
     pj_lock_release(tp->lock);
+    pj_lock_release(mgr->lock);
 
     /* Dec ref transport group lock, if any */
     if (tp->grp_lock) {
