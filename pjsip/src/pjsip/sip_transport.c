@@ -2006,7 +2006,11 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 
     PJ_LOG(5, (THIS_FILE, "Destroying transport manager"));
 
+    /* Last chance to wait for other tpmgr functions to finish before
+     * we destroy everything.
+     */
     pj_lock_acquire(mgr->lock);
+    pj_lock_release(mgr->lock);
 
     /*
      * Destroy all transports in the hash table.
@@ -2015,19 +2019,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
          itr = pj_hash_first(mgr->table, &itr_val))
     {
         transport *tp_ref;
-        pjsip_transport *tp;
-
         tp_ref = pj_hash_this(mgr->table, itr);
-        tp = tp_ref->tp;
-
-        /* We need to release first the transport manager's lock here.
-         * Later in the beginning of destroy_transport(), we will reacquire
-         * the lock, but only after acquiring the transport lock,
-         * to prevent lock ordering violation and avoid deadlock.
-         */
-        pj_lock_release(mgr->lock);
-        destroy_transport(mgr, tp);
-        pj_lock_acquire(mgr->lock);
+        destroy_transport(mgr, tp_ref->tp);
     }
 
     /*
@@ -2041,8 +2034,6 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 
         factory = next;
     }
-
-    pj_lock_release(mgr->lock);
 
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
     /* If you encounter assert error on this line, it means there are
