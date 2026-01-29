@@ -36,15 +36,55 @@ deadlock:stateless_send_transport_cb
 #14 pjsip_tsx_recv_msg ../src/pjsip/sip_transaction.c:2061
 
 deadlock:pjsip_dlg_on_tsx_state
+
 #=============================================================================
-
-# Lock-order-inversion destroy_transport ../src/pjsip/sip_transport.c with:
-# - udp_shutdown ../src/pjsip/sip_transport_udp.c
-deadlock:destroy_transport
-
-# Lock-order-inversion lis_destroy ../src/pjsip/sip_transport_tcp.c with:
-# - pjsip_transport_register ../src/pjsip/sip_transport.c
-deadlock:lis_destroy
+# Lock-order-inversion when destroying pjsip_transport or pjsip_tpmgr.
+# It involves:
+# (a) pjsip_tpmgr and pj_ioqueue, or
+# (b) pjsip_tpmgr, pjsip_transport, and pj_ioqueue
+# This should be okay because the inversion happens during destruction
+# when the transport has stopped working.
+#
+# Stack traces (a):
+#5 pj_ioqueue_lock_key ../src/pj/ioqueue_common_abs.c:1478
+#6 pj_activesock_close ../src/pj/activesock.c:317
+#7 lis_close ../src/pjsip/sip_transport_tcp.c:538
+#8 lis_destroy ../src/pjsip/sip_transport_tcp.c:548
+#9 pjsip_tpmgr_destroy ../src/pjsip/sip_transport.c:2029
+#10 pjsip_endpt_destroy ../src/pjsip/sip_endpoint.c:607
+#
+#3 pjsip_transport_register ../src/pjsip/sip_transport.c:1345
+#4 tcp_create ../src/pjsip/sip_transport_tcp.c:727
+#5 on_accept_complete ../src/pjsip/sip_transport_tcp.c:1192
+#6 ioqueue_on_accept_complete ../src/pj/activesock.c:914
+#7 ioqueue_dispatch_read_event ../src/pj/ioqueue_common_abs.c:536
+#8 pj_ioqueue_poll ../src/pj/ioqueue_select.c:1093
+#
+# Stack traces (b):
+# Mutex of pj_ioqueue acquired here while holding mutex of pjsip_tpmgr:
+#5 pj_ioqueue_lock_key ../src/pj/ioqueue_common_abs.c:1478
+#6 pj_ioqueue_connect ../src/pj/ioqueue_common_abs.c:1305
+#7 pj_activesock_start_connect ../src/pj/activesock.c:961
+#8 lis_create_transport ../src/pjsip/sip_transport_tcp.c:1063
+#9 pjsip_tpmgr_acquire_transport2 ../src/pjsip/sip_transport.c:2800
+#10 pjsip_tpmgr_acquire_transport ../src/pjsip/sip_transport.c:2493
+#11 pjsip_endpt_acquire_transport ../src/pjsip/sip_endpoint.c:1234
+#
+# Mutex of pjsip_tpmgr acquired here while holding mutex of pj_ioqueue:
+#2 pj_lock_acquire ../src/pj/lock.c:179
+#3 tp_state_callback ../src/pjsip/sip_transport.c:2924
+#4 on_connect_complete ../src/pjsip/sip_transport_tcp.c:1569
+#5 ioqueue_on_connect_complete ../src/pj/activesock.c:976
+#6 ioqueue_dispatch_write_event ../src/pj/ioqueue_common_abs.c:287
+#7 pj_ioqueue_poll ../src/pj/ioqueue_select.c:1097
+#
+# Mutex of pjsip_tpmgr acquired here while holding mutex of pjsip_transport:
+#2 pj_lock_acquire ../src/pj/lock.c:179
+#3 destroy_transport ../src/pjsip/sip_transport.c:1415
+#4 pjsip_transport_destroy ../src/pjsip/sip_transport.c:1583
+#
+deadlock:pjsip_tpmgr_destroy
+deadlock:pjsip_transport_destroy
 
 #=============================================================================
 # Lock-order-inversion in pjsip_endpoint
