@@ -2015,8 +2015,19 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
          itr = pj_hash_first(mgr->table, &itr_val))
     {
         transport *tp_ref;
+        pjsip_transport *tp;
+
         tp_ref = pj_hash_this(mgr->table, itr);
-        destroy_transport(mgr, tp_ref->tp);
+        tp = tp_ref->tp;
+
+        /* We need to release first the transport manager's lock here.
+         * Later in the beginning of destroy_transport(), we will reacquire
+         * the lock, but only after acquiring the transport lock,
+         * to prevent lock ordering violation and avoid deadlock.
+         */
+        pj_lock_release(mgr->lock);
+        destroy_transport(mgr, tp);
+        pj_lock_acquire(mgr->lock);
     }
 
     /*
