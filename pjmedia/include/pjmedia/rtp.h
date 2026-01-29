@@ -114,11 +114,11 @@ struct pjmedia_rtp_hdr
 struct pjmedia_rtp_add_hdr_short
 {
 #if defined(PJ_IS_BIG_ENDIAN) && (PJ_IS_BIG_ENDIAN!=0)
-    pj_uint16_t f:1;            /**< F bit (0 means last, 1 has more) */
-    pj_uint16_t pt:7;           /**< payload type                     */
+    pj_uint8_t f:1;            /**< F bit (0 means last, 1 has more) */
+    pj_uint8_t pt:7;           /**< payload type                     */
 #else
-    pj_uint16_t pt:7;           /**< payload type                     */
-    pj_uint16_t f:1;            /**< F bit (0 means last, 1 has more) */
+    pj_uint8_t pt:7;           /**< payload type                     */
+    pj_uint8_t f:1;            /**< F bit (0 means last, 1 has more) */
 #endif
 };
 #pragma pack()
