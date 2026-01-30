@@ -977,6 +977,17 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
         return PJ_FALSE;
     }
 
+    /* Handle retransmission (same branch) but different CSeq */
+    if (rdata->msg_info.msg->line.req.method.id == tsx->method.id &&
+        rdata->msg_info.cseq->cseq != tsx->cseq)
+    {
+        pj_str_t warn_text = pj_str("Retransmission with different CSeq");
+        pjsip_endpt_respond_stateless(mod_tsx_layer.endpt,
+                                      rdata, 500, &warn_text, NULL, NULL);
+        pj_mutex_unlock( mod_tsx_layer.mutex);
+        return PJ_TRUE;
+    }
+
     /* Prevent the transaction to get deleted before we have chance to lock it
      * in pjsip_tsx_recv_msg().
      */
@@ -1905,13 +1916,29 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 PJ_DEF(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
                                               int code )
 {
-    pj_time_val delay = {0, 100};
+    return pjsip_tsx_terminate_async2(tsx, code, 100);
+}
+
+
+/*
+ * Force terminate transaction asynchronously, using the transaction
+ * internal timer.
+ */
+PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
+                                               int code,
+                                               unsigned milisec)
+{
+    pj_time_val delay = {0, 0};
 
     PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
 
-    PJ_LOG(5,(tsx->obj_name, "Request to terminate transaction async"));
+    PJ_LOG(5,(tsx->obj_name, "Request to terminate transaction async in %u ms",
+              milisec));
 
     PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
+
+    delay.msec = milisec;
+    pj_time_val_normalize(&delay);
 
     lock_timer(tsx);
     tsx_cancel_timer(tsx, &tsx->timeout_timer);
@@ -1923,14 +1950,16 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
 
 
 /*
- * Cease retransmission on the UAC transaction. The UAC transaction is
- * still considered running, and it will complete when either final
- * response is received or the transaction times out.
+ * Cease retransmission on the UAC and UAS transaction. The UAC transaction
+ * is still considered running, and it will complete when either final
+ * response is received or the transaction times out. The UAS transaction
+ * will retransmit 200 response until ACK is received or the transaction
+ * times out.
  */
 PJ_DEF(pj_status_t) pjsip_tsx_stop_retransmit(pjsip_transaction *tsx)
 {
     PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
-    PJ_ASSERT_RETURN(tsx->role == PJSIP_ROLE_UAC &&
+    PJ_ASSERT_RETURN(/* tsx->role == PJSIP_ROLE_UAC && */
                      tsx->method.id == PJSIP_INVITE_METHOD,
                      PJ_EINVALIDOP);
 

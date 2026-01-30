@@ -432,9 +432,26 @@ PJ_DECL(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
 
 
 /**
- * Cease retransmission on the UAC transaction. The UAC transaction is
- * still considered running, and it will complete when either final
- * response is received or the transaction times out.
+ * Force terminate transaction asynchronously, using the transaction
+ * internal timer.
+ *
+ * @param tsx       The transaction.
+ * @param code      The status code to report.
+ * @param millisec  Timeout value in milliseconds.
+ *
+ * @return          PJ_SUCCESS or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
+                                                int code,
+                                                unsigned millisec);
+
+
+/**
+ * Cease retransmission on the UAC and UAS transaction. The UAC transaction
+ * is still considered running, and it will complete when either final
+ * response is received or the transaction times out. The UAS transaction
+ * will retransmit 200 response until ACK is received or the transaction
+ * times out.
  *
  * This operation normally is used for INVITE transaction only, when
  * the transaction is cancelled before any provisional response has been
