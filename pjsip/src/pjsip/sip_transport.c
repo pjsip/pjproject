@@ -2003,7 +2003,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 
     PJ_LOG(5, (THIS_FILE, "Destroying transport manager"));
 
+    /* Last chance to wait for other tpmgr functions to finish before
+     * we destroy everything. This should not be needed though, as all
+     * worker threads should have already been stopped at this point. 
+     */
     pj_lock_acquire(mgr->lock);
+    pj_lock_release(mgr->lock);
 
     /*
      * Destroy all transports in the hash table.
@@ -2027,8 +2032,6 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 
         factory = next;
     }
-
-    pj_lock_release(mgr->lock);
 
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
     /* If you encounter assert error on this line, it means there are
