@@ -710,6 +710,7 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
                  */
                 pjsip_tsx_terminate_async2(inv->invite_tsx,
                                            inv->invite_tsx->status_code,
+                                           NULL,
                                            pjsip_cfg()->tsx.td);
             } else {
                 /* If the response was not 2xx, the ACK is considered part of

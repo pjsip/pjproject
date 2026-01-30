@@ -1919,7 +1919,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 PJ_DEF(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
                                               int code )
 {
-    return pjsip_tsx_terminate_async2(tsx, code, 100);
+    return pjsip_tsx_terminate_async2(tsx, code, NULL, 100);
 }
 
 
@@ -1929,6 +1929,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
  */
 PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
                                                int code,
+                                               const pj_str_t *reason,
                                                unsigned millisec)
 {
     pj_time_val delay = {0, 0};
@@ -1940,6 +1941,13 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
 
     PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
 
+    /* Set termination status code, if not yet */
+    pj_grp_lock_acquire(tsx->grp_lock);
+    if (tsx->status_code < 200)
+        tsx_set_status_code(tsx, code, reason);
+    pj_grp_lock_release(tsx->grp_lock);
+
+    /* Schedule the termination */
     delay.msec = millisec;
     pj_time_val_normalize(&delay);
 
@@ -1962,8 +1970,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
 PJ_DEF(pj_status_t) pjsip_tsx_stop_retransmit(pjsip_transaction *tsx)
 {
     PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
-    PJ_ASSERT_RETURN(/* tsx->role == PJSIP_ROLE_UAC && */
-                     tsx->method.id == PJSIP_INVITE_METHOD,
+    PJ_ASSERT_RETURN(tsx->method.id == PJSIP_INVITE_METHOD,
                      PJ_EINVALIDOP);
 
     PJ_LOG(5,(tsx->obj_name, "Request to stop retransmission"));
