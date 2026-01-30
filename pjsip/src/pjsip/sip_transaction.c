@@ -985,7 +985,8 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
         pj_mutex_unlock( mod_tsx_layer.mutex);
         if (endpt) {
             pj_str_t warn_text = pj_str("Retransmission with different CSeq");
-            pjsip_endpt_respond_stateless(endpt, rdata, 500, &warn_text,
+            pjsip_endpt_respond_stateless(endpt, rdata,
+                                          PJSIP_SC_BAD_REQUEST, &warn_text,
                                           NULL, NULL);
         }
         return PJ_TRUE;
