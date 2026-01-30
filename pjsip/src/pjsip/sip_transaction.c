@@ -1953,11 +1953,11 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
 
 
 /*
- * Cease retransmission on the UAC and UAS transaction. The UAC transaction
- * is still considered running, and it will complete when either final
- * response is received or the transaction times out. The UAS transaction
- * will retransmit 200 response until ACK is received or the transaction
- * times out.
+ * Cease internal, timer-based retransmission on the INVITE transaction.
+ * The transaction is still considered running and will complete according
+ * to the normal state machine (e.g., when a final response/ACK is
+ * processed or when the transaction times out), but no further periodic
+ * retransmissions will be driven by the transaction retransmit timer.
  */
 PJ_DEF(pj_status_t) pjsip_tsx_stop_retransmit(pjsip_transaction *tsx)
 {
