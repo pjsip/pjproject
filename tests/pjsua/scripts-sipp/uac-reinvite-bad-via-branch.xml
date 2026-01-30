@@ -126,7 +126,7 @@
   <!-- By adding rrs="true" (Record Route Sets), the route sets         -->
   <!-- are saved and used for following messages sent. Useful to test   -->
   <!-- against stateful SIP proxies/B2BUAs.                             -->
-  <recv response="500" rtd="true">
+  <recv response="400" rtd="true">
   </recv>
 
   <!-- Packet lost can be simulated in any send/recv message by         -->
