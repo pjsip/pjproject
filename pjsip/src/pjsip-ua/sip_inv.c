@@ -4674,6 +4674,11 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
      * but only the transaction.
      */
     if (inv->state != PJSIP_INV_STATE_DISCONNECTED &&
+        /* Avoid acting on the subsequent COMPLETED->TERMINATED transition
+         * (e.g. Timer D), which can happen long after the response/timeout
+         * was already processed.
+         */
+        e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED &&
         ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
             tsx->method.id != PJSIP_CANCEL_METHOD) ||
          (tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT &&
