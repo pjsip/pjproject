@@ -706,6 +706,7 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 
                 /* Schedule INVITE tsx termination to absorb request
                  * retransmissions for about 64*T1 (~32 seconds).
+                 * See also #4765.
                  */
                 pjsip_tsx_terminate_async2(inv->invite_tsx,
                                            inv->invite_tsx->status_code,

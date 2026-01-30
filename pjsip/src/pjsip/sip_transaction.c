@@ -981,10 +981,13 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
     if (rdata->msg_info.msg->line.req.method.id == tsx->method.id &&
         rdata->msg_info.cseq->cseq != tsx->cseq)
     {
-        pj_str_t warn_text = pj_str("Retransmission with different CSeq");
-        pjsip_endpt_respond_stateless(mod_tsx_layer.endpt,
-                                      rdata, 500, &warn_text, NULL, NULL);
+        pjsip_endpoint* endpt = mod_tsx_layer.endpt;
         pj_mutex_unlock( mod_tsx_layer.mutex);
+        if (endpt) {
+            pj_str_t warn_text = pj_str("Retransmission with different CSeq");
+            pjsip_endpt_respond_stateless(endpt, rdata, 500, &warn_text,
+                                          NULL, NULL);
+        }
         return PJ_TRUE;
     }
 
@@ -1926,18 +1929,18 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
  */
 PJ_DEF(pj_status_t) pjsip_tsx_terminate_async2(pjsip_transaction *tsx,
                                                int code,
-                                               unsigned milisec)
+                                               unsigned millisec)
 {
     pj_time_val delay = {0, 0};
 
     PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
 
     PJ_LOG(5,(tsx->obj_name, "Request to terminate transaction async in %u ms",
-              milisec));
+              millisec));
 
     PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
 
-    delay.msec = milisec;
+    delay.msec = millisec;
     pj_time_val_normalize(&delay);
 
     lock_timer(tsx);
@@ -3667,15 +3670,25 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
             lock_timer(tsx);
             tsx_cancel_timer( tsx, &tsx->timeout_timer );
 
-            /* Timer I is T4 timer for unreliable transports, and
-             * zero seconds for reliable transports.
-             */
-            if (tsx->is_reliable) {
-                timeout.sec = 0; 
-                timeout.msec = 0;
+            /* Schedule tsx termination */
+            if (tsx->status_code/100 == 2) {
+                /* Normally 2xx response is handled by TU (not considered
+                 * part of the INVITE tsx), anyway if it comes here, let's
+                 * delay the tsx termination to absorb INVITE retransmission
+                 * for about 64*T1 (~32 seconds). See also #4765.
+                 */
+                timeout = td_timer_val; 
             } else {
-                timeout.sec = t4_timer_val.sec;
-                timeout.msec = t4_timer_val.msec;
+                /* Timer I is T4 timer for unreliable transports, and
+                 * zero seconds for reliable transports.
+                 */
+                if (tsx->is_reliable) {
+                    timeout.sec = 0; 
+                    timeout.msec = 0;
+                } else {
+                    timeout.sec = t4_timer_val.sec;
+                    timeout.msec = t4_timer_val.msec;
+                }
             }
             tsx_schedule_timer( tsx, &tsx->timeout_timer,
                                 &timeout, TIMEOUT_TIMER);

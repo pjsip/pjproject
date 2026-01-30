@@ -67,7 +67,7 @@
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
       To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
-      CSeq: [cseq] ACK
+      CSeq: 1 ACK
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       Subject: Performance Test
@@ -113,11 +113,11 @@
     <![CDATA[
 
       ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
-      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-1
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-2
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
       To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
-      CSeq: [cseq] ACK
+      CSeq: 1 ACK
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       Subject: Performance Test
@@ -136,7 +136,7 @@
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
       To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
-      CSeq: [cseq] BYE
+      CSeq: 2 BYE
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       Subject: Performance Test
