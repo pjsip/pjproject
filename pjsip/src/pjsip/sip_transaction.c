@@ -984,10 +984,16 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
         pjsip_endpoint* endpt = mod_tsx_layer.endpt;
         pj_mutex_unlock( mod_tsx_layer.mutex);
         if (endpt) {
+            pj_str_t hdr_name = pj_str("Warning");
             pj_str_t warn_text = pj_str("Retransmission with different CSeq");
-            pjsip_endpt_respond_stateless(endpt, rdata,
-                                          PJSIP_SC_BAD_REQUEST, &warn_text,
-                                          NULL, NULL);
+            pjsip_hdr hdr;
+            pjsip_generic_string_hdr warn_hdr;
+
+            pjsip_generic_string_hdr_init2(&warn_hdr, &hdr_name, &warn_text);
+            pj_list_init(&hdr);
+            pj_list_push_back(&hdr, &warn_hdr);
+            pjsip_endpt_respond_stateless(endpt, rdata, PJSIP_SC_BAD_REQUEST,
+                                          NULL, &hdr, NULL);
         }
         return PJ_TRUE;
     }
