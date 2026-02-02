@@ -1331,7 +1331,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
                                             int mod_data_id,
                                             void *mod_data)
 {
-    pjsip_transaction *tsx = NULL;
+    pjsip_transaction *tsx;
     pjsip_msg *msg = tdata->msg;
     pj_status_t status;
 
@@ -1734,7 +1734,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 {
     pj_status_t status;
     pjsip_transaction *tsx = NULL;
-    pj_grp_lock_t *tsx_lock;
+    pj_grp_lock_t *tsx_lock = NULL;
     pj_bool_t processed = PJ_FALSE;
     unsigned i;
 
