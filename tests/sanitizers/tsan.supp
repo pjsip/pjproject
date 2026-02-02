@@ -11,19 +11,31 @@ race:*
 # - rt_on_rx_response ../src/test/transport_test.c
 deadlock:stateless_send_transport_cb
 
-# Lock-order-inversion pjsip_dlg_on_tsx_state ../src/pjsip/sip_dialog.c with:
-# - pjsip_tsx_set_transport ../src/pjsip/sip_transaction.c
-# - pjsip_dlg_create_uas_and_inc_lock ../src/pjsip/sip_dialog.c
+#=============================================================================
+# Lock-order-inversion between sip dialog and sip transaction
+# Check https://github.com/pjsip/pjproject/pull/4755 for more details
+
+# Example stack trace:
+# Mutex M1 acquired here while holding mutex M0 in thread T2:
+#4 pj_grp_lock_acquire ../src/pj/lock.c:486
+#5 pjsip_tsx_set_transport ../src/pjsip/sip_transaction.c:1841
+#6 pjsip_dlg_send_request ../src/pjsip/sip_dialog.c:1384
+#7 pjsip_inv_send_msg ../src/pjsip-ua/sip_inv.c:3825
+
+# Mutex M0 acquired here while holding mutex M1 in thread T2:
+#4 pj_grp_lock_acquire ../src/pj/lock.c:486
+#5 pjsip_dlg_inc_lock ../src/pjsip/sip_dialog.c:965
+#6 pjsip_inv_create_ack ../src/pjsip-ua/sip_inv.c:3732
+#7 inv_send_ack ../src/pjsip-ua/sip_inv.c:583
+#8 inv_on_state_early ../src/pjsip-ua/sip_inv.c:5217
+#9 mod_inv_on_tsx_state ../src/pjsip-ua/sip_inv.c:859
+#10 pjsip_dlg_on_tsx_state ../src/pjsip/sip_dialog.c:2249
+#11 mod_ua_on_tsx_state ../src/pjsip/sip_ua_layer.c:186
+#12 tsx_set_state ../src/pjsip/sip_transaction.c:1460
+#13 tsx_on_state_proceeding_uac ../src/pjsip/sip_transaction.c:3404
+#14 pjsip_tsx_recv_msg ../src/pjsip/sip_transaction.c:2061
+
 #deadlock:pjsip_dlg_on_tsx_state
-
-# Lock-order-inversion destroy_transport ../src/pjsip/sip_transport.c with:
-# - udp_shutdown ../src/pjsip/sip_transport_udp.c
-deadlock:destroy_transport
-
-# Lock-order-inversion lis_destroy ../src/pjsip/sip_transport_tcp.c with:
-# - pjsip_transport_register ../src/pjsip/sip_transport.c
-deadlock:lis_destroy
-
 #=============================================================================
 # Lock-order-inversion in pjsip_endpoint
 # Example stack trace:
