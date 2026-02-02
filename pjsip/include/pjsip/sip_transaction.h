@@ -424,7 +424,7 @@ PJ_DECL(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx,
  *
  * @param tsx       The transaction.
  * @param code      The status code to report. This is applied only if
- *                  the current status code is not final.
+ *                  the current status code is not final (i.e. < 200).
  *
  * @return          PJ_SUCCESS or the appropriate error code.
  */
@@ -438,8 +438,9 @@ PJ_DECL(pj_status_t) pjsip_tsx_terminate_async(pjsip_transaction *tsx,
  *
  * @param tsx       The transaction.
  * @param code      The status code to report. This is applied only if
- *                  the current status code is not final.
- * @param reason    The reason phrase to report (optional).
+ *                  the current status code is not final (i.e. < 200).
+ * @param reason    The reason phrase to report (optional). This is applied 
+ *                  only if the current status code is not final (i.e. < 200).
  * @param millisec  Timeout value in milliseconds.
  *
  * @return          PJ_SUCCESS or the appropriate error code.
