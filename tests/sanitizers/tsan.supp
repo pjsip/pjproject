@@ -37,16 +37,6 @@ deadlock:stateless_send_transport_cb
 
 deadlock:pjsip_dlg_on_tsx_state
 #=============================================================================
-
-# Lock-order-inversion destroy_transport ../src/pjsip/sip_transport.c with:
-# - udp_shutdown ../src/pjsip/sip_transport_udp.c
-deadlock:destroy_transport
-
-# Lock-order-inversion lis_destroy ../src/pjsip/sip_transport_tcp.c with:
-# - pjsip_transport_register ../src/pjsip/sip_transport.c
-deadlock:lis_destroy
-
-#=============================================================================
 # Lock-order-inversion in pjsip_endpoint
 # Example stack trace:
 # Mutex of pjsip_endpoint acquired here while holding mutex of pjsip_tsx:

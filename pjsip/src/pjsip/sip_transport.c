@@ -1411,8 +1411,8 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
 
     TRACE_((THIS_FILE, "Transport %s is being destroyed", tp->obj_name));
 
-    pj_lock_acquire(tp->lock);
     pj_lock_acquire(mgr->lock);
+    pj_lock_acquire(tp->lock);
 
     /*
      * Unregister timer, if any.
@@ -1477,8 +1477,8 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
                               "not found in the hash table", tp->obj_name));
     }
 
-    pj_lock_release(mgr->lock);
     pj_lock_release(tp->lock);
+    pj_lock_release(mgr->lock);
 
     /* Dec ref transport group lock, if any */
     if (tp->grp_lock) {
@@ -1512,18 +1512,15 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
     PJ_LOG(4, (THIS_FILE, "Transport %s shutting down, force=%d",
                           tp->obj_name, force));
 
-    pj_lock_acquire(tp->lock);
-
     mgr = tp->tpmgr;
 
-    // Acquiring manager lock after transport lock may cause deadlock.
-    // And it does not seem necessary as well.
-    //pj_lock_acquire(mgr->lock);
+    pj_lock_acquire(mgr->lock);
+    pj_lock_acquire(tp->lock);
 
     /* Do nothing if transport is being shutdown/destroyed already */
     if (tp->is_shutdown || tp->is_destroying) {
-        //pj_lock_release(mgr->lock);
         pj_lock_release(tp->lock);
+        pj_lock_release(mgr->lock);
         return PJ_SUCCESS;
     }
 
@@ -1553,8 +1550,8 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
         pjsip_transport_dec_ref(tp);
     }
 
-    //pj_lock_release(mgr->lock);
     pj_lock_release(tp->lock);
+    pj_lock_release(mgr->lock);
 
     return status;
 }
@@ -2006,7 +2003,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 
     PJ_LOG(5, (THIS_FILE, "Destroying transport manager"));
 
+    /* Last chance to wait for other tpmgr functions to finish before
+     * we destroy everything. This should not be needed though, as all
+     * worker threads should have already been stopped at this point. 
+     */
     pj_lock_acquire(mgr->lock);
+    pj_lock_release(mgr->lock);
 
     /*
      * Destroy all transports in the hash table.
@@ -2030,8 +2032,6 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 
         factory = next;
     }
-
-    pj_lock_release(mgr->lock);
 
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
     /* If you encounter assert error on this line, it means there are
