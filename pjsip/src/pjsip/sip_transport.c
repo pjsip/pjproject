@@ -2789,6 +2789,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
         }
     }
 
+    pj_lock_release(mgr->lock);
+
     TRACE_((THIS_FILE, "Creating new transport from factory"));
 
     /* Request factory to create transport. */
@@ -2802,12 +2804,10 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                                            addr_len, tp);
     }
     if (status == PJ_SUCCESS) {
-        PJ_ASSERT_ON_FAIL(tp!=NULL,
-            {pj_lock_release(mgr->lock); return PJ_EBUG;});
+        PJ_ASSERT_RETURN(tp != NULL, PJ_EBUG);
         pjsip_transport_add_ref(*tp);
         (*tp)->factory = factory;
     }
-    pj_lock_release(mgr->lock);
     return status;
 }
 
