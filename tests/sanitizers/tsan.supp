@@ -9,7 +9,7 @@ race:*
 # - pj_ioqueue_connect ../src/pj/ioqueue_common_abs.c
 # - tp_state_callback ../src/pjsip/sip_transport.c
 # - rt_on_rx_response ../src/test/transport_test.c
-deadlock:stateless_send_transport_cb
+#deadlock:stateless_send_transport_cb
 
 #=============================================================================
 # Lock-order-inversion in pjsip_endpoint
