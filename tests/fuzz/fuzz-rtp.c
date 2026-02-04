@@ -189,15 +189,19 @@ static void test_multiple_packets(pjmedia_rtp_session *session,
 
     /* Jitter buffer configuration */
     unsigned frame_size = 160;
-    unsigned prefetch = 10;
+    unsigned ptime = 20;
     unsigned max_count = 50;
+    unsigned prefetch = 10;
 
     /* Create jitter buffer with fixed, realistic parameters */
     pj_str_t jb_name = pj_str("fuzz-jb");
-    status = pjmedia_jbuf_create(pool, &jb_name, frame_size, prefetch, max_count, &jb);
+    status = pjmedia_jbuf_create(pool, &jb_name, frame_size, ptime, max_count, &jb);
     if (status != PJ_SUCCESS) {
         return;
     }
+
+    /* Configure jitter buffer prefetch (initial delay) using adaptive mode */
+    pjmedia_jbuf_set_adaptive(jb, prefetch, 5, max_count);
 
     /* Process up to 16 packets to test more complex scenarios */
     while (offset + 1 + 12 < size && packet_num < 16) {
@@ -241,6 +245,27 @@ static void test_multiple_packets(pjmedia_rtp_session *session,
             if (packet_num % 4 == 0) {
                 pjmedia_jb_state jb_state;
                 pjmedia_jbuf_get_state(jb, &jb_state);
+            }
+
+            /* Exercise jitter buffer GET operations to drive dequeue path */
+            if (packet_num > prefetch && packet_num % 3 == 0) {
+                pjmedia_jb_state jb_state;
+                pjmedia_jbuf_get_state(jb, &jb_state);
+
+                /* Only call GET if there are frames in the buffer */
+                if (jb_state.size > 0) {
+                    char frame_type;
+                    pj_size_t frame_size_out = jb_state.frame_size;
+                    pj_uint32_t bit_info;
+                    pj_uint32_t ts;
+                    int seq_out;
+                    char out_buf[512];
+
+                    /* Test get_frame3 (most comprehensive API) */
+                    pjmedia_jbuf_get_frame3(jb, out_buf, &frame_size_out,
+                                            &frame_type, &bit_info,
+                                            &ts, &seq_out);
+                }
             }
         }
 
