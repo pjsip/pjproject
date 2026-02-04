@@ -5,12 +5,6 @@
 # Focus on deadlock reports only (e.g., lock-order-inversion)
 race:*
 
-# Lock-order-inversion stateless_send_transport_cb ../src/pjsip/sip_util.c with:
-# - pj_ioqueue_connect ../src/pj/ioqueue_common_abs.c
-# - tp_state_callback ../src/pjsip/sip_transport.c
-# - rt_on_rx_response ../src/test/transport_test.c
-#deadlock:stateless_send_transport_cb
-
 #=============================================================================
 # Lock-order-inversion in pjsip_endpoint
 # Example stack trace:
