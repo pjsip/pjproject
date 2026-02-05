@@ -1,0 +1,54 @@
+The speex library repo:
+- speex codec
+https://gitlab.xiph.org/xiph/speex.git
+rev: 05895229896dc942d453446eba6f9f5ddcf95422
+
+- speex DSP (EC)
+https://gitlab.xiph.org/xiph/speexdsp.git
+
+license: third_party/speex/COPYING
+
+Local changes (Note that libspeex codec and DSP might differ. e.g.: arch.h and fixed_generic.h):
+1. Undefined WORD2INT.
+2. Undefined SATURATE32PSHR.
+--- third_party/speex/libspeex/arch.h
++++ third_party/speex/libspeex/arch.h
+@@ -107,8 +107,6 @@
+ #define SIG_SHIFT    14
+ #define GAIN_SHIFT   6
+
+-#define WORD2INT(x) ((x) < -32767 ? -32768 : ((x) > 32766 ? 32767 : (x)))
+-
+ #define EPSILON 1
+ #define VERY_SMALL 0
+ #define VERY_LARGE32 ((spx_word32_t)2147483647)
+@@ -173,7 +171,6 @@
+ #define VSHR32(a,shift) (a)
+ #define SATURATE16(x,a) (x)
+ #define SATURATE32(x,a) (x)
+-#define SATURATE32PSHR(x,shift,a) (x)
+
+ #define PSHR(a,shift)       (a)
+ #define SHR(a,shift)       (a)
+@@ -210,8 +207,7 @@
+ #define DIV32(a,b)     (((spx_word32_t)(a))/(spx_word32_t)(b))
+ #define PDIV32(a,b)     (((spx_word32_t)(a))/(spx_word32_t)(b))
+
+-#define WORD2INT(x) ((x) < -32767.5f ? -32768 : \
+-                    ((x) > 32766.5f ? 32767 : (spx_int16_t)floor(.5 + (x))))
++
+ #endif
+
+ --- third_party/speex/libspeex/fixed_generic.h
++++ third_party/speex/libspeex/fixed_generic.h
+@@ -52,10 +52,6 @@
+ #define SATURATE16(x,a) (((x)>(a) ? (a) : (x)<-(a) ? -(a) : (x)))
+ #define SATURATE32(x,a) (((x)>(a) ? (a) : (x)<-(a) ? -(a) : (x)))
+
++#define SATURATE32PSHR(x,shift,a) (((x)>=(SHL32(a,shift))) ? (a) : \
++                                   (x)<=-(SHL32(a,shift)) ? -(a) : \
++                                   (PSHR32(x, shift)))
++
+ #define SHR(a,shift) ((a) >> (shift))
+ #define SHL(a,shift) ((spx_int32_t)((spx_uint32_t)(a) << (shift)))
+ #define PSHR(a,shift) (SHR((a)+((EXTEND32(1)<<((shift))>>1)),shift))
