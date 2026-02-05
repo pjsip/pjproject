@@ -11,6 +11,8 @@ license: third_party/speex/COPYING
 Local changes (Note that libspeex codec and DSP might differ. e.g.: arch.h and fixed_generic.h):
 1. Undefined WORD2INT.
 2. Undefined SATURATE32PSHR.
+3. fatal error: speex_config_types.h: No such file or directory
+
 --- third_party/speex/libspeex/arch.h
 +++ third_party/speex/libspeex/arch.h
 @@ -107,8 +107,6 @@
@@ -52,3 +54,14 @@ Local changes (Note that libspeex codec and DSP might differ. e.g.: arch.h and f
  #define SHR(a,shift) ((a) >> (shift))
  #define SHL(a,shift) ((spx_int32_t)((spx_uint32_t)(a) << (shift)))
  #define PSHR(a,shift) (SHR((a)+((EXTEND32(1)<<((shift))>>1)),shift))
+
+ --- third_party/speex/include/speex/speex_types.h
++++  third_party/speex/include/speex/speex_types.h
+@@ -119,7 +119,7 @@
+
+ #else
+
+-#include "speex_config_types.h"
++#include <speex/speex_config_types.h>
+
+ #endif
