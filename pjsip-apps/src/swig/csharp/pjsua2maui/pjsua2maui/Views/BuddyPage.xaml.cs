@@ -109,10 +109,10 @@ public partial class BuddyPage : ContentPage, ISoftObserver
         InitializeComponent();
         try
         {
-            Dispatcher.Dispatch(() => { myApp = new SoftApp(); });
+            myApp = new SoftApp();
             String config_path = Environment.GetFolderPath(
                                       Environment.SpecialFolder.LocalApplicationData);
-            Dispatcher.Dispatch(() => myApp.init(this, config_path));
+            myApp.init(this, config_path);
         }
         catch (Exception e)
         {

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
+    <TargetFrameworks>net10.0-ios;net9.0-android;net9.0-ios</TargetFrameworks>
     
     <OutputType>Exe</OutputType>
     <RootNamespace>pjsua2maui</RootNamespace>
@@ -21,11 +21,11 @@
     <ApplicationVersion>1</ApplicationVersion>
 
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">12.2</SupportedOSPlatformVersion>
-    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
     <BuildWithMSBuildOnMono>false</BuildWithMSBuildOnMono>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-ios|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-ios|AnyCPU'">
     <CreatePackage>false</CreatePackage>
   </PropertyGroup>
   <ItemGroup>
@@ -121,7 +121,7 @@
       <ForceLoad>True</ForceLoad>
       <SmartLink>False</SmartLink>
       <IsCxx>True</IsCxx>
-      <LinkerFlags>-L$(ProjectDir)Platforms/iOS/lib/arm64 -lpjsua2 -ld_classic</LinkerFlags>
+      <LinkerFlags>-L$(ProjectDir)Platforms/iOS/lib/arm64 -lpjsua2</LinkerFlags>
     </NativeReference>
   </ItemGroup>
 </Project>
