@@ -1,22 +1,22 @@
-/* Copyright (C) 2002 Jean-Marc Valin 
+/* Copyright (C) 2002 Jean-Marc Valin
    File: quant_lsp.c
    LSP vector quantization
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -68,6 +68,7 @@
 
 #endif
 
+#ifndef DISABLE_ENCODER
 static void compute_quant_weights(spx_lsp_t *qlsp, spx_word16_t *quant_weight, int order)
 {
    int i;
@@ -110,7 +111,7 @@ static int lsp_quant(spx_word16_t *x, const signed char *cdbk, int nbVec, int nb
       {
          tmp=SUB16(x[j],SHL16((spx_word16_t)*ptr++,5));
          dist=MAC16_16(dist,tmp,tmp);
-      } 
+      }
       if (dist<best_dist)
       {
          best_dist=dist;
@@ -120,7 +121,7 @@ static int lsp_quant(spx_word16_t *x, const signed char *cdbk, int nbVec, int nb
 
    for (j=0;j<nbDim;j++)
       x[j] = SUB16(x[j],SHL16((spx_word16_t)cdbk[best_id*nbDim+j],5));
-    
+
    return best_id;
 }
 #endif
@@ -149,7 +150,7 @@ static int lsp_weight_quant(spx_word16_t *x, spx_word16_t *weight, const signed 
          best_id=i;
       }
    }
-   
+
    for (j=0;j<nbDim;j++)
       x[j] = SUB16(x[j],SHL16((spx_word16_t)cdbk[best_id*nbDim+j],5));
    return best_id;
@@ -161,7 +162,7 @@ void lsp_quant_nb(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits)
    int i;
    int id;
    spx_word16_t quant_weight[10];
-   
+
    for (i=0;i<order;i++)
       qlsp[i]=lsp[i];
 
@@ -179,7 +180,7 @@ void lsp_quant_nb(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits)
 
    for (i=0;i<order;i++)
       qlsp[i]*=2;
- 
+
    id = lsp_weight_quant(qlsp, quant_weight, cdbk_nb_low1, NB_CDBK_SIZE_LOW1, 5);
    speex_bits_pack(bits, id, 6);
 
@@ -209,7 +210,9 @@ void lsp_quant_nb(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits)
    for (i=0;i<order;i++)
       qlsp[i]=lsp[i]-qlsp[i];
 }
+#endif /* DISABLE_ENCODER */
 
+#ifndef DISABLE_DECODER
 void lsp_unquant_nb(spx_lsp_t *lsp, int order, SpeexBits *bits)
 {
    int i, id;
@@ -232,13 +235,14 @@ void lsp_unquant_nb(spx_lsp_t *lsp, int order, SpeexBits *bits)
    id=speex_bits_unpack_unsigned(bits, 6);
    for (i=0;i<5;i++)
       lsp[i+5] = ADD32(lsp[i+5], LSP_DIV_512(cdbk_nb_high1[id*5+i]));
-   
+
    id=speex_bits_unpack_unsigned(bits, 6);
    for (i=0;i<5;i++)
       lsp[i+5] = ADD32(lsp[i+5], LSP_DIV_1024(cdbk_nb_high2[id*5+i]));
 }
+#endif /* DISABLE_DECODER */
 
-
+#ifndef DISABLE_ENCODER
 void lsp_quant_lbr(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits)
 {
    int i;
@@ -258,10 +262,10 @@ void lsp_quant_lbr(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits)
 #endif
    id = lsp_quant(qlsp, cdbk_nb, NB_CDBK_SIZE, order);
    speex_bits_pack(bits, id, 6);
-   
+
    for (i=0;i<order;i++)
       qlsp[i]*=2;
-   
+
    id = lsp_weight_quant(qlsp, quant_weight, cdbk_nb_low1, NB_CDBK_SIZE_LOW1, 5);
    speex_bits_pack(bits, id, 6);
 
@@ -279,7 +283,9 @@ void lsp_quant_lbr(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits)
    for (i=0;i<order;i++)
       qlsp[i]=lsp[i]-qlsp[i];
 }
+#endif /* DISABLE_ENCODER */
 
+#ifndef DISABLE_DECODER
 void lsp_unquant_lbr(spx_lsp_t *lsp, int order, SpeexBits *bits)
 {
    int i, id;
@@ -298,24 +304,15 @@ void lsp_unquant_lbr(spx_lsp_t *lsp, int order, SpeexBits *bits)
    id=speex_bits_unpack_unsigned(bits, 6);
    for (i=0;i<5;i++)
       lsp[i+5] += LSP_DIV_512(cdbk_nb_high1[id*5+i]);
-   
-}
 
+}
+#endif /* DISABLE_DECODER */
 
-#ifdef DISABLE_WIDEBAND
-void lsp_quant_high(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits)
-{
-   speex_fatal("Wideband and Ultra-wideband are disabled");
-}
-void lsp_unquant_high(spx_lsp_t *lsp, int order, SpeexBits *bits)
-{
-   speex_fatal("Wideband and Ultra-wideband are disabled");
-}
-#else
+#ifndef DISABLE_WIDEBAND
 extern const signed char high_lsp_cdbk[];
 extern const signed char high_lsp_cdbk2[];
 
-
+#ifndef DISABLE_ENCODER
 void lsp_quant_high(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits)
 {
    int i;
@@ -362,7 +359,10 @@ void lsp_quant_high(spx_lsp_t *lsp, spx_lsp_t *qlsp, int order, SpeexBits *bits)
    for (i=0;i<order;i++)
       qlsp[i]=lsp[i]-qlsp[i];
 }
+#endif /* DISABLE_ENCODER */
 
+
+#ifndef DISABLE_DECODER
 void lsp_unquant_high(spx_lsp_t *lsp, int order, SpeexBits *bits)
 {
 
@@ -380,6 +380,7 @@ void lsp_unquant_high(spx_lsp_t *lsp, int order, SpeexBits *bits)
    for (i=0;i<order;i++)
       lsp[i] += LSP_DIV_512(high_lsp_cdbk2[id*order+i]);
 }
+#endif /* DISABLE_DECODER */
 
-#endif
+#endif /* DISABLE_WIDEBAND */
 

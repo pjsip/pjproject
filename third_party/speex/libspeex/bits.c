@@ -1,4 +1,4 @@
-/* Copyright (C) 2002 Jean-Marc Valin 
+/* Copyright (C) 2002 Jean-Marc Valin
    File: speex_bits.c
 
    Handles bit packing/unpacking
@@ -6,18 +6,18 @@
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -36,7 +36,7 @@
 #include "config.h"
 #endif
 
-#include <speex/speex_bits.h>
+#include "speex/speex_bits.h"
 #include "arch.h"
 #include "os_support.h"
 
@@ -79,7 +79,7 @@ EXPORT void speex_bits_set_bit_buffer(SpeexBits *bits, void *buff, int buf_size)
    bits->charPtr=0;
    bits->bitPtr=0;
    bits->overflow=0;
-   
+
 }
 
 EXPORT void speex_bits_destroy(SpeexBits *bits)
@@ -106,7 +106,7 @@ EXPORT void speex_bits_rewind(SpeexBits *bits)
    bits->overflow=0;
 }
 
-EXPORT void speex_bits_read_from(SpeexBits *bits, char *chars, int len)
+EXPORT void speex_bits_read_from(SpeexBits *bits, const char *chars, int len)
 {
    int i;
    int nchars = len / BYTES_PER_CHAR;
@@ -153,7 +153,7 @@ static void speex_bits_flush(SpeexBits *bits)
    bits->charPtr=0;
 }
 
-EXPORT void speex_bits_read_whole_bytes(SpeexBits *bits, char *chars, int nbytes)
+EXPORT void speex_bits_read_whole_bytes(SpeexBits *bits, const char *chars, int nbytes)
 {
    int i,pos;
    int nchars = nbytes/BYTES_PER_CHAR;
@@ -275,7 +275,7 @@ EXPORT int speex_bits_unpack_signed(SpeexBits *bits, int nbBits)
    /* If number is negative */
    if (d>>(nbBits-1))
    {
-      d |= (-1)<<nbBits;
+      d |= (~0u)<<nbBits;
    }
    return d;
 }

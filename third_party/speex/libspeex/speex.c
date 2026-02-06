@@ -1,4 +1,4 @@
-/* Copyright (C) 2002 Jean-Marc Valin 
+/* Copyright (C) 2002 Jean-Marc Valin
    File: speex.c
 
    Basic Speex functions
@@ -6,18 +6,18 @@
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -162,14 +162,17 @@ EXPORT int speex_decode_int(void *state, SpeexBits *bits, spx_int16_t *out)
    int ret;
    speex_decoder_ctl(state, SPEEX_GET_FRAME_SIZE, &N);
    ret = (*((SpeexMode**)state))->dec(state, bits, float_out);
-   for (i=0;i<N;i++)
+   if (ret == 0)
    {
-      if (float_out[i]>32767.f)
-         out[i] = 32767;
-      else if (float_out[i]<-32768.f)
-         out[i] = -32768;
-      else
-         out[i] = (spx_int16_t)floor(.5+float_out[i]);
+      for (i=0;i<N;i++)
+      {
+         if (float_out[i]>32767.f)
+            out[i] = 32767;
+         else if (float_out[i]<-32768.f)
+            out[i] = -32768;
+         else
+            out[i] = (spx_int16_t)floor(.5+float_out[i]);
+      }
    }
    return ret;
 }
@@ -192,7 +195,7 @@ EXPORT int speex_decoder_ctl(void *state, int request, void *ptr)
 int nb_mode_query(const void *mode, int request, void *ptr)
 {
    const SpeexNBMode *m = (const SpeexNBMode*)mode;
-   
+
    switch (request)
    {
    case SPEEX_MODE_FRAME_SIZE:

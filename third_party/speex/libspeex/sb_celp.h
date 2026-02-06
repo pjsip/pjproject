@@ -7,18 +7,18 @@
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -37,7 +37,6 @@
 #define SB_CELP_H
 
 #include "modes.h"
-#include <speex/speex_bits.h>
 #include "nb_celp.h"
 
 /**Structure representing the full state of the sub-band encoder*/
@@ -57,7 +56,7 @@ typedef struct SBEncState {
 
    char  *stack;                  /**< Temporary allocation stack */
    spx_word16_t *high;               /**< High-band signal (buffer) */
-   spx_word16_t *h0_mem, *h1_mem;
+   spx_word16_t *h0_mem;
 
    const spx_word16_t *window;    /**< LPC analysis window */
    const spx_word16_t *lagWindow;       /**< Auto-correlation window */
@@ -84,7 +83,7 @@ typedef struct SBEncState {
    int    vad_enabled;            /**< 1 for enabling VAD, 0 otherwise */
    float  relative_quality;
 #endif /* #ifndef DISABLE_VBR */
-   
+
    int    encode_submode;
    const SpeexSubmode * const *submodes;
    int    submodeID;
@@ -119,9 +118,9 @@ typedef struct SBDecState {
    spx_word32_t *pi_gain;
    spx_word16_t *exc_rms;
    spx_word16_t *innov_save;      /** If non-NULL, innovation is copied here */
-   
+
    spx_word16_t last_ener;
-   spx_int32_t seed;
+   spx_uint32_t seed;
 
    int    encode_submode;
    const SpeexSubmode * const *submodes;
