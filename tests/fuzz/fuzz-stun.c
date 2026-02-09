@@ -41,52 +41,48 @@ pj_pool_factory *mem;
 
 int stun_parse(uint8_t *data, size_t Size)
 {
-    pj_status_t status;
     pj_pool_t *pool;
     pj_stun_msg *msg = NULL;
     pj_stun_msg *response = NULL;
     pj_stun_auth_cred cred;
-    pj_str_t USERNAME, PASSWORD, REALM, NONCE;
+    pj_str_t username, password, realm, nonce;
     unsigned char *encoded_buf;
     pj_size_t encoded_len;
-
-    if (Size < 20)
-        return 0;
 
     /* Use fixed credentials based on control byte */
     /* Bit 0: Use alternative username (for testing mismatch) */
     /* Bit 1: Use alternative password (for testing auth failure) */
     if (data[0] & 0x01) {
-        USERNAME = pj_str(ALT_USERNAME);
+        username = pj_str(ALT_USERNAME);
     } else {
-        USERNAME = pj_str(FIXED_USERNAME);
+        username = pj_str(FIXED_USERNAME);
     }
 
     if (data[0] & 0x02) {
-        PASSWORD = pj_str(ALT_PASSWORD);
+        password = pj_str(ALT_PASSWORD);
     } else {
-        PASSWORD = pj_str(FIXED_PASSWORD);
+        password = pj_str(FIXED_PASSWORD);
     }
 
-    REALM = pj_str(FIXED_REALM);
-    NONCE = pj_str(FIXED_NONCE);
+    realm = pj_str(FIXED_REALM);
+    nonce = pj_str(FIXED_NONCE);
 
     pool = pj_pool_create(mem, "stun_fuzz", 4096, 4096, NULL);
     encoded_buf = pj_pool_alloc(pool, kMaxInputLength);
 
     /* Path 1: Decode existing STUN message */
-    status = pj_stun_msg_decode(pool, data, Size,
-                                 PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
-                                 &msg, NULL, NULL);
+    pj_stun_msg_decode(pool, data, Size,
+                       PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
+                       &msg, NULL, NULL);
 
-    /* Path 2: Authenticate (always execute, even if decode failed) */
+    /* Path 2: Authenticate (execute regardless of decode result for coverage) */
     pj_bzero(&cred, sizeof(cred));
     cred.type = PJ_STUN_AUTH_CRED_STATIC;
-    cred.data.static_cred.username = USERNAME;
+    cred.data.static_cred.username = username;
     cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
-    cred.data.static_cred.data = PASSWORD;
-    cred.data.static_cred.realm = REALM;
-    cred.data.static_cred.nonce = NONCE;
+    cred.data.static_cred.data = password;
+    cred.data.static_cred.realm = realm;
+    cred.data.static_cred.nonce = nonce;
 
     if (msg) {
         pj_stun_authenticate_request(data, (unsigned)Size,
@@ -95,10 +91,21 @@ int stun_parse(uint8_t *data, size_t Size)
 
     /* Path 3: Create new STUN messages (different types based on input) */
     {
-        int method = (data[1] % 4) ? PJ_STUN_BINDING_METHOD :
-                     ((data[2] % 2) ? PJ_STUN_ALLOCATE_METHOD : PJ_STUN_REFRESH_METHOD);
+        int msg_type;
+        int type_selector = data[1] % 8;
 
-        pj_stun_msg_create(pool, method, PJ_STUN_MAGIC, NULL, &response);
+        /* Select proper STUN message type (method + class) */
+        if (type_selector < 2) {
+            msg_type = PJ_STUN_BINDING_REQUEST;
+        } else if (type_selector < 4) {
+            msg_type = PJ_STUN_ALLOCATE_REQUEST;
+        } else if (type_selector < 6) {
+            msg_type = PJ_STUN_REFRESH_REQUEST;
+        } else {
+            msg_type = PJ_STUN_BINDING_INDICATION;
+        }
+
+        pj_stun_msg_create(pool, msg_type, PJ_STUN_MAGIC, NULL, &response);
     }
 
     /* Path 4: Add various attributes to message */
@@ -107,13 +114,13 @@ int stun_parse(uint8_t *data, size_t Size)
         pj_str_t software = pj_str("FuzzTest");
 
         /* Add USERNAME attribute */
-        pj_stun_msg_add_string_attr(pool, response, PJ_STUN_ATTR_USERNAME, &USERNAME);
+        pj_stun_msg_add_string_attr(pool, response, PJ_STUN_ATTR_USERNAME, &username);
 
         /* Add REALM attribute */
-        pj_stun_msg_add_string_attr(pool, response, PJ_STUN_ATTR_REALM, &REALM);
+        pj_stun_msg_add_string_attr(pool, response, PJ_STUN_ATTR_REALM, &realm);
 
         /* Add NONCE attribute */
-        pj_stun_msg_add_string_attr(pool, response, PJ_STUN_ATTR_NONCE, &NONCE);
+        pj_stun_msg_add_string_attr(pool, response, PJ_STUN_ATTR_NONCE, &nonce);
 
         /* Add SOFTWARE attribute */
         pj_stun_msg_add_string_attr(pool, response, PJ_STUN_ATTR_SOFTWARE, &software);
@@ -126,7 +133,7 @@ int stun_parse(uint8_t *data, size_t Size)
             pj_memcpy(&addr.sin_port, data + 8, 2);
         }
         pj_stun_msg_add_sockaddr_attr(pool, response, PJ_STUN_ATTR_MAPPED_ADDR,
-                                       PJ_TRUE, (pj_sockaddr_t*)&addr, sizeof(addr));
+                                       PJ_FALSE, (pj_sockaddr_t*)&addr, sizeof(addr));
 
         /* Add XOR-MAPPED-ADDRESS */
         pj_stun_msg_add_sockaddr_attr(pool, response, PJ_STUN_ATTR_XOR_MAPPED_ADDR,
@@ -146,14 +153,17 @@ int stun_parse(uint8_t *data, size_t Size)
                                           (data[12] % 4) + 1, unknown_attrs);
         }
 
-        /* Path 5: Encode the message */
-        status = pj_stun_msg_encode(response, encoded_buf, kMaxInputLength,
-                                     0, NULL, &encoded_len);
+        /* Path 5: Add MESSAGE-INTEGRITY and encode with proper key */
+        pj_stun_msg_add_msgint_attr(pool, response);
 
-        /* Path 6: Add message integrity (if encoding succeeded) */
-        if (status == PJ_SUCCESS && encoded_len > 0) {
-            pj_stun_msg_add_msgint_attr(pool, response);
-        }
+        /* Create authentication key for MESSAGE-INTEGRITY calculation */
+        pj_str_t key;
+        pj_stun_create_key(pool, &key, &realm, &username,
+                          PJ_STUN_PASSWD_PLAIN, &password);
+
+        /* Encode message with MESSAGE-INTEGRITY */
+        pj_stun_msg_encode(response, encoded_buf, kMaxInputLength,
+                           0, &key, &encoded_len);
 
         /* Path 7: Attribute lookup and manipulation */
         pj_stun_msg_find_attr(response, PJ_STUN_ATTR_USERNAME, 0);
@@ -176,13 +186,13 @@ int stun_parse(uint8_t *data, size_t Size)
 extern int
 LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
-    if (Size < kMinInputLength || Size > kMaxInputLength) {
-        return 1;
-    }
-
     int ret = 0;
     uint8_t *data;
     pj_caching_pool caching_pool;
+
+    if (Size < kMinInputLength || Size > kMaxInputLength) {
+        return 1;
+    }
 
     /* Add NULL byte */
     data = (uint8_t *)calloc((Size+1), sizeof(uint8_t));
@@ -190,7 +200,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     /* init Calls */
     pj_init();
-    pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0);
+    pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
     pj_log_set_level(0);
 
     mem = &caching_pool.factory;
