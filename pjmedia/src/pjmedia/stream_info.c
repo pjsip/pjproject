@@ -401,6 +401,22 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
     /* Get codec info and param */
     status = get_audio_codec_info_param(si, pool, mgr, local_m, rem_m);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Get local RTCP-FB info */
+    status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, local,
+                                         stream_idx, si->rx_pt,
+                                         &si->loc_rtcp_fb);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Get remote RTCP-FB info */
+    status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, remote,
+                                         stream_idx, si->tx_pt,
+                                         &si->rem_rtcp_fb);
+    if (status != PJ_SUCCESS)
+        return status;
 
     return status;
 }
