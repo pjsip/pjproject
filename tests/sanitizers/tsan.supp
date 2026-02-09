@@ -6,6 +6,37 @@
 race:*
 
 #=============================================================================
+# Lock-order-inversion between sip transport and ioqueue
+# Mutex M1 acquired here while holding mutex M0 in main thread:
+#5 pj_ioqueue_lock_key ../src/pj/ioqueue_common_abs.c:1502
+#6 pj_ioqueue_connect ../src/pj/ioqueue_common_abs.c:1329
+#7 pj_activesock_start_connect ../src/pj/activesock.c:961
+#8 lis_create_transport ../src/pjsip/sip_transport_tcp.c:1063
+#9 pjsip_tpmgr_acquire_transport2 ../src/pjsip/sip_transport.c:2800
+#10 pjsip_endpt_acquire_transport2 ../src/pjsip/sip_endpoint.c:1288
+#11 stateless_send_transport_cb ../src/pjsip/sip_util.c:1208
+#12 stateless_send_resolver_callback ../src/pjsip/sip_util.c:1444
+#13 pjsip_resolve ../src/pjsip/sip_resolve.c:399
+#14 pjsip_endpt_resolve ../src/pjsip/sip_endpoint.c:1243
+#15 pjsip_endpt_send_request_stateless ../src/pjsip/sip_util.c:1513
+#16 tsx_send_msg ../src/pjsip/sip_transaction.c:2599
+#17 tsx_on_state_null ../src/pjsip/sip_transaction.c:2871
+#18 pjsip_tsx_send_msg ../src/pjsip/sip_transaction.c:2023
+#19 perform_tsx_test ../src/test/tsx_uac_test.c:1156
+
+# Mutex M0 acquired here while holding mutex M1 in main thread:
+#4 pj_grp_lock_acquire ../src/pj/lock.c:486
+#5 send_msg_callback ../src/pjsip/sip_transaction.c:2096
+#6 stateless_send_transport_cb ../src/pjsip/sip_util.c:1162
+#7 transport_send_callback ../src/pjsip/sip_transport.c:952
+#8 on_data_sent ../src/pjsip/sip_transport_tcp.c:1254
+#9 tcp_flush_pending_tx ../src/pjsip/sip_transport_tcp.c:799
+#10 on_connect_complete ../src/pjsip/sip_transport_tcp.c:1573
+#11 ioqueue_on_connect_complete ../src/pj/activesock.c:976
+
+deadlock:lis_create_transport
+
+#=============================================================================
 # Lock-order-inversion in pjsip_endpoint
 # Example stack trace:
 # Mutex of pjsip_endpoint acquired here while holding mutex of pjsip_tsx:
