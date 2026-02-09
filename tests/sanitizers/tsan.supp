@@ -6,7 +6,8 @@
 race:*
 
 #=============================================================================
-# Lock-order-inversion between sip transport and ioqueue
+# Lock-order-inversion between ioqueue and sip transaction
+
 # Mutex M1 acquired here while holding mutex M0 in main thread:
 #5 pj_ioqueue_lock_key ../src/pj/ioqueue_common_abs.c:1502
 #6 pj_ioqueue_connect ../src/pj/ioqueue_common_abs.c:1329
