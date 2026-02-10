@@ -429,7 +429,7 @@ static pj_bool_t ssl_on_data_sent(pj_ssl_sock_t *ssock,
     return PJ_TRUE;
 }
 
-#define HTTP_SERVER_ADDR        "trac.pjsip.org"
+#define HTTP_SERVER_ADDR        "www.pjsip.org"
 #define HTTP_SERVER_PORT        443
 #define HTTP_REQ                "GET https://" HTTP_SERVER_ADDR "/ HTTP/1.0\r\n\r\n";
 

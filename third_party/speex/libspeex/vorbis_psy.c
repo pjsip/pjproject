@@ -4,18 +4,18 @@
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -39,6 +39,7 @@
 #include "smallft.h"
 #include "lpc.h"
 #include "vorbis_psy.h"
+#include "os_support.h"
 
 #include <stdlib.h>
 #include <math.h>
@@ -47,15 +48,15 @@
 /* psychoacoustic setup ********************************************/
 
 static VorbisPsyInfo example_tuning = {
-  
-  .5,.5,  
+
+  .5,.5,
   3,3,25,
-  
+
   /*63     125     250     500      1k      2k      4k      8k     16k*/
   // vorbis mode 4 style
   //{-32,-32,-32,-32,-28,-24,-22,-20,-20, -20, -20, -8, -6, -6, -6, -6, -6},
   { -4, -6, -6, -6, -6, -6, -6, -6, -8, -8,-10,-10, -8, -6, -4, -4, -2},
-  
+
   {
     0, 1, 2, 3, 4, 5, 5,  5,     /* 7dB */
     6, 6, 6, 5, 4, 4, 4,  4,     /* 15dB */
@@ -77,16 +78,16 @@ static void _analysis_output(char *base,int i,float *v,int n,int bark,int dB){
 
   sprintf(buffer,"%s_%d.m",base,i);
   of=fopen(buffer,"w");
-  
+
   if(!of)perror("failed to open data dump file");
-  
+
   for(j=0;j<n;j++){
     if(bark){
       float b=toBARK((4000.f*j/n)+.25);
       fprintf(of,"%f ",b);
     }else
       fprintf(of,"%f ",(double)j);
-    
+
     if(dB){
       float val;
       if(v[j]==0.)
@@ -106,7 +107,7 @@ static void bark_noise_hybridmp(int n,const long *b,
                                 float *noise,
                                 const float offset,
                                 const int fixed){
-  
+
   float *N=alloca(n*sizeof(*N));
   float *X=alloca(n*sizeof(*N));
   float *XX=alloca(n*sizeof(*N));
@@ -126,7 +127,7 @@ static void bark_noise_hybridmp(int n,const long *b,
   if (y < 1.f) y = 1.f;
 
   w = y * y * .5;
-    
+
   tN += w;
   tX += w;
   tY += w * y;
@@ -138,12 +139,12 @@ static void bark_noise_hybridmp(int n,const long *b,
   XY[0] = tXY;
 
   for (i = 1, x = 1.f; i < n; i++, x += 1.f) {
-    
+
     y = f[i] + offset;
     if (y < 1.f) y = 1.f;
 
     w = y * y;
-    
+
     tN += w;
     tX += w * x;
     tXX += w * x * x;
@@ -156,59 +157,59 @@ static void bark_noise_hybridmp(int n,const long *b,
     Y[i] = tY;
     XY[i] = tXY;
   }
-  
+
   for (i = 0, x = 0.f;; i++, x += 1.f) {
-    
+
     lo = b[i] >> 16;
     if( lo>=0 ) break;
     hi = b[i] & 0xffff;
-    
+
     tN = N[hi] + N[-lo];
     tX = X[hi] - X[-lo];
     tXX = XX[hi] + XX[-lo];
-    tY = Y[hi] + Y[-lo];    
+    tY = Y[hi] + Y[-lo];
     tXY = XY[hi] - XY[-lo];
-    
+
     A = tY * tXX - tX * tXY;
     B = tN * tXY - tX * tY;
     D = tN * tXX - tX * tX;
     R = (A + x * B) / D;
     if (R < 0.f)
       R = 0.f;
-    
+
     noise[i] = R - offset;
   }
-  
+
   for ( ;; i++, x += 1.f) {
-    
+
     lo = b[i] >> 16;
     hi = b[i] & 0xffff;
     if(hi>=n)break;
-    
+
     tN = N[hi] - N[lo];
     tX = X[hi] - X[lo];
     tXX = XX[hi] - XX[lo];
     tY = Y[hi] - Y[lo];
     tXY = XY[hi] - XY[lo];
-    
+
     A = tY * tXX - tX * tXY;
     B = tN * tXY - tX * tY;
     D = tN * tXX - tX * tX;
     R = (A + x * B) / D;
     if (R < 0.f) R = 0.f;
-    
+
     noise[i] = R - offset;
   }
   for ( ; i < n; i++, x += 1.f) {
-    
+
     R = (A + x * B) / D;
     if (R < 0.f) R = 0.f;
-    
+
     noise[i] = R - offset;
   }
-  
+
   if (fixed <= 0) return;
-  
+
   for (i = 0, x = 0.f;; i++, x += 1.f) {
     hi = i + fixed / 2;
     lo = hi - fixed;
@@ -219,8 +220,8 @@ static void bark_noise_hybridmp(int n,const long *b,
     tXX = XX[hi] + XX[-lo];
     tY = Y[hi] + Y[-lo];
     tXY = XY[hi] - XY[-lo];
-    
-    
+
+
     A = tY * tXX - tX * tXY;
     B = tN * tXY - tX * tY;
     D = tN * tXX - tX * tX;
@@ -229,22 +230,22 @@ static void bark_noise_hybridmp(int n,const long *b,
     if (R - offset < noise[i]) noise[i] = R - offset;
   }
   for ( ;; i++, x += 1.f) {
-    
+
     hi = i + fixed / 2;
     lo = hi - fixed;
     if(hi>=n)break;
-    
+
     tN = N[hi] - N[lo];
     tX = X[hi] - X[lo];
     tXX = XX[hi] - XX[lo];
     tY = Y[hi] - Y[lo];
     tXY = XY[hi] - XY[lo];
-    
+
     A = tY * tXX - tX * tXY;
     B = tN * tXY - tX * tY;
     D = tN * tXX - tX * tX;
     R = (A + x * B) / D;
-    
+
     if (R - offset < noise[i]) noise[i] = R - offset;
   }
   for ( ; i < n; i++, x += 1.f) {
@@ -254,7 +255,7 @@ static void bark_noise_hybridmp(int n,const long *b,
 }
 
 static void _vp_noisemask(VorbisPsy *p,
-			  float *logfreq, 
+			  float *logfreq,
 			  float *logmask){
 
   int i,n=p->n/2;
@@ -269,15 +270,15 @@ static void _vp_noisemask(VorbisPsy *p,
 		      p->vi->noisewindowfixed);
 
   for(i=0;i<n;i++)work[i]=logfreq[i]-work[i];
-  
+
   {
     static int seq=0;
-    
+
     float work2[n];
     for(i=0;i<n;i++){
       work2[i]=logmask[i]+work[i];
     }
-    
+
     //_analysis_output("logfreq",seq,logfreq,n,0,0);
     //_analysis_output("median",seq,work,n,0,0);
     //_analysis_output("envelope",seq,work2,n,0,0);
@@ -298,7 +299,7 @@ VorbisPsy *vorbis_psy_init(int rate, int n)
   long i,j,lo=-99,hi=1;
   VorbisPsy *p = speex_alloc(sizeof(VorbisPsy));
   memset(p,0,sizeof(*p));
-  
+
   p->n = n;
   spx_drft_init(&p->lookup, n);
   p->bark = speex_alloc(n*sizeof(*p->bark));
@@ -316,35 +317,39 @@ VorbisPsy *vorbis_psy_init(int rate, int n)
       sin((i+.5)/n * M_PI)*sin((i+.5)/n * M_PI);
   /* bark scale lookups */
   for(i=0;i<n;i++){
-    float bark=toBARK(rate/(2*n)*i); 
-    
-    for(;lo+p->vi->noisewindowlomin<i && 
+    float bark=toBARK(rate/(2*n)*i);
+
+    for(;lo+p->vi->noisewindowlomin<i &&
 	  toBARK(rate/(2*n)*lo)<(bark-p->vi->noisewindowlo);lo++);
-    
+
     for(;hi<=n && (hi<i+p->vi->noisewindowhimin ||
 	  toBARK(rate/(2*n)*hi)<(bark+p->vi->noisewindowhi));hi++);
-    
+
     p->bark[i]=((lo-1)<<16)+(hi-1);
 
   }
 
   /* set up rolling noise median */
   p->noiseoffset=speex_alloc(n*sizeof(*p->noiseoffset));
-  
+
   for(i=0;i<n;i++){
     float halfoc=toOC((i+.5)*rate/(2.*n))*2.;
     int inthalfoc;
     float del;
-    
+
     if(halfoc<0)halfoc=0;
     if(halfoc>=P_BANDS-1)halfoc=P_BANDS-1;
     inthalfoc=(int)halfoc;
+    /*If we hit the P_BANDS-1 clamp above, inthalfoc+1 will be out of bounds,
+       even though it will have an interpolation weight of 0.
+      Shift the interval so we don't read past the end of the array.*/
+    if(inthalfoc>=P_BANDS-2)inthalfoc=P_BANDS-2;
     del=halfoc-inthalfoc;
-    
+
     p->noiseoffset[i]=
-      p->vi->noiseoff[inthalfoc]*(1.-del) + 
+      p->vi->noiseoff[inthalfoc]*(1.-del) +
       p->vi->noiseoff[inthalfoc+1]*del;
-    
+
   }
 #if 0
   _analysis_output_always("noiseoff0",ls,p->noiseoffset,n,1,0,0);
@@ -377,14 +382,14 @@ void compute_curve(VorbisPsy *psy, float *audio, float *curve)
    float scale_dB;
 
    scale_dB=todB(scale);
-  
+
    /* window the PCM data; use a BH4 window, not vorbis */
    for(i=0;i<psy->n;i++)
      work[i]=audio[i] * psy->window[i];
 
    {
      static int seq=0;
-     
+
      //_analysis_output("win",seq,work,psy->n,0,0);
 
      seq++;
@@ -431,7 +436,7 @@ void curve_to_lpc(VorbisPsy *psy, float *curve, float *awk1, float *awk2, int or
       ac[2*i-1] = curve[i];
    ac[0] = curve[0];
    ac[2*len-1] = curve[len-1];
-   
+
    spx_drft_backward(&psy->lookup, ac);
    _spx_lpc(awk1, ac, ord);
    tmp = 1.;
@@ -446,7 +451,7 @@ void curve_to_lpc(VorbisPsy *psy, float *curve, float *awk1, float *awk2, int or
 #else
    /* Use the second (awk2) filter to correct the first one */
    for (i=0;i<2*len;i++)
-      ac[i] = 0;   
+      ac[i] = 0;
    for (i=0;i<ord;i++)
       ac[i+1] = awk1[i];
    ac[0] = 1;
@@ -466,7 +471,7 @@ void curve_to_lpc(VorbisPsy *psy, float *curve, float *awk1, float *awk2, int or
       ac[2*i-1] = curve[i];
    ac[0] = curve[0];
    ac[2*len-1] = curve[len-1];
-   
+
    spx_drft_backward(&psy->lookup, ac);
    _spx_lpc(awk2, ac, ord);
    tmp = 1;
