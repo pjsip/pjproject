@@ -488,6 +488,20 @@ static void pcap2wav(const struct args *args)
             const pj_int64_t wallclock_gap =
                 (pj_int64_t)(pkt1.packet_ts.u64 - pkt0.packet_ts.u64) * param.info.clock_rate;
             ts_discontinuity = ts_gap_s - max_marker_gap_diff >= wallclock_gap;
+            /* When the RTP marker bit is set (start of a talkspurt after
+             * silence/hold), RTP timestamps may not reflect the actual pause
+             * duration. If the real wall-clock gap (from pcap timestamps)
+             * exceeds the RTP timestamp gap by more than 150ms (a jitter
+             * buffer to tolerate clock drift and network jitter), use the
+             * wall-clock gap instead so that silence is correctly filled.
+             *
+             * Comparison (avoiding division):
+             *   ts_gap/clock_rate + 150ms < pcap_ns_gap / 1e9
+             *   => ts_gap * 1e9 + 150ms * clock_rate * 1e9 < pcap_ns_gap * clock_rate
+             */
+            if (ts_gap_s + min_marker_gap_diff < wallclock_gap) {
+                ts_gap = wallclock_gap / 1000000000;
+            }
         } else {
             ts_discontinuity = PJ_FALSE;
         }
