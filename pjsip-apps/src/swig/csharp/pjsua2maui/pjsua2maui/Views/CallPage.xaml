@@ -4,10 +4,15 @@
             x:Class="pjsua2maui.Views.CallPage"
              xmlns:c="clr-namespace:pjsua2maui.Controls">
     <ContentPage.Content>
-        <c:CallView>
-            
-
-        </c:CallView>
+        <VerticalStackLayout Spacing="12">
+            <c:VideoView HeightRequest="240" WidthRequest="320" BackgroundColor="Transparent" x:Name="videoView" />
+            <Label Text="Peer" FontSize="18" HorizontalOptions="Center" x:Name="peerLabel" />
+            <Label Text="Status" FontSize="14" HorizontalOptions="Center" x:Name="statusLabel" />
+            <HorizontalStackLayout Spacing="16" HorizontalOptions="Center">
+                <Button Text="Accept" x:Name="acceptCallButton" />
+                <Button Text="Hangup" x:Name="hangupCallButton" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
     </ContentPage.Content>
 </ContentPage>
 
