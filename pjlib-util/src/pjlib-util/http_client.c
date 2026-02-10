@@ -1148,6 +1148,16 @@ static pj_status_t auth_respond_basic(pj_http_req *hreq)
     pj_status_t status;
     int len;
 
+    /* Ensure the combined length of username, colon, and password doesn't
+     * exceeds buffer size.
+     */
+    if ((hreq->param.auth_cred.username.slen + 1 +
+         hreq->param.auth_cred.data.slen) > BUF_SIZE)
+    {
+        TRACE_((THIS_FILE,"Error: username and password exceed buffer size"));
+        return PJ_ETOOBIG;
+    }
+
     /* Use send buffer to store userid ":" password */
     user_pass.ptr = hreq->buffer.ptr;
     pj_strcpy(&user_pass, &hreq->param.auth_cred.username);
