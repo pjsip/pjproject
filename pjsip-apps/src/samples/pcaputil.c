@@ -192,6 +192,7 @@ struct rtp_packet
     pjmedia_rtp_hdr *rtp;
     pj_uint8_t      *payload;
     unsigned         payload_len;
+    pj_uint32_t      rtp_ts;
     pj_timestamp     packet_ts;
 };
 
@@ -283,6 +284,7 @@ static int read_rtp(struct rtp_packet *pkt, pj_bool_t check_pt)
 
         pkt->rtp = (pjmedia_rtp_hdr*)r;
         pkt->payload = (pj_uint8_t*)p;
+        pkt->rtp_ts = pj_ntohl(pkt->rtp->ts);
 
         /* We have good packet */
         break;
@@ -452,8 +454,7 @@ static void pcap2wav(const struct args *args)
         }
 
         /* Fill in the gap (if any) between pkt0 and pkt1 */
-        ts_gap = pj_ntohl(pkt1.rtp->ts) - pj_ntohl(pkt0.rtp->ts) -
-                 samples_cnt;
+        ts_gap = pkt1.rtp_ts - pkt0.rtp_ts - samples_cnt;
 
         if (ts_gap <= (long)param.info.clock_rate * GAP_IGNORE_SECONDS) { /* Ignore gap >30s */
             while (ts_gap >= (long)samples_per_frame) {
