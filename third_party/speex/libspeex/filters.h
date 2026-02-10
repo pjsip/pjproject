@@ -7,18 +7,18 @@
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -62,8 +62,19 @@ void qmf_decomp(const spx_word16_t *xx, const spx_word16_t *aa, spx_word16_t *, 
 void qmf_synth(const spx_word16_t *x1, const spx_word16_t *x2, const spx_word16_t *a, spx_word16_t *y, int N, int M, spx_word16_t *mem1, spx_word16_t *mem2, char *stack);
 
 void filter_mem16(const spx_word16_t *x, const spx_coef_t *num, const spx_coef_t *den, spx_word16_t *y, int N, int ord, spx_mem_t *mem, char *stack);
+
+#ifdef MERGE_FILTERS
+
+#define OVERRIDE_IIR_MEM16
+#define OVERRIDE_FIR_MEM16
+extern const spx_word16_t zeros[];
+#define iir_mem16(x, den, y, N, ord, mem, stack) filter_mem16(x, zeros, den, y,  N, ord, mem, stack)
+#define fir_mem16(x, num, y, N, ord, mem, stack) filter_mem16(x, num, zeros, y,  N, ord, mem, stack)
+
+#else /* MERGE_FILTERS */
 void iir_mem16(const spx_word16_t *x, const spx_coef_t *den, spx_word16_t *y, int N, int ord, spx_mem_t *mem, char *stack);
 void fir_mem16(const spx_word16_t *x, const spx_coef_t *num, spx_word16_t *y, int N, int ord, spx_mem_t *mem, char *stack);
+#endif  /* MERGE_FILTERS */
 
 /* Apply bandwidth expansion on LPC coef */
 void bw_lpc(spx_word16_t , const spx_coef_t *lpc_in, spx_coef_t *lpc_out, int order);
@@ -86,5 +97,9 @@ int max_pitch,   /*pitch gain (3-tap)*/
 spx_word16_t  comb_gain,    /*gain of comb filter*/
 char *stack
 );
+
+
+#define filter10(x, num, den, y, N, mem, stack) filter_mem16(x, num, den, y, N, 10, mem, stack)
+
 
 #endif
