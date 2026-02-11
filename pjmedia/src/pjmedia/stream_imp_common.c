@@ -644,12 +644,20 @@ static void on_destroy(void *arg)
 
     /* This function may be called when stream is partly initialized. */
 
+    /* Continue in transport destroy handler, as RTP/RTCP packet may still
+     * coming and processed by stream after stream destroy is requested.
+     */
+    if (c_strm->transport && c_strm->transport->grp_lock) {
+        pj_grp_lock_t* grp_lock = c_strm->transport->grp_lock;
+
+        c_strm->transport = NULL;
+        pj_grp_lock_add_handler(grp_lock, NULL, c_strm, &on_destroy);
+        pj_grp_lock_dec_ref(grp_lock);
+        return;
+    }
+
     /* Call specific stream destroy handler. */
     on_stream_destroy(arg);
-
-    /* Release ref to transport */
-    if (c_strm->transport && c_strm->transport->grp_lock)
-        pj_grp_lock_dec_ref(c_strm->transport->grp_lock);
 
     /* Free mutex */
     if (c_strm->jb_mutex) {
