@@ -2313,26 +2313,33 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     att_param.rtp_cb2 = &on_rx_rtp;
     att_param.rtcp_cb = &on_rx_rtcp;
 
-    /* Create group lock & attach handler */
-    status = pj_grp_lock_create_w_handler(pool, NULL, stream,
-                                          &on_destroy,
-                                          &c_strm->grp_lock);
-    if (status != PJ_SUCCESS)
-        goto err_cleanup;
-
-    /* Add ref */
-    pj_grp_lock_add_ref(c_strm->grp_lock);
-    c_strm->port.grp_lock = c_strm->grp_lock;
-
     /* Only attach transport when stream is ready. */
     c_strm->transport = tp;
     status = pjmedia_transport_attach2(tp, &att_param);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
-    /* Also add ref the transport group lock */
-    if (c_strm->transport->grp_lock)
-        pj_grp_lock_add_ref(c_strm->transport->grp_lock);
+    /* Initialize group lock, use transport's if available */
+    if (c_strm->transport->grp_lock) {
+        status = pj_grp_lock_add_handler(c_strm->transport->grp_lock, NULL,
+                                         stream, &on_destroy);
+        if (status != PJ_SUCCESS)
+            goto err_cleanup;
+
+        /* Use transport group lock */
+        c_strm->grp_lock = c_strm->transport->grp_lock;
+    } else {
+        /* Transport does not have group lock, create our own */
+        status = pj_grp_lock_create_w_handler(pool, NULL, stream,
+                                              &on_destroy,
+                                              &c_strm->grp_lock);
+        if (status != PJ_SUCCESS)
+            goto err_cleanup;
+    }
+
+    /* Add ref */
+    pj_grp_lock_add_ref(c_strm->grp_lock);
+    c_strm->port.grp_lock = c_strm->grp_lock;
 
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
