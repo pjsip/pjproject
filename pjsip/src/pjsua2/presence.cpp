@@ -114,8 +114,10 @@ Buddy::~Buddy()
             delete bud;
         }
 
-        if (pjsua_buddy_del(id) != PJ_SUCCESS) {
+        pj_status_t status = pjsua_buddy_del(id);
+        if (status != PJ_SUCCESS) {
             // TODO: schedule retry to delete buddy
+            PJ_PERROR(1,(THIS_FILE, status, "Failed to delete buddy %d", id));
         }
 
 #if !DEPRECATED_FOR_TICKET_2232

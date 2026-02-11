@@ -421,8 +421,8 @@ pjsua_buddy_get_dlg_event_info( pjsua_buddy_id buddy_id,
 PJ_DEF(pj_status_t) pjsua_buddy_set_user_data( pjsua_buddy_id buddy_id,
                                                void *user_data)
 {
-    struct buddy_lock lck;
-    pj_status_t status;
+    //struct buddy_lock lck;
+    //pj_status_t status;
 
     PJ_ASSERT_RETURN(pjsua_buddy_is_valid(buddy_id), PJ_EINVAL);
 
@@ -446,8 +446,8 @@ PJ_DEF(pj_status_t) pjsua_buddy_set_user_data( pjsua_buddy_id buddy_id,
  */
 PJ_DEF(void*) pjsua_buddy_get_user_data(pjsua_buddy_id buddy_id)
 {
-    struct buddy_lock lck;
-    pj_status_t status;
+    //struct buddy_lock lck;
+    //pj_status_t status;
     void *user_data;
 
     PJ_ASSERT_RETURN(pjsua_buddy_is_valid(buddy_id), NULL);
