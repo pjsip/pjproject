@@ -94,7 +94,9 @@ static pj_status_t ioqueue_init_key( pj_pool_t *pool,
     key->connecting = 0;
 #endif
     pj_list_init(&key->read_cb_list);
+    pj_list_init(&key->write_cb_list);
     key->read_callback_thread = NULL;
+    key->write_callback_thread = NULL;
     key->closing = 0;
 
     /* Save callback. */
@@ -190,6 +192,52 @@ PJ_INLINE(int) key_has_pending_connect(pj_ioqueue_key_t *key)
 
 #define IS_CLOSING(key) (key->closing)
 
+
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
+static unsigned ioqueue_dispatch_write_event_no_lock(pj_ioqueue_key_t* h,
+                                                     unsigned max_event)
+{
+    unsigned event_cnt = 0;
+
+    while (1) {
+        struct write_operation *write_op = NULL;
+        void (*on_write_complete)(pj_ioqueue_key_t *key,
+                                  pj_ioqueue_op_key_t *op_key,
+                                  pj_ssize_t bytes_sent);
+
+        /* Check if there is any pending write callback for this key. */
+        pj_ioqueue_lock_key(h);
+
+        if (!IS_CLOSING(h) && !pj_list_empty(&h->write_cb_list) &&
+            (max_event == 0 || event_cnt < max_event))
+        {
+            write_op = h->write_cb_list.next;
+            pj_list_erase(write_op);
+            on_write_complete = h->cb.on_write_complete;
+        } else {
+            /* No more pending callback or maximum event number is reached.
+             * Clear the callback thread and return.
+             */
+            h->write_callback_thread = NULL;
+            on_write_complete = NULL;
+        }
+
+        pj_ioqueue_unlock_key(h);
+        PJ_RACE_ME(5);
+
+        /* Invoke the callback or return */
+        if (on_write_complete) {
+            (*on_write_complete)(h, (pj_ioqueue_op_key_t*)write_op,
+                                write_op->written);
+            ++event_cnt;
+        } else {
+            break;
+        }
+    }
+
+    return event_cnt;
+}
+#endif
 
 /*
  * ioqueue_dispatch_event()
@@ -408,9 +456,26 @@ static pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
                 PJ_RACE_ME(5);
             } else {
 #if PJ_IOQUEUE_CALLBACK_NO_LOCK
-                /* Do not hold mutex while invoking callback to avoid
-                 * lock order inversion with application locks.
+                /* If we're not allowing concurrency, we must prevent
+                 * re-entrancy in the callback.
                  */
+                if (h->write_callback_thread) {
+                    /* Another thread is in the write callback for this key,
+                     * just queue this write_op, that thread will invoke the
+                     * callback later.
+                     */
+                    pj_list_push_back(&h->write_cb_list, write_op);
+                    pj_ioqueue_unlock_key(h);
+                    return PJ_TRUE;
+                }
+
+                /* Save the thread invoking the write callback.
+                 * Note that when threading is disabled or concurrency is allowed,
+                 * this will always be NULL.
+                 */
+                h->write_callback_thread = pj_thread_this();
+
+                /* Do not hold mutex while invoking callback */
                 has_lock = PJ_FALSE;
                 pj_ioqueue_unlock_key(h);
                 PJ_RACE_ME(5);
@@ -429,6 +494,11 @@ static pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
             if (has_lock) {
                 pj_ioqueue_unlock_key(h);
             }
+
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
+            /* If we have more pending write callback, process it now */
+            ioqueue_dispatch_write_event_no_lock(h, 0);
+#endif
 
         } else {
             pj_ioqueue_unlock_key(h);
@@ -1486,8 +1556,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
     pj_list_init(&key->write_list);
     pj_list_init(&key->accept_list);
     pj_list_init(&key->read_cb_list);
+    pj_list_init(&key->write_cb_list);
     key->connecting = 0;
     key->read_callback_thread = NULL;
+    key->write_callback_thread = NULL;
 
     /* Remove key from sets */
     ioqueue_remove_from_set2(key->ioqueue, key,
