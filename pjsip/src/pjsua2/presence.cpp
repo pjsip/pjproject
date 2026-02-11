@@ -108,13 +108,15 @@ Buddy::~Buddy()
     if (isValid() && getOriginalInstance()==this) {
         Account *acc = NULL;
         BuddyUserData *bud = (BuddyUserData*)pjsua_buddy_get_user_data(id);
+        pjsua_buddy_set_user_data(id, NULL);
         if (bud) {
             acc = bud->acc;
             delete bud;
         }
 
-        pjsua_buddy_set_user_data(id, NULL);
-        pjsua_buddy_del(id);
+        if (pjsua_buddy_del(id) != PJ_SUCCESS) {
+            // TODO: schedule retry to delete buddy
+        }
 
 #if !DEPRECATED_FOR_TICKET_2232
         /* Remove from account buddy list */
