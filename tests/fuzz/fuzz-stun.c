@@ -40,9 +40,9 @@
 pj_pool_factory *mem;
 
 /* TURN session callback stub */
-static void turn_on_send_pkt(pj_turn_session *sess,
-                             const void *pkt,
-                             size_t pkt_len,
+static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
+                             const pj_uint8_t *pkt,
+                             unsigned pkt_len,
                              const pj_sockaddr_t *dst_addr,
                              unsigned dst_addr_len)
 {
@@ -51,6 +51,7 @@ static void turn_on_send_pkt(pj_turn_session *sess,
     PJ_UNUSED_ARG(pkt_len);
     PJ_UNUSED_ARG(dst_addr);
     PJ_UNUSED_ARG(dst_addr_len);
+    return PJ_SUCCESS;
 }
 
 int stun_parse(uint8_t *data, size_t Size)
@@ -213,8 +214,10 @@ int stun_parse(uint8_t *data, size_t Size)
 
         /* Setup STUN config for TURN */
         pj_stun_config_init(&stun_cfg, mem, 0, ioqueue, timer_heap);
-        pj_ioqueue_create(pool, 4, &ioqueue);
-        pj_timer_heap_create(pool, 16, &timer_heap);
+        status = pj_ioqueue_create(pool, 4, &ioqueue);
+        if (status != PJ_SUCCESS) goto on_turn_cleanup;
+        status = pj_timer_heap_create(pool, 16, &timer_heap);
+        if (status != PJ_SUCCESS) goto on_turn_cleanup;
         stun_cfg.ioqueue = ioqueue;
         stun_cfg.timer_heap = timer_heap;
 
@@ -226,7 +229,10 @@ int stun_parse(uint8_t *data, size_t Size)
                                        PJ_TURN_TP_UDP, NULL, &turn_cb, 0, NULL, &turn_sess);
 
         if (status == PJ_SUCCESS && turn_sess) {
-            /* Test TURN sendto (exercises ChannelData formatting) using full remaining data */
+            /* Test TURN sendto (will return PJ_EIGNORED since session not READY).
+             * Note: Driving session to READY requires simulating allocation with async
+             * I/O and timer callbacks, impractical for fuzzing. This still exercises
+             * session creation and sendto API with various inputs. */
             pj_sockaddr_in peer_addr;
             pj_bzero(&peer_addr, sizeof(peer_addr));
             peer_addr.sin_family = pj_AF_INET();
@@ -247,6 +253,7 @@ int stun_parse(uint8_t *data, size_t Size)
             pj_turn_session_destroy(turn_sess, PJ_SUCCESS);
         }
 
+on_turn_cleanup:
         if (timer_heap) pj_timer_heap_destroy(timer_heap);
         if (ioqueue) pj_ioqueue_destroy(ioqueue);
     }
