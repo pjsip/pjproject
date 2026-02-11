@@ -279,7 +279,16 @@ static pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
             has_lock = PJ_FALSE;
             pj_ioqueue_unlock_key(h);
         } else {
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
+            /* Do not hold mutex while invoking callback to avoid
+             * lock order inversion with application locks.
+             */
+            has_lock = PJ_FALSE;
+            pj_ioqueue_unlock_key(h);
+            PJ_RACE_ME(5);
+#else
             has_lock = PJ_TRUE;
+#endif
         }
 
         /* Call callback. */
@@ -398,7 +407,16 @@ static pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
                 pj_ioqueue_unlock_key(h);
                 PJ_RACE_ME(5);
             } else {
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
+                /* Do not hold mutex while invoking callback to avoid
+                 * lock order inversion with application locks.
+                 */
+                has_lock = PJ_FALSE;
+                pj_ioqueue_unlock_key(h);
+                PJ_RACE_ME(5);
+#else
                 has_lock = PJ_TRUE;
+#endif
             }
 
             /* Call callback. */
@@ -754,7 +772,16 @@ static pj_bool_t ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
         pj_ioqueue_unlock_key(h);
         PJ_RACE_ME(5);
     } else {
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
+        /* Do not hold mutex while invoking callback to avoid
+         * lock order inversion with application locks.
+         */
+        has_lock = PJ_FALSE;
+        pj_ioqueue_unlock_key(h);
+        PJ_RACE_ME(5);
+#else
         has_lock = PJ_TRUE;
+#endif
     }
 
     /* Call callback. */
