@@ -24,7 +24,7 @@
 
 #include <pjnath.h>
 
-#define kMinInputLength 20
+#define kMinInputLength 24
 #define kMaxInputLength 5120
 
 /* Fixed credentials for consistent authentication testing */
@@ -39,6 +39,21 @@
 
 pj_pool_factory *mem;
 
+/* TURN session callback stub */
+static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
+                             const pj_uint8_t *pkt,
+                             unsigned pkt_len,
+                             const pj_sockaddr_t *dst_addr,
+                             unsigned dst_addr_len)
+{
+    PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(pkt);
+    PJ_UNUSED_ARG(pkt_len);
+    PJ_UNUSED_ARG(dst_addr);
+    PJ_UNUSED_ARG(dst_addr_len);
+    return PJ_SUCCESS;
+}
+
 int stun_parse(uint8_t *data, size_t Size)
 {
     pj_pool_t *pool;
@@ -49,16 +64,26 @@ int stun_parse(uint8_t *data, size_t Size)
     unsigned char *encoded_buf;
     pj_size_t encoded_len;
 
-    /* Use fixed credentials based on control byte */
-    /* Bit 0: Use alternative username (for testing mismatch) */
-    /* Bit 1: Use alternative password (for testing auth failure) */
-    if (data[0] & 0x01) {
+    /* Extract all flags at the beginning */
+    uint8_t flag_cred_username = data[0] & 0x01;
+    uint8_t flag_cred_password = data[0] & 0x02;
+    uint8_t flag_msg_type = data[1];
+    uint8_t flag_error_code = data[2] & 0x01;
+    uint8_t flag_unknown_attrs = data[2] & 0x02;
+    uint8_t flag_turn_enabled = data[3] & 0x01;
+
+    /* Advance data pointer and adjust size */
+    data += 4;
+    Size -= 4;
+
+    /* Use fixed credentials based on extracted flags */
+    if (flag_cred_username) {
         username = pj_str(ALT_USERNAME);
     } else {
         username = pj_str(FIXED_USERNAME);
     }
 
-    if (data[0] & 0x02) {
+    if (flag_cred_password) {
         password = pj_str(ALT_PASSWORD);
     } else {
         password = pj_str(FIXED_PASSWORD);
@@ -70,7 +95,7 @@ int stun_parse(uint8_t *data, size_t Size)
     pool = pj_pool_create(mem, "stun_fuzz", 4096, 4096, NULL);
     encoded_buf = pj_pool_alloc(pool, kMaxInputLength);
 
-    /* Path 1: Decode existing STUN message */
+    /* Path 1: Decode existing STUN message using full remaining data */
     pj_stun_msg_decode(pool, data, Size,
                        PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
                        &msg, NULL, NULL);
@@ -89,10 +114,10 @@ int stun_parse(uint8_t *data, size_t Size)
                                       msg, &cred, pool, NULL, NULL);
     }
 
-    /* Path 3: Create new STUN messages (different types based on input) */
+    /* Path 3: Create new STUN messages (different types based on flag) */
     {
         int msg_type;
-        int type_selector = data[1] % 8;
+        int type_selector = flag_msg_type % 8;
 
         /* Select proper STUN message type (method + class) */
         if (type_selector < 2) {
@@ -108,7 +133,7 @@ int stun_parse(uint8_t *data, size_t Size)
         pj_stun_msg_create(pool, msg_type, PJ_STUN_MAGIC, NULL, &response);
     }
 
-    /* Path 4: Add various attributes to message */
+    /* Path 4: Add various attributes to message using full remaining data */
     if (response) {
         pj_sockaddr_in addr;
         pj_str_t software = pj_str("FuzzTest");
@@ -125,12 +150,12 @@ int stun_parse(uint8_t *data, size_t Size)
         /* Add SOFTWARE attribute */
         pj_stun_msg_add_string_attr(pool, response, PJ_STUN_ATTR_SOFTWARE, &software);
 
-        /* Add MAPPED-ADDRESS attribute */
+        /* Add MAPPED-ADDRESS attribute using data */
         pj_bzero(&addr, sizeof(addr));
         addr.sin_family = pj_AF_INET();
-        if (Size >= 10) {
-            pj_memcpy(&addr.sin_addr, data + 4, 4);
-            pj_memcpy(&addr.sin_port, data + 8, 2);
+        if (Size >= 6) {
+            pj_memcpy(&addr.sin_addr, data, 4);
+            pj_memcpy(&addr.sin_port, data + 4, 2);
         }
         pj_stun_msg_add_sockaddr_attr(pool, response, PJ_STUN_ATTR_MAPPED_ADDR,
                                        PJ_FALSE, (pj_sockaddr_t*)&addr, sizeof(addr));
@@ -139,18 +164,18 @@ int stun_parse(uint8_t *data, size_t Size)
         pj_stun_msg_add_sockaddr_attr(pool, response, PJ_STUN_ATTR_XOR_MAPPED_ADDR,
                                        PJ_TRUE, (pj_sockaddr_t*)&addr, sizeof(addr));
 
-        /* Add ERROR-CODE attribute */
-        if (data[3] % 2) {
-            int err_code = (data[10] % 200) + 400;
+        /* Add ERROR-CODE attribute based on flag */
+        if (flag_error_code && Size >= 7) {
+            int err_code = (data[6] % 200) + 400;
             pj_str_t err_reason = pj_str("Test Error");
             pj_stun_msg_add_errcode_attr(pool, response, err_code, &err_reason);
         }
 
         /* Add UNKNOWN-ATTRIBUTES if decode found unknown attrs */
-        if (msg && data[11] % 2) {
+        if (msg && flag_unknown_attrs && Size >= 8) {
             pj_uint16_t unknown_attrs[4] = {0x8001, 0x8002, 0x8003, 0x8004};
             pj_stun_msg_add_unknown_attr(pool, response,
-                                          (data[12] % 4) + 1, unknown_attrs);
+                                          (data[7] % 4) + 1, unknown_attrs);
         }
 
         /* Path 5: Add MESSAGE-INTEGRITY and encode with proper key */
@@ -172,10 +197,65 @@ int stun_parse(uint8_t *data, size_t Size)
     }
 
     /* Path 8: Create error response (only if msg is a request) */
-    if (msg && PJ_STUN_IS_REQUEST(msg->hdr.type)) {
+    if (msg && PJ_STUN_IS_REQUEST(msg->hdr.type) && Size >= 9) {
         pj_str_t err_msg = pj_str("Unauthorized");
-        pj_stun_msg_create_response(pool, msg, (data[13] % 200) + 400,
+        pj_stun_msg_create_response(pool, msg, (data[8] % 200) + 400,
                                      &err_msg, &response);
+    }
+
+    /* Path 9: TURN session operations using full remaining data */
+    if (Size >= 20 && flag_turn_enabled) {
+        pj_turn_session *turn_sess = NULL;
+        pj_turn_session_cb turn_cb;
+        pj_stun_config stun_cfg;
+        pj_ioqueue_t *ioqueue = NULL;
+        pj_timer_heap_t *timer_heap = NULL;
+        pj_status_t status;
+
+        /* Setup STUN config for TURN */
+        pj_stun_config_init(&stun_cfg, mem, 0, ioqueue, timer_heap);
+        status = pj_ioqueue_create(pool, 4, &ioqueue);
+        if (status != PJ_SUCCESS) goto on_turn_cleanup;
+        status = pj_timer_heap_create(pool, 16, &timer_heap);
+        if (status != PJ_SUCCESS) goto on_turn_cleanup;
+        stun_cfg.ioqueue = ioqueue;
+        stun_cfg.timer_heap = timer_heap;
+
+        /* Create TURN session */
+        pj_bzero(&turn_cb, sizeof(turn_cb));
+        turn_cb.on_send_pkt = &turn_on_send_pkt;
+
+        status = pj_turn_session_create(&stun_cfg, "turn_fuzz", pj_AF_INET(),
+                                       PJ_TURN_TP_UDP, NULL, &turn_cb, 0, NULL, &turn_sess);
+
+        if (status == PJ_SUCCESS && turn_sess) {
+            /* Test TURN sendto (will return PJ_EIGNORED since session not READY).
+             * Note: Driving session to READY requires simulating allocation with async
+             * I/O and timer callbacks, impractical for fuzzing. This still exercises
+             * session creation and sendto API with various inputs. */
+            pj_sockaddr_in peer_addr;
+            pj_bzero(&peer_addr, sizeof(peer_addr));
+            peer_addr.sin_family = pj_AF_INET();
+
+            if (Size >= 6) {
+                pj_memcpy(&peer_addr.sin_addr, data, 4);
+                pj_memcpy(&peer_addr.sin_port, data + 4, 2);
+
+                size_t payload_len = Size - 6;
+                if (payload_len > 512) payload_len = 512;
+
+                if (payload_len > 0) {
+                    pj_turn_session_sendto(turn_sess, data + 6, payload_len,
+                                          (pj_sockaddr_t*)&peer_addr, sizeof(peer_addr));
+                }
+            }
+
+            pj_turn_session_destroy(turn_sess, PJ_SUCCESS);
+        }
+
+on_turn_cleanup:
+        if (timer_heap) pj_timer_heap_destroy(timer_heap);
+        if (ioqueue) pj_ioqueue_destroy(ioqueue);
     }
 
     pj_pool_release(pool);
