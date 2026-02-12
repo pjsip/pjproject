@@ -1459,8 +1459,33 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
     pj_list_init(&key->write_list);
     pj_list_init(&key->accept_list);
     pj_list_init(&key->read_cb_list);
-    key->connecting = 0;
+
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
+    /* Wait until any read callback is finished */
+    do {
+        unsigned counter = 0;
+
+        while (key->read_callback_thread) {
+            pj_ioqueue_unlock_key(key);
+            pj_thread_sleep(10);
+            pj_ioqueue_lock_key(key);
+            
+            /* Clear read pending list again */
+            pj_list_init(&key->read_list);
+
+            /* Timeout after ~1 second */
+            if (++counter > 100) {
+                PJ_LOG(1,(THIS_FILE, "Timeout waiting for read callback "
+                                     "to finish on socket=%ld", key->fd));
+                break;
+            }
+        }
+    } while (0);
+#else
     key->read_callback_thread = NULL;
+#endif
+
+    key->connecting = 0;
 
     /* Remove key from sets */
     ioqueue_remove_from_set2(key->ioqueue, key,
