@@ -2122,7 +2122,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
      * - The ufrag must be at least 4 bytes, passwd at least 22 bytes.
      * - Combined usernames and +1 for colon must not exceed MAX_USERNAME_LEN.
      */
-    if (rem_ufrag->slen < 4 && rem_passwd->slen < 22)
+    if (rem_ufrag->slen < 4 || rem_passwd->slen < 22)
     {
         pj_grp_lock_release(ice->grp_lock);
         LOG5((ice->obj_name, "The ufrag must be at least 4 bytes, passwd at "
