@@ -647,6 +647,10 @@ static void on_destroy(void *arg)
     /* Call specific stream destroy handler. */
     on_stream_destroy(arg);
 
+    /* Release ref to transport */
+    if (c_strm->transport && c_strm->transport->grp_lock)
+        pj_grp_lock_dec_ref(c_strm->transport->grp_lock);
+
     /* Free mutex */
     if (c_strm->jb_mutex) {
         pj_mutex_destroy(c_strm->jb_mutex);
