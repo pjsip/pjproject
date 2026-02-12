@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <pjsip.h>
 #include <pjlib.h>
 #include <pjsip-simple/pidf.h>
@@ -9,34 +10,52 @@
 #include <pjsip-simple/dialog_info.h>
 #include <pjsip-simple/iscomposing.h>
 
+#define kMinInputLength 10
+#define kMaxInputLength 5120
+
 static pj_caching_pool caching_pool;
 static pj_pool_t *pool = NULL;
-static int initialized = 0;
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     char print_buf[2048];
+    pj_status_t status;
+    int doc_len;
 
-    if (!initialized) {
-        pj_init();
-        pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
-        initialized = 1;
+    if (Size < kMinInputLength || Size > kMaxInputLength) {
+        return 0;
     }
 
-    if (Size == 0) return 0;
+    status = pj_init();
+    if (status != PJ_SUCCESS) {
+        return 0;
+    }
+
+    pj_log_set_level(0);
+    pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
 
     pool = pj_pool_create(&caching_pool.factory, "fuzz-presence", 4000, 4000, NULL);
-    if (!pool) return 0;
+    if (!pool) {
+        pj_caching_pool_destroy(&caching_pool);
+        return 0;
+    }
+
+    /* Clamp size to INT_MAX to avoid truncation issues */
+    if (Size > INT_MAX) {
+        Size = INT_MAX;
+    }
+    doc_len = (int)Size;
 
     char *doc = pj_pool_alloc(pool, Size + 1);
     if (!doc) {
         pj_pool_release(pool);
+        pj_caching_pool_destroy(&caching_pool);
         return 0;
     }
     memcpy(doc, Data, Size);
     doc[Size] = '\0';
 
     /* Test PIDF parser */
-    pjpidf_pres *pidf_pres = pjpidf_parse(pool, doc, (int)Size);
+    pjpidf_pres *pidf_pres = pjpidf_parse(pool, doc, doc_len);
     if (pidf_pres) {
         pjpidf_print(pidf_pres, print_buf, sizeof(print_buf));
 
@@ -74,7 +93,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     }
 
     /* Test Dialog-Info parser */
-    pjsip_dlg_info_dialog *dlg_info = pjsip_dlg_info_parse(pool, doc, (int)Size);
+    pjsip_dlg_info_dialog *dlg_info = pjsip_dlg_info_parse(pool, doc, doc_len);
     if (dlg_info) {
         pj_xml_attr *attr = dlg_info->attr_head.next;
         while (attr != &dlg_info->attr_head) {
@@ -107,6 +126,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     }
 
     pj_pool_release(pool);
+    pj_caching_pool_destroy(&caching_pool);
     return 0;
 }
 
