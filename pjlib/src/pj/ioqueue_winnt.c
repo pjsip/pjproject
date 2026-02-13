@@ -858,7 +858,9 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
     do {
         unsigned counter = 0;
 
-        while (key->read_callback_thread) {
+        while (key->read_callback_thread &&
+               key->read_callback_thread != pj_thread_this())
+        {
             /* Callback is running, unlock while waiting, since the callback
              * may need the lock.
              */
