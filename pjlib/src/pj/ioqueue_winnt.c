@@ -31,7 +31,7 @@
 #define THIS_FILE "ioq_winnt"
 
 /* Only build when the backend is Windows I/O Completion Ports. */
-#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
+#if 1// PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
 
 #define THIS_FILE "ioq_winnt"
 
@@ -211,7 +211,7 @@ static FnCancelIoEx fnCancelIoEx = NULL;
 static void key_on_destroy(void* data);
 static void increment_counter(pj_ioqueue_key_t* key);
 static void decrement_counter(pj_ioqueue_key_t* key);
-
+static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key);
 
 #define PENDING_OP_POS(op_key) (PJ_ARRAY_SIZE(op_key->internal__) - 1)
 
@@ -391,11 +391,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
 {
     PJ_ASSERT_RETURN(key, PJ_EINVAL);
 
-    pj_ioqueue_lock_key(key);
-
-    key->connecting = 0;
-
-    pj_ioqueue_unlock_key(key);
+    cancel_all_pending_op(key);
 
     return PJ_SUCCESS;
 
@@ -847,18 +843,49 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
     /* Cancel any outstanding op */
     BOOL rc = fnCancelIoEx(key->hnd, NULL);
 
-#if PJ_IOQUEUE_CALLBACK_NO_LOCK
-    /* Cancel any outstanding callback */
     pj_ioqueue_lock_key(key);
+
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
+    /* Clear any pending read callbacks */
     while (!pj_list_empty(&key->read_cb_list)) {
         struct pending_op *op = key->read_cb_list.next;
         pj_list_erase(op);
         pj_list_push_back(&key->free_pending_list, op);
         decrement_counter(key);
     }
-    key->read_callback_thread = NULL;
-    pj_ioqueue_unlock_key(key);
+
+    /* Wait until any read callback is finished */
+    do {
+        unsigned counter = 0;
+
+        while (key->read_callback_thread) {
+            /* Callback is running, unlock while waiting, since the callback
+             * may need the lock.
+             */
+            pj_ioqueue_unlock_key(key);
+            pj_thread_sleep(10);
+            pj_ioqueue_lock_key(key);
+            
+            /* Clear any pending read callbacks again */
+            while (!pj_list_empty(&key->read_cb_list)) {
+                struct pending_op *op = key->read_cb_list.next;
+                pj_list_erase(op);
+                pj_list_push_back(&key->free_pending_list, op);
+                decrement_counter(key);
+            }
+
+            /* Timeout after ~1 second */
+            if (++counter > 100) {
+                PJ_LOG(1,(THIS_FILE, "Timeout waiting for read callback "
+                                     "to finish on key=%p", key));
+                break;
+            }
+        }
+    } while (0);
 #endif
+
+    key->connecting = 0;
+    pj_ioqueue_unlock_key(key);
 
     if (rc == 0) {
         DWORD dwError = WSAGetLastError();

@@ -1466,6 +1466,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
         unsigned counter = 0;
 
         while (key->read_callback_thread) {
+            /* Callback is running, unlock while waiting, since the callback
+             * may need the lock.
+             */
             pj_ioqueue_unlock_key(key);
             pj_thread_sleep(10);
             pj_ioqueue_lock_key(key);
@@ -1481,8 +1484,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
             }
         }
     } while (0);
-#else
-    key->read_callback_thread = NULL;
 #endif
 
     key->connecting = 0;
