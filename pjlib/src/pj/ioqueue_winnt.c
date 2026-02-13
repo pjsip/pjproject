@@ -31,7 +31,7 @@
 #define THIS_FILE "ioq_winnt"
 
 /* Only build when the backend is Windows I/O Completion Ports. */
-#if 1// PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
 
 #define THIS_FILE "ioq_winnt"
 
