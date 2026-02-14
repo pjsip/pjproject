@@ -328,7 +328,7 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *f)
 static void pcap2wav(const struct args *args)
 {
     const pj_str_t WAV = {".wav", 4};
-    struct rtp_packet pkt0;
+    struct rtp_packet pkt;
 
     pjmedia_codec_mgr *cmgr;
     const pjmedia_codec_info *ci;
@@ -355,14 +355,14 @@ static void pcap2wav(const struct args *args)
 #endif
 
     /* Read first packet */
-    read_rtp(&pkt0, PJ_FALSE);
+    read_rtp(&pkt, PJ_FALSE);
 
     cmgr = pjmedia_endpt_get_codec_mgr(app.mept);
 
     /* Get codec info and param for the specified payload type */
-    app.pt = pkt0.rtp->pt;
+    app.pt = pkt.rtp->pt;
     if (app.pt < 96) {
-        T( pjmedia_codec_mgr_get_codec_info(cmgr, pkt0.rtp->pt, &ci) );
+        T( pjmedia_codec_mgr_get_codec_info(cmgr, pkt.rtp->pt, &ci) );
     } else {
         unsigned cnt = 2;
         const pjmedia_codec_info *info[2];
@@ -422,14 +422,14 @@ static void pcap2wav(const struct args *args)
         pjmedia_frame frames[16], pcm_frame;
         short pcm[PJMEDIA_MAX_MTU];
         unsigned i, frame_cnt;
-        long samples_cnt, ts_gap;
+        long samples_cnt, ts_gap_samples;
 
         pj_assert(sizeof(pcm) >= samples_per_frame);
 
         /* Parse first packet */
         frame_cnt = PJ_ARRAY_SIZE(frames);
-        T( pjmedia_codec_parse(app.codec, pkt0.payload, pkt0.payload_len,
-                                &pkt0.packet_ts, &frame_cnt, frames) );
+        T( pjmedia_codec_parse(app.codec, pkt.payload, pkt.payload_len,
+                                &pkt.packet_ts, &frame_cnt, frames) );
 
         /* Decode and write to WAV file */
         samples_cnt = 0;
@@ -453,11 +453,11 @@ static void pcap2wav(const struct args *args)
             break;
         }
 
-        /* Fill in the gap (if any) between pkt0 and pkt1 */
-        ts_gap = pkt1.rtp_ts - pkt0.rtp_ts - samples_cnt;
+        /* Fill in the gap (if any) between pkt and pkt1 */
+        ts_gap_samples = pkt1.rtp_ts - pkt.rtp_ts - samples_cnt;
 
-        if (ts_gap <= (long)param.info.clock_rate * GAP_IGNORE_SECONDS) { /* Ignore gap >30s */
-            while (ts_gap >= (long)samples_per_frame) {
+        if (ts_gap_samples <= (long)param.info.clock_rate * GAP_IGNORE_SECONDS) { /* Ignore gap >30s */
+            while (ts_gap_samples >= (long)samples_per_frame) {
                 pcm_frame.buf = pcm;
                 pcm_frame.size = samples_per_frame * 2;
 
@@ -474,14 +474,14 @@ static void pcap2wav(const struct args *args)
                 if (app.aud_strm) {
                     T( wait_play(&pcm_frame) );
                 }
-                ts_gap -= samples_per_frame;
+                ts_gap_samples -= samples_per_frame;
             }
         }
 
         /* Next */
-        pkt0 = pkt1;
-        pkt0.rtp = (pjmedia_rtp_hdr*)pkt0.buffer;
-        pkt0.payload = pkt0.buffer + (pkt1.payload - pkt1.buffer);
+        pkt = pkt1;
+        pkt.rtp = (pjmedia_rtp_hdr*)pkt.buffer;
+        pkt.payload = pkt.buffer + (pkt1.payload - pkt1.buffer);
     }
 }
 
