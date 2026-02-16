@@ -163,7 +163,7 @@ static void test_codec_cycle(pjmedia_codec *codec, const uint8_t *Data, size_t S
 
     pj_status_t status;
     pjmedia_frame input_frame, output_frame;
-    pj_int16_t pcm_buffer[4096];
+    pj_int16_t pcm_buffer[4096] = {0};
     pj_uint8_t encoded_buffer[2048];
 
     /* Initialise pjmedia_frame */
