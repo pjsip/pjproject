@@ -279,9 +279,9 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
             size = pj_ansi_strlen(sendbuf);
             status = pj_sock_send(sock_data.csock, sendbuf, &size, 0);
             if (status != PJ_SUCCESS)
-                app_perror("send() error2", status);
+                app_perror("send() error for callback trigger", status);
             
-            pj_thread_sleep(1);
+            pj_thread_sleep(200);
         }
 
         if (PJ_TIME_VAL_GT(now, end_time) && sock_data.unregistered)
