@@ -452,7 +452,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
         while (q < q_end && p < p_end) {
             pj_uint16_t tmp_nal_size;
 
-            if (p + pktz->cfg.unpack_nal_start > p_end)
+            if (p + pktz->cfg.unpack_nal_start > p_end || q + 2 > q_end)
                 return PJ_EINVAL;
 
             /* Write NAL unit start code */
