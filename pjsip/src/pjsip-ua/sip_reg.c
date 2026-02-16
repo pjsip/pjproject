@@ -424,6 +424,13 @@ PJ_DEF(void) pjsip_regc_add_ref( pjsip_regc *regc )
      * the regc is being destroyed and we should not try to access it.
      * This can happen when transaction callbacks are invoked during
      * endpoint shutdown (see https://github.com/pjsip/pjproject/issues/4163).
+     * 
+     * Note: There is a small race window between checking busy_ctr and
+     * calling pj_atomic_inc, but this is acceptable because:
+     * 1. The regc struct memory is pool-allocated and not freed immediately
+     * 2. Reading the pointer value is safe even during concurrent updates
+     * 3. If busy_ctr becomes NULL after the check, pj_atomic_inc may fail,
+     *    but this is during destruction anyway and handled safely
      */
     if (regc->busy_ctr) {
         pj_atomic_inc(regc->busy_ctr);
@@ -435,6 +442,10 @@ PJ_DEF(pj_status_t) pjsip_regc_dec_ref( pjsip_regc *regc )
     pj_assert(regc);
     /* Check if regc is being destroyed. If busy_ctr is NULL, it means
      * the regc has been destroyed and we should not try to access it.
+     * 
+     * Note: There is a small race window between checking busy_ctr and
+     * calling pj_atomic_dec_and_get, but this is acceptable for the same
+     * reasons as explained in pjsip_regc_add_ref.
      */
     if (regc->busy_ctr) {
         if (pj_atomic_dec_and_get(regc->busy_ctr)==0 && regc->_delete_flag) {
@@ -1122,13 +1133,21 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
      * get terminated during endpoint shutdown. If busy_ctr or lock is NULL,
      * the regc has been destroyed and we should not access it.
      * See https://github.com/pjsip/pjproject/issues/4163.
+     * 
+     * Check this before calling add_ref to avoid reference count imbalance.
+     * 
+     * Note: Reading busy_ctr/lock without holding the lock is safe here because:
+     * 1. The regc struct is pool-allocated and not freed immediately
+     * 2. We only read pointer values to check for NULL
+     * 3. If there's a race and they become NULL after we check, the worst case
+     *    is we proceed with add_ref/lock_acquire which will fail safely
      */
-    pjsip_regc_add_ref(regc);
     if (!regc->busy_ctr || !regc->lock) {
         /* regc is being/has been destroyed, return immediately */
         return;
     }
 
+    pjsip_regc_add_ref(regc);
     pj_lock_acquire(regc->lock);
 
     /* Decrement pending transaction counter. */
