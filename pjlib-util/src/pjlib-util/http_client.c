@@ -1148,6 +1148,31 @@ static pj_status_t auth_respond_basic(pj_http_req *hreq)
     pj_status_t status;
     int len;
 
+    /* Ensure the combined length of username, colon, and password doesn't
+     * exceed buffer size.
+     */
+    if (hreq->param.auth_cred.username.slen < 0 ||
+        hreq->param.auth_cred.data.slen < 0)
+    {
+        TRACE_((THIS_FILE,
+                "Error: username and/or password length is negative"));
+        return PJ_ETOOBIG;
+    }
+
+    do {
+        pj_size_t user_len =
+            (pj_size_t)hreq->param.auth_cred.username.slen;
+        pj_size_t pass_len =
+            (pj_size_t)hreq->param.auth_cred.data.slen;
+
+        if (user_len >= BUF_SIZE ||
+            pass_len > (pj_size_t)BUF_SIZE - 1 - user_len)
+        {
+            TRACE_((THIS_FILE,
+                    "Error: username and password exceed buffer size"));
+            return PJ_ETOOBIG;
+        }
+    } while (0);
     /* Use send buffer to store userid ":" password */
     user_pass.ptr = hreq->buffer.ptr;
     pj_strcpy(&user_pass, &hreq->param.auth_cred.username);
