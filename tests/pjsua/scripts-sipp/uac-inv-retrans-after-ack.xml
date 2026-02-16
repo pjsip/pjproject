@@ -18,13 +18,123 @@
 <!--                                                                    -->
 <!--                                                                    -->
 
-<scenario name="UAC">
+<!-- INVITE retransmission after ACK must not be treated as a new call  -->
+<!-- pjsua must be run with param "--max-calls=1" (mod_sipp.py default) -->
+     
+<scenario name="INVITE retransmission after ACK must not be treated as a new call">
 
+  <!-- Send initial INVITE -->
   <send>
     <![CDATA[
 
       INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
       Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-1
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Subject: Performance Test
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=Tester 234 123 IN IP4 127.0.0.1
+      s=Tester
+      c=IN IP4 127.0.0.1
+      t=0 0
+      m=audio 17424 RTP/AVP 0 101
+      a=rtpmap:101 telephone-event/8000
+      a=sendrecv
+
+    ]]>
+  </send>
+
+  <recv response="100" optional="true">
+  </recv>
+
+  <recv response="180" optional="true">
+  </recv>
+
+  <recv response="200" rtd="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-2
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Subject: Performance Test
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="500"/>
+  
+  <!-- Retransmit INVITE to simulate late retransmission, should be responded with 200 retrans -->
+  <send>
+    <![CDATA[
+
+      INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-1
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Subject: Performance Test
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=Tester 234 123 IN IP4 127.0.0.1
+      s=Tester
+      c=IN IP4 127.0.0.1
+      t=0 0
+      m=audio 17424 RTP/AVP 0 101
+      a=rtpmap:101 telephone-event/8000
+      a=sendrecv
+
+    ]]>
+  </send>
+
+  <recv response="200">
+  </recv>
+  
+  <send>
+    <![CDATA[
+
+      ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-2
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Subject: Performance Test
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="500"/>
+
+  <!-- Send a re-INVITE (not a retransmission) to verify proper handling and ensure it is not rejected due to the lingering initial INVITE -->
+  <send>
+    <![CDATA[
+
+      INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
       To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
@@ -40,16 +150,14 @@
       s=Tester
       c=IN IP4 127.0.0.1
       t=0 0
-      m=audio 17424 UDP/TLS/RTP/SAVP 0 101
+      m=audio 17424 RTP/AVP 0 101
       a=rtpmap:101 telephone-event/8000
       a=sendrecv
-      a=setup:actpass
-      a=fingerprint:SHA-256 7A:89:37:BC:1E:DF:7A:81:86:71:E7:D9:10:6D:AD:2C:26:12:63:FF:00:31:81:52:82:E0:63:2A:23:47:A4:05
+
     ]]>
   </send>
 
-  <recv response="100"
-        optional="true">
+  <recv response="100" optional="true">
   </recv>
 
   <recv response="180" optional="true">
@@ -62,7 +170,7 @@
     <![CDATA[
 
       ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
-      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-2
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
       To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
@@ -80,48 +188,12 @@
   <send>
     <![CDATA[
 
-      INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
-      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-3
+      BYE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
       To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
-      CSeq: [cseq] INVITE
-      Contact: sip:sipp@[local_ip]:[local_port]
-      Max-Forwards: 70
-      Subject: Performance Test
-      Content-Type: application/sdp
-      Content-Length: [len]
-
-      v=0
-      o=Tester 234 123 IN IP4 127.0.0.1
-      s=Tester
-      c=IN IP4 127.0.0.1
-      t=0 0
-      m=audio 17424 RTP/SAVP 0 101
-      a=rtpmap:101 telephone-event/8000
-      a=sendrecv
-      a=crypto:1 AES_256_CM_HMAC_SHA1_80 inline:LBNmzgnWiJiRYuNsEzUJJDbPhCbv89EFyjJHf9wXIpAiweS3JjEBeDJCDqCbvw==
-      a=crypto:2 AES_256_CM_HMAC_SHA1_32 inline:rs43/wcKQvpx/rW7BE+Z3Kw9ctXl8d+uLNv/yVPCwtqhoHS+7bbBiAkx6ZM0Sw==
-      a=crypto:3 AES_CM_128_HMAC_SHA1_80 inline:URF7iv+U7XFsqiWMmPYMPOuIqz3qjQjmLW/qP5+x
-      a=crypto:4 AES_CM_128_HMAC_SHA1_32 inline:08xQbX6lbROmI6H2wKmrLPi0oAURF0eRftsfzgEv
-    ]]>
-  </send>
-
-  <recv response="100" optional="true">
-  </recv>
-
-  <recv response="200" rtd="true">
-  </recv>
-
-  <send>
-    <![CDATA[
-
-      ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
-      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-4
-      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
-      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
-      Call-ID: [call_id]
-      CSeq: [cseq] ACK
+      CSeq: [cseq] BYE
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       Subject: Performance Test
@@ -130,6 +202,8 @@
     ]]>
   </send>
 
+  <recv response="200">
+  </recv>
 
   <!-- definition of the response time repartition table (unit is ms)   -->
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
