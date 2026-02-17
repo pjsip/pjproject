@@ -421,18 +421,21 @@ pjsua_buddy_get_dlg_event_info( pjsua_buddy_id buddy_id,
 PJ_DEF(pj_status_t) pjsua_buddy_set_user_data( pjsua_buddy_id buddy_id,
                                                void *user_data)
 {
-    struct buddy_lock lck;
-    pj_status_t status;
+    //struct buddy_lock lck;
+    //pj_status_t status;
 
     PJ_ASSERT_RETURN(pjsua_buddy_is_valid(buddy_id), PJ_EINVAL);
 
-    status = lock_buddy("pjsua_buddy_set_user_data()", buddy_id, &lck, 0);
-    if (status != PJ_SUCCESS)
-        return status;
+    /* Locking may fail and validity check above should be sufficient.
+     * Other similar functions also skip locking.
+     */
+    //status = lock_buddy("pjsua_buddy_set_user_data()", buddy_id, &lck, 0);
+    //if (status != PJ_SUCCESS)
+    //    return status;
 
     pjsua_var.buddy[buddy_id].user_data = user_data;
 
-    unlock_buddy(&lck);
+    //unlock_buddy(&lck);
 
     return PJ_SUCCESS;
 }
@@ -443,19 +446,23 @@ PJ_DEF(pj_status_t) pjsua_buddy_set_user_data( pjsua_buddy_id buddy_id,
  */
 PJ_DEF(void*) pjsua_buddy_get_user_data(pjsua_buddy_id buddy_id)
 {
-    struct buddy_lock lck;
-    pj_status_t status;
+    //struct buddy_lock lck;
+    //pj_status_t status;
     void *user_data;
 
     PJ_ASSERT_RETURN(pjsua_buddy_is_valid(buddy_id), NULL);
 
-    status = lock_buddy("pjsua_buddy_get_user_data()", buddy_id, &lck, 0);
-    if (status != PJ_SUCCESS)
-        return NULL;
+    /* Locking may fail and application has no idea whether the user_data
+     * is really NULL or locking failed, so we skip locking here.
+     * Other similar functions also skip locking.
+     */
+    //status = lock_buddy("pjsua_buddy_get_user_data()", buddy_id, &lck, 0);
+    //if (status != PJ_SUCCESS)
+    //    return NULL;
 
     user_data = pjsua_var.buddy[buddy_id].user_data;
 
-    unlock_buddy(&lck);
+    //unlock_buddy(&lck);
 
     return user_data;
 }
