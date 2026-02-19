@@ -1556,7 +1556,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
     pj_list_init(&key->write_list);
     pj_list_init(&key->accept_list);
     pj_list_init(&key->read_cb_list);
+<<<<<<< HEAD
     pj_list_init(&key->write_cb_list);
+=======
+>>>>>>> 9b0a4e83fb1663a0c05f2186c147aff9e063a4b5
 
 #if PJ_IOQUEUE_CALLBACK_NO_LOCK
     /* Wait until any read callback is finished */
@@ -1584,6 +1587,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
             }
         }
     } while (0);
+<<<<<<< HEAD
 
     /* Wait until any write callback is finished */
     do {
@@ -1610,6 +1614,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
             }
         }
     } while (0);
+=======
+>>>>>>> 9b0a4e83fb1663a0c05f2186c147aff9e063a4b5
 #endif
 
     key->connecting = 0;

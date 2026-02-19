@@ -858,6 +858,7 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
         pj_list_push_back(&key->free_pending_list, op);
         decrement_counter(key);
     }
+<<<<<<< HEAD
     /* Clear any pending write callbacks */
     while (!pj_list_empty(&key->write_cb_list)) {
         struct pending_op *op = key->write_cb_list.next;
@@ -865,6 +866,8 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
         pj_list_push_back(&key->free_pending_list, op);
         decrement_counter(key);
     }
+=======
+>>>>>>> 9b0a4e83fb1663a0c05f2186c147aff9e063a4b5
 
     /* Wait until any read callback is finished */
     do {
@@ -896,6 +899,7 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
             }
         }
     } while (0);
+<<<<<<< HEAD
 
     /* Wait until any write callback is finished */
     do {
@@ -927,6 +931,8 @@ static pj_status_t cancel_all_pending_op(pj_ioqueue_key_t *key)
             }
         }
     } while (0);
+=======
+>>>>>>> 9b0a4e83fb1663a0c05f2186c147aff9e063a4b5
 #endif
 
     key->connecting = 0;
