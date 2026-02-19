@@ -516,7 +516,7 @@ call_param::call_param(const SipTxOption &tx_option, const CallSetting &setting,
 }
 
 Call::Call(Account& account, int call_id)
-: acc(account), id(call_id), userData(NULL), sdp_pool(NULL), child(NULL)
+: acc(account), id(call_id), userData(NULL), child(NULL)
 {
     if (call_id != PJSUA_INVALID_ID)
         pjsua_call_set_user_data(call_id, this);
@@ -760,22 +760,18 @@ void Call::makeCall(const string &dst_uri, const CallOpParam &prm)
 
 void Call::answer(const CallOpParam &prm) PJSUA2_THROW(Error)
 {
-    pj_pool_t *pool = NULL;
+    pj_pool_t *tmp_pool = NULL;
     
-    /* Get the pool from the invite session for SDP operations */
+    /* Create temporary pool for SDP operations if SDP is provided */
     if (!prm.sdp.wholeSdp.empty()) {
-        pjsua_call *call = &pjsua_var.calls[id];
-        if (call->inv && call->inv->pool_prov) {
-            pool = call->inv->pool_prov;
-        } else {
-            PJSUA2_RAISE_ERROR2(PJ_EINVALIDOP, 
-                               "Cannot answer with SDP: invite session pool "
-                               "is not available");
+        tmp_pool = pjsua_pool_create("tmp-answer", 2048, 512);
+        if (!tmp_pool) {
+            PJSUA2_RAISE_ERROR2(PJ_ENOMEM, "Call::answer()");
         }
     }
     
     call_param param(prm.txOption, prm.opt, prm.reason,
-                     pool, prm.sdp.wholeSdp);
+                     tmp_pool, prm.sdp.wholeSdp);
     
     if (param.sdp) {
         PJSUA2_CHECK_EXPR( pjsua_call_answer_with_sdp(id, param.sdp,
@@ -787,6 +783,11 @@ void Call::answer(const CallOpParam &prm) PJSUA2_THROW(Error)
         PJSUA2_CHECK_EXPR( pjsua_call_answer2(id, param.p_opt, prm.statusCode,
                                               param.p_reason,
                                               param.p_msg_data) );
+    }
+    
+    /* Release temporary pool */
+    if (tmp_pool) {
+        pj_pool_release(tmp_pool);
     }
 }
 

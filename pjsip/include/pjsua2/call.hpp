@@ -2355,7 +2355,6 @@ private:
     pjsua_call_id        id;
     Token                userData;
     std::vector<Media *> medias;
-    pj_pool_t           *sdp_pool;
     Call                *child;     /* New outgoing call in call transfer.  */
 };
 
