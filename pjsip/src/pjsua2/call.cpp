@@ -541,12 +541,6 @@ Call::~Call()
             PJ_UNUSED_ARG(err);
         }
     }
-
-    /* Release SDP pool if it was created */
-    if (sdp_pool) {
-        pj_pool_release(sdp_pool);
-        sdp_pool = NULL;
-    }
 }
 
 CallInfo Call::getInfo() const PJSUA2_THROW(Error)
@@ -766,8 +760,22 @@ void Call::makeCall(const string &dst_uri, const CallOpParam &prm)
 
 void Call::answer(const CallOpParam &prm) PJSUA2_THROW(Error)
 {
+    pj_pool_t *pool = NULL;
+    
+    /* Get the pool from the invite session for SDP operations */
+    if (!prm.sdp.wholeSdp.empty()) {
+        pjsua_call *call = &pjsua_var.calls[id];
+        if (call->inv && call->inv->pool_prov) {
+            pool = call->inv->pool_prov;
+        } else {
+            PJSUA2_RAISE_ERROR2(PJ_EINVALIDOP, 
+                               "Cannot answer with SDP: invite session pool "
+                               "is not available");
+        }
+    }
+    
     call_param param(prm.txOption, prm.opt, prm.reason,
-                     sdp_pool, prm.sdp.wholeSdp);
+                     pool, prm.sdp.wholeSdp);
     
     if (param.sdp) {
         PJSUA2_CHECK_EXPR( pjsua_call_answer_with_sdp(id, param.sdp,

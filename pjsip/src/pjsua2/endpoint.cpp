@@ -1303,18 +1303,7 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
     if (rem_sdp)
         prm.remSdp.fromPj(*rem_sdp);
     
-    /* Create Call's own pool for SDP operations to avoid use-after-free.
-     * This pool will be destroyed in Call's destructor.
-     */
-    if (!call->sdp_pool) {
-        call->sdp_pool = pjsua_pool_create("call-sdp", 2048, 512);
-        if (!call->sdp_pool) {
-            PJ_LOG(2,(THIS_FILE, "Failed to create SDP pool for call %d",
-                      call_id));
-            return;
-        }
-    }
-    
+    call->sdp_pool = pool;
     call->onCallSdpCreated(prm);
     
     /* Check if application modifies the SDP */
