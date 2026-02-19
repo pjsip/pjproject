@@ -812,12 +812,12 @@
 
 
 /**
- * This setting ensures that the read callback is invoked without holding
- * the key mutex, even when concurrency is disabled.
+ * This setting ensures that the read and write callbacks are invoked without
+ * holding the key mutex, even when concurrency is disabled.
  *
  * Note: This may introduce a race condition between key unregistration
- * and the read callback. Therefore, the application must be prepared
- * to handle a read callback even after pj_ioqueue_unregister() has returned.
+ * and the read/write callbacks. Therefore, the application must be prepared
+ * to handle these callbacks even after pj_ioqueue_unregister() has returned.
  *
  * Default: 1 (enabled).
  */
