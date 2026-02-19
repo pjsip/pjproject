@@ -1557,6 +1557,61 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
     pj_list_init(&key->accept_list);
     pj_list_init(&key->read_cb_list);
     pj_list_init(&key->write_cb_list);
+
+#if PJ_IOQUEUE_CALLBACK_NO_LOCK
+    /* Wait until any read callback is finished */
+    do {
+        unsigned counter = 0;
+
+        while (key->read_callback_thread &&
+               key->read_callback_thread != pj_thread_this())
+        {
+            /* Callback is running, unlock while waiting, since the callback
+             * may need the lock.
+             */
+            pj_ioqueue_unlock_key(key);
+            pj_thread_sleep(10);
+            pj_ioqueue_lock_key(key);
+            
+            /* Clear read pending list again */
+            pj_list_init(&key->read_list);
+
+            /* Timeout after ~1 second */
+            if (++counter > 100) {
+                PJ_LOG(1,(THIS_FILE, "Timeout waiting for read callback "
+                                     "to finish on socket=%ld", key->fd));
+                break;
+            }
+        }
+    } while (0);
+
+    /* Wait until any write callback is finished */
+    do {
+        unsigned counter = 0;
+
+        while (key->write_callback_thread &&
+               key->write_callback_thread != pj_thread_this())
+        {
+            /* Callback is running, unlock while waiting, since the callback
+             * may need the lock.
+             */
+            pj_ioqueue_unlock_key(key);
+            pj_thread_sleep(10);
+            pj_ioqueue_lock_key(key);
+            
+            /* Clear write pending list again */
+            pj_list_init(&key->write_list);
+
+            /* Timeout after ~1 second */
+            if (++counter > 100) {
+                PJ_LOG(1,(THIS_FILE, "Timeout waiting for write callback "
+                                     "to finish on socket=%ld", key->fd));
+                break;
+            }
+        }
+    } while (0);
+#endif
+
     key->connecting = 0;
     key->read_callback_thread = NULL;
     key->write_callback_thread = NULL;
