@@ -195,9 +195,24 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
             /* Not the first fragment, get NRI and NAL unit type
              * from the previous fragment.
              */
+
+            /* Verify nal_start */
+            if (nal_start < buf + pktz->cfg.mtu) {
+                PJ_LOG(2,(THIS_FILE,
+                          "Bad H.264 fragmentation state at pos=%u", *pos));
+                return PJ_EINVAL;
+            }
+
             p = nal_start - pktz->cfg.mtu;
             NRI = (*p & 0x60) >> 5;
             TYPE = *(p+1) & 0x1F;
+
+            /* Check fragmentation indication */
+            if ((*(p) & 0x1F) != NAL_TYPE_FU_A) {
+                PJ_LOG(2,(THIS_FILE,
+                          "Bad H.264 fragmentation state at pos=%u", *pos));
+                return PJ_EINVAL;
+            }
         }
 
         /* Init FU indicator (one octet: F+NRI+TYPE) */
@@ -437,7 +452,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
         while (q < q_end && p < p_end) {
             pj_uint16_t tmp_nal_size;
 
-            if (p + pktz->cfg.unpack_nal_start > p_end)
+            if (p + pktz->cfg.unpack_nal_start > p_end || q + 2 > q_end)
                 return PJ_EINVAL;
 
             /* Write NAL unit start code */

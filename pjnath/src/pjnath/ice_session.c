@@ -2102,7 +2102,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
                               const pj_ice_sess_cand rem_cand[])
 {
     pj_ice_sess_checklist *clist;
-    char buf[128];
+    enum { MAX_USERNAME_LEN = 512 };
+    char buf[MAX_USERNAME_LEN];
     pj_str_t username;
     timer_data *td;
     pj_status_t status;
@@ -2115,6 +2116,27 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
         /* Checklist has been created */
         pj_grp_lock_release(ice->grp_lock);
         return PJ_SUCCESS;
+    }
+
+    /* Verify credentials lengths:
+     * - The ufrag must be at least 4 bytes, passwd at least 22 bytes.
+     * - Combined usernames and +1 for colon must not exceed MAX_USERNAME_LEN.
+     */
+    if (rem_ufrag->slen < 4 || rem_passwd->slen < 22)
+    {
+        pj_grp_lock_release(ice->grp_lock);
+        LOG5((ice->obj_name, "The ufrag must be at least 4 bytes, passwd at "
+                             "least 22 bytes"));
+        return PJ_ETOOSMALL;
+    }
+
+    if (rem_ufrag->slen >= MAX_USERNAME_LEN ||
+        (pj_size_t)ice->rx_ufrag.slen > 
+                (pj_size_t)MAX_USERNAME_LEN - 1 - (pj_size_t)rem_ufrag->slen)
+    {
+        pj_grp_lock_release(ice->grp_lock);
+        LOG5((ice->obj_name, "Combined usernames must not exceed 512 bytes"));
+        return PJ_ETOOBIG;
     }
 
     /* Save credentials */

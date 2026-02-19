@@ -186,13 +186,17 @@ static void err_exit(const char *title, pj_status_t status)
                             err_exit(#op, status); \
                     } while (0)
 
+struct rtp_packet
+{
+    pj_uint8_t       buffer[PJMEDIA_MAX_MTU];
+    pjmedia_rtp_hdr *rtp;
+    pj_uint8_t      *payload;
+    unsigned         payload_len;
+    pj_uint32_t      rtp_ts;
+    pj_timestamp     packet_ts;
+};
 
-static int read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
-                    pjmedia_rtp_hdr **rtp,
-                    pj_uint8_t **payload,
-                    unsigned *payload_size,
-                    pj_bool_t check_pt,
-                    pj_timestamp *ts)
+static int read_rtp(struct rtp_packet *pkt, pj_bool_t check_pt)
 {
     pj_status_t status;
 
@@ -204,12 +208,12 @@ static int read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
 
     /* Loop reading until we have a good RTP packet */
     for (;;) {
-        pj_size_t sz = bufsize;
+        pj_size_t sz = sizeof(pkt->buffer);
         const pjmedia_rtp_hdr *r;
         const void *p;
         pjmedia_rtp_status seq_st;
 
-        status = pj_pcap_read_udp_with_timestamp(app.pcap, NULL, buf, &sz, ts);
+        status = pj_pcap_read_udp_with_timestamp(app.pcap, NULL, pkt->buffer, &sz, &pkt->packet_ts);
         if (status != PJ_SUCCESS) {
             if (status == PJ_EEOF)
                 return PJ_FALSE;
@@ -220,8 +224,8 @@ static int read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
          * We will decode it again to get the payload after we do
          * SRTP decoding
          */
-        status = pjmedia_rtp_decode_rtp(&app.rtp_sess, buf, (int)sz, &r,
-                                        &p, payload_size);
+        status = pjmedia_rtp_decode_rtp(&app.rtp_sess, pkt->buffer, (int)sz, &r,
+                                        &p, &pkt->payload_len);
         if (status != PJ_SUCCESS) {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(status, errmsg, sizeof(errmsg));
@@ -234,7 +238,7 @@ static int read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
         if (app.srtp) {
             int len = (int)sz;
             status = pjmedia_transport_srtp_decrypt_pkt(app.srtp, PJ_TRUE,
-                                                        buf, &len);
+                                                        pkt->buffer, &len);
             if (status != PJ_SUCCESS) {
                 char errmsg[PJ_ERR_MSG_SIZE];
                 pj_strerror(status, errmsg, sizeof(errmsg));
@@ -245,8 +249,8 @@ static int read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
             sz = len;
 
             /* Decode RTP packet again */
-            status = pjmedia_rtp_decode_rtp(&app.rtp_sess, buf, (int)sz, &r,
-                                            &p, payload_size);
+            status = pjmedia_rtp_decode_rtp(&app.rtp_sess, pkt->buffer, (int)sz, &r,
+                                            &p, &pkt->payload_len);
             if (status != PJ_SUCCESS) {
                 char errmsg[PJ_ERR_MSG_SIZE];
                 pj_strerror(status, errmsg, sizeof(errmsg));
@@ -278,8 +282,9 @@ static int read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
         }
 
 
-        *rtp = (pjmedia_rtp_hdr*)r;
-        *payload = (pj_uint8_t*)p;
+        pkt->rtp = (pjmedia_rtp_hdr*)r;
+        pkt->payload = (pj_uint8_t*)p;
+        pkt->rtp_ts = pj_ntohl(pkt->rtp->ts);
 
         /* We have good packet */
         break;
@@ -323,14 +328,7 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *f)
 static void pcap2wav(const struct args *args)
 {
     const pj_str_t WAV = {".wav", 4};
-    struct pkt
-    {
-        pj_uint8_t       buffer[PJMEDIA_MAX_MTU];
-        pjmedia_rtp_hdr *rtp;
-        pj_uint8_t      *payload;
-        unsigned         payload_len;
-        pj_timestamp     ts;
-    } pkt0;
+    struct rtp_packet pkt0;
 
     pjmedia_codec_mgr *cmgr;
     const pjmedia_codec_info *ci;
@@ -357,8 +355,7 @@ static void pcap2wav(const struct args *args)
 #endif
 
     /* Read first packet */
-    read_rtp(pkt0.buffer, sizeof(pkt0.buffer), &pkt0.rtp,
-             &pkt0.payload, &pkt0.payload_len, PJ_FALSE, &pkt0.ts);
+    read_rtp(&pkt0, PJ_FALSE);
 
     cmgr = pjmedia_endpt_get_codec_mgr(app.mept);
 
@@ -421,7 +418,7 @@ static void pcap2wav(const struct args *args)
 
     /* Loop reading PCAP and writing WAV file */
     for (;;) {
-        struct pkt pkt1;
+        struct rtp_packet pkt1;
         pjmedia_frame frames[16], pcm_frame;
         short pcm[PJMEDIA_MAX_MTU];
         unsigned i, frame_cnt;
@@ -432,7 +429,7 @@ static void pcap2wav(const struct args *args)
         /* Parse first packet */
         frame_cnt = PJ_ARRAY_SIZE(frames);
         T( pjmedia_codec_parse(app.codec, pkt0.payload, pkt0.payload_len,
-                                &pkt0.ts, &frame_cnt, frames) );
+                                &pkt0.packet_ts, &frame_cnt, frames) );
 
         /* Decode and write to WAV file */
         samples_cnt = 0;
@@ -452,14 +449,12 @@ static void pcap2wav(const struct args *args)
         }
 
         /* Read next packet */
-        if (!read_rtp(pkt1.buffer, sizeof(pkt1.buffer), &pkt1.rtp,
-                      &pkt1.payload, &pkt1.payload_len, PJ_TRUE, &pkt1.ts)) {
+        if (!read_rtp(&pkt1, PJ_TRUE)) {
             break;
         }
 
         /* Fill in the gap (if any) between pkt0 and pkt1 */
-        ts_gap = pj_ntohl(pkt1.rtp->ts) - pj_ntohl(pkt0.rtp->ts) -
-                 samples_cnt;
+        ts_gap = pkt1.rtp_ts - pkt0.rtp_ts - samples_cnt;
 
         if (ts_gap <= (long)param.info.clock_rate * GAP_IGNORE_SECONDS) { /* Ignore gap >30s */
             while (ts_gap >= (long)samples_per_frame) {
@@ -528,14 +523,7 @@ static void pcap2avi(const struct args *args)
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     const pj_str_t AVI = {".avi", 4};
     enum { MAX_BUF_SIZE = 100 * 1024 * 1024 };
-    struct pkt
-    {
-        pj_uint8_t       buffer[PJMEDIA_MAX_MTU];
-        pjmedia_rtp_hdr *rtp;
-        pj_uint8_t      *payload;
-        unsigned         payload_len;
-        pj_timestamp     ts;
-    } pkt0;
+    struct rtp_packet pkt0;
 
     const pjmedia_vid_codec_info *ci;
     pjmedia_vid_codec_param param;
@@ -559,8 +547,7 @@ static void pcap2avi(const struct args *args)
 #endif
 
     /* Read first packet */
-    read_rtp(pkt0.buffer, sizeof(pkt0.buffer), &pkt0.rtp,
-             &pkt0.payload, &pkt0.payload_len, PJ_FALSE, &pkt0.ts);
+    read_rtp(&pkt0, PJ_FALSE);
 
     /* Get codec info and param for the specified payload type */
     app.pt = pkt0.rtp->pt;
@@ -594,7 +581,7 @@ static void pcap2avi(const struct args *args)
 
     /* Loop reading PCAP and writing AVI file */
     for (;;) {
-        struct pkt pkt1;
+        struct rtp_packet pkt1;
         pjmedia_frame frame, out_frame;
 
         pj_bzero(&out_frame, sizeof(out_frame));
@@ -627,8 +614,7 @@ static void pcap2avi(const struct args *args)
         }
 
         /* Read next packet */
-        if (!read_rtp(pkt1.buffer, sizeof(pkt1.buffer), &pkt1.rtp,
-                      &pkt1.payload, &pkt1.payload_len, PJ_TRUE, &pkt1.ts)) {
+        if (!read_rtp(&pkt1, PJ_TRUE)) {
             break;
         }
 

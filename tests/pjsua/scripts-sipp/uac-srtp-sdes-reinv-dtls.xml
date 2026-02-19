@@ -83,7 +83,7 @@
     <![CDATA[
 
       INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
-      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-1
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-3
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
       To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
@@ -117,7 +117,7 @@
     <![CDATA[
 
       ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
-      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-2
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-4
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
       To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]

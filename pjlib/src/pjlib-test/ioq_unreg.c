@@ -266,6 +266,23 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
             pj_mutex_unlock(sock_data.mutex);
             pj_ioqueue_unregister(sock_data.key);
         }
+        else if (test_method == UNREGISTER_IN_CALLBACK && 
+            PJ_TIME_VAL_GT(now, time_to_unregister) &&
+            !sock_data.unregistered)
+        {
+            /* Read callback is not triggered if packets are lost.
+             * Let's help triggering callback.
+             */
+            pj_ssize_t size;
+            char *sendbuf = "Ping";
+
+            size = pj_ansi_strlen(sendbuf);
+            status = pj_sock_send(sock_data.csock, sendbuf, &size, 0);
+            if (status != PJ_SUCCESS)
+                app_perror("send() error for callback trigger", status);
+
+            pj_thread_sleep(200);
+        }
 
         if (PJ_TIME_VAL_GT(now, end_time) && sock_data.unregistered)
             break;
