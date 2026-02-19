@@ -541,6 +541,12 @@ Call::~Call()
             PJ_UNUSED_ARG(err);
         }
     }
+
+    /* Release SDP pool if it was created */
+    if (sdp_pool) {
+        pj_pool_release(sdp_pool);
+        sdp_pool = NULL;
+    }
 }
 
 CallInfo Call::getInfo() const PJSUA2_THROW(Error)
@@ -760,13 +766,6 @@ void Call::makeCall(const string &dst_uri, const CallOpParam &prm)
 
 void Call::answer(const CallOpParam &prm) PJSUA2_THROW(Error)
 {
-    /* Check if SDP pool is available when SDP is provided */
-    if (!prm.sdp.wholeSdp.empty() && !sdp_pool) {
-        PJSUA2_RAISE_ERROR2(PJ_EINVALIDOP, 
-                           "Cannot answer with SDP: call dialog is no longer "
-                           "valid (pool has been destroyed)");
-    }
-    
     call_param param(prm.txOption, prm.opt, prm.reason,
                      sdp_pool, prm.sdp.wholeSdp);
     
@@ -1080,11 +1079,6 @@ void Call::processStateChange(OnCallStateParam &prm)
             }
         }
         medias.clear();
-
-        /* Reset SDP pool pointer to prevent use-after-free.
-         * The pool will be destroyed by the dialog/invite session.
-         */
-        sdp_pool = NULL;
 
         /* Remove this Call object association */
         pjsua_call_set_user_data(id, NULL);
