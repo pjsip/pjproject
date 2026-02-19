@@ -1303,7 +1303,6 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
     if (rem_sdp)
         prm.remSdp.fromPj(*rem_sdp);
     
-    call->sdp_pool = pool;
     call->onCallSdpCreated(prm);
     
     /* Check if application modifies the SDP */
