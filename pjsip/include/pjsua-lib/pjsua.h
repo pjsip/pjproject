@@ -467,6 +467,19 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 
 
 /**
+ * Enable support for RFC 4235 dialog event package. This was introduced in
+ * PJSIP version 2.16 and provides client-side dialog event subscription
+ * support. Set this to 0 to disable the dialog event package, which can be
+ * useful if you have your own implementation of the dialog event server.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJSUA_HAS_DLG_EVENT_PKG
+#   define PJSUA_HAS_DLG_EVENT_PKG       1
+#endif
+
+
+/**
  * This enumeration represents pjsua state.
  */
 typedef enum pjsua_state
