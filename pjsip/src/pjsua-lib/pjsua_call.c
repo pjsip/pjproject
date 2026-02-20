@@ -3826,10 +3826,13 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
     str_dest.slen = 1;
 
     /* Use remote contact URI (dialog target) if available, otherwise
-     * fall back to remote info URI. Per RFC 5589 Section 4.1, the
-     * transferor SHOULD use the Contact URI from the dialog. Per RFC 3261
-     * Section 12.2.1.1, Contact provides the dialog target (proper endpoint),
-     * while From/To may contain proxy addresses causing Replaces to fail.
+     * fall back to remote info URI. Per RFC 5589 Section 7.3, the Contact URI
+     * SHOULD be used unless it's suspected to be unroutable outside the dialog.
+     * Per RFC 3261 Section 12.2.1.1, Contact provides the dialog target, and
+     * RFC 3891 requires the INVITE with Replaces reach the specific UA instance.
+     * Note: This implementation uses Contact when available; for deployments
+     * with unroutable Contacts (e.g., private IPs), proper network routing
+     * (GRUU, SIP Outbound RFC 5626) should be configured.
      */
     if (dest_dlg->remote.contact) {
         uri = (pjsip_uri*) pjsip_uri_get_uri(dest_dlg->remote.contact->uri);
