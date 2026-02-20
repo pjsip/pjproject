@@ -499,7 +499,7 @@ call_param::call_param(const SipTxOption &tx_option, const CallSetting &setting,
     p_reason = (reason.slen == 0? NULL: &reason);
 
     sdp = NULL;
-    if (sdp_str != "") {
+    if (pool != NULL && sdp_str != "") {
         pj_str_t dup_pj_sdp;
         pj_str_t pj_sdp_str = {(char*)sdp_str.c_str(),
                                (pj_ssize_t)sdp_str.size()};
