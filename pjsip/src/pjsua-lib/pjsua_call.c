@@ -3826,9 +3826,10 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
     str_dest.slen = 1;
 
     /* Use remote contact URI (dialog target) if available, otherwise
-     * fall back to remote info URI. Per RFC 3261 Section 12.2.1.1,
-     * the Contact header provides the dialog target which is the proper
-     * endpoint address, while From/To may contain proxy addresses.
+     * fall back to remote info URI. Per RFC 5589 Section 4.1, the
+     * transferor SHOULD use the Contact URI from the dialog. Per RFC 3261
+     * Section 12.2.1.1, Contact provides the dialog target (proper endpoint),
+     * while From/To may contain proxy addresses causing Replaces to fail.
      */
     if (dest_dlg->remote.contact) {
         uri = (pjsip_uri*) pjsip_uri_get_uri(dest_dlg->remote.contact->uri);
