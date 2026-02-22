@@ -31,6 +31,8 @@
 #define kMaxInputLength 5120
 
 pj_pool_factory *mem;
+static pj_caching_pool caching_pool;
+static int initialized = 0;
 
 /* Common context shared by all operations */
 typedef struct {
@@ -165,10 +167,18 @@ static int test_vpx_codec(int operation, codec_test_ctx *ctx)
 extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
     codec_test_ctx ctx;
-    pj_caching_pool caching_pool;
 
     if (Size < kMinInputLength || Size > kMaxInputLength) {
         return 0;
+    }
+
+    /* Initialize pjlib once */
+    if (!initialized) {
+        pj_init();
+        pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
+        pj_log_set_level(0);
+        mem = &caching_pool.factory;
+        initialized = 1;
     }
 
     /* Allocate buffers */
@@ -183,12 +193,6 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         free((void *)ctx.data);
         return 0;
     }
-
-    /* Init pjlib */
-    pj_init();
-    pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
-    pj_log_set_level(0);
-    mem = &caching_pool.factory;
 
     /* Test all video codec packetizers with the SAME input data */
 #define TEST_CODEC(name, func, op) \
@@ -210,7 +214,6 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     /* Cleanup */
     free((void *)ctx.data);
     free(ctx.output);
-    pj_caching_pool_destroy(&caching_pool);
 
     return 0;
 }
