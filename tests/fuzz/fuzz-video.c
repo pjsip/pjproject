@@ -35,7 +35,7 @@ pj_pool_factory *mem;
 /* Common context shared by all operations */
 typedef struct {
     pj_pool_t *pool;
-    const uint8_t *data;
+    uint8_t *data;
     size_t size;
     uint8_t *output;
     size_t output_size;
@@ -136,6 +136,7 @@ static int test_vpx_codec(int operation, codec_test_ctx *ctx)
     if (!ctx->pool) return -1;
 
     pj_bzero(&cfg, sizeof(cfg));
+    pjmedia_vpx_packetizer_cfg_default(&cfg);
     cfg.mtu = 1500;
 
     if (pjmedia_vpx_packetizer_create(ctx->pool, &cfg, &pktz) != PJ_SUCCESS)
@@ -148,17 +149,13 @@ static int test_vpx_codec(int operation, codec_test_ctx *ctx)
     } else {
         /* Packetize: VPX bitstream -> RTP */
         if (ctx->size >= 20) {
-            pj_uint8_t *payloads[16];
-            pj_size_t payload_lens[16];
-            unsigned bits_pos = 0, i;
-
-            for (i = 0; i < 16; i++) {
-                payloads[i] = (pj_uint8_t *)pj_pool_alloc(ctx->pool, 1500);
-                payload_lens[i] = 1500;
-            }
-
+            pj_uint8_t *payload;
+            pj_size_t payload_len;
+            unsigned bits_pos = 0;
+            payload = (pj_uint8_t *)pj_pool_alloc(ctx->pool, 1500);
+            payload_len = 1500;
             pjmedia_vpx_packetize(pktz, ctx->size, &bits_pos, PJ_TRUE,
-                                  payloads, payload_lens);
+                                  &payload, &payload_len);
         }
     }
 
