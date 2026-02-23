@@ -350,8 +350,10 @@ on_turn_cleanup:
         pj_status_t status;
 
         /* Setup infrastructure */
-        pj_ioqueue_create(pool, 8, &ioqueue);
-        pj_timer_heap_create(pool, 32, &timer_heap);
+        status = pj_ioqueue_create(pool, 8, &ioqueue);
+        if (status != PJ_SUCCESS) goto on_ice_cleanup;
+        status = pj_timer_heap_create(pool, 32, &timer_heap);
+        if (status != PJ_SUCCESS) goto on_ice_cleanup;
         pj_stun_config_init(&stun_cfg, mem, 0, ioqueue, timer_heap);
 
         /* Create ICE transport */
@@ -399,6 +401,7 @@ on_turn_cleanup:
             pj_ice_strans_destroy(ice_st);
         }
 
+on_ice_cleanup:
         if (timer_heap) pj_timer_heap_destroy(timer_heap);
         if (ioqueue) pj_ioqueue_destroy(ioqueue);
     }
