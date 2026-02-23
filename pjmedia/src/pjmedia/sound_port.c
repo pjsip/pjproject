@@ -406,8 +406,9 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
         if (status != PJ_SUCCESS) {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(status, errmsg, sizeof(errmsg));
-            PJ_LOG(3,(THIS_FILE, "Unable to set echo canceller: %s "
-                      "[status=%d]", errmsg, status));
+            PJ_LOG(3,(THIS_FILE, "Failure in opening sound device: unable "
+                      "to set echo canceller: %s [status=%d]", 
+                      errmsg, status));
             goto on_error;
         }
     }
