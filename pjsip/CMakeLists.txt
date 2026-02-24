@@ -310,6 +310,7 @@ if(BUILD_TESTING)
     src/test/txdata_test.c
     src/test/uri_test.c
     src/test/inv_offer_answer_test.c
+    src/test/auth_async_test.c
     src/test/${PJ_TEST_MAIN}
   )
 

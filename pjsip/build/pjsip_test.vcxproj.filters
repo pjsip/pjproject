@@ -78,6 +78,9 @@
     <ClCompile Include="..\src\test\uri_test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\test\auth_async_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\test\test.h">

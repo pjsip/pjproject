@@ -148,6 +148,13 @@ const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
         } \
     } while(0)
 
+
+/* Signature of async auth token, best effort to verify the validity of
+ * the implementor.
+ */
+#define AUTH_TOKEN_SIGNATURE    "AUTH"
+
+
 static void dup_bin(pj_pool_t *pool, pj_str_t *dst, const pj_str_t *src)
 {
     dst->slen = src->slen;
@@ -1838,4 +1845,82 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(  pjsip_auth_clt_sess *sess,
     *new_request = tdata;
     return PJ_SUCCESS;
 
+}
+
+
+PJ_DEF(pj_status_t) pjsip_auth_clt_async_configure(
+                                    pjsip_auth_clt_sess *sess,
+                                    const pjsip_auth_clt_async_setting *opt)
+{
+    PJ_ASSERT_RETURN(sess && opt, PJ_EINVAL);
+    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_configure(sess->parent,
+                        opt));
+
+    if (!sess->async_opt) {
+        sess->async_opt = PJ_POOL_ZALLOC_T(sess->pool,
+                                           pjsip_auth_clt_async_setting);
+    }
+    *sess->async_opt = *opt;
+
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjsip_auth_clt_async_send_req(
+                                    pjsip_auth_clt_sess *sess,
+                                    void *token,
+                                    pjsip_tx_data *new_request)
+{
+    pjsip_auth_clt_async_impl_token *send_token =
+                                (pjsip_auth_clt_async_impl_token*)token;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(sess && token && new_request, PJ_EINVAL);
+    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_send_req(
+                                                        sess->parent,
+                                                        token, new_request));
+    PJ_ASSERT_RETURN(sess->async_opt && sess->async_opt->cb, PJ_EINVALIDOP);
+
+    /* Best effort to verify the validity of the implementor */
+    if (!send_token->send_impl ||
+        pj_memcmp(send_token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
+    {
+        return PJ_EINVAL;
+    }
+
+    status = (*send_token->send_impl)(sess, send_token->user_data,
+                                      new_request);
+    /* Clear the signature only on success to invalidate the token after use.
+     * On failure the signature is left intact so the application may retry
+     * by calling this function again with the same token.
+     */
+    if (status == PJ_SUCCESS)
+        pj_bzero(send_token->signature, 4);
+
+    return status;
+}
+
+
+PJ_DEF(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
+                                    pjsip_auth_clt_sess* sess,
+                                    pjsip_auth_clt_async_impl_token *token,
+                                    const pjsip_rx_data* rdata,
+                                    pjsip_tx_data* tdata)
+{
+    pjsip_auth_clt_async_on_chal_param cbparam = {0};
+
+    PJ_ASSERT_RETURN(sess && token && rdata && tdata, PJ_EINVAL);
+    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_impl_on_challenge(
+                                                    sess->parent,
+                                                    token, rdata, tdata));
+
+    if (!sess->async_opt || !sess->async_opt->cb)
+        return PJ_EINVALIDOP;
+
+    cbparam.rdata = rdata;
+    cbparam.tdata = tdata;
+    pj_memcpy(token->signature, AUTH_TOKEN_SIGNATURE, 4);
+
+    (*sess->async_opt->cb)(sess, token, &cbparam);
+    return PJ_SUCCESS;
 }

@@ -376,6 +376,11 @@ int test_main(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, regc_test, PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
 #endif
 
+#if INCLUDE_AUTH_ASYNC_TEST
+    UT_ADD_TEST(&test_app.ut_app, auth_async_test,
+                PJ_TEST_EXCLUSIVE | PJ_TEST_KEEP_LAST);
+#endif
+
     /* This needs to be exclusive, because there must NOT be any other
      * loop transport otherwise some test will fail (e.g. sending will
      * fallback to that transport)

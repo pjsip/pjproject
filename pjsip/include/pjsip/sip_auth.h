@@ -329,6 +329,11 @@ PJ_DECL(void) pjsip_auth_clt_pref_dup(pj_pool_t *pool,
                                       pjsip_auth_clt_pref *dst,
                                       const pjsip_auth_clt_pref *src);
 
+/**
+ * Forward declaration of asynchronous client authentication settings.
+ */
+typedef struct pjsip_auth_clt_async_setting pjsip_auth_clt_async_setting;
+
 
 /**
  * This structure describes client authentication sessions. It keeps
@@ -347,8 +352,15 @@ typedef struct pjsip_auth_clt_sess
                                              using a shared parent. Is only
                                              used in parent. Set up by
                                              pjsip_auth_clt_set_parent      */
-    struct pjsip_auth_clt_sess *parent; /**< allow a common parent
+    struct pjsip_auth_clt_sess *parent; /**< Allow a common parent
                                              for multiple sessions.         */
+
+    /**
+     * Optional asynchronous client authentication settings for this
+     * session.
+     */
+    pjsip_auth_clt_async_setting *async_opt;
+
 } pjsip_auth_clt_sess;
 
 
@@ -612,13 +624,115 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_init( pj_pool_t *pool,
  * This allows a central caching of authorization headers over multiple
  * dialogs.
  *
- * @param sess          session that will be delegating the requests.
- * @param p             parent that will be shared.
+ * @param sess          Session that will be delegating the requests.
+ * @param p             Parent that will be shared.
  *
  * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
                                                pjsip_auth_clt_sess *p);
+
+
+/**
+ * This structure describes the parameter passed to the callback when
+ * a challenge is received.
+ */
+typedef struct pjsip_auth_clt_async_on_chal_param
+{
+    /**
+     * The original request message which is challenged by the server.
+     *
+     * If the application needs to use the request beyond the callback,
+     * it must maintain the request's lifetime, e.g: using
+     * #pjsip_tx_data_add_ref() and #pjsip_tx_data_dec_ref().
+     */
+    pjsip_tx_data              *tdata;
+
+    /**
+     * The 401/407 response containing the challenge from the server.
+     *
+     * Note that the response is only valid during the callback.
+     * The application can make a copy of the response if it needs to use
+     * the response beyond the callback, e.g: using #pjsip_rx_data_clone().
+     */
+    const pjsip_rx_data        *rdata;
+
+} pjsip_auth_clt_async_on_chal_param;
+
+
+/**
+ * Callback to notify application when a challenge is received.
+ *
+ * @param sess          The client authentication session.
+ * @param token         The token associated with the asynchronous request
+ *                      to be passed to #pjsip_auth_clt_async_send_req().
+ * @param param         The callback parameter containing the original request
+ *                      and the response with the challenge.
+ */
+typedef void pjsip_auth_clt_async_on_challenge(
+                                pjsip_auth_clt_sess *sess,
+                                void *token,
+                                pjsip_auth_clt_async_on_chal_param* param);
+
+
+/**
+ * Asynchronous client authentication settings.
+ */
+typedef struct pjsip_auth_clt_async_setting
+{
+    /**
+     * Callback to notify the application when a challenge is received.
+     */
+    pjsip_auth_clt_async_on_challenge  *cb;
+
+} pjsip_auth_clt_async_setting;
+
+
+/**
+ * Configure the authentication client to handle the authentication manually.
+ *
+ * When the client receives a challenge, the library normally will
+ * automatically calculate the authentication response using the specified
+ * credential info and resend the request.
+ *
+ * However, application can choose to handle the authentication manually using
+ * this function. When a challenge is received, the application will be
+ * notified. Then when the new request with the authentication response is
+ * ready, the application can send it using #pjsip_auth_clt_async_send_req().
+ *
+ * @param sess          The client authentication session.
+ * @param opt           The asynchronous client authentication settings.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_async_configure(
+                                    pjsip_auth_clt_sess *sess,
+                                    const pjsip_auth_clt_async_setting *opt);
+
+
+/**
+ * Send the new request with the authentication response. This function is
+ * only used when the application has configured the authentication client to
+ * handle authentication manually.
+ *
+ * If application sends the new request with authentication response
+ * from outside the callback, application must maintain the validity of the
+ * owner of the authentication session. For example, if the authentication
+ * session is owned by a SIP registration client, the application must
+ * ensure that the registration client instance is still valid when calling
+ * this function.
+ *
+ * @param sess          The client authentication session.
+ * @param token         The token associated with the asynchronous request.
+ * @param new_request   The new request to be sent.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_async_send_req(
+                                    pjsip_auth_clt_sess *sess,
+                                    void *token,
+                                    pjsip_tx_data *new_request);
+
 
 /**
  * This structure describes initialization settings of server authorization
@@ -869,6 +983,78 @@ PJ_DECL(pj_status_t) pjsip_auth_create_digest2(pj_str_t *result,
                                  const pjsip_cred_info *cred_info,
                                  const pj_str_t *method,
                                  const pjsip_auth_algorithm_type algorithm_type);
+
+
+/*
+ **********************************************************************
+ * Internal types and functions for asynchronous client authentication
+ * implementor.
+ **********************************************************************
+ */
+
+/**
+ * Asynchronous client authentication implementor API.
+ *
+ * Callback for sending asynchronous client authentication.
+ *
+ * @param sess          The client authentication session.
+ * @param user_data     User data for sending the new request with
+ *                      authentication response.
+ * @param new_request   The new request to be sent.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+typedef pj_status_t pjsip_auth_clt_async_impl_send(
+                                    pjsip_auth_clt_sess *sess,
+                                    void *user_data,
+                                    pjsip_tx_data *new_request);
+
+/*
+ * Asynchronous client authentication implementor API.
+ *
+ * Token for sending asynchronous client authentication.
+ */
+typedef struct pjsip_auth_clt_async_impl_token
+{
+    /**
+     * User data to be passed on to the implementor when sending the new
+     * request with authentication response.
+     */
+    void                           *user_data;
+
+    /**
+     * Callback for sending the new request with authentication response.
+     */
+    pjsip_auth_clt_async_impl_send *send_impl;
+
+    /**
+     * Signature for verifying the integrity of the token.
+     */
+    pj_uint8_t                      signature[4];
+
+} pjsip_auth_clt_async_impl_token;
+
+
+/*
+ * Asynchronous client authentication implementor API.
+ *
+ * Notify the client authentication session that a challenge is received,
+ * it will invoke callback to application if asynchronous client
+ * authentication is configured.
+ *
+ * @param sess          The client authentication session.
+ * @param token         The asynchronous client authentication token.
+ * @param rdata         The received challenge.
+ * @param tdata         The last sent request.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
+                                    pjsip_auth_clt_sess* sess,
+                                    pjsip_auth_clt_async_impl_token *token,
+                                    const pjsip_rx_data* rdata,
+                                    pjsip_tx_data* tdata);
+
 
 /**
  * @}
