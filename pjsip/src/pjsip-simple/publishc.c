@@ -117,6 +117,9 @@ static pj_status_t pubc_async_auth_send_impl(
                                 pjsip_auth_clt_sess *auth_sess,
                                 void *user_data,
                                 pjsip_tx_data *tdata);
+static void pubc_async_auth_abandon_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data);
 
 PJ_DEF(void) pjsip_publishc_opt_default(pjsip_publishc_opt *opt)
 {
@@ -204,6 +207,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt,
 
     pubc->auth_token.user_data = pubc;
     pubc->auth_token.send_impl = &pubc_async_auth_send_impl;
+    pubc->auth_token.abandon_impl = &pubc_async_auth_abandon_impl;
 
     pj_list_init(&pubc->route_set);
     pj_list_init(&pubc->usr_hdr);
@@ -588,6 +592,18 @@ static pj_status_t pubc_async_auth_send_impl(
     pjsip_publishc *pubc = (pjsip_publishc *)user_data;
     PJ_UNUSED_ARG(auth_sess);
     return pjsip_publishc_send(pubc, tdata);
+}
+
+static void pubc_async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
+                                         void *user_data)
+{
+    pjsip_publishc *pubc = (pjsip_publishc *)user_data;
+    pj_str_t reason = { "Authentication abandoned", 24 };
+
+    PJ_UNUSED_ARG(auth_sess);
+
+    call_callback(pubc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
+                  NULL, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
 }
 
 static void tsx_callback(void *token, pjsip_event *event)

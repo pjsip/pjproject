@@ -1901,6 +1901,33 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_send_req(
 }
 
 
+PJ_DEF(pj_status_t) pjsip_auth_clt_async_abandon(
+                                    pjsip_auth_clt_sess *sess,
+                                    void *token)
+{
+    pjsip_auth_clt_async_impl_token *impl_token =
+                                (pjsip_auth_clt_async_impl_token*)token;
+
+    PJ_ASSERT_RETURN(sess && token, PJ_EINVAL);
+    DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_abandon(sess->parent,
+                                                           token));
+
+    /* Best effort to verify the integrity of the token */
+    if (pj_memcmp(impl_token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
+        return PJ_EINVAL;
+
+    /* Clear the signature FIRST to prevent any further use of the token,
+     * even if abandon_impl triggers destruction of the session.
+     */
+    pj_bzero(impl_token->signature, 4);
+
+    if (impl_token->abandon_impl)
+        (*impl_token->abandon_impl)(sess, impl_token->user_data);
+
+    return PJ_SUCCESS;
+}
+
+
 PJ_DEF(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
                             pjsip_auth_clt_sess* sess,
                             pjsip_auth_clt_async_impl_token *token,

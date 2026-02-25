@@ -1021,6 +1021,22 @@ typedef pj_status_t pjsip_auth_clt_async_impl_send(
                                     void *user_data,
                                     pjsip_tx_data *new_request);
 
+/**
+ * Asynchronous client authentication implementor API.
+ *
+ * Optional callback invoked when the application abandons the pending
+ * challenge (by calling pjsip_auth_clt_async_abandon()).  The implementor
+ * should treat the in-flight request as having failed and perform any
+ * required cleanup, e.g. terminate the session or invoke its own
+ * completion callback with an error code.
+ *
+ * @param sess          The client authentication session.
+ * @param user_data     User data supplied in the token.
+ */
+typedef void pjsip_auth_clt_async_impl_abandon(
+                                    pjsip_auth_clt_sess *sess,
+                                    void *user_data);
+
 /*
  * Asynchronous client authentication implementor API.
  *
@@ -1032,17 +1048,23 @@ typedef struct pjsip_auth_clt_async_impl_token
      * User data to be passed on to the implementor when sending the new
      * request with authentication response.
      */
-    void                           *user_data;
+    void                                *user_data;
 
     /**
      * Callback for sending the new request with authentication response.
      */
-    pjsip_auth_clt_async_impl_send *send_impl;
+    pjsip_auth_clt_async_impl_send      *send_impl;
+
+    /**
+     * Optional callback invoked when the application abandons the pending
+     * challenge.  May be NULL (treated as a no-op).
+     */
+    pjsip_auth_clt_async_impl_abandon   *abandon_impl;
 
     /**
      * Signature for verifying the integrity of the token.
      */
-    pj_uint8_t                      signature[4];
+    pj_uint8_t                           signature[4];
 
 } pjsip_auth_clt_async_impl_token;
 
@@ -1064,6 +1086,28 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
                             pjsip_auth_clt_sess* sess,
                             pjsip_auth_clt_async_impl_token *token,
                             const pjsip_auth_clt_async_on_chal_param *param);
+
+
+/**
+ * Inform the authentication session that the application has chosen to
+ * abandon the pending authentication challenge.  The token is invalidated
+ * before abandon_impl is called, so any subsequent call to
+ * pjsip_auth_clt_async_send_req() with the same token will return PJ_EINVAL.
+ *
+ * If the token's abandon_impl field is non-NULL it will be invoked so that
+ * the implementor can perform cleanup (e.g. terminate the SIP session or
+ * invoke its own completion callback with an error code).
+ *
+ * @param sess          The client authentication session.
+ * @param token         The token that was passed to the application's
+ *                      challenge callback.
+ *
+ * @return              PJ_SUCCESS, or PJ_EINVAL if the token is no longer
+ *                      valid (already used or already abandoned).
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_async_abandon(
+                            pjsip_auth_clt_sess *sess,
+                            void *token);
 
 
 /**

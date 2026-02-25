@@ -28,6 +28,14 @@
  *   3. Double-send prevention: calling pjsip_auth_clt_async_send_req a second
  *      time with the same token returns PJ_EINVAL because the signature is
  *      cleared after a successful send.
+ *   4. Abandoned token: challenge callback fires but the application never
+ *      calls pjsip_auth_clt_async_send_req.  pjsip_regc_destroy must complete
+ *      cleanly; the server must never receive authenticated credentials.
+ *   5. Abandon API: application calls pjsip_auth_clt_async_abandon() from
+ *      within the challenge callback.  The regc abandon_impl must fire the
+ *      on_reg_complete callback with an error code, and the token must be
+ *      invalidated so that any subsequent pjsip_auth_clt_async_send_req()
+ *      call returns PJ_EINVAL.
  */
 
 #include "test.h"
@@ -518,6 +526,211 @@ static int double_send_test(const pj_str_t *registrar_uri)
 
 
 /*****************************************************************************
+ * Sub-test 4: Abandoned token — app never calls pjsip_auth_clt_async_send_req
+ *
+ * The challenge callback fires and receives the token, but the application
+ * deliberately never calls pjsip_auth_clt_async_send_req (e.g. credentials
+ * not available, request cancelled).  The key assertions are:
+ *   a) The server never receives an authenticated REGISTER.
+ *   b) pjsip_regc_destroy completes without crash or assertion failure.
+ *      pj_bzero inside regc_destroy clears the token's signature, ensuring
+ *      that any out-of-scope reference to the token cannot invoke send_impl
+ *      with a dangling user_data pointer.
+ *****************************************************************************/
+
+static struct {
+    pj_bool_t fired;
+} g_abandoned;
+
+static void on_challenge_no_send(
+                        pjsip_auth_clt_sess *sess,
+                        void *token,
+                        const pjsip_auth_clt_async_on_chal_param *param)
+{
+    PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(token);
+    PJ_UNUSED_ARG(param);
+    /* Intentionally do nothing: simulate an app that cannot supply
+     * credentials and abandons the token without calling
+     * pjsip_auth_clt_async_send_req.
+     */
+    g_abandoned.fired = PJ_TRUE;
+}
+
+static int abandoned_token_test(const pj_str_t *registrar_uri)
+{
+    pjsip_regc    *regc = NULL;
+    pjsip_tx_data *tdata;
+    unsigned       i;
+    int rc;
+
+    PJ_LOG(3, (THIS_FILE, "  async auth: abandoned token (no send_req call)"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    pj_bzero(&g_abandoned, sizeof(g_abandoned));
+    g_registrar.req_count  = 0;
+    g_registrar.auth_count = 0;
+
+    rc = create_regc(registrar_uri, &on_challenge_no_send, NULL, &regc);
+    if (rc != 0) return -1300;
+
+    rc = pjsip_regc_register(regc, PJ_TRUE, &tdata);
+    if (rc != PJ_SUCCESS) { pjsip_regc_destroy(regc); return -1310; }
+
+    rc = pjsip_regc_send(regc, tdata);
+    if (rc != PJ_SUCCESS) { pjsip_regc_destroy(regc); return -1320; }
+
+    /* Wait for the challenge callback to fire (up to 5 s) */
+    for (i = 0; i < 50 && !g_abandoned.fired; ++i)
+        flush_events(100);
+
+    if (!g_abandoned.fired) {
+        PJ_LOG(3, (THIS_FILE, "    error: challenge callback not invoked"));
+        pjsip_regc_destroy(regc);
+        return -1330;
+    }
+
+    /* Let the transaction settle without servicing the pending token */
+    flush_events(500);
+
+    /* The server must not have received authenticated credentials */
+    if (g_registrar.auth_count != 0) {
+        PJ_LOG(3, (THIS_FILE,
+                   "    error: authenticated REGISTER sent unexpectedly"));
+        pjsip_regc_destroy(regc);
+        return -1340;
+    }
+
+    /* Registration must not have completed successfully */
+    if (g_ctx.done && g_ctx.reg_code == 200) {
+        PJ_LOG(3, (THIS_FILE,
+                   "    error: registration unexpectedly completed with 200"));
+        pjsip_regc_destroy(regc);
+        return -1350;
+    }
+
+    /* Destroy with a live (un-serviced) token.  pj_bzero in regc_destroy
+     * clears the signature so any stale reference to the token after this
+     * point would be rejected by pjsip_auth_clt_async_send_req.
+     * Reaching here without crash is the key assertion.
+     */
+    pjsip_regc_destroy(regc);
+    return 0;
+}
+
+
+/*****************************************************************************
+ * Sub-test 5: Abandon API — app calls pjsip_auth_clt_async_abandon()
+ *
+ * The application calls pjsip_auth_clt_async_abandon() from within the
+ * challenge callback.  Assertions:
+ *   a) The regc abandon_impl fires on_reg_complete with a non-200 code.
+ *   b) The server never receives authenticated credentials.
+ *   c) The token is invalidated: a subsequent pjsip_auth_clt_async_send_req()
+ *      with the same token returns PJ_EINVAL.
+ *****************************************************************************/
+
+static struct {
+    pj_bool_t            fired;
+    pjsip_auth_clt_sess *sess;
+    void                *token;
+} g_abandon_api;
+
+static void on_challenge_do_abandon(
+                        pjsip_auth_clt_sess *sess,
+                        void *token,
+                        const pjsip_auth_clt_async_on_chal_param *param)
+{
+    PJ_UNUSED_ARG(param);
+
+    /* Remember for later invalidation check */
+    g_abandon_api.sess  = sess;
+    g_abandon_api.token = token;
+    g_abandon_api.fired = PJ_TRUE;
+
+    /* Explicitly abandon: regc's abandon_impl will call on_reg_complete */
+    pjsip_auth_clt_async_abandon(sess, token);
+}
+
+static int abandon_api_test(const pj_str_t *registrar_uri)
+{
+    pjsip_regc    *regc = NULL;
+    pjsip_tx_data *tdata = NULL;
+    pj_status_t    status;
+    unsigned       i;
+    int rc;
+
+    PJ_LOG(3, (THIS_FILE, "  async auth: abandon API (pjsip_auth_clt_async_abandon)"));
+
+    pj_bzero(&g_ctx, sizeof(g_ctx));
+    pj_bzero(&g_abandon_api, sizeof(g_abandon_api));
+    g_registrar.req_count  = 0;
+    g_registrar.auth_count = 0;
+
+    rc = create_regc(registrar_uri, &on_challenge_do_abandon, NULL, &regc);
+    if (rc != 0) return -1400;
+
+    rc = pjsip_regc_register(regc, PJ_TRUE, &tdata);
+    if (rc != PJ_SUCCESS) { pjsip_regc_destroy(regc); return -1410; }
+
+    rc = pjsip_regc_send(regc, tdata);
+    if (rc != PJ_SUCCESS) { pjsip_regc_destroy(regc); return -1420; }
+
+    /* Wait until the challenge callback fires and abandon_impl runs (up to 5 s) */
+    for (i = 0; i < 50 && (!g_abandon_api.fired || !g_ctx.done); ++i)
+        flush_events(100);
+
+    if (!g_abandon_api.fired) {
+        PJ_LOG(3, (THIS_FILE, "    error: challenge callback not invoked"));
+        pjsip_regc_destroy(regc);
+        return -1430;
+    }
+
+    /* abandon_impl must have invoked on_reg_complete with a non-200 code */
+    if (!g_ctx.done) {
+        PJ_LOG(3, (THIS_FILE,
+                   "    error: on_reg_complete not called after abandon"));
+        pjsip_regc_destroy(regc);
+        return -1440;
+    }
+    if (g_ctx.reg_code == 200) {
+        PJ_LOG(3, (THIS_FILE,
+                   "    error: on_reg_complete reported 200 after abandon"));
+        pjsip_regc_destroy(regc);
+        return -1450;
+    }
+
+    /* Server must not have received authenticated credentials */
+    if (g_registrar.auth_count != 0) {
+        PJ_LOG(3, (THIS_FILE,
+                   "    error: authenticated REGISTER sent after abandon"));
+        pjsip_regc_destroy(regc);
+        return -1460;
+    }
+
+    /* The token must now be invalid (signature zeroed by abandon) */
+    rc = pjsip_regc_register(regc, PJ_TRUE, &tdata);
+    if (rc == PJ_SUCCESS) {
+        status = pjsip_auth_clt_async_send_req(g_abandon_api.sess,
+                                               g_abandon_api.token,
+                                               tdata);
+        pjsip_tx_data_dec_ref(tdata);
+
+        if (status != PJ_EINVAL) {
+            PJ_LOG(3, (THIS_FILE,
+                       "    error: expected PJ_EINVAL for abandoned token, "
+                       "got status=%d", status));
+            pjsip_regc_destroy(regc);
+            return -1470;
+        }
+    }
+
+    pjsip_regc_destroy(regc);
+    return 0;
+}
+
+
+/*****************************************************************************
  * Main entry point
  *****************************************************************************/
 int auth_async_test(void)
@@ -564,6 +777,18 @@ int auth_async_test(void)
 
     /* 3. Double-send / token invalidation */
     rc = double_send_test(&registrar_uri);
+    if (rc != 0) goto on_return;
+
+    pj_thread_sleep(200);
+
+    /* 4. Abandoned token */
+    rc = abandoned_token_test(&registrar_uri);
+    if (rc != 0) goto on_return;
+
+    pj_thread_sleep(200);
+
+    /* 5. Abandon API */
+    rc = abandon_api_test(&registrar_uri);
     if (rc != 0) goto on_return;
 
 on_return:

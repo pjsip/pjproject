@@ -124,6 +124,10 @@ static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
                                         void *user_data,
                                         pjsip_tx_data *tdata);
 
+/* Declaration of async auth abandon implementation */
+static void async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
+                                    void *user_data);
+
 
 PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
                                        pjsip_regc_cb *cb,
@@ -174,6 +178,7 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
     /* Initialize asynchronous authentication token */
     regc->auth_token.user_data = regc;
     regc->auth_token.send_impl = &async_auth_send_impl;
+    regc->auth_token.abandon_impl = &async_auth_abandon_impl;
 
     /* Done */
     *p_regc = regc;
@@ -1137,6 +1142,21 @@ static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
     }
 
     return status;
+}
+
+
+/* Called when the application abandons a pending async auth challenge. */
+static void async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
+                                    void *user_data)
+{
+    pjsip_regc *regc = (pjsip_regc*)user_data;
+    pj_str_t reason = { "Authentication abandoned", 24 };
+
+    PJ_UNUSED_ARG(auth_sess);
+
+    /* Called without regc->lock held (same convention as send_impl). */
+    call_callback(regc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
+                  NULL, NOEXP, 0, NULL, PJ_FALSE);
 }
 
 

@@ -58,6 +58,9 @@ static pj_status_t im_async_auth_send_impl(
                                 pjsip_auth_clt_sess *auth_sess,
                                 void *user_data,
                                 pjsip_tx_data *tdata);
+static void im_async_auth_abandon_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data);
 
 
 /* The module instance. */
@@ -414,6 +417,20 @@ static pj_status_t im_async_auth_send_impl(
     return pjsip_endpt_send_request(endpt, tdata, -1, im_data2, send_cb);
 }
 
+/* Called when the application abandons a pending async IM auth challenge. */
+static void im_async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
+                                       void *user_data)
+{
+    im_auth_ctx *ctx = (im_auth_ctx *)user_data;
+    pjsip_endpoint *endpt = pjsua_var.endpt;
+
+    PJ_UNUSED_ARG(auth_sess);
+
+    /* Clean up the per-request auth context. */
+    pjsip_auth_clt_deinit(&ctx->auth);
+    pjsip_endpt_release_pool(endpt, ctx->pool);
+}
+
 
 /* Outgoing IM callback. */
 static void im_callback(void *token, pjsip_event *e)
@@ -459,8 +476,9 @@ static void im_callback(void *token, pjsip_event *e)
             pjsip_auth_clt_set_prefs(&ctx->auth,
                 &pjsua_var.acc[im_data->acc_id].cfg.auth_pref);
 
-            ctx->token.user_data = ctx;
-            ctx->token.send_impl = &im_async_auth_send_impl;
+            ctx->token.user_data    = ctx;
+            ctx->token.send_impl    = &im_async_auth_send_impl;
+            ctx->token.abandon_impl = &im_async_auth_abandon_impl;
 
             chal_param.rdata = rdata;
             chal_param.tdata = tsx->last_tx;
@@ -468,7 +486,9 @@ static void im_callback(void *token, pjsip_event *e)
                                                 &ctx->auth, &ctx->token,
                                                 &chal_param);
             if (status == PJ_SUCCESS) {
-                /* Async auth dispatched; pool freed in send_impl. */
+                /* Async auth dispatched; pool freed in send_impl or
+                 * abandon_impl.
+                 */
                 return;
             }
 
@@ -606,8 +626,9 @@ static void typing_callback(void *token, pjsip_event *e)
             pjsip_auth_clt_set_prefs(&ctx->auth,
                 &pjsua_var.acc[im_data->acc_id].cfg.auth_pref);
 
-            ctx->token.user_data = ctx;
-            ctx->token.send_impl = &im_async_auth_send_impl;
+            ctx->token.user_data    = ctx;
+            ctx->token.send_impl    = &im_async_auth_send_impl;
+            ctx->token.abandon_impl = &im_async_auth_abandon_impl;
 
             chal_param.rdata = rdata;
             chal_param.tdata = tsx->last_tx;
@@ -615,7 +636,9 @@ static void typing_callback(void *token, pjsip_event *e)
                                                 &ctx->auth, &ctx->token,
                                                 &chal_param);
             if (status == PJ_SUCCESS) {
-                /* Async auth dispatched; pool freed in send_impl. */
+                /* Async auth dispatched; pool freed in send_impl or
+                 * abandon_impl.
+                 */
                 return;
             }
 

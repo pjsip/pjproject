@@ -145,6 +145,16 @@ static pj_status_t inv_async_auth_send_impl(
                                 pjsip_auth_clt_sess *auth_sess,
                                 void *user_data,
                                 pjsip_tx_data *tdata);
+static void inv_bye_auth_abandon_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data);
+static void inv_initial_invite_auth_abandon_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data);
+static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
+                          pjsip_event *e);
+static void inv_set_cause(pjsip_inv_session *inv, int cause_code,
+                          const pj_str_t *cause_text);
 
 static void (*inv_state_handler[])( pjsip_inv_session *inv, pjsip_event *e) = 
 {
@@ -345,6 +355,27 @@ static pj_status_t inv_async_auth_send_impl(
         pjsip_inv_uac_restart(inv, PJ_FALSE);
     }
     return pjsip_inv_send_msg(inv, tdata);
+}
+
+/* Abandon callback for BYE 401/407: disconnect the session. */
+static void inv_bye_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
+                                      void *user_data)
+{
+    pjsip_inv_session *inv = (pjsip_inv_session *)user_data;
+    PJ_UNUSED_ARG(auth_sess);
+    inv_set_cause(inv, PJSIP_SC_OK, NULL);
+    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, NULL);
+}
+
+/* Abandon callback for initial INVITE 401/407: terminate the session. */
+static void inv_initial_invite_auth_abandon_impl(
+                                      pjsip_auth_clt_sess *auth_sess,
+                                      void *user_data)
+{
+    pjsip_inv_session *inv = (pjsip_inv_session *)user_data;
+    PJ_UNUSED_ARG(auth_sess);
+    inv_set_cause(inv, PJSIP_SC_UNAUTHORIZED, NULL);
+    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, NULL);
 }
 
 /*
@@ -4082,6 +4113,7 @@ static void inv_handle_bye_response( pjsip_inv_session *inv,
         pjsip_auth_clt_async_on_chal_param chal_param;
         struct tsx_inv_data *tsx_inv_data;
 
+        inv->auth_token.abandon_impl = &inv_bye_auth_abandon_impl;
         chal_param.rdata = rdata;
         chal_param.tdata = tsx->last_tx;
         status = pjsip_auth_clt_async_impl_on_challenge(
@@ -4280,6 +4312,8 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
         pjsip_tx_data *tdata;
         pjsip_auth_clt_async_on_chal_param chal_param;
 
+        /* UPDATE auth: abandoning does not terminate the session. */
+        inv->auth_token.abandon_impl = NULL;
         chal_param.rdata = e->body.tsx_state.src.rdata;
         chal_param.tdata = tsx->last_tx;
         status = pjsip_auth_clt_async_impl_on_challenge(
@@ -4787,6 +4821,8 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
         if (tsx->method.id == PJSIP_INVITE_METHOD)
             inv->invite_tsx = NULL;
 
+        /* In-dialog request auth: abandoning does not terminate session. */
+        inv->auth_token.abandon_impl = NULL;
         chal_param.rdata = e->body.tsx_state.src.rdata;
         chal_param.tdata = tsx->last_tx;
         status = pjsip_auth_clt_async_impl_on_challenge(
@@ -4894,6 +4930,8 @@ static void handle_uac_call_rejection(pjsip_inv_session *inv, pjsip_event *e)
         pjsip_tx_data *tdata;
         pjsip_auth_clt_async_on_chal_param chal_param;
 
+        /* Initial INVITE auth: abandoning terminates the session. */
+        inv->auth_token.abandon_impl = &inv_initial_invite_auth_abandon_impl;
         chal_param.rdata = e->body.tsx_state.src.rdata;
         chal_param.tdata = tsx->last_tx;
         status = pjsip_auth_clt_async_impl_on_challenge(

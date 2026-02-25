@@ -88,6 +88,12 @@ static pj_status_t evsub_async_auth_send_impl(
                                 pjsip_auth_clt_sess *auth_sess,
                                 void *user_data,
                                 pjsip_tx_data *tdata);
+static void evsub_async_auth_abandon_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data);
+static void set_state(pjsip_evsub *sub, pjsip_evsub_state state,
+                      const pj_str_t *state_str, pjsip_event *event,
+                      const pj_str_t *reason);
 
 
 /*
@@ -607,6 +613,14 @@ static pj_status_t evsub_async_auth_send_impl(
     return pjsip_dlg_send_request(sub->dlg, tdata, -1, NULL);
 }
 
+static void evsub_async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
+                                          void *user_data)
+{
+    pjsip_evsub *sub = (pjsip_evsub *)user_data;
+    PJ_UNUSED_ARG(auth_sess);
+    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL, NULL);
+}
+
 /*
  * Set subscription session state.
  */
@@ -819,6 +833,7 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
 
     sub->auth_token.user_data = sub;
     sub->auth_token.send_impl = &evsub_async_auth_send_impl;
+    sub->auth_token.abandon_impl = &evsub_async_auth_abandon_impl;
 
     /* Copy callback, if any: */
     if (user_cb)
