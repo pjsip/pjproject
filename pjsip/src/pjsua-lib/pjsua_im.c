@@ -43,6 +43,22 @@ const pjsip_method pjsip_message_method =
 /* Proto */
 static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata);
 
+/* Per-request auth context for async auth support.
+ * Allocated on its own pool; freed in send_impl or on sync path.
+ */
+typedef struct im_auth_ctx {
+    pj_pool_t                       *pool;
+    pjsip_auth_clt_sess              auth;
+    pjsip_auth_clt_async_impl_token  token;
+    pjsua_im_data                   *im_data;
+    pjsip_endpt_send_callback        send_cb;
+} im_auth_ctx;
+
+static pj_status_t im_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata);
+
 
 /* The module instance. */
 static pjsip_module mod_pjsua_im = 
@@ -370,6 +386,35 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
 }
 
 
+static pj_status_t im_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata)
+{
+    im_auth_ctx *ctx = (im_auth_ctx *)user_data;
+    pjsip_endpoint *endpt = pjsua_var.endpt;
+    pj_pool_t *pool;
+    pjsip_endpt_send_callback send_cb;
+    pjsua_im_data *im_data;
+    pjsua_im_data *im_data2;
+
+    PJ_UNUSED_ARG(auth_sess);
+
+    pool    = ctx->pool;
+    send_cb = ctx->send_cb;
+    im_data = ctx->im_data;
+
+    im_data2 = pjsua_im_data_dup(tdata->pool, im_data);
+    PJSIP_MSG_CSEQ_HDR(tdata->msg)->cseq++;
+
+    /* Clean up auth context before dispatching the new request */
+    pjsip_auth_clt_deinit(&ctx->auth);
+    pjsip_endpt_release_pool(endpt, pool);
+
+    return pjsip_endpt_send_request(endpt, tdata, -1, im_data2, send_cb);
+}
+
+
 /* Outgoing IM callback. */
 static void im_callback(void *token, pjsip_event *e)
 {
@@ -386,30 +431,51 @@ static void im_callback(void *token, pjsip_event *e)
 
         /* Handle authentication challenges */
         if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG &&
-            (tsx->status_code == 401 || tsx->status_code == 407)) 
+            (tsx->status_code == 401 || tsx->status_code == 407))
         {
             pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
             pjsip_tx_data *tdata;
-            pjsip_auth_clt_sess auth;
+            pjsip_auth_clt_async_on_chal_param chal_param;
+            im_auth_ctx *ctx;
+            pj_pool_t *auth_pool;
+            pjsua_im_data *im_data2;
             pj_status_t status;
 
             PJ_LOG(4,(THIS_FILE, "Resending IM with authentication"));
 
-            /* Create temporary authentication session */
-            pjsip_auth_clt_init(&auth,pjsua_var.endpt,rdata->tp_info.pool, 0);
+            auth_pool = pjsip_endpt_create_pool(pjsua_var.endpt,
+                                                "imauthctx%p", 512, 512);
+            if (!auth_pool) return;
 
-            pjsip_auth_clt_set_credentials(&auth, 
+            ctx = PJ_POOL_ZALLOC_T(auth_pool, im_auth_ctx);
+            ctx->pool    = auth_pool;
+            ctx->im_data = im_data;
+            ctx->send_cb = &im_callback;
+
+            pjsip_auth_clt_init(&ctx->auth, pjsua_var.endpt, auth_pool, 0);
+            pjsip_auth_clt_set_credentials(&ctx->auth,
                 pjsua_var.acc[im_data->acc_id].cred_cnt,
                 pjsua_var.acc[im_data->acc_id].cred);
+            pjsip_auth_clt_set_prefs(&ctx->auth,
+                &pjsua_var.acc[im_data->acc_id].cfg.auth_pref);
 
-            pjsip_auth_clt_set_prefs(&auth, 
-                                     &pjsua_var.acc[im_data->acc_id].cfg.auth_pref);
+            ctx->token.user_data = ctx;
+            ctx->token.send_impl = &im_async_auth_send_impl;
 
-            status = pjsip_auth_clt_reinit_req(&auth, rdata, tsx->last_tx,
-                                               &tdata);
+            chal_param.rdata = rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &ctx->auth, &ctx->token,
+                                                &chal_param);
             if (status == PJ_SUCCESS) {
-                pjsua_im_data *im_data2;
+                /* Async auth dispatched; pool freed in send_impl. */
+                return;
+            }
 
+            /* Sync fallback */
+            status = pjsip_auth_clt_reinit_req(&ctx->auth, rdata,
+                                               tsx->last_tx, &tdata);
+            if (status == PJ_SUCCESS) {
                 /* Must duplicate im_data */
                 im_data2 = pjsua_im_data_dup(tdata->pool, im_data);
 
@@ -417,20 +483,22 @@ static void im_callback(void *token, pjsip_event *e)
                 PJSIP_MSG_CSEQ_HDR(tdata->msg)->cseq++;
 
                 /* Re-send request */
-                status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1,
-                                                   im_data2, &im_callback);
-                if (status == PJ_SUCCESS) {
-                    /* Done */
-                    pjsip_auth_clt_deinit(&auth);
+                status = pjsip_endpt_send_request(pjsua_var.endpt, tdata,
+                                                  -1, im_data2,
+                                                  &im_callback);
+                pjsip_auth_clt_deinit(&ctx->auth);
+                pjsip_endpt_release_pool(pjsua_var.endpt, auth_pool);
+                if (status == PJ_SUCCESS)
                     return;
-                }
-                pjsip_auth_clt_deinit(&auth);
 
                 /* Don't invoke callback if another callback (with auth,
                  * different tsx) has been called.
                  */
                 if (im_data2->acc_id == PJSUA_INVALID_ID)
                     return;
+            } else {
+                pjsip_auth_clt_deinit(&ctx->auth);
+                pjsip_endpt_release_pool(pjsua_var.endpt, auth_pool);
             }
         }
 
@@ -511,27 +579,49 @@ static void typing_callback(void *token, pjsip_event *e)
 
         /* Handle authentication challenges */
         if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG &&
-            (tsx->status_code == 401 || tsx->status_code == 407)) 
+            (tsx->status_code == 401 || tsx->status_code == 407))
         {
             pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
             pjsip_tx_data *tdata;
-            pjsip_auth_clt_sess auth;
+            pjsip_auth_clt_async_on_chal_param chal_param;
+            im_auth_ctx *ctx;
+            pj_pool_t *auth_pool;
             pj_status_t status;
 
             PJ_LOG(4,(THIS_FILE, "Resending IM with authentication"));
 
-            /* Create temporary authentication session */
-            pjsip_auth_clt_init(&auth,pjsua_var.endpt,rdata->tp_info.pool, 0);
+            auth_pool = pjsip_endpt_create_pool(pjsua_var.endpt,
+                                                "imauthctx%p", 512, 512);
+            if (!auth_pool) return;
 
-            pjsip_auth_clt_set_credentials(&auth, 
+            ctx = PJ_POOL_ZALLOC_T(auth_pool, im_auth_ctx);
+            ctx->pool    = auth_pool;
+            ctx->im_data = im_data;
+            ctx->send_cb = &typing_callback;
+
+            pjsip_auth_clt_init(&ctx->auth, pjsua_var.endpt, auth_pool, 0);
+            pjsip_auth_clt_set_credentials(&ctx->auth,
                 pjsua_var.acc[im_data->acc_id].cred_cnt,
                 pjsua_var.acc[im_data->acc_id].cred);
+            pjsip_auth_clt_set_prefs(&ctx->auth,
+                &pjsua_var.acc[im_data->acc_id].cfg.auth_pref);
 
-            pjsip_auth_clt_set_prefs(&auth, 
-                                     &pjsua_var.acc[im_data->acc_id].cfg.auth_pref);
+            ctx->token.user_data = ctx;
+            ctx->token.send_impl = &im_async_auth_send_impl;
 
-            status = pjsip_auth_clt_reinit_req(&auth, rdata, tsx->last_tx,
-                                               &tdata);
+            chal_param.rdata = rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &ctx->auth, &ctx->token,
+                                                &chal_param);
+            if (status == PJ_SUCCESS) {
+                /* Async auth dispatched; pool freed in send_impl. */
+                return;
+            }
+
+            /* Sync fallback */
+            status = pjsip_auth_clt_reinit_req(&ctx->auth, rdata,
+                                               tsx->last_tx, &tdata);
             if (status == PJ_SUCCESS) {
                 pjsua_im_data *im_data2;
 
@@ -542,14 +632,16 @@ static void typing_callback(void *token, pjsip_event *e)
                 PJSIP_MSG_CSEQ_HDR(tdata->msg)->cseq++;
 
                 /* Re-send request */
-                status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1,
-                                                   im_data2, &typing_callback);
-                if (status == PJ_SUCCESS) {
-                    /* Done */
-                    pjsip_auth_clt_deinit(&auth);
+                status = pjsip_endpt_send_request(pjsua_var.endpt, tdata,
+                                                  -1, im_data2,
+                                                  &typing_callback);
+                pjsip_auth_clt_deinit(&ctx->auth);
+                pjsip_endpt_release_pool(pjsua_var.endpt, auth_pool);
+                if (status == PJ_SUCCESS)
                     return;
-                }
-                pjsip_auth_clt_deinit(&auth);
+            } else {
+                pjsip_auth_clt_deinit(&ctx->auth);
+                pjsip_endpt_release_pool(pjsua_var.endpt, auth_pool);
             }
         }
 

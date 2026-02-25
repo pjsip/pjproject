@@ -99,6 +99,7 @@ struct pjsip_publishc
 
     /* Authorization sessions. */
     pjsip_auth_clt_sess          auth_sess;
+    pjsip_auth_clt_async_impl_token auth_token; /**< Async auth token.  */
 
     /* Auto refresh publication. */
     pj_bool_t                    auto_refresh;
@@ -111,6 +112,11 @@ struct pjsip_publishc
     pending_publish              pending_reqs_empty;
 };
 
+
+static pj_status_t pubc_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata);
 
 PJ_DEF(void) pjsip_publishc_opt_default(pjsip_publishc_opt *opt)
 {
@@ -196,6 +202,9 @@ PJ_DEF(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt,
         return status;
     }
 
+    pubc->auth_token.user_data = pubc;
+    pubc->auth_token.send_impl = &pubc_async_auth_send_impl;
+
     pj_list_init(&pubc->route_set);
     pj_list_init(&pubc->usr_hdr);
 
@@ -222,6 +231,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc)
         if (pubc->mutex)
             pj_mutex_destroy(pubc->mutex);
 
+        pj_bzero(&pubc->auth_token, sizeof(pubc->auth_token));
         pjsip_auth_clt_deinit(&pubc->auth_sess);
         pjsip_endpt_release_pool(pubc->endpt, pubc->pool);
     }
@@ -570,6 +580,16 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     /* No need to call callback as it should have been called */
 }
 
+static pj_status_t pubc_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata)
+{
+    pjsip_publishc *pubc = (pjsip_publishc *)user_data;
+    PJ_UNUSED_ARG(auth_sess);
+    return pjsip_publishc_send(pubc, tdata);
+}
+
 static void tsx_callback(void *token, pjsip_event *event)
 {
     pj_status_t status;
@@ -596,17 +616,23 @@ static void tsx_callback(void *token, pjsip_event *event)
     {
         pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
         pjsip_tx_data *tdata;
+        pjsip_auth_clt_async_on_chal_param chal_param;
 
-        status = pjsip_auth_clt_reinit_req( &pubc->auth_sess,
-                                            rdata, 
-                                            tsx->last_tx,  
-                                            &tdata);
+        chal_param.rdata = rdata;
+        chal_param.tdata = tsx->last_tx;
+        status = pjsip_auth_clt_async_impl_on_challenge(
+                                        &pubc->auth_sess,
+                                        &pubc->auth_token, &chal_param);
         if (status != PJ_SUCCESS) {
-            call_callback(pubc, status, tsx->status_code, 
-                          &rdata->msg_info.msg->line.status.reason,
-                          rdata, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
-        } else {
-            status = pjsip_publishc_send(pubc, tdata);
+            status = pjsip_auth_clt_reinit_req(&pubc->auth_sess, rdata,
+                                               tsx->last_tx, &tdata);
+            if (status != PJ_SUCCESS) {
+                call_callback(pubc, status, tsx->status_code,
+                              &rdata->msg_info.msg->line.status.reason,
+                              rdata, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+            } else {
+                status = pjsip_publishc_send(pubc, tdata);
+            }
         }
 
     } else {

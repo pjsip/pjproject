@@ -141,6 +141,11 @@ static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
                                           unsigned code,
                                           const pj_str_t *reason);
 
+static pj_status_t inv_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata);
+
 static void (*inv_state_handler[])( pjsip_inv_session *inv, pjsip_event *e) = 
 {
     &inv_on_state_null,
@@ -317,8 +322,29 @@ static void inv_session_destroy(pjsip_inv_session *inv)
     pj_pool_release(inv->pool_active);
     inv->pool_active = NULL;
 
+    pj_bzero(&inv->auth_token, sizeof(inv->auth_token));
     pj_atomic_destroy(inv->ref_cnt);
     inv->ref_cnt = NULL;
+}
+
+static pj_status_t inv_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata)
+{
+    pjsip_inv_session *inv = (pjsip_inv_session *)user_data;
+    PJ_UNUSED_ARG(auth_sess);
+    /* For initial INVITE auth retry the session must be restarted
+     * so that pjsip_inv_send_msg() can accept the new INVITE.
+     * In-dialog re-INVITE only needs invite_tsx cleared, which
+     * the call site handles before dispatching the challenge.
+     */
+    if (tdata->msg->line.req.method.id == PJSIP_INVITE_METHOD &&
+        inv->state != PJSIP_INV_STATE_CONFIRMED)
+    {
+        pjsip_inv_uac_restart(inv, PJ_FALSE);
+    }
+    return pjsip_inv_send_msg(inv, tdata);
 }
 
 /*
@@ -1049,6 +1075,9 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
 
     /* Object name will use the same dialog pointer. */
     pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
+
+    inv->auth_token.user_data = inv;
+    inv->auth_token.send_impl = &inv_async_auth_send_impl;
 
     /* Create negotiator if local_sdp is specified. */
     if (local_sdp) {
@@ -1828,6 +1857,9 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 
     /* Object name will use the same dialog pointer. */
     pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
+
+    inv->auth_token.user_data = inv;
+    inv->auth_token.send_impl = &inv_async_auth_send_impl;
 
     /* Process SDP in message body, if present. */
     sdp_info = pjsip_rdata_get_sdp_info(rdata);
@@ -3193,6 +3225,14 @@ static pj_bool_t inv_uac_recurse(pjsip_inv_session *inv, int code,
     return PJ_FALSE;
 }
 
+PJ_DEF(pj_bool_t) pjsip_inv_uac_try_next_target(pjsip_inv_session *inv)
+{
+    PJ_ASSERT_RETURN(inv, PJ_FALSE);
+    return inv_uac_recurse(inv, PJSIP_SC_UNAUTHORIZED,
+                           pjsip_get_status_text(PJSIP_SC_UNAUTHORIZED),
+                           NULL);
+}
+
 
 /* Process header parameter in redirection target. */
 void pjsip_inv_process_hparam(pjsip_inv_session *sess, 
@@ -4039,29 +4079,41 @@ static void inv_handle_bye_response( pjsip_inv_session *inv,
     if (tsx->status_code == 401 || tsx->status_code == 407) {
 
         pjsip_tx_data *tdata;
-        
-        status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
-                                            rdata,
-                                            tsx->last_tx,
-                                            &tdata);
-        
-        if (status != PJ_SUCCESS) {
-            
-            /* Does not have proper credentials. 
-             * End the session anyway.
-             */
-            inv_set_cause(inv, PJSIP_SC_OK, NULL);
-            inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-            
-        } else {
-            struct tsx_inv_data *tsx_inv_data;
+        pjsip_auth_clt_async_on_chal_param chal_param;
+        struct tsx_inv_data *tsx_inv_data;
 
-            tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+        chal_param.rdata = rdata;
+        chal_param.tdata = tsx->last_tx;
+        status = pjsip_auth_clt_async_impl_on_challenge(
+                                            &inv->dlg->auth_sess,
+                                            &inv->auth_token,
+                                            &chal_param);
+        if (status == PJ_SUCCESS) {
+            tsx_inv_data =
+                (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
             if (tsx_inv_data)
                 tsx_inv_data->retrying = PJ_TRUE;
+        } else {
+            status = pjsip_auth_clt_reinit_req(&inv->dlg->auth_sess,
+                                               rdata, tsx->last_tx,
+                                               &tdata);
+            if (status != PJ_SUCCESS) {
 
-            /* Re-send BYE. */
-            status = pjsip_inv_send_msg(inv, tdata);
+                /* Does not have proper credentials.
+                 * End the session anyway.
+                 */
+                inv_set_cause(inv, PJSIP_SC_OK, NULL);
+                inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+
+            } else {
+                tsx_inv_data =
+                    (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+                if (tsx_inv_data)
+                    tsx_inv_data->retrying = PJ_TRUE;
+
+                /* Re-send BYE. */
+                status = pjsip_inv_send_msg(inv, tdata);
+            }
         }
 
     } else {
@@ -4226,29 +4278,34 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
         (tsx->status_code == 401 || tsx->status_code == 407))
     {
         pjsip_tx_data *tdata;
+        pjsip_auth_clt_async_on_chal_param chal_param;
 
-        status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
-                                            e->body.tsx_state.src.rdata,
-                                            tsx->last_tx,
-                                            &tdata);
-        
-        if (status != PJ_SUCCESS) {
-            
-            /* Somehow failed. Probably it's not a good idea to terminate
-             * the session since this is just a request within dialog. And
-             * even if we terminate we should send BYE.
-             */
-            /*
-            inv_set_cause(inv, PJSIP_SC_OK, NULL);
-            inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-            */
-            
-        } else {
+        chal_param.rdata = e->body.tsx_state.src.rdata;
+        chal_param.tdata = tsx->last_tx;
+        status = pjsip_auth_clt_async_impl_on_challenge(
+                                            &inv->dlg->auth_sess,
+                                            &inv->auth_token,
+                                            &chal_param);
+        if (status == PJ_SUCCESS) {
             if (tsx_inv_data)
                 tsx_inv_data->retrying = PJ_TRUE;
+        } else {
+            status = pjsip_auth_clt_reinit_req(
+                                        &inv->dlg->auth_sess,
+                                        e->body.tsx_state.src.rdata,
+                                        tsx->last_tx, &tdata);
+            if (status == PJ_SUCCESS) {
+                if (tsx_inv_data)
+                    tsx_inv_data->retrying = PJ_TRUE;
 
-            /* Re-send request. */
-            status = pjsip_inv_send_msg(inv, tdata);
+                /* Re-send request. */
+                status = pjsip_inv_send_msg(inv, tdata);
+            }
+            /* Somehow failed. Probably it's not a good idea to
+             * terminate the session since this is just a request
+             * within dialog. And even if we terminate we should
+             * send BYE.
+             */
         }
 
         handled = PJ_TRUE;
@@ -4720,37 +4777,46 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
     /* Handle 401/407 challenge. */
     else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
              (tsx->status_code == PJSIP_SC_UNAUTHORIZED ||
-              tsx->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED)) 
+              tsx->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED))
     {
         pjsip_tx_data *tdata;
         pj_status_t status;
+        pjsip_auth_clt_async_on_chal_param chal_param;
+        struct tsx_inv_data *tsx_inv_data;
 
         if (tsx->method.id == PJSIP_INVITE_METHOD)
             inv->invite_tsx = NULL;
 
-        status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
-                                            e->body.tsx_state.src.rdata,
-                                            tsx->last_tx, &tdata);
-    
-        if (status != PJ_SUCCESS) {
-            /* Somehow failed. Probably it's not a good idea to terminate
-             * the session since this is just a request within dialog. And
-             * even if we terminate we should send BYE.
-             */
-            /*
-            inv_set_cause(inv, PJSIP_SC_OK, NULL);
-            inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-            */
-            
-        } else {
-            struct tsx_inv_data *tsx_inv_data;
-
-            tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+        chal_param.rdata = e->body.tsx_state.src.rdata;
+        chal_param.tdata = tsx->last_tx;
+        status = pjsip_auth_clt_async_impl_on_challenge(
+                                            &inv->dlg->auth_sess,
+                                            &inv->auth_token,
+                                            &chal_param);
+        if (status == PJ_SUCCESS) {
+            tsx_inv_data =
+                (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
             if (tsx_inv_data)
                 tsx_inv_data->retrying = PJ_TRUE;
+        } else {
+            status = pjsip_auth_clt_reinit_req(
+                                        &inv->dlg->auth_sess,
+                                        e->body.tsx_state.src.rdata,
+                                        tsx->last_tx, &tdata);
+            if (status == PJ_SUCCESS) {
+                tsx_inv_data =
+                    (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+                if (tsx_inv_data)
+                    tsx_inv_data->retrying = PJ_TRUE;
 
-            /* Re-send request. */
-            status = pjsip_inv_send_msg(inv, tdata);
+                /* Re-send request. */
+                status = pjsip_inv_send_msg(inv, tdata);
+            }
+            /* Somehow failed. Probably it's not a good idea to
+             * terminate the session since this is just a request
+             * within dialog. And even if we terminate we should
+             * send BYE.
+             */
         }
 
         return PJ_TRUE; /* Handled */
@@ -4820,37 +4886,46 @@ static void handle_uac_call_rejection(pjsip_inv_session *inv, pjsip_event *e)
         }
 
     } else if ((tsx->status_code==401 || tsx->status_code==407) &&
-                !inv->cancelling) 
+                !inv->cancelling)
     {
-
         /* Handle authentication failure:
          * Resend the request with Authorization header.
          */
         pjsip_tx_data *tdata;
+        pjsip_auth_clt_async_on_chal_param chal_param;
 
-        status = pjsip_auth_clt_reinit_req(&inv->dlg->auth_sess, 
-                                           e->body.tsx_state.src.rdata,
-                                           tsx->last_tx,
-                                           &tdata);
-
+        chal_param.rdata = e->body.tsx_state.src.rdata;
+        chal_param.tdata = tsx->last_tx;
+        status = pjsip_auth_clt_async_impl_on_challenge(
+                                            &inv->dlg->auth_sess,
+                                            &inv->auth_token,
+                                            &chal_param);
         if (status != PJ_SUCCESS) {
+            status = pjsip_auth_clt_reinit_req(
+                                        &inv->dlg->auth_sess,
+                                        e->body.tsx_state.src.rdata,
+                                        tsx->last_tx, &tdata);
+            if (status != PJ_SUCCESS) {
 
-            /* Does not have proper credentials. If we are currently 
-             * recursing, try the next target. Otherwise end the session.
-             */
-            if (!inv_uac_recurse(inv, tsx->status_code, &tsx->status_text, e))
-            {
-                /* Recursion fails, terminate session now */
-                goto terminate_session;
+                /* Does not have proper credentials. If we are currently
+                 * recursing, try the next target. Otherwise end the
+                 * session.
+                 */
+                if (!inv_uac_recurse(inv, tsx->status_code,
+                                     &tsx->status_text, e))
+                {
+                    /* Recursion fails, terminate session now */
+                    goto terminate_session;
+                }
+
+            } else {
+
+                /* Restart session. */
+                pjsip_inv_uac_restart(inv, PJ_FALSE);
+
+                /* Send the request. */
+                status = pjsip_inv_send_msg(inv, tdata);
             }
-
-        } else {
-
-            /* Restart session. */
-            pjsip_inv_uac_restart(inv, PJ_FALSE);
-
-            /* Send the request. */
-            status = pjsip_inv_send_msg(inv, tdata);
         }
 
     } else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&

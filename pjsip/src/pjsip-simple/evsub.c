@@ -84,6 +84,10 @@ PJ_DEF(const pjsip_method*) pjsip_get_notify_method()
  */
 static void        mod_evsub_on_tsx_state(pjsip_transaction*, pjsip_event*);
 static pj_status_t mod_evsub_unload(void);
+static pj_status_t evsub_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata);
 
 
 /*
@@ -239,6 +243,7 @@ struct pjsip_evsub
     pj_grp_lock_t        *grp_lock;     /* Session group lock       */
 
     void                 *mod_data[PJSIP_MAX_MODULE];   /**< Module data.   */
+    pjsip_auth_clt_async_impl_token auth_token; /**< Async auth token.      */
 };
 
 
@@ -588,7 +593,18 @@ static void evsub_destroy( pjsip_evsub *sub )
         dlgsub = dlgsub->next;
     }
 
+    pj_bzero(&sub->auth_token, sizeof(sub->auth_token));
     pj_grp_lock_dec_ref(sub->grp_lock);
+}
+
+static pj_status_t evsub_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata)
+{
+    pjsip_evsub *sub = (pjsip_evsub *)user_data;
+    PJ_UNUSED_ARG(auth_sess);
+    return pjsip_dlg_send_request(sub->dlg, tdata, -1, NULL);
 }
 
 /*
@@ -801,6 +817,8 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
     pj_ansi_snprintf(sub->obj_name, PJ_ARRAY_SIZE(sub->obj_name),
                      "evsub%p", sub);
 
+    sub->auth_token.user_data = sub;
+    sub->auth_token.send_impl = &evsub_async_auth_send_impl;
 
     /* Copy callback, if any: */
     if (user_cb)
@@ -1823,23 +1841,31 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
         if (tsx->status_code==401 || tsx->status_code==407) {
             pjsip_tx_data *tdata;
             pj_status_t status;
+            pjsip_auth_clt_async_on_chal_param chal_param;
 
             if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
                 /* Previously failed transaction has terminated */
                 return;
             }
 
-            status = pjsip_auth_clt_reinit_req(&sub->dlg->auth_sess,
-                                               event->body.tsx_state.src.rdata,
-                                               tsx->last_tx, &tdata);
-            if (status == PJ_SUCCESS) 
-                status = pjsip_dlg_send_request(sub->dlg, tdata, -1, NULL);
-            
+            chal_param.rdata = event->body.tsx_state.src.rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                            &sub->dlg->auth_sess,
+                                            &sub->auth_token, &chal_param);
             if (status != PJ_SUCCESS) {
-                /* Authentication failed! */
-                set_state(sub, PJSIP_EVSUB_STATE_TERMINATED,
-                          NULL, event, &tsx->status_text);
-                return;
+                status = pjsip_auth_clt_reinit_req(
+                                &sub->dlg->auth_sess,
+                                event->body.tsx_state.src.rdata,
+                                tsx->last_tx, &tdata);
+                if (status == PJ_SUCCESS)
+                    status = pjsip_dlg_send_request(sub->dlg, tdata, -1,
+                                                    NULL);
+                if (status != PJ_SUCCESS) {
+                    /* Authentication failed! */
+                    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED,
+                              NULL, event, &tsx->status_text);
+                }
             }
 
             return;
@@ -2250,20 +2276,29 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
             pjsip_tx_data *tdata;
             pj_status_t status;
             pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
+            pjsip_auth_clt_async_on_chal_param chal_param;
 
             /* Handled by other module already (e.g: invite module) */
             if (tsx->last_tx->auth_retry)
                 return;
 
-            status = pjsip_auth_clt_reinit_req(&sub->dlg->auth_sess, rdata,
-                                               tsx->last_tx, &tdata);
-            if (status == PJ_SUCCESS)
-                status = pjsip_dlg_send_request(sub->dlg, tdata, -1, NULL);
-
+            chal_param.rdata = rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                            &sub->dlg->auth_sess,
+                                            &sub->auth_token, &chal_param);
             if (status != PJ_SUCCESS) {
-                /* Can't authenticate. Terminate session (?) */
-                set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL,
-                          &tsx->status_text);
+                status = pjsip_auth_clt_reinit_req(&sub->dlg->auth_sess,
+                                                   rdata, tsx->last_tx,
+                                                   &tdata);
+                if (status == PJ_SUCCESS)
+                    status = pjsip_dlg_send_request(sub->dlg, tdata, -1,
+                                                    NULL);
+                if (status != PJ_SUCCESS) {
+                    /* Can't authenticate. Terminate session (?) */
+                    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL,
+                              &tsx->status_text);
+                }
             }
             return;
 
