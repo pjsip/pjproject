@@ -1218,6 +1218,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
         pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
         pjsip_tx_data *tdata;
         pj_bool_t is_unreg;
+        pjsip_auth_clt_async_on_chal_param chal_param;
 
         /* reset current op */
         is_unreg = (regc->current_op == REGC_UNREGISTERING);
@@ -1276,11 +1277,12 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
          * It should be safe to do this since the regc's refcount has been
          * incremented.
          */
+        chal_param.rdata = rdata;
+        chal_param.tdata = tsx->last_tx;
         pj_lock_release(regc->lock);
         status = pjsip_auth_clt_async_impl_on_challenge(&regc->auth_sess,
                                                         &regc->auth_token,
-                                                        rdata,
-                                                        tsx->last_tx);
+                                                        &chal_param);
         pj_lock_acquire(regc->lock);
         if (status != PJ_SUCCESS) {
             /* Application does not handle the authentication, so let's

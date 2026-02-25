@@ -1881,7 +1881,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_send_req(
                                                         token, new_request));
     PJ_ASSERT_RETURN(sess->async_opt && sess->async_opt->cb, PJ_EINVALIDOP);
 
-    /* Best effort to verify the validity of the implementor */
+    /* Best effort to verify the integrity of the token */
     if (!send_token->send_impl ||
         pj_memcmp(send_token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
     {
@@ -1902,25 +1902,21 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_send_req(
 
 
 PJ_DEF(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
-                                    pjsip_auth_clt_sess* sess,
-                                    pjsip_auth_clt_async_impl_token *token,
-                                    const pjsip_rx_data* rdata,
-                                    pjsip_tx_data* tdata)
+                            pjsip_auth_clt_sess* sess,
+                            pjsip_auth_clt_async_impl_token *token,
+                            const pjsip_auth_clt_async_on_chal_param *param)
 {
-    pjsip_auth_clt_async_on_chal_param cbparam = {0};
-
-    PJ_ASSERT_RETURN(sess && token && rdata && tdata, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sess && token && param && param->rdata && param->tdata,
+                     PJ_EINVAL);
     DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_impl_on_challenge(
                                                     sess->parent,
-                                                    token, rdata, tdata));
+                                                    token, param));
 
     if (!sess->async_opt || !sess->async_opt->cb)
         return PJ_EINVALIDOP;
 
-    cbparam.rdata = rdata;
-    cbparam.tdata = tdata;
     pj_memcpy(token->signature, AUTH_TOKEN_SIGNATURE, 4);
 
-    (*sess->async_opt->cb)(sess, token, &cbparam);
+    (*sess->async_opt->cb)(sess, token, param);
     return PJ_SUCCESS;
 }

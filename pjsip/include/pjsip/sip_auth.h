@@ -670,9 +670,9 @@ typedef struct pjsip_auth_clt_async_on_chal_param
  *                      and the response with the challenge.
  */
 typedef void pjsip_auth_clt_async_on_challenge(
-                                pjsip_auth_clt_sess *sess,
-                                void *token,
-                                pjsip_auth_clt_async_on_chal_param* param);
+                            pjsip_auth_clt_sess *sess,
+                            void *token,
+                            const pjsip_auth_clt_async_on_chal_param* param);
 
 
 /**
@@ -1044,16 +1044,14 @@ typedef struct pjsip_auth_clt_async_impl_token
  *
  * @param sess          The client authentication session.
  * @param token         The asynchronous client authentication token.
- * @param rdata         The received challenge.
- * @param tdata         The last sent request.
+ * @param param         The challenge parameters (rdata and tdata).
  *
  * @return              PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
-                                    pjsip_auth_clt_sess* sess,
-                                    pjsip_auth_clt_async_impl_token *token,
-                                    const pjsip_rx_data* rdata,
-                                    pjsip_tx_data* tdata);
+                            pjsip_auth_clt_sess* sess,
+                            pjsip_auth_clt_async_impl_token *token,
+                            const pjsip_auth_clt_async_on_chal_param *param);
 
 
 /**

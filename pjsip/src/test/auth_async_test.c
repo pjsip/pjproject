@@ -86,9 +86,11 @@ static pj_bool_t registrar_rx_request(pjsip_rx_data *rdata)
     if (pjsip_msg_find_hdr(msg, PJSIP_H_AUTHORIZATION, NULL) == NULL) {
         /* No credentials - issue a 401 challenge */
         const pj_str_t hname  = pj_str("WWW-Authenticate");
-        const pj_str_t hvalue = pj_str("Digest realm=\"test\", nonce=\"testnonce\"");
+        const pj_str_t hvalue =
+            pj_str("Digest realm=\"test\", nonce=\"testnonce\"");
         pjsip_generic_string_hdr *hwww =
-            pjsip_generic_string_hdr_create(rdata->tp_info.pool, &hname, &hvalue);
+            pjsip_generic_string_hdr_create(rdata->tp_info.pool,
+                                            &hname, &hvalue);
         pj_list_push_back(&hdr_list, hwww);
         code = 401;
     } else {
@@ -161,7 +163,7 @@ static pj_status_t dummy_send_impl(pjsip_auth_clt_sess *sess,
 /* Async challenge callback - used by the sync and deferred send tests. */
 static void on_auth_challenge(pjsip_auth_clt_sess *sess,
                               void *token,
-                              pjsip_auth_clt_async_on_chal_param *param)
+                              const pjsip_auth_clt_async_on_chal_param *param)
 {
     pjsip_tx_data *new_tdata = NULL;
     pj_status_t    status;
@@ -398,9 +400,10 @@ static struct {
     void                *token;
 } g_double_send;
 
-static void on_challenge_for_double_send(pjsip_auth_clt_sess *sess,
-                                         void *token,
-                                         pjsip_auth_clt_async_on_chal_param *param)
+static void on_challenge_for_double_send(
+                                pjsip_auth_clt_sess *sess,
+                                void *token,
+                                const pjsip_auth_clt_async_on_chal_param *param)
 {
     pjsip_tx_data *new_tdata = NULL;
     pj_status_t    status;
@@ -455,7 +458,8 @@ static int double_send_test(const pj_str_t *registrar_uri)
         return -1230;
     }
     if (!g_ctx.done || g_ctx.reg_code != 200) {
-        PJ_LOG(3, (THIS_FILE, "    error: registration did not complete (code=%d)",
+        PJ_LOG(3, (THIS_FILE,
+                   "    error: registration did not complete (code=%d)",
                    g_ctx.reg_code));
         pjsip_regc_destroy(regc);
         return -1240;

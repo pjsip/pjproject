@@ -348,7 +348,8 @@ typedef struct pjsua_acc
     pjsip_transport_type_e tp_type; /**< Transport type (for local acc or
                                          transport binding)             */
     pjsua_ip_change_op ip_change_op;/**< IP change process progress.    */
-    pjsip_auth_clt_sess shared_auth_sess; /**< share one auth over all requests */
+    pjsip_auth_clt_sess shared_auth_sess; /**< Share one auth session over
+                                               all requests             */
 } pjsua_acc;
 
 
