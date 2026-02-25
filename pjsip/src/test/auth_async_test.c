@@ -165,10 +165,11 @@ static void on_auth_challenge(pjsip_auth_clt_sess *sess,
                               void *token,
                               const pjsip_auth_clt_async_on_chal_param *param)
 {
+    test_ctx_t    *ctx       = (test_ctx_t *)param->user_data;
     pjsip_tx_data *new_tdata = NULL;
     pj_status_t    status;
 
-    g_ctx.challenge_count++;
+    ctx->challenge_count++;
 
     /* Build the authenticated request.  rdata is only valid inside this
      * callback, so pjsip_auth_clt_reinit_req must always be called here.
@@ -177,12 +178,12 @@ static void on_auth_challenge(pjsip_auth_clt_sess *sess,
                                        param->rdata,
                                        param->tdata,
                                        &new_tdata);
-    g_ctx.reinit_status = status;
+    ctx->reinit_status = status;
 
     if (status != PJ_SUCCESS || !new_tdata)
         return;
 
-    if (g_ctx.sync) {
+    if (ctx->sync) {
         /* Synchronous path: send from within the callback.
          * The lock has been released by sip_reg.c before this callback
          * fires, so there is no deadlock risk.
@@ -190,10 +191,10 @@ static void on_auth_challenge(pjsip_auth_clt_sess *sess,
         pjsip_auth_clt_async_send_req(sess, token, new_tdata);
     } else {
         /* Asynchronous path: stash everything and let the event loop send. */
-        g_ctx.deferred.pending = PJ_TRUE;
-        g_ctx.deferred.sess    = sess;
-        g_ctx.deferred.token   = token;
-        g_ctx.deferred.tdata   = new_tdata;
+        ctx->deferred.pending = PJ_TRUE;
+        ctx->deferred.sess    = sess;
+        ctx->deferred.token   = token;
+        ctx->deferred.tdata   = new_tdata;
         /* new_tdata holds a refcount from reinit_req; released by
          * async_auth_send_impl -> pjsip_regc_send.
          */
@@ -215,6 +216,7 @@ static void on_reg_complete(struct pjsip_regc_cbparam *param)
  *****************************************************************************/
 static int create_regc(const pj_str_t *registrar_uri,
                        pjsip_auth_clt_async_on_challenge *challenge_cb,
+                       void *user_data,
                        pjsip_regc **p_regc)
 {
     pjsip_regc               *regc;
@@ -240,7 +242,8 @@ static int create_regc(const pj_str_t *registrar_uri,
     if (rc != PJ_SUCCESS) { pjsip_regc_destroy(regc); return -1; }
 
     pj_bzero(&async_cfg, sizeof(async_cfg));
-    async_cfg.cb = challenge_cb;
+    async_cfg.cb        = challenge_cb;
+    async_cfg.user_data = user_data;
     rc = pjsip_auth_clt_async_configure(pjsip_regc_get_auth_sess(regc),
                                         &async_cfg);
     if (rc != PJ_SUCCESS) { pjsip_regc_destroy(regc); return -1; }
@@ -299,7 +302,7 @@ static int sync_send_test(const pj_str_t *registrar_uri)
     g_registrar.auth_count = 0;
     g_ctx.sync = PJ_TRUE;
 
-    rc = create_regc(registrar_uri, &on_auth_challenge, &regc);
+    rc = create_regc(registrar_uri, &on_auth_challenge, &g_ctx, &regc);
     if (rc != 0) return -1000;
 
     rc = send_and_wait(regc);
@@ -352,7 +355,7 @@ static int deferred_send_test(const pj_str_t *registrar_uri)
     g_registrar.auth_count = 0;
     g_ctx.sync = PJ_FALSE;  /* deferred */
 
-    rc = create_regc(registrar_uri, &on_auth_challenge, &regc);
+    rc = create_regc(registrar_uri, &on_auth_challenge, &g_ctx, &regc);
     if (rc != 0) return -1100;
 
     rc = send_and_wait(regc);
@@ -438,7 +441,8 @@ static int double_send_test(const pj_str_t *registrar_uri)
     g_registrar.auth_count = 0;
     g_ctx.sync = PJ_TRUE;
 
-    rc = create_regc(registrar_uri, &on_challenge_for_double_send, &regc);
+    rc = create_regc(registrar_uri, &on_challenge_for_double_send,
+                     NULL, &regc);
     if (rc != 0) return -1200;
 
     rc = pjsip_regc_register(regc, PJ_TRUE, &dummy_tdata);

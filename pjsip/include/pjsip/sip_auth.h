@@ -657,6 +657,12 @@ typedef struct pjsip_auth_clt_async_on_chal_param
      */
     const pjsip_rx_data        *rdata;
 
+    /**
+     * Application-specific data set via the #pjsip_auth_clt_async_setting
+     * user_data field.
+     */
+    void                       *user_data;
+
 } pjsip_auth_clt_async_on_chal_param;
 
 
@@ -684,6 +690,12 @@ typedef struct pjsip_auth_clt_async_setting
      * Callback to notify the application when a challenge is received.
      */
     pjsip_auth_clt_async_on_challenge  *cb;
+
+    /**
+     * Optional application-specific data passed to the callback via
+     * #pjsip_auth_clt_async_on_chal_param::user_data.
+     */
+    void                               *user_data;
 
 } pjsip_auth_clt_async_setting;
 

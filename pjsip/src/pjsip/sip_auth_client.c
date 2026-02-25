@@ -1906,6 +1906,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
                             pjsip_auth_clt_async_impl_token *token,
                             const pjsip_auth_clt_async_on_chal_param *param)
 {
+    pjsip_auth_clt_async_on_chal_param cb_param;
+
     PJ_ASSERT_RETURN(sess && token && param && param->rdata && param->tdata,
                      PJ_EINVAL);
     DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_impl_on_challenge(
@@ -1917,6 +1919,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
 
     pj_memcpy(token->signature, AUTH_TOKEN_SIGNATURE, 4);
 
-    (*sess->async_opt->cb)(sess, token, param);
+    cb_param           = *param;
+    cb_param.user_data = sess->async_opt->user_data;
+    (*sess->async_opt->cb)(sess, token, &cb_param);
     return PJ_SUCCESS;
 }
