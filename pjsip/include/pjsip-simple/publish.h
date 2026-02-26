@@ -221,6 +221,16 @@ PJ_DECL(pj_status_t) pjsip_publishc_set_auth_sess(
                                     pjsip_auth_clt_sess *session);
 
 /**
+ * Get the authentication client session associated with the publication.
+ *
+ * @param pubc      The client publication structure.
+ *
+ * @return          The authentication client session.
+ */
+PJ_DECL(pjsip_auth_clt_sess*) pjsip_publishc_get_auth_sess(
+                                    pjsip_publishc *pubc);
+
+/**
  * Set route set to be used for outgoing requests.
  *
  * @param pubc      The client publication structure.

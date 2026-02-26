@@ -459,10 +459,16 @@ static void im_callback(void *token, pjsip_event *e)
 
             pjsip_auth_clt_init(&ctx->auth, pjsua_var.endpt, tsx->pool, 0);
 
-            /* Set shared auth session for IM */
+            /* Set shared or non-shared async auth for IM */
             if (pjsua_var.acc[im_data->acc_id].cfg.use_shared_auth) {
                 pjsip_auth_clt_set_parent(&ctx->auth,
                     &pjsua_var.acc[im_data->acc_id].shared_auth_sess);
+            } else if (pjsua_var.ua_cfg.cb.on_auth_challenge) {
+                pjsip_auth_clt_async_setting async_opt;
+                pj_bzero(&async_opt, sizeof(async_opt));
+                async_opt.cb = &pjsua_auth_on_challenge;
+                async_opt.user_data = (void*)(pj_ssize_t)im_data->acc_id;
+                pjsip_auth_clt_async_configure(&ctx->auth, &async_opt);
             }
 
             pjsip_auth_clt_set_credentials(&ctx->auth,
@@ -615,10 +621,16 @@ static void typing_callback(void *token, pjsip_event *e)
 
             pjsip_auth_clt_init(&ctx->auth, pjsua_var.endpt, tsx->pool, 0);
 
-            /* Set shared auth session for IM */
+            /* Set shared or non-shared async auth for IM */
             if (pjsua_var.acc[im_data->acc_id].cfg.use_shared_auth) {
                 pjsip_auth_clt_set_parent(&ctx->auth,
                     &pjsua_var.acc[im_data->acc_id].shared_auth_sess);
+            } else if (pjsua_var.ua_cfg.cb.on_auth_challenge) {
+                pjsip_auth_clt_async_setting async_opt;
+                pj_bzero(&async_opt, sizeof(async_opt));
+                async_opt.cb = &pjsua_auth_on_challenge;
+                async_opt.user_data = (void*)(pj_ssize_t)im_data->acc_id;
+                pjsip_auth_clt_async_configure(&ctx->auth, &async_opt);
             }
 
             pjsip_auth_clt_set_credentials(&ctx->auth,

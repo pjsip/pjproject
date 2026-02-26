@@ -1973,5 +1973,5 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
      * fall through to synchronous path.
      */
     pj_bzero(token->signature, 4);
-    return PJ_EINVALIDOP;
+    return PJ_EIGNORED;
 }

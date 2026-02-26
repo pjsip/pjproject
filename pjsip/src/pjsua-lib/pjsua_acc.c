@@ -2848,6 +2848,18 @@ static pj_status_t pjsua_regc_init(int acc_id)
         }
     }
 
+    /* Configure async auth on non-shared regc auth session */
+    if (!acc->cfg.use_shared_auth &&
+        pjsua_var.ua_cfg.cb.on_auth_challenge)
+    {
+        pjsip_auth_clt_async_setting async_opt;
+        pj_bzero(&async_opt, sizeof(async_opt));
+        async_opt.cb = &pjsua_auth_on_challenge;
+        async_opt.user_data = (void*)(pj_ssize_t)acc->index;
+        pjsip_auth_clt_async_configure(
+            pjsip_regc_get_auth_sess(acc->regc), &async_opt);
+    }
+
     /* Set delay before registration refresh */
     status = pjsip_regc_set_delay_before_refresh(
                                         acc->regc,

@@ -1538,6 +1538,13 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id)
         if (acc->cfg.use_shared_auth) {
             pjsip_publishc_set_auth_sess(acc->publish_sess,
                                          &acc->shared_auth_sess);
+        } else if (pjsua_var.ua_cfg.cb.on_auth_challenge) {
+            pjsip_auth_clt_async_setting async_opt;
+            pj_bzero(&async_opt, sizeof(async_opt));
+            async_opt.cb = &pjsua_auth_on_challenge;
+            async_opt.user_data = (void*)(pj_ssize_t)acc->index;
+            pjsip_auth_clt_async_configure(
+                pjsip_publishc_get_auth_sess(acc->publish_sess), &async_opt);
         }
 
         /* Set route-set */
@@ -2146,11 +2153,17 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
 
     if (acc->cfg.use_shared_auth) {
         pjsip_dlg_set_auth_sess(buddy->dlg, &acc->shared_auth_sess);
+    } else if (pjsua_var.ua_cfg.cb.on_auth_challenge) {
+        pjsip_auth_clt_async_setting async_opt;
+        pj_bzero(&async_opt, sizeof(async_opt));
+        async_opt.cb = &pjsua_auth_on_challenge;
+        async_opt.user_data = (void*)(pj_ssize_t)acc->index;
+        pjsip_auth_clt_async_configure(&buddy->dlg->auth_sess, &async_opt);
     }
 
     /* Set credentials */
     if (acc->cred_cnt) {
-        pjsip_auth_clt_set_credentials( &buddy->dlg->auth_sess, 
+        pjsip_auth_clt_set_credentials( &buddy->dlg->auth_sess,
                                         acc->cred_cnt, acc->cred);
     }
 
