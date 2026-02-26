@@ -1530,8 +1530,14 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id)
 
         /* Add credential for authentication */
         if (acc->cred_cnt) {
-            pjsip_publishc_set_credentials(acc->publish_sess, acc->cred_cnt, 
+            pjsip_publishc_set_credentials(acc->publish_sess, acc->cred_cnt,
                                            acc->cred);
+        }
+
+        /* Set shared auth session for PUBLISH */
+        if (acc->cfg.use_shared_auth) {
+            pjsip_publishc_set_auth_sess(acc->publish_sess,
+                                         &acc->shared_auth_sess);
         }
 
         /* Set route-set */

@@ -324,6 +324,14 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_credentials( pjsip_publishc *pubc,
     return pjsip_auth_clt_set_credentials(&pubc->auth_sess, count, cred);
 }
 
+PJ_DEF(pj_status_t) pjsip_publishc_set_auth_sess(
+                                    pjsip_publishc *pubc,
+                                    pjsip_auth_clt_sess *session)
+{
+    PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
+    return pjsip_auth_clt_set_parent(&pubc->auth_sess, session);
+}
+
 PJ_DEF(pj_status_t) pjsip_publishc_set_route_set( pjsip_publishc *pubc,
                                               const pjsip_route_hdr *route_set)
 {

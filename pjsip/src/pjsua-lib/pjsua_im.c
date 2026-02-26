@@ -458,6 +458,13 @@ static void im_callback(void *token, pjsip_event *e)
             ctx->send_cb = &im_callback;
 
             pjsip_auth_clt_init(&ctx->auth, pjsua_var.endpt, tsx->pool, 0);
+
+            /* Set shared auth session for IM */
+            if (pjsua_var.acc[im_data->acc_id].cfg.use_shared_auth) {
+                pjsip_auth_clt_set_parent(&ctx->auth,
+                    &pjsua_var.acc[im_data->acc_id].shared_auth_sess);
+            }
+
             pjsip_auth_clt_set_credentials(&ctx->auth,
                 pjsua_var.acc[im_data->acc_id].cred_cnt,
                 pjsua_var.acc[im_data->acc_id].cred);
@@ -607,6 +614,13 @@ static void typing_callback(void *token, pjsip_event *e)
             ctx->send_cb = &typing_callback;
 
             pjsip_auth_clt_init(&ctx->auth, pjsua_var.endpt, tsx->pool, 0);
+
+            /* Set shared auth session for IM */
+            if (pjsua_var.acc[im_data->acc_id].cfg.use_shared_auth) {
+                pjsip_auth_clt_set_parent(&ctx->auth,
+                    &pjsua_var.acc[im_data->acc_id].shared_auth_sess);
+            }
+
             pjsip_auth_clt_set_credentials(&ctx->auth,
                 pjsua_var.acc[im_data->acc_id].cred_cnt,
                 pjsua_var.acc[im_data->acc_id].cred);

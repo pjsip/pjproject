@@ -1246,6 +1246,45 @@ typedef void (*pjsua_on_rejected_incoming_call_cb)(
 
 
 /**
+ * This structure contains the parameters for \a on_auth_challenge callback.
+ */
+typedef struct pjsua_on_auth_challenge_param
+{
+    /**
+     * The account ID associated with the challenged request.
+     * May be PJSUA_INVALID_ID if the account cannot be determined.
+     */
+    pjsua_acc_id                acc_id;
+
+    /**
+     * The call ID associated with the challenged request.
+     * Will be PJSUA_INVALID_ID for non-call requests (REGISTER, PUBLISH,
+     * out-of-dialog MESSAGE, etc.).
+     */
+    pjsua_call_id               call_id;
+
+    /**
+     * The client authentication session that received the challenge.
+     */
+    pjsip_auth_clt_sess        *auth_sess;
+
+    /**
+     * The authentication token to be passed to
+     * pjsip_auth_clt_async_send_req() or pjsip_auth_clt_async_abandon().
+     */
+    void                       *token;
+
+    /**
+     * The 401/407 response containing the challenge.
+     * Only valid during the callback. Clone with pjsip_rx_data_clone()
+     * if needed beyond the callback.
+     */
+    const pjsip_rx_data        *rdata;
+
+} pjsua_on_auth_challenge_param;
+
+
+/**
  * This structure describes application callback to receive various event
  * notification from PJSUA-API. All of these callbacks are OPTIONAL,
  * although definitely application would want to implement some of
@@ -2211,6 +2250,18 @@ typedef struct pjsua_callback
      * callback.
      */
     pjmedia_vid_conf_op_cb on_vid_conf_op_completed;
+
+    /**
+     * This callback is called when a 401/407 challenge is received and
+     * asynchronous authentication handling is desired. The application
+     * should set up credentials and call pjsip_auth_clt_async_send_req()
+     * to resend the request with authentication, or call
+     * pjsip_auth_clt_async_abandon() to give up.
+     *
+     * If this callback is not set, the library will handle authentication
+     * automatically using the configured credentials (synchronous path).
+     */
+    void (*on_auth_challenge)(const pjsua_on_auth_challenge_param *param);
 
 } pjsua_callback;
 

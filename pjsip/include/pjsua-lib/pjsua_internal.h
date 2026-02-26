@@ -1070,6 +1070,13 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc);
  */
 void pjsua_acc_end_ip_change(pjsua_acc *acc);
 
+/*
+ * Bridge callback: maps low-level auth challenge to pjsua on_auth_challenge.
+ */
+void pjsua_auth_on_challenge(pjsip_auth_clt_sess *sess,
+                             void *token,
+                             const pjsip_auth_clt_async_on_chal_param *param);
+
 PJ_END_DECL
 
 #endif  /* __PJSUA_INTERNAL_H__ */
