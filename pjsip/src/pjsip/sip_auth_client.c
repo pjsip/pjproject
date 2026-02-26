@@ -1965,6 +1965,13 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
 
     cb_param           = *param;
     cb_param.user_data = sess->async_opt->user_data;
-    (*sess->async_opt->cb)(sess, token, &cb_param);
-    return PJ_SUCCESS;
+    if ((*sess->async_opt->cb)(sess, token, &cb_param)) {
+        return PJ_SUCCESS;
+    }
+
+    /* Callback chose not to handle — invalidate token, let caller
+     * fall through to synchronous path.
+     */
+    pj_bzero(token->signature, 4);
+    return PJ_EINVALIDOP;
 }

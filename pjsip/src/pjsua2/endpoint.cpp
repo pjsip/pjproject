@@ -1164,6 +1164,51 @@ void Endpoint::on_mwi_info(pjsua_acc_id acc_id,
     acc->onMwiInfo(prm);
 }
 
+pj_status_t AuthChallenge::respond()
+{
+    pjsip_tx_data *new_tdata;
+    pj_status_t status;
+
+    status = pjsip_auth_clt_reinit_req(param->auth_sess,
+                                       (pjsip_rx_data*)param->rdata,
+                                       param->tdata, &new_tdata);
+    if (status == PJ_SUCCESS) {
+        status = pjsip_auth_clt_async_send_req(param->auth_sess,
+                                               param->token, new_tdata);
+    }
+    param->handled = PJ_TRUE;
+    return status;
+}
+
+pj_status_t AuthChallenge::abandon()
+{
+    pj_status_t status = pjsip_auth_clt_async_abandon(param->auth_sess,
+                                                      param->token);
+    param->handled = PJ_TRUE;
+    return status;
+}
+
+void Endpoint::on_auth_challenge(pjsua_on_auth_challenge_param *param)
+{
+    Account *acc = lookupAcc(param->acc_id, "on_auth_challenge()");
+    if (!acc) {
+        /* No account — leave handled=false, sync fallback */
+        return;
+    }
+
+    OnAuthChallengeParam prm;
+    prm.accId   = param->acc_id;
+    prm.callId  = param->call_id;
+    if (param->rdata)
+        prm.rdata.fromPj(*(pjsip_rx_data*)param->rdata);
+    prm.challenge.param = param;
+
+    acc->onAuthChallenge(prm);
+    /* If app called respond() or abandon(), param->handled is PJ_TRUE.
+     * If not (default no-op), param->handled stays PJ_FALSE → sync fallback.
+     */
+}
+
 void Endpoint::on_acc_find_for_incoming(const pjsip_rx_data *rdata,
                                         pjsua_acc_id* acc_id)
 {
@@ -2112,6 +2157,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_rejected_incoming_call = &Endpoint::on_rejected_incoming_call;
     ua_cfg.cb.on_conf_op_completed      = &Endpoint::on_conf_op_completed;
     ua_cfg.cb.on_vid_conf_op_completed  = &Endpoint::on_vid_conf_op_completed;
+    ua_cfg.cb.on_auth_challenge         = &Endpoint::on_auth_challenge;
 
     /* Init! */
     PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );

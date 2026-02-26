@@ -674,8 +674,14 @@ typedef struct pjsip_auth_clt_async_on_chal_param
  *                      to be passed to #pjsip_auth_clt_async_send_req().
  * @param param         The callback parameter containing the original request
  *                      and the response with the challenge.
+ *
+ * @return              PJ_TRUE if the application handles the challenge
+ *                      (will call pjsip_auth_clt_async_send_req() or
+ *                      pjsip_auth_clt_async_abandon() later).
+ *                      PJ_FALSE to let the library handle authentication
+ *                      via the synchronous path.
  */
-typedef void pjsip_auth_clt_async_on_challenge(
+typedef pj_bool_t pjsip_auth_clt_async_on_challenge(
                             pjsip_auth_clt_sess *sess,
                             void *token,
                             const pjsip_auth_clt_async_on_chal_param* param);

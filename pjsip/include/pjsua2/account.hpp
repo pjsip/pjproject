@@ -1882,6 +1882,58 @@ struct OnSendRequestParam
 
 
 /**
+ * Represents a pending authentication challenge.
+ * Call respond() to resend with authentication, or abandon() to give up.
+ * If neither is called before the callback returns, the library handles
+ * authentication automatically using configured credentials (sync path).
+ * This object is only valid during the onAuthChallenge() callback.
+ */
+class AuthChallenge
+{
+public:
+    /**
+     * Respond to the authentication challenge by building and sending
+     * an authenticated request. Uses credentials currently configured
+     * on the account.
+     *
+     * @return          PJ_SUCCESS on success.
+     */
+    pj_status_t respond();
+
+    /**
+     * Abandon the authentication challenge. The pending request will
+     * not be resent.
+     *
+     * @return          PJ_SUCCESS on success.
+     */
+    pj_status_t abandon();
+
+private:
+    friend class Endpoint;
+
+    pjsua_on_auth_challenge_param *param;
+};
+
+/**
+ * Parameters for Account::onAuthChallenge() callback.
+ */
+struct OnAuthChallengeParam
+{
+    /** Account ID associated with the challenged request. */
+    pjsua_acc_id        accId;
+
+    /** Call ID, or PJSUA_INVALID_ID for non-call requests. */
+    pjsua_call_id       callId;
+
+    /** The 401/407 response containing the challenge. */
+    SipRxData           rdata;
+
+    /** The authentication challenge. Call respond() or abandon(). */
+    AuthChallenge       challenge;
+};
+
+
+/**
  * Parameters for presNotify() account method.
  */
 struct PresNotifyParam
@@ -2369,6 +2421,17 @@ public:
      * @param prm           Callback parameter.
      */
     virtual void onMwiInfo(OnMwiInfoParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * Called when a 401/407 challenge is received. Override to handle
+     * authentication asynchronously. Call prm.challenge.respond() to
+     * resend with authentication, or prm.challenge.abandon() to give up.
+     * If neither is called, the library handles it automatically.
+     *
+     * @param prm       Callback parameter.
+     */
+    virtual void onAuthChallenge(OnAuthChallengeParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
 private:

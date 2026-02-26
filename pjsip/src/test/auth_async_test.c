@@ -169,9 +169,9 @@ static pj_status_t dummy_send_impl(pjsip_auth_clt_sess *sess,
  *****************************************************************************/
 
 /* Async challenge callback - used by the sync and deferred send tests. */
-static void on_auth_challenge(pjsip_auth_clt_sess *sess,
-                              void *token,
-                              const pjsip_auth_clt_async_on_chal_param *param)
+static pj_bool_t on_auth_challenge(pjsip_auth_clt_sess *sess,
+                                   void *token,
+                                   const pjsip_auth_clt_async_on_chal_param *param)
 {
     test_ctx_t    *ctx       = (test_ctx_t *)param->user_data;
     pjsip_tx_data *new_tdata = NULL;
@@ -189,7 +189,7 @@ static void on_auth_challenge(pjsip_auth_clt_sess *sess,
     ctx->reinit_status = status;
 
     if (status != PJ_SUCCESS || !new_tdata)
-        return;
+        return PJ_TRUE;
 
     if (ctx->sync) {
         /* Synchronous path: send from within the callback.
@@ -207,6 +207,7 @@ static void on_auth_challenge(pjsip_auth_clt_sess *sess,
          * async_auth_send_impl -> pjsip_regc_send.
          */
     }
+    return PJ_TRUE;
 }
 
 /* Registration completion callback. */
@@ -411,7 +412,7 @@ static struct {
     void                *token;
 } g_double_send;
 
-static void on_challenge_for_double_send(
+static pj_bool_t on_challenge_for_double_send(
                                 pjsip_auth_clt_sess *sess,
                                 void *token,
                                 const pjsip_auth_clt_async_on_chal_param *param)
@@ -422,7 +423,7 @@ static void on_challenge_for_double_send(
     status = pjsip_auth_clt_reinit_req(sess, param->rdata, param->tdata,
                                        &new_tdata);
     if (status != PJ_SUCCESS || !new_tdata)
-        return;
+        return PJ_TRUE;
 
     /* Remember the session and token before consuming them */
     g_double_send.sess  = sess;
@@ -431,6 +432,7 @@ static void on_challenge_for_double_send(
     /* First (and only legitimate) send - this clears token->signature */
     pjsip_auth_clt_async_send_req(sess, token, new_tdata);
     g_double_send.fired = PJ_TRUE;
+    return PJ_TRUE;
 }
 
 static int double_send_test(const pj_str_t *registrar_uri)
@@ -542,7 +544,7 @@ static struct {
     pj_bool_t fired;
 } g_abandoned;
 
-static void on_challenge_no_send(
+static pj_bool_t on_challenge_no_send(
                         pjsip_auth_clt_sess *sess,
                         void *token,
                         const pjsip_auth_clt_async_on_chal_param *param)
@@ -555,6 +557,7 @@ static void on_challenge_no_send(
      * pjsip_auth_clt_async_send_req.
      */
     g_abandoned.fired = PJ_TRUE;
+    return PJ_TRUE;
 }
 
 static int abandoned_token_test(const pj_str_t *registrar_uri)
@@ -636,7 +639,7 @@ static struct {
     void                *token;
 } g_abandon_api;
 
-static void on_challenge_do_abandon(
+static pj_bool_t on_challenge_do_abandon(
                         pjsip_auth_clt_sess *sess,
                         void *token,
                         const pjsip_auth_clt_async_on_chal_param *param)
@@ -650,6 +653,7 @@ static void on_challenge_do_abandon(
 
     /* Explicitly abandon: regc's abandon_impl will call on_reg_complete */
     pjsip_auth_clt_async_abandon(sess, token);
+    return PJ_TRUE;
 }
 
 static int abandon_api_test(const pj_str_t *registrar_uri)

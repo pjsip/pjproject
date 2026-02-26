@@ -1281,6 +1281,21 @@ typedef struct pjsua_on_auth_challenge_param
      */
     const pjsip_rx_data        *rdata;
 
+    /**
+     * The original request that was challenged. Needed to build the
+     * authenticated retry. Only valid during the callback.
+     */
+    pjsip_tx_data              *tdata;
+
+    /**
+     * Output: set to PJ_TRUE if the application handles the challenge
+     * (will call pjsip_auth_clt_async_send_req() or
+     * pjsip_auth_clt_async_abandon() later).
+     * Default PJ_FALSE means the library handles authentication
+     * via the synchronous path.
+     */
+    pj_bool_t                   handled;
+
 } pjsua_on_auth_challenge_param;
 
 
@@ -2261,7 +2276,7 @@ typedef struct pjsua_callback
      * If this callback is not set, the library will handle authentication
      * automatically using the configured credentials (synchronous path).
      */
-    void (*on_auth_challenge)(const pjsua_on_auth_challenge_param *param);
+    void (*on_auth_challenge)(pjsua_on_auth_challenge_param *param);
 
 } pjsua_callback;
 

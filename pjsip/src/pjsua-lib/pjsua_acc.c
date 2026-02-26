@@ -36,7 +36,8 @@ static void schedule_reregistration(pjsua_acc *acc);
 static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te);
 
 /* Bridge: maps low-level auth challenge -> pjsua on_auth_challenge */
-void pjsua_auth_on_challenge(pjsip_auth_clt_sess *sess,
+pj_bool_t pjsua_auth_on_challenge(
+                             pjsip_auth_clt_sess *sess,
                              void *token,
                              const pjsip_auth_clt_async_on_chal_param *param)
 {
@@ -48,7 +49,8 @@ void pjsua_auth_on_challenge(pjsip_auth_clt_sess *sess,
 
     /* Determine call_id from rdata -> dialog -> mod_data */
     if (param->rdata) {
-        pjsip_dialog *dlg = pjsip_rdata_get_dlg(param->rdata);
+        pjsip_dialog *dlg = pjsip_rdata_get_dlg(
+                                        (pjsip_rx_data*)param->rdata);
         if (dlg) {
             pjsua_call *call =
                 (pjsua_call*)dlg->mod_data[pjsua_var.mod.id];
@@ -63,8 +65,11 @@ void pjsua_auth_on_challenge(pjsip_auth_clt_sess *sess,
     cb_param.auth_sess = sess;
     cb_param.token     = token;
     cb_param.rdata     = param->rdata;
+    cb_param.tdata     = param->tdata;
 
     (*pjsua_var.ua_cfg.cb.on_auth_challenge)(&cb_param);
+
+    return cb_param.handled;
 }
 
 /*
