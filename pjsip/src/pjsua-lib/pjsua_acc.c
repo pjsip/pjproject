@@ -1333,6 +1333,10 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
             update_reg = PJ_TRUE;
             unreg_first = PJ_TRUE;
         }
+
+        /* Propagate updated credentials to shared auth session */
+        pjsip_auth_clt_set_credentials(&acc->shared_auth_sess,
+                                        acc->cred_cnt, acc->cred);
     }
 
     /* Authentication preference */

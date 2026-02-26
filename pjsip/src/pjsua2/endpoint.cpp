@@ -1164,28 +1164,114 @@ void Endpoint::on_mwi_info(pjsua_acc_id acc_id,
     acc->onMwiInfo(prm);
 }
 
+AuthChallenge::AuthChallenge()
+    : param_(NULL), deferred_(false), consumed_(false),
+      cloned_rdata_(NULL), auth_sess_(NULL), token_(NULL), tdata_(NULL)
+{}
+
+AuthChallenge::~AuthChallenge()
+{
+    if (deferred_ && !consumed_ && auth_sess_ && token_)
+        pjsip_auth_clt_async_abandon(auth_sess_, token_);
+    if (cloned_rdata_)
+        pjsip_rx_data_free_cloned(cloned_rdata_);
+}
+
+AuthChallenge* AuthChallenge::defer()
+{
+    if (!param_ || consumed_ || deferred_)
+        PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+
+    pjsip_rx_data *cloned = NULL;
+    if (param_->rdata) {
+        pj_status_t st = pjsip_rx_data_clone(param_->rdata, 0, &cloned);
+        PJSUA2_CHECK_EXPR(st);
+    }
+
+    AuthChallenge *d   = new AuthChallenge();
+    d->deferred_       = true;
+    d->cloned_rdata_   = cloned;
+    d->auth_sess_      = param_->auth_sess;
+    d->token_          = param_->token;
+    d->tdata_          = param_->tdata;
+
+    param_->handled = PJ_TRUE;
+    consumed_ = true;
+    param_    = NULL;
+    return d;
+}
+
 pj_status_t AuthChallenge::respond()
 {
-    pjsip_tx_data *new_tdata;
-    pj_status_t status;
+    if (consumed_) return PJ_EINVALIDOP;
 
-    status = pjsip_auth_clt_reinit_req(param->auth_sess,
-                                       (pjsip_rx_data*)param->rdata,
-                                       param->tdata, &new_tdata);
-    if (status == PJ_SUCCESS) {
-        status = pjsip_auth_clt_async_send_req(param->auth_sess,
-                                               param->token, new_tdata);
+    pjsip_auth_clt_sess *sess;
+    void *tok;  pjsip_rx_data *rd;  pjsip_tx_data *td;
+
+    if (deferred_) {
+        sess = auth_sess_;  tok = token_;
+        rd = cloned_rdata_;  td = tdata_;
+    } else {
+        if (!param_) return PJ_EINVALIDOP;
+        sess = param_->auth_sess;  tok = param_->token;
+        rd = (pjsip_rx_data*)param_->rdata;  td = param_->tdata;
     }
-    param->handled = PJ_TRUE;
+
+    pjsip_tx_data *new_tdata = NULL;
+    pj_status_t status = pjsip_auth_clt_reinit_req(sess, rd, td, &new_tdata);
+    if (status == PJ_SUCCESS)
+        status = pjsip_auth_clt_async_send_req(sess, tok, new_tdata);
+    else
+        pjsip_auth_clt_async_abandon(sess, tok);
+
+    consumed_ = true;
+    if (!deferred_ && param_) param_->handled = PJ_TRUE;
     return status;
+}
+
+pj_status_t AuthChallenge::respond(const AuthCredInfoVector &creds)
+{
+    if (consumed_) return PJ_EINVALIDOP;
+
+    pjsip_auth_clt_sess *sess = deferred_ ? auth_sess_
+                                           : (param_ ? param_->auth_sess
+                                                     : NULL);
+    if (!sess) return PJ_EINVALIDOP;
+
+    /* Apply provided credentials to the auth session */
+    pjsip_cred_info ci[8];
+    unsigned count = (unsigned)creds.size();
+    if (count > PJ_ARRAY_SIZE(ci))
+        count = PJ_ARRAY_SIZE(ci);
+    for (unsigned i = 0; i < count; ++i)
+        ci[i] = creds[i].toPj();
+    pjsip_auth_clt_set_credentials(sess, count, ci);
+
+    return respond();
 }
 
 pj_status_t AuthChallenge::abandon()
 {
-    pj_status_t status = pjsip_auth_clt_async_abandon(param->auth_sess,
-                                                      param->token);
-    param->handled = PJ_TRUE;
+    if (consumed_) return PJ_EINVALIDOP;
+
+    pjsip_auth_clt_sess *sess;
+    void *tok;
+    if (deferred_) { sess = auth_sess_;  tok = token_; }
+    else {
+        if (!param_) return PJ_EINVALIDOP;
+        sess = param_->auth_sess;  tok = param_->token;
+    }
+
+    pj_status_t status = pjsip_auth_clt_async_abandon(sess, tok);
+    consumed_ = true;
+    if (!deferred_ && param_) param_->handled = PJ_TRUE;
     return status;
+}
+
+bool AuthChallenge::isValid() const
+{
+    if (consumed_) return false;
+    return deferred_ ? (auth_sess_ != NULL) : (param_ != NULL);
 }
 
 void Endpoint::on_auth_challenge(pjsua_on_auth_challenge_param *param)
@@ -1201,11 +1287,12 @@ void Endpoint::on_auth_challenge(pjsua_on_auth_challenge_param *param)
     prm.callId  = param->call_id;
     if (param->rdata)
         prm.rdata.fromPj(*(pjsip_rx_data*)param->rdata);
-    prm.challenge.param = param;
+    prm.challenge.param_ = param;
 
     acc->onAuthChallenge(prm);
-    /* If app called respond() or abandon(), param->handled is PJ_TRUE.
-     * If not (default no-op), param->handled stays PJ_FALSE → sync fallback.
+    /* If app called respond(), abandon(), or defer(), param->handled is
+     * PJ_TRUE.  If not (default no-op), param->handled stays PJ_FALSE →
+     * sync fallback.
      */
 }
 

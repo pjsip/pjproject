@@ -1886,19 +1886,43 @@ struct OnSendRequestParam
  * Call respond() to resend with authentication, or abandon() to give up.
  * If neither is called before the callback returns, the library handles
  * authentication automatically using configured credentials (sync path).
- * This object is only valid during the onAuthChallenge() callback.
+ *
+ * For async use, call defer() during the callback to obtain a heap-allocated
+ * AuthChallenge that can be used later. The caller owns the returned object.
  */
 class AuthChallenge
 {
 public:
+    AuthChallenge();
+    ~AuthChallenge();
+
+    /**
+     * Defer for async handling. Clones rdata, captures auth_sess/token/tdata,
+     * sets handled=PJ_TRUE. Returns NEW heap-allocated AuthChallenge the
+     * caller owns. Original becomes invalid.
+     * Must be called during onAuthChallenge() callback.
+     *
+     * @return          New heap-allocated AuthChallenge (caller owns).
+     */
+    AuthChallenge* defer() PJSUA2_THROW(Error);
+
     /**
      * Respond to the authentication challenge by building and sending
      * an authenticated request. Uses credentials currently configured
-     * on the account.
+     * on the auth session.
      *
      * @return          PJ_SUCCESS on success.
      */
     pj_status_t respond();
+
+    /**
+     * Respond with provided credentials. Sets them on the auth session
+     * before building the authenticated request.
+     *
+     * @param creds     Credentials to set on the auth session.
+     * @return          PJ_SUCCESS on success.
+     */
+    pj_status_t respond(const AuthCredInfoVector &creds);
 
     /**
      * Abandon the authentication challenge. The pending request will
@@ -1908,10 +1932,27 @@ public:
      */
     pj_status_t abandon();
 
+    /**
+     * Check whether this challenge object is still valid (not yet
+     * consumed by respond() or abandon()).
+     *
+     * @return          true if valid.
+     */
+    bool isValid() const;
+
 private:
     friend class Endpoint;
 
-    pjsua_on_auth_challenge_param *param;
+    AuthChallenge(const AuthChallenge&);
+    AuthChallenge& operator=(const AuthChallenge&);
+
+    pjsua_on_auth_challenge_param  *param_;
+    bool                            deferred_;
+    bool                            consumed_;
+    pjsip_rx_data                  *cloned_rdata_;
+    pjsip_auth_clt_sess           *auth_sess_;
+    void                           *token_;
+    pjsip_tx_data                  *tdata_;
 };
 
 /**
