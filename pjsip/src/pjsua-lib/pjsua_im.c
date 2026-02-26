@@ -44,10 +44,9 @@ const pjsip_method pjsip_message_method =
 static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata);
 
 /* Per-request auth context for async auth support.
- * Allocated on its own pool; freed in send_impl or on sync path.
+ * Allocated from tsx->pool; kept alive via grp_lock ref.
  */
 typedef struct im_auth_ctx {
-    pj_pool_t                       *pool;
     pjsip_auth_clt_sess              auth;
     pjsip_auth_clt_async_impl_token  token;
     pjsua_im_data                   *im_data;
@@ -396,23 +395,20 @@ static pj_status_t im_async_auth_send_impl(
 {
     im_auth_ctx *ctx = (im_auth_ctx *)user_data;
     pjsip_endpoint *endpt = pjsua_var.endpt;
-    pj_pool_t *pool;
     pjsip_endpt_send_callback send_cb;
     pjsua_im_data *im_data;
     pjsua_im_data *im_data2;
 
     PJ_UNUSED_ARG(auth_sess);
 
-    pool    = ctx->pool;
     send_cb = ctx->send_cb;
     im_data = ctx->im_data;
 
     im_data2 = pjsua_im_data_dup(tdata->pool, im_data);
     PJSIP_MSG_CSEQ_HDR(tdata->msg)->cseq++;
 
-    /* Clean up auth context before dispatching the new request */
+    /* Clean up auth session; pool is freed by core layer via grp_lock */
     pjsip_auth_clt_deinit(&ctx->auth);
-    pjsip_endpt_release_pool(endpt, pool);
 
     return pjsip_endpt_send_request(endpt, tdata, -1, im_data2, send_cb);
 }
@@ -422,13 +418,11 @@ static void im_async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
                                        void *user_data)
 {
     im_auth_ctx *ctx = (im_auth_ctx *)user_data;
-    pjsip_endpoint *endpt = pjsua_var.endpt;
 
     PJ_UNUSED_ARG(auth_sess);
 
-    /* Clean up the per-request auth context. */
+    /* Clean up auth session; pool is freed by core layer via grp_lock */
     pjsip_auth_clt_deinit(&ctx->auth);
-    pjsip_endpt_release_pool(endpt, ctx->pool);
 }
 
 
@@ -454,22 +448,16 @@ static void im_callback(void *token, pjsip_event *e)
             pjsip_tx_data *tdata;
             pjsip_auth_clt_async_on_chal_param chal_param;
             im_auth_ctx *ctx;
-            pj_pool_t *auth_pool;
             pjsua_im_data *im_data2;
             pj_status_t status;
 
             PJ_LOG(4,(THIS_FILE, "Resending IM with authentication"));
 
-            auth_pool = pjsip_endpt_create_pool(pjsua_var.endpt,
-                                                "imauthctx%p", 512, 512);
-            if (!auth_pool) return;
-
-            ctx = PJ_POOL_ZALLOC_T(auth_pool, im_auth_ctx);
-            ctx->pool    = auth_pool;
+            ctx = PJ_POOL_ZALLOC_T(tsx->pool, im_auth_ctx);
             ctx->im_data = im_data;
             ctx->send_cb = &im_callback;
 
-            pjsip_auth_clt_init(&ctx->auth, pjsua_var.endpt, auth_pool, 0);
+            pjsip_auth_clt_init(&ctx->auth, pjsua_var.endpt, tsx->pool, 0);
             pjsip_auth_clt_set_credentials(&ctx->auth,
                 pjsua_var.acc[im_data->acc_id].cred_cnt,
                 pjsua_var.acc[im_data->acc_id].cred);
@@ -479,6 +467,8 @@ static void im_callback(void *token, pjsip_event *e)
             ctx->token.user_data    = ctx;
             ctx->token.send_impl    = &im_async_auth_send_impl;
             ctx->token.abandon_impl = &im_async_auth_abandon_impl;
+            ctx->token.grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
 
             chal_param.rdata = rdata;
             chal_param.tdata = tsx->last_tx;
@@ -486,11 +476,16 @@ static void im_callback(void *token, pjsip_event *e)
                                                 &ctx->auth, &ctx->token,
                                                 &chal_param);
             if (status == PJ_SUCCESS) {
-                /* Async auth dispatched; pool freed in send_impl or
-                 * abandon_impl.
+                /* Async auth dispatched; memory freed by core layer
+                 * via grp_lock dec_ref.
                  */
                 return;
             }
+
+            /* Async dispatch failed — release grp_lock ref and fall
+             * through to sync path.
+             */
+            pj_grp_lock_dec_ref(tsx->grp_lock);
 
             /* Sync fallback */
             status = pjsip_auth_clt_reinit_req(&ctx->auth, rdata,
@@ -507,7 +502,6 @@ static void im_callback(void *token, pjsip_event *e)
                                                   -1, im_data2,
                                                   &im_callback);
                 pjsip_auth_clt_deinit(&ctx->auth);
-                pjsip_endpt_release_pool(pjsua_var.endpt, auth_pool);
                 if (status == PJ_SUCCESS)
                     return;
 
@@ -518,7 +512,6 @@ static void im_callback(void *token, pjsip_event *e)
                     return;
             } else {
                 pjsip_auth_clt_deinit(&ctx->auth);
-                pjsip_endpt_release_pool(pjsua_var.endpt, auth_pool);
             }
         }
 
@@ -605,21 +598,15 @@ static void typing_callback(void *token, pjsip_event *e)
             pjsip_tx_data *tdata;
             pjsip_auth_clt_async_on_chal_param chal_param;
             im_auth_ctx *ctx;
-            pj_pool_t *auth_pool;
             pj_status_t status;
 
             PJ_LOG(4,(THIS_FILE, "Resending IM with authentication"));
 
-            auth_pool = pjsip_endpt_create_pool(pjsua_var.endpt,
-                                                "imauthctx%p", 512, 512);
-            if (!auth_pool) return;
-
-            ctx = PJ_POOL_ZALLOC_T(auth_pool, im_auth_ctx);
-            ctx->pool    = auth_pool;
+            ctx = PJ_POOL_ZALLOC_T(tsx->pool, im_auth_ctx);
             ctx->im_data = im_data;
             ctx->send_cb = &typing_callback;
 
-            pjsip_auth_clt_init(&ctx->auth, pjsua_var.endpt, auth_pool, 0);
+            pjsip_auth_clt_init(&ctx->auth, pjsua_var.endpt, tsx->pool, 0);
             pjsip_auth_clt_set_credentials(&ctx->auth,
                 pjsua_var.acc[im_data->acc_id].cred_cnt,
                 pjsua_var.acc[im_data->acc_id].cred);
@@ -629,6 +616,8 @@ static void typing_callback(void *token, pjsip_event *e)
             ctx->token.user_data    = ctx;
             ctx->token.send_impl    = &im_async_auth_send_impl;
             ctx->token.abandon_impl = &im_async_auth_abandon_impl;
+            ctx->token.grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
 
             chal_param.rdata = rdata;
             chal_param.tdata = tsx->last_tx;
@@ -636,11 +625,16 @@ static void typing_callback(void *token, pjsip_event *e)
                                                 &ctx->auth, &ctx->token,
                                                 &chal_param);
             if (status == PJ_SUCCESS) {
-                /* Async auth dispatched; pool freed in send_impl or
-                 * abandon_impl.
+                /* Async auth dispatched; memory freed by core layer
+                 * via grp_lock dec_ref.
                  */
                 return;
             }
+
+            /* Async dispatch failed — release grp_lock ref and fall
+             * through to sync path.
+             */
+            pj_grp_lock_dec_ref(tsx->grp_lock);
 
             /* Sync fallback */
             status = pjsip_auth_clt_reinit_req(&ctx->auth, rdata,
@@ -659,12 +653,10 @@ static void typing_callback(void *token, pjsip_event *e)
                                                   -1, im_data2,
                                                   &typing_callback);
                 pjsip_auth_clt_deinit(&ctx->auth);
-                pjsip_endpt_release_pool(pjsua_var.endpt, auth_pool);
                 if (status == PJ_SUCCESS)
                     return;
             } else {
                 pjsip_auth_clt_deinit(&ctx->auth);
-                pjsip_endpt_release_pool(pjsua_var.endpt, auth_pool);
             }
         }
 

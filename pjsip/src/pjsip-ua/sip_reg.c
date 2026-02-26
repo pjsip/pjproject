@@ -96,7 +96,6 @@ struct pjsip_regc
 
     /* Authorization sessions. */
     pjsip_auth_clt_sess          auth_sess;
-    pjsip_auth_clt_async_impl_token auth_token;
 
     /* Auto refresh registration. */
     pj_bool_t                    auto_reg;
@@ -175,11 +174,6 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
     pj_list_init(&regc->contact_hdr_list);
     pj_list_init(&regc->removed_contact_hdr_list);
 
-    /* Initialize asynchronous authentication token */
-    regc->auth_token.user_data = regc;
-    regc->auth_token.send_impl = &async_auth_send_impl;
-    regc->auth_token.abandon_impl = &async_auth_abandon_impl;
-
     /* Done */
     *p_regc = regc;
     return PJ_SUCCESS;
@@ -196,9 +190,6 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force)
 
     pj_lock_acquire(regc->lock);
 
-    /* Reset async auth token */
-    pj_bzero(&regc->auth_token, sizeof(regc->auth_token));
-    
     if (!force && regc->has_tsx) {
         pj_lock_release(regc->lock);
         return PJ_EBUSY;
@@ -1297,13 +1288,26 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
          * It should be safe to do this since the regc's refcount has been
          * incremented.
          */
-        chal_param.rdata = rdata;
-        chal_param.tdata = tsx->last_tx;
-        pj_lock_release(regc->lock);
-        status = pjsip_auth_clt_async_impl_on_challenge(&regc->auth_sess,
-                                                        &regc->auth_token,
-                                                        &chal_param);
-        pj_lock_acquire(regc->lock);
+        {
+            pjsip_auth_clt_async_impl_token *auth_token;
+            auth_token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                          pjsip_auth_clt_async_impl_token);
+            auth_token->user_data    = regc;
+            auth_token->send_impl    = &async_auth_send_impl;
+            auth_token->abandon_impl = &async_auth_abandon_impl;
+            auth_token->grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
+
+            chal_param.rdata = rdata;
+            chal_param.tdata = tsx->last_tx;
+            pj_lock_release(regc->lock);
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                    &regc->auth_sess,
+                                                    auth_token, &chal_param);
+            pj_lock_acquire(regc->lock);
+            if (status != PJ_SUCCESS)
+                pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
         if (status != PJ_SUCCESS) {
             /* Application does not handle the authentication, so let's
              * handle it here now.

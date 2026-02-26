@@ -1888,14 +1888,21 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_send_req(
         return PJ_EINVAL;
     }
 
-    status = (*send_token->send_impl)(sess, send_token->user_data,
-                                      new_request);
-    /* Clear the signature only on success to invalidate the token after use.
-     * On failure the signature is left intact so the application may retry
-     * by calling this function again with the same token.
+    /* Save grp_lock before send_impl — after dec_ref the token memory
+     * may be freed.
      */
-    if (status == PJ_SUCCESS)
+    {
+        pj_grp_lock_t *grp_lock = send_token->grp_lock;
+
+        status = (*send_token->send_impl)(sess, send_token->user_data,
+                                          new_request);
+        /* Always invalidate the token after use.  Send failures are
+         * transport-level errors — not retryable with the same tdata.
+         */
         pj_bzero(send_token->signature, 4);
+        if (grp_lock)
+            pj_grp_lock_dec_ref(grp_lock);
+    }
 
     return status;
 }
@@ -1916,13 +1923,23 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_abandon(
     if (pj_memcmp(impl_token->signature, AUTH_TOKEN_SIGNATURE, 4) != 0)
         return PJ_EINVAL;
 
-    /* Clear the signature FIRST to prevent any further use of the token,
-     * even if abandon_impl triggers destruction of the session.
+    /* Save grp_lock before any operation — after dec_ref the token memory
+     * may be freed.
      */
-    pj_bzero(impl_token->signature, 4);
+    {
+        pj_grp_lock_t *grp_lock = impl_token->grp_lock;
 
-    if (impl_token->abandon_impl)
-        (*impl_token->abandon_impl)(sess, impl_token->user_data);
+        /* Clear the signature FIRST to prevent any further use of the
+         * token, even if abandon_impl triggers destruction of the session.
+         */
+        pj_bzero(impl_token->signature, 4);
+
+        if (impl_token->abandon_impl)
+            (*impl_token->abandon_impl)(sess, impl_token->user_data);
+
+        if (grp_lock)
+            pj_grp_lock_dec_ref(grp_lock);
+    }
 
     return PJ_SUCCESS;
 }

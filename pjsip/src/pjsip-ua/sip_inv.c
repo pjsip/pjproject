@@ -332,7 +332,6 @@ static void inv_session_destroy(pjsip_inv_session *inv)
     pj_pool_release(inv->pool_active);
     inv->pool_active = NULL;
 
-    pj_bzero(&inv->auth_token, sizeof(inv->auth_token));
     pj_atomic_destroy(inv->ref_cnt);
     inv->ref_cnt = NULL;
 }
@@ -1106,9 +1105,6 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
 
     /* Object name will use the same dialog pointer. */
     pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
-
-    inv->auth_token.user_data = inv;
-    inv->auth_token.send_impl = &inv_async_auth_send_impl;
 
     /* Create negotiator if local_sdp is specified. */
     if (local_sdp) {
@@ -1888,9 +1884,6 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 
     /* Object name will use the same dialog pointer. */
     pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
-
-    inv->auth_token.user_data = inv;
-    inv->auth_token.send_impl = &inv_async_auth_send_impl;
 
     /* Process SDP in message body, if present. */
     sdp_info = pjsip_rdata_get_sdp_info(rdata);
@@ -4113,13 +4106,24 @@ static void inv_handle_bye_response( pjsip_inv_session *inv,
         pjsip_auth_clt_async_on_chal_param chal_param;
         struct tsx_inv_data *tsx_inv_data;
 
-        inv->auth_token.abandon_impl = &inv_bye_auth_abandon_impl;
-        chal_param.rdata = rdata;
-        chal_param.tdata = tsx->last_tx;
-        status = pjsip_auth_clt_async_impl_on_challenge(
-                                            &inv->dlg->auth_sess,
-                                            &inv->auth_token,
-                                            &chal_param);
+        {
+            pjsip_auth_clt_async_impl_token *token;
+            token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                     pjsip_auth_clt_async_impl_token);
+            token->user_data    = inv;
+            token->send_impl    = &inv_async_auth_send_impl;
+            token->abandon_impl = &inv_bye_auth_abandon_impl;
+            token->grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
+
+            chal_param.rdata = rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &inv->dlg->auth_sess,
+                                                token, &chal_param);
+            if (status != PJ_SUCCESS)
+                pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
         if (status == PJ_SUCCESS) {
             tsx_inv_data =
                 (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
@@ -4313,13 +4317,24 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
         pjsip_auth_clt_async_on_chal_param chal_param;
 
         /* UPDATE auth: abandoning does not terminate the session. */
-        inv->auth_token.abandon_impl = NULL;
-        chal_param.rdata = e->body.tsx_state.src.rdata;
-        chal_param.tdata = tsx->last_tx;
-        status = pjsip_auth_clt_async_impl_on_challenge(
-                                            &inv->dlg->auth_sess,
-                                            &inv->auth_token,
-                                            &chal_param);
+        {
+            pjsip_auth_clt_async_impl_token *token;
+            token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                     pjsip_auth_clt_async_impl_token);
+            token->user_data    = inv;
+            token->send_impl    = &inv_async_auth_send_impl;
+            token->abandon_impl = NULL;
+            token->grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
+
+            chal_param.rdata = e->body.tsx_state.src.rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &inv->dlg->auth_sess,
+                                                token, &chal_param);
+            if (status != PJ_SUCCESS)
+                pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
         if (status == PJ_SUCCESS) {
             if (tsx_inv_data)
                 tsx_inv_data->retrying = PJ_TRUE;
@@ -4822,13 +4837,24 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
             inv->invite_tsx = NULL;
 
         /* In-dialog request auth: abandoning does not terminate session. */
-        inv->auth_token.abandon_impl = NULL;
-        chal_param.rdata = e->body.tsx_state.src.rdata;
-        chal_param.tdata = tsx->last_tx;
-        status = pjsip_auth_clt_async_impl_on_challenge(
-                                            &inv->dlg->auth_sess,
-                                            &inv->auth_token,
-                                            &chal_param);
+        {
+            pjsip_auth_clt_async_impl_token *token;
+            token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                     pjsip_auth_clt_async_impl_token);
+            token->user_data    = inv;
+            token->send_impl    = &inv_async_auth_send_impl;
+            token->abandon_impl = NULL;
+            token->grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
+
+            chal_param.rdata = e->body.tsx_state.src.rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &inv->dlg->auth_sess,
+                                                token, &chal_param);
+            if (status != PJ_SUCCESS)
+                pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
         if (status == PJ_SUCCESS) {
             tsx_inv_data =
                 (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
@@ -4931,13 +4957,24 @@ static void handle_uac_call_rejection(pjsip_inv_session *inv, pjsip_event *e)
         pjsip_auth_clt_async_on_chal_param chal_param;
 
         /* Initial INVITE auth: abandoning terminates the session. */
-        inv->auth_token.abandon_impl = &inv_initial_invite_auth_abandon_impl;
-        chal_param.rdata = e->body.tsx_state.src.rdata;
-        chal_param.tdata = tsx->last_tx;
-        status = pjsip_auth_clt_async_impl_on_challenge(
-                                            &inv->dlg->auth_sess,
-                                            &inv->auth_token,
-                                            &chal_param);
+        {
+            pjsip_auth_clt_async_impl_token *token;
+            token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                     pjsip_auth_clt_async_impl_token);
+            token->user_data    = inv;
+            token->send_impl    = &inv_async_auth_send_impl;
+            token->abandon_impl = &inv_initial_invite_auth_abandon_impl;
+            token->grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
+
+            chal_param.rdata = e->body.tsx_state.src.rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &inv->dlg->auth_sess,
+                                                token, &chal_param);
+            if (status != PJ_SUCCESS)
+                pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
         if (status != PJ_SUCCESS) {
             status = pjsip_auth_clt_reinit_req(
                                         &inv->dlg->auth_sess,

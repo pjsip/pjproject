@@ -249,7 +249,6 @@ struct pjsip_evsub
     pj_grp_lock_t        *grp_lock;     /* Session group lock       */
 
     void                 *mod_data[PJSIP_MAX_MODULE];   /**< Module data.   */
-    pjsip_auth_clt_async_impl_token auth_token; /**< Async auth token.      */
 };
 
 
@@ -599,7 +598,6 @@ static void evsub_destroy( pjsip_evsub *sub )
         dlgsub = dlgsub->next;
     }
 
-    pj_bzero(&sub->auth_token, sizeof(sub->auth_token));
     pj_grp_lock_dec_ref(sub->grp_lock);
 }
 
@@ -830,10 +828,6 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
     /* Set name. */
     pj_ansi_snprintf(sub->obj_name, PJ_ARRAY_SIZE(sub->obj_name),
                      "evsub%p", sub);
-
-    sub->auth_token.user_data = sub;
-    sub->auth_token.send_impl = &evsub_async_auth_send_impl;
-    sub->auth_token.abandon_impl = &evsub_async_auth_abandon_impl;
 
     /* Copy callback, if any: */
     if (user_cb)
@@ -1863,11 +1857,24 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
                 return;
             }
 
-            chal_param.rdata = event->body.tsx_state.src.rdata;
-            chal_param.tdata = tsx->last_tx;
-            status = pjsip_auth_clt_async_impl_on_challenge(
-                                            &sub->dlg->auth_sess,
-                                            &sub->auth_token, &chal_param);
+            {
+                pjsip_auth_clt_async_impl_token *token;
+                token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                         pjsip_auth_clt_async_impl_token);
+                token->user_data    = sub;
+                token->send_impl    = &evsub_async_auth_send_impl;
+                token->abandon_impl = &evsub_async_auth_abandon_impl;
+                token->grp_lock     = tsx->grp_lock;
+                pj_grp_lock_add_ref(tsx->grp_lock);
+
+                chal_param.rdata = event->body.tsx_state.src.rdata;
+                chal_param.tdata = tsx->last_tx;
+                status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &sub->dlg->auth_sess,
+                                                token, &chal_param);
+                if (status != PJ_SUCCESS)
+                    pj_grp_lock_dec_ref(tsx->grp_lock);
+            }
             if (status != PJ_SUCCESS) {
                 status = pjsip_auth_clt_reinit_req(
                                 &sub->dlg->auth_sess,
@@ -2297,11 +2304,24 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
             if (tsx->last_tx->auth_retry)
                 return;
 
-            chal_param.rdata = rdata;
-            chal_param.tdata = tsx->last_tx;
-            status = pjsip_auth_clt_async_impl_on_challenge(
-                                            &sub->dlg->auth_sess,
-                                            &sub->auth_token, &chal_param);
+            {
+                pjsip_auth_clt_async_impl_token *token;
+                token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                         pjsip_auth_clt_async_impl_token);
+                token->user_data    = sub;
+                token->send_impl    = &evsub_async_auth_send_impl;
+                token->abandon_impl = &evsub_async_auth_abandon_impl;
+                token->grp_lock     = tsx->grp_lock;
+                pj_grp_lock_add_ref(tsx->grp_lock);
+
+                chal_param.rdata = rdata;
+                chal_param.tdata = tsx->last_tx;
+                status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &sub->dlg->auth_sess,
+                                                token, &chal_param);
+                if (status != PJ_SUCCESS)
+                    pj_grp_lock_dec_ref(tsx->grp_lock);
+            }
             if (status != PJ_SUCCESS) {
                 status = pjsip_auth_clt_reinit_req(&sub->dlg->auth_sess,
                                                    rdata, tsx->last_tx,

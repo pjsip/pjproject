@@ -480,7 +480,6 @@ struct pjsip_inv_session
     pjsip_tx_data       *last_ack;                  /**< Last ACK request   */
     pj_int32_t           last_ack_cseq;             /**< CSeq of last ACK   */
     void                *mod_data[PJSIP_MAX_MODULE];/**< Modules data.      */
-    pjsip_auth_clt_async_impl_token auth_token;     /**< Async auth token.  */
     struct pjsip_timer  *timer;                     /**< Session Timers.    */
     pj_bool_t            following_fork;            /**< Internal, following
                                                          forked media?      */
