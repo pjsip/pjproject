@@ -319,6 +319,7 @@ if(BUILD_TESTING)
     PRIVATE
       pjlib
       pjlib-util
+      pjnath
       pjmedia
       pjsip
       pjsip-simple
