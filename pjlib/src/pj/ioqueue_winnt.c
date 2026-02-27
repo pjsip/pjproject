@@ -1312,6 +1312,16 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
     }
 #endif
 
+    /* Clear callbacks first before setting closing flag to prevent race
+     * condition where poll_iocp() dequeues a completion but skips the
+     * callback because closing is already set. This matches the approach
+     * used in select/epoll implementations.
+     */
+    key->cb.on_accept_complete = NULL;
+    key->cb.on_connect_complete = NULL;
+    key->cb.on_read_complete = NULL;
+    key->cb.on_write_complete = NULL;
+
     /* Mark key as closing before closing handle. */
     key->closing = 1;
 
@@ -1347,12 +1357,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
      */
     //CloseHandle(key->hnd);
     pj_sock_close((pj_sock_t)key->hnd);
-
-    /* Reset callbacks */
-    key->cb.on_accept_complete = NULL;
-    key->cb.on_connect_complete = NULL;
-    key->cb.on_read_complete = NULL;
-    key->cb.on_write_complete = NULL;
 
     /* Even after handle is closed, I suspect that IOCP may still try to
      * do something with the handle, causing memory corruption when pool
