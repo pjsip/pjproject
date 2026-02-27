@@ -960,9 +960,13 @@ static unsigned ioqueue_dispatch_read_event_no_lock(pj_ioqueue_key_t* h,
         /* Check if there is any pending read callback for this key. */
         pj_ioqueue_lock_key(h);
 
-        if (!h->closing && !pj_list_empty(&h->read_cb_list) &&
+        if (!pj_list_empty(&h->read_cb_list) &&
             (max_event == 0 || event_cnt < max_event))
         {
+            /* Process pending callbacks even if closing, to ensure proper cleanup.
+             * Callbacks will be NULL if key is closing, so operations will be
+             * released without invoking the callback.
+             */
             read_op = h->read_cb_list.next;
             pj_list_erase(read_op);
             on_read_complete = h->cb.on_read_complete;
@@ -1007,9 +1011,13 @@ static unsigned ioqueue_dispatch_write_event_no_lock(pj_ioqueue_key_t* h,
         /* Check if there is any pending write callback for this key. */
         pj_ioqueue_lock_key(h);
 
-        if (!h->closing && !pj_list_empty(&h->write_cb_list) &&
+        if (!pj_list_empty(&h->write_cb_list) &&
             (max_event == 0 || event_cnt < max_event))
         {
+            /* Process pending callbacks even if closing, to ensure proper cleanup.
+             * Callbacks will be NULL if key is closing, so operations will be
+             * released without invoking the callback.
+             */
             write_op = h->write_cb_list.next;
             pj_list_erase(write_op);
             on_write_complete = h->cb.on_write_complete;
