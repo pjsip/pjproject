@@ -284,8 +284,23 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
             pj_thread_sleep(200);
         }
 
-        if (PJ_TIME_VAL_GT(now, end_time) && sock_data.unregistered)
-            break;
+        if (PJ_TIME_VAL_GT(now, end_time)) {
+            /* Timeout reached. If not yet unregistered in callback mode,
+             * force unregister here to avoid infinite loop.
+             */
+            if (test_method == UNREGISTER_IN_CALLBACK && 
+                !sock_data.unregistered)
+            {
+                pj_mutex_lock(sock_data.mutex);
+                if (!sock_data.unregistered) {
+                    sock_data.unregistered = 1;
+                    pj_ioqueue_unregister(sock_data.key);
+                }
+                pj_mutex_unlock(sock_data.mutex);
+            }
+            if (sock_data.unregistered)
+                break;
+        }
 
         timeout.sec = 0; timeout.msec = 200;
         n = pj_ioqueue_poll(ioqueue, &timeout);
