@@ -77,7 +77,6 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
     pjsip_msg *msg = rdata->msg_info.msg;
     pjsip_hdr  hdr_list;
     int        code;
-    pj_status_t status;
 
     if (msg->line.req.method.id != PJSIP_REGISTER_METHOD ||
         !is_user_equal(rdata->msg_info.from, TEST_USER))
@@ -102,10 +101,8 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
         code = 200;
     }
 
-    status = pjsip_endpt_respond(pjsua_get_pjsip_endpt(), NULL, rdata,
-                                 code, NULL, &hdr_list, NULL, NULL);
-    pj_assert(status == PJ_SUCCESS);
-    PJ_UNUSED_ARG(status);
+    pjsip_endpt_respond_stateless(pjsua_get_pjsip_endpt(), rdata,
+                                   code, NULL, &hdr_list, NULL);
     return PJ_TRUE;
 }
 

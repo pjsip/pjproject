@@ -47,6 +47,12 @@ pj_bool_t pjsua_auth_on_challenge(
 
     PJ_UNUSED_ARG(sess);
 
+    /* Account may have been deleted between receiving the 401 and
+     * processing the auth challenge callback. Skip if invalid.
+     */
+    if (!pjsua_acc_is_valid(acc_id))
+        return PJ_FALSE;
+
     /* Determine call_id from rdata -> dialog -> mod_data */
     if (param->rdata) {
         pjsip_dialog *dlg = pjsip_rdata_get_dlg(
@@ -62,7 +68,12 @@ pj_bool_t pjsua_auth_on_challenge(
     pj_bzero(&cb_param, sizeof(cb_param));
     cb_param.acc_id    = acc_id;
     cb_param.call_id   = call_id;
-    cb_param.auth_sess = sess;
+    /* Always use the shared auth session (account-level lifetime) instead
+     * of the potentially short-lived module-owned session (e.g. regc's).
+     * The shared session has the same credentials and survives regc
+     * destroy/recreate cycles.
+     */
+    cb_param.auth_sess = &pjsua_var.acc[acc_id].shared_auth_sess;
     cb_param.token     = token;
     cb_param.rdata     = param->rdata;
     cb_param.tdata     = param->tdata;
@@ -423,10 +434,18 @@ static pj_status_t initialize_acc(unsigned acc_id)
     for (i=0; i<acc_cfg->cred_count; ++i) {
         acc->cred[acc->cred_cnt++] = acc_cfg->cred_info[i];
     }
-    for (i=0; i<pjsua_var.ua_cfg.cred_count && 
+    for (i=0; i<pjsua_var.ua_cfg.cred_count &&
               acc->cred_cnt < PJ_ARRAY_SIZE(acc->cred); ++i)
     {
         acc->cred[acc->cred_cnt++] = pjsua_var.ua_cfg.cred_info[i];
+    }
+
+    /* Set credentials on shared auth session so it can generate
+     * Authorization headers when used by the on_auth_challenge bridge.
+     */
+    if (acc->cred_cnt) {
+        pjsip_auth_clt_set_credentials(&acc->shared_auth_sess,
+                                        acc->cred_cnt, acc->cred);
     }
 
     /* If account's ICE and TURN customization is not set, then

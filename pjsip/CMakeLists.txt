@@ -333,6 +333,7 @@ if(BUILD_TESTING)
   add_executable(pjsua2-test
     src/pjsua2-test/main.cpp
     src/pjsua2-test/instant_messaging.cpp
+    src/pjsua2-test/auth_challenge.cpp
   )
 
   target_link_libraries(pjsua2-test
@@ -344,6 +345,9 @@ if(BUILD_TESTING)
       pjmedia-audiodev
       pjmedia-videodev
       pjsip
+      pjsip-simple
+      pjsip-ua
+      pjsua-lib
       pjsua2
   )
 

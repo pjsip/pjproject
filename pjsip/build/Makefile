@@ -161,7 +161,7 @@ export PJSUA2_LIB_LDFLAGS += $(PJSUA_LIB_LDLIB) \
 #
 export PJSUA2_TEST_SRCDIR = ../src/pjsua2-test
 export PJSUA2_TEST_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			   main.o instant_messaging.o
+			   main.o instant_messaging.o auth_challenge.o
 export PJSUA2_TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_TEST_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_TEST_LDFLAGS += $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(LDFLAGS)

@@ -1196,6 +1196,8 @@ int Account::getId() const
 
 Account *Account::lookup(int acc_id)
 {
+    if (!pjsua_acc_is_valid(acc_id))
+        return NULL;
     return (Account*)pjsua_acc_get_user_data(acc_id);
 }
 

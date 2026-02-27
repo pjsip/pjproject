@@ -190,6 +190,7 @@ using namespace pj;
 #endif
 
 %newobject pj::AuthChallenge::defer;
+%nocopyctor pj::AuthChallenge;
 
 %copyctor pj::OnCallMediaEventParam;
 
