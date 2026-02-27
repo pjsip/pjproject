@@ -990,6 +990,12 @@ static unsigned ioqueue_dispatch_read_event_no_lock(pj_ioqueue_key_t* h,
             release_pending_op(h, read_op);
             ++event_cnt;
         } else {
+            /* If we dequeued an operation but callback is NULL (key is closing),
+             * we must still release the operation to prevent leak.
+             */
+            if (read_op) {
+                release_pending_op(h, read_op);
+            }
             break;
         }
     }
@@ -1041,6 +1047,12 @@ static unsigned ioqueue_dispatch_write_event_no_lock(pj_ioqueue_key_t* h,
             release_pending_op(h, write_op);
             ++event_cnt;
         } else {
+            /* If we dequeued an operation but callback is NULL (key is closing),
+             * we must still release the operation to prevent leak.
+             */
+            if (write_op) {
+                release_pending_op(h, write_op);
+            }
             break;
         }
     }
