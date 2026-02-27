@@ -184,10 +184,10 @@ export TEST_OBJS += dlg_core_test.o dns_test.o msg_err_test.o \
 		    pjsua_auth_test.o
 export TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export TEST_CXXFLAGS += $(_CXXFLAGS)
-export TEST_LDFLAGS += $(PJSIP_LDLIB) \
+export TEST_LDFLAGS += $(PJSUA_LDLIB) \
+		       $(PJSIP_LDLIB) \
 		       $(PJSIP_UA_LDLIB) \
 		       $(PJSIP_SIMPLE_LDLIB) \
-		       $(PJSUA_LDLIB) \
 		       $(PJMEDIA_CODEC_LDLIB) \
 		       $(PJMEDIA_VIDEODEV_LDLIB) \
 		       $(PJMEDIA_LDLIB) \
