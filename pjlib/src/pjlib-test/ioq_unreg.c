@@ -289,7 +289,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
              * force unregister here to avoid infinite loop.
              */
             pj_bool_t should_exit = PJ_FALSE;
-            
+
             if (test_method == UNREGISTER_IN_CALLBACK) {
                 pj_mutex_lock(sock_data.mutex);
                 if (!sock_data.unregistered) {
