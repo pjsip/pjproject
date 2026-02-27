@@ -960,13 +960,9 @@ static unsigned ioqueue_dispatch_read_event_no_lock(pj_ioqueue_key_t* h,
         /* Check if there is any pending read callback for this key. */
         pj_ioqueue_lock_key(h);
 
-        if (!pj_list_empty(&h->read_cb_list) &&
+        if (!h->closing && !pj_list_empty(&h->read_cb_list) &&
             (max_event == 0 || event_cnt < max_event))
         {
-            /* Process pending callbacks even if closing, to ensure proper cleanup.
-             * Callbacks will be NULL if key is closing, so operations will be
-             * released without invoking the callback.
-             */
             read_op = h->read_cb_list.next;
             pj_list_erase(read_op);
             on_read_complete = h->cb.on_read_complete;
@@ -990,12 +986,6 @@ static unsigned ioqueue_dispatch_read_event_no_lock(pj_ioqueue_key_t* h,
             release_pending_op(h, read_op);
             ++event_cnt;
         } else {
-            /* If we dequeued an operation but callback is NULL (key is closing),
-             * we must still release the operation to prevent leak.
-             */
-            if (read_op) {
-                release_pending_op(h, read_op);
-            }
             break;
         }
     }
@@ -1017,13 +1007,9 @@ static unsigned ioqueue_dispatch_write_event_no_lock(pj_ioqueue_key_t* h,
         /* Check if there is any pending write callback for this key. */
         pj_ioqueue_lock_key(h);
 
-        if (!pj_list_empty(&h->write_cb_list) &&
+        if (!h->closing && !pj_list_empty(&h->write_cb_list) &&
             (max_event == 0 || event_cnt < max_event))
         {
-            /* Process pending callbacks even if closing, to ensure proper cleanup.
-             * Callbacks will be NULL if key is closing, so operations will be
-             * released without invoking the callback.
-             */
             write_op = h->write_cb_list.next;
             pj_list_erase(write_op);
             on_write_complete = h->cb.on_write_complete;
@@ -1047,12 +1033,6 @@ static unsigned ioqueue_dispatch_write_event_no_lock(pj_ioqueue_key_t* h,
             release_pending_op(h, write_op);
             ++event_cnt;
         } else {
-            /* If we dequeued an operation but callback is NULL (key is closing),
-             * we must still release the operation to prevent leak.
-             */
-            if (write_op) {
-                release_pending_op(h, write_op);
-            }
             break;
         }
     }
@@ -1332,18 +1312,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
     }
 #endif
 
-    /* Clear callbacks first before setting closing flag.
-     * This matches the approach used in select/epoll implementations
-     * and ensures proper shutdown sequence. While operations already
-     * queued in IOCP when unregister is called will have their 
-     * callbacks skipped (either due to NULL callback or closing flag),
-     * this is the intended behavior during shutdown.
-     */
-    key->cb.on_accept_complete = NULL;
-    key->cb.on_connect_complete = NULL;
-    key->cb.on_read_complete = NULL;
-    key->cb.on_write_complete = NULL;
-
     /* Mark key as closing before closing handle. */
     key->closing = 1;
 
@@ -1379,6 +1347,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
      */
     //CloseHandle(key->hnd);
     pj_sock_close((pj_sock_t)key->hnd);
+
+    /* Reset callbacks */
+    key->cb.on_accept_complete = NULL;
+    key->cb.on_connect_complete = NULL;
+    key->cb.on_read_complete = NULL;
+    key->cb.on_write_complete = NULL;
 
     /* Even after handle is closed, I suspect that IOCP may still try to
      * do something with the handle, causing memory corruption when pool
