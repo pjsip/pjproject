@@ -23,6 +23,12 @@
  * The code is taken from PR #4172 with few minor changes.
  * Issue fix attempt is done in #4136.
  *
+ * This test validates that:
+ * 1. Multiple socket unregistrations don't cause crashes
+ * 2. cancel_all_pending_op() properly cleans up callback lists
+ * 3. Memory pools can be released safely after unregister
+ * 4. IOCP completion port handles unregister correctly
+ *
  * Note:
  * - The crash was reproducible on Windows 10 & MSVC2005 (Win32),
  *   but not reproducible on Windows 11 & MSVC2022 (Win32 &x64).
@@ -203,6 +209,12 @@ on_error:
         pj_ioqueue_destroy(test->ioq);
     pj_pool_release(test->pool);
 
-    PJ_LOG(3, (THIS_FILE, "Recv cnt = %u", recv_cnt));
+    if (status == PJ_SUCCESS) {
+        PJ_LOG(3, (THIS_FILE, "Recv cnt = %u", recv_cnt));
+        PJ_LOG(3, (THIS_FILE, "IOCP unregister test passed - validated %d socket "
+                   "unregistrations with proper cleanup", CLIENT_NUM));
+    } else {
+        PJ_LOG(1, (THIS_FILE, "Recv cnt = %u, status = %d", recv_cnt, status));
+    }
     return status;
 }
