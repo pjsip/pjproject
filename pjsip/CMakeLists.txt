@@ -311,6 +311,7 @@ if(BUILD_TESTING)
     src/test/uri_test.c
     src/test/inv_offer_answer_test.c
     src/test/auth_async_test.c
+    src/test/pjsua_auth_test.c
     src/test/${PJ_TEST_MAIN}
   )
 
@@ -322,6 +323,7 @@ if(BUILD_TESTING)
       pjsip
       pjsip-simple
       pjsip-ua
+      pjsua-lib
   )
 
   add_test(NAME pjsip-test COMMAND pjsip-test)

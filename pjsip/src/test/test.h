@@ -88,6 +88,7 @@ extern pj_caching_pool caching_pool;
 #define INCLUDE_INV_OA_TEST     INCLUDE_INV_GROUP
 #define INCLUDE_REGC_TEST       INCLUDE_REGC_GROUP
 #define INCLUDE_AUTH_ASYNC_TEST INCLUDE_REGC_GROUP
+#define INCLUDE_PJSUA_AUTH_TEST INCLUDE_REGC_GROUP
 
 
 /* The tests */
@@ -106,6 +107,7 @@ int transport_tcp_test(void);
 int resolve_test(void);
 int regc_test(void);
 int auth_async_test(void);
+int pjsua_auth_test(void);
 int inv_offer_answer_test(void);
 
 #define MAX_TSX_TESTS   10

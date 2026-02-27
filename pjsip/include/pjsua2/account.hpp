@@ -1953,6 +1953,7 @@ private:
     pjsip_auth_clt_sess           *auth_sess_;
     void                           *token_;
     pjsip_tx_data                  *tdata_;
+    pjsua_acc_id                    acc_id_;
 };
 
 /**

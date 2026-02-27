@@ -1166,15 +1166,25 @@ void Endpoint::on_mwi_info(pjsua_acc_id acc_id,
 
 AuthChallenge::AuthChallenge()
     : param_(NULL), deferred_(false), consumed_(false),
-      cloned_rdata_(NULL), auth_sess_(NULL), token_(NULL), tdata_(NULL)
+      cloned_rdata_(NULL), auth_sess_(NULL), token_(NULL), tdata_(NULL),
+      acc_id_(PJSUA_INVALID_ID)
 {}
 
 AuthChallenge::~AuthChallenge()
 {
-    if (deferred_ && !consumed_ && auth_sess_ && token_)
-        pjsip_auth_clt_async_abandon(auth_sess_, token_);
+    if (deferred_ && !consumed_ && auth_sess_ && token_) {
+        if (PJSUA_TRY_LOCK() == PJ_SUCCESS) {
+            if (pjsua_acc_is_valid(acc_id_))
+                pjsip_auth_clt_async_abandon(auth_sess_, token_);
+            PJSUA_UNLOCK();
+        }
+        /* If try-lock fails (e.g. GC finalizer during shutdown),
+         * skip abandon — the account/pool is being torn down anyway. */
+    }
     if (cloned_rdata_)
         pjsip_rx_data_free_cloned(cloned_rdata_);
+    if (deferred_ && tdata_)
+        pjsip_tx_data_dec_ref(tdata_);
 }
 
 AuthChallenge* AuthChallenge::defer()
@@ -1194,6 +1204,10 @@ AuthChallenge* AuthChallenge::defer()
     d->auth_sess_      = param_->auth_sess;
     d->token_          = param_->token;
     d->tdata_          = param_->tdata;
+    d->acc_id_         = param_->acc_id;
+
+    if (d->tdata_)
+        pjsip_tx_data_add_ref(d->tdata_);
 
     param_->handled = PJ_TRUE;
     consumed_ = true;
@@ -1209,6 +1223,12 @@ pj_status_t AuthChallenge::respond()
     void *tok;  pjsip_rx_data *rd;  pjsip_tx_data *td;
 
     if (deferred_) {
+        PJSUA_LOCK();
+        if (!pjsua_acc_is_valid(acc_id_)) {
+            PJSUA_UNLOCK();
+            consumed_ = true;
+            return PJ_EINVALIDOP;
+        }
         sess = auth_sess_;  tok = token_;
         rd = cloned_rdata_;  td = tdata_;
     } else {
@@ -1225,7 +1245,10 @@ pj_status_t AuthChallenge::respond()
         pjsip_auth_clt_async_abandon(sess, tok);
 
     consumed_ = true;
-    if (!deferred_ && param_) param_->handled = PJ_TRUE;
+    if (deferred_)
+        PJSUA_UNLOCK();
+    else if (param_)
+        param_->handled = PJ_TRUE;
     return status;
 }
 
@@ -1233,9 +1256,19 @@ pj_status_t AuthChallenge::respond(const AuthCredInfoVector &creds)
 {
     if (consumed_) return PJ_EINVALIDOP;
 
-    pjsip_auth_clt_sess *sess = deferred_ ? auth_sess_
-                                           : (param_ ? param_->auth_sess
-                                                     : NULL);
+    pjsip_auth_clt_sess *sess;
+
+    if (deferred_) {
+        PJSUA_LOCK();
+        if (!pjsua_acc_is_valid(acc_id_)) {
+            PJSUA_UNLOCK();
+            consumed_ = true;
+            return PJ_EINVALIDOP;
+        }
+        sess = auth_sess_;
+    } else {
+        sess = param_ ? param_->auth_sess : NULL;
+    }
     if (!sess) return PJ_EINVALIDOP;
 
     /* Apply provided credentials to the auth session */
@@ -1247,7 +1280,15 @@ pj_status_t AuthChallenge::respond(const AuthCredInfoVector &creds)
         ci[i] = creds[i].toPj();
     pjsip_auth_clt_set_credentials(sess, count, ci);
 
-    return respond();
+    /* respond() will re-acquire PJSUA_LOCK for deferred path, but the
+     * mutex is recursive so this is safe — no gap where account could
+     * be deleted between set_credentials and send. */
+    pj_status_t status = respond();
+
+    if (deferred_)
+        PJSUA_UNLOCK();
+
+    return status;
 }
 
 pj_status_t AuthChallenge::abandon()
@@ -1256,22 +1297,34 @@ pj_status_t AuthChallenge::abandon()
 
     pjsip_auth_clt_sess *sess;
     void *tok;
-    if (deferred_) { sess = auth_sess_;  tok = token_; }
-    else {
+    if (deferred_) {
+        PJSUA_LOCK();
+        if (!pjsua_acc_is_valid(acc_id_)) {
+            PJSUA_UNLOCK();
+            consumed_ = true;
+            return PJ_EINVALIDOP;
+        }
+        sess = auth_sess_;  tok = token_;
+    } else {
         if (!param_) return PJ_EINVALIDOP;
         sess = param_->auth_sess;  tok = param_->token;
     }
 
     pj_status_t status = pjsip_auth_clt_async_abandon(sess, tok);
     consumed_ = true;
-    if (!deferred_ && param_) param_->handled = PJ_TRUE;
+    if (deferred_)
+        PJSUA_UNLOCK();
+    else if (param_)
+        param_->handled = PJ_TRUE;
     return status;
 }
 
 bool AuthChallenge::isValid() const
 {
     if (consumed_) return false;
-    return deferred_ ? (auth_sess_ != NULL) : (param_ != NULL);
+    if (deferred_)
+        return auth_sess_ != NULL && pjsua_acc_is_valid(acc_id_);
+    return param_ != NULL;
 }
 
 void Endpoint::on_auth_challenge(pjsua_on_auth_challenge_param *param)
