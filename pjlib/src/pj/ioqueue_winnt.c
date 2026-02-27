@@ -1312,10 +1312,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
     }
 #endif
 
-    /* Clear callbacks first before setting closing flag to prevent race
-     * condition where poll_iocp() dequeues a completion but skips the
-     * callback because closing is already set. This matches the approach
-     * used in select/epoll implementations.
+    /* Clear callbacks first before setting closing flag.
+     * This matches the approach used in select/epoll implementations
+     * and ensures proper shutdown sequence. While operations already
+     * queued in IOCP when unregister is called will have their 
+     * callbacks skipped (either due to NULL callback or closing flag),
+     * this is the intended behavior during shutdown.
      */
     key->cb.on_accept_complete = NULL;
     key->cb.on_connect_complete = NULL;
