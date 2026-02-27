@@ -296,7 +296,10 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
                     sock_data.unregistered = 1;
                     pj_ioqueue_unregister(sock_data.key);
                 }
-                should_exit = sock_data.unregistered;
+                /* After the mutex block, unregistered is always 1 here
+                 * (either we just set it, or callback already set it).
+                 */
+                should_exit = PJ_TRUE;
                 pj_mutex_unlock(sock_data.mutex);
             } else {
                 should_exit = sock_data.unregistered;
