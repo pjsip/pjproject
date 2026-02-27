@@ -6502,7 +6502,15 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
             /* Either we get non-2xx or media update failed,
              * revert back provisional media.
              */
-            pjsua_media_prov_revert(call->index);
+            if (inv->invite_tsx == NULL || tsx == inv->invite_tsx) {
+                pjsua_media_prov_revert(call->index);
+            }
+            else
+            {
+                PJ_LOG(4, (THIS_FILE, "Retaining provisional media for call %d "
+                    "since this is not the active Invite",
+                    call->index));
+            }
         }
     } else if (tsx->role == PJSIP_ROLE_UAC &&
                pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0 &&
