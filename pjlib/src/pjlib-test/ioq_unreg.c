@@ -289,6 +289,12 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
         if (PJ_TIME_VAL_GT(now, end_time)) {
             /* Timeout reached. If not yet unregistered in callback mode,
              * force unregister here to avoid infinite loop.
+             * 
+             * Note: callback-no-lock is the default for all ioqueue 
+             * implementations. This timeout issue has been observed
+             * specifically with IOCP implementation, possibly due to
+             * callback delivery timing or IOCP completion port behavior
+             * under certain conditions.
              */
             pj_bool_t should_exit = PJ_FALSE;
 
@@ -343,10 +349,14 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     PJ_LOG(3,(THIS_FILE, "....%s: done (%ld KB/s)",
               title, sock_data.received * 1000 / MSEC / 1000));
     
-    /* Report if unregistration was forced (callback didn't fire) */
+    /* Report if unregistration was forced (callback didn't fire).
+     * Note: callback-no-lock is the default for all ioqueue implementations.
+     * This issue appears to be IOCP-specific.
+     */
     if (test_method == UNREGISTER_IN_CALLBACK && sock_data.forced_unreg) {
         PJ_LOG(2,(THIS_FILE, "....%s: WARNING - unregistration was forced "
-                  "(callback not triggered, possibly due to packet loss)",
+                  "(callback not triggered, possibly due to IOCP timing issues "
+                  "or packet loss)",
                   title));
     }
     
