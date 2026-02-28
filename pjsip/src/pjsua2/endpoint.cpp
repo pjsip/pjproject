@@ -1231,6 +1231,11 @@ pj_status_t AuthChallenge::respond()
         }
         sess = auth_sess_;  tok = token_;
         rd = cloned_rdata_;  td = tdata_;
+        /* Release PJSUA_LOCK before reinit/send to prevent lock-order-
+         * inversion with tsx grp_lock (see pjsip_regc_send which does
+         * the same with regc->lock).
+         */
+        PJSUA_UNLOCK();
     } else {
         if (!param_) return PJ_EINVALIDOP;
         sess = param_->auth_sess;  tok = param_->token;
@@ -1245,9 +1250,7 @@ pj_status_t AuthChallenge::respond()
         pjsip_auth_clt_async_abandon(sess, tok);
 
     consumed_ = true;
-    if (deferred_)
-        PJSUA_UNLOCK();
-    else if (param_)
+    if (!deferred_ && param_)
         param_->handled = PJ_TRUE;
     return status;
 }
@@ -1280,15 +1283,10 @@ pj_status_t AuthChallenge::respond(const AuthCredInfoVector &creds)
         ci[i] = creds[i].toPj();
     pjsip_auth_clt_set_credentials(sess, count, ci);
 
-    /* respond() will re-acquire PJSUA_LOCK for deferred path, but the
-     * mutex is recursive so this is safe — no gap where account could
-     * be deleted between set_credentials and send. */
-    pj_status_t status = respond();
-
     if (deferred_)
         PJSUA_UNLOCK();
 
-    return status;
+    return respond();
 }
 
 pj_status_t AuthChallenge::abandon()
