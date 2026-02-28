@@ -164,7 +164,8 @@ struct pjsip_dialog
     pjsip_cid_hdr      *call_id;    /**< Call-ID header.                    */
     pjsip_route_hdr     route_set;  /**< Route set.                         */
     pj_bool_t           route_set_frozen; /**< Route set has been set.      */
-    pjsip_auth_clt_sess auth_sess;  /**< Client authentication session.     */
+    pjsip_auth_clt_sess             auth_sess;  /**< Client auth session.   */
+    pjsip_auth_clt_async_impl_token auth_token; /**< Async auth token.      */
     pj_str_t            initial_dest;/**< Initial destination host (used for
                                           verifying remote TLS cert).       */
 

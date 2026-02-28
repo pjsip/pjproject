@@ -35,6 +35,54 @@ static int get_ip_addr_ver(const pj_str_t *host);
 static void schedule_reregistration(pjsua_acc *acc);
 static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te);
 
+/* Bridge: maps low-level auth challenge -> pjsua on_auth_challenge */
+pj_bool_t pjsua_auth_on_challenge(
+                             pjsip_auth_clt_sess *sess,
+                             void *token,
+                             const pjsip_auth_clt_async_on_chal_param *param)
+{
+    pjsua_on_auth_challenge_param cb_param;
+    pjsua_acc_id acc_id = (pjsua_acc_id)(pj_ssize_t)param->user_data;
+    pjsua_call_id call_id = PJSUA_INVALID_ID;
+
+    PJ_UNUSED_ARG(sess);
+
+    /* Account may have been deleted between receiving the 401 and
+     * processing the auth challenge callback. Skip if invalid.
+     */
+    if (!pjsua_acc_is_valid(acc_id))
+        return PJ_FALSE;
+
+    /* Determine call_id from rdata -> dialog -> mod_data */
+    if (param->rdata) {
+        pjsip_dialog *dlg = pjsip_rdata_get_dlg(
+                                        (pjsip_rx_data*)param->rdata);
+        if (dlg) {
+            pjsua_call *call =
+                (pjsua_call*)dlg->mod_data[pjsua_var.mod.id];
+            if (call)
+                call_id = call->index;
+        }
+    }
+
+    pj_bzero(&cb_param, sizeof(cb_param));
+    cb_param.acc_id    = acc_id;
+    cb_param.call_id   = call_id;
+    /* Always use the shared auth session (account-level lifetime) instead
+     * of the potentially short-lived module-owned session (e.g. regc's).
+     * The shared session has the same credentials and survives regc
+     * destroy/recreate cycles.
+     */
+    cb_param.auth_sess = &pjsua_var.acc[acc_id].shared_auth_sess;
+    cb_param.token     = token;
+    cb_param.rdata     = param->rdata;
+    cb_param.tdata     = param->tdata;
+
+    (*pjsua_var.ua_cfg.cb.on_auth_challenge)(&cb_param);
+
+    return cb_param.handled;
+}
+
 /*
  * Get number of current accounts.
  */
@@ -331,6 +379,15 @@ static pj_status_t initialize_acc(unsigned acc_id)
     }
     pjsip_auth_clt_init( &acc->shared_auth_sess, pjsua_var.endpt, acc->pool, 0);
 
+    /* Configure async auth if pjsua callback is set */
+    if (pjsua_var.ua_cfg.cb.on_auth_challenge) {
+        pjsip_auth_clt_async_setting async_opt;
+        pj_bzero(&async_opt, sizeof(async_opt));
+        async_opt.cb = &pjsua_auth_on_challenge;
+        async_opt.user_data = (void*)(pj_ssize_t)acc->index;
+        pjsip_auth_clt_async_configure(&acc->shared_auth_sess, &async_opt);
+    }
+
     if (sip_reg_uri) {
         acc->srv_port = sip_reg_uri->port;
     }
@@ -377,10 +434,18 @@ static pj_status_t initialize_acc(unsigned acc_id)
     for (i=0; i<acc_cfg->cred_count; ++i) {
         acc->cred[acc->cred_cnt++] = acc_cfg->cred_info[i];
     }
-    for (i=0; i<pjsua_var.ua_cfg.cred_count && 
+    for (i=0; i<pjsua_var.ua_cfg.cred_count &&
               acc->cred_cnt < PJ_ARRAY_SIZE(acc->cred); ++i)
     {
         acc->cred[acc->cred_cnt++] = pjsua_var.ua_cfg.cred_info[i];
+    }
+
+    /* Set credentials on shared auth session so it can generate
+     * Authorization headers when used by the on_auth_challenge bridge.
+     */
+    if (acc->cred_cnt) {
+        pjsip_auth_clt_set_credentials(&acc->shared_auth_sess,
+                                        acc->cred_cnt, acc->cred);
     }
 
     /* If account's ICE and TURN customization is not set, then
@@ -1287,6 +1352,10 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
             update_reg = PJ_TRUE;
             unreg_first = PJ_TRUE;
         }
+
+        /* Propagate updated credentials to shared auth session */
+        pjsip_auth_clt_set_credentials(&acc->shared_auth_sess,
+                                        acc->cred_cnt, acc->cred);
     }
 
     /* Authentication preference */
@@ -2800,6 +2869,18 @@ static pj_status_t pjsua_regc_init(int acc_id)
                          status);
             goto on_return;
         }
+    }
+
+    /* Configure async auth on non-shared regc auth session */
+    if (!acc->cfg.use_shared_auth &&
+        pjsua_var.ua_cfg.cb.on_auth_challenge)
+    {
+        pjsip_auth_clt_async_setting async_opt;
+        pj_bzero(&async_opt, sizeof(async_opt));
+        async_opt.cb = &pjsua_auth_on_challenge;
+        async_opt.user_data = (void*)(pj_ssize_t)acc->index;
+        pjsip_auth_clt_async_configure(
+            pjsip_regc_get_auth_sess(acc->regc), &async_opt);
     }
 
     /* Set delay before registration refresh */

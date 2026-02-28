@@ -1033,6 +1033,12 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
     if (acc->cfg.use_shared_auth) {
         pjsip_dlg_set_auth_sess(dlg, &acc->shared_auth_sess);
+    } else if (pjsua_var.ua_cfg.cb.on_auth_challenge) {
+        pjsip_auth_clt_async_setting async_opt;
+        pj_bzero(&async_opt, sizeof(async_opt));
+        async_opt.cb = &pjsua_auth_on_challenge;
+        async_opt.user_data = (void*)(pj_ssize_t)acc->index;
+        pjsip_auth_clt_async_configure(&dlg->auth_sess, &async_opt);
     }
 
     /* Calculate call's secure level */
@@ -2021,6 +2027,18 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         pjsip_auth_clt_set_credentials(&dlg->auth_sess,
                                        pjsua_var.acc[acc_id].cred_cnt,
                                        pjsua_var.acc[acc_id].cred);
+    }
+
+    /* Set shared or non-shared async auth for incoming call dialog */
+    if (pjsua_var.acc[acc_id].cfg.use_shared_auth) {
+        pjsip_dlg_set_auth_sess(dlg,
+                                &pjsua_var.acc[acc_id].shared_auth_sess);
+    } else if (pjsua_var.ua_cfg.cb.on_auth_challenge) {
+        pjsip_auth_clt_async_setting async_opt;
+        pj_bzero(&async_opt, sizeof(async_opt));
+        async_opt.cb = &pjsua_auth_on_challenge;
+        async_opt.user_data = (void*)(pj_ssize_t)acc_id;
+        pjsip_auth_clt_async_configure(&dlg->auth_sess, &async_opt);
     }
 
     /* Set preference */

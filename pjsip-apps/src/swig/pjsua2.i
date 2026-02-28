@@ -189,6 +189,9 @@ using namespace pj;
     %ignore pj::Endpoint::utilAddPendingJob;
 #endif
 
+%newobject pj::AuthChallenge::defer;
+%nocopyctor pj::AuthChallenge;
+
 %copyctor pj::OnCallMediaEventParam;
 
 //
