@@ -110,6 +110,14 @@ using namespace pj;
     return $null;
   }
 
+  %typemap(check) SWIGTYPE *self %{
+  if (!$1) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException,
+      "invalid native object; delete() likely already called");
+    return $null;
+  }
+  %}
+
   // Force the Error Java class to extend java.lang.Exception
   %typemap(javabase) pj::Error "java.lang.Exception";
 
