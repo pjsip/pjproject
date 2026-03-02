@@ -113,10 +113,6 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    /* Initialize asynchronous authentication token */
-    dlg->auth_token.user_data = dlg;
-    dlg->auth_token.send_impl = &dlg_async_auth_send_impl;
-
     if (grp_lock) {
         dlg->grp_lock_ = grp_lock;
     } else {
@@ -157,8 +153,6 @@ static void destroy_dialog( pjsip_dialog *dlg, pj_bool_t unlock_mutex )
         pjsip_tpselector_dec_ref(&dlg->tp_sel);
         pj_bzero(&dlg->tp_sel, sizeof(pjsip_tpselector));
     }
-    /* Invalidate any pending async auth token */
-    pj_bzero(&dlg->auth_token, sizeof(dlg->auth_token));
     pjsip_auth_clt_deinit(&dlg->auth_sess);
 
     pj_grp_lock_dec_ref(dlg->grp_lock_);
@@ -2228,20 +2222,38 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
             pjsip_auth_clt_async_on_chal_param chal_param;
 
             /* Check if application handles the authentication.
+             * Allocate a per-challenge token from tsx->pool so that
+             * concurrent 401/407s on the same dialog each get their
+             * own token (the tsx grp_lock ref keeps the pool alive
+             * until the token is consumed).
+             *
              * Release the dialog lock while invoking the callback to
              * prevent deadlock if the application calls
              * pjsip_auth_clt_async_send_req() synchronously from within
              * the callback. sess_count remains elevated so the dialog
              * stays alive while the lock is released.
              */
-            chal_param.rdata = rdata;
-            chal_param.tdata = tsx->last_tx;
-            pj_grp_lock_release(dlg->grp_lock_);
-            status = pjsip_auth_clt_async_impl_on_challenge(
-                                                &dlg->auth_sess,
-                                                &dlg->auth_token,
-                                                &chal_param);
-            pj_grp_lock_acquire(dlg->grp_lock_);
+            {
+                pjsip_auth_clt_async_impl_token *auth_token;
+                auth_token = PJ_POOL_ZALLOC_T(
+                                    tsx->pool,
+                                    pjsip_auth_clt_async_impl_token);
+                auth_token->user_data    = dlg;
+                auth_token->send_impl    = &dlg_async_auth_send_impl;
+                auth_token->grp_lock     = tsx->grp_lock;
+                pj_grp_lock_add_ref(tsx->grp_lock);
+
+                chal_param.rdata = rdata;
+                chal_param.tdata = tsx->last_tx;
+                pj_grp_lock_release(dlg->grp_lock_);
+                status = pjsip_auth_clt_async_impl_on_challenge(
+                                                    &dlg->auth_sess,
+                                                    auth_token,
+                                                    &chal_param);
+                pj_grp_lock_acquire(dlg->grp_lock_);
+                if (status != PJ_SUCCESS)
+                    pj_grp_lock_dec_ref(tsx->grp_lock);
+            }
 
             if (status != PJ_SUCCESS) {
                 /* Application does not handle the authentication,

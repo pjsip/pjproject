@@ -1173,13 +1173,22 @@ AuthChallenge::AuthChallenge()
 AuthChallenge::~AuthChallenge()
 {
     if (deferred_ && !consumed_ && auth_sess_ && token_) {
+        /* Capture sess/token under PJSUA_LOCK, then call async_abandon
+         * outside the lock to avoid lock-order inversion.
+         */
+        pjsip_auth_clt_sess *sess = NULL;
+        void *tok = NULL;
         if (PJSUA_TRY_LOCK() == PJ_SUCCESS) {
-            if (pjsua_acc_is_valid(acc_id_))
-                pjsip_auth_clt_async_abandon(auth_sess_, token_);
+            if (pjsua_acc_is_valid(acc_id_)) {
+                sess = auth_sess_;
+                tok = token_;
+            }
             PJSUA_UNLOCK();
         }
         /* If try-lock fails (e.g. GC finalizer during shutdown),
          * skip abandon — the account/pool is being torn down anyway. */
+        if (sess && tok)
+            pjsip_auth_clt_async_abandon(sess, tok);
     }
     if (cloned_rdata_)
         pjsip_rx_data_free_cloned(cloned_rdata_);
@@ -1303,6 +1312,10 @@ pj_status_t AuthChallenge::abandon()
             return PJ_EINVALIDOP;
         }
         sess = auth_sess_;  tok = token_;
+        /* Release PJSUA_LOCK before abandon to prevent lock-order
+         * inversion (same pattern as respond()).
+         */
+        PJSUA_UNLOCK();
     } else {
         if (!param_) return PJ_EINVALIDOP;
         sess = param_->auth_sess;  tok = param_->token;
@@ -1310,9 +1323,7 @@ pj_status_t AuthChallenge::abandon()
 
     pj_status_t status = pjsip_auth_clt_async_abandon(sess, tok);
     consumed_ = true;
-    if (deferred_)
-        PJSUA_UNLOCK();
-    else if (param_)
+    if (!deferred_ && param_)
         param_->handled = PJ_TRUE;
     return status;
 }
