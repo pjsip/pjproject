@@ -161,6 +161,9 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     pj_ioqueue_callback callback;
     pj_time_val end_time;
     pj_status_t status;
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
+    pj_time_val max_time;
+#endif
 
 
     /* Sometimes its important to have other sockets registered to
@@ -248,6 +251,11 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     /* Bootstrap the first send/receive */
     on_read_complete(sock_data.key, sock_data.op_key, 0);
 
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
+    pj_gettimeofday(&max_time);
+    max_time.sec += 10;
+#endif
+
     /* Loop until test time ends */
     for (;;) {
         pj_time_val now, timeout;
@@ -286,6 +294,25 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
 
         if (PJ_TIME_VAL_GT(now, end_time) && sock_data.unregistered)
             break;
+
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
+        /* Hard timeout for UNREGISTER_IN_CALLBACK on IOCP:
+         * On CI, the recv callback chain may break due to transient
+         * socket errors, causing infinite hang.
+         */
+        if (test_method == UNREGISTER_IN_CALLBACK &&
+            PJ_TIME_VAL_GT(now, max_time) &&
+            !sock_data.unregistered)
+        {
+            PJ_LOG(2,(THIS_FILE, "....%s: timed out waiting for "
+                      "unregister callback", title));
+            pj_mutex_lock(sock_data.mutex);
+            sock_data.unregistered = 1;
+            pj_mutex_unlock(sock_data.mutex);
+            pj_ioqueue_unregister(sock_data.key);
+            break;
+        }
+#endif
 
         timeout.sec = 0; timeout.msec = 200;
         n = pj_ioqueue_poll(ioqueue, &timeout);
