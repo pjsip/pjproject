@@ -189,7 +189,8 @@ static int block4l (g722_enc_t *enc, int dl)
     enc->sgl[1] = enc->plt[1] >> 15 ;
     enc->sgl[2] = enc->plt[2] >> 15 ;
 
-    wd1 = enc->al[1] << 2;
+    // orig: wd1 = enc->al[1] << 2;
+    wd1 = enc->al[1] * 4;
     SATURATE(wd1, 32767, -32768);
 
     if ( enc->sgl[0] == enc->sgl[1] )  wd2 = - wd1 ;
@@ -394,7 +395,8 @@ static int block4h (g722_enc_t *enc, int d)
     enc->sgh[1] = enc->ph[1] >> 15 ;
     enc->sgh[2] = enc->ph[2] >> 15 ;
 
-    wd1 = enc->ah[1] << 2;
+    // orig: wd1 = enc->ah[1] << 2;
+    wd1 = enc->ah[1] * 4;
     SATURATE(wd1, 32767, -32768);
 
     if ( enc->sgh[0] == enc->sgh[1] )  wd2 = - wd1 ;
