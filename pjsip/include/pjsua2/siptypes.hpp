@@ -667,7 +667,7 @@ public:
     /**
      * Construct from PJSIP's pjsip_rx_data
      */
-    void fromPj(pjsip_rx_data &rdata);
+    void fromPj(const pjsip_rx_data &rdata);
 };
 
 /**

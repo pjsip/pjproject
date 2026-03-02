@@ -535,11 +535,13 @@ SipRxData::SipRxData()
 {
 }
 
-void SipRxData::fromPj(pjsip_rx_data &rdata)
+void SipRxData::fromPj(const pjsip_rx_data &rdata)
 {
     char straddr[PJ_INET6_ADDRSTRLEN+10];
 
-    info        = pjsip_rx_data_get_info(&rdata);
+    /* pjsip_rx_data_get_info() is read-only but the C API lacks const. */
+    info        = pjsip_rx_data_get_info(
+                        const_cast<pjsip_rx_data*>(&rdata));
     wholeMsg    = string(rdata.msg_info.msg_buf, rdata.msg_info.len);
     pj_sockaddr_print(&rdata.pkt_info.src_addr, straddr, sizeof(straddr), 3);
     srcAddress  = straddr;

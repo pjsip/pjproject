@@ -440,13 +440,15 @@ static pj_status_t initialize_acc(unsigned acc_id)
         acc->cred[acc->cred_cnt++] = pjsua_var.ua_cfg.cred_info[i];
     }
 
-    /* Set credentials on shared auth session so it can generate
-     * Authorization headers when used by the on_auth_challenge bridge.
+    /* Set credentials and preference on shared auth session so it can
+     * generate Authorization headers when used by the on_auth_challenge
+     * bridge.
      */
     if (acc->cred_cnt) {
         pjsip_auth_clt_set_credentials(&acc->shared_auth_sess,
                                         acc->cred_cnt, acc->cred);
     }
+    pjsip_auth_clt_set_prefs(&acc->shared_auth_sess, &acc->cfg.auth_pref);
 
     /* If account's ICE and TURN customization is not set, then
      * initialize it with the settings from the global media config.
@@ -1361,11 +1363,12 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Authentication preference */
     acc->cfg.auth_pref.initial_auth = cfg->auth_pref.initial_auth;
     if (pj_strcmp(&acc->cfg.auth_pref.algorithm, &cfg->auth_pref.algorithm)) {
-        pj_strdup_with_null(acc->pool, &acc->cfg.auth_pref.algorithm, 
+        pj_strdup_with_null(acc->pool, &acc->cfg.auth_pref.algorithm,
                             &cfg->auth_pref.algorithm);
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
     }
+    pjsip_auth_clt_set_prefs(&acc->shared_auth_sess, &acc->cfg.auth_pref);
 
     /* Shared authentication session */
     acc->cfg.use_shared_auth = cfg->use_shared_auth;

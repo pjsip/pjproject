@@ -1253,10 +1253,13 @@ pj_status_t AuthChallenge::respond()
 
     pjsip_tx_data *new_tdata = NULL;
     pj_status_t status = pjsip_auth_clt_reinit_req(sess, rd, td, &new_tdata);
-    if (status == PJ_SUCCESS)
+    if (status == PJ_SUCCESS && new_tdata)
         status = pjsip_auth_clt_async_send_req(sess, tok, new_tdata);
-    else
+    else {
         pjsip_auth_clt_async_abandon(sess, tok);
+        if (status == PJ_SUCCESS)
+            status = PJ_EINVALIDOP;
+    }
 
     consumed_ = true;
     if (!deferred_ && param_)
@@ -1290,10 +1293,15 @@ pj_status_t AuthChallenge::respond(const AuthCredInfoVector &creds)
         count = PJ_ARRAY_SIZE(ci);
     for (unsigned i = 0; i < count; ++i)
         ci[i] = creds[i].toPj();
-    pjsip_auth_clt_set_credentials(sess, count, ci);
+    pj_status_t status = pjsip_auth_clt_set_credentials(sess, count, ci);
 
     if (deferred_)
         PJSUA_UNLOCK();
+
+    if (status != PJ_SUCCESS) {
+        abandon();
+        return status;
+    }
 
     return respond();
 }
@@ -1348,7 +1356,7 @@ void Endpoint::on_auth_challenge(pjsua_on_auth_challenge_param *param)
     prm.accId   = param->acc_id;
     prm.callId  = param->call_id;
     if (param->rdata)
-        prm.rdata.fromPj(*(pjsip_rx_data*)param->rdata);
+        prm.rdata.fromPj(*param->rdata);
     prm.challenge.param_ = param;
 
     acc->onAuthChallenge(prm);
@@ -1364,7 +1372,7 @@ void Endpoint::on_acc_find_for_incoming(const pjsip_rx_data *rdata,
     OnSelectAccountParam prm;
 
     pj_assert(rdata && acc_id);
-    prm.rdata.fromPj(*((pjsip_rx_data *)rdata));
+    prm.rdata.fromPj(*rdata);
     prm.accountIndex = *acc_id;
     
     instance_->onSelectAccount(prm);
