@@ -2082,13 +2082,14 @@ public:
      * Note that application must delete all Buddy instances belong to this
      * account before shutting down the account.
      *
-     * This method will fail silently if there are still active calls
-     * associated with this account. Application should hang up all calls
-     * first using Call::hangup() and wait until the calls are fully
-     * disconnected. Application can check whether this method failed by
-     * calling isValid() after this method returns: if isValid() returns
-     * true, the account was not deleted and the application should retry
-     * after cleaning up active calls.
+     * This method will not throw an exception if there are still active
+     * calls associated with this account; in that case the shutdown will
+     * fail and any error will be logged internally. Application should
+     * hang up all calls first using Call::hangup() and wait until the
+     * calls are fully disconnected. Application can check whether this
+     * method failed by calling isValid() after this method returns: if
+     * isValid() returns true, the account was not deleted and the
+     * application should retry after cleaning up active calls.
      *
      * Alternatively, application can use shutdown2() which will throw an
      * Error exception on failure.

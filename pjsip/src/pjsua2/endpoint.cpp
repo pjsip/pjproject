@@ -1566,7 +1566,7 @@ void Endpoint::on_call_transfer_request2(pjsua_call_id call_id,
         if (prm.newCall) {
             /* Sanity checks */
             pj_assert(prm.newCall->id == PJSUA_INVALID_ID);
-            pj_assert(prm.newCall->acc->getId() == call->acc->getId());
+            pj_assert(prm.newCall->acc == call->acc);
 
             /* We don't manage (e.g: create, delete) the call child,
              * so let's just override any existing child.
@@ -1634,7 +1634,7 @@ void Endpoint::on_call_replace_request2(pjsua_call_id call_id,
     if (prm.newCall && prm.newCall != call) {
         /* Sanity checks */
         pj_assert(prm.newCall->id == PJSUA_INVALID_ID);
-        pj_assert(prm.newCall->acc->getId() == call->acc->getId());
+        pj_assert(prm.newCall->acc == call->acc);
 
         /* We don't manage (e.g: create, delete) the call child,
          * so let's just override any existing child.
@@ -1681,7 +1681,7 @@ void Endpoint::on_call_replaced(pjsua_call_id old_call_id,
     if (prm.newCall && prm.newCall != call) {
         /* Sanity checks */
         pj_assert(prm.newCall->id == new_call_id);
-        pj_assert(prm.newCall->acc->getId() == call->acc->getId());
+        pj_assert(prm.newCall->acc == call->acc);
         pj_assert(pjsua_call_get_user_data(new_call_id) == prm.newCall);
 
         /* Warn if new_call created in onCallReplaceRequest() is changed */
