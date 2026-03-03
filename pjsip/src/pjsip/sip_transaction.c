@@ -1235,7 +1235,7 @@ static void tsx_on_destroy( void *arg )
     PJ_LOG(5,(tsx->obj_name, "Transaction destroyed!"));
 
     /* Unchain dialog lock if it was chained */
-    if (tsx->chained_dlg_lock) {
+    if (tsx->chained_dlg_lock && tsx->grp_lock) {
         pj_grp_lock_unchain_lock(tsx->grp_lock, (pj_lock_t*)tsx->chained_dlg_lock);
         pj_grp_lock_dec_ref(tsx->chained_dlg_lock);
         tsx->chained_dlg_lock = NULL;
