@@ -1127,7 +1127,19 @@ Account::~Account()
     /* If this instance is deleted, also delete the corresponding account in
      * PJSUA library.
      */
-    shutdown();
+    try {
+        AccountShutdownParam prm;
+        shutdown2(prm);
+    } catch (...) {
+        /* shutdown2() failed (e.g. active calls still exist). The C-layer
+         * account is still valid but its user_data points to this object
+         * which is being destroyed. Null it to prevent dangling pointer
+         * callbacks.
+         */
+        if (id != PJSUA_INVALID_ID && pjsua_acc_is_valid(id)) {
+            pjsua_acc_set_user_data(id, NULL);
+        }
+    }
 }
 
 void Account::create(const AccountConfig &acc_cfg,
@@ -1148,6 +1160,20 @@ void Account::create(const AccountConfig &acc_cfg,
 
 void Account::shutdown()
 {
+    try {
+        AccountShutdownParam prm;
+        shutdown2(prm);
+    } catch (Error &err) {
+        PJ_PERROR(1, (THIS_FILE, err.status,
+                     "Failed to delete account %d, possibly still "
+                     "has active calls", id));
+    }
+}
+
+void Account::shutdown2(const AccountShutdownParam &prm) PJSUA2_THROW(Error)
+{
+    PJ_UNUSED_ARG(prm);
+
     if (isValid() && pjsua_get_state() < PJSUA_STATE_CLOSING) {
 #if !DEPRECATED_FOR_TICKET_2232
         // Cleanup buddies in the buddy list
@@ -1157,11 +1183,7 @@ void Account::shutdown()
         }
 #endif
 
-        // This caused error message of "Error: cannot find Account.."
-        // when Endpoint::on_reg_started() is called for unregistration.
-        //pjsua_acc_set_user_data(id, NULL);
-
-        pjsua_acc_del(id);
+        PJSUA2_CHECK_EXPR(pjsua_acc_del(id));
     }
 }
 

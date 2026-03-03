@@ -679,6 +679,21 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 
     acc = &pjsua_var.acc[acc_id];
 
+    /* Reject if there are active calls using this account */
+    for (i = 0; i < pjsua_var.ua_cfg.max_calls; ++i) {
+        if (pjsua_var.calls[i].acc_id == acc_id &&
+            (pjsua_var.calls[i].inv != NULL ||
+             pjsua_var.calls[i].async_call.dlg != NULL))
+        {
+            PJ_LOG(2, (THIS_FILE,
+                       "Unable to delete account %d: call %d still exists",
+                       acc_id, i));
+            PJSUA_UNLOCK();
+            pj_log_pop_indent();
+            return PJ_EBUSY;
+        }
+    }
+
     for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.buddy); ++i) {
         pjsua_buddy *b = &pjsua_var.buddy[i];
 
@@ -743,8 +758,8 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
         --pjsua_var.acc_cnt;
     }
 
-    /* Leave the calls intact, as I don't think calls need to
-     * access account once it's created
+    /* Calls using this account should have been terminated before
+     * calling this function (enforced by the check above).
      */
 
     /* Update default account */

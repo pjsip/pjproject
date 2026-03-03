@@ -5154,9 +5154,17 @@ PJ_DECL(void*) pjsua_acc_get_user_data(pjsua_acc_id acc_id);
  * if necessary, and terminate server side presence subscriptions associated
  * with this account.
  *
+ * All calls associated with this account must be disconnected before calling
+ * this function. If any calls are still active (including calls that are being
+ * set up or disconnected), this function will return PJ_EBUSY. Application
+ * should hang up all calls first using pjsua_call_hangup() and wait until the
+ * calls are fully disconnected before deleting the account.
+ *
  * @param acc_id        Id of the account to be deleted.
  *
- * @return              PJ_SUCCESS on success, or the appropriate error code.
+ * @return              PJ_SUCCESS on success, PJ_EBUSY if there are active
+ *                      calls using this account, or the appropriate error
+ *                      code.
  */
 PJ_DECL(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id);
 

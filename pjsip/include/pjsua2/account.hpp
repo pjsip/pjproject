@@ -2030,6 +2030,14 @@ struct SendResponseParam
 };
 
 /**
+ * Parameters for Account::shutdown2(). This is currently reserved for
+ * future use.
+ */
+struct AccountShutdownParam
+{
+};
+
+/**
  * Account.
  */
 class Account
@@ -2074,6 +2082,17 @@ public:
      * Note that application must delete all Buddy instances belong to this
      * account before shutting down the account.
      *
+     * This method will fail silently if there are still active calls
+     * associated with this account. Application should hang up all calls
+     * first using Call::hangup() and wait until the calls are fully
+     * disconnected. Application can check whether this method failed by
+     * calling isValid() after this method returns: if isValid() returns
+     * true, the account was not deleted and the application should retry
+     * after cleaning up active calls.
+     *
+     * Alternatively, application can use shutdown2() which will throw an
+     * Error exception on failure.
+     *
      * If application implements a derived class, the derived class should
      * call this method in the beginning stage in its destructor, or
      * alternatively application should call this method before deleting
@@ -2081,6 +2100,20 @@ public:
      * the derived class destructor and Account callbacks.
      */
     void shutdown();
+
+    /**
+     * Shutdown the account, with additional options. This will initiate
+     * unregistration if needed, and delete the corresponding account in
+     * the PJSUA-LIB.
+     *
+     * Unlike shutdown(), this method throws an Error exception on failure.
+     * For example, if there are active calls still using this account, it
+     * will throw an Error with PJ_EBUSY status.
+     *
+     * @param prm               Shutdown parameters (currently reserved
+     *                          for future use).
+     */
+    void shutdown2(const AccountShutdownParam &prm) PJSUA2_THROW(Error);
 
     /**
      * Modify the account to use the specified account configuration.
