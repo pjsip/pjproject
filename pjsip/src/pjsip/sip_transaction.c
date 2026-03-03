@@ -1187,6 +1187,7 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
     tsx->pool = pool;
     tsx->tsx_user = tsx_user;
     tsx->endpt = mod_tsx_layer.endpt;
+    tsx->chained_dlg_lock = NULL;
 
     pj_ansi_snprintf(tsx->obj_name, sizeof(tsx->obj_name), 
                      "tsx%p", tsx);
@@ -1232,6 +1233,13 @@ static void tsx_on_destroy( void *arg )
     pjsip_transaction *tsx = (pjsip_transaction*)arg;
 
     PJ_LOG(5,(tsx->obj_name, "Transaction destroyed!"));
+
+    /* Unchain dialog lock if it was chained */
+    if (tsx->chained_dlg_lock) {
+        pj_grp_lock_unchain_lock(tsx->grp_lock, (pj_lock_t*)tsx->chained_dlg_lock);
+        pj_grp_lock_dec_ref(tsx->chained_dlg_lock);
+        tsx->chained_dlg_lock = NULL;
+    }
 
     pj_mutex_destroy(tsx->mutex_b);
     pjsip_endpt_release_pool(tsx->endpt, tsx->pool);

@@ -29,7 +29,8 @@ race:*
 #13 tsx_on_state_proceeding_uac ../src/pjsip/sip_transaction.c:3404
 #14 pjsip_tsx_recv_msg ../src/pjsip/sip_transaction.c:2061
 
-deadlock:pjsip_dlg_on_tsx_state
+# Disabled after implementing lock chain mechanism in #4759
+# deadlock:pjsip_dlg_on_tsx_state
 
 #=============================================================================
 # Lock-order-inversion in pjsip_endpoint

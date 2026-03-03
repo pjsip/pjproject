@@ -581,6 +581,11 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     if (status != PJ_SUCCESS)
         goto on_error;
 
+    /* Chain dialog lock to transaction lock and add ref */
+    pj_grp_lock_add_ref(dlg->grp_lock_);
+    pj_grp_lock_chain_lock(tsx->grp_lock, (pj_lock_t*)dlg->grp_lock_, 0);
+    tsx->chained_dlg_lock = dlg->grp_lock_;
+
     /* Associate this dialog to the transaction. */
     tsx->mod_data[dlg->ua->id] = dlg;
 
@@ -1384,6 +1389,11 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
         status = pjsip_tsx_set_transport(tsx, &dlg->tp_sel);
         pj_assert(status == PJ_SUCCESS);
 
+        /* Chain dialog lock to transaction lock and add ref */
+        pj_grp_lock_add_ref(dlg->grp_lock_);
+        pj_grp_lock_chain_lock(tsx->grp_lock, (pj_lock_t*)dlg->grp_lock_, 0);
+        tsx->chained_dlg_lock = dlg->grp_lock_;
+
         /* Attach this dialog to the transaction, so that user agent
          * will dispatch events to this dialog.
          */
@@ -1806,6 +1816,11 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
                                           NULL, NULL);
             goto on_return;
         }
+
+        /* Chain dialog lock to transaction lock and add ref */
+        pj_grp_lock_add_ref(dlg->grp_lock_);
+        pj_grp_lock_chain_lock(tsx->grp_lock, (pj_lock_t*)dlg->grp_lock_, 0);
+        tsx->chained_dlg_lock = dlg->grp_lock_;
 
         /* Put this dialog in the transaction data. */
         tsx->mod_data[dlg->ua->id] = dlg;

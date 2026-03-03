@@ -86,6 +86,7 @@ struct pjsip_transaction
     pjsip_endpoint             *endpt;          /**< Endpoint instance.     */
     pj_bool_t                   terminating;    /**< terminate() was called */
     pj_grp_lock_t              *grp_lock;       /**< Transaction grp lock.  */
+    pj_grp_lock_t              *chained_dlg_lock; /**< Chained dialog lock. */
     pj_mutex_t                 *mutex_b;        /**< Second mutex to avoid
                                                      deadlock. It is used to
                                                      protect timer.         */
