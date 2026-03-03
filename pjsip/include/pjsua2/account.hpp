@@ -2030,11 +2030,21 @@ struct SendResponseParam
 };
 
 /**
- * Parameters for Account::shutdown2(). This is currently reserved for
- * future use.
+ * Parameters for Account::shutdown2().
  */
 struct AccountShutdownParam
 {
+    /**
+     * If true, the account will always be deleted even when there are
+     * active calls using it (a warning will be logged). If false, the
+     * function will throw an Error with PJ_EBUSY when active calls exist.
+     *
+     * Default: false
+     */
+    bool        force;
+
+    /** Default constructor */
+    AccountShutdownParam() : force(false) {}
 };
 
 /**
@@ -2049,8 +2059,9 @@ public:
     Account();
 
     /**
-     * Destructor. Note that if the account is deleted, it will also delete
-     * the corresponding account in the PJSUA-LIB.
+     * Destructor. This will call shutdown() to always delete the
+     * corresponding account in the PJSUA-LIB, even if there are active
+     * calls. This ensures no resource leak occurs.
      *
      * If application implements a derived class, the derived class should
      * call shutdown() in the beginning stage in its destructor, or
@@ -2076,23 +2087,16 @@ public:
                 bool make_default=false) PJSUA2_THROW(Error);
 
     /**
-     * Shutdown the account. This will initiate unregistration if needed,
-     * and delete the corresponding account in the PJSUA-LIB.
+     * Shutdown the account. This will always delete the account
+     * (force=true), initiating unregistration if needed, and deleting the
+     * corresponding account in the PJSUA-LIB. Active calls will not
+     * prevent deletion; a warning will be logged if any exist.
+     *
+     * This method does not throw an exception. Any error will be logged
+     * internally.
      *
      * Note that application must delete all Buddy instances belong to this
      * account before shutting down the account.
-     *
-     * This method will not throw an exception if there are still active
-     * calls associated with this account; in that case the shutdown will
-     * fail and any error will be logged internally. Application should
-     * hang up all calls first using Call::hangup() and wait until the
-     * calls are fully disconnected. Application can check whether this
-     * method failed by calling isValid() after this method returns: if
-     * isValid() returns true, the account was not deleted and the
-     * application should retry after cleaning up active calls.
-     *
-     * Alternatively, application can use shutdown2() which will throw an
-     * Error exception on failure.
      *
      * If application implements a derived class, the derived class should
      * call this method in the beginning stage in its destructor, or
@@ -2108,11 +2112,11 @@ public:
      * the PJSUA-LIB.
      *
      * Unlike shutdown(), this method throws an Error exception on failure.
-     * For example, if there are active calls still using this account, it
-     * will throw an Error with PJ_EBUSY status.
+     * By default (force=false), if there are active calls still using this
+     * account, it will throw an Error with PJ_EBUSY status. Set force=true
+     * to always delete the account regardless.
      *
-     * @param prm               Shutdown parameters (currently reserved
-     *                          for future use).
+     * @param prm               Shutdown parameters.
      */
     void shutdown2(const AccountShutdownParam &prm) PJSUA2_THROW(Error);
 

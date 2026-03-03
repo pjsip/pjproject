@@ -1124,22 +1124,8 @@ Account::Account()
 
 Account::~Account()
 {
-    /* If this instance is deleted, also delete the corresponding account in
-     * PJSUA library.
-     */
-    try {
-        AccountShutdownParam prm;
-        shutdown2(prm);
-    } catch (...) {
-        /* shutdown2() failed (e.g. active calls still exist). The C-layer
-         * account is still valid but its user_data points to this object
-         * which is being destroyed. Null it to prevent dangling pointer
-         * callbacks.
-         */
-        if (id != PJSUA_INVALID_ID && pjsua_acc_is_valid(id)) {
-            pjsua_acc_set_user_data(id, NULL);
-        }
-    }
+    /* Always delete the C-layer account to prevent resource leaks. */
+    shutdown();
 }
 
 void Account::create(const AccountConfig &acc_cfg,
@@ -1162,18 +1148,16 @@ void Account::shutdown()
 {
     try {
         AccountShutdownParam prm;
+        prm.force = true;
         shutdown2(prm);
     } catch (Error &err) {
         PJ_PERROR(1, (THIS_FILE, err.status,
-                     "Failed to delete account %d, possibly still "
-                     "has active calls", id));
+                     "Failed to delete account %d", id));
     }
 }
 
 void Account::shutdown2(const AccountShutdownParam &prm) PJSUA2_THROW(Error)
 {
-    PJ_UNUSED_ARG(prm);
-
     if (isValid() && pjsua_get_state() < PJSUA_STATE_CLOSING) {
 #if !DEPRECATED_FOR_TICKET_2232
         // Cleanup buddies in the buddy list
@@ -1183,7 +1167,10 @@ void Account::shutdown2(const AccountShutdownParam &prm) PJSUA2_THROW(Error)
         }
 #endif
 
-        PJSUA2_CHECK_EXPR(pjsua_acc_del(id));
+        pjsua_acc_del_param del_prm;
+        pjsua_acc_del_param_default(&del_prm);
+        del_prm.force = prm.force? PJ_TRUE : PJ_FALSE;
+        PJSUA2_CHECK_EXPR(pjsua_acc_del2(id, &del_prm));
     }
 }
 
