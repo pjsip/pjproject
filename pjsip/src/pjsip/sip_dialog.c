@@ -69,20 +69,6 @@ static void dlg_on_destroy( void *arg )
     pjsip_endpt_release_pool(dlg->endpt, dlg->pool);
 }
 
-/* Helper function to chain dialog lock to transaction lock */
-static void chain_dialog_lock_to_tsx(pjsip_transaction *tsx, 
-                                     pjsip_dialog *dlg)
-{
-    /* Add ref to dialog lock before chaining */
-    pj_grp_lock_add_ref(dlg->grp_lock_);
-    
-    /* Chain dialog lock to transaction lock */
-    pj_grp_lock_chain_lock(tsx->grp_lock, (pj_lock_t*)dlg->grp_lock_, 0);
-    
-    /* Store reference for cleanup in tsx_on_destroy */
-    tsx->chained_dlg_lock = dlg->grp_lock_;
-}
-
 static pj_status_t create_dialog( pjsip_user_agent *ua,
                                   pj_grp_lock_t *grp_lock,
                                   pjsip_dialog **p_dlg)
@@ -578,25 +564,19 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
         lock_incremented = PJ_TRUE;
     }
 
-    /* Create tsx lock first so we can lock it before creating
-     * the transaction. This is to avoid deadlock by preventing
-     * the newly created transaction to process messages before
-     * this function returns.
+    /* Use dialog's group lock for the transaction to ensure synchronized
+     * locking and avoid deadlock. Add ref before creating transaction.
      */
-    status = pj_grp_lock_create(dlg->pool, NULL, &tsx_lock);
+    pj_grp_lock_add_ref(dlg->grp_lock_);
+    pj_grp_lock_acquire(dlg->grp_lock_);
+
+    /* Create UAS transaction for this request, using dialog's group lock. */
+    status = pjsip_tsx_create_uas2(dlg->ua, rdata, dlg->grp_lock_, &tsx);
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    pj_grp_lock_add_ref(tsx_lock);
-    pj_grp_lock_acquire(tsx_lock);
-
-    /* Create UAS transaction for this request. */
-    status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
-    if (status != PJ_SUCCESS)
-        goto on_error;
-
-    /* Chain dialog lock to transaction lock and add ref */
-    chain_dialog_lock_to_tsx(tsx, dlg);
+    /* Store dialog lock reference for proper cleanup */
+    tsx->chained_dlg_lock = dlg->grp_lock_;
 
     /* Associate this dialog to the transaction. */
     tsx->mod_data[dlg->ua->id] = dlg;
@@ -623,8 +603,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     /* Feed the first request to the transaction. */
     pjsip_tsx_recv_msg(tsx, rdata);
 
-    pj_grp_lock_release(tsx_lock);
-    pj_grp_lock_dec_ref(tsx_lock);
+    pj_grp_lock_release(dlg->grp_lock_);
 
     /* Done. */
     *p_dlg = dlg;
@@ -632,14 +611,13 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     return PJ_SUCCESS;
 
 on_error:
-    if (tsx_lock) {
-        pj_grp_lock_release(tsx_lock);
-        pj_grp_lock_dec_ref(tsx_lock);
-    }
-
     if (tsx) {
+        /* Transaction was created with dialog's group lock.
+         * It will decrement ref in its destroy handler.
+         */
+        pj_grp_lock_release(dlg->grp_lock_);
+        
         int st_code;
-
         st_code = (status == PJSIP_ENOTREQUESTMSG ||
                    status == PJSIP_EMISSINGHDR ||
                    status == PJSIP_EINVALIDHDR)? PJSIP_SC_BAD_REQUEST:
@@ -647,6 +625,10 @@ on_error:
         pjsip_tsx_terminate(tsx, st_code);
         pj_assert(dlg->tsx_count>0);
         --dlg->tsx_count;
+    } else if (dlg->grp_lock_ && pj_grp_lock_get_ref(dlg->grp_lock_) > 0) {
+        /* Transaction wasn't created, we need to clean up manually */
+        pj_grp_lock_release(dlg->grp_lock_);
+        pj_grp_lock_dec_ref(dlg->grp_lock_);
     }
 
     if (lock_incremented) {
@@ -1393,16 +1375,22 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
     if (msg->line.req.method.id != PJSIP_ACK_METHOD) {
         int tsx_count;
 
-        status = pjsip_tsx_create_uac(dlg->ua, tdata, &tsx);
-        if (status != PJ_SUCCESS)
+        /* Add ref to dialog lock before creating transaction */
+        pj_grp_lock_add_ref(dlg->grp_lock_);
+
+        /* Create UAC transaction using dialog's group lock */
+        status = pjsip_tsx_create_uac2(dlg->ua, tdata, dlg->grp_lock_, &tsx);
+        if (status != PJ_SUCCESS) {
+            pj_grp_lock_dec_ref(dlg->grp_lock_);
             goto on_error;
+        }
 
         /* Set transport selector */
         status = pjsip_tsx_set_transport(tsx, &dlg->tp_sel);
         pj_assert(status == PJ_SUCCESS);
 
-        /* Chain dialog lock to transaction lock and add ref */
-        chain_dialog_lock_to_tsx(tsx, dlg);
+        /* Store dialog lock reference for proper cleanup */
+        tsx->chained_dlg_lock = dlg->grp_lock_;
 
         /* Attach this dialog to the transaction, so that user agent
          * will dispatch events to this dialog.
@@ -1797,17 +1785,12 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
     if (pjsip_rdata_get_tsx(rdata) == NULL &&
         rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD)
     {
-        /* Create tsx lock first so we can lock it before creating
-         * the transaction. This is to avoid deadlock by preventing
-         * the newly created transaction to process messages before
-         * this function returns.
+        /* Use dialog's group lock for the transaction. Add ref before
+         * creating transaction.
          */
-        status = pj_grp_lock_create(dlg->pool, NULL, &tsx_lock);
-        if (status == PJ_SUCCESS) {
-            pj_grp_lock_add_ref(tsx_lock);
-            pj_grp_lock_acquire(tsx_lock);
-            status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
-        }
+        pj_grp_lock_add_ref(dlg->grp_lock_);
+        pj_grp_lock_acquire(dlg->grp_lock_);
+        status = pjsip_tsx_create_uas2(dlg->ua, rdata, dlg->grp_lock_, &tsx);
 
         if (status != PJ_SUCCESS) {
             /* Once case for this is when re-INVITE contains same
@@ -1824,17 +1807,21 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
             reason = pj_strerror(status, errmsg, sizeof(errmsg));
             pjsip_endpt_respond_stateless(dlg->endpt, rdata, st_code, &reason,
                                           NULL, NULL);
+            pj_grp_lock_release(dlg->grp_lock_);
+            pj_grp_lock_dec_ref(dlg->grp_lock_);
             goto on_return;
         }
 
-        /* Chain dialog lock to transaction lock and add ref */
-        chain_dialog_lock_to_tsx(tsx, dlg);
+        /* Store dialog lock reference for proper cleanup */
+        tsx->chained_dlg_lock = dlg->grp_lock_;
 
         /* Put this dialog in the transaction data. */
         tsx->mod_data[dlg->ua->id] = dlg;
 
         /* Add transaction count. */
         ++dlg->tsx_count;
+
+        pj_grp_lock_release(dlg->grp_lock_);
     }
 
     /* Update the target URI if this is a target refresh request.
