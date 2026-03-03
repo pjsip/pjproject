@@ -70,18 +70,6 @@ static void dlg_on_destroy( void *arg )
 }
 
 /* Helper function to chain dialog lock to transaction lock */
-static void chain_dialog_lock_to_tsx(pjsip_transaction *tsx, 
-                                     pjsip_dialog *dlg)
-{
-    /* Add ref to dialog lock before chaining */
-    pj_grp_lock_add_ref(dlg->grp_lock_);
-    
-    /* Chain dialog lock to transaction lock */
-    pj_grp_lock_chain_lock(tsx->grp_lock, (pj_lock_t*)dlg->grp_lock_, 0);
-    
-    /* Store reference for cleanup in tsx_on_destroy */
-    tsx->chained_dlg_lock = dlg->grp_lock_;
-}
 
 static pj_status_t create_dialog( pjsip_user_agent *ua,
                                   pj_grp_lock_t *grp_lock,
@@ -588,6 +576,8 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
         goto on_error;
 
     pj_grp_lock_add_ref(tsx_lock);
+    /* Chain locks so dlg lock is always acquired first before tsx. */
+    pj_grp_lock_chain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_, 0);
     pj_grp_lock_acquire(tsx_lock);
 
     /* Create UAS transaction for this request. */
@@ -595,8 +585,6 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    /* Chain dialog lock to transaction lock and add ref */
-    chain_dialog_lock_to_tsx(tsx, dlg);
 
     /* Associate this dialog to the transaction. */
     tsx->mod_data[dlg->ua->id] = dlg;
@@ -634,6 +622,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 on_error:
     if (tsx_lock) {
         pj_grp_lock_release(tsx_lock);
+        pj_grp_lock_unchain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_);
         pj_grp_lock_dec_ref(tsx_lock);
     }
 
@@ -1397,12 +1386,14 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
         if (status != PJ_SUCCESS)
             goto on_error;
 
+
+        /* Chain locks so dlg lock is always acquired first before tsx. */
+        pj_grp_lock_chain_lock(tsx->grp_lock, (pj_lock_t *)dlg->grp_lock_, 0);
+
         /* Set transport selector */
         status = pjsip_tsx_set_transport(tsx, &dlg->tp_sel);
         pj_assert(status == PJ_SUCCESS);
 
-        /* Chain dialog lock to transaction lock and add ref */
-        chain_dialog_lock_to_tsx(tsx, dlg);
 
         /* Attach this dialog to the transaction, so that user agent
          * will dispatch events to this dialog.
@@ -1805,6 +1796,8 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
         status = pj_grp_lock_create(dlg->pool, NULL, &tsx_lock);
         if (status == PJ_SUCCESS) {
             pj_grp_lock_add_ref(tsx_lock);
+            /* Chain locks so dlg lock is always acquired first before tsx. */
+            pj_grp_lock_chain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_, 0);
             pj_grp_lock_acquire(tsx_lock);
             status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
         }
@@ -1827,8 +1820,6 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
             goto on_return;
         }
 
-        /* Chain dialog lock to transaction lock and add ref */
-        chain_dialog_lock_to_tsx(tsx, dlg);
 
         /* Put this dialog in the transaction data. */
         tsx->mod_data[dlg->ua->id] = dlg;
@@ -1925,6 +1916,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 on_return:
     if (tsx_lock) {
         pj_grp_lock_release(tsx_lock);
+        pj_grp_lock_unchain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_);
         pj_grp_lock_dec_ref(tsx_lock);
     }
     /* Unlock dialog and dec session, may destroy dialog. */
@@ -2285,6 +2277,7 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
     {
         pj_assert(dlg->tsx_count>0);
         --dlg->tsx_count;
+        pj_grp_lock_unchain_lock(tsx->grp_lock, (pj_lock_t *)dlg->grp_lock_);
         tsx->mod_data[dlg->ua->id] = NULL;
     }
 
