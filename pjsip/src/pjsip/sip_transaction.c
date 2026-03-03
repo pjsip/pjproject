@@ -22,6 +22,8 @@
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_errno.h>
 #include <pjsip/sip_event.h>
+#include <pjsip/sip_dialog.h>
+#include <pjsip/sip_ua_layer.h>
 #include <pjlib-util/errno.h>
 #include <pj/hash.h>
 #include <pj/pool.h>
@@ -1230,8 +1232,20 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
 static void tsx_on_destroy( void *arg )
 {
     pjsip_transaction *tsx = (pjsip_transaction*)arg;
+    pjsip_dialog *dlg;
+    pjsip_user_agent *ua;
 
     PJ_LOG(5,(tsx->obj_name, "Transaction destroyed!"));
+
+    /* Unchain and dec ref dialog group lock if tsx is associated with dialog */
+    ua = pjsip_ua_instance();
+    if (ua) {
+        dlg = (pjsip_dialog*) tsx->mod_data[ua->id];
+        if (dlg) {
+            pj_grp_lock_unchain_lock(tsx->grp_lock, (pj_lock_t *)dlg->grp_lock_);
+            pj_grp_lock_dec_ref(dlg->grp_lock_);
+        }
+    }
 
     pj_mutex_destroy(tsx->mutex_b);
     pjsip_endpt_release_pool(tsx->endpt, tsx->pool);
