@@ -1356,7 +1356,7 @@ void Endpoint::on_auth_challenge(pjsua_on_auth_challenge_param *param)
     prm.accId   = param->acc_id;
     prm.callId  = param->call_id;
     if (param->rdata)
-        prm.rdata.fromPj(*param->rdata);
+        prm.rdata.fromPj(*(pjsip_rx_data*)param->rdata);
     prm.challenge.param_ = param;
 
     acc->onAuthChallenge(prm);
@@ -1372,7 +1372,7 @@ void Endpoint::on_acc_find_for_incoming(const pjsip_rx_data *rdata,
     OnSelectAccountParam prm;
 
     pj_assert(rdata && acc_id);
-    prm.rdata.fromPj(*rdata);
+    prm.rdata.fromPj(*((pjsip_rx_data *)rdata));
     prm.accountIndex = *acc_id;
     
     instance_->onSelectAccount(prm);
