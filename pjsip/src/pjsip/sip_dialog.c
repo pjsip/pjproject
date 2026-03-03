@@ -620,9 +620,10 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 
 on_error:
     if (tsx_lock) {
-        /* tsx_lock is non-NULL only if lock creation succeeded at line 572.
-         * If we reach here, locks were already chained at line 580, so we
-         * need to unchain them and dec the dialog lock reference.
+        /* tsx_lock is non-NULL only if lock creation succeeded above.
+         * If we reach here, locks were already chained before attempting
+         * to create the transaction, so we need to unchain them and
+         * dec the dialog lock reference.
          */
         pj_grp_lock_release(tsx_lock);
         pj_grp_lock_unchain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_);
@@ -1920,9 +1921,9 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 
 on_return:
     if (tsx_lock) {
-        /* tsx_lock is non-NULL only if lock creation succeeded at line 1796.
-         * When status == PJ_SUCCESS at line 1797, we enter the if block and
-         * chain locks at line 1802. If we reach here with tsx_lock != NULL,
+        /* tsx_lock is non-NULL only if lock creation succeeded.
+         * Lock chaining happens inside the 'if (status == PJ_SUCCESS)' block
+         * immediately after lock creation. If we reach here with tsx_lock != NULL,
          * it means locks were chained and need to be unchained.
          */
         pj_grp_lock_release(tsx_lock);
