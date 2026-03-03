@@ -577,7 +577,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 
     pj_grp_lock_add_ref(tsx_lock);
     /* Chain locks so dlg lock is always acquired first before tsx. */
-    pj_grp_lock_chain_lock(tsx_lock, dlg->grp_lock_, 0);
+    pj_grp_lock_chain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_, 0);
     pj_grp_lock_acquire(tsx_lock);
 
     /* Create UAS transaction for this request. */
@@ -622,7 +622,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 on_error:
     if (tsx_lock) {
         pj_grp_lock_release(tsx_lock);
-        pj_grp_lock_unchain_lock(tsx_lock, dlg->grp_lock_);
+        pj_grp_lock_unchain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_);
         pj_grp_lock_dec_ref(tsx_lock);
     }
 
@@ -1388,7 +1388,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 
 
         /* Chain locks so dlg lock is always acquired first before tsx. */
-        pj_grp_lock_chain_lock(tsx->grp_lock, dlg->grp_lock_, 0);
+        pj_grp_lock_chain_lock(tsx->grp_lock, (pj_lock_t *)dlg->grp_lock_, 0);
 
         /* Set transport selector */
         status = pjsip_tsx_set_transport(tsx, &dlg->tp_sel);
@@ -1797,7 +1797,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
         if (status == PJ_SUCCESS) {
             pj_grp_lock_add_ref(tsx_lock);
             /* Chain locks so dlg lock is always acquired first before tsx. */
-            pj_grp_lock_chain_lock(tsx_lock, dlg->grp_lock_, 0);
+            pj_grp_lock_chain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_, 0);
             pj_grp_lock_acquire(tsx_lock);
             status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
         }
@@ -1916,7 +1916,7 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 on_return:
     if (tsx_lock) {
         pj_grp_lock_release(tsx_lock);
-        pj_grp_lock_unchain_lock(tsx_lock, dlg->grp_lock_);
+        pj_grp_lock_unchain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_);
         pj_grp_lock_dec_ref(tsx_lock);
     }
     /* Unlock dialog and dec session, may destroy dialog. */
@@ -2277,7 +2277,7 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
     {
         pj_assert(dlg->tsx_count>0);
         --dlg->tsx_count;
-        pj_grp_lock_unchain_lock(tsx->grp_lock, dlg->grp_lock_);
+        pj_grp_lock_unchain_lock(tsx->grp_lock, (pj_lock_t *)dlg->grp_lock_);
         tsx->mod_data[dlg->ua->id] = NULL;
     }
 
