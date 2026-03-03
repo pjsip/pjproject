@@ -1237,7 +1237,12 @@ static void tsx_on_destroy( void *arg )
 
     PJ_LOG(5,(tsx->obj_name, "Transaction destroyed!"));
 
-    /* Unchain and dec ref dialog group lock if tsx is associated with dialog */
+    /* Unchain and dec ref dialog group lock if tsx is associated with dialog.
+     * Note: Dialog is associated with tsx (via tsx->mod_data[ua->id] = dlg)
+     * only after the locks are successfully chained in sip_dialog.c. Therefore,
+     * if dlg != NULL here, it is safe to assume locks were chained and need
+     * to be unchained.
+     */
     ua = pjsip_ua_instance();
     if (ua) {
         dlg = (pjsip_dialog*) tsx->mod_data[ua->id];
