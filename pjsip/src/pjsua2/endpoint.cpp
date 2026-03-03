@@ -1240,22 +1240,38 @@ pj_status_t AuthChallenge::respond()
         }
         sess = auth_sess_;  tok = token_;
         rd = cloned_rdata_;  td = tdata_;
-        /* Release PJSUA_LOCK before reinit/send to prevent lock-order-
-         * inversion with tsx grp_lock (see pjsip_regc_send which does
-         * the same with regc->lock).
-         */
-        PJSUA_UNLOCK();
     } else {
         if (!param_) return PJ_EINVALIDOP;
         sess = param_->auth_sess;  tok = param_->token;
         rd = (pjsip_rx_data*)param_->rdata;  td = param_->tdata;
     }
 
+    /* Call reinit_req while still holding PJSUA_LOCK (deferred path) so
+     * that a concurrent pjsua_acc_del() cannot zero the auth session.
+     * reinit_req does not acquire tsx grp_lock, so no lock-order issue.
+     */
     pjsip_tx_data *new_tdata = NULL;
     pj_status_t status = pjsip_auth_clt_reinit_req(sess, rd, td, &new_tdata);
-    if (status == PJ_SUCCESS && new_tdata)
+
+    /* Release PJSUA_LOCK before send/abandon to prevent lock-order-
+     * inversion with tsx grp_lock (send_impl may call pjsip_regc_send
+     * which acquires regc grp_lock, while SIP callbacks acquire
+     * tsx grp_lock then PJSUA_LOCK — opposite order).
+     */
+    if (deferred_)
+        PJSUA_UNLOCK();
+
+    if (status == PJ_SUCCESS && new_tdata) {
         status = pjsip_auth_clt_async_send_req(sess, tok, new_tdata);
-    else {
+        if (status != PJ_SUCCESS) {
+            /* send_req may fail without consuming the token (e.g. account
+             * deleted between unlock and send) — abandon to release the
+             * token's grp_lock reference.  If the token was already
+             * consumed, abandon will harmlessly return PJ_EINVAL.
+             */
+            pjsip_auth_clt_async_abandon(sess, tok);
+        }
+    } else {
         pjsip_auth_clt_async_abandon(sess, tok);
         if (status == PJ_SUCCESS)
             status = PJ_EINVALIDOP;
@@ -1315,13 +1331,21 @@ pj_status_t AuthChallenge::abandon()
     if (deferred_) {
         PJSUA_LOCK();
         if (!pjsua_acc_is_valid(acc_id_)) {
+            /* Account deleted — skip abandon.  The token's grp_lock ref
+             * will leak, but calling abandon would dereference user_data
+             * (e.g. regc) which has already been destroyed by
+             * pjsua_acc_del().  A proper fix requires pjsua_acc_del()
+             * to consume outstanding auth tokens before destruction.
+             */
             PJSUA_UNLOCK();
             consumed_ = true;
             return PJ_EINVALIDOP;
         }
         sess = auth_sess_;  tok = token_;
         /* Release PJSUA_LOCK before abandon to prevent lock-order
-         * inversion (same pattern as respond()).
+         * inversion — abandon_impl may call regc/inv callbacks that
+         * acquire tsx grp_lock, and SIP callbacks acquire tsx grp_lock
+         * then PJSUA_LOCK (opposite order).
          */
         PJSUA_UNLOCK();
     } else {

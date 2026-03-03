@@ -47,11 +47,18 @@ pj_bool_t pjsua_auth_on_challenge(
 
     PJ_UNUSED_ARG(sess);
 
-    /* Account may have been deleted between receiving the 401 and
-     * processing the auth challenge callback. Skip if invalid.
+    /* Hold PJSUA_LOCK while checking account validity and populating
+     * cb_param to prevent a concurrent pjsua_acc_del() from zeroing the
+     * account between the validity check and the data access (TOCTOU).
+     * Lock ordering is safe: callers hold at most tsx/dlg grp_lock, and
+     * the established order is grp_lock -> PJSUA_LOCK.
      */
-    if (!pjsua_acc_is_valid(acc_id))
+    PJSUA_LOCK();
+
+    if (!pjsua_acc_is_valid(acc_id)) {
+        PJSUA_UNLOCK();
         return PJ_FALSE;
+    }
 
     /* Determine call_id from rdata -> dialog -> mod_data */
     if (param->rdata) {
@@ -77,6 +84,15 @@ pj_bool_t pjsua_auth_on_challenge(
     cb_param.token     = token;
     cb_param.rdata     = param->rdata;
     cb_param.tdata     = param->tdata;
+
+    /* Release PJSUA_LOCK before the application callback to avoid
+     * blocking other PJSUA operations during potentially slow user code.
+     * If the account is deleted after this point, the downstream code
+     * handles it: respond() checks validity under lock for the deferred
+     * path, and reinit_req catches a zeroed session for the synchronous
+     * path.
+     */
+    PJSUA_UNLOCK();
 
     (*pjsua_var.ua_cfg.cb.on_auth_challenge)(&cb_param);
 

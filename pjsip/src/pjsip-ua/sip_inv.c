@@ -361,9 +361,12 @@ static void inv_bye_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
                                       void *user_data)
 {
     pjsip_inv_session *inv = (pjsip_inv_session *)user_data;
+    pjsip_event usr_event;
+
     PJ_UNUSED_ARG(auth_sess);
+    PJSIP_EVENT_INIT_USER(usr_event, NULL, NULL, NULL, NULL);
     inv_set_cause(inv, PJSIP_SC_OK, NULL);
-    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, NULL);
+    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, &usr_event);
 }
 
 /* Abandon callback for initial INVITE 401/407: terminate the session. */
@@ -372,9 +375,12 @@ static void inv_initial_invite_auth_abandon_impl(
                                       void *user_data)
 {
     pjsip_inv_session *inv = (pjsip_inv_session *)user_data;
+    pjsip_event usr_event;
+
     PJ_UNUSED_ARG(auth_sess);
+    PJSIP_EVENT_INIT_USER(usr_event, NULL, NULL, NULL, NULL);
     inv_set_cause(inv, PJSIP_SC_UNAUTHORIZED, NULL);
-    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, NULL);
+    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, &usr_event);
 }
 
 /*
