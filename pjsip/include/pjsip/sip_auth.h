@@ -805,7 +805,7 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_abandon(
                                     void *token);
 
 /**
- * @}  /* End of PJSIP_AUTH_ASYNC group */
+ * @}
  */
 
 
