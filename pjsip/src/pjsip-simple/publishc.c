@@ -593,6 +593,10 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     /* No need to call callback as it should have been called */
 }
 
+/* Async auth send callback: resend the authenticated PUBLISH request.
+ * user_data points to pjsip_publishc*.  No lock is held by the caller
+ * (publishc does not use dialog-based locking).
+ */
 static pj_status_t pubc_async_auth_send_impl(
                                 pjsip_auth_clt_sess *auth_sess,
                                 void *user_data,
@@ -603,6 +607,9 @@ static pj_status_t pubc_async_auth_send_impl(
     return pjsip_publishc_send(pubc, tdata);
 }
 
+/* Async auth abandon callback: notify the app that PUBLISH auth failed.
+ * user_data points to pjsip_publishc*.  No lock is held by the caller.
+ */
 static void pubc_async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
                                          void *user_data)
 {
@@ -643,6 +650,11 @@ static void tsx_callback(void *token, pjsip_event *event)
         pjsip_tx_data *tdata;
         pjsip_auth_clt_async_on_chal_param chal_param;
 
+        /* Per-challenge token allocated from tsx->pool, kept alive
+         * by the grp_lock ref until consumed (send or abandon).
+         * No lock is held here — publishc uses endpoint-level
+         * send_request, not dialog-based locking.
+         */
         {
             pjsip_auth_clt_async_impl_token *auth_token;
             auth_token = PJ_POOL_ZALLOC_T(tsx->pool,

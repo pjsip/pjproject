@@ -601,6 +601,9 @@ static void evsub_destroy( pjsip_evsub *sub )
     pj_grp_lock_dec_ref(sub->grp_lock);
 }
 
+/* Async auth send callback: resend the authenticated request via dialog.
+ * user_data points to pjsip_evsub*.  No lock is held by the caller.
+ */
 static pj_status_t evsub_async_auth_send_impl(
                                 pjsip_auth_clt_sess *auth_sess,
                                 void *user_data,
@@ -611,6 +614,9 @@ static pj_status_t evsub_async_auth_send_impl(
     return pjsip_dlg_send_request(sub->dlg, tdata, -1, NULL);
 }
 
+/* Async auth abandon callback: terminate the subscription.
+ * user_data points to pjsip_evsub*.  No lock is held by the caller.
+ */
 static void evsub_async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
                                           void *user_data)
 {

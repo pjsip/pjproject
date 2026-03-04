@@ -2286,6 +2286,9 @@ typedef struct pjsua_callback
      * If this callback is not set, the library will handle authentication
      * automatically using the configured credentials (synchronous path).
      *
+     * Note: this callback is invoked from the SIP worker thread.
+     * PJSUA_LOCK is NOT held during the callback.
+     *
      * @param param     The callback parameters.
      */
     void (*on_auth_challenge)(pjsua_on_auth_challenge_param *param);
@@ -4914,14 +4917,20 @@ typedef struct pjsua_acc_config
 
     /**
      * Use a shared authorization session within this account.
-     * This will use the accounts credentials on outgoing requests,
-     * so that less 401/407 Responses will be returned.
+     * This will use the account's credentials on outgoing requests,
+     * so that fewer 401/407 responses will be returned.
+     *
+     * When the \a on_auth_challenge callback is set, the shared session
+     * is also used as the auth session passed to the callback, regardless
+     * of this setting.
      *
      * Needs PJSIP_AUTH_AUTO_SEND_NEXT and PJSIP_AUTH_HEADER_CACHING
      * enabled to work properly, and also will grow usage of the used pool for
      * the cached headers.
      *
      * Default: PJ_FALSE
+     *
+     * @see pjsua_callback::on_auth_challenge
      */
     pj_bool_t        use_shared_auth;
 

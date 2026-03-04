@@ -634,6 +634,29 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_set_parent(pjsip_auth_clt_sess *sess,
 
 
 /**
+ * @defgroup PJSIP_AUTH_ASYNC Asynchronous Client Authentication
+ * @ingroup PJSIP_AUTH_API
+ * @brief Non-blocking SIP authentication challenge handling.
+ *
+ * This API allows applications to handle 401/407 authentication challenges
+ * asynchronously rather than providing credentials synchronously.
+ *
+ * Typical workflow:
+ *  1. Call pjsip_auth_clt_async_configure() to enable async mode.
+ *  2. When a 401/407 response arrives, the application callback is invoked.
+ *  3. Return PJ_TRUE from the callback to take ownership of the challenge.
+ *  4. Later (or immediately), call pjsip_auth_clt_async_send_req() to
+ *     resend with credentials, or pjsip_auth_clt_async_abandon() to give up.
+ *  5. Returning PJ_FALSE from the callback falls back to the synchronous
+ *     pjsip_auth_clt_reinit_req() path.
+ *
+ * Thread safety: the token may be consumed (send/abandon) from any thread,
+ * provided the authentication session and its owner remain valid.  When a
+ * parent session is configured, the parent's lock serializes access.
+ * @{
+ */
+
+/**
  * This structure describes the parameter passed to the callback when
  * a challenge is received.
  */
@@ -780,6 +803,10 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_send_req(
 PJ_DECL(pj_status_t) pjsip_auth_clt_async_abandon(
                                     pjsip_auth_clt_sess *sess,
                                     void *token);
+
+/**
+ * @}  /* End of PJSIP_AUTH_ASYNC group */
+ */
 
 
 /**

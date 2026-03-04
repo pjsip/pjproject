@@ -1889,6 +1889,13 @@ struct OnSendRequestParam
  *
  * For async use, call defer() during the callback to obtain a heap-allocated
  * AuthChallenge that can be used later. The caller owns the returned object.
+ *
+ * Each AuthChallenge is single-use: once consumed by respond(), abandon(),
+ * or defer(), further calls return PJ_EINVALIDOP (defer() throws Error).
+ *
+ * Thread safety: on a deferred object, respond() and abandon() may be called
+ * from any thread. The non-deferred object must only be used during the
+ * onAuthChallenge() callback.
  */
 class AuthChallenge
 {
@@ -1903,10 +1910,14 @@ public:
     ~AuthChallenge();
 
     /**
-     * Defer for async handling. Clones rdata, captures auth_sess/token/tdata,
-     * sets handled=PJ_TRUE. Returns NEW heap-allocated AuthChallenge the
-     * caller owns. Original becomes invalid.
-     * Must be called during onAuthChallenge() callback.
+     * Defer the challenge for asynchronous handling. Creates a new
+     * heap-allocated AuthChallenge that can be used after the callback
+     * returns. The caller owns the returned object and must eventually
+     * call respond() or abandon() on it (or simply delete it, which
+     * auto-abandons).
+     *
+     * Must be called during the onAuthChallenge() callback. After this
+     * call, the original AuthChallenge becomes invalid.
      *
      * @return          New heap-allocated AuthChallenge (caller owns).
      */
@@ -1917,7 +1928,8 @@ public:
      * an authenticated request. Uses credentials currently configured
      * on the auth session.
      *
-     * @return          PJ_SUCCESS on success.
+     * @return          PJ_SUCCESS on success, or PJ_EINVALIDOP if already
+     *                  consumed by a prior respond()/abandon()/defer() call.
      */
     pj_status_t respond();
 
@@ -1936,7 +1948,8 @@ public:
      * Abandon the authentication challenge. The pending request will
      * not be resent.
      *
-     * @return          PJ_SUCCESS on success.
+     * @return          PJ_SUCCESS on success, or PJ_EINVALIDOP if already
+     *                  consumed by a prior respond()/abandon()/defer() call.
      */
     pj_status_t abandon();
 
