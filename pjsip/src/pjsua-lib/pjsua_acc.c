@@ -47,16 +47,26 @@ pj_bool_t pjsua_auth_on_challenge(
 
     PJ_UNUSED_ARG(sess);
 
-    /* Hold PJSUA_LOCK while checking account validity and populating
-     * cb_param to prevent a concurrent pjsua_acc_del() from zeroing the
-     * account between the validity check and the data access (TOCTOU).
-     * Lock ordering is safe: callers hold at most tsx/dlg grp_lock, and
-     * the established order is grp_lock -> PJSUA_LOCK.
+    /* Do NOT acquire PJSUA_LOCK here.  This callback is invoked with
+     * the transaction grp_lock held (pjsip_tsx_recv_msg -> state_handler
+     * -> regc_tsx_callback -> here), while pjsua_acc_del() holds
+     * PJSUA_LOCK (recursively via pjsua_acc_set_registration) and then
+     * acquires a tsx grp_lock through pjsip_regc_send ->
+     * pjsip_tsx_set_transport.  Acquiring PJSUA_LOCK here would create
+     * an ABBA lock-order inversion.
+     *
+     * This is safe without the lock because:
+     *  - pjsua_var.acc[] is a fixed-size static array; indexing is
+     *    always valid for a bounded acc_id.
+     *  - A racy read of the 'valid' flag can only produce a false
+     *    positive (proceed with a just-deleted account), which is
+     *    harmless: respond() rechecks validity under lock for the
+     *    deferred path, and reinit_req handles a zeroed auth session
+     *    for the synchronous path.
+     *  - &shared_auth_sess is a stable address (static array member).
+     *  - pjsua_var.mod.id is immutable after pjsua_init().
      */
-    PJSUA_LOCK();
-
     if (!pjsua_acc_is_valid(acc_id)) {
-        PJSUA_UNLOCK();
         return PJ_FALSE;
     }
 
@@ -84,15 +94,6 @@ pj_bool_t pjsua_auth_on_challenge(
     cb_param.token     = token;
     cb_param.rdata     = param->rdata;
     cb_param.tdata     = param->tdata;
-
-    /* Release PJSUA_LOCK before the application callback to avoid
-     * blocking other PJSUA operations during potentially slow user code.
-     * If the account is deleted after this point, the downstream code
-     * handles it: respond() checks validity under lock for the deferred
-     * path, and reinit_req catches a zeroed session for the synchronous
-     * path.
-     */
-    PJSUA_UNLOCK();
 
     (*pjsua_var.ua_cfg.cb.on_auth_challenge)(&cb_param);
 
