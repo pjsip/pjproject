@@ -1055,8 +1055,10 @@ static void transport_detach( pjmedia_transport *tp,
          * during its wait loop, causing a deadlock.
          *
          * It is safe to unlock here because:
-         * - Callbacks (rtp_cb/rtcp_cb) have been set to NULL above, so
-         *   any in-flight callback will be a no-op.
+         * - Callbacks (rtp_cb/rtp_cb2/rtcp_cb) have been set to NULL
+         *   above, so no new application callbacks will be invoked
+         *   after this point (although an in-flight callback that has
+         *   already copied the function pointer may still complete).
          * - pj_ioqueue_clear_key() handles its own locking internally.
          */
         pj_ioqueue_unlock_key(udp->rtcp_key);
