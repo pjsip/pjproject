@@ -30,12 +30,23 @@
  */
 
 #include <iostream>
-#include <cassert>
 #include <memory>
 
 #include "auth_challenge.hpp"
 
 #define THIS_FILE "auth_challenge.cpp"
+
+/* Always-active assertion (not compiled out by NDEBUG). */
+#define TEST_ASSERT(expr) \
+    do { \
+        if (!(expr)) { \
+            PJ_LOG(1,(THIS_FILE, "TEST ASSERT FAILED: %s (%s:%d)", \
+                      #expr, THIS_FILE, __LINE__)); \
+            pj_log_push_indent(); \
+            throw Error(PJ_EINVAL, "test assertion", \
+                        #expr, THIS_FILE, __LINE__); \
+        } \
+    } while (0)
 #define TEST_USER "pjsua2-auth-test"
 
 using namespace pj;
@@ -256,7 +267,7 @@ AuthChallengeTests::AuthChallengeTests()
 
         status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
                                               &g_mock_reg_mod);
-        assert(status == PJ_SUCCESS);
+        TEST_ASSERT(status == PJ_SUCCESS);
         (void)status;
     }
 
@@ -298,11 +309,11 @@ void AuthChallengeTests::immediateResponse()
 
     poll_events(30000);
 
-    assert(g_state.challengeReceived == true);
-    assert(g_state.regDone == true);
-    assert(g_state.regCode == 200);
-    assert(g_mock_req_count >= 2);
-    assert(g_mock_auth_count >= 1);
+    TEST_ASSERT(g_state.challengeReceived == true);
+    TEST_ASSERT(g_state.regDone == true);
+    TEST_ASSERT(g_state.regCode == 200);
+    TEST_ASSERT(g_mock_req_count >= 2);
+    TEST_ASSERT(g_mock_auth_count >= 1);
 
     /* Disable mock registrar before destroying account so the
      * unregister doesn't trigger a 401 on a deleted account.
@@ -340,20 +351,20 @@ void AuthChallengeTests::deferredResponse()
             elapsed += 50;
         }
     }
-    assert(g_state.deferred != nullptr);
-    assert(g_state.deferred->isValid() == true);
+    TEST_ASSERT(g_state.deferred != nullptr);
+    TEST_ASSERT(g_state.deferred->isValid() == true);
 
     /* Now respond */
     pj_status_t status = g_state.deferred->respond();
-    assert(status == PJ_SUCCESS);
-    assert(g_state.deferred->isValid() == false);
+    TEST_ASSERT(status == PJ_SUCCESS);
+    TEST_ASSERT(g_state.deferred->isValid() == false);
     g_state.deferred.reset();
 
     poll_events(10000);
 
-    assert(g_state.regDone == true);
-    assert(g_state.regCode == 200);
-    assert(g_mock_auth_count >= 1);
+    TEST_ASSERT(g_state.regDone == true);
+    TEST_ASSERT(g_state.regCode == 200);
+    TEST_ASSERT(g_mock_auth_count >= 1);
 
     g_mock_enabled = PJ_FALSE;
     g_state.deferEnabled = false;
@@ -388,21 +399,21 @@ void AuthChallengeTests::deferredRespondWithCreds()
             elapsed += 50;
         }
     }
-    assert(g_state.deferred != nullptr);
-    assert(g_state.deferred->isValid() == true);
+    TEST_ASSERT(g_state.deferred != nullptr);
+    TEST_ASSERT(g_state.deferred->isValid() == true);
 
     /* Respond with credentials */
     AuthCredInfoVector creds;
     creds.push_back(AuthCredInfo("digest", "*", TEST_USER, 0, "secret"));
     pj_status_t status = g_state.deferred->respond(creds);
-    assert(status == PJ_SUCCESS);
+    TEST_ASSERT(status == PJ_SUCCESS);
     g_state.deferred.reset();
 
     poll_events(10000);
 
-    assert(g_state.regDone == true);
-    assert(g_state.regCode == 200);
-    assert(g_mock_auth_count >= 1);
+    TEST_ASSERT(g_state.regDone == true);
+    TEST_ASSERT(g_state.regCode == 200);
+    TEST_ASSERT(g_mock_auth_count >= 1);
 
     g_mock_enabled = PJ_FALSE;
     g_state.deferEnabled = false;
@@ -442,7 +453,7 @@ void AuthChallengeTests::deferredAbandon()
             elapsed += 50;
         }
     }
-    assert(g_state.deferred != nullptr);
+    TEST_ASSERT(g_state.deferred != nullptr);
 
     /* To abandon without crashing: delete the account first (which
      * invalidates it and destroys the regc/auth token), then destroy
@@ -455,7 +466,7 @@ void AuthChallengeTests::deferredAbandon()
     g_mock_enabled = PJ_FALSE;
     g_state.deferEnabled = false;
 
-    assert(g_state.challengeReceived == true);
+    TEST_ASSERT(g_state.challengeReceived == true);
 
     acc.reset();
     pjsua_handle_events(500);
@@ -495,8 +506,8 @@ void AuthChallengeTests::accountDeleteWithPending()
             elapsed += 50;
         }
     }
-    assert(g_state.deferred != nullptr);
-    assert(g_state.deferred->isValid() == true);
+    TEST_ASSERT(g_state.deferred != nullptr);
+    TEST_ASSERT(g_state.deferred->isValid() == true);
 
     /* Delete the account while deferred state is outstanding.
      * Disable mock registrar to prevent 401 on unregister (which would
@@ -513,7 +524,7 @@ void AuthChallengeTests::accountDeleteWithPending()
      * is gone. isValid() should return false because the account
      * has been deleted.
      */
-    assert(g_state.deferred->isValid() == false);
+    TEST_ASSERT(g_state.deferred->isValid() == false);
 
     /* Destroy the deferred state — this exercises the destructor's
      * TRY_LOCK + is_valid guard path. Must not crash.

@@ -1309,7 +1309,7 @@ pj_status_t AuthChallenge::respond(const AuthCredInfoVector &creds)
     if (!sess) return PJ_EINVALIDOP;
 
     /* Apply provided credentials to the auth session */
-    pjsip_cred_info ci[8];
+    pjsip_cred_info ci[PJSUA_ACC_MAX_PROXIES];
     unsigned count = (unsigned)creds.size();
     if (count > PJ_ARRAY_SIZE(ci))
         count = PJ_ARRAY_SIZE(ci);

@@ -924,6 +924,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
 
     sess->parent = NULL;
     sess->lock = NULL;
+    sess->async_opt = NULL;
     return PJ_SUCCESS;
 }
 
@@ -1865,7 +1866,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_async_configure(
                                     pjsip_auth_clt_sess *sess,
                                     const pjsip_auth_clt_async_setting *opt)
 {
-    PJ_ASSERT_RETURN(sess && opt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sess && opt && opt->cb, PJ_EINVAL);
     DO_ON_PARENT_LOCKED(sess, pjsip_auth_clt_async_configure(sess->parent,
                         opt));
 
