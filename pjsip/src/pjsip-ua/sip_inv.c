@@ -4848,6 +4848,12 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
         pjsip_auth_clt_async_on_chal_param chal_param;
         struct tsx_inv_data *tsx_inv_data;
 
+        /* Clear invite_tsx so pjsip_inv_send_msg() can accept the
+         * retried INVITE.  Note: if another re-INVITE arrives before
+         * the deferred send_impl fires, invite_tsx will be overwritten.
+         * This is acceptable because tsx_inv_data->retrying prevents
+         * the old tsx from affecting the inv state machine.
+         */
         if (tsx->method.id == PJSIP_INVITE_METHOD)
             inv->invite_tsx = NULL;
 

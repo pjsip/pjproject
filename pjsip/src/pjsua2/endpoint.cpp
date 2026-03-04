@@ -1184,9 +1184,15 @@ AuthChallenge::~AuthChallenge()
                 tok = token_;
             }
             PJSUA_UNLOCK();
+        } else {
+            /* Try-lock failed (e.g. GC finalizer during shutdown).
+             * Still abandon the token to release its grp_lock ref.
+             * The signature check inside async_abandon provides safety
+             * if the token was already consumed.
+             */
+            sess = auth_sess_;
+            tok = token_;
         }
-        /* If try-lock fails (e.g. GC finalizer during shutdown),
-         * skip abandon — the account/pool is being torn down anyway. */
         if (sess && tok)
             pjsip_auth_clt_async_abandon(sess, tok);
     }

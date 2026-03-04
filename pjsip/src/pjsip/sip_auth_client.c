@@ -151,6 +151,11 @@ const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
 
 /* Signature of async auth token, used to detect double-use (zeroed on
  * consumption) and provide minimal protection against invalid token pointers.
+ *
+ * Note: the check-then-clear of the signature in send_req/abandon is not
+ * atomic, but this is safe under PJSIP's single-worker-thread model.  When
+ * a parent session lock is configured (via DO_ON_PARENT_LOCKED), the lock
+ * serializes concurrent access.
  */
 #define AUTH_TOKEN_SIGNATURE    "AUTH"
 
@@ -1008,6 +1013,14 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
 
         if (status != PJ_SUCCESS)
             return status;
+    }
+
+    /* Clone async auth setting so forked dialogs inherit the
+     * async callback configuration.
+     */
+    if (rhs->async_opt) {
+        sess->async_opt = PJ_POOL_ALLOC_T(pool, pjsip_auth_clt_async_setting);
+        *sess->async_opt = *rhs->async_opt;
     }
 
     /* TODO note:

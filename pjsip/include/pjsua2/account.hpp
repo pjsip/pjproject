@@ -1942,7 +1942,12 @@ public:
 
     /**
      * Check whether this challenge object is still valid (not yet
-     * consumed by respond() or abandon()).
+     * consumed by respond() or abandon(), and the associated account
+     * is still active).
+     *
+     * Note: this is an advisory check without synchronization.
+     * The result may be stale if another thread concurrently
+     * deletes the account.
      *
      * @return          true if valid.
      */
