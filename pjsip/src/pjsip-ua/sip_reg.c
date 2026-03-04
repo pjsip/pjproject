@@ -1121,6 +1121,7 @@ static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
     status = pjsip_regc_send(regc, tdata);
     if (status != PJ_SUCCESS) {
         char errmsg[PJ_ERR_MSG_SIZE];
+        pj_bool_t is_unreg = (regc->current_op == REGC_UNREGISTERING);
         pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
         /* call_callback() is invoked here without holding regc->lock.
          * This function is called either from within the async challenge
@@ -1129,7 +1130,7 @@ static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
          * and consistent with the rest of the codebase.
          */
         call_callback(regc, status, 0, &reason, NULL, NOEXP, 0, NULL,
-                      PJ_FALSE);
+                      is_unreg);
     }
 
     return status;
@@ -1141,13 +1142,14 @@ static void async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
                                     void *user_data)
 {
     pjsip_regc *regc = (pjsip_regc*)user_data;
+    pj_bool_t is_unreg = (regc->current_op == REGC_UNREGISTERING);
     pj_str_t reason = { "Authentication abandoned", 24 };
 
     PJ_UNUSED_ARG(auth_sess);
 
     /* Called without regc->lock held (same convention as send_impl). */
     call_callback(regc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
-                  NULL, NOEXP, 0, NULL, PJ_FALSE);
+                  NULL, NOEXP, 0, NULL, is_unreg);
 }
 
 
@@ -1231,9 +1233,12 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
         pj_bool_t is_unreg;
         pjsip_auth_clt_async_on_chal_param chal_param;
 
-        /* reset current op */
+        /* Capture is_unreg but keep current_op alive so that
+         * async auth callbacks can read it if needed.  It will be
+         * reset to REGC_IDLE below (sync fallback) or by
+         * pjsip_regc_send() on the async success path.
+         */
         is_unreg = (regc->current_op == REGC_UNREGISTERING);
-        regc->current_op = REGC_IDLE;
 
         if (update_contact) {
             pjsip_msg *msg;
@@ -1310,8 +1315,10 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
         }
         if (status != PJ_SUCCESS) {
             /* Application does not handle the authentication, so let's
-             * handle it here now.
+             * handle it here now.  Reset current_op now since we deferred
+             * it above for the async path.
              */
+            regc->current_op = REGC_IDLE;
 
             /* Reinit request with auth response. */
             status = pjsip_auth_clt_reinit_req( &regc->auth_sess,

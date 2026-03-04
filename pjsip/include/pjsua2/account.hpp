@@ -1922,8 +1922,10 @@ public:
     pj_status_t respond();
 
     /**
-     * Respond with provided credentials. Sets them on the auth session
-     * before building the authenticated request.
+     * Respond with provided credentials. Sets them on the account-level
+     * shared auth session before building the authenticated request.
+     * Note that this permanently replaces the account's credentials,
+     * affecting all subsequent authentication for the account.
      *
      * @param creds     Credentials to set on the auth session.
      * @return          PJ_SUCCESS on success.

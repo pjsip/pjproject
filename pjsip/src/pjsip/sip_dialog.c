@@ -2240,6 +2240,11 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
                                     pjsip_auth_clt_async_impl_token);
                 auth_token->user_data    = dlg;
                 auth_token->send_impl    = &dlg_async_auth_send_impl;
+                /* abandon_impl is NULL: dialog-level send is stateless
+                 * (just forwards to pjsip_dlg_send_request), so no
+                 * cleanup is needed on abandon.  grp_lock dec_ref
+                 * handles the token memory.
+                 */
                 auth_token->grp_lock     = tsx->grp_lock;
                 pj_grp_lock_add_ref(tsx->grp_lock);
 

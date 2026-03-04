@@ -1857,6 +1857,12 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
                 return;
             }
 
+            /* Dialog grp_lock is held by the caller
+             * (pjsip_dlg_on_tsx_state).  We do NOT release it here
+             * because grp_lock is recursive (sync send from callback
+             * works) and releasing a lock held by a parent caller
+             * risks state changes from another thread.
+             */
             {
                 pjsip_auth_clt_async_impl_token *token;
                 token = PJ_POOL_ZALLOC_T(tsx->pool,
@@ -2304,6 +2310,9 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
             if (tsx->last_tx->auth_retry)
                 return;
 
+            /* Dialog grp_lock held by caller; see SUBSCRIBE handler
+             * comment above for locking rationale.
+             */
             {
                 pjsip_auth_clt_async_impl_token *token;
                 token = PJ_POOL_ZALLOC_T(tsx->pool,

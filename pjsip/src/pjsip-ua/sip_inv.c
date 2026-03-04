@@ -4112,6 +4112,12 @@ static void inv_handle_bye_response( pjsip_inv_session *inv,
         pjsip_auth_clt_async_on_chal_param chal_param;
         struct tsx_inv_data *tsx_inv_data;
 
+        /* Dialog grp_lock is held by the caller (pjsip_dlg_on_tsx_state).
+         * We do NOT release it here because:
+         * (a) grp_lock is recursive, so sync send from callback works, and
+         * (b) releasing a lock held by a parent caller risks state changes
+         *     from another thread processing a different event on this dialog.
+         */
         {
             pjsip_auth_clt_async_impl_token *token;
             token = PJ_POOL_ZALLOC_T(tsx->pool,
@@ -4322,7 +4328,10 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
         pjsip_tx_data *tdata;
         pjsip_auth_clt_async_on_chal_param chal_param;
 
-        /* UPDATE auth: abandoning does not terminate the session. */
+        /* UPDATE auth: abandon_impl is NULL because abandoning a
+         * mid-dialog UPDATE does not terminate the session.
+         * Dialog grp_lock is held by the caller; see BYE handler comment.
+         */
         {
             pjsip_auth_clt_async_impl_token *token;
             token = PJ_POOL_ZALLOC_T(tsx->pool,
@@ -4842,7 +4851,10 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
         if (tsx->method.id == PJSIP_INVITE_METHOD)
             inv->invite_tsx = NULL;
 
-        /* In-dialog request auth: abandoning does not terminate session. */
+        /* In-dialog request auth: abandon_impl is NULL because
+         * abandoning a mid-dialog request does not terminate the session.
+         * Dialog grp_lock is held by the caller; see BYE handler comment.
+         */
         {
             pjsip_auth_clt_async_impl_token *token;
             token = PJ_POOL_ZALLOC_T(tsx->pool,
@@ -4962,7 +4974,9 @@ static void handle_uac_call_rejection(pjsip_inv_session *inv, pjsip_event *e)
         pjsip_tx_data *tdata;
         pjsip_auth_clt_async_on_chal_param chal_param;
 
-        /* Initial INVITE auth: abandoning terminates the session. */
+        /* Initial INVITE auth: abandoning terminates the session.
+         * Dialog grp_lock is held by the caller; see BYE handler comment.
+         */
         {
             pjsip_auth_clt_async_impl_token *token;
             token = PJ_POOL_ZALLOC_T(tsx->pool,
