@@ -1264,7 +1264,9 @@ typedef struct pjsua_on_auth_challenge_param
     pjsua_call_id               call_id;
 
     /**
-     * The client authentication session that received the challenge.
+     * The account-level shared authentication session.
+     * Use this when calling pjsip_auth_clt_async_send_req() or
+     * pjsip_auth_clt_async_abandon().
      */
     pjsip_auth_clt_sess        *auth_sess;
 
@@ -1283,14 +1285,15 @@ typedef struct pjsua_on_auth_challenge_param
 
     /**
      * The original request that was challenged. Needed to build the
-     * authenticated retry. Only valid during the callback.
+     * authenticated retry. Only valid during the callback unless the
+     * application extends its lifetime using pjsip_tx_data_add_ref().
      */
     pjsip_tx_data              *tdata;
 
     /**
-     * Output: set to PJ_TRUE if the application handles the challenge
-     * (will call pjsip_auth_clt_async_send_req() or
-     * pjsip_auth_clt_async_abandon() later).
+     * Output: set to PJ_TRUE if the application handles the challenge.
+     * The application MUST then eventually call
+     * pjsip_auth_clt_async_send_req() or pjsip_auth_clt_async_abandon().
      * Default PJ_FALSE means the library handles authentication
      * via the synchronous path.
      */
@@ -2267,14 +2270,23 @@ typedef struct pjsua_callback
     pjmedia_vid_conf_op_cb on_vid_conf_op_completed;
 
     /**
-     * This callback is called when a 401/407 challenge is received and
-     * asynchronous authentication handling is desired. The application
-     * should set up credentials and call pjsip_auth_clt_async_send_req()
-     * to resend the request with authentication, or call
-     * pjsip_auth_clt_async_abandon() to give up.
+     * This callback is called when a 401/407 challenge is received.
+     * It may be triggered by any outgoing SIP request that receives a
+     * 401/407 response, including REGISTER, INVITE, PUBLISH, MESSAGE, etc.
+     *
+     * To handle the challenge, the application should set
+     * \a param->handled to PJ_TRUE and later call
+     * pjsip_auth_clt_async_send_req() to resend with authentication,
+     * or pjsip_auth_clt_async_abandon() to give up. Both may be called
+     * synchronously within this callback or deferred.
+     *
+     * If \a param->handled is left as PJ_FALSE (the default), the library
+     * falls back to synchronous authentication using configured credentials.
      *
      * If this callback is not set, the library will handle authentication
      * automatically using the configured credentials (synchronous path).
+     *
+     * @param param     The callback parameters.
      */
     void (*on_auth_challenge)(pjsua_on_auth_challenge_param *param);
 

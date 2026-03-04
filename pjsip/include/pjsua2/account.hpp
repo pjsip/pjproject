@@ -1894,6 +1894,12 @@ class AuthChallenge
 {
 public:
     AuthChallenge();
+
+    /**
+     * Destructor. If this is a deferred challenge that was never consumed
+     * by respond() or abandon(), destruction will auto-abandon the pending
+     * authentication and release associated resources.
+     */
     ~AuthChallenge();
 
     /**
@@ -2467,11 +2473,21 @@ public:
 
     /**
      * Called when a 401/407 challenge is received. Override to handle
-     * authentication asynchronously. Call prm.challenge.respond() to
-     * resend with authentication, or prm.challenge.abandon() to give up.
-     * If neither is called, the library handles it automatically.
+     * authentication challenges. Three usage patterns are supported:
+     *
+     * - Synchronous: call prm.challenge.respond() or
+     *   prm.challenge.respond(creds) directly within this callback.
+     * - Asynchronous: call prm.challenge.defer() to obtain a
+     *   heap-allocated AuthChallenge, then call respond() or abandon()
+     *   on it later from any context. The caller owns the returned object.
+     * - Default: if neither respond(), abandon(), nor defer() is called,
+     *   the library handles authentication automatically using configured
+     *   credentials.
      *
      * @param prm       Callback parameter.
+     *
+     * @see AuthChallenge
+     * @see OnAuthChallengeParam
      */
     virtual void onAuthChallenge(OnAuthChallengeParam &prm)
     { PJ_UNUSED_ARG(prm); }

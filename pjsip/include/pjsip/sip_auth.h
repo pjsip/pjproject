@@ -675,9 +675,13 @@ typedef struct pjsip_auth_clt_async_on_chal_param
  * @param param         The callback parameter containing the original request
  *                      and the response with the challenge.
  *
- * @return              PJ_TRUE if the application handles the challenge
- *                      (will call pjsip_auth_clt_async_send_req() or
- *                      pjsip_auth_clt_async_abandon() later).
+ * @return              PJ_TRUE if the application handles the challenge.
+ *                      The application MUST then eventually call
+ *                      pjsip_auth_clt_async_send_req() or
+ *                      pjsip_auth_clt_async_abandon(); failure to do so
+ *                      will leak the token's group lock reference.
+ *                      It is safe to call either function synchronously
+ *                      from within the callback itself.
  *                      PJ_FALSE to let the library handle authentication
  *                      via the synchronous path.
  */
@@ -733,6 +737,10 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_configure(
  * only used when the application has configured the authentication client to
  * handle authentication manually.
  *
+ * The token is single-use: after this call (regardless of success or
+ * failure), the token is invalidated and any subsequent call with the same
+ * token will return PJ_EINVAL.
+ *
  * If application sends the new request with authentication response
  * from outside the callback, application must maintain the validity of the
  * owner of the authentication session. For example, if the authentication
@@ -744,7 +752,8 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_configure(
  * @param token         The token associated with the asynchronous request.
  * @param new_request   The new request to be sent.
  *
- * @return              PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS on success, or PJ_EINVAL if the token
+ *                      has already been consumed or is invalid.
  */
 PJ_DECL(pj_status_t) pjsip_auth_clt_async_send_req(
                                     pjsip_auth_clt_sess *sess,
@@ -758,7 +767,7 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_async_send_req(
  * pjsip_auth_clt_async_send_req() with the same token will return PJ_EINVAL.
  *
  * If the token's abandon_impl field is non-NULL it will be invoked so that
- * the implementor can perform cleanup (e.g. terminate the SIP session or
+ * the SIP module can perform cleanup (e.g. terminate the SIP session or
  * invoke its own completion callback with an error code).
  *
  * @param sess          The client authentication session.
@@ -1026,13 +1035,14 @@ PJ_DECL(pj_status_t) pjsip_auth_create_digest2(pj_str_t *result,
 
 /*
  **********************************************************************
- * Internal types and functions for asynchronous client authentication
- * implementor.
+ * Internal types and functions for asynchronous client authentication,
+ * used by SIP modules (dialog, regc, inv, evsub, publishc, im) to
+ * integrate async auth into their 401/407 handling.
  **********************************************************************
  */
 
 /**
- * Asynchronous client authentication implementor API.
+ * @internal Internal integration API for async client authentication.
  *
  * Callback for sending asynchronous client authentication.
  *
@@ -1049,10 +1059,10 @@ typedef pj_status_t pjsip_auth_clt_async_impl_send(
                                     pjsip_tx_data *new_request);
 
 /**
- * Asynchronous client authentication implementor API.
+ * @internal Internal integration API for async client authentication.
  *
  * Optional callback invoked when the application abandons the pending
- * challenge (by calling pjsip_auth_clt_async_abandon()).  The implementor
+ * challenge (by calling pjsip_auth_clt_async_abandon()).  The SIP module
  * should treat the in-flight request as having failed and perform any
  * required cleanup, e.g. terminate the session or invoke its own
  * completion callback with an error code.
@@ -1064,16 +1074,17 @@ typedef void pjsip_auth_clt_async_impl_abandon(
                                     pjsip_auth_clt_sess *sess,
                                     void *user_data);
 
-/*
- * Asynchronous client authentication implementor API.
+/**
+ * @internal Internal integration API for async client authentication.
  *
- * Token for sending asynchronous client authentication.
+ * Token for sending asynchronous client authentication. The signature
+ * field is managed by the core auth layer (set on creation, zeroed on
+ * consumption) and MUST NOT be modified by integration modules.
  */
 typedef struct pjsip_auth_clt_async_impl_token
 {
     /**
-     * User data to be passed on to the implementor when sending the new
-     * request with authentication response.
+     * User data to be passed to the send_impl/abandon_impl callbacks.
      */
     void                                *user_data;
 
@@ -1103,18 +1114,23 @@ typedef struct pjsip_auth_clt_async_impl_token
 } pjsip_auth_clt_async_impl_token;
 
 
-/*
- * Asynchronous client authentication implementor API.
+/**
+ * @internal Internal integration API for async client authentication.
  *
- * Notify the client authentication session that a challenge is received,
- * it will invoke callback to application if asynchronous client
- * authentication is configured.
+ * Notify the client authentication session that a challenge is received.
+ * If asynchronous authentication is configured, this invokes the
+ * application callback. The application may handle the challenge
+ * (callback returns PJ_TRUE) or decline (returns PJ_FALSE).
  *
  * @param sess          The client authentication session.
  * @param token         The asynchronous client authentication token.
  * @param param         The challenge parameters (rdata and tdata).
  *
- * @return              PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS if the application accepted the challenge,
+ *                      PJ_EIGNORED if the application declined (returned
+ *                      PJ_FALSE) and the caller should fall back to the
+ *                      synchronous pjsip_auth_clt_reinit_req() path,
+ *                      or other error on failure.
  */
 PJ_DECL(pj_status_t) pjsip_auth_clt_async_impl_on_challenge(
                             pjsip_auth_clt_sess* sess,

@@ -149,8 +149,8 @@ const pjsip_auth_algorithm pjsip_auth_algorithms[] = {
     } while(0)
 
 
-/* Signature of async auth token, best effort to verify the validity of
- * the implementor.
+/* Signature of async auth token, used to detect double-use (zeroed on
+ * consumption) and provide minimal protection against invalid token pointers.
  */
 #define AUTH_TOKEN_SIGNATURE    "AUTH"
 
