@@ -27,6 +27,7 @@
 /* Global PJSIP endpoint and memory pool */
 pjsip_endpoint *endpt;
 pj_caching_pool caching_pool;
+pjsip_transport *loop_transport;
 
 #define POOL_SIZE 8000
 #define PJSIP_TEST_MEM_SIZE (2*1024*1024)
@@ -61,6 +62,7 @@ static void test_uas_transaction(pj_pool_t *pool, const uint8_t *data, size_t si
     pj_bzero(&rdata, sizeof(rdata));
     rdata.msg_info.msg = msg;
     rdata.tp_info.pool = pool;
+    rdata.tp_info.transport = loop_transport;
     
     /* Populate message info fields from parsed message headers */
     rdata.msg_info.via = (pjsip_via_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_VIA, NULL);
@@ -88,19 +90,21 @@ static void test_uas_transaction(pj_pool_t *pool, const uint8_t *data, size_t si
 
     /* Force transaction termination to prevent leaks */
     if (tsx->state != PJSIP_TSX_STATE_TERMINATED)
-        pjsip_tsx_terminate(tsx, 500);
+        pjsip_tsx_terminate_async(tsx, 500);
 }
 
 /* Test client-side (UAC) transaction creation and sending */
 static void test_uac_transaction(pj_pool_t *pool, const uint8_t *data, size_t size)
 {
-    if (size < 20)
+    if (size < 25)
         return;
 
     /* Extract fuzzer input as SIP URIs */
     pj_str_t target = {(char*)data, size > 100 ? 100 : (pj_ssize_t)size};
-    pj_str_t from = {(char*)data + 10, size > 110 ? 50 : (pj_ssize_t)(size - 10)};
-    pj_str_t to = {(char*)data + 15, size > 115 ? 50 : (pj_ssize_t)(size - 15)};
+    pj_ssize_t from_len = (size > 110) ? 50 : ((size > 10) ? (pj_ssize_t)(size - 10) : 0);
+    pj_ssize_t to_len = (size > 115) ? 50 : ((size > 15) ? (pj_ssize_t)(size - 15) : 0);
+    pj_str_t from = {(char*)data + 10, from_len};
+    pj_str_t to = {(char*)data + 15, to_len};
 
     /* Create outgoing request message */
     pjsip_tx_data *tdata = NULL;
@@ -118,7 +122,7 @@ static void test_uac_transaction(pj_pool_t *pool, const uint8_t *data, size_t si
         
         /* Force transaction termination to prevent leaks */
         if (tsx->state != PJSIP_TSX_STATE_TERMINATED)
-            pjsip_tsx_terminate(tsx, 408);
+            pjsip_tsx_terminate_async(tsx, 408);
     }
     
     /* Release transmit data buffer */
@@ -133,8 +137,10 @@ static void test_create_request(pj_pool_t *pool, const uint8_t *data, size_t siz
 
     /* Extract URIs from fuzzer input */
     pj_str_t uri = {(char*)data, size > 100 ? 100 : (pj_ssize_t)size};
-    pj_str_t from = {(char*)data + 10, size > 110 ? 50 : (pj_ssize_t)(size - 10)};
-    pj_str_t to = {(char*)data + 20, size > 120 ? 50 : (pj_ssize_t)(size - 20)};
+    pj_ssize_t from_len = (size > 110) ? 50 : ((size > 10) ? (pj_ssize_t)(size - 10) : 0);
+    pj_ssize_t to_len = (size > 120) ? 50 : ((size > 20) ? (pj_ssize_t)(size - 20) : 0);
+    pj_str_t from = {(char*)data + 10, from_len};
+    pj_str_t to = {(char*)data + 20, to_len};
 
     pjsip_tx_data *tdata = NULL;
     pjsip_endpt_create_request(endpt, &pjsip_options_method,
@@ -163,15 +169,18 @@ static void test_create_response(pj_pool_t *pool, const uint8_t *data, size_t si
     pj_bzero(&rdata, sizeof(rdata));
     rdata.msg_info.msg = msg;
     rdata.tp_info.pool = pool;
+    rdata.tp_info.transport = loop_transport;
     
     /* Populate message info fields from parsed message headers */
     rdata.msg_info.via = (pjsip_via_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_VIA, NULL);
     rdata.msg_info.from = (pjsip_from_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_FROM, NULL);
     rdata.msg_info.to = (pjsip_to_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
     rdata.msg_info.cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
+    rdata.msg_info.cid = (pjsip_cid_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
     
     /* Skip if required headers are missing */
-    if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to || !rdata.msg_info.cseq)
+    if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to ||
+        !rdata.msg_info.cseq || !rdata.msg_info.cid)
         return;
 
     pjsip_tx_data *tdata = NULL;
@@ -185,9 +194,12 @@ static void test_create_ack_cancel(pj_pool_t *pool, const uint8_t *data, size_t 
     if (size < 30)
         return;
 
+    /* Extract URIs, ensuring no buffer over-read */
     pj_str_t uri = {(char*)data, size > 100 ? 100 : (pj_ssize_t)size};
-    pj_str_t from = {(char*)data + 10, size > 110 ? 50 : (pj_ssize_t)(size - 10)};
-    pj_str_t to = {(char*)data + 20, size > 120 ? 50 : (pj_ssize_t)(size - 20)};
+    pj_ssize_t from_len = (size > 110) ? 50 : ((size > 10) ? (pj_ssize_t)(size - 10) : 0);
+    pj_ssize_t to_len = (size > 120) ? 50 : ((size > 20) ? (pj_ssize_t)(size - 20) : 0);
+    pj_str_t from = {(char*)data + 10, from_len};
+    pj_str_t to = {(char*)data + 20, to_len};
 
     pjsip_tx_data *invite = NULL;
     if (pjsip_endpt_create_request(endpt, &pjsip_invite_method,
@@ -212,8 +224,10 @@ static void test_process_route_set(pj_pool_t *pool, const uint8_t *data, size_t 
 
     /* Extract URIs from fuzzer input */
     pj_str_t uri = {(char*)data, size > 100 ? 100 : (pj_ssize_t)size};
-    pj_str_t from = {(char*)data + 10, size > 110 ? 50 : (pj_ssize_t)(size - 10)};
-    pj_str_t to = {(char*)data + 20, size > 120 ? 50 : (pj_ssize_t)(size - 20)};
+    pj_ssize_t from_len = (size > 110) ? 50 : ((size > 10) ? (pj_ssize_t)(size - 10) : 0);
+    pj_ssize_t to_len = (size > 120) ? 50 : ((size > 20) ? (pj_ssize_t)(size - 20) : 0);
+    pj_str_t from = {(char*)data + 10, from_len};
+    pj_str_t to = {(char*)data + 20, to_len};
 
     pjsip_tx_data *tdata = NULL;
     if (pjsip_endpt_create_request(endpt, &pjsip_options_method,
@@ -235,9 +249,6 @@ static void test_process_route_set(pj_pool_t *pool, const uint8_t *data, size_t 
 extern int
 LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
-    if (Size < 0)
-        return 1;
-
     /* One-time initialization of PJSIP stack */
     static int initialized = 0;
     if (!initialized) {
@@ -263,7 +274,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         if (status != PJ_SUCCESS)
             return 0;
 
-        status = pjsip_loop_start(endpt, NULL);
+        status = pjsip_loop_start(endpt, &loop_transport);
         if (status != PJ_SUCCESS)
             return 0;
 
