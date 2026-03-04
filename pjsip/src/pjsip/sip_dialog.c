@@ -620,14 +620,19 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 
 on_error:
     if (tsx_lock) {
-        /* tsx_lock is non-NULL only if lock creation succeeded above.
-         * If we reach here, locks were already chained before attempting
-         * to create the transaction, so we need to unchain them and
-         * dec the dialog lock reference.
-         */
         pj_grp_lock_release(tsx_lock);
-        pj_grp_lock_unchain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_);
-        pj_grp_lock_dec_ref(dlg->grp_lock_);
+        if (!tsx) {
+            /* tsx_lock is non-NULL only if lock creation succeeded above.
+             * If tsx is NULL, the transaction was never created, so
+             * tsx_on_destroy() will never run. We must unchain and dec-ref
+             * the dialog lock ourselves.
+             * If tsx is non-NULL, tsx_on_destroy() will handle the
+             * unchaining and dec-ref, so we must NOT do it here to avoid
+             * a double dec-ref.
+             */
+            pj_grp_lock_unchain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_);
+            pj_grp_lock_dec_ref(dlg->grp_lock_);
+        }
         pj_grp_lock_dec_ref(tsx_lock);
     }
 
@@ -1921,14 +1926,20 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 
 on_return:
     if (tsx_lock) {
-        /* tsx_lock is non-NULL only if lock creation succeeded.
-         * Lock chaining happens inside the 'if (status == PJ_SUCCESS)' block
-         * immediately after lock creation. If we reach here with tsx_lock != NULL,
-         * it means locks were chained and need to be unchained.
-         */
         pj_grp_lock_release(tsx_lock);
-        pj_grp_lock_unchain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_);
-        pj_grp_lock_dec_ref(dlg->grp_lock_);
+        if (!tsx) {
+            /* tsx_lock was created and locks were chained, but tsx creation
+             * failed (pjsip_tsx_create_uas2 returned error). Since there is
+             * no transaction, tsx_on_destroy() will never run, so we must
+             * unchain and dec-ref the dialog lock ourselves.
+             */
+            pj_grp_lock_unchain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_);
+            pj_grp_lock_dec_ref(dlg->grp_lock_);
+        }
+        /* If tsx was successfully created, tsx_on_destroy() will handle
+         * unchaining and dec-ref of dlg->grp_lock_. Do NOT do it here
+         * to avoid double dec-ref.
+         */
         pj_grp_lock_dec_ref(tsx_lock);
     }
     /* Unlock dialog and dec session, may destroy dialog. */
