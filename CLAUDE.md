@@ -6,9 +6,6 @@ It combines signaling protocol (SIP) with multimedia framework and NAT
 traversal functionality into a high-level API (PJSUA/PJSUA2), portable across
 desktops, embedded systems, and mobile handsets.
 
-Always reference these instructions first and fallback to search or bash commands
-only when you encounter unexpected information that does not match the info here.
-
 ## Build & Test
 
 - Build:
@@ -23,10 +20,6 @@ only when you encounter unexpected information that does not match the info here
   - `make pjsip-test` - SIP stack tests (5+ min, timeout 600s)
   - `make pjsua-test` - high-level API tests, Python-based (5+ min, timeout 600s)
 - Get target architecture: `make infotarget` (e.g., `x86_64-pc-linux-gnu`)
-- Run main PJSUA application:
-  - `./pjsip-apps/bin/pjsua-x86_64-pc-linux-gnu --help` - show all options
-  - `./pjsip-apps/bin/pjsua-x86_64-pc-linux-gnu --null-audio --no-cli-console` - basic test run
-  - Note: pjsua binary name depends on the target architecture name
 - SSL tests will fail with timeouts in sandboxed environments - this is expected.
 
 ### Minimum Validation (mandatory after every change)
@@ -41,8 +34,8 @@ only when you encounter unexpected information that does not match the info here
 
 ### Manual Validation
 
-1. **Basic SIP**: `echo "Cp\nq" | ./pjsip-apps/bin/pjsua-x86_64-pc-linux-gnu --null-audio --no-cli-console` - verify codec list includes speex, G.711, etc.
-2. **Config check**: `./pjlib/bin/pjlib-test-x86_64-pc-linux-gnu --config --list | grep PJ_SSL` - verify SSL support
+1. **Basic SIP**: `echo "Cp\nq" | ./pjsip-apps/bin/pjsua-x86_64-pc-linux-gnu --null-audio --no-cli-console` - verify codec list
+2. **Config check**: `./pjlib/bin/pjlib-test-x86_64-pc-linux-gnu --config --list | grep PJ_SSL`
 3. **Quick test**: `make pjlib-util-test`
 
 ### Configure Options
@@ -91,29 +84,14 @@ build/              # Build system files
 - Transport changes: `pjsip/include/pjsip/sip_transport.h`
 - ICE/NAT: `pjnath/include/pjnath/ice_strmtp.h`
 
-### Main Applications Built
+### Test Executables (after build)
 
-After running `make`:
-- `pjsip-apps/bin/pjsua-x86_64-pc-linux-gnu` - Main SIP user agent application
-- `pjsip-apps/bin/pjsystest-x86_64-pc-linux-gnu` - Audio system test application
-- `pjsip-apps/bin/samples/x86_64-pc-linux-gnu/` - Various sample applications
-
-### Test Executables Built
-
-- `pjlib/bin/pjlib-test-x86_64-pc-linux-gnu` - Core library tests
-- `pjlib-util/bin/pjlib-util-test-x86_64-pc-linux-gnu` - Utility tests
-- `pjnath/bin/pjnath-test-x86_64-pc-linux-gnu` - NAT traversal tests
-- `pjmedia/bin/pjmedia-test-x86_64-pc-linux-gnu` - Media framework tests
-- `pjsip/bin/pjsip-test-x86_64-pc-linux-gnu` - SIP stack tests
-- `pjsip/bin/pjsua2-test-x86_64-pc-linux-gnu` - High-level C++ API tests
-
-### Testing Framework
-
-- Python-based test framework in `tests/pjsua/`
-- Use `cd tests/pjsua && python3 run.py MODULE CONFIG` for individual tests
-- Example: `cd tests/pjsua && python3 run.py mod_run.py scripts-run/100_simple.py`
-- Use `cd tests/pjsua && python3 runall.py` for complete test suite
-- Test modules include: mod_run, mod_call, mod_pres, mod_sendto, mod_media_playrec
+- `pjlib/bin/pjlib-test-x86_64-pc-linux-gnu`
+- `pjlib-util/bin/pjlib-util-test-x86_64-pc-linux-gnu`
+- `pjnath/bin/pjnath-test-x86_64-pc-linux-gnu`
+- `pjmedia/bin/pjmedia-test-x86_64-pc-linux-gnu`
+- `pjsip/bin/pjsip-test-x86_64-pc-linux-gnu`
+- `pjsip/bin/pjsua2-test-x86_64-pc-linux-gnu`
 
 ## Coding Conventions
 
@@ -266,30 +244,8 @@ Network -> pjmedia_transport (RTP) -> pjmedia_stream (jitter buffer + decode)
 - Don't add external library dependencies without discussion
 - Don't declare variables after statements in C code (violates C89)
 
-## Common Reference
+## CI Integration
 
-### Build System Details
-- Uses autotools (configure/make) build system
-- Main build controlled by top-level Makefile
-- Each component has its own build/ subdirectory with component-specific Makefiles
-- Parallel builds supported with `make -j<N>`
-- Dependencies generated with `make dep`
-
-### Key Environment Variables
-- `TARGET_NAME` - Target architecture (set by configure)
-- `CI_ARGS` - Additional arguments for CI testing
-- `CI_MODE` - CI mode flag
-- `CI_RUNNER` - CI runner command wrapper
-
-### SSL/TLS Support
-- Default build includes OpenSSL support
-- SSL implementation ID: 1=OpenSSL, 2=GnuTLS
-- Check SSL support: `./pjlib/bin/pjlib-test-x86_64-pc-linux-gnu --config --list | grep SSL`
-
-### Built-in Media Codecs
-- G.711 (PCMU/PCMA), G.722, G.722.1, GSM, iLBC, L16 (linear PCM), Speex
-
-### CI Integration
 - GitHub Actions workflows in `.github/workflows/`
 - Primary CI runs on Linux, Mac, and Windows
 - Uses `cirunner` tool for test execution with timeouts

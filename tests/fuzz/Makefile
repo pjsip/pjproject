@@ -12,6 +12,7 @@ XML=fuzz-xml
 SDP=fuzz-sdp
 STUN=fuzz-stun
 SIP=fuzz-sip
+SIPTRAN=fuzz-sip-transaction
 RTCP=fuzz-rtcp
 DNS=fuzz-dns
 H264=fuzz-h264
@@ -23,6 +24,7 @@ CRYPTO=fuzz-crypto
 RTP=fuzz-rtp
 SRTP=fuzz-srtp
 PRES=fuzz-presence
+VIDEO=fuzz-video
 
 EXTFLAGS=-Wall -Werror
 
@@ -34,6 +36,7 @@ $(TARGET):
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(SDP).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(STUN).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(SIP).c
+	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(SIPTRAN).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(RTCP).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(DNS).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(H264).c
@@ -45,12 +48,14 @@ $(TARGET):
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(RTP).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(SRTP).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(PRES).c
+	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(VIDEO).c
 
 	$(CXX) $(PJ_CFLAGS) -o $(JSON) $(JSON).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(XML)  $(XML).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(SDP)  $(SDP).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(STUN) $(STUN).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(SIP)  $(SIP).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
+	$(CXX) $(PJ_CFLAGS) -o $(SIPTRAN)  $(SIPTRAN).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(RTCP) $(RTCP).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(DNS)  $(DNS).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(H264) $(H264).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
@@ -61,7 +66,8 @@ $(TARGET):
 	$(CXX) $(PJ_CFLAGS) -o $(URL)  $(URL).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(URI)  $(URI).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(PRES)  $(PRES).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
+	$(CXX) $(PJ_CFLAGS) -o $(VIDEO)  $(VIDEO).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(CRYPTO) $(CRYPTO).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE) -lssl -lcrypto -lz
 
 clean:
-	rm $(JSON) $(XML) $(SDP) $(STUN) $(SIP) $(RTCP) $(DNS) $(H264) $(VPX) $(HTTP) $(URL) $(URI) $(CRYPTO) $(RTP) $(SRTP) $(PRES) *.o
+	rm $(JSON) $(XML) $(SDP) $(STUN) $(SIP) $(SIPTRAN) $(RTCP) $(DNS) $(H264) $(VPX) $(HTTP) $(URL) $(URI) $(CRYPTO) $(RTP) $(SRTP) $(PRES) $(VIDEO) *.o

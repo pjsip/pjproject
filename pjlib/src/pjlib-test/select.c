@@ -71,7 +71,7 @@ static int do_select( pj_sock_t sock1, pj_sock_t sock2,
         setcount[i] = 0;
     }
 
-    timeout.sec = 1;
+    timeout.sec = 5;
     timeout.msec = 0;
 
     n = pj_sock_select(PJ_IOQUEUE_MAX_HANDLES, &fds[0], &fds[1], &fds[2],
@@ -141,8 +141,10 @@ int select_test()
         status=-40; goto on_return;
     }
 
-    // Sleep a bit. See https://github.com/pjsip/pjproject/issues/890
-    pj_thread_sleep(10);
+    // Sleep a bit to let the UDP packet arrive via loopback before
+    // calling select().  See https://github.com/pjsip/pjproject/issues/890
+    // Use 100 ms instead of 10 ms to tolerate heavily loaded CI runners.
+    pj_thread_sleep(100);
 
     // Check that socket is marked as reable.
     // Note that select() may also report that sockets are writable.

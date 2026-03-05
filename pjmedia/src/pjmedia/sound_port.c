@@ -403,8 +403,14 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
         status = pjmedia_snd_port_set_ec(snd_port, pool, 
                                          snd_port->aud_param.ec_tail_ms,
                                          snd_port->prm_ec_options);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            char errmsg[PJ_ERR_MSG_SIZE];
+            pj_strerror(status, errmsg, sizeof(errmsg));
+            PJ_LOG(3,(THIS_FILE, "Failure in opening sound device: unable "
+                      "to set echo canceller: %s [status=%d]", 
+                      errmsg, status));
             goto on_error;
+        }
     }
 
     /* Create clock and buffers, if configured */
