@@ -771,6 +771,8 @@ static pj_status_t  silk_codec_parse( pjmedia_codec *codec,
     SKP_Silk_SDK_get_TOC(pkt, pkt_size, &toc);
     count = toc.framesInPacket;
     pj_assert(count <= SILK_MAX_FRAMES_PER_PACKET);
+    if (count > *frame_cnt)
+        count = *frame_cnt;
 
     for (i = 0; i < count; i++) {
         frames[i].type = PJMEDIA_FRAME_TYPE_AUDIO;
