@@ -23,9 +23,42 @@
 
 #include <pjmedia/event.h>
 #include <pjmedia/rtcp.h>
+#include <pjmedia/rtcp_fb.h>
 
 #define kMinInputLength 10
 #define kMaxInputLength 5120
+
+int rtcp_fb_parser(const void *data, size_t size)
+{
+    if (size < 12) {
+        return 0;
+    }
+
+    /* Test NACK parsing */
+    {
+        unsigned nack_cnt = 16;
+        pjmedia_rtcp_fb_nack nack[16];
+        pjmedia_rtcp_fb_parse_nack(data, size, &nack_cnt, nack);
+    }
+
+    /* Test PLI parsing */
+    pjmedia_rtcp_fb_parse_pli(data, size);
+
+    /* Test SLI parsing */
+    {
+        unsigned sli_cnt = 16;
+        pjmedia_rtcp_fb_sli sli[16];
+        pjmedia_rtcp_fb_parse_sli(data, size, &sli_cnt, sli);
+    }
+
+    /* Test RPSI parsing */
+    {
+        pjmedia_rtcp_fb_rpsi rpsi;
+        pjmedia_rtcp_fb_parse_rpsi(data, size, &rpsi);
+    }
+
+    return 0;
+}
 
 int rtcp_parser(char *data, size_t size)
 {
@@ -39,7 +72,11 @@ int rtcp_parser(char *data, size_t size)
     setting.samples_per_frame = 160;
     pjmedia_rtcp_init2(&session, &setting);
 
+    /* Test integrated RTCP parsing */
     pjmedia_rtcp_rx_rtcp(&session, data, size);
+
+    /* Test all RTCP-FB message types directly */
+    rtcp_fb_parser(data, size);
 
     return ret;
 }
