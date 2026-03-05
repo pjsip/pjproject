@@ -2093,7 +2093,8 @@ public:
      * prevent deletion; a warning will be logged if any exist.
      *
      * This method does not throw an exception. Any error will be logged
-     * internally.
+     * internally. For safer behavior that checks for active calls, use
+     * shutdown2() instead.
      *
      * Note that application must delete all Buddy instances belong to this
      * account before shutting down the account.
