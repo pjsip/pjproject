@@ -11,6 +11,11 @@ env:
   # Setting CI_RUNNER to empty should disable cirunner
   CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 -o ${{ github.workspace }}/artifacts --
   MAKE_FAST: make -j 2
+  # Workaround for Apple clang ASan bug on macOS ARM64 (Sequoia) where
+  # sigaltstack(SS_DISABLE) fails during thread exit, causing:
+  #   CHECK failed: sanitizer_posix_libcdep.cpp "((0)) == ((sigaltstack(...)))"
+  # Only affects ASan-instrumented binaries; harmless for non-ASan jobs.
+  ASAN_OPTIONS: use_sigaltstack=0
 jobs:
   default-build:
     # checking pure lib source distribution with plain configure & make
