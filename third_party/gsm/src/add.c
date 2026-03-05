@@ -56,7 +56,8 @@ word gsm_abs P1((a), word a)
 longword gsm_L_mult P2((a,b),word a, word b)
 {
 	assert( a != MIN_WORD || b != MIN_WORD );
-	return ((longword)a * (longword)b) << 1;
+	// orig: return ((longword)a * (longword)b) << 1;
+	return ((longword)a * (longword)b) * 2;
 }
 
 longword gsm_L_add P2((a,b), longword a, longword b)
@@ -155,7 +156,8 @@ longword gsm_L_asl P2((a,n), longword a, int n)
 	if (n >= 32) return 0;
 	if (n <= -32) return -(a < 0);
 	if (n < 0) return gsm_L_asr(a, -n);
-	return a << n;
+	// orig: return a << n;
+	return (longword)((ulongword)a << n);
 }
 
 word gsm_asl P2((a,n), word a, int n)
@@ -163,14 +165,16 @@ word gsm_asl P2((a,n), word a, int n)
 	if (n >= 16) return 0;
 	if (n <= -16) return -(a < 0);
 	if (n < 0) return gsm_asr(a, -n);
-	return a << n;
+	// orig: return a << n;
+	return (word)((uword)a << n);
 }
 
 longword gsm_L_asr P2((a,n), longword a, int n)
 {
 	if (n >= 32) return -(a < 0);
 	if (n <= -32) return 0;
-	if (n < 0) return a << -n;
+	// orig: if (n < 0) return a << -n;
+	if (n < 0) return (longword)((ulongword)a << -n);
 
 #	ifdef	SASR
 		return a >> n;
@@ -184,7 +188,8 @@ word gsm_asr P2((a,n), word a, int n)
 {
 	if (n >= 16) return -(a < 0);
 	if (n <= -16) return 0;
-	if (n < 0) return a << -n;
+	// orig: if (n < 0) return a << -n;
+	if (n < 0) return (word)((uword)a << -n);
 
 #	ifdef	SASR
 		return a >> n;
