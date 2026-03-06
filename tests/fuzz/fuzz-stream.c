@@ -24,8 +24,6 @@
 #include <pjmedia-codec.h>
 
 #define CLOCK_RATE 8000
-#define SAMPLES_PER_FRAME 160
-#define CHANNEL_COUNT 1
 
 static pj_caching_pool caching_pool;
 static pjmedia_endpt *endpt = NULL;
@@ -50,6 +48,7 @@ static int init_media(void)
 
     status = pjmedia_endpt_create(&caching_pool.factory, NULL, 1, &endpt);
     if (status != PJ_SUCCESS) {
+        pj_caching_pool_destroy(&caching_pool);
         return -1;
     }
 
@@ -84,7 +83,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     pj_bzero(&codec_info, sizeof(codec_info));
     codec_info.type = PJMEDIA_TYPE_AUDIO;
     codec_info.clock_rate = CLOCK_RATE;
-    codec_info.channel_cnt = CHANNEL_COUNT;
+    codec_info.channel_cnt = 1;
 
     switch (codec_id) {
         case 0:
@@ -121,7 +120,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     /* Verify sufficient input size for codec */
     size_t offset = 1;
-    if (Size <= offset + samples_needed * 2) {
+    if (Size < offset + samples_needed * 2) {
         pj_pool_release(pool);
         return 0;
     }
@@ -180,7 +179,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     status = pjmedia_codec_encode(codec, &input, sizeof(encoded), &output);
 
     /* Test decode operation if encode succeeded */
-    if (status == PJ_SUCCESS && output.size > 0 && output.size < sizeof(encoded)) {
+    if (status == PJ_SUCCESS && output.size > 0 && output.size <= sizeof(encoded)) {
         /* G.711 requires exact frame size of 80 bytes */
         if (codec_id >= 2 || output.size == 80) {
             pjmedia_frame dec_input;
