@@ -11,11 +11,16 @@ env:
   # Setting CI_RUNNER to empty should disable cirunner
   CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 -o ${{ github.workspace }}/artifacts --
   MAKE_FAST: make -j 2
-  # Workaround for Apple clang ASan bug on macOS ARM64 (Sequoia) where
-  # sigaltstack(SS_DISABLE) fails during thread exit, causing:
-  #   CHECK failed: sanitizer_posix_libcdep.cpp "((0)) == ((sigaltstack(...)))"
+  # Workaround for Apple clang ASan bugs on macOS ARM64 (Sequoia):
+  # 1. use_sigaltstack=0: sigaltstack(SS_DISABLE) fails during thread exit:
+  #      CHECK failed: sanitizer_posix_libcdep.cpp "((0)) == ((sigaltstack(...)))"
+  # 2. detect_stack_use_after_return=0: PlatformUnpoisonStacks() crashes when
+  #    longjmp is used in non-main threads (e.g. SIP parser error recovery via
+  #    pj_throw_exception_ -> pj_longjmp). ASan intercepts longjmp at runtime
+  #    and fails to determine worker thread stack bounds (addr=0x0):
+  #      CHECK failed: asan_poisoning.cpp "((AddrIsInMem(...))) != (0)" (0x0, 0x0)
   # Only affects ASan-instrumented binaries; harmless for non-ASan jobs.
-  ASAN_OPTIONS: use_sigaltstack=0
+  ASAN_OPTIONS: use_sigaltstack=0:detect_stack_use_after_return=0
 jobs:
   default-build:
     # checking pure lib source distribution with plain configure & make
