@@ -574,12 +574,19 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
         goto on_error;
 
     pj_grp_lock_add_ref(tsx_lock);
+    /* Add ref to dialog group lock before chaining the lock */
+    pj_grp_lock_add_ref(dlg->grp_lock_);
+    /* Chain locks so dlg lock is always acquired first before tsx. */
+    pj_grp_lock_chain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_, 0);
     pj_grp_lock_acquire(tsx_lock);
 
     /* Create UAS transaction for this request. */
     status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
     if (status != PJ_SUCCESS)
         goto on_error;
+
+    /* Store the chained dialog lock in tsx for cleanup in tsx_on_destroy() */
+    tsx->chained_lock = dlg->grp_lock_;
 
     /* Associate this dialog to the transaction. */
     tsx->mod_data[dlg->ua->id] = dlg;
@@ -617,6 +624,18 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 on_error:
     if (tsx_lock) {
         pj_grp_lock_release(tsx_lock);
+        if (!tsx) {
+            /* tsx_lock is non-NULL only if lock creation succeeded above.
+             * If tsx is NULL, the transaction was never created, so
+             * tsx_on_destroy() will never run. We must unchain and dec-ref
+             * the dialog lock ourselves.
+             * If tsx is non-NULL, tsx_on_destroy() will handle the
+             * unchaining and dec-ref, so we must NOT do it here to avoid
+             * a double dec-ref.
+             */
+            pj_grp_lock_unchain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_);
+            pj_grp_lock_dec_ref(dlg->grp_lock_);
+        }
         pj_grp_lock_dec_ref(tsx_lock);
     }
 
@@ -1380,6 +1399,14 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
         if (status != PJ_SUCCESS)
             goto on_error;
 
+        /* Add ref to dialog group lock before chaining the lock */
+        pj_grp_lock_add_ref(dlg->grp_lock_);
+        /* Chain locks so dlg lock is always acquired first before tsx. */
+        pj_grp_lock_chain_lock(tsx->grp_lock, (pj_lock_t *)dlg->grp_lock_, 0);
+        
+        /* Store the chained dialog lock in tsx for cleanup in tsx_on_destroy() */
+        tsx->chained_lock = dlg->grp_lock_;
+
         /* Set transport selector */
         status = pjsip_tsx_set_transport(tsx, &dlg->tp_sel);
         pj_assert(status == PJ_SUCCESS);
@@ -1785,8 +1812,16 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
         status = pj_grp_lock_create(dlg->pool, NULL, &tsx_lock);
         if (status == PJ_SUCCESS) {
             pj_grp_lock_add_ref(tsx_lock);
+            /* Add ref to dialog group lock before chaining the lock */
+            pj_grp_lock_add_ref(dlg->grp_lock_);
+            /* Chain locks so dlg lock is always acquired first before tsx. */
+            pj_grp_lock_chain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_, 0);
             pj_grp_lock_acquire(tsx_lock);
             status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
+            if (status == PJ_SUCCESS) {
+                /* Store the chained dialog lock in tsx for cleanup in tsx_on_destroy() */
+                tsx->chained_lock = dlg->grp_lock_;
+            }
         }
 
         if (status != PJ_SUCCESS) {
@@ -1902,6 +1937,19 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 on_return:
     if (tsx_lock) {
         pj_grp_lock_release(tsx_lock);
+        if (!tsx) {
+            /* tsx_lock was created and locks were chained, but tsx creation
+             * failed (pjsip_tsx_create_uas2 returned error). Since there is
+             * no transaction, tsx_on_destroy() will never run, so we must
+             * unchain and dec-ref the dialog lock ourselves.
+             */
+            pj_grp_lock_unchain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_);
+            pj_grp_lock_dec_ref(dlg->grp_lock_);
+        }
+        /* If tsx was successfully created, tsx_on_destroy() will handle
+         * unchaining and dec-ref of dlg->grp_lock_. Do NOT do it here
+         * to avoid double dec-ref.
+         */
         pj_grp_lock_dec_ref(tsx_lock);
     }
     /* Unlock dialog and dec session, may destroy dialog. */
