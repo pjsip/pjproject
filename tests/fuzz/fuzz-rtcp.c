@@ -28,10 +28,10 @@
 #define kMinInputLength 10
 #define kMaxInputLength 5120
 
-int rtcp_fb_parser(const void *data, size_t size)
+void rtcp_fb_parser(const void *data, size_t size)
 {
-    if (size < 12) {
-        return 0;
+    if (size < sizeof(pjmedia_rtcp_fb_common)) {
+        return;
     }
 
     /* Test NACK parsing */
@@ -56,8 +56,6 @@ int rtcp_fb_parser(const void *data, size_t size)
         pjmedia_rtcp_fb_rpsi rpsi;
         pjmedia_rtcp_fb_parse_rpsi(data, size, &rpsi);
     }
-
-    return 0;
 }
 
 int rtcp_parser(char *data, size_t size)
@@ -75,7 +73,7 @@ int rtcp_parser(char *data, size_t size)
     /* Test integrated RTCP parsing */
     pjmedia_rtcp_rx_rtcp(&session, data, size);
 
-    /* Test all RTCP-FB message types directly */
+    /* Test RTCP-FB message types (NACK, PLI, SLI, RPSI) */
     rtcp_fb_parser(data, size);
 
     return ret;
