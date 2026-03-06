@@ -29,14 +29,15 @@
 #define kMinInputLength 100
 #define kMaxInputLength 5120
 
-pj_pool_factory *mem;
+static pj_pool_factory *mem;
 
-void fuzz_sdes(const uint8_t *data, size_t size)
+static void fuzz_sdes(const uint8_t *data, size_t size)
 {
     pjmedia_endpt *endpt = NULL;
     pj_pool_t *pool = NULL, *sdp_pool = NULL;
     pj_status_t status;
     pjmedia_transport *loop_tp = NULL, *srtp_tp = NULL;
+    pjmedia_transport *loop_tp2 = NULL, *srtp_tp2 = NULL;
     pjmedia_srtp_setting srtp_opt;
     pjmedia_sdp_session *local_sdp = NULL, *remote_sdp = NULL;
     char *sdp_str = NULL;
@@ -110,16 +111,36 @@ void fuzz_sdes(const uint8_t *data, size_t size)
 
         local_sdp->media[local_sdp->media_count++] = m;
 
-        /* Test answerer side: encode_sdp -> parse_attr_crypto */
-        pjmedia_transport_encode_sdp(srtp_tp, sdp_pool,
-                                     local_sdp, remote_sdp, 0);
+        status = pjmedia_transport_media_create(srtp_tp, sdp_pool, 0,
+                                                remote_sdp, 0);
+        if (status == PJ_SUCCESS)
+            pjmedia_transport_encode_sdp(srtp_tp, sdp_pool,
+                                         local_sdp, remote_sdp, 0);
 
-        /* Test offerer side: media_start -> parse_attr_crypto */
-        pjmedia_transport_media_start(srtp_tp, sdp_pool,
-                                      local_sdp, remote_sdp, 0);
+        status = pjmedia_transport_loop_create(endpt, &loop_tp2);
+        if (status != PJ_SUCCESS)
+            goto cleanup;
+
+        status = pjmedia_transport_srtp_create(endpt, loop_tp2, &srtp_opt,
+                                               &srtp_tp2);
+        if (status != PJ_SUCCESS)
+            goto cleanup;
+
+        status = pjmedia_transport_media_create(srtp_tp2, sdp_pool, 0,
+                                                NULL, 0);
+        if (status == PJ_SUCCESS) {
+            pjmedia_transport_encode_sdp(srtp_tp2, sdp_pool,
+                                         local_sdp, NULL, 0);
+            pjmedia_transport_media_start(srtp_tp2, sdp_pool,
+                                          local_sdp, remote_sdp, 0);
+        }
     }
 
 cleanup:
+    if (srtp_tp2)
+        pjmedia_transport_close(srtp_tp2);
+    else if (loop_tp2)
+        pjmedia_transport_close(loop_tp2);
     if (srtp_tp)
         pjmedia_transport_close(srtp_tp);
     else if (loop_tp)
@@ -135,14 +156,17 @@ cleanup:
 extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
     pj_caching_pool caching_pool;
+    pj_status_t status;
 
     if (Size < kMinInputLength || Size > kMaxInputLength) {
         return 1;
     }
 
-    pj_init();
-    pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy,
-                         10 * 1024 * 1024);
+    status = pj_init();
+    if (status != PJ_SUCCESS)
+        return 0;
+
+    pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
     pj_log_set_level(0);
 
     mem = &caching_pool.factory;
