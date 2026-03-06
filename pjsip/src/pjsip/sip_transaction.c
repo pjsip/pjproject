@@ -22,8 +22,6 @@
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_errno.h>
 #include <pjsip/sip_event.h>
-#include <pjsip/sip_dialog.h>
-#include <pjsip/sip_ua_layer.h>
 #include <pjlib-util/errno.h>
 #include <pj/hash.h>
 #include <pj/pool.h>
@@ -1201,6 +1199,7 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
     tsx->timeout_timer.id = TIMER_INACTIVE;
     tsx->timeout_timer.user_data = tsx;
     tsx->timeout_timer.cb = &tsx_timer_callback;
+    tsx->chained_lock = NULL;
     
     if (grp_lock) {
         tsx->grp_lock = grp_lock;
@@ -1232,24 +1231,17 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
 static void tsx_on_destroy( void *arg )
 {
     pjsip_transaction *tsx = (pjsip_transaction*)arg;
-    pjsip_dialog *dlg;
-    pjsip_user_agent *ua;
 
     PJ_LOG(5,(tsx->obj_name, "Transaction destroyed!"));
 
-    /* Unchain and dec ref dialog group lock if tsx is associated with dialog.
-     * Note: Dialog is associated with tsx (via tsx->mod_data[ua->id] = dlg)
-     * only after the locks are successfully chained in sip_dialog.c. Therefore,
-     * if dlg != NULL here, it is safe to assume locks were chained and need
-     * to be unchained.
+    /* Unchain and dec ref the chained lock (e.g., dialog lock) if it was set.
+     * The chained_lock is stored when pj_grp_lock_chain_lock() is called
+     * in sip_dialog.c to prevent lock-order-inversion.
      */
-    ua = pjsip_ua_instance();
-    if (ua) {
-        dlg = (pjsip_dialog*) tsx->mod_data[ua->id];
-        if (dlg) {
-            pj_grp_lock_unchain_lock(tsx->grp_lock, (pj_lock_t *)dlg->grp_lock_);
-            pj_grp_lock_dec_ref(dlg->grp_lock_);
-        }
+    if (tsx->chained_lock) {
+        pj_grp_lock_unchain_lock(tsx->grp_lock, (pj_lock_t *)tsx->chained_lock);
+        pj_grp_lock_dec_ref(tsx->chained_lock);
+        tsx->chained_lock = NULL;
     }
 
     pj_mutex_destroy(tsx->mutex_b);

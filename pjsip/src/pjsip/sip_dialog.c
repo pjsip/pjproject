@@ -585,6 +585,9 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     if (status != PJ_SUCCESS)
         goto on_error;
 
+    /* Store the chained dialog lock in tsx for cleanup in tsx_on_destroy() */
+    tsx->chained_lock = dlg->grp_lock_;
+
     /* Associate this dialog to the transaction. */
     tsx->mod_data[dlg->ua->id] = dlg;
 
@@ -1400,6 +1403,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
         pj_grp_lock_add_ref(dlg->grp_lock_);
         /* Chain locks so dlg lock is always acquired first before tsx. */
         pj_grp_lock_chain_lock(tsx->grp_lock, (pj_lock_t *)dlg->grp_lock_, 0);
+        
+        /* Store the chained dialog lock in tsx for cleanup in tsx_on_destroy() */
+        tsx->chained_lock = dlg->grp_lock_;
 
         /* Set transport selector */
         status = pjsip_tsx_set_transport(tsx, &dlg->tp_sel);
@@ -1812,6 +1818,10 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
             pj_grp_lock_chain_lock(tsx_lock, (pj_lock_t *)dlg->grp_lock_, 0);
             pj_grp_lock_acquire(tsx_lock);
             status = pjsip_tsx_create_uas2(dlg->ua, rdata, tsx_lock, &tsx);
+            if (status == PJ_SUCCESS) {
+                /* Store the chained dialog lock in tsx for cleanup in tsx_on_destroy() */
+                tsx->chained_lock = dlg->grp_lock_;
+            }
         }
 
         if (status != PJ_SUCCESS) {
