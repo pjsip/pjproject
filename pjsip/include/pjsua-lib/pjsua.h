@@ -1246,6 +1246,63 @@ typedef void (*pjsua_on_rejected_incoming_call_cb)(
 
 
 /**
+ * This structure contains the parameters for \a on_auth_challenge callback.
+ */
+typedef struct pjsua_on_auth_challenge_param
+{
+    /**
+     * The account ID associated with the challenged request.
+     * May be PJSUA_INVALID_ID if the account cannot be determined.
+     */
+    pjsua_acc_id                acc_id;
+
+    /**
+     * The call ID associated with the challenged request.
+     * Will be PJSUA_INVALID_ID for non-call requests (REGISTER, PUBLISH,
+     * out-of-dialog MESSAGE, etc.).
+     */
+    pjsua_call_id               call_id;
+
+    /**
+     * The account-level shared authentication session.
+     * Use this when calling pjsip_auth_clt_async_send_req() or
+     * pjsip_auth_clt_async_abandon().
+     */
+    pjsip_auth_clt_sess        *auth_sess;
+
+    /**
+     * The authentication token to be passed to
+     * pjsip_auth_clt_async_send_req() or pjsip_auth_clt_async_abandon().
+     */
+    void                       *token;
+
+    /**
+     * The 401/407 response containing the challenge.
+     * Only valid during the callback. Clone with pjsip_rx_data_clone()
+     * if needed beyond the callback.
+     */
+    const pjsip_rx_data        *rdata;
+
+    /**
+     * The original request that was challenged. Needed to build the
+     * authenticated retry. Only valid during the callback unless the
+     * application extends its lifetime using pjsip_tx_data_add_ref().
+     */
+    pjsip_tx_data              *tdata;
+
+    /**
+     * Output: set to PJ_TRUE if the application handles the challenge.
+     * The application MUST then eventually call
+     * pjsip_auth_clt_async_send_req() or pjsip_auth_clt_async_abandon().
+     * Default PJ_FALSE means the library handles authentication
+     * via the synchronous path.
+     */
+    pj_bool_t                   handled;
+
+} pjsua_on_auth_challenge_param;
+
+
+/**
  * This structure describes application callback to receive various event
  * notification from PJSUA-API. All of these callbacks are OPTIONAL,
  * although definitely application would want to implement some of
@@ -2211,6 +2268,30 @@ typedef struct pjsua_callback
      * callback.
      */
     pjmedia_vid_conf_op_cb on_vid_conf_op_completed;
+
+    /**
+     * This callback is called when a 401/407 challenge is received.
+     * It may be triggered by any outgoing SIP request that receives a
+     * 401/407 response, including REGISTER, INVITE, PUBLISH, MESSAGE, etc.
+     *
+     * To handle the challenge, the application should set
+     * \a param->handled to PJ_TRUE and later call
+     * pjsip_auth_clt_async_send_req() to resend with authentication,
+     * or pjsip_auth_clt_async_abandon() to give up. Both may be called
+     * synchronously within this callback or deferred.
+     *
+     * If \a param->handled is left as PJ_FALSE (the default), the library
+     * falls back to synchronous authentication using configured credentials.
+     *
+     * If this callback is not set, the library will handle authentication
+     * automatically using the configured credentials (synchronous path).
+     *
+     * Note: this callback is invoked from the SIP worker thread.
+     * PJSUA_LOCK is NOT held during the callback.
+     *
+     * @param param     The callback parameters.
+     */
+    void (*on_auth_challenge)(pjsua_on_auth_challenge_param *param);
 
 } pjsua_callback;
 
@@ -4836,14 +4917,20 @@ typedef struct pjsua_acc_config
 
     /**
      * Use a shared authorization session within this account.
-     * This will use the accounts credentials on outgoing requests,
-     * so that less 401/407 Responses will be returned.
+     * This will use the account's credentials on outgoing requests,
+     * so that fewer 401/407 responses will be returned.
+     *
+     * When the \a on_auth_challenge callback is set, the shared session
+     * is also used as the auth session passed to the callback, regardless
+     * of this setting.
      *
      * Needs PJSIP_AUTH_AUTO_SEND_NEXT and PJSIP_AUTH_HEADER_CACHING
      * enabled to work properly, and also will grow usage of the used pool for
      * the cached headers.
      *
      * Default: PJ_FALSE
+     *
+     * @see pjsua_callback::on_auth_challenge
      */
     pj_bool_t        use_shared_auth;
 

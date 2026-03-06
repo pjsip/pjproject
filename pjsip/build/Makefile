@@ -161,7 +161,7 @@ export PJSUA2_LIB_LDFLAGS += $(PJSUA_LIB_LDLIB) \
 #
 export PJSUA2_TEST_SRCDIR = ../src/pjsua2-test
 export PJSUA2_TEST_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			   main.o instant_messaging.o
+			   main.o instant_messaging.o auth_challenge.o
 export PJSUA2_TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_TEST_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_TEST_LDFLAGS += $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(LDFLAGS)
@@ -180,13 +180,14 @@ export TEST_OBJS += dlg_core_test.o dns_test.o msg_err_test.o \
 		    transport_test.o transport_udp_test.o \
 		    tsx_basic_test.o tsx_bench.o tsx_uac_test.o \
 		    tsx_uas_test.o txdata_test.o uri_test.o \
-		    inv_offer_answer_test.o
+		    inv_offer_answer_test.o auth_async_test.o \
+		    pjsua_auth_test.o
 export TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export TEST_CXXFLAGS += $(_CXXFLAGS)
-export TEST_LDFLAGS += $(PJSIP_LDLIB) \
+export TEST_LDFLAGS += $(PJSUA_LIB_LDLIB) \
+		       $(PJSIP_LDLIB) \
 		       $(PJSIP_UA_LDLIB) \
 		       $(PJSIP_SIMPLE_LDLIB) \
-		       $(PJSUA_LDLIB) \
 		       $(PJMEDIA_CODEC_LDLIB) \
 		       $(PJMEDIA_VIDEODEV_LDLIB) \
 		       $(PJMEDIA_LDLIB) \

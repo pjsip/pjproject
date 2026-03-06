@@ -348,7 +348,8 @@ typedef struct pjsua_acc
     pjsip_transport_type_e tp_type; /**< Transport type (for local acc or
                                          transport binding)             */
     pjsua_ip_change_op ip_change_op;/**< IP change process progress.    */
-    pjsip_auth_clt_sess shared_auth_sess; /**< share one auth over all requests */
+    pjsip_auth_clt_sess shared_auth_sess; /**< Share one auth session over
+                                               all requests             */
 } pjsua_acc;
 
 
@@ -1068,6 +1069,14 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc);
  * End IP change process per account.
  */
 void pjsua_acc_end_ip_change(pjsua_acc *acc);
+
+/*
+ * Bridge callback: maps low-level auth challenge to pjsua on_auth_challenge.
+ */
+pj_bool_t pjsua_auth_on_challenge(
+                             pjsip_auth_clt_sess *sess,
+                             void *token,
+                             const pjsip_auth_clt_async_on_chal_param *param);
 
 PJ_END_DECL
 
