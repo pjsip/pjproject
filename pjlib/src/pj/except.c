@@ -37,19 +37,6 @@ static long thread_local_id = -1;
 
 
 #if !defined(PJ_EXCEPTION_USE_WIN32_SEH) || PJ_EXCEPTION_USE_WIN32_SEH==0
-/*
- * Disable ASan instrumentation on this function. ASan inserts
- * __asan_handle_no_return before the longjmp (which is noreturn),
- * and on macOS ARM64 this crashes in PlatformUnpoisonStacks() when
- * it cannot determine the worker thread's stack bounds.
- */
-#if defined(__has_feature)
-#  if __has_feature(address_sanitizer)
-__attribute__((no_sanitize("address")))
-#  endif
-#elif defined(__SANITIZE_ADDRESS__)
-__attribute__((no_sanitize("address")))
-#endif
 PJ_DEF(void) pj_throw_exception_(int exception_id)
 {
     struct pj_exception_state_t *handler;
