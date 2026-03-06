@@ -2351,7 +2351,7 @@ public:
 private:
     friend class Endpoint;
 
-    Account             &acc;
+    Account             *acc;
     pjsua_call_id        id;
     Token                userData;
     std::vector<Media *> medias;
