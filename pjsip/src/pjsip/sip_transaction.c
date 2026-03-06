@@ -1234,12 +1234,12 @@ static void tsx_on_destroy( void *arg )
 
     PJ_LOG(5,(tsx->obj_name, "Transaction destroyed!"));
 
-    /* Unchain and dec ref the chained lock (e.g., dialog lock) if it was set.
+    /* Dec ref the chained lock (e.g., dialog lock) if it was set.
+     * The lock was unchained earlier in tsx_shutdown().
      * The chained_lock is stored when pj_grp_lock_chain_lock() is called
      * in sip_dialog.c to prevent lock-order-inversion.
      */
     if (tsx->chained_lock) {
-        pj_grp_lock_unchain_lock(tsx->grp_lock, (pj_lock_t *)tsx->chained_lock);
         pj_grp_lock_dec_ref(tsx->chained_lock);
         tsx->chained_lock = NULL;
     }
@@ -1258,6 +1258,15 @@ static pj_status_t tsx_shutdown( pjsip_transaction *tsx )
      * we haven't been called before */
     if (!tsx->terminating) {
         pjsip_tpselector_dec_ref(&tsx->tp_sel);
+        
+        /* Unchain the chained lock (e.g., dialog lock) if it was set.
+         * This must be done before the group lock is destroyed.
+         * The chained_lock is stored when pj_grp_lock_chain_lock() is called
+         * in sip_dialog.c to prevent lock-order-inversion.
+         */
+        if (tsx->chained_lock) {
+            pj_grp_lock_unchain_lock(tsx->grp_lock, (pj_lock_t *)tsx->chained_lock);
+        }
     }
 
     /* Free last transmitted message. */
