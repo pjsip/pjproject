@@ -1893,9 +1893,16 @@ struct OnSendRequestParam
  * Each AuthChallenge is single-use: once consumed by respond(), abandon(),
  * or defer(), further calls return PJ_EINVALIDOP (defer() throws Error).
  *
- * Thread safety: on a deferred object, respond() and abandon() may be called
- * from any thread. The non-deferred object must only be used during the
- * onAuthChallenge() callback.
+ * Thread safety: on a deferred object, respond() and abandon() must be called
+ * from a pjlib-registered thread. The non-deferred object must only be used
+ * during the onAuthChallenge() callback.
+ *
+ * GC note (Python/Java): The destructor calls pjsip APIs which require a
+ * pjlib-registered thread. Since garbage collectors may run destructor/
+ * Release() on an unregistered finalizer thread, you MUST explicitly call
+ * respond(), abandon(), or delete/Release() on the deferred object from a
+ * pjlib-registered thread. Do NOT let the GC collect it implicitly.
+ * See https://docs.pjsip.org/en/latest/pjsua2/general_concept.html#problems-with-garbage-collection
  */
 class AuthChallenge
 {
