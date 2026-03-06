@@ -780,7 +780,7 @@ int inv_offer_answer_test(void)
 
         /* Build contact URI from the assigned port */
         pj_ansi_snprintf(contact_buf, sizeof(contact_buf),
-                         "sip:inv_oa_test@127.0.0.1:%d",
+                         "sip:inv_offer_answer_test@127.0.0.1:%d",
                          tp->local_name.port);
         contact_uri = pj_str(contact_buf);
     }
