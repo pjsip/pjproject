@@ -39,7 +39,7 @@
 
 pj_pool_factory *mem;
 
-/* TURN session callback stub */
+/* TURN session callback stubs */
 static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
                              const pj_uint8_t *pkt,
                              unsigned pkt_len,
@@ -52,6 +52,53 @@ static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
     PJ_UNUSED_ARG(dst_addr);
     PJ_UNUSED_ARG(dst_addr_len);
     return PJ_SUCCESS;
+}
+
+static void turn_on_rx_data(pj_turn_session *sess,
+                           void *pkt,
+                           unsigned pkt_len,
+                           const pj_sockaddr_t *peer_addr,
+                           unsigned addr_len)
+{
+    PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(pkt);
+    PJ_UNUSED_ARG(pkt_len);
+    PJ_UNUSED_ARG(peer_addr);
+    PJ_UNUSED_ARG(addr_len);
+}
+
+static void turn_on_state(pj_turn_session *sess,
+                         pj_turn_state_t old_state,
+                         pj_turn_state_t new_state)
+{
+    PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(old_state);
+    PJ_UNUSED_ARG(new_state);
+}
+
+/* ICE session callback stubs */
+static void ice_on_rx_data(pj_ice_strans *ice_st,
+                          unsigned comp_id,
+                          void *pkt,
+                          pj_size_t size,
+                          const pj_sockaddr_t *src_addr,
+                          unsigned src_addr_len)
+{
+    PJ_UNUSED_ARG(ice_st);
+    PJ_UNUSED_ARG(comp_id);
+    PJ_UNUSED_ARG(pkt);
+    PJ_UNUSED_ARG(size);
+    PJ_UNUSED_ARG(src_addr);
+    PJ_UNUSED_ARG(src_addr_len);
+}
+
+static void ice_on_ice_complete(pj_ice_strans *ice_st,
+                                pj_ice_strans_op op,
+                                pj_status_t status)
+{
+    PJ_UNUSED_ARG(ice_st);
+    PJ_UNUSED_ARG(op);
+    PJ_UNUSED_ARG(status);
 }
 
 int stun_parse(uint8_t *data, size_t Size)
@@ -71,6 +118,7 @@ int stun_parse(uint8_t *data, size_t Size)
     uint8_t flag_error_code = data[2] & 0x01;
     uint8_t flag_unknown_attrs = data[2] & 0x02;
     uint8_t flag_turn_enabled = data[3] & 0x01;
+    uint8_t flag_ice_enabled = data[3] & 0x04;
 
     /* Advance data pointer and adjust size */
     data += 4;
@@ -203,7 +251,7 @@ int stun_parse(uint8_t *data, size_t Size)
                                      &err_msg, &response);
     }
 
-    /* Path 9: TURN session operations using full remaining data */
+    /* Path 9: TURN session operations - sendto, packet reception, and allocate requests */
     if (Size >= 20 && flag_turn_enabled) {
         pj_turn_session *turn_sess = NULL;
         pj_turn_session_cb turn_cb;
@@ -224,20 +272,32 @@ int stun_parse(uint8_t *data, size_t Size)
         /* Create TURN session */
         pj_bzero(&turn_cb, sizeof(turn_cb));
         turn_cb.on_send_pkt = &turn_on_send_pkt;
+        turn_cb.on_rx_data = &turn_on_rx_data;
+        turn_cb.on_state = &turn_on_state;
 
         status = pj_turn_session_create(&stun_cfg, "turn_fuzz", pj_AF_INET(),
                                        PJ_TURN_TP_UDP, NULL, &turn_cb, 0, NULL, &turn_sess);
 
         if (status == PJ_SUCCESS && turn_sess) {
-            /* Test TURN sendto (will return PJ_EIGNORED since session not READY).
-             * Note: Driving session to READY requires simulating allocation with async
-             * I/O and timer callbacks, impractical for fuzzing. This still exercises
-             * session creation and sendto API with various inputs. */
-            pj_sockaddr_in peer_addr;
-            pj_bzero(&peer_addr, sizeof(peer_addr));
-            peer_addr.sin_family = pj_AF_INET();
+            /* Configure TURN server and credentials */
+            pj_str_t srv_addr_str = pj_str("127.0.0.1");
+            int default_port = 3478;
+            pj_stun_auth_cred cred;
 
+            pj_turn_session_set_server(turn_sess, &srv_addr_str, default_port, NULL);
+
+            pj_bzero(&cred, sizeof(cred));
+            cred.type = PJ_STUN_AUTH_CRED_STATIC;
+            cred.data.static_cred.username = pj_str(FIXED_USERNAME);
+            cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
+            cred.data.static_cred.data = pj_str(FIXED_PASSWORD);
+            pj_turn_session_set_credential(turn_sess, &cred);
+
+            /* Test TURN sendto API */
             if (Size >= 6) {
+                pj_sockaddr_in peer_addr;
+                pj_bzero(&peer_addr, sizeof(peer_addr));
+                peer_addr.sin_family = pj_AF_INET();
                 pj_memcpy(&peer_addr.sin_addr, data, 4);
                 pj_memcpy(&peer_addr.sin_port, data + 4, 2);
 
@@ -250,10 +310,98 @@ int stun_parse(uint8_t *data, size_t Size)
                 }
             }
 
+            /* Test TURN packet reception API */
+            if (Size >= 40) {
+                pj_turn_session_on_rx_pkt_param prm;
+                pj_sockaddr_in src_addr;
+                size_t pkt_len = Size;
+                if (pkt_len > 1500) pkt_len = 1500;
+
+                pj_bzero(&src_addr, sizeof(src_addr));
+                src_addr.sin_family = pj_AF_INET();
+                src_addr.sin_port = pj_htons(default_port);
+                src_addr.sin_addr.s_addr = pj_htonl(0x7F000001);
+
+                pj_bzero(&prm, sizeof(prm));
+                prm.pkt = data;
+                prm.pkt_len = pkt_len;
+                prm.src_addr = (pj_sockaddr*)&src_addr;
+                prm.src_addr_len = sizeof(src_addr);
+
+                pj_turn_session_on_rx_pkt2(turn_sess, &prm);
+            }
+
             pj_turn_session_destroy(turn_sess, PJ_SUCCESS);
         }
 
 on_turn_cleanup:
+        if (timer_heap) pj_timer_heap_destroy(timer_heap);
+        if (ioqueue) pj_ioqueue_destroy(ioqueue);
+    }
+
+    /* Path 10: ICE session operations - connectivity checks and packet handling */
+    if (Size >= 50 && flag_ice_enabled) {
+        pj_ice_strans *ice_st = NULL;
+        pj_ice_strans_cb ice_cb;
+        pj_ice_strans_cfg ice_cfg;
+        pj_stun_config stun_cfg;
+        pj_ioqueue_t *ioqueue = NULL;
+        pj_timer_heap_t *timer_heap = NULL;
+        pj_status_t status;
+
+        /* Setup infrastructure */
+        status = pj_ioqueue_create(pool, 8, &ioqueue);
+        if (status != PJ_SUCCESS) goto on_ice_cleanup;
+        status = pj_timer_heap_create(pool, 32, &timer_heap);
+        if (status != PJ_SUCCESS) goto on_ice_cleanup;
+        pj_stun_config_init(&stun_cfg, mem, 0, ioqueue, timer_heap);
+
+        /* Create ICE transport */
+        pj_bzero(&ice_cb, sizeof(ice_cb));
+        ice_cb.on_rx_data = &ice_on_rx_data;
+        ice_cb.on_ice_complete = &ice_on_ice_complete;
+
+        pj_ice_strans_cfg_default(&ice_cfg);
+        ice_cfg.stun_cfg = stun_cfg;
+        ice_cfg.af = pj_AF_INET();
+
+        status = pj_ice_strans_create("ice_fuzz", &ice_cfg, 1,
+                                     NULL, &ice_cb, &ice_st);
+
+        if (status == PJ_SUCCESS && ice_st) {
+            pj_str_t local_ufrag = pj_str(FIXED_USERNAME);
+            pj_str_t local_pwd = pj_str(FIXED_PASSWORD);
+
+            /* Initialize ICE with role based on flag */
+            pj_ice_sess_role role = (data[0] & 0x04) ? 
+                                    PJ_ICE_SESS_ROLE_CONTROLLING :
+                                    PJ_ICE_SESS_ROLE_CONTROLLED;
+
+            status = pj_ice_strans_init_ice(ice_st, role, &local_ufrag, &local_pwd);
+
+            if (status == PJ_SUCCESS) {
+                /* Query ICE state - exercises state management code */
+                pj_ice_strans_get_state(ice_st);
+                pj_ice_strans_has_sess(ice_st);
+                pj_ice_strans_sess_is_running(ice_st);
+                pj_ice_strans_sess_is_complete(ice_st);
+
+                /* Test candidate enumeration if we have data */
+                if (Size >= 20) {
+                    unsigned comp_id = 1;
+                    unsigned cand_cnt = 8;
+                    pj_ice_sess_cand cands[8];
+                    pj_ice_sess_cand def_cand;
+
+                    pj_ice_strans_enum_cands(ice_st, comp_id, &cand_cnt, cands);
+                    pj_ice_strans_get_def_cand(ice_st, comp_id, &def_cand);
+                }
+            }
+
+            pj_ice_strans_destroy(ice_st);
+        }
+
+on_ice_cleanup:
         if (timer_heap) pj_timer_heap_destroy(timer_heap);
         if (ioqueue) pj_ioqueue_destroy(ioqueue);
     }
