@@ -2030,6 +2030,24 @@ struct SendResponseParam
 };
 
 /**
+ * Parameters for Account::shutdown2().
+ */
+struct AccountShutdownParam
+{
+    /**
+     * If true, the account will always be deleted even when there are
+     * active calls using it (a warning will be logged). If false, the
+     * function will throw an Error with PJ_EBUSY when active calls exist.
+     *
+     * Default: false
+     */
+    bool        force;
+
+    /** Default constructor */
+    AccountShutdownParam() : force(false) {}
+};
+
+/**
  * Account.
  */
 class Account
@@ -2041,8 +2059,9 @@ public:
     Account();
 
     /**
-     * Destructor. Note that if the account is deleted, it will also delete
-     * the corresponding account in the PJSUA-LIB.
+     * Destructor. This will call shutdown() to always delete the
+     * corresponding account in the PJSUA-LIB, even if there are active
+     * calls. This ensures no resource leak occurs.
      *
      * If application implements a derived class, the derived class should
      * call shutdown() in the beginning stage in its destructor, or
@@ -2068,8 +2087,14 @@ public:
                 bool make_default=false) PJSUA2_THROW(Error);
 
     /**
-     * Shutdown the account. This will initiate unregistration if needed,
-     * and delete the corresponding account in the PJSUA-LIB.
+     * Shutdown the account. This will always delete the account
+     * (force=true), initiating unregistration if needed, and deleting the
+     * corresponding account in the PJSUA-LIB. Active calls will not
+     * prevent deletion; a warning will be logged if any exist.
+     *
+     * This method does not throw an exception. Any error will be logged
+     * internally. For safer behavior that checks for active calls, use
+     * shutdown2() instead.
      *
      * Note that application must delete all Buddy instances belong to this
      * account before shutting down the account.
@@ -2081,6 +2106,20 @@ public:
      * the derived class destructor and Account callbacks.
      */
     void shutdown();
+
+    /**
+     * Shutdown the account, with additional options. This will initiate
+     * unregistration if needed, and delete the corresponding account in
+     * the PJSUA-LIB.
+     *
+     * Unlike shutdown(), this method throws an Error exception on failure.
+     * By default (force=false), if there are active calls still using this
+     * account, it will throw an Error with PJ_EBUSY status. Set force=true
+     * to always delete the account regardless.
+     *
+     * @param prm               Shutdown parameters.
+     */
+    void shutdown2(const AccountShutdownParam &prm) PJSUA2_THROW(Error);
 
     /**
      * Modify the account to use the specified account configuration.
