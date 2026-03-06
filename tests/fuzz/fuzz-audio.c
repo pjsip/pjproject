@@ -62,8 +62,8 @@ static codec_config_t codec_configs[] = {
     {&codec_gsm,      "GSM",         33,  320},
     {&codec_speex,    "Speex",       10,  320},
     {&codec_ilbc,     "iLBC",        38,  480},
-    {&codec_l16_8k,   "L16 8kHz",    160, 160},
-    {&codec_l16_16k,  "L16 16kHz",   320, 320},
+    {&codec_l16_8k,   "L16 8kHz",    320, 320},
+    {&codec_l16_16k,  "L16 16kHz",   640, 640},
 };
 
 #define NUM_CODECS (sizeof(codec_configs) / sizeof(codec_configs[0]))
@@ -117,6 +117,8 @@ static int init_codecs(void)
         return -1;
     }
 
+    pj_log_set_level(0);
+
     /* Initialize caching pool */
     pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
 
@@ -159,12 +161,12 @@ static int init_codecs(void)
 static void test_codec_cycle(pjmedia_codec *codec, const uint8_t *Data, size_t Size,
                               size_t min_frame_size, size_t pcm_frame_size)
 {
-    if (!codec || Size < min_frame_size) return;
-
     pj_status_t status;
     pjmedia_frame input_frame, output_frame;
     pj_int16_t pcm_buffer[4096] = {0};
     pj_uint8_t encoded_buffer[2048];
+
+    if (!codec || Size < min_frame_size) return;
 
     /* Initialise pjmedia_frame */
     pj_bzero(&input_frame, sizeof(input_frame));
@@ -235,19 +237,29 @@ static void test_codec_cycle(pjmedia_codec *codec, const uint8_t *Data, size_t S
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
+    const uint8_t *current_data;
+    size_t remaining_size;
+    size_t i;
+    codec_config_t *config;
+    pjmedia_codec *codec;
+    size_t chunk_size;
+    size_t consumed;
+    pj_int16_t pcm_val;
+    pj_uint8_t alaw;
+    pj_uint8_t ulaw;
+
     /* Initialize codecs on first run */
     if (init_codecs() != 0) {
         return 0;
     }
 
-    const uint8_t *current_data = Data;
-    size_t remaining_size = Size;
-    size_t i;
+    current_data = Data;
+    remaining_size = Size;
 
     /* Test each codec sequentially with non-overlapping chunks of data */
     for (i = 0; i < NUM_CODECS; i++) {
-        codec_config_t *config = &codec_configs[i];
-        pjmedia_codec *codec = *(config->codec_ptr);
+        config = &codec_configs[i];
+        codec = *(config->codec_ptr);
 
         /* Skip if codec not available or not enough data */
         if (!codec || remaining_size < config->min_frame_size) {
@@ -255,7 +267,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         }
 
         /* Calculate chunk size for this codec (at least min_frame_size, max pcm_frame_size) */
-        size_t chunk_size = config->pcm_frame_size;
+        chunk_size = config->pcm_frame_size;
         if (chunk_size > remaining_size) {
             chunk_size = remaining_size;
         }
@@ -265,7 +277,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
                         config->min_frame_size, config->pcm_frame_size);
 
         /* Advance to next chunk of data */
-        size_t consumed = config->min_frame_size;
+        consumed = config->min_frame_size;
         if (consumed > remaining_size) {
             consumed = remaining_size;
         }
@@ -281,11 +293,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     /* Test low-level G.711 conversion functions with remaining data */
     if (remaining_size > 1) {
         for (i = 0; i + 1 < remaining_size && i < 256; i += 2) {
-            pj_int16_t pcm_val = (pj_int16_t)((current_data[i] << 8) | current_data[i+1]);
+            pcm_val = (pj_int16_t)((current_data[i] << 8) | current_data[i+1]);
 
-            /* G.711 conversions */
-            pj_uint8_t alaw = pjmedia_linear2alaw(pcm_val);
-            pj_uint8_t ulaw = pjmedia_linear2ulaw(pcm_val);
+            alaw = pjmedia_linear2alaw(pcm_val);
+            ulaw = pjmedia_linear2ulaw(pcm_val);
             pcm_val = pjmedia_alaw2linear(alaw);
             pcm_val = pjmedia_ulaw2linear(ulaw);
             ulaw = pjmedia_alaw2ulaw(current_data[i]);
