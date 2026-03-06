@@ -23,9 +23,10 @@
 #include <pjlib.h>
 
 #define THIS_FILE   "inv_offer_answer_test.c"
-#define PORT        50068
-#define CONTACT     "sip:inv_offer_answer_test@127.0.0.1:50068"
 #define TRACE_(x)   //PJ_LOG(3,x)
+
+static char contact_buf[80];
+static pj_str_t contact_uri;
 
 static struct oa_sdp_t
 {
@@ -322,7 +323,7 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
         /*
          * Create UAS
          */
-        uri = pj_str(CONTACT);
+        uri = contact_uri;
         PJ_TEST_SUCCESS(pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(), rdata,
                                                           &uri, &dlg),
                         NULL, { pj_assert(0); return PJ_FALSE; });
@@ -436,9 +437,9 @@ static int perform_test(inv_test_param_t *param)
     pj_memcpy(&inv_test.param, param, sizeof(*param));
     job_cnt = 0;
 
-    uri = pj_str(CONTACT);
+    uri = contact_uri;
 
-    /*  
+    /*
      * Create UAC
      */
     status = pjsip_dlg_create_uac(pjsip_ua_instance(), 
@@ -768,14 +769,20 @@ int inv_offer_answer_test(void)
     pjsip_endpt_register_module(endpt, &mod_inv_oa_test);
     pjsip_endpt_register_module(endpt, &mod_msg_logger);
 
-    /* Create SIP UDP transport */
+    /* Create SIP UDP transport on ephemeral port */
     {
         pj_sockaddr_in addr;
         pjsip_transport *tp;
 
-        pj_sockaddr_in_init(&addr, NULL, PORT);
+        pj_sockaddr_in_init(&addr, NULL, 0);
         PJ_TEST_SUCCESS(pjsip_udp_transport_start(endpt, &addr, NULL, 1, &tp),
                         NULL, return -5);
+
+        /* Build contact URI from the assigned port */
+        pj_ansi_snprintf(contact_buf, sizeof(contact_buf),
+                         "sip:inv_oa_test@127.0.0.1:%d",
+                         tp->local_name.port);
+        contact_uri = pj_str(contact_buf);
     }
 
     /* Do tests */
