@@ -10,6 +10,10 @@
 #define	GSM_H
 
 #ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef __cplusplus
 #	define	NeedFunctionPrototypes	1
 #endif
 
@@ -43,7 +47,7 @@ typedef gsm_byte 		gsm_frame[33];		/* 33 * 8 bits	 */
 
 #define	GSM_MAGIC		0xD		  	/* 13 kbit/s RPE-LTP */
 
-#define	GSM_PATCHLEVEL		10
+#define	GSM_PATCHLEVEL		23
 #define	GSM_MINOR		0
 #define	GSM_MAJOR		1
 
@@ -67,5 +71,9 @@ extern int  gsm_explode GSM_P((gsm, gsm_byte   *, gsm_signal *));
 extern void gsm_implode GSM_P((gsm, gsm_signal *, gsm_byte   *));
 
 #undef	GSM_P
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif	/* GSM_H */
