@@ -908,6 +908,8 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
     int bw;
 #endif
 
+    PJ_ASSERT_RETURN(codec && ts && frames && frame_cnt, PJ_EINVAL);
+
     pj_mutex_lock (opus_data->mutex);
 
     if (pkt_size > sizeof(tmp_buf)) {
@@ -927,6 +929,12 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
       PJ_LOG(2, (THIS_FILE, "No frames retrieved (num_frames = 0)"));
       pj_mutex_unlock(opus_data->mutex);
       return PJMEDIA_CODEC_EFAILED;
+    }
+
+    if (num_frames > (int)*frame_cnt) {
+        PJ_LOG(4, (THIS_FILE, "Opus parse: clamping num_frames from %d to %u",
+                   num_frames, *frame_cnt));
+        num_frames = (int)*frame_cnt;
     }
 
     out_pos = 0;

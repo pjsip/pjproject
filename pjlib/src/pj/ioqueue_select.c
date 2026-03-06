@@ -223,7 +223,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
                      sizeof(union operation_key), PJ_EBUG);
 
     /* Create and init common ioqueue stuffs */
-    ioqueue = PJ_POOL_ALLOC_T(pool, pj_ioqueue_t);
+    ioqueue = PJ_POOL_ZALLOC_T(pool, pj_ioqueue_t);
     ioqueue_init(ioqueue);
 
     if (cfg)

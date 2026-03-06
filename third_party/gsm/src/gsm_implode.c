@@ -367,7 +367,7 @@ void gsm_implode P3((s, source, c), gsm s, gsm_signal * source, gsm_byte * c)
 		}
 	}
 	else
-#endif 
+#endif
 	{
 
 		*c++ =   ((GSM_MAGIC & 0xF) << 4)		/* 1 */

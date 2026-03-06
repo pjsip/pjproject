@@ -23,6 +23,7 @@
 //#define TRACE(log)      PJ_LOG(3,log)
 #define TRACE(log)
 #define MAX_ASYNC       16
+#define MAX_UDP_MISMATCH_LOG    10
 
 #define RETCODE_CONNECT_FAILED  650
 
@@ -120,6 +121,7 @@ struct test_desc
         pj_status_t connect_status;
 
         int retcode;                 /* test retcode. non-zero will abort. */
+        unsigned udp_rx_mismatch_cnt;/* UDP RX out-of-order counter */
 
         /* okud: op_key user data */
         unsigned okuds_cnt[2];
@@ -197,8 +199,11 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                              * order? (tested on Linux epoll). Or could there be
                              * bug somewhere?
                              */
-                            PJ_LOG(3,(THIS_FILE, "  UDP RX sequence mismatch at idx=%ld. Expecting %d, got %d",
-                                      p-start, counter, *p));
+                            test->state.udp_rx_mismatch_cnt++;
+                            if (test->state.udp_rx_mismatch_cnt <= MAX_UDP_MISMATCH_LOG) {
+                                PJ_LOG(3,(THIS_FILE, "  UDP RX sequence mismatch at idx=%ld. Expecting %d, got %d",
+                                          p-start, counter, *p));
+                            }
                             //test->state.retcode = 413;
                             //okud->server.status = PJ_EBUG;
                             //pj_lock_release((pj_lock_t*)test->state.grp_lock);
@@ -742,6 +747,12 @@ static int perform_test(test_desc *test)
     }
 
 on_return:
+    if (test->state.udp_rx_mismatch_cnt > MAX_UDP_MISMATCH_LOG) {
+        PJ_LOG(3,(THIS_FILE, "  UDP RX sequence mismatch total: %u "
+                             "(only first %d shown)",
+                  test->state.udp_rx_mismatch_cnt, MAX_UDP_MISMATCH_LOG));
+    }
+
     if (test->state.ioq)
         pj_ioqueue_destroy(test->state.ioq);
     if (test->state.grp_lock) {

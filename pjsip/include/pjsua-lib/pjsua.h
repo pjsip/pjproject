@@ -5150,15 +5150,70 @@ PJ_DECL(void*) pjsua_acc_get_user_data(pjsua_acc_id acc_id);
 
 
 /**
+ * Parameters for account deletion with pjsua_acc_del2(). Application should
+ * use #pjsua_acc_del_param_default() to initialize this structure with its
+ * default values.
+ */
+typedef struct pjsua_acc_del_param
+{
+    /**
+     * If PJ_TRUE, the account will always be deleted even when there are
+     * active calls using it (a warning will be logged). If PJ_FALSE, the
+     * function will return PJ_EBUSY when active calls exist.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t   force;
+
+} pjsua_acc_del_param;
+
+
+/**
+ * Initialize account deletion parameters with default values.
+ *
+ * @param prm           The parameter to be initialized.
+ */
+PJ_DECL(void) pjsua_acc_del_param_default(pjsua_acc_del_param *prm);
+
+
+/**
  * Delete an account. This will unregister the account from the SIP server,
  * if necessary, and terminate server side presence subscriptions associated
  * with this account.
+ *
+ * This function always deletes the account regardless of active calls
+ * (equivalent to calling pjsua_acc_del2() with force=PJ_TRUE). For safer
+ * behavior that checks for active calls, use pjsua_acc_del2() instead.
  *
  * @param acc_id        Id of the account to be deleted.
  *
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id);
+
+
+/**
+ * Delete an account with additional options. This will unregister the account
+ * from the SIP server, if necessary, and terminate server side presence
+ * subscriptions associated with this account.
+ *
+ * By default (force=PJ_FALSE), if there are active calls using this account,
+ * this function will return PJ_EBUSY. Application should hang up all calls
+ * first using pjsua_call_hangup() and wait until the calls are fully
+ * disconnected before deleting the account.
+ *
+ * When force=PJ_TRUE, the account will be deleted even if there are active
+ * calls. A warning will be logged but deletion will proceed.
+ *
+ * @param acc_id        Id of the account to be deleted.
+ * @param prm           Account deletion parameters.
+ *
+ * @return              PJ_SUCCESS on success, PJ_EBUSY if force is PJ_FALSE
+ *                      and there are active calls using this account, or the
+ *                      appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_del2(pjsua_acc_id acc_id,
+                                     const pjsua_acc_del_param *prm);
 
 
 /**

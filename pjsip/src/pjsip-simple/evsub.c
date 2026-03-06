@@ -236,6 +236,7 @@ struct pjsip_evsub
     pj_timer_entry       *pending_sub_timer; /**< Stop pending sub timer.   */
     pjsip_tx_data        *pending_notify;/**< Pending NOTIFY to be sent.    */
     pj_bool_t             calling_on_rx_refresh;/**< Inside on_rx_refresh()?*/
+    pj_bool_t             deferred_state_notify;/**< Deferred TERMINATED notify */
     pj_grp_lock_t        *grp_lock;     /* Session group lock       */
 
     void                 *mod_data[PJSIP_MAX_MODULE];   /**< Module data.   */
@@ -626,8 +627,15 @@ static void set_state( pjsip_evsub *sub, pjsip_evsub_state state,
         event = &dummy_event;
     }
 
-    if (sub->user.on_evsub_state && sub->call_cb)
-        (*sub->user.on_evsub_state)(sub, event);
+    if (sub->user.on_evsub_state && sub->call_cb) {
+        if (state == PJSIP_EVSUB_STATE_TERMINATED &&
+            sub->calling_on_rx_refresh)
+        {
+            sub->deferred_state_notify = PJ_TRUE;
+        } else {
+            (*sub->user.on_evsub_state)(sub, event);
+        }
+    }
 
     if (state == PJSIP_EVSUB_STATE_TERMINATED &&
         prev_state != PJSIP_EVSUB_STATE_TERMINATED) 
@@ -2190,6 +2198,19 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
             if (sub->expires->ivalue == 0) st_code = 200;
         }
         sub->calling_on_rx_refresh = PJ_FALSE;
+
+        if (sub->deferred_state_notify) {
+            sub->deferred_state_notify = PJ_FALSE;
+
+            if (sub->user.on_evsub_state && sub->call_cb)
+                (*sub->user.on_evsub_state)(sub, event);
+
+            if (sub->state == PJSIP_EVSUB_STATE_TERMINATED &&
+                sub->pending_tsx == 0)
+            {
+                evsub_destroy(sub);
+            }
+        }
 
         /* Application MUST specify final response! */
         PJ_ASSERT_ON_FAIL(st_code >= 200, {st_code=200; });
