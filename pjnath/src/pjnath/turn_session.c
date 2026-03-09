@@ -1051,6 +1051,10 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
         cd->ch_number = pj_htons((pj_uint16_t)ch->num);
         cd->length = pj_htons((pj_uint16_t)pkt_len);
         pj_memcpy(cd+1, pkt, pkt_len);
+        /* Add zero padding, if data is not 4-bytes aligned. */
+        if (pkt_len & 0x03) {
+            pj_bzero(((pj_uint8_t *)(cd+1)) + pkt_len, 4 - (pkt_len & 0x03));
+        }
 
         pj_assert(sess->srv_addr != NULL);
 
