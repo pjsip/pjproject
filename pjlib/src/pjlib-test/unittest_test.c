@@ -630,8 +630,40 @@ int unittest_parallel_test()
     pj_test_runner_destroy(runner);
     pj_pool_release(pool);
 
-    PJ_TEST_STREQ(pj_cstr(&stmp0, parallel_msg), pj_cstr(&stmp1, correct_msg),
-                  "wrong test scheduling", return -112);
+    if (test_app.param_ci_mode) {
+        /* In CI mode, only verify grouping constraints without requiring
+         * exact completion order within parallel groups, since sleep-based
+         * ordering is unreliable on loaded CI runners.
+         *
+         * Constraints:
+         *  - positions 0-1: exclusive "a","b" in order
+         *  - positions 2-4: parallel "c","d","e" in any order
+         *  - positions 5-7: exclusive "f","g","h" in order
+         *  - positions 8-10: parallel "i","j","k" in any order
+         */
+        const char *msg = parallel_msg;
+        int ok = (pj_ansi_strlen(msg) == 11 &&
+                  msg[0]=='a' && msg[1]=='b' &&
+                  pj_ansi_strchr("cde", msg[2]) &&
+                  pj_ansi_strchr("cde", msg[3]) &&
+                  pj_ansi_strchr("cde", msg[4]) &&
+                  msg[2]!=msg[3] && msg[3]!=msg[4] && msg[2]!=msg[4] &&
+                  msg[5]=='f' && msg[6]=='g' && msg[7]=='h' &&
+                  pj_ansi_strchr("ijk", msg[8]) &&
+                  pj_ansi_strchr("ijk", msg[9]) &&
+                  pj_ansi_strchr("ijk", msg[10]) &&
+                  msg[8]!=msg[9] && msg[9]!=msg[10] && msg[8]!=msg[10]);
+        if (!ok) {
+            PJ_LOG(1,("unittest_test",
+                       "wrong test scheduling: got \"%s\", "
+                       "expected \"ab{cde}fgh{ijk}\"", msg));
+            return -112;
+        }
+    } else {
+        PJ_TEST_STREQ(pj_cstr(&stmp0, parallel_msg),
+                       pj_cstr(&stmp1, correct_msg),
+                       "wrong test scheduling", return -112);
+    }
 
     return 0;
 }

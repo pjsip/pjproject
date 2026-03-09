@@ -67,3 +67,22 @@ deadlock:pjsip_dlg_on_tsx_state
 # deadlock:endpt_on_rx_msg as this will basically filter all message
 # processing threads, and may potentially suppress genuine deadlock issue.
 #=============================================================================
+
+#=============================================================================
+# Lock-order-inversion inside libdbus (used by SDL2 on Linux)
+# This is not a PJSIP bug. TSan detects a potential deadlock between two
+# internal dbus mutexes acquired in the SDL video device worker thread
+# (job_thread in sdl_dev.c), triggered during pjsua video subsystem init.
+#
+# Example stack trace:
+#   Mutex M1 acquired here while holding mutex M0 in thread T2:
+#   #0 pthread_mutex_lock (libtsan.so.2)
+#   #1 <null> (libdbus-1.so.3)
+#   #2 job_thread ../src/pjmedia-videodev/sdl_dev.c
+#
+#   Mutex M0 acquired here while holding mutex M1 in thread T2:
+#   #0 pthread_mutex_lock (libtsan.so.2)
+#   #1 <null> (libdbus-1.so.3)
+#   #2 job_thread ../src/pjmedia-videodev/sdl_dev.c
+deadlock:libdbus
+#=============================================================================
