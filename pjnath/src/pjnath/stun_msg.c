@@ -1802,6 +1802,14 @@ static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf,
     /* Copy error string */
     pj_memcpy(buf + ATTR_HDR_LEN + 4, ca->reason.ptr, ca->reason.slen);
 
+    /* Zero-fill padding bytes if reason string is not 4-bytes aligned */
+    if (ca->reason.slen & 0x03) {
+        pj_uint8_t pad[3];
+        pj_memset(pad, padding_char, sizeof(pad));
+        pj_memcpy(buf + ATTR_HDR_LEN + 4 + ca->reason.slen, pad,
+                  4 - (ca->reason.slen & 0x03));
+    }
+
     /* Done */
     *printed = (ATTR_HDR_LEN + 4 + (unsigned)ca->reason.slen + 3) & (~3);
 
@@ -1938,6 +1946,14 @@ static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf,
         *dst_unk_attr = pj_htons(ca->attrs[i]);
     }
 
+    /* Zero-fill padding bytes if attribute list is not 4-bytes aligned */
+    if ((ca->attr_count << 1) & 0x03) {
+        pj_uint8_t pad[3];
+        pj_memset(pad, padding_char, sizeof(pad));
+        pj_memcpy(buf + ATTR_HDR_LEN + (ca->attr_count << 1), pad,
+                  4 - ((ca->attr_count << 1) & 0x03));
+    }
+
     /* Done */
     *printed = (ATTR_HDR_LEN + (ca->attr_count << 1) + 3) & (~3);
 
@@ -2071,6 +2087,14 @@ static pj_status_t encode_binary_attr(const void *a, pj_uint8_t *buf,
 
     /* Copy the data */
     pj_memcpy(buf+ATTR_HDR_LEN, ca->data, ca->length);
+
+    /* Zero-fill padding bytes if data is not 4-bytes aligned */
+    if (ca->length & 0x03) {
+        pj_uint8_t pad[3];
+        pj_memset(pad, padding_char, sizeof(pad));
+        pj_memcpy(buf + ATTR_HDR_LEN + ca->length, pad,
+                  4 - (ca->length & 0x03));
+    }
 
     /* Done */
     return PJ_SUCCESS;
