@@ -1789,7 +1789,9 @@ static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf,
     
     PJ_UNUSED_ARG(msghdr);
 
-    if (len < ATTR_HDR_LEN + 4 + (unsigned)ca->reason.slen) 
+    /* Calculated total attr_len (add padding if necessary) */
+    *printed = (ATTR_HDR_LEN + 4 + (unsigned)ca->reason.slen + 3) & (~3);
+    if (len < *printed)
         return PJ_ETOOSMALL;
 
     /* Copy and convert attribute to network byte order */
@@ -1811,7 +1813,6 @@ static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf,
     }
 
     /* Done */
-    *printed = (ATTR_HDR_LEN + 4 + (unsigned)ca->reason.slen + 3) & (~3);
 
     return PJ_SUCCESS;
 }
@@ -1933,8 +1934,11 @@ static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf,
     
     PJ_UNUSED_ARG(msghdr);
 
+    /* Calculated total attr_len (add padding if necessary) */
+    *printed = (ATTR_HDR_LEN + (ca->attr_count << 1) + 3) & (~3);
+
     /* Check that buffer is enough */
-    if (len < ATTR_HDR_LEN + (ca->attr_count << 1))
+    if (len < *printed)
         return PJ_ETOOSMALL;
 
     PUTVAL16H(buf, 0, ca->hdr.type);
@@ -1955,7 +1959,6 @@ static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf,
     }
 
     /* Done */
-    *printed = (ATTR_HDR_LEN + (ca->attr_count << 1) + 3) & (~3);
 
     return PJ_SUCCESS;
 }
