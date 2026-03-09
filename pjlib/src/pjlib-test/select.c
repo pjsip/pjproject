@@ -48,7 +48,6 @@ enum
     EXCEPT_FDS
 };
 
-#define UDP_PORT    51232
 #define THIS_FILE   "select_test"
 
 /*
@@ -56,14 +55,14 @@ enum
  *
  * Perform pj_sock_select() and find out which sockets
  * are signalled.
- */    
+ */
 static int do_select( pj_sock_t sock1, pj_sock_t sock2,
                       int setcount[])
 {
     pj_fd_set_t fds[3];
     pj_time_val timeout;
     int i, n;
-    
+
     for (i=0; i<3; ++i) {
         PJ_FD_ZERO(&fds[i]);
         PJ_FD_SET(sock1, &fds[i]);
@@ -71,7 +70,7 @@ static int do_select( pj_sock_t sock1, pj_sock_t sock2,
         setcount[i] = 0;
     }
 
-    timeout.sec = 1;
+    timeout.sec = 5;
     timeout.msec = 0;
 
     n = pj_sock_select(PJ_IOQUEUE_MAX_HANDLES, &fds[0], &fds[1], &fds[2],
@@ -108,32 +107,43 @@ int select_test()
     pj_ssize_t sent, received;
     char buf[10];
     pj_status_t rc;
+    int addrlen;
 
     PJ_LOG(3, (THIS_FILE, "...Testing simple UDP select()"));
-    
-    // Create two UDP sockets.
+
+    /* Create two UDP sockets. */
     rc = pj_sock_socket( pj_AF_INET(), pj_SOCK_DGRAM(), 0, &udp1);
     if (rc != PJ_SUCCESS) {
         app_perror("...error: unable to create socket", rc);
         status=-10; goto on_return;
     }
     rc = pj_sock_socket( pj_AF_INET(), pj_SOCK_DGRAM(), 0, &udp2);
-    if (udp2 == PJ_INVALID_SOCKET) {
+    if (rc != PJ_SUCCESS) {
         app_perror("...error: unable to create socket", rc);
         status=-20; goto on_return;
     }
 
-    // Bind one of the UDP socket.
+    /* Bind to an ephemeral port to avoid conflicts with other tests. */
     pj_bzero(&udp_addr, sizeof(udp_addr));
     udp_addr.sin_family = pj_AF_INET();
-    udp_addr.sin_port = UDP_PORT;
+    udp_addr.sin_port = 0;
     udp_addr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));
 
-    if (pj_sock_bind(udp2, &udp_addr, sizeof(udp_addr))) {
+    rc = pj_sock_bind(udp2, &udp_addr, sizeof(udp_addr));
+    if (rc != PJ_SUCCESS) {
+        app_perror("...error: unable to bind socket", rc);
         status=-30; goto on_return;
     }
 
-    // Send data.
+    /* Get the assigned port. */
+    addrlen = sizeof(udp_addr);
+    rc = pj_sock_getsockname(udp2, &udp_addr, &addrlen);
+    if (rc != PJ_SUCCESS) {
+        app_perror("...error: unable to get socket name", rc);
+        status=-35; goto on_return;
+    }
+
+    /* Send data. */
     sent = datalen;
     rc = pj_sock_sendto(udp1, data, &sent, 0, &udp_addr, sizeof(udp_addr));
     if (rc != PJ_SUCCESS || sent != datalen) {
@@ -141,11 +151,14 @@ int select_test()
         status=-40; goto on_return;
     }
 
-    // Sleep a bit. See https://github.com/pjsip/pjproject/issues/890
+    /* Sleep a bit to let the UDP packet arrive via loopback before
+     * calling select().  See https://github.com/pjsip/pjproject/issues/890
+     */
     pj_thread_sleep(10);
 
-    // Check that socket is marked as reable.
-    // Note that select() may also report that sockets are writable.
+    /* Check that socket is marked as readable.
+     * Note that select() may also report that sockets are writable.
+     */
     status = do_select(udp1, udp2, setcount);
     if (status < 0) {
         char errbuf[128];
@@ -174,7 +187,7 @@ int select_test()
         status=-90; goto on_return;
     }
 
-    // Read the socket to clear readable sockets.
+    /* Read the socket to clear readable sockets. */
     received = sizeof(buf);
     rc = pj_sock_recv(udp2, buf, &received, 0);
     if (rc != PJ_SUCCESS || received != 5) {
@@ -183,9 +196,10 @@ int select_test()
     
     status = 0;
 
-    // Test timeout on the read part.
-    // This won't necessarily return zero, as select() may report that
-    // sockets are writable.
+    /* Test timeout on the read part.
+     * This won't necessarily return zero, as select() may report that
+     * sockets are writable.
+     */
     setcount[0] = setcount[1] = setcount[2] = 0;
     status = do_select(udp1, udp2, setcount);
     if (status != 0 && status != setcount[WRITE_FDS]) {

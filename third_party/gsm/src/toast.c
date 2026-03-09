@@ -34,7 +34,7 @@ char	*inname, *outname;
  *  The function (*init_input)() begins input (e.g. skips a header).
  *
  *  There are different versions of input, output, init_input and init_output
- *  for different formats understood by toast; which ones are used 
+ *  for different formats understood by toast; which ones are used
  *  depends on the command line arguments and, in their absence, the
  *  filename; the fallback is #defined in toast.h
  *
@@ -71,7 +71,7 @@ struct fmtdesc {
 		generic_init,
 		generic_init,
 		ulaw_input,
-		ulaw_output 
+		ulaw_output
 
 }, f_alaw = {
 		"A-law", "8 kHz, 8 bit A-law encoding", ".A",
@@ -146,7 +146,7 @@ static int length_okay P1((name), char * name)
 
 	/* If our _pathname_ is too long, we'll usually not be
 	 * able to open the file at all -- don't worry about that.
-	 * 
+	 *
 	 * But if the _filename_ is too long, there is danger of
 	 * silent truncation on some systems, which results
 	 * in the target replacing the source!
@@ -160,7 +160,7 @@ static int length_okay P1((name), char * name)
 #else
 #ifdef	_PC_NAME_MAX
 #ifdef USE_PATHCONF
-	{	char * s, tmp; 
+	{	char * s, tmp;
 		
 		/*  s = dirname(name)
 		 */
@@ -200,7 +200,7 @@ static int length_okay P1((name), char * name)
  *  Return a pointer the suffix of a string, if any.
  *  A suffix alone has no suffix, an empty suffix can not be had.
  */
-static char * suffix P2((name, suf), char *name, char * suf) 
+static char * suffix P2((name, suf), char *name, char * suf)
 {
 	size_t nlen = strlen(name);
 	size_t slen = strlen(suf);
@@ -211,7 +211,7 @@ static char * suffix P2((name, suf), char *name, char * suf)
 }
 
 
-static void catch_signals P1((fun), SIGHANDLER_T (*fun) ()) 
+static void catch_signals P1((fun), SIGHANDLER_T (*fun) (int))
 {
 #ifdef	SIGHUP
 	signal( SIGHUP,   fun );
@@ -230,7 +230,7 @@ static void catch_signals P1((fun), SIGHANDLER_T (*fun) ())
 #endif
 }
 
-static SIGHANDLER_T onintr P0()
+static SIGHANDLER_T onintr P1((signo), int signo)
 {
 	char * tmp = outname;
 
@@ -252,8 +252,8 @@ static char * emalloc P1((len), size_t len)
 	char * s;
 	if (!(s = malloc(len))) {
 		fprintf(stderr, "%s: failed to malloc %d bytes -- abort\n",
-			progname, len);
-		onintr();
+			progname, (int)len);
+		onintr(0);
 		exit(1);
 	}
 	return s;
@@ -270,7 +270,7 @@ static char* normalname P3((name, want, cut), char *name, char *want,char *cut)
 	maxlen = strlen(name) + 1 + strlen(want) + strlen(cut);
 	p = strcpy(emalloc(maxlen), name);
 
-	if (s = suffix(p, cut)) strcpy(s, want);
+	if ((s = suffix(p, cut)) != 0) strcpy(s, want);
 	else if (*want && !suffix(p, want)) strcat(p, want);
 
 	return p;
@@ -325,7 +325,7 @@ static void update_mode P0()
 		fprintf(stderr, "%s: could not change file mode of \"%s\"\n",
 			progname, outname);
 	}
-#else 
+#else
 #ifdef HAS_CHMOD
 	if (outname && chmod(outname, instat.st_mode & 07777)) {
 		perror(outname);
@@ -341,7 +341,7 @@ static void update_own P0()
 	if (!instat.st_nlink) return; /* couldn't stat in */
 #ifdef HAS_FCHOWN
 	(void)fchown(fileno(out), instat.st_uid, instat.st_gid);
-#else 
+#else
 #ifdef HAS_CHOWN
 	(void)chown(outname, instat.st_uid, instat.st_gid);
 #endif /* HAS_CHOWN  */
@@ -415,9 +415,10 @@ static int okay_as_input P3((name,f,st), char* name, FILE* f, struct stat * st)
 		return 0;
 	}
 	if (st->st_nlink > 1 && !f_cat && !f_precious) {
-		fprintf(stderr, 
-		      "%s: \"%s\" has %s other link%s -- unchanged.\n",
-			progname,name,st->st_nlink - 1,"s" + (st->st_nlink<=2));
+		fprintf(stderr,
+		      "%s: \"%s\" has %d other link%s -- unchanged.\n",
+			progname, name, (int)(st->st_nlink - 1),
+			&"s"[st->st_nlink == 2]);
 		return 0;
 	}
 	return 1;
@@ -497,7 +498,7 @@ static int open_output P1((name), char *name)
 		out     = stdout;
 		outname = (char *)NULL;
 #ifdef	HAS__FSETMODE
-		_fsetmode(out, "b"); 
+		_fsetmode(out, "b");
 #endif
 	}
 	else {
@@ -531,7 +532,7 @@ static int process_encode P0()
 	gsm      	r;
 	gsm_signal    	s[ 160 ];
 	gsm_frame	d;
- 
+
 	int		cc;
 
 	if (!(r = gsm_create())) {
@@ -571,7 +572,7 @@ static int process_decode P0()
 	gsm      	r;
 	gsm_frame	s;
 	gsm_signal	d[ 160 ];
- 
+
 	int		cc;
 
 	if (!(r = gsm_create())) {	/* malloc failed */
@@ -586,15 +587,15 @@ static int process_decode P0()
 		if (cc != sizeof(s)) {
 			if (cc >= 0) fprintf(stderr,
 			"%s: incomplete frame (%d byte%s missing) from %s\n",
-					progname, sizeof(s) - cc,
-					"s" + (sizeof(s) - cc == 1),
+					progname, (int)(sizeof(s) - cc),
+					&"s"[sizeof(s) - cc == 1],
 					inname ? inname : "stdin" );
 			gsm_destroy(r);
 			errno = 0;
 			return -1;
 		}
 		if (gsm_decode(r, s, d)) {
-			fprintf(stderr, "%s: bad frame in %s\n", 
+			fprintf(stderr, "%s: bad frame in %s\n",
 				progname, inname ? inname : "stdin");
 			gsm_destroy(r);
 			errno = 0;
@@ -624,8 +625,6 @@ static int process_decode P0()
 
 static int process P1((name), char * name)
 {
-	int step = 0;
-
 	out     = (FILE *)0;
 	in      = (FILE *)0;
 
@@ -754,7 +753,6 @@ int main P2((ac, av), int ac, char **av)
 {
 	int  		opt;
 	extern int	optind;
-	extern char	* optarg;
 
 	parse_argv0(*av);
 
@@ -778,8 +776,7 @@ int main P2((ac, av), int ac, char **av)
 	case 'v': version(); exit(0);
 	case 'h': help();    exit(0);
 
-	default: 
-	usage:
+	default:
 		fprintf(stderr,
 	"Usage: %s [-fcpdhvuaslFC] [files...] (-h for help)\n",
 			progname);

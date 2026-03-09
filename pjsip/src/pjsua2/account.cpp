@@ -1124,9 +1124,7 @@ Account::Account()
 
 Account::~Account()
 {
-    /* If this instance is deleted, also delete the corresponding account in
-     * PJSUA library.
-     */
+    /* Always delete the C-layer account to prevent resource leaks. */
     shutdown();
 }
 
@@ -1148,6 +1146,18 @@ void Account::create(const AccountConfig &acc_cfg,
 
 void Account::shutdown()
 {
+    try {
+        AccountShutdownParam prm;
+        prm.force = true;
+        shutdown2(prm);
+    } catch (Error &err) {
+        PJ_PERROR(1, (THIS_FILE, err.status,
+                     "Failed to delete account %d", id));
+    }
+}
+
+void Account::shutdown2(const AccountShutdownParam &prm) PJSUA2_THROW(Error)
+{
     if (isValid() && pjsua_get_state() < PJSUA_STATE_CLOSING) {
 #if !DEPRECATED_FOR_TICKET_2232
         // Cleanup buddies in the buddy list
@@ -1157,11 +1167,10 @@ void Account::shutdown()
         }
 #endif
 
-        // This caused error message of "Error: cannot find Account.."
-        // when Endpoint::on_reg_started() is called for unregistration.
-        //pjsua_acc_set_user_data(id, NULL);
-
-        pjsua_acc_del(id);
+        pjsua_acc_del_param del_prm;
+        pjsua_acc_del_param_default(&del_prm);
+        del_prm.force = prm.force? PJ_TRUE : PJ_FALSE;
+        PJSUA2_CHECK_EXPR(pjsua_acc_del2(id, &del_prm));
     }
 }
 

@@ -1046,16 +1046,30 @@ static void transport_detach( pjmedia_transport *tp,
         udp->rtcp_cb = NULL;
         udp->user_data = NULL;
 
+        /* Unlock keys before clearing, to avoid deadlock with
+         * PJ_IOQUEUE_CALLBACK_NO_LOCK. When that setting is enabled,
+         * pj_ioqueue_clear_key() waits for the read/write callback thread
+         * to finish, but the callback thread needs the key lock to clear
+         * its state (read_callback_thread). If we hold the lock here,
+         * pj_ioqueue_clear_key()'s recursive lock prevents full release
+         * during its wait loop, causing a deadlock.
+         *
+         * It is safe to unlock here because:
+         * - Callbacks (rtp_cb/rtp_cb2/rtcp_cb) have been set to NULL
+         *   above, so no new application callbacks will be invoked
+         *   after this point (although an in-flight callback that has
+         *   already copied the function pointer may still complete).
+         * - pj_ioqueue_clear_key() handles its own locking internally.
+         */
+        pj_ioqueue_unlock_key(udp->rtcp_key);
+        pj_ioqueue_unlock_key(udp->rtp_key);
+
         /* Cancel any outstanding operations */
         pj_ioqueue_clear_key(udp->rtp_key);
         pj_ioqueue_clear_key(udp->rtcp_key);
 
         /* Set key status to 'stopped' as keys have been cleared */
         udp->started = PJ_FALSE;
-
-        /* Unlock keys */
-        pj_ioqueue_unlock_key(udp->rtcp_key);
-        pj_ioqueue_unlock_key(udp->rtp_key);
 
         PJ_LOG(4,(udp->base.name, "UDP media transport detached"));
     }

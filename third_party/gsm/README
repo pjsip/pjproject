@@ -25,8 +25,8 @@ a library API.  Compression and decompression run faster than realtime
 on most SPARCstations.  The implementation has been verified against the
 ETSI standard test patterns.
 
-Jutta Degener (jutta@cs.tu-berlin.de)
-Carsten Bormann (cabo@cs.tu-berlin.de)
+Jutta Degener (then jutta@cs.tu-berlin.de, nowadays jutta@pobox.com)
+Carsten Bormann (then cabo@cs.tu-berlin.de, nowadays cabo@tzi.org)
 
 Communications and Operating Systems Research Group, TU Berlin
 Fax: +49.30.31425156, Phone: +49.30.31424315

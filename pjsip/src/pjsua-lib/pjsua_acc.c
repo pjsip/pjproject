@@ -747,7 +747,23 @@ PJ_DEF(void*) pjsua_acc_get_user_data(pjsua_acc_id acc_id)
 /*
  * Delete account.
  */
+PJ_DEF(void) pjsua_acc_del_param_default(pjsua_acc_del_param *prm)
+{
+    pj_bzero(prm, sizeof(*prm));
+}
+
+
 PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
+{
+    pjsua_acc_del_param prm;
+    pjsua_acc_del_param_default(&prm);
+    prm.force = PJ_TRUE;
+    return pjsua_acc_del2(acc_id, &prm);
+}
+
+
+PJ_DEF(pj_status_t) pjsua_acc_del2(pjsua_acc_id acc_id,
+                                    const pjsua_acc_del_param *prm)
 {
     pjsua_acc *acc;
     unsigned i;
@@ -762,6 +778,27 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     PJSUA_LOCK();
 
     acc = &pjsua_var.acc[acc_id];
+
+    /* Check for active calls using this account */
+    for (i = 0; i < pjsua_var.ua_cfg.max_calls; ++i) {
+        if (pjsua_var.calls[i].acc_id == acc_id &&
+            (pjsua_var.calls[i].inv != NULL ||
+             pjsua_var.calls[i].async_call.dlg != NULL))
+        {
+            if (!prm->force) {
+                PJ_LOG(2, (THIS_FILE,
+                           "Unable to delete account %d: call %d still "
+                           "exists", acc_id, i));
+                PJSUA_UNLOCK();
+                pj_log_pop_indent();
+                return PJ_EBUSY;
+            }
+            PJ_LOG(2, (THIS_FILE,
+                       "Warning: deleting account %d while call %d is "
+                       "still active (forced)", acc_id, i));
+            break;
+        }
+    }
 
     for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.buddy); ++i) {
         pjsua_buddy *b = &pjsua_var.buddy[i];
@@ -827,8 +864,8 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
         --pjsua_var.acc_cnt;
     }
 
-    /* Leave the calls intact, as I don't think calls need to
-     * access account once it's created
+    /* Ideally calls using this account should have been terminated
+     * before calling this function, unless force deletion is used.
      */
 
     /* Update default account */
