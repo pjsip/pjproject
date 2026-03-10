@@ -2078,7 +2078,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
         ptime <<= 1;
 
         /* Allocate buffer */
-        stream->enc_buf_size = afd->clock_rate * ptime / 1000 / 1000;
+        stream->enc_buf_size = ptime / 1000 * afd->clock_rate / 1000;
         c_strm->enc_buf = (pj_int16_t*)
                           pj_pool_alloc(pool, stream->enc_buf_size * 2);
 
