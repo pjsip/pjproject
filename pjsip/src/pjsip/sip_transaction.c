@@ -1199,6 +1199,7 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
     tsx->timeout_timer.id = TIMER_INACTIVE;
     tsx->timeout_timer.user_data = tsx;
     tsx->timeout_timer.cb = &tsx_timer_callback;
+    tsx->chained_lock = NULL;
     
     if (grp_lock) {
         tsx->grp_lock = grp_lock;
@@ -1247,6 +1248,17 @@ static pj_status_t tsx_shutdown( pjsip_transaction *tsx )
      * we haven't been called before */
     if (!tsx->terminating) {
         pjsip_tpselector_dec_ref(&tsx->tp_sel);
+        
+        /* Unchain and dec ref the chained lock (e.g., dialog lock) if it was set.
+         * This must be done before the group lock is destroyed.
+         * The chained_lock is stored when pj_grp_lock_chain_lock() is called
+         * in sip_dialog.c to prevent lock-order-inversion.
+         */
+        if (tsx->chained_lock) {
+            pj_grp_lock_unchain_lock(tsx->grp_lock, (pj_lock_t *)tsx->chained_lock);
+            pj_grp_lock_dec_ref(tsx->chained_lock);
+            tsx->chained_lock = NULL;
+        }
     }
 
     /* Free last transmitted message. */
