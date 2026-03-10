@@ -48,9 +48,7 @@
   typedef long long             pj_int64_t;
   typedef unsigned long long    pj_uint64_t;
   #define PJ_INLINE_SPECIFIER   static inline
-  /* Disable noreturn when ASan is active on macOS ARM64 to avoid
-   * __asan_handle_no_return crash in PlatformUnpoisonStacks().
-   */
+  /* Apple Clang ASan crashes on longjmp/noreturn, see #4846 */
   #if defined(__has_feature) && __has_feature(address_sanitizer) && \
       defined(__APPLE__) && defined(__aarch64__)
     #define PJ_ATTR_NORETURN
