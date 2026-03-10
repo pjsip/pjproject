@@ -549,12 +549,14 @@ static pj_str_t cid_uri_to_hdr_value(pj_pool_t *pool, pj_str_t *cid_uri)
     pj_size_t cid_len = pj_strlen(cid_uri);
     pj_size_t alloc_len = cid_len + 2 /* for the leading and trailing angle brackets */;
     pj_str_t uri_overlay;
-    pj_str_t cid_hdr;
+    pj_str_t cid_hdr = {0};
     pj_str_t hdr_overlay;
 
     pj_strassign(&uri_overlay, cid_uri);
     /* If the URI is already enclosed in angle brackets, remove them. */
     if (uri_overlay.ptr[0] == '<') {
+        if (uri_overlay.slen < 2)
+            return cid_hdr;
         uri_overlay.ptr++;
         uri_overlay.slen -= 2;
     }
