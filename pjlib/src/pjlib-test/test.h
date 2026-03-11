@@ -28,6 +28,17 @@
 #define GROUP_LIBC                  TEST_DEFAULT
 #define GROUP_OS                    TEST_DEFAULT
 #define GROUP_DATA_STRUCTURE        TEST_DEFAULT
+
+/* Apple Clang ASan crashes on longjmp, see #4846 */
+#ifndef __has_feature
+    #define __has_feature(x) 0
+#endif
+#if defined(__APPLE__) && \
+    (defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer))
+    #define APPLE_ASAN  1
+#else
+    #define APPLE_ASAN  0
+#endif
 #define GROUP_NETWORK               TEST_DEFAULT
 #if defined(PJ_SYMBIAN)
 #   define GROUP_FILE               0
@@ -43,7 +54,7 @@
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
 #define INCLUDE_TIMESTAMP_TEST      GROUP_OS
-#define INCLUDE_EXCEPTION_TEST      GROUP_LIBC
+#define INCLUDE_EXCEPTION_TEST      (GROUP_LIBC && !APPLE_ASAN)
 #define INCLUDE_RAND_TEST           GROUP_LIBC
 #define INCLUDE_LIST_TEST           GROUP_DATA_STRUCTURE
 #define INCLUDE_ATOMIC_SLIST_TEST   GROUP_DATA_STRUCTURE

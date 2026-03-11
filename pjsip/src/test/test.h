@@ -30,11 +30,17 @@ extern pj_caching_pool caching_pool;
 #ifndef __has_feature
     #define __has_feature(x) 0
 #endif
-#if defined(__SANITIZE_ADDRESS__) || \
-    (defined(__has_feature) && __has_feature(address_sanitizer))
+#if defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer)
     #define ASAN_ENABLED 1
 #else
     #define ASAN_ENABLED 0
+#endif
+
+/* Apple Clang ASan crashes on longjmp, see #4846 */
+#if defined(__APPLE__) && ASAN_ENABLED
+    #define APPLE_ASAN 1
+#else
+    #define APPLE_ASAN 0
 #endif
 
 #define TEST_UDP_PORT       15060
@@ -71,11 +77,8 @@ extern pj_caching_pool caching_pool;
 #   define WITH_BENCHMARK           1
 #endif
 
-#define INCLUDE_URI_TEST        INCLUDE_MESSAGING_GROUP
-/* Do not run message test under ASan, as sip_parser's longjmp mechanism
- * will cause issues.
- */
-#define INCLUDE_MSG_TEST        (INCLUDE_MESSAGING_GROUP && !ASAN_ENABLED)
+#define INCLUDE_URI_TEST        (INCLUDE_MESSAGING_GROUP && !APPLE_ASAN)
+#define INCLUDE_MSG_TEST        (INCLUDE_MESSAGING_GROUP && !APPLE_ASAN)
 #define INCLUDE_MULTIPART_TEST  INCLUDE_MESSAGING_GROUP
 #define INCLUDE_TXDATA_TEST     INCLUDE_MESSAGING_GROUP
 #define INCLUDE_TSX_BENCH       (INCLUDE_MESSAGING_GROUP && WITH_BENCHMARK)
