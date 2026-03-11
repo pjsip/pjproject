@@ -82,13 +82,10 @@ static void test_uas_transaction(pj_pool_t *pool, const uint8_t *data, size_t si
     /* Feed parsed message into transaction */
     pjsip_tsx_recv_msg(tsx, &rdata);
 
-    /* Create and send response through transaction */
+    /* Create response */
     pjsip_tx_data *tdata = NULL;
-    if (pjsip_endpt_create_response(endpt, &rdata, 200, NULL, &tdata) == PJ_SUCCESS && tdata) {
-        pj_status_t status = pjsip_tsx_send_msg(tsx, tdata);
-        if (status != PJ_SUCCESS)
-            pjsip_tx_data_dec_ref(tdata);
-    }
+    if (pjsip_endpt_create_response(endpt, &rdata, 200, NULL, &tdata) == PJ_SUCCESS && tdata)
+        pjsip_tx_data_dec_ref(tdata);
 
     /* Force transaction termination to prevent leaks */
     if (tsx->state != PJSIP_TSX_STATE_TERMINATED)
@@ -115,18 +112,16 @@ static void test_uac_transaction(pj_pool_t *pool, const uint8_t *data, size_t si
                                     NULL, NULL, -1, NULL, &tdata) != PJ_SUCCESS || !tdata)
         return;
 
-    /* Create UAC transaction and send message */
+    /* Create UAC transaction */
     pjsip_transaction *tsx = NULL;
     pj_status_t status = pjsip_tsx_create_uac(&tsx_user, tdata, &tsx);
     
-    if (status == PJ_SUCCESS && tsx) {
-        status = pjsip_tsx_send_msg(tsx, NULL);
-        if (status != PJ_SUCCESS)
+    if (status == PJ_SUCCESS && tsx && tsx->state != PJSIP_TSX_STATE_TERMINATED) {
+        pjsip_tsx_terminate_async(tsx, 408);
+    } else {
+        /* Clean up tdata */
+        if (tdata)
             pjsip_tx_data_dec_ref(tdata);
-        
-        /* Force transaction termination to prevent leaks */
-        if (tsx->state != PJSIP_TSX_STATE_TERMINATED)
-            pjsip_tsx_terminate_async(tsx, 408);
     }
 }
 
