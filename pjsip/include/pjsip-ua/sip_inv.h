@@ -287,6 +287,12 @@ typedef struct pjsip_inv_callback
      * This callback is optional. If this callback is not implemented,
      * the default behavior is to NOT follow the redirection response.
      *
+     * Note: when \a e is NULL (e.g. called from
+     * #pjsip_inv_uac_try_next_target() after an async auth failure),
+     * the application should carry any needed context through its own
+     * state, such as the \a user_data field in
+     * #pjsip_auth_clt_async_setting.
+     *
      * @param inv       The invite session.
      * @param target    The current target to be tried.
      * @param e         The event that caused this callback to be called.
@@ -294,22 +300,7 @@ typedef struct pjsip_inv_callback
      *                  4xx/5xx response received for the INVITE sent to
      *                  subsequent targets, or NULL if this callback is
      *                  called from within #pjsip_inv_process_redirect()
-     *                  context, or when called via
-     *                  #pjsip_inv_uac_try_next_target() (e.g. from an
-     *                  async authentication challenge callback that
-     *                  could not supply credentials).
-     *                  When \a e is NULL the application cannot
-     *                  determine the triggering event from this
-     *                  parameter alone. If the callback needs context
-     *                  from the challenge response (e.g. the 401/407
-     *                  message that triggered the auth failure),
-     *                  the application should carry that information
-     *                  through its own state — for example via the
-     *                  \a user_data field in
-     *                  #pjsip_auth_clt_async_setting, which is
-     *                  available in the async challenge callback
-     *                  before #pjsip_inv_uac_try_next_target() is
-     *                  called.
+     *                  or #pjsip_inv_uac_try_next_target() context.
      *
      * @return          Action to be performed for the target. Set this
      *                  parameter to one of the value below:
