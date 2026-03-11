@@ -63,13 +63,13 @@ static void test_uas_transaction(pj_pool_t *pool, const uint8_t *data, size_t si
     rdata.msg_info.msg = msg;
     rdata.tp_info.pool = pool;
     rdata.tp_info.transport = loop_transport;
-    
+
     /* Populate message info fields from parsed message headers */
     rdata.msg_info.via = (pjsip_via_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_VIA, NULL);
     rdata.msg_info.from = (pjsip_from_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_FROM, NULL);
     rdata.msg_info.to = (pjsip_to_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
     rdata.msg_info.cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
-    
+
     /* Skip if required headers are missing */
     if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to || !rdata.msg_info.cseq)
         return;
@@ -115,14 +115,12 @@ static void test_uac_transaction(pj_pool_t *pool, const uint8_t *data, size_t si
     /* Create UAC transaction */
     pjsip_transaction *tsx = NULL;
     pj_status_t status = pjsip_tsx_create_uac(&tsx_user, tdata, &tsx);
-    
+
     if (status == PJ_SUCCESS && tsx && tsx->state != PJSIP_TSX_STATE_TERMINATED) {
         pjsip_tsx_terminate_async(tsx, 408);
-    } else {
-        /* Clean up tdata */
-        if (tdata)
-            pjsip_tx_data_dec_ref(tdata);
     }
+
+    pjsip_tx_data_dec_ref(tdata);
 }
 
 /* Test sip_util.c request creation functions */
@@ -166,14 +164,14 @@ static void test_create_response(pj_pool_t *pool, const uint8_t *data, size_t si
     rdata.msg_info.msg = msg;
     rdata.tp_info.pool = pool;
     rdata.tp_info.transport = loop_transport;
-    
+
     /* Populate message info fields from parsed message headers */
     rdata.msg_info.via = (pjsip_via_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_VIA, NULL);
     rdata.msg_info.from = (pjsip_from_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_FROM, NULL);
     rdata.msg_info.to = (pjsip_to_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
     rdata.msg_info.cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
     rdata.msg_info.cid = (pjsip_cid_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
-    
+
     /* Skip if required headers are missing */
     if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to ||
         !rdata.msg_info.cseq || !rdata.msg_info.cid)
@@ -291,22 +289,22 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     /* Run all tests with same input, processing pending events between tests for cleanup */
     pj_time_val timeout = {0, 0};
-    
+
     test_uas_transaction(pool, Data, Size);
     pjsip_endpt_handle_events(endpt, &timeout);
-    
+
     test_uac_transaction(pool, Data, Size);
     pjsip_endpt_handle_events(endpt, &timeout);
-    
+
     test_create_request(pool, Data, Size);
     pjsip_endpt_handle_events(endpt, &timeout);
-    
+
     test_create_response(pool, Data, Size);
     pjsip_endpt_handle_events(endpt, &timeout);
-    
+
     test_create_ack_cancel(pool, Data, Size);
     pjsip_endpt_handle_events(endpt, &timeout);
-    
+
     test_process_route_set(pool, Data, Size);
     pjsip_endpt_handle_events(endpt, &timeout);
 
