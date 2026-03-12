@@ -514,12 +514,13 @@ static void systest_disconnect_player2(void)
 static void systest_play_wav_impl(unsigned path_cnt, const char *paths[],
                                   unsigned path_cnt2, const char *paths2[])
 {
-    play_id1 = PJSUA_INVALID_ID;
-    play_id2 = PJSUA_INVALID_ID;
     enum gui_key key;
     test_item_t *ti;
     const char *title = "WAV File Playback Test";
     pj_status_t status;
+
+    play_id1 = PJSUA_INVALID_ID;
+    play_id2 = PJSUA_INVALID_ID;
 
     ti = systest_alloc_test_item(title);
     if (!ti)

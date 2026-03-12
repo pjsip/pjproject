@@ -70,6 +70,7 @@ PJ_DEF(pj_status_t) pj_atomic_slist_create(pj_pool_t *pool, pj_atomic_slist **sl
 {
     pj_atomic_slist *p_slist;
     pj_status_t      rc;
+    char             name[PJ_MAX_OBJ_NAME];
 
     PJ_ASSERT_RETURN(pool && slist, PJ_EINVAL);
 
@@ -77,7 +78,6 @@ PJ_DEF(pj_status_t) pj_atomic_slist_create(pj_pool_t *pool, pj_atomic_slist **sl
     if (!p_slist)
         return PJ_ENOMEM;
 
-    char                name[PJ_MAX_OBJ_NAME];
     /* Set name. */
     pj_ansi_snprintf(name, PJ_MAX_OBJ_NAME, "slst%p", p_slist);
 

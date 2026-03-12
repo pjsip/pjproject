@@ -149,13 +149,12 @@ static slist_test_desc tests[] = {
 
 int atomic_slist_test()
 {
+    pj_pool_t       *pool = NULL;
     pj_atomic_slist *slist = NULL;
     const int        sz = 15;
     slist_node      *nodes;
     slist_node      *p;
-    int              i; // don't change to unsigned!
-
-    pj_pool_t       *pool = NULL;;
+    int              i; /* don't change to unsigned! */
     int              rc = 0;
 
     pool = pj_pool_create(mem, NULL, 4096, 0, NULL);
@@ -220,7 +219,7 @@ error:
 
 int atomic_slist_mt_test()
 {
-    pj_pool_t       *pool = NULL;;
+    pj_pool_t       *pool = NULL;
     int              rc = 0;
     int              i;
 
@@ -247,9 +246,10 @@ static int slist_stress_test(slist_test_desc* test) {
     unsigned i;
     pj_timestamp t1, t2;
     int rc;
+    int ident;
 
     TRACE((THIS_FILE, "%s", test->cfg.title));
-    int ident = pj_log_get_indent();    /* worker_thread change ident on this thread */
+    ident = pj_log_get_indent();    /* worker_thread change ident on this thread */
     pj_log_push_indent();
 
     rc = slist_stress_test_init(test);
