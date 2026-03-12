@@ -592,20 +592,24 @@ jobs:
 
   cmake-build:
     runs-on: macos-latest
-    name: CMake / ${{ matrix.build_type }}
-    strategy:
-      fail-fast: false
-      matrix:
-        build_type: [Debug, Release]
+    name: CMake / Debug+Release
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
       run: brew install openssl
-    - name: configure
-      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-    - name: build
-      run: cmake --build build -j $(sysctl -n hw.ncpu)
-    - name: check
+    - name: configure Debug
+      run: cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug
+    - name: build Debug
+      run: cmake --build build-debug -j $(sysctl -n hw.ncpu)
+    - name: check Debug
       run: |
-        file build/pjsip-apps/pjsua
-        otool -L build/pjsip-apps/pjsua
+        file build-debug/pjsip-apps/pjsua
+        otool -L build-debug/pjsip-apps/pjsua
+    - name: configure Release
+      run: cmake -B build-release -DCMAKE_BUILD_TYPE=Release
+    - name: build Release
+      run: cmake --build build-release -j $(sysctl -n hw.ncpu)
+    - name: check Release
+      run: |
+        file build-release/pjsip-apps/pjsua
+        otool -L build-release/pjsip-apps/pjsua
