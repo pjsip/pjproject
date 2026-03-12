@@ -141,6 +141,21 @@ static pj_status_t add_reason_warning_hdr(pjsip_tx_data *tdata,
                                           unsigned code,
                                           const pj_str_t *reason);
 
+static pj_status_t inv_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata);
+static void inv_bye_auth_abandon_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data);
+static void inv_initial_invite_auth_abandon_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data);
+static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
+                          pjsip_event *e);
+static void inv_set_cause(pjsip_inv_session *inv, int cause_code,
+                          const pj_str_t *cause_text);
+
 static void (*inv_state_handler[])( pjsip_inv_session *inv, pjsip_event *e) = 
 {
     &inv_on_state_null,
@@ -319,6 +334,53 @@ static void inv_session_destroy(pjsip_inv_session *inv)
 
     pj_atomic_destroy(inv->ref_cnt);
     inv->ref_cnt = NULL;
+}
+
+static pj_status_t inv_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata)
+{
+    pjsip_inv_session *inv = (pjsip_inv_session *)user_data;
+    PJ_UNUSED_ARG(auth_sess);
+    /* For initial INVITE auth retry the session must be restarted
+     * so that pjsip_inv_send_msg() can accept the new INVITE.
+     * In-dialog re-INVITE only needs invite_tsx cleared, which
+     * the call site handles before dispatching the challenge.
+     */
+    if (tdata->msg->line.req.method.id == PJSIP_INVITE_METHOD &&
+        inv->state != PJSIP_INV_STATE_CONFIRMED)
+    {
+        pjsip_inv_uac_restart(inv, PJ_FALSE);
+    }
+    return pjsip_inv_send_msg(inv, tdata);
+}
+
+/* Abandon callback for BYE 401/407: disconnect the session. */
+static void inv_bye_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
+                                      void *user_data)
+{
+    pjsip_inv_session *inv = (pjsip_inv_session *)user_data;
+    pjsip_event usr_event;
+
+    PJ_UNUSED_ARG(auth_sess);
+    PJSIP_EVENT_INIT_USER(usr_event, NULL, NULL, NULL, NULL);
+    inv_set_cause(inv, PJSIP_SC_OK, NULL);
+    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, &usr_event);
+}
+
+/* Abandon callback for initial INVITE 401/407: terminate the session. */
+static void inv_initial_invite_auth_abandon_impl(
+                                      pjsip_auth_clt_sess *auth_sess,
+                                      void *user_data)
+{
+    pjsip_inv_session *inv = (pjsip_inv_session *)user_data;
+    pjsip_event usr_event;
+
+    PJ_UNUSED_ARG(auth_sess);
+    PJSIP_EVENT_INIT_USER(usr_event, NULL, NULL, NULL, NULL);
+    inv_set_cause(inv, PJSIP_SC_UNAUTHORIZED, NULL);
+    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, &usr_event);
 }
 
 /*
@@ -3193,6 +3255,14 @@ static pj_bool_t inv_uac_recurse(pjsip_inv_session *inv, int code,
     return PJ_FALSE;
 }
 
+PJ_DEF(pj_bool_t) pjsip_inv_uac_try_next_target(pjsip_inv_session *inv)
+{
+    PJ_ASSERT_RETURN(inv, PJ_FALSE);
+    return inv_uac_recurse(inv, PJSIP_SC_UNAUTHORIZED,
+                           pjsip_get_status_text(PJSIP_SC_UNAUTHORIZED),
+                           NULL);
+}
+
 
 /* Process header parameter in redirection target. */
 void pjsip_inv_process_hparam(pjsip_inv_session *sess, 
@@ -4039,29 +4109,59 @@ static void inv_handle_bye_response( pjsip_inv_session *inv,
     if (tsx->status_code == 401 || tsx->status_code == 407) {
 
         pjsip_tx_data *tdata;
-        
-        status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
-                                            rdata,
-                                            tsx->last_tx,
-                                            &tdata);
-        
-        if (status != PJ_SUCCESS) {
-            
-            /* Does not have proper credentials. 
-             * End the session anyway.
-             */
-            inv_set_cause(inv, PJSIP_SC_OK, NULL);
-            inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-            
-        } else {
-            struct tsx_inv_data *tsx_inv_data;
+        pjsip_auth_clt_async_on_chal_param chal_param;
+        struct tsx_inv_data *tsx_inv_data;
 
-            tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+        /* Dialog grp_lock is held by the caller (pjsip_dlg_on_tsx_state).
+         * We do NOT release it here because:
+         * (a) grp_lock is recursive, so sync send from callback works, and
+         * (b) releasing a lock held by a parent caller risks state changes
+         *     from another thread processing a different event on this dialog.
+         */
+        {
+            pjsip_auth_clt_async_impl_token *token;
+            token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                     pjsip_auth_clt_async_impl_token);
+            token->user_data    = inv;
+            token->send_impl    = &inv_async_auth_send_impl;
+            token->abandon_impl = &inv_bye_auth_abandon_impl;
+            token->grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
+
+            chal_param.rdata = rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &inv->dlg->auth_sess,
+                                                token, &chal_param);
+            if (status != PJ_SUCCESS)
+                pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
+        if (status == PJ_SUCCESS) {
+            tsx_inv_data =
+                (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
             if (tsx_inv_data)
                 tsx_inv_data->retrying = PJ_TRUE;
+        } else {
+            status = pjsip_auth_clt_reinit_req(&inv->dlg->auth_sess,
+                                               rdata, tsx->last_tx,
+                                               &tdata);
+            if (status != PJ_SUCCESS) {
 
-            /* Re-send BYE. */
-            status = pjsip_inv_send_msg(inv, tdata);
+                /* Does not have proper credentials.
+                 * End the session anyway.
+                 */
+                inv_set_cause(inv, PJSIP_SC_OK, NULL);
+                inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+
+            } else {
+                tsx_inv_data =
+                    (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+                if (tsx_inv_data)
+                    tsx_inv_data->retrying = PJ_TRUE;
+
+                /* Re-send BYE. */
+                status = pjsip_inv_send_msg(inv, tdata);
+            }
         }
 
     } else {
@@ -4226,29 +4326,50 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
         (tsx->status_code == 401 || tsx->status_code == 407))
     {
         pjsip_tx_data *tdata;
+        pjsip_auth_clt_async_on_chal_param chal_param;
 
-        status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
-                                            e->body.tsx_state.src.rdata,
-                                            tsx->last_tx,
-                                            &tdata);
-        
-        if (status != PJ_SUCCESS) {
-            
-            /* Somehow failed. Probably it's not a good idea to terminate
-             * the session since this is just a request within dialog. And
-             * even if we terminate we should send BYE.
-             */
-            /*
-            inv_set_cause(inv, PJSIP_SC_OK, NULL);
-            inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-            */
-            
-        } else {
+        /* UPDATE auth: abandon_impl is NULL because abandoning a
+         * mid-dialog UPDATE does not terminate the session.
+         * Dialog grp_lock is held by the caller; see BYE handler comment.
+         */
+        {
+            pjsip_auth_clt_async_impl_token *token;
+            token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                     pjsip_auth_clt_async_impl_token);
+            token->user_data    = inv;
+            token->send_impl    = &inv_async_auth_send_impl;
+            token->abandon_impl = NULL;
+            token->grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
+
+            chal_param.rdata = e->body.tsx_state.src.rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &inv->dlg->auth_sess,
+                                                token, &chal_param);
+            if (status != PJ_SUCCESS)
+                pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
+        if (status == PJ_SUCCESS) {
             if (tsx_inv_data)
                 tsx_inv_data->retrying = PJ_TRUE;
+        } else {
+            status = pjsip_auth_clt_reinit_req(
+                                        &inv->dlg->auth_sess,
+                                        e->body.tsx_state.src.rdata,
+                                        tsx->last_tx, &tdata);
+            if (status == PJ_SUCCESS) {
+                if (tsx_inv_data)
+                    tsx_inv_data->retrying = PJ_TRUE;
 
-            /* Re-send request. */
-            status = pjsip_inv_send_msg(inv, tdata);
+                /* Re-send request. */
+                status = pjsip_inv_send_msg(inv, tdata);
+            }
+            /* Somehow failed. Probably it's not a good idea to
+             * terminate the session since this is just a request
+             * within dialog. And even if we terminate we should
+             * send BYE.
+             */
         }
 
         handled = PJ_TRUE;
@@ -4720,37 +4841,68 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
     /* Handle 401/407 challenge. */
     else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
              (tsx->status_code == PJSIP_SC_UNAUTHORIZED ||
-              tsx->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED)) 
+              tsx->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED))
     {
         pjsip_tx_data *tdata;
         pj_status_t status;
+        pjsip_auth_clt_async_on_chal_param chal_param;
+        struct tsx_inv_data *tsx_inv_data;
 
+        /* Clear invite_tsx so pjsip_inv_send_msg() can accept the
+         * retried INVITE.  Note: if another re-INVITE arrives before
+         * the deferred send_impl fires, invite_tsx will be overwritten.
+         * This is acceptable because tsx_inv_data->retrying prevents
+         * the old tsx from affecting the inv state machine.
+         */
         if (tsx->method.id == PJSIP_INVITE_METHOD)
             inv->invite_tsx = NULL;
 
-        status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
-                                            e->body.tsx_state.src.rdata,
-                                            tsx->last_tx, &tdata);
-    
-        if (status != PJ_SUCCESS) {
-            /* Somehow failed. Probably it's not a good idea to terminate
-             * the session since this is just a request within dialog. And
-             * even if we terminate we should send BYE.
-             */
-            /*
-            inv_set_cause(inv, PJSIP_SC_OK, NULL);
-            inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-            */
-            
-        } else {
-            struct tsx_inv_data *tsx_inv_data;
+        /* In-dialog request auth: abandon_impl is NULL because
+         * abandoning a mid-dialog request does not terminate the session.
+         * Dialog grp_lock is held by the caller; see BYE handler comment.
+         */
+        {
+            pjsip_auth_clt_async_impl_token *token;
+            token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                     pjsip_auth_clt_async_impl_token);
+            token->user_data    = inv;
+            token->send_impl    = &inv_async_auth_send_impl;
+            token->abandon_impl = NULL;
+            token->grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
 
-            tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+            chal_param.rdata = e->body.tsx_state.src.rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &inv->dlg->auth_sess,
+                                                token, &chal_param);
+            if (status != PJ_SUCCESS)
+                pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
+        if (status == PJ_SUCCESS) {
+            tsx_inv_data =
+                (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
             if (tsx_inv_data)
                 tsx_inv_data->retrying = PJ_TRUE;
+        } else {
+            status = pjsip_auth_clt_reinit_req(
+                                        &inv->dlg->auth_sess,
+                                        e->body.tsx_state.src.rdata,
+                                        tsx->last_tx, &tdata);
+            if (status == PJ_SUCCESS) {
+                tsx_inv_data =
+                    (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
+                if (tsx_inv_data)
+                    tsx_inv_data->retrying = PJ_TRUE;
 
-            /* Re-send request. */
-            status = pjsip_inv_send_msg(inv, tdata);
+                /* Re-send request. */
+                status = pjsip_inv_send_msg(inv, tdata);
+            }
+            /* Somehow failed. Probably it's not a good idea to
+             * terminate the session since this is just a request
+             * within dialog. And even if we terminate we should
+             * send BYE.
+             */
         }
 
         return PJ_TRUE; /* Handled */
@@ -4820,37 +4972,61 @@ static void handle_uac_call_rejection(pjsip_inv_session *inv, pjsip_event *e)
         }
 
     } else if ((tsx->status_code==401 || tsx->status_code==407) &&
-                !inv->cancelling) 
+                !inv->cancelling)
     {
-
         /* Handle authentication failure:
          * Resend the request with Authorization header.
          */
         pjsip_tx_data *tdata;
+        pjsip_auth_clt_async_on_chal_param chal_param;
 
-        status = pjsip_auth_clt_reinit_req(&inv->dlg->auth_sess, 
-                                           e->body.tsx_state.src.rdata,
-                                           tsx->last_tx,
-                                           &tdata);
+        /* Initial INVITE auth: abandoning terminates the session.
+         * Dialog grp_lock is held by the caller; see BYE handler comment.
+         */
+        {
+            pjsip_auth_clt_async_impl_token *token;
+            token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                     pjsip_auth_clt_async_impl_token);
+            token->user_data    = inv;
+            token->send_impl    = &inv_async_auth_send_impl;
+            token->abandon_impl = &inv_initial_invite_auth_abandon_impl;
+            token->grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
 
+            chal_param.rdata = e->body.tsx_state.src.rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                &inv->dlg->auth_sess,
+                                                token, &chal_param);
+            if (status != PJ_SUCCESS)
+                pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
         if (status != PJ_SUCCESS) {
+            status = pjsip_auth_clt_reinit_req(
+                                        &inv->dlg->auth_sess,
+                                        e->body.tsx_state.src.rdata,
+                                        tsx->last_tx, &tdata);
+            if (status != PJ_SUCCESS) {
 
-            /* Does not have proper credentials. If we are currently 
-             * recursing, try the next target. Otherwise end the session.
-             */
-            if (!inv_uac_recurse(inv, tsx->status_code, &tsx->status_text, e))
-            {
-                /* Recursion fails, terminate session now */
-                goto terminate_session;
+                /* Does not have proper credentials. If we are currently
+                 * recursing, try the next target. Otherwise end the
+                 * session.
+                 */
+                if (!inv_uac_recurse(inv, tsx->status_code,
+                                     &tsx->status_text, e))
+                {
+                    /* Recursion fails, terminate session now */
+                    goto terminate_session;
+                }
+
+            } else {
+
+                /* Restart session. */
+                pjsip_inv_uac_restart(inv, PJ_FALSE);
+
+                /* Send the request. */
+                status = pjsip_inv_send_msg(inv, tdata);
             }
-
-        } else {
-
-            /* Restart session. */
-            pjsip_inv_uac_restart(inv, PJ_FALSE);
-
-            /* Send the request. */
-            status = pjsip_inv_send_msg(inv, tdata);
         }
 
     } else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&

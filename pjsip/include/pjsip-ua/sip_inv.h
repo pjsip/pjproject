@@ -287,6 +287,12 @@ typedef struct pjsip_inv_callback
      * This callback is optional. If this callback is not implemented,
      * the default behavior is to NOT follow the redirection response.
      *
+     * Note: when \a e is NULL (e.g. called from
+     * #pjsip_inv_uac_try_next_target() after an async auth failure),
+     * the application should carry any needed context through its own
+     * state, such as the \a user_data field in
+     * #pjsip_auth_clt_async_setting.
+     *
      * @param inv       The invite session.
      * @param target    The current target to be tried.
      * @param e         The event that caused this callback to be called.
@@ -294,7 +300,7 @@ typedef struct pjsip_inv_callback
      *                  4xx/5xx response received for the INVITE sent to
      *                  subsequent targets, or NULL if this callback is
      *                  called from within #pjsip_inv_process_redirect()
-     *                  context.
+     *                  or #pjsip_inv_uac_try_next_target() context.
      *
      * @return          Action to be performed for the target. Set this
      *                  parameter to one of the value below:
@@ -768,6 +774,34 @@ PJ_DECL(pj_status_t) pjsip_inv_terminate( pjsip_inv_session *inv,
  */
 PJ_DECL(pj_status_t) pjsip_inv_uac_restart(pjsip_inv_session *inv,
                                            pj_bool_t new_offer);
+
+
+/**
+ * Attempt to recurse to the next target in the dialog's target set
+ * after an authentication failure in which the application could not
+ * supply credentials.  This is intended to be called from an
+ * asynchronous authentication challenge callback (see
+ * #pjsip_auth_clt_async_setting) when the application decides it
+ * cannot authenticate the current attempt and wants the session to
+ * fall back to the same redirect-target walk that the synchronous
+ * code path would have performed.
+ *
+ * The function invokes #pjsip_inv_callback::on_redirected for each
+ * candidate target, passing NULL for the event parameter (see the
+ * note in that callback's documentation for how to handle this).
+ *
+ * If no suitable next target exists the function returns PJ_FALSE
+ * and the caller is responsible for ending the session, typically
+ * via #pjsip_inv_end_session().
+ *
+ * @param inv       The UAC invite session.
+ *
+ * @return          PJ_TRUE if a next target was found and
+ *                  #pjsip_inv_callback::on_redirected was invoked,
+ *                  PJ_FALSE if no more targets are available.
+ */
+PJ_DECL(pj_bool_t) pjsip_inv_uac_try_next_target(
+                                           pjsip_inv_session *inv);
 
 
 /**

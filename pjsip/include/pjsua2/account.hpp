@@ -1882,6 +1882,133 @@ struct OnSendRequestParam
 
 
 /**
+ * Represents a pending authentication challenge.
+ * Call respond() to resend with authentication, or abandon() to give up.
+ * If neither is called before the callback returns, the library handles
+ * authentication automatically using configured credentials (sync path).
+ *
+ * For async use, call defer() during the callback to obtain a heap-allocated
+ * AuthChallenge that can be used later. The caller owns the returned object.
+ *
+ * Each AuthChallenge is single-use: once consumed by respond(), abandon(),
+ * or defer(), further calls return PJ_EINVALIDOP (defer() throws Error).
+ *
+ * Thread safety: on a deferred object, respond() and abandon() must be called
+ * from a pjlib-registered thread. The non-deferred object must only be used
+ * during the onAuthChallenge() callback.
+ *
+ * GC note (Python/Java): The destructor calls pjsip APIs which require a
+ * pjlib-registered thread. Since garbage collectors may run destructor/
+ * Release() on an unregistered finalizer thread, you MUST explicitly call
+ * respond(), abandon(), or delete/Release() on the deferred object from a
+ * pjlib-registered thread. Do NOT let the GC collect it implicitly.
+ * See https://docs.pjsip.org/en/latest/pjsua2/general_concept.html#problems-with-garbage-collection
+ */
+class AuthChallenge
+{
+public:
+    AuthChallenge();
+
+    /**
+     * Destructor. If this is a deferred challenge that was never consumed
+     * by respond() or abandon(), destruction will auto-abandon the pending
+     * authentication and release associated resources.
+     */
+    ~AuthChallenge();
+
+    /**
+     * Defer the challenge for asynchronous handling. Creates a new
+     * heap-allocated AuthChallenge that can be used after the callback
+     * returns. The caller owns the returned object and must eventually
+     * call respond() or abandon() on it (or simply delete it, which
+     * auto-abandons).
+     *
+     * Must be called during the onAuthChallenge() callback. After this
+     * call, the original AuthChallenge becomes invalid.
+     *
+     * @return          New heap-allocated AuthChallenge (caller owns).
+     */
+    AuthChallenge* defer() PJSUA2_THROW(Error);
+
+    /**
+     * Respond to the authentication challenge by building and sending
+     * an authenticated request. Uses credentials currently configured
+     * on the auth session.
+     *
+     * @return          PJ_SUCCESS on success, or PJ_EINVALIDOP if already
+     *                  consumed by a prior respond()/abandon()/defer() call.
+     */
+    pj_status_t respond();
+
+    /**
+     * Respond with provided credentials. Sets them on the account-level
+     * shared auth session before building the authenticated request.
+     * Note that this permanently replaces the account's credentials,
+     * affecting all subsequent authentication for the account.
+     *
+     * @param creds     Credentials to set on the auth session.
+     * @return          PJ_SUCCESS on success.
+     */
+    pj_status_t respond(const AuthCredInfoVector &creds);
+
+    /**
+     * Abandon the authentication challenge. The pending request will
+     * not be resent.
+     *
+     * @return          PJ_SUCCESS on success, or PJ_EINVALIDOP if already
+     *                  consumed by a prior respond()/abandon()/defer() call.
+     */
+    pj_status_t abandon();
+
+    /**
+     * Check whether this challenge object is still valid (not yet
+     * consumed by respond() or abandon(), and the associated account
+     * is still active).
+     *
+     * Note: this is an advisory check without synchronization.
+     * The result may be stale if another thread concurrently
+     * deletes the account.
+     *
+     * @return          true if valid.
+     */
+    bool isValid() const;
+
+private:
+    friend class Endpoint;
+
+    AuthChallenge(const AuthChallenge&);
+    AuthChallenge& operator=(const AuthChallenge&);
+
+    pjsua_on_auth_challenge_param  *param_;
+    bool                            deferred_;
+    bool                            consumed_;
+    pjsip_rx_data                  *cloned_rdata_;
+    pjsip_auth_clt_sess           *auth_sess_;
+    void                           *token_;
+    pjsip_tx_data                  *tdata_;
+    pjsua_acc_id                    acc_id_;
+};
+
+/**
+ * Parameters for Account::onAuthChallenge() callback.
+ */
+struct OnAuthChallengeParam
+{
+    /** Account ID associated with the challenged request. */
+    pjsua_acc_id        accId;
+
+    /** Call ID, or PJSUA_INVALID_ID for non-call requests. */
+    pjsua_call_id       callId;
+
+    /** The 401/407 response containing the challenge. */
+    SipRxData           rdata;
+
+    /** The authentication challenge. Call respond() or abandon(). */
+    AuthChallenge       challenge;
+};
+
+
+/**
  * Parameters for presNotify() account method.
  */
 struct PresNotifyParam
@@ -2408,6 +2535,27 @@ public:
      * @param prm           Callback parameter.
      */
     virtual void onMwiInfo(OnMwiInfoParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * Called when a 401/407 challenge is received. Override to handle
+     * authentication challenges. Three usage patterns are supported:
+     *
+     * - Synchronous: call prm.challenge.respond() or
+     *   prm.challenge.respond(creds) directly within this callback.
+     * - Asynchronous: call prm.challenge.defer() to obtain a
+     *   heap-allocated AuthChallenge, then call respond() or abandon()
+     *   on it later from any context. The caller owns the returned object.
+     * - Default: if neither respond(), abandon(), nor defer() is called,
+     *   the library handles authentication automatically using configured
+     *   credentials.
+     *
+     * @param prm       Callback parameter.
+     *
+     * @see AuthChallenge
+     * @see OnAuthChallengeParam
+     */
+    virtual void onAuthChallenge(OnAuthChallengeParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
 private:

@@ -207,6 +207,30 @@ PJ_DECL(pj_status_t) pjsip_publishc_set_credentials(pjsip_publishc *pubc,
                                                     const pjsip_cred_info c[]);
 
 /**
+ * Set shared authentication session for the client publication.
+ * When set, authentication operations will be delegated to the
+ * specified parent session.
+ *
+ * @param pubc      The client publication structure.
+ * @param session   The parent authentication session, or NULL to remove.
+ *
+ * @return          PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_publishc_set_auth_sess(
+                                    pjsip_publishc *pubc,
+                                    pjsip_auth_clt_sess *session);
+
+/**
+ * Get the authentication client session associated with the publication.
+ *
+ * @param pubc      The client publication structure.
+ *
+ * @return          The authentication client session.
+ */
+PJ_DECL(pjsip_auth_clt_sess*) pjsip_publishc_get_auth_sess(
+                                    pjsip_publishc *pubc);
+
+/**
  * Set route set to be used for outgoing requests.
  *
  * @param pubc      The client publication structure.
