@@ -21,6 +21,7 @@ jobs:
       pjnath-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       pjmedia-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       pjsip-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjmedia-pjsip-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       pjnath-pjmedia-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       pjnath-pjsip-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
       any-src: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.pjsip-apps == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
@@ -85,7 +86,7 @@ jobs:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.any-src == 'true'
     runs-on: ubuntu-latest
-    name: Default / pjmedia,pjsua
+    name: Default / pjsua
     steps:
     - uses: actions/checkout@v2
     - name: install cirunner
@@ -128,8 +129,6 @@ jobs:
         cat pjsua-caps
     - name: ensure AMR codec is installed
       run: cat pjsua-caps | grep -E 'AMR/8000'
-    - name: pjmedia-test
-      run: make pjmedia-test
     - name: pjsua-test
       run: make pjsua-test
     - name: upload artifacts on failure
@@ -175,9 +174,9 @@ jobs:
 
   default-full-bundle-3:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjsip-deps == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia-pjsip-deps == 'true'
     runs-on: ubuntu-latest
-    name: Default / pjsip
+    name: Default / pjmedia,pjsip
     steps:
     - uses: actions/checkout@v2
     - name: install cirunner
@@ -189,9 +188,11 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g -fsanitize=address" CXXFLAGS="-fsanitize=address" LDFLAGS="-rdynamic -fsanitize=address" ./configure
+      run: CFLAGS="-g -fsanitize=address" CXXFLAGS="-fsanitize=address" LDFLAGS="-rdynamic -fsanitize=address" ./configure --enable-libwebrtc-aec3
     - name: make
       run: $MAKE_FAST
+    - name: pjmedia-test
+      run: make pjmedia-test
     - name: pjsip-test
       run: make pjsip-test
     - name: upload artifacts on failure
@@ -278,7 +279,7 @@ jobs:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.any-src == 'true'
     runs-on: ubuntu-latest
-    name: OpenH264+VPX / pjmedia,pjsua
+    name: OpenH264+VPX / pjsua
     steps:
     - uses: actions/checkout@v2
     - name: install cirunner
@@ -336,10 +337,6 @@ jobs:
       # one of the step above has changed core_pattern, restore it
     - name: reinstall cirunner
       run: cirunner/installlinux.sh
-    - name: pjmedia-test
-      run: |
-        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
-        make pjmedia-test
     - name: pjsua-test
       run: |
         export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
@@ -398,9 +395,9 @@ jobs:
 
   vid-openh264-3:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjsip-deps == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia-pjsip-deps == 'true'
     runs-on: ubuntu-latest
-    name: OpenH264+VPX / pjsip
+    name: OpenH264+VPX / pjmedia,pjsip
     steps:
     - uses: actions/checkout@v2
     - name: install cirunner
@@ -416,12 +413,16 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-g -fsanitize=thread" CXXFLAGS="-g -fsanitize=thread" LDFLAGS="-rdynamic -fsanitize=thread" ./configure
+      run: CFLAGS="-g -DHAS_VID_CODEC_TEST=0 -fsanitize=thread" CXXFLAGS="-g -fsanitize=thread" LDFLAGS="-rdynamic -fsanitize=thread" ./configure
     - name: make
       run: $MAKE_FAST
       # one of the step above has changed core_pattern, restore it
     - name: reinstall cirunner
       run: cirunner/installlinux.sh
+    - name: pjmedia-test
+      run: |
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp"
+        make pjmedia-test
     - name: pjsip-test serial
       # when using no worker thread, pjsip_endpt is safe without suppression
       run: |
