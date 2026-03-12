@@ -44,22 +44,36 @@ static char* alloc_str_from_data(pj_pool_t *pool, const uint8_t *data,
 
 static void test_uac_dialog(pj_pool_t *pool, const uint8_t *data, size_t size)
 {
+    pj_ssize_t len1, len2, len3;
+    pj_str_t local_uri, remote_uri, target;
+    pjsip_dialog *dlg;
+    pj_status_t status;
+    pjsip_tx_data *tdata;
+    char *route_data;
+    pj_str_t route_name;
+    pjsip_hdr *hdr;
+    pjsip_route_hdr route_set;
+    pjsip_route_hdr *route_hdr;
+
     if (size < 3)
         return;
 
     /* Split input data into three URI strings */
-    pj_ssize_t len1 = (size / 3 > 50) ? 50 : size / 3;
-    pj_ssize_t len2 = (size / 3 > 50) ? 50 : size / 3;
-    pj_ssize_t len3 = (size - len1 - len2 > 50) ? 50 : size - len1 - len2;
+    len1 = (size / 3 > 50) ? 50 : size / 3;
+    len2 = (size / 3 > 50) ? 50 : size / 3;
+    len3 = (size - len1 - len2 > 50) ? 50 : size - len1 - len2;
 
-    pj_str_t local_uri = {alloc_str_from_data(pool, data, 0, len1), len1};
-    pj_str_t remote_uri = {alloc_str_from_data(pool, data, len1, len2), len2};
-    pj_str_t target = {alloc_str_from_data(pool, data, len1 + len2, len3), len3};
+    local_uri.ptr = alloc_str_from_data(pool, data, 0, len1);
+    local_uri.slen = len1;
+    remote_uri.ptr = alloc_str_from_data(pool, data, len1, len2);
+    remote_uri.slen = len2;
+    target.ptr = alloc_str_from_data(pool, data, len1 + len2, len3);
+    target.slen = len3;
 
     /* Create UAC dialog */
-    pjsip_dialog *dlg = NULL;
-    pj_status_t status = pjsip_dlg_create_uac(pjsip_ua_instance(), &local_uri,
-                                               NULL, &remote_uri, &target, &dlg);
+    dlg = NULL;
+    status = pjsip_dlg_create_uac(pjsip_ua_instance(), &local_uri,
+                                   NULL, &remote_uri, &target, &dlg);
     if (status != PJ_SUCCESS || !dlg)
         return;
 
@@ -67,16 +81,20 @@ static void test_uac_dialog(pj_pool_t *pool, const uint8_t *data, size_t size)
 
     /* Parse and set route header from fuzzer data */
     if (size > 150) {
-        char *route_data = alloc_str_from_data(pool, data, 150, size - 150);
-        pj_str_t route_name = pj_str("Route");
-        pjsip_hdr *hdr = (pjsip_hdr*)pjsip_parse_hdr(pool, &route_name,
-                                                      route_data, size - 150, NULL);
-        if (hdr && hdr->type == PJSIP_H_ROUTE)
-            pjsip_dlg_set_route_set(dlg, (pjsip_route_hdr*)hdr);
+        route_data = alloc_str_from_data(pool, data, 150, size - 150);
+        route_name = pj_str("Route");
+        hdr = (pjsip_hdr*)pjsip_parse_hdr(pool, &route_name,
+                                           route_data, size - 150, NULL);
+        if (hdr && hdr->type == PJSIP_H_ROUTE) {
+            route_hdr = (pjsip_route_hdr*)hdr;
+            pj_list_init(&route_set);
+            pj_list_push_back(&route_set, route_hdr);
+            pjsip_dlg_set_route_set(dlg, &route_set);
+        }
     }
 
     /* Create request within dialog */
-    pjsip_tx_data *tdata = NULL;
+    tdata = NULL;
     status = pjsip_dlg_create_request(dlg, &pjsip_options_method, -1, &tdata);
     if (status == PJ_SUCCESS && tdata)
         pjsip_tx_data_dec_ref(tdata);
@@ -90,20 +108,28 @@ static void test_uac_dialog(pj_pool_t *pool, const uint8_t *data, size_t size)
 
 static void test_uas_dialog(pj_pool_t *pool, const uint8_t *data, size_t size)
 {
+    char *data_copy;
+    pjsip_parser_err_report err_list;
+    pjsip_msg *msg;
+    pjsip_rx_data rdata;
+    pjsip_dialog *dlg;
+    pj_status_t status;
+    pjsip_tx_data *tdata;
+    pjsip_transaction *tsx;
+    pj_time_val timeout;
+
     if (size < 1)
         return;
 
     /* Parse input data as SIP message */
-    char *data_copy = alloc_str_from_data(pool, data, 0, size);
-    pjsip_parser_err_report err_list;
+    data_copy = alloc_str_from_data(pool, data, 0, size);
     pj_list_init(&err_list);
 
-    pjsip_msg *msg = pjsip_parse_msg(pool, data_copy, size, &err_list);
+    msg = pjsip_parse_msg(pool, data_copy, size, &err_list);
     if (!msg || msg->type != PJSIP_REQUEST_MSG)
         return;
 
     /* Setup received message structure */
-    pjsip_rx_data rdata;
     pj_bzero(&rdata, sizeof(rdata));
     rdata.msg_info.msg = msg;
     rdata.tp_info.pool = pool;
@@ -132,14 +158,14 @@ static void test_uas_dialog(pj_pool_t *pool, const uint8_t *data, size_t size)
         return;
 
     /* Create UAS dialog from incoming request */
-    pjsip_dialog *dlg = NULL;
-    pj_status_t status = pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(),
-                                                            &rdata, NULL, &dlg);
+    dlg = NULL;
+    status = pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(),
+                                                &rdata, NULL, &dlg);
     if (status != PJ_SUCCESS || !dlg)
         return;
 
     /* Create response within dialog */
-    pjsip_tx_data *tdata = NULL;
+    tdata = NULL;
     status = pjsip_dlg_create_response(dlg, &rdata, 200, NULL, &tdata);
     if (status == PJ_SUCCESS && tdata)
         pjsip_tx_data_dec_ref(tdata);
@@ -148,7 +174,17 @@ static void test_uas_dialog(pj_pool_t *pool, const uint8_t *data, size_t size)
     pjsip_dlg_inc_session(dlg, &dialog_test_mod);
     pjsip_dlg_dec_session(dlg, &dialog_test_mod);
 
+    /* Terminate the transaction to prevent memory leak */
+    tsx = pjsip_rdata_get_tsx(&rdata);
+    if (tsx && tsx->state != PJSIP_TSX_STATE_TERMINATED)
+        pjsip_tsx_terminate(tsx, 500);
+
     pjsip_dlg_dec_lock(dlg);
+
+    /* Process events to cleanup terminated transactions */
+    timeout.sec = 0;
+    timeout.msec = 0;
+    pjsip_endpt_handle_events(endpt, &timeout);
 }
 
 int LLVMFuzzerInitialize(int *argc, char ***argv)
@@ -206,6 +242,7 @@ int LLVMFuzzerInitialize(int *argc, char ***argv)
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
     pj_pool_t *pool;
+    pj_time_val timeout;
 
     /* Create pool for this iteration */
     pool = pjsip_endpt_create_pool(endpt, "dialog-fuzz", POOL_SIZE, POOL_SIZE);
@@ -219,7 +256,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     /* Release pool */
     pjsip_endpt_release_pool(endpt, pool);
 
+    /* Final cleanup of any pending events */
+    timeout.sec = 0;
+    timeout.msec = 0;
+    pjsip_endpt_handle_events(endpt, &timeout);
+
     return 0;
 }
-
-
