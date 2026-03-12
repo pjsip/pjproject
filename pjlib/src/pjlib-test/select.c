@@ -61,7 +61,7 @@ static int do_select( pj_sock_t sock1, pj_sock_t sock2,
 {
     pj_fd_set_t fds[3];
     pj_time_val timeout;
-    int i, n;
+    int i, n, nfds;
 
     for (i=0; i<3; ++i) {
         PJ_FD_ZERO(&fds[i]);
@@ -73,7 +73,8 @@ static int do_select( pj_sock_t sock1, pj_sock_t sock2,
     timeout.sec = 5;
     timeout.msec = 0;
 
-    n = pj_sock_select(PJ_IOQUEUE_MAX_HANDLES, &fds[0], &fds[1], &fds[2],
+    nfds = (int)(sock1 > sock2 ? sock1 : sock2) + 1;
+    n = pj_sock_select(nfds, &fds[0], &fds[1], &fds[2],
                        &timeout);
     if (n < 0)
         return n;
