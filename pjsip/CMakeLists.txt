@@ -310,6 +310,8 @@ if(BUILD_TESTING)
     src/test/txdata_test.c
     src/test/uri_test.c
     src/test/inv_offer_answer_test.c
+    src/test/auth_async_test.c
+    src/test/pjsua_auth_test.c
     src/test/${PJ_TEST_MAIN}
   )
 
@@ -317,10 +319,12 @@ if(BUILD_TESTING)
     PRIVATE
       pjlib
       pjlib-util
+      pjnath
       pjmedia
       pjsip
       pjsip-simple
       pjsip-ua
+      pjsua-lib
   )
 
   add_test(NAME pjsip-test COMMAND pjsip-test)
@@ -329,6 +333,7 @@ if(BUILD_TESTING)
   add_executable(pjsua2-test
     src/pjsua2-test/main.cpp
     src/pjsua2-test/instant_messaging.cpp
+    src/pjsua2-test/auth_challenge.cpp
   )
 
   target_link_libraries(pjsua2-test
@@ -340,6 +345,9 @@ if(BUILD_TESTING)
       pjmedia-audiodev
       pjmedia-videodev
       pjsip
+      pjsip-simple
+      pjsip-ua
+      pjsua-lib
       pjsua2
   )
 

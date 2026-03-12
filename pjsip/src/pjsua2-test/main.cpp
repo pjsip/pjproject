@@ -18,16 +18,29 @@
 
 #include <pjsua2/endpoint.hpp>
 #include "instant_messaging.hpp"
+#include "auth_challenge.hpp"
 
 using namespace pj;
 
 int main(int argc, char *argv[])
 {
     try {
-        InstantMessagingTests instantMessagingTests;
+        {
+            InstantMessagingTests instantMessagingTests;
 
-        instantMessagingTests.immediateResponse();
-        instantMessagingTests.deferredResponse();
+            instantMessagingTests.immediateResponse();
+            instantMessagingTests.deferredResponse();
+        }
+
+        {
+            AuthChallengeTests authChallengeTests;
+
+            authChallengeTests.immediateResponse();
+            authChallengeTests.deferredResponse();
+            authChallengeTests.deferredRespondWithCreds();
+            authChallengeTests.deferredAbandon();
+            authChallengeTests.accountDeleteWithPending();
+        }
     } catch (...) {
         return 1;
     }

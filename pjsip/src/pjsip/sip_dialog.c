@@ -69,6 +69,12 @@ static void dlg_on_destroy( void *arg )
     pjsip_endpt_release_pool(dlg->endpt, dlg->pool);
 }
 
+
+/* Declaration of async auth send implementation */
+static pj_status_t dlg_async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
+                                             void *user_data,
+                                             pjsip_tx_data *tdata);
+
 static pj_status_t create_dialog( pjsip_user_agent *ua,
                                   pj_grp_lock_t *grp_lock,
                                   pjsip_dialog **p_dlg)
@@ -128,6 +134,18 @@ on_error:
     pjsip_endpt_release_pool(endpt, pool);
     return status;
 }
+
+/* Sending implementation for asynchronous client authentication */
+static pj_status_t dlg_async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
+                                             void *user_data,
+                                             pjsip_tx_data *tdata)
+{
+    pjsip_dialog *dlg = (pjsip_dialog *)user_data;
+
+    PJ_UNUSED_ARG(auth_sess);
+    return pjsip_dlg_send_request(dlg, tdata, -1, NULL);
+}
+
 
 static void destroy_dialog( pjsip_dialog *dlg, pj_bool_t unlock_mutex )
 {
@@ -2249,14 +2267,58 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
         {
             pjsip_transaction *tsx = pjsip_rdata_get_tsx(rdata);
             pjsip_tx_data *tdata;
+            pjsip_auth_clt_async_on_chal_param chal_param;
 
-            status = pjsip_auth_clt_reinit_req( &dlg->auth_sess,
-                                                rdata, tsx->last_tx,
-                                                &tdata);
+            /* Check if application handles the authentication.
+             * Allocate a per-challenge token from tsx->pool so that
+             * concurrent 401/407s on the same dialog each get their
+             * own token (the tsx grp_lock ref keeps the pool alive
+             * until the token is consumed).
+             *
+             * Release the dialog lock while invoking the callback to
+             * prevent deadlock if the application calls
+             * pjsip_auth_clt_async_send_req() synchronously from within
+             * the callback. sess_count remains elevated so the dialog
+             * stays alive while the lock is released.
+             */
+            {
+                pjsip_auth_clt_async_impl_token *auth_token;
+                auth_token = PJ_POOL_ZALLOC_T(
+                                    tsx->pool,
+                                    pjsip_auth_clt_async_impl_token);
+                auth_token->user_data    = dlg;
+                auth_token->send_impl    = &dlg_async_auth_send_impl;
+                /* abandon_impl is NULL: dialog-level send is stateless
+                 * (just forwards to pjsip_dlg_send_request), so no
+                 * cleanup is needed on abandon.  grp_lock dec_ref
+                 * handles the token memory.
+                 */
+                auth_token->grp_lock     = tsx->grp_lock;
+                pj_grp_lock_add_ref(tsx->grp_lock);
 
-            if (status == PJ_SUCCESS) {
-                /* Re-send request. */
-                status = pjsip_dlg_send_request(dlg, tdata, -1, NULL);
+                chal_param.rdata = rdata;
+                chal_param.tdata = tsx->last_tx;
+                pj_grp_lock_release(dlg->grp_lock_);
+                status = pjsip_auth_clt_async_impl_on_challenge(
+                                                    &dlg->auth_sess,
+                                                    auth_token,
+                                                    &chal_param);
+                pj_grp_lock_acquire(dlg->grp_lock_);
+                if (status != PJ_SUCCESS)
+                    pj_grp_lock_dec_ref(tsx->grp_lock);
+            }
+
+            if (status != PJ_SUCCESS) {
+                /* Application does not handle the authentication,
+                 * fall back to synchronous reinit.
+                 */
+                status = pjsip_auth_clt_reinit_req(&dlg->auth_sess,
+                                                   rdata, tsx->last_tx,
+                                                   &tdata);
+                if (status == PJ_SUCCESS) {
+                    /* Re-send request. */
+                    status = pjsip_dlg_send_request(dlg, tdata, -1, NULL);
+                }
             }
         }
     }

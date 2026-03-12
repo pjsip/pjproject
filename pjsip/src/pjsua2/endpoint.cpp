@@ -1164,6 +1164,238 @@ void Endpoint::on_mwi_info(pjsua_acc_id acc_id,
     acc->onMwiInfo(prm);
 }
 
+AuthChallenge::AuthChallenge()
+    : param_(NULL), deferred_(false), consumed_(false),
+      cloned_rdata_(NULL), auth_sess_(NULL), token_(NULL), tdata_(NULL),
+      acc_id_(PJSUA_INVALID_ID)
+{}
+
+AuthChallenge::~AuthChallenge()
+{
+    if (deferred_ && !consumed_ && auth_sess_ && token_) {
+        /* Capture sess/token under PJSUA_LOCK, then call async_abandon
+         * outside the lock to avoid lock-order inversion.
+         */
+        pjsip_auth_clt_sess *sess = NULL;
+        void *tok = NULL;
+        if (PJSUA_TRY_LOCK() == PJ_SUCCESS) {
+            if (pjsua_acc_is_valid(acc_id_)) {
+                sess = auth_sess_;
+                tok = token_;
+            }
+            PJSUA_UNLOCK();
+        } else {
+            /* Try-lock failed (e.g. GC finalizer during shutdown).
+             * Still abandon the token to release its grp_lock ref.
+             * The signature check inside async_abandon provides safety
+             * if the token was already consumed.
+             */
+            sess = auth_sess_;
+            tok = token_;
+        }
+        if (sess && tok)
+            pjsip_auth_clt_async_abandon(sess, tok);
+    }
+    if (cloned_rdata_)
+        pjsip_rx_data_free_cloned(cloned_rdata_);
+    if (deferred_ && tdata_)
+        pjsip_tx_data_dec_ref(tdata_);
+}
+
+AuthChallenge* AuthChallenge::defer()
+{
+    if (!param_ || consumed_ || deferred_)
+        PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+
+    pjsip_rx_data *cloned = NULL;
+    if (param_->rdata) {
+        pj_status_t st = pjsip_rx_data_clone(param_->rdata, 0, &cloned);
+        PJSUA2_CHECK_EXPR(st);
+    }
+
+    AuthChallenge *d   = new AuthChallenge();
+    d->deferred_       = true;
+    d->cloned_rdata_   = cloned;
+    d->auth_sess_      = param_->auth_sess;
+    d->token_          = param_->token;
+    d->tdata_          = param_->tdata;
+    d->acc_id_         = param_->acc_id;
+
+    if (d->tdata_)
+        pjsip_tx_data_add_ref(d->tdata_);
+
+    param_->handled = PJ_TRUE;
+    consumed_ = true;
+    param_    = NULL;
+    return d;
+}
+
+pj_status_t AuthChallenge::respond()
+{
+    if (consumed_) return PJ_EINVALIDOP;
+
+    pjsip_auth_clt_sess *sess;
+    void *tok;  pjsip_rx_data *rd;  pjsip_tx_data *td;
+
+    if (deferred_) {
+        PJSUA_LOCK();
+        if (!pjsua_acc_is_valid(acc_id_)) {
+            PJSUA_UNLOCK();
+            consumed_ = true;
+            return PJ_EINVALIDOP;
+        }
+        sess = auth_sess_;  tok = token_;
+        rd = cloned_rdata_;  td = tdata_;
+    } else {
+        if (!param_) return PJ_EINVALIDOP;
+        sess = param_->auth_sess;  tok = param_->token;
+        rd = (pjsip_rx_data*)param_->rdata;  td = param_->tdata;
+    }
+
+    /* Call reinit_req while still holding PJSUA_LOCK (deferred path) so
+     * that a concurrent pjsua_acc_del() cannot zero the auth session.
+     * reinit_req does not acquire tsx grp_lock, so no lock-order issue.
+     */
+    pjsip_tx_data *new_tdata = NULL;
+    pj_status_t status = pjsip_auth_clt_reinit_req(sess, rd, td, &new_tdata);
+
+    /* Release PJSUA_LOCK before send/abandon to prevent lock-order-
+     * inversion with tsx grp_lock (send_impl may call pjsip_regc_send
+     * which acquires regc grp_lock, while SIP callbacks acquire
+     * tsx grp_lock then PJSUA_LOCK — opposite order).
+     */
+    if (deferred_)
+        PJSUA_UNLOCK();
+
+    if (status == PJ_SUCCESS && new_tdata) {
+        status = pjsip_auth_clt_async_send_req(sess, tok, new_tdata);
+        if (status != PJ_SUCCESS) {
+            /* send_req may fail without consuming the token (e.g. account
+             * deleted between unlock and send) — abandon to release the
+             * token's grp_lock reference.  If the token was already
+             * consumed, abandon will harmlessly return PJ_EINVAL.
+             */
+            pjsip_auth_clt_async_abandon(sess, tok);
+        }
+    } else {
+        pjsip_auth_clt_async_abandon(sess, tok);
+        if (status == PJ_SUCCESS)
+            status = PJ_EINVALIDOP;
+    }
+
+    consumed_ = true;
+    if (!deferred_ && param_)
+        param_->handled = PJ_TRUE;
+    return status;
+}
+
+pj_status_t AuthChallenge::respond(const AuthCredInfoVector &creds)
+{
+    if (consumed_) return PJ_EINVALIDOP;
+
+    pjsip_auth_clt_sess *sess;
+
+    if (deferred_) {
+        PJSUA_LOCK();
+        if (!pjsua_acc_is_valid(acc_id_)) {
+            PJSUA_UNLOCK();
+            consumed_ = true;
+            return PJ_EINVALIDOP;
+        }
+        sess = auth_sess_;
+    } else {
+        sess = param_ ? param_->auth_sess : NULL;
+    }
+    if (!sess) return PJ_EINVALIDOP;
+
+    /* Apply provided credentials to the auth session */
+    pjsip_cred_info ci[PJSUA_ACC_MAX_PROXIES];
+    unsigned count = (unsigned)creds.size();
+    if (count > PJ_ARRAY_SIZE(ci))
+        count = PJ_ARRAY_SIZE(ci);
+    for (unsigned i = 0; i < count; ++i)
+        ci[i] = creds[i].toPj();
+    pj_status_t status = pjsip_auth_clt_set_credentials(sess, count, ci);
+
+    if (deferred_)
+        PJSUA_UNLOCK();
+
+    if (status != PJ_SUCCESS) {
+        abandon();
+        return status;
+    }
+
+    return respond();
+}
+
+pj_status_t AuthChallenge::abandon()
+{
+    if (consumed_) return PJ_EINVALIDOP;
+
+    pjsip_auth_clt_sess *sess;
+    void *tok;
+    if (deferred_) {
+        PJSUA_LOCK();
+        if (!pjsua_acc_is_valid(acc_id_)) {
+            /* Account deleted — skip abandon.  The token's grp_lock ref
+             * will leak, but calling abandon would dereference user_data
+             * (e.g. regc) which has already been destroyed by
+             * pjsua_acc_del().  A proper fix requires pjsua_acc_del()
+             * to consume outstanding auth tokens before destruction.
+             */
+            PJSUA_UNLOCK();
+            consumed_ = true;
+            return PJ_EINVALIDOP;
+        }
+        sess = auth_sess_;  tok = token_;
+        /* Release PJSUA_LOCK before abandon to prevent lock-order
+         * inversion — abandon_impl may call regc/inv callbacks that
+         * acquire tsx grp_lock, and SIP callbacks acquire tsx grp_lock
+         * then PJSUA_LOCK (opposite order).
+         */
+        PJSUA_UNLOCK();
+    } else {
+        if (!param_) return PJ_EINVALIDOP;
+        sess = param_->auth_sess;  tok = param_->token;
+    }
+
+    pj_status_t status = pjsip_auth_clt_async_abandon(sess, tok);
+    consumed_ = true;
+    if (!deferred_ && param_)
+        param_->handled = PJ_TRUE;
+    return status;
+}
+
+bool AuthChallenge::isValid() const
+{
+    if (consumed_) return false;
+    if (deferred_)
+        return auth_sess_ != NULL && pjsua_acc_is_valid(acc_id_);
+    return param_ != NULL;
+}
+
+void Endpoint::on_auth_challenge(pjsua_on_auth_challenge_param *param)
+{
+    Account *acc = lookupAcc(param->acc_id, "on_auth_challenge()");
+    if (!acc) {
+        /* No account — leave handled=false, sync fallback */
+        return;
+    }
+
+    OnAuthChallengeParam prm;
+    prm.accId   = param->acc_id;
+    prm.callId  = param->call_id;
+    if (param->rdata)
+        prm.rdata.fromPj(*(pjsip_rx_data*)param->rdata);
+    prm.challenge.param_ = param;
+
+    acc->onAuthChallenge(prm);
+    /* If app called respond(), abandon(), or defer(), param->handled is
+     * PJ_TRUE.  If not (default no-op), param->handled stays PJ_FALSE →
+     * sync fallback.
+     */
+}
+
 void Endpoint::on_acc_find_for_incoming(const pjsip_rx_data *rdata,
                                         pjsua_acc_id* acc_id)
 {
@@ -2112,6 +2344,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_rejected_incoming_call = &Endpoint::on_rejected_incoming_call;
     ua_cfg.cb.on_conf_op_completed      = &Endpoint::on_conf_op_completed;
     ua_cfg.cb.on_vid_conf_op_completed  = &Endpoint::on_vid_conf_op_completed;
+    ua_cfg.cb.on_auth_challenge         = &Endpoint::on_auth_challenge;
 
     /* Init! */
     PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );

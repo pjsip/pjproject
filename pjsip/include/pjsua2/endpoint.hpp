@@ -2329,6 +2329,8 @@ private:
                            pjsua_acc_id acc_id);
     static void on_mwi_info(pjsua_acc_id acc_id,
                             pjsua_mwi_info *mwi_info);
+    static void on_auth_challenge(
+                            pjsua_on_auth_challenge_param *param);
     static void on_acc_find_for_incoming(const pjsip_rx_data *rdata,
                                          pjsua_acc_id* acc_id);
     static void on_buddy_state(pjsua_buddy_id buddy_id);
