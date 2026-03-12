@@ -2283,6 +2283,7 @@ PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_b
 PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) 
 {
     int rc;
+
     PJ_UNUSED_ARG(flags);
     rc = pthread_barrier_wait(&barrier->barrier);
     switch (rc) {
@@ -2341,10 +2342,10 @@ PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_b
  */
 PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) 
 {
-    PJ_UNUSED_ARG(flags);
-
     pj_bool_t is_last = PJ_FALSE;
     int status;
+
+    PJ_UNUSED_ARG(flags);
 
     pthread_mutex_lock(&barrier->mutex.mutex);
     if (++barrier->count >= barrier->trip_count) {
