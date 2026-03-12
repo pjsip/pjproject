@@ -28,6 +28,11 @@ only when you encounter unexpected information that does not match the info here
   - `./pjsip-apps/bin/pjsua-x86_64-pc-linux-gnu --null-audio --no-cli-console` - basic test run
   - Note: pjsua binary name depends on the target architecture name
 - SSL tests will fail with timeouts in sandboxed environments - this is expected.
+- Run a specific test by passing its name(s) as arguments to the test executable:
+  - `./pjlib/bin/pjlib-test-x86_64-pc-linux-gnu timer_test` - run only timer_test
+  - `./pjlib/bin/pjlib-test-x86_64-pc-linux-gnu --list` - list all available tests
+  - Test names do NOT use `--test` flag — just pass the name directly as a positional argument.
+  - Common options: `-w N` (worker threads), `--shuffle`, `--ci-mode`, `--stop-err` (stop on first error)
 
 ### Minimum Validation (mandatory after every change)
 - **Always run `make -j3`** after changes — code must compile with zero errors and zero warnings (`-Wall` is enabled by default).
@@ -174,6 +179,7 @@ Follow the official PJSIP coding style: https://docs.pjsip.org/en/latest/get-sta
 - Media and SIP run on separate thread groups (media endpoint has its own ioqueue worker).
 - Use `pj_mutex_t` / `pj_lock_t` for synchronization - NOT pthread directly.
 - Callback functions may be called from worker threads - be thread-safe.
+- Avoid invoking user callbacks while holding a mutex — this is prone to deadlock. Where possible, release the lock before calling callbacks, then re-acquire if needed.
 - `pj_init()` and `pj_shutdown()` must be called from the main thread; calls must be balanced.
 - Non-main threads must register via `pj_thread_register()` after `pj_init()`.
 
@@ -181,6 +187,8 @@ Follow the official PJSIP coding style: https://docs.pjsip.org/en/latest/get-sta
 - Provides mutual exclusion, reference counting, and lock ordering in one primitive.
 - Used by dialogs, transactions, ICE sessions, and other long-lived objects.
 - `pj_grp_lock_add_ref()` / `pj_grp_lock_dec_ref()` manage lifetime. `dec_ref` returns `PJ_EGONE` when the object is destroyed.
+- Always ensure object lifetime extends beyond pending timers and async I/O. Use `pj_grp_lock_add_ref()` before scheduling a timer/callback and `pj_grp_lock_dec_ref()` in the callback itself.
+- Never destroy a mutex/lock that other threads may still reference. Use reference counting (`pj_grp_lock_t`) to ensure the lock is only destroyed when the last reference is released.
 - Members register destruction handlers via `pj_grp_lock_add_handler()`.
 - Lock ordering: PJSUA_LOCK > dialog grp_lock > transaction grp_lock.
 - Chain external locks with `pj_grp_lock_chain_lock()` (negative pos = before, positive = after).
@@ -265,6 +273,7 @@ Network -> pjmedia_transport (RTP) -> pjmedia_stream (jitter buffer + decode)
 - Don't ignore thread safety in callback implementations
 - Don't add external library dependencies without discussion
 - Don't declare variables after statements in C code (violates C89)
+- Don't destroy objects that have pending timers or async callbacks — cancel or ensure completion first
 
 ## Common Reference
 
@@ -294,3 +303,7 @@ Network -> pjmedia_transport (RTP) -> pjmedia_stream (jitter buffer + decode)
 - Primary CI runs on Linux, Mac, and Windows
 - Uses `cirunner` tool for test execution with timeouts
 - Tests multiple configurations (SSL/no-SSL, video codecs, etc.)
+
+### Writing Robust Tests
+- Tests must not depend on precise timing. Use generous tolerances or event-driven synchronization (barriers, semaphores) instead of fixed delays. CI runners can be 5-10x slower than local machines.
+- When using platform-specific features (sigaltstack, thread stacks), verify compatibility with AddressSanitizer. CI runs ASan builds on macOS ARM64. Test with `ASAN_OPTIONS` when touching thread/signal code.
