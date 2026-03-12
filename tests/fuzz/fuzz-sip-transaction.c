@@ -116,11 +116,12 @@ static void test_uac_transaction(pj_pool_t *pool, const uint8_t *data, size_t si
     pjsip_transaction *tsx = NULL;
     pj_status_t status = pjsip_tsx_create_uac(&tsx_user, tdata, &tsx);
 
-    if (status == PJ_SUCCESS && tsx && tsx->state != PJSIP_TSX_STATE_TERMINATED) {
-        pjsip_tsx_terminate_async(tsx, 408);
+    if (status == PJ_SUCCESS && tsx) {
+        if (tsx->state != PJSIP_TSX_STATE_TERMINATED)
+            pjsip_tsx_terminate_async(tsx, 408);
+    } else {
+        pjsip_tx_data_dec_ref(tdata);
     }
-
-    pjsip_tx_data_dec_ref(tdata);
 }
 
 /* Test sip_util.c request creation functions */
