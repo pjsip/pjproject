@@ -11,6 +11,46 @@ env:
   # Setting CI_RUNNER to empty should disable cirunner
   CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 -o ${{ github.workspace }}/artifacts --
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+      pjlib-util: ${{ steps.filter.outputs.pjlib-util }}
+      pjnath: ${{ steps.filter.outputs.pjnath }}
+      pjmedia: ${{ steps.filter.outputs.pjmedia }}
+      pjsip: ${{ steps.filter.outputs.pjsip }}
+      pjsip-apps: ${{ steps.filter.outputs.pjsip-apps }}
+      tests: ${{ steps.filter.outputs.tests }}
+      ci: ${{ steps.filter.outputs.ci }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          core:
+            - 'pjlib/**'
+            - 'build/**'
+            - 'configure*'
+            - 'aconfigure*'
+            - 'Makefile'
+            - '*.mak*'
+            - 'third_party/**'
+          pjlib-util:
+            - 'pjlib-util/**'
+          pjnath:
+            - 'pjnath/**'
+          pjmedia:
+            - 'pjmedia/**'
+          pjsip:
+            - 'pjsip/**'
+          pjsip-apps:
+            - 'pjsip-apps/**'
+          tests:
+            - 'tests/**'
+          ci:
+            - '.github/**'
+
   default:
     runs-on: windows-latest
     name: Default / build only
@@ -61,6 +101,14 @@ jobs:
         path: artifacts
 
   openssl-1:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: windows-latest
     name: OpenSSL / pjlib,util,pjmedia
     steps:
@@ -133,6 +181,17 @@ jobs:
         path: artifacts
 
   openssl-2:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.pjsip-apps == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: windows-latest
     name: OpenSSL / pjsip,pjsua
     env:
@@ -234,6 +293,14 @@ jobs:
         path: artifacts
 
   openssl-3:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: windows-latest
     name: OpenSSL / pjnath
     steps:
@@ -345,6 +412,15 @@ jobs:
         path: artifacts
 
   vid-libvpx-schannel-1:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: windows-latest
     name: VPX+SChannel / pjlib,util,pjmedia,pjnath
     env:
@@ -467,6 +543,17 @@ jobs:
         path: artifacts
 
   vid-libvpx-schannel-2:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.pjsip-apps == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: windows-latest
     name: VPX+SChannel / pjsua
     env:
@@ -588,6 +675,14 @@ jobs:
         path: artifacts
 
   vid-libvpx-schannel-3:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: windows-latest
     name: VPX+SChannel / pjsip
     steps:
@@ -744,6 +839,12 @@ jobs:
   #       path: artifacts
 
   iocp:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: windows-latest
     name: IOCP / pjlib
     steps:
@@ -780,6 +881,17 @@ jobs:
         path: artifacts
 
   iocp-cb-no-lock:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.pjsip-apps == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: windows-latest
     name: iocp-cb-no-lock / pjlib,pjsua
     env:

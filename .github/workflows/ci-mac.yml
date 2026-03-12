@@ -22,6 +22,46 @@ env:
   # Only affects ASan-instrumented binaries; harmless for non-ASan jobs.
   ASAN_OPTIONS: use_sigaltstack=0:detect_stack_use_after_return=0
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+      pjlib-util: ${{ steps.filter.outputs.pjlib-util }}
+      pjnath: ${{ steps.filter.outputs.pjnath }}
+      pjmedia: ${{ steps.filter.outputs.pjmedia }}
+      pjsip: ${{ steps.filter.outputs.pjsip }}
+      pjsip-apps: ${{ steps.filter.outputs.pjsip-apps }}
+      tests: ${{ steps.filter.outputs.tests }}
+      ci: ${{ steps.filter.outputs.ci }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          core:
+            - 'pjlib/**'
+            - 'build/**'
+            - 'configure*'
+            - 'aconfigure*'
+            - 'Makefile'
+            - '*.mak*'
+            - 'third_party/**'
+          pjlib-util:
+            - 'pjlib-util/**'
+          pjnath:
+            - 'pjnath/**'
+          pjmedia:
+            - 'pjmedia/**'
+          pjsip:
+            - 'pjsip/**'
+          pjsip-apps:
+            - 'pjsip-apps/**'
+          tests:
+            - 'tests/**'
+          ci:
+            - '.github/**'
+
   default-build:
     # checking pure lib source distribution with plain configure & make
     runs-on: macos-latest
@@ -47,6 +87,15 @@ jobs:
 
   default-pjlib-util-pjmedia-pjnath:
     # full bundle: enable all codecs + AEC + DTLS
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: Default / pjmedia,pjnath
     steps:
@@ -77,6 +126,17 @@ jobs:
         path: artifacts
 
   default-pjsua-test:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.pjsip-apps == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: Default / pjsua-test
     steps:
@@ -121,6 +181,14 @@ jobs:
         path: artifacts
 
   default-pjsip-test:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: Default / pjlib,util,pjsip-test
     steps:
@@ -153,6 +221,15 @@ jobs:
         path: artifacts
 
   openssl-1:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: OpenSSL / pjlib,util,pjnath,pjmedia
     steps:
@@ -197,6 +274,14 @@ jobs:
         path: artifacts
 
   openssl-2:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: OpenSSL / pjsip
     steps:
@@ -229,6 +314,15 @@ jobs:
         path: artifacts
 
   gnu-tls-1:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: GnuTLS / pjlib,util,pjmedia,pjnath
     steps:
@@ -271,6 +365,14 @@ jobs:
         path: artifacts
 
   gnu-tls-2:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: GnuTLS / pjsip-test
     steps:
@@ -301,6 +403,17 @@ jobs:
         path: artifacts
 
   video-openh264-1:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.pjsip-apps == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: Openh264+VPX / pjmedia,pjsua
     steps:
@@ -347,6 +460,14 @@ jobs:
         path: artifacts
 
   video-openh264-2:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: Openh264+VPX / util,pjnath
     steps:
@@ -377,6 +498,14 @@ jobs:
         path: artifacts
 
   video-openh264-3:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: Openh264+VPX / pjlib,pjsip
     steps:
@@ -407,6 +536,14 @@ jobs:
         path: artifacts
 
   video-ffmpeg:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: FFMPEG+VPX+x264 / pjmedia
     steps:
@@ -445,6 +582,14 @@ jobs:
         path: artifacts
 
   video-vid-toolbox:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: VPX+VidToolbox / pjmedia
     steps:
@@ -477,6 +622,17 @@ jobs:
         path: artifacts
 
   ioq-cb-no-lock:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.pjsip-apps == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: macos-latest
     name: ioq-cb-no-lock / pjlib,pjsua
     steps:

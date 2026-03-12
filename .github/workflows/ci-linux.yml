@@ -12,6 +12,46 @@ env:
   CI_RUNNER: python ${{ github.workspace }}/cirunner/cirunner.py -t 3600 -o ${{ github.workspace }}/artifacts --
   MAKE_FAST: make -j 3
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+      pjlib-util: ${{ steps.filter.outputs.pjlib-util }}
+      pjnath: ${{ steps.filter.outputs.pjnath }}
+      pjmedia: ${{ steps.filter.outputs.pjmedia }}
+      pjsip: ${{ steps.filter.outputs.pjsip }}
+      pjsip-apps: ${{ steps.filter.outputs.pjsip-apps }}
+      tests: ${{ steps.filter.outputs.tests }}
+      ci: ${{ steps.filter.outputs.ci }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          core:
+            - 'pjlib/**'
+            - 'build/**'
+            - 'configure*'
+            - 'aconfigure*'
+            - 'Makefile'
+            - '*.mak*'
+            - 'third_party/**'
+          pjlib-util:
+            - 'pjlib-util/**'
+          pjnath:
+            - 'pjnath/**'
+          pjmedia:
+            - 'pjmedia/**'
+          pjsip:
+            - 'pjsip/**'
+          pjsip-apps:
+            - 'pjsip-apps/**'
+          tests:
+            - 'tests/**'
+          ci:
+            - '.github/**'
+
   default-build:
     # checking pure lib source distribution with plain configure & make
     runs-on: ubuntu-latest
@@ -41,6 +81,17 @@ jobs:
 
   default-full-bundle-1:
     # full bundle: enable all codecs + AEC + DTLS
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.pjsip-apps == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: ubuntu-latest
     name: Default / pjmedia,pjsua
     steps:
@@ -97,6 +148,14 @@ jobs:
         path: artifacts
 
   default-full-bundle-2:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: ubuntu-latest
     name: Default / pjlib,util,pjnath
     steps:
@@ -129,6 +188,14 @@ jobs:
         path: artifacts
 
   default-full-bundle-3:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: ubuntu-latest
     name: Default / pjsip
     steps:
@@ -155,6 +222,14 @@ jobs:
         path: artifacts
 
   no-tls:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: ubuntu-latest
     name: No SSL / pjlib,pjsip
     steps:
@@ -188,6 +263,15 @@ jobs:
   # TLS: with OpenSSL (same as build-ubuntu-default)
 
   gnu-tls:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: ubuntu-latest
     name: GnuTLS / pjlib,pjnath,pjsip
     steps:
@@ -224,6 +308,17 @@ jobs:
         path: artifacts
 
   vid-openh264-1:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.pjsip-apps == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjmedia,pjsua
     steps:
@@ -299,6 +394,14 @@ jobs:
         path: artifacts
 
   vid-openh264-2:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjlib,util,pjnath
     steps:
@@ -342,6 +445,14 @@ jobs:
         path: artifacts
 
   vid-openh264-3:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjsip
     steps:
@@ -385,6 +496,14 @@ jobs:
         path: artifacts
 
   vid-ffmpeg:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: ubuntu-latest
     name: FFMPEG+x264 / pjmedia
     steps:
@@ -440,6 +559,17 @@ jobs:
         path: artifacts
 
   ioq-epoll-cb-no-lock-conf-thread:
+    needs: [detect-changes]
+    if: >-
+      github.event_name == 'push' ||
+      needs.detect-changes.outputs.core == 'true' ||
+      needs.detect-changes.outputs.pjlib-util == 'true' ||
+      needs.detect-changes.outputs.pjnath == 'true' ||
+      needs.detect-changes.outputs.pjmedia == 'true' ||
+      needs.detect-changes.outputs.pjsip == 'true' ||
+      needs.detect-changes.outputs.pjsip-apps == 'true' ||
+      needs.detect-changes.outputs.tests == 'true' ||
+      needs.detect-changes.outputs.ci == 'true'
     runs-on: ubuntu-latest
     name: ioq-epoll-cb-no-lock-conf-thread / pjlib,pjsua
     steps:
