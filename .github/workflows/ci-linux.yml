@@ -15,14 +15,15 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      core: ${{ steps.filter.outputs.core }}
-      pjlib-util: ${{ steps.filter.outputs.pjlib-util }}
-      pjnath: ${{ steps.filter.outputs.pjnath }}
-      pjmedia: ${{ steps.filter.outputs.pjmedia }}
-      pjsip: ${{ steps.filter.outputs.pjsip }}
-      pjsip-apps: ${{ steps.filter.outputs.pjsip-apps }}
-      tests: ${{ steps.filter.outputs.tests }}
-      ci: ${{ steps.filter.outputs.ci }}
+      # Aggregate dependency groups — each combines the raw path filters
+      # relevant to a set of test jobs, so per-job conditions are one-liners.
+      pjlib-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjnath-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjmedia-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjsip-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjnath-pjmedia-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjnath-pjsip-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      any-src: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.pjsip-apps == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
     steps:
     - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v3
@@ -82,16 +83,7 @@ jobs:
   default-full-bundle-1:
     # full bundle: enable all codecs + AEC + DTLS
     needs: [detect-changes]
-    if: >-
-      github.event_name == 'push' ||
-      needs.detect-changes.outputs.core == 'true' ||
-      needs.detect-changes.outputs.pjlib-util == 'true' ||
-      needs.detect-changes.outputs.pjnath == 'true' ||
-      needs.detect-changes.outputs.pjmedia == 'true' ||
-      needs.detect-changes.outputs.pjsip == 'true' ||
-      needs.detect-changes.outputs.pjsip-apps == 'true' ||
-      needs.detect-changes.outputs.tests == 'true' ||
-      needs.detect-changes.outputs.ci == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any-src == 'true'
     runs-on: ubuntu-latest
     name: Default / pjmedia,pjsua
     steps:
@@ -149,13 +141,7 @@ jobs:
 
   default-full-bundle-2:
     needs: [detect-changes]
-    if: >-
-      github.event_name == 'push' ||
-      needs.detect-changes.outputs.core == 'true' ||
-      needs.detect-changes.outputs.pjlib-util == 'true' ||
-      needs.detect-changes.outputs.pjnath == 'true' ||
-      needs.detect-changes.outputs.tests == 'true' ||
-      needs.detect-changes.outputs.ci == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath-deps == 'true'
     runs-on: ubuntu-latest
     name: Default / pjlib,util,pjnath
     steps:
@@ -189,13 +175,7 @@ jobs:
 
   default-full-bundle-3:
     needs: [detect-changes]
-    if: >-
-      github.event_name == 'push' ||
-      needs.detect-changes.outputs.core == 'true' ||
-      needs.detect-changes.outputs.pjlib-util == 'true' ||
-      needs.detect-changes.outputs.pjsip == 'true' ||
-      needs.detect-changes.outputs.tests == 'true' ||
-      needs.detect-changes.outputs.ci == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjsip-deps == 'true'
     runs-on: ubuntu-latest
     name: Default / pjsip
     steps:
@@ -223,13 +203,7 @@ jobs:
 
   no-tls:
     needs: [detect-changes]
-    if: >-
-      github.event_name == 'push' ||
-      needs.detect-changes.outputs.core == 'true' ||
-      needs.detect-changes.outputs.pjlib-util == 'true' ||
-      needs.detect-changes.outputs.pjsip == 'true' ||
-      needs.detect-changes.outputs.tests == 'true' ||
-      needs.detect-changes.outputs.ci == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjsip-deps == 'true'
     runs-on: ubuntu-latest
     name: No SSL / pjlib,pjsip
     steps:
@@ -264,14 +238,7 @@ jobs:
 
   gnu-tls:
     needs: [detect-changes]
-    if: >-
-      github.event_name == 'push' ||
-      needs.detect-changes.outputs.core == 'true' ||
-      needs.detect-changes.outputs.pjlib-util == 'true' ||
-      needs.detect-changes.outputs.pjnath == 'true' ||
-      needs.detect-changes.outputs.pjsip == 'true' ||
-      needs.detect-changes.outputs.tests == 'true' ||
-      needs.detect-changes.outputs.ci == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath-pjsip-deps == 'true'
     runs-on: ubuntu-latest
     name: GnuTLS / pjlib,pjnath,pjsip
     steps:
@@ -309,16 +276,7 @@ jobs:
 
   vid-openh264-1:
     needs: [detect-changes]
-    if: >-
-      github.event_name == 'push' ||
-      needs.detect-changes.outputs.core == 'true' ||
-      needs.detect-changes.outputs.pjlib-util == 'true' ||
-      needs.detect-changes.outputs.pjnath == 'true' ||
-      needs.detect-changes.outputs.pjmedia == 'true' ||
-      needs.detect-changes.outputs.pjsip == 'true' ||
-      needs.detect-changes.outputs.pjsip-apps == 'true' ||
-      needs.detect-changes.outputs.tests == 'true' ||
-      needs.detect-changes.outputs.ci == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any-src == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjmedia,pjsua
     steps:
@@ -395,13 +353,7 @@ jobs:
 
   vid-openh264-2:
     needs: [detect-changes]
-    if: >-
-      github.event_name == 'push' ||
-      needs.detect-changes.outputs.core == 'true' ||
-      needs.detect-changes.outputs.pjlib-util == 'true' ||
-      needs.detect-changes.outputs.pjnath == 'true' ||
-      needs.detect-changes.outputs.tests == 'true' ||
-      needs.detect-changes.outputs.ci == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath-deps == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjlib,util,pjnath
     steps:
@@ -446,13 +398,7 @@ jobs:
 
   vid-openh264-3:
     needs: [detect-changes]
-    if: >-
-      github.event_name == 'push' ||
-      needs.detect-changes.outputs.core == 'true' ||
-      needs.detect-changes.outputs.pjlib-util == 'true' ||
-      needs.detect-changes.outputs.pjsip == 'true' ||
-      needs.detect-changes.outputs.tests == 'true' ||
-      needs.detect-changes.outputs.ci == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjsip-deps == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjsip
     steps:
@@ -497,13 +443,7 @@ jobs:
 
   vid-ffmpeg:
     needs: [detect-changes]
-    if: >-
-      github.event_name == 'push' ||
-      needs.detect-changes.outputs.core == 'true' ||
-      needs.detect-changes.outputs.pjlib-util == 'true' ||
-      needs.detect-changes.outputs.pjmedia == 'true' ||
-      needs.detect-changes.outputs.tests == 'true' ||
-      needs.detect-changes.outputs.ci == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia-deps == 'true'
     runs-on: ubuntu-latest
     name: FFMPEG+x264 / pjmedia
     steps:
@@ -560,16 +500,7 @@ jobs:
 
   ioq-epoll-cb-no-lock-conf-thread:
     needs: [detect-changes]
-    if: >-
-      github.event_name == 'push' ||
-      needs.detect-changes.outputs.core == 'true' ||
-      needs.detect-changes.outputs.pjlib-util == 'true' ||
-      needs.detect-changes.outputs.pjnath == 'true' ||
-      needs.detect-changes.outputs.pjmedia == 'true' ||
-      needs.detect-changes.outputs.pjsip == 'true' ||
-      needs.detect-changes.outputs.pjsip-apps == 'true' ||
-      needs.detect-changes.outputs.tests == 'true' ||
-      needs.detect-changes.outputs.ci == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any-src == 'true'
     runs-on: ubuntu-latest
     name: ioq-epoll-cb-no-lock-conf-thread / pjlib,pjsua
     steps:
