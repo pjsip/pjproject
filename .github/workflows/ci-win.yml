@@ -835,11 +835,11 @@ jobs:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
 
-  iocp-cb-no-lock:
+  iocp-cb-with-lock:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.any-src == 'true'
     runs-on: windows-latest
-    name: iocp-cb-no-lock / pjlib,pjsua
+    name: iocp-cb-with-lock / pjlib,pjsua
     env:
       PYTHONUTF8: 1  # This forces Python to use UTF-8
     steps:
@@ -856,7 +856,7 @@ jobs:
       run: |
         cd pjlib/include/pj; cp config_site_test.h config_site.h
         Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
-        Add-Content config_site.h "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1"
+        Add-Content config_site.h "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 0"
         Add-Content config_site.h "#define PJ_IOQUEUE_IMP PJ_IOQUEUE_IMP_IOCP"
       shell: powershell
     - name: get openssl

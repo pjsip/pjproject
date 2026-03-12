@@ -542,11 +542,11 @@ jobs:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
 
-  ioq-cb-no-lock:
+  ioq-cb-with-lock:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.any-src == 'true'
     runs-on: macos-latest
-    name: ioq-cb-no-lock / pjlib,pjsua
+    name: ioq-cb-with-lock / pjlib,pjsua
     steps:
     - uses: actions/checkout@v2
     - name: install cirunner
@@ -570,7 +570,7 @@ jobs:
         unzip -o visqol.zip -d tests/pjsua/tools
         chmod +x tests/pjsua/tools/visqol
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1\n" >> config_site.h
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 0\n" >> config_site.h
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
