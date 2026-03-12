@@ -157,7 +157,7 @@ Follow the official PJSIP coding style: https://docs.pjsip.org/en/latest/get-sta
 - Media and SIP run on separate thread groups (media endpoint has its own ioqueue worker).
 - Use `pj_mutex_t` / `pj_lock_t` for synchronization - NOT pthread directly.
 - Callback functions may be called from worker threads - be thread-safe.
-- Never invoke user callbacks while holding a mutex — this is prone to deadlock. Release the lock before calling callbacks, then re-acquire if needed.
+- Avoid invoking user callbacks while holding a mutex — this is prone to deadlock. Where possible, release the lock before calling callbacks, then re-acquire if needed.
 - `pj_init()` and `pj_shutdown()` must be called from the main thread; calls must be balanced.
 - Non-main threads must register via `pj_thread_register()` after `pj_init()`.
 
