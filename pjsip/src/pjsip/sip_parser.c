@@ -1347,6 +1347,9 @@ static void int_parse_host(pj_scanner *scanner, pj_str_t *host)
         pj_scan_get_char(scanner);
         pj_scan_get_until_ch(scanner, ']', host);
         pj_scan_get_char(scanner);
+        /* Empty IPv6 address (e.g. "sip:[]") is invalid */
+        if (host->slen == 0)
+            on_syntax_error(scanner);
     } else {
         pj_scan_get( scanner, &pconst.pjsip_HOST_SPEC, host);
     }

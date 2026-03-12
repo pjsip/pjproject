@@ -188,6 +188,10 @@ static int get_ip_addr_ver(const pj_str_t *host)
     pj_in_addr dummy;
     pj_in6_addr dummy6;
 
+    /* Check for empty address */
+    if (host->slen == 0)
+        return 0;
+
     /* First check if this is an IPv4 address */
     if (pj_inet_pton(pj_AF_INET(), host, &dummy) == PJ_SUCCESS)
         return 4;
