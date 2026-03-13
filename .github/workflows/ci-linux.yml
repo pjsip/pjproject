@@ -17,14 +17,14 @@ jobs:
     outputs:
       # Aggregate dependency groups — each combines the raw path filters
       # relevant to a set of test jobs, so per-job conditions are one-liners.
-      pjlib-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
-      pjnath-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
-      pjmedia-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
-      pjsip-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
-      pjmedia-pjsip-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
-      pjnath-pjmedia-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
-      pjnath-pjsip-deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
-      any-src: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib-util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.pjsip-apps == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjlib_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjnath_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjmedia_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjsip_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjmedia_pjsip_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjnath_pjmedia_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      pjnath_pjsip_deps: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+      any_src: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjlib_util == 'true' || steps.filter.outputs.pjnath == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.pjsip == 'true' || steps.filter.outputs.pjsip_apps == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
     steps:
     - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v3
@@ -39,7 +39,7 @@ jobs:
             - 'Makefile'
             - '*.mak*'
             - 'third_party/**'
-          pjlib-util:
+          pjlib_util:
             - 'pjlib-util/**'
           pjnath:
             - 'pjnath/**'
@@ -47,7 +47,7 @@ jobs:
             - 'pjmedia/**'
           pjsip:
             - 'pjsip/**'
-          pjsip-apps:
+          pjsip_apps:
             - 'pjsip-apps/**'
           tests:
             - 'tests/**'
@@ -84,7 +84,7 @@ jobs:
   default-full-bundle-1:
     # full bundle: enable all codecs + AEC + DTLS
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.any-src == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: Default / pjsua
     steps:
@@ -140,7 +140,7 @@ jobs:
 
   default-full-bundle-2:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath-deps == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath_deps == 'true'
     runs-on: ubuntu-latest
     name: Default / pjlib,util,pjnath
     steps:
@@ -174,7 +174,7 @@ jobs:
 
   default-full-bundle-3:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia-pjsip-deps == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia_pjsip_deps == 'true'
     runs-on: ubuntu-latest
     name: Default / pjmedia,pjsip
     steps:
@@ -204,7 +204,7 @@ jobs:
 
   no-tls:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjsip-deps == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjsip_deps == 'true'
     runs-on: ubuntu-latest
     name: No SSL / pjlib,pjsip
     steps:
@@ -239,7 +239,7 @@ jobs:
 
   gnu-tls:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath-pjsip-deps == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath_pjsip_deps == 'true'
     runs-on: ubuntu-latest
     name: GnuTLS / pjlib,pjnath,pjsip
     steps:
@@ -277,7 +277,7 @@ jobs:
 
   vid-openh264-1:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.any-src == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjsua
     steps:
@@ -350,7 +350,7 @@ jobs:
 
   vid-openh264-2:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath-deps == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath_deps == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjlib,util,pjnath
     steps:
@@ -395,7 +395,7 @@ jobs:
 
   vid-openh264-3:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia-pjsip-deps == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia_pjsip_deps == 'true'
     runs-on: ubuntu-latest
     name: OpenH264+VPX / pjmedia,pjsip
     steps:
@@ -444,7 +444,7 @@ jobs:
 
   vid-ffmpeg:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia-deps == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia_deps == 'true'
     runs-on: ubuntu-latest
     name: FFMPEG+x264 / pjmedia
     steps:
@@ -501,7 +501,7 @@ jobs:
 
   ioq-epoll-cb-with-lock-conf-thread:
     needs: [detect-changes]
-    if: github.event_name == 'push' || needs.detect-changes.outputs.any-src == 'true'
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: ioq-epoll-cb-with-lock-conf-thread / pjlib,pjsua
     steps:
