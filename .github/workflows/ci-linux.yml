@@ -25,7 +25,7 @@ jobs:
     - name: config site
       run: echo -e "#define PJ_TODO(x)\n" > pjlib/include/pj/config_site.h
     - name: configure
-      run: ./configure
+      run: ./configure CFLAGS="-std=gnu89 -Werror=declaration-after-statement"
     - name: make
       run: $MAKE_FAST
     - name: get SSL info

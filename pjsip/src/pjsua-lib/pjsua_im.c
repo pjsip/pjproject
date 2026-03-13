@@ -166,10 +166,11 @@ pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
 
 static pj_bool_t is_typing_indication(pjsip_rx_data *rdata)
 {
+    pjsip_msg_body *body;
     PJ_ASSERT_RETURN(rdata, PJ_FALSE);
     PJ_ASSERT_RETURN(rdata->msg_info.msg, PJ_FALSE);
 
-    pjsip_msg_body *body = rdata->msg_info.msg->body;
+    body = rdata->msg_info.msg->body;
 
     if (body && pj_stricmp(&body->content_type.type, &STR_MIME_APP)==0 &&
         pj_stricmp(&body->content_type.subtype, &STR_MIME_ISCOMPOSING)==0) {
