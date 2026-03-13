@@ -921,6 +921,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
     sess->cred_cnt = 0;
     sess->cred_info = NULL;
     pj_list_init(&sess->cached_auth);
+    pj_bzero(&sess->pref, sizeof(sess->pref));
 
     sess->parent = NULL;
     sess->lock = NULL;
