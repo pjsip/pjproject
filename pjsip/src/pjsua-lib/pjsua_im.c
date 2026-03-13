@@ -484,6 +484,7 @@ static void im_callback(void *token, pjsip_event *e)
             ctx->token.grp_lock     = tsx->grp_lock;
             pj_grp_lock_add_ref(tsx->grp_lock);
 
+            pj_bzero(&chal_param, sizeof(chal_param));
             chal_param.rdata = rdata;
             chal_param.tdata = tsx->last_tx;
             status = pjsip_auth_clt_async_impl_on_challenge(
@@ -646,6 +647,7 @@ static void typing_callback(void *token, pjsip_event *e)
             ctx->token.grp_lock     = tsx->grp_lock;
             pj_grp_lock_add_ref(tsx->grp_lock);
 
+            pj_bzero(&chal_param, sizeof(chal_param));
             chal_param.rdata = rdata;
             chal_param.tdata = tsx->last_tx;
             status = pjsip_auth_clt_async_impl_on_challenge(

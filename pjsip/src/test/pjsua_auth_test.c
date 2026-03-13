@@ -662,8 +662,17 @@ static int acc_delete_deferred_test(pjsua_transport_id tp_id, int port)
 /* Recreate the test framework's endpoint + tsx layer after pjsua_destroy. */
 static void restore_endpt(void)
 {
-    pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
-    pjsip_tsx_layer_init_module(endpt);
+    pj_status_t status;
+
+    status = pjsip_endpt_create(&caching_pool.factory, "endpt", &endpt);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(1, (THIS_FILE, status, "Error creating endpoint"));
+        return;
+    }
+    status = pjsip_tsx_layer_init_module(endpt);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(1, (THIS_FILE, status, "Error initializing tsx layer"));
+    }
 }
 
 

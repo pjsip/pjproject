@@ -751,7 +751,8 @@ int auth_async_test(void)
     rc = pjsip_udp_transport_start(endpt, NULL, NULL, 1, &udp);
     if (rc != PJ_SUCCESS) {
         app_perror("  error creating UDP transport", rc);
-        return -1;
+        rc = -1;
+        goto on_return;
     }
 
     port = pj_sockaddr_get_port(&udp->local_addr);

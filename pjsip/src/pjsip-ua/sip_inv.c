@@ -4118,6 +4118,7 @@ static void inv_handle_bye_response( pjsip_inv_session *inv,
          * (b) releasing a lock held by a parent caller risks state changes
          *     from another thread processing a different event on this dialog.
          */
+        pj_bzero(&chal_param, sizeof(chal_param));
         {
             pjsip_auth_clt_async_impl_token *token;
             token = PJ_POOL_ZALLOC_T(tsx->pool,
@@ -4332,6 +4333,7 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
          * mid-dialog UPDATE does not terminate the session.
          * Dialog grp_lock is held by the caller; see BYE handler comment.
          */
+        pj_bzero(&chal_param, sizeof(chal_param));
         {
             pjsip_auth_clt_async_impl_token *token;
             token = PJ_POOL_ZALLOC_T(tsx->pool,
@@ -4861,6 +4863,7 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
          * abandoning a mid-dialog request does not terminate the session.
          * Dialog grp_lock is held by the caller; see BYE handler comment.
          */
+        pj_bzero(&chal_param, sizeof(chal_param));
         {
             pjsip_auth_clt_async_impl_token *token;
             token = PJ_POOL_ZALLOC_T(tsx->pool,
@@ -4983,6 +4986,7 @@ static void handle_uac_call_rejection(pjsip_inv_session *inv, pjsip_event *e)
         /* Initial INVITE auth: abandoning terminates the session.
          * Dialog grp_lock is held by the caller; see BYE handler comment.
          */
+        pj_bzero(&chal_param, sizeof(chal_param));
         {
             pjsip_auth_clt_async_impl_token *token;
             token = PJ_POOL_ZALLOC_T(tsx->pool,
