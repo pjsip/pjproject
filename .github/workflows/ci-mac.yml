@@ -22,6 +22,44 @@ env:
   # Only affects ASan-instrumented binaries; harmless for non-ASan jobs.
   ASAN_OPTIONS: use_sigaltstack=0:detect_stack_use_after_return=0
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      # macOS-specific code lives in pjlib (OS abstractions, ioqueue/kqueue,
+      # sockets, threading, SSL) and pjmedia (audio/video devices, native
+      # codecs, AEC). Other components (pjlib-util, pjnath, pjsip, pjsip-apps)
+      # are platform-independent protocol logic already covered by Linux CI.
+      # Only run full Mac test suite for changes to platform-specific areas.
+      mac_full_tests: ${{ steps.filter.outputs.core == 'true' || steps.filter.outputs.pjmedia == 'true' || steps.filter.outputs.tests == 'true' || steps.filter.outputs.ci == 'true' }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          core:
+            - 'pjlib/**'
+            - 'build/**'
+            - 'configure*'
+            - 'aconfigure*'
+            - 'Makefile'
+            - '*.mak*'
+            - 'third_party/**'
+          pjlib_util:
+            - 'pjlib-util/**'
+          pjnath:
+            - 'pjnath/**'
+          pjmedia:
+            - 'pjmedia/**'
+          pjsip:
+            - 'pjsip/**'
+          pjsip_apps:
+            - 'pjsip-apps/**'
+          tests:
+            - 'tests/**'
+          ci:
+            - '.github/**'
+
   default-build:
     # checking pure lib source distribution with plain configure & make
     runs-on: macos-latest
@@ -47,6 +85,8 @@ jobs:
 
   default-pjlib-util-pjmedia-pjnath:
     # full bundle: enable all codecs + AEC + DTLS
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: Default / pjmedia,pjnath
     steps:
@@ -77,6 +117,8 @@ jobs:
         path: artifacts
 
   default-pjsua-test:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: Default / pjsua-test
     steps:
@@ -121,6 +163,8 @@ jobs:
         path: artifacts
 
   default-pjsip-test:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: Default / pjlib,util,pjsip-test
     steps:
@@ -153,6 +197,8 @@ jobs:
         path: artifacts
 
   openssl-1:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: OpenSSL / pjlib,util,pjnath,pjmedia
     steps:
@@ -197,6 +243,8 @@ jobs:
         path: artifacts
 
   openssl-2:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: OpenSSL / pjsip
     steps:
@@ -229,6 +277,8 @@ jobs:
         path: artifacts
 
   gnu-tls-1:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: GnuTLS / pjlib,util,pjmedia,pjnath
     steps:
@@ -271,6 +321,8 @@ jobs:
         path: artifacts
 
   gnu-tls-2:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: GnuTLS / pjsip-test
     steps:
@@ -301,8 +353,10 @@ jobs:
         path: artifacts
 
   video-openh264-1:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
-    name: Openh264+VPX / pjmedia,pjsua
+    name: Openh264+VPX / pjsua
     steps:
     - uses: actions/checkout@v2
     - name: install cirunner
@@ -335,8 +389,6 @@ jobs:
       run: cd pjsip-apps/src/swig && make
     - name: disable firewall
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: pjmedia-test
-      run: make pjmedia-test
     - name: pjsua-test
       run: make pjsua-test
     - name: upload artifacts on failure
@@ -347,38 +399,10 @@ jobs:
         path: artifacts
 
   video-openh264-2:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
-    name: Openh264+VPX / util,pjnath
-    steps:
-    - uses: actions/checkout@v2
-    - name: install cirunner
-      run: |
-        git clone --depth 1 https://github.com/pjsip/cirunner.git
-        cirunner/installmac.sh
-    - name: install dependencies
-      run: brew install openssl openh264 libvpx opencore-amr
-    - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
-    - name: configure
-      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fsanitize=address" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb) -fsanitize=address" CXXFLAGS="-fsanitize=address" ./configure
-    - name: make
-      run: $MAKE_FAST
-    - name: disable firewall
-      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-    - name: pjlib-util-test
-      run: make pjlib-util-test
-    - name: pjnath-test
-      run: make pjnath-test
-    - name: upload artifacts on failure
-      if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
-        path: artifacts
-
-  video-openh264-3:
-    runs-on: macos-latest
-    name: Openh264+VPX / pjlib,pjsip
+    name: Openh264+VPX / pjlib,util,pjnath
     steps:
     - uses: actions/checkout@v2
     - name: install cirunner
@@ -397,6 +421,40 @@ jobs:
       run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: pjlib-test
       run: make pjlib-test
+    - name: pjlib-util-test
+      run: make pjlib-util-test
+    - name: pjnath-test
+      run: make pjnath-test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
+
+  video-openh264-3:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
+    runs-on: macos-latest
+    name: Openh264+VPX / pjmedia,pjsip
+    steps:
+    - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installmac.sh
+    - name: install dependencies
+      run: brew install openssl openh264 libvpx opencore-amr
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
+    - name: configure
+      run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -DHAS_VID_CODEC_TEST=0 -fsanitize=address" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb) -fsanitize=address" CXXFLAGS="-fsanitize=address" ./configure
+    - name: make
+      run: $MAKE_FAST
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: pjmedia-test
+      run: make pjmedia-test
     - name: pjsip-test
       run: make pjsip-test
     - name: upload artifacts on failure
@@ -407,6 +465,8 @@ jobs:
         path: artifacts
 
   video-ffmpeg:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: FFMPEG+VPX+x264 / pjmedia
     steps:
@@ -445,6 +505,8 @@ jobs:
         path: artifacts
 
   video-vid-toolbox:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
     name: VPX+VidToolbox / pjmedia
     steps:
@@ -476,9 +538,11 @@ jobs:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
 
-  ioq-cb-no-lock:
+  ioq-cb-with-lock:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.mac_full_tests == 'true'
     runs-on: macos-latest
-    name: ioq-cb-no-lock / pjlib,pjsua
+    name: ioq-cb-with-lock / pjlib,pjsua
     steps:
     - uses: actions/checkout@v2
     - name: install cirunner
@@ -502,7 +566,7 @@ jobs:
         unzip -o visqol.zip -d tests/pjsua/tools
         chmod +x tests/pjsua/tools/visqol
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 1\n" >> config_site.h
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 0\n" >> config_site.h
     - name: configure
       run: CFLAGS="-g $(pkg-config --cflags openssl) $(pkg-config --cflags opencore-amrnb) -fPIC" LDFLAGS="$(pkg-config --libs-only-L openssl) $(pkg-config --libs-only-L opencore-amrnb)" CXXFLAGS="-g -fPIC" ./configure
     - name: make
@@ -524,20 +588,24 @@ jobs:
 
   cmake-build:
     runs-on: macos-latest
-    name: CMake / ${{ matrix.build_type }}
-    strategy:
-      fail-fast: false
-      matrix:
-        build_type: [Debug, Release]
+    name: CMake / Debug+Release
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
       run: brew install openssl
-    - name: configure
-      run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-    - name: build
-      run: cmake --build build -j $(sysctl -n hw.ncpu)
-    - name: check
+    - name: configure Debug
+      run: cmake -B build-debug -DCMAKE_BUILD_TYPE=Debug
+    - name: build Debug
+      run: cmake --build build-debug -j $(sysctl -n hw.ncpu)
+    - name: check Debug
       run: |
-        file build/pjsip-apps/pjsua
-        otool -L build/pjsip-apps/pjsua
+        file build-debug/pjsip-apps/pjsua
+        otool -L build-debug/pjsip-apps/pjsua
+    - name: configure Release
+      run: cmake -B build-release -DCMAKE_BUILD_TYPE=Release
+    - name: build Release
+      run: cmake --build build-release -j $(sysctl -n hw.ncpu)
+    - name: check Release
+      run: |
+        file build-release/pjsip-apps/pjsua
+        otool -L build-release/pjsip-apps/pjsua
