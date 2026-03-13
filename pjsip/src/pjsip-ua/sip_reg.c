@@ -1303,6 +1303,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
             auth_token->grp_lock     = tsx->grp_lock;
             pj_grp_lock_add_ref(tsx->grp_lock);
 
+            pj_bzero(&chal_param, sizeof(chal_param));
             chal_param.rdata = rdata;
             chal_param.tdata = tsx->last_tx;
             pj_lock_release(regc->lock);

@@ -1766,8 +1766,19 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     }
 
     if (!replaced_dlg) {
-        /* Clone rdata. */
-        pjsip_rx_data_clone(rdata, 0, &call->incoming_data);
+        /* Clone rdata — needed for on_incoming_call callback.
+         * Without it, incoming_data stays NULL and on_incoming_call
+         * is silently skipped, so reject the call on failure.
+         */
+        status = pjsip_rx_data_clone(rdata, 0, &call->incoming_data);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(1, (THIS_FILE, status,
+                          "Failed to clone rdata for incoming call"));
+            ret_st_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+            pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
+                                          ret_st_code, NULL, NULL, NULL);
+            goto on_return;
+        }
     }
 
     /*

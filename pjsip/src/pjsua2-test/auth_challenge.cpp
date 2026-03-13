@@ -217,7 +217,7 @@ static AccountConfig make_acc_config(int port, bool with_creds)
 
     if (with_creds) {
         AuthCredInfo cred("digest", "*", TEST_USER, 0, "secret");
-        cfg.sipConfig.authCreds.push_back(cred);
+        cfg.sipConfig.authCreds.push_back(PJSUA2_MOVE(cred));
     }
 
     cfg.natConfig.contactRewriteUse = 0;
