@@ -11,6 +11,7 @@ JSON=fuzz-json
 XML=fuzz-xml
 SDP=fuzz-sdp
 STUN=fuzz-stun
+PIDF=fuzz-pidf
 SIP=fuzz-sip
 SIPTRAN=fuzz-sip-transaction
 SIPDIAL=fuzz-sip-dialog
@@ -39,6 +40,7 @@ $(TARGET):
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(XML).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(SDP).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(STUN).c
+	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(PIDF).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(SIP).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(SIPTRAN).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(SIPDIAL).c
@@ -62,6 +64,7 @@ $(TARGET):
 	$(CXX) $(PJ_CFLAGS) -o $(XML)  $(XML).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(SDP)  $(SDP).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(STUN) $(STUN).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
+	$(CXX) $(PJ_CFLAGS) -o $(PIDF) $(PIDF).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(SIP)  $(SIP).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(SIPTRAN)  $(SIPTRAN).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(SIPDIAL)  $(SIPDIAL).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
@@ -82,4 +85,4 @@ $(TARGET):
 	$(CXX) $(PJ_CFLAGS) -o $(CRYPTO) $(CRYPTO).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE) -lssl -lcrypto -lz
 
 clean:
-	rm $(JSON) $(XML) $(SDP) $(STUN) $(SIP) $(SIPTRAN) $(SIPDIAL) $(RTCP) $(DNS) $(H264) $(VPX) $(HTTP) $(URL) $(URI) $(CRYPTO) $(RTP) $(SRTP) $(PRES) $(VIDEO) $(AUDIO) $(STREAM) $(SDES) *.o
+	rm $(JSON) $(XML) $(SDP) $(STUN) $(PIDF) $(SIP) $(SIPTRAN) $(SIPDIAL) $(RTCP) $(DNS) $(H264) $(VPX) $(HTTP) $(URL) $(URI) $(CRYPTO) $(RTP) $(SRTP) $(PRES) $(VIDEO) $(AUDIO) $(STREAM) $(SDES) *.o
