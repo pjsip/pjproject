@@ -627,6 +627,7 @@
     <ClCompile Include="..\src\pjlib-util-test\resolver_test.c" />
     <ClCompile Include="..\src\pjlib-util-test\stun.c" />
     <ClCompile Include="..\src\pjlib-util-test\test.c" />
+    <ClCompile Include="..\src\pjlib-util-test\websock_test.c" />
     <ClCompile Include="..\src\pjlib-util-test\xml.c" />
   </ItemGroup>
   <ItemGroup>

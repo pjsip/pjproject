@@ -89,6 +89,9 @@
     <ClCompile Include="..\src\pjlib-util\symbols.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjlib-util\websock.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjlib-util\xml.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -173,6 +176,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pjlib-util\types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjlib-util\websock.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pjlib-util\xml.h">

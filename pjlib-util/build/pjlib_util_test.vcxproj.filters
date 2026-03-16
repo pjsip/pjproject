@@ -39,6 +39,9 @@
     <ClCompile Include="..\src\pjlib-util-test\test.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjlib-util-test\websock_test.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjlib-util-test\xml.c">
       <Filter>Source Files</Filter>
     </ClCompile>
