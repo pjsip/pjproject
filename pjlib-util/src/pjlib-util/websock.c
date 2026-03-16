@@ -309,26 +309,39 @@ static pj_status_t send_handshake(pj_websock *ws)
         (int)ws->host.slen, ws->host.ptr,
         ws->port,
         ws->ws_key_b64);
+    if (len < 0 || len >= (int)sizeof(buf))
+        return PJ_ETOOSMALL;
 
     /* Subprotocol */
     if (ws->subprotocol.slen > 0) {
-        len += pj_ansi_snprintf(buf + len, sizeof(buf) - len,
+        int n = pj_ansi_snprintf(buf + len, sizeof(buf) - len,
             "Sec-WebSocket-Protocol: %.*s\r\n",
             (int)ws->subprotocol.slen, ws->subprotocol.ptr);
+        if (n < 0 || n >= (int)(sizeof(buf) - len))
+            return PJ_ETOOSMALL;
+        len += n;
     }
 
     /* Extra headers */
     for (i = 0; i < ws->extra_hdr.count; ++i) {
-        len += pj_ansi_snprintf(buf + len, sizeof(buf) - len,
+        int n = pj_ansi_snprintf(buf + len, sizeof(buf) - len,
             "%.*s: %.*s\r\n",
             (int)ws->extra_hdr.header[i].name.slen,
             ws->extra_hdr.header[i].name.ptr,
             (int)ws->extra_hdr.header[i].value.slen,
             ws->extra_hdr.header[i].value.ptr);
+        if (n < 0 || n >= (int)(sizeof(buf) - len))
+            return PJ_ETOOSMALL;
+        len += n;
     }
 
     /* End of headers */
-    len += pj_ansi_snprintf(buf + len, sizeof(buf) - len, "\r\n");
+    {
+        int n = pj_ansi_snprintf(buf + len, sizeof(buf) - len, "\r\n");
+        if (n < 0 || n >= (int)(sizeof(buf) - len))
+            return PJ_ETOOSMALL;
+        len += n;
+    }
 
     PJ_LOG(5, (THIS_FILE, "Sending WebSocket handshake (%d bytes)", len));
 
