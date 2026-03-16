@@ -55,7 +55,7 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         return 0;
 
     /* Test DNS packet parsing */
-    status = pj_dns_parse_packet(pool, (void*)Data, Size, &dns);
+    status = pj_dns_parse_packet(pool, Data, (unsigned)Size, &dns);
     
     if (status == PJ_SUCCESS && dns && dns->hdr.anscount > 0) {
         /* Test A record parsing */
