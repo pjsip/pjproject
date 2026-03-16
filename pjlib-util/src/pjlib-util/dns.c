@@ -139,6 +139,9 @@ static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt,
             int dummy;
             pj_uint16_t offset;
 
+            if (p + 1 >= max)
+                return PJLIB_UTIL_EDNSINNAMEPTR;
+
             /* Get the 14bit offset */
             pj_memcpy(&offset, p, 2);
             offset ^= pj_htons((pj_uint16_t)(0xc0 << 8));
@@ -210,6 +213,9 @@ static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt,
         if ((*p & 0xc0) == 0xc0) {
             /* Compression is found! */
             pj_uint16_t offset;
+
+            if (p + 1 >= max)
+                return PJLIB_UTIL_EDNSINNAMEPTR;
 
             /* Get the 14bit offset */
             pj_memcpy(&offset, p, 2);
