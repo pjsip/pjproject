@@ -44,6 +44,7 @@ static struct echo_server_t
     pj_uint16_t     port;
     pj_thread_t    *thread;
     pj_bool_t       quit;
+    pj_pool_t      *pool;
 } g_server;
 
 /* Minimal Base64 encode (RFC 4648) for the server handshake */
@@ -307,11 +308,18 @@ static pj_status_t start_echo_server(void)
         return status;
     }
 
-    status = pj_thread_create(pj_pool_create(mem, "srv", 512, 256, NULL),
-                              "ws_echo_srv", &server_thread, &g_server,
-                              0, 0, &g_server.thread);
+    g_server.pool = pj_pool_create(mem, "srv", 512, 256, NULL);
+    if (!g_server.pool) {
+        pj_sock_close(g_server.sock);
+        return PJ_ENOMEM;
+    }
+
+    status = pj_thread_create(g_server.pool, "ws_echo_srv", &server_thread,
+                              &g_server, 0, 0, &g_server.thread);
     if (status != PJ_SUCCESS) {
         pj_sock_close(g_server.sock);
+        pj_pool_release(g_server.pool);
+        g_server.pool = NULL;
         return status;
     }
 
@@ -331,6 +339,10 @@ static void stop_echo_server(void)
     if (g_server.sock != PJ_INVALID_SOCKET) {
         pj_sock_close(g_server.sock);
         g_server.sock = PJ_INVALID_SOCKET;
+    }
+    if (g_server.pool) {
+        pj_pool_release(g_server.pool);
+        g_server.pool = NULL;
     }
 }
 
