@@ -24,11 +24,9 @@
 #include <pjlib-util.h>
 #include <pjsip.h>
 #include <pjsip/sip_auth.h>
-#if defined(PJSIP_HAS_DIGEST_AKA_AUTH) && PJSIP_HAS_DIGEST_AKA_AUTH
-#include <pjsip/sip_auth_aka.h>
-#endif
 
 #define POOL_SIZE 4000
+#define MAX_FUZZ_MSG_SIZE (POOL_SIZE - 1)
 
 /* Global resources (one-time initialization) */
 static pj_caching_pool caching_pool;
@@ -39,6 +37,7 @@ static pjsip_auth_srv auth_srv;
 static pj_status_t lookup_cred(pj_pool_t *pool, const pj_str_t *realm,
                                 const pj_str_t *acc_name, pjsip_cred_info *cred)
 {
+    PJ_UNUSED_ARG(pool);
     pj_bzero(cred, sizeof(*cred));
     cred->realm = *realm;
     cred->username = *acc_name;
@@ -58,6 +57,9 @@ static pjsip_msg* parse_sip_message(pj_pool_t *pool, const uint8_t *data,
     if (size < 10)
         return NULL;
 
+    if (size > MAX_FUZZ_MSG_SIZE)
+        size = MAX_FUZZ_MSG_SIZE;
+
     /* Copy to null-terminated buffer */
     msg_buf = (char*)pj_pool_alloc(pool, size + 1);
     pj_memcpy(msg_buf, data, size);
@@ -65,7 +67,7 @@ static pjsip_msg* parse_sip_message(pj_pool_t *pool, const uint8_t *data,
 
     /* Parse SIP message */
     pj_list_init(&err_list);
-    msg = pjsip_parse_msg(pool, msg_buf, size, &err_list);
+    msg = pjsip_parse_msg(pool, msg_buf, (pj_size_t)size, &err_list);
 
     if (!msg || msg->type != PJSIP_REQUEST_MSG || !msg->line.req.uri)
         return NULL;
@@ -105,7 +107,8 @@ static void test_auth_server_verify(pj_pool_t *pool, pjsip_msg *msg)
     rdata.tp_info.pool = pool;
 
     /* Test verification */
-    pjsip_auth_srv_verify(&auth_srv, &rdata, NULL);
+    int status_code;
+    pjsip_auth_srv_verify(&auth_srv, &rdata, &status_code);
 }
 
 /* Server challenge generation */
@@ -119,6 +122,19 @@ static void test_auth_server_challenge(pj_pool_t *pool, pjsip_msg *msg)
     pj_bzero(&rdata, sizeof(rdata));
     rdata.msg_info.msg = msg;
     rdata.tp_info.pool = pool;
+
+    /* Populate required msg_info shortcuts; bail if any are missing */
+    rdata.msg_info.via = (pjsip_via_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_VIA, NULL);
+    rdata.msg_info.from = (pjsip_fromto_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_FROM, NULL);
+    rdata.msg_info.to = (pjsip_fromto_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
+    rdata.msg_info.cseq = (pjsip_cseq_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL);
+    rdata.msg_info.cid = (pjsip_cid_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL);
+    if (!rdata.msg_info.via || !rdata.msg_info.from || !rdata.msg_info.to ||
+        !rdata.msg_info.cseq || !rdata.msg_info.cid)
+        return;
+
+    if (msg->line.req.method.id == PJSIP_ACK_METHOD)
+        return;
 
     /* Create 401 response */
     status = pjsip_endpt_create_response(endpt, &rdata, 401, NULL, &tdata);
