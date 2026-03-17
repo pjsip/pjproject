@@ -81,11 +81,19 @@ struct pj_websock
     pj_uint8_t             *rx_buf;
     pj_size_t               rx_buf_size;
 
-    /* Fragment reassembly buffer */
+    /* Fragment reassembly buffer (for WS-level message fragmentation) */
     pj_uint8_t             *frag_buf;
     pj_size_t               frag_buf_size;
     pj_size_t               frag_len;
     pj_websock_opcode       frag_opcode;
+
+    /* Partial frame accumulation (frame payload spans multiple reads) */
+    pj_bool_t               rx_partial;
+    pj_websock_opcode       rx_partial_op;
+    pj_bool_t               rx_partial_fin;
+    pj_size_t               rx_partial_total;
+    pj_size_t               rx_partial_got;
+    pj_uint8_t             *rx_partial_buf;
 
     /* TX buffer for data frames */
     pj_uint8_t             *tx_buf;
@@ -219,15 +227,20 @@ static pj_size_t encode_frame(pj_uint8_t *buf, pj_websock_opcode opcode,
  * Parse a single frame from data. Returns the number of bytes consumed,
  * or 0 if not enough data for a complete frame.
  */
-static pj_size_t decode_frame_header(const pj_uint8_t *data, pj_size_t len,
-                                     pj_bool_t *fin,
-                                     pj_websock_opcode *opcode,
-                                     const pj_uint8_t **payload,
-                                     pj_size_t *payload_len)
+/*
+ * Parse WebSocket frame header only (2-14 bytes). Does not require the full
+ * payload to be present. Returns header size (bytes consumed for header +
+ * mask), or 0 if insufficient data for the header itself.
+ */
+static pj_size_t parse_frame_header(const pj_uint8_t *data, pj_size_t len,
+                                    pj_bool_t *fin,
+                                    pj_websock_opcode *opcode,
+                                    pj_bool_t *has_mask,
+                                    pj_uint8_t mask_key[4],
+                                    pj_size_t *payload_len)
 {
     pj_size_t pos = 0;
     pj_uint8_t b1;
-    pj_bool_t has_mask;
     pj_size_t plen;
 
     if (len < 2) return 0;
@@ -238,7 +251,7 @@ static pj_size_t decode_frame_header(const pj_uint8_t *data, pj_size_t len,
 
     /* Byte 1 */
     b1 = data[1];
-    has_mask = (b1 & 0x80) != 0;
+    *has_mask = (b1 & 0x80) != 0;
     plen = b1 & 0x7F;
     pos = 2;
 
@@ -265,30 +278,50 @@ static pj_size_t decode_frame_header(const pj_uint8_t *data, pj_size_t len,
         pos = 10;
     }
 
-    /* Guard against integer overflow in subsequent pos + plen arithmetic */
-    if (plen > len) return 0;
-
-    if (has_mask) {
-        /* Server frames should not be masked per RFC 6455, but handle it */
-        pj_uint8_t mask[4];
-        pj_size_t i;
-
-        if (len < pos + 4 + plen) return 0;
-        pj_memcpy(mask, &data[pos], 4);
+    if (*has_mask) {
+        if (len < pos + 4) return 0;
+        pj_memcpy(mask_key, &data[pos], 4);
         pos += 4;
-        *payload = &data[pos];
-        *payload_len = plen;
-        /* Unmask in place (data buffer is writable) */
-        for (i = 0; i < plen; ++i) {
-            ((pj_uint8_t*)(*payload))[i] ^= mask[i & 3];
-        }
-    } else {
-        if (len < pos + plen) return 0;
-        *payload = &data[pos];
-        *payload_len = plen;
     }
 
-    return pos + plen;
+    *payload_len = plen;
+    return pos;
+}
+
+
+/*
+ * Decode a complete WebSocket frame (header + full payload).
+ * Returns total consumed bytes, or 0 if the frame is incomplete.
+ */
+static pj_size_t decode_frame_header(const pj_uint8_t *data, pj_size_t len,
+                                     pj_bool_t *fin,
+                                     pj_websock_opcode *opcode,
+                                     const pj_uint8_t **payload,
+                                     pj_size_t *payload_len)
+{
+    pj_size_t hdr_len;
+    pj_bool_t has_mask;
+    pj_uint8_t mask[4];
+
+    hdr_len = parse_frame_header(data, len, fin, opcode, &has_mask,
+                                 mask, payload_len);
+    if (hdr_len == 0)
+        return 0;
+
+    /* Need full payload in buffer */
+    if (len < hdr_len + *payload_len)
+        return 0;
+
+    *payload = &data[hdr_len];
+
+    if (has_mask) {
+        pj_size_t i;
+        for (i = 0; i < *payload_len; ++i) {
+            ((pj_uint8_t*)(*payload))[i] ^= mask[i & 3];
+        }
+    }
+
+    return hdr_len + *payload_len;
 }
 
 
@@ -622,12 +655,14 @@ static void on_transport_connected(pj_websock *ws, pj_status_t status)
 #if PJ_HAS_SSL_SOCK
         if (ws->is_ssl) {
             status = pj_ssl_sock_start_read2(ws->ssl_sock, ws->pool,
-                                             ws->rx_buf_size, readbuf, 0);
+                                             (unsigned)ws->rx_buf_size,
+                                             readbuf, 0);
         } else
 #endif
         {
             status = pj_activesock_start_read2(ws->asock, ws->pool,
-                                               ws->rx_buf_size, readbuf, 0);
+                                               (unsigned)ws->rx_buf_size,
+                                               readbuf, 0);
         }
     }
 
@@ -747,119 +782,76 @@ static void on_transport_data(pj_websock *ws, void *data, pj_size_t size,
 /*=========================================================================
  * WebSocket frame processing
  */
-static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
-                             pj_size_t len, pj_size_t *remainder)
+/*
+ * Process a decoded frame payload (shared by normal and partial paths).
+ * Returns PJ_FALSE if caller should stop (e.g. after CLOSE), PJ_TRUE
+ * to continue processing.
+ */
+static pj_bool_t handle_frame(pj_websock *ws, pj_bool_t fin,
+                               pj_websock_opcode opcode,
+                               pj_uint8_t *payload,
+                               pj_size_t payload_len)
 {
-    pj_size_t consumed;
+    switch (opcode) {
+    case PJ_WEBSOCK_OP_PING:
+        PJ_LOG(5, (THIS_FILE, "Received PING (%lu bytes)",
+                   (unsigned long)payload_len));
+        pj_grp_lock_acquire(ws->grp_lock);
+        if (!ws->destroying)
+            send_pong(ws, payload, payload_len);
+        pj_grp_lock_release(ws->grp_lock);
+        break;
 
-    *remainder = 0;
+    case PJ_WEBSOCK_OP_PONG:
+        PJ_LOG(5, (THIS_FILE, "Received PONG"));
+        break;
 
-    while (len > 0) {
-        pj_bool_t fin;
-        pj_websock_opcode opcode;
-        const pj_uint8_t *payload;
-        pj_size_t payload_len;
+    case PJ_WEBSOCK_OP_CLOSE:
+    {
+        pj_uint16_t code = 0;
+        pj_str_t reason;
+        pj_websock_readystate prev_state;
 
-        /* Check if we're being destroyed concurrently */
-        if (ws->destroying)
-            return;
+        reason.ptr = NULL;
+        reason.slen = 0;
 
-        consumed = decode_frame_header(data, len, &fin, &opcode,
-                                       &payload, &payload_len);
-        if (consumed == 0) {
-            /* Incomplete frame, keep remainder */
-            *remainder = len;
-            return;
+        if (payload_len >= 2) {
+            code = (pj_uint16_t)((payload[0] << 8) | payload[1]);
+            if (payload_len > 2) {
+                reason.ptr = (char*)payload + 2;
+                reason.slen = payload_len - 2;
+            }
         }
 
-        switch (opcode) {
-        case PJ_WEBSOCK_OP_PING:
-            PJ_LOG(5, (THIS_FILE, "Received PING (%lu bytes)",
-                       (unsigned long)payload_len));
-            pj_grp_lock_acquire(ws->grp_lock);
-            if (!ws->destroying)
-                send_pong(ws, payload, payload_len);
-            pj_grp_lock_release(ws->grp_lock);
-            break;
+        PJ_LOG(4, (THIS_FILE, "Received CLOSE (code=%d, reason=%.*s)",
+                   code,
+                   (int)reason.slen,
+                   (reason.ptr ? reason.ptr : "")));
 
-        case PJ_WEBSOCK_OP_PONG:
-            PJ_LOG(5, (THIS_FILE, "Received PONG"));
-            break;
-
-        case PJ_WEBSOCK_OP_CLOSE:
-        {
-            pj_uint16_t code = 0;
-            pj_str_t reason;
-            pj_websock_readystate prev_state;
-
-            reason.ptr = NULL;
-            reason.slen = 0;
-
-            if (payload_len >= 2) {
-                code = (pj_uint16_t)((payload[0] << 8) | payload[1]);
-                if (payload_len > 2) {
-                    reason.ptr = (char*)payload + 2;
-                    reason.slen = payload_len - 2;
-                }
-            }
-
-            PJ_LOG(4, (THIS_FILE, "Received CLOSE (code=%d)", code));
-
-            pj_grp_lock_acquire(ws->grp_lock);
-            prev_state = ws->state;
-            if (prev_state == PJ_WEBSOCK_STATE_OPEN) {
-                /* Echo close frame back */
-                send_close_frame(ws, code, &reason);
-            }
-            ws->state = PJ_WEBSOCK_STATE_CLOSED;
-            pj_grp_lock_release(ws->grp_lock);
-
-            /* Invoke callback without lock */
-            if (!ws->destroying && ws->cb.on_close)
-                ws->cb.on_close(ws, code, &reason);
-            return; /* Stop processing after close */
+        pj_grp_lock_acquire(ws->grp_lock);
+        prev_state = ws->state;
+        if (prev_state == PJ_WEBSOCK_STATE_OPEN) {
+            /* Echo close frame back */
+            send_close_frame(ws, code, &reason);
         }
+        ws->state = PJ_WEBSOCK_STATE_CLOSED;
+        pj_grp_lock_release(ws->grp_lock);
 
-        case PJ_WEBSOCK_OP_TEXT:
-        case PJ_WEBSOCK_OP_BIN:
-            if (fin && ws->frag_len == 0) {
-                /* Complete message in single frame - invoke without lock */
-                if (ws->cb.on_rx_msg)
-                    ws->cb.on_rx_msg(ws, opcode, payload, payload_len);
-            } else {
-                /* First fragment */
-                if (ws->frag_len == 0) {
-                    ws->frag_opcode = opcode;
-                }
-                /* Append to fragment buffer */
-                if (ws->frag_len + payload_len > ws->frag_buf_size) {
-                    PJ_LOG(2, (THIS_FILE, "Message too large, dropping"));
-                    ws->frag_len = 0;
-                    break;
-                }
-                pj_memcpy(ws->frag_buf + ws->frag_len, payload,
-                          payload_len);
-                ws->frag_len += payload_len;
+        /* Invoke callback without lock */
+        if (!ws->destroying && ws->cb.on_close)
+            ws->cb.on_close(ws, code, &reason);
+        return PJ_FALSE; /* Stop processing after close */
+    }
 
-                if (fin) {
-                    /* Final fragment - deliver without lock */
-                    pj_websock_opcode frag_op = ws->frag_opcode;
-                    pj_size_t frag_len = ws->frag_len;
-                    ws->frag_len = 0;
-                    if (ws->cb.on_rx_msg) {
-                        ws->cb.on_rx_msg(ws, frag_op,
-                                         ws->frag_buf, frag_len);
-                    }
-                }
-            }
-            break;
-
-        case PJ_WEBSOCK_OP_CONT:
-            /* Continuation frame */
+    case PJ_WEBSOCK_OP_TEXT:
+    case PJ_WEBSOCK_OP_BIN:
+        if (fin && ws->frag_len == 0) {
+            /* Complete message in single frame */
+            if (ws->cb.on_rx_msg)
+                ws->cb.on_rx_msg(ws, opcode, payload, payload_len);
+        } else {
             if (ws->frag_len == 0) {
-                PJ_LOG(2, (THIS_FILE,
-                           "Unexpected continuation frame, ignoring"));
-                break;
+                ws->frag_opcode = opcode;
             }
             if (ws->frag_len + payload_len > ws->frag_buf_size) {
                 PJ_LOG(2, (THIS_FILE, "Message too large, dropping"));
@@ -878,12 +870,163 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
                                      ws->frag_buf, frag_len);
                 }
             }
-            break;
+        }
+        break;
 
-        default:
-            PJ_LOG(3, (THIS_FILE, "Unknown opcode 0x%x, ignoring",
-                       opcode));
+    case PJ_WEBSOCK_OP_CONT:
+        if (ws->frag_len == 0) {
+            PJ_LOG(2, (THIS_FILE,
+                       "Unexpected continuation frame, ignoring"));
             break;
+        }
+        if (ws->frag_len + payload_len > ws->frag_buf_size) {
+            PJ_LOG(2, (THIS_FILE, "Message too large, dropping"));
+            ws->frag_len = 0;
+            break;
+        }
+        pj_memcpy(ws->frag_buf + ws->frag_len, payload, payload_len);
+        ws->frag_len += payload_len;
+
+        if (fin) {
+            pj_websock_opcode frag_op = ws->frag_opcode;
+            pj_size_t frag_len = ws->frag_len;
+            ws->frag_len = 0;
+            if (ws->cb.on_rx_msg) {
+                ws->cb.on_rx_msg(ws, frag_op,
+                                 ws->frag_buf, frag_len);
+            }
+        }
+        break;
+
+    default:
+        PJ_LOG(3, (THIS_FILE, "Unknown opcode 0x%x, ignoring", opcode));
+        break;
+    }
+
+    return PJ_TRUE;
+}
+
+static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
+                             pj_size_t len, pj_size_t *remainder)
+{
+    *remainder = 0;
+
+    /* Check if we're being destroyed concurrently */
+    if (ws->destroying)
+        return;
+
+    /* Continue accumulating an oversized frame from previous reads */
+    while (ws->rx_partial && len > 0) {
+        pj_size_t needed = ws->rx_partial_total - ws->rx_partial_got;
+        pj_size_t copy = (len < needed) ? len : needed;
+
+        pj_memcpy(ws->rx_partial_buf + ws->rx_partial_got, data, copy);
+        ws->rx_partial_got += copy;
+        data += copy;
+        len -= copy;
+
+        if (ws->rx_partial_got < ws->rx_partial_total) {
+            /* Still need more data */
+            return;
+        }
+
+        /* Unmask if needed (mask_key stored in rx_partial_buf header) */
+        /* Note: server->client frames are not masked per RFC 6455 */
+
+        /* Complete frame - process it */
+        ws->rx_partial = PJ_FALSE;
+        if (!handle_frame(ws, ws->rx_partial_fin, ws->rx_partial_op,
+                          ws->rx_partial_buf, ws->rx_partial_total))
+        {
+            return; /* CLOSE received */
+        }
+    }
+
+    while (len > 0) {
+        pj_bool_t fin;
+        pj_websock_opcode opcode;
+        const pj_uint8_t *payload;
+        pj_size_t payload_len;
+        pj_size_t consumed;
+
+        consumed = decode_frame_header(data, len, &fin, &opcode,
+                                       &payload, &payload_len);
+        if (consumed == 0) {
+            /* Full frame not in buffer. Check if we can parse the header
+             * to start incremental accumulation for oversized frames.
+             */
+            pj_bool_t has_mask;
+            pj_uint8_t mask[4];
+            pj_size_t hdr_len;
+            pj_size_t avail;
+
+            hdr_len = parse_frame_header(data, len, &fin, &opcode,
+                                         &has_mask, mask, &payload_len);
+            if (hdr_len == 0 || hdr_len >= len) {
+                /* Incomplete header, keep remainder */
+                *remainder = len;
+                return;
+            }
+
+            /* Header parsed but payload exceeds read buffer. Verify it
+             * fits within max message size, then start accumulating.
+             */
+            if (payload_len > ws->frag_buf_size) {
+                PJ_LOG(2, (THIS_FILE,
+                           "Frame payload too large (%lu > %lu), dropping",
+                           (unsigned long)payload_len,
+                           (unsigned long)ws->frag_buf_size));
+                /* Skip the entire frame: consume header + available
+                 * payload bytes, set up discard state for the rest.
+                 */
+                ws->rx_partial = PJ_TRUE;
+                ws->rx_partial_op = opcode;
+                ws->rx_partial_fin = fin;
+                ws->rx_partial_total = 0; /* Signal discard */
+                ws->rx_partial_got = 0;
+                ws->rx_partial_buf = NULL;
+                /* Consume everything we have */
+                return;
+            }
+
+            /* Allocate accumulation buffer from pool if needed */
+            if (!ws->rx_partial_buf) {
+                ws->rx_partial_buf = (pj_uint8_t*)pj_pool_alloc(
+                                         ws->pool,
+                                         ws->frag_buf_size);
+            }
+
+            avail = len - hdr_len;
+            if (has_mask) {
+                /* Unmask available payload */
+                pj_size_t i;
+                for (i = 0; i < avail; ++i) {
+                    ((pj_uint8_t*)(data + hdr_len))[i] ^= mask[i & 3];
+                }
+            }
+            pj_memcpy(ws->rx_partial_buf, data + hdr_len, avail);
+
+            ws->rx_partial = PJ_TRUE;
+            ws->rx_partial_op = opcode;
+            ws->rx_partial_fin = fin;
+            ws->rx_partial_total = payload_len;
+            ws->rx_partial_got = avail;
+
+            PJ_LOG(6, (THIS_FILE,
+                       "Large frame: opcode=%d payload=%lu, "
+                       "buffered %lu, need %lu more",
+                       opcode, (unsigned long)payload_len,
+                       (unsigned long)avail,
+                       (unsigned long)(payload_len - avail)));
+
+            /* All data consumed, wait for more reads */
+            return;
+        }
+
+        if (!handle_frame(ws, fin, opcode, (pj_uint8_t*)payload,
+                          payload_len))
+        {
+            return; /* CLOSE received */
         }
 
         data += consumed;

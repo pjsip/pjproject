@@ -57,8 +57,11 @@ PJ_BEGIN_DECL
 /** Default maximum receive message size (256 KB). */
 #define PJ_WEBSOCK_MAX_RX_MSG_SIZE  (256 * 1024)
 
-/** Default receive buffer size (16 KB). */
-#define PJ_WEBSOCK_RX_BUF_SIZE      (16 * 1024)
+/** Default receive buffer size (64 KB).
+ *  Sized to handle typical real-time API messages (e.g., audio deltas up to
+ *  ~50 KB) in a single read, avoiding incremental frame accumulation.
+ */
+#define PJ_WEBSOCK_RX_BUF_SIZE      (64 * 1024)
 
 /** Default transmit buffer size (64 KB). */
 #define PJ_WEBSOCK_TX_BUF_SIZE      (64 * 1024)
