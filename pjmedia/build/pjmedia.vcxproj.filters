@@ -11,6 +11,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\pjmedia\ai_port.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjmedia\ai_port_openai.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjmedia\alaw_ulaw.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -247,6 +253,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\pjmedia\ai_port.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\pjmedia\alaw_ulaw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
