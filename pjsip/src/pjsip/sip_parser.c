@@ -1999,7 +1999,8 @@ static pjsip_hdr* parse_hdr_content_len( pjsip_parse_ctx *ctx )
 
     hdr = pjsip_clen_hdr_create(ctx->pool);
     pj_scan_get(ctx->scanner, &pconst.pjsip_DIGIT_SPEC, &digit);
-    hdr->len = pj_strtoul(&digit);
+    strtoi_validate(&digit, PJSIP_MIN_CONTENT_LENGTH,
+                    PJSIP_MAX_CONTENT_LENGTH, &hdr->len);
     parse_hdr_end(ctx->scanner);
 
     if (ctx->rdata)
