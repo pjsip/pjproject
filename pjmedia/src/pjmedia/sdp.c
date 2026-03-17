@@ -1169,26 +1169,33 @@ static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
     /* address. */
     pj_scan_get_until_chr(scanner, "/ \t\r\n", &conn->addr);
     /* Parse multicast details, if any. */
-    if (*scanner->curptr == '/') {
+    if (!pj_scan_is_eof(scanner) && *scanner->curptr == '/') {
         pj_str_t str;
         unsigned long ul;
 
+        /* consume '/' separator before TTL */
+        pj_scan_get_char(scanner);
+
+        /* read TTL */
         pj_scan_get_until_chr(scanner, "/ \t\r\n", &str);
-        if (*scanner->curptr == '/') {
-            if ((pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS) || ul > 255) {
-                on_scanner_error(scanner);
-                return;
-            }
-
-            conn->ttl = (pj_uint8_t)ul;
-        }        
-
         if ((pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS) || ul > 255) {
             on_scanner_error(scanner);
             return;
         }
-        conn->no_addr = (pj_uint8_t)ul;
+        conn->ttl = (pj_uint8_t)ul;
 
+        /* optional: number of addresses */
+        if (!pj_scan_is_eof(scanner) && *scanner->curptr == '/') {
+            /* consume '/' separator before no_addr */
+            pj_scan_get_char(scanner);
+
+            pj_scan_get_until_chr(scanner, " \t\r\n", &str);
+            if ((pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS) || ul > 255) {
+                on_scanner_error(scanner);
+                return;
+            }
+            conn->no_addr = (pj_uint8_t)ul;
+        }
     }
 
     /* We've got what we're looking for, skip anything until newline */
@@ -1284,7 +1291,8 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
         pj_scan_get_char(scanner);
 
         /* Check again for the end of the line */
-        if ((*scanner->curptr == '\r') || (*scanner->curptr == '\n'))
+        if (pj_scan_is_eof(scanner) ||
+            (*scanner->curptr == '\r') || (*scanner->curptr == '\n'))
                 break;
 
         pj_scan_get(scanner, &cs_token, &fmt);
@@ -1329,8 +1337,8 @@ static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
     /* get attr name. */
     pj_scan_get(scanner, &cs_token, &attr->name);
 
-    if (*scanner->curptr && *scanner->curptr != '\r' && 
-        *scanner->curptr != '\n') 
+    if (!pj_scan_is_eof(scanner) && *scanner->curptr != '\r' &&
+        *scanner->curptr != '\n')
     {
         /* skip ':' if present. */
         if (*scanner->curptr == ':')
