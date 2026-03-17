@@ -248,6 +248,8 @@ static pj_size_t decode_frame_header(const pj_uint8_t *data, pj_size_t len,
              (pj_uint32_t)data[9];
         /* Reject frames with upper 32 bits set (>4GB) */
         if (hi != 0) return 0;
+        /* On 32-bit platforms, lo could still overflow pj_size_t */
+        if (sizeof(pj_size_t) < 8 && lo > 0x7FFFFFFFU) return 0;
         plen = (pj_size_t)lo;
         pos = 10;
     }
@@ -414,6 +416,8 @@ static pj_status_t process_handshake_response(pj_websock *ws,
     /* Compute expected Sec-WebSocket-Accept value */
     concat_len = pj_ansi_snprintf(concat, sizeof(concat), "%s%s",
                                   ws->ws_key_b64, WS_GUID);
+    if (concat_len < 0 || concat_len >= (int)sizeof(concat))
+        return PJ_ETOOBIG;
     pj_sha1_init(&sha_ctx);
     pj_sha1_update(&sha_ctx, (pj_uint8_t*)concat, concat_len);
     pj_sha1_final(&sha_ctx, sha_hash);
@@ -659,8 +663,9 @@ static void on_transport_data(pj_websock *ws, void *data, pj_size_t size,
             pj_time_val delay;
             delay.sec = ws->ping_interval;
             delay.msec = 0;
-            pj_timer_heap_schedule(ws->timer_heap, &ws->ping_timer,
-                                   &delay);
+            pj_timer_heap_schedule_w_grp_lock(ws->timer_heap,
+                                              &ws->ping_timer, &delay,
+                                              1, ws->grp_lock);
         }
 
         pj_grp_lock_release(ws->grp_lock);
@@ -832,6 +837,8 @@ static pj_status_t send_close_frame(pj_websock *ws,
                                     const pj_str_t *reason)
 {
     pj_uint8_t payload[128];
+    /* Use local frame buffer to avoid clobbering tx_buf during async send */
+    pj_uint8_t frame_buf[128 + MAX_FRAME_HDR_LEN];
     pj_size_t plen = 0;
     pj_size_t frame_len;
 
@@ -848,19 +855,26 @@ static pj_status_t send_close_frame(pj_websock *ws,
         plen += rlen;
     }
 
-    frame_len = encode_frame(ws->tx_buf, PJ_WEBSOCK_OP_CLOSE, PJ_TRUE,
+    frame_len = encode_frame(frame_buf, PJ_WEBSOCK_OP_CLOSE, PJ_TRUE,
                              payload, plen);
-    return send_raw(ws, ws->tx_buf, (pj_ssize_t)frame_len);
+    return send_raw(ws, frame_buf, (pj_ssize_t)frame_len);
 }
 
 static pj_status_t send_pong(pj_websock *ws, const void *data,
                              pj_size_t len)
 {
+    /* Use local frame buffer to avoid clobbering tx_buf during async send.
+     * Pong payload max is 125 bytes per RFC 6455.
+     */
+    pj_uint8_t frame_buf[125 + MAX_FRAME_HDR_LEN];
     pj_size_t frame_len;
 
-    frame_len = encode_frame(ws->tx_buf, PJ_WEBSOCK_OP_PONG, PJ_TRUE,
+    if (len > 125)
+        len = 125;
+
+    frame_len = encode_frame(frame_buf, PJ_WEBSOCK_OP_PONG, PJ_TRUE,
                              data, len);
-    return send_raw(ws, ws->tx_buf, (pj_ssize_t)frame_len);
+    return send_raw(ws, frame_buf, (pj_ssize_t)frame_len);
 }
 
 
@@ -875,19 +889,30 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 
     PJ_UNUSED_ARG(th);
 
-    if (ws->state != PJ_WEBSOCK_STATE_OPEN)
+    pj_grp_lock_acquire(ws->grp_lock);
+
+    if (ws->state != PJ_WEBSOCK_STATE_OPEN) {
+        pj_grp_lock_release(ws->grp_lock);
         return;
+    }
 
     PJ_LOG(5, (THIS_FILE, "Sending PING"));
 
-    frame_len = encode_frame(ws->tx_buf, PJ_WEBSOCK_OP_PING, PJ_TRUE,
-                             NULL, 0);
-    send_raw(ws, ws->tx_buf, (pj_ssize_t)frame_len);
+    /* Use local buffer to avoid clobbering tx_buf during async send */
+    {
+        pj_uint8_t ping_buf[MAX_FRAME_HDR_LEN];
+        frame_len = encode_frame(ping_buf, PJ_WEBSOCK_OP_PING, PJ_TRUE,
+                                 NULL, 0);
+        send_raw(ws, ping_buf, (pj_ssize_t)frame_len);
+    }
 
     /* Reschedule */
     delay.sec = ws->ping_interval;
     delay.msec = 0;
-    pj_timer_heap_schedule(ws->timer_heap, &ws->ping_timer, &delay);
+    pj_timer_heap_schedule_w_grp_lock(ws->timer_heap, &ws->ping_timer,
+                                      &delay, 1, ws->grp_lock);
+
+    pj_grp_lock_release(ws->grp_lock);
 }
 
 
