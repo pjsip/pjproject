@@ -122,7 +122,7 @@ static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt,
     pj_status_t status;
 
     /* Limit the number of recursion */
-    if (rec_counter > 10) {
+    if (rec_counter > 5) {
         /* Too many name recursion */
         return PJLIB_UTIL_EDNSINNAMEPTR;
     }
@@ -132,7 +132,7 @@ static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt,
 
     *name_len = *parsed_len = 0;
     p = start;
-    while (*p) {
+    while (p < max && *p) {
         if ((*p & 0xc0) == 0xc0) {
             /* Compression is found! */
             int ptr_len = 0;
@@ -200,7 +200,7 @@ static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt,
     pj_status_t status;
 
     /* Limit the number of recursion */
-    if (rec_counter > 10) {
+    if (rec_counter > 5) {
         /* Too many name recursion */
         return PJLIB_UTIL_EDNSINNAMEPTR;
     }
@@ -209,7 +209,7 @@ static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt,
         return PJLIB_UTIL_EDNSINNAMEPTR;
 
     p = start;
-    while (*p) {
+    while (p < max && *p) {
         if ((*p & 0xc0) == 0xc0) {
             /* Compression is found! */
             pj_uint16_t offset;
@@ -481,6 +481,17 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
     res->hdr.anscount = pj_ntohs(res->hdr.anscount);
     res->hdr.nscount  = pj_ntohs(res->hdr.nscount);
     res->hdr.arcount  = pj_ntohs(res->hdr.arcount);
+
+    /* Sanity check section counts to prevent excessive allocation from
+     * malicious packets.
+     */
+    if (res->hdr.qdcount > PJ_DNS_MAX_SECTION_COUNT ||
+        res->hdr.anscount > PJ_DNS_MAX_SECTION_COUNT ||
+        res->hdr.nscount > PJ_DNS_MAX_SECTION_COUNT ||
+        res->hdr.arcount > PJ_DNS_MAX_SECTION_COUNT)
+    {
+        return PJLIB_UTIL_EDNSINSIZE;
+    }
 
     /* Mark start and end of payload */
     start = ((const pj_uint8_t*)packet) + sizeof(pj_dns_hdr);
