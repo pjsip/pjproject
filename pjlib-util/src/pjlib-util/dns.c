@@ -490,7 +490,7 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
         res->hdr.nscount > PJ_DNS_MAX_SECTION_COUNT ||
         res->hdr.arcount > PJ_DNS_MAX_SECTION_COUNT)
     {
-        return PJLIB_UTIL_EDNSINSIZE;
+        return PJ_ETOOMANY;
     }
 
     /* Mark start and end of payload */
