@@ -209,6 +209,7 @@ int main(int argc, char *argv[])
     pj_str_t url_str;
     pj_str_t token_str;
     pjmedia_ai_port_param ai_param;
+    pj_ssl_sock_param ssl_param;
     pjmedia_port *ai_media_port;
     unsigned ai_rate, ai_ccnt, ai_spf, ai_bps;
     char tmp[10];
@@ -325,6 +326,13 @@ int main(int argc, char *argv[])
     ai_param.timer_heap = app.timer_heap;
     ai_param.cb.on_event = &on_ai_event;
     ai_param.backend = app.backend;
+
+    /* Enable TLS certificate verification for wss:// connections.
+     * This prevents MITM attacks when sending the API key.
+     */
+    pj_ssl_sock_param_default(&ssl_param);
+    ssl_param.verify_peer = PJ_TRUE;
+    ai_param.ssl_param = &ssl_param;
 
     status = pjmedia_ai_port_create(app.pool, &ai_param, &app.ai_port);
     if (status != PJ_SUCCESS) {
