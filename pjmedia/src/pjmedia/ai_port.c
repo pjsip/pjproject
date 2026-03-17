@@ -112,9 +112,6 @@ struct pjmedia_ai_port
     /* Temporary pool for JSON parsing */
     pj_pool_t               *tmp_pool;
 
-    /* Send state */
-    pj_bool_t                send_pending;
-
     /* RX pre-buffer: delay output until threshold is reached */
     pj_bool_t                rx_started;
     unsigned                 prebuf_samples;
@@ -159,7 +156,7 @@ static void flush_tx_buf(pjmedia_ai_port *aip, pj_bool_t force)
     pj_status_t status;
     int enc_len;
 
-    if (aip->state != AI_STATE_CONNECTED || aip->send_pending)
+    if (aip->state != AI_STATE_CONNECTED)
         return;
 
     avail = pjmedia_circ_buf_get_len(aip->tx_buf);
@@ -170,13 +167,24 @@ static void flush_tx_buf(pjmedia_ai_port *aip, pj_bool_t force)
     if (!force && avail < aip->tx_flush_samples)
         return;
 
-    /* Read samples from circular buffer into TX-specific buffer */
+    /* Peek at samples without consuming them yet */
     if (avail > DECODE_BUF_SAMPLES)
         avail = DECODE_BUF_SAMPLES;
 
-    status = pjmedia_circ_buf_read(aip->tx_buf, aip->tx_read_buf, avail);
-    if (status != PJ_SUCCESS)
-        return;
+    /* Copy samples to linear buffer without advancing read pointer */
+    {
+        pj_int16_t *reg1, *reg2;
+        unsigned reg1_len, reg2_len, to_copy;
+
+        pjmedia_circ_buf_get_read_regions(aip->tx_buf, &reg1, &reg1_len,
+                                          &reg2, &reg2_len);
+        to_copy = (avail < reg1_len) ? avail : reg1_len;
+        pj_memcpy(aip->tx_read_buf, reg1, to_copy * sizeof(pj_int16_t));
+        if (to_copy < avail && reg2) {
+            pj_memcpy(aip->tx_read_buf + to_copy, reg2,
+                       (avail - to_copy) * sizeof(pj_int16_t));
+        }
+    }
 
     /* Encode via backend */
     enc_len = ENCODE_BUF_SIZE;
@@ -199,11 +207,15 @@ static void flush_tx_buf(pjmedia_ai_port *aip, pj_bool_t force)
 
     pj_grp_lock_acquire(aip->base.grp_lock);
 
-    if (status == PJ_SUCCESS) {
-        aip->send_pending = PJ_FALSE;
-    } else if (status == PJ_EPENDING) {
-        aip->send_pending = PJ_TRUE;
+    if (status == PJ_SUCCESS || status == PJ_EPENDING) {
+        /* Send completed or in progress, consume the samples */
+        pjmedia_circ_buf_adv_read_ptr(aip->tx_buf, avail);
+    } else if (status == PJ_EBUSY) {
+        /* Previous send still in flight, keep samples for retry */
+        PJ_LOG(6, (THIS_FILE, "websock send busy, will retry"));
     } else {
+        /* Fatal send error, discard samples */
+        pjmedia_circ_buf_adv_read_ptr(aip->tx_buf, avail);
         PJ_PERROR(4, (THIS_FILE, status, "websock send failed"));
     }
 }
@@ -410,11 +422,17 @@ static void on_ws_rx_msg(pj_websock *ws, pj_websock_opcode opcode,
         return;
     }
 
-    /* Send reply if backend provided one */
+    /* Send reply if backend provided one (e.g. session.update).
+     * If the socket is busy (PJ_EBUSY), log a warning. A proper
+     * send queue is not yet implemented.
+     */
     if (reply && reply_len > 0) {
         status = pj_websock_send(aip->ws, PJ_WEBSOCK_OP_TEXT,
                                  reply, reply_len);
-        if (status != PJ_SUCCESS) {
+        if (status == PJ_EBUSY) {
+            PJ_LOG(3, (THIS_FILE, "Send busy, backend reply dropped "
+                       "(%lu bytes)", (unsigned long)reply_len));
+        } else if (status != PJ_SUCCESS && status != PJ_EPENDING) {
             PJ_PERROR(4, (THIS_FILE, status, "Failed to send reply"));
         }
     }
@@ -454,22 +472,24 @@ static void on_ws_close(pj_websock *ws, pj_uint16_t status_code,
     pjmedia_ai_port *aip;
     pjmedia_ai_event ev;
 
-    PJ_UNUSED_ARG(status_code);
-    PJ_UNUSED_ARG(reason);
-
     aip = (pjmedia_ai_port*)pj_websock_get_user_data(ws);
     PJ_ASSERT_ON_FAIL(aip != NULL, return);
 
+    PJ_LOG(4, (THIS_FILE, "WebSocket closed (code=%d, reason=%.*s)",
+               status_code,
+               (int)(reason ? reason->slen : 0),
+               (reason && reason->ptr ? reason->ptr : "")));
+
     pj_grp_lock_acquire(aip->base.grp_lock);
     aip->state = AI_STATE_IDLE;
-    aip->send_pending = PJ_FALSE;
     pjmedia_circ_buf_reset(aip->tx_buf);
     pjmedia_circ_buf_reset(aip->rx_buf);
     pj_grp_lock_release(aip->base.grp_lock);
 
     pj_bzero(&ev, sizeof(ev));
     ev.type = PJMEDIA_AI_EVENT_DISCONNECTED;
-    ev.status = PJ_SUCCESS;
+    /* 1000 = normal close per RFC 6455 */
+    ev.status = (status_code == 1000) ? PJ_SUCCESS : PJ_EEOF;
     if (aip->cb.on_event)
         aip->cb.on_event(aip, &ev);
 }
@@ -639,8 +659,12 @@ PJ_DEF(pj_status_t) pjmedia_ai_port_create(
     /* Create temporary pool for JSON parsing */
     aip->tmp_pool = pj_pool_create(pool->factory, "aiport_tmp%p",
                                    4096, 4096, NULL);
+    if (!aip->tmp_pool) {
+        pjmedia_port_destroy(&aip->base);
+        return PJ_ENOMEM;
+    }
 
-    /* Create WebSocket (share group lock) */
+    /* Create WebSocket */
     {
         pj_websock_param ws_param;
 
@@ -651,7 +675,18 @@ PJ_DEF(pj_status_t) pjmedia_ai_port_create(
         ws_param.cb.on_rx_msg = &on_ws_rx_msg;
         ws_param.cb.on_close = &on_ws_close;
         ws_param.user_data = aip;
-        ws_param.ssl_param = param->ssl_param;
+
+        /* Copy ssl_param into our pool so the caller's stack/temp
+         * allocation doesn't become a dangling pointer.
+         */
+        if (param->ssl_param) {
+            pj_ssl_sock_param *ssl_copy;
+
+            ssl_copy = PJ_POOL_ALLOC_T(own_pool, pj_ssl_sock_param);
+            pj_memcpy(ssl_copy, param->ssl_param,
+                       sizeof(pj_ssl_sock_param));
+            ws_param.ssl_param = ssl_copy;
+        }
 
         status = pj_websock_create(own_pool, &ws_param, &aip->ws);
         if (status != PJ_SUCCESS) {

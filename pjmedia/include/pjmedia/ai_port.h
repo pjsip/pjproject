@@ -148,6 +148,10 @@ typedef struct pjmedia_ai_port_param
      * factory (e.g. pjmedia_ai_openai_backend_create()). The port clock
      * rate, channel count, and bits per sample are taken from the
      * backend's native settings.
+     *
+     * The AI port takes ownership of the backend. The backend will be
+     * destroyed when the port is destroyed via pjmedia_port_destroy().
+     * The caller must not use or destroy the backend after passing it.
      */
     pjmedia_ai_backend      *backend;
 
@@ -164,13 +168,17 @@ typedef struct pjmedia_ai_port_param
      * reducing bandwidth. The AI service's server-side VAD (if any)
      * still handles turn detection independently.
      *
-     * Default value is PJ_TRUE.
+     * Default value is PJ_FALSE.
      */
     pj_bool_t                vad_enabled;
 
     /**
      * Specify the SSL/TLS parameters for wss:// connections. Set to NULL
      * to use defaults. Ignored for ws:// connections.
+     *
+     * The AI port makes an internal copy of this structure, so the
+     * caller's pointer does not need to remain valid after
+     * pjmedia_ai_port_create() returns.
      */
     pj_ssl_sock_param       *ssl_param;
 

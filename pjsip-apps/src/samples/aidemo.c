@@ -85,7 +85,7 @@ static struct app_t
     pjmedia_port        *null_port;
     pjmedia_master_port *master_port;
 
-    pj_bool_t            connected;
+    volatile pj_bool_t   connected;
 
     char                 url[512];
     int                  log_level;
@@ -327,11 +327,11 @@ int main(int argc, char *argv[])
     ai_param.cb.on_event = &on_ai_event;
     ai_param.backend = app.backend;
 
-    /* Enable TLS certificate verification for wss:// connections.
-     * This prevents MITM attacks when sending the API key.
+    /* To enable TLS certificate verification, set verify_peer=PJ_TRUE
+     * and supply a CA certificate via pj_ssl_cert_load_from_files()
+     * + pj_ssl_sock_set_certificate() on the ssl_param.
      */
     pj_ssl_sock_param_default(&ssl_param);
-    ssl_param.verify_peer = PJ_TRUE;
     ai_param.ssl_param = &ssl_param;
 
     status = pjmedia_ai_port_create(app.pool, &ai_param, &app.ai_port);
