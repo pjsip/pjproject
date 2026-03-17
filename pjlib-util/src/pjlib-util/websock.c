@@ -915,12 +915,17 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
     if (ws->destroying)
         return;
 
-    /* Continue accumulating an oversized frame from previous reads */
+    /* Continue accumulating/discarding a partial frame from previous reads */
     while (ws->rx_partial && len > 0) {
         pj_size_t needed = ws->rx_partial_total - ws->rx_partial_got;
         pj_size_t copy = (len < needed) ? len : needed;
 
-        pj_memcpy(ws->rx_partial_buf + ws->rx_partial_got, data, copy);
+        if (ws->rx_partial_buf) {
+            /* Accumulating: copy payload into buffer */
+            pj_memcpy(ws->rx_partial_buf + ws->rx_partial_got, data, copy);
+        }
+        /* else: discarding oversized frame, just consume bytes */
+
         ws->rx_partial_got += copy;
         data += copy;
         len -= copy;
@@ -930,15 +935,19 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
             return;
         }
 
-        /* Unmask if needed (mask_key stored in rx_partial_buf header) */
-        /* Note: server->client frames are not masked per RFC 6455 */
-
-        /* Complete frame - process it */
+        /* Frame complete (or fully discarded) */
         ws->rx_partial = PJ_FALSE;
-        if (!handle_frame(ws, ws->rx_partial_fin, ws->rx_partial_op,
-                          ws->rx_partial_buf, ws->rx_partial_total))
-        {
-            return; /* CLOSE received */
+
+        if (ws->rx_partial_buf) {
+            /* Note: server->client frames are not masked per RFC 6455 */
+            if (!handle_frame(ws, ws->rx_partial_fin, ws->rx_partial_op,
+                              ws->rx_partial_buf, ws->rx_partial_total))
+            {
+                return; /* CLOSE received */
+            }
+        } else {
+            PJ_LOG(5, (THIS_FILE, "Discarded oversized frame (%lu bytes)",
+                       (unsigned long)ws->rx_partial_total));
         }
     }
 
@@ -972,20 +981,21 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
              * fits within max message size, then start accumulating.
              */
             if (payload_len > ws->frag_buf_size) {
+                pj_size_t avail_discard = len - hdr_len;
+
                 PJ_LOG(2, (THIS_FILE,
                            "Frame payload too large (%lu > %lu), dropping",
                            (unsigned long)payload_len,
                            (unsigned long)ws->frag_buf_size));
-                /* Skip the entire frame: consume header + available
-                 * payload bytes, set up discard state for the rest.
+                /* Set up discard state: consume available payload bytes
+                 * now, skip the rest in subsequent reads.
                  */
                 ws->rx_partial = PJ_TRUE;
                 ws->rx_partial_op = opcode;
                 ws->rx_partial_fin = fin;
-                ws->rx_partial_total = 0; /* Signal discard */
-                ws->rx_partial_got = 0;
-                ws->rx_partial_buf = NULL;
-                /* Consume everything we have */
+                ws->rx_partial_total = payload_len;
+                ws->rx_partial_got = avail_discard;
+                ws->rx_partial_buf = NULL; /* NULL = discard mode */
                 return;
             }
 
