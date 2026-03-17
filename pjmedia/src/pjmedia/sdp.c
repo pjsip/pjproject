@@ -1173,29 +1173,32 @@ static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
         pj_str_t str;
         unsigned long ul;
 
-        /* consume '/' separator before TTL */
+        /* consume '/' separator */
         pj_scan_get_char(scanner);
 
-        /* read TTL */
+        /* read first field (TTL if followed by '/', else no_addr) */
         pj_scan_get_until_chr(scanner, "/ \t\r\n", &str);
-        if ((pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS) || ul > 255) {
-            on_scanner_error(scanner);
-            return;
-        }
-        conn->ttl = (pj_uint8_t)ul;
-
-        /* optional: number of addresses */
         if (!pj_scan_is_eof(scanner) && *scanner->curptr == '/') {
-            /* consume '/' separator before no_addr */
-            pj_scan_get_char(scanner);
-
-            pj_scan_get_until_chr(scanner, " \t\r\n", &str);
+            /* first field is TTL, second field is no_addr */
             if ((pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS) || ul > 255) {
                 on_scanner_error(scanner);
                 return;
             }
-            conn->no_addr = (pj_uint8_t)ul;
+
+            conn->ttl = (pj_uint8_t)ul;
+
+            /* consume '/' separator before no_addr */
+            pj_scan_get_char(scanner);
+
+            pj_scan_get_until_chr(scanner, " \t\r\n", &str);
         }
+
+        if ((pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS) || ul > 255) {
+            on_scanner_error(scanner);
+            return;
+        }
+        conn->no_addr = (pj_uint8_t)ul;
+
     }
 
     /* We've got what we're looking for, skip anything until newline */
