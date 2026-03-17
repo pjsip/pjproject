@@ -82,15 +82,21 @@ typedef enum pjmedia_ai_event_type
  */
 typedef struct pjmedia_ai_event
 {
-    /** Event type. */
+    /**
+     * Specify the event type.
+     */
     pjmedia_ai_event_type   type;
 
-    /** Status code. PJ_SUCCESS for informational events, error code
-     *  for DISCONNECTED. */
+    /**
+     * Specify the status code. PJ_SUCCESS for informational events,
+     * error code for DISCONNECTED.
+     */
     pj_status_t             status;
 
-    /** Text payload (transcript, etc). Only valid for TRANSCRIPT events.
-     *  The pointer is only valid for the duration of the callback. */
+    /**
+     * Text payload (transcript, etc). Only valid for TRANSCRIPT events.
+     * The pointer is only valid for the duration of the callback.
+     */
     pj_str_t                text;
 
 } pjmedia_ai_event;
@@ -117,35 +123,55 @@ typedef struct pjmedia_ai_port_cb
  */
 typedef struct pjmedia_ai_port_param
 {
-    /** Ioqueue for WebSocket async I/O. Required. */
+    /**
+     * Specify the ioqueue to use for WebSocket async I/O. Required.
+     */
     pj_ioqueue_t            *ioqueue;
 
-    /** Timer heap for WebSocket timers. Required. */
+    /**
+     * Specify the timer heap to use for WebSocket timers. Required.
+     */
     pj_timer_heap_t         *timer_heap;
 
-    /** Application callback. */
+    /**
+     * Specify the application callback, see #pjmedia_ai_port_cb.
+     */
     pjmedia_ai_port_cb       cb;
 
-    /** Application user data. */
+    /**
+     * Specify application user data.
+     */
     void                    *user_data;
 
-    /** AI backend instance. Required. Created by a backend factory
-     *  (e.g. pjmedia_ai_openai_backend_create). The port clock rate,
-     *  channel count, and bits per sample are taken from the backend's
-     *  native settings. */
+    /**
+     * Specify the AI backend instance. Required. Created by a backend
+     * factory (e.g. pjmedia_ai_openai_backend_create()). The port clock
+     * rate, channel count, and bits per sample are taken from the
+     * backend's native settings.
+     */
     pjmedia_ai_backend      *backend;
 
-    /** Ptime in milliseconds. Default: 20. */
+    /**
+     * Specify the ptime in milliseconds.
+     *
+     * Default value is 20.
+     */
     unsigned                 ptime_msec;
 
-    /** Enable client-side VAD on the TX (microphone) path. When enabled,
-     *  silence frames are not sent over WebSocket, reducing bandwidth.
-     *  The AI service's server-side VAD (if any) still handles turn
-     *  detection independently. Default: PJ_TRUE.
+    /**
+     * Specify whether to enable client-side VAD on the TX (microphone)
+     * path. When enabled, silence frames are not sent over WebSocket,
+     * reducing bandwidth. The AI service's server-side VAD (if any)
+     * still handles turn detection independently.
+     *
+     * Default value is PJ_TRUE.
      */
     pj_bool_t                vad_enabled;
 
-    /** Optional SSL parameters for wss:// connections. */
+    /**
+     * Specify the SSL/TLS parameters for wss:// connections. Set to NULL
+     * to use defaults. Ignored for ws:// connections.
+     */
     pj_ssl_sock_param       *ssl_param;
 
 } pjmedia_ai_port_param;
@@ -252,19 +278,30 @@ typedef struct pjmedia_ai_backend_op
  */
 struct pjmedia_ai_backend
 {
-    /** Backend operation vtable. */
+    /**
+     * Specify the backend operation vtable.
+     */
     const pjmedia_ai_backend_op *op;
 
-    /** Native clock rate of the AI service (e.g. 24000 for OpenAI). */
+    /**
+     * Specify the native clock rate of the AI service
+     * (e.g. 24000 for OpenAI).
+     */
     unsigned                 native_clock_rate;
 
-    /** Native channel count. */
+    /**
+     * Specify the native channel count.
+     */
     unsigned                 native_channel_count;
 
-    /** Native bits per sample. */
+    /**
+     * Specify the native bits per sample.
+     */
     unsigned                 native_bits_per_sample;
 
-    /** Opaque backend-specific data. */
+    /**
+     * Specify opaque backend-specific data.
+     */
     void                    *backend_data;
 };
 
