@@ -87,9 +87,18 @@ struct pj_websock
     pj_size_t               frag_len;
     pj_websock_opcode       frag_opcode;
 
-    /* TX buffer */
+    /* TX buffer for data frames */
     pj_uint8_t             *tx_buf;
     pj_size_t               tx_buf_size;
+
+    /* TX buffer for control frames (ping, pong, close).
+     * Separate from tx_buf so control frames can be sent even when a
+     * data send is in flight.  Max control payload is 125 bytes (RFC 6455).
+     */
+#   define CTL_BUF_SIZE  (125 + MAX_FRAME_HDR_LEN) /* 139 bytes */
+    pj_uint8_t              ctl_buf[125 + MAX_FRAME_HDR_LEN];
+    pj_ioqueue_op_key_t     ctl_send_key;
+    pj_bool_t               ctl_send_pending;
 
     /* Ping/pong timer */
     pj_timer_entry          ping_timer;
@@ -112,6 +121,8 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
                              pj_size_t len, pj_size_t *remainder);
 static pj_status_t send_raw(pj_websock *ws, const void *data,
                             pj_ssize_t len);
+static pj_status_t send_raw_ctl(pj_websock *ws, const void *data,
+                                pj_ssize_t len);
 static pj_status_t send_close_frame(pj_websock *ws,
                                     pj_uint16_t status_code,
                                     const pj_str_t *reason);
@@ -286,7 +297,8 @@ static pj_size_t decode_frame_header(const pj_uint8_t *data, pj_size_t len,
  */
 static pj_status_t send_handshake(pj_websock *ws)
 {
-    char buf[2048];
+    char *buf = (char*)ws->tx_buf;
+    pj_size_t buf_size = ws->tx_buf_size;
     int len;
     pj_uint8_t raw_key[WS_KEY_RAW_LEN];
     int b64_len = sizeof(ws->ws_key_b64);
@@ -300,7 +312,7 @@ static pj_status_t send_handshake(pj_websock *ws)
     ws->ws_key_b64[b64_len] = '\0';
 
     /* Build HTTP request */
-    len = pj_ansi_snprintf(buf, sizeof(buf),
+    len = pj_ansi_snprintf(buf, buf_size,
         "GET %.*s HTTP/1.1\r\n"
         "Host: %.*s:%d\r\n"
         "Upgrade: websocket\r\n"
@@ -311,36 +323,36 @@ static pj_status_t send_handshake(pj_websock *ws)
         (int)ws->host.slen, ws->host.ptr,
         ws->port,
         ws->ws_key_b64);
-    if (len < 0 || len >= (int)sizeof(buf))
+    if (len < 0 || len >= (int)buf_size)
         return PJ_ETOOSMALL;
 
     /* Subprotocol */
     if (ws->subprotocol.slen > 0) {
-        int n = pj_ansi_snprintf(buf + len, sizeof(buf) - len,
+        int n = pj_ansi_snprintf(buf + len, buf_size - len,
             "Sec-WebSocket-Protocol: %.*s\r\n",
             (int)ws->subprotocol.slen, ws->subprotocol.ptr);
-        if (n < 0 || n >= (int)(sizeof(buf) - len))
+        if (n < 0 || n >= (int)(buf_size - len))
             return PJ_ETOOSMALL;
         len += n;
     }
 
     /* Extra headers */
     for (i = 0; i < ws->extra_hdr.count; ++i) {
-        int n = pj_ansi_snprintf(buf + len, sizeof(buf) - len,
+        int n = pj_ansi_snprintf(buf + len, buf_size - len,
             "%.*s: %.*s\r\n",
             (int)ws->extra_hdr.header[i].name.slen,
             ws->extra_hdr.header[i].name.ptr,
             (int)ws->extra_hdr.header[i].value.slen,
             ws->extra_hdr.header[i].value.ptr);
-        if (n < 0 || n >= (int)(sizeof(buf) - len))
+        if (n < 0 || n >= (int)(buf_size - len))
             return PJ_ETOOSMALL;
         len += n;
     }
 
     /* End of headers */
     {
-        int n = pj_ansi_snprintf(buf + len, sizeof(buf) - len, "\r\n");
-        if (n < 0 || n >= (int)(sizeof(buf) - len))
+        int n = pj_ansi_snprintf(buf + len, buf_size - len, "\r\n");
+        if (n < 0 || n >= (int)(buf_size - len))
             return PJ_ETOOSMALL;
         len += n;
     }
@@ -479,6 +491,41 @@ static pj_status_t send_raw(pj_websock *ws, const void *data,
     return (status == PJ_EPENDING) ? PJ_SUCCESS : status;
 }
 
+/* Send a control frame (ping, pong, close) using the dedicated ctl_buf.
+ * This is independent of the data send path so control frames can be sent
+ * even when a user data send is in flight.
+ * Caller MUST hold ws->grp_lock.
+ */
+static pj_status_t send_raw_ctl(pj_websock *ws, const void *data,
+                                pj_ssize_t len)
+{
+    pj_status_t status;
+
+    if (ws->ctl_send_pending) {
+        PJ_LOG(4, (THIS_FILE, "Control send still pending, returning EBUSY"));
+        return PJ_EBUSY;
+    }
+
+#if PJ_HAS_SSL_SOCK
+    if (ws->is_ssl && ws->ssl_sock) {
+        status = pj_ssl_sock_send(ws->ssl_sock, &ws->ctl_send_key,
+                                  data, &len, 0);
+    } else
+#endif
+    if (ws->asock) {
+        status = pj_activesock_send(ws->asock, &ws->ctl_send_key,
+                                    data, &len, 0);
+    } else {
+        return PJ_EINVALIDOP;
+    }
+
+    if (status == PJ_EPENDING) {
+        ws->ctl_send_pending = PJ_TRUE;
+    }
+
+    return (status == PJ_EPENDING) ? PJ_SUCCESS : status;
+}
+
 
 #if PJ_HAS_SSL_SOCK
 /*=========================================================================
@@ -506,9 +553,11 @@ static pj_bool_t ssl_on_data_sent(pj_ssl_sock_t *ssock,
                                   pj_ssize_t sent)
 {
     pj_websock *ws = (pj_websock*)pj_ssl_sock_get_user_data(ssock);
-    PJ_UNUSED_ARG(op_key);
     PJ_UNUSED_ARG(sent);
-    ws->send_pending = PJ_FALSE;
+    if (op_key == &ws->ctl_send_key)
+        ws->ctl_send_pending = PJ_FALSE;
+    else
+        ws->send_pending = PJ_FALSE;
     return PJ_TRUE;
 }
 #endif /* PJ_HAS_SSL_SOCK */
@@ -539,9 +588,11 @@ static pj_bool_t asock_on_data_sent(pj_activesock_t *asock,
                                     pj_ssize_t sent)
 {
     pj_websock *ws = (pj_websock*)pj_activesock_get_user_data(asock);
-    PJ_UNUSED_ARG(op_key);
     PJ_UNUSED_ARG(sent);
-    ws->send_pending = PJ_FALSE;
+    if (op_key == &ws->ctl_send_key)
+        ws->ctl_send_pending = PJ_FALSE;
+    else
+        ws->send_pending = PJ_FALSE;
     return PJ_TRUE;
 }
 
@@ -670,12 +721,17 @@ static void on_transport_data(pj_websock *ws, void *data, pj_size_t size,
 
         pj_grp_lock_release(ws->grp_lock);
 
-        /* Invoke callback without lock */
+        /* Invoke callback without lock.  The transport's grp_lock
+         * reference keeps the object alive even if the callback calls
+         * pj_websock_destroy().
+         */
         if (ws->cb.on_connect)
             ws->cb.on_connect(ws, PJ_SUCCESS);
 
-        /* Process remaining data as WebSocket frames */
-        if (parsed < size) {
+        /* Process remaining data as WebSocket frames, but only if
+         * the callback didn't destroy us.
+         */
+        if (!ws->destroying && parsed < size) {
             pj_size_t rem = size - parsed;
             pj_memmove(data, (pj_uint8_t*)data + parsed, rem);
             process_rx_frame(ws, (pj_uint8_t*)data, rem, remainder);
@@ -704,6 +760,10 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
         const pj_uint8_t *payload;
         pj_size_t payload_len;
 
+        /* Check if we're being destroyed concurrently */
+        if (ws->destroying)
+            return;
+
         consumed = decode_frame_header(data, len, &fin, &opcode,
                                        &payload, &payload_len);
         if (consumed == 0) {
@@ -717,7 +777,8 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
             PJ_LOG(5, (THIS_FILE, "Received PING (%lu bytes)",
                        (unsigned long)payload_len));
             pj_grp_lock_acquire(ws->grp_lock);
-            send_pong(ws, payload, payload_len);
+            if (!ws->destroying)
+                send_pong(ws, payload, payload_len);
             pj_grp_lock_release(ws->grp_lock);
             break;
 
@@ -729,6 +790,7 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
         {
             pj_uint16_t code = 0;
             pj_str_t reason;
+            pj_websock_readystate prev_state;
 
             reason.ptr = NULL;
             reason.slen = 0;
@@ -744,7 +806,8 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
             PJ_LOG(4, (THIS_FILE, "Received CLOSE (code=%d)", code));
 
             pj_grp_lock_acquire(ws->grp_lock);
-            if (ws->state == PJ_WEBSOCK_STATE_OPEN) {
+            prev_state = ws->state;
+            if (prev_state == PJ_WEBSOCK_STATE_OPEN) {
                 /* Echo close frame back */
                 send_close_frame(ws, code, &reason);
             }
@@ -752,7 +815,7 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
             pj_grp_lock_release(ws->grp_lock);
 
             /* Invoke callback without lock */
-            if (ws->cb.on_close)
+            if (!ws->destroying && ws->cb.on_close)
                 ws->cb.on_close(ws, code, &reason);
             return; /* Stop processing after close */
         }
@@ -832,13 +895,15 @@ static void process_rx_frame(pj_websock *ws, pj_uint8_t *data,
 /*=========================================================================
  * Control frame helpers
  */
+/* Control-frame senders use ws->ctl_buf + send_raw_ctl(), which is
+ * independent of the data-frame tx_buf + send_raw() path.
+ * Callers MUST hold ws->grp_lock.
+ */
 static pj_status_t send_close_frame(pj_websock *ws,
                                     pj_uint16_t status_code,
                                     const pj_str_t *reason)
 {
-    pj_uint8_t payload[128];
-    /* Use local frame buffer to avoid clobbering tx_buf during async send */
-    pj_uint8_t frame_buf[128 + MAX_FRAME_HDR_LEN];
+    pj_uint8_t payload[125];
     pj_size_t plen = 0;
     pj_size_t frame_len;
 
@@ -855,26 +920,22 @@ static pj_status_t send_close_frame(pj_websock *ws,
         plen += rlen;
     }
 
-    frame_len = encode_frame(frame_buf, PJ_WEBSOCK_OP_CLOSE, PJ_TRUE,
+    frame_len = encode_frame(ws->ctl_buf, PJ_WEBSOCK_OP_CLOSE, PJ_TRUE,
                              payload, plen);
-    return send_raw(ws, frame_buf, (pj_ssize_t)frame_len);
+    return send_raw_ctl(ws, ws->ctl_buf, (pj_ssize_t)frame_len);
 }
 
 static pj_status_t send_pong(pj_websock *ws, const void *data,
                              pj_size_t len)
 {
-    /* Use local frame buffer to avoid clobbering tx_buf during async send.
-     * Pong payload max is 125 bytes per RFC 6455.
-     */
-    pj_uint8_t frame_buf[125 + MAX_FRAME_HDR_LEN];
     pj_size_t frame_len;
 
     if (len > 125)
         len = 125;
 
-    frame_len = encode_frame(frame_buf, PJ_WEBSOCK_OP_PONG, PJ_TRUE,
+    frame_len = encode_frame(ws->ctl_buf, PJ_WEBSOCK_OP_PONG, PJ_TRUE,
                              data, len);
-    return send_raw(ws, frame_buf, (pj_ssize_t)frame_len);
+    return send_raw_ctl(ws, ws->ctl_buf, (pj_ssize_t)frame_len);
 }
 
 
@@ -898,13 +959,9 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 
     PJ_LOG(5, (THIS_FILE, "Sending PING"));
 
-    /* Use local buffer to avoid clobbering tx_buf during async send */
-    {
-        pj_uint8_t ping_buf[MAX_FRAME_HDR_LEN];
-        frame_len = encode_frame(ping_buf, PJ_WEBSOCK_OP_PING, PJ_TRUE,
-                                 NULL, 0);
-        send_raw(ws, ping_buf, (pj_ssize_t)frame_len);
-    }
+    frame_len = encode_frame(ws->ctl_buf, PJ_WEBSOCK_OP_PING, PJ_TRUE,
+                             NULL, 0);
+    send_raw_ctl(ws, ws->ctl_buf, (pj_ssize_t)frame_len);
 
     /* Reschedule */
     delay.sec = ws->ping_interval;
@@ -987,8 +1044,9 @@ PJ_DEF(pj_status_t) pj_websock_create(pj_pool_t *pool,
     /* Init timer */
     pj_timer_entry_init(&ws->ping_timer, 0, ws, &on_timer);
 
-    /* Init send key */
+    /* Init send keys */
     pj_ioqueue_op_key_init(&ws->send_key, sizeof(ws->send_key));
+    pj_ioqueue_op_key_init(&ws->ctl_send_key, sizeof(ws->ctl_send_key));
 
     /* Create or use supplied group lock */
     if (param->grp_lock) {
@@ -1031,6 +1089,7 @@ PJ_DEF(pj_status_t) pj_websock_connect(
     ws->handshake_done = PJ_FALSE;
     ws->frag_len = 0;
     ws->send_pending = PJ_FALSE;
+    ws->ctl_send_pending = PJ_FALSE;
 
     /* Copy connect parameters */
     ws->subprotocol.slen = 0;
@@ -1117,6 +1176,7 @@ PJ_DEF(pj_status_t) pj_websock_connect(
         ssl_prm.server_name = ws->host;
         ssl_prm.sock_af = rem_addr.addr.sa_family;
         ssl_prm.sock_type = pj_SOCK_STREAM();
+        ssl_prm.grp_lock = ws->grp_lock;
 
         status = pj_ssl_sock_create(ws->pool, &ssl_prm, &ws->ssl_sock);
         if (status != PJ_SUCCESS) {
@@ -1152,6 +1212,7 @@ PJ_DEF(pj_status_t) pj_websock_connect(
     } else {
         /* Plain TCP connection */
         pj_activesock_cb asock_cb;
+        pj_activesock_cfg asock_cfg;
         pj_sock_t sock;
 
         status = pj_sock_socket(rem_addr.addr.sa_family,
@@ -1161,14 +1222,17 @@ PJ_DEF(pj_status_t) pj_websock_connect(
             return status;
         }
 
+        pj_activesock_cfg_default(&asock_cfg);
+        asock_cfg.grp_lock = ws->grp_lock;
+
         pj_bzero(&asock_cb, sizeof(asock_cb));
         asock_cb.on_connect_complete = &asock_on_connect_complete;
         asock_cb.on_data_read = &asock_on_data_read;
         asock_cb.on_data_sent = &asock_on_data_sent;
 
         status = pj_activesock_create(ws->pool, sock, pj_SOCK_STREAM(),
-                                      NULL, ws->ioqueue, &asock_cb, ws,
-                                      &ws->asock);
+                                      &asock_cfg, ws->ioqueue, &asock_cb,
+                                      ws, &ws->asock);
         if (status != PJ_SUCCESS) {
             pj_sock_close(sock);
             ws->state = PJ_WEBSOCK_STATE_CLOSED;
