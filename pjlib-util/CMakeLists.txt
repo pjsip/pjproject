@@ -25,6 +25,7 @@ add_library(pjlib-util
   src/pjlib-util/string.c
   src/pjlib-util/stun_simple.c
   src/pjlib-util/stun_simple_client.c
+  src/pjlib-util/websock.c
   src/pjlib-util/xml.c
 )
 
@@ -62,6 +63,7 @@ target_sources(pjlib-util
       include/pjlib-util/string.h
       include/pjlib-util/stun_simple.h
       include/pjlib-util/types.h
+      include/pjlib-util/websock.h
       include/pjlib-util/xml.h
 )
 
@@ -82,6 +84,7 @@ if(BUILD_TESTING)
     src/pjlib-util-test/test.c
     src/pjlib-util-test/json_test.c
     src/pjlib-util-test/http_client.c
+    src/pjlib-util-test/websock_test.c
     src/pjlib-util-test/${PJ_TEST_MAIN}
   )
 
