@@ -50,7 +50,8 @@ typedef enum pjmedia_silence_det_mode {
                                             in silence condition, in ms.  */
 #define DEF_BEFORE_SILENCE          400  /* Silence time before really changing
                                             state into SILENCE, in ms.    */
-#define DEF_THRESHOLD               1000 /* Default threshold.            */
+#define DEF_THRESHOLD       PJMEDIA_SILENCE_DET_THRESHOLD
+#define DEF_MIN_THRESHOLD   PJMEDIA_SILENCE_DET_MIN_THRESHOLD
 
 /**
  * This enumeration specifies the states of the silence detector.
@@ -82,9 +83,10 @@ struct pjmedia_silence_det
                                              threshold in voiced condition. */
     unsigned  recalc_on_silence;        /**< Setting of time to recalc 
                                              threshold in silence condition.*/
-    unsigned  before_silence;           /**< Setting of silence time before 
+    unsigned  before_silence;           /**< Setting of silence time before
                                              really changing state into SILENCE,
                                              in ms.                         */
+    unsigned  min_threshold;            /**< Minimum adaptive threshold.    */
 };
 
 
@@ -171,6 +173,35 @@ PJ_DEF(pj_status_t) pjmedia_silence_det_set_params( pjmedia_silence_det *sd,
     sd->recalc_on_voiced = recalc_time1;
     sd->recalc_on_silence = recalc_time2;
     sd->before_silence  = before_silence;
+    sd->min_threshold   = DEF_MIN_THRESHOLD;
+
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_silence_det_set_params2(
+                                        pjmedia_silence_det *sd,
+                                        const pjmedia_silence_det_param *p)
+{
+    PJ_ASSERT_RETURN(sd && p, PJ_EINVAL);
+
+    sd->before_silence  = (p->before_silence >= 0) ?
+                          (unsigned)p->before_silence : DEF_BEFORE_SILENCE;
+    sd->recalc_on_voiced = (p->recalc_on_voiced >= 0) ?
+                           (unsigned)p->recalc_on_voiced :
+                           DEF_RECALC_ON_VOICED;
+    sd->recalc_on_silence = (p->recalc_on_silence >= 0) ?
+                            (unsigned)p->recalc_on_silence :
+                            DEF_RECALC_ON_SILENCE;
+    sd->min_threshold   = (p->min_threshold >= 0) ?
+                          (unsigned)p->min_threshold : DEF_MIN_THRESHOLD;
+
+    /* Clamp current threshold to the new floor in adaptive mode */
+    if (sd->mode == VAD_MODE_ADAPTIVE &&
+        sd->threshold < sd->min_threshold)
+    {
+        sd->threshold = sd->min_threshold;
+    }
 
     return PJ_SUCCESS;
 }
@@ -276,6 +307,8 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
                 if (sd->silence_timer >= sd->recalc_on_silence) {
                     unsigned old = sd->threshold;
                     sd->threshold = avg_recent_level << 1;
+                    if (sd->threshold < sd->min_threshold)
+                        sd->threshold = sd->min_threshold;
                     if (sd->threshold != old) {
                         TRACE_((THIS_FILE,"%s re-adjust threshold (in silence)"
                                           " to %d (was %d)", sd->objname,
@@ -301,6 +334,8 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
                 if (sd->silence_timer >= sd->before_silence) {
                     sd->state = STATE_SILENCE;
                     sd->threshold = avg_recent_level << 1;
+                    if (sd->threshold < sd->min_threshold)
+                        sd->threshold = sd->min_threshold;
                     TRACE_((THIS_FILE,"%s starting silence (level=%d "
                                       "threshold=%d)", sd->objname, level,
                                       sd->threshold));
