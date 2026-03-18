@@ -197,31 +197,34 @@ static void log_sec_err(int log_level, const char* sender,
                          FORMAT_MESSAGE_IGNORE_INSERTS,
                          NULL, ss, 0, (LPSTR)&str, 0, NULL);
     /* Trim new line chars */
-    while (len > 0 && (str[len-1] == '\r' || str[len-1] == '\n'))
-        str[--len] = 0;
+    if (str) {
+        while (len > 0 && (str[len-1] == '\r' || str[len-1] == '\n'))
+            str[--len] = 0;
+    }
 
     switch (log_level) {
     case 1:
-        PJ_LOG(1, (sender, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(1, (sender, "%s: 0x%x-%s", title, ss, (str? str : "")));
         break;
     case 2:
-        PJ_LOG(2, (sender, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(2, (sender, "%s: 0x%x-%s", title, ss, (str? str : "")));
         break;
     case 3:
-        PJ_LOG(3, (sender, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(3, (sender, "%s: 0x%x-%s", title, ss, (str? str : "")));
         break;
     case 4:
-        PJ_LOG(4, (sender, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(4, (sender, "%s: 0x%x-%s", title, ss, (str? str : "")));
         break;
     case 5:
-        PJ_LOG(5, (sender, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(5, (sender, "%s: 0x%x-%s", title, ss, (str? str : "")));
         break;
     default:
-        PJ_LOG(6, (sender, "%s: 0x%x-%s", title, ss, str));
+        PJ_LOG(6, (sender, "%s: 0x%x-%s", title, ss, (str? str : "")));
         break;
     }
 
-    LocalFree(str);
+    if (str)
+        LocalFree(str);
 }
 
 static pj_str_t sch_err_print(pj_status_t e, char *msg, pj_size_t max)
@@ -489,8 +492,10 @@ static void ssl_ciphers_populate()
         char tmp_buf[SZ_ALG_MAX_SIZE];
         pj_str_t tmp_st;
 
-        pj_unicode_to_ansi(fn->rgpszFunctions[i], SZ_ALG_MAX_SIZE,
+        pj_unicode_to_ansi(fn->rgpszFunctions[i], -1,
                            tmp_buf, sizeof(tmp_buf));
+        if (tmp_buf[0] == '\0')
+            continue;
         pj_strdup2_with_null(sch_ssl.pool, &tmp_st, tmp_buf);
 
         /* Unfortunately we do not get the ID here.
@@ -527,8 +532,10 @@ static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock)
             char tmp_buf[SZ_ALG_MAX_SIZE+1];
             unsigned i;
 
-            pj_unicode_to_ansi(ci.szCipherSuite, SZ_ALG_MAX_SIZE,
+            pj_unicode_to_ansi(ci.szCipherSuite, -1,
                                tmp_buf, sizeof(tmp_buf));
+            if (tmp_buf[0] == '\0')
+                return c;
 
             /* If cipher is actually in the list and:
              * - if ID is 0, update it, or
@@ -565,7 +572,7 @@ static pj_status_t blob_to_str(DWORD enc_type, CERT_NAME_BLOB* blob,
 {
     DWORD ret;
     ret = CertNameToStrA(enc_type, blob, flag, buf, buf_len);
-    if (ret < 0) {
+    if (ret <= 1) {
         PJ_LOG(3,(SENDER, "Failed to convert cert blob to string"));
         return PJ_ETOOSMALL;
     }
@@ -702,7 +709,7 @@ static void cert_parse_info(pj_pool_t* pool, pj_ssl_cert_info* ci,
             switch (ane->dwAltNameChoice) {
             case CERT_ALT_NAME_DNS_NAME:
                 type = PJ_SSL_CERT_NAME_DNS;
-                len = pj_unicode_to_ansi(ane->pwszDNSName, sizeof(buf),
+                len = pj_unicode_to_ansi(ane->pwszDNSName, -1,
                                          buf, sizeof(buf)) != NULL;
                 break;
             case CERT_ALT_NAME_IP_ADDRESS:
@@ -713,12 +720,12 @@ static void cert_parse_info(pj_pool_t* pool, pj_ssl_cert_info* ci,
                 break;
             case CERT_ALT_NAME_URL:
                 type = PJ_SSL_CERT_NAME_URI;
-                len = pj_unicode_to_ansi(ane->pwszDNSName, sizeof(buf),
+                len = pj_unicode_to_ansi(ane->pwszURL, -1,
                                          buf, sizeof(buf)) != NULL;
                 break;
             case CERT_ALT_NAME_RFC822_NAME:
                 type = PJ_SSL_CERT_NAME_RFC822;
-                len = pj_unicode_to_ansi(ane->pwszDNSName, sizeof(buf),
+                len = pj_unicode_to_ansi(ane->pwszRfc822Name, -1,
                                          buf, sizeof(buf)) != NULL;
                 break;
             default:
@@ -851,6 +858,12 @@ static PCCERT_CONTEXT find_cert_in_stores(pj_ssl_cert_lookup_type type,
         /* Lookup based on type */
 
         if (type == PJ_SSL_CERT_LOOKUP_SUBJECT) {
+            /* keyword->ptr must be null-terminated for this API.
+             * The caller (ssl_sock_imp_common.c) uses
+             * pj_strdup_with_null(), so this should always hold.
+             */
+            PJ_ASSERT_ON_FAIL(keyword->ptr[keyword->slen] == '\0',
+                              { CertCloseStore(store, 0); return NULL; });
             cert = CertFindCertificateInStore(
                         store, X509_ASN_ENCODING, 0,
                         CERT_FIND_SUBJECT_STR_A, keyword->ptr, NULL);
@@ -867,9 +880,10 @@ static PCCERT_CONTEXT find_cert_in_stores(pj_ssl_cert_lookup_type type,
             WCHAR buf[256];
             DWORD buf_size;
 
-            if (keyword->slen >= sizeof(buf)) {
+            if (keyword->slen >= PJ_ARRAY_SIZE(buf)) {
                 PJ_LOG(1,(SENDER,"Cannot lookup certificate, friendly name "
-                                 "keyword is too long (max=%d)",sizeof(buf)));
+                                 "keyword is too long (max=%d)",
+                                 (int)PJ_ARRAY_SIZE(buf)));
             } else {
                 cert = NULL;
                 while (1) {
@@ -1328,7 +1342,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t* ssock)
         }
 
         /* Adjust maximum message size to our allocated buffer size */
-        if (!sch_ssock->write_buf) {
+        if (sch_ssock->write_buf) {
             pj_size_t max_msg = sch_ssock->write_buf_cap -
                                 sch_ssock->strm_sizes.cbHeader -
                                 sch_ssock->strm_sizes.cbTrailer;
