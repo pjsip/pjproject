@@ -104,6 +104,7 @@ SAMPLES = $(BINDIR)\auddemo.exe \
 	  $(BINDIR)\streamutil.exe \
 	  $(BINDIR)\strerror.exe \
 	  $(BINDIR)\tonegen.exe \
+	  $(BINDIR)\vaddemo.exe \
 	  $(BINDIR)\vid_streamutil.exe
 
 

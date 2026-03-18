@@ -45,6 +45,7 @@ SAMPLES := auddemo \
 	   streamutil \
 	   strerror \
 	   tonegen \
+	   vaddemo \
 	   vid_codec_test \
 	   vid_streamutil
 
