@@ -1,5 +1,6 @@
 import pjsua2 as pj
 import sys
+import os
 import time
 from collections import deque
 import struct
@@ -233,6 +234,95 @@ def ua_tonegen_test():
 
     ep.libDestroy()
 
+#
+# AI Media Port test
+#
+class MyAiPort(pj.AudioMediaAiPort):
+    """Custom AI port that collects events."""
+    def __init__(self):
+        super().__init__()
+        self.events = []
+        self.connected = False
+        self.transcripts = []
+
+    def onEvent(self, event):
+        self.events.append(event.type)
+        if event.type == pj.PJMEDIA_AI_EVENT_CONNECTED:
+            self.connected = True
+            write("  [AI] Connected\r\n")
+        elif event.type == pj.PJMEDIA_AI_EVENT_DISCONNECTED:
+            self.connected = False
+            write("  [AI] Disconnected\r\n")
+        elif event.type == pj.PJMEDIA_AI_EVENT_TRANSCRIPT:
+            self.transcripts.append(event.text)
+            write("  [AI] " + event.text + "\r\n")
+        elif event.type == pj.PJMEDIA_AI_EVENT_RESPONSE_DONE:
+            write("  [AI] Response done\r\n")
+
+def ua_ai_port_test():
+    write("AI media port test.." + "\r\n")
+    ep_cfg = pj.EpConfig()
+
+    ep = pj.Endpoint()
+    ep.libCreate()
+    ep.libInit(ep_cfg)
+    ep.libStart()
+
+    # Create AI port with default params
+    ai = MyAiPort()
+    prm = pj.AiMediaPortParam()
+    assert prm.vadEnabled == False
+    assert prm.ptimeMsec == 20
+
+    ai.createPort(prm)
+    write("  AI port created and registered to conf bridge\r\n")
+
+    # Route audio: mic -> AI -> speaker
+    ai.startTransmit(ep.audDevManager().getPlaybackDevMedia())
+    ep.audDevManager().getCaptureDevMedia().startTransmit(ai)
+    write("  Audio routing established\r\n")
+
+    # Connect to OpenAI if API key is available
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if api_key:
+        url = ("wss://api.openai.com/v1/realtime"
+               "?model=gpt-4o-mini-realtime-preview")
+        write("  Connecting to OpenAI..\r\n")
+        ai.connect(url, api_key)
+
+        # Wait for connection
+        for i in range(150):
+            ep.libHandleEvents(100)
+            if ai.connected:
+                break
+
+        if ai.connected:
+            write("  Connected! Speak into your mic.\r\n")
+            write("  Press ENTER to stop.\r\n")
+            input()
+
+            write("  Disconnecting..\r\n")
+            ai.disconnect()
+            # Let close handshake complete
+            for i in range(20):
+                ep.libHandleEvents(100)
+        else:
+            write("  Connection timeout (non-fatal)\r\n")
+    else:
+        write("  OPENAI_API_KEY not set, skipping AI connection test\r\n")
+
+    # Disconnect routing
+    ai.stopTransmit(ep.audDevManager().getPlaybackDevMedia())
+    ep.audDevManager().getCaptureDevMedia().stopTransmit(ai)
+    write("  Audio routing disconnected\r\n")
+
+    del ai
+    write("  AI port destroyed\r\n")
+
+    ep.libDestroy()
+    write("  AI media port test OK\r\n")
+
+
 class RandomIntVal():
     def __init__(self):
         self.value = randint(0, 100000)
@@ -304,6 +394,7 @@ if __name__ == "__main__":
     ua_run_test_exception()
     ua_run_log_test()
     ua_run_ua_test()
+    ua_ai_port_test()
     ua_tonegen_test()
     ua_pending_job_test()
     sys.exit(0)

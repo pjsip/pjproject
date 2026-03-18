@@ -584,7 +584,10 @@ void AudioMediaAiPort::disconnect() PJSUA2_THROW(Error)
     }
 
     status = pjmedia_ai_port_disconnect(aiPort);
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    /* Ignore PJ_EINVALIDOP (not connected) */
+    if (status != PJ_SUCCESS && status != PJ_EINVALIDOP) {
+        PJSUA2_CHECK_RAISE_ERROR(status);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
