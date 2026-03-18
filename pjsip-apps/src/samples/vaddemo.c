@@ -234,6 +234,11 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (app.clock_rate == 0 || app.ptime == 0) {
+        puts("Error: clock rate and ptime must be > 0");
+        return 1;
+    }
+
     app.samples_per_frame = app.clock_rate * app.ptime / 1000;
 
     /* Init PJLIB */

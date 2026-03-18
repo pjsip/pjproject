@@ -196,6 +196,13 @@ PJ_DEF(pj_status_t) pjmedia_silence_det_set_params2(
     sd->min_threshold   = (p->min_threshold >= 0) ?
                           (unsigned)p->min_threshold : DEF_MIN_THRESHOLD;
 
+    /* Clamp current threshold to the new floor in adaptive mode */
+    if (sd->mode == VAD_MODE_ADAPTIVE &&
+        sd->threshold < sd->min_threshold)
+    {
+        sd->threshold = sd->min_threshold;
+    }
+
     return PJ_SUCCESS;
 }
 
