@@ -74,7 +74,8 @@ OBJDIR = .\output\samples-$(TARGET)
 BINDIR = ..\bin\samples\$(TARGET)
 
 
-SAMPLES = $(BINDIR)\auddemo.exe \
+SAMPLES = $(BINDIR)\aidemo.exe \
+	  $(BINDIR)\auddemo.exe \
 	  $(BINDIR)\aectest.exe \
 	  $(BINDIR)\aviplay.exe \
 	  $(BINDIR)\clidemo.exe \

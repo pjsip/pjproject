@@ -23,3 +23,18 @@ target_link_libraries(pjsua
     pjsip-simple
     pjsua-lib
 )
+
+# ##############################################################################
+# samples
+
+add_executable(aidemo src/samples/aidemo.c)
+target_link_libraries(aidemo
+  PRIVATE
+    pjlib
+    pjlib-util
+    pjnath
+    pjmedia
+    pjmedia-codec
+    pjmedia-audiodev
+    pjmedia-videodev
+)

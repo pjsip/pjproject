@@ -297,6 +297,8 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_DSHOW
 # pjmedia
 
 add_library(pjmedia
+  src/pjmedia/ai_port.c
+  src/pjmedia/ai_port_openai.c
   src/pjmedia/alaw_ulaw.c
   src/pjmedia/alaw_ulaw_table.c
   src/pjmedia/avi_player.c
@@ -381,6 +383,7 @@ target_sources(pjmedia
       include
     FILES
       include/pjmedia.h
+      include/pjmedia/ai_port.h
       include/pjmedia/alaw_ulaw.h
       include/pjmedia/audiodev.h
       include/pjmedia/av_sync.h
