@@ -138,6 +138,7 @@ EXPORTS
 	pjmedia_silence_det_set_fixed            @ 137 NONAME
 	pjmedia_silence_det_set_name             @ 138 NONAME
 	pjmedia_silence_det_set_params           @ 139 NONAME
+	pjmedia_silence_det_set_params2          @ 193 NONAME
 	pjmedia_snd_port_connect                 @ 140 NONAME
 	pjmedia_snd_port_create                  @ 141 NONAME
 	pjmedia_snd_port_create_player           @ 142 NONAME

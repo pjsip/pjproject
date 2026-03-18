@@ -135,37 +135,38 @@ static pj_status_t rec_cb(void *user_data, pjmedia_frame *frame)
             app.sil_run++;
             /* Print first 3 silence frames, then compress */
             if (app.sil_run <= 3) {
-                printf("[%3u.%03u] lvl=%5d SIL",
-                       ms / 1000, ms % 1000, (int)level);
-                if (is_transition && app.frame_count > 1)
-                    printf(" << SILENCE");
-                printf("\n");
+                char line[120];
+                int len;
+
+                len = pj_ansi_snprintf(line, sizeof(line),
+                          "[%3u.%03u] lvl=%5d SIL%s\n",
+                          ms / 1000, ms % 1000, (int)level,
+                          (is_transition && app.frame_count > 1) ?
+                          " << SILENCE" : "");
+                if (len > 0)
+                    fwrite(line, 1, len, stdout);
             }
         } else {
-            /* Always print voiced frames */
-            printf("[%3u.%03u] lvl=%5d VOX",
-                   ms / 1000, ms % 1000, (int)level);
+            /* Always print voiced frames with visual bar */
+            char line[120];
+            char bar[53];
+            int bar_len = (int)(level * 50 / 5000);
+            int len, i;
 
-            /* Visual bar (50 cols, scale to 5000) */
-            {
-                int bar_len = (int)(level * 50 / 5000);
-                int i;
+            if (bar_len > 50) bar_len = 50;
+            bar[0] = '|';
+            for (i = 0; i < 50; i++)
+                bar[i + 1] = (i < bar_len) ? '#' : ' ';
+            bar[51] = '|';
+            bar[52] = '\0';
 
-                if (bar_len > 50) bar_len = 50;
-
-                printf(" |");
-                for (i = 0; i < 50; i++) {
-                    if (i < bar_len)
-                        printf("#");
-                    else
-                        printf(" ");
-                }
-                printf("|");
-            }
-
-            if (is_transition && app.frame_count > 1)
-                printf(" << VOICED");
-            printf("\n");
+            len = pj_ansi_snprintf(line, sizeof(line),
+                      "[%3u.%03u] lvl=%5d VOX %s%s\n",
+                      ms / 1000, ms % 1000, (int)level, bar,
+                      (is_transition && app.frame_count > 1) ?
+                      " << VOICED" : "");
+            if (len > 0)
+                fwrite(line, 1, len, stdout);
         }
     }
 
@@ -184,10 +185,12 @@ static void print_usage(void)
     puts("  -p N   Ptime in ms (default: 20)");
     puts("  -t N   Fixed threshold (0 = adaptive, default: 0)");
     puts("  -L N   Log level (default: 3)");
+    puts("  -h     Show this help");
     puts("");
-    puts("Output columns:");
-    puts("  [time] lvl=N STATE |visual bar|");
-    puts("  # = voiced, . = silence, << = state transition");
+    puts("Output format:");
+    puts("  VOX frames: [time] lvl=N VOX |#### visual bar|");
+    puts("  SIL frames: [time] lvl=N SIL  (first 3 shown, rest compressed)");
+    puts("  << marks state transitions");
 }
 
 

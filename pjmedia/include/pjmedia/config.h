@@ -739,12 +739,32 @@
 
 
 /**
- * Suggested or default threshold to be set for fixed silence detection
- * or as starting threshold for adaptive silence detection. The threshold
- * has the range from zero to 0xFFFF.
+ * Default starting threshold for adaptive silence detection, or the
+ * threshold for fixed silence detection. The threshold has the range
+ * from zero to 0xFFFF. Signal levels below this value are considered
+ * silence. Typical speech produces levels of 50-600, while a quiet room
+ * has levels near 0.
+ *
+ * Default: 50
  */
 #ifndef PJMEDIA_SILENCE_DET_THRESHOLD
-#   define PJMEDIA_SILENCE_DET_THRESHOLD        4
+#   define PJMEDIA_SILENCE_DET_THRESHOLD        50
+#endif
+
+
+/**
+ * Minimum adaptive threshold for the silence detector. When adaptive
+ * mode recalculates the threshold based on the noise floor, it will
+ * never drop below this value. This prevents the threshold from
+ * collapsing to 0 in very quiet environments, which would cause any
+ * signal (even electrical noise at level 1) to be classified as speech.
+ *
+ * Set to 0 to disable (not recommended).
+ *
+ * Default: 20
+ */
+#ifndef PJMEDIA_SILENCE_DET_MIN_THRESHOLD
+#   define PJMEDIA_SILENCE_DET_MIN_THRESHOLD    20
 #endif
 
 

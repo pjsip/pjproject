@@ -50,11 +50,8 @@ typedef enum pjmedia_silence_det_mode {
                                             in silence condition, in ms.  */
 #define DEF_BEFORE_SILENCE          400  /* Silence time before really changing
                                             state into SILENCE, in ms.    */
-#define DEF_THRESHOLD               50   /* Default threshold.            */
-#define DEF_MIN_THRESHOLD           20   /* Minimum adaptive threshold.
-                                            Prevents threshold from
-                                            collapsing to 0 in very quiet
-                                            environments.                 */
+#define DEF_THRESHOLD       PJMEDIA_SILENCE_DET_THRESHOLD
+#define DEF_MIN_THRESHOLD   PJMEDIA_SILENCE_DET_MIN_THRESHOLD
 
 /**
  * This enumeration specifies the states of the silence detector.
