@@ -607,7 +607,7 @@ public:
  * real-time AI services (e.g. OpenAI Realtime API) over WebSocket.
  *
  * Basic usage:
- * 1. Create with createPort() specifying the backend type.
+ * 1. Create with createPort() (uses the OpenAI Realtime API backend).
  * 2. Connect to the AI service with connect().
  * 3. Use startTransmit()/stopTransmit() to route audio from/to
  *    other conference bridge ports (e.g. AudioMedia from a call).

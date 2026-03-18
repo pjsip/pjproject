@@ -463,6 +463,13 @@ AudioMediaAiPort::AudioMediaAiPort()
 {
 }
 
+static void ai_wrapper_on_destroy(void *member)
+{
+    pj_pool_t *pool = static_cast<pj_pool_t *>(member);
+    if (pool)
+        pj_pool_release(pool);
+}
+
 AudioMediaAiPort::~AudioMediaAiPort()
 {
     if (aiPort) {
@@ -477,7 +484,6 @@ AudioMediaAiPort::~AudioMediaAiPort()
         }
 
         PJSUA2_CATCH_IGNORE( disconnect() );
-        pj_thread_sleep(200);
     }
 
     PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
@@ -487,10 +493,10 @@ AudioMediaAiPort::~AudioMediaAiPort()
         aiPort = NULL;
     }
 
-    if (pool) {
-        pj_pool_release(pool);
-        pool = NULL;
-    }
+    /* Note: pool is released by ai_wrapper_on_destroy() via
+     * grp_lock destroy handler, not here. This ensures the pool
+     * (which holds the backend struct) outlives the port.
+     */
 }
 
 void AudioMediaAiPort::createPort(const AiMediaPortParam &prm)
@@ -541,6 +547,14 @@ void AudioMediaAiPort::createPort(const AiMediaPortParam &prm)
     }
 
     media_port = pjmedia_ai_port_get_port(aiPort);
+
+    /* Register a grp_lock destroy handler so the wrapper pool (which
+     * holds the backend struct) is released only after the port's
+     * grp_lock ref-count reaches zero and all callbacks have completed.
+     */
+    pj_grp_lock_add_handler(media_port->grp_lock, pool,
+                            pool, &ai_wrapper_on_destroy);
+
     registerMediaPort2(media_port, pool);
 }
 
