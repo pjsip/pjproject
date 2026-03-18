@@ -31,6 +31,8 @@
 #define INCLUDE_STUN_TEST           1
 #define INCLUDE_RESOLVER_TEST       1
 #define INCLUDE_HTTP_CLIENT_TEST    1
+#define INCLUDE_WEBSOCK_TEST        1
+#define INCLUDE_WEBSOCK_ONLINE_TEST 0
 
 extern int xml_test(void);
 extern int json_test(void);
@@ -40,6 +42,7 @@ extern int stun_test();
 extern int test_main(int argc, char *argv[]);
 extern int resolver_test(void);
 extern int http_client_test();
+extern int websock_test(void);
 
 extern void app_perror(const char *title, pj_status_t rc);
 extern pj_pool_factory *mem;

@@ -66,6 +66,9 @@
 /* HTTP */
 #include <pjlib-util/http_client.h>
 
+/* WebSocket */
+#include <pjlib-util/websock.h>
+
 /** CLI **/
 #include <pjlib-util/cli.h>
 #include <pjlib-util/cli_console.h>

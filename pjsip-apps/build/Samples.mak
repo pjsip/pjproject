@@ -16,7 +16,8 @@ SRCDIR := ../src/samples
 OBJDIR := ./output/samples-$(TARGET_NAME)
 BINDIR := ../bin/samples/$(TARGET_NAME)
 
-SAMPLES := auddemo \
+SAMPLES := aidemo \
+	   auddemo \
 	   aviplay \
 	   aectest \
 	   clidemo \
@@ -45,6 +46,7 @@ SAMPLES := auddemo \
 	   streamutil \
 	   strerror \
 	   tonegen \
+	   vaddemo \
 	   vid_codec_test \
 	   vid_streamutil
 

@@ -606,6 +606,8 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\pjmedia\ai_port.c" />
+    <ClCompile Include="..\src\pjmedia\ai_port_openai.c" />
     <ClCompile Include="..\src\pjmedia\alaw_ulaw.c" />
     <ClCompile Include="..\src\pjmedia\alaw_ulaw_table.c" />
     <ClCompile Include="..\src\pjmedia\audiodev.c" />
@@ -764,6 +766,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjmedia.h" />
+    <ClInclude Include="..\include\pjmedia\ai_port.h" />
     <ClInclude Include="..\include\pjmedia\alaw_ulaw.h" />
     <ClInclude Include="..\include\pjmedia\audiodev.h" />
     <ClInclude Include="..\include\pjmedia\avi.h" />

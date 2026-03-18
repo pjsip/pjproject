@@ -108,18 +108,18 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_set_adaptive(pjmedia_silence_det *sd,
  * Set other silence detector parameters.
  *
  * @param sd                The silence detector
- * @param before_silence    Minimum duration of silence (in msec) before 
+ * @param before_silence    Minimum duration of silence (in msec) before
  *                          silence is reported. If -1 is specified, then
  *                          the default value will be used. The default is
  *                          400 msec.
  * @param recalc_time1      The interval (in msec) to recalculate threshold
- *                          in non-silence condition when adaptive silence 
- *                          detection is set. If -1 is specified, then the 
+ *                          in non-silence condition when adaptive silence
+ *                          detection is set. If -1 is specified, then the
  *                          default value will be used. The default is 4000
  *                          (msec).
  * @param recalc_time2      The interval (in msec) to recalculate threshold
  *                          in silence condition when adaptive silence detection
- *                          is set. If -1 is specified, then the default value 
+ *                          is set. If -1 is specified, then the default value
  *                          will be used. The default value is 2000 (msec).
  *
  * @return                  PJ_SUCCESS on success.
@@ -128,6 +128,72 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_set_params( pjmedia_silence_det *sd,
                                                      int before_silence,
                                                      int recalc_time1,
                                                      int recalc_time2);
+
+
+/**
+ * Parameters for #pjmedia_silence_det_set_params2(). Use
+ * #pjmedia_silence_det_param_default() to initialize with default values,
+ * then override specific fields as needed.
+ */
+typedef struct pjmedia_silence_det_param
+{
+    /**
+     * Minimum duration of silence (in msec) before silence is reported.
+     * Specify -1 for default (400 ms).
+     */
+    int     before_silence;
+
+    /**
+     * The interval (in msec) to recalculate threshold in non-silence
+     * (voiced) condition. Specify -1 for default (4000 ms).
+     */
+    int     recalc_on_voiced;
+
+    /**
+     * The interval (in msec) to recalculate threshold in silence condition.
+     * Specify -1 for default (2000 ms).
+     */
+    int     recalc_on_silence;
+
+    /**
+     * Minimum threshold for adaptive mode. The adaptive threshold will
+     * never drop below this value, preventing false voice detection in
+     * very quiet environments. Specify -1 for default (20). Set to 0
+     * to disable.
+     */
+    int     min_threshold;
+
+} pjmedia_silence_det_param;
+
+
+/**
+ * Initialize silence detector parameters with default values.
+ *
+ * @param p     The parameter structure to initialize.
+ */
+PJ_INLINE(void) pjmedia_silence_det_param_default(
+                                        pjmedia_silence_det_param *p)
+{
+    p->before_silence = -1;
+    p->recalc_on_voiced = -1;
+    p->recalc_on_silence = -1;
+    p->min_threshold = -1;
+}
+
+
+/**
+ * Set silence detector parameters using a parameter structure. This is an
+ * extended version of #pjmedia_silence_det_set_params() that supports
+ * additional settings such as minimum adaptive threshold.
+ *
+ * @param sd    The silence detector.
+ * @param p     The parameter structure.
+ *
+ * @return      PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_silence_det_set_params2(
+                                        pjmedia_silence_det *sd,
+                                        const pjmedia_silence_det_param *p);
 
 
 /**

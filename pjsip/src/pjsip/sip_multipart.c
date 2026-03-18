@@ -835,7 +835,7 @@ PJ_DEF(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
 
         /* Eat the boundary */
         curptr += delim.slen;
-        if (*curptr=='-' && curptr<endptr-1 && *(curptr+1)=='-') {
+        if (curptr+1 < endptr && *curptr=='-' && *(curptr+1)=='-') {
             /* Found the closing delimiter */
             curptr += 2;
             break;
@@ -843,8 +843,12 @@ PJ_DEF(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
         /* Optional whitespace after delimiter */
         while (curptr!=endptr && IS_SPACE(*curptr)) ++curptr;
         /* Mandatory CRLF */
+        if (curptr == endptr) {
+            PJ_LOG(2, (THIS_FILE, "Unexpected end of buffer after boundary"));
+            return NULL;
+        }
         if (*curptr=='\r') ++curptr;
-        if (*curptr!='\n') {
+        if (curptr == endptr || *curptr!='\n') {
             /* Expecting a newline here */
             PJ_LOG(2, (THIS_FILE, "Failed to find newline"));
 

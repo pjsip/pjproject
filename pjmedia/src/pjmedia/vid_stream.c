@@ -279,11 +279,10 @@ static void send_mgr_on_destroy(void *arg)
 static pj_status_t attach_send_manager(send_stream *ss, send_manager *mgr)
 {
     pj_status_t status = PJ_SUCCESS;
+    pj_pool_t *pool = NULL;
 
     /* Initialize manager if not yet */
     if (!mgr->pool) {
-        pj_pool_t *pool;
-
         /* Create pool */
         pool = pj_pool_create(ss->pool->factory, "stream_send_mgr",
                               1024, 1024, NULL);
@@ -300,13 +299,17 @@ static pj_status_t attach_send_manager(send_stream *ss, send_manager *mgr)
                                               &mgr->grp_lock);
         if (status != PJ_SUCCESS)
             goto on_return;
+    }
 
-        /* Create thread */
+    /* Add ref counter */
+    status = pj_grp_lock_add_ref(mgr->grp_lock);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    /* Create thread if manager was initialized */
+    if (pool)
         status = pj_thread_create(pool, "send_mgr", &send_worker_thread, mgr,
                                   0, 0, &mgr->thread);
-        if (status != PJ_SUCCESS)
-            goto on_return;
-    }
 
 on_return:
     if (status != PJ_SUCCESS) {
@@ -318,9 +321,7 @@ on_return:
     }
 
     ss->mgr = mgr;
-
-    /* Add ref counter */
-    return pj_grp_lock_add_ref(mgr->grp_lock);
+    return PJ_SUCCESS;
 }
 
 /* Detach send manager from stream.
