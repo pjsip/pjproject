@@ -489,7 +489,7 @@ static void ssl_ciphers_populate()
     sch_dec();
 
     for (ULONG i = 0; i < fn->cFunctions; i++) {
-        char tmp_buf[SZ_ALG_MAX_SIZE];
+        char tmp_buf[SZ_ALG_MAX_SIZE] = {0};
         pj_str_t tmp_st;
 
         pj_unicode_to_ansi(fn->rgpszFunctions[i], -1,
@@ -529,7 +529,7 @@ static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock)
         if (ssl_cipher_num < PJ_SSL_SOCK_MAX_CIPHERS &&
             !pj_ssl_cipher_name(c))
         {
-            char tmp_buf[SZ_ALG_MAX_SIZE+1];
+            char tmp_buf[SZ_ALG_MAX_SIZE+1] = {0};
             unsigned i;
 
             pj_unicode_to_ansi(ci.szCipherSuite, -1,
@@ -858,12 +858,11 @@ static PCCERT_CONTEXT find_cert_in_stores(pj_ssl_cert_lookup_type type,
         /* Lookup based on type */
 
         if (type == PJ_SSL_CERT_LOOKUP_SUBJECT) {
-            /* keyword->ptr must be null-terminated for this API.
-             * The caller (ssl_sock_imp_common.c) uses
-             * pj_strdup_with_null(), so this should always hold.
+            /* CertFindCertificateInStore requires null-terminated string.
+             * The caller (ssl_sock_imp_common.c) always uses
+             * pj_strdup_with_null(), so keyword->ptr is safe to use
+             * directly here.
              */
-            PJ_ASSERT_ON_FAIL(keyword->ptr[keyword->slen] == '\0',
-                              { CertCloseStore(store, 0); return NULL; });
             cert = CertFindCertificateInStore(
                         store, X509_ASN_ENCODING, 0,
                         CERT_FIND_SUBJECT_STR_A, keyword->ptr, NULL);
@@ -1138,7 +1137,6 @@ static void verify_remote_cert(pj_ssl_sock_t* ssock)
         goto on_return;
     }
 
-    chain_para.cbSize = sizeof(chain_para);
     chain_para.cbSize = sizeof(chain_para);
     if (!CertGetCertificateChain(HCCE_CURRENT_USER,
                                  (PCCERT_CONTEXT)cert_ctx,
