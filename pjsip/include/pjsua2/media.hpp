@@ -556,6 +556,128 @@ private:
     pjmedia_port *port;
 };
 
+
+/**
+ * AI Media Port event data.
+ */
+struct AiMediaEvent
+{
+    /** Event type. */
+    pjmedia_ai_event_type  type;
+
+    /** Status code. PJ_SUCCESS for informational events. */
+    pj_status_t            status;
+
+    /** Text payload (transcript). Only valid for TRANSCRIPT events. */
+    string                 text;
+};
+
+
+/**
+ * AI Media Port creation parameters.
+ */
+struct AiMediaPortParam
+{
+    /**
+     * Enable voice activity detection (VAD) on the TX path.
+     * When enabled, silence frames are not sent to the AI service.
+     *
+     * Default: false
+     */
+    bool                vadEnabled;
+
+    /**
+     * Ptime in milliseconds.
+     *
+     * Default: 20
+     */
+    unsigned            ptimeMsec;
+
+public:
+    /** Default constructor */
+    AiMediaPortParam() : vadEnabled(false), ptimeMsec(20) {}
+};
+
+
+/**
+ * AI Media Port.
+ *
+ * This wraps pjmedia_ai_port as an AudioMedia object that can be
+ * connected to the conference bridge. It bridges audio to/from
+ * real-time AI services (e.g. OpenAI Realtime API) over WebSocket.
+ *
+ * Basic usage:
+ * 1. Create with createPort() specifying the backend type.
+ * 2. Connect to the AI service with connect().
+ * 3. Use startTransmit()/stopTransmit() to route audio from/to
+ *    other conference bridge ports (e.g. AudioMedia from a call).
+ * 4. Disconnect with disconnect() when done.
+ *
+ * Events (connected, transcript, etc.) are delivered via the
+ * virtual onEvent() callback.
+ */
+class AudioMediaAiPort : public AudioMedia
+{
+public:
+    /**
+     * Constructor.
+     */
+    AudioMediaAiPort();
+
+    /**
+     * Destructor. Disconnects from the AI service (if connected) and
+     * unregisters the port from the conference bridge.
+     */
+    virtual ~AudioMediaAiPort();
+
+    /**
+     * Create an AI media port with the OpenAI Realtime API backend and
+     * register it to the conference bridge. The port operates at the
+     * backend's native clock rate (e.g. 24kHz for OpenAI); the
+     * conference bridge handles resampling.
+     *
+     * @param prm       Creation parameters.
+     */
+    void createPort(const AiMediaPortParam &prm = AiMediaPortParam())
+                    PJSUA2_THROW(Error);
+
+    /**
+     * Connect to the AI service asynchronously. The onEvent() callback
+     * will be called with PJMEDIA_AI_EVENT_CONNECTED or
+     * PJMEDIA_AI_EVENT_DISCONNECTED when complete.
+     *
+     * @param url           WebSocket URL (e.g.
+     *                      "wss://api.openai.com/v1/realtime?model=...")
+     * @param authToken     Authentication token (e.g. OpenAI API key).
+     */
+    void connect(const string &url, const string &authToken)
+                 PJSUA2_THROW(Error);
+
+    /**
+     * Disconnect from the AI service gracefully.
+     */
+    void disconnect() PJSUA2_THROW(Error);
+
+    /*
+     * Callbacks
+     */
+
+    /**
+     * Called when an AI event occurs (connected, transcript, etc.).
+     * This may be called from the ioqueue worker thread.
+     *
+     * @param event     The event data.
+     */
+    virtual void onEvent(const AiMediaEvent &event)
+    { PJ_UNUSED_ARG(event); }
+
+private:
+    pj_pool_t          *pool;
+    pjmedia_ai_port    *aiPort;
+    pjmedia_ai_backend *backend;
+};
+
+
 /**
  * This structure contains additional info about AudioMediaPlayer.
  */

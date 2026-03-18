@@ -379,6 +379,15 @@ PJ_DECL(pj_status_t) pjmedia_ai_port_disconnect(pjmedia_ai_port *ai_port);
 PJ_DECL(void*) pjmedia_ai_port_get_user_data(pjmedia_ai_port *ai_port);
 
 /**
+ * Set the user data associated with the AI port.
+ *
+ * @param ai_port   The AI port instance.
+ * @param user_data The user data pointer.
+ */
+PJ_DECL(void) pjmedia_ai_port_set_user_data(pjmedia_ai_port *ai_port,
+                                             void *user_data);
+
+/**
  * Create an OpenAI Realtime API backend.
  *
  * @param pool          Pool for allocations.
