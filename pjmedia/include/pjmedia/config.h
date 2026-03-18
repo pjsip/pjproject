@@ -745,10 +745,10 @@
  * silence. Typical speech produces levels of 50-600, while a quiet room
  * has levels near 0.
  *
- * Default: 50
+ * Default: 20
  */
 #ifndef PJMEDIA_SILENCE_DET_THRESHOLD
-#   define PJMEDIA_SILENCE_DET_THRESHOLD        50
+#   define PJMEDIA_SILENCE_DET_THRESHOLD        20
 #endif
 
 
