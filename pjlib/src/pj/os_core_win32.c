@@ -736,10 +736,13 @@ static pj_status_t create_thread(const char *thread_name,
                                   thread_main, rec,
                                   dwflags, NULL);
 #else
-    rec->idthread = 0;
-    rec->hthread = (HANDLE)_beginthreadex(NULL, (unsigned)stack_size,
-                                          thread_main, rec,
-                                          dwflags, (unsigned*)&rec->idthread);
+    {
+        unsigned tid = 0;
+        rec->hthread = (HANDLE)_beginthreadex(NULL, (unsigned)stack_size,
+                                              thread_main, rec,
+                                              dwflags, &tid);
+        rec->idthread = tid;
+    }
 #endif
 
     if (rec->hthread == NULL)
