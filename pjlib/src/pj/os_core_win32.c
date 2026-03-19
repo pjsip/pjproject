@@ -459,7 +459,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     thread->stk_size = 0xFFFFFFFFUL;
     thread->stk_max_usage = 0;
 #else
-    stack_ptr = '\0';
+    PJ_UNUSED_ARG(stack_ptr);
 #endif
 
     if (cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)
@@ -731,19 +731,15 @@ static pj_status_t create_thread(const char *thread_name,
     rec->proc = proc;
     rec->arg = arg;
 
-#ifdef _MSC_VER
-    rec->idthread = 0;
-    rec->hthread = (HANDLE)_beginthreadex(NULL, (unsigned)stack_size,
-                                          thread_main, rec,
-                                          dwflags, (unsigned*)&rec->idthread);
-#elif defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     rec->hthread = CreateThreadRT(NULL, 0,
                                   thread_main, rec,
                                   dwflags, NULL);
 #else
-    rec->hthread = CreateThread(NULL, stack_size,
-                                thread_main, rec,
-                                dwflags, &rec->idthread);
+    rec->idthread = 0;
+    rec->hthread = (HANDLE)_beginthreadex(NULL, (unsigned)stack_size,
+                                          thread_main, rec,
+                                          dwflags, (unsigned*)&rec->idthread);
 #endif
 
     if (rec->hthread == NULL)
