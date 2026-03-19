@@ -462,6 +462,17 @@ typedef enum pjmedia_vid_stream_rc_method
     PJMEDIA_VID_STREAM_RC_SEND_THREAD = 2
 } pjmedia_vid_stream_rc_method;
 
+typedef enum pjmedia_ai_event_type
+{
+    PJMEDIA_AI_EVENT_CONNECTED,
+    PJMEDIA_AI_EVENT_DISCONNECTED,
+    PJMEDIA_AI_EVENT_TRANSCRIPT,
+    PJMEDIA_AI_EVENT_RESPONSE_START,
+    PJMEDIA_AI_EVENT_RESPONSE_DONE,
+    PJMEDIA_AI_EVENT_SPEECH_STARTED,
+    PJMEDIA_AI_EVENT_SPEECH_STOPPED
+} pjmedia_ai_event_type;
+
 enum pjmedia_file_writer_option
 {
     PJMEDIA_FILE_WRITE_PCM = 0,

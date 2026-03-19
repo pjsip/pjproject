@@ -21,6 +21,7 @@ pjmedia/videodev.h              pjmedia_vid_dev_hwnd_type
 pjmedia/vid_codec.h             pjmedia_vid_packing
 pjmedia/vid_conf.h              pjmedia_vid_conf_op_type
 pjmedia/vid_stream.h            pjmedia_vid_stream_rc_method
+pjmedia/ai_port.h               pjmedia_ai_event_type
 pjmedia/wav_port.h              pjmedia_file_writer_option pjmedia_file_player_option
 
 pjmedia-audiodev/audiodev.h     pjmedia_aud_dev_route pjmedia_aud_dev_cap

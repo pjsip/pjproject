@@ -801,3 +801,10 @@ PJ_DEF(void*) pjmedia_ai_port_get_user_data(pjmedia_ai_port *ai_port)
     PJ_ASSERT_RETURN(ai_port, NULL);
     return ai_port->user_data;
 }
+
+PJ_DEF(void) pjmedia_ai_port_set_user_data(pjmedia_ai_port *ai_port,
+                                            void *user_data)
+{
+    PJ_ASSERT_ON_FAIL(ai_port, return);
+    ai_port->user_data = user_data;
+}
