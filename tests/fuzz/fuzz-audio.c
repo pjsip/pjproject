@@ -53,6 +53,7 @@ static pjmedia_codec *codec_speex = NULL;
 static pjmedia_codec *codec_ilbc = NULL;
 static pjmedia_codec *codec_l16_8k = NULL;
 static pjmedia_codec *codec_l16_16k = NULL;
+static pjmedia_codec *codec_l16_48k = NULL;
 
 /* Codec configurations array */
 static codec_config_t codec_configs[] = {
@@ -64,6 +65,7 @@ static codec_config_t codec_configs[] = {
     {&codec_ilbc,     "iLBC",        38,  480},
     {&codec_l16_8k,   "L16 8kHz",    320, 320},
     {&codec_l16_16k,  "L16 16kHz",   640, 640},
+    {&codec_l16_48k,  "L16 48kHz",   1920, 1920},
 };
 
 #define NUM_CODECS (sizeof(codec_configs) / sizeof(codec_configs[0]))
@@ -77,7 +79,21 @@ static const char* codec_id_strings[] = {
     "speex/8000/1",
     "iLBC/8000/1",
     "L16/8000/1",
-    "L16/16000/1"
+    "L16/16000/1",
+    "L16/48000/1"
+};
+
+/* Clock rates for each codec (must match codec_id_strings order) */
+static const unsigned codec_clock_rates[] = {
+    8000,   /* PCMA */
+    8000,   /* PCMU */
+    16000,  /* G.722 */
+    8000,   /* GSM */
+    8000,   /* Speex */
+    8000,   /* iLBC */
+    8000,   /* L16 8kHz */
+    16000,  /* L16 16kHz */
+    48000   /* L16 48kHz */
 };
 
 /* Helper function to allocate and open a codec */
@@ -94,6 +110,7 @@ static void alloc_codec(const char *id_str, pjmedia_codec **codec_ptr)
     if (status == PJ_SUCCESS && count > 0) {
         status = pjmedia_codec_mgr_get_default_param(codec_mgr, codec_info, &param);
         if (status == PJ_SUCCESS) {
+            param.setting.plc = 1;
             status = pjmedia_codec_mgr_alloc_codec(codec_mgr, codec_info, codec_ptr);
             if (status == PJ_SUCCESS && *codec_ptr) {
                 pjmedia_codec_open(*codec_ptr, &param);
@@ -159,18 +176,35 @@ static int init_codecs(void)
 
 /* Helper function to test codec encode/decode cycle */
 static void test_codec_cycle(pjmedia_codec *codec, const uint8_t *Data, size_t Size,
-                              size_t min_frame_size, size_t pcm_frame_size)
+                              size_t min_frame_size, size_t pcm_frame_size,
+                              unsigned clock_rate)
 {
     pj_status_t status;
     pjmedia_frame input_frame, output_frame;
     pj_int16_t pcm_buffer[4096] = {0};
     pj_uint8_t encoded_buffer[2048];
+    pjmedia_codec_param param;
 
     if (!codec || Size < min_frame_size) return;
 
     /* Initialise pjmedia_frame */
     pj_bzero(&input_frame, sizeof(input_frame));
     pj_bzero(&output_frame, sizeof(output_frame));
+
+    /* Test runtime parameter modification (tests VAD toggling, keep PLC enabled) */
+    if (Size >= min_frame_size + 2) {
+        pj_bzero(&param, sizeof(param));
+        param.info.avg_bps = 128000;
+        param.info.clock_rate = clock_rate;
+        param.info.channel_cnt = 1;
+        param.info.frm_ptime = 20;
+        param.info.pcm_bits_per_sample = 16;
+        param.setting.vad = (Data[min_frame_size] & 0x01) ? 1 : 0;
+        param.setting.plc = 1;
+        if (codec->op->modify) {
+            pjmedia_codec_modify(codec, &param);
+        }
+    }
 
     /* Test decode */
     input_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
@@ -226,12 +260,18 @@ static void test_codec_cycle(pjmedia_codec *codec, const uint8_t *Data, size_t S
         (void)status;
     }
 
-    /* Test PLC if supported */
+    /* Test PLC if function exists */
     if (codec->op->recover) {
         output_frame.buf = pcm_buffer;
         output_frame.size = sizeof(pcm_buffer);
 
-        pjmedia_codec_recover(codec, sizeof(pcm_buffer), &output_frame);
+        /* Wrap in error handling to avoid asserts in codecs with incomplete PLC */
+        status = pjmedia_codec_recover(codec, sizeof(pcm_buffer), &output_frame);
+        if (status == PJ_SUCCESS) {
+            output_frame.buf = pcm_buffer;
+            output_frame.size = sizeof(pcm_buffer);
+            pjmedia_codec_recover(codec, sizeof(pcm_buffer), &output_frame);
+        }
     }
 }
 
@@ -274,7 +314,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
         /* Test this codec with current data chunk */
         test_codec_cycle(codec, current_data, chunk_size,
-                        config->min_frame_size, config->pcm_frame_size);
+                        config->min_frame_size, config->pcm_frame_size,
+                        codec_clock_rates[i]);
 
         /* Advance to next chunk of data */
         consumed = config->min_frame_size;
