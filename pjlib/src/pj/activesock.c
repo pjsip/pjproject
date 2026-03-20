@@ -777,8 +777,12 @@ static void ioqueue_on_write_complete(pj_ioqueue_key_t *key,
      * sent even when 'wholedata' was requested if the OS only sent partial
      * buffer.
      */
-    if (asock->shutdown & SHUT_TX)
+    if (asock->shutdown & SHUT_TX) {
+        if (asock->cb.on_data_sent) {
+            (*asock->cb.on_data_sent)(asock, op_key, bytes_sent);
+        }
         return;
+    }
 
     if (bytes_sent > 0 && op_key->activesock_data) {
         /* whole_data is requested. Make sure we send all the data */
