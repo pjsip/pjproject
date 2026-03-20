@@ -100,23 +100,44 @@ static void fuzz_sdes(const uint8_t *data, size_t size)
 
     if (remote_sdp->media_count > 0) {
         pjmedia_sdp_media *m;
+        pj_uint32_t rem_proto = 0;
 
         m = PJ_POOL_ZALLOC_T(sdp_pool, pjmedia_sdp_media);
         m->desc.media = pj_str("audio");
         m->desc.port = 4000;
         m->desc.port_count = 1;
-        m->desc.transport = pj_str("RTP/AVP");
+
+        /* Match remote transport protocol to properly test SDES negotiation */
+        rem_proto = pjmedia_sdp_transport_get_proto(&remote_sdp->media[0]->desc.transport);
+        if (rem_proto == PJMEDIA_TP_PROTO_RTP_SAVP ||
+            rem_proto == (PJMEDIA_TP_PROTO_RTP_SAVP | PJMEDIA_TP_PROFILE_RTCP_FB))
+        {
+            m->desc.transport = pj_str("RTP/SAVP");
+        } else {
+            m->desc.transport = pj_str("RTP/AVP");
+        }
+
         m->desc.fmt_count = 1;
         m->desc.fmt[0] = pj_str("0");
 
         local_sdp->media[local_sdp->media_count++] = m;
 
+        /* Test as answerer: process remote offer with crypto attributes */
         status = pjmedia_transport_media_create(srtp_tp, sdp_pool, 0,
                                                 remote_sdp, 0);
-        if (status == PJ_SUCCESS)
-            pjmedia_transport_encode_sdp(srtp_tp, sdp_pool,
-                                         local_sdp, remote_sdp, 0);
+        if (status == PJ_SUCCESS) {
+            /* This triggers parse_attr_crypto() for answerer role */
+            status = pjmedia_transport_encode_sdp(srtp_tp, sdp_pool,
+                                                  local_sdp, remote_sdp, 0);
 
+            /* Also test media_start to complete the negotiation */
+            if (status == PJ_SUCCESS) {
+                pjmedia_transport_media_start(srtp_tp, sdp_pool,
+                                              local_sdp, remote_sdp, 0);
+            }
+        }
+
+        /* Test as offerer: generate crypto offer, then process answer */
         status = pjmedia_transport_loop_create(endpt, &loop_tp2);
         if (status != PJ_SUCCESS)
             goto cleanup;
@@ -129,10 +150,21 @@ static void fuzz_sdes(const uint8_t *data, size_t size)
         status = pjmedia_transport_media_create(srtp_tp2, sdp_pool, 0,
                                                 NULL, 0);
         if (status == PJ_SUCCESS) {
-            pjmedia_transport_encode_sdp(srtp_tp2, sdp_pool,
-                                         local_sdp, NULL, 0);
-            pjmedia_transport_media_start(srtp_tp2, sdp_pool,
-                                          local_sdp, remote_sdp, 0);
+            pjmedia_sdp_session *offer_sdp;
+
+            /* Create a local offer */
+            offer_sdp = pjmedia_sdp_session_clone(sdp_pool, local_sdp);
+            if (offer_sdp && offer_sdp->media_count > 0) {
+                offer_sdp->media[0]->desc.transport = pj_str("RTP/SAVP");
+
+                /* Generate offer with crypto (offerer role) */
+                pjmedia_transport_encode_sdp(srtp_tp2, sdp_pool,
+                                             offer_sdp, NULL, 0);
+
+                /* Process remote answer (back to answerer role) */
+                pjmedia_transport_media_start(srtp_tp2, sdp_pool,
+                                              offer_sdp, remote_sdp, 0);
+            }
         }
     }
 
