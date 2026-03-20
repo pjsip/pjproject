@@ -779,7 +779,7 @@ static void ioqueue_on_write_complete(pj_ioqueue_key_t *key,
      */
     if (asock->shutdown & SHUT_TX) {
         if (asock->cb.on_data_sent) {
-            (*asock->cb.on_data_sent)(asock, op_key, -PJ_ESOCKETSTOP);
+            (*asock->cb.on_data_sent)(asock, op_key, bytes_sent);
         }
         return;
     }
