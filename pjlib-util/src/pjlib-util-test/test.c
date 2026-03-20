@@ -52,7 +52,7 @@ static int test_inner(int argc, char *argv[])
     PJ_TEST_SUCCESS(pj_init(), NULL, { return 1; })
     PJ_TEST_SUCCESS(pjlib_util_init(), NULL, { return 2; });
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
-    
+
     if (ut_app_init1(&test_app.ut_app, mem) != PJ_SUCCESS)
         return 1;
 
@@ -96,6 +96,10 @@ static int test_inner(int argc, char *argv[])
     }
 
     ut_app_destroy(&test_app.ut_app);
+
+    pj_caching_pool_destroy(&caching_pool);
+    pj_shutdown();
+
     return 0;
 }
 
