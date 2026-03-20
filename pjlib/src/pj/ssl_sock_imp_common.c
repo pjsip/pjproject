@@ -584,7 +584,9 @@ static pj_status_t flush_circ_buf_output(pj_ssl_sock_t *ssock,
 
     /* Allocate buffer for send data */
     wdata = alloc_send_data(ssock, needed_len);
-    if (wdata == NULL) {
+    if (wdata == NULL && ssock->send_buf_pending.data_len) {
+        return PJ_ENOMEM;
+    } else if (wdata == NULL) {
         /* Oops, the send buffer is full, let's just
          * queue it for sending and return PJ_EPENDING.
          */
