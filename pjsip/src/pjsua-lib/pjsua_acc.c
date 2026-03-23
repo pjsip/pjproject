@@ -4586,6 +4586,7 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
                 continue;
 
             pjsip_regc_release_transport(pjsua_var.acc[i].regc);
+            acc->rfc5626_status = OUTBOUND_UNKNOWN;
 
             if (pjsua_var.acc[i].ip_change_op ==
                                             PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP)
