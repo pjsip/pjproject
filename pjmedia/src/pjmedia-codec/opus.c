@@ -687,7 +687,6 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
     idx = find_fmtp(&attr->setting.enc_fmtp, &STR_MAX_BIT_RATE, PJ_FALSE);
     if (idx >= 0) {
         unsigned rate;
-        auto_bit_rate = PJ_FALSE;
         rate = (unsigned)pj_strtoul(&attr->setting.enc_fmtp.param[idx].val);
         /* Clamp to RFC 7587 range: 6000-510000 bps */
         if (rate < 6000 || rate > 510000) {
@@ -700,6 +699,7 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
             PJ_LOG(5, (THIS_FILE, "Setting encoder bitrate to remote's "
                        "maxaveragebitrate %u", rate));
             attr->info.avg_bps = rate;
+            auto_bit_rate = PJ_FALSE;
         } else {
             PJ_LOG(4, (THIS_FILE, "Ignoring remote's maxaveragebitrate "
                        "%u (>= max_bps %u)", rate, attr->info.max_bps));
