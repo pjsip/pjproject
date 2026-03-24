@@ -109,10 +109,10 @@ static void fuzz_sdes(const uint8_t *data, size_t size)
 
         /* Match remote transport protocol to properly test SDES negotiation */
         rem_proto = pjmedia_sdp_transport_get_proto(&remote_sdp->media[0]->desc.transport);
-        if (rem_proto == PJMEDIA_TP_PROTO_RTP_SAVP ||
-            rem_proto == (PJMEDIA_TP_PROTO_RTP_SAVP | PJMEDIA_TP_PROFILE_RTCP_FB))
-        {
+        if (rem_proto == PJMEDIA_TP_PROTO_RTP_SAVP) {
             m->desc.transport = pj_str("RTP/SAVP");
+        } else if (rem_proto == (PJMEDIA_TP_PROTO_RTP_SAVP | PJMEDIA_TP_PROFILE_RTCP_FB)) {
+            m->desc.transport = pj_str("RTP/SAVPF");
         } else {
             m->desc.transport = pj_str("RTP/AVP");
         }
@@ -158,12 +158,14 @@ static void fuzz_sdes(const uint8_t *data, size_t size)
                 offer_sdp->media[0]->desc.transport = pj_str("RTP/SAVP");
 
                 /* Generate offer with crypto (offerer role) */
-                pjmedia_transport_encode_sdp(srtp_tp2, sdp_pool,
-                                             offer_sdp, NULL, 0);
+                status = pjmedia_transport_encode_sdp(srtp_tp2, sdp_pool,
+                                                      offer_sdp, NULL, 0);
 
-                /* Process remote answer (back to answerer role) */
-                pjmedia_transport_media_start(srtp_tp2, sdp_pool,
-                                              offer_sdp, remote_sdp, 0);
+                if (status == PJ_SUCCESS) {
+                    /* Process remote answer */
+                    pjmedia_transport_media_start(srtp_tp2, sdp_pool,
+                                                  offer_sdp, remote_sdp, 0);
+                }
             }
         }
     }
