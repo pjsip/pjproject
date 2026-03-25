@@ -4586,6 +4586,11 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
                 continue;
 
             pjsip_regc_release_transport(pjsua_var.acc[i].regc);
+
+            /* Reset contact rewrite flag so that re-registration will
+             * generate a new Contact based on the new transport.
+             */
+            acc->contact_rewritten = PJ_FALSE;
             if (acc->rfc5626_status == OUTBOUND_ACTIVE) {
                 acc->rfc5626_status = OUTBOUND_WANTED;
             }
