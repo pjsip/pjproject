@@ -51,14 +51,16 @@ static unsigned parse_candidates(const uint8_t *data, size_t size,
         pj_bzero(cand, sizeof(*cand));
 
         /* Candidate type from fuzzer */
-        cand->type = (pj_ice_cand_type)((data[offset] % 4) + 1);
+        cand->type = (pj_ice_cand_type)(data[offset] % PJ_ICE_CAND_TYPE_MAX);
         cand->comp_id = 1;
         cand->transport_id = 0;
         cand->local_pref = 65535;
 
-        /* Priority from fuzzer (4 bytes) */
-        cand->prio = (data[offset+1] << 24) | (data[offset+2] << 16) |
-                     (data[offset+3] << 8) | data[offset+4];
+        /* Priority from fuzzer (4 bytes) - cast to avoid UB */
+        cand->prio = ((pj_uint32_t)data[offset+1] << 24) |
+                     ((pj_uint32_t)data[offset+2] << 16) |
+                     ((pj_uint32_t)data[offset+3] << 8) |
+                     (pj_uint32_t)data[offset+4];
 
         /* Foundation - simple static string */
         cand->foundation = pj_str("candidate");
@@ -68,7 +70,8 @@ static unsigned parse_candidates(const uint8_t *data, size_t size,
         pj_bzero(addr, sizeof(*addr));
         addr->sin_family = pj_AF_INET();
         pj_memcpy(&addr->sin_addr, data + offset + 5, 4);
-        addr->sin_port = pj_htons((data[offset+9] << 8) | data[offset+10]);
+        addr->sin_port = pj_htons(((pj_uint16_t)data[offset+9] << 8) |
+                                  (pj_uint16_t)data[offset+10]);
 
         /* Base/related address */
         pj_memcpy(&cand->base_addr, &cand->addr, sizeof(cand->addr));
@@ -81,6 +84,8 @@ static unsigned parse_candidates(const uint8_t *data, size_t size,
 
 extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
+    /* Initialize pjlib once */
+    static int pj_initialized = 0;
     pj_caching_pool caching_pool;
     pj_ioqueue_t *ioqueue = NULL;
     pj_timer_heap_t *timer_heap = NULL;
@@ -88,12 +93,11 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     pj_ice_strans *ice_st = NULL;
     pj_pool_t *pool = NULL;
     pj_pool_t *env_pool = NULL;
+    int i;
 
-    if (Size < 50)
+    if (Size < 30)
         return 0;
 
-    /* Initialize pjlib once */
-    static int pj_initialized = 0;
     if (!pj_initialized) {
         pj_init();
         pj_initialized = 1;
@@ -224,7 +228,7 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     }
 
     /* Poll timer heap to drive state machine */
-    for (int i = 0; i < 5; i++) {
+    for (i = 0; i < 5; i++) {
         pj_time_val timeout = {0, 100};
         pj_timer_heap_poll(timer_heap, &timeout);
     }
