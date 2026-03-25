@@ -687,10 +687,23 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
     idx = find_fmtp(&attr->setting.enc_fmtp, &STR_MAX_BIT_RATE, PJ_FALSE);
     if (idx >= 0) {
         unsigned rate;
-        auto_bit_rate = PJ_FALSE;
         rate = (unsigned)pj_strtoul(&attr->setting.enc_fmtp.param[idx].val);
-        if (rate < attr->info.avg_bps)
+        /* Clamp to RFC 7587 range: 6000-510000 bps */
+        if (rate < 6000 || rate > 510000) {
+            PJ_LOG(3, (THIS_FILE, "Clamping maxaveragebitrate %u to "
+                       "valid range [6000, 510000]", rate));
+            if (rate < 6000) rate = 6000;
+            if (rate > 510000) rate = 510000;
+        }
+        if (rate < attr->info.max_bps) {
+            PJ_LOG(5, (THIS_FILE, "Setting encoder bitrate to remote's "
+                       "maxaveragebitrate %u", rate));
             attr->info.avg_bps = rate;
+            auto_bit_rate = PJ_FALSE;
+        } else {
+            PJ_LOG(4, (THIS_FILE, "Ignoring remote's maxaveragebitrate "
+                       "%u (>= max_bps %u)", rate, attr->info.max_bps));
+        }
     }
 
     /* Check plc */
@@ -720,15 +733,6 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
         opus_data->cfg.cbr = cbr > 0? PJ_TRUE: PJ_FALSE;
     }
     
-    /* Check max average bit rate */
-    idx = find_fmtp(&attr->setting.dec_fmtp, &STR_MAX_BIT_RATE, PJ_FALSE);
-    if (idx >= 0) {
-        unsigned rate;
-        rate = (unsigned) pj_strtoul(&attr->setting.dec_fmtp.param[idx].val);
-        if (rate < attr->info.avg_bps)
-            attr->info.avg_bps = rate;
-    }
-
     TRACE_((THIS_FILE, "%s:%d: sample_rate: %u",
             __FUNCTION__, __LINE__, opus_data->cfg.sample_rate));
 
@@ -1257,11 +1261,7 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
 }
 
 #if defined(_MSC_VER)
-#  if 1 /* Change to 0 if Opus lib name is "opus.lib" */
-#    pragma comment(lib, "libopus.a")
-#  else
-#    pragma comment(lib, "opus.lib")
-#  endif
+#   pragma comment(lib, PJMEDIA_CODEC_OPUS_LIB_NAME)
 #endif
 
 #endif /* PJMEDIA_HAS_OPUS_CODEC */

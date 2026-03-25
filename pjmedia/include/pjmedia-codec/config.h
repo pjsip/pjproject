@@ -525,6 +525,15 @@
 #   define PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE          0
 #endif
 
+/**
+ * Opus library name for MSVC \a \#pragma \a comment(lib,...) linking.
+ *
+ * Default: "opus.lib"
+ */
+#ifndef PJMEDIA_CODEC_OPUS_LIB_NAME
+#   define PJMEDIA_CODEC_OPUS_LIB_NAME                  "opus.lib"
+#endif
+
 
 /**
  * OPUS default encoding complexity, which is an integer from

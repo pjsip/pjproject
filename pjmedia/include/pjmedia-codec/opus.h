@@ -68,6 +68,7 @@ PJ_BEGIN_DECL
  * appropriate decoding fmtp attributes.
  *
  * Here is an example of modifying the codec settings:
+ *
  \code
     pjmedia_codec_param param;
     pjmedia_codec_opus_config opus_cfg;
@@ -87,6 +88,23 @@ PJ_BEGIN_DECL
     opus_cfg.bit_rate = 20000;
     ...
     pjmedia_codec_opus_set_default_param(&opus_cfg, &param);
+ \endcode
+ *
+ *
+ * \section opus_windows_linking Windows Linking
+ *
+ * On MSVC, the codec source automatically links to the Opus library using
+ * \a \#pragma \a comment(lib,...). The default library name is \a "opus.lib",
+ * which is the standard convention for MSVC builds of the Opus library.
+ *
+ * If the Opus library has a different name (e.g., when built with MinGW
+ * producing \a "libopus.a"), define #PJMEDIA_CODEC_OPUS_LIB_NAME in
+ * \a config_site.h before enabling the codec:
+ *
+ \code
+    // In config_site.h
+    #define PJMEDIA_CODEC_OPUS_LIB_NAME  "libopus.a"
+    #define PJMEDIA_HAS_OPUS_CODEC       1
  \endcode
  *
  */
