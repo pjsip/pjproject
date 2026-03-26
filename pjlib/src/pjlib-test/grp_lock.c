@@ -419,7 +419,11 @@ static int multi_chain_unchain_test(pj_pool_t *pool)
         pj_atomic_set(state.started, 0);
         state.stopping = PJ_FALSE;
 
-        /* Chain two external locks at different priorities */
+        /* Chain two external locks at different priorities.
+         * Done BEFORE spawning threads to avoid TSAN lock-order-inversion
+         * warnings (chain_lock acquires in insertion order which may
+         * differ from the final list order seen by worker threads).
+         */
         pj_grp_lock_add_ref(state.ext_grp_lock);
         status = pj_grp_lock_chain_lock(state.grp_lock,
                                         (pj_lock_t *)state.ext_grp_lock,
@@ -431,7 +435,9 @@ static int multi_chain_unchain_test(pj_pool_t *pool)
                                         (pj_lock_t *)ext2, -2);
         if (status != PJ_SUCCESS) { rc = -520; break; }
 
-        /* Spawn threads */
+        /* Spawn threads — they will acquire/release the group lock
+         * (including both chained locks) while we unchain one.
+         */
         for (i = 0; i < state.n_threads; ++i) {
             char name[16];
             pj_ansi_snprintf(name, sizeof(name), "mc%d", i);
@@ -461,7 +467,7 @@ static int multi_chain_unchain_test(pj_pool_t *pool)
 
         pj_thread_sleep(1);
 
-        /* Unchain only the first external lock */
+        /* Unchain only the first external lock while threads are active */
         pj_grp_lock_unchain_lock(state.grp_lock,
                                  (pj_lock_t *)state.ext_grp_lock);
         pj_grp_lock_dec_ref(state.ext_grp_lock);
