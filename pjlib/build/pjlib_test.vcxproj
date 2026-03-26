@@ -778,6 +778,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\src\pjlib-test\grp_lock.c" />
     <ClCompile Include="..\src\pjlib-test\mutex.c" />
     <ClCompile Include="..\src\pjlib-test\os.c" />
     <ClCompile Include="..\src\pjlib-test\pool.c" />

@@ -718,6 +718,7 @@ if(BUILD_TESTING)
     src/pjlib-test/ioq_tcp.c
     src/pjlib-test/ioq_iocp_unreg_test.c
     src/pjlib-test/list.c
+    src/pjlib-test/grp_lock.c
     src/pjlib-test/mutex.c
     src/pjlib-test/os.c
     src/pjlib-test/pool.c
