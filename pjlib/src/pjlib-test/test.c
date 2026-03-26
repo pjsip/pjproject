@@ -270,6 +270,10 @@ static int features_tests(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, atomic_test, 0);
 #endif
 
+#if INCLUDE_GRP_LOCK_TEST
+    UT_ADD_TEST(&test_app.ut_app, grp_lock_test, 0);
+#endif
+
 #if INCLUDE_TIMER_TEST
     UT_ADD_TEST(&test_app.ut_app, timer_test, 0);
 #endif

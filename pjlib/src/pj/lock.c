@@ -208,6 +208,7 @@ typedef struct grp_lock_item
     PJ_DECL_LIST_MEMBER(struct grp_lock_item);
     int          prio;
     pj_lock_t   *lock;
+    pj_bool_t    unchained;
 
 } grp_lock_item;
 
@@ -295,6 +296,17 @@ static pj_status_t grp_lock_acquire(LOCK_OBJ *p)
     lck = glock->lock_list.next;
     while (lck != &glock->lock_list) {
         pj_lock_acquire(lck->lock);
+
+        /* Check if this item was removed from the list while we were
+         * blocked on pj_lock_acquire (i.e. by pj_grp_lock_unchain_lock
+         * on another thread). If so, release the lock we just acquired
+         * and skip to the next item (which was preserved by
+         * pj_grp_lock_unchain_lock).
+         */
+        if (lck->unchained) {
+            pj_lock_release(lck->lock);
+        }
+
         lck = lck->next;
     }
     grp_lock_set_owner_thread(glock);
@@ -313,12 +325,23 @@ static pj_status_t grp_lock_tryacquire(LOCK_OBJ *p)
     while (lck != &glock->lock_list) {
         pj_status_t status = pj_lock_tryacquire(lck->lock);
         if (status != PJ_SUCCESS) {
+            /* Rollback: release locks acquired so far (backward).
+             * Skip unchained items — they were already released by
+             * pj_grp_lock_unchain_lock().
+             */
             lck = lck->prev;
             while (lck != &glock->lock_list) {
-                pj_lock_release(lck->lock);
+                if (!lck->unchained)
+                    pj_lock_release(lck->lock);
                 lck = lck->prev;
             }
             return status;
+        }
+        /* If this item was unchained while we were iterating, release
+         * the lock we just acquired.
+         */
+        if (lck->unchained) {
+            pj_lock_release(lck->lock);
         }
         lck = lck->next;
     }
@@ -704,9 +727,26 @@ PJ_DEF(pj_status_t) pj_grp_lock_unchain_lock( pj_grp_lock_t *glock,
     }
 
     if (lck != &glock->lock_list) {
+        grp_lock_item *next = lck->next;
+        grp_lock_item *prev = lck->prev;
         int i;
 
         pj_list_erase(lck);
+
+        /* Restore lck->next and lck->prev so that any thread currently
+         * iterating the lock_list (in grp_lock_acquire forward via
+         * lck->next, or grp_lock_release/tryacquire-rollback backward
+         * via lck->prev) at this node can still advance correctly after
+         * unblocking. Without this, pj_list_erase's pj_list_init()
+         * would set both pointers to self, causing an infinite loop.
+         *
+         * Mark the item as unchained so grp_lock_acquire/tryacquire can
+         * detect it and release the extra lock acquisition.
+         */
+        lck->next = next;
+        lck->prev = prev;
+        lck->unchained = PJ_TRUE;
+
         for (i=0; i<glock->owner_cnt; ++i)
             pj_lock_release(lck->lock);
     }

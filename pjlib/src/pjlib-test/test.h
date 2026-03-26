@@ -78,6 +78,7 @@
 #define INCLUDE_UNITTEST_TEST       GROUP_DATA_STRUCTURE
 #define INCLUDE_ATOMIC_TEST         GROUP_OS
 #define INCLUDE_MUTEX_TEST          (PJ_HAS_THREADS && GROUP_OS)
+#define INCLUDE_GRP_LOCK_TEST       (PJ_HAS_THREADS && GROUP_OS)
 #define INCLUDE_SLEEP_TEST          GROUP_OS
 #define INCLUDE_OS_TEST             GROUP_OS
 #define INCLUDE_THREAD_TEST         (PJ_HAS_THREADS && GROUP_OS)
@@ -128,6 +129,7 @@ extern int timer_test(void);
 extern int rbtree_test(void);
 extern int atomic_test(void);
 extern int mutex_test(void);
+extern int grp_lock_test(void);
 extern int sleep_test(void);
 extern int thread_test(void);
 extern int sock_test(void);
@@ -154,7 +156,7 @@ extern int echo_srv_sync(void);
 extern int udp_echo_srv_ioqueue(void);
 extern int echo_srv_common_loop(pj_atomic_t *bytes_counter);
 
-#define UT_MAX_TESTS    24
+#define UT_MAX_TESTS    25
 #include "test_util.h"
 
 /* Global vars */
