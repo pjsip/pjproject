@@ -47,6 +47,10 @@
 
 #define PyInt_AsLong( x )                  PyLong_AsLong( x )
 
+#else /* PY_MAJOR_VERSION <= 2 */
+
+#define INIT_RETURN
+
 #endif // PY_MAJOR_VERSION > 2
 
 #endif // __PY_PYTHON_3_COMPAT__
