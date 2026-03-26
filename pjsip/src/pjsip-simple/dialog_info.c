@@ -50,7 +50,10 @@ static void xml_init_node(pj_pool_t *pool, pj_xml_node *node,
 {
     pj_list_init(&node->attr_head);
     pj_list_init(&node->node_head);
-    node->name = *name;
+    
+    if (name) node->name = *name;
+    else node->name.ptr=NULL, node->name.slen=0;
+    
     if (value) pj_strdup(pool, &node->content, value);
     else node->content.ptr=NULL, node->content.slen=0;
 }
@@ -68,12 +71,12 @@ static pj_xml_attr* xml_create_attr(pj_pool_t *pool, pj_str_t *name,
 PJ_DEF(void) pjsip_dlg_info_remote_construct(pj_pool_t *pool,
                                              pjsip_dlg_info_remote *remote)
 {
-    pj_xml_node *node;
+    //pj_xml_node *node;
 
     xml_init_node(pool, remote, &REMOTE, NULL);
-    node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
-    xml_init_node(pool, node, NULL, NULL);
-    pj_xml_add_node(remote, node);
+    //node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
+    //xml_init_node(pool, node, NULL, NULL);
+    //pj_xml_add_node(remote, node);
 }
 
 PJ_DEF(const pj_str_t *)
@@ -176,12 +179,12 @@ pjsip_dlg_info_remote_set_target_uri(pj_pool_t *pool,
 PJ_DEF(void) pjsip_dlg_info_local_construct(pj_pool_t *pool,
                                             pjsip_dlg_info_local *local)
 {
-    pj_xml_node *node;
+    //pj_xml_node *node;
 
     xml_init_node(pool, local, &LOCAL, NULL);
-    node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
-    xml_init_node(pool, node, NULL, NULL);
-    pj_xml_add_node(local, node);
+    //node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
+    //xml_init_node(pool, node, &EMPTY_STRING, &EMPTY_STRING);
+    //pj_xml_add_node(local, node);
 }
 
 PJ_DEF(const pj_str_t *)
@@ -290,8 +293,12 @@ pjsip_dlg_info_dialog_construct(pj_pool_t *pool,
     pjsip_dlg_info_remote *remote;
 
     xml_init_node(pool, dialog, &DIALOG, NULL);
-    attr = xml_create_attr(pool, &ID, id);
-    pj_xml_add_attr(dialog, attr);
+
+    if (id) {
+        attr = xml_create_attr(pool, &ID, id);
+        pj_xml_add_attr(dialog, attr);
+    }
+
     local = PJ_POOL_ALLOC_T(pool, pjsip_dlg_info_local);
     pjsip_dlg_info_local_construct(pool, local);
     pj_xml_add_node(dialog, local);
@@ -516,20 +523,23 @@ pjsip_dlg_info_dialog_info_construct(pj_pool_t *pool,
 {
     pj_xml_attr *attr;
     pjsip_dlg_info_dialog *dialog;
+    pj_xml_node* node;
 
     xml_init_node(pool, dialog_info, &DIALOG_INFO, NULL);
     attr = xml_create_attr(pool, &VERSION, version);
-    pj_xml_add_attr(dialog_info, attr);
-
-    attr = xml_create_attr(pool, &STATE, state);
     pj_xml_add_attr(dialog_info, attr);
 
     attr = xml_create_attr(pool, &ENTITY, entity);
     pj_xml_add_attr(dialog_info, attr);
 
     dialog = PJ_POOL_ALLOC_T(pool, pjsip_dlg_info_dialog);
-    pjsip_dlg_info_local_construct(pool, dialog);
+    pjsip_dlg_info_dialog_construct(pool, dialog, NULL);
     pj_xml_add_node(dialog_info, dialog);
+
+    node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
+    xml_init_node(pool, node, &STATE, state);
+    pj_xml_add_node(dialog, node);
+
 }
 
 PJ_DEF(const pj_str_t *)
