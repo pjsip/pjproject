@@ -297,16 +297,26 @@ static int run_race_test(race_test_state *state,
         /* Brief pause to let threads get into acquire/release loops */
         pj_thread_sleep(1);
 
-        /* Unchain while threads are running — this is the race target */
+        /* Unchain while threads are running — this is the race target.
+         * Defer dec_ref until after threads are joined, because a worker
+         * that acquired grp_lock before the unchain still holds
+         * ext_grp_lock. Its grp_lock_release will call
+         * grp_lock_release(ext_grp_lock) which does dec_ref. If our
+         * dec_ref here brings the count to 1, the worker's dec_ref
+         * would destroy ext_grp_lock while other workers may still
+         * try to acquire it (via the erased node's stale lock pointer).
+         */
         pj_grp_lock_unchain_lock(state->grp_lock,
                                  (pj_lock_t *)state->ext_grp_lock);
-        pj_grp_lock_dec_ref(state->ext_grp_lock);
 
         /* Wait for all threads to finish */
         for (i = 0; i < state->n_threads; ++i) {
             pj_thread_join(threads[i]);
             pj_thread_destroy(threads[i]);
         }
+
+        /* Now safe to dec_ref — no thread can access ext_grp_lock */
+        pj_grp_lock_dec_ref(state->ext_grp_lock);
 
         /* Verify: group lock should be acquirable (not stuck) */
         pj_grp_lock_acquire(state->grp_lock);
@@ -470,12 +480,13 @@ static int multi_chain_unchain_test(pj_pool_t *pool)
         /* Unchain only the first external lock while threads are active */
         pj_grp_lock_unchain_lock(state.grp_lock,
                                  (pj_lock_t *)state.ext_grp_lock);
-        pj_grp_lock_dec_ref(state.ext_grp_lock);
 
         for (i = 0; i < state.n_threads; ++i) {
             pj_thread_join(threads[i]);
             pj_thread_destroy(threads[i]);
         }
+
+        pj_grp_lock_dec_ref(state.ext_grp_lock);
 
         /* Verify all locks are in clean state */
         pj_grp_lock_acquire(state.grp_lock);
