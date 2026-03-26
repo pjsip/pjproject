@@ -95,11 +95,9 @@ typedef struct race_test_state
     pj_pool_t       *pool;
     pj_grp_lock_t   *grp_lock;      /* The group lock under test */
     pj_grp_lock_t   *ext_grp_lock;  /* External lock to chain/unchain */
-    pj_mutex_t      *ext_mutex;      /* Protects ext_grp_lock access */
 
     pj_sem_t        *start_sem;      /* Fired to start all threads */
     pj_atomic_t     *started;        /* Count of threads that started */
-    pj_atomic_t     *errors;         /* Error counter */
 
     int              n_threads;      /* Number of worker threads */
     int              n_iterations;   /* Iterations per thread */
@@ -126,29 +124,19 @@ static void race_state_init(race_test_state *state, pj_pool_t *pool,
     pj_assert(status == PJ_SUCCESS);
     pj_grp_lock_add_ref(state->ext_grp_lock);
 
-    status = pj_mutex_create_simple(pool, "extmtx", &state->ext_mutex);
-    pj_assert(status == PJ_SUCCESS);
-
     status = pj_sem_create(pool, "race", 0, n_threads + 1, &state->start_sem);
     pj_assert(status == PJ_SUCCESS);
 
     status = pj_atomic_create(pool, 0, &state->started);
     pj_assert(status == PJ_SUCCESS);
-
-    status = pj_atomic_create(pool, 0, &state->errors);
-    pj_assert(status == PJ_SUCCESS);
 }
 
 static void race_state_destroy(race_test_state *state)
 {
-    if (state->errors)
-        pj_atomic_destroy(state->errors);
     if (state->started)
         pj_atomic_destroy(state->started);
     if (state->start_sem)
         pj_sem_destroy(state->start_sem);
-    if (state->ext_mutex)
-        pj_mutex_destroy(state->ext_mutex);
     if (state->ext_grp_lock)
         pj_grp_lock_dec_ref(state->ext_grp_lock);
     if (state->grp_lock)
@@ -247,7 +235,6 @@ static int run_race_test(race_test_state *state,
                          const char *test_name)
 {
     int round;
-    int err_count;
 
     PJ_LOG(3,(THIS_FILE, "...%s (%d rounds, %d threads, %d iterations)",
               test_name, state->n_rounds, state->n_threads,
@@ -256,7 +243,7 @@ static int run_race_test(race_test_state *state,
     for (round = 0; round < state->n_rounds; ++round) {
         pj_thread_t *threads[MAX_RACE_THREADS];
         pj_status_t status;
-        int i;
+        int i, n_created = 0;
 
         pj_assert(state->n_threads <= MAX_RACE_THREADS);
 
@@ -270,6 +257,7 @@ static int run_race_test(race_test_state *state,
                                         (pj_lock_t *)state->ext_grp_lock,
                                         0);
         if (status != PJ_SUCCESS) {
+            pj_grp_lock_dec_ref(state->ext_grp_lock);
             PJ_LOG(1,(THIS_FILE, "chain_lock failed, round %d", round));
             return -200;
         }
@@ -283,12 +271,17 @@ static int run_race_test(race_test_state *state,
                                       0, 0, &threads[i]);
             if (status != PJ_SUCCESS) {
                 PJ_LOG(1,(THIS_FILE, "thread_create failed"));
+                n_created = i;
                 state->stopping = PJ_TRUE;
-                /* Wait for any already-started threads */
-                while (i > 0) {
-                    --i;
+                for (i = 0; i < n_created; ++i)
                     pj_sem_post(state->start_sem);
+                for (i = 0; i < n_created; ++i) {
+                    pj_thread_join(threads[i]);
+                    pj_thread_destroy(threads[i]);
                 }
+                pj_grp_lock_unchain_lock(state->grp_lock,
+                                         (pj_lock_t *)state->ext_grp_lock);
+                pj_grp_lock_dec_ref(state->ext_grp_lock);
                 return -210;
             }
         }
@@ -322,13 +315,6 @@ static int run_race_test(race_test_state *state,
         /* Verify: external lock should be acquirable (not stuck) */
         pj_grp_lock_acquire(state->ext_grp_lock);
         pj_grp_lock_release(state->ext_grp_lock);
-    }
-
-    err_count = (int)pj_atomic_get(state->errors);
-    if (err_count > 0) {
-        PJ_LOG(1,(THIS_FILE, "%s: %d errors detected", test_name,
-                  err_count));
-        return -250;
     }
 
     return 0;
@@ -428,27 +414,44 @@ static int multi_chain_unchain_test(pj_pool_t *pool)
 
     for (round = 0; round < 50 && rc == 0; ++round) {
         pj_thread_t *threads[MAX_RACE_THREADS];
-        int i;
+        int i, n_created = 0;
 
         pj_atomic_set(state.started, 0);
         state.stopping = PJ_FALSE;
 
         /* Chain two external locks at different priorities */
         pj_grp_lock_add_ref(state.ext_grp_lock);
-        pj_grp_lock_chain_lock(state.grp_lock,
-                                (pj_lock_t *)state.ext_grp_lock, -1);
+        status = pj_grp_lock_chain_lock(state.grp_lock,
+                                        (pj_lock_t *)state.ext_grp_lock,
+                                        -1);
+        if (status != PJ_SUCCESS) { rc = -510; break; }
+
         pj_grp_lock_add_ref(ext2);
-        pj_grp_lock_chain_lock(state.grp_lock,
-                                (pj_lock_t *)ext2, -2);
+        status = pj_grp_lock_chain_lock(state.grp_lock,
+                                        (pj_lock_t *)ext2, -2);
+        if (status != PJ_SUCCESS) { rc = -520; break; }
 
         /* Spawn threads */
         for (i = 0; i < state.n_threads; ++i) {
             char name[16];
             pj_ansi_snprintf(name, sizeof(name), "mc%d", i);
-            pj_thread_create(state.pool, name,
-                             &mixed_worker, &state,
-                             0, 0, &threads[i]);
+            status = pj_thread_create(state.pool, name,
+                                      &mixed_worker, &state,
+                                      0, 0, &threads[i]);
+            if (status != PJ_SUCCESS) {
+                n_created = i;
+                state.stopping = PJ_TRUE;
+                for (i = 0; i < n_created; ++i)
+                    pj_sem_post(state.start_sem);
+                for (i = 0; i < n_created; ++i) {
+                    pj_thread_join(threads[i]);
+                    pj_thread_destroy(threads[i]);
+                }
+                rc = -530;
+                break;
+            }
         }
+        if (rc != 0) break;
 
         while (pj_atomic_get(state.started) < state.n_threads)
             pj_thread_sleep(1);
