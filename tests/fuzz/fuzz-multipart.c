@@ -24,6 +24,9 @@
 #include <pjsip.h>
 #include <pjsip/sip_multipart.h>
 
+#define kMinInputLength 10
+#define kMaxInputLength 4096
+
 pj_pool_factory *mem;
 pjsip_endpoint *endpt;
 static pj_caching_pool caching_pool;
@@ -39,6 +42,8 @@ int multipart_parse(uint8_t *data, size_t size) {
     size_t msg_size;
 
     pool = pjsip_endpt_create_pool(endpt, "multipart", 4096, 1024);
+    if (!pool)
+        return 0;
 
     /* SIP message template with multipart body */
     const char *sip_header = 
@@ -141,21 +146,28 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     uint8_t *data;
     static pj_bool_t initialized = PJ_FALSE;
 
+    if (Size < kMinInputLength || Size > kMaxInputLength)
+        return 0;
+
     data = (uint8_t *)calloc((Size+1), sizeof(uint8_t));
+    if (data == NULL)
+        return 0;
     memcpy((void *)data, (void *)Data, Size);
 
     /* Initialise PJLIB once */
     if (!initialized) {
-        pj_status_t status;
-
-        pj_init();
-        pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
         pj_log_set_level(0);
+
+        if (pj_init() != PJ_SUCCESS) {
+            free(data);
+            return 0;
+        }
+
+        pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
         mem = &caching_pool.factory;
 
         /* Create SIP endpoint */
-        status = pjsip_endpt_create(&caching_pool.factory, "fuzz", &endpt);
-        if (status != PJ_SUCCESS) {
+        if (pjsip_endpt_create(&caching_pool.factory, "fuzz", &endpt) != PJ_SUCCESS || !endpt) {
             free(data);
             return 0;
         }
