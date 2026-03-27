@@ -87,3 +87,14 @@ race:*
 #   #2 job_thread ../src/pjmedia-videodev/sdl_dev.c
 deadlock:libdbus
 #=============================================================================
+
+#=============================================================================
+# Lock-order-inversion in pj_grp_lock_chain_lock
+#
+# pj_grp_lock_chain_lock() acquires locks in insertion order (own_lock first,
+# then the external lock), while pj_grp_lock_acquire() acquires them in list
+# order. TSan sees these as inconsistent lock orderings, but this is safe
+# because chain_lock is always called while the caller already holds the
+# group lock — no actual deadlock can occur.
+deadlock:pj_grp_lock_chain_lock
+#=============================================================================
