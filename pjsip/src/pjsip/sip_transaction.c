@@ -1227,12 +1227,30 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
     return PJ_SUCCESS;
 }
 
-/* Really destroy transaction, when grp_lock reference is zero */
+/* Really destroy transaction, when grp_lock reference is zero.
+ * This is called from grp_lock_destroy() after all chained locks
+ * have been released but before own_lock and pool are freed.
+ */
 static void tsx_on_destroy( void *arg )
 {
     pjsip_transaction *tsx = (pjsip_transaction*)arg;
 
     PJ_LOG(5,(tsx->obj_name, "Transaction destroyed!"));
+
+    /* Dec ref the chained lock (e.g., dialog lock) if it was set.
+     * The dialog lock is intentionally left chained — grp_lock_destroy()
+     * has already released it (along with all other chained locks) before
+     * calling this callback. We only need to drop the reference that was
+     * added when the lock was chained.
+     *
+     * Not unchaining avoids the race where pj_grp_lock_unchain_lock()
+     * erases a node from the lock_list while another thread is blocked
+     * mid-traversal inside grp_lock_acquire/release.
+     */
+    if (tsx->chained_lock) {
+        pj_grp_lock_dec_ref(tsx->chained_lock);
+        tsx->chained_lock = NULL;
+    }
 
     pj_mutex_destroy(tsx->mutex_b);
     pjsip_endpt_release_pool(tsx->endpt, tsx->pool);
@@ -1248,17 +1266,20 @@ static pj_status_t tsx_shutdown( pjsip_transaction *tsx )
      * we haven't been called before */
     if (!tsx->terminating) {
         pjsip_tpselector_dec_ref(&tsx->tp_sel);
-        
-        /* Unchain and dec ref the chained lock (e.g., dialog lock) if it was set.
-         * This must be done before the group lock is destroyed.
-         * The chained_lock is stored when pj_grp_lock_chain_lock() is called
-         * in sip_dialog.c to prevent lock-order-inversion.
+
+        /* Note: the chained lock (e.g., dialog lock) is intentionally
+         * left chained. It will be released by grp_lock_destroy() when
+         * the tsx's ref count reaches zero, then tsx_on_destroy() will
+         * dec_ref it. Not unchaining avoids the race where
+         * pj_grp_lock_unchain_lock() erases a lock_list node while
+         * another thread is blocked mid-traversal inside
+         * grp_lock_acquire/release.
+         *
+         * The only side effect is that between tsx_shutdown and
+         * grp_lock_destroy, any straggler acquiring tsx->grp_lock
+         * (e.g., a pending transport callback) will also briefly
+         * acquire the dialog lock. This is harmless.
          */
-        if (tsx->chained_lock) {
-            pj_grp_lock_unchain_lock(tsx->grp_lock, (pj_lock_t *)tsx->chained_lock);
-            pj_grp_lock_dec_ref(tsx->chained_lock);
-            tsx->chained_lock = NULL;
-        }
     }
 
     /* Free last transmitted message. */
