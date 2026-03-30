@@ -89,6 +89,9 @@ tests/fuzz/*.o
 */docs/latex/
 */docs/*.tag
 
+# CMake stuff
+__cmake_systeminformation/
+
 # Coverity scan stuff
 cov-int/
 getversion.mak
