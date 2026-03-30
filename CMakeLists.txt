@@ -1,7 +1,25 @@
 cmake_minimum_required(VERSION 3.28...4.0)
 
+# Read version from version.mak
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.mak" _version_lines)
+foreach(_line IN LISTS _version_lines)
+  if(_line MATCHES "^export PJ_VERSION_MAJOR[ \t]*:=[ \t]*([0-9]+)")
+    set(_pj_ver_major "${CMAKE_MATCH_1}")
+  elseif(_line MATCHES "^export PJ_VERSION_MINOR[ \t]*:=[ \t]*([0-9]+)")
+    set(_pj_ver_minor "${CMAKE_MATCH_1}")
+  elseif(_line MATCHES "^export PJ_VERSION_REV[ \t]*:=[ \t]*([0-9]+)")
+    set(_pj_ver_rev "${CMAKE_MATCH_1}")
+  endif()
+endforeach()
+# CMake VERSION field only accepts numeric components
+if(_pj_ver_rev)
+  set(_pj_cmake_version "${_pj_ver_major}.${_pj_ver_minor}.${_pj_ver_rev}")
+else()
+  set(_pj_cmake_version "${_pj_ver_major}.${_pj_ver_minor}")
+endif()
+
 project(pjproject
-  VERSION 2.15
+  VERSION ${_pj_cmake_version}
   DESCRIPTION "Multimedia communication library"
   HOMEPAGE_URL "http://www.pjsip.org"
   LANGUAGES C CXX
