@@ -4017,6 +4017,8 @@ static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
                                             &tdata);
 
     } else {
+        inv->cancelling = PJ_TRUE;
+
         /* Always answer CANCEL will 200 (OK) regardless of
          * the state of the INVITE transaction.
          */
