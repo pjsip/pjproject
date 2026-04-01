@@ -604,6 +604,7 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
     {
         pj_status_t status;
 
+        pj_bzero(strm->cap_thread_desc, sizeof(pj_thread_desc));
         status = pj_thread_register("ds_cap", strm->cap_thread_desc, 
                                     &strm->cap_thread);
         if (status != PJ_SUCCESS)
