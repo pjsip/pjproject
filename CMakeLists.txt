@@ -210,8 +210,23 @@ configure_file(
   @ONLY
 )
 
-# install Find modules needed by system dependencies
+# Install custom Find modules needed by enabled dependencies.
+# CMake built-in modules (Threads, OpenSSL, GnuTLS, ALSA, OpenGL, SDL2)
+# do not need to be installed.
 set(_pj_find_modules)
+
+# Helper: append a Find module if the feature is enabled and the file exists
+macro(_pj_collect_find_module _condition _package)
+  if(${_condition})
+    set(_fm "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Find${_package}.cmake")
+    if(EXISTS "${_fm}")
+      list(APPEND _pj_find_modules "${_fm}")
+    endif()
+    unset(_fm)
+  endif()
+endmacro()
+
+# System third-party deps (bundled deps use Pj::Dep:: aliases instead)
 set(_pj_pkg_G7221    "G7221")
 set(_pj_pkg_GSM      "GSM")
 set(_pj_pkg_Resample "Resample")
@@ -220,12 +235,30 @@ set(_pj_pkg_SRTP     "SRTP")
 set(_pj_pkg_YUV      "YUV")
 foreach(_dep IN LISTS PJ_SYSTEM_DEPS)
   if(DEFINED _pj_pkg_${_dep})
-    set(_find_module "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Find${_pj_pkg_${_dep}}.cmake")
-    if(EXISTS "${_find_module}")
-      list(APPEND _pj_find_modules "${_find_module}")
-    endif()
+    _pj_collect_find_module(TRUE ${_pj_pkg_${_dep}})
   endif()
 endforeach()
+
+# Platform libs and optional features with custom Find modules
+_pj_collect_find_module(PJLIB_WITH_LIBUUID               UUID)
+_pj_collect_find_module(PJNATH_WITH_UPNP                 UPNP)
+_pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_COREAUDIO   CoreAudio)
+_pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_V4L2        V4L2)
+if(PJMEDIA_WITH_RESAMPLE STREQUAL "libsamplerate")
+  _pj_collect_find_module(TRUE SampleRate)
+endif()
+_pj_collect_find_module(PJMEDIA_WITH_SPEEX_AEC            SpeexDSP)
+_pj_collect_find_module(PJMEDIA_WITH_FFMPEG               FFMPEG)
+_pj_collect_find_module(PJMEDIA_WITH_OPENCORE_AMRNB_CODEC OpenCoreAMRNB)
+_pj_collect_find_module(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OpenCoreAMRWB)
+_pj_collect_find_module(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC VisualOnAMRWBEnc)
+_pj_collect_find_module(PJMEDIA_WITH_SILK_CODEC           Silk)
+_pj_collect_find_module(PJMEDIA_WITH_OPUS_CODEC           OPUS)
+_pj_collect_find_module(PJMEDIA_WITH_BCG729_CODEC         BCG729)
+_pj_collect_find_module(PJMEDIA_WITH_LYRA_CODEC           Lyra)
+_pj_collect_find_module(PJMEDIA_WITH_VPX_CODEC            VPX)
+_pj_collect_find_module(PJMEDIA_WITH_OPEN_H264_CODEC      OpenH264)
+
 if(_pj_find_modules)
   list(REMOVE_DUPLICATES _pj_find_modules)
   install(FILES ${_pj_find_modules}

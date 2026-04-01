@@ -2,17 +2,101 @@
 
 include(CMakeFindDependencyMacro)
 
+# Add our Find modules to the search path for dependencies below
+set(_pj_saved_module_path "${CMAKE_MODULE_PATH}")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
+
 find_dependency(Threads)
 
+# SSL/TLS backend (mutually exclusive)
 set(_pj_ssl_backend "@PJLIB_WITH_SSL@")
 if(_pj_ssl_backend STREQUAL "openssl")
-  find_dependency(OpenSSL)
+  find_package(OpenSSL COMPONENTS Crypto SSL MODULE QUIET)
+  if(NOT OpenSSL_FOUND AND NOT OPENSSL_FOUND)
+    find_dependency(OpenSSL COMPONENTS Crypto SSL)
+  endif()
 elseif(_pj_ssl_backend STREQUAL "gnutls")
   find_dependency(GnuTLS)
 elseif(_pj_ssl_backend STREQUAL "mbedtls")
   find_dependency(MbedTLS CONFIG)
 endif()
 unset(_pj_ssl_backend)
+
+# pjlib platform deps
+if(@PJLIB_WITH_LIBUUID@)
+  find_dependency(UUID)
+endif()
+
+# pjnath deps
+if(@PJNATH_WITH_UPNP@)
+  find_dependency(UPNP)
+endif()
+
+# Audio device backends
+if(@PJMEDIA_WITH_AUDIODEV_COREAUDIO@)
+  find_dependency(CoreAudio)
+endif()
+if(@PJMEDIA_WITH_AUDIODEV_ALSA@)
+  find_dependency(ALSA)
+endif()
+
+# Video device backends
+if(@PJMEDIA_WITH_VIDEODEV_OPENGL@)
+  find_dependency(OpenGL)
+endif()
+if(@PJMEDIA_WITH_VIDEODEV_SDL@)
+  find_dependency(SDL2)
+endif()
+if(@PJMEDIA_WITH_VIDEODEV_V4L2@)
+  find_dependency(V4L2)
+endif()
+
+# AEC backends
+if(@PJMEDIA_WITH_SPEEX_AEC@)
+  find_dependency(SpeexDSP)
+endif()
+
+# Resampling backend
+set(_pj_resample "@PJMEDIA_WITH_RESAMPLE@")
+if(_pj_resample STREQUAL "libsamplerate")
+  find_dependency(SampleRate)
+endif()
+unset(_pj_resample)
+
+# FFMPEG
+if(@PJMEDIA_WITH_FFMPEG@)
+  find_dependency(FFMPEG)
+endif()
+
+# Audio/video codecs
+if(@PJMEDIA_WITH_OPENCORE_AMRNB_CODEC@)
+  find_dependency(OpenCoreAMRNB)
+endif()
+if(@PJMEDIA_WITH_OPENCORE_AMRWB_CODEC@)
+  find_dependency(OpenCoreAMRWB)
+  find_dependency(VisualOnAMRWBEnc)
+endif()
+if(@PJMEDIA_WITH_SILK_CODEC@)
+  find_dependency(Silk)
+endif()
+if(@PJMEDIA_WITH_OPUS_CODEC@)
+  find_dependency(OPUS)
+endif()
+if(@PJMEDIA_WITH_BCG729_CODEC@)
+  find_dependency(BCG729)
+endif()
+if(@PJMEDIA_WITH_LYRA_CODEC@)
+  find_dependency(Lyra)
+endif()
+if(@PJMEDIA_WITH_VPX_CODEC@)
+  find_dependency(VPX)
+endif()
+if(@PJMEDIA_WITH_OPEN_H264_CODEC@)
+  find_dependency(OpenH264)
+endif()
+
+set(CMAKE_MODULE_PATH "${_pj_saved_module_path}")
+unset(_pj_saved_module_path)
 
 # Load exported targets
 include("${CMAKE_CURRENT_LIST_DIR}/@PJ_CMAKE_TARGETS_FILE@")
