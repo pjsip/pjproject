@@ -154,7 +154,7 @@ include(CMakePackageConfigHelpers)
 set(PJ_CMAKE_INSTALL_DIR         "${CMAKE_INSTALL_LIBDIR}/cmake/Pj")
 set(PJ_CMAKE_TARGETS_FILE        "PjTargets.cmake")
 set(PJ_CMAKE_CONFIG_FILE         "PjConfig.cmake")
-set(PJ_CMAKE_CONFIG_VERSION_FILE "jConfigVersion.cmake")
+set(PJ_CMAKE_CONFIG_VERSION_FILE "PjConfigVersion.cmake")
 
 # install exports
 install(
@@ -180,9 +180,64 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
+# collect third-party dependency provider info for PjDeps.cmake
+set(PJ_BUNDLED_DEPS "")
+set(PJ_SYSTEM_DEPS "")
+
+set(_pj_all_deps G7221 GSM iLBC Resample Speex SRTP YUV)
+if(NOT (APPLE OR MINGW OR CYGWIN))
+  list(APPEND _pj_all_deps WebRTC WebRTC_AEC3)
+endif()
+
+foreach(_dep IN LISTS _pj_all_deps)
+  string(TOUPPER "PJ_DEP_${_dep}" _dep_option)
+  if(DEFINED ${_dep_option})
+    if(${_dep_option} STREQUAL "bundled")
+      list(APPEND PJ_BUNDLED_DEPS "${_dep}")
+    elseif(${_dep_option} STREQUAL "system")
+      list(APPEND PJ_SYSTEM_DEPS "${_dep}")
+    endif()
+  endif()
+endforeach()
+unset(_pj_all_deps)
+
+list(JOIN PJ_BUNDLED_DEPS ";" PJ_BUNDLED_DEPS_STR)
+list(JOIN PJ_SYSTEM_DEPS ";" PJ_SYSTEM_DEPS_STR)
+
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/PjDeps.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/PjDeps.cmake"
+  @ONLY
+)
+
+# install Find modules needed by system dependencies
+set(_pj_find_modules)
+set(_pj_pkg_G7221    "G7221")
+set(_pj_pkg_GSM      "GSM")
+set(_pj_pkg_Resample "Resample")
+set(_pj_pkg_Speex    "Speex")
+set(_pj_pkg_SRTP     "SRTP")
+set(_pj_pkg_YUV      "YUV")
+foreach(_dep IN LISTS PJ_SYSTEM_DEPS)
+  if(DEFINED _pj_pkg_${_dep})
+    set(_find_module "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Find${_pj_pkg_${_dep}}.cmake")
+    if(EXISTS "${_find_module}")
+      list(APPEND _pj_find_modules "${_find_module}")
+    endif()
+  endif()
+endforeach()
+if(_pj_find_modules)
+  list(REMOVE_DUPLICATES _pj_find_modules)
+  install(FILES ${_pj_find_modules}
+    DESTINATION "${PJ_CMAKE_INSTALL_DIR}"
+    COMPONENT PjDevelopment
+  )
+endif()
+
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/${PJ_CMAKE_CONFIG_FILE}"
   "${CMAKE_CURRENT_BINARY_DIR}/${PJ_CMAKE_CONFIG_VERSION_FILE}"
+  "${CMAKE_CURRENT_BINARY_DIR}/PjDeps.cmake"
 
   DESTINATION "${PJ_CMAKE_INSTALL_DIR}"
   COMPONENT PjDevelopment

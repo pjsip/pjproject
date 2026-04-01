@@ -564,3 +564,12 @@ jobs:
       run: |
         file build/pjsip-apps/pjsua
         ldd build/pjsip-apps/pjsua
+    - name: install
+      run: cmake --install build --prefix ${{ runner.temp }}/pj-install
+    - name: test find_package
+      run: |
+        cmake -B build-consumer tests/cmake \
+          -DCMAKE_PREFIX_PATH=${{ runner.temp }}/pj-install \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        cmake --build build-consumer --verbose
+        ./build-consumer/test_consumer
