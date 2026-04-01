@@ -434,6 +434,150 @@ on_return:
     return ret;
 }
 
+/*
+ * Test that send callbacks are invoked even after activesock is closed.
+ * This verifies the fix for #4864/#4878 where pending write callbacks
+ * were silently dropped, leaking tdata references in upper layers.
+ */
+struct close_test_state
+{
+    int cb_count;
+};
+
+static pj_bool_t close_test_on_data_sent(pj_activesock_t *asock,
+                                         pj_ioqueue_op_key_t *op_key,
+                                         pj_ssize_t sent)
+{
+    struct close_test_state *st;
+
+    PJ_UNUSED_ARG(op_key);
+    PJ_UNUSED_ARG(sent);
+
+    st = (struct close_test_state*)pj_activesock_get_user_data(asock);
+    if (st)
+        st->cb_count++;
+
+    return PJ_TRUE;
+}
+
+static int activesock_close_send_cb_test(void)
+{
+    enum { COUNT = 100 };
+    pj_pool_t *pool = NULL;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_sock_t sock1 = PJ_INVALID_SOCKET, sock2 = PJ_INVALID_SOCKET;
+    pj_activesock_t *asock1 = NULL, *asock2 = NULL;
+    pj_activesock_cb cb;
+    struct close_test_state state;
+    struct send_key op_keys[COUNT];
+    pj_time_val delay = {0, 100};
+    int pending_count = 0;
+    unsigned i;
+    int ret = 0;
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "..activesock close with pending send CB test"));
+
+    pool = pj_pool_create(mem, "close_send_cb", 256, 256, NULL);
+    PJ_TEST_NOT_NULL(pool, NULL, return -500);
+
+    PJ_TEST_SUCCESS(app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0,
+                                   &sock1, &sock2),
+                    NULL, ERR(-510));
+    PJ_TEST_SUCCESS(pj_ioqueue_create(pool, 4, &ioqueue),
+                    NULL, ERR(-520));
+
+    pj_bzero(&cb, sizeof(cb));
+    cb.on_data_sent = &close_test_on_data_sent;
+
+    pj_bzero(&state, sizeof(state));
+    PJ_TEST_SUCCESS(pj_activesock_create(pool, sock2, pj_SOCK_STREAM(),
+                                         NULL, ioqueue, &cb, &state,
+                                         &asock2),
+                    NULL, ERR(-530));
+
+    /* Create asock1 just to keep sock1 alive (peer side) */
+    PJ_TEST_SUCCESS(pj_activesock_create(pool, sock1, pj_SOCK_STREAM(),
+                                         NULL, ioqueue, &cb, NULL, &asock1),
+                    NULL, ERR(-535));
+
+    /* Shrink send buffer so fast-track fails quickly, forcing sends
+     * through the async ioqueue path.
+     */
+    {
+        int sndbuf = 1024;
+        pj_sock_setsockopt(sock2, pj_SOL_SOCKET(), pj_SO_SNDBUF(),
+                           &sndbuf, sizeof(sndbuf));
+    }
+
+    /* Send multiple packets without polling, they should queue up */
+    for (i = 0; i < COUNT; ++i) {
+        struct tcp_pkt pkt;
+        pj_ssize_t len;
+
+        pkt.signature = SIGNATURE;
+        pkt.seq = i;
+        pj_memset(pkt.fill, 'a', sizeof(pkt.fill));
+
+        pj_ioqueue_op_key_init(&op_keys[i].op_key,
+                               sizeof(op_keys[i]));
+
+        len = sizeof(pkt);
+        status = pj_activesock_send(asock2, &op_keys[i].op_key,
+                                    &pkt, &len, 0);
+        if (status == PJ_EPENDING) {
+            pending_count++;
+        } else if (status != PJ_SUCCESS) {
+            break;
+        }
+    }
+
+    /* Close the activesock while sends are pending. The send callbacks
+     * MUST still be invoked so upper layers can free resources.
+     */
+    pj_activesock_close(asock2);
+    asock2 = NULL;
+
+    /* Poll to process any remaining ioqueue events. On IOCP, each
+     * cancelled overlapped op needs a separate poll to dequeue from
+     * the completion port. Poll until all callbacks received or
+     * timeout (~20s worst case, but early-break when done).
+     */
+    for (i = 0; i < 200; ++i) {
+        pj_ioqueue_poll(ioqueue, &delay);
+        if (state.cb_count >= pending_count && pending_count > 0)
+            break;
+    }
+
+    PJ_LOG(3, (THIS_FILE, "...pending=%d, callbacks=%d",
+               pending_count, state.cb_count));
+
+    if (pending_count == 0) {
+        /* All sends completed synchronously (fast-track succeeded).
+         * The async drain path is not exercised in this run. To force
+         * async path, set PJ_IOQUEUE_FAST_TRACK=0 in config_site.h.
+         */
+        PJ_LOG(3, (THIS_FILE, "...async path not exercised, skipping"));
+    } else {
+        /* All pending sends must have received a callback */
+        PJ_TEST_GTE(state.cb_count, pending_count,
+                    "not all pending send callbacks were invoked",
+                    ERR(-540));
+    }
+
+on_return:
+    if (asock2)
+        pj_activesock_close(asock2);
+    if (asock1)
+        pj_activesock_close(asock1);
+    if (ioqueue)
+        pj_ioqueue_destroy(ioqueue);
+    if (pool)
+        pj_pool_release(pool);
+
+    return ret;
+}
+
 int activesock_test(void)
 {
     int rc;
@@ -441,6 +585,9 @@ int activesock_test(void)
         return rc;
 
     if ((rc=activesock_test1()) != 0)
+        return rc;
+
+    if ((rc=activesock_close_send_cb_test()) != 0)
         return rc;
 
     return 0;

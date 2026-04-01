@@ -543,12 +543,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
         key->fd = PJ_INVALID_SOCKET;
     }
 
-    /* Clear callback */
-    key->cb.on_accept_complete = NULL;
-    key->cb.on_connect_complete = NULL;
-    key->cb.on_read_complete = NULL;
-    key->cb.on_write_complete = NULL;
-
     /* Must release ioqueue lock first before decrementing counter, to
      * prevent deadlock.
      */
@@ -558,6 +552,19 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     key->closing = 1;
 
     pj_ioqueue_unlock_key(key);
+
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+    /* Drain pending write callbacks. See #4864, #4878.
+     * Must be done before clearing callbacks below.
+     */
+    ioqueue_drain_pending_writes(key);
+#endif
+
+    /* Clear callback */
+    key->cb.on_accept_complete = NULL;
+    key->cb.on_connect_complete = NULL;
+    key->cb.on_read_complete = NULL;
+    key->cb.on_write_complete = NULL;
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Decrement counter. */

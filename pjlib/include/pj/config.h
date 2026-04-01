@@ -825,6 +825,21 @@
 #   define PJ_IOQUEUE_CALLBACK_NO_LOCK  1
 #endif
 
+/**
+ * Enable the ioqueue "fast track" optimization. When enabled (default),
+ * pj_ioqueue_send(), pj_ioqueue_sendto(), and pj_ioqueue_accept() attempt
+ * the operation immediately before queuing it for async processing.
+ *
+ * This should not be disabled in production. Setting to 0 forces all
+ * operations through the async path, intended only for debugging and
+ * testing the ioqueue completion callback logic. See #4864, #4878.
+ *
+ * Default: 1 (enabled).
+ */
+#ifndef PJ_IOQUEUE_FAST_TRACK
+#   define PJ_IOQUEUE_FAST_TRACK  1
+#endif
+
 
 /**
  * Determine if FD_SETSIZE is changeable/set-able. If so, then we will
