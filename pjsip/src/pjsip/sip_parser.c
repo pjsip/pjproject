@@ -1190,9 +1190,19 @@ parse_headers:
             if (parsing_headers) {
                 /* Use hname_save, not hname: longjmp() may have clobbered
                  * hname if the compiler kept its fields in registers.
+                 * Guard against NULL ptr: pj_scan_get() may have thrown
+                 * before hname_save was populated, leaving ptr as NULL.
+                 * Passing NULL to %.*s is undefined behavior even with
+                 * length 0, so fall back to a static empty string.
                  */
-                err_info->hname.ptr = (char*)hname_save.ptr;
-                err_info->hname.slen = hname_save.slen;
+                if (hname_save.ptr != NULL) {
+                    err_info->hname.ptr = (char*)hname_save.ptr;
+                    err_info->hname.slen = hname_save.slen;
+                } else {
+                    static const char empty[] = "";
+                    err_info->hname.ptr = (char*)empty;
+                    err_info->hname.slen = 0;
+                }
             } else if (msg && msg->type == PJSIP_REQUEST_MSG)
                 err_info->hname = pj_str("Request Line");
             else if (msg && msg->type == PJSIP_RESPONSE_MSG)
