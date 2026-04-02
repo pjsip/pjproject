@@ -19,7 +19,7 @@ export PJNATH_LIB:=libpjnath-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export PJNATH_SONAME := libpjnath.$(SHLIB_SUFFIX)
-export PJNATH_SHLIB := $(PJNATH_SONAME).$(PJ_VERSION_MAJOR)
+export PJNATH_SHLIB := $(PJNATH_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################
