@@ -154,7 +154,7 @@ include(CMakePackageConfigHelpers)
 set(PJ_CMAKE_INSTALL_DIR         "${CMAKE_INSTALL_LIBDIR}/cmake/Pj")
 set(PJ_CMAKE_TARGETS_FILE        "PjTargets.cmake")
 set(PJ_CMAKE_CONFIG_FILE         "PjConfig.cmake")
-set(PJ_CMAKE_CONFIG_VERSION_FILE "jConfigVersion.cmake")
+set(PJ_CMAKE_CONFIG_VERSION_FILE "PjConfigVersion.cmake")
 
 # install exports
 install(
@@ -180,9 +180,97 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
+# collect third-party dependency provider info for PjDeps.cmake
+set(PJ_BUNDLED_DEPS "")
+set(PJ_SYSTEM_DEPS "")
+
+set(_pj_all_deps G7221 GSM iLBC Resample Speex SRTP YUV)
+if(NOT (APPLE OR MINGW OR CYGWIN))
+  list(APPEND _pj_all_deps WebRTC WebRTC_AEC3)
+endif()
+
+foreach(_dep IN LISTS _pj_all_deps)
+  string(TOUPPER "PJ_DEP_${_dep}" _dep_option)
+  if(DEFINED ${_dep_option})
+    if(${_dep_option} STREQUAL "bundled")
+      list(APPEND PJ_BUNDLED_DEPS "${_dep}")
+    elseif(${_dep_option} STREQUAL "system")
+      list(APPEND PJ_SYSTEM_DEPS "${_dep}")
+    endif()
+  endif()
+endforeach()
+unset(_pj_all_deps)
+
+list(JOIN PJ_BUNDLED_DEPS ";" PJ_BUNDLED_DEPS_STR)
+list(JOIN PJ_SYSTEM_DEPS ";" PJ_SYSTEM_DEPS_STR)
+
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Pj/PjDeps.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/PjDeps.cmake"
+  @ONLY
+)
+
+# Install custom Find modules needed by enabled dependencies.
+# CMake built-in modules (Threads, OpenSSL, GnuTLS, ALSA, OpenGL, SDL2)
+# do not need to be installed.
+set(_pj_find_modules)
+
+# Helper: append a Find module if the feature is enabled and the file exists
+macro(_pj_collect_find_module _condition _package)
+  if(${_condition})
+    set(_fm "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Find${_package}.cmake")
+    if(EXISTS "${_fm}")
+      list(APPEND _pj_find_modules "${_fm}")
+    endif()
+    unset(_fm)
+  endif()
+endmacro()
+
+# System third-party deps (bundled deps use Pj::Dep:: aliases instead)
+set(_pj_pkg_G7221    "G7221")
+set(_pj_pkg_GSM      "GSM")
+set(_pj_pkg_Resample "Resample")
+set(_pj_pkg_Speex    "Speex")
+set(_pj_pkg_SRTP     "SRTP")
+set(_pj_pkg_YUV      "YUV")
+foreach(_dep IN LISTS PJ_SYSTEM_DEPS)
+  if(DEFINED _pj_pkg_${_dep})
+    _pj_collect_find_module(TRUE ${_pj_pkg_${_dep}})
+  endif()
+endforeach()
+
+# Platform libs and optional features with custom Find modules
+_pj_collect_find_module(PJLIB_WITH_LIBUUID               UUID)
+_pj_collect_find_module(PJNATH_WITH_UPNP                 UPNP)
+_pj_collect_find_module(PJMEDIA_WITH_AUDIODEV_COREAUDIO   CoreAudio)
+_pj_collect_find_module(PJMEDIA_WITH_VIDEODEV_V4L2        V4L2)
+if(PJMEDIA_WITH_RESAMPLE STREQUAL "libsamplerate")
+  _pj_collect_find_module(TRUE SampleRate)
+endif()
+_pj_collect_find_module(PJMEDIA_WITH_SPEEX_AEC            SpeexDSP)
+_pj_collect_find_module(PJMEDIA_WITH_FFMPEG               FFMPEG)
+_pj_collect_find_module(PJMEDIA_WITH_OPENCORE_AMRNB_CODEC OpenCoreAMRNB)
+_pj_collect_find_module(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC OpenCoreAMRWB)
+_pj_collect_find_module(PJMEDIA_WITH_OPENCORE_AMRWB_CODEC VisualOnAMRWBEnc)
+_pj_collect_find_module(PJMEDIA_WITH_SILK_CODEC           Silk)
+_pj_collect_find_module(PJMEDIA_WITH_OPUS_CODEC           OPUS)
+_pj_collect_find_module(PJMEDIA_WITH_BCG729_CODEC         BCG729)
+_pj_collect_find_module(PJMEDIA_WITH_LYRA_CODEC           Lyra)
+_pj_collect_find_module(PJMEDIA_WITH_VPX_CODEC            VPX)
+_pj_collect_find_module(PJMEDIA_WITH_OPEN_H264_CODEC      OpenH264)
+
+if(_pj_find_modules)
+  list(REMOVE_DUPLICATES _pj_find_modules)
+  install(FILES ${_pj_find_modules}
+    DESTINATION "${PJ_CMAKE_INSTALL_DIR}"
+    COMPONENT PjDevelopment
+  )
+endif()
+
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/${PJ_CMAKE_CONFIG_FILE}"
   "${CMAKE_CURRENT_BINARY_DIR}/${PJ_CMAKE_CONFIG_VERSION_FILE}"
+  "${CMAKE_CURRENT_BINARY_DIR}/PjDeps.cmake"
 
   DESTINATION "${PJ_CMAKE_INSTALL_DIR}"
   COMPONENT PjDevelopment

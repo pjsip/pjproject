@@ -528,11 +528,13 @@ target_sources(pjmedia
 
 target_link_libraries(pjmedia
   PUBLIC
+    # pjlib - PUBLIC to propagate PJ_AUTOCONF and other compile definitions
+    pjlib
     # srtp - PUBLIC to propagate shared library dependency to consumers
     $<$<BOOL:${PJMEDIA_WITH_SRTP}>:Pj::Dep::SRTP>
   PRIVATE
     # project
-    pjlib pjlib-ssl pjlib-util pjnath
+    pjlib-ssl pjlib-util pjnath
 
     # resampling backend
     $<$<STREQUAL:${PJMEDIA_WITH_RESAMPLE},libresample>:Pj::Dep::Resample>
@@ -692,9 +694,11 @@ target_sources(pjmedia-codec
 #
 
 target_link_libraries(pjmedia-codec
+  PUBLIC
+    pjlib
   PRIVATE
     # project
-    pjlib pjlib-util pjmedia
+    pjlib-util pjmedia
 
     # audio codecs
     $<$<BOOL:${PJMEDIA_WITH_GSM_CODEC}>:Pj::Dep::GSM>
@@ -779,9 +783,11 @@ target_compile_definitions(pjmedia-audiodev
 #
 
 target_link_libraries(pjmedia-audiodev
+  PUBLIC
+    pjlib
   PRIVATE
     # project
-    pjlib pjlib-util pjmedia
+    pjlib-util pjmedia
 
     # audio backends
     $<$<BOOL:${PJMEDIA_WITH_AUDIODEV_ALSA}>:ALSA::ALSA>
@@ -861,9 +867,11 @@ endif()
 #
 
 target_link_libraries(pjmedia-videodev
+  PUBLIC
+    pjlib
   PRIVATE
     # project
-    pjlib pjlib-util pjmedia
+    pjlib-util pjmedia
 
     # video backends
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>:OpenGL::GL;OpenGL::GLES2>

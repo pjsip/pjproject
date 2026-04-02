@@ -280,9 +280,9 @@ endif()
 # ssl
 add_library(pjlib-ssl INTERFACE) # a target to expose SSL deps
 if(PJLIB_WITH_SSL STREQUAL "openssl")
-  find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
+  find_package(OpenSSL COMPONENTS Crypto SSL MODULE)
   if(NOT OPENSSL_FOUND)
-    find_package(OpenSSL COMPONENTS Crypto SSL)
+    find_package(OpenSSL COMPONENTS Crypto SSL CONFIG)
   endif()
   if(OPENSSL_FOUND)
     target_link_libraries(pjlib-ssl INTERFACE OpenSSL::Crypto OpenSSL::SSL)
@@ -668,7 +668,7 @@ block(SCOPE_FOR VARIABLES)
     string(TOUPPER "PJ_SSL_SOCK_IMP_${PJLIB_WITH_SSL}" PJ_SSL_SOCK_IMP)
   else()
     set(PJ_HAS_SSL_SOCK 0)
-    set(PJ_HAS_SSL_SOCK_IMP "PJ_SSL_SOCK_IMP_NONE")
+    set(PJ_SSL_SOCK_IMP "PJ_SSL_SOCK_IMP_NONE")
   endif()
 
   # write configured header
