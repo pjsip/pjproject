@@ -10,7 +10,7 @@ export MILENAGE_LIB := libmilenage-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export MILENAGE_SONAME := libmilenage.$(SHLIB_SUFFIX)
-export MILENAGE_SHLIB := $(MILENAGE_SONAME).$(PJ_VERSION_MAJOR)
+export MILENAGE_SHLIB := $(MILENAGE_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################

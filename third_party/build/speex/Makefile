@@ -10,7 +10,7 @@ export SPEEX_LIB := libspeex-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export SPEEX_SONAME := libspeex.$(SHLIB_SUFFIX)
-export SPEEX_SHLIB := $(SPEEX_SONAME).$(PJ_VERSION_MAJOR)
+export SPEEX_SHLIB := $(SPEEX_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################

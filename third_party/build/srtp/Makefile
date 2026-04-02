@@ -11,7 +11,7 @@ export SRTP_LIB := libsrtp-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export SRTP_SONAME := libsrtp.$(SHLIB_SUFFIX)
-export SRTP_SHLIB := $(SRTP_SONAME).$(PJ_VERSION_MAJOR)
+export SRTP_SHLIB := $(SRTP_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################
