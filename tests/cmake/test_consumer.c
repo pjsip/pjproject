@@ -2,14 +2,14 @@
  * Verifies that find_package(Pj) works and all transitive dependencies
  * (including Pj::Dep::* aliases) resolve correctly.
  */
-#include <pjlib.h>
+#include <pjsua-lib/pjsua.h>
 
 int main(void)
 {
     pj_status_t status;
-    status = pj_init();
+    status = pjsua_create();
     if (status != PJ_SUCCESS)
         return 1;
-    pj_shutdown();
+    pjsua_destroy();
     return 0;
 }

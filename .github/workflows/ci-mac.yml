@@ -618,3 +618,4 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
         cmake --build build-consumer --verbose
         ./build-consumer/test_consumer
+        ./build-consumer/test_consumer2

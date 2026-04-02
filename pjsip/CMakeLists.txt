@@ -81,8 +81,9 @@ target_sources(pjsip
 
 # dependencies
 target_link_libraries(pjsip
-  PRIVATE
+  PUBLIC
     pjlib
+  PRIVATE
     pjlib-ssl
     pjlib-util
 )
@@ -151,7 +152,7 @@ target_sources(pjsip-simple
 )
 
 # dependencies
-target_link_libraries(pjsip-simple PRIVATE pjlib pjlib-util pjsip)
+target_link_libraries(pjsip-simple PUBLIC pjlib PRIVATE pjlib-util pjsip)
 
 # ##############################################################################
 # pjsip-ua
@@ -185,8 +186,10 @@ target_sources(pjsip-ua
 
 # dependencies
 target_link_libraries(pjsip-ua
+  PUBLIC
+    pjlib
   PRIVATE
-    pjlib pjlib-util pjmedia pjsip pjsip-simple
+    pjlib-util pjmedia pjsip pjsip-simple
 )
 
 # ##############################################################################
@@ -219,8 +222,9 @@ target_sources(pjsua-lib
 
 # dependencies
 target_link_libraries(pjsua-lib
-  PRIVATE
+  PUBLIC
     pjlib
+  PRIVATE
     pjlib-util
     pjnath
     pjmedia
@@ -271,8 +275,9 @@ target_sources(pjsua2
 
 # dependencies
 target_link_libraries(pjsua2
-  PRIVATE
+  PUBLIC
     pjlib
+  PRIVATE
     pjlib-util
     pjnath
     pjmedia

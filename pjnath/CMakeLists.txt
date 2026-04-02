@@ -57,7 +57,7 @@ target_sources(pjnath
 # ##############################################################################
 # Dependencies
 
-target_link_libraries(pjnath PRIVATE pjlib pjlib-util)
+target_link_libraries(pjnath PUBLIC pjlib PRIVATE pjlib-util)
 
 # upnp
 if(PJNATH_WITH_UPNP)
