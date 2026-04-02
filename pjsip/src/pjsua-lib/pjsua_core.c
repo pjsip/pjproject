@@ -126,6 +126,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
     pjsip_timer_setting_default(&cfg->timer_setting);
     pjsua_srtp_opt_default(&cfg->srtp_opt);
+    cfg->no_refer_sub = PJ_TRUE;
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,

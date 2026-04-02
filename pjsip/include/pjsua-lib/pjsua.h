@@ -2691,6 +2691,15 @@ typedef struct pjsua_config
      */
     pj_str_t         upnp_if_name;
 
+    /**
+     * When non-zero, "norefersub" will be added to the SIP Supported header
+     * per RFC 4488, suppressing the implicit event subscription when sending
+     * REFER.
+     *
+     * Default: PJ_TRUE
+     */
+    pj_bool_t        no_refer_sub;
+
 } pjsua_config;
 
 
