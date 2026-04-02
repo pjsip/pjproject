@@ -2113,6 +2113,122 @@ static int hdr_test(void)
 
 
 /*****************************************************************************/
+/* Test that parsing a complete SIP message with a malformed registered header
+ * value does not crash and always produces a valid (non-NULL) hname pointer
+ * in every error-report entry.
+ *
+ * This directly exercises the longjmp/volatile clobbering fix in
+ * int_parse_msg() (sip_parser.c): before that fix, longjmp() could restore
+ * the CPU registers holding hname.ptr/hname.slen to their setjmp-time
+ * values, yielding a garbage pointer that later caused SIGSEGV when the
+ * error was logged via pj_ansi_snprintf(..., "%.*s", ..., err->hname.ptr).
+ */
+static pj_status_t malformed_hdr_test(void)
+{
+    /* Each test case is a complete SIP message that contains at least one
+     * header whose value is malformed enough to cause the registered handler
+     * to throw a PJ_THROW exception.
+     */
+    static const struct {
+        const char *desc;
+        const char *msg;
+        const char *expected_hname; /* expected hname in first error entry */
+    } cases[] = {
+        {
+            /* Max-Forwards handler calls parse_generic_int_hdr() which calls
+             * pj_scan_get(DIGIT_SPEC,...).  "notanumber" has no digits, so
+             * pj_scan_get() throws immediately.
+             */
+            "Max-Forwards: notanumber",
+            "INVITE sip:bob@biloxi.com SIP/2.0\r\n"
+            "Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds8\r\n"
+            "Max-Forwards: notanumber\r\n"
+            "To: Bob <sip:bob@biloxi.com>\r\n"
+            "From: Alice <sip:alice@atlanta.com>;tag=1928301774\r\n"
+            "Call-ID: malformed-mf@atlanta.com\r\n"
+            "CSeq: 1 INVITE\r\n"
+            "Content-Length: 0\r\n"
+            "\r\n",
+            "Max-Forwards"
+        },
+        {
+            /* Content-Length handler also calls pj_scan_get(DIGIT_SPEC,...).
+             * Same throw path as above but with a different header.
+             */
+            "Content-Length: notanumber",
+            "SIP/2.0 200 OK\r\n"
+            "Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds8\r\n"
+            "To: Bob <sip:bob@biloxi.com>;tag=abc\r\n"
+            "From: Alice <sip:alice@atlanta.com>;tag=1928301774\r\n"
+            "Call-ID: malformed-cl@atlanta.com\r\n"
+            "CSeq: 1 INVITE\r\n"
+            "Content-Length: notanumber\r\n"
+            "\r\n",
+            "Content-Length"
+        },
+    };
+
+    unsigned i;
+
+    PJ_LOG(3,(THIS_FILE, "  testing malformed header error reporting.."));
+
+    for (i = 0; i < PJ_ARRAY_SIZE(cases); ++i) {
+        pj_pool_t *pool;
+        pjsip_parser_err_report err_list;
+        pjsip_parser_err_report *err;
+        pj_size_t len;
+
+        pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
+        pj_list_init(&err_list);
+        len = pj_ansi_strlen(cases[i].msg);
+
+        /* Must not crash (SIGSEGV was the pre-fix symptom). */
+        pjsip_parse_msg(pool, cases[i].msg, len, &err_list);
+
+        /* The malformed header value must have produced at least one
+         * error report entry.
+         */
+        if (pj_list_empty(&err_list)) {
+            PJ_LOG(3,(THIS_FILE,
+                      "    error: no parse error reported for: %s",
+                      cases[i].desc));
+            pjsip_endpt_release_pool(endpt, pool);
+            return -600;
+        }
+
+        /* Every error entry must carry a non-NULL hname.ptr.
+         * Passing NULL to %.*s (as done in sip_transport.c) is
+         * undefined behavior even when the length field is 0.
+         */
+        for (err = err_list.next; err != &err_list; err = err->next) {
+            if (err->hname.ptr == NULL) {
+                PJ_LOG(3,(THIS_FILE,
+                          "    error: err_info->hname.ptr is NULL for: %s",
+                          cases[i].desc));
+                pjsip_endpt_release_pool(endpt, pool);
+                return -610;
+            }
+        }
+
+        /* The first error entry must identify the offending header. */
+        err = err_list.next;
+        if (pj_strcmp2(&err->hname, cases[i].expected_hname) != 0) {
+            PJ_LOG(3,(THIS_FILE,
+                      "    error: wrong hname '%.*s', expected '%s' for: %s",
+                      (int)err->hname.slen, err->hname.ptr,
+                      cases[i].expected_hname, cases[i].desc));
+            pjsip_endpt_release_pool(endpt, pool);
+            return -620;
+        }
+
+        pjsip_endpt_release_pool(endpt, pool);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*****************************************************************************/
 
 int msg_test(void)
 {
@@ -2131,6 +2247,10 @@ int msg_test(void)
         return status;
 
     status = simple_test();
+    if (status != PJ_SUCCESS)
+        return status;
+
+    status = malformed_hdr_test();
     if (status != PJ_SUCCESS)
         return status;
 
