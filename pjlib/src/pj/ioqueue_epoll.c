@@ -667,6 +667,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     pj_ioqueue_unlock_key(key);
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
+    /* Drain pending write callbacks. See #4864, #4878. */
+    ioqueue_drain_pending_writes(key);
+
     /* Decrement counter. */
     decrement_counter(key);
 #else
