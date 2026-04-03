@@ -1352,7 +1352,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 #endif
 
         for (ii=0; ii<pjsua_var.ua_cfg.thread_cnt; ++ii) {
-            char tname[16];
+            char tname[PJ_MAX_OBJ_NAME];
             
             pj_ansi_snprintf(tname, sizeof(tname), "pjsua_%d", ii);
 
