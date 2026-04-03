@@ -1021,10 +1021,15 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 {
     /* These variables require "volatile" so their values get
      * preserved when re-entering the PJ_TRY block after an error.
+     * When longjmp() unwinds the stack, any local non-volatile variable
+     * that was modified between setjmp() and longjmp() has indeterminate
+     * value (C99 7.13.2.1). hname_save captures the header name into
+     * volatile storage before calling the header handler, which may throw.
      */
     volatile pj_bool_t parsing_headers;
     pjsip_msg *volatile msg = NULL;
     pjsip_ctype_hdr *volatile ctype_hdr = NULL;
+    volatile pj_str_t hname_save;
 
     pj_str_t hname;
     pj_scanner *scanner = ctx->scanner;
@@ -1072,9 +1077,21 @@ parse_headers:
              * Ref: PROTOS #2412
              */
             hname.slen = 0;
-            
+            hname_save.ptr = NULL;
+            hname_save.slen = 0;
+
             /* Get hname. */
             pj_scan_get( scanner, &pconst.pjsip_TOKEN_SPEC, &hname);
+
+            /* Save hname into volatile storage immediately after the scan,
+             * before any code that may throw an exception. longjmp() restores
+             * CPU registers, which can clobber the non-volatile hname if the
+             * compiler kept its fields in registers. Volatile variables are
+             * always written to memory, so they survive longjmp() intact.
+             */
+            hname_save.ptr = hname.ptr;
+            hname_save.slen = hname.slen;
+
             if (pj_scan_get_char( scanner ) != ':') {
                 PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
             }
@@ -1170,9 +1187,23 @@ parse_headers:
             err_info->line = scanner->line;
             /* Scanner's column is zero based, so add 1 */
             err_info->col = pj_scan_get_col(scanner) + 1;
-            if (parsing_headers)
-                err_info->hname = hname;
-            else if (msg && msg->type == PJSIP_REQUEST_MSG)
+            if (parsing_headers) {
+                /* Use hname_save, not hname: longjmp() may have clobbered
+                 * hname if the compiler kept its fields in registers.
+                 * Guard against NULL ptr: pj_scan_get() may have thrown
+                 * before hname_save was populated, leaving ptr as NULL.
+                 * Passing NULL to %.*s is undefined behavior even with
+                 * length 0, so fall back to a static empty string.
+                 */
+                if (hname_save.ptr != NULL) {
+                    err_info->hname.ptr = (char*)hname_save.ptr;
+                    err_info->hname.slen = hname_save.slen;
+                } else {
+                    static const char empty[] = "";
+                    err_info->hname.ptr = (char*)empty;
+                    err_info->hname.slen = 0;
+                }
+            } else if (msg && msg->type == PJSIP_REQUEST_MSG)
                 err_info->hname = pj_str("Request Line");
             else if (msg && msg->type == PJSIP_RESPONSE_MSG)
                 err_info->hname = pj_str("Status Line");
