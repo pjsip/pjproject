@@ -403,6 +403,25 @@ PJ_DECL(pj_status_t) pjsip_pres_parse_xpidf2(char *body, unsigned body_len,
                                              pjsip_pres_status *status);
 
 
+/**
+ * This is a utility function to create DIALOG-INFO message body from PJSIP
+ * presence status.
+ *
+ * @param pool          The pool to allocate memory for the message body.
+ * @param status        Presence status to be converted into DIALOG-INFO
+ *                      message body.
+ * @param entity        The entity ID, which normally is equal to the
+ *                      presentity ID publishing this presence info.
+ * @param p_body        Pointer to receive the SIP message body.
+ *
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_pres_create_dialog_info(pj_pool_t* pool,
+                                                   const pjsip_pres_status* status,
+                                                   const pj_str_t* entity,
+                                                   pjsip_msg_body** p_body);
+
+
 
 /**
  * @}
