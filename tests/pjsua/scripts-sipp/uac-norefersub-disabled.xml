@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!-- SIPp acts as UAC and sends OPTIONS to pjsua (UAS).
+     The 200 OK from pjsua must NOT contain "norefersub" in the Supported
+     header when pjsua is started with --no-supported-norefersub (sets
+     pjsua_config.no_refer_sub = PJ_FALSE).                           -->
+
+<scenario name="UAC OPTIONS: verify norefersub absent from Supported header">
+
+  <send retrans="500">
+    <![CDATA[
+
+      OPTIONS sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>
+      Call-ID: [call_id]
+      CSeq: 1 OPTIONS
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200" rtd="true">
+    <action>
+      <!-- Capture whether norefersub appears in the Supported header -->
+      <ereg regexp="norefersub" search_in="hdr" header="Supported:" assign_to="1"/>
+    </action>
+  </recv>
+
+  <!-- If norefersub WAS found (variable 1 is set), stop immediately
+       with a non-zero exit code to fail the test.                     -->
+  <nop next="fail" test="1"/>
+
+  <!-- Success: norefersub was absent as expected -->
+  <pause milliseconds="500"/>
+  <nop next="end"/>
+
+  <label id="fail"/>
+  <nop>
+    <action>
+      <exec int_cmd="stop_now"/>
+    </action>
+  </nop>
+
+  <label id="end"/>
+
+
+  <!-- definition of the response time repartition table (unit is ms)   -->
+  <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
+
+  <!-- definition of the call length repartition table (unit is ms)     -->
+  <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
+
+</scenario>
