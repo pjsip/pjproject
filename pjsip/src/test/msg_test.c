@@ -2183,7 +2183,7 @@ static pj_status_t malformed_hdr_test(void)
         len = pj_ansi_strlen(cases[i].msg);
 
         /* Must not crash (SIGSEGV was the pre-fix symptom). */
-        pjsip_parse_msg(pool, cases[i].msg, len, &err_list);
+        pjsip_parse_msg(pool, (char *)cases[i].msg, len, &err_list);
 
         /* The malformed header value must have produced at least one
          * error report entry.

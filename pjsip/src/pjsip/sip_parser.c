@@ -1522,7 +1522,7 @@ static pjsip_uri *int_parse_uri(pj_scanner *scanner, pj_pool_t *pool,
         } else {
             /* Unsupported URI scheme */
             PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
-            UNREACHED({ return NULL; /* Not reached. */ })
+            return NULL;
         }
 
     /*
