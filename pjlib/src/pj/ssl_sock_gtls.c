@@ -356,15 +356,15 @@ static pj_ssize_t tls_data_push(gnutls_transport_ptr_t ptr,
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)ptr;
     gnutls_sock_t *gssock = (gnutls_sock_t *)ssock;
 
-    pj_lock_acquire(ssock->circ_buf_output_mutex);
-    if (circ_write(&ssock->circ_buf_output, data, len) != PJ_SUCCESS) {
-        pj_lock_release(ssock->circ_buf_output_mutex);
+    pj_lock_acquire(ssock->ssl_write_buf_mutex);
+    if (circ_write(&ssock->ssl_write_buf, data, len) != PJ_SUCCESS) {
+        pj_lock_release(ssock->ssl_write_buf_mutex);
 
         gnutls_transport_set_errno(gssock->session, ENOMEM);
         return -1;
     }
 
-    pj_lock_release(ssock->circ_buf_output_mutex);
+    pj_lock_release(ssock->ssl_write_buf_mutex);
 
     return len;
 }
@@ -378,22 +378,22 @@ static pj_ssize_t tls_data_pull(gnutls_transport_ptr_t ptr,
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)ptr;
     gnutls_sock_t *gssock = (gnutls_sock_t *)ssock;
 
-    pj_lock_acquire(ssock->circ_buf_input_mutex);
+    pj_lock_acquire(ssock->ssl_read_buf_mutex);
 
-    if (circ_empty(&ssock->circ_buf_input)) {
-        pj_lock_release(ssock->circ_buf_input_mutex);
+    if (circ_empty(&ssock->ssl_read_buf)) {
+        pj_lock_release(ssock->ssl_read_buf_mutex);
 
         /* Data buffers not yet filled */
         gnutls_transport_set_errno(gssock->session, EAGAIN);
         return -1;
     }
 
-    pj_size_t circ_buf_size = circ_size(&ssock->circ_buf_input);
+    pj_size_t circ_buf_size = circ_size(&ssock->ssl_read_buf);
     pj_size_t read_size = PJ_MIN(circ_buf_size, len);
 
-    circ_read(&ssock->circ_buf_input, data, read_size);
+    circ_read(&ssock->ssl_read_buf, data, read_size);
 
-    pj_lock_release(ssock->circ_buf_input_mutex);
+    pj_lock_release(ssock->ssl_read_buf_mutex);
 
     return read_size;
 }
@@ -680,12 +680,12 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
                            (gnutls_transport_ptr_t) (uintptr_t) ssock);
 
     /* Initialize input circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_input, 512);
+    status = circ_init(ssock->pool->factory, &ssock->ssl_read_buf, 512);
     if (status != PJ_SUCCESS)
         return status;
 
     /* Initialize output circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_output, 512);
+    status = circ_init(ssock->pool->factory, &ssock->ssl_write_buf, 512);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -849,17 +849,17 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     }
 
     /* Destroy circular buffers */
-    circ_deinit(&ssock->circ_buf_input);
-    circ_deinit(&ssock->circ_buf_output);
+    circ_deinit(&ssock->ssl_read_buf);
+    circ_deinit(&ssock->ssl_write_buf);
 }
 
 
 /* Reset socket state. */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
-    pj_lock_acquire(ssock->circ_buf_output_mutex);
+    pj_lock_acquire(ssock->ssl_write_buf_mutex);
     ssock->ssl_state = SSL_STATE_NULL;
-    pj_lock_release(ssock->circ_buf_output_mutex);
+    pj_lock_release(ssock->ssl_write_buf_mutex);
 
     ssl_close_sockets(ssock);
 
@@ -1157,10 +1157,6 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
     /* Perform SSL handshake */
     ret = gnutls_handshake(gssock->session);
 
-    status = flush_circ_buf_output(ssock, &ssock->handshake_op_key, 0, 0);
-    if (status != PJ_SUCCESS)
-        return status;
-
     if (ret == GNUTLS_E_SUCCESS) {
         /* System are GO */
         ssock->ssl_state = SSL_STATE_ESTABLISHED;
@@ -1210,6 +1206,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
  * Write the plain data to GnuTLS, it will be encrypted by gnutls_record_send()
  * and sent via tls_data_push. Note that re-negotitation may be on progress, so
  * sending data should be delayed until re-negotiation is completed.
+ * Caller must hold ssock->write_mutex.
  */
 static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
                              pj_ssize_t size, int *nwritten)

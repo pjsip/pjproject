@@ -109,7 +109,7 @@ static OSStatus SocketWrite(SSLConnectionRef connection,
     pj_size_t len = *dataLength;
 
     pj_lock_acquire(ssock->write_mutex);
-    if (circ_write(&ssock->circ_buf_output, data, len) != PJ_SUCCESS) {
+    if (circ_write(&ssock->ssl_write_buf, data, len) != PJ_SUCCESS) {
         pj_lock_release(ssock->write_mutex);
         *dataLength = 0;
         return errSSLInternal;
@@ -128,22 +128,22 @@ static OSStatus SocketRead(SSLConnectionRef connection,
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)connection;
     pj_size_t len = *dataLength;
 
-    pj_lock_acquire(ssock->circ_buf_input_mutex);
+    pj_lock_acquire(ssock->ssl_read_buf_mutex);
 
-    if (circ_empty(&ssock->circ_buf_input)) {
-        pj_lock_release(ssock->circ_buf_input_mutex);
+    if (circ_empty(&ssock->ssl_read_buf)) {
+        pj_lock_release(ssock->ssl_read_buf_mutex);
 
         /* Data buffers not yet filled */
         *dataLength = 0;
         return errSSLWouldBlock;
     }
 
-    pj_size_t circ_buf_size = circ_size(&ssock->circ_buf_input);
+    pj_size_t circ_buf_size = circ_size(&ssock->ssl_read_buf);
     pj_size_t read_size = PJ_MIN(circ_buf_size, len);
 
-    circ_read(&ssock->circ_buf_input, data, read_size);
+    circ_read(&ssock->ssl_read_buf, data, read_size);
 
-    pj_lock_release(ssock->circ_buf_input_mutex);
+    pj_lock_release(ssock->ssl_read_buf_mutex);
 
     *dataLength = read_size;
 
@@ -377,12 +377,12 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     pj_status_t status;
 
    /* Initialize input circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_input, 8192);
+    status = circ_init(ssock->pool->factory, &ssock->ssl_read_buf, 8192);
     if (status != PJ_SUCCESS)
         return status;
 
     /* Initialize output circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_output, 8192);
+    status = circ_init(ssock->pool->factory, &ssock->ssl_write_buf, 8192);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -511,17 +511,17 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     }
 
     /* Destroy circular buffers */
-    circ_deinit(&ssock->circ_buf_input);
-    circ_deinit(&ssock->circ_buf_output);
+    circ_deinit(&ssock->ssl_read_buf);
+    circ_deinit(&ssock->ssl_write_buf);
 }
 
 
 /* Reset socket state. */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
-    pj_lock_acquire(ssock->circ_buf_output_mutex);
+    pj_lock_acquire(ssock->ssl_write_buf_mutex);
     ssock->ssl_state = SSL_STATE_NULL;
-    pj_lock_release(ssock->circ_buf_output_mutex);
+    pj_lock_release(ssock->ssl_write_buf_mutex);
 
     ssl_close_sockets(ssock);
 }
@@ -1366,11 +1366,6 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
     }
     pj_lock_release(ssock->write_mutex);
 
-    status = flush_circ_buf_output(ssock, &ssock->handshake_op_key, 0, 0);
-    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-        return status;
-    }
-
     if (ret == noErr) {
         /* Handshake has been completed */
         ssock->ssl_state = SSL_STATE_ESTABLISHED;
@@ -1402,6 +1397,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
 /*
  * Write the plain data to Darwin SSL, it will be encrypted by SSLWrite()
  * and call SocketWrite.
+ * Caller must hold ssock->write_mutex.
  */
 static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
                              pj_ssize_t size, int *nwritten)

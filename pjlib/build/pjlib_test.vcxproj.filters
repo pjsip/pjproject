@@ -93,6 +93,9 @@
     <ClCompile Include="..\src\pjlib-test\ssl_sock.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjlib-test\ssl_sock_stress.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjlib-test\string.c">
       <Filter>Source Files</Filter>
     </ClCompile>

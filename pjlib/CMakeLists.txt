@@ -729,6 +729,7 @@ if(BUILD_TESTING)
     src/pjlib-test/sock.c
     src/pjlib-test/sock_perf.c
     src/pjlib-test/ssl_sock.c
+    src/pjlib-test/ssl_sock_stress.c
     src/pjlib-test/string.c
     src/pjlib-test/test.c
     src/pjlib-test/thread.c

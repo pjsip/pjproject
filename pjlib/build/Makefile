@@ -51,7 +51,7 @@ export TEST_OBJS += activesock.o atomic.o atomic_slist.o \
 		    fifobuf.o file.o hash_test.o ioq_perf.o ioq_udp.o \
 		    ioq_stress_test.o ioq_unreg.o ioq_tcp.o ioq_iocp_unreg_test.o \
 		    list.o mutex.o os.o pool.o pool_perf.o rand.o rbtree.o \
-		    select.o sleep.o sock.o sock_perf.o ssl_sock.o \
+		    select.o sleep.o sock.o sock_perf.o ssl_sock.o ssl_sock_stress.o \
 		    string.o test.o thread.o timer.o timestamp.o \
 		    udp_echo_srv_sync.o udp_echo_srv_ioqueue.o \
 		    unittest_test.o util.o

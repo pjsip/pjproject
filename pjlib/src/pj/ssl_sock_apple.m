@@ -1135,12 +1135,12 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
     pj_status_t status;
 
     /* Initialize input circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_input, 8192);
+    status = circ_init(ssock->pool->factory, &ssock->ssl_read_buf, 8192);
     if (status != PJ_SUCCESS)
         return status;
 
     /* Initialize output circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_output, 8192);
+    status = circ_init(ssock->pool->factory, &ssock->ssl_write_buf, 8192);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -1525,8 +1525,8 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     }
 
     /* Destroy circular buffers */
-    circ_deinit(&ssock->circ_buf_input);
-    circ_deinit(&ssock->circ_buf_output);
+    circ_deinit(&ssock->ssl_read_buf);
+    circ_deinit(&ssock->ssl_write_buf);
     
     PJ_LOG(4, (THIS_FILE, "SSL %p destroyed", ssock));
 }
@@ -1535,9 +1535,9 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 /* Reset socket state. */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
-    pj_lock_acquire(ssock->circ_buf_output_mutex);
+    pj_lock_acquire(ssock->ssl_write_buf_mutex);
     ssock->ssl_state = SSL_STATE_NULL;
-    pj_lock_release(ssock->circ_buf_output_mutex);
+    pj_lock_release(ssock->ssl_write_buf_mutex);
 
 #if SSL_DEBUG
     PJ_LOG(3, (THIS_FILE, "SSL reset sock state %p", ssock));
@@ -2170,20 +2170,20 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
 {
     pj_size_t circ_buf_size, read_size;
 
-    pj_lock_acquire(ssock->circ_buf_input_mutex);
+    pj_lock_acquire(ssock->ssl_read_buf_mutex);
 
-    if (circ_empty(&ssock->circ_buf_input)) {
-        pj_lock_release(ssock->circ_buf_input_mutex);
+    if (circ_empty(&ssock->ssl_read_buf)) {
+        pj_lock_release(ssock->ssl_read_buf_mutex);
         *size = 0;
         return PJ_SUCCESS;
     }
 
-    circ_buf_size = circ_size(&ssock->circ_buf_input);
+    circ_buf_size = circ_size(&ssock->ssl_read_buf);
     read_size = PJ_MIN(circ_buf_size, (pj_size_t)*size);
 
-    circ_read(&ssock->circ_buf_input, data, read_size);
+    circ_read(&ssock->ssl_read_buf, data, read_size);
 
-    pj_lock_release(ssock->circ_buf_input_mutex);
+    pj_lock_release(ssock->ssl_read_buf_mutex);
 
     *size = read_size;
 
@@ -2192,14 +2192,14 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
 
 /*
  * Write the plain data to buffer. It will be encrypted later during
- * sending.
+ * sending. Caller must hold ssock->write_mutex.
  */
 static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
                              pj_ssize_t size, int *nwritten)
 {
     pj_status_t status;
 
-    status = circ_write(&ssock->circ_buf_output, data, size);
+    status = circ_write(&ssock->ssl_write_buf, data, size);
     *nwritten = (status == PJ_SUCCESS)? (int)size: 0;
     
     return status;
