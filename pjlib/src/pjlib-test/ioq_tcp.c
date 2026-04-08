@@ -167,7 +167,7 @@ static int send_recv_test(pj_ioqueue_t *ioque,
     // Starts send on the client side.
     bytes = bufsize;
     status = pj_ioqueue_send(ckey, &write_op, send_buf, &bytes, 0);
-    if (status != PJ_SUCCESS && bytes != PJ_EPENDING) {
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
         return -120;
     }
     if (status == PJ_EPENDING) {
