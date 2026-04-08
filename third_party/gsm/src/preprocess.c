@@ -58,8 +58,7 @@ void Gsm_Preprocess P3((S, s, so),
 
 	/*  4.2.1   Downscaling of the input signal
 	 */
-		// orig: SO = SASR( *s, 3 ) << 2;
-		SO = SASR( *s, 3 ) * 4;
+		SO = SASL(SASR( *s, 3 ), 2);
 		s++;
 
 		assert (SO >= -0x4000);	/* downscaled by     */
@@ -84,15 +83,13 @@ void Gsm_Preprocess P3((S, s, so),
 		/*   Compute the recursive part
 		 */
 		L_s2 = s1;
-		// orig: L_s2 <<= 15;
-		L_s2 *= 32768;
+		L_s2 = SASL(L_s2, 15);
 
 		/*   Execution of a 31 bv 16 bits multiplication
 		 */
 
 		msp = SASR( L_z2, 15 );
-		// orig: lsp = L_z2-((longword)msp<<15);
-		lsp = L_z2-((longword)msp*32768);
+		lsp = L_z2 - SASL((longword)msp, 15); /* gsm_L_sub(L_z2,(msp<<15)); */
 
 		L_s2  += GSM_MULT_R( lsp, 32735 );
 		L_temp = (longword)msp * 32735; /* GSM_L_MULT(msp,32735) >> 1;*/

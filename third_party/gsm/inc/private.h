@@ -59,6 +59,13 @@ struct gsm_state {
 #define	SASR(x, by)	((x) >= 0 ? (x) >> (by) : (~(-((x) + 1) >> (by))))
 #endif	/* SASR */
 
+#ifdef  SASL	 /* flag: it's safe to left-shift negative signed values */
+#undef  SASL
+#define SASL(x, by)	((x) << (by))
+#else
+#define SASL(x, by)	((x) * (1 << (by)))
+#endif
+
 #include "proto.h"
 
 /*
@@ -101,8 +108,7 @@ extern word	gsm_asr  	P((word a, int n));
 	(SASR( ((longword)(a) * (longword)(b)), 15 ))
 
 # define GSM_L_MULT(a, b) /* word a, word b */	\
-	(((longword)(a) * (longword)(b)) * 2)
-	// orig: (((longword)(a) * (longword)(b)) << 1)
+	(SASL(((longword)(a) * (longword)(b)), 1))
 
 # define GSM_L_ADD(a, b)	\
 	( (a) <  0 ? ( (b) >= 0 ? (a) + (b)	\
