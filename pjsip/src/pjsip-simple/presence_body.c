@@ -25,6 +25,7 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/string.h>
+#include <pjsip-simple/dialog_info.h>
 
 
 #define THIS_FILE   "presence_body.c"
@@ -33,7 +34,14 @@
 static const pj_str_t STR_APPLICATION = { "application", 11 };
 static const pj_str_t STR_PIDF_XML =    { "pidf+xml", 8 };
 static const pj_str_t STR_XPIDF_XML =   { "xpidf+xml", 9 };
-
+static const pj_str_t STR_DIALOG_INFO_XML = { "dialog-info+xml", 15 };
+//static pj_str_t STR_TRYING = { "trying", 6 };
+//static pj_str_t STR_PROCEEDING = { "proceeding", 10 };
+//static pj_str_t STR_EARLY = { "early", 5 };
+static pj_str_t STR_CONFIRMED = { "confirmed", 9 };
+static pj_str_t STR_TERMINATED = { "terminated", 10 };
+static pj_str_t STR_VERSION = { "1.0", 3 };
+static pj_str_t STR_EMPTY_STRING = { NULL, 0 };
 
 
 
@@ -293,4 +301,49 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_xpidf2(char *body, unsigned body_len,
     return PJ_SUCCESS;
 }
 
+
+/*
+ * This is a utility function to create DIALOG-INFO message body from PJSIP
+ * presence status (pjsip_pres_status).
+ */
+PJ_DEF(pj_status_t) pjsip_pres_create_dialog_info(pj_pool_t* pool,
+                                                  const pjsip_pres_status* status,
+                                                  const pj_str_t* entity,
+                                                  pjsip_msg_body** p_body)
+{
+    pjsip_dlg_info_dialog* dlginfo;
+    pjsip_msg_body* body;
+
+    pjrpid_element rpid = status->info[0].rpid;
+    pj_bool_t basic_open = status->info[0].basic_open;
+
+    const pj_str_t* state;
+
+    if (basic_open) {
+        if (rpid.activity == PJRPID_ACTIVITY_BUSY) {
+            state = &STR_CONFIRMED;
+        }
+        else {
+            state = &STR_TERMINATED;
+        }
+    }
+    else {
+        //pjsip_dlg_info_dialog_set_state(pool, dlginfo, &STR_TERMINATED);
+        state = &STR_TERMINATED;
+    }
+
+    /* Create DIALOG-INFO document. */
+    dlginfo = pjsip_dlg_info_create(pool, &STR_VERSION, state, entity);
+
+    body = PJ_POOL_ZALLOC_T(pool, pjsip_msg_body);
+    body->data = dlginfo;
+    body->content_type.type = STR_APPLICATION;
+    body->content_type.subtype = STR_DIALOG_INFO_XML;
+    body->print_body = &pres_print_body;
+    body->clone_data = &xml_clone_data;
+
+    *p_body = body;
+
+    return PJ_SUCCESS;
+}
 

@@ -69,6 +69,7 @@ typedef enum content_type_e
     CONTENT_TYPE_NONE,
     CONTENT_TYPE_PIDF,
     CONTENT_TYPE_XPIDF,
+    CONTENT_TYPE_DIALOG_INFO,
 } content_type_e;
 
 /*
@@ -133,11 +134,13 @@ static pjsip_evsub_user pres_user =
  */
 static const pj_str_t STR_EVENT     = { "Event", 5 };
 static const pj_str_t STR_PRESENCE          = { "presence", 8 };
+static const pj_str_t STR_DIALOG            = { "dialog", 6 };
 static const pj_str_t STR_APPLICATION       = { "application", 11 };
 static const pj_str_t STR_PIDF_XML          = { "pidf+xml", 8};
 static const pj_str_t STR_XPIDF_XML         = { "xpidf+xml", 9};
 static const pj_str_t STR_APP_PIDF_XML      = { "application/pidf+xml", 20 };
 static const pj_str_t STR_APP_XPIDF_XML    = { "application/xpidf+xml", 21 };
+static const pj_str_t STR_APP_DIALOG_INFO_XML = { "application/dialog-info+xml", 27 };
 
 
 /*
@@ -273,6 +276,10 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
         return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_REQUEST);
     }
     if (pj_stricmp(&event->event_type, &STR_PRESENCE) != 0) {
+    }
+    else if (pj_stricmp(&event->event_type, &STR_DIALOG) != 0) {
+    }
+    else {
         return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_EVENT);
     }
 
@@ -288,6 +295,10 @@ PJ_DEF(pj_status_t) pjsip_pres_create_uas( pjsip_dialog *dlg,
             } else
             if (pj_stricmp(&accept->values[i], &STR_APP_XPIDF_XML)==0) {
                 content_type = CONTENT_TYPE_XPIDF;
+                break;
+            } else
+            if (pj_stricmp(&accept->values[i], &STR_APP_DIALOG_INFO_XML) == 0) {
+                content_type = CONTENT_TYPE_DIALOG_INFO;
                 break;
             }
         }
@@ -498,6 +509,11 @@ static pj_status_t pres_create_msg_body( pjsip_pres *pres,
 
         return pjsip_pres_create_xpidf(tdata->pool, &pres->status,
                                        &entity, &tdata->msg->body);
+
+    } else if (pres->content_type == CONTENT_TYPE_DIALOG_INFO) {
+
+        return pjsip_pres_create_dialog_info(tdata->pool, &pres->status,
+                                             &entity, &tdata->msg->body);
 
     } else {
         return PJSIP_SIMPLE_EBADCONTENT;
