@@ -1522,6 +1522,10 @@ static pjsip_uri *int_parse_uri(pj_scanner *scanner, pj_pool_t *pool,
         } else {
             /* Unsupported URI scheme */
             PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
+            /* This return is unreachable at runtime (PJ_THROW unwinds via
+             * longjmp), but is needed to satisfy the compiler when
+             * PJ_ATTR_NORETURN is empty (e.g. Apple Clang + ASan on ARM64).
+             */
             return NULL;
         }
 
