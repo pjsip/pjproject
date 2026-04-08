@@ -544,10 +544,11 @@ static int process_encode P0()
 	(void)gsm_option(r, GSM_OPT_LTP_CUT,	&f_ltp_cut);
 
 	while ((cc = (*input)(s)) > 0) {
-		if (cc < sizeof(s) / sizeof(*s))
+		if (cc < sizeof(s) / sizeof(*s)) {
 			memset((char *)(s+cc), 0, sizeof(s)-(cc * sizeof(*s)));
+		}
 		gsm_encode(r, s, d);
-		if (fwrite((char *)d, sizeof(d), 1, out) != 1) {
+		if (fwrite((char *)d, 1, sizeof(d), out) != sizeof(d)) {
 			perror(outname ? outname : "stdout");
 			fprintf(stderr, "%s: error writing to %s\n",
 				progname, outname ? outname : "stdout");
@@ -643,8 +644,9 @@ static int process P1((name), char * name)
 		goto err;
 	}
 
-	if ((*(f_decode ? process_decode : process_encode))())
+	if ((*(f_decode ? process_decode : process_encode))()) {
 		goto err;
+	}
 
 	if (fflush(out) < 0 || ferror(out)) {
 		perror(outname ? outname : "stdout");
@@ -787,7 +789,6 @@ int main P2((ac, av), int ac, char **av)
 
 	av += optind;
 	ac -= optind;
-
 	catch_signals(onintr);
 
 	if (ac <= 0) process( (char *)0 );

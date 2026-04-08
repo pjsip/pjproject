@@ -90,7 +90,6 @@ void Gsm_Coder P8((S,s,LARc,Nc,bc,Mc,xmaxc,xMc),
 		}
 		dp  += 40;
 		dpp += 40;
-
 	}
 	(void)memcpy( (char *)S->dp0, (char *)(S->dp0 + 160),
 		120 * sizeof(*S->dp0) );

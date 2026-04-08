@@ -330,8 +330,7 @@ static void APCM_quantization P5((xM,xMc,mant_out,exp_out,xmaxc_out),
 
 		assert(temp1 >= 0 && temp1 < 16);
 
-		// orig: temp = xM[i] << temp1;
-		temp = (word)((uword)xM[i] << temp1);
+		temp = SASL(xM[i], temp1);
 		temp = GSM_MULT( temp, temp2 );
 		temp = SASR(temp, 12);
 		xMc[i] = temp + 4;		/* see note below */
@@ -376,8 +375,7 @@ static void APCM_inverse_quantization P4((xMc,mant,exp,xMp),
 		temp = (*xMc++ << 1) - 7;	        /* restore sign   */
 		assert( temp <= 7 && temp >= -7 ); 	/* 4 bit signed   */
 
-		// orig: temp <<= 12;
-		temp *= 4096;				/* 16 bit signed  */
+		temp = SASL(temp, 12);			/* 16 bit signed  */
 		temp = GSM_MULT_R( temp1, temp );
 		temp = GSM_ADD( temp, temp3 );
 		*xMp++ = gsm_asr( temp, temp2 );

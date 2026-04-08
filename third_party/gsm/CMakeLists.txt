@@ -49,3 +49,7 @@ target_compile_definitions(gsm
     WAV49=1
     NeedFunctionPrototypes=1
 )
+
+if(MSVC)
+  target_compile_options(gsm PRIVATE /FIconfig.h)
+endif()
