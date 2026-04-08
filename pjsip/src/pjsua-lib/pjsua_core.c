@@ -835,24 +835,6 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
  * PJSUA Base API.
  */
 
-/* Worker thread function. */
-static int worker_thread(void *arg)
-{
-    enum { TIMEOUT = 10 };
-
-    PJ_UNUSED_ARG(arg);
-
-    while (!pjsua_var.thread_quit_flag) {
-        int count;
-
-        count = pjsua_handle_events(TIMEOUT);
-        if (count < 0)
-            pj_thread_sleep(TIMEOUT);
-    }
-
-    return 0;
-}
-
 #if PJSUA_SEPARATE_WORKER_FOR_TIMER
 
 /* Timer heap worker thread function. */
@@ -892,6 +874,26 @@ static int worker_thread_ioqueue(void *arg)
         pj_time_val timeout = {0, 100};
         pj_ioqueue_poll(ioq, &timeout);
     }
+    return 0;
+}
+
+#else
+
+/* Worker thread function. */
+static int worker_thread(void *arg)
+{
+    enum { TIMEOUT = 10 };
+
+    PJ_UNUSED_ARG(arg);
+
+    while (!pjsua_var.thread_quit_flag) {
+        int count;
+
+        count = pjsua_handle_events(TIMEOUT);
+        if (count < 0)
+            pj_thread_sleep(TIMEOUT);
+    }
+
     return 0;
 }
 
