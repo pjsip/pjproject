@@ -83,9 +83,9 @@ static pj_bool_t udp_echo_srv_on_data_recvfrom(pj_activesock_t *asock,
         srv->status = pj_activesock_sendto(asock, &srv->send_key, data, 
                                            &sent, 0,
                                            src_addr, addr_len);
-        if (srv->status != PJ_SUCCESS) {
+        if (srv->status != PJ_SUCCESS && srv->status != PJ_EPENDING) {
             srv->tx_err_cnt++;
-            udp_echo_err("sendto()", status);
+            udp_echo_err("sendto()", srv->status);
         }
     }
 

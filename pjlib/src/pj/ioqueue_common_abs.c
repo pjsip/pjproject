@@ -1193,6 +1193,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
             }
         }
     }
+#else
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(sent);
 #endif
 
     /*
@@ -1218,7 +1221,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
          * the sending only. If the polling thread runs on lower priority
          * than the sending thread, then it's possible that the pending
          * write flag is not cleared in-time because clearing is only done
-         * during polling. 
+         * during polling.
          *
          * Aplication should specify multiple write operation keys on
          * situation like this.
@@ -1345,6 +1348,9 @@ retry_on_restart:
             }
         }
     }
+#else
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(sent);
 #endif
 
     /*
@@ -1465,6 +1471,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
             }
         }
     }
+#else
+    PJ_UNUSED_ARG(status);
 #endif
 
     pj_ioqueue_lock_key(key);
