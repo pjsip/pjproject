@@ -204,19 +204,40 @@ static void tls_print_logs(int level, const char* msg)
 
 
 /* Initialize GnuTLS. */
+static int tls_init_count;
+static void tls_deinit(void);
+
 static pj_status_t tls_init(void)
 {
+    pj_status_t status;
+    int ret;
+
+    if (tls_init_count == 1)
+        return PJ_SUCCESS;
+
+    if (tls_init_count == -1) {
+        /* Another thread is initializing. Spin briefly. */
+        int retry;
+        for (retry = 0; retry < 100 && tls_init_count == -1; ++retry)
+            pj_thread_sleep(10);
+        return (tls_init_count == 1) ? PJ_SUCCESS : PJ_EBUSY;
+    }
+
+    tls_init_count = -1;
+
     /* Register error subsystem */
-    pj_status_t status = pj_register_strerror(PJ_ERRNO_START_USER +
+    status = pj_register_strerror(PJ_ERRNO_START_USER +
                                               PJ_ERRNO_SPACE_SIZE * 6,
                                               PJ_ERRNO_SPACE_SIZE,
                                               &tls_strerror);
     pj_assert(status == PJ_SUCCESS);
 
     /* Init GnuTLS library */
-    int ret = gnutls_global_init();
-    if (ret < 0)
+    ret = gnutls_global_init();
+    if (ret < 0) {
+        tls_init_count = 0;
         return tls_status_from_err(NULL, ret);
+    }
 
     gnutls_global_set_log_level(GNUTLS_LOG_LEVEL);
     gnutls_global_set_log_function(tls_print_logs);
@@ -246,6 +267,14 @@ static pj_status_t tls_init(void)
         ssl_cipher_num = i;
     }
 
+    /* Schedule cleanup at pj_shutdown() */
+    status = pj_atexit(&tls_deinit);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(2, ("gtls", status,
+                       "Failed to register GnuTLS cleanup"));
+    }
+
+    tls_init_count = 1;
     return PJ_SUCCESS;
 }
 
@@ -253,7 +282,10 @@ static pj_status_t tls_init(void)
 /* Shutdown GnuTLS */
 static void tls_deinit(void)
 {
-    gnutls_global_deinit();
+    if (tls_init_count == 1) {
+        gnutls_global_deinit();
+        tls_init_count = 0;
+    }
 }
 
 
@@ -656,15 +688,12 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 
     cert = ssock->cert;
 
-    /* Even if reopening is harmless, having one instance only simplifies
-     * deallocating it later on */
-    if (!gssock->tls_init_count) {
-        gssock->tls_init_count++;
-        ret = tls_init();
-        if (ret < 0)
-            return ret;
-    } else
-        return PJ_SUCCESS;
+    /* Initialize GnuTLS library (idempotent) */
+    {
+        pj_status_t status = tls_init();
+        if (status != PJ_SUCCESS)
+            return status;
+    }
 
     /* Start this socket session */
     ret = gnutls_init(&gssock->session, ssock->is_server ? GNUTLS_SERVER
@@ -842,11 +871,8 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
         gssock->xcred = NULL;
     }
 
-    /* Free GnuTLS library */
-    if (gssock->tls_init_count) {
-        gssock->tls_init_count--;
-        tls_deinit();
-    }
+    /* Note: GnuTLS library stays initialized for the process lifetime.
+     * tls_deinit() is called via pj_atexit() at pj_shutdown(). */
 
     /* Destroy circular buffers */
     circ_deinit(&ssock->ssl_read_buf);
@@ -870,8 +896,12 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 static void ssl_ciphers_populate(void)
 {
      if (!ssl_cipher_num) {
-         tls_init();
-         tls_deinit();
+         pj_status_t status = tls_init();
+         if (status != PJ_SUCCESS) {
+             PJ_PERROR(1, ("gtls", status, "Failed to initialize GnuTLS"));
+             return;
+         }
+         /* GnuTLS stays initialized — no tls_deinit() here */
      }
 }
 

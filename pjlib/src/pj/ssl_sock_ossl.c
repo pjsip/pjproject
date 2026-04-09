@@ -691,10 +691,22 @@ static pj_status_t init_openssl(void)
 {
     pj_status_t status;
 
-    if (openssl_init_count)
+    if (openssl_init_count == 1)
         return PJ_SUCCESS;
 
-    openssl_init_count = 1;
+    /* Use count as a simple state: 0=not started, -1=in progress, 1=done.
+     * This prevents a race where a concurrent caller sees count=1 (done)
+     * while initialization is still in progress.
+     */
+    if (openssl_init_count == -1) {
+        /* Another thread is initializing. Spin briefly. */
+        int retry;
+        for (retry = 0; retry < 100 && openssl_init_count == -1; ++retry)
+            pj_thread_sleep(10);
+        return (openssl_init_count == 1) ? PJ_SUCCESS : PJ_EBUSY;
+    }
+
+    openssl_init_count = -1;
 
     PJ_LOG(4, (THIS_FILE, "OpenSSL version : %ld", OPENSSL_VERSION_NUMBER));
     /* Register error subsystem */
@@ -750,9 +762,20 @@ static pj_status_t init_openssl(void)
         pj_assert(meth);
 
         ctx=SSL_CTX_new(meth);
+        if (!ctx) {
+            PJ_LOG(1, (THIS_FILE, "SSL_CTX_new() failed"));
+            openssl_init_count = 0;
+            return PJ_ENOMEM;
+        }
         SSL_CTX_set_cipher_list(ctx, "ALL:COMPLEMENTOFALL");
 
         ssl = SSL_new(ctx);
+        if (!ssl) {
+            PJ_LOG(1, (THIS_FILE, "SSL_new() failed"));
+            SSL_CTX_free(ctx);
+            openssl_init_count = 0;
+            return PJ_ENOMEM;
+        }
 
         sk_cipher = SSL_get_ciphers(ssl);
 
@@ -889,6 +912,7 @@ static pj_status_t init_openssl(void)
         PJ_LOG(1,(THIS_FILE,
                "Fatal error: failed to get application data index for "
                "SSL socket"));
+        openssl_init_count = 0;
         return status;
     }
 
@@ -896,10 +920,13 @@ static pj_status_t init_openssl(void)
     PJ_SSL_SOCK_OSSL_USE_THREAD_CB != 0 && OPENSSL_VERSION_NUMBER < 0x10100000L
 
     status = init_ossl_lock();
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        openssl_init_count = 0;
         return status;
+    }
 #endif
 
+    openssl_init_count = 1;
     return status;
 }
 
@@ -1656,7 +1683,9 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     pj_assert(ssock);
 
     /* Make sure OpenSSL library has been initialized */
-    init_openssl();
+    status = init_openssl();
+    if (status != PJ_SUCCESS)
+        return status;
 
     set_entropy(ssock);
 
@@ -1832,7 +1861,11 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 static void ssl_ciphers_populate()
 {
     if (ssl_cipher_num == 0 || ssl_curves_num == 0) {
-        init_openssl();
+        pj_status_t status = init_openssl();
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(1, ("ossl", status, "Failed to initialize OpenSSL"));
+            return;
+        }
         shutdown_openssl();
     }
 }
