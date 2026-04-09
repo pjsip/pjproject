@@ -65,6 +65,7 @@ struct test_state
 {
     pj_pool_t      *pool;           /* pool                                 */
     pj_ioqueue_t   *ioqueue;        /* ioqueue                              */
+    pj_ssl_sock_t  *accepted_ssock; /* accepted server-side socket          */
     pj_bool_t       is_server;      /* server role flag                     */
     pj_bool_t       is_verbose;     /* verbose flag, e.g: cert info         */
     pj_bool_t       echo;           /* echo received data                   */
@@ -214,6 +215,9 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
     st = (struct test_state*)pj_pool_zalloc(parent_st->pool, sizeof(struct test_state));
     *st = *parent_st;
     pj_ssl_sock_set_user_data(newsock, st);
+
+    /* Track accepted socket for cleanup */
+    parent_st->accepted_ssock = newsock;
 
     status = pj_ssl_sock_get_info(newsock, &info);
     if (status != PJ_SUCCESS) {
@@ -1227,10 +1231,12 @@ static int client_non_ssl(unsigned ms_timeout)
     PJ_LOG(3, ("", "...Done!"));
 
 on_return:
-    if (ssock_serv)
-        pj_ssl_sock_close(ssock_serv);
     if (asock_cli && !state_cli.err && !state_cli.done)
         pj_activesock_close(asock_cli);
+    if (state_serv.accepted_ssock)
+        pj_ssl_sock_close(state_serv.accepted_ssock);
+    if (ssock_serv)
+        pj_ssl_sock_close(ssock_serv);
     if (timer)
         pj_timer_heap_destroy(timer);
     if (ioqueue)
