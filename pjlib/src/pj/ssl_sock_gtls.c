@@ -1223,7 +1223,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
     while (total_written < size) {
         /* Try encrypting using GnuTLS */
         nwritten_ = gnutls_record_send(gssock->session,
-                                      ((read_data_t *)data) + total_written,
+                                      ((char *)data) + total_written,
                                       size - total_written);
 
         if (nwritten_ > 0) {

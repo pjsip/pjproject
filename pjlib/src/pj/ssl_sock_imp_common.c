@@ -565,6 +565,7 @@ static pj_status_t flush_ssl_write_buf(pj_ssl_sock_t *ssock,
         pj_lock_acquire(ssock->write_mutex);
         free_send_op(ssock, op);
         pj_lock_release(ssock->write_mutex);
+
     }
 
     return status;
@@ -1682,7 +1683,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_recvfrom2 (pj_ssl_sock_t *ssock,
 
 
 /* Write plain data to SSL and flush the buffer. */
-static pj_status_t ssl_send (pj_ssl_sock_t *ssock, 
+static pj_status_t ssl_send (pj_ssl_sock_t *ssock,
                              pj_ioqueue_op_key_t *send_key,
                              const void *data,
                              pj_ssize_t size,
@@ -1699,7 +1700,7 @@ static pj_status_t ssl_send (pj_ssl_sock_t *ssock,
     pj_lock_acquire(ssock->write_mutex);
     status = ssl_write(ssock, data, size, &nwritten);
     pj_lock_release(ssock->write_mutex);
-    
+
     if (status == PJ_SUCCESS && nwritten == size) {
         /* All data written, flush write buffer to network socket */
         status = flush_ssl_write_buf(ssock, send_key, size, flags);

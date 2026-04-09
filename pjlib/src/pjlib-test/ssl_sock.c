@@ -1692,6 +1692,7 @@ on_return:
 struct large_msg_state
 {
     pj_pool_t          *pool;
+    pj_ssl_sock_t      *accepted_ssock;
     pj_bool_t           is_server;
     pj_bool_t           echo;
     pj_status_t         err;
@@ -1770,6 +1771,9 @@ static pj_bool_t lm_on_accept_complete(pj_ssl_sock_t *ssock,
     st->done = PJ_FALSE;
     st->err = PJ_SUCCESS;
     pj_ssl_sock_set_user_data(newsock, st);
+
+    /* Track accepted socket for cleanup */
+    parent_st->accepted_ssock = newsock;
 
     read_buf[0] = st->read_buf;
     status = pj_ssl_sock_start_read2(newsock, st->pool,
@@ -2006,6 +2010,14 @@ static int large_msg_test(void)
     status = PJ_SUCCESS;
 
 on_return:
+    if (ssock_cli)
+        pj_ssl_sock_close(ssock_cli);
+    if (state_serv.accepted_ssock)
+        pj_ssl_sock_close(state_serv.accepted_ssock);
+    if (ssock_serv)
+        pj_ssl_sock_close(ssock_serv);
+
+    /* Poll to drain pending events after close */
     if (ioqueue) {
         pj_time_val delay = {0, 500};
         int n = 50;
@@ -2013,10 +2025,6 @@ on_return:
             ;
     }
 
-    if (ssock_cli)
-        pj_ssl_sock_close(ssock_cli);
-    if (ssock_serv)
-        pj_ssl_sock_close(ssock_serv);
     if (timer)
         pj_timer_heap_destroy(timer);
     if (ioqueue)

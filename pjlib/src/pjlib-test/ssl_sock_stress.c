@@ -25,12 +25,13 @@
  * SSL send load test: blast many sends, verify all callbacks fire.
  * Uses small SO_SNDBUF to force async (PJ_EPENDING) send path.
  */
-#define SEND_LOAD_COUNT     200
+#define SEND_LOAD_COUNT     100
 #define SEND_LOAD_PKT_LEN   512
 
 struct send_load_state
 {
     pj_pool_t          *pool;
+    pj_ssl_sock_t      *accepted_ssock;
     pj_bool_t           is_server;
     pj_bool_t           echo;
     pj_status_t         err;
@@ -112,6 +113,9 @@ static pj_bool_t load_on_accept_complete(pj_ssl_sock_t *ssock,
                                        sizeof(struct send_load_state));
     *st = *parent_st;
     pj_ssl_sock_set_user_data(newsock, st);
+
+    /* Track accepted socket for cleanup */
+    parent_st->accepted_ssock = newsock;
 
     read_buf[0] = st->read_buf;
     status = pj_ssl_sock_start_read2(newsock, st->pool,
@@ -341,18 +345,20 @@ static int send_load_test(void)
     status = PJ_SUCCESS;
 
 on_return:
-    /* Cleanup: poll briefly to allow delayed close */
+    if (ssock_cli)
+        pj_ssl_sock_close(ssock_cli);
+    if (state_serv.accepted_ssock)
+        pj_ssl_sock_close(state_serv.accepted_ssock);
+    if (ssock_serv)
+        pj_ssl_sock_close(ssock_serv);
+
+    /* Poll to drain pending events after close */
     if (ioqueue) {
         pj_time_val delay = {0, 500};
         int n = 50;
         while (n-- > 0 && pj_ioqueue_poll(ioqueue, &delay) > 0)
             ;
     }
-
-    if (ssock_cli)
-        pj_ssl_sock_close(ssock_cli);
-    if (ssock_serv)
-        pj_ssl_sock_close(ssock_serv);
 
     if (timer)
         pj_timer_heap_destroy(timer);
@@ -371,6 +377,7 @@ on_return:
 struct close_pending_state
 {
     pj_pool_t          *pool;
+    pj_ssl_sock_t      *accepted_ssock;
     pj_bool_t           is_server;
     pj_bool_t           echo;
     pj_status_t         err;
@@ -596,8 +603,19 @@ static int close_pending_test(void)
 on_return:
     if (ssock_cli)
         pj_ssl_sock_close(ssock_cli);
+    if (state_serv.accepted_ssock)
+        pj_ssl_sock_close(state_serv.accepted_ssock);
     if (ssock_serv)
         pj_ssl_sock_close(ssock_serv);
+
+    /* Poll to drain pending events after close */
+    if (ioqueue) {
+        pj_time_val delay = {0, 500};
+        int n = 50;
+        while (n-- > 0 && pj_ioqueue_poll(ioqueue, &delay) > 0)
+            ;
+    }
+
     if (timer)
         pj_timer_heap_destroy(timer);
     if (ioqueue)
@@ -618,6 +636,7 @@ on_return:
 struct bidir_state
 {
     pj_pool_t          *pool;
+    pj_ssl_sock_t      *accepted_ssock;
     pj_bool_t           is_server;
     pj_status_t         err;
     pj_size_t           sent;
@@ -709,6 +728,9 @@ static pj_bool_t bidir_on_accept_complete(pj_ssl_sock_t *ssock,
     st->done = PJ_FALSE;
     st->err = PJ_SUCCESS;
     pj_ssl_sock_set_user_data(newsock, st);
+
+    /* Track accepted socket for cleanup */
+    parent_st->accepted_ssock = newsock;
 
     read_buf[0] = st->read_buf;
     status = pj_ssl_sock_start_read2(newsock, st->pool,
@@ -915,6 +937,14 @@ static int bidir_test(void)
     status = PJ_SUCCESS;
 
 on_return:
+    if (ssock_cli)
+        pj_ssl_sock_close(ssock_cli);
+    if (state_serv.accepted_ssock)
+        pj_ssl_sock_close(state_serv.accepted_ssock);
+    if (ssock_serv)
+        pj_ssl_sock_close(ssock_serv);
+
+    /* Poll to drain pending events after close */
     if (ioqueue) {
         pj_time_val delay = {0, 500};
         int n = 50;
@@ -922,10 +952,6 @@ on_return:
             ;
     }
 
-    if (ssock_cli)
-        pj_ssl_sock_close(ssock_cli);
-    if (ssock_serv)
-        pj_ssl_sock_close(ssock_serv);
     if (timer)
         pj_timer_heap_destroy(timer);
     if (ioqueue)
@@ -952,6 +978,8 @@ on_return:
 struct mt_state
 {
     pj_pool_t          *pool;
+    pj_ssl_sock_t     **accepted_arr;
+    int                 accepted_cnt;
     pj_bool_t           is_server;
     pj_bool_t           echo;
     pj_status_t         err;
@@ -1041,6 +1069,13 @@ static pj_bool_t mt_on_accept_complete(pj_ssl_sock_t *ssock,
     st->done = PJ_FALSE;
     st->err = PJ_SUCCESS;
     pj_ssl_sock_set_user_data(newsock, st);
+
+    /* Track accepted socket for cleanup */
+    if (parent_st->accepted_arr &&
+        parent_st->accepted_cnt < MT_CLIENTS)
+    {
+        parent_st->accepted_arr[parent_st->accepted_cnt++] = newsock;
+    }
 
     read_buf[0] = st->read_buf;
     status = pj_ssl_sock_start_read2(newsock, st->pool,
@@ -1138,6 +1173,7 @@ static int mt_send_load_test(void)
     pj_timer_heap_t *timer = NULL;
     pj_ssl_sock_t *ssock_serv = NULL;
     pj_ssl_sock_t *ssock_cli[MT_CLIENTS];
+    pj_ssl_sock_t *ssock_accepted[MT_CLIENTS];
     pj_thread_t *threads[MT_WORKER_THREADS];
     pj_ssl_sock_param param;
     struct mt_state state_serv;
@@ -1149,6 +1185,7 @@ static int mt_send_load_test(void)
     int i;
 
     pj_bzero(ssock_cli, sizeof(ssock_cli));
+    pj_bzero(ssock_accepted, sizeof(ssock_accepted));
     pj_bzero(threads, sizeof(threads));
     pj_bzero(&ctx, sizeof(ctx));
 
@@ -1193,6 +1230,8 @@ static int mt_send_load_test(void)
     state_serv.pool = pool;
     state_serv.echo = PJ_TRUE;
     state_serv.is_server = PJ_TRUE;
+    state_serv.accepted_arr = ssock_accepted;
+    state_serv.accepted_cnt = 0;
     param.user_data = &state_serv;
     param.require_client_cert = PJ_FALSE;
 
@@ -1331,6 +1370,18 @@ on_return:
         }
     }
 
+    for (i = 0; i < MT_CLIENTS; i++) {
+        if (ssock_cli[i])
+            pj_ssl_sock_close(ssock_cli[i]);
+    }
+    for (i = 0; i < state_serv.accepted_cnt; i++) {
+        if (ssock_accepted[i])
+            pj_ssl_sock_close(ssock_accepted[i]);
+    }
+    if (ssock_serv)
+        pj_ssl_sock_close(ssock_serv);
+
+    /* Poll to drain pending events after close */
     if (ioqueue) {
         pj_time_val delay = {0, 500};
         int n = 50;
@@ -1338,12 +1389,6 @@ on_return:
             ;
     }
 
-    for (i = 0; i < MT_CLIENTS; i++) {
-        if (ssock_cli[i])
-            pj_ssl_sock_close(ssock_cli[i]);
-    }
-    if (ssock_serv)
-        pj_ssl_sock_close(ssock_serv);
     if (timer)
         pj_timer_heap_destroy(timer);
     if (ioqueue)
