@@ -1237,6 +1237,15 @@ on_return:
         pj_ssl_sock_close(state_serv.accepted_ssock);
     if (ssock_serv)
         pj_ssl_sock_close(ssock_serv);
+
+    /* Poll to let deferred socket destruction complete */
+    if (ioqueue) {
+        pj_time_val delay = {0, 500};
+        int n = 50;
+        while (n-- > 0 && pj_ioqueue_poll(ioqueue, &delay) > 0)
+            ;
+    }
+
     if (timer)
         pj_timer_heap_destroy(timer);
     if (ioqueue)
