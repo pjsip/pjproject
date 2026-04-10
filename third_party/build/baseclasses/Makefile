@@ -10,7 +10,7 @@ export BASECLASSES_LIB := libbaseclasses-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export BASECLASSES_SONAME := libbaseclasses.$(SHLIB_SUFFIX)
-export BASECLASSES_SHLIB := $(BASECLASSES_SONAME).$(PJ_VERSION_MAJOR)
+export BASECLASSES_SHLIB := $(BASECLASSES_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################

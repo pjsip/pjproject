@@ -10,7 +10,7 @@ export GSM_CODEC_LIB := libgsmcodec-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export GSM_CODEC_SONAME := libgsmcodec.$(SHLIB_SUFFIX)
-export GSM_CODEC_SHLIB := $(GSM_CODEC_SONAME).$(PJ_VERSION_MAJOR)
+export GSM_CODEC_SHLIB := $(GSM_CODEC_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################

@@ -10,7 +10,7 @@ export YUV_LIB := libyuv-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export YUV_SONAME := libyuv.$(SHLIB_SUFFIX)
-export YUV_SHLIB := $(YUV_SONAME).$(PJ_VERSION_MAJOR)
+export YUV_SHLIB := $(YUV_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################
