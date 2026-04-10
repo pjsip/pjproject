@@ -252,8 +252,10 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Add "norefersub" in Supported header */
-    pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_SUPPORTED,
-                               NULL, 1, &str_norefersub);
+    if (pjsua_var.ua_cfg.no_refer_sub) {
+        pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_SUPPORTED,
+                                   NULL, 1, &str_norefersub);
+    }
 
     /* Add "INFO" in Allow header, for DTMF and video key frame request. */
     pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_ALLOW,

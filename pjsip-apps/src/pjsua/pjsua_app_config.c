@@ -238,6 +238,8 @@ static void usage(void)
     puts  ("  --thread-cnt=N      Number of worker threads (default:1)");
     puts  ("  --duration=SEC      Set maximum call duration (default:no limit)");
     puts  ("  --norefersub        Suppress event subscription when transferring calls");
+    puts  ("  --no-supported-norefersub");
+    puts  ("                      Don't advertise \"norefersub\" in the Supported header");
     puts  ("  --use-compact-form  Minimize SIP message size");
     puts  ("  --no-force-lr       Allow strict-route to be used (i.e. do not force lr)");
     puts  ("  --accept-redirect=N Specify how to handle call redirect (3xx) response.");
@@ -403,7 +405,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_RX_DROP_PCT, OPT_TX_DROP_PCT, OPT_EC_TAIL, OPT_EC_OPT,
            OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS,
            OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP, OPT_THREAD_CNT,
-           OPT_NOREFERSUB, OPT_ACCEPT_REDIRECT,
+           OPT_NOREFERSUB, OPT_NO_SUPPORTED_NOREFERSUB, OPT_ACCEPT_REDIRECT,
            OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_CERT_FILE, OPT_TLS_PRIV_FILE,
            OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
            OPT_TLS_NEG_TIMEOUT, OPT_TLS_CIPHER,
@@ -443,6 +445,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "no-tcp",     0, 0, OPT_NO_TCP},
         { "no-udp",     0, 0, OPT_NO_UDP},
         { "norefersub", 0, 0, OPT_NOREFERSUB},
+        { "no-supported-norefersub", 0, 0, OPT_NO_SUPPORTED_NOREFERSUB},
         { "proxy",      1, 0, OPT_PROXY},
         { "outbound",   1, 0, OPT_OUTBOUND_PROXY},
         { "registrar",  1, 0, OPT_REGISTRAR},
@@ -745,6 +748,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_NOREFERSUB: /* norefersub */
             cfg->no_refersub = PJ_TRUE;
+            break;
+
+        case OPT_NO_SUPPORTED_NOREFERSUB: /* no-supported-norefersub */
+            cfg->cfg.no_refer_sub = PJ_FALSE;
             break;
 
         case OPT_NO_TCP: /* no-tcp */
@@ -2502,6 +2509,11 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     /* norefersub ? */
     if (config->no_refersub) {
         pj_strcat2(&cfg, "--norefersub\n");
+    }
+
+    /* no-supported-norefersub ? */
+    if (!config->cfg.no_refer_sub) {
+        pj_strcat2(&cfg, "--no-supported-norefersub\n");
     }
 
     if (pjsip_cfg()->endpt.use_compact_form)
