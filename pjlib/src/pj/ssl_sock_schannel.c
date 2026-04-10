@@ -382,6 +382,7 @@ static void ssl_reset_sock_state(pj_ssl_sock_t* ssock)
 {
     sch_ssl_sock_t* sch_ssock = (sch_ssl_sock_t*)ssock;
     SECURITY_STATUS ss;
+    int post_unlock_flush_write_buf = 0;
 
     LOG_DEBUG(SNAME(ssock), "SSL reset");
 
@@ -434,10 +435,9 @@ static void ssl_reset_sock_state(pj_ssl_sock_t* ssock)
                                     buf_out[0].cbBuffer);
                 if (status != PJ_SUCCESS) {
                     PJ_PERROR(1, (SNAME(ssock), status,
-                        "Failed to queuehandshake packets"));
+                        "Failed to queue shutdown packets"));
                 } else {
-                    flush_ssl_write_buf(ssock, &ssock->shutdown_op_key,
-                                          0, 0);
+                    post_unlock_flush_write_buf = 1;
                 }
             }
         } else {
@@ -457,10 +457,21 @@ static void ssl_reset_sock_state(pj_ssl_sock_t* ssock)
         SecInvalidateHandle(&sch_ssock->cred_handle);
     }
     circ_reset(&ssock->ssl_read_buf);
-    circ_reset(&ssock->ssl_write_buf);
+    if (!post_unlock_flush_write_buf)
+        circ_reset(&ssock->ssl_write_buf);
     circ_reset(&sch_ssock->decrypted_buf);
 
     pj_lock_release(ssock->write_mutex);
+
+    if (post_unlock_flush_write_buf) {
+        pj_status_t flush_st;
+        flush_st = flush_ssl_write_buf(ssock, &ssock->shutdown_op_key,
+                                       0, 0);
+        circ_reset(&ssock->ssl_write_buf);
+        if (flush_st == PJ_EPENDING) {
+            PJ_LOG(5, (SNAME(ssock), "close_notify send pending"));
+        }
+    }
 
     ssl_close_sockets(ssock);
 }

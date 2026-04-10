@@ -75,19 +75,10 @@ typedef struct write_data_t {
  * Replaces the old send_buf ring buffer + write_data_t for network sends.
  */
 
-/* Minimum encrypted data buffer size. Ensures small sends get reusable
- * buffers. Override in config_site.h if needed.
+/* PJ_SSL_SEND_OP_MIN_BUF_SIZE, PJ_SSL_SEND_OP_FREE_LIST_MAX, and
+ * PJ_SSL_SEND_OP_ACTIVE_MAX are defined in pj/config.h.
  */
-#ifndef PJ_SSL_SEND_OP_MIN_BUF_SIZE
-#   define PJ_SSL_SEND_OP_MIN_BUF_SIZE     4000
-#endif
 
-/* Maximum number of send ops kept in the free list for recycling.
- * Excess ops have their pools released (true memory free).
- */
-#ifndef PJ_SSL_SEND_OP_FREE_LIST_MAX
-#   define PJ_SSL_SEND_OP_FREE_LIST_MAX    4
-#endif
 
 typedef struct ssl_send_op_t {
     PJ_DECL_LIST_MEMBER(struct ssl_send_op_t);
@@ -97,6 +88,7 @@ typedef struct ssl_send_op_t {
     pj_size_t            plain_data_len;/* plaintext length for callback   */
     pj_size_t            enc_len;       /* actual encrypted data length    */
     pj_size_t            enc_buf_cap;   /* embedded buffer capacity        */
+    unsigned             flags;         /* send flags                      */
     char                 enc_data[1];   /* variable-length encrypted data  */
 } ssl_send_op_t;
 
@@ -155,11 +147,14 @@ struct pj_ssl_sock_t
     write_data_t          write_pending;/* list of pending write to ssl */
     write_data_t          write_pending_empty; /* cache for write_pending   */
     pj_bool_t             flushing_write_pend; /* flag of flushing is ongoing*/
-    ssl_send_op_t         send_op_active;  /* list: in-flight send ops     */
+    ssl_send_op_t         send_op_active;  /* send queue (pending + in-flight)*/
+    unsigned              send_op_active_cnt;/* active queue count          */
     ssl_send_op_t         send_op_free;    /* free list for recycling      */
     unsigned              send_op_free_cnt;/* free list count              */
     pj_lock_t            *write_mutex;  /* protect ssl_write_buf & send ops */
-    pj_lock_t            *asock_send_mutex; /* protect send order */
+    pj_bool_t             sending;      /* drain loop active or async send
+                                         * in flight (under write_mutex)  */
+    ssl_send_op_t        *send_op_inflight; /* op pending in ioqueue       */
 
     circ_buf_t            ssl_read_buf;
     pj_lock_t            *ssl_read_buf_mutex;
