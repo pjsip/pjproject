@@ -42,6 +42,8 @@ struct send_load_state
     int                 pending_cnt;
     int                 sent_cb_cnt;
     int                 send_idx;
+    int                 renego_at;
+    pj_bool_t           renego_done;
     pj_ioqueue_op_key_t op_keys[SEND_LOAD_COUNT];
     char                send_data[SEND_LOAD_PKT_LEN];
 };
@@ -69,23 +71,27 @@ static pj_bool_t load_on_connect_complete(pj_ssl_sock_t *ssock,
         return PJ_FALSE;
     }
 
-    /* Blast sends — many rapid sends naturally trigger PJ_EPENDING
-     * as the SSL/network buffers fill up.
+    /* Blast sends. When renego_at > 0, only send the first half here;
+     * the second half is sent from on_data_read after renegotiation
+     * completes (during polling, so handshake messages can be exchanged).
      */
-    for (i = 0; i < SEND_LOAD_COUNT; i++) {
-        pj_ssize_t len = SEND_LOAD_PKT_LEN;
+    {
+        int count = (st->renego_at > 0) ? st->renego_at : SEND_LOAD_COUNT;
+        for (i = 0; i < count; i++) {
+            pj_ssize_t len = SEND_LOAD_PKT_LEN;
 
-        status = pj_ssl_sock_send(ssock, &st->op_keys[i],
-                                  st->send_data, &len, 0);
-        if (status == PJ_EPENDING) {
-            st->pending_cnt++;
-        } else if (status == PJ_SUCCESS) {
-            st->sent += len;
-        } else {
-            st->err = status;
-            return PJ_FALSE;
+            status = pj_ssl_sock_send(ssock, &st->op_keys[i],
+                                      st->send_data, &len, 0);
+            if (status == PJ_EPENDING || status == PJ_EBUSY) {
+                st->pending_cnt++;
+            } else if (status == PJ_SUCCESS) {
+                st->sent += len;
+            } else {
+                st->err = status;
+                return PJ_FALSE;
+            }
+            st->send_idx++;
         }
-        st->send_idx++;
     }
 
     return PJ_TRUE;
@@ -144,14 +150,66 @@ static pj_bool_t load_on_data_read(pj_ssl_sock_t *ssock,
     if (size > 0) {
         st->recv += size;
 
+        /* Server: trigger renegotiation if configured */
+        if (st->is_server && st->renego_at > 0 && !st->renego_done) {
+            pj_size_t threshold = (pj_size_t)st->renego_at *
+                                  SEND_LOAD_PKT_LEN;
+            if (st->recv >= threshold) {
+                pj_status_t s = pj_ssl_sock_renegotiate(ssock);
+                if (s != PJ_SUCCESS && s != PJ_EPENDING) {
+                    PJ_LOG(3, ("", "...server renegotiate: %d", s));
+                }
+                st->renego_done = PJ_TRUE;
+            }
+        }
+
         /* Server echoes data back */
         if (st->echo) {
             pj_ssize_t sz = (pj_ssize_t)size;
             pj_status_t s;
 
             s = pj_ssl_sock_send(ssock, &st->op_keys[0], data, &sz, 0);
-            if (s != PJ_SUCCESS && s != PJ_EPENDING) {
+            if (s != PJ_SUCCESS && s != PJ_EPENDING &&
+                s != PJ_EBUSY)
+            {
                 st->err = s;
+            }
+        }
+
+        /* Client: trigger renegotiation + send second half when first
+         * half has been echoed back (during polling, so handshake can
+         * complete via ioqueue event processing).
+         */
+        if (!st->is_server && st->renego_at > 0 && !st->renego_done) {
+            pj_size_t threshold = (pj_size_t)st->renego_at *
+                                  SEND_LOAD_PKT_LEN;
+            if (st->recv >= threshold) {
+                pj_status_t s;
+                int i;
+
+                s = pj_ssl_sock_renegotiate(ssock);
+                if (s != PJ_SUCCESS && s != PJ_EPENDING) {
+                    PJ_LOG(3, ("", "...client renegotiate: %d", s));
+                    st->err = s;
+                }
+                st->renego_done = PJ_TRUE;
+
+                /* Send second half */
+                for (i = st->send_idx; i < SEND_LOAD_COUNT; i++) {
+                    pj_ssize_t len = SEND_LOAD_PKT_LEN;
+
+                    s = pj_ssl_sock_send(ssock, &st->op_keys[i],
+                                         st->send_data, &len, 0);
+                    if (s == PJ_EPENDING || s == PJ_EBUSY) {
+                        st->pending_cnt++;
+                    } else if (s == PJ_SUCCESS) {
+                        st->sent += len;
+                    } else {
+                        st->err = s;
+                        return PJ_FALSE;
+                    }
+                    st->send_idx++;
+                }
             }
         }
 
@@ -196,7 +254,10 @@ static pj_bool_t load_on_data_sent(pj_ssl_sock_t *ssock,
     return PJ_TRUE;
 }
 
-static int send_load_test(void)
+/* renego_at: trigger renegotiation after this many sends/packets.
+ * renego_srv: PJ_TRUE = server-initiated, PJ_FALSE = client-initiated.
+ */
+static int send_load_test_inner(int renego_at, pj_bool_t renego_srv)
 {
     pj_pool_t *pool = NULL;
     pj_ioqueue_t *ioqueue = NULL;
@@ -244,7 +305,7 @@ static int send_load_test(void)
                          pj_strset2(&tmp_st, "127.0.0.1"), 0);
     }
 
-    /* Fill send data with pattern */
+    /* Fill send data with repeating byte pattern. */
     for (i = 0; i < SEND_LOAD_PKT_LEN; i++)
         state_cli.send_data[i] = (char)(i & 0xFF);
 
@@ -252,6 +313,7 @@ static int send_load_test(void)
     state_serv.pool = pool;
     state_serv.echo = PJ_TRUE;
     state_serv.is_server = PJ_TRUE;
+    state_serv.renego_at = renego_srv ? renego_at : 0;
     param.user_data = &state_serv;
     param.require_client_cert = PJ_FALSE;
 
@@ -268,6 +330,7 @@ static int send_load_test(void)
     state_cli.pool = pool;
     state_cli.echo = PJ_FALSE;
     state_cli.is_server = PJ_FALSE;
+    state_cli.renego_at = renego_srv ? 0 : renego_at;
 
     status = pj_ssl_sock_create(pool, &param, &ssock_cli);
     if (status != PJ_SUCCESS) {
@@ -299,7 +362,12 @@ static int send_load_test(void)
             pj_get_timestamp(&t_now);
             elapsed = pj_elapsed_msec(&t_start, &t_now);
             if (elapsed > 30000) {
-                PJ_LOG(1, ("", "...send_load_test TIMEOUT after 30s"));
+                PJ_LOG(1, ("", "...send_load_test TIMEOUT after 30s "
+                           "(sent=%lu recv=%lu pend=%d cb=%d)",
+                           (unsigned long)state_cli.sent,
+                           (unsigned long)state_cli.recv,
+                           state_cli.pending_cnt,
+                           state_cli.sent_cb_cnt));
                 status = PJ_ETIMEDOUT;
                 goto on_return;
             }
@@ -313,14 +381,15 @@ static int send_load_test(void)
     }
 
     /* Verify results */
-    PJ_LOG(3, ("", "...send_load_test: sent=%lu, recv=%lu, "
+    PJ_LOG(3, ("", "...send_load_test%s: sent=%lu, recv=%lu, "
                "pending=%d, sent_cb=%d",
+               renego_at ? " (renego)" : "",
                (unsigned long)state_cli.sent,
                (unsigned long)state_cli.recv,
                state_cli.pending_cnt,
                state_cli.sent_cb_cnt));
 
-    if (state_cli.pending_cnt == 0) {
+    if (state_cli.pending_cnt == 0 && !renego_at) {
         PJ_LOG(3, ("", "...NOTE: all sends completed synchronously, "
                    "async path NOT tested. Set PJ_IOQUEUE_FAST_TRACK=0 "
                    "in config_site.h to force async path."));
@@ -387,7 +456,10 @@ struct close_pending_state
     pj_bool_t           done;
     int                 pending_cnt;
     int                 sent_cb_cnt;
+    int                 err_cb_cnt;
     int                 send_idx;
+    int                 renego_at;
+    pj_bool_t           renego_done;
     pj_ioqueue_op_key_t op_keys[SEND_LOAD_COUNT];
     char                send_data[SEND_LOAD_PKT_LEN];
     pj_bool_t           blast_done;
@@ -416,8 +488,16 @@ static pj_bool_t cp_on_connect_complete(pj_ssl_sock_t *ssock,
         return PJ_FALSE;
     }
 
-    /* Blast sends */
+    /* Blast sends, with optional renegotiation mid-stream */
     for (i = 0; i < SEND_LOAD_COUNT; i++) {
+        if (st->renego_at > 0 && i == st->renego_at) {
+            pj_status_t s = pj_ssl_sock_renegotiate(ssock);
+            if (s != PJ_SUCCESS && s != PJ_EPENDING) {
+                st->err = s;
+                break;
+            }
+        }
+
         len = SEND_LOAD_PKT_LEN;
         status = pj_ssl_sock_send(ssock, &st->op_keys[i],
                                   st->send_data, &len, 0);
@@ -473,6 +553,8 @@ static pj_bool_t cp_on_data_sent(pj_ssl_sock_t *ssock,
     /* Tolerate errors — socket may be closing under us */
     if (sent > 0)
         st->sent += sent;
+    else
+        st->err_cb_cnt++;
     st->sent_cb_cnt++;
 
     return PJ_TRUE;
@@ -584,8 +666,9 @@ static int close_pending_test(void)
     }
 
     /* Close client while sends may still be pending */
-    PJ_LOG(3, ("", "...close_pending_test: closing client with "
-               "pending=%d", state_cli.pending_cnt));
+    PJ_LOG(3, ("", "...close_pending_test: closing with pending=%d "
+               "sent_cb=%d", state_cli.pending_cnt,
+               state_cli.sent_cb_cnt));
     pj_ssl_sock_close(ssock_cli);
     ssock_cli = NULL;
 
@@ -597,7 +680,24 @@ static int close_pending_test(void)
             pj_ioqueue_poll(ioqueue, &delay);
     }
 
-    PJ_LOG(3, ("", "...close_pending_test: completed (no crash)"));
+    PJ_LOG(3, ("", "...close_pending_test: pending=%d sent_cb=%d "
+               "err_cb=%d",
+               state_cli.pending_cnt, state_cli.sent_cb_cnt,
+               state_cli.err_cb_cnt));
+
+    /* Every send that returned PJ_EPENDING must get a callback:
+     * either a successful completion or an error/cancel on destroy.
+     */
+    if (state_cli.pending_cnt > 0 &&
+        state_cli.pending_cnt != state_cli.sent_cb_cnt)
+    {
+        PJ_LOG(1, ("", "...close_pending_test: pending=%d != sent_cb=%d "
+                   "(callbacks lost on destroy!)",
+                   state_cli.pending_cnt, state_cli.sent_cb_cnt));
+        status = PJ_EBUG;
+        goto on_return;
+    }
+
     status = PJ_SUCCESS;
 
 on_return:
@@ -627,6 +727,180 @@ on_return:
 }
 
 
+/* Renegotiation support check — only OpenSSL and GnuTLS actually
+ * support initiating renegotiation. Must use TLS 1.2 (already the
+ * default for all stress tests). */
+/* Client-initiated renegotiation: OpenSSL only.
+ * GnuTLS does not support client-initiated renegotiation. */
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#   define HAS_CLIENT_RENEGO_TEST  1
+#else
+#   define HAS_CLIENT_RENEGO_TEST  0
+#endif
+
+/* Server-initiated renegotiation: OpenSSL and GnuTLS. */
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) || \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_GNUTLS)
+#   define HAS_RENEGO_TEST  1
+#else
+#   define HAS_RENEGO_TEST  0
+#endif
+
+/*
+ * Destroy-during-renegotiation test: close socket while sends are delayed
+ * due to renegotiation. Verifies on_data_sent callbacks fire with error.
+ */
+#if HAS_CLIENT_RENEGO_TEST
+static int destroy_during_renego_test(void)
+{
+    pj_pool_t *pool = NULL;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_timer_heap_t *timer = NULL;
+    pj_ssl_sock_t *ssock_serv = NULL;
+    pj_ssl_sock_t *ssock_cli = NULL;
+    pj_ssl_sock_param param;
+    struct close_pending_state state_serv;
+    struct close_pending_state state_cli;
+    pj_sockaddr addr, listen_addr;
+    pj_status_t status;
+    int i;
+
+    pool = pj_pool_create(mem, "ssl_drenego", 8192, 4096, NULL);
+    pj_bzero(&state_serv, sizeof(state_serv));
+    pj_bzero(&state_cli, sizeof(state_cli));
+
+    status = pj_ioqueue_create(pool, 4, &ioqueue);
+    if (status != PJ_SUCCESS) goto on_return;
+
+    status = pj_timer_heap_create(pool, 4, &timer);
+    if (status != PJ_SUCCESS) goto on_return;
+
+    pj_ssl_sock_param_default(&param);
+    param.cb.on_accept_complete2 = &load_on_accept_complete;
+    param.cb.on_connect_complete = &cp_on_connect_complete;
+    param.cb.on_data_read = &cp_on_data_read;
+    param.cb.on_data_sent = &cp_on_data_sent;
+    param.ioqueue = ioqueue;
+    param.timer_heap = timer;
+    param.proto = PJ_SSL_SOCK_PROTO_TLS1_2;
+    param.ciphers_num = 0;
+
+    {
+        pj_str_t tmp_st;
+        pj_sockaddr_init(PJ_AF_INET, &addr,
+                         pj_strset2(&tmp_st, "127.0.0.1"), 0);
+    }
+
+    for (i = 0; i < SEND_LOAD_PKT_LEN; i++)
+        state_cli.send_data[i] = (char)(i & 0xFF);
+
+    /* SERVER */
+    state_serv.pool = pool;
+    state_serv.is_server = PJ_TRUE;
+    param.user_data = &state_serv;
+    param.require_client_cert = PJ_FALSE;
+
+    listen_addr = addr;
+    status = ssl_test_create_server(pool, &param, "destroy_renego",
+                                    &ssock_serv, &listen_addr);
+    if (status != PJ_SUCCESS) goto on_return;
+
+    /* CLIENT — renegotiate mid-blast so second half gets delayed */
+    state_cli.pool = pool;
+    state_cli.is_server = PJ_FALSE;
+    state_cli.renego_at = SEND_LOAD_COUNT / 2;
+    param.user_data = &state_cli;
+
+    status = pj_ssl_sock_create(pool, &param, &ssock_cli);
+    if (status != PJ_SUCCESS) goto on_return;
+
+    status = pj_ssl_sock_start_connect(ssock_cli, pool, &addr,
+                                       &listen_addr,
+                                       pj_sockaddr_get_len(&addr));
+    if (status == PJ_SUCCESS)
+        cp_on_connect_complete(ssock_cli, PJ_SUCCESS);
+    else if (status != PJ_EPENDING)
+        goto on_return;
+
+    /* Poll until blast is done (all sends attempted, some delayed) */
+    {
+        pj_timestamp t_start, t_now;
+        pj_uint32_t elapsed;
+        pj_get_timestamp(&t_start);
+        while (!state_cli.blast_done && !state_cli.err) {
+            pj_time_val delay = {0, 100};
+            pj_ioqueue_poll(ioqueue, &delay);
+            pj_timer_heap_poll(timer, NULL);
+            pj_get_timestamp(&t_now);
+            elapsed = pj_elapsed_msec(&t_start, &t_now);
+            if (elapsed > 30000) {
+                status = PJ_ETIMEDOUT;
+                goto on_return;
+            }
+        }
+    }
+
+    /* Close immediately — DO NOT wait for renegotiation to complete.
+     * Delayed sends in write_pending must get callbacks on destroy.
+     */
+    PJ_LOG(3, ("", "...destroy_renego: closing with pending=%d",
+               state_cli.pending_cnt));
+    pj_ssl_sock_close(ssock_cli);
+    ssock_cli = NULL;
+
+    {
+        pj_time_val delay = {0, 500};
+        int n = 20;
+        while (n-- > 0)
+            pj_ioqueue_poll(ioqueue, &delay);
+    }
+
+    PJ_LOG(3, ("", "...destroy_renego: pending=%d sent_cb=%d err_cb=%d",
+               state_cli.pending_cnt, state_cli.sent_cb_cnt,
+               state_cli.err_cb_cnt));
+
+    if (state_cli.pending_cnt == 0) {
+        PJ_LOG(3, ("", "...NOTE: all sends completed synchronously, "
+                   "destroy callback path NOT tested"));
+    }
+
+    if (state_cli.pending_cnt != state_cli.sent_cb_cnt) {
+        PJ_LOG(1, ("", "...destroy_renego: pending=%d != sent_cb=%d",
+                   state_cli.pending_cnt, state_cli.sent_cb_cnt));
+        status = PJ_EBUG;
+        goto on_return;
+    }
+
+    if (state_cli.pending_cnt > 0 && state_cli.err_cb_cnt == 0) {
+        PJ_LOG(1, ("", "...destroy_renego: pending=%d but 0 error "
+                   "callbacks", state_cli.pending_cnt));
+        status = PJ_EBUG;
+        goto on_return;
+    }
+
+    status = PJ_SUCCESS;
+
+on_return:
+    if (ssock_cli) pj_ssl_sock_close(ssock_cli);
+    if (state_serv.accepted_ssock)
+        pj_ssl_sock_close(state_serv.accepted_ssock);
+    if (ssock_serv) pj_ssl_sock_close(ssock_serv);
+
+    if (ioqueue) {
+        pj_time_val delay = {0, 500};
+        int n = 50;
+        while (n-- > 0 && pj_ioqueue_poll(ioqueue, &delay) > 0)
+            ;
+    }
+    if (timer) pj_timer_heap_destroy(timer);
+    if (ioqueue) pj_ioqueue_destroy(ioqueue);
+    if (pool) pj_pool_release(pool);
+
+    return (status == PJ_SUCCESS) ? 0 : -1;
+}
+#endif /* HAS_CLIENT_RENEGO_TEST */
+
+
 /*
  * Bidirectional simultaneous load test: both sides send independent data.
  */
@@ -643,9 +917,11 @@ struct bidir_state
     pj_size_t           recv;
     pj_uint8_t          read_buf[8192];
     pj_bool_t           done;
+    pj_bool_t           recv_done;
     int                 pending_cnt;
     int                 sent_cb_cnt;
     int                 send_idx;
+    int                 renego_at;
     pj_ioqueue_op_key_t op_keys[BIDIR_SEND_COUNT];
     char                send_data[BIDIR_PKT_LEN];
     pj_size_t           expected_recv;
@@ -660,9 +936,18 @@ static pj_bool_t bidir_blast_sends(pj_ssl_sock_t *ssock,
         pj_ssize_t len = BIDIR_PKT_LEN;
         pj_status_t s;
 
+        /* Trigger renegotiation mid-stream if configured */
+        if (st->renego_at > 0 && i == st->renego_at) {
+            s = pj_ssl_sock_renegotiate(ssock);
+            if (s != PJ_SUCCESS && s != PJ_EPENDING) {
+                st->err = s;
+                return PJ_FALSE;
+            }
+        }
+
         s = pj_ssl_sock_send(ssock, &st->op_keys[i],
                              st->send_data, &len, 0);
-        if (s == PJ_EPENDING) {
+        if (s == PJ_EPENDING || s == PJ_EBUSY) {
             st->pending_cnt++;
         } else if (s == PJ_SUCCESS) {
             st->sent += len;
@@ -761,8 +1046,12 @@ static pj_bool_t bidir_on_data_read(pj_ssl_sock_t *ssock,
 
     if (size > 0) {
         st->recv += size;
-        if (st->recv >= st->expected_recv)
-            st->done = PJ_TRUE;
+        if (st->recv >= st->expected_recv) {
+            st->recv_done = PJ_TRUE;
+            /* If all pending sends have completed too, we're fully done */
+            if (st->pending_cnt == st->sent_cb_cnt)
+                st->done = PJ_TRUE;
+        }
     }
 
     if (status != PJ_SUCCESS) {
@@ -793,10 +1082,15 @@ static pj_bool_t bidir_on_data_sent(pj_ssl_sock_t *ssock,
 
     st->sent += sent;
     st->sent_cb_cnt++;
+
+    /* Check if all pending sends completed while recv was already done */
+    if (st->recv_done && st->pending_cnt == st->sent_cb_cnt)
+        st->done = PJ_TRUE;
+
     return PJ_TRUE;
 }
 
-static int bidir_test(void)
+static int bidir_test_inner(int renego_at)
 {
     pj_pool_t *pool = NULL;
     pj_ioqueue_t *ioqueue = NULL;
@@ -867,6 +1161,7 @@ static int bidir_test(void)
     state_cli.pool = pool;
     state_cli.is_server = PJ_FALSE;
     state_cli.expected_recv = BIDIR_SEND_COUNT * BIDIR_PKT_LEN;
+    state_cli.renego_at = renego_at;
     param.user_data = &state_cli;
 
     status = pj_ssl_sock_create(pool, &param, &ssock_cli);
@@ -1399,33 +1694,503 @@ on_return:
     return (status == PJ_SUCCESS) ? 0 : -1;
 }
 
+/*
+ * Concurrent send test: multiple threads blast-send on the SAME SSL socket.
+ * This simulates production SIP where worker threads share a TLS transport.
+ * Detects out-of-order TLS records (causes connection reset) and data
+ * corruption from interleaved ssl_write_buf access.
+ */
+#define CS_SENDER_THREADS   3
+#define CS_SENDS_PER_THREAD 30
+#define CS_PKT_LEN          512
+
+struct cs_sender_arg
+{
+    pj_ssl_sock_t      *ssock;
+    pj_ioqueue_op_key_t op_keys[CS_SENDS_PER_THREAD];
+    char                send_data[CS_PKT_LEN];
+    int                 send_cnt;
+    int                 pending_cnt;
+    int                 sent_cb_cnt;
+    pj_size_t           sent;
+    pj_status_t         err;
+    pj_bool_t           done;
+};
+
+struct cs_state
+{
+    pj_pool_t          *pool;
+    pj_ssl_sock_t      *accepted_ssock;
+    pj_bool_t           is_server;
+    pj_bool_t           echo;
+    pj_status_t         err;
+    pj_size_t           sent;
+    pj_size_t           recv;
+    pj_uint8_t          read_buf[8192];
+    pj_bool_t           done;
+    int                 pending_cnt;
+    int                 sent_cb_cnt;
+    int                 send_idx;
+    int                 renego_at;
+    pj_bool_t           renego_done;
+    pj_ioqueue_op_key_t send_key;
+    char                send_data[CS_PKT_LEN];
+    pj_size_t           expected_recv;
+};
+
+static pj_bool_t cs_on_connect_complete(pj_ssl_sock_t *ssock,
+                                        pj_status_t status)
+{
+    struct cs_state *st = (struct cs_state *)
+                           pj_ssl_sock_get_user_data(ssock);
+    void *read_buf[1];
+
+    if (status != PJ_SUCCESS) {
+        st->err = status;
+        return PJ_FALSE;
+    }
+
+    read_buf[0] = st->read_buf;
+    status = pj_ssl_sock_start_read2(ssock, st->pool,
+                                     sizeof(st->read_buf),
+                                     (void **)read_buf, 0);
+    if (status != PJ_SUCCESS) {
+        st->err = status;
+        return PJ_FALSE;
+    }
+
+    /* Sends will happen from worker threads, not here */
+    st->done = PJ_FALSE;
+    return PJ_TRUE;
+}
+
+static pj_bool_t cs_on_accept_complete(pj_ssl_sock_t *ssock,
+                                       pj_ssl_sock_t *newsock,
+                                       const pj_sockaddr_t *src_addr,
+                                       int src_addr_len,
+                                       pj_status_t accept_status)
+{
+    struct cs_state *parent_st = (struct cs_state *)
+                                  pj_ssl_sock_get_user_data(ssock);
+    struct cs_state *st;
+    void *read_buf[1];
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(src_addr);
+    PJ_UNUSED_ARG(src_addr_len);
+
+    if (accept_status != PJ_SUCCESS)
+        return PJ_FALSE;
+
+    st = (struct cs_state *)pj_pool_zalloc(parent_st->pool,
+                                           sizeof(struct cs_state));
+    *st = *parent_st;
+    pj_ssl_sock_set_user_data(newsock, st);
+    parent_st->accepted_ssock = newsock;
+
+    read_buf[0] = st->read_buf;
+    status = pj_ssl_sock_start_read2(newsock, st->pool,
+                                     sizeof(st->read_buf),
+                                     (void **)read_buf, 0);
+    if (status != PJ_SUCCESS) {
+        st->err = status;
+        return PJ_FALSE;
+    }
+
+    return PJ_TRUE;
+}
+
+static pj_bool_t cs_on_data_read(pj_ssl_sock_t *ssock,
+                                 void *data,
+                                 pj_size_t size,
+                                 pj_status_t status,
+                                 pj_size_t *remainder)
+{
+    struct cs_state *st = (struct cs_state *)
+                           pj_ssl_sock_get_user_data(ssock);
+
+    if (remainder)
+        *remainder = 0;
+
+    if (size > 0) {
+        st->recv += size;
+
+        /* Server echoes data back */
+        if (st->echo) {
+            pj_ssize_t sz = (pj_ssize_t)size;
+            pj_status_t s;
+
+            s = pj_ssl_sock_send(ssock, &st->send_key, data, &sz, 0);
+            if (s != PJ_SUCCESS && s != PJ_EPENDING && s != PJ_EBUSY)
+                st->err = s;
+        }
+
+        /* Client: check completion */
+        if (!st->is_server && st->recv >= st->expected_recv)
+            st->done = PJ_TRUE;
+    }
+
+    if (status != PJ_SUCCESS) {
+        if (status == PJ_EEOF)
+            st->done = PJ_TRUE;
+        else
+            st->err = status;
+    }
+
+    if (st->err != PJ_SUCCESS || st->done)
+        return PJ_FALSE;
+
+    return PJ_TRUE;
+}
+
+static pj_bool_t cs_on_data_sent(pj_ssl_sock_t *ssock,
+                                 pj_ioqueue_op_key_t *op_key,
+                                 pj_ssize_t sent)
+{
+    struct cs_state *st = (struct cs_state *)
+                           pj_ssl_sock_get_user_data(ssock);
+    PJ_UNUSED_ARG(op_key);
+
+    if (sent < 0) {
+        st->err = (pj_status_t)-sent;
+        return PJ_FALSE;
+    }
+
+    st->sent += sent;
+    st->sent_cb_cnt++;
+    return PJ_TRUE;
+}
+
+static int cs_sender_proc(void *arg)
+{
+    struct cs_sender_arg *sa = (struct cs_sender_arg *)arg;
+    int i;
+
+    for (i = 0; i < CS_SENDS_PER_THREAD; i++) {
+        pj_ssize_t len = CS_PKT_LEN;
+        pj_status_t status;
+
+        status = pj_ssl_sock_send(sa->ssock, &sa->op_keys[i],
+                                  sa->send_data, &len, 0);
+        if (status == PJ_EPENDING || status == PJ_EBUSY) {
+            sa->pending_cnt++;
+        } else if (status == PJ_SUCCESS) {
+            sa->sent += len;
+        } else {
+            PJ_LOG(3, ("", "...cs_sender[%p] send %d err=%d",
+                       arg, i, status));
+            sa->err = status;
+            break;
+        }
+        sa->send_cnt++;
+    }
+    sa->done = PJ_TRUE;
+    return 0;
+}
+
+static int concurrent_send_test(void)
+{
+    pj_pool_t *pool = NULL;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_timer_heap_t *timer = NULL;
+    pj_ssl_sock_t *ssock_serv = NULL;
+    pj_ssl_sock_t *ssock_cli = NULL;
+    pj_ssl_sock_param param;
+    struct cs_state state_serv;
+    struct cs_state state_cli;
+    struct cs_sender_arg senders[CS_SENDER_THREADS];
+    pj_thread_t *sender_threads[CS_SENDER_THREADS];
+    pj_thread_t *poll_thread = NULL;
+    struct mt_test_ctx poll_ctx;
+    pj_sockaddr addr, listen_addr;
+
+    pj_status_t status;
+    pj_size_t total_expected;
+    int i;
+
+    pool = pj_pool_create(mem, "ssl_cs", 32000, 4096, NULL);
+
+    pj_bzero(&state_serv, sizeof(state_serv));
+    pj_bzero(&state_cli, sizeof(state_cli));
+    pj_bzero(senders, sizeof(senders));
+    pj_bzero(sender_threads, sizeof(sender_threads));
+    pj_bzero(&poll_ctx, sizeof(poll_ctx));
+
+    status = pj_ioqueue_create(pool, 4, &ioqueue);
+    if (status != PJ_SUCCESS) {
+        app_perror("...concurrent_send_test: ioqueue create", status);
+        goto on_return;
+    }
+
+    status = pj_timer_heap_create(pool, 4, &timer);
+    if (status != PJ_SUCCESS) {
+        app_perror("...concurrent_send_test: timer create", status);
+        goto on_return;
+    }
+
+    pj_ssl_sock_param_default(&param);
+    param.cb.on_accept_complete2 = &cs_on_accept_complete;
+    param.cb.on_connect_complete = &cs_on_connect_complete;
+    param.cb.on_data_read = &cs_on_data_read;
+    param.cb.on_data_sent = &cs_on_data_sent;
+    param.ioqueue = ioqueue;
+    param.timer_heap = timer;
+    param.proto = PJ_SSL_SOCK_PROTO_TLS1_2;
+    param.ciphers_num = 0;
+
+    {
+        pj_str_t tmp_st;
+        pj_sockaddr_init(PJ_AF_INET, &addr,
+                         pj_strset2(&tmp_st, "127.0.0.1"), 0);
+    }
+
+    total_expected = (pj_size_t)CS_SENDER_THREADS * CS_SENDS_PER_THREAD *
+                     CS_PKT_LEN;
+
+    /* SERVER */
+    state_serv.pool = pool;
+    state_serv.echo = PJ_TRUE;
+    state_serv.is_server = PJ_TRUE;
+    param.user_data = &state_serv;
+    param.require_client_cert = PJ_FALSE;
+
+    listen_addr = addr;
+    status = ssl_test_create_server(pool, &param, "concurrent_send_test",
+                                    &ssock_serv, &listen_addr);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    /* CLIENT */
+    state_cli.pool = pool;
+    state_cli.is_server = PJ_FALSE;
+    state_cli.expected_recv = total_expected;
+    param.user_data = &state_cli;
+
+    status = pj_ssl_sock_create(pool, &param, &ssock_cli);
+    if (status != PJ_SUCCESS) {
+        app_perror("...concurrent_send_test: client create", status);
+        goto on_return;
+    }
+
+    status = pj_ssl_sock_start_connect(ssock_cli, pool, &addr,
+                                       &listen_addr,
+                                       pj_sockaddr_get_len(&addr));
+    if (status == PJ_SUCCESS) {
+        cs_on_connect_complete(ssock_cli, PJ_SUCCESS);
+    } else if (status != PJ_EPENDING) {
+        app_perror("...concurrent_send_test: connect", status);
+        goto on_return;
+    }
+
+    /* Poll until handshake completes (connect callback fires) */
+    {
+        pj_ssl_sock_info info;
+        pj_timestamp t_start, t_now;
+
+        pj_get_timestamp(&t_start);
+        for (;;) {
+            pj_time_val delay = {0, 100};
+            pj_ioqueue_poll(ioqueue, &delay);
+            pj_timer_heap_poll(timer, NULL);
+
+            if (state_cli.err) {
+                status = state_cli.err;
+                app_perror("...concurrent_send_test: connect error",
+                           status);
+                goto on_return;
+            }
+
+            status = pj_ssl_sock_get_info(ssock_cli, &info);
+            if (status == PJ_SUCCESS && info.established)
+                break;
+
+            pj_get_timestamp(&t_now);
+            if (pj_elapsed_msec(&t_start, &t_now) > 10000) {
+                PJ_LOG(1, ("", "...concurrent_send_test: "
+                           "connect TIMEOUT"));
+                status = PJ_ETIMEDOUT;
+                goto on_return;
+            }
+        }
+    }
+
+    /* Start poll thread */
+    poll_ctx.ioqueue = ioqueue;
+    poll_ctx.timer = timer;
+    poll_ctx.quit_flag = PJ_FALSE;
+    status = pj_thread_create(pool, "cs_poll", &mt_worker_proc,
+                              &poll_ctx, 0, 0, &poll_thread);
+    if (status != PJ_SUCCESS) {
+        app_perror("...concurrent_send_test: poll thread create", status);
+        goto on_return;
+    }
+
+    /* Launch sender threads — all send on the SAME ssock_cli */
+    for (i = 0; i < CS_SENDER_THREADS; i++) {
+        int k;
+
+        senders[i].ssock = ssock_cli;
+        for (k = 0; k < CS_PKT_LEN; k++)
+            senders[i].send_data[k] = (char)((i + k) & 0xFF);
+
+        status = pj_thread_create(pool, "cs_send", &cs_sender_proc,
+                                  &senders[i], 0, 0, &sender_threads[i]);
+        if (status != PJ_SUCCESS) {
+            app_perror("...concurrent_send_test: sender create", status);
+            goto on_return;
+        }
+    }
+
+    /* Wait for all senders to finish */
+    for (i = 0; i < CS_SENDER_THREADS; i++) {
+        if (sender_threads[i]) {
+            pj_thread_join(sender_threads[i]);
+            pj_thread_destroy(sender_threads[i]);
+            sender_threads[i] = NULL;
+        }
+    }
+
+    /* Poll until client receives all echoed data or error */
+    {
+        pj_timestamp t_start, t_now;
+
+        pj_get_timestamp(&t_start);
+        while (!state_cli.err && !state_cli.done) {
+            pj_time_val delay = {0, 100};
+
+            /* Main thread also polls */
+            pj_ioqueue_poll(ioqueue, &delay);
+            pj_timer_heap_poll(timer, NULL);
+
+            pj_get_timestamp(&t_now);
+            if (pj_elapsed_msec(&t_start, &t_now) > 30000) {
+                PJ_LOG(1, ("", "...concurrent_send_test TIMEOUT "
+                           "(recv=%lu expected=%lu err=%d)",
+                           (unsigned long)state_cli.recv,
+                           (unsigned long)total_expected,
+                           (int)state_cli.err));
+                status = PJ_ETIMEDOUT;
+                goto on_return;
+            }
+        }
+    }
+
+    if (state_cli.err) {
+        PJ_LOG(1, ("", "...concurrent_send_test: connection error=%d "
+                   "(recv=%lu/%lu) — likely out-of-order TLS records",
+                   (int)state_cli.err,
+                   (unsigned long)state_cli.recv,
+                   (unsigned long)total_expected));
+        status = state_cli.err;
+        goto on_return;
+    }
+
+    /* Verify */
+    {
+        int total_sends = 0;
+        int total_pending = 0;
+        pj_size_t total_sent = 0;
+
+        for (i = 0; i < CS_SENDER_THREADS; i++) {
+            total_sends += senders[i].send_cnt;
+            total_pending += senders[i].pending_cnt;
+            total_sent += senders[i].sent;
+            if (senders[i].err) {
+                PJ_LOG(1, ("", "...sender[%d] error=%d after %d sends",
+                           i, senders[i].err, senders[i].send_cnt));
+                status = senders[i].err;
+                goto on_return;
+            }
+        }
+
+        PJ_LOG(3, ("", "...concurrent_send_test: threads=%d "
+                   "total_sends=%d recv=%lu/%lu",
+                   CS_SENDER_THREADS, total_sends,
+                   (unsigned long)state_cli.recv,
+                   (unsigned long)total_expected));
+    }
+
+    status = PJ_SUCCESS;
+
+on_return:
+    poll_ctx.quit_flag = PJ_TRUE;
+    if (poll_thread) {
+        pj_thread_join(poll_thread);
+        pj_thread_destroy(poll_thread);
+    }
+    for (i = 0; i < CS_SENDER_THREADS; i++) {
+        if (sender_threads[i]) {
+            pj_thread_join(sender_threads[i]);
+            pj_thread_destroy(sender_threads[i]);
+        }
+    }
+
+    if (ssock_cli)
+        pj_ssl_sock_close(ssock_cli);
+    if (state_serv.accepted_ssock)
+        pj_ssl_sock_close(state_serv.accepted_ssock);
+    if (ssock_serv)
+        pj_ssl_sock_close(ssock_serv);
+
+    if (ioqueue) {
+        pj_time_val delay = {0, 500};
+        int n = 50;
+        while (n-- > 0 && pj_ioqueue_poll(ioqueue, &delay) > 0)
+            ;
+    }
+
+    if (timer)
+        pj_timer_heap_destroy(timer);
+    if (ioqueue)
+        pj_ioqueue_destroy(ioqueue);
+    if (pool)
+        pj_pool_release(pool);
+
+    return (status == PJ_SUCCESS) ? 0 : -1;
+}
+
 #endif /* PJ_HAS_THREADS */
 
+
+static int send_load_test(void) { return send_load_test_inner(0, PJ_FALSE); }
+static int bidir_test(void)     { return bidir_test_inner(0); }
+
+#define RUN_SUBTEST(name, call) \
+    do { \
+        PJ_LOG(3,("", ".." name)); \
+        ret = call; \
+        if (ret != 0) { \
+            PJ_LOG(1,("", "FAILED: " name " (rc=%d)", ret)); \
+            return ret; \
+        } \
+    } while (0)
 
 int ssl_sock_stress_test(void)
 {
     int ret;
 
-    PJ_LOG(3,("", "..send load test"));
-    ret = send_load_test();
-    if (ret != 0)
-        return ret;
-
-    PJ_LOG(3,("", "..close under pending sends test"));
-    ret = close_pending_test();
-    if (ret != 0)
-        return ret;
-
-    PJ_LOG(3,("", "..bidirectional simultaneous load test"));
-    ret = bidir_test();
-    if (ret != 0)
-        return ret;
+    RUN_SUBTEST("send load test", send_load_test());
+    RUN_SUBTEST("close under pending sends test", close_pending_test());
+    RUN_SUBTEST("bidirectional simultaneous load test", bidir_test());
 
 #if PJ_HAS_THREADS
-    PJ_LOG(3,("", "..multi-threaded send load test"));
-    ret = mt_send_load_test();
-    if (ret != 0)
-        return ret;
+    RUN_SUBTEST("multi-threaded send load test", mt_send_load_test());
+    RUN_SUBTEST("concurrent send (same socket) test",
+                concurrent_send_test());
+#endif
+
+#if HAS_CLIENT_RENEGO_TEST
+    RUN_SUBTEST("send load + client renegotiation test",
+                send_load_test_inner(SEND_LOAD_COUNT / 2, PJ_FALSE));
+    RUN_SUBTEST("bidirectional + renegotiation test",
+                bidir_test_inner(BIDIR_SEND_COUNT / 2));
+    RUN_SUBTEST("destroy during renegotiation test",
+                destroy_during_renego_test());
+#endif
+
+#if HAS_RENEGO_TEST
+    RUN_SUBTEST("send load + server renegotiation test",
+                send_load_test_inner(SEND_LOAD_COUNT / 2, PJ_TRUE));
 #endif
 
     return 0;
