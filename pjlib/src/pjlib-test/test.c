@@ -350,6 +350,7 @@ static int features_tests(int argc, char *argv[])
 
 #if INCLUDE_SSLSOCK_TEST
     UT_ADD_TEST(&test_app.ut_app, ssl_sock_test, 0);
+    UT_ADD_TEST(&test_app.ut_app, ssl_sock_stress_test, 0);
 #endif
 
 #if INCLUDE_IOCP_UNREG_TEST

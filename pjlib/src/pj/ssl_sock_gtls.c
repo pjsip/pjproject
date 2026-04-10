@@ -204,19 +204,40 @@ static void tls_print_logs(int level, const char* msg)
 
 
 /* Initialize GnuTLS. */
+static int tls_init_count;
+static void tls_deinit(void);
+
 static pj_status_t tls_init(void)
 {
+    pj_status_t status;
+    int ret;
+
+    if (tls_init_count == 1)
+        return PJ_SUCCESS;
+
+    if (tls_init_count == -1) {
+        /* Another thread is initializing. Spin briefly. */
+        int retry;
+        for (retry = 0; retry < 100 && tls_init_count == -1; ++retry)
+            pj_thread_sleep(10);
+        return (tls_init_count == 1) ? PJ_SUCCESS : PJ_EBUSY;
+    }
+
+    tls_init_count = -1;
+
     /* Register error subsystem */
-    pj_status_t status = pj_register_strerror(PJ_ERRNO_START_USER +
+    status = pj_register_strerror(PJ_ERRNO_START_USER +
                                               PJ_ERRNO_SPACE_SIZE * 6,
                                               PJ_ERRNO_SPACE_SIZE,
                                               &tls_strerror);
     pj_assert(status == PJ_SUCCESS);
 
     /* Init GnuTLS library */
-    int ret = gnutls_global_init();
-    if (ret < 0)
+    ret = gnutls_global_init();
+    if (ret < 0) {
+        tls_init_count = 0;
         return tls_status_from_err(NULL, ret);
+    }
 
     gnutls_global_set_log_level(GNUTLS_LOG_LEVEL);
     gnutls_global_set_log_function(tls_print_logs);
@@ -246,6 +267,14 @@ static pj_status_t tls_init(void)
         ssl_cipher_num = i;
     }
 
+    /* Schedule cleanup at pj_shutdown() */
+    status = pj_atexit(&tls_deinit);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(2, ("gtls", status,
+                       "Failed to register GnuTLS cleanup"));
+    }
+
+    tls_init_count = 1;
     return PJ_SUCCESS;
 }
 
@@ -253,7 +282,10 @@ static pj_status_t tls_init(void)
 /* Shutdown GnuTLS */
 static void tls_deinit(void)
 {
-    gnutls_global_deinit();
+    if (tls_init_count == 1) {
+        gnutls_global_deinit();
+        tls_init_count = 0;
+    }
 }
 
 
@@ -356,15 +388,15 @@ static pj_ssize_t tls_data_push(gnutls_transport_ptr_t ptr,
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)ptr;
     gnutls_sock_t *gssock = (gnutls_sock_t *)ssock;
 
-    pj_lock_acquire(ssock->circ_buf_output_mutex);
-    if (circ_write(&ssock->circ_buf_output, data, len) != PJ_SUCCESS) {
-        pj_lock_release(ssock->circ_buf_output_mutex);
+    pj_lock_acquire(ssock->ssl_write_buf_mutex);
+    if (circ_write(&ssock->ssl_write_buf, data, len) != PJ_SUCCESS) {
+        pj_lock_release(ssock->ssl_write_buf_mutex);
 
         gnutls_transport_set_errno(gssock->session, ENOMEM);
         return -1;
     }
 
-    pj_lock_release(ssock->circ_buf_output_mutex);
+    pj_lock_release(ssock->ssl_write_buf_mutex);
 
     return len;
 }
@@ -378,22 +410,22 @@ static pj_ssize_t tls_data_pull(gnutls_transport_ptr_t ptr,
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)ptr;
     gnutls_sock_t *gssock = (gnutls_sock_t *)ssock;
 
-    pj_lock_acquire(ssock->circ_buf_input_mutex);
+    pj_lock_acquire(ssock->ssl_read_buf_mutex);
 
-    if (circ_empty(&ssock->circ_buf_input)) {
-        pj_lock_release(ssock->circ_buf_input_mutex);
+    if (circ_empty(&ssock->ssl_read_buf)) {
+        pj_lock_release(ssock->ssl_read_buf_mutex);
 
         /* Data buffers not yet filled */
         gnutls_transport_set_errno(gssock->session, EAGAIN);
         return -1;
     }
 
-    pj_size_t circ_buf_size = circ_size(&ssock->circ_buf_input);
+    pj_size_t circ_buf_size = circ_size(&ssock->ssl_read_buf);
     pj_size_t read_size = PJ_MIN(circ_buf_size, len);
 
-    circ_read(&ssock->circ_buf_input, data, read_size);
+    circ_read(&ssock->ssl_read_buf, data, read_size);
 
-    pj_lock_release(ssock->circ_buf_input_mutex);
+    pj_lock_release(ssock->ssl_read_buf_mutex);
 
     return read_size;
 }
@@ -656,15 +688,12 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 
     cert = ssock->cert;
 
-    /* Even if reopening is harmless, having one instance only simplifies
-     * deallocating it later on */
-    if (!gssock->tls_init_count) {
-        gssock->tls_init_count++;
-        ret = tls_init();
-        if (ret < 0)
-            return ret;
-    } else
-        return PJ_SUCCESS;
+    /* Initialize GnuTLS library (idempotent) */
+    {
+        pj_status_t status = tls_init();
+        if (status != PJ_SUCCESS)
+            return status;
+    }
 
     /* Start this socket session */
     ret = gnutls_init(&gssock->session, ssock->is_server ? GNUTLS_SERVER
@@ -680,12 +709,12 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
                            (gnutls_transport_ptr_t) (uintptr_t) ssock);
 
     /* Initialize input circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_input, 512);
+    status = circ_init(ssock->pool->factory, &ssock->ssl_read_buf, 512);
     if (status != PJ_SUCCESS)
         return status;
 
     /* Initialize output circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_output, 512);
+    status = circ_init(ssock->pool->factory, &ssock->ssl_write_buf, 512);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -842,24 +871,21 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
         gssock->xcred = NULL;
     }
 
-    /* Free GnuTLS library */
-    if (gssock->tls_init_count) {
-        gssock->tls_init_count--;
-        tls_deinit();
-    }
+    /* Note: GnuTLS library stays initialized for the process lifetime.
+     * tls_deinit() is called via pj_atexit() at pj_shutdown(). */
 
     /* Destroy circular buffers */
-    circ_deinit(&ssock->circ_buf_input);
-    circ_deinit(&ssock->circ_buf_output);
+    circ_deinit(&ssock->ssl_read_buf);
+    circ_deinit(&ssock->ssl_write_buf);
 }
 
 
 /* Reset socket state. */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
-    pj_lock_acquire(ssock->circ_buf_output_mutex);
+    pj_lock_acquire(ssock->ssl_write_buf_mutex);
     ssock->ssl_state = SSL_STATE_NULL;
-    pj_lock_release(ssock->circ_buf_output_mutex);
+    pj_lock_release(ssock->ssl_write_buf_mutex);
 
     ssl_close_sockets(ssock);
 
@@ -870,8 +896,12 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 static void ssl_ciphers_populate(void)
 {
      if (!ssl_cipher_num) {
-         tls_init();
-         tls_deinit();
+         pj_status_t status = tls_init();
+         if (status != PJ_SUCCESS) {
+             PJ_PERROR(1, ("gtls", status, "Failed to initialize GnuTLS"));
+             return;
+         }
+         /* GnuTLS stays initialized — no tls_deinit() here */
      }
 }
 
@@ -1157,10 +1187,6 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
     /* Perform SSL handshake */
     ret = gnutls_handshake(gssock->session);
 
-    status = flush_circ_buf_output(ssock, &ssock->handshake_op_key, 0, 0);
-    if (status != PJ_SUCCESS)
-        return status;
-
     if (ret == GNUTLS_E_SUCCESS) {
         /* System are GO */
         ssock->ssl_state = SSL_STATE_ESTABLISHED;
@@ -1210,6 +1236,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
  * Write the plain data to GnuTLS, it will be encrypted by gnutls_record_send()
  * and sent via tls_data_push. Note that re-negotitation may be on progress, so
  * sending data should be delayed until re-negotiation is completed.
+ * Caller must hold ssock->write_mutex.
  */
 static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
                              pj_ssize_t size, int *nwritten)
@@ -1226,7 +1253,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
     while (total_written < size) {
         /* Try encrypting using GnuTLS */
         nwritten_ = gnutls_record_send(gssock->session,
-                                      ((read_data_t *)data) + total_written,
+                                      ((char *)data) + total_written,
                                       size - total_written);
 
         if (nwritten_ > 0) {

@@ -545,6 +545,57 @@ jobs:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
         path: artifacts
 
+  ioq-no-fast-track:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.pjlib_deps == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: select+ossl
+            config_site: |
+              #define PJ_TODO(x)
+              #define PJ_IOQUEUE_FAST_TRACK 0
+              #define PJ_IOQUEUE_IMP PJ_IOQUEUE_IMP_SELECT
+            configure_args: ""
+            install_deps: ""
+          - name: epoll+gtls
+            config_site: |
+              #define PJ_TODO(x)
+              #define PJ_IOQUEUE_FAST_TRACK 0
+            configure_args: "--with-gnutls=/usr/"
+            install_deps: "sudo apt-get update && sudo apt-get install -y libgnutls28-dev"
+    name: ioq-no-fast-track / ${{ matrix.name }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
+    - name: install dependencies
+      if: matrix.install_deps != ''
+      run: ${{ matrix.install_deps }}
+    - name: config site
+      run: |
+        cat > pjlib/include/pj/config_site.h << 'SITE_EOF'
+        ${{ matrix.config_site }}
+        SITE_EOF
+    - name: configure
+      run: CFLAGS="-g -fsanitize=address" LDFLAGS="-rdynamic -fsanitize=address" ./configure ${{ matrix.configure_args }}
+    - name: make
+      run: $MAKE_FAST
+    - name: pjlib ioqueue, activesock, ssl_sock test
+      run: |
+        export LSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/lsan.supp"
+        cd pjlib/build && ../bin/pjlib-test-`make -s -C ../.. infotarget` $CI_MODE $CI_ARGS udp_ioqueue_test tcp_ioqueue_test udp_ioqueue_unreg_test activesock_test ssl_sock_test ssl_sock_stress_test
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ matrix.name }}-${{ github.run_id }}
+        path: artifacts
+
   cmake-build:
     runs-on: ubuntu-latest
     name: CMake / ${{ matrix.build_type }}

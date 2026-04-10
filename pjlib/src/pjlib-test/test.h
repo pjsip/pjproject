@@ -143,6 +143,7 @@ extern int iocp_unregister_test(void);
 extern int activesock_test(void);
 extern int file_test(void);
 extern int ssl_sock_test(void);
+extern int ssl_sock_stress_test(void);
 extern int unittest_basic_test(void);
 extern int unittest_parallel_test(void);
 extern int unittest_test(void);

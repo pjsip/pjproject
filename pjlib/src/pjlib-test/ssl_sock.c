@@ -16,23 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include "test.h"
-#include <pjlib.h>
-
-
-#define CERT_DIR                    "../build/"
-#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN) || \
-    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
-/* If we use Darwin SSL, use the cert in DER format. */
-#   define CERT_CA_FILE             CERT_DIR "cacert.der"
-#else
-#   define CERT_CA_FILE             CERT_DIR "cacert.pem"
-#endif
-#define CERT_FILE                   CERT_DIR "cacert.pem"
-#define CERT_PRIVKEY_FILE           CERT_DIR "privkey.pem"
-#define CERT_PRIVKEY_PASS           "privkeypass"
-
-#define TEST_LOAD_FROM_FILES        1
+#include "ssl_sock_test.h"
 
 /* Test direct certificate loading.
  * For OpenSSL backend only and TEST_LOAD_FROM_FILES must be 1.
@@ -81,6 +65,7 @@ struct test_state
 {
     pj_pool_t      *pool;           /* pool                                 */
     pj_ioqueue_t   *ioqueue;        /* ioqueue                              */
+    pj_ssl_sock_t  *accepted_ssock; /* accepted server-side socket          */
     pj_bool_t       is_server;      /* server role flag                     */
     pj_bool_t       is_verbose;     /* verbose flag, e.g: cert info         */
     pj_bool_t       echo;           /* echo received data                   */
@@ -230,6 +215,9 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
     st = (struct test_state*)pj_pool_zalloc(parent_st->pool, sizeof(struct test_state));
     *st = *parent_st;
     pj_ssl_sock_set_user_data(newsock, st);
+
+    /* Track accepted socket for cleanup */
+    parent_st->accepted_ssock = newsock;
 
     status = pj_ssl_sock_get_info(newsock, &info);
     if (status != PJ_SUCCESS) {
@@ -1243,10 +1231,21 @@ static int client_non_ssl(unsigned ms_timeout)
     PJ_LOG(3, ("", "...Done!"));
 
 on_return:
-    if (ssock_serv)
-        pj_ssl_sock_close(ssock_serv);
     if (asock_cli && !state_cli.err && !state_cli.done)
         pj_activesock_close(asock_cli);
+    if (state_serv.accepted_ssock)
+        pj_ssl_sock_close(state_serv.accepted_ssock);
+    if (ssock_serv)
+        pj_ssl_sock_close(ssock_serv);
+
+    /* Poll to let deferred socket destruction complete */
+    if (ioqueue) {
+        pj_time_val delay = {0, 500};
+        int n = 50;
+        while (n-- > 0 && pj_ioqueue_poll(ioqueue, &delay) > 0)
+            ;
+    }
+
     if (timer)
         pj_timer_heap_destroy(timer);
     if (ioqueue)
@@ -1665,8 +1664,8 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
         if (state_cli[i].err != PJ_SUCCESS)
             cli_err++;
 
-        tot_sent += state_cli[1].sent;
-        tot_recv += state_cli[1].recv;
+        tot_sent += state_cli[i].sent;
+        tot_recv += state_cli[i].recv;
     }
 
     PJ_LOG(3, ("", ".....Clients: %d (%d errors)", clients, cli_err));
@@ -1692,33 +1691,370 @@ on_return:
 }
 #endif
 
-#if 0 && (!defined(PJ_SYMBIAN) || PJ_SYMBIAN==0)
-pj_status_t pj_ssl_sock_ossl_test_send_buf(pj_pool_t *pool);
-static int ossl_test_send_buf()
+/* Stress tests (send_load, close_pending, bidir, mt_send_load) are in
+ * ssl_sock_stress.c, registered as ssl_sock_stress_test().
+ */
+
+
+/*
+ * Large message test: send 64KB data (multiple TLS records),
+ * verify byte-for-byte echo. Uses dedicated state/callbacks with
+ * larger buffers than the echo_test infrastructure.
+ */
+#define LARGE_MSG_SIZE      (64 * 1024)
+#define LARGE_MSG_BUF_SIZE  8192
+
+struct large_msg_state
 {
-    pj_pool_t *pool;
+    pj_pool_t          *pool;
+    pj_ssl_sock_t      *accepted_ssock;
+    pj_bool_t           is_server;
+    pj_bool_t           echo;
+    pj_status_t         err;
+    pj_size_t           sent;
+    pj_size_t           recv;
+    pj_uint8_t          read_buf[LARGE_MSG_BUF_SIZE];
+    pj_bool_t           done;
+    char               *send_str;
+    pj_size_t           send_str_len;
+    const char         *check_echo_ptr;
+    pj_ioqueue_op_key_t send_key;
+};
+
+static pj_bool_t lm_on_connect_complete(pj_ssl_sock_t *ssock,
+                                        pj_status_t status)
+{
+    struct large_msg_state *st = (struct large_msg_state *)
+                                  pj_ssl_sock_get_user_data(ssock);
+    void *read_buf[1];
+
+    if (status != PJ_SUCCESS) {
+        st->err = status;
+        return PJ_FALSE;
+    }
+
+    read_buf[0] = st->read_buf;
+    status = pj_ssl_sock_start_read2(ssock, st->pool,
+                                     sizeof(st->read_buf),
+                                     (void **)read_buf, 0);
+    if (status != PJ_SUCCESS) {
+        st->err = status;
+        return PJ_FALSE;
+    }
+
+    /* Start sending */
+    while (st->sent < st->send_str_len) {
+        pj_ssize_t size = st->send_str_len - st->sent;
+
+        status = pj_ssl_sock_send(ssock, &st->send_key,
+                                  st->send_str + st->sent, &size, 0);
+        if (status == PJ_SUCCESS) {
+            st->sent += size;
+        } else {
+            if (status != PJ_EPENDING)
+                st->err = status;
+            break;
+        }
+    }
+
+    return (st->err == PJ_SUCCESS) ? PJ_TRUE : PJ_FALSE;
+}
+
+static pj_bool_t lm_on_accept_complete(pj_ssl_sock_t *ssock,
+                                       pj_ssl_sock_t *newsock,
+                                       const pj_sockaddr_t *src_addr,
+                                       int src_addr_len,
+                                       pj_status_t accept_status)
+{
+    struct large_msg_state *parent_st = (struct large_msg_state *)
+                                         pj_ssl_sock_get_user_data(ssock);
+    struct large_msg_state *st;
+    void *read_buf[1];
     pj_status_t status;
 
-    pool = pj_pool_create(mem, "send_buf", 256, 256, NULL);
-    status = pj_ssl_sock_ossl_test_send_buf(pool);
-    pj_pool_release(pool);
-    return status;
+    PJ_UNUSED_ARG(src_addr);
+    PJ_UNUSED_ARG(src_addr_len);
+
+    if (accept_status != PJ_SUCCESS)
+        return PJ_FALSE;
+
+    st = (struct large_msg_state *)pj_pool_zalloc(parent_st->pool,
+                                        sizeof(struct large_msg_state));
+    *st = *parent_st;
+    st->sent = 0;
+    st->recv = 0;
+    st->done = PJ_FALSE;
+    st->err = PJ_SUCCESS;
+    pj_ssl_sock_set_user_data(newsock, st);
+
+    /* Track accepted socket for cleanup */
+    parent_st->accepted_ssock = newsock;
+
+    read_buf[0] = st->read_buf;
+    status = pj_ssl_sock_start_read2(newsock, st->pool,
+                                     sizeof(st->read_buf),
+                                     (void **)read_buf, 0);
+    if (status != PJ_SUCCESS) {
+        st->err = status;
+        return PJ_FALSE;
+    }
+
+    return PJ_TRUE;
 }
-#else
-static int ossl_test_send_buf()
+
+static pj_bool_t lm_on_data_read(pj_ssl_sock_t *ssock,
+                                  void *data,
+                                  pj_size_t size,
+                                  pj_status_t status,
+                                  pj_size_t *remainder)
 {
-    return 0;
+    struct large_msg_state *st = (struct large_msg_state *)
+                                  pj_ssl_sock_get_user_data(ssock);
+
+    if (remainder)
+        *remainder = 0;
+
+    if (size > 0) {
+        st->recv += size;
+
+        /* Server: echo data back */
+        if (st->echo) {
+            pj_ssize_t sz = (pj_ssize_t)size;
+            pj_status_t s;
+
+            s = pj_ssl_sock_send(ssock, &st->send_key, data, &sz, 0);
+            if (s == PJ_SUCCESS)
+                st->sent += sz;
+            else if (s != PJ_EPENDING)
+                st->err = s;
+        }
+
+        /* Client: verify echoed data byte-for-byte */
+        if (st->check_echo_ptr) {
+            if (pj_memcmp(st->check_echo_ptr, data, size)) {
+                PJ_LOG(1, ("", "...ERROR echoed data mismatch at "
+                           "offset %lu",
+                           (unsigned long)(st->check_echo_ptr -
+                                           st->send_str)));
+                st->err = PJ_EINVAL;
+            }
+            st->check_echo_ptr += size;
+
+            if (st->recv >= st->send_str_len)
+                st->done = PJ_TRUE;
+        }
+    }
+
+    if (status != PJ_SUCCESS) {
+        if (status == PJ_EEOF)
+            st->done = PJ_TRUE;
+        else
+            st->err = status;
+    }
+
+    if (st->err != PJ_SUCCESS || st->done)
+        return PJ_FALSE;
+
+    return PJ_TRUE;
 }
-#endif
+
+static pj_bool_t lm_on_data_sent(pj_ssl_sock_t *ssock,
+                                  pj_ioqueue_op_key_t *op_key,
+                                  pj_ssize_t sent)
+{
+    struct large_msg_state *st = (struct large_msg_state *)
+                                  pj_ssl_sock_get_user_data(ssock);
+    PJ_UNUSED_ARG(op_key);
+
+    if (sent < 0) {
+        st->err = (pj_status_t)-sent;
+        return PJ_FALSE;
+    }
+
+    st->sent += sent;
+
+    /* Client: continue sending remaining data */
+    if (st->send_str && st->sent < st->send_str_len) {
+        while (st->sent < st->send_str_len) {
+            pj_ssize_t size = st->send_str_len - st->sent;
+            pj_status_t s;
+
+            s = pj_ssl_sock_send(ssock, &st->send_key,
+                                 st->send_str + st->sent, &size, 0);
+            if (s == PJ_SUCCESS) {
+                st->sent += size;
+            } else {
+                if (s != PJ_EPENDING)
+                    st->err = s;
+                break;
+            }
+        }
+    }
+
+    return (st->err == PJ_SUCCESS) ? PJ_TRUE : PJ_FALSE;
+}
+
+static int large_msg_test(void)
+{
+    pj_pool_t *pool = NULL;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_timer_heap_t *timer = NULL;
+    pj_ssl_sock_t *ssock_serv = NULL;
+    pj_ssl_sock_t *ssock_cli = NULL;
+    pj_ssl_sock_param param;
+    struct large_msg_state state_serv;
+    struct large_msg_state state_cli;
+    pj_sockaddr addr, listen_addr;
+    pj_status_t status;
+    char *large_buf;
+    int i;
+
+    pool = pj_pool_create(mem, "ssl_large", 256000, 4096, NULL);
+
+    pj_bzero(&state_serv, sizeof(state_serv));
+    pj_bzero(&state_cli, sizeof(state_cli));
+
+    status = pj_ioqueue_create(pool, 4, &ioqueue);
+    if (status != PJ_SUCCESS) {
+        app_perror("...large_msg_test: ioqueue create", status);
+        goto on_return;
+    }
+
+    status = pj_timer_heap_create(pool, 4, &timer);
+    if (status != PJ_SUCCESS) {
+        app_perror("...large_msg_test: timer create", status);
+        goto on_return;
+    }
+
+    pj_ssl_sock_param_default(&param);
+    param.cb.on_accept_complete2 = &lm_on_accept_complete;
+    param.cb.on_connect_complete = &lm_on_connect_complete;
+    param.cb.on_data_read = &lm_on_data_read;
+    param.cb.on_data_sent = &lm_on_data_sent;
+    param.ioqueue = ioqueue;
+    param.timer_heap = timer;
+    param.proto = PJ_SSL_SOCK_PROTO_TLS1_2;
+    param.ciphers_num = 0;
+
+    {
+        pj_str_t tmp_st;
+        pj_sockaddr_init(PJ_AF_INET, &addr,
+                         pj_strset2(&tmp_st, "127.0.0.1"), 0);
+    }
+
+    /* Fill send data with deterministic pattern */
+    large_buf = (char *)pj_pool_alloc(pool, LARGE_MSG_SIZE);
+    for (i = 0; i < LARGE_MSG_SIZE; i++)
+        large_buf[i] = (char)(i & 0xFF);
+
+    /* SERVER */
+    state_serv.pool = pool;
+    state_serv.echo = PJ_TRUE;
+    state_serv.is_server = PJ_TRUE;
+    param.user_data = &state_serv;
+    param.require_client_cert = PJ_FALSE;
+
+    listen_addr = addr;
+    status = ssl_test_create_server(pool, &param, "large_msg_test",
+                                    &ssock_serv, &listen_addr);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    /* CLIENT */
+    state_cli.pool = pool;
+    state_cli.is_server = PJ_FALSE;
+    state_cli.send_str = large_buf;
+    state_cli.send_str_len = LARGE_MSG_SIZE;
+    state_cli.check_echo_ptr = large_buf;
+    param.user_data = &state_cli;
+
+    status = pj_ssl_sock_create(pool, &param, &ssock_cli);
+    if (status != PJ_SUCCESS) {
+        app_perror("...large_msg_test: client create", status);
+        goto on_return;
+    }
+
+    status = pj_ssl_sock_start_connect(ssock_cli, pool, &addr,
+                                       &listen_addr,
+                                       pj_sockaddr_get_len(&addr));
+    if (status == PJ_SUCCESS) {
+        lm_on_connect_complete(ssock_cli, PJ_SUCCESS);
+    } else if (status != PJ_EPENDING) {
+        app_perror("...large_msg_test: connect", status);
+        goto on_return;
+    }
+
+    /* Poll until done */
+    {
+        pj_timestamp t_start, t_now;
+        pj_uint32_t elapsed;
+
+        pj_get_timestamp(&t_start);
+        while (!state_cli.err && !state_cli.done) {
+            pj_time_val delay = {0, 100};
+            pj_ioqueue_poll(ioqueue, &delay);
+            pj_timer_heap_poll(timer, NULL);
+
+            pj_get_timestamp(&t_now);
+            elapsed = pj_elapsed_msec(&t_start, &t_now);
+            if (elapsed > 30000) {
+                PJ_LOG(1, ("", "...large_msg_test TIMEOUT after 30s"));
+                status = PJ_ETIMEDOUT;
+                goto on_return;
+            }
+        }
+    }
+
+    if (state_cli.err) {
+        status = state_cli.err;
+        app_perror("...large_msg_test client error", status);
+        goto on_return;
+    }
+
+    PJ_LOG(3, ("", "...large_msg_test: sent=%lu, recv=%lu",
+               (unsigned long)state_cli.sent,
+               (unsigned long)state_cli.recv));
+
+    if (state_cli.recv < (pj_size_t)LARGE_MSG_SIZE) {
+        PJ_LOG(1, ("", "...large_msg_test: recv=%lu < expected=%d",
+                   (unsigned long)state_cli.recv, LARGE_MSG_SIZE));
+        status = PJ_EINVAL;
+        goto on_return;
+    }
+
+    status = PJ_SUCCESS;
+
+on_return:
+    if (ssock_cli)
+        pj_ssl_sock_close(ssock_cli);
+    if (state_serv.accepted_ssock)
+        pj_ssl_sock_close(state_serv.accepted_ssock);
+    if (ssock_serv)
+        pj_ssl_sock_close(ssock_serv);
+
+    /* Poll to drain pending events after close */
+    if (ioqueue) {
+        pj_time_val delay = {0, 500};
+        int n = 50;
+        while (n-- > 0 && pj_ioqueue_poll(ioqueue, &delay) > 0)
+            ;
+    }
+
+    if (timer)
+        pj_timer_heap_destroy(timer);
+    if (ioqueue)
+        pj_ioqueue_destroy(ioqueue);
+    if (pool)
+        pj_pool_release(pool);
+
+    return (status == PJ_SUCCESS) ? 0 : -1;
+}
+
+
 
 int ssl_sock_test(void)
 {
     int ret;
-
-    PJ_LOG(3,("", "..test ossl send buf"));
-    ret = ossl_test_send_buf();
-    if (ret != 0)
-        return ret;
 
     PJ_LOG(3,("", "..get cipher list test"));
     ret = get_cipher_list();
@@ -1825,6 +2161,11 @@ int ssl_sock_test(void)
     if (ret != 0)
         return ret;
 #endif
+
+    PJ_LOG(3,("", "..large message test"));
+    ret = large_msg_test();
+    if (ret != 0)
+        return ret;
 
 #if WITH_BENCHMARK
 #if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_MBEDTLS)
