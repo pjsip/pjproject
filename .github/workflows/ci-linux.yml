@@ -558,12 +558,14 @@ jobs:
               #define PJ_TODO(x)
               #define PJ_IOQUEUE_FAST_TRACK 0
               #define PJ_IOQUEUE_IMP PJ_IOQUEUE_IMP_SELECT
+              #define PJ_RACE_ME(x) pj_thread_sleep(pj_rand() % (x))
             configure_args: ""
             install_deps: ""
           - name: epoll+gtls
             config_site: |
               #define PJ_TODO(x)
               #define PJ_IOQUEUE_FAST_TRACK 0
+              #define PJ_RACE_ME(x) pj_thread_sleep(pj_rand() % (x))
             configure_args: "--with-gnutls=/usr/"
             install_deps: "sudo apt-get update && sudo apt-get install -y libgnutls28-dev"
     name: ioq-no-fast-track / ${{ matrix.name }}
