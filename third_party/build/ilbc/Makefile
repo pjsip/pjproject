@@ -10,7 +10,7 @@ export ILBC_LIB := libilbccodec-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export ILBC_SONAME := libilbccodec.$(SHLIB_SUFFIX)
-export ILBC_SHLIB := $(ILBC_SONAME).$(PJ_VERSION_MAJOR)
+export ILBC_SHLIB := $(ILBC_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################

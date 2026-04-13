@@ -18,7 +18,7 @@ export PJLIB_UTIL_LIB := libpjlib-util-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export PJLIB_UTIL_SONAME := libpjlib-util.$(SHLIB_SUFFIX)
-export PJLIB_UTIL_SHLIB := $(PJLIB_UTIL_SONAME).$(PJ_VERSION_MAJOR)
+export PJLIB_UTIL_SHLIB := $(PJLIB_UTIL_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################

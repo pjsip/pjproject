@@ -10,7 +10,7 @@ export G7221_CODEC_LIB := libg7221codec-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export G7221_CODEC_SONAME := libg7221codec.$(SHLIB_SUFFIX)
-export G7221_CODEC_SHLIB := $(G7221_CODEC_SONAME).$(PJ_VERSION_MAJOR)
+export G7221_CODEC_SHLIB := $(G7221_CODEC_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################
