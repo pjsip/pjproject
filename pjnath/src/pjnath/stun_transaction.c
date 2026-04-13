@@ -355,24 +355,26 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
 
 
 /* Retransmit timer callback */
-static void retransmit_timer_callback(pj_timer_heap_t *timer_heap, 
+static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
                                       pj_timer_entry *timer)
 {
     pj_stun_client_tsx *tsx = (pj_stun_client_tsx *) timer->user_data;
+    /* Save grp_lock to local variable since tsx may be destroyed during
+     * callbacks below (e.g. on_send_msg, on_complete), after which
+     * tsx->grp_lock must not be accessed.
+     */
+    pj_grp_lock_t *grp_lock = tsx->grp_lock;
     pj_status_t status;
 
     PJ_UNUSED_ARG(timer_heap);
-    pj_grp_lock_acquire(tsx->grp_lock);
+    pj_grp_lock_acquire(grp_lock);
 
     if (tsx->is_destroying) {
-        pj_grp_lock_release(tsx->grp_lock);
+        pj_grp_lock_release(grp_lock);
         return;
     }
 
     if (tsx->transmit_count >= PJ_STUN_MAX_TRANSMIT_COUNT) {
-        /* tsx may be destroyed when calling the callback below */
-        pj_grp_lock_t *grp_lock = tsx->grp_lock;
-
         /* Retransmission count exceeded. Transaction has failed */
         tsx->retransmit_timer.id = 0;
         PJ_LOG(4,(tsx->obj_name, "STUN timeout waiting for response"));
@@ -391,6 +393,11 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 
     tsx->retransmit_timer.id = 0;
     status = tsx_transmit_msg(tsx, PJ_TRUE);
+    if (status == PJNATH_ESTUNDESTROYED) {
+        /* We've been destroyed, don't access tsx anymore. */
+        pj_grp_lock_release(grp_lock);
+        return;
+    }
     if (status != PJ_SUCCESS) {
         tsx->retransmit_timer.id = 0;
         if (!tsx->complete) {
@@ -401,7 +408,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
         }
     }
 
-    pj_grp_lock_release(tsx->grp_lock);
+    pj_grp_lock_release(grp_lock);
     /* We might have been destroyed, don't try to access the object */
 }
 
