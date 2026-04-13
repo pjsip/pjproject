@@ -382,7 +382,7 @@ PJ_DEF(pj_status_t) pjsip_auth_create_digest2( pj_str_t *result,
     } else {
         AUTH_TRACE_((THIS_FILE, " Using pre computed digest for %.*s digest",
                 (int)algorithm->iana_name.slen, algorithm->iana_name.ptr));
-        pj_memcpy( ha1, cred_info->data.ptr, cred_info->data.slen );
+        pj_memcpy( ha1, cred_info->data.ptr, digest_strlen );
     }
 
     AUTH_TRACE_((THIS_FILE, " ha1=%.*s", algorithm->digest_str_length, ha1));
