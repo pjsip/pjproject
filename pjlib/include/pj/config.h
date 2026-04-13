@@ -842,6 +842,62 @@
 
 
 /**
+ * Maximum number of SSL send operations that can be queued (encrypted
+ * and waiting for the network). When this limit is reached,
+ * pj_ssl_sock_send() returns PJ_EBUSY and the application must retry
+ * later.
+ *
+ * This prevents unbounded memory growth when the network stalls (e.g.,
+ * TCP window full, slow receiver). Each queued operation holds a pool
+ * with the encrypted TLS record (~4-16 KB depending on record size).
+ * Embedded or memory-constrained deployments may set this to bound
+ * memory usage per SSL socket.
+ *
+ * Default: 0 (disabled — consistent with ioqueue write_list which
+ * is also unbounded). Set to a positive value to enable.
+ */
+#ifndef PJ_SSL_SEND_OP_ACTIVE_MAX
+#   define PJ_SSL_SEND_OP_ACTIVE_MAX    0
+#endif
+
+
+/**
+ * Maximum number of completed SSL send operations kept in a free list
+ * for recycling. Each send operation has its own pool (~4-16 KB for
+ * the encrypted TLS record). Recycling avoids repeated pool
+ * allocation/release on busy connections.
+ *
+ * Higher values reduce allocation overhead at the cost of resident
+ * memory per SSL socket. With asynchronous sends (PJ_IOQUEUE_FAST_TRACK
+ * disabled), operations cycle rapidly through alloc-send-free, so a
+ * larger free list reduces churn.
+ *
+ * Set to 0 to disable recycling (always release pools immediately).
+ *
+ * Default: 16
+ */
+#ifndef PJ_SSL_SEND_OP_FREE_LIST_MAX
+#   define PJ_SSL_SEND_OP_FREE_LIST_MAX     16
+#endif
+
+
+/**
+ * Minimum encrypted data buffer size for SSL send operations. When a
+ * send is smaller than this value, the buffer is padded to this size
+ * so that the operation can be reused from the free list for future
+ * sends of varying sizes without reallocation.
+ *
+ * Should be at least as large as a typical TLS record overhead plus
+ * a common application payload (e.g., a SIP response ~1-2 KB).
+ *
+ * Default: 4000
+ */
+#ifndef PJ_SSL_SEND_OP_MIN_BUF_SIZE
+#   define PJ_SSL_SEND_OP_MIN_BUF_SIZE      4000
+#endif
+
+
+/**
  * Determine if FD_SETSIZE is changeable/set-able. If so, then we will
  * set it to PJ_IOQUEUE_MAX_HANDLES. Currently we detect this by checking
  * for Winsock.

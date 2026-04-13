@@ -1258,6 +1258,22 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
     }
 #endif
 
+    /* Note: SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION is intentionally
+     * NOT set — it enables the CVE-2009-3555 MitM attack. OpenSSL's
+     * secure renegotiation (RFC 5746) works without it.
+     */
+
+#ifdef SSL_OP_ALLOW_CLIENT_RENEGOTIATION
+    /* OpenSSL 3.x disables client-initiated renegotiation by default.
+     * Only enable on server sockets to avoid DoS exposure — a
+     * malicious client could repeatedly request renegotiation to
+     * exhaust server CPU with asymmetric crypto operations.
+     */
+    if (ssock->is_server && ssock->param.enable_renegotiation) {
+        ssl_opt |= SSL_OP_ALLOW_CLIENT_RENEGOTIATION;
+    }
+#endif
+
     if (ssl_opt)
         SSL_CTX_set_options(ctx, ssl_opt);
 
@@ -1801,7 +1817,7 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 /* Reset SSL socket state */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
-    int post_unlock_flush_circ_buf = 0;
+    int post_unlock_flush_write_buf = 0;
 
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
 
@@ -1832,7 +1848,7 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
             if (ret == 0) {
                 /* SSL_shutdown will potentially trigger a bunch of
                  * data to dump to the socket */
-                post_unlock_flush_circ_buf = 1;
+                post_unlock_flush_write_buf = 1;
             }
         }
     }
@@ -1841,9 +1857,21 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 
     pj_lock_release(ssock->write_mutex);
 
-    if (post_unlock_flush_circ_buf) {
-        /* Flush data to send close notify. */
-        flush_ssl_write_buf(ssock, &ssock->shutdown_op_key, 0, 0);
+    if (post_unlock_flush_write_buf) {
+        pj_status_t flush_status;
+
+        /* Flush data to send close_notify. */
+        flush_status = flush_ssl_write_buf(ssock, &ssock->shutdown_op_key,
+                                           0, 0);
+        if (flush_status == PJ_EPENDING) {
+            /* close_notify is being sent asynchronously. Closing the
+             * socket now will abort it — the peer may not receive the
+             * graceful shutdown. This is acceptable; ssl_on_destroy
+             * will clean up the orphaned send op.
+             */
+            PJ_LOG(5, (ssock->pool->obj_name,
+                       "close_notify send pending, closing anyway"));
+        }
     }
 
     ssl_close_sockets(ssock);
@@ -2557,7 +2585,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
         pj_status_t status;
         int err = SSL_get_error(ossock->ossl_ssl, size_);
 
-        /* SSL might just return SSL_ERROR_WANT_READ in 
+        /* SSL might just return SSL_ERROR_WANT_READ in
          * re-negotiation.
          */
         if (err != SSL_ERROR_NONE && err != SSL_ERROR_WANT_READ &&
@@ -2584,7 +2612,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
                 return status;
             }
         }
-        
+
         /* Return PJ_ETRYAGAIN when SSL needs renegotiation */
         if (!SSL_is_init_finished(ossock->ossl_ssl)) {
             pj_lock_release(ssock->write_mutex);

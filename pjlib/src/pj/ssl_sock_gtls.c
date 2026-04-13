@@ -1196,6 +1196,8 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
         status = PJ_EPENDING;
     } else {
         /* Fatal error invalidates session, no fallback */
+        PJ_LOG(1, ("tls", "gnutls_handshake() error: %s (%d)",
+                   gnutls_strerror(ret), ret));
         status = PJ_EINVAL;
     }
 
@@ -1280,22 +1282,20 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
     gnutls_sock_t *gssock = (gnutls_sock_t *)ssock;
     int status;
 
-    /* First call gnutls_rehandshake() to see if this is even possible */
-    status = gnutls_rehandshake(gssock->session);
-
-    if (status == GNUTLS_E_SUCCESS) {
-        /* Rehandshake is possible, so try a GnuTLS handshake now. The eventual
-         * gnutls_record_recv() calls could return a few specific values during
-         * this state:
-         *
-         *   - GNUTLS_E_REHANDSHAKE: rehandshake message processing
-         *   - GNUTLS_E_WARNING_ALERT_RECEIVED: client does not wish to
-         *                                      renegotiate
+    if (!ssock->is_server) {
+        /* GnuTLS does not support client-initiated renegotiation.
+         * gnutls_rehandshake() is server-only (sends HelloRequest),
+         * and gnutls_handshake() on an established session fails.
          */
-        return PJ_SUCCESS;
-    } else {
-        return tls_status_from_err(ssock, status);
+        return PJ_ENOTSUP;
     }
+
+    /* Server: send HelloRequest to ask client to renegotiate */
+    status = gnutls_rehandshake(gssock->session);
+    if (status == GNUTLS_E_SUCCESS)
+        return PJ_SUCCESS;
+
+    return tls_status_from_err(ssock, status);
 }
 
 #endif /* PJ_HAS_SSL_SOCK */
