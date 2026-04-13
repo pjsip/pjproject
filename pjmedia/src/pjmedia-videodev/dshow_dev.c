@@ -106,6 +106,7 @@ struct dshow_factory
     unsigned                     dev_count;
     struct dshow_dev_info       *dev_info;
 
+    pj_mutex_t                  *cap_thread_lock;
     dshow_cap_thread             cap_threads; /**< Registered thread list */
 };
 
@@ -241,6 +242,14 @@ static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
 
     pj_list_init(&df->cap_threads);
 
+    {
+        pj_status_t status;
+        status = pj_mutex_create_simple(df->pool, "dshow_thr",
+                                        &df->cap_thread_lock);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
     return dshow_factory_refresh(f);
 }
 
@@ -249,6 +258,9 @@ static pj_status_t dshow_factory_destroy(pjmedia_vid_dev_factory *f)
 {
     struct dshow_factory *df = (struct dshow_factory*)f;
     pj_pool_t *pool = df->pool;
+
+    if (df->cap_thread_lock)
+        pj_mutex_destroy(df->cap_thread_lock);
 
     df->pool = NULL;
     if (df->dev_pool)
@@ -609,17 +621,16 @@ static pj_status_t dshow_factory_default_param(pj_pool_t *pool,
  * factory pool so they remain valid across stream create/destroy cycles,
  * and each thread gets its own descriptor (some cameras use multiple
  * callback threads).
- *
- * Note: the list is accessed without mutex. This is safe as normally only
- * one dshow capture stream is active at a time, and entries are only
- * appended (never removed), so concurrent readers won't see a torn list.
  */
 static pj_bool_t dshow_register_thread(struct dshow_factory *df)
 {
     DWORD tid = GetCurrentThreadId();
-    dshow_cap_thread *ct = df->cap_threads.next;
+    dshow_cap_thread *ct;
     pj_bool_t found = PJ_FALSE;
 
+    pj_mutex_lock(df->cap_thread_lock);
+
+    ct = df->cap_threads.next;
     while (ct != &df->cap_threads) {
         if (ct->tid == tid) {
             found = PJ_TRUE;
@@ -638,12 +649,17 @@ static pj_bool_t dshow_register_thread(struct dshow_factory *df)
             pj_list_push_back(&df->cap_threads, ct);
         }
 
+        pj_mutex_unlock(df->cap_thread_lock);
+
         status = pj_thread_register("ds_cap", ct->thread_desc, &thread);
         if (status != PJ_SUCCESS)
             return PJ_FALSE;
-        PJ_LOG(5,(THIS_FILE, "Capture thread started"));
+        PJ_LOG(5,(THIS_FILE, "Capture thread registered (tid=%lu)",
+                  (unsigned long)tid));
+        return PJ_TRUE;
     }
 
+    pj_mutex_unlock(df->cap_thread_lock);
     return PJ_TRUE;
 }
 
