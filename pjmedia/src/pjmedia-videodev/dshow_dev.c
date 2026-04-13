@@ -87,6 +87,14 @@ struct dshow_dev_info
     WCHAR                        display_name[192];
 };
 
+/* Registered capture thread entry */
+typedef struct dshow_cap_thread
+{
+    PJ_DECL_LIST_MEMBER(struct dshow_cap_thread);
+    DWORD           tid;
+    pj_thread_desc  thread_desc;
+} dshow_cap_thread;
+
 /* dshow_ factory */
 struct dshow_factory
 {
@@ -97,6 +105,8 @@ struct dshow_factory
 
     unsigned                     dev_count;
     struct dshow_dev_info       *dev_info;
+
+    dshow_cap_thread             cap_threads; /**< Registered thread list */
 };
 
 /* Video stream. */
@@ -105,6 +115,7 @@ struct dshow_stream
     pjmedia_vid_dev_stream   base;                  /**< Base stream        */
     pjmedia_vid_dev_param    param;                 /**< Settings           */
     pj_pool_t               *pool;                  /**< Memory pool.       */
+    struct dshow_factory    *factory;               /**< Factory.           */
 
     pjmedia_vid_dev_cb       vid_cb;                /**< Stream callback.   */
     void                    *user_data;             /**< Application data.  */
@@ -113,8 +124,6 @@ struct dshow_stream
     pj_bool_t                rend_thread_exited;
     pj_bool_t                cap_thread_exited;
     pj_bool_t                cap_thread_initialized;
-    pj_thread_desc           cap_thread_desc;
-    pj_thread_t             *cap_thread;
     void                    *frm_buf;
     unsigned                 frm_buf_size;
 
@@ -214,11 +223,12 @@ pjmedia_vid_dev_factory* pjmedia_dshow_factory(pj_pool_factory *pf)
 /* API: init factory */
 static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
 {
+    struct dshow_factory *df = (struct dshow_factory*)f;
     HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-    if (hr == RPC_E_CHANGED_MODE) {     
-        /* When using apartment mode, Dshow object would not be accessible from 
+    if (hr == RPC_E_CHANGED_MODE) {
+        /* When using apartment mode, Dshow object would not be accessible from
          * other thread. Take this into consideration when implementing native
-         * renderer using Dshow. 
+         * renderer using Dshow.
          */
         hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
         if (FAILED(hr)) {
@@ -228,6 +238,8 @@ static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
             return PJMEDIA_EVID_INIT;
         }
     }
+
+    pj_list_init(&df->cap_threads);
 
     return dshow_factory_refresh(f);
 }
@@ -590,6 +602,51 @@ static pj_status_t dshow_factory_default_param(pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+/* Check if the calling thread is registered to pjlib. We track registered
+ * threads in the factory's list rather than relying on pj_thread_is_registered()
+ * alone, because the thread descriptor it points to may have been freed
+ * (e.g. after library restart). Thread descriptors are allocated from the
+ * factory pool so they remain valid across stream create/destroy cycles,
+ * and each thread gets its own descriptor (some cameras use multiple
+ * callback threads).
+ *
+ * Note: the list is accessed without mutex. This is safe as normally only
+ * one dshow capture stream is active at a time, and entries are only
+ * appended (never removed), so concurrent readers won't see a torn list.
+ */
+static pj_bool_t dshow_register_thread(struct dshow_factory *df)
+{
+    DWORD tid = GetCurrentThreadId();
+    dshow_cap_thread *ct = df->cap_threads.next;
+    pj_bool_t found = PJ_FALSE;
+
+    while (ct != &df->cap_threads) {
+        if (ct->tid == tid) {
+            found = PJ_TRUE;
+            break;
+        }
+        ct = ct->next;
+    }
+
+    if (!found || !pj_thread_is_registered()) {
+        pj_status_t status;
+        pj_thread_t *thread;
+
+        if (!found) {
+            ct = PJ_POOL_ZALLOC_T(df->pool, dshow_cap_thread);
+            ct->tid = tid;
+            pj_list_push_back(&df->cap_threads, ct);
+        }
+
+        status = pj_thread_register("ds_cap", ct->thread_desc, &thread);
+        if (status != PJ_SUCCESS)
+            return PJ_FALSE;
+        PJ_LOG(5,(THIS_FILE, "Capture thread started"));
+    }
+
+    return PJ_TRUE;
+}
+
 static void input_cb(void *user_data, IMediaSample *pMediaSample)
 {
     struct dshow_stream *strm = (struct dshow_stream*)user_data;
@@ -600,17 +657,9 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
         return;
     }
 
-    if (strm->cap_thread_initialized == 0 || !pj_thread_is_registered())
-    {
-        pj_status_t status;
-
-        status = pj_thread_register("ds_cap", strm->cap_thread_desc, 
-                                    &strm->cap_thread);
-        if (status != PJ_SUCCESS)
-            return;
-        strm->cap_thread_initialized = 1;
-        PJ_LOG(5,(THIS_FILE, "Capture thread started"));
-    }
+    if (!dshow_register_thread(strm->factory))
+        return;
+    strm->cap_thread_initialized = 1;
 
     frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
     IMediaSample_GetPointer(pMediaSample, (BYTE **)&frame.buf);
@@ -906,6 +955,7 @@ static pj_status_t dshow_factory_create_stream(
     strm = PJ_POOL_ZALLOC_T(pool, struct dshow_stream);
     pj_memcpy(&strm->param, param, sizeof(*param));
     strm->pool = pool;
+    strm->factory = df;
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
 
@@ -1060,7 +1110,7 @@ static pj_status_t dshow_stream_stop(pjmedia_vid_dev_stream *strm)
     unsigned i;
 
     stream->quit_flag = PJ_TRUE;
-    if (stream->cap_thread) {
+    if (stream->cap_thread_initialized) {
         for (i=0; !stream->cap_thread_exited && i<100; ++i)
             pj_thread_sleep(10);
     }
