@@ -828,7 +828,12 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
     pj_status_t handshake_status;
     int ret;
 
+    /* Hold write_mutex to prevent concurrent session access from
+     * read and write callbacks (ioqueue may fire them in parallel).
+     */
+    pj_lock_acquire(ssock->write_mutex);
     ret = mbedtls_ssl_handshake(&mssock->ssl_ctx);
+    pj_lock_release(ssock->write_mutex);
     handshake_status = ssl_status_from_err(ssock, ret);
 
     if (handshake_status == PJ_EPENDING)
@@ -856,8 +861,15 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
 static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
 {
     mbedtls_sock_t *mssock = (mbedtls_sock_t *)ssock;
+    int ret;
 
-    int ret = mbedtls_ssl_read(&mssock->ssl_ctx, data, *size);
+    /* Hold write_mutex because mbedtls_ssl_read() may produce
+     * handshake data during renegotiation (same as OpenSSL's
+     * SSL_read approach).
+     */
+    pj_lock_acquire(ssock->write_mutex);
+    ret = mbedtls_ssl_read(&mssock->ssl_ctx, data, *size);
+    pj_lock_release(ssock->write_mutex);
     if (ret >= 0) {
         *size = ret;
         return PJ_SUCCESS;

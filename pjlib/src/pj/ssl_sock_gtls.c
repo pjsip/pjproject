@@ -1184,8 +1184,13 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
     int ret;
     pj_status_t status;
 
-    /* Perform SSL handshake */
+    /* Perform SSL handshake.
+     * Hold write_mutex to prevent concurrent session access from
+     * read and write callbacks (ioqueue may fire them in parallel).
+     */
+    pj_lock_acquire(ssock->write_mutex);
     ret = gnutls_handshake(gssock->session);
+    pj_lock_release(ssock->write_mutex);
 
     if (ret == GNUTLS_E_SUCCESS) {
         /* System are GO */
@@ -1212,8 +1217,14 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
     int decrypted_size;
 
     /* Decrypt received data using GnuTLS (will read our input
-     * circular buffer) */
+     * circular buffer).
+     * Hold write_mutex because gnutls_record_recv() may produce
+     * handshake data during renegotiation (same as OpenSSL's
+     * SSL_read approach).
+     */
+    pj_lock_acquire(ssock->write_mutex);
     decrypted_size = gnutls_record_recv(gssock->session, data, *size);
+    pj_lock_release(ssock->write_mutex);
     *size = 0;
     if (decrypted_size > 0) {
         *size = decrypted_size;
