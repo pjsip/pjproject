@@ -996,6 +996,17 @@ struct UaConfig : public PersistentObject
      */
     string              upnpIfName;
 
+    /**
+     * When set to true, "norefersub" is advertised in the SIP Supported
+     * header per RFC 4488, indicating that this endpoint is capable of
+     * suppressing the implicit REFER event subscription.  The actual
+     * suppression is negotiated per-call via the Refer-Sub header; this
+     * flag only controls whether the capability is announced.
+     *
+     * Default: true
+     */
+    bool                noRefersub;
+
 public:
     /**
      * Default constructor to initialize with default values.
