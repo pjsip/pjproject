@@ -1337,10 +1337,10 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     /* Use write_mutex (not ssl_read_buf_mutex) to serialise the
      * ssl_state transition and the first ssl_do_handshake() call
      * against a concurrent ssock_on_data_read() that could fire on
-     * the newly-registered ioqueue key.  write_mutex is correct
-     * because ssl_do_handshake() now acquires write_mutex internally
-     * (for every backend), and the consistent lock order everywhere
-     * is: write_mutex -> ssl_read_buf_mutex.
+     * the newly-registered ioqueue key.  write_mutex is the correct
+     * outer lock here because backends that touch shared SSL session
+     * state acquire write_mutex internally, and the consistent lock
+     * order everywhere is: write_mutex -> ssl_read_buf_mutex.
      */
     pj_lock_acquire(ssock->write_mutex);
     ssock->ssl_state = SSL_STATE_HANDSHAKING;
