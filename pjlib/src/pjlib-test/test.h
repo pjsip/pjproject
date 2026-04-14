@@ -168,7 +168,6 @@ struct test_app_t
     const char *param_echo_server;
     int         param_echo_port;
     int         param_log_decor;
-    pj_bool_t   param_ci_mode;
     pj_bool_t   param_skip_essentials;
 };
 extern struct test_app_t test_app;

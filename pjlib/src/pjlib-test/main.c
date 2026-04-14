@@ -48,7 +48,6 @@ static void usage()
     ut_usage();
 
     puts("  --skip-e         Skip essential tests");
-    puts("  --ci-mode        Running in slow CI  mode");
     puts("  -i               Ask ENTER before quitting");
     puts("  -p PORT          Use port PORT for echo port");
     puts("  -s SERVER        Use SERVER as ech oserver");
@@ -110,7 +109,6 @@ int main(int argc, char *argv[])
     }
     test_app.param_skip_essentials = pj_argparse_get_bool(&argc, argv,
                                                           "--skip-e");
-    test_app.param_ci_mode = pj_argparse_get_bool(&argc, argv, "--ci-mode");
 
 
     if (pj_argparse_peek_next_option(argv)) {
