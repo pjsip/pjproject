@@ -2427,10 +2427,16 @@ static pj_status_t transport_attach2  (pjmedia_transport *tp,
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
+    if (tp->grp_lock)
+        pj_grp_lock_acquire(tp->grp_lock);
+
     tp_ice->stream = att_param->user_data;
     tp_ice->rtp_cb = att_param->rtp_cb;
     tp_ice->rtp_cb2 = att_param->rtp_cb2;
     tp_ice->rtcp_cb = att_param->rtcp_cb;
+
+    if (tp->grp_lock)
+        pj_grp_lock_release(tp->grp_lock);
 
     /* Check again if we are multiplexing RTP & RTCP. */
     tp_ice->use_rtcp_mux = (pj_sockaddr_has_addr(&att_param->rem_addr) &&
@@ -2455,14 +2461,18 @@ static void transport_detach(pjmedia_transport *tp,
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
-    /* TODO: need to solve ticket #460 here */
+    PJ_UNUSED_ARG(strm);
+
+    if (tp->grp_lock)
+        pj_grp_lock_acquire(tp->grp_lock);
 
     tp_ice->rtp_cb = NULL;
     tp_ice->rtp_cb2 = NULL;
     tp_ice->rtcp_cb = NULL;
     tp_ice->stream = NULL;
 
-    PJ_UNUSED_ARG(strm);
+    if (tp->grp_lock)
+        pj_grp_lock_release(tp->grp_lock);
 }
 
 
@@ -2537,19 +2547,37 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 }
 
 
-static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id, 
+static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
                            void *pkt, pj_size_t size,
                            const pj_sockaddr_t *src_addr,
                            unsigned src_addr_len)
 {
     struct transport_ice *tp_ice;
     pj_bool_t discard = PJ_FALSE;
+    void (*rtp_cb)(void*, void*, pj_ssize_t);
+    void (*rtp_cb2)(pjmedia_tp_cb_param*);
+    void (*rtcp_cb)(void*, void*, pj_ssize_t);
+    void *stream;
 
     tp_ice = (struct transport_ice*) pj_ice_strans_get_user_data(ice_st);
     if (!tp_ice) {
         /* Destroy on progress */
         return;
     }
+
+    /* Snapshot callback pointers under lock to avoid race with
+     * transport_detach() clearing them.
+     */
+    if (tp_ice->base.grp_lock)
+        pj_grp_lock_acquire(tp_ice->base.grp_lock);
+
+    rtp_cb = tp_ice->rtp_cb;
+    rtp_cb2 = tp_ice->rtp_cb2;
+    rtcp_cb = tp_ice->rtcp_cb;
+    stream = tp_ice->stream;
+
+    if (tp_ice->base.grp_lock)
+        pj_grp_lock_release(tp_ice->base.grp_lock);
 
     if (comp_id == 1) {
         ++tp_ice->rtp_src_cnt;
@@ -2558,13 +2586,13 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
         pj_sockaddr_cp(&tp_ice->rtcp_src_addr, src_addr);
     }
 
-    if (comp_id==1 && (tp_ice->rtp_cb || tp_ice->rtp_cb2)) {
+    if (comp_id==1 && (rtp_cb || rtp_cb2)) {
         pj_bool_t rem_switch = PJ_FALSE;
 
         /* Simulate packet lost on RX direction */
         if (tp_ice->rx_drop_pct) {
             if ((pj_rand() % 100) <= (int)tp_ice->rx_drop_pct) {
-                PJ_LOG(5,(tp_ice->base.name, 
+                PJ_LOG(5,(tp_ice->base.name,
                           "RX RTP packet dropped because of pkt lost "
                           "simulation"));
                 return;
@@ -2572,19 +2600,19 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
         }
 
         if (!discard) {
-            if (tp_ice->rtp_cb2) {
+            if (rtp_cb2) {
                 pjmedia_tp_cb_param param;
 
-                param.user_data = tp_ice->stream;
+                param.user_data = stream;
                 param.pkt = pkt;
                 param.size = size;
                 param.src_addr = (tp_ice->use_ice? NULL:
                                   (pj_sockaddr_t *)src_addr);
                 param.rem_switch = PJ_FALSE;
-                (*tp_ice->rtp_cb2)(&param);
+                (*rtp_cb2)(&param);
                 rem_switch = param.rem_switch;
             } else {
-                (*tp_ice->rtp_cb)(tp_ice->stream, pkt, size);
+                (*rtp_cb)(stream, pkt, size);
             }
         }
         
@@ -2631,7 +2659,7 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
         PJ_UNUSED_ARG(rem_switch);
 #endif
 
-    } else if (comp_id==2 && tp_ice->rtcp_cb) {
+    } else if (comp_id==2 && rtcp_cb) {
 
 #if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
     (PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR == 1)
@@ -2668,7 +2696,7 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
 #endif
 
         if (!discard)
-            (*tp_ice->rtcp_cb)(tp_ice->stream, pkt, size);
+            (*rtcp_cb)(stream, pkt, size);
     }
 
     PJ_UNUSED_ARG(src_addr_len);

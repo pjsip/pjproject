@@ -1555,6 +1555,13 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
     void (*cb2)(pjmedia_tp_cb_param*) = NULL;
     void *cb_data = NULL;
 
+    /* Guard against race with transport_detach()/destroy().
+     * The underlying transport may invoke this callback after user_data
+     * has been cleared during detach.
+     */
+    if (!srtp)
+        return;
+
     if (srtp->bypass_srtp) {
         if (srtp->rtp_cb2) {
             pjmedia_tp_cb_param param2 = *param;
@@ -1763,6 +1770,12 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
     srtp_err_status_t err;
     void (*cb)(void*, void*, pj_ssize_t) = NULL;
     void *cb_data = NULL;
+
+    /* Guard against race with transport_detach()/destroy().
+     * See comment in srtp_rtp_cb().
+     */
+    if (!srtp)
+        return;
 
     if (srtp->bypass_srtp) {
         srtp->rtcp_cb(srtp->user_data, pkt, size);
