@@ -1778,7 +1778,8 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
         return;
 
     if (srtp->bypass_srtp) {
-        srtp->rtcp_cb(srtp->user_data, pkt, size);
+        if (srtp->rtcp_cb)
+            srtp->rtcp_cb(srtp->user_data, pkt, size);
         return;
     }
 
