@@ -2341,6 +2341,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
                         ope->param.disconnect_ports.sink == port))
             {
                 cancel_op = ope;
+            } else if (found &&
+                       ope->type == PJMEDIA_CONF_OP_ADJUST_CONN_LEVEL &&
+                       (ope->param.adjust_conn_level.src == port ||
+                        ope->param.adjust_conn_level.sink == port))
+            {
+                cancel_op = ope;
             }
 
             ope = ope->next;
