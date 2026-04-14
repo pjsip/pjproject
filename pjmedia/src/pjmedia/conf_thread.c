@@ -483,6 +483,8 @@ static pj_status_t op_connect_ports(pjmedia_conf *conf,
                                     const pjmedia_conf_op_param *prm);
 static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
                                        const pjmedia_conf_op_param *prm);
+static pj_status_t op_adjust_conn_level(pjmedia_conf *conf,
+                                        const pjmedia_conf_op_param *prm);
 
 static op_entry* get_free_op_entry(pjmedia_conf *conf)
 {
@@ -543,6 +545,9 @@ static void handle_op_queue(pjmedia_conf *conf)
             break;
         case PJMEDIA_CONF_OP_DISCONNECT_PORTS:
             status = op_disconnect_ports(conf, &param);
+            break;
+        case PJMEDIA_CONF_OP_ADJUST_CONN_LEVEL:
+            status = op_adjust_conn_level(conf, &param);
             break;
         default:
             status = PJ_EINVALIDOP;
@@ -1428,6 +1433,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 {
     struct conf_port *conf_port = NULL;
     SLOT_TYPE index = INVALID_SLOT;
+    op_entry *ope;
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(conf && pool && strm_port, PJ_EINVAL);
@@ -1475,15 +1481,16 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 
     conf_port->is_new = PJ_TRUE;
 
-    /* Put the port to the reserved slot. */
-    conf->ports[index] = conf_port;/*pointer assignment is processor level atomic*/
+    pj_mutex_lock(conf->mutex);
 
-    /* Put the port, but don't add port counter yet */
-    //conf->port_cnt++;
+    /* Put the port to the reserved slot and queue the operation
+     * under the same mutex hold, so that other threads calling
+     * connect/disconnect will see both the port and the queued
+     * ADD_PORT op atomically.
+     */
+    conf->ports[index] = conf_port;
 
-    pj_mutex_lock( conf->mutex );
     /* Queue the operation */
-    op_entry *ope;
     ope = get_free_op_entry(conf);
     if (ope) {
         ope->type = PJMEDIA_CONF_OP_ADD_PORT;
@@ -1493,6 +1500,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
         PJ_LOG(4,(THIS_FILE, "Add port %d (%.*s) queued",
                              index, (int)port_name->slen, port_name->ptr));
     } else {
+        conf->ports[index] = NULL;
         pj_mutex_unlock(conf->mutex);
         status = PJ_ENOMEM;
         goto on_return;
@@ -1530,11 +1538,13 @@ on_return:
 static SLOT_TYPE conf_reserve_port(pjmedia_conf *conf)
 {
     port_slot *pslot;
+    SLOT_TYPE slot;
+
     pslot = pj_atomic_slist_pop(conf->unused_slots);
     if (!pslot)
         return INVALID_SLOT;
 
-    SLOT_TYPE slot = (SLOT_TYPE)(pslot - conf->free_port_slots);
+    slot = (SLOT_TYPE)(pslot - conf->free_port_slots);
     pj_assert( slot < conf->max_ports && conf->ports[slot] == NULL );
     return slot;
 }
@@ -1602,6 +1612,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
     struct conf_port *conf_port = NULL;
     pjmedia_port *port = NULL;
     SLOT_TYPE index = INVALID_SLOT;
+    op_entry *ope;
     pj_str_t tmp;
     pj_status_t status;
 
@@ -1664,15 +1675,16 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
 
     conf_port->is_new = PJ_TRUE;
 
-    /* Put the port to the reserved slot. */
-    conf->ports[index] = conf_port;/*pointer assignment is processor level atomic*/
+    pj_mutex_lock(conf->mutex);
 
-    /* Put the port, but don't add port counter yet */
-    //conf->port_cnt++;
+    /* Put the port to the reserved slot and queue the operation
+     * under the same mutex hold, so that other threads calling
+     * connect/disconnect will see both the port and the queued
+     * ADD_PORT op atomically.
+     */
+    conf->ports[index] = conf_port;
 
-    pj_mutex_lock( conf->mutex );
     /* Queue the operation */
-    op_entry *ope;
     ope = get_free_op_entry(conf);
     if (ope) {
         ope->type = PJMEDIA_CONF_OP_ADD_PORT;
@@ -1682,6 +1694,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
         PJ_LOG(4,(THIS_FILE, "Add port %d (%.*s) queued",
                  index, (int)name->slen, name->ptr));
     } else {
+        conf->ports[index] = NULL;
         pj_mutex_unlock(conf->mutex);
         status = PJ_ENOMEM;
         goto on_return;
@@ -2109,6 +2122,43 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
     return PJ_SUCCESS;
 }
 
+static pj_status_t op_adjust_conn_level(pjmedia_conf *conf,
+                                        const pjmedia_conf_op_param *prm)
+{
+    unsigned src_slot, sink_slot;
+    struct conf_port *src_port;
+    unsigned i;
+
+    src_slot = prm->adjust_conn_level.src;
+    sink_slot = prm->adjust_conn_level.sink;
+    src_port = conf->ports[src_slot];
+
+    if (!src_port || !conf->ports[sink_slot])
+        return PJ_EINVAL;
+
+    /* Find the connection */
+    for (i=0; i<src_port->listener_cnt; ++i) {
+        if (src_port->listener_slots[i] == sink_slot)
+            break;
+    }
+
+    if (i == src_port->listener_cnt) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Adjust conn level: connection %d->%d does not exist",
+                  src_slot, sink_slot));
+        return PJ_EINVAL;
+    }
+
+    /* Set normalized adjustment level. */
+    src_port->listener_adj_level[i] =
+                            prm->adjust_conn_level.adj_level + NORMAL_LEVEL;
+
+    PJ_LOG(5,(THIS_FILE, "Adjusted conn level %d->%d to %d",
+              src_slot, sink_slot, prm->adjust_conn_level.adj_level));
+
+    return PJ_SUCCESS;
+}
+
 /*
  * Disconnect port from all sources
  */
@@ -2448,12 +2498,12 @@ static void op_remove_port2(pjmedia_conf *conf,
     unsigned port = prm->remove_port.port;
     struct conf_port *conf_port;
 
-    //pj_mutex_lock(conf->mutex);
+    pj_mutex_lock(conf->mutex);
 
     conf_port = conf->ports[port];
     if (conf_port == NULL) {
         /* Already freed, perhaps by concurrent operation */
-        //pj_mutex_unlock(conf->mutex);
+        pj_mutex_unlock(conf->mutex);
         PJ_LOG(4,(THIS_FILE,"Port %d already freed", port));
         return;
     }
@@ -2467,7 +2517,7 @@ static void op_remove_port2(pjmedia_conf *conf,
 
     pj_assert(conf->port_cnt >= conf->upper_bound_reg);
 
-    //pj_mutex_unlock(conf->mutex);
+    pj_mutex_unlock(conf->mutex);
 
     PJ_LOG(4, (THIS_FILE, "Removed port %d, port count=%d",
                port, conf->port_cnt));
@@ -2761,7 +2811,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_conn_level( pjmedia_conf *conf,
                                                     int adj_level )
 {
     struct conf_port *src_port, *dst_port;
-    unsigned i;
+    op_entry *ope;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && src_slot<conf->max_ports &&
@@ -2775,30 +2826,28 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_conn_level( pjmedia_conf *conf,
 
     pj_mutex_lock(conf->mutex);
 
-    /* Ports must be valid. */
+    /* Ports must be valid and not being removed. */
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
-    if (!src_port || !dst_port) {
+    if (!src_port || !dst_port || src_port->removing || dst_port->removing) {
         pj_mutex_unlock(conf->mutex);
         return PJ_EINVAL;
     }
 
-    /* Check if connection has been made */
-    for (i=0; i<src_port->listener_cnt; ++i) {
-        if (src_port->listener_slots[i] == sink_slot)
-            break;
+    /* Queue the operation */
+    ope = get_free_op_entry(conf);
+    if (ope) {
+        ope->type = PJMEDIA_CONF_OP_ADJUST_CONN_LEVEL;
+        ope->param.adjust_conn_level.src = src_slot;
+        ope->param.adjust_conn_level.sink = sink_slot;
+        ope->param.adjust_conn_level.adj_level = adj_level;
+        pj_list_push_back(conf->op_queue, ope);
+    } else {
+        status = PJ_ENOMEM;
     }
-
-    if (i == src_port->listener_cnt) {
-        /* connection hasn't been made */
-        pj_mutex_unlock(conf->mutex);
-        return PJ_EINVAL;
-    } 
-    /* Set normalized adjustment level. */
-    src_port->listener_adj_level[i] = adj_level + NORMAL_LEVEL;
 
     pj_mutex_unlock(conf->mutex);
-    return PJ_SUCCESS;
+    return status;
 }
 
 
@@ -2985,6 +3034,8 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
     else if ((cport->tx_setting == PJMEDIA_PORT_MUTE) ||
               cport->last_timestamp.u64 != timestamp->u64)/*no data in mix_buf*/
     {
+        pjmedia_frame frame;
+
         TRACE_EX( (THIS_FILE, "%s: Transmit heart-beat frames to port %p (%.*s, %d, transmitter_cnt=%d) last_timestamp=%llu, timestamp=%llu",
                     pj_thread_get_name( pj_thread_this() ),
                     cport,
@@ -2993,8 +3044,6 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
                     cport->slot,
                     cport->transmitter_cnt,
                     cport->last_timestamp.u64, timestamp->u64) );
-
-        pjmedia_frame frame;
 
         /* Clear left-over samples in tx_buffer, if any, so that it won't
          * be transmitted next time we have audio signal.
@@ -3350,20 +3399,22 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 static pj_status_t thread_pool_start(pjmedia_conf *conf)
 {
+    pj_atomic_value_t worker_threads;
     int i;
+
     pj_assert(conf->is_parallel);
 
     CONF_CHECK_SUCCESS(pj_barrier_create(conf->pool,
                                       conf->threads,
-                                      &conf->active_thread), 
+                                      &conf->active_thread),
                        return tmp_status_);
 
     CONF_CHECK_SUCCESS(pj_barrier_create(conf->pool,
                                       conf->threads,
-                                      &conf->barrier), 
+                                      &conf->barrier),
                        return tmp_status_);
 
-    pj_atomic_value_t    worker_threads = conf->threads-1;
+    worker_threads = conf->threads-1;
     /* active worker thread counter*/
     CONF_CHECK_SUCCESS(pj_atomic_create(conf->pool, worker_threads, &conf->active_thread_cnt), 
                        return tmp_status_);
@@ -3462,11 +3513,15 @@ static void perform_get_frame(pjmedia_conf *conf)
         unsigned j, samples_per_frame = conf->samples_per_frame;
         pj_int32_t cj, listener_cnt;
         pj_int32_t level = 0;
-        SLOT_TYPE port_idx = conf->active_ports[i];
+        SLOT_TYPE port_idx;
+        struct conf_port *conf_port;
+        unsigned rx_adj_level;
+
+        port_idx = conf->active_ports[i];
         pj_assert(port_idx < conf->max_ports);
-        struct conf_port *conf_port = conf->ports[port_idx];
+        conf_port = conf->ports[port_idx];
         PJ_ASSERT_ON_FAIL(conf_port, continue);
-        unsigned rx_adj_level = conf_port->rx_adj_level; //for auto-vectorizer
+        rx_adj_level = conf_port->rx_adj_level; /*for auto-vectorizer*/
 
         /* Skip if we're not allowed to receive from this port. */
         if (conf_port->rx_setting == PJMEDIA_PORT_DISABLE) {
@@ -3755,12 +3810,12 @@ static void mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener,
                              pj_int16_t *p_in,
                              const pj_timestamp *timestamp) 
 {
-    PJ_UNUSED_ARG(conf_port);
-    PJ_UNUSED_ARG(listener_slot);
-
     pj_int16_t *p_in_conn_leveled;
     unsigned k, samples_per_frame = conf->samples_per_frame;
     pj_int32_t *mix_buf = listener->mix_buf;
+
+    PJ_UNUSED_ARG(conf_port);
+    PJ_UNUSED_ARG(listener_slot);
 
     /* apply connection level, if not normal */
     if (listener_adj_level != NORMAL_LEVEL) {
@@ -3820,7 +3875,7 @@ static void mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener,
                 listener->transmitter_cnt,
                 (int)conf_port->name.slen,
                 conf_port->name.ptr,
-                port_idx, conf_port->listener_cnt));
+                conf_port->slot, conf_port->listener_cnt));
 
         } else {
             /* this frame is from the first transmitter */
@@ -3848,7 +3903,7 @@ static void mix_and_transmit(pjmedia_conf *conf, struct conf_port *listener,
                 conf_port,
                 (int)conf_port->name.slen,
                 conf_port->name.ptr,
-                port_idx, conf_port->listener_cnt));
+                conf_port->slot, conf_port->listener_cnt));
         }
 
         /* Check if normalization adjustment needed. */

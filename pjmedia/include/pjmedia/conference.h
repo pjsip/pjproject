@@ -120,7 +120,12 @@ typedef enum pjmedia_conf_op_type
     /**
      * The disconnect ports (stop transmit) operation.
      */
-    PJMEDIA_CONF_OP_DISCONNECT_PORTS
+    PJMEDIA_CONF_OP_DISCONNECT_PORTS,
+
+    /**
+     * The adjust connection level operation.
+     */
+    PJMEDIA_CONF_OP_ADJUST_CONN_LEVEL
 
 } pjmedia_conf_op_type;
 
@@ -162,6 +167,15 @@ typedef union pjmedia_conf_op_param
                                  port operation, this will be set
                                  to -1.                                 */
     } disconnect_ports;
+
+    /**
+     * The information for adjusting connection level operation.
+     */
+    struct {
+        unsigned src;       /**< The source port id.                    */
+        unsigned sink;      /**< The destination port id.               */
+        int adj_level;      /**< The adjustment level.                  */
+    } adjust_conn_level;
 
 } pjmedia_conf_op_param;
 
