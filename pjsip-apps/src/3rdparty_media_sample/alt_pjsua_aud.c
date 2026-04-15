@@ -28,11 +28,16 @@
 
 
 /*****************************************************************************
- * Our dummy codecs. Since we won't use any PJMEDIA codecs, we need to declare
- * our own codecs and register them to PJMEDIA's codec manager. We just need
- * the info so that they can be listed in SDP. The encoding and decoding will
- * happen in your third party media stream and will not use these codecs,
- * hence the "dummy" name.
+ * Our dummy codecs. Since we won't use any PJMEDIA codecs we have two options:
+ *
+ * - Declare our own codecs and register them to PJMEDIA's codec manager
+ *   in pjsua_aud_subsys_init().
+ *   Then they will be used for validating during SDP negotiation,
+ *   but the actual encoding and decoding will be done in our 3rd party media stream.
+ *
+ * - Do not register any codecs, and handle the failure in codec lookup during
+ *   SDP negotiation as non-fatal, so that the negotiation can proceed and the
+ *   3rd-party media stream can be used without registering any codecs.
  */
 static struct alt_codec
 {
@@ -168,16 +173,13 @@ static pjmedia_codec_factory_op alt_codec_factory_op =
 /* Initialize third party media library. */
 pj_status_t pjsua_aud_subsys_init()
 {
-    pjmedia_codec_mgr *codec_mgr;
-    pj_status_t status;
-
-    /* Register our "dummy" codecs */
-    alt_codec_factory.base.op = &alt_codec_factory_op;
-    codec_mgr = pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt);
-    status = pjmedia_codec_mgr_register_factory(codec_mgr,
-                                                &alt_codec_factory.base);
-    if (status != PJ_SUCCESS)
-        return status;
+    /* Codec registration is intentionally omitted: pjsua now handles an
+     * empty codec registry gracefully, so 3rd-party media stacks do not
+     * need to register dummy codecs.  The alt_codec_factory above is kept
+     * as reference documentation for implementors who do want to register.
+     */
+    (void)alt_codec_factory;
+    (void)alt_codec_factory_op;
 
     /* TODO: initialize your evil library here */
     return PJ_SUCCESS;
