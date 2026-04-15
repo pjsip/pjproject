@@ -120,7 +120,12 @@ typedef enum pjmedia_conf_op_type
     /**
      * The disconnect ports (stop transmit) operation.
      */
-    PJMEDIA_CONF_OP_DISCONNECT_PORTS
+    PJMEDIA_CONF_OP_DISCONNECT_PORTS,
+
+    /**
+     * The adjust connection level operation.
+     */
+    PJMEDIA_CONF_OP_ADJUST_CONN_LEVEL
 
 } pjmedia_conf_op_type;
 
@@ -162,6 +167,15 @@ typedef union pjmedia_conf_op_param
                                  port operation, this will be set
                                  to -1.                                 */
     } disconnect_ports;
+
+    /**
+     * The information for adjusting connection level operation.
+     */
+    struct {
+        unsigned src;       /**< The source port id.                    */
+        unsigned sink;      /**< The destination port id.               */
+        int adj_level;      /**< The adjustment level.                  */
+    } adjust_conn_level;
 
 } pjmedia_conf_op_param;
 
@@ -865,17 +879,24 @@ PJ_DECL(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
  * adjustment value is reported in the media port info when the
  * #pjmedia_conf_get_port_info() function is called.
  *
+ * Note that the operation is queued and will be executed asynchronously
+ * by the conference bridge clock thread (similar to connect/disconnect
+ * operations). The return value indicates whether the operation was
+ * successfully queued, not whether the adjustment was applied. The actual
+ * completion status is reported via the operation callback if one is set
+ * with #pjmedia_conf_set_op_cb().
+ *
  * @param conf          The conference bridge.
  * @param src_slot      Source slot.
  * @param sink_slot     Sink slot.
  * @param adj_level     Adjustment level, which must be greater than or equal
  *                      to -128. A value of zero means there is no level
- *                      adjustment to be made, the value -128 will mute the 
- *                      signal, and the value of +128 will make the signal 
- *                      100% louder, +256 will make it 200% louder, etc. 
+ *                      adjustment to be made, the value -128 will mute the
+ *                      signal, and the value of +128 will make the signal
+ *                      100% louder, +256 will make it 200% louder, etc.
  *                      See the function description for the formula.
  *
- * @return              PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS if the operation was queued successfully.
  */
 PJ_DECL(pj_status_t) pjmedia_conf_adjust_conn_level( pjmedia_conf *conf,
                                                      unsigned src_slot,

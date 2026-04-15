@@ -298,6 +298,8 @@ static pj_status_t op_connect_ports(pjmedia_conf *conf,
                                     const pjmedia_conf_op_param *prm);
 static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
                                        const pjmedia_conf_op_param *prm);
+static pj_status_t op_adjust_conn_level(pjmedia_conf *conf,
+                                        const pjmedia_conf_op_param *prm);
 
 static op_entry* get_free_op_entry(pjmedia_conf *conf)
 {
@@ -358,6 +360,9 @@ static void handle_op_queue(pjmedia_conf *conf)
                 break;
             case PJMEDIA_CONF_OP_DISCONNECT_PORTS:
                 status = op_disconnect_ports(conf, &param);
+                break;
+            case PJMEDIA_CONF_OP_ADJUST_CONN_LEVEL:
+                status = op_adjust_conn_level(conf, &param);
                 break;
             default:
                 status = PJ_EINVALIDOP;
@@ -1611,6 +1616,43 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
     return PJ_SUCCESS;
 }
 
+static pj_status_t op_adjust_conn_level(pjmedia_conf *conf,
+                                        const pjmedia_conf_op_param *prm)
+{
+    unsigned src_slot, sink_slot;
+    struct conf_port *src_port;
+    unsigned i;
+
+    src_slot = prm->adjust_conn_level.src;
+    sink_slot = prm->adjust_conn_level.sink;
+    src_port = conf->ports[src_slot];
+
+    if (!src_port || !conf->ports[sink_slot])
+        return PJ_EINVAL;
+
+    /* Find the connection */
+    for (i=0; i<src_port->listener_cnt; ++i) {
+        if (src_port->listener_slots[i] == sink_slot)
+            break;
+    }
+
+    if (i == src_port->listener_cnt) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Adjust conn level: connection %d->%d does not exist",
+                  src_slot, sink_slot));
+        return PJ_EINVAL;
+    }
+
+    /* Set normalized adjustment level. */
+    src_port->listener_adj_level[i] =
+                            prm->adjust_conn_level.adj_level + NORMAL_LEVEL;
+
+    PJ_LOG(5,(THIS_FILE, "Adjusted conn level %d->%d to %d",
+              src_slot, sink_slot, prm->adjust_conn_level.adj_level));
+
+    return PJ_SUCCESS;
+}
+
 /*
  * Disconnect port from all sources
  */
@@ -1791,6 +1833,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
             } else if (found && ope->type == PJMEDIA_CONF_OP_DISCONNECT_PORTS &&
                        (ope->param.disconnect_ports.src == port ||
                         ope->param.disconnect_ports.sink == port))
+            {
+                cancel_op = ope;
+            } else if (found &&
+                       ope->type == PJMEDIA_CONF_OP_ADJUST_CONN_LEVEL &&
+                       (ope->param.adjust_conn_level.src == port ||
+                        ope->param.adjust_conn_level.sink == port))
             {
                 cancel_op = ope;
             }
@@ -2214,7 +2262,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_conn_level( pjmedia_conf *conf,
                                                     int adj_level )
 {
     struct conf_port *src_port, *dst_port;
-    unsigned i;
+    op_entry *ope;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && src_slot<conf->max_ports &&
@@ -2228,30 +2277,28 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_conn_level( pjmedia_conf *conf,
 
     pj_mutex_lock(conf->mutex);
 
-    /* Ports must be valid. */
+    /* Ports must be valid and not being removed. */
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
-    if (!src_port || !dst_port) {
+    if (!src_port || !dst_port || src_port->removing || dst_port->removing) {
         pj_mutex_unlock(conf->mutex);
         return PJ_EINVAL;
     }
 
-    /* Check if connection has been made */
-    for (i=0; i<src_port->listener_cnt; ++i) {
-        if (src_port->listener_slots[i] == sink_slot)
-            break;
+    /* Queue the operation */
+    ope = get_free_op_entry(conf);
+    if (ope) {
+        ope->type = PJMEDIA_CONF_OP_ADJUST_CONN_LEVEL;
+        ope->param.adjust_conn_level.src = src_slot;
+        ope->param.adjust_conn_level.sink = sink_slot;
+        ope->param.adjust_conn_level.adj_level = adj_level;
+        pj_list_push_back(conf->op_queue, ope);
+    } else {
+        status = PJ_ENOMEM;
     }
-
-    if (i == src_port->listener_cnt) {
-        /* connection hasn't been made */
-        pj_mutex_unlock(conf->mutex);
-        return PJ_EINVAL;
-    } 
-    /* Set normalized adjustment level. */
-    src_port->listener_adj_level[i] = adj_level + NORMAL_LEVEL;
 
     pj_mutex_unlock(conf->mutex);
-    return PJ_SUCCESS;
+    return status;
 }
 
 
