@@ -153,9 +153,13 @@ int main()
     pj_status_t status;
     unsigned i;
 
-    pj_init();
+    status = pj_init();
+    if (status != PJ_SUCCESS)
+        return 1;
     pj_caching_pool_init(&cp, NULL, 0);
-    pjlib_util_init();
+    status = pjlib_util_init();
+    if (status != PJ_SUCCESS)
+        return 1;
 
     /*
      * Create CLI app.

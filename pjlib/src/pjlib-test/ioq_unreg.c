@@ -100,8 +100,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         if (PJ_TIME_VAL_GTE(now, time_to_unregister)) { 
             sock_data.unregistered = 1;
             TRACE((THIS_FILE, "......on_read_complete(): unregistering"));
-            pj_ioqueue_unregister(key);
             pj_mutex_unlock(sock_data.mutex);
+            pj_ioqueue_unregister(key);
             return;
         }
     }

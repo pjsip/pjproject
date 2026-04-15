@@ -312,6 +312,10 @@ static pj_size_t decode_frame_header(const pj_uint8_t *data, pj_size_t len,
     if (len < hdr_len + *payload_len)
         return 0;
 
+    /* Explicit cap for static analysis (redundant with check above) */
+    if (*payload_len > len)
+        return 0;
+
     *payload = &data[hdr_len];
 
     if (has_mask) {

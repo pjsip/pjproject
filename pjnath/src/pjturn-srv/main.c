@@ -132,8 +132,13 @@ int main()
     if (status != PJ_SUCCESS)
         return err("pj_init() error", status);
 
-    pjlib_util_init();
-    pjnath_init();
+    status = pjlib_util_init();
+    if (status != PJ_SUCCESS)
+        return err("pjlib_util_init() error", status);
+
+    status = pjnath_init();
+    if (status != PJ_SUCCESS)
+        return err("pjnath_init() error", status);
 
     pj_caching_pool_init(&g_cp, NULL, 0);
 

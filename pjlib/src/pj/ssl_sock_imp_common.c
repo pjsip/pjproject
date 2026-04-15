@@ -2141,12 +2141,12 @@ PJ_DEF(pj_status_t) pj_ssl_sock_send (pj_ssl_sock_t *ssock,
      * Check BEFORE ssl_send which encrypts the plaintext — once
      * encrypted, the data cannot be "un-sent" without corruption.
      */
-    if (PJ_SSL_SEND_OP_ACTIVE_MAX > 0 &&
-        ssock->send_op_active_cnt >= PJ_SSL_SEND_OP_ACTIVE_MAX)
-    {
+#if PJ_SSL_SEND_OP_ACTIVE_MAX > 0
+    if (ssock->send_op_active_cnt >= PJ_SSL_SEND_OP_ACTIVE_MAX) {
         status = PJ_EBUSY;
         goto on_return;
     }
+#endif
 
     /* Write data to SSL */
     status = ssl_send(ssock, send_key, data, *size, flags);

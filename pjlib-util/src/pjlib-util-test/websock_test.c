@@ -125,6 +125,8 @@ static pj_size_t server_decode_frame(const pj_uint8_t *data, pj_size_t len,
     /* Client frames must be masked */
     if (!(data[1] & 0x80)) return 0;
     if (len < pos + 4 + pl) return 0;
+    /* Cap payload length to caller's buffer size */
+    if (pl > SERVER_BUF_SIZE) return 0;
     pj_memcpy(mask, &data[pos], 4);
     pos += 4;
     for (i = 0; i < pl; ++i)

@@ -1231,7 +1231,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
         pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
         pjsip_tx_data *tdata;
         pj_bool_t is_unreg;
-        pjsip_auth_clt_async_on_chal_param chal_param;
+        pjsip_auth_clt_async_on_chal_param chal_param = {{0}};
 
         /* Capture is_unreg but keep current_op alive so that
          * async auth callbacks can read it if needed.  It will be
