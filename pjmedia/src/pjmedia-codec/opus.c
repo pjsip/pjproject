@@ -1131,13 +1131,13 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
         opus_data->dec_frame[0].timestamp = input->timestamp;
         pj_memcpy(opus_data->dec_frame[0].buf, input->buf, input->size);
         opus_data->dec_frame_index = 0;
-        pj_mutex_unlock (opus_data->mutex);
 
         /* Return zero decoded bytes */
         output->size = 0;
         output->type = PJMEDIA_FRAME_TYPE_NONE;
         output->timestamp = input->timestamp;
 
+        pj_mutex_unlock (opus_data->mutex);
         return PJ_SUCCESS;
     }
 

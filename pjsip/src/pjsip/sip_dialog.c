@@ -2266,7 +2266,7 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
         {
             pjsip_transaction *tsx = pjsip_rdata_get_tsx(rdata);
             pjsip_tx_data *tdata;
-            pjsip_auth_clt_async_on_chal_param chal_param;
+            pjsip_auth_clt_async_on_chal_param chal_param = {{0}};
 
             /* Check if application handles the authentication.
              * Allocate a per-challenge token from tsx->pool so that

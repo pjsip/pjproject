@@ -4111,7 +4111,7 @@ static void inv_handle_bye_response( pjsip_inv_session *inv,
     if (tsx->status_code == 401 || tsx->status_code == 407) {
 
         pjsip_tx_data *tdata;
-        pjsip_auth_clt_async_on_chal_param chal_param;
+        pjsip_auth_clt_async_on_chal_param chal_param = {{0}};
         struct tsx_inv_data *tsx_inv_data;
 
         /* Dialog grp_lock is held by the caller (pjsip_dlg_on_tsx_state).
@@ -4329,7 +4329,7 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
         (tsx->status_code == 401 || tsx->status_code == 407))
     {
         pjsip_tx_data *tdata;
-        pjsip_auth_clt_async_on_chal_param chal_param;
+        pjsip_auth_clt_async_on_chal_param chal_param = {{0}};
 
         /* UPDATE auth: abandon_impl is NULL because abandoning a
          * mid-dialog UPDATE does not terminate the session.
@@ -4849,7 +4849,7 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
     {
         pjsip_tx_data *tdata;
         pj_status_t status;
-        pjsip_auth_clt_async_on_chal_param chal_param;
+        pjsip_auth_clt_async_on_chal_param chal_param = {{0}};
         struct tsx_inv_data *tsx_inv_data;
 
         /* Clear invite_tsx so pjsip_inv_send_msg() can accept the
@@ -4983,7 +4983,7 @@ static void handle_uac_call_rejection(pjsip_inv_session *inv, pjsip_event *e)
          * Resend the request with Authorization header.
          */
         pjsip_tx_data *tdata;
-        pjsip_auth_clt_async_on_chal_param chal_param;
+        pjsip_auth_clt_async_on_chal_param chal_param = {{0}};
 
         /* Initial INVITE auth: abandoning terminates the session.
          * Dialog grp_lock is held by the caller; see BYE handler comment.

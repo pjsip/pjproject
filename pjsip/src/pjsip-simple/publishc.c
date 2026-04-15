@@ -648,7 +648,7 @@ static void tsx_callback(void *token, pjsip_event *event)
     {
         pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
         pjsip_tx_data *tdata;
-        pjsip_auth_clt_async_on_chal_param chal_param;
+        pjsip_auth_clt_async_on_chal_param chal_param = {{0}};
 
         /* Per-challenge token allocated from tsx->pool, kept alive
          * by the grp_lock ref until consumed (send or abandon).
