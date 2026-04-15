@@ -129,16 +129,16 @@ pjlib-test: pjlib/bin/pjlib-test-$(TARGET_NAME)
 	cd pjlib/build && $(CI_RUNNER) ../bin/pjlib-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjlib-util-test: pjlib-util/bin/pjlib-util-test-$(TARGET_NAME)
-	cd pjlib-util/build && $(CI_RUNNER) ../bin/pjlib-util-test-$(TARGET_NAME) $(CI_ARGS)
+	cd pjlib-util/build && $(CI_RUNNER) ../bin/pjlib-util-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjnath-test: pjnath/bin/pjnath-test-$(TARGET_NAME)
-	cd pjnath/build && $(CI_RUNNER) ../bin/pjnath-test-$(TARGET_NAME) $(CI_ARGS)
+	cd pjnath/build && $(CI_RUNNER) ../bin/pjnath-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjmedia-test: pjmedia/bin/pjmedia-test-$(TARGET_NAME)
-	cd pjmedia/build && $(CI_RUNNER) ../bin/pjmedia-test-$(TARGET_NAME) $(CI_ARGS)
+	cd pjmedia/build && $(CI_RUNNER) ../bin/pjmedia-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjsip-test: pjsip/bin/pjsip-test-$(TARGET_NAME)
-	cd pjsip/build && $(CI_RUNNER) ../bin/pjsip-test-$(TARGET_NAME) $(CI_ARGS)
+	cd pjsip/build && $(CI_RUNNER) ../bin/pjsip-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjsua-test: cmp_wav
 	cd tests/pjsua && python runall.py -t 2
