@@ -75,23 +75,23 @@ struct ipjsua_swiftApp: App {
 
         /* Use colorbar for local account and enable incoming video */
         var acc_cfg = pjsua_acc_config();
-        var tmp_pool:UnsafeMutablePointer<pj_pool_t>? = nil;
-        var info : [pjmedia_vid_dev_info] =
+        var tmp_pool: UnsafeMutablePointer<pj_pool_t>? = nil;
+        var infos: [pjmedia_vid_dev_info] =
             Array(repeating: pjmedia_vid_dev_info(), count: 16);
-        var count:UInt32 = UInt32(info.capacity);
+        var count = UInt32(infos.capacity);
 
         tmp_pool = pjsua_pool_create("tmp-ipjsua", 1000, 1000);
         pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
         acc_cfg.vid_in_auto_show = pj_bool_t(PJ_TRUE.rawValue);
 
-        pjsua_vid_enum_devs(&info, &count);
+        pjsua_vid_enum_devs(&infos, &count);
         for i in 0..<count {
-            let name: [CChar] = tupleToArray(tuple: info[Int(i)].name);
-            if let dev_name = String(validatingUTF8: name) {
-                if (dev_name == "Colorbar generator") {
-                    acc_cfg.vid_cap_dev = pjmedia_vid_dev_index(i);
-                    break;
-                }
+            let dev_name = withUnsafeBytes(of: infos[Int(i)].name) { ptr in
+                String(cString: ptr.baseAddress!.assumingMemoryBound(to: CChar.self))
+            }
+            if (dev_name == "Colorbar generator") {
+                acc_cfg.vid_cap_dev = pjmedia_vid_dev_index(i);
+                break;
             }
         }
         pjsua_acc_modify(aid, &acc_cfg);
@@ -165,10 +165,17 @@ private func on_call_state(call_id: pjsua_call_id,
     }
 }
 
-private func tupleToArray<Tuple, Value>(tuple: Tuple) -> [Value] {
-    let tupleMirror = Mirror(reflecting: tuple)
-    return tupleMirror.children.compactMap { (child: Mirror.Child) -> Value? in
-        return child.value as? Value
+
+private func tupleToArray<Tuple, Value>(
+    _ tuple: Tuple,
+    count: any BinaryInteger,
+    as: Value.Type = Value.self
+) -> [Value] {
+    withUnsafePointer(to: tuple) { ptr in
+        let cnt = Int(count)
+        return ptr.withMemoryRebound(to: Value.self, capacity: cnt) { reboundPtr in
+            Array(UnsafeBufferPointer(start: reboundPtr, count: cnt))
+        }
     }
 }
 
@@ -176,23 +183,23 @@ private func on_call_media_state(call_id: pjsua_call_id)
 {
     var ci = pjsua_call_info();
     pjsua_call_get_info(call_id, &ci);
-    let media: [pjsua_call_media_info] = tupleToArray(tuple: ci.media);
+    let medias: [pjsua_call_media_info] = tupleToArray(ci.media, count: ci.media_cnt);
 
-    for mi in 0...ci.media_cnt {
-        if (media[Int(mi)].status == PJSUA_CALL_MEDIA_ACTIVE ||
-            media[Int(mi)].status == PJSUA_CALL_MEDIA_REMOTE_HOLD)
+    for media in medias {
+        if (media.status == PJSUA_CALL_MEDIA_ACTIVE ||
+            media.status == PJSUA_CALL_MEDIA_REMOTE_HOLD)
         {
-            switch (media[Int(mi)].type) {
+            switch (media.type) {
             case PJMEDIA_TYPE_AUDIO:
                 var call_conf_slot: pjsua_conf_port_id;
 
-                call_conf_slot = media[Int(mi)].stream.aud.conf_slot;
+                call_conf_slot = media.stream.aud.conf_slot;
                 pjsua_conf_connect(call_conf_slot, 0);
                 pjsua_conf_connect(0, call_conf_slot);
                 break;
         
             case PJMEDIA_TYPE_VIDEO:
-                let wid = media[Int(mi)].stream.vid.win_in;
+                let wid = media.stream.vid.win_in;
                 var wi = pjsua_vid_win_info();
                     
                 if (pjsua_vid_win_get_info(wid, &wi) == PJ_SUCCESS.rawValue) {
