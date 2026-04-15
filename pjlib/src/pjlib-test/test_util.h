@@ -35,6 +35,7 @@ typedef struct ut_app_t
     int                  prm_list_test;
     pj_bool_t            prm_stop_on_error;
     pj_bool_t            prm_shuffle;
+    pj_bool_t            prm_ci_mode;
     int                  prm_seed;
     unsigned             flags;
     unsigned             verbosity;
@@ -176,19 +177,23 @@ PJ_INLINE(pj_status_t) ut_run_tests(ut_app_t *ut_app, const char *title,
 
     if (argc > 1) {
         int i;
+        pj_bool_t has_error = PJ_FALSE;
         for (i=1; i<argc; ++i) {
             pj_test_case *tc;
-            for (tc=ut_app->suite.tests.next; tc!=&ut_app->suite.tests; 
+            for (tc=ut_app->suite.tests.next; tc!=&ut_app->suite.tests;
                  tc=tc->next)
             {
                 if (pj_ansi_strcmp(argv[i], tc->obj_name)==0)
                     break;
             }
             if (tc==&ut_app->suite.tests) {
-                PJ_LOG(2,(THIS_FILE, "Test \"%s\" is not found in %s",
+                PJ_LOG(1,(THIS_FILE, "Test \"%s\" is not found in %s",
                           argv[i], title));
+                has_error = PJ_TRUE;
             }
         }
+        if (has_error)
+            return PJ_ENOTFOUND;
     }
 
     if (ut_app->ntests <= 0)
@@ -229,6 +234,7 @@ PJ_INLINE(void) ut_usage()
     puts("  -L, --list       List the tests and exit");
     puts("  --stop-err       Stop testing on error");
     puts("  --shuffle        Shuffle the test order");
+    puts("  --ci-mode        Running in slow CI mode");
     puts("  --seed N         Set shuffle random seed (must be >= 0)");
     puts("  --stdout-buf N   Set stdout buffering mode:");
     puts("  --stderr-buf N   Set stderr buffering mode:");
@@ -250,6 +256,7 @@ PJ_INLINE(pj_status_t) ut_parse_args(ut_app_t *ut_app, int *argc, char *argv[])
                             pj_argparse_get_bool(argc, argv, "--list");
     ut_app->prm_stop_on_error = pj_argparse_get_bool(argc, argv, "--stop-err");
     ut_app->prm_shuffle = pj_argparse_get_bool(argc, argv, "--shuffle");
+    ut_app->prm_ci_mode = pj_argparse_get_bool(argc, argv, "--ci-mode");
     if (pj_argparse_get_bool(argc, argv, "--log-no-cache")) {
         ut_app->flags |= PJ_TEST_LOG_NO_CACHE;
     }

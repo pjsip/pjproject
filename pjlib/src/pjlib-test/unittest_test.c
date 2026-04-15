@@ -630,7 +630,7 @@ int unittest_parallel_test()
     pj_test_runner_destroy(runner);
     pj_pool_release(pool);
 
-    if (test_app.param_ci_mode) {
+    if (test_app.ut_app.prm_ci_mode) {
         /* In CI mode, only verify grouping constraints without requiring
          * exact completion order within parallel groups, since sleep-based
          * ordering is unreliable on loaded CI runners.

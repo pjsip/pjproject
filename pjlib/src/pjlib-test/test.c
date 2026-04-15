@@ -44,7 +44,6 @@ struct test_app_t test_app = {
     PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
         PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT,
                                         /* .param_log_decor */
-    PJ_FALSE,                           /* .param_ci_mode */
 };
 
 int null_func()
@@ -403,7 +402,7 @@ int test_inner(int argc, char *argv[])
 
     pj_caching_pool_init( &caching_pool, NULL, 0 );
 
-    if (test_app.param_ci_mode)
+    if (test_app.ut_app.prm_ci_mode)
         PJ_LOG(3,(THIS_FILE, "Using ci-mode"));
 
     if (!test_app.param_skip_essentials) {
