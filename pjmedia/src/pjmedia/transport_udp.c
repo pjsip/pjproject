@@ -495,16 +495,30 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 }
 
 /* Call RTP cb. */
-static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read, 
+static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
                         pj_bool_t *rem_switch)
 {
     void (*cb)(void*,void*,pj_ssize_t);
     void (*cb2)(pjmedia_tp_cb_param*);
     void *user_data;
 
+    /* Snapshot callback pointers under lock to avoid race with
+     * transport_detach() clearing them. Note that
+     * pj_ioqueue_lock_key() == pj_grp_lock_acquire() for the same
+     * group lock, so the detach side is already synchronized via
+     * pj_ioqueue_lock_key(). The lock is needed here because
+     * PJ_IOQUEUE_CALLBACK_NO_LOCK causes this callback to be invoked
+     * without the key lock held.
+     */
+    if (udp->base.grp_lock)
+        pj_grp_lock_acquire(udp->base.grp_lock);
+
     cb = udp->rtp_cb;
     cb2 = udp->rtp_cb2;
     user_data = udp->user_data;
+
+    if (udp->base.grp_lock)
+        pj_grp_lock_release(udp->base.grp_lock);
 
     if (cb2) {
         pjmedia_tp_cb_param param;
@@ -528,8 +542,15 @@ static void call_rtcp_cb(struct transport_udp *udp, pj_ssize_t bytes_read)
     void(*cb)(void*, void*, pj_ssize_t);
     void *user_data;
 
+    /* See comment in call_rtp_cb() above. */
+    if (udp->base.grp_lock)
+        pj_grp_lock_acquire(udp->base.grp_lock);
+
     cb = udp->rtcp_cb;
     user_data = udp->user_data;
+
+    if (udp->base.grp_lock)
+        pj_grp_lock_release(udp->base.grp_lock);
 
     if (cb)
         (*cb)(user_data, udp->rtcp_pkt, bytes_read);
@@ -1020,8 +1041,12 @@ static void transport_detach( pjmedia_transport *tp,
 
     //if (udp->attached) {
     if (1) {
-        /* Lock the ioqueue keys to make sure that callbacks are
-         * not executed. See ticket #460 for details.
+        /* Lock the ioqueue keys to synchronize with the RTP/RTCP
+         * callbacks. Note: pj_ioqueue_lock_key() acquires the
+         * transport's group lock (the same lock used by
+         * call_rtp_cb/call_rtcp_cb to snapshot callback pointers),
+         * so these clears are atomic with respect to the callbacks.
+         * See ticket #460 for details.
          */
 
         TRACE_((udp->base.name, "detach(): before locking keys"));
@@ -1048,18 +1073,16 @@ static void transport_detach( pjmedia_transport *tp,
 
         /* Unlock keys before clearing, to avoid deadlock with
          * PJ_IOQUEUE_CALLBACK_NO_LOCK. When that setting is enabled,
-         * pj_ioqueue_clear_key() waits for the read/write callback thread
-         * to finish, but the callback thread needs the key lock to clear
-         * its state (read_callback_thread). If we hold the lock here,
-         * pj_ioqueue_clear_key()'s recursive lock prevents full release
-         * during its wait loop, causing a deadlock.
+         * pj_ioqueue_clear_key() waits for the read/write callback
+         * thread to finish, but the callback thread may need the
+         * group lock (in call_rtp_cb/call_rtcp_cb) to snapshot the
+         * pointers. If we hold the lock here, the wait loop in
+         * pj_ioqueue_clear_key() would deadlock with the callback
+         * thread.
          *
-         * It is safe to unlock here because:
-         * - Callbacks (rtp_cb/rtp_cb2/rtcp_cb) have been set to NULL
-         *   above, so no new application callbacks will be invoked
-         *   after this point (although an in-flight callback that has
-         *   already copied the function pointer may still complete).
-         * - pj_ioqueue_clear_key() handles its own locking internally.
+         * It is safe to unlock here because the callback pointers
+         * have been cleared above under the lock, so any callback
+         * that snapshots after this point will see NULLs.
          */
         pj_ioqueue_unlock_key(udp->rtcp_key);
         pj_ioqueue_unlock_key(udp->rtp_key);
