@@ -261,7 +261,7 @@ jobs:
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjsip/bin
-        Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
+        Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_MODE $env:CI_WIN_ARGS"
       shell: powershell
     - name: python pjsua tests
       run: |
@@ -715,7 +715,7 @@ jobs:
         $env:SDL_DIR = Get-Content .\sdl_dir.txt
         $env:PATH+=";$env:SDL_DIR\lib\x86;"
         cd pjsip/bin
-        Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS"
+        Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_MODE $env:CI_WIN_ARGS"
       shell: powershell
     - name: upload artifacts on failure
       if: ${{ failure() }}
@@ -906,7 +906,7 @@ jobs:
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjsip/bin
-        Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_WIN_ARGS resolve_test inv_offer_answer_test transport_udp_test transport_tcp_test regc_test tsx_destroy_test"
+        Invoke-Expression "$env:CI_RUNNER ./pjsip-test-i386-Win32-vc14-Release.exe $env:CI_MODE $env:CI_WIN_ARGS resolve_test inv_offer_answer_test transport_udp_test transport_tcp_test regc_test tsx_destroy_test"
       shell: powershell
     - name: build test tools cmp_wav
       run: |

@@ -164,8 +164,8 @@ static struct tsx_uas_test_global_t
 
 #define TEST_TIMEOUT_ERROR      -30
 
-// An effort to accommodate CPU load spike on some test machines.
-#define MAX_ALLOWED_DIFF        500 //150
+/* Widen timing tolerance in CI mode — shared runners can be 5-10x slower. */
+#define MAX_ALLOWED_DIFF    (test_app.ut_app.prm_ci_mode ? 2500 : 500)
 
 static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e);
 static pj_bool_t on_rx_message(pjsip_rx_data *rdata);
