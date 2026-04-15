@@ -1196,8 +1196,17 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
         /* System are GO */
         ssock->ssl_state = SSL_STATE_ESTABLISHED;
         status = PJ_SUCCESS;
-    } else if (!gnutls_error_is_fatal(ret)) {
-        /* Non fatal error, retry later (busy or again) */
+    } else if (!gnutls_error_is_fatal(ret) ||
+               ret == GNUTLS_E_GOT_APPLICATION_DATA)
+    {
+        /* Non fatal error, retry later (busy or again).
+         * GNUTLS_E_GOT_APPLICATION_DATA means the peer sent application
+         * data while we expected handshake records (common during
+         * renegotiation).  The app data sits in GnuTLS's internal record
+         * buffer and will be returned by the next gnutls_record_recv().
+         * Treat it as non-fatal so the caller retries after draining the
+         * buffered application data.
+         */
         status = PJ_EPENDING;
     } else {
         /* Fatal error invalidates session, no fallback */
@@ -1301,8 +1310,13 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
         return PJ_ENOTSUP;
     }
 
-    /* Server: send HelloRequest to ask client to renegotiate */
+    /* Server: send HelloRequest to ask client to renegotiate.
+     * Hold write_mutex for session access consistency with
+     * ssl_do_handshake() and ssl_read().
+     */
+    pj_lock_acquire(ssock->write_mutex);
     status = gnutls_rehandshake(gssock->session);
+    pj_lock_release(ssock->write_mutex);
     if (status == GNUTLS_E_SUCCESS)
         return PJ_SUCCESS;
 
