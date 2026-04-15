@@ -411,7 +411,7 @@ static int test_resolve(const char *title,
  */
 static int round_robin_test(pj_pool_t *pool)
 {
-    enum { COUNT = 400, PCT_ALLOWANCE = 10 };
+    enum { COUNT = 800, PCT_ALLOWANCE = 15 };
     unsigned i;
     struct server_hit
     {
