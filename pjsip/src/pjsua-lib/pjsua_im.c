@@ -447,7 +447,7 @@ static void im_callback(void *token, pjsip_event *e)
         {
             pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
             pjsip_tx_data *tdata;
-            pjsip_auth_clt_async_on_chal_param chal_param = {{0}};
+            pjsip_auth_clt_async_on_chal_param chal_param = { 0 };
             im_auth_ctx *ctx;
             pjsua_im_data *im_data2;
             pj_status_t status;
@@ -611,7 +611,7 @@ static void typing_callback(void *token, pjsip_event *e)
         {
             pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
             pjsip_tx_data *tdata;
-            pjsip_auth_clt_async_on_chal_param chal_param = {{0}};
+            pjsip_auth_clt_async_on_chal_param chal_param = { 0 };
             im_auth_ctx *ctx;
             pj_status_t status;
 
