@@ -1272,6 +1272,44 @@ void on_playfile_done(pjmedia_port *port, void *usr_data)
                                &delay);
 }
 
+/* Callback to replace the generated SDP with a custom one (--custom-sdp).
+ * Only compiled when PJSUA_MEDIA_HAS_PJMEDIA=0 (alt media backend). */
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+static void on_call_sdp_created_cb(pjsua_call_id call_id,
+                                   pjmedia_sdp_session *sdp,
+                                   pj_pool_t *pool,
+                                   const pjmedia_sdp_session *rem_sdp)
+{
+    pjmedia_sdp_session *custom = NULL;
+    pj_str_t sdp_str;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(rem_sdp);
+
+    if (app_config.custom_sdp.slen == 0)
+        return;
+
+    /* Make a writable copy since pjmedia_sdp_parse modifies the buffer */
+    sdp_str.ptr = (char*)pj_pool_alloc(pool,
+                                       (pj_size_t)(app_config.custom_sdp.slen + 1));
+    pj_memcpy(sdp_str.ptr, app_config.custom_sdp.ptr,
+              (pj_size_t)app_config.custom_sdp.slen);
+    sdp_str.ptr[app_config.custom_sdp.slen] = '\0';
+    sdp_str.slen = app_config.custom_sdp.slen;
+
+    status = pjmedia_sdp_parse(pool, sdp_str.ptr, (pj_size_t)sdp_str.slen,
+                               &custom);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(1,(THIS_FILE, status,
+                     "Failed to parse custom SDP, using generated SDP"));
+        return;
+    }
+
+    pj_memcpy(sdp, custom, sizeof(*sdp));
+}
+#endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
+
 /* IP change progress callback. */
 void on_ip_change_progress(pjsua_ip_change_op op,
                            pj_status_t status,
@@ -1650,6 +1688,9 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_snd_dev_operation = &on_snd_dev_operation;
     app_config.cfg.cb.on_call_media_event = &on_call_media_event;
     app_config.cfg.cb.on_ip_change_progress = &on_ip_change_progress;
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+    app_config.cfg.cb.on_call_sdp_created = &on_call_sdp_created_cb;
+#endif
 #ifdef TRANSPORT_ADAPTER_SAMPLE
     app_config.cfg.cb.on_create_media_transport = &on_create_media_transport;
 #endif

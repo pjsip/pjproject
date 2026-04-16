@@ -14,7 +14,7 @@ OBJS = alt_pjsua_aud.o alt_pjsua_txt.o alt_pjsua_vid.o pjsua_app.o main.o pjsua_
 all: alt_pjsua
 
 alt_pjsua: $(OBJS)
-	$(PJ_CC) -o $@ $(OBJS) $(_CFLAGS) $(_LDFLAGS)
+	$(PJ_CC) -o $@ $(OBJS) $(_CFLAGS) -Wl,--allow-multiple-definition $(_LDFLAGS)
 
 pjsua_app.o: ../pjsua/pjsua_app.c
 	$(PJ_CC) $(_CFLAGS) -c -o $@ $<

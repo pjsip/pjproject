@@ -187,6 +187,12 @@ typedef struct pjsua_app_config
     /* CLI setting */
     pj_bool_t               use_cli;
     cli_cfg_t               cli_cfg;
+
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+    /* Custom SDP to inject via on_call_sdp_created (replaces generated SDP).
+     * Only available when PJSUA_MEDIA_HAS_PJMEDIA=0 (alt media backend). */
+    pj_str_t                custom_sdp;
+#endif
 } pjsua_app_config;
 
 /** Extern variable declaration **/
