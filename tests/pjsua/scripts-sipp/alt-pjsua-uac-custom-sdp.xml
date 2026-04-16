@@ -2,22 +2,26 @@
 <!DOCTYPE scenario SYSTEM "sipp.dtd">
 
 <!-- SIPp acts as UAS. alt_pjsua sends an INVITE with its custom SDP
-     (audio PCMU). SIPp verifies the codec appears in the INVITE, answers
-     200 OK with a matching audio SDP, then waits for BYE. -->
+     containing audio (PCMU) and video (H263-1998). SIPp verifies both
+     codecs appear in the INVITE, answers 200 OK with matching audio and
+     video, then waits for BYE. -->
 
 <scenario name="alt_pjsua UAC custom SDP: SIPp as UAS">
 
   <recv request="INVITE" crlf="true">
     <action>
       <!-- Verify the INVITE carries the custom SDP injected by alt_pjsua.
-           Check codec only (no IP/port) so the test is environment-independent.
-           search_in="msg" searches the entire SIP message. The condexec nop
-           avoids SIPp 3.7 exiting on "referenced 1 times" warning. -->
+           Check codecs only (no IP/port) so the test is environment-independent.
+           search_in="msg" searches the entire SIP message. The condexec nops
+           avoid SIPp 3.7 exiting on "referenced 1 times" warning. -->
       <ereg regexp="a=rtpmap:0 PCMU/8000" search_in="msg"
             check_it="true" assign_to="1"/>
+      <ereg regexp="a=rtpmap:96 H263-1998/90000" search_in="msg"
+            check_it="true" assign_to="2"/>
     </action>
   </recv>
   <nop condexec="1"></nop>
+  <nop condexec="2"></nop>
 
   <send>
     <![CDATA[
@@ -53,6 +57,8 @@ c=IN IP[media_ip_type] [media_ip]
 t=0 0
 m=audio [media_port] RTP/AVP 0
 a=rtpmap:0 PCMU/8000
+m=video [media_port+2] RTP/AVP 96
+a=rtpmap:96 H263-1998/90000
 
     ]]>
   </send>
