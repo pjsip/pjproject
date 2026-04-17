@@ -105,6 +105,47 @@ enum pjmedia_conf_option
 };
 
 
+
+typedef enum  pjmedia_conf_op_type
+{
+    PJMEDIA_CONF_OP_NONE = 0,
+    PJMEDIA_CONF_OP_ADD_PORT,
+    PJMEDIA_CONF_OP_REMOVE_PORT,
+    PJMEDIA_CONF_OP_REPLACE_PORT
+} pjmedia_conf_op_type;
+
+typedef void (*pjmedia_conf_op_result_cb)(pj_status_t status,
+    unsigned    slot,
+    void* user_data);
+
+
+//the structure to queue and process operations on its ports without blocking the main thread.
+typedef struct conf_op {
+    PJ_DECL_LIST_MEMBER(struct conf_op); // to embeded in linked list
+    pjmedia_conf_op_type type;
+
+    unsigned             slot;
+
+    /* for REPLACE */
+    pjmedia_port* new_port;
+    pj_pool_t* new_port_pool;
+    pjmedia_conf_op_result_cb   cb;
+    void* user_data;
+    pj_status_t          rc;
+} conf_op;
+
+struct port_destroy_item {
+    PJ_DECL_LIST_MEMBER(struct port_destroy_item);
+    pjmedia_port* port;
+};
+
+
+static void conf_handle_op_(pjmedia_conf* conf, struct conf_op* op);
+static void conf_defer_port_destroy_(pjmedia_conf* conf, pjmedia_port* p);
+static void conf_run_deferred_destroys_(pjmedia_conf* conf);
+static void conf_handle_op_(pjmedia_conf* conf, struct conf_op* op);
+
+
 /**
  * Create conference bridge with the specified parameters. The sampling rate,
  * samples per frame, and bits per sample will be used for the internal
@@ -242,6 +283,20 @@ PJ_DECL(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
                                             pjmedia_port *strm_port,
                                             const pj_str_t *name,
                                             unsigned *p_slot );
+
+
+
+
+PJ_DECL(pj_status_t) pjmedia_conf_replace_port_impl(pjmedia_conf *conf,
+                                pj_pool_t *pool,
+                                pjmedia_port *strm_port,
+                                unsigned            slot);
+
+PJ_DEF(pj_status_t) pjmedia_conf_replace_port(pjmedia_conf *conf,
+                                              pj_pool_t *pool,
+                                              pjmedia_port *strm_port,
+                                              unsigned slot);
+
 
 
 #if !DEPRECATED_FOR_TICKET_2234
