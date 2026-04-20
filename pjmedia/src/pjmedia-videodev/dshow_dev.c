@@ -629,6 +629,7 @@ static pj_bool_t dshow_register_thread(struct dshow_factory *df)
 {
     DWORD tid = GetCurrentThreadId();
     dshow_cap_thread *ct;
+    pj_bool_t new_entry = PJ_FALSE;
 
     EnterCriticalSection(&df->cap_thread_cs);
 
@@ -643,11 +644,20 @@ static pj_bool_t dshow_register_thread(struct dshow_factory *df)
         ct = PJ_POOL_ZALLOC_T(df->pool, dshow_cap_thread);
         ct->tid = tid;
         pj_list_push_back(&df->cap_threads, ct);
+        new_entry = PJ_TRUE;
     }
 
     LeaveCriticalSection(&df->cap_thread_cs);
 
-    if (!pj_thread_is_registered()) {
+    /* Register if this is a new list entry (i.e. first time this factory
+     * sees this tid) even when pj_thread_is_registered() is true. After a
+     * pjlib restart, Win32 TlsAlloc may return a reused slot whose value
+     * was left set by the previous session; pj_thread_is_registered()
+     * would then return true but TLS points to freed descriptor memory.
+     * Re-registering with the new factory pool's descriptor overwrites TLS
+     * and restores a valid pointer.
+     */
+    if (new_entry || !pj_thread_is_registered()) {
         pj_thread_t *thread;
         pj_status_t status;
 
