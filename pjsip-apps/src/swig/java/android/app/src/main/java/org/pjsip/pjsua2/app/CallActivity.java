@@ -25,6 +25,7 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -107,6 +108,14 @@ public class CallActivity extends Activity
         SurfaceView surfaceInVideo = findViewById(R.id.surfaceIncomingVideo);
         SurfaceView surfacePreview = findViewById(R.id.surfacePreviewCapture);
 
+        /* Local preview must sit above the remote video SurfaceView.
+         * Two overlapping SurfaceViews share the same compositor layer by
+         * default, so the preview would be hidden behind the remote video
+         * without this. Using media-overlay (not on-top) keeps regular UI
+         * (buttons, text) above the preview.
+         */
+        surfacePreview.setZOrderMediaOverlay(true);
+
         /* Avoid visible black boxes (blank video views) initially */
         if (MainActivity.currentCall == null ||
             MainActivity.currentCall.vidWin == null)
@@ -174,6 +183,31 @@ public class CallActivity extends Activity
                 System.out.println(e);
             }
         }
+
+        /* Re-apply video/preview layout after rotation. We must wait for
+         * the post-rotation layout pass to actually complete — using
+         * View.post() is not enough, as it can fire before the parent's
+         * new dimensions are applied, causing the preview to be placed
+         * using stale margins (and end up off-screen, disappearing).
+         */
+        final View videoLayout = findViewById(R.id.bottom_layout);
+        if (videoLayout != null && MainActivity.currentCall != null) {
+            final ViewTreeObserver vto = videoLayout.getViewTreeObserver();
+            vto.addOnGlobalLayoutListener(
+                new ViewTreeObserver.OnGlobalLayoutListener() {
+                    @Override
+                    public void onGlobalLayout() {
+                        videoLayout.getViewTreeObserver()
+                                   .removeOnGlobalLayoutListener(this);
+                        if (MainActivity.currentCall == null) return;
+                        if (MainActivity.currentCall.vidWin != null)
+                            setupIncomingVideoLayout();
+                        if (MainActivity.currentCall.vidPrev != null)
+                            setupVideoPreviewLayout();
+                    }
+                });
+            videoLayout.requestLayout();
+        }
     }
 
     @Override
@@ -186,12 +220,27 @@ public class CallActivity extends Activity
     private void setupIncomingVideoLayout()
     {
         try {
+            /* Adjust width to match the parent layout */
+            final RelativeLayout videoLayout = findViewById(R.id.bottom_layout);
+            if (videoLayout == null) return;
+
+            /* The parent may not be measured yet when PJMEDIA_EVENT_FMT_CHANGED
+             * arrives early — defer until it is, otherwise we'd divide by zero
+             * and end up with a 0-sized invisible surface.
+             */
+            if (videoLayout.getMeasuredWidth() == 0 ||
+                videoLayout.getMeasuredHeight() == 0)
+            {
+                videoLayout.post(new Runnable() {
+                    @Override public void run() { setupIncomingVideoLayout(); }
+                });
+                return;
+            }
+
             StreamInfo si = MainActivity.currentCall.getStreamInfo(MainActivity.currentCall.vidGetStreamIdx());
             int w = (int)si.getVidCodecParam().getDecFmt().getWidth();
             int h = (int)si.getVidCodecParam().getDecFmt().getHeight();
 
-            /* Adjust width to match the parent layout */
-            RelativeLayout videoLayout = findViewById(R.id.bottom_layout);
             h = (int)((double)videoLayout.getMeasuredWidth() / w * h);
             w = videoLayout.getMeasuredWidth();
 
@@ -226,12 +275,24 @@ public class CallActivity extends Activity
         try {
             int w, h;
             SurfaceView surfacePreview = findViewById(R.id.surfacePreviewCapture);
+            final RelativeLayout videoLayout = findViewById(R.id.bottom_layout);
+            if (videoLayout == null) return;
+
+            /* Defer until parent has been measured to avoid 0-sized preview. */
+            if (videoLayout.getMeasuredWidth() == 0 ||
+                videoLayout.getMeasuredHeight() == 0)
+            {
+                videoLayout.post(new Runnable() {
+                    @Override public void run() { setupVideoPreviewLayout(); }
+                });
+                return;
+            }
+
             VideoWindowInfo vwi = MainActivity.currentCall.vidPrev.getVideoWindow().getInfo();
             w = (int) vwi.getSize().getW();
             h = (int) vwi.getSize().getH();
 
             /* Adjust width to match the parent layout */
-            RelativeLayout videoLayout = findViewById(R.id.bottom_layout);
             h = (int) ((double) videoLayout.getMeasuredWidth() / 2 / w * h);
             w = videoLayout.getMeasuredWidth() / 2;
 
@@ -267,12 +328,9 @@ public class CallActivity extends Activity
 
     public void hangupCall(View view)
     {
-        localVideoHandler.resetVideoWindow();
-        remoteVideoHandler.resetVideoWindow();
-
-        handler_ = null;
-        finish();
-
+        /* Issue the SIP hangup first, while the activity (and its handler)
+         * is still alive, so any resulting callbacks can still be delivered.
+         */
         if (MainActivity.currentCall != null) {
             CallOpParam prm = new CallOpParam();
             prm.setStatusCode(pjsip_status_code.PJSIP_SC_DECLINE);
@@ -282,6 +340,12 @@ public class CallActivity extends Activity
                 System.out.println(e);
             }
         }
+
+        localVideoHandler.resetVideoWindow();
+        remoteVideoHandler.resetVideoWindow();
+
+        handler_ = null;
+        finish();
     }
     
 
