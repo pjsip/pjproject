@@ -859,19 +859,22 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 static void schedule_registration ( pjsip_regc *regc, pj_uint32_t expiration )
 {
     if (regc->auto_reg && expiration > 0 && expiration != NOEXP) {
-        pj_time_val delay = { 0, 0};
+        pj_time_val delay = {0, 0};
 
         pj_timer_heap_cancel_if_active(pjsip_endpt_get_timer_heap(regc->endpt),
                                        &regc->timer, 0);
 
-        delay.sec = expiration - regc->delay_before_refresh;
+        /* prevent underflow in case the remote answers with an unexpectedly low Expires field */
+        if (expiration > regc->delay_before_refresh) {
+            delay.sec = expiration - regc->delay_before_refresh;
+        }
         if (regc->expires != PJSIP_REGC_EXPIRATION_NOT_SPECIFIED && 
-            delay.sec > (pj_int32_t)regc->expires) 
-        {
+            delay.sec > (pj_int32_t)regc->expires) {
             delay.sec = regc->expires;
         }
-        if (delay.sec < DELAY_BEFORE_REFRESH) 
+        if (delay.sec < DELAY_BEFORE_REFRESH) {
             delay.sec = DELAY_BEFORE_REFRESH;
+        }
         regc->timer.cb = &regc_refresh_timer_cb;
         regc->timer.id = REFRESH_TIMER;
         regc->timer.user_data = regc;
