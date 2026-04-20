@@ -106,7 +106,8 @@ struct dshow_factory
     unsigned                     dev_count;
     struct dshow_dev_info       *dev_info;
 
-    pj_mutex_t                  *cap_thread_lock;
+    CRITICAL_SECTION             cap_thread_cs;
+    pj_bool_t                    cap_thread_cs_init;
     dshow_cap_thread             cap_threads; /**< Registered thread list */
 };
 
@@ -242,13 +243,13 @@ static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
 
     pj_list_init(&df->cap_threads);
 
-    {
-        pj_status_t status;
-        status = pj_mutex_create_simple(df->pool, "dshow_thr",
-                                        &df->cap_thread_lock);
-        if (status != PJ_SUCCESS)
-            return status;
-    }
+    /* Use a native CRITICAL_SECTION (not pj_mutex_t) because this lock is
+     * taken from DirectShow worker threads that have not yet been
+     * registered to pjlib. pj_mutex_lock() calls pj_thread_this() and
+     * would assert on such threads.
+     */
+    InitializeCriticalSection(&df->cap_thread_cs);
+    df->cap_thread_cs_init = PJ_TRUE;
 
     return dshow_factory_refresh(f);
 }
@@ -259,8 +260,10 @@ static pj_status_t dshow_factory_destroy(pjmedia_vid_dev_factory *f)
     struct dshow_factory *df = (struct dshow_factory*)f;
     pj_pool_t *pool = df->pool;
 
-    if (df->cap_thread_lock)
-        pj_mutex_destroy(df->cap_thread_lock);
+    if (df->cap_thread_cs_init) {
+        DeleteCriticalSection(&df->cap_thread_cs);
+        df->cap_thread_cs_init = PJ_FALSE;
+    }
 
     df->pool = NULL;
     if (df->dev_pool)
@@ -626,40 +629,35 @@ static pj_bool_t dshow_register_thread(struct dshow_factory *df)
 {
     DWORD tid = GetCurrentThreadId();
     dshow_cap_thread *ct;
-    pj_bool_t found = PJ_FALSE;
 
-    pj_mutex_lock(df->cap_thread_lock);
+    EnterCriticalSection(&df->cap_thread_cs);
 
     ct = df->cap_threads.next;
     while (ct != &df->cap_threads) {
-        if (ct->tid == tid) {
-            found = PJ_TRUE;
+        if (ct->tid == tid)
             break;
-        }
         ct = ct->next;
     }
 
-    if (!found || !pj_thread_is_registered()) {
-        pj_status_t status;
+    if (ct == &df->cap_threads) {
+        ct = PJ_POOL_ZALLOC_T(df->pool, dshow_cap_thread);
+        ct->tid = tid;
+        pj_list_push_back(&df->cap_threads, ct);
+    }
+
+    LeaveCriticalSection(&df->cap_thread_cs);
+
+    if (!pj_thread_is_registered()) {
         pj_thread_t *thread;
-
-        if (!found) {
-            ct = PJ_POOL_ZALLOC_T(df->pool, dshow_cap_thread);
-            ct->tid = tid;
-            pj_list_push_back(&df->cap_threads, ct);
-        }
-
-        pj_mutex_unlock(df->cap_thread_lock);
+        pj_status_t status;
 
         status = pj_thread_register("ds_cap", ct->thread_desc, &thread);
         if (status != PJ_SUCCESS)
             return PJ_FALSE;
         PJ_LOG(5,(THIS_FILE, "Capture thread registered (tid=%lu)",
                   (unsigned long)tid));
-        return PJ_TRUE;
     }
 
-    pj_mutex_unlock(df->cap_thread_lock);
     return PJ_TRUE;
 }
 
