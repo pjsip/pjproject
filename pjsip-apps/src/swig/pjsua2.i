@@ -195,6 +195,12 @@ using namespace pj;
 
 %copyctor pj::OnCallMediaEventParam;
 
+// SWIG can't wrap 'operator=' — silence warning 503 for the copy-assign
+// operator. (The move ctor/assignment are hidden via #ifndef SWIG in the
+// header, since SWIG 4.x doesn't reliably match rvalue-ref signatures
+// in %ignore.)
+%ignore pj::DeferredResponse::operator=;
+
 //
 // Ignore stuffs in pjsua2
 //

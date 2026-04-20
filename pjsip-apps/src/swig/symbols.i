@@ -245,7 +245,8 @@ typedef enum pjmedia_conf_op_type
     PJMEDIA_CONF_OP_ADD_PORT,
     PJMEDIA_CONF_OP_REMOVE_PORT,
     PJMEDIA_CONF_OP_CONNECT_PORTS,
-    PJMEDIA_CONF_OP_DISCONNECT_PORTS
+    PJMEDIA_CONF_OP_DISCONNECT_PORTS,
+    PJMEDIA_CONF_OP_ADJUST_CONN_LEVEL
 } pjmedia_conf_op_type;
 
 typedef enum pjmedia_echo_flag
@@ -351,6 +352,34 @@ typedef enum pjmedia_rtcp_fb_type
     PJMEDIA_RTCP_FB_TRR_INT,
     PJMEDIA_RTCP_FB_OTHER
 } pjmedia_rtcp_fb_type;
+
+typedef struct pjmedia_tone_digit
+{
+    char digit;
+    short on_msec;
+    short off_msec;
+    short volume;
+} pjmedia_tone_digit;
+
+typedef struct pjmedia_tone_digit_map
+{
+    unsigned count;
+    struct {
+        char digit;
+        short freq1;
+        short freq2;
+    } digits[16];
+} pjmedia_tone_digit_map;
+
+typedef struct pjmedia_tone_desc
+{
+    short freq1;
+    short freq2;
+    short on_msec;
+    short off_msec;
+    short volume;
+    short flags;
+} pjmedia_tone_desc;
 
 typedef enum pjmedia_srtp_use
 {
