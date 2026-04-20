@@ -142,20 +142,13 @@ public class CallActivity extends Activity
         }
     }
 
-    @Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        
-        WindowManager wm;
-        Display display;
-        int rotation;
+    private void updateCaptureOrientation() {
         int orient;
-
-        wm = (WindowManager)this.getSystemService(Context.WINDOW_SERVICE);
-        display = wm.getDefaultDisplay();
-        rotation = display.getRotation();
+        WindowManager wm = (WindowManager)this.getSystemService(
+                                                  Context.WINDOW_SERVICE);
+        int rotation = wm.getDefaultDisplay().getRotation();
         System.out.println("Device orientation changed: " + rotation);
-        
+
         switch (rotation) {
         case Surface.ROTATION_0:   // Portrait
             orient = pjmedia_orient.PJMEDIA_ORIENT_ROTATE_270DEG;
@@ -183,6 +176,13 @@ public class CallActivity extends Activity
                 System.out.println(e);
             }
         }
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+
+        updateCaptureOrientation();
 
         /* Re-apply video/preview layout after rotation. We must wait for
          * the post-rotation layout pass to actually complete — using
@@ -192,8 +192,7 @@ public class CallActivity extends Activity
          */
         final View videoLayout = findViewById(R.id.bottom_layout);
         if (videoLayout != null && MainActivity.currentCall != null) {
-            final ViewTreeObserver vto = videoLayout.getViewTreeObserver();
-            vto.addOnGlobalLayoutListener(
+            videoLayout.getViewTreeObserver().addOnGlobalLayoutListener(
                 new ViewTreeObserver.OnGlobalLayoutListener() {
                     @Override
                     public void onGlobalLayout() {
@@ -226,11 +225,13 @@ public class CallActivity extends Activity
 
             /* The parent may not be measured yet when PJMEDIA_EVENT_FMT_CHANGED
              * arrives early — defer until it is, otherwise we'd divide by zero
-             * and end up with a 0-sized invisible surface.
+             * and end up with a 0-sized invisible surface. Guard against the
+             * activity tearing down so we don't loop forever.
              */
             if (videoLayout.getMeasuredWidth() == 0 ||
                 videoLayout.getMeasuredHeight() == 0)
             {
+                if (!videoLayout.isAttachedToWindow()) return;
                 videoLayout.post(new Runnable() {
                     @Override public void run() { setupIncomingVideoLayout(); }
                 });
@@ -278,10 +279,14 @@ public class CallActivity extends Activity
             final RelativeLayout videoLayout = findViewById(R.id.bottom_layout);
             if (videoLayout == null) return;
 
-            /* Defer until parent has been measured to avoid 0-sized preview. */
+            /* Defer until parent has been measured to avoid 0-sized preview.
+             * Guard against the activity tearing down so we don't loop
+             * forever.
+             */
             if (videoLayout.getMeasuredWidth() == 0 ||
                 videoLayout.getMeasuredHeight() == 0)
             {
+                if (!videoLayout.isAttachedToWindow()) return;
                 videoLayout.post(new Runnable() {
                     @Override public void run() { setupVideoPreviewLayout(); }
                 });
@@ -366,10 +371,11 @@ public class CallActivity extends Activity
 
             if (MainActivity.currentCall.vidWin != null) {
                 /* Set capture orientation according to current
-                 * device orientation.
+                 * device orientation. Call the helper directly to
+                 * avoid the onConfigurationChanged() relayout path,
+                 * which is only needed for real rotation events.
                  */
-                onConfigurationChanged(getResources().getConfiguration());
-
+                updateCaptureOrientation();
             }
 
             if (MainActivity.currentCall.vidPrev != null) {
