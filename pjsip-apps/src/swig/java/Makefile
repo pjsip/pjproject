@@ -14,10 +14,6 @@ SWIG_FLAGS += $(GEN_DOC)
 
 ifneq ($(findstring android,$(TARGET_NAME)),)
  OS=android
- ifeq ("$(JAVA_HOME)","")
-   # Set dummy JAVA_HOME as JNI is bundled in Android NDK, only need javac here
-   JAVA_HOME := $(dir $(shell which javac))
- endif
 else
  ifneq ($(findstring darwin,$(TARGET_NAME)),)
   OS=darwin
@@ -39,9 +35,12 @@ else
   endif
 endif
 
-# Get JDK location
+# Get JDK location (not needed for Android — Gradle handles Java build)
 CHECK_JDK := 1
 ifeq ($(findstring clean,$(MAKECMDGOALS)),clean)
+  CHECK_JDK := 0
+endif
+ifeq ($(OS),android)
   CHECK_JDK := 0
 endif
 
@@ -175,7 +174,7 @@ endif
 
 MY_APP_JAVA := android/app/src/main/java/$(subst .,/,$(MY_PACKAGE_NAME))/app/MyApp.java
 
-.PHONY: all java install uninstall
+.PHONY: all java install uninstall android_helpers
 
 all: $(LIBPJSUA2_SO) java
 
@@ -204,7 +203,7 @@ clean distclean realclean:
 		$(MY_PACKAGE_PATH)/*.java $(MY_PACKAGE_PATH)/*.class \
 		$(MY_PACKAGE_PATH)/../*.java $(MY_PACKAGE_PATH)/../*.class
 
-java: $(MY_PACKAGE_PATH)/Error.class $(MY_PACKAGE_PATH)/test.class $(MY_PACKAGE_PATH)/sample.class
+android_helpers: $(OUT_DIR)/pjsua2_wrap.cpp
 ifneq (,$(findstring PJMEDIA_VIDEO_DEV_HAS_ANDROID=1,$(ANDROID_CFLAGS)))
 	@echo "Copying Android camera helper components..."
 	cp $(PJDIR)/pjmedia/src/pjmedia-videodev/android/PjCamera*.java $(MY_PACKAGE_PATH)/..
@@ -212,6 +211,12 @@ endif
 ifneq (,$(findstring PJMEDIA_AUDIO_DEV_HAS_OBOE=1,$(OBOE_CFLAGS)))
 	@echo "Copying Android Oboe audio device helper components..."
 	cp $(PJDIR)/pjmedia/src/pjmedia-audiodev/android/PjAudioDevInfo.java $(MY_PACKAGE_PATH)/..
+endif
+
+ifeq ($(OS),android)
+java: $(OUT_DIR)/pjsua2_wrap.cpp android_helpers
+else
+java: $(MY_PACKAGE_PATH)/Error.class $(MY_PACKAGE_PATH)/test.class $(MY_PACKAGE_PATH)/sample.class
 endif
 
 $(MY_PACKAGE_PATH)/Error.class: $(MY_PACKAGE_PATH)/Error.java
