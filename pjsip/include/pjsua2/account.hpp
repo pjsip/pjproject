@@ -2108,6 +2108,11 @@ public:
     DeferredResponse& operator=(const DeferredResponse& deferredResponse)
         PJSUA2_THROW(Error);
 
+    /* SWIG 4.x doesn't reliably match rvalue-reference signatures in
+     * %ignore, and the target languages (Java/C#/Python) have no concept
+     * of move semantics anyway. Hide the move ctor/assignment from SWIG.
+     */
+#ifndef SWIG
     /**
      * Moves the deferred response object.
      */
@@ -2117,6 +2122,7 @@ public:
      * Moves the deferred response object.
      */
     DeferredResponse& operator=(DeferredResponse&& deferredResponse) noexcept;
+#endif
 
     /**
      * Destructor that frees possible cloned rx_data.
