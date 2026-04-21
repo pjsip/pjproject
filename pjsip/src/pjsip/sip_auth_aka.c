@@ -62,11 +62,18 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
     if (chal->algorithm.slen==0 || pj_stricmp2(&chal->algorithm, "md5") == 0) {
         /*
          * A normal MD5 authentication is requested. Fallback to the usual
-         * MD5 digest creation.
+         * MD5 digest creation. pjsip_auth_create_digest() asserts that the
+         * credential is NOT an AKA credential, so clear the EXT_AKA flag
+         * on a local copy before calling it.
          */
-        status = pjsip_auth_create_digest(&auth->response, &auth->nonce, 
-                                 &auth->nc, &auth->cnonce, &auth->qop, 
-                                 &auth->uri, &auth->realm, cred, method);
+        pjsip_cred_info plain_cred;
+        pj_memcpy(&plain_cred, cred, sizeof(plain_cred));
+        plain_cred.data_type &= ~PJSIP_CRED_DATA_EXT_AKA;
+
+        status = pjsip_auth_create_digest(&auth->response, &auth->nonce,
+                                 &auth->nc, &auth->cnonce, &auth->qop,
+                                 &auth->uri, &auth->realm, &plain_cred,
+                                 method);
 
         return status;
 
