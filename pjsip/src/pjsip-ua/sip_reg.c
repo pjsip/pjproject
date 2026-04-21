@@ -37,10 +37,15 @@
 
 #define REFRESH_TIMER           1
 #define DELAY_BEFORE_REFRESH    PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH
+
+/* This defines the minimum value for the refresh timer in milliseconds.
+ * If the calculated expiry for the refresh timer falls below this; it will be clamped to this value.
+ */
+#define MIN_REFRESH_MSEC        500
 #define THIS_FILE               "sip_reg.c"
 
 /* Outgoing transaction timeout when server sends 100 but never replies
- * with final response. Value is in MILISECONDS!
+ * with final response. Value is in MILLISECONDS!
  */
 #define REGC_TSX_TIMEOUT        33000
 
@@ -859,6 +864,8 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 static void schedule_registration ( pjsip_regc *regc, pj_uint32_t expiration )
 {
     if (regc->auto_reg && expiration > 0 && expiration != NOEXP) {
+        const long min_delay_sec = MIN_REFRESH_MSEC / 1000;
+        const long min_delay_msec = MIN_REFRESH_MSEC % 1000;
         pj_time_val delay = {0, 0};
 
         pj_timer_heap_cancel_if_active(pjsip_endpt_get_timer_heap(regc->endpt),
@@ -873,7 +880,20 @@ static void schedule_registration ( pjsip_regc *regc, pj_uint32_t expiration )
             delay.sec = regc->expires;
         }
         if (delay.sec < DELAY_BEFORE_REFRESH) {
-            delay.sec = DELAY_BEFORE_REFRESH;
+            if (expiration <= DELAY_BEFORE_REFRESH) {
+                /* Very small expiration: refresh before expiry. */
+                delay.sec  = (expiration > 1) ? (long)expiration - 1 : 0;
+                delay.msec = (expiration > 1) ? 0 : 500;
+            } else {
+                delay.sec = DELAY_BEFORE_REFRESH;
+            }
+        }
+        
+        /* enforce minimum refresh interval */
+        if( delay.sec < min_delay_sec ||
+            (delay.sec == min_delay_sec && delay.msec < min_delay_msec) ) {
+            delay.sec  = min_delay_sec;
+            delay.msec = min_delay_msec;
         }
         regc->timer.cb = &regc_refresh_timer_cb;
         regc->timer.id = REFRESH_TIMER;
