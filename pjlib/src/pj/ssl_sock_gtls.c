@@ -313,7 +313,11 @@ static int tls_cert_verify_cb(gnutls_session_t session)
         ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
         return GNUTLS_E_CERTIFICATE_ERROR;
     }
-    if (ssock->param.verify_peer) {
+    /* Always map GnuTLS chain-trust flags into ssock->verify_status so that
+     * upper layers (e.g. sip_transport_tls, which sets verify_peer=PJ_FALSE
+     * and enforces certificate policy itself) can inspect the result.
+     * Aborting the handshake immediately is only done when verify_peer is
+     * set at the SSL-socket level. */
     if (status & GNUTLS_CERT_INVALID) {
         if (status & GNUTLS_CERT_SIGNER_NOT_FOUND)
             ssock->verify_status |= PJ_SSL_CERT_EISSUER_NOT_FOUND;
@@ -331,11 +335,11 @@ static int tls_cert_verify_cb(gnutls_session_t session)
         else
             ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
 
-        return GNUTLS_E_CERTIFICATE_ERROR;
+        if (ssock->param.verify_peer)
+            return GNUTLS_E_CERTIFICATE_ERROR;
     }
 
-    /* When verification is not requested just return ok here, however
-     * applications can still get the verification status. */
+    if (ssock->param.verify_peer) {
         gnutls_x509_crt_t cert;
         unsigned int cert_list_size;
         const gnutls_datum_t *cert_list;
@@ -376,6 +380,8 @@ out:
         return GNUTLS_E_CERTIFICATE_ERROR;
     }
 
+    /* verify_peer is false: allow the handshake to complete. Upper layers
+     * will read ssock->verify_status to enforce their own policy. */
     return GNUTLS_E_SUCCESS;
 }
 
