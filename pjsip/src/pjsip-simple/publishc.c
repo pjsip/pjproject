@@ -723,8 +723,8 @@ static void tsx_callback(void *token, pjsip_event *event)
             if (pubc->auto_refresh && expiration!=0 &&
                 expiration!=PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED)
             {
-                const long min_delay_sec = MIN_REFRESH_MSEC / 1000;
-                const long min_delay_msec = MIN_REFRESH_MSEC % 1000;
+                const pj_time_val min_delay = {MIN_REFRESH_MSEC / 1000,
+                                               MIN_REFRESH_MSEC % 1000};
                 pj_time_val delay = {0, 0};
 
                 /* Cancel existing timer, if any */
@@ -753,10 +753,8 @@ static void tsx_callback(void *token, pjsip_event *event)
                 }
                 
                 /* make sure we don't go below the minimum */
-                if (delay.sec < min_delay_sec ||
-                    (delay.sec == min_delay_sec && delay.msec < min_delay_msec)) {
-                    delay.sec  = min_delay_sec;
-                    delay.msec = min_delay_msec;
+                if (PJ_TIME_VAL_LT(delay, min_delay)) {
+                    delay = min_delay;
                 }
                 pubc->timer.cb = &pubc_refresh_timer_cb;
                 pubc->timer.id = REFRESH_TIMER;

@@ -864,8 +864,8 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 static void schedule_registration ( pjsip_regc *regc, pj_uint32_t expiration )
 {
     if (regc->auto_reg && expiration > 0 && expiration != NOEXP) {
-        const long min_delay_sec = MIN_REFRESH_MSEC / 1000;
-        const long min_delay_msec = MIN_REFRESH_MSEC % 1000;
+        const pj_time_val min_delay = {MIN_REFRESH_MSEC / 1000,
+                                       MIN_REFRESH_MSEC % 1000};
         pj_time_val delay = {0, 0};
 
         pj_timer_heap_cancel_if_active(pjsip_endpt_get_timer_heap(regc->endpt),
@@ -890,10 +890,8 @@ static void schedule_registration ( pjsip_regc *regc, pj_uint32_t expiration )
         }
 
         /* make sure we don't go below the minimum */
-        if (delay.sec < min_delay_sec ||
-            (delay.sec == min_delay_sec && delay.msec < min_delay_msec)) {
-            delay.sec  = min_delay_sec;
-            delay.msec = min_delay_msec;
+        if (PJ_TIME_VAL_LT(delay, min_delay)) {
+            delay = min_delay;
         }
         regc->timer.cb = &regc_refresh_timer_cb;
         regc->timer.id = REFRESH_TIMER;
