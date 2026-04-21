@@ -68,7 +68,7 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
          */
         pjsip_cred_info plain_cred;
         pj_memcpy(&plain_cred, cred, sizeof(plain_cred));
-        plain_cred.data_type &= ~PJSIP_CRED_DATA_EXT_MASK;
+        plain_cred.data_type &= ~PJSIP_CRED_DATA_EXT_AKA;
 
         status = pjsip_auth_create_digest(&auth->response, &auth->nonce,
                                  &auth->nc, &auth->cnonce, &auth->qop,

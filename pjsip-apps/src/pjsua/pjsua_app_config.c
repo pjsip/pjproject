@@ -980,8 +980,8 @@ static pj_status_t parse_args(int argc, char *argv[],
                     return PJ_EINVAL;
                 }
             }
-#endif
             break;
+#endif
 
         case OPT_REG_RETRY_INTERVAL:
             cur_acc->reg_retry_interval = (unsigned)pj_strtoul(pj_cstr(&tmp, pj_optarg));
@@ -1662,13 +1662,21 @@ static pj_status_t parse_args(int argc, char *argv[],
 #if PJSIP_HAS_DIGEST_AKA_AUTH
         /* Promote credentials to AKA if --aka-op or --aka-amf was supplied.
          * Order-independent: --aka-op/--aka-amf may appear before or after
-         * --password on the command line. K is taken from the password.
+         * --password on the command line. K is taken from the password, so
+         * --password is required for AKA — skip promotion if it's missing
+         * rather than silently running AKA with an all-zero K.
          */
         {
             unsigned j;
             for (j=0; j<acfg->cred_count; ++j) {
                 pjsip_cred_info *c = &acfg->cred_info[j];
                 if (c->ext.aka.op.slen || c->ext.aka.amf.slen) {
+                    if (c->data.slen == 0) {
+                        PJ_LOG(1,(THIS_FILE,
+                                  "Error: --aka-op/--aka-amf requires "
+                                  "--password (used as AKA K)"));
+                        return PJ_EINVAL;
+                    }
                     c->data_type |= PJSIP_CRED_DATA_EXT_AKA;
                     c->ext.aka.k = c->data;
                     c->ext.aka.cb = &pjsip_auth_create_aka_response;
