@@ -752,9 +752,9 @@ static void tsx_callback(void *token, pjsip_event *event)
                     }
                 }
                 
-                /* enforce minimum refresh interval */
-                if( delay.sec < min_delay_sec ||
-                    (delay.sec == min_delay_sec && delay.msec < min_delay_msec) ) {
+                /* make sure we don't go below the minimum */
+                if (delay.sec < min_delay_sec ||
+                    (delay.sec == min_delay_sec && delay.msec < min_delay_msec)) {
                     delay.sec  = min_delay_sec;
                     delay.msec = min_delay_msec;
                 }
@@ -764,7 +764,7 @@ static void tsx_callback(void *token, pjsip_event *event)
                 pjsip_endpt_schedule_timer( pubc->endpt, &pubc->timer, &delay);
                 pj_gettimeofday(&pubc->last_refresh);
                 pubc->next_refresh = pubc->last_refresh;
-                pubc->next_refresh.sec += delay.sec;
+                PJ_TIME_VAL_ADD(pubc->next_refresh, delay);
             }
 
         } else {

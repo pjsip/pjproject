@@ -888,10 +888,10 @@ static void schedule_registration ( pjsip_regc *regc, pj_uint32_t expiration )
                 delay.sec = DELAY_BEFORE_REFRESH;
             }
         }
-        
-        /* enforce minimum refresh interval */
-        if( delay.sec < min_delay_sec ||
-            (delay.sec == min_delay_sec && delay.msec < min_delay_msec) ) {
+
+        /* make sure we don't go below the minimum */
+        if (delay.sec < min_delay_sec ||
+            (delay.sec == min_delay_sec && delay.msec < min_delay_msec)) {
             delay.sec  = min_delay_sec;
             delay.msec = min_delay_msec;
         }
@@ -901,7 +901,7 @@ static void schedule_registration ( pjsip_regc *regc, pj_uint32_t expiration )
         pjsip_endpt_schedule_timer( regc->endpt, &regc->timer, &delay);
         pj_gettimeofday(&regc->last_reg);
         regc->next_reg = regc->last_reg;
-        regc->next_reg.sec += delay.sec;
+        PJ_TIME_VAL_ADD(regc->next_reg, delay);
     }
 }
 
