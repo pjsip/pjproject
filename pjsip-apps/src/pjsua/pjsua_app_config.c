@@ -57,8 +57,11 @@ static void usage(void)
     puts  ("  --password=string   Set authentication password");
 
 #if PJSIP_HAS_DIGEST_AKA_AUTH
-    puts  ("  --aka-op=hex        Set OP value to use in Digest AKA authentication");
-    puts  ("  --aka-amf=hex       Set AMF value to use in Digest AKA authentication");
+    puts  ("  --aka-op=hex        Set OP value for Digest AKA authentication.");
+    puts  ("                      Specifying --aka-op or --aka-amf switches the");
+    puts  ("                      current credential to AKA mode (K is taken from");
+    puts  ("                      --password).");
+    puts  ("  --aka-amf=hex       Set AMF value for Digest AKA authentication");
 #endif
 
     puts  ("  --contact=url       Optionally override the Contact information");
@@ -938,12 +941,9 @@ static pj_status_t parse_args(int argc, char *argv[],
         case OPT_PASSWORD:   /* authentication password */
             cur_acc->cred_info[cur_acc->cred_count].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
             cur_acc->cred_info[cur_acc->cred_count].data = pj_str(pj_optarg);
-#if PJSIP_HAS_DIGEST_AKA_AUTH
-            cur_acc->cred_info[cur_acc->cred_count].data_type |= PJSIP_CRED_DATA_EXT_AKA;
-            cur_acc->cred_info[cur_acc->cred_count].ext.aka.k = pj_str(pj_optarg);
-            cur_acc->cred_info[cur_acc->cred_count].ext.aka.cb = &pjsip_auth_create_aka_response;
             break;
 
+#if PJSIP_HAS_DIGEST_AKA_AUTH
         case OPT_AKA_OP:    /* aka op */
             {
                 pj_str_t hex = pj_str(pj_optarg);
@@ -1658,6 +1658,24 @@ static pj_status_t parse_args(int argc, char *argv[],
         {
             acfg->cred_count++;
         }
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        /* Promote credentials to AKA if --aka-op or --aka-amf was supplied.
+         * Order-independent: --aka-op/--aka-amf may appear before or after
+         * --password on the command line. K is taken from the password.
+         */
+        {
+            unsigned j;
+            for (j=0; j<acfg->cred_count; ++j) {
+                pjsip_cred_info *c = &acfg->cred_info[j];
+                if (c->ext.aka.op.slen || c->ext.aka.amf.slen) {
+                    c->data_type |= PJSIP_CRED_DATA_EXT_AKA;
+                    c->ext.aka.k = c->data;
+                    c->ext.aka.cb = &pjsip_auth_create_aka_response;
+                }
+            }
+        }
+#endif
 
         if (acfg->ice_cfg.enable_ice) {
             acfg->ice_cfg_use = PJSUA_ICE_CONFIG_USE_CUSTOM;
