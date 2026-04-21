@@ -612,6 +612,51 @@ jobs:
         name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ matrix.name }}-${{ github.run_id }}
         path: artifacts
 
+  alt-pjsua:
+    # Build pjsua-lib with PJSUA_MEDIA_HAS_PJMEDIA=0 (third-party media mode)
+    # and test the alt_pjsua sample application.
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
+    runs-on: ubuntu-latest
+    name: alt_pjsua / 3rdparty media
+    steps:
+    - uses: actions/checkout@v2
+    - name: install cirunner
+      run: |
+        git clone --depth 1 https://github.com/pjsip/cirunner.git
+        cirunner/installlinux.sh
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y sip-tester
+    - name: config site
+      run: cp pjsip-apps/src/3rdparty_media_sample/config_site.h pjlib/include/pj/config_site.h
+    - name: configure
+      run: |
+        CFLAGS="-g -fPIC -Wno-unused-label" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" \
+        ./configure --enable-ext-sound --disable-speex-aec \
+          --disable-g711-codec --disable-l16-codec --disable-gsm-codec \
+          --disable-g722-codec --disable-g7221-codec --disable-speex-codec \
+          --disable-ilbc-codec --disable-opencore-amrnb \
+          --disable-sdl --disable-ffmpeg --disable-v4l2
+    - name: make
+      run: make -j3 lib
+    - name: build alt_pjsua
+      run: cd pjsip-apps/src/3rdparty_media_sample && make
+    - name: set up Python 3.10 for pjsua test
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+    - name: alt_pjsua-test
+      run: |
+        cd tests/pjsua
+        python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uac-custom-sdp.xml
+        python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uas-custom-sdp.xml
+    - name: upload artifacts on failure
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ github.run_id }}
+        path: artifacts
+
   cmake-build:
     runs-on: ubuntu-latest
     name: CMake / ${{ matrix.build_type }}

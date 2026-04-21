@@ -3329,6 +3329,22 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                                                    pool, rem_sdp);
     }
 
+    if (sdp->media_count > PJSUA_MAX_CALL_MEDIA) {
+        PJ_LOG(1, (THIS_FILE,
+                   "Error in provided SDP: media count %u exceeds "
+                   "PJSUA_MAX_CALL_MEDIA=%u",
+                   sdp->media_count, PJSUA_MAX_CALL_MEDIA));
+        status = PJ_ETOOMANY;
+        goto on_error;
+    }
+
+    /* Sync med_prov_cnt with the final SDP media count in case the callback
+     * added or replaced media sections (e.g. custom SDP with more m= lines).
+     * Mirrors the same invariant maintained for the rem_sdp (UAS) path above:
+     * med_prov_cnt must never decrease. */
+    if (call->med_prov_cnt < sdp->media_count)
+        call->med_prov_cnt = sdp->media_count;
+
     *p_sdp = sdp;
     return PJ_SUCCESS;
 

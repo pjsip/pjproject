@@ -705,5 +705,119 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_update_port(pjsua_conf_port_id id)
     return PJ_ENOTSUP;
 }
 
+/* Get video conference port id of a call stream. */
+PJ_DEF(pjsua_conf_port_id) pjsua_call_get_vid_conf_port(
+                                                    pjsua_call_id call_id,
+                                                    pjmedia_dir dir)
+{
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(dir);
+    UNIMPLEMENTED(pjsua_call_get_vid_conf_port)
+    return PJSUA_INVALID_ID;
+}
+
+/* Reset AVI player data (internal, called from pjsua_core). */
+void pjsua_reset_avi_player_data(pjsua_avi_player_id id)
+{
+    PJ_UNUSED_ARG(id);
+}
+
+/* Reset AVI recorder data (internal, called from pjsua_core). */
+void pjsua_reset_avi_recorder_data(pjsua_avi_rec_id id)
+{
+    PJ_UNUSED_ARG(id);
+}
+
+/* Create AVI player. */
+PJ_DEF(pj_status_t) pjsua_avi_player_create(const pj_str_t *filename,
+                                             pjsua_avi_player_id *id)
+{
+    PJ_UNUSED_ARG(filename);
+    PJ_UNUSED_ARG(id);
+    UNIMPLEMENTED(pjsua_avi_player_create)
+    return PJ_ENOTSUP;
+}
+
+/* Destroy AVI player. */
+PJ_DEF(pj_status_t) pjsua_avi_player_destroy(pjsua_avi_player_id id)
+{
+    PJ_UNUSED_ARG(id);
+    UNIMPLEMENTED(pjsua_avi_player_destroy)
+    return PJ_ENOTSUP;
+}
+
+/* Get audio conference port of AVI player. */
+PJ_DEF(pjsua_conf_port_id) pjsua_avi_player_get_conf_port(
+                                                        pjsua_avi_player_id id,
+                                                        pjmedia_type strm_type,
+                                                        unsigned strm_idx)
+{
+    PJ_UNUSED_ARG(id);
+    PJ_UNUSED_ARG(strm_type);
+    PJ_UNUSED_ARG(strm_idx);
+    UNIMPLEMENTED(pjsua_avi_player_get_conf_port)
+    return PJSUA_INVALID_ID;
+}
+
+/* Get video device index of AVI player. */
+PJ_DEF(pjmedia_vid_dev_index) pjsua_avi_player_get_vid_dev(
+                                                        pjsua_avi_player_id id)
+{
+    PJ_UNUSED_ARG(id);
+    UNIMPLEMENTED(pjsua_avi_player_get_vid_dev)
+    return PJMEDIA_VID_INVALID_DEV;
+}
+
+/* Create AVI recorder. */
+PJ_DEF(pj_status_t) pjsua_avi_recorder_create(const pj_str_t *filename,
+                                               pj_ssize_t max_size,
+                                               const pjmedia_format *vid_fmt,
+                                               const pjmedia_format *aud_fmt,
+                                               unsigned options,
+                                               pjsua_avi_rec_id *id)
+{
+    PJ_UNUSED_ARG(filename);
+    PJ_UNUSED_ARG(max_size);
+    PJ_UNUSED_ARG(vid_fmt);
+    PJ_UNUSED_ARG(aud_fmt);
+    PJ_UNUSED_ARG(options);
+    PJ_UNUSED_ARG(id);
+    UNIMPLEMENTED(pjsua_avi_recorder_create)
+    return PJ_ENOTSUP;
+}
+
+/* Destroy AVI recorder. */
+PJ_DEF(pj_status_t) pjsua_avi_recorder_destroy(pjsua_avi_rec_id id)
+{
+    PJ_UNUSED_ARG(id);
+    UNIMPLEMENTED(pjsua_avi_recorder_destroy)
+    return PJ_ENOTSUP;
+}
+
+/* Get audio conference port of AVI recorder. */
+PJ_DEF(pjsua_conf_port_id) pjsua_avi_recorder_get_conf_port(
+                                                        pjsua_avi_rec_id id,
+                                                        unsigned strm_idx)
+{
+    PJ_UNUSED_ARG(id);
+    PJ_UNUSED_ARG(strm_idx);
+    UNIMPLEMENTED(pjsua_avi_recorder_get_conf_port)
+    return PJSUA_INVALID_ID;
+}
+
+/* Set AVI recorder callback. */
+PJ_DEF(pj_status_t) pjsua_avi_recorder_set_cb(
+                                    pjsua_avi_rec_id id,
+                                    void *user_data,
+                                    void(*cb)(pjsua_avi_rec_id rec_id,
+                                              void *usr_data))
+{
+    PJ_UNUSED_ARG(id);
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(cb);
+    UNIMPLEMENTED(pjsua_avi_recorder_set_cb)
+    return PJ_ENOTSUP;
+}
+
 #endif  /* PJSUA_HAS_VIDEO */
 

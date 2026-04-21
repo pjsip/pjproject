@@ -175,6 +175,10 @@ static void usage(void)
     puts  ("  --no-tones          Disable audible tones");
     puts  ("  --jb-max-size       Specify jitter buffer maximum size, in msec (default=-1)");
     puts  ("  --extra-audio       Add one more audio stream");
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+    puts  ("  --custom-sdp=STR    Replace generated SDP with this string.");
+    puts  ("                      Use \\r\\n or \\n as line separators. The full SDP is replaced as-is.");
+#endif
 
 #if PJSUA_HAS_VIDEO
     puts  ("");
@@ -422,6 +426,9 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI,
            OPT_REC_AVI, OPT_REC_AVI_SIZE, OPT_REC_AVI_AUDIO, OPT_AUTO_REC_AVI,
            OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+           , OPT_CUSTOM_SDP
+#endif
     };
     struct pj_getopt_option long_options[] = {
         { "config-file",1, 0, OPT_CONFIG_FILE},
@@ -578,6 +585,9 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "use-cli",    0, 0, OPT_USE_CLI},
         { "cli-telnet-port", 1, 0, OPT_CLI_TELNET_PORT},
         { "no-cli-console", 0, 0, OPT_DISABLE_CLI_CONSOLE},
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+        { "custom-sdp",     1, 0, OPT_CUSTOM_SDP},
+#endif
         { NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -1609,6 +1619,38 @@ static pj_status_t parse_args(int argc, char *argv[],
             cfg->cli_cfg.cli_fe &= (~CLI_FE_CONSOLE);
             break;
 
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+        case OPT_CUSTOM_SDP:
+        {
+            /* Unescape \r\n and \n in the option value so the user can
+             * pass the SDP as a single command-line argument.
+             */
+            const char *src = pj_optarg;
+            char *dst;
+            pj_size_t len = pj_ansi_strlen(pj_optarg);
+
+            cfg->custom_sdp.ptr = (char*)pj_pool_alloc(cfg->pool, len + 1);
+            dst = cfg->custom_sdp.ptr;
+            while (*src) {
+                if (src[0] == '\\' && src[1] == 'r' && src[2] == '\\' &&
+                    src[3] == 'n')
+                {
+                    *dst++ = '\r';
+                    *dst++ = '\n';
+                    src += 4;
+                } else if (src[0] == '\\' && src[1] == 'n') {
+                    *dst++ = '\n';
+                    src += 2;
+                } else {
+                    *dst++ = *src++;
+                }
+            }
+            *dst = '\0';
+            cfg->custom_sdp.slen = (pj_ssize_t)(dst - cfg->custom_sdp.ptr);
+            break;
+        }
+#endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
+
         default:
             PJ_LOG(1,(THIS_FILE,
                       "Argument \"%s\" is not valid. Use --help to see help",
@@ -2557,6 +2599,40 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
                               config->cfg.timer_setting.sess_expires);
         pj_strcat2(&cfg, line);
     }
+
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+    if (config->custom_sdp.slen) {
+        /* Escape actual CRLF/LF back to \r\n/\n when saving */
+        const char *src = config->custom_sdp.ptr;
+        const char *end = src + config->custom_sdp.slen;
+        pj_str_t escaped;
+        char *ebuf;
+        char *ep;
+
+        /* Worst case: every byte becomes 4 chars (\r\n) */
+        ebuf = (char*)pj_pool_alloc(config->pool,
+                                    (pj_size_t)(config->custom_sdp.slen * 4 + 1));
+        ep = ebuf;
+        while (src < end) {
+            if (src[0] == '\r' && src + 1 < end && src[1] == '\n') {
+                *ep++ = '\\'; *ep++ = 'r'; *ep++ = '\\'; *ep++ = 'n';
+                src += 2;
+            } else if (src[0] == '\n') {
+                *ep++ = '\\'; *ep++ = 'n';
+                src++;
+            } else {
+                *ep++ = *src++;
+            }
+        }
+        *ep = '\0';
+        escaped.ptr = ebuf;
+        escaped.slen = (pj_ssize_t)(ep - ebuf);
+
+        pj_strcat2(&cfg, "--custom-sdp \"");
+        pj_strcat(&cfg, &escaped);
+        pj_strcat2(&cfg, "\"\n");
+    }
+#endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
 
     *(cfg.ptr + cfg.slen) = '\0';
     return (int)cfg.slen;

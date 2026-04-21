@@ -41,7 +41,10 @@ excluded_tests = [
     "uas-mwi",
     "uas-register-ip-change-port-only",
     "uas-register-ip-change",
-    "uas-timer-update"
+    "uas-timer-update",
+    # These require alt_pjsua (PJSUA_MEDIA_HAS_PJMEDIA=0); run explicitly with --exe alt_pjsua
+    "alt-pjsua-uac-custom-sdp",
+    "alt-pjsua-uas-custom-sdp",
 ]
 
 # Exclude scripts-sipp/uac-reinvite-bad-via-branch on MacOS due to unreliable result
