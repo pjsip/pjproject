@@ -37,6 +37,11 @@
 
 #define REFRESH_TIMER           1
 #define DELAY_BEFORE_REFRESH    PJSIP_PUBLISHC_DELAY_BEFORE_REFRESH
+
+/* This defines the minimum value for the refresh timer in milliseconds.
+ * If the calculated expiry for the refresh timer falls below this; it will be clamped to this value.
+ */
+#define MIN_REFRESH_MSEC        500
 #define THIS_FILE               "publishc.c"
 
 
@@ -718,7 +723,9 @@ static void tsx_callback(void *token, pjsip_event *event)
             if (pubc->auto_refresh && expiration!=0 &&
                 expiration!=PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED)
             {
-                pj_time_val delay = { 0, 0};
+                const pj_time_val min_delay = {MIN_REFRESH_MSEC / 1000,
+                                               MIN_REFRESH_MSEC % 1000};
+                pj_time_val delay = {0, 0};
 
                 /* Cancel existing timer, if any */
                 if (pubc->timer.id != 0) {
@@ -726,21 +733,36 @@ static void tsx_callback(void *token, pjsip_event *event)
                     pubc->timer.id = 0;
                 }
 
-                delay.sec = expiration - DELAY_BEFORE_REFRESH;
+                /* prevent underflow in case the remote answers with an unexpectedly low expiry value */
+                if (expiration > DELAY_BEFORE_REFRESH) {
+                    delay.sec = expiration - DELAY_BEFORE_REFRESH;
+                }
                 if (pubc->expires != PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED && 
                     delay.sec > (pj_int32_t)pubc->expires) 
                 {
                     delay.sec = pubc->expires;
                 }
-                if (delay.sec < DELAY_BEFORE_REFRESH) 
-                    delay.sec = DELAY_BEFORE_REFRESH;
+                if (delay.sec < DELAY_BEFORE_REFRESH) {
+                    if (expiration <= DELAY_BEFORE_REFRESH) {
+                        /* Very small expiration: refresh before expiry. */
+                        delay.sec  = (expiration > 1) ? (long)expiration - 1 : 0;
+                        delay.msec = (expiration > 1) ? 0 : 500;
+                    } else {
+                        delay.sec = DELAY_BEFORE_REFRESH;
+                    }
+                }
+                
+                /* make sure we don't go below the minimum */
+                if (PJ_TIME_VAL_LT(delay, min_delay)) {
+                    delay = min_delay;
+                }
                 pubc->timer.cb = &pubc_refresh_timer_cb;
                 pubc->timer.id = REFRESH_TIMER;
                 pubc->timer.user_data = pubc;
                 pjsip_endpt_schedule_timer( pubc->endpt, &pubc->timer, &delay);
                 pj_gettimeofday(&pubc->last_refresh);
                 pubc->next_refresh = pubc->last_refresh;
-                pubc->next_refresh.sec += delay.sec;
+                PJ_TIME_VAL_ADD(pubc->next_refresh, delay);
             }
 
         } else {
