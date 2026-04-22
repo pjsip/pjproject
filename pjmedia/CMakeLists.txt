@@ -41,6 +41,16 @@ elseif(PJMEDIA_WITH_RESAMPLE STREQUAL "speex")
     message(FATAL_ERROR "Resampling backend cannot be set to `speex`, \
                          because Speex is not available")
   endif()
+  # Modern speex (1.2+) ships the resampler in libspeexdsp, separate from
+  # libspeex. When using system speex we therefore also need SpeexDSP.
+  # The bundled speex keeps the resampler in-tree so nothing extra is
+  # required there.
+  get_target_property(_pj_speex_provider Pj::Dep::Speex PJ_DEP_PROVIDER)
+  if(_pj_speex_provider STREQUAL "system")
+    find_package(SpeexDSP REQUIRED)
+    set(_pj_resample_speex_needs_speexdsp TRUE)
+  endif()
+  unset(_pj_speex_provider)
 endif()
 
 #
@@ -540,6 +550,7 @@ target_link_libraries(pjmedia
     $<$<STREQUAL:${PJMEDIA_WITH_RESAMPLE},libresample>:Pj::Dep::Resample>
     $<$<STREQUAL:${PJMEDIA_WITH_RESAMPLE},libsamplerate>:SampleRate::SampleRate>
     $<$<STREQUAL:${PJMEDIA_WITH_RESAMPLE},speex>:Pj::Dep::Speex>
+    $<$<BOOL:${_pj_resample_speex_needs_speexdsp}>:SpeexDSP::SpeexDSP>
 
     # aec
     $<$<BOOL:${PJMEDIA_WITH_SPEEX_AEC}>:Pj::Dep::Speex;SpeexDSP::SpeexDSP>
