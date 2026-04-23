@@ -193,7 +193,12 @@ static srtp_err_status_t srtp_aes_gcm_openssl_context_init(void *cv,
         break;
     }
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
     EVP_CIPHER_CTX_reset(c->ctx);
+#else
+    EVP_CIPHER_CTX_cleanup(c->ctx);
+    EVP_CIPHER_CTX_init(c->ctx);
+#endif
 
     if (!EVP_CipherInit_ex(c->ctx, evp, NULL, key, NULL, 0)) {
         return (srtp_err_status_init_fail);
