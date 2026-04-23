@@ -2743,7 +2743,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 
     /* Check if ICE has been completed */
     if (ice->is_complete) {
-        LOG4((ice->obj_name,
+        PJ_LOG(5, (ice->obj_name,
               "Ignored completed STUN request after ICE nego has been "
               "completed!"));
         pj_grp_lock_release(ice->grp_lock);
@@ -3344,7 +3344,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
 
     /* Check if ICE has been completed */
     if (ice->is_complete) {
-        LOG4((ice->obj_name,
+        PJ_LOG(5, (ice->obj_name,
               "Ignored incoming check after ICE nego has been completed!"));
         return;
     }
