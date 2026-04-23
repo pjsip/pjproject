@@ -90,6 +90,16 @@ foreach(dep IN LISTS DEPS)
       else()
         set(dep_target ${DEP_${dep}_PACKAGE}::${DEP_${dep}_PACKAGE})
       endif()
+      # Promote the IMPORTED target to GLOBAL so the `Pj::Dep::${dep}`
+      # ALIAS created below is visible across subdirectories. An ALIAS
+      # that backs a non-GLOBAL IMPORTED target is scope-local, which
+      # breaks `if(TARGET Pj::Dep::${dep})` checks in sibling modules
+      # (e.g. pjmedia checking for `Pj::Dep::Speex`).
+      get_target_property(_is_imported ${dep_target} IMPORTED)
+      if(_is_imported)
+        set_target_properties(${dep_target} PROPERTIES IMPORTED_GLOBAL TRUE)
+      endif()
+      unset(_is_imported)
     endif()
   endif()
 
