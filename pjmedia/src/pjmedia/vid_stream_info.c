@@ -101,7 +101,7 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
                                                          &i, &p_info, NULL);
         if (status == PJ_SUCCESS) {
             si->codec_info = *p_info;
-        } else {
+        } else if (status == PJ_ENOTFOUND){
             /* Codec not in registry but rtpmap provides encoding name.
              * Build partial codec_info so 3rd-party media stacks can
              * operate without registering dummy codecs.
@@ -112,6 +112,8 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
             si->codec_info.clock_rate = rtpmap->clock_rate;
             si->codec_info.dir = PJMEDIA_DIR_ENCODING_DECODING;
             status = PJ_SUCCESS;
+        } else {
+            return status;
         }
     }
 

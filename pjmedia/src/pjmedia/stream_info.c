@@ -244,13 +244,15 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
     status = pjmedia_codec_mgr_get_default_param(mgr, &si->fmt,
                                                  si->param);
 
-    /* When codec is not in the registry but codec info was provided by an
-     * rtpmap attribute (e.g. for 3rd-party media stacks), treat the failure
-     * as non-fatal: clear si->param so callers skip codec-specific tuning.
-     * Other errors may indicate malformed codec info
-     * or initialization failures and should be returned to the caller.
+    /* When codec is not in the registry but codec info was provided by SDP
+     * (e.g. via rtpmap for 3rd-party media stacks), treat unsupported/not
+     * found codec-param lookup as non-fatal: clear si->param so callers
+     * skip codec-specific tuning. Other errors may indicate malformed codec
+     * info or initialization failures and should be returned to the caller.
      */
-    if (status == PJMEDIA_CODEC_EUNSUP && si->fmt.encoding_name.slen > 0) {
+    if ((status == PJMEDIA_CODEC_EUNSUP || status == PJ_ENOTFOUND) &&
+        si->fmt.encoding_name.slen > 0 &&
+        si->fmt.clock_rate != 0) {
         si->param = NULL;
         status = PJ_SUCCESS;
     }
