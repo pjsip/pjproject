@@ -1709,6 +1709,7 @@ static pj_status_t process_encode_h264(and_media_codec_data *and_media_data)
                 AMediaCodec_releaseOutputBuffer(and_media_data->enc,
                                         and_media_data->enc_output_buf_idx,
                                         0);
+                and_media_data->enc_output_buf_idx = -1;
                 return PJ_ENOMEM;
             }
             h264_data->enc_frame_buf_size = frame_size;
