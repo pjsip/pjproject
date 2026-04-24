@@ -50,14 +50,14 @@ PJ_BEGIN_DECL
  *
  * \section opus_codec_setting Codec Settings
  *
- * General codec settings for this codec such as VAD and PLC can be 
+ * General codec settings for this codec such as VAD and PLC can be
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param
  * (see the documentation of #pjmedia_codec_param for more info).
  *
  * For Opus codec specific settings, such as sample rate,
  * channel count, bit rate, complexity, and CBR, can be configured
  * in #pjmedia_codec_opus_config.
- * The default setting of sample rate is specified in 
+ * The default setting of sample rate is specified in
  * #PJMEDIA_CODEC_OPUS_DEFAULT_SAMPLE_RATE. The default setting of
  * bitrate is specified in #PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE.
  * And the default setting of complexity is specified in
@@ -89,6 +89,148 @@ PJ_BEGIN_DECL
     ...
     pjmedia_codec_opus_set_default_param(&opus_cfg, &param);
  \endcode
+ *
+ * \subsection opus_codec_config_fields Configuration Fields
+ *
+ * The fields of #pjmedia_codec_opus_config control encoder behavior and the
+ * decoder fmtp advertised in the SDP offer:
+ *
+ * - \b sample_rate: Opus internal clock rate in Hz. Valid values are 8000,
+ *   12000, 16000, 24000, and 48000. Defaults to
+ *   #PJMEDIA_CODEC_OPUS_DEFAULT_SAMPLE_RATE (48000). When not 48000 this
+ *   is advertised in both \a maxplaybackrate and \a sprop-maxcapturerate
+ *   fmtp (see \ref opus_sdp_fmtp).
+ * - \b channel_cnt: 1 (mono) or 2 (stereo). When set to 2, the
+ *   \a stereo / \a sprop-stereo fmtp parameters are advertised so remote
+ *   endpoints know to send/expect stereo frames.
+ * - \b frm_ptime and \b frm_ptime_denum: Encoder frame ptime in msec, with
+ *   optional denominator to express fractional values. Use frm_ptime=20,
+ *   frm_ptime_denum=0 for the 20 ms default. To express 2.5 ms, use
+ *   frm_ptime=5 and frm_ptime_denum=2.
+ * - \b bit_rate: Encoder target bit rate in bps. 0
+ *   (#PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE) lets Opus pick based on sample
+ *   rate, channel count, and content. Non-zero values are advertised as
+ *   \a maxaveragebitrate. On the receive side, a remote's advertised
+ *   \a maxaveragebitrate is clamped to the RFC 7587 range
+ *   [6000, 510000] bps with a log warning.
+ * - \b packet_loss: Expected network packet loss percentage. Passed to
+ *   Opus as the \a OPUS_SET_PACKET_LOSS_PERC encoder hint so Opus can tune
+ *   its internal resilience. This field does not itself advertise any
+ *   fmtp; the \a useinbandfec attribute is driven by the PLC setting in
+ *   #pjmedia_codec_param (see below).
+ * - \b complexity: Encoder complexity 0..10. Higher yields better quality
+ *   at the cost of CPU. Default #PJMEDIA_CODEC_OPUS_DEFAULT_COMPLEXITY (5).
+ * - \b cbr: Constant vs variable bit rate. Default
+ *   #PJMEDIA_CODEC_OPUS_DEFAULT_CBR (PJ_FALSE, i.e. VBR). When PJ_TRUE
+ *   the \a cbr=1 fmtp is advertised.
+ *
+ *
+ * \section opus_on_the_fly Changing Parameters During a Call
+ *
+ * Added in \pr{3189}. Opus accepts
+ * changes to bit rate, bandwidth (clock rate), CBR, VAD/DTX, PLC/FEC,
+ * packet loss, complexity, and ptime mid-call, without renegotiating
+ * SDP. Other codecs typically accept only the VAD/PLC settings via the
+ * same API.
+ *
+ * The entry points at each API layer:
+ *
+ * - \b PJMEDIA: #pjmedia_stream_modify_codec_param() accepts a new
+ *   #pjmedia_codec_param and applies whatever the codec supports
+ *   changing at run-time.
+ * - \b PJSUA-LIB: #pjsua_call_aud_stream_modify_codec_param() wraps the
+ *   above for a given call and media index.
+ * - \b PJSUA2: \a Call::audStreamModifyCodecParam() is the C++ binding
+ *   of the PJSUA-LIB function.
+ *
+ * A typical use is adjusting the bit rate when network conditions change.
+ * Fetch the current codec param from the stream (or construct one from
+ * the current #pjmedia_codec_opus_config), patch the fields of interest,
+ * and pass it back.
+ *
+ *
+ * \section opus_pjsua2 PJSUA2 API
+ *
+ * In PJSUA2 (added in \pr{3935}), the
+ * Opus configuration is exposed as \a pj::CodecOpusConfig and manipulated
+ * through the endpoint:
+ *
+ * - \a Endpoint::getCodecOpusConfig() reads the current default
+ *   configuration.
+ * - \a Endpoint::setCodecOpusConfig() installs a new default configuration
+ *   and regenerates the SDP fmtp attributes, equivalent to calling
+ *   #pjmedia_codec_opus_set_default_param() at the C level.
+ *
+ * \a pj::CodecOpusConfig mirrors #pjmedia_codec_opus_config field by field,
+ * so the descriptions above apply to both. For on-the-fly changes during a
+ * call, use \a Call::audStreamModifyCodecParam() as noted above.
+ *
+ *
+ * \section opus_sdp_fmtp SDP Format Parameters
+ *
+ * The Opus codec negotiates the following parameters via
+ * <tt>a=fmtp</tt> lines in the SDP (see RFC 7587). They are generated
+ * automatically from the #pjmedia_codec_opus_config and the VAD/PLC bits
+ * in #pjmedia_codec_param by #pjmedia_codec_opus_set_default_param();
+ * applications rarely set them by hand.
+ *
+ * Driven by #pjmedia_codec_opus_config:
+ *
+ * - \a maxplaybackrate and \a sprop-maxcapturerate: both advertised when
+ *   \a sample_rate is not 48000, reflecting the endpoint's decode (and
+ *   mirror capture) clock rate.
+ * - \a stereo and \a sprop-stereo: advertised when \a channel_cnt is 2.
+ *   \a stereo tells the remote "you may send stereo to me";
+ *   \a sprop-stereo tells the remote "I may send stereo to you".
+ * - \a maxaveragebitrate: advertised only when \a bit_rate is non-zero.
+ *   On the decoding side, the value received from the remote is clamped
+ *   to a practical range and a log warning is emitted if adjusted.
+ * - \a cbr: advertised as \a cbr=1 when \a cbr is PJ_TRUE, otherwise
+ *   omitted (variable bit rate).
+ *
+ * Note that the effective session clock rate and channel count are
+ * negotiated as the minimum of what each side advertises: the session
+ * clock rate becomes min(remote's \a maxplaybackrate,
+ * local's \a sprop-maxcapturerate) and the channel count becomes
+ * min(remote's \a stereo, local's \a sprop-stereo). If the remote
+ * omits either attribute, RFC 7587 section 7 defaults apply: 48000 Hz
+ * and mono. Therefore, to actually run stereo or a non-48000 rate both
+ * peers must advertise it.
+ *
+ * Driven by #pjmedia_codec_param settings:
+ *
+ * - \a useinbandfec: advertised as \a useinbandfec=1 when
+ *   \a setting.plc is non-zero, signalling that in-band FEC is enabled
+ *   on the encoder. This pairs with #pjmedia_codec_opus_config::packet_loss,
+ *   which is passed to Opus as the expected loss percentage so FEC is
+ *   actually produced.
+ * - \a usedtx: advertised as \a usedtx=1 when \a setting.vad is non-zero,
+ *   i.e. the encoder is allowed to skip frames during silence.
+ *
+ * When interoperating with WebRTC peers or SIP gateways that are strict
+ * about Opus parameters, keep \a sample_rate at 48000 and leave
+ * \a bit_rate at 0 unless you have a specific reason to override.
+ *
+ *
+ * \section opus_troubleshooting Troubleshooting
+ *
+ * - \b One-way \b audio \b or \b truncated \b frames \b after \b on-the-fly
+ *   \b changes: \a param.info.max_rx_frame_size must fit the largest
+ *   Opus frame the remote may produce after a VBR&rarr;CBR, ptime, or
+ *   sampling rate change. PJSIP sets a safe default (1275 bytes, Opus's
+ *   worst case); this bullet applies if an application has explicitly
+ *   lowered it. See \issue{2089} for background.
+ * - \b Stereo \b not \b negotiated: Stereo runs only when both sides
+ *   advertise it (see \ref opus_sdp_fmtp). Local \a channel_cnt must be
+ *   2 so \a sprop-stereo is advertised; if the remote omits \a stereo
+ *   or sends \a stereo=0, the negotiated channel count is mono. Inspect
+ *   the SDP log to confirm what each side advertised.
+ * - \b Clock \b rate \b lower \b than \b expected: Similarly, the
+ *   session clock rate is the minimum of remote \a maxplaybackrate and
+ *   local \a sprop-maxcapturerate, defaulting to 48000 per RFC 7587
+ *   when the remote omits the attribute.
+ * - \b MSVC \b link \b errors \b on \b libopus: see
+ *   \ref opus_windows_linking below.
  *
  *
  * \section opus_windows_linking Windows Linking
