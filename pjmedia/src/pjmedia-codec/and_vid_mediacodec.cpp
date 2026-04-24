@@ -1696,16 +1696,21 @@ static pj_status_t process_encode_h264(and_media_codec_data *and_media_data)
 
     /* Android 16+ returns read-only DMA buffers from AMediaCodec_getOutputBuffer.
      * The H264 packetizer writes FU-A headers back into the buffer, so we must
-     * work on a writable copy. Grow the buffer via pool when needed.
+     * work on a writable copy. Skip in whole mode — the frame is only read there.
+     * Grow the buffer via pool when needed.
      */
-    {
+    if (!and_media_data->whole) {
         unsigned frame_size = and_media_data->enc_buf_info.size;
 
         if (frame_size > h264_data->enc_frame_buf_size) {
             h264_data->enc_frame_buf = (pj_uint8_t *)pj_pool_alloc(
                                             and_media_data->pool, frame_size);
-            if (!h264_data->enc_frame_buf)
+            if (!h264_data->enc_frame_buf) {
+                AMediaCodec_releaseOutputBuffer(and_media_data->enc,
+                                        and_media_data->enc_output_buf_idx,
+                                        0);
                 return PJ_ENOMEM;
+            }
             h264_data->enc_frame_buf_size = frame_size;
         }
         pj_memcpy(h264_data->enc_frame_buf, and_media_data->enc_frame_whole,
