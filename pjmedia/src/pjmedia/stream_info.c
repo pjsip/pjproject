@@ -244,26 +244,40 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
     status = pjmedia_codec_mgr_get_default_param(mgr, &si->fmt,
                                                  si->param);
 
-    /* Get remote fmtp for our encoder. */
-    pjmedia_stream_info_parse_fmtp(pool, rem_m, si->tx_pt,
-                                   &si->param->setting.enc_fmtp);
-
-    /* Get local fmtp for our decoder. */
-    pjmedia_stream_info_parse_fmtp(pool, local_m, si->rx_pt,
-                                   &si->param->setting.dec_fmtp);
-
-    if (!pj_stricmp2(&si->fmt.encoding_name, "opus")) {
-        get_opus_channels_and_clock_rate(&si->param->setting.enc_fmtp,
-                                         &si->param->setting.dec_fmtp,
-                                         &si->fmt.channel_cnt,
-                                         &si->fmt.clock_rate);
+    /* When codec is not in the registry but codec info was provided by SDP
+     * (e.g. via rtpmap for 3rd-party media stacks), treat unsupported/not
+     * found codec-param lookup as non-fatal: clear si->param so callers
+     * skip codec-specific tuning. Other errors may indicate malformed codec
+     * info or initialization failures and should be returned to the caller.
+     */
+    if ((status == PJMEDIA_CODEC_EUNSUP || status == PJ_ENOTFOUND) &&
+        si->fmt.encoding_name.slen > 0 &&
+        si->fmt.clock_rate != 0) {
+        si->param = NULL;
+        status = PJ_SUCCESS;
     }
 
+    if (si->param) {
+        /* Get remote fmtp for our encoder. */
+        pjmedia_stream_info_parse_fmtp(pool, rem_m, si->tx_pt,
+                                       &si->param->setting.enc_fmtp);
+
+        /* Get local fmtp for our decoder. */
+        pjmedia_stream_info_parse_fmtp(pool, local_m, si->rx_pt,
+                                       &si->param->setting.dec_fmtp);
+
+        if (!pj_stricmp2(&si->fmt.encoding_name, "opus")) {
+            get_opus_channels_and_clock_rate(&si->param->setting.enc_fmtp,
+                                             &si->param->setting.dec_fmtp,
+                                             &si->fmt.channel_cnt,
+                                             &si->fmt.clock_rate);
+        }
+    }
 
     /* Get the remote ptime for our encoder. */
     attr = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
                                   "ptime", NULL);
-    if (attr) {
+    if (attr && si->param) {
         pj_str_t tmp_val = attr->value;
         unsigned frm_per_pkt;
 

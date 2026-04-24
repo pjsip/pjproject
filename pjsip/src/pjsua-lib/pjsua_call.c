@@ -1260,6 +1260,22 @@ on_return:
     return status;
 }
 
+/* Check whether an rtpmap/fmtp attribute value refers to the given payload
+ * type (SDP format). The attribute value must begin with the payload type
+ * token followed by whitespace or end-of-string. An empty fmt never matches.
+ */
+static pj_bool_t attr_matches_fmt(const pj_str_t *attr_val,
+                                  const pj_str_t *fmt)
+{
+    if (fmt->slen == 0)
+        return PJ_FALSE;
+
+    return (attr_val->slen >= fmt->slen &&
+            pj_memcmp(attr_val->ptr, fmt->ptr, fmt->slen) == 0 &&
+            (attr_val->slen == fmt->slen ||
+             pj_isspace((unsigned char)attr_val->ptr[fmt->slen])));
+}
+
 pj_status_t create_temp_sdp(pj_pool_t *pool,
                             const pjmedia_sdp_session *rem_sdp,
                             pjmedia_sdp_session **p_sdp)
@@ -1358,8 +1374,52 @@ pj_status_t create_temp_sdp(pj_pool_t *pool,
 
         /* Disable media if it has zero format/codec */
         if (m->desc.fmt_count == 0) {
+#if PJSUA_MEDIA_HAS_PJMEDIA
             m->desc.fmt[m->desc.fmt_count++] = pj_str("0");
             pjmedia_sdp_media_deactivate(pool, m);
+#else
+            /* For 3rd-party media (empty codec registry), copy formats and
+             * matching rtpmap/fmtp attributes from the remote offer so the
+             * temporary answer remains valid for
+             * pjsip_inv_verify_request3().
+             */
+            {
+                const pjmedia_sdp_media *rem_m = rem_sdp->media[i];
+                const pj_str_t STR_RTPMAP = { "rtpmap", 6 };
+                const pj_str_t STR_FMTP   = { "fmtp",   4 };
+                unsigned j, k;
+                for (j = 0; j < rem_m->desc.fmt_count &&
+                     m->desc.fmt_count < PJMEDIA_MAX_SDP_FMT; ++j)
+                {
+                    pj_strdup(pool, &m->desc.fmt[m->desc.fmt_count],
+                              &rem_m->desc.fmt[j]);
+                    ++m->desc.fmt_count;
+                }
+                for (j = 0; j < rem_m->attr_count &&
+                     m->attr_count < PJMEDIA_MAX_SDP_ATTR; ++j)
+                {
+                    const pjmedia_sdp_attr *rem_attr = rem_m->attr[j];
+                    const pj_str_t *attr_val;
+                    pj_bool_t match = PJ_FALSE;
+                    if (pj_stricmp(&rem_attr->name, &STR_RTPMAP) != 0 &&
+                        pj_stricmp(&rem_attr->name, &STR_FMTP) != 0)
+                    {
+                        continue;
+                    }
+                    attr_val = &rem_attr->value;
+                    for (k = 0; k < m->desc.fmt_count; ++k) {
+                        if (attr_matches_fmt(attr_val, &m->desc.fmt[k])) {
+                            match = PJ_TRUE;
+                            break;
+                        }
+                    }
+                    if (match) {
+                        m->attr[m->attr_count++] =
+                            pjmedia_sdp_attr_clone(pool, rem_attr);
+                    }
+                }
+            }
+#endif
         }
 
         sdp->media[sdp->media_count++] = m;
