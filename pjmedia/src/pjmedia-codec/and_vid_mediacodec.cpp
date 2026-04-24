@@ -1314,7 +1314,7 @@ static pj_status_t and_media_codec_encode_more(pjmedia_vid_codec *codec,
                                                             and_media_data,
                                                             out_size, output,
                                                             has_more);
-    if (!(*has_more)) {
+    if (!(*has_more) && and_media_data->enc_output_buf_idx >= 0) {
         AMediaCodec_releaseOutputBuffer(and_media_data->enc,
                                         and_media_data->enc_output_buf_idx,
                                         0);
@@ -1716,6 +1716,15 @@ static pj_status_t process_encode_h264(and_media_codec_data *and_media_data)
         pj_memcpy(h264_data->enc_frame_buf, and_media_data->enc_frame_whole,
                   frame_size);
         and_media_data->enc_frame_whole = h264_data->enc_frame_buf;
+
+        /* The MediaCodec output buffer is no longer needed; release it now
+         * so the codec is not starved of output buffers during packetization.
+         * Set enc_output_buf_idx to -1 so encode_more does not double-release.
+         */
+        AMediaCodec_releaseOutputBuffer(and_media_data->enc,
+                                        and_media_data->enc_output_buf_idx,
+                                        0);
+        and_media_data->enc_output_buf_idx = -1;
     }
 
     return status;
