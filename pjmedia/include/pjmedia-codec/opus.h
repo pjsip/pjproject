@@ -217,9 +217,10 @@ PJ_BEGIN_DECL
  * - \b One-way \b audio \b or \b truncated \b frames \b after \b on-the-fly
  *   \b changes: \a param.info.max_rx_frame_size must fit the largest
  *   Opus frame the remote may produce after a VBR&rarr;CBR, ptime, or
- *   sampling rate change. PJSIP sets a safe default (1275 bytes, Opus's
- *   worst case); this bullet applies if an application has explicitly
- *   lowered it. See \issue{2089} for background.
+ *   sampling rate change. PJSIP sets a safe default of 1280 bytes,
+ *   which covers the Opus wrapper's 1277-byte worst-case sizing; this
+ *   bullet applies if an application has explicitly lowered it. See
+ *   \issue{2089} for background.
  * - \b Stereo \b not \b negotiated: Stereo runs only when both sides
  *   advertise it (see \ref opus_sdp_fmtp). Local \a channel_cnt must be
  *   2 so \a sprop-stereo is advertised; if the remote omits \a stereo
