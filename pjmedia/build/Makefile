@@ -50,8 +50,8 @@ export _CXXFLAGS:= $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 
 export _LDFLAGS := $(APP_THIRD_PARTY_LIBS) \
 		   $(APP_THIRD_PARTY_EXT) \
-		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(APP_LDFLAGS) $(LDFLAGS) 
+		   $(CC_LDFLAGS) $(APP_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) \
+		   $(HOST_LDFLAGS) $(LDFLAGS) 
 
 ###############################################################################
 # Defines for building PJMEDIA library
