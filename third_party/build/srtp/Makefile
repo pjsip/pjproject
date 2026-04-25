@@ -24,8 +24,8 @@ export _CFLAGS 	:= $(CC_INC). $(CC_INC)../../srtp/crypto/include \
 		   $(CFLAGS) 
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
-export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(APP_LDFLAGS) $(LDFLAGS) 
+export _LDFLAGS := $(CC_LDFLAGS) $(APP_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) \
+		   $(HOST_LDFLAGS) $(LDFLAGS)
 
 # libcrypt.a (the crypto engine) 
 ciphers = crypto/cipher/cipher.o crypto/cipher/null_cipher.o crypto/cipher/cipher_test_cases.o     \
