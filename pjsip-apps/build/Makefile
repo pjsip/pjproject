@@ -19,7 +19,7 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(CC_LDFLAGS) $(APP_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) \
-		   $(HOST_LDFLAGS) $(APP_LDLIBS) $(LDFLAGS)
+		   $(HOST_LDFLAGS) $(APP_LDLIBS) $(LDFLAGS) 
 
 ###############################################################################
 # Defines for building PJSUA
