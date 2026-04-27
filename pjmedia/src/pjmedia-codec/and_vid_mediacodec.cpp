@@ -1703,8 +1703,10 @@ static pj_status_t process_encode_h264(and_media_codec_data *and_media_data)
         unsigned frame_size = and_media_data->enc_buf_info.size;
 
         if (frame_size > h264_data->enc_frame_buf_size) {
+            /* Allocate 2x to reduce the frequency of future reallocations. */
             h264_data->enc_frame_buf = (pj_uint8_t *)pj_pool_alloc(
-                                            and_media_data->pool, frame_size);
+                                            and_media_data->pool,
+                                            frame_size * 2);
             if (!h264_data->enc_frame_buf) {
                 AMediaCodec_releaseOutputBuffer(and_media_data->enc,
                                         and_media_data->enc_output_buf_idx,
@@ -1712,7 +1714,7 @@ static pj_status_t process_encode_h264(and_media_codec_data *and_media_data)
                 and_media_data->enc_output_buf_idx = -1;
                 return PJ_ENOMEM;
             }
-            h264_data->enc_frame_buf_size = frame_size;
+            h264_data->enc_frame_buf_size = frame_size * 2;
         }
         pj_memcpy(h264_data->enc_frame_buf, and_media_data->enc_frame_whole,
                   frame_size);
