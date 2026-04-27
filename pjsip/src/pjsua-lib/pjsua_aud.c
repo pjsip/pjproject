@@ -524,14 +524,22 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
             call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
         }
 
-        /* Don't check for direction and transmitted packets count as we
-         * assume that RTP timestamp remains increasing when outgoing
-         * direction is disabled/paused.
+        /* Save TX seq/ts only when at least one packet was actually sent.
+         * When the stream is recreated before any packets were transmitted
+         * (e.g. media renegotiation during early dialog where the
+         * conference bridge hasn't flushed yet), saving seq=0/ts=0 forces
+         * the new stream into an invalid continuation state. Skipping the
+         * save lets pjmedia_rtp_session_init() pick a fresh random
+         * sequence number instead, which is far safer for interop with
+         * gateways that treat seq=0 as uninitialized or apply strict
+         * replay-window checks.
+         *
+         * The original guard also checked `call_med->dir & ENCODING` but
+         * that is intentionally dropped: an outgoing-paused stream may
+         * still have accumulated a valid TX sequence via clock frames.
          */
-        //if ((call_med->dir & PJMEDIA_DIR_ENCODING) &&
-        //    (pjmedia_stream_get_stat(strm, &stat) == PJ_SUCCESS) &&
-        //    stat.tx.pkt)
-        if (pjmedia_stream_get_stat(strm, &stat) == PJ_SUCCESS)
+        if (pjmedia_stream_get_stat(strm, &stat) == PJ_SUCCESS &&
+            stat.tx.pkt > 0)
         {
             /* Save RTP timestamp & sequence, so when media session is
              * restarted, those values will be restored as the initial
