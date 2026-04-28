@@ -213,10 +213,13 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
         codec_id_st = pj_str(codec_id);
         status = pjmedia_codec_mgr_find_codecs_by_id(mgr, &codec_id_st,
                                                      &i, &p_info, NULL);
-        if (status != PJ_SUCCESS)
+        if (status == PJ_SUCCESS) {
+            pj_memcpy(&si->fmt, p_info, sizeof(pjmedia_codec_info));
+        } else if (status != PJ_ENOTFOUND &&
+                   status != PJMEDIA_CODEC_EUNSUP) {
             return status;
-
-        pj_memcpy(&si->fmt, p_info, sizeof(pjmedia_codec_info));
+        }
+        /* else: codec not in registry; si->fmt from rtpmap is used */
 
         /* Determine payload type for outgoing channel, by finding
          * dynamic payload type in remote SDP that matches the answer.

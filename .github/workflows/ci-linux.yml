@@ -650,6 +650,7 @@ jobs:
         cd tests/pjsua
         python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uac-custom-sdp.xml
         python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uas-custom-sdp.xml
+        python3 run.py --exe ../../pjsip-apps/src/3rdparty_media_sample/alt_pjsua mod_sipp.py scripts-sipp/alt-pjsua-uas-amr-sdp.xml
     - name: upload artifacts on failure
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
