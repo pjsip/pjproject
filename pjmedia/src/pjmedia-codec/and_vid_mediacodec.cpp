@@ -176,6 +176,13 @@ typedef struct h264_codec_data {
     unsigned                     enc_sps_pps_len;
     pj_bool_t                    enc_sps_pps_ex;
 
+    /* Writable copy of encoder output buffer. Android 16+ may return read-only
+     * DMA buffers from AMediaCodec_getOutputBuffer, but the H264 packetizer
+     * writes FU-A headers directly into the input buffer, requiring write access.
+     */
+    pj_uint8_t                  *enc_frame_buf;
+    unsigned                     enc_frame_buf_size;
+
     pj_uint8_t                  *dec_sps_buf;
     unsigned                     dec_sps_len;
     pj_uint8_t                  *dec_pps_buf;
@@ -1307,7 +1314,7 @@ static pj_status_t and_media_codec_encode_more(pjmedia_vid_codec *codec,
                                                             and_media_data,
                                                             out_size, output,
                                                             has_more);
-    if (!(*has_more)) {
+    if (!(*has_more) && and_media_data->enc_output_buf_idx >= 0) {
         AMediaCodec_releaseOutputBuffer(and_media_data->enc,
                                         and_media_data->enc_output_buf_idx,
                                         0);
@@ -1685,6 +1692,42 @@ static pj_status_t process_encode_h264(and_media_codec_data *and_media_data)
         and_media_data->enc_frame_size = h264_data->enc_sps_pps_len;
     } else {
         h264_data->enc_sps_pps_ex = PJ_FALSE;
+    }
+
+    /* Android 16+ returns read-only DMA buffers from AMediaCodec_getOutputBuffer.
+     * The H264 packetizer writes FU-A headers back into the buffer, so we must
+     * work on a writable copy. Skip in whole mode — the frame is only read there.
+     * Grow the buffer via pool when needed.
+     */
+    if (!and_media_data->whole) {
+        unsigned frame_size = and_media_data->enc_buf_info.size;
+
+        if (frame_size > h264_data->enc_frame_buf_size) {
+            /* Allocate 2x to reduce the frequency of future reallocations. */
+            h264_data->enc_frame_buf = (pj_uint8_t *)pj_pool_alloc(
+                                            and_media_data->pool,
+                                            frame_size * 2);
+            if (!h264_data->enc_frame_buf) {
+                AMediaCodec_releaseOutputBuffer(and_media_data->enc,
+                                        and_media_data->enc_output_buf_idx,
+                                        0);
+                and_media_data->enc_output_buf_idx = -1;
+                return PJ_ENOMEM;
+            }
+            h264_data->enc_frame_buf_size = frame_size * 2;
+        }
+        pj_memcpy(h264_data->enc_frame_buf, and_media_data->enc_frame_whole,
+                  frame_size);
+        and_media_data->enc_frame_whole = h264_data->enc_frame_buf;
+
+        /* The MediaCodec output buffer is no longer needed; release it now
+         * so the codec is not starved of output buffers during packetization.
+         * Set enc_output_buf_idx to -1 so encode_more does not double-release.
+         */
+        AMediaCodec_releaseOutputBuffer(and_media_data->enc,
+                                        and_media_data->enc_output_buf_idx,
+                                        0);
+        and_media_data->enc_output_buf_idx = -1;
     }
 
     return status;
