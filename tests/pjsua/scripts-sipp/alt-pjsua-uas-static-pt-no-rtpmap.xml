@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="ISO-8859-1" ?>
 <!DOCTYPE scenario SYSTEM "sipp.dtd">
 
-<!-- SIPp acts as UAC and sends an INVITE with an AMR-WB + AMR SDP offer
-     containing only dynamic payload types (PT 116 and PT 96). alt_pjsua
-     acts as UAS and auto-answers 200 OK with its custom SDP. SIPp
-     verifies the 200 OK body carries the expectedAMR-WB rtpmap, then
-     sends ACK, waits briefly, and sends BYE. -->
+<!-- SIPp acts as UAC and sends an INVITE with a static payload type (PT 0,
+     PCMU) but WITHOUT an a=rtpmap attribute.  RFC 4566 makes rtpmap optional
+     for static PTs.  alt_pjsua acts as UAS and auto-answers 200 OK with its
+     custom SDP (also PT 0, no rtpmap).  The call must reach the confirmed
+     state, verifying that the no-rtpmap static-PT code path in
+     get_audio_codec_info_param() handles an empty codec registry gracefully.
+     SIPp sends ACK, waits briefly, and terminates with BYE. -->
 
-<scenario name="alt_pjsua UAS AMR dynamic-PT SDP: SIPp as UAC">
+<scenario name="alt_pjsua UAS static PT without rtpmap: SIPp as UAC">
 
   <send retrans="500">
     <![CDATA[
@@ -20,7 +22,7 @@
       CSeq: 1 INVITE
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
-      Subject: alt_pjsua UAS AMR dynamic-PT SDP test
+      Subject: alt_pjsua UAS static PT no rtpmap test
       Content-Type: application/sdp
       Content-Length: [len]
 
@@ -29,17 +31,7 @@ o=sipp 1234567890 1234567890 IN IP[local_ip_type] [local_ip]
 s=-
 c=IN IP[media_ip_type] [media_ip]
 t=0 0
-m=audio [media_port] RTP/AVP 116 96 111 110
-a=rtpmap:116 AMR-WB/16000/1
-a=fmtp:116 mode-change-capability=2
-a=rtpmap:96 AMR/8000/1
-a=fmtp:96 mode-change-capability=2
-a=rtpmap:111 telephone-event/16000
-a=fmtp:111 0-15
-a=rtpmap:110 telephone-event/8000
-a=fmtp:110 0-15
-a=ptime:20
-a=sendrecv
+m=audio [media_port] RTP/AVP 0
 
     ]]>
   </send>
@@ -51,16 +43,7 @@ a=sendrecv
   </recv>
 
   <recv response="200" rtd="true">
-    <action>
-      <!-- Verify the 200 OK carries the custom SDP injected by alt_pjsua.
-           Check for the AMR-WB dynamic PT rtpmap so the test is
-           environment-independent. The condexec nop avoids SIPp 3.7
-           exiting on "referenced 1 times" warning. -->
-      <ereg regexp="a=rtpmap:116 AMR-WB/16000" search_in="msg"
-            check_it="true" assign_to="1"/>
-    </action>
   </recv>
-  <nop condexec="1"></nop>
 
   <send>
     <![CDATA[
