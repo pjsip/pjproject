@@ -162,10 +162,18 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
             const pjmedia_codec_info *p_info;
 
             status = pjmedia_codec_mgr_get_codec_info( mgr, pt, &p_info);
-            if (status != PJ_SUCCESS)
+            if (status == PJ_SUCCESS) {
+                pj_memcpy(&si->fmt, p_info, sizeof(pjmedia_codec_info));
+            } else if (status == PJMEDIA_CODEC_EUNSUP ||
+                       status == PJ_ENOTFOUND) {
+                /* Static PT without rtpmap and codec not in registry.
+                 * Keep bare fmt so callers skip codec-specific tuning.
+                 */
+                si->fmt.type = si->type;
+                si->fmt.pt   = pt;
+            } else {
                 return status;
-
-            pj_memcpy(&si->fmt, p_info, sizeof(pjmedia_codec_info));
+            }
         }
 
         /* For static payload type, pt's are symetric */
@@ -248,14 +256,15 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
                                                  si->param);
 
     /* When codec is not in the registry but codec info was provided by SDP
-     * (e.g. via rtpmap for 3rd-party media stacks), treat unsupported/not
-     * found codec-param lookup as non-fatal: clear si->param so callers
-     * skip codec-specific tuning. Other errors may indicate malformed codec
-     * info or initialization failures and should be returned to the caller.
+     * (e.g. via rtpmap for 3rd-party media stacks, or a known static PT),
+     * treat unsupported/not-found codec-param lookup as non-fatal: clear
+     * si->param so callers skip codec-specific tuning. Other errors may
+     * indicate malformed codec info or initialization failures and should
+     * be returned to the caller.
      */
     if ((status == PJMEDIA_CODEC_EUNSUP || status == PJ_ENOTFOUND) &&
-        si->fmt.encoding_name.slen > 0 &&
-        si->fmt.clock_rate != 0) {
+        (si->fmt.pt < 96 ||
+         (si->fmt.encoding_name.slen > 0 && si->fmt.clock_rate != 0))) {
         si->param = NULL;
         status = PJ_SUCCESS;
     }
