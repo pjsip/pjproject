@@ -2630,10 +2630,32 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                             if (pj_stricmp(&tdata->dest_info.name,
                                            &tp_iter->tp->remote_name.host))
                             {
-                                TRACE_((THIS_FILE, "Skipping secure transport "
-                                                   "with different hostname"));
-                                tp_iter = tp_iter->next;
-                                continue;
+                                pj_in_addr  tmp4;
+                                pj_in6_addr tmp6;
+                                pj_bool_t   is_ip;
+
+                                /* Check if tdata->dest_info.name is an IP address.
+                                 * If it is, allow reuse of FQDN transport since
+                                 * the IP was already matched by address lookup.
+                                 */
+                                is_ip = (pj_inet_pton(pj_AF_INET(),  &tdata->dest_info.name, &tmp4) == PJ_SUCCESS) ||
+                                        (pj_inet_pton(pj_AF_INET6(), &tdata->dest_info.name, &tmp6) == PJ_SUCCESS);
+
+                                if (!is_ip) {
+                                    /* Hostname mismatch and not an IP address.
+                                     * CVE-2020-15260 protection applies, skip.
+                                     */
+                                    TRACE_((THIS_FILE, "Skipping secure transport "
+                                                       "with different hostname"));
+                                    tp_iter = tp_iter->next;
+                                    continue;
+                                }
+
+                                /* Literal IP matched by addr — safe to reuse
+                                 * existing FQDN transport.
+                                 */
+                                TRACE_((THIS_FILE, "Allowing IP address to reuse "
+                                                   "FQDN transport"));
                             }
                         }
 
