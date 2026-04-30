@@ -160,9 +160,11 @@
    * \a &lt;prefix&gt;/model_coeffs. Use \a --disable-lyra to opt
    * out explicitly.
    *
-   * <b>CMake:</b> Lyra is located via the bundled
-   * \a cmake/FindLyra.cmake module (\a find_package(Lyra REQUIRED)),
-   * which uses pkg-config when available.
+   * <b>CMake:</b> Lyra is discovered via the bundled
+   * \a cmake/FindLyra.cmake module, which uses pkg-config when
+   * available. The lookup is optional: if Lyra is not found, CMake
+   * disables \a PJMEDIA_WITH_LYRA_CODEC instead of failing
+   * configuration.
    *
    * <b>config_site.h fallback</b> (Visual Studio, custom builds):
    * set #PJMEDIA_HAS_LYRA_CODEC to 1 in \a config_site.h and add
@@ -193,10 +195,13 @@
    * - \a soundstream_encoder.tflite
    *
    * These ship with the Lyra source tree under \a model_coeffs/ and
-   * are loaded at codec init — there is no embedded fallback. For
-   * mobile / embedded deployments the files must be packaged in the
-   * application bundle and \a model_path set to the unpacked
-   * location.
+   * are consumed when a Lyra encoder or decoder instance is opened
+   * for a stream — there is no embedded fallback. A missing or
+   * invalid \a model_path therefore surfaces as a codec-open
+   * failure during call media setup, not at
+   * #pjmedia_codec_lyra_init() time. For mobile / embedded
+   * deployments the files must be packaged in the application
+   * bundle and \a model_path set to the unpacked location.
    *
    *
    * \section lyra_caveats Caveats
