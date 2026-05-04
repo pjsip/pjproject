@@ -226,6 +226,10 @@ PJ_DECL(pj_status_t) pj_thread_create(  pj_pool_t *pool,
  *                      is non-zero (the default is 0 on Linux/Mac/Windows
  *                      and 1 on rtems; can be enabled per-build via
  *                      config_site.h on any platform).
+ *                      Note: on platforms where PJ_THREAD_ALLOCATE_STACK is
+ *                      non-zero (e.g. rtems), the caller must provide a
+ *                      non-zero stack_size matching the size of stack_addr;
+ *                      passing 0 is not valid in that case.
  * @param stack_addr    Preallocated space of size stack_size for the stack
  *                      for the new thread, used if PJ_THREAD_ALLOCATE_STACK
  *                      macro defined and is not 0. Otherwise ignored.

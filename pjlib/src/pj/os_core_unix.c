@@ -882,6 +882,11 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(rec, PJ_ENOMEM);
 
 #if defined(PJ_THREAD_ALLOCATE_STACK) && PJ_THREAD_ALLOCATE_STACK!=0
+    /* When pjlib allocates the stack from the pool, 0 is not
+     * meaningful; fall back to PJ_THREAD_DEFAULT_STACK_SIZE.
+     */
+    if (stack_size == 0)
+        stack_size = PJ_THREAD_DEFAULT_STACK_SIZE;
     /* Allocate memory for the stack */
     stack_addr = pj_pool_alloc(pool, stack_size);
     PJ_ASSERT_RETURN(stack_addr, PJ_ENOMEM);
