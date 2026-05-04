@@ -2510,7 +2510,9 @@ pj_bool_t is_valid_ip(const pj_str_t *ip_addr, pjsip_transport *tp)
 
     ci = ssl_info.remote_cert_info;
     if (ci->subj_alt_name.cnt) {
-        for (unsigned i = 0; i < ci->subj_alt_name.cnt; ++i) {
+        unsigned i = 0;
+
+        for (; i < ci->subj_alt_name.cnt; ++i) {
             switch (ci->subj_alt_name.entry[i].type) {
             case PJ_SSL_CERT_NAME_IP:
                 if (!pj_strcmp(ip_addr, &ci->subj_alt_name.entry[i].name)) {
