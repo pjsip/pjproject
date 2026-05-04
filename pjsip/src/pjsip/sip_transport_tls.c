@@ -2307,6 +2307,19 @@ static void wipe_buf(pj_str_t *buf)
     buf->slen = 0;
 }
 
+PJ_DEF(pj_status_t) pjsip_tls_transport_get_ssl_info(pjsip_transport *tp,
+                                                     pj_ssl_sock_info *ssl_info)
+{
+    PJ_ASSERT_RETURN(tp && ssl_info, PJ_EINVAL);
+
+    struct tls_transport *tls = (struct tls_transport*)tp;
+
+    if (!tls->ssock)
+        return PJ_EINVAL;
+
+    return pj_ssl_sock_get_info(tls->ssock, ssl_info);
+}
+
 /*
  * Wipe out certificates and keys in the TLS setting buffer.
  */

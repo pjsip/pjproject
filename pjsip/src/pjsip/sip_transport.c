@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjsip/sip_transport.h>
+#include <pjsip/sip_transport_tls.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_parser.h>
 #include <pjsip/sip_msg.h>
@@ -29,6 +30,7 @@
 #include <pj/log.h>
 #include <pj/ioqueue.h>
 #include <pj/hash.h>
+#include <pj/ssl_sock.h>
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
@@ -2494,6 +2496,41 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
                                           NULL, tp);
 }
 
+/*
+ * Check if the IP address is included in the TLS transport's certificate.
+ */
+pj_bool_t is_valid_ip(const pj_str_t *ip_addr, pjsip_transport *tp)
+{
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+    pj_ssl_sock_info ssl_info;
+    pj_ssl_cert_info *ci;
+
+    if (pjsip_tls_transport_get_ssl_info(tp, &ssl_info) != PJ_SUCCESS)
+        return PJ_FALSE;
+
+    ci = ssl_info.remote_cert_info;
+    if (ci->subj_alt_name.cnt) {
+        for (unsigned i = 0; i < ci->subj_alt_name.cnt; ++i) {
+            switch (ci->subj_alt_name.entry[i].type) {
+            case PJ_SSL_CERT_NAME_IP:
+                if (!pj_strcmp(ip_addr, &ci->subj_alt_name.entry[i].name)) {
+                    TRACE_((THIS_FILE, 
+                            "IP address %.*s found in the certificate", 
+                            (int)ip_addr->slen, ip_addr->ptr));
+                    return PJ_TRUE;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+#else
+    PJ_UNUSED_ARG(ip_addr);
+    PJ_UNUSED_ARG(tp);
+#endif
+    return PJ_FALSE;
+}
 
 /*
  * pjsip_tpmgr_acquire_transport2()
@@ -2633,29 +2670,49 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
                                 pj_in_addr  tmp4;
                                 pj_in6_addr tmp6;
                                 pj_bool_t   is_ip;
+                                pj_bool_t   is_valid = PJ_FALSE;
 
-                                /* Check if tdata->dest_info.name is an IP address.
-                                 * If it is, allow reuse of FQDN transport since
-                                 * the IP was already matched by address lookup.
+                                /* Check if tdata->dest_info.name is an 
+                                 * IP address.
+                                 * If it is, check if it matches the
+                                 * transport's certificate.
                                  */
-                                is_ip = (pj_inet_pton(pj_AF_INET(),  &tdata->dest_info.name, &tmp4) == PJ_SUCCESS) ||
-                                        (pj_inet_pton(pj_AF_INET6(), &tdata->dest_info.name, &tmp6) == PJ_SUCCESS);
+                                is_ip = (pj_inet_pton(pj_AF_INET(),
+                                              &tdata->dest_info.name, &tmp4) ==
+                                                        PJ_SUCCESS) ||
+                                        (pj_inet_pton(pj_AF_INET6(),
+                                              &tdata->dest_info.name, &tmp6) ==
+                                                        PJ_SUCCESS);
 
-                                if (!is_ip) {
+                                if (is_ip) {
+                                    is_valid = is_valid_ip(
+                                                         &tdata->dest_info.name,
+                                                         tp_iter->tp);
+                                    if (!is_valid) {
+                                        TRACE_((THIS_FILE, 
+                                                "Skipping secure transport, "
+                                                "certificate doesn't match the "
+                                                "IP Address"));
+                                    }
+                                } else {
                                     /* Hostname mismatch and not an IP address.
                                      * CVE-2020-15260 protection applies, skip.
                                      */
-                                    TRACE_((THIS_FILE, "Skipping secure transport "
-                                                       "with different hostname"));
+                                    TRACE_((THIS_FILE, 
+                                            "Skipping secure transport "
+                                            "with different hostname"));
+                                }
+                                if (is_valid) {
+                                    /* Literal IP matched by addr and
+                                     * certificate, safe to reuse
+                                     * existing transport.
+                                     */
+                                    TRACE_((THIS_FILE, "Allowing IP address to "
+                                                       "reuse transport"));
+                                } else {
                                     tp_iter = tp_iter->next;
                                     continue;
                                 }
-
-                                /* Literal IP matched by addr — safe to reuse
-                                 * existing FQDN transport.
-                                 */
-                                TRACE_((THIS_FILE, "Allowing IP address to reuse "
-                                                   "FQDN transport"));
                             }
                         }
 
