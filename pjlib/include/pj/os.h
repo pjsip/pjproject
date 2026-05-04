@@ -183,12 +183,18 @@ PJ_DECL(pj_uint32_t) pj_getpid(void);
  * @param thread_name   The optional name to be assigned to the thread.
  * @param proc          Thread entry function.
  * @param arg           Argument to be passed to the thread entry function.
- * @param stack_size    The size of the stack for the new thread, or ZERO or
- *                      PJ_THREAD_DEFAULT_STACK_SIZE to let the 
- *                      library choose the reasonable size for the stack. 
- *                      For some systems, the stack will be allocated from 
- *                      the pool, so the pool must have suitable capacity.
- * @param flags         Flags for thread creation, which is bitmask combination 
+ * @param stack_size    The size of the stack for the new thread, in bytes.
+ *                      Pass 0 to let the OS pick its default size; this is
+ *                      honored on every platform regardless of
+ *                      PJ_THREAD_SET_STACK_SIZE. Pass a non-zero value to
+ *                      request a specific size; that request is propagated
+ *                      to the OS thread API only when PJ_THREAD_SET_STACK_SIZE
+ *                      is non-zero (the default is 0 on Linux/Mac/Windows
+ *                      and 1 on rtems; can be enabled per-build via
+ *                      config_site.h on any platform). For some systems,
+ *                      the stack will be allocated from the pool, so the
+ *                      pool must have suitable capacity.
+ * @param flags         Flags for thread creation, which is bitmask combination
  *                      from enum pj_thread_create_flags.
  * @param thread        Pointer to hold the newly created thread.
  *
@@ -211,9 +217,19 @@ PJ_DECL(pj_status_t) pj_thread_create(  pj_pool_t *pool,
  * @param thread_name   The optional name to be assigned to the thread.
  * @param proc          Thread entry function.
  * @param arg           Argument to be passed to the thread entry function.
- * @param stack_size    The size of the stack for the new thread, or ZERO or
- *                      PJ_THREAD_DEFAULT_STACK_SIZE to let the 
- *                      library choose the reasonable size for the stack. 
+ * @param stack_size    The size of the stack for the new thread, in bytes.
+ *                      Pass 0 to let the OS pick its default size; this is
+ *                      honored on every platform regardless of
+ *                      PJ_THREAD_SET_STACK_SIZE. Pass a non-zero value to
+ *                      request a specific size; that request is propagated
+ *                      to the OS thread API only when PJ_THREAD_SET_STACK_SIZE
+ *                      is non-zero (the default is 0 on Linux/Mac/Windows
+ *                      and 1 on rtems; can be enabled per-build via
+ *                      config_site.h on any platform).
+ *                      Note: on platforms where PJ_THREAD_ALLOCATE_STACK is
+ *                      non-zero (e.g. rtems), the caller must provide a
+ *                      non-zero stack_size matching the size of stack_addr;
+ *                      passing 0 is not valid in that case.
  * @param stack_addr    Preallocated space of size stack_size for the stack
  *                      for the new thread, used if PJ_THREAD_ALLOCATE_STACK
  *                      macro defined and is not 0. Otherwise ignored.
