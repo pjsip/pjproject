@@ -452,6 +452,18 @@ typedef struct pjsip_tls_state_info
 
 } pjsip_tls_state_info;
 
+/**
+ * Retrieve the SSL socket info of the TCP transport.
+ *
+ * @param transport     The TLS transport.
+ * @param ssl_info      The SSL Info.
+ *
+ * @return              PJ_SUCCESS when succesful, or the appropriate
+ *                      error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tls_transport_get_ssl_info(pjsip_transport *tp,
+                                                    pj_ssl_sock_info *ssl_info);
+
 
 /**
  * Initialize TLS setting with default values.
