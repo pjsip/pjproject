@@ -722,6 +722,13 @@ static pj_status_t create_thread(const char *thread_name,
 
     PJ_LOG(6, (rec->obj_name, "Thread created"));
 
+#if !defined(PJ_THREAD_SET_STACK_SIZE) || PJ_THREAD_SET_STACK_SIZE==0
+    /* Don't propagate caller's stack_size to the OS thread API;
+     * let the OS pick its default size.
+     */
+    stack_size = 0;
+#endif
+
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
     rec->stk_size = stack_size ? (pj_uint32_t)stack_size : 0xFFFFFFFFUL;
     rec->stk_max_usage = 0;

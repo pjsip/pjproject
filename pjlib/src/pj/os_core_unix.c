@@ -800,12 +800,12 @@ static pj_status_t create_thread(const char *thread_name,
         pj_ansi_strxcpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
     }
 
-    /* Set default stack size */
-    if (stack_size == 0)
-        stack_size = PJ_THREAD_DEFAULT_STACK_SIZE;
-
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
-    rec->stk_size = stack_size;
+#   if defined(PJ_THREAD_SET_STACK_SIZE) && PJ_THREAD_SET_STACK_SIZE!=0
+    rec->stk_size = stack_size ? stack_size : 0xFFFFFFFFUL;
+#   else
+    rec->stk_size = 0xFFFFFFFFUL;
+#   endif
     rec->stk_max_usage = 0;
 #endif
 
@@ -813,11 +813,15 @@ static pj_status_t create_thread(const char *thread_name,
     pthread_attr_init(&thread_attr);
 
 #if defined(PJ_THREAD_SET_STACK_SIZE) && PJ_THREAD_SET_STACK_SIZE!=0
-    /* Set thread's stack size */
-    rc = pthread_attr_setstacksize(&thread_attr, stack_size);
-    if (rc != 0) {
-        pthread_attr_destroy(&thread_attr);
-        return PJ_RETURN_OS_ERROR(rc);
+    /* Set thread's stack size if caller specified one;
+     * 0 means let OS pick the default.
+     */
+    if (stack_size != 0) {
+        rc = pthread_attr_setstacksize(&thread_attr, stack_size);
+        if (rc != 0) {
+            pthread_attr_destroy(&thread_attr);
+            return PJ_RETURN_OS_ERROR(rc);
+        }
     }
 #endif  /* PJ_THREAD_SET_STACK_SIZE */
 

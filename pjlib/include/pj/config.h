@@ -614,12 +614,18 @@
 
 
 /**
- * Specify this as \a stack_size argument in #pj_thread_create() to specify
- * that thread should use default stack size for the current platform.
+ * Numeric default stack size used by pjlib in legacy code paths and on
+ * platforms that require an explicit per-thread stack size. Historically
+ * intended as a small embedded-friendly default.
  *
- * Default: 8192
+ * IMPORTANT: this is NOT a sentinel for "OS default" -- pass 0 (zero)
+ * for that. To get the OS thread default stack size on every platform,
+ * pass 0 as the stack_size argument to #pj_thread_create(); the OS
+ * picks its default regardless of #PJ_THREAD_SET_STACK_SIZE.
+ *
+ * Default: 8192.
  */
-#ifndef PJ_THREAD_DEFAULT_STACK_SIZE 
+#ifndef PJ_THREAD_DEFAULT_STACK_SIZE
 #  define PJ_THREAD_DEFAULT_STACK_SIZE    8192
 #endif
 
