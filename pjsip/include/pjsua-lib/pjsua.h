@@ -700,6 +700,19 @@ typedef struct pjsua_on_stream_created_param
      * On input, it specifies the audio media port of the stream. Application
      * may modify this pointer to point to different media port to be
      * registered to the conference bridge.
+     *
+     * \warning
+     * If the substituted port retains a pointer to the original audio
+     * stream port (e.g. a DSP wrapper around it), the application must
+     * take a reference on the inner port's group lock at construction
+     * (pj_grp_lock_add_ref() on the original port->grp_lock) and release
+     * it from the wrapper's on_destroy(). Otherwise
+     * pjmedia_stream_destroy(), which PJSUA calls unconditionally at
+     * call teardown, may free the inner port while the conference bridge
+     * is still iterating over the wrapper. The substituted port also
+     * needs its own pool released from on_destroy(); set #destroy_port
+     * to PJ_TRUE so PJSUA fires the destroy chain. See "Customizing the
+     * Audio Stream Port" in the docs guide for the full contract.
      */
     pjmedia_port        *port;
 
@@ -1411,7 +1424,18 @@ typedef struct pjsua_callback
      * This media port then will be added to the conference bridge instead.
      *
      * Note: if implemented, on_stream_created2() callback will be called
-     * instead of this one. 
+     * instead of this one.
+     *
+     * \warning
+     * Same lifetime contract as on_stream_created2(): if the substituted
+     * port wraps the original audio stream port, the wrapper must pin
+     * the inner port via pj_grp_lock_add_ref() on (*p_port)->grp_lock at
+     * construction and release it from on_destroy(). This callback has
+     * no #pjsua_on_stream_created_param::destroy_port equivalent — the
+     * application must call pjmedia_port_destroy() on the substituted
+     * port itself (e.g. from on_stream_destroyed()) so the destroy
+     * chain fires. Prefer on_stream_created2() for new code. See
+     * "Customizing the Audio Stream Port" in the docs guide.
      *
      * @param call_id       Call identification.
      * @param strm          Audio media stream.
@@ -1431,6 +1455,20 @@ typedef struct pjsua_callback
      * registered to the conference bridge. Application may return different
      * audio media port if it has added media processing port to the stream.
      * This media port then will be added to the conference bridge instead.
+     *
+     * \warning
+     * If the substituted port retains a pointer to the original audio
+     * stream port (e.g. a DSP wrapper around it), the application must
+     * take a reference on the inner port's group lock at construction
+     * (pj_grp_lock_add_ref() on the original param->port->grp_lock) and
+     * release it from the wrapper's on_destroy(). Otherwise
+     * pjmedia_stream_destroy(), which PJSUA calls unconditionally at
+     * call teardown, may free the inner port while the conference bridge
+     * is still iterating over the wrapper. The substituted port also
+     * needs its own pool released from on_destroy(); set
+     * #pjsua_on_stream_created_param::destroy_port to PJ_TRUE so PJSUA
+     * fires the destroy chain. See "Customizing the Audio Stream Port"
+     * in the docs guide for the full contract.
      *
      * @param call_id       Call identification.
      * @param param         The on stream created callback parameter.
