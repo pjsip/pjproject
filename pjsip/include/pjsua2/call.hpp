@@ -856,6 +856,20 @@ struct OnStreamCreatedParam
      * On input, it specifies the audio media port of the stream. Application
      * may modify this pointer to point to different media port to be
      * registered to the conference bridge.
+     *
+     * \warning
+     * If the substituted port retains a pointer to the original audio
+     * stream port (e.g. a DSP wrapper around it), the application must
+     * take a reference on the inner port's group lock at construction
+     * (pj_grp_lock_add_ref() on the original port's grp_lock — MediaPort
+     * is a void* alias of pjmedia_port*, so a cast is needed) and
+     * release it from the wrapper's on_destroy(). Otherwise
+     * pjmedia_stream_destroy(), which PJSUA calls unconditionally at
+     * call teardown, may free the inner port while the conference bridge
+     * is still iterating over the wrapper. The substituted port also
+     * needs its own pool released from on_destroy(); set #destroyPort
+     * to true so PJSUA fires the destroy chain. See "Customizing the
+     * Audio Stream Port" in the docs guide for the full contract.
      */
     MediaPort   pPort;
 };
@@ -2032,6 +2046,17 @@ public:
      * registered to the conference bridge. Application may return different
      * audio media port if it has added media processing port to the stream.
      * This media port then will be added to the conference bridge instead.
+     *
+     * \warning
+     * Same lifetime contract as the C-side on_stream_created2(): if the
+     * substituted port wraps the original audio stream port, the wrapper
+     * must pin the inner port via pj_grp_lock_add_ref() on its grp_lock
+     * at construction and release it from on_destroy() — otherwise
+     * pjmedia_stream_destroy() at call teardown may free it while the
+     * conference bridge still references the wrapper. The substituted
+     * port also needs its own pool released from on_destroy(); set
+     * #OnStreamCreatedParam::destroyPort to true so the destroy chain
+     * fires. See "Customizing the Audio Stream Port" in the docs guide.
      *
      * @param prm       Callback parameter.
      */
