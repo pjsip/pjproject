@@ -710,9 +710,10 @@ typedef struct pjsua_on_stream_created_param
      * pjmedia_stream_destroy(), which PJSUA calls unconditionally at
      * call teardown, may free the inner port while the conference bridge
      * is still iterating over the wrapper. The substituted port also
-     * needs its own pool released from on_destroy(); set #destroy_port
-     * to PJ_TRUE so PJSUA fires the destroy chain. See "Customizing the
-     * Audio Stream Port" in the docs guide for the full contract.
+     * needs its own pool released from on_destroy(); set
+     * #pjsua_on_stream_created_param::destroy_port to PJ_TRUE so PJSUA
+     * fires the destroy chain. See "Customizing the Audio Stream Port"
+     * in the docs guide for the full contract.
      */
     pjmedia_port        *port;
 
