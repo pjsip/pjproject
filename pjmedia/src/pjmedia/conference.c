@@ -1107,6 +1107,11 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
         PJ_LOG(4,(THIS_FILE, "Add port %d (%.*s) queued",
                              index, (int)port_name->slen, port_name->ptr));
     } else {
+        /* Failed to queue ADD op: undo slot registration and release the
+         * conf_port reference taken by create_conf_port().
+         */
+        conf->ports[index] = NULL;
+        pj_grp_lock_dec_ref(strm_port->grp_lock);
         status = PJ_ENOMEM;
         goto on_return;
     }
@@ -1272,8 +1277,6 @@ PJ_DEF(pj_status_t) pjmedia_conf_configure_port( pjmedia_conf *conf,
         pj_mutex_unlock(conf->mutex);
         return PJ_EINVAL;
     }
-
-    conf_port = conf->ports[slot];
 
     if (tx != PJMEDIA_PORT_NO_CHANGE)
         conf_port->tx_setting = tx;
@@ -2816,18 +2819,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
                 continue;
             }
 
-            /* Check that the port is not removed when we call get_frame() */
-            if (conf->ports[i] == NULL) {
-                conf_port->rx_level = 0;
-                continue;
-            }
-                
-
             /* Ignore if we didn't get any frame */
             if (frame_type != PJMEDIA_FRAME_TYPE_AUDIO) {
                 conf_port->rx_level = 0;
                 continue;
-            }           
+            }
         }
 
         p_in = (pj_int16_t*) frame->buf;

@@ -620,18 +620,21 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 
     /* Queue the operation */
     ope = get_free_op_entry(vid_conf);
-    if (ope) {
-        ope->type = PJMEDIA_VID_CONF_OP_ADD_PORT;
-        ope->param.add_port.port = index;
-        pj_list_push_back(vid_conf->op_queue, ope);
-        PJ_LOG(4,(THIS_FILE,"Add video port %d (%.*s) queued",
-                  index, (int)cport->name.slen, cport->name.ptr));
-    } else {
+    if (!ope) {
+        /* Failed to queue ADD op: undo slot registration and the port ref
+         * we took above, then fall through to on_error to release the pool.
+         */
+        vid_conf->ports[index] = NULL;
+        pjmedia_port_dec_ref(port);
         status = PJ_ENOMEM;
-        goto on_return;
+        goto on_error;
     }
+    ope->type = PJMEDIA_VID_CONF_OP_ADD_PORT;
+    ope->param.add_port.port = index;
+    pj_list_push_back(vid_conf->op_queue, ope);
+    PJ_LOG(4,(THIS_FILE,"Add video port %d (%.*s) queued",
+              index, (int)cport->name.slen, cport->name.ptr));
 
-on_return:
     pj_mutex_unlock(vid_conf->mutex);
 
     /* Done. */
