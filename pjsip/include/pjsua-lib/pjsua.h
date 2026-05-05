@@ -1432,7 +1432,7 @@ typedef struct pjsua_callback
      * port wraps the original audio stream port, the wrapper must pin
      * the inner port via pj_grp_lock_add_ref() on (*p_port)->grp_lock at
      * construction and release it from on_destroy(). This callback has
-     * no #pjsua_on_stream_created_param::destroy_port equivalent — the
+     * no #pjsua_on_stream_created_param::destroy_port equivalent, so the
      * application must call pjmedia_port_destroy() on the substituted
      * port itself (e.g. from on_stream_destroyed()) so the destroy
      * chain fires. Prefer on_stream_created2() for new code. See
