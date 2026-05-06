@@ -999,6 +999,7 @@ static pj_status_t and_media_alloc_codec(pjmedia_vid_codec_factory *factory,
 
     /* codec data */
     and_media_data = PJ_POOL_ZALLOC_T(pool, and_media_codec_data);
+    and_media_data->enc_output_buf_idx = -1;
     and_media_data->pool = pool;
     and_media_data->codec_idx = idx;
     codec->codec_data = and_media_data;
@@ -1285,6 +1286,7 @@ static pj_status_t and_media_codec_encode_begin(pjmedia_vid_codec *codec,
         AMediaCodec_releaseOutputBuffer(and_media_data->enc,
                                         buf_info.index,
                                         0);
+        and_media_data->enc_output_buf_idx = -1;
 
         return PJ_SUCCESS;
     }
@@ -1318,6 +1320,7 @@ static pj_status_t and_media_codec_encode_more(pjmedia_vid_codec *codec,
         AMediaCodec_releaseOutputBuffer(and_media_data->enc,
                                         and_media_data->enc_output_buf_idx,
                                         0);
+        and_media_data->enc_output_buf_idx = -1;
     }
 
     return status;
@@ -1684,6 +1687,7 @@ static pj_status_t process_encode_h264(and_media_codec_data *and_media_data)
         AMediaCodec_releaseOutputBuffer(and_media_data->enc,
                                         and_media_data->enc_output_buf_idx,
                                         0);
+        and_media_data->enc_output_buf_idx = -1;
 
         return PJ_EIGNORED;
     }
