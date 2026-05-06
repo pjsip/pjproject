@@ -2638,9 +2638,15 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
             update_keep_alive(acc, PJ_TRUE, param);
 
             /* Capture server-affinity pin from successful REGISTER (#4964).
-             * Empty-only: explicit pins from pjsua_acc_set_affinity_addr()
-             * are not overwritten. transport_id-pinned accounts skip this
-             * (affinity is bypassed when transport_id is set).
+             *
+             * Three cases:
+             *   1. Pin empty (no addr, no tp) → auto-capture both.
+             *   2. Pin has an explicit addr but no tp → fill tp only if
+             *      REGISTER landed on the same address.
+             *   3. Pin already has tp → no-op.
+             *
+             * Skip entirely when transport_id is set — affinity is
+             * bypassed there.
              */
             if (acc->sa_enabled &&
                 acc->sa_next_hop_tp == NULL &&
@@ -2650,13 +2656,22 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                 pjsip_transaction *tsx = pjsip_rdata_get_tsx(param->rdata);
                 if (tsx && tsx->last_tx) {
                     pjsip_tx_data *req = tsx->last_tx;
+                    pj_bool_t addr_was_empty =
+                        !pj_sockaddr_has_addr(&acc->sa_next_hop_addr);
+                    pj_bool_t addr_matches = !addr_was_empty &&
+                        pj_sockaddr_cmp(&acc->sa_next_hop_addr,
+                                        &req->tp_info.dst_addr) == 0;
+
                     if (req->tp_info.dst_addr_len > 0 &&
                         req->tp_info.dst_addr_len <=
-                            (int)sizeof(acc->sa_next_hop_addr))
+                            (int)sizeof(acc->sa_next_hop_addr) &&
+                        (addr_was_empty || addr_matches))
                     {
-                        pj_memcpy(&acc->sa_next_hop_addr,
-                                  &req->tp_info.dst_addr,
-                                  req->tp_info.dst_addr_len);
+                        if (addr_was_empty) {
+                            pj_memcpy(&acc->sa_next_hop_addr,
+                                      &req->tp_info.dst_addr,
+                                      req->tp_info.dst_addr_len);
+                        }
                         acc->sa_next_hop_tp = param->rdata->tp_info.transport;
                         pjsip_transport_add_ref(acc->sa_next_hop_tp);
                         PJ_LOG(4,(THIS_FILE,
@@ -4252,6 +4267,9 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
 {
     pjsua_acc *acc;
     int addr_len;
+    pjsip_transport_type_e tp_type;
+    pjsip_transport *tp = NULL;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id) && addr, PJ_EINVAL);
 
@@ -4271,11 +4289,39 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
         return PJ_EINVALIDOP;
     }
 
-    /* Drop any existing pin (transport will be (re)created on first send). */
+    /* Determine the transport type from the account configuration.
+     * Falls back to UDP when the account hasn't pinned a scheme.
+     */
+    tp_type = (acc->tp_type != PJSIP_TRANSPORT_UNSPECIFIED) ? acc->tp_type
+                                                            : PJSIP_TRANSPORT_UDP;
+
+    /* Try to materialize the transport now. For TCP/TLS this initiates
+     * connection setup if not already cached; for UDP it returns the
+     * shared listener. If acquire fails (e.g. no listener of this type),
+     * we still store the address — sa_next_hop_tp will be filled later
+     * when a REGISTER lands on this same address.
+     */
+    status = pjsip_endpt_acquire_transport(pjsua_var.endpt, tp_type,
+                                           addr, addr_len, NULL, &tp);
+
+    /* Drop any existing pin. */
     clear_sa_pin(acc);
 
     pj_memcpy(&acc->sa_next_hop_addr, addr, addr_len);
-    /* sa_next_hop_tp stays NULL — filled in on first outgoing request. */
+    if (status == PJ_SUCCESS && tp != NULL) {
+        /* acquire_transport already added a reference. */
+        acc->sa_next_hop_tp = tp;
+        PJ_LOG(4,(THIS_FILE,
+                  "Account %d: server affinity explicitly pinned via API "
+                  "to transport %s",
+                  acc->index, tp->obj_name));
+    } else {
+        PJ_PERROR(3,(THIS_FILE, status,
+                     "Account %d: server affinity address stored but "
+                     "transport not yet materialized; will fill on next "
+                     "REGISTER landing on this address",
+                     acc->index));
+    }
 
     PJSUA_UNLOCK();
     return PJ_SUCCESS;
