@@ -305,6 +305,18 @@ typedef struct pjsua_acc
     pj_sockaddr      ka_target;     /**< Destination address for K-A    */
     unsigned         ka_target_len; /**< Length of ka_target.           */
 
+    /* Account-scoped server affinity (issue #4964). Pins the resolved
+     * next-hop on REGISTER (or via pjsua_acc_set_affinity_addr) so that
+     * subsequent same-account requests bypass the SRV/DNS server-election
+     * randomness in pjlib-util/srv_resolver.c.
+     */
+    pj_bool_t        sa_enabled;    /**< Effective enabled flag.         */
+    pj_bool_t        sa_strict;     /**< Effective strict flag.          */
+    pj_sockaddr      sa_next_hop_addr; /**< Cached resolved address.     */
+    pjsip_transport *sa_next_hop_tp;   /**< Cached transport (ref'd).
+                                            NULL until first send after
+                                            an explicit-address pin.    */
+
     pjsip_route_hdr  route_set;     /**< Complete route set inc. outbnd.*/
     pj_uint32_t      global_route_crc; /** CRC of global route setting. */
     pj_uint32_t      local_route_crc;  /** CRC of account route setting.*/
