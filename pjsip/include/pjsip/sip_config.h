@@ -1577,9 +1577,10 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 /**
  * Specify whether to absorb INVITE request retransmissions arriving after
  * an ACK has been received for a 2xx response. When enabled (default), the
- * INVITE transaction termination is delayed for about 64*T1 (~32 seconds)
- * so retransmitted INVITEs are matched to the existing transaction and
- * silently dropped, rather than being treated as new requests.
+ * INVITE transaction termination is delayed for about ~32 seconds
+ * (configurable via pjsip_cfg()->tsx.td) so retransmitted INVITEs are
+ * matched to the existing transaction and answered by the cached 2xx
+ * retransmission, rather than being treated as new requests.
  *
  * Set this to 0 to revert to the legacy behavior, where the INVITE
  * transaction is terminated immediately after ACK and any subsequent
