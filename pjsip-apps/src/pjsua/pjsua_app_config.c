@@ -75,6 +75,9 @@ static void usage(void)
             PJSUA_REG_RETRY_INTERVAL);
     puts  ("  --reg-use-proxy=N   Control the use of proxy settings in REGISTER.");
     puts  ("                      0=no proxy, 1=outbound only, 2=acc only, 3=all (default)");
+    puts  ("  --server-affinity[=on|strict|off]  Pin same SIP server across requests");
+    puts  ("                      on:auto-refresh on DNS change (default), strict:no");
+    puts  ("                      auto-refresh, off:disable. See pjproject issue #4964.");
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --mwi               Subscribe to message summary/waiting indication");
     puts  ("  --use-ims           Enable 3GPP/IMS related settings on this account");
@@ -428,7 +431,8 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_VIDEO, OPT_TEXT, OPT_TEXT_RED, OPT_EXTRA_AUDIO,
            OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI,
            OPT_REC_AVI, OPT_REC_AVI_SIZE, OPT_REC_AVI_AUDIO, OPT_AUTO_REC_AVI,
-           OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE
+           OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE,
+           OPT_SERVER_AFFINITY
 #if !PJSUA_MEDIA_HAS_PJMEDIA
            , OPT_CUSTOM_SDP
 #endif
@@ -588,6 +592,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "use-cli",    0, 0, OPT_USE_CLI},
         { "cli-telnet-port", 1, 0, OPT_CLI_TELNET_PORT},
         { "no-cli-console", 0, 0, OPT_DISABLE_CLI_CONSOLE},
+        { "server-affinity", 2, 0, OPT_SERVER_AFFINITY},
 #if !PJSUA_MEDIA_HAS_PJMEDIA
         { "custom-sdp",     1, 0, OPT_CUSTOM_SDP},
 #endif
@@ -1617,6 +1622,28 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_DISABLE_CLI_CONSOLE:
             cfg->cli_cfg.cli_fe &= (~CLI_FE_CONSOLE);
+            break;
+
+        case OPT_SERVER_AFFINITY:
+            /* --server-affinity            : enable
+             * --server-affinity=strict     : enable + strict
+             * --server-affinity=off        : disable explicitly
+             */
+            if (pj_optarg == NULL ||
+                pj_ansi_stricmp(pj_optarg, "on") == 0)
+            {
+                cur_acc->server_affinity = PJSUA_SERVER_AFFINITY_ENABLED;
+            } else if (pj_ansi_stricmp(pj_optarg, "strict") == 0) {
+                cur_acc->server_affinity = PJSUA_SERVER_AFFINITY_ENABLED;
+                cur_acc->server_affinity_strict = PJSUA_SERVER_AFFINITY_ENABLED;
+            } else if (pj_ansi_stricmp(pj_optarg, "off") == 0) {
+                cur_acc->server_affinity = PJSUA_SERVER_AFFINITY_DISABLED;
+            } else {
+                PJ_LOG(1, (THIS_FILE,
+                           "Error: invalid --server-affinity value '%s'; "
+                           "expected 'on', 'strict', or 'off'", pj_optarg));
+                return PJ_EINVAL;
+            }
             break;
 
 #if !PJSUA_MEDIA_HAS_PJMEDIA
