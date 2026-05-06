@@ -889,7 +889,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     pj_bool_t unreg_first = PJ_FALSE;
     pj_bool_t update_mwi = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
-    /* Server-affinity (#4964) snapshots — captured before config mutation
+    /* Server-affinity (#4964) snapshots: captured before config mutation
      * so we can detect next-hop URI changes at the bottom of the function.
      */
     pj_bool_t   sa_old_enabled = PJ_FALSE;
@@ -1564,9 +1564,9 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
                                 &cfg->rtcp_fb_cfg);
 
     /* Server affinity (#4964): refresh effective flags, then clear the
-     * cached pin if it's no longer valid — i.e. the feature got disabled,
-     * transport_id changed, or the next-hop URI (proxy[0] / reg_uri)
-     * changed. Other unrelated config edits leave the pin intact.
+     * cached pin if it's no longer valid (the feature got disabled,
+     * transport_id changed, or the next-hop URI proxy[0]/reg_uri
+     * changed). Other unrelated config edits leave the pin intact.
      */
     update_sa_effective_flags(acc);
     if (sa_old_enabled && !acc->sa_enabled) {
@@ -2645,7 +2645,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
              *      REGISTER landed on the same address.
              *   3. Pin already has tp → no-op.
              *
-             * Skip entirely when transport_id is set — affinity is
+             * Skip entirely when transport_id is set: affinity is
              * bypassed there.
              */
             if (acc->sa_enabled &&
@@ -4263,7 +4263,7 @@ PJ_DEF(pj_status_t) pjsua_acc_refresh_transport(pjsua_acc_id acc_id)
  * Pin the account's server affinity to a specific remote address (#4964).
  *
  * For TLS, the SNI hostname and peer cert validation use the hostname of
- * the account's next-hop URI (proxy[0] preferred, else reg_uri) — the
+ * the account's next-hop URI (proxy[0] preferred, else reg_uri); the
  * caller only supplies an address. This is the same trust model the
  * auto-capture path inherits from REGISTER's normal resolution flow.
  */
@@ -4341,7 +4341,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
     /* Try to materialize the transport now. For TCP/TLS this initiates
      * connection setup if not already cached; for UDP it returns the
      * shared listener. If acquire fails (e.g. no listener of this type),
-     * we still store the address — sa_next_hop_tp will be filled later
+     * we still store the address; sa_next_hop_tp will be filled later
      * when a REGISTER lands on this same address.
      */
     if (tdata_ptr) {

@@ -4423,10 +4423,15 @@ typedef struct pjsua_acc_config
      * next-hop server (address + transport) and reuses it across
      * subsequent same-account requests, instead of re-selecting on every
      * DNS resolution. For TLS, this skips the per-request CVE-2020-15260
-     * hostname check on reuse — trust is asserted at handshake.
+     * hostname check on reuse: trust is asserted at handshake.
      *
-     * See https://github.com/pjsip/pjproject/issues/4964 for the design
-     * (motivation, trust model, lifecycle).
+     * Current scope: this version pins TCP/TLS connections (which solves
+     * the marquee SRV flip-flop and TLS connection-coalescing cases).
+     * UDP destination-pinning and DNS-driven auto-refresh are tracked as
+     * follow-up work; for UDP the address is stored but the per-request
+     * destination is not yet constrained.
+     *
+     * See \issue{4964} for the design (motivation, trust model, lifecycle).
      *
      * Default: PJSUA_SERVER_AFFINITY_UNSPECIFIED (inherit from
      * pjsua_config.acc_server_affinity_default).
@@ -4438,7 +4443,11 @@ typedef struct pjsua_acc_config
      * resolution stops returning the cached address. When DISABLED, the
      * affinity auto-refreshes from the current resolved set.
      *
-     * Only meaningful when server_affinity is effectively enabled.
+     * Only meaningful when server_affinity is effectively enabled. Note
+     * that auto-refresh on DNS change is deferred to a follow-up; in the
+     * current version the pin clears on transport disconnect, IP change,
+     * acc_modify next-hop change, or explicit
+     * #pjsua_acc_refresh_transport().
      *
      * Default: PJSUA_SERVER_AFFINITY_UNSPECIFIED (treated as DISABLED).
      */

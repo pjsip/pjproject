@@ -3237,7 +3237,7 @@ void pjsua_parse_media_type( pj_pool_t *pool,
  *
  * Caller is expected to hold PJSUA_LOCK (same as ka_transport / via_tp
  * read sites). Server-affinity (#4964) reuses the cached transport ref
- * here, defensively skipping shutdown transports — pjsip_tpmgr_acquire_
+ * here, defensively skipping shutdown transports: pjsip_tpmgr_acquire_
  * transport2's PJSIP_TPSELECTOR_TRANSPORT short-circuit only checks
  * is_destroying, not is_shutdown.
  */
