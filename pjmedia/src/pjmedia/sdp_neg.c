@@ -1697,10 +1697,11 @@ static pj_status_t create_answer( pj_pool_t *pool,
     char media_used[PJMEDIA_MAX_SDP_MEDIA];
     unsigned i;
 
-    /* Validate remote offer. 
+    /* Validate remote offer.
      * This should have been validated before.
+     * Use lenient validation (allow missing c= for disabled media).
      */
-    status = pjmedia_sdp_validate(offer);
+    status = pjmedia_sdp_validate2(offer, PJ_FALSE);
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
 
     /* Create initial answer by duplicating initial SDP,
