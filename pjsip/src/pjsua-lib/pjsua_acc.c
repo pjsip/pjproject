@@ -4534,6 +4534,11 @@ PJ_DEF(pj_status_t) pjsua_acc_refresh_transport(pjsua_acc_id acc_id)
 
 /*
  * Pin the account's server affinity to a specific remote address (#4964).
+ *
+ * For TLS, the SNI hostname and peer cert validation use the hostname of
+ * the account's next-hop URI (proxy[0] preferred, else reg_uri) — the
+ * caller only supplies an address. This is the same trust model the
+ * auto-capture path inherits from REGISTER's normal resolution flow.
  */
 PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
                                                 const pj_sockaddr *addr)
@@ -4542,6 +4547,9 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
     int addr_len;
     pjsip_transport_type_e tp_type;
     pjsip_transport *tp = NULL;
+    pj_pool_t *tmp_pool = NULL;
+    pjsip_tx_data dummy_tdata;
+    pjsip_tx_data *tdata_ptr = NULL;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id) && addr, PJ_EINVAL);
@@ -4568,14 +4576,55 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
     tp_type = (acc->tp_type != PJSIP_TRANSPORT_UNSPECIFIED) ? acc->tp_type
                                                             : PJSIP_TRANSPORT_UDP;
 
+    /* Build a dummy tdata carrying the next-hop hostname so the TLS
+     * factory can use it for SNI and CVE-2020-15260 cert validation at
+     * handshake. For TCP/UDP it's harmless extra info.
+     */
+    {
+        const pj_str_t *uri_str = NULL;
+
+        if (acc->cfg.proxy_cnt > 0)
+            uri_str = &acc->cfg.proxy[0];
+        else if (acc->cfg.reg_uri.slen)
+            uri_str = &acc->cfg.reg_uri;
+
+        if (uri_str && uri_str->slen) {
+            tmp_pool = pjsua_pool_create("tmpsa", 512, 256);
+            if (tmp_pool) {
+                pj_str_t tmp;
+                pjsip_uri *uri;
+
+                pj_strdup_with_null(tmp_pool, &tmp, uri_str);
+                uri = pjsip_parse_uri(tmp_pool, tmp.ptr, tmp.slen, 0);
+                if (uri) {
+                    pjsip_host_info dinfo;
+                    pj_status_t st = pjsip_get_dest_info(uri, NULL,
+                                                         tmp_pool, &dinfo);
+                    if (st == PJ_SUCCESS && dinfo.addr.host.slen) {
+                        pj_bzero(&dummy_tdata, sizeof(dummy_tdata));
+                        pj_strdup(tmp_pool, &dummy_tdata.dest_info.name,
+                                  &dinfo.addr.host);
+                        tdata_ptr = &dummy_tdata;
+                    }
+                }
+            }
+        }
+    }
+
     /* Try to materialize the transport now. For TCP/TLS this initiates
      * connection setup if not already cached; for UDP it returns the
      * shared listener. If acquire fails (e.g. no listener of this type),
      * we still store the address — sa_next_hop_tp will be filled later
      * when a REGISTER lands on this same address.
      */
-    status = pjsip_endpt_acquire_transport(pjsua_var.endpt, tp_type,
-                                           addr, addr_len, NULL, &tp);
+    if (tdata_ptr) {
+        status = pjsip_endpt_acquire_transport2(pjsua_var.endpt, tp_type,
+                                                addr, addr_len,
+                                                NULL, tdata_ptr, &tp);
+    } else {
+        status = pjsip_endpt_acquire_transport(pjsua_var.endpt, tp_type,
+                                               addr, addr_len, NULL, &tp);
+    }
 
     /* Drop any existing pin. */
     clear_sa_pin(acc);
@@ -4595,6 +4644,9 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
                      "REGISTER landing on this address",
                      acc->index));
     }
+
+    if (tmp_pool)
+        pj_pool_release(tmp_pool);
 
     PJSUA_UNLOCK();
     return PJ_SUCCESS;
