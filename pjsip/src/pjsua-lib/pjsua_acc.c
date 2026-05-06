@@ -2836,7 +2836,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                         }
                         acc->sa_next_hop_tp = param->rdata->tp_info.transport;
                         pjsip_transport_add_ref(acc->sa_next_hop_tp);
-                        PJ_LOG(4,(THIS_FILE,
+                        PJ_LOG(3,(THIS_FILE,
                                   "Account %d: server affinity pinned "
                                   "to transport %s",
                                   acc->index,

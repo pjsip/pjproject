@@ -1628,16 +1628,24 @@ static pj_status_t parse_args(int argc, char *argv[],
             /* --server-affinity            : enable
              * --server-affinity=strict     : enable + strict
              * --server-affinity=off        : disable explicitly
+             *
+             * Sets both the current account's tristate AND the global
+             * default (pjsua_config.acc_server_affinity_default) so any
+             * account added later (at startup via --next-account or at
+             * runtime via the +a CLI command) inherits the same setting.
              */
             if (pj_optarg == NULL ||
                 pj_ansi_stricmp(pj_optarg, "on") == 0)
             {
                 cur_acc->server_affinity = PJSUA_SERVER_AFFINITY_ENABLED;
+                cfg->cfg.acc_server_affinity_default = PJ_TRUE;
             } else if (pj_ansi_stricmp(pj_optarg, "strict") == 0) {
                 cur_acc->server_affinity = PJSUA_SERVER_AFFINITY_ENABLED;
                 cur_acc->server_affinity_strict = PJSUA_SERVER_AFFINITY_ENABLED;
+                cfg->cfg.acc_server_affinity_default = PJ_TRUE;
             } else if (pj_ansi_stricmp(pj_optarg, "off") == 0) {
                 cur_acc->server_affinity = PJSUA_SERVER_AFFINITY_DISABLED;
+                cfg->cfg.acc_server_affinity_default = PJ_FALSE;
             } else {
                 PJ_LOG(1, (THIS_FILE,
                            "Error: invalid --server-affinity value '%s'; "
