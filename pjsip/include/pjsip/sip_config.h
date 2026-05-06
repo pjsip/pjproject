@@ -1560,7 +1560,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_INV_ACCEPT_UNKNOWN_BODY    PJ_FALSE
 #endif
 
-/** 
+/**
  * Specify whether to check if UPDATE sent in EARLY state has already
  * completed SDP negotiation using reliable provisional responses, as
  * specified in RFC3311 section 5.1.
@@ -1572,6 +1572,23 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_INV_UPDATE_EARLY_CHECK_RELIABLE
 #   define PJSIP_INV_UPDATE_EARLY_CHECK_RELIABLE    0
+#endif
+
+/**
+ * Specify whether to absorb INVITE request retransmissions arriving after
+ * an ACK has been received for a 2xx response. When enabled (default), the
+ * INVITE transaction termination is delayed for about 64*T1 (~32 seconds)
+ * so retransmitted INVITEs are matched to the existing transaction and
+ * silently dropped, rather than being treated as new requests.
+ *
+ * Set this to 0 to revert to the legacy behavior, where the INVITE
+ * transaction is terminated immediately after ACK and any subsequent
+ * retransmission is treated as a new request. See also \pr{4765}.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJSIP_INV_ABSORB_RETRANS_AFTER_ACK
+#   define PJSIP_INV_ABSORB_RETRANS_AFTER_ACK   1
 #endif
 
 /**

@@ -763,6 +763,7 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 
             /* Now we can terminate the INVITE transaction */
             if (inv->invite_tsx->status_code/100 == 2) {
+#if PJSIP_INV_ABSORB_RETRANS_AFTER_ACK
                 /* Stop retransmissions of 200 response */
                 pjsip_tsx_stop_retransmit(inv->invite_tsx);
 
@@ -774,6 +775,10 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
                                            inv->invite_tsx->status_code,
                                            NULL,
                                            pjsip_cfg()->tsx.td);
+#else
+                pjsip_tsx_terminate(inv->invite_tsx,
+                                    inv->invite_tsx->status_code);
+#endif
             } else {
                 /* If the response was not 2xx, the ACK is considered part of
                  * the INVITE transaction, so should have been handled by

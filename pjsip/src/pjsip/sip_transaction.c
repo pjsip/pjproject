@@ -3718,19 +3718,22 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
             tsx_cancel_timer( tsx, &tsx->timeout_timer );
 
             /* Schedule tsx termination */
+#if PJSIP_INV_ABSORB_RETRANS_AFTER_ACK
             if (tsx->status_code/100 == 2) {
                 /* Normally 2xx response is handled by TU (not considered
                  * part of the INVITE tsx), anyway if it comes here, let's
                  * delay the tsx termination to absorb INVITE retransmission
                  * for about 64*T1 (~32 seconds). See also #4765.
                  */
-                timeout = td_timer_val; 
-            } else {
+                timeout = td_timer_val;
+            } else
+#endif
+            {
                 /* Timer I is T4 timer for unreliable transports, and
                  * zero seconds for reliable transports.
                  */
                 if (tsx->is_reliable) {
-                    timeout.sec = 0; 
+                    timeout.sec = 0;
                     timeout.msec = 0;
                 } else {
                     timeout.sec = t4_timer_val.sec;
