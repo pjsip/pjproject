@@ -1329,8 +1329,12 @@ static pj_status_t match_offer(pj_pool_t *pool,
                         unsigned k;
 
                         found_matching_codec = 1;
-                        pt_offer[pt_answer_count] = slave->desc.fmt[j];
-                        pt_answer[pt_answer_count++] = slave->desc.fmt[j];
+                        pt_offer[pt_answer_count] = prefer_remote_codec_order?
+                                                    master->desc.fmt[i]:
+                                                    slave->desc.fmt[j];
+                        pt_answer[pt_answer_count++] = prefer_remote_codec_order?
+                                                       slave->desc.fmt[j]:
+                                                       master->desc.fmt[i];
 
                         /* Take note of clock rate for tel-event. Note: for
                          * static PT, we assume the clock rate is 8000.
