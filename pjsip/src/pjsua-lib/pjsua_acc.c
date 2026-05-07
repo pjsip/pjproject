@@ -4435,15 +4435,15 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
                                      PJSUA_CONTACT_REWRITE_UNREGISTER) != 0);
 
             if (need_unreg && acc->regc) {
-                /* PJSUA_CONTACT_REWRITE_UNREGISTER is set: avoid bundling
-                 * the old (expires=0) and new Contact in a single REGISTER
-                 * (which is what pjsip_regc_update_contact() would produce).
-                 * Tear down the existing regc so the upcoming REGISTER
-                 * carries only the new Contact on the new transport. The
-                 * old binding will be replaced by the registrar (atomically
-                 * for SIP outbound via +sip.instance/reg-id, or by AOR
-                 * match) or expire on its own.
+                /* PJSUA_CONTACT_REWRITE_UNREGISTER is set. Mirror the
+                 * IP-change response path semantics (see
+                 * acc_check_nat_addr()): send an explicit unregister of
+                 * the old Contact, then tear down and recreate the regc
+                 * so the next REGISTER carries only the new Contact
+                 * under a fresh Call-ID. The unregister is best-effort
+                 * — the regc is destroyed before the response arrives.
                  */
+                pjsua_acc_set_registration(acc->index, PJ_FALSE);
                 destroy_regc(acc, PJ_TRUE);
                 update_keep_alive(acc, PJ_FALSE, NULL);
                 status = pjsua_regc_init(acc->index);
