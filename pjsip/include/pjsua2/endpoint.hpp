@@ -792,6 +792,14 @@ struct UaConfig : public PersistentObject
      */
     string              upnpIfName;
 
+    /**
+     * Default value for AccountConfig::serverAffinity. New accounts with
+     * server_affinity set to PJSUA_SERVER_AFFINITY_UNSPECIFIED inherit
+     * this value.
+     *
+     * Default: PJSUA_ACC_SERVER_AFFINITY_DEFAULT
+     */
+    bool                accServerAffinityDefault;
 public:
     /**
      * Default constructor to initialize with default values.
@@ -2200,4 +2208,3 @@ private:
 
 
 #endif  /* __PJSUA2_UA_HPP__ */
-

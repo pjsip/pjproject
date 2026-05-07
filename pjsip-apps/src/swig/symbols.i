@@ -947,3 +947,9 @@ typedef enum pjsua_dtmf_method
   PJSUA_DTMF_METHOD_SIP_INFO
 } pjsua_dtmf_method;
 
+typedef enum pjsua_server_affinity_mode
+{
+    PJSUA_SERVER_AFFINITY_UNSPECIFIED = 0,
+    PJSUA_SERVER_AFFINITY_DISABLED,
+    PJSUA_SERVER_AFFINITY_ENABLED
+} pjsua_server_affinity_mode;
