@@ -5249,13 +5249,26 @@ PJ_DECL(pj_status_t) pjsua_acc_refresh_transport(pjsua_acc_id acc_id);
  * Pin the account's server affinity to a specific remote address.
  * Useful for accounts that don't register (auto-capture on REGISTER
  * doesn't apply) or to override the address REGISTER would otherwise
- * pick. Server affinity must be enabled on the account.
+ * pick.
+ *
+ * The transport is materialized eagerly via
+ * #pjsip_endpt_acquire_transport using the account's tp_type and the
+ * next-hop URI hostname (proxy[0] preferred, else reg_uri) for SNI /
+ * cert validation on TLS. On failure to materialize the transport,
+ * the call is a no-op and the existing pin (if any) is preserved.
+ *
+ * Returns PJ_EINVALIDOP if server affinity is not enabled on the
+ * account, or if pjsua_acc_config.transport_id is set (transport_id
+ * already expresses pinning, and affinity is bypassed in that case).
  *
  * See #pjsua_acc_config.server_affinity.
  *
  * @param acc_id        The account ID.
  * @param addr          The remote address to pin to. Must not be NULL.
- * @return              PJ_SUCCESS on success.
+ * @return              PJ_SUCCESS when the pin is established;
+ *                      PJ_EINVALIDOP if affinity is disabled or
+ *                      transport_id is set; otherwise the underlying
+ *                      transport-acquisition error.
  */
 PJ_DECL(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
                                                  const pj_sockaddr *addr);

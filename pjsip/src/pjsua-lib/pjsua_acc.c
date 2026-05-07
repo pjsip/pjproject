@@ -4293,6 +4293,14 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
         PJSUA_UNLOCK();
         return PJ_EINVALIDOP;
     }
+    /* If the account is locked to a specific transport_id, affinity is
+     * bypassed in pjsua_init_tpselector(); pinning here would be a silent
+     * no-op. Reject so the caller knows.
+     */
+    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
+        PJSUA_UNLOCK();
+        return PJ_EINVALIDOP;
+    }
 
     /* Determine the transport type from the account configuration.
      * Falls back to UDP when the account hasn't pinned a scheme.
@@ -4335,11 +4343,9 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
         }
     }
 
-    /* Try to materialize the transport now. For TCP/TLS this initiates
-     * connection setup if not already cached; for UDP it returns the
-     * shared listener. If acquire fails (e.g. no listener of this type),
-     * we still store the address; sa_next_hop_tp will be filled later
-     * when a REGISTER lands on this same address.
+    /* Try to materialize the transport BEFORE touching existing pin.
+     * On failure leave the account state untouched so a failed call is
+     * a no-op rather than dropping the prior pin.
      */
     if (tdata_ptr) {
         status = pjsip_endpt_acquire_transport2(pjsua_var.endpt, tp_type,
@@ -4350,30 +4356,31 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
                                                addr, addr_len, NULL, &tp);
     }
 
-    /* Drop any existing pin. */
-    clear_sa_pin(acc);
-
-    pj_memcpy(&acc->sa_next_hop_addr, addr, addr_len);
     if (status == PJ_SUCCESS && tp != NULL) {
-        /* acquire_transport already added a reference. */
+        /* Atomic swap: drop existing pin, install new pin.
+         * acquire_transport already added a reference to tp.
+         */
+        clear_sa_pin(acc);
+        pj_memcpy(&acc->sa_next_hop_addr, addr, addr_len);
         acc->sa_next_hop_tp = tp;
-        PJ_LOG(4,(THIS_FILE,
+        PJ_LOG(3,(THIS_FILE,
                   "Account %d: server affinity explicitly pinned via API "
                   "to transport %s",
                   acc->index, tp->obj_name));
     } else {
-        PJ_PERROR(3,(THIS_FILE, status,
-                     "Account %d: server affinity address stored but "
-                     "transport not yet materialized; will fill on next "
-                     "REGISTER landing on this address",
+        PJ_PERROR(2,(THIS_FILE, status,
+                     "Account %d: pjsua_acc_set_affinity_addr failed; "
+                     "existing pin (if any) is preserved",
                      acc->index));
+        if (status == PJ_SUCCESS)
+            status = PJ_ENOTFOUND;     /* tp was NULL but no error code */
     }
 
     if (tmp_pool)
         pj_pool_release(tmp_pool);
 
     PJSUA_UNLOCK();
-    return PJ_SUCCESS;
+    return status;
 }
 
 
