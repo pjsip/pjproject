@@ -380,7 +380,6 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
                                        PJSUA_IPV6_DISABLED;
 
     cfg->server_affinity        = PJSUA_SERVER_AFFINITY_UNSPECIFIED;
-    cfg->server_affinity_strict = PJSUA_SERVER_AFFINITY_UNSPECIFIED;
 
     cfg->media_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
     cfg->ip_change_cfg.shutdown_tp = PJ_TRUE;
