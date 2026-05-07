@@ -4431,15 +4431,44 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
         }
 
         if (pj_strcmp(&tmp_contact, &acc->contact)) {
-            if (acc->contact.slen < tmp_contact.slen) {
-                pj_strdup_with_null(acc->pool, &acc->contact, &tmp_contact);
+            pj_bool_t need_unreg = ((acc->cfg.contact_rewrite_method &
+                                     PJSUA_CONTACT_REWRITE_UNREGISTER) != 0);
+
+            if (need_unreg && acc->regc) {
+                /* PJSUA_CONTACT_REWRITE_UNREGISTER is set: avoid bundling
+                 * the old (expires=0) and new Contact in a single REGISTER
+                 * (which is what pjsip_regc_update_contact() would produce).
+                 * Tear down the existing regc so the upcoming REGISTER
+                 * carries only the new Contact on the new transport. The
+                 * old binding will be replaced by the registrar (atomically
+                 * for SIP outbound via +sip.instance/reg-id, or by AOR
+                 * match) or expire on its own.
+                 */
+                destroy_regc(acc, PJ_TRUE);
+                update_keep_alive(acc, PJ_FALSE, NULL);
+                status = pjsua_regc_init(acc->index);
+                if (status != PJ_SUCCESS) {
+                    pjsua_perror(THIS_FILE,
+                                 "Unable to reinit client registration"
+                                 " for re-registration", status);
+                    pj_pool_release(pool);
+                    schedule_reregistration(acc);
+                    goto on_return;
+                }
             } else {
-                pj_strncpy_with_null(&acc->contact, &tmp_contact, 
-                                     PJSIP_MAX_URL_SIZE);
+                if (acc->contact.slen < tmp_contact.slen) {
+                    pj_strdup_with_null(acc->pool, &acc->contact,
+                                        &tmp_contact);
+                } else {
+                    pj_strncpy_with_null(&acc->contact, &tmp_contact,
+                                         PJSIP_MAX_URL_SIZE);
+                }
+                update_regc_contact(acc);
+                if (acc->regc) {
+                    pjsip_regc_update_contact(acc->regc, 1,
+                                              &acc->reg_contact);
+                }
             }
-            update_regc_contact(acc);
-            if (acc->regc)
-                pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
         }
         pj_pool_release(pool);
     }
