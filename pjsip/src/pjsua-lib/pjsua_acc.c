@@ -4831,6 +4831,18 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
         pj_pool_release(pool);
     }
 
+    /* Drop affinity pin before retrying — if the pinned server is the
+     * one that misbehaved, fresh resolution gives the retry a chance
+     * at a different address from the resolved set. Re-pin happens
+     * naturally via regc_cb capture on a successful retry. (#4964)
+     */
+    if (acc->sa_enabled && acc->sa_next_hop_tp) {
+        PJ_LOG(4,(THIS_FILE,
+                  "Account %d: dropping server affinity pin before "
+                  "re-registration retry", acc->index));
+        clear_sa_pin(acc);
+    }
+
     status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
     if (status != PJ_SUCCESS)
         schedule_reregistration(acc);
