@@ -1838,6 +1838,13 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     }
 
 on_return:
+    /* Reattach hidden Route on early-exit paths (idempotent on success).
+     * Guarded by acc->valid since the very first early exit fires before
+     * acc is initialized. (#4964)
+     */
+    if (acc->valid)
+        sa_sync_route_set(acc);
+
     PJSUA_UNLOCK();
     pj_log_pop_indent();
     return status;
@@ -2477,16 +2484,22 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
             break;
     }
 
-    /* 
-     * Update account's route set 
+    /*
+     * Update account's route set
      */
-    
+
+    /* Detach hidden affinity Route so strip-tail size accounting below
+     * operates on [outbound][acc.proxy][service-route] only. (#4964)
+     */
+    if (acc->sa_route_hdr)
+        pj_list_erase(acc->sa_route_hdr);
+
     /* First remove all routes which are not the outbound proxies */
     rcnt = pj_list_size(&acc->route_set);
     if (rcnt != pjsua_var.ua_cfg.outbound_proxy_cnt + acc->cfg.proxy_cnt) {
-        for (i=pjsua_var.ua_cfg.outbound_proxy_cnt + acc->cfg.proxy_cnt, 
-                hr=acc->route_set.prev; 
-             i<rcnt; 
+        for (i=pjsua_var.ua_cfg.outbound_proxy_cnt + acc->cfg.proxy_cnt,
+                hr=acc->route_set.prev;
+             i<rcnt;
              ++i)
          {
             pjsip_route_hdr *prev = hr->prev;
@@ -2502,7 +2515,11 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
         pj_list_push_back(&acc->route_set, hr);
     }
 
-    /* Done */
+    /* Reattach hidden Route and push the post-update route_set diff
+     * to regc — Service-Route changes after first pin capture would
+     * otherwise never reach regc. (#4964)
+     */
+    sa_sync_route_set(acc);
 
     PJ_LOG(4,(THIS_FILE, "Service-Route updated for acc %d with %d URI(s)",
               acc->index, uri_cnt));
@@ -3233,6 +3250,11 @@ static pj_status_t pjsua_regc_init(int acc_id)
                              status);
                 goto on_return;
             }
+            /* Seed affinity mirror to match what we just pushed, so
+             * the next sa_sync_route_set only pushes the delta. (#4964)
+             */
+            update_hdr_list(acc->pool, (pjsip_hdr*)&acc->sa_pushed_route,
+                            (const pjsip_hdr*)&route_set);
         }
     }
 
