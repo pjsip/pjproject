@@ -4437,13 +4437,26 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
             if (need_unreg && acc->regc) {
                 /* PJSUA_CONTACT_REWRITE_UNREGISTER is set. Mirror the
                  * IP-change response path semantics (see
-                 * acc_check_nat_addr()): send an explicit unregister of
-                 * the old Contact, then tear down and recreate the regc
-                 * so the next REGISTER carries only the new Contact
-                 * under a fresh Call-ID. The unregister is best-effort
-                 * — the regc is destroyed before the response arrives.
+                 * acc_check_nat_addr()): send an explicit unregister
+                 * of the old Contact, then tear down and recreate the
+                 * regc so the next REGISTER carries only the new
+                 * Contact under a fresh Call-ID. The unregister is
+                 * best-effort — the regc is destroyed before the
+                 * response arrives. If the old regc still has a
+                 * pending transaction (PJSIP_EBUSY), defer to the
+                 * next retry rather than abandon the in-flight tsx
+                 * and race a second REGISTER against it.
                  */
-                pjsua_acc_set_registration(acc->index, PJ_FALSE);
+                status = pjsua_acc_set_registration(acc->index,
+                                                   PJ_FALSE);
+                if (status != PJ_SUCCESS) {
+                    pjsua_perror(THIS_FILE,
+                                 "Unable to send unregister of old"
+                                 " Contact; deferring", status);
+                    pj_pool_release(pool);
+                    schedule_reregistration(acc);
+                    goto on_return;
+                }
                 destroy_regc(acc, PJ_TRUE);
                 update_keep_alive(acc, PJ_FALSE, NULL);
                 status = pjsua_regc_init(acc->index);
