@@ -547,17 +547,15 @@ static pj_bool_t resolve_sa_tristate(pjsua_server_affinity_mode mode,
     }
 }
 
-/* Recompute effective sa_enabled and sa_strict from config tristates plus
- * the global default. Called after add/modify to keep the cached effective
- * flags in sync with config.
+/* Recompute effective sa_enabled from the config tristate plus the
+ * global default. Called after add/modify to keep the cached effective
+ * flag in sync with config.
  */
 static void update_sa_effective_flags(pjsua_acc *acc)
 {
     acc->sa_enabled = resolve_sa_tristate(
         acc->cfg.server_affinity,
         pjsua_var.ua_cfg.acc_server_affinity_default);
-    acc->sa_strict = resolve_sa_tristate(
-        acc->cfg.server_affinity_strict, PJ_FALSE);
 }
 
 /* Drop cached pin state. Caller must hold PJSUA_LOCK. */
@@ -867,7 +865,6 @@ PJ_DEF(pj_status_t) pjsua_acc_del2(pjsua_acc_id acc_id,
     /* Clear server-affinity pin (#4964). */
     clear_sa_pin(acc);
     acc->sa_enabled = PJ_FALSE;
-    acc->sa_strict = PJ_FALSE;
 
     /* Cancel any re-registration timer */
     if (acc->auto_rereg.timer.id) {

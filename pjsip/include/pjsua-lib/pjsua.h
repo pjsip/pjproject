@@ -4787,21 +4787,6 @@ typedef struct pjsua_acc_config
     pjsua_server_affinity_mode  server_affinity;
 
     /**
-     * Strict server affinity. When ENABLED, the pin is held even if DNS
-     * resolution stops returning the cached address. When DISABLED, the
-     * affinity auto-refreshes from the current resolved set.
-     *
-     * Only meaningful when server_affinity is effectively enabled. Note
-     * that auto-refresh on DNS change is deferred to a follow-up; in the
-     * current version the pin clears on transport disconnect, IP change,
-     * acc_modify next-hop change, or explicit
-     * #pjsua_acc_refresh_transport().
-     *
-     * Default: PJSUA_SERVER_AFFINITY_UNSPECIFIED (treated as DISABLED).
-     */
-    pjsua_server_affinity_mode  server_affinity_strict;
-
-    /**
      * Control the use of STUN for the SIP signaling.
      *
      * Default: PJSUA_STUN_USE_DEFAULT

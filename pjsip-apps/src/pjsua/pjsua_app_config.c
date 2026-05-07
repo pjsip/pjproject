@@ -75,9 +75,8 @@ static void usage(void)
             PJSUA_REG_RETRY_INTERVAL);
     puts  ("  --reg-use-proxy=N   Control the use of proxy settings in REGISTER.");
     puts  ("                      0=no proxy, 1=outbound only, 2=acc only, 3=all (default)");
-    puts  ("  --server-affinity[=on|strict|off]  Pin same SIP server across requests");
-    puts  ("                      on:auto-refresh on DNS change (default), strict:no");
-    puts  ("                      auto-refresh, off:disable. See pjproject issue #4964.");
+    puts  ("  --server-affinity[=on|off]  Pin same SIP server across requests");
+    puts  ("                      (TCP/TLS only in this version). See issue #4964.");
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --mwi               Subscribe to message summary/waiting indication");
     puts  ("  --use-ims           Enable 3GPP/IMS related settings on this account");
@@ -1626,7 +1625,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_SERVER_AFFINITY:
             /* --server-affinity            : enable
-             * --server-affinity=strict     : enable + strict
+             * --server-affinity=on         : enable (same as no value)
              * --server-affinity=off        : disable explicitly
              *
              * Sets both the current account's tristate AND the global
@@ -1639,17 +1638,13 @@ static pj_status_t parse_args(int argc, char *argv[],
             {
                 cur_acc->server_affinity = PJSUA_SERVER_AFFINITY_ENABLED;
                 cfg->cfg.acc_server_affinity_default = PJ_TRUE;
-            } else if (pj_ansi_stricmp(pj_optarg, "strict") == 0) {
-                cur_acc->server_affinity = PJSUA_SERVER_AFFINITY_ENABLED;
-                cur_acc->server_affinity_strict = PJSUA_SERVER_AFFINITY_ENABLED;
-                cfg->cfg.acc_server_affinity_default = PJ_TRUE;
             } else if (pj_ansi_stricmp(pj_optarg, "off") == 0) {
                 cur_acc->server_affinity = PJSUA_SERVER_AFFINITY_DISABLED;
                 cfg->cfg.acc_server_affinity_default = PJ_FALSE;
             } else {
                 PJ_LOG(1, (THIS_FILE,
                            "Error: invalid --server-affinity value '%s'; "
-                           "expected 'on', 'strict', or 'off'", pj_optarg));
+                           "expected 'on' or 'off'", pj_optarg));
                 return PJ_EINVAL;
             }
             break;
