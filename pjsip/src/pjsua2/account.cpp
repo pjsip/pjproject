@@ -726,6 +726,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.auth_pref.algorithm       = str2Pj(sipConfig.authInitialAlgorithm);
     ret.transport_id              = sipConfig.transportId;
     ret.ipv6_sip_use              = sipConfig.ipv6Use;
+    ret.server_affinity           = sipConfig.serverAffinity;
     ret.use_shared_auth           = sipConfig.useSharedAuth;
     ret.auto_repond_sip_message = sipConfig.autoRespondSipMessage;
 
@@ -915,6 +916,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     sipConfig.authInitialAlgorithm   = pj2Str(prm.auth_pref.algorithm);
     sipConfig.transportId            = prm.transport_id;
     sipConfig.ipv6Use                = prm.ipv6_sip_use;
+    sipConfig.serverAffinity         = prm.server_affinity;
     sipConfig.useSharedAuth          = PJ2BOOL(prm.use_shared_auth);
     sipConfig.autoRespondSipMessage = PJ2BOOL(prm.auto_repond_sip_message);
 
@@ -1264,6 +1266,22 @@ Account::setOnlineStatus(const PresenceStatus &pres_st) PJSUA2_THROW(Error)
 void Account::setTransport(TransportId tp_id) PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_acc_set_transport(id, tp_id) );
+}
+
+void Account::refreshTransport() PJSUA2_THROW(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_acc_refresh_transport(id) );
+}
+
+void Account::setAffinityAddr(const SocketAddress &addr) PJSUA2_THROW(Error)
+{
+    pj_sockaddr sa;
+    pj_str_t input = str2Pj(addr);
+
+    PJSUA2_CHECK_EXPR(
+        pj_sockaddr_parse(pj_AF_UNSPEC(), 0, &input, &sa)
+    );
+    PJSUA2_CHECK_EXPR( pjsua_acc_set_affinity_addr(id, &sa) );
 }
 
 void Account::presNotify(const PresNotifyParam &prm) PJSUA2_THROW(Error)
