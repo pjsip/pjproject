@@ -1652,6 +1652,55 @@ static int perform_test(pj_pool_t *pool, int test_index)
     return 0;
 }
 
+/* Regression: static PT with different string spellings (offer "0" vs
+ * preanswer "00") must not trigger the reorder-loop assertion. */
+static int sdp_neg_static_pt_repr_test(pj_pool_t *pool)
+{
+    static char offer_str[] =
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\nc=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n";
+
+    static char local_str[] =
+        "v=0\r\n"
+        "o=- 2 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\nc=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=audio 5000 RTP/AVP 00\r\n";
+
+    pjmedia_sdp_session *offer, *local;
+    pjmedia_sdp_neg *neg;
+    const pjmedia_sdp_session *active_local;
+    pj_status_t status;
+    char b1[sizeof(offer_str)], b2[sizeof(local_str)];
+
+    pj_memcpy(b1, offer_str, sizeof(offer_str));
+    pj_memcpy(b2, local_str, sizeof(local_str));
+    if (pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1), &offer) != PJ_SUCCESS)
+        return -2000;
+    if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &local) != PJ_SUCCESS)
+        return -2010;
+    if (pjmedia_sdp_neg_create_w_remote_offer(pool, local, offer, &neg) != PJ_SUCCESS)
+        return -2020;
+    pjmedia_sdp_neg_set_prefer_remote_codec_order(neg, PJ_FALSE);
+
+    status = pjmedia_sdp_neg_negotiate(pool, neg, 0);
+    if (status != PJ_SUCCESS) {
+        app_perror(status, "   sdp_neg_static_pt_repr_test: negotiate failed");
+        return -2030;
+    }
+
+    /* apply_answer_symmetric_pt rewrites the answer fmt to the offer's PT
+     * string — verify the active local SDP carries the offer-side spelling. */
+    pjmedia_sdp_neg_get_active_local(neg, &active_local);
+    if (pj_strcmp2(&active_local->media[0]->desc.fmt[0], "0") != 0)
+        return -2040;
+
+    return 0;
+}
+
 int sdp_neg_test()
 {
     unsigned i;
@@ -1674,6 +1723,20 @@ int sdp_neg_test()
         }
     }
 
+    {
+        pj_pool_t *pool;
+
+        pool = pj_pool_create(mem, "sdp_neg_pt_repr", 4000, 4000, NULL);
+        if (!pool)
+            return PJ_ENOMEM;
+
+        PJ_LOG(3,(THIS_FILE, "  sdp_neg_static_pt_repr_test"));
+        status = sdp_neg_static_pt_repr_test(pool);
+        pj_pool_release(pool);
+
+        if (status != 0)
+            return status;
+    }
+
     return 0;
 }
-
