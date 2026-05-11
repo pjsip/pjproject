@@ -326,6 +326,9 @@ typedef struct pjsua_acc
      * randomness in pjlib-util/srv_resolver.c.
      */
     pj_bool_t        sa_enabled;    /**< Effective enabled flag.         */
+    pj_bool_t        sa_pin_explicit;  /**< Pin was set by API call (not
+                                            auto-captured). Survives
+                                            auto-rereg pin drop.        */
     pj_sockaddr      sa_next_hop_addr; /**< Cached resolved address.     */
     pjsip_transport *sa_next_hop_tp;   /**< Cached transport (ref'd).
                                             NULL until first send after

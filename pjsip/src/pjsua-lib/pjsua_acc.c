@@ -574,6 +574,7 @@ static pj_bool_t update_hdr_list(pj_pool_t *pool, pjsip_hdr *dst,
 static void sa_sync_route_set(pjsua_acc *acc)
 {
     pj_bool_t need_route;
+    pj_bool_t hdr_rebuilt = PJ_FALSE;
 
     if (acc->sa_route_hdr)
         pj_list_erase(acc->sa_route_hdr);
@@ -619,6 +620,7 @@ static void sa_sync_route_set(pjsua_acc *acc)
                     acc->sa_route_hdr = hdr;
                     pj_sockaddr_cp(&acc->sa_route_hdr_addr,
                                    &acc->sa_next_hop_addr);
+                    hdr_rebuilt = PJ_TRUE;
                 } else {
                     PJ_LOG(2,(THIS_FILE, "Account %d: failed to parse "
                                          "hidden Route '%.*s' (#4964)",
@@ -632,17 +634,20 @@ static void sa_sync_route_set(pjsua_acc *acc)
             pj_list_push_front(&acc->route_set, acc->sa_route_hdr);
     }
 
-    /* Push to regc only if it actually differs from what we pushed
-     * last time. update_hdr_list both detects the diff and keeps
-     * acc->sa_pushed_route in sync as our mirror of regc's view.
-     * Skipping avoids the regc->pool clone that
-     * pjsip_regc_set_route_set does unconditionally.
+    /* Push to regc when the route_set diffs from sa_pushed_route, OR
+     * when we rebuilt the hidden hdr. The rebuild case is force-pushed
+     * because pjsip_hdr_cmp (used by update_hdr_list) compares headers
+     * by printed form, and ;hide entries print empty — so a stale
+     * hidden Route clone in the mirror would falsely match a fresh
+     * hidden Route built for a different address. (#4964)
      */
-    if (acc->regc &&
-        update_hdr_list(acc->pool, (pjsip_hdr*)&acc->sa_pushed_route,
-                        (const pjsip_hdr*)&acc->route_set))
-    {
-        pjsip_regc_set_route_set(acc->regc, &acc->route_set);
+    if (acc->regc) {
+        pj_bool_t changed = update_hdr_list(
+                                acc->pool,
+                                (pjsip_hdr*)&acc->sa_pushed_route,
+                                (const pjsip_hdr*)&acc->route_set);
+        if (changed || hdr_rebuilt)
+            pjsip_regc_set_route_set(acc->regc, &acc->route_set);
     }
 }
 
@@ -655,6 +660,7 @@ static void clear_sa_pin(pjsua_acc *acc)
         acc->sa_next_hop_tp = NULL;
     }
     pj_bzero(&acc->sa_next_hop_addr, sizeof(acc->sa_next_hop_addr));
+    acc->sa_pin_explicit = PJ_FALSE;
     sa_sync_route_set(acc);
 }
 
@@ -2957,6 +2963,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                         }
                         acc->sa_next_hop_tp = param->rdata->tp_info.transport;
                         pjsip_transport_add_ref(acc->sa_next_hop_tp);
+                        acc->sa_pin_explicit = PJ_FALSE;
                         /* Mirror the pin into route_set (UDP only —
                          * for TCP/TLS tp_sel covers destination).
                          */
@@ -4769,6 +4776,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
         clear_sa_pin(acc);
         pj_memcpy(&acc->sa_next_hop_addr, addr, addr_len);
         acc->sa_next_hop_tp = tp;
+        acc->sa_pin_explicit = PJ_TRUE;
         /* Inject hidden Route for UDP destination-pinning. */
         sa_sync_route_set(acc);
         PJ_LOG(3,(THIS_FILE,
@@ -4853,12 +4861,12 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
         pj_pool_release(pool);
     }
 
-    /* Drop affinity pin before retrying — if the pinned server is the
-     * one that misbehaved, fresh resolution gives the retry a chance
-     * at a different address from the resolved set. Re-pin happens
-     * naturally via regc_cb capture on a successful retry. (#4964)
+    /* Drop auto-captured affinity pin before retrying — if the pinned
+     * server is the one that misbehaved, fresh resolution gives the
+     * retry a chance at a different address. Explicit (API-set) pins
+     * are preserved per the set_affinity_addr contract. (#4964)
      */
-    if (acc->sa_enabled && acc->sa_next_hop_tp) {
+    if (acc->sa_enabled && acc->sa_next_hop_tp && !acc->sa_pin_explicit) {
         PJ_LOG(4,(THIS_FILE,
                   "Account %d: dropping server affinity pin before "
                   "re-registration retry", acc->index));
