@@ -15,7 +15,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -39,6 +38,13 @@
 
 pj_pool_factory *mem;
 
+/* Buffer to capture the last outgoing STUN/TURN packet for response synthesis */
+static unsigned char g_turn_sent_buf[PJ_TURN_MAX_PKT_LEN];
+static size_t g_turn_sent_len;
+
+/* Track latest TURN session state so post-poll code can detect deferred destroy */
+static pj_turn_state_t g_turn_last_state;
+
 /* TURN session callback stubs */
 static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
                              const pj_uint8_t *pkt,
@@ -47,10 +53,12 @@ static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
                              unsigned dst_addr_len)
 {
     PJ_UNUSED_ARG(sess);
-    PJ_UNUSED_ARG(pkt);
-    PJ_UNUSED_ARG(pkt_len);
     PJ_UNUSED_ARG(dst_addr);
     PJ_UNUSED_ARG(dst_addr_len);
+    if (pkt_len <= sizeof(g_turn_sent_buf)) {
+        pj_memcpy(g_turn_sent_buf, pkt, pkt_len);
+        g_turn_sent_len = pkt_len;
+    }
     return PJ_SUCCESS;
 }
 
@@ -73,7 +81,7 @@ static void turn_on_state(pj_turn_session *sess,
 {
     PJ_UNUSED_ARG(sess);
     PJ_UNUSED_ARG(old_state);
-    PJ_UNUSED_ARG(new_state);
+    g_turn_last_state = new_state;
 }
 
 /* ICE session callback stubs */
@@ -291,10 +299,120 @@ int stun_parse(uint8_t *data, size_t Size)
             cred.data.static_cred.username = pj_str(FIXED_USERNAME);
             cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
             cred.data.static_cred.data = pj_str(FIXED_PASSWORD);
+            cred.data.static_cred.realm = pj_str(FIXED_REALM);
+            cred.data.static_cred.nonce = pj_str(FIXED_NONCE);
             pj_turn_session_set_credential(turn_sess, &cred);
 
+            /* TURN allocation lifecycle */
+            g_turn_sent_len = 0;
+            g_turn_last_state = PJ_TURN_STATE_NULL;
+            pj_turn_session_alloc(turn_sess, NULL);
+
+            /* Poll once to flush any async work (timer callbacks, ioqueue events) */
+            {
+                pj_time_val poll_tv = {0, 0};
+                pj_ioqueue_poll(ioqueue, &poll_tv);
+                pj_timer_heap_poll(timer_heap, &poll_tv);
+            }
+
+            /* Ensure the session reaches PJ_TURN_STATE_READY */
+            if (g_turn_sent_len >= 20) {
+                pj_stun_msg *alloc_resp = NULL;
+                unsigned char resp_buf[512];
+                pj_size_t resp_len = 0;
+                pj_sockaddr_in relay_addr, mapped_addr;
+                pj_str_t resp_key;
+                pj_str_t realm_s   = pj_str(FIXED_REALM);
+                pj_str_t uname_s   = pj_str(FIXED_USERNAME);
+                pj_str_t passwd_s  = pj_str(FIXED_PASSWORD);
+                pj_turn_session_on_rx_pkt_param resp_prm;
+                pj_sockaddr_in server_src;
+                pj_sockaddr peer_perms[1];
+                pj_sockaddr peer_ch;
+
+                /* Build response using captured transaction ID (bytes 8-19) */
+                pj_stun_msg_create(pool, PJ_STUN_ALLOCATE_RESPONSE, PJ_STUN_MAGIC,
+                                   (pj_uint8_t *)(g_turn_sent_buf + 8), &alloc_resp);
+
+                pj_bzero(&relay_addr, sizeof(relay_addr));
+                relay_addr.sin_family          = pj_AF_INET();
+                relay_addr.sin_addr.s_addr     = pj_htonl(0xC0A80002); /* 192.168.0.2 */
+                relay_addr.sin_port            = pj_htons(49152);
+
+                pj_bzero(&mapped_addr, sizeof(mapped_addr));
+                mapped_addr.sin_family         = pj_AF_INET();
+                mapped_addr.sin_addr.s_addr    = pj_htonl(0x7F000001); /* 127.0.0.1 */
+                mapped_addr.sin_port           = pj_htons(12345);
+
+                pj_stun_msg_add_sockaddr_attr(pool, alloc_resp,
+                    PJ_STUN_ATTR_XOR_RELAYED_ADDR, PJ_TRUE,
+                    (pj_sockaddr_t *)&relay_addr, sizeof(relay_addr));
+                pj_stun_msg_add_sockaddr_attr(pool, alloc_resp,
+                    PJ_STUN_ATTR_XOR_MAPPED_ADDR, PJ_TRUE,
+                    (pj_sockaddr_t *)&mapped_addr, sizeof(mapped_addr));
+                pj_stun_msg_add_uint_attr(pool, alloc_resp,
+                    PJ_STUN_ATTR_LIFETIME, 600);
+                pj_stun_msg_add_msgint_attr(pool, alloc_resp);
+
+                pj_stun_create_key(pool, &resp_key, &realm_s, &uname_s,
+                                   PJ_STUN_PASSWD_PLAIN, &passwd_s);
+                pj_stun_msg_encode(alloc_resp, (pj_uint8_t *)resp_buf,
+                                   sizeof(resp_buf), 0, &resp_key, &resp_len);
+
+                pj_bzero(&server_src, sizeof(server_src));
+                server_src.sin_family       = pj_AF_INET();
+                server_src.sin_addr.s_addr  = pj_htonl(0x7F000001);
+                server_src.sin_port         = pj_htons(default_port);
+
+                pj_bzero(&resp_prm, sizeof(resp_prm));
+                resp_prm.pkt          = resp_buf;
+                resp_prm.pkt_len      = resp_len;
+                resp_prm.src_addr     = (pj_sockaddr *)&server_src;
+                resp_prm.src_addr_len = sizeof(server_src);
+
+                pj_turn_session_on_rx_pkt2(turn_sess, &resp_prm);
+
+                /* Poll so the session processes the response and reaches READY */
+                {
+                    pj_time_val poll_tv = {0, 0};
+                    pj_ioqueue_poll(ioqueue, &poll_tv);
+                    pj_timer_heap_poll(timer_heap, &poll_tv);
+                }
+
+                /* Guard: session may have been freed during poll */
+                if (g_turn_last_state < PJ_TURN_STATE_DESTROYING) {
+                    pj_bzero(peer_perms, sizeof(peer_perms));
+                    peer_perms[0].ipv4.sin_family = pj_AF_INET();
+                    if (Size >= 6) {
+                        pj_memcpy(&peer_perms[0].ipv4.sin_addr, data, 4);
+                        peer_perms[0].ipv4.sin_port =
+                            pj_htons(((pj_uint16_t)data[4] << 8) | data[5]);
+                    }
+                    pj_turn_session_set_perm(turn_sess, 1, peer_perms, 1);
+
+                    /* exercises CHANNEL-BIND request path */
+                    pj_bzero(&peer_ch, sizeof(peer_ch));
+                    peer_ch.ipv4.sin_family = pj_AF_INET();
+                    if (Size >= 4) {
+                        pj_memcpy(&peer_ch.ipv4.sin_addr, data, 4);
+                    }
+                    peer_ch.ipv4.sin_port = pj_htons(12345);
+                    pj_turn_session_bind_channel(turn_sess,
+                        (pj_sockaddr_t *)&peer_ch, sizeof(peer_ch.ipv4));
+
+                    /* shutdown turn session */
+                    pj_turn_session_shutdown(turn_sess);
+
+                    {
+                        pj_time_val poll_tv = {0, 0};
+                        pj_ioqueue_poll(ioqueue, &poll_tv);
+                        pj_timer_heap_poll(timer_heap, &poll_tv);
+                    }
+                }
+            }
+
             /* Test TURN sendto API */
-            if (Size >= 6) {
+            if (g_turn_last_state < PJ_TURN_STATE_DESTROYING && Size >= 6) {
                 pj_sockaddr_in peer_addr;
                 pj_bzero(&peer_addr, sizeof(peer_addr));
                 peer_addr.sin_family = pj_AF_INET();
@@ -311,7 +429,7 @@ int stun_parse(uint8_t *data, size_t Size)
             }
 
             /* Test TURN packet reception API */
-            if (Size >= 40) {
+            if (g_turn_last_state < PJ_TURN_STATE_DESTROYING && Size >= 40) {
                 pj_turn_session_on_rx_pkt_param prm;
                 pj_sockaddr_in src_addr;
                 size_t pkt_len = Size;
@@ -331,7 +449,8 @@ int stun_parse(uint8_t *data, size_t Size)
                 pj_turn_session_on_rx_pkt2(turn_sess, &prm);
             }
 
-            pj_turn_session_destroy(turn_sess, PJ_SUCCESS);
+            if (g_turn_last_state < PJ_TURN_STATE_DESTROYING)
+                pj_turn_session_destroy(turn_sess, PJ_SUCCESS);
         }
 
 on_turn_cleanup:
