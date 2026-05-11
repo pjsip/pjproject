@@ -564,8 +564,40 @@ static void update_sa_effective_flags(pjsua_acc *acc)
 }
 
 /* Forward decl. */
-static pj_bool_t update_hdr_list(pj_pool_t *pool, pjsip_hdr *dst,
-                                 const pjsip_hdr *src);
+static int pjsip_hdr_cmp(const pjsip_hdr *h1, const pjsip_hdr *h2);
+
+/* Order-sensitive Route-list sync. Returns PJ_TRUE if dst differs
+ * from src in content or order, and resyncs dst to match in that
+ * case. Used for the affinity mirror — Route order is semantically
+ * significant (RFC 3261 loose routing, RFC 3608 Service-Route), so a
+ * pure set-based diff would miss reorders. (#4964)
+ */
+static pj_bool_t sa_sync_mirror(pj_pool_t *pool, pjsip_hdr *dst,
+                                 const pjsip_hdr *src)
+{
+    pjsip_hdr *di = dst->next;
+    const pjsip_hdr *si = src->next;
+    pj_bool_t differs = PJ_FALSE;
+
+    while (di != dst && si != src) {
+        if (pjsip_hdr_cmp(di, si) != 0) {
+            differs = PJ_TRUE;
+            break;
+        }
+        di = di->next;
+        si = si->next;
+    }
+    if (!differs && (di != dst || si != src))
+        differs = PJ_TRUE;     /* different sizes */
+
+    if (differs) {
+        while (!pj_list_empty(dst))
+            pj_list_erase(dst->next);
+        for (si = src->next; si != src; si = si->next)
+            pj_list_push_back(dst, pjsip_hdr_clone(pool, si));
+    }
+    return differs;
+}
 
 /* Sync the hidden Route entry in acc->route_set with the current pin
  * state, then push to regc if the result actually differs from what
@@ -636,13 +668,13 @@ static void sa_sync_route_set(pjsua_acc *acc)
 
     /* Push to regc when the route_set diffs from sa_pushed_route, OR
      * when we rebuilt the hidden hdr. The rebuild case is force-pushed
-     * because pjsip_hdr_cmp (used by update_hdr_list) compares headers
-     * by printed form, and ;hide entries print empty — so a stale
-     * hidden Route clone in the mirror would falsely match a fresh
-     * hidden Route built for a different address. (#4964)
+     * because pjsip_hdr_cmp compares headers by printed form, and
+     * ;hide entries print empty — so a stale hidden Route clone in
+     * the mirror would falsely match a fresh hidden Route built for a
+     * different address. (#4964)
      */
     if (acc->regc) {
-        pj_bool_t changed = update_hdr_list(
+        pj_bool_t changed = sa_sync_mirror(
                                 acc->pool,
                                 (pjsip_hdr*)&acc->sa_pushed_route,
                                 (const pjsip_hdr*)&acc->route_set);
@@ -3260,8 +3292,8 @@ static pj_status_t pjsua_regc_init(int acc_id)
             /* Seed affinity mirror to match what we just pushed, so
              * the next sa_sync_route_set only pushes the delta. (#4964)
              */
-            update_hdr_list(acc->pool, (pjsip_hdr*)&acc->sa_pushed_route,
-                            (const pjsip_hdr*)&route_set);
+            sa_sync_mirror(acc->pool, (pjsip_hdr*)&acc->sa_pushed_route,
+                           (const pjsip_hdr*)&route_set);
         }
     }
 

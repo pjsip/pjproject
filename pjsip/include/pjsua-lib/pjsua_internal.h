@@ -331,8 +331,10 @@ typedef struct pjsua_acc
                                             auto-rereg pin drop.        */
     pj_sockaddr      sa_next_hop_addr; /**< Cached resolved address.     */
     pjsip_transport *sa_next_hop_tp;   /**< Cached transport (ref'd).
-                                            NULL until first send after
-                                            an explicit-address pin.    */
+                                            NULL when pin is empty; set
+                                            on regc_cb auto-capture or
+                                            pjsua_acc_set_affinity_addr
+                                            success.                    */
     pjsip_route_hdr *sa_route_hdr;     /**< Hidden Route injected at the
                                             head of route_set when pin
                                             is active. Constrains UDP

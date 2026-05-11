@@ -4783,10 +4783,10 @@ typedef struct pjsua_acc_config
      *
      * Limitation: when #reg_use_proxy is set to 0 (REGISTER bypasses
      * both outbound and account proxies) and UDP affinity is enabled,
-     * the proxy entries from acc->route_set may still be pushed to the
-     * registration client alongside the hidden Route, partially
-     * defeating the reg_use_proxy=0 intent. Use the default
-     * #PJSUA_REG_USE_ALL_PROXY with UDP affinity if this matters.
+     * the configured proxies may still appear in REGISTER routing
+     * alongside the affinity pin, partially defeating the
+     * reg_use_proxy=0 intent. Use the default #PJSUA_REG_USE_ALL_PROXY
+     * with UDP affinity if this matters.
      *
      * See \issue{4964} for the design (motivation, trust model, lifecycle).
      *
