@@ -1736,7 +1736,7 @@ static int sdp_neg_strict_validate_test(pj_pool_t *pool)
         return -1020;
 
     status = pjmedia_sdp_neg_negotiate(pool, neg, 0);
-    if (status == PJ_SUCCESS)
+    if (status != PJ_SUCCESS)
         return -1030;
 
     if (pjmedia_sdp_neg_get_state(neg) != PJMEDIA_SDP_NEG_STATE_DONE)
