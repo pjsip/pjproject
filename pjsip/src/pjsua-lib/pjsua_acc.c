@@ -302,9 +302,13 @@ static pj_status_t destroy_regc(pjsua_acc *acc, pj_bool_t force)
     acc->rfc5626_status = OUTBOUND_UNKNOWN;
     acc->rfc5626_flowtmr = 0;
     /* New regc starts with an empty route_set; reset the mirror so the
-     * next sa_sync_route_set diff re-pushes the hidden Route. (#4964)
+     * next sa_sync_route_set diff re-pushes the hidden Route. Also
+     * reset the sub-pool that held the previous mirror's clones to
+     * reclaim memory. (#4964)
      */
     pj_list_init(&acc->sa_pushed_route);
+    if (acc->sa_mirror_pool)
+        pj_pool_reset(acc->sa_mirror_pool);
 
     return PJ_SUCCESS;
 }
@@ -570,9 +574,11 @@ static int pjsip_hdr_cmp(const pjsip_hdr *h1, const pjsip_hdr *h2);
  * from src in content or order, and resyncs dst to match in that
  * case. Used for the affinity mirror — Route order is semantically
  * significant (RFC 3261 loose routing, RFC 3608 Service-Route), so a
- * pure set-based diff would miss reorders. (#4964)
+ * pure set-based diff would miss reorders. Clones go into a per-acc
+ * sub-pool reset on each rebuild so memory does not grow across
+ * Service-Route flaps. (#4964)
  */
-static pj_bool_t sa_sync_mirror(pj_pool_t *pool, pjsip_hdr *dst,
+static pj_bool_t sa_sync_mirror(pjsua_acc *acc, pjsip_hdr *dst,
                                  const pjsip_hdr *src)
 {
     pjsip_hdr *di = dst->next;
@@ -591,10 +597,18 @@ static pj_bool_t sa_sync_mirror(pj_pool_t *pool, pjsip_hdr *dst,
         differs = PJ_TRUE;     /* different sizes */
 
     if (differs) {
-        while (!pj_list_empty(dst))
-            pj_list_erase(dst->next);
+        if (acc->sa_mirror_pool)
+            pj_pool_reset(acc->sa_mirror_pool);
+        else
+            acc->sa_mirror_pool = pjsua_pool_create("sa_mirror%p",
+                                                   256, 256);
+        if (!acc->sa_mirror_pool)
+            return differs;
+
+        pj_list_init(dst);
         for (si = src->next; si != src; si = si->next)
-            pj_list_push_back(dst, pjsip_hdr_clone(pool, si));
+            pj_list_push_back(dst,
+                              pjsip_hdr_clone(acc->sa_mirror_pool, si));
     }
     return differs;
 }
@@ -675,7 +689,7 @@ static void sa_sync_route_set(pjsua_acc *acc)
      */
     if (acc->regc) {
         pj_bool_t changed = sa_sync_mirror(
-                                acc->pool,
+                                acc,
                                 (pjsip_hdr*)&acc->sa_pushed_route,
                                 (const pjsip_hdr*)&acc->route_set);
         if (changed || hdr_rebuilt)
@@ -1016,6 +1030,10 @@ PJ_DEF(pj_status_t) pjsua_acc_del2(pjsua_acc_id acc_id,
     pjsua_pres_delete_acc(acc_id, 0);
 
     /* Release & wipe account pool */
+    if (acc->sa_mirror_pool) {
+        pj_pool_release(acc->sa_mirror_pool);
+        acc->sa_mirror_pool = NULL;
+    }
     if (acc->pool) {
         pj_pool_secure_release(&acc->pool);
     }
@@ -3292,7 +3310,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
             /* Seed affinity mirror to match what we just pushed, so
              * the next sa_sync_route_set only pushes the delta. (#4964)
              */
-            sa_sync_mirror(acc->pool, (pjsip_hdr*)&acc->sa_pushed_route,
+            sa_sync_mirror(acc, (pjsip_hdr*)&acc->sa_pushed_route,
                            (const pjsip_hdr*)&route_set);
         }
     }

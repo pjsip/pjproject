@@ -355,6 +355,12 @@ typedef struct pjsua_acc
                                             before each push so we
                                             skip the regc clone when
                                             nothing actually changed.   */
+    pj_pool_t       *sa_mirror_pool;   /**< Sub-pool for sa_pushed_route
+                                            clones. Reset on each
+                                            mirror rebuild so memory
+                                            does not grow with each
+                                            sync (acc->pool has no
+                                            reset point).               */
 
     pjsip_route_hdr  route_set;     /**< Complete route set inc. outbnd.*/
     pj_uint32_t      global_route_crc; /** CRC of global route setting. */
