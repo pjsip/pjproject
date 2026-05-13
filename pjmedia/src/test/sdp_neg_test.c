@@ -1701,6 +1701,50 @@ static int sdp_neg_static_pt_repr_test(pj_pool_t *pool)
     return 0;
 }
 
+/* Regression: offer without c= on a port=0 media (passes lenient validation,
+ * fails strict) must leave the negotiator in DONE state, not stuck in WAIT_NEGO. */
+static int sdp_neg_strict_validate_test(pj_pool_t *pool)
+{
+    /* No c= anywhere; port=0 — passes validate2(PJ_FALSE), fails validate(). */
+    static char offer_str[] =
+        "v=0\r\n"
+        "o=- 0 0 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "t=0 0\r\n"
+        "m=audio 0 RTP/AVP 0\r\n";
+
+    static char local_str[] =
+        "v=0\r\n"
+        "o=- 1 1 IN IP4 127.0.0.1\r\n"
+        "s=-\r\n"
+        "c=IN IP4 127.0.0.1\r\n"
+        "t=0 0\r\n"
+        "m=audio 4000 RTP/AVP 0\r\n";
+
+    pjmedia_sdp_session *offer, *local;
+    pjmedia_sdp_neg *neg;
+    pj_status_t status;
+    char b1[sizeof(offer_str)], b2[sizeof(local_str)];
+
+    pj_memcpy(b1, offer_str, sizeof(offer_str));
+    pj_memcpy(b2, local_str, sizeof(local_str));
+    if (pjmedia_sdp_parse(pool, b1, pj_ansi_strlen(b1), &offer) != PJ_SUCCESS)
+        return -1000;
+    if (pjmedia_sdp_parse(pool, b2, pj_ansi_strlen(b2), &local) != PJ_SUCCESS)
+        return -1010;
+    if (pjmedia_sdp_neg_create_w_remote_offer(pool, local, offer, &neg) != PJ_SUCCESS)
+        return -1020;
+
+    status = pjmedia_sdp_neg_negotiate(pool, neg, 0);
+    if (status != PJ_SUCCESS)
+        return -1030;
+
+    if (pjmedia_sdp_neg_get_state(neg) != PJMEDIA_SDP_NEG_STATE_DONE)
+        return -1040;
+
+    return 0;
+}
+
 int sdp_neg_test()
 {
     unsigned i;
@@ -1732,6 +1776,21 @@ int sdp_neg_test()
 
         PJ_LOG(3,(THIS_FILE, "  sdp_neg_static_pt_repr_test"));
         status = sdp_neg_static_pt_repr_test(pool);
+        pj_pool_release(pool);
+
+        if (status != 0)
+            return status;
+    }
+
+    {
+        pj_pool_t *pool;
+
+        pool = pj_pool_create(mem, "sdp_neg_strict_val", 4000, 4000, NULL);
+        if (!pool)
+            return PJ_ENOMEM;
+
+        PJ_LOG(3,(THIS_FILE, "  sdp_neg_strict_validate_test"));
+        status = sdp_neg_strict_validate_test(pool);
         pj_pool_release(pool);
 
         if (status != 0)
