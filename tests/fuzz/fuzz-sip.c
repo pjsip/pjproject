@@ -458,7 +458,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
             rdata.pkt_info.len = sizeof(rdata.pkt_info.packet);
         }
 
-        /* Acquire dummy UDP transport */
+        /* Acquire loop datagram transport */
         if (pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
                                           (pj_sockaddr_t *)&remote_addr,
                                           sizeof(remote_addr),
