@@ -4898,15 +4898,57 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
         }
 
         if (pj_strcmp(&tmp_contact, &acc->contact)) {
-            if (acc->contact.slen < tmp_contact.slen) {
-                pj_strdup_with_null(acc->pool, &acc->contact, &tmp_contact);
+            pj_bool_t need_unreg = ((acc->cfg.contact_rewrite_method &
+                                     PJSUA_CONTACT_REWRITE_UNREGISTER) != 0);
+
+            if (need_unreg && acc->regc) {
+                /* PJSUA_CONTACT_REWRITE_UNREGISTER is set. Mirror the
+                 * IP-change response path semantics (see
+                 * acc_check_nat_addr()): send an explicit unregister
+                 * of the old Contact, then tear down and recreate the
+                 * regc so the next REGISTER carries only the new
+                 * Contact under a fresh Call-ID. The unregister is
+                 * best-effort — the regc is destroyed before the
+                 * response arrives. If the old regc still has a
+                 * pending transaction (PJSIP_EBUSY), defer to the
+                 * next retry rather than abandon the in-flight tsx
+                 * and race a second REGISTER against it.
+                 */
+                status = pjsua_acc_set_registration(acc->index,
+                                                   PJ_FALSE);
+                if (status != PJ_SUCCESS) {
+                    pjsua_perror(THIS_FILE,
+                                 "Unable to send unregister of old"
+                                 " Contact; deferring", status);
+                    pj_pool_release(pool);
+                    schedule_reregistration(acc);
+                    goto on_return;
+                }
+                destroy_regc(acc, PJ_TRUE);
+                update_keep_alive(acc, PJ_FALSE, NULL);
+                status = pjsua_regc_init(acc->index);
+                if (status != PJ_SUCCESS) {
+                    pjsua_perror(THIS_FILE,
+                                 "Unable to reinit client registration"
+                                 " for re-registration", status);
+                    pj_pool_release(pool);
+                    schedule_reregistration(acc);
+                    goto on_return;
+                }
             } else {
-                pj_strncpy_with_null(&acc->contact, &tmp_contact, 
-                                     PJSIP_MAX_URL_SIZE);
+                if (acc->contact.slen < tmp_contact.slen) {
+                    pj_strdup_with_null(acc->pool, &acc->contact,
+                                        &tmp_contact);
+                } else {
+                    pj_strncpy_with_null(&acc->contact, &tmp_contact,
+                                         PJSIP_MAX_URL_SIZE);
+                }
+                update_regc_contact(acc);
+                if (acc->regc) {
+                    pjsip_regc_update_contact(acc->regc, 1,
+                                              &acc->reg_contact);
+                }
             }
-            update_regc_contact(acc);
-            if (acc->regc)
-                pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
         }
         pj_pool_release(pool);
     }
