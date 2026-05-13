@@ -301,6 +301,14 @@ static pj_status_t destroy_regc(pjsua_acc *acc, pj_bool_t force)
     acc->reg_mapped_addr.slen = 0;
     acc->rfc5626_status = OUTBOUND_UNKNOWN;
     acc->rfc5626_flowtmr = 0;
+    /* New regc starts with an empty route_set; reset the mirror so the
+     * next sa_sync_route_set diff re-pushes the hidden Route. Also
+     * reset the sub-pool that held the previous mirror's clones to
+     * reclaim memory. (#4964)
+     */
+    pj_list_init(&acc->sa_pushed_route);
+    if (acc->sa_mirror_pool)
+        pj_pool_reset(acc->sa_mirror_pool);
 
     return PJ_SUCCESS;
 }
@@ -414,10 +422,11 @@ static pj_status_t initialize_acc(unsigned acc_id)
     //  acc_cfg->contact = acc_cfg->id;
     //}
 
-    /* Build account route-set from outbound proxies and route set from 
+    /* Build account route-set from outbound proxies and route set from
      * account configuration.
      */
     pj_list_init(&acc->route_set);
+    pj_list_init(&acc->sa_pushed_route);   /* mirror for diff (#4964) */
 
     if (!pj_list_empty(&pjsua_var.outbound_proxy)) {
         pjsip_route_hdr *r;
@@ -558,6 +567,137 @@ static void update_sa_effective_flags(pjsua_acc *acc)
         pjsua_var.ua_cfg.acc_server_affinity_default);
 }
 
+/* Forward decl. */
+static int pjsip_hdr_cmp(const pjsip_hdr *h1, const pjsip_hdr *h2);
+
+/* Order-sensitive Route-list sync. Returns PJ_TRUE if dst differs
+ * from src in content or order, and resyncs dst to match in that
+ * case. Used for the affinity mirror — Route order is semantically
+ * significant (RFC 3261 loose routing, RFC 3608 Service-Route), so a
+ * pure set-based diff would miss reorders. Clones go into a per-acc
+ * sub-pool reset on each rebuild so memory does not grow across
+ * Service-Route flaps. (#4964)
+ */
+static pj_bool_t sa_sync_mirror(pjsua_acc *acc, pjsip_hdr *dst,
+                                 const pjsip_hdr *src)
+{
+    pjsip_hdr *di = dst->next;
+    const pjsip_hdr *si = src->next;
+    pj_bool_t differs = PJ_FALSE;
+
+    while (di != dst && si != src) {
+        if (pjsip_hdr_cmp(di, si) != 0) {
+            differs = PJ_TRUE;
+            break;
+        }
+        di = di->next;
+        si = si->next;
+    }
+    if (!differs && (di != dst || si != src))
+        differs = PJ_TRUE;     /* different sizes */
+
+    if (differs) {
+        if (acc->sa_mirror_pool)
+            pj_pool_reset(acc->sa_mirror_pool);
+        else
+            acc->sa_mirror_pool = pjsua_pool_create("sa_mirror%p",
+                                                   256, 256);
+        if (!acc->sa_mirror_pool)
+            return differs;
+
+        pj_list_init(dst);
+        for (si = src->next; si != src; si = si->next)
+            pj_list_push_back(dst,
+                              pjsip_hdr_clone(acc->sa_mirror_pool, si));
+    }
+    return differs;
+}
+
+/* Sync the hidden Route entry in acc->route_set with the current pin
+ * state, then push to regc if the result actually differs from what
+ * we pushed last time. UDP-only (TCP/TLS use tp_sel). See #4964.
+ */
+static void sa_sync_route_set(pjsua_acc *acc)
+{
+    pj_bool_t need_route;
+    pj_bool_t hdr_rebuilt = PJ_FALSE;
+
+    if (acc->sa_route_hdr)
+        pj_list_erase(acc->sa_route_hdr);
+
+    /* Use sa_next_hop_tp->key.type rather than acc->tp_type because
+     * tp_type is only meaningful when transport_id is set, and
+     * affinity is bypassed in that case anyway.
+     */
+    need_route =
+        acc->sa_enabled && acc->sa_next_hop_tp != NULL &&
+        ((acc->sa_next_hop_tp->key.type & ~PJSIP_TRANSPORT_IPV6)
+         == PJSIP_TRANSPORT_UDP);
+
+    if (need_route) {
+        /* Reuse cached hdr when the address didn't change (skips parse
+         * + acc->pool alloc on the acc_modify detach/reattach path).
+         */
+        if (acc->sa_route_hdr == NULL ||
+            pj_sockaddr_cmp(&acc->sa_route_hdr_addr,
+                            &acc->sa_next_hop_addr) != 0)
+        {
+            /* Build "<sip:host:port;lr;hide>". The angle brackets are
+             * required so ;hide lands in URI params, where
+             * pjsip_routing_hdr_print() looks for it.
+             */
+            char host_port[PJ_INET6_ADDRSTRLEN + 16];
+            char buf[PJ_INET6_ADDRSTRLEN + 32];
+            pj_str_t hname = { "Route", 5 };
+            pj_str_t tmp;
+            pjsip_route_hdr *hdr;
+            int len;
+
+            pj_sockaddr_print(&acc->sa_next_hop_addr, host_port,
+                              sizeof(host_port),
+                              3 /* port + IPv6 brackets */);
+            len = pj_ansi_snprintf(buf, sizeof(buf),
+                                   "<sip:%s;lr;hide>", host_port);
+            if (len > 0 && len < (int)sizeof(buf)) {
+                pj_strdup2(acc->pool, &tmp, buf);
+                hdr = (pjsip_route_hdr*)pjsip_parse_hdr(
+                          acc->pool, &hname, tmp.ptr, tmp.slen, NULL);
+                if (hdr) {
+                    acc->sa_route_hdr = hdr;
+                    pj_sockaddr_cp(&acc->sa_route_hdr_addr,
+                                   &acc->sa_next_hop_addr);
+                    hdr_rebuilt = PJ_TRUE;
+                } else {
+                    PJ_LOG(2,(THIS_FILE, "Account %d: failed to parse "
+                                         "hidden Route '%.*s' (#4964)",
+                              acc->index, (int)tmp.slen, tmp.ptr));
+                    acc->sa_route_hdr = NULL;
+                }
+            }
+        }
+
+        if (acc->sa_route_hdr)
+            pj_list_push_front(&acc->route_set, acc->sa_route_hdr);
+    }
+
+    /* Push to regc when the route_set diffs from sa_pushed_route, OR
+     * when we rebuilt the hidden hdr. The rebuild case is force-pushed
+     * because pjsip_hdr_cmp compares headers by printed form, and
+     * ;hide entries print empty — so a stale hidden Route clone in
+     * the mirror would falsely match a fresh hidden Route built for a
+     * different address. (#4964)
+     */
+    if (acc->regc) {
+        pj_bool_t changed = sa_sync_mirror(
+                                acc,
+                                (pjsip_hdr*)&acc->sa_pushed_route,
+                                (const pjsip_hdr*)&acc->route_set);
+        if (changed || hdr_rebuilt)
+            pjsip_regc_set_route_set(acc->regc, &acc->route_set);
+    }
+}
+
+
 /* Drop cached pin state. Caller must hold PJSUA_LOCK. */
 static void clear_sa_pin(pjsua_acc *acc)
 {
@@ -566,6 +706,8 @@ static void clear_sa_pin(pjsua_acc *acc)
         acc->sa_next_hop_tp = NULL;
     }
     pj_bzero(&acc->sa_next_hop_addr, sizeof(acc->sa_next_hop_addr));
+    acc->sa_pin_explicit = PJ_FALSE;
+    sa_sync_route_set(acc);
 }
 
 
@@ -888,6 +1030,10 @@ PJ_DEF(pj_status_t) pjsua_acc_del2(pjsua_acc_id acc_id,
     pjsua_pres_delete_acc(acc_id, 0);
 
     /* Release & wipe account pool */
+    if (acc->sa_mirror_pool) {
+        pj_pool_release(acc->sa_mirror_pool);
+        acc->sa_mirror_pool = NULL;
+    }
     if (acc->pool) {
         pj_pool_secure_release(&acc->pool);
     }
@@ -1054,6 +1200,14 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     sa_old_transport_id    = acc->cfg.transport_id;
     sa_old_local_route_crc = acc->local_route_crc;
     sa_old_reg_uri         = acc->cfg.reg_uri;
+
+    /* The route_set rebuild below iterates assuming the head structure
+     * is [outbound_proxies][acc.proxy[]]. Detach our hidden entry now;
+     * the bottom of this function reattaches it (cache-hit reuses
+     * the same node) or omits it if the pin was cleared. #4964.
+     */
+    if (acc->sa_route_hdr)
+        pj_list_erase(acc->sa_route_hdr);
 
     /* == Validate first == */
 
@@ -1709,10 +1863,12 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     pjmedia_rtcp_fb_setting_dup(acc->pool, &acc->cfg.rtcp_fb_cfg,
                                 &cfg->rtcp_fb_cfg);
 
-    /* Server affinity (#4964): refresh effective flags, then clear the
-     * cached pin if it's no longer valid (the feature got disabled,
-     * transport_id changed, or the next-hop URI proxy[0]/reg_uri
-     * changed). Other unrelated config edits leave the pin intact.
+    /* Server affinity (#4964): refresh effective flags. If the pin is
+     * no longer valid (feature disabled, transport_id changed, or
+     * next-hop URI proxy[0]/reg_uri changed), clear it. Otherwise
+     * re-attach the hidden Route entry that was detached at the top of
+     * this function (so the route_set rebuild iteration could run
+     * against the original structure).
      */
     update_sa_effective_flags(acc);
     if (sa_old_enabled && !acc->sa_enabled) {
@@ -1726,11 +1882,25 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         else if (pj_strcmp(&acc->cfg.reg_uri, &sa_old_reg_uri))
             next_hop_changed = PJ_TRUE;
 
-        if (next_hop_changed)
+        if (next_hop_changed) {
             clear_sa_pin(acc);
+        } else if (pj_sockaddr_has_addr(&acc->sa_next_hop_addr)) {
+            /* Pin still valid: re-attach hidden Route detached at the
+             * top. update_hdr_list inside will see no net change and
+             * skip the regc push.
+             */
+            sa_sync_route_set(acc);
+        }
     }
 
 on_return:
+    /* Reattach hidden Route on early-exit paths (idempotent on success).
+     * Guarded by acc->valid since the very first early exit fires before
+     * acc is initialized. (#4964)
+     */
+    if (acc->valid)
+        sa_sync_route_set(acc);
+
     PJSUA_UNLOCK();
     pj_log_pop_indent();
     return status;
@@ -2370,16 +2540,22 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
             break;
     }
 
-    /* 
-     * Update account's route set 
+    /*
+     * Update account's route set
      */
-    
+
+    /* Detach hidden affinity Route so strip-tail size accounting below
+     * operates on [outbound][acc.proxy][service-route] only. (#4964)
+     */
+    if (acc->sa_route_hdr)
+        pj_list_erase(acc->sa_route_hdr);
+
     /* First remove all routes which are not the outbound proxies */
     rcnt = pj_list_size(&acc->route_set);
     if (rcnt != pjsua_var.ua_cfg.outbound_proxy_cnt + acc->cfg.proxy_cnt) {
-        for (i=pjsua_var.ua_cfg.outbound_proxy_cnt + acc->cfg.proxy_cnt, 
-                hr=acc->route_set.prev; 
-             i<rcnt; 
+        for (i=pjsua_var.ua_cfg.outbound_proxy_cnt + acc->cfg.proxy_cnt,
+                hr=acc->route_set.prev;
+             i<rcnt;
              ++i)
          {
             pjsip_route_hdr *prev = hr->prev;
@@ -2395,7 +2571,11 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
         pj_list_push_back(&acc->route_set, hr);
     }
 
-    /* Done */
+    /* Reattach hidden Route and push the post-update route_set diff
+     * to regc — Service-Route changes after first pin capture would
+     * otherwise never reach regc. (#4964)
+     */
+    sa_sync_route_set(acc);
 
     PJ_LOG(4,(THIS_FILE, "Service-Route updated for acc %d with %d URI(s)",
               acc->index, uri_cnt));
@@ -2833,6 +3013,11 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
                         }
                         acc->sa_next_hop_tp = param->rdata->tp_info.transport;
                         pjsip_transport_add_ref(acc->sa_next_hop_tp);
+                        acc->sa_pin_explicit = PJ_FALSE;
+                        /* Mirror the pin into route_set (UDP only —
+                         * for TCP/TLS tp_sel covers destination).
+                         */
+                        sa_sync_route_set(acc);
                         PJ_LOG(3,(THIS_FILE,
                                   "Account %d: server affinity pinned "
                                   "to transport %s",
@@ -3122,6 +3307,11 @@ static pj_status_t pjsua_regc_init(int acc_id)
                              status);
                 goto on_return;
             }
+            /* Seed affinity mirror to match what we just pushed, so
+             * the next sa_sync_route_set only pushes the delta. (#4964)
+             */
+            sa_sync_mirror(acc, (pjsip_hdr*)&acc->sa_pushed_route,
+                           (const pjsip_hdr*)&route_set);
         }
     }
 
@@ -4636,6 +4826,9 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
         clear_sa_pin(acc);
         pj_memcpy(&acc->sa_next_hop_addr, addr, addr_len);
         acc->sa_next_hop_tp = tp;
+        acc->sa_pin_explicit = PJ_TRUE;
+        /* Inject hidden Route for UDP destination-pinning. */
+        sa_sync_route_set(acc);
         PJ_LOG(3,(THIS_FILE,
                   "Account %d: server affinity explicitly pinned via API "
                   "to transport %s",
@@ -4716,6 +4909,18 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
                 pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
         }
         pj_pool_release(pool);
+    }
+
+    /* Drop auto-captured affinity pin before retrying — if the pinned
+     * server is the one that misbehaved, fresh resolution gives the
+     * retry a chance at a different address. Explicit (API-set) pins
+     * are preserved per the set_affinity_addr contract. (#4964)
+     */
+    if (acc->sa_enabled && acc->sa_next_hop_tp && !acc->sa_pin_explicit) {
+        PJ_LOG(4,(THIS_FILE,
+                  "Account %d: dropping server affinity pin before "
+                  "re-registration retry", acc->index));
+        clear_sa_pin(acc);
     }
 
     status = pjsua_acc_set_registration(acc->index, PJ_TRUE);

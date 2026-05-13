@@ -4773,11 +4773,20 @@ typedef struct pjsua_acc_config
      * DNS resolution. For TLS, this skips the per-request CVE-2020-15260
      * hostname check on reuse: trust is asserted at handshake.
      *
-     * Current scope: this version pins TCP/TLS connections (which solves
-     * the marquee SRV flip-flop and TLS connection-coalescing cases).
-     * UDP destination-pinning and DNS-driven auto-refresh are tracked as
-     * follow-up work; for UDP the address is stored but the per-request
-     * destination is not yet constrained.
+     * TCP/TLS pinning is via the transport selector. UDP pinning is via
+     * a hidden Route header (suppressed from the wire) since the UDP
+     * listener is shared. Pin recovery on graceful migration is driven
+     * by the auto-rereg retry path: a retry-eligible REGISTER failure
+     * drops the auto-captured pin so the retry can pick a different
+     * address from the resolved set. Pins set explicitly via
+     * #pjsua_acc_set_affinity_addr are preserved across retries.
+     *
+     * Limitation: when #reg_use_proxy is set to 0 (REGISTER bypasses
+     * both outbound and account proxies) and UDP affinity is enabled,
+     * the configured proxies may still appear in REGISTER routing
+     * alongside the affinity pin, partially defeating the
+     * reg_use_proxy=0 intent. Use the default #PJSUA_REG_USE_ALL_PROXY
+     * with UDP affinity if this matters.
      *
      * See \issue{4964} for the design (motivation, trust model, lifecycle).
      *

@@ -326,10 +326,41 @@ typedef struct pjsua_acc
      * randomness in pjlib-util/srv_resolver.c.
      */
     pj_bool_t        sa_enabled;    /**< Effective enabled flag.         */
+    pj_bool_t        sa_pin_explicit;  /**< Pin was set by API call (not
+                                            auto-captured). Survives
+                                            auto-rereg pin drop.        */
     pj_sockaddr      sa_next_hop_addr; /**< Cached resolved address.     */
     pjsip_transport *sa_next_hop_tp;   /**< Cached transport (ref'd).
-                                            NULL until first send after
-                                            an explicit-address pin.    */
+                                            NULL when pin is empty; set
+                                            on regc_cb auto-capture or
+                                            pjsua_acc_set_affinity_addr
+                                            success.                    */
+    pjsip_route_hdr *sa_route_hdr;     /**< Hidden Route injected at the
+                                            head of route_set when pin
+                                            is active. Constrains UDP
+                                            destination via loose-route.
+                                            Suppressed from wire by the
+                                            ;hide URI param. NULL when
+                                            pin is empty.               */
+    pj_sockaddr      sa_route_hdr_addr;/**< The address sa_route_hdr was
+                                            built for. Used to skip
+                                            pjsip_parse_hdr() rebuild
+                                            when the cached header is
+                                            still valid (e.g., on the
+                                            acc_modify detach/reattach
+                                            path).                      */
+    pjsip_route_hdr  sa_pushed_route;  /**< Mirror of what we last
+                                            pushed to regc. Diffed
+                                            against acc->route_set
+                                            before each push so we
+                                            skip the regc clone when
+                                            nothing actually changed.   */
+    pj_pool_t       *sa_mirror_pool;   /**< Sub-pool for sa_pushed_route
+                                            clones. Reset on each
+                                            mirror rebuild so memory
+                                            does not grow with each
+                                            sync (acc->pool has no
+                                            reset point).               */
 
     pjsip_route_hdr  route_set;     /**< Complete route set inc. outbnd.*/
     pj_uint32_t      global_route_crc; /** CRC of global route setting. */
