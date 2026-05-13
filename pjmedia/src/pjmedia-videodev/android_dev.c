@@ -1272,7 +1272,12 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     }
     
     /* The buffer may be originally YV12, i.e: U & V planes are swapped.
-     * We also need to strip out padding, if any.
+     * In memory the order is Y, V, U. After in-place rearrangement to
+     * I420:
+     *   - U_out address coincides with V's source (p2)
+     *   - V_out address coincides with U's source (p1)
+     * so we must save V (plane[2]) into convert_buf before moving U
+     * (plane[1]) into U_out, which would otherwise overwrite V at p2.
      */
     else if (pixStride1==1 && pixStride2==1 && p1 > p2 && p2 > p0)
     {
@@ -1287,19 +1292,19 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 
             /* No padding, note Y plane should be no padding too! */
             pj_assert(rowStride0 == strm->cam_size.w);
-            pj_memcpy(strm->convert_buf, p1, strm->vafp.plane_bytes[1]);
+            pj_memcpy(strm->convert_buf, p2, strm->vafp.plane_bytes[2]);
             pj_memmove(U, p1, strm->vafp.plane_bytes[1]);
-            pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[1]);
+            pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
 
         } else if (rowStride1 > strm->cam_size.w/2) {
 
-            /* Strip padding */
-            strip_padding(strm->convert_buf, p1, strm->cam_size.w/2,
-                          strm->cam_size.h/2, rowStride1);
-            strip_padding(V, p2, strm->cam_size.w/2, strm->cam_size.h/2,
-                          rowStride2);
-
-            /* Get V plane data from conversion buffer */
+            /* Strip padding: save V via convert_buf (its source location
+             * overlaps U_out), then strip U into U_out, then write V.
+             */
+            strip_padding(strm->convert_buf, p2, strm->cam_size.w/2,
+                          strm->cam_size.h/2, rowStride2);
+            strip_padding(U, p1, strm->cam_size.w/2, strm->cam_size.h/2,
+                          rowStride1);
             pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
 
         }
