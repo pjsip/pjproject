@@ -403,7 +403,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     if (msg) {
         pjsip_rx_data rdata;
-        pj_sockaddr_in remote_addr;
+        pj_sockaddr remote_addr;
         pjsip_transport *fake_transport = NULL;
         int i;
 
@@ -440,13 +440,12 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         rdata.msg_info.max_fwd = (pjsip_max_fwd_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_MAX_FORWARDS, NULL);
 
         /* Setup transport info */
-        pj_bzero(&remote_addr, sizeof(remote_addr));
-        remote_addr.sin_family = PJ_AF_INET;
-        remote_addr.sin_addr.s_addr = pj_htonl(0x7F000001);
-        remote_addr.sin_port = pj_htons(5060);
+        pj_sockaddr_init(pj_AF_INET(), &remote_addr, NULL, 5060);
+        remote_addr.ipv4.sin_addr.s_addr = pj_htonl(0x7F000001);
 
-        pj_memcpy(&rdata.pkt_info.src_addr, &remote_addr, sizeof(remote_addr));
-        rdata.pkt_info.src_addr_len = sizeof(remote_addr);
+        pj_memcpy(&rdata.pkt_info.src_addr, &remote_addr,
+                  sizeof(remote_addr.ipv4));
+        rdata.pkt_info.src_addr_len = sizeof(remote_addr.ipv4);
         pj_ansi_snprintf(rdata.pkt_info.src_name, sizeof(rdata.pkt_info.src_name),
                          "127.0.0.1");
         rdata.pkt_info.src_port = 5060;
@@ -460,8 +459,8 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
         /* Acquire loop datagram transport */
         if (pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
-                                          (pj_sockaddr_t *)&remote_addr,
-                                          sizeof(remote_addr),
+                                          &remote_addr,
+                                          sizeof(remote_addr.ipv4),
                                           NULL, &fake_transport) == PJ_SUCCESS) {
             rdata.tp_info.transport = fake_transport;
         }
@@ -478,12 +477,16 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         if (msg->type == PJSIP_REQUEST_MSG && rdata.msg_info.via) {
             pj_strdup2(pool, &rdata.msg_info.via->recvd_param,
                        rdata.pkt_info.src_name);
+            if (rdata.msg_info.via->rport_param == 0) {
+                rdata.msg_info.via->rport_param = rdata.pkt_info.src_port;
+            }
         }
 
         /* Route through the full endpoint module pipeline */
         if (rdata.tp_info.transport &&
             rdata.msg_info.from && rdata.msg_info.to &&
-            rdata.msg_info.via && rdata.msg_info.cseq && rdata.msg_info.cid) {
+            rdata.msg_info.via && rdata.msg_info.cseq &&
+            rdata.msg_info.cid && rdata.msg_info.cid->id.slen != 0) {
             pjsip_endpt_process_rx_data(endpt, &rdata, NULL, NULL);
             {
                 pj_time_val timeout = {0, 0};
