@@ -43,6 +43,9 @@ static void dns_make_query_fuzz(const char *data, size_t size)
     int qtype;
 
     pool = pj_pool_create(mem, "dns_mkq", 2000, 2000, NULL);
+    if (!pool) {
+        return;
+    }
 
     name.ptr = (char *)data;
     name.slen = (pj_ssize_t)(size > 63 ? 63 : size);
