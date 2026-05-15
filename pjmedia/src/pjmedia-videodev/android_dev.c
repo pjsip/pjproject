@@ -1272,12 +1272,11 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     }
     
     /* The buffer may be originally YV12, i.e: U & V planes are swapped.
-     * In memory the order is Y, V, U. After in-place rearrangement to
-     * I420:
-     *   - U_out address coincides with V's source (p2)
-     *   - V_out address coincides with U's source (p1)
-     * so we must save V (plane[2]) into convert_buf before moving U
-     * (plane[1]) into U_out, which would otherwise overwrite V at p2.
+     * In memory the order is Y, V, U. During in-place rearrangement to
+     * I420, U_out may overlap V's source (p2) in the no-padding case,
+     * and more generally writing U_out first may overwrite V data that
+     * is still needed. So save V (plane[2]) into convert_buf before
+     * moving/stripping U (plane[1]) into U_out, then write V_out.
      */
     else if (pixStride1==1 && pixStride2==1 && p1 > p2 && p2 > p0)
     {
