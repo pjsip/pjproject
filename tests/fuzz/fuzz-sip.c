@@ -487,9 +487,19 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
             rdata.msg_info.from && rdata.msg_info.to &&
             rdata.msg_info.via && rdata.msg_info.cseq &&
             rdata.msg_info.cid && rdata.msg_info.cid->id.slen != 0) {
+            pjsip_transaction *tsx;
+            pj_time_val timeout = {0, 0};
+            unsigned i;
+
             pjsip_endpt_process_rx_data(endpt, &rdata, NULL, NULL);
-            {
-                pj_time_val timeout = {0, 0};
+
+            tsx = pjsip_rdata_get_tsx(&rdata);
+            if (tsx) {
+                pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
+            }
+
+            /* Pump events repeatedly */
+            for (i = 0; i < 8; ++i) {
                 pjsip_endpt_handle_events(endpt, &timeout);
             }
         }
