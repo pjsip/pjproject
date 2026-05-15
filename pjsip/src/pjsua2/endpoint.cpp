@@ -333,6 +333,7 @@ void UaConfig::fromPj(const pjsua_config &ua_cfg)
     this->enableUpnp = PJ2BOOL(ua_cfg.enable_upnp);
     this->upnpIfName = pj2Str(ua_cfg.upnp_if_name);
     this->noRefersub = PJ2BOOL(ua_cfg.no_refer_sub);
+    this->accServerAffinityDefault = PJ2BOOL(ua_cfg.acc_server_affinity_default);
 }
 
 pjsua_config UaConfig::toPj() const
@@ -374,6 +375,7 @@ pjsua_config UaConfig::toPj() const
     pua_cfg.enable_upnp = this->enableUpnp;
     pua_cfg.upnp_if_name = str2Pj(this->upnpIfName);
     pua_cfg.no_refer_sub = this->noRefersub;
+    pua_cfg.acc_server_affinity_default = this->accServerAffinityDefault;
 
     return pua_cfg;
 }
@@ -395,6 +397,7 @@ void UaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_BOOL    ( this_node, enableUpnp);
     NODE_READ_STRING  ( this_node, upnpIfName);
     NODE_READ_BOOL_OPT( this_node, noRefersub);
+    NODE_READ_BOOL_OPT( this_node, accServerAffinityDefault);
 }
 
 void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -414,6 +417,7 @@ void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_BOOL    ( this_node, enableUpnp);
     NODE_WRITE_STRING  ( this_node, upnpIfName);
     NODE_WRITE_BOOL    ( this_node, noRefersub);
+    NODE_WRITE_BOOL    ( this_node, accServerAffinityDefault);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

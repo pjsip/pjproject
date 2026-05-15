@@ -409,6 +409,17 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 
 
 /**
+ * Default value for account-scoped server affinity. See
+ * #pjsua_acc_config.server_affinity for details.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJSUA_ACC_SERVER_AFFINITY_DEFAULT
+#   define PJSUA_ACC_SERVER_AFFINITY_DEFAULT    0
+#endif
+
+
+/**
  * Specify whether pjsua should disable automatically sending initial
  * answer 100/Trying for incoming calls. If disabled, application can
  * later send 100/Trying if it wishes using pjsua_call_answer().
@@ -2741,6 +2752,15 @@ typedef struct pjsua_config
      */
     pj_bool_t        no_refer_sub;
 
+    /**
+     * Default value for pjsua_acc_config.server_affinity. New accounts
+     * with server_affinity set to PJSUA_SERVER_AFFINITY_UNSPECIFIED will
+     * inherit this value.
+     *
+     * Default: PJSUA_ACC_SERVER_AFFINITY_DEFAULT
+     */
+    pj_bool_t        acc_server_affinity_default;
+
 } pjsua_config;
 
 
@@ -4186,6 +4206,31 @@ typedef enum pjsua_ipv6_use
 } pjsua_ipv6_use;
 
 /**
+ * Specify how server affinity is configured per account. Tristate so that
+ * pjsua_acc_modify() can leave the inherited setting intact by passing
+ * PJSUA_SERVER_AFFINITY_UNSPECIFIED. UNSPECIFIED falls back to the global
+ * pjsua_config.acc_server_affinity_default.
+ */
+typedef enum pjsua_server_affinity_mode
+{
+    /**
+     * Inherit from pjsua_config.acc_server_affinity_default.
+     */
+    PJSUA_SERVER_AFFINITY_UNSPECIFIED = 0,
+
+    /**
+     * Server affinity disabled.
+     */
+    PJSUA_SERVER_AFFINITY_DISABLED,
+
+    /**
+     * Server affinity enabled.
+     */
+    PJSUA_SERVER_AFFINITY_ENABLED
+
+} pjsua_server_affinity_mode;
+
+/**
  * Specify NAT64 options to be used in account config.
  */
 typedef enum pjsua_nat64_opt
@@ -4720,6 +4765,35 @@ typedef struct pjsua_acc_config
      * Outgoing offer will prefer to use IPv4)
      */
     pjsua_ipv6_use              ipv6_media_use;
+
+    /**
+     * Server affinity. When enabled, the account pins the resolved
+     * next-hop server (address + transport) and reuses it across
+     * subsequent same-account requests, instead of re-selecting on every
+     * DNS resolution. For TLS, this skips the per-request CVE-2020-15260
+     * hostname check on reuse: trust is asserted at handshake.
+     *
+     * TCP/TLS pinning is via the transport selector. UDP pinning is via
+     * a hidden Route header (suppressed from the wire) since the UDP
+     * listener is shared. Pin recovery on graceful migration is driven
+     * by the auto-rereg retry path: a retry-eligible REGISTER failure
+     * drops the auto-captured pin so the retry can pick a different
+     * address from the resolved set. Pins set explicitly via
+     * #pjsua_acc_set_affinity_addr are preserved across retries.
+     *
+     * Limitation: when #reg_use_proxy is set to 0 (REGISTER bypasses
+     * both outbound and account proxies) and UDP affinity is enabled,
+     * the configured proxies may still appear in REGISTER routing
+     * alongside the affinity pin, partially defeating the
+     * reg_use_proxy=0 intent. Use the default #PJSUA_REG_USE_ALL_PROXY
+     * with UDP affinity if this matters.
+     *
+     * See \issue{4964} for the design (motivation, trust model, lifecycle).
+     *
+     * Default: PJSUA_SERVER_AFFINITY_UNSPECIFIED (inherit from
+     * pjsua_config.acc_server_affinity_default).
+     */
+    pjsua_server_affinity_mode  server_affinity;
 
     /**
      * Control the use of STUN for the SIP signaling.
@@ -5637,6 +5711,49 @@ PJ_DECL(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
  */
 PJ_DECL(pj_status_t) pjsua_acc_set_transport(pjsua_acc_id acc_id,
                                              pjsua_transport_id tp_id);
+
+
+/**
+ * Discard the account's cached server-affinity state (address and
+ * transport ref). The next REGISTER will perform fresh resolution.
+ * Existing dialogs/calls hold their own transport refs and are
+ * unaffected. No-op if server affinity is disabled for the account.
+ *
+ * See #pjsua_acc_config.server_affinity.
+ *
+ * @param acc_id        The account ID.
+ * @return              PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_refresh_transport(pjsua_acc_id acc_id);
+
+
+/**
+ * Pin the account's server affinity to a specific remote address.
+ * Useful for accounts that don't register (auto-capture on REGISTER
+ * doesn't apply) or to override the address REGISTER would otherwise
+ * pick.
+ *
+ * The transport is materialized eagerly via
+ * #pjsip_endpt_acquire_transport using the account's tp_type and the
+ * next-hop URI hostname (proxy[0] preferred, else reg_uri) for SNI /
+ * cert validation on TLS. On failure to materialize the transport,
+ * the call is a no-op and the existing pin (if any) is preserved.
+ *
+ * Returns PJ_EINVALIDOP if server affinity is not enabled on the
+ * account, or if pjsua_acc_config.transport_id is set (transport_id
+ * already expresses pinning, and affinity is bypassed in that case).
+ *
+ * See #pjsua_acc_config.server_affinity.
+ *
+ * @param acc_id        The account ID.
+ * @param addr          The remote address to pin to. Must not be NULL.
+ * @return              PJ_SUCCESS when the pin is established;
+ *                      PJ_EINVALIDOP if affinity is disabled or
+ *                      transport_id is set; otherwise the underlying
+ *                      transport-acquisition error.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
+                                                 const pj_sockaddr *addr);
 
 
 /**

@@ -28,6 +28,38 @@
 
 pj_pool_factory *mem;
 
+/* Exercise pj_dns_make_query */
+static void dns_make_query_fuzz(const char *data, size_t size)
+{
+    static const pj_uint16_t qtypes[] = {
+        PJ_DNS_TYPE_A, PJ_DNS_TYPE_CNAME, PJ_DNS_TYPE_NS,
+        PJ_DNS_TYPE_PTR, PJ_DNS_TYPE_SRV, PJ_DNS_TYPE_AAAA
+    };
+    pj_pool_t *pool;
+    pj_dns_parsed_packet *pkt;
+    pj_str_t name;
+    char qbuf[512];
+    unsigned qbuf_size;
+    int qtype;
+
+    pool = pj_pool_create(mem, "dns_mkq", 2000, 2000, NULL);
+    if (!pool) {
+        return;
+    }
+
+    name.ptr = (char *)data;
+    name.slen = (pj_ssize_t)(size > 63 ? 63 : size);
+    qtype = (int)qtypes[(unsigned char)data[0] % 6];
+    qbuf_size = sizeof(qbuf);
+
+    if (pj_dns_make_query(qbuf, &qbuf_size, 0x1234, qtype, &name) == PJ_SUCCESS) {
+        pkt = NULL;
+        pj_dns_parse_packet(pool, qbuf, qbuf_size, &pkt);
+    }
+
+    pj_pool_release(pool);
+}
+
 int dns_parser(char *data, size_t size)
 {
 
@@ -70,6 +102,7 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     /* Fuzz */
     ret = dns_parser(data, Size);
+    dns_make_query_fuzz(data, Size);
 
     free(data);
     pj_caching_pool_destroy(&caching_pool);

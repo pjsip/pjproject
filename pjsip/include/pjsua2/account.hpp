@@ -299,6 +299,17 @@ struct AccountSipConfig : public PersistentObject
     pjsua_ipv6_use      ipv6Use;
 
     /**
+     * Server affinity. When enabled, the account pins the resolved
+     * next-hop server (address + transport) and reuses it across
+     * subsequent same-account requests. See \issue{4964} for the
+     * design (motivation, trust model, lifecycle).
+     *
+     * Default: PJSUA_SERVER_AFFINITY_UNSPECIFIED (inherit from
+     * UaConfig::accServerAffinityDefault).
+     */
+    pjsua_server_affinity_mode serverAffinity;
+
+    /**
      * Use a shared authorization session within this account.
      * This will use the accounts credentials on outgoing requests,
      * so that less 401/407 Responses will be returned.
@@ -2370,6 +2381,35 @@ public:
      * @param tp_id             The transport ID.
      */
     void setTransport(TransportId tp_id) PJSUA2_THROW(Error);
+
+    /**
+     * Discard the account's cached server-affinity state (address +
+     * transport reference). The next REGISTER refresh re-pins. Existing
+     * dialogs/calls keep their own transport refs and are unaffected.
+     * No-op if server affinity is disabled for the account.
+     *
+     * See AccountSipConfig::serverAffinity, \issue{4964}.
+     */
+    void refreshTransport() PJSUA2_THROW(Error);
+
+    /**
+     * Pin the account's server affinity to a specific remote address.
+     * Useful for accounts that don't register, or to override the
+     * address REGISTER would otherwise pick. The transport is
+     * materialized eagerly using the account's tp_type and the next-hop
+     * URI hostname for SNI / cert validation on TLS. On failure the
+     * existing pin (if any) is preserved.
+     *
+     * @param addr      The remote address (IPv4 or IPv6 with port) to
+     *                  pin to.
+     *
+     * @throws Error    PJ_EINVALIDOP if affinity is disabled or
+     *                  AccountSipConfig::transportId is set; otherwise
+     *                  the underlying transport-acquisition error.
+     *
+     * See AccountSipConfig::serverAffinity, \issue{4964}.
+     */
+    void setAffinityAddr(const SocketAddress &addr) PJSUA2_THROW(Error);
 
     /**
      * Send NOTIFY to inform account presence status or to terminate server

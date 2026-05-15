@@ -1028,3 +1028,10 @@ typedef enum pjsua_sip_siprec_use
     PJSUA_SIP_SIPREC_MANDATORY,
 } pjsua_sip_siprec_use;
 
+typedef enum pjsua_server_affinity_mode
+{
+    PJSUA_SERVER_AFFINITY_UNSPECIFIED = 0,
+    PJSUA_SERVER_AFFINITY_DISABLED,
+    PJSUA_SERVER_AFFINITY_ENABLED
+} pjsua_server_affinity_mode;
+

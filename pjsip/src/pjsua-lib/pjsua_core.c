@@ -127,6 +127,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     pjsip_timer_setting_default(&cfg->timer_setting);
     pjsua_srtp_opt_default(&cfg->srtp_opt);
     cfg->no_refer_sub = PJ_TRUE;
+    cfg->acc_server_affinity_default = PJSUA_ACC_SERVER_AFFINITY_DEFAULT;
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
@@ -391,6 +392,8 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
                                        PJSUA_IPV6_DISABLED;
     cfg->ipv6_media_use = PJ_HAS_IPV6? PJSUA_IPV6_ENABLED_PREFER_IPV4 :
                                        PJSUA_IPV6_DISABLED;
+
+    cfg->server_affinity        = PJSUA_SERVER_AFFINITY_UNSPECIFIED;
 
     cfg->media_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
     cfg->ip_change_cfg.shutdown_tp = PJ_TRUE;
@@ -3382,6 +3385,12 @@ void pjsua_parse_media_type( pj_pool_t *pool,
 
 /*
  * Internal function to init transport selector based on account's config.
+ *
+ * Caller is expected to hold PJSUA_LOCK (same as ka_transport / via_tp
+ * read sites). Server-affinity (#4964) reuses the cached transport ref
+ * here, defensively skipping shutdown transports: pjsip_tpmgr_acquire_
+ * transport2's PJSIP_TPSELECTOR_TRANSPORT short-circuit only checks
+ * is_destroying, not is_shutdown.
  */
 void pjsua_init_tpselector(pjsua_acc_id acc_id,
                            pjsip_tpselector *sel)
@@ -3394,7 +3403,7 @@ void pjsua_init_tpselector(pjsua_acc_id acc_id,
         pjsua_transport_data *tpdata;
         unsigned flag;
 
-        PJ_ASSERT_RETURN(acc->cfg.transport_id >= 0 && 
+        PJ_ASSERT_RETURN(acc->cfg.transport_id >= 0 &&
                          acc->cfg.transport_id <
                          (int)PJ_ARRAY_SIZE(pjsua_var.tpdata), );
         tpdata = &pjsua_var.tpdata[acc->cfg.transport_id];
@@ -3408,6 +3417,14 @@ void pjsua_init_tpselector(pjsua_acc_id acc_id,
             sel->type = PJSIP_TPSELECTOR_LISTENER;
             sel->u.listener = tpdata->data.factory;
         }
+    } else if (acc->sa_enabled &&
+               acc->sa_next_hop_tp != NULL &&
+               !acc->sa_next_hop_tp->is_shutdown &&
+               !acc->sa_next_hop_tp->is_destroying)
+    {
+        /* Server affinity (#4964): reuse the pinned transport. */
+        sel->type = PJSIP_TPSELECTOR_TRANSPORT;
+        sel->u.transport = acc->sa_next_hop_tp;
     } else if (acc->cfg.ipv6_sip_use != PJSUA_IPV6_ENABLED_NO_PREFERENCE) {
         sel->type = PJSIP_TPSELECTOR_IP_VER;
         sel->u.ip_ver = (pjsip_tpselector_ip_ver)acc->cfg.ipv6_sip_use;
