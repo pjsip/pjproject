@@ -314,7 +314,7 @@ static unsigned char  s2a[] = {
 	 90, 91, 88, 89, 94, 95, 92, 93, 82, 83, 80, 81, 86, 87, 84, 85
 };
 
-int alaw_input P1((buf), gsm_signal * buf) 
+int alaw_input P1((buf), gsm_signal * buf)
 {
 	int  i, c;
 
@@ -323,7 +323,7 @@ int alaw_input P1((buf), gsm_signal * buf)
 	return i;
 }
 
-int alaw_output P1((buf), gsm_signal * buf) 
+int alaw_output P1((buf), gsm_signal * buf)
 {
 	int  i;
 

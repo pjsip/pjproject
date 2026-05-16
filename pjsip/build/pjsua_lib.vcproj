@@ -3805,6 +3805,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjsua-lib\pjsua_txt.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjsua-lib\pjsua_vid.c"
 				>
 			</File>

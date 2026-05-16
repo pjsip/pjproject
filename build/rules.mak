@@ -154,32 +154,32 @@ $(OBJDIR)/$(app).ko: $(OBJDIR)/$(app).o | $(OBJDIRS)
 ../lib/$(app).ko: $(LIB) $(OBJDIR)/$(app).ko
 	cp $(OBJDIR)/$(app).ko ../lib
 
-$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.m | $(OBJDIRS)
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.m | $(@D)
 	$(CC) $($(APP)_CFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<) 
 
-$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.c | $(OBJDIRS)
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.c | $(@D)
 	$(CC) $($(APP)_CFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<) 
 
-$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.S | $(OBJDIRS)
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.S | $(@D)
 	$(CC) $($(APP)_CFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<) 
 
-$(OBJDIR)/dshowclasses.o: $(SRCDIR)/dshowclasses.cpp | $(OBJDIRS)
+$(OBJDIR)/dshowclasses.o: $(SRCDIR)/dshowclasses.cpp | $(@D)
 	$(CXX) $($(APP)_CXXFLAGS) -I$(SRCDIR)/../../../third_party/BaseClasses -fpermissive \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)
 
-$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cpp | $(OBJDIRS)
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cpp | $(@D)
 	$(CXX) $($(APP)_CXXFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)
 
-$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cc | $(OBJDIRS)
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cc | $(@D)
 	$(CXX) $($(APP)_CXXFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)

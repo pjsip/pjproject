@@ -55,6 +55,15 @@ static void usage(void)
     puts  ("  --realm=string      Set realm");
     puts  ("  --username=string   Set authentication username");
     puts  ("  --password=string   Set authentication password");
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+    puts  ("  --aka-op=hex        Set OP value for Digest AKA authentication.");
+    puts  ("                      Specifying --aka-op or --aka-amf switches the");
+    puts  ("                      current credential to AKA mode (K is taken from");
+    puts  ("                      --password).");
+    puts  ("  --aka-amf=hex       Set AMF value for Digest AKA authentication");
+#endif
+
     puts  ("  --contact=url       Optionally override the Contact information");
     puts  ("  --contact-params=S  Append the specified parameters S in Contact header");
     puts  ("  --contact-uri-params=S  Append the specified parameters S in Contact URI");
@@ -66,6 +75,8 @@ static void usage(void)
             PJSUA_REG_RETRY_INTERVAL);
     puts  ("  --reg-use-proxy=N   Control the use of proxy settings in REGISTER.");
     puts  ("                      0=no proxy, 1=outbound only, 2=acc only, 3=all (default)");
+    puts  ("  --server-affinity[=on|off]  Pin same SIP server across requests");
+    puts  ("                      (TCP/TLS only in this version). See issue #4964.");
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --mwi               Subscribe to message summary/waiting indication");
     puts  ("  --use-ims           Enable 3GPP/IMS related settings on this account");
@@ -169,6 +180,10 @@ static void usage(void)
     puts  ("  --no-tones          Disable audible tones");
     puts  ("  --jb-max-size       Specify jitter buffer maximum size, in msec (default=-1)");
     puts  ("  --extra-audio       Add one more audio stream");
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+    puts  ("  --custom-sdp=STR    Replace generated SDP with this string.");
+    puts  ("                      Use \\r\\n or \\n as line separators. The full SDP is replaced as-is.");
+#endif
 
 #if PJSUA_HAS_VIDEO
     puts  ("");
@@ -176,9 +191,19 @@ static void usage(void)
     puts  ("  --video             Enable video");
     puts  ("  --vcapture-dev=id   Video capture device ID (default=-1)");
     puts  ("  --vrender-dev=id    Video render device ID (default=-2)");
-    puts  ("  --play-avi=FILE     Load this AVI as virtual capture device");
+    puts  ("  --play-avi=FILE     Load this AVI as virtual capture device.");
+    puts  ("                      This can be specified multiple times.");
     puts  ("  --auto-play-avi     Automatically play the AVI media to call");
+    puts  ("  --rec-avi=FILE      Record video to AVI file");
+    puts  ("  --rec-avi-size=N    Maximum AVI recording file size");
+    puts  ("  --rec-avi-audio     Include audio in the AVI recording");
+    puts  ("  --auto-rec-avi      Automatically record video");
 #endif
+
+    puts  ("");
+    puts  ("Text Options:");
+    puts  ("  --text              Enable real-time text stream");
+    puts  ("  --text-red=N        Text stream redundancy level (default=0)");
 
     puts  ("");
     puts  ("Media Transport Options:");
@@ -222,6 +247,8 @@ static void usage(void)
     puts  ("  --thread-cnt=N      Number of worker threads (default:1)");
     puts  ("  --duration=SEC      Set maximum call duration (default:no limit)");
     puts  ("  --norefersub        Suppress event subscription when transferring calls");
+    puts  ("  --no-supported-norefersub");
+    puts  ("                      Don't advertise \"norefersub\" in the Supported header");
     puts  ("  --use-compact-form  Minimize SIP message size");
     puts  ("  --no-force-lr       Allow strict-route to be used (i.e. do not force lr)");
     puts  ("  --accept-redirect=N Specify how to handle call redirect (3xx) response.");
@@ -367,7 +394,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY,
            OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
            OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
-           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
+           OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD, OPT_AKA_OP, OPT_AKA_AMF,
            OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
            OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
            OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
@@ -387,7 +414,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_RX_DROP_PCT, OPT_TX_DROP_PCT, OPT_EC_TAIL, OPT_EC_OPT,
            OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS,
            OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP, OPT_THREAD_CNT,
-           OPT_NOREFERSUB, OPT_ACCEPT_REDIRECT,
+           OPT_NOREFERSUB, OPT_NO_SUPPORTED_NOREFERSUB, OPT_ACCEPT_REDIRECT,
            OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_CERT_FILE, OPT_TLS_PRIV_FILE,
            OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
            OPT_TLS_NEG_TIMEOUT, OPT_TLS_CIPHER,
@@ -400,9 +427,14 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC,
            OPT_DISABLE_STUN, OPT_NO_FORCE_LR,
            OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE,
-           OPT_VIDEO, OPT_EXTRA_AUDIO,
+           OPT_VIDEO, OPT_TEXT, OPT_TEXT_RED, OPT_EXTRA_AUDIO,
            OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI,
-           OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE
+           OPT_REC_AVI, OPT_REC_AVI_SIZE, OPT_REC_AVI_AUDIO, OPT_AUTO_REC_AVI,
+           OPT_USE_CLI, OPT_CLI_TELNET_PORT, OPT_DISABLE_CLI_CONSOLE,
+           OPT_SERVER_AFFINITY
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+           , OPT_CUSTOM_SDP
+#endif
     };
     struct pj_getopt_option long_options[] = {
         { "config-file",1, 0, OPT_CONFIG_FILE},
@@ -426,6 +458,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "no-tcp",     0, 0, OPT_NO_TCP},
         { "no-udp",     0, 0, OPT_NO_UDP},
         { "norefersub", 0, 0, OPT_NOREFERSUB},
+        { "no-supported-norefersub", 0, 0, OPT_NO_SUPPORTED_NOREFERSUB},
         { "proxy",      1, 0, OPT_PROXY},
         { "outbound",   1, 0, OPT_OUTBOUND_PROXY},
         { "registrar",  1, 0, OPT_REGISTRAR},
@@ -446,6 +479,10 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "realm",      1, 0, OPT_REALM},
         { "username",   1, 0, OPT_USERNAME},
         { "password",   1, 0, OPT_PASSWORD},
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        { "aka-op",   1, 0, OPT_AKA_OP},
+        { "aka-amf",   1, 0, OPT_AKA_AMF},
+#endif
         { "rereg-delay",1, 0, OPT_REG_RETRY_INTERVAL},
         { "reg-use-proxy", 1, 0, OPT_REG_USE_PROXY},
         { "nameserver", 1, 0, OPT_NAMESERVER},
@@ -540,14 +577,24 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
         { "outb-rid",   1, 0, OPT_OUTB_RID},
         { "video",      0, 0, OPT_VIDEO},
+        { "text",       0, 0, OPT_TEXT},
+        { "text-red",   1, 0, OPT_TEXT_RED},
         { "extra-audio",0, 0, OPT_EXTRA_AUDIO},
         { "vcapture-dev", 1, 0, OPT_VCAPTURE_DEV},
         { "vrender-dev",  1, 0, OPT_VRENDER_DEV},
         { "play-avi",   1, 0, OPT_PLAY_AVI},
         { "auto-play-avi", 0, 0, OPT_AUTO_PLAY_AVI},
+        { "rec-avi",   1, 0, OPT_REC_AVI},
+        { "rec-avi-size",   1, 0, OPT_REC_AVI_SIZE},
+        { "rec-avi-audio", 0, 0, OPT_REC_AVI_AUDIO},
+        { "auto-rec-avi", 0, 0, OPT_AUTO_REC_AVI},
         { "use-cli",    0, 0, OPT_USE_CLI},
         { "cli-telnet-port", 1, 0, OPT_CLI_TELNET_PORT},
         { "no-cli-console", 0, 0, OPT_DISABLE_CLI_CONSOLE},
+        { "server-affinity", 2, 0, OPT_SERVER_AFFINITY},
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+        { "custom-sdp",     1, 0, OPT_CUSTOM_SDP},
+#endif
         { NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -718,6 +765,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_NOREFERSUB: /* norefersub */
             cfg->no_refersub = PJ_TRUE;
+            break;
+
+        case OPT_NO_SUPPORTED_NOREFERSUB: /* no-supported-norefersub */
+            cfg->cfg.no_refer_sub = PJ_FALSE;
             break;
 
         case OPT_NO_TCP: /* no-tcp */
@@ -904,12 +955,47 @@ static pj_status_t parse_args(int argc, char *argv[],
         case OPT_PASSWORD:   /* authentication password */
             cur_acc->cred_info[cur_acc->cred_count].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
             cur_acc->cred_info[cur_acc->cred_count].data = pj_str(pj_optarg);
-#if PJSIP_HAS_DIGEST_AKA_AUTH
-            cur_acc->cred_info[cur_acc->cred_count].data_type |= PJSIP_CRED_DATA_EXT_AKA;
-            cur_acc->cred_info[cur_acc->cred_count].ext.aka.k = pj_str(pj_optarg);
-            cur_acc->cred_info[cur_acc->cred_count].ext.aka.cb = &pjsip_auth_create_aka_response;
-#endif
             break;
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        case OPT_AKA_OP:    /* aka op */
+            {
+                pj_str_t hex = pj_str(pj_optarg);
+                pj_str_t *aka_op = &cur_acc->cred_info[cur_acc->cred_count].ext.aka.op;
+                if (hex.slen/2 <= PJSIP_AKA_OPLEN) {
+                    char* oct = pj_pool_alloc(cfg->pool, hex.slen/2);
+                    pj_ssize_t len;
+                    len = my_hex_string_to_octet_array(hex.ptr, hex.slen, oct);
+                    if (len == hex.slen)
+                        pj_strset(aka_op, oct, len/2);
+                }
+                if (aka_op->slen != hex.slen/2) {
+                    PJ_LOG(1,(THIS_FILE, "Error: invalid --aka-op value '%s'",
+                              pj_optarg));
+                    return PJ_EINVAL;
+                }
+            }
+            break;
+
+        case OPT_AKA_AMF:   /* aka amf */
+            {
+                pj_str_t hex = pj_str(pj_optarg);
+                pj_str_t *aka_amf = &cur_acc->cred_info[cur_acc->cred_count].ext.aka.amf;
+                if (hex.slen/2 <= PJSIP_AKA_AMFLEN) {
+                    char* oct = pj_pool_alloc(cfg->pool, hex.slen/2);
+                    pj_ssize_t len;
+                    len = my_hex_string_to_octet_array(hex.ptr, hex.slen, oct);
+                    if (len == hex.slen)
+                        pj_strset(aka_amf, oct, len/2);
+                }
+                if (aka_amf->slen != hex.slen/2) {
+                    PJ_LOG(1,(THIS_FILE, "Error: invalid --aka-amf value '%s'",
+                              pj_optarg));
+                    return PJ_EINVAL;
+                }
+            }
+            break;
+#endif
 
         case OPT_REG_RETRY_INTERVAL:
             cur_acc->reg_retry_interval = (unsigned)pj_strtoul(pj_cstr(&tmp, pj_optarg));
@@ -1476,6 +1562,12 @@ static pj_status_t parse_args(int argc, char *argv[],
             cfg->vid.in_auto_show = PJ_TRUE;
             cfg->vid.out_auto_transmit = PJ_TRUE;
             break;
+        case OPT_TEXT:
+            cfg->txt_cnt = 1;
+            break;
+        case OPT_TEXT_RED:
+            cfg->txt_red_level = atoi(pj_optarg);
+            break;
         case OPT_EXTRA_AUDIO:
             cfg->aud_cnt++;
             break;
@@ -1502,6 +1594,22 @@ static pj_status_t parse_args(int argc, char *argv[],
             app_config.avi_auto_play = PJ_TRUE;
             break;
 
+        case OPT_REC_AVI:
+            app_config.avi_rec = pj_str(pj_optarg);
+            break;
+
+        case OPT_REC_AVI_SIZE:
+            app_config.avi_rec_size = atoi(pj_optarg);
+            break;
+
+        case OPT_REC_AVI_AUDIO:
+            app_config.avi_rec_audio = PJ_TRUE;
+            break;
+
+        case OPT_AUTO_REC_AVI:
+            app_config.avi_auto_rec = PJ_TRUE;
+            break;
+
         case OPT_USE_CLI:
             cfg->use_cli = PJ_TRUE;
             break;
@@ -1514,6 +1622,64 @@ static pj_status_t parse_args(int argc, char *argv[],
         case OPT_DISABLE_CLI_CONSOLE:
             cfg->cli_cfg.cli_fe &= (~CLI_FE_CONSOLE);
             break;
+
+        case OPT_SERVER_AFFINITY:
+            /* --server-affinity            : enable
+             * --server-affinity=on         : enable (same as no value)
+             * --server-affinity=off        : disable explicitly
+             *
+             * Sets both the current account's tristate AND the global
+             * default (pjsua_config.acc_server_affinity_default) so any
+             * account added later (at startup via --next-account or at
+             * runtime via the +a CLI command) inherits the same setting.
+             */
+            if (pj_optarg == NULL ||
+                pj_ansi_stricmp(pj_optarg, "on") == 0)
+            {
+                cur_acc->server_affinity = PJSUA_SERVER_AFFINITY_ENABLED;
+                cfg->cfg.acc_server_affinity_default = PJ_TRUE;
+            } else if (pj_ansi_stricmp(pj_optarg, "off") == 0) {
+                cur_acc->server_affinity = PJSUA_SERVER_AFFINITY_DISABLED;
+                cfg->cfg.acc_server_affinity_default = PJ_FALSE;
+            } else {
+                PJ_LOG(1, (THIS_FILE,
+                           "Error: invalid --server-affinity value '%s'; "
+                           "expected 'on' or 'off'", pj_optarg));
+                return PJ_EINVAL;
+            }
+            break;
+
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+        case OPT_CUSTOM_SDP:
+        {
+            /* Unescape \r\n and \n in the option value so the user can
+             * pass the SDP as a single command-line argument.
+             */
+            const char *src = pj_optarg;
+            char *dst;
+            pj_size_t len = pj_ansi_strlen(pj_optarg);
+
+            cfg->custom_sdp.ptr = (char*)pj_pool_alloc(cfg->pool, len + 1);
+            dst = cfg->custom_sdp.ptr;
+            while (*src) {
+                if (src[0] == '\\' && src[1] == 'r' && src[2] == '\\' &&
+                    src[3] == 'n')
+                {
+                    *dst++ = '\r';
+                    *dst++ = '\n';
+                    src += 4;
+                } else if (src[0] == '\\' && src[1] == 'n') {
+                    *dst++ = '\n';
+                    src += 2;
+                } else {
+                    *dst++ = *src++;
+                }
+            }
+            *dst = '\0';
+            cfg->custom_sdp.slen = (pj_ssize_t)(dst - cfg->custom_sdp.ptr);
+            break;
+        }
+#endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
 
         default:
             PJ_LOG(1,(THIS_FILE,
@@ -1565,6 +1731,32 @@ static pj_status_t parse_args(int argc, char *argv[],
             acfg->cred_count++;
         }
 
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        /* Promote credentials to AKA if --aka-op or --aka-amf was supplied.
+         * Order-independent: --aka-op/--aka-amf may appear before or after
+         * --password on the command line. K is taken from the password, so
+         * --password is required for AKA — skip promotion if it's missing
+         * rather than silently running AKA with an all-zero K.
+         */
+        {
+            unsigned j;
+            for (j=0; j<acfg->cred_count; ++j) {
+                pjsip_cred_info *c = &acfg->cred_info[j];
+                if (c->ext.aka.op.slen || c->ext.aka.amf.slen) {
+                    if (c->data.slen == 0) {
+                        PJ_LOG(1,(THIS_FILE,
+                                  "Error: --aka-op/--aka-amf requires "
+                                  "--password (used as AKA K)"));
+                        return PJ_EINVAL;
+                    }
+                    c->data_type |= PJSIP_CRED_DATA_EXT_AKA;
+                    c->ext.aka.k = c->data;
+                    c->ext.aka.cb = &pjsip_auth_create_aka_response;
+                }
+            }
+        }
+#endif
+
         if (acfg->ice_cfg.enable_ice) {
             acfg->ice_cfg_use = PJSUA_ICE_CONFIG_USE_CUSTOM;
         }
@@ -1606,8 +1798,15 @@ static void default_config()
     pjsua_app_config *cfg = &app_config;
 
     pjsua_config_default(&cfg->cfg);
-    pj_ansi_snprintf(tmp, sizeof(tmp), "PJSUA v%s %s", pj_get_version(),
+    pj_ansi_snprintf(tmp, sizeof(tmp), "PJSUA/v%s %s", pj_get_version(),
                     pj_get_sys_info()->info.ptr);
+    /* System info may contain more than one SLASH which doesn't conform
+     * with the RFC 3261, so just replace it with white space.
+     */
+    for (i = sizeof("PJSUA/") + 1; ;i++) {
+        if (tmp[i] == 0) break;
+        if (tmp[i] == '/') tmp[i] = ' ';
+    }
     pj_strdup2_with_null(app_config.pool, &cfg->cfg.user_agent, tmp);
 
     pjsua_logging_config_default(&cfg->log_cfg);
@@ -1622,6 +1821,16 @@ static void default_config()
     cfg->rec_id = PJSUA_INVALID_ID;
     cfg->wav_port = PJSUA_INVALID_ID;
     cfg->rec_port = PJSUA_INVALID_ID;
+    cfg->dyn_player_id = PJSUA_INVALID_ID;
+    cfg->dyn_player_port = PJSUA_INVALID_ID;
+    cfg->dyn_player_call = PJSUA_INVALID_ID;
+    cfg->dyn_player_active = PJ_FALSE;
+    cfg->dyn_play_filename[0] = '\0';
+    cfg->dyn_rec_id = PJSUA_INVALID_ID;
+    cfg->dyn_rec_port = PJSUA_INVALID_ID;
+    cfg->dyn_rec_call = PJSUA_INVALID_ID;
+    cfg->dyn_rec_active = PJ_FALSE;
+    cfg->dyn_rec_filename[0] = '\0';
     cfg->mic_level = cfg->speaker_level = 1.0;
     cfg->capture_dev = PJSUA_INVALID_ID;
     cfg->playback_dev = PJSUA_INVALID_ID;
@@ -1629,6 +1838,9 @@ static void default_config()
     cfg->playback_lat = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
     cfg->ringback_slot = PJSUA_INVALID_ID;
     cfg->ring_slot = PJSUA_INVALID_ID;
+    cfg->avi_rec_id = PJSUA_INVALID_ID;
+    cfg->avi_vid_slot = PJSUA_INVALID_ID;
+    cfg->avi_aud_slot = PJSUA_INVALID_ID;
 
     for (i=0; i<PJ_ARRAY_SIZE(cfg->acc_cfg); ++i)
         pjsua_acc_config_default(&cfg->acc_cfg[i]);
@@ -1641,6 +1853,11 @@ static void default_config()
     cfg->aud_cnt = 1;
 
     cfg->avi_def_idx = PJSUA_INVALID_ID;
+    for (i = 0; i < PJ_ARRAY_SIZE(cfg->avi); ++i) {
+        cfg->avi[i].slot = PJSUA_INVALID_ID;
+        cfg->avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
+        cfg->avi[i].p_id = PJSUA_INVALID_ID;
+    }
 
     cfg->use_cli = PJ_FALSE;
     cfg->cli_cfg.cli_fe = CLI_FE_CONSOLE;
@@ -1805,6 +2022,30 @@ static void write_account_settings(int acc_index, pj_str_t *result)
                                   acc_cfg->cred_info[i].data.ptr);
             pj_strcat2(result, line);
         }
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+        if (acc_cfg->cred_info[i].ext.aka.op.slen) {
+            char hex[PJSIP_AKA_OPLEN * 2];
+            pj_str_t *aka_op = &acc_cfg->cred_info[i].ext.aka.op;
+            pj_assert(aka_op->slen <= PJSIP_AKA_OPLEN);
+            my_octet_array_to_hex_string(aka_op->ptr, aka_op->slen, hex);
+            
+            pj_ansi_snprintf(line, sizeof(line), "--aka-op %.*s\n",
+                                  (int)aka_op->slen*2, hex);
+            pj_strcat2(result, line);
+        }
+
+        if (acc_cfg->cred_info[i].ext.aka.amf.slen) {
+            char hex[PJSIP_AKA_AMFLEN * 2];
+            pj_str_t *aka_amf = &acc_cfg->cred_info[i].ext.aka.amf;
+            pj_assert(aka_amf->slen <= PJSIP_AKA_AMFLEN);
+            my_octet_array_to_hex_string(aka_amf->ptr, aka_amf->slen, hex);
+            
+            pj_ansi_snprintf(line, sizeof(line), "--aka-amf %.*s\n",
+                                  (int)aka_amf->slen*2, hex);
+            pj_strcat2(result, line);
+        }
+#endif
 
         if (i != acc_cfg->cred_count - 1)
             pj_strcat2(result, "--next-cred\n");
@@ -2088,6 +2329,16 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         pj_strcat2(&cfg, "--extra-audio\n");
     }
 
+    /* Text */
+    if (config->txt_cnt) {
+        pj_strcat2(&cfg, "--text\n");
+    }
+    if (config->txt_red_level) {
+        pj_ansi_snprintf(line, sizeof(line), "--text-red %d\n",
+                        (int)config->txt_red_level);
+        pj_strcat2(&cfg, line);
+    }
+
     /* SRTP */
 #if PJMEDIA_HAS_SRTP
     if (app_config.cfg.use_srtp != PJSUA_DEFAULT_USE_SRTP) {
@@ -2233,6 +2484,24 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         pj_ansi_snprintf(line, sizeof(line), "--auto-play-avi\n");
         pj_strcat2(&cfg, line);
     }
+    if (config->avi_rec.slen) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi %s\n",
+                         config->avi_rec.ptr);
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_rec_size) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi-size %d\n",
+                         config->avi_rec_size);
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_rec_audio) {
+        pj_ansi_snprintf(line, sizeof(line), "--rec-avi-audio\n");
+        pj_strcat2(&cfg, line);
+    }
+    if (config->avi_auto_rec) {
+        pj_ansi_snprintf(line, sizeof(line), "--auto-rec-avi\n");
+        pj_strcat2(&cfg, line);
+    }
 
     /* ptime */
     if (config->media_cfg.ptime) {
@@ -2340,6 +2609,11 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
         pj_strcat2(&cfg, "--norefersub\n");
     }
 
+    /* no-supported-norefersub ? */
+    if (!config->cfg.no_refer_sub) {
+        pj_strcat2(&cfg, "--no-supported-norefersub\n");
+    }
+
     if (pjsip_cfg()->endpt.use_compact_form)
     {
         pj_strcat2(&cfg, "--use-compact-form\n");
@@ -2381,6 +2655,40 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
                               config->cfg.timer_setting.sess_expires);
         pj_strcat2(&cfg, line);
     }
+
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+    if (config->custom_sdp.slen) {
+        /* Escape actual CRLF/LF back to \r\n/\n when saving */
+        const char *src = config->custom_sdp.ptr;
+        const char *end = src + config->custom_sdp.slen;
+        pj_str_t escaped;
+        char *ebuf;
+        char *ep;
+
+        /* Worst case: every byte becomes 4 chars (\r\n) */
+        ebuf = (char*)pj_pool_alloc(config->pool,
+                                    (pj_size_t)(config->custom_sdp.slen * 4 + 1));
+        ep = ebuf;
+        while (src < end) {
+            if (src[0] == '\r' && src + 1 < end && src[1] == '\n') {
+                *ep++ = '\\'; *ep++ = 'r'; *ep++ = '\\'; *ep++ = 'n';
+                src += 2;
+            } else if (src[0] == '\n') {
+                *ep++ = '\\'; *ep++ = 'n';
+                src++;
+            } else {
+                *ep++ = *src++;
+            }
+        }
+        *ep = '\0';
+        escaped.ptr = ebuf;
+        escaped.slen = (pj_ssize_t)(ep - ebuf);
+
+        pj_strcat2(&cfg, "--custom-sdp \"");
+        pj_strcat(&cfg, &escaped);
+        pj_strcat2(&cfg, "\"\n");
+    }
+#endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
 
     *(cfg.ptr + cfg.slen) = '\0';
     return (int)cfg.slen;

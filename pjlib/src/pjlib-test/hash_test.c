@@ -25,6 +25,8 @@
 #if INCLUDE_HASH_TEST
 
 #define HASH_COUNT  31
+#define THIS_FILE   "hash_test.c"
+
 
 static int hash_test_with_key(pj_pool_t *pool, unsigned char key)
 {
@@ -33,51 +35,28 @@ static int hash_test_with_key(pj_pool_t *pool, unsigned char key)
     pj_hash_iterator_t it_buf, *it;
     unsigned *entry;
 
-    ht = pj_hash_create(pool, HASH_COUNT);
-    if (!ht)
-        return -10;
+    PJ_TEST_NOT_NULL( (ht=pj_hash_create(pool, HASH_COUNT)), NULL, return -10);
 
     pj_hash_set(pool, ht, &key, sizeof(key), 0, &value);
 
-    entry = (unsigned*) pj_hash_get(ht, &key, sizeof(key), NULL);
-    if (!entry)
-        return -20;
-
-    if (*entry != value)
-        return -30;
-
-    if (pj_hash_count(ht) != 1)
-        return -30;
-
-    it = pj_hash_first(ht, &it_buf);
-    if (it == NULL)
-        return -40;
-
-    entry = (unsigned*) pj_hash_this(ht, it);
-    if (!entry)
-        return -50;
-
-    if (*entry != value)
-        return -60;
-
-    it = pj_hash_next(ht, it);
-    if (it != NULL)
-        return -70;
+    PJ_TEST_NOT_NULL((entry=(unsigned*)pj_hash_get(ht,&key,sizeof(key),NULL)),
+                     NULL, return -20);
+    PJ_TEST_EQ( *entry, value, NULL, return -25);
+    PJ_TEST_EQ(pj_hash_count(ht), 1, NULL, return -30);
+    PJ_TEST_NOT_NULL((it=pj_hash_first(ht, &it_buf)), NULL, return -40);
+    PJ_TEST_NOT_NULL((entry=(unsigned*)pj_hash_this(ht, it)), NULL,
+                     return -50);
+    PJ_TEST_EQ(*entry, value, NULL, return -60);
+    PJ_TEST_EQ(pj_hash_next(ht, it), NULL, NULL, return -70);
 
     /* Erase item */
 
     pj_hash_set(NULL, ht, &key, sizeof(key), 0, NULL);
 
-    if (pj_hash_get(ht, &key, sizeof(key), NULL) != NULL)
-        return -80;
-
-    if (pj_hash_count(ht) != 0)
-        return -90;
-
-    it = pj_hash_first(ht, &it_buf);
-    if (it != NULL)
-        return -100;
-
+    PJ_TEST_EQ(pj_hash_get(ht, &key, sizeof(key), NULL), NULL, NULL,
+               return -80);
+    PJ_TEST_EQ(pj_hash_count(ht), 0, NULL, return -90);
+    PJ_TEST_EQ(pj_hash_first(ht, &it_buf), NULL, NULL, return -100);
     return 0;
 }
 
@@ -92,9 +71,7 @@ static int hash_collision_test(pj_pool_t *pool)
     unsigned char *values;
     unsigned i;
 
-    ht = pj_hash_create(pool, HASH_COUNT);
-    if (!ht)
-        return -200;
+    PJ_TEST_NOT_NULL((ht=pj_hash_create(pool, HASH_COUNT)), NULL, return -200);
 
     values = (unsigned char*) pj_pool_alloc(pool, COUNT);
 
@@ -103,16 +80,13 @@ static int hash_collision_test(pj_pool_t *pool)
         pj_hash_set(pool, ht, &i, sizeof(i), 0, &values[i]);
     }
 
-    if (pj_hash_count(ht) != COUNT)
-        return -210;
+    PJ_TEST_EQ(pj_hash_count(ht), COUNT, NULL, return -210);
 
     for (i=0; i<COUNT; ++i) {
         unsigned char *entry;
         entry = (unsigned char*) pj_hash_get(ht, &i, sizeof(i), NULL);
-        if (!entry)
-            return -220;
-        if (*entry != values[i])
-            return -230;
+        PJ_TEST_NOT_NULL(entry, NULL, return -220);
+        PJ_TEST_EQ(*entry, values[i], NULL, return -230);
     }
 
     i = 0;
@@ -122,9 +96,7 @@ static int hash_collision_test(pj_pool_t *pool)
         it = pj_hash_next(ht, it);
     }
 
-    if (i != COUNT)
-        return -240;
-
+    PJ_TEST_EQ(i, COUNT, NULL, return -240);
     return 0;
 }
 

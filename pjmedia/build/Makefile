@@ -23,15 +23,15 @@ export PJMEDIA_VIDEODEV_LIB:=libpjmedia-videodev-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export PJMEDIA_SONAME:=libpjmedia.$(SHLIB_SUFFIX)
-export PJMEDIA_SHLIB:=$(PJMEDIA_SONAME).$(PJ_VERSION_MAJOR)
+export PJMEDIA_SHLIB:=$(PJMEDIA_SONAME).$(PJ_SONAME_VERSION)
 export PJMEDIA_CODEC_SONAME:=libpjmedia-codec.$(SHLIB_SUFFIX)
-export PJMEDIA_CODEC_SHLIB:=$(PJMEDIA_CODEC_SONAME).$(PJ_VERSION_MAJOR)
+export PJMEDIA_CODEC_SHLIB:=$(PJMEDIA_CODEC_SONAME).$(PJ_SONAME_VERSION)
 export PJSDP_SONAME:=libpjsdp.$(SHLIB_SUFFIX)
-export PJSDP_SHLIB:=$(PJSDP_SONAME).$(PJ_VERSION_MAJOR)
+export PJSDP_SHLIB:=$(PJSDP_SONAME).$(PJ_SONAME_VERSION)
 export PJMEDIA_AUDIODEV_SONAME:=libpjmedia-audiodev.$(SHLIB_SUFFIX)
-export PJMEDIA_AUDIODEV_SHLIB:=$(PJMEDIA_AUDIODEV_SONAME).$(PJ_VERSION_MAJOR)
+export PJMEDIA_AUDIODEV_SHLIB:=$(PJMEDIA_AUDIODEV_SONAME).$(PJ_SONAME_VERSION)
 export PJMEDIA_VIDEODEV_SONAME:=libpjmedia-videodev.$(SHLIB_SUFFIX)
-export PJMEDIA_VIDEODEV_SHLIB:=$(PJMEDIA_VIDEODEV_SONAME).$(PJ_VERSION_MAJOR)
+export PJMEDIA_VIDEODEV_SHLIB:=$(PJMEDIA_VIDEODEV_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 
@@ -50,16 +50,17 @@ export _CXXFLAGS:= $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 
 export _LDFLAGS := $(APP_THIRD_PARTY_LIBS) \
 		   $(APP_THIRD_PARTY_EXT) \
-		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(APP_LDFLAGS) $(LDFLAGS) 
+		   $(CC_LDFLAGS) $(APP_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) \
+		   $(HOST_LDFLAGS) $(LDFLAGS) 
 
 ###############################################################################
 # Defines for building PJMEDIA library
 #
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			alaw_ulaw.o alaw_ulaw_table.o avi_player.o \
-			bidirectional.o clock_thread.o codec.o conference.o \
+			ai_port.o ai_port_openai.o \
+			alaw_ulaw.o alaw_ulaw_table.o avi_player.o avi_writer.o av_sync.o \
+			bidirectional.o clock_thread.o codec.o conference.o conf_thread.o \
 			conf_switch.o converter.o  converter_libswscale.o converter_libyuv.o \
 			delaybuf.o echo_common.o \
 			echo_port.o echo_suppress.o echo_webrtc.o echo_webrtc_aec3.o \
@@ -72,7 +73,7 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			sound_legacy.o sound_port.o stereo_port.o stream_common.o \
 			stream.o stream_info.o tonegen.o transport_adapter_sample.o \
 			transport_ice.o transport_loop.o transport_srtp.o transport_udp.o \
-			types.o vid_codec.o vid_codec_util.o \
+			types.o txt_stream.o vid_codec.o vid_codec_util.o \
 			vid_port.o vid_stream.o vid_stream_info.o vid_conf.o \
 			wav_player.o wav_playlist.o wav_writer.o wave.o \
 			wsola.o audiodev.o videodev.o

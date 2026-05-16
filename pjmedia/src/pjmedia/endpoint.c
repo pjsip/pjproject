@@ -99,6 +99,9 @@ struct pjmedia_endpt
     /** Is telephone-event enable */
     pj_bool_t             has_telephone_event;
 
+    /** Redundancy level */
+    unsigned              red_level;
+
     /** List of exit callback. */
     exit_cb               exit_cb_list;
 };
@@ -107,6 +110,7 @@ struct pjmedia_endpt
 PJ_DEF(void)
 pjmedia_endpt_create_sdp_param_default(pjmedia_endpt_create_sdp_param *param)
 {
+    pj_bzero(param, sizeof(*param));
     param->dir = PJMEDIA_DIR_ENCODING_DECODING;
 }
 
@@ -905,6 +909,118 @@ pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
 }
 
 #endif /* PJMEDIA_HAS_VIDEO */
+
+
+/* Create rtpmap and fmtp for redundancy.*/
+static pj_status_t create_redundancy_rtpmap(pj_pool_t *pool,
+                                            pjmedia_sdp_media *m,
+                                            unsigned red_level,
+                                            unsigned red_pt,
+                                            unsigned clock_rate,
+                                            unsigned media_pt)
+{
+    const pj_str_t STR_RED = { "red", 3 };
+    enum { MAX_FMTP_STR_LEN = 32 };
+    char buf[MAX_FMTP_STR_LEN];
+    pjmedia_sdp_attr *attr;
+    pjmedia_sdp_rtpmap rtpmap;
+    unsigned i, len, buf_len = 0;
+    pj_str_t *fmt;
+
+    pj_bzero(&rtpmap, sizeof(rtpmap));
+    fmt = &m->desc.fmt[m->desc.fmt_count++];
+    fmt->ptr = (char*) pj_pool_alloc(pool, 8);
+    fmt->slen = pj_utoa(red_pt, fmt->ptr);
+    rtpmap.pt = *fmt;
+
+    /* Add rtpmap. */
+    rtpmap.enc_name = STR_RED;
+    rtpmap.clock_rate = clock_rate;
+    pjmedia_sdp_rtpmap_to_attr(pool, &rtpmap, &attr);
+    m->attr[m->attr_count++] = attr;
+
+    /* Add fmtp */
+    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+    attr->name = pj_str("fmtp");
+    len = pj_ansi_snprintf(buf, sizeof(buf), "%d %d",
+                           red_pt, media_pt);
+    buf_len = PJ_MIN(buf_len + len, MAX_FMTP_STR_LEN);
+
+    /* For redundancy, format parameters is a slash "/"
+     * separated list of RTP payload types.
+     */
+    for (i = 0; i < red_level; i++) {
+        len = pj_ansi_snprintf(buf + buf_len, MAX_FMTP_STR_LEN - buf_len,
+                               "/%d", media_pt);
+        buf_len = PJ_MIN(buf_len + len, MAX_FMTP_STR_LEN);
+    }
+    attr->value = pj_strdup3(pool, buf);
+    m->attr[m->attr_count++] = attr;
+
+    return PJ_SUCCESS;
+}
+
+/* Create m=text SDP media line */
+PJ_DEF(pj_status_t)
+pjmedia_endpt_create_text_sdp(pjmedia_endpt *endpt,
+                               pj_pool_t *pool,
+                               const pjmedia_sock_info *si,
+                               const pjmedia_endpt_create_sdp_param *options,
+                               pjmedia_sdp_media **p_m)
+{
+    const pj_str_t STR_TEXT = { "text", 4 };
+    pjmedia_sdp_media *m;
+    pjmedia_sdp_attr *attr;
+    pjmedia_endpt_create_sdp_param param;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(endpt);
+
+    /* Create and init basic SDP media */
+    pjmedia_endpt_create_sdp_param_default(&param);
+    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+    status = init_sdp_media(m, pool, &STR_TEXT, si, options? options->dir:
+                            param.dir);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* The payload types in m line are listed in order of preference,
+     * so if we have redundancy, we should add it first since it's
+     * preferred.
+     */
+    if (options && options->red_level > 0) {
+        status = create_redundancy_rtpmap(pool, m, options->red_level,
+                                          PJMEDIA_RTP_PT_REDUNDANCY, 1000,
+                                          PJMEDIA_RTP_PT_T140);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+
+    /* Add format and rtpmap for T140 text codec */
+    {
+        const pj_str_t STR_T140 = { "t140", 4 };
+        pjmedia_sdp_rtpmap rtpmap;
+        pj_str_t *fmt;
+
+        pj_bzero(&rtpmap, sizeof(rtpmap));
+        fmt = &m->desc.fmt[m->desc.fmt_count++];
+        fmt->ptr = (char*) pj_pool_alloc(pool, 8);
+        fmt->slen = pj_utoa(PJMEDIA_RTP_PT_T140, fmt->ptr);
+        rtpmap.pt = *fmt;
+
+        /* Encoding name */
+        rtpmap.enc_name = STR_T140;
+
+        /* Clock rate. Must be 1000 for t140. */
+        rtpmap.clock_rate = 1000;
+
+        pjmedia_sdp_rtpmap_to_attr(pool, &rtpmap, &attr);
+        m->attr[m->attr_count++] = attr;
+    }
+
+    *p_m = m;
+    return PJ_SUCCESS;
+}
 
 
 /**

@@ -1,0 +1,59 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+			 xmlns:models="clr-namespace:pjsua2maui.Models"
+			 xmlns:viewModels="clr-namespace:pjsua2maui.ViewModels"
+             x:Class="pjsua2maui.Views.BuddyPage">
+
+    <ContentPage.BindingContext>
+        <viewModels:BuddyViewModel/>
+    </ContentPage.BindingContext>
+
+	<ContentPage.ToolbarItems>
+		<ToolbarItem Text="Settings"
+					 Clicked="Settings_Clicked"/>
+		<ToolbarItem Text="Quit"
+					 Clicked="Quit_Clicked"/>
+	</ContentPage.ToolbarItems>
+	<ContentPage.Content>
+		<StackLayout VerticalOptions="FillAndExpand"
+					 HorizontalOptions="Start">
+			<StackLayout VerticalOptions="CenterAndExpand">
+				<ListView x:Name="BuddiesListView"
+						  ItemsSource="{Binding Buddies}"
+						  VerticalOptions="FillAndExpand"
+						  HasUnevenRows="true"
+						  SelectedItem="{Binding SelectedBuddy}"
+						  RefreshCommand="{Binding LoadBuddiesCommand}"
+						  IsPullToRefreshEnabled="true"
+						  IsRefreshing="{Binding IsBusy, Mode=OneWay}"
+						  CachingStrategy="RecycleElement">
+					<ListView.ItemTemplate>
+						<DataTemplate x:DataType="models:SoftBuddy">
+							<TextCell Text="{Binding cfg.uri}"/>
+						</DataTemplate>
+					</ListView.ItemTemplate>
+				</ListView>
+			</StackLayout>
+			<StackLayout Orientation="Horizontal" HorizontalOptions="CenterAndExpand"
+						 VerticalOptions="End">
+				
+			</StackLayout>
+			<Grid VerticalOptions="End"
+				    HorizontalOptions="FillAndExpand">
+           
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Text="Call" Clicked="Call_Clicked"/>
+				<Button Grid.Column="1" Text="Add"  Clicked="Add_Clicked"/> 
+				<Button Grid.Column="2" Text="Edit" Clicked="Edit_Clicked"/>
+				<Button Grid.Column="3" Text="Remove" Clicked="Delete_Clicked"/>
+             </Grid>
+		</StackLayout>
+	</ContentPage.Content>
+</ContentPage>
+

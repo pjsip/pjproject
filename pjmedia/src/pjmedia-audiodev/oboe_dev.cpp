@@ -39,6 +39,9 @@
 #include <android/log.h>
 #include <oboe/Oboe.h>
 
+/* Setting of maximum number of consecutive stream restart attempts. */
+#define MAX_RESTART     3
+
 /* Device info */
 typedef struct aud_dev_info
 {
@@ -416,7 +419,6 @@ static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
 
         f->dev_count++;
 
-    on_skip_dev:
         jni_env->DeleteLocalRef(jdev_info);
     }
 
@@ -530,7 +532,7 @@ class MyOboeEngine : oboe::AudioStreamDataCallback,
 public:
     MyOboeEngine(struct oboe_aud_stream *stream_, pjmedia_dir dir_)
     : stream(stream_), dir(dir_), oboe_stream(NULL), dir_st(NULL),
-      thread(NULL), thread_quit(PJ_TRUE), queue(NULL),
+      thread(NULL), thread_quit(PJ_TRUE), nrestart(0), queue(NULL),
       err_thread_registered(false), mutex(NULL)
     {
         pj_assert(dir == PJMEDIA_DIR_CAPTURE || dir == PJMEDIA_DIR_PLAYBACK);
@@ -551,6 +553,7 @@ public:
         }
 
         int dev_id = 0;
+        oboe::PerformanceMode performance_mode;
         oboe::AudioStreamBuilder sb;
 
         pj_mutex_lock(mutex);
@@ -575,12 +578,20 @@ public:
                 dev_id = stream->f->dev_info[stream->param.play_id].id;
             }
         }
+
+        if (PJMEDIA_OBOE_USE_LOWLATENCY) {
+            performance_mode= oboe::PerformanceMode::LowLatency;
+        } else {
+            performance_mode = oboe::PerformanceMode::None;
+        }
+        
         sb.setDeviceId(dev_id);
         sb.setSampleRate(stream->param.clock_rate);
         sb.setChannelCount(stream->param.channel_count);
-        sb.setPerformanceMode(oboe::PerformanceMode::LowLatency);
+        sb.setPerformanceMode(performance_mode);
         sb.setFormat(oboe::AudioFormat::I16);
         sb.setUsage(oboe::Usage::VoiceCommunication);
+        sb.setInputPreset(oboe::InputPreset::VoiceCommunication);
         sb.setContentType(oboe::ContentType::Speech);
         sb.setDataCallback(this);
         sb.setErrorCallback(this);
@@ -745,6 +756,7 @@ public:
             }
         }
 
+        this->nrestart = 0;
         sem_post(&sem);
 
         return (thread_quit? oboe::DataCallbackResult::Stop :
@@ -775,12 +787,19 @@ public:
             pj_status_t status;
 
             PJ_LOG(3,(THIS_FILE,
-                      "Oboe stream %s error (%d/%s), "
-                      "trying to restart stream..",
+                      "Oboe stream %s error (%d/%s)",
                       dir_st, result, oboe::convertToText(result)));
 
             Stop();
-            status = Start();
+
+            if (nrestart < MAX_RESTART) {
+                ++nrestart;
+                PJ_LOG(3, (THIS_FILE, "Trying to restart Oboe %s stream #%d",
+                                      dir_st, nrestart));
+                status = Start();
+            } else {
+                status = PJMEDIA_EAUD_SYSERR;
+            }
 
             if (status != PJ_SUCCESS) {
                 pjmedia_event e;
@@ -930,6 +949,7 @@ private:
     const char                  *dir_st;
     pj_thread_t                 *thread;
     volatile pj_bool_t           thread_quit;
+    unsigned                     nrestart;
     sem_t                        sem;
     pj_atomic_queue_t           *queue;
     pj_timestamp                 ts;

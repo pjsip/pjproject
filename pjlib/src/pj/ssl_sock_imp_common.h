@@ -69,14 +69,28 @@ typedef struct write_data_t {
 } write_data_t;
 
 /*
- * Structure of SSL socket write buffer (circular buffer).
+ * Per-send operation data. Each op is a single contiguous allocation
+ * (header + embedded encrypted data buffer) from its own pool, so
+ * the pool can be released when the op is discarded from the free list.
+ * Replaces the old send_buf ring buffer + write_data_t for network sends.
  */
-typedef struct send_buf_t {
-    char                *buf;
-    pj_size_t            max_len;    
-    char                *start;
-    pj_size_t            len;
-} send_buf_t;
+
+/* PJ_SSL_SEND_OP_MIN_BUF_SIZE, PJ_SSL_SEND_OP_FREE_LIST_MAX, and
+ * PJ_SSL_SEND_OP_ACTIVE_MAX are defined in pj/config.h.
+ */
+
+
+typedef struct ssl_send_op_t {
+    PJ_DECL_LIST_MEMBER(struct ssl_send_op_t);
+    pj_pool_t           *pool;          /* own pool, released on discard   */
+    pj_ioqueue_op_key_t  key;           /* internal op_key for activesock  */
+    pj_ioqueue_op_key_t *app_key;       /* caller's op_key (for callback)  */
+    pj_size_t            plain_data_len;/* plaintext length for callback   */
+    pj_size_t            enc_len;       /* actual encrypted data length    */
+    pj_size_t            enc_buf_cap;   /* embedded buffer capacity        */
+    unsigned             flags;         /* send flags                      */
+    char                 enc_data[1];   /* variable-length encrypted data  */
+} ssl_send_op_t;
 
 /* Circular buffer object */
 typedef struct circ_buf_t {
@@ -133,17 +147,20 @@ struct pj_ssl_sock_t
     write_data_t          write_pending;/* list of pending write to ssl */
     write_data_t          write_pending_empty; /* cache for write_pending   */
     pj_bool_t             flushing_write_pend; /* flag of flushing is ongoing*/
-    send_buf_t            send_buf;
-    write_data_t          send_buf_pending; /* send buffer is full but some
-                                             * data is queuing in wbio.     */
-    write_data_t          send_pending; /* list of pending write to network */
-    pj_lock_t            *write_mutex;  /* protect write BIO and send_buf   */
+    ssl_send_op_t         send_op_active;  /* send queue (pending + in-flight)*/
+    unsigned              send_op_active_cnt;/* active queue count          */
+    ssl_send_op_t         send_op_free;    /* free list for recycling      */
+    unsigned              send_op_free_cnt;/* free list count              */
+    pj_lock_t            *write_mutex;  /* protect ssl_write_buf & send ops */
+    pj_bool_t             sending;      /* drain loop active or async send
+                                         * in flight (under write_mutex)  */
+    ssl_send_op_t        *send_op_inflight; /* op pending in ioqueue       */
 
-    circ_buf_t            circ_buf_input;
-    pj_lock_t            *circ_buf_input_mutex;
+    circ_buf_t            ssl_read_buf;
+    pj_lock_t            *ssl_read_buf_mutex;
 
-    circ_buf_t            circ_buf_output;
-    pj_lock_t            *circ_buf_output_mutex;
+    circ_buf_t            ssl_write_buf;
+    pj_lock_t            *ssl_write_buf_mutex;
 };
 
 
@@ -153,16 +170,20 @@ struct pj_ssl_sock_t
 struct pj_ssl_cert_t
 {
 #if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
+    /* Certificate files. */
     pj_str_t CA_file;
     pj_str_t CA_path;
     pj_str_t cert_file;
     pj_str_t privkey_file;
     pj_str_t privkey_pass;
 
-    /* Certificate buffer. */
+    /* Certificate buffers. */
     pj_ssl_cert_buffer CA_buf;
     pj_ssl_cert_buffer cert_buf;
     pj_ssl_cert_buffer privkey_buf;
+
+    /* Certificate direct (backend specific instances). */
+    pj_ssl_cert_direct direct;
 #else
     pj_ssl_cert_lookup_criteria criteria;
 #endif
@@ -195,8 +216,8 @@ static void io_read(pj_ssl_sock_t *ssock, circ_buf_t *cb,
 static pj_status_t io_write(pj_ssl_sock_t *ssock, circ_buf_t *cb,
                             const pj_uint8_t *src, pj_size_t len);
 
-static write_data_t* alloc_send_data(pj_ssl_sock_t *ssock, pj_size_t len);
-static void free_send_data(pj_ssl_sock_t *ssock, write_data_t *wdata);
+static ssl_send_op_t* alloc_send_op(pj_ssl_sock_t *ssock, pj_size_t enc_len);
+static void free_send_op(pj_ssl_sock_t *ssock, ssl_send_op_t *op);
 static pj_status_t flush_delayed_send(pj_ssl_sock_t *ssock);
 
 #ifdef SSL_SOCK_IMP_USE_CIRC_BUF
@@ -267,6 +288,9 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock);
 static void ssl_ciphers_populate();
 static pj_ssl_cipher ssl_get_cipher(pj_ssl_sock_t *ssock);
 static void ssl_update_certs_info(pj_ssl_sock_t *ssock);
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+static void ssl_free_cert(pj_ssl_cert_t *cert);
+#endif
 
 /* SSL session functions */
 static void ssl_set_state(pj_ssl_sock_t *ssock, pj_bool_t is_server);

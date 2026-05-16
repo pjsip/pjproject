@@ -558,7 +558,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * access module.
  */
 #ifndef PJSIP_SAFE_MODULE
-#   define PJSIP_SAFE_MODULE            1
+#   define PJSIP_SAFE_MODULE            0
 #endif
 
 
@@ -1560,7 +1560,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_INV_ACCEPT_UNKNOWN_BODY    PJ_FALSE
 #endif
 
-/** 
+/**
  * Specify whether to check if UPDATE sent in EARLY state has already
  * completed SDP negotiation using reliable provisional responses, as
  * specified in RFC3311 section 5.1.
@@ -1573,6 +1573,37 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #ifndef PJSIP_INV_UPDATE_EARLY_CHECK_RELIABLE
 #   define PJSIP_INV_UPDATE_EARLY_CHECK_RELIABLE    0
 #endif
+
+/**
+ * Specify whether to absorb INVITE request retransmissions arriving after
+ * an ACK has been received for a 2xx response. When enabled (default), the
+ * INVITE transaction termination is delayed for about ~32 seconds
+ * (configurable via pjsip_cfg()->tsx.td) so retransmitted INVITEs are
+ * matched to the existing transaction and answered by the cached 2xx
+ * retransmission, rather than being treated as new requests.
+ *
+ * Set this to 0 to revert to the legacy behavior, where the INVITE
+ * transaction is terminated immediately after ACK and any subsequent
+ * retransmission is treated as a new request. See also \pr{4765}.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJSIP_INV_ABSORB_RETRANS_AFTER_ACK
+#   define PJSIP_INV_ABSORB_RETRANS_AFTER_ACK   1
+#endif
+
+/**
+ * Specify whether message info will include additional details such as
+ * Call-ID and To header information in the log output. When enabled,
+ * the message info string will contain more detailed information to
+ * help with debugging and monitoring.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJSIP_MSG_INFO_HAS_EXTRA_DETAILS
+#   define PJSIP_MSG_INFO_HAS_EXTRA_DETAILS    0
+#endif
+
 
 /**
  * Dump configuration to log with verbosity equal to info(3).

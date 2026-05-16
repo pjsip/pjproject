@@ -330,8 +330,9 @@ static pj_timer_entry_dup * remove_node( pj_timer_heap_t *ht, size_t slot)
 #if ASSERT_IF_ENTRY_DESTROYED
         pj_assert(removed_node->dup._timer_id==removed_node->entry->_timer_id);
 #endif
+    } else {
+        GET_ENTRY(removed_node)->_timer_id = -1;
     }
-    GET_ENTRY(removed_node)->_timer_id = -1;
     GET_FIELD(removed_node, _timer_id) = -1;
 
 #if !PJ_TIMER_USE_LINKED_LIST

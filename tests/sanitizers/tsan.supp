@@ -1,0 +1,89 @@
+# Thread Sanitizer suppressions for PJSIP
+# Add suppressions here if needed when TSan detects false positives
+#
+# Disable data race warnings as most are by design or harmless
+# Focus on deadlock reports only (e.g., lock-order-inversion)
+race:*
+
+#=============================================================================
+# Lock-order-inversion between sip dialog and sip transaction
+# Check https://github.com/pjsip/pjproject/pull/4755 for more details
+
+# Example stack trace:
+# Mutex M1 acquired here while holding mutex M0 in thread T2:
+#4 pj_grp_lock_acquire ../src/pj/lock.c:486
+#5 pjsip_tsx_set_transport ../src/pjsip/sip_transaction.c:1841
+#6 pjsip_dlg_send_request ../src/pjsip/sip_dialog.c:1384
+#7 pjsip_inv_send_msg ../src/pjsip-ua/sip_inv.c:3825
+
+# Mutex M0 acquired here while holding mutex M1 in thread T2:
+#4 pj_grp_lock_acquire ../src/pj/lock.c:486
+#5 pjsip_dlg_inc_lock ../src/pjsip/sip_dialog.c:965
+#6 pjsip_inv_create_ack ../src/pjsip-ua/sip_inv.c:3732
+#7 inv_send_ack ../src/pjsip-ua/sip_inv.c:583
+#8 inv_on_state_early ../src/pjsip-ua/sip_inv.c:5217
+#9 mod_inv_on_tsx_state ../src/pjsip-ua/sip_inv.c:859
+#10 pjsip_dlg_on_tsx_state ../src/pjsip/sip_dialog.c:2249
+#11 mod_ua_on_tsx_state ../src/pjsip/sip_ua_layer.c:186
+#12 tsx_set_state ../src/pjsip/sip_transaction.c:1460
+#13 tsx_on_state_proceeding_uac ../src/pjsip/sip_transaction.c:3404
+#14 pjsip_tsx_recv_msg ../src/pjsip/sip_transaction.c:2061
+
+# Disabled as lock chain mechanism has been implemented
+# deadlock:pjsip_dlg_on_tsx_state
+
+#=============================================================================
+# Lock-order-inversion in pjsip_endpoint
+# Example stack trace:
+# Mutex of pjsip_endpoint acquired here while holding mutex of pjsip_tsx:
+#1 pj_rwmutex_lock_read ../src/pj/os_core_unix.c:1830
+#2 endpt_on_tx_msg ../src/pjsip/sip_endpoint.c:1114
+#3 pjsip_transport_send ../src/pjsip/sip_transport.c:1010
+#4 stateless_send_transport_cb ../src/pjsip/sip_util.c:1305
+#5 stateless_send_resolver_callback ../src/pjsip/sip_util.c:1444
+#6 pjsip_resolve ../src/pjsip/sip_resolve.c:399
+#7 pjsip_endpt_resolve ../src/pjsip/sip_endpoint.c:1205
+#8 pjsip_endpt_send_request_stateless ../src/pjsip/sip_util.c:1513
+#9 tsx_send_msg ../src/pjsip/sip_transaction.c:2597
+#10 tsx_on_state_null ../src/pjsip/sip_transaction.c:2869
+#11 pjsip_tsx_send_msg ../src/pjsip/sip_transaction.c:2021
+#
+# Mutex of pjsip_tsx acquired here while holding mutex of pjsip_endpoint:
+#4 pj_grp_lock_acquire ../src/pj/lock.c:486
+#5 pjsip_tsx_recv_msg ../src/pjsip/sip_transaction.c:2058
+#6 mod_tsx_layer_on_rx_response ../src/pjsip/sip_transaction.c:1044
+#7 pjsip_endpt_process_rx_data ../src/pjsip/sip_endpoint.c:975
+#8 endpt_on_rx_msg ../src/pjsip/sip_endpoint.c:1119
+#9 pjsip_tpmgr_receive_packet ../src/pjsip/sip_transport.c:2465
+#
+# Note that this is actually safe since pjsip_endpt_process_rx_data() and
+# endpt_on_tx_msg() use a read lock. If you want to avoid the warning,
+# app can register all modules first by calling pjsip_endpt_register_module()
+# during startup, before calling pjsip_endpt_handle_events(). Alternatively,
+# you can enable the suppression below.
+#
+# deadlock:pj_rwmutex_lock_read
+#
+# Note that you shouldn't use deadlock:endpt_on_tx_msg or
+# deadlock:endpt_on_rx_msg as this will basically filter all message
+# processing threads, and may potentially suppress genuine deadlock issue.
+#=============================================================================
+
+#=============================================================================
+# Lock-order-inversion inside libdbus (used by SDL2 on Linux)
+# This is not a PJSIP bug. TSan detects a potential deadlock between two
+# internal dbus mutexes acquired in the SDL video device worker thread
+# (job_thread in sdl_dev.c), triggered during pjsua video subsystem init.
+#
+# Example stack trace:
+#   Mutex M1 acquired here while holding mutex M0 in thread T2:
+#   #0 pthread_mutex_lock (libtsan.so.2)
+#   #1 <null> (libdbus-1.so.3)
+#   #2 job_thread ../src/pjmedia-videodev/sdl_dev.c
+#
+#   Mutex M0 acquired here while holding mutex M1 in thread T2:
+#   #0 pthread_mutex_lock (libtsan.so.2)
+#   #1 <null> (libdbus-1.so.3)
+#   #2 job_thread ../src/pjmedia-videodev/sdl_dev.c
+deadlock:libdbus
+#=============================================================================

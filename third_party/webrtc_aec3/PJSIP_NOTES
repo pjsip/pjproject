@@ -78,3 +78,19 @@ index d76d35167..2d8b1037f 100644
  #  include <arm_neon.h>
  typedef float32x4_t v4sf;
  #  define SIMD_SZ 4
+
+6. Add support for loongarch64
+diff --git a/third_party/webrtc_aec3/src/rtc_base/system/arch.h b/third_party/webrtc_aec3/src/rtc_base/system/arch.h
+index be2367b85..62aaba88b 100644
+--- a/third_party/webrtc_aec3/src/rtc_base/system/arch.h
++++ b/third_party/webrtc_aec3/src/rtc_base/system/arch.h
+@@ -73,6 +73,9 @@
+ #elif defined(__riscv) && __riscv_xlen == 32
+ #define WEBRTC_ARCH_32_BITS
+ #define WEBRTC_ARCH_LITTLE_ENDIAN
++#elif defined(__loongarch64) || defined(__loongarch64__)
++#define WEBRTC_ARCH_LITTLE_ENDIAN
++#define WEBRTC_ARCH_64_BITS
+ #elif defined(__pnacl__)
+ #define WEBRTC_ARCH_32_BITS
+ #define WEBRTC_ARCH_LITTLE_ENDIAN

@@ -150,6 +150,7 @@ typedef enum pj_ssl_cert_name_type
     PJ_SSL_CERT_NAME_IP
 } pj_ssl_cert_name_type;
 
+
 /**
  * Field type for looking up SSL certificate in the certificate stores.
  */
@@ -185,6 +186,7 @@ typedef enum pj_ssl_cert_lookup_type
 
 } pj_ssl_cert_lookup_type;
 
+
 /**
  * Describe structure of certificate lookup criteria.
  */
@@ -201,6 +203,61 @@ typedef struct pj_ssl_cert_lookup_criteria
     pj_str_t                keyword;
 
 } pj_ssl_cert_lookup_criteria;
+
+
+/**
+ * The SSL certificate buffer.
+ */
+typedef pj_str_t pj_ssl_cert_buffer;
+
+
+/**
+ * Data type of the direct SSL certificate.
+ */
+typedef enum pj_ssl_cert_direct_type
+{
+    /**
+     * No data.
+     */
+    PJ_SSL_CERT_DIRECT_NONE = 0,
+
+    /**
+     * Data is OpenSSL EVP_PKEY.
+     */
+    PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY = 1,
+
+    /**
+     * Data is OpenSSL X509 certificate.
+     */
+    PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT = 2,
+
+} pj_ssl_cert_direct_type;
+
+
+/**
+ * The direct SSL certificate. Instead of loading certificate from file,
+ * buffer, or OS certificate store, application can provide direct access
+ * to the backend specific certificate data using this structure.
+ */
+typedef struct pj_ssl_cert_direct
+{
+    /**
+     * Bit flag of the type of direct certificate data, see
+     * \ref pj_ssl_cert_direct_type.
+     */
+    unsigned type;
+    
+    /**
+     * Pointer to backend specific private key object, e.g: OpenSSL EVP_PKEY.
+     */
+    void *privkey;
+
+    /**
+     * Pointer to backend specific certificate object, e.g: OpenSSL X509.
+     */
+    void *cert;
+
+} pj_ssl_cert_direct;
 
 
 /**
@@ -254,10 +311,6 @@ typedef struct pj_ssl_cert_info {
 
 } pj_ssl_cert_info;
 
-/**
- * The SSL certificate buffer.
- */
-typedef pj_str_t pj_ssl_cert_buffer;
 
 /**
  * Create credential from files. TLS server application can provide multiple
@@ -270,7 +323,10 @@ typedef pj_str_t pj_ssl_cert_buffer;
  * @param cert_file     The file of certificate.
  * @param privkey_file  The file of private key.
  * @param privkey_pass  The password of private key, if any.
- * @param p_cert        Pointer to credential instance to be created.
+ * @param p_cert        Pointer to credential instance.
+ *                      If the credential instance is NULL, a new credential
+ *                      instance will be created, otherwise the specified
+ *                      credential instance will be used.
  *
  * @return              PJ_SUCCESS when successful.
  */
@@ -297,7 +353,10 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
  * @param cert_file     The file of certificate.
  * @param privkey_file  The file of private key.
  * @param privkey_pass  The password of private key, if any.
- * @param p_cert        Pointer to credential instance to be created.
+ * @param p_cert        Pointer to credential instance.
+ *                      If the credential instance is NULL, a new credential
+ *                      instance will be created, otherwise the specified
+ *                      credential instance will be used.
  *
  * @return              PJ_SUCCESS when successful.
  */
@@ -320,7 +379,10 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files2(
  * @param cert_buf      The buffer of certificate.
  * @param privkey_buf   The buffer of private key.
  * @param privkey_pass  The password of private key, if any.
- * @param p_cert        Pointer to credential instance to be created.
+ * @param p_cert        Pointer to credential instance.
+ *                      If the credential instance is NULL, a new credential
+ *                      instance will be created, otherwise the specified
+ *                      credential instance will be used.
  *
  * @return              PJ_SUCCESS when successful.
  */
@@ -330,6 +392,7 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
                                         const pj_ssl_cert_buffer *privkey_buf,
                                         const pj_str_t *privkey_pass,
                                         pj_ssl_cert_t **p_cert);
+
 
 /**
  * Create credential from OS certificate store, this function will lookup
@@ -344,16 +407,49 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
  * trusted CA certificates in Current User store only (will not check CA
  * certificates in the Local Machine store).
  *
- * @param pool              The pool.
- * @param criteria          The lookup criteria.
- * @param p_cert            Pointer to credential instance to be created.
+ * @param pool          The pool.
+ * @param criteria      The lookup criteria.
+ * @param p_cert        Pointer to credential instance.
+ *                      If the credential instance is NULL, a new credential
+ *                      instance will be created, otherwise the specified
+ *                      credential instance will be used.
  *
- * @return                  PJ_SUCCESS when successful.
+ * @return              PJ_SUCCESS when successful.
  */
 PJ_DECL(pj_status_t) pj_ssl_cert_load_from_store(
                                 pj_pool_t *pool,
                                 const pj_ssl_cert_lookup_criteria *criteria,
                                 pj_ssl_cert_t **p_cert);
+
+
+/**
+ * Create credential from the backend specific objects.
+ *
+ * For example, application can use OpenSSL ENGINE to load a private key from
+ * a hardware device, and then provide the EVP_PKEY instance to be used by
+ * OpenSSL backend via this function.
+ *
+ * Application should maintain the objects lifetime until the credential
+ * instance is no longer used (e.g: SSL socket is destroyed).
+ * In OpenSSL version 3, the SSL socket utilizes the reference counting
+ * feature to manage object lifetimes. Specifically,
+ * pj_ssl_sock_set_certificate() increments the reference count and
+ * pj_ssl_sock_close() decrements it.
+ *
+ * @param pool          The pool.
+ * @param cert_direct   The backend specific objects.
+ * @param p_cert        Pointer to credential instance.
+ *                      If the credential instance is NULL, a new credential
+ *                      instance will be created, otherwise the specified
+ *                      credential instance will be used.
+ *
+ * @return              PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_load_direct(
+                                pj_pool_t *pool,
+                                pj_ssl_cert_direct *cert_direct,
+                                pj_ssl_cert_t **p_cert);
+
 
 /**
  * Dump SSL certificate info.
@@ -446,6 +542,18 @@ typedef enum pj_ssl_cipher {
     PJ_TLS_DH_anon_WITH_AES_256_CBC_SHA         = 0x0000003A,
     PJ_TLS_DH_anon_WITH_AES_128_CBC_SHA256      = 0x0000006C,
     PJ_TLS_DH_anon_WITH_AES_256_CBC_SHA256      = 0x0000006D,
+
+    PJ_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384  = 0x0000c02c,
+    PJ_TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384    = 0x0000c030,
+    PJ_TLS_DHE_DSS_WITH_AES_256_GCM_SHA384      = 0x000000a3,
+    PJ_TLS_DHE_RSA_WITH_AES_256_GCM_SHA384      = 0x0000009f,
+    PJ_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256  = 0x0000c02b,
+    PJ_TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256    = 0x0000c02f,
+
+    /* TLS 1.3 cipher suites */
+    PJ_TLS_AES_128_GCM_SHA256                   = 0x00001301,
+    PJ_TLS_AES_256_GCM_SHA384                   = 0x00001302,
+    PJ_TLS_CHACHA20_POLY1305_SHA256             = 0x00001303,
 
     /* TLS (deprecated) */
     PJ_TLS_RSA_EXPORT_WITH_RC4_40_MD5           = 0x00000003,
@@ -788,27 +896,33 @@ typedef struct pj_ssl_sock_cb
 typedef enum pj_ssl_sock_proto
 {
     /**
-     * Default protocol of backend. 
+     * Default protocol of backend.
+     * Typically this will be set to all supported non-deprecated protocols,
+     * which, currently is TLSv1.2 and TLSv1.3.
      */   
     PJ_SSL_SOCK_PROTO_DEFAULT = 0,
 
     /** 
-     * SSLv2.0 protocol.          
+     * SSLv2.0 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_SSL2    = (1 << 0),
 
     /** 
-     * SSLv3.0 protocol.          
+     * SSLv3.0 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_SSL3    = (1 << 1),
 
     /**
-     * TLSv1.0 protocol.          
+     * TLSv1.0 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_TLS1    = (1 << 2),
 
     /** 
      * TLSv1.1 protocol.
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_TLS1_1  = (1 << 3),
 
@@ -823,11 +937,14 @@ typedef enum pj_ssl_sock_proto
     PJ_SSL_SOCK_PROTO_TLS1_3  = (1 << 5),
 
     /** 
-     * Certain backend implementation e.g:OpenSSL, has feature to enable all
-     * protocol. 
+     * This protocol has been deprecated.
      */
     PJ_SSL_SOCK_PROTO_SSL23   = (1 << 16) - 1,
-    PJ_SSL_SOCK_PROTO_ALL = PJ_SSL_SOCK_PROTO_SSL23,
+
+    /**
+     * This will enable all the backend's supported protocols.
+     */
+    PJ_SSL_SOCK_PROTO_ALL     = (1 << 16) - 1,
 
     /**
      * DTLSv1.0 protocol.         

@@ -10,7 +10,7 @@ export SPEEX_LIB := libspeex-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export SPEEX_SONAME := libspeex.$(SHLIB_SUFFIX)
-export SPEEX_SHLIB := $(SPEEX_SONAME).$(PJ_VERSION_MAJOR)
+export SPEEX_SHLIB := $(SPEEX_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################
@@ -22,8 +22,8 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../../pjlib/include
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
-export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(APP_LDFLAGS) $(LDFLAGS) 
+export _LDFLAGS := $(CC_LDFLAGS) $(APP_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) \
+		   $(HOST_LDFLAGS) $(LDFLAGS) 
 
 export SPEEX_SRCDIR = ../../speex/libspeex
 export SPEEX_OBJS = 	bits.o cb_search.o exc_10_16_table.o  \

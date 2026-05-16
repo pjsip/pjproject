@@ -9,7 +9,7 @@ MY_MODULES      := $(MY_MODULE_PATH)/pjsua_app.o \
 		   $(MY_MODULE_PATH)/pjsua_app_legacy.o
 
 OUT_DIR		:= ../build/jni
-LIBPJSUA_SO	:= ../app/src/main/jniLibs/armeabi/libpjsua.so
+LIBPJSUA_SO	:= ../app/src/main/jniLibs/$(TARGET_ARCH)/libpjsua.so
 
 # Env settings, e.g: path to SWIG, JDK, java(.exe), javac(.exe)
 MY_SWIG		:= swig
@@ -23,10 +23,12 @@ MY_LDFLAGS	:= $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(MY_JNI_LDFLAGS) $(LDFLAGS)
 MY_PACKAGE_NAME	:= org.pjsip.pjsua
 MY_PACKAGE_PATH := ../app/src/main/java/$(subst .,/,$(MY_PACKAGE_NAME))
 
-all: $(LIBPJSUA_SO) java
+MY_STD_CPP := ../app/src/main/jniLibs/$(TARGET_ARCH)/libc++_shared.so
+
+all: $(LIBPJSUA_SO) java $(MY_STD_CPP)
 
 $(LIBPJSUA_SO): $(OUT_DIR)/pjsua_wrap.o
-	mkdir -p ../app/src/main/jniLibs/armeabi
+	mkdir -p ../app/src/main/jniLibs/$(TARGET_ARCH)
 	$(PJ_CXX) -shared -o $(LIBPJSUA_SO) \
 	$(OUT_DIR)/pjsua_wrap.o $(OUT_DIR)/pjsua_app_callback.o \
 	$(MY_MODULES) \
@@ -54,3 +56,8 @@ ifneq (,$(findstring PJMEDIA_VIDEO_DEV_HAS_ANDROID=1,$(ANDROID_CFLAGS)))
 	@echo "Copying Android camera helper components..."
 	cp $(PJDIR)/pjmedia/src/pjmedia-videodev/android/PjCamera*.java $(MY_PACKAGE_PATH)/..
 endif
+
+$(MY_STD_CPP): $(STD_CPP_LIB)
+	cp -v $< $@
+
+

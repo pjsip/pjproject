@@ -75,7 +75,8 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
     ses->out_hdr.m = 0;
     ses->out_hdr.pt = (pj_uint8_t) default_pt;
     ses->out_hdr.seq = (pj_uint16_t) pj_htons( (pj_uint16_t)ses->out_extseq );
-    ses->out_hdr.ts = 0;
+    /* Initial timestamp value SHOULD be random, according to RFC 3550. */
+    ses->out_hdr.ts = pj_rand();
     ses->out_hdr.ssrc = sender_ssrc;
 
     /* Keep some arguments as session defaults. */

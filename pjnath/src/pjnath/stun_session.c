@@ -1220,8 +1220,9 @@ static pj_status_t send_response(pj_stun_session *sess, void *token,
     out_pkt = (pj_uint8_t*) pj_pool_alloc(pool, out_max_len);
 
     /* Encode */
-    status = pj_stun_msg_encode(response, out_pkt, out_max_len, 0, 
-                                &auth_info->auth_key, &out_len);
+    status = pj_stun_msg_encode(response, out_pkt, out_max_len, 0,
+                                auth_info ? &auth_info->auth_key : NULL,
+                                &out_len);
     if (status != PJ_SUCCESS) {
         LOG_ERR_(sess, "Error encoding message", status);
         return status;

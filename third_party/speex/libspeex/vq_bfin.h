@@ -1,25 +1,25 @@
 /* Copyright (C) 2005 Analog Devices */
 /**
    @file vq_bfin.h
-   @author Jean-Marc Valin 
+   @author Jean-Marc Valin
    @brief Blackfin-optimized vq routine
 */
 /*
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -32,6 +32,8 @@
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+#include "bfin.h"
 
 #define OVERRIDE_VQ_NBEST
 void vq_nbest(spx_word16_t *in, const spx_word16_t *codebook, int len, int entries, spx_word32_t *E, int N, int *nbest, spx_word32_t *best_dist, char *stack)
@@ -66,7 +68,8 @@ void vq_nbest(spx_word16_t *in, const spx_word16_t *codebook, int len, int entri
             "LOOP_END entries_loop%=;\n\t"
             : "=&D" (dist), "=&a" (codebook), "=&d" (best_dist[0]), "=&d" (nbest[0]), "=&a" (E)
             : "a" (len-1), "a" (in), "a" (2), "d" (entries), "d" (len<<1), "1" (codebook), "4" (E), "2" (best_dist[0]), "3" (nbest[0])
-            : "R0", "R1", "R2", "I0", "L0", "B0", "A0", "cc", "memory"
+            : "R0", "R1", "R2", "I0", "L0", "B0", "A0", "cc", "memory",
+              "ASTAT" BFIN_HWLOOP0_REGS BFIN_HWLOOP1_REGS
                );
       }
    } else {
@@ -89,7 +92,7 @@ void vq_nbest(spx_word16_t *in, const spx_word16_t *codebook, int len, int entri
             "%0 = (A0 -= R0.L*R1.L) (IS);\n\t"
          : "=D" (dist), "=a" (codebook)
          : "a" (len-1), "a" (in), "a" (2), "1" (codebook), "0" (E[i])
-         : "R0", "R1", "I0", "L0", "A0"
+         : "R0", "R1", "I0", "L0", "A0", "ASTAT" BFIN_HWLOOP0_REGS
             );
       if (i<N || dist<best_dist[N-1])
       {

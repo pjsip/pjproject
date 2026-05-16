@@ -41,7 +41,7 @@
     #define TRACE_(arg)
 #endif
 
-#define NUM_PROTOCOL            2
+#define NUM_PROTOCOL            4
 #define HTTP_1_0                "1.0"
 #define HTTP_1_1                "1.1"
 #define CONTENT_LENGTH          "Content-Length"
@@ -57,17 +57,23 @@
 enum http_protocol
 {
     PROTOCOL_HTTP,
-    PROTOCOL_HTTPS
+    PROTOCOL_HTTPS,
+    PROTOCOL_WS,
+    PROTOCOL_WSS
 };
 
 static const char *http_protocol_names[NUM_PROTOCOL] =
 {
     "HTTP",
-    "HTTPS"
+    "HTTPS",
+    "WS",
+    "WSS"
 };
 
 static const unsigned int http_default_port[NUM_PROTOCOL] =
 {
+    80,
+    443,
     80,
     443
 };
@@ -818,14 +824,18 @@ PJ_DEF(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
 
         /* Parse the protocol */
         pj_scan_get_until_ch(&scanner, ':', &s);
-        if (!pj_stricmp2(&s, http_protocol_names[PROTOCOL_HTTP])) {
-            pj_strset2(&hurl->protocol,
-                       (char*)http_protocol_names[PROTOCOL_HTTP]);
-        } else if (!pj_stricmp2(&s, http_protocol_names[PROTOCOL_HTTPS])) {
-            pj_strset2(&hurl->protocol,
-                       (char*)http_protocol_names[PROTOCOL_HTTPS]);
-        } else {
-            PJ_THROW(PJ_ENOTSUP); // unsupported protocol
+        {
+            int i;
+            for (i = 0; i < NUM_PROTOCOL; i++) {
+                if (!pj_stricmp2(&s, http_protocol_names[i])) {
+                    pj_strset2(&hurl->protocol,
+                               (char*)http_protocol_names[i]);
+                    break;
+                }
+            }
+            if (i == NUM_PROTOCOL) {
+                PJ_THROW(PJ_ENOTSUP); /* unsupported protocol */
+            }
         }
 
         if (pj_scan_strcmp(&scanner, "://", 3)) {
@@ -1148,6 +1158,31 @@ static pj_status_t auth_respond_basic(pj_http_req *hreq)
     pj_status_t status;
     int len;
 
+    /* Ensure the combined length of username, colon, and password doesn't
+     * exceed buffer size.
+     */
+    if (hreq->param.auth_cred.username.slen < 0 ||
+        hreq->param.auth_cred.data.slen < 0)
+    {
+        TRACE_((THIS_FILE,
+                "Error: username and/or password length is negative"));
+        return PJ_ETOOBIG;
+    }
+
+    do {
+        pj_size_t user_len =
+            (pj_size_t)hreq->param.auth_cred.username.slen;
+        pj_size_t pass_len =
+            (pj_size_t)hreq->param.auth_cred.data.slen;
+
+        if (user_len >= BUF_SIZE ||
+            pass_len > (pj_size_t)BUF_SIZE - 1 - user_len)
+        {
+            TRACE_((THIS_FILE,
+                    "Error: username and password exceed buffer size"));
+            return PJ_ETOOBIG;
+        }
+    } while (0);
     /* Use send buffer to store userid ":" password */
     user_pass.ptr = hreq->buffer.ptr;
     pj_strcpy(&user_pass, &hreq->param.auth_cred.username);

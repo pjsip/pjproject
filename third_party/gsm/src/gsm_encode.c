@@ -13,7 +13,6 @@
 void gsm_encode P3((s, source, c), gsm s, gsm_signal * source, gsm_byte * c)
 {
 	word	 	LARc[8], Nc[4], Mc[4], bc[4], xmaxc[4], xmc[13*4];
-
 	Gsm_Coder(s, source, LARc, Nc, bc, Mc, xmaxc, xmc);
 
 
@@ -345,7 +344,6 @@ void gsm_encode P3((s, source, c), gsm s, gsm_signal * source, gsm_byte * c)
 
 #endif	/* WAV49 */
 	{
-
 		*c++ =   ((GSM_MAGIC & 0xF) << 4)		/* 1 */
 		       | ((LARc[0] >> 2) & 0xF);
 		*c++ =   ((LARc[0] & 0x3) << 6)
@@ -446,6 +444,5 @@ void gsm_encode P3((s, source, c), gsm s, gsm_signal * source, gsm_byte * c)
 		*c++ =   ((xmc[49] & 0x3) << 6)
 		       | ((xmc[50] & 0x7) << 3)
 		       | (xmc[51] & 0x7);
-
 	}
 }

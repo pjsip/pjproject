@@ -31,12 +31,11 @@
 #include <stdio.h>
 
 #include <windows.h>
+#include <process.h>
 
 #if defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H != 0
 #  include <winsock2.h>
-#endif
-
-#if defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H != 0
+#elif defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H != 0
 #  include <winsock.h>
 #endif
 
@@ -123,6 +122,28 @@ struct pj_atomic_t
 };
 
 /*
+ * Implementation of pj_barrier_t.
+ */
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+struct pj_barrier_t {
+    SYNCHRONIZATION_BARRIER sync_barrier;
+};
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+struct pj_barrier_t {
+    CRITICAL_SECTION        mutex;
+    CONDITION_VARIABLE      cond;
+    unsigned                count;
+    unsigned                waiting;
+};
+#else
+struct pj_barrier_t {
+    HANDLE                  cond;   /* Semaphore */
+    LONG                    count;  /* Number of threads required to pass the barrier */
+    LONG                    waiting;/* Number of threads waiting at the barrier */
+};
+#endif
+
+/*
  * Flag and reference counter for PJLIB instance.
  */
 static int initialized;
@@ -140,6 +161,9 @@ static void (*atexit_func[32])(void);
  * Some static prototypes.
  */
 static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name);
+
+static void load_set_thread_description();
+static void set_thread_display_name(const char *name);
 
 
 /*
@@ -163,6 +187,9 @@ PJ_DEF(pj_status_t) pj_init(void)
     if (WSAStartup(MAKEWORD(2,0), &wsa) != 0) {
         return PJ_RETURN_OS_ERROR(WSAGetLastError());
     }
+
+    /* load SetThreadDescription before setting thread name in pj_thread_init() call */
+    load_set_thread_description();
 
     /* Init this thread's TLS. */
     if ((rc=pj_thread_init()) != PJ_SUCCESS) {
@@ -265,6 +292,8 @@ PJ_DEF(void) pj_shutdown()
 
     /* Free PJLIB TLS */
     if (thread_tls_id != -1) {
+        if (pj_thread_this() == (pj_thread_t*)main_thread)
+            pj_thread_unregister();
         pj_thread_local_free(thread_tls_id);
         thread_tls_id = -1;
     }
@@ -369,6 +398,8 @@ PJ_DEF(void*) pj_thread_get_os_handle(pj_thread_t *thread)
     PJ_ASSERT_RETURN(thread, NULL);
 
 #if PJ_HAS_THREADS
+    PJ_ASSERT_ON_FAIL(thread->hthread != GetCurrentThread(), 
+                      PJ_LOG(1, (THIS_FILE, "Can not use pseudo handle of the thread %s on other threads", thread->obj_name)));
     return thread->hthread;
 #else
     pj_assert("pj_thread_is_registered() called in non-threading mode!");
@@ -388,11 +419,15 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     pj_thread_t *thread = (pj_thread_t *)desc;
     pj_str_t thread_name = pj_str((char*)cstr_thread_name);
 
+    _STATIC_ASSERT(sizeof(pj_thread_desc) >= sizeof(pj_thread_t));
+
     /* Size sanity check. */
     if (sizeof(pj_thread_desc) < sizeof(pj_thread_t)) {
         pj_assert(!"Not enough pj_thread_desc size!");
         return PJ_EBUG;
     }
+
+    //pj_assert(pj_thread_local_get(thread_tls_id) == NULL);
 
     /* If a thread descriptor has been registered before, just return it. */
     if (pj_thread_local_get (thread_tls_id) != 0) {
@@ -403,11 +438,20 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
         //  has been deleted by application.
         //*thread_ptr = (pj_thread_t*)pj_thread_local_get (thread_tls_id);
         //return PJ_SUCCESS;
+        PJ_LOG(4,(THIS_FILE, "Info: possibly re-registering existing "
+                  "thread"));
     }
 
     /* Initialize and set the thread entry. */
     pj_bzero(desc, sizeof(struct pj_thread_t));
+
+    //GetCurrentThread() returns the same pseudo-handle for all threads. 
+    //The program will go into an infinite wait state if someone tries to 
+    //pj_thread_join() to the thread_ptr registered here. 
+    //If someone wants to use pj_thread_join() for thread registered here, they
+    //should call DuplicateHandle() here and properly CloseHandle() after using.
     thread->hthread = GetCurrentThread();
+
     thread->idthread = GetCurrentThreadId();
 
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
@@ -415,7 +459,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     thread->stk_size = 0xFFFFFFFFUL;
     thread->stk_max_usage = 0;
 #else
-    stack_ptr = '\0';
+    PJ_UNUSED_ARG(stack_ptr);
 #endif
 
     if (cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)
@@ -428,6 +472,8 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     rc = pj_thread_local_set(thread_tls_id, thread);
     if (rc != PJ_SUCCESS)
         return rc;
+
+    set_thread_display_name(thread->obj_name);
 
     *thread_ptr = thread;
     return PJ_SUCCESS;
@@ -462,9 +508,36 @@ typedef struct tagTHREADNAME_INFO {
 } THREADNAME_INFO;
 #pragma pack(pop)
 
-// The SetThreadDescription API was brought in version 1607 of Windows 10.
-typedef HRESULT(WINAPI *FnSetThreadDescription)(HANDLE hThread,
-                                                PCWSTR lpThreadDescription);
+// The SetThreadDescription and GetThreadDescription API was brought
+// in Windows Server 2016 or version 1607 of Windows 10.
+typedef HRESULT(WINAPI* LPFN_SETTHREADDESCRIPTION)(_In_ HANDLE hThread,
+                                                   _In_ PCWSTR lpThreadDescription);
+typedef HRESULT(WINAPI* LPFN_GETTHREADDESCRIPTION)(_In_ HANDLE hThread,
+                                                   _Outptr_result_z_ PWSTR* ppszThreadDescription);
+
+static LPFN_SETTHREADDESCRIPTION pSetThreadDescription = NULL;
+static LPFN_GETTHREADDESCRIPTION pGetThreadDescription = NULL;
+
+static void load_set_thread_description()
+{
+#if !(defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) || \
+      (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8!=0)
+
+    /* Windows Server 2016, Windows 10 LTSB 2016 and Windows 10 version 1607: SetThreadDescription is only available by 
+     * Runtime Dynamic Linking in KernelBase.dll.
+     */
+    LPCTSTR module[] = {TEXT("Kernel32.dll"), TEXT("KernelBase.dll")};
+    size_t i;
+    for (i = 0; (pSetThreadDescription == NULL || pGetThreadDescription == NULL) && i < PJ_ARRAY_SIZE(module); ++i) {
+        HMODULE hModule = GetModuleHandle(module[i]);
+        if (hModule) {
+            pSetThreadDescription = (LPFN_SETTHREADDESCRIPTION)GetProcAddress(hModule, "SetThreadDescription");
+            pGetThreadDescription = (LPFN_GETTHREADDESCRIPTION)GetProcAddress(hModule, "GetThreadDescription");
+        }
+    }
+#endif
+}
+
 
 static void set_thread_display_name(const char *name)
 {
@@ -474,16 +547,34 @@ static void set_thread_display_name(const char *name)
     return;
 
 #else
-    /* Set thread name by SetThreadDescription (if support) */
-    FnSetThreadDescription fn = (FnSetThreadDescription)GetProcAddress(
-        GetModuleHandle(PJ_T("Kernel32.dll")), "SetThreadDescription");
-    PJ_LOG(5, (THIS_FILE, "SetThreadDescription:%p, name:%s", fn, name));
-    if (fn) {
+
+    if (pSetThreadDescription) {
         wchar_t wname[PJ_MAX_OBJ_NAME];
+        HRESULT hr;
         pj_ansi_to_unicode(name, (int)pj_ansi_strlen(name), wname,
                            PJ_MAX_OBJ_NAME);
-        fn(GetCurrentThread(), wname);
-        return;
+
+        /* Set thread name by SetThreadDescription (if support) */
+        hr = pSetThreadDescription(GetCurrentThread(), wname);
+        pj_assert(SUCCEEDED(hr));
+        PJ_UNUSED_ARG(hr);
+
+#if 0
+        PWSTR  data;
+        hr = pGetThreadDescription(GetCurrentThread(), &data);
+        if (SUCCEEDED(hr))
+            LocalFree(data);
+#endif
+        /* Thread names are visible when performing post-modern debugging 
+         * by loading a crash dump in Visual Studio.
+         * But thread names are only visible in 
+         * Visual Studio 2017 version 15.6 and later versions.
+         * 
+         * And the thread names are not visible even in VS 2022,
+         * if remote debugging is running on Windows Server 2016.
+         * 
+         * So additionally let's set a thread name by throwing an exception.
+         */
     }
 
     /* Set thread name by throwing an exception */
@@ -517,10 +608,10 @@ static void set_thread_display_name(const char *name)
 #endif
 }
 
-static DWORD WINAPI thread_main(void *param)
+static unsigned WINAPI thread_main(void *param)
 {
     pj_thread_t *rec = param;
-    DWORD result;
+    int result;
 
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
     rec->stk_start = (char*)&rec;
@@ -542,8 +633,15 @@ static DWORD WINAPI thread_main(void *param)
               rec->stk_max_usage, rec->caller_file, rec->caller_line));
 #endif
 
-    return (DWORD)result;
+    return result;
 }
+
+static pj_status_t create_thread(const char *thread_name,
+                                 pj_thread_proc *proc,
+                                 void *arg,
+                                 pj_size_t stack_size,
+                                 DWORD dwflags,
+                                 pj_thread_t *rec);
 
 /*
  * pj_thread_create(...)
@@ -558,10 +656,7 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 {
     DWORD dwflags = 0;
     pj_thread_t *rec;
-
-#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
-    PJ_UNUSED_ARG(stack_size);
-#endif
+    pj_status_t status;
 
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(pool && proc && thread_ptr, PJ_EINVAL);
@@ -575,6 +670,46 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     if (!rec)
         return PJ_ENOMEM;
 
+    status = create_thread(thread_name, proc, arg, stack_size, dwflags, rec);
+    if (status == PJ_SUCCESS) {
+        /* Success! */
+        *thread_ptr = rec;
+    }
+    return status;
+}
+
+PJ_DEF(pj_status_t) pj_thread_create2(const char *thread_name,
+                                      pj_thread_proc *proc,
+                                      void *arg,
+                                      pj_size_t stack_size,
+                                      void *stack_addr,
+                                      pj_thread_t *thread)
+{
+    PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(proc && thread, PJ_EINVAL);
+    PJ_UNUSED_ARG(stack_addr);
+
+    if (thread == pj_thread_this())
+        return PJ_ECANCELLED;
+
+    return create_thread(thread_name, proc, arg, stack_size, 0, thread);
+}
+
+static pj_status_t create_thread(const char *thread_name,
+                                 pj_thread_proc *proc,
+                                 void *arg,
+                                 pj_size_t stack_size,
+                                 DWORD dwflags,
+                                 pj_thread_t *rec)
+{
+
+#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+    PJ_UNUSED_ARG(stack_size);
+#endif
+
+    PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(proc && rec, PJ_EINVAL);
+
     /* Set name. */
     if (!thread_name)
         thread_name = "thr%p";
@@ -586,6 +721,13 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     }
 
     PJ_LOG(6, (rec->obj_name, "Thread created"));
+
+#if !defined(PJ_THREAD_SET_STACK_SIZE) || PJ_THREAD_SET_STACK_SIZE==0
+    /* Don't propagate caller's stack_size to the OS thread API;
+     * let the OS pick its default size.
+     */
+    stack_size = 0;
+#endif
 
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
     rec->stk_size = stack_size ? (pj_uint32_t)stack_size : 0xFFFFFFFFUL;
@@ -601,16 +743,19 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
                                   thread_main, rec,
                                   dwflags, NULL);
 #else
-    rec->hthread = CreateThread(NULL, stack_size,
-                                thread_main, rec,
-                                dwflags, &rec->idthread);
+    {
+        unsigned tid = 0;
+        rec->hthread = (HANDLE)_beginthreadex(NULL, (unsigned)stack_size,
+                                              thread_main, rec,
+                                              dwflags, &tid);
+        rec->idthread = tid;
+    }
 #endif
 
     if (rec->hthread == NULL)
-        return PJ_RETURN_OS_ERROR(GetLastError());
+        return pj_get_os_error();
 
     /* Success! */
-    *thread_ptr = rec;
     return PJ_SUCCESS;
 }
 
@@ -683,6 +828,13 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
     if (p == pj_thread_this())
         return PJ_ECANCELLED;
 
+    PJ_ASSERT_ON_FAIL(p->hthread != GetCurrentThread(), {
+        PJ_LOG(1, (THIS_FILE, 
+                    "Can not joining thread %s having a pseudo handle"
+                    , p->obj_name));
+        return PJ_ETIMEDOUT;
+    });
+
     PJ_LOG(6, (pj_thread_this()->obj_name, "Joining thread %s", p->obj_name));
 
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
@@ -700,19 +852,58 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
 }
 
 /*
+ * pj_thread_unregister()
+ */
+PJ_DEF(pj_status_t) pj_thread_unregister()
+{
+    pj_status_t status;
+    pj_thread_t *rec;
+    PJ_CHECK_STACK();
+
+    rec = pj_thread_this();
+    PJ_ASSERT_RETURN(rec, PJ_EBUG);
+
+    if ((status = pj_thread_destroy(rec)) != PJ_SUCCESS)
+        return status;
+    else
+        return pj_thread_local_set(thread_tls_id, NULL);
+}
+
+PJ_DEF(pj_status_t) pj_thread_attach(const char *cstr_thread_name,
+                                     pj_thread_desc desc,
+                                     pj_thread_t **thread_ptr)
+{
+    pj_status_t status;
+    if ((status = pj_thread_register(cstr_thread_name, desc, thread_ptr)) == PJ_SUCCESS &&
+        !DuplicateHandle(GetCurrentProcess(),
+                         (*thread_ptr)->hthread,
+                         GetCurrentProcess(),
+                         &(*thread_ptr)->hthread,
+                         0, FALSE,
+                         DUPLICATE_CLOSE_SOURCE | DUPLICATE_SAME_ACCESS))
+    {
+            status = pj_get_os_error();
+    }
+    return status;
+}
+
+
+/*
  * pj_thread_destroy()
  */
 PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *p)
 {
-    pj_thread_t *rec = (pj_thread_t *)p;
-
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(p, PJ_EINVAL);
 
-    if (CloseHandle(rec->hthread) == TRUE)
-        return PJ_SUCCESS;
+    // As a general case CloseHandle() should not be called on pseudo-handles
+    // like the one returned by GetCurrentThread(). 
+    // However, CloseHandle() knows about GetCurrentThread()'s pseudo-handles,
+    // does nothing and returns non zero.
+    if (!CloseHandle(p->hthread))
+        return pj_get_os_error();
     else
-        return PJ_RETURN_OS_ERROR(GetLastError());
+        return PJ_SUCCESS;
 }
 
 /*
@@ -740,7 +931,13 @@ PJ_DEF(void) pj_thread_check_stack(const char *file, int line)
 {
     char stk_ptr;
     pj_uint32_t usage;
-    pj_thread_t *thread = pj_thread_this();
+    pj_thread_t *thread;
+
+    /* may be called after pj_thread_unregister() */
+    if (!pj_thread_is_registered())
+        return;
+
+    thread = pj_thread_this();
 
     pj_assert(thread);
 
@@ -981,6 +1178,7 @@ PJ_DEF(void*) pj_thread_local_get(long index)
     //Can't check stack because this function is called
     //by PJ_CHECK_STACK() itself!!!
     //PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(index >= 0, NULL);
 #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
     return TlsGetValueRT(index);
 #else
@@ -1545,6 +1743,119 @@ PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
 }
 
 #endif  /* PJ_HAS_EVENT_OBJ */
+
+///////////////////////////////////////////////////////////////////////////////
+
+/*
+ * pj_barrier_create()
+ */
+PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) 
+{
+    pj_barrier_t *barrier;
+    PJ_ASSERT_RETURN(pool && p_barrier, PJ_EINVAL);
+    barrier = (pj_barrier_t *)pj_pool_zalloc(pool, sizeof(pj_barrier_t));
+    if (barrier == NULL)
+        return PJ_ENOMEM;
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+    if (InitializeSynchronizationBarrier(&barrier->sync_barrier, trip_count, -1)) {
+        *p_barrier = barrier;
+        return PJ_SUCCESS;
+    } else
+        return pj_get_os_error();
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+    InitializeCriticalSection(&barrier->mutex);
+    InitializeConditionVariable(&barrier->cond);
+    barrier->count = trip_count;
+    barrier->waiting = 0;
+    *p_barrier = barrier;
+    return PJ_SUCCESS;
+#else
+    barrier->cond = CreateSemaphore(NULL,
+                                    0,          /* initial count */
+                                    trip_count, /* max count */
+                                    NULL);
+    if (!barrier->cond)
+        return pj_get_os_error();
+    barrier->count = trip_count;
+    barrier->waiting = 0;
+    *p_barrier = barrier;
+    return PJ_SUCCESS;
+#endif
+}
+
+/*
+ * pj_barrier_destroy()
+ */
+PJ_DEF(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier) 
+{
+    PJ_ASSERT_RETURN(barrier, PJ_EINVAL);
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+    DeleteSynchronizationBarrier(&barrier->sync_barrier);
+    return PJ_SUCCESS;
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+    DeleteCriticalSection(&barrier->mutex);
+    return PJ_SUCCESS;
+#else
+    if (CloseHandle(barrier->cond))
+        return PJ_SUCCESS;
+    else
+        return pj_get_os_error();
+#endif
+}
+
+/*
+ * pj_barrier_wait()
+ */
+PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) 
+{
+    PJ_ASSERT_RETURN(barrier, PJ_EINVAL);
+#if PJ_WIN32_WINNT >= _WIN32_WINNT_WIN8
+    DWORD dwFlags = ((flags & PJ_BARRIER_FLAGS_BLOCK_ONLY) ? SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY : 0) |
+        ((flags & PJ_BARRIER_FLAGS_SPIN_ONLY) ? SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY : 0) |
+        ((flags & PJ_BARRIER_FLAGS_NO_DELETE) ? SYNCHRONIZATION_BARRIER_FLAGS_NO_DELETE : 0);
+    return EnterSynchronizationBarrier(&barrier->sync_barrier, dwFlags);
+#elif PJ_WIN32_WINNT >= _WIN32_WINNT_VISTA
+    PJ_UNUSED_ARG(flags);
+    EnterCriticalSection(&barrier->mutex);
+    if (++barrier->waiting == barrier->count) {
+        barrier->waiting = 0;
+        LeaveCriticalSection(&barrier->mutex);
+        WakeAllConditionVariable(&barrier->cond);
+        return PJ_TRUE;
+    } else {
+        BOOL rc = SleepConditionVariableCS(&barrier->cond, &barrier->mutex, INFINITE);
+        LeaveCriticalSection(&barrier->mutex);
+        if (rc)
+            /* Returning PJ_FALSE in this case (a successful return from 
+             * SleepConditionVariableCS) is intentional.
+             */
+            return PJ_FALSE;
+        else
+            return pj_get_os_error();
+    }
+#else
+    PJ_UNUSED_ARG(flags);
+
+    if (InterlockedIncrement(&barrier->waiting) == barrier->count) {
+        LONG previousCount = 0;
+        barrier->waiting = 0;
+        /* Release all threads waiting on the semaphore */
+        if (barrier->count == 1 || 
+            ReleaseSemaphore(barrier->cond, barrier->count-1, &previousCount))
+        {
+            PJ_ASSERT_RETURN(previousCount == 0, PJ_EBUG);
+            return PJ_TRUE;
+        } else {
+            return pj_get_os_error();
+        }
+    }
+
+    if (WaitForSingleObject(barrier->cond, INFINITE) == WAIT_OBJECT_0)
+        return PJ_FALSE;
+    else
+        return pj_get_os_error();
+#endif
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 #if defined(PJ_TERM_HAS_COLOR) && PJ_TERM_HAS_COLOR != 0

@@ -72,8 +72,17 @@ static void init_data()
     for (i=0; i<PJSUA_MAX_VID_WINS; ++i) {
         pjsua_vid_win_reset(i);
     }
-}
+#if PJSUA_HAS_VIDEO
+    for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_player); ++i) {
+        pjsua_reset_avi_player_data(i);
+    }
 
+    for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.avi_recorder); ++i) {
+        pjsua_reset_avi_recorder_data(i);
+    }
+#endif
+
+}
 
 PJ_DEF(void) pjsua_logging_config_default(pjsua_logging_config *cfg)
 {
@@ -114,8 +123,11 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->hangup_forked_call = PJ_TRUE;
 
     cfg->use_timer = PJSUA_SIP_TIMER_OPTIONAL;
+    cfg->use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
     pjsip_timer_setting_default(&cfg->timer_setting);
     pjsua_srtp_opt_default(&cfg->srtp_opt);
+    cfg->no_refer_sub = PJ_TRUE;
+    cfg->acc_server_affinity_default = PJSUA_ACC_SERVER_AFFINITY_DEFAULT;
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
@@ -168,6 +180,7 @@ PJ_DEF(pjsua_msg_data*) pjsua_msg_data_clone(pj_pool_t *pool,
 
     pj_strdup(pool, &msg_data->target_uri, &rhs->target_uri);
     pj_strdup(pool, &msg_data->local_uri, &rhs->local_uri);
+    pj_strdup(pool, &msg_data->contact_uri, &rhs->contact_uri);
 
     pj_list_init(&msg_data->hdr_list);
     hdr = rhs->hdr_list.next;
@@ -335,9 +348,11 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->require_100rel = pjsua_var.ua_cfg.require_100rel;
     cfg->use_timer = pjsua_var.ua_cfg.use_timer;
     cfg->timer_setting = pjsua_var.ua_cfg.timer_setting;
+    cfg->use_siprec = pjsua_var.ua_cfg.use_siprec;
     cfg->lock_codec = 1;
     cfg->ka_interval = 15;
     cfg->ka_data = pj_str("\r\n");
+    cfg->txt_red_level = PJSUA_TXT_DEFAULT_REDUNDANCY_LEVEL;
     cfg->vid_cap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     cfg->vid_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
 #if PJMEDIA_HAS_VIDEO
@@ -378,6 +393,8 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->ipv6_media_use = PJ_HAS_IPV6? PJSUA_IPV6_ENABLED_PREFER_IPV4 :
                                        PJSUA_IPV6_DISABLED;
 
+    cfg->server_affinity        = PJSUA_SERVER_AFFINITY_UNSPECIFIED;
+
     cfg->media_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
     cfg->ip_change_cfg.shutdown_tp = PJ_TRUE;
     cfg->ip_change_cfg.hangup_calls = PJ_FALSE;
@@ -385,11 +402,15 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
                                         PJSUA_CALL_UPDATE_CONTACT |
                                         PJSUA_CALL_UPDATE_VIA;
     cfg->enable_rtcp_xr = (PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR);
+    cfg->use_shared_auth = PJ_FALSE;
+
+    cfg->auto_repond_sip_message = PJ_TRUE;
 }
 
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
+    cfg->acc_id = PJSUA_INVALID_ID;
 }
 
 PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
@@ -415,6 +436,7 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->channel_count = 1;
     cfg->audio_frame_ptime = PJSUA_DEFAULT_AUDIO_FRAME_PTIME;
     cfg->max_media_ports = PJSUA_MAX_CONF_PORTS;
+    cfg->conf_threads = PJMEDIA_CONF_THREADS;
     cfg->has_ioqueue = PJ_TRUE;
     cfg->thread_cnt = 1;
     cfg->quality = PJSUA_DEFAULT_CODEC_QUALITY;
@@ -667,15 +689,31 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
     pj_bool_t processed = PJ_FALSE;
 
 #if PJSUA_DETECT_MERGED_REQUESTS
-    if (pjsip_tsx_detect_merged_requests(rdata)) {
-        PJ_LOG(4, (THIS_FILE, "Merged request detected"));
+    pjsip_transaction *tsx;
+    if ((tsx = pjsip_tsx_detect_merged_requests(rdata)) != NULL) {
 
-        /* Respond with 482 (Loop Detected) */
-        pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
-                            PJSIP_SC_LOOP_DETECTED, NULL,
-                            NULL, NULL, NULL);
+        pjsip_dialog *dlg = pjsip_tsx_get_dlg(tsx);
 
-        return PJ_TRUE;
+        PJ_LOG(4, (THIS_FILE, "Merged request detected (%s) (%s): %s from %s:%d",
+                              dlg ? dlg->obj_name : "-no-dlg-",
+                              tsx->obj_name,
+                              pjsip_rx_data_get_info(rdata),
+                              rdata->pkt_info.src_name,
+                              rdata->pkt_info.src_port));
+
+        /* Don't respond to ACK, even if it looks like a merged request 
+         * Let it be "dropped/unhandled by any modules"
+         */
+        if (pjsip_method_cmp(&rdata->msg_info.msg->line.req.method,
+                             &pjsip_ack_method) == 0) {
+            return PJ_FALSE;
+        } else {
+            /* Respond with 482 (Loop Detected) */
+            pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
+                                PJSIP_SC_LOOP_DETECTED, NULL,
+                                NULL, NULL, NULL);
+            return PJ_TRUE;
+        }
     }
 #endif
 
@@ -801,24 +839,6 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
  * PJSUA Base API.
  */
 
-/* Worker thread function. */
-static int worker_thread(void *arg)
-{
-    enum { TIMEOUT = 10 };
-
-    PJ_UNUSED_ARG(arg);
-
-    while (!pjsua_var.thread_quit_flag) {
-        int count;
-
-        count = pjsua_handle_events(TIMEOUT);
-        if (count < 0)
-            pj_thread_sleep(TIMEOUT);
-    }
-
-    return 0;
-}
-
 #if PJSUA_SEPARATE_WORKER_FOR_TIMER
 
 /* Timer heap worker thread function. */
@@ -858,6 +878,26 @@ static int worker_thread_ioqueue(void *arg)
         pj_time_val timeout = {0, 100};
         pj_ioqueue_poll(ioq, &timeout);
     }
+    return 0;
+}
+
+#else
+
+/* Worker thread function. */
+static int worker_thread(void *arg)
+{
+    enum { TIMEOUT = 10 };
+
+    PJ_UNUSED_ARG(arg);
+
+    while (!pjsua_var.thread_quit_flag) {
+        int count;
+
+        count = pjsua_handle_events(TIMEOUT);
+        if (count < 0)
+            pj_thread_sleep(TIMEOUT);
+    }
+
     return 0;
 }
 
@@ -1144,6 +1184,12 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     status = pjsip_timer_init_module(pjsua_var.endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+#if PJSUA_HAS_SIPREC
+    /* Initialize siprec support */
+    status = pjsip_siprec_init_module(pjsua_var.endpt);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
+
     /* Initialize and register PJSUA application module. */
     {
         const pjsip_module mod_initializer = 
@@ -1265,8 +1311,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     status = pjsip_pres_init_module( pjsua_var.endpt, pjsip_evsub_instance());
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+#if PJSUA_HAS_DLG_EVENT_PKG
     status = pjsip_dlg_event_init_module( pjsua_var.endpt, pjsip_evsub_instance());
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
 
     /* Initialize MWI support */
     status = pjsip_mwi_init_module(pjsua_var.endpt, pjsip_evsub_instance());
@@ -1310,7 +1358,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 #endif
 
         for (ii=0; ii<pjsua_var.ua_cfg.thread_cnt; ++ii) {
-            char tname[16];
+            char tname[PJ_MAX_OBJ_NAME];
             
             pj_ansi_snprintf(tname, sizeof(tname), "pjsua_%d", ii);
 
@@ -1939,15 +1987,17 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
         pj_log_push_indent();
 
         /* Terminate all calls. */
-        if ((flags & PJSUA_DESTROY_NO_TX_MSG) == 0) {
-            pjsua_call_hangup_all();
-        } else {
-            /* Deinit media channel of all calls (see #1717) */
-            for (i=0; i<(int)pjsua_var.ua_cfg.max_calls; ++i) {
-                /* TODO: check if we're not allowed to send to network in the
-                 *       "flags", and if so do not do TURN allocation...
-                 */
-                pjsua_media_channel_deinit(i);
+        if (pjsua_var.calls) {
+            if ((flags & PJSUA_DESTROY_NO_TX_MSG) == 0) {
+                pjsua_call_hangup_all();
+            } else {
+                /* Deinit media channel of all calls (see #1717) */
+                for (i=0; i<(int)pjsua_var.ua_cfg.max_calls; ++i) {
+                    /* TODO: check if we're not allowed to send to network in
+                     *       the "flags", and if so do not do TURN allocation...
+                     */
+                    pjsua_media_channel_deinit(i);
+                }
             }
         }
 
@@ -3102,6 +3152,88 @@ PJ_DEF(pj_status_t) pjsua_transport_lis_start(pjsua_transport_id id,
 }
 
 
+PJ_DEF(pj_status_t) pjsua_transport_lis_restart(pjsua_transport_id id,
+                                               const pjsua_transport_config *cfg)
+{
+    pj_status_t status = PJ_SUCCESS;
+    pjsip_transport_type_e tp_type;
+    /* Common variables used by all transport types */
+    pj_sockaddr bind_addr;
+    pjsip_host_port addr_name;
+    int af;
+
+    /* Make sure id is in range. */
+    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.tpdata), 
+                     PJ_EINVAL);
+
+    /* Make sure that transport exists */
+    PJ_ASSERT_RETURN(pjsua_var.tpdata[id].data.ptr != NULL, PJ_EINVAL);
+
+    tp_type = pjsua_var.tpdata[id].type & ~PJSIP_TRANSPORT_IPV6;
+ 
+    if ((tp_type == PJSIP_TRANSPORT_TLS) || (tp_type == PJSIP_TRANSPORT_TCP)) {
+        pjsip_tpfactory *factory = pjsua_var.tpdata[id].data.factory;
+        af = pjsip_transport_type_get_af(factory->type);
+    } else if (tp_type == PJSIP_TRANSPORT_UDP) {
+        pjsip_transport *transport = pjsua_var.tpdata[id].data.tp;
+        af = pjsip_transport_type_get_af(transport->key.type);
+    } else {
+        return PJ_EINVAL;
+    }
+
+    /* Initialize bind address */
+    pj_sockaddr_init(af, &bind_addr, NULL, 0);
+    
+    if (cfg->port)
+        pj_sockaddr_set_port(&bind_addr, (pj_uint16_t)cfg->port);
+
+    if (cfg->bound_addr.slen) {
+        status = pj_sockaddr_set_str_addr(af, 
+                                          &bind_addr,
+                                          &cfg->bound_addr);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, 
+                         "Unable to resolve transport bound address", 
+                         status);
+            return status;
+        }
+    }
+
+    /* Set published name */
+    pj_bzero(&addr_name, sizeof(pjsip_host_port));
+    if (cfg->public_addr.slen)
+        addr_name.host = cfg->public_addr;
+
+    /* Restart transport based on type */
+    if ((tp_type == PJSIP_TRANSPORT_TLS) || (tp_type == PJSIP_TRANSPORT_TCP)) {
+        pjsip_tpfactory *factory = pjsua_var.tpdata[id].data.factory;
+        
+        if (tp_type == PJSIP_TRANSPORT_TCP) {
+            status = pjsip_tcp_transport_restart(factory, &bind_addr,
+                                                 &addr_name);
+        }
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+        else {
+            /* Use the new restart2 function for TLS to support settings update */
+            status = pjsip_tls_transport_restart2(factory, &cfg->tls_setting, &bind_addr,
+                                                  &addr_name); 
+        }
+#endif  
+    } else if (tp_type == PJSIP_TRANSPORT_UDP) {
+        pjsip_transport *transport = pjsua_var.tpdata[id].data.tp;
+            
+        /* Restart UDP transport using restart2 function */
+        status = pjsip_udp_transport_restart2(transport, 
+                                             PJSIP_UDP_TRANSPORT_DESTROY_SOCKET,
+                                             PJ_INVALID_SOCKET,
+                                             &bind_addr,
+                                             cfg->public_addr.slen ? &addr_name : NULL);
+    }
+    
+    return status;
+}
+
+
 /*
  * Add additional headers etc in msg_data specified by application
  * when sending requests.
@@ -3130,6 +3262,29 @@ void pjsua_process_msg_data(pjsip_tx_data *tdata,
     hdr = msg_data->hdr_list.next;
     while (hdr && hdr != &msg_data->hdr_list) {
         pjsip_hdr *new_hdr;
+
+        /* For Max-Forwards header, just update the value of the existing
+         * header. In case it does not exist, clone the header as usual.
+         */
+        if (hdr->type == PJSIP_H_MAX_FORWARDS) {
+            pjsip_max_fwd_hdr *orig_hdr;
+
+            orig_hdr = pjsip_hdr_find(&tdata->msg->hdr, PJSIP_H_MAX_FORWARDS,
+                                      NULL);
+            if (orig_hdr != NULL) {
+                pj_uint32_t orig_value = orig_hdr->ivalue;
+                pj_uint32_t new_value  =
+                                    ((const pjsip_max_fwd_hdr*)hdr)->ivalue;
+
+                orig_hdr->ivalue = new_value;
+                PJ_LOG(4, (THIS_FILE,
+                           "Overriding Max-Forwards header value: %u -> %u",
+                           orig_value, new_value));
+
+                hdr = hdr->next;
+                continue;
+            }
+        }
 
         new_hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, hdr);
         pjsip_msg_add_hdr(tdata->msg, new_hdr);
@@ -3230,6 +3385,12 @@ void pjsua_parse_media_type( pj_pool_t *pool,
 
 /*
  * Internal function to init transport selector based on account's config.
+ *
+ * Caller is expected to hold PJSUA_LOCK (same as ka_transport / via_tp
+ * read sites). Server-affinity (#4964) reuses the cached transport ref
+ * here, defensively skipping shutdown transports: pjsip_tpmgr_acquire_
+ * transport2's PJSIP_TPSELECTOR_TRANSPORT short-circuit only checks
+ * is_destroying, not is_shutdown.
  */
 void pjsua_init_tpselector(pjsua_acc_id acc_id,
                            pjsip_tpselector *sel)
@@ -3242,7 +3403,7 @@ void pjsua_init_tpselector(pjsua_acc_id acc_id,
         pjsua_transport_data *tpdata;
         unsigned flag;
 
-        PJ_ASSERT_RETURN(acc->cfg.transport_id >= 0 && 
+        PJ_ASSERT_RETURN(acc->cfg.transport_id >= 0 &&
                          acc->cfg.transport_id <
                          (int)PJ_ARRAY_SIZE(pjsua_var.tpdata), );
         tpdata = &pjsua_var.tpdata[acc->cfg.transport_id];
@@ -3256,6 +3417,14 @@ void pjsua_init_tpselector(pjsua_acc_id acc_id,
             sel->type = PJSIP_TPSELECTOR_LISTENER;
             sel->u.listener = tpdata->data.factory;
         }
+    } else if (acc->sa_enabled &&
+               acc->sa_next_hop_tp != NULL &&
+               !acc->sa_next_hop_tp->is_shutdown &&
+               !acc->sa_next_hop_tp->is_destroying)
+    {
+        /* Server affinity (#4964): reuse the pinned transport. */
+        sel->type = PJSIP_TPSELECTOR_TRANSPORT;
+        sel->u.transport = acc->sa_next_hop_tp;
     } else if (acc->cfg.ipv6_sip_use != PJSUA_IPV6_ENABLED_NO_PREFERENCE) {
         sel->type = PJSIP_TPSELECTOR_IP_VER;
         sel->u.ip_ver = (pjsip_tpselector_ip_ver)acc->cfg.ipv6_sip_use;
@@ -4016,9 +4185,11 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
         sd_param.include_udp = PJ_FALSE;
 
         PJ_LOG(4,(THIS_FILE, "IP change shutting down transports.."));
+        PJSUA_LOCK();
         status = pjsip_tpmgr_shutdown_all(
                                     pjsip_endpt_get_tpmgr(pjsua_var.endpt),
                                     &sd_param);
+        PJSUA_UNLOCK();
 
         /* Provide dummy info instead of NULL info to avoid possible crash
          * (if app does not check).

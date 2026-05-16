@@ -948,6 +948,10 @@ static int hdr_test_from(pjsip_hdr *h);
 static int hdr_test_proxy_authenticate(pjsip_hdr *h);
 static int hdr_test_record_route(pjsip_hdr *h);
 static int hdr_test_supported(pjsip_hdr *h);
+static int hdr_test_supported_with_leading_comma(pjsip_hdr *h);
+static int hdr_test_supported_with_trailing_comma(pjsip_hdr *h);
+static int hdr_test_supported_with_multiple_commas(pjsip_hdr *h);
+static int hdr_test_supported_with_middle_commas(pjsip_hdr *h);
 static int hdr_test_to(pjsip_hdr *h);
 static int hdr_test_via(pjsip_hdr *h);
 static int hdr_test_via_ipv6_1(pjsip_hdr *h);
@@ -1128,7 +1132,39 @@ struct hdr_test_t
         /* Empty Supported */
         "Supported", "k",
         "",
-        &hdr_test_supported,
+        &hdr_test_supported
+    },
+
+    {
+        /* Supported with leading comma (buggy MizuDroid format) */
+        "Supported", "k",
+        ",outbound",
+        &hdr_test_supported_with_leading_comma,
+        HDR_FLAG_DONT_PRINT
+    },
+
+    {
+        /* Supported with trailing comma */
+        "Supported", "k",
+        "outbound,",
+        &hdr_test_supported_with_trailing_comma,
+        HDR_FLAG_DONT_PRINT
+    },
+
+    {
+        /* Supported with multiple consecutive commas at beginning */
+        "Supported", "k",
+        ",,,outbound,path",
+        &hdr_test_supported_with_multiple_commas,
+        HDR_FLAG_DONT_PRINT
+    },
+
+    {
+        /* Supported with multiple consecutive commas in middle */
+        "Supported", "k",
+        "outbound,,,path",
+        &hdr_test_supported_with_middle_commas,
+        HDR_FLAG_DONT_PRINT
     },
 
     {
@@ -1736,6 +1772,92 @@ static int hdr_test_supported(pjsip_hdr *h)
 }
 
 /*
+    ",outbound"
+    Test for handling leading comma (buggy MizuDroid format)
+ */
+static int hdr_test_supported_with_leading_comma(pjsip_hdr *h)
+{
+    pjsip_supported_hdr *hdr = (pjsip_supported_hdr*)h;
+
+    if (h->type != PJSIP_H_SUPPORTED)
+        return -2330;
+
+    if (hdr->count != 1)
+        return -2331;
+
+    if (pj_strcmp2(&hdr->values[0], "outbound") != 0)
+        return -2332;
+
+    return 0;
+}
+
+/*
+    "outbound,"
+    Test for handling trailing comma
+ */
+static int hdr_test_supported_with_trailing_comma(pjsip_hdr *h)
+{
+    pjsip_supported_hdr *hdr = (pjsip_supported_hdr*)h;
+
+    if (h->type != PJSIP_H_SUPPORTED)
+        return -2340;
+
+    if (hdr->count != 1)
+        return -2341;
+
+    if (pj_strcmp2(&hdr->values[0], "outbound") != 0)
+        return -2342;
+
+    return 0;
+}
+
+/*
+    ",,,outbound,path"
+    Test for handling multiple consecutive commas at beginning
+ */
+static int hdr_test_supported_with_multiple_commas(pjsip_hdr *h)
+{
+    pjsip_supported_hdr *hdr = (pjsip_supported_hdr*)h;
+
+    if (h->type != PJSIP_H_SUPPORTED)
+        return -2350;
+
+    if (hdr->count != 2)
+        return -2351;
+
+    if (pj_strcmp2(&hdr->values[0], "outbound") != 0)
+        return -2352;
+
+    if (pj_strcmp2(&hdr->values[1], "path") != 0)
+        return -2353;
+
+    return 0;
+}
+
+/*
+    "outbound,,,path"
+    Test for handling multiple consecutive commas in middle
+ */
+static int hdr_test_supported_with_middle_commas(pjsip_hdr *h)
+{
+    pjsip_supported_hdr *hdr = (pjsip_supported_hdr*)h;
+
+    if (h->type != PJSIP_H_SUPPORTED)
+        return -2360;
+
+    if (hdr->count != 2)
+        return -2361;
+
+    if (pj_strcmp2(&hdr->values[0], "outbound") != 0)
+        return -2362;
+
+    if (pj_strcmp2(&hdr->values[1], "path") != 0)
+        return -2363;
+
+    return 0;
+}
+
+/*
     NAME_ADDR GENERIC_PARAM,
  */
 static int hdr_test_to(pjsip_hdr *h)
@@ -1991,6 +2113,125 @@ static int hdr_test(void)
 
 
 /*****************************************************************************/
+/* Test that parsing a complete SIP message with a malformed registered header
+ * value does not crash and always produces a valid (non-NULL) hname pointer
+ * in every error-report entry.
+ *
+ * This directly exercises the longjmp/volatile clobbering fix in
+ * int_parse_msg() (sip_parser.c): before that fix, longjmp() could restore
+ * the CPU registers holding hname.ptr/hname.slen to their setjmp-time
+ * values, yielding a garbage pointer that later caused SIGSEGV when the
+ * error was logged via pj_ansi_snprintf(..., "%.*s", ..., err->hname.ptr).
+ */
+static pj_status_t malformed_hdr_test(void)
+{
+    /* Each test case is a complete SIP message that contains at least one
+     * header whose value is malformed enough to cause the registered handler
+     * to throw a PJ_THROW exception.
+     */
+    static const struct {
+        const char *desc;
+        const char *msg;
+        const char *expected_hname; /* expected hname in first error entry */
+    } cases[] = {
+        {
+            /* Max-Forwards handler calls parse_generic_int_hdr() which calls
+             * pj_scan_get(DIGIT_SPEC,...).  "notanumber" has no digits, so
+             * pj_scan_get() throws immediately.
+             */
+            "Max-Forwards: notanumber",
+            "INVITE sip:bob@biloxi.com SIP/2.0\r\n"
+            "Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds8\r\n"
+            "Max-Forwards: notanumber\r\n"
+            "To: Bob <sip:bob@biloxi.com>\r\n"
+            "From: Alice <sip:alice@atlanta.com>;tag=1928301774\r\n"
+            "Call-ID: malformed-mf@atlanta.com\r\n"
+            "CSeq: 1 INVITE\r\n"
+            "Content-Length: 0\r\n"
+            "\r\n",
+            "Max-Forwards"
+        },
+        {
+            /* Content-Length handler also calls pj_scan_get(DIGIT_SPEC,...).
+             * Same throw path as above but with a different header.
+             */
+            "Content-Length: notanumber",
+            "SIP/2.0 200 OK\r\n"
+            "Via: SIP/2.0/UDP pc33.atlanta.com;branch=z9hG4bKnashds8\r\n"
+            "To: Bob <sip:bob@biloxi.com>;tag=abc\r\n"
+            "From: Alice <sip:alice@atlanta.com>;tag=1928301774\r\n"
+            "Call-ID: malformed-cl@atlanta.com\r\n"
+            "CSeq: 1 INVITE\r\n"
+            "Content-Length: notanumber\r\n"
+            "\r\n",
+            "Content-Length"
+        },
+    };
+
+    unsigned i;
+
+    PJ_LOG(3,(THIS_FILE, "  testing malformed header error reporting.."));
+
+    for (i = 0; i < PJ_ARRAY_SIZE(cases); ++i) {
+        pj_pool_t *pool;
+        pjsip_parser_err_report err_list;
+        pjsip_parser_err_report *err;
+        pj_size_t len;
+
+        pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
+        pj_list_init(&err_list);
+        len = pj_ansi_strlen(cases[i].msg);
+
+        /* Must not crash (SIGSEGV was the pre-fix symptom). */
+        /* Cast away const: pjsip_parse_msg() requires a mutable buffer
+         * (it modifies it during scanning), and the test data is read-only.
+         */
+        pjsip_parse_msg(pool, (char *)cases[i].msg, len, &err_list);
+
+        /* The malformed header value must have produced at least one
+         * error report entry.
+         */
+        if (pj_list_empty(&err_list)) {
+            PJ_LOG(3,(THIS_FILE,
+                      "    error: no parse error reported for: %s",
+                      cases[i].desc));
+            pjsip_endpt_release_pool(endpt, pool);
+            return -600;
+        }
+
+        /* Every error entry must carry a non-NULL hname.ptr.
+         * Passing NULL to %.*s (as done in sip_transport.c) is
+         * undefined behavior even when the length field is 0.
+         */
+        for (err = err_list.next; err != &err_list; err = err->next) {
+            if (err->hname.ptr == NULL) {
+                PJ_LOG(3,(THIS_FILE,
+                          "    error: err_info->hname.ptr is NULL for: %s",
+                          cases[i].desc));
+                pjsip_endpt_release_pool(endpt, pool);
+                return -610;
+            }
+        }
+
+        /* The first error entry must identify the offending header. */
+        err = err_list.next;
+        if (pj_strcmp2(&err->hname, cases[i].expected_hname) != 0) {
+            PJ_LOG(3,(THIS_FILE,
+                      "    error: wrong hname '%.*s', expected '%s' for: %s",
+                      (int)err->hname.slen, err->hname.ptr,
+                      cases[i].expected_hname, cases[i].desc));
+            pjsip_endpt_release_pool(endpt, pool);
+            return -620;
+        }
+
+        pjsip_endpt_release_pool(endpt, pool);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*****************************************************************************/
 
 int msg_test(void)
 {
@@ -2009,6 +2250,10 @@ int msg_test(void)
         return status;
 
     status = simple_test();
+    if (status != PJ_SUCCESS)
+        return status;
+
+    status = malformed_hdr_test();
     if (status != PJ_SUCCESS)
         return status;
 

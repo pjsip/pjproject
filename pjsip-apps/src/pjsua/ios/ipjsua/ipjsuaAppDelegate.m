@@ -35,8 +35,15 @@
 
 #define THIS_FILE       "ipjsuaAppDelegate.m"
 
-/* Specify if we use push notification. */
-#define USE_PUSH_NOTIFICATION 1
+/* Specify if we use push notification.
+ * Note that you need to setup your SIP server first to support it.
+ */
+#define USE_PUSH_NOTIFICATION 0
+
+/* Specify if we want to use video.
+ * Note that video can only work in the foreground.
+ */
+#define USE_VIDEO 1
 
 /* Specify the timeout (in sec) to wait for the incoming INVITE
  * to come after we receive push notification.
@@ -312,6 +319,8 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     int argc = PJ_ARRAY_SIZE(pjsua_app_def_argv) -1;
     pj_status_t status;
     
+    REGISTER_THREAD;
+
     isShuttingDown = false;
     displayMsg("Starting..");
     
@@ -358,10 +367,10 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
         cfg.cred_info[0].scheme = pj_str("digest");
         cfg.cred_info[0].username = pj_str(SIP_USER);
         cfg.cred_info[0].data = pj_str(SIP_PASSWD);
-        /* Uncomment this to enable video. Note that video can only
-         * work in the foreground.
-         */
-        // app_config_init_video(&cfg);
+
+#if USE_VIDEO
+        app_config_init_video(&cfg);
+#endif
 
         /* If we have Push Notification token, put it in the registration
          * Contact URI params.
@@ -480,6 +489,9 @@ didDectivateAudioSession:(AVAudioSession *) audioSession
 
     long code = (long)END_CALL | (call_id << 4);
     pjsua_schedule_timer2(pjsip_funcs, (void *)code, 0);
+}
+
+- (void)providerDidReset:(nonnull CXProvider *)provider {
 }
 
 - (void)pushRegistry:(PKPushRegistry *)registry

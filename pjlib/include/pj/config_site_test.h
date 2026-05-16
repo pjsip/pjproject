@@ -1,4 +1,15 @@
-#define PJMEDIA_SRTP_HAS_DTLS 1
+/* To suppress warning: label ‘TODO*’ defined but not used [-Wunused-label] */
+#define PJ_TODO(x)
+
+/* Temp workaround for MacOS rwmutex deadlock */
+#if defined(PJ_DARWINOS) && PJ_DARWINOS
+    #undef PJ_EMULATE_RWMUTEX
+    #define PJ_EMULATE_RWMUTEX  1
+#endif
+
+#if PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL
+#   define PJMEDIA_SRTP_HAS_DTLS 1
+#endif
 #define PJMEDIA_HAS_WEBRTC_AEC 1
 #define PJMEDIA_CODEC_L16_HAS_8KHZ_MONO 1
 #define PJMEDIA_CODEC_L16_HAS_8KHZ_STEREO 1
@@ -8,4 +19,4 @@
 #define PJMEDIA_CODEC_L16_HAS_48KHZ_STEREO 1
 #define PJMEDIA_HAS_G7221_CODEC 1
 #define PJMEDIA_HAS_G722_CODEC 1
-#define PJ_EXCLUDE_BENCHMARK_TESTS 1
+#define PJ_EXCLUDE_BENCHMARK_TESTS 0

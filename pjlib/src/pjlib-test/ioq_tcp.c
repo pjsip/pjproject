@@ -167,7 +167,7 @@ static int send_recv_test(pj_ioqueue_t *ioque,
     // Starts send on the client side.
     bytes = bufsize;
     status = pj_ioqueue_send(ckey, &write_op, send_buf, &bytes, 0);
-    if (status != PJ_SUCCESS && bytes != PJ_EPENDING) {
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
         return -120;
     }
     if (status == PJ_EPENDING) {
@@ -946,7 +946,7 @@ int tcp_ioqueue_test()
 {
     pj_ioqueue_epoll_flag epoll_flags[] = {
         PJ_IOQUEUE_EPOLL_AUTO,
-#if PJ_HAS_LINUX_EPOLL
+#if PJ_IOQUEUE_IMP==PJ_IOQUEUE_IMP_EPOLL
         PJ_IOQUEUE_EPOLL_EXCLUSIVE,
         PJ_IOQUEUE_EPOLL_ONESHOT,
         0

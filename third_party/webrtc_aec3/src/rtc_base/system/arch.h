@@ -73,6 +73,9 @@
 #elif defined(__riscv) && __riscv_xlen == 32
 #define WEBRTC_ARCH_32_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN
+#elif defined(__loongarch64) || defined(__loongarch64__)
+#define WEBRTC_ARCH_LITTLE_ENDIAN
+#define WEBRTC_ARCH_64_BITS
 #elif defined(__pnacl__)
 #define WEBRTC_ARCH_32_BITS
 #define WEBRTC_ARCH_LITTLE_ENDIAN

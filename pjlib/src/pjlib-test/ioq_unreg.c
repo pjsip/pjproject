@@ -100,8 +100,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
         if (PJ_TIME_VAL_GTE(now, time_to_unregister)) { 
             sock_data.unregistered = 1;
             TRACE((THIS_FILE, "......on_read_complete(): unregistering"));
-            pj_ioqueue_unregister(key);
             pj_mutex_unlock(sock_data.mutex);
+            pj_ioqueue_unregister(key);
             return;
         }
     }
@@ -161,6 +161,9 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     pj_ioqueue_callback callback;
     pj_time_val end_time;
     pj_status_t status;
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
+    pj_time_val max_time;
+#endif
 
 
     /* Sometimes its important to have other sockets registered to
@@ -168,7 +171,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
      * will return from the poll early.
      */
     if (other_socket) {
-        status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, 56127, &osd.sock);
+        status = app_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, -1, &osd.sock);
         if (status != PJ_SUCCESS) {
             app_perror("Error creating other socket", status);
             return -12;
@@ -248,6 +251,11 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     /* Bootstrap the first send/receive */
     on_read_complete(sock_data.key, sock_data.op_key, 0);
 
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
+    pj_gettimeofday(&max_time);
+    max_time.sec += 10;
+#endif
+
     /* Loop until test time ends */
     for (;;) {
         pj_time_val now, timeout;
@@ -266,9 +274,45 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
             pj_mutex_unlock(sock_data.mutex);
             pj_ioqueue_unregister(sock_data.key);
         }
+        else if (test_method == UNREGISTER_IN_CALLBACK && 
+            PJ_TIME_VAL_GT(now, time_to_unregister) &&
+            !sock_data.unregistered)
+        {
+            /* Read callback is not triggered if packets are lost.
+             * Let's help triggering callback.
+             */
+            pj_ssize_t size;
+            char *sendbuf = "Ping";
+
+            size = pj_ansi_strlen(sendbuf);
+            status = pj_sock_send(sock_data.csock, sendbuf, &size, 0);
+            if (status != PJ_SUCCESS)
+                app_perror("send() error for callback trigger", status);
+
+            pj_thread_sleep(200);
+        }
 
         if (PJ_TIME_VAL_GT(now, end_time) && sock_data.unregistered)
             break;
+
+#if PJ_IOQUEUE_IMP == PJ_IOQUEUE_IMP_IOCP
+        /* Hard timeout for UNREGISTER_IN_CALLBACK on IOCP:
+         * On CI, the recv callback chain may break due to transient
+         * socket errors, causing infinite hang.
+         */
+        if (test_method == UNREGISTER_IN_CALLBACK &&
+            PJ_TIME_VAL_GT(now, max_time) &&
+            !sock_data.unregistered)
+        {
+            PJ_LOG(2,(THIS_FILE, "....%s: timed out waiting for "
+                      "unregister callback", title));
+            pj_mutex_lock(sock_data.mutex);
+            sock_data.unregistered = 1;
+            pj_mutex_unlock(sock_data.mutex);
+            pj_ioqueue_unregister(sock_data.key);
+            break;
+        }
+#endif
 
         timeout.sec = 0; timeout.msec = 200;
         n = pj_ioqueue_poll(ioqueue, &timeout);

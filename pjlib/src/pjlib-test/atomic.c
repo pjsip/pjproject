@@ -44,58 +44,48 @@
 
 #if INCLUDE_ATOMIC_TEST
 
+#define THIS_FILE   "atomic.c"
+#define ERR(r__)    { rc=r__; goto on_return; }
+
 int atomic_test(void)
 {
     pj_pool_t *pool;
     pj_atomic_t *atomic_var;
-    pj_status_t rc;
+    int rc=0;
 
-    pool = pj_pool_create(mem, NULL, 4096, 0, NULL);
-    if (!pool)
-        return -10;
-
+    PJ_TEST_NOT_NULL( (pool=pj_pool_create(mem, NULL, 4096, 0, NULL)),
+                      NULL, ERR(-10));
     /* create() */
-    rc = pj_atomic_create(pool, 111, &atomic_var);
-    if (rc != 0) {
-        return -20;
-    }
+    PJ_TEST_SUCCESS( pj_atomic_create(pool, 111, &atomic_var), NULL, ERR(-20));
 
     /* get: check the value. */
-    if (pj_atomic_get(atomic_var) != 111)
-        return -30;
+    PJ_TEST_EQ( pj_atomic_get(atomic_var), 111, NULL, ERR(-30));
 
     /* increment. */
     pj_atomic_inc(atomic_var);
-    if (pj_atomic_get(atomic_var) != 112)
-        return -40;
+    PJ_TEST_EQ( pj_atomic_get(atomic_var), 112, NULL, ERR(-40));
 
     /* decrement. */
     pj_atomic_dec(atomic_var);
-    if (pj_atomic_get(atomic_var) != 111)
-        return -50;
+    PJ_TEST_EQ( pj_atomic_get(atomic_var), 111, NULL, ERR(-50));
 
     /* set */
     pj_atomic_set(atomic_var, 211);
-    if (pj_atomic_get(atomic_var) != 211)
-        return -60;
+    PJ_TEST_EQ( pj_atomic_get(atomic_var), 211, NULL, ERR(-60));
 
     /* add */
     pj_atomic_add(atomic_var, 10);
-    if (pj_atomic_get(atomic_var) != 221)
-        return -60;
+    PJ_TEST_EQ( pj_atomic_get(atomic_var), 221, NULL, ERR(-60));
 
     /* check the value again. */
-    if (pj_atomic_get(atomic_var) != 221)
-        return -70;
+    PJ_TEST_EQ( pj_atomic_get(atomic_var), 221, NULL, ERR(-70));
 
     /* destroy */
-    rc = pj_atomic_destroy(atomic_var);
-    if (rc != 0)
-        return -80;
+    PJ_TEST_SUCCESS( pj_atomic_destroy(atomic_var), NULL, ERR(-80));
 
+on_return:
     pj_pool_release(pool);
-
-    return 0;
+    return rc;
 }
 
 

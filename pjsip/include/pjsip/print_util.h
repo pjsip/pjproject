@@ -19,6 +19,9 @@
 #ifndef __PJSIP_PRINT_H__
 #define __PJSIP_PRINT_H__
 
+PJ_BEGIN_DECL
+
+
 #define copy_advance_char_check(buf,chr)   \
         do { \
             if (1 >= (endbuf-buf)) return -1;   \
@@ -161,6 +164,9 @@ PJ_INLINE(void) init_hdr(void *hptr, pjsip_hdr_e htype, void *vptr)
     hdr->vptr = (pjsip_hdr_vptr*) vptr;
     pj_list_init(hdr);
 }
+
+
+PJ_END_DECL
 
 #endif  /* __PJSIP_PRINT_H__ */
 

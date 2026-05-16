@@ -35,6 +35,9 @@
     <ClCompile Include="..\src\pjsua-lib\pjsua_pres.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjsua-lib\pjsua_txt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjsua-lib\pjsua_vid.c">
       <Filter>Source Files</Filter>
     </ClCompile>

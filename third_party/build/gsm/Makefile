@@ -10,7 +10,7 @@ export GSM_CODEC_LIB := libgsmcodec-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export GSM_CODEC_SONAME := libgsmcodec.$(SHLIB_SUFFIX)
-export GSM_CODEC_SHLIB := $(GSM_CODEC_SONAME).$(PJ_VERSION_MAJOR)
+export GSM_CODEC_SHLIB := $(GSM_CODEC_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################
@@ -34,6 +34,7 @@ export GSM_CODEC_OBJS = add.o code.o decode.o \
 
 export GSM_CODEC_CFLAGS = -DSASR -DWAV49 -DNeedFunctionPrototypes=1 $(_CFLAGS)
 
+export GSM_CODEC_LDFLAGS += $(_LDFLAGS)
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################

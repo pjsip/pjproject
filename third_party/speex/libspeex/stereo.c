@@ -1,21 +1,21 @@
-/* Copyright (C) 2002 Jean-Marc Valin 
+/* Copyright (C) 2002 Jean-Marc Valin
    File: stereo.c
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -33,8 +33,8 @@
 #include "config.h"
 #endif
 
-#include <speex/speex_stereo.h>
-#include <speex/speex_callbacks.h>
+#include "speex/speex_stereo.h"
+#include "speex/speex_callbacks.h"
 #include "math_approx.h"
 #include "vq.h"
 #include <math.h>
@@ -69,7 +69,7 @@ static const spx_word16_t balance_bounds[31] = {18, 23, 30, 38, 49, 63,  81, 104
 #ifdef FIXED_POINT
 #define COMPATIBILITY_HACK(s) do {if ((s)->reserved1 != 0xdeadbeef) speex_stereo_state_reset((SpeexStereoState*)s); } while (0);
 #else
-#define COMPATIBILITY_HACK(s) 
+#define COMPATIBILITY_HACK(s)
 #endif
 
 EXPORT SpeexStereoState *speex_stereo_state_init()
@@ -96,7 +96,7 @@ EXPORT void speex_stereo_state_reset(SpeexStereoState *_stereo)
    stereo->smooth_right = 1.f;
    stereo->reserved1 = 0;
    stereo->reserved2 = 0;
-#endif   
+#endif
 }
 
 EXPORT void speex_stereo_state_destroy(SpeexStereoState *stereo)
@@ -104,6 +104,7 @@ EXPORT void speex_stereo_state_destroy(SpeexStereoState *stereo)
    speex_free(stereo);
 }
 
+#ifndef DISABLE_ENCODER
 #ifndef DISABLE_FLOAT_API
 EXPORT void speex_encode_stereo(float *data, int frame_size, SpeexBits *bits)
 {
@@ -123,7 +124,7 @@ EXPORT void speex_encode_stereo(float *data, int frame_size, SpeexBits *bits)
    /*Quantization*/
    speex_bits_pack(bits, 14, 5);
    speex_bits_pack(bits, SPEEX_INBAND_STEREO, 4);
-   
+
    balance=4*log(balance);
 
    /*Pack sign*/
@@ -134,9 +135,9 @@ EXPORT void speex_encode_stereo(float *data, int frame_size, SpeexBits *bits)
    balance=floor(.5+fabs(balance));
    if (balance>30)
       balance=31;
-   
+
    speex_bits_pack(bits, (int)balance, 5);
-   
+
    /* FIXME: this is a hack */
    tmp=scal_quant(e_ratio*Q15_ONE, e_ratio_quant_bounds, 4);
    speex_bits_pack(bits, tmp, 2);
@@ -152,8 +153,12 @@ EXPORT void speex_encode_stereo_int(spx_int16_t *data, int frame_size, SpeexBits
    int balance_id;
 #ifdef FIXED_POINT
    int shift;
+   int sqr_shift;
+
+   /* Avoid overflows when summing squares */
+   sqr_shift = frame_size >= 512 ? 9 : 8;
 #endif
-   
+
    /* In band marker */
    speex_bits_pack(bits, 14, 5);
    /* Stereo marker */
@@ -161,15 +166,15 @@ EXPORT void speex_encode_stereo_int(spx_int16_t *data, int frame_size, SpeexBits
 
    for (i=0;i<frame_size;i++)
    {
-      e_left  += SHR32(MULT16_16(data[2*i],data[2*i]),8);
-      e_right += SHR32(MULT16_16(data[2*i+1],data[2*i+1]),8);
+      e_left  += SHR32(MULT16_16(data[2*i],data[2*i]),sqr_shift);
+      e_right += SHR32(MULT16_16(data[2*i+1],data[2*i+1]),sqr_shift);
 #ifdef FIXED_POINT
       /* I think this is actually unbiased */
       data[i] =  SHR16(data[2*i],1)+PSHR16(data[2*i+1],1);
 #else
       data[i] =  .5*(((float)data[2*i])+data[2*i+1]);
 #endif
-      e_tot   += SHR32(MULT16_16(data[i],data[i]),8);
+      e_tot   += SHR32(MULT16_16(data[i],data[i]),sqr_shift);
    }
    if (e_left > e_right)
    {
@@ -198,9 +203,9 @@ EXPORT void speex_encode_stereo_int(spx_int16_t *data, int frame_size, SpeexBits
    if (balance_id>30)
       balance_id=31;
 #endif
-   
+
    speex_bits_pack(bits, balance_id, 5);
-   
+
    /* "coherence" quantisation */
 #ifdef FIXED_POINT
    shift = spx_ilog2(e_tot);
@@ -211,11 +216,17 @@ EXPORT void speex_encode_stereo_int(spx_int16_t *data, int frame_size, SpeexBits
 #else
    e_ratio = e_tot/(1.+e_left+e_right);
 #endif
-   
+
    tmp=scal_quant(EXTRACT16(e_ratio), e_ratio_quant_bounds, 4);
    /*fprintf (stderr, "%d %d %d %d\n", largest, smallest, balance_id, e_ratio);*/
    speex_bits_pack(bits, tmp, 2);
 }
+#else /* DISABLE_ENCODER */
+EXPORT void speex_encode_stereo_int(spx_int16_t *data, int frame_size, SpeexBits *bits)
+{
+}
+#endif /* DISABLE_ENCODER */
+
 
 #ifndef DISABLE_FLOAT_API
 EXPORT void speex_decode_stereo(float *data, int frame_size, SpeexStereoState *_stereo)
@@ -224,12 +235,12 @@ EXPORT void speex_decode_stereo(float *data, int frame_size, SpeexStereoState *_
    spx_word32_t balance;
    spx_word16_t e_left, e_right, e_ratio;
    RealSpeexStereoState *stereo = (RealSpeexStereoState*)_stereo;
-   
+
    COMPATIBILITY_HACK(stereo);
-   
+
    balance=stereo->balance;
    e_ratio=stereo->e_ratio;
-   
+
    /* These two are Q14, with max value just below 2. */
    e_right = DIV32(QCONST32(1., 22), spx_sqrt(MULT16_32_Q15(e_ratio, ADD32(QCONST32(1., 16), balance))));
    e_left = SHR32(MULT16_16(spx_sqrt(balance), e_right), 8);
@@ -253,10 +264,10 @@ EXPORT void speex_decode_stereo_int(spx_int16_t *data, int frame_size, SpeexSter
    RealSpeexStereoState *stereo = (RealSpeexStereoState*)_stereo;
 
    COMPATIBILITY_HACK(stereo);
-   
+
    balance=stereo->balance;
    e_ratio=stereo->e_ratio;
-   
+
    /* These two are Q14, with max value just below 2. */
    e_right = DIV32(QCONST32(1., 22), spx_sqrt(MULT16_32_Q15(e_ratio, ADD32(QCONST32(1., 16), balance))));
    e_left = SHR32(MULT16_16(spx_sqrt(balance), e_right), 8);
@@ -278,7 +289,7 @@ EXPORT int speex_std_stereo_request_handler(SpeexBits *bits, void *state, void *
    int tmp;
 
    stereo = (RealSpeexStereoState*)data;
-   
+
    COMPATIBILITY_HACK(stereo);
 
    if (speex_bits_unpack_unsigned(bits, 1))

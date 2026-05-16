@@ -111,8 +111,13 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
 }
 
 
+/* Maximum recursion depth for DNS name compression pointers.
+ * RFC 1035 compression in practice never exceeds 2-3 levels.
+ */
+#define MAX_NAME_RECURSION  5
+
 /* Get a name length (note: name consists of multiple labels and
- * it may contain pointers when name compression is applied) 
+ * it may contain pointers when name compression is applied)
  */
 static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt, 
                                 const pj_uint8_t *start, const pj_uint8_t *max, 
@@ -122,7 +127,7 @@ static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt,
     pj_status_t status;
 
     /* Limit the number of recursion */
-    if (rec_counter > 10) {
+    if (rec_counter > MAX_NAME_RECURSION) {
         /* Too many name recursion */
         return PJLIB_UTIL_EDNSINNAMEPTR;
     }
@@ -132,12 +137,15 @@ static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt,
 
     *name_len = *parsed_len = 0;
     p = start;
-    while (*p) {
+    while (p < max && *p) {
         if ((*p & 0xc0) == 0xc0) {
             /* Compression is found! */
             int ptr_len = 0;
             int dummy;
             pj_uint16_t offset;
+
+            if (p + 1 >= max)
+                return PJLIB_UTIL_EDNSINNAMEPTR;
 
             /* Get the 14bit offset */
             pj_memcpy(&offset, p, 2);
@@ -197,7 +205,7 @@ static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt,
     pj_status_t status;
 
     /* Limit the number of recursion */
-    if (rec_counter > 10) {
+    if (rec_counter > MAX_NAME_RECURSION) {
         /* Too many name recursion */
         return PJLIB_UTIL_EDNSINNAMEPTR;
     }
@@ -206,10 +214,13 @@ static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt,
         return PJLIB_UTIL_EDNSINNAMEPTR;
 
     p = start;
-    while (*p) {
+    while (p < max && *p) {
         if ((*p & 0xc0) == 0xc0) {
             /* Compression is found! */
             pj_uint16_t offset;
+
+            if (p + 1 >= max)
+                return PJLIB_UTIL_EDNSINNAMEPTR;
 
             /* Get the 14bit offset */
             pj_memcpy(&offset, p, 2);
@@ -475,6 +486,17 @@ PJ_DEF(pj_status_t) pj_dns_parse_packet( pj_pool_t *pool,
     res->hdr.anscount = pj_ntohs(res->hdr.anscount);
     res->hdr.nscount  = pj_ntohs(res->hdr.nscount);
     res->hdr.arcount  = pj_ntohs(res->hdr.arcount);
+
+    /* Sanity check section counts to prevent excessive allocation from
+     * malicious packets.
+     */
+    if (res->hdr.qdcount > PJ_DNS_MAX_SECTION_COUNT ||
+        res->hdr.anscount > PJ_DNS_MAX_SECTION_COUNT ||
+        res->hdr.nscount > PJ_DNS_MAX_SECTION_COUNT ||
+        res->hdr.arcount > PJ_DNS_MAX_SECTION_COUNT)
+    {
+        return PJ_ETOOMANY;
+    }
 
     /* Mark start and end of payload */
     start = ((const pj_uint8_t*)packet) + sizeof(pj_dns_hdr);

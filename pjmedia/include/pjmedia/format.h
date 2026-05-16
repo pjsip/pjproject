@@ -78,6 +78,9 @@ typedef enum pjmedia_format_id
     /** AMR narrowband */
     PJMEDIA_FORMAT_AMR      = PJMEDIA_FORMAT_PACK(' ', 'A', 'M', 'R'),
 
+    /** ITU G.722 */
+    PJMEDIA_FORMAT_G722     = PJMEDIA_FORMAT_PACK('G', '7', '2', '2'),
+
     /** ITU G.729 */
     PJMEDIA_FORMAT_G729     = PJMEDIA_FORMAT_PACK('G', '7', '2', '9'),
 

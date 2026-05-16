@@ -575,7 +575,7 @@ PJ_DECL(pj_ssize_t) pj_strtok2(const pj_str_t *str, const char *delim,
  * Find the occurence of a substring substr in string str.
  *
  * @param str       The string to search.
- * @param substr    The string to search fo.
+ * @param substr    The string to search for.
  *
  * @return the pointer to the position of substr in str, or NULL. Note
  *         that if str is not NULL terminated, the returned pointer
@@ -588,7 +588,7 @@ PJ_DECL(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr);
  * both strings.
  *
  * @param str       The string to search.
- * @param substr    The string to search fo.
+ * @param substr    The string to search for.
  *
  * @return the pointer to the position of substr in str, or NULL. Note
  *         that if str is not NULL terminated, the returned pointer

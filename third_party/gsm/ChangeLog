@@ -1,3 +1,69 @@
+Sun Aug 31 20:25:13 2025	Jutta Degener (jutta@pobox.com)
+
+	* Release 1.0 Patchlevel 23
+	Declare signal handlers as accepting an int; sometimes, gcc cares.
+	(Thanks to Thomas Petazzoni <thomas.petazzoni@bootlin.com>
+	for the patch; errors are mine.)
+	Also, write &"s"[x == 1] instead of "s" + (x == 1) to pluralize
+	(pointer arithmetic on arrays is so rare as to elicit compiler warnings
+	in some settings); and why didn't toast_lin.c:linear_input() have a
+	P1 proto macro like linear_output()?
+
+Thu Aug  4 18:47:10 2022	Jutta Degener (jutta@pobox.com)
+
+	* Release 1.0 Patchlevel 22
+	Remove unused, and occasionally out of date, VERSION variable
+	from Makefile.
+
+Sun Jul 31 16:17:59 2022	Jutta Degener (jutta@pobox.com)
+
+	* Release 1.0 Patchlevel 21
+	Use $(LN), not ln, in the Makefile rules for the installed binary
+ 	of untoast and tcat.
+	(Thanks to Carlo Cabrera for pointing that out!)
+
+Mon Jul  4 10:34:18 2022
+
+	* Release 1.0 Patchlevel 20
+	Use $(RMFLAGS) with the rms in the Makefile; add -f to $(RMFLAGS) to
+        avoid spurious error messages during build.
+
+Fri Mar 27 15:18:06  2020
+
+	* Release 1.0 Patchlevel 19
+	Make it easier to include gsm.h from C++ by wrapping it with macros. 
+	Throw a #define _POSIX_C_SOURCE 200809L into toast.h to make it
+	possible for Linux glibc to just work.
+	(Thanks to enh@google.com for the suggestion; errors are mine.)
+	Switch from compress/.Z to gzip/.gz 
+
+Sat May  5 21:48:20  2018
+
+	* Release 1.0 Patchlevel 18
+	Remove the MacOS "quarantine" files that I didn't know I'd shipped.
+	Remove some trailing spaces.
+	Bump up the patchlevel in inc/gsm.h (I'd forgotten that in release 17.)
+
+Tue Jun 27 17:59:30  2017
+
+	* Release 1.0 Patchlevel 17
+	New email addresses in the README.
+	Avoid left-shifting signed integers.
+	Don't print longwords using %d or %ld, cast them to (long) first.
+	Don't compare longwords as longs in addtest, we only care for the
+		lower 32 bits. (The math works, but the test failed.)
+
+Sat Sep 17 14:50:55  2016
+
+	* Release 1.0 Patchlevel 16
+	New email addresses in the manual pages (patch 16)
+	Removed a stray .orig file (in patch 15) 
+
+Sun Apr  5  04:53:07 2009       Jutta Degener (jutta@pobox.com)
+
+	* Release 1.0 Patchlevel 13
+	COPYRIGHT: exploring the deeper meaning and cultural
+	history of the word "any".
 
 Fri Jun  2 06:27:56 2006	Jutta Degener (jutta@pobox.com)
 
@@ -90,3 +156,4 @@ Wed Oct 28 14:12:35 1992  Carsten Bormann  (cabo at kubus)
 	Copyright 1992 by Jutta Degener and Carsten Bormann, Technische
 	Universitaet Berlin.  See the accompanying file "COPYRIGHT" for
 	details.  THERE IS ABSOLUTELY NO WARRANTY FOR THIS SOFTWARE.
+

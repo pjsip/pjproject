@@ -192,12 +192,56 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
             pjsip_endpt_cancel_timer(endpt, &cd->timer);
         }
 
-        /* Rewind play file when hangup automatically, 
+        /* Rewind play file when hangup automatically,
          * since file is not looped
          */
         if (app_config.auto_play_hangup)
             pjsua_player_set_pos(app_config.wav_id, 0);
 
+        /* Cleanup dynamic playback if attached to this call */
+        if (app_config.dyn_player_active &&
+            app_config.dyn_player_call == call_id)
+        {
+            PJ_LOG(3, (THIS_FILE, "Call ended, stopping playback"));
+
+            /* Disconnect and destroy player if created */
+            if (app_config.dyn_player_id != PJSUA_INVALID_ID) {
+                /* Destroy player (connections to call's slot will be cleaned
+                 * up automatically as the call is terminating) */
+                pjsua_player_destroy(app_config.dyn_player_id);
+            }
+
+            /* Reset state */
+            app_config.dyn_player_id = PJSUA_INVALID_ID;
+            app_config.dyn_player_port = PJSUA_INVALID_ID;
+            app_config.dyn_player_call = PJSUA_INVALID_ID;
+            app_config.dyn_player_active = PJ_FALSE;
+            app_config.dyn_play_filename[0] = '\0';
+        }
+
+        /* Cleanup dynamic recording if attached to this call */
+        if (app_config.dyn_rec_active &&
+            app_config.dyn_rec_call == call_id)
+        {
+            PJ_LOG(3, (THIS_FILE, "Call ended, stopping recording"));
+
+            /* Disconnect and destroy recorder if created */
+            if (app_config.dyn_rec_id != PJSUA_INVALID_ID) {
+                /* Disconnect microphone from recorder (mic is always slot 0)
+                 * (call's slot is being torn down, so that disconnects automatically) */
+                pjsua_conf_disconnect(0, app_config.dyn_rec_port);
+
+                /* Destroy recorder */
+                pjsua_recorder_destroy(app_config.dyn_rec_id);
+            }
+
+            /* Reset state */
+            app_config.dyn_rec_id = PJSUA_INVALID_ID;
+            app_config.dyn_rec_port = PJSUA_INVALID_ID;
+            app_config.dyn_rec_call = PJSUA_INVALID_ID;
+            app_config.dyn_rec_active = PJ_FALSE;
+            app_config.dyn_rec_filename[0] = '\0';
+        }
 
         PJ_LOG(3,(THIS_FILE, "Call %d is DISCONNECTED [reason=%d (%.*s)]", 
                   call_id,
@@ -325,6 +369,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
         pjsua_call_setting_default(&opt);
         opt.aud_cnt = app_config.aud_cnt;
         opt.vid_cnt = app_config.vid.vid_cnt;
+        opt.txt_cnt = app_config.txt_cnt;
 
         pjsua_call_answer2(call_id, &opt, app_config.auto_answer, NULL,
                            NULL);
@@ -345,7 +390,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 
         PJ_LOG(3,(THIS_FILE,
                   "Incoming call for account %d!\n"
-                  "Media count: %d audio & %d video\n"
+                  "Media count: %d audio & %d video & %d text\n"
                   "%s"
                   "From: %.*s\n"
                   "To: %.*s\n"
@@ -353,6 +398,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                   acc_id,
                   call_info.rem_aud_cnt,
                   call_info.rem_vid_cnt,
+                  call_info.rem_txt_cnt,
                   notif_st,
                   (int)call_info.remote_info.slen,
                   call_info.remote_info.ptr,
@@ -421,12 +467,90 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
             pjsua_conf_connect(call_conf_slot, app_config.rec_port);
         }
 
+        /* Dynamic recording - start if queued */
+        if (app_config.dyn_rec_active &&
+            app_config.dyn_rec_id == PJSUA_INVALID_ID &&
+            app_config.dyn_rec_filename[0] != '\0')
+        {
+            pj_status_t status;
+            pjsua_recorder_id rec_id;
+            pjsua_conf_port_id rec_port;
+            pj_str_t rec_file;
+
+            /* Create recorder */
+            rec_file = pj_str(app_config.dyn_rec_filename);
+            status = pjsua_recorder_create(&rec_file, 0, NULL, 0, 0, &rec_id);
+            if (status == PJ_SUCCESS) {
+                rec_port = pjsua_recorder_get_conf_port(rec_id);
+
+                /* Connect call to recorder */
+                pjsua_conf_connect(call_conf_slot, rec_port);
+
+                /* Connect microphone to recorder */
+                pjsua_conf_connect(0, rec_port);
+
+                /* Save state */
+                app_config.dyn_rec_id = rec_id;
+                app_config.dyn_rec_port = rec_port;
+                app_config.dyn_rec_call = ci->id;
+
+                PJ_LOG(3, (THIS_FILE, "Dynamic recording auto-started"));
+            } else {
+                PJ_LOG(2, (THIS_FILE, "Failed to auto-start recording: %d", status));
+                app_config.dyn_rec_active = PJ_FALSE;
+                app_config.dyn_rec_filename[0] = '\0';
+            }
+        }
+
+        /* Record audio into AVI, if desired */
+        if (app_config.avi_auto_rec && app_config.avi_rec_audio &&
+            app_config.avi_aud_slot != PJSUA_INVALID_ID)
+        {
+            pjsua_conf_connect(call_conf_slot, app_config.avi_aud_slot);
+        }
+
         /* Stream a file, if desired */
-        if ((app_config.auto_play || app_config.auto_play_hangup) && 
+        if ((app_config.auto_play || app_config.auto_play_hangup) &&
             app_config.wav_port != PJSUA_INVALID_ID)
         {
             pjsua_conf_connect(app_config.wav_port, call_conf_slot);
             connect_sound = PJ_FALSE;
+        }
+
+        /* Dynamic playback - start if queued */
+        if (app_config.dyn_player_active &&
+            app_config.dyn_player_id == PJSUA_INVALID_ID &&
+            app_config.dyn_play_filename[0] != '\0')
+        {
+            pj_status_t status;
+            pjsua_player_id player_id;
+            pjsua_conf_port_id player_port;
+            pj_str_t play_file;
+
+            /* Create player */
+            play_file = pj_str(app_config.dyn_play_filename);
+            status = pjsua_player_create(&play_file, 0, &player_id);
+            if (status == PJ_SUCCESS) {
+                player_port = pjsua_player_get_conf_port(player_id);
+
+                /* Connect player to call */
+                pjsua_conf_connect(player_port, call_conf_slot);
+
+                /* Disconnect microphone (like auto-play) */
+                pjsua_conf_disconnect(0, call_conf_slot);
+
+                /* Save state */
+                app_config.dyn_player_id = player_id;
+                app_config.dyn_player_port = player_port;
+                app_config.dyn_player_call = ci->id;
+
+                PJ_LOG(3, (THIS_FILE, "Dynamic playback auto-started"));
+                connect_sound = PJ_FALSE;
+            } else {
+                PJ_LOG(2, (THIS_FILE, "Failed to auto-start playback: %d", status));
+                app_config.dyn_player_active = PJ_FALSE;
+                app_config.dyn_play_filename[0] = '\0';
+            }
         }
 
         /* Stream AVI, if desired */
@@ -488,6 +612,14 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
                 pjsua_conf_connect(call_conf_slot, app_config.rec_port);
                 pjsua_conf_connect(0, app_config.rec_port);
             }
+
+            /* Record audio into AVI, if desired */
+            if (app_config.avi_auto_rec && app_config.avi_rec_audio &&
+                app_config.avi_aud_slot != PJSUA_INVALID_ID)
+            {
+                pjsua_conf_connect(call_conf_slot, app_config.avi_aud_slot);
+                pjsua_conf_connect(0, app_config.avi_aud_slot);
+            }
         }
     }
 }
@@ -496,10 +628,22 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 static void on_call_video_state(pjsua_call_info *ci, unsigned mi,
                                 pj_bool_t *has_error)
 {
-    if (ci->media_status != PJSUA_CALL_MEDIA_ACTIVE)
+    if (ci->media[mi].status != PJSUA_CALL_MEDIA_ACTIVE)
         return;
 
     arrange_window(ci->media[mi].stream.vid.win_in);
+
+#if PJMEDIA_HAS_VIDEO
+    if (app_config.avi_auto_rec &&
+        app_config.avi_vid_slot != PJSUA_INVALID_ID)
+    {
+        pjsua_conf_port_id pid;
+
+        pid = pjsua_call_get_vid_conf_port(ci->id, PJMEDIA_DIR_DECODING);
+        if (pid != PJSUA_INVALID_ID)
+            pjsua_vid_conf_connect(pid, app_config.avi_vid_slot, NULL);
+    }
+#endif
 
     PJ_UNUSED_ARG(has_error);
 }
@@ -586,6 +730,21 @@ static void call_on_dtmf_callback2(pjsua_call_id call_id,
     };    
     PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c%s, using %s method", 
            call_id, info->digit, duration, method));
+}
+
+/* Incoming text stream callback. */
+static void call_on_rx_text(pjsua_call_id call_id,
+                            const pjsua_txt_stream_data *data)
+{
+    if (data->text.slen == 0) {
+        PJ_LOG(4, (THIS_FILE, "Received empty T140 block with seq %d",
+                              data->seq));
+    } else {
+        PJ_LOG(3, (THIS_FILE, "Incoming text on call %d, seq %d: %.*s "
+                              "(%d bytes)", call_id, data->seq,
+                              (int)data->text.slen, data->text.ptr,
+                              (int)data->text.slen));
+    }
 }
 
 /*
@@ -1113,6 +1272,44 @@ void on_playfile_done(pjmedia_port *port, void *usr_data)
                                &delay);
 }
 
+/* Callback to replace the generated SDP with a custom one (--custom-sdp).
+ * Only compiled when PJSUA_MEDIA_HAS_PJMEDIA=0 (alt media backend). */
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+static void on_call_sdp_created_cb(pjsua_call_id call_id,
+                                   pjmedia_sdp_session *sdp,
+                                   pj_pool_t *pool,
+                                   const pjmedia_sdp_session *rem_sdp)
+{
+    pjmedia_sdp_session *custom = NULL;
+    pj_str_t sdp_str;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(rem_sdp);
+
+    if (app_config.custom_sdp.slen == 0)
+        return;
+
+    /* Make a writable copy since pjmedia_sdp_parse modifies the buffer */
+    sdp_str.ptr = (char*)pj_pool_alloc(pool,
+                                       (pj_size_t)(app_config.custom_sdp.slen + 1));
+    pj_memcpy(sdp_str.ptr, app_config.custom_sdp.ptr,
+              (pj_size_t)app_config.custom_sdp.slen);
+    sdp_str.ptr[app_config.custom_sdp.slen] = '\0';
+    sdp_str.slen = app_config.custom_sdp.slen;
+
+    status = pjmedia_sdp_parse(pool, sdp_str.ptr, (pj_size_t)sdp_str.slen,
+                               &custom);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(1,(THIS_FILE, status,
+                     "Failed to parse custom SDP, using generated SDP"));
+        return;
+    }
+
+    pj_memcpy(sdp, custom, sizeof(*sdp));
+}
+#endif /* !PJSUA_MEDIA_HAS_PJMEDIA */
+
 /* IP change progress callback. */
 void on_ip_change_progress(pjsua_ip_change_op op,
                            pj_status_t status,
@@ -1197,6 +1394,13 @@ static void hangup_timeout_callback(pj_timer_heap_t *timer_heap,
 
     app_config.auto_hangup_timer.id = 0;
     pjsua_call_hangup_all();
+}
+
+static void avi_writer_cb(pjsua_avi_rec_id id, void *user_data)
+{
+    PJ_UNUSED_ARG(user_data);
+
+    PJ_LOG(4, (THIS_FILE, "AVI recorder %d: recording has completed", id));
 }
 
 /*
@@ -1464,6 +1668,7 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_call_media_state = &on_call_media_state;
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;
     app_config.cfg.cb.on_dtmf_digit2 = &call_on_dtmf_callback2;
+    app_config.cfg.cb.on_call_rx_text = &call_on_rx_text;
     app_config.cfg.cb.on_call_redirected = &call_on_redirected;
     app_config.cfg.cb.on_reg_state = &on_reg_state;
     app_config.cfg.cb.on_incoming_subscribe = &on_incoming_subscribe;
@@ -1483,6 +1688,9 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_snd_dev_operation = &on_snd_dev_operation;
     app_config.cfg.cb.on_call_media_event = &on_call_media_event;
     app_config.cfg.cb.on_ip_change_progress = &on_ip_change_progress;
+#if !PJSUA_MEDIA_HAS_PJMEDIA
+    app_config.cfg.cb.on_call_sdp_created = &on_call_sdp_created_cb;
+#endif
 #ifdef TRANSPORT_ADAPTER_SAMPLE
     app_config.cfg.cb.on_create_media_transport = &on_create_media_transport;
 #endif
@@ -1658,73 +1866,46 @@ static pj_status_t app_init(void)
 
     }
 
-    /* Create AVI player virtual devices */
-    if (app_config.avi_cnt) {
-#if PJMEDIA_HAS_VIDEO && PJMEDIA_VIDEO_DEV_HAS_AVI
-        pjmedia_vid_dev_factory *avi_factory;
-
-        status = pjmedia_avi_dev_create_factory(pjsua_get_pool_factory(),
-                                                app_config.avi_cnt,
-                                                &avi_factory);
+    if (app_config.avi_rec.slen) {
+#if PJMEDIA_HAS_VIDEO
+        status = pjsua_avi_recorder_create(&app_config.avi_rec,
+                                           app_config.avi_rec_size,
+                                           NULL, NULL, 0,
+                                           &app_config.avi_rec_id);
         if (status != PJ_SUCCESS) {
-            PJ_PERROR(1,(THIS_FILE, status, "Error creating AVI factory"));
+            PJ_PERROR(1, (THIS_FILE, status, "Error creating AVI recorder"));
             goto on_error;
         }
 
+        app_config.avi_vid_slot = pjsua_avi_recorder_get_conf_port(
+                                                     app_config.avi_rec_id,
+                                                     PJMEDIA_TYPE_VIDEO);
+        app_config.avi_aud_slot = pjsua_avi_recorder_get_conf_port(
+                                                     app_config.avi_rec_id,
+                                                     PJMEDIA_TYPE_AUDIO);
+
+        pjsua_avi_recorder_set_cb(app_config.avi_rec_id, NULL, 
+                                  &avi_writer_cb);
+#endif
+    }
+
+    /* Create AVI player virtual devices */
+    if (app_config.avi_cnt) {
+#if PJMEDIA_HAS_VIDEO && PJMEDIA_VIDEO_DEV_HAS_AVI
+
         for (i=0; i<app_config.avi_cnt; ++i) {
-            pjmedia_avi_dev_param avdp;
-            pjmedia_vid_dev_index avid;
-            unsigned strm_idx, strm_cnt;
+            pjsua_avi_player_id avi_id;
+            status = pjsua_avi_player_create(&app_config.avi[i].path, &avi_id);
 
-            app_config.avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
-            app_config.avi[i].slot = PJSUA_INVALID_ID;
+            if (status == PJ_SUCCESS) {
+                app_config.avi[i].p_id = avi_id;
+                app_config.avi[i].slot = pjsua_avi_player_get_conf_port(
+                    avi_id, PJMEDIA_TYPE_AUDIO, 0);
+                app_config.avi[i].dev_id =
+                    pjsua_avi_player_get_vid_dev(avi_id);
 
-            pjmedia_avi_dev_param_default(&avdp);
-            avdp.path = app_config.avi[i].path;
-
-            status =  pjmedia_avi_dev_alloc(avi_factory, &avdp, &avid);
-            if (status != PJ_SUCCESS) {
-                PJ_PERROR(1,(THIS_FILE, status,
-                             "Error creating AVI player for %.*s",
-                             (int)avdp.path.slen, avdp.path.ptr));
-                goto on_error;
-            }
-
-            PJ_LOG(4,(THIS_FILE, "AVI player %.*s created, dev_id=%d",
-                      (int)avdp.title.slen, avdp.title.ptr, avid));
-
-            app_config.avi[i].dev_id = avid;
-            if (app_config.avi_def_idx == PJSUA_INVALID_ID)
-                app_config.avi_def_idx = i;
-
-            strm_cnt = pjmedia_avi_streams_get_num_streams(avdp.avi_streams);
-            for (strm_idx=0; strm_idx<strm_cnt; ++strm_idx) {
-                pjmedia_port *aud;
-                pjmedia_format *fmt;
-                pjsua_conf_port_id slot;
-                char fmt_name[5];
-
-                aud = pjmedia_avi_streams_get_stream(avdp.avi_streams,
-                                                     strm_idx);
-                fmt = &aud->info.fmt;
-
-                pjmedia_fourcc_name(fmt->id, fmt_name);
-
-                if (fmt->id == PJMEDIA_FORMAT_PCM) {
-                    status = pjsua_conf_add_port(app_config.pool, aud,
-                                                 &slot);
-                    if (status == PJ_SUCCESS) {
-                        PJ_LOG(4,(THIS_FILE,
-                                  "AVI %.*s: audio added to slot %d",
-                                  (int)avdp.title.slen, avdp.title.ptr,
-                                  slot));
-                        app_config.avi[i].slot = slot;
-                    }
-                } else {
-                    PJ_LOG(4,(THIS_FILE,
-                              "AVI %.*s: audio ignored, format=%s",
-                              (int)avdp.title.slen, avdp.title.ptr,
-                              fmt_name));
+                if (app_config.avi_def_idx == PJSUA_INVALID_ID) {
+                    app_config.avi_def_idx = i;
                 }
             }
         }
@@ -1759,6 +1940,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             pjsua_acc_modify(aid, &acc_cfg);
         }
@@ -1803,6 +1985,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
@@ -1838,6 +2021,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             pjsua_acc_modify(aid, &acc_cfg);
         }
@@ -1868,6 +2052,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
@@ -1907,6 +2092,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(acc_id, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             pjsua_acc_modify(acc_id, &acc_cfg);
         }
@@ -1936,6 +2122,7 @@ static pj_status_t app_init(void)
             pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 
             app_config_init_video(&acc_cfg);
+            acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
@@ -1961,6 +2148,7 @@ static pj_status_t app_init(void)
         app_config.acc_cfg[i].reg_first_retry_interval = 60;
 
         app_config_init_video(&app_config.acc_cfg[i]);
+        app_config.acc_cfg[i].txt_red_level = app_config.txt_red_level;
 
         status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, NULL);
         if (status != PJ_SUCCESS)
@@ -2019,6 +2207,7 @@ static pj_status_t app_init(void)
     pjsua_call_setting_default(&call_opt);
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
+    call_opt.txt_cnt = app_config.txt_cnt;
     if (app_config.enable_loam) {
         call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
     }
@@ -2093,6 +2282,7 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
         pjsua_call_setting_default(&call_opt);
         call_opt.aud_cnt = app_config.aud_cnt;
         call_opt.vid_cnt = app_config.vid.vid_cnt;
+        call_opt.txt_cnt = app_config.txt_cnt;
 
         pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL, 
                              NULL, NULL);
@@ -2142,19 +2332,23 @@ static pj_status_t app_destroy(void)
     }
 #endif
 
-    /* Close avi devs and ports */
-    for (i=0; i<app_config.avi_cnt; ++i) {
-        if (app_config.avi[i].slot != PJSUA_INVALID_ID) {
-            pjsua_conf_remove_port(app_config.avi[i].slot);
-            app_config.avi[i].slot = PJSUA_INVALID_ID;
-        }
 #if PJMEDIA_HAS_VIDEO && PJMEDIA_VIDEO_DEV_HAS_AVI
-        if (app_config.avi[i].dev_id != PJMEDIA_VID_INVALID_DEV) {
-            pjmedia_avi_dev_free(app_config.avi[i].dev_id);
-            app_config.avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
+    /* Close avi player */
+    for (i = 0; i < app_config.avi_cnt; ++i) {
+        if (app_config.avi[i].p_id != PJSUA_INVALID_ID) {
+            if (pjsua_avi_player_destroy(app_config.avi[i].p_id) == PJ_SUCCESS)
+                app_config.avi[i].p_id = PJSUA_INVALID_ID;
         }
-#endif
     }
+#endif
+
+    /* Close avi writer */
+#if PJMEDIA_HAS_VIDEO
+    if (app_config.avi_rec_id != PJSUA_INVALID_ID) {
+        pjsua_avi_recorder_destroy(app_config.avi_rec_id);
+        app_config.avi_rec_id = PJSUA_INVALID_ID;
+    }
+#endif
 
     /* Close ringback port */
     if (app_config.ringback_port && 
@@ -2223,6 +2417,9 @@ static pj_status_t app_destroy(void)
     pj_bzero(&app_config, sizeof(app_config));
     app_config.wav_id = PJSUA_INVALID_ID;
     app_config.rec_id = PJSUA_INVALID_ID;
+    app_config.avi_rec_id = PJSUA_INVALID_ID;
+    app_config.avi_vid_slot = PJSUA_INVALID_ID;
+    app_config.avi_aud_slot = PJSUA_INVALID_ID;
 
     if (use_cli) {    
         app_config.use_cli = use_cli;

@@ -1021,10 +1021,15 @@ static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 {
     /* These variables require "volatile" so their values get
      * preserved when re-entering the PJ_TRY block after an error.
+     * When longjmp() unwinds the stack, any local non-volatile variable
+     * that was modified between setjmp() and longjmp() has indeterminate
+     * value (C99 7.13.2.1). hname_save captures the header name into
+     * volatile storage before calling the header handler, which may throw.
      */
     volatile pj_bool_t parsing_headers;
     pjsip_msg *volatile msg = NULL;
     pjsip_ctype_hdr *volatile ctype_hdr = NULL;
+    volatile pj_str_t hname_save;
 
     pj_str_t hname;
     pj_scanner *scanner = ctx->scanner;
@@ -1072,9 +1077,21 @@ parse_headers:
              * Ref: PROTOS #2412
              */
             hname.slen = 0;
-            
+            hname_save.ptr = NULL;
+            hname_save.slen = 0;
+
             /* Get hname. */
             pj_scan_get( scanner, &pconst.pjsip_TOKEN_SPEC, &hname);
+
+            /* Save hname into volatile storage immediately after the scan,
+             * before any code that may throw an exception. longjmp() restores
+             * CPU registers, which can clobber the non-volatile hname if the
+             * compiler kept its fields in registers. Volatile variables are
+             * always written to memory, so they survive longjmp() intact.
+             */
+            hname_save.ptr = hname.ptr;
+            hname_save.slen = hname.slen;
+
             if (pj_scan_get_char( scanner ) != ':') {
                 PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
             }
@@ -1170,9 +1187,23 @@ parse_headers:
             err_info->line = scanner->line;
             /* Scanner's column is zero based, so add 1 */
             err_info->col = pj_scan_get_col(scanner) + 1;
-            if (parsing_headers)
-                err_info->hname = hname;
-            else if (msg && msg->type == PJSIP_REQUEST_MSG)
+            if (parsing_headers) {
+                /* Use hname_save, not hname: longjmp() may have clobbered
+                 * hname if the compiler kept its fields in registers.
+                 * Guard against NULL ptr: pj_scan_get() may have thrown
+                 * before hname_save was populated, leaving ptr as NULL.
+                 * Passing NULL to %.*s is undefined behavior even with
+                 * length 0, so fall back to a static empty string.
+                 */
+                if (hname_save.ptr != NULL) {
+                    err_info->hname.ptr = (char*)hname_save.ptr;
+                    err_info->hname.slen = hname_save.slen;
+                } else {
+                    static const char empty[] = "";
+                    err_info->hname.ptr = (char*)empty;
+                    err_info->hname.slen = 0;
+                }
+            } else if (msg && msg->type == PJSIP_REQUEST_MSG)
                 err_info->hname = pj_str("Request Line");
             else if (msg && msg->type == PJSIP_RESPONSE_MSG)
                 err_info->hname = pj_str("Status Line");
@@ -1347,6 +1378,9 @@ static void int_parse_host(pj_scanner *scanner, pj_str_t *host)
         pj_scan_get_char(scanner);
         pj_scan_get_until_ch(scanner, ']', host);
         pj_scan_get_char(scanner);
+        /* Empty IPv6 address (e.g. "sip:[]") is invalid */
+        if (host->slen == 0)
+            on_syntax_error(scanner);
     } else {
         pj_scan_get( scanner, &pconst.pjsip_HOST_SPEC, host);
     }
@@ -1488,7 +1522,11 @@ static pjsip_uri *int_parse_uri(pj_scanner *scanner, pj_pool_t *pool,
         } else {
             /* Unsupported URI scheme */
             PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
-            UNREACHED({ return NULL; /* Not reached. */ })
+            /* This return is unreachable at runtime (PJ_THROW unwinds via
+             * longjmp), but is needed to satisfy the compiler when
+             * PJ_ATTR_NORETURN is empty (e.g. Apple Clang + ASan on ARM64).
+             */
+            return NULL;
         }
 
     /*
@@ -1763,6 +1801,8 @@ PJ_DEF(void) pjsip_parse_end_hdr_imp( pj_scanner *scanner )
 static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
                                      pj_scanner *scanner)
 {
+    pj_str_t elem;
+
     /* Some header fields allow empty elements in the value:
      *   Accept, Allow, Supported
      */
@@ -1778,17 +1818,34 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
         return;
     }
 
-    pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, 
-                 &hdr->values[hdr->count]);
-    hdr->count++;
-
-    while ((hdr->count < PJSIP_GENERIC_ARRAY_MAX_COUNT) &&
-           (*scanner->curptr == ','))
+    /* Parse array elements, skipping any empty elements (for buggy clients).
+     * Scanner is configured with PJ_SCAN_AUTOSKIP_WS_HEADER, so whitespace
+     * is automatically skipped after getting comma or element.
+     */
+    while (hdr->count < PJ_ARRAY_SIZE(hdr->values))
     {
-        pj_scan_get_char(scanner);
-        pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, 
-                     &hdr->values[hdr->count]);
-        hdr->count++;
+        /* Skip any leading/consecutive commas */
+        while (*scanner->curptr == ',') {
+            pj_scan_get_char(scanner);
+        }
+        
+        /* Check for end of header */
+        if (pj_scan_is_eof(scanner) || 
+            *scanner->curptr == '\r' || *scanner->curptr == '\n') 
+        {
+            break;
+        }
+        
+        /* Get element */
+        pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, &elem);
+        if (elem.slen > 0) {
+            hdr->values[hdr->count++] = elem;
+        }
+        
+        /* If not followed by comma, we're done */
+        if (*scanner->curptr != ',') {
+            break;
+        }
     }
 
 end:
@@ -1916,8 +1973,8 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
             hdr->expires = pj_strtoul(&pvalue);
             if (hdr->expires == PJSIP_EXPIRES_NOT_SPECIFIED)
                 hdr->expires--;
-            if (hdr->expires > PJSIP_MAX_EXPIRES)
-                hdr->expires = PJSIP_MAX_EXPIRES;
+            //if (hdr->expires > PJSIP_MAX_EXPIRES)
+            //    hdr->expires = PJSIP_MAX_EXPIRES;
 #if PJSIP_MIN_EXPIRES > 0
             if (hdr->expires < PJSIP_MIN_EXPIRES)
                 hdr->expires = PJSIP_MIN_EXPIRES;
@@ -1977,7 +2034,8 @@ static pjsip_hdr* parse_hdr_content_len( pjsip_parse_ctx *ctx )
 
     hdr = pjsip_clen_hdr_create(ctx->pool);
     pj_scan_get(ctx->scanner, &pconst.pjsip_DIGIT_SPEC, &digit);
-    hdr->len = pj_strtoul(&digit);
+    strtoi_validate(&digit, PJSIP_MIN_CONTENT_LENGTH,
+                    PJSIP_MAX_CONTENT_LENGTH, &hdr->len);
     parse_hdr_end(ctx->scanner);
 
     if (ctx->rdata)

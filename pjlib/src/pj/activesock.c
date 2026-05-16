@@ -773,12 +773,18 @@ static void ioqueue_on_write_complete(pj_ioqueue_key_t *key,
 
     asock = (pj_activesock_t*) pj_ioqueue_get_user_data(key);
 
-    /* Ignore if we've been shutdown. This may cause data to be partially
-     * sent even when 'wholedata' was requested if the OS only sent partial
-     * buffer.
+    /* If we've been shutdown, still invoke the callback so upper layers
+     * can release resources (e.g., pjsip_tx_data_dec_ref). See #4878.
+     *
+     * Note: asock->key may be NULL at this point (cleared by
+     * pj_activesock_close before pj_ioqueue_unregister). The callback
+     * must not attempt further I/O on this active socket.
      */
-    if (asock->shutdown & SHUT_TX)
+    if (asock->shutdown & SHUT_TX) {
+        if (asock->cb.on_data_sent)
+            (*asock->cb.on_data_sent)(asock, op_key, bytes_sent);
         return;
+    }
 
     if (bytes_sent > 0 && op_key->activesock_data) {
         /* whole_data is requested. Make sure we send all the data */

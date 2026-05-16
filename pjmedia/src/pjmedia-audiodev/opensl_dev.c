@@ -28,6 +28,7 @@
 #include <pj/os.h>
 #include <pj/string.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/event.h>
 
 #if defined(PJMEDIA_AUDIO_DEV_HAS_OPENSL) && PJMEDIA_AUDIO_DEV_HAS_OPENSL != 0
 
@@ -194,16 +195,56 @@ void bqPlayerCallback(W_SLBufferQueueItf bq, void *context)
         frame.bit_info = 0;
         
         status = (*stream->play_cb)(stream->user_data, &frame);
-        if (status != PJ_SUCCESS || frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
-            pj_bzero(buf, stream->playerBufferSize);
+        if (status != PJ_SUCCESS) {
+            if (!stream->quit_flag) {
+                pjmedia_event e;
+                
+                PJ_PERROR(3, (THIS_FILE, status, "OpenSL playback callback stopped due to error"));
+                
+                /* Broadcast OpenSL playback error */
+                pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
+                                  &stream->play_timestamp, &stream->base);
+                e.data.aud_dev_err.dir = PJMEDIA_DIR_PLAYBACK;
+                e.data.aud_dev_err.status = status;
+                e.data.aud_dev_err.id = stream->param.play_id;
+                
+                pjmedia_event_publish(NULL, &stream->base, &e,
+                                     PJMEDIA_EVENT_PUBLISH_DEFAULT);
+            }
+        }
+        
+        if (status != PJ_SUCCESS || frame.type != PJMEDIA_FRAME_TYPE_AUDIO) {
+            if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
+                pj_bzero(buf, stream->playerBufferSize);
+            if (status != PJ_SUCCESS)
+                return;
+        }
         
         stream->play_timestamp.u64 += stream->param.samples_per_frame /
                                       stream->param.channel_count;
         
         result = (*bq)->Enqueue(bq, buf, stream->playerBufferSize);
         if (result != SL_RESULT_SUCCESS) {
+            pjmedia_event e;
+            pj_status_t pj_status = opensl_to_pj_error(result);
+            
             PJ_LOG(3, (THIS_FILE, "Unable to enqueue next player buffer !!! %d",
                                   result));
+            
+            if (!stream->quit_flag) {
+                PJ_PERROR(3, (THIS_FILE, pj_status, "OpenSL playback enqueue failed"));
+                
+                /* Broadcast OpenSL playback error */
+                pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
+                                  &stream->play_timestamp, &stream->base);
+                e.data.aud_dev_err.dir = PJMEDIA_DIR_PLAYBACK;
+                e.data.aud_dev_err.status = pj_status;
+                e.data.aud_dev_err.id = stream->param.play_id;
+                
+                pjmedia_event_publish(NULL, &stream->base, &e,
+                                     PJMEDIA_EVENT_PUBLISH_DEFAULT);
+            }
+            return;
         }
         
         stream->playerBufIdx %= NUM_BUFFERS;
@@ -241,6 +282,24 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
         frame.bit_info = 0;
         
         status = (*stream->rec_cb)(stream->user_data, &frame);
+        if (status != PJ_SUCCESS) {
+            if (!stream->quit_flag) {
+                pjmedia_event e;
+                
+                PJ_PERROR(3, (THIS_FILE, status, "OpenSL record callback stopped due to error"));
+                
+                /* Broadcast OpenSL record error */
+                pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
+                                  &stream->rec_timestamp, &stream->base);
+                e.data.aud_dev_err.dir = PJMEDIA_DIR_CAPTURE;
+                e.data.aud_dev_err.status = status;
+                e.data.aud_dev_err.id = stream->param.rec_id;
+                
+                pjmedia_event_publish(NULL, &stream->base, &e,
+                                     PJMEDIA_EVENT_PUBLISH_DEFAULT);
+            }
+            return;
+        }
         
         stream->rec_timestamp.u64 += stream->param.samples_per_frame /
                                      stream->param.channel_count;
@@ -248,8 +307,26 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
         /* And now enqueue next buffer */
         result = (*bq)->Enqueue(bq, buf, stream->recordBufferSize);
         if (result != SL_RESULT_SUCCESS) {
+            pjmedia_event e;
+            pj_status_t pj_status = opensl_to_pj_error(result);
+            
             PJ_LOG(3, (THIS_FILE, "Unable to enqueue next record buffer !!! %d",
                                   result));
+            
+            if (!stream->quit_flag) {
+                PJ_PERROR(3, (THIS_FILE, pj_status, "OpenSL record enqueue failed"));
+                
+                /* Broadcast OpenSL record error */
+                pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR,
+                                  &stream->rec_timestamp, &stream->base);
+                e.data.aud_dev_err.dir = PJMEDIA_DIR_CAPTURE;
+                e.data.aud_dev_err.status = pj_status;
+                e.data.aud_dev_err.id = stream->param.rec_id;
+                
+                pjmedia_event_publish(NULL, &stream->base, &e,
+                                     PJMEDIA_EVENT_PUBLISH_DEFAULT);
+            }
+            return;
         }
         
         stream->recordBufIdx %= NUM_BUFFERS;

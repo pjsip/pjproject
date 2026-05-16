@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!-- Test that "norefersub" appears in the Supported header of an
+     incoming INVITE (RFC 4488). This is the default pjsua behavior
+     when pjsua_config.no_refer_sub is PJ_TRUE (the default).         -->
+
+<scenario name="UAS: verify norefersub in Supported header">
+
+  <recv request="INVITE" crlf="true">
+    <action>
+      <!-- Capture whether norefersub is present.
+           No check_it - we handle the failure via nop/test below.
+           $1 assigned here + consumed by nop/test = 2 references.    -->
+      <ereg regexp="norefersub"
+            search_in="hdr"
+            header="Supported:"
+            assign_to="1"/>
+      <!-- Capture the From-tag parameter for the BYE To header.
+           No capture group: $2 = full match = "tag=VALUE".
+           $2 assigned here + used in BYE template = 2 references.    -->
+      <ereg regexp="tag=[^ ;,\r\n]+"
+            search_in="hdr"
+            header="From:"
+            assign_to="2"/>
+    </action>
+  </recv>
+
+  <!-- If norefersub IS found (variable 1 set), proceed normally.
+       If NOT found, fall through to stop_now (fail the test).         -->
+  <nop next="main" test="1"/>
+  <nop>
+    <action>
+      <exec int_cmd="stop_now"/>
+    </action>
+  </nop>
+
+  <label id="main"/>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 100 Trying
+      [last_Via:]
+      [last_From:]
+      [last_To:]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <send retrans="500">
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=- 1 1 IN IP4 [local_ip]
+      s=pjmedia
+      c=IN IP4 [local_ip]
+      t=0 0
+      m=audio 4000 RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+
+    ]]>
+  </send>
+
+  <recv request="ACK" crlf="true">
+  </recv>
+
+  <pause milliseconds="1000"/>
+
+  <!-- BYE using the INVITE's Call-ID ([last_Call-ID:]) and the
+       captured From-tag ([$2]) so pjsua can match its dialog.        -->
+  <send retrans="500">
+    <![CDATA[
+
+      BYE sip:[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: <sip:[remote_ip]:[remote_port]>;[$2]
+      [last_Call-ID:]
+      CSeq: 2 BYE
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200">
+  </recv>
+
+
+  <!-- definition of the response time repartition table (unit is ms)   -->
+  <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
+
+  <!-- definition of the call length repartition table (unit is ms)     -->
+  <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
+
+</scenario>

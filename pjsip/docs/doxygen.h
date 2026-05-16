@@ -36,7 +36,7 @@
   \n
   @section pjsip_intro_sec Introduction
 
-  PJSIP is an Open Source SIP prototol stack, designed to be very small in 
+  PJSIP is an Open Source SIP protocol stack, designed to be very small in 
   footprint, have high performance, and very flexible.
 
   @subsection hist_sec History

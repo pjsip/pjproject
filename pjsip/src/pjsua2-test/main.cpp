@@ -15,24 +15,35 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
 #include <pjsua2/endpoint.hpp>
+#include "instant_messaging.hpp"
+#include "auth_challenge.hpp"
 
 using namespace pj;
 
-extern "C"
 int main(int argc, char *argv[])
 {
-    Endpoint ep;
-    EpConfig epCfg;
-    PJ_UNUSED_ARG(argc);
-    PJ_UNUSED_ARG(argv);
+    try {
+        {
+            InstantMessagingTests instantMessagingTests;
 
-    epCfg.uaConfig.userAgent = "pjsua++-test";
+            instantMessagingTests.immediateResponse();
+            instantMessagingTests.deferredResponse();
+        }
 
-    ep.libCreate();
-    ep.libInit(epCfg);
-    ep.libStart();
-    ep.libDestroy();
+        {
+            AuthChallengeTests authChallengeTests;
+
+            authChallengeTests.immediateResponse();
+            authChallengeTests.deferredResponse();
+            authChallengeTests.deferredRespondWithCreds();
+            authChallengeTests.deferredAbandon();
+            authChallengeTests.accountDeleteWithPending();
+        }
+    } catch (...) {
+        return 1;
+    }
 
     return 0;
 }

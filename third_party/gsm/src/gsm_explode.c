@@ -273,7 +273,7 @@ int gsm_explode P3((s, c, target), gsm s, gsm_byte * c, gsm_signal * target)
 			xmc[51] = sr & 0x7;  sr >>= 3;
 		}
 	}
-	else 
+	else
 #endif
 	{
 	/* GSM_MAGIC  = (*c >> 4) & 0xF; */

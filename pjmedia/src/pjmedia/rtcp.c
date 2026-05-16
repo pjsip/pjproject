@@ -574,6 +574,11 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
         sess->rx_lsr = ((pj_ntohl(sr->ntp_sec) & 0x0000FFFF) << 16) | 
                        ((pj_ntohl(sr->ntp_frac) >> 16) & 0xFFFF);
 
+        /* Save RTP & NTP timestamps of RTCP packet */
+        sess->rx_lsr_ts = pj_ntohl(sr->rtp_ts);
+        sess->rx_lsr_ntp.u32.hi = pj_ntohl(sr->ntp_sec);
+        sess->rx_lsr_ntp.u32.lo = pj_ntohl(sr->ntp_frac);
+
         /* Calculate SR arrival time for DLSR */
         pj_get_timestamp(&sess->rx_lsr_time);
 
@@ -943,7 +948,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
      * sent RTCP SR.
      */
     if (sess->stat.tx.pkt != pj_ntohl(sess->rtcp_sr_pkt.sr.sender_pcount)) {
-        pj_time_val ts_time;
+        //pj_time_val ts_time;
         pj_uint32_t rtp_ts;
 
         /* So we should send RTCP SR */
@@ -963,11 +968,13 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
         sr->ntp_frac = pj_htonl(ntp.lo);
 
         /* Fill in RTP timestamp (corresponds to NTP timestamp) in SR. */
-        ts_time.sec = ntp.hi - sess->tv_base.sec - JAN_1970;
-        ts_time.msec = (long)(ntp.lo * 1000.0 / 0xFFFFFFFF);
-        rtp_ts = sess->rtp_ts_base +
-                 (pj_uint32_t)(sess->clock_rate*ts_time.sec) +
-                 (pj_uint32_t)(sess->clock_rate*ts_time.msec/1000);
+        // Use real last transmitted RTP timestamp instead of calculated one.
+        //ts_time.sec = ntp.hi - sess->tv_base.sec - JAN_1970;
+        //ts_time.msec = (long)(ntp.lo * 1000.0 / 0xFFFFFFFF);
+        //rtp_ts = sess->rtp_ts_base +
+        //         (pj_uint32_t)(sess->clock_rate*ts_time.sec) +
+        //         (pj_uint32_t)(sess->clock_rate*ts_time.msec/1000);
+        rtp_ts = sess->stat.rtp_tx_last_ts;
         sr->rtp_ts = pj_htonl(rtp_ts);
 
         TRACE_((sess->name, "TX RTCP SR: ntp_ts=%p", 

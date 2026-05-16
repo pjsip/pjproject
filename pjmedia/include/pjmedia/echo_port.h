@@ -21,7 +21,7 @@
 
 /**
  * @file echo_port.h
- * @brief AEC (Accoustic Echo Cancellation) media port.
+ * @brief AEC (Acoustic Echo Cancellation) media port.
  */
 #include <pjmedia/port.h>
 

@@ -19,6 +19,7 @@
 #include <pjmedia/sdp_neg.h>
 #include <pjmedia/sdp.h>
 #include <pjmedia/codec.h>
+#include <pjmedia/stream_common.h>
 #include <pjmedia/vid_codec.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
@@ -60,6 +61,8 @@ struct pjmedia_sdp_neg
     pj_int8_t             vid_dyn_codecs_cnt;
     pj_str_t              vid_dyn_codecs[PJMEDIA_CODEC_MGR_MAX_CODECS];
 #endif
+    pj_int8_t             txt_dyn_codecs_cnt;
+    pj_str_t              txt_dyn_codecs[2];     /**< "red", "t140"          */
 
     pjmedia_sdp_session *initial_sdp,       /**< Initial local SDP           */
                         *initial_sdp_tmp,   /**< Temporary initial local SDP */
@@ -127,6 +130,11 @@ static void init_mapping(pjmedia_sdp_neg *neg)
     pjmedia_vid_codec_mgr_get_dyn_codecs(NULL, &neg->vid_dyn_codecs_cnt,
                                          neg->vid_dyn_codecs);
 #endif
+
+    /* Text has no codec mgr; sort by pj_stricmp for binary search. */
+    neg->txt_dyn_codecs[0] = pj_str("red");
+    neg->txt_dyn_codecs[1] = pj_str("t140");
+    neg->txt_dyn_codecs_cnt = PJ_ARRAY_SIZE(neg->txt_dyn_codecs);
 
     pj_memset(neg->pt_to_codec, -1, PJ_ARRAY_SIZE(neg->pt_to_codec) *
               PJ_ARRAY_SIZE(neg->pt_to_codec[0]));
@@ -777,6 +785,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
                                      pj_bool_t allow_asym)
 {
     unsigned i;
+    pj_bool_t is_audio;
 
     /* Check that the media type match our offer. */
 
@@ -784,6 +793,8 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
         /* The media type in the answer is different than the offer! */
         return PJMEDIA_SDPNEG_EINVANSMEDIA;
     }
+
+    is_audio = (pj_strcmp2(&offer->desc.media, "audio") == 0);
 
     /* Check if remote has rejected our offer */
     if (answer->desc.port == 0) {
@@ -885,6 +896,10 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
                 }
                 pjmedia_sdp_attr_get_rtpmap(a, &or_);
 
+                /* For audio, channel count is 1 if not specified */
+                if (is_audio && or_.param.slen == 0)
+                    or_.param = pj_str("1");
+
                 /* Find paylaod in answer SDP with matching 
                  * encoding name and clock rate.
                  */
@@ -895,13 +910,16 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
                         pjmedia_sdp_rtpmap ar;
                         pjmedia_sdp_attr_get_rtpmap(a, &ar);
 
+                        /* For audio, channel count is 1 if not specified */
+                        if (is_audio && ar.param.slen == 0)
+                            ar.param = pj_str("1");
+
                         /* See if encoding name, clock rate, and channel
                          * count match 
                          */
                         if (!pj_stricmp(&or_.enc_name, &ar.enc_name) &&
                             or_.clock_rate == ar.clock_rate &&
-                            (pj_stricmp(&or_.param, &ar.param)==0 ||
-                             (ar.param.slen==1 && *ar.param.ptr=='1')))
+                            (pj_stricmp(&or_.param, &ar.param)==0))
                         {
                             /* Call custom format matching callbacks */
                             if (custom_fmt_match(pool, &or_.enc_name,
@@ -1141,6 +1159,7 @@ static void apply_answer_symmetric_pt(pj_pool_t *pool,
      */
     for (i = 0; i < pt_cnt; ++i) {
         pjmedia_sdp_attr *a;
+        pj_bool_t is_red = PJ_FALSE;
 
         /* Skip if the PTs are the same already, e.g: static PT. */
         if (pj_strcmp(&pt_answer[i], &pt_offer[i]) == 0)
@@ -1152,18 +1171,70 @@ static void apply_answer_symmetric_pt(pj_pool_t *pool,
         /* Also update payload type in rtpmap */
         a = pjmedia_sdp_media_find_attr2(answer, "rtpmap", &pt_answer[i]);
         if (a) {
+            pjmedia_sdp_rtpmap r;
+
             rewrite_pt(pool, &a->value, &pt_answer[i], &pt_offer[i]);
             /* Temporarily remove the attribute in case the new payload
              * type is being used by another format in the media.
              */
             pjmedia_sdp_media_remove_attr(answer, a);
             a_tmp[a_tmp_cnt++] = a;
+
+            pjmedia_sdp_attr_get_rtpmap(a, &r);
+            if (!pj_stricmp2(&r.enc_name, "red")) {
+                is_red = PJ_TRUE;
+            }
         }
 
         /* Also update payload type in fmtp */
         a = pjmedia_sdp_media_find_attr2(answer, "fmtp", &pt_answer[i]);
         if (a) {
-            rewrite_pt(pool, &a->value, &pt_answer[i], &pt_offer[i]);
+            if (is_red) {
+                enum { MAX_FMTP_STR_LEN = 32 };
+                pjmedia_codec_fmtp fmtp;
+                pj_status_t status;
+                unsigned pt_o=0, pt_a=0, buf_len=0;
+                char buf[MAX_FMTP_STR_LEN];
+
+                pt_o = pj_strtoul(&pt_offer[i]);
+                pt_a = pj_strtoul(&pt_answer[i]);
+                buf_len = pj_ansi_snprintf(buf, MAX_FMTP_STR_LEN, "%d ", pt_o);
+                status = pjmedia_stream_info_parse_fmtp(pool, answer, pt_a, 
+                                                        &fmtp);
+
+                if (status == PJ_SUCCESS) {
+                    unsigned len = 0;
+                    unsigned j, k;
+                    pj_str_t new_fmtp;
+
+                    /* Update the fmtp redundancy PT. */
+                    for (j = 0; j < fmtp.cnt; ++j) {
+                        pt_o = pj_strtoul(&fmtp.param[j].val);
+                        for (k = 0; k < pt_cnt ;++k) {
+                            if (!pj_stricmp(&fmtp.param[j].val, &pt_answer[k])){
+                                pt_o = pj_strtoul(&pt_offer[k]);
+                                break;
+                            }
+                        }
+                        len = pj_ansi_snprintf(buf + buf_len,
+                                               MAX_FMTP_STR_LEN - buf_len,
+                                               (j==0)?"%d":"/%d", pt_o);
+
+                        if (len >= MAX_FMTP_STR_LEN - buf_len) {
+                            /* Truncation occurred, stop processing further. */
+                            buf_len = MAX_FMTP_STR_LEN;
+                            break;
+                        } else {
+                            buf_len += len;
+                        }
+                    }
+                    new_fmtp.ptr = buf;
+                    new_fmtp.slen = buf_len;
+                    rewrite_pt(pool, &a->value, &a->value, &new_fmtp);
+                }
+            } else {
+                rewrite_pt(pool, &a->value, &pt_answer[i], &pt_offer[i]);
+            }
             /* Temporarily remove the attribute in case the new payload
              * type is being used by another format in the media.
              */
@@ -1191,6 +1262,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
     pj_bool_t master_has_codec = 0,
               master_has_other = 0,
               found_matching_codec = 0,
+              found_matching_red = 0,
               found_matching_telephone_event = 0,
               found_matching_other = 0;
     unsigned pt_answer_count = 0;
@@ -1198,6 +1270,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
     pj_str_t pt_offer[PJMEDIA_MAX_SDP_FMT];
     pjmedia_sdp_media *answer;
     const pjmedia_sdp_media *master, *slave;
+    int o_red_level = 0;
     unsigned nclockrate = 0, clockrate[PJMEDIA_MAX_SDP_FMT];
     unsigned ntel_clockrate = 0, tel_clockrate[PJMEDIA_MAX_SDP_FMT];
 
@@ -1263,8 +1336,12 @@ static pj_status_t match_offer(pj_pool_t *pool,
                         unsigned k;
 
                         found_matching_codec = 1;
-                        pt_offer[pt_answer_count] = slave->desc.fmt[j];
-                        pt_answer[pt_answer_count++] = slave->desc.fmt[j];
+                        pt_offer[pt_answer_count] = prefer_remote_codec_order?
+                                                    master->desc.fmt[i]:
+                                                    slave->desc.fmt[j];
+                        pt_answer[pt_answer_count++] = prefer_remote_codec_order?
+                                                       slave->desc.fmt[j]:
+                                                       master->desc.fmt[i];
 
                         /* Take note of clock rate for tel-event. Note: for
                          * static PT, we assume the clock rate is 8000.
@@ -1285,7 +1362,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                  */
                 const pjmedia_sdp_attr *a;
                 pjmedia_sdp_rtpmap or_;
-                pj_bool_t is_codec = 0;
+                pj_bool_t is_codec = 0, is_tel = 0, is_red = 0;
 
                 /* Get the rtpmap for the payload type in the master. */
                 a = pjmedia_sdp_media_find_attr2(master, "rtpmap", 
@@ -1296,14 +1373,18 @@ static pj_status_t match_offer(pj_pool_t *pool,
                 }
                 pjmedia_sdp_attr_get_rtpmap(a, &or_);
 
-                if (pj_stricmp2(&or_.enc_name, "telephone-event")) {
+                if (!pj_stricmp2(&or_.enc_name, "telephone-event")) {
+                    is_tel = 1;
+                } else if (!pj_stricmp2(&or_.enc_name, "red")) {
+                    is_red = 1;
+                } else {
                     master_has_codec = 1;
                     if (!answer_with_multiple_codecs && found_matching_codec)
                         continue;
                     is_codec = 1;
                 }
                 
-                /* Find paylaod in our initial SDP with matching 
+                /* Find payload in our initial SDP with matching
                  * encoding name and clock rate.
                  */
                 for (j=0; j<slave->desc.fmt_count; ++j) {
@@ -1352,7 +1433,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                                         break;
                                 if (k == nclockrate)
                                     clockrate[nclockrate++] = or_.clock_rate;
-                            } else {
+                            } else if (is_tel) {
                                 unsigned k;
 
                                 /* Keep track of tel-event clock rate,
@@ -1366,6 +1447,22 @@ static pj_status_t match_offer(pj_pool_t *pool,
                                 
                                 tel_clockrate[ntel_clockrate++] = or_.clock_rate;
                                 found_matching_telephone_event = 1;
+                            } else if (is_red) {
+                                pjmedia_sdp_media *o_med;
+                                unsigned o_fmt_idx;
+                                pjmedia_codec_fmtp fmtp;
+                                pj_status_t status;
+
+                                o_med = (pjmedia_sdp_media *)offer;
+                                o_fmt_idx = prefer_remote_codec_order? i:j;
+                                pt = pj_strtoul(&o_med->desc.fmt[o_fmt_idx]);
+                                status = pjmedia_stream_info_parse_fmtp(
+                                             pool, o_med, pt, &fmtp);
+                                if (status != PJ_SUCCESS)
+                                    continue;
+
+                                o_red_level = fmtp.cnt - 1;
+                                found_matching_red = 1;
                             }
 
                             pt_offer[pt_answer_count] = 
@@ -1427,6 +1524,56 @@ static pj_status_t match_offer(pj_pool_t *pool,
     }
 
     /* Seems like everything is in order. */
+
+    /* Match offer's redundancy level. */
+    if (found_matching_red) {
+        for (i = 0; i < pt_answer_count; i++) {
+            pjmedia_sdp_attr *a;
+            pjmedia_sdp_rtpmap r;
+            pjmedia_codec_fmtp fmtp;
+            int a_red_level = 0;
+            unsigned pt;
+            pj_status_t status;
+
+            /* Get the rtpmap. */
+            a = pjmedia_sdp_media_find_attr2(preanswer, "rtpmap",
+                                             &preanswer->desc.fmt[i]);
+            pj_assert(a);
+            pjmedia_sdp_attr_get_rtpmap(a, &r);
+
+            /* Only care for redundancy format */
+            if (pj_stricmp2(&r.enc_name, "red"))
+                continue;
+
+            pt = pj_strtoul(&preanswer->desc.fmt[i]);
+            status = pjmedia_stream_info_parse_fmtp(pool, preanswer,
+                                                    pt, &fmtp);
+            if (status != PJ_SUCCESS)
+                break;
+
+            /* If we support higher redundancy level, reduce it to match
+             * offer.
+             */
+            a_red_level = fmtp.cnt - 1;
+            if (a_red_level > o_red_level) {
+                a = pjmedia_sdp_media_find_attr2(preanswer, "fmtp",
+                                                 &preanswer->desc.fmt[i]);
+                if (a) {
+                    int lvl = 0;
+                    for (i = 0; i < (unsigned)a->value.slen; i++) {
+                        if (*(a->value.ptr + i) == '/') {
+                            if (lvl++ >= o_red_level) {
+                                a->value.slen = i;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            break;
+        }
+    }
 
     /* Remove unwanted telephone-event formats. */
     if (found_matching_telephone_event) {
@@ -1550,10 +1697,11 @@ static pj_status_t create_answer( pj_pool_t *pool,
     char media_used[PJMEDIA_MAX_SDP_MEDIA];
     unsigned i;
 
-    /* Validate remote offer. 
+    /* Validate remote offer.
      * This should have been validated before.
+     * Use lenient validation (allow missing c= for disabled media).
      */
-    status = pjmedia_sdp_validate(offer);
+    status = pjmedia_sdp_validate2(offer, PJ_FALSE);
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, status);
 
     /* Create initial answer by duplicating initial SDP,
@@ -1715,8 +1863,6 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
 {
     unsigned i, j;
 
-    PJ_UNUSED_ARG(pool);
-
     for (i = 0; i < sess->media_count; ++i) {
         pjmedia_type med_type;
         unsigned count;
@@ -1743,6 +1889,9 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
             dyn_codecs = neg->vid_dyn_codecs;
             count = neg->vid_dyn_codecs_cnt;
 #endif
+        } else if (med_type == PJMEDIA_TYPE_TEXT) {
+            dyn_codecs = neg->txt_dyn_codecs;
+            count = neg->txt_dyn_codecs_cnt;
         } else {
             continue;
         }
@@ -1858,7 +2007,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
             }
 
             if (new_pt != 0 && new_pt != (pj_int8_t)pt) {
-                rewrite_pt2(neg->pool_active, (pj_str_t *)&attr->value,
+                rewrite_pt2(pool, (pj_str_t *)&attr->value,
                             pt, new_pt);
             } else {
                 new_pt = (pj_int8_t)pt;
@@ -1886,6 +2035,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
             const pjmedia_sdp_attr *attr;
             pjmedia_sdp_fmtp fmtp;
             unsigned pt, new_pt = 0;
+            pj_bool_t is_red = PJ_FALSE;
 
             attr = sdp_m->attr[j];
             if (pj_strcmp2(&attr->name, "fmtp") != 0)
@@ -1899,12 +2049,91 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
                 continue;
 
             new_pt = pt_change[pt - START_DYNAMIC_PT];
-            /* No PT change */
-            if (new_pt == 0 || new_pt == pt)
-                continue;
+            if (new_pt == 0)
+                new_pt = pt;
 
-            rewrite_pt2(neg->pool_active, (pj_str_t *)&attr->value,
-                        pt, new_pt);
+            /* Detect RED so we can also rewrite its redundancy PT refs
+             * (the body, e.g. "100 98/98/98", references other PTs).
+             * Look up rtpmap by new_pt: the rtpmap loop above may have
+             * already rewritten the rtpmap value in place.
+             */
+            {
+                const pjmedia_sdp_attr *rtpmap_attr;
+                pjmedia_sdp_rtpmap r;
+                pj_str_t npt_str;
+                char npt_buf[8];
+
+                npt_str.ptr = npt_buf;
+                npt_str.slen = pj_utoa(new_pt, npt_buf);
+                rtpmap_attr = pjmedia_sdp_media_find_attr2(sdp_m, "rtpmap",
+                                                           &npt_str);
+                if (rtpmap_attr &&
+                    pjmedia_sdp_attr_get_rtpmap(rtpmap_attr, &r)==PJ_SUCCESS &&
+                    pj_stricmp2(&r.enc_name, "red") == 0)
+                {
+                    is_red = PJ_TRUE;
+                }
+            }
+
+            if (is_red) {
+                pjmedia_codec_fmtp parsed;
+
+                pj_bzero(&parsed, sizeof(parsed));
+                if (pjmedia_stream_info_parse_fmtp_data(pool, &fmtp.fmt_param,
+                                                        &parsed) == PJ_SUCCESS
+                    && parsed.cnt > 0)
+                {
+                    /* Same bound as create_redundancy_rtpmap() (producer)
+                     * and apply_answer_symmetric_pt().
+                     */
+                    enum { MAX_FMTP_STR_LEN = 32 };
+                    char buf[MAX_FMTP_STR_LEN];
+                    int buf_len, len;
+                    unsigned k;
+                    pj_bool_t modified = (new_pt != pt);
+                    pj_str_t new_val;
+
+                    buf_len = pj_ansi_snprintf(buf, MAX_FMTP_STR_LEN, "%u ",
+                                               new_pt);
+                    if (buf_len < 0 || buf_len >= MAX_FMTP_STR_LEN)
+                        continue;
+
+                    for (k = 0; k < parsed.cnt; ++k) {
+                        unsigned ref_pt = pj_strtoul(&parsed.param[k].val);
+                        unsigned new_ref = ref_pt;
+
+                        if (ref_pt >= START_DYNAMIC_PT &&
+                            pt_change[ref_pt - START_DYNAMIC_PT] != 0)
+                        {
+                            new_ref = pt_change[ref_pt - START_DYNAMIC_PT];
+                            if (new_ref != ref_pt)
+                                modified = PJ_TRUE;
+                        }
+                        len = pj_ansi_snprintf(buf + buf_len,
+                                               MAX_FMTP_STR_LEN - buf_len,
+                                               (k == 0)? "%u": "/%u",
+                                               new_ref);
+                        if (len < 0 || len >= MAX_FMTP_STR_LEN - buf_len) {
+                            buf_len = -1;
+                            break;
+                        }
+                        buf_len += len;
+                    }
+
+                    if (buf_len > 0 && modified) {
+                        new_val.ptr = buf;
+                        new_val.slen = buf_len;
+                        pj_strdup(pool, (pj_str_t *)&attr->value, &new_val);
+                    }
+                    continue;
+                }
+                /* Parse failed or empty body: fall through. */
+            }
+
+            /* Only the fmtp's own PT needs rewriting. */
+            if (new_pt == pt)
+                continue;
+            rewrite_pt2(pool, (pj_str_t *)&attr->value, pt, new_pt);
         }
 
         /* Modify format list */
@@ -1920,7 +2149,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
             if (new_pt == 0 || new_pt == pt)
                 continue;
 
-            rewrite_pt2(neg->pool_active, &sdp_m->desc.fmt[j],
+            rewrite_pt2(pool, &sdp_m->desc.fmt[j],
                         pt, new_pt);
         }
     }
@@ -1940,15 +2169,18 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg)
                      neg->state == PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER,
                      PJMEDIA_SDPNEG_EINSTATE);
 
-    // No longer needed after #3322.
-    if (0 && neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
+    if (neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
         neg->active_local_sdp) 
     {
         /* Increment next version number. This happens if for example
          * the reinvite offer is rejected by 488. If we don't increment
          * the version here, the next offer will have the same version.
          */
-        neg->active_local_sdp->origin.version++;
+        // No longer needed after #3322.
+        // neg->active_local_sdp->origin.version++;
+
+        /* Revert last sent SDP. */
+        neg->last_sent = neg->active_local_sdp;
     }
 
     /* Revert back initial SDP */

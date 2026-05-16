@@ -26,15 +26,15 @@ export PJSUA2_LIB_LIB=libpjsua2-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export PJSIP_SONAME := libpjsip.$(SHLIB_SUFFIX)
-export PJSIP_SHLIB := $(PJSIP_SONAME).$(PJ_VERSION_MAJOR)
+export PJSIP_SHLIB := $(PJSIP_SONAME).$(PJ_SONAME_VERSION)
 export PJSIP_UA_SONAME := libpjsip-ua.$(SHLIB_SUFFIX)
-export PJSIP_UA_SHLIB := $(PJSIP_UA_SONAME).$(PJ_VERSION_MAJOR)
+export PJSIP_UA_SHLIB := $(PJSIP_UA_SONAME).$(PJ_SONAME_VERSION)
 export PJSIP_SIMPLE_SONAME := libpjsip-simple.$(SHLIB_SUFFIX)
-export PJSIP_SIMPLE_SHLIB := $(PJSIP_SIMPLE_SONAME).$(PJ_VERSION_MAJOR)
+export PJSIP_SIMPLE_SHLIB := $(PJSIP_SIMPLE_SONAME).$(PJ_SONAME_VERSION)
 export PJSUA_LIB_SONAME := libpjsua.$(SHLIB_SUFFIX)
-export PJSUA_LIB_SHLIB := $(PJSUA_LIB_SONAME).$(PJ_VERSION_MAJOR)
+export PJSUA_LIB_SHLIB := $(PJSUA_LIB_SONAME).$(PJ_SONAME_VERSION)
 export PJSUA2_LIB_SONAME := libpjsua2.$(SHLIB_SUFFIX)
-export PJSUA2_LIB_SHLIB := $(PJSUA2_LIB_SONAME).$(PJ_VERSION_MAJOR)
+export PJSUA2_LIB_SHLIB := $(PJSUA2_LIB_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################
@@ -50,8 +50,8 @@ export _CXXFLAGS:= $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS) $(_CFLAGS)
 export _LDFLAGS := $(APP_THIRD_PARTY_LIBS) \
 		   $(APP_THIRD_PARTY_EXT) \
-		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(APP_LDFLAGS) $(LDFLAGS) 
+		   $(CC_LDFLAGS) $(APP_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) \
+		   $(HOST_LDFLAGS) $(LDFLAGS) 
 
 ###############################################################################
 # Defines for building PJSIP core library
@@ -80,7 +80,7 @@ export PJSIP_LDFLAGS += $(PJLIB_UTIL_LDLIB) \
 export PJSIP_UA_SRCDIR = ../src/pjsip-ua
 export PJSIP_UA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			sip_inv.o sip_reg.o sip_replaces.o sip_xfer.o \
-			sip_100rel.o sip_timer.o
+			sip_100rel.o sip_timer.o sip_siprec.o
 export PJSIP_UA_CFLAGS += $(_CFLAGS)
 export PJSIP_UA_CXXFLAGS += $(_CXXFLAGS)
 export PJSIP_UA_LDFLAGS += $(PJSIP_SIMPLE_LDLIB) \
@@ -114,7 +114,7 @@ export PJSUA_LIB_SRCDIR = ../src/pjsua-lib
 export PJSUA_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			pjsua_acc.o pjsua_call.o pjsua_core.o \
 			pjsua_im.o pjsua_media.o pjsua_pres.o \
-			pjsua_dump.o pjsua_aud.o pjsua_vid.o
+			pjsua_dump.o pjsua_aud.o pjsua_txt.o pjsua_vid.o
 export PJSUA_LIB_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA_LIB_CXXFLAGS += $(_CXXFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA_LIB_LDFLAGS += $(PJSIP_UA_LDLIB) \
@@ -161,7 +161,7 @@ export PJSUA2_LIB_LDFLAGS += $(PJSUA_LIB_LDLIB) \
 #
 export PJSUA2_TEST_SRCDIR = ../src/pjsua2-test
 export PJSUA2_TEST_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			   main.o
+			   main.o instant_messaging.o auth_challenge.o
 export PJSUA2_TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_TEST_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_TEST_LDFLAGS += $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(LDFLAGS)
@@ -169,7 +169,6 @@ ifeq ($(EXCLUDE_APP),0)
 export PJSUA2_TEST_EXE := pjsua2-test-$(TARGET_NAME)$(HOST_EXE)
 endif
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
-
 
 ###############################################################################
 # Defines for building test application
@@ -181,19 +180,20 @@ export TEST_OBJS += dlg_core_test.o dns_test.o msg_err_test.o \
 		    transport_test.o transport_udp_test.o \
 		    tsx_basic_test.o tsx_bench.o tsx_uac_test.o \
 		    tsx_uas_test.o txdata_test.o uri_test.o \
-		    inv_offer_answer_test.o
+		    inv_offer_answer_test.o auth_async_test.o \
+		    pjsua_auth_test.o
 export TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export TEST_CXXFLAGS += $(_CXXFLAGS)
-export TEST_LDFLAGS += $(PJSIP_LDLIB) \
+export TEST_LDFLAGS += $(PJSUA_LIB_LDLIB) \
+		       $(PJSIP_LDLIB) \
 		       $(PJSIP_UA_LDLIB) \
 		       $(PJSIP_SIMPLE_LDLIB) \
-		       $(PJSUA_LDLIB) \
 		       $(PJMEDIA_CODEC_LDLIB) \
 		       $(PJMEDIA_VIDEODEV_LDLIB) \
 		       $(PJMEDIA_LDLIB) \
 		       $(PJMEDIA_AUDIODEV_LDLIB) \
-		       $(PJLIB_UTIL_LDLIB) \
 		       $(PJNATH_LDLIB) \
+		       $(PJLIB_UTIL_LDLIB) \
 		       $(PJLIB_LDLIB) \
 		       $(_LDFLAGS)
 ifeq ($(EXCLUDE_APP),0)

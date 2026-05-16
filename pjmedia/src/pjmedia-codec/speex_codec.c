@@ -383,12 +383,16 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_deinit(void)
         return PJ_EINVALIDOP;
     }
 
+    /* Release the factory mutex before calling unregister to avoid lock
+     * order inversion with codec manager mutex.
+     */
+    pj_mutex_unlock(spx_factory.mutex);
+
     /* Unregister Speex codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &spx_factory.base);
     
     /* Destroy mutex. */
-    pj_mutex_unlock(spx_factory.mutex);
     pj_mutex_destroy(spx_factory.mutex);
     spx_factory.mutex = NULL;
 
@@ -840,13 +844,16 @@ static pj_status_t  spx_codec_parse( pjmedia_codec *codec,
     int char_ptr = 0;
     int bit_ptr = 0;
 
+    PJ_ASSERT_RETURN(codec && ts && frames && frame_cnt, PJ_EINVAL);
+
     samples_per_frame=spx_factory.speex_param[spx->param_id].samples_per_frame;
 
     /* Copy the data into the speex bit-stream */
     speex_bits_read_from(&spx->dec_bits, (char*)pkt, (int)pkt_size);
 
-    while (speex_get_next_frame(&spx->dec_bits) == 0 && 
-           spx->dec_bits.charPtr != char_ptr)
+    while (speex_get_next_frame(&spx->dec_bits) == 0 &&
+           spx->dec_bits.charPtr != char_ptr &&
+           count < *frame_cnt)
     {
         frames[count].buf = (char*)pkt + char_ptr;
         /* Bit info contains start bit offset of the frame */

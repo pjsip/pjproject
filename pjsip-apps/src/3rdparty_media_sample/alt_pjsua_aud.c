@@ -366,6 +366,14 @@ PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( pjsua_call_id call_id,
     return PJ_ENOTSUP;
 }
 
+PJ_DEF(pj_status_t) pjsua_call_dial_dtmf2( pjsua_call_id call_id,
+                                          const pj_str_t *digits,
+                                          unsigned duration)
+{
+    UNIMPLEMENTED(pjsua_call_dial_dtmf2)
+    return PJ_ENOTSUP;
+}
+
 /*****************************************************************************
  * Below are auxiliary API that we don't support (feel free to implement them
  * with the other media stack)
@@ -640,11 +648,11 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
     return PJ_SUCCESS;
 }
 
-/* Use null sound device. */
+/* Use null sound device. Alt media backend has no real sound device,
+ * so this is a no-op that always succeeds. */
 PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
 {
-    UNIMPLEMENTED(pjsua_set_null_snd_dev)
-    return PJ_ENOTSUP;
+    return PJ_SUCCESS;
 }
 
 /* Use no device! */

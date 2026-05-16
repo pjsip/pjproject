@@ -23,7 +23,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include "os_support.h"
 
 /* The guts header contains all the multiplication and addition macros that are defined for
- fixed or floating point complex numbers.  It also delares the kf_ internal functions.
+ fixed or floating point complex numbers.  It also declares the kf_ internal functions.
  */
 
 static void kf_bfly2(
@@ -110,7 +110,7 @@ static void kf_bfly4(
              C_MUL(scratch[0],Fout[m] , *tw1 );
              C_MUL(scratch[1],Fout[m2] , *tw2 );
              C_MUL(scratch[2],Fout[m3] , *tw3 );
-             
+
              C_SUB( scratch[5] , *Fout, scratch[1] );
              C_ADDTO(*Fout, scratch[1]);
              C_ADD( scratch[3] , scratch[0] , scratch[2] );
@@ -120,7 +120,7 @@ static void kf_bfly4(
              tw2 += fstride*2;
              tw3 += fstride*3;
              C_ADDTO( *Fout , scratch[3] );
-             
+
              Fout[m].r = scratch[5].r - scratch[4].i;
              Fout[m].i = scratch[5].i + scratch[4].r;
              Fout[m3].r = scratch[5].r + scratch[4].i;
@@ -140,7 +140,7 @@ static void kf_bfly4(
              C_MUL4(scratch[0],Fout[m] , *tw1 );
              C_MUL4(scratch[1],Fout[m2] , *tw2 );
              C_MUL4(scratch[2],Fout[m3] , *tw3 );
-             
+
              Fout->r = PSHR16(Fout->r, 2);
              Fout->i = PSHR16(Fout->i, 2);
              C_SUB( scratch[5] , *Fout, scratch[1] );
@@ -154,7 +154,7 @@ static void kf_bfly4(
              tw2 += fstride*2;
              tw3 += fstride*3;
              C_ADDTO( *Fout , scratch[3] );
-             
+
              Fout[m].r = scratch[5].r + scratch[4].i;
              Fout[m].i = scratch[5].i - scratch[4].r;
              Fout[m3].r = scratch[5].r - scratch[4].i;
@@ -292,7 +292,7 @@ static void kf_bfly_generic(
     /*CHECKBUF(scratchbuf,nscratchbuf,p);*/
     if (p>17)
        speex_fatal("KissFFT: max radix supported is 17");
-    
+
     for ( u=0; u<m; ++u ) {
         k=u;
         for ( q1=0 ; q1<p ; ++q1 ) {
@@ -317,7 +317,7 @@ static void kf_bfly_generic(
         }
     }
 }
-               
+
 static
 void kf_shuffle(
          kiss_fft_cpx * Fout,
@@ -330,7 +330,7 @@ void kf_shuffle(
 {
    const int p=*factors++; /* the radix  */
    const int m=*factors++; /* stage's fft length/p */
-   
+
     /*printf ("fft %d %d %d %d %d %d\n", p*m, m, p, s2, fstride*in_stride, N);*/
    if (m==1)
    {
@@ -392,14 +392,14 @@ void kf_work(
 
     switch (p) {
         case 2: kf_bfly2(Fout,fstride,st,m); break;
-        case 3: kf_bfly3(Fout,fstride,st,m); break; 
+        case 3: kf_bfly3(Fout,fstride,st,m); break;
         case 4: kf_bfly4(Fout,fstride,st,m); break;
-        case 5: kf_bfly5(Fout,fstride,st,m); break; 
+        case 5: kf_bfly5(Fout,fstride,st,m); break;
         default: kf_bfly_generic(Fout,fstride,st,m,p); break;
     }
 #else
     /*printf ("fft %d %d %d %d %d %d %d\n", p*m, m, p, s2, fstride*in_stride, N, m2);*/
-    if (m==1) 
+    if (m==1)
     {
        /*for (i=0;i<N;i++)
        {
@@ -416,24 +416,24 @@ void kf_work(
        kf_work( Fout , f, fstride*p, in_stride, factors,st, N*p, fstride*in_stride, m);
     }
 
-    
-       
-       
+
+
+
        switch (p) {
           case 2: kf_bfly2(Fout,fstride,st,m, N, m2); break;
-          case 3: for (i=0;i<N;i++){Fout=Fout_beg+i*m2; kf_bfly3(Fout,fstride,st,m);} break; 
+          case 3: for (i=0;i<N;i++){Fout=Fout_beg+i*m2; kf_bfly3(Fout,fstride,st,m);} break;
           case 4: kf_bfly4(Fout,fstride,st,m, N, m2); break;
-          case 5: for (i=0;i<N;i++){Fout=Fout_beg+i*m2; kf_bfly5(Fout,fstride,st,m);} break; 
+          case 5: for (i=0;i<N;i++){Fout=Fout_beg+i*m2; kf_bfly5(Fout,fstride,st,m);} break;
           default: for (i=0;i<N;i++){Fout=Fout_beg+i*m2; kf_bfly_generic(Fout,fstride,st,m,p);} break;
-    }    
+    }
 #endif
 }
 
 /*  facbuf is populated by p1,m1,p2,m2, ...
-    where 
+    where
     p[i] * m[i] = m[i-1]
     m0 = n                  */
-static 
+static
 void kf_factor(int n,int * facbuf)
 {
     int p=4;
@@ -501,10 +501,10 @@ kiss_fft_cfg kiss_fft_alloc(int nfft,int inverse_fft,void * mem,size_t * lenmem 
 
 
 
-    
+
 void kiss_fft_stride(kiss_fft_cfg st,const kiss_fft_cpx *fin,kiss_fft_cpx *fout,int in_stride)
 {
-    if (fin == fout) 
+    if (fin == fout)
     {
        speex_fatal("In-place FFT not supported");
        /*CHECKBUF(tmpbuf,ntmpbuf,st->nfft);

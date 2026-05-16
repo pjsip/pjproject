@@ -10,7 +10,7 @@ export YUV_LIB := libyuv-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export YUV_SONAME := libyuv.$(SHLIB_SUFFIX)
-export YUV_SHLIB := $(YUV_SONAME).$(PJ_VERSION_MAJOR)
+export YUV_SHLIB := $(YUV_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################
@@ -72,6 +72,7 @@ export YUV_OBJS = \
 
 export YUV_CFLAGS = -fomit-frame-pointer -fno-strict-aliasing -Wno-memset-elt-size -Wno-unknown-warning-option -Wno-pragmas $(_CFLAGS)
 export YUV_CXXFLAGS = -fomit-frame-pointer -fno-strict-aliasing -Wno-memset-elt-size -Wno-unknown-warning-option -Wno-pragmas $(_CXXFLAGS)
+export YUV_LDFLAGS = $(_LDFLAGS)
 
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 

@@ -702,6 +702,42 @@ struct container_node_op
 #define NODE_WRITE_STRINGV(node,item)   node.writeStringVector(#item, item)
 #define NODE_WRITE_OBJ(node,item)       node.writeObject(item)
 
+/*
+ * Optional-read variants: leave the item unchanged (i.e. at its
+ * constructor-initialized default) when the field is absent in the config
+ * file (e.g. loading a config file written by an older version that did not
+ * yet have the field).  Each macro checks hasUnread() and the name of the
+ * next element before attempting the read, so no exception is thrown and the
+ * read cursor is left in the correct position for the next field.
+ *
+ * Convention: always append new fields at the END of readObject() and use
+ * these _OPT variants so that older config files remain loadable.
+ */
+#define NODE_READ_BOOL_OPT(node,item) \
+    do { if ((node).hasUnread() && (node).unreadName()==#item) \
+             (item)=(node).readBool(#item); } while(0)
+#define NODE_READ_UNSIGNED_OPT(node,item) \
+    do { if ((node).hasUnread() && (node).unreadName()==#item) \
+             (item)=(unsigned)(node).readNumber(#item); } while(0)
+#define NODE_READ_INT_OPT(node,item) \
+    do { if ((node).hasUnread() && (node).unreadName()==#item) \
+             (item)=(int)(node).readNumber(#item); } while(0)
+#define NODE_READ_FLOAT_OPT(node,item) \
+    do { if ((node).hasUnread() && (node).unreadName()==#item) \
+             (item)=(node).readNumber(#item); } while(0)
+#define NODE_READ_NUM_T_OPT(node,T,item) \
+    do { if ((node).hasUnread() && (node).unreadName()==#item) \
+             (item)=(T)(int)(node).readNumber(#item); } while(0)
+#define NODE_READ_STRING_OPT(node,item) \
+    do { if ((node).hasUnread() && (node).unreadName()==#item) \
+             (item)=(node).readString(#item); } while(0)
+#define NODE_READ_STRINGV_OPT(node,item) \
+    do { if ((node).hasUnread() && (node).unreadName()==#item) \
+             (item)=(node).readStringVector(#item); } while(0)
+#define NODE_READ_OBJ_OPT(node,item) \
+    do { if ((node).hasUnread() && (node).unreadName()==#item) \
+             (node).readObject(item); } while(0)
+
 //! @endcond
 
 /**

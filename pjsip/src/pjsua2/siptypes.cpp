@@ -17,6 +17,7 @@
  */
 #include <pjsua2/types.hpp>
 #include <pjsua2/siptypes.hpp>
+#include <pjsip/print_util.h>       /* For pjsip_hdr_names */
 #include "util.hpp"
 
 using namespace pj;
@@ -82,7 +83,7 @@ void readSipHeaders( const ContainerNode &node,
         ContainerNode header_node = headers_node.readContainer("header");
         hdr.hName = header_node.readString("hname");
         hdr.hValue = header_node.readString("hvalue");
-        headers.push_back(hdr);
+        headers.push_back(PJSUA2_MOVE(hdr));
     }
 }
 
@@ -113,7 +114,7 @@ AuthCredInfo::AuthCredInfo(const string &param_scheme,
                            const int param_data_type,
                            const string param_data)
 : scheme(param_scheme), realm(param_realm), username(param_user_name),
-  dataType(param_data_type), data(param_data),
+  dataType(param_data_type), data(PJSUA2_MOVE(param_data)),
   algoType(PJSIP_AUTH_ALGORITHM_NOT_SET)
 {
 }
@@ -176,7 +177,9 @@ pjsip_cred_info AuthCredInfo::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
-TlsConfig::TlsConfig() : method(PJSIP_SSL_UNSPECIFIED_METHOD),
+TlsConfig::TlsConfig() : credDirectType(0),
+                         privKeyDirect(NULL), certDirect(NULL),
+                         method(PJSIP_SSL_UNSPECIFIED_METHOD),
                          qosType(PJ_QOS_TYPE_BEST_EFFORT)
 {
     pjsip_tls_setting ts;
@@ -198,6 +201,20 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.privkey_buf      = str2Pj(this->privKeyBuf);
     ts.cert_lookup.type = this->certLookupType;
     ts.cert_lookup.keyword = str2Pj(this->certLookupKeyword);
+    
+    if (this->certDirect &&
+        (this->credDirectType & PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT))
+    {
+        ts.cert_direct.type |= PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT;
+        ts.cert_direct.cert = this->certDirect;
+    }
+    if (this->privKeyDirect &&
+        (this->credDirectType & PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY))
+    {
+        ts.cert_direct.type |= PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY;
+        ts.cert_direct.privkey = this->privKeyDirect;
+    }
+
     ts.method           = this->method;
     ts.ciphers_num      = (unsigned)this->ciphers.size();
     ts.proto            = this->proto;
@@ -231,6 +248,26 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->privKeyBuf    = pj2Str(prm.privkey_buf);
     this->certLookupType= prm.cert_lookup.type;
     this->certLookupKeyword = pj2Str(prm.cert_lookup.keyword);
+    this->credDirectType= 0;
+
+    if (prm.cert_direct.cert &&
+        (prm.cert_direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT))
+    {
+        this->credDirectType |= PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT; 
+        this->certDirect = prm.cert_direct.cert;
+    } else {
+        this->certDirect = NULL;
+    }
+
+    if (prm.cert_direct.privkey &&
+        (prm.cert_direct.type & PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY))
+    {
+        this->credDirectType |= PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY; 
+        this->privKeyDirect = prm.cert_direct.privkey;
+    } else {
+        this->privKeyDirect = NULL;
+    }
+
     this->method        = (pjsip_ssl_method)prm.method;
     this->proto         = prm.proto;
     // The following will only work if sizeof(enum)==sizeof(int)
@@ -357,7 +394,7 @@ void SockOptParams::fromPj(const pj_sockopt_params &prm)
         if (prm.options[i].optlen == sizeof(int)) {
             so.setOptValInt(*((int *)prm.options[i].optval));
         }
-        this->sockOpts.push_back(so);
+        this->sockOpts.push_back(PJSUA2_MOVE(so));
     }
 }
 
@@ -375,7 +412,7 @@ void SockOptParams::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
             int optVal = so_node.readInt("optVal");
             so.setOptValInt(optVal);
         }
-        sockOpts.push_back(so);
+        sockOpts.push_back(PJSUA2_MOVE(so));
     }
 }
 
@@ -609,7 +646,7 @@ void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
     while (pj_hdr != &prm.hdr) {
         SipHeader sh;
         sh.fromPj(pj_hdr);
-        headers.push_back(sh);
+        headers.push_back(PJSUA2_MOVE(sh));
         pj_hdr = pj_hdr->next;
     }
 
@@ -741,8 +778,9 @@ TsxStateEvent::TsxStateEvent()
 
 bool SipTxOption::isEmpty() const
 {
-    return (targetUri == "" && localUri == "" &&  headers.size() == 0 &&
-            contentType == "" && msgBody == "" && multipartContentType.type == "" &&
+    return (targetUri == "" && localUri == "" && contactUri == "" &&
+            headers.size() == 0 && contentType == "" && msgBody == "" &&
+            multipartContentType.type == "" &&
             multipartContentType.subType == "" && multipartParts.size() == 0);
 }
 
@@ -752,12 +790,14 @@ void SipTxOption::fromPj(const pjsua_msg_data &prm) PJSUA2_THROW(Error)
 
     localUri = pj2Str(prm.local_uri);
 
+    contactUri = pj2Str(prm.contact_uri);
+
     headers.clear();
     pjsip_hdr* pj_hdr = prm.hdr_list.next;
     while (pj_hdr != &prm.hdr_list) {
         SipHeader sh;
         sh.fromPj(pj_hdr);
-        headers.push_back(sh);
+        headers.push_back(PJSUA2_MOVE(sh));
         pj_hdr = pj_hdr->next;
     }
 
@@ -770,7 +810,7 @@ void SipTxOption::fromPj(const pjsua_msg_data &prm) PJSUA2_THROW(Error)
     while (pj_mp != &prm.multipart_parts) {
         SipMultipartPart smp;
         smp.fromPj(*pj_mp);
-        multipartParts.push_back(smp);
+        multipartParts.push_back(PJSUA2_MOVE(smp));
         pj_mp = pj_mp->next;
     }
 }
@@ -785,9 +825,29 @@ void SipTxOption::toPj(pjsua_msg_data &msg_data) const
 
     msg_data.local_uri = str2Pj(localUri);
 
+    msg_data.contact_uri = str2Pj(contactUri);
+
     pj_list_init(&msg_data.hdr_list);
     for (i = 0; i < headers.size(); i++) {
         pjsip_generic_string_hdr& pj_hdr = headers[i].toPj();
+        
+        /* If the header is Max-Forwards, the header type needs to be
+         * PJSIP_H_MAX_FORWARDS as PJSUA will compare the header type
+         * instead of the string name.
+         */
+        if ((headers[i].hName.size() ==
+             pjsip_hdr_names[PJSIP_H_MAX_FORWARDS].name_len) &&
+            (pj_ansi_strnicmp(headers[i].hName.c_str(),
+                              pjsip_hdr_names[PJSIP_H_MAX_FORWARDS].name,
+                              headers[i].hName.size()) == 0))
+        {
+            pjsip_max_fwd_hdr *tmp = (pjsip_max_fwd_hdr*)&pj_hdr;
+
+            pj_assert(sizeof(pjsip_generic_string_hdr) >=
+                      sizeof(pjsip_max_fwd_hdr));
+            pjsip_max_fwd_hdr_init(NULL, tmp, std::stoi(headers[i].hValue));
+        }
+
         pj_list_push_back(&msg_data.hdr_list, &pj_hdr);
     }
 

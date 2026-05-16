@@ -214,13 +214,17 @@ PJ_DEF(pj_status_t) pjmedia_codec_bcg729_deinit(void)
         return PJ_EINVALIDOP;
     }
 
+    /* Release the factory mutex before calling unregister to avoid lock
+     * order inversion with codec manager mutex.
+     */
+    pj_mutex_unlock(bcg729_factory.mutex);
+
     /* Unregister bcg729 codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &bcg729_factory.base);
     bcg729_factory.endpt = NULL;
 
     /* Destroy mutex. */
-    pj_mutex_unlock(bcg729_factory.mutex);
     pj_mutex_destroy(bcg729_factory.mutex);
     bcg729_factory.mutex = NULL;
 

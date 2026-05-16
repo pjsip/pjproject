@@ -56,6 +56,9 @@
 #else
 #define WEBRTC_ARCH_32_BITS
 #endif
+#elif defined(__loongarch64) || defined(__loongarch64__)
+#define WEBRTC_ARCH_LITTLE_ENDIAN
+#define WEBRTC_ARCH_64_BITS
 #else
 #error Please add support for your architecture in typedefs.h
 #endif

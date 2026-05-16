@@ -549,12 +549,14 @@ static pj_str_t cid_uri_to_hdr_value(pj_pool_t *pool, pj_str_t *cid_uri)
     pj_size_t cid_len = pj_strlen(cid_uri);
     pj_size_t alloc_len = cid_len + 2 /* for the leading and trailing angle brackets */;
     pj_str_t uri_overlay;
-    pj_str_t cid_hdr;
+    pj_str_t cid_hdr = {0};
     pj_str_t hdr_overlay;
 
     pj_strassign(&uri_overlay, cid_uri);
     /* If the URI is already enclosed in angle brackets, remove them. */
     if (uri_overlay.ptr[0] == '<') {
+        if (uri_overlay.slen < 2)
+            return cid_hdr;
         uri_overlay.ptr++;
         uri_overlay.slen -= 2;
     }
@@ -833,7 +835,7 @@ PJ_DEF(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
 
         /* Eat the boundary */
         curptr += delim.slen;
-        if (*curptr=='-' && curptr<endptr-1 && *(curptr+1)=='-') {
+        if (curptr+1 < endptr && *curptr=='-' && *(curptr+1)=='-') {
             /* Found the closing delimiter */
             curptr += 2;
             break;
@@ -841,8 +843,12 @@ PJ_DEF(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
         /* Optional whitespace after delimiter */
         while (curptr!=endptr && IS_SPACE(*curptr)) ++curptr;
         /* Mandatory CRLF */
+        if (curptr == endptr) {
+            PJ_LOG(2, (THIS_FILE, "Unexpected end of buffer after boundary"));
+            return NULL;
+        }
         if (*curptr=='\r') ++curptr;
-        if (*curptr!='\n') {
+        if (curptr == endptr || *curptr!='\n') {
             /* Expecting a newline here */
             PJ_LOG(2, (THIS_FILE, "Failed to find newline"));
 

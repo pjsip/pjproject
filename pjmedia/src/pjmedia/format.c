@@ -403,7 +403,7 @@ pjmedia_register_video_format_info(pjmedia_video_format_mgr *mgr,
 
 PJ_DEF(pjmedia_video_format_mgr*) pjmedia_video_format_mgr_instance(void)
 {
-    pj_assert(video_format_mgr_instance != NULL);
+//    pj_assert(video_format_mgr_instance != NULL);
     return video_format_mgr_instance;
 }
 

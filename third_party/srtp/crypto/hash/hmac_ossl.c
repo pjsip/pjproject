@@ -93,6 +93,9 @@ typedef struct {
     EVP_MAC_CTX *ctx_dup;
 #else
     HMAC_CTX *ctx;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+    HMAC_CTX static_ctx;
+#endif
 #endif
 } srtp_hmac_ossl_ctx_t;
 
@@ -153,6 +156,7 @@ static srtp_err_status_t srtp_hmac_alloc(srtp_auth_t **a,
         hmac->ctx = NULL;
     }
 #else
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
     hmac->ctx = HMAC_CTX_new();
     if (hmac->ctx == NULL) {
         srtp_crypto_free(hmac);
@@ -160,6 +164,10 @@ static srtp_err_status_t srtp_hmac_alloc(srtp_auth_t **a,
         *a = NULL;
         return srtp_err_status_alloc_fail;
     }
+#else
+    HMAC_CTX_init(&hmac->static_ctx);
+    hmac->ctx = &hmac->static_ctx;
+#endif
 #endif
 
     /* set pointers */
@@ -182,7 +190,11 @@ static srtp_err_status_t srtp_hmac_dealloc(srtp_auth_t *a)
         EVP_MAC_CTX_free(hmac->ctx_dup);
         EVP_MAC_free(hmac->mac);
 #else
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
         HMAC_CTX_free(hmac->ctx);
+#else
+        HMAC_CTX_cleanup(hmac->ctx);
+#endif
 #endif
         /* zeroize entire state*/
         octet_string_set_to_zero(hmac, sizeof(srtp_hmac_ossl_ctx_t));

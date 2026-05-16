@@ -1247,7 +1247,10 @@ static PyObject *py_pjsua_transport_get_info(PyObject *pSelf, PyObject *pArgs)
 
 /*
  * py_pjsua_transport_set_enable
+ * NOTE: This function is commented out because pjsua_transport_set_enable
+ * has been deprecated and is no longer available in the PJSUA API.
  */
+/*
 static PyObject *py_pjsua_transport_set_enable(PyObject *pSelf, 
                                                PyObject *pArgs)
 {
@@ -1264,6 +1267,7 @@ static PyObject *py_pjsua_transport_set_enable(PyObject *pSelf,
 
     return Py_BuildValue("i", status);
 }
+*/
 
 /*
  * py_pjsua_transport_close
@@ -1298,6 +1302,11 @@ static char pjsua_transport_get_info_doc[] =
     "void _pjsua.transport_get_info "
     "(_pjsua.Transport_ID id, _pjsua.Transport_Info info) "
     "Get information about transports.";
+/*
+ * NOTE: pjsua_transport_set_enable_doc is commented out because the
+ * corresponding function has been deprecated and is no longer available.
+ */
+/*
 static char pjsua_transport_set_enable_doc[] =
     "void _pjsua.transport_set_enable "
     "(_pjsua.Transport_ID id, int enabled) "
@@ -1306,6 +1315,7 @@ static char pjsua_transport_set_enable_doc[] =
     "Disabling a transport does not necessarily close the socket, "
     "it will only discard incoming messages and prevent the transport "
     "from being used to send outgoing messages.";
+*/
 static char pjsua_transport_close_doc[] =
     "void _pjsua.transport_close (_pjsua.Transport_ID id, int force) "
     "Close the transport. If transport is forcefully closed, "
@@ -2526,7 +2536,7 @@ static PyObject *py_pjsua_playlist_create(PyObject *pSelf, PyObject *pArgs)
 
     count = 0;
     for (count=0; count<PyList_Size(pFileList) && 
-                  count<PJ_ARRAY_SIZE(files); ++count) 
+                  count<(int)PJ_ARRAY_SIZE(files); ++count) 
     {
         files[count] = PyString_ToPJ(PyList_GetItem(pFileList, count));
     }
@@ -4061,10 +4071,16 @@ static PyMethodDef py_pjsua_methods[] =
         "transport_get_info", py_pjsua_transport_get_info, METH_VARARGS,
         pjsua_transport_get_info_doc
     },
+    /*
+     * NOTE: transport_set_enable is commented out because the underlying
+     * pjsua_transport_set_enable function has been deprecated.
+     */
+    /*
     {
         "transport_set_enable", py_pjsua_transport_set_enable, METH_VARARGS,
         pjsua_transport_set_enable_doc
     },
+    */
     {
        "transport_close", py_pjsua_transport_close, METH_VARARGS,
         pjsua_transport_close_doc
@@ -4422,6 +4438,21 @@ static PyMethodDef py_pjsua_methods[] =
 };
 
 
+#if PY_MAJOR_VERSION > 2
+static struct PyModuleDef py_pjsua_module =
+{
+    PyModuleDef_HEAD_INIT,
+    "_pjsua", /* name of module */
+    "PJSUA-lib module for python\n", /* module documentation, may be NULL */
+    -1,   /* size of per-interpreter state of the module, or -1 if the module keeps state in global variables. */
+    py_pjsua_methods,
+    NULL,                /* m_reload */
+    NULL,                /* m_traverse */
+    NULL,                /* m_clear */
+    NULL,                /* m_free */
+};
+#endif
+
 
 /*
  * Mapping C structs from and to Python objects & initializing object
@@ -4437,30 +4468,30 @@ init_pjsua(void)
     PyEval_InitThreads();
 
     if (PyType_Ready(&PyTyp_pjsua_callback) < 0)
-        return;
+        return INIT_RETURN;
     if (PyType_Ready(&PyTyp_pjsua_config) < 0)
-        return;
+        return INIT_RETURN;
     if (PyType_Ready(&PyTyp_pjsua_logging_config) < 0)
-        return;
+        return INIT_RETURN;
     if (PyType_Ready(&PyTyp_pjsua_msg_data) < 0)
-        return;
+        return INIT_RETURN;
     PyTyp_pjsua_media_config.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyTyp_pjsua_media_config) < 0)
-        return;
+        return INIT_RETURN;
     PyTyp_pjsip_cred_info.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyTyp_pjsip_cred_info) < 0)
-        return;
+        return INIT_RETURN;
     PyTyp_pjsip_rx_data.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyTyp_pjsip_rx_data) < 0)
-        return;
+        return INIT_RETURN;
 
     /* LIB TRANSPORT */
 
     if (PyType_Ready(&PyTyp_pjsua_transport_config) < 0)
-        return;
+        return INIT_RETURN;
     
     if (PyType_Ready(&PyTyp_pjsua_transport_info) < 0)
-        return;
+        return INIT_RETURN;
     
     /* END OF LIB TRANSPORT */
 
@@ -4468,48 +4499,48 @@ init_pjsua(void)
 
     
     if (PyType_Ready(&PyTyp_pjsua_acc_config) < 0)
-        return;
+        return INIT_RETURN;
     if (PyType_Ready(&PyTyp_pjsua_acc_info) < 0)
-        return;
+        return INIT_RETURN;
 
     /* END OF LIB ACCOUNT */
 
     /* LIB BUDDY */
 
     if (PyType_Ready(&PyTyp_pjsua_buddy_config) < 0)
-        return;
+        return INIT_RETURN;
     if (PyType_Ready(&PyTyp_pjsua_buddy_info) < 0)
-        return;
+        return INIT_RETURN;
 
     /* END OF LIB BUDDY */
 
     /* LIB MEDIA */
   
     if (PyType_Ready(&PyTyp_pjsua_codec_info) < 0)
-        return;
+        return INIT_RETURN;
 
     if (PyType_Ready(&PyTyp_pjsua_conf_port_info) < 0)
-        return;
+        return INIT_RETURN;
 
     if (PyType_Ready(&PyTyp_pjmedia_snd_dev_info) < 0)
-        return;
+        return INIT_RETURN;
 
     PyTyp_pjmedia_codec_param_info.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyTyp_pjmedia_codec_param_info) < 0)
-        return;
+        return INIT_RETURN;
     PyTyp_pjmedia_codec_param_setting.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyTyp_pjmedia_codec_param_setting) < 0)
-        return;
+        return INIT_RETURN;
 
     if (PyType_Ready(&PyTyp_pjmedia_codec_param) < 0)
-        return;
+        return INIT_RETURN;
 
     /* END OF LIB MEDIA */
 
     /* LIB CALL */
 
     if (PyType_Ready(&PyTyp_pjsua_call_info) < 0)
-        return;
+        return INIT_RETURN;
 
     /* END OF LIB CALL */
 
@@ -4608,4 +4639,6 @@ init_pjsua(void)
     /* Skip it.. */
 
 #undef ADD_CONSTANT
+
+    return INIT_RETURN;
 }

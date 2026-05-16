@@ -297,6 +297,11 @@ public:
      * If bidirectional media flow is desired, application needs to call
      * this method twice, with the second one called from the opposite source
      * media.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
+
      *
      * @param sink              The destination Media.
      */
@@ -323,6 +328,10 @@ public:
      * If bidirectional media flow is desired, application needs to call
      * this method twice, with the second one called from the opposite source
      * media.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * @param sink              The destination Media.
      * @param param             The parameter.
@@ -333,6 +342,10 @@ public:
 
     /**
      *  Stop media flow to destination/sink port.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * @param sink              The destination media.
      *
@@ -413,6 +426,10 @@ protected:
      * This method needs to be called by descendants of this class to register
      * the media port created to the conference bridge and Endpoint's
      * media list.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * param port  The media port to be registered to the conference bridge.
      *
@@ -423,6 +440,10 @@ protected:
      * This method needs to be called by descendants of this class to register
      * the media port created to the conference bridge and Endpoint's
      * media list.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * param port  The media port to be registered to the conference bridge.
      * param pool  The memory pool.
@@ -436,6 +457,10 @@ protected:
      * the media port from the conference bridge and Endpoint's media list.
      * Descendant should only call this method if it has registered the media
      * with the previous call to registerMediaPort().
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onAudioMediaOpCompleted() to receive notification upon
+     * completion.
      */
     void unregisterMediaPort() PJSUA2_THROW(Error);
 
@@ -528,8 +553,130 @@ public:
 
 private:
     pj_pool_t *pool;
-    pjmedia_port port;
+    pjmedia_port *port;
 };
+
+
+/**
+ * AI Media Port event data.
+ */
+struct AiMediaEvent
+{
+    /** Event type. */
+    pjmedia_ai_event_type  type;
+
+    /** Status code. PJ_SUCCESS for informational events. */
+    pj_status_t            status;
+
+    /** Text payload (transcript). Only valid for TRANSCRIPT events. */
+    string                 text;
+};
+
+
+/**
+ * AI Media Port creation parameters.
+ */
+struct AiMediaPortParam
+{
+    /**
+     * Enable voice activity detection (VAD) on the TX path.
+     * When enabled, silence frames are not sent to the AI service.
+     *
+     * Default: false
+     */
+    bool                vadEnabled;
+
+    /**
+     * Ptime in milliseconds.
+     *
+     * Default: 20
+     */
+    unsigned            ptimeMsec;
+
+public:
+    /** Default constructor */
+    AiMediaPortParam() : vadEnabled(false), ptimeMsec(20) {}
+};
+
+
+/**
+ * AI Media Port.
+ *
+ * This wraps pjmedia_ai_port as an AudioMedia object that can be
+ * connected to the conference bridge. It bridges audio to/from
+ * real-time AI services (e.g. OpenAI Realtime API) over WebSocket.
+ *
+ * Basic usage:
+ * 1. Create with createPort() (uses the OpenAI Realtime API backend).
+ * 2. Connect to the AI service with connect().
+ * 3. Use startTransmit()/stopTransmit() to route audio from/to
+ *    other conference bridge ports (e.g. AudioMedia from a call).
+ * 4. Disconnect with disconnect() when done.
+ *
+ * Events (connected, transcript, etc.) are delivered via the
+ * virtual onEvent() callback.
+ */
+class AudioMediaAiPort : public AudioMedia
+{
+public:
+    /**
+     * Constructor.
+     */
+    AudioMediaAiPort();
+
+    /**
+     * Destructor. Disconnects from the AI service (if connected) and
+     * unregisters the port from the conference bridge.
+     */
+    virtual ~AudioMediaAiPort();
+
+    /**
+     * Create an AI media port with the OpenAI Realtime API backend and
+     * register it to the conference bridge. The port operates at the
+     * backend's native clock rate (e.g. 24kHz for OpenAI); the
+     * conference bridge handles resampling.
+     *
+     * @param prm       Creation parameters.
+     */
+    void createPort(const AiMediaPortParam &prm = AiMediaPortParam())
+                    PJSUA2_THROW(Error);
+
+    /**
+     * Connect to the AI service asynchronously. The onEvent() callback
+     * will be called with PJMEDIA_AI_EVENT_CONNECTED or
+     * PJMEDIA_AI_EVENT_DISCONNECTED when complete.
+     *
+     * @param url           WebSocket URL (e.g.
+     *                      "wss://api.openai.com/v1/realtime?model=...")
+     * @param authToken     Authentication token (e.g. OpenAI API key).
+     */
+    void connect(const string &url, const string &authToken)
+                 PJSUA2_THROW(Error);
+
+    /**
+     * Disconnect from the AI service gracefully.
+     */
+    void disconnect() PJSUA2_THROW(Error);
+
+    /*
+     * Callbacks
+     */
+
+    /**
+     * Called when an AI event occurs (connected, transcript, etc.).
+     * This may be called from the ioqueue worker thread.
+     *
+     * @param event     The event data.
+     */
+    virtual void onEvent(const AiMediaEvent &event)
+    { PJ_UNUSED_ARG(event); }
+
+private:
+    pj_pool_t          *pool;
+    pjmedia_ai_port    *aiPort;
+    pjmedia_ai_backend *backend;
+};
+
 
 /**
  * This structure contains additional info about AudioMediaPlayer.
@@ -1780,6 +1927,10 @@ public:
      * If bidirectional media flow is desired, application needs to call
      * this method twice, with the second one called from the opposite source
      * media.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onVideoMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * @param sink              The destination Media.
      * @param param             The parameter.
@@ -1791,6 +1942,10 @@ public:
     /**
      *  Stop media flow to destination/sink port.
      *
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onVideoMediaOpCompleted() to receive notification upon
+     * completion.
+     * 
      * @param sink              The destination media.
      *
      */
@@ -1803,6 +1958,10 @@ public:
      * has changed, video conference needs to be informed to update its
      * internal states.
      *
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onVideoMediaOpCompleted() to receive notification upon
+     * completion.
+     * 
      */
     void update() const PJSUA2_THROW(Error);
 
@@ -1831,6 +1990,10 @@ protected:
      * This method needs to be called by descendants of this class to register
      * the media port created to the conference bridge and Endpoint's
      * media list.
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onVideoMediaOpCompleted() to receive notification upon
+     * completion.
      *
      * param port  The media port to be registered to the conference bridge.
      * param pool  The memory pool.
@@ -1842,6 +2005,11 @@ protected:
      * the media port from the conference bridge and Endpoint's media list.
      * Descendant should only call this method if it has registered the media
      * with the previous call to registerMediaPort().
+     * 
+     * This operation executes asynchronously, use the callback set from
+     * Endpoint::onVideoMediaOpCompleted() to receive notification upon
+     * completion.
+     * 
      */
     void unregisterMediaPort();
 };
@@ -2487,6 +2655,148 @@ private:
     friend class Endpoint;
 };
 
+/**
+ * Video AVI Player.
+ */
+class VideoPlayer
+{
+public:
+    /**
+     * Constructor.
+     */
+    VideoPlayer();
+
+    /**
+     * Create an avi file player, and automatically add this player to
+     * the audio/video conference bridge. The player will create a virtual
+     * video device and audio/video media port based on the streams contained
+     * in the file.
+     * The maximum number of stream is limited to PJSUA_MAX_AVI_NUM_STREAMS
+     * and the video stream is limited to one stream.
+     *
+     * @param filename      The filename to be played. Currently only
+     *                      AVI files are supported. The video stream is using
+     *                      YUY2/I420/RGB24 format and the audio stream is using
+     *                      16bit PCM format.
+     *                      Filename's length must be smaller than PJ_MAXPATH.
+     *
+     */
+    void createVideoPlayer(const string &file_name) PJSUA2_THROW(Error);
+
+    /**
+     * Enumerate all audio media port.
+     *
+     * @return          The list of audio media port.
+     */
+    AudioMediaVector2 mediaEnumPorts() PJSUA2_THROW(Error);
+
+    /**
+     * Enumerate all video media port.
+     *
+     * @return          The list of video media port.
+     */
+    VideoMediaVector mediaEnumVidPorts() PJSUA2_THROW(Error);
+
+    /**
+     * Get the video device index of the avi player. Application can use this
+     * index as the video source/capture device.
+     *
+     * @return          The video device index.
+     */
+    int getVideoDevId() PJSUA2_THROW(Error);
+
+    /**
+     * Destructor. This will unregister the audio/video port from the
+     * audio/video conference bridge.
+     */
+    virtual ~VideoPlayer();
+
+private:
+    /**
+     * Player Id.
+     */
+    int playerId;
+
+};
+
+/**
+ * Video AVI Recorder.
+ */
+class VideoRecorder
+{
+public:
+    /**
+     * Constructor.
+     */
+    VideoRecorder();
+
+    /**
+     * Create an avi recorder and automatically add a audio/video port
+     * the audio/video conference bridge. User can connect the audio/video port
+     * from a source port to store the uncompressed video and 16 bit PCM audio.
+     * The recorder currently supports YUY2/I420/RGB24 video format and
+     * PCM audio format.
+     *
+     * Note: Uncompressed video can lead to significant file size growth.
+     *
+     * @param filename      The filename to be played. Currently only
+     *                      AVI files are supported. Filename's length must be
+     *                      smaller than PJ_MAXPATH.
+     *                      Filename's length must be smaller than PJ_MAXPATH.
+     * @param max_size      Maximum file size.
+     * @param vid_fmt       The video format. If this is not set (NULL), the
+                            format will be set to:
+                            - format:PJMEDIA_FORMAT_I420
+                            - size:320x240
+                            - fps:15
+     * @param aud_fmt       The audio format. If this is not set (NULL), the
+                            format will be set to:
+                            - format:PJMEDIA_FORMAT_PCM
+                            - bits_per_sample:16
+                            - clock rate/chan count/ptime:the conf bridge settings
+     * @param options       Optional options.
+     */
+    void createVideoRecorder(const string& file_name,
+                             long max_size = 0,
+                             MediaFormatVideo *vid_fmt = NULL,
+                             MediaFormatAudio *aud_fmt = NULL,
+                             unsigned options = 0) PJSUA2_THROW(Error);
+
+    /**
+     * Enumerate video media port.
+     *
+     * @return          The list of audio media port.
+     */
+    VideoMedia getVideoMedia() PJSUA2_THROW(Error);
+
+    /**
+     * Enumerate audio media port.
+     *
+     * @return          The list of video media port.
+     */
+    AudioMedia getAudioMedia() PJSUA2_THROW(Error);
+
+    /**
+     * Register a callback to be called when the file size has reached the
+     * max size.
+     */
+    virtual void onMaxSize()
+    {
+    }
+
+    virtual ~VideoRecorder();
+
+private:
+    /**
+     * Recorder Id.
+     */
+    int recorderId;
+
+    /**
+     *  Low level callback
+     */
+    static void max_size_cb(pjsua_recorder_id id, void *usr_data);
+};
 
 /*************************************************************************
 * Codec management

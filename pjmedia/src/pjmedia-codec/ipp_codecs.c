@@ -769,12 +769,16 @@ PJ_DEF(pj_status_t) pjmedia_codec_ipp_deinit(void)
         return PJ_EINVALIDOP;
     }
 
+    /* Release the factory mutex before calling unregister to avoid lock
+     * order inversion with codec manager mutex.
+     */
+    pj_mutex_unlock(ipp_factory.mutex);
+
     /* Unregister IPP codecs factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &ipp_factory.base);
     
     /* Destroy mutex. */
-    pj_mutex_unlock(ipp_factory.mutex);
     pj_mutex_destroy(ipp_factory.mutex);
     ipp_factory.mutex = NULL;
 

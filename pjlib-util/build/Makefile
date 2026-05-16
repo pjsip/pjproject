@@ -18,7 +18,7 @@ export PJLIB_UTIL_LIB := libpjlib-util-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export PJLIB_UTIL_SONAME := libpjlib-util.$(SHLIB_SUFFIX)
-export PJLIB_UTIL_SHLIB := $(PJLIB_UTIL_SONAME).$(PJ_VERSION_MAJOR)
+export PJLIB_UTIL_SHLIB := $(PJLIB_UTIL_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################
@@ -28,8 +28,8 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CFLAGS) $(CC_INC)../include $(CC_INC)../../pjlib/include
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
-export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(APP_LDFLAGS) $(LDFLAGS)
+export _LDFLAGS := $(CC_LDFLAGS) $(APP_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) \
+		   $(HOST_LDFLAGS) $(LDFLAGS)
 
 ###############################################################################
 # Defines for building PJLIB-UTIL library
@@ -40,7 +40,7 @@ export PJLIB_UTIL_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 		dns_dump.o dns_server.o getopt.o hmac_md5.o hmac_sha1.o \
 		http_client.o json.o md5.o pcap.o resolver.o scanner.o sha1.o \
 		srv_resolver.o string.o stun_simple.o \
-		stun_simple_client.o xml.o
+		stun_simple_client.o websock.o xml.o
 export PJLIB_UTIL_CFLAGS += $(_CFLAGS)
 export PJLIB_UTIL_CXXFLAGS += $(_CXXFLAGS)
 export PJLIB_UTIL_LDFLAGS += $(PJLIB_LDLIB) $(_LDFLAGS)
@@ -50,7 +50,7 @@ export PJLIB_UTIL_LDFLAGS += $(PJLIB_LDLIB) $(_LDFLAGS)
 #
 export UTIL_TEST_SRCDIR = ../src/pjlib-util-test
 export UTIL_TEST_OBJS += xml.o encryption.o stun.o resolver_test.o test.o \
-		json_test.o http_client.o
+		json_test.o http_client.o websock_test.o
 export UTIL_TEST_CFLAGS += $(_CFLAGS)
 export UTIL_TEST_CXXFLAGS += $(_CXXFLAGS)
 export UTIL_TEST_LDFLAGS += $(PJLIB_UTIL_LDLIB) $(PJLIB_LDLIB) $(_LDFLAGS)

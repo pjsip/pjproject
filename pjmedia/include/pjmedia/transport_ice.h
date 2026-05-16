@@ -444,6 +444,22 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_send_local_cand(
                                             pjmedia_sdp_session *sdp,
                                             pj_bool_t *p_end_of_cand);
 
+/**
+ * Parse an ICE candidate attribute string into a pj_ice_sess_cand structure.
+ *
+ * @param pool      Optional pool for string duplication. If NULL, the
+ *                  foundation string will point to the input string.
+ * @param cand_str  The candidate attribute string to parse (without
+ *                  "candidate:" prefix, just the value part).
+ * @param cand      Pointer to candidate structure to be filled.
+ *
+ * @return          PJ_SUCCESS on success, or PJNATH_EICEINCANDSDP on
+ *                  parsing error, or PJ_EINVAL if parameters are invalid.
+ */
+PJ_DECL(pj_status_t) pjmedia_ice_parse_cand(pj_pool_t *pool,
+                                            const pj_str_t *cand_str,
+                                            pj_ice_sess_cand *cand);
+
 
 PJ_END_DECL
 

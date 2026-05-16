@@ -11,6 +11,10 @@
 
 #include "config.h"
 
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 

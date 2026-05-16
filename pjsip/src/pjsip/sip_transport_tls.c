@@ -87,6 +87,7 @@ struct tls_transport
     pjsip_transport          base;
     pj_bool_t                is_server;
     pj_str_t                 remote_name;
+    pjsip_server_addresses   server_addr;
 
     pj_bool_t                is_registered;
     pj_bool_t                is_closing;
@@ -166,6 +167,7 @@ static pj_status_t tls_create(struct tls_listener *listener,
                               const pj_sockaddr *local,
                               const pj_sockaddr *remote,
                               const pj_str_t *remote_name,
+                              const pjsip_server_addresses *addr,
                               pj_grp_lock_t *glock,
                               struct tls_transport **p_tls);
 
@@ -400,6 +402,7 @@ static pj_status_t update_factory_addr(struct tls_listener *listener,
         }
 
         /* Copy the address */
+        listener->factory.has_addr_name = PJ_TRUE;
         listener->factory.addr_name = *addr_name;
         pj_strdup(listener->factory.pool, &listener->factory.addr_name.host,
                   &addr_name->host);
@@ -620,7 +623,8 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
     pj_grp_lock_add_handler(listener->grp_lock, pool, listener,
                             &lis_on_destroy);
 
-    /* Check if certificate/CA list for SSL socket is set */
+    /* Set SSL/TLS credentials */
+
     if (listener->tls_setting.cert_file.slen ||
         listener->tls_setting.ca_list_file.slen ||
         listener->tls_setting.ca_list_path.slen || 
@@ -633,11 +637,16 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                         &listener->tls_setting.privkey_file,
                         &listener->tls_setting.password,
                         &listener->cert);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set TLS credentials from files"));
             goto on_error;
-    } else if (listener->tls_setting.ca_buf.slen ||
-               listener->tls_setting.cert_buf.slen||
-               listener->tls_setting.privkey_buf.slen)
+        }
+    }
+    
+    if (listener->tls_setting.ca_buf.slen ||
+        listener->tls_setting.cert_buf.slen||
+        listener->tls_setting.privkey_buf.slen)
     {
         status = pj_ssl_cert_load_from_buffer(pool,
                         &listener->tls_setting.ca_buf,
@@ -645,18 +654,37 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
                         &listener->tls_setting.privkey_buf,
                         &listener->tls_setting.password,
                         &listener->cert);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set TLS credentials from buffer"));
             goto on_error;    
-    } else if (listener->tls_setting.cert_lookup.type !=
-                                                PJ_SSL_CERT_LOOKUP_NONE &&
-               listener->tls_setting.cert_lookup.keyword.slen)
+        }
+    }
+    
+    if (listener->tls_setting.cert_lookup.type != PJ_SSL_CERT_LOOKUP_NONE &&
+        listener->tls_setting.cert_lookup.keyword.slen)
     {
         status = pj_ssl_cert_load_from_store(
                                 pool,
                                 &listener->tls_setting.cert_lookup,
                                 &listener->cert);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set TLS credentials from store"));
             goto on_error;
+        }
+    }
+
+    if (listener->tls_setting.cert_direct.type != PJ_SSL_CERT_DIRECT_NONE) {
+        status = pj_ssl_cert_load_direct(
+                                pool,
+                                &listener->tls_setting.cert_direct,
+                                &listener->cert);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(2,(listener->factory.obj_name, status,
+                         "Failed to set direct TLS credentials"));
+            goto on_error;
+        }
     }
 
     /* Register to transport manager */
@@ -763,6 +791,15 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
                                                 const pj_sockaddr *local,
                                                 const pjsip_host_port *a_name)
 {
+    return pjsip_tls_transport_restart2(factory, NULL, local, a_name);
+}
+
+
+PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
+                                                 const pjsip_tls_setting *opt,
+                                                 const pj_sockaddr *local,
+                                                 const pjsip_host_port *a_name)
+{
     pj_status_t status = PJ_SUCCESS;
     struct tls_listener *listener = (struct tls_listener *)factory;
 
@@ -771,6 +808,15 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
         PJ_LOG(3,(factory->obj_name,
                       "TLS restart requested while no listener created, "
                       "update the published address only"));
+
+        /* Update TLS settings if provided */
+        if (opt) {
+            /* Wipe old certificate keys for security */
+            pjsip_tls_setting_wipe_keys(&listener->tls_setting);
+            
+            /* Copy new settings */
+            pjsip_tls_setting_copy(listener->factory.pool, &listener->tls_setting, opt);
+        }
 
         status = update_factory_addr(listener, a_name);
         if (status != PJ_SUCCESS)
@@ -783,6 +829,69 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
     }
 
     lis_close(listener);
+
+    /* Update TLS settings if provided */
+    if (opt) {
+        /* Wipe old certificate keys for security */
+        pjsip_tls_setting_wipe_keys(&listener->tls_setting);
+        
+        /* Copy new settings */
+        pjsip_tls_setting_copy(listener->factory.pool, &listener->tls_setting, opt);
+        
+        /* Free old certificate if present */
+        if (listener->cert) {
+            pj_ssl_cert_wipe_keys(listener->cert);
+            listener->cert = NULL;
+        }
+        
+        /* Load new certificate based on updated settings */
+        if (listener->tls_setting.cert_file.slen ||
+            listener->tls_setting.ca_list_file.slen ||
+            listener->tls_setting.ca_list_path.slen || 
+            listener->tls_setting.privkey_file.slen) 
+        {
+            status = pj_ssl_cert_load_from_files2(listener->factory.pool,
+                            &listener->tls_setting.ca_list_file,
+                            &listener->tls_setting.ca_list_path,
+                            &listener->tls_setting.cert_file,
+                            &listener->tls_setting.privkey_file,
+                            &listener->tls_setting.password,
+                            &listener->cert);
+            if (status != PJ_SUCCESS) {
+                tls_perror(listener->factory.obj_name,
+                           "Failed to load certificate from files", status, NULL);
+                return status;
+            }
+        } else if (listener->tls_setting.ca_buf.slen ||
+                   listener->tls_setting.cert_buf.slen ||
+                   listener->tls_setting.privkey_buf.slen)
+        {
+            status = pj_ssl_cert_load_from_buffer(listener->factory.pool,
+                            &listener->tls_setting.ca_buf,
+                            &listener->tls_setting.cert_buf,
+                            &listener->tls_setting.privkey_buf,
+                            &listener->tls_setting.password,
+                            &listener->cert);
+            if (status != PJ_SUCCESS) {
+                tls_perror(listener->factory.obj_name,
+                           "Failed to load certificate from buffer", status, NULL);
+                return status;
+            }
+        } else if (listener->tls_setting.cert_lookup.type !=
+                                                    PJ_SSL_CERT_LOOKUP_NONE &&
+                   listener->tls_setting.cert_lookup.keyword.slen)
+        {
+            status = pj_ssl_cert_load_from_store(
+                                    listener->factory.pool,
+                                    &listener->tls_setting.cert_lookup,
+                                    &listener->cert);
+            if (status != PJ_SUCCESS) {
+                tls_perror(listener->factory.obj_name,
+                           "Failed to load certificate from store", status, NULL);
+                return status;
+            }
+        }
+    }
 
     status = pjsip_tls_transport_lis_start(factory, local, a_name);
     if (status != PJ_SUCCESS) { 
@@ -851,6 +960,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
                                const pj_sockaddr *local,
                                const pj_sockaddr *remote,
                                const pj_str_t *remote_name,
+                               const pjsip_server_addresses *addr,
                                pj_grp_lock_t *glock,
                                struct tls_transport **p_tls)
 {
@@ -919,12 +1029,29 @@ static pj_status_t tls_create( struct tls_listener *listener,
         pj_sockaddr_cp(&tls->base.local_addr, local);
     }
     
-    sockaddr_to_host_port(pool, &tls->base.local_name, &tls->base.local_addr);
+    /* Use listener's published address, if any. */
+    tls->base.has_addr_name = listener->factory.has_addr_name;
+    if (listener->factory.has_addr_name) {
+        tls->base.local_name = listener->factory.addr_name;
+    } else {
+        sockaddr_to_host_port(pool, &tls->base.local_name,
+                              &tls->base.local_addr);
+    }
+
     if (tls->remote_name.slen) {
         tls->base.remote_name.host = tls->remote_name;
         tls->base.remote_name.port = pj_sockaddr_get_port(remote);
     } else {
         sockaddr_to_host_port(pool, &tls->base.remote_name, remote);
+    }
+
+    if (addr) {
+        unsigned i;
+        pj_memcpy( &tls->server_addr, addr,
+                   sizeof(pjsip_server_addresses));
+        for (i = 0; i < addr->count; ++i) {
+            pj_strdup(pool, &tls->server_addr.entry[i].name, &addr->entry[i].name);
+        }
     }
 
     tls->base.endpt = listener->endpt;
@@ -1202,6 +1329,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     pj_ssl_sock_param ssock_param;
     pj_sockaddr local_addr;
     pj_str_t remote_name;
+    pjsip_server_addresses server_addr;
     pj_status_t status;
 
     /* Sanity checks */
@@ -1221,12 +1349,14 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                                    POOL_TP_INIT, POOL_TP_INC);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
-    /* Get remote host name from tdata */
-    if (tdata)
+    /* Get remote host name and DNS queried server addresses from tdata */
+    if (tdata) {
         remote_name = tdata->dest_info.name;
-    else
+        server_addr = tdata->dest_info.addr;
+    } else {
         pj_bzero(&remote_name, sizeof(remote_name));
-
+        pj_bzero(&server_addr, sizeof(server_addr));
+    }
     /* Build SSL socket param */
     pj_ssl_sock_param_default(&ssock_param);
     ssock_param.sock_af = (factory->type & PJSIP_TRANSPORT_IPV6) ?
@@ -1303,7 +1433,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     /* Create the transport descriptor */
     status = tls_create(listener, pool, ssock, PJ_FALSE, &local_addr, 
-                        rem_addr, &remote_name, glock, &tls);
+                        rem_addr, &remote_name, &server_addr, glock, &tls);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -1351,8 +1481,15 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
                                      new_port);
             }
 
-            sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
-                                  &tls->base.local_addr);
+            /* Only update published address if not specified, otherwise
+             * only update the port.
+             */
+            if (!tls->base.has_addr_name) {
+                sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
+                                      &tls->base.local_addr);
+            } else {
+                tls->base.local_name.port = new_port;
+            }
         }
 
         PJ_LOG(4,(tls->base.obj_name, 
@@ -1482,7 +1619,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
      * Create TLS transport for the new socket.
      */
     status = tls_create( listener, NULL, new_ssock, PJ_TRUE,
-                         &ssl_info.local_addr, &tmp_src_addr, NULL,
+                         &ssl_info.local_addr, &tmp_src_addr, NULL, NULL,
                          ssl_info.grp_lock, &tls);
     
     if (status != PJ_SUCCESS) {
@@ -1553,10 +1690,8 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     if (pjsip_cfg()->tls.keep_alive_interval) {
         pj_time_val delay = {0};
         delay.sec = pjsip_cfg()->tls.keep_alive_interval;
-        pjsip_endpt_schedule_timer(listener->endpt,
-                                   &tls->ka_timer,
-                                   &delay);
-        tls->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                              &delay, PJ_TRUE, tls->grp_lock);
         pj_gettimeofday(&tls->last_activity);
     }
 
@@ -1635,6 +1770,7 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
 static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
 {
     pj_bool_t(*verify_cb)(const pjsip_tls_on_verify_param * param) = NULL;
+    struct tls_transport* tls_trans = NULL;
 
     if (is_server) {
         struct tls_listener* tls;
@@ -1642,10 +1778,8 @@ static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
         tls = (struct tls_listener*)pj_ssl_sock_get_user_data(ssock);
         verify_cb = tls->tls_setting.on_verify_cb;
     } else {
-        struct tls_transport* tls;
-
-        tls = (struct tls_transport*)pj_ssl_sock_get_user_data(ssock);
-        verify_cb = tls->on_verify_cb;
+        tls_trans = (struct tls_transport*)pj_ssl_sock_get_user_data(ssock);
+        verify_cb = tls_trans->on_verify_cb;
     }
 
     if (verify_cb) {
@@ -1655,6 +1789,9 @@ static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
         pj_bzero(&param, sizeof(param));
         pj_ssl_sock_get_info(ssock, &info);
 
+        if (tls_trans) {
+            param.server_addr = &tls_trans->server_addr;
+        }
         param.local_addr = &info.local_addr;
         param.remote_addr = &info.remote_addr;
         param.local_cert_info = info.local_cert_info;
@@ -1929,7 +2066,14 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     tp_addr = &tls->base.local_addr;
     pj_sockaddr_cp((pj_sockaddr_t*)&addr, 
                    (pj_sockaddr_t*)&ssl_info.local_addr);
-    if (pj_sockaddr_cmp(tp_addr, &addr) != 0) {
+    /* Only update if the address family is the same. This is because
+     * some SSL backend (such as Apple) may return IPv6 effective local
+     * address in a NAT64 network even though initially initialized
+     * with IPv4.
+     */
+    if (tp_addr->addr.sa_family == addr.addr.sa_family &&
+        pj_sockaddr_cmp(tp_addr, &addr) != 0)
+    {
         pj_sockaddr_cp(tp_addr, &addr);
         sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
                               tp_addr);
@@ -2085,9 +2229,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     if (pjsip_cfg()->tls.keep_alive_interval) {
         pj_time_val delay = {0};            
         delay.sec = pjsip_cfg()->tls.keep_alive_interval;
-        pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
-                                   &delay);
-        tls->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                              &delay, PJ_TRUE, tls->grp_lock);
         pj_gettimeofday(&tls->last_activity);
     }
 
@@ -2122,9 +2265,8 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
         delay.sec = pjsip_cfg()->tls.keep_alive_interval - now.sec;
         delay.msec = 0;
 
-        pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
-                                   &delay);
-        tls->ka_timer.id = PJ_TRUE;
+        pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                              &delay, PJ_TRUE, tls->grp_lock);
         return;
     }
 
@@ -2152,9 +2294,8 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     delay.sec = pjsip_cfg()->tls.keep_alive_interval;
     delay.msec = 0;
 
-    pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
-                               &delay);
-    tls->ka_timer.id = PJ_TRUE;
+    pjsip_endpt_schedule_timer_w_grp_lock(tls->base.endpt, &tls->ka_timer,
+                                          &delay, PJ_TRUE, tls->grp_lock);
 }
 
 

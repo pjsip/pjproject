@@ -590,7 +590,9 @@ static void dns_callback(void *user_data,
         query_job->q_srv = NULL;
 
         if (status == PJ_SUCCESS) {
-            if (PJ_DNS_GET_TC(pkt->hdr.flags)) {
+            if (PJ_DNS_RESOLVER_DISCARD_TRUNCATED_ANSWER &&
+                PJ_DNS_GET_TC(pkt->hdr.flags))
+            {
                 /* Got truncated answer, the standard recommends to follow up
                  * the query using TCP. Since we currently don't support it,
                  * just return error.

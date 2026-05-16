@@ -31,6 +31,7 @@
 
 #define THIS_FILE   "activesock.c"
 
+#define ERR(r__)  { ret=r__; goto on_return; }
 
 /*******************************************************************
  * Simple UDP echo server.
@@ -82,9 +83,9 @@ static pj_bool_t udp_echo_srv_on_data_recvfrom(pj_activesock_t *asock,
         srv->status = pj_activesock_sendto(asock, &srv->send_key, data, 
                                            &sent, 0,
                                            src_addr, addr_len);
-        if (srv->status != PJ_SUCCESS) {
+        if (srv->status != PJ_SUCCESS && srv->status != PJ_EPENDING) {
             srv->tx_err_cnt++;
-            udp_echo_err("sendto()", status);
+            udp_echo_err("sendto()", srv->status);
         }
     }
 
@@ -142,7 +143,8 @@ static void udp_echo_srv_destroy(struct udp_echo_srv *srv)
  * UDP ping pong test (send packet back and forth between two UDP echo
  * servers.
  */
-static int udp_ping_pong_test(void)
+/* was udp_ping_pong_test(void) */
+static int activesock_test0(void)
 {
     pj_ioqueue_t *ioqueue = NULL;
     pj_pool_t *pool = NULL;
@@ -153,27 +155,13 @@ static int udp_ping_pong_test(void)
     pj_status_t status;
 
     pool = pj_pool_create(mem, "pingpong", 512, 512, NULL);
-    if (!pool)
-        return -10;
+    PJ_TEST_NOT_NULL(pool, NULL, return -10);
 
-    status = pj_ioqueue_create(pool, 4, &ioqueue);
-    if (status != PJ_SUCCESS) {
-        ret = -20;
-        udp_echo_err("pj_ioqueue_create()", status);
-        goto on_return;
-    }
-
-    status = udp_echo_srv_create(pool, ioqueue, PJ_TRUE, &srv1);
-    if (status != PJ_SUCCESS) {
-        ret = -30;
-        goto on_return;
-    }
-
-    status = udp_echo_srv_create(pool, ioqueue, PJ_TRUE, &srv2);
-    if (status != PJ_SUCCESS) {
-        ret = -40;
-        goto on_return;
-    }
+    PJ_TEST_SUCCESS(pj_ioqueue_create(pool, 4, &ioqueue), NULL, ERR(-20))
+    PJ_TEST_SUCCESS(udp_echo_srv_create(pool, ioqueue, PJ_TRUE, &srv1), 
+                    NULL, ERR(-30));
+    PJ_TEST_SUCCESS(udp_echo_srv_create(pool, ioqueue, PJ_TRUE, &srv2),
+                    NULL, ERR(-40));
 
     /* initiate the first send */
     for (count=0; count<1000; ++count) {
@@ -193,11 +181,8 @@ static int udp_ping_pong_test(void)
             status = pj_activesock_sendto(srv1->asock, &srv1->send_key,
                                           &data, &sent, 0,
                                           &addr, sizeof(addr));
-            if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-                ret = -50;
-                udp_echo_err("sendto()", status);
-                goto on_return;
-            }
+            PJ_TEST_TRUE(status==PJ_SUCCESS || status==PJ_EPENDING,
+                         "pj_activesock_sendto()", ERR(-50));
 
             need_send = PJ_FALSE;
         }
@@ -215,20 +200,10 @@ static int udp_ping_pong_test(void)
 #endif
         }
 
-        if (srv1->rx_err_cnt+srv1->tx_err_cnt != 0 ||
-            srv2->rx_err_cnt+srv2->tx_err_cnt != 0)
-        {
-            /* Got error */
-            ret = -60;
-            goto on_return;
-        }
-
-        if (last_rx1 == srv1->rx_cnt && last_rx2 == srv2->rx_cnt) {
-            /* Packet lost */
-            ret = -70;
-            udp_echo_err("packets have been lost", PJ_ETIMEDOUT);
-            goto on_return;
-        }
+        PJ_TEST_EQ(srv1->rx_err_cnt+srv1->tx_err_cnt, 0, NULL, ERR(-60));
+        PJ_TEST_EQ(srv2->rx_err_cnt+srv2->tx_err_cnt, 0, NULL, ERR(-62));
+        PJ_TEST_TRUE(last_rx1 != srv1->rx_cnt || last_rx2 != srv2->rx_cnt,
+                     "timeout/packets have been lost", ERR(-70));
     }
 
     ret = 0;
@@ -331,7 +306,8 @@ static pj_bool_t tcp_on_data_sent(pj_activesock_t *asock,
     return PJ_TRUE;
 }
 
-static int tcp_perf_test(void)
+/* was tcp_perf_test() */
+static int activesock_test1(void)
 {
     enum { COUNT=10000 };
     pj_pool_t *pool = NULL;
@@ -341,48 +317,33 @@ static int tcp_perf_test(void)
     pj_activesock_cb cb;
     struct tcp_state *state1, *state2;
     unsigned i;
-    pj_status_t status;
+    int ret = 0;
+    pj_status_t status = PJ_SUCCESS;
 
-    pool = pj_pool_create(mem, "tcpperf", 256, 256, NULL);
+    pool = pj_pool_create(mem, "activesock_test1", 256, 256, NULL);
+    PJ_TEST_NOT_NULL(pool, NULL, return -10);
 
-    status = app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock1, 
-                            &sock2);
-    if (status != PJ_SUCCESS) {
-        status = -100;
-        goto on_return;
-    }
-
-    status = pj_ioqueue_create(pool, 4, &ioqueue);
-    if (status != PJ_SUCCESS) {
-        status = -110;
-        goto on_return;
-    }
+    PJ_TEST_SUCCESS( app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock1,
+                                    &sock2),
+                     NULL, ERR(-100));
+    PJ_TEST_SUCCESS(pj_ioqueue_create(pool, 4, &ioqueue),
+                    NULL, ERR(-110));
 
     pj_bzero(&cb, sizeof(cb));
     cb.on_data_read = &tcp_on_data_read;
     cb.on_data_sent = &tcp_on_data_sent;
 
     state1 = PJ_POOL_ZALLOC_T(pool, struct tcp_state);
-    status = pj_activesock_create(pool, sock1, pj_SOCK_STREAM(), NULL, ioqueue,
-                                  &cb, state1, &asock1);
-    if (status != PJ_SUCCESS) {
-        status = -120;
-        goto on_return;
-    }
+    PJ_TEST_SUCCESS(pj_activesock_create(pool, sock1, pj_SOCK_STREAM(), 
+                                         NULL, ioqueue, &cb, state1, &asock1),
+                    NULL, ERR(-120));
 
     state2 = PJ_POOL_ZALLOC_T(pool, struct tcp_state);
-    status = pj_activesock_create(pool, sock2, pj_SOCK_STREAM(), NULL, ioqueue,
-                                  &cb, state2, &asock2);
-    if (status != PJ_SUCCESS) {
-        status = -130;
-        goto on_return;
-    }
-
-    status = pj_activesock_start_read(asock1, pool, 1000, 0);
-    if (status != PJ_SUCCESS) {
-        status = -140;
-        goto on_return;
-    }
+    PJ_TEST_SUCCESS(pj_activesock_create(pool, sock2, pj_SOCK_STREAM(), NULL,
+                                         ioqueue, &cb, state2, &asock2),
+                    NULL, ERR(-130));
+    PJ_TEST_SUCCESS(pj_activesock_start_read(asock1, pool, 1000, 0),
+                    NULL, ERR(-140));
 
     /* Send packet as quickly as possible */
     for (i=0; i<COUNT && !state1->err && !state2->err; ++i) {
@@ -420,16 +381,10 @@ static int tcp_perf_test(void)
                  */
                 pj_symbianos_poll(-1, 0);
 #endif
-                if (status != PJ_SUCCESS) {
-                    PJ_LOG(1,("", "   err: send status=%d", status));
-                    status = -180;
-                    break;
-                } else if (status == PJ_SUCCESS) {
-                    if (len != sizeof(*pkt)) {
-                        PJ_LOG(1,("", "   err: shouldn't report partial sent"));
-                        status = -190;
-                        break;
-                    }
+                PJ_TEST_SUCCESS(status, "send error", ERR(-180));
+                if (status == PJ_SUCCESS) {
+                    PJ_TEST_EQ(len, sizeof(*pkt), 
+                               "shouldn't report partial sent", ERR(-190));
                 }
         }
 
@@ -458,22 +413,156 @@ static int tcp_perf_test(void)
     if (status == PJ_EPENDING)
         status = PJ_SUCCESS;
 
-    if (status != 0)
-        goto on_return;
+    /* this should not happen. non-success should have been dealt with */
+    PJ_TEST_SUCCESS(status, NULL, ERR(-182));
+    
+    PJ_TEST_EQ(state1->err, 0, NULL, ERR(-183));
+    PJ_TEST_EQ(state2->err, 0, NULL, ERR(-186));
+    PJ_TEST_EQ(state1->next_recv_seq, COUNT, 
+               "not all packets are received", ERR(-195));
 
-    if (state1->err) {
-        status = -183;
-        goto on_return;
+on_return:
+    if (asock2)
+        pj_activesock_close(asock2);
+    if (asock1)
+        pj_activesock_close(asock1);
+    if (ioqueue)
+        pj_ioqueue_destroy(ioqueue);
+    if (pool)
+        pj_pool_release(pool);
+
+    return ret;
+}
+
+/*
+ * Test that send callbacks are invoked even after activesock is closed.
+ * This verifies the fix for #4864/#4878 where pending write callbacks
+ * were silently dropped, leaking tdata references in upper layers.
+ */
+struct close_test_state
+{
+    int cb_count;
+};
+
+static pj_bool_t close_test_on_data_sent(pj_activesock_t *asock,
+                                         pj_ioqueue_op_key_t *op_key,
+                                         pj_ssize_t sent)
+{
+    struct close_test_state *st;
+
+    PJ_UNUSED_ARG(op_key);
+    PJ_UNUSED_ARG(sent);
+
+    st = (struct close_test_state*)pj_activesock_get_user_data(asock);
+    if (st)
+        st->cb_count++;
+
+    return PJ_TRUE;
+}
+
+static int activesock_close_send_cb_test(void)
+{
+    enum { COUNT = 100 };
+    pj_pool_t *pool = NULL;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_sock_t sock1 = PJ_INVALID_SOCKET, sock2 = PJ_INVALID_SOCKET;
+    pj_activesock_t *asock1 = NULL, *asock2 = NULL;
+    pj_activesock_cb cb;
+    struct close_test_state state;
+    struct send_key op_keys[COUNT];
+    pj_time_val delay = {0, 100};
+    int pending_count = 0;
+    unsigned i;
+    int ret = 0;
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "..activesock close with pending send CB test"));
+
+    pool = pj_pool_create(mem, "close_send_cb", 256, 256, NULL);
+    PJ_TEST_NOT_NULL(pool, NULL, return -500);
+
+    PJ_TEST_SUCCESS(app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0,
+                                   &sock1, &sock2),
+                    NULL, ERR(-510));
+    PJ_TEST_SUCCESS(pj_ioqueue_create(pool, 4, &ioqueue),
+                    NULL, ERR(-520));
+
+    pj_bzero(&cb, sizeof(cb));
+    cb.on_data_sent = &close_test_on_data_sent;
+
+    pj_bzero(&state, sizeof(state));
+    PJ_TEST_SUCCESS(pj_activesock_create(pool, sock2, pj_SOCK_STREAM(),
+                                         NULL, ioqueue, &cb, &state,
+                                         &asock2),
+                    NULL, ERR(-530));
+
+    /* Create asock1 just to keep sock1 alive (peer side) */
+    PJ_TEST_SUCCESS(pj_activesock_create(pool, sock1, pj_SOCK_STREAM(),
+                                         NULL, ioqueue, &cb, NULL, &asock1),
+                    NULL, ERR(-535));
+
+    /* Shrink send buffer so fast-track fails quickly, forcing sends
+     * through the async ioqueue path.
+     */
+    {
+        int sndbuf = 1024;
+        pj_sock_setsockopt(sock2, pj_SOL_SOCKET(), pj_SO_SNDBUF(),
+                           &sndbuf, sizeof(sndbuf));
     }
-    if (state2->err) {
-        status = -186;
-        goto on_return;
+
+    /* Send multiple packets without polling, they should queue up */
+    for (i = 0; i < COUNT; ++i) {
+        struct tcp_pkt pkt;
+        pj_ssize_t len;
+
+        pkt.signature = SIGNATURE;
+        pkt.seq = i;
+        pj_memset(pkt.fill, 'a', sizeof(pkt.fill));
+
+        pj_ioqueue_op_key_init(&op_keys[i].op_key,
+                               sizeof(op_keys[i]));
+
+        len = sizeof(pkt);
+        status = pj_activesock_send(asock2, &op_keys[i].op_key,
+                                    &pkt, &len, 0);
+        if (status == PJ_EPENDING) {
+            pending_count++;
+        } else if (status != PJ_SUCCESS) {
+            break;
+        }
     }
-    if (state1->next_recv_seq != COUNT) {
-        PJ_LOG(3,("", "   err: only %u packets received, expecting %u", 
-                      state1->next_recv_seq, COUNT));
-        status = -195;
-        goto on_return;
+
+    /* Close the activesock while sends are pending. The send callbacks
+     * MUST still be invoked so upper layers can free resources.
+     */
+    pj_activesock_close(asock2);
+    asock2 = NULL;
+
+    /* Poll to process any remaining ioqueue events. On IOCP, each
+     * cancelled overlapped op needs a separate poll to dequeue from
+     * the completion port. Poll until all callbacks received or
+     * timeout (~20s worst case, but early-break when done).
+     */
+    for (i = 0; i < 200; ++i) {
+        pj_ioqueue_poll(ioqueue, &delay);
+        if (state.cb_count >= pending_count && pending_count > 0)
+            break;
+    }
+
+    PJ_LOG(3, (THIS_FILE, "...pending=%d, callbacks=%d",
+               pending_count, state.cb_count));
+
+    if (pending_count == 0) {
+        /* All sends completed synchronously (fast-track succeeded).
+         * The async drain path is not exercised in this run. To force
+         * async path, set PJ_IOQUEUE_FAST_TRACK=0 in config_site.h.
+         */
+        PJ_LOG(3, (THIS_FILE, "...async path not exercised, skipping"));
+    } else {
+        /* All pending sends must have received a callback */
+        PJ_TEST_GTE(state.cb_count, pending_count,
+                    "not all pending send callbacks were invoked",
+                    ERR(-540));
     }
 
 on_return:
@@ -486,24 +575,20 @@ on_return:
     if (pool)
         pj_pool_release(pool);
 
-    return status;
+    return ret;
 }
-
-
 
 int activesock_test(void)
 {
-    int ret;
+    int rc;
+    if ((rc=activesock_test0()) != 0)
+        return rc;
 
-    PJ_LOG(3,("", "..udp ping/pong test"));
-    ret = udp_ping_pong_test();
-    if (ret != 0)
-        return ret;
+    if ((rc=activesock_test1()) != 0)
+        return rc;
 
-    PJ_LOG(3,("", "..tcp perf test"));
-    ret = tcp_perf_test();
-    if (ret != 0)
-        return ret;
+    if ((rc=activesock_close_send_cb_test()) != 0)
+        return rc;
 
     return 0;
 }

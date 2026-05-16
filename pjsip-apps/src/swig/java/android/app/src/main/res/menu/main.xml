@@ -1,14 +1,14 @@
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
         android:id="@+id/action_acc_config"
         android:icon="@android:drawable/ic_menu_manage"
-        android:showAsAction="ifRoom"
+        app:showAsAction="ifRoom"
         android:title="Account Config"/>
     <item
         android:id="@+id/action_quit"
         android:icon="@android:drawable/ic_menu_close_clear_cancel"
-        android:showAsAction="ifRoom"
+        app:showAsAction="ifRoom"
         android:title="Quit"/>
-    
 </menu>

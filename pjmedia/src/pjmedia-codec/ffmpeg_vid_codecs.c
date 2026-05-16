@@ -731,7 +731,7 @@ static int find_codec_idx_by_fmt_id(pjmedia_format_id fmt_id)
     return -1;
 }
 
-static void init_codec(AVCodec *c, pj_bool_t is_encoder,
+static void init_codec(const AVCodec *c, pj_bool_t is_encoder,
                        pj_bool_t is_decoder)
 {
     pj_status_t status;
@@ -783,24 +783,24 @@ static void init_codec(AVCodec *c, pj_bool_t is_encoder,
              (raw_fmt_cnt < PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT);
              ++p)
         {
-            pjmedia_format_id fmt_id;
+            pjmedia_format_id pix_fmt_id;
 
             raw_fmt_cnt_should_be++;
-            status = PixelFormat_to_pjmedia_format_id(*p, &fmt_id);
+            status = PixelFormat_to_pjmedia_format_id(*p, &pix_fmt_id);
             if (status != PJ_SUCCESS) {
                 PJ_PERROR(6, (THIS_FILE, status,
                               "Unrecognized ffmpeg pixel format %d", *p));
                 continue;
             }
 
-            //raw_fmt[raw_fmt_cnt++] = fmt_id;
+            //raw_fmt[raw_fmt_cnt++] = pix_fmt_id;
             /* Disable some formats due to H.264 error:
              * x264 [error]: baseline profile doesn't support 4:4:4
              */
             if (desc->info.pt != PJMEDIA_RTP_PT_H264 ||
-                fmt_id != PJMEDIA_FORMAT_RGB24)
+                pix_fmt_id != PJMEDIA_FORMAT_RGB24)
             {
-                raw_fmt[raw_fmt_cnt++] = fmt_id;
+                raw_fmt[raw_fmt_cnt++] = pix_fmt_id;
             }
         }
 
@@ -874,7 +874,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
                                                   pj_pool_factory *pf)
 {
     pj_pool_t *pool;
-    AVCodec *c;
+    const AVCodec *c;
     pj_status_t status;
     unsigned i;
 
@@ -1592,6 +1592,7 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
     AVFrame avframe;
     AVPacket avpacket;
     int err, got_packet;
+    pj_bool_t has_key_frame = PJ_FALSE;
     //AVRational src_timebase;
     /* For some reasons (e.g: SSE/MMX usage), the avcodec_encode_video() must
      * have stack aligned to 16 bytes. Let's try to be safe by preparing the
@@ -1662,13 +1663,23 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
                     break;
                 }
                 if (err >= 0) {
-                    pj_memcpy(bits_out, pkt->data, pkt->size);
-                    bits_out += pkt->size;
                     out_size += pkt->size;
-                    av_packet_unref(&avpacket);
+                    if (out_size <= output_buf_len) {
+                        pj_memcpy(bits_out, pkt->data, pkt->size);
+                        bits_out += pkt->size;
+                    }
+                    if (pkt->flags & AV_PKT_FLAG_KEY)
+                        has_key_frame = PJ_TRUE;
+                    av_packet_unref(pkt);
                 }
             }
             av_packet_free(&pkt);
+            if (out_size > output_buf_len) {
+                PJ_LOG(2, (THIS_FILE,
+                    "Output frame size (%u) exceeds buffer size (%u)",
+                     out_size, output_buf_len));
+                return PJ_ETOOSMALL;
+            }
         }
     }
 
@@ -1677,24 +1688,20 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
     err = avcodec_encode_video2(ff->enc_ctx, &avpacket, &avframe, &got_packet);
     if (!err && got_packet)
         err = avpacket.size;
+    has_key_frame = avpacket.flags & AV_PKT_FLAG_KEY;
 #else
     PJ_UNUSED_ARG(got_packet);
     err = avcodec_encode_video(ff->enc_ctx, avpacket.data, avpacket.size, &avframe);
+    has_key_frame = ff->enc_ctx->coded_frame->key_frame;
 #endif
 
     if (err < 0) {
         print_ffmpeg_err(err);
         return PJMEDIA_CODEC_EFAILED;
     } else {
-        pj_bool_t has_key_frame = PJ_FALSE;
         output->size = err;
         output->bit_info = 0;
 
-#if LIBAVCODEC_VER_AT_LEAST(54,15)
-        has_key_frame = (avpacket.flags & AV_PKT_FLAG_KEY);
-#else
-        has_key_frame = ff->enc_ctx->coded_frame->key_frame;
-#endif
         if (has_key_frame)
             output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
     }
@@ -1870,7 +1877,7 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
     ffmpeg_private *ff = (ffmpeg_private*)codec->codec_data;
     AVFrame avframe;
     AVPacket avpacket;
-    int err, got_picture;
+    int err, got_picture = 0;
 
     /* Check if decoder has been opened */
     PJ_ASSERT_RETURN(ff->dec_ctx, PJ_EINVALIDOP);
@@ -1967,8 +1974,14 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
         /* Check decoding result, e.g: see if the format got changed,
          * keyframe found/missing.
          */
+#if LIBAVUTIL_VER_AT_LEAST(58,7)
         status = check_decode_result(codec, &input->timestamp,
-                                     avframe.key_frame);
+                !!(avframe.flags & AV_FRAME_FLAG_KEY));
+#else
+        status = check_decode_result(codec, &input->timestamp,
+                avframe.key_frame);
+#endif
+                                     /* avframe.key_frame); */
         if (status != PJ_SUCCESS) {
             ffmpeg_frame_unref(&avframe);
             return status;

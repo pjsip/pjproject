@@ -50,6 +50,7 @@
 #include <pj/pool_buf.h>
 #include <pj/rand.h>
 #include <pj/rbtree.h>
+#include <pj/atomic_slist.h>
 #include <pj/sock.h>
 #include <pj/sock_qos.h>
 #include <pj/sock_select.h>

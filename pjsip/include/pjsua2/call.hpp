@@ -23,6 +23,7 @@
  * @brief PJSUA2 Call manipulation
  */
 #include <pjsua-lib/pjsua.h>
+#include <pjsua2/account.hpp>
 #include <pjsua2/media.hpp>
 
 /** PJSUA2 API is inside pj namespace */
@@ -281,7 +282,8 @@ struct CallSetting
     /**
      * Bitmask of pjsua_call_flag constants.
      *
-     * Default: PJSUA_CALL_INCLUDE_DISABLED_MEDIA
+     * Default: 0
+     * (PJSUA_CALL_INCLUDE_DISABLED_MEDIA is the legacy default value).
      */
     unsigned        flag;
     
@@ -309,6 +311,14 @@ struct CallSetting
      * Default: 1 (if video feature is enabled, otherwise it is zero)
      */
     unsigned        videoCount;
+
+    /**
+     * Number of simultaneous active text streams for this call. Setting
+     * this to zero will disable text in this call.
+     *
+     * Default: 1
+     */
+    unsigned        textCount;
 
     /**
      * Media direction. This setting will only be used if the flag
@@ -553,6 +563,11 @@ struct CallInfo
      */
     unsigned            remVideoCount;
 
+    /**
+     * Number of text streams offered by remote
+     */
+    unsigned            remTextCount;
+
 public:
     /**
      * Default constructor
@@ -564,7 +579,8 @@ public:
                  lastStatusCode(PJSIP_SC_NULL),
                  remOfferer(false),
                  remAudioCount(0),
-                 remVideoCount(0)
+                 remVideoCount(0),
+                 remTextCount(0)
     {}
 
     /**
@@ -674,6 +690,21 @@ struct StreamInfo
      * enabled?
      */
     bool                useKa;
+
+    /**
+     *  Number of keepalive messages to be sent
+     */
+    unsigned            startCountKa;
+
+    /**
+     * Keepalive interval after the stream is created.
+     */
+    unsigned startIntervalKa;
+
+    /**
+     *  Keepalive sending interval.
+     */
+    unsigned intervalKa;
 #endif
 
     /**
@@ -825,6 +856,20 @@ struct OnStreamCreatedParam
      * On input, it specifies the audio media port of the stream. Application
      * may modify this pointer to point to different media port to be
      * registered to the conference bridge.
+     *
+     * \warning
+     * If the substituted port retains a pointer to the original audio
+     * stream port (e.g. a DSP wrapper around it), the application must
+     * take a reference on the inner port's group lock at construction
+     * (pj_grp_lock_add_ref() on the original port's grp_lock; note that
+     * MediaPort is a void* alias of pjmedia_port*, so a cast is needed)
+     * and release it from the wrapper's on_destroy(). Otherwise
+     * pjmedia_stream_destroy(), which PJSUA calls unconditionally at
+     * call teardown, may free the inner port while the conference bridge
+     * is still iterating over the wrapper. The substituted port also
+     * needs its own pool released from on_destroy(); set #destroyPort
+     * to true so PJSUA fires the destroy chain. See "Customizing the
+     * Audio Stream Port" in the docs guide for the full contract.
      */
     MediaPort   pPort;
 };
@@ -917,6 +962,35 @@ struct OnDtmfEventParam
      * an event with PJMEDIA_STREAM_DTMF_IS_END for every event.
      */
     unsigned            flags;
+};
+
+/**
+ * This structure contains parameters for Call::onCallRxText()
+ * callback.
+ */
+struct OnCallRxTextParam
+{
+    /**
+     * The sequence of the incoming text block data.
+     */
+    int                 seq;
+
+    /**
+     * The timestamp of the text block data.
+     */
+    unsigned            ts;
+
+    /**
+     * The content of the text block.
+     * Note that the text can be empty.
+     */
+    string              text;
+
+public:
+    /**
+     * Convert from pjsip
+     */
+    void fromPj(const pjsua_txt_stream_data &prm);
 };
 
 /**
@@ -1384,6 +1458,32 @@ public:
 };
 
 /**
+ * This structure contains parameters for Call::sendText()
+ */
+struct CallSendTextParam
+{
+    /**
+     * Specify the text media stream index. This can be set to -1 to denote
+     * the first text stream in the call.
+     *
+     * Default: -1 (first text stream)
+     */
+    int     medIdx;
+
+    /**
+     * The text data to be sent.
+     */
+    string  text;
+
+public:
+    /**
+     * Default constructor initializes with default value.
+     */
+    CallSendTextParam();
+};
+
+
+/**
  * Call.
  */
 class Call
@@ -1714,6 +1814,14 @@ public:
     void sendDtmf(const CallSendDtmfParam &param) PJSUA2_THROW(Error);
     
     /**
+     * Send real-time text to remote via RTP stream. This only works if
+     * the call has text media.
+     *
+     * @param param     The send text parameter.
+     */
+    void sendText(const CallSendTextParam &param) PJSUA2_THROW(Error);
+
+    /**
      * Send instant messaging inside INVITE session.
      *
      * @param prm.contentType
@@ -1925,8 +2033,8 @@ public:
      * (as opposed to onStreamCreated(), which is called *after* the session
      * has been created). The application may change
      * some stream info parameter values, i.e: jbInit, jbMinPre, jbMaxPre,
-     * jbMax, useKa, rtcpSdesByeDisabled, jbDiscardAlgo (audio),
-     * vidCodecParam.encFmt (video).
+     * jbMax, useKa, startCountKa, startIntervalKa, intervalKa,
+     * rtcpSdesByeDisabled, jbDiscardAlgo (audio), vidCodecParam.encFmt (video).
      *
      * @param prm       Callback parameter.
      */
@@ -1938,6 +2046,17 @@ public:
      * registered to the conference bridge. Application may return different
      * audio media port if it has added media processing port to the stream.
      * This media port then will be added to the conference bridge instead.
+     *
+     * \warning
+     * Same lifetime contract as the C-side on_stream_created2(): if the
+     * substituted port wraps the original audio stream port, the wrapper
+     * must pin the inner port via pj_grp_lock_add_ref() on its grp_lock
+     * at construction and release it from on_destroy(); otherwise
+     * pjmedia_stream_destroy() at call teardown may free it while the
+     * conference bridge still references the wrapper. The substituted
+     * port also needs its own pool released from on_destroy(); set
+     * #OnStreamCreatedParam::destroyPort to true so the destroy chain
+     * fires. See "Customizing the Audio Stream Port" in the docs guide.
      *
      * @param prm       Callback parameter.
      */
@@ -1967,6 +2086,15 @@ public:
      * @param prm       Callback parameter.
      */
     virtual void onDtmfEvent(OnDtmfEventParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * Notify application upon incoming text data from the text stream.
+     * Note that the received text can be empty.
+     *
+     * @param prm       Callback parameter.
+     */
+    virtual void onCallRxText(OnCallRxTextParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
     /**
@@ -2248,11 +2376,10 @@ public:
 private:
     friend class Endpoint;
 
-    Account             &acc;
+    Account             *acc;
     pjsua_call_id        id;
     Token                userData;
     std::vector<Media *> medias;
-    pj_pool_t           *sdp_pool;
     Call                *child;     /* New outgoing call in call transfer.  */
 };
 

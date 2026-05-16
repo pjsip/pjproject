@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+	xmlns:viewModels="clr-namespace:pjsua2maui.ViewModels"
+    x:Class="pjsua2maui.Views.AccountConfigPage"
+    Title="Account Config">
+
+    <ContentPage.BindingContext>
+        <viewModels:AccountConfigViewModel/>
+    </ContentPage.BindingContext>
+
+    <ContentPage.Content>
+        <StackLayout VerticalOptions="FillAndExpand">
+            <StackLayout VerticalOptions="FillAndExpand"
+                         Margin="10"
+                         x:DataType="viewModels:AccountConfigViewModel">
+                <Label Text="Id:"/>
+                <Entry HorizontalOptions="FillAndExpand" Text="{Binding accCfg.idUri}"/>
+                <Label Text="Registrar"/>
+                <Entry HorizontalOptions="FillAndExpand" Text="{Binding accCfg.registrarUri}"/>
+                <Label Text="Proxy"/>
+                <Entry HorizontalOptions="FillAndExpand" Text="{Binding accCfg.proxy}"/>
+                <Label Text="Username"/>
+                <Entry HorizontalOptions="FillAndExpand" Text="{Binding accCfg.username}"/>
+                <Label Text="Password"/>
+                <Entry HorizontalOptions="FillAndExpand" Text="{Binding accCfg.password}"/>
+            </StackLayout>
+ 
+            <Grid VerticalOptions="End"
+				    HorizontalOptions="FillAndExpand">
+           
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Text="Ok" HorizontalOptions="FillAndExpand"  Clicked="Ok_Clicked" />
+                <Button Grid.Column="1" Text="Cancel" Clicked="Cancel_Clicked" HorizontalOptions="FillAndExpand" />
+             </Grid>
+        </StackLayout>
+    </ContentPage.Content>
+</ContentPage>
+

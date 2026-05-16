@@ -1,5 +1,6 @@
 import pjsua2 as pj
 import sys
+import os
 import time
 from collections import deque
 import struct
@@ -50,6 +51,20 @@ def ua_data_test():
         write(s  + "\r\n")
     write("\r\n")
 
+    #
+    # ByteVector
+    # Assign bytes/bytearray/memoryview to a ByteVector
+    # Copy the content of a ByteVector to a bytearray/memoryview
+    #
+    bv = pj.ByteVector()
+    bv.assign_from_bytes(bytearray([1, 2, 3]))
+    assert bv.size() == 3
+    assert bv[0] == 1 and bv[1] == 2 and bv[2] == 3
+
+    ba = memoryview(bytearray(5))
+    bv.copy_to_bytearray(ba[1:])
+    assert ba == b'\x00\x01\x02\x03\x00'
+
 #
 # Exception test
 #
@@ -78,39 +93,45 @@ class MyLogWriter(pj.LogWriter):
         write("This is Python:" + entry.msg + "\r\n")
 
 class AMP(pj.AudioMediaPort):
-    frames = deque()
+    buffers = deque()
 
     def onFrameRequested(self, frame):
-        if len(self.frames):
-            # Get a frame from the queue and pass it to PJSIP
-            frame_ = self.frames.popleft()
+        if len(self.buffers):
+            # Get a buffer from the queue
+            buffer_out = self.buffers.popleft()
+            # Copy the buffer to PJSIP's frame
             frame.type = pj.PJMEDIA_TYPE_AUDIO
-            frame.buf = frame_
+            frame.buf.assign_from_bytes(buffer_out)
 
     def onFrameReceived(self, frame):
-        frame_ = pj.ByteVector()
-        for i in range(frame.buf.size()):
+        # Get the incoming audio buffer from PJSIP's frame
+        buffer_in = bytearray(frame.buf.size())
+        frame.buf.copy_to_bytearray(buffer_in)
+        # Prepare an output buffer
+        buffer_out = bytearray(len(buffer_in))
+
+        # Now you can process these byte arrays directly, e.g. use numpy
+        for i in range(len(buffer_in)):
             if (i % 2 == 1):
                 # Convert it to signed 16-bit integer
-                x = frame.buf[i] << 8 | frame.buf[i-1]
+                x = buffer_in[i] << 8 | buffer_in[i-1]
                 x = struct.unpack('<h', struct.pack('<H', x))[0]
 
                 # Amplify the signal by 50% and clip it
                 x = int(x * 1.5)
-                if (x > 32767):
+                if x > 32767:
                     x = 32767
-                else:
-                    if (x < -32768):
-                        x = -32768
+                elif x < -32768:
+                    x = -32768
 
                 # Convert it to unsigned 16-bit integer
                 x = struct.unpack('<H', struct.pack('<h', x))[0]
 
-                # Put it back in the vector in little endian order
-                frame_.append(x & 0xff)
-                frame_.append((x & 0xff00) >> 8)
+                # Put it in the output buffer in little endian order
+                buffer_out[i-1] = (x & 0xff)
+                buffer_out[i] = (x & 0xff00) >> 8
 
-        self.frames.append(frame_)
+        self.buffers.append(buffer_out)
 
 #
 # Testing log writer callback
@@ -213,6 +234,95 @@ def ua_tonegen_test():
 
     ep.libDestroy()
 
+#
+# AI Media Port test
+#
+class MyAiPort(pj.AudioMediaAiPort):
+    """Custom AI port that collects events."""
+    def __init__(self):
+        super().__init__()
+        self.events = []
+        self.connected = False
+        self.transcripts = []
+
+    def onEvent(self, event):
+        self.events.append(event.type)
+        if event.type == pj.PJMEDIA_AI_EVENT_CONNECTED:
+            self.connected = True
+            write("  [AI] Connected\r\n")
+        elif event.type == pj.PJMEDIA_AI_EVENT_DISCONNECTED:
+            self.connected = False
+            write("  [AI] Disconnected\r\n")
+        elif event.type == pj.PJMEDIA_AI_EVENT_TRANSCRIPT:
+            self.transcripts.append(event.text)
+            write("  [AI] " + event.text + "\r\n")
+        elif event.type == pj.PJMEDIA_AI_EVENT_RESPONSE_DONE:
+            write("  [AI] Response done\r\n")
+
+def ua_ai_port_test():
+    write("AI media port test.." + "\r\n")
+    ep_cfg = pj.EpConfig()
+
+    ep = pj.Endpoint()
+    ep.libCreate()
+    ep.libInit(ep_cfg)
+    ep.libStart()
+
+    # Create AI port with default params
+    ai = MyAiPort()
+    prm = pj.AiMediaPortParam()
+    assert prm.vadEnabled == False
+    assert prm.ptimeMsec == 20
+
+    ai.createPort(prm)
+    write("  AI port created and registered to conf bridge\r\n")
+
+    # Route audio: mic -> AI -> speaker
+    ai.startTransmit(ep.audDevManager().getPlaybackDevMedia())
+    ep.audDevManager().getCaptureDevMedia().startTransmit(ai)
+    write("  Audio routing established\r\n")
+
+    # Connect to OpenAI if API key is available
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if api_key:
+        url = ("wss://api.openai.com/v1/realtime"
+               "?model=gpt-4o-mini-realtime-preview")
+        write("  Connecting to OpenAI..\r\n")
+        ai.connect(url, api_key)
+
+        # Wait for connection
+        for i in range(150):
+            ep.libHandleEvents(100)
+            if ai.connected:
+                break
+
+        if ai.connected:
+            write("  Connected! Speak into your mic.\r\n")
+            write("  Press ENTER to stop.\r\n")
+            input()
+
+            write("  Disconnecting..\r\n")
+            ai.disconnect()
+            # Let close handshake complete
+            for i in range(20):
+                ep.libHandleEvents(100)
+        else:
+            write("  Connection timeout (non-fatal)\r\n")
+    else:
+        write("  OPENAI_API_KEY not set, skipping AI connection test\r\n")
+
+    # Disconnect routing
+    ai.stopTransmit(ep.audDevManager().getPlaybackDevMedia())
+    ep.audDevManager().getCaptureDevMedia().stopTransmit(ai)
+    write("  Audio routing disconnected\r\n")
+
+    del ai
+    write("  AI port destroyed\r\n")
+
+    ep.libDestroy()
+    write("  AI media port test OK\r\n")
+
+
 class RandomIntVal():
     def __init__(self):
         self.value = randint(0, 100000)
@@ -284,6 +394,7 @@ if __name__ == "__main__":
     ua_run_test_exception()
     ua_run_log_test()
     ua_run_ua_test()
+    ua_ai_port_test()
     ua_tonegen_test()
     ua_pending_job_test()
     sys.exit(0)

@@ -256,6 +256,9 @@ static void dump_media_session(const char *indent,
         case PJMEDIA_TYPE_VIDEO:
             media_type_str = "video";
             break;
+        case PJMEDIA_TYPE_TEXT:
+            media_type_str = "text";
+            break;
         case PJMEDIA_TYPE_APPLICATION:
             media_type_str = "application";
             break;
@@ -266,7 +269,8 @@ static void dump_media_session(const char *indent,
 
         /* Check if the stream is deactivated */
         if (call_med->tp == NULL ||
-            (!call_med->strm.a.stream && !call_med->strm.v.stream))
+            (!call_med->strm.a.stream && !call_med->strm.v.stream &&
+             !call_med->strm.t.stream))
         {
             len = pj_ansi_snprintf(p, end-p,
                       "%s  #%d %s deactivated\n",
@@ -362,6 +366,23 @@ static void dump_media_session(const char *indent,
                                  vfd->fps.num*1.0/vfd->fps.denum);
             }
 #endif /* PJMEDIA_HAS_VIDEO */
+
+        } else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+            pjmedia_txt_stream *stream = call_med->strm.t.stream;
+            pjmedia_txt_stream_info info;
+
+            pjmedia_stream_common_get_stat((pjmedia_stream_common *)stream,
+                                           &stat);
+            has_stat = PJ_TRUE;
+
+            pjmedia_txt_stream_get_info(stream, &info);
+            pj_ansi_snprintf(codec_info, sizeof(codec_info), " %.*s",
+                             (int)info.fmt.encoding_name.slen,
+                             info.fmt.encoding_name.ptr);
+            pj_ansi_snprintf(rx_info, sizeof(rx_info), "pt=%d, red=%d(lvl=%d)",
+                             info.rx_pt, info.rx_red_pt, info.rx_red_level);
+            pj_ansi_snprintf(tx_info, sizeof(tx_info), "pt=%d, red=%d(lvl=%d),",
+                             info.tx_pt, info.tx_red_pt, info.tx_red_level);
 
         } else {
             has_stat = PJ_FALSE;

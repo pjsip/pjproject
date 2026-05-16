@@ -70,7 +70,7 @@ PJ_DECL(pjsip_module*) pjsip_bdlg_event_instance(void);
  * Maximum dialog event status info items which can handled by application.
  *
  */
-#define PJSIP_DLG_EVENT_STATUS_MAX_INFO  8
+#define PJSIP_DLG_EVENT_STATUS_MAX_INFO  1
 
 
 /**

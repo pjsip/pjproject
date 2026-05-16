@@ -378,7 +378,6 @@ int dummy_function()
 #endif
 
 #ifdef HAS_PJSIP_REGC
-    //pjsip_regc_get_module();
     pjsip_regc_create(NULL, NULL, NULL, NULL);
     pjsip_regc_destroy(NULL);
     pjsip_regc_get_info(NULL, NULL);

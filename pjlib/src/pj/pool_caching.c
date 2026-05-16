@@ -31,6 +31,7 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
                                     const char *name,
                                     pj_size_t initial_size, 
                                     pj_size_t increment_sz,
+                                    pj_size_t alignment,
                                     pj_pool_callback *callback);
 static void cpool_release_pool(pj_pool_factory *pf, pj_pool_t *pool);
 static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail );
@@ -121,16 +122,19 @@ PJ_DEF(void) pj_caching_pool_destroy( pj_caching_pool *cp )
     }
 
     if (cp->lock) {
+        pj_status_t status;
         pj_lock_destroy(cp->lock);
-        pj_lock_create_null_mutex(NULL, "cachingpool", &cp->lock);
+        status = pj_lock_create_null_mutex(NULL, "cachingpool", &cp->lock);
+        PJ_ASSERT_ON_FAIL(status==PJ_SUCCESS, return);
     }
 }
 
 static pj_pool_t* cpool_create_pool(pj_pool_factory *pf, 
-                                              const char *name, 
-                                              pj_size_t initial_size, 
-                                              pj_size_t increment_sz, 
-                                              pj_pool_callback *callback)
+                                    const char *name, 
+                                    pj_size_t initial_size, 
+                                    pj_size_t increment_sz,
+                                    pj_size_t alignment,
+                                    pj_pool_callback *callback)
 {
     pj_caching_pool *cp = (pj_caching_pool*)pf;
     pj_pool_t *pool;
@@ -173,7 +177,7 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
 
         /* Create new pool */
         pool = pj_pool_create_int(&cp->factory, name, initial_size, 
-                                  increment_sz, callback);
+                                  increment_sz, alignment, callback);
         if (!pool) {
             pj_lock_release(cp->lock);
             return NULL;
@@ -185,7 +189,7 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
         pj_list_erase(pool);
 
         /* Initialize the pool. */
-        pj_pool_init_int(pool, name, increment_sz, callback);
+        pj_pool_init_int(pool, name, increment_sz, alignment, callback);
 
         /* Update pool manager's free capacity. */
         if (cp->capacity > pj_pool_get_capacity(pool)) {

@@ -389,7 +389,7 @@ struct pjsip_rx_data
         /** Start of msg buffer. */
         char                    *msg_buf;
 
-        /** Length fo message. */
+        /** Length of message. */
         int                      len;
 
         /** The parsed message, if any. */
@@ -856,6 +856,7 @@ struct pjsip_transport
 
     int                     addr_len;       /**< Length of addresses.       */
     pj_sockaddr             local_addr;     /**< Bound address.             */
+    pj_bool_t               has_addr_name;  /**< Has config published name? */
     pjsip_host_port         local_name;     /**< Published name (eg. STUN). */
     pjsip_host_port         remote_name;    /**< Remote address name.       */
     pjsip_transport_dir     dir;            /**< Connection direction.      */
@@ -1082,6 +1083,7 @@ struct pjsip_tpfactory
     char                   *info;           /**< Transport info/description.*/
 
     pj_sockaddr             local_addr;     /**< Bound address.         */
+    pj_bool_t               has_addr_name;  /**< Has published name?    */
     pjsip_host_port         addr_name;      /**< Published name.        */
 
     /**
@@ -1300,6 +1302,19 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
  * @return          Number of transports.
  */
 PJ_DECL(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr);
+
+
+/**
+ * Return number of transports of the specified type currently registered to
+ * the transport manager.
+ *
+ * @param mgr       The transport manager.
+ * @param type      Transport type (can be from pjsip_transport_type_e enum)
+ *
+ * @return          Number of transports.
+ */
+PJ_DECL(unsigned) pjsip_tpmgr_get_transport_count_by_type(pjsip_tpmgr *mgr,
+                                                          int type);
 
 
 /**

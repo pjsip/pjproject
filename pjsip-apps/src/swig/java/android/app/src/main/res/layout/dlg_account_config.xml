@@ -8,70 +8,76 @@
     <TextView
         android:id="@+id/textViewInfo"
         android:textAppearance="?android:attr/textAppearanceSmall"
-    	android:paddingBottom="20dp"
-        android:textColor="#b0b0b0" >
+        android:paddingBottom="20dp"
+        android:textColor="#b0b0b0"
+        android:importantForAccessibility = "no">
     </TextView>
     
-	<TableRow>
-        <TextView android:text="ID">
-        </TextView>  
-
-	    <EditText
-	        android:id="@+id/editTextId"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:layout_weight="1"
-	        android:inputType="textUri|textEmailAddress" >
+   <TableRow>
+      <TextView android:text="ID">
+      </TextView>
 
-	        <requestFocus />
-	    </EditText>
-    </TableRow>
-	<TableRow>
-        <TextView android:text="Registrar">
-        </TextView>  
-	    <EditText
-	        android:id="@+id/editTextRegistrar"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:layout_weight="1"
-	        android:inputType="textUri" >
-	    </EditText>
-    </TableRow>
-	<TableRow>
-        <TextView android:text="Proxy">
-        </TextView>  
-	    <EditText
-	        android:id="@+id/editTextProxy"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:layout_weight="1"
-	        android:inputType="textUri" >
-	    </EditText>
-    </TableRow>
-	<TableRow>
-        <TextView android:text="Username">
-        </TextView>  
 
-	    <EditText
-	        android:id="@+id/editTextUsername"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:layout_weight="1"
-	        android:inputType="text" >
+      <EditText
+         android:id="@+id/editTextId"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:layout_weight="1"
+         android:importantForAccessibility="no"
+         android:inputType="textUri|textEmailAddress">
+         <requestFocus />
+      </EditText>
+   </TableRow>
+   <TableRow>
+      <TextView android:text="Registrar">
+      </TextView>
 
-	    </EditText>
-    </TableRow>
-	<TableRow>
-        <TextView android:text="Password">
-        </TextView>  
+      <EditText
+         android:id="@+id/editTextRegistrar"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:layout_weight="1"
+         android:importantForAccessibility="no"
+         android:inputType="textUri">
+      </EditText>
+   </TableRow>
+   <TableRow>
+      <TextView android:text="Proxy">
+      </TextView>
 
-	    <EditText
-	        android:id="@+id/editTextPassword"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:layout_weight="1"
-	        android:inputType="textPassword" >
+      <EditText
+         android:id="@+id/editTextProxy"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:layout_weight="1"
+         android:importantForAccessibility="no"
+         android:inputType="textUri">
+      </EditText>
+   </TableRow>
+   <TableRow>
+      <TextView android:text="Username">
+      </TextView>
 
-	    </EditText>
-    </TableRow>
+      <EditText
+         android:id="@+id/editTextUsername"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:layout_weight="1"
+         android:inputType="text"
+         android:importantForAccessibility="no">
+      </EditText>
+   </TableRow>
+   <TableRow>
+      <TextView android:text="Password">
+      </TextView>
+
+      <EditText
+         android:id="@+id/editTextPassword"
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:layout_weight="1"
+         android:importantForAccessibility="no"
+         android:inputType="textPassword">
+      </EditText>
+   </TableRow>
 </TableLayout>

@@ -69,6 +69,19 @@
 #endif
 
 
+/**
+ * Maximum number of entries allowed in each DNS header section (query,
+ * answer, authority, additional). This caps allocations during packet
+ * parsing to prevent memory exhaustion from malicious responses with
+ * inflated section counts. Practical DNS responses rarely exceed this.
+ *
+ * Default: 256
+ */
+#ifndef PJ_DNS_MAX_SECTION_COUNT
+#   define PJ_DNS_MAX_SECTION_COUNT                 256
+#endif
+
+
 /* **************************************************************************
  * RESOLVER CONFIGURATION
  */
@@ -192,6 +205,16 @@
  */
 #ifndef PJ_DNS_RESOLVER_TMP_BUF_SIZE
 #   define PJ_DNS_RESOLVER_TMP_BUF_SIZE             4000
+#endif
+
+
+/**
+ * Specifies whether DNS resolver should discard truncated answer.
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJ_DNS_RESOLVER_DISCARD_TRUNCATED_ANSWER
+#   define PJ_DNS_RESOLVER_DISCARD_TRUNCATED_ANSWER     1
 #endif
 
 

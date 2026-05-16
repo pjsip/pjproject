@@ -27,6 +27,76 @@ using namespace std;
 #define THIS_FILE               "account.cpp"
 
 ///////////////////////////////////////////////////////////////////////////////
+// DeferredResponse implementation
+
+DeferredResponse::DeferredResponse(const OnInstantMessageParam& param) 
+    : transaction{pjsip_rdata_get_tsx(static_cast<pjsip_rx_data*>(param.rdata.pjRxData))}
+{
+    auto status = pjsip_rx_data_clone(static_cast<pjsip_rx_data*>(param.rdata.pjRxData),
+                                      0, &data);
+    if (status != PJ_SUCCESS) {
+        throw Error(status, "DeferredResponse","Unable to clone rx_data",
+                    std::string{}, 0);
+    }
+}
+
+DeferredResponse::DeferredResponse() : transaction{nullptr}
+{
+}
+
+DeferredResponse::DeferredResponse(const DeferredResponse& deferredResponse)
+{
+    transaction = deferredResponse.transaction;
+    auto status = pjsip_rx_data_clone(deferredResponse.data, 0, &data);
+    if (status != PJ_SUCCESS) {
+        throw Error(status, "DeferredResponse","Unable to clone rx_data",
+                    std::string{}, 0);
+    }
+}
+
+DeferredResponse& DeferredResponse::operator=(const DeferredResponse& deferredResponse)
+{
+    if (this != &deferredResponse) {
+        transaction = deferredResponse.transaction;
+        if(data) {
+            pjsip_rx_data_free_cloned(data);
+        }
+        auto status = pjsip_rx_data_clone(deferredResponse.data, 0, &data);
+        if (status != PJ_SUCCESS) {
+            throw Error(status, "DeferredResponse","Unable to clone rx_data",
+                        std::string{}, 0);
+        }
+    }
+    return *this;
+}
+
+DeferredResponse::DeferredResponse(DeferredResponse&& deferredResponse) noexcept 
+    : transaction{deferredResponse.transaction}, data{deferredResponse.data}
+{
+    deferredResponse.data = nullptr;
+    deferredResponse.transaction = nullptr;
+}
+
+DeferredResponse& DeferredResponse::operator=(DeferredResponse&& deferredResponse)
+    noexcept
+{
+    if (this != &deferredResponse) {
+        transaction = deferredResponse.transaction;
+        data = deferredResponse.data;
+        deferredResponse.data = nullptr;
+        deferredResponse.transaction = nullptr;
+    }
+    return *this;
+}
+
+DeferredResponse::~DeferredResponse()
+{
+    if(data) {
+        pjsip_rx_data_free_cloned(data);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 void RtcpFbCap::fromPj(const pjmedia_rtcp_fb_cap &prm)
 {
@@ -65,7 +135,7 @@ void RtcpFbConfig::fromPj(const pjmedia_rtcp_fb_setting &prm)
     for (unsigned i = 0; i < prm.cap_count; ++i) {
         RtcpFbCap cap;
         cap.fromPj(prm.caps[i]);
-        this->caps.push_back(cap);
+        this->caps.push_back(PJSUA2_MOVE(cap));
     }
 }
 
@@ -96,7 +166,7 @@ void RtcpFbConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
         NODE_READ_NUM_T         (cap_node, pjmedia_rtcp_fb_type, cap.type);
         NODE_READ_STRING        (cap_node, cap.typeName);
         NODE_READ_STRING        (cap_node, cap.param);
-        this->caps.push_back(cap);
+        this->caps.push_back(PJSUA2_MOVE(cap));
     }
 }
 
@@ -157,7 +227,7 @@ void SrtpOpt::fromPj(const pjsua_srtp_opt &prm)
     for (unsigned i = 0; i < prm.crypto_count; ++i) {
         SrtpCrypto crypto;
         crypto.fromPj(prm.crypto[i]);
-        this->cryptos.push_back(crypto);
+        this->cryptos.push_back(PJSUA2_MOVE(crypto));
     }
 
     this->keyings.clear();
@@ -196,7 +266,7 @@ void SrtpOpt::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
         NODE_READ_STRING        (crypto_node, crypto.key);
         NODE_READ_STRING        (crypto_node, crypto.name);
         NODE_READ_UNSIGNED      (crypto_node, crypto.flags);
-        this->cryptos.push_back(crypto);
+        this->cryptos.push_back(PJSUA2_MOVE(crypto));
     }
 
     ContainerNode keying_node = this_node.readArray("keyings");
@@ -281,13 +351,15 @@ void AccountSipConfig::readObject(const ContainerNode &node)
     NODE_READ_BOOL      (this_node, authInitialEmpty);
     NODE_READ_STRING    (this_node, authInitialAlgorithm);
     NODE_READ_INT       (this_node, transportId);
+    NODE_READ_BOOL      (this_node, useSharedAuth);
+    NODE_READ_BOOL      (this_node, autoRespondSipMessage);
 
     ContainerNode creds_node = this_node.readArray("authCreds");
     authCreds.resize(0);
     while (creds_node.hasUnread()) {
         AuthCredInfo cred;
         cred.readObject(creds_node);
-        authCreds.push_back(cred);
+        authCreds.push_back(PJSUA2_MOVE(cred));
     }
 }
 
@@ -303,6 +375,8 @@ void AccountSipConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_BOOL     (this_node, authInitialEmpty);
     NODE_WRITE_STRING   (this_node, authInitialAlgorithm);
     NODE_WRITE_INT      (this_node, transportId);
+    NODE_WRITE_BOOL     (this_node, useSharedAuth);
+    NODE_WRITE_BOOL     (this_node, autoRespondSipMessage);
 
     ContainerNode creds_node = this_node.writeNewArray("authCreds");
     for (unsigned i=0; i<authCreds.size(); ++i) {
@@ -320,6 +394,7 @@ void AccountCallConfig::readObject(const ContainerNode &node)
     NODE_READ_NUM_T   ( this_node, pjsua_call_hold_type, holdType);
     NODE_READ_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
     NODE_READ_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
+    NODE_READ_NUM_T   ( this_node, pjsua_sip_siprec_use, siprecUse);
     NODE_READ_UNSIGNED( this_node, timerMinSESec);
     NODE_READ_UNSIGNED( this_node, timerSessExpiresSec);
 }
@@ -332,6 +407,7 @@ void AccountCallConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_NUM_T   ( this_node, pjsua_call_hold_type, holdType);
     NODE_WRITE_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
     NODE_WRITE_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
+    NODE_WRITE_NUM_T   ( this_node, pjsua_sip_siprec_use, siprecUse);
     NODE_WRITE_UNSIGNED( this_node, timerMinSESec);
     NODE_WRITE_UNSIGNED( this_node, timerSessExpiresSec);
 }
@@ -402,6 +478,7 @@ void AccountNatConfig::readObject(const ContainerNode &node)
     NODE_READ_BOOL    ( this_node, iceAggressiveNomination);
     NODE_READ_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
     NODE_READ_INT     ( this_node, iceWaitNominationTimeoutMsec);
+    NODE_READ_INT     ( this_node, iceCheckSrcAddr);
     NODE_READ_BOOL    ( this_node, iceNoRtcp);
     NODE_READ_BOOL    ( this_node, iceAlwaysUpdate);
     NODE_READ_BOOL    ( this_node, turnEnabled);
@@ -420,6 +497,7 @@ void AccountNatConfig::readObject(const ContainerNode &node)
     NODE_READ_UNSIGNED( this_node, udpKaIntervalSec);
     NODE_READ_STRING  ( this_node, udpKaData);
     NODE_READ_INT     ( this_node, contactUseSrcPort);
+    NODE_READ_STRINGV ( this_node, iceManualHost);
 }
 
 void AccountNatConfig::writeObject(ContainerNode &node) const
@@ -438,6 +516,7 @@ void AccountNatConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_BOOL    ( this_node, iceAggressiveNomination);
     NODE_WRITE_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
     NODE_WRITE_INT     ( this_node, iceWaitNominationTimeoutMsec);
+    NODE_WRITE_INT     ( this_node, iceCheckSrcAddr);
     NODE_WRITE_BOOL    ( this_node, iceNoRtcp);
     NODE_WRITE_BOOL    ( this_node, iceAlwaysUpdate);
     NODE_WRITE_BOOL    ( this_node, turnEnabled);
@@ -456,6 +535,7 @@ void AccountNatConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_UNSIGNED( this_node, udpKaIntervalSec);
     NODE_WRITE_STRING  ( this_node, udpKaData);
     NODE_WRITE_INT     ( this_node, contactUseSrcPort);
+    NODE_WRITE_STRINGV  (this_node, iceManualHost);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -534,6 +614,23 @@ void AccountVideoConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_UNSIGNED( this_node, rateControlBandwidth);
     NODE_WRITE_UNSIGNED( this_node, startKeyframeCount);
     NODE_WRITE_UNSIGNED( this_node, startKeyframeInterval);
+}
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountTextConfig::readObject(const ContainerNode &node)
+                                   PJSUA2_THROW(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountTextConfig");
+
+    NODE_READ_INT    ( this_node, redundancyLevel);
+}
+
+void AccountTextConfig::writeObject(ContainerNode &node) const
+                                    PJSUA2_THROW(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountTextConfig");
+
+    NODE_WRITE_INT   ( this_node, redundancyLevel);
 }
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -622,18 +719,22 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     for (i=0; i<sipConfig.proxies.size(); ++i) {
         ret.proxy[ret.proxy_cnt++] = str2Pj(sipConfig.proxies[i]);
     }
-    ret.force_contact           = str2Pj(sipConfig.contactForced);
-    ret.contact_params          = str2Pj(sipConfig.contactParams);
-    ret.contact_uri_params      = str2Pj(sipConfig.contactUriParams);
-    ret.auth_pref.initial_auth  = sipConfig.authInitialEmpty;
-    ret.auth_pref.algorithm     = str2Pj(sipConfig.authInitialAlgorithm);
-    ret.transport_id            = sipConfig.transportId;
-    ret.ipv6_sip_use            = sipConfig.ipv6Use;
+    ret.force_contact             = str2Pj(sipConfig.contactForced);
+    ret.contact_params            = str2Pj(sipConfig.contactParams);
+    ret.contact_uri_params        = str2Pj(sipConfig.contactUriParams);
+    ret.auth_pref.initial_auth    = sipConfig.authInitialEmpty;
+    ret.auth_pref.algorithm       = str2Pj(sipConfig.authInitialAlgorithm);
+    ret.transport_id              = sipConfig.transportId;
+    ret.ipv6_sip_use              = sipConfig.ipv6Use;
+    ret.server_affinity           = sipConfig.serverAffinity;
+    ret.use_shared_auth           = sipConfig.useSharedAuth;
+    ret.auto_repond_sip_message = sipConfig.autoRespondSipMessage;
 
     // AccountCallConfig
     ret.call_hold_type          = callConfig.holdType;
     ret.require_100rel          = callConfig.prackUse;
     ret.use_timer               = callConfig.timerUse;
+    ret.use_siprec              = callConfig.siprecUse;
     ret.timer_setting.min_se    = callConfig.timerMinSESec;
     ret.timer_setting.sess_expires = callConfig.timerSessExpiresSec;
 
@@ -660,11 +761,31 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.ice_cfg.enable_ice      = natConfig.iceEnabled;
     ret.ice_cfg.ice_opt.trickle = natConfig.iceTrickle;
     ret.ice_cfg.ice_max_host_cands = natConfig.iceMaxHostCands;
+    ret.ice_cfg.ice_manual_host_cnt = 0;
+    if (natConfig.iceManualHost.size() >
+                            PJ_ARRAY_SIZE(ret.ice_cfg.ice_manual_host))
+    {
+        PJSUA2_RAISE_ERROR(PJ_ETOOMANY);
+    }
+    for (i=0; i<natConfig.iceManualHost.size(); ++i) {
+        pj_str_t tmp = pj_str(const_cast<char*>
+                              (natConfig.iceManualHost[i].c_str()));
+        pj_sockaddr* addr =
+                &ret.ice_cfg.ice_manual_host[ret.ice_cfg.ice_manual_host_cnt];
+        if (pj_sockaddr_set_str_addr(pj_AF_INET(),  addr, &tmp)==PJ_SUCCESS ||
+            pj_sockaddr_set_str_addr(pj_AF_INET6(), addr, &tmp)==PJ_SUCCESS)
+        {
+            ret.ice_cfg.ice_manual_host_cnt++;
+        } else {
+            PJSUA2_RAISE_ERROR(PJ_EINVAL);
+        }
+    }
     ret.ice_cfg.ice_opt.aggressive = natConfig.iceAggressiveNomination;
     ret.ice_cfg.ice_opt.nominated_check_delay =
                             natConfig.iceNominatedCheckDelayMsec;
     ret.ice_cfg.ice_opt.controlled_agent_want_nom_timeout =
                             natConfig.iceWaitNominationTimeoutMsec;
+    ret.ice_cfg.ice_opt.check_src_addr = natConfig.iceCheckSrcAddr;
     ret.ice_cfg.ice_no_rtcp     = natConfig.iceNoRtcp;
     ret.ice_cfg.ice_always_update = natConfig.iceAlwaysUpdate;
 
@@ -720,6 +841,9 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.vid_stream_sk_cfg.count = videoConfig.startKeyframeCount;
     ret.vid_stream_sk_cfg.interval = videoConfig.startKeyframeInterval;
 
+    // AccountTextConfig
+    ret.txt_red_level           = textConfig.redundancyLevel;
+
     // AccountIpChangeConfig
     ret.ip_change_cfg.shutdown_tp = ipChangeConfig.shutdownTp;
     ret.ip_change_cfg.hangup_calls = ipChangeConfig.hangupCalls;
@@ -759,7 +883,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         SipHeader new_hdr;
         new_hdr.fromPj(hdr);
 
-        regConfig.headers.push_back(new_hdr);
+        regConfig.headers.push_back(PJSUA2_MOVE(new_hdr));
 
         hdr = hdr->next;
     }
@@ -779,24 +903,28 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         cred.akaOp      = pj2Str(src.ext.aka.op);
         cred.akaAmf     = pj2Str(src.ext.aka.amf);
 
-        sipConfig.authCreds.push_back(cred);
+        sipConfig.authCreds.push_back(PJSUA2_MOVE(cred));
     }
     sipConfig.proxies.clear();
     for (i=0; i<prm.proxy_cnt; ++i) {
         sipConfig.proxies.push_back(pj2Str(prm.proxy[i]));
     }
-    sipConfig.contactForced     = pj2Str(prm.force_contact);
-    sipConfig.contactParams     = pj2Str(prm.contact_params);
-    sipConfig.contactUriParams  = pj2Str(prm.contact_uri_params);
-    sipConfig.authInitialEmpty  = PJ2BOOL(prm.auth_pref.initial_auth);
-    sipConfig.authInitialAlgorithm = pj2Str(prm.auth_pref.algorithm);
-    sipConfig.transportId       = prm.transport_id;
-    sipConfig.ipv6Use           = prm.ipv6_sip_use;
+    sipConfig.contactForced          = pj2Str(prm.force_contact);
+    sipConfig.contactParams          = pj2Str(prm.contact_params);
+    sipConfig.contactUriParams       = pj2Str(prm.contact_uri_params);
+    sipConfig.authInitialEmpty       = PJ2BOOL(prm.auth_pref.initial_auth);
+    sipConfig.authInitialAlgorithm   = pj2Str(prm.auth_pref.algorithm);
+    sipConfig.transportId            = prm.transport_id;
+    sipConfig.ipv6Use                = prm.ipv6_sip_use;
+    sipConfig.serverAffinity         = prm.server_affinity;
+    sipConfig.useSharedAuth          = PJ2BOOL(prm.use_shared_auth);
+    sipConfig.autoRespondSipMessage = PJ2BOOL(prm.auto_repond_sip_message);
 
     // AccountCallConfig
     callConfig.holdType         = prm.call_hold_type;
     callConfig.prackUse         = prm.require_100rel;
     callConfig.timerUse         = prm.use_timer;
+    callConfig.siprecUse        = prm.use_siprec;
     callConfig.timerMinSESec    = prm.timer_setting.min_se;
     callConfig.timerSessExpiresSec = prm.timer_setting.sess_expires;
 
@@ -806,7 +934,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     while (hdr != &prm.sub_hdr_list) {
         SipHeader new_hdr;
         new_hdr.fromPj(hdr);
-        presConfig.headers.push_back(new_hdr);
+        presConfig.headers.push_back(PJSUA2_MOVE(new_hdr));
         hdr = hdr->next;
     }
     presConfig.publishEnabled   = PJ2BOOL(prm.publish_enabled);
@@ -828,12 +956,21 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
         natConfig.iceEnabled = PJ2BOOL(prm.ice_cfg.enable_ice);
         natConfig.iceTrickle = prm.ice_cfg.ice_opt.trickle;
         natConfig.iceMaxHostCands = prm.ice_cfg.ice_max_host_cands;
+        natConfig.iceManualHost.clear();
+        for (i=0; i<prm.ice_cfg.ice_manual_host_cnt; ++i) {
+            char buf[PJ_INET6_ADDRSTRLEN];
+            const pj_sockaddr *addr = &prm.ice_cfg.ice_manual_host[i];
+            if (pj_sockaddr_print(addr, buf, sizeof(buf), 0) != NULL) {
+                natConfig.iceManualHost.push_back(std::string(buf));
+            }
+        }
         natConfig.iceAggressiveNomination =
                         PJ2BOOL(prm.ice_cfg.ice_opt.aggressive);
         natConfig.iceNominatedCheckDelayMsec =
                         prm.ice_cfg.ice_opt.nominated_check_delay;
         natConfig.iceWaitNominationTimeoutMsec =
                         prm.ice_cfg.ice_opt.controlled_agent_want_nom_timeout;
+        natConfig.iceCheckSrcAddr = prm.ice_cfg.ice_opt.check_src_addr;
         natConfig.iceNoRtcp     = PJ2BOOL(prm.ice_cfg.ice_no_rtcp);
         natConfig.iceAlwaysUpdate = PJ2BOOL(prm.ice_cfg.ice_always_update);
     } else {
@@ -848,6 +985,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
                         mcfg->ice_opt.nominated_check_delay;
         natConfig.iceWaitNominationTimeoutMsec =
                         mcfg->ice_opt.controlled_agent_want_nom_timeout;
+        natConfig.iceCheckSrcAddr = mcfg->ice_opt.check_src_addr;
         natConfig.iceNoRtcp     = PJ2BOOL(mcfg->ice_no_rtcp);
         natConfig.iceAlwaysUpdate = PJ2BOOL(mcfg->ice_always_update);
     }
@@ -917,6 +1055,9 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     videoConfig.startKeyframeCount      = prm.vid_stream_sk_cfg.count;
     videoConfig.startKeyframeInterval   = prm.vid_stream_sk_cfg.interval;
 
+    // AccountTextConfig
+    textConfig.redundancyLevel          = prm.txt_red_level;
+
     // AccountIpChangeConfig
     ipChangeConfig.shutdownTp = PJ2BOOL(prm.ip_change_cfg.shutdown_tp);
     ipChangeConfig.hangupCalls = PJ2BOOL(prm.ip_change_cfg.hangup_calls);
@@ -985,9 +1126,7 @@ Account::Account()
 
 Account::~Account()
 {
-    /* If this instance is deleted, also delete the corresponding account in
-     * PJSUA library.
-     */
+    /* Always delete the C-layer account to prevent resource leaks. */
     shutdown();
 }
 
@@ -1009,6 +1148,18 @@ void Account::create(const AccountConfig &acc_cfg,
 
 void Account::shutdown()
 {
+    try {
+        AccountShutdownParam prm;
+        prm.force = true;
+        shutdown2(prm);
+    } catch (Error &err) {
+        PJ_PERROR(1, (THIS_FILE, err.status,
+                     "Failed to delete account %d", id));
+    }
+}
+
+void Account::shutdown2(const AccountShutdownParam &prm) PJSUA2_THROW(Error)
+{
     if (isValid() && pjsua_get_state() < PJSUA_STATE_CLOSING) {
 #if !DEPRECATED_FOR_TICKET_2232
         // Cleanup buddies in the buddy list
@@ -1018,11 +1169,10 @@ void Account::shutdown()
         }
 #endif
 
-        // This caused error message of "Error: cannot find Account.."
-        // when Endpoint::on_reg_started() is called for unregistration.
-        //pjsua_acc_set_user_data(id, NULL);
-
-        pjsua_acc_del(id);
+        pjsua_acc_del_param del_prm;
+        pjsua_acc_del_param_default(&del_prm);
+        del_prm.force = prm.force? PJ_TRUE : PJ_FALSE;
+        PJSUA2_CHECK_EXPR(pjsua_acc_del2(id, &del_prm));
     }
 }
 
@@ -1057,6 +1207,8 @@ int Account::getId() const
 
 Account *Account::lookup(int acc_id)
 {
+    if (!pjsua_acc_is_valid(acc_id))
+        return NULL;
     return (Account*)pjsua_acc_get_user_data(acc_id);
 }
 
@@ -1077,7 +1229,17 @@ void Account::sendRequest(const pj::SendRequestParam& prm) PJSUA2_THROW(Error)
     pjsua_msg_data msg_data;
     prm.txOption.toPj(msg_data);
 
-    PJSUA2_CHECK_EXPR(pjsua_acc_send_request(id, &dest_uri, &method, NULL, prm.userData, &msg_data));
+    PJSUA2_CHECK_EXPR(pjsua_acc_send_request(id, &dest_uri, &method, NULL,
+                                             prm.userData, &msg_data));
+}
+
+void Account::sendResponse(const pj::SendResponseParam& prm) PJSUA2_THROW(Error)
+{
+    const auto reason = str2Pj(prm.reason);
+    PJSUA2_CHECK_EXPR(pjsua_acc_send_response(id, prm.deferredResponse.data,
+                                              prm.deferredResponse.transaction,
+                                              static_cast<pj_status_t>(prm.code),
+                                              &reason, nullptr));
 }
 
 void Account::setRegistration(bool renew) PJSUA2_THROW(Error)
@@ -1104,6 +1266,22 @@ Account::setOnlineStatus(const PresenceStatus &pres_st) PJSUA2_THROW(Error)
 void Account::setTransport(TransportId tp_id) PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_acc_set_transport(id, tp_id) );
+}
+
+void Account::refreshTransport() PJSUA2_THROW(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_acc_refresh_transport(id) );
+}
+
+void Account::setAffinityAddr(const SocketAddress &addr) PJSUA2_THROW(Error)
+{
+    pj_sockaddr sa;
+    pj_str_t input = str2Pj(addr);
+
+    PJSUA2_CHECK_EXPR(
+        pj_sockaddr_parse(pj_AF_UNSPEC(), 0, &input, &sa)
+    );
+    PJSUA2_CHECK_EXPR( pjsua_acc_set_affinity_addr(id, &sa) );
 }
 
 void Account::presNotify(const PresNotifyParam &prm) PJSUA2_THROW(Error)
@@ -1134,7 +1312,12 @@ BuddyVector2 Account::enumBuddies2() const PJSUA2_THROW(Error)
 
     PJSUA2_CHECK_EXPR( pjsua_enum_buddies(ids, &count) );
     for (i = 0; i < count; ++i) {
-        bv2.push_back(Buddy(ids[i]));
+        pjsua_buddy_info pbi;
+
+        pjsua_buddy_get_info(ids[i], &pbi);
+        if (id == pbi.acc_id) {
+            bv2.push_back(Buddy(ids[i]));
+        }
     }
 
     return bv2;
@@ -1161,11 +1344,17 @@ Buddy Account::findBuddy2(string uri) const PJSUA2_THROW(Error)
 {
     pj_str_t pj_uri;
     pjsua_buddy_id bud_id;
+    pjsua_buddy_info pbi;
 
     pj_strset2(&pj_uri, (char*)uri.c_str());
 
     bud_id = pjsua_buddy_find(&pj_uri);
-    if (id == PJSUA_INVALID_ID) {
+    if (bud_id == PJSUA_INVALID_ID) {
+        PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+    }
+
+    pjsua_buddy_get_info(bud_id, &pbi);
+    if (id != pbi.acc_id) {
         PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
     }
 

@@ -46,7 +46,7 @@
 #define spx_atan atan
 
 /** Generate a pseudo-random number */
-static inline spx_word16_t speex_rand(spx_word16_t std, spx_int32_t *seed)
+static inline spx_word16_t speex_rand(spx_word16_t std, spx_uint32_t *seed)
 {
    const unsigned int jflone = 0x3f800000;
    const unsigned int jflmsk = 0x007fffff;
@@ -119,7 +119,7 @@ static inline spx_int16_t spx_ilog4(spx_uint32_t x)
 #ifdef FIXED_POINT
 
 /** Generate a pseudo-random number */
-static inline spx_word16_t speex_rand(spx_word16_t std, spx_int32_t *seed)
+static inline spx_word16_t speex_rand(spx_word16_t std, spx_uint32_t *seed)
 {
    spx_word32_t res;
    *seed = 1664525 * *seed + 1013904223;
@@ -144,7 +144,7 @@ static inline spx_word16_t spx_sqrt(spx_word32_t x)
    int k;
    spx_word32_t rt;
    k = spx_ilog4(x)-6;
-   x = VSHR32(x, (k<<1));
+   x = VSHR32(x, (int)((unsigned)k<<1));
    rt = ADD16(C0, MULT16_16_Q14(x, ADD16(C1, MULT16_16_Q14(x, ADD16(C2, MULT16_16_Q14(x, (C3)))))));
    rt = VSHR32(rt,7-k);
    return rt;

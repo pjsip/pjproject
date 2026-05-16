@@ -22,6 +22,9 @@
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
     defined(PJMEDIA_HAS_LIBYUV) && (PJMEDIA_HAS_LIBYUV != 0)
 
+/* When using newer external libyuv, allow use of deprecated type uint8 */
+#define LIBYUV_LEGACY_TYPES
+
 #include <libyuv.h>
 
 static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,

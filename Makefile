@@ -10,7 +10,18 @@ ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
 endif
 
-all clean dep depend print:
+# Create library directories to avoid linker warnings about missing search paths
+all:
+	@mkdir -p pjlib/lib pjlib-util/lib pjnath/lib pjmedia/lib pjsip/lib third_party/lib
+	for dir in $(DIRS); do \
+		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
+		    true; \
+		else \
+		    exit 1; \
+		fi; \
+	done
+
+dep depend clean print:
 	for dir in $(DIRS); do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
 		    true; \
@@ -20,7 +31,7 @@ all clean dep depend print:
 	done
 
 distclean realclean:
-	for dir in $(DIRS); do \
+	for dir in $(DIRS) pjsip-apps/src/swig pjsip-apps/src/pjsua/android/jni; do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
 		    true; \
 		else \
@@ -29,6 +40,17 @@ distclean realclean:
 	done
 	$(HOST_RM) config.log
 	$(HOST_RM) config.status
+	$(HOST_RM) pjlib/include/pj/compat/os_auto.h
+	$(HOST_RM) pjlib/include/pj/compat/m_auto.h
+	$(HOST_RM) pjmedia/include/pjmedia/config_auto.h
+	$(HOST_RM) pjmedia/include/pjmedia-codec/config_auto.h
+	$(HOST_RM) pjsip/include/pjsip/sip_autoconf.h
+	$(subst @@,$(subst /,$(HOST_PSEP),pjlib/lib),$(HOST_RMDIR))
+	$(subst @@,$(subst /,$(HOST_PSEP),pjlib-util/lib),$(HOST_RMDIR))
+	$(subst @@,$(subst /,$(HOST_PSEP),pjnath/lib),$(HOST_RMDIR))
+	$(subst @@,$(subst /,$(HOST_PSEP),pjmedia/lib),$(HOST_RMDIR))
+	$(subst @@,$(subst /,$(HOST_PSEP),pjsip/lib),$(HOST_RMDIR))
+	$(subst @@,$(subst /,$(HOST_PSEP),third_party/lib),$(HOST_RMDIR))
 
 lib:
 	for dir in $(LIB_DIRS); do \
@@ -104,22 +126,19 @@ xhdrid:
 selftest: pjlib-test pjlib-util-test pjnath-test pjmedia-test pjsip-test pjsua-test
 
 pjlib-test: pjlib/bin/pjlib-test-$(TARGET_NAME)
-	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME)
-
-pjlib-test-ci: pjlib/bin/pjlib-test-$(TARGET_NAME)
-	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME) --ci-mode
+	cd pjlib/build && $(CI_RUNNER) ../bin/pjlib-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjlib-util-test: pjlib-util/bin/pjlib-util-test-$(TARGET_NAME)
-	cd pjlib-util/build && ../bin/pjlib-util-test-$(TARGET_NAME)
+	cd pjlib-util/build && $(CI_RUNNER) ../bin/pjlib-util-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjnath-test: pjnath/bin/pjnath-test-$(TARGET_NAME)
-	cd pjnath/build && ../bin/pjnath-test-$(TARGET_NAME)
+	cd pjnath/build && $(CI_RUNNER) ../bin/pjnath-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjmedia-test: pjmedia/bin/pjmedia-test-$(TARGET_NAME)
-	cd pjmedia/build && ../bin/pjmedia-test-$(TARGET_NAME)
+	cd pjmedia/build && $(CI_RUNNER) ../bin/pjmedia-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjsip-test: pjsip/bin/pjsip-test-$(TARGET_NAME)
-	cd pjsip/build && ../bin/pjsip-test-$(TARGET_NAME)
+	cd pjsip/build && $(CI_RUNNER) ../bin/pjsip-test-$(TARGET_NAME) $(CI_ARGS) $(CI_MODE)
 
 pjsua-test: cmp_wav
 	cd tests/pjsua && python runall.py -t 2
@@ -161,3 +180,6 @@ uninstall:
 	rmdir $(DESTDIR)$(includedir) 2> /dev/null || true
 	$(RM) $(addprefix $(DESTDIR)$(libdir)/,$(notdir $(APP_LIBXX_FILES)))
 	rmdir $(DESTDIR)$(libdir) 2> /dev/null || true
+
+infotarget:
+	@echo $(TARGET_NAME)

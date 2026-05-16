@@ -19,7 +19,7 @@ export PJNATH_LIB:=libpjnath-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export PJNATH_SONAME := libpjnath.$(SHLIB_SUFFIX)
-export PJNATH_SHLIB := $(PJNATH_SONAME).$(PJ_VERSION_MAJOR)
+export PJNATH_SHLIB := $(PJNATH_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################
@@ -30,8 +30,8 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../pjlib-util/include
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
-export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(APP_LDFLAGS) $(LDFLAGS) 
+export _LDFLAGS := $(CC_LDFLAGS) $(APP_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) \
+		   $(HOST_LDFLAGS) $(LDFLAGS) 
 
 ###############################################################################
 # Defines for building PJNATH library

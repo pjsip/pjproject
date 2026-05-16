@@ -11,7 +11,7 @@ export WEBRTC_LIB := libwebrtc-$(TARGET_NAME)$(LIBEXT)
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
 export WEBRTC_SONAME := libwebrtc.$(SHLIB_SUFFIX)
-export WEBRTC_SHLIB := $(WEBRTC_SONAME).$(PJ_VERSION_MAJOR)
+export WEBRTC_SHLIB := $(WEBRTC_SONAME).$(PJ_SONAME_VERSION)
 endif
 
 ###############################################################################
@@ -61,6 +61,7 @@ export WEBRTC_OBJS = \
 
 export WEBRTC_CFLAGS = $(_CFLAGS) $(WEBRTC_OTHER_CFLAGS)
 export WEBRTC_CXXFLAGS = $(WEBRTC_CFLAGS)
+export WEBRTC_LDFLAGS = $(_LDFLAGS)
 
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 

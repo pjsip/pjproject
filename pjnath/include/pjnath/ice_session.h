@@ -201,6 +201,12 @@ typedef struct pj_ice_sess_comp
      */
     pj_stun_session     *stun_sess;
 
+    /**
+     * The remote candidate checked address. This is expected address that 
+     * the remote going to use.
+     */
+    pj_sockaddr         rcand_check_addr;
+
 } pj_ice_sess_comp;
 
 
@@ -317,6 +323,13 @@ struct pj_ice_sess_cand
      */
     pj_sockaddr          rel_addr;
 
+    /**
+     * Indicate that remote connectivity check has been received or the check
+     * has been successful for this candidate. It is applicable for 
+     * remote candidate only.
+     *
+     */
+    pj_bool_t            checked;
 };
 
 
@@ -672,6 +685,15 @@ typedef struct pj_ice_sess_options
      */
     pj_ice_sess_trickle trickle;
 
+    /**
+     * Specify whether to check the source address of the incoming messages.
+     * The source address will be compared to the remote candidate which has 
+     * a completed connectivity check or received a connectivity check.
+     *
+     * Default value is PJ_ICE_SESS_CHECK_SRC_ADDR.
+     */
+    pj_bool_t check_src_addr;
+
 } pj_ice_sess_options;
 
 
@@ -705,6 +727,8 @@ struct pj_ice_sess
     pj_timer_entry       timer;                     /**< ICE timer.         */
     pj_timer_entry       timer_end_of_cand;         /**< End-of-cand timer. */
     pj_ice_sess_cb       cb;                        /**< Callback.          */
+    pj_time_val          time_completed;            /**< The time when ICE  
+                                                         is completed.      */
 
     pj_stun_config       stun_cfg;                  /**< STUN settings.     */
 

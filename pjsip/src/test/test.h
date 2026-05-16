@@ -20,9 +20,28 @@
 #define __TEST_H__
 
 #include <pjsip/sip_types.h>
+#include <pjsip/sip_msg.h>
+#include <pj/string.h>
 
 extern pjsip_endpoint *endpt;
 extern pj_caching_pool caching_pool;
+
+/* Check if we are using ASan */
+#ifndef __has_feature
+    #define __has_feature(x) 0
+#endif
+#if defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer)
+    #define ASAN_ENABLED 1
+#else
+    #define ASAN_ENABLED 0
+#endif
+
+/* Apple Clang ASan crashes on longjmp, see #4846 */
+#if defined(__APPLE__) && ASAN_ENABLED
+    #define APPLE_ASAN 1
+#else
+    #define APPLE_ASAN 0
+#endif
 
 #define TEST_UDP_PORT       15060
 #define TEST_UDP_PORT_STR   "15060"
@@ -58,8 +77,8 @@ extern pj_caching_pool caching_pool;
 #   define WITH_BENCHMARK           1
 #endif
 
-#define INCLUDE_URI_TEST        INCLUDE_MESSAGING_GROUP
-#define INCLUDE_MSG_TEST        INCLUDE_MESSAGING_GROUP
+#define INCLUDE_URI_TEST        (INCLUDE_MESSAGING_GROUP && !APPLE_ASAN)
+#define INCLUDE_MSG_TEST        (INCLUDE_MESSAGING_GROUP && !APPLE_ASAN)
 #define INCLUDE_MULTIPART_TEST  INCLUDE_MESSAGING_GROUP
 #define INCLUDE_TXDATA_TEST     INCLUDE_MESSAGING_GROUP
 #define INCLUDE_TSX_BENCH       (INCLUDE_MESSAGING_GROUP && WITH_BENCHMARK)
@@ -71,6 +90,8 @@ extern pj_caching_pool caching_pool;
 #define INCLUDE_TSX_DESTROY_TEST INCLUDE_TSX_GROUP
 #define INCLUDE_INV_OA_TEST     INCLUDE_INV_GROUP
 #define INCLUDE_REGC_TEST       INCLUDE_REGC_GROUP
+#define INCLUDE_AUTH_ASYNC_TEST INCLUDE_REGC_GROUP
+#define INCLUDE_PJSUA_AUTH_TEST INCLUDE_REGC_GROUP
 
 
 /* The tests */
@@ -83,9 +104,16 @@ int tsx_bench(void);
 int tsx_destroy_test(void);
 int transport_udp_test(void);
 int transport_loop_test(void);
+int transport_loop_multi_test(void);
+int transport_loop_resolve_error_test(void);
 int transport_tcp_test(void);
 int resolve_test(void);
 int regc_test(void);
+int auth_async_test(void);
+int pjsua_auth_test(void);
+int inv_offer_answer_test(void);
+
+#define MAX_TSX_TESTS   10
 
 struct tsx_test_param
 {
@@ -93,42 +121,60 @@ struct tsx_test_param
     int port;
     char *tp_type;
 };
+extern struct tsx_test_param tsx_test[MAX_TSX_TESTS];
 
-int tsx_basic_test(struct tsx_test_param *param);
-int tsx_uac_test(struct tsx_test_param *param);
-int tsx_uas_test(struct tsx_test_param *param);
+int tsx_basic_test(unsigned tid);
+int tsx_uac_test(unsigned tid);
+int tsx_uas_test(unsigned tid);
 
 /* Transport test helpers (transport_test.c). */
 int generic_transport_test(pjsip_transport *tp);
 int transport_send_recv_test( pjsip_transport_type_e tp_type,
                               pjsip_transport *ref_tp,
-                              char *target_url,
+                              const char *host_port_transport,
                               int *p_usec_rtt);
 int transport_rt_test( pjsip_transport_type_e tp_type,
                        pjsip_transport *ref_tp,
-                       char *target_url,
+                       const char *host_port_transport,
                        int *pkt_lost);
-int transport_load_test(char *target_url);
-
-/* Invite session */
-int inv_offer_answer_test(void);
+int transport_load_test(pjsip_transport_type_e tp_type,
+                        const char *host_port_transport);
 
 /* Test main entry */
-int  test_main(char *testlist);
+int  test_main(int argc, char *argv[]);
 
 /* Test utilities. */
-void list_tests(void);
 void app_perror(const char *msg, pj_status_t status);
 int  init_msg_logger(void);
 int  msg_logger_set_enabled(pj_bool_t enabled);
 void flush_events(unsigned duration);
-
+pjsip_transport *wait_loop_transport_clear(int secs);
 
 void report_ival(const char *name, int value, const char *valname, const char *desc);
 void report_sval(const char *name, const char* value, const char *valname, const char *desc);
 
+/* Utility to check if the user part of From/To is equal to the string */
+PJ_INLINE(pj_bool_t) is_user_equal(const pjsip_fromto_hdr *hdr, const char *user)
+{
+    const pjsip_sip_uri *sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(hdr->uri);
+    const pj_str_t *scheme = pjsip_uri_get_scheme(sip_uri);
+
+    if (pj_stricmp2(scheme, "sip") && pj_stricmp2(scheme, "sips"))
+        return PJ_FALSE;
+
+    return pj_strcmp2(&sip_uri->user, user)==0;
+}
 
 /* Settings. */
 extern int log_level;
+
+#define UT_MAX_TESTS    32
+#include "../../../pjlib/src/pjlib-test/test_util.h"
+
+struct test_app_t
+{
+    ut_app_t         ut_app;
+};
+extern struct test_app_t test_app;
 
 #endif  /* __TEST_H__ */

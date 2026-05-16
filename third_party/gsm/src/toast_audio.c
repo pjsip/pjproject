@@ -29,7 +29,7 @@ extern int	ulaw_output P((gsm_signal *));
 
 static int put_u32 P2((f, u), FILE * f, unsigned long u)
 {
-	/*  Write a 32-bit unsigned value msb first. 
+	/*  Write a 32-bit unsigned value msb first.
 	 */
 	if (  putc( (char)((u>>24) & 0x0FF), f) == EOF
 	   || putc( (char)((u>>16) & 0x0FF), f) == EOF
@@ -58,14 +58,14 @@ int audio_init_input P0()
 {
 	unsigned long	len, enc;	/* unsigned 32 bits	*/
 
-	if (  fgetc(in) != '.' 
+	if (  fgetc(in) != '.'
 	   || fgetc(in) != 's'
 	   || fgetc(in) != 'n'
 	   || fgetc(in) != 'd'
 	   || get_u32( in, &len )
 	   || get_u32( in, &enc )	/* skip this */
 	   || get_u32( in, &enc )) {
-		fprintf(stderr, 
+		fprintf(stderr,
 	"%s: bad (missing?) header in Sun audio file \"%s\";\n\
 	Try one of -u, -a, -l instead (%s -h for help).\n",
 			progname, inname ? inname : "stdin", progname);
@@ -86,7 +86,7 @@ int audio_init_input P0()
 
 	while (len > 4*4)
 		if (getc(in) == EOF) {
-			fprintf(stderr, 
+			fprintf(stderr,
 			"%s: EOF in header of Sun audio file \"%s\";\n\
 			Try one of -u, -a, -l instead (%s -h for help).\n",
 				progname, inname ? inname : "stdin", progname);

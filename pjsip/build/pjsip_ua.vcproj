@@ -3469,6 +3469,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjsip-ua\sip_siprec.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjsip-ua\sip_xfer.c"
 				>
 				<FileConfiguration
@@ -3607,6 +3611,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjsip-ua\sip_timer.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjsip-ua\sip_siprec.h"
 				>
 			</File>
 			<File

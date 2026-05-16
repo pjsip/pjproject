@@ -25,16 +25,29 @@ namespace pjsua2xamarin
 {
     public class MyAccount : Account
     {
-    	~MyAccount()
-    	{
+        ~MyAccount()
+        {
             Debug.WriteLine("*** MyAccount is being deleted");
-    	}
+        }
 
         override public void onRegState(OnRegStateParam prm)
         {
-	        AccountInfo ai = getInfo();
-	        Debug.WriteLine("***" + (ai.regIsActive? "": "Un") +
-	    		          "Register: code=" + prm.code);
+            AccountInfo ai = getInfo();
+            Debug.WriteLine("***" + (ai.regIsActive ? "" : "Un") +
+                          "Register: code=" + prm.code);
+        }
+
+        override public void onIncomingCall(OnIncomingCallParam iprm)
+        {
+            Call call = new Call(this, iprm.callId);
+            CallInfo ci = call.getInfo();
+            CallOpParam prm = new CallOpParam();
+
+            Debug.WriteLine("*** Incoming Call: " + ci.remoteUri + " [" +
+                            ci.stateText + "]");
+
+            prm.statusCode = (pjsip_status_code)200;
+            call.answer(prm);
         }
     }
 
@@ -61,8 +74,8 @@ namespace pjsua2xamarin
         public static MyLogWriter writer = new MyLogWriter();
         public static MyAccount acc = new MyAccount();
 
-        /* Preview of Colorbar */
-        private static VideoPreview vp = new VideoPreview(2);
+        /* Preview of default capture video device */
+        private static VideoPreview vp = new VideoPreview(-1);
 
         public PjSample()
         {
@@ -83,7 +96,13 @@ namespace pjsua2xamarin
                 // Init library
                 EpConfig epConfig = new EpConfig();
                 epConfig.logConfig.writer = writer;
-                epConfig.logConfig.decor &= ~(uint)pj_log_decoration.PJ_LOG_HAS_NEWLINE;
+                //epConfig.logConfig.filename = "PjSample.log";
+                if (epConfig.logConfig.filename.Length == 0)
+                {
+                    // Omit newlines for logging to console/debug-output
+                    epConfig.logConfig.decor &=
+                                ~(uint)pj_log_decoration.PJ_LOG_HAS_NEWLINE;
+                }
                 ep.libInit(epConfig);
 
                 // Create transport
@@ -131,21 +150,21 @@ namespace pjsua2xamarin
             }
 
             new Thread(() =>
+            {
+                try
                 {
-                    try
-                    {
-                        checkThread("pjsua2.stop.2");
+                    checkThread("pjsua2.stop.2");
 
-                        Debug.WriteLine("*** DESTROYING PJSUA2 ***");
-                        ep.libDestroy();
-                        ep.Dispose();
-                        Debug.WriteLine("*** PJSUA2 DESTROYED ***");
-                    }
-                    catch (Exception err)
-                    {
-                        Debug.WriteLine("Exception: " + err.Message);
-                    }
-                }).Start();
+                    Debug.WriteLine("*** DESTROYING PJSUA2 ***");
+                    ep.libDestroy();
+                    ep.Dispose();
+                    Debug.WriteLine("*** PJSUA2 DESTROYED ***");
+                }
+                catch (Exception err)
+                {
+                    Debug.WriteLine("Exception: " + err.Message);
+                }
+            }).Start();
         }
 
         public void startPreview(IntPtr hwnd)
@@ -153,7 +172,8 @@ namespace pjsua2xamarin
             try
             {
                 VideoPreviewOpParam param = new VideoPreviewOpParam();
-                param.window.handle.setWindow(hwnd.ToInt64());
+                param.window.handle.window = hwnd;
+                param.format.init(Convert.ToUInt32(pjmedia_format_id.PJMEDIA_FORMAT_I420), 350, 250, 30);
 
                 // Video render operation needs to be invoked from non-main-thread.
                 new Thread(() =>
@@ -169,7 +189,7 @@ namespace pjsua2xamarin
                     {
                         Debug.WriteLine("Exception: " + err.Message);
                     }
-                }).Start(); 
+                }).Start();
 
             }
             catch (Exception err)
@@ -190,7 +210,7 @@ namespace pjsua2xamarin
                         checkThread("pjsua2.updatePreviewWindow");
 
                         VideoWindowHandle handle = new VideoWindowHandle();
-                        handle.handle.setWindow(hwnd.ToInt64());
+                        handle.handle.window = hwnd;
 
                         VideoWindow window = vp.getVideoWindow();
                         window.setWindow(handle);

@@ -37,6 +37,11 @@
 
 #define REFRESH_TIMER           1
 #define DELAY_BEFORE_REFRESH    PJSIP_PUBLISHC_DELAY_BEFORE_REFRESH
+
+/* This defines the minimum value for the refresh timer in milliseconds.
+ * If the calculated expiry for the refresh timer falls below this; it will be clamped to this value.
+ */
+#define MIN_REFRESH_MSEC        500
 #define THIS_FILE               "publishc.c"
 
 
@@ -111,6 +116,14 @@ struct pjsip_publishc
     pending_publish              pending_reqs_empty;
 };
 
+
+static pj_status_t pubc_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata);
+static void pubc_async_auth_abandon_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data);
 
 PJ_DEF(void) pjsip_publishc_opt_default(pjsip_publishc_opt *opt)
 {
@@ -314,6 +327,21 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_credentials( pjsip_publishc *pubc,
 {
     PJ_ASSERT_RETURN(pubc && count && cred, PJ_EINVAL);
     return pjsip_auth_clt_set_credentials(&pubc->auth_sess, count, cred);
+}
+
+PJ_DEF(pj_status_t) pjsip_publishc_set_auth_sess(
+                                    pjsip_publishc *pubc,
+                                    pjsip_auth_clt_sess *session)
+{
+    PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
+    return pjsip_auth_clt_set_parent(&pubc->auth_sess, session);
+}
+
+PJ_DEF(pjsip_auth_clt_sess*) pjsip_publishc_get_auth_sess(
+                                    pjsip_publishc *pubc)
+{
+    PJ_ASSERT_RETURN(pubc, NULL);
+    return &pubc->auth_sess;
 }
 
 PJ_DEF(pj_status_t) pjsip_publishc_set_route_set( pjsip_publishc *pubc,
@@ -570,6 +598,35 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     /* No need to call callback as it should have been called */
 }
 
+/* Async auth send callback: resend the authenticated PUBLISH request.
+ * user_data points to pjsip_publishc*.  No lock is held by the caller
+ * (publishc does not use dialog-based locking).
+ */
+static pj_status_t pubc_async_auth_send_impl(
+                                pjsip_auth_clt_sess *auth_sess,
+                                void *user_data,
+                                pjsip_tx_data *tdata)
+{
+    pjsip_publishc *pubc = (pjsip_publishc *)user_data;
+    PJ_UNUSED_ARG(auth_sess);
+    return pjsip_publishc_send(pubc, tdata);
+}
+
+/* Async auth abandon callback: notify the app that PUBLISH auth failed.
+ * user_data points to pjsip_publishc*.  No lock is held by the caller.
+ */
+static void pubc_async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
+                                         void *user_data)
+{
+    pjsip_publishc *pubc = (pjsip_publishc *)user_data;
+    pj_str_t reason = { "Authentication abandoned", 24 };
+
+    PJ_UNUSED_ARG(auth_sess);
+
+    call_callback(pubc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
+                  NULL, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+}
+
 static void tsx_callback(void *token, pjsip_event *event)
 {
     pj_status_t status;
@@ -596,17 +653,42 @@ static void tsx_callback(void *token, pjsip_event *event)
     {
         pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
         pjsip_tx_data *tdata;
+        pjsip_auth_clt_async_on_chal_param chal_param = { 0 };
 
-        status = pjsip_auth_clt_reinit_req( &pubc->auth_sess,
-                                            rdata, 
-                                            tsx->last_tx,  
-                                            &tdata);
+        /* Per-challenge token allocated from tsx->pool, kept alive
+         * by the grp_lock ref until consumed (send or abandon).
+         * No lock is held here — publishc uses endpoint-level
+         * send_request, not dialog-based locking.
+         */
+        {
+            pjsip_auth_clt_async_impl_token *auth_token;
+            auth_token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                          pjsip_auth_clt_async_impl_token);
+            auth_token->user_data    = pubc;
+            auth_token->send_impl    = &pubc_async_auth_send_impl;
+            auth_token->abandon_impl = &pubc_async_auth_abandon_impl;
+            auth_token->grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
+
+            pj_bzero(&chal_param, sizeof(chal_param));
+            chal_param.rdata = rdata;
+            chal_param.tdata = tsx->last_tx;
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                            &pubc->auth_sess,
+                                            auth_token, &chal_param);
+            if (status != PJ_SUCCESS)
+                pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
         if (status != PJ_SUCCESS) {
-            call_callback(pubc, status, tsx->status_code, 
-                          &rdata->msg_info.msg->line.status.reason,
-                          rdata, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
-        } else {
-            status = pjsip_publishc_send(pubc, tdata);
+            status = pjsip_auth_clt_reinit_req(&pubc->auth_sess, rdata,
+                                               tsx->last_tx, &tdata);
+            if (status != PJ_SUCCESS) {
+                call_callback(pubc, status, tsx->status_code,
+                              &rdata->msg_info.msg->line.status.reason,
+                              rdata, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
+            } else {
+                status = pjsip_publishc_send(pubc, tdata);
+            }
         }
 
     } else {
@@ -641,7 +723,9 @@ static void tsx_callback(void *token, pjsip_event *event)
             if (pubc->auto_refresh && expiration!=0 &&
                 expiration!=PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED)
             {
-                pj_time_val delay = { 0, 0};
+                const pj_time_val min_delay = {MIN_REFRESH_MSEC / 1000,
+                                               MIN_REFRESH_MSEC % 1000};
+                pj_time_val delay = {0, 0};
 
                 /* Cancel existing timer, if any */
                 if (pubc->timer.id != 0) {
@@ -649,21 +733,36 @@ static void tsx_callback(void *token, pjsip_event *event)
                     pubc->timer.id = 0;
                 }
 
-                delay.sec = expiration - DELAY_BEFORE_REFRESH;
+                /* prevent underflow in case the remote answers with an unexpectedly low expiry value */
+                if (expiration > DELAY_BEFORE_REFRESH) {
+                    delay.sec = expiration - DELAY_BEFORE_REFRESH;
+                }
                 if (pubc->expires != PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED && 
                     delay.sec > (pj_int32_t)pubc->expires) 
                 {
                     delay.sec = pubc->expires;
                 }
-                if (delay.sec < DELAY_BEFORE_REFRESH) 
-                    delay.sec = DELAY_BEFORE_REFRESH;
+                if (delay.sec < DELAY_BEFORE_REFRESH) {
+                    if (expiration <= DELAY_BEFORE_REFRESH) {
+                        /* Very small expiration: refresh before expiry. */
+                        delay.sec  = (expiration > 1) ? (long)expiration - 1 : 0;
+                        delay.msec = (expiration > 1) ? 0 : 500;
+                    } else {
+                        delay.sec = DELAY_BEFORE_REFRESH;
+                    }
+                }
+                
+                /* make sure we don't go below the minimum */
+                if (PJ_TIME_VAL_LT(delay, min_delay)) {
+                    delay = min_delay;
+                }
                 pubc->timer.cb = &pubc_refresh_timer_cb;
                 pubc->timer.id = REFRESH_TIMER;
                 pubc->timer.user_data = pubc;
                 pjsip_endpt_schedule_timer( pubc->endpt, &pubc->timer, &delay);
                 pj_gettimeofday(&pubc->last_refresh);
                 pubc->next_refresh = pubc->last_refresh;
-                pubc->next_refresh.sec += delay.sec;
+                PJ_TIME_VAL_ADD(pubc->next_refresh, delay);
             }
 
         } else {

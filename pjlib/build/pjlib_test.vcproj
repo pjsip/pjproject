@@ -3931,6 +3931,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-test\ioq_iocp_unreg_test.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-test\ioq_perf.c"
 				>
 				<FileConfiguration

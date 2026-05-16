@@ -385,6 +385,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <RuntimeLibrary Condition="'$(API_Family)'=='UWP'">MultiThreadedDebugDLL</RuntimeLibrary>
+      <ForcedIncludeFiles>config.h</ForcedIncludeFiles>
     </ClCompile>
   </ItemDefinitionGroup>
   <PropertyGroup>

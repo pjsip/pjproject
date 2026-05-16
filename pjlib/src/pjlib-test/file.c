@@ -24,6 +24,7 @@
 #define FILENAME                "testfil1.txt"
 #define NEWNAME                 "testfil2.txt"
 #define INCLUDE_FILE_TIME_TEST  0
+#define THIS_FILE               "file.c"
 
 static char buffer[11] = {'H', 'e', 'l', 'l', 'o', ' ',
                           'W', 'o', 'r', 'l', 'd' };
@@ -51,43 +52,25 @@ static int file_test_internal(void)
     /*
      * Write data to the file.
      */
-    status = pj_file_open(NULL, FILENAME, PJ_O_WRONLY, &fd);
-    if (status != PJ_SUCCESS) {
-        app_perror("...file_open() error", status);
-        return -10;
-    }
+    PJ_TEST_SUCCESS(pj_file_open(NULL, FILENAME, PJ_O_WRONLY, &fd),
+                    NULL, return -10);
 
     size = sizeof(buffer);
-    status = pj_file_write(fd, buffer, &size);
-    if (status != PJ_SUCCESS) {
-        app_perror("...file_write() error", status);
-        pj_file_close(fd);
-        return -20;
-    }
-    if (size != sizeof(buffer))
-        return -25;
-
-    status = pj_file_close(fd);
-    if (status != PJ_SUCCESS) {
-        app_perror("...file_close() error", status);
-        return -30;
-    }
+    PJ_TEST_SUCCESS(pj_file_write(fd, buffer, &size), NULL,
+                    { pj_file_close(fd); return -20; });
+    PJ_TEST_EQ(size, sizeof(buffer), NULL, return -25 );
+    PJ_TEST_SUCCESS( pj_file_close(fd), NULL, return -30 );
 
     /* Check the file existance and size. */
-    if (!pj_file_exists(FILENAME))
-        return -40;
+    PJ_TEST_TRUE( pj_file_exists(FILENAME), NULL, return -40 );
 
-    if (pj_file_size(FILENAME) != sizeof(buffer))
-        return -50;
+    PJ_TEST_EQ( pj_file_size(FILENAME), sizeof(buffer), NULL, return -50 );
 
     /* Get file stat. */
-    status = pj_file_getstat(FILENAME, &stat);
-    if (status != PJ_SUCCESS)
-        return -60;
+    PJ_TEST_SUCCESS(pj_file_getstat(FILENAME, &stat), NULL, return -60 );
 
     /* Check stat size. */
-    if (stat.size != sizeof(buffer))
-        return -70;
+    PJ_TEST_EQ(stat.size, sizeof(buffer), NULL, return -70 );
 
 #if INCLUDE_FILE_TIME_TEST
     /* Check file creation time >= start_time. */
@@ -118,11 +101,8 @@ static int file_test_internal(void)
     /*
      * Re-open the file and read data.
      */
-    status = pj_file_open(NULL, FILENAME, PJ_O_RDONLY, &fd);
-    if (status != PJ_SUCCESS) {
-        app_perror("...file_open() error", status);
-        return -100;
-    }
+    PJ_TEST_SUCCESS(pj_file_open(NULL, FILENAME, PJ_O_RDONLY, &fd),
+                    NULL, return -100);
 
     size = 0;
     while (size < (pj_ssize_t)sizeof(readbuf)) {
@@ -133,6 +113,7 @@ static int file_test_internal(void)
             PJ_LOG(3,("", "...error reading file after %ld bytes "
                           "(error follows)", size));
             app_perror("...error", status);
+            pj_file_close(fd);
             return -110;
         }
         if (read == 0) {
@@ -142,68 +123,41 @@ static int file_test_internal(void)
         size += read;
     }
 
-    if (size != sizeof(buffer))
-        return -120;
+    PJ_TEST_EQ(size, sizeof(buffer), NULL, 
+               {pj_file_close(fd); return -120; });
 
     /*
     if (!pj_file_eof(fd, PJ_O_RDONLY))
         return -130;
      */
 
-    if (pj_memcmp(readbuf, buffer, size) != 0)
-        return -140;
+    PJ_TEST_EQ(pj_memcmp(readbuf, buffer, size), 0, NULL,
+               {pj_file_close(fd); return -140; });
 
     /* Seek test. */
-    status = pj_file_setpos(fd, 4, PJ_SEEK_SET);
-    if (status != PJ_SUCCESS) {
-        app_perror("...file_setpos() error", status);
-        return -141;
-    }
+    PJ_TEST_SUCCESS(pj_file_setpos(fd, 4, PJ_SEEK_SET), NULL,
+                    {pj_file_close(fd); return -141; });
 
     /* getpos test. */
-    status = pj_file_getpos(fd, &pos);
-    if (status != PJ_SUCCESS) {
-        app_perror("...file_getpos() error", status);
-        return -142;
-    }
-    if (pos != 4)
-        return -143;
+    PJ_TEST_SUCCESS(pj_file_getpos(fd, &pos), NULL,
+                    {pj_file_close(fd); return -142; });
+    PJ_TEST_EQ(pos, 4, NULL, {pj_file_close(fd); return -143; });
 
-    status = pj_file_close(fd);
-    if (status != PJ_SUCCESS) {
-        app_perror("...file_close() error", status);
-        return -150;
-    }
+    PJ_TEST_SUCCESS(pj_file_close(fd), NULL, return -150);
 
     /*
      * Rename test.
      */
-    status = pj_file_move(FILENAME, NEWNAME);
-    if (status != PJ_SUCCESS) {
-        app_perror("...file_move() error", status);
-        return -160;
-    }
-
-    if (pj_file_exists(FILENAME))
-        return -170;
-    if (!pj_file_exists(NEWNAME))
-        return -180;
-
-    if (pj_file_size(NEWNAME) != sizeof(buffer))
-        return -190;
+    PJ_TEST_SUCCESS(pj_file_move(FILENAME, NEWNAME), NULL, return -160);
+    PJ_TEST_EQ(pj_file_exists(FILENAME), 0, NULL, return -170);
+    PJ_TEST_TRUE(pj_file_exists(NEWNAME), NULL, return -180);
+    PJ_TEST_EQ(pj_file_size(NEWNAME), sizeof(buffer), NULL, return -190);
 
     /* Delete test. */
-    status = pj_file_delete(NEWNAME);
-    if (status != PJ_SUCCESS) {
-        app_perror("...file_delete() error", status);
-        return -200;
-    }
+    PJ_TEST_SUCCESS(pj_file_delete(NEWNAME), NULL, return -200);
+    PJ_TEST_EQ(pj_file_exists(NEWNAME), 0, NULL, return -210);
 
-    if (pj_file_exists(NEWNAME))
-        return -210;
-
-    PJ_LOG(3,("", "...success"));
-    return PJ_SUCCESS;
+    return 0;
 }
 
 

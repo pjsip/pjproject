@@ -59,6 +59,7 @@ static const char *desc =
 "  -l  Set the echo tail length in ms. Default is 200 ms            \n"
 "  -r  Set repeat count (default=1)                                 \n"
 "  -a  Algorithm: 0=default, 1=speex, 2=echo suppress, 3=WebRtc     \n"
+"                 4=WebRtc-AEC3                                     \n"
 "  -i  Interactive                                                  \n"
 "\n"
 " Note that for the AEC internal buffering mechanism, it is required\n"
@@ -131,6 +132,9 @@ int main(int argc, char *argv[])
                     break;
                 case 3:
                     opt = PJMEDIA_ECHO_WEBRTC;
+                    break;
+                case 4:
+                    opt = PJMEDIA_ECHO_WEBRTC_AEC3;
                     break;
                 default:
                     puts("Invalid algorithm");

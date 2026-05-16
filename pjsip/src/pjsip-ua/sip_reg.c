@@ -37,10 +37,15 @@
 
 #define REFRESH_TIMER           1
 #define DELAY_BEFORE_REFRESH    PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH
+
+/* This defines the minimum value for the refresh timer in milliseconds.
+ * If the calculated expiry for the refresh timer falls below this; it will be clamped to this value.
+ */
+#define MIN_REFRESH_MSEC        500
 #define THIS_FILE               "sip_reg.c"
 
 /* Outgoing transaction timeout when server sends 100 but never replies
- * with final response. Value is in MILISECONDS!
+ * with final response. Value is in MILLISECONDS!
  */
 #define REGC_TSX_TIMEOUT        33000
 
@@ -118,6 +123,16 @@ struct pjsip_regc
 };
 
 
+/* Declaration of async auth send implementation */
+static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
+                                        void *user_data,
+                                        pjsip_tx_data *tdata);
+
+/* Declaration of async auth abandon implementation */
+static void async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
+                                    void *user_data);
+
+
 PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
                                        pjsip_regc_cb *cb,
                                        pjsip_regc **p_regc)
@@ -179,6 +194,7 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force)
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
 
     pj_lock_acquire(regc->lock);
+
     if (!force && regc->has_tsx) {
         pj_lock_release(regc->lock);
         return PJ_EBUSY;
@@ -848,26 +864,42 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 static void schedule_registration ( pjsip_regc *regc, pj_uint32_t expiration )
 {
     if (regc->auto_reg && expiration > 0 && expiration != NOEXP) {
-        pj_time_val delay = { 0, 0};
+        const pj_time_val min_delay = {MIN_REFRESH_MSEC / 1000,
+                                       MIN_REFRESH_MSEC % 1000};
+        pj_time_val delay = {0, 0};
 
         pj_timer_heap_cancel_if_active(pjsip_endpt_get_timer_heap(regc->endpt),
                                        &regc->timer, 0);
 
-        delay.sec = expiration - regc->delay_before_refresh;
+        /* prevent underflow in case the remote answers with an unexpectedly low Expires field */
+        if (expiration > regc->delay_before_refresh) {
+            delay.sec = expiration - regc->delay_before_refresh;
+        }
         if (regc->expires != PJSIP_REGC_EXPIRATION_NOT_SPECIFIED && 
-            delay.sec > (pj_int32_t)regc->expires) 
-        {
+            delay.sec > (pj_int32_t)regc->expires) {
             delay.sec = regc->expires;
         }
-        if (delay.sec < DELAY_BEFORE_REFRESH) 
-            delay.sec = DELAY_BEFORE_REFRESH;
+        if (delay.sec < DELAY_BEFORE_REFRESH) {
+            if (expiration <= DELAY_BEFORE_REFRESH) {
+                /* Very small expiration: refresh before expiry. */
+                delay.sec  = (expiration > 1) ? (long)expiration - 1 : 0;
+                delay.msec = (expiration > 1) ? 0 : 500;
+            } else {
+                delay.sec = DELAY_BEFORE_REFRESH;
+            }
+        }
+
+        /* make sure we don't go below the minimum */
+        if (PJ_TIME_VAL_LT(delay, min_delay)) {
+            delay = min_delay;
+        }
         regc->timer.cb = &regc_refresh_timer_cb;
         regc->timer.id = REFRESH_TIMER;
         regc->timer.user_data = regc;
         pjsip_endpt_schedule_timer( regc->endpt, &regc->timer, &delay);
         pj_gettimeofday(&regc->last_reg);
         regc->next_reg = regc->last_reg;
-        regc->next_reg.sec += delay.sec;
+        PJ_TIME_VAL_ADD(regc->next_reg, delay);
     }
 }
 
@@ -1096,6 +1128,52 @@ static pj_uint32_t calculate_response_expiration(const pjsip_regc *regc,
     return expiration;
 }
 
+
+/* Sending authentication */
+static pj_status_t async_auth_send_impl(pjsip_auth_clt_sess *auth_sess,
+                                        void *user_data,
+                                        pjsip_tx_data *tdata)
+{
+    pj_status_t status;
+    pjsip_regc *regc = (pjsip_regc*)user_data;
+
+    PJ_UNUSED_ARG(auth_sess);
+
+    status = pjsip_regc_send(regc, tdata);
+    if (status != PJ_SUCCESS) {
+        char errmsg[PJ_ERR_MSG_SIZE];
+        pj_bool_t is_unreg = (regc->current_op == REGC_UNREGISTERING);
+        pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
+        /* call_callback() is invoked here without holding regc->lock.
+         * This function is called either from within the async challenge
+         * callback (lock already released before the callback fires) or
+         * from outside it (no lock held by the caller), so this is safe
+         * and consistent with the rest of the codebase.
+         */
+        call_callback(regc, status, 0, &reason, NULL, NOEXP, 0, NULL,
+                      is_unreg);
+    }
+
+    return status;
+}
+
+
+/* Called when the application abandons a pending async auth challenge. */
+static void async_auth_abandon_impl(pjsip_auth_clt_sess *auth_sess,
+                                    void *user_data)
+{
+    pjsip_regc *regc = (pjsip_regc*)user_data;
+    pj_bool_t is_unreg = (regc->current_op == REGC_UNREGISTERING);
+    pj_str_t reason = { "Authentication abandoned", 24 };
+
+    PJ_UNUSED_ARG(auth_sess);
+
+    /* Called without regc->lock held (same convention as send_impl). */
+    call_callback(regc, PJ_ECANCELLED, PJSIP_SC_UNAUTHORIZED, &reason,
+                  NULL, NOEXP, 0, NULL, is_unreg);
+}
+
+
 static void regc_tsx_callback(void *token, pjsip_event *event)
 {
     pj_status_t status;
@@ -1174,10 +1252,14 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
         pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
         pjsip_tx_data *tdata;
         pj_bool_t is_unreg;
+        pjsip_auth_clt_async_on_chal_param chal_param = { 0 };
 
-        /* reset current op */
+        /* Capture is_unreg but keep current_op alive so that
+         * async auth callbacks can read it if needed.  It will be
+         * reset to REGC_IDLE below (sync fallback) or by
+         * pjsip_regc_send() on the async success path.
+         */
         is_unreg = (regc->current_op == REGC_UNREGISTERING);
-        regc->current_op = REGC_IDLE;
 
         if (update_contact) {
             pjsip_msg *msg;
@@ -1221,36 +1303,77 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
             }
         }
 
-        status = pjsip_auth_clt_reinit_req( &regc->auth_sess,
-                                            rdata, 
-                                            tsx->last_tx,  
-                                            &tdata);
-
-        if (status == PJ_SUCCESS) {
-            /* Need to unlock the regc temporarily while sending the message
-             * to prevent deadlock (see ticket #2260 and #1247).
-             * It should be safe to do this since the regc's refcount has been
-             * incremented.
-             */
-            pj_lock_release(regc->lock);
-            status = pjsip_regc_send(regc, tdata);
-            pj_lock_acquire(regc->lock);
+        if (regc->_delete_flag != 0) {
+            pjsip_auth_clt_set_parent(&regc->auth_sess, NULL);
         }
-        
-        if (status != PJ_SUCCESS) {
 
-            /* Only call callback if application is still interested
-             * in it.
+        /* Check if application handles the authentication.
+         * Release the lock to prevent deadlock in case application calls
+         * pjsip_auth_clt_async_send_req() synchronously from within the
+         * callback (see ticket #2260 and #1247).
+         * It should be safe to do this since the regc's refcount has been
+         * incremented.
+         */
+        {
+            pjsip_auth_clt_async_impl_token *auth_token;
+            auth_token = PJ_POOL_ZALLOC_T(tsx->pool,
+                                          pjsip_auth_clt_async_impl_token);
+            auth_token->user_data    = regc;
+            auth_token->send_impl    = &async_auth_send_impl;
+            auth_token->abandon_impl = &async_auth_abandon_impl;
+            auth_token->grp_lock     = tsx->grp_lock;
+            pj_grp_lock_add_ref(tsx->grp_lock);
+
+            pj_bzero(&chal_param, sizeof(chal_param));
+            chal_param.rdata = rdata;
+            chal_param.tdata = tsx->last_tx;
+            pj_lock_release(regc->lock);
+            status = pjsip_auth_clt_async_impl_on_challenge(
+                                                    &regc->auth_sess,
+                                                    auth_token, &chal_param);
+            pj_lock_acquire(regc->lock);
+            if (status != PJ_SUCCESS)
+                pj_grp_lock_dec_ref(tsx->grp_lock);
+        }
+        if (status != PJ_SUCCESS) {
+            /* Application does not handle the authentication, so let's
+             * handle it here now.  Reset current_op now since we deferred
+             * it above for the async path.
              */
-            if (regc->_delete_flag == 0) {
-                /* Should be safe to release the lock temporarily.
-                 * We do this to avoid deadlock. 
+            regc->current_op = REGC_IDLE;
+
+            /* Reinit request with auth response. */
+            status = pjsip_auth_clt_reinit_req( &regc->auth_sess,
+                                                rdata, 
+                                                tsx->last_tx,
+                                                &tdata);
+
+            /* Send the request. */
+            if (status == PJ_SUCCESS && tdata) {
+                /* Need to unlock the regc temporarily while sending the
+                 * message to prevent deadlock (see ticket #2260 and #1247).
+                 * It should be safe to do this since the regc's refcount has
+                 * been incremented.
                  */
                 pj_lock_release(regc->lock);
-                call_callback(regc, status, tsx->status_code, 
-                              &rdata->msg_info.msg->line.status.reason,
-                              rdata, NOEXP, 0, NULL, is_unreg);
+                status = pjsip_regc_send(regc, tdata);
                 pj_lock_acquire(regc->lock);
+            }
+
+            if (status != PJ_SUCCESS) {
+                /* Only call callback if application is still interested
+                 * in it.
+                 */
+                if (regc->_delete_flag == 0) {
+                    /* Should be safe to release the lock temporarily.
+                     * We do this to avoid deadlock. 
+                     */
+                    pj_lock_release(regc->lock);
+                    call_callback(regc, status, tsx->status_code, 
+                                  &rdata->msg_info.msg->line.status.reason,
+                                  rdata, NOEXP, 0, NULL, is_unreg);
+                    pj_lock_acquire(regc->lock);
+                }
             }
         }
 
@@ -1555,4 +1678,16 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     return status;
 }
 
+PJ_DEF(pj_status_t) pjsip_regc_set_auth_sess( pjsip_regc *regc,
+                                              pjsip_auth_clt_sess *session )
+{
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+    return pjsip_auth_clt_set_parent(&regc->auth_sess, session);
+}
 
+
+PJ_DEF(pjsip_auth_clt_sess*) pjsip_regc_get_auth_sess( pjsip_regc *regc )
+{
+    PJ_ASSERT_RETURN(regc, NULL);
+    return &regc->auth_sess;
+}

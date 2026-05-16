@@ -297,7 +297,7 @@ pj_status_t ssl_network_event_poll()
 
         if (ssock->is_closing || !ssock->pool ||
             (!ssock->is_server && !assock->connection) ||
-            (ssock->is_server && !assock->listener))
+            (ssock->is_server && !assock->listener && !assock->connection))
         {
             PJ_LOG(3, (THIS_FILE, "Warning: Discarding SSL event type %d of "
                        "a closing socket %p", event->type, ssock));
@@ -804,10 +804,8 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
             if (is_complete &&
                 (context == NULL || nw_content_context_get_is_final(context)))
             {
-                return;
-            }
-
-            if (error != NULL) {
+                status = PJ_EEOF;
+            } else if (error != NULL) {
                 errno = nw_error_get_error_code(error);
                 if (errno == 89) {
                     /* Since error 89 is network intentionally cancelled by
@@ -823,7 +821,7 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
             dispatch_block_t schedule_next_receive = 
             ^{
                 /* If there was no error in receiving, request more data. */
-                if (!error && !is_complete && assock->connection) {
+                if (!error && !is_complete && status != PJ_EEOF) {
                     network_start_read(ssock, async_count, buff_size,
                                        readbuf, flags);
                 }
@@ -926,9 +924,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 
     /* Set min and max protocol version */
     if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT) {
-        ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1 |
-                             PJ_SSL_SOCK_PROTO_TLS1_1 |
-                             PJ_SSL_SOCK_PROTO_TLS1_2 |
+        ssock->param.proto = PJ_SSL_SOCK_PROTO_TLS1_2 |
                              PJ_SSL_SOCK_PROTO_TLS1_3;
     }
 
@@ -1002,9 +998,11 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
          */
         sec_protocol_options_set_tls_resumption_enabled(sec_options, false);
         
-        /* SSL verification options */
-        sec_protocol_options_set_peer_authentication_required(sec_options,
-            true);
+        /* SSL peer authentication options */
+        if (ssock->is_server && ssock->param.require_client_cert) {
+            sec_protocol_options_set_peer_authentication_required(sec_options,
+                                                                  true);
+        }
 
         /* Handshake flow:
          * 1. Server's challenge block, provide server's trust
@@ -1137,12 +1135,12 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
     pj_status_t status;
 
     /* Initialize input circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_input, 8192);
+    status = circ_init(ssock->pool->factory, &ssock->ssl_read_buf, 8192);
     if (status != PJ_SUCCESS)
         return status;
 
     /* Initialize output circular buffer */
-    status = circ_init(ssock->pool->factory, &ssock->circ_buf_output, 8192);
+    status = circ_init(ssock->pool->factory, &ssock->ssl_write_buf, 8192);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -1166,10 +1164,8 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
             errno = nw_error_get_error_code(error);
             warn("Connection failed %p", assock);
             status = PJ_STATUS_FROM_OS(errno);
-#if SSL_DEBUG
-            PJ_LOG(3, (THIS_FILE, "SSL state and errno %d %d", state, errno));
-#endif
-            call_cb = PJ_TRUE;  
+            if (ssock->ssl_state == SSL_STATE_HANDSHAKING)
+                call_cb = PJ_TRUE;
         }
 
         if (state == nw_connection_state_ready) {
@@ -1400,7 +1396,8 @@ static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
     
     assock = PJ_POOL_ZALLOC_T(pool, applessl_sock_t);    
 
-    assock->queue = dispatch_queue_create("ssl_queue", DISPATCH_QUEUE_SERIAL);
+    assock->queue = dispatch_queue_create("ssl_queue",
+                                          DISPATCH_QUEUE_CONCURRENT);
     assock->ev_semaphore = dispatch_semaphore_create(0);    
     if (!assock->queue || !assock->ev_semaphore) {
         ssl_destroy(&assock->base);
@@ -1432,7 +1429,6 @@ static void close_connection(applessl_sock_t *assock)
         
         assock->connection = nil;
         nw_connection_force_cancel(conn);
-        nw_release(conn);
 
         /* We need to wait until the connection is at cancelled state,
          * otherwise events will still be delivered even though we
@@ -1449,6 +1445,9 @@ static void close_connection(applessl_sock_t *assock)
             PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL connection "
                                   "%p %d", assock, assock->con_state));
         }
+
+        nw_connection_set_state_changed_handler(conn, nil);
+        nw_release(conn);
 
 #if SSL_DEBUG
         PJ_LOG(3, (THIS_FILE, "SSL connection %p closed", assock));
@@ -1526,8 +1525,8 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     }
 
     /* Destroy circular buffers */
-    circ_deinit(&ssock->circ_buf_input);
-    circ_deinit(&ssock->circ_buf_output);
+    circ_deinit(&ssock->ssl_read_buf);
+    circ_deinit(&ssock->ssl_write_buf);
     
     PJ_LOG(4, (THIS_FILE, "SSL %p destroyed", ssock));
 }
@@ -1536,9 +1535,9 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 /* Reset socket state. */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
-    pj_lock_acquire(ssock->circ_buf_output_mutex);
+    pj_lock_acquire(ssock->ssl_write_buf_mutex);
     ssock->ssl_state = SSL_STATE_NULL;
-    pj_lock_release(ssock->circ_buf_output_mutex);
+    pj_lock_release(ssock->ssl_write_buf_mutex);
 
 #if SSL_DEBUG
     PJ_LOG(3, (THIS_FILE, "SSL reset sock state %p", ssock));
@@ -2171,20 +2170,20 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
 {
     pj_size_t circ_buf_size, read_size;
 
-    pj_lock_acquire(ssock->circ_buf_input_mutex);
+    pj_lock_acquire(ssock->ssl_read_buf_mutex);
 
-    if (circ_empty(&ssock->circ_buf_input)) {
-        pj_lock_release(ssock->circ_buf_input_mutex);
+    if (circ_empty(&ssock->ssl_read_buf)) {
+        pj_lock_release(ssock->ssl_read_buf_mutex);
         *size = 0;
         return PJ_SUCCESS;
     }
 
-    circ_buf_size = circ_size(&ssock->circ_buf_input);
+    circ_buf_size = circ_size(&ssock->ssl_read_buf);
     read_size = PJ_MIN(circ_buf_size, (pj_size_t)*size);
 
-    circ_read(&ssock->circ_buf_input, data, read_size);
+    circ_read(&ssock->ssl_read_buf, data, read_size);
 
-    pj_lock_release(ssock->circ_buf_input_mutex);
+    pj_lock_release(ssock->ssl_read_buf_mutex);
 
     *size = read_size;
 
@@ -2193,14 +2192,14 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
 
 /*
  * Write the plain data to buffer. It will be encrypted later during
- * sending.
+ * sending. Caller must hold ssock->write_mutex.
  */
 static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
                              pj_ssize_t size, int *nwritten)
 {
     pj_status_t status;
 
-    status = circ_write(&ssock->circ_buf_output, data, size);
+    status = circ_write(&ssock->ssl_write_buf, data, size);
     *nwritten = (status == PJ_SUCCESS)? (int)size: 0;
     
     return status;

@@ -45,6 +45,19 @@
 #include <unistd.h>         // getpid()
 #include <errno.h>          // errno
 
+#if PJ_HAS_THREADS
+#  if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L \
+                                && !defined(__STDC_NO_ATOMICS__)  \
+                                && (!defined(__GNUC__) || defined(__clang__) \
+                                || __GNUC__ > 4 \
+                                || (__GNUC__ == 4 && __GNUC_MINOR__ >= 9))
+#    define HAS_STD_ATOMICS 1
+#    include <stdatomic.h>
+#  else
+#    define EMULATE_ATOMICS 1
+#  endif
+#endif
+
 #include <pthread.h>
 #if defined(PJ_HAS_PTHREAD_NP_H) && PJ_HAS_PTHREAD_NP_H != 0
 #  include <pthread_np.h>
@@ -101,9 +114,15 @@ struct pj_thread_t
 
 struct pj_atomic_t
 {
+#if HAS_STD_ATOMICS
+    _Atomic pj_atomic_value_t value;
+#elif EMULATE_ATOMICS
     pj_mutex_t         *mutex;
     pj_atomic_value_t   value;
-};
+#else
+    pj_atomic_value_t   value;
+#endif
+} PJ_ALIGN_DATA_SUFFIX(8);
 
 struct pj_mutex_t
 {
@@ -146,6 +165,18 @@ struct pj_event_t
 };
 #endif  /* PJ_HAS_EVENT_OBJ */
 
+struct pj_barrier_t {
+#if defined(_POSIX_BARRIERS) && _POSIX_BARRIERS >= 200112L
+    /* pthread_barrier is supported. */
+    pthread_barrier_t barrier;
+#else
+    /* pthread_barrier is not supported. */
+    pj_mutex_t          mutex;
+    pthread_cond_t      cond;
+    unsigned            count;
+    unsigned            trip_count;
+#endif
+};
 
 /*
  * Flag and reference counter for PJLIB instance.
@@ -166,7 +197,6 @@ static unsigned atexit_count;
 static void (*atexit_func[32])(void);
 
 static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type);
-
 /*
  * pj_init(void).
  * Init PJLIB!
@@ -431,6 +461,29 @@ PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
 #endif
 }
 
+#if !defined(PJ_ANDROID) || PJ_ANDROID == 0
+static pj_status_t set_prio(pj_thread_t *thread, int prio, 
+                            pj_bool_t max_policy)
+{
+    int policy;
+    int rc;
+    struct sched_param param;
+
+    if (max_policy) {
+        policy = SCHED_RR;
+    } else {
+        rc = pthread_getschedparam (thread->thread, &policy, &param);
+        if (rc != 0)
+            return PJ_RETURN_OS_ERROR(rc);
+    }
+    param.sched_priority = prio;
+    rc = pthread_setschedparam(thread->thread, policy, &param);
+    if (rc != 0)
+        return PJ_RETURN_OS_ERROR(rc);
+
+    return PJ_SUCCESS;    
+}
+#endif /* !PJ_ANDROID */
 
 /*
  * Set the thread priority.
@@ -445,23 +498,15 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
     return set_android_thread_priority(prio);
 
 #  else
+    pj_status_t status = PJ_EUNKNOWN;
 
-    struct sched_param param;
-    int policy;
-    int rc;
+    if (prio > 0)
+        status = set_prio(thread, prio, PJ_TRUE);
 
-    rc = pthread_getschedparam (thread->thread, &policy, &param);
-    if (rc != 0)
-        return PJ_RETURN_OS_ERROR(rc);
+    if (status != PJ_SUCCESS)
+        status = set_prio(thread, prio, PJ_FALSE);
 
-    param.sched_priority = prio;
-
-    rc = pthread_setschedparam(thread->thread, policy, &param);
-    if (rc != 0)
-        return PJ_RETURN_OS_ERROR(rc);
-
-    return PJ_SUCCESS;
-
+    return status;
 #  endif /* PJ_ANDROID */
 
 #else
@@ -498,21 +543,40 @@ PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
 }
 
 
+static int get_prio_max(pj_thread_t *thread)
+{
+    int ori_policy, policy;
+    int prio;
+    int rc;
+    struct sched_param ori_param, param;
+
+    rc = pthread_getschedparam (thread->thread, &ori_policy, &ori_param);
+    if (rc != 0)
+        return -1;
+ 
+    policy = SCHED_RR;
+    prio = sched_get_priority_max(policy);
+    
+    /* Make sure the priority is usable. */
+    param.sched_priority = prio;
+
+    rc = pthread_setschedparam(thread->thread, policy, &param);
+    if (rc != 0)
+        return sched_get_priority_max(ori_policy);
+    
+    /* Revert the original policy/param. */
+    rc = pthread_setschedparam(thread->thread, ori_policy, &ori_param);
+    return prio;
+}
+
+
 /*
  * Get the highest priority value available on this system.
  */
 PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
 {
-    struct sched_param param;
-    int policy;
-    int rc;
-
-    rc = pthread_getschedparam(thread->thread, &policy, &param);
-    if (rc != 0)
-        return -1;
-
 #if defined(_POSIX_PRIORITY_SCHEDULING)
-    return sched_get_priority_max(policy);
+    return get_prio_max(thread);
 #elif defined __OpenBSD__
     /* Thread prio min/max are declared in OpenBSD private hdr */
     return 31;
@@ -681,6 +745,9 @@ static void *thread_main(void *param)
     rec->stk_start = (char*)&rec;
 #endif
 
+    /* Store the thread. */
+    rec->thread = pthread_self();
+
     /* Set current thread id. */
     rc = pj_thread_local_set(thread_tls_id, rec);
     if (rc != PJ_SUCCESS) {
@@ -705,83 +772,63 @@ static void *thread_main(void *param)
 
     return result;
 }
-#endif
 
-/*
- * pj_thread_create(...)
- */
-PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
-                                      const char *thread_name,
-                                      pj_thread_proc *proc,
-                                      void *arg,
-                                      pj_size_t stack_size,
-                                      unsigned flags,
-                                      pj_thread_t **ptr_thread)
+static pj_status_t create_thread(const char *thread_name,
+                                 pj_thread_proc *proc,
+                                 void *arg,
+                                 pj_size_t stack_size,
+                                 void *stack_addr,
+                                 pj_thread_t *rec)
 {
-#if PJ_HAS_THREADS
-    pj_thread_t *rec;
     pthread_attr_t thread_attr;
-    void *stack_addr;
     int rc;
+    const char *ch;
 
     PJ_UNUSED_ARG(stack_addr);
 
     PJ_CHECK_STACK();
-    PJ_ASSERT_RETURN(pool && proc && ptr_thread, PJ_EINVAL);
-
-    /* Create thread record and assign name for the thread */
-    rec = (struct pj_thread_t*) pj_pool_zalloc(pool, sizeof(pj_thread_t));
-    PJ_ASSERT_RETURN(rec, PJ_ENOMEM);
+    PJ_ASSERT_RETURN(proc && rec, PJ_EINVAL);
 
     /* Set name. */
     if (!thread_name)
         thread_name = "thr%p";
 
-    if (strchr(thread_name, '%')) {
+    ch = pj_ansi_strchr(thread_name, '%');
+    if (ch && *(ch+1) == 'p') {
         pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
     } else {
         pj_ansi_strxcpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
     }
 
-    /* Set default stack size */
-    if (stack_size == 0)
-        stack_size = PJ_THREAD_DEFAULT_STACK_SIZE;
-
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
-    rec->stk_size = stack_size;
+#   if defined(PJ_THREAD_SET_STACK_SIZE) && PJ_THREAD_SET_STACK_SIZE!=0
+    rec->stk_size = stack_size ? stack_size : 0xFFFFFFFFUL;
+#   else
+    rec->stk_size = 0xFFFFFFFFUL;
+#   endif
     rec->stk_max_usage = 0;
 #endif
-
-    /* Emulate suspended thread with mutex. */
-    if (flags & PJ_THREAD_SUSPENDED) {
-        rc = pj_mutex_create_simple(pool, NULL, &rec->suspended_mutex);
-        if (rc != PJ_SUCCESS) {
-            return rc;
-        }
-
-        pj_mutex_lock(rec->suspended_mutex);
-    } else {
-        pj_assert(rec->suspended_mutex == NULL);
-    }
-
 
     /* Init thread attributes */
     pthread_attr_init(&thread_attr);
 
 #if defined(PJ_THREAD_SET_STACK_SIZE) && PJ_THREAD_SET_STACK_SIZE!=0
-    /* Set thread's stack size */
-    rc = pthread_attr_setstacksize(&thread_attr, stack_size);
-    if (rc != 0) {
-        pthread_attr_destroy(&thread_attr);
-        return PJ_RETURN_OS_ERROR(rc);
+    /* Set thread's stack size if caller specified one;
+     * 0 means let OS pick the default.
+     */
+    if (stack_size != 0) {
+        rc = pthread_attr_setstacksize(&thread_attr, stack_size);
+        if (rc != 0) {
+            pthread_attr_destroy(&thread_attr);
+            return PJ_RETURN_OS_ERROR(rc);
+        }
     }
 #endif  /* PJ_THREAD_SET_STACK_SIZE */
 
 
 #if defined(PJ_THREAD_ALLOCATE_STACK) && PJ_THREAD_ALLOCATE_STACK!=0
     /* Allocate memory for the stack */
-    stack_addr = pj_pool_alloc(pool, stack_size);
-    PJ_ASSERT_RETURN(stack_addr, PJ_ENOMEM);
+    PJ_ASSERT_RETURN(stack_addr, PJ_EINVAL);
 
     rc = pthread_attr_setstackaddr(&thread_attr, stack_addr);
     if (rc != 0) {
@@ -803,10 +850,90 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     /* Destroy thread attributes */
     pthread_attr_destroy(&thread_attr);
 
-    *ptr_thread = rec;
-
     PJ_LOG(6, (rec->obj_name, "Thread created"));
     return PJ_SUCCESS;
+
+}
+
+#endif
+
+/*
+ * pj_thread_create(...)
+ */
+PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
+                                      const char *thread_name,
+                                      pj_thread_proc *proc,
+                                      void *arg,
+                                      pj_size_t stack_size,
+                                      unsigned flags,
+                                      pj_thread_t **ptr_thread)
+{
+#if PJ_HAS_THREADS
+    pj_status_t status;
+    pj_thread_t *rec;
+    void *stack_addr = NULL;
+    int rc;
+
+    PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(pool && proc && ptr_thread, PJ_EINVAL);
+
+    /* Create thread record and assign name for the thread */
+    rec = (struct pj_thread_t*) pj_pool_zalloc(pool, sizeof(pj_thread_t));
+    PJ_ASSERT_RETURN(rec, PJ_ENOMEM);
+
+#if defined(PJ_THREAD_ALLOCATE_STACK) && PJ_THREAD_ALLOCATE_STACK!=0
+    /* When pjlib allocates the stack from the pool, 0 is not
+     * meaningful; fall back to PJ_THREAD_DEFAULT_STACK_SIZE.
+     */
+    if (stack_size == 0)
+        stack_size = PJ_THREAD_DEFAULT_STACK_SIZE;
+    /* Allocate memory for the stack */
+    stack_addr = pj_pool_alloc(pool, stack_size);
+    PJ_ASSERT_RETURN(stack_addr, PJ_ENOMEM);
+#endif  /* PJ_THREAD_ALLOCATE_STACK */
+
+    /* Emulate suspended thread with mutex. */
+    if (flags & PJ_THREAD_SUSPENDED) {
+        rc = pj_mutex_create_simple(pool, NULL, &rec->suspended_mutex);
+        if (rc != PJ_SUCCESS) {
+            return rc;
+        }
+
+        pj_mutex_lock(rec->suspended_mutex);
+    } else {
+        pj_assert(rec->suspended_mutex == NULL);
+    }
+
+    status = create_thread(thread_name, proc, arg, stack_size, stack_addr, rec);
+    if (status == PJ_SUCCESS) {
+        /* Success! */
+        *ptr_thread = rec;
+    }
+    return status;
+
+#else
+    pj_assert(!"Threading is disabled!");
+    return PJ_EINVALIDOP;
+#endif
+}
+
+PJ_DEF(pj_status_t) pj_thread_create2( const char *thread_name,
+                                       pj_thread_proc *proc, 
+                                       void *arg,
+                                       pj_size_t stack_size, 
+                                       void *stack_addr,
+                                       pj_thread_t *thread )
+{
+#if PJ_HAS_THREADS
+
+    PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(proc && thread, PJ_EINVAL);
+
+    if (thread == pj_thread_this())
+        return PJ_ECANCELLED;
+
+    return create_thread(thread_name, proc, arg, stack_size, stack_addr, thread);
+
 #else
     pj_assert(!"Threading is disabled!");
     return PJ_EINVALIDOP;
@@ -907,11 +1034,48 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
 }
 
 /*
+ * pj_thread_unregister()
+ */
+PJ_DEF(pj_status_t) pj_thread_unregister()
+{
+#if PJ_HAS_THREADS
+    pj_status_t status;
+    //int result;
+    pj_thread_t *rec;
+    PJ_CHECK_STACK();
+
+    rec = pj_thread_this();
+    PJ_ASSERT_RETURN(rec, PJ_EBUG);
+    
+    if ((status = pj_thread_destroy(rec)) != PJ_SUCCESS)
+        return status;
+    //else if ((result = pthread_detach(rec->thread)) != 0)
+    //    return PJ_RETURN_OS_ERROR(result);
+    else
+        return pj_thread_local_set(thread_tls_id, NULL);
+#else
+    pj_assert(!"No multithreading support!");
+    return PJ_EINVALIDOP;
+#endif
+}
+
+/*
+ * pj_thread_attach()
+ */
+PJ_DEF(pj_status_t) pj_thread_attach(const char *cstr_thread_name,
+                                     pj_thread_desc desc,
+                                     pj_thread_t **thread_ptr)
+{
+    return pj_thread_register(cstr_thread_name, desc, thread_ptr);
+}
+
+/*
  * pj_thread_destroy()
  */
 PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *p)
 {
     PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(p, PJ_EINVAL);
 
     /* Destroy mutex used to suspend thread */
     if (p->suspended_mutex) {
@@ -974,7 +1138,13 @@ PJ_DEF(void) pj_thread_check_stack(const char *file, int line)
 {
     char stk_ptr;
     pj_uint32_t usage;
-    pj_thread_t *thread = pj_thread_this();
+    pj_thread_t *thread;
+
+    /* may be called after pj_thread_unregister() */
+    if (!pj_thread_is_registered())
+        return;
+
+    thread = pj_thread_this();
 
     /* Calculate current usage. */
     usage = (&stk_ptr > thread->stk_start) ? &stk_ptr - thread->stk_start :
@@ -1023,19 +1193,25 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
                                       pj_atomic_value_t initial,
                                       pj_atomic_t **ptr_atomic)
 {
+#if EMULATE_ATOMICS
     pj_status_t rc;
+#endif
     pj_atomic_t *atomic_var;
 
     atomic_var = PJ_POOL_ZALLOC_T(pool, pj_atomic_t);
 
     PJ_ASSERT_RETURN(atomic_var, PJ_ENOMEM);
 
-#if PJ_HAS_THREADS
+#if HAS_STD_ATOMICS
+    atomic_init(&atomic_var->value, initial);
+#elif EMULATE_ATOMICS
     rc = pj_mutex_create(pool, "atm%p", PJ_MUTEX_SIMPLE, &atomic_var->mutex);
     if (rc != PJ_SUCCESS)
         return rc;
-#endif
     atomic_var->value = initial;
+#else
+    atomic_var->value = initial;
+#endif
 
     *ptr_atomic = atomic_var;
     return PJ_SUCCESS;
@@ -1046,11 +1222,13 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
 {
+#if EMULATE_ATOMICS
     pj_status_t status;
+#endif
 
     PJ_ASSERT_RETURN(atomic_var, PJ_EINVAL);
-    
-#if PJ_HAS_THREADS
+
+#if EMULATE_ATOMICS
     status = pj_mutex_destroy( atomic_var->mutex );
     if (status == PJ_SUCCESS) {
         atomic_var->mutex = NULL;
@@ -1066,20 +1244,24 @@ PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
  */
 PJ_DEF(void) pj_atomic_set(pj_atomic_t *atomic_var, pj_atomic_value_t value)
 {
+#if EMULATE_ATOMICS
     pj_status_t status;
+#endif
 
     PJ_CHECK_STACK();
     PJ_ASSERT_ON_FAIL(atomic_var, return);
 
-#if PJ_HAS_THREADS
+#if HAS_STD_ATOMICS
+    atomic_store(&atomic_var->value, value);
+#elif EMULATE_ATOMICS
     status = pj_mutex_lock( atomic_var->mutex );
     if (status != PJ_SUCCESS) {
         return;
     }
-#endif
     atomic_var->value = value;
-#if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    atomic_var->value = value;
 #endif
 }
 
@@ -1092,13 +1274,16 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_get(pj_atomic_t *atomic_var)
 
     PJ_CHECK_STACK();
 
-#if PJ_HAS_THREADS
+#if HAS_STD_ATOMICS
+    oldval = atomic_load(&atomic_var->value);
+#elif EMULATE_ATOMICS
     pj_mutex_lock( atomic_var->mutex );
-#endif
     oldval = atomic_var->value;
-#if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    oldval = atomic_var->value;
 #endif
+
     return oldval;
 }
 
@@ -1111,12 +1296,14 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var)
 
     PJ_CHECK_STACK();
 
-#if PJ_HAS_THREADS
+#if HAS_STD_ATOMICS
+    new_value = atomic_fetch_add(&atomic_var->value, 1) + 1;
+#elif EMULATE_ATOMICS
     pj_mutex_lock( atomic_var->mutex );
-#endif
     new_value = ++atomic_var->value;
-#if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    new_value = ++atomic_var->value;
 #endif
 
     return new_value;
@@ -1139,12 +1326,14 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var)
 
     PJ_CHECK_STACK();
 
-#if PJ_HAS_THREADS
+#if HAS_STD_ATOMICS
+    new_value = atomic_fetch_sub(&atomic_var->value, 1) - 1;
+#elif EMULATE_ATOMICS
     pj_mutex_lock( atomic_var->mutex );
-#endif
     new_value = --atomic_var->value;
-#if PJ_HAS_THREADS
     pj_mutex_unlock( atomic_var->mutex);
+#else
+    new_value = --atomic_var->value;
 #endif
 
     return new_value;
@@ -1167,15 +1356,14 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
 {
     pj_atomic_value_t new_value;
 
-#if PJ_HAS_THREADS
-    pj_mutex_lock(atomic_var->mutex);
-#endif
-
-    atomic_var->value += value;
-    new_value = atomic_var->value;
-
-#if PJ_HAS_THREADS
-    pj_mutex_unlock(atomic_var->mutex);
+#if HAS_STD_ATOMICS
+    new_value = atomic_fetch_add(&atomic_var->value, value) + value;
+#elif EMULATE_ATOMICS
+    pj_mutex_lock( atomic_var->mutex );
+    new_value = atomic_var->value += value;
+    pj_mutex_unlock( atomic_var->mutex);
+#else
+    new_value = atomic_var->value += value;
 #endif
 
     return new_value;
@@ -2079,6 +2267,124 @@ PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
 }
 
 #endif  /* PJ_HAS_EVENT_OBJ */
+
+///////////////////////////////////////////////////////////////////////////////
+#if defined(_POSIX_BARRIERS) && _POSIX_BARRIERS >= 200112L
+    /* pthread_barrier is supported. */
+
+/**
+ * Barrier object.
+ */
+PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier) 
+{
+    pj_barrier_t *barrier;
+    int rc;
+    PJ_ASSERT_RETURN(pool && p_barrier, PJ_EINVAL);
+    barrier = (pj_barrier_t *)pj_pool_zalloc(pool, sizeof(pj_barrier_t));
+    if (barrier == NULL)
+        return PJ_ENOMEM;
+    rc = pthread_barrier_init(&barrier->barrier, NULL, trip_count);
+    if (rc == 0)
+        *p_barrier = barrier;
+    return PJ_STATUS_FROM_OS(rc);
+}
+
+/**
+ * Wait on the barrier.
+ */
+PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) 
+{
+    int rc;
+
+    PJ_UNUSED_ARG(flags);
+    rc = pthread_barrier_wait(&barrier->barrier);
+    switch (rc) {
+    case 0:
+        return PJ_FALSE;
+    case PTHREAD_BARRIER_SERIAL_THREAD:
+        return PJ_TRUE;
+    default:
+        return PJ_STATUS_FROM_OS(rc);
+    }
+}
+
+/**
+ * Destroy the barrier.
+ */
+PJ_DEF(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier) 
+{
+    int status = pthread_barrier_destroy(&barrier->barrier);
+    return PJ_STATUS_FROM_OS(status);
+}
+
+#else   // _POSIX_BARRIERS
+    /* pthread_barrier is not supported. */
+
+/**
+ * Barrier object.
+ */
+PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_barrier_t **p_barrier)
+{
+    pj_barrier_t *barrier;
+    pj_status_t status;
+    int rc;
+
+    PJ_ASSERT_RETURN(pool && p_barrier, PJ_EINVAL);
+    barrier = (pj_barrier_t*)pj_pool_zalloc(pool, sizeof(pj_barrier_t));
+    if (barrier == NULL)
+        return PJ_ENOMEM;
+
+    rc = pthread_cond_init(&barrier->cond, NULL);
+    if ((status = PJ_STATUS_FROM_OS(rc)) == PJ_SUCCESS) {
+        status = init_mutex(&barrier->mutex, "barrier%p", PJ_MUTEX_SIMPLE);
+        if (status != PJ_SUCCESS) {
+            rc = pthread_cond_destroy(&barrier->cond);
+            pj_assert(!rc);
+        } else {
+            barrier->count = 0;
+            barrier->trip_count = trip_count;
+            *p_barrier = barrier;
+        }
+    }
+    return status;
+}
+
+/**
+ * Wait on the barrier.
+ */
+PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) 
+{
+    pj_bool_t is_last = PJ_FALSE;
+    int status;
+
+    PJ_UNUSED_ARG(flags);
+
+    pthread_mutex_lock(&barrier->mutex.mutex);
+    if (++barrier->count >= barrier->trip_count) {
+        barrier->count = 0;
+        status = pthread_cond_broadcast(&barrier->cond);
+        is_last = PJ_TRUE;
+    } else {
+        status = pthread_cond_wait(&barrier->cond, &barrier->mutex.mutex);
+    }
+    pthread_mutex_unlock(&barrier->mutex.mutex);
+
+    return !status ? is_last : PJ_STATUS_FROM_OS(status);
+}
+
+/**
+ * Destroy the barrier.
+ */
+PJ_DEF(pj_status_t) pj_barrier_destroy(pj_barrier_t *barrier) 
+{
+    int status = pthread_cond_destroy(&barrier->cond);
+    pj_assert(!status);
+    PJ_UNUSED_ARG(status);
+    return pj_mutex_destroy(&barrier->mutex);
+}
+
+#endif  // _POSIX_BARRIERS
+
 
 ///////////////////////////////////////////////////////////////////////////////
 #if defined(PJ_TERM_HAS_COLOR) && PJ_TERM_HAS_COLOR != 0

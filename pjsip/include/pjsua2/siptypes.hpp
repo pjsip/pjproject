@@ -280,6 +280,32 @@ struct TlsConfig : public PersistentObject
     string              certLookupKeyword;
 
     /**
+     * When using backend specific credentials objects, specify the backend
+     * object types using this bit flag, see also \ref pj_ssl_cert_direct_type.
+     */
+    unsigned            credDirectType;
+
+    /**
+     * Optional backend specific private key. See also
+     * \a pj_ssl_cert_load_direct().
+     *
+     * Currently only the OpenSSL backend is supported. This setting
+     * corresponds to an OpenSSL EVP_PKEY instance. When this is set,
+     * specify PJ_SSL_CERT_DIRECT_OPENSSL_EVP_PKEY flag in \a certDirectType.
+     */
+    Token               privKeyDirect;
+
+    /**
+     * Optional backend specific certificate. See also
+     * \a pj_ssl_cert_load_direct().
+     *
+     * Currently only the OpenSSL backend is supported, this setting
+     * corresponds to an OpenSSL X509 instance. When this is set,
+     * specify PJ_SSL_CERT_DIRECT_OPENSSL_X509_CERT flag in \a certDirectType.
+     */
+    Token               certDirect;
+
+    /**
      * TLS protocol method from #pjsip_ssl_method. In the future, this field
      * might be deprecated in favor of <b>proto</b> field. For now, this field 
      * is only applicable only when <b>proto</b> field is set to zero.
@@ -997,7 +1023,18 @@ struct SipTxOption
     string                  localUri;
 
     /**
+     * Optional contact URI to be used for this call. If empty (""), the
+     * contact will be generated automatically based on the account
+     * configuration. At the moment this field is only used when sending
+     * initial INVITE requests.
+     */
+    string                  contactUri;
+
+    /**
      * Additional message headers to be included in the outgoing message.
+     *
+     * Application may override Max-Forwards header value (the default is
+     * #PJSIP_MAX_FORWARDS_VALUE) by adding a Max-Forwards header here.
      */
     SipHeaderVector         headers;
 

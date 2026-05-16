@@ -572,6 +572,21 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_ssrc( pj_pool_t *pool,
 }
 
 
+PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_label(pj_pool_t *pool,
+                                                const pj_str_t *label_str)
+{
+    pjmedia_sdp_attr *attr;
+    
+    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+    attr->name = pj_str("label");
+    attr->value.ptr = (char *)pj_pool_alloc(pool, label_str->slen);
+    pj_memcpy(attr->value.ptr, label_str->ptr, label_str->slen);
+    attr->value.slen = label_str->slen;
+
+    return attr;
+}
+
+
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_to_rtpmap(pj_pool_t *pool,
                                                const pjmedia_sdp_attr *attr,
                                                pjmedia_sdp_rtpmap **p_rtpmap)
@@ -1154,19 +1169,29 @@ static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
     /* address. */
     pj_scan_get_until_chr(scanner, "/ \t\r\n", &conn->addr);
     /* Parse multicast details, if any. */
-    if (*scanner->curptr == '/') {
+    if (!pj_scan_is_eof(scanner) && *scanner->curptr == '/') {
         pj_str_t str;
         unsigned long ul;
 
+        /* consume '/' separator */
+        pj_scan_get_char(scanner);
+
+        /* read first field (TTL if followed by '/', else no_addr) */
         pj_scan_get_until_chr(scanner, "/ \t\r\n", &str);
-        if (*scanner->curptr == '/') {
+        if (!pj_scan_is_eof(scanner) && *scanner->curptr == '/') {
+            /* first field is TTL, second field is no_addr */
             if ((pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS) || ul > 255) {
                 on_scanner_error(scanner);
                 return;
             }
 
             conn->ttl = (pj_uint8_t)ul;
-        }        
+
+            /* consume '/' separator before no_addr */
+            pj_scan_get_char(scanner);
+
+            pj_scan_get_until_chr(scanner, " \t\r\n", &str);
+        }
 
         if ((pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS) || ul > 255) {
             on_scanner_error(scanner);
@@ -1269,7 +1294,8 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
         pj_scan_get_char(scanner);
 
         /* Check again for the end of the line */
-        if ((*scanner->curptr == '\r') || (*scanner->curptr == '\n'))
+        if (pj_scan_is_eof(scanner) ||
+            (*scanner->curptr == '\r') || (*scanner->curptr == '\n'))
                 break;
 
         pj_scan_get(scanner, &cs_token, &fmt);
@@ -1314,8 +1340,8 @@ static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
     /* get attr name. */
     pj_scan_get(scanner, &cs_token, &attr->name);
 
-    if (*scanner->curptr && *scanner->curptr != '\r' && 
-        *scanner->curptr != '\n') 
+    if (!pj_scan_is_eof(scanner) && *scanner->curptr != '\r' &&
+        *scanner->curptr != '\n')
     {
         /* skip ':' if present. */
         if (*scanner->curptr == ':')

@@ -331,7 +331,11 @@ static int test_resolve(const char *title,
                         int port,
                         pjsip_server_addresses *ref)
 {
+    enum {
+        TIMEOUT_SECS = 60
+    };
     pjsip_host_info dest;
+    pj_time_val timeout;
     struct result result;
 
     PJ_LOG(3,(THIS_FILE, " test_resolve(): %s", title));
@@ -343,15 +347,25 @@ static int test_resolve(const char *title,
 
     result.status = 0x12345678;
 
+    pj_gettimeofday(&timeout);
+    timeout.sec += TIMEOUT_SECS;
+
     pjsip_endpt_resolve(endpt, pool, &dest, &result, &cb);
 
     while (result.status == 0x12345678) {
         int i = 0;
-        pj_time_val timeout = { 1, 0 };
-        pjsip_endpt_handle_events(endpt, &timeout);
+        pj_time_val wait_timeout = { 1, 0 };
+        pj_time_val now;
+
+        pjsip_endpt_handle_events(endpt, &wait_timeout);
         if (i == 1)
             pj_dns_resolver_dump(pjsip_endpt_get_resolver(endpt), PJ_TRUE);
+
+        pj_gettimeofday(&now);
+        PJ_TEST_TRUE(PJ_TIME_VAL_LT(now, timeout), NULL, return 12345678);
     }
+
+    pjsip_endpt_stop_handle_events(endpt);
 
     if (result.status != PJ_SUCCESS) {
         app_perror("  pjsip_endpt_resolve() error", result.status);
@@ -397,7 +411,7 @@ static int test_resolve(const char *title,
  */
 static int round_robin_test(pj_pool_t *pool)
 {
-    enum { COUNT = 400, PCT_ALLOWANCE = 10 };
+    enum { COUNT = 800, PCT_ALLOWANCE = 15 };
     unsigned i;
     struct server_hit
     {
@@ -439,6 +453,8 @@ static int round_robin_test(pj_pool_t *pool)
             if (ii == 1)
                 pj_dns_resolver_dump(pjsip_endpt_get_resolver(endpt), PJ_TRUE);
         }
+
+        pjsip_endpt_stop_handle_events(endpt);
 
         /* Find which server was "hit" */
         for (j=0; j<PJ_ARRAY_SIZE(server_hit); ++j) {

@@ -23,9 +23,10 @@
 #include <pjlib.h>
 
 #define THIS_FILE   "inv_offer_answer_test.c"
-#define PORT        5068
-#define CONTACT     "sip:127.0.0.1:5068"
-#define TRACE_(x)   PJ_LOG(3,x)
+#define TRACE_(x)   //PJ_LOG(3,x)
+
+static char contact_buf[80];
+static pj_str_t contact_uri;
 
 static struct oa_sdp_t
 {
@@ -277,6 +278,7 @@ static void on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
     const char *who = NULL;
 
     PJ_UNUSED_ARG(e);
+    PJ_UNUSED_ARG(who);
 
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
         TRACE_((THIS_FILE, "      %s call disconnected",
@@ -314,15 +316,17 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
         pjmedia_sdp_session *sdp = NULL;
         pj_str_t uri;
         pjsip_tx_data *tdata;
-        pj_status_t status;
+
+        if (!is_user_equal(rdata->msg_info.from, "inv_offer_answer_test"))
+            return PJ_FALSE;
 
         /*
          * Create UAS
          */
-        uri = pj_str(CONTACT);
-        status = pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(), rdata,
-                                                   &uri, &dlg);
-        pj_assert(status == PJ_SUCCESS);
+        uri = contact_uri;
+        PJ_TEST_SUCCESS(pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(), rdata,
+                                                          &uri, &dlg),
+                        NULL, { pj_assert(0); return PJ_FALSE; });
 
         if (inv_test.param.oa[0] == OFFERER_UAC)
             sdp = create_sdp(rdata->tp_info.pool, oa_sdp[0].answer);
@@ -331,8 +335,10 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
         else
             pj_assert(!"Invalid offerer type");
 
-        status = pjsip_inv_create_uas(dlg, rdata, sdp, inv_test.param.inv_option, &inv_test.uas);
-        pj_assert(status == PJ_SUCCESS);
+        PJ_TEST_SUCCESS(pjsip_inv_create_uas(dlg, rdata, sdp,
+                                             inv_test.param.inv_option,
+                                             &inv_test.uas),
+                        NULL, { pj_assert(0); return PJ_FALSE; });
         pjsip_dlg_dec_lock(dlg);
 
         TRACE_((THIS_FILE, "    Sending 183 with SDP"));
@@ -340,23 +346,23 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
         /*
          * Answer with 183
          */
-        status = pjsip_inv_initial_answer(inv_test.uas, rdata, 183, NULL,
-                                          NULL, &tdata);
-        pj_assert(status == PJ_SUCCESS);
+        PJ_TEST_SUCCESS(pjsip_inv_initial_answer(inv_test.uas, rdata, 183,
+                                                 NULL, NULL, &tdata),
+                        NULL, { pj_assert(0); return PJ_FALSE; });
 
         /* Use multipart body, if configured */
         if (sdp && inv_test.param.multipart_body) {
-             status = pjsip_create_multipart_sdp_body(
+             PJ_TEST_SUCCESS(pjsip_create_multipart_sdp_body(
                                 tdata->pool,
                                 pjmedia_sdp_session_clone(tdata->pool, sdp),
-                                &tdata->msg->body);
+                                &tdata->msg->body),
+                            NULL, { pj_assert(0); return PJ_FALSE; });
         }
-        pj_assert(status == PJ_SUCCESS);
 
-        status = pjsip_inv_send_msg(inv_test.uas, tdata);
-        pj_assert(status == PJ_SUCCESS);
+        PJ_TEST_SUCCESS(pjsip_inv_send_msg(inv_test.uas, tdata),
+                        NULL, { pj_assert(0); return PJ_FALSE; });
 
-        return (status == PJ_SUCCESS);
+        return PJ_TRUE;
     }
 
     return PJ_FALSE;
@@ -431,9 +437,9 @@ static int perform_test(inv_test_param_t *param)
     pj_memcpy(&inv_test.param, param, sizeof(*param));
     job_cnt = 0;
 
-    uri = pj_str(CONTACT);
+    uri = contact_uri;
 
-    /*  
+    /*
      * Create UAC
      */
     status = pjsip_dlg_create_uac(pjsip_ua_instance(), 
@@ -466,8 +472,8 @@ static int perform_test(inv_test_param_t *param)
     }
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, -40);
 
-    status = pjsip_inv_send_msg(inv_test.uac, tdata);
-    PJ_ASSERT_RETURN(status==PJ_SUCCESS, -50);
+    PJ_TEST_SUCCESS(pjsip_inv_send_msg(inv_test.uac, tdata),
+                    NULL, PJ_ASSERT_RETURN(0, -50));
 
     /*
      * Wait until test completes
@@ -498,8 +504,8 @@ static int perform_test(inv_test_param_t *param)
     pj_assert(status == PJ_SUCCESS);
 
     if (tdata) {
-        status = pjsip_inv_send_msg(inv_test.uas, tdata);
-        pj_assert(status == PJ_SUCCESS);
+        PJ_TEST_SUCCESS(pjsip_inv_send_msg(inv_test.uas, tdata),
+                        NULL, pj_assert(0));
     }
 
     flush_events(500);
@@ -513,6 +519,9 @@ static pj_bool_t log_on_rx_msg(pjsip_rx_data *rdata)
     pjsip_msg *msg = rdata->msg_info.msg;
     char info[80];
 
+    if (!is_user_equal(rdata->msg_info.from, "inv_offer_answer_test"))
+        return PJ_FALSE;
+        
     if (msg->type == PJSIP_REQUEST_MSG)
         pj_ansi_snprintf(info, sizeof(info), "%.*s", 
             (int)msg->line.req.method.name.slen,
@@ -760,16 +769,20 @@ int inv_offer_answer_test(void)
     pjsip_endpt_register_module(endpt, &mod_inv_oa_test);
     pjsip_endpt_register_module(endpt, &mod_msg_logger);
 
-    /* Create SIP UDP transport */
+    /* Create SIP UDP transport on ephemeral port */
     {
         pj_sockaddr_in addr;
         pjsip_transport *tp;
-        pj_status_t status;
 
-        pj_sockaddr_in_init(&addr, NULL, PORT);
-        status = pjsip_udp_transport_start(endpt, &addr, NULL, 1, &tp);
-        pj_assert(status == PJ_SUCCESS);
-        PJ_UNUSED_ARG(status);
+        pj_sockaddr_in_init(&addr, NULL, 0);
+        PJ_TEST_SUCCESS(pjsip_udp_transport_start(endpt, &addr, NULL, 1, &tp),
+                        NULL, return -5);
+
+        /* Build contact URI from the assigned port */
+        pj_ansi_snprintf(contact_buf, sizeof(contact_buf),
+                         "sip:inv_offer_answer_test@127.0.0.1:%d",
+                         tp->local_name.port);
+        contact_uri = pj_str(contact_buf);
     }
 
     /* Do tests */

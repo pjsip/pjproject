@@ -1,4 +1,4 @@
-/* Copyright (C) 2002-2007 Jean-Marc Valin 
+/* Copyright (C) 2002-2007 Jean-Marc Valin
    File: modes.c
 
    Describes the wideband modes of the codec
@@ -6,18 +6,18 @@
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -51,6 +51,28 @@
 #ifndef NULL
 #define NULL 0
 #endif
+
+#if defined(DISABLE_ENCODER) || defined(DISABLE_WIDEBAND)
+#define split_cb_search_shape_sign NULL
+#define noise_codebook_quant NULL
+#define pitch_search_3tap NULL
+#define forced_pitch_quant NULL
+#define sb_encoder_init NULL
+#define sb_encoder_destroy NULL
+#define sb_encode NULL
+#define sb_encoder_ctl NULL
+#define lsp_quant_high NULL
+#endif /* DISABLE_ENCODER */
+
+#if defined(DISABLE_DECODER) || defined(DISABLE_WIDEBAND)
+#define noise_codebook_unquant NULL
+#define split_cb_shape_sign_unquant NULL
+#define lsp_unquant_high NULL
+#define sb_decoder_init NULL
+#define sb_decoder_destroy NULL
+#define sb_decode NULL
+#define sb_decoder_ctl NULL
+#endif /* DISABLE_DECODER */
 
 EXPORT const SpeexMode * const speex_mode_list[SPEEX_NB_MODES] = {&speex_nb_mode, &speex_wb_mode, &speex_uwb_mode};
 
@@ -206,14 +228,14 @@ EXPORT const SpeexMode speex_wb_mode = {
    "wideband (sub-band CELP)",
    1,
    4,
-   &sb_encoder_init,
-   &sb_encoder_destroy,
-   &sb_encode,
-   &sb_decoder_init,
-   &sb_decoder_destroy,
-   &sb_decode,
-   &sb_encoder_ctl,
-   &sb_decoder_ctl,
+   sb_encoder_init,
+   sb_encoder_destroy,
+   sb_encode,
+   sb_decoder_init,
+   sb_decoder_destroy,
+   sb_decode,
+   sb_encoder_ctl,
+   sb_decoder_ctl,
 };
 
 
@@ -276,14 +298,14 @@ EXPORT const SpeexMode speex_uwb_mode = {
    "ultra-wideband (sub-band CELP)",
    2,
    4,
-   &sb_encoder_init,
-   &sb_encoder_destroy,
-   &sb_encode,
-   &sb_decoder_init,
-   &sb_decoder_destroy,
-   &sb_decode,
-   &sb_encoder_ctl,
-   &sb_decoder_ctl,
+   sb_encoder_init,
+   sb_encoder_destroy,
+   sb_encode,
+   sb_decoder_init,
+   sb_decoder_destroy,
+   sb_decode,
+   sb_encoder_ctl,
+   sb_decoder_ctl,
 };
 
 /* We have defined speex_lib_get_mode() as a macro in speex.h */

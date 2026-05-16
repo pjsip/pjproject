@@ -20,12 +20,25 @@
 #define __PJLIB_TEST_H__
 
 #include <pj/types.h>
+#include <pj/argparse.h>
+#include <pj/unittest.h>
 
 #define TEST_DEFAULT                1
 
 #define GROUP_LIBC                  TEST_DEFAULT
 #define GROUP_OS                    TEST_DEFAULT
 #define GROUP_DATA_STRUCTURE        TEST_DEFAULT
+
+/* Apple Clang ASan crashes on longjmp, see #4846 */
+#ifndef __has_feature
+    #define __has_feature(x) 0
+#endif
+#if defined(__APPLE__) && \
+    (defined(__SANITIZE_ADDRESS__) || __has_feature(address_sanitizer))
+    #define APPLE_ASAN  1
+#else
+    #define APPLE_ASAN  0
+#endif
 #define GROUP_NETWORK               TEST_DEFAULT
 #if defined(PJ_SYMBIAN)
 #   define GROUP_FILE               0
@@ -41,9 +54,20 @@
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC
 #define INCLUDE_TIMESTAMP_TEST      GROUP_OS
-#define INCLUDE_EXCEPTION_TEST      GROUP_LIBC
+#define INCLUDE_EXCEPTION_TEST      (GROUP_LIBC && !APPLE_ASAN)
 #define INCLUDE_RAND_TEST           GROUP_LIBC
 #define INCLUDE_LIST_TEST           GROUP_DATA_STRUCTURE
+#define INCLUDE_ATOMIC_SLIST_TEST   GROUP_DATA_STRUCTURE
+
+/* define this macro to control multithreaded testing for other platforms */
+#ifndef INCLUDE_MT_ATOMIC_SLIST_TEST
+#   ifdef PJ_WIN32
+#       define INCLUDE_MT_ATOMIC_SLIST_TEST INCLUDE_ATOMIC_SLIST_TEST
+#   else
+#       define INCLUDE_MT_ATOMIC_SLIST_TEST 0
+#   endif
+#endif
+
 #define INCLUDE_HASH_TEST           GROUP_DATA_STRUCTURE
 #define INCLUDE_POOL_TEST           GROUP_LIBC
 #define INCLUDE_POOL_PERF_TEST      (GROUP_LIBC && WITH_BENCHMARK)
@@ -51,7 +75,7 @@
 #define INCLUDE_FIFOBUF_TEST        GROUP_DATA_STRUCTURE
 #define INCLUDE_RBTREE_TEST         GROUP_DATA_STRUCTURE
 #define INCLUDE_TIMER_TEST          GROUP_DATA_STRUCTURE
-#define INCLUDE_UNITTEST_TEST       GROUP_DATA_STRUCTUREc
+#define INCLUDE_UNITTEST_TEST       GROUP_DATA_STRUCTURE
 #define INCLUDE_ATOMIC_TEST         GROUP_OS
 #define INCLUDE_MUTEX_TEST          (PJ_HAS_THREADS && GROUP_OS)
 #define INCLUDE_SLEEP_TEST          GROUP_OS
@@ -63,6 +87,7 @@
 #define INCLUDE_IOQUEUE_STRESS_TEST (PJ_HAS_THREADS && GROUP_NETWORK)
 #define INCLUDE_UDP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_TCP_IOQUEUE_TEST    GROUP_NETWORK
+#define INCLUDE_IOCP_UNREG_TEST     GROUP_NETWORK
 #define INCLUDE_ACTIVESOCK_TEST     GROUP_NETWORK
 #define INCLUDE_SSLSOCK_TEST        (PJ_HAS_SSL_SOCK && GROUP_NETWORK)
 #define INCLUDE_IOQUEUE_PERF_TEST   (PJ_HAS_THREADS && GROUP_NETWORK && WITH_BENCHMARK)
@@ -87,6 +112,8 @@ extern int timestamp_test(void);
 extern int exception_test(void);
 extern int rand_test(void);
 extern int list_test(void);
+extern int atomic_slist_test(void);
+extern int atomic_slist_mt_test(void);
 extern int hash_test(void);
 extern int log_test(void);
 extern int os_test(void);
@@ -109,11 +136,17 @@ extern int select_test(void);
 extern int udp_ioqueue_test(void);
 extern int udp_ioqueue_unreg_test(void);
 extern int tcp_ioqueue_test(void);
-extern int ioqueue_perf_test(void);
+extern int ioqueue_perf_test0(void);
+extern int ioqueue_perf_test1(void);
 extern int ioqueue_stress_test(void);
+extern int iocp_unregister_test(void);
 extern int activesock_test(void);
 extern int file_test(void);
 extern int ssl_sock_test(void);
+extern int ssl_sock_stress_test(void);
+extern int unittest_basic_test(void);
+extern int unittest_parallel_test(void);
+extern int unittest_test(void);
 
 extern int echo_server(void);
 extern int echo_client(int sock_type, const char *server, int port);
@@ -122,10 +155,24 @@ extern int echo_srv_sync(void);
 extern int udp_echo_srv_ioqueue(void);
 extern int echo_srv_common_loop(pj_atomic_t *bytes_counter);
 
+#define UT_MAX_TESTS    24
+#include "test_util.h"
 
+/* Global vars */
 extern pj_pool_factory *mem;
+struct test_app_t
+{
+    ut_app_t    ut_app;
+    
+    int         param_echo_sock_type;
+    const char *param_echo_server;
+    int         param_echo_port;
+    int         param_log_decor;
+    pj_bool_t   param_skip_essentials;
+};
+extern struct test_app_t test_app;
 
-extern int          test_main(void);
+extern int          test_main(int argc, char *argv[]);
 extern void         app_perror(const char *msg, pj_status_t err);
 extern pj_status_t  app_socket(int family, int type, int proto, int port,
                                pj_sock_t *ptr_sock);

@@ -86,7 +86,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 {
     pj_pool_t *pool;
     test_server *test_srv;
-    pj_sockaddr hostip;
+    pj_sockaddr hostip, bound_addr;
     char strbuf[100];
     pj_status_t status = PJ_EINVAL;
     pj_bool_t use_ipv6 = flags & SERVER_IPV6;
@@ -105,7 +105,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
             RETURN_ERROR(status);
     }
 
-    pool = pj_pool_create(mem, THIS_FILE, 512, 512, NULL);
+    pool = pj_pool_create(stun_cfg->pf, THIS_FILE, 512, 512, NULL);
     test_srv = (test_server*) PJ_POOL_ZALLOC_T(pool, test_server);
     test_srv->pool = pool;
     test_srv->flags = flags;
@@ -118,13 +118,16 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
     pj_ioqueue_op_key_init(&test_srv->send_key, sizeof(test_srv->send_key));
 
     if (flags & CREATE_DNS_SERVER) {
-        status = pj_dns_server_create(mem, test_srv->stun_cfg->ioqueue,
-                                      GET_AF(use_ipv6), DNS_SERVER_PORT,
+        status = pj_dns_server_create(stun_cfg->pf, test_srv->stun_cfg->ioqueue,
+                                      GET_AF(use_ipv6), 0,
                                       0, &test_srv->dns_server);
         if (status != PJ_SUCCESS) {
             destroy_test_server(test_srv);
             RETURN_ERROR(status);
         }
+
+        pj_dns_server_get_addr(test_srv->dns_server, &bound_addr);
+        test_srv->dns_server_port = pj_sockaddr_get_port(&bound_addr);
 
         /* Add DNS A record for the domain, for fallback */
         if (flags & CREATE_A_RECORD_FOR_DOMAIN) {
@@ -148,23 +151,24 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 
     if (flags & CREATE_STUN_SERVER) {
         pj_activesock_cb stun_sock_cb;
-        pj_sockaddr bound_addr;
+        pj_sockaddr stun_bound_addr;
 
         pj_bzero(&stun_sock_cb, sizeof(stun_sock_cb));
         stun_sock_cb.on_data_recvfrom = &stun_on_data_recvfrom;
 
-        pj_sockaddr_init(GET_AF(use_ipv6), &bound_addr, 
-                         NULL, STUN_SERVER_PORT);
+        pj_sockaddr_init(GET_AF(use_ipv6), &stun_bound_addr, 
+                         NULL, 0);
 
-        status = pj_activesock_create_udp(pool, &bound_addr, NULL, 
+        status = pj_activesock_create_udp(pool, &stun_bound_addr, NULL, 
                                           test_srv->stun_cfg->ioqueue,
                                           &stun_sock_cb, test_srv, 
-                                          &test_srv->stun_sock, NULL);
+                                          &test_srv->stun_sock, &stun_bound_addr);
         if (status != PJ_SUCCESS) {
             destroy_test_server(test_srv);
             RETURN_ERROR(status);
         }
 
+        test_srv->stun_server_port = pj_sockaddr_get_port(&stun_bound_addr);
         status = pj_activesock_start_recvfrom(test_srv->stun_sock, pool,
                                               MAX_STUN_PKT, 0);
         if (status != PJ_SUCCESS) {
@@ -187,7 +191,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
                              "stun.%s", domain);
             pj_strdup2(pool, &target, strbuf);
             pj_dns_init_srv_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 0, 0, 
-                               STUN_SERVER_PORT, &target);
+                               test_srv->stun_server_port, &target);
             pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
 
             res_name = target;
@@ -205,10 +209,10 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 
     if (flags & CREATE_TURN_SERVER) {
         
-        pj_sockaddr bound_addr;
+        pj_sockaddr turn_bound_addr;
         pj_turn_tp_type tp_type = get_turn_tp_type(flags);
         
-        pj_sockaddr_init(GET_AF(use_ipv6), &bound_addr, NULL, TURN_SERVER_PORT);
+        pj_sockaddr_init(GET_AF(use_ipv6), &turn_bound_addr, NULL, 0);
 
         if (tp_type == PJ_TURN_TP_UDP) {
             pj_activesock_cb turn_sock_cb;
@@ -216,21 +220,24 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
             pj_bzero(&turn_sock_cb, sizeof(turn_sock_cb));
             turn_sock_cb.on_data_recvfrom = &turn_udp_on_data_recvfrom;
 
-            status = pj_activesock_create_udp(pool, &bound_addr, NULL,
+            status = pj_activesock_create_udp(pool, &turn_bound_addr, NULL,
                                               test_srv->stun_cfg->ioqueue,
                                               &turn_sock_cb, test_srv,
-                                              &test_srv->turn_sock, NULL);
+                                              &test_srv->turn_sock,
+                                              &turn_bound_addr);
 
             if (status != PJ_SUCCESS) {
                 destroy_test_server(test_srv);
                 RETURN_ERROR(status);
             }
 
+            test_srv->turn_server_port = pj_sockaddr_get_port(&turn_bound_addr);
             status = pj_activesock_start_recvfrom(test_srv->turn_sock, pool,
                                                   MAX_STUN_PKT, 0);
         } else if (tp_type == PJ_TURN_TP_TCP) {
             pj_sock_t sock_fd;
             pj_activesock_cb turn_sock_cb;
+            int name_len = sizeof(turn_bound_addr);
 
             pj_bzero(&turn_sock_cb, sizeof(turn_sock_cb));
             turn_sock_cb.on_accept_complete2 = &turn_tcp_on_accept_complete;
@@ -246,8 +253,8 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
                                    &val, sizeof(val));
             }
 
-            status = pj_sock_bind(sock_fd, &bound_addr, 
-                                  pj_sockaddr_get_len(&bound_addr));
+            status = pj_sock_bind(sock_fd, &turn_bound_addr, 
+                                  pj_sockaddr_get_len(&turn_bound_addr));
             if (status != PJ_SUCCESS) {
                 pj_sock_close(sock_fd);
                 RETURN_ERROR(status);
@@ -271,6 +278,11 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 
             status = pj_activesock_start_accept(test_srv->turn_sock,
                                                 pool);
+
+            if (pj_sock_getsockname(sock_fd, &turn_bound_addr, &name_len)==PJ_SUCCESS) {
+                test_srv->turn_server_port = pj_sockaddr_get_port(&turn_bound_addr);
+            }
+
         } 
 #if USE_TLS
         else if (tp_type == PJ_TURN_TP_TLS) {
@@ -281,6 +293,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
             pj_str_t cert_file = pj_str(CERT_FILE);
             pj_str_t privkey_file = pj_str(CERT_PRIVKEY_FILE);
             pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
+            pj_ssl_sock_info ssock_info;
 
             pj_ssl_sock_param_default(&ssl_param);
             ssl_param.cb.on_accept_complete2 = &turn_tls_on_accept_complete2;
@@ -296,6 +309,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
                     pj_ssl_sock_close(ssock_serv);
             }
 
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
             status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
                                                  &privkey_file, &privkey_pass,
                                                  &cert);
@@ -303,15 +317,33 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
                 if (ssock_serv)
                     pj_ssl_sock_close(ssock_serv);
             }
-
             status = pj_ssl_sock_set_certificate(ssock_serv, pool, cert);
             if (status != PJ_SUCCESS) {
                 if (ssock_serv)
                     pj_ssl_sock_close(ssock_serv);
             }
+#else
+            /* Schannel backend currently can only load certificates from
+             * OS cert store, here we don't load any cert so the SSL socket
+             * will create & use a self-signed cert.
+             */
+            PJ_UNUSED_ARG(ca_file);
+            PJ_UNUSED_ARG(cert_file);
+            PJ_UNUSED_ARG(privkey_file);
+            PJ_UNUSED_ARG(privkey_pass);
+            PJ_UNUSED_ARG(cert);
+#endif
             test_srv->ssl_srv_sock = ssock_serv;
-            status = pj_ssl_sock_start_accept(ssock_serv, pool, &bound_addr, 
-                                             pj_sockaddr_get_len(&bound_addr));
+
+            status = pj_ssl_sock_start_accept(ssock_serv, pool, &turn_bound_addr, 
+                                             pj_sockaddr_get_len(&turn_bound_addr));
+
+            /* Can only get local address after start_accept() */
+            if (pj_ssl_sock_get_info(ssock_serv, &ssock_info)==PJ_SUCCESS) {
+                test_srv->turn_server_port = 
+                            pj_sockaddr_get_port(&ssock_info.local_addr);
+            }
+
         }
 #endif
         if (status != PJ_SUCCESS) {
@@ -346,7 +378,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
                              "turn.%s", domain);
             pj_strdup2(pool, &target, strbuf);
             pj_dns_init_srv_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 0, 0, 
-                               TURN_SERVER_PORT, &target);
+                               test_srv->turn_server_port, &target);
             pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
 
             res_name = target;

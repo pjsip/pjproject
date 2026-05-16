@@ -1048,13 +1048,16 @@ static pj_status_t parse_setup_finger_attr(dtls_srtp *ds,
     if (!a)
         return PJMEDIA_SRTP_ESDPAMBIGUEANS;
 
-    if (pj_stristr(&a->value, &ID_PASSIVE) ||
-        (rem_as_offerer && pj_stristr(&a->value, &ID_ACTPASS)))
-    {
-        /* Remote offers/answers 'passive' (or offers 'actpass'), so we are
-         * the client.
-         */
+    if (pj_stristr(&a->value, &ID_PASSIVE)) {
+        /* Remote offers/answers 'passive' so we are the client. */
         ds->setup = DTLS_SETUP_ACTIVE;
+    } else if (rem_as_offerer && pj_stristr(&a->value, &ID_ACTPASS)) {
+        /* If remote offers 'actpass' and our setup is unknown,
+         * we choose the role as the client, otherwise we maintain
+         * the current setup to avoid establishing new DTLS connection.
+         */
+        if (ds->setup == DTLS_SETUP_UNKNOWN)
+            ds->setup = DTLS_SETUP_ACTIVE;
     } else if (pj_stristr(&a->value, &ID_ACTIVE)) {
         /* Remote offers/answers 'active' so we are the server. */
         ds->setup = DTLS_SETUP_PASSIVE;
@@ -1296,6 +1299,7 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
         pjmedia_transport_get_info(ds->srtp->member_tp, &info);
 
         if (idx == RTP_CHANNEL &&
+            pj_sockaddr_has_addr(&info.src_rtp_name) &&
             pj_sockaddr_cmp(&ds->rem_addr, &info.src_rtp_name))
         {
             pj_sockaddr_cp(&ds->rem_addr, &info.src_rtp_name);
@@ -1361,6 +1365,51 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
         (ds->setup == DTLS_SETUP_ACTPASS || ds->setup == DTLS_SETUP_PASSIVE))
     {
         pj_status_t status;
+
+#if defined(PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR) && \
+            PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR==1
+
+        if (!ds->use_ice) {
+            pjmedia_transport_info info;
+            pj_sockaddr *src_addr;
+            pj_sockaddr *rem_addr;
+
+            /* Check the source address with the specified remote address from
+             * the SDP. At this point, if the remote address information
+             * is not available yet (e.g.: remote SDP has not been received), 
+             * delay the handshake.
+             * Note: when ICE is used, the source address checking will be
+             * done in ICE session.
+             */
+            if (!ds->rem_fingerprint.slen) {
+                PJ_LOG(4, (ds->base.name, "DTLS-SRTP %s delaying the handshake "
+                          "until remote address is ready",
+                          CHANNEL_TO_STRING(idx)));
+                DTLS_UNLOCK(ds);
+                return PJ_SUCCESS;
+            }
+            pjmedia_transport_get_info(ds->srtp->member_tp, &info);
+            if (idx == RTP_CHANNEL) {
+                rem_addr = &ds->rem_addr;
+                src_addr = &info.src_rtp_name;
+            } else {
+                rem_addr = &ds->rem_rtcp;
+                src_addr = &info.src_rtcp_name;
+            }
+
+            if (pj_sockaddr_cmp(src_addr, rem_addr) != 0) {
+                char psrc_addr[PJ_INET6_ADDRSTRLEN] = {0};
+
+                pj_sockaddr_print(src_addr, psrc_addr, sizeof(psrc_addr), 3);
+                PJ_LOG(4, (ds->base.name, "DTLS-SRTP %s ignoring %lu bytes, "
+                    "from unrecognized src addr %s", CHANNEL_TO_STRING(idx),
+                    (unsigned long)size, psrc_addr));
+
+                DTLS_UNLOCK(ds);
+                return PJ_SUCCESS;
+            }
+        }
+#endif
         ds->setup = DTLS_SETUP_PASSIVE;
         status = ssl_handshake_channel(ds, idx);
         if (status != PJ_SUCCESS) {

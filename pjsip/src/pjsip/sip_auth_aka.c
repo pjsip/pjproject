@@ -62,11 +62,18 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
     if (chal->algorithm.slen==0 || pj_stricmp2(&chal->algorithm, "md5") == 0) {
         /*
          * A normal MD5 authentication is requested. Fallback to the usual
-         * MD5 digest creation.
+         * MD5 digest creation. pjsip_auth_create_digest() asserts that the
+         * credential is NOT an AKA credential, so clear the EXT_AKA flag
+         * on a local copy before calling it.
          */
-        status = pjsip_auth_create_digest(&auth->response, &auth->nonce, 
-                                 &auth->nc, &auth->cnonce, &auth->qop, 
-                                 &auth->uri, &auth->realm, cred, method);
+        pjsip_cred_info plain_cred;
+        pj_memcpy(&plain_cred, cred, sizeof(plain_cred));
+        plain_cred.data_type &= ~PJSIP_CRED_DATA_EXT_AKA;
+
+        status = pjsip_auth_create_digest(&auth->response, &auth->nonce,
+                                 &auth->nc, &auth->cnonce, &auth->qop,
+                                 &auth->uri, &auth->realm, &plain_cred,
+                                 method);
 
         return status;
 
@@ -88,8 +95,9 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
     }
 
     /* Decode nonce */
-    nonce_bin.slen = len = PJ_BASE64_TO_BASE256_LEN(chal->nonce.slen);
+    nonce_bin.slen = PJ_BASE64_TO_BASE256_LEN(chal->nonce.slen);
     nonce_bin.ptr = pj_pool_alloc(pool, nonce_bin.slen + 1);
+    len = (int)nonce_bin.slen;
     status = pj_base64_decode(&chal->nonce, (pj_uint8_t*)nonce_bin.ptr, &len);
     nonce_bin.slen = len;
     if (status != PJ_SUCCESS)
@@ -175,8 +183,10 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
         pj_memcpy(resikck.ptr + PJSIP_AKA_RESLEN + PJSIP_AKA_IKLEN,
                   ck, PJSIP_AKA_CKLEN);
 
-        pj_hmac_md5((const pj_uint8_t*)AKAv2_Passwd.ptr, AKAv2_Passwd.slen,
-                    (const pj_uint8_t*)resikck.ptr, resikck.slen,
+        pj_hmac_md5((const pj_uint8_t*)AKAv2_Passwd.ptr,
+                    (unsigned)AKAv2_Passwd.slen,
+                    (const pj_uint8_t*)resikck.ptr,
+                    (unsigned)resikck.slen,
                     hmac_digest);
 
         aka_cred.data.slen = hmac64_len =

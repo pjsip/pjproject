@@ -53,8 +53,8 @@ int main(int argc, char *argv[])
 
     pj_init();
     pj_caching_pool_init(&cp, NULL, 0);
-    pjlib_util_init();
-    pjnath_init();
+    (void)pjlib_util_init();
+    (void)pjnath_init();
     pjmedia_endpt_create(&cp.factory, NULL, 0, &med_ept);
     pjsip_endpt_create(&cp.factory, "localhost", &sip_ept);
     pjsip_evsub_init_module(sip_ept);

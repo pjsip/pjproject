@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include "proto.h"
 
-void gsm_debug_words P4( (name, from, to, ptr), 
+void gsm_debug_words P4( (name, from, to, ptr),
 	char 	      * name,
 	int		from,
 	int		to,
@@ -49,7 +49,7 @@ void gsm_debug_longwords P4( (name, from, to, ptr),
 	fprintf( stderr, "%s [%d .. %d]: ", name, from, to );
 	while (from <= to) {
 
-		fprintf(stderr, "%d ", ptr[ from ] );
+		fprintf(stderr, "%ld ", (long)ptr[ from ] );
 		from++;
 		if (nprinted++ >= 7) {
 			nprinted = 0;
@@ -63,14 +63,14 @@ void gsm_debug_longword P2(  (name, value),
 	char		* name,
 	longword	  value	)
 {
-	fprintf(stderr, "%s: %d\n", name, (long)value );
+	fprintf(stderr, "%s: %ld\n", name, (long)value );
 }
 
 void gsm_debug_word P2(  (name, value),
 	char	* name,
 	word	  value	)
 {
-	fprintf(stderr, "%s: %d\n", name, (long)value);
+	fprintf(stderr, "%s: %ld\n", name, (long)value);
 }
 
 #endif

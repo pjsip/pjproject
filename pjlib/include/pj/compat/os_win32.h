@@ -57,6 +57,7 @@
 #define PJ_HAS_SYS_IOCTL_H          0
 #define PJ_HAS_SYS_SELECT_H         0
 #define PJ_HAS_SYS_SOCKET_H         0
+#define PJ_HAS_SYS_STAT_H           1
 #define PJ_HAS_SYS_TIME_H           0
 #define PJ_HAS_SYS_TIMEB_H          1
 #define PJ_HAS_SYS_TYPES_H          1

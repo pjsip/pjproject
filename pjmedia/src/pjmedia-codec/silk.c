@@ -358,13 +358,17 @@ PJ_DEF(pj_status_t) pjmedia_codec_silk_deinit(void)
         return PJ_EINVALIDOP;
     }
 
+    /* Release the factory mutex before calling unregister to avoid lock
+     * order inversion with codec manager mutex.
+     */
+    pj_mutex_unlock(silk_factory.mutex);
+
     /* Unregister silk codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
                                                   &silk_factory.base);
     silk_factory.endpt = NULL;
 
     /* Destroy mutex. */
-    pj_mutex_unlock(silk_factory.mutex);
     pj_mutex_destroy(silk_factory.mutex);
     silk_factory.mutex = NULL;
 
@@ -767,6 +771,8 @@ static pj_status_t  silk_codec_parse( pjmedia_codec *codec,
     SKP_Silk_SDK_get_TOC(pkt, pkt_size, &toc);
     count = toc.framesInPacket;
     pj_assert(count <= SILK_MAX_FRAMES_PER_PACKET);
+    if (count > *frame_cnt)
+        count = *frame_cnt;
 
     for (i = 0; i < count; i++) {
         frames[i].type = PJMEDIA_FRAME_TYPE_AUDIO;

@@ -679,6 +679,7 @@
     <ClCompile Include="..\src\pjsip-ua\sip_reg.c" />
     <ClCompile Include="..\src\pjsip-ua\sip_replaces.c" />
     <ClCompile Include="..\src\pjsip-ua\sip_timer.c" />
+    <ClCompile Include="..\src\pjsip-ua\sip_siprec.c" />
     <ClCompile Include="..\src\pjsip-ua\sip_xfer.c" />
   </ItemGroup>
   <ItemGroup>
@@ -687,6 +688,7 @@
     <ClInclude Include="..\include\pjsip-ua\sip_regc.h" />
     <ClInclude Include="..\include\pjsip-ua\sip_replaces.h" />
     <ClInclude Include="..\include\pjsip-ua\sip_timer.h" />
+    <ClInclude Include="..\include\pjsip-ua\sip_siprec.h" />
     <ClInclude Include="..\include\pjsip-ua\sip_xfer.h" />
     <ClInclude Include="..\include\pjsip_ua.h" />
   </ItemGroup>
