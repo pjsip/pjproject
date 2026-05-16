@@ -634,6 +634,71 @@ static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
     pj_log_pop_indent();
 }
 
+/*
+ * Pre-allocate a null-port conference slot for a call that has no active
+ * media yet (PJSIP 2.15 defers conf_slot assignment until on_media_update).
+ * This allows SWI conference connections to be set up while the INVITE is
+ * still in progress, matching PJSIP 2.6 behaviour.
+ */
+PJ_DEF(pjsua_conf_port_id) pjsua_call_preallocate_conf_port(pjsua_call_id call_id)
+{
+    pjsua_call* call;
+    pjsua_call_media* call_med;
+    pjmedia_port* null_port = NULL;
+    unsigned null_slot;
+    pj_str_t null_name;
+    pj_status_t status;
+    pjsua_conf_port_id result = PJSUA_INVALID_ID;
+
+    PJ_ASSERT_RETURN(call_id >= 0 && call_id < (int)pjsua_var.ua_cfg.max_calls,
+        PJSUA_INVALID_ID);
+
+    PJSUA_LOCK();
+
+    if (!pjsua_call_is_active(call_id))
+        goto on_return;
+
+    call = &pjsua_var.calls[call_id];
+    if (call->audio_idx < 0)
+        goto on_return;
+
+    call_med = &call->media[call->audio_idx];
+    if (call_med->strm.a.conf_slot != PJSUA_INVALID_ID) {
+        /* Already allocated */
+        result = call_med->strm.a.conf_slot;
+        goto on_return;
+    }
+
+    /* Pre-allocate using typical G.711 parameters; pjsua_aud_channel_update
+     * will replace this with the real stream via pjmedia_conf_replace_port,
+     * preserving the same slot number so existing SWI connections stay valid.
+     */
+    null_name = pj_str("call-null-placeholder");
+    status = pjmedia_null_port_create(
+        call->inv ? call->inv->pool : pjsua_var.pool,
+        8000, 1, 160, 16, &null_port);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    status = pjmedia_conf_add_port(pjsua_var.mconf,
+        call->inv ? call->inv->pool : pjsua_var.pool,
+        null_port, &null_name, &null_slot);
+    if (status != PJ_SUCCESS) {
+        pjmedia_port_destroy(null_port);
+        goto on_return;
+    }
+
+    call_med->strm.a.conf_slot = (int)null_slot;
+    result = (pjsua_conf_port_id)null_slot;
+
+    PJ_LOG(3, (THIS_FILE, "Call %d: pre-allocated conf slot %d (null port)",
+        call_id, null_slot));
+
+on_return:
+    PJSUA_UNLOCK();
+    return result;
+}
+
 /* Internal function: update audio channel after SDP negotiation.
  * Warning: do not use temporary/flip-flop pool, e.g: inv->pool_prov,
  *          for creating stream, etc, as after SDP negotiation and when
@@ -712,6 +777,41 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 #endif
             si->rtcp_sdes_bye_disabled = prm.stream_info.info.aud.rtcp_sdes_bye_disabled;
             si->rx_event_pt = prm.stream_info.info.aud.rx_event_pt;
+        }
+
+        /* Pre-allocate conference slot with null port for PJSIP 2.15 async conf.
+        * replace_port will swap it with the real stream later, keeping the same
+        * slot so switch connections (e.g. 2->4) route real audio.
+        */
+        if (call_med->strm.a.conf_slot == PJSUA_INVALID_ID) {
+            pjmedia_port* null_port = NULL;
+            unsigned null_slot;
+            pj_status_t pre_status;
+            pj_str_t null_name = pj_str("call-null-placeholder");
+            unsigned clock_rate = si->fmt.clock_rate;
+            unsigned channel_count = si->fmt.channel_cnt;
+            unsigned samples_per_frame = PJMEDIA_SPF(clock_rate, 20000, channel_count);
+
+            pre_status = pjmedia_null_port_create(
+                call->inv->pool,
+                clock_rate,
+                channel_count,
+                samples_per_frame,
+                16,
+                &null_port);
+            if (pre_status == PJ_SUCCESS) {
+                pre_status = pjmedia_conf_add_port(pjsua_var.mconf,
+                    call->inv->pool,
+                    null_port,
+                    &null_name,
+                    &null_slot);
+                if (pre_status == PJ_SUCCESS) {
+                    call_med->strm.a.conf_slot = (int)null_slot;
+                }
+                else {
+                    pjmedia_port_destroy(null_port);
+                }
+            }
         }
 
         /* Create session based on session info. */
@@ -802,16 +902,35 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                                  call->index, strm_idx);
                 port_name = pj_str(tmp);
             }
-            status = pjmedia_conf_add_port(pjsua_var.mconf,
-                                           call->inv->pool,
-                                           call_med->strm.a.media_port,
-                                           &port_name,
-                                           (unsigned*)
-                                           &call_med->strm.a.conf_slot);
-            if (status != PJ_SUCCESS) {
-                goto on_return;
+            if (call_med->strm.a.conf_slot != PJSUA_INVALID_ID) {
+                /* Slot pre-allocated with placeholder; replace it with real stream */
+                status = pjmedia_conf_replace_port(pjsua_var.mconf,
+                    call->inv->pool,
+                    call_med->strm.a.media_port,
+                    (unsigned)call_med->strm.a.conf_slot);
+                if (status != PJ_SUCCESS) {
+                    PJ_LOG(2, (THIS_FILE, "replace_port failed, falling back to add_port: %d", status));
+                    pjsua_conf_remove_port(call_med->strm.a.conf_slot);
+                    call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
+                    /* Fall through to add_port */
+                }
+            }
+
+            if (call_med->strm.a.conf_slot == PJSUA_INVALID_ID) {
+                status = pjmedia_conf_add_port(pjsua_var.mconf,
+                    call->inv->pool,
+                    call_med->strm.a.media_port,
+                    &port_name,
+                    (unsigned*)
+                    &call_med->strm.a.conf_slot);
+                if (status != PJ_SUCCESS) {
+                    goto on_return;
+                }
             }
         }
+
+        PJ_LOG(3, (THIS_FILE, "Call %d conf_slot=%d after channel_update",
+            call->index, call_med->strm.a.conf_slot));
 
         /* Subscribe to stream events */
         pjmedia_event_subscribe(NULL, &call_media_on_event, call_med,
@@ -819,6 +938,10 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
     }
 
 on_return:
+    if (status != PJ_SUCCESS && call_med->strm.a.conf_slot != PJSUA_INVALID_ID) {
+        pjsua_conf_remove_port(call_med->strm.a.conf_slot);
+        call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
+    }
     pj_log_pop_indent();
     if (status != PJ_SUCCESS)
         pjsua_perror(THIS_FILE, "pjsua_aud_channel_update failed", status);
