@@ -28,6 +28,9 @@
 #include <pjmedia-codec/speex.h>
 #include <pjmedia-codec/ilbc.h>
 #include <pjmedia-codec/l16.h>
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+#  include <pjmedia-codec/opus.h>
+#endif
 
 /* Codec configuration structure */
 typedef struct {
@@ -54,6 +57,9 @@ static pjmedia_codec *codec_ilbc = NULL;
 static pjmedia_codec *codec_l16_8k = NULL;
 static pjmedia_codec *codec_l16_16k = NULL;
 static pjmedia_codec *codec_l16_48k = NULL;
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+static pjmedia_codec *codec_opus = NULL;
+#endif
 
 /* Codec configurations array */
 static codec_config_t codec_configs[] = {
@@ -66,6 +72,10 @@ static codec_config_t codec_configs[] = {
     {&codec_l16_8k,   "L16 8kHz",    320, 320},
     {&codec_l16_16k,  "L16 16kHz",   640, 640},
     {&codec_l16_48k,  "L16 48kHz",   1920, 1920},
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    /* Opus stereo @ 48 kHz: 20 ms frame = 960 samples * 2 ch * 2 bytes = 3840 */
+    {&codec_opus,     "Opus",        10,  3840},
+#endif
 };
 
 #define NUM_CODECS (sizeof(codec_configs) / sizeof(codec_configs[0]))
@@ -80,7 +90,10 @@ static const char* codec_id_strings[] = {
     "iLBC/8000/1",
     "L16/8000/1",
     "L16/16000/1",
-    "L16/48000/1"
+    "L16/48000/1",
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    "opus/48000/2"
+#endif
 };
 
 /* Clock rates for each codec (must match codec_id_strings order) */
@@ -93,7 +106,10 @@ static const unsigned codec_clock_rates[] = {
     8000,   /* iLBC */
     8000,   /* L16 8kHz */
     16000,  /* L16 16kHz */
-    48000   /* L16 48kHz */
+    48000,  /* L16 48kHz */
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    48000   /* Opus */
+#endif
 };
 
 /* Helper function to allocate and open a codec */
@@ -164,6 +180,9 @@ static int init_codecs(void)
     pjmedia_codec_speex_init(endpt, 0, -1, -1);
     pjmedia_codec_ilbc_init(endpt, 30);
     pjmedia_codec_l16_init(endpt, 0);
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    pjmedia_codec_opus_init(endpt);
+#endif
 
     /* Allocate all codecs using the configuration array */
     for (i = 0; i < NUM_CODECS; i++) {
