@@ -1979,11 +1979,17 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
     if (c_strm->dec)
         c_strm->dec->port.get_frame = NULL;
 
-    /* Detach from sending manager */
+    /* Detach from sending manager.
+     * MUST NOT hold stream mutex while detaching from send manager, as
+     * it may cause deadlock. The send_worker_thread() acquires manager's
+     * group lock first, then tries to acquire stream's group lock, while
+     * holding the stream lock here and then trying to acquire manager's
+     * lock in detach_send_manager() creates AB-BA deadlock.
+     * This is safe because the streaming has already been stopped above
+     * and detach_send_manager() provides its own synchronization.
+     */
     if (stream->send_stream) {
-        pj_grp_lock_acquire(c_strm->grp_lock);
         detach_send_manager(stream->send_stream);
-        pj_grp_lock_release(c_strm->grp_lock);
     }
 
 #if TRACE_RC
