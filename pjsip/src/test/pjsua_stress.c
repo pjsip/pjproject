@@ -481,6 +481,7 @@ static int setup_pjsua(const stress_opts_t *opts)
     if (status != PJ_SUCCESS) error_exit("transport create failed", status);
 
     /* Resolve colorbar device. Falls back to default capture if unavailable. */
+#if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0
     g.colorbar_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     if (opts->max_video_legs > 0) {
         pjmedia_vid_dev_index idx;
@@ -493,6 +494,12 @@ static int setup_pjsua(const stress_opts_t *opts)
             PJ_LOG(2, (THIS_FILE, "Colorbar device not found, using default"));
         }
     }
+#else
+    if (opts->max_video_legs > 0) {
+        PJ_LOG(1, (THIS_FILE,
+                   "Video disabled at compile time, -v is ignored"));
+    }
+#endif
 
     /* Acquire the transport id from the just-created UDP transport. */
     {
