@@ -3480,6 +3480,14 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         goto on_return;
 
+    if (call->hanging_up) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Can not re-INVITE call %d while it is hanging up",
+                  call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
     if (options != call->opt.flag)
         call->opt.flag = options;
 
@@ -3622,6 +3630,14 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
     status = acquire_call("pjsua_call_update()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
+
+    if (call->hanging_up) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Can not send UPDATE on call %d while it is hanging up",
+                  call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
 
     if (options != call->opt.flag)
         call->opt.flag = options;
