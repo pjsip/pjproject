@@ -5481,7 +5481,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
         PJ_LOG(4, (THIS_FILE,
                    "Ignoring stale media update on call %d "
                    "(inv %p != current %p)",
-                   call ? call->index : -1, inv,
+                   call ? (int)call->index : -1, inv,
                    call ? (void*)call->inv : NULL));
         goto on_return;
     }
