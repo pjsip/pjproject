@@ -67,6 +67,8 @@ struct null_stream {
     pjmedia_vid_dev_stream   base;
     pjmedia_vid_dev_param    param;
     pj_pool_t               *pool;
+    pj_timestamp             ts;
+    unsigned                 ts_inc;
 };
 
 
@@ -264,11 +266,36 @@ static pj_status_t null_factory_create_stream(
     struct null_factory *nf = (struct null_factory*)f;
     pj_pool_t *pool;
     struct null_stream *strm;
+    const pjmedia_video_format_detail *vfd;
+    unsigned i;
+    pj_bool_t fmt_supported = PJ_FALSE;
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
-                     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO,
+                     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
+                     (param->dir == PJMEDIA_DIR_CAPTURE ||
+                      param->dir == PJMEDIA_DIR_RENDER),
                      PJ_EINVAL);
+
+    if (param->dir == PJMEDIA_DIR_CAPTURE) {
+        PJ_ASSERT_RETURN(param->cap_id < NULL_DEV_COUNT &&
+                         nf->dev_info[param->cap_id].info.dir ==
+                             PJMEDIA_DIR_CAPTURE, PJMEDIA_EVID_INVDEV);
+    } else {
+        PJ_ASSERT_RETURN(param->rend_id < NULL_DEV_COUNT &&
+                         nf->dev_info[param->rend_id].info.dir ==
+                             PJMEDIA_DIR_RENDER, PJMEDIA_EVID_INVDEV);
+    }
+
+    for (i = 0; i < PJ_ARRAY_SIZE(null_fmts); ++i) {
+        if (null_fmts[i] == param->fmt.id) {
+            fmt_supported = PJ_TRUE;
+            break;
+        }
+    }
+    PJ_ASSERT_RETURN(fmt_supported, PJMEDIA_EVID_BADFORMAT);
+
+    vfd = pjmedia_format_get_video_format_detail(&param->fmt, PJ_TRUE);
     PJ_UNUSED_ARG(cb);
     PJ_UNUSED_ARG(user_data);
 
@@ -278,6 +305,7 @@ static pj_status_t null_factory_create_stream(
     strm = PJ_POOL_ZALLOC_T(pool, struct null_stream);
     strm->pool = pool;
     pj_memcpy(&strm->param, param, sizeof(*param));
+    strm->ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
     strm->base.op = &stream_op;
 
     *p_vid_strm = &strm->base;
@@ -328,9 +356,11 @@ static pj_status_t null_stream_start(pjmedia_vid_dev_stream *s)
 static pj_status_t null_stream_get_frame(pjmedia_vid_dev_stream *s,
                                          pjmedia_frame *frame)
 {
-    PJ_UNUSED_ARG(s);
+    struct null_stream *strm = (struct null_stream*)s;
     frame->type = PJMEDIA_FRAME_TYPE_VIDEO;
     frame->bit_info = 0;
+    frame->timestamp = strm->ts;
+    strm->ts.u64 += strm->ts_inc;
     if (frame->buf && frame->size)
         pj_bzero(frame->buf, frame->size);
     return PJ_SUCCESS;

@@ -817,6 +817,7 @@ add_library(pjmedia-videodev
   src/pjmedia-videodev/dshowclasses.cpp
   src/pjmedia-videodev/errno.c
   src/pjmedia-videodev/ffmpeg_dev.c
+  src/pjmedia-videodev/null_dev.c
   src/pjmedia-videodev/opengl_dev.c
   src/pjmedia-videodev/util.c
   src/pjmedia-videodev/v4l2_dev.c
