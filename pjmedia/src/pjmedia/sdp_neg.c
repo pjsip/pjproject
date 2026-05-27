@@ -480,6 +480,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
                 if (new_offer->media_count >= PJMEDIA_MAX_SDP_MEDIA) {
                     PJ_LOG(3,(THIS_FILE, "Too many media in SDP, "
                                          "modify local offer failed"));
+                    neg->state = PJMEDIA_SDP_NEG_STATE_DONE;
                     return PJ_ETOOMANY;
                 }
 
@@ -500,6 +501,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
             if (new_offer->media_count >= PJMEDIA_MAX_SDP_MEDIA) {
                 PJ_LOG(3,(THIS_FILE, "Too many media in SDP, "
                                      "modify local offer failed"));
+                neg->state = PJMEDIA_SDP_NEG_STATE_DONE;
                 return PJ_ETOOMANY;
             }
 
