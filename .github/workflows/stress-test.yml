@@ -1,0 +1,57 @@
+# Weekly stress test of the high-level PJSUA API.
+#
+# Runs pjsua_stress under ASan and TSan on Ubuntu. The test brings up a
+# single PJSUA instance, ramps to ~1024 concurrent call legs, then runs
+# random call/conf/video operations on multiple worker threads for 10
+# minutes to surface deadlocks, races and memory issues.
+#
+# Triggered weekly (Sunday 03:00 UTC) and manually via workflow_dispatch.
+
+name: Stress Test (weekly)
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+jobs:
+  stress:
+    if: github.repository == 'pjsip/pjproject'
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, thread]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    name: ${{ matrix.sanitizer }}-sanitizer
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply config_site_stress.h
+        run: cp pjlib/include/pj/config_site_stress.h pjlib/include/pj/config_site.h
+
+      - name: Configure
+        run: |
+          CFLAGS="-g -fsanitize=${{ matrix.sanitizer }}" \
+          CXXFLAGS="-g -fsanitize=${{ matrix.sanitizer }}" \
+          LDFLAGS="-rdynamic -fsanitize=${{ matrix.sanitizer }}" \
+          ./configure
+
+      - name: Build
+        run: make -j3
+
+      - name: Run pjsua-stress
+        run: |
+          export LSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/lsan.supp"
+          export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp halt_on_error=1"
+          export ASAN_OPTIONS="halt_on_error=1"
+          ARCH=$(make --no-print-directory -s infotarget)
+          cd pjsip/bin
+          ./pjsua-stress-$ARCH -n 1024 -v 32 -t 8 --duration 600 2>&1 | tee stress.log
+
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-${{ matrix.sanitizer }}-log
+          path: pjsip/bin/stress.log
