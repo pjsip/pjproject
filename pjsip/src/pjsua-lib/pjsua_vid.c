@@ -946,14 +946,16 @@ static void free_vid_win(pjsua_vid_win_id wid)
     num_locks = PJSUA_RELEASE_LOCK();
 
     if (w->vp_cap) {
-        pjsua_vid_conf_remove_port(w->cap_slot);
+        if (w->cap_slot != PJSUA_INVALID_ID)
+            pjsua_vid_conf_remove_port(w->cap_slot);
         pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
                                   w->vp_cap);
         pjmedia_vid_port_stop(w->vp_cap);
         pjmedia_vid_port_destroy(w->vp_cap);
     }
     if (w->vp_rend) {
-        pjsua_vid_conf_remove_port(w->rend_slot);
+        if (w->rend_slot != PJSUA_INVALID_ID)
+            pjsua_vid_conf_remove_port(w->rend_slot);
         pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
                                   w->vp_rend);
         pjmedia_vid_port_stop(w->vp_rend);
