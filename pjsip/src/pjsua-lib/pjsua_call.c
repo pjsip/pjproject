@@ -3385,6 +3385,13 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         goto on_return;
 
+    if (call->hanging_up) {
+        PJ_LOG(3,(THIS_FILE, "Can not hold call %d while it is hanging up",
+                  call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
     if (call->inv->state != PJSIP_INV_STATE_CONFIRMED) {
         PJ_LOG(3,(THIS_FILE, "Can not hold call that is not confirmed"));
         status = PJSIP_ESESSIONSTATE;
@@ -3508,6 +3515,14 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     status = acquire_call("pjsua_call_reinvite2()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
+
+    if (call->hanging_up) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Can not re-INVITE call %d while it is hanging up",
+                  call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
 
     if (pjsua_call_media_is_changing(call)) {
         PJ_LOG(1,(THIS_FILE, "Unable to reinvite" ERR_MEDIA_CHANGING));
@@ -3642,6 +3657,14 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     status = acquire_call("pjsua_call_update2()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
+
+    if (call->hanging_up) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Can not send UPDATE on call %d while it is hanging up",
+                  call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
 
     /* Don't check media changing if UPDATE is sent without SDP */
     if (pjsua_call_media_is_changing(call) &&
