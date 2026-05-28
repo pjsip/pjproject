@@ -3385,6 +3385,13 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         goto on_return;
 
+    if (call->hanging_up) {
+        PJ_LOG(3,(THIS_FILE, "Can not hold call %d while it is hanging up",
+                  call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
     if (call->inv->state != PJSIP_INV_STATE_CONFIRMED) {
         PJ_LOG(3,(THIS_FILE, "Can not hold call that is not confirmed"));
         status = PJSIP_ESESSIONSTATE;
@@ -3473,6 +3480,14 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         goto on_return;
 
+    if (call->hanging_up) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Can not re-INVITE call %d while it is hanging up",
+                  call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
     if (options != call->opt.flag)
         call->opt.flag = options;
 
@@ -3508,6 +3523,14 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     status = acquire_call("pjsua_call_reinvite2()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
+
+    if (call->hanging_up) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Can not re-INVITE call %d while it is hanging up",
+                  call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
 
     if (pjsua_call_media_is_changing(call)) {
         PJ_LOG(1,(THIS_FILE, "Unable to reinvite" ERR_MEDIA_CHANGING));
@@ -3608,6 +3631,14 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
         goto on_return;
 
+    if (call->hanging_up) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Can not send UPDATE on call %d while it is hanging up",
+                  call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
+
     if (options != call->opt.flag)
         call->opt.flag = options;
 
@@ -3642,6 +3673,14 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     status = acquire_call("pjsua_call_update2()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
+
+    if (call->hanging_up) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Can not send UPDATE on call %d while it is hanging up",
+                  call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
 
     /* Don't check media changing if UPDATE is sent without SDP */
     if (pjsua_call_media_is_changing(call) &&
@@ -5466,6 +5505,26 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
+    /* Stale callback guard. The inv that fired this callback may be a
+     * leftover from a dialog that the application has already hung up.
+     * If pjsua's call slot has since been reallocated to a different
+     * dialog (e.g. an outgoing make_call right after a hangup whose
+     * earlier re-INVITE is still pending a response), `call->inv` now
+     * points at the new dialog. Touching its media — in particular
+     * pjsua_media_prov_revert() below — would corrupt the new dialog's
+     * provisional state and trip the assertion in
+     * pjsua_media_channel_update() (`med_prov_cnt >= media_count`).
+     * Just drop the late event in that case.
+     */
+    if (!call || call->inv != inv) {
+        PJ_LOG(4, (THIS_FILE,
+                   "Ignoring stale media update on call %d "
+                   "(inv %p != current %p)",
+                   call ? (int)call->index : -1, inv,
+                   call ? (void*)call->inv : NULL));
+        goto on_return;
+    }
+
     if (call->hanging_up)
         goto on_return;
 
@@ -6451,6 +6510,23 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
     if (call->inv == NULL || call->hanging_up) {
         /* Call has been disconnected. */
+        goto on_return;
+    }
+
+    /* Stale callback guard (see comment in pjsua_call_on_media_update).
+     * The inv firing this tsx-state callback may belong to a dialog
+     * whose call slot has already been recycled into a new dialog.
+     * Acting on the slot's current state would corrupt the new dialog
+     * (e.g. pjsua_media_prov_revert further below would zero
+     * med_prov_cnt of the new dialog and trip the assertion in
+     * pjsua_media_channel_update). Drop the stale event.
+     */
+    if (call->inv != inv) {
+        PJ_LOG(4, (THIS_FILE,
+                   "Ignoring stale tsx-state event on call %d "
+                   "(inv %p != current %p, cseq=%d)",
+                   call->index, inv, (void*)call->inv,
+                   tsx ? (int)tsx->cseq : -1));
         goto on_return;
     }
 
