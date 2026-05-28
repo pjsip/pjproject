@@ -29,6 +29,9 @@
     <ClCompile Include="..\src\pjmedia-videodev\ffmpeg_dev.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjmedia-videodev\null_dev.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjmedia-videodev\sdl_dev.c">
       <Filter>Source Files</Filter>
     </ClCompile>
