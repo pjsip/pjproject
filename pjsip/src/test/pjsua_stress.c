@@ -369,7 +369,7 @@ static void do_unhold(worker_ctx_t *w)
     pjsua_call_id id = registry_pick_random(&w->rng_state);
     pjsua_call_setting opt;
     if (id == PJSUA_INVALID_ID) return;
-    pjsua_call_setting_default(&opt);
+    make_call_setting(&opt, (g.opts.max_video_legs > 0));
     opt.flag = PJSUA_CALL_UNHOLD;
     w->ops[OP_UNHOLD]++;
     /* reinvite2 with PJSUA_CALL_UNHOLD; older reinvite() takes a flag bool. */
@@ -472,6 +472,11 @@ static int setup_pjsua(const stress_opts_t *opts)
     pjsua_media_config_default(&media_cfg);
     /* Fewer codec threads keeps sanitizer noise down. */
     media_cfg.no_vad = PJ_TRUE;
+    /* Uniform 8 kHz across sound device, conference bridge, and codecs
+     * so the audio pipeline never resamples. Pairs with the G.711-only
+     * codec setup below (PCMU/PCMA are 8 kHz). */
+    media_cfg.clock_rate     = 8000;
+    media_cfg.snd_clock_rate = 8000;
 
     status = pjsua_init(&cfg, &log_cfg, &media_cfg);
     if (status != PJ_SUCCESS) error_exit("pjsua_init() failed", status);
@@ -562,6 +567,26 @@ static int setup_pjsua(const stress_opts_t *opts)
 
     status = pjsua_start();
     if (status != PJ_SUCCESS) error_exit("pjsua_start() failed", status);
+
+    /* Use G.711 (PCMU/PCMA, 8 kHz) only so the pipeline matches the
+     * 8 kHz clock_rate set above and never has to resample. Disable
+     * every other audio codec by priority 0. */
+    {
+        pjsua_codec_info codecs[64];
+        unsigned i, ccnt = PJ_ARRAY_SIZE(codecs);
+        status = pjsua_enum_codecs(codecs, &ccnt);
+        if (status == PJ_SUCCESS) {
+            for (i = 0; i < ccnt; ++i) {
+                pj_uint8_t prio = 0;
+                if (pj_strnicmp2(&codecs[i].codec_id, "PCMU/", 5) == 0 ||
+                    pj_strnicmp2(&codecs[i].codec_id, "PCMA/", 5) == 0)
+                {
+                    prio = PJMEDIA_CODEC_PRIO_NORMAL;
+                }
+                pjsua_codec_set_priority(&codecs[i].codec_id, prio);
+            }
+        }
+    }
 
     return 0;
 }
