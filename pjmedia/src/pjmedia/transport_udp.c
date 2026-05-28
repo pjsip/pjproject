@@ -529,19 +529,25 @@ static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
     if (udp->base.grp_lock)
         pj_grp_lock_release(udp->base.grp_lock);
 
-    /* If a concurrent transport_attach2() zeroed rtp_src_addr between
-     * the recvfrom completion and this snapshot, the cb has no valid
-     * peer to act on; drop the packet rather than feeding sa_family=0
-     * downstream. The next recvfrom will repopulate the address.
-     */
-    if (src_addr->addr.sa_family != PJ_AF_INET &&
-        src_addr->addr.sa_family != PJ_AF_INET6)
-    {
-        return;
-    }
-
     if (cb2) {
         pjmedia_tp_cb_param param;
+
+        /* If a concurrent transport_attach2() zeroed rtp_src_addr
+         * between the recvfrom completion and this snapshot, the cb
+         * has no valid peer to act on; drop the packet rather than
+         * feeding sa_family=0 downstream. The next recvfrom will
+         * repopulate the address. Only relevant for real received
+         * packets (bytes_read > 0); error notifications (bytes_read
+         * < 0, e.g. PJ_ESOCKETSTOP from the restart paths) must
+         * still be delivered regardless of src_addr state, since
+         * they signal a fatal socket condition to the upper layer.
+         */
+        if (bytes_read > 0 &&
+            src_addr->addr.sa_family != PJ_AF_INET &&
+            src_addr->addr.sa_family != PJ_AF_INET6)
+        {
+            return;
+        }
 
         param.user_data = user_data;
         param.pkt = udp->rtp_pkt;
@@ -552,6 +558,7 @@ static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
         if (rem_switch)
             *rem_switch = param.rem_switch;
     } else if (cb) {
+        /* Legacy cb doesn't consume src_addr; deliver unconditionally. */
         (*cb)(user_data, udp->rtp_pkt, bytes_read);
     }
 }
