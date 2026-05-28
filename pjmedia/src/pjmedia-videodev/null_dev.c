@@ -361,10 +361,14 @@ static pj_status_t null_stream_get_frame(pjmedia_vid_dev_stream *s,
     frame->bit_info = 0;
     frame->timestamp = strm->ts;
     strm->ts.u64 += strm->ts_inc;
-    if (frame->buf && frame->size)
-        return pjmedia_video_format_fill_black(&strm->param.fmt,
-                                               frame->buf,
-                                               frame->size);
+    if (frame->buf && frame->size) {
+        pj_status_t status;
+        status = pjmedia_video_format_fill_black(&strm->param.fmt,
+                                                 frame->buf,
+                                                 frame->size);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
     return PJ_SUCCESS;
 }
 
