@@ -5466,6 +5466,26 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
+    /* Stale callback guard. The inv that fired this callback may be a
+     * leftover from a dialog that the application has already hung up.
+     * If pjsua's call slot has since been reallocated to a different
+     * dialog (e.g. an outgoing make_call right after a hangup whose
+     * earlier re-INVITE is still pending a response), `call->inv` now
+     * points at the new dialog. Touching its media — in particular
+     * pjsua_media_prov_revert() below — would corrupt the new dialog's
+     * provisional state and trip the assertion in
+     * pjsua_media_channel_update() (`med_prov_cnt >= media_count`).
+     * Just drop the late event in that case.
+     */
+    if (!call || call->inv != inv) {
+        PJ_LOG(4, (THIS_FILE,
+                   "Ignoring stale media update on call %d "
+                   "(inv %p != current %p)",
+                   call ? (int)call->index : -1, inv,
+                   call ? (void*)call->inv : NULL));
+        goto on_return;
+    }
+
     if (call->hanging_up)
         goto on_return;
 
@@ -6451,6 +6471,23 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
     if (call->inv == NULL || call->hanging_up) {
         /* Call has been disconnected. */
+        goto on_return;
+    }
+
+    /* Stale callback guard (see comment in pjsua_call_on_media_update).
+     * The inv firing this tsx-state callback may belong to a dialog
+     * whose call slot has already been recycled into a new dialog.
+     * Acting on the slot's current state would corrupt the new dialog
+     * (e.g. pjsua_media_prov_revert further below would zero
+     * med_prov_cnt of the new dialog and trip the assertion in
+     * pjsua_media_channel_update). Drop the stale event.
+     */
+    if (call->inv != inv) {
+        PJ_LOG(4, (THIS_FILE,
+                   "Ignoring stale tsx-state event on call %d "
+                   "(inv %p != current %p, cseq=%d)",
+                   call->index, inv, (void*)call->inv,
+                   tsx ? (int)tsx->cseq : -1));
         goto on_return;
     }
 
