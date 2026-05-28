@@ -203,6 +203,20 @@ PJ_BEGIN_DECL
 
 
 /**
+ * This setting controls whether the null video device (no-op capture and
+ * renderer) should be included. The null renderer is useful for tests and
+ * for video calls that should be signalled but not actually displayed —
+ * the real renderer back-ends (SDL, Metal, etc.) can block on init in
+ * headless / sanitized runs, the null renderer avoids that entirely.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_VIDEO_DEV_HAS_NULL
+#   define PJMEDIA_VIDEO_DEV_HAS_NULL           1
+#endif
+
+
+/**
  * This setting controls whether ffmpeg support should be included.
  *
  * Default: 0 (unfinished)

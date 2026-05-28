@@ -3185,6 +3185,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia-videodev\null_dev.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia-videodev\sdl_dev.c"
 				>
 			</File>

@@ -432,7 +432,7 @@ didActivateAudioSession:(AVAudioSession *) audioSession
 }
 
 - (void) provider:(CXProvider *) provider
-didDectivateAudioSession:(AVAudioSession *) audioSession
+didDeactivateAudioSession:(AVAudioSession *) audioSession
 {
     NSLog(@"Did deactivate Audio Session");
 }
