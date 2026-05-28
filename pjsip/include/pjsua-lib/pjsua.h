@@ -1372,6 +1372,53 @@ typedef struct pjsua_callback
                               pjsip_event *e);
 
     /**
+     * Notification when an in-dialog UAC transaction within the call is
+     * about to cause the call to be terminated due to RFC 3261 #12.2.1.2
+     * failures: 408 Request Timeout, transaction timeout, or 481
+     * Call/Transaction Does Not Exist. The library would otherwise send
+     * BYE automatically.
+     *
+     * If implemented, the application can return PJ_TRUE to suppress the
+     * automatic termination and keep the call alive, e.g. when an INFO or
+     * MESSAGE request fails for application-level reasons (see RFC 5057
+     * #5.2; ETSI EN 16072 eCall, etc.). When suppressed, the library
+     * still cancels any pending SDP offer that the failed re-INVITE or
+     * UPDATE carried, so the call remains usable for subsequent
+     * renegotiation. inv->cause is not set to the failed status.
+     *
+     * Interaction with pjsip_cfg()->endpt.keep_inv_after_tsx_timeout:
+     * when that global flag is set, the 408/timeout branch is short-
+     * circuited before the callback is reached, so the callback is not
+     * invoked for 408 -- the session is already kept by the global flag.
+     * The callback is still invoked for 481. Applications that want this
+     * callback to be the sole authority for both should leave the global
+     * flag at its default (PJ_FALSE).
+     *
+     * Threading: invoked synchronously while the dialog group lock is
+     * held. The application MUST NOT call any pjsua, pjsip_dlg, or
+     * pjsip_inv API that would acquire a higher-order lock (PJSUA_LOCK
+     * > dialog grp_lock > tsx grp_lock) from inside this callback --
+     * doing so risks deadlock. Defer such work to a timer.
+     *
+     * Note: this callback must be set in pjsua_callback BEFORE
+     * pjsua_init(); installing it later has no effect because pjsua wires
+     * the underlying pjsip-ua hook only at init time.
+     *
+     * This callback is optional. When not set, the call is terminated as
+     * per the default behavior.
+     *
+     * @param call_id   The call identification.
+     * @param tsx       The failed UAC transaction.
+     * @param e         The event that caused the failure.
+     *
+     * @return          PJ_TRUE to suppress the automatic call termination.
+     *                  PJ_FALSE (default) to keep current behavior.
+     */
+    pj_bool_t (*on_call_tsx_terminate_session)(pjsua_call_id call_id,
+                                               pjsip_transaction *tsx,
+                                               pjsip_event *e);
+
+    /**
      * Notify application when a transaction started by pjsua_acc_send_request()
      * has been completed,i.e. when a response has been received.
      *

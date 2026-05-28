@@ -116,6 +116,14 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
                                                   const pjsip_uri *target,
                                                   const pjsip_event *e);
 
+/*
+ * UAC transaction termination override handler.
+ */
+static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
+                                            pjsip_inv_session *inv,
+                                            pjsip_transaction *tsx,
+                                            pjsip_event *e);
+
 
 /* Create SDP for call hold. */
 static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
@@ -245,6 +253,10 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     inv_cb.on_redirected = &pjsua_call_on_redirected;
     if (pjsua_var.ua_cfg.cb.on_call_rx_reinvite) {
         inv_cb.on_rx_reinvite = &pjsua_call_on_rx_reinvite;
+    }
+    if (pjsua_var.ua_cfg.cb.on_call_tsx_terminate_session) {
+        inv_cb.on_uac_tsx_terminate_session =
+                                    &pjsua_call_on_uac_tsx_terminate_session;
     }
 
     /* Initialize invite session module: */
@@ -6987,6 +6999,28 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
     pj_log_pop_indent();
 
     return op;
+}
+
+/*
+ * UAC tsx termination override: ask the app whether to keep the call alive
+ * when the invite session is about to be terminated due to 408/481 on an
+ * in-dialog UAC request.
+ */
+static pj_bool_t pjsua_call_on_uac_tsx_terminate_session(
+                                            pjsip_inv_session *inv,
+                                            pjsip_transaction *tsx,
+                                            pjsip_event *e)
+{
+    pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+
+    if (!call || call->hanging_up ||
+        !pjsua_var.ua_cfg.cb.on_call_tsx_terminate_session)
+    {
+        return PJ_FALSE;
+    }
+
+    return (*pjsua_var.ua_cfg.cb.on_call_tsx_terminate_session)(call->index,
+                                                                tsx, e);
 }
 
 #if defined(PJSUA_MEDIA_HAS_PJMEDIA) && PJSUA_MEDIA_HAS_PJMEDIA != 0

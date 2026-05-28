@@ -1510,8 +1510,27 @@ void Endpoint::on_call_tsx_state(pjsua_call_id call_id,
     
     OnCallTsxStateParam prm;
     prm.e.fromPj(*e);
-    
+
     call->onCallTsxState(prm);
+}
+
+pj_bool_t Endpoint::on_call_tsx_terminate_session(pjsua_call_id call_id,
+                                                  pjsip_transaction *tsx,
+                                                  pjsip_event *e)
+{
+    PJ_UNUSED_ARG(tsx);
+
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+        return PJ_FALSE;
+    }
+
+    OnCallTsxTerminateSessionParam prm;
+    prm.e.fromPj(*e);
+
+    call->onCallTsxTerminateSession(prm);
+
+    return prm.suppressTermination ? PJ_TRUE : PJ_FALSE;
 }
 
 void Endpoint::on_call_media_state(pjsua_call_id call_id)
@@ -2325,6 +2344,8 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     /* Call callbacks */
     ua_cfg.cb.on_call_state             = &Endpoint::on_call_state;
     ua_cfg.cb.on_call_tsx_state         = &Endpoint::on_call_tsx_state;
+    ua_cfg.cb.on_call_tsx_terminate_session
+                                        = &Endpoint::on_call_tsx_terminate_session;
     ua_cfg.cb.on_call_media_state       = &Endpoint::on_call_media_state;
     ua_cfg.cb.on_call_sdp_created       = &Endpoint::on_call_sdp_created;
     ua_cfg.cb.on_stream_precreate       = &Endpoint::on_stream_precreate;
