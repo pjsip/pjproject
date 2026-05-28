@@ -149,14 +149,11 @@ static void do_test_transaction_layer(pjsip_msg *msg, pjsip_rx_data *rdata)
     if (!msg || msg->type != PJSIP_REQUEST_MSG || !rdata)
         return;
 
-    /* Verify required headers exist */
-    if (!pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL) ||
-        !pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL))
+    if (!rdata->msg_info.via || !rdata->msg_info.cseq ||
+        !rdata->msg_info.from || !rdata->msg_info.cid)
         return;
 
-    via_hdr = (pjsip_via_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_VIA, NULL);
-    if (!via_hdr)
-        return;
+    via_hdr = rdata->msg_info.via;
 
     /* Skip transaction creation if transport not available */
     if (!rdata->tp_info.transport)
@@ -209,8 +206,8 @@ static void do_test_transaction_uac(pjsip_msg *msg, pjsip_rx_data *rdata)
     if (!msg || msg->type != PJSIP_RESPONSE_MSG || !rdata)
         return;
 
-    /* Verify CSeq header exists */
-    if (!pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL))
+    if (!rdata->msg_info.via || !rdata->msg_info.cseq ||
+        !rdata->msg_info.from || !rdata->msg_info.cid)
         return;
 
     /* Skip if no transport available */
@@ -406,7 +403,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     if (msg) {
         pjsip_rx_data rdata;
-        pj_sockaddr_in remote_addr;
+        pj_sockaddr remote_addr;
         pjsip_transport *fake_transport = NULL;
         int i;
 
@@ -443,13 +440,15 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         rdata.msg_info.max_fwd = (pjsip_max_fwd_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_MAX_FORWARDS, NULL);
 
         /* Setup transport info */
-        pj_bzero(&remote_addr, sizeof(remote_addr));
-        remote_addr.sin_family = PJ_AF_INET;
-        remote_addr.sin_addr.s_addr = pj_htonl(0x7F000001);
-        remote_addr.sin_port = pj_htons(5060);
+        pj_sockaddr_init(pj_AF_INET(), &remote_addr, NULL, 5060);
+        remote_addr.ipv4.sin_addr.s_addr = pj_htonl(0x7F000001);
 
-        pj_memcpy(&rdata.pkt_info.src_addr, &remote_addr, sizeof(remote_addr));
-        rdata.pkt_info.src_addr_len = sizeof(remote_addr);
+        pj_memcpy(&rdata.pkt_info.src_addr, &remote_addr,
+                  sizeof(remote_addr.ipv4));
+        rdata.pkt_info.src_addr_len = sizeof(remote_addr.ipv4);
+        pj_ansi_snprintf(rdata.pkt_info.src_name, sizeof(rdata.pkt_info.src_name),
+                         "127.0.0.1");
+        rdata.pkt_info.src_port = 5060;
         if (Size < sizeof(rdata.pkt_info.packet)) {
             pj_memcpy(rdata.pkt_info.packet, DataFx, Size);
             rdata.pkt_info.len = Size;
@@ -458,9 +457,10 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
             rdata.pkt_info.len = sizeof(rdata.pkt_info.packet);
         }
 
-        /* Acquire dummy UDP transport */
-        if (pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_UDP,
-                                          &remote_addr, sizeof(remote_addr),
+        /* Acquire loop datagram transport */
+        if (pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
+                                          &remote_addr,
+                                          sizeof(remote_addr.ipv4),
                                           NULL, &fake_transport) == PJ_SUCCESS) {
             rdata.tp_info.transport = fake_transport;
         }
@@ -473,6 +473,36 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
         do_test_auth_client(pool, msg);
         do_test_dialog(msg);
+
+        if (msg->type == PJSIP_REQUEST_MSG && rdata.msg_info.via) {
+            pj_strdup2(pool, &rdata.msg_info.via->recvd_param,
+                       rdata.pkt_info.src_name);
+            if (rdata.msg_info.via->rport_param == 0) {
+                rdata.msg_info.via->rport_param = rdata.pkt_info.src_port;
+            }
+        }
+
+        /* Route through the full endpoint module pipeline */
+        if (rdata.tp_info.transport &&
+            rdata.msg_info.from && rdata.msg_info.to &&
+            rdata.msg_info.via && rdata.msg_info.cseq &&
+            rdata.msg_info.cid && rdata.msg_info.cid->id.slen != 0) {
+            pjsip_transaction *tsx;
+            pj_time_val timeout = {0, 0};
+            unsigned i;
+
+            pjsip_endpt_process_rx_data(endpt, &rdata, NULL, NULL);
+
+            tsx = pjsip_rdata_get_tsx(&rdata);
+            if (tsx) {
+                pjsip_tsx_terminate(tsx, PJSIP_SC_REQUEST_TERMINATED);
+            }
+
+            /* Pump events repeatedly */
+            for (i = 0; i < 8; ++i) {
+                pjsip_endpt_handle_events(endpt, &timeout);
+            }
+        }
 
         /* Release transport */
         if (fake_transport) {

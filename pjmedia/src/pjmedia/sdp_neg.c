@@ -477,6 +477,13 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
             if (!found) {
                 pjmedia_sdp_media *m;
 
+                if (new_offer->media_count >= PJMEDIA_MAX_SDP_MEDIA) {
+                    PJ_LOG(3,(THIS_FILE, "Too many media in SDP, "
+                                         "modify local offer failed"));
+                    neg->state = PJMEDIA_SDP_NEG_STATE_DONE;
+                    return PJ_ETOOMANY;
+                }
+
                 m = sdp_media_clone_deactivate(pool, om, om, local);
 
                 pj_array_insert(new_offer->media, sizeof(new_offer->media[0]),
@@ -490,6 +497,13 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
          */
         for (oi = new_offer->media_count; oi < old_offer->media_count; ++oi) {
             pjmedia_sdp_media *m;
+
+            if (new_offer->media_count >= PJMEDIA_MAX_SDP_MEDIA) {
+                PJ_LOG(3,(THIS_FILE, "Too many media in SDP, "
+                                     "modify local offer failed"));
+                neg->state = PJMEDIA_SDP_NEG_STATE_DONE;
+                return PJ_ETOOMANY;
+            }
 
             m = sdp_media_clone_deactivate(pool, old_offer->media[oi],
                                            old_offer->media[oi], local);

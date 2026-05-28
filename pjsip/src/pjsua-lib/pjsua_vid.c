@@ -946,14 +946,16 @@ static void free_vid_win(pjsua_vid_win_id wid)
     num_locks = PJSUA_RELEASE_LOCK();
 
     if (w->vp_cap) {
-        pjsua_vid_conf_remove_port(w->cap_slot);
+        if (w->cap_slot != PJSUA_INVALID_ID)
+            pjsua_vid_conf_remove_port(w->cap_slot);
         pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
                                   w->vp_cap);
         pjmedia_vid_port_stop(w->vp_cap);
         pjmedia_vid_port_destroy(w->vp_cap);
     }
     if (w->vp_rend) {
-        pjsua_vid_conf_remove_port(w->rend_slot);
+        if (w->rend_slot != PJSUA_INVALID_ID)
+            pjsua_vid_conf_remove_port(w->rend_slot);
         pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
                                   w->vp_rend);
         pjmedia_vid_port_stop(w->vp_rend);
@@ -2727,6 +2729,14 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
     status = acquire_call("pjsua_call_set_vid_strm()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
         goto on_return;
+
+    if (call->hanging_up) {
+        PJ_LOG(3,(THIS_FILE,
+                  "Can not change video stream on call %d while it is "
+                  "hanging up", call_id));
+        status = PJ_EINVALIDOP;
+        goto on_return;
+    }
 
     if (param) {
         param_ = *param;
