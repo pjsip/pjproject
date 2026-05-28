@@ -6,7 +6,10 @@ ifneq ($(findstring android,$(TARGET_NAME)),)
 else
     ifneq ($(findstring ios,$(TARGET_NAME)),)
   	LANG = csharp
-    else
+    else ifneq ($(IS_CATALYST),)
+    # Mac Catalyst adicionado explicitamente como assinante do ecossistema C#
+    LANG = csharp
+	else
   	LANG = python java
     endif
 endif
@@ -22,7 +25,16 @@ all: symbols.i
 	
 all clean dep depend distclean print realclean install uninstall: $(LANG)
 
-java python csharp:
+csharp:
+ifeq ($(CMD_is_lang),)
+	$(MAKE) $(MAKE_FLAGS) --no-print-directory -C $@ $(MAKECMDGOALS)
+	$(MAKE) $(MAKE_FLAGS) --no-print-directory -C $@/pjsua2maui $(MAKECMDGOALS)
+else
+	$(MAKE) $(MAKE_FLAGS) --no-print-directory -C $@
+	$(MAKE) $(MAKE_FLAGS) --no-print-directory -C $@/pjsua2maui
+endif
+
+java python :
 ifeq ($(CMD_is_lang),)
 	$(MAKE) $(MAKE_FLAGS) --no-print-directory -C $@ $(MAKECMDGOALS)
 else
