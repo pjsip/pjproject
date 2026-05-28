@@ -164,6 +164,25 @@ static void call_timeout_callback(pj_timer_heap_t *timer_heap,
 }
 
 /*
+ * Handler that lets the application veto the library's automatic
+ * teardown of the call after an in-dialog UAC 408/481.
+ * Enabled via --keep-call-on-tsx-fail; emits a marker log so tests
+ * can detect that suppression actually took effect.
+ */
+static pj_bool_t on_call_tsx_terminate_session(pjsua_call_id call_id,
+                                               pjsip_transaction *tsx,
+                                               pjsip_event *e)
+{
+    PJ_UNUSED_ARG(e);
+    PJ_LOG(3, (THIS_FILE,
+               "Call %d: suppressing termination after %.*s %d",
+               call_id,
+               (int)tsx->method.name.slen, tsx->method.name.ptr,
+               tsx->status_code));
+    return PJ_TRUE;
+}
+
+/*
  * Handler when invite state has changed.
  */
 static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
@@ -1685,6 +1704,10 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_mwi_info = &on_mwi_info;
     app_config.cfg.cb.on_transport_state = &on_transport_state;
     app_config.cfg.cb.on_ice_transport_error = &on_ice_transport_error;
+    if (app_config.keep_call_on_tsx_fail) {
+        app_config.cfg.cb.on_call_tsx_terminate_session =
+                                            &on_call_tsx_terminate_session;
+    }
     app_config.cfg.cb.on_snd_dev_operation = &on_snd_dev_operation;
     app_config.cfg.cb.on_call_media_event = &on_call_media_event;
     app_config.cfg.cb.on_ip_change_progress = &on_ip_change_progress;
