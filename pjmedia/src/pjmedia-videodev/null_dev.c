@@ -362,7 +362,9 @@ static pj_status_t null_stream_get_frame(pjmedia_vid_dev_stream *s,
     frame->timestamp = strm->ts;
     strm->ts.u64 += strm->ts_inc;
     if (frame->buf && frame->size)
-        pj_bzero(frame->buf, frame->size);
+        return pjmedia_video_format_fill_black(&strm->param.fmt,
+                                               frame->buf,
+                                               frame->size);
     return PJ_SUCCESS;
 }
 
