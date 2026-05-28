@@ -96,5 +96,16 @@ __cmake_systeminformation/
 cov-int/
 getversion.mak
 configure.out
+
+# MAUI stuff
+
+*/Platforms/Android/pjsua2/*
+*/Platforms/Android/lib/*
+*/Platforms/Android/org/pjsip/*
 */Platforms/iOS/pjsua2/*
 */Platforms/iOS/lib/*
+*/Platforms/MacCatalyst/pjsua2/*
+*/Platforms/MacCatalyst/lib/*
+*/Platforms/Windows/Native/*
+*/Platforms/Windows/pjsua2/*
+workload-install.ps1
