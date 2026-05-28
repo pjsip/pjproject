@@ -121,6 +121,7 @@ static struct {
     int                 video_leg_count;
     pjsua_acc_id        acc_id;
     pjmedia_vid_dev_index colorbar_dev;
+    pjmedia_vid_dev_index null_rend_dev;
     stress_opts_t       opts;
     volatile pj_bool_t  stop_flag;
     pj_thread_t        *stats_thread;
@@ -480,9 +481,16 @@ static int setup_pjsua(const stress_opts_t *opts)
     status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &tcfg, NULL);
     if (status != PJ_SUCCESS) error_exit("transport create failed", status);
 
-    /* Resolve colorbar device. Falls back to default capture if unavailable. */
+    /* Resolve video devices. Capture: colorbar (synthetic frame source).
+     * Render: null (discards frames). Using a null renderer keeps the
+     * test out of the real renderer back-ends (SDL / Metal / Darwin /
+     * etc.), which would otherwise need a main-thread runloop on macOS
+     * and would slow stress runs everywhere by opening real windows.
+     * Both fall back to PJMEDIA_VID_DEFAULT_* if the device isn't
+     * available (e.g. colorbar or null factory wasn't compiled in). */
 #if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0
-    g.colorbar_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
+    g.colorbar_dev  = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
+    g.null_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
     if (opts->max_video_legs > 0) {
         pjmedia_vid_dev_index idx;
         status = pjmedia_vid_dev_lookup("Colorbar", "Colorbar generator",
@@ -492,6 +500,13 @@ static int setup_pjsua(const stress_opts_t *opts)
             PJ_LOG(3, (THIS_FILE, "Using Colorbar capture dev id=%d", idx));
         } else {
             PJ_LOG(2, (THIS_FILE, "Colorbar device not found, using default"));
+        }
+        status = pjmedia_vid_dev_lookup("Null", "Null renderer", &idx);
+        if (status == PJ_SUCCESS) {
+            g.null_rend_dev = idx;
+            PJ_LOG(3, (THIS_FILE, "Using Null render dev id=%d", idx));
+        } else {
+            PJ_LOG(2, (THIS_FILE, "Null render device not found, using default"));
         }
     }
 #else
@@ -536,6 +551,7 @@ static int setup_pjsua(const stress_opts_t *opts)
                 acc_cfg.vid_in_auto_show      = PJ_FALSE;
                 acc_cfg.vid_out_auto_transmit = PJ_TRUE;
                 acc_cfg.vid_cap_dev           = g.colorbar_dev;
+                acc_cfg.vid_rend_dev          = g.null_rend_dev;
                 pjsua_acc_modify(g.acc_id, &acc_cfg);
             }
             pj_pool_release(tmp_pool);
@@ -833,7 +849,7 @@ bad:
  * main
  *==========================================================================*/
 
-static int main_func(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     int rc;
     int parse_rc = parse_args(argc, argv, &g.opts);
@@ -896,12 +912,3 @@ static int main_func(int argc, char *argv[])
     return rc;
 }
 
-/* On macOS, pjsua's default video renderer (SDL/Metal) needs an NSApplication
- * + main-thread runloop; without it, video media setup hangs. pj_run_app()
- * dispatches main_func onto a worker thread and runs the AppKit runloop on
- * the original main thread, satisfying that requirement. On Linux/Windows
- * pj_run_app() is a passthrough that just calls main_func directly. */
-int main(int argc, char *argv[])
-{
-    return pj_run_app(&main_func, argc, argv, 0);
-}
