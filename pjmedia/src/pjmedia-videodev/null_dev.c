@@ -357,12 +357,12 @@ static pj_status_t null_stream_get_frame(pjmedia_vid_dev_stream *s,
                                          pjmedia_frame *frame)
 {
     struct null_stream *strm = (struct null_stream*)s;
+    pj_status_t status;
     frame->type = PJMEDIA_FRAME_TYPE_VIDEO;
     frame->bit_info = 0;
     frame->timestamp = strm->ts;
     strm->ts.u64 += strm->ts_inc;
     if (frame->buf && frame->size) {
-        pj_status_t status;
         status = pjmedia_video_format_fill_black(&strm->param.fmt,
                                                  frame->buf,
                                                  frame->size);
