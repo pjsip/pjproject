@@ -190,23 +190,41 @@ static int init_codecs(void)
      * alloc_codec() would open Opus as mono via the default param, which
      * contradicts the "opus/48000/2" id and the 3840-byte (20 ms @ 48 kHz
      * stereo) PCM frame size, leaving the stereo encode/decode paths
-     * unexercised. Configure 2 channels so Opus actually opens in stereo. */
+     * unexercised. Configure 2 channels so Opus actually opens in stereo.
+     *
+     * The stereo override is only applied when every query/config step
+     * succeeds. If any step fails, Opus stays at its factory (mono) default,
+     * so we downgrade the Opus harness entry to mono to keep the id, channel
+     * count and PCM frame size consistent with how the codec is opened. */
     {
         pjmedia_codec_param opus_param;
         pjmedia_codec_opus_config opus_cfg;
         const pjmedia_codec_info *opus_info;
         unsigned opus_cnt = 1;
         pj_str_t opus_id = pj_str("opus/48000/2");
+        pj_bool_t stereo_ok = PJ_FALSE;
+        /* Opus is the last entry in codec_configs[] (see the array above). */
+        codec_config_t *opus_config = &codec_configs[NUM_CODECS - 1];
 
         if (pjmedia_codec_mgr_find_codecs_by_id(codec_mgr, &opus_id, &opus_cnt,
                                                 &opus_info, NULL) == PJ_SUCCESS &&
             opus_cnt > 0 &&
             pjmedia_codec_mgr_get_default_param(codec_mgr, opus_info,
-                                                &opus_param) == PJ_SUCCESS)
+                                                &opus_param) == PJ_SUCCESS &&
+            pjmedia_codec_opus_get_config(&opus_cfg) == PJ_SUCCESS)
         {
-            pjmedia_codec_opus_get_config(&opus_cfg);
             opus_cfg.channel_cnt = 2;
-            pjmedia_codec_opus_set_default_param(&opus_cfg, &opus_param);
+            if (pjmedia_codec_opus_set_default_param(&opus_cfg, &opus_param)
+                    == PJ_SUCCESS)
+            {
+                stereo_ok = PJ_TRUE;
+            }
+        }
+
+        if (!stereo_ok) {
+            /* Mono fallback: 20 ms @ 48 kHz mono = 960 samples * 2 bytes. */
+            opus_config->channel_cnt = 1;
+            opus_config->pcm_frame_size = 1920;
         }
     }
 #endif
