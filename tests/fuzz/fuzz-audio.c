@@ -38,6 +38,7 @@ typedef struct {
     const char *name;
     size_t min_frame_size;
     size_t pcm_frame_size;
+    unsigned channel_cnt;
 } codec_config_t;
 
 /* Global state for persistent fuzzing */
@@ -63,18 +64,18 @@ static pjmedia_codec *codec_opus = NULL;
 
 /* Codec configurations array */
 static codec_config_t codec_configs[] = {
-    {&codec_pcma,     "G.711 A-Law", 80,  160},
-    {&codec_pcmu,     "G.711 U-Law", 80,  160},
-    {&codec_g722,     "G.722",       80,  320},
-    {&codec_gsm,      "GSM",         33,  320},
-    {&codec_speex,    "Speex",       10,  320},
-    {&codec_ilbc,     "iLBC",        38,  480},
-    {&codec_l16_8k,   "L16 8kHz",    320, 320},
-    {&codec_l16_16k,  "L16 16kHz",   640, 640},
-    {&codec_l16_48k,  "L16 48kHz",   1920, 1920},
+    {&codec_pcma,     "G.711 A-Law", 80,  160,  1},
+    {&codec_pcmu,     "G.711 U-Law", 80,  160,  1},
+    {&codec_g722,     "G.722",       80,  320,  1},
+    {&codec_gsm,      "GSM",         33,  320,  1},
+    {&codec_speex,    "Speex",       10,  320,  1},
+    {&codec_ilbc,     "iLBC",        38,  480,  1},
+    {&codec_l16_8k,   "L16 8kHz",    320, 320,  1},
+    {&codec_l16_16k,  "L16 16kHz",   640, 640,  1},
+    {&codec_l16_48k,  "L16 48kHz",   1920, 1920, 1},
 #if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
     /* Opus stereo @ 48 kHz: 20 ms frame = 960 samples * 2 ch * 2 bytes = 3840 */
-    {&codec_opus,     "Opus",        10,  3840},
+    {&codec_opus,     "Opus",        10,  3840, 2},
 #endif
 };
 
@@ -222,7 +223,7 @@ static int init_codecs(void)
 /* Helper function to test codec encode/decode cycle */
 static void test_codec_cycle(pjmedia_codec *codec, const uint8_t *Data, size_t Size,
                               size_t min_frame_size, size_t pcm_frame_size,
-                              unsigned clock_rate)
+                              unsigned clock_rate, unsigned channel_cnt)
 {
     pj_status_t status;
     pjmedia_frame input_frame, output_frame;
@@ -241,7 +242,10 @@ static void test_codec_cycle(pjmedia_codec *codec, const uint8_t *Data, size_t S
         pj_bzero(&param, sizeof(param));
         param.info.avg_bps = 128000;
         param.info.clock_rate = clock_rate;
-        param.info.channel_cnt = 1;
+        /* Use the codec's actual channel count (e.g. 2 for Opus) rather than
+         * forcing mono, so the modify path does not contradict how the codec
+         * was opened and the stereo paths stay exercised. */
+        param.info.channel_cnt = channel_cnt;
         param.info.frm_ptime = 20;
         param.info.pcm_bits_per_sample = 16;
         param.setting.vad = (Data[min_frame_size] & 0x01) ? 1 : 0;
@@ -360,7 +364,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         /* Test this codec with current data chunk */
         test_codec_cycle(codec, current_data, chunk_size,
                         config->min_frame_size, config->pcm_frame_size,
-                        codec_clock_rates[i]);
+                        codec_clock_rates[i], config->channel_cnt);
 
         /* Advance to next chunk of data */
         consumed = config->min_frame_size;
