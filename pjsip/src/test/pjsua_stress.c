@@ -486,7 +486,11 @@ static int setup_pjsua(const stress_opts_t *opts)
     status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &tcfg, NULL);
     if (status != PJ_SUCCESS) error_exit("transport create failed", status);
 
-    /* Resolve video devices. Capture: colorbar (synthetic frame source).
+    /* Resolve video devices. Capture: Colorbar-active — the "active"
+     * variant pushes frames on its own clock so the video media flow
+     * actually moves under stress; the passive Colorbar device only
+     * emits frames when polled, which doesn't happen because no clock
+     * is wired to drive it here.
      * Render: null (discards frames). Using a null renderer keeps the
      * test out of the real renderer back-ends (SDL / Metal / Darwin /
      * etc.), which would otherwise need a main-thread runloop on macOS
@@ -498,13 +502,15 @@ static int setup_pjsua(const stress_opts_t *opts)
     g.null_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
     if (opts->max_video_legs > 0) {
         pjmedia_vid_dev_index idx;
-        status = pjmedia_vid_dev_lookup("Colorbar", "Colorbar generator",
+        status = pjmedia_vid_dev_lookup("Colorbar", "Colorbar-active",
                                         &idx);
         if (status == PJ_SUCCESS) {
             g.colorbar_dev = idx;
-            PJ_LOG(3, (THIS_FILE, "Using Colorbar capture dev id=%d", idx));
+            PJ_LOG(3, (THIS_FILE,
+                       "Using Colorbar-active capture dev id=%d", idx));
         } else {
-            PJ_LOG(2, (THIS_FILE, "Colorbar device not found, using default"));
+            PJ_LOG(2, (THIS_FILE,
+                       "Colorbar-active device not found, using default"));
         }
         status = pjmedia_vid_dev_lookup("Null", "Null renderer", &idx);
         if (status == PJ_SUCCESS) {
