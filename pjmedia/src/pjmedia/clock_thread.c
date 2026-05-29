@@ -251,18 +251,30 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
     clock->quitting = PJ_TRUE;
 
     if (clock->thread) {
-        if (pj_thread_join(clock->thread) == PJ_SUCCESS) {
+        pj_status_t status = pj_thread_join(clock->thread);
+        if (status == PJ_SUCCESS) {
             pj_thread_destroy(clock->thread);
             clock->thread = NULL;
             pj_pool_reset(clock->pool);
-        } else {
+        } else if (status == PJ_ECANCELLED) {
             /* We are probably called from the clock thread itself.
              * Do not cancel the thread's quitting though, since it
              * may cause the clock thread to run indefinitely.
-             */ 
+             */
             // clock->quitting = PJ_FALSE;
-            
             return PJ_EBUSY;
+        } else {
+            /* pthread_join() returned an OS error (e.g. EINVAL on
+             * macOS). The usual cause is another thread already
+             * joining this same descriptor concurrently — POSIX
+             * forbids two simultaneous joiners. The actual joiner
+             * will set clock->thread = NULL once the underlying
+             * thread has exited; spin-wait here so the caller's
+             * follow-up pj_pool_release() doesn't pull the rug out
+             * from under the still-running clock thread.
+             */
+            while (clock->thread != NULL)
+                pj_thread_sleep(1);
         }
     }
 
@@ -429,9 +441,20 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
     clock->quitting = PJ_TRUE;
 
     if (clock->thread) {
-        pj_thread_join(clock->thread);
-        pj_thread_destroy(clock->thread);
-        clock->thread = NULL;
+        pj_status_t status = pj_thread_join(clock->thread);
+        if (status == PJ_SUCCESS) {
+            pj_thread_destroy(clock->thread);
+            clock->thread = NULL;
+        } else if (status != PJ_ECANCELLED) {
+            /* Another thread is already joining the same descriptor
+             * (see pjmedia_clock_stop() for details). Wait for it
+             * to clear clock->thread before we release clock->pool
+             * (which would free the thread descriptor underneath
+             * the joiner).
+             */
+            while (clock->thread != NULL)
+                pj_thread_sleep(1);
+        }
     }
 
     if (clock->lock) {
