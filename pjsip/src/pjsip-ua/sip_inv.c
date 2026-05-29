@@ -4318,14 +4318,29 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
           !pjsip_cfg()->endpt.keep_inv_after_tsx_timeout)))
     {
         pjsip_tx_data *bye = NULL;
+        pj_bool_t suppress = PJ_FALSE;
 
-        /* End session */
-        status = pjsip_inv_end_session(inv, tsx->status_code,
-                                       &tsx->status_text, &bye);
-        if (status == PJ_SUCCESS && bye) {
-            status = pjsip_inv_send_msg(inv, bye);
+        /* Allow application to override the automatic session termination. */
+        if (mod_inv.cb.on_uac_tsx_terminate_session) {
+            suppress = (*mod_inv.cb.on_uac_tsx_terminate_session)(inv, tsx,
+                                                                  e);
         }
 
+        if (!suppress) {
+            /* End session */
+            status = pjsip_inv_end_session(inv, tsx->status_code,
+                                           &tsx->status_text, &bye);
+            if (status == PJ_SUCCESS && bye) {
+                status = pjsip_inv_send_msg(inv, bye);
+            }
+        }
+
+        /* Mark handled either way: when suppressed, the caller must not
+         * fall through to handle_uac_tsx_response() and invoke the
+         * callback a second time for the same transaction. The tail SDP
+         * cleanup below still runs so the negotiator does not stay in
+         * LOCAL_OFFER for a kept-alive session.
+         */
         handled =  PJ_TRUE;
     }
 
@@ -4825,6 +4840,20 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
     {
         pjsip_tx_data *bye;
         pj_status_t status;
+
+        /* Allow application to override the automatic session termination.
+         * Return PJ_FALSE so the caller (e.g. inv_on_state_confirmed for
+         * a re-INVITE) still runs its post-failure cleanup branch --
+         * cancelling a pending SDP offer and clearing inv->invite_tsx --
+         * which would otherwise be skipped on PJ_TRUE. The session is
+         * kept alive but the failed transaction must not leave stale
+         * negotiation state behind.
+         */
+        if (mod_inv.cb.on_uac_tsx_terminate_session &&
+            (*mod_inv.cb.on_uac_tsx_terminate_session)(inv, tsx, e))
+        {
+            return PJ_FALSE;
+        }
 
         inv_set_cause(inv, tsx->status_code, &tsx->status_text);
 

@@ -254,6 +254,8 @@ static void usage(void)
     puts  ("  --accept-redirect=N Specify how to handle call redirect (3xx) response.");
     puts  ("                      0: reject, 1: follow automatically,");
     puts  ("                      2: follow + replace To header (default), 3: ask");
+    puts  ("  --keep-call-on-tsx-fail");
+    puts  ("                      Keep call on in-dialog UAC tsx 408/481");
 
     puts  ("");
     puts  ("CLI options:");
@@ -415,6 +417,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS,
            OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP, OPT_THREAD_CNT,
            OPT_NOREFERSUB, OPT_NO_SUPPORTED_NOREFERSUB, OPT_ACCEPT_REDIRECT,
+           OPT_KEEP_CALL_ON_TSX_FAIL,
            OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_CERT_FILE, OPT_TLS_PRIV_FILE,
            OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
            OPT_TLS_NEG_TIMEOUT, OPT_TLS_CIPHER,
@@ -459,6 +462,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "no-udp",     0, 0, OPT_NO_UDP},
         { "norefersub", 0, 0, OPT_NOREFERSUB},
         { "no-supported-norefersub", 0, 0, OPT_NO_SUPPORTED_NOREFERSUB},
+        { "keep-call-on-tsx-fail", 0, 0, OPT_KEEP_CALL_ON_TSX_FAIL},
         { "proxy",      1, 0, OPT_PROXY},
         { "outbound",   1, 0, OPT_OUTBOUND_PROXY},
         { "registrar",  1, 0, OPT_REGISTRAR},
@@ -769,6 +773,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_NO_SUPPORTED_NOREFERSUB: /* no-supported-norefersub */
             cfg->cfg.no_refer_sub = PJ_FALSE;
+            break;
+
+        case OPT_KEEP_CALL_ON_TSX_FAIL: /* keep-call-on-tsx-fail */
+            cfg->keep_call_on_tsx_fail = PJ_TRUE;
             break;
 
         case OPT_NO_TCP: /* no-tcp */
