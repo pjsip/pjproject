@@ -494,21 +494,29 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     return PJ_SUCCESS;
 }
 
-/* Call RTP cb. */
+/* Call RTP cb.
+ *
+ * src_addr is an out-param: on return, holds the snapshot of the RTP
+ * source address taken under grp_lock. Callers that need to act on the
+ * peer address (e.g. on_rx_rtp's rem_switch path) must use this snapshot
+ * rather than reading udp->rtp_src_addr directly, since the latter can
+ * be raced by transport_attach2().
+ */
 static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
-                        pj_bool_t *rem_switch)
+                        pj_bool_t *rem_switch, pj_sockaddr *src_addr)
 {
     void (*cb)(void*,void*,pj_ssize_t);
     void (*cb2)(pjmedia_tp_cb_param*);
     void *user_data;
 
-    /* Snapshot callback pointers under lock to avoid race with
-     * transport_detach() clearing them. Note that
-     * pj_ioqueue_lock_key() == pj_grp_lock_acquire() for the same
-     * group lock, so the detach side is already synchronized via
-     * pj_ioqueue_lock_key(). The lock is needed here because
-     * PJ_IOQUEUE_CALLBACK_NO_LOCK causes this callback to be invoked
-     * without the key lock held.
+    /* Snapshot callback pointers and the RTP source address under lock.
+     * pj_ioqueue_lock_key() == pj_grp_lock_acquire() for the same group
+     * lock, so transport_attach2() (which zeroes rtp_src_addr under the
+     * ioqueue key lock) is serialized with us here. Snapshotting is
+     * necessary because PJ_IOQUEUE_CALLBACK_NO_LOCK causes this callback
+     * to be invoked without the key lock held — without the copy, a
+     * concurrent attach could bzero rtp_src_addr after we passed a
+     * pointer to it into the cb, and the cb would then see sa_family=0.
      */
     if (udp->base.grp_lock)
         pj_grp_lock_acquire(udp->base.grp_lock);
@@ -516,6 +524,7 @@ static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
     cb = udp->rtp_cb;
     cb2 = udp->rtp_cb2;
     user_data = udp->user_data;
+    pj_memcpy(src_addr, &udp->rtp_src_addr, sizeof(*src_addr));
 
     if (udp->base.grp_lock)
         pj_grp_lock_release(udp->base.grp_lock);
@@ -523,15 +532,33 @@ static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read,
     if (cb2) {
         pjmedia_tp_cb_param param;
 
+        /* If a concurrent transport_attach2() zeroed rtp_src_addr
+         * between the recvfrom completion and this snapshot, the cb
+         * has no valid peer to act on; drop the packet rather than
+         * feeding sa_family=0 downstream. The next recvfrom will
+         * repopulate the address. Only relevant for real received
+         * packets (bytes_read > 0); error notifications (bytes_read
+         * < 0, e.g. PJ_ESOCKETSTOP from the restart paths) must
+         * still be delivered regardless of src_addr state, since
+         * they signal a fatal socket condition to the upper layer.
+         */
+        if (bytes_read > 0 &&
+            src_addr->addr.sa_family != PJ_AF_INET &&
+            src_addr->addr.sa_family != PJ_AF_INET6)
+        {
+            return;
+        }
+
         param.user_data = user_data;
         param.pkt = udp->rtp_pkt;
         param.size = bytes_read;
-        param.src_addr = &udp->rtp_src_addr;
+        param.src_addr = src_addr;
         param.rem_switch = PJ_FALSE;
         (*cb2)(&param);
         if (rem_switch)
             *rem_switch = param.rem_switch;
     } else if (cb) {
+        /* Legacy cb doesn't consume src_addr; deliver unconditionally. */
         (*cb)(user_data, udp->rtp_pkt, bytes_read);
     }
 }
@@ -564,6 +591,7 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
     struct transport_udp *udp;
     pj_status_t status;
     pj_bool_t rem_switch = PJ_FALSE;
+    pj_sockaddr src_addr;
     pj_bool_t transport_restarted = PJ_FALSE;
     unsigned num_err = 0;
     pj_status_t last_err = PJ_SUCCESS;
@@ -584,7 +612,7 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
         status = transport_restart(PJ_TRUE, udp);
         if (status != PJ_SUCCESS) {
             bytes_read = -PJ_ESOCKETSTOP;
-            call_rtp_cb(udp, bytes_read, NULL);
+            call_rtp_cb(udp, bytes_read, NULL, &src_addr);
         }
         return;
     }
@@ -595,7 +623,7 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
         /* Simulate packet lost on RX direction */
         if (udp->rx_drop_pct) {
             if ((pj_rand() % 100) <= (int)udp->rx_drop_pct) {
-                PJ_LOG(5,(udp->base.name, 
+                PJ_LOG(5,(udp->base.name,
                           "RX RTP packet dropped because of pkt lost "
                           "simulation"));
                 discard = PJ_TRUE;
@@ -603,10 +631,10 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
         }
 
         //if (!discard && udp->attached && cb)
-        if (!discard && 
-            (-bytes_read != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))) 
+        if (!discard &&
+            (-bytes_read != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL)))
         {
-            call_rtp_cb(udp, bytes_read, &rem_switch);
+            call_rtp_cb(udp, bytes_read, &rem_switch, &src_addr);
         }
 
         /* Transport may be destroyed from the callback! */
@@ -620,12 +648,16 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
         {
             char addr_text[PJ_INET6_ADDRSTRLEN+10];
 
-            /* Set remote RTP address to source address */
-            pj_sockaddr_cp(&udp->rem_rtp_addr, &udp->rtp_src_addr);
+            /* Set remote RTP address to source address. Use the snapshot
+             * filled in by call_rtp_cb() rather than udp->rtp_src_addr,
+             * since the latter can be zeroed by a concurrent
+             * transport_attach2().
+             */
+            pj_sockaddr_cp(&udp->rem_rtp_addr, &src_addr);
 
             PJ_LOG(4,(udp->base.name,
                       "Remote RTP address switched to %s",
-                      pj_sockaddr_print(&udp->rtp_src_addr, addr_text,
+                      pj_sockaddr_print(&src_addr, addr_text,
                                         sizeof(addr_text), 3)));
 
             if (udp->use_rtcp_mux) {
@@ -660,11 +692,11 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
                                      &udp->rtp_src_addr,
                                      &udp->rtp_addrlen);
 
-        if (status != PJ_EPENDING && status != PJ_SUCCESS) {        
+        if (status != PJ_EPENDING && status != PJ_SUCCESS) {
             if (transport_restarted && last_err == status) {
                 /* Still the same error after restart */
                 bytes_read = -PJ_ESOCKETSTOP;
-                call_rtp_cb(udp, bytes_read, NULL);
+                call_rtp_cb(udp, bytes_read, NULL, &src_addr);
                 break;
             } else if (PJMEDIA_IGNORE_RECV_ERR_CNT) {
                 if (last_err == status) {
@@ -677,10 +709,10 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
                 if (status == PJ_ESOCKETSTOP ||
                     num_err > PJMEDIA_IGNORE_RECV_ERR_CNT)
                 {
-                    status = transport_restart(PJ_TRUE, udp);               
+                    status = transport_restart(PJ_TRUE, udp);
                     if (status != PJ_SUCCESS) {
                         bytes_read = -PJ_ESOCKETSTOP;
-                        call_rtp_cb(udp, bytes_read, NULL);
+                        call_rtp_cb(udp, bytes_read, NULL, &src_addr);
                         break;
                     }
                     transport_restarted = PJ_TRUE;
