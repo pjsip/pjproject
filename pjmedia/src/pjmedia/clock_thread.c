@@ -123,6 +123,12 @@ struct pjmedia_clock
     pj_bool_t                running;
     pj_bool_t                quitting;
     pj_lock_t               *lock;
+    /* Serializes pjmedia_clock_stop() and pjmedia_clock_destroy()
+     * across concurrent callers. Cannot be the same as `lock` above,
+     * because `lock` is held by the clock thread inside the callback
+     * (see clock_thread()), and stop/destroy must be allowed to run
+     * while the thread is mid-callback. */
+    pj_mutex_t              *destroy_lock;
 };
 
 
@@ -186,9 +192,26 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
     clock->thread = NULL;
     clock->running = PJ_FALSE;
     clock->quitting = PJ_FALSE;
-    
+    clock->destroy_lock = NULL;
+
     /* I don't think we need a mutex, so we'll use null. */
     status = pj_lock_create_null_mutex(pool, "clock", &clock->lock);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* But we *do* need a real mutex to serialize stop/destroy: under
+     * stress, multiple threads can land in pjmedia_clock_stop() on the
+     * same clock concurrently (e.g. cbar_stream_stop reached from both
+     * vid_port handle_format_change and free_vid_win). Without this,
+     * two pthread_join() calls race the same descriptor — POSIX
+     * rejects the second one with EINVAL, but on Windows the
+     * underlying WaitForSingleObject() permits multiple waiters and
+     * *both* return success, leading to double pj_thread_destroy()
+     * and double pj_pool_reset(). Allocated from the caller's pool so
+     * it outlives clock->pool's release in pjmedia_clock_destroy().
+     */
+    status = pj_mutex_create_recursive(pool, "clockdestroy",
+                                       &clock->destroy_lock);
     if (status != PJ_SUCCESS)
         return status;
 
@@ -245,7 +268,19 @@ PJ_DEF(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock)
  */
 PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
 {
+    pj_status_t ret = PJ_SUCCESS;
+
     PJ_ASSERT_RETURN(clock != NULL, PJ_EINVAL);
+
+    /* Serialize against concurrent stop/destroy on the same clock.
+     * The first caller does the join + descriptor destroy; subsequent
+     * callers acquire the mutex, find clock->thread == NULL, and
+     * return PJ_SUCCESS without touching the thread handle. This is
+     * portable across POSIX (where pthread_join would reject the
+     * second joiner with EINVAL) and Windows (where the underlying
+     * wait would otherwise allow multiple successful waiters).
+     */
+    pj_mutex_lock(clock->destroy_lock);
 
     clock->running = PJ_FALSE;
     clock->quitting = PJ_TRUE;
@@ -257,28 +292,23 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
             clock->thread = NULL;
             pj_pool_reset(clock->pool);
         } else if (status == PJ_ECANCELLED) {
-            /* We are probably called from the clock thread itself.
-             * Do not cancel the thread's quitting though, since it
-             * may cause the clock thread to run indefinitely.
-             */
-            // clock->quitting = PJ_FALSE;
-            return PJ_EBUSY;
+            /* We are called from the clock thread itself; we cannot
+             * join ourselves. Leave clock->quitting set so the thread
+             * will exit on the next loop iteration. The caller must
+             * NOT release the clock's owning pool — the thread is
+             * still alive. */
+            ret = PJ_EBUSY;
         } else {
-            /* pthread_join() returned an OS error (e.g. EINVAL on
-             * macOS). The usual cause is another thread already
-             * joining this same descriptor concurrently — POSIX
-             * forbids two simultaneous joiners. The actual joiner
-             * will set clock->thread = NULL once the underlying
-             * thread has exited; spin-wait here so the caller's
-             * follow-up pj_pool_release() doesn't pull the rug out
-             * from under the still-running clock thread.
-             */
-            while (clock->thread != NULL)
-                pj_thread_sleep(1);
+            /* Any other OS error from pj_thread_join(): clock->thread
+             * is still alive and the descriptor was not freed.
+             * Propagate the error so the caller doesn't release the
+             * owning pool out from under the running thread. */
+            ret = status;
         }
     }
 
-    return PJ_SUCCESS;
+    pj_mutex_unlock(clock->destroy_lock);
+    return ret;
 }
 
 
@@ -435,7 +465,13 @@ static int clock_thread(void *arg)
  */
 PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
 {
+    pj_status_t ret = PJ_SUCCESS;
+
     PJ_ASSERT_RETURN(clock != NULL, PJ_EINVAL);
+
+    /* Serialize against concurrent stop/destroy. See the same
+     * pattern in pjmedia_clock_stop() above. */
+    pj_mutex_lock(clock->destroy_lock);
 
     clock->running = PJ_FALSE;
     clock->quitting = PJ_TRUE;
@@ -445,15 +481,17 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
         if (status == PJ_SUCCESS) {
             pj_thread_destroy(clock->thread);
             clock->thread = NULL;
-        } else if (status != PJ_ECANCELLED) {
-            /* Another thread is already joining the same descriptor
-             * (see pjmedia_clock_stop() for details). Wait for it
-             * to clear clock->thread before we release clock->pool
-             * (which would free the thread descriptor underneath
-             * the joiner).
-             */
-            while (clock->thread != NULL)
-                pj_thread_sleep(1);
+        } else {
+            /* PJ_ECANCELLED (self-join) or another OS error: the
+             * clock thread is still alive and may still touch
+             * clock->lock and clock->pool from inside the callback
+             * loop. Tearing them down here would be a UAF. Skip the
+             * cleanup, propagate the error, and let the caller
+             * (which still owns the backing pool) retry once the
+             * thread has actually exited. */
+            ret = (status == PJ_ECANCELLED) ? PJ_EBUSY : status;
+            pj_mutex_unlock(clock->destroy_lock);
+            return ret;
         }
     }
 
@@ -464,7 +502,19 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
 
     pj_pool_safe_release(&clock->pool);
 
-    return PJ_SUCCESS;
+    /* Release destroy_lock and free its OS resources. pjmedia_clock
+     * is documented as single-owner for stop/destroy, and the higher
+     * layer (e.g. pjsua_vid window refcounting) is responsible for
+     * not calling destroy concurrently; the destroy_lock only guards
+     * against the in-progress stop/destroy on the same clock that
+     * we've already drained by holding it through the join above.
+     * After this unlock there must be no further callers.
+     */
+    pj_mutex_unlock(clock->destroy_lock);
+    pj_mutex_destroy(clock->destroy_lock);
+    clock->destroy_lock = NULL;
+
+    return ret;
 }
 
 

@@ -597,7 +597,9 @@ static pjsua_vid_win_id vid_preview_get_win(pjmedia_vid_dev_index id,
 
     for (i=0; i<PJSUA_MAX_VID_WINS; ++i) {
         pjsua_vid_win *w = &pjsua_var.win[i];
-        if (w->type == PJSUA_WND_TYPE_PREVIEW && w->preview_cap_id == id) {
+        if (w->type == PJSUA_WND_TYPE_PREVIEW && !w->is_destroying &&
+            w->preview_cap_id == id)
+        {
             wid = i;
             break;
         }
@@ -944,15 +946,24 @@ static void free_vid_win(pjsua_vid_win_id wid)
     PJ_LOG(4,(THIS_FILE, "Window %d: destroying..", wid));
     pj_log_push_indent();
 
-    /* Snapshot the underlying vid_ports and conf slots under PJSUA_LOCK,
-     * then clear them out of the window so that anything else reading
-     * pjsua_var.win[wid] concurrently (e.g. another call's
-     * pjsua_vid_stop_stream() that shares this preview window) sees
-     * vp_cap == NULL / vp_rend == NULL and skips the stop, instead of
+    /* Mark the window as being torn down and snapshot the underlying
+     * vid_ports / conf slots under PJSUA_LOCK, then clear them out
+     * of the window so that anything else reading pjsua_var.win[wid]
+     * concurrently (e.g. another call's pjsua_vid_stop_stream() that
+     * shares this preview window, or vid_preview_get_win() about to
+     * inc_vid_win() this slot) sees is_destroying == PJ_TRUE and
+     * vp_cap == NULL / vp_rend == NULL and skips the slot, instead of
      * dereferencing a vid_port whose underlying cbar stream is about
      * to be freed by the destroy calls below.
+     *
+     * dec_vid_win() already sets is_destroying before calling us, but
+     * free_vid_win() is also reached from create_vid_win()'s on_error
+     * path and from pjsua_vid_subsys_destroy() — those don't go
+     * through dec_vid_win(), so we set the flag here too. Idempotent
+     * either way.
      */
     PJSUA_LOCK();
+    w->is_destroying = PJ_TRUE;
     vp_cap    = w->vp_cap;
     vp_rend   = w->vp_rend;
     cap_slot  = w->cap_slot;
@@ -997,7 +1008,7 @@ static void inc_vid_win(pjsua_vid_win_id wid)
 
     PJSUA_LOCK();
     w = &pjsua_var.win[wid];
-    pj_assert(w->type != PJSUA_WND_TYPE_NONE);
+    pj_assert(w->type != PJSUA_WND_TYPE_NONE && !w->is_destroying);
     ++w->ref_cnt;
     PJSUA_UNLOCK();
 }
@@ -1011,7 +1022,9 @@ static void dec_vid_win(pjsua_vid_win_id wid)
 
     PJSUA_LOCK();
     w = &pjsua_var.win[wid];
-    if (w->type == PJSUA_WND_TYPE_NONE || w->ref_cnt == 0) {
+    if (w->type == PJSUA_WND_TYPE_NONE || w->is_destroying ||
+        w->ref_cnt == 0)
+    {
         /* A concurrent dec on a shared preview window has already
          * driven ref_cnt to 0 and is inside free_vid_win() (which
          * releases PJSUA_LOCK to destroy its vid_ports), or the
@@ -1020,12 +1033,21 @@ static void dec_vid_win(pjsua_vid_win_id wid)
         return;
     }
     if (--w->ref_cnt == 0) {
-        /* Mark the window dead *before* we release PJSUA_LOCK inside
-         * free_vid_win(): a concurrent inc/dec on the same wid (e.g.
-         * another call sharing this Colorbar preview) would otherwise
-         * touch half-destroyed state and double-destroy the cbar
-         * stream, racing the cbar clock thread vs pool release. */
-        w->type = PJSUA_WND_TYPE_NONE;
+        /* Mark the window as being destroyed *before* we release
+         * PJSUA_LOCK inside free_vid_win(): a concurrent inc/dec on
+         * the same wid (e.g. another call sharing this Colorbar
+         * preview) would otherwise touch half-destroyed state and
+         * double-destroy the cbar stream, racing the cbar clock
+         * thread vs pool release.
+         *
+         * The flag is cleared (via pj_bzero) only by the final
+         * pjsua_vid_win_reset() at the tail of free_vid_win(),
+         * which is also what returns the slot to the allocator.
+         * Until then, the slot stays "not selectable" in
+         * vid_preview_get_win(), the create_vid_win() slot
+         * allocator, the enumeration, and another inc/dec.
+         */
+        w->is_destroying = PJ_TRUE;
         need_free = PJ_TRUE;
     }
     PJSUA_UNLOCK();
@@ -1818,7 +1840,7 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_wins( pjsua_vid_win_id wids[],
 
     for (i=0; i<PJSUA_MAX_VID_WINS && cnt <*count; ++i) {
         pjsua_vid_win *w = &pjsua_var.win[i];
-        if (w->type != PJSUA_WND_TYPE_NONE)
+        if (w->type != PJSUA_WND_TYPE_NONE && !w->is_destroying)
             wids[cnt++] = i;
     }
 
