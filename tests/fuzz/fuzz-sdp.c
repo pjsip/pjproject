@@ -31,6 +31,102 @@
 
 pj_pool_factory *mem;
 
+/* Hardcoded local capability SDP used in negotiation paths */
+static const char LOCAL_CAP_SDP[] =
+    "v=0\r\n"
+    "o=- 1234 1 IN IP4 127.0.0.1\r\n"
+    "s=pjmedia\r\n"
+    "c=IN IP4 127.0.0.1\r\n"
+    "t=0 0\r\n"
+    "m=audio 4000 RTP/AVP 0 8 9 101\r\n"
+    "a=rtpmap:0 PCMU/8000\r\n"
+    "a=rtpmap:8 PCMA/8000\r\n"
+    "a=rtpmap:9 G722/8000\r\n"
+    "a=rtpmap:101 telephone-event/8000\r\n"
+    "a=fmtp:101 0-15\r\n"
+    "m=video 4002 RTP/AVP 96 97\r\n"
+    "a=rtpmap:96 H264/90000\r\n"
+    "a=rtpmap:97 VP8/90000\r\n";
+
+/* Fuzz sdp negotiation code */
+static void sdp_neg_fuzz(const char *data, size_t size)
+{
+    pj_pool_t *pool;
+    pjmedia_sdp_session *local_cap, *remote_sdp, *local_sdp2;
+    pjmedia_sdp_neg *neg;
+    char *lbuf, *rbuf, *lbuf2;
+    size_t lcap_len = sizeof(LOCAL_CAP_SDP) - 1;
+
+    pool = pj_pool_create(mem, "sdp_neg_fuzz", 8000, 4000, NULL);
+
+    /* Answerer logic */
+    lbuf = (char *)pj_pool_alloc(pool, lcap_len + 1);
+    pj_memcpy(lbuf, LOCAL_CAP_SDP, lcap_len + 1);
+    rbuf = (char *)pj_pool_alloc(pool, size + 1);
+    pj_memcpy(rbuf, data, size);
+    rbuf[size] = '\0';
+
+    if (pjmedia_sdp_parse(pool, lbuf, lcap_len, &local_cap) == PJ_SUCCESS &&
+        pjmedia_sdp_parse(pool, rbuf, size, &remote_sdp) == PJ_SUCCESS) {
+
+        if (pjmedia_sdp_neg_create_w_remote_offer(pool, local_cap, remote_sdp,
+                                                   &neg) == PJ_SUCCESS) {
+            pjmedia_sdp_neg_set_prefer_remote_codec_order(neg, PJ_FALSE);
+            pjmedia_sdp_neg_set_answer_multiple_codecs(neg, PJ_FALSE);
+
+            if (pjmedia_sdp_neg_negotiate(pool, neg, 0) == PJ_SUCCESS) {
+                const pjmedia_sdp_session *active_l, *active_r;
+                pjmedia_sdp_neg_get_active_local(neg, &active_l);
+                pjmedia_sdp_neg_get_active_remote(neg, &active_r);
+                pjmedia_sdp_neg_was_answer_remote(neg);
+
+                lbuf2 = (char *)pj_pool_alloc(pool, lcap_len + 1);
+                pj_memcpy(lbuf2, LOCAL_CAP_SDP, lcap_len + 1);
+                if (pjmedia_sdp_parse(pool, lbuf2, lcap_len, &local_sdp2) == PJ_SUCCESS) {
+                    if (pjmedia_sdp_neg_modify_local_offer2(pool, neg, 0,
+                                                             local_sdp2) == PJ_SUCCESS)
+                        pjmedia_sdp_neg_cancel_offer(neg);
+                }
+            }
+        }
+    }
+
+    /* Offerer logic */
+    lbuf = (char *)pj_pool_alloc(pool, lcap_len + 1);
+    pj_memcpy(lbuf, LOCAL_CAP_SDP, lcap_len + 1);
+    rbuf = (char *)pj_pool_alloc(pool, size + 1);
+    pj_memcpy(rbuf, data, size);
+    rbuf[size] = '\0';
+
+    if (pjmedia_sdp_parse(pool, lbuf, lcap_len, &local_cap) == PJ_SUCCESS) {
+        if (pjmedia_sdp_neg_create_w_local_offer(pool, local_cap, &neg) == PJ_SUCCESS) {
+            if (pjmedia_sdp_parse(pool, rbuf, size, &remote_sdp) == PJ_SUCCESS) {
+                if (pjmedia_sdp_neg_set_remote_answer(pool, neg, remote_sdp) == PJ_SUCCESS)
+                    pjmedia_sdp_neg_negotiate(pool, neg, 0);
+            }
+        }
+    }
+
+    /* Remote Offerer logic */
+    rbuf = (char *)pj_pool_alloc(pool, size + 1);
+    pj_memcpy(rbuf, data, size);
+    rbuf[size] = '\0';
+    lbuf = (char *)pj_pool_alloc(pool, lcap_len + 1);
+    pj_memcpy(lbuf, LOCAL_CAP_SDP, lcap_len + 1);
+
+    if (pjmedia_sdp_parse(pool, rbuf, size, &remote_sdp) == PJ_SUCCESS) {
+        if (pjmedia_sdp_neg_create_w_remote_offer(pool, NULL, remote_sdp,
+                                                   &neg) == PJ_SUCCESS) {
+            if (pjmedia_sdp_parse(pool, lbuf, lcap_len, &local_cap) == PJ_SUCCESS) {
+                if (pjmedia_sdp_neg_set_local_answer(pool, neg, local_cap) == PJ_SUCCESS)
+                    pjmedia_sdp_neg_negotiate(pool, neg, 0);
+            }
+        }
+    }
+
+    pj_pool_release(pool);
+}
+
 int sdp_parser(char *DataFx,size_t Size){
 
     int ret = 0;
@@ -57,18 +153,17 @@ end:
 
 extern int
 LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
-{/*pjproject/pjmedia/src/test/sdp_neg_test.c*/
+{
 
     if (Size < kMinInputLength || Size > kMaxInputLength){
         return 1;
     }
 
-/*Add Extra byte */
+    /* Add Extra byte */
     char *DataFx;
-    DataFx = (char *)calloc((Size+1),sizeof(char));
-    memcpy((void *)DataFx,(void *)Data,Size);
+    DataFx = (char *)calloc((Size+1), sizeof(char));
+    memcpy((void *)DataFx, (void *)Data, Size);
 
-/*init*/
     int ret = 0;
     pj_caching_pool caching_pool;
     pj_pool_t *pool;
@@ -83,10 +178,13 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     pjmedia_event_mgr_create(pool, 0, NULL);
 
-/*Call*/
-    ret = sdp_parser(DataFx,Size);
+    /* Fuzz sdp parsing */
+    ret = sdp_parser(DataFx, Size);
 
-/*Free*/
+    /* Fuzz sdp negotiation */
+    sdp_neg_fuzz(DataFx, Size);
+
+    /* Free object */
     pjmedia_event_mgr_destroy(pjmedia_event_mgr_instance());
     pj_pool_release(pool);
     pj_caching_pool_destroy(&caching_pool);
