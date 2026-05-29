@@ -181,7 +181,7 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     /* Fuzz sdp parsing */
     ret = sdp_parser(DataFx, Size);
 
-    /* Fuz sdp negotiation */
+    /* Fuzz sdp negotiation */
     sdp_neg_fuzz(DataFx, Size);
 
     /* Free object */
