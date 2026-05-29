@@ -194,8 +194,9 @@ static int init_codecs(void)
      *
      * The stereo override is only applied when every query/config step
      * succeeds. If any step fails, Opus stays at its factory (mono) default,
-     * so we downgrade the Opus harness entry to mono to keep the id, channel
-     * count and PCM frame size consistent with how the codec is opened. */
+     * so we downgrade the harness Opus channel count and PCM frame size to
+     * match how the codec will be opened (while still looking it up by the
+     * registered "opus/48000/2" ID).
     {
         pjmedia_codec_param opus_param;
         pjmedia_codec_opus_config opus_cfg;
