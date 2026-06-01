@@ -1528,19 +1528,24 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
         vp_rend = w->vp_rend;
         PJSUA_UNLOCK();
 
+        /* Retrieve stream decoding port and always remove the
+         * call-specific subscription from it, even when the renderer
+         * has already been torn down.
+         */
+        status = pjmedia_vid_stream_get_port(strm, PJMEDIA_DIR_DECODING,
+                                             &media_port);
+        if (status == PJ_SUCCESS) {
+            pjmedia_event_unsubscribe(NULL, &call_media_on_event,
+                                      call_med, media_port);
+        }
+
         if (vp_rend) {
             /* Unsubscribe event, but stop the render first */
             pjmedia_vid_port_stop(vp_rend);
             pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
                                       vp_rend);
 
-            /* Retrieve stream decoding port */
-            status = pjmedia_vid_stream_get_port(strm, PJMEDIA_DIR_DECODING,
-                                                 &media_port);
             if (status == PJ_SUCCESS) {
-                pjmedia_event_unsubscribe(NULL, &call_media_on_event,
-                                        call_med, media_port);
-
                 pjmedia_vid_port_unsubscribe_event(vp_rend, media_port);
             }
         }

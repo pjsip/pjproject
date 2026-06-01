@@ -212,8 +212,12 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
      */
     status = pj_mutex_create_recursive(pool, "clockdestroy",
                                        &clock->destroy_lock);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        pj_lock_destroy(clock->lock);
+        clock->lock = NULL;
+        pj_pool_safe_release(&clock->pool);
         return status;
+    }
 
     *p_clock = clock;
 
@@ -502,19 +506,12 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
 
     pj_pool_safe_release(&clock->pool);
 
-    /* Release destroy_lock and free its OS resources. pjmedia_clock
-     * is documented as single-owner for stop/destroy, and the higher
-     * layer (e.g. pjsua_vid window refcounting) is responsible for
-     * not calling destroy concurrently; the destroy_lock only guards
-     * against the in-progress stop/destroy on the same clock that
-     * we've already drained by holding it through the join above.
-     * After this unlock there must be no further callers.
+    /* Keep destroy_lock valid for the lifetime of this clock object.
+     * Unlocking and immediately destroying it can race with concurrent
+     * stop/destroy callers currently blocked on the same mutex.
      */
     pj_mutex_unlock(clock->destroy_lock);
-    pj_mutex_destroy(clock->destroy_lock);
-    clock->destroy_lock = NULL;
 
     return ret;
 }
-
 
