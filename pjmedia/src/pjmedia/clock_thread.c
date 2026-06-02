@@ -207,10 +207,17 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
      * rejects the second one with EINVAL, but on Windows the
      * underlying WaitForSingleObject() permits multiple waiters and
      * *both* return success, leading to double pj_thread_destroy()
-     * and double pj_pool_reset(). Allocated from the caller's pool so
-     * it outlives clock->pool's release in pjmedia_clock_destroy().
-     */
-    status = pj_mutex_create_recursive(pool, "clockdestroy",
+     * and double pj_pool_reset().
+     *
+     * Allocated from clock->pool — not the caller's pool — so the
+     * lock and the memory it guards share one lifetime and are torn
+     * down together in pjmedia_clock_destroy() by a single owner.
+     * pj_mutex_destroy(destroy_lock) runs immediately before
+     * pj_pool_safe_release(&clock->pool) there. This relies on the
+     * caller not issuing concurrent destroy on the same handle —
+     * which the higher-layer is_destroying flag + dec_vid_win under
+     * PJSUA_LOCK guarantees for the pjsua video path. */
+    status = pj_mutex_create_recursive(clock->pool, "clockdestroy",
                                        &clock->destroy_lock);
     if (status != PJ_SUCCESS) {
         pj_lock_destroy(clock->lock);
@@ -504,14 +511,19 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
         clock->lock = NULL;
     }
 
-    pj_pool_safe_release(&clock->pool);
-
-    /* Keep destroy_lock valid for the lifetime of this clock object.
-     * Unlocking and immediately destroying it can race with concurrent
-     * stop/destroy callers currently blocked on the same mutex.
-     */
+    /* Release destroy_lock and tear down its OS resources together
+     * with the pool that backs its memory. The lock and the memory
+     * it guards share one lifetime — both go away here, under one
+     * owner. Safe because the higher layer (e.g. pjsua_vid's
+     * is_destroying flag + dec_vid_win under PJSUA_LOCK) guarantees
+     * no concurrent destroy/stop on the same clock; any in-flight
+     * concurrent caller has already drained against destroy_lock
+     * above. */
     pj_mutex_unlock(clock->destroy_lock);
+    pj_mutex_destroy(clock->destroy_lock);
+    clock->destroy_lock = NULL;
+
+    pj_pool_safe_release(&clock->pool);
 
     return ret;
 }
-
