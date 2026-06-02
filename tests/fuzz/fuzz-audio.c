@@ -197,6 +197,7 @@ static int init_codecs(void)
      * so we downgrade the harness Opus channel count and PCM frame size to
      * match how the codec will be opened (while still looking it up by the
      * registered "opus/48000/2" ID).
+     */
     {
         pjmedia_codec_param opus_param;
         pjmedia_codec_opus_config opus_cfg;
