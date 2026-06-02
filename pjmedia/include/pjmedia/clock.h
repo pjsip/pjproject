@@ -327,7 +327,7 @@ PJ_DECL(pj_bool_t) pjmedia_clock_wait(pjmedia_clock *clock,
  * The caller must also ensure no concurrent #pjmedia_clock_stop() or
  * #pjmedia_clock_destroy() is in flight on the same clock when the
  * destroy proceeds past its internal join; the lock that serializes
- * stop/destroy is torn down at the tail of a successful destroy.
+ * stop/destroy stays valid for the clock object's lifetime.
  *
  * @param clock             The media clock.
  *

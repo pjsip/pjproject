@@ -511,17 +511,10 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
         clock->lock = NULL;
     }
 
-    /* Release destroy_lock and tear down its OS resources together
-     * with the pool that backs its memory. The lock and the memory
-     * it guards share one lifetime — both go away here, under one
-     * owner. Safe because the higher layer (e.g. pjsua_vid's
-     * is_destroying flag + dec_vid_win under PJSUA_LOCK) guarantees
-     * no concurrent destroy/stop on the same clock; any in-flight
-     * concurrent caller has already drained against destroy_lock
-     * above. */
+    /* Keep destroy_lock valid for the clock object's lifetime.
+     * This avoids late stop/destroy callers touching a destroyed/NULL
+     * mutex after another thread has already completed destroy(). */
     pj_mutex_unlock(clock->destroy_lock);
-    pj_mutex_destroy(clock->destroy_lock);
-    clock->destroy_lock = NULL;
 
     pj_pool_safe_release(&clock->pool);
 
