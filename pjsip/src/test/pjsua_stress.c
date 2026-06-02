@@ -114,6 +114,9 @@ typedef struct worker_ctx {
 
 /* Global state. */
 static struct {
+    /* Own caching pool factory so pool/mutex outlive pjsua_destroy(). */
+    pj_caching_pool     cp;
+    pj_bool_t           cp_inited;
     pj_pool_t          *pool;
     pj_mutex_t         *mutex;          /* protects legs[], leg_count, video_leg_count */
     leg_entry_t        *legs;           /* size = max_legs */
@@ -884,19 +887,32 @@ int main(int argc, char *argv[])
 {
     int rc;
     int parse_rc = parse_args(argc, argv, &g.opts);
+    pj_status_t status;
     if (parse_rc < 0) return 2;
     if (parse_rc > 0) return 0;
 
-    if (setup_pjsua(&g.opts) != 0)
+    /* Independent pjlib ref + caching pool so g.pool/g.mutex outlive
+     * pjsua_destroy() and survive late on_call_state callbacks. */
+    status = pj_init();
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "pj_init() failed"));
         return 1;
+    }
+    pj_caching_pool_init(&g.cp, &pj_pool_factory_default_policy, 0);
+    g.cp_inited = PJ_TRUE;
+
+    if (setup_pjsua(&g.opts) != 0) {
+        pj_caching_pool_destroy(&g.cp);
+        pj_shutdown();
+        return 1;
+    }
 
     PJ_LOG(3, (THIS_FILE,
                "pjsua_stress: N=%d V=%d T=%d duration=%ds port=%d seed=%u",
                g.opts.max_legs, g.opts.max_video_legs, g.opts.worker_count,
                g.opts.duration_sec, g.opts.port, g.opts.seed));
 
-    /* Allocate runtime structures from a pjsua pool. */
-    g.pool = pjsua_pool_create("stress", 4096, 4096);
+    g.pool = pj_pool_create(&g.cp.factory, "stress", 4096, 4096, NULL);
     if (!g.pool) {
         PJ_LOG(1, (THIS_FILE, "pjsua_pool_create failed"));
         pjsua_destroy();
@@ -928,8 +944,10 @@ int main(int argc, char *argv[])
     if (run_cleanup() != 0 && rc == 0)
         rc = 1;
 
-    /* Release app-owned resources before pjsua_destroy, otherwise pjsua's
-     * pool factory logs "Pool is not released by application" on shutdown. */
+    /* Destroy pjsua first so its workers stop firing on_call_state
+     * callbacks before we tear down g.mutex (held via registry_remove). */
+    pjsua_destroy();
+
     if (g.mutex) {
         pj_mutex_destroy(g.mutex);
         g.mutex = NULL;
@@ -938,8 +956,12 @@ int main(int argc, char *argv[])
         pj_pool_release(g.pool);
         g.pool = NULL;
     }
+    if (g.cp_inited) {
+        pj_caching_pool_destroy(&g.cp);
+        g.cp_inited = PJ_FALSE;
+    }
 
-    pjsua_destroy();
+    pj_shutdown();
     return rc;
 }
 
