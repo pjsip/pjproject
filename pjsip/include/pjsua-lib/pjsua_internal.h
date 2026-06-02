@@ -537,6 +537,9 @@ typedef struct pjsua_vid_win
     pjsua_vid_win_type           type;          /**< Type.              */
     pj_pool_t                   *pool;          /**< Own pool.          */
     unsigned                     ref_cnt;       /**< Reference counter. */
+    pj_bool_t                    is_destroying; /**< Currently being torn
+                                                     down (free_vid_win()
+                                                     in progress).      */
     pjmedia_vid_port            *vp_cap;        /**< Capture vidport.   */
     pjmedia_vid_port            *vp_rend;       /**< Renderer vidport   */
     pjsua_conf_port_id           cap_slot;      /**< Capturer conf slot */

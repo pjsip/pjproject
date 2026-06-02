@@ -2367,6 +2367,9 @@ private:
     static void on_call_tsx_state(pjsua_call_id call_id,
                                   pjsip_transaction *tsx,
                                   pjsip_event *e);
+    static pj_bool_t on_call_tsx_terminate_session(pjsua_call_id call_id,
+                                                   pjsip_transaction *tsx,
+                                                   pjsip_event *e);
     static void on_call_media_state(pjsua_call_id call_id);
     static void on_call_sdp_created(pjsua_call_id call_id,
                                     pjmedia_sdp_session *sdp,
