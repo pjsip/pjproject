@@ -511,10 +511,12 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
         clock->lock = NULL;
     }
 
-    /* Keep destroy_lock valid for the clock object's lifetime.
-     * This avoids late stop/destroy callers touching a destroyed/NULL
-     * mutex after another thread has already completed destroy(). */
+    /* destroy_lock memory lives in clock->pool, so tear it down here
+     * before pool release. Caller must not race stop/destroy past
+     * this point. */
     pj_mutex_unlock(clock->destroy_lock);
+    pj_mutex_destroy(clock->destroy_lock);
+    clock->destroy_lock = NULL;
 
     pj_pool_safe_release(&clock->pool);
 
