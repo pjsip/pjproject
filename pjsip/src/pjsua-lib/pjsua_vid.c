@@ -1843,11 +1843,13 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_wins( pjsua_vid_win_id wids[],
 
     cnt = 0;
 
+    PJSUA_LOCK();
     for (i=0; i<PJSUA_MAX_VID_WINS && cnt <*count; ++i) {
         pjsua_vid_win *w = &pjsua_var.win[i];
         if (w->type != PJSUA_WND_TYPE_NONE && !w->is_destroying)
             wids[cnt++] = i;
     }
+    PJSUA_UNLOCK();
 
     *count = cnt;
 
