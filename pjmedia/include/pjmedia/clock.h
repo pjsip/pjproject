@@ -317,11 +317,23 @@ PJ_DECL(pj_bool_t) pjmedia_clock_wait(pjmedia_clock *clock,
 
 
 /**
- * Destroy the clock.
+ * Destroy the clock. If called from inside the clock callback
+ * (self-join), the function cannot complete the destroy: it returns
+ * #PJ_EBUSY without tearing the clock down. The caller must arrange
+ * a retry from a different thread. Use #pjmedia_clock_stop() to
+ * signal stop from within the callback, and destroy from outside.
+ *
+ * The caller must also ensure no concurrent #pjmedia_clock_stop() or
+ * #pjmedia_clock_destroy() runs on the same clock once the destroy
+ * proceeds past its internal join; the lock that serializes
+ * stop/destroy is torn down at the tail of a successful destroy.
  *
  * @param clock             The media clock.
  *
- * @return                  PJ_SUCCES on success.
+ * @return                  PJ_SUCCESS on success, #PJ_EBUSY if
+ *                          called from inside the clock callback
+ *                          (self-join), or another error code if
+ *                          the OS-level join failed.
  */
 PJ_DECL(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock);
 
