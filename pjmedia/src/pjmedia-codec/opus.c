@@ -833,6 +833,12 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
         opus_data->parse_buf_size = MAX_ENCODED_PACKET_SIZE * 2;
         opus_data->parse_buf = pj_pool_alloc(opus_data->pool,
                                              opus_data->parse_buf_size);
+        if (!opus_data->parse_buf) {
+            opus_data->parse_buf_size = 0;
+            PJ_LOG(2, (THIS_FILE, "Unable to allocate parse buffer"));
+            pj_mutex_unlock(opus_data->mutex);
+            return PJ_ENOMEM;
+        }
     }
 
     /* Initialize the repacketizers */
