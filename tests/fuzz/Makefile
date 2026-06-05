@@ -33,6 +33,7 @@ STREAM=fuzz-stream
 AUDIO=fuzz-audio
 AUTH=fuzz-auth
 MULTI=fuzz-multipart
+WAV=fuzz-wav
 
 EXTFLAGS=-Wall -Werror
 
@@ -65,6 +66,7 @@ $(TARGET):
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(AUDIO).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(AUTH).c
 	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(MULTI).c
+	$(CC) $(PJ_CFLAGS) $(EXTFLAGS) -c $(WAV).c
 
 	$(CXX) $(PJ_CFLAGS) -o $(JSON) $(JSON).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(XML)  $(XML).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
@@ -91,7 +93,8 @@ $(TARGET):
 	$(CXX) $(PJ_CFLAGS) -o $(STREAM)  $(STREAM).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(AUTH)  $(AUTH).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(MULTI)  $(MULTI).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
+	$(CXX) $(PJ_CFLAGS) -o $(WAV)  $(WAV).o  $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE)
 	$(CXX) $(PJ_CFLAGS) -o $(CRYPTO) $(CRYPTO).o $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS) $(LIB_FUZZING_ENGINE) -lssl -lcrypto -lz
 
 clean:
-	rm $(JSON) $(XML) $(SDP) $(ICE) $(STUN) $(SIP) $(SIPTRAN) $(SIPDIAL) $(RTCP) $(DNS) $(DNSREC) $(H264) $(VPX) $(HTTP) $(URL) $(URI) $(CRYPTO) $(RTP) $(SRTP) $(PRES) $(VIDEO) $(AUDIO) $(STREAM) $(SDES) $(AUTH)  $(MULTI) *.o
+	rm $(JSON) $(XML) $(SDP) $(ICE) $(STUN) $(SIP) $(SIPTRAN) $(SIPDIAL) $(RTCP) $(DNS) $(DNSREC) $(H264) $(VPX) $(HTTP) $(URL) $(URI) $(CRYPTO) $(RTP) $(SRTP) $(PRES) $(VIDEO) $(AUDIO) $(STREAM) $(SDES) $(AUTH)  $(MULTI) $(WAV) *.o
