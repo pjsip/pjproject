@@ -283,14 +283,9 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
 
     PJ_ASSERT_RETURN(clock != NULL, PJ_EINVAL);
 
-    /* Serialize against concurrent stop/destroy on the same clock.
-     * The first caller does the join + descriptor destroy; subsequent
-     * callers acquire the mutex, find clock->thread == NULL, and
-     * return PJ_SUCCESS without touching the thread handle. This is
-     * portable across POSIX (where pthread_join would reject the
-     * second joiner with EINVAL) and Windows (where the underlying
-     * wait would otherwise allow multiple successful waiters).
-     */
+    /* Serialize in-flight stop/destroy calls within the clock's
+     * lifetime. The caller contract in clock.h bars stop/destroy
+     * after a successful destroy (which tears down this lock). */
     pj_mutex_lock(clock->destroy_lock);
 
     clock->running = PJ_FALSE;
@@ -511,14 +506,9 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
         clock->lock = NULL;
     }
 
-    /* Release destroy_lock and tear down its OS resources together
-     * with the pool that backs its memory. The lock and the memory
-     * it guards share one lifetime — both go away here, under one
-     * owner. Safe because the higher layer (e.g. pjsua_vid's
-     * is_destroying flag + dec_vid_win under PJSUA_LOCK) guarantees
-     * no concurrent destroy/stop on the same clock; any in-flight
-     * concurrent caller has already drained against destroy_lock
-     * above. */
+    /* destroy_lock memory lives in clock->pool, so tear it down here
+     * before pool release. Caller must not race stop/destroy past
+     * this point. */
     pj_mutex_unlock(clock->destroy_lock);
     pj_mutex_destroy(clock->destroy_lock);
     clock->destroy_lock = NULL;
