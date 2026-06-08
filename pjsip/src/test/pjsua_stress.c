@@ -20,7 +20,7 @@
  *   4. Cleanup: hangup_all, wait for the call count to drain, pjsua_destroy.
  *
  * Usage:
- *   pjsua_stress [options]
+ *   pjsua-stress [options]
  *     -n N            Max audio call legs   (default 64)
  *     -v V            Max video call legs   (default 0)
  *     -t T            Worker thread count   (default 4)
@@ -126,10 +126,21 @@ static struct {
     pjmedia_vid_dev_index colorbar_dev;
     pjmedia_vid_dev_index null_rend_dev;
     stress_opts_t       opts;
-    volatile pj_bool_t  stop_flag;
+    pj_atomic_t        *stop_flag;
     pj_thread_t        *stats_thread;
     worker_ctx_t       *workers;        /* size = worker_count */
 } g;
+
+static pj_bool_t stop_flag_get(void)
+{
+    return g.stop_flag && pj_atomic_get(g.stop_flag) != 0;
+}
+
+static void stop_flag_set(pj_bool_t stop)
+{
+    if (g.stop_flag)
+        pj_atomic_set(g.stop_flag, stop ? 1 : 0);
+}
 
 
 /*============================================================================
@@ -321,7 +332,7 @@ static void do_make_call(worker_ctx_t *w, pj_bool_t with_video)
     if ((int)pjsua_call_get_count() + 2 > g.opts.max_legs)
         return;
     pj_mutex_lock(g.mutex);
-    if (with_video && g.video_leg_count >= g.opts.max_video_legs) {
+    if (with_video && g.video_leg_count + 2 > g.opts.max_video_legs) {
         pj_mutex_unlock(g.mutex);
         return;
     }
@@ -387,7 +398,7 @@ static int worker_thread(void *arg)
     int op_modulus = OP_COUNT;
 
     PJ_LOG(4, (THIS_FILE, "worker %d started", w->id));
-    while (!g.stop_flag) {
+    while (!stop_flag_get()) {
         int op = rand_r(&w->rng_state) % op_modulus;
         switch (op) {
         case OP_HANGUP:      do_hangup(w);             break;
@@ -419,11 +430,11 @@ static int worker_thread(void *arg)
 static int stats_thread_proc(void *arg)
 {
     PJ_UNUSED_ARG(arg);
-    while (!g.stop_flag) {
+    while (!stop_flag_get()) {
         unsigned i;
-        for (i = 0; i < STATS_INTERVAL_MS / 100 && !g.stop_flag; ++i)
+        for (i = 0; i < STATS_INTERVAL_MS / 100 && !stop_flag_get(); ++i)
             pj_thread_sleep(100);
-        if (g.stop_flag) break;
+        if (stop_flag_get()) break;
         PJ_LOG(3, (THIS_FILE,
                    "stats: tracked_legs=%d video=%d pjsua_calls=%u",
                    registry_leg_count(), registry_video_count(),
@@ -630,7 +641,7 @@ static int run_ramp(const stress_opts_t *opts)
             pjsua_call_setting opt;
             pj_str_t uri = pj_str(g.opts.self_uri);
             pj_status_t status;
-            pj_bool_t want_video = (vlegs < opts->max_video_legs);
+            pj_bool_t want_video = (vlegs + 2 <= opts->max_video_legs);
 
             pjsua_call_setting_default(&opt);
             opt.aud_cnt = 1;
@@ -674,7 +685,7 @@ static int run_stress(const stress_opts_t *opts)
     PJ_LOG(3, (THIS_FILE, "Stress phase: %d threads for %d s",
                opts->worker_count, opts->duration_sec));
 
-    g.stop_flag = PJ_FALSE;
+    stop_flag_set(PJ_FALSE);
 
     /* Spawn stats thread. */
     status = pj_thread_create(g.pool, "stats", &stats_thread_proc, NULL,
@@ -695,7 +706,7 @@ static int run_stress(const stress_opts_t *opts)
                                   0, 0, &w->thread);
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "worker thread create failed", status);
-            g.stop_flag = PJ_TRUE;
+            stop_flag_set(PJ_TRUE);
             return 1;
         }
     }
@@ -711,7 +722,7 @@ static int run_stress(const stress_opts_t *opts)
     }
 
     PJ_LOG(3, (THIS_FILE, "Stress duration elapsed; signaling stop"));
-    g.stop_flag = PJ_TRUE;
+    stop_flag_set(PJ_TRUE);
 
     for (i = 0; i < opts->worker_count; ++i) {
         if (g.workers[i].thread) {
@@ -777,7 +788,7 @@ static int run_cleanup(void)
 static void usage(void)
 {
     puts(
-        "Usage: pjsua_stress [options]\n"
+        "Usage: pjsua-stress [options]\n"
         "  -n N            Max audio call legs        (default 64)\n"
         "  -v V            Max video call legs        (default 0)\n"
         "  -t T            Worker thread count        (default 4)\n"
@@ -886,10 +897,8 @@ bad:
 int main(int argc, char *argv[])
 {
     int rc;
-    int parse_rc = parse_args(argc, argv, &g.opts);
     pj_status_t status;
-    if (parse_rc < 0) return 2;
-    if (parse_rc > 0) return 0;
+    int parse_rc;
 
     /* Independent pjlib ref + caching pool so g.pool/g.mutex outlive
      * pjsua_destroy() and survive late on_call_state callbacks. */
@@ -898,6 +907,17 @@ int main(int argc, char *argv[])
         PJ_LOG(1, (THIS_FILE, "pj_init() failed"));
         return 1;
     }
+
+    parse_rc = parse_args(argc, argv, &g.opts);
+    if (parse_rc < 0) {
+        pj_shutdown();
+        return 2;
+    }
+    if (parse_rc > 0) {
+        pj_shutdown();
+        return 0;
+    }
+
     pj_caching_pool_init(&g.cp, &pj_pool_factory_default_policy, 0);
     g.cp_inited = PJ_TRUE;
 
@@ -934,6 +954,12 @@ int main(int argc, char *argv[])
         pjsua_destroy();
         return 1;
     }
+    status = pj_atomic_create(g.pool, 0, &g.stop_flag);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "atomic create failed"));
+        pjsua_destroy();
+        return 1;
+    }
 
     rc = run_ramp(&g.opts);
     if (rc == 0) {
@@ -952,6 +978,10 @@ int main(int argc, char *argv[])
         pj_mutex_destroy(g.mutex);
         g.mutex = NULL;
     }
+    if (g.stop_flag) {
+        pj_atomic_destroy(g.stop_flag);
+        g.stop_flag = NULL;
+    }
     if (g.pool) {
         pj_pool_release(g.pool);
         g.pool = NULL;
@@ -964,4 +994,3 @@ int main(int argc, char *argv[])
     pj_shutdown();
     return rc;
 }
-
