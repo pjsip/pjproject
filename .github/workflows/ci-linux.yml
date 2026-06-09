@@ -688,3 +688,64 @@ jobs:
         cmake --build build-consumer --verbose
         ./build-consumer/test_consumer
         ./build-consumer/test_consumer2
+
+  # NOTE: temporary jobs to observe stress behavior on the GitHub runner.
+  # Revert before merging to master; the long-form runs live in stress-test.yml.
+  stress-testrun-asan:
+    runs-on: ubuntu-latest
+    name: stress / asan
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+    - name: config site
+      run: cp pjlib/include/pj/config_site_stress.h pjlib/include/pj/config_site.h
+    - name: configure
+      run: |
+        CFLAGS="-g -fsanitize=address" \
+        CXXFLAGS="-g -fsanitize=address" \
+        LDFLAGS="-rdynamic -fsanitize=address" \
+        ./configure
+    - name: make
+      run: $MAKE_FAST
+    - name: run pjsua-stress
+      run: |
+        export LSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/lsan.supp"
+        export ASAN_OPTIONS="halt_on_error=1"
+        ARCH=$(make --no-print-directory -s infotarget)
+        cd pjsip/bin
+        ./pjsua-stress-$ARCH -n 256 -v 16 -t 4 --duration 300 2>&1 | tee stress.log
+    - name: upload log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: stress-asan-log-${{ github.run_id }}
+        path: pjsip/bin/stress.log
+
+  stress-testrun-tsan:
+    runs-on: ubuntu-latest
+    name: stress / tsan
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+    - name: config site
+      run: cp pjlib/include/pj/config_site_stress.h pjlib/include/pj/config_site.h
+    - name: configure
+      run: |
+        CFLAGS="-g -fsanitize=thread" \
+        CXXFLAGS="-g -fsanitize=thread" \
+        LDFLAGS="-rdynamic -fsanitize=thread" \
+        ./configure
+    - name: make
+      run: $MAKE_FAST
+    - name: run pjsua-stress
+      run: |
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp halt_on_error=1"
+        ARCH=$(make --no-print-directory -s infotarget)
+        cd pjsip/bin
+        ./pjsua-stress-$ARCH -n 256 -v 16 -t 4 --duration 300 2>&1 | tee stress.log
+    - name: upload log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: stress-tsan-log-${{ github.run_id }}
+        path: pjsip/bin/stress.log
