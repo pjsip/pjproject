@@ -704,7 +704,7 @@ jobs:
         CFLAGS="-g -fsanitize=address" \
         CXXFLAGS="-g -fsanitize=address" \
         LDFLAGS="-rdynamic -fsanitize=address" \
-        ./configure
+        ./configure --enable-epoll
     - name: make
       run: $MAKE_FAST
     - name: run pjsua-stress
@@ -734,7 +734,7 @@ jobs:
         CFLAGS="-g -fsanitize=thread" \
         CXXFLAGS="-g -fsanitize=thread" \
         LDFLAGS="-rdynamic -fsanitize=thread" \
-        ./configure
+        ./configure --enable-epoll
     - name: make
       run: $MAKE_FAST
     - name: run pjsua-stress

@@ -38,7 +38,7 @@ jobs:
           CFLAGS="-g -fsanitize=${{ matrix.sanitizer }}" \
           CXXFLAGS="-g -fsanitize=${{ matrix.sanitizer }}" \
           LDFLAGS="-rdynamic -fsanitize=${{ matrix.sanitizer }}" \
-          ./configure
+          ./configure --enable-epoll
 
       - name: Build
         run: make -j3
