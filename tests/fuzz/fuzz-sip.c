@@ -395,9 +395,12 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
          * evsub_msg.c (Event/Subscription-State/Allow-Events),
          * sip_replaces.c (Replaces) and sip_timer.c (Session-Expires/Min-SE)
          * are never exercised even when present in the input message. */
-        pjsip_evsub_init_module(endpt);
-        pjsip_replaces_init_module(endpt);
-        pjsip_timer_init_module(endpt);
+        if (pjsip_evsub_init_module(endpt) != PJ_SUCCESS ||
+            pjsip_replaces_init_module(endpt) != PJ_SUCCESS ||
+            pjsip_timer_init_module(endpt) != PJ_SUCCESS) {
+            free(DataFx);
+            return 0;
+        }
 
         /* Initialize transaction user module */
         pj_bzero(&tsx_user_module, sizeof(tsx_user_module));
