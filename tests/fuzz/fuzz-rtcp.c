@@ -71,12 +71,12 @@ int rtcp_parser(char *data, size_t size)
     setting.samples_per_frame = 160;
     pjmedia_rtcp_init2(&session, &setting);
 
-    /* Enable RTCP XR (RFC 3611) so that pjmedia_rtcp_rx_rtcp() dispatches
-     * Extended Report packets (PT=207) into the XR parser in rtcp_xr.c.
-     * Without this the entire RTCP XR decoder is unreachable. Requires the
-     * build to define PJMEDIA_HAS_RTCP_XR=1 (see build.sh); the call is a
-     * no-op when the feature is compiled out. */
-    pjmedia_rtcp_enable_xr(&session, PJ_TRUE);
+    /* Enable RTCP XR (RFC 3611) so pjmedia_rtcp_rx_rtcp() can dispatch Extended
+     * Report packets (PT=207) into the XR parser (rtcp_xr.c) when
+     * PJMEDIA_HAS_RTCP_XR is enabled at build time. */
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    (void)pjmedia_rtcp_enable_xr(&session, PJ_TRUE);
+#endif
 
     /* Test integrated RTCP parsing */
     pjmedia_rtcp_rx_rtcp(&session, data, size);
