@@ -120,3 +120,4 @@ EXPORTS
 	pjsua_transport_register                 @ 119 NONAME
 	pjsua_transport_set_enable               @ 120 NONAME
 	pjsua_verify_sip_url                     @ 121 NONAME
+	pjsua_tone_detector_create               @ 122 NONAME

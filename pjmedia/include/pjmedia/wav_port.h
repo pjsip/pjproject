@@ -292,6 +292,18 @@ PJ_DECL(pj_status_t) pjmedia_wav_writer_port_create(pj_pool_t *pool,
                                                     pj_ssize_t buff_size,
                                                     pjmedia_port **p_port );
 
+PJ_DECL(pj_status_t) pjmedia_tone_detector_port_create(pj_pool_t *pool,
+						    const char *filename,
+						    unsigned clock_rate,
+						    unsigned channel_count,
+						    unsigned samples_per_frame,
+						    unsigned bits_per_sample,
+						    unsigned flags,
+						    pj_ssize_t buff_size,
+						    pjmedia_port **p_port,
+	       					    pj_status_t (*cb)(pjmedia_port *port, void *usr_data),
+						    void *usr_data);
+
 
 /**
  * Get current writing position. Note that this does not necessarily match
@@ -352,7 +364,7 @@ pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
  */
 PJ_DECL(pj_status_t) 
 pjmedia_wav_writer_port_set_cb2(pjmedia_port *port,
-                                pj_size_t pos,
+                               pj_size_t pos,
                                 void *user_data,
                                 void (*cb)(pjmedia_port *port,
                                            void *usr_data));
@@ -361,6 +373,7 @@ pjmedia_wav_writer_port_set_cb2(pjmedia_port *port,
 /**
  * @}
  */
+
 
 
 PJ_END_DECL

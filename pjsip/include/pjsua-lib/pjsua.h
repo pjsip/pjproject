@@ -8932,6 +8932,14 @@ PJ_DECL(pj_status_t) pjsua_recorder_create(const pj_str_t *filename,
                                            unsigned options,
                                            pjsua_recorder_id *p_id);
 
+PJ_DECL(pj_status_t) pjsua_tone_detector_create(const pj_str_t *filename,
+					   unsigned enc_type,
+					   void *enc_param,
+					   pj_ssize_t max_size,
+					   unsigned options,
+					   pjsua_recorder_id *p_id,
+					   pj_status_t (*cb)(pjmedia_port *port, void *usr_data),
+					   void *usr_data);
 
 /**
  * Get conference port associated with recorder.
