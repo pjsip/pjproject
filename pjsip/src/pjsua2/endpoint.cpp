@@ -340,7 +340,7 @@ void UaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_BOOL    ( this_node, mwiUnsolicitedEnabled);
     NODE_READ_BOOL    ( this_node, enableUpnp);
     NODE_READ_STRING  ( this_node, upnpIfName);
-    NODE_READ_BOOL_OPT( this_node, accServerAffinityDefault);
+    NODE_READ_BOOL    ( this_node, accServerAffinityDefault);
 }
 
 void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
