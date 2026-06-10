@@ -129,6 +129,7 @@ static struct {
     pj_atomic_t        *stop_flag;
     pj_thread_t        *stats_thread;
     worker_ctx_t       *workers;        /* size = worker_count */
+    pj_timer_entry     *deferred_state_timers;  /* size = max_legs */
 } g;
 
 static pj_bool_t stop_flag_get(void)
@@ -262,45 +263,66 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     pjsua_call_answer2(call_id, &opt, 200, NULL, NULL);
 }
 
-static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
+/* Runs from the pjsua event loop, NOT under the dialog grp_lock — see
+ * on_call_state() for the lock-order rationale. */
+static void on_call_state_change_deferred(pj_timer_heap_t *th,
+                                          pj_timer_entry *te)
 {
+    pjsua_call_id call_id = (pjsua_call_id)(pj_ssize_t)te->user_data;
     pjsua_call_info ci;
-    pj_status_t status;
+    pj_bool_t has_video = PJ_FALSE;
+    unsigned i;
 
-    PJ_UNUSED_ARG(e);
+    PJ_UNUSED_ARG(th);
 
-    status = pjsua_call_get_info(call_id, &ci);
-    if (status != PJ_SUCCESS)
+    if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS) {
+        registry_remove(call_id);
         return;
+    }
+
+    for (i = 0; i < ci.media_cnt; ++i) {
+        if (ci.media[i].type == PJMEDIA_TYPE_VIDEO &&
+            ci.media[i].dir != PJMEDIA_DIR_NONE)
+        {
+            has_video = PJ_TRUE;
+            break;
+        }
+    }
 
     if (ci.state == PJSIP_INV_STATE_CONFIRMED) {
-        pj_bool_t has_video = PJ_FALSE;
-        unsigned i;
-        for (i = 0; i < ci.media_cnt; ++i) {
-            if (ci.media[i].type == PJMEDIA_TYPE_VIDEO &&
-                ci.media[i].dir != PJMEDIA_DIR_NONE)
-            {
-                has_video = PJ_TRUE;
-                break;
-            }
-        }
         registry_add(call_id, has_video);
     } else if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
         registry_remove(call_id);
     }
-}
 
-static void on_call_media_state(pjsua_call_id call_id)
-{
     /* Connect audio call to itself so the conf bridge drains audio frames. */
-    pjsua_call_info ci;
-    if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS)
-        return;
     if (ci.media_status == PJSUA_CALL_MEDIA_ACTIVE &&
         ci.conf_slot != PJSUA_INVALID_ID)
     {
         pjsua_conf_connect(ci.conf_slot, ci.conf_slot);
     }
+}
+
+/* Defer the registry update: calling pjsua_call_get_info() here would
+ * acquire PJSUA_LOCK while the SIP stack already holds the dialog grp_lock,
+ * inverting the order that pjsua_call_make_call uses (PJSUA_LOCK first). */
+static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
+{
+    pj_time_val zero = {0, 0};
+    PJ_UNUSED_ARG(e);
+    if (!g.deferred_state_timers ||
+        call_id < 0 || call_id >= g.opts.max_legs)
+        return;
+    pjsua_schedule_timer(&g.deferred_state_timers[call_id], &zero);
+}
+
+static void on_call_media_state(pjsua_call_id call_id)
+{
+    pj_time_val zero = {0, 0};
+    if (!g.deferred_state_timers ||
+        call_id < 0 || call_id >= g.opts.max_legs)
+        return;
+    pjsua_schedule_timer(&g.deferred_state_timers[call_id], &zero);
 }
 
 
@@ -942,10 +964,20 @@ int main(int argc, char *argv[])
         g.pool, sizeof(leg_entry_t) * g.opts.max_legs);
     g.workers = (worker_ctx_t *)pj_pool_zalloc(
         g.pool, sizeof(worker_ctx_t) * g.opts.worker_count);
-    if (!g.legs || !g.workers) {
+    g.deferred_state_timers = (pj_timer_entry *)pj_pool_zalloc(
+        g.pool, sizeof(pj_timer_entry) * g.opts.max_legs);
+    if (!g.legs || !g.workers || !g.deferred_state_timers) {
         PJ_LOG(1, (THIS_FILE, "pool alloc failed"));
         pjsua_destroy();
         return 1;
+    }
+    {
+        int idx;
+        for (idx = 0; idx < g.opts.max_legs; ++idx) {
+            pj_timer_entry_init(&g.deferred_state_timers[idx], 0,
+                                (void*)(pj_ssize_t)idx,
+                                &on_call_state_change_deferred);
+        }
     }
     if (pj_mutex_create_recursive(g.pool, "stress-reg", &g.mutex)
         != PJ_SUCCESS)
