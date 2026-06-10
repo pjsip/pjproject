@@ -95,11 +95,11 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
         pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
 
-        /* A media endpoint registers the codec/format managers that the AVI
-         * stream parser consults while building stream info. */
-        if (pjmedia_endpt_create(&caching_pool.factory, NULL, 0,
-                                 &med_endpt) != PJ_SUCCESS)
+        /* A media endpoint registers codec/format managers; avoid audio init. */
+        if (pjmedia_endpt_create2(&caching_pool.factory, NULL, 0,
+                                  &med_endpt) != PJ_SUCCESS)
         {
+            pj_caching_pool_destroy(&caching_pool);
             return 0;
         }
 
