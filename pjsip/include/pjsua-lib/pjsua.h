@@ -9262,7 +9262,7 @@ PJ_DECL(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param);
 
 /**
  * Set pjsua to use null sound device. The null sound device only provides
- * the timing needed by the conference bridge, and will not interract with
+ * the timing needed by the conference bridge, and will not interact with
  * any hardware.
  * For configurable behavior, use #pjsua_set_null_snd_dev2().
  *
@@ -9274,7 +9274,7 @@ PJ_DECL(pj_status_t) pjsua_set_null_snd_dev(void);
 /**
  * Set pjsua to use null sound device according to the specified param.
  * The null sound device only provides the timing needed by the conference
- * bridge, and will not interract with any hardware.
+ * bridge, and will not interact with any hardware.
  * Use #pjsua_null_snd_dev_param_default() to initialize the param.
  *
  * @param snd_param          Null sound device parameter.

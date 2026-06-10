@@ -1924,8 +1924,11 @@ static void close_snd_port(pjmedia_snd_port *old_snd)
         return;
 
     strm = pjmedia_snd_port_get_snd_stream(old_snd);
-    st = pjmedia_aud_stream_get_param(strm, &param);
-
+    if (strm) {
+        st = pjmedia_aud_stream_get_param(strm, &param);
+    } else {
+        st = PJ_EINVAL;
+    }
     if (st != PJ_SUCCESS ||
         param.rec_id == PJSUA_SND_NO_DEV ||
         pjmedia_aud_dev_get_info(param.rec_id, &cap_info) != PJ_SUCCESS)
@@ -2528,6 +2531,8 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev2(
         status = create_null_snd(pjsua_var.snd_pool,
                                  &pjsua_var.null_snd);
         if (status != PJ_SUCCESS) {
+            pj_pool_release(pjsua_var.snd_pool);
+            pjsua_var.snd_pool = NULL;
             PJSUA_UNLOCK();
             pj_log_pop_indent();
             return status;
