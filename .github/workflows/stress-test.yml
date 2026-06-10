@@ -30,6 +30,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y nasm
+
+      - name: Get openh264
+        run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
+
+      - name: Build openh264
+        run: cd openh264 && make -j3 && sudo make install && sudo ldconfig
+
       - name: Apply config_site_stress.h
         run: cp pjlib/include/pj/config_site_stress.h pjlib/include/pj/config_site.h
 

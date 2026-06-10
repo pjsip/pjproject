@@ -24,3 +24,7 @@
 
 /* Stress test exercises video calls; default is off. */
 #define PJMEDIA_HAS_VIDEO       1
+
+/* Default is 1, but be explicit — passthrough-codec configs can flip it
+ * off and leave the SDP offer with no audio codec. */
+#define PJMEDIA_HAS_G711_CODEC  1
