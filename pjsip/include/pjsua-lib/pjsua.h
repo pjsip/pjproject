@@ -6488,6 +6488,14 @@ PJ_DECL(pjsua_conf_port_id) pjsua_call_get_vid_conf_port(
                                                     pjsua_call_id call_id,
                                                     pjmedia_dir dir);
 
+/*
+ * Pre-allocate a null-port conference slot for a call that has no active
+ * media yet (PJSIP 2.15 defers conf_slot assignment until on_media_update).
+ * This allows SWI conference connections to be set up while the INVITE is
+ * still in progress, matching PJSIP 2.6 behaviour.
+ */
+PJ_DECL(pjsua_conf_port_id) pjsua_call_preallocate_conf_port(pjsua_call_id call_id);
+
 /**
  * Obtain detail information about the specified call.
  *
