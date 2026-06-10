@@ -292,16 +292,54 @@ PJ_DECL(pj_status_t) pjmedia_wav_writer_port_create(pj_pool_t *pool,
                                                     pj_ssize_t buff_size,
                                                     pjmedia_port **p_port );
 
+/** Maximum simultaneous frequencies a tone detector can watch. */
+#define PJMEDIA_TONE_DETECT_MAX_FREQS 4
+
+/**
+ * Reported back to the application when the detector fires.
+ */
+typedef struct pjmedia_tone_detect_event
+{
+    unsigned freqs[PJMEDIA_TONE_DETECT_MAX_FREQS]; /**< Frequencies watched (Hz). */
+    unsigned n_freqs;                              /**< Number of entries used. */
+    unsigned duration_ms;                          /**< Time from port creation
+                                                        to detection (ms).      */
+} pjmedia_tone_detect_event;
+
+/**
+ * Create a media port that watches the audio stream for the simultaneous
+ * presence (AND) of \a n_freqs frequencies and fires \a cb the first time the
+ * combined tone is sustained for ~60ms.
+ *
+ * The port consumes frames (put_frame) but does not produce them; it can be
+ * connected to a conference bridge as a sink in place of a recorder.
+ *
+ * @param pool              Pool to allocate the port from.
+ * @param clock_rate        The sampling rate (Hz).
+ * @param channel_count     Number of channels.
+ * @param samples_per_frame Number of samples per frame.
+ * @param bits_per_sample   Must be 16.
+ * @param freqs             Array of frequencies (Hz) to watch.
+ * @param n_freqs           Number of frequencies (1..PJMEDIA_TONE_DETECT_MAX_FREQS).
+ * @param p_port            Receives the created port.
+ * @param cb                Callback fired on first sustained detection.
+ *                          Runs on a pjmedia worker thread. The event pointer
+ *                          is valid only for the duration of the call.
+ * @param usr_data          Opaque user data passed back to \a cb.
+ *
+ * @return                  PJ_SUCCESS on success.
+ */
 PJ_DECL(pj_status_t) pjmedia_tone_detector_port_create(pj_pool_t *pool,
-						    const char *filename,
 						    unsigned clock_rate,
 						    unsigned channel_count,
 						    unsigned samples_per_frame,
 						    unsigned bits_per_sample,
-						    unsigned flags,
-						    pj_ssize_t buff_size,
+						    const unsigned *freqs,
+						    unsigned n_freqs,
 						    pjmedia_port **p_port,
-	       					    pj_status_t (*cb)(pjmedia_port *port, void *usr_data),
+						    pj_status_t (*cb)(pjmedia_port *port,
+						                      void *usr_data,
+						                      const pjmedia_tone_detect_event *event),
 						    void *usr_data);
 
 

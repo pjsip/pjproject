@@ -1502,64 +1502,34 @@ PJ_DEF(pj_status_t) pjsua_player_destroy(pjsua_player_id id)
 }
 
 /*
- * Create a tone detector, and automatically connect it to
- * the conference bridge.
+ * Create a tone detector and connect it to the conference bridge.
+ * Uses the recorder slot table for bookkeeping.
  */
-PJ_DEF(pj_status_t) pjsua_tone_detector_create( const pj_str_t *filename,
-					   unsigned enc_type,
-					   void *enc_param,
-					   pj_ssize_t max_size,
-					   unsigned options,
-					   pjsua_recorder_id *p_id,
-					   pj_status_t (*cb)(pjmedia_port *port, void *usr_data),
-					   void *usr_data)
+PJ_DEF(pj_status_t) pjsua_tone_detector_create(
+				   pj_status_t (*cb)(pjmedia_port *port,
+						     void *usr_data,
+						     const pjmedia_tone_detect_event *event),
+				   void *usr_data,
+				   const unsigned *freqs,
+				   unsigned n_freqs,
+				   pjsua_recorder_id *p_id)
 {
-    enum Format
-    {
-	FMT_UNKNOWN,
-	FMT_WAV,
-	FMT_MP3,
-    };
     unsigned slot, file_id;
-    char path[PJ_MAXPATH];
-    pj_str_t ext;
-    int file_format;
     pj_pool_t *pool = NULL;
-    pj_status_t status = PJ_SUCCESS;
-    pjmedia_port *port;
+    pj_status_t status;
+    pjmedia_port *port = NULL;
+    pj_str_t port_name = pj_str("tone_det");
 
-    /* Filename must present */
-    PJ_ASSERT_RETURN(filename != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cb != NULL && freqs != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(n_freqs >= 1 && n_freqs <= PJMEDIA_TONE_DETECT_MAX_FREQS,
+		     PJ_EINVAL);
 
-    /* Don't support max_size at present */
-    PJ_ASSERT_RETURN(max_size == 0 || max_size == -1, PJ_EINVAL);
-
-    /* Don't support encoding type at present */
-    PJ_ASSERT_RETURN(enc_type == 0, PJ_EINVAL);
-
-    PJ_LOG(4,(THIS_FILE, "Creating recorder %.*s..",
-	      (int)filename->slen, filename->ptr));
+    PJ_LOG(4,(THIS_FILE, "Creating tone detector.."));
     pj_log_push_indent();
 
     if (pjsua_var.rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.recorder)) {
 	pj_log_pop_indent();
 	return PJ_ETOOMANY;
-    }
-
-    /* Determine the file format */
-    ext.ptr = filename->ptr + filename->slen - 4;
-    ext.slen = 4;
-
-    if (pj_stricmp2(&ext, ".wav") == 0)
-	file_format = FMT_WAV;
-    else if (pj_stricmp2(&ext, ".mp3") == 0)
-	file_format = FMT_MP3;
-    else {
-	PJ_LOG(1,(THIS_FILE, "pjsua_tone_detector_create() error: unable to "
-			     "determine file format for %.*s",
-			     (int)filename->slen, filename->ptr));
-	pj_log_pop_indent();
-	return PJ_ENOTSUP;
     }
 
     PJSUA_LOCK();
@@ -1570,41 +1540,30 @@ PJ_DEF(pj_status_t) pjsua_tone_detector_create( const pj_str_t *filename,
     }
 
     if (file_id == PJ_ARRAY_SIZE(pjsua_var.recorder)) {
-	/* This is unexpected */
 	pj_assert(0);
 	status = PJ_EBUG;
 	goto on_return;
     }
 
-    pj_memcpy(path, filename->ptr, filename->slen);
-    path[filename->slen] = '\0';
-
-    pool = pjsua_pool_create(pjsua_get_basename(path, (unsigned)filename->slen),
-			     1000, 1000);
+    pool = pjsua_pool_create("tone_det", 1000, 1000);
     if (!pool) {
 	status = PJ_ENOMEM;
 	goto on_return;
     }
 
-    if (file_format == FMT_WAV) {
-	status = pjmedia_tone_detector_port_create(pool, path,
-						pjsua_var.media_cfg.clock_rate,
-						pjsua_var.mconf_cfg.channel_count,
-						pjsua_var.mconf_cfg.samples_per_frame,
-						pjsua_var.mconf_cfg.bits_per_sample,
-						options, 0, &port, cb, usr_data);
-    } else {
-	PJ_UNUSED_ARG(enc_param);
-	port = NULL;
-	status = PJ_ENOTSUP;
-    }
-
+    status = pjmedia_tone_detector_port_create(pool,
+					    pjsua_var.media_cfg.clock_rate,
+					    pjsua_var.mconf_cfg.channel_count,
+					    pjsua_var.mconf_cfg.samples_per_frame,
+					    pjsua_var.mconf_cfg.bits_per_sample,
+					    freqs, n_freqs,
+					    &port, cb, usr_data);
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to open file for recording", status);
+	pjsua_perror(THIS_FILE, "Unable to create tone detector port", status);
 	goto on_return;
     }
-    status = pjmedia_conf_add_port(pjsua_var.mconf, pool,
-				   port, filename, &slot);
+
+    status = pjmedia_conf_add_port(pjsua_var.mconf, pool, port, &port_name, &slot);
     if (status != PJ_SUCCESS) {
 	pjmedia_port_destroy(port);
 	goto on_return;
@@ -1620,7 +1579,7 @@ PJ_DEF(pj_status_t) pjsua_tone_detector_create( const pj_str_t *filename,
 
     PJSUA_UNLOCK();
 
-    PJ_LOG(4,(THIS_FILE, "Recorder created, id=%d, slot=%d", file_id, slot));
+    PJ_LOG(4,(THIS_FILE, "Tone detector created, id=%d, slot=%d", file_id, slot));
 
     pj_log_pop_indent();
     return PJ_SUCCESS;
@@ -1630,6 +1589,12 @@ on_return:
     if (pool) pj_pool_release(pool);
     pj_log_pop_indent();
     return status;
+}
+
+PJ_DEF(pj_status_t) pjsua_tone_detector_destroy(pjsua_recorder_id id)
+{
+    /* The detector lives in the recorder slot table; cleanup is identical. */
+    return pjsua_recorder_destroy(id);
 }
 
 /*****************************************************************************

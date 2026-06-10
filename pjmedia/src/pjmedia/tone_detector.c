@@ -19,23 +19,21 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/wav_port.h>
-#include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/errno.h>
-#include <pjmedia/wave.h>
 #include <pj/assert.h>
-#include <pj/file_access.h>
-#include <pj/file_io.h>
 #include <pj/log.h>
+#include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <math.h>
 
 
 #define THIS_FILE	    "tone_detector.c"
+/* Reuse wav-writer signature so pjsua's recorder slot machinery accepts the
+ * port. A dedicated PJMEDIA_SIG_PORT_TONE_DETECT would be cleaner but means
+ * extending the signature header upstream. */
 #define SIGNATURE	    PJMEDIA_SIG_PORT_WAV_WRITER
-
-#define TONE_440HZ 0
-#define TONE_480HZ 1
+#define TONE_DET_PORT_NAME  "tone_det"
 
 /* Mean-square energy gate: ~ -30 dBFS relative to int16 full-scale. */
 static const float energy_min_threshold = 0.01f * 32767.0f * 32767.0f * 0.7f;
@@ -92,8 +90,12 @@ struct tone_detector_port {
     pjmedia_port     base;
     pj_bool_t	     cb_called;
     unsigned	     consecutive_hits;
-    goertzel_state_t    state[2];
-    pj_status_t	     (*cb)(pjmedia_port*, void*);
+    unsigned	     n_freqs;
+    unsigned	     freqs[PJMEDIA_TONE_DETECT_MAX_FREQS];
+    goertzel_state_t state[PJMEDIA_TONE_DETECT_MAX_FREQS];
+    pj_time_val	     start_ts;
+    pj_status_t	     (*cb)(pjmedia_port*, void*,
+			   const pjmedia_tone_detect_event*);
 };
 
 static pj_status_t process_frame(pjmedia_port *this_port, pjmedia_frame *frame);
@@ -103,50 +105,48 @@ static pj_status_t tone_detector_on_destroy(pjmedia_port *this_port);
  * Create tone detector port.
  */
 PJ_DEF(pj_status_t) pjmedia_tone_detector_port_create( pj_pool_t *pool,
-						     const char *filename,
 						     unsigned sampling_rate,
 						     unsigned channel_count,
 						     unsigned samples_per_frame,
 						     unsigned bits_per_sample,
-						     unsigned flags,
-						     pj_ssize_t buff_size,
+						     const unsigned *freqs,
+						     unsigned n_freqs,
 						     pjmedia_port **p_port,
-						     pj_status_t (*cb)(pjmedia_port *port, void *usr_data),
+						     pj_status_t (*cb)(pjmedia_port *port,
+								       void *usr_data,
+								       const pjmedia_tone_detect_event *event),
 						     void *cb_user_data)
 {
     struct tone_detector_port *td_port;
-    pj_str_t name;
+    pj_str_t name = pj_str((char*)TONE_DET_PORT_NAME);
+    unsigned i;
 
-    PJ_UNUSED_ARG(flags);
-    PJ_UNUSED_ARG(buff_size);
-
-    /* Check arguments. */
-    PJ_ASSERT_RETURN(pool && filename && p_port, PJ_EINVAL);
-
-    /* Only supports 16bits per sample for now. */
+    PJ_ASSERT_RETURN(pool && p_port && freqs && cb, PJ_EINVAL);
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
+    PJ_ASSERT_RETURN(n_freqs >= 1 && n_freqs <= PJMEDIA_TONE_DETECT_MAX_FREQS,
+		     PJ_EINVAL);
 
     td_port = PJ_POOL_ZALLOC_T(pool, struct tone_detector_port);
     PJ_ASSERT_RETURN(td_port != NULL, PJ_ENOMEM);
 
-    /* Initialize port info. */
-    pj_strdup2(pool, &name, filename);
     pjmedia_port_info_init(&td_port->base.info, &name, SIGNATURE,
 			   sampling_rate, channel_count, bits_per_sample,
 			   samples_per_frame);
 
-    goertzel_state_init(&td_port->state[0], 480, sampling_rate);
-    goertzel_state_init(&td_port->state[1], 440, sampling_rate);
+    td_port->n_freqs = n_freqs;
+    for (i = 0; i < n_freqs; ++i) {
+	td_port->freqs[i] = freqs[i];
+	goertzel_state_init(&td_port->state[i], (int)freqs[i],
+			    (int)sampling_rate);
+    }
+    pj_gettimeofday(&td_port->start_ts);
 
     td_port->base.put_frame = &process_frame;
     td_port->base.on_destroy = &tone_detector_on_destroy;
-
-    *p_port = &td_port->base;
-
     td_port->base.port_data.pdata = cb_user_data;
     td_port->cb = cb;
-    td_port->cb_called = PJ_FALSE;
-    td_port->consecutive_hits = 0;
+
+    *p_port = &td_port->base;
     return PJ_SUCCESS;
 }
 
@@ -157,6 +157,7 @@ static pj_status_t process_frame(pjmedia_port *this_port, pjmedia_frame *frame)
 	int nsamples;
 	float en;
 	pj_bool_t hit = PJ_FALSE;
+	unsigned i;
 
 	if (!this_port || !frame || td_port->cb_called) {
 		return PJ_SUCCESS;
@@ -167,12 +168,18 @@ static pj_status_t process_frame(pjmedia_port *this_port, pjmedia_frame *frame)
 	en = compute_energy(src, nsamples);
 
 	if (en > energy_min_threshold) {
-		float r1 = goertzel_state_run(&td_port->state[0], src, nsamples, en);
-		float r2 = goertzel_state_run(&td_port->state[1], src, nsamples, en);
-		hit = (r1 >= freq_energy_ratio_threshold) &&
-		      (r2 >= freq_energy_ratio_threshold);
-		PJ_LOG(5,(THIS_FILE, "process_frame energy[%f] Hz1[%f] Hz2[%f] hit=%d streak=%u",
-		          en, r1, r2, hit, td_port->consecutive_hits));
+		hit = PJ_TRUE;
+		for (i = 0; i < td_port->n_freqs; ++i) {
+			float r = goertzel_state_run(&td_port->state[i], src, nsamples, en);
+			if (r < freq_energy_ratio_threshold) {
+				hit = PJ_FALSE;
+				/* keep looping only for the log; cheap relative to per-frame work */
+			}
+			PJ_LOG(5,(THIS_FILE, "process_frame energy[%f] f=%uHz r=%f",
+				  en, td_port->freqs[i], r));
+		}
+		PJ_LOG(5,(THIS_FILE, "process_frame hit=%d streak=%u", hit,
+			  td_port->consecutive_hits));
 	}
 
 	if (hit) {
@@ -182,8 +189,22 @@ static pj_status_t process_frame(pjmedia_port *this_port, pjmedia_frame *frame)
 	}
 
 	if (td_port->consecutive_hits >= TONE_DETECT_DEBOUNCE_FRAMES && td_port->cb) {
+		pjmedia_tone_detect_event event;
+		pj_time_val now, diff;
+
 		td_port->cb_called = PJ_TRUE;
-		(*td_port->cb)(&td_port->base, td_port->base.port_data.pdata);
+
+		pj_gettimeofday(&now);
+		diff = now;
+		PJ_TIME_VAL_SUB(diff, td_port->start_ts);
+
+		pj_bzero(&event, sizeof(event));
+		event.n_freqs = td_port->n_freqs;
+		for (i = 0; i < td_port->n_freqs; ++i)
+			event.freqs[i] = td_port->freqs[i];
+		event.duration_ms = (unsigned)PJ_TIME_VAL_MSEC(diff);
+
+		(*td_port->cb)(&td_port->base, td_port->base.port_data.pdata, &event);
 	}
 	return PJ_SUCCESS;
 }
