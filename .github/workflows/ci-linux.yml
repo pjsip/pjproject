@@ -719,7 +719,7 @@ jobs:
         export ASAN_OPTIONS="halt_on_error=1"
         ARCH=$(make --no-print-directory -s infotarget)
         cd pjsip/bin
-        ./pjsua-stress-$ARCH -n 256 -v 16 -t 4 --duration 300 2>&1 | tee stress.log
+        ./pjsua-stress-$ARCH -n 256 -v 16 -t 4 --duration 300 --log-level 4 2>&1 | tee stress.log
     - name: upload log
       if: always()
       uses: actions/upload-artifact@v4
@@ -754,7 +754,7 @@ jobs:
         export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp halt_on_error=1"
         ARCH=$(make --no-print-directory -s infotarget)
         cd pjsip/bin
-        ./pjsua-stress-$ARCH -n 256 -v 16 -t 4 --duration 300 2>&1 | tee stress.log
+        ./pjsua-stress-$ARCH -n 256 -v 16 -t 4 --duration 300 --log-level 4 2>&1 | tee stress.log
         # halt_on_error doesn't always abort on lock-order-inversion warnings,
         # so explicitly fail the job if TSan printed any report.
         if grep -qE "WARNING: ThreadSanitizer|ERROR: ThreadSanitizer" stress.log; then

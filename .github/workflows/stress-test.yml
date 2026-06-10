@@ -59,7 +59,7 @@ jobs:
           export ASAN_OPTIONS="halt_on_error=1"
           ARCH=$(make --no-print-directory -s infotarget)
           cd pjsip/bin
-          ./pjsua-stress-$ARCH -n 1024 -v 32 -t 8 --duration 600 2>&1 | tee stress.log
+          ./pjsua-stress-$ARCH -n 1024 -v 32 -t 8 --duration 600 --log-level 4 2>&1 | tee stress.log
 
       - name: Upload log
         if: always()
