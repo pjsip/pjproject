@@ -27,6 +27,7 @@
  * Both APIs take a path rather than a memory buffer, so the input is written
  * to a temporary file before parsing.
  */
+#include <errno.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -51,7 +52,7 @@ static pj_bool_t write_temp_file(const uint8_t *Data, size_t Size,
                                  char *name_buf, size_t name_buf_len)
 {
     int fd;
-    ssize_t written;
+    size_t total;
 
     if (name_buf_len < 1)
         return PJ_FALSE;
@@ -63,13 +64,22 @@ static pj_bool_t write_temp_file(const uint8_t *Data, size_t Size,
     if (fd < 0)
         return PJ_FALSE;
 
-    written = write(fd, Data, Size);
-    close(fd);
-
-    if (written != (ssize_t)Size) {
-        unlink(name_buf);
-        return PJ_FALSE;
+    /* write() may be interrupted (EINTR) or perform a short write; loop until
+     * the whole buffer is written so valid inputs are not dropped. */
+    total = 0;
+    while (total < Size) {
+        ssize_t n = write(fd, Data + total, Size - total);
+        if (n < 0) {
+            if (errno == EINTR)
+                continue;
+            close(fd);
+            unlink(name_buf);
+            return PJ_FALSE;
+        }
+        total += (size_t)n;
     }
+
+    close(fd);
 
     return PJ_TRUE;
 }
