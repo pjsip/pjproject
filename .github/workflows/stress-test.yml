@@ -63,6 +63,17 @@ jobs:
           ./pjsua-stress-$ARCH -n 1024 -v 32 -t 8 --duration 600 --log-level 4 2>&1 | tee stress.log
           # Pipe-to-tee can mask signal-exit codes; check PIPESTATUS directly.
           rc=${PIPESTATUS[0]}
+          # If our crash handler dumped a backtrace, resolve the static-frame
+          # offsets via addr2line so the names land in the uploaded log.
+          if grep -q "=== pjsua_stress backtrace ===" stress.log; then
+            OFFSETS=$(grep -oE "\./pjsua-stress[^(]*\(\+0x[0-9a-fA-F]+\)" stress.log \
+                      | grep -oE "0x[0-9a-fA-F]+" || true)
+            if [ -n "$OFFSETS" ]; then
+              echo "" >> stress.log
+              echo "=== addr2line resolved frames ===" >> stress.log
+              addr2line -e "./pjsua-stress-$ARCH" -f -p -i $OFFSETS >> stress.log 2>&1 || true
+            fi
+          fi
           if [ "$rc" -ne 0 ]; then
             echo "::error::pjsua-stress exited with code $rc; see uploaded stress.log"
             exit "$rc"
