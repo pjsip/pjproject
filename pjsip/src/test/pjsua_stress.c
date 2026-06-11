@@ -503,7 +503,7 @@ static int setup_pjsua(const stress_opts_t *opts)
     pjsua_logging_config_default(&log_cfg);
     log_cfg.console_level = opts->log_level;
     log_cfg.level = opts->log_level;
-    log_cfg.msg_logging = PJ_TRUE;
+    log_cfg.msg_logging = PJ_FALSE;
 
     pjsua_media_config_default(&media_cfg);
     /* Fewer codec threads keeps sanitizer noise down. */
