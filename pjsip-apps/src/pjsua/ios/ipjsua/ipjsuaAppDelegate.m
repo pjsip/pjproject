@@ -88,6 +88,50 @@ enum {
     pjsua_schedule_timer2(pjsip_funcs, (void *)action, 0); \
 }
 
+static UIDeviceOrientation get_ui_fallback_orientation(void)
+{
+    __block UIDeviceOrientation dev_ori = UIDeviceOrientationUnknown;
+
+    void (^read_ui_orientation)(void) = ^{
+        if (@available(iOS 13.0, *)) {
+            UIInterfaceOrientation if_ori =
+                app.window.windowScene.interfaceOrientation;
+
+            switch (if_ori) {
+                case UIInterfaceOrientationPortrait:
+                    dev_ori = UIDeviceOrientationPortrait;
+                    break;
+                case UIInterfaceOrientationPortraitUpsideDown:
+                    dev_ori = UIDeviceOrientationPortraitUpsideDown;
+                    break;
+                case UIInterfaceOrientationLandscapeLeft:
+                    dev_ori = UIDeviceOrientationLandscapeLeft;
+                    break;
+                case UIInterfaceOrientationLandscapeRight:
+                    dev_ori = UIDeviceOrientationLandscapeRight;
+                    break;
+                default:
+                    break;
+            }
+        }
+    };
+
+    if ([NSThread isMainThread]) {
+        read_ui_orientation();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), read_ui_orientation);
+    }
+
+    return dev_ori;
+}
+
+static pj_bool_t is_pjsua_ready_for_timer(void)
+{
+    pjsua_state st = pjsua_get_state();
+
+    return (st >= PJSUA_STATE_INIT && st < PJSUA_STATE_CLOSING);
+}
+
 static void pjsip_funcs(void *user_data)
 {
     /* IMPORTANT:
@@ -194,27 +238,7 @@ static void pjsip_funcs(void *user_data)
         if (dev_ori < UIDeviceOrientationPortrait ||
             dev_ori > UIDeviceOrientationLandscapeRight)
         {
-            if (@available(iOS 13.0, *)) {
-                UIInterfaceOrientation if_ori =
-                    app.window.windowScene.interfaceOrientation;
-
-                switch (if_ori) {
-                    case UIInterfaceOrientationPortrait:
-                        dev_ori = UIDeviceOrientationPortrait;
-                        break;
-                    case UIInterfaceOrientationPortraitUpsideDown:
-                        dev_ori = UIDeviceOrientationPortraitUpsideDown;
-                        break;
-                    case UIInterfaceOrientationLandscapeLeft:
-                        dev_ori = UIDeviceOrientationLandscapeLeft;
-                        break;
-                    case UIInterfaceOrientationLandscapeRight:
-                        dev_ori = UIDeviceOrientationLandscapeRight;
-                        break;
-                    default:
-                        break;
-                }
-            }
+            dev_ori = get_ui_fallback_orientation();
         }
 
         if (dev_ori != prev_ori) {
@@ -681,7 +705,9 @@ didDectivateAudioSession:(AVAudioSession *) audioSession
 {
     // Restart any tasks that were paused (or not yet started) while the
     // application was inactive.
-    SCHEDULE_TIMER(HANDLE_ORI_CHANGE);
+    if (is_pjsua_ready_for_timer()) {
+        SCHEDULE_TIMER(HANDLE_ORI_CHANGE);
+    }
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application
