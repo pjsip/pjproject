@@ -316,15 +316,18 @@ typedef struct pjmedia_tone_detect_event
  *
  * @param pool              Pool to allocate the port from.
  * @param clock_rate        The sampling rate (Hz).
- * @param channel_count     Number of channels.
+ * @param channel_count     Number of channels. Must be 1 (mono); the
+ *                          Goertzel filter expects a contiguous sample stream.
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Must be 16.
  * @param freqs             Array of frequencies (Hz) to watch.
  * @param n_freqs           Number of frequencies (1..PJMEDIA_TONE_DETECT_MAX_FREQS).
  * @param p_port            Receives the created port.
  * @param cb                Callback fired on first sustained detection.
- *                          Runs on a pjmedia worker thread. The event pointer
- *                          is valid only for the duration of the call.
+ *                          Delivered via the pjmedia event mechanism, so it
+ *                          runs on the pjmedia event thread (not the conf
+ *                          bridge worker). The event pointer is valid only
+ *                          for the duration of the call.
  * @param usr_data          Opaque user data passed back to \a cb.
  *
  * @return                  PJ_SUCCESS on success.
@@ -400,9 +403,9 @@ pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
  *
  * @return              PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) 
+PJ_DECL(pj_status_t)
 pjmedia_wav_writer_port_set_cb2(pjmedia_port *port,
-                               pj_size_t pos,
+                                pj_size_t pos,
                                 void *user_data,
                                 void (*cb)(pjmedia_port *port,
                                            void *usr_data));

@@ -20,12 +20,19 @@
  */
 #include <pjmedia/wav_port.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/event.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <math.h>
+
+/* MSVC and some Windows toolchains don't define M_PI in <math.h> unless
+ * _USE_MATH_DEFINES is set before the include. Provide a fallback. */
+#ifndef M_PI
+#  define M_PI 3.14159265358979323846
+#endif
 
 
 #define THIS_FILE	    "tone_detector.c"
@@ -53,7 +60,7 @@ static void goertzel_state_init(goertzel_state_t *gs, int frequency, int samplin
         gs->coef=(float)2*(float)cos(2*M_PI*((float)frequency/(float)sampling_frequency));
 }
 
-static float goertzel_state_run(goertzel_state_t *gs,int16_t  *samples, int nsamples, float mean_square_energy){
+static float goertzel_state_run(goertzel_state_t *gs, pj_int16_t *samples, int nsamples, float mean_square_energy){
         int i;
         float tmp;
         float q1=0;
@@ -76,7 +83,7 @@ static float goertzel_state_run(goertzel_state_t *gs,int16_t  *samples, int nsam
 
 /* Returns mean-square energy (sum of squares divided by sample count) so the
  * threshold is independent of frame size. */
-static float compute_energy(int16_t *samples, int nsamples){
+static float compute_energy(pj_int16_t *samples, int nsamples){
         float en=0;
         int i;
         for(i=0;i<nsamples;++i){
@@ -88,18 +95,39 @@ static float compute_energy(int16_t *samples, int nsamples){
 
 struct tone_detector_port {
     pjmedia_port     base;
+    pj_bool_t	     subscribed;
     pj_bool_t	     cb_called;
     unsigned	     consecutive_hits;
     unsigned	     n_freqs;
     unsigned	     freqs[PJMEDIA_TONE_DETECT_MAX_FREQS];
     goertzel_state_t state[PJMEDIA_TONE_DETECT_MAX_FREQS];
     pj_time_val	     start_ts;
+    /* Detection payload, filled before publishing the event and read by
+     * tone_detector_on_event when the callback finally runs. Safe to keep
+     * in the port struct because cb_called gates against re-fire. */
+    pjmedia_tone_detect_event pending_event;
     pj_status_t	     (*cb)(pjmedia_port*, void*,
 			   const pjmedia_tone_detect_event*);
 };
 
 static pj_status_t process_frame(pjmedia_port *this_port, pjmedia_frame *frame);
 static pj_status_t tone_detector_on_destroy(pjmedia_port *this_port);
+
+/*
+ * Event dispatcher: pjmedia delivers PJMEDIA_EVENT_CALLBACK on the main
+ * pjmedia event thread, so the user callback runs outside the conf bridge
+ * worker thread and is free to call back into pjsua/pjmedia.
+ */
+static pj_status_t tone_detector_on_event(pjmedia_event *event, void *user_data)
+{
+    struct tone_detector_port *td_port = (struct tone_detector_port*)user_data;
+
+    if (event->type == PJMEDIA_EVENT_CALLBACK && td_port->cb) {
+	(*td_port->cb)(&td_port->base, td_port->base.port_data.pdata,
+		       &td_port->pending_event);
+    }
+    return PJ_SUCCESS;
+}
 
 /*
  * Create tone detector port.
@@ -123,6 +151,10 @@ PJ_DEF(pj_status_t) pjmedia_tone_detector_port_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && p_port && freqs && cb, PJ_EINVAL);
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
+    /* The Goertzel filter treats the buffer as a contiguous sample stream;
+     * interleaved stereo would corrupt detection. Restrict to mono until
+     * an explicit channel-aware path is added. */
+    PJ_ASSERT_RETURN(channel_count == 1, PJ_EINVAL);
     PJ_ASSERT_RETURN(n_freqs >= 1 && n_freqs <= PJMEDIA_TONE_DETECT_MAX_FREQS,
 		     PJ_EINVAL);
 
@@ -162,9 +194,17 @@ static pj_status_t process_frame(pjmedia_port *this_port, pjmedia_frame *frame)
 	if (!this_port || !frame || td_port->cb_called) {
 		return PJ_SUCCESS;
 	}
+	/* The conference bridge can feed us silence/CN frames with type !=
+	 * PJMEDIA_FRAME_TYPE_AUDIO, a NULL buffer, or zero size. Skip those
+	 * to avoid dereferencing NULL or dividing by zero in compute_energy. */
+	if (frame->type != PJMEDIA_FRAME_TYPE_AUDIO || !frame->buf ||
+	    frame->size < sizeof(pj_int16_t))
+	{
+		return PJ_SUCCESS;
+	}
 
 	src = (pj_int16_t*)frame->buf;
-	nsamples = (int)(frame->size / 2);
+	nsamples = (int)(frame->size / sizeof(pj_int16_t));
 	en = compute_energy(src, nsamples);
 
 	if (en > energy_min_threshold) {
@@ -188,31 +228,53 @@ static pj_status_t process_frame(pjmedia_port *this_port, pjmedia_frame *frame)
 		td_port->consecutive_hits = 0;
 	}
 
-	if (td_port->consecutive_hits >= TONE_DETECT_DEBOUNCE_FRAMES && td_port->cb) {
-		pjmedia_tone_detect_event event;
+	if (td_port->consecutive_hits >= TONE_DETECT_DEBOUNCE_FRAMES &&
+	    td_port->cb && !td_port->cb_called)
+	{
 		pj_time_val now, diff;
+		pjmedia_event ev;
 
-		td_port->cb_called = PJ_TRUE;
-
+		/* Build the payload before flipping cb_called so on_event sees a
+		 * fully-populated struct. */
 		pj_gettimeofday(&now);
 		diff = now;
 		PJ_TIME_VAL_SUB(diff, td_port->start_ts);
 
-		pj_bzero(&event, sizeof(event));
-		event.n_freqs = td_port->n_freqs;
+		pj_bzero(&td_port->pending_event, sizeof(td_port->pending_event));
+		td_port->pending_event.n_freqs = td_port->n_freqs;
 		for (i = 0; i < td_port->n_freqs; ++i)
-			event.freqs[i] = td_port->freqs[i];
-		event.duration_ms = (unsigned)PJ_TIME_VAL_MSEC(diff);
+			td_port->pending_event.freqs[i] = td_port->freqs[i];
+		td_port->pending_event.duration_ms = (unsigned)PJ_TIME_VAL_MSEC(diff);
 
-		(*td_port->cb)(&td_port->base, td_port->base.port_data.pdata, &event);
+		/* Subscribe lazily on first fire. Stays subscribed for the life
+		 * of the port. */
+		if (!td_port->subscribed) {
+			pj_status_t status;
+			status = pjmedia_event_subscribe(NULL, &tone_detector_on_event,
+							 td_port, td_port);
+			td_port->subscribed = (status == PJ_SUCCESS)? PJ_TRUE : PJ_FALSE;
+		}
+
+		if (td_port->subscribed) {
+			td_port->cb_called = PJ_TRUE;
+			pjmedia_event_init(&ev, PJMEDIA_EVENT_CALLBACK, NULL, td_port);
+			pjmedia_event_publish(NULL, td_port, &ev,
+					      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+		}
 	}
 	return PJ_SUCCESS;
 }
 
 static pj_status_t tone_detector_on_destroy(pjmedia_port *this_port)
 {
-	PJ_UNUSED_ARG(this_port);
-	PJ_LOG(4,(THIS_FILE, "tone detector on destroy"));
+	struct tone_detector_port *td_port = (struct tone_detector_port*)this_port;
+
+	if (td_port->subscribed) {
+		pjmedia_event_unsubscribe(NULL, &tone_detector_on_event,
+					  td_port, td_port);
+		td_port->subscribed = PJ_FALSE;
+	}
+	PJ_LOG(4,(THIS_FILE, "tone detector destroyed"));
 	return PJ_SUCCESS;
 }
 

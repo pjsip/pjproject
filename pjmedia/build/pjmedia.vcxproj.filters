@@ -215,6 +215,9 @@
     <ClCompile Include="..\src\pjmedia\wav_writer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjmedia\tone_detector.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjmedia\wave.c">
       <Filter>Source Files</Filter>
     </ClCompile>

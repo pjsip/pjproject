@@ -8938,9 +8938,10 @@ PJ_DECL(pj_status_t) pjsua_recorder_create(const pj_str_t *filename,
  * #pjsua_recorder_get_conf_port() to wire a call's audio into it.
  *
  * @param cb         Callback invoked the first time the detector identifies
- *                   the configured tone sustained for ~60ms. Runs on a
- *                   pjmedia worker thread; the event pointer is only valid
- *                   during the call.
+ *                   the configured tone sustained for ~60ms. Delivered via
+ *                   the pjmedia event mechanism, so it runs on the pjmedia
+ *                   event thread (not the conf bridge worker). The event
+ *                   pointer is only valid during the call.
  * @param usr_data   Opaque user data passed back to \a cb.
  * @param freqs      Array of frequencies (Hz) the detector must observe
  *                   simultaneously (AND).

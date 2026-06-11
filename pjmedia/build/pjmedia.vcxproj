@@ -762,6 +762,7 @@
     <ClCompile Include="..\src\pjmedia\wav_player.c" />
     <ClCompile Include="..\src\pjmedia\wav_playlist.c" />
     <ClCompile Include="..\src\pjmedia\wav_writer.c" />
+    <ClCompile Include="..\src\pjmedia\tone_detector.c" />
     <ClCompile Include="..\src\pjmedia\wsola.c" />
   </ItemGroup>
   <ItemGroup>

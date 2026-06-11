@@ -379,6 +379,7 @@ add_library(pjmedia
   src/pjmedia/wav_player.c
   src/pjmedia/wav_playlist.c
   src/pjmedia/wav_writer.c
+  src/pjmedia/tone_detector.c
   src/pjmedia/wave.c
   src/pjmedia/wsola.c
   src/pjmedia/audiodev.c
