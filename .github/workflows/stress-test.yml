@@ -60,8 +60,10 @@ jobs:
           export ASAN_OPTIONS="halt_on_error=1"
           ARCH=$(make --no-print-directory -s infotarget)
           cd pjsip/bin
-          ./pjsua-stress-$ARCH -n 1024 -v 32 -t 8 --duration 600 --log-level 4 2>&1 | tee stress.log
-          # Pipe-to-tee can mask signal-exit codes; check PIPESTATUS directly.
+          # `|| :` keeps `set -eo pipefail` from exiting the script when the
+          # binary aborts; we want to capture PIPESTATUS and decode the
+          # backtrace before deciding to fail the step.
+          ./pjsua-stress-$ARCH -n 1024 -v 32 -t 8 --duration 600 --log-level 4 2>&1 | tee stress.log || :
           rc=${PIPESTATUS[0]}
           # If our crash handler dumped a backtrace, resolve the static-frame
           # offsets via addr2line so the names land in the uploaded log.
