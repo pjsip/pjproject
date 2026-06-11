@@ -110,3 +110,21 @@ deadlock:libdbus
 deadlock:pjsua_call_on_state_changed
 deadlock:pjsua_call_on_incoming
 #=============================================================================
+
+#=============================================================================
+# Lock-order-inversion inside pjmedia event manager when an event
+# subscriber callback publishes another event (nested publish).
+#
+# Two orderings appear on the event worker thread:
+#   M0 -> M1: event_mgr_distribute_events holds mgr->mutex and briefly
+#     acquires mgr->cb_mutex (the cb_mutex serializes callback execution
+#     against unsubscribe); mgr->mutex is then released before invoking
+#     the subscriber callback while cb_mutex remains held.
+#   M1 -> M0: the subscriber callback calls pjmedia_event_publish, which
+#     re-acquires mgr->mutex while cb_mutex is still held.
+#
+# This is a pjmedia event manager design issue; reworking the lock
+# topology to make the worker drop both locks before the callback (and
+# reorder publish's locking) would require a separate, broader change.
+deadlock:event_mgr_distribute_events
+#=============================================================================
