@@ -424,6 +424,9 @@
     <ClInclude Include="..\include\pjmedia\vid_tee.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pjmedia\tone_detector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\include\pjmedia\wav_playlist.h">
       <Filter>Header Files</Filter>
     </ClInclude>

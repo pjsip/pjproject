@@ -458,6 +458,7 @@ target_sources(pjmedia
       include/pjmedia/vid_stream.h
       include/pjmedia/vid_tee.h
       include/pjmedia/videodev.h
+      include/pjmedia/tone_detector.h
       include/pjmedia/wav_playlist.h
       include/pjmedia/wav_port.h
       include/pjmedia/wave.h

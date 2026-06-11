@@ -828,6 +828,7 @@
     <ClInclude Include="..\include\pjmedia\vid_stream.h" />
     <ClInclude Include="..\include\pjmedia\vid_tee.h" />
     <ClInclude Include="..\include\pjmedia\wave.h" />
+    <ClInclude Include="..\include\pjmedia\tone_detector.h" />
     <ClInclude Include="..\include\pjmedia\wav_playlist.h" />
     <ClInclude Include="..\include\pjmedia\wav_port.h" />
     <ClInclude Include="..\include\pjmedia\wsola.h" />

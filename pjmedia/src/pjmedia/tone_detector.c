@@ -18,7 +18,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjmedia/wav_port.h>
+#include <pjmedia/tone_detector.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/event.h>
 #include <pj/assert.h>
@@ -93,6 +93,10 @@ static float compute_energy(pj_int16_t *samples, int nsamples){
         return en / (float)nsamples;
 }
 
+/* The detection payload must fit in pjmedia_event.data.user[] so it can be
+ * copied through the event queue. PJMEDIA_TONE_DETECT_MAX_FREQS is sized
+ * (4) to keep sizeof(pjmedia_tone_detect_event) well under the event slot.
+ * Verified at runtime in pjmedia_tone_detector_port_create(). */
 struct tone_detector_port {
     pjmedia_port     base;
     pj_bool_t	     subscribed;
@@ -102,10 +106,6 @@ struct tone_detector_port {
     unsigned	     freqs[PJMEDIA_TONE_DETECT_MAX_FREQS];
     goertzel_state_t state[PJMEDIA_TONE_DETECT_MAX_FREQS];
     pj_time_val	     start_ts;
-    /* Detection payload, filled before publishing the event and read by
-     * tone_detector_on_event when the callback finally runs. Safe to keep
-     * in the port struct because cb_called gates against re-fire. */
-    pjmedia_tone_detect_event pending_event;
     pj_status_t	     (*cb)(pjmedia_port*, void*,
 			   const pjmedia_tone_detect_event*);
 };
@@ -117,14 +117,19 @@ static pj_status_t tone_detector_on_destroy(pjmedia_port *this_port);
  * Event dispatcher: pjmedia delivers PJMEDIA_EVENT_CALLBACK on the main
  * pjmedia event thread, so the user callback runs outside the conf bridge
  * worker thread and is free to call back into pjsua/pjmedia.
+ *
+ * The detection payload travels inside event->data.user, copied at publish
+ * time. That avoids a shared mutable struct in the port and the cross-thread
+ * data race that would come with it.
  */
 static pj_status_t tone_detector_on_event(pjmedia_event *event, void *user_data)
 {
     struct tone_detector_port *td_port = (struct tone_detector_port*)user_data;
 
     if (event->type == PJMEDIA_EVENT_CALLBACK && td_port->cb) {
-	(*td_port->cb)(&td_port->base, td_port->base.port_data.pdata,
-		       &td_port->pending_event);
+	const pjmedia_tone_detect_event *payload =
+	    (const pjmedia_tone_detect_event*)&event->data.user;
+	(*td_port->cb)(&td_port->base, td_port->base.port_data.pdata, payload);
     }
     return PJ_SUCCESS;
 }
@@ -153,6 +158,9 @@ PJ_DEF(pj_status_t) pjmedia_tone_detector_port_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
     PJ_ASSERT_RETURN(n_freqs >= 1 && n_freqs <= PJMEDIA_TONE_DETECT_MAX_FREQS,
 		     PJ_EINVAL);
+    /* Payload travels in event->data.user; verify it fits. */
+    PJ_ASSERT_RETURN(sizeof(pjmedia_tone_detect_event) <=
+		     sizeof(pjmedia_event_user_data), PJ_EBUG);
 
     /* The Goertzel filter treats the buffer as a contiguous sample stream;
      * interleaved stereo would corrupt detection. Always declare ourselves
@@ -248,21 +256,26 @@ static pj_status_t process_frame(pjmedia_port *this_port, pjmedia_frame *frame)
 	{
 		pj_time_val now, diff;
 		pjmedia_event ev;
+		pjmedia_tone_detect_event *payload;
 
-		/* Build the payload before flipping cb_called so on_event sees a
-		 * fully-populated struct. */
+		td_port->cb_called = PJ_TRUE;
+
 		pj_gettimeofday(&now);
 		diff = now;
 		PJ_TIME_VAL_SUB(diff, td_port->start_ts);
 
-		pj_bzero(&td_port->pending_event, sizeof(td_port->pending_event));
-		td_port->pending_event.n_freqs = td_port->n_freqs;
-		for (i = 0; i < td_port->n_freqs; ++i)
-			td_port->pending_event.freqs[i] = td_port->freqs[i];
-		td_port->pending_event.duration_ms = (unsigned)PJ_TIME_VAL_MSEC(diff);
-
-		td_port->cb_called = PJ_TRUE;
+		/* Build the payload directly inside the event so it travels
+		 * through the pjmedia event queue (which crosses thread
+		 * boundaries with proper synchronization). No shared mutable
+		 * state in the port struct. */
 		pjmedia_event_init(&ev, PJMEDIA_EVENT_CALLBACK, NULL, td_port);
+		payload = (pjmedia_tone_detect_event*)&ev.data.user;
+		pj_bzero(payload, sizeof(*payload));
+		payload->n_freqs = td_port->n_freqs;
+		for (i = 0; i < td_port->n_freqs; ++i)
+			payload->freqs[i] = td_port->freqs[i];
+		payload->duration_ms = (unsigned)PJ_TIME_VAL_MSEC(diff);
+
 		pjmedia_event_publish(NULL, td_port, &ev,
 				      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
 	}

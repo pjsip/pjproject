@@ -1527,12 +1527,12 @@ PJ_DEF(pj_status_t) pjsua_tone_detector_create(
     PJ_LOG(4,(THIS_FILE, "Creating tone detector.."));
     pj_log_push_indent();
 
-    if (pjsua_var.rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.recorder)) {
-	pj_log_pop_indent();
-	return PJ_ETOOMANY;
-    }
-
     PJSUA_LOCK();
+
+    if (pjsua_var.rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.recorder)) {
+	status = PJ_ETOOMANY;
+	goto on_return;
+    }
 
     for (file_id=0; file_id<PJ_ARRAY_SIZE(pjsua_var.recorder); ++file_id) {
 	if (pjsua_var.recorder[file_id].port == NULL)
