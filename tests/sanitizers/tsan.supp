@@ -90,22 +90,23 @@ deadlock:libdbus
 
 #=============================================================================
 # Lock-order-inversion between PJSUA_LOCK and a dialog's group lock,
-# observed on the same thread during call setup paths such as
-# pjsua_call_make_call.
+# observed inside PJSUA's internal callback handlers reached from the
+# SIP stack (outgoing call setup, incoming UAS, media update, etc.).
 #
-# Two orderings appear within one such call:
-#   M0 -> M1: PJSUA holds PJSUA_LOCK; pjsip_dlg_create_uac ->
-#     pj_grp_lock_add_handler briefly acquires the new dialog's grp_lock
-#     to install a handler.
-#   M1 -> M0: pjsip_inv_send_msg -> pjsip_dlg_send_request takes the
-#     dialog grp_lock; the SIP stack's tsx-state callback chain reaches
-#     pjsua_call_on_state_changed, whose PJSUA_RELOCK re-acquires
-#     PJSUA_LOCK after invoking the user on_call_state callback.
+# Two orderings appear on the same thread within one PJSUA operation:
+#   M0 -> M1: PJSUA holds PJSUA_LOCK; pjsip_dlg_create_{uac,uas} and
+#     friends briefly acquire the new dialog's grp_lock via
+#     pj_grp_lock_add_handler to install a handler.
+#   M1 -> M0: the SIP stack's transport / SDP / tsx-state callback chain
+#     reaches a PJSUA internal handler (pjsua_call_on_state_changed,
+#     pjsua_call_on_incoming, etc.). Those handlers use PJSUA_RELEASE_LOCK
+#     / PJSUA_RELOCK around user-callback invocations; the RELOCK
+#     re-acquires PJSUA_LOCK while the dialog grp_lock is still held
+#     upstream by the SIP stack.
 #
-# PJSUA already drops PJSUA_LOCK around user callbacks (see the
-# PJSUA_RELEASE_LOCK / PJSUA_RELOCK pair in pjsua_call_on_state_changed),
-# but the dialog grp_lock is held upstream by the SIP stack and outside
-# PJSUA's control. Eliminating it would require reworking PJSUA's lock
-# topology.
+# PJSUA already drops PJSUA_LOCK around user callbacks, but the dialog
+# grp_lock is held by the SIP stack and outside PJSUA's control.
+# Eliminating it would require reworking PJSUA's lock topology.
 deadlock:pjsua_call_on_state_changed
+deadlock:pjsua_call_on_incoming
 #=============================================================================
