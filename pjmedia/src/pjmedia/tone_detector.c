@@ -151,12 +151,13 @@ PJ_DEF(pj_status_t) pjmedia_tone_detector_port_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && p_port && freqs && cb, PJ_EINVAL);
     PJ_ASSERT_RETURN(bits_per_sample == 16, PJ_EINVAL);
-    /* The Goertzel filter treats the buffer as a contiguous sample stream;
-     * interleaved stereo would corrupt detection. Restrict to mono until
-     * an explicit channel-aware path is added. */
-    PJ_ASSERT_RETURN(channel_count == 1, PJ_EINVAL);
     PJ_ASSERT_RETURN(n_freqs >= 1 && n_freqs <= PJMEDIA_TONE_DETECT_MAX_FREQS,
 		     PJ_EINVAL);
+
+    /* The Goertzel filter treats the buffer as a contiguous sample stream;
+     * interleaved stereo would corrupt detection. Always declare ourselves
+     * mono — pjmedia_conf_add_port() will downmix a stereo bridge for us. */
+    channel_count = 1;
 
     td_port = PJ_POOL_ZALLOC_T(pool, struct tone_detector_port);
     PJ_ASSERT_RETURN(td_port != NULL, PJ_ENOMEM);
@@ -177,6 +178,20 @@ PJ_DEF(pj_status_t) pjmedia_tone_detector_port_create( pj_pool_t *pool,
     td_port->base.on_destroy = &tone_detector_on_destroy;
     td_port->base.port_data.pdata = cb_user_data;
     td_port->cb = cb;
+
+    /* Subscribe to pjmedia events up front so the lone failure path is
+     * reported synchronously here, rather than per-frame after debounce. */
+    {
+	pj_status_t status;
+	status = pjmedia_event_subscribe(NULL, &tone_detector_on_event,
+					 td_port, td_port);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(2,(THIS_FILE, status,
+			 "Failed to subscribe to pjmedia events"));
+	    return status;
+	}
+	td_port->subscribed = PJ_TRUE;
+    }
 
     *p_port = &td_port->base;
     return PJ_SUCCESS;
@@ -246,21 +261,10 @@ static pj_status_t process_frame(pjmedia_port *this_port, pjmedia_frame *frame)
 			td_port->pending_event.freqs[i] = td_port->freqs[i];
 		td_port->pending_event.duration_ms = (unsigned)PJ_TIME_VAL_MSEC(diff);
 
-		/* Subscribe lazily on first fire. Stays subscribed for the life
-		 * of the port. */
-		if (!td_port->subscribed) {
-			pj_status_t status;
-			status = pjmedia_event_subscribe(NULL, &tone_detector_on_event,
-							 td_port, td_port);
-			td_port->subscribed = (status == PJ_SUCCESS)? PJ_TRUE : PJ_FALSE;
-		}
-
-		if (td_port->subscribed) {
-			td_port->cb_called = PJ_TRUE;
-			pjmedia_event_init(&ev, PJMEDIA_EVENT_CALLBACK, NULL, td_port);
-			pjmedia_event_publish(NULL, td_port, &ev,
-					      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
-		}
+		td_port->cb_called = PJ_TRUE;
+		pjmedia_event_init(&ev, PJMEDIA_EVENT_CALLBACK, NULL, td_port);
+		pjmedia_event_publish(NULL, td_port, &ev,
+				      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
 	}
 	return PJ_SUCCESS;
 }

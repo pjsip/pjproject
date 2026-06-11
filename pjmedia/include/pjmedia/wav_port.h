@@ -326,8 +326,9 @@ typedef struct pjmedia_tone_detect_event
  * @param cb                Callback fired on first sustained detection.
  *                          Delivered via the pjmedia event mechanism, so it
  *                          runs on the pjmedia event thread (not the conf
- *                          bridge worker). The event pointer is valid only
- *                          for the duration of the call.
+ *                          bridge worker). The event pointer references
+ *                          internal storage and is valid only for the
+ *                          duration of the callback; do not retain it.
  * @param usr_data          Opaque user data passed back to \a cb.
  *
  * @return                  PJ_SUCCESS on success.

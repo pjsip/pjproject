@@ -8941,7 +8941,8 @@ PJ_DECL(pj_status_t) pjsua_recorder_create(const pj_str_t *filename,
  *                   the configured tone sustained for ~60ms. Delivered via
  *                   the pjmedia event mechanism, so it runs on the pjmedia
  *                   event thread (not the conf bridge worker). The event
- *                   pointer is only valid during the call.
+ *                   pointer references internal storage and is valid only
+ *                   for the duration of the callback; do not retain it.
  * @param usr_data   Opaque user data passed back to \a cb.
  * @param freqs      Array of frequencies (Hz) the detector must observe
  *                   simultaneously (AND).
