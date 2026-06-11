@@ -41,6 +41,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__linux__) || defined(__APPLE__)
+#  include <execinfo.h>
+#  include <signal.h>
+#  include <unistd.h>
+#  define PJSUA_STRESS_HAS_BACKTRACE 1
+#endif
+
 #define THIS_FILE  "pjsua_stress"
 
 /* Default CLI values. */
@@ -913,6 +920,44 @@ bad:
 
 
 /*============================================================================
+ * Crash backtrace
+ *==========================================================================*/
+
+#ifdef PJSUA_STRESS_HAS_BACKTRACE
+/* Async-signal-safe handler: dumps a native backtrace, then re-raises
+ * the signal with the default disposition so the process still dies
+ * with the original status (e.g. 134 for SIGABRT). The build links
+ * with -rdynamic so non-static symbols resolve to names. */
+static void crash_signal_handler(int sig)
+{
+    static const char header[] = "\n=== pjsua_stress backtrace ===\n";
+    void *frames[64];
+    int n;
+
+    (void)!write(STDERR_FILENO, header, sizeof(header) - 1);
+    n = backtrace(frames, (int)(sizeof(frames) / sizeof(frames[0])));
+    backtrace_symbols_fd(frames, n, STDERR_FILENO);
+
+    signal(sig, SIG_DFL);
+    raise(sig);
+    _exit(128 + sig);  /* fallback if raise() somehow returns */
+}
+
+static void install_crash_handler(void)
+{
+    void *dummy[1];
+    /* Prime the libgcc unwinder so backtrace() inside the handler
+     * doesn't take the slow first-call path that may allocate. */
+    backtrace(dummy, 1);
+    signal(SIGABRT, crash_signal_handler);
+    signal(SIGSEGV, crash_signal_handler);
+}
+#else
+static void install_crash_handler(void) {}
+#endif
+
+
+/*============================================================================
  * main
  *==========================================================================*/
 
@@ -921,6 +966,8 @@ int main(int argc, char *argv[])
     int rc;
     pj_status_t status;
     int parse_rc;
+
+    install_crash_handler();
 
     /* Independent pjlib ref + caching pool so g.pool/g.mutex outlive
      * pjsua_destroy() and survive late on_call_state callbacks. */
