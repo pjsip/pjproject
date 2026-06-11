@@ -54,12 +54,26 @@ jobs:
 
       - name: Run pjsua-stress
         run: |
+          set -eo pipefail
           export LSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/lsan.supp"
           export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp halt_on_error=1"
           export ASAN_OPTIONS="halt_on_error=1"
           ARCH=$(make --no-print-directory -s infotarget)
           cd pjsip/bin
           ./pjsua-stress-$ARCH -n 1024 -v 32 -t 8 --duration 600 --log-level 4 2>&1 | tee stress.log
+          # Pipe-to-tee can mask signal-exit codes; check PIPESTATUS directly.
+          rc=${PIPESTATUS[0]}
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::pjsua-stress exited with code $rc; see uploaded stress.log"
+            exit "$rc"
+          fi
+          # Belt-and-suspenders: catch libc assertions and sanitizer reports
+          # even if the binary somehow exited 0.
+          if grep -qE "Assertion .* failed|ERROR: AddressSanitizer|ERROR: LeakSanitizer|WARNING: ThreadSanitizer|ERROR: ThreadSanitizer" stress.log; then
+            echo "::error::Assertion or sanitizer report found in stress.log"
+            grep -nE "Assertion .* failed|ERROR: AddressSanitizer|ERROR: LeakSanitizer|WARNING: ThreadSanitizer|ERROR: ThreadSanitizer|SUMMARY: " stress.log
+            exit 1
+          fi
 
       - name: Upload log
         if: always()
