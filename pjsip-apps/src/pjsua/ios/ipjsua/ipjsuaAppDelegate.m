@@ -188,9 +188,39 @@ static void pjsip_funcs(void *user_data)
         UIDeviceOrientation dev_ori = [[UIDevice currentDevice] orientation];
         int i;
 
-        if (dev_ori == prev_ori) return;
+        /* At startup or resume, device orientation may be unknown even when
+         * UI orientation is valid. Try UI orientation as fallback.
+         */
+        if (dev_ori < UIDeviceOrientationPortrait ||
+            dev_ori > UIDeviceOrientationLandscapeRight)
+        {
+            if (@available(iOS 13.0, *)) {
+                UIInterfaceOrientation if_ori =
+                    app.window.windowScene.interfaceOrientation;
 
-        NSLog(@"Device orientation changed: %d", (int)(prev_ori = dev_ori));
+                switch (if_ori) {
+                    case UIInterfaceOrientationPortrait:
+                        dev_ori = UIDeviceOrientationPortrait;
+                        break;
+                    case UIInterfaceOrientationPortraitUpsideDown:
+                        dev_ori = UIDeviceOrientationPortraitUpsideDown;
+                        break;
+                    case UIInterfaceOrientationLandscapeLeft:
+                        dev_ori = UIDeviceOrientationLandscapeLeft;
+                        break;
+                    case UIInterfaceOrientationLandscapeRight:
+                        dev_ori = UIDeviceOrientationLandscapeRight;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        if (dev_ori != prev_ori) {
+            NSLog(@"Device orientation changed: %d", (int)dev_ori);
+            prev_ori = dev_ori;
+        }
 
         if (dev_ori >= UIDeviceOrientationPortrait &&
             dev_ori <= UIDeviceOrientationLandscapeRight)
@@ -354,6 +384,11 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
                 selector:@selector(orientationChanged:)
                 name:UIDeviceOrientationDidChangeNotification
                 object:[UIDevice currentDevice]];
+
+            /* Apply current orientation once at startup so capture device
+             * orientation is correct even when app starts in landscape.
+             */
+            SCHEDULE_TIMER(HANDLE_ORI_CHANGE);
         });
         
         static char contact_uri_buf[1024];
@@ -644,7 +679,9 @@ didDectivateAudioSession:(AVAudioSession *) audioSession
 
 - (void)applicationDidBecomeActive:(UIApplication *)application
 {
-    // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+    // Restart any tasks that were paused (or not yet started) while the
+    // application was inactive.
+    SCHEDULE_TIMER(HANDLE_ORI_CHANGE);
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application
