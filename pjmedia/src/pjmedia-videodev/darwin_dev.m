@@ -813,6 +813,9 @@ static pj_status_t darwin_factory_create_stream(
     pj_memcpy(&strm->param, param, sizeof(*param));
     strm->pool = pool;
     strm->cam_portrait_angle = -1;
+#if TARGET_OS_IPHONE
+    [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+#endif
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
     strm->factory = qf;
@@ -1318,8 +1321,15 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             if (@available(macOS 14.0, iOS 17.0, *)) {
                 AVCaptureConnection *vidcon;
                 const CGFloat cap_ori[4] = { 0, 90, 180, 270};
-                int idx = strm->param.orient - 1;
+                int idx;
                 int rotation;
+
+                if (strm->param.orient < PJMEDIA_ORIENT_NATURAL ||
+                    strm->param.orient > PJMEDIA_ORIENT_ROTATE_270DEG)
+                {
+                    return PJ_EINVAL;
+                }
+                idx = strm->param.orient - 1;
 
 #if TARGET_OS_IPHONE
                 /* Derive the device-specific portrait angle by combining the
@@ -1581,7 +1591,9 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
     if (stream->render_data_provider) {
         CGDataProviderRelease(stream->render_data_provider);
         stream->render_data_provider = nil;
-    }    
+    }
+
+    [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
 #endif /* TARGET_OS_IPHONE */
 
     if (stream->queue) {
