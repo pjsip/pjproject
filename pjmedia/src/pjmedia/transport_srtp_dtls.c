@@ -81,7 +81,6 @@ static void on_ice_complete2(pjmedia_transport *tp,
                              void *user_data);
 
 static void dtls_on_destroy(void *arg);
-static void dtls_media_stop_channel(dtls_srtp *ds, unsigned idx);
 
 
 static pjmedia_transport_op dtls_op =
@@ -192,6 +191,9 @@ static unsigned valid_profiles_cnt;
 static X509     *dtls_cert;
 static EVP_PKEY *dtls_priv_key;
 static pj_status_t ssl_generate_cert(X509 **p_cert, EVP_PKEY **p_priv_key);
+
+/* Forward declaration */
+static void dtls_media_stop_channel(dtls_srtp* ds, unsigned idx);
 
 static pj_status_t dtls_init()
 {
