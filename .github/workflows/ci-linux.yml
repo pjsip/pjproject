@@ -694,7 +694,7 @@ jobs:
   stress-testrun-asan:
     runs-on: ubuntu-latest
     name: stress / asan
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
@@ -723,7 +723,7 @@ jobs:
         # `|| :` keeps `set -eo pipefail` from exiting the script when the
         # binary aborts; we want to capture PIPESTATUS and decode the
         # backtrace before deciding to fail the step.
-        ./pjsua-stress-$ARCH -n 256 -v 16 -t 4 --duration 300 --log-level 4 2>&1 | tee stress.log || :
+        ./pjsua-stress-$ARCH -n 1024 -v 32 -t 4 --duration 480 --log-level 4 2>&1 | tee stress.log || :
         rc=${PIPESTATUS[0]}
         # If our crash handler dumped a backtrace, resolve the static-frame
         # offsets via addr2line so the names land in the uploaded log.
@@ -757,7 +757,7 @@ jobs:
   stress-testrun-tsan:
     runs-on: ubuntu-latest
     name: stress / tsan
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
@@ -785,7 +785,7 @@ jobs:
         # `|| :` keeps `set -eo pipefail` from exiting the script when the
         # binary aborts; we want to capture PIPESTATUS and decode the
         # backtrace before deciding to fail the step.
-        ./pjsua-stress-$ARCH -n 256 -v 16 -t 4 --duration 300 --log-level 4 2>&1 | tee stress.log || :
+        ./pjsua-stress-$ARCH -n 1024 -v 32 -t 4 --duration 480 --log-level 4 2>&1 | tee stress.log || :
         rc=${PIPESTATUS[0]}
         # If our crash handler dumped a backtrace, resolve the static-frame
         # offsets via addr2line so the names land in the uploaded log.

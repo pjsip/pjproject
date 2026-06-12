@@ -58,8 +58,10 @@
 #define DEF_PORT            5060
 #define DEF_LOG_LEVEL       3
 
-/* Ramp phase will fail if it takes longer than this. */
-#define RAMP_TIMEOUT_SEC    120
+/* Ramp phase will fail if it takes longer than this. Sized for 1024 call
+ * legs at the ~7-leg/sec rate observed on the GitHub ASan runner, with
+ * headroom for TSan's slower instrumentation. */
+#define RAMP_TIMEOUT_SEC    300
 
 /* How long to wait for pjsua_call_hangup_all() to drain before falling
  * through to pjsua_destroy(). Under stress some calls end up parked in
