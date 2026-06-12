@@ -657,6 +657,16 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
     return PJ_SUCCESS;
 }
 
+/* Use null sound device with configurable parameter. Alt media backend has no
+ * real sound device, so this is also a no-op that always succeeds.
+ */
+PJ_DEF(pj_status_t) pjsua_set_null_snd_dev2(
+                            const pjsua_null_snd_dev_param *snd_param)
+{
+    PJ_UNUSED_ARG(snd_param);
+    return PJ_SUCCESS;
+}
+
 /* Use no device! */
 PJ_DEF(pjmedia_port*) pjsua_set_no_snd_dev(void)
 {
