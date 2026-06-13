@@ -24,7 +24,6 @@
 #include <pjmedia/event.h>
 #include <pjmedia/rtcp.h>
 #include <pjmedia/rtcp_fb.h>
-#include <pjmedia/rtcp_xr.h>
 
 #define kMinInputLength 10
 #define kMaxInputLength 5120
@@ -71,12 +70,10 @@ int rtcp_parser(char *data, size_t size)
     setting.samples_per_frame = 160;
     pjmedia_rtcp_init2(&session, &setting);
 
-    /* Enable RTCP XR (RFC 3611) so pjmedia_rtcp_rx_rtcp() can dispatch Extended
-     * Report packets (PT=207) into the XR parser (rtcp_xr.c) when
+    /* Attempt to enable RTCP XR (RFC 3611) so pjmedia_rtcp_rx_rtcp() can
+     * dispatch Extended Report packets (PT=207) into the XR parser when
      * PJMEDIA_HAS_RTCP_XR is enabled at build time. */
-#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     (void)pjmedia_rtcp_enable_xr(&session, PJ_TRUE);
-#endif
 
     /* Test integrated RTCP parsing */
     pjmedia_rtcp_rx_rtcp(&session, data, size);
