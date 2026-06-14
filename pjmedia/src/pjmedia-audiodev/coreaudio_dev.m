@@ -2216,10 +2216,10 @@ static pj_status_t ca_stream_start(pjmedia_aud_stream *strm)
     }
 
 #if !COREAUDIO_MAC && SETUP_AV_AUDIO_SESSION
-    /* When SETUP_AV_AUDIO_SESSION is 0 (CallKit mode), CallKit owns
-     * audio session activation via provider(_:didActivate:).
-     * PJSIP must NOT call setActive:true — it overrides CallKit's
-     * route and causes cold-start audio routing failures. */
+    /* Activate AVAudioSession only when SETUP_AV_AUDIO_SESSION is enabled.
+     * When it's disabled (typical for CallKit apps), the app/CallKit owns
+     * audio session activation (e.g., provider:didActivateAudioSession:),
+     * so PJSIP must not call setActive:. */
     if ([stream->sess setActive:true error:nil] != YES) {
         PJ_LOG(4, (THIS_FILE, "Warning: cannot activate audio session"));
     }
