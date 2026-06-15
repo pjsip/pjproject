@@ -2496,7 +2496,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
                     == PJ_SUCCESS)
             {
                 PJ_LOG(4,(inv->obj_name, "Ignored %s response with unchanged "
-                          "SDP answer in early media (no renegotiation)",
+                          "SDP answer (no renegotiation)",
                           (st_code/10==18? "early" : "final" )));
                 return PJ_SUCCESS;
             }
