@@ -128,6 +128,10 @@ struct pjmedia_stream
                                                  is used to put RTP marker
                                                  bit.                       */
     pj_uint32_t              ts_vad_disabled;/**< TS when VAD was disabled. */
+    pj_bool_t                vad_suspended; /**< VAD temporarily suspended at
+                                                 startup (suspended in the
+                                                 codec only; codec_param keeps
+                                                 the configured VAD value).  */
     pj_uint32_t              tx_duration;   /**< TX duration in timestamp.  */
 
     unsigned                 soft_start_cnt;/**< Stream soft start counter */
@@ -1357,16 +1361,16 @@ static pj_status_t put_frame( pjmedia_port *port,
     }
 #endif
 
-    /* If VAD is temporarily disabled during creation, enable it
-     * after transmitting for VAD_SUSPEND_SEC seconds.
+    /* If VAD was suspended at creation, re-enable it after VAD_SUSPEND_MSEC.
+     * codec_param already holds the configured value, so just re-apply it.
      */
-    if (stream->vad_enabled != stream->codec_param.setting.vad &&
+    if (stream->vad_suspended &&
         (stream->tx_duration - stream->ts_vad_disabled) >
            PJMEDIA_PIA_SRATE(&c_strm->port.info) *
           PJMEDIA_STREAM_VAD_SUSPEND_MSEC / 1000)
     {
-        stream->codec_param.setting.vad = stream->vad_enabled;
         pjmedia_codec_modify(stream->codec, &stream->codec_param);
+        stream->vad_suspended = PJ_FALSE;
         PJ_LOG(4,(c_strm->port.info.name.ptr,"VAD re-enabled"));
     }
 
@@ -2087,12 +2091,19 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     }
 
 
-    /* Initially disable the VAD in the stream, to help traverse NAT better */
+    /* Initially disable VAD in the stream to help traverse NAT better. We
+     * suspend it in the codec only; codec_param (hence pjmedia_stream_get_info())
+     * keeps the configured VAD value, so the transient isn't mistaken for a
+     * media change that would needlessly restart the stream (dropping audio).
+     */
     stream->vad_enabled = stream->codec_param.setting.vad;
     if (PJMEDIA_STREAM_VAD_SUSPEND_MSEC > 0 && stream->vad_enabled) {
-        stream->codec_param.setting.vad = 0;
+        pjmedia_codec_param vad_param = stream->codec_param;
+
+        vad_param.setting.vad = 0;
+        stream->vad_suspended = PJ_TRUE;
         stream->ts_vad_disabled = 0;
-        pjmedia_codec_modify(stream->codec, &stream->codec_param);
+        pjmedia_codec_modify(stream->codec, &vad_param);
         PJ_LOG(4,(c_strm->port.info.name.ptr,"VAD temporarily disabled"));
     }
 
