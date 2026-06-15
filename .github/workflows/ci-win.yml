@@ -54,7 +54,7 @@ jobs:
             - '.github/**'
 
   default:
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: Default / build only
     steps:
     - uses: actions/checkout@master
@@ -81,7 +81,7 @@ jobs:
       shell: cmd
     - name: MSBuild
       run: |
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Debug /p:Platform=win32
       shell: cmd
     - name: build swig
@@ -90,7 +90,7 @@ jobs:
         set PATH=%PATH%;%SWIG_PATH%
         dir pjlib/include/pj/config_site.h
         type pjlib/include/pj/config_site.h
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         set INCLUDE=%INCLUDE%;%JAVA_HOME%\include;%JAVA_HOME%\include\win32
         cd pjsip-apps/build
         msbuild swig_java_pjsua2.vcxproj /p:PlatformToolset=v143 /p:Configuration=Debug-Dynamic /p:Platform=win32 /p:UseEnv=true
@@ -105,7 +105,7 @@ jobs:
   openssl-1:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.pjmedia_deps == 'true'
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: OpenSSL / pjlib,util,pjmedia
     steps:
     - uses: actions/checkout@master
@@ -137,13 +137,14 @@ jobs:
         cd pjlib/include/pj; cp config_site_test.h config_site.h; Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
       shell: powershell
     - name: check VsDevCmd.bat
-      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      run: |
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
     - name: MSBuild
       working-directory: .
       run: |
         set /P OPENSSL_DIR=<openssl_dir.txt
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include
         set LIB=%LIB%;%OPENSSL_DIR%\lib
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
@@ -179,7 +180,7 @@ jobs:
   openssl-2:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: OpenSSL / pjsip,pjsua
     env:
       PYTHONUTF8: 1  # This forces Python to use UTF-8
@@ -221,13 +222,14 @@ jobs:
         cd pjlib/include/pj; cp config_site_test.h config_site.h; Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
       shell: powershell
     - name: check VsDevCmd.bat
-      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      run: |
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
     - name: MSBuild
       working-directory: .
       run: |
         set /P OPENSSL_DIR=<openssl_dir.txt
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include
         set LIB=%LIB%;%OPENSSL_DIR%\lib
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
@@ -238,7 +240,7 @@ jobs:
         cd tests/pjsua/tools
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include
         set LIB=%LIB%;%OPENSSL_DIR%\lib
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
     - name: get test tool visqol
@@ -282,7 +284,7 @@ jobs:
   openssl-3:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath_deps == 'true'
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: OpenSSL / pjnath
     steps:
     - uses: actions/checkout@master
@@ -314,13 +316,14 @@ jobs:
         cd pjlib/include/pj; cp config_site_test.h config_site.h; Add-Content config_site.h "#define PJ_HAS_SSL_SOCK 1"
       shell: powershell
     - name: check VsDevCmd.bat
-      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      run: |
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
     - name: MSBuild
       working-directory: .
       run: |
         set /P OPENSSL_DIR=<openssl_dir.txt
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include
         set LIB=%LIB%;%OPENSSL_DIR%\lib
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
@@ -340,7 +343,7 @@ jobs:
         path: artifacts
 
   gnu-tls:
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: GnuTLS / build only
     steps:
     - uses: actions/checkout@master
@@ -374,13 +377,14 @@ jobs:
         Add-Content pjlib/include/pj/config_site.h "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_GNUTLS"
       shell: powershell
     - name: check VsDevCmd.bat
-      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      run: |
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
     - name: MSBuild
       working-directory: .
       run: |
         set /P GNUTLS_DIR=<gnutls_dir.txt
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         set INCLUDE=%INCLUDE%;%GNUTLS_DIR%\include
         set LIB=%LIB%;%GNUTLS_DIR%\lib
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
@@ -395,7 +399,7 @@ jobs:
   vid-libvpx-schannel-1:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.pjnath_pjmedia_deps == 'true'
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: VPX+SChannel / pjlib,util,pjmedia,pjnath
     env:
       PYTHONUTF8: 1  # This forces Python to use UTF-8
@@ -452,7 +456,8 @@ jobs:
         Add-Content config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
       shell: powershell
     - name: check VsDevCmd.bat
-      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      run: |
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
     - name: MSBuild
       working-directory: .
@@ -460,7 +465,7 @@ jobs:
         set /P OPENSSL_DIR=<openssl_dir.txt
         set /P VPX_DIR=<vpx_dir.txt
         set /P SDL_DIR=<sdl_dir.txt
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%VPX_DIR%\include;%SDL_DIR%\include
         set LIB=%LIB%;%OPENSSL_DIR%\lib;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
@@ -473,7 +478,7 @@ jobs:
         cd tests/pjsua/tools
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%VPX_DIR%\include;%SDL_DIR%\include
         set LIB=%LIB%;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
     - name: get test tool visqol
@@ -519,7 +524,7 @@ jobs:
   vid-libvpx-schannel-2:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: VPX+SChannel / pjsua
     env:
       PYTHONUTF8: 1  # This forces Python to use UTF-8
@@ -584,7 +589,8 @@ jobs:
         Add-Content config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
       shell: powershell
     - name: check VsDevCmd.bat
-      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      run: |
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
     - name: MSBuild
       working-directory: .
@@ -592,7 +598,7 @@ jobs:
         set /P OPENSSL_DIR=<openssl_dir.txt
         set /P VPX_DIR=<vpx_dir.txt
         set /P SDL_DIR=<sdl_dir.txt
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%VPX_DIR%\include;%SDL_DIR%\include
         set LIB=%LIB%;%OPENSSL_DIR%\lib;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
@@ -605,7 +611,7 @@ jobs:
         cd tests/pjsua/tools
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%VPX_DIR%\include;%SDL_DIR%\include
         set LIB=%LIB%;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
     - name: get test tool visqol
@@ -642,7 +648,7 @@ jobs:
   vid-libvpx-schannel-3:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.pjsip_deps == 'true'
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: VPX+SChannel / pjsip
     steps:
     - uses: actions/checkout@master
@@ -697,7 +703,8 @@ jobs:
         Add-Content config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
       shell: powershell
     - name: check VsDevCmd.bat
-      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      run: |
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
     - name: MSBuild
       working-directory: .
@@ -705,7 +712,7 @@ jobs:
         set /P OPENSSL_DIR=<openssl_dir.txt
         set /P VPX_DIR=<vpx_dir.txt
         set /P SDL_DIR=<sdl_dir.txt
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%VPX_DIR%\include;%SDL_DIR%\include
         set LIB=%LIB%;%OPENSSL_DIR%\lib;%VPX_DIR%\lib;%SDL_DIR%\lib\x86
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
@@ -726,7 +733,7 @@ jobs:
 
   # Temporarily disabled due to ffmpeg library build issues
   # build-win-vid-ffmpeg:
-  #   runs-on: windows-latest
+  #   runs-on: windows-2022
   #   name: FFMPEG / build only
   #   steps:
   #   - uses: actions/checkout@master
@@ -778,14 +785,15 @@ jobs:
   #       Add-Content pjlib/include/pj/config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
   #     shell: powershell
   #   - name: check VsDevCmd.bat
-  #     run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+  #     run: |
+  #       for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
   #     shell: cmd
   #   - name: MSBuild
   #     working-directory: .
   #     run: |
   #       set /P FFMPEG_DIR=<ffmpeg_dir.txt        
   #       set /P SDL_DIR=<sdl_dir.txt
-  #       call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+  #       for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
   #       set INCLUDE=%INCLUDE%;%FFMPEG_DIR%\include;%SDL_DIR%\include
   #       set LIB=%LIB%;%FFMPEG_DIR%\lib;%SDL_DIR%\lib\x86
   #       msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
@@ -800,7 +808,7 @@ jobs:
   iocp:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.pjlib_deps == 'true'
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: IOCP / pjlib
     steps:
     - uses: actions/checkout@master
@@ -809,12 +817,13 @@ jobs:
         cd pjlib/include/pj; cp config_site_test.h config_site.h; Add-Content config_site.h "#define PJ_IOQUEUE_IMP PJ_IOQUEUE_IMP_IOCP"
       shell: powershell
     - name: check VsDevCmd.bat
-      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      run: |
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
     - name: MSBuild
       working-directory: .
       run: |
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
     - name: verify ioqueue type is iocp
@@ -838,7 +847,7 @@ jobs:
   iocp-cb-with-lock:
     needs: [detect-changes]
     if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
-    runs-on: windows-latest
+    runs-on: windows-2022
     name: iocp-cb-with-lock / pjlib,pjsua
     env:
       PYTHONUTF8: 1  # This forces Python to use UTF-8
@@ -883,13 +892,14 @@ jobs:
         cd ..
       shell: powershell
     - name: check VsDevCmd.bat
-      run: dir "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+      run: |
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
     - name: MSBuild
       working-directory: .
       run: |
         set /P OPENSSL_DIR=<openssl_dir.txt
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include
         set LIB=%LIB%;%OPENSSL_DIR%\lib
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
@@ -914,7 +924,7 @@ jobs:
         cd tests/pjsua/tools
         set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include
         set LIB=%LIB%;%OPENSSL_DIR%\lib
-        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
         msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
     - name: get test tool visqol
