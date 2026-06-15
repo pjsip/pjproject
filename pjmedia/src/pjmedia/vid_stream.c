@@ -351,7 +351,13 @@ static pj_status_t detach_send_manager(send_stream *ss)
         }
         e = next;
     }
+    /* Also hold ss->grp_lock for the write so send_rtp()'s read of
+     * ss->mgr (taken under ss->grp_lock) doesn't race with this store.
+     * Lock order is mgr->grp_lock -> ss->grp_lock; no other path holds
+     * the two nested in the opposite order. */
+    pj_grp_lock_acquire(ss->grp_lock);
     ss->mgr = NULL;
+    pj_grp_lock_release(ss->grp_lock);
     pj_grp_lock_release(mgr->grp_lock);
 
     /* Stop send manager thread */
@@ -465,8 +471,12 @@ static void send_rtp(send_stream *ss, send_entry *entry)
     } else {
         /* Detach drained the queue and stopped the worker between our
          * release of ss->grp_lock and now; the entry would never be
-         * processed, so drop the stream ref we just added. */
+         * processed. Recycle it to ss->free_list (matching the worker
+         * thread pattern) and drop the stream ref we just added. */
         pj_grp_lock_release(mgr->grp_lock);
+        pj_grp_lock_acquire(ss->grp_lock);
+        pj_list_push_back(&ss->free_list, entry);
+        pj_grp_lock_release(ss->grp_lock);
         pj_grp_lock_dec_ref(ss->grp_lock);
     }
 
