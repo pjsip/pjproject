@@ -8938,7 +8938,10 @@ PJ_DECL(pj_status_t) pjsua_recorder_create(const pj_str_t *filename,
  * #pjsua_recorder_get_conf_port() to wire a call's audio into it.
  *
  * @param cb         Callback invoked the first time the detector identifies
- *                   the configured tone sustained for ~60ms. Delivered via
+ *                   the configured tone sustained for
+ *                   PJMEDIA_TONE_DETECT_DEBOUNCE_FRAMES consecutive frames
+ *                   (≈60ms at the default 20ms ptime; scales with the
+ *                   active audio frame size and clock rate). Delivered via
  *                   the pjmedia event mechanism, so it runs on the pjmedia
  *                   event thread (not the conf bridge worker). The event
  *                   pointer references internal storage and is valid only
@@ -8952,9 +8955,9 @@ PJ_DECL(pj_status_t) pjsua_recorder_create(const pj_str_t *filename,
  * @return           PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsua_tone_detector_create(
-				   pj_status_t (*cb)(pjmedia_port *port,
-						     void *usr_data,
-						     const pjmedia_tone_detect_event *event),
+				   void (*cb)(pjmedia_port *port,
+					      void *usr_data,
+					      const pjmedia_tone_detect_event *event),
 				   void *usr_data,
 				   const unsigned *freqs,
 				   unsigned n_freqs,

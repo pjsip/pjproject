@@ -47,10 +47,6 @@ static const float energy_min_threshold = 0.01f * 32767.0f * 32767.0f * 0.7f;
 /* Per-frequency energy ratio above which a bin is considered "present". */
 static const float freq_energy_ratio_threshold = 0.4f;
 
-/* Number of consecutive matching frames required before firing the callback.
- * At 20ms/frame this is ~60ms, enough to reject speech transients. */
-#define TONE_DETECT_DEBOUNCE_FRAMES 3
-
 typedef struct goertzel_state{
         float coef;
 } goertzel_state_t;
@@ -105,7 +101,7 @@ struct tone_detector_port {
     unsigned	     freqs[PJMEDIA_TONE_DETECT_MAX_FREQS];
     goertzel_state_t state[PJMEDIA_TONE_DETECT_MAX_FREQS];
     pj_time_val	     start_ts;
-    pj_status_t	     (*cb)(pjmedia_port*, void*,
+    void	     (*cb)(pjmedia_port*, void*,
 			   const pjmedia_tone_detect_event*);
 };
 
@@ -144,9 +140,9 @@ PJ_DEF(pj_status_t) pjmedia_tone_detector_port_create( pj_pool_t *pool,
 						     const unsigned *freqs,
 						     unsigned n_freqs,
 						     pjmedia_port **p_port,
-						     pj_status_t (*cb)(pjmedia_port *port,
-								       void *usr_data,
-								       const pjmedia_tone_detect_event *event),
+						     void (*cb)(pjmedia_port *port,
+								void *usr_data,
+								const pjmedia_tone_detect_event *event),
 						     void *cb_user_data)
 {
     struct tone_detector_port *td_port;
@@ -250,7 +246,7 @@ static pj_status_t process_frame(pjmedia_port *this_port, pjmedia_frame *frame)
 		td_port->consecutive_hits = 0;
 	}
 
-	if (td_port->consecutive_hits >= TONE_DETECT_DEBOUNCE_FRAMES &&
+	if (td_port->consecutive_hits >= PJMEDIA_TONE_DETECT_DEBOUNCE_FRAMES &&
 	    td_port->cb && !td_port->cb_called)
 	{
 		pj_time_val now, diff;

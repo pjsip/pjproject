@@ -1506,9 +1506,9 @@ PJ_DEF(pj_status_t) pjsua_player_destroy(pjsua_player_id id)
  * Uses the recorder slot table for bookkeeping.
  */
 PJ_DEF(pj_status_t) pjsua_tone_detector_create(
-				   pj_status_t (*cb)(pjmedia_port *port,
-						     void *usr_data,
-						     const pjmedia_tone_detect_event *event),
+				   void (*cb)(pjmedia_port *port,
+					      void *usr_data,
+					      const pjmedia_tone_detect_event *event),
 				   void *usr_data,
 				   const unsigned *freqs,
 				   unsigned n_freqs,

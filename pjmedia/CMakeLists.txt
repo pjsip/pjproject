@@ -912,6 +912,7 @@ if(BUILD_TESTING)
     src/test/vid_port_test.c
     src/test/rtp_test.c
     src/test/test.c
+    src/test/tone_detector_test.c
     src/test/sdp_neg_test.c
   )
 

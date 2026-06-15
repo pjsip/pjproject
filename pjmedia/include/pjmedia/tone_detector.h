@@ -47,6 +47,17 @@ PJ_BEGIN_DECL
 /** Maximum simultaneous frequencies a tone detector can watch. */
 #define PJMEDIA_TONE_DETECT_MAX_FREQS 4
 
+/**
+ * Number of consecutive matching frames required before the detector fires.
+ * The effective debounce duration is
+ *   PJMEDIA_TONE_DETECT_DEBOUNCE_FRAMES * samples_per_frame / clock_rate
+ * — at the default 20ms ptime that's roughly 60ms, which is short enough
+ * to feel responsive on ringback yet long enough to reject speech transients.
+ */
+#ifndef PJMEDIA_TONE_DETECT_DEBOUNCE_FRAMES
+#  define PJMEDIA_TONE_DETECT_DEBOUNCE_FRAMES 3
+#endif
+
 
 /**
  * Reported back to the application when the detector fires.
@@ -63,7 +74,9 @@ typedef struct pjmedia_tone_detect_event
 /**
  * Create a media port that watches the audio stream for the simultaneous
  * presence (AND) of \a n_freqs frequencies and fires \a cb the first time the
- * combined tone is sustained for ~60ms.
+ * combined tone is sustained for PJMEDIA_TONE_DETECT_DEBOUNCE_FRAMES
+ * consecutive frames (≈60ms at the default 20ms ptime; scales with the
+ * configured \a samples_per_frame and \a clock_rate).
  *
  * The port consumes frames (put_frame) but does not produce them; it can be
  * connected to a conference bridge as a sink in place of a recorder.
@@ -96,9 +109,9 @@ PJ_DECL(pj_status_t) pjmedia_tone_detector_port_create(pj_pool_t *pool,
                                                     const unsigned *freqs,
                                                     unsigned n_freqs,
                                                     pjmedia_port **p_port,
-                                                    pj_status_t (*cb)(pjmedia_port *port,
-                                                                      void *usr_data,
-                                                                      const pjmedia_tone_detect_event *event),
+                                                    void (*cb)(pjmedia_port *port,
+                                                               void *usr_data,
+                                                               const pjmedia_tone_detect_event *event),
                                                     void *usr_data);
 
 

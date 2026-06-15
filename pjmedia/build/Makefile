@@ -156,7 +156,7 @@ export PJMEDIA_CODEC_LDFLAGS += $(PJMEDIA_LDLIB) \
 export PJMEDIA_TEST_SRCDIR = ../src/test
 export PJMEDIA_TEST_OBJS += codec_vectors.o jbuf_test.o main.o mips_test.o \
 			    vid_codec_test.o vid_dev_test.o vid_port_test.o \
-			    rtp_test.o test.o
+			    rtp_test.o test.o tone_detector_test.o
 export PJMEDIA_TEST_OBJS += sdp_neg_test.o 
 export PJMEDIA_TEST_CFLAGS += $(_CFLAGS)
 export PJMEDIA_TEST_CXXFLAGS += $(_CXXFLAGS)
