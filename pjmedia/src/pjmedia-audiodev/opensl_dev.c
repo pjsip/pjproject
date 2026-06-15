@@ -113,6 +113,8 @@ struct opensl_aud_stream
     W_SLBufferQueueItf  recordBufQ;
 };
 
+static pj_status_t opensl_to_pj_error(SLresult code);
+
 /* Factory prototypes */
 static pj_status_t opensl_init(pjmedia_aud_dev_factory *f);
 static pj_status_t opensl_destroy(pjmedia_aud_dev_factory *f);
@@ -333,7 +335,7 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
     }
 }
 
-pj_status_t opensl_to_pj_error(SLresult code)
+static pj_status_t opensl_to_pj_error(SLresult code)
 {
     switch(code) {
         case SL_RESULT_SUCCESS:
