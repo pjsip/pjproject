@@ -689,9 +689,12 @@ jobs:
         ./build-consumer/test_consumer
         ./build-consumer/test_consumer2
 
-  # NOTE: temporary jobs to observe stress behavior on the GitHub runner.
-  # Revert before merging to master; the long-form runs live in stress-test.yml.
-  stress-testrun-asan:
+  # Short pjsua-stress runs under ASan/TSan on every PR / push to master.
+  # The full weekly run (larger fleet, longer duration) lives in
+  # .github/workflows/stress-test.yml.
+  stress-asan:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: stress / asan
     timeout-minutes: 45
@@ -725,7 +728,7 @@ jobs:
         # DON'T use `|| :` here — `:` runs as a single-command pipeline
         # that resets PIPESTATUS to (0), masking the real exit code.
         set +e
-        ./pjsua-stress-$ARCH -n 1024 -v 32 -t 4 --duration 480 --log-level 4 2>&1 | tee stress.log
+        ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 2>&1 | tee stress.log
         rc=${PIPESTATUS[0]}
         set -e
         # If our crash handler dumped a backtrace, resolve the static-frame
@@ -757,7 +760,9 @@ jobs:
         name: stress-asan-log-${{ github.run_id }}
         path: pjsip/bin/stress.log
 
-  stress-testrun-tsan:
+  stress-tsan:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
     runs-on: ubuntu-latest
     name: stress / tsan
     timeout-minutes: 45
@@ -790,7 +795,7 @@ jobs:
         # DON'T use `|| :` here — `:` runs as a single-command pipeline
         # that resets PIPESTATUS to (0), masking the real exit code.
         set +e
-        ./pjsua-stress-$ARCH -n 1024 -v 32 -t 4 --duration 480 --log-level 4 2>&1 | tee stress.log
+        ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 2>&1 | tee stress.log
         rc=${PIPESTATUS[0]}
         set -e
         # If our crash handler dumped a backtrace, resolve the static-frame
