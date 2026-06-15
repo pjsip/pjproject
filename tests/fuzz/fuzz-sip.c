@@ -29,6 +29,9 @@
 #include <pjsip/sip_auth.h>
 #include <pjsip/sip_transaction.h>
 #include <pjsip/sip_dialog.h>
+#include <pjsip-simple/evsub.h>
+#include <pjsip-ua/sip_replaces.h>
+#include <pjsip-ua/sip_timer.h>
 
 pjsip_endpoint *endpt;
 pj_caching_pool caching_pool;
@@ -384,6 +387,20 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         }
 
         pjsip_ua_init_module(endpt, NULL);
+
+        /* Register the specialised SIP header parsers. The core SIP parser
+         * only installs grammars for headers whose owning module has been
+         * initialised; without these calls the headers below are parsed as
+         * generic string headers and the hand-written grammars in
+         * evsub_msg.c (Event/Subscription-State/Allow-Events),
+         * sip_replaces.c (Replaces) and sip_timer.c (Session-Expires/Min-SE)
+         * are never exercised even when present in the input message. */
+        if (pjsip_evsub_init_module(endpt) != PJ_SUCCESS ||
+            pjsip_replaces_init_module(endpt) != PJ_SUCCESS ||
+            pjsip_timer_init_module(endpt) != PJ_SUCCESS) {
+            free(DataFx);
+            return 0;
+        }
 
         /* Initialize transaction user module */
         pj_bzero(&tsx_user_module, sizeof(tsx_user_module));
