@@ -102,11 +102,11 @@ static int feed_frames(pjmedia_port *port, pj_int16_t *buf, unsigned nframes,
     return 0;
 }
 
-/* Drain pending pjmedia events so callbacks (delivered via the event
- * mechanism) actually run before we assert. */
+/* Give pjmedia's event worker time to dispatch any PJMEDIA_EVENT_CALLBACK
+ * that process_frame queued via PJMEDIA_EVENT_PUBLISH_POST_EVENT, so the
+ * callback runs (and updates ctx) before we assert. */
 static void drain_events(void)
 {
-    /* PJMEDIA_EVENT_PUBLISH_POST_EVENT enqueues; main thread must poll. */
     pj_thread_sleep(100);
 }
 
