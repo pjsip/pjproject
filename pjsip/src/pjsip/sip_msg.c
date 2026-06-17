@@ -1402,7 +1402,11 @@ static int print_media_type(char *buf, unsigned len,
     const pjsip_parser_const_t *pc;
 
     /* Check buffer for "type/subtype"; params are checked below. */
-    if ((pj_ssize_t)len < media->type.slen + 1 + media->subtype.slen)
+    if (media->type.slen < 0 || media->subtype.slen < 0)
+        return -1;
+    if ((pj_size_t)len <= (pj_size_t)media->type.slen)
+        return -1;
+    if ((pj_size_t)len - (pj_size_t)media->type.slen - 1 < (pj_size_t)media->subtype.slen)
         return -1;
 
     pj_memcpy(p, media->type.ptr, media->type.slen);
