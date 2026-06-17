@@ -1141,7 +1141,14 @@ static pj_bool_t handle_up_down(cli_telnet_sess *sess, pj_bool_t is_up)
     history = get_prev_history(sess, is_up);
     if (history) {
         pj_str_t send_data;
-        char str[PJ_CLI_MAX_CMDBUF];
+        /* The redraw sequence can accumulate up to
+         *   cur_pos + 2 * rcmd->len + history->slen
+         * bytes, each term bounded by PJ_CLI_MAX_CMDBUF, so size the
+         * local buffer for the worst case and clamp each term below.
+         */
+        char str[PJ_CLI_MAX_CMDBUF * 4];
+        unsigned cur_pos, buf_len;
+        pj_size_t hist_len;
         enum {
             MOVE_CURSOR_LEFT = 0x08,
             CLEAR_CHAR = 0x20
@@ -1149,15 +1156,24 @@ static pj_bool_t handle_up_down(cli_telnet_sess *sess, pj_bool_t is_up)
         send_data.ptr = str;
         send_data.slen = 0;
 
+        cur_pos = sess->rcmd->cur_pos;
+        buf_len = sess->rcmd->len;
+        hist_len = history->slen;
+        if (cur_pos > PJ_CLI_MAX_CMDBUF)
+            cur_pos = PJ_CLI_MAX_CMDBUF;
+        if (buf_len > PJ_CLI_MAX_CMDBUF)
+            buf_len = PJ_CLI_MAX_CMDBUF;
+        if (hist_len > PJ_CLI_MAX_CMDBUF)
+            hist_len = PJ_CLI_MAX_CMDBUF;
+
         /* Move cursor position to the beginning of line */
-        if (sess->rcmd->cur_pos > 0) {
-            pj_memset(send_data.ptr, MOVE_CURSOR_LEFT, sess->rcmd->cur_pos);
-            send_data.slen = sess->rcmd->cur_pos;
+        if (cur_pos > 0) {
+            pj_memset(send_data.ptr, MOVE_CURSOR_LEFT, cur_pos);
+            send_data.slen = cur_pos;
         }
 
-        if (sess->rcmd->len > (unsigned)history->slen) {
+        if (buf_len > (unsigned)hist_len) {
             /* Clear the command currently shown*/
-            unsigned buf_len = sess->rcmd->len;
             pj_memset(&send_data.ptr[send_data.slen], CLEAR_CHAR, buf_len);
             send_data.slen += buf_len;
 
@@ -1167,7 +1183,10 @@ static pj_bool_t handle_up_down(cli_telnet_sess *sess, pj_bool_t is_up)
             send_data.slen += buf_len;
         }
         /* Send data */
-        pj_strcat(&send_data, history);
+        if (hist_len > 0) {
+            pj_memcpy(&send_data.ptr[send_data.slen], history->ptr, hist_len);
+            send_data.slen += hist_len;
+        }
         telnet_sess_send(sess, &send_data);
         pj_ansi_strxcpy2((char*)sess->rcmd->rbuf, history, 
                          sizeof(sess->rcmd->rbuf));
