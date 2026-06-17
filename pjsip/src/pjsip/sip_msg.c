@@ -544,7 +544,11 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
             }
             pj_memcpy(p, ctype_hdr.ptr, ctype_hdr.slen);
             p += ctype_hdr.slen;
-            p += print_media_type(p, (unsigned)(end-p), media);
+            len = print_media_type(p, (unsigned)(end-p), media);
+            /* Defensive; buffer is already validated above. */
+            if (len < 0)
+                return -1;
+            p += len;
             *p++ = '\r';
             *p++ = '\n';
 
@@ -1454,6 +1458,9 @@ static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr,
     *p++ = ' ';
 
     len = print_media_type(p, (unsigned)(buf+size-p), &hdr->media);
+    /* Defensive; buffer is already validated above. */
+    if (len < 0)
+        return -1;
     p += len;
 
     *p = '\0';
