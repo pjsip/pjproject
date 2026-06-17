@@ -964,8 +964,8 @@ static int pjsip_generic_array_hdr_print( pjsip_generic_array_hdr *hdr,
                             &hdr->sname : &hdr->name;
 
     copy_advance(p, (*hname));
-    *p++ = ':';
-    *p++ = ' ';
+    copy_advance_char_check(p, ':');
+    copy_advance_char_check(p, ' ');
 
     if (hdr->count > 0) {
         unsigned i;
