@@ -40,7 +40,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_nack(
                                         void *buf,
                                         pj_size_t *length,
                                         unsigned nack_cnt,
-                                        const pjmedia_rtcp_fb_nack nack[])
+                                        const pjmedia_rtcp_fb_nack *nack)
 {
     pjmedia_rtcp_fb_common *hdr;
     pj_uint8_t *p;
@@ -118,7 +118,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_sli(
                                         void *buf,
                                         pj_size_t *length,
                                         unsigned sli_cnt,
-                                        const pjmedia_rtcp_fb_sli sli[])
+                                        const pjmedia_rtcp_fb_sli *sli)
 {
     pjmedia_rtcp_fb_common *hdr;
     pj_uint8_t *p;
@@ -332,7 +332,7 @@ typedef struct sdp_codec_info_t
 static pj_status_t get_codec_info_from_sdp(pjmedia_endpt *endpt,
                                            const pjmedia_sdp_media *m,
                                            unsigned *sci_cnt,
-                                           sdp_codec_info_t sci[])
+                                           sdp_codec_info_t *sci)
 {
     pjmedia_codec_mgr *codec_mgr;
     unsigned j, cnt = 0;
@@ -624,7 +624,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_nack(
                                         const void *buf,
                                         pj_size_t length,
                                         unsigned *nack_cnt,
-                                        pjmedia_rtcp_fb_nack nack[])
+                                        pjmedia_rtcp_fb_nack *nack)
 {
     pjmedia_rtcp_fb_common *hdr = (pjmedia_rtcp_fb_common*) buf;
     pj_uint8_t *p;
@@ -688,7 +688,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_sli(
                                         const void *buf,
                                         pj_size_t length,
                                         unsigned *sli_cnt,
-                                        pjmedia_rtcp_fb_sli sli[])
+                                        pjmedia_rtcp_fb_sli *sli)
 {
     pjmedia_rtcp_fb_common *hdr = (pjmedia_rtcp_fb_common*) buf;
     pj_uint8_t *p;
