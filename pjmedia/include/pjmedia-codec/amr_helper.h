@@ -1094,7 +1094,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
     pj_uint8_t *r = (pj_uint8_t*)pkt;
 
     /* End of the packet, used to bound all reads below */
-    pj_uint8_t *pkt_end = (pj_uint8_t*)pkt + pkt_size;
+    pj_uint8_t *pkt_end = pkt_size ? ((pj_uint8_t*)pkt + pkt_size) : (pj_uint8_t*)pkt;
 
     /* env vars for AMR or AMRWB */
     pj_uint8_t               SID_FT;
@@ -1120,7 +1120,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
     PJ_UNUSED_ARG(order_maps);
 
     /* Empty packet, nothing to parse */
-    if (r >= pkt_end) {
+    if (pkt_size == 0) {
         *nframes = 0;
         return PJ_SUCCESS;
     }
@@ -1219,7 +1219,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
         }
 
         /* Stop if the frame data is not fully contained in the packet */
-        if (r + flen > pkt_end)
+        if ((pj_size_t)(pkt_end - r) < flen)
             break;
 
         frames[cnt].buf = r;
