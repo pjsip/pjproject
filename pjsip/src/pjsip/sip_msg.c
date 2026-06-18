@@ -544,7 +544,11 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
             }
             pj_memcpy(p, ctype_hdr.ptr, ctype_hdr.slen);
             p += ctype_hdr.slen;
-            p += print_media_type(p, (unsigned)(end-p), media);
+            len = print_media_type(p, (unsigned)(end-p), media);
+            /* Defensive; buffer is already validated above. */
+            if (len < 0)
+                return -1;
+            p += len;
             *p++ = '\r';
             *p++ = '\n';
 
@@ -964,8 +968,8 @@ static int pjsip_generic_array_hdr_print( pjsip_generic_array_hdr *hdr,
                             &hdr->sname : &hdr->name;
 
     copy_advance(p, (*hname));
-    *p++ = ':';
-    *p++ = ' ';
+    copy_advance_char_check(p, ':');
+    copy_advance_char_check(p, ' ');
 
     if (hdr->count > 0) {
         unsigned i;
@@ -1401,6 +1405,14 @@ static int print_media_type(char *buf, unsigned len,
     pj_ssize_t printed;
     const pjsip_parser_const_t *pc;
 
+    /* Check buffer for "type/subtype"; params are checked below. */
+    if (media->type.slen < 0 || media->subtype.slen < 0)
+        return -1;
+    if ((pj_size_t)len <= (pj_size_t)media->type.slen)
+        return -1;
+    if ((pj_size_t)len - (pj_size_t)media->type.slen - 1 < (pj_size_t)media->subtype.slen)
+        return -1;
+
     pj_memcpy(p, media->type.ptr, media->type.slen);
     p += media->type.slen;
     *p++ = '/';
@@ -1446,6 +1458,9 @@ static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr,
     *p++ = ' ';
 
     len = print_media_type(p, (unsigned)(buf+size-p), &hdr->media);
+    /* Defensive; buffer is already validated above. */
+    if (len < 0)
+        return -1;
     p += len;
 
     *p = '\0';
