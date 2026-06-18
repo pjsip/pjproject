@@ -336,7 +336,7 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_nack(
                                         void *buf,
                                         pj_size_t *length,
                                         unsigned nack_cnt,
-                                        const pjmedia_rtcp_fb_nack nack[]);
+                                        const pjmedia_rtcp_fb_nack *nack);
 
 
 /**
@@ -378,7 +378,7 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_sli(
                                         void *buf,
                                         pj_size_t *length,
                                         unsigned sli_cnt,
-                                        const pjmedia_rtcp_fb_sli sli[]);
+                                        const pjmedia_rtcp_fb_sli *sli);
 
 
 /**
@@ -422,7 +422,7 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_nack(
                                         const void *buf,
                                         pj_size_t length,
                                         unsigned *nack_cnt,
-                                        pjmedia_rtcp_fb_nack nack[]);
+                                        pjmedia_rtcp_fb_nack *nack);
 
 
 /**
@@ -456,7 +456,7 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_sli(
                                         const void *buf,
                                         pj_size_t length,
                                         unsigned *sli_cnt,
-                                        pjmedia_rtcp_fb_sli sli[]);
+                                        pjmedia_rtcp_fb_sli *sli);
 
 
 /**
