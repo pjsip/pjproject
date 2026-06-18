@@ -396,8 +396,8 @@
 /**
  * Specify how long an agent wants to wait (in milliseconds) for a valid pair
  * to be created from incoming connectivity checks, after it has found that all
- * connectivity checks in its checklist have been completed but there is no
- * valid pair yet for any component.
+ * connectivity checks in its checklist have been completed but one or more
+ * components still lack a valid pair.
  *
  * This is useful when the agent's own connectivity checks cannot be sent
  * (e.g. the local routing or firewall rejects the remote candidate address),

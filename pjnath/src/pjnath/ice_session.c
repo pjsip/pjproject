@@ -136,6 +136,7 @@ typedef struct timer_data
 
 /* Forward declarations */
 static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te);
+static pj_bool_t check_ice_complete(pj_ice_sess *ice);
 static void on_ice_complete(pj_ice_sess *ice, pj_status_t status);
 static void ice_keep_alive(pj_ice_sess *ice, pj_bool_t send_now);
 static void ice_on_destroy(void *obj);
@@ -1269,10 +1270,43 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
         on_ice_complete(ice, PJNATH_EICENOMTIMEOUT);
         break;
     case TIMER_WAIT_VALID_PAIR:
-        LOG4((ice->obj_name,
-              "Timed-out in waiting for a valid pair to be created from "
-              "incoming checks. Setting state to fail now.."));
-        on_ice_complete(ice, PJNATH_EICEFAILED);
+        {
+            /* Grace period elapsed. Only fail if all checks have completed
+             * and at least one component still lacks a valid pair. If some
+             * checks are still pending (e.g. a triggered check from a late
+             * incoming check is in progress), or valid pairs have meanwhile
+             * been created, don't force a failure here: let the normal
+             * completion handling proceed instead.
+             */
+            unsigned k;
+            pj_bool_t pending = PJ_FALSE;
+
+            for (k=0; k<ice->clist.count; ++k) {
+                if (ice->clist.checks[k].state <
+                        PJ_ICE_SESS_CHECK_STATE_SUCCEEDED)
+                {
+                    pending = PJ_TRUE;
+                    break;
+                }
+            }
+
+            for (k=0; k<ice->comp_cnt; ++k) {
+                if (ice->comp[k].valid_check == NULL)
+                    break;
+            }
+
+            if (!pending && k < ice->comp_cnt) {
+                LOG4((ice->obj_name,
+                      "Timed-out in waiting for a valid pair to be created "
+                      "from incoming checks. Setting state to fail now.."));
+                on_ice_complete(ice, PJNATH_EICEFAILED);
+            } else {
+                LOG4((ice->obj_name,
+                      "Grace period for valid pair elapsed, but checks are "
+                      "still pending or valid pairs now exist; continuing.."));
+                check_ice_complete(ice);
+            }
+        }
         break;
     case TIMER_COMPLETION_CALLBACK:
         {
