@@ -789,9 +789,15 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
         /* Check if RTCP source address is the same as the configured
          * remote address, and switch the address when they are
          * different.
+         *
+         * Skip when rem_rtcp_addr is not initialized yet (sa_family==0),
+         * e.g. an RTCP packet arriving before transport_attach2() or on a
+         * recycled transport: pj_sockaddr_cmp() would call
+         * pj_sockaddr_get_addr_len(), which asserts on an invalid family.
          */
         if (bytes_read>0 &&
-            (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0)
+            (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0 &&
+            udp->rem_rtcp_addr.addr.sa_family != 0)
         {
             if (pj_sockaddr_cmp(&udp->rem_rtcp_addr, &udp->rtcp_src_addr) == 0) {
                 /* Still receiving from rem_rtcp_addr, don't switch */
