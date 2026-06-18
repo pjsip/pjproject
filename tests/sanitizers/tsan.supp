@@ -107,8 +107,8 @@ deadlock:libdbus
 # PJSUA already drops PJSUA_LOCK around user callbacks, but the dialog
 # grp_lock is held by the SIP stack and outside PJSUA's control.
 # Eliminating it would require reworking PJSUA's lock topology.
-deadlock:pjsua_call_on_state_changed
-deadlock:pjsua_call_on_incoming
+# deadlock:pjsua_call_on_state_changed
+# deadlock:pjsua_call_on_incoming
 #=============================================================================
 
 #=============================================================================
