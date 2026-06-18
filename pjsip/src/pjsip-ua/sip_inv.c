@@ -2471,12 +2471,32 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
         {
             pjsip_sdp_info *tdata_sdp_info;
             const pjmedia_sdp_session *reoffer_sdp = NULL;
+            const pjmedia_sdp_session *active_remote = NULL;
 
             if (pjmedia_sdp_neg_get_state(inv->neg) !=
                 PJMEDIA_SDP_NEG_STATE_DONE)
             {
                 PJ_LOG(4,(inv->obj_name, "SDP negotiation in progress, "
                           "message body in %s response is ignored",
+                          (st_code/10==18? "early" : "final" )));
+                return PJ_SUCCESS;
+            }
+
+            /* Non-forking (same To tag): if the new SDP answer is identical to
+             * the negotiated one, skip renegotiation to avoid a needless media
+             * restart (jitter buffer reset, dropped early media) when a remote
+             * repeats the same answer across 18x responses.
+             */
+            if (pj_stricmp(&tsx_inv_data->done_tag, &res_tag) == 0 &&
+                sdp_info->sdp &&
+                pjmedia_sdp_neg_get_active_remote(inv->neg, &active_remote)
+                    == PJ_SUCCESS &&
+                active_remote &&
+                pjmedia_sdp_session_cmp(active_remote, sdp_info->sdp, 0)
+                    == PJ_SUCCESS)
+            {
+                PJ_LOG(4,(inv->obj_name, "Ignored %s response with unchanged "
+                          "SDP answer (no renegotiation)",
                           (st_code/10==18? "early" : "final" )));
                 return PJ_SUCCESS;
             }
