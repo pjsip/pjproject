@@ -2525,14 +2525,14 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
                 return;
             }
 
+            if (uri_cnt >= PJ_ARRAY_SIZE(uri)) {
+                PJ_LOG(1,(THIS_FILE, "Error: too many Service-Route headers"));
+                return;
+            }
+
             uri[uri_cnt++] = h->name_addr.uri;
             h = h->next;
-        } while (h != hr && uri_cnt != PJ_ARRAY_SIZE(uri));
-
-        if (h != hr) {
-            PJ_LOG(1,(THIS_FILE, "Error: too many Service-Route headers"));
-            return;
-        }
+        } while (h != hr);
 
         /* Prepare to find next Service-Route header */
         hsr = hsr->next;

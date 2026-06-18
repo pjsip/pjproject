@@ -1,0 +1,99 @@
+# Weekly stress test of the high-level PJSUA API.
+#
+# Runs pjsua_stress under ASan and TSan on Ubuntu. The test brings up a
+# single PJSUA instance, ramps to ~1024 concurrent call legs, then runs
+# random call/conf/video operations on multiple worker threads for 10
+# minutes to surface deadlocks, races and memory issues.
+#
+# Triggered weekly (Sunday 03:00 UTC) and manually via workflow_dispatch.
+
+name: Stress Test (weekly)
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stress:
+    if: github.repository == 'pjsip/pjproject'
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, thread]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    name: ${{ matrix.sanitizer }}-sanitizer
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y nasm
+
+      - name: Get openh264
+        run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
+
+      - name: Build openh264
+        run: cd openh264 && make -j3 && sudo make install && sudo ldconfig
+
+      - name: Apply config_site_stress.h
+        run: cp pjlib/include/pj/config_site_stress.h pjlib/include/pj/config_site.h
+
+      - name: Configure
+        run: |
+          CFLAGS="-g -fsanitize=${{ matrix.sanitizer }}" \
+          CXXFLAGS="-g -fsanitize=${{ matrix.sanitizer }}" \
+          LDFLAGS="-rdynamic -fsanitize=${{ matrix.sanitizer }}" \
+          ./configure --enable-epoll
+
+      - name: Build
+        run: make -j3
+
+      - name: Run pjsua-stress
+        run: |
+          set -eo pipefail
+          export LSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/lsan.supp"
+          export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp halt_on_error=1"
+          export ASAN_OPTIONS="halt_on_error=1"
+          ARCH=$(make --no-print-directory -s infotarget)
+          cd pjsip/bin
+          # Temporarily disable errexit so a crashed binary doesn't kill the
+          # step before we capture PIPESTATUS and decode the backtrace.
+          # DON'T use `|| :` here — `:` runs as a single-command pipeline
+          # that resets PIPESTATUS to (0), masking the real exit code.
+          set +e
+          ./pjsua-stress-$ARCH -n 1024 -v 32 -t 8 --duration 600 --log-level 4 2>&1 | tee stress.log
+          rc=${PIPESTATUS[0]}
+          set -e
+          # If our crash handler dumped a backtrace, resolve the static-frame
+          # offsets via addr2line so the names land in the uploaded log.
+          if grep -q "=== pjsua_stress backtrace ===" stress.log; then
+            OFFSETS=$(grep -oE "\./pjsua-stress[^(]*\(\+0x[0-9a-fA-F]+\)" stress.log \
+                      | grep -oE "0x[0-9a-fA-F]+" || true)
+            if [ -n "$OFFSETS" ]; then
+              echo "" >> stress.log
+              echo "=== addr2line resolved frames ===" >> stress.log
+              addr2line -e "./pjsua-stress-$ARCH" -f -p -i $OFFSETS >> stress.log 2>&1 || true
+            fi
+          fi
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::pjsua-stress exited with code $rc; see uploaded stress.log"
+            exit "$rc"
+          fi
+          # Belt-and-suspenders: catch libc assertions and sanitizer reports
+          # even if the binary somehow exited 0.
+          if grep -qE "Assertion .* failed|ERROR: AddressSanitizer|ERROR: LeakSanitizer|WARNING: ThreadSanitizer|ERROR: ThreadSanitizer" stress.log; then
+            echo "::error::Assertion or sanitizer report found in stress.log"
+            grep -nE "Assertion .* failed|ERROR: AddressSanitizer|ERROR: LeakSanitizer|WARNING: ThreadSanitizer|ERROR: ThreadSanitizer|SUMMARY: " stress.log
+            exit 1
+          fi
+
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-${{ matrix.sanitizer }}-log
+          path: pjsip/bin/stress.log

@@ -351,7 +351,13 @@ static pj_status_t detach_send_manager(send_stream *ss)
         }
         e = next;
     }
+    /* Also hold ss->grp_lock for the write so send_rtp()'s read of
+     * ss->mgr (taken under ss->grp_lock) doesn't race with this store.
+     * Lock order is mgr->grp_lock -> ss->grp_lock; no other path holds
+     * the two nested in the opposite order. */
+    pj_grp_lock_acquire(ss->grp_lock);
     ss->mgr = NULL;
+    pj_grp_lock_release(ss->grp_lock);
     pj_grp_lock_release(mgr->grp_lock);
 
     /* Stop send manager thread */
@@ -419,6 +425,7 @@ static send_entry* get_send_entry(send_stream *ss)
 static void send_rtp(send_stream *ss, send_entry *entry)
 {
     pj_timestamp send_ts;
+    send_manager *mgr;
 
     pj_grp_lock_acquire(ss->grp_lock);
 
@@ -427,6 +434,9 @@ static void send_rtp(send_stream *ss, send_entry *entry)
         pj_grp_lock_release(ss->grp_lock);
         return;
     }
+    /* Snapshot under ss->grp_lock — detach_send_manager() will NULL
+     * ss->mgr later, but we need a stable pointer to lock against. */
+    mgr = ss->mgr;
 
     /* Calculate earliest sending time allowed by rate control */
     ss->rc_total += entry->buf_size;
@@ -445,12 +455,32 @@ static void send_rtp(send_stream *ss, send_entry *entry)
     /* Add ref stream to avoid premature destroy of stream */
     pj_grp_lock_add_ref(ss->grp_lock);
 
+    /* Keep mgr alive across the ss->grp_lock release, even if a
+     * concurrent detach drops the per-stream mgr ref. */
+    pj_grp_lock_add_ref(mgr->grp_lock);
+
     pj_grp_lock_release(ss->grp_lock);
 
-    /* Queue the packet */
-    pj_grp_lock_acquire(ss->mgr->grp_lock);
-    pj_list_push_back(&ss->mgr->send_list, entry);
-    pj_grp_lock_release(ss->mgr->grp_lock);
+    /* Queue the packet. detach_send_manager() mutates ss->mgr under
+     * mgr->grp_lock, so the recheck below is sufficient to know whether
+     * the queue is still being drained by the worker thread. */
+    pj_grp_lock_acquire(mgr->grp_lock);
+    if (ss->mgr == mgr) {
+        pj_list_push_back(&mgr->send_list, entry);
+        pj_grp_lock_release(mgr->grp_lock);
+    } else {
+        /* Detach drained the queue and stopped the worker between our
+         * release of ss->grp_lock and now; the entry would never be
+         * processed. Recycle it to ss->free_list (matching the worker
+         * thread pattern) and drop the stream ref we just added. */
+        pj_grp_lock_release(mgr->grp_lock);
+        pj_grp_lock_acquire(ss->grp_lock);
+        pj_list_push_back(&ss->free_list, entry);
+        pj_grp_lock_release(ss->grp_lock);
+        pj_grp_lock_dec_ref(ss->grp_lock);
+    }
+
+    pj_grp_lock_dec_ref(mgr->grp_lock);
 }
 
 
