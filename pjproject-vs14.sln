@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.11.35327.3
+# Visual Studio Version 18
+VisualStudioVersion = 18.6.11819.183 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1DFF1CF3-DBD7-4DA4-A36D-663D695EB678}"
 	ProjectSection(SolutionItems) = preProject
@@ -2567,8 +2567,6 @@ Global
 		{28181FAC-41D6-4620-968B-C08BCAEB851B}.Release-Static|x64.ActiveCfg = Release|x64
 		{28181FAC-41D6-4620-968B-C08BCAEB851B}.Release-Static|x64.Build.0 = Release|x64
 		{C72F15C3-EF84-912D-5E0E-6DC3CCC33C45}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C72F15C3-EF84-912D-5E0E-6DC3CCC33C45}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C72F15C3-EF84-912D-5E0E-6DC3CCC33C45}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
 		{C72F15C3-EF84-912D-5E0E-6DC3CCC33C45}.Debug|ARM.ActiveCfg = Debug|Any CPU
 		{C72F15C3-EF84-912D-5E0E-6DC3CCC33C45}.Debug|ARM.Build.0 = Debug|Any CPU
 		{C72F15C3-EF84-912D-5E0E-6DC3CCC33C45}.Debug|ARM.Deploy.0 = Debug|Any CPU
