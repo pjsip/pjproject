@@ -509,6 +509,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
             /* Got "NORMAL" frame from jitter buffer */
             pjmedia_frame frame_in, frame_out;
             pj_bool_t use_dec_buf = PJ_FALSE;
+            unsigned exp_decoded_samples;
 
             stream->plc_cnt = 0;
 
@@ -522,13 +523,21 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
             frame_out.size = frame->size - samples_count*BYTES_PER_SAMPLE;
 
             /* Check if we need to use the decode buffer, i.e: codec is opus
-             * and the decoded frame is larger than the stream frame.
+             * and the decoded frame is larger than the stream frame. The
+             * per-frame decoded size is signalled by the codec via bit_info,
+             * but when the remote raises the ptime mid-stream (e.g. 20->40 ms)
+             * only the first frame carries it; subsequent frames rely on
+             * samples_per_frame, which tracks the updated dec_ptime. Use
+             * whichever is larger so every oversized frame (any ptime up to
+             * the dec_buf capacity) gets the bigger buffer instead of failing
+             * to decode into a too-small stream frame.
              */
+            exp_decoded_samples = PJ_MAX(bit_info, samples_per_frame);
             if (stream->dec_buf &&
-                bit_info * sizeof(pj_int16_t) > frame_out.size)
+                exp_decoded_samples * sizeof(pj_int16_t) > frame_out.size)
             {
                 stream->dec_buf_pos = 0;
-                stream->dec_buf_count = bit_info;
+                stream->dec_buf_count = exp_decoded_samples;
 
                 use_dec_buf = PJ_TRUE;
                 frame_out.buf = stream->dec_buf;
