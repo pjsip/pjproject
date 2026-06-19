@@ -502,6 +502,16 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool_,
                 &avi_hdr.strf_hdr[fport[i]->stream_id].strf_video_hdr;
             const pjmedia_video_format_info *vfi;
 
+            /* Reject zero rate (fps numerator) or scale (fps denominator)
+             * from a malformed header. A zero scale would otherwise be passed
+             * as a zero frame-rate denominator to pjmedia_format_init_video(),
+             * which aborts (or later causes a division by zero).
+             */
+            if (strl_hdr->rate == 0 || strl_hdr->scale == 0) {
+                status = PJMEDIA_ENOTVALIDAVI;
+                goto on_error;
+            }
+
             vfi = pjmedia_get_video_format_info(
                 pjmedia_video_format_mgr_instance(),
                 strl_hdr->codec);
