@@ -544,6 +544,11 @@ PJ_BEGIN_DECL
  * Unsupported AVI file.
  */
 #define PJMEDIA_EAVIUNSUPP          (PJMEDIA_ERRNO_START+191)    /* 220191 */
+/**
+ * @hideinitializer
+ * Not a valid AVI file.
+ */
+#define PJMEDIA_ENOTVALIDAVI        (PJMEDIA_ERRNO_START+192)    /* 220192 */
 
 
 /************************************************************

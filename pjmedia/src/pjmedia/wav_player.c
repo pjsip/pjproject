@@ -399,8 +399,18 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool_,
         goto on_error;
     }
 
+    /* Validate sample rate and channel count. A malformed header with a zero
+     * sample rate or channel count would otherwise abort in
+     * pjmedia_port_info_init() (or yield a zero samples-per-frame).
+     */
+    if (wave_hdr.fmt_hdr.sample_rate == 0 || wave_hdr.fmt_hdr.nchan == 0) {
+        pj_file_close(fport->fd);
+        status = PJMEDIA_ENOTVALIDWAVE;
+        goto on_error;
+    }
+
     fport->fmt_tag = (pjmedia_wave_fmt_tag)wave_hdr.fmt_hdr.fmt_tag;
-    fport->bytes_per_sample = (pj_uint16_t) 
+    fport->bytes_per_sample = (pj_uint16_t)
                               (wave_hdr.fmt_hdr.bits_per_sample / 8);
 
     /* If length of fmt_header is greater than 16, skip the remaining
