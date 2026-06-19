@@ -1634,6 +1634,7 @@ struct wvp_test
     pj_pool_t       *pool;
     struct wvp_pkt   txq;       /* List head of queued packets.         */
     pj_sockaddr      bogon;     /* "Unreachable" address (sends fail).  */
+    pj_bool_t        shim_err;  /* Set if shim hit an unexpected packet.*/
     struct wvp_sess *caller;
     struct wvp_sess *callee;
 };
@@ -1678,9 +1679,15 @@ static pj_status_t wvp_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id,
     if (pj_sockaddr_cmp(dst_addr, &t->bogon) == 0)
         return PJ_STATUS_FROM_OS(120); /* arbitrary non-success send error */
 
+    /* An unknown destination or an oversized packet is not expected in this
+     * controlled setup; flag it and fail the send so the test fails loudly
+     * instead of silently masking the problem.
+     */
     dst = wvp_find_dst(t, dst_addr);
-    if (dst == NULL || size > sizeof(p->data))
-        return PJ_SUCCESS;
+    if (dst == NULL || size > sizeof(p->data)) {
+        t->shim_err = PJ_TRUE;
+        return PJ_EINVAL;
+    }
 
     /* Enqueue a copy for delivery from the poll loop. */
     p = PJ_POOL_ZALLOC_T(t->pool, struct wvp_pkt);
@@ -1883,6 +1890,18 @@ int ice_wait_valid_pair_test(void)
                       "status=%d", callee.status));
             rc = -26; goto s1_done;
         }
+        /* The controlling side must complete successfully too. */
+        if (!caller.completed || caller.status != PJ_SUCCESS) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: caller did not complete "
+                      "successfully, completed=%d status=%d",
+                      caller.completed, caller.status));
+            rc = -27; goto s1_done;
+        }
+        if (t.shim_err) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: transport shim saw an "
+                      "unexpected packet"));
+            rc = -28; goto s1_done;
+        }
         PJ_LOG(3,(THIS_FILE, INDENT "ok: callee recovered via incoming check"));
 
     s1_done:
@@ -1944,6 +1963,11 @@ int ice_wait_valid_pair_test(void)
             PJ_LOG(1,(THIS_FILE, INDENT "err: unexpected success"));
             rc = -34; goto s2_done;
         }
+        if (t.shim_err) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: transport shim saw an "
+                      "unexpected packet"));
+            rc = -35; goto s2_done;
+        }
         PJ_LOG(3,(THIS_FILE, INDENT "ok: deferred then failed on timeout"));
 
     s2_done:
@@ -1993,6 +2017,11 @@ int ice_wait_valid_pair_test(void)
         if (callee.status == PJ_SUCCESS) {
             PJ_LOG(1,(THIS_FILE, INDENT "err: unexpected success"));
             rc = -43; goto s3_done;
+        }
+        if (t.shim_err) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: transport shim saw an "
+                      "unexpected packet"));
+            rc = -44; goto s3_done;
         }
         PJ_LOG(3,(THIS_FILE, INDENT "ok: failed immediately when disabled"));
 
