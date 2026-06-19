@@ -2196,7 +2196,8 @@ typedef struct pjsua_callback
      * Callback when the sound device is about to be opened or closed.
      * This callback will be called even when null sound device or no
      * sound device is configured by the application (i.e. the
-     * #pjsua_set_null_snd_dev() and #pjsua_set_no_snd_dev() APIs).
+     * #pjsua_set_null_snd_dev(), #pjsua_set_null_snd_dev2(), and
+     * #pjsua_set_no_snd_dev() APIs).
      * Application can use the API #pjsua_get_snd_dev() to get the info
      * about which sound device is going to be opened/closed.
      *
@@ -8546,6 +8547,34 @@ PJ_DECL(void) pjsua_snd_dev_param_default(pjsua_snd_dev_param *prm);
 
 
 /**
+ * This structure specifies the parameters to set null sound device.
+ * Use pjsua_null_snd_dev_param_default() to initialize this structure with
+ * default values. Application should only override relevant fields to keep
+ * forward compatibility when new fields are added in the future.
+ */
+typedef struct pjsua_null_snd_dev_param
+{
+    /**
+     * If PJ_TRUE, switch using a gapless handover (start null clock first,
+     * then stop old device). If PJ_FALSE, use legacy behavior (stop old
+     * device first, then start null clock).
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t           avoid_clock_gap;
+
+} pjsua_null_snd_dev_param;
+
+
+/**
+ * Initialize pjsua_null_snd_dev_param with default values.
+ *
+ * @param prm           The parameter.
+ */
+PJ_DECL(void) pjsua_null_snd_dev_param_default(pjsua_null_snd_dev_param *prm);
+
+
+/**
  * This structure specifies the parameters for conference ports connection.
  * Use pjsua_conf_connect_param_default() to initialize this structure with
  * default values.
@@ -9233,12 +9262,28 @@ PJ_DECL(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param);
 
 /**
  * Set pjsua to use null sound device. The null sound device only provides
- * the timing needed by the conference bridge, and will not interract with
+ * the timing needed by the conference bridge, and will not interact with
  * any hardware.
+ * For configurable behavior, use #pjsua_set_null_snd_dev2().
  *
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_set_null_snd_dev(void);
+
+
+/**
+ * Set pjsua to use null sound device according to the specified param.
+ * The null sound device only provides the timing needed by the conference
+ * bridge, and will not interact with any hardware.
+ * Use #pjsua_null_snd_dev_param_default() to initialize the param.
+ *
+ * @param snd_param          Null sound device parameter.
+ *
+ * @return                   PJ_SUCCESS on success, or the appropriate
+ *                           error code.
+ */
+PJ_DECL(pj_status_t) pjsua_set_null_snd_dev2(
+                                const pjsua_null_snd_dev_param *snd_param);
 
 
 /**
@@ -9380,8 +9425,8 @@ PJ_DECL(pj_status_t) pjsua_snd_get_setting(pjmedia_aud_dev_cap cap,
  * media clock is driven by sound device in master port, but unfortunately
  * some sound devices may produce jittery clock. To improve media clock,
  * application can install Null Sound Device (i.e: using
- * pjsua_set_null_snd_dev()), which will act as a master port, and instantiate
- * the sound device as extra sound device.
+ * pjsua_set_null_snd_dev() or pjsua_set_null_snd_dev2()), which will act
+ * as a master port, and instantiate the sound device as extra sound device.
  *
  * Note that extra sound device will not have auto-close upon idle feature.
  * Also note that currently extra sound device only supports mono channel.

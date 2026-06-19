@@ -253,7 +253,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool_,
     if (fport[0]->fsize <= (pj_off_t)(sizeof(riff_hdr_t) + sizeof(avih_hdr_t) +
                                       sizeof(strl_hdr_t)))
     {
-        status = PJMEDIA_EINVALIMEDIATYPE;
+        status = PJMEDIA_ENOTVALIDAVI;
         goto on_error;
     }
 
@@ -276,7 +276,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool_,
         !COMPARE_TAG(avi_hdr.avih_hdr.hdrl_tag, PJMEDIA_AVI_HDRL_TAG) ||
         !COMPARE_TAG(avi_hdr.avih_hdr.avih, PJMEDIA_AVI_AVIH_TAG))
     {
-        status = PJMEDIA_EINVALIMEDIATYPE;
+        status = PJMEDIA_ENOTVALIDAVI;
         goto on_error;
     }
 
@@ -533,6 +533,15 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool_,
         } else {
             strf_audio_hdr_t *strf_hdr =
                 &avi_hdr.strf_hdr[fport[i]->stream_id].strf_audio_hdr;
+
+            /* Reject zero sample rate / channel count (malformed header) to
+             * avoid a zero clock rate propagating into the audio port, which
+             * would later cause a division by zero / invalid port.
+             */
+            if (strf_hdr->sample_rate == 0 || strf_hdr->nchannels == 0) {
+                status = PJMEDIA_ENOTVALIDAVI;
+                goto on_error;
+            }
 
             fport[i]->bits_per_sample = strf_hdr->bits_per_sample;
             //fport[i]->usec_per_frame = avi_hdr.avih_hdr.usec_per_frame;
@@ -854,7 +863,7 @@ static pj_status_t skip_forward(pjmedia_port *this_port, pj_size_t frames)
                            (unsigned long)pos));
             }
 
-            return PJMEDIA_ENOTVALIDWAVE;
+            return PJMEDIA_ENOTVALIDAVI;
         }
 
         PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len, return PJ_EINVAL);
@@ -1147,7 +1156,7 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
                                ch.id, ch.len,
                                (unsigned long)pos));
                 }
-                status = PJMEDIA_ENOTVALIDWAVE;
+                status = PJMEDIA_ENOTVALIDAVI;
                 goto on_error2;
             }
 

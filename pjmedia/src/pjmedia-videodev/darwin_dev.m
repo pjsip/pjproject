@@ -39,10 +39,6 @@
 #define DEFAULT_WIDTH           640
 #define DEFAULT_HEIGHT          480
 #define DEFAULT_FPS             15
-/* When the camera orientation changes, maintain horizon-level capture
- * relative to gravity.
- */
-#define USE_HORIZON_LEVEL       1
 
 /* Define whether we should maintain the aspect ratio when rotating the image.
  * For more details, please refer to util.h.
@@ -136,7 +132,12 @@ struct darwin_stream
     
     pjmedia_vid_dev_conv    conv;
     pjmedia_rect_size       vid_size;
-    
+    /* Device-specific portrait rotation angle derived from coordinator +
+     * physical device orientation. -1 means not yet calibrated.
+     * Constant for the lifetime of the stream (determined by camera hardware).
+     */
+    int                     cam_portrait_angle;
+
     AVCaptureSession            *cap_session;
     AVCaptureDeviceInput        *dev_input;
     pj_bool_t                    has_image;
@@ -811,6 +812,10 @@ static pj_status_t darwin_factory_create_stream(
     strm = PJ_POOL_ZALLOC_T(pool, struct darwin_stream);
     pj_memcpy(&strm->param, param, sizeof(*param));
     strm->pool = pool;
+    strm->cam_portrait_angle = -1;
+#if TARGET_OS_IPHONE
+    [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+#endif
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
     strm->factory = qf;
@@ -966,13 +971,10 @@ static pj_status_t darwin_factory_create_stream(
             (vfd->size.h > vfd->size.w))
         {
             if (param->orient == PJMEDIA_ORIENT_UNKNOWN) {
-#if (USE_HORIZON_LEVEL)
-                /* Handle sending portrait. */
                 if (vfd->size.h > vfd->size.w)
                     param->orient = PJMEDIA_ORIENT_ROTATE_90DEG;
                 else
-#endif
-                param->orient = PJMEDIA_ORIENT_NATURAL;
+                    param->orient = PJMEDIA_ORIENT_NATURAL;
             }
             darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
                                &param->orient);
@@ -1296,7 +1298,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
 
             pj_memcpy(&strm->param.orient, pval,
                       sizeof(strm->param.orient));
-        
+
             if (strm->param.dir == PJMEDIA_DIR_RENDER) {
 #if TARGET_OS_IPHONE
                 dispatch_sync_on_main_queue(^{
@@ -1319,18 +1321,72 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             if (@available(macOS 14.0, iOS 17.0, *)) {
                 AVCaptureConnection *vidcon;
                 const CGFloat cap_ori[4] = { 0, 90, 180, 270};
-                int rotation = cap_ori[strm->param.orient-1];
+                int idx;
+                int rotation;
 
-#if (USE_HORIZON_LEVEL)
-                AVCaptureDeviceRotationCoordinator *coord =
-                    [[AVCaptureDeviceRotationCoordinator alloc]
-                     initWithDevice:strm->dev_input.device
-                     previewLayer:nil];
-                if (coord) {
-                    rotation = coord.videoRotationAngleForHorizonLevelCapture;
-                    [coord release];
+                if (strm->param.orient < PJMEDIA_ORIENT_NATURAL ||
+                    strm->param.orient > PJMEDIA_ORIENT_ROTATE_270DEG)
+                {
+                    return PJ_EINVAL;
                 }
+                idx = strm->param.orient - 1;
+
+#if TARGET_OS_IPHONE
+                /* Derive the device-specific portrait angle by combining the
+                 * coordinator's gravity-aligned angle with the physical device
+                 * tilt. This handles sensors whose native orientation differs
+                 * from the conventional landscape-native assumption (e.g. the
+                 * portrait-native sensor on iPhone 17), and works correctly
+                 * regardless of physical device orientation when set_cap is
+                 * called.
+                 *
+                 * cam_portrait_angle = (coord_angle + device_tilt_CW) % 360
+                 *   device_tilt_CW: 0=portrait, 90=LandscapeRight,
+                 *                   180=upsidedown, 270=LandscapeLeft
+                 * rotation = (cam_portrait_angle - 90 + cap_ori[idx]) % 360
+                 */
+                if (strm->cam_portrait_angle < 0) {
+                    AVCaptureDeviceRotationCoordinator *coord =
+                        [[AVCaptureDeviceRotationCoordinator alloc]
+                         initWithDevice:strm->dev_input.device
+                         previewLayer:nil];
+                    if (coord) {
+                        int coord_angle =
+                            (int)coord.videoRotationAngleForHorizonLevelCapture;
+                        int device_tilt;
+                        [coord release];
+
+                        switch ([UIDevice currentDevice].orientation) {
+                        case UIDeviceOrientationPortrait:
+                            device_tilt = 0; break;
+                        case UIDeviceOrientationLandscapeRight:
+                            device_tilt = 90; break;
+                        case UIDeviceOrientationPortraitUpsideDown:
+                            device_tilt = 180; break;
+                        case UIDeviceOrientationLandscapeLeft:
+                            device_tilt = 270; break;
+                        default:
+                            device_tilt = -1; break;
+                        }
+
+                        if (device_tilt >= 0) {
+                            strm->cam_portrait_angle =
+                                (coord_angle + device_tilt) % 360;
+                        }
+                    }
+                }
+
+                if (strm->cam_portrait_angle >= 0) {
+                    rotation = (strm->cam_portrait_angle - 90 +
+                                (int)cap_ori[idx] + 360) % 360;
+                } else {
+                    /* Device orientation unknown; fall back to conventional. */
+                    rotation = (int)cap_ori[idx];
+                }
+#else
+                rotation = (int)cap_ori[idx];
 #endif
+
                 vidcon = [strm->video_output
                           connectionWithMediaType:AVMediaTypeVideo];
                 if ([vidcon isVideoRotationAngleSupported:rotation])
@@ -1357,7 +1413,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                                strm->size.w);
 
                 if (!support_ori) {
-                    PJ_LOG(4, (THIS_FILE, "Native video capture orientation " 
+                    PJ_LOG(4, (THIS_FILE, "Native video capture orientation "
                                           "unsupported, will use converter's "
                                           "rotation."));
                 }
@@ -1366,15 +1422,16 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                                                  &strm->conv, strm->pool,
                                                  &strm->param.fmt,
                                                  orig_size, strm->size,
-                                                 (support_ori?PJ_FALSE:PJ_TRUE),
+                                                 support_ori? PJ_FALSE :
+                                                 PJ_TRUE,
                                                  MAINTAIN_ASPECT_RATIO);
-                
+
                 if (status != PJ_SUCCESS)
                     return status;
             }
-            
+
             pjmedia_vid_dev_conv_set_rotation(&strm->conv, strm->param.orient);
-            
+
             PJ_LOG(5, (THIS_FILE, "Video capture orientation set to %d",
                                   strm->param.orient));
 
@@ -1534,7 +1591,9 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
     if (stream->render_data_provider) {
         CGDataProviderRelease(stream->render_data_provider);
         stream->render_data_provider = nil;
-    }    
+    }
+
+    [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
 #endif /* TARGET_OS_IPHONE */
 
     if (stream->queue) {

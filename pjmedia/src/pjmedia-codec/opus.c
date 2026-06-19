@@ -146,6 +146,8 @@ struct opus_data
     pjmedia_frame                dec_frame[2];
     int                          dec_frame_index;
     pj_size_t                    dec_frame_buf_size;
+    unsigned char               *parse_buf;
+    pj_size_t                    parse_buf_size;
 };
 
 /* Codec factory instance */
@@ -821,6 +823,24 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
                 opus_data->dec_frame_buf_size);
     opus_data->dec_frame_index = -1;
 
+    /* Output buffer for codec_parse(). The repacketizer may expand a
+     * multi-frame packet (one shared TOC byte) into N separate single-frame
+     * packets (each with its own TOC), so the total can exceed the input
+     * size. Use a dedicated, persistent buffer sized generously enough to
+     * accommodate any expansion of a MAX_ENCODED_PACKET_SIZE input.
+     */
+    if (!opus_data->parse_buf) {
+        opus_data->parse_buf_size = MAX_ENCODED_PACKET_SIZE * 2;
+        opus_data->parse_buf = pj_pool_alloc(opus_data->pool,
+                                             opus_data->parse_buf_size);
+        if (!opus_data->parse_buf) {
+            opus_data->parse_buf_size = 0;
+            PJ_LOG(2, (THIS_FILE, "Unable to allocate parse buffer"));
+            pj_mutex_unlock(opus_data->mutex);
+            return PJ_ENOMEM;
+        }
+    }
+
     /* Initialize the repacketizers */
     opus_repacketizer_init(opus_data->enc_packer);
     opus_repacketizer_init(opus_data->dec_packer);
@@ -953,9 +973,22 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
 
     out_pos = 0;
     for (i = 0; i < num_frames; ++i) {
+        /* Write extracted single-frame packets into parse_buf rather than
+         * back into pkt, which would overflow when the per-frame outputs
+         * (each with their own TOC byte) total more than pkt_size.
+         */
+        if ((pj_size_t)out_pos >= opus_data->parse_buf_size) {
+            PJ_LOG(5, (THIS_FILE, "Parse output buffer exhausted "
+                       "(pkt_size=%lu, frame=%d)",
+                       (unsigned long)pkt_size, i));
+            pj_mutex_unlock (opus_data->mutex);
+            return PJMEDIA_CODEC_EFAILED;
+        }
         size = opus_repacketizer_out_range(opus_data->dec_packer, i, i+1,
-                                           ((unsigned char*)pkt) + out_pos,
-                                           sizeof(tmp_buf));
+                                           opus_data->parse_buf + out_pos,
+                                           (opus_int32)
+                                           (opus_data->parse_buf_size -
+                                            out_pos));
         if (size < 0) {
             PJ_LOG(5, (THIS_FILE, "Parse failed! (pkt_size=%lu, err=%d)",
                        (unsigned long)pkt_size, size));
@@ -963,7 +996,7 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
             return PJMEDIA_CODEC_EFAILED;
         }
         frames[i].type = PJMEDIA_FRAME_TYPE_AUDIO;
-        frames[i].buf = ((char*)pkt) + out_pos;
+        frames[i].buf = opus_data->parse_buf + out_pos;
         frames[i].size = size;
         frames[i].bit_info = 0;
 

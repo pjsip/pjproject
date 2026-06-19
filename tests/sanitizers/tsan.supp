@@ -87,3 +87,44 @@ race:*
 #   #2 job_thread ../src/pjmedia-videodev/sdl_dev.c
 deadlock:libdbus
 #=============================================================================
+
+#=============================================================================
+# Lock-order-inversion between PJSUA_LOCK and a dialog's group lock,
+# observed inside PJSUA's internal callback handlers reached from the
+# SIP stack (outgoing call setup, incoming UAS, media update, etc.).
+#
+# Two orderings appear on the same thread within one PJSUA operation:
+#   M0 -> M1: PJSUA holds PJSUA_LOCK; pjsip_dlg_create_{uac,uas} and
+#     friends briefly acquire the new dialog's grp_lock via
+#     pj_grp_lock_add_handler to install a handler.
+#   M1 -> M0: the SIP stack's transport / SDP / tsx-state callback chain
+#     reaches a PJSUA internal handler (pjsua_call_on_state_changed,
+#     pjsua_call_on_incoming, etc.). Those handlers use PJSUA_RELEASE_LOCK
+#     / PJSUA_RELOCK around user-callback invocations; the RELOCK
+#     re-acquires PJSUA_LOCK while the dialog grp_lock is still held
+#     upstream by the SIP stack.
+#
+# PJSUA already drops PJSUA_LOCK around user callbacks, but the dialog
+# grp_lock is held by the SIP stack and outside PJSUA's control.
+# Eliminating it would require reworking PJSUA's lock topology.
+deadlock:pjsua_call_on_state_changed
+deadlock:pjsua_call_on_incoming
+#=============================================================================
+
+#=============================================================================
+# Lock-order-inversion inside pjmedia event manager when an event
+# subscriber callback publishes another event (nested publish).
+#
+# Two orderings appear on the event worker thread:
+#   M0 -> M1: event_mgr_distribute_events holds mgr->mutex and briefly
+#     acquires mgr->cb_mutex (the cb_mutex serializes callback execution
+#     against unsubscribe); mgr->mutex is then released before invoking
+#     the subscriber callback while cb_mutex remains held.
+#   M1 -> M0: the subscriber callback calls pjmedia_event_publish, which
+#     re-acquires mgr->mutex while cb_mutex is still held.
+#
+# This is a pjmedia event manager design issue; reworking the lock
+# topology to make the worker drop both locks before the callback (and
+# reorder publish's locking) would require a separate, broader change.
+deadlock:event_mgr_distribute_events
+#=============================================================================

@@ -549,6 +549,9 @@
   <ItemGroup>
     <ClCompile Include="..\src\test\auth_async_test.c" />
     <ClCompile Include="..\src\test\pjsua_auth_test.c" />
+    <ClCompile Include="..\src\test\pjsua_stress.c">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\src\test\dlg_core_test.c" />
     <ClCompile Include="..\src\test\dns_test.c" />
     <ClCompile Include="..\src\test\inv_offer_answer_test.c" />

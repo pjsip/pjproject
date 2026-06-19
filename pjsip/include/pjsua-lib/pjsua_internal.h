@@ -657,6 +657,8 @@ struct pjsua_data
     pjmedia_master_port *null_snd;  /**< Master port for null sound.    */
     pjmedia_port        *null_port; /**< Null port.                     */
     pj_bool_t            snd_is_on; /**< Media flow is currently active */
+    pj_bool_t            snd_avoid_clock_gap; /**< Keep clock continuity
+                                                    across null<->real dev */
     unsigned             snd_mode;  /**< Sound device mode.             */
 
     /* Video device */

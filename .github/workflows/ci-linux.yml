@@ -688,3 +688,142 @@ jobs:
         cmake --build build-consumer --verbose
         ./build-consumer/test_consumer
         ./build-consumer/test_consumer2
+
+  # Short pjsua-stress runs under ASan/TSan on every PR / push to master.
+  # The full weekly run (larger fleet, longer duration) lives in
+  # .github/workflows/stress-test.yml.
+  stress-asan:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
+    runs-on: ubuntu-latest
+    name: stress / asan
+    timeout-minutes: 45
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y nasm
+    - name: get openh264
+      run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
+    - name: build openh264
+      run: cd openh264 && $MAKE_FAST && sudo make install && sudo ldconfig
+    - name: config site
+      run: cp pjlib/include/pj/config_site_stress.h pjlib/include/pj/config_site.h
+    - name: configure
+      run: |
+        CFLAGS="-g -fsanitize=address" \
+        CXXFLAGS="-g -fsanitize=address" \
+        LDFLAGS="-rdynamic -fsanitize=address" \
+        ./configure --enable-epoll
+    - name: make
+      run: $MAKE_FAST
+    - name: run pjsua-stress
+      run: |
+        set -eo pipefail
+        export LSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/lsan.supp"
+        export ASAN_OPTIONS="halt_on_error=1"
+        ARCH=$(make --no-print-directory -s infotarget)
+        cd pjsip/bin
+        # Temporarily disable errexit so a crashed binary doesn't kill the
+        # step before we capture PIPESTATUS and decode the backtrace.
+        # DON'T use `|| :` here — `:` runs as a single-command pipeline
+        # that resets PIPESTATUS to (0), masking the real exit code.
+        set +e
+        ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 2>&1 | tee stress.log
+        rc=${PIPESTATUS[0]}
+        set -e
+        # If our crash handler dumped a backtrace, resolve the static-frame
+        # offsets via addr2line so the names land in the uploaded log.
+        if grep -q "=== pjsua_stress backtrace ===" stress.log; then
+          OFFSETS=$(grep -oE "\./pjsua-stress[^(]*\(\+0x[0-9a-fA-F]+\)" stress.log \
+                    | grep -oE "0x[0-9a-fA-F]+" || true)
+          if [ -n "$OFFSETS" ]; then
+            echo "" >> stress.log
+            echo "=== addr2line resolved frames ===" >> stress.log
+            addr2line -e "./pjsua-stress-$ARCH" -f -p -i $OFFSETS >> stress.log 2>&1 || true
+          fi
+        fi
+        if [ "$rc" -ne 0 ]; then
+          echo "::error::pjsua-stress exited with code $rc; see uploaded stress.log"
+          exit "$rc"
+        fi
+        # Belt-and-suspenders: catch libc assertions and sanitizer reports
+        # even if the binary somehow exited 0.
+        if grep -qE "Assertion .* failed|ERROR: AddressSanitizer|ERROR: LeakSanitizer" stress.log; then
+          echo "::error::Assertion or AddressSanitizer report found in stress.log"
+          grep -nE "Assertion .* failed|ERROR: AddressSanitizer|ERROR: LeakSanitizer|SUMMARY: AddressSanitizer" stress.log
+          exit 1
+        fi
+    - name: upload log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: stress-asan-log-${{ github.run_id }}
+        path: pjsip/bin/stress.log
+
+  stress-tsan:
+    needs: [detect-changes]
+    if: github.event_name == 'push' || needs.detect-changes.outputs.any_src == 'true'
+    runs-on: ubuntu-latest
+    name: stress / tsan
+    timeout-minutes: 45
+    steps:
+    - uses: actions/checkout@v4
+    - name: install dependencies
+      run: sudo apt-get update && sudo apt-get install -y nasm
+    - name: get openh264
+      run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
+    - name: build openh264
+      run: cd openh264 && $MAKE_FAST && sudo make install && sudo ldconfig
+    - name: config site
+      run: cp pjlib/include/pj/config_site_stress.h pjlib/include/pj/config_site.h
+    - name: configure
+      run: |
+        CFLAGS="-g -fsanitize=thread" \
+        CXXFLAGS="-g -fsanitize=thread" \
+        LDFLAGS="-rdynamic -fsanitize=thread" \
+        ./configure --enable-epoll
+    - name: make
+      run: $MAKE_FAST
+    - name: run pjsua-stress
+      run: |
+        set -eo pipefail
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp halt_on_error=1"
+        ARCH=$(make --no-print-directory -s infotarget)
+        cd pjsip/bin
+        # Temporarily disable errexit so a crashed binary doesn't kill the
+        # step before we capture PIPESTATUS and decode the backtrace.
+        # DON'T use `|| :` here — `:` runs as a single-command pipeline
+        # that resets PIPESTATUS to (0), masking the real exit code.
+        set +e
+        ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 2>&1 | tee stress.log
+        rc=${PIPESTATUS[0]}
+        set -e
+        # If our crash handler dumped a backtrace, resolve the static-frame
+        # offsets via addr2line so the names land in the uploaded log.
+        if grep -q "=== pjsua_stress backtrace ===" stress.log; then
+          OFFSETS=$(grep -oE "\./pjsua-stress[^(]*\(\+0x[0-9a-fA-F]+\)" stress.log \
+                    | grep -oE "0x[0-9a-fA-F]+" || true)
+          if [ -n "$OFFSETS" ]; then
+            echo "" >> stress.log
+            echo "=== addr2line resolved frames ===" >> stress.log
+            addr2line -e "./pjsua-stress-$ARCH" -f -p -i $OFFSETS >> stress.log 2>&1 || true
+          fi
+        fi
+        if [ "$rc" -ne 0 ]; then
+          echo "::error::pjsua-stress exited with code $rc; see uploaded stress.log"
+          exit "$rc"
+        fi
+        # Belt-and-suspenders: catch libc assertions and TSan reports even
+        # if the binary somehow exited 0 (halt_on_error doesn't always abort
+        # on lock-order-inversion warnings).
+        if grep -qE "Assertion .* failed|WARNING: ThreadSanitizer|ERROR: ThreadSanitizer" stress.log; then
+          echo "::error::Assertion or ThreadSanitizer report found in stress.log"
+          grep -nE "Assertion .* failed|WARNING: ThreadSanitizer|ERROR: ThreadSanitizer|SUMMARY: ThreadSanitizer" stress.log
+          exit 1
+        fi
+    - name: upload log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: stress-tsan-log-${{ github.run_id }}
+        path: pjsip/bin/stress.log

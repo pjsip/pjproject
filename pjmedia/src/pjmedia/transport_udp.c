@@ -789,9 +789,15 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
         /* Check if RTCP source address is the same as the configured
          * remote address, and switch the address when they are
          * different.
+         *
+         * Skip when rem_rtcp_addr is not initialized yet (sa_family==0),
+         * e.g. an RTCP packet arriving before transport_attach2() or on a
+         * recycled transport: pj_sockaddr_cmp() would call
+         * pj_sockaddr_get_addr_len(), which asserts on an invalid family.
          */
         if (bytes_read>0 &&
-            (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0)
+            (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0 &&
+            udp->rem_rtcp_addr.addr.sa_family != 0)
         {
             if (pj_sockaddr_cmp(&udp->rem_rtcp_addr, &udp->rtcp_src_addr) == 0) {
                 /* Still receiving from rem_rtcp_addr, don't switch */
@@ -1137,6 +1143,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
                                        pj_size_t size)
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
+    pj_ioqueue_key_t *key;
     pj_ssize_t sent;
     unsigned id;
     struct pending_write *pw;
@@ -1149,6 +1156,14 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     PJ_ASSERT_RETURN(size <= PJMEDIA_MAX_MTU, PJ_ETOOBIG);
 
     if (!udp->started) {
+        return PJ_SUCCESS;
+    }
+
+    /* Snapshot the key — a concurrent transport_destroy() can clear
+     * udp->rtp_key. pj_ioqueue_sendto() handles a closing key
+     * gracefully via PJ_ECANCELLED, but asserts on NULL. */
+    key = udp->rtp_key;
+    if (!key) {
         return PJ_SUCCESS;
     }
 
@@ -1179,10 +1194,10 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     pj_memcpy(pw->buffer, pkt, size);
 
     sent = size;
-    status = pj_ioqueue_sendto( udp->rtp_key, 
+    status = pj_ioqueue_sendto( key,
                                 &udp->rtp_pending_write[id].op_key,
                                 pw->buffer, &sent, 0,
-                                &udp->rem_rtp_addr, 
+                                &udp->rem_rtp_addr,
                                 udp->addr_len);
 
     if (status != PJ_EPENDING) {
@@ -1216,6 +1231,7 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
                                         pj_size_t size)
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
+    pj_ioqueue_key_t *key;
     pj_ssize_t sent;
     pj_status_t status;
 
@@ -1225,14 +1241,19 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
         return PJ_SUCCESS;
     }
 
+    /* Snapshot the key (see transport_send_rtp for rationale). */
+    key = udp->use_rtcp_mux ? udp->rtp_key : udp->rtcp_key;
+    if (!key) {
+        return PJ_SUCCESS;
+    }
+
     if (addr == NULL) {
         addr = &udp->rem_rtcp_addr;
         addr_len = udp->addr_len;
     }
 
     sent = size;
-    status = pj_ioqueue_sendto( (udp->use_rtcp_mux? udp->rtp_key:
-                                 udp->rtcp_key), &udp->rtcp_write_op,
+    status = pj_ioqueue_sendto( key, &udp->rtcp_write_op,
                                 pkt, &sent, 0, addr, addr_len);
 
     if (status==PJ_SUCCESS || status==PJ_EPENDING)

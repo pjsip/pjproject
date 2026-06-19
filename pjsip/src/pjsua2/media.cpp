@@ -1125,6 +1125,15 @@ void AudDevManager::setNullDev() PJSUA2_THROW(Error)
     PJSUA2_CHECK_EXPR( pjsua_set_null_snd_dev() );
 }
 
+void AudDevManager::setNullDev2(bool avoidClockGap) PJSUA2_THROW(Error)
+{
+    pjsua_null_snd_dev_param param;
+
+    pjsua_null_snd_dev_param_default(&param);
+    param.avoid_clock_gap = avoidClockGap;
+    PJSUA2_CHECK_EXPR( pjsua_set_null_snd_dev2(&param) );
+}
+
 MediaPort *AudDevManager::setNoDev()
 {
     return (MediaPort*)pjsua_set_no_snd_dev();

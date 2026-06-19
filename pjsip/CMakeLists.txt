@@ -334,6 +334,26 @@ if(BUILD_TESTING)
 
   add_test(NAME pjsip-test COMMAND pjsip-test)
 
+  # pjsua stress test application
+  add_executable(pjsua-stress
+    src/test/pjsua_stress.c
+  )
+
+  target_link_libraries(pjsua-stress
+    PRIVATE
+      pjlib
+      pjlib-util
+      pjnath
+      pjmedia
+      pjmedia-codec
+      pjmedia-audiodev
+      pjmedia-videodev
+      pjsip
+      pjsip-simple
+      pjsip-ua
+      pjsua-lib
+  )
+
   # pjsua test application
   add_executable(pjsua2-test
     src/pjsua2-test/main.cpp

@@ -1093,6 +1093,9 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
     pj_uint8_t r_bitptr = 0;
     pj_uint8_t *r = (pj_uint8_t*)pkt;
 
+    /* End of the packet, used to bound all reads below */
+    pj_uint8_t *pkt_end = pkt_size ? ((pj_uint8_t*)pkt + pkt_size) : (pj_uint8_t*)pkt;
+
     /* env vars for AMR or AMRWB */
     pj_uint8_t               SID_FT;
     const pj_uint8_t        *framelen_tbl;
@@ -1114,8 +1117,13 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
         order_maps      = pjmedia_codec_amrwb_ordermaps;
     }
 
-    PJ_UNUSED_ARG(pkt_size);
     PJ_UNUSED_ARG(order_maps);
+
+    /* Empty packet, nothing to parse */
+    if (pkt_size == 0) {
+        *nframes = 0;
+        return PJ_SUCCESS;
+    }
 
     /* Code Mode Request, 4 bits */
     *cmr = (pj_uint8_t)((*r >> 4) & 0x0F);
@@ -1129,6 +1137,15 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
     for (;;) {
         pj_uint8_t TOC = 0;
         pj_uint8_t F, FT, Q;
+
+        /* Make sure the TOC byte(s) are within the packet. The 4 and 6
+         * bit-offset cases straddle two octets, so they need one more byte.
+         */
+        if (r >= pkt_end ||
+            ((r_bitptr == 4 || r_bitptr == 6) && r + 1 >= pkt_end))
+        {
+            break;
+        }
 
         if (r_bitptr == 0) {
             TOC = (pj_uint8_t)(*r >> 2);
@@ -1187,9 +1204,23 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
     /* Speech frames */
     while (cnt < *nframes) {
         pj_uint8_t FT;
+        unsigned flen;
 
         info = (pjmedia_codec_amr_bit_info*) &frames[cnt].bit_info;
         FT = info->frame_type;
+
+        /* Number of packet bytes this frame spans */
+        if (setting->octet_aligned) {
+            flen = framelen_tbl[FT];
+        } else if (FT == 14 || FT == 15) {
+            flen = 0;
+        } else {
+            flen = (framelenbit_tbl[FT] + r_bitptr + 7) >> 3;
+        }
+
+        /* Stop if the frame data is not fully contained in the packet */
+        if ((pj_size_t)(pkt_end - r) < flen)
+            break;
 
         frames[cnt].buf = r;
         info->start_bit = r_bitptr;
@@ -1222,6 +1253,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
         }
         ++cnt;
     }
+    *nframes = cnt;
 
     return PJ_SUCCESS;
 }
