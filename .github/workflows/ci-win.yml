@@ -79,6 +79,9 @@ jobs:
       run: |
         echo #define PJ_TODO(x) > pjlib\include\pj\config_site.h
       shell: cmd
+    - name: Restore .NET MAUI Workloads
+      run: dotnet workload restore pjsip-apps\src\swig\csharp\pjsua2maui\pjsua2maui\pjsua2maui.csproj
+      shell: pwsh
     - name: MSBuild
       run: |
         for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat"
@@ -140,6 +143,8 @@ jobs:
       run: |
         for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
+    - name: Restore .NET MAUI Workloads
+      run: dotnet workload restore pjsip-apps\src\swig\csharp\pjsua2maui\pjsua2maui\pjsua2maui.csproj
     - name: MSBuild
       working-directory: .
       run: |
@@ -225,6 +230,8 @@ jobs:
       run: |
         for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
+    - name: Restore .NET MAUI Workloads
+      run: dotnet workload restore pjsip-apps\src\swig\csharp\pjsua2maui\pjsua2maui\pjsua2maui.csproj    
     - name: MSBuild
       working-directory: .
       run: |
@@ -319,6 +326,8 @@ jobs:
       run: |
         for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
+    - name: Restore .NET MAUI Workloads
+      run: dotnet workload restore pjsip-apps\src\swig\csharp\pjsua2maui\pjsua2maui\pjsua2maui.csproj
     - name: MSBuild
       working-directory: .
       run: |
@@ -380,6 +389,8 @@ jobs:
       run: |
         for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
+    - name: Restore .NET MAUI Workloads
+      run: dotnet workload restore pjsip-apps\src\swig\csharp\pjsua2maui\pjsua2maui\pjsua2maui.csproj
     - name: MSBuild
       working-directory: .
       run: |
@@ -455,6 +466,8 @@ jobs:
         Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
         Add-Content config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
       shell: powershell
+    - name: Restore .NET MAUI Workloads
+      run: dotnet workload restore pjsip-apps\src\swig\csharp\pjsua2maui\pjsua2maui\pjsua2maui.csproj
     - name: check VsDevCmd.bat
       run: |
         for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
@@ -588,6 +601,8 @@ jobs:
         Add-Content config_site.h "#define PJMEDIA_VIDEO_DEV_HAS_SDL 1"
         Add-Content config_site.h "#define PJMEDIA_HAS_VPX_CODEC 1"
       shell: powershell
+    - name: Restore .NET MAUI Workloads
+      run: dotnet workload restore pjsip-apps\src\swig\csharp\pjsua2maui\pjsua2maui\pjsua2maui.csproj
     - name: check VsDevCmd.bat
       run: |
         for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
@@ -706,6 +721,8 @@ jobs:
       run: |
         for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do dir "%%i\Common7\Tools\VsDevCmd.bat"
       shell: cmd
+    - name: Restore .NET MAUI Workloads
+      run: dotnet workload restore pjsip-apps\src\swig\csharp\pjsua2maui\pjsua2maui\pjsua2maui.csproj
     - name: MSBuild
       working-directory: .
       run: |
