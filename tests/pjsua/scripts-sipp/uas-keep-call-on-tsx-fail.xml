@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!--
+  Verifies pjsua's on_call_tsx_terminate_session callback: when the
+  application returns PJ_TRUE, an in-dialog UAC re-INVITE that gets
+  481 must NOT cause the call to be terminated by the library. The
+  paired pjsua driver runs with the keep-call-on-tsx-fail flag; the
+  call must stay alive until pjsua itself sends BYE in response to
+  the hangup command, not as a side effect of the failed re-INVITE.
+-->
+
+<scenario name="uas-keep-call-on-tsx-fail">
+
+  <recv request="INVITE" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=- 1 1 IN IP4 [local_ip]
+      s=-
+      c=IN IP4 [local_ip]
+      t=0 0
+      m=audio 4444 RTP/AVP 0
+      a=rtpmap:0 PCMU/8000
+
+    ]]>
+  </send>
+
+  <recv request="ACK">
+  </recv>
+
+  <!-- Wait for pjsua's hold re-INVITE, respond 481. -->
+  <recv request="INVITE" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 481 Call/Transaction Does Not Exist
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv request="ACK">
+  </recv>
+
+  <!--
+    With suppression in effect, pjsua-lib must NOT auto-BYE here. The
+    BYE that follows is the one pjsua sends after the test driver
+    issues the 'h' (hangup) command on stdin. If suppression failed,
+    the BYE would arrive immediately and SIPp would still accept it,
+    but the driver's expect for the suppression log line would have
+    timed out first.
+  -->
+  <recv request="BYE">
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
+  <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
+
+</scenario>

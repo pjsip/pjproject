@@ -106,8 +106,8 @@ export PJMEDIA_AUDIODEV_LDFLAGS += $(PJMEDIA_LDLIB) \
 #
 export PJMEDIA_VIDEODEV_SRCDIR = ../src/pjmedia-videodev
 export PJMEDIA_VIDEODEV_OBJS += videodev.o errno.o avi_dev.o ffmpeg_dev.o \
-				colorbar_dev.o v4l2_dev.o opengl_dev.o \
-				util.o
+				colorbar_dev.o null_dev.o v4l2_dev.o \
+				opengl_dev.o util.o
 export PJMEDIA_VIDEODEV_CFLAGS += $(_CFLAGS)
 export PJMEDIA_VIDEODEV_CXXFLAGS += $(_CXXFLAGS)
 export PJMEDIA_VIDEODEV_LDFLAGS += $(PJMEDIA_LDLIB) \

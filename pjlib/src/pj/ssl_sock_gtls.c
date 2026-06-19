@@ -1018,12 +1018,22 @@ static void tls_cert_get_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
     if (ci->version >= 3) {
         char out[256] = { 0 };
         /* Get the number of all alternate names so that we can allocate
-         * the correct number of bytes in subj_alt_name */
+         * the correct number of bytes in subj_alt_name.
+         *
+         * Pass the true capacity of 'out' as the in/out size argument on
+         * every iteration. 'len' otherwise still holds sizeof(buf) (512)
+         * from an earlier getter, which would let GnuTLS copy an oversized
+         * SubjectAltName entry past the end of the 256-byte 'out' buffer.
+         * Use sizeof(out) - 1 to match the populate loop below, leaving
+         * room for the NUL terminator GnuTLS appends to string names.
+         */
+        len = sizeof(out) - 1;
         while (gnutls_x509_crt_get_subject_alt_name(cert, seq, out, &len,
                                                     NULL) !=
                GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE)
         {
             seq++;
+            len = sizeof(out) - 1;
         }
 
         ci->subj_alt_name.entry = pj_pool_calloc(pool, seq,

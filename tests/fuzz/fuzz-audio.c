@@ -28,6 +28,9 @@
 #include <pjmedia-codec/speex.h>
 #include <pjmedia-codec/ilbc.h>
 #include <pjmedia-codec/l16.h>
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+#  include <pjmedia-codec/opus.h>
+#endif
 
 /* Codec configuration structure */
 typedef struct {
@@ -35,6 +38,7 @@ typedef struct {
     const char *name;
     size_t min_frame_size;
     size_t pcm_frame_size;
+    unsigned channel_cnt;
 } codec_config_t;
 
 /* Global state for persistent fuzzing */
@@ -54,18 +58,25 @@ static pjmedia_codec *codec_ilbc = NULL;
 static pjmedia_codec *codec_l16_8k = NULL;
 static pjmedia_codec *codec_l16_16k = NULL;
 static pjmedia_codec *codec_l16_48k = NULL;
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+static pjmedia_codec *codec_opus = NULL;
+#endif
 
 /* Codec configurations array */
 static codec_config_t codec_configs[] = {
-    {&codec_pcma,     "G.711 A-Law", 80,  160},
-    {&codec_pcmu,     "G.711 U-Law", 80,  160},
-    {&codec_g722,     "G.722",       80,  320},
-    {&codec_gsm,      "GSM",         33,  320},
-    {&codec_speex,    "Speex",       10,  320},
-    {&codec_ilbc,     "iLBC",        38,  480},
-    {&codec_l16_8k,   "L16 8kHz",    320, 320},
-    {&codec_l16_16k,  "L16 16kHz",   640, 640},
-    {&codec_l16_48k,  "L16 48kHz",   1920, 1920},
+    {&codec_pcma,     "G.711 A-Law", 80,  160,  1},
+    {&codec_pcmu,     "G.711 U-Law", 80,  160,  1},
+    {&codec_g722,     "G.722",       80,  320,  1},
+    {&codec_gsm,      "GSM",         33,  320,  1},
+    {&codec_speex,    "Speex",       10,  320,  1},
+    {&codec_ilbc,     "iLBC",        38,  480,  1},
+    {&codec_l16_8k,   "L16 8kHz",    320, 320,  1},
+    {&codec_l16_16k,  "L16 16kHz",   640, 640,  1},
+    {&codec_l16_48k,  "L16 48kHz",   1920, 1920, 1},
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    /* Opus stereo @ 48 kHz: 20 ms frame = 960 samples * 2 ch * 2 bytes = 3840 */
+    {&codec_opus,     "Opus",        10,  3840, 2},
+#endif
 };
 
 #define NUM_CODECS (sizeof(codec_configs) / sizeof(codec_configs[0]))
@@ -80,7 +91,10 @@ static const char* codec_id_strings[] = {
     "iLBC/8000/1",
     "L16/8000/1",
     "L16/16000/1",
-    "L16/48000/1"
+    "L16/48000/1",
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    "opus/48000/2"
+#endif
 };
 
 /* Clock rates for each codec (must match codec_id_strings order) */
@@ -93,7 +107,10 @@ static const unsigned codec_clock_rates[] = {
     8000,   /* iLBC */
     8000,   /* L16 8kHz */
     16000,  /* L16 16kHz */
-    48000   /* L16 48kHz */
+    48000,  /* L16 48kHz */
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    48000   /* Opus */
+#endif
 };
 
 /* Helper function to allocate and open a codec */
@@ -164,6 +181,55 @@ static int init_codecs(void)
     pjmedia_codec_speex_init(endpt, 0, -1, -1);
     pjmedia_codec_ilbc_init(endpt, 30);
     pjmedia_codec_l16_init(endpt, 0);
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC != 0)
+    pjmedia_codec_opus_init(endpt);
+
+    /* The Opus factory is registered as stereo (per RFC 7587: clock rate
+     * 48000, 2 channels), but its default codec param is mono since
+     * opus_cfg.channel_cnt defaults to 1. Without overriding it here,
+     * alloc_codec() would open Opus as mono via the default param, which
+     * contradicts the "opus/48000/2" id and the 3840-byte (20 ms @ 48 kHz
+     * stereo) PCM frame size, leaving the stereo encode/decode paths
+     * unexercised. Configure 2 channels so Opus actually opens in stereo.
+     *
+     * The stereo override is only applied when every query/config step
+     * succeeds. If any step fails, Opus stays at its factory (mono) default,
+     * so we downgrade the harness Opus channel count and PCM frame size to
+     * match how the codec will be opened (while still looking it up by the
+     * registered "opus/48000/2" ID).
+     */
+    {
+        pjmedia_codec_param opus_param;
+        pjmedia_codec_opus_config opus_cfg;
+        const pjmedia_codec_info *opus_info;
+        unsigned opus_cnt = 1;
+        pj_str_t opus_id = pj_str("opus/48000/2");
+        pj_bool_t stereo_ok = PJ_FALSE;
+        /* Opus is the last entry in codec_configs[] (see the array above). */
+        codec_config_t *opus_config = &codec_configs[NUM_CODECS - 1];
+
+        if (pjmedia_codec_mgr_find_codecs_by_id(codec_mgr, &opus_id, &opus_cnt,
+                                                &opus_info, NULL) == PJ_SUCCESS &&
+            opus_cnt > 0 &&
+            pjmedia_codec_mgr_get_default_param(codec_mgr, opus_info,
+                                                &opus_param) == PJ_SUCCESS &&
+            pjmedia_codec_opus_get_config(&opus_cfg) == PJ_SUCCESS)
+        {
+            opus_cfg.channel_cnt = 2;
+            if (pjmedia_codec_opus_set_default_param(&opus_cfg, &opus_param)
+                    == PJ_SUCCESS)
+            {
+                stereo_ok = PJ_TRUE;
+            }
+        }
+
+        if (!stereo_ok) {
+            /* Mono fallback: 20 ms @ 48 kHz mono = 960 samples * 2 bytes. */
+            opus_config->channel_cnt = 1;
+            opus_config->pcm_frame_size = 1920;
+        }
+    }
+#endif
 
     /* Allocate all codecs using the configuration array */
     for (i = 0; i < NUM_CODECS; i++) {
@@ -177,7 +243,7 @@ static int init_codecs(void)
 /* Helper function to test codec encode/decode cycle */
 static void test_codec_cycle(pjmedia_codec *codec, const uint8_t *Data, size_t Size,
                               size_t min_frame_size, size_t pcm_frame_size,
-                              unsigned clock_rate)
+                              unsigned clock_rate, unsigned channel_cnt)
 {
     pj_status_t status;
     pjmedia_frame input_frame, output_frame;
@@ -196,7 +262,10 @@ static void test_codec_cycle(pjmedia_codec *codec, const uint8_t *Data, size_t S
         pj_bzero(&param, sizeof(param));
         param.info.avg_bps = 128000;
         param.info.clock_rate = clock_rate;
-        param.info.channel_cnt = 1;
+        /* Use the codec's actual channel count (e.g. 2 for Opus) rather than
+         * forcing mono, so the modify path does not contradict how the codec
+         * was opened and the stereo paths stay exercised. */
+        param.info.channel_cnt = channel_cnt;
         param.info.frm_ptime = 20;
         param.info.pcm_bits_per_sample = 16;
         param.setting.vad = (Data[min_frame_size] & 0x01) ? 1 : 0;
@@ -315,7 +384,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         /* Test this codec with current data chunk */
         test_codec_cycle(codec, current_data, chunk_size,
                         config->min_frame_size, config->pcm_frame_size,
-                        codec_clock_rates[i]);
+                        codec_clock_rates[i], config->channel_cnt);
 
         /* Advance to next chunk of data */
         consumed = config->min_frame_size;

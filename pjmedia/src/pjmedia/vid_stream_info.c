@@ -99,10 +99,22 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
         i = 1;
         status = pjmedia_vid_codec_mgr_find_codecs_by_id(mgr, &codec_id_st,
                                                          &i, &p_info, NULL);
-        if (status != PJ_SUCCESS)
+        if (status == PJ_SUCCESS) {
+            si->codec_info = *p_info;
+        } else if (status == PJ_ENOTFOUND){
+            /* Codec not in registry but rtpmap provides encoding name.
+             * Build partial codec_info so 3rd-party media stacks can
+             * operate without registering dummy codecs.
+             */
+            pj_bzero(&si->codec_info, sizeof(si->codec_info));
+            si->codec_info.pt = (pj_uint8_t)pt;
+            pj_strdup(pool, &si->codec_info.encoding_name, &rtpmap->enc_name);
+            si->codec_info.clock_rate = rtpmap->clock_rate;
+            si->codec_info.dir = PJMEDIA_DIR_ENCODING_DECODING;
+            status = PJ_SUCCESS;
+        } else {
             return status;
-
-        si->codec_info = *p_info;
+        }
     }
 
 
@@ -115,10 +127,20 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
                                                      &si->codec_info,
                                                      si->codec_param);
 
+    /* When codec is not in the registry (e.g. for 3rd-party media), treat
+     * as non-fatal: clear codec_param so callers skip codec-specific tuning.
+     */
+    if (status == PJMEDIA_CODEC_EUNSUP && si->codec_info.encoding_name.slen > 0) {
+        si->codec_param = NULL;
+        status = PJ_SUCCESS;
+    }
+
     /* Adjust encoding bitrate, if higher than remote preference. The remote
      * bitrate preference is read from SDP "b=TIAS" line in media level.
      */
-    if ((si->dir & PJMEDIA_DIR_ENCODING) && rem_m->bandw_count) {
+    if (si->codec_param && (si->dir & PJMEDIA_DIR_ENCODING) &&
+        rem_m->bandw_count)
+    {
         unsigned i, bandw = 0;
 
         for (i = 0; i < rem_m->bandw_count; ++i) {
@@ -142,13 +164,15 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
         }
     }
 
-    /* Get remote fmtp for our encoder. */
-    pjmedia_stream_info_parse_fmtp(pool, rem_m, si->tx_pt,
-                                   &si->codec_param->enc_fmtp);
+    if (si->codec_param) {
+        /* Get remote fmtp for our encoder. */
+        pjmedia_stream_info_parse_fmtp(pool, rem_m, si->tx_pt,
+                                       &si->codec_param->enc_fmtp);
 
-    /* Get local fmtp for our decoder. */
-    pjmedia_stream_info_parse_fmtp(pool, local_m, si->rx_pt,
-                                   &si->codec_param->dec_fmtp);
+        /* Get local fmtp for our decoder. */
+        pjmedia_stream_info_parse_fmtp(pool, local_m, si->rx_pt,
+                                       &si->codec_param->dec_fmtp);
+    }
 
     /* When direction is NONE (it means SDP negotiation has failed) we don't
      * need to return a failure here, as returning failure will cause

@@ -41,6 +41,16 @@ typedef pj_int8_t pt_to_codec_map[DYNAMIC_PT_SIZE];
 /* Array for mapping codec ID to PT number. */
 typedef pj_int8_t codec_to_pt_map[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
+/* Check whether a payload type is a dynamic PT that fits in the map,
+ * i.e. in the range START_DYNAMIC_PT..127. Payload numbers parsed from
+ * remote SDP attributes must be validated with this before being used as
+ * an index into the fixed-size dynamic PT map arrays.
+ */
+PJ_INLINE(pj_bool_t) is_dynamic_pt(unsigned pt)
+{
+    return pt >= START_DYNAMIC_PT && pt < START_DYNAMIC_PT + DYNAMIC_PT_SIZE;
+}
+
 /**
  * This structure describes SDP media negotiator.
  */
@@ -477,6 +487,13 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
             if (!found) {
                 pjmedia_sdp_media *m;
 
+                if (new_offer->media_count >= PJMEDIA_MAX_SDP_MEDIA) {
+                    PJ_LOG(3,(THIS_FILE, "Too many media in SDP, "
+                                         "modify local offer failed"));
+                    neg->state = PJMEDIA_SDP_NEG_STATE_DONE;
+                    return PJ_ETOOMANY;
+                }
+
                 m = sdp_media_clone_deactivate(pool, om, om, local);
 
                 pj_array_insert(new_offer->media, sizeof(new_offer->media[0]),
@@ -490,6 +507,13 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
          */
         for (oi = new_offer->media_count; oi < old_offer->media_count; ++oi) {
             pjmedia_sdp_media *m;
+
+            if (new_offer->media_count >= PJMEDIA_MAX_SDP_MEDIA) {
+                PJ_LOG(3,(THIS_FILE, "Too many media in SDP, "
+                                     "modify local offer failed"));
+                neg->state = PJMEDIA_SDP_NEG_STATE_DONE;
+                return PJ_ETOOMANY;
+            }
 
             m = sdp_media_clone_deactivate(pool, old_offer->media[oi],
                                            old_offer->media[oi], local);
@@ -1923,7 +1947,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
 
             /* We only need to handle mapping for dynamic PT */
             pt = pj_strtoul(&rtpmap.pt);
-            if (pt < START_DYNAMIC_PT)
+            if (!is_dynamic_pt(pt))
                 continue;
 
             if (med_type == PJMEDIA_TYPE_AUDIO) {
@@ -2045,7 +2069,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
 
             /* We only need to handle mapping for dynamic PT */
             pt = pj_strtoul(&fmtp.fmt);
-            if (pt < START_DYNAMIC_PT)
+            if (!is_dynamic_pt(pt))
                 continue;
 
             new_pt = pt_change[pt - START_DYNAMIC_PT];
@@ -2102,7 +2126,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
                         unsigned ref_pt = pj_strtoul(&parsed.param[k].val);
                         unsigned new_ref = ref_pt;
 
-                        if (ref_pt >= START_DYNAMIC_PT &&
+                        if (is_dynamic_pt(ref_pt) &&
                             pt_change[ref_pt - START_DYNAMIC_PT] != 0)
                         {
                             new_ref = pt_change[ref_pt - START_DYNAMIC_PT];
@@ -2141,7 +2165,7 @@ static pj_status_t assign_pt_and_update_map(pj_pool_t *pool,
             unsigned pt, new_pt = 0;
 
             pt = pj_strtoul(&sdp_m->desc.fmt[j]);
-            if (pt < START_DYNAMIC_PT)
+            if (!is_dynamic_pt(pt))
                  continue;
 
             new_pt = pt_change[pt - START_DYNAMIC_PT];

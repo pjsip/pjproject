@@ -146,6 +146,7 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_EWAVETOOSHORT,    "WAVE file too short" ),
     PJ_BUILD_ERR( PJMEDIA_EFRMFILETOOBIG,   "Sound frame too large for file buffer"),
     PJ_BUILD_ERR( PJMEDIA_EAVIUNSUPP,       "Unsupported AVI file"),
+    PJ_BUILD_ERR( PJMEDIA_ENOTVALIDAVI,     "Not a valid AVI file"),
 
     /* Sound device errors: */
     PJ_BUILD_ERR( PJMEDIA_ENOSNDREC,        "No suitable sound capture device" ),

@@ -738,7 +738,17 @@ SipTxData::SipTxData()
 void SipTxData::fromPj(pjsip_tx_data &tdata)
 {
     char straddr[PJ_INET6_ADDRSTRLEN+10];
-    
+
+    /* Hold a reference to the tx_data for the duration of this function.
+     * This is invoked from event callbacks (e.g. on_tsx_state) that may run
+     * on a worker thread and, in transaction termination/transport error
+     * paths, after the transaction group lock has been released. Without a
+     * reference the tx_data (and its pool) can be freed concurrently, causing
+     * a crash inside pjsip_tx_data_encode()/pjsip_msg_print() while the
+     * message is being encoded below.
+     */
+    pjsip_tx_data_add_ref(&tdata);
+
     info        = pjsip_tx_data_get_info(&tdata);
     pjsip_tx_data_encode(&tdata);
     wholeMsg    = string(tdata.buf.start, tdata.buf.cur - tdata.buf.start);
@@ -749,6 +759,8 @@ void SipTxData::fromPj(pjsip_tx_data &tdata)
         dstAddress = "";
     }
     pjTxData    = (void *)&tdata;
+
+    pjsip_tx_data_dec_ref(&tdata);
 }
 
 SipTransaction::SipTransaction()

@@ -537,6 +537,9 @@ typedef struct pjsua_vid_win
     pjsua_vid_win_type           type;          /**< Type.              */
     pj_pool_t                   *pool;          /**< Own pool.          */
     unsigned                     ref_cnt;       /**< Reference counter. */
+    pj_bool_t                    is_destroying; /**< Currently being torn
+                                                     down (free_vid_win()
+                                                     in progress).      */
     pjmedia_vid_port            *vp_cap;        /**< Capture vidport.   */
     pjmedia_vid_port            *vp_rend;       /**< Renderer vidport   */
     pjsua_conf_port_id           cap_slot;      /**< Capturer conf slot */
@@ -654,6 +657,8 @@ struct pjsua_data
     pjmedia_master_port *null_snd;  /**< Master port for null sound.    */
     pjmedia_port        *null_port; /**< Null port.                     */
     pj_bool_t            snd_is_on; /**< Media flow is currently active */
+    pj_bool_t            snd_avoid_clock_gap; /**< Keep clock continuity
+                                                    across null<->real dev */
     unsigned             snd_mode;  /**< Sound device mode.             */
 
     /* Video device */

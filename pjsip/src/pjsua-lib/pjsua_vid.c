@@ -597,7 +597,9 @@ static pjsua_vid_win_id vid_preview_get_win(pjmedia_vid_dev_index id,
 
     for (i=0; i<PJSUA_MAX_VID_WINS; ++i) {
         pjsua_vid_win *w = &pjsua_var.win[i];
-        if (w->type == PJSUA_WND_TYPE_PREVIEW && w->preview_cap_id == id) {
+        if (w->type == PJSUA_WND_TYPE_PREVIEW && !w->is_destroying &&
+            w->preview_cap_id == id)
+        {
             wid = i;
             break;
         }
@@ -937,29 +939,57 @@ on_error:
 static void free_vid_win(pjsua_vid_win_id wid)
 {
     pjsua_vid_win *w = &pjsua_var.win[wid];
+    pjmedia_vid_port *vp_cap, *vp_rend;
+    pjsua_conf_port_id cap_slot, rend_slot;
     unsigned num_locks = 0;
-    
+
     PJ_LOG(4,(THIS_FILE, "Window %d: destroying..", wid));
     pj_log_push_indent();
+
+    /* Mark the window as being torn down and snapshot the underlying
+     * vid_ports / conf slots under PJSUA_LOCK, then clear them out
+     * of the window so that anything else reading pjsua_var.win[wid]
+     * concurrently (e.g. another call's pjsua_vid_stop_stream() that
+     * shares this preview window, or vid_preview_get_win() about to
+     * inc_vid_win() this slot) sees is_destroying == PJ_TRUE and
+     * vp_cap == NULL / vp_rend == NULL and skips the slot, instead of
+     * dereferencing a vid_port whose underlying cbar stream is about
+     * to be freed by the destroy calls below.
+     *
+     * dec_vid_win() already sets is_destroying before calling us, but
+     * free_vid_win() is also reached from create_vid_win()'s on_error
+     * path and from pjsua_vid_subsys_destroy() — those don't go
+     * through dec_vid_win(), so we set the flag here too. Idempotent
+     * either way.
+     */
+    PJSUA_LOCK();
+    w->is_destroying = PJ_TRUE;
+    vp_cap    = w->vp_cap;
+    vp_rend   = w->vp_rend;
+    cap_slot  = w->cap_slot;
+    rend_slot = w->rend_slot;
+    w->vp_cap    = NULL;
+    w->vp_rend   = NULL;
+    w->cap_slot  = PJSUA_INVALID_ID;
+    w->rend_slot = PJSUA_INVALID_ID;
+    PJSUA_UNLOCK();
 
     /* Release locks before unsubscribing/destroying, to avoid deadlock. */
     num_locks = PJSUA_RELEASE_LOCK();
 
-    if (w->vp_cap) {
-        if (w->cap_slot != PJSUA_INVALID_ID)
-            pjsua_vid_conf_remove_port(w->cap_slot);
-        pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
-                                  w->vp_cap);
-        pjmedia_vid_port_stop(w->vp_cap);
-        pjmedia_vid_port_destroy(w->vp_cap);
+    if (vp_cap) {
+        if (cap_slot != PJSUA_INVALID_ID)
+            pjsua_vid_conf_remove_port(cap_slot);
+        pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL, vp_cap);
+        pjmedia_vid_port_stop(vp_cap);
+        pjmedia_vid_port_destroy(vp_cap);
     }
-    if (w->vp_rend) {
-        if (w->rend_slot != PJSUA_INVALID_ID)
-            pjsua_vid_conf_remove_port(w->rend_slot);
-        pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
-                                  w->vp_rend);
-        pjmedia_vid_port_stop(w->vp_rend);
-        pjmedia_vid_port_destroy(w->vp_rend);
+    if (vp_rend) {
+        if (rend_slot != PJSUA_INVALID_ID)
+            pjsua_vid_conf_remove_port(rend_slot);
+        pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL, vp_rend);
+        pjmedia_vid_port_stop(vp_rend);
+        pjmedia_vid_port_destroy(vp_rend);
     }
     /* Re-acquire the locks. */
     PJSUA_RELOCK(num_locks);
@@ -973,23 +1003,56 @@ static void free_vid_win(pjsua_vid_win_id wid)
 static void inc_vid_win(pjsua_vid_win_id wid)
 {
     pjsua_vid_win *w;
-    
+
     pj_assert(wid >= 0 && wid < PJSUA_MAX_VID_WINS);
 
+    PJSUA_LOCK();
     w = &pjsua_var.win[wid];
-    pj_assert(w->type != PJSUA_WND_TYPE_NONE);
+    pj_assert(w->type != PJSUA_WND_TYPE_NONE && !w->is_destroying);
     ++w->ref_cnt;
+    PJSUA_UNLOCK();
 }
 
 static void dec_vid_win(pjsua_vid_win_id wid)
 {
     pjsua_vid_win *w;
-    
+    pj_bool_t need_free = PJ_FALSE;
+
     pj_assert(wid >= 0 && wid < PJSUA_MAX_VID_WINS);
 
+    PJSUA_LOCK();
     w = &pjsua_var.win[wid];
-    pj_assert(w->type != PJSUA_WND_TYPE_NONE);
-    if (--w->ref_cnt == 0)
+    if (w->type == PJSUA_WND_TYPE_NONE || w->is_destroying ||
+        w->ref_cnt == 0)
+    {
+        /* A concurrent dec on a shared preview window has already
+         * driven ref_cnt to 0 and is inside free_vid_win() (which
+         * releases PJSUA_LOCK to destroy its vid_ports), or the
+         * caller is unbalanced. Either way, nothing more to do. */
+        PJSUA_UNLOCK();
+        return;
+    }
+    if (--w->ref_cnt == 0) {
+        /* Mark the window as being destroyed *before* we release
+         * PJSUA_LOCK inside free_vid_win(): a concurrent inc/dec on
+         * the same wid (e.g. another call sharing this Colorbar
+         * preview) would otherwise touch half-destroyed state and
+         * double-destroy the cbar stream, racing the cbar clock
+         * thread vs pool release.
+         *
+         * The flag is cleared (via pj_bzero) only by the final
+         * pjsua_vid_win_reset() at the tail of free_vid_win(),
+         * which is also what returns the slot to the allocator.
+         * Until then, the slot stays "not selectable" in
+         * vid_preview_get_win(), the create_vid_win() slot
+         * allocator, the enumeration, and another inc/dec.
+         */
+        w->is_destroying = PJ_TRUE;
+        need_free = PJ_TRUE;
+    }
+    PJSUA_UNLOCK();
+
+    if (need_free)
         free_vid_win(wid);
 }
 
@@ -1430,32 +1493,61 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 
     /* Unsubscribe events first, otherwise the event callbacks
      * can be called and access already destroyed objects.
+     *
+     * Both branches read pjsua_var.win[wid] after we released
+     * PJSUA_LOCK above. A racing dec_vid_win() on a shared preview
+     * window or on a renderer window whose call_med peer was just
+     * torn down (prov_med <-> call_med sync in pjsua_media.c) can
+     * have already freed the window — its vp_cap / vp_rend are NULL
+     * and re-stopping or unsubscribing would dereference NULL.
      */
     if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
         pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.cap_win_id];
+        pjmedia_vid_port *vp_cap;
 
-        /* Unsubscribe event */
-        pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
-                                  w->vp_cap);
+        /* Snapshot vp_cap so a racing free_vid_win() that clears
+         * w->vp_cap mid-flight can't NULL it out from under us
+         * between the check and the use. */
+        PJSUA_LOCK();
+        vp_cap = w->vp_cap;
+        PJSUA_UNLOCK();
+
+        if (vp_cap) {
+            /* Unsubscribe event */
+            pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
+                                      vp_cap);
+        }
     }
     if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
         pj_status_t status;
         pjmedia_port *media_port;
         pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
+        pjmedia_vid_port *vp_rend;
 
-        /* Unsubscribe event, but stop the render first */
-        pjmedia_vid_port_stop(w->vp_rend);
-        pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
-                                  w->vp_rend);
+        PJSUA_LOCK();
+        vp_rend = w->vp_rend;
+        PJSUA_UNLOCK();
 
-        /* Retrieve stream decoding port */
+        /* Retrieve stream decoding port and always remove the
+         * call-specific subscription from it, even when the renderer
+         * has already been torn down.
+         */
         status = pjmedia_vid_stream_get_port(strm, PJMEDIA_DIR_DECODING,
                                              &media_port);
         if (status == PJ_SUCCESS) {
             pjmedia_event_unsubscribe(NULL, &call_media_on_event,
-                                    call_med, media_port);
+                                      call_med, media_port);
+        }
 
-            pjmedia_vid_port_unsubscribe_event(w->vp_rend, media_port);
+        if (vp_rend) {
+            /* Unsubscribe event, but stop the render first */
+            pjmedia_vid_port_stop(vp_rend);
+            pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
+                                      vp_rend);
+
+            if (status == PJ_SUCCESS) {
+                pjmedia_vid_port_unsubscribe_event(vp_rend, media_port);
+            }
         }
     }
     /* Unsubscribe from video stream events */
@@ -1751,11 +1843,13 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_wins( pjsua_vid_win_id wids[],
 
     cnt = 0;
 
+    PJSUA_LOCK();
     for (i=0; i<PJSUA_MAX_VID_WINS && cnt <*count; ++i) {
         pjsua_vid_win *w = &pjsua_var.win[i];
-        if (w->type != PJSUA_WND_TYPE_NONE)
+        if (w->type != PJSUA_WND_TYPE_NONE && !w->is_destroying)
             wids[cnt++] = i;
     }
+    PJSUA_UNLOCK();
 
     *count = cnt;
 

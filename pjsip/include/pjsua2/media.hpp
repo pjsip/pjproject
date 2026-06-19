@@ -1208,10 +1208,19 @@ public:
     /**
      * Set pjsua to use null sound device. The null sound device only provides
      * the timing needed by the conference bridge, and will not interract with
-     * any hardware.
+     * any hardware. For configurable behavior, use setNullDev2().
      *
      */
     void setNullDev() PJSUA2_THROW(Error);
+
+    /**
+     * Set pjsua to use null sound device with transition behavior control.
+     *
+     * @param avoidClockGap      If true, transition will prioritize clock
+     *                           continuity (may overlap briefly). If false,
+     *                           use legacy close-then-open behavior.
+     */
+    void setNullDev2(bool avoidClockGap) PJSUA2_THROW(Error);
 
     /**
      * Disconnect the main conference bridge from any sound devices, and let

@@ -478,6 +478,15 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 
                 has_crypto_attr = PJ_TRUE;
 
+                /* Bound writes to tags[] by its capacity. m_rem->attr_count
+                 * is capped by the SDP parser at PJMEDIA_MAX_SDP_ATTR, which
+                 * can exceed PJ_ARRAY_SIZE(tags); without this guard a remote
+                 * peer can overflow the stack array by sending more than
+                 * PJ_ARRAY_SIZE(tags) a=crypto attributes.
+                 */
+                if (cr_attr_count >= PJ_ARRAY_SIZE(tags))
+                    return PJMEDIA_SRTP_ESDPINCRYPTO;
+
                 status = parse_attr_crypto(srtp->pool, m_rem->attr[i],
                                            &tmp_rx_crypto,
                                            &tags[cr_attr_count]);

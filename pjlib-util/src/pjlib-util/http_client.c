@@ -432,18 +432,31 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
                                                 hreq->response.size);
         }
 
-        /* If the size of data received exceeds its current size,
-         * grow the buffer by a factor of 2.
+        /* If the size of data received exceeds its current size, grow the
+         * buffer by a factor of 2 repeatedly, until it can actually hold
+         * everything received so far. A single doubling is not sufficient
+         * when the server delivers a body chunk larger than twice the
+         * (possibly undersized) Content-Length used for the initial
+         * allocation, which would otherwise overflow the buffer in the
+         * pj_memcpy() below.
          */
-        if (hreq->tcp_state.current_read_size + size > 
-            hreq->response.size) 
+        if (hreq->tcp_state.current_read_size + size >
+            hreq->response.size)
         {
             void *olddata = hreq->response.data;
+            pj_size_t new_size = hreq->response.size;
 
-            hreq->response.data = pj_pool_alloc(hreq->pool, 
-                                                hreq->response.size << 1);
+            /* Guard against size==0 (Content-Length: 0 with a body), which
+             * would make the doubling loop below spin forever.
+             */
+            if (new_size == 0)
+                new_size = INITIAL_DATA_BUF_SIZE;
+            while (hreq->tcp_state.current_read_size + size > new_size)
+                new_size <<= 1;
+
+            hreq->response.data = pj_pool_alloc(hreq->pool, new_size);
             pj_memcpy(hreq->response.data, olddata, hreq->response.size);
-            hreq->response.size <<= 1;
+            hreq->response.size = new_size;
         }
 
         /* Append the response data. */

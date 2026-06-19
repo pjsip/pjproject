@@ -1372,6 +1372,53 @@ typedef struct pjsua_callback
                               pjsip_event *e);
 
     /**
+     * Notification when an in-dialog UAC transaction within the call is
+     * about to cause the call to be terminated due to RFC 3261 #12.2.1.2
+     * failures: 408 Request Timeout, transaction timeout, or 481
+     * Call/Transaction Does Not Exist. The library would otherwise send
+     * BYE automatically.
+     *
+     * If implemented, the application can return PJ_TRUE to suppress the
+     * automatic termination and keep the call alive, e.g. when an INFO or
+     * MESSAGE request fails for application-level reasons (see RFC 5057
+     * #5.2; ETSI EN 16072 eCall, etc.). When suppressed, the library
+     * still cancels any pending SDP offer that the failed re-INVITE or
+     * UPDATE carried, so the call remains usable for subsequent
+     * renegotiation. inv->cause is not set to the failed status.
+     *
+     * Interaction with pjsip_cfg()->endpt.keep_inv_after_tsx_timeout:
+     * when that global flag is set, the 408/timeout branch is short-
+     * circuited before the callback is reached, so the callback is not
+     * invoked for 408 -- the session is already kept by the global flag.
+     * The callback is still invoked for 481. Applications that want this
+     * callback to be the sole authority for both should leave the global
+     * flag at its default (PJ_FALSE).
+     *
+     * Threading: invoked synchronously while the dialog group lock is
+     * held. The application MUST NOT call any pjsua, pjsip_dlg, or
+     * pjsip_inv API that would acquire a higher-order lock (PJSUA_LOCK
+     * > dialog grp_lock > tsx grp_lock) from inside this callback --
+     * doing so risks deadlock. Defer such work to a timer.
+     *
+     * Note: this callback must be set in pjsua_callback BEFORE
+     * pjsua_init(); installing it later has no effect because pjsua wires
+     * the underlying pjsip-ua hook only at init time.
+     *
+     * This callback is optional. When not set, the call is terminated as
+     * per the default behavior.
+     *
+     * @param call_id   The call identification.
+     * @param tsx       The failed UAC transaction.
+     * @param e         The event that caused the failure.
+     *
+     * @return          PJ_TRUE to suppress the automatic call termination.
+     *                  PJ_FALSE (default) to keep current behavior.
+     */
+    pj_bool_t (*on_call_tsx_terminate_session)(pjsua_call_id call_id,
+                                               pjsip_transaction *tsx,
+                                               pjsip_event *e);
+
+    /**
      * Notify application when a transaction started by pjsua_acc_send_request()
      * has been completed,i.e. when a response has been received.
      *
@@ -2149,7 +2196,8 @@ typedef struct pjsua_callback
      * Callback when the sound device is about to be opened or closed.
      * This callback will be called even when null sound device or no
      * sound device is configured by the application (i.e. the
-     * #pjsua_set_null_snd_dev() and #pjsua_set_no_snd_dev() APIs).
+     * #pjsua_set_null_snd_dev(), #pjsua_set_null_snd_dev2(), and
+     * #pjsua_set_no_snd_dev() APIs).
      * Application can use the API #pjsua_get_snd_dev() to get the info
      * about which sound device is going to be opened/closed.
      *
@@ -8499,6 +8547,34 @@ PJ_DECL(void) pjsua_snd_dev_param_default(pjsua_snd_dev_param *prm);
 
 
 /**
+ * This structure specifies the parameters to set null sound device.
+ * Use pjsua_null_snd_dev_param_default() to initialize this structure with
+ * default values. Application should only override relevant fields to keep
+ * forward compatibility when new fields are added in the future.
+ */
+typedef struct pjsua_null_snd_dev_param
+{
+    /**
+     * If PJ_TRUE, switch using a gapless handover (start null clock first,
+     * then stop old device). If PJ_FALSE, use legacy behavior (stop old
+     * device first, then start null clock).
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t           avoid_clock_gap;
+
+} pjsua_null_snd_dev_param;
+
+
+/**
+ * Initialize pjsua_null_snd_dev_param with default values.
+ *
+ * @param prm           The parameter.
+ */
+PJ_DECL(void) pjsua_null_snd_dev_param_default(pjsua_null_snd_dev_param *prm);
+
+
+/**
  * This structure specifies the parameters for conference ports connection.
  * Use pjsua_conf_connect_param_default() to initialize this structure with
  * default values.
@@ -9186,12 +9262,28 @@ PJ_DECL(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param);
 
 /**
  * Set pjsua to use null sound device. The null sound device only provides
- * the timing needed by the conference bridge, and will not interract with
+ * the timing needed by the conference bridge, and will not interact with
  * any hardware.
+ * For configurable behavior, use #pjsua_set_null_snd_dev2().
  *
  * @return              PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_set_null_snd_dev(void);
+
+
+/**
+ * Set pjsua to use null sound device according to the specified param.
+ * The null sound device only provides the timing needed by the conference
+ * bridge, and will not interact with any hardware.
+ * Use #pjsua_null_snd_dev_param_default() to initialize the param.
+ *
+ * @param snd_param          Null sound device parameter.
+ *
+ * @return                   PJ_SUCCESS on success, or the appropriate
+ *                           error code.
+ */
+PJ_DECL(pj_status_t) pjsua_set_null_snd_dev2(
+                                const pjsua_null_snd_dev_param *snd_param);
 
 
 /**
@@ -9333,8 +9425,8 @@ PJ_DECL(pj_status_t) pjsua_snd_get_setting(pjmedia_aud_dev_cap cap,
  * media clock is driven by sound device in master port, but unfortunately
  * some sound devices may produce jittery clock. To improve media clock,
  * application can install Null Sound Device (i.e: using
- * pjsua_set_null_snd_dev()), which will act as a master port, and instantiate
- * the sound device as extra sound device.
+ * pjsua_set_null_snd_dev() or pjsua_set_null_snd_dev2()), which will act
+ * as a master port, and instantiate the sound device as extra sound device.
  *
  * Note that extra sound device will not have auto-close upon idle feature.
  * Also note that currently extra sound device only supports mono channel.
