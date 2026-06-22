@@ -2103,8 +2103,8 @@ static pj_bool_t parse_ossl_asn1_time(pj_time_val *tv, pj_bool_t *gmt,
     int i;
 
     utc = ASN1_STRING_type(tm) == V_ASN1_UTCTIME;
-    p = (char*)M_ASN1_STRING_data((ASN1_STRING*)tm);
-    len = M_ASN1_STRING_length((ASN1_STRING*)tm);
+    p = (char*)M_ASN1_STRING_data(tm);
+    len = M_ASN1_STRING_length(tm);
     end = p + len - 1;
 
     /* GMT */
