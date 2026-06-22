@@ -364,7 +364,17 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp_with_timestamp(
                 pj_memcpy(udp_hdr, &tmp.udp, sizeof(*udp_hdr));
             }
 
-            /* Calculate payload size */
+            /* Calculate payload size. The UDP length field covers the
+             * header plus payload, so anything below the header size is
+             * malformed; subtracting it would underflow sz and defeat the
+             * buffer check below.
+             */
+            if (pj_ntohs(tmp.udp.len) < sizeof(tmp.udp)) {
+                TRACE_((file->obj_name, "Invalid UDP length %d, skipping",
+                        pj_ntohs(tmp.udp.len)));
+                SKIP_PKT();
+                continue;
+            }
             sz = pj_ntohs(tmp.udp.len) - sizeof(tmp.udp);
             break;
         default:
