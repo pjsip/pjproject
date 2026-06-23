@@ -1603,7 +1603,10 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
          * subscription state.
          */
         if (dlgsub->sub == NULL) {
-            dlgsub = dlgsub->next;
+            struct dlgsub *next = dlgsub->next;
+            if (next == dlgsub)
+                break;
+            dlgsub = next;
             continue;
         }
 
