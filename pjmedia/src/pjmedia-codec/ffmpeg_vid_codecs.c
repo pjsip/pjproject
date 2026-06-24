@@ -1271,12 +1271,17 @@ static void print_ffmpeg_err(int err)
 
 static void free_codec_context(AVCodecContext **ctx, pj_bool_t opened)
 {
+#if LIBAVCODEC_VER_AT_LEAST(60,39)
+    PJ_UNUSED_ARG(opened);
+    avcodec_free_context(ctx);
+#else
     if (!*ctx)
         return;
     if (opened)
         avcodec_close(*ctx);
     av_free(*ctx);
     *ctx = NULL;
+#endif
 }
 
 static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
