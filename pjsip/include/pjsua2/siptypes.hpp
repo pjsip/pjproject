@@ -153,6 +153,12 @@ public:
     /** Construct a socket option with the specified parameters. */
     SockOpt(int level, int optName, int optVal);
 
+    /** Copy constructor. */
+    SockOpt(const SockOpt &that);
+
+    /** Copy assignment operator. */
+    SockOpt& operator=(const SockOpt &that);
+
     /**
      * Set option value of type integer.
      *
