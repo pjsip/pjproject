@@ -1645,10 +1645,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
                     if (PEM_read_bio_X509(new_bio, &x, NULL, NULL) == NULL)
                         break;
 
-                    if ((xn = X509_get_subject_name(x)) == NULL)
-                        break;
-
-                    if ((xn = X509_NAME_dup(xn)) == NULL )
+                    if ((xn = X509_NAME_dup(X509_get_subject_name(x))) == NULL )
                         break;
 
 #if !USING_BORINGSSL
@@ -2105,9 +2102,9 @@ static pj_bool_t parse_ossl_asn1_time(pj_time_val *tv, pj_bool_t *gmt,
     pj_parsed_time pt;
     int i;
 
-    utc = tm->type == V_ASN1_UTCTIME;
-    p = (char*)tm->data;
-    len = tm->length;
+    utc = ASN1_STRING_type(tm) == V_ASN1_UTCTIME;
+    p = (char*)M_ASN1_STRING_data(tm);
+    len = M_ASN1_STRING_length(tm);
     end = p + len - 1;
 
     /* GMT */
