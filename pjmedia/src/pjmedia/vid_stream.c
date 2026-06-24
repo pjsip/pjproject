@@ -406,8 +406,10 @@ static send_entry* get_send_entry(send_stream *ss)
         /* Not found, allocate a new one */
         e = PJ_POOL_ZALLOC_T(ss->pool, send_entry);
         buf = pj_pool_alloc(ss->pool, ss->buf_size);
-        if (!e || !buf)
+        if (!e || !buf) {
+            pj_grp_lock_release(ss->grp_lock);
             return NULL;
+        }
 
         e->buf = buf;
         e->buf_size = ss->buf_size;
