@@ -57,6 +57,16 @@ PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t buf_len,
 
     PJ_CHECK_STACK();
 
+    /* The buffer must hold a full message header before any header field
+     * is read, otherwise the type/length reads below (and the buf_len
+     * subtraction) run past the end of the buffer.
+     */
+    if (buf_len < sizeof(pjstun_msg_hdr)) {
+        PJ_LOG(4,(THIS_FILE, "Error: STUN message too short (%lu bytes)",
+                             (unsigned long)buf_len));
+        return PJLIB_UTIL_ESTUNINMSGLEN;
+    }
+
     msg->hdr = (pjstun_msg_hdr*)buf;
     msg_type = pj_ntohs(msg->hdr->type);
 
@@ -84,7 +94,9 @@ PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t buf_len,
     msg->attr_count = 0;
     p_attr = (char*)buf + sizeof(pjstun_msg_hdr);
 
-    while (msg_len > 0 && msg->attr_count < attr_max_cnt) {
+    while (msg_len >= sizeof(pjstun_attr_hdr) &&
+           msg->attr_count < attr_max_cnt)
+    {
         pjstun_attr_hdr **attr = &msg->attr[msg->attr_count];
         pj_uint32_t len;
         pj_uint16_t attr_type;
