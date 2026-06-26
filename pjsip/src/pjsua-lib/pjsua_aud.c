@@ -642,10 +642,9 @@ static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
  */
 PJ_DEF(pjsua_conf_port_id) pjsua_call_preallocate_conf_port(pjsua_call_id call_id)
 {
-    pjsua_call* call;
-    pjsua_call_media* call_med;
-    pjmedia_port* null_port = NULL;
-    unsigned null_slot;
+    pj_pool_t        *inv_pool = NULL;
+    pjmedia_port     *null_port = NULL;
+    unsigned          null_slot = (unsigned)PJSUA_INVALID_ID;
     pj_str_t null_name;
     pj_status_t status;
     pjsua_conf_port_id result = PJSUA_INVALID_ID;
@@ -655,19 +654,32 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_preallocate_conf_port(pjsua_call_id call_i
 
     PJSUA_LOCK();
 
-    if (!pjsua_call_is_active(call_id))
-        goto on_return;
+    if (!pjsua_call_is_active(call_id)) {
+        PJSUA_UNLOCK();
+        return PJSUA_INVALID_ID;
+    }
+    {
 
-    call = &pjsua_var.calls[call_id];
-    if (call->audio_idx < 0)
-        goto on_return;
+        pjsua_call       *call = &pjsua_var.calls[call_id];
+        pjsua_call_media *call_med;
+        if (call->audio_idx < 0) {
+           PJSUA_UNLOCK();
+           return PJSUA_INVALID_ID;
+        }
 
     call_med = &call->media[call->audio_idx];
+    
     if (call_med->strm.a.conf_slot != PJSUA_INVALID_ID) {
         /* Already allocated */
         result = call_med->strm.a.conf_slot;
-        goto on_return;
+        PJSUA_UNLOCK();
+        return result;
     }
+
+    inv_pool = call->inv ? call->inv->pool : pjsua_var.pool;
+    }
+
+    PJSUA_UNLOCK();
 
     /* Pre-allocate using typical G.711 parameters; pjsua_aud_channel_update
      * will replace this with the real stream via pjmedia_conf_replace_port,
@@ -675,27 +687,48 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_preallocate_conf_port(pjsua_call_id call_i
      */
     null_name = pj_str("call-null-placeholder");
     status = pjmedia_null_port_create(
-        call->inv ? call->inv->pool : pjsua_var.pool,
+        inv_pool,
         8000, 1, 160, 16, &null_port);
     if (status != PJ_SUCCESS)
-        goto on_return;
+        return PJSUA_INVALID_ID;
 
     status = pjmedia_conf_add_port(pjsua_var.mconf,
-        call->inv ? call->inv->pool : pjsua_var.pool,
+        inv_pool,
         null_port, &null_name, &null_slot);
     if (status != PJ_SUCCESS) {
         pjmedia_port_destroy(null_port);
-        goto on_return;
+        return PJSUA_INVALID_ID;
     }
 
-    call_med->strm.a.conf_slot = (int)null_slot;
-    result = (pjsua_conf_port_id)null_slot;
+    PJSUA_LOCK();
+
+    if (!pjsua_call_is_active(call_id)) {
+        /* Call was torn down while we were working ? undo the slot. */
+        PJSUA_UNLOCK();
+        pjsua_conf_remove_port((pjsua_conf_port_id)null_slot);
+        return PJSUA_INVALID_ID;
+    }
+
+    {
+        pjsua_call       *call     = &pjsua_var.calls[call_id];
+        pjsua_call_media *call_med = &call->media[call->audio_idx];
+        if (call_med->strm.a.conf_slot != PJSUA_INVALID_ID) {
+            /* Another thread beat us to it ? undo the duplicate slot. */
+            result = call_med->strm.a.conf_slot;
+            PJSUA_UNLOCK();
+            pjsua_conf_remove_port((pjsua_conf_port_id)null_slot);
+            return result;
+        }
+
+
+        call_med->strm.a.conf_slot = (int)null_slot;
+        result = (pjsua_conf_port_id)null_slot;
+    }
+
+    PJSUA_UNLOCK();
 
     PJ_LOG(3, (THIS_FILE, "Call %d: pre-allocated conf slot %d (null port)",
         call_id, null_slot));
-
-on_return:
-    PJSUA_UNLOCK();
     return result;
 }
 
@@ -784,16 +817,20 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
         * slot so switch connections (e.g. 2->4) route real audio.
         */
         if (call_med->strm.a.conf_slot == PJSUA_INVALID_ID) {
-            pjmedia_port* null_port = NULL;
-            unsigned null_slot;
-            pj_status_t pre_status;
-            pj_str_t null_name = pj_str("call-null-placeholder");
+            pjmedia_port *null_port  = NULL;
+            unsigned      null_slot  = (unsigned)PJSUA_INVALID_ID;
+            pj_status_t   pre_status;
+            pj_str_t      null_name  = pj_str("call-null-placeholder");
+            pj_pool_t    *inv_pool   = call->inv->pool;
             unsigned clock_rate = si->fmt.clock_rate;
             unsigned channel_count = si->fmt.channel_cnt;
             unsigned samples_per_frame = PJMEDIA_SPF(clock_rate, 20000, channel_count);
 
+            /* Release lock before entering the conf bridge. */
+            PJSUA_UNLOCK();
+
             pre_status = pjmedia_null_port_create(
-                call->inv->pool,
+                inv_pool,
                 clock_rate,
                 channel_count,
                 samples_per_frame,
@@ -801,15 +838,31 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                 &null_port);
             if (pre_status == PJ_SUCCESS) {
                 pre_status = pjmedia_conf_add_port(pjsua_var.mconf,
-                    call->inv->pool,
+                    inv_pool,
                     null_port,
                     &null_name,
                     &null_slot);
-                if (pre_status == PJ_SUCCESS) {
+                if (pre_status != PJ_SUCCESS) 
+                    pjmedia_port_destroy(null_port);
+            }
+
+            PJSUA_LOCK();
+
+            /* Call may have been torn down while we were unlocked. */
+            if (!pjsua_call_is_active(call->index)) {
+                if (pre_status == PJ_SUCCESS)
+                    pjsua_conf_remove_port((pjsua_conf_port_id)null_slot);
+                status = PJ_EINVALIDOP;
+                goto on_return;
+            }
+            if (pre_status == PJ_SUCCESS) {
+                if (call_med->strm.a.conf_slot == PJSUA_INVALID_ID) {
+                    /* Normal case: assign the pre-allocated slot. */
                     call_med->strm.a.conf_slot = (int)null_slot;
                 }
                 else {
-                    pjmedia_port_destroy(null_port);
+                    /* Another thread already assigned a slot while unlocked. */
+                    pjsua_conf_remove_port((pjsua_conf_port_id)null_slot);
                 }
             }
         }
@@ -902,30 +955,60 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                                  call->index, strm_idx);
                 port_name = pj_str(tmp);
             }
-            if (call_med->strm.a.conf_slot != PJSUA_INVALID_ID) {
-                /* Slot pre-allocated with placeholder; replace it with real stream */
-                status = pjmedia_conf_replace_port(pjsua_var.mconf,
-                    call->inv->pool,
-                    call_med->strm.a.media_port,
-                    (unsigned)call_med->strm.a.conf_slot);
-                if (status != PJ_SUCCESS) {
-                    PJ_LOG(2, (THIS_FILE, "replace_port failed, falling back to add_port: %d", status));
-                    pjsua_conf_remove_port(call_med->strm.a.conf_slot);
-                    call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
-                    /* Fall through to add_port */
-                }
-            }
+            {
+                pjmedia_port *media_port = call_med->strm.a.media_port;
+                int           pre_slot   = call_med->strm.a.conf_slot;
+                pj_pool_t    *inv_pool   = call->inv->pool;
+                unsigned      new_slot   = (unsigned)PJSUA_INVALID_ID;
+                pj_bool_t     replaced   = PJ_FALSE;
 
-            if (call_med->strm.a.conf_slot == PJSUA_INVALID_ID) {
-                status = pjmedia_conf_add_port(pjsua_var.mconf,
-                    call->inv->pool,
-                    call_med->strm.a.media_port,
-                    &port_name,
-                    (unsigned*)
-                    &call_med->strm.a.conf_slot);
-                if (status != PJ_SUCCESS) {
+                /* Release lock before entering the conf bridge to avoid
+                 * lock-ordering deadlock (conf mutex vs PJSUA_LOCK).
+                 */
+                PJSUA_UNLOCK();
+
+                if (pre_slot != PJSUA_INVALID_ID) {
+                    /* Slot pre-allocated with placeholder; replace it with
+                     * the real stream to preserve the slot number so existing
+                     * switch connections stay valid.
+                     */
+                    status = pjmedia_conf_replace_port(pjsua_var.mconf,
+                                                       inv_pool,
+                                                       media_port,
+                                                       (unsigned)pre_slot);
+                    if (status == PJ_SUCCESS) {
+                        replaced = PJ_TRUE;
+                    } else {
+                        PJ_LOG(2, (THIS_FILE,
+                                   "replace_port failed, falling back to "
+                                   "add_port: %d", status));
+                        pjsua_conf_remove_port((pjsua_conf_port_id)pre_slot);
+                    }
+                }
+
+                if (!replaced) {
+                    status = pjmedia_conf_add_port(pjsua_var.mconf,
+                                                   inv_pool,
+                                                   media_port,
+                                                   &port_name,
+                                                   &new_slot);
+                }
+
+                PJSUA_LOCK();
+
+                /* Re-validate: call may have gone away while unlocked. */
+                if (!pjsua_call_is_active(call->index)) {
+                    if (!replaced && status == PJ_SUCCESS)
+                        pjsua_conf_remove_port((pjsua_conf_port_id)new_slot);
+                    status = PJ_EINVALIDOP;
                     goto on_return;
                 }
+
+                if (status != PJ_SUCCESS)
+                    goto on_return;
+
+                if (!replaced)
+                    call_med->strm.a.conf_slot = (int)new_slot;
             }
         }
 
