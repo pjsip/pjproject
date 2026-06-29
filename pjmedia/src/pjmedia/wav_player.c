@@ -80,9 +80,10 @@ struct file_reader_port
 };
 
 
-static pj_status_t file_get_frame(pjmedia_port *this_port, 
+static pj_status_t file_get_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame);
 static pj_status_t file_on_destroy(pjmedia_port *this_port);
+static pj_status_t file_on_event(pjmedia_event *event, void *user_data);
 
 static struct file_reader_port *create_file_port(pj_pool_t *pool)
 {
@@ -740,6 +741,19 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_set_eof_cb2(pjmedia_port *port,
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
 
     fport = (struct file_reader_port*) port;
+
+    /* On clear, synchronously unsubscribe so a pending EOF event can't dispatch
+     * cb2 against a freed owner; unsubscribe drains any in-flight callback via
+     * the event mgr cb_mutex. Unconditional (unsubscribe is idempotent and
+     * always drains): the subscribed flag is set on the media thread without a
+     * lock, so a stale read here could otherwise skip the drain. Clear cb2
+     * first so a concurrent file_get_frame() EOF can't re-arm the subscription.
+     */
+    if (!cb) {
+        fport->cb2 = NULL;
+        pjmedia_event_unsubscribe(NULL, &file_on_event, fport, fport);
+        fport->subscribed = PJ_FALSE;
+    }
 
     fport->base.port_data.pdata = user_data;
     fport->cb2 = cb;

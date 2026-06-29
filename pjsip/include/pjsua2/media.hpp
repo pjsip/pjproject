@@ -795,6 +795,12 @@ public:
     /**
      * Destructor. This will unregister the player port from the conference
      * bridge.
+     *
+     * To prevent a use-after-free, the destructor synchronously cancels the
+     * EOF callback, blocking until any in-flight onEof2() on the media event
+     * worker thread returns. Destroying from inside onEof2() is safe (the event
+     * lock is recursive), but destroying from another thread while holding a
+     * lock that onEof2() also takes can deadlock; avoid that.
      */
     virtual ~AudioMediaPlayer();
 

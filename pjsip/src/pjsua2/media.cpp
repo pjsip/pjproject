@@ -601,6 +601,17 @@ AudioMediaPlayer::AudioMediaPlayer()
 AudioMediaPlayer::~AudioMediaPlayer()
 {
     if (playerId != PJSUA_INVALID_ID) {
+        /* Cancel the EOF callback synchronously while still alive: port destroy
+         * is async, so the subscription would otherwise fire eof_cb() on freed
+         * memory.
+         */
+        pjmedia_port *port;
+        if (pjsua_player_get_port(playerId, &port) == PJ_SUCCESS) {
+            if (port->info.signature == PJMEDIA_SIG_PORT_WAV_PLAYER)
+                pjmedia_wav_player_set_eof_cb2(port, NULL, NULL);
+            else if (port->info.signature == PJMEDIA_SIG_PORT_WAV_PLAYLIST)
+                pjmedia_wav_playlist_set_eof_cb2(port, NULL, NULL);
+        }
         PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjsua_player_destroy(playerId);
     }
