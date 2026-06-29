@@ -1269,6 +1269,21 @@ static void print_ffmpeg_err(int err)
 
 }
 
+static void free_codec_context(AVCodecContext **ctx, pj_bool_t opened)
+{
+#if LIBAVCODEC_VER_AT_LEAST(60,39)
+    PJ_UNUSED_ARG(opened);
+    avcodec_free_context(ctx);
+#else
+    if (!*ctx)
+        return;
+    if (opened)
+        avcodec_close(*ctx);
+    av_free(*ctx);
+    *ctx = NULL;
+#endif
+}
+
 static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
                                      pj_mutex_t *ff_mutex)
 {
@@ -1395,18 +1410,8 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
     return PJ_SUCCESS;
 
 on_error:
-    if (ff->enc_ctx) {
-        if (enc_opened)
-            avcodec_close(ff->enc_ctx);
-        av_free(ff->enc_ctx);
-        ff->enc_ctx = NULL;
-    }
-    if (ff->dec_ctx) {
-        if (dec_opened)
-            avcodec_close(ff->dec_ctx);
-        av_free(ff->dec_ctx);
-        ff->dec_ctx = NULL;
-    }
+    free_codec_context(&ff->enc_ctx, enc_opened);
+    free_codec_context(&ff->dec_ctx, dec_opened);
     return status;
 }
 
@@ -1498,16 +1503,8 @@ static pj_status_t ffmpeg_codec_close( pjmedia_vid_codec *codec )
     ff_mutex = ((struct ffmpeg_factory*)codec->factory)->mutex;
 
     pj_mutex_lock(ff_mutex);
-    if (ff->enc_ctx) {
-        avcodec_close(ff->enc_ctx);
-        av_free(ff->enc_ctx);
-    }
-    if (ff->dec_ctx && ff->dec_ctx!=ff->enc_ctx) {
-        avcodec_close(ff->dec_ctx);
-        av_free(ff->dec_ctx);
-    }
-    ff->enc_ctx = NULL;
-    ff->dec_ctx = NULL;
+    free_codec_context(&ff->enc_ctx, PJ_TRUE);
+    free_codec_context(&ff->dec_ctx, PJ_TRUE);
     pj_mutex_unlock(ff_mutex);
 
     return PJ_SUCCESS;
