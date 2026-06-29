@@ -1187,11 +1187,27 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                      deviceInputWithDevice:di[p->target_id].dev
                      error:&error];
 
+            if (!new_dev_input) {
+                PJ_LOG(3, (THIS_FILE,
+                           "Failed to create capture device input: %s",
+                           error? [error.localizedDescription
+                                   UTF8String] : "unknown"));
+                return PJ_EUNKNOWN;
+            }
+
             [strm->cap_session beginConfiguration];
             [strm->cap_session removeInput:cur_dev_input];
+            if (![strm->cap_session canAddInput:new_dev_input]) {
+                /* Restore previous input on failure */
+                [strm->cap_session addInput:cur_dev_input];
+                [strm->cap_session commitConfiguration];
+                PJ_LOG(3, (THIS_FILE, "Session cannot accept "
+                           "new capture device input"));
+                return PJ_EUNKNOWN;
+            }
             [strm->cap_session addInput:new_dev_input];
             [strm->cap_session commitConfiguration];
-            
+
             strm->dev_input = new_dev_input;
             strm->param.cap_id = p->target_id;
             strm->cam_portrait_angle = -1;
@@ -1199,7 +1215,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             /* Set the orientation as well */
             darwin_stream_set_cap(s, PJMEDIA_VID_DEV_CAP_ORIENTATION,
                                &strm->param.orient);
-            
+
             return PJ_SUCCESS;
         }
         
