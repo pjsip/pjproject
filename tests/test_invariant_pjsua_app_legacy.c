@@ -33,7 +33,8 @@ START_TEST(test_simple_input_security)
         if (!mock_stdin) continue;
         
         // Call the actual function
-        pj_bool_t result = simple_input(buffer, buf_size, mock_stdin);
+        pj_bool_t result = simple_input_from("test", buffer, buf_size, mock_stdin);
+        (void)result;
         
         // Verify guard zones unchanged
         ck_assert_msg(memcmp(guard_start, "\xAA\xAA\xAA\xAA", 4) == 0,
