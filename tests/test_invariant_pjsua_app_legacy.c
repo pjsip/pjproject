@@ -36,9 +36,9 @@ START_TEST(test_simple_input_security)
         pj_bool_t result = simple_input(buffer, buf_size, mock_stdin);
         
         // Verify guard zones unchanged
-        ck_assert_msg(memchr(guard_start, 0xAA, 4) == guard_start + 3,
+        ck_assert_msg(memcmp(guard_start, "\xAA\xAA\xAA\xAA", 4) == 0,
                      "Buffer underflow detected");
-        ck_assert_msg(memchr(guard_end, 0xAA, 4) == guard_end + 3,
+        ck_assert_msg(memcmp(guard_end, "\xAA\xAA\xAA\xAA", 4) == 0,
                      "Buffer overflow detected");
         
         fclose(mock_stdin);
