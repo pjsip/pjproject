@@ -969,7 +969,6 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
 
             /* Ok, let's do the switch */
             adi = &strm->factory->dev_info[p->target_id];
-            PJ_LOG(4, (THIS_FILE, "Switching camera to %s..", adi->info.name));
 
             /* Call PjCamera::Start() method */
             with_attach = jni_get_env(&jni_env);
