@@ -85,6 +85,7 @@ typedef struct pjsua_app_config
     pj_bool_t               keep_call_on_tsx_fail;
     pjsua_transport_config  udp_cfg;
     pjsua_transport_config  rtp_cfg;
+    pj_bool_t               enable_rtcp_mux;
     pjsip_redirect_op       redir_op;
     int                     srtp_keying;
 
