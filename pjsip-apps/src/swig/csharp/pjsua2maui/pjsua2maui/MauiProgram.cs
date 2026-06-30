@@ -11,32 +11,36 @@ namespace pjsua2maui;
 
 public static class MauiProgram
 {
-   public static MauiApp CreateMauiApp()
-   {
-      var builder = MauiApp.CreateBuilder();
-      builder
-         .UseMauiApp<App>()
-         .ConfigureFonts(fonts =>
-         {
-            fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-            fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-         });
+    public static MauiApp CreateMauiApp()
+    {
+        var builder = MauiApp.CreateBuilder();
+        builder
+           .UseMauiApp<App>()
+           .ConfigureFonts(fonts =>
+           {
+               fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+               fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+           });
+        builder.ConfigureMauiHandlers(handlers =>
+        {
 #if ANDROID
-      builder.ConfigureMauiHandlers(handlers =>
-      {
-         handlers.AddHandler(typeof(pjsua2maui.Controls.VideoView), typeof(pjsua2maui.Platforms.Android.VideoViewHandler));
-      });
+            handlers.AddHandler(typeof(pjsua2maui.Controls.VideoView), typeof(pjsua2maui.Platforms.Android.VideoViewHandler));
+#endif
+#if IOS
+            handlers.AddHandler(typeof(pjsua2maui.Controls.VideoView), typeof(pjsua2maui.Platforms.iOS.VideoViewHandler));
+#endif
+#if MACCATALYST
+            handlers.AddHandler(typeof(pjsua2maui.Controls.VideoView), typeof(pjsua2maui.Platforms.MacCatalyst.VideoViewHandler));
+#endif
+#if WINDOWS
+            handlers.AddHandler(typeof(pjsua2maui.Controls.VideoView), typeof(pjsua2maui.Platforms.Windows.VideoViewHandler));
 #endif
 
+        });
+
 #if DEBUG
-      builder.Logging.AddDebug();
+        builder.Logging.AddDebug();
 #endif
-#if __IOS__
-      builder.ConfigureMauiHandlers(handlers =>
-      {
-         handlers.AddHandler(typeof(pjsua2maui.Controls.VideoView), typeof(pjsua2maui.Platforms.iOS.VideoViewHandler));
-      });
-#endif
-      return builder.Build();
-   }
+        return builder.Build();
+    }
 }
