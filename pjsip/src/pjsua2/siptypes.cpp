@@ -352,6 +352,26 @@ SockOpt::SockOpt(int level, int optName, int optVal)
     setOptValInt(optVal);
 }
 
+SockOpt::SockOpt(const SockOpt &that)
+{
+    *this = that;
+}
+
+SockOpt& SockOpt::operator=(const SockOpt &that)
+{
+    if (this == &that)
+        return *this;
+
+    level = that.level;
+    optName = that.optName;
+    optLen = that.optLen;
+    optValInt = that.optValInt;
+    /* Re-point to our own optValInt if 'that' used its internal buffer. */
+    optVal = (that.optVal == &that.optValInt) ? &optValInt : that.optVal;
+
+    return *this;
+}
+
 void SockOpt::setOptValInt(int opt_val)
 {
     optVal = &optValInt;

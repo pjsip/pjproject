@@ -2907,6 +2907,27 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         PJ_LOG(2, (THIS_FILE, "SIP registration failed, status=%d (%.*s)", 
                    param->code, 
                    (int)param->reason.slen, param->reason.ptr));
+
+        /* Transaction timeout (no response, rdata==NULL) over a reliable
+         * transport may mean the connection was silently dropped. Shut it
+         * down to force a reconnect on the next registration. A real 408
+         * response (rdata!=NULL) means the connection is alive, so skip it.
+         */
+        if (param->code == PJSIP_SC_REQUEST_TIMEOUT && param->rdata == NULL) {
+            pjsip_regc_info reginfo;
+
+            pjsip_regc_get_info(param->regc, &reginfo);
+            if (reginfo.transport &&
+                (reginfo.transport->flag & PJSIP_TRANSPORT_RELIABLE))
+            {
+                PJ_LOG(3, (THIS_FILE,
+                           "Registration timed out, shutting down transport "
+                           "%s to force a reconnect on next registration",
+                           reginfo.transport->obj_name));
+                pjsip_transport_shutdown(reginfo.transport);
+            }
+        }
+
         destroy_regc(acc, PJ_TRUE);
 
         /* Clear Service-Route header */

@@ -57,10 +57,6 @@
                                               (LIBAVUTIL_VERSION_MAJOR == major && \
                                                LIBAVUTIL_VERSION_MINOR >= minor))
 
-#if LIBAVCODEC_VER_AT_LEAST(60,39)
-#   define avcodec_close(x)     ((void)0)
-#endif
-
 void pjmedia_ffmpeg_add_ref();
 void pjmedia_ffmpeg_dec_ref();
 

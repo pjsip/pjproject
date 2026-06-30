@@ -759,6 +759,14 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_set_eof_cb2(pjmedia_port *port,
 
     fport = (struct playlist_port*) port;
 
+    /* See pjmedia_wav_player_set_eof_cb2(): unconditionally drain EOF
+     * subscription on clear (unsubscribe is idempotent and always drains). */
+    if (!cb) {
+        fport->cb2 = NULL;
+        pjmedia_event_unsubscribe(NULL, &file_on_event, fport, fport);
+        fport->subscribed = PJ_FALSE;
+    }
+
     fport->base.port_data.pdata = user_data;
     fport->cb2 = cb;
 
