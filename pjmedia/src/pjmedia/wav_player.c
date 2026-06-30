@@ -326,6 +326,12 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool_,
         goto on_error;
 
 
+    /* Zero the header first: it is read and byte-swapped in stages, and
+     * pjmedia_wave_hdr_file_to_host() swaps the whole struct (including
+     * data_hdr) before all fields have been read from the file.
+     */
+    pj_bzero(&wave_hdr, sizeof(wave_hdr));
+
     /* Read the RIFF file header only. */
     size_to_read = size_read = sizeof(wave_hdr.riff_hdr);
     status = pj_file_read( fport->fd, &wave_hdr, &size_read);
