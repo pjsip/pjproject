@@ -1340,6 +1340,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                 const CGFloat cap_ori[4] = { 0, 90, 180, 270};
                 int idx;
                 int rotation;
+                int effective_portrait_angle;
 
                 if (strm->param.orient < PJMEDIA_ORIENT_NATURAL ||
                     strm->param.orient > PJMEDIA_ORIENT_ROTATE_270DEG)
@@ -1362,6 +1363,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                  *                   180=upsidedown, 270=LandscapeLeft
                  * rotation = (cam_portrait_angle - 90 + cap_ori[idx]) % 360
                  */
+                effective_portrait_angle = -1;
                 if (strm->cam_portrait_angle < 0) {
                     AVCaptureDeviceRotationCoordinator *coord =
                         [[AVCaptureDeviceRotationCoordinator alloc]
@@ -1386,18 +1388,34 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
                             device_tilt = -1; break;
                         }
 
+                        PJ_LOG(3, (THIS_FILE,
+                                   "Detected orientation, "
+                                   "UIDeviceOrientation=%d, coord_angle=%d, "
+                                   "device_tilt=%d",
+                                   (int)[UIDevice currentDevice].orientation,
+                                   coord_angle, device_tilt));
+
                         if (device_tilt >= 0) {
                             strm->cam_portrait_angle =
                                 (coord_angle + device_tilt) % 360;
+                        } else {
+                            /* Orientation unknown (face-up/down); use
+                             * coordinator's angle as best-effort — it
+                             * reflects the last known non-face orientation.
+                             * Do not cache: cam_portrait_angle stays -1 so
+                             * it is recomputed when orientation is known. */
+                            effective_portrait_angle = coord_angle;
                         }
                     }
                 }
+                if (strm->cam_portrait_angle >= 0)
+                    effective_portrait_angle = strm->cam_portrait_angle;
 
-                if (strm->cam_portrait_angle >= 0) {
-                    rotation = (strm->cam_portrait_angle - 90 +
+                if (effective_portrait_angle >= 0) {
+                    rotation = (effective_portrait_angle - 90 +
                                 (int)cap_ori[idx] + 360) % 360;
                 } else {
-                    /* Device orientation unknown; fall back to conventional. */
+                    /* Coordinator unavailable; fall back to conventional. */
                     rotation = (int)cap_ori[idx];
                 }
 #else
