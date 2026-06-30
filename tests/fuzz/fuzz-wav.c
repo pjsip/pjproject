@@ -39,6 +39,9 @@
 #include <pjmedia/wav_port.h>
 #include <pjmedia/avi_stream.h>
 #include <pjmedia/endpoint.h>
+#include <pjmedia/converter.h>
+#include <pjmedia/event.h>
+#include <pjmedia/format.h>
 
 #define kMinInputLength 16
 #define kMaxInputLength 16384
@@ -111,6 +114,26 @@ extern int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         {
             pj_caching_pool_destroy(&caching_pool);
             return 0;
+        }
+
+        /* pjmedia_endpt_create2() registers the video codec manager but not
+         * the video format/converter/event managers. Without these, parsing an
+         * AVI with a recognizable video stream calls pjmedia_get_video_format_info()
+         * with a NULL manager and aborts (format.c: "Assertion mgr != NULL"),
+         * so the AVI video header path could never be fuzzed. Create them here,
+         * from a long-lived pool, so that path is actually exercised. */
+        {
+            pj_pool_t *vpool = pj_pool_create(&caching_pool.factory,
+                                              "fuzz-wav-init",
+                                              4000, 4000, NULL);
+            if (vpool) {
+                if (!pjmedia_video_format_mgr_instance())
+                    pjmedia_video_format_mgr_create(vpool, 64, 0, NULL);
+                if (!pjmedia_converter_mgr_instance())
+                    pjmedia_converter_mgr_create(vpool, NULL);
+                if (!pjmedia_event_mgr_instance())
+                    pjmedia_event_mgr_create(vpool, 0, NULL);
+            }
         }
 
         initialized = PJ_TRUE;
