@@ -1250,6 +1250,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
         case OPT_RTCP_MUX:
             cur_acc->enable_rtcp_mux = PJ_TRUE;
+            cfg->enable_rtcp_mux = PJ_TRUE;
             break;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -1823,6 +1824,7 @@ static void default_config()
     cfg->udp_cfg.port = 5060;
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->rtp_cfg.port = 4000;
+    cfg->enable_rtcp_mux = PJ_FALSE;
     cfg->redir_op = PJSIP_REDIRECT_ACCEPT_REPLACE;
     cfg->duration = PJSUA_APP_NO_LIMIT_DURATION;
     cfg->wav_id = PJSUA_INVALID_ID;
@@ -2231,6 +2233,11 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     }
     if (config->enable_qos) {
         pj_strcat2(&cfg, "--set-qos\n");
+    }
+    /* When there are no registered accounts, --rtcp-mux is not written by
+     * write_account_settings(), so emit it here from the global flag. */
+    if (config->acc_cnt == 0 && config->enable_rtcp_mux) {
+        pj_strcat2(&cfg, "--rtcp-mux\n");
     }
 
     /* Message Composition Indication */
