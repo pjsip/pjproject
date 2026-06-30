@@ -192,6 +192,9 @@ static X509     *dtls_cert;
 static EVP_PKEY *dtls_priv_key;
 static pj_status_t ssl_generate_cert(X509 **p_cert, EVP_PKEY **p_priv_key);
 
+/* Forward declaration */
+static void dtls_media_stop_channel(dtls_srtp* ds, unsigned idx);
+
 static pj_status_t dtls_init()
 {
     /* Make sure OpenSSL library has been initialized */
@@ -1191,6 +1194,8 @@ static pj_status_t ssl_on_recv_packet(dtls_srtp *ds, unsigned idx,
 {
     char tmp[128];
     pj_size_t nwritten;
+    int ssl_err = SSL_ERROR_NONE;
+    pj_status_t flush_status;
 
     DTLS_LOCK(ds);
 
@@ -1220,10 +1225,13 @@ static pj_status_t ssl_on_recv_packet(dtls_srtp *ds, unsigned idx,
     while (1) {
         int rc = SSL_read(ds->ossl_ssl[idx], tmp, sizeof(tmp));
         if (rc <= 0) {
+            ssl_err = SSL_get_error(ds->ossl_ssl[idx], rc);
 #if DTLS_DEBUG
-            pj_status_t status = GET_SSL_STATUS(ds);
-            if (status != PJ_SUCCESS)
-                pj_perror(2, ds->base.name, status, "SSL_read() error");
+            {
+                pj_status_t status = GET_SSL_STATUS(ds);
+                if (status != PJ_SUCCESS)
+                    pj_perror(2, ds->base.name, status, "SSL_read() error");
+            }
 #endif
             break;
         }
@@ -1231,8 +1239,25 @@ static pj_status_t ssl_on_recv_packet(dtls_srtp *ds, unsigned idx,
 
     DTLS_UNLOCK(ds);
 
-    /* Flush anything pending in the write BIO */
-    return ssl_flush_wbio(ds, idx);
+    /* Flush anything pending in the write BIO (may include a fatal alert) */
+    flush_status = ssl_flush_wbio(ds, idx);
+
+    /* SSL_ERROR_SSL / SSL_ERROR_SYSCALL are unrecoverable: the session
+     * must not continue.  Destroy it immediately so the
+     * retransmission clock stops and the next incoming packet can trigger
+     * a fresh handshake.
+     */
+    if (ssl_err == SSL_ERROR_SSL || ssl_err == SSL_ERROR_SYSCALL) {
+        PJ_LOG(3,(ds->base.name,
+                  "DTLS-SRTP %s fatal SSL error (ssl_err=%d), resetting "
+                  "session", CHANNEL_TO_STRING(idx), ssl_err));
+        DTLS_LOCK(ds);
+        dtls_media_stop_channel(ds, idx);
+        DTLS_UNLOCK(ds);
+        return PJ_SUCCESS;
+    }
+
+    return flush_status;
 }
 
 
@@ -1358,13 +1383,27 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
         }
     }
 
-    /* If our setup is ACTPASS, incoming packet may be a client hello,
-     * so let's update setup to PASSIVE and initiate DTLS handshake.
+    /* If our setup is ACTPASS/PASSIVE/UNKNOWN, incoming packet may be a
+     * ClientHello, so initiate server-side DTLS handshake.
      */
     if (!ds->nego_started[idx] &&
-        (ds->setup == DTLS_SETUP_ACTPASS || ds->setup == DTLS_SETUP_PASSIVE))
+        (ds->setup == DTLS_SETUP_ACTPASS || ds->setup == DTLS_SETUP_PASSIVE ||
+         ds->setup == DTLS_SETUP_UNKNOWN))
     {
         pj_status_t status;
+
+        /* If the DTLS role is not yet known (SDP not yet processed), defer
+         * until we have the remote fingerprint so certificate verification
+         * is possible.  The remote will retransmit and we will handle it
+         * once dtls_encode_sdp() or dtls_media_start() has run.
+         */
+        if (ds->setup == DTLS_SETUP_UNKNOWN && !ds->rem_fingerprint.slen) {
+            PJ_LOG(4, (ds->base.name, "DTLS-SRTP %s ClientHello received "
+                      "before SDP is processed, deferring",
+                      CHANNEL_TO_STRING(idx)));
+            DTLS_UNLOCK(ds);
+            return PJ_SUCCESS;
+        }
 
 #if defined(PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR) && \
             PJMEDIA_SRTP_DTLS_CHECK_HELLO_ADDR==1
@@ -1376,7 +1415,7 @@ static pj_status_t dtls_on_recv(pjmedia_transport *tp, unsigned idx,
 
             /* Check the source address with the specified remote address from
              * the SDP. At this point, if the remote address information
-             * is not available yet (e.g.: remote SDP has not been received), 
+             * is not available yet (e.g.: remote SDP has not been received),
              * delay the handshake.
              * Note: when ICE is used, the source address checking will be
              * done in ICE session.
