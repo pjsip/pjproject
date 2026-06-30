@@ -812,61 +812,6 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
             si->rx_event_pt = prm.stream_info.info.aud.rx_event_pt;
         }
 
-        /* Pre-allocate conference slot with null port for PJSIP 2.15 async conf.
-        * replace_port will swap it with the real stream later, keeping the same
-        * slot so switch connections (e.g. 2->4) route real audio.
-        */
-        if (call_med->strm.a.conf_slot == PJSUA_INVALID_ID) {
-            pjmedia_port *null_port  = NULL;
-            unsigned      null_slot  = (unsigned)PJSUA_INVALID_ID;
-            pj_status_t   pre_status;
-            pj_str_t      null_name  = pj_str("call-null-placeholder");
-            pj_pool_t    *inv_pool   = call->inv->pool;
-            unsigned clock_rate = si->fmt.clock_rate;
-            unsigned channel_count = si->fmt.channel_cnt;
-            unsigned samples_per_frame = PJMEDIA_SPF(clock_rate, 20000, channel_count);
-
-            /* Release lock before entering the conf bridge. */
-            PJSUA_UNLOCK();
-
-            pre_status = pjmedia_null_port_create(
-                inv_pool,
-                clock_rate,
-                channel_count,
-                samples_per_frame,
-                16,
-                &null_port);
-            if (pre_status == PJ_SUCCESS) {
-                pre_status = pjmedia_conf_add_port(pjsua_var.mconf,
-                    inv_pool,
-                    null_port,
-                    &null_name,
-                    &null_slot);
-                if (pre_status != PJ_SUCCESS) 
-                    pjmedia_port_destroy(null_port);
-            }
-
-            PJSUA_LOCK();
-
-            /* Call may have been torn down while we were unlocked. */
-            if (!pjsua_call_is_active(call->index)) {
-                if (pre_status == PJ_SUCCESS)
-                    pjsua_conf_remove_port((pjsua_conf_port_id)null_slot);
-                status = PJ_EINVALIDOP;
-                goto on_return;
-            }
-            if (pre_status == PJ_SUCCESS) {
-                if (call_med->strm.a.conf_slot == PJSUA_INVALID_ID) {
-                    /* Normal case: assign the pre-allocated slot. */
-                    call_med->strm.a.conf_slot = (int)null_slot;
-                }
-                else {
-                    /* Another thread already assigned a slot while unlocked. */
-                    pjsua_conf_remove_port((pjsua_conf_port_id)null_slot);
-                }
-            }
-        }
-
         /* Create session based on session info. */
         status = pjmedia_stream_create(pjsua_var.med_endpt, NULL, si,
                                        call_med->tp, NULL,
@@ -971,6 +916,19 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                     /* Slot pre-allocated with placeholder; replace it with
                      * the real stream to preserve the slot number so existing
                      * switch connections stay valid.
+                     */
+                    /* Note: pjmedia_conf_replace_port is asynchronous —
+                     * it queues the op and returns PJ_SUCCESS immediately.
+                     * The fallback below only catches early validation
+                     * failures (bad slot, alloc error). If the deferred
+                     * pjmedia_conf_replace_port_impl later fails (resample,
+                     * buffer, channel mismatch), its on_error_unlock path
+                     * safely reattaches the null placeholder back to the
+                     * slot, so there is no crash or dangling pointer — the
+                     * call simply produces silence. The failure is logged
+                     * by conf_handle_op_. Full async recovery (e.g. retry
+                     * via add_port) would require a result callback (op->cb)
+                     * and is left as a future improvement.
                      */
                     status = pjmedia_conf_replace_port(pjsua_var.mconf,
                                                        inv_pool,

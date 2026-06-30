@@ -882,7 +882,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool_,
     }
 
     /* Create mutex. */
-    status = pj_mutex_create_recursive(pool, "conf_op", &conf->mutex);
+    status = pj_mutex_create_recursive(pool, "conf", &conf->mutex);
     if (status != PJ_SUCCESS) {
         pjmedia_conf_destroy(conf);
         return status;
@@ -918,6 +918,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool_,
 
     conf->destroy_list = PJ_POOL_ZALLOC_T(pool, struct port_destroy_item);
     pj_list_init(conf->destroy_list);
+
+    /* Create op_mutex to protect the op_list and destroy_list. */
+    status = pj_mutex_create_recursive(pool, "conf_op", &conf->op_mutex);
+    if (status != PJ_SUCCESS) {
+        pjmedia_conf_destroy(conf);
+        return status;
+    }
 
     /* Done */
 
