@@ -212,7 +212,8 @@ static pj_status_t read_wav_until(struct file_reader_port *fport,
             pj_uint32_t sig = subchunk.id;
             pj_off_t fpos;
             pj_file_getpos(fport->fd, &fpos);
-            if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+            if ((sig & 0xFF000000) && (sig & 0x00FF0000) &&
+                (sig & 0x0000FF00) && (sig & 0x000000FF))
             {
                 PJ_LOG(2, (THIS_FILE,
                            "%.*s. Zero length chunk of type %s found at offset=%lu (read_wav_until)",
@@ -366,10 +367,18 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool_,
     pj_memcpy(&wave_hdr.fmt_hdr, &chunk, sizeof(chunk));
 
     /* Read the rest of `fmt ` chunk. */
-    size_read = sizeof(wave_hdr.fmt_hdr) - sizeof(chunk);
+    size_to_read = size_read = sizeof(wave_hdr.fmt_hdr) - sizeof(chunk);
     status = pj_file_read(fport->fd, &wave_hdr.fmt_hdr.fmt_tag, &size_read);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
+        goto on_error;
+    }
+    if (size_read != size_to_read) {
+        /* File truncated within the `fmt ` chunk; the remaining fmt header
+         * fields would be left uninitialized.
+         */
+        pj_file_close(fport->fd);
+        status = PJMEDIA_EWAVETOOSHORT;
         goto on_error;
     }
 
