@@ -991,7 +991,7 @@ static pj_status_t create_srtp_ctx(transport_srtp *srtp,
                    setting->tx_roc.roc,
                    (err == srtp_err_status_ok)? "succeeded": "failed"));
     }
-    ctx->tx_policy = *tx;
+    ctx->tx_policy = *tx; /* pointer to dynamic memory erased below: */
     pj_strset(&ctx->tx_policy.key,  ctx->tx_key, tx->key.slen);
     ctx->tx_policy.name=pj_str(crypto_suites[get_crypto_idx(&tx->name)].name);
 
@@ -1043,7 +1043,7 @@ static pj_status_t create_srtp_ctx(transport_srtp *srtp,
                    setting->rx_roc.ssrc, setting->rx_roc.roc,
                    (err == srtp_err_status_ok)? "succeeded": "failed"));
     }
-    ctx->rx_policy = *rx;
+    ctx->rx_policy = *rx; /* pointer to dynamic memory erased below: */
     pj_strset(&ctx->rx_policy.key,  ctx->rx_key, rx->key.slen);
     ctx->rx_policy.name=pj_str(crypto_suites[get_crypto_idx(&rx->name)].name);
 
