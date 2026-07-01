@@ -320,6 +320,7 @@ PJ_INLINE(void) pjmedia_conf_param_default(pjmedia_conf_param *param)
 #endif
 }
 
+
 /**
  * Create conference bridge with the specified parameters. The sampling rate,
  * samples per frame, and bits per sample will be used for the internal
@@ -524,6 +525,13 @@ PJ_DECL(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
                                             pjmedia_port *strm_port,
                                             const pj_str_t *name,
                                             unsigned *p_slot );
+
+
+PJ_DECL(pj_status_t) pjmedia_conf_replace_port(pjmedia_conf *conf,
+                                              pj_pool_t *pool,
+                                              pjmedia_port *strm_port,
+                                              unsigned slot);
+
 
 
 #if !DEPRECATED_FOR_TICKET_2234

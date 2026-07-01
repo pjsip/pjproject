@@ -6490,6 +6490,23 @@ PJ_DECL(pjsua_conf_port_id) pjsua_call_get_vid_conf_port(
                                                     pjmedia_dir dir);
 
 /**
+ * Pre-allocate a null-port conference slot for a call that has no active
+ * media yet. This allows conference connections to be established while
+ * the INVITE is still in progress. When media becomes active,
+ * pjsua_aud_channel_update() will replace the placeholder with the real
+ * stream port via pjmedia_conf_replace_port(), preserving the slot number
+ * so existing connections remain valid.
+ *
+ * @param call_id   Call identification.
+ *
+ * @return          The pre-allocated conference slot ID, or
+ *                  PJSUA_INVALID_ID if the call is not active,
+ *                  has no audio media index, or a resource
+ *                  allocation error occurred.
+ */
+PJ_DECL(pjsua_conf_port_id) pjsua_call_preallocate_conf_port(pjsua_call_id call_id);
+
+/**
  * Obtain detail information about the specified call.
  *
  * @param call_id       Call identification.
