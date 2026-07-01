@@ -2086,9 +2086,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     {
         /* Choose local interface to use in Via if acc is not using
          * STUN nor UPnP. See https://github.com/pjsip/pjproject/issues/1804
-         * Skip if the caller's Contact resolves to a reliable (TCP/TLS)
-         * transport: pjsua_acc_get_uac_addr() would open a spurious outbound
-         * connection to the Contact when contact_use_src_port is enabled.
+         * Skip if the caller's Contact resolves to a reliable transport
+         * (e.g., TCP/TLS): pjsua_acc_get_uac_addr() would open a spurious
+         * outbound connection to the Contact when contact_use_src_port is enabled.
          */
         {
             char target_buf[PJSIP_MAX_URL_SIZE];
