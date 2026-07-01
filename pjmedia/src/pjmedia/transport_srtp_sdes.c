@@ -486,8 +486,8 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
                  */
                 if (cr_attr_count >= PJ_ARRAY_SIZE(tags))
                     return PJMEDIA_SRTP_ESDPINCRYPTO;
-
-                status = parse_attr_crypto(srtp->pool, m_rem->attr[i],
+                /* use sdp_pool because srtp->pool lives as long as the call */
+                status = parse_attr_crypto(sdp_pool, m_rem->attr[i],
                                            &tmp_rx_crypto,
                                            &tags[cr_attr_count]);
                 if (status != PJ_SUCCESS)
@@ -691,8 +691,10 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
         if (srtp->srtp_ctx.tx_policy_neg.name.slen == 0)
             return PJ_SUCCESS;
 
-        /* Get the local crypto. */
-        fill_local_crypto(srtp->pool, m_loc, PJ_FALSE,
+        /* Get the local crypto. 
+         * do not use srtp->pool because it may live as long as the call, thus memleak     
+         */
+        fill_local_crypto(pool, m_loc, PJ_FALSE,
                           loc_crypto, &loc_cryto_cnt);
 
         if (loc_cryto_cnt == 0)
@@ -737,14 +739,14 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
             //DEACTIVATE_MEDIA(pool, m_loc);
             //return PJMEDIA_SDP_EINPROTO;
         //}
-        fill_local_crypto(srtp->pool, m_loc, PJ_TRUE,
+        fill_local_crypto(pool, m_loc, PJ_TRUE,
                           loc_crypto, &loc_cryto_cnt);
     } else if (srtp->setting.use == PJMEDIA_SRTP_MANDATORY) {
         if (srtp->peer_use != PJMEDIA_SRTP_MANDATORY) {
             DEACTIVATE_MEDIA(pool, m_loc);
             return PJMEDIA_SDP_EINPROTO;
         }
-        fill_local_crypto(srtp->pool, m_loc, PJ_TRUE,
+        fill_local_crypto(pool, m_loc, PJ_TRUE,
                           loc_crypto, &loc_cryto_cnt);
     }
 
@@ -761,7 +763,7 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
 
         has_crypto_attr = PJ_TRUE;
 
-        status = parse_attr_crypto(srtp->pool, m_rem->attr[i],
+        status = parse_attr_crypto(pool, m_rem->attr[i],
                                    &tmp_tx_crypto, &rem_tag);
         if (status != PJ_SUCCESS)
             return status;
