@@ -3336,6 +3336,23 @@ static pj_status_t pjsua_regc_init(int acc_id)
         }
     }
 
+    /* Push affinity hidden Route to the freshly-created regc (#4964).
+     * When set_affinity_addr() was called before the regc existed,
+     * sa_sync_route_set() had no regc to push to; do it now.
+     * Guard: only call when a UDP pin is active. sa_sync_route_set()
+     * pushes acc->route_set whenever its mirror differs, so calling it
+     * unconditionally would override reg_use_proxy=0 by injecting
+     * acc->route_set proxies into the regc. TCP/TLS pins use tp_sel
+     * for destination control and do not need the hidden Route.
+     * Strip PJSIP_TRANSPORT_IPV6 to match both UDP4 and UDP6.
+     */
+    if (acc->sa_enabled && acc->sa_next_hop_tp != NULL &&
+        ((acc->sa_next_hop_tp->key.type & ~PJSIP_TRANSPORT_IPV6)
+         == PJSIP_TRANSPORT_UDP))
+    {
+        sa_sync_route_set(acc);
+    }
+
     /* Add custom request headers specified in the account config */
     status = pjsip_regc_add_headers(acc->regc, &acc->cfg.reg_hdr_list);
     if (status != PJ_SUCCESS) {
@@ -4817,6 +4834,16 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
                     pj_status_t st = pjsip_get_dest_info(uri, NULL,
                                                          tmp_pool, &dinfo);
                     if (st == PJ_SUCCESS && dinfo.addr.host.slen) {
+                        /* Refine tp_type from URI when acc->tp_type is
+                         * unspecified (no transport_id set). Prevents the
+                         * UDP fallback from firing on TLS/TCP accounts
+                         * that rely on dynamic transport selection.
+                         */
+                        if (acc->tp_type == PJSIP_TRANSPORT_UNSPECIFIED &&
+                            dinfo.type != PJSIP_TRANSPORT_UNSPECIFIED)
+                        {
+                            tp_type = dinfo.type;
+                        }
                         pj_bzero(&dummy_tdata, sizeof(dummy_tdata));
                         pj_strdup(tmp_pool, &dummy_tdata.dest_info.name,
                                   &dinfo.addr.host);
