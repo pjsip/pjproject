@@ -1272,6 +1272,7 @@ on_return:
     return status;
 }
 
+#if !PJSUA_MEDIA_HAS_PJMEDIA
 /* Check whether an rtpmap/fmtp attribute value refers to the given payload
  * type (SDP format). The attribute value must begin with the payload type
  * token followed by whitespace or end-of-string. An empty fmt never matches.
@@ -1287,6 +1288,7 @@ static pj_bool_t attr_matches_fmt(const pj_str_t *attr_val,
             (attr_val->slen == fmt->slen ||
              pj_isspace((unsigned char)attr_val->ptr[fmt->slen])));
 }
+#endif
 
 pj_status_t create_temp_sdp(pj_pool_t *pool,
                             const pjmedia_sdp_session *rem_sdp,
