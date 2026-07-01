@@ -3336,6 +3336,13 @@ static pj_status_t pjsua_regc_init(int acc_id)
         }
     }
 
+    /* Push affinity hidden Route to the freshly-created regc (#4964).
+     * When set_affinity_addr() was called before the regc existed,
+     * sa_sync_route_set() had no regc to push to; do it now.
+     * No-op when affinity is disabled or not yet pinned.
+     */
+    sa_sync_route_set(acc);
+
     /* Add custom request headers specified in the account config */
     status = pjsip_regc_add_headers(acc->regc, &acc->cfg.reg_hdr_list);
     if (status != PJ_SUCCESS) {
