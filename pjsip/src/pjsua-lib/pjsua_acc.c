@@ -4824,6 +4824,16 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
                     pj_status_t st = pjsip_get_dest_info(uri, NULL,
                                                          tmp_pool, &dinfo);
                     if (st == PJ_SUCCESS && dinfo.addr.host.slen) {
+                        /* Refine tp_type from URI when acc->tp_type is
+                         * unspecified (no transport_id set). Prevents the
+                         * UDP fallback from firing on TLS/TCP accounts
+                         * that rely on dynamic transport selection.
+                         */
+                        if (acc->tp_type == PJSIP_TRANSPORT_UNSPECIFIED &&
+                            dinfo.type != PJSIP_TRANSPORT_UNSPECIFIED)
+                        {
+                            tp_type = dinfo.type;
+                        }
                         pj_bzero(&dummy_tdata, sizeof(dummy_tdata));
                         pj_strdup(tmp_pool, &dummy_tdata.dest_info.name,
                                   &dinfo.addr.host);
