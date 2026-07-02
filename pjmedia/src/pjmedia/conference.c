@@ -301,6 +301,8 @@ static pj_status_t op_disconnect_ports(pjmedia_conf *conf,
 static pj_status_t op_adjust_conn_level(pjmedia_conf *conf,
                                         const pjmedia_conf_op_param *prm);
 
+static void destroy_conf_port_resources(struct conf_port *conf_port);
+
 static op_entry* get_free_op_entry(pjmedia_conf *conf)
 {
     op_entry *ope = NULL;
@@ -1875,17 +1877,37 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
         if (found) {
             pjmedia_conf_op_param prm;
 
+            /* Mark the port as removing before releasing the mutex, so
+             * other threads can no longer queue any operation on it
+             * (e.g: connect/disconnect) nor remove it again while it is
+             * being destroyed below.
+             */
+            conf_port->removing = PJ_TRUE;
+
             /* Release mutex to avoid deadlock */
             pj_mutex_unlock(conf->mutex);
 
-            /* Remove it */
+            /* The port has never been active (its add-op has just been
+             * cancelled above), so it has no connection and the clock
+             * thread never touches it. It is safe to destroy the port
+             * resources from this thread. Note that op_remove_port()
+             * must not be called from here as it modifies states shared
+             * with the clock thread (e.g: while disconnecting the port
+             * from other ports), so it can only be run by the clock
+             * thread.
+             */
+            destroy_conf_port_resources(conf_port);
+
+            PJ_LOG(4,(THIS_FILE,"Removing new port %d (%.*s) synchronously",
+                      port, (int)conf_port->name.slen, conf_port->name.ptr));
+
             prm.remove_port.port = port;
-            status = op_remove_port(conf, &prm);
 
             if (conf->cb) {
                 pjmedia_conf_op_info op_info = { 0 };
 
                 pj_log_push_indent();
+                op_info.conf = conf;
                 op_info.op_type = PJMEDIA_CONF_OP_REMOVE_PORT;
                 op_info.status = status;
                 op_info.op_param = prm;
@@ -1929,6 +1951,42 @@ on_return:
 }
 
 
+/*
+ * Destroy resources owned by a conference port: resample states, delay
+ * buffer, and the pjmedia port for passive ports.
+ *
+ * For a port that has been activated in the bridge, this must only be
+ * called from the clock thread, via op_remove_port(). For a newly added
+ * port whose add-op has been cancelled, this may be called from the
+ * thread invoking pjmedia_conf_remove_port(), as such port is never
+ * accessed by the clock thread.
+ */
+static void destroy_conf_port_resources(struct conf_port *conf_port)
+{
+    /* Destroy resample if this conf port has it. */
+    if (conf_port->rx_resample) {
+        pjmedia_resample_destroy(conf_port->rx_resample);
+        conf_port->rx_resample = NULL;
+    }
+    if (conf_port->tx_resample) {
+        pjmedia_resample_destroy(conf_port->tx_resample);
+        conf_port->tx_resample = NULL;
+    }
+
+    /* Destroy pjmedia port if this conf port is passive port,
+     * i.e: has delay buf.
+     */
+    if (conf_port->delay_buf) {
+        pjmedia_delay_buf_destroy(conf_port->delay_buf);
+        conf_port->delay_buf = NULL;
+
+        if (conf_port->port)
+            pjmedia_port_destroy(conf_port->port);
+        conf_port->port = NULL;
+    }
+}
+
+
 static pj_status_t op_remove_port(pjmedia_conf *conf,
                                   const pjmedia_conf_op_param *prm)
 {
@@ -1967,27 +2025,8 @@ static pj_status_t op_remove_port(pjmedia_conf *conf,
                       "Fail to stop transmission from %d->any", port));
     }
     
-    /* Destroy resample if this conf port has it. */
-    if (conf_port->rx_resample) {
-        pjmedia_resample_destroy(conf_port->rx_resample);
-        conf_port->rx_resample = NULL;
-    }
-    if (conf_port->tx_resample) {
-        pjmedia_resample_destroy(conf_port->tx_resample);
-        conf_port->tx_resample = NULL;
-    }
-
-    /* Destroy pjmedia port if this conf port is passive port,
-     * i.e: has delay buf.
-     */
-    if (conf_port->delay_buf) {
-        pjmedia_delay_buf_destroy(conf_port->delay_buf);
-        conf_port->delay_buf = NULL;
-
-        if (conf_port->port)
-            pjmedia_port_destroy(conf_port->port);
-        conf_port->port = NULL;
-    }
+    /* Destroy the port's own resources. */
+    destroy_conf_port_resources(conf_port);
 
     PJ_LOG(4,(THIS_FILE,"Removing port %d (%.*s)",
               port, (int)conf_port->name.slen, conf_port->name.ptr));
