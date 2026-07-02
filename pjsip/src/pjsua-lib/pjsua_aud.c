@@ -1512,6 +1512,101 @@ PJ_DEF(pj_status_t) pjsua_player_destroy(pjsua_player_id id)
     return PJ_SUCCESS;
 }
 
+/*
+ * Create a tone detector and connect it to the conference bridge.
+ * Uses the recorder slot table for bookkeeping.
+ */
+PJ_DEF(pj_status_t) pjsua_tone_detector_create(
+				   void (*cb)(pjmedia_port *port,
+					      void *usr_data,
+					      const pjmedia_tone_detect_event *event),
+				   void *usr_data,
+				   const unsigned *freqs,
+				   unsigned n_freqs,
+				   pjsua_recorder_id *p_id)
+{
+    unsigned slot, file_id;
+    pj_pool_t *pool = NULL;
+    pj_status_t status;
+    pjmedia_port *port = NULL;
+    pj_str_t port_name = pj_str("tone_det");
+
+    PJ_ASSERT_RETURN(cb != NULL && freqs != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(n_freqs >= 1 && n_freqs <= PJMEDIA_TONE_DETECT_MAX_FREQS,
+		     PJ_EINVAL);
+
+    PJ_LOG(4,(THIS_FILE, "Creating tone detector.."));
+    pj_log_push_indent();
+
+    PJSUA_LOCK();
+
+    if (pjsua_var.rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.recorder)) {
+	status = PJ_ETOOMANY;
+	goto on_return;
+    }
+
+    for (file_id=0; file_id<PJ_ARRAY_SIZE(pjsua_var.recorder); ++file_id) {
+	if (pjsua_var.recorder[file_id].port == NULL)
+	    break;
+    }
+
+    if (file_id == PJ_ARRAY_SIZE(pjsua_var.recorder)) {
+	pj_assert(0);
+	status = PJ_EBUG;
+	goto on_return;
+    }
+
+    pool = pjsua_pool_create("tone_det", 1000, 1000);
+    if (!pool) {
+	status = PJ_ENOMEM;
+	goto on_return;
+    }
+
+    status = pjmedia_tone_detector_port_create(pool,
+					    pjsua_var.media_cfg.clock_rate,
+					    pjsua_var.mconf_cfg.channel_count,
+					    pjsua_var.mconf_cfg.samples_per_frame,
+					    pjsua_var.mconf_cfg.bits_per_sample,
+					    freqs, n_freqs,
+					    &port, cb, usr_data);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create tone detector port", status);
+	goto on_return;
+    }
+
+    status = pjmedia_conf_add_port(pjsua_var.mconf, pool, port, &port_name, &slot);
+    if (status != PJ_SUCCESS) {
+	pjmedia_port_destroy(port);
+	goto on_return;
+    }
+
+    pjsua_var.recorder[file_id].port = port;
+    pjsua_var.recorder[file_id].slot = slot;
+    pjsua_var.recorder[file_id].pool = pool;
+
+    if (p_id) *p_id = file_id;
+
+    ++pjsua_var.rec_cnt;
+
+    PJSUA_UNLOCK();
+
+    PJ_LOG(4,(THIS_FILE, "Tone detector created, id=%d, slot=%d", file_id, slot));
+
+    pj_log_pop_indent();
+    return PJ_SUCCESS;
+
+on_return:
+    PJSUA_UNLOCK();
+    if (pool) pj_pool_release(pool);
+    pj_log_pop_indent();
+    return status;
+}
+
+PJ_DEF(pj_status_t) pjsua_tone_detector_destroy(pjsua_recorder_id id)
+{
+    /* The detector lives in the recorder slot table; cleanup is identical. */
+    return pjsua_recorder_destroy(id);
+}
 
 /*****************************************************************************
  * File recorder.

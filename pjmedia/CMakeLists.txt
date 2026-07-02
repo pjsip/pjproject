@@ -379,6 +379,7 @@ add_library(pjmedia
   src/pjmedia/wav_player.c
   src/pjmedia/wav_playlist.c
   src/pjmedia/wav_writer.c
+  src/pjmedia/tone_detector.c
   src/pjmedia/wave.c
   src/pjmedia/wsola.c
   src/pjmedia/audiodev.c
@@ -457,6 +458,7 @@ target_sources(pjmedia
       include/pjmedia/vid_stream.h
       include/pjmedia/vid_tee.h
       include/pjmedia/videodev.h
+      include/pjmedia/tone_detector.h
       include/pjmedia/wav_playlist.h
       include/pjmedia/wav_port.h
       include/pjmedia/wave.h
@@ -910,6 +912,7 @@ if(BUILD_TESTING)
     src/test/vid_port_test.c
     src/test/rtp_test.c
     src/test/test.c
+    src/test/tone_detector_test.c
     src/test/sdp_neg_test.c
   )
 

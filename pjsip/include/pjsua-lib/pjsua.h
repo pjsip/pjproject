@@ -8961,6 +8961,46 @@ PJ_DECL(pj_status_t) pjsua_recorder_create(const pj_str_t *filename,
                                            unsigned options,
                                            pjsua_recorder_id *p_id);
 
+/**
+ * Create a tone detector and connect it to the conference bridge. The
+ * detector reuses the recorder slot table, so its id can be passed to
+ * #pjsua_recorder_get_conf_port() to wire a call's audio into it.
+ *
+ * @param cb         Callback invoked the first time the detector identifies
+ *                   the configured tone sustained for
+ *                   PJMEDIA_TONE_DETECT_DEBOUNCE_FRAMES consecutive frames
+ *                   (≈60ms at the default 20ms ptime; scales with the
+ *                   active audio frame size and clock rate). Delivered via
+ *                   the pjmedia event mechanism, so it runs on the pjmedia
+ *                   event thread (not the conf bridge worker). The event
+ *                   pointer references internal storage and is valid only
+ *                   for the duration of the callback; do not retain it.
+ * @param usr_data   Opaque user data passed back to \a cb.
+ * @param freqs      Array of frequencies (Hz) the detector must observe
+ *                   simultaneously (AND).
+ * @param n_freqs    Number of frequencies (1..PJMEDIA_TONE_DETECT_MAX_FREQS).
+ * @param p_id       Receives the detector id (a recorder slot id).
+ *
+ * @return           PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_tone_detector_create(
+				   void (*cb)(pjmedia_port *port,
+					      void *usr_data,
+					      const pjmedia_tone_detect_event *event),
+				   void *usr_data,
+				   const unsigned *freqs,
+				   unsigned n_freqs,
+				   pjsua_recorder_id *p_id);
+
+/**
+ * Destroy a tone detector previously created with
+ * #pjsua_tone_detector_create().
+ *
+ * @param id    The detector id.
+ *
+ * @return      PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_tone_detector_destroy(pjsua_recorder_id id);
 
 /**
  * Get conference port associated with recorder.

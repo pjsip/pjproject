@@ -37,6 +37,7 @@
 #define HAS_JBUF_TEST           1
 #define HAS_MIPS_TEST           WITH_BENCHMARK
 #define HAS_CODEC_VECTOR_TEST   1
+#define HAS_TONE_DETECTOR_TEST  1
 
 int session_test(void);
 int rtp_test(void);
@@ -48,6 +49,7 @@ int codec_test_vectors(void);
 int vid_codec_test(void);
 int vid_dev_test(void);
 int vid_port_test(void);
+int tone_detector_test(void);
 
 extern pj_pool_factory *mem;
 void app_perror(pj_status_t status, const char *title);
