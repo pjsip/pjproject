@@ -1595,3 +1595,445 @@ int trickle_ice_test(void)
 
     return rc;
 }
+
+
+/*****************************************************************************
+ * Test for issue #4978: an agent must not fail ICE immediately when all of
+ * its own connectivity checks complete without a valid pair. This happens
+ * when the checks cannot even be sent (e.g. the remote candidate address is
+ * unreachable from this host and the send fails with EPERM), while the remote
+ * agent can still reach this agent and create a (peer-reflexive) valid pair
+ * via incoming checks.
+ *
+ * These tests drive raw, transport-agnostic pj_ice_sess instances and route
+ * their packets through an in-memory queue. Sends to a designated "bogon"
+ * address fail synchronously, simulating EPERM.
+ */
+#define WVP_TP_ID       1
+#define WVP_BOGON_IP    "192.168.1.162"
+#define WVP_BOGON_PORT  49130
+
+struct wvp_sess;
+
+/* A queued packet pending delivery to a destination session. */
+struct wvp_pkt
+{
+    PJ_DECL_LIST_MEMBER(struct wvp_pkt);
+    struct wvp_sess *dst;
+    unsigned         comp_id;
+    unsigned         transport_id;
+    pj_sockaddr      src_addr;
+    int              src_len;
+    pj_size_t        len;
+    pj_uint8_t       data[800];
+};
+
+struct wvp_test
+{
+    pj_stun_config  *stun_cfg;
+    pj_pool_t       *pool;
+    struct wvp_pkt   txq;       /* List head of queued packets.         */
+    pj_sockaddr      bogon;     /* "Unreachable" address (sends fail).  */
+    pj_bool_t        shim_err;  /* Set if shim hit an unexpected packet.*/
+    struct wvp_sess *caller;
+    struct wvp_sess *callee;
+};
+
+struct wvp_sess
+{
+    struct wvp_test *test;
+    pj_ice_sess     *ice;
+    pj_sockaddr      addr;      /* This session's transport address.    */
+    pj_str_t         ufrag;
+    pj_str_t         pass;
+    pj_bool_t        completed;
+    pj_status_t      status;
+};
+
+static struct wvp_sess *wvp_find_dst(struct wvp_test *t,
+                                     const pj_sockaddr_t *addr)
+{
+    if (t->caller && pj_sockaddr_cmp(addr, &t->caller->addr) == 0)
+        return t->caller;
+    if (t->callee && pj_sockaddr_cmp(addr, &t->callee->addr) == 0)
+        return t->callee;
+    return NULL;
+}
+
+static pj_status_t wvp_on_tx_pkt(pj_ice_sess *ice, unsigned comp_id,
+                                 unsigned transport_id,
+                                 const void *pkt, pj_size_t size,
+                                 const pj_sockaddr_t *dst_addr,
+                                 unsigned dst_addr_len)
+{
+    struct wvp_sess *src = (struct wvp_sess*) ice->user_data;
+    struct wvp_test *t = src->test;
+    struct wvp_sess *dst;
+    struct wvp_pkt *p;
+
+    PJ_UNUSED_ARG(dst_addr_len);
+
+    /* Sends to the bogon address fail synchronously, as if the local route
+     * to it is prohibited (EPERM).
+     */
+    if (pj_sockaddr_cmp(dst_addr, &t->bogon) == 0)
+        return PJ_STATUS_FROM_OS(120); /* arbitrary non-success send error */
+
+    /* An unknown destination or an oversized packet is not expected in this
+     * controlled setup; flag it and fail the send so the test fails loudly
+     * instead of silently masking the problem.
+     */
+    dst = wvp_find_dst(t, dst_addr);
+    if (dst == NULL || size > sizeof(p->data)) {
+        t->shim_err = PJ_TRUE;
+        return PJ_EINVAL;
+    }
+
+    /* Enqueue a copy for delivery from the poll loop. */
+    p = PJ_POOL_ZALLOC_T(t->pool, struct wvp_pkt);
+    p->dst = dst;
+    p->comp_id = comp_id;
+    p->transport_id = transport_id;
+    pj_sockaddr_cp(&p->src_addr, &src->addr);
+    p->src_len = pj_sockaddr_get_len(&src->addr);
+    p->len = size;
+    pj_memcpy(p->data, pkt, size);
+    pj_list_push_back(&t->txq, p);
+
+    return PJ_SUCCESS;
+}
+
+static void wvp_on_ice_complete(pj_ice_sess *ice, pj_status_t status)
+{
+    struct wvp_sess *s = (struct wvp_sess*) ice->user_data;
+    s->completed = PJ_TRUE;
+    s->status = status;
+}
+
+static void wvp_on_rx_data(pj_ice_sess *ice, unsigned comp_id,
+                           unsigned transport_id, void *pkt, pj_size_t size,
+                           const pj_sockaddr_t *src_addr,
+                           unsigned src_addr_len)
+{
+    PJ_UNUSED_ARG(ice); PJ_UNUSED_ARG(comp_id); PJ_UNUSED_ARG(transport_id);
+    PJ_UNUSED_ARG(pkt); PJ_UNUSED_ARG(size);
+    PJ_UNUSED_ARG(src_addr); PJ_UNUSED_ARG(src_addr_len);
+}
+
+/* Poll the timer heap and deliver queued packets for the given duration. */
+static void wvp_poll(struct wvp_test *t, unsigned msec)
+{
+    pj_time_val stop, now;
+
+    pj_gettimeofday(&stop);
+    stop.msec += msec;
+    pj_time_val_normalize(&stop);
+
+    for (;;) {
+        unsigned guard = 0;
+
+        pj_timer_heap_poll(t->stun_cfg->timer_heap, NULL);
+
+        while (!pj_list_empty(&t->txq) && ++guard < 1000) {
+            struct wvp_pkt *p = t->txq.next;
+            pj_list_erase(p);
+            pj_ice_sess_on_rx_pkt(p->dst->ice, p->comp_id, p->transport_id,
+                                  p->data, p->len, &p->src_addr, p->src_len);
+        }
+
+        pj_gettimeofday(&now);
+        if (PJ_TIME_VAL_GTE(now, stop))
+            break;
+        pj_thread_sleep(1);
+    }
+}
+
+/* Create a raw ICE session with a single host candidate. Pass
+ * wait_pair_timeout == -2 to keep the default (do not override the option).
+ */
+static pj_status_t wvp_create_sess(struct wvp_test *t, struct wvp_sess *s,
+                                   const char *name, pj_ice_sess_role role,
+                                   pj_uint16_t port, int wait_pair_timeout)
+{
+    pj_ice_sess_cb cb;
+    pj_ice_sess_options opt;
+    pj_str_t loopback, fnd;
+    unsigned cand_id;
+    pj_status_t status;
+
+    pj_bzero(&cb, sizeof(cb));
+    cb.on_tx_pkt = &wvp_on_tx_pkt;
+    cb.on_ice_complete = &wvp_on_ice_complete;
+    cb.on_rx_data = &wvp_on_rx_data;
+
+    s->test = t;
+    s->completed = PJ_FALSE;
+    s->status = PJ_EUNKNOWN;
+    s->ufrag = pj_str((char*)(role==PJ_ICE_SESS_ROLE_CONTROLLING ?
+                              "Lcaller0" : "Lcallee0"));
+    s->pass  = pj_str((char*)"0123456789012345678901"); /* >=22 chars */
+
+    loopback = pj_str((char*)"127.0.0.1");
+    pj_sockaddr_init(pj_AF_INET(), &s->addr, &loopback, port);
+
+    status = pj_ice_sess_create(t->stun_cfg, name, role, 1, &cb,
+                                &s->ufrag, &s->pass, NULL, &s->ice);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    s->ice->user_data = s;
+
+    if (wait_pair_timeout != -2) {
+        pj_ice_sess_get_options(s->ice, &opt);
+        opt.wait_valid_pair_timeout = wait_pair_timeout;
+        pj_ice_sess_set_options(s->ice, &opt);
+    }
+
+    /* Add a single host candidate at this session's address. */
+    fnd = pj_str((char*)"Hhost");
+    status = pj_ice_sess_add_cand(s->ice, 1, WVP_TP_ID,
+                                  PJ_ICE_CAND_TYPE_HOST, 65535, &fnd,
+                                  &s->addr, &s->addr, &s->addr,
+                                  pj_sockaddr_get_len(&s->addr), &cand_id);
+    return status;
+}
+
+/* Build a remote host candidate at the given address. */
+static void wvp_init_rcand(pj_ice_sess_cand *c, const pj_sockaddr *addr)
+{
+    pj_bzero(c, sizeof(*c));
+    c->type = PJ_ICE_CAND_TYPE_HOST;
+    c->comp_id = 1;
+    c->transport_id = WVP_TP_ID;
+    c->local_pref = 65535;
+    c->foundation = pj_str((char*)"Hrhost");
+    c->prio = 1862270975;       /* a valid host-candidate priority */
+    pj_sockaddr_cp(&c->addr, addr);
+    pj_sockaddr_cp(&c->base_addr, addr);
+}
+
+int ice_wait_valid_pair_test(void)
+{
+    app_sess_t app_sess;
+    pj_str_t bogon_ip;
+    pj_status_t status;
+    int rc = 0;
+
+    PJ_LOG(3,(THIS_FILE, "ICE wait-valid-pair (#4978)"));
+    pj_log_push_indent();
+
+    status = create_stun_config(&app_sess);
+    if (status != PJ_SUCCESS) {
+        pj_log_pop_indent();
+        return -10;
+    }
+    bogon_ip = pj_str((char*)WVP_BOGON_IP);
+
+    /* --- Sub-test 1: recovery via incoming check ---
+     * Callee's own checks (to the bogon) all fail to send, but the caller can
+     * reach the callee, so the callee should form a peer-reflexive valid pair
+     * and complete successfully instead of failing immediately.
+     */
+    {
+        struct wvp_test t;
+        struct wvp_sess caller, callee;
+        pj_ice_sess_cand rcand;
+        unsigned i;
+
+        PJ_LOG(3,(THIS_FILE, INDENT "recovery: callee's checks fail to send "
+                  "but caller reaches callee"));
+
+        pj_bzero(&t, sizeof(t));
+        pj_bzero(&caller, sizeof(caller));
+        pj_bzero(&callee, sizeof(callee));
+        t.stun_cfg = &app_sess.stun_cfg;
+        t.pool = app_sess.pool;
+        pj_list_init(&t.txq);
+        pj_sockaddr_init(pj_AF_INET(), &t.bogon, &bogon_ip, WVP_BOGON_PORT);
+        t.caller = &caller;
+        t.callee = &callee;
+
+        if ((rc=wvp_create_sess(&t, &caller, "wvpUA1",
+                                PJ_ICE_SESS_ROLE_CONTROLLING, 34101, -2))) {
+            rc = -20; goto s1_done;
+        }
+        if ((rc=wvp_create_sess(&t, &callee, "wvpUA2",
+                                PJ_ICE_SESS_ROLE_CONTROLLED, 34102, -2))) {
+            rc = -21; goto s1_done;
+        }
+
+        /* Caller's remote candidate is the callee's real (reachable) addr. */
+        wvp_init_rcand(&rcand, &callee.addr);
+        if (pj_ice_sess_create_check_list(caller.ice, &callee.ufrag,
+                                          &callee.pass, 1, &rcand)) {
+            rc = -22; goto s1_done;
+        }
+        /* Callee's remote candidate is the unreachable bogon. */
+        wvp_init_rcand(&rcand, &t.bogon);
+        if (pj_ice_sess_create_check_list(callee.ice, &caller.ufrag,
+                                          &caller.pass, 1, &rcand)) {
+            rc = -23; goto s1_done;
+        }
+
+        pj_ice_sess_start_check(caller.ice);
+        pj_ice_sess_start_check(callee.ice);
+
+        for (i=0; i<80 && !(caller.completed && callee.completed); ++i)
+            wvp_poll(&t, 100);
+
+        if (!callee.completed) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: callee did not complete"));
+            rc = -25; goto s1_done;
+        }
+        if (callee.status != PJ_SUCCESS) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: callee failed to recover, "
+                      "status=%d", callee.status));
+            rc = -26; goto s1_done;
+        }
+        /* The controlling side must complete successfully too. */
+        if (!caller.completed || caller.status != PJ_SUCCESS) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: caller did not complete "
+                      "successfully, completed=%d status=%d",
+                      caller.completed, caller.status));
+            rc = -27; goto s1_done;
+        }
+        if (t.shim_err) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: transport shim saw an "
+                      "unexpected packet"));
+            rc = -28; goto s1_done;
+        }
+        PJ_LOG(3,(THIS_FILE, INDENT "ok: callee recovered via incoming check"));
+
+    s1_done:
+        if (caller.ice) pj_ice_sess_destroy(caller.ice);
+        if (callee.ice) pj_ice_sess_destroy(callee.ice);
+        pj_list_init(&t.txq);
+        if (rc) goto on_return;
+    }
+
+    /* --- Sub-test 2: bounded failure on timeout ---
+     * Callee's checks fail to send and nobody reaches it. It must not fail
+     * immediately (grace timer), but must eventually fail after the timeout.
+     */
+    {
+        struct wvp_test t;
+        struct wvp_sess callee;
+        pj_ice_sess_cand rcand;
+        unsigned i;
+
+        PJ_LOG(3,(THIS_FILE, INDENT "timeout: no peer, fail after grace "
+                  "period (500ms)"));
+
+        pj_bzero(&t, sizeof(t));
+        pj_bzero(&callee, sizeof(callee));
+        t.stun_cfg = &app_sess.stun_cfg;
+        t.pool = app_sess.pool;
+        pj_list_init(&t.txq);
+        pj_sockaddr_init(pj_AF_INET(), &t.bogon, &bogon_ip, WVP_BOGON_PORT);
+        t.callee = &callee;
+
+        if ((rc=wvp_create_sess(&t, &callee, "wvpUA3",
+                                PJ_ICE_SESS_ROLE_CONTROLLED, 34103, 500))) {
+            rc = -30; goto s2_done;
+        }
+        wvp_init_rcand(&rcand, &t.bogon);
+        if (pj_ice_sess_create_check_list(callee.ice, &callee.ufrag,
+                                          &callee.pass, 1, &rcand)) {
+            rc = -31; goto s2_done;
+        }
+
+        pj_ice_sess_start_check(callee.ice);
+
+        /* Within the grace period the agent must NOT have failed yet. */
+        wvp_poll(&t, 200);
+        if (callee.completed) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: failed during grace period "
+                      "(status=%d)", callee.status));
+            rc = -32; goto s2_done;
+        }
+
+        /* After the grace period it must fail. */
+        for (i=0; i<10 && !callee.completed; ++i)
+            wvp_poll(&t, 100);
+        if (!callee.completed) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: did not fail after grace"));
+            rc = -33; goto s2_done;
+        }
+        if (callee.status == PJ_SUCCESS) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: unexpected success"));
+            rc = -34; goto s2_done;
+        }
+        if (t.shim_err) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: transport shim saw an "
+                      "unexpected packet"));
+            rc = -35; goto s2_done;
+        }
+        PJ_LOG(3,(THIS_FILE, INDENT "ok: deferred then failed on timeout"));
+
+    s2_done:
+        if (callee.ice) pj_ice_sess_destroy(callee.ice);
+        pj_list_init(&t.txq);
+        if (rc) goto on_return;
+    }
+
+    /* --- Sub-test 3: disabled grace (-1) restores immediate failure --- */
+    {
+        struct wvp_test t;
+        struct wvp_sess callee;
+        pj_ice_sess_cand rcand;
+        unsigned i;
+
+        PJ_LOG(3,(THIS_FILE, INDENT "disabled: timeout=-1 fails immediately"));
+
+        pj_bzero(&t, sizeof(t));
+        pj_bzero(&callee, sizeof(callee));
+        t.stun_cfg = &app_sess.stun_cfg;
+        t.pool = app_sess.pool;
+        pj_list_init(&t.txq);
+        pj_sockaddr_init(pj_AF_INET(), &t.bogon, &bogon_ip, WVP_BOGON_PORT);
+        t.callee = &callee;
+
+        if ((rc=wvp_create_sess(&t, &callee, "wvpUA4",
+                                PJ_ICE_SESS_ROLE_CONTROLLED, 34104, -1))) {
+            rc = -40; goto s3_done;
+        }
+        wvp_init_rcand(&rcand, &t.bogon);
+        if (pj_ice_sess_create_check_list(callee.ice, &callee.ufrag,
+                                          &callee.pass, 1, &rcand)) {
+            rc = -41; goto s3_done;
+        }
+
+        pj_ice_sess_start_check(callee.ice);
+
+        /* Should fail almost immediately (well within the 500ms that would
+         * apply if the grace timer were active).
+         */
+        for (i=0; i<5 && !callee.completed; ++i)
+            wvp_poll(&t, 20);
+        if (!callee.completed) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: did not fail immediately"));
+            rc = -42; goto s3_done;
+        }
+        if (callee.status == PJ_SUCCESS) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: unexpected success"));
+            rc = -43; goto s3_done;
+        }
+        if (t.shim_err) {
+            PJ_LOG(1,(THIS_FILE, INDENT "err: transport shim saw an "
+                      "unexpected packet"));
+            rc = -44; goto s3_done;
+        }
+        PJ_LOG(3,(THIS_FILE, INDENT "ok: failed immediately when disabled"));
+
+    s3_done:
+        if (callee.ice) pj_ice_sess_destroy(callee.ice);
+        pj_list_init(&t.txq);
+        if (rc) goto on_return;
+    }
+
+on_return:
+    destroy_stun_config(&app_sess);
+    pj_log_pop_indent();
+
+    return rc;
+}
