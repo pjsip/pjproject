@@ -586,12 +586,22 @@ static void evsub_destroy( pjsip_evsub *sub )
         sub->pending_sub_timer = NULL;
     }
 
-    /* Remove this session from dialog's list of subscription */
+    /* Remove this session from dialog's list of subscription.
+     *
+     * Clear the back-pointer (dlgsub->sub) BEFORE erasing the node. The
+     * dlgsub node is allocated from the dialog pool and may still be
+     * reachable by an in-flight on_new_transaction() walk (e.g. a REFER
+     * retransmit-timer event firing while the dialog/subscription is being
+     * torn down). That walk dereferences dlgsub->sub; leaving it pointing
+     * at this now-destroyed subscription is a use-after-free. By NULLing it
+     * first, any such traversal sees a NULL sub and safely skips the node.
+     */
     dlgsub_head = (struct dlgsub *) sub->dlg->mod_data[mod_evsub.mod.id];
     dlgsub = dlgsub_head->next;
     while (dlgsub != dlgsub_head) {
         
         if (dlgsub->sub == sub) {
+            dlgsub->sub = NULL;
             pj_list_erase(dlgsub);
             break;
         }
@@ -1585,6 +1595,21 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 
     while (dlgsub != dlgsub_head) {
 
+        /* Guard against a dlgsub node whose subscription is being or has
+         * been destroyed. evsub_destroy() clears dlgsub->sub before
+         * erasing the node; a late transaction event (e.g. REFER
+         * retransmit timer firing during dialog teardown) can still reach
+         * such a node. Skipping it here avoids dereferencing freed
+         * subscription state.
+         */
+        if (dlgsub->sub == NULL) {
+            struct dlgsub *next = dlgsub->next;
+            if (next == dlgsub)
+                break;
+            dlgsub = next;
+            continue;
+        }
+
         if (pj_stricmp(&dlgsub->sub->event->event_type, 
                        &event_hdr->event_type)==0)
         {
@@ -2468,5 +2493,4 @@ static void mod_evsub_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
 
     }
 }
-
 
