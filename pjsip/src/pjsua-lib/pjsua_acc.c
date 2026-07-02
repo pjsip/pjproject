@@ -4877,6 +4877,18 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
         acc->sa_pin_explicit = PJ_TRUE;
         /* Inject hidden Route for UDP destination-pinning. */
         sa_sync_route_set(acc);
+        /* Update the regc's transport selector for TCP/TLS accounts.
+         * For TCP/TLS the destination is controlled by tp_sel (not the
+         * hidden Route used for UDP). The regc stores a tp_sel snapshot
+         * taken at creation time in pjsua_regc_init(); without this,
+         * a pin change on a live regc would leave it pointing at the
+         * old transport.
+         */
+        if (acc->regc) {
+            pjsip_tpselector tp_sel;
+            pjsua_init_tpselector(acc->index, &tp_sel);
+            pjsip_regc_set_transport(acc->regc, &tp_sel);
+        }
         PJ_LOG(3,(THIS_FILE,
                   "Account %d: server affinity explicitly pinned via API "
                   "to transport %s",
