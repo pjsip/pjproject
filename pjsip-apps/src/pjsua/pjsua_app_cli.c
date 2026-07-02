@@ -252,8 +252,9 @@ pj_status_t cli_init(void)
      * thread is waiting for the write lock in register/unregister_module).
      */
     app_config.log_cfg.cb = &cli_log_writer;
-    pjsua_reconfigure_logging(&app_config.log_cfg);
-
+    status = pjsua_reconfigure_logging(&app_config.log_cfg);
+    if (status != PJ_SUCCESS)
+        goto on_error;
     return PJ_SUCCESS;
 
 on_error:
