@@ -243,6 +243,17 @@ pj_status_t cli_init(void)
             goto on_error;
     }
 
+    /* Redirect logging to the CLI frontends here (before pjsua_start() is
+     * called by the caller), NOT in cli_main(). pjsua_reconfigure_logging()
+     * unregisters/re-registers the SIP message logging module, and doing
+     * that after the stack is already processing traffic can race with
+     * pjsip_endpt_process_rx_data()/endpt_on_tx_msg() and self-deadlock on
+     * endpt->mod_mutex (a thread re-entering the read lock while another
+     * thread is waiting for the write lock in register/unregister_module).
+     */
+    app_config.log_cfg.cb = &cli_log_writer;
+    pjsua_reconfigure_logging(&app_config.log_cfg);
+
     return PJ_SUCCESS;
 
 on_error:
@@ -253,10 +264,6 @@ on_error:
 pj_status_t cli_main(pj_bool_t wait_telnet_cli)
 {
     char cmdline[PJ_CLI_MAX_CMDBUF];
-
-    /* ReInit logging */
-    app_config.log_cfg.cb = &cli_log_writer;
-    pjsua_reconfigure_logging(&app_config.log_cfg);
 
     if (app_config.cli_cfg.cli_fe & CLI_FE_CONSOLE) {
         /* Main loop for CLI FE console */
