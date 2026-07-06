@@ -290,7 +290,9 @@ static pj_ssize_t ka_recv_timeout(pj_sock_t sock, void *buf,
     timeout.msec = timeout_ms % 1000;
 
     n = pj_sock_select((int)sock + 1, &rset, NULL, NULL, &timeout);
-    if (n < 1 || !PJ_FD_ISSET(sock, &rset))
+    if (n < 0)
+        return -1;
+    if (n == 0 || !PJ_FD_ISSET(sock, &rset))
         return 0;
 
     len = (pj_ssize_t)buf_size;

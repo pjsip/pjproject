@@ -2015,7 +2015,12 @@ static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
 
                 send_st = pj_ssl_sock_send(tls->ssock, &tls->pong_op_key.key,
                                            pong, &pong_len, 0);
-                if (send_st != PJ_SUCCESS && send_st != PJ_EPENDING) {
+                /* PJ_EBUSY means the data was queued behind an ongoing TLS
+                 * renegotiation, i.e. it will still be sent; not an error.
+                 */
+                if (send_st != PJ_SUCCESS && send_st != PJ_EPENDING &&
+                    send_st != PJ_EBUSY)
+                {
                     tls_perror(tls->base.obj_name,
                                "Error sending CRLF keep-alive response",
                                send_st, &tls->remote_name);
