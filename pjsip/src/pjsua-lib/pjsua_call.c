@@ -765,11 +765,25 @@ static void dlg_set_via(pjsip_dialog *dlg, pjsua_acc *acc)
     {
         /* Choose local interface to use in Via if acc is not using
          * STUN nor UPnP. See https://github.com/pjsip/pjproject/issues/1804
+         * Skip if the outgoing target resolves to a reliable transport
+         * (e.g., TCP/TLS): pjsua_acc_get_uac_addr() would open a spurious
+         * outbound connection when contact_use_src_port is enabled, while
+         * the Via is correctly resolved when the request is actually sent
+         * over the real outbound connection.
          */
         pjsip_host_port via_addr;
         const void *via_tp;
+        pjsip_host_info dest_info;
+        pj_bool_t reliable_dest = PJ_FALSE;
 
-        if (pjsua_acc_get_uac_addr(acc->index, dlg->pool, &acc->cfg.id,
+        if (pjsip_get_dest_info((const pjsip_uri*)dlg->target, NULL,
+                                dlg->pool, &dest_info) == PJ_SUCCESS)
+        {
+            reliable_dest = (dest_info.flag & PJSIP_TRANSPORT_RELIABLE) != 0;
+        }
+
+        if (!reliable_dest &&
+            pjsua_acc_get_uac_addr(acc->index, dlg->pool, &acc->cfg.id,
                                    &via_addr, NULL, NULL,
                                    &via_tp) == PJ_SUCCESS)
         {
