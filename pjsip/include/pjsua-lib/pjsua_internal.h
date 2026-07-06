@@ -845,6 +845,35 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
                                    int *p_secure,
                                    const void **p_tp);
 
+/* Get local transport address suitable to be used for the Via address of
+ * requests sent by a UAS dialog. Unlike pjsua_acc_get_uac_addr(), the next
+ * hop is taken from the dialog route set (from the incoming Record-Route),
+ * falling back to the remote target. Returns PJ_ENOTFOUND when the next hop
+ * is a reliable transport (the Via is then resolved at send time), so the
+ * caller should leave the Via untouched.
+ */
+pj_status_t pjsua_acc_get_uas_addr(pjsua_acc_id acc_id,
+                                   pj_pool_t *pool,
+                                   pjsip_dialog *dlg,
+                                   pjsip_host_port *addr,
+                                   pjsip_transport_type_e *p_tp_type,
+                                   int *p_secure,
+                                   const void **p_tp);
+
+/* Get local transport address for the Via of requests sent by a UAC dialog.
+ * Like pjsua_acc_get_uac_addr(), the next hop is the account outbound proxy
+ * when configured, but otherwise the dialog's remote target (not the account
+ * id URI). Returns PJ_ENOTFOUND when the next hop is a reliable transport (the
+ * Via is resolved at send time), so the caller should leave the Via untouched.
+ */
+pj_status_t pjsua_acc_get_uac_dlg_addr(pjsua_acc_id acc_id,
+                                       pj_pool_t *pool,
+                                       pjsip_dialog *dlg,
+                                       pjsip_host_port *addr,
+                                       pjsip_transport_type_e *p_tp_type,
+                                       int *p_secure,
+                                       const void **p_tp);
+
 /**
  * Handle incoming invite request.
  */

@@ -1066,40 +1066,20 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
                !pjsua_sip_acc_is_using_upnp(acc_id))
     {
-        /* Choose local interface to use in Via if acc is not using
-         * STUN nor UPnP. See https://github.com/pjsip/pjproject/issues/1412
-         * Skip if the subscriber's Contact resolves to a reliable transport
-         * (e.g., TCP/TLS): pjsua_acc_get_uac_addr() would open a spurious
-         * outbound connection to the Contact when contact_use_src_port is
-         * enabled.
+        /* Choose local interface to use in Via if acc is not using STUN nor
+         * UPnP. See https://github.com/pjsip/pjproject/issues/1412
+         * The address is selected toward the dialog's actual next hop (route
+         * set from Record-Route, else the remote target); reliable transports
+         * are skipped and resolved at send time.
          */
-        char target_buf[PJSIP_MAX_URL_SIZE];
-        pj_str_t target;
         pjsip_host_port via_addr;
         const void *via_tp;
-        pjsip_host_info dest_info;
-        pj_bool_t reliable_dest = PJ_FALSE;
 
-        if (pjsip_get_dest_info((const pjsip_uri*)dlg->target, NULL,
-                                dlg->pool, &dest_info) == PJ_SUCCESS)
+        if (pjsua_acc_get_uas_addr(acc_id, dlg->pool, dlg, &via_addr,
+                                   NULL, NULL, &via_tp) == PJ_SUCCESS)
         {
-            reliable_dest = (dest_info.flag & PJSIP_TRANSPORT_RELIABLE) != 0;
-        }
-
-        if (!reliable_dest) {
-            target.ptr = target_buf;
-            target.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
-                                          dlg->target,
-                                          target_buf, sizeof(target_buf));
-            if (target.slen < 0) target.slen = 0;
-
-            if (pjsua_acc_get_uac_addr(acc_id, dlg->pool, &target,
-                                       &via_addr, NULL, NULL,
-                                       &via_tp) == PJ_SUCCESS)
-            {
-                pjsip_dlg_set_via_sent_by(dlg, &via_addr,
-                                          (pjsip_transport*)via_tp);
-            }
+            pjsip_dlg_set_via_sent_by(dlg, &via_addr,
+                                      (pjsip_transport*)via_tp);
         }
     }
 
