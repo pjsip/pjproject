@@ -75,7 +75,7 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			transport_ice.o transport_loop.o transport_srtp.o transport_udp.o \
 			types.o txt_stream.o vid_codec.o vid_codec_util.o \
 			vid_port.o vid_stream.o vid_stream_info.o vid_conf.o \
-			wav_player.o wav_playlist.o wav_writer.o wave.o \
+			wav_player.o wav_playlist.o wav_writer.o tone_detector.o wave.o \
 			wsola.o audiodev.o videodev.o
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)
@@ -156,7 +156,7 @@ export PJMEDIA_CODEC_LDFLAGS += $(PJMEDIA_LDLIB) \
 export PJMEDIA_TEST_SRCDIR = ../src/test
 export PJMEDIA_TEST_OBJS += codec_vectors.o jbuf_test.o main.o mips_test.o \
 			    vid_codec_test.o vid_dev_test.o vid_port_test.o \
-			    rtp_test.o test.o
+			    rtp_test.o test.o tone_detector_test.o
 export PJMEDIA_TEST_OBJS += sdp_neg_test.o 
 export PJMEDIA_TEST_CFLAGS += $(_CFLAGS)
 export PJMEDIA_TEST_CXXFLAGS += $(_CXXFLAGS)
