@@ -1498,9 +1498,18 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
         if ((tp_flag & PJSIP_TRANSPORT_RELIABLE) &&
             pj_sockaddr_has_addr(&tp->key.rem_addr))
         {
-            if (tdata->dest_info.name.slen == 0 && tp->remote_name.host.slen) {
-                pj_strdup(tdata->pool, &tdata->dest_info.name,
-                          &tp->remote_name.host);
+            /* Preserve the next-hop hostname for TLS SNI / certificate
+             * validation: prefer the parsed next-hop host, falling back to
+             * the transport's remote name only if it is not available.
+             */
+            if (tdata->dest_info.name.slen == 0) {
+                if (dest_info.addr.host.slen) {
+                    pj_strdup(tdata->pool, &tdata->dest_info.name,
+                              &dest_info.addr.host);
+                } else if (tp->remote_name.host.slen) {
+                    pj_strdup(tdata->pool, &tdata->dest_info.name,
+                              &tp->remote_name.host);
+                }
             }
             tdata->dest_info.addr.count = 1;
             tdata->dest_info.addr.entry[0].type =
