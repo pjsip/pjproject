@@ -613,6 +613,55 @@ static pj_bool_t sa_sync_mirror(pjsua_acc *acc, pjsip_hdr *dst,
     return differs;
 }
 
+/* Build the route set to push to the registration client (regc): the
+ * affinity hidden Route (when a UDP pin is active) followed by the routes
+ * selected by reg_use_proxy (outbound proxy and/or account proxies).
+ * Headers are shallow-cloned into `pool`.
+ *
+ * This is deliberately NOT acc->route_set: that list is the dialog route
+ * set and always carries the account proxies plus the hidden Route, whereas
+ * the regc route set must honor reg_use_proxy (e.g. reg_use_proxy=0 must not
+ * inherit the account proxies) and include the outbound proxy. (#4964)
+ */
+static void sa_build_reg_route_set(pjsua_acc *acc, pj_pool_t *pool,
+                                   pjsip_route_hdr *route_set)
+{
+    const pjsip_route_hdr *r;
+
+    pj_list_init(route_set);
+
+    /* Hidden affinity Route first (UDP destination pin). */
+    if (acc->sa_route_hdr && acc->sa_enabled && acc->sa_next_hop_tp != NULL &&
+        ((acc->sa_next_hop_tp->key.type & ~PJSIP_TRANSPORT_IPV6)
+         == PJSIP_TRANSPORT_UDP))
+    {
+        pj_list_push_back(route_set,
+                          pjsip_hdr_shallow_clone(pool, acc->sa_route_hdr));
+    }
+
+    if (acc->cfg.reg_use_proxy & PJSUA_REG_USE_OUTBOUND_PROXY) {
+        r = pjsua_var.outbound_proxy.next;
+        while (r != &pjsua_var.outbound_proxy) {
+            pj_list_push_back(route_set, pjsip_hdr_shallow_clone(pool, r));
+            r = r->next;
+        }
+    }
+
+    if ((acc->cfg.reg_use_proxy & PJSUA_REG_USE_ACC_PROXY) &&
+        acc->cfg.proxy_cnt)
+    {
+        int cnt = acc->cfg.proxy_cnt;
+        pjsip_route_hdr *pos = route_set->prev;
+        int i;
+
+        r = acc->route_set.prev;
+        for (i=0; i<cnt; ++i) {
+            pj_list_push_front(pos, pjsip_hdr_shallow_clone(pool, r));
+            r = r->prev;
+        }
+    }
+}
+
 /* Sync the hidden Route entry in acc->route_set with the current pin
  * state, then push to regc if the result actually differs from what
  * we pushed last time. UDP-only (TCP/TLS use tp_sel). See #4964.
@@ -688,12 +737,25 @@ static void sa_sync_route_set(pjsua_acc *acc)
      * different address. (#4964)
      */
     if (acc->regc) {
-        pj_bool_t changed = sa_sync_mirror(
-                                acc,
-                                (pjsip_hdr*)&acc->sa_pushed_route,
-                                (const pjsip_hdr*)&acc->route_set);
-        if (changed || hdr_rebuilt)
-            pjsip_regc_set_route_set(acc->regc, &acc->route_set);
+        pj_pool_t *tmp_pool = pjsua_pool_create("sa_regrt%p", 512, 256);
+
+        if (tmp_pool) {
+            pjsip_route_hdr reg_route_set;
+            pj_bool_t changed;
+
+            /* The regc route set is the hidden Route plus the reg_use_proxy
+             * routes, NOT the full acc->route_set (which is the dialog route
+             * set). See sa_build_reg_route_set(). (#4964)
+             */
+            sa_build_reg_route_set(acc, tmp_pool, &reg_route_set);
+            changed = sa_sync_mirror(acc,
+                                     (pjsip_hdr*)&acc->sa_pushed_route,
+                                     (const pjsip_hdr*)&reg_route_set);
+            if (changed || hdr_rebuilt)
+                pjsip_regc_set_route_set(acc->regc, &reg_route_set);
+
+            pj_pool_release(tmp_pool);
+        }
     }
 }
 
@@ -3291,35 +3353,19 @@ static pj_status_t pjsua_regc_init(int acc_id)
         goto on_return;
     }
 
-    /* Set route-set */
-    if (acc->cfg.reg_use_proxy) {
+    /* Set route-set: the affinity hidden Route (when a UDP pin is active)
+     * plus the reg_use_proxy-selected routes, built together so that
+     * reg_use_proxy is honored (e.g. reg_use_proxy=0 does not inherit the
+     * account proxies) and the outbound proxy is preserved even when
+     * affinity has pinned a UDP destination. This replaces the previous
+     * split of a reg_use_proxy block followed by a separate
+     * sa_sync_route_set() push of acc->route_set, which for a pinned UDP
+     * account overrode reg_use_proxy and dropped the outbound proxy. (#4964)
+     */
+    {
         pjsip_route_hdr route_set;
-        const pjsip_route_hdr *r;
 
-        pj_list_init(&route_set);
-
-        if (acc->cfg.reg_use_proxy & PJSUA_REG_USE_OUTBOUND_PROXY) {
-            r = pjsua_var.outbound_proxy.next;
-            while (r != &pjsua_var.outbound_proxy) {
-                pj_list_push_back(&route_set, pjsip_hdr_shallow_clone(pool, r));
-                r = r->next;
-            }
-        }
-
-        if (acc->cfg.reg_use_proxy & PJSUA_REG_USE_ACC_PROXY &&
-            acc->cfg.proxy_cnt)
-        {
-            int cnt = acc->cfg.proxy_cnt;
-            pjsip_route_hdr *pos = route_set.prev;
-            int i;
-
-            r = acc->route_set.prev;
-            for (i=0; i<cnt; ++i) {
-                pj_list_push_front(pos, pjsip_hdr_shallow_clone(pool, r));
-                r = r->prev;
-            }
-        }
-
+        sa_build_reg_route_set(acc, pool, &route_set);
         if (!pj_list_empty(&route_set)) {
             status = pjsip_regc_set_route_set( acc->regc, &route_set );
             if (status != PJ_SUCCESS) {
@@ -3334,23 +3380,6 @@ static pj_status_t pjsua_regc_init(int acc_id)
             sa_sync_mirror(acc, (pjsip_hdr*)&acc->sa_pushed_route,
                            (const pjsip_hdr*)&route_set);
         }
-    }
-
-    /* Push affinity hidden Route to the freshly-created regc (#4964).
-     * When set_affinity_addr() was called before the regc existed,
-     * sa_sync_route_set() had no regc to push to; do it now.
-     * Guard: only call when a UDP pin is active. sa_sync_route_set()
-     * pushes acc->route_set whenever its mirror differs, so calling it
-     * unconditionally would override reg_use_proxy=0 by injecting
-     * acc->route_set proxies into the regc. TCP/TLS pins use tp_sel
-     * for destination control and do not need the hidden Route.
-     * Strip PJSIP_TRANSPORT_IPV6 to match both UDP4 and UDP6.
-     */
-    if (acc->sa_enabled && acc->sa_next_hop_tp != NULL &&
-        ((acc->sa_next_hop_tp->key.type & ~PJSIP_TRANSPORT_IPV6)
-         == PJSIP_TRANSPORT_UDP))
-    {
-        sa_sync_route_set(acc);
     }
 
     /* Add custom request headers specified in the account config */
