@@ -365,6 +365,7 @@ int test_main(int argc, char *argv[])
 
 #if INCLUDE_TCP_TEST
     UT_ADD_TEST(&test_app.ut_app, transport_tcp_test, 0);
+    UT_ADD_TEST(&test_app.ut_app, transport_tcp_keep_alive_test, 0);
 #endif
 
     /* Note: put exclusive tests last */
