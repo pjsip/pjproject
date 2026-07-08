@@ -1409,22 +1409,42 @@ static pj_status_t tcp_shutdown(pjsip_transport *transport)
  * Callback from ioqueue that an incoming data is received from the socket.
  */
 #if PJSIP_TCP_KEEP_ALIVE_RESPONSE
-/* Count the leading bytes of a received buffer that form RFC 5626 (Section
- * 4.4.1) CRLF keep-alive "ping"(s), i.e. one or more consecutive "\r\n\r\n"
- * (double CRLF) sequences at the start of the buffer. Returns 0 if the buffer
- * does not begin with a ping.
+/* RFC 5626 Section 4.4.1 CRLF keep-alive patterns: the accepted "ping" and
+ * the "pong" reply. Defined together in one place, with lengths derived via
+ * sizeof, so both can be adjusted - or made configurable, e.g. a single CRLF
+ * or a longer packet - without touching the scan/response logic. The pong
+ * has static lifetime so it stays valid until the (async) send completes.
  */
-static pj_size_t tcp_get_crlf_ka_len(const char *data, pj_size_t size)
-{
-    pj_size_t i = 0;
+static const char tcp_crlf_ka_ping[] = { '\r', '\n', '\r', '\n' };
+static const char tcp_crlf_ka_pong[] = { '\r', '\n' };
 
-    while (size - i >= 4 &&
-           data[i+0] == '\r' && data[i+1] == '\n' &&
-           data[i+2] == '\r' && data[i+3] == '\n')
+/* Count the leading bytes of a received buffer that form CRLF keep-alive
+ * "ping"(s), i.e. one or more consecutive ping patterns at the start of the
+ * buffer. Returns 0 if the buffer does not begin with a ping.
+ */
+static pj_size_t tcp_get_crlf_ka_len(const char *data, pj_size_t size,
+                                     pj_size_t *partial_len)
+{
+    const char *ka = tcp_crlf_ka_ping;
+    const pj_size_t ka_sz = sizeof(tcp_crlf_ka_ping);
+    pj_size_t matched = 0, tail;
+
+    while (size - matched >= ka_sz &&
+           pj_memcmp(data + matched, ka, ka_sz) == 0)
     {
-        i += 4;
+        matched += ka_sz;
     }
-    return i;
+
+    /* A ping may be fragmented across reads, leaving a 1..(ka_sz-1) byte
+     * prefix of the pattern at the end. Report it so the caller can retain
+     * and reassemble it with the next read, rather than handing it to the
+     * parser (whose leading-newline skip would drop it, leaving the ping
+     * unanswered).
+     */
+    tail = size - matched;
+    *partial_len = (tail >= 1 && tail < ka_sz &&
+                    pj_memcmp(data + matched, ka, tail) == 0) ? tail : 0;
+    return matched;
 }
 #endif
 
@@ -1468,14 +1488,12 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
          * SIP parser (which would otherwise drop them as a malformed message).
          */
         {
-            pj_size_t ka_len = tcp_get_crlf_ka_len((char*)data, size);
+            pj_size_t partial_len;
+            pj_size_t ka_len = tcp_get_crlf_ka_len((char*)data, size,
+                                                   &partial_len);
 
             if (ka_len) {
-                /* Static storage: the buffer must stay valid until the
-                 * (possibly asynchronous) send completes.
-                 */
-                static const char pong[] = { '\r', '\n' };
-                pj_ssize_t pong_len = 2;
+                pj_ssize_t pong_len = sizeof(tcp_crlf_ka_pong);
                 char addr[PJ_INET6_ADDRSTRLEN+10];
                 pj_status_t send_st;
 
@@ -1486,13 +1504,28 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
                                             sizeof(addr), 1)));
 
                 send_st = pj_activesock_send(tcp->asock, &tcp->pong_op_key.key,
-                                             pong, &pong_len, 0);
+                                             tcp_crlf_ka_pong, &pong_len, 0);
                 if (send_st != PJ_SUCCESS && send_st != PJ_EPENDING) {
                     tcp_perror(tcp->base.obj_name,
                                "Error sending CRLF keep-alive response",
                                send_st);
                 }
+            }
 
+            /* A ping fragmented across reads leaves a trailing incomplete
+             * ping: keep those 1-3 bytes so they reassemble with the next
+             * read (otherwise the parser's leading-newline skip would drop
+             * them and the ping would go unanswered).
+             */
+            if (partial_len) {
+                if (ka_len)
+                    pj_memmove(data, (char*)data + ka_len, partial_len);
+                *remainder = partial_len;
+                pj_pool_reset(rdata->tp_info.pool);
+                return PJ_TRUE;
+            }
+
+            if (ka_len) {
                 if (ka_len == size) {
                     /* Nothing but keep-alive(s) in this buffer. */
                     *remainder = 0;

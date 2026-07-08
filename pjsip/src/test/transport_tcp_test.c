@@ -315,6 +315,9 @@ static pj_ssize_t ka_recv_timeout(pj_sock_t sock, void *buf,
  *     packet rather than a keep-alive ping - is NOT answered.
  *  3. After the non-ping data, a genuine ping is still answered, i.e. the
  *     stream was not left in a bad state.
+ *  4. A ping fragmented across TCP reads ("\r\n"+"\r\n", and "\r"+"\n\r\n")
+ *     is reassembled and answered exactly once, with no pong for the
+ *     incomplete leading fragment.
  */
 int transport_tcp_keep_alive_test(void)
 {
@@ -412,6 +415,65 @@ int transport_tcp_keep_alive_test(void)
         PJ_LOG(3,(THIS_FILE, "   Error: expected a CRLF pong, got %d byte(s)",
                   (int)len));
         ret = -241;
+        goto on_return;
+    }
+
+    /* Phase 4-5: a ping fragmented across two reads ("\r\n" then "\r\n")
+     * must be reassembled and answered once. The first fragment on its own
+     * must not draw a pong, and must not be dropped either.
+     */
+    status = ka_send_raw(sock, ping, 2);                /* "\r\n" */
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to send ping fragment", status);
+        ret = -250;
+        goto on_return;
+    }
+    len = ka_recv_timeout(sock, buf, sizeof(buf), NO_PONG_WAIT_MSEC);
+    if (len != 0) {
+        PJ_LOG(3,(THIS_FILE, "   Error: got %d byte(s) for a partial ping "
+                             "fragment (expected none)", (int)len));
+        ret = -251;
+        goto on_return;
+    }
+    status = ka_send_raw(sock, ping + 2, 2);            /* completing "\r\n" */
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to send ping fragment", status);
+        ret = -252;
+        goto on_return;
+    }
+    len = ka_recv_timeout(sock, buf, sizeof(buf), PONG_WAIT_MSEC);
+    if (len != 2 || buf[0] != '\r' || buf[1] != '\n') {
+        PJ_LOG(3,(THIS_FILE, "   Error: expected a CRLF pong for a reassembled "
+                             "fragmented ping, got %d byte(s)", (int)len));
+        ret = -253;
+        goto on_return;
+    }
+
+    /* Phase 6-7: fragmentation on an odd boundary ("\r" then "\n\r\n"). */
+    status = ka_send_raw(sock, ping, 1);                /* "\r" */
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to send ping fragment", status);
+        ret = -260;
+        goto on_return;
+    }
+    len = ka_recv_timeout(sock, buf, sizeof(buf), NO_PONG_WAIT_MSEC);
+    if (len != 0) {
+        PJ_LOG(3,(THIS_FILE, "   Error: got %d byte(s) for a 1-byte ping "
+                             "fragment (expected none)", (int)len));
+        ret = -261;
+        goto on_return;
+    }
+    status = ka_send_raw(sock, ping + 1, 3);            /* "\n\r\n" */
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to send ping fragment", status);
+        ret = -262;
+        goto on_return;
+    }
+    len = ka_recv_timeout(sock, buf, sizeof(buf), PONG_WAIT_MSEC);
+    if (len != 2 || buf[0] != '\r' || buf[1] != '\n') {
+        PJ_LOG(3,(THIS_FILE, "   Error: expected a CRLF pong for an odd-boundary "
+                             "fragmented ping, got %d byte(s)", (int)len));
+        ret = -263;
         goto on_return;
     }
 
