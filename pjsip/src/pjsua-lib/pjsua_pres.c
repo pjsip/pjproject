@@ -2211,7 +2211,7 @@ static void subscribe_buddy(pjsua_buddy_id buddy_id,
         return;
     }
 
-    pjsip_dlg_dec_lock(buddy->dlg);
+    pjsip_dlg_dec_lock(dlg);
     if (tmp_pool) pj_pool_release(tmp_pool);
     pj_log_pop_indent();
 }
