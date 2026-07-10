@@ -1290,9 +1290,11 @@ static pj_bool_t bundle_group_contains_mid(const pjmedia_sdp_session *sdp,
         if (pj_stricmp2(&attr->name, "group") != 0)
             continue;
 
+        if (attr->value.ptr == NULL || attr->value.slen == 0)
+            continue;
+
         pos = attr->value.ptr;
         end = attr->value.ptr + attr->value.slen;
-
         while (pos < end) {
             const char *token_start;
             pj_str_t token;
