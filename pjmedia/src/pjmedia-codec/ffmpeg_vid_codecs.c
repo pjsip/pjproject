@@ -413,10 +413,11 @@ static FUNC_PACKETIZE(vpx_packetize)
 {
     vpx_data *data = (vpx_data *)ff->data;
     pj_status_t status;
-    unsigned payload_desc_size = 1;
+    /* For VP8, use 4 bytes payload desc, see #4659 for more info */
+    unsigned payload_desc_size = (ff->desc->info.fmt_id == PJMEDIA_FORMAT_VP8)?
+                                 4 : 1;
     pj_uint8_t *outbuf = payload;
     pj_size_t out_size = *payload_len;
-    out_size -= payload_desc_size;
 
     status = pjmedia_vpx_packetize(data->pktz, bits_len, bits_pos, is_keyframe,
                                    &outbuf, &out_size);
