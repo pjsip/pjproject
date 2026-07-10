@@ -1459,6 +1459,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
 {
     pjsip_host_info dest_info;
     pjsip_send_state *stateless_data;
+    pj_bool_t tp_pinned = PJ_FALSE;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(endpt && tdata, PJ_EINVAL);
@@ -1474,6 +1475,56 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
     stateless_data->endpt = endpt;
     stateless_data->tdata = tdata;
     stateless_data->app_cb = cb;
+
+    /* If the caller selected a specific, connected reliable transport
+     * (e.g. server affinity, #4964), the message can only be sent to that
+     * transport's peer. Pin the destination to it and skip host resolution,
+     * which would otherwise re-run DNS/SRV and may pick a different address
+     * than the selected transport's. dest_info.name is kept as the next-hop
+     * hostname so TLS SNI and certificate validation remain correct. Only
+     * reliable transports (TCP/TLS) represent a fixed peer; datagram (UDP)
+     * selectors don't, so they still resolve normally.
+     */
+    if (tdata->dest_info.addr.count == 0 &&
+        tdata->tp_sel.type == PJSIP_TPSELECTOR_TRANSPORT &&
+        tdata->tp_sel.u.transport != NULL &&
+        !tdata->tp_sel.u.transport->is_shutdown &&
+        !tdata->tp_sel.u.transport->is_destroying)
+    {
+        pjsip_transport *tp = tdata->tp_sel.u.transport;
+        unsigned tp_flag = pjsip_transport_get_flag_from_type(
+                               (pjsip_transport_type_e)tp->key.type);
+
+        if ((tp_flag & PJSIP_TRANSPORT_RELIABLE) &&
+            pj_sockaddr_has_addr(&tp->key.rem_addr))
+        {
+            /* Preserve the next-hop hostname for TLS SNI / certificate
+             * validation: prefer the parsed next-hop host, falling back to
+             * the transport's remote name only if it is not available.
+             */
+            if (tdata->dest_info.name.slen == 0) {
+                if (dest_info.addr.host.slen) {
+                    pj_strdup(tdata->pool, &tdata->dest_info.name,
+                              &dest_info.addr.host);
+                } else if (tp->remote_name.host.slen) {
+                    pj_strdup(tdata->pool, &tdata->dest_info.name,
+                              &tp->remote_name.host);
+                }
+            }
+            tdata->dest_info.addr.count = 1;
+            tdata->dest_info.addr.entry[0].type =
+                                    (pjsip_transport_type_e)tp->key.type;
+            tdata->dest_info.addr.entry[0].priority = 0;
+            tdata->dest_info.addr.entry[0].weight = 0;
+            pj_sockaddr_cp(&tdata->dest_info.addr.entry[0].addr,
+                           &tp->key.rem_addr);
+            tdata->dest_info.addr.entry[0].addr_len =
+                           pj_sockaddr_get_len(&tp->key.rem_addr);
+            tdata->dest_info.addr.entry[0].name = tdata->dest_info.name;
+            tdata->dest_info.cur_addr = 0;
+            tp_pinned = PJ_TRUE;
+        }
+    }
 
     /* If destination info has not been initialized (this applies for most
      * all requests except CANCEL), resolve destination host. The processing
@@ -1513,9 +1564,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
         pjsip_endpt_resolve( endpt, tdata->pool, &dest_info, stateless_data,
                              &stateless_send_resolver_callback);
     } else {
-        PJ_LOG(5,(THIS_FILE, "%s: skipping target resolution because "
-                             "address is already set",
-                             pjsip_tx_data_get_info(tdata)));
+        PJ_LOG(5,(THIS_FILE, "%s: skipping target resolution because %s",
+                             pjsip_tx_data_get_info(tdata),
+                             tp_pinned ? "a reliable transport is already "
+                                         "pinned" : "address is already set"));
         stateless_send_resolver_callback(PJ_SUCCESS, stateless_data,
                                          &tdata->dest_info.addr);
     }
