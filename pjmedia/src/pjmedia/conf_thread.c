@@ -2378,12 +2378,29 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
         if (found) {
             pjmedia_conf_op_param prm;
 
+            /* Mark the port as removing before releasing the mutex, so
+             * other threads can no longer queue any operation on it
+             * (e.g: connect/disconnect) nor remove it again while it is
+             * being destroyed below.
+             */
+            conf_port->removing = PJ_TRUE;
+
             /* Release mutex to avoid deadlock */
             pj_mutex_unlock(conf->mutex);
 
-            /* Remove it */
+            /* The port has never been active (its add-op has just been
+             * cancelled above), so it has no connection and the clock
+             * thread never touches it. Do not call op_remove_port() from
+             * this thread as it modifies states shared with the clock
+             * thread (e.g: disconnecting the port from other ports and
+             * updating the active listener array), so it can only be run
+             * by the clock thread. The port's own resources are freed by
+             * op_remove_port2() below.
+             */
+            PJ_LOG(4,(THIS_FILE,"Removing new port %d (%.*s) synchronously",
+                      port, (int)conf_port->name.slen, conf_port->name.ptr));
+
             prm.remove_port.port = port;
-            status = op_remove_port(conf, &prm);
 
             if (conf->cb) {
                 pjmedia_conf_op_info op_info = { 0 };
