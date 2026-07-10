@@ -4119,16 +4119,20 @@ static int get_ip_addr_ver(const pj_str_t *host)
 /* Get local transport address suitable to be used for Via or Contact address
  * to send request to the specified destination URI.
  */
-pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
-                                   pj_pool_t *pool,
-                                   const pj_str_t *dst_uri,
-                                   pjsip_host_port *addr,
-                                   pjsip_transport_type_e *p_tp_type,
-                                   int *secure,
-                                   const void **p_tp)
+/* Determine the local address to use in the Via/Contact for requests sent
+ * toward sip_uri (the effective next hop). Factored out of
+ * pjsua_acc_get_uac_addr() so it can be shared with the dialog (UAS) variant
+ * pjsua_acc_get_uas_addr().
+ */
+static pj_status_t get_uac_addr_for_sip_uri(pjsua_acc_id acc_id,
+                                            pj_pool_t *pool,
+                                            pjsip_sip_uri *sip_uri,
+                                            pjsip_host_port *addr,
+                                            pjsip_transport_type_e *p_tp_type,
+                                            int *secure,
+                                            const void **p_tp)
 {
     pjsua_acc *acc;
-    pjsip_sip_uri *sip_uri;
     pj_status_t status;
     pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
     unsigned flag;
@@ -4138,31 +4142,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     pjsip_tpmgr_fla2_param tfla2_prm;
     pj_bool_t update_addr = PJ_TRUE;
 
-    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
-
-    /* If route-set is configured for the account, then URI is the
-     * first entry of the route-set.
-     */
-    if (!pj_list_empty(&acc->route_set)) {
-        sip_uri = (pjsip_sip_uri*)
-                  pjsip_uri_get_uri(acc->route_set.next->name_addr.uri);
-    } else {
-        pj_str_t tmp;
-        pjsip_uri *uri;
-
-        pj_strdup_with_null(pool, &tmp, dst_uri);
-
-        uri = pjsip_parse_uri(pool, tmp.ptr, tmp.slen, 0);
-        if (uri == NULL)
-            return PJSIP_EINVALIDURI;
-
-        /* For non-SIP scheme, route set should be configured */
-        if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
-            return PJSIP_ENOROUTESET;
-
-        sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
-    }
 
     /* Get transport type of the URI */
     if (sip_uri->transport_param.slen == 0) {
@@ -4439,6 +4419,142 @@ on_return:
         *p_tp = tfla2_prm.ret_tp;
 
     return PJ_SUCCESS;
+}
+
+
+pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
+                                   pj_pool_t *pool,
+                                   const pj_str_t *dst_uri,
+                                   pjsip_host_port *addr,
+                                   pjsip_transport_type_e *p_tp_type,
+                                   int *secure,
+                                   const void **p_tp)
+{
+    pjsua_acc *acc;
+    pjsip_sip_uri *sip_uri;
+
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
+    acc = &pjsua_var.acc[acc_id];
+
+    /* If route-set is configured for the account, then URI is the
+     * first entry of the route-set.
+     */
+    if (!pj_list_empty(&acc->route_set)) {
+        sip_uri = (pjsip_sip_uri*)
+                  pjsip_uri_get_uri(acc->route_set.next->name_addr.uri);
+    } else {
+        pj_str_t tmp;
+        pjsip_uri *uri;
+
+        pj_strdup_with_null(pool, &tmp, dst_uri);
+
+        uri = pjsip_parse_uri(pool, tmp.ptr, tmp.slen, 0);
+        if (uri == NULL)
+            return PJSIP_EINVALIDURI;
+
+        /* For non-SIP scheme, route set should be configured */
+        if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
+            return PJSIP_ENOROUTESET;
+
+        sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+    }
+
+    return get_uac_addr_for_sip_uri(acc_id, pool, sip_uri, addr,
+                                    p_tp_type, secure, p_tp);
+}
+
+
+/* Compute the local Via address toward next_hop, skipping reliable transports
+ * (their Via is resolved from the real connection at send time, and probing
+ * here would open a spurious outbound connection when contact_use_src_port is
+ * enabled). Shared by the dialog variants below. Returns PJ_ENOTFOUND when the
+ * next hop is reliable, so the caller leaves the Via untouched.
+ */
+static pj_status_t get_dlg_via_addr(pjsua_acc_id acc_id,
+                                    pj_pool_t *pool,
+                                    pjsip_uri *next_hop,
+                                    pjsip_host_port *addr,
+                                    pjsip_transport_type_e *p_tp_type,
+                                    int *secure,
+                                    const void **p_tp)
+{
+    pjsip_host_info dest_info;
+
+    if (!PJSIP_URI_SCHEME_IS_SIP(next_hop) &&
+        !PJSIP_URI_SCHEME_IS_SIPS(next_hop))
+    {
+        return PJSIP_ENOROUTESET;
+    }
+
+    if (pjsip_get_dest_info(next_hop, NULL, pool, &dest_info) == PJ_SUCCESS &&
+        (dest_info.flag & PJSIP_TRANSPORT_RELIABLE) != 0)
+    {
+        return PJ_ENOTFOUND;
+    }
+
+    return get_uac_addr_for_sip_uri(acc_id, pool,
+                                    (pjsip_sip_uri*)pjsip_uri_get_uri(next_hop),
+                                    addr, p_tp_type, secure, p_tp);
+}
+
+
+/* UAS (incoming dialog) variant of pjsua_acc_get_uac_addr().
+ *
+ * In-dialog requests sent by a UAS dialog are routed via the dialog route set
+ * (built from the incoming Record-Route), falling back to the remote target -
+ * NOT via the account's outbound proxy. Select the local Via address toward
+ * that actual next hop.
+ */
+pj_status_t pjsua_acc_get_uas_addr(pjsua_acc_id acc_id,
+                                   pj_pool_t *pool,
+                                   pjsip_dialog *dlg,
+                                   pjsip_host_port *addr,
+                                   pjsip_transport_type_e *p_tp_type,
+                                   int *secure,
+                                   const void **p_tp)
+{
+    pjsip_uri *next_hop;
+
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id) && dlg, PJ_EINVAL);
+
+    if (!pj_list_empty(&dlg->route_set))
+        next_hop = dlg->route_set.next->name_addr.uri;
+    else
+        next_hop = dlg->target;
+
+    return get_dlg_via_addr(acc_id, pool, next_hop, addr,
+                            p_tp_type, secure, p_tp);
+}
+
+
+/* UAC dialog variant of pjsua_acc_get_uac_addr().
+ *
+ * As with the account-based resolution, the next hop is the account's outbound
+ * proxy (acc->route_set) when configured; otherwise it is the dialog's remote
+ * target (the actual request destination) rather than the account id URI, so
+ * that on a multihomed host the Via reflects the interface toward the peer.
+ */
+pj_status_t pjsua_acc_get_uac_dlg_addr(pjsua_acc_id acc_id,
+                                       pj_pool_t *pool,
+                                       pjsip_dialog *dlg,
+                                       pjsip_host_port *addr,
+                                       pjsip_transport_type_e *p_tp_type,
+                                       int *secure,
+                                       const void **p_tp)
+{
+    pjsua_acc *acc;
+    pjsip_uri *next_hop;
+
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id) && dlg, PJ_EINVAL);
+    acc = &pjsua_var.acc[acc_id];
+
+    if (!pj_list_empty(&acc->route_set))
+        next_hop = acc->route_set.next->name_addr.uri;
+    else
+        next_hop = dlg->target;
+
+    return get_dlg_via_addr(acc_id, pool, next_hop, addr,
+                            p_tp_type, secure, p_tp);
 }
 
 
