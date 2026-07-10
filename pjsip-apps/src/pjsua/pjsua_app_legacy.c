@@ -165,7 +165,7 @@ static pj_bool_t simple_input(const char *title, char *buf, pj_size_t len)
         return PJ_FALSE;
 
     /* Remove trailing newlines. */
-    for (p=buf; ; ++p) {
+    for (p=buf; p < buf+len; ++p) {
         if (*p=='\r' || *p=='\n') *p='\0';
         else if (!*p) break;
     }
