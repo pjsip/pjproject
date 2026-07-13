@@ -786,12 +786,6 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 
     PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
 
-    /* The account table being full is a runtime condition driven by how many
-     * accounts the application adds, not a programmer invariant, so return an
-     * error in all build configurations instead of asserting (which aborts in
-     * debug builds). This mirrors how pjsua_call_make_call() handles the
-     * analogous PJSUA_MAX_CALLS limit.
-     */
     if (pjsua_var.acc_cnt >= PJ_ARRAY_SIZE(pjsua_var.acc))
         return PJ_ETOOMANY;
 
