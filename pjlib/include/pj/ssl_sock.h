@@ -398,8 +398,9 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
  * Set the DER-encoded OCSP response to be stapled by a server socket when
  * OCSP stapling (TLS Certificate Status Request extension) is enabled via
  * pj_ssl_sock_param.enable_ocsp_stapling. The response is typically obtained
- * out-of-band from the certificate's OCSP responder and refreshed
- * periodically by the application.
+ * out-of-band from the certificate's OCSP responder. For the OpenSSL backend,
+ * the response is copied into the server SSL context when it is initialized,
+ * so it must be set before the first handshake to take effect.
  *
  * This is only meaningful on server sockets and is currently only
  * implemented for the OpenSSL backend. Setting an empty response will clear

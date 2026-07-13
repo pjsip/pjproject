@@ -1213,6 +1213,10 @@ static int ocsp_status_cb(SSL *ssl, void *arg)
         const unsigned char *resp = NULL;
         long len;
 
+        /* Clear any previous response (e.g., after renegotiation). */
+        ossock->ocsp_resp.ptr = NULL;
+        ossock->ocsp_resp.slen = 0;
+
         /* Retrieve and keep the stapled response, if the peer sent one.
          * We only expose it; verification is left to the application (or
          * to OpenSSL's own certificate verification when configured).
@@ -1765,7 +1769,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
         SSL_CTX_set_tlsext_status_arg(ctx, ssock);
         PJ_LOG(4,(ssock->pool->obj_name,
                   "OCSP stapling enabled (%ld-byte response)",
-                  ossock->ocsp_resp.slen));
+                  (long)ossock->ocsp_resp.slen));
     }
 #endif
 
@@ -2800,4 +2804,3 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
 
 
 #endif  /* PJ_HAS_SSL_SOCK */
-

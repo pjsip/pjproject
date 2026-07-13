@@ -1808,8 +1808,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
         ossl_sock_t *ossock = (ossl_sock_t *)ssock;
         info->native_ssl = ossock->ossl_ssl;
 
-        /* OCSP response stapled by the peer (client side) */
-        info->ocsp_resp = ossock->ocsp_resp;
+        if (!ssock->is_server) {
+            /* OCSP response stapled by the peer (client side) */
+            info->ocsp_resp = ossock->ocsp_resp;
+        }
     }
 #endif
 
@@ -2657,7 +2659,7 @@ PJ_DEF(pj_status_t) pj_ssl_cert_set_ocsp_resp(
                                 pj_ssl_cert_t *cert,
                                 const pj_ssl_cert_buffer *ocsp_resp)
 {
-#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_SCHANNEL)
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
     PJ_ASSERT_RETURN(pool && cert && ocsp_resp, PJ_EINVAL);
 
     if (ocsp_resp->slen)
@@ -2759,6 +2761,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
     pj_strdup(pool, &cert_->CA_buf, &cert->CA_buf);
     pj_strdup(pool, &cert_->cert_buf, &cert->cert_buf);
     pj_strdup(pool, &cert_->privkey_buf, &cert->privkey_buf);
+    pj_strdup(pool, &cert_->ocsp_resp_buf, &cert->ocsp_resp_buf);
 
     /* For OpenSSL version >= 3.0, add ref EVP_PKEY & X509 */
 #   if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL) && \
@@ -2785,4 +2788,3 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
 
     return PJ_SUCCESS;
 }
-
