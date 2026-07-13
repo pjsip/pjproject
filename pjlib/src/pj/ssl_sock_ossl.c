@@ -595,7 +595,7 @@ static int sess_cache_find(const char *name)
  * held on sess (as handed to new_session_cb). Any previous session for the
  * same name is replaced. The new entry becomes MRU (front of the array).
  */
-static void sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
+static pj_bool_t sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
 {
     int idx;
     unsigned n;
@@ -603,8 +603,7 @@ static void sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
     if (!ossl_sess_cache_lock || name->slen == 0 ||
         name->slen >= PJ_MAX_HOSTNAME)
     {
-        SSL_SESSION_free(sess);
-        return;
+        return PJ_FALSE;
     }
 
     pj_lock_acquire(ossl_sess_cache_lock);
@@ -638,6 +637,7 @@ static void sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
     }
 
     pj_lock_release(ossl_sess_cache_lock);
+    return PJ_TRUE;
 }
 
 /* Look up a cached session for the given server name. On success, returns the
@@ -715,8 +715,7 @@ static int new_session_cb(SSL *ssl, SSL_SESSION *sess)
     pj_ssl_sock_t *ssock = SSL_get_ex_data(ssl, sslsock_idx);
 
     if (ssock && ssock->param.server_name.slen) {
-        sess_cache_store(&ssock->param.server_name, sess);
-        return 1;
+        return sess_cache_store(&ssock->param.server_name, sess) ? 1 : 0;
     }
     return 0;
 }
@@ -2919,4 +2918,3 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
 
 
 #endif  /* PJ_HAS_SSL_SOCK */
-

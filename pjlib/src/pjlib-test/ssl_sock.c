@@ -2101,8 +2101,10 @@ static pj_bool_t reuse_on_accept(pj_ssl_sock_t *ssock,
     read_buf[0] = st->read_buf;
     status = pj_ssl_sock_start_read2(newsock, st->pool, sizeof(st->read_buf),
                                      read_buf, 0);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        pj_ssl_sock_close(newsock);
         return PJ_TRUE;
+    }
 
     /* Send a greeting. For TLS 1.3 the NewSessionTicket precedes this on the
      * wire, so the client caches the session while reading.
@@ -2110,8 +2112,10 @@ static pj_bool_t reuse_on_accept(pj_ssl_sock_t *ssock,
     len = (pj_ssize_t)pj_ansi_strlen(reuse_greeting);
     status = pj_ssl_sock_send(newsock, &st->send_key.op_key, reuse_greeting,
                               &len, 0);
-    if (status != PJ_SUCCESS && status != PJ_EPENDING)
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+        pj_ssl_sock_close(newsock);
         return PJ_TRUE;
+    }
 
     return PJ_TRUE;
 }
@@ -2126,6 +2130,7 @@ static pj_bool_t reuse_on_connect(pj_ssl_sock_t *ssock, pj_status_t status)
     if (status != PJ_SUCCESS) {
         st->err = status;
         st->done = PJ_TRUE;
+        pj_ssl_sock_close(ssock);
         return PJ_FALSE;
     }
 
@@ -2138,6 +2143,7 @@ static pj_bool_t reuse_on_connect(pj_ssl_sock_t *ssock, pj_status_t status)
     if (status != PJ_SUCCESS) {
         st->err = status;
         st->done = PJ_TRUE;
+        pj_ssl_sock_close(ssock);
         return PJ_FALSE;
     }
     return PJ_TRUE;
@@ -2260,6 +2266,7 @@ static int session_reuse_test(void)
         } else if (status == PJ_EPENDING) {
             status = PJ_SUCCESS;
         } else {
+            pj_ssl_sock_close(ssock_cli);
             goto on_return;
         }
 
@@ -2480,4 +2487,3 @@ int ssl_sock_test(void)
  */
 int dummy_ssl_sock_test;
 #endif  /* INCLUDE_SSLSOCK_TEST */
-
