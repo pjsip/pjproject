@@ -1275,6 +1275,18 @@
 
 
 /**
+ * Maximum number of TLS client sessions cached for resumption by the OpenSSL
+ * backend when pj_ssl_sock_param.enable_session_reuse is set. Sessions are
+ * cached per server name; the oldest entry is evicted when the cache is full.
+ *
+ * Default: 64
+ */
+#ifndef PJ_SSL_SOCK_OSSL_SESS_CACHE_SIZE
+#   define PJ_SSL_SOCK_OSSL_SESS_CACHE_SIZE   64
+#endif
+
+
+/**
  * Disable WSAECONNRESET error for UDP sockets on Win32 platforms. See
  * https://github.com/pjsip/pjproject/issues/1197.
  *

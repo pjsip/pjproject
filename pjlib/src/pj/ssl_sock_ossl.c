@@ -553,6 +553,175 @@ static int openssl_init_count;
 /* OpenSSL application data index */
 static int sslsock_idx;
 
+/* Client TLS session cache for session resumption. TLS 1.3 delivers the
+ * resumption ticket via a NewSessionTicket message after the handshake, so it
+ * is captured asynchronously in new_session_cb() and stored here keyed by the
+ * target server name, then re-injected on the next connection to the same
+ * server. Entries are kept MRU-first; the least recently used is evicted when
+ * the cache is full.
+ */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#  define OSSL_SESS_CACHE_ENABLED   1
+#else
+#  define OSSL_SESS_CACHE_ENABLED   0
+#endif
+
+#if OSSL_SESS_CACHE_ENABLED
+typedef struct ossl_sess_cache_entry {
+    char          server_name[PJ_MAX_HOSTNAME];
+    SSL_SESSION  *sess;
+} ossl_sess_cache_entry;
+
+static ossl_sess_cache_entry ossl_sess_cache[PJ_SSL_SOCK_OSSL_SESS_CACHE_SIZE];
+static unsigned              ossl_sess_cache_cnt;
+static pj_caching_pool       ossl_sess_cp;
+static pj_pool_t            *ossl_sess_pool;
+static pj_lock_t            *ossl_sess_cache_lock;
+
+/* Find the cache slot for the given server name. Returns -1 if not found.
+ * Caller must hold ossl_sess_cache_lock.
+ */
+static int sess_cache_find(const char *name)
+{
+    unsigned i;
+    for (i = 0; i < ossl_sess_cache_cnt; ++i) {
+        if (pj_ansi_strcmp(ossl_sess_cache[i].server_name, name) == 0)
+            return (int)i;
+    }
+    return -1;
+}
+
+/* Store a session for the given server name, taking ownership of the reference
+ * held on sess (as handed to new_session_cb). Any previous session for the
+ * same name is replaced. The new entry becomes MRU (front of the array).
+ */
+static void sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
+{
+    int idx;
+    unsigned n;
+
+    if (!ossl_sess_cache_lock || name->slen == 0 ||
+        name->slen >= PJ_MAX_HOSTNAME)
+    {
+        SSL_SESSION_free(sess);
+        return;
+    }
+
+    pj_lock_acquire(ossl_sess_cache_lock);
+
+    /* Drop any existing entry for this name so we can re-insert at front. */
+    {
+        char nbuf[PJ_MAX_HOSTNAME];
+        pj_memcpy(nbuf, name->ptr, name->slen);
+        nbuf[name->slen] = '\0';
+
+        idx = sess_cache_find(nbuf);
+        if (idx >= 0) {
+            SSL_SESSION_free(ossl_sess_cache[idx].sess);
+            for (n = (unsigned)idx; n + 1 < ossl_sess_cache_cnt; ++n)
+                ossl_sess_cache[n] = ossl_sess_cache[n + 1];
+            ossl_sess_cache_cnt--;
+        } else if (ossl_sess_cache_cnt == PJ_SSL_SOCK_OSSL_SESS_CACHE_SIZE) {
+            /* Evict least recently used (last). */
+            SSL_SESSION_free(ossl_sess_cache[ossl_sess_cache_cnt - 1].sess);
+            ossl_sess_cache_cnt--;
+        }
+
+        /* Shift existing entries down and insert at front. */
+        for (n = ossl_sess_cache_cnt; n > 0; --n)
+            ossl_sess_cache[n] = ossl_sess_cache[n - 1];
+
+        pj_memcpy(ossl_sess_cache[0].server_name, name->ptr, name->slen);
+        ossl_sess_cache[0].server_name[name->slen] = '\0';
+        ossl_sess_cache[0].sess = sess;
+        ossl_sess_cache_cnt++;
+    }
+
+    pj_lock_release(ossl_sess_cache_lock);
+}
+
+/* Look up a cached session for the given server name. On success, returns the
+ * session with its reference count incremented (caller must SSL_SESSION_free()
+ * it) and promotes the entry to MRU. Returns NULL if not found.
+ */
+static SSL_SESSION *sess_cache_get(const pj_str_t *name)
+{
+    char nbuf[PJ_MAX_HOSTNAME];
+    SSL_SESSION *sess = NULL;
+    int idx;
+
+    if (!ossl_sess_cache_lock || name->slen == 0 ||
+        name->slen >= PJ_MAX_HOSTNAME)
+    {
+        return NULL;
+    }
+
+    pj_memcpy(nbuf, name->ptr, name->slen);
+    nbuf[name->slen] = '\0';
+
+    pj_lock_acquire(ossl_sess_cache_lock);
+    idx = sess_cache_find(nbuf);
+    if (idx >= 0) {
+        unsigned n;
+        ossl_sess_cache_entry e = ossl_sess_cache[idx];
+
+        sess = e.sess;
+        SSL_SESSION_up_ref(sess);
+
+        /* Promote to MRU. */
+        for (n = (unsigned)idx; n > 0; --n)
+            ossl_sess_cache[n] = ossl_sess_cache[n - 1];
+        ossl_sess_cache[0] = e;
+    }
+    pj_lock_release(ossl_sess_cache_lock);
+
+    return sess;
+}
+
+/* Free all cached sessions and destroy the cache lock. Registered as an
+ * atexit handler.
+ */
+static void sess_cache_clear(void)
+{
+    unsigned i;
+
+    if (ossl_sess_cache_lock)
+        pj_lock_acquire(ossl_sess_cache_lock);
+
+    for (i = 0; i < ossl_sess_cache_cnt; ++i)
+        SSL_SESSION_free(ossl_sess_cache[i].sess);
+    ossl_sess_cache_cnt = 0;
+
+    if (ossl_sess_cache_lock) {
+        pj_lock_t *lck = ossl_sess_cache_lock;
+        ossl_sess_cache_lock = NULL;
+        pj_lock_release(lck);
+        pj_lock_destroy(lck);
+    }
+    if (ossl_sess_pool) {
+        pj_pool_release(ossl_sess_pool);
+        ossl_sess_pool = NULL;
+        pj_caching_pool_destroy(&ossl_sess_cp);
+    }
+}
+
+/* OpenSSL "new session" callback (client side). Fires when a session becomes
+ * available for caching, which for TLS 1.3 happens after the handshake when a
+ * NewSessionTicket is received. Returning 1 tells OpenSSL we retain the
+ * reference on sess.
+ */
+static int new_session_cb(SSL *ssl, SSL_SESSION *sess)
+{
+    pj_ssl_sock_t *ssock = SSL_get_ex_data(ssl, sslsock_idx);
+
+    if (ssock && ssock->param.server_name.slen) {
+        sess_cache_store(&ssock->param.server_name, sess);
+        return 1;
+    }
+    return 0;
+}
+#endif  /* OSSL_SESS_CACHE_ENABLED */
+
 #if defined(PJ_SSL_SOCK_OSSL_USE_THREAD_CB) && \
     PJ_SSL_SOCK_OSSL_USE_THREAD_CB != 0 && OPENSSL_VERSION_NUMBER < 0x10100000L
 
@@ -926,6 +1095,32 @@ static pj_status_t init_openssl(void)
     }
 #endif
 
+#if OSSL_SESS_CACHE_ENABLED
+    /* Create the client session cache lock. */
+    pj_caching_pool_init(&ossl_sess_cp, NULL, 0);
+    ossl_sess_pool = pj_pool_create(&ossl_sess_cp.factory, "ssl_sess", 512,
+                                    512, NULL);
+    if (ossl_sess_pool) {
+        status = pj_lock_create_recursive_mutex(ossl_sess_pool, "ssl_sess",
+                                                &ossl_sess_cache_lock);
+    } else {
+        status = PJ_ENOMEM;
+    }
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(2, (THIS_FILE, status, "Warning! Unable to create TLS "
+                      "session cache lock, session reuse will not work"));
+        ossl_sess_cache_lock = NULL;
+        if (ossl_sess_pool) {
+            pj_pool_release(ossl_sess_pool);
+            ossl_sess_pool = NULL;
+            pj_caching_pool_destroy(&ossl_sess_cp);
+        }
+    } else {
+        pj_atexit(&sess_cache_clear);
+    }
+    status = PJ_SUCCESS;
+#endif
+
     openssl_init_count = 1;
     return status;
 }
@@ -1239,13 +1434,16 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
         unsigned int sid_ctx = SERVER_SESSION_ID_CONTEXT;
 
 #if SERVER_DISABLE_SESSION_TICKETS
-        /* Disable session tickets for TLSv1.2 and below. */
-        ssl_opt |= SSL_OP_NO_TICKET;
+        /* Disable session tickets (incl. TLSv1.3) unless the application
+         * opts in to session reuse.
+         */
+        if (!ssock->param.enable_session_reuse) {
+            ssl_opt |= SSL_OP_NO_TICKET;
 #ifdef SSL_CTX_set_num_tickets
-        /* Set the number of TLSv1.3 session tickets issued to 0. */
-        SSL_CTX_set_num_tickets(ctx, 0);
+            /* Set the number of TLSv1.3 session tickets issued to 0. */
+            SSL_CTX_set_num_tickets(ctx, 0);
 #endif
-
+        }
 #endif
 
         SSL_CTX_set_timeout(ctx, SERVER_SESSION_TIMEOUT);
@@ -1256,6 +1454,16 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
                                   "context. Session reuse will not work."));
         }
     }
+#if OSSL_SESS_CACHE_ENABLED
+    else if (ssock->param.enable_session_reuse) {
+        /* Client: enable session caching and capture new sessions (incl.
+         * TLSv1.3 tickets which arrive after the handshake) via callback.
+         */
+        SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_CLIENT |
+                                            SSL_SESS_CACHE_NO_INTERNAL_STORE);
+        SSL_CTX_sess_set_new_cb(ctx, &new_session_cb);
+    }
+#endif
 
 #ifdef SSL_OP_NO_RENEGOTIATION
     if (!ssock->param.enable_renegotiation) {
@@ -1763,6 +1971,19 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     (void)BIO_set_close(ossock->ossl_rbio, BIO_CLOSE);
     (void)BIO_set_close(ossock->ossl_wbio, BIO_CLOSE);
     SSL_set_bio(ossock->ossl_ssl, ossock->ossl_rbio, ossock->ossl_wbio);
+
+#if OSSL_SESS_CACHE_ENABLED
+    /* Client: resume a cached session for this server, if any. */
+    if (!ssock->is_server && ssock->param.enable_session_reuse &&
+        ssock->param.server_name.slen)
+    {
+        SSL_SESSION *sess = sess_cache_get(&ssock->param.server_name);
+        if (sess) {
+            SSL_set_session(ossock->ossl_ssl, sess);
+            SSL_SESSION_free(sess);
+        }
+    }
+#endif
 
     return PJ_SUCCESS;
 }
