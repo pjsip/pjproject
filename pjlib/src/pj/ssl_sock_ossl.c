@@ -230,6 +230,12 @@ typedef struct ossl_sock_t
     SSL                  *ossl_ssl;
     BIO                  *ossl_rbio;
     BIO                  *ossl_wbio;
+
+    /* OCSP stapling (TLS status_request extension) buffer. On a server
+     * socket this holds the DER-encoded response to be stapled; on a client
+     * socket it holds the response stapled by the peer, if any.
+     */
+    pj_str_t              ocsp_resp;
 } ossl_sock_t;
 
 
@@ -1161,6 +1167,72 @@ static void set_dh_use_option(BIO *bio, const pj_ssl_sock_t* ssock,
 #endif
 
 /* Initialize OpenSSL context for the ssock */
+#if defined(TLSEXT_STATUSTYPE_ocsp)
+/* OCSP stapling (TLS status_request, ext type 0x0005) callback.
+ *
+ * The same callback serves both roles, distinguished by the socket role:
+ *  - Server: staple the DER-encoded OCSP response configured on the socket.
+ *            Return codes follow SSL_TLSEXT_ERR_xxx semantics.
+ *  - Client: capture the response stapled by the peer so it can be exposed
+ *            via pj_ssl_sock_info.ocsp_resp. Return codes follow the client
+ *            convention: >0 accept, 0 reject, <0 internal error.
+ *
+ * The \a arg is the pj_ssl_sock_t whose SSL_CTX registered this callback:
+ * for a client this is the socket itself, for a server it is the listener
+ * socket that owns the (possibly shared) SSL_CTX and holds the response.
+ */
+static int ocsp_status_cb(SSL *ssl, void *arg)
+{
+    pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)arg;
+    ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+
+    if (ssock->is_server) {
+        unsigned char *buf;
+
+        /* Nothing to staple: don't send the extension. */
+        if (!ossock->ocsp_resp.ptr || ossock->ocsp_resp.slen <= 0)
+            return SSL_TLSEXT_ERR_NOACK;
+
+        /* OpenSSL takes ownership of the buffer and frees it with
+         * OPENSSL_free(), so hand it a fresh copy on every handshake.
+         */
+        buf = OPENSSL_malloc(ossock->ocsp_resp.slen);
+        if (!buf)
+            return SSL_TLSEXT_ERR_NOACK;
+
+        pj_memcpy(buf, ossock->ocsp_resp.ptr, ossock->ocsp_resp.slen);
+        if (SSL_set_tlsext_status_ocsp_resp(ssl, buf,
+                                            ossock->ocsp_resp.slen) != 1)
+        {
+            OPENSSL_free(buf);
+            return SSL_TLSEXT_ERR_NOACK;
+        }
+
+        return SSL_TLSEXT_ERR_OK;
+    } else {
+        const unsigned char *resp = NULL;
+        long len;
+
+        /* Retrieve and keep the stapled response, if the peer sent one.
+         * We only expose it; verification is left to the application (or
+         * to OpenSSL's own certificate verification when configured).
+         */
+        len = SSL_get_tlsext_status_ocsp_resp(ssl, &resp);
+        if (resp && len > 0) {
+            pj_str_t src;
+
+            src.ptr = (char *)resp;
+            src.slen = len;
+            pj_strdup(ssock->pool, &ossock->ocsp_resp, &src);
+        }
+
+        /* Accept: do not fail the handshake solely on the stapled status. */
+        return 1;
+    }
+}
+#endif
+
+
 static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
@@ -1679,12 +1751,30 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
         }
     }
 
+#if defined(TLSEXT_STATUSTYPE_ocsp)
+    /* Enable OCSP stapling (status_request extension) on server sockets.
+     * The response is stored on this socket (the listener owns the possibly
+     * shared SSL_CTX) so it survives the key wiping below and remains
+     * reachable by the callback via the registered argument.
+     */
+    if (ssock->is_server && ssock->param.enable_ocsp_stapling &&
+        cert && cert->ocsp_resp_buf.slen)
+    {
+        pj_strdup(ssock->pool, &ossock->ocsp_resp, &cert->ocsp_resp_buf);
+        SSL_CTX_set_tlsext_status_cb(ctx, ocsp_status_cb);
+        SSL_CTX_set_tlsext_status_arg(ctx, ssock);
+        PJ_LOG(4,(ssock->pool->obj_name,
+                  "OCSP stapling enabled (%ld-byte response)",
+                  ossock->ocsp_resp.slen));
+    }
+#endif
+
     /* Early sensitive data cleanup after OpenSSL context setup. However,
      * this cannot be done for listener sockets, as the data will still
      * be needed by accepted sockets.
      */
     if (cert && (!ssock->is_server || ssock->parent)) {
-        pj_ssl_cert_wipe_keys(cert);    
+        pj_ssl_cert_wipe_keys(cert);
     }
 
     return PJ_SUCCESS;
@@ -1763,6 +1853,18 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     (void)BIO_set_close(ossock->ossl_rbio, BIO_CLOSE);
     (void)BIO_set_close(ossock->ossl_wbio, BIO_CLOSE);
     SSL_set_bio(ossock->ossl_ssl, ossock->ossl_rbio, ossock->ossl_wbio);
+
+#if defined(TLSEXT_STATUSTYPE_ocsp)
+    /* Request OCSP stapling (status_request extension) on client sockets.
+     * The CTX is per-client here, so registering the callback with this
+     * socket as its argument is safe.
+     */
+    if (!ssock->is_server && ssock->param.enable_ocsp_stapling) {
+        SSL_CTX_set_tlsext_status_cb(ossock->ossl_ctx, ocsp_status_cb);
+        SSL_CTX_set_tlsext_status_arg(ossock->ossl_ctx, ssock);
+        SSL_set_tlsext_status_type(ossock->ossl_ssl, TLSEXT_STATUSTYPE_ocsp);
+    }
+#endif
 
     return PJ_SUCCESS;
 }
