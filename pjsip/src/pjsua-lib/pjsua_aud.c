@@ -1163,7 +1163,7 @@ PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
         (unsigned)sink >= pjsua_var.media_cfg.max_media_ports)
     {
         PJ_LOG(3,(THIS_FILE, "pjsua_conf_disconnect(%d, %d) failed: port ID "
-                             "out of range (max_media_ports=%d)",
+                             "out of range (max_media_ports=%u)",
                              source, sink,
                              pjsua_var.media_cfg.max_media_ports));
         return PJ_EINVAL;
