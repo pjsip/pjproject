@@ -16,15 +16,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <pjmedia/txt_stream.h>
-#include <pjmedia/clock.h>
-#include <pjmedia/errno.h>
-#include <pjmedia/jbuf.h>
-#include <pjmedia/port.h>
-#include <pjmedia/rtp.h>
-#include <pjmedia/rtcp.h>
-#include <pjmedia/sdp_neg.h>
-#include <pjmedia/transport.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
 #include <pj/errno.h>
@@ -32,57 +23,65 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/rand.h>
+#include <pjmedia/clock.h>
+#include <pjmedia/errno.h>
+#include <pjmedia/jbuf.h>
+#include <pjmedia/port.h>
+#include <pjmedia/rtcp.h>
+#include <pjmedia/rtp.h>
+#include <pjmedia/sdp_neg.h>
+#include <pjmedia/transport.h>
+#include <pjmedia/txt_stream.h>
 
-#define THIS_FILE                       "txt_stream.c"
-#define LOGERR_(expr)                   PJ_PERROR(4,expr)
-#define TRC_(expr)                      PJ_LOG(5,expr)
+#define THIS_FILE "txt_stream.c"
+#define LOGERR_(expr) PJ_PERROR(4, expr)
+#define TRC_(expr) PJ_LOG(5, expr)
 
 #if 0
-#   define TRACE_(log)  PJ_LOG(3, log)
+#define TRACE_(log) PJ_LOG(3, log)
 #else
-#   define TRACE_(log)
+#define TRACE_(log)
 #endif
 
 /* Default and max buffering time if not specified.
  * The RFC recommends a buffering time of 300 ms. Note that the maximum
  * according to the RFC is 500 ms.
  */
-#define BUFFERING_TIME          300
-#define MAX_BUFFERING_TIME      500
+#define BUFFERING_TIME 300
+#define MAX_BUFFERING_TIME 500
 
 /* Buffer size to store the characters buffered during BUFFERING_TIME.
  * The default cps (character per second) is 30, but it's over a 10-second
  * interval, so we need a larger buffer to handle the burst.
  */
-#define BUFFER_SIZE             64
+#define BUFFER_SIZE 64
 
 /* The number of buffers must be the max redundancy we want to support +
  * plus one more to store the primary data.
  */
-#define NUM_BUFFERS             PJMEDIA_TXT_STREAM_MAX_RED_LEVELS + 1
+#define NUM_BUFFERS PJMEDIA_TXT_STREAM_MAX_RED_LEVELS + 1
 
 /* 5.4. Compensation for Packets Out of Order:
  * If analysis of a received packet reveals a gap in the sequence,
  * we need to wait for the missing packet(s) to arrive.  It is
  * RECOMMENDED the waiting time be limited to 1 second (1000 ms).
  */
-#define MAX_RX_WAITING_TIME     1000
+#define MAX_RX_WAITING_TIME 1000
 
 /* Maximum number of text packets that can be kept in the jitter buffer.
  * The value should be roughly our MAX_RX_WAITING_TIME over remote's
  * buffering time (which unfortunately we don't know).
  */
-#define JBUF_MAX_COUNT          8
+#define JBUF_MAX_COUNT 8
 
 /* Maximum size of a single text frame in bytes */
-#define MAX_TEXT_FRAME_SIZE      512
+#define MAX_TEXT_FRAME_SIZE 512
 
 /* Buffer to store redundancy and primary data. */
-typedef struct red_buf
-{
+typedef struct red_buf {
     unsigned timestamp;
     unsigned length;
-    char     buf[BUFFER_SIZE];
+    char buf[BUFFER_SIZE];
 } red_buf;
 
 typedef struct pjmedia_txt_stream {
@@ -108,12 +107,11 @@ typedef struct pjmedia_txt_stream {
 
 static void clock_cb(const pj_timestamp *ts, void *user_data);
 
-
 #include "stream_imp_common.c"
 
 static void on_stream_destroy(void *arg)
 {
-    pjmedia_txt_stream *stream = (pjmedia_txt_stream *)arg;
+    pjmedia_txt_stream *stream = (pjmedia_txt_stream *) arg;
 
     if (stream->clock) {
         pjmedia_clock_destroy(stream->clock);
@@ -124,13 +122,13 @@ static void on_stream_destroy(void *arg)
 /*
  * Destroy stream.
  */
-PJ_DEF(pj_status_t) pjmedia_txt_stream_destroy( pjmedia_txt_stream *stream )
+PJ_DEF(pj_status_t) pjmedia_txt_stream_destroy(pjmedia_txt_stream *stream)
 {
-    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *) stream;
 
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
-    PJ_LOG(4,(c_strm->port.info.name.ptr, "Stream destroying"));
+    PJ_LOG(4, (c_strm->port.info.name.ptr, "Stream destroying"));
 
     stream->cb = NULL;
 
@@ -140,18 +138,18 @@ PJ_DEF(pj_status_t) pjmedia_txt_stream_destroy( pjmedia_txt_stream *stream )
     /* Send RTCP BYE (also SDES & XR) */
     if (c_strm->transport && !c_strm->rtcp_sdes_bye_disabled) {
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-        send_rtcp(c_strm, PJ_TRUE, PJ_TRUE, c_strm->rtcp.xr_enabled,
-                  PJ_FALSE, PJ_FALSE, PJ_FALSE);
-#else
-        send_rtcp(c_strm, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE,
+        send_rtcp(c_strm, PJ_TRUE, PJ_TRUE, c_strm->rtcp.xr_enabled, PJ_FALSE,
                   PJ_FALSE, PJ_FALSE);
+#else
+        send_rtcp(c_strm, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_FALSE,
+                  PJ_FALSE);
 #endif
     }
 
     /* Unsubscribe from RTCP session events
      * Currently unused
      */
-    //pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream, &c_strm->rtcp);
+    // pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream, &c_strm->rtcp);
 
     /* Detach from transport
      * MUST NOT hold stream mutex while detaching from transport, as
@@ -159,7 +157,7 @@ PJ_DEF(pj_status_t) pjmedia_txt_stream_destroy( pjmedia_txt_stream *stream )
      */
     if (c_strm->transport) {
         pjmedia_transport_detach(c_strm->transport, c_strm);
-        //c_strm->transport = NULL;
+        // c_strm->transport = NULL;
     }
 
     if (c_strm->grp_lock) {
@@ -172,12 +170,10 @@ PJ_DEF(pj_status_t) pjmedia_txt_stream_destroy( pjmedia_txt_stream *stream )
 }
 
 PJ_DEF(pj_status_t)
-pjmedia_txt_stream_create( pjmedia_endpt *endpt,
-                           pj_pool_t *pool,
-                           const pjmedia_txt_stream_info *info,
-                           pjmedia_transport *tp,
-                           void *user_data,
-                           pjmedia_txt_stream **p_stream)
+pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
+                          const pjmedia_txt_stream_info *info,
+                          pjmedia_transport *tp, void *user_data,
+                          pjmedia_txt_stream **p_stream)
 
 {
     enum { M = 32 };
@@ -194,8 +190,7 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
     PJ_ASSERT_RETURN(endpt && info && tp && p_stream, PJ_EINVAL);
 
     if (pool == NULL) {
-        own_pool = pjmedia_endpt_create_pool( endpt, "tstrm%p",
-                                              2000, 2000);
+        own_pool = pjmedia_endpt_create_pool(endpt, "tstrm%p", 2000, 2000);
         PJ_ASSERT_RETURN(own_pool != NULL, PJ_ENOMEM);
         pool = own_pool;
     }
@@ -208,7 +203,7 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
 
     /* Duplicate stream info */
     pj_memcpy(&stream->si, info, sizeof(*info));
-    c_strm->si = (pjmedia_stream_info_common *)&stream->si;
+    c_strm->si = (pjmedia_stream_info_common *) &stream->si;
     pj_strdup(pool, &stream->si.fmt.encoding_name, &info->fmt.encoding_name);
     pjmedia_rtcp_fb_info_dup(pool, &c_strm->si->loc_rtcp_fb,
                              &info->loc_rtcp_fb);
@@ -216,7 +211,7 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
                              &info->rem_rtcp_fb);
 
     /* Init stream/port name */
-    name.ptr = (char*) pj_pool_alloc(pool, M);
+    name.ptr = (char *) pj_pool_alloc(pool, M);
     name.slen = pj_ansi_snprintf(name.ptr, M, "tstrm%p", stream);
     c_strm->port.info.name = name;
 
@@ -224,7 +219,7 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
     c_strm->endpt = endpt;
     c_strm->dir = info->dir;
     c_strm->user_data = user_data;
-    c_strm->rtcp_interval = (PJMEDIA_RTCP_INTERVAL-500 + (pj_rand()%1000)) *
+    c_strm->rtcp_interval = (PJMEDIA_RTCP_INTERVAL - 500 + (pj_rand() % 1000)) *
                             info->fmt.clock_rate / 1000;
     c_strm->rtcp_sdes_bye_disabled = info->rtcp_sdes_bye_disabled;
 
@@ -233,7 +228,7 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
     stream->rx_last_seq = -1;
     stream->is_idle = PJ_TRUE;
 
-#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     c_strm->use_ka = info->use_ka;
     c_strm->ka_interval = info->ka_cfg.ka_interval;
     c_strm->start_ka_count = info->ka_cfg.start_count;
@@ -243,13 +238,18 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
     c_strm->cname = info->cname;
     if (c_strm->cname.slen == 0) {
         /* Build random RTCP CNAME. CNAME has user@host format */
-        c_strm->cname.ptr = p = (char*) pj_pool_alloc(pool, 20);
+        c_strm->cname.ptr = p = (char *) pj_pool_alloc(pool, 20);
         pj_create_random_string(p, 5);
         p += 5;
-        *p++ = '@'; *p++ = 'p'; *p++ = 'j';
+        *p++ = '@';
+        *p++ = 'p';
+        *p++ = 'j';
         pj_create_random_string(p, 6);
         p += 6;
-        *p++ = '.'; *p++ = 'o'; *p++ = 'r'; *p++ = 'g';
+        *p++ = '.';
+        *p++ = 'o';
+        *p++ = 'r';
+        *p++ = 'g';
         c_strm->cname.slen = p - c_strm->cname.ptr;
     }
 
@@ -259,8 +259,7 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
         stream->buf_time = BUFFERING_TIME;
     cparam.usec_interval = stream->buf_time * 1000;
     cparam.clock_rate = 1000;
-    status = pjmedia_clock_create2(pool, &cparam,
-                                   PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
+    status = pjmedia_clock_create2(pool, &cparam, PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
                                    clock_cb, stream, &stream->clock);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
@@ -271,10 +270,8 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
         goto err_cleanup;
 
     /* Create jitter buffer */
-    status = pjmedia_jbuf_create(pool, &c_strm->port.info.name,
-                                 BUFFER_SIZE,
-                                 stream->buf_time,
-                                 JBUF_MAX_COUNT, &c_strm->jb);
+    status = pjmedia_jbuf_create(pool, &c_strm->port.info.name, BUFFER_SIZE,
+                                 stream->buf_time, JBUF_MAX_COUNT, &c_strm->jb);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
@@ -283,15 +280,15 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
     pjmedia_jbuf_set_discard(c_strm->jb, PJMEDIA_JB_DISCARD_NONE);
 
     /* Create decoder channel: */
-    status = create_channel( pool, c_strm, PJMEDIA_DIR_DECODING,
-                             info->rx_pt, 0, c_strm->si, &c_strm->dec);
+    status = create_channel(pool, c_strm, PJMEDIA_DIR_DECODING, info->rx_pt, 0,
+                            c_strm->si, &c_strm->dec);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
     /* Create encoder channel: */
     buf_size = BUFFER_SIZE;
-    status = create_channel( pool, c_strm, PJMEDIA_DIR_ENCODING,
-                             info->tx_pt, buf_size, c_strm->si, &c_strm->enc);
+    status = create_channel(pool, c_strm, PJMEDIA_DIR_ENCODING, info->tx_pt,
+                            buf_size, c_strm->si, &c_strm->enc);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
@@ -317,17 +314,16 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
 
         /* Subscribe to RTCP events */
         // Currently not needed, perhaps for future use.
-        //pjmedia_event_subscribe(NULL, &stream_event_cb, stream,
+        // pjmedia_event_subscribe(NULL, &stream_event_cb, stream,
         //                        &c_strm->rtcp);
     }
 
     /* Allocate outgoing RTCP buffer, should be enough to hold SR/RR, SDES,
      * BYE, and XR.
      */
-    c_strm->out_rtcp_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
-                                 sizeof(pjmedia_rtcp_common) +
-                                 (4 + (unsigned)c_strm->cname.slen) +
-                                 32;
+    c_strm->out_rtcp_pkt_size = sizeof(pjmedia_rtcp_sr_pkt) +
+                                sizeof(pjmedia_rtcp_common) +
+                                (4 + (unsigned) c_strm->cname.slen) + 32;
 
     if (c_strm->out_rtcp_pkt_size > PJMEDIA_MAX_MTU)
         c_strm->out_rtcp_pkt_size = PJMEDIA_MAX_MTU;
@@ -350,8 +346,7 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
     att_param.rtcp_cb = &on_rx_rtcp;
 
     /* Create group lock & attach handler */
-    status = pj_grp_lock_create_w_handler(pool, NULL, stream,
-                                          &on_destroy,
+    status = pj_grp_lock_create_w_handler(pool, NULL, stream, &on_destroy,
                                           &c_strm->grp_lock);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
@@ -372,10 +367,10 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
 
     /* Send RTCP SDES */
     if (!c_strm->rtcp_sdes_bye_disabled) {
-       pjmedia_stream_common_send_rtcp_sdes(c_strm);
+        pjmedia_stream_common_send_rtcp_sdes(c_strm);
     }
 
-#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     /* NAT hole punching by sending KA packet via RTP transport. */
     if (c_strm->use_ka)
         send_keep_alive_packet(c_strm);
@@ -384,7 +379,8 @@ pjmedia_txt_stream_create( pjmedia_endpt *endpt,
     /* Success! */
     *p_stream = stream;
 
-    PJ_LOG(3, (THIS_FILE, "Text stream %s created", c_strm->port.info.name.ptr));
+    PJ_LOG(3,
+           (THIS_FILE, "Text stream %s created", c_strm->port.info.name.ptr));
 
     return PJ_SUCCESS;
 
@@ -395,7 +391,7 @@ err_cleanup:
 
 PJ_DEF(pj_status_t) pjmedia_txt_stream_start(pjmedia_txt_stream *stream)
 {
-    pjmedia_stream_common *c_strm = (pjmedia_stream_common *)stream;
+    pjmedia_stream_common *c_strm = (pjmedia_stream_common *) stream;
     pj_status_t status;
 
     pjmedia_stream_common_start(c_strm);
@@ -428,7 +424,7 @@ static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
     pj_uint32_t ts;
     int popped_seq;
     char *text_ptr = NULL;
-    
+
     pj_mutex_lock(c_strm->jb_mutex);
 
     do {
@@ -746,7 +742,16 @@ static pj_status_t send_text(pjmedia_txt_stream *stream, unsigned rtp_ts_len)
             rtp_ts_len = 1;
     }
 
-    /* Check for Keep-Alive condition (RFC 4103 recommends 10s of idle time) */
+    /* Check for Keep-Alive condition */
+    /*
+       RFC 9071 (Section 4.2.2) suggests 10 seconds as the threshold for
+       detecting a "long pause" from an idle RTT source. RFC 6263 (Section 7)
+       suggests a minimum transmission interval (Tr) of 15 seconds for UDP
+       keep-alives to maintain NAT bindings. Using a 10-second timer provides a
+       safe 5-second margin to ensure the keep-alive traverses the network
+       before a firewall drops the connection.
+    */
+
     if (stream->is_idle && stream->tx_buf[0].length == 0) {
         if (!is_first_packet &&
             pj_elapsed_msec(&stream->tx_last_ts, &now) >= 10000) {
@@ -1014,8 +1019,8 @@ pjmedia_txt_stream_send_text(pjmedia_txt_stream *stream, const pj_str_t *text)
         return PJ_ETOOMANY;
     }
 
-    pj_memcpy(stream->tx_buf[0].buf + stream->tx_buf[0].length,
-            text->ptr, text->slen);
+    pj_memcpy(stream->tx_buf[0].buf + stream->tx_buf[0].length, text->ptr,
+              text->slen);
     stream->tx_buf[0].length += (unsigned) text->slen;
 
     /* Decide if we should send the text immediately or just buffer it. */
