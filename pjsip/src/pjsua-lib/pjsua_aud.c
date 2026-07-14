@@ -991,8 +991,8 @@ PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
      * PJ_EINVAL instead of letting pjmedia_conf_connect_port() abort on its
      * PJ_ASSERT_RETURN in debug/ASan builds.
      */
-    if (source >= (int)pjsua_var.media_cfg.max_media_ports ||
-        sink >= (int)pjsua_var.media_cfg.max_media_ports)
+    if ((unsigned)source >= pjsua_var.media_cfg.max_media_ports ||
+        (unsigned)sink >= pjsua_var.media_cfg.max_media_ports)
     {
         PJ_LOG(3,(THIS_FILE, "pjsua_conf_connect(%d, %d) failed: port ID out "
                              "of range (max_media_ports=%d)",
