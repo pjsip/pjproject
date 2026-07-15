@@ -5262,6 +5262,20 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
         return;
     }
 
+    /* Stale callback guard (see pjsua_call_on_media_update): a leftover inv
+     * whose call slot has been recycled into a new dialog. Running the
+     * teardown below (media deinit, on_call_state, reset_call) would wipe
+     * the live call's slot and drop its own DISCONNECTED (issue #4992).
+     */
+    if (call->inv != inv) {
+        PJ_LOG(4, (THIS_FILE,
+                   "Ignoring stale state change on call %d "
+                   "(inv %p != current %p, state=%d)",
+                   call->index, inv, (void*)call->inv, inv->state));
+        pj_log_pop_indent();
+        return;
+    }
+
 
     /* Get call times */
     switch (inv->state) {
