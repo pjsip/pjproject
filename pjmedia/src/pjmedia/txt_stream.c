@@ -270,8 +270,9 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
         goto err_cleanup;
 
     /* Create jitter buffer */
-    status = pjmedia_jbuf_create(pool, &c_strm->port.info.name, BUFFER_SIZE,
-                                 stream->buf_time, JBUF_MAX_COUNT, &c_strm->jb);
+    status =
+        pjmedia_jbuf_create(pool, &c_strm->port.info.name, MAX_TEXT_FRAME_SIZE,
+                            stream->buf_time, JBUF_MAX_COUNT, &c_strm->jb);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
@@ -417,6 +418,7 @@ pjmedia_txt_stream_get_info(const pjmedia_txt_stream *stream,
 static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
 {
     pjmedia_stream_common *c_strm = &stream->base;
+    PJ_UNUSED_ARG(now);
 
     char frm_type;
     char frm_buf[MAX_TEXT_FRAME_SIZE];
@@ -601,6 +603,9 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     pj_int16_t diff = 0;
     pj_status_t status = PJ_SUCCESS;
 
+    /* Initialize to prevent uninitialized memory reads on success paths */
+    *pkt_discarded = PJ_FALSE;
+
     pj_mutex_lock(c_strm->jb_mutex);
     if (seq_st.status.flag.restart) {
         stream->rx_last_seq = -1;
@@ -610,6 +615,12 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     if (hdr->pt == c_strm->si->rx_red_pt) {
         status = decode_red(stream, c_strm->si->rx_pt, seq,
                             (const char *) payload, payloadlen, &consumed);
+
+        /* Mark packet as discarded if RED decoding fails */
+        if (status != PJ_SUCCESS) {
+            *pkt_discarded = PJ_TRUE;
+        }
+
     } else if (hdr->pt == c_strm->si->rx_pt) {
         /* Fallback: Route T.140 directly to Jitter Buffer */
         diff = (pj_int16_t) (seq - stream->rx_last_seq);
@@ -777,7 +788,7 @@ static pj_status_t send_text(pjmedia_txt_stream *stream, unsigned rtp_ts_len)
         void *bom_rtphdr;
         int bom_size;
         pj_uint32_t bom_ts;
-        char temp_buf[256];
+        char temp_buf[BUFFER_SIZE];
         unsigned temp_len;
 
         /* M=1 (Marker bit) for the first packet of a talkspurt */
@@ -1014,7 +1025,7 @@ pjmedia_txt_stream_send_text(pjmedia_txt_stream *stream, const pj_str_t *text)
 
     pj_mutex_lock(c_strm->jb_mutex);
 
-    if (stream->tx_buf[0].length + text->slen > MAX_TEXT_FRAME_SIZE) {
+    if (stream->tx_buf[0].length + text->slen > BUFFER_SIZE) {
         pj_mutex_unlock(c_strm->jb_mutex);
         return PJ_ETOOMANY;
     }
@@ -1130,11 +1141,19 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si, pj_pool_t *pool,
         }
     }
 
+    if (si->rx_red_pt > 0) {
+        pjmedia_stream_info_parse_fmtp(pool, local_m, si->rx_red_pt,
+                                       &si->dec_fmtp);
+    }
+
     /* Set fmt */
     si->fmt.type = PJMEDIA_TYPE_TEXT;
     si->fmt.pt = si->rx_pt;
     pj_strset2(&si->fmt.encoding_name, "t140");
+    /*RFC 4103 recommends a clock frequency of 1000 Hz */
     si->fmt.clock_rate = 1000;
+    /* RFC 4103 defines the payload as a single, sequential stream of text */
+    si->fmt.channel_cnt = 1;
 
     return (si->tx_pt < 96 || si->rx_pt < 96) ? PJMEDIA_EINVALIDPT : PJ_SUCCESS;
 }
