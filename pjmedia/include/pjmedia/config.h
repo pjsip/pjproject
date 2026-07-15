@@ -1620,7 +1620,7 @@
  * Default: 128MB (enough for 8K RGBA)
  */
 #ifndef PJMEDIA_MAX_VIDEO_DEC_FRAME_SIZE
-#  define PJMEDIA_MAX_VIDEO_DEC_FRAME_SIZE          (1<<27)
+#  define PJMEDIA_MAX_VIDEO_DEC_FRAME_SIZE          (1u<<27)
 #endif
 
 
