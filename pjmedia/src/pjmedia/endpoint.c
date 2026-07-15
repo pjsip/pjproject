@@ -527,8 +527,14 @@ pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
         }
 
         /* Take a note of used dynamic PT */
-        if (pt >= 96)
+        if (pt >= 96) {
+            if (used_pt_num >= PJMEDIA_MAX_SDP_FMT) {
+                PJ_LOG(4,(THIS_FILE, "Warning: used-PT array is full, "
+                          "some audio codecs are omitted"));
+                break;
+            }
             used_pt[used_pt_num++] = pt;
+        }
 
         fmt = &m->desc.fmt[m->desc.fmt_count++];
         fmt->ptr = (char*) pj_pool_alloc(pool, 8);
