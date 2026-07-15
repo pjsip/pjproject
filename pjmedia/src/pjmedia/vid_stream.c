@@ -1740,8 +1740,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     {
         PJ_LOG(3,(THIS_FILE, "Invalid decoding size %dx%d in creating "
                   "video stream %s",
-                  vfd_dec->size.w, vfd_dec->size.h, name.ptr));
-        status = PJ_ETOOBIG;
+                  (int)vfd_dec->size.w, (int)vfd_dec->size.h, name.ptr));
         goto err_cleanup;
     }
     stream->dec_max_size = vfd_dec->size.w * vfd_dec->size.h * 4;
