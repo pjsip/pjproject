@@ -68,7 +68,7 @@ jobs:
           # generous.
           ./pjsua-stress-$ARCH -n 1024 -v 32 -t 8 --duration 600 --log-level 4 > stress.log 2>&1 &
           app_pid=$!
-          tail --pid=$app_pid -f stress.log &
+          tail --pid=$app_pid -n +1 -f stress.log &
           (
             sleep 1500
             if kill -0 $app_pid 2>/dev/null; then

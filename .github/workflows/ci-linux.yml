@@ -730,7 +730,7 @@ jobs:
         # at 5 min by the binary, stress phase is 6 min), so 15 is generous.
         ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 > stress.log 2>&1 &
         app_pid=$!
-        tail --pid=$app_pid -f stress.log &
+        tail --pid=$app_pid -n +1 -f stress.log &
         (
           sleep 900
           if kill -0 $app_pid 2>/dev/null; then
@@ -821,7 +821,7 @@ jobs:
         # at 5 min by the binary, stress phase is 6 min), so 15 is generous.
         ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 > stress.log 2>&1 &
         app_pid=$!
-        tail --pid=$app_pid -f stress.log &
+        tail --pid=$app_pid -n +1 -f stress.log &
         (
           sleep 900
           if kill -0 $app_pid 2>/dev/null; then

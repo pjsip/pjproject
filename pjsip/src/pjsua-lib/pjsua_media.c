@@ -3486,9 +3486,14 @@ static void log_call_dump(int call_id)
         }
         p_orig = p[part_len];
         p[part_len] = '\0';
-        /* Trim the trailing newline, the logger appends one */
-        if (part_len > 0 && p[part_len-1] == '\n')
+        /* Trim the trailing newline (and optional CR), the logger
+         * appends one
+         */
+        if (part_len > 0 && p[part_len-1] == '\n') {
             p[part_len-1] = '\0';
+            if (part_len > 1 && p[part_len-2] == '\r')
+                p[part_len-2] = '\0';
+        }
         PJ_LOG(3,(THIS_FILE, "%s", p));
         p[part_len] = p_orig;
         part_idx += part_len;
