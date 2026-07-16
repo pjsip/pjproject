@@ -1213,12 +1213,14 @@ static void stateless_send_transport_cb( void *token,
                                                 tdata,
                                                 &stateless_data->cur_transport);
         if (status != PJ_SUCCESS) {
-            /* Couldn't acquire this transport; fall through to the next resolved
-             * address (e.g. an 18.1.1 TCP upgrade reverts to UDP with no TCP tp). */
-            PJ_LOG(5,(THIS_FILE, "Unable to acquire %s transport for %s "
-                                 "(err=%d), trying next address",
-                                 pjsip_transport_get_type_name(cur_addr_type),
-                                 pjsip_tx_data_get_info(tdata), status));
+            /* Couldn't acquire this transport; fall through to the next
+             * resolved address (e.g. RFC 3261 18.1.1 TCP upgrade reverts to
+             * UDP when no TCP transport is available). */
+            PJ_PERROR(5,(THIS_FILE, status,
+                         "Unable to acquire %s transport for %s, "
+                         "trying next address",
+                         pjsip_transport_get_type_name(cur_addr_type),
+                         pjsip_tx_data_get_info(tdata)));
             sent = -status;
             continue;
         }
