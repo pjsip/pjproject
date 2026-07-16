@@ -175,6 +175,7 @@ struct pj_barrier_t {
     pthread_cond_t      cond;
     unsigned            count;
     unsigned            trip_count;
+    unsigned            generation;
 #endif
 };
 
@@ -2397,17 +2398,24 @@ PJ_DEF(pj_status_t) pj_barrier_create(pj_pool_t *pool, unsigned trip_count, pj_b
 PJ_DEF(pj_int32_t) pj_barrier_wait(pj_barrier_t *barrier, pj_uint32_t flags) 
 {
     pj_bool_t is_last = PJ_FALSE;
-    int status;
+    int status = 0;
 
     PJ_UNUSED_ARG(flags);
 
     pthread_mutex_lock(&barrier->mutex.mutex);
     if (++barrier->count >= barrier->trip_count) {
         barrier->count = 0;
+        ++barrier->generation;
         status = pthread_cond_broadcast(&barrier->cond);
         is_last = PJ_TRUE;
     } else {
-        status = pthread_cond_wait(&barrier->cond, &barrier->mutex.mutex);
+        unsigned gen = barrier->generation;
+        /* Loop to guard against spurious wakeups and barrier reuse: return
+         * only once this generation has been released by the last waiter,
+         * instead of returning on any wakeup.
+         */
+        while (gen == barrier->generation && status == 0)
+            status = pthread_cond_wait(&barrier->cond, &barrier->mutex.mutex);
     }
     pthread_mutex_unlock(&barrier->mutex.mutex);
 
