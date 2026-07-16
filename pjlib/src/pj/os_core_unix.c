@@ -647,12 +647,21 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
     thread->signature1 = SIGNATURE1;
     thread->signature2 = SIGNATURE2;
 
-    if(cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1)
-        pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name),
-                         cstr_thread_name, thread->thread);
-    else
+    if (cstr_thread_name && pj_strlen(&thread_name) < sizeof(thread->obj_name)-1) {
+        const char *p = pj_ansi_strchr(cstr_thread_name, '%');
+        /* Only expand the "%p" object-id convention; never treat an
+         * arbitrary name as a printf format string.
+         */
+        if (p && *(p+1)=='p' && *(p+2)=='\0')
+            pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name),
+                             cstr_thread_name, thread->thread);
+        else
+            pj_ansi_strxcpy(thread->obj_name, cstr_thread_name,
+                            sizeof(thread->obj_name));
+    } else {
         pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name),
                          "thr%p", (void*)thread->thread);
+    }
 
     rc = pj_thread_local_set(thread_tls_id, thread);
     if (rc != PJ_SUCCESS) {
@@ -794,7 +803,7 @@ static pj_status_t create_thread(const char *thread_name,
         thread_name = "thr%p";
 
     ch = pj_ansi_strchr(thread_name, '%');
-    if (ch && *(ch+1) == 'p') {
+    if (ch && *(ch+1) == 'p' && *(ch+2) == '\0') {
         pj_ansi_snprintf(rec->obj_name, PJ_MAX_OBJ_NAME, thread_name, rec);
     } else {
         pj_ansi_strxcpy(rec->obj_name, thread_name, PJ_MAX_OBJ_NAME);
@@ -1109,7 +1118,15 @@ PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
 
     pj_set_os_error(0);
 
-    usleep(msec * 1000);
+    /* Sleep in sub-second chunks to avoid overflow of msec*1000 for large
+     * values, and to keep each usleep() argument below 1000000, which POSIX
+     * requires.
+     */
+    while (msec > 0) {
+        unsigned chunk = (msec > 500)? 500 : msec;
+        usleep(chunk * 1000);
+        msec -= chunk;
+    }
 
     /* MacOS X (reported on 10.5) seems to always set errno to ETIMEDOUT.
      * It does so because usleep() is declared to return int, and we're
@@ -1525,11 +1542,13 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
     }
 
     if (rc != 0) {
+        pthread_mutexattr_destroy(&attr);
         return PJ_RETURN_OS_ERROR(rc);
     }
 
     rc = pthread_mutex_init(&mutex->mutex, &attr);
     if (rc != 0) {
+        pthread_mutexattr_destroy(&attr);
         return PJ_RETURN_OS_ERROR(rc);
     }
 
@@ -1551,10 +1570,16 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
     if (!name) {
         name = "mtx%p";
     }
-    if (strchr(name, '%')) {
-        pj_ansi_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
-    } else {
-        pj_ansi_strxcpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
+    {
+        const char *p = strchr(name, '%');
+        /* Only expand the "%p" object-id convention; never treat an
+         * arbitrary name as a printf format string.
+         */
+        if (p && *(p+1)=='p' && *(p+2)=='\0') {
+            pj_ansi_snprintf(mutex->obj_name, PJ_MAX_OBJ_NAME, name, mutex);
+        } else {
+            pj_ansi_strxcpy(mutex->obj_name, name, PJ_MAX_OBJ_NAME);
+        }
     }
 
     PJ_LOG(6, (mutex->obj_name, "Mutex created"));
@@ -1972,10 +1997,16 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
     if (!name) {
         name = "sem%p";
     }
-    if (strchr(name, '%')) {
-        pj_ansi_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
-    } else {
-        pj_ansi_strxcpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
+    {
+        const char *p = strchr(name, '%');
+        /* Only expand the "%p" object-id convention; never treat an
+         * arbitrary name as a printf format string.
+         */
+        if (p && *(p+1)=='p' && *(p+2)=='\0') {
+            pj_ansi_snprintf(sem->obj_name, PJ_MAX_OBJ_NAME, name, sem);
+        } else {
+            pj_ansi_strxcpy(sem->obj_name, name, PJ_MAX_OBJ_NAME);
+        }
     }
 
     PJ_LOG(6, (sem->obj_name, "Semaphore created"));
