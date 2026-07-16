@@ -23,12 +23,19 @@ def has_ssl_sock():
             content = f.read()
       except IOError:
          return None
-      # Only match active #define lines, not commented-out ones
-      # (e.g. "//#define PJ_HAS_SSL_SOCK 1").
+      # Only match active #define/#undef lines, not commented-out ones
+      # (e.g. "//#define PJ_HAS_SSL_SOCK 1"). Autoconf's autoheader
+      # leaves the macro as a bare "#undef PJ_HAS_SSL_SOCK" (no value)
+      # when SSL support wasn't detected/was disabled, so that must be
+      # treated as "not available" rather than ignored.
       for line in content.splitlines():
-         m = re.match(r'\s*#define\s+PJ_HAS_SSL_SOCK\s+(\d+)', line)
+         m = re.match(r'\s*#\s*(define|undef)\s+PJ_HAS_SSL_SOCK\b\s*(\d+)?',
+                      line)
          if m:
-            return m.group(1) != "0"
+            directive, value = m.group(1), m.group(2)
+            if directive == "undef":
+               return False
+            return value is None or value != "0"
       return None
 
    val = find_value(site_header)
