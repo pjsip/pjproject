@@ -720,7 +720,8 @@ static pj_status_t encode_red(pjmedia_txt_stream *stream, unsigned pt,
     return PJ_SUCCESS;
 }
 
-static pj_status_t send_text(pjmedia_txt_stream *stream, unsigned rtp_ts_len)
+static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
+                                    unsigned rtp_ts_len)
 {
     pjmedia_stream_common *c_strm = &stream->base;
     pjmedia_channel *channel = c_strm->enc;
@@ -734,8 +735,6 @@ static pj_status_t send_text(pjmedia_txt_stream *stream, unsigned rtp_ts_len)
     pjmedia_rtp_hdr *hdr;
     unsigned pt_to_use;
 
-    /* Lock Jitter Buffer mutex to protect stream state during transmission */
-    pj_mutex_lock(c_strm->jb_mutex);
     pj_get_timestamp(&now);
 
     is_first_packet =
@@ -963,7 +962,18 @@ static pj_status_t send_text(pjmedia_txt_stream *stream, unsigned rtp_ts_len)
     }
 
 on_return:
+    return status;
+}
+
+static pj_status_t send_text(pjmedia_txt_stream *stream, unsigned rtp_ts_len)
+{
+    pjmedia_stream_common *c_strm = &stream->base;
+    pj_status_t status;
+
+    pj_mutex_lock(c_strm->jb_mutex);
+    status = send_text_locked(stream, rtp_ts_len);
     pj_mutex_unlock(c_strm->jb_mutex);
+
     return status;
 }
 
@@ -1039,7 +1049,7 @@ pjmedia_txt_stream_send_text(pjmedia_txt_stream *stream, const pj_str_t *text)
     pj_get_timestamp(&now);
     interval = pj_elapsed_msec(&stream->tx_last_ts, &now);
     if (interval >= stream->buf_time) {
-        status = send_text(stream, interval);
+        status = send_text_locked(stream, interval);
     }
 
     pj_mutex_unlock(c_strm->jb_mutex);
