@@ -655,7 +655,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
          */
         if (p && *(p+1)=='p' && *(p+2)=='\0')
             pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name),
-                             cstr_thread_name, thread->thread);
+                             cstr_thread_name, (void*)thread->thread);
         else
             pj_ansi_strxcpy(thread->obj_name, cstr_thread_name,
                             sizeof(thread->obj_name));
