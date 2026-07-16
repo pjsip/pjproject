@@ -671,9 +671,12 @@ static pj_status_t encode_red(pjmedia_txt_stream *stream, unsigned pt,
         /* Enforce empty history if requested */
         if (!force_empty_history) {
             offset = stream->tx_buf[0].timestamp - stream->tx_buf[i].timestamp;
-            if (offset > 16383)
-                continue; /* Skip uninitialized */
-            hist_len = stream->tx_buf[i].length;
+            if (offset > 16383) {
+                offset = 0;
+                hist_len = 0;
+            } else {
+                hist_len = stream->tx_buf[i].length;
+            }
         }
 
         if (len + 4 > (unsigned) *size)
