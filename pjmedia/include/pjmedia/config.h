@@ -1615,6 +1615,16 @@
 
 
 /**
+ * Maximum decoded video frame buffer size. Video stream creation will fail
+ * if the negotiated decoding format requires a larger buffer.
+ * Default: 128MB (enough for 8K RGBA)
+ */
+#ifndef PJMEDIA_MAX_VIDEO_DEC_FRAME_SIZE
+#  define PJMEDIA_MAX_VIDEO_DEC_FRAME_SIZE          (1u<<27)
+#endif
+
+
+/**
  * Specify the maximum duration (in ms) for resynchronization. When a media
  * is late to another media it is supposed to be synchronized to, it is
  * guaranteed to be synchronized again after this duration. While if the
