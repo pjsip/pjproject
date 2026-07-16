@@ -2165,11 +2165,22 @@ PJ_DEF(pj_status_t) pj_event_create(pj_pool_t *pool, const char *name,
                                     pj_event_t **ptr_event)
 {
     pj_event_t *event;
+    pj_status_t rc;
+    int prc;
 
     event = PJ_POOL_ALLOC_T(pool, pj_event_t);
+    PJ_ASSERT_RETURN(event, PJ_ENOMEM);
 
-    init_mutex(&event->mutex, name, PJ_MUTEX_SIMPLE);
-    pthread_cond_init(&event->cond, 0);
+    rc = init_mutex(&event->mutex, name, PJ_MUTEX_SIMPLE);
+    if (rc != PJ_SUCCESS)
+        return rc;
+
+    prc = pthread_cond_init(&event->cond, 0);
+    if (prc != 0) {
+        pj_mutex_destroy(&event->mutex);
+        return PJ_RETURN_OS_ERROR(prc);
+    }
+
     event->auto_reset = !manual_reset;
     event->threads_waiting = 0;
 
