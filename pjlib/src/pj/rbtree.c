@@ -419,8 +419,8 @@ PJ_DEF(unsigned) pj_rbtree_min_height( pj_rbtree *tree,
     if (node==NULL) 
         node=tree->root;
     
-    l = (node->left != tree->null) ? pj_rbtree_max_height(tree,node->left)+1 : 0;
-    r = (node->right != tree->null) ? pj_rbtree_max_height(tree,node->right)+1 : 0;
+    l = (node->left != tree->null) ? pj_rbtree_min_height(tree,node->left)+1 : 0;
+    r = (node->right != tree->null) ? pj_rbtree_min_height(tree,node->right)+1 : 0;
     return l > r ? r : l;
 }
 
