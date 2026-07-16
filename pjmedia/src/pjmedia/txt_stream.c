@@ -1134,20 +1134,27 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si, pj_pool_t *pool,
                                            &si->enc_fmtp) == PJ_SUCCESS) {
             si->tx_red_level = 0;
             for (i = 0; i < si->enc_fmtp.cnt; ++i) {
-                /* Check for 'redundancy=97/98' */
-                if (pj_strcmp(&si->enc_fmtp.param[i].name, &ID_RED_PARAM) ==
-                    0) {
-                    /* Count slashes or commas in value to determine depth */
-                    const char *p = si->enc_fmtp.param[i].val.ptr;
-                    for (r = 0; r < si->enc_fmtp.param[i].val.slen; ++r) {
-                        if (p[r] == '/')
-                            si->tx_red_level++;
-                    }
-                    break;
+                const char *p;
+                /* Accept either a non-standard named parameter (redundancy=)
+                 * or the standard RFC 2198 slash-separated PT list.
+                 */
+                if (si->enc_fmtp.param[i].name.slen != 0 &&
+                    pj_strcmp(&si->enc_fmtp.param[i].name, &ID_RED_PARAM) !=
+                        0) {
+                    continue;
                 }
-                /* Fallback: Nameless parameter count */
-                if (si->enc_fmtp.param[i].name.slen == 0)
-                    si->tx_red_level++;
+
+                p = si->enc_fmtp.param[i].val.ptr;
+                for (r = 0; r < si->enc_fmtp.param[i].val.slen; ++r) {
+                    if (p[r] == '/')
+                        si->tx_red_level++;
+                }
+                /* If fmtp was tokenized into multiple params (e.g. separated
+                 * by ';'), redundancy level is token count minus one.
+                 */
+                if (si->tx_red_level == 0 && si->enc_fmtp.cnt > 1)
+                    si->tx_red_level = (int) si->enc_fmtp.cnt - 1;
+                break;
             }
         }
     }
