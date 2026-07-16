@@ -432,10 +432,22 @@ on_return:
     if (rc != PJ_SUCCESS) {
         if (key && key->grp_lock)
             pj_grp_lock_dec_ref_dbg(key->grp_lock, "ioqueue", 0);
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+        if (key) {
+            /* Return the pre-created key to the free list instead of leaking
+             * it (it was removed from the free list above). init_key() cannot
+             * fail in SAFE_UNREG mode, so a non-NULL key here is fully
+             * initialized and safe to recycle.
+             */
+            key->ref_count = 0;
+            pj_list_push_back(&ioqueue->free_list, key);
+            key = NULL;
+        }
+#endif
     }
     *p_key = key;
     pj_lock_release(ioqueue->lock);
-    
+
     return rc;
 }
 
