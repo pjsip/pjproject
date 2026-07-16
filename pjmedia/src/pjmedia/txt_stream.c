@@ -421,7 +421,7 @@ static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
 
     char frm_type;
     char frm_buf[MAX_TEXT_FRAME_SIZE];
-    pj_size_t frm_size = sizeof(frm_buf);
+    pj_size_t frm_size;
     pj_uint32_t ts;
     int popped_seq;
     char *text_ptr = NULL;
@@ -431,10 +431,12 @@ static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
     pj_mutex_lock(c_strm->jb_mutex);
 
     do {
-        /* Reset frm_size for every iteration to prevent truncation */
+        /* Initialize state to detect uninitialized returns */
+        popped_seq = -1;
+        ts = 0;
         frm_size = sizeof(frm_buf);
 
-        /* Pop the frame from the jitter buffer. */
+        /* Pop the frame from the jitter buffer */
         pjmedia_jbuf_get_frame3(c_strm->jb, frm_buf, &frm_size, &frm_type, NULL,
                                 &ts, &popped_seq);
 
@@ -446,17 +448,24 @@ static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
 
         /* Handle missing frames */
         if (frm_type != PJMEDIA_JB_NORMAL_FRAME) {
-            if (frm_type == PJMEDIA_JB_MISSING_FRAME && stream->cb) {
-                /* Inject U+FFFD (replacement char) for lost packets */
-                pjmedia_txt_stream_data data;
-                data.seq = popped_seq;
-                data.ts = ts;
-                data.text.ptr = "\xEF\xBF\xBD";
-                data.text.slen = 3;
+            if (frm_type == PJMEDIA_JB_MISSING_FRAME) {
+                /* break if jitter buffer didn't provide a sequence */
+                if (popped_seq == -1) {
+                    break;
+                }
 
-                pj_mutex_unlock(c_strm->jb_mutex);
-                (*stream->cb)(stream, stream->cb_user_data, &data);
-                pj_mutex_lock(c_strm->jb_mutex);
+                if (stream->cb) {
+                    /* Inject U+FFFD (replacement char) for lost packets */
+                    pjmedia_txt_stream_data data;
+                    data.seq = popped_seq;
+                    data.ts = ts;
+                    data.text.ptr = "\xEF\xBF\xBD";
+                    data.text.slen = 3;
+
+                    pj_mutex_unlock(c_strm->jb_mutex);
+                    (*stream->cb)(stream, stream->cb_user_data, &data);
+                    pj_mutex_lock(c_strm->jb_mutex);
+                }
             }
             continue;
         }
