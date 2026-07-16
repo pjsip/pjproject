@@ -547,7 +547,13 @@ on_return:
              * it (it was removed from the free list above). init_key() cannot
              * fail in SAFE_UNREG mode, so a non-NULL key here is fully
              * initialized and safe to recycle.
+             *
+             * This error path is reached before the key is added to the
+             * active list / epoll set, so no other thread references it;
+             * unlike the scan_closing_keys() recycle it is safe to clear
+             * grp_lock here (init_key() re-sets it on the next reuse).
              */
+            key->grp_lock = NULL;
             key->ref_count = 0;
             pj_list_push_back(&ioqueue->free_list, key);
             key = NULL;
