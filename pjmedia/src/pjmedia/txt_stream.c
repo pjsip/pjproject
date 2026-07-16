@@ -746,12 +746,12 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
     pt_to_use = use_red ? stream->si.tx_red_pt : channel->pt;
 
     /* Calculate RTP timestamp increment based on actual elapsed time */
-    if (rtp_ts_len == 0) {
-        if (is_first_packet) {
-            rtp_ts_len = 20;
-        } else {
-            rtp_ts_len = pj_elapsed_msec(&stream->tx_last_ts, &now);
-        }
+    if (is_first_packet) {
+        /* Use a small initial increment; absolute RTP TS base is arbitrary */
+        rtp_ts_len = 20;
+    } else if (rtp_ts_len == 0) {
+        rtp_ts_len = pj_elapsed_msec(&stream->tx_last_ts, &now);
+
         if (rtp_ts_len == 0)
             rtp_ts_len = 1;
     }
@@ -1138,40 +1138,44 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si, pj_pool_t *pool,
         }
     }
 
-    /* Parse Redundancy Level */
+    /* Parse Redundancy Level using a temporary struct */
     if (rem_red_pt > 0) {
+        pjmedia_codec_fmtp red_fmtp;
+        pj_bzero(&red_fmtp, sizeof(red_fmtp));
+
         if (pjmedia_stream_info_parse_fmtp(pool, rem_m, rem_red_pt,
-                                           &si->enc_fmtp) == PJ_SUCCESS) {
+                                           &red_fmtp) == PJ_SUCCESS) {
             si->tx_red_level = 0;
-            for (i = 0; i < si->enc_fmtp.cnt; ++i) {
+            for (i = 0; i < red_fmtp.cnt; ++i) {
                 const char *p;
                 /* Accept either a non-standard named parameter (redundancy=)
                  * or the standard RFC 2198 slash-separated PT list.
                  */
-                if (si->enc_fmtp.param[i].name.slen != 0 &&
-                    pj_strcmp(&si->enc_fmtp.param[i].name, &ID_RED_PARAM) !=
-                        0) {
+                if (red_fmtp.param[i].name.slen != 0 &&
+                    pj_strcmp(&red_fmtp.param[i].name, &ID_RED_PARAM) != 0) {
                     continue;
                 }
 
-                p = si->enc_fmtp.param[i].val.ptr;
-                for (r = 0; r < si->enc_fmtp.param[i].val.slen; ++r) {
+                p = red_fmtp.param[i].val.ptr;
+                for (r = 0; r < red_fmtp.param[i].val.slen; ++r) {
                     if (p[r] == '/')
                         si->tx_red_level++;
                 }
-                /* If fmtp was tokenized into multiple params (e.g. separated
-                 * by ';'), redundancy level is token count minus one.
-                 */
-                if (si->tx_red_level == 0 && si->enc_fmtp.cnt > 1)
-                    si->tx_red_level = (int) si->enc_fmtp.cnt - 1;
+
+                /* If fmtp was tokenized into multiple params */
+                if (si->tx_red_level == 0 && red_fmtp.cnt > 1)
+                    si->tx_red_level = (int) red_fmtp.cnt - 1;
                 break;
             }
         }
     }
 
-    if (si->rx_red_pt > 0) {
-        pjmedia_stream_info_parse_fmtp(pool, local_m, si->rx_red_pt,
-                                       &si->dec_fmtp);
+    /* Populate enc_fmtp/dec_fmtp with the BASE T.140 codec parameters */
+    if (si->tx_pt > 0) {
+        pjmedia_stream_info_parse_fmtp(pool, rem_m, si->tx_pt, &si->enc_fmtp);
+    }
+    if (si->rx_pt > 0) {
+        pjmedia_stream_info_parse_fmtp(pool, local_m, si->rx_pt, &si->dec_fmtp);
     }
 
     /* Set fmt */
