@@ -418,7 +418,6 @@ pjmedia_txt_stream_get_info(const pjmedia_txt_stream *stream,
 static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
 {
     pjmedia_stream_common *c_strm = &stream->base;
-    PJ_UNUSED_ARG(now);
 
     char frm_type;
     char frm_buf[MAX_TEXT_FRAME_SIZE];
@@ -426,6 +425,8 @@ static void call_cb(pjmedia_txt_stream *stream, pj_bool_t now)
     pj_uint32_t ts;
     int popped_seq;
     char *text_ptr = NULL;
+
+    PJ_UNUSED_ARG(now);
 
     pj_mutex_lock(c_strm->jb_mutex);
 
