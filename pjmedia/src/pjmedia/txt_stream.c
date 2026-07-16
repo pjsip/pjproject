@@ -846,21 +846,28 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
                     c_strm->last_frm_ts_sent = c_strm->rtcp.stat.rtp_tx_last_ts;
 #endif
-                }
-            }
 
-            /* Shift the register: BOM becomes history for the next packet */
-            for (i = NUM_BUFFERS - 1; i > 0; i--) {
-                stream->tx_buf[i] = stream->tx_buf[i - 1];
+                    /* Shift the register: BOM becomes history for the next
+                     * packet */
+                    for (i = NUM_BUFFERS - 1; i > 0; i--) {
+                        stream->tx_buf[i] = stream->tx_buf[i - 1];
+                    }
+
+                    is_first_packet = PJ_FALSE;
+                    stream->is_idle = PJ_FALSE;
+                    rtp_ts_len =
+                        10; /* TS advance for the actual character packet */
+                }
             }
 
             /* Restore the user's typed character */
             stream->tx_buf[0].length = temp_len;
             pj_memcpy(stream->tx_buf[0].buf, temp_buf, temp_len);
 
-            is_first_packet = PJ_FALSE;
-            stream->is_idle = PJ_FALSE;
-            rtp_ts_len = 10; /* TS advance for the actual character packet */
+            /* If the BOM failed to send, abort */
+            if (status != PJ_SUCCESS) {
+                goto on_return;
+            }
         }
     }
 
