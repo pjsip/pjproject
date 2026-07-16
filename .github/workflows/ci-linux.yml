@@ -701,7 +701,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y nasm
+      run: sudo apt-get update && sudo apt-get install -y nasm gdb
     - name: get openh264
       run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
@@ -723,14 +723,38 @@ jobs:
         export ASAN_OPTIONS="halt_on_error=1"
         ARCH=$(make --no-print-directory -s infotarget)
         cd pjsip/bin
+        # Run in the background (log streamed to the console by tail) so a
+        # watchdog can dump thread stacks and kill the binary if it hangs.
+        # Without this a deadlock is a silent 45-minute job timeout with no
+        # diagnostics. A healthy run finishes in ~8 minutes (ramp is capped
+        # at 5 min by the binary, stress phase is 6 min), so 15 is generous.
+        ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 > stress.log 2>&1 &
+        app_pid=$!
+        tail --pid=$app_pid -n +1 -f stress.log &
+        (
+          sleep 900
+          if kill -0 $app_pid 2>/dev/null; then
+            {
+              echo ""
+              echo "=== pjsua_stress watchdog: still running after 900 s, dumping thread stacks ==="
+              sudo gdb -p $app_pid -batch -ex "thread apply all bt" 2>&1
+            } >> stress.log
+            touch watchdog.fired
+            kill -9 $app_pid 2>/dev/null
+          fi
+        ) > /dev/null 2>&1 &
+        watchdog_pid=$!
         # Temporarily disable errexit so a crashed binary doesn't kill the
-        # step before we capture PIPESTATUS and decode the backtrace.
-        # DON'T use `|| :` here — `:` runs as a single-command pipeline
-        # that resets PIPESTATUS to (0), masking the real exit code.
+        # step before we capture the exit code and decode the backtrace.
         set +e
-        ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 2>&1 | tee stress.log
-        rc=${PIPESTATUS[0]}
+        wait $app_pid
+        rc=$?
         set -e
+        kill $watchdog_pid 2>/dev/null || true
+        if [ -f watchdog.fired ]; then
+          echo "::error::pjsua-stress hung; watchdog killed it after 900 s, thread stacks are in the uploaded stress.log"
+          exit 124
+        fi
         # If our crash handler dumped a backtrace, resolve the static-frame
         # offsets via addr2line so the names land in the uploaded log.
         if grep -q "=== pjsua_stress backtrace ===" stress.log; then
@@ -769,7 +793,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y nasm
+      run: sudo apt-get update && sudo apt-get install -y nasm gdb
     - name: get openh264
       run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
@@ -790,14 +814,38 @@ jobs:
         export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp halt_on_error=1"
         ARCH=$(make --no-print-directory -s infotarget)
         cd pjsip/bin
+        # Run in the background (log streamed to the console by tail) so a
+        # watchdog can dump thread stacks and kill the binary if it hangs.
+        # Without this a deadlock is a silent 45-minute job timeout with no
+        # diagnostics. A healthy run finishes in ~8 minutes (ramp is capped
+        # at 5 min by the binary, stress phase is 6 min), so 15 is generous.
+        ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 > stress.log 2>&1 &
+        app_pid=$!
+        tail --pid=$app_pid -n +1 -f stress.log &
+        (
+          sleep 900
+          if kill -0 $app_pid 2>/dev/null; then
+            {
+              echo ""
+              echo "=== pjsua_stress watchdog: still running after 900 s, dumping thread stacks ==="
+              sudo gdb -p $app_pid -batch -ex "thread apply all bt" 2>&1
+            } >> stress.log
+            touch watchdog.fired
+            kill -9 $app_pid 2>/dev/null
+          fi
+        ) > /dev/null 2>&1 &
+        watchdog_pid=$!
         # Temporarily disable errexit so a crashed binary doesn't kill the
-        # step before we capture PIPESTATUS and decode the backtrace.
-        # DON'T use `|| :` here — `:` runs as a single-command pipeline
-        # that resets PIPESTATUS to (0), masking the real exit code.
+        # step before we capture the exit code and decode the backtrace.
         set +e
-        ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 2>&1 | tee stress.log
-        rc=${PIPESTATUS[0]}
+        wait $app_pid
+        rc=$?
         set -e
+        kill $watchdog_pid 2>/dev/null || true
+        if [ -f watchdog.fired ]; then
+          echo "::error::pjsua-stress hung; watchdog killed it after 900 s, thread stacks are in the uploaded stress.log"
+          exit 124
+        fi
         # If our crash handler dumped a backtrace, resolve the static-frame
         # offsets via addr2line so the names land in the uploaded log.
         if grep -q "=== pjsua_stress backtrace ===" stress.log; then
