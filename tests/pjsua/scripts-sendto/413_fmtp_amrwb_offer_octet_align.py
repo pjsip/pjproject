@@ -25,6 +25,6 @@ extra_headers = ""
 include = ["octet-align=1"]	# response must include 'octet-align=1'
 exclude = []
 
-sendto_cfg = sip.SendtoCfg("AMR-WB negotiation should response with fmtp 'octet-align=1'", pjsua_args, sdp, 200,
+sendto_cfg = sip.SendtoCfg("AMR-WB negotiation should respond with fmtp 'octet-align=1'", pjsua_args, sdp, 200,
 			   extra_headers=extra_headers,
 			   resp_inc=include, resp_exc=exclude)

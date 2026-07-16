@@ -25,6 +25,6 @@ extra_headers = ""
 include = [""]
 exclude = ["octet-align=1"]	# response must not include fmtp 'octet-align=1'
 
-sendto_cfg = sip.SendtoCfg("AMR-WB negotiation should not contain 'octet-align=1'", pjsua_args, sdp, 200,
+sendto_cfg = sip.SendtoCfg("AMR-WB negotiation (offer with octet-align=0) should not contain 'octet-align=1'", pjsua_args, sdp, 200,
 			   extra_headers=extra_headers,
 			   resp_inc=include, resp_exc=exclude)
