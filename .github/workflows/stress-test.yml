@@ -66,7 +66,11 @@ jobs:
           # diagnostics. A healthy run finishes in ~20 minutes (ramp is
           # capped at 5 min by the binary, stress phase is 10 min), so 25 is
           # generous.
-          ./pjsua-stress-$ARCH -n 1024 -v 32 -t 8 --duration 600 --log-level 4 > stress.log 2>&1 &
+          # stdbuf -oL -eL: with stdout redirected to a file it is block-
+          # buffered by default, so on a hang the watchdog's kill -9 drops the
+          # last unflushed buffer (the lines right before the freeze). Line-
+          # buffering keeps the log complete up to the moment of the kill.
+          stdbuf -oL -eL ./pjsua-stress-$ARCH -n 1024 -v 32 -t 8 --duration 600 --log-level 4 > stress.log 2>&1 &
           app_pid=$!
           tail --pid=$app_pid -n +1 -f stress.log &
           (
