@@ -112,8 +112,14 @@ PJ_IDEF(void*) pj_pool_calloc( pj_pool_t *pool, pj_size_t count, pj_size_t size)
      * the wrapped (small) product would be allocated while the caller assumes
      * it received count*size bytes, leading to a heap overflow at the caller.
      */
-    if (count != 0 && size > ((pj_size_t)-1) / count)
+    if (count != 0 && size > ((pj_size_t)-1) / count) {
+        /* Treat overflow as an allocation failure so callers that rely on the
+         * pool's no-memory callback (e.g. throwing PJ_NO_MEMORY_EXCEPTION)
+         * instead of checking for NULL get consistent behavior.
+         */
+        (*pool->callback)(pool, (pj_size_t)-1);
         return NULL;
+    }
 
     buf = pj_pool_alloc( pool, size*count);
     if (buf)

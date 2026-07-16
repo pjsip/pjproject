@@ -102,6 +102,10 @@ PJ_DEF(pj_pool_t*) pj_pool_create_on_buf(const char *name,
          * strict-alignment CPUs.
          */
         pj_size_t pad = PJ_POOL_ALIGNMENT - align_diff;
+        /* Reject a buffer too small to align, otherwise size -= pad would
+         * underflow (size is unsigned).
+         */
+        PJ_ASSERT_RETURN(size > pad, NULL);
         buf = (void*) (((char*)buf) + pad);
         size -= pad;
     }
