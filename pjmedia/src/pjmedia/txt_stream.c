@@ -1121,8 +1121,8 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si, pj_pool_t *pool,
         }
     }
 
-    si->tx_red_pt = (pj_uint8_t) rem_red_pt;
-    si->tx_pt = (pj_uint8_t) rem_t140_pt;
+si->tx_red_pt = 0;
+si->tx_pt = (pj_uint8_t) rem_t140_pt;
 
     /* Parse Local PTs */
     for (fmti = 0; fmti < local_m->desc.fmt_count; ++fmti) {
