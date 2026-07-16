@@ -108,7 +108,7 @@ jobs:
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
+      run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev libopencore-amrwb-dev libvo-amrwbenc-dev
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
@@ -143,6 +143,8 @@ jobs:
         cat pjsua-caps
     - name: ensure AMR codec is installed
       run: cat pjsua-caps | grep -E 'AMR/8000'
+    - name: ensure AMR-WB codec is installed
+      run: cat pjsua-caps | grep -E 'AMR-WB/16000'
     - name: pjsua-test
       run: make pjsua-test
     - name: upload artifacts on failure
@@ -301,7 +303,7 @@ jobs:
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y swig nasm sip-tester libvpx-dev libopencore-amrnb-dev libsdl2-dev
+      run: sudo apt-get update && sudo apt-get install -y swig nasm sip-tester libvpx-dev libopencore-amrnb-dev libopencore-amrwb-dev libvo-amrwbenc-dev libsdl2-dev
     - name: get openh264
       run: git clone --depth 1 --single-branch --branch openh264v2.1.0 https://github.com/cisco/openh264.git
     - name: build openh264
@@ -341,6 +343,8 @@ jobs:
         cat pjsua-caps
     - name: ensure AMR codec is installed
       run: cat pjsua-caps | grep -E 'AMR/8000'
+    - name: ensure AMR-WB codec is installed
+      run: cat pjsua-caps | grep -E 'AMR-WB/16000'
     - name: ensure H264 codec is installed
       run: cat pjsua-caps | grep -E 'H264/'
     - name: ensure VP8 codec is installed
@@ -525,7 +529,7 @@ jobs:
         git clone --depth 1 https://github.com/pjsip/cirunner.git
         cirunner/installlinux.sh
     - name: install dependencies
-      run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev
+      run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev libopencore-amrwb-dev libvo-amrwbenc-dev
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo -e "#define PJ_IOQUEUE_CALLBACK_NO_LOCK 0\n#define PJMEDIA_CONF_BACKEND PJMEDIA_CONF_PARALLEL_BRIDGE_BACKEND\n#define PJMEDIA_CONF_THREADS 4" >> config_site.h
     - name: configure
