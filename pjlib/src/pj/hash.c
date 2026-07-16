@@ -107,7 +107,10 @@ PJ_DEF(pj_hash_table_t*) pj_hash_create(pj_pool_t *pool, unsigned size)
     table_size = 8;
     do {
         table_size <<= 1;    
-    } while (table_size < size);
+    } while (table_size < size && table_size <= 0x40000000);
+    /* The upper bound above caps table_size at 2^31 so the left shift cannot
+     * overflow to 0 (which would loop forever) for a very large 'size'.
+     */
     table_size -= 1;
     
     h->rows = table_size;
