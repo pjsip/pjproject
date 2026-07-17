@@ -2606,9 +2606,17 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
                           &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
                           buf);
                 } else {
-                    pj_strdup2(pool, 
-                          &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name, 
-                          (char*)p);
+                    /* Preserve the explicit ASN.1 string length instead of
+                     * treating the data as a NUL-terminated C string. A DNS
+                     * SAN such as "host.example\0.attacker" would otherwise be
+                     * truncated at the embedded NUL, letting a crafted cert be
+                     * accepted for the prefix hostname (identity bypass).
+                     */
+                    pj_str_t tmp;
+                    pj_strset(&tmp, (char*)p, len);
+                    pj_strdup_with_null(pool,
+                          &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
+                          &tmp);
                     OPENSSL_free(p);
                 }
                 ci->subj_alt_name.cnt++;
