@@ -41,5 +41,5 @@ test_param = TestParam(
 # support compiled in (PJ_HAS_SSL_SOCK == 0, e.g. configured with
 # --disable-ssl). SIPS mandates a secure (TLS) hop, so it can't run
 # without it either.
-if not util.has_ssl_sock():
+if not util.has_ssl_sock(G_EXE):
     test_param.skip = True

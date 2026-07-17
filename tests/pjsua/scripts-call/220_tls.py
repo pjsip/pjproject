@@ -36,5 +36,5 @@ test_param = TestParam(
 # Skip this test if the build under test doesn't have TLS transport
 # support compiled in (PJ_HAS_SSL_SOCK == 0, e.g. configured with
 # --disable-ssl).
-if not util.has_ssl_sock():
+if not util.has_ssl_sock(G_EXE):
     test_param.skip = True
