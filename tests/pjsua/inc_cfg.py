@@ -13,6 +13,7 @@ DEFAULT_START_TELNET_PORT = 60000
 # Shared vars
 ARGS = []		# arguments containing script module & config
 HAS_SND_DEV = config_site.HAS_SND_DEV
+G_EXE = ""		# pjsua executable path (set by run.py once resolved)
 
 # Individual pjsua instance configuration class
 class InstanceParam:

@@ -138,8 +138,8 @@ def test_func(t):
         caller.send("call hold")
     else:
         caller.send("H")
-    caller.expect("INVITE sip:")
-    callee.expect("INVITE sip:")
+    caller.expect("INVITE sips?:")
+    callee.expect("INVITE sips?:")
     callee.expect(const.MEDIA_HOLD)
     caller.expect(const.MEDIA_HOLD)
     
@@ -153,8 +153,8 @@ def test_func(t):
         caller.send("call reinvite")
     else:
         caller.send("v")
-    caller.expect("INVITE sip:")
-    callee.expect("INVITE sip:")
+    caller.expect("INVITE sips?:")
+    callee.expect("INVITE sips?:")
     callee.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
     caller.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
 
@@ -179,8 +179,8 @@ def test_func(t):
         callee.send("call hold")
     else:
         callee.send("H")
-    callee.expect("INVITE sip:")
-    caller.expect("INVITE sip:")
+    callee.expect("INVITE sips?:")
+    caller.expect("INVITE sips?:")
     caller.expect(const.MEDIA_HOLD)
     callee.expect(const.MEDIA_HOLD)
     
@@ -194,8 +194,8 @@ def test_func(t):
         callee.send("call reinvite")
     else:
         callee.send("v")
-    callee.expect("INVITE sip:")
-    caller.expect("INVITE sip:")
+    callee.expect("INVITE sips?:")
+    caller.expect("INVITE sips?:")
     caller.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
     callee.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
 
@@ -244,8 +244,8 @@ def test_func(t):
         callee.send("call update")
     else:
         callee.send("U")
-    callee.expect("UPDATE sip:")
-    caller.expect("UPDATE sip:")
+    callee.expect("UPDATE sips?:")
+    caller.expect("UPDATE sips?:")
     caller.expect(const.MEDIA_ACTIVE, title="waiting for media active with UPDATE")
     callee.expect(const.MEDIA_ACTIVE, title="waiting for media active with UPDATE")
     
@@ -319,8 +319,8 @@ def test_func(t):
         caller.send("call update")
     else:
         caller.send("U")
-    caller.expect("UPDATE sip:")
-    callee.expect("UPDATE sip:")
+    caller.expect("UPDATE sips?:")
+    callee.expect("UPDATE sips?:")
     callee.expect("SIP/2.0 488")
     caller.expect("SIP/2.0 488")
     caller.sync_stdout()
@@ -343,7 +343,11 @@ def test_func(t):
     callee.expect(const.STATE_DISCONNECTED)
     
 
-# Here where it all comes together
+# Here where it all comes together. A config script may supply its own
+# test_func (via TestParam(..., func=...)) if the generic call flow
+# below (hold/reinvite/update/DTMF) doesn't fit its scenario; otherwise
+# fall back to the generic one.
 test = cfg_file.test_param
-test.test_func = test_func
+if test.test_func is None:
+    test.test_func = test_func
 
