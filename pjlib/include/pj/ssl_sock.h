@@ -1045,6 +1045,14 @@ typedef struct pj_ssl_sock_info
     void *native_ssl;
 
     /**
+     * Describes whether the established connection resumed a previous TLS
+     * session (abbreviated handshake) instead of performing a full handshake.
+     * Only meaningful when \a established is PJ_TRUE. Currently only set by
+     * the OpenSSL backend.
+     */
+    pj_bool_t session_reused;
+
+    /**
      * The DER-encoded OCSP response stapled by the peer during handshake
      * (client side only), when OCSP stapling is requested via
      * pj_ssl_sock_param.enable_ocsp_stapling. The buffer is owned by the
@@ -1363,6 +1371,19 @@ typedef struct pj_ssl_sock_param
      * Default: PJ_FALSE
      */
     pj_bool_t enable_ocsp_stapling;
+
+    /**
+     * Specify if TLS session reuse (resumption) is enabled. When acting as
+     * client, the backend will cache sessions per server name (see
+     * \a server_name) and resume them on subsequent connections, avoiding a
+     * full handshake. When acting as server, the backend will issue session
+     * tickets (including TLS 1.3 tickets) so clients can resume.
+     *
+     * Currently only implemented by the OpenSSL backend.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t enable_session_reuse;
 
 } pj_ssl_sock_param;
 

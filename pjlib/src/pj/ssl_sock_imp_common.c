@@ -1807,6 +1807,8 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
     {
         ossl_sock_t *ossock = (ossl_sock_t *)ssock;
         info->native_ssl = ossock->ossl_ssl;
+        if (info->established && ossock->ossl_ssl)
+            info->session_reused = SSL_session_reused(ossock->ossl_ssl);
 
         if (!ssock->is_server) {
             /* OCSP response stapled by the peer (client side) */
