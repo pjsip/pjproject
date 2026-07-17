@@ -75,7 +75,7 @@
 #define JBUF_MAX_COUNT 8
 
 /* Maximum size of a single text frame in bytes */
-#define MAX_TEXT_FRAME_SIZE 512
+#define MAX_TEXT_FRAME_SIZE PJMEDIA_MAX_MTU
 
 /* Buffer to store redundancy and primary data. */
 typedef struct red_buf {
@@ -286,8 +286,8 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
-    /* Create encoder channel: */
-    buf_size = BUFFER_SIZE;
+    /* Create encoder channel: accommodate full RED headers and history */
+    buf_size = PJMEDIA_MAX_MTU;
     status = create_channel(pool, c_strm, PJMEDIA_DIR_ENCODING, info->tx_pt,
                             buf_size, c_strm->si, &c_strm->enc);
     if (status != PJ_SUCCESS)
@@ -559,8 +559,17 @@ static pj_status_t decode_red(pjmedia_txt_stream *stream, unsigned pt, int seq,
             }
         }
 
-        /* Inject everything we missed, even length=0 frames! */
+        /* Inject explicitly empty frames for tracking missing sequences */
         diff = (pj_int16_t) (block_seq - stream->rx_last_seq);
+        if (stream->rx_last_seq != -1 && diff > 1) {
+            pj_uint16_t missing_seq = stream->rx_last_seq + 1;
+            while (missing_seq != block_seq) {
+                pjmedia_jbuf_put_frame(stream->base.jb, "", 0, missing_seq);
+                missing_seq++;
+            }
+        }
+
+        /* Inject everything we missed, even length=0 frames! */
         if (stream->rx_last_seq == -1 || diff > 0) {
             pjmedia_jbuf_put_frame(stream->base.jb, data_ptr, data_len,
                                    block_seq);
@@ -634,6 +643,16 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
     } else if (hdr->pt == c_strm->si->rx_pt) {
         /* Fallback: Route T.140 directly to Jitter Buffer */
         diff = (pj_int16_t) (seq - stream->rx_last_seq);
+
+        /* Inject explicitly empty frames for tracking missing sequences */
+        if (stream->rx_last_seq != -1 && diff > 1) {
+            pj_uint16_t missing_seq = stream->rx_last_seq + 1;
+            while (missing_seq != seq) {
+                pjmedia_jbuf_put_frame(c_strm->jb, "", 0, missing_seq);
+                missing_seq++;
+            }
+        }
+
         if (stream->rx_last_seq == -1 || diff > 0) {
             pjmedia_jbuf_put_frame(c_strm->jb, payload, payloadlen, seq);
             stream->rx_last_seq = seq;
@@ -800,8 +819,7 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
         void *bom_rtphdr;
         int bom_size;
         pj_uint32_t bom_ts;
-        char temp_buf[BUFFER_SIZE];
-        unsigned temp_len;
+        char bom_payload[3] = {(char) 0xEF, (char) 0xBB, (char) 0xBF};
 
         /* M=1 (Marker bit) for the first packet of a talkspurt */
         status = pjmedia_rtp_encode_rtp(&channel->rtp, pt_to_use, 1,
@@ -811,75 +829,65 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
             pj_memcpy(channel->buf, bom_rtphdr, sizeof(pjmedia_rtp_hdr));
             bom_ts = pj_ntohl(((pjmedia_rtp_hdr *) bom_rtphdr)->ts);
 
-            /* Back up the actual character the user typed */
-            temp_len = stream->tx_buf[0].length;
-            pj_memcpy(temp_buf, stream->tx_buf[0].buf, temp_len);
-
-            /* Load the BOM into the active slot */
-            stream->tx_buf[0].buf[0] = 0xEF;
-            stream->tx_buf[0].buf[1] = 0xBB;
-            stream->tx_buf[0].buf[2] = 0xBF;
-            stream->tx_buf[0].length = 3;
-            stream->tx_buf[0].timestamp = bom_ts;
-
-            for (i = 1; i < NUM_BUFFERS; i++) {
-                stream->tx_buf[i].length = 0;
-                stream->tx_buf[i].timestamp = bom_ts;
-            }
-
             if (use_red) {
-                /* Encode the BOM with forced empty redundant headers */
+                red_buf real_tx_buf[NUM_BUFFERS];
+                red_buf temp_tx_buf[NUM_BUFFERS];
+
+                /* Construct local RED history leaving stream->tx_buf untouched
+                 */
+                pj_bzero(temp_tx_buf, sizeof(temp_tx_buf));
+                temp_tx_buf[0].timestamp = bom_ts;
+                temp_tx_buf[0].length = 3;
+                pj_memcpy(temp_tx_buf[0].buf, bom_payload, 3);
+                for (i = 1; i < NUM_BUFFERS; i++)
+                    temp_tx_buf[i].timestamp = bom_ts;
+
+                /* Swap buffer context for encode_red */
+                pj_memcpy(real_tx_buf, stream->tx_buf, sizeof(real_tx_buf));
+                pj_memcpy(stream->tx_buf, temp_tx_buf, sizeof(temp_tx_buf));
+
                 bom_size = (int) channel->buf_size - sizeof(pjmedia_rtp_hdr);
                 status = encode_red(
                     stream, (unsigned) stream->si.tx_pt,
                     ((char *) channel->buf) + sizeof(pjmedia_rtp_hdr),
                     &bom_size, PJ_TRUE);
+
+                /* Restore original state */
+                pj_memcpy(stream->tx_buf, real_tx_buf, sizeof(real_tx_buf));
             } else {
-                /* Direct payload copy for non-redundant BOM */
-                bom_size = stream->tx_buf[0].length;
+                bom_size = 3;
                 pj_memcpy(((char *) channel->buf) + sizeof(pjmedia_rtp_hdr),
-                          stream->tx_buf[0].buf, bom_size);
-                status = PJ_SUCCESS;
+                          bom_payload, 3);
             }
 
             if (status == PJ_SUCCESS) {
+                /* Allocate a local buffer for the BOM */
+                char bom_tx_pkt[PJMEDIA_MAX_MTU];
+                int bom_tx_size = bom_size + sizeof(pjmedia_rtp_hdr);
+
+                /* Copy the payload while the lock is still held */
+                pj_memcpy(bom_tx_pkt, channel->buf, bom_tx_size);
+
                 pj_mutex_unlock(c_strm->jb_mutex);
-                status = pjmedia_transport_send_rtp(
-                    c_strm->transport, channel->buf,
-                    bom_size + sizeof(pjmedia_rtp_hdr));
+                status = pjmedia_transport_send_rtp(c_strm->transport,
+                                                    bom_tx_pkt, bom_tx_size);
                 pj_mutex_lock(c_strm->jb_mutex);
+
                 if (status == PJ_SUCCESS) {
                     hdr = (pjmedia_rtp_hdr *) channel->buf;
-
-                    /* Update RTCP TX stats */
                     pjmedia_rtcp_tx_rtp(&c_strm->rtcp, bom_size);
                     c_strm->rtcp.stat.rtp_tx_last_ts = pj_ntohl(hdr->ts);
                     c_strm->rtcp.stat.rtp_tx_last_seq = pj_ntohs(hdr->seq);
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
                     pj_gettimeofday(&c_strm->last_frm_ts_sent);
 #endif
-
-                    /* Shift the register: BOM becomes history for the next
-                     * packet */
-                    for (i = NUM_BUFFERS - 1; i > 0; i--) {
-                        stream->tx_buf[i] = stream->tx_buf[i - 1];
-                    }
-
                     is_first_packet = PJ_FALSE;
                     stream->is_idle = PJ_FALSE;
-                    rtp_ts_len =
-                        10; /* TS advance for the actual character packet */
+                    rtp_ts_len = 10;
                 }
             }
-
-            /* Restore the user's typed character */
-            stream->tx_buf[0].length = temp_len;
-            pj_memcpy(stream->tx_buf[0].buf, temp_buf, temp_len);
-
-            /* If the BOM failed to send, abort */
-            if (status != PJ_SUCCESS) {
+            if (status != PJ_SUCCESS)
                 goto on_return;
-            }
         }
     }
 
@@ -960,24 +968,39 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
         goto on_return;
     }
 
-    /* Network transmission */
-    pj_mutex_unlock(c_strm->jb_mutex);
-    status = pjmedia_transport_send_rtp(c_strm->transport, channel->buf,
-                                        size + sizeof(pjmedia_rtp_hdr));
-    pj_mutex_lock(c_strm->jb_mutex);
+    /* Network transmission (applies to both BOM and standard payload) */
+    {
+        /* Allocate a local buffer */
+        char tx_pkt[PJMEDIA_MAX_MTU];
+        int tx_size = size + sizeof(pjmedia_rtp_hdr);
+        pj_uint32_t pkt_ts;
+        pj_uint16_t pkt_seq;
 
-    if (status == PJ_SUCCESS) {
+        /* Copy the payload while the lock is still held */
+        pj_memcpy(tx_pkt, channel->buf, tx_size);
+
+        /* Cache the headers to ensure RTCP stats remain accurate */
         hdr = (pjmedia_rtp_hdr *) channel->buf;
-        pj_get_timestamp(&stream->tx_last_ts);
+        pkt_ts = pj_ntohl(hdr->ts);
+        pkt_seq = pj_ntohs(hdr->seq);
 
-        /* Update RTCP TX stats */
-        pjmedia_rtcp_tx_rtp(&c_strm->rtcp, size);
-        c_strm->rtcp.stat.rtp_tx_last_ts = pj_ntohl(hdr->ts);
-        c_strm->rtcp.stat.rtp_tx_last_seq = pj_ntohs(hdr->seq);
+        /* Drop the lock and transmit the local copy */
+        pj_mutex_unlock(c_strm->jb_mutex);
+        status = pjmedia_transport_send_rtp(c_strm->transport, tx_pkt, tx_size);
+        pj_mutex_lock(c_strm->jb_mutex);
+
+        if (status == PJ_SUCCESS) {
+            pj_get_timestamp(&stream->tx_last_ts);
+
+            /* Update RTCP TX stats using the cached headers */
+            pjmedia_rtcp_tx_rtp(&c_strm->rtcp, size);
+            c_strm->rtcp.stat.rtp_tx_last_ts = pkt_ts;
+            c_strm->rtcp.stat.rtp_tx_last_seq = pkt_seq;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
-        pj_gettimeofday(&c_strm->last_frm_ts_sent);
+            pj_gettimeofday(&c_strm->last_frm_ts_sent);
 #endif
+        }
     }
 
 on_return:
