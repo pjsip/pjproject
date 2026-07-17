@@ -559,12 +559,13 @@ static pj_status_t decode_red(pjmedia_txt_stream *stream, unsigned pt, int seq,
             }
         }
 
-        /* Inject explicitly empty frames for tracking missing sequences */
+        /* Report sequences not covered by this RED packet as lost. */
         diff = (pj_int16_t) (block_seq - stream->rx_last_seq);
         if (stream->rx_last_seq != -1 && diff > 1) {
             pj_uint16_t missing_seq = stream->rx_last_seq + 1;
             while (missing_seq != block_seq) {
-                pjmedia_jbuf_put_frame(stream->base.jb, "", 0, missing_seq);
+                pjmedia_jbuf_put_frame(stream->base.jb, "\xEF\xBF\xBD", 3,
+                                       missing_seq);
                 missing_seq++;
             }
         }
@@ -644,11 +645,12 @@ static pj_status_t on_stream_rx_rtp(pjmedia_stream_common *c_strm,
         /* Fallback: Route T.140 directly to Jitter Buffer */
         diff = (pj_int16_t) (seq - stream->rx_last_seq);
 
-        /* Inject explicitly empty frames for tracking missing sequences */
+        /* Report missing T.140 packets as lost text. */
         if (stream->rx_last_seq != -1 && diff > 1) {
             pj_uint16_t missing_seq = stream->rx_last_seq + 1;
             while (missing_seq != seq) {
-                pjmedia_jbuf_put_frame(c_strm->jb, "", 0, missing_seq);
+                pjmedia_jbuf_put_frame(c_strm->jb, "\xEF\xBF\xBD", 3,
+                                       missing_seq);
                 missing_seq++;
             }
         }
