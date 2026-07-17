@@ -856,7 +856,7 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
                     c_strm->rtcp.stat.rtp_tx_last_ts = pj_ntohl(hdr->ts);
                     c_strm->rtcp.stat.rtp_tx_last_seq = pj_ntohs(hdr->seq);
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
-                    c_strm->last_frm_ts_sent = c_strm->rtcp.stat.rtp_tx_last_ts;
+                    pj_gettimeofday(&c_strm->last_frm_ts_sent);
 #endif
 
                     /* Shift the register: BOM becomes history for the next
@@ -976,7 +976,7 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
         c_strm->rtcp.stat.rtp_tx_last_seq = pj_ntohs(hdr->seq);
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
-        c_strm->last_frm_ts_sent = c_strm->rtcp.stat.rtp_tx_last_ts;
+        pj_gettimeofday(&c_strm->last_frm_ts_sent);
 #endif
     }
 
