@@ -728,6 +728,9 @@ jobs:
         # Without this a deadlock is a silent 45-minute job timeout with no
         # diagnostics. A healthy run finishes in ~8 minutes (ramp is capped
         # at 5 min by the binary, stress phase is 6 min), so 15 is generous.
+        # Don't wrap this in stdbuf: it injects LD_PRELOAD=libstdbuf.so,
+        # which trips the ASan/TSan runtime link-order check and aborts the
+        # binary at startup ("ASan runtime does not come first").
         ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 > stress.log 2>&1 &
         app_pid=$!
         tail --pid=$app_pid -n +1 -f stress.log &
@@ -819,6 +822,9 @@ jobs:
         # Without this a deadlock is a silent 45-minute job timeout with no
         # diagnostics. A healthy run finishes in ~8 minutes (ramp is capped
         # at 5 min by the binary, stress phase is 6 min), so 15 is generous.
+        # Don't wrap this in stdbuf: it injects LD_PRELOAD=libstdbuf.so,
+        # which trips the ASan/TSan runtime link-order check and aborts the
+        # binary at startup ("ASan runtime does not come first").
         ./pjsua-stress-$ARCH -n 512 -v 16 -t 4 --duration 360 --log-level 4 > stress.log 2>&1 &
         app_pid=$!
         tail --pid=$app_pid -n +1 -f stress.log &
