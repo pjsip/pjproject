@@ -1731,7 +1731,18 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
-    /* Create temporary buffer for immediate decoding */
+    /* Create temporary buffer for immediate decoding, reject decoding size
+     * that is zero, too large, or would overflow the size calculation.
+     */
+    if (vfd_dec->size.w == 0 || vfd_dec->size.h == 0 ||
+        vfd_dec->size.w > PJMEDIA_MAX_VIDEO_DEC_FRAME_SIZE / 4 /
+                          vfd_dec->size.h)
+    {
+        PJ_LOG(3,(THIS_FILE, "Invalid decoding size %dx%d in creating "
+                  "video stream %s",
+                  (int)vfd_dec->size.w, (int)vfd_dec->size.h, name.ptr));
+        goto err_cleanup;
+    }
     stream->dec_max_size = vfd_dec->size.w * vfd_dec->size.h * 4;
     stream->dec_frame.buf = pj_pool_alloc(pool, stream->dec_max_size);
 

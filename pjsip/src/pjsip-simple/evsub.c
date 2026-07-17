@@ -1665,13 +1665,13 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
      * Take note that it could be us that is trying to send a final message,
      * such as final NOTIFY upon unsubscription.
      */
-    if (dlgsub == dlgsub_head ||
-        (dlgsub->sub &&
-            tsx->role == PJSIP_ROLE_UAS &&
+    if (dlgsub == dlgsub_head || dlgsub->sub == NULL ||
+        (tsx->role == PJSIP_ROLE_UAS &&
             pjsip_evsub_get_state(dlgsub->sub)==PJSIP_EVSUB_STATE_TERMINATED))
     {
-        const char *reason_msg = 
-            (dlgsub == dlgsub_head ? "Subscription Does Not Exist" :
+        const char *reason_msg =
+            (dlgsub == dlgsub_head || dlgsub->sub == NULL ?
+             "Subscription Does Not Exist" :
              "Subscription already terminated");
 
         /* This could be incoming request to create new subscription */

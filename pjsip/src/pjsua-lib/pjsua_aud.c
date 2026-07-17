@@ -986,6 +986,21 @@ PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
 
     PJ_ASSERT_RETURN(source >= 0 && sink >= 0, PJ_EINVAL);
 
+    /* Reject out-of-range port IDs gracefully. An upper-bound violation can
+     * occur at run-time (e.g. a port removed by another thread), so return
+     * PJ_EINVAL instead of letting pjmedia_conf_connect_port() abort on its
+     * PJ_ASSERT_RETURN in debug/ASan builds.
+     */
+    if ((unsigned)source >= pjsua_var.media_cfg.max_media_ports ||
+        (unsigned)sink >= pjsua_var.media_cfg.max_media_ports)
+    {
+        PJ_LOG(3,(THIS_FILE, "pjsua_conf_connect(%d, %d) failed: port ID out "
+                             "of range (max_media_ports=%u)",
+                             source, sink,
+                             pjsua_var.media_cfg.max_media_ports));
+        return PJ_EINVAL;
+    }
+
     pj_log_push_indent();
 
     PJSUA_LOCK();
@@ -1142,6 +1157,18 @@ PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
               source, sink));
 
     PJ_ASSERT_RETURN(source >= 0 && sink >= 0, PJ_EINVAL);
+
+    /* Reject out-of-range port IDs gracefully; see pjsua_conf_connect2(). */
+    if ((unsigned)source >= pjsua_var.media_cfg.max_media_ports ||
+        (unsigned)sink >= pjsua_var.media_cfg.max_media_ports)
+    {
+        PJ_LOG(3,(THIS_FILE, "pjsua_conf_disconnect(%d, %d) failed: port ID "
+                             "out of range (max_media_ports=%u)",
+                             source, sink,
+                             pjsua_var.media_cfg.max_media_ports));
+        return PJ_EINVAL;
+    }
+
     pj_log_push_indent();
 
     status = pjmedia_conf_disconnect_port(pjsua_var.mconf, source, sink);

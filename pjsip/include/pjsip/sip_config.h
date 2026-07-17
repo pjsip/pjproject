@@ -500,6 +500,14 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * larger than this value the request will be sent with TCP. This setting
  * is useful only when PJSIP_DONT_SWITCH_TO_TCP is set to 0.
  *
+ * Note that the switch only takes effect when a TCP transport is available to
+ * carry the request: the library upgrades the resolved destination to TCP, but
+ * if no TCP transport has been created/registered, transport acquisition for it
+ * fails; if the sender allows fallback to the next resolved address, the
+ * request may then be sent oversized over UDP. Applications that rely on this
+ * automatic switch should therefore create a TCP transport in addition to the
+ * UDP one.
+ *
  * Default is 1300 bytes.
  */
 #ifndef PJSIP_UDP_SIZE_THRESHOLD

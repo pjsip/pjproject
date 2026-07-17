@@ -785,8 +785,9 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
-    PJ_ASSERT_RETURN(pjsua_var.acc_cnt < PJ_ARRAY_SIZE(pjsua_var.acc),
-                     PJ_ETOOMANY);
+
+    if (pjsua_var.acc_cnt >= PJ_ARRAY_SIZE(pjsua_var.acc))
+        return PJ_ETOOMANY;
 
 #if !PJ_HAS_IPV6
     PJ_ASSERT_RETURN(cfg->ipv6_sip_use == PJSUA_IPV6_DISABLED, PJ_EINVAL);
