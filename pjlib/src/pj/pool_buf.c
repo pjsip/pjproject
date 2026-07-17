@@ -93,11 +93,21 @@ PJ_DEF(pj_pool_t*) pj_pool_create_on_buf(const char *name,
     }
 
     /* Check and align buffer */
-    align_diff = (pj_size_t)buf;
-    if (align_diff & (PJ_POOL_ALIGNMENT-1)) {
-        align_diff &= (PJ_POOL_ALIGNMENT-1);
-        buf = (void*) (((char*)buf) + align_diff);
-        size -= align_diff;
+    align_diff = (pj_size_t)buf & (PJ_POOL_ALIGNMENT-1);
+    if (align_diff != 0) {
+        /* Round the buffer up to the next alignment boundary. The pad is
+         * (ALIGNMENT - misalignment), not the misalignment itself; adding the
+         * misalignment would leave the buffer (and hence the pj_pool_t/
+         * pj_pool_block placed at its start) unaligned, risking SIGBUS on
+         * strict-alignment CPUs.
+         */
+        pj_size_t pad = PJ_POOL_ALIGNMENT - align_diff;
+        /* Reject a buffer too small to align, otherwise size -= pad would
+         * underflow (size is unsigned).
+         */
+        PJ_ASSERT_RETURN(size > pad, NULL);
+        buf = (void*) (((char*)buf) + pad);
+        size -= pad;
     }
 
     param.stack_buf = buf;
