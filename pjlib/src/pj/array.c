@@ -28,11 +28,11 @@ PJ_DEF(void) pj_array_insert( void *array,
                               const void *value)
 {
     if (count && pos < count) {
-        pj_memmove( (char*)array + (pos+1)*elem_size,
-                    (char*)array + pos*elem_size,
+        pj_memmove( (char*)array + (pos+1)*(pj_size_t)elem_size,
+                    (char*)array + pos*(pj_size_t)elem_size,
                     (count-pos)*(pj_size_t)elem_size);
     }
-    pj_memmove((char*)array + pos*elem_size, value, elem_size);
+    pj_memmove((char*)array + pos*(pj_size_t)elem_size, value, elem_size);
 }
 
 PJ_DEF(void) pj_array_erase( void *array,
@@ -41,6 +41,11 @@ PJ_DEF(void) pj_array_erase( void *array,
                              unsigned pos)
 {
     pj_assert(count != 0);
+    /* Guard against count==0 in release builds: count-1 would wrap to a huge
+     * unsigned value and trigger an oversized pj_memmove.
+     */
+    if (count == 0)
+        return;
     if (pos < count-1) {
         pj_memmove( (char*)array + pos*elem_size,
                     (char*)array + (pos+1)*elem_size,

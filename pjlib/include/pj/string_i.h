@@ -187,13 +187,13 @@ PJ_IDEF(int) pj_strncmp( const pj_str_t *str1, const pj_str_t *str2,
     pj_assert(str1->slen >= 0);
     pj_assert(str2->slen >= 0);
 
-    if (len < (unsigned)str1->slen && str1->slen > 0) {
+    if (len < (pj_size_t)str1->slen && str1->slen > 0) {
         copy1.ptr = str1->ptr;
         copy1.slen = len;
         str1 = &copy1;
     }
 
-    if (len < (unsigned)str2->slen && str2->slen > 0) {
+    if (len < (pj_size_t)str2->slen && str2->slen > 0) {
         copy2.ptr = str2->ptr;
         copy2.slen = len;
         str2 = &copy2;
@@ -344,13 +344,13 @@ PJ_IDEF(int) pj_strnicmp( const pj_str_t *str1, const pj_str_t *str2,
 {
     pj_str_t copy1, copy2;
 
-    if (len < (unsigned)str1->slen && str1->slen > 0) {
+    if (len < (pj_size_t)str1->slen && str1->slen > 0) {
         copy1.ptr = str1->ptr;
         copy1.slen = len;
         str1 = &copy1;
     }
 
-    if (len < (unsigned)str2->slen && str2->slen > 0) {
+    if (len < (pj_size_t)str2->slen && str2->slen > 0) {
         copy2.ptr = str2->ptr;
         copy2.slen = len;
         str2 = &copy2;
