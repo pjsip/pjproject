@@ -112,6 +112,11 @@ struct tcp_transport
     pjsip_tx_data_op_key     ka_op_key;
     pj_str_t                 ka_pkt;
 
+    /* Dedicated op key for sending the CRLF keep-alive response ("pong"),
+     * so that it never collides with an in-flight keep-alive ("ping") send.
+     */
+    pjsip_tx_data_op_key     pong_op_key;
+
     /* TCP transport can only have  one rdata!
      * Otherwise chunks of incoming PDU may be received on different
      * buffer.
@@ -735,6 +740,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     tcp->ka_timer.user_data = (void*)tcp;
     tcp->ka_timer.cb = &tcp_keep_alive_timer;
     pj_ioqueue_op_key_init(&tcp->ka_op_key.key, sizeof(pj_ioqueue_op_key_t));
+    pj_ioqueue_op_key_init(&tcp->pong_op_key.key, sizeof(pj_ioqueue_op_key_t));
     pj_strdup(tcp->base.pool, &tcp->ka_pkt, &ka_pkt);
 
     if (is_server && listener->initial_timeout) {
@@ -1402,6 +1408,47 @@ static pj_status_t tcp_shutdown(pjsip_transport *transport)
 /* 
  * Callback from ioqueue that an incoming data is received from the socket.
  */
+#if PJSIP_TCP_KEEP_ALIVE_RESPONSE
+/* RFC 5626 Section 4.4.1 CRLF keep-alive patterns: the accepted "ping" and
+ * the "pong" reply. Defined together in one place, with lengths derived via
+ * sizeof, so both can be adjusted - or made configurable, e.g. a single CRLF
+ * or a longer packet - without touching the scan/response logic. The pong
+ * has static lifetime so it stays valid until the (async) send completes.
+ */
+static const char tcp_crlf_ka_ping[] = { '\r', '\n', '\r', '\n' };
+static const char tcp_crlf_ka_pong[] = { '\r', '\n' };
+
+/* Count the leading bytes of a received buffer that form CRLF keep-alive
+ * "ping"(s), i.e. one or more consecutive ping patterns at the start of the
+ * buffer. Returns 0 if the buffer does not begin with a ping.
+ */
+static pj_size_t tcp_get_crlf_ka_len(const char *data, pj_size_t size,
+                                     pj_size_t *partial_len)
+{
+    const char *ka = tcp_crlf_ka_ping;
+    const pj_size_t ka_sz = sizeof(tcp_crlf_ka_ping);
+    pj_size_t matched = 0, tail;
+
+    while (size - matched >= ka_sz &&
+           pj_memcmp(data + matched, ka, ka_sz) == 0)
+    {
+        matched += ka_sz;
+    }
+
+    /* A ping may be fragmented across reads, leaving a 1..(ka_sz-1) byte
+     * prefix of the pattern at the end. Report it so the caller can retain
+     * and reassemble it with the next read, rather than handing it to the
+     * parser (whose leading-newline skip would drop it, leaving the ping
+     * unanswered).
+     */
+    tail = size - matched;
+    *partial_len = (tail >= 1 && tail < ka_sz &&
+                    pj_memcmp(data + matched, ka, tail) == 0) ? tail : 0;
+    return matched;
+}
+#endif
+
+
 static pj_bool_t on_data_read(pj_activesock_t *asock,
                               void *data,
                               pj_size_t size,
@@ -1433,6 +1480,67 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
         pj_gettimeofday(&tcp->last_activity);
 
         pj_assert((void*)rdata->pkt_info.packet == data);
+
+#if PJSIP_TCP_KEEP_ALIVE_RESPONSE
+        /* RFC 5626 Section 4.4.1: respond to a received CRLF keep-alive
+         * "ping" (double CRLF) with a single CRLF "pong". Handle this before
+         * parsing and consume the ping byte(s), so they are not passed to the
+         * SIP parser (which would otherwise drop them as a malformed message).
+         */
+        {
+            pj_size_t partial_len;
+            pj_size_t ka_len = tcp_get_crlf_ka_len((char*)data, size,
+                                                   &partial_len);
+
+            if (ka_len) {
+                pj_ssize_t pong_len = sizeof(tcp_crlf_ka_pong);
+                char addr[PJ_INET6_ADDRSTRLEN+10];
+                pj_status_t send_st;
+
+                PJ_LOG(5,(tcp->base.obj_name,
+                          "Responding to CRLF keep-alive from %s",
+                          pj_addr_str_print(&tcp->base.remote_name.host,
+                                            tcp->base.remote_name.port, addr,
+                                            sizeof(addr), 1)));
+
+                send_st = pj_activesock_send(tcp->asock, &tcp->pong_op_key.key,
+                                             tcp_crlf_ka_pong, &pong_len, 0);
+                if (send_st != PJ_SUCCESS && send_st != PJ_EPENDING) {
+                    tcp_perror(tcp->base.obj_name,
+                               "Error sending CRLF keep-alive response",
+                               send_st);
+                }
+            }
+
+            /* A ping fragmented across reads leaves a trailing incomplete
+             * ping: keep those 1-3 bytes so they reassemble with the next
+             * read (otherwise the parser's leading-newline skip would drop
+             * them and the ping would go unanswered).
+             */
+            if (partial_len) {
+                if (ka_len)
+                    pj_memmove(data, (char*)data + ka_len, partial_len);
+                *remainder = partial_len;
+                pj_pool_reset(rdata->tp_info.pool);
+                return PJ_TRUE;
+            }
+
+            if (ka_len) {
+                if (ka_len == size) {
+                    /* Nothing but keep-alive(s) in this buffer. */
+                    *remainder = 0;
+                    pj_pool_reset(rdata->tp_info.pool);
+                    return PJ_TRUE;
+                }
+
+                /* Consume the ping(s); shift the rest to the front of the
+                 * buffer and carry on parsing it as usual.
+                 */
+                pj_memmove(data, (char*)data + ka_len, size - ka_len);
+                size -= ka_len;
+            }
+        }
+#endif
 
         /* Init pkt_info part. */
         rdata->pkt_info.len = size;

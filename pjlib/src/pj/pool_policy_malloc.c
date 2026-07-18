@@ -42,7 +42,13 @@ static void *default_block_alloc(pj_pool_factory *factory, pj_size_t size)
             return NULL;
     }
 
-    p = malloc(size+(SIG_SIZE << 1));
+    /* Guard against overflow when adding the signature padding (only nonzero
+     * when PJ_SAFE_POOL is enabled).
+     */
+    if (size > ((pj_size_t)-1) - (SIG_SIZE << 1))
+        p = NULL;
+    else
+        p = malloc(size + (SIG_SIZE << 1));
 
     if (p == NULL) {
         if (factory->on_block_free) 

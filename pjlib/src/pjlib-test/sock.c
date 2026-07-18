@@ -63,8 +63,6 @@
 
 #if INCLUDE_SOCK_TEST
 
-#define UDP_PORT        51234
-#define TCP_PORT        (UDP_PORT+10)
 #define BIG_DATA_LEN    8192
 #define ADDRESS         "127.0.0.1"
 
@@ -633,6 +631,7 @@ static int udp_test(void)
     pj_sockaddr_in dstaddr, srcaddr;
     pj_str_t s;
     pj_status_t rc = 0, retval;
+    int addrlen;
 
     PJ_LOG(3,("test", "...udp_test()"));
 
@@ -647,25 +646,39 @@ static int udp_test(void)
         rc = -110; goto on_error;
     }
 
-    /* Bind server socket. */
+    /* Bind server socket to an ephemeral port, then query the assigned port
+     * with getsockname(). Binding to a fixed port intermittently fails with
+     * WSAEACCES on Windows when the port falls in an OS-excluded/reserved
+     * range, so let the OS pick a free port instead.
+     */
     pj_bzero(&dstaddr, sizeof(dstaddr));
     dstaddr.sin_family = pj_AF_INET();
-    dstaddr.sin_port = pj_htons(UDP_PORT);
+    dstaddr.sin_port = 0;
     dstaddr.sin_addr = pj_inet_addr(pj_cstr(&s, ADDRESS));
-    
+
     if ((rc=pj_sock_bind(ss, &dstaddr, sizeof(dstaddr))) != 0) {
         app_perror("...bind error udp:"ADDRESS, rc);
         rc = -120; goto on_error;
     }
+    addrlen = sizeof(dstaddr);
+    if ((rc=pj_sock_getsockname(ss, &dstaddr, &addrlen)) != 0) {
+        app_perror("...getsockname error", rc);
+        rc = -120; goto on_error;
+    }
 
-    /* Bind client socket. */
+    /* Bind client socket to an ephemeral port too, and query it. */
     pj_bzero(&srcaddr, sizeof(srcaddr));
     srcaddr.sin_family = pj_AF_INET();
-    srcaddr.sin_port = pj_htons(UDP_PORT-1);
+    srcaddr.sin_port = 0;
     srcaddr.sin_addr = pj_inet_addr(pj_cstr(&s, ADDRESS));
 
     if ((rc=pj_sock_bind(cs, &srcaddr, sizeof(srcaddr))) != 0) {
         app_perror("...bind error", rc);
+        rc = -121; goto on_error;
+    }
+    addrlen = sizeof(srcaddr);
+    if ((rc=pj_sock_getsockname(cs, &srcaddr, &addrlen)) != 0) {
+        app_perror("...getsockname error", rc);
         rc = -121; goto on_error;
     }
             

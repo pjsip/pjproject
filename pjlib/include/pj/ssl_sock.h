@@ -395,6 +395,32 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
 
 
 /**
+ * Set the DER-encoded OCSP response to be stapled by a server socket when
+ * OCSP stapling (TLS Certificate Status Request extension) is enabled via
+ * pj_ssl_sock_param.enable_ocsp_stapling. The response is typically obtained
+ * out-of-band from the certificate's OCSP responder. For the OpenSSL backend,
+ * the response is copied into the server SSL context when it is initialized,
+ * so it must be set before the first handshake to take effect.
+ *
+ * This is only meaningful on server sockets and is currently only
+ * implemented for the OpenSSL backend. Setting an empty response will clear
+ * any previously set response.
+ *
+ * @param pool          The pool used to duplicate the response buffer.
+ * @param cert          The credential instance, which must have been created
+ *                      by one of the pj_ssl_cert_load_from_xxx() functions.
+ * @param ocsp_resp     The DER-encoded OCSP response, as returned by the
+ *                      certificate's OCSP responder.
+ *
+ * @return              PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_set_ocsp_resp(
+                                        pj_pool_t *pool,
+                                        pj_ssl_cert_t *cert,
+                                        const pj_ssl_cert_buffer *ocsp_resp);
+
+
+/**
  * Create credential from OS certificate store, this function will lookup
  * certificate using the specified criterias.
  *
@@ -1018,6 +1044,25 @@ typedef struct pj_ssl_sock_info
      */
     void *native_ssl;
 
+    /**
+     * Describes whether the established connection resumed a previous TLS
+     * session (abbreviated handshake) instead of performing a full handshake.
+     * Only meaningful when \a established is PJ_TRUE. Currently only set by
+     * the OpenSSL backend.
+     */
+    pj_bool_t session_reused;
+
+    /**
+     * The DER-encoded OCSP response stapled by the peer during handshake
+     * (client side only), when OCSP stapling is requested via
+     * pj_ssl_sock_param.enable_ocsp_stapling. The buffer is owned by the
+     * secure socket and remains valid until the socket is destroyed. If the
+     * peer did not staple any response, \a ptr will be NULL and \a slen zero.
+     *
+     * Currently only available for the OpenSSL backend.
+     */
+    pj_ssl_cert_buffer ocsp_resp;
+
 } pj_ssl_sock_info;
 
 
@@ -1301,10 +1346,44 @@ typedef struct pj_ssl_sock_param
 
     /**
      * Specify if renegotiation is enabled for TLSv1.2 or earlier.
-     * 
+     *
      * Default: PJ_TRUE
      */
     pj_bool_t enable_renegotiation;
+
+    /**
+     * Specify whether to enable OCSP stapling, a.k.a. the TLS Certificate
+     * Status Request extension (extension type 0x0005, RFC 6066).
+     *
+     * When acting as client, enabling this will make the client include the
+     * "status_request" extension in its ClientHello, asking the server to
+     * staple an OCSP response for its certificate to the handshake. The
+     * stapled response returned by the server, if any, can be retrieved
+     * after the handshake completes via pj_ssl_sock_info.ocsp_resp.
+     *
+     * When acting as server, enabling this will make the server staple an
+     * OCSP response to the handshake for clients that request it. The
+     * DER-encoded response to be stapled must be supplied via the
+     * certificate, see #pj_ssl_cert_set_ocsp_resp().
+     *
+     * Currently it is only implemented for the OpenSSL backend.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t enable_ocsp_stapling;
+
+    /**
+     * Specify if TLS session reuse (resumption) is enabled. When acting as
+     * client, the backend will cache sessions per server name (see
+     * \a server_name) and resume them on subsequent connections, avoiding a
+     * full handshake. When acting as server, the backend will issue session
+     * tickets (including TLS 1.3 tickets) so clients can resume.
+     *
+     * Currently only implemented by the OpenSSL backend.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t enable_session_reuse;
 
 } pj_ssl_sock_param;
 

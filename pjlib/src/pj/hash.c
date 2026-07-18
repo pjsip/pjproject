@@ -106,8 +106,13 @@ PJ_DEF(pj_hash_table_t*) pj_hash_create(pj_pool_t *pool, unsigned size)
      */
     table_size = 8;
     do {
-        table_size <<= 1;    
-    } while (table_size < size);
+        table_size <<= 1;
+    } while (table_size < size && table_size <= ((unsigned)-1 >> 1));
+    /* The upper bound (half the max value of table_size) stops before the
+     * left shift would overflow the unsigned table_size, which would loop
+     * forever. For an unreasonably large 'size' the table is capped at the
+     * largest representable power of two rather than growing unbounded.
+     */
     table_size -= 1;
     
     h->rows = table_size;

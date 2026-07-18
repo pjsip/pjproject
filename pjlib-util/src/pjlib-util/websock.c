@@ -483,6 +483,18 @@ static pj_status_t process_handshake_response(pj_websock *ws,
     }
     accept_hdr += 22; /* skip header name + ": " */
 
+    /* find_substr_i() only guarantees the 22-byte header name fits within
+     * the parsed headers, but the compare below reads a fixed accept_len
+     * bytes. Make sure the whole value is present before reading it.
+     * accept_hdr never points past data + *parsed_len, so subtract to keep
+     * the check well-defined instead of forming accept_hdr + accept_len.
+     */
+    if (accept_len > (const char*)data + *parsed_len - accept_hdr) {
+        PJ_LOG(2, (THIS_FILE, "WebSocket handshake: "
+                   "truncated Sec-WebSocket-Accept"));
+        return PJ_EUNKNOWN;
+    }
+
     /* Compare */
     if (pj_memcmp(accept_hdr, expected_accept, accept_len) != 0) {
         PJ_LOG(2, (THIS_FILE, "WebSocket handshake: "

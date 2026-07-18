@@ -613,6 +613,55 @@ static pj_bool_t sa_sync_mirror(pjsua_acc *acc, pjsip_hdr *dst,
     return differs;
 }
 
+/* Build the route set to push to the registration client (regc): the
+ * affinity hidden Route (when a UDP pin is active) followed by the routes
+ * selected by reg_use_proxy (outbound proxy and/or account proxies).
+ * Headers are shallow-cloned into `pool`.
+ *
+ * This is deliberately NOT acc->route_set: that list is the dialog route
+ * set and always carries the account proxies plus the hidden Route, whereas
+ * the regc route set must honor reg_use_proxy (e.g. reg_use_proxy=0 must not
+ * inherit the account proxies) and include the outbound proxy. (#4964)
+ */
+static void sa_build_reg_route_set(pjsua_acc *acc, pj_pool_t *pool,
+                                   pjsip_route_hdr *route_set)
+{
+    const pjsip_route_hdr *r;
+
+    pj_list_init(route_set);
+
+    /* Hidden affinity Route first (UDP destination pin). */
+    if (acc->sa_route_hdr && acc->sa_enabled && acc->sa_next_hop_tp != NULL &&
+        ((acc->sa_next_hop_tp->key.type & ~PJSIP_TRANSPORT_IPV6)
+         == PJSIP_TRANSPORT_UDP))
+    {
+        pj_list_push_back(route_set,
+                          pjsip_hdr_shallow_clone(pool, acc->sa_route_hdr));
+    }
+
+    if (acc->cfg.reg_use_proxy & PJSUA_REG_USE_OUTBOUND_PROXY) {
+        r = pjsua_var.outbound_proxy.next;
+        while (r != &pjsua_var.outbound_proxy) {
+            pj_list_push_back(route_set, pjsip_hdr_shallow_clone(pool, r));
+            r = r->next;
+        }
+    }
+
+    if ((acc->cfg.reg_use_proxy & PJSUA_REG_USE_ACC_PROXY) &&
+        acc->cfg.proxy_cnt)
+    {
+        int cnt = acc->cfg.proxy_cnt;
+        pjsip_route_hdr *pos = route_set->prev;
+        int i;
+
+        r = acc->route_set.prev;
+        for (i=0; i<cnt; ++i) {
+            pj_list_push_front(pos, pjsip_hdr_shallow_clone(pool, r));
+            r = r->prev;
+        }
+    }
+}
+
 /* Sync the hidden Route entry in acc->route_set with the current pin
  * state, then push to regc if the result actually differs from what
  * we pushed last time. UDP-only (TCP/TLS use tp_sel). See #4964.
@@ -688,12 +737,25 @@ static void sa_sync_route_set(pjsua_acc *acc)
      * different address. (#4964)
      */
     if (acc->regc) {
-        pj_bool_t changed = sa_sync_mirror(
-                                acc,
-                                (pjsip_hdr*)&acc->sa_pushed_route,
-                                (const pjsip_hdr*)&acc->route_set);
-        if (changed || hdr_rebuilt)
-            pjsip_regc_set_route_set(acc->regc, &acc->route_set);
+        pj_pool_t *tmp_pool = pjsua_pool_create("sa_regrt%p", 512, 256);
+
+        if (tmp_pool) {
+            pjsip_route_hdr reg_route_set;
+            pj_bool_t changed;
+
+            /* The regc route set is the hidden Route plus the reg_use_proxy
+             * routes, NOT the full acc->route_set (which is the dialog route
+             * set). See sa_build_reg_route_set(). (#4964)
+             */
+            sa_build_reg_route_set(acc, tmp_pool, &reg_route_set);
+            changed = sa_sync_mirror(acc,
+                                     (pjsip_hdr*)&acc->sa_pushed_route,
+                                     (const pjsip_hdr*)&reg_route_set);
+            if (changed || hdr_rebuilt)
+                pjsip_regc_set_route_set(acc->regc, &reg_route_set);
+
+            pj_pool_release(tmp_pool);
+        }
     }
 }
 
@@ -723,8 +785,9 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
-    PJ_ASSERT_RETURN(pjsua_var.acc_cnt < PJ_ARRAY_SIZE(pjsua_var.acc),
-                     PJ_ETOOMANY);
+
+    if (pjsua_var.acc_cnt >= PJ_ARRAY_SIZE(pjsua_var.acc))
+        return PJ_ETOOMANY;
 
 #if !PJ_HAS_IPV6
     PJ_ASSERT_RETURN(cfg->ipv6_sip_use == PJSUA_IPV6_DISABLED, PJ_EINVAL);
@@ -2907,6 +2970,27 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         PJ_LOG(2, (THIS_FILE, "SIP registration failed, status=%d (%.*s)", 
                    param->code, 
                    (int)param->reason.slen, param->reason.ptr));
+
+        /* Transaction timeout (no response, rdata==NULL) over a reliable
+         * transport may mean the connection was silently dropped. Shut it
+         * down to force a reconnect on the next registration. A real 408
+         * response (rdata!=NULL) means the connection is alive, so skip it.
+         */
+        if (param->code == PJSIP_SC_REQUEST_TIMEOUT && param->rdata == NULL) {
+            pjsip_regc_info reginfo;
+
+            pjsip_regc_get_info(param->regc, &reginfo);
+            if (reginfo.transport &&
+                (reginfo.transport->flag & PJSIP_TRANSPORT_RELIABLE))
+            {
+                PJ_LOG(3, (THIS_FILE,
+                           "Registration timed out, shutting down transport "
+                           "%s to force a reconnect on next registration",
+                           reginfo.transport->obj_name));
+                pjsip_transport_shutdown(reginfo.transport);
+            }
+        }
+
         destroy_regc(acc, PJ_TRUE);
 
         /* Clear Service-Route header */
@@ -3270,35 +3354,19 @@ static pj_status_t pjsua_regc_init(int acc_id)
         goto on_return;
     }
 
-    /* Set route-set */
-    if (acc->cfg.reg_use_proxy) {
+    /* Set route-set: the affinity hidden Route (when a UDP pin is active)
+     * plus the reg_use_proxy-selected routes, built together so that
+     * reg_use_proxy is honored (e.g. reg_use_proxy=0 does not inherit the
+     * account proxies) and the outbound proxy is preserved even when
+     * affinity has pinned a UDP destination. This replaces the previous
+     * split of a reg_use_proxy block followed by a separate
+     * sa_sync_route_set() push of acc->route_set, which for a pinned UDP
+     * account overrode reg_use_proxy and dropped the outbound proxy. (#4964)
+     */
+    {
         pjsip_route_hdr route_set;
-        const pjsip_route_hdr *r;
 
-        pj_list_init(&route_set);
-
-        if (acc->cfg.reg_use_proxy & PJSUA_REG_USE_OUTBOUND_PROXY) {
-            r = pjsua_var.outbound_proxy.next;
-            while (r != &pjsua_var.outbound_proxy) {
-                pj_list_push_back(&route_set, pjsip_hdr_shallow_clone(pool, r));
-                r = r->next;
-            }
-        }
-
-        if (acc->cfg.reg_use_proxy & PJSUA_REG_USE_ACC_PROXY &&
-            acc->cfg.proxy_cnt)
-        {
-            int cnt = acc->cfg.proxy_cnt;
-            pjsip_route_hdr *pos = route_set.prev;
-            int i;
-
-            r = acc->route_set.prev;
-            for (i=0; i<cnt; ++i) {
-                pj_list_push_front(pos, pjsip_hdr_shallow_clone(pool, r));
-                r = r->prev;
-            }
-        }
-
+        sa_build_reg_route_set(acc, pool, &route_set);
         if (!pj_list_empty(&route_set)) {
             status = pjsip_regc_set_route_set( acc->regc, &route_set );
             if (status != PJ_SUCCESS) {
@@ -4052,16 +4120,20 @@ static int get_ip_addr_ver(const pj_str_t *host)
 /* Get local transport address suitable to be used for Via or Contact address
  * to send request to the specified destination URI.
  */
-pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
-                                   pj_pool_t *pool,
-                                   const pj_str_t *dst_uri,
-                                   pjsip_host_port *addr,
-                                   pjsip_transport_type_e *p_tp_type,
-                                   int *secure,
-                                   const void **p_tp)
+/* Determine the local address to use in the Via/Contact for requests sent
+ * toward sip_uri (the effective next hop). Factored out of
+ * pjsua_acc_get_uac_addr() so it can be shared with the dialog (UAS) variant
+ * pjsua_acc_get_uas_addr().
+ */
+static pj_status_t get_uac_addr_for_sip_uri(pjsua_acc_id acc_id,
+                                            pj_pool_t *pool,
+                                            pjsip_sip_uri *sip_uri,
+                                            pjsip_host_port *addr,
+                                            pjsip_transport_type_e *p_tp_type,
+                                            int *secure,
+                                            const void **p_tp)
 {
     pjsua_acc *acc;
-    pjsip_sip_uri *sip_uri;
     pj_status_t status;
     pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
     unsigned flag;
@@ -4071,31 +4143,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     pjsip_tpmgr_fla2_param tfla2_prm;
     pj_bool_t update_addr = PJ_TRUE;
 
-    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
-
-    /* If route-set is configured for the account, then URI is the
-     * first entry of the route-set.
-     */
-    if (!pj_list_empty(&acc->route_set)) {
-        sip_uri = (pjsip_sip_uri*)
-                  pjsip_uri_get_uri(acc->route_set.next->name_addr.uri);
-    } else {
-        pj_str_t tmp;
-        pjsip_uri *uri;
-
-        pj_strdup_with_null(pool, &tmp, dst_uri);
-
-        uri = pjsip_parse_uri(pool, tmp.ptr, tmp.slen, 0);
-        if (uri == NULL)
-            return PJSIP_EINVALIDURI;
-
-        /* For non-SIP scheme, route set should be configured */
-        if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
-            return PJSIP_ENOROUTESET;
-
-        sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
-    }
 
     /* Get transport type of the URI */
     if (sip_uri->transport_param.slen == 0) {
@@ -4372,6 +4420,142 @@ on_return:
         *p_tp = tfla2_prm.ret_tp;
 
     return PJ_SUCCESS;
+}
+
+
+pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
+                                   pj_pool_t *pool,
+                                   const pj_str_t *dst_uri,
+                                   pjsip_host_port *addr,
+                                   pjsip_transport_type_e *p_tp_type,
+                                   int *secure,
+                                   const void **p_tp)
+{
+    pjsua_acc *acc;
+    pjsip_sip_uri *sip_uri;
+
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
+    acc = &pjsua_var.acc[acc_id];
+
+    /* If route-set is configured for the account, then URI is the
+     * first entry of the route-set.
+     */
+    if (!pj_list_empty(&acc->route_set)) {
+        sip_uri = (pjsip_sip_uri*)
+                  pjsip_uri_get_uri(acc->route_set.next->name_addr.uri);
+    } else {
+        pj_str_t tmp;
+        pjsip_uri *uri;
+
+        pj_strdup_with_null(pool, &tmp, dst_uri);
+
+        uri = pjsip_parse_uri(pool, tmp.ptr, tmp.slen, 0);
+        if (uri == NULL)
+            return PJSIP_EINVALIDURI;
+
+        /* For non-SIP scheme, route set should be configured */
+        if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
+            return PJSIP_ENOROUTESET;
+
+        sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+    }
+
+    return get_uac_addr_for_sip_uri(acc_id, pool, sip_uri, addr,
+                                    p_tp_type, secure, p_tp);
+}
+
+
+/* Compute the local Via address toward next_hop, skipping reliable transports
+ * (their Via is resolved from the real connection at send time, and probing
+ * here would open a spurious outbound connection when contact_use_src_port is
+ * enabled). Shared by the dialog variants below. Returns PJ_ENOTFOUND when the
+ * next hop is reliable, so the caller leaves the Via untouched.
+ */
+static pj_status_t get_dlg_via_addr(pjsua_acc_id acc_id,
+                                    pj_pool_t *pool,
+                                    pjsip_uri *next_hop,
+                                    pjsip_host_port *addr,
+                                    pjsip_transport_type_e *p_tp_type,
+                                    int *secure,
+                                    const void **p_tp)
+{
+    pjsip_host_info dest_info;
+
+    if (!PJSIP_URI_SCHEME_IS_SIP(next_hop) &&
+        !PJSIP_URI_SCHEME_IS_SIPS(next_hop))
+    {
+        return PJSIP_ENOROUTESET;
+    }
+
+    if (pjsip_get_dest_info(next_hop, NULL, pool, &dest_info) == PJ_SUCCESS &&
+        (dest_info.flag & PJSIP_TRANSPORT_RELIABLE) != 0)
+    {
+        return PJ_ENOTFOUND;
+    }
+
+    return get_uac_addr_for_sip_uri(acc_id, pool,
+                                    (pjsip_sip_uri*)pjsip_uri_get_uri(next_hop),
+                                    addr, p_tp_type, secure, p_tp);
+}
+
+
+/* UAS (incoming dialog) variant of pjsua_acc_get_uac_addr().
+ *
+ * In-dialog requests sent by a UAS dialog are routed via the dialog route set
+ * (built from the incoming Record-Route), falling back to the remote target -
+ * NOT via the account's outbound proxy. Select the local Via address toward
+ * that actual next hop.
+ */
+pj_status_t pjsua_acc_get_uas_addr(pjsua_acc_id acc_id,
+                                   pj_pool_t *pool,
+                                   pjsip_dialog *dlg,
+                                   pjsip_host_port *addr,
+                                   pjsip_transport_type_e *p_tp_type,
+                                   int *secure,
+                                   const void **p_tp)
+{
+    pjsip_uri *next_hop;
+
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id) && dlg, PJ_EINVAL);
+
+    if (!pj_list_empty(&dlg->route_set))
+        next_hop = dlg->route_set.next->name_addr.uri;
+    else
+        next_hop = dlg->target;
+
+    return get_dlg_via_addr(acc_id, pool, next_hop, addr,
+                            p_tp_type, secure, p_tp);
+}
+
+
+/* UAC dialog variant of pjsua_acc_get_uac_addr().
+ *
+ * As with the account-based resolution, the next hop is the account's outbound
+ * proxy (acc->route_set) when configured; otherwise it is the dialog's remote
+ * target (the actual request destination) rather than the account id URI, so
+ * that on a multihomed host the Via reflects the interface toward the peer.
+ */
+pj_status_t pjsua_acc_get_uac_dlg_addr(pjsua_acc_id acc_id,
+                                       pj_pool_t *pool,
+                                       pjsip_dialog *dlg,
+                                       pjsip_host_port *addr,
+                                       pjsip_transport_type_e *p_tp_type,
+                                       int *secure,
+                                       const void **p_tp)
+{
+    pjsua_acc *acc;
+    pjsip_uri *next_hop;
+
+    PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id) && dlg, PJ_EINVAL);
+    acc = &pjsua_var.acc[acc_id];
+
+    if (!pj_list_empty(&acc->route_set))
+        next_hop = acc->route_set.next->name_addr.uri;
+    else
+        next_hop = dlg->target;
+
+    return get_dlg_via_addr(acc_id, pool, next_hop, addr,
+                            p_tp_type, secure, p_tp);
 }
 
 
@@ -4796,6 +4980,16 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
                     pj_status_t st = pjsip_get_dest_info(uri, NULL,
                                                          tmp_pool, &dinfo);
                     if (st == PJ_SUCCESS && dinfo.addr.host.slen) {
+                        /* Refine tp_type from URI when acc->tp_type is
+                         * unspecified (no transport_id set). Prevents the
+                         * UDP fallback from firing on TLS/TCP accounts
+                         * that rely on dynamic transport selection.
+                         */
+                        if (acc->tp_type == PJSIP_TRANSPORT_UNSPECIFIED &&
+                            dinfo.type != PJSIP_TRANSPORT_UNSPECIFIED)
+                        {
+                            tp_type = dinfo.type;
+                        }
                         pj_bzero(&dummy_tdata, sizeof(dummy_tdata));
                         pj_strdup(tmp_pool, &dummy_tdata.dest_info.name,
                                   &dinfo.addr.host);
@@ -4829,6 +5023,18 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
         acc->sa_pin_explicit = PJ_TRUE;
         /* Inject hidden Route for UDP destination-pinning. */
         sa_sync_route_set(acc);
+        /* Update the regc's transport selector for TCP/TLS accounts.
+         * For TCP/TLS the destination is controlled by tp_sel (not the
+         * hidden Route used for UDP). The regc stores a tp_sel snapshot
+         * taken at creation time in pjsua_regc_init(); without this,
+         * a pin change on a live regc would leave it pointing at the
+         * old transport.
+         */
+        if (acc->regc) {
+            pjsip_tpselector tp_sel;
+            pjsua_init_tpselector(acc->index, &tp_sel);
+            pjsip_regc_set_transport(acc->regc, &tp_sel);
+        }
         PJ_LOG(3,(THIS_FILE,
                   "Account %d: server affinity explicitly pinned via API "
                   "to transport %s",

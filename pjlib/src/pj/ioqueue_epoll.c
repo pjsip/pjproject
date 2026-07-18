@@ -524,8 +524,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     rc = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, sock, &key->ev);
     if (rc < 0) {
         status = pj_get_os_error();
-        pj_lock_destroy(key->lock);
-        key = NULL;
+        /* Do not destroy key->lock: it is a shared, pre-created lock owned by
+         * the ioqueue's key pool. Leave the key for on_return to recycle.
+         */
         PJ_PERROR(1,(THIS_FILE, status, "epol_ctl(ADD) error"));
         goto on_return;
     }
@@ -540,10 +541,28 @@ on_return:
     if (status != PJ_SUCCESS) {
         if (key && key->grp_lock)
             pj_grp_lock_dec_ref_dbg(key->grp_lock, "ioqueue", 0);
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+        if (key) {
+            /* Return the pre-created key to the free list instead of leaking
+             * it (it was removed from the free list above). init_key() cannot
+             * fail in SAFE_UNREG mode, so a non-NULL key here is fully
+             * initialized and safe to recycle.
+             *
+             * This error path is reached before the key is added to the
+             * active list / epoll set, so no other thread references it;
+             * unlike the scan_closing_keys() recycle it is safe to clear
+             * grp_lock here (init_key() re-sets it on the next reuse).
+             */
+            key->grp_lock = NULL;
+            key->ref_count = 0;
+            pj_list_push_back(&ioqueue->free_list, key);
+            key = NULL;
+        }
+#endif
     }
     *p_key = key;
     pj_lock_release(ioqueue->lock);
-    
+
     return status;
 }
 

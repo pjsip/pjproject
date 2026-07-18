@@ -3447,15 +3447,14 @@ static void stop_media_session(pjsua_call_id call_id)
  * printing it is a bit tricky, it should be printed part by part as long 
  * as the logger can accept.
  */
-static void log_call_dump(int call_id) 
+static void log_call_dump(int call_id)
 {
     pj_pool_t *pool;
     unsigned call_dump_len;
     unsigned part_len;
     unsigned part_idx;
-    unsigned log_decor;
     char *buf;
-    enum { BUF_LEN = 10*1024 };
+    enum { BUF_LEN = 10*1024, MAX_PART_LEN = PJ_LOG_MAX_SIZE-80 };
     pj_status_t status;
 
     pool = pjsua_pool_create("tmp", 1024, 1024);
@@ -3468,26 +3467,37 @@ static void log_call_dump(int call_id)
 
     call_dump_len = (unsigned)pj_ansi_strlen(buf);
 
-    log_decor = pj_log_get_decor();
-    pj_log_set_decor(log_decor & ~(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR));
-    PJ_LOG(3,(THIS_FILE, "\n"));
-    pj_log_set_decor(0);
-
+    /* Print in parts split at line boundaries. Don't touch the log decor:
+     * it is process-global, so the save/clear/restore done here previously
+     * raced with other threads and could leave the decor cleared for good.
+     */
     part_idx = 0;
-    part_len = PJ_LOG_MAX_SIZE-80;
     while (part_idx < call_dump_len) {
         char p_orig, *p;
 
         p = buf + part_idx;
-        if (part_idx + part_len > call_dump_len)
-            part_len = call_dump_len - part_idx;
+        part_len = call_dump_len - part_idx;
+        if (part_len > MAX_PART_LEN) {
+            part_len = MAX_PART_LEN;
+            while (part_len > 0 && p[part_len-1] != '\n')
+                --part_len;
+            if (part_len == 0)
+                part_len = MAX_PART_LEN;
+        }
         p_orig = p[part_len];
         p[part_len] = '\0';
+        /* Trim the trailing newline (and optional CR), the logger
+         * appends one
+         */
+        if (part_len > 0 && p[part_len-1] == '\n') {
+            p[part_len-1] = '\0';
+            if (part_len > 1 && p[part_len-2] == '\r')
+                p[part_len-2] = '\0';
+        }
         PJ_LOG(3,(THIS_FILE, "%s", p));
         p[part_len] = p_orig;
         part_idx += part_len;
     }
-    pj_log_set_decor(log_decor);
 
 on_return:
     pj_pool_release(pool);

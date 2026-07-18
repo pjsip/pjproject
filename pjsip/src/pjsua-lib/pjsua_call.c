@@ -763,15 +763,17 @@ static void dlg_set_via(pjsip_dialog *dlg, pjsua_acc *acc)
     } else if (!pjsua_sip_acc_is_using_stun(acc->index) &&
                !pjsua_sip_acc_is_using_upnp(acc->index))
     {
-        /* Choose local interface to use in Via if acc is not using
-         * STUN nor UPnP. See https://github.com/pjsip/pjproject/issues/1804
+        /* Choose local interface to use in Via if acc is not using STUN nor
+         * UPnP. See https://github.com/pjsip/pjproject/issues/1804
+         * The address is selected toward the actual next hop (account outbound
+         * proxy if set, else the dialog's remote target); reliable transports
+         * are skipped and resolved at send time.
          */
         pjsip_host_port via_addr;
         const void *via_tp;
 
-        if (pjsua_acc_get_uac_addr(acc->index, dlg->pool, &acc->cfg.id,
-                                   &via_addr, NULL, NULL,
-                                   &via_tp) == PJ_SUCCESS)
+        if (pjsua_acc_get_uac_dlg_addr(acc->index, dlg->pool, dlg, &via_addr,
+                                       NULL, NULL, &via_tp) == PJ_SUCCESS)
         {
             pjsip_dlg_set_via_sent_by(dlg, &via_addr,
                                       (pjsip_transport*)via_tp);
@@ -1272,6 +1274,7 @@ on_return:
     return status;
 }
 
+#if !PJSUA_MEDIA_HAS_PJMEDIA
 /* Check whether an rtpmap/fmtp attribute value refers to the given payload
  * type (SDP format). The attribute value must begin with the payload type
  * token followed by whitespace or end-of-string. An empty fmt never matches.
@@ -1287,6 +1290,7 @@ static pj_bool_t attr_matches_fmt(const pj_str_t *attr_val,
             (attr_val->slen == fmt->slen ||
              pj_isspace((unsigned char)attr_val->ptr[fmt->slen])));
 }
+#endif
 
 pj_status_t create_temp_sdp(pj_pool_t *pool,
                             const pjmedia_sdp_session *rem_sdp,
@@ -2084,23 +2088,17 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
                !pjsua_sip_acc_is_using_upnp(acc_id))
     {
-        /* Choose local interface to use in Via if acc is not using
-         * STUN nor UPnP. See https://github.com/pjsip/pjproject/issues/1804
+        /* Choose local interface to use in Via if acc is not using STUN nor
+         * UPnP. See https://github.com/pjsip/pjproject/issues/1804
+         * The address is selected toward the dialog's actual next hop (route
+         * set from Record-Route, else the remote target); reliable transports
+         * are skipped and resolved at send time.
          */
-        char target_buf[PJSIP_MAX_URL_SIZE];
-        pj_str_t target;
         pjsip_host_port via_addr;
         const void *via_tp;
 
-        target.ptr = target_buf;
-        target.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
-                                      dlg->target,
-                                      target_buf, sizeof(target_buf));
-        if (target.slen < 0) target.slen = 0;
-
-        if (pjsua_acc_get_uac_addr(acc_id, dlg->pool, &target,
-                                   &via_addr, NULL, NULL,
-                                   &via_tp) == PJ_SUCCESS)
+        if (pjsua_acc_get_uas_addr(acc_id, dlg->pool, dlg, &via_addr,
+                                   NULL, NULL, &via_tp) == PJ_SUCCESS)
         {
             pjsip_dlg_set_via_sent_by(dlg, &via_addr,
                                       (pjsip_transport*)via_tp);
@@ -5260,6 +5258,20 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     if (!call) {
+        pj_log_pop_indent();
+        return;
+    }
+
+    /* Stale callback guard (see pjsua_call_on_media_update): a leftover inv
+     * whose call slot has been recycled into a new dialog. Running the
+     * teardown below (media deinit, on_call_state, reset_call) would wipe
+     * the live call's slot and drop its own DISCONNECTED (issue #4992).
+     */
+    if (call->inv != inv) {
+        PJ_LOG(4, (THIS_FILE,
+                   "Ignoring stale state change on call %d "
+                   "(inv %p != current %p, state=%d)",
+                   call->index, inv, (void*)call->inv, inv->state));
         pj_log_pop_indent();
         return;
     }

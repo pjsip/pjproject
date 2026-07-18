@@ -942,7 +942,16 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
         }
     }
     if (ht->cur_size && next_delay) {
+#if PJ_TIMER_USE_LINKED_LIST
+        /* In linked-list mode the earliest entry is the list head; heap[0]
+         * is not heap-ordered in this mode. The enclosing "ht->cur_size"
+         * check guarantees the list is non-empty, so head_list.next is a
+         * real node.
+         */
+        *next_delay = ht->head_list.next->_timer_value;
+#else
         *next_delay = ht->heap[0]->_timer_value;
+#endif
         if (count > 0)
             pj_gettickcount(&now);
         PJ_TIME_VAL_SUB(*next_delay, now);

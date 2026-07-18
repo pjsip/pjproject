@@ -375,7 +375,6 @@ static pj_status_t detach_send_manager(send_stream *ss)
 static send_entry* get_send_entry(send_stream *ss)
 {
     send_entry *e;
-    void *buf;
     pj_timestamp min_sent_ts, idle_ts;
 
     /* Find entry which has idled for at least 1/16 seconds */
@@ -404,12 +403,13 @@ static send_entry* get_send_entry(send_stream *ss)
 
     if (e == &ss->free_list) {
         /* Not found, allocate a new one */
-        e = PJ_POOL_ZALLOC_T(ss->pool, send_entry);
-        buf = pj_pool_alloc(ss->pool, ss->buf_size);
-        if (!e || !buf)
+        e = pj_pool_alloc(ss->pool, sizeof(send_entry) + ss->buf_size);
+        if (!e) {
+            pj_grp_lock_release(ss->grp_lock);
             return NULL;
+        }
 
-        e->buf = buf;
+        e->buf = e + 1;
         e->buf_size = ss->buf_size;
         e->stream = ss;
 #if TRACE_RC
@@ -1731,7 +1731,18 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     if (status != PJ_SUCCESS)
         goto err_cleanup;
 
-    /* Create temporary buffer for immediate decoding */
+    /* Create temporary buffer for immediate decoding, reject decoding size
+     * that is zero, too large, or would overflow the size calculation.
+     */
+    if (vfd_dec->size.w == 0 || vfd_dec->size.h == 0 ||
+        vfd_dec->size.w > PJMEDIA_MAX_VIDEO_DEC_FRAME_SIZE / 4 /
+                          vfd_dec->size.h)
+    {
+        PJ_LOG(3,(THIS_FILE, "Invalid decoding size %dx%d in creating "
+                  "video stream %s",
+                  (int)vfd_dec->size.w, (int)vfd_dec->size.h, name.ptr));
+        goto err_cleanup;
+    }
     stream->dec_max_size = vfd_dec->size.w * vfd_dec->size.h * 4;
     stream->dec_frame.buf = pj_pool_alloc(pool, stream->dec_max_size);
 

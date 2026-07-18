@@ -230,6 +230,12 @@ typedef struct ossl_sock_t
     SSL                  *ossl_ssl;
     BIO                  *ossl_rbio;
     BIO                  *ossl_wbio;
+
+    /* OCSP stapling (TLS status_request extension) buffer. On a server
+     * socket this holds the DER-encoded response to be stapled; on a client
+     * socket it holds the response stapled by the peer, if any.
+     */
+    pj_str_t              ocsp_resp;
 } ossl_sock_t;
 
 
@@ -552,6 +558,174 @@ static int openssl_init_count;
 
 /* OpenSSL application data index */
 static int sslsock_idx;
+
+/* Client TLS session cache for session resumption. TLS 1.3 delivers the
+ * resumption ticket via a NewSessionTicket message after the handshake, so it
+ * is captured asynchronously in new_session_cb() and stored here keyed by the
+ * target server name, then re-injected on the next connection to the same
+ * server. Entries are kept MRU-first; the least recently used is evicted when
+ * the cache is full.
+ */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#  define OSSL_SESS_CACHE_ENABLED   1
+#else
+#  define OSSL_SESS_CACHE_ENABLED   0
+#endif
+
+#if OSSL_SESS_CACHE_ENABLED
+typedef struct ossl_sess_cache_entry {
+    char          server_name[PJ_MAX_HOSTNAME];
+    SSL_SESSION  *sess;
+} ossl_sess_cache_entry;
+
+static ossl_sess_cache_entry ossl_sess_cache[PJ_SSL_SOCK_OSSL_SESS_CACHE_SIZE];
+static unsigned              ossl_sess_cache_cnt;
+static pj_caching_pool       ossl_sess_cp;
+static pj_pool_t            *ossl_sess_pool;
+static pj_lock_t            *ossl_sess_cache_lock;
+
+/* Find the cache slot for the given server name. Returns -1 if not found.
+ * Caller must hold ossl_sess_cache_lock.
+ */
+static int sess_cache_find(const char *name)
+{
+    unsigned i;
+    for (i = 0; i < ossl_sess_cache_cnt; ++i) {
+        if (pj_ansi_strcmp(ossl_sess_cache[i].server_name, name) == 0)
+            return (int)i;
+    }
+    return -1;
+}
+
+/* Store a session for the given server name, taking ownership of the reference
+ * held on sess (as handed to new_session_cb). Any previous session for the
+ * same name is replaced. The new entry becomes MRU (front of the array).
+ */
+static pj_bool_t sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
+{
+    int idx;
+    unsigned n;
+
+    if (!ossl_sess_cache_lock || name->slen == 0 ||
+        name->slen >= PJ_MAX_HOSTNAME)
+    {
+        return PJ_FALSE;
+    }
+
+    pj_lock_acquire(ossl_sess_cache_lock);
+
+    /* Drop any existing entry for this name so we can re-insert at front. */
+    {
+        char nbuf[PJ_MAX_HOSTNAME];
+        pj_memcpy(nbuf, name->ptr, name->slen);
+        nbuf[name->slen] = '\0';
+
+        idx = sess_cache_find(nbuf);
+        if (idx >= 0) {
+            SSL_SESSION_free(ossl_sess_cache[idx].sess);
+            for (n = (unsigned)idx; n + 1 < ossl_sess_cache_cnt; ++n)
+                ossl_sess_cache[n] = ossl_sess_cache[n + 1];
+            ossl_sess_cache_cnt--;
+        } else if (ossl_sess_cache_cnt == PJ_SSL_SOCK_OSSL_SESS_CACHE_SIZE) {
+            /* Evict least recently used (last). */
+            SSL_SESSION_free(ossl_sess_cache[ossl_sess_cache_cnt - 1].sess);
+            ossl_sess_cache_cnt--;
+        }
+
+        /* Shift existing entries down and insert at front. */
+        for (n = ossl_sess_cache_cnt; n > 0; --n)
+            ossl_sess_cache[n] = ossl_sess_cache[n - 1];
+
+        pj_memcpy(ossl_sess_cache[0].server_name, name->ptr, name->slen);
+        ossl_sess_cache[0].server_name[name->slen] = '\0';
+        ossl_sess_cache[0].sess = sess;
+        ossl_sess_cache_cnt++;
+    }
+
+    pj_lock_release(ossl_sess_cache_lock);
+    return PJ_TRUE;
+}
+
+/* Look up a cached session for the given server name. On success, returns the
+ * session with its reference count incremented (caller must SSL_SESSION_free()
+ * it) and promotes the entry to MRU. Returns NULL if not found.
+ */
+static SSL_SESSION *sess_cache_get(const pj_str_t *name)
+{
+    char nbuf[PJ_MAX_HOSTNAME];
+    SSL_SESSION *sess = NULL;
+    int idx;
+
+    if (!ossl_sess_cache_lock || name->slen == 0 ||
+        name->slen >= PJ_MAX_HOSTNAME)
+    {
+        return NULL;
+    }
+
+    pj_memcpy(nbuf, name->ptr, name->slen);
+    nbuf[name->slen] = '\0';
+
+    pj_lock_acquire(ossl_sess_cache_lock);
+    idx = sess_cache_find(nbuf);
+    if (idx >= 0) {
+        unsigned n;
+        ossl_sess_cache_entry e = ossl_sess_cache[idx];
+
+        sess = e.sess;
+        SSL_SESSION_up_ref(sess);
+
+        /* Promote to MRU. */
+        for (n = (unsigned)idx; n > 0; --n)
+            ossl_sess_cache[n] = ossl_sess_cache[n - 1];
+        ossl_sess_cache[0] = e;
+    }
+    pj_lock_release(ossl_sess_cache_lock);
+
+    return sess;
+}
+
+/* Free all cached sessions and destroy the cache lock. Registered as an
+ * atexit handler.
+ */
+static void sess_cache_clear(void)
+{
+    unsigned i;
+
+    if (ossl_sess_cache_lock)
+        pj_lock_acquire(ossl_sess_cache_lock);
+
+    for (i = 0; i < ossl_sess_cache_cnt; ++i)
+        SSL_SESSION_free(ossl_sess_cache[i].sess);
+    ossl_sess_cache_cnt = 0;
+
+    if (ossl_sess_cache_lock) {
+        pj_lock_t *lck = ossl_sess_cache_lock;
+        ossl_sess_cache_lock = NULL;
+        pj_lock_release(lck);
+        pj_lock_destroy(lck);
+    }
+    if (ossl_sess_pool) {
+        pj_pool_release(ossl_sess_pool);
+        ossl_sess_pool = NULL;
+        pj_caching_pool_destroy(&ossl_sess_cp);
+    }
+}
+
+/* OpenSSL "new session" callback (client side). Fires when a session becomes
+ * available for caching, which for TLS 1.3 happens after the handshake when a
+ * NewSessionTicket is received. Returning 1 tells OpenSSL we retain the
+ * reference on sess.
+ */
+static int new_session_cb(SSL *ssl, SSL_SESSION *sess)
+{
+    pj_ssl_sock_t *ssock = SSL_get_ex_data(ssl, sslsock_idx);
+
+    if (ssock && ssock->param.server_name.slen) {
+        return sess_cache_store(&ssock->param.server_name, sess) ? 1 : 0;
+    }
+    return 0;
+}
+#endif  /* OSSL_SESS_CACHE_ENABLED */
 
 #if defined(PJ_SSL_SOCK_OSSL_USE_THREAD_CB) && \
     PJ_SSL_SOCK_OSSL_USE_THREAD_CB != 0 && OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -926,6 +1100,32 @@ static pj_status_t init_openssl(void)
     }
 #endif
 
+#if OSSL_SESS_CACHE_ENABLED
+    /* Create the client session cache lock. */
+    pj_caching_pool_init(&ossl_sess_cp, NULL, 0);
+    ossl_sess_pool = pj_pool_create(&ossl_sess_cp.factory, "ssl_sess", 512,
+                                    512, NULL);
+    if (ossl_sess_pool) {
+        status = pj_lock_create_recursive_mutex(ossl_sess_pool, "ssl_sess",
+                                                &ossl_sess_cache_lock);
+    } else {
+        status = PJ_ENOMEM;
+    }
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(2, (THIS_FILE, status, "Warning! Unable to create TLS "
+                      "session cache lock, session reuse will not work"));
+        ossl_sess_cache_lock = NULL;
+        if (ossl_sess_pool) {
+            pj_pool_release(ossl_sess_pool);
+            ossl_sess_pool = NULL;
+            pj_caching_pool_destroy(&ossl_sess_cp);
+        }
+    } else {
+        pj_atexit(&sess_cache_clear);
+    }
+    status = PJ_SUCCESS;
+#endif
+
     openssl_init_count = 1;
     return status;
 }
@@ -1161,6 +1361,76 @@ static void set_dh_use_option(BIO *bio, const pj_ssl_sock_t* ssock,
 #endif
 
 /* Initialize OpenSSL context for the ssock */
+#if defined(TLSEXT_STATUSTYPE_ocsp)
+/* OCSP stapling (TLS status_request, ext type 0x0005) callback.
+ *
+ * The same callback serves both roles, distinguished by the socket role:
+ *  - Server: staple the DER-encoded OCSP response configured on the socket.
+ *            Return codes follow SSL_TLSEXT_ERR_xxx semantics.
+ *  - Client: capture the response stapled by the peer so it can be exposed
+ *            via pj_ssl_sock_info.ocsp_resp. Return codes follow the client
+ *            convention: >0 accept, 0 reject, <0 internal error.
+ *
+ * The \a arg is the pj_ssl_sock_t whose SSL_CTX registered this callback:
+ * for a client this is the socket itself, for a server it is the listener
+ * socket that owns the (possibly shared) SSL_CTX and holds the response.
+ */
+static int ocsp_status_cb(SSL *ssl, void *arg)
+{
+    pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)arg;
+    ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+
+    if (ssock->is_server) {
+        unsigned char *buf;
+
+        /* Nothing to staple: don't send the extension. */
+        if (!ossock->ocsp_resp.ptr || ossock->ocsp_resp.slen <= 0)
+            return SSL_TLSEXT_ERR_NOACK;
+
+        /* OpenSSL takes ownership of the buffer and frees it with
+         * OPENSSL_free(), so hand it a fresh copy on every handshake.
+         */
+        buf = OPENSSL_malloc(ossock->ocsp_resp.slen);
+        if (!buf)
+            return SSL_TLSEXT_ERR_NOACK;
+
+        pj_memcpy(buf, ossock->ocsp_resp.ptr, ossock->ocsp_resp.slen);
+        if (SSL_set_tlsext_status_ocsp_resp(ssl, buf,
+                                            ossock->ocsp_resp.slen) != 1)
+        {
+            OPENSSL_free(buf);
+            return SSL_TLSEXT_ERR_NOACK;
+        }
+
+        return SSL_TLSEXT_ERR_OK;
+    } else {
+        const unsigned char *resp = NULL;
+        long len;
+
+        /* Clear any previous response (e.g., after renegotiation). */
+        ossock->ocsp_resp.ptr = NULL;
+        ossock->ocsp_resp.slen = 0;
+
+        /* Retrieve and keep the stapled response, if the peer sent one.
+         * We only expose it; verification is left to the application (or
+         * to OpenSSL's own certificate verification when configured).
+         */
+        len = SSL_get_tlsext_status_ocsp_resp(ssl, &resp);
+        if (resp && len > 0) {
+            pj_str_t src;
+
+            src.ptr = (char *)resp;
+            src.slen = len;
+            pj_strdup(ssock->pool, &ossock->ocsp_resp, &src);
+        }
+
+        /* Accept: do not fail the handshake solely on the stapled status. */
+        return 1;
+    }
+}
+#endif
+
+
 static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
@@ -1239,13 +1509,16 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
         unsigned int sid_ctx = SERVER_SESSION_ID_CONTEXT;
 
 #if SERVER_DISABLE_SESSION_TICKETS
-        /* Disable session tickets for TLSv1.2 and below. */
-        ssl_opt |= SSL_OP_NO_TICKET;
+        /* Disable session tickets (incl. TLSv1.3) unless the application
+         * opts in to session reuse.
+         */
+        if (!ssock->param.enable_session_reuse) {
+            ssl_opt |= SSL_OP_NO_TICKET;
 #ifdef SSL_CTX_set_num_tickets
-        /* Set the number of TLSv1.3 session tickets issued to 0. */
-        SSL_CTX_set_num_tickets(ctx, 0);
+            /* Set the number of TLSv1.3 session tickets issued to 0. */
+            SSL_CTX_set_num_tickets(ctx, 0);
 #endif
-
+        }
 #endif
 
         SSL_CTX_set_timeout(ctx, SERVER_SESSION_TIMEOUT);
@@ -1256,6 +1529,16 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
                                   "context. Session reuse will not work."));
         }
     }
+#if OSSL_SESS_CACHE_ENABLED
+    else if (ssock->param.enable_session_reuse) {
+        /* Client: enable session caching and capture new sessions (incl.
+         * TLSv1.3 tickets which arrive after the handshake) via callback.
+         */
+        SSL_CTX_set_session_cache_mode(ctx, SSL_SESS_CACHE_CLIENT |
+                                            SSL_SESS_CACHE_NO_INTERNAL_STORE);
+        SSL_CTX_sess_set_new_cb(ctx, &new_session_cb);
+    }
+#endif
 
 #ifdef SSL_OP_NO_RENEGOTIATION
     if (!ssock->param.enable_renegotiation) {
@@ -1645,10 +1928,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
                     if (PEM_read_bio_X509(new_bio, &x, NULL, NULL) == NULL)
                         break;
 
-                    if ((xn = X509_get_subject_name(x)) == NULL)
-                        break;
-
-                    if ((xn = X509_NAME_dup(xn)) == NULL )
+                    if ((xn = X509_NAME_dup(X509_get_subject_name(x))) == NULL )
                         break;
 
 #if !USING_BORINGSSL
@@ -1682,12 +1962,30 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
         }
     }
 
+#if defined(TLSEXT_STATUSTYPE_ocsp)
+    /* Enable OCSP stapling (status_request extension) on server sockets.
+     * The response is stored on this socket (the listener owns the possibly
+     * shared SSL_CTX) so it survives the key wiping below and remains
+     * reachable by the callback via the registered argument.
+     */
+    if (ssock->is_server && ssock->param.enable_ocsp_stapling &&
+        cert && cert->ocsp_resp_buf.slen)
+    {
+        pj_strdup(ssock->pool, &ossock->ocsp_resp, &cert->ocsp_resp_buf);
+        SSL_CTX_set_tlsext_status_cb(ctx, ocsp_status_cb);
+        SSL_CTX_set_tlsext_status_arg(ctx, ssock);
+        PJ_LOG(4,(ssock->pool->obj_name,
+                  "OCSP stapling enabled (%ld-byte response)",
+                  (long)ossock->ocsp_resp.slen));
+    }
+#endif
+
     /* Early sensitive data cleanup after OpenSSL context setup. However,
      * this cannot be done for listener sockets, as the data will still
      * be needed by accepted sockets.
      */
     if (cert && (!ssock->is_server || ssock->parent)) {
-        pj_ssl_cert_wipe_keys(cert);    
+        pj_ssl_cert_wipe_keys(cert);
     }
 
     return PJ_SUCCESS;
@@ -1766,6 +2064,31 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     (void)BIO_set_close(ossock->ossl_rbio, BIO_CLOSE);
     (void)BIO_set_close(ossock->ossl_wbio, BIO_CLOSE);
     SSL_set_bio(ossock->ossl_ssl, ossock->ossl_rbio, ossock->ossl_wbio);
+
+#if OSSL_SESS_CACHE_ENABLED
+    /* Client: resume a cached session for this server, if any. */
+    if (!ssock->is_server && ssock->param.enable_session_reuse &&
+        ssock->param.server_name.slen)
+    {
+        SSL_SESSION *sess = sess_cache_get(&ssock->param.server_name);
+        if (sess) {
+            SSL_set_session(ossock->ossl_ssl, sess);
+            SSL_SESSION_free(sess);
+        }
+    }
+#endif
+
+#if defined(TLSEXT_STATUSTYPE_ocsp)
+    /* Request OCSP stapling (status_request extension) on client sockets.
+     * The CTX is per-client here, so registering the callback with this
+     * socket as its argument is safe.
+     */
+    if (!ssock->is_server && ssock->param.enable_ocsp_stapling) {
+        SSL_CTX_set_tlsext_status_cb(ossock->ossl_ctx, ocsp_status_cb);
+        SSL_CTX_set_tlsext_status_arg(ossock->ossl_ctx, ssock);
+        SSL_set_tlsext_status_type(ossock->ossl_ssl, TLSEXT_STATUSTYPE_ocsp);
+    }
+#endif
 
     return PJ_SUCCESS;
 }
@@ -2105,9 +2428,9 @@ static pj_bool_t parse_ossl_asn1_time(pj_time_val *tv, pj_bool_t *gmt,
     pj_parsed_time pt;
     int i;
 
-    utc = tm->type == V_ASN1_UTCTIME;
-    p = (char*)tm->data;
-    len = tm->length;
+    utc = ASN1_STRING_type(tm) == V_ASN1_UTCTIME;
+    p = (char*)M_ASN1_STRING_data(tm);
+    len = M_ASN1_STRING_length(tm);
     end = p + len - 1;
 
     /* GMT */
@@ -2283,9 +2606,17 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
                           &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
                           buf);
                 } else {
-                    pj_strdup2(pool, 
-                          &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name, 
-                          (char*)p);
+                    /* Preserve the explicit ASN.1 string length instead of
+                     * treating the data as a NUL-terminated C string. A DNS
+                     * SAN such as "host.example\0.attacker" would otherwise be
+                     * truncated at the embedded NUL, letting a crafted cert be
+                     * accepted for the prefix hostname (identity bypass).
+                     */
+                    pj_str_t tmp;
+                    pj_strset(&tmp, (char*)p, len);
+                    pj_strdup_with_null(pool,
+                          &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
+                          &tmp);
                     OPENSSL_free(p);
                 }
                 ci->subj_alt_name.cnt++;
@@ -2701,4 +3032,3 @@ static pj_status_t ssl_renegotiate(pj_ssl_sock_t *ssock)
 
 
 #endif  /* PJ_HAS_SSL_SOCK */
-

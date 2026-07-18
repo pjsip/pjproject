@@ -2052,6 +2052,287 @@ on_return:
 
 
 
+/*
+ * TLS session resumption test (OpenSSL backend). Opens a server that issues
+ * TLS 1.3 session tickets, then makes two client connections to it with
+ * session reuse enabled. The first connection must perform a full handshake;
+ * the second must resume the cached session.
+ */
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+
+static const char reuse_greeting[] = "hello";
+
+struct reuse_state
+{
+    pj_pool_t      *pool;
+    pj_bool_t       is_server;
+    pj_bool_t       done;           /* client round completed              */
+    pj_status_t     err;
+    pj_bool_t       reused;         /* client: was the session resumed     */
+    pj_uint8_t      read_buf[128];
+    struct send_key send_key;
+};
+
+static pj_bool_t reuse_on_accept(pj_ssl_sock_t *ssock,
+                                 pj_ssl_sock_t *newsock,
+                                 const pj_sockaddr_t *src_addr,
+                                 int src_addr_len,
+                                 pj_status_t accept_status)
+{
+    struct reuse_state *parent_st = (struct reuse_state*)
+                                    pj_ssl_sock_get_user_data(ssock);
+    struct reuse_state *st;
+    void *read_buf[1];
+    pj_ssize_t len;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(src_addr);
+    PJ_UNUSED_ARG(src_addr_len);
+
+    if (accept_status != PJ_SUCCESS)
+        return PJ_TRUE;             /* keep listening */
+
+    st = (struct reuse_state*) pj_pool_zalloc(parent_st->pool, sizeof(*st));
+    st->pool = parent_st->pool;
+    st->is_server = PJ_TRUE;
+    pj_ssl_sock_set_user_data(newsock, st);
+
+    /* Read so we notice the client closing (EOF). */
+    read_buf[0] = st->read_buf;
+    status = pj_ssl_sock_start_read2(newsock, st->pool, sizeof(st->read_buf),
+                                     read_buf, 0);
+    if (status != PJ_SUCCESS) {
+        pj_ssl_sock_close(newsock);
+        return PJ_TRUE;
+    }
+
+    /* Send a greeting. For TLS 1.3 the NewSessionTicket precedes this on the
+     * wire, so the client caches the session while reading.
+     */
+    len = (pj_ssize_t)pj_ansi_strlen(reuse_greeting);
+    status = pj_ssl_sock_send(newsock, &st->send_key.op_key, reuse_greeting,
+                              &len, 0);
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+        pj_ssl_sock_close(newsock);
+        return PJ_TRUE;
+    }
+
+    return PJ_TRUE;
+}
+
+static pj_bool_t reuse_on_connect(pj_ssl_sock_t *ssock, pj_status_t status)
+{
+    struct reuse_state *st = (struct reuse_state*)
+                             pj_ssl_sock_get_user_data(ssock);
+    pj_ssl_sock_info info;
+    void *read_buf[1];
+
+    if (status != PJ_SUCCESS) {
+        st->err = status;
+        st->done = PJ_TRUE;
+        pj_ssl_sock_close(ssock);
+        return PJ_FALSE;
+    }
+
+    if (pj_ssl_sock_get_info(ssock, &info) == PJ_SUCCESS)
+        st->reused = info.session_reused;
+
+    read_buf[0] = st->read_buf;
+    status = pj_ssl_sock_start_read2(ssock, st->pool, sizeof(st->read_buf),
+                                     read_buf, 0);
+    if (status != PJ_SUCCESS) {
+        st->err = status;
+        st->done = PJ_TRUE;
+        pj_ssl_sock_close(ssock);
+        return PJ_FALSE;
+    }
+    return PJ_TRUE;
+}
+
+static pj_bool_t reuse_on_read(pj_ssl_sock_t *ssock,
+                               void *data, pj_size_t size,
+                               pj_status_t status, pj_size_t *remainder)
+{
+    struct reuse_state *st = (struct reuse_state*)
+                             pj_ssl_sock_get_user_data(ssock);
+    PJ_UNUSED_ARG(data);
+    PJ_UNUSED_ARG(remainder);
+
+    if (st->is_server) {
+        /* Client closed or error -> tear down the accepted socket. */
+        if (status != PJ_SUCCESS) {
+            pj_ssl_sock_close(ssock);
+            return PJ_FALSE;
+        }
+        return PJ_TRUE;
+    }
+
+    /* Client: receiving the greeting means the NewSessionTicket (if any) has
+     * already been processed and cached.
+     */
+    if (size > 0)
+        st->done = PJ_TRUE;
+    if (status != PJ_SUCCESS) {
+        if (status != PJ_EEOF)
+            st->err = status;
+        st->done = PJ_TRUE;
+    }
+    if (st->done) {
+        pj_ssl_sock_close(ssock);
+        return PJ_FALSE;
+    }
+    return PJ_TRUE;
+}
+
+static int session_reuse_test(void)
+{
+    pj_pool_t *pool = NULL;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_timer_heap_t *timer = NULL;
+    pj_ssl_sock_t *ssock_serv = NULL;
+    pj_ssl_sock_param param;
+    struct reuse_state state_serv;
+    pj_sockaddr bind_addr, listen_addr;
+    pj_str_t tmp_st;
+    pj_bool_t reused[2];
+    int i;
+    pj_status_t status;
+
+    pj_bzero(&state_serv, sizeof(state_serv));
+    reused[0] = PJ_TRUE;    /* expect full handshake -> should become FALSE */
+    reused[1] = PJ_FALSE;   /* expect resumption     -> should become TRUE  */
+
+    pool = pj_pool_create(mem, "ssl_reuse", 512, 512, NULL);
+    status = pj_ioqueue_create(pool, 8, &ioqueue);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+    status = pj_timer_heap_create(pool, 8, &timer);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    /* Server: issue TLS 1.3 tickets. */
+    pj_ssl_sock_param_default(&param);
+    param.cb.on_accept_complete2 = &reuse_on_accept;
+    param.cb.on_data_read = &reuse_on_read;
+    param.cb.on_data_sent = &ssl_on_data_sent;
+    param.ioqueue = ioqueue;
+    param.timer_heap = timer;
+    param.proto = PJ_SSL_SOCK_PROTO_TLS1_3;
+    param.enable_session_reuse = PJ_TRUE;
+    param.user_data = &state_serv;
+    state_serv.pool = pool;
+    state_serv.is_server = PJ_TRUE;
+
+    pj_sockaddr_init(PJ_AF_INET, &listen_addr,
+                     pj_strset2(&tmp_st, "127.0.0.1"), 0);
+
+    status = ssl_test_create_server(pool, &param, "session_reuse_test",
+                                    &ssock_serv, &listen_addr);
+    if (status != PJ_SUCCESS)
+        goto on_return;
+
+    /* Two client rounds against the same server. */
+    for (i = 0; i < 2; ++i) {
+        pj_ssl_sock_t *ssock_cli = NULL;
+        pj_ssl_sock_param cparam;
+        struct reuse_state state_cli;
+        unsigned loop;
+
+        pj_bzero(&state_cli, sizeof(state_cli));
+        state_cli.pool = pool;
+
+        pj_ssl_sock_param_default(&cparam);
+        cparam.cb.on_connect_complete = &reuse_on_connect;
+        cparam.cb.on_data_read = &reuse_on_read;
+        cparam.cb.on_data_sent = &ssl_on_data_sent;
+        cparam.ioqueue = ioqueue;
+        cparam.timer_heap = timer;
+        cparam.proto = PJ_SSL_SOCK_PROTO_TLS1_3;
+        cparam.enable_session_reuse = PJ_TRUE;
+        cparam.server_name = pj_str("127.0.0.1");
+        cparam.user_data = &state_cli;
+
+        status = pj_ssl_sock_create(pool, &cparam, &ssock_cli);
+        if (status != PJ_SUCCESS)
+            goto on_return;
+
+        pj_sockaddr_init(PJ_AF_INET, &bind_addr,
+                         pj_strset2(&tmp_st, "127.0.0.1"), 0);
+        status = pj_ssl_sock_start_connect(ssock_cli, pool, &bind_addr,
+                                           &listen_addr,
+                                           pj_sockaddr_get_len(&listen_addr));
+        if (status == PJ_SUCCESS) {
+            reuse_on_connect(ssock_cli, PJ_SUCCESS);
+        } else if (status == PJ_EPENDING) {
+            status = PJ_SUCCESS;
+        } else {
+            pj_ssl_sock_close(ssock_cli);
+            goto on_return;
+        }
+
+        /* Wait for this round to complete. */
+        loop = 0;
+        while (!state_cli.done && !state_cli.err && loop++ < 1000) {
+            pj_time_val delay = {0, 100};
+            pj_ioqueue_poll(ioqueue, &delay);
+            pj_timer_heap_poll(timer, NULL);
+        }
+
+        /* Drain so the ticket is fully processed and the server-side socket
+         * observes the client close.
+         */
+        {
+            pj_time_val delay = {0, 500};
+            loop = 0;
+            while (pj_ioqueue_poll(ioqueue, &delay) > 0 && loop++ < 100)
+                ;
+            pj_timer_heap_poll(timer, NULL);
+        }
+
+        if (state_cli.err) {
+            status = state_cli.err;
+            goto on_return;
+        }
+
+        PJ_LOG(3, ("", "...connection %d: session_reused=%d",
+                   i + 1, state_cli.reused));
+        reused[i] = state_cli.reused;
+    }
+
+    if (reused[0]) {
+        PJ_LOG(1, ("", "...ERROR: first connection unexpectedly resumed"));
+        status = PJ_EBUG;
+        goto on_return;
+    }
+    if (!reused[1]) {
+        PJ_LOG(1, ("", "...ERROR: second connection did not resume session"));
+        status = PJ_EBUG;
+        goto on_return;
+    }
+    PJ_LOG(3, ("", "...session resumption OK"));
+    status = PJ_SUCCESS;
+
+on_return:
+    if (ssock_serv)
+        pj_ssl_sock_close(ssock_serv);
+    if (ioqueue) {
+        pj_time_val delay = {0, 500};
+        while (pj_ioqueue_poll(ioqueue, &delay) > 0)
+            ;
+    }
+    if (timer)
+        pj_timer_heap_destroy(timer);
+    if (ioqueue)
+        pj_ioqueue_destroy(ioqueue);
+    if (pool)
+        pj_pool_release(pool);
+
+    return (status == PJ_SUCCESS) ? 0 : -1;
+}
+
+#endif  /* PJ_SSL_SOCK_IMP_OPENSSL */
+
+
 int ssl_sock_test(void)
 {
     int ret;
@@ -2096,6 +2377,13 @@ int ssl_sock_test(void)
                     PJ_FALSE, PJ_FALSE);
     if (ret != 0)
         return ret;
+
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+    PJ_LOG(3,("", "..TLSv1.3 session resumption test"));
+    ret = session_reuse_test();
+    if (ret != 0)
+        return ret;
+#endif
 #endif
 
     PJ_LOG(3,("", "..echo test w/ compatible proto: server TLSv1.2 vs client TLSv1.2"));
@@ -2199,4 +2487,3 @@ int ssl_sock_test(void)
  */
 int dummy_ssl_sock_test;
 #endif  /* INCLUDE_SSLSOCK_TEST */
-

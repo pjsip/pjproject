@@ -68,10 +68,14 @@ enum timer_type
 {
     TIMER_NONE,                 /**< Timer not active                   */
     TIMER_COMPLETION_CALLBACK,  /**< Call on_ice_complete() callback    */
-    TIMER_CONTROLLED_WAIT_NOM,  /**< Controlled agent is waiting for 
+    TIMER_CONTROLLED_WAIT_NOM,  /**< Controlled agent is waiting for
                                      controlling agent to send connectivity
                                      check with nominated flag after it has
                                      valid check for every components.  */
+    TIMER_WAIT_VALID_PAIR,      /**< Agent is waiting for a valid pair to be
+                                     created from incoming checks after all of
+                                     its own checks have completed without any
+                                     valid pair.                        */
     TIMER_START_NOMINATED_CHECK,/**< Controlling agent start connectivity
                                      checks with USE-CANDIDATE flag.    */
     TIMER_KEEP_ALIVE            /**< ICE keep-alive timer.              */
@@ -132,6 +136,7 @@ typedef struct timer_data
 
 /* Forward declarations */
 static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te);
+static pj_bool_t check_ice_complete(pj_ice_sess *ice);
 static void on_ice_complete(pj_ice_sess *ice, pj_status_t status);
 static void ice_keep_alive(pj_ice_sess *ice, pj_bool_t send_now);
 static void ice_on_destroy(void *obj);
@@ -322,8 +327,9 @@ PJ_DEF(void) pj_ice_sess_options_default(pj_ice_sess_options *opt)
 {
     opt->aggressive = PJ_TRUE;
     opt->nominated_check_delay = PJ_ICE_NOMINATED_CHECK_DELAY;
-    opt->controlled_agent_want_nom_timeout = 
+    opt->controlled_agent_want_nom_timeout =
         ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT;
+    opt->wait_valid_pair_timeout = PJ_ICE_WAIT_VALID_PAIR_TIMEOUT;
     opt->trickle = PJ_ICE_SESS_TRICKLE_DISABLED;
     opt->check_src_addr = PJ_ICE_SESS_CHECK_SRC_ADDR;
 }
@@ -1258,10 +1264,49 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 
     switch (type) {
     case TIMER_CONTROLLED_WAIT_NOM:
-        LOG4((ice->obj_name, 
+        LOG4((ice->obj_name,
               "Controlled agent timed-out in waiting for the controlling "
               "agent to send nominated check. Setting state to fail now.."));
         on_ice_complete(ice, PJNATH_EICENOMTIMEOUT);
+        break;
+    case TIMER_WAIT_VALID_PAIR:
+        {
+            /* Grace period elapsed. Only fail if all checks have completed
+             * and at least one component still lacks a valid pair. If some
+             * checks are still pending (e.g. a triggered check from a late
+             * incoming check is in progress), or valid pairs have meanwhile
+             * been created, don't force a failure here: let the normal
+             * completion handling proceed instead.
+             */
+            unsigned k;
+            pj_bool_t pending = PJ_FALSE;
+
+            for (k=0; k<ice->clist.count; ++k) {
+                if (ice->clist.checks[k].state <
+                        PJ_ICE_SESS_CHECK_STATE_SUCCEEDED)
+                {
+                    pending = PJ_TRUE;
+                    break;
+                }
+            }
+
+            for (k=0; k<ice->comp_cnt; ++k) {
+                if (ice->comp[k].valid_check == NULL)
+                    break;
+            }
+
+            if (!pending && k < ice->comp_cnt) {
+                LOG4((ice->obj_name,
+                      "Timed-out in waiting for a valid pair to be created "
+                      "from incoming checks. Setting state to fail now.."));
+                on_ice_complete(ice, PJNATH_EICEFAILED);
+            } else {
+                LOG4((ice->obj_name,
+                      "Grace period for valid pair elapsed, but checks are "
+                      "still pending or valid pairs now exist; continuing.."));
+                check_ice_complete(ice);
+            }
+        }
         break;
     case TIMER_COMPLETION_CALLBACK:
         {
@@ -1438,6 +1483,50 @@ static void update_comp_check(pj_ice_sess *ice, unsigned comp_id,
     }
 }
 
+/* All of the agent's own connectivity checks have completed but there is no
+ * valid pair yet. Instead of failing immediately, wait for a while: the remote
+ * agent may still be able to reach us and trigger a valid pair via incoming
+ * checks (e.g. when our own checks could not be sent because the local routing
+ * or firewall rejects the remote candidate address).
+ *
+ * Returns PJ_TRUE if ICE has been marked failed (grace disabled or another
+ * timer is active), or PJ_FALSE if the agent is now waiting.
+ */
+static pj_bool_t wait_valid_pair_or_fail(pj_ice_sess *ice)
+{
+    /* Grace timer already running, keep waiting. */
+    if (ice->timer.id == TIMER_WAIT_VALID_PAIR)
+        return PJ_FALSE;
+
+    if (ice->timer.id == TIMER_NONE &&
+        ice->opt.wait_valid_pair_timeout >= 0)
+    {
+        pj_time_val delay;
+
+        delay.sec = 0;
+        delay.msec = ice->opt.wait_valid_pair_timeout;
+        pj_time_val_normalize(&delay);
+
+        pj_timer_heap_schedule_w_grp_lock(ice->stun_cfg.timer_heap,
+                                          &ice->timer, &delay,
+                                          TIMER_WAIT_VALID_PAIR,
+                                          ice->grp_lock);
+
+        LOG5((ice->obj_name,
+              "All checks have completed but there is no valid pair yet. "
+              "Agent now waits for a valid pair to be created from incoming "
+              "checks (timeout=%d msec)",
+              ice->opt.wait_valid_pair_timeout));
+        return PJ_FALSE;
+    }
+
+    /* Grace timer is disabled (or another timer is active), mark ICE as
+     * failed.
+     */
+    on_ice_complete(ice, PJNATH_EICEFAILED);
+    return PJ_TRUE;
+}
+
 /* Check if ICE nego completed */
 static pj_bool_t check_ice_complete(pj_ice_sess *ice)
 {
@@ -1525,17 +1614,26 @@ static pj_bool_t check_ice_complete(pj_ice_sess *ice)
             }
 
             if (i < ice->comp_cnt) {
-                /* This component ID doesn't have valid pair.
-                 * Mark ICE as failed. 
+                /* This component ID doesn't have a valid pair yet. Don't fail
+                 * immediately, wait for a valid pair from incoming checks.
                  */
-                on_ice_complete(ice, PJNATH_EICEFAILED);
-                return PJ_TRUE;
+                return wait_valid_pair_or_fail(ice);
             } else {
                 /* All components have a valid pair.
                  * We should wait until we receive nominated checks.
                  */
+
+                /* If we were waiting for a valid pair to be created from
+                 * incoming checks, cancel that grace timer now that we have
+                 * one, so we can wait for nomination instead.
+                 */
+                if (ice->timer.id == TIMER_WAIT_VALID_PAIR) {
+                    pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap,
+                                                   &ice->timer, TIMER_NONE);
+                }
+
                 if (ice->timer.id == TIMER_NONE &&
-                    ice->opt.controlled_agent_want_nom_timeout >= 0) 
+                    ice->opt.controlled_agent_want_nom_timeout >= 0)
                 {
                     pj_time_val delay;
 
@@ -1579,17 +1677,27 @@ static pj_bool_t check_ice_complete(pj_ice_sess *ice)
             }
 
             if (i < ice->comp_cnt) {
-                /* At least one component doesn't have a valid check. Mark
-                 * ICE as failed.
+                /* At least one component doesn't have a valid check yet.
+                 * Don't fail immediately: the controlled agent may still be
+                 * able to reach us and trigger a valid pair via incoming
+                 * checks, after which we can nominate. Wait for a while.
                  */
-                on_ice_complete(ice, PJNATH_EICEFAILED);
-                return PJ_TRUE;
+                return wait_valid_pair_or_fail(ice);
             }
 
-            /* Now it's time to send connectivity check with nomination 
+            /* All components have a valid pair. If we were waiting for one to
+             * be created from incoming checks, cancel that grace timer before
+             * starting our nominated checks.
+             */
+            if (ice->timer.id == TIMER_WAIT_VALID_PAIR) {
+                pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap,
+                                               &ice->timer, TIMER_NONE);
+            }
+
+            /* Now it's time to send connectivity check with nomination
              * flag set.
              */
-            LOG4((ice->obj_name, 
+            LOG4((ice->obj_name,
                   "All checks have completed, starting nominated checks now"));
             start_nominated_check(ice);
             return PJ_FALSE;

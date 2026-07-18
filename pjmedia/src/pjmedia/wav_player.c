@@ -80,9 +80,10 @@ struct file_reader_port
 };
 
 
-static pj_status_t file_get_frame(pjmedia_port *this_port, 
+static pj_status_t file_get_frame(pjmedia_port *this_port,
                                   pjmedia_frame *frame);
 static pj_status_t file_on_destroy(pjmedia_port *this_port);
+static pj_status_t file_on_event(pjmedia_event *event, void *user_data);
 
 static struct file_reader_port *create_file_port(pj_pool_t *pool)
 {
@@ -211,7 +212,8 @@ static pj_status_t read_wav_until(struct file_reader_port *fport,
             pj_uint32_t sig = subchunk.id;
             pj_off_t fpos;
             pj_file_getpos(fport->fd, &fpos);
-            if ((sig & (0xFF << 24)) && (sig & (0xFF << 16)) && (sig & (0xFF << 8)) && (sig & (0xFF << 0)))
+            if ((sig & 0xFF000000) && (sig & 0x00FF0000) &&
+                (sig & 0x0000FF00) && (sig & 0x000000FF))
             {
                 PJ_LOG(2, (THIS_FILE,
                            "%.*s. Zero length chunk of type %s found at offset=%lu (read_wav_until)",
@@ -324,6 +326,12 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool_,
         goto on_error;
 
 
+    /* Zero the header first: it is read and byte-swapped in stages, and
+     * pjmedia_wave_hdr_file_to_host() swaps the whole struct (including
+     * data_hdr) before all fields have been read from the file.
+     */
+    pj_bzero(&wave_hdr, sizeof(wave_hdr));
+
     /* Read the RIFF file header only. */
     size_to_read = size_read = sizeof(wave_hdr.riff_hdr);
     status = pj_file_read( fport->fd, &wave_hdr, &size_read);
@@ -365,10 +373,18 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool_,
     pj_memcpy(&wave_hdr.fmt_hdr, &chunk, sizeof(chunk));
 
     /* Read the rest of `fmt ` chunk. */
-    size_read = sizeof(wave_hdr.fmt_hdr) - sizeof(chunk);
+    size_to_read = size_read = sizeof(wave_hdr.fmt_hdr) - sizeof(chunk);
     status = pj_file_read(fport->fd, &wave_hdr.fmt_hdr.fmt_tag, &size_read);
     if (status != PJ_SUCCESS) {
         pj_file_close(fport->fd);
+        goto on_error;
+    }
+    if (size_read != size_to_read) {
+        /* File truncated within the `fmt ` chunk; the remaining fmt header
+         * fields would be left uninitialized.
+         */
+        pj_file_close(fport->fd);
+        status = PJMEDIA_EWAVETOOSHORT;
         goto on_error;
     }
 
@@ -740,6 +756,19 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_set_eof_cb2(pjmedia_port *port,
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
 
     fport = (struct file_reader_port*) port;
+
+    /* On clear, synchronously unsubscribe so a pending EOF event can't dispatch
+     * cb2 against a freed owner; unsubscribe drains any in-flight callback via
+     * the event mgr cb_mutex. Unconditional (unsubscribe is idempotent and
+     * always drains): the subscribed flag is set on the media thread without a
+     * lock, so a stale read here could otherwise skip the drain. Clear cb2
+     * first so a concurrent file_get_frame() EOF can't re-arm the subscription.
+     */
+    if (!cb) {
+        fport->cb2 = NULL;
+        pjmedia_event_unsubscribe(NULL, &file_on_event, fport, fport);
+        fport->subscribed = PJ_FALSE;
+    }
 
     fport->base.port_data.pdata = user_data;
     fport->cb2 = cb;
