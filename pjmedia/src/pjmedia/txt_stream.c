@@ -769,7 +769,6 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
     pj_timestamp now;
     pj_bool_t is_first_packet;
     pj_bool_t use_red;
-    pjmedia_rtp_hdr *hdr;
     pj_bool_t has_deferred_char = PJ_FALSE;
 
     void *rtphdr;
