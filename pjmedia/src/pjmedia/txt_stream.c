@@ -571,7 +571,7 @@ static pj_status_t decode_red(pjmedia_txt_stream *stream, unsigned pt, int seq,
         }
 
         /* Inject everything we missed, even length=0 frames! */
-        if (stream->rx_last_seq == -1 || diff > 0) {
+        if (stream->rx_last_seq != -1 && diff > 0) {
             pjmedia_jbuf_put_frame(stream->base.jb, data_ptr, data_len,
                                    block_seq);
             stream->rx_last_seq = block_seq; /* Update tracker */
