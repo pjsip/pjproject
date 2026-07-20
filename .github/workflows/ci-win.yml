@@ -5,6 +5,13 @@ on:
       - 'master'
   pull_request:
     types: [opened, synchronize, reopened]
+
+# Cancel superseded runs on the same ref (e.g. a force-push to a PR) so they
+# stop holding CI runner slots.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CI_WIN_ARGS: -w 3 --shuffle
   CI_MODE: --ci-mode
