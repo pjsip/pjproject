@@ -399,11 +399,6 @@ PJ_DEF(pj_status_t) pjsip_ua_unregister_dlg( pjsip_user_agent *ua,
     /* Remove this dialog from the list. */
     pj_list_erase(dlg);
 
-    /* Mark as unregistered so a stray repeat unregistration is a no-op
-     * rather than an assertion failure.
-     */
-    dlg->dlg_set = NULL;
-
     /* If dialog list is empty, remove the dialog set from the hash table. */
     if (pj_list_empty(&dlg_set->dlg_list)) {
 

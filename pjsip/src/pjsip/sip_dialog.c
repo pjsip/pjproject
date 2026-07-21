@@ -922,6 +922,14 @@ PJ_DEF(pj_status_t) pjsip_dlg_terminate( pjsip_dialog *dlg )
     /* MUST not have pending transactions. */
     PJ_ASSERT_RETURN(dlg->tsx_count==0, PJ_EINVALIDOP);
 
+    /* Claim the teardown. If another path (e.g. pjsip_dlg_dec_lock() or a
+     * repeated terminate) has already started destroying this dialog, do
+     * not unregister/destroy it again. See #1886.
+     */
+    if (dlg->destroying)
+        return PJ_SUCCESS;
+    dlg->destroying = PJ_TRUE;
+
     return unregister_and_destroy_dialog(dlg, PJ_FALSE);
 }
 
