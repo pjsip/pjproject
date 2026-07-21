@@ -3099,8 +3099,17 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
             label_attr = pjmedia_sdp_media_find_attr(
                             rem_sdp->media[mi], &STR_LABEL_ATTR, NULL);
-            m->attr[m->attr_count++] = pjmedia_sdp_attr_create_label(pool,
-                                                        &label_attr->value);
+            if (label_attr) {
+                m->attr[m->attr_count++] = pjmedia_sdp_attr_create_label(pool,
+                                                            &label_attr->value);
+            } else if (pjsua_var.acc[call->acc_id].cfg.siprec_label_mode ==
+                       PJSUA_SIPREC_LABEL_OPTIONAL)
+            {
+                PJ_LOG(3,(THIS_FILE,
+                          "Call %d media %d: Missing label attribute in SDP answer. "
+                          "SIPREC metadata correlation will be limited.",
+                          call_id, mi));
+            }
         }
 
         /* Add ssrc and cname attribute */

@@ -32,6 +32,12 @@
 #define THIS_FILE               "sip_siprec.c"
 
 
+/* SIPREC label mode constants (must match pjsua_siprec_label_mode enum) */
+#define SIPREC_LABEL_MODE_MANDATORY   0
+#define SIPREC_LABEL_MODE_OPTIONAL    1
+#define SIPREC_LABEL_MODE_DISABLED    2
+
+
 static const pj_str_t STR_SIPREC         = {"siprec", 6};
 static const pj_str_t STR_LABEL          = {"label", 5};
 
@@ -64,12 +70,12 @@ static pj_status_t pjsip_siprec_check_request(pjsip_rx_data *rdata)
 
     /* Find Contact header */
     contact_hdr = (pjsip_contact_hdr*)
-            pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
-
+    pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
+    
     if(!contact_hdr || !contact_hdr->uri){
         return PJ_FALSE;
     }
-
+    
     /* Check "+sip.src" parameter exist in the Contact header */
     if(!pjsip_param_find(&contact_hdr->other_param, &str_src)){
         return PJ_FALSE;
@@ -129,13 +135,14 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
 /**
  * Verifies that the incoming request is a siprec request or not.
  */
-PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata, 
+PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                               pj_str_t *metadata,
                                               pjmedia_sdp_session *sdp_offer,
                                               unsigned *options,
                                               pjsip_dialog *dlg,
                                               pjsip_endpoint *endpt,
-                                              pjsip_tx_data **p_tdata)
+                                              pjsip_tx_data **p_tdata,
+                                              unsigned label_mode)
 {
     int code = 200;
     pj_status_t status = PJ_SUCCESS;
@@ -181,15 +188,34 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         goto on_return;
     }
 
-    /* Check that the media attribute label exist in the SDP */
-    for (mi=0; mi<sdp_offer->media_count; ++mi) {
-        if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
-                                            &STR_LABEL, NULL)){
-            code = PJSIP_SC_BAD_REQUEST;
-            warn_text = "SDP must have label media attribute";
-            goto on_return;
+    /* Check that the media attribute label exist in the SDP
+     * Behavior depends on label_mode:
+     * - MANDATORY: Reject if any media lacks label
+     * - OPTIONAL: Accept, but log warning for unlabeled media
+     * - DISABLED: Skip label checking entirely
+     */
+    if (label_mode == SIPREC_LABEL_MODE_MANDATORY) {
+        for (mi=0; mi<sdp_offer->media_count; ++mi) {
+            if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
+                                                &STR_LABEL, NULL)){
+                code = PJSIP_SC_BAD_REQUEST;
+                warn_text = "SDP must have label media attribute";
+                goto on_return;
+            }
+        }
+    } else if (label_mode == SIPREC_LABEL_MODE_OPTIONAL) {
+        for (mi=0; mi<sdp_offer->media_count; ++mi) {
+            if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
+                                                &STR_LABEL, NULL)){
+                PJ_LOG(3,(THIS_FILE,
+                          "SIPREC media %d missing label attribute. "
+                          "Metadata correlation will be limited. "
+                          "To require labels, set siprec_label_mode to "
+                          "PJSUA_SIPREC_LABEL_MANDATORY.", mi));
+            }
         }
     }
+    /* DISABLED: Do nothing */
 
     status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
                                         rdata->msg_info.msg->body,

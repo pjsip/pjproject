@@ -388,6 +388,25 @@ struct AccountCallConfig : public PersistentObject
     pjsua_sip_siprec_use siprecUse;
 
     /**
+     * Specify whether SDP label attributes are required for SIPREC.
+     * When enabled, SIPREC INVITEs without 'a=label' in all media streams
+     * will be rejected with 400 Bad Request. When disabled, the SRS will
+     * accept SIPREC INVITEs even without labels for better interoperability.
+     *
+     * According to RFC 7866, the SRC MUST include labels, but for
+     * interoperability with some implementations, this requirement can be
+     * relaxed.
+     *
+     * This setting controls the behavior:
+     * - PJSUA_SIPREC_LABEL_MANDATORY: Reject SIPREC without labels
+     * - PJSUA_SIPREC_LABEL_OPTIONAL: Accept without labels, log warning
+     * - PJSUA_SIPREC_LABEL_DISABLED: Don't use labels
+     *
+     * Default: PJSUA_SIPREC_LABEL_OPTIONAL (allow for interoperability)
+     */
+    pjsua_siprec_label_mode siprecLabelMode;
+
+    /**
      * Specify minimum Session Timer expiration period, in seconds.
      * Must not be lower than 90. Default is 90.
      */
@@ -407,6 +426,7 @@ public:
                           prackUse(PJSUA_100REL_NOT_USED),
                           timerUse(PJSUA_SIP_TIMER_OPTIONAL),
                           siprecUse(PJSUA_SIP_SIPREC_INACTIVE),
+                          siprecLabelMode(PJSUA_SIPREC_LABEL_OPTIONAL),
                           timerMinSESec(90),
                           timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE)
     {}
