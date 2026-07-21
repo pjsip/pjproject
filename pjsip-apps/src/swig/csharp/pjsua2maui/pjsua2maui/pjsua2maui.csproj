@@ -1,8 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net10.0-ios;net9.0-android;net9.0-ios</TargetFrameworks>
-    
+    <TargetFrameworks>net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="!$([MSBuild]::IsOSPlatform('linux'))">net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+    <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android-x86;android-x64;android-arm;android-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">ios-arm64;iossimulator-x64;iossimulator-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">maccatalyst-x64;maccatalyst-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">win-x64;win-arm64</RuntimeIdentifiers>
     <OutputType>Exe</OutputType>
     <RootNamespace>pjsua2maui</RootNamespace>
     <UseMaui>true</UseMaui>
@@ -20,83 +25,85 @@
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
 
-    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">12.2</SupportedOSPlatformVersion>
+    <!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
+    <WindowsPackageType>None</WindowsPackageType>
+
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">12.2</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     <BuildWithMSBuildOnMono>false</BuildWithMSBuildOnMono>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AppxPackageSigningEnabled Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">false</AppxPackageSigningEnabled>
+    <HasPackageAndPublishMenu Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">false</HasPackageAndPublishMenu>
+    <ProjectPriFileName Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">resources.pri</ProjectPriFileName>
+    <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">win-x64;win-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <PropertyGroup> 
+    <Platform Condition="'$(Platform)' == '' Or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <RuntimeIdentifier Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' And '$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' And '$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-ios|AnyCPU'">
     <CreatePackage>false</CreatePackage>
   </PropertyGroup>
+  
   <ItemGroup>
-    <!-- App Icon -->
     <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
-
-    <!-- Splash Screen -->
     <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
-
-    <!-- Images -->
     <MauiImage Include="Resources\Images\*" />
     <MauiImage Update="Resources\Images\dotnet_bot.svg" BaseSize="168,208" />
-
-    <!-- Custom Fonts -->
     <MauiFont Include="Resources\Fonts\*" />
-
-    <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
     <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
-  <ItemGroup>
-    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCamera.java"
-      Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCamera.java')" />
-    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCamera2.java"
-      Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCamera2.java')" />
-    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCameraInfo.java"
-      Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCameraInfo.java')" />
-    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCameraInfo2.java"
-      Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCameraInfo2.java')" />
+  
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCamera.java" Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCamera.java')" />
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCamera2.java" Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCamera2.java')" />
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCameraInfo.java" Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCameraInfo.java')" />
+    <AndroidJavaSource Include="Platforms\Android\org\pjsip\PjCameraInfo2.java" Condition="Exists('$(ProjectDir)Platforms\Android\org\pjsip\PjCameraInfo2.java')" />
   </ItemGroup>
-  <ItemGroup>
-    <AndroidNativeLibrary Include="Platforms\Android\lib\armeabi-v7a\libc++_shared.so"
-      Condition="Exists('$(ProjectDir)Platforms\Android\lib\armeabi-v7a\libc++_shared.so')">
+
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <AndroidNativeLibrary Include="Platforms\Android\lib\armeabi-v7a\libc++_shared.so" Condition="Exists('$(ProjectDir)Platforms\Android\lib\armeabi-v7a\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidNativeLibrary>
     <AndroidNativeLibrary Include="Platforms\Android\lib\armeabi-v7a\libpjsua2.so" Condition="Exists('Platforms\Android\lib\armeabi-v7a\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidNativeLibrary>
-    <AndroidNativeLibrary Include="Platforms\Android\lib\arm64-v8a\libc++_shared.so"
-      Condition="Exists('Platforms\Android\lib\arm64-v8a\libc++_shared.so')">
+    <AndroidNativeLibrary Include="Platforms\Android\lib\arm64-v8a\libc++_shared.so" Condition="Exists('Platforms\Android\lib\arm64-v8a\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidNativeLibrary>
-    <AndroidNativeLibrary Include="Platforms\Android\lib\arm64-v8a\libpjsua2.so"
-      Condition="Exists('Platforms\Android\lib\arm64-v8a\libpjsua2.so')">
+    <AndroidNativeLibrary Include="Platforms\Android\lib\arm64-v8a\libpjsua2.so" Condition="Exists('Platforms\Android\lib\arm64-v8a\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidNativeLibrary>
-    <AndroidNativeLibrary Include="Platforms\Android\lib\x86\libc++_shared.so"
-      Condition="Exists('Platforms\Android\lib\x86\libc++_shared.so')">
+    <AndroidNativeLibrary Include="Platforms\Android\lib\x86\libc++_shared.so" Condition="Exists('Platforms\Android\lib\x86\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidNativeLibrary>
-    <AndroidNativeLibrary Include="Platforms\Android\lib\x86\libpjsua2.so"
-      Condition="Exists('Platforms\Android\lib\x86\libpjsua2.so')">
+    <AndroidNativeLibrary Include="Platforms\Android\lib\x86\libpjsua2.so" Condition="Exists('Platforms\Android\lib\x86\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidNativeLibrary>
-    <AndroidNativeLibrary Include="Platforms\Android\lib\x86_64\libc++_shared.so"
-      Condition="Exists('Platforms\Android\lib\x86_64\libc++_shared.so')">
+    <AndroidNativeLibrary Include="Platforms\Android\lib\x86_64\libc++_shared.so" Condition="Exists('Platforms\Android\lib\x86_64\libc++_shared.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidNativeLibrary>
-    <AndroidNativeLibrary Include="Platforms\Android\lib\x86_64\libpjsua2.so"
-      Condition="Exists('Platforms\Android\lib\x86_64\libpjsua2.so')">
+    <AndroidNativeLibrary Include="Platforms\Android\lib\x86_64\libpjsua2.so" Condition="Exists('Platforms\Android\lib\x86_64\libpjsua2.so')">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidNativeLibrary>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.71" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.80" />
   </ItemGroup>
+  
   <ItemGroup Condition="($(RuntimeIdentifier.StartsWith('iossimulator-arm64')))">
-    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64/libpjsua2.a"
-      Condition="Exists('$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64/libpjsua2.a')">
+    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64/libpjsua2.a" Condition="Exists('$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64/libpjsua2.a')">
       <Kind>Static</Kind>
       <ForceLoad>True</ForceLoad>
       <SmartLink>False</SmartLink>
@@ -104,9 +111,9 @@
       <LinkerFlags>-L$(ProjectDir)Platforms/iOS/lib/iossimulator-arm64 -lpjsua2 -ld_classic</LinkerFlags>
     </NativeReference>
   </ItemGroup>
+  
   <ItemGroup Condition="($(RuntimeIdentifier.StartsWith('iossimulator-x64')))">
-    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/x86_64/libpjsua2.a"
-      Condition="Exists('$(ProjectDir)Platforms/iOS/lib/x86_64/libpjsua2.a')">
+    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/x86_64/libpjsua2.a" Condition="Exists('$(ProjectDir)Platforms/iOS/lib/x86_64/libpjsua2.a')">
       <Kind>Static</Kind>
       <ForceLoad>True</ForceLoad>
       <SmartLink>False</SmartLink>
@@ -114,14 +121,57 @@
       <LinkerFlags>-L$(ProjectDir)Platforms/iOS/lib/x86_64 -lpjsua2 -ld_classic</LinkerFlags>
     </NativeReference>
   </ItemGroup>
+  
   <ItemGroup Condition="($(RuntimeIdentifier.StartsWith('ios-arm64')))">
-    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/arm64/libpjsua2.a"
-      Condition="Exists('$(ProjectDir)Platforms/iOS/lib/arm64/libpjsua2.a')">
+    <NativeReference Include="$(ProjectDir)Platforms/iOS/lib/arm64/libpjsua2.a" Condition="Exists('$(ProjectDir)Platforms/iOS/lib/arm64/libpjsua2.a')">
       <Kind>Static</Kind>
       <ForceLoad>True</ForceLoad>
       <SmartLink>False</SmartLink>
       <IsCxx>True</IsCxx>
       <LinkerFlags>-L$(ProjectDir)Platforms/iOS/lib/arm64 -lpjsua2</LinkerFlags>
     </NativeReference>
+  </ItemGroup>
+  
+  <!-- Mac Catalyst Native Linking -->
+  <ItemGroup Condition="($(RuntimeIdentifier.StartsWith('maccatalyst-x64')))">
+    <NativeReference Include="$(ProjectDir)Platforms/MacCatalyst/lib/x86_64/libpjsua2.a" Condition="Exists('$(ProjectDir)Platforms/MacCatalyst/lib/x86_64/libpjsua2.a')">
+      <Kind>Static</Kind>
+      <ForceLoad>True</ForceLoad>
+      <SmartLink>False</SmartLink>
+      <IsCxx>True</IsCxx>
+      <LinkerFlags>-L$(ProjectDir)Platforms/MacCatalyst/lib/x86_64 -lpjsua2 -ld_classic</LinkerFlags>
+    </NativeReference>
+  </ItemGroup>
+  <ItemGroup Condition="($(RuntimeIdentifier.StartsWith('maccatalyst-arm64')))">
+    <NativeReference Include="$(ProjectDir)Platforms/MacCatalyst/lib/arm64/libpjsua2.a" Condition="Exists('$(ProjectDir)Platforms/MacCatalyst/lib/arm64/libpjsua2.a')">
+      <Kind>Static</Kind>
+      <ForceLoad>True</ForceLoad>
+      <SmartLink>False</SmartLink>
+      <IsCxx>True</IsCxx>
+      <LinkerFlags>-L$(ProjectDir)Platforms/MacCatalyst/lib/arm64 -lpjsua2</LinkerFlags>
+    </NativeReference>
+  </ItemGroup>
+
+  <!-- Windows Native Linking -->
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+    <None Condition="$(RuntimeIdentifier.Contains('x64')) Or '$(Platform)' == 'x64' Or '$(PlatformTarget)' == 'x64'" Update="Platforms\Windows\Native\x64\pjsua2.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Visible>True</Visible>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
+    <None Condition="$(RuntimeIdentifier.Contains('arm64')) Or '$(Platform)' == 'ARM64' Or '$(PlatformTarget)' == 'ARM64'" Update="Platforms\Windows\Native\ARM64\pjsua2.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Visible>True</Visible>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <MauiXaml Update="Platforms\Windows\App.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </MauiXaml>
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+    <Folder Include="Platforms\Windows\Native\x64\" />
+    <Folder Include="Platforms\Windows\Native\ARM64\" />
   </ItemGroup>
 </Project>
