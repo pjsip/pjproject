@@ -6,8 +6,7 @@ ifneq ($(findstring android,$(TARGET_NAME)),)
 else
     ifneq ($(findstring ios,$(TARGET_NAME)),)
   	LANG = csharp
-    else ifneq ($(IS_CATALYST),)
-    # Mac Catalyst adicionado explicitamente como assinante do ecossistema C#
+    else ifneq ($(findstring osx,$(TARGET_NAME)),)
     LANG = csharp
 	else
   	LANG = python java
