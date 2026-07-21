@@ -174,6 +174,9 @@ struct pjsip_dialog
     /** Transaction counter. */
     int                 tsx_count;  /**< Number of pending transactions.    */
 
+    /** Teardown guard, set once destruction has started (see #1886). */
+    pj_bool_t           destroying; /**< Dialog is being destroyed?         */
+
     /** Transport selector. */
     pjsip_tpselector    tp_sel;
 

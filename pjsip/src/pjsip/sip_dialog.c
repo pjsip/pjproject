@@ -922,6 +922,14 @@ PJ_DEF(pj_status_t) pjsip_dlg_terminate( pjsip_dialog *dlg )
     /* MUST not have pending transactions. */
     PJ_ASSERT_RETURN(dlg->tsx_count==0, PJ_EINVALIDOP);
 
+    /* Claim the teardown. If another path (e.g. pjsip_dlg_dec_lock() or a
+     * repeated terminate) has already started destroying this dialog, do
+     * not unregister/destroy it again. See #1886.
+     */
+    if (dlg->destroying)
+        return PJ_SUCCESS;
+    dlg->destroying = PJ_TRUE;
+
     return unregister_and_destroy_dialog(dlg, PJ_FALSE);
 }
 
@@ -1046,7 +1054,14 @@ PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
     pj_assert(dlg->sess_count > 0);
     --dlg->sess_count;
 
-    if (dlg->sess_count==0 && dlg->tsx_count==0) {
+    if (dlg->sess_count==0 && dlg->tsx_count==0 && !dlg->destroying) {
+        /* Claim the teardown before dropping the lock. Another thread
+         * holding a reference (e.g. a concurrent transaction's
+         * on_tsx_state) can acquire the group lock during the
+         * release/acquire window below and also observe zero counts;
+         * this flag makes sure only one thread destroys the dialog.
+         */
+        dlg->destroying = PJ_TRUE;
         pj_grp_lock_release(dlg->grp_lock_);
         pj_grp_lock_acquire(dlg->grp_lock_);
         /* We are holding the dialog group lock here, so before we destroy
