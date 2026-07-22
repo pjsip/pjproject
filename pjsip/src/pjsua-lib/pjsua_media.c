@@ -2437,6 +2437,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     unsigned mtxtcnt = PJ_ARRAY_SIZE(mtxtidx);
     unsigned mtottxtcnt = PJ_ARRAY_SIZE(mtxtidx);
     unsigned mi;
+    unsigned reinit_med_cnt;
     pj_bool_t pending_med_tp = PJ_FALSE;
     pj_bool_t reinit = PJ_FALSE;
     pj_status_t status;
@@ -2582,28 +2583,25 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
              * accepted. Reject before growing med_prov_cnt so nothing indexes
              * out of bounds; the count matches what the add-blocks produce.
              */
-            {
-                unsigned reinit_med_cnt = call->med_prov_cnt;
+            reinit_med_cnt = call->med_prov_cnt;
+            if (call->opt.aud_cnt > mtotaudcnt)
+                reinit_med_cnt += call->opt.aud_cnt - mtotaudcnt;
+            if (call->opt.vid_cnt > mtotvidcnt)
+                reinit_med_cnt += call->opt.vid_cnt - mtotvidcnt;
+            if (call->opt.txt_cnt > mtottxtcnt)
+                reinit_med_cnt += call->opt.txt_cnt - mtottxtcnt;
 
-                if (call->opt.aud_cnt > mtotaudcnt)
-                    reinit_med_cnt += call->opt.aud_cnt - mtotaudcnt;
-                if (call->opt.vid_cnt > mtotvidcnt)
-                    reinit_med_cnt += call->opt.vid_cnt - mtotvidcnt;
-                if (call->opt.txt_cnt > mtottxtcnt)
-                    reinit_med_cnt += call->opt.txt_cnt - mtottxtcnt;
-
-                if (reinit_med_cnt > PJSUA_MAX_CALL_MEDIA) {
-                    PJ_LOG(1,(THIS_FILE, "Call %d: re-INVITE/UPDATE media "
-                              "count (%u existing, requested aud=%u vid=%u "
-                              "txt=%u) would exceed maximum %d", call_id,
-                              call->med_prov_cnt, call->opt.aud_cnt,
-                              call->opt.vid_cnt, call->opt.txt_cnt,
-                              PJSUA_MAX_CALL_MEDIA));
-                    if (sip_err_code)
-                        *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
-                    status = PJ_ETOOMANY;
-                    goto on_error;
-                }
+            if (reinit_med_cnt > PJSUA_MAX_CALL_MEDIA) {
+                PJ_LOG(1,(THIS_FILE, "Call %d: re-INVITE/UPDATE media count "
+                          "(%u existing, requested aud=%u vid=%u txt=%u) "
+                          "would exceed maximum %d", call_id,
+                          call->med_prov_cnt, call->opt.aud_cnt,
+                          call->opt.vid_cnt, call->opt.txt_cnt,
+                          PJSUA_MAX_CALL_MEDIA));
+                if (sip_err_code)
+                    *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+                status = PJ_ETOOMANY;
+                goto on_error;
             }
 
             /* Call setting may add or remove media. Adding media is done by
