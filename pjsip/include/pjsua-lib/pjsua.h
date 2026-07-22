@@ -4548,12 +4548,13 @@ typedef struct pjsua_acc_config
      * - PJSUA_SIPREC_LABEL_OPTIONAL: Accept without labels, log warning
      * - PJSUA_SIPREC_LABEL_DISABLED: Don't use labels
      *
-     * Default: PJSUA_SIPREC_LABEL_OPTIONAL (allow for interoperability)
+     * Default: The default value is taken from siprec_label_mode in
+     *          pjsua_config.
      */
     pjsua_siprec_label_mode  siprec_label_mode;
 
     /**
-     * Specify Session Timer settings, see #pjsip_timer_setting. 
+     * Specify Session Timer settings, see #pjsip_timer_setting.
      */
     pjsip_timer_setting timer_setting;
 
