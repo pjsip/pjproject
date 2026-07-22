@@ -3107,7 +3107,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
                        PJSUA_SIPREC_LABEL_OPTIONAL)
             {
                 PJ_LOG(3,(THIS_FILE,
-                          "Call %d media %d: Missing label attribute in SDP answer. "
+                          "Call %d media %d: Missing label attribute in remote SDP. "
                           "SIPREC metadata correlation will be limited.",
                           call_id, mi));
             }
