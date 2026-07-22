@@ -1785,8 +1785,11 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
             const pj_str_t st_hide = {"hide", 4};
 
             if (pj_stricmp(&p->name, &st_hide) == 0) {
-                /* Check if param 'hide' is specified without 'lr'. */
-                pj_assert(sip_uri->lr_param != 0);
+                /* Proprietary 'hide' param: suppress this Route from wire.
+                 * By design, PJSIP always pairs 'hide' with 'lr', but we
+                 * don't assert lr_param here since external/malformed input
+                 * could trigger it. Just hide the route regardless.
+                 */
                 return 0;
             }
             p = p->next;
