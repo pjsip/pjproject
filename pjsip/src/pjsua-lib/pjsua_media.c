@@ -2628,6 +2628,28 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
         } else {
 
+            /* Safety net: apply_call_setting() already rejects call settings
+             * whose media count exceeds PJSUA_MAX_CALL_MEDIA, so this cannot
+             * normally trigger. Guard anyway so no code path can overflow the
+             * fixed-size media index arrays. The per-field checks precede the
+             * sum so the addition cannot integer-overflow.
+             */
+            if (call->opt.aud_cnt > PJSUA_MAX_CALL_MEDIA ||
+                call->opt.vid_cnt > PJSUA_MAX_CALL_MEDIA ||
+                call->opt.txt_cnt > PJSUA_MAX_CALL_MEDIA ||
+                call->opt.aud_cnt + call->opt.vid_cnt + call->opt.txt_cnt >
+                    PJSUA_MAX_CALL_MEDIA)
+            {
+                PJ_LOG(1,(THIS_FILE, "Call %d: media count (aud=%u vid=%u "
+                          "txt=%u) exceeds maximum %d", call_id,
+                          call->opt.aud_cnt, call->opt.vid_cnt,
+                          call->opt.txt_cnt, PJSUA_MAX_CALL_MEDIA));
+                if (sip_err_code)
+                    *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+                status = PJ_ETOOMANY;
+                goto on_error;
+            }
+
             maudcnt = mtotaudcnt = call->opt.aud_cnt;
             for (mi=0; mi<maudcnt; ++mi) {
                 maudidx[mi] = (pj_uint8_t)mi;
@@ -2644,17 +2666,23 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
             /* Need to publish supported media? */
             if (call->opt.flag & PJSUA_CALL_INCLUDE_DISABLED_MEDIA) {
-                if (mtotaudcnt == 0) {
+                if (mtotaudcnt == 0 &&
+                    call->med_prov_cnt < PJSUA_MAX_CALL_MEDIA)
+                {
                     mtotaudcnt = 1;
                     maudidx[0] = (pj_uint8_t)call->med_prov_cnt++;
                 }
 #if PJMEDIA_HAS_VIDEO
-                if (mtotvidcnt == 0) {
+                if (mtotvidcnt == 0 &&
+                    call->med_prov_cnt < PJSUA_MAX_CALL_MEDIA)
+                {
                     mtotvidcnt = 1;
                     mvididx[0] = (pj_uint8_t)call->med_prov_cnt++;
                 }
 #endif
-                if (mtottxtcnt == 0) {
+                if (mtottxtcnt == 0 &&
+                    call->med_prov_cnt < PJSUA_MAX_CALL_MEDIA)
+                {
                     mtottxtcnt = 1;
                     mtxtidx[0] = (pj_uint8_t)call->med_prov_cnt++;
                 }
