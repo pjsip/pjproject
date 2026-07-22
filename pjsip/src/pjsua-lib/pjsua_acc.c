@@ -1545,6 +1545,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* SIPREC */
     acc->cfg.use_siprec = cfg->use_siprec;
+    acc->cfg.siprec_label_mode = cfg->siprec_label_mode;
 
     /* Transport */
     if (acc->cfg.transport_id != cfg->transport_id) {
