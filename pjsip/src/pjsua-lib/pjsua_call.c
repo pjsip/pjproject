@@ -712,7 +712,34 @@ static pj_status_t apply_call_setting(pjsua_call *call,
                                       const pjsua_call_setting *opt,
                                       const pjmedia_sdp_session *rem_sdp)
 {
+    pjsua_call_setting prev_opt;
+
     pj_assert(call);
+
+    /* Remember the current setting so it can be restored if re-initializing
+     * the media channel below fails: a rejected re-offer must not leave the
+     * call holding a setting it never applied (which could e.g. drop media on
+     * the next re-offer).
+     */
+    prev_opt = call->opt;
+
+    /* Reject media counts that would overflow the call's fixed-size media
+     * arrays (pjsua_call.media[PJSUA_MAX_CALL_MEDIA]). This is application
+     * input, so fail gracefully rather than assert or overflow. The
+     * per-field checks precede the sum so the addition cannot overflow.
+     */
+    if (opt &&
+        (opt->aud_cnt > PJSUA_MAX_CALL_MEDIA ||
+         opt->vid_cnt > PJSUA_MAX_CALL_MEDIA ||
+         opt->txt_cnt > PJSUA_MAX_CALL_MEDIA ||
+         opt->aud_cnt + opt->vid_cnt + opt->txt_cnt > PJSUA_MAX_CALL_MEDIA))
+    {
+        PJ_LOG(1,(THIS_FILE, "Rejecting call setting: requested media count "
+                  "(aud=%u vid=%u txt=%u) exceeds maximum per call (%d)",
+                  opt->aud_cnt, opt->vid_cnt, opt->txt_cnt,
+                  PJSUA_MAX_CALL_MEDIA));
+        return PJ_ETOOMANY;
+    }
 
     if (!opt) {
         pjsua_call_cleanup_flag(&call->opt);
@@ -749,6 +776,8 @@ static pj_status_t apply_call_setting(pjsua_call *call,
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Error re-initializing media channel",
                          status);
+            /* Restore the previous setting; this re-offer was rejected. */
+            call->opt = prev_opt;
             return status;
         }
     }
@@ -3006,8 +3035,12 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
          * the previous one.
          */
         if (!call->opt_inited) {
+            status = apply_call_setting(call, opt, NULL);
+            if (status != PJ_SUCCESS) {
+                pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
+                goto on_return;
+            }
             call->opt_inited = PJ_TRUE;
-            apply_call_setting(call, opt, NULL);
         } else if (pj_memcmp(opt, &call->opt, sizeof(*opt)) != 0) {
             /* Warn application about call setting inconsistency */
             PJ_LOG(2,(THIS_FILE, "The call setting changes is ignored."));
