@@ -24,8 +24,13 @@
 #if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0 && \
     defined(PJMEDIA_VIDEO_DEV_HAS_SDL) && PJMEDIA_VIDEO_DEV_HAS_SDL != 0
 
+#if SDL_VERSION_ATLEAST(3,0,0)
+#include <SDL3/SDL.h>
+#define SDL_RenderCopy(renderer, texture, srcrect, dstrect) SDL_RenderTexture(renderer, texture, srcrect, dstrect)
+#else
 #include <SDL.h>
 #include <SDL_syswm.h>
+#endif
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
 #   include "SDL_opengl.h"
 #   define OPENGL_DEV_IDX 1
@@ -722,9 +727,28 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */   
         if (use_app_win) {
             /* Use the window supplied by the application. */       
+#if SDL_VERSION_ATLEAST(3,0,0)
+            SDL_PropertiesID props = SDL_CreateProperties();
+#if defined(PJ_WIN32) && PJ_WIN32 != 0
+            SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_WIN32_HWND_POINTER, hwnd->info.window);
+#elif defined(PJ_ANDROID)
+            // ...
+#elif defined(PJ_IPHONE)
+            // ...
+#else
+            SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X11_WINDOW_NUMBER, (Uint64)hwnd->info.window);
+#endif
+            strm->window = SDL_CreateWindowWithProperties(props);
+            SDL_DestroyProperties(props);
+#else
             strm->window = SDL_CreateWindowFrom(hwnd->info.window);
+#endif
             if (!strm->window) {
+#if SDL_VERSION_ATLEAST(3,0,0)
+                sdl_log_err("SDL_CreateWindowWithProperties()");
+#else
                 sdl_log_err("SDL_CreateWindowFrom()");
+#endif
                 return PJMEDIA_EVID_SYSERR;
             }
         } else {
@@ -1064,6 +1088,44 @@ static pj_status_t get_cap(void *data)
 
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW)
     {
+#if SDL_VERSION_ATLEAST(3,0,0)
+        SDL_PropertiesID props = SDL_GetWindowProperties(strm->window);
+        pjmedia_vid_dev_hwnd *wnd = (pjmedia_vid_dev_hwnd *)pval;
+        if (props) {
+#if defined(SDL_VIDEO_DRIVER_WINDOWS)
+            HWND hwnd = (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+            if (hwnd) {
+                wnd->type = PJMEDIA_VID_DEV_HWND_TYPE_WINDOWS;
+                wnd->info.win.hwnd = (void *)hwnd;
+                return PJ_SUCCESS;
+            }
+#endif
+#if defined(SDL_VIDEO_DRIVER_X11)
+            Window xwindow = (Window)SDL_GetNumberProperty(props, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
+            Display *display = (Display *)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+            if (xwindow) {
+                wnd->info.x11.window = (void *)xwindow;
+                wnd->info.x11.display = (void *)display;
+                return PJ_SUCCESS;
+            }
+#endif
+#if defined(SDL_VIDEO_DRIVER_COCOA)
+            void *cocoa_window = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
+            if (cocoa_window) {
+                wnd->info.cocoa.window = cocoa_window;
+                return PJ_SUCCESS;
+            }
+#endif
+#if defined(SDL_VIDEO_DRIVER_UIKIT)
+            void *uikit_window = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_UIKIT_WINDOW_POINTER, NULL);
+            if (uikit_window) {
+                wnd->info.ios.window = uikit_window;
+                return PJ_SUCCESS;
+            }
+#endif
+        }
+        return PJMEDIA_EVID_INVCAP;
+#else
         SDL_SysWMinfo info;
         SDL_VERSION(&info.version);
 
@@ -1098,6 +1160,7 @@ static pj_status_t get_cap(void *data)
             return PJ_SUCCESS;
         } else
             return PJMEDIA_EVID_INVCAP;
+#endif
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
         SDL_GetWindowPosition(strm->window, &((pjmedia_coord *)pval)->x,
                               &((pjmedia_coord *)pval)->y);
@@ -1550,6 +1613,8 @@ static pj_status_t job_queue_destroy(job_queue *jq)
 #ifdef _MSC_VER
 #   if defined(PJMEDIA_SDL_LIB)
 #       pragma comment( lib, PJMEDIA_SDL_LIB)
+#   elif SDL_VERSION_ATLEAST(3,0,0)
+#       pragma comment( lib, "sdl3.lib")
 #   elif SDL_VERSION_ATLEAST(2,0,0)
 #       pragma comment( lib, "sdl2.lib")
 #   elif SDL_VERSION_ATLEAST(1,3,0)

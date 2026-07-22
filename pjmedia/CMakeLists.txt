@@ -276,7 +276,23 @@ cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_SDL
   "Enable FFMPEG video device backend" ON
   "PJMEDIA_WITH_VIDEODEV" OFF
 )
-import_if_or_set(PJMEDIA_WITH_VIDEODEV_SDL OFF SDL2)
+if(PJMEDIA_WITH_VIDEODEV_SDL)
+  # Check for SDL3 first
+  find_package(SDL3 QUIET)
+  if(SDL3_FOUND)
+    set(PJMEDIA_SDL_TARGET "SDL3::SDL3")
+    set(PJMEDIA_SDL_PACKAGE "SDL3" CACHE INTERNAL "SDL package used")
+  else()
+    # Fallback to SDL2
+    find_package(SDL2 QUIET)
+    if(SDL2_FOUND)
+      set(PJMEDIA_SDL_TARGET "SDL2::SDL2")
+      set(PJMEDIA_SDL_PACKAGE "SDL2" CACHE INTERNAL "SDL package used")
+    else()
+      pj_force_set(PJMEDIA_WITH_VIDEODEV_SDL OFF "Neither SDL3 nor SDL2 was found")
+    endif()
+  endif()
+endif()
 
 # Metal backend
 cmake_dependent_option(PJMEDIA_WITH_VIDEODEV_METAL
@@ -890,7 +906,7 @@ target_link_libraries(pjmedia-videodev
     # video backends
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_OPENGL}>:OpenGL::GL;OpenGL::GLES2>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_FFMPEG}>:FFMPEG::avdevice>
-    $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_SDL}>:SDL2::SDL2>
+    $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_SDL}>:${PJMEDIA_SDL_TARGET}>
     $<$<BOOL:${PJMEDIA_WITH_VIDEODEV_V4L2}>:V4L2::V4L2>
     # TODO: add remaining APIs' dependencies
 
