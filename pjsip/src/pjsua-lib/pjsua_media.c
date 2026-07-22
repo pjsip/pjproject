@@ -2822,12 +2822,12 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
             }
 
             /* Force a T.38 (image/udptl) line's media type to NONE so the later
-             * media update skips it (both the stream update and
-             * pjsua_aud_channel_update() are gated on type==AUDIO). Otherwise
-             * this slot keeps the previous call's AUDIO type and the update
-             * tries to build a fresh audio stream on the now-addressless image
-             * transport, asserting on sa_family. Such T.38 media is app-managed
-             * (the application's own UDPTL socket). */
+             * media update routes it to the app-managed T.38 branch instead of
+             * the audio path. Otherwise this slot keeps the previous call's
+             * AUDIO type and the update tries to build a fresh audio stream on
+             * the now-addressless image transport, asserting on sa_family. Such
+             * T.38 media is app-managed (the application's own UDPTL socket);
+             * pjsua_media_channel_update() then reports it as disabled media. */
             if (rem_sdp && mi < rem_sdp->media_count &&
                 pjsua_sdp_media_is_udptl(rem_sdp->media[mi]))
             {
@@ -4638,6 +4638,35 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
                                       &need_renego_sdp);
             if (status != PJ_SUCCESS)
                 goto on_check_med_status;
+        } else if (mi < remote_sdp->media_count &&
+                   pjsua_sdp_media_is_udptl(remote_sdp->media[mi]))
+        {
+            /* App-managed T.38 (image/udptl). pjmedia has no T.38 engine;
+             * the application terminates T.38 on its own UDPTL socket (see
+             * the matching note in pjsua_media_channel_init()). There is no
+             * pjsua stream to build, so tear down anything left from the
+             * previous negotiation and mark the slot as disabled media
+             * rather than failing with PJMEDIA_EUNSUPMEDIATYPE. Failing
+             * would expose the slot as PJSUA_CALL_MEDIA_ERROR and, for a
+             * udptl-only offer, leave got_media false so the call is
+             * disconnected during the initial answer.
+             */
+            stop_media_stream(call, mi);
+            if (call_med->tp) {
+                pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
+                pjmedia_transport_close(call_med->tp);
+                call_med->tp = call_med->tp_orig = NULL;
+            }
+            call_med->state = PJSUA_CALL_MEDIA_NONE;
+            call_med->dir = PJMEDIA_DIR_NONE;
+
+            /* Count the app-managed line as media so an initial udptl-only
+             * offer is answerable instead of being rejected as "no media".
+             */
+            if (local_sdp->media[mi]->desc.port != 0)
+                got_media = PJ_TRUE;
+
+            continue;
         } else {
             status = PJMEDIA_EUNSUPMEDIATYPE;
         }
