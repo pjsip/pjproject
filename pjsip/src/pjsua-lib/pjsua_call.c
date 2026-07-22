@@ -712,7 +712,16 @@ static pj_status_t apply_call_setting(pjsua_call *call,
                                       const pjsua_call_setting *opt,
                                       const pjmedia_sdp_session *rem_sdp)
 {
+    pjsua_call_setting prev_opt;
+
     pj_assert(call);
+
+    /* Remember the current setting so it can be restored if re-initializing
+     * the media channel below fails: a rejected re-offer must not leave the
+     * call holding a setting it never applied (which could e.g. drop media on
+     * the next re-offer).
+     */
+    prev_opt = call->opt;
 
     /* Reject media counts that would overflow the call's fixed-size media
      * arrays (pjsua_call.media[PJSUA_MAX_CALL_MEDIA]). This is application
@@ -767,6 +776,8 @@ static pj_status_t apply_call_setting(pjsua_call *call,
         if (status != PJ_SUCCESS) {
             pjsua_perror(THIS_FILE, "Error re-initializing media channel",
                          status);
+            /* Restore the previous setting; this re-offer was rejected. */
+            call->opt = prev_opt;
             return status;
         }
     }
