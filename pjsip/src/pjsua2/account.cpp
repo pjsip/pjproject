@@ -395,7 +395,7 @@ void AccountCallConfig::readObject(const ContainerNode &node)
     NODE_READ_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
     NODE_READ_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
     NODE_READ_NUM_T   ( this_node, pjsua_sip_siprec_use, siprecUse);
-    NODE_READ_NUM_T   ( this_node, pjsua_siprec_label_mode, siprecLabelMode);
+    NODE_READ_NUM_T_OPT(this_node, pjsua_siprec_label_mode, siprecLabelMode);
     NODE_READ_UNSIGNED( this_node, timerMinSESec);
     NODE_READ_UNSIGNED( this_node, timerSessExpiresSec);
 }
