@@ -395,7 +395,7 @@ void AccountCallConfig::readObject(const ContainerNode &node)
     NODE_READ_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
     NODE_READ_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
     NODE_READ_NUM_T   ( this_node, pjsua_sip_siprec_use, siprecUse);
-    NODE_READ_NUM_T_OPT(this_node, pjsua_siprec_label_mode, siprecLabelMode);
+    NODE_READ_BOOL    ( this_node, siprecRequireLabel);
     NODE_READ_UNSIGNED( this_node, timerMinSESec);
     NODE_READ_UNSIGNED( this_node, timerSessExpiresSec);
 }
@@ -409,7 +409,7 @@ void AccountCallConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
     NODE_WRITE_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
     NODE_WRITE_NUM_T   ( this_node, pjsua_sip_siprec_use, siprecUse);
-    NODE_WRITE_NUM_T   ( this_node, pjsua_siprec_label_mode, siprecLabelMode);
+    NODE_WRITE_BOOL    ( this_node, siprecRequireLabel);
     NODE_WRITE_UNSIGNED( this_node, timerMinSESec);
     NODE_WRITE_UNSIGNED( this_node, timerSessExpiresSec);
 }
@@ -737,7 +737,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.require_100rel          = callConfig.prackUse;
     ret.use_timer               = callConfig.timerUse;
     ret.use_siprec              = callConfig.siprecUse;
-    ret.siprec_label_mode       = callConfig.siprecLabelMode;
+    ret.siprec_require_label    = callConfig.siprecRequireLabel;
     ret.timer_setting.min_se    = callConfig.timerMinSESec;
     ret.timer_setting.sess_expires = callConfig.timerSessExpiresSec;
 
@@ -928,7 +928,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     callConfig.prackUse         = prm.require_100rel;
     callConfig.timerUse         = prm.use_timer;
     callConfig.siprecUse        = prm.use_siprec;
-    callConfig.siprecLabelMode  = prm.siprec_label_mode;
+    callConfig.siprecRequireLabel = PJ2BOOL(prm.siprec_require_label);
     callConfig.timerMinSESec    = prm.timer_setting.min_se;
     callConfig.timerSessExpiresSec = prm.timer_setting.sess_expires;
 

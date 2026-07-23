@@ -32,12 +32,6 @@
 #define THIS_FILE               "sip_siprec.c"
 
 
-/* SIPREC label mode constants (must match pjsua_siprec_label_mode enum) */
-#define SIPREC_LABEL_MODE_MANDATORY   0
-#define SIPREC_LABEL_MODE_OPTIONAL    1
-#define SIPREC_LABEL_MODE_DISABLED    2
-
-
 static const pj_str_t STR_SIPREC         = {"siprec", 6};
 static const pj_str_t STR_LABEL          = {"label", 5};
 
@@ -142,7 +136,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                               pjsip_dialog *dlg,
                                               pjsip_endpoint *endpt,
                                               pjsip_tx_data **p_tdata,
-                                              unsigned label_mode)
+                                              pj_bool_t require_label)
 {
     int code = 200;
     pj_status_t status = PJ_SUCCESS;
@@ -188,13 +182,13 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         goto on_return;
     }
 
-    /* Check that the media attribute label exist in the SDP
-     * Behavior depends on label_mode:
-     * - MANDATORY: Reject if any media lacks label
-     * - OPTIONAL: Accept, but log warning for unlabeled media
-     * - DISABLED: Skip label checking entirely
+    /* Check that the media attribute label exists in the SDP
+     * Behavior depends on require_label:
+     * - PJ_TRUE (require): Reject if any media lacks label
+     * - PJ_FALSE (optional): Accept, but log warning for unlabeled media
      */
-    if (label_mode == SIPREC_LABEL_MODE_MANDATORY) {
+    if (require_label) {
+        /* Require labels - reject if any media stream lacks one */
         for (mi=0; mi<sdp_offer->media_count; ++mi) {
             if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
                                                 &STR_LABEL, NULL)){
@@ -203,19 +197,19 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                 goto on_return;
             }
         }
-    } else if (label_mode == SIPREC_LABEL_MODE_OPTIONAL) {
+    } else {
+        /* Labels are optional - log warnings for missing labels */
         for (mi=0; mi<sdp_offer->media_count; ++mi) {
             if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
                                                 &STR_LABEL, NULL)){
                 PJ_LOG(3,(THIS_FILE,
                           "SIPREC media %d missing label attribute. "
                           "Metadata correlation will be limited. "
-                          "To require labels, set siprec_label_mode to "
-                          "PJSUA_SIPREC_LABEL_MANDATORY.", mi));
+                          "To require labels, set siprec_require_label to PJ_TRUE.",
+                          mi));
             }
         }
     }
-    /* DISABLED: Do nothing */
 
     status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
                                         rdata->msg_info.msg->body,

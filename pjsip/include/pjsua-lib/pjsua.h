@@ -2452,38 +2452,6 @@ typedef enum pjsua_sip_siprec_use
 } pjsua_sip_siprec_use;
 
 
-/**
- * This enumeration specifies the SIPREC label attribute requirements.
- * The label attribute ('a=label') identifies media streams in the SDP
- * and correlates them with SIPREC metadata.
- */
-typedef enum pjsua_siprec_label_mode
-{
-    /**
-     * Mandatory mode. SIPREC SDP media streams MUST include the label
-     * attribute. SDP negotiation will fail if any media stream is missing
-     * the label attribute. This is the strictest mode and ensures full
-     * metadata correlation.
-     */
-    PJSUA_SIPREC_LABEL_MANDATORY = 0,
-
-    /**
-     * Optional mode. SIPREC SDP media streams may omit the label attribute.
-     * The SDP negotiation will succeed, but a warning will be logged for
-     * each unlabeled media stream. Metadata correlation will be limited
-     * for unlabeled streams. Use this mode for compatibility with
-     * non-compliant SRC implementations.
-     */
-    PJSUA_SIPREC_LABEL_OPTIONAL = 1,
-
-    /**
-     * Disabled mode. Do not use or expect SIPREC label attributes in SDP.
-     * Metadata correlation will not be available. Use this mode when
-     * working with legacy systems or when SIPREC metadata is not required.
-     */
-    PJSUA_SIPREC_LABEL_DISABLED = 2,
-
-} pjsua_siprec_label_mode;
 
 
 /**
@@ -2699,23 +2667,20 @@ typedef struct pjsua_config
     pjsua_sip_siprec_use use_siprec;
 
     /**
-     * Specify whether SDP label attributes are required for SIPREC.
-     * When enabled, SIPREC INVITEs without 'a=label' in all media streams
-     * will be rejected with 400 Bad Request. When disabled, the SRS will
-     * accept SIPREC INVITEs even without labels for better interoperability.
+     * Specify whether SIPREC label attributes ('a=label') are required
+     * in incoming INVITE requests.
      *
-     * According to RFC 7866, the SRC MUST include labels, but for
-     * interoperability with some implementations, this requirement can be
-     * relaxed.
+     * When set to PJ_TRUE, SIPREC INVITEs without the label attribute in
+     * all media streams will be rejected with 400 Bad Request. This enforces
+     * RFC 7866 compliance for proper metadata correlation.
      *
-     * This setting controls the behavior:
-     * - PJSUA_SIPREC_LABEL_MANDATORY: Reject SIPREC without labels
-     * - PJSUA_SIPREC_LABEL_OPTIONAL: Accept without labels, log warning
-     * - PJSUA_SIPREC_LABEL_DISABLED: Don't use labels
+     * When set to PJ_FALSE (default), the SRS will accept SIPREC INVITEs
+     * even without labels for better interoperability. Missing labels will
+     * be logged as warnings for debugging purposes.
      *
-     * Default: PJSUA_SIPREC_LABEL_OPTIONAL (allow for interoperability)
+     * Default: PJ_FALSE (allow for interoperability)
      */
-    pjsua_siprec_label_mode  siprec_label_mode;
+    pj_bool_t       siprec_require_label;
 
     /**
      * Handle unsolicited NOTIFY requests containing message waiting 
@@ -4534,24 +4499,21 @@ typedef struct pjsua_acc_config
     pjsua_sip_siprec_use use_siprec;
 
     /**
-     * Specify whether SDP label attributes are required for SIPREC.
-     * When enabled, SIPREC INVITEs without 'a=label' in all media streams
-     * will be rejected with 400 Bad Request. When disabled, the SRS will
-     * accept SIPREC INVITEs even without labels for better interoperability.
+     * Specify whether SIPREC label attributes ('a=label') are required
+     * in incoming INVITE requests.
      *
-     * According to RFC 7866, the SRC MUST include labels, but for
-     * interoperability with some implementations, this requirement can be
-     * relaxed.
+     * When set to PJ_TRUE, SIPREC INVITEs without the label attribute in
+     * all media streams will be rejected with 400 Bad Request. This enforces
+     * RFC 7866 compliance for proper metadata correlation.
      *
-     * This setting controls the behavior:
-     * - PJSUA_SIPREC_LABEL_MANDATORY: Reject SIPREC without labels
-     * - PJSUA_SIPREC_LABEL_OPTIONAL: Accept without labels, log warning
-     * - PJSUA_SIPREC_LABEL_DISABLED: Don't use labels
+     * When set to PJ_FALSE (default), the SRS will accept SIPREC INVITEs
+     * even without labels for better interoperability. Missing labels will
+     * be logged as warnings for debugging purposes.
      *
-     * Default: The default value is taken from siprec_label_mode in
-     *          pjsua_config.
+     * Default: The default value is taken from siprec_require_label in
+     *          pjsua_config (PJ_FALSE).
      */
-    pjsua_siprec_label_mode  siprec_label_mode;
+    pj_bool_t       siprec_require_label;
 
     /**
      * Specify Session Timer settings, see #pjsip_timer_setting.

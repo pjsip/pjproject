@@ -105,7 +105,7 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                                 pjsip_dialog *dlg,
                                                 pjsip_endpoint *endpt,
                                                 pjsip_tx_data **p_tdata,
-                                                unsigned label_mode);
+                                                pj_bool_t require_label);
 
 
 /**

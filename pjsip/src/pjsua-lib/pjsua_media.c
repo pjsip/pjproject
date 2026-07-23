@@ -3088,12 +3088,12 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
             continue;
         }
 
-        /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so Get label
-         * attribute in SDP offer and add label attribute to SDP answer
+        /* Check if request supports PJSIP_INV_REQUIRE_SIPREC. If so, get label
+         * attribute in SDP offer and add label attribute to SDP answer.
+         * If labels are not required, log a warning when labels are missing.
          */
         if (call->inv && (call->inv->options & PJSIP_INV_REQUIRE_SIPREC) &&
-            rem_sdp && pjsua_var.acc[call->acc_id].cfg.siprec_label_mode !=
-                       PJSUA_SIPREC_LABEL_DISABLED)
+            rem_sdp)
         {
             pjmedia_sdp_attr *label_attr;
             const pj_str_t STR_LABEL_ATTR = {"label", 5};
@@ -3103,12 +3103,12 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
             if (label_attr) {
                 m->attr[m->attr_count++] = pjmedia_sdp_attr_create_label(pool,
                                                             &label_attr->value);
-            } else if (pjsua_var.acc[call->acc_id].cfg.siprec_label_mode ==
-                       PJSUA_SIPREC_LABEL_OPTIONAL)
-            {
+            } else if (!pjsua_var.acc[call->acc_id].cfg.siprec_require_label) {
+                /* Labels are not required, but missing for debugging */
                 PJ_LOG(3,(THIS_FILE,
                           "Call %d media %d: Missing label attribute in remote SDP. "
-                          "SIPREC metadata correlation will be limited.",
+                          "SIPREC metadata correlation will be limited. "
+                          "To require labels, set siprec_require_label to PJ_TRUE.",
                           call_id, mi));
             }
         }

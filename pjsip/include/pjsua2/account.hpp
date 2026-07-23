@@ -388,23 +388,20 @@ struct AccountCallConfig : public PersistentObject
     pjsua_sip_siprec_use siprecUse;
 
     /**
-     * Specify whether SDP label attributes are required for SIPREC.
-     * When enabled, SIPREC INVITEs without 'a=label' in all media streams
-     * will be rejected with 400 Bad Request. When disabled, the SRS will
-     * accept SIPREC INVITEs even without labels for better interoperability.
+     * Specify whether SIPREC label attributes ('a=label') are required
+     * in incoming INVITE requests.
      *
-     * According to RFC 7866, the SRC MUST include labels, but for
-     * interoperability with some implementations, this requirement can be
-     * relaxed.
+     * When set to true, SIPREC INVITEs without the label attribute in
+     * all media streams will be rejected with 400 Bad Request. This enforces
+     * RFC 7866 compliance for proper metadata correlation.
      *
-     * This setting controls the behavior:
-     * - PJSUA_SIPREC_LABEL_MANDATORY: Reject SIPREC without labels
-     * - PJSUA_SIPREC_LABEL_OPTIONAL: Accept without labels, log warning
-     * - PJSUA_SIPREC_LABEL_DISABLED: Don't use labels
+     * When set to false (default), the SRS will accept SIPREC INVITEs
+     * even without labels for better interoperability. Missing labels will
+     * be logged as warnings for debugging purposes.
      *
-     * Default: PJSUA_SIPREC_LABEL_OPTIONAL (allow for interoperability)
+     * Default: false (allow for interoperability)
      */
-    pjsua_siprec_label_mode siprecLabelMode;
+    bool siprecRequireLabel;
 
     /**
      * Specify minimum Session Timer expiration period, in seconds.
@@ -426,7 +423,7 @@ public:
                           prackUse(PJSUA_100REL_NOT_USED),
                           timerUse(PJSUA_SIP_TIMER_OPTIONAL),
                           siprecUse(PJSUA_SIP_SIPREC_INACTIVE),
-                          siprecLabelMode(PJSUA_SIPREC_LABEL_OPTIONAL),
+                          siprecRequireLabel(false),
                           timerMinSESec(90),
                           timerSessExpiresSec(PJSIP_SESS_TIMER_DEF_SE)
     {}
