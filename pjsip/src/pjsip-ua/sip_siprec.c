@@ -64,12 +64,12 @@ static pj_status_t pjsip_siprec_check_request(pjsip_rx_data *rdata)
 
     /* Find Contact header */
     contact_hdr = (pjsip_contact_hdr*)
-            pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
+    pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
 
     if(!contact_hdr || !contact_hdr->uri){
         return PJ_FALSE;
     }
-
+    
     /* Check "+sip.src" parameter exist in the Contact header */
     if(!pjsip_param_find(&contact_hdr->other_param, &str_src)){
         return PJ_FALSE;
@@ -125,17 +125,17 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
     return PJ_FALSE;
 }
 
-
 /**
  * Verifies that the incoming request is a siprec request or not.
  */
-PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata, 
+PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                               pj_str_t *metadata,
                                               pjmedia_sdp_session *sdp_offer,
                                               unsigned *options,
                                               pjsip_dialog *dlg,
                                               pjsip_endpoint *endpt,
-                                              pjsip_tx_data **p_tdata)
+                                              pjsip_tx_data **p_tdata,
+                                              pj_bool_t require_label)
 {
     int code = 200;
     pj_status_t status = PJ_SUCCESS;
@@ -181,13 +181,32 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         goto on_return;
     }
 
-    /* Check that the media attribute label exist in the SDP */
-    for (mi=0; mi<sdp_offer->media_count; ++mi) {
-        if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
-                                            &STR_LABEL, NULL)){
-            code = PJSIP_SC_BAD_REQUEST;
-            warn_text = "SDP must have label media attribute";
-            goto on_return;
+    /* Check that the media attribute label exists in the SDP
+     * Behavior depends on require_label:
+     * - PJ_TRUE (require): Reject if any media lacks label
+     * - PJ_FALSE (optional): Accept, but log warning for unlabeled media
+     */
+    if (require_label) {
+        /* Require labels - reject if any media stream lacks one */
+        for (mi=0; mi<sdp_offer->media_count; ++mi) {
+            if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
+                                                &STR_LABEL, NULL)){
+                code = PJSIP_SC_BAD_REQUEST;
+                warn_text = "SDP must have label media attribute";
+                goto on_return;
+            }
+        }
+    } else {
+        /* Labels are optional - log warnings for missing labels */
+        for (mi=0; mi<sdp_offer->media_count; ++mi) {
+            if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
+                                                &STR_LABEL, NULL)){
+                PJ_LOG(3,(THIS_FILE,
+                          "SIPREC media %d missing label attribute. "
+                          "Metadata correlation will be limited. "
+                          "To require labels, set siprec_require_label to PJ_TRUE.",
+                          mi));
+            }
         }
     }
 
