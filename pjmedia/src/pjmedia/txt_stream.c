@@ -1049,22 +1049,21 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si, pj_pool_t *pool,
     unsigned rem_t140_pt = 0;
     unsigned pt = 0;
     pjmedia_sdp_rtpmap rtpmap;
-
+    
     /* Parse Remote PTs */
     for (i = 0; i < rem_m->desc.fmt_count; ++i) {
         pt = (unsigned) pj_strtoul(&rem_m->desc.fmt[i]);
         attr =
             pjmedia_sdp_media_find_attr(rem_m, &ID_RTPMAP, &rem_m->desc.fmt[i]);
         if (attr && pjmedia_sdp_attr_get_rtpmap(attr, &rtpmap) == PJ_SUCCESS) {
-            if (pj_strcmp(&rtpmap.enc_name, &ID_REDUNDANCY) == 0) {
+            if (pj_stricmp(&rtpmap.enc_name, &ID_REDUNDANCY) == 0) {
                 rem_red_pt = pt;
             } else {
                 rem_t140_pt = pt;
             }
         }
     }
-
-    si->tx_red_pt = 0;
+    
     si->tx_pt = (pj_uint8_t) rem_t140_pt;
 
     /* Parse Local PTs */
@@ -1073,7 +1072,7 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si, pj_pool_t *pool,
         attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP,
                                            &local_m->desc.fmt[fmti]);
         if (attr && pjmedia_sdp_attr_get_rtpmap(attr, &rtpmap) == PJ_SUCCESS) {
-            if (pj_strcmp(&rtpmap.enc_name, &ID_REDUNDANCY) == 0) {
+            if (pj_stricmp(&rtpmap.enc_name, &ID_REDUNDANCY) == 0) {
                 si->rx_red_pt = (pj_uint8_t) pt;
             } else {
                 si->rx_pt = (pj_uint8_t) pt;
@@ -1112,6 +1111,9 @@ static pj_status_t get_codec_info(pjmedia_txt_stream_info *si, pj_pool_t *pool,
             }
         }
     }
+    /* Only activate red when we DO have redundancy */
+    if (si->tx_red_level > 0) 
+        si->tx_red_pt = (pj_uint8_t) rem_red_pt;
 
     /* Populate enc_fmtp/dec_fmtp with the BASE T.140 codec parameters */
     if (si->tx_pt > 0) {
