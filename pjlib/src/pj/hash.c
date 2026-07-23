@@ -62,8 +62,9 @@ struct pj_hash_table_t
 
 #if HASH_USE_SIPHASH
 #include <pj/guid.h>
+#include <pj/rand.h>
 
-/* Per-process SipHash key, derived once from fresh GUID(s). */
+/* Per-process SipHash key, derived once from a mix of entropy sources. */
 static pj_uint64_t sip_k0, sip_k1;
 static pj_bool_t   sip_key_ready;
 
@@ -77,51 +78,22 @@ static pj_bool_t   sip_key_ready;
         v2 += v1; v1 = SIP_ROTL(v1,17); v1 ^= v2; v2 = SIP_ROTL(v2,32); \
     } while (0)
 
-static void init_sip_key(void)
-{
-    char guidbuf[PJ_GUID_MAX_LENGTH];
-    pj_str_t guid;
-    pj_uint8_t k[16];
-    unsigned i, n;
-
-    /* Derive the key from fresh GUID(s): OS entropy on platforms with a real
-     * UUID backend, degrading only on the (weak) guid_simple fallback.
-     */
-    pj_enter_critical_section();
-    if (!sip_key_ready) {
-        pj_bzero(k, sizeof(k));
-        for (n = 0; n < 2; ++n) {
-            guid.ptr = guidbuf;
-            pj_generate_unique_string(&guid);
-            for (i = 0; i < (unsigned)guid.slen; ++i)
-                k[i & 15] = (pj_uint8_t)(k[i & 15] * 33 +
-                                         (pj_uint8_t)guid.ptr[i]);
-        }
-        sip_k0 = SIP_U64(((pj_uint32_t)k[0]<<24)|(k[1]<<16)|(k[2]<<8)|k[3],
-                         ((pj_uint32_t)k[4]<<24)|(k[5]<<16)|(k[6]<<8)|k[7]);
-        sip_k1 = SIP_U64(((pj_uint32_t)k[8]<<24)|(k[9]<<16)|(k[10]<<8)|k[11],
-                         ((pj_uint32_t)k[12]<<24)|(k[13]<<16)|(k[14]<<8)|k[15]);
-        sip_key_ready = PJ_TRUE;
-    }
-    pj_leave_critical_section();
-}
-
-/* SipHash-2-4 over the (optionally lowercased) key, folded to 32 bits. */
-static pj_uint32_t calc_table_hash(const void *key, unsigned len,
-                                   pj_bool_t lower)
+/* SipHash-2-4 keyed hash over the (optionally lowercased) input, returning the
+ * full 64-bit result. Kept independent of the process key so it can be checked
+ * against canonical SipHash-2-4 test vectors (see pj_hash_test_siphash24()).
+ */
+static pj_uint64_t siphash24(pj_uint64_t k0, pj_uint64_t k1,
+                             const void *data, unsigned len, pj_bool_t lower)
 {
     pj_uint64_t v0, v1, v2, v3, m, b;
-    const pj_uint8_t *in = (const pj_uint8_t*)key;
+    const pj_uint8_t *in = (const pj_uint8_t*)data;
     unsigned i, left = len & 7;
     const pj_uint8_t *end = in + (len - left);
 
-    if (!sip_key_ready)
-        init_sip_key();
-
-    v0 = SIP_U64(0x736f6d65, 0x70736575) ^ sip_k0;
-    v1 = SIP_U64(0x646f7261, 0x6e646f6d) ^ sip_k1;
-    v2 = SIP_U64(0x6c796765, 0x6e657261) ^ sip_k0;
-    v3 = SIP_U64(0x74656462, 0x79746573) ^ sip_k1;
+    v0 = SIP_U64(0x736f6d65, 0x70736575) ^ k0;
+    v1 = SIP_U64(0x646f7261, 0x6e646f6d) ^ k1;
+    v2 = SIP_U64(0x6c796765, 0x6e657261) ^ k0;
+    v3 = SIP_U64(0x74656462, 0x79746573) ^ k1;
 
     for (; in != end; in += 8) {
         m = 0;
@@ -142,7 +114,93 @@ static pj_uint32_t calc_table_hash(const void *key, unsigned len,
     v2 ^= 0xff;
     SIP_ROUND; SIP_ROUND; SIP_ROUND; SIP_ROUND;
 
-    b = v0 ^ v1 ^ v2 ^ v3;
+    return v0 ^ v1 ^ v2 ^ v3;
+}
+
+/* Unit-test hook (prototype lives only in the pjlib-test private header, not in
+ * any public header): run the keyed core with an explicit key so tests can
+ * verify canonical SipHash-2-4 vectors.
+ */
+PJ_DECL(pj_uint64_t) pj_hash_test_siphash24(pj_uint64_t k0, pj_uint64_t k1,
+                                            const void *data, unsigned len);
+PJ_DEF(pj_uint64_t) pj_hash_test_siphash24(pj_uint64_t k0, pj_uint64_t k1,
+                                           const void *data, unsigned len)
+{
+    return siphash24(k0, k1, data, len, PJ_FALSE);
+}
+
+/* Fold a buffer of raw entropy bytes into the 16-byte key material. */
+static void mix_entropy(pj_uint8_t k[16], unsigned *idx,
+                        const void *data, unsigned len)
+{
+    const pj_uint8_t *p = (const pj_uint8_t*)data;
+    unsigned i;
+    for (i = 0; i < len; ++i) {
+        unsigned j = (*idx) & 15;
+        k[j] = (pj_uint8_t)(k[j] * 33 + p[i]);
+        ++(*idx);
+    }
+}
+
+static void init_sip_key(void)
+{
+    pj_enter_critical_section();
+    if (!sip_key_ready) {
+        pj_uint8_t k[16];
+        char guidbuf[PJ_GUID_MAX_LENGTH];
+        pj_str_t guid;
+        pj_timestamp ts;
+        pj_uint32_t u32;
+        void *ptrs[2];
+        unsigned n, idx = 0;
+
+        /* Combine whatever entropy is portably available without an OS CSPRNG:
+         * fresh GUID(s) (real OS entropy on proper UUID backends), a high-
+         * resolution timestamp, the process id, address-space layout (ASLR)
+         * via a couple of pointer values, and pj_rand(). No single source is
+         * strong on its own, but together they make the per-process key hard
+         * to predict remotely even on the weak guid_simple GUID backend; the
+         * strongest entropy still comes from an OS UUID backend.
+         */
+        pj_bzero(k, sizeof(k));
+
+        for (n = 0; n < 2; ++n) {
+            guid.ptr = guidbuf;
+            pj_generate_unique_string(&guid);
+            mix_entropy(k, &idx, guidbuf, (unsigned)guid.slen);
+        }
+        if (pj_get_timestamp(&ts) == PJ_SUCCESS)
+            mix_entropy(k, &idx, &ts, sizeof(ts));
+        u32 = pj_getpid();
+        mix_entropy(k, &idx, &u32, sizeof(u32));
+        ptrs[0] = (void*)k;         /* stack address (ASLR) */
+        ptrs[1] = (void*)&sip_k0;   /* data-segment address (ASLR) */
+        mix_entropy(k, &idx, ptrs, sizeof(ptrs));
+        for (n = 0; n < 4; ++n) {
+            u32 = (pj_uint32_t)pj_rand();
+            mix_entropy(k, &idx, &u32, sizeof(u32));
+        }
+
+        sip_k0 = SIP_U64(((pj_uint32_t)k[0]<<24)|(k[1]<<16)|(k[2]<<8)|k[3],
+                         ((pj_uint32_t)k[4]<<24)|(k[5]<<16)|(k[6]<<8)|k[7]);
+        sip_k1 = SIP_U64(((pj_uint32_t)k[8]<<24)|(k[9]<<16)|(k[10]<<8)|k[11],
+                         ((pj_uint32_t)k[12]<<24)|(k[13]<<16)|(k[14]<<8)|k[15]);
+        sip_key_ready = PJ_TRUE;
+    }
+    pj_leave_critical_section();
+}
+
+/* SipHash-2-4 over the (optionally lowercased) key with the process key,
+ * folded to 32 bits for the bucket index. */
+static pj_uint32_t calc_table_hash(const void *key, unsigned len,
+                                   pj_bool_t lower)
+{
+    pj_uint64_t b;
+
+    if (!sip_key_ready)
+        init_sip_key();
+
+    b = siphash24(sip_k0, sip_k1, key, len, lower);
     return (pj_uint32_t)b ^ (pj_uint32_t)(b >> 32);
 }
 #endif  /* HASH_USE_SIPHASH */
@@ -236,17 +294,30 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
     pj_hash_entry **p_entry, *entry;
 
 #if HASH_USE_SIPHASH
-    /* Always compute the keyed table hash. The caller-supplied *hval is a
-     * djb2 value (from pj_hash_calc), which is not comparable to the keyed
-     * table hash, so it is neither trusted for bucketing nor overwritten
-     * here: callers keep their precomputed djb2 hval, which some code relies
-     * on as a stable, deterministic value (e.g. pjsip compares dialog
-     * tag_hval values directly).
+    /* Bucketing always uses the keyed table hash. The caller-supplied *hval is
+     * a djb2 value (from pj_hash_calc), which is not comparable to the keyed
+     * hash, so it is not trusted for bucketing here.
      */
     if (keylen==PJ_HASH_KEY_STRING)
         keylen = (unsigned)pj_ansi_strlen((const char*)key);
     hash = calc_table_hash(key, keylen, lower);
-    PJ_UNUSED_ARG(hval);
+
+    /* Honor the public hval out-contract: fill a zero (uncomputed) hval with
+     * the deterministic djb2 value, matching pj_hash_calc(), so get-then-set
+     * patterns keep working. A nonzero value is left untouched: it is a
+     * caller-owned value that some code relies on as stable (e.g. pjsip
+     * compares dialog tag_hval directly).
+     */
+    if (hval && *hval == 0) {
+        if (lower) {
+            pj_str_t k;
+            k.ptr = (char*)key;
+            k.slen = keylen;
+            *hval = pj_hash_calc_tolower(0, NULL, &k);
+        } else {
+            *hval = pj_hash_calc(0, key, keylen);
+        }
+    }
 #else
     if (hval && *hval != 0) {
         hash = *hval;
