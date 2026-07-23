@@ -73,7 +73,7 @@ pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
  * If both conditions are met, according to RFC 7866,
  * the INVITE request is a siprec. Otherwise,
  * no changes are made to the request. If INVITE request is a siprec,
- * the SDP label attribute checking behavior depends on label_mode.
+ * the SDP label attribute checking behavior depends on require_label.
  *
  * @param rdata         The incoming request to be verified.
  * @param metadata      The siprec metadata information
@@ -84,10 +84,11 @@ pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
  * @param endpt         Media endpoint instance.
  * @param p_tdata       Upon error, it will be filled with the final response
  *                      to be sent to the request sender.
- * @param label_mode    Controls SIPREC SDP label attribute enforcement:
- *                      - 0 (MANDATORY): Reject SIPREC if any media lacks label
- *                      - 1 (OPTIONAL): Accept without labels, log warning
- *                      - 2 (DISABLED): Skip label checking entirely
+ * @param require_label Controls SIPREC SDP label attribute enforcement:
+ *                      - PJ_TRUE: Require labels, reject SIPREC if any media
+ *                        lacks label attribute (strict RFC 7866 compliance)
+ *                      - PJ_FALSE: Accept without labels, but log warnings for
+ *                        unlabeled media (better interoperability)
  *
  * @return   The function returns the following:
  *             - If the request includes the value siprec in the Require header
