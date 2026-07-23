@@ -2452,8 +2452,6 @@ typedef enum pjsua_sip_siprec_use
 } pjsua_sip_siprec_use;
 
 
-
-
 /**
  * This constants controls the use of 100rel extension.
  */

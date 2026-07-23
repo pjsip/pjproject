@@ -65,7 +65,7 @@ static pj_status_t pjsip_siprec_check_request(pjsip_rx_data *rdata)
     /* Find Contact header */
     contact_hdr = (pjsip_contact_hdr*)
     pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, NULL);
-    
+
     if(!contact_hdr || !contact_hdr->uri){
         return PJ_FALSE;
     }
@@ -124,7 +124,6 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
     }
     return PJ_FALSE;
 }
-
 
 /**
  * Verifies that the incoming request is a siprec request or not.
