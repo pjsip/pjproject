@@ -166,8 +166,9 @@ static void init_sip_key(void)
 
         for (n = 0; n < 2; ++n) {
             guid.ptr = guidbuf;
-            pj_generate_unique_string(&guid);
-            mix_entropy(k, &idx, guidbuf, (unsigned)guid.slen);
+            guid.slen = 0;
+            if (pj_generate_unique_string(&guid) != NULL)
+                mix_entropy(k, &idx, guidbuf, (unsigned)guid.slen);
         }
         if (pj_get_timestamp(&ts) == PJ_SUCCESS)
             mix_entropy(k, &idx, &ts, sizeof(ts));
