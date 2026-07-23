@@ -239,10 +239,18 @@ static int hash_hval_test(pj_pool_t *pool)
     /* A nonzero hval must be left untouched, and the lookup must still
      * succeed (bucketing does not depend on the supplied hval).
      */
+#if TEST_SIPHASH
+    hval = 1; /* Deliberately not the djb2 hash. */
+#else
     hval = djb2;
+#endif
     e = pj_hash_get(ht, KEY, PJ_HASH_KEY_STRING, &hval);
     if (e != &value) return -550;
+#if TEST_SIPHASH
+    PJ_TEST_EQ(hval, 1, NULL, return -560);
+#else
     PJ_TEST_EQ(hval, djb2, NULL, return -560);
+#endif
 
     return 0;
 }
