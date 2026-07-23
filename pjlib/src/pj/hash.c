@@ -49,7 +49,106 @@ struct pj_hash_table_t
 
 
 
-PJ_DEF(pj_uint32_t) pj_hash_calc(pj_uint32_t hash, const void *key, 
+/*
+ * Keyed table hash (SipHash-2-4) for hash-flooding resistance. Only the hash
+ * TABLE bucketing uses this; pj_hash_calc() below stays plain djb2.
+ */
+#if defined(PJ_HASH_TABLE_USE_SIPHASH) && PJ_HASH_TABLE_USE_SIPHASH!=0 && \
+    defined(PJ_HAS_INT64) && PJ_HAS_INT64!=0
+#  define HASH_USE_SIPHASH   1
+#else
+#  define HASH_USE_SIPHASH   0
+#endif
+
+#if HASH_USE_SIPHASH
+#include <pj/guid.h>
+
+/* Per-process SipHash key, derived once from fresh GUID(s). */
+static pj_uint64_t sip_k0, sip_k1;
+static pj_bool_t   sip_key_ready;
+
+#define SIP_U64(hi,lo)  (((pj_uint64_t)(hi) << 32) | (pj_uint64_t)(lo))
+#define SIP_ROTL(x,b)   (pj_uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))
+#define SIP_ROUND \
+    do { \
+        v0 += v1; v1 = SIP_ROTL(v1,13); v1 ^= v0; v0 = SIP_ROTL(v0,32); \
+        v2 += v3; v3 = SIP_ROTL(v3,16); v3 ^= v2; \
+        v0 += v3; v3 = SIP_ROTL(v3,21); v3 ^= v0; \
+        v2 += v1; v1 = SIP_ROTL(v1,17); v1 ^= v2; v2 = SIP_ROTL(v2,32); \
+    } while (0)
+
+static void init_sip_key(void)
+{
+    char guidbuf[PJ_GUID_MAX_LENGTH];
+    pj_str_t guid;
+    pj_uint8_t k[16];
+    unsigned i, n;
+
+    /* Derive the key from fresh GUID(s): OS entropy on platforms with a real
+     * UUID backend, degrading only on the (weak) guid_simple fallback.
+     */
+    pj_enter_critical_section();
+    if (!sip_key_ready) {
+        pj_bzero(k, sizeof(k));
+        for (n = 0; n < 2; ++n) {
+            guid.ptr = guidbuf;
+            pj_generate_unique_string(&guid);
+            for (i = 0; i < (unsigned)guid.slen; ++i)
+                k[i & 15] = (pj_uint8_t)(k[i & 15] * 33 +
+                                         (pj_uint8_t)guid.ptr[i]);
+        }
+        sip_k0 = SIP_U64(((pj_uint32_t)k[0]<<24)|(k[1]<<16)|(k[2]<<8)|k[3],
+                         ((pj_uint32_t)k[4]<<24)|(k[5]<<16)|(k[6]<<8)|k[7]);
+        sip_k1 = SIP_U64(((pj_uint32_t)k[8]<<24)|(k[9]<<16)|(k[10]<<8)|k[11],
+                         ((pj_uint32_t)k[12]<<24)|(k[13]<<16)|(k[14]<<8)|k[15]);
+        sip_key_ready = PJ_TRUE;
+    }
+    pj_leave_critical_section();
+}
+
+/* SipHash-2-4 over the (optionally lowercased) key, folded to 32 bits. */
+static pj_uint32_t calc_table_hash(const void *key, unsigned len,
+                                   pj_bool_t lower)
+{
+    pj_uint64_t v0, v1, v2, v3, m, b;
+    const pj_uint8_t *in = (const pj_uint8_t*)key;
+    unsigned i, left = len & 7;
+    const pj_uint8_t *end = in + (len - left);
+
+    if (!sip_key_ready)
+        init_sip_key();
+
+    v0 = SIP_U64(0x736f6d65, 0x70736575) ^ sip_k0;
+    v1 = SIP_U64(0x646f7261, 0x6e646f6d) ^ sip_k1;
+    v2 = SIP_U64(0x6c796765, 0x6e657261) ^ sip_k0;
+    v3 = SIP_U64(0x74656462, 0x79746573) ^ sip_k1;
+
+    for (; in != end; in += 8) {
+        m = 0;
+        for (i = 0; i < 8; ++i) {
+            pj_uint8_t c = lower? (pj_uint8_t)pj_tolower(in[i]) : in[i];
+            m |= (pj_uint64_t)c << (8*i);
+        }
+        v3 ^= m; SIP_ROUND; SIP_ROUND; v0 ^= m;
+    }
+
+    b = (pj_uint64_t)len << 56;
+    for (i = 0; i < left; ++i) {
+        pj_uint8_t c = lower? (pj_uint8_t)pj_tolower(in[i]) : in[i];
+        b |= (pj_uint64_t)c << (8*i);
+    }
+    v3 ^= b; SIP_ROUND; SIP_ROUND; v0 ^= b;
+
+    v2 ^= 0xff;
+    SIP_ROUND; SIP_ROUND; SIP_ROUND; SIP_ROUND;
+
+    b = v0 ^ v1 ^ v2 ^ v3;
+    return (pj_uint32_t)b ^ (pj_uint32_t)(b >> 32);
+}
+#endif  /* HASH_USE_SIPHASH */
+
+
+PJ_DEF(pj_uint32_t) pj_hash_calc(pj_uint32_t hash, const void *key,
                                  unsigned keylen)
 {
     PJ_CHECK_STACK();
@@ -98,6 +197,13 @@ PJ_DEF(pj_hash_table_t*) pj_hash_create(pj_pool_t *pool, unsigned size)
     h = PJ_POOL_ALLOC_T(pool, pj_hash_table_t);
     h->count = 0;
 
+#if HASH_USE_SIPHASH
+    /* Ensure the per-process keyed-hash key is initialized before the table
+     * is used (safe: pj_init() has set up the critical section by now).
+     */
+    init_sip_key();
+#endif
+
     PJ_LOG( 6, ("hashtbl", "hash table %p created from pool %s", h, pj_pool_getobjname(pool)));
 
     /* size must be 2^n - 1.
@@ -129,13 +235,26 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
     pj_uint32_t hash;
     pj_hash_entry **p_entry, *entry;
 
+#if HASH_USE_SIPHASH
+    /* Always compute the keyed table hash. The caller-supplied *hval is a
+     * djb2 value (from pj_hash_calc), which is not comparable to the keyed
+     * table hash, so it is neither trusted for bucketing nor overwritten
+     * here: callers keep their precomputed djb2 hval, which some code relies
+     * on as a stable, deterministic value (e.g. pjsip compares dialog
+     * tag_hval values directly).
+     */
+    if (keylen==PJ_HASH_KEY_STRING)
+        keylen = (unsigned)pj_ansi_strlen((const char*)key);
+    hash = calc_table_hash(key, keylen, lower);
+    PJ_UNUSED_ARG(hval);
+#else
     if (hval && *hval != 0) {
         hash = *hval;
         if (keylen==PJ_HASH_KEY_STRING) {
             keylen = (unsigned)pj_ansi_strlen((const char*)key);
         }
     } else {
-        /* This slightly differs with pj_hash_calc() because we need 
+        /* This slightly differs with pj_hash_calc() because we need
          * to get the keylen when keylen is PJ_HASH_KEY_STRING.
          */
         hash=0;
@@ -163,6 +282,7 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
         if (hval)
             *hval = hash;
     }
+#endif  /* HASH_USE_SIPHASH */
 
     /* scan the linked list */
     for (p_entry = &ht->table[hash & ht->rows], entry=*p_entry; 

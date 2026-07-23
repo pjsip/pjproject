@@ -606,6 +606,27 @@
 #endif
 
 /**
+ * If enabled, the hash TABLE (pj_hash_table_t) computes its bucket index with
+ * a keyed hash (SipHash) using a per-process random key, instead of the plain
+ * djb2 hash. This defends against hash-flooding denial-of-service, where an
+ * attacker who controls keys inserted into a table (e.g. SIP transaction keys
+ * derived from the Via branch, or dialog keys from Call-ID/tags) crafts many
+ * keys that collide into one bucket, degrading lookups from O(1) to O(n).
+ *
+ * This only affects the internal table bucketing. The public pj_hash_calc()
+ * remains the deterministic djb2 hash (it is used to derive stable values such
+ * as the SIP +sip.instance id and ICE foundations, which must not be keyed).
+ *
+ * Requires 64-bit integer support (PJ_HAS_INT64); otherwise the table falls
+ * back to djb2 regardless of this setting.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJ_HASH_TABLE_USE_SIPHASH
+#  define PJ_HASH_TABLE_USE_SIPHASH   1
+#endif
+
+/**
  * Set this to 1 to enable debugging on the group lock. Default: 0
  */
 #ifndef PJ_GRP_LOCK_DEBUG
