@@ -142,67 +142,73 @@ static void mix_entropy(pj_uint8_t k[16], unsigned *idx,
     }
 }
 
-static void init_sip_key(void)
+/* Derive the per-process table-hash key. Called once from pj_init() while
+ * pjlib is still single-threaded, so no locking is needed here. Keeping this
+ * out of the hash create/lookup paths keeps those paths lock-free, avoiding
+ * lock-order inversions with locks that may be held during hash operations.
+ */
+void pj_hash_init_key(void)
 {
-    pj_enter_critical_section();
-    if (!sip_key_ready) {
-        pj_uint8_t k[16];
-        char guidbuf[PJ_GUID_MAX_LENGTH];
-        pj_str_t guid;
-        pj_timestamp ts;
-        pj_uint32_t u32;
-        void *ptrs[2];
-        unsigned n, idx = 0;
+    pj_uint8_t k[16];
+    char guidbuf[PJ_GUID_MAX_LENGTH];
+    pj_str_t guid;
+    pj_timestamp ts;
+    pj_uint32_t u32;
+    void *ptrs[2];
+    unsigned n, idx = 0;
 
-        /* Combine whatever entropy is portably available without an OS CSPRNG:
-         * fresh GUID(s) (real OS entropy on proper UUID backends), a high-
-         * resolution timestamp, the process id, address-space layout (ASLR)
-         * via a couple of pointer values, and pj_rand(). No single source is
-         * strong on its own, but together they make the per-process key hard
-         * to predict remotely even on the weak guid_simple GUID backend; the
-         * strongest entropy still comes from an OS UUID backend.
-         */
-        pj_bzero(k, sizeof(k));
+    if (sip_key_ready)
+        return;
 
-        for (n = 0; n < 2; ++n) {
-            guid.ptr = guidbuf;
-            guid.slen = 0;
-            if (pj_generate_unique_string(&guid) != NULL)
-                mix_entropy(k, &idx, guidbuf, (unsigned)guid.slen);
-        }
-        if (pj_get_timestamp(&ts) == PJ_SUCCESS)
-            mix_entropy(k, &idx, &ts, sizeof(ts));
-        u32 = pj_getpid();
-        mix_entropy(k, &idx, &u32, sizeof(u32));
-        ptrs[0] = (void*)k;         /* stack address (ASLR) */
-        ptrs[1] = (void*)&sip_k0;   /* data-segment address (ASLR) */
-        mix_entropy(k, &idx, ptrs, sizeof(ptrs));
-        for (n = 0; n < 4; ++n) {
-            u32 = (pj_uint32_t)pj_rand();
-            mix_entropy(k, &idx, &u32, sizeof(u32));
-        }
+    /* Combine whatever entropy is portably available without an OS CSPRNG:
+     * fresh GUID(s) (real OS entropy on proper UUID backends), a high-
+     * resolution timestamp, the process id, address-space layout (ASLR)
+     * via a couple of pointer values, and pj_rand(). No single source is
+     * strong on its own, but together they make the per-process key hard
+     * to predict remotely even on the weak guid_simple GUID backend; the
+     * strongest entropy still comes from an OS UUID backend.
+     */
+    pj_bzero(k, sizeof(k));
 
-        sip_k0 = SIP_U64(((pj_uint32_t)k[0]<<24)|(k[1]<<16)|(k[2]<<8)|k[3],
-                         ((pj_uint32_t)k[4]<<24)|(k[5]<<16)|(k[6]<<8)|k[7]);
-        sip_k1 = SIP_U64(((pj_uint32_t)k[8]<<24)|(k[9]<<16)|(k[10]<<8)|k[11],
-                         ((pj_uint32_t)k[12]<<24)|(k[13]<<16)|(k[14]<<8)|k[15]);
-        sip_key_ready = PJ_TRUE;
+    for (n = 0; n < 2; ++n) {
+        guid.ptr = guidbuf;
+        guid.slen = 0;
+        if (pj_generate_unique_string(&guid) != NULL)
+            mix_entropy(k, &idx, guidbuf, (unsigned)guid.slen);
     }
-    pj_leave_critical_section();
+    if (pj_get_timestamp(&ts) == PJ_SUCCESS)
+        mix_entropy(k, &idx, &ts, sizeof(ts));
+    u32 = pj_getpid();
+    mix_entropy(k, &idx, &u32, sizeof(u32));
+    ptrs[0] = (void*)k;         /* stack address (ASLR) */
+    ptrs[1] = (void*)&sip_k0;   /* data-segment address (ASLR) */
+    mix_entropy(k, &idx, ptrs, sizeof(ptrs));
+    for (n = 0; n < 4; ++n) {
+        u32 = (pj_uint32_t)pj_rand();
+        mix_entropy(k, &idx, &u32, sizeof(u32));
+    }
+
+    sip_k0 = SIP_U64(((pj_uint32_t)k[0]<<24)|(k[1]<<16)|(k[2]<<8)|k[3],
+                     ((pj_uint32_t)k[4]<<24)|(k[5]<<16)|(k[6]<<8)|k[7]);
+    sip_k1 = SIP_U64(((pj_uint32_t)k[8]<<24)|(k[9]<<16)|(k[10]<<8)|k[11],
+                     ((pj_uint32_t)k[12]<<24)|(k[13]<<16)|(k[14]<<8)|k[15]);
+    sip_key_ready = PJ_TRUE;
 }
 
 /* SipHash-2-4 over the (optionally lowercased) key with the process key,
- * folded to 32 bits for the bucket index. */
+ * folded to 32 bits for the bucket index. The key is initialized by
+ * pj_init(); if that has not run the key is zero, which still yields a valid
+ * (though unkeyed) hash rather than any unsafe behavior. */
 static pj_uint32_t calc_table_hash(const void *key, unsigned len,
                                    pj_bool_t lower)
 {
-    pj_uint64_t b;
-
-    if (!sip_key_ready)
-        init_sip_key();
-
-    b = siphash24(sip_k0, sip_k1, key, len, lower);
+    pj_uint64_t b = siphash24(sip_k0, sip_k1, key, len, lower);
     return (pj_uint32_t)b ^ (pj_uint32_t)(b >> 32);
+}
+#else   /* HASH_USE_SIPHASH */
+/* SipHash disabled: nothing to initialize. */
+void pj_hash_init_key(void)
+{
 }
 #endif  /* HASH_USE_SIPHASH */
 
@@ -255,13 +261,6 @@ PJ_DEF(pj_hash_table_t*) pj_hash_create(pj_pool_t *pool, unsigned size)
 
     h = PJ_POOL_ALLOC_T(pool, pj_hash_table_t);
     h->count = 0;
-
-#if HASH_USE_SIPHASH
-    /* Ensure the per-process keyed-hash key is initialized before the table
-     * is used (safe: pj_init() has set up the critical section by now).
-     */
-    init_sip_key();
-#endif
 
     PJ_LOG( 6, ("hashtbl", "hash table %p created from pool %s", h, pj_pool_getobjname(pool)));
 
