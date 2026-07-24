@@ -33,6 +33,7 @@
 #include <pj/guid.h>
 #include <pj/except.h>
 #include <pj/errno.h>
+#include <pj/hash.h>
 
 #if defined(PJ_HAS_SEMAPHORE_H) && PJ_HAS_SEMAPHORE_H != 0
 #  include <semaphore.h>
@@ -253,6 +254,11 @@ PJ_DEF(pj_status_t) pj_init(void)
         }
     }
 #endif
+
+    /* Initialize the per-process hash table bucketing key while still
+     * single-threaded, so the hash create/lookup paths stay lock-free.
+     */
+    pj_hash_init_key();
 
     /* Flag PJLIB as initialized */
     ++initialized;

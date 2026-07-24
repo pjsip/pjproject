@@ -25,6 +25,7 @@
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/except.h>
+#include <pj/hash.h>
 #include <pj/unicode.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -230,6 +231,11 @@ PJ_DEF(pj_status_t) pj_init(void)
         }
     }
 #endif
+
+    /* Initialize the per-process hash table bucketing key while still
+     * single-threaded, so the hash create/lookup paths stay lock-free.
+     */
+    pj_hash_init_key();
 
     /* Flag PJLIB as initialized */
     ++initialized;
