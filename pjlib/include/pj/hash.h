@@ -85,6 +85,13 @@ PJ_DECL(pj_uint32_t) pj_hash_calc_tolower(pj_uint32_t hval,
                                           const pj_str_t *key);
 
 /**
+ * Internal: initialize the per-process key used for hash table bucketing.
+ * Called once by pj_init() while pjlib is still single-threaded. Applications
+ * do not need to call this directly.
+ */
+void pj_hash_init_key(void);
+
+/**
  * Create a hash table with the specified 'bucket' size.
  *
  * @param pool  the pool from which the hash table will be allocated from.
