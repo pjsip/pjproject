@@ -166,14 +166,14 @@ static int siphash_vector_test(void)
 
 
 /*
- * Case-insensitive keys (pj_hash_*_lower) must map to the same entry
- * regardless of case, and must be a separate namespace from the
- * case-sensitive variants.
+ * Case-insensitive keys (pj_hash_*_lower) map to the same entry regardless of
+ * case, while the plain (case-sensitive) API keeps different-case keys as
+ * distinct entries.
  */
 static int hash_lower_test(pj_pool_t *pool)
 {
     pj_hash_table_t *ht;
-    unsigned v1 = 111, v2 = 222;
+    unsigned v1 = 111, v2 = 222, v3 = 333, v4 = 444;
     void *e;
 
     PJ_TEST_NOT_NULL((ht=pj_hash_create(pool, HASH_COUNT)), NULL, return -400);
@@ -187,12 +187,6 @@ static int hash_lower_test(pj_pool_t *pool)
                           NULL);
     if (e != &v1) return -410;
 
-    /* Case-sensitive lookup of that same key is a different namespace and
-     * must NOT find the lower-cased entry.
-     */
-    e = pj_hash_get(ht, "SIP:Alice@Example.COM", PJ_HASH_KEY_STRING, NULL);
-    PJ_TEST_EQ(e, NULL, NULL, return -420);
-
     /* Setting via yet another case updates the same single entry. */
     pj_hash_set_lower(pool, ht, "sip:ALICE@EXAMPLE.com", PJ_HASH_KEY_STRING,
                       0, &v2);
@@ -200,6 +194,17 @@ static int hash_lower_test(pj_pool_t *pool)
     e = pj_hash_get_lower(ht, "SIP:alice@example.COM", PJ_HASH_KEY_STRING,
                           NULL);
     if (e != &v2) return -440;
+
+    /* The plain (case-sensitive) API keeps different-case keys distinct. This
+     * does not rely on the two keys hashing differently: even on a hash
+     * collision the differing key bytes fail the content comparison, so a
+     * lookup of one case never resolves the other.
+     */
+    pj_hash_set(pool, ht, "Kk", 2, 0, &v3);
+    pj_hash_set(pool, ht, "kK", 2, 0, &v4);
+    PJ_TEST_EQ(pj_hash_count(ht), 3, NULL, return -450);
+    if (pj_hash_get(ht, "Kk", 2, NULL) != &v3) return -460;
+    if (pj_hash_get(ht, "kK", 2, NULL) != &v4) return -470;
 
     return 0;
 }
