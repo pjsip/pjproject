@@ -1097,6 +1097,9 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
         media_cfg = &default_media_cfg;
     }
 
+    PJ_ASSERT_RETURN(ua_cfg->outbound_proxy_cnt <=
+                      PJ_ARRAY_SIZE(ua_cfg->outbound_proxy), PJ_EINVAL);
+
     /* Initialize logging first so that info/errors can be captured */
     if (log_cfg) {
         status = pjsua_reconfigure_logging(log_cfg);
