@@ -247,9 +247,9 @@ static int test_make_call_bounds(void)
     opt.vid_cnt = 0;
     opt.txt_cnt = 0;
     status = pjsua_call_make_call(g_ctx.acc_id, &uri, &opt, NULL, NULL, &cid);
-    if (status == PJ_ETOOMANY) {
-        PJ_LOG(1, (THIS_FILE, "    boundary count (== max) was wrongly "
-                   "rejected"));
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    boundary count (== max) failed (%d)",
+                   status));
         return -1102;
     }
     if (status == PJ_SUCCESS && cid != PJSUA_INVALID_ID)
