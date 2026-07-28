@@ -58,7 +58,7 @@ extern pj_bool_t pjmedia_add_bandwidth_tias_in_sdp;
 
 /*****************************************************************************
  * Message size saver
- * 
+ *
  * The tests in this file check what happens when you try to establish calls
  * with the maximum number of media allowed.
  * With the defaults that are currently in place,
@@ -68,7 +68,8 @@ extern pj_bool_t pjmedia_add_bandwidth_tias_in_sdp;
  * We tweak the library settings here to bring down the payload size
  * and restore the settings after the tests so we don't affect other tests.
  *****************************************************************************/
-typedef struct msg_size_saved {
+typedef struct msg_size_saved
+{
     pj_bool_t        disable_tcp_switch;
     pj_bool_t        compact_form;
     pj_bool_t        rtpmap_static;
@@ -94,7 +95,8 @@ static void minimize_msg_size(msg_size_saved *sv)
     pjmedia_endpt_get_flag(endpt, PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG,
                            &sv->tel_event);
     sv->codec_count = PJ_ARRAY_SIZE(sv->codecs);
-    pjsua_enum_codecs(sv->codecs, &sv->codec_count);
+    if (pjsua_enum_codecs(sv->codecs, &sv->codec_count) != PJ_SUCCESS)
+        sv->codec_count = 0;
 
     /* apply settings */
     pjsip_cfg()->endpt.disable_tcp_switch   = PJ_TRUE;
@@ -128,7 +130,8 @@ static void restore_msg_size(const msg_size_saved *sv)
  * Shared test state
  *****************************************************************************/
 
-static struct {
+static struct
+{
     pjsua_acc_id  acc_id;
     char          self_uri[128];
     /* Result recorded by on_incoming_call when it probes answer2 with an
@@ -157,6 +160,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                              pjsip_rx_data *rdata)
 {
     pjsua_call_setting opt;
+    pj_status_t status;
 
     PJ_UNUSED_ARG(acc_id);
     PJ_UNUSED_ARG(rdata);
@@ -179,7 +183,9 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     opt.aud_cnt = 1;
     opt.vid_cnt = 0;
     opt.txt_cnt = 0;
-    pjsua_call_answer2(call_id, &opt, 200, NULL, NULL);
+    status = pjsua_call_answer2(call_id, &opt, 200, NULL, NULL);
+    if (status != PJ_SUCCESS)
+        PJ_PERROR(1, (THIS_FILE, status, "  valid answer2 failed"));
 
     g_ctx.incoming_seen = PJ_TRUE;
 }
@@ -343,7 +349,7 @@ static int test_make_call_bounds(void)
     if (status == PJ_SUCCESS && cid != PJSUA_INVALID_ID)
         pjsua_call_hangup(cid, 0, NULL, NULL);
 
-    /* Tear down the boundary call and its (possibly late) auto-answered peer. */
+    /* Tear down the boundary call and its (possibly late) answered peer. */
     drain_all_calls();
 
     return 0;
@@ -550,7 +556,7 @@ int pjsua_call_test(void)
      * run here too and no locking races arise in the test itself. */
     ua_cfg.thread_cnt = 0;
 
-    /* Make sure PRACK, session timer and don't bother with SRTP */
+    /* Make sure PRACK and session timer are off and don't bother with SRTP */
     ua_cfg.require_100rel   = PJSUA_100REL_NOT_USED;
     ua_cfg.use_timer        = PJSUA_SIP_TIMER_INACTIVE;
     ua_cfg.use_srtp         = PJMEDIA_SRTP_DISABLED;
@@ -592,7 +598,13 @@ int pjsua_call_test(void)
     /* Use a null (dummy) sound device so calls with audio can be set up on
      * hosts/CI without real audio hardware.
      */
-    pjsua_set_null_snd_dev();
+    status = pjsua_set_null_snd_dev();
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "  set_null_snd_dev failed (%d)", status));
+        pjsua_destroy();
+        rc = -2007;
+        goto on_restore;
+    }
 
     /* Local account bound to the UDP transport, and a self URI to dial. */
     status = pjsua_acc_add_local(tp_id, PJ_TRUE, &g_ctx.acc_id);
@@ -605,13 +617,21 @@ int pjsua_call_test(void)
 
     {
         pjsua_transport_info ti;
-        pjsua_transport_get_info(tp_id, &ti);
+        status = pjsua_transport_get_info(tp_id, &ti);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(1, (THIS_FILE, "  transport_get_info failed (%d)", status));
+            pjsua_destroy();
+            rc = -2006;
+            goto on_restore;
+        }
         port = pj_sockaddr_get_port(&ti.local_addr);
     }
     pj_ansi_snprintf(g_ctx.self_uri, sizeof(g_ctx.self_uri),
                      "sip:%s@127.0.0.1:%u", TEST_USER, (unsigned)port);
 
-    /* Before starting the tests; adjust library settings to bring to the payload size */
+    /* Adjust library settings to bring down the payload size before
+     * running the sub-tests.
+     */
     minimize_msg_size(&lib_settings);
 
     /* ---- Run sub-tests ---- */
