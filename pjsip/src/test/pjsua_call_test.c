@@ -52,6 +52,78 @@
 #define TEST_USER   "pjsua-call-test"
 
 
+/* pjmedia globals (defined in endpoint.c; config.h only doc-comments them). */
+extern pj_bool_t pjmedia_add_rtpmap_for_static_pt;
+extern pj_bool_t pjmedia_add_bandwidth_tias_in_sdp;
+
+/*****************************************************************************
+ * Message size saver
+ * 
+ * The tests in this file check what happens when you try to establish calls
+ * with the maximum number of media allowed.
+ * With the defaults that are currently in place,
+ * this causes INVITE messages to become so large that they exceed
+ * the default max packet length (PJSIP_MAX_PKT_LEN)
+ * which causes wrong failures.
+ * We tweak the library settings here to bring down the payload size
+ * and restore the settings after the tests so we don't affect other tests.
+ *****************************************************************************/
+typedef struct msg_size_saved {
+    pj_bool_t        disable_tcp_switch;
+    pj_bool_t        compact_form;
+    pj_bool_t        rtpmap_static;
+    pj_bool_t        bandw_tias;
+    pj_bool_t        tel_event;
+    pjsua_codec_info codecs[PJMEDIA_CODEC_MGR_MAX_CODECS];
+    unsigned         codec_count;
+} msg_size_saved;
+
+/* Tweak library settings in order to bring down payload size */
+static void minimize_msg_size(msg_size_saved *sv)
+{
+    pjmedia_endpt *endpt = pjsua_get_pjmedia_endpt();
+    pj_bool_t no = PJ_FALSE;
+    const pj_str_t all = pj_str("*");
+    const pj_str_t pcmu = pj_str("PCMU/8000");
+
+    /* get the current settings... */
+    sv->disable_tcp_switch  = pjsip_cfg()->endpt.disable_tcp_switch;
+    sv->compact_form        = pjsip_cfg()->endpt.use_compact_form;
+    sv->rtpmap_static       = pjmedia_add_rtpmap_for_static_pt;
+    sv->bandw_tias          = pjmedia_add_bandwidth_tias_in_sdp;
+    pjmedia_endpt_get_flag(endpt, PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG,
+                           &sv->tel_event);
+    sv->codec_count = PJ_ARRAY_SIZE(sv->codecs);
+    pjsua_enum_codecs(sv->codecs, &sv->codec_count);
+
+    /* apply settings */
+    pjsip_cfg()->endpt.disable_tcp_switch   = PJ_TRUE;
+    pjsip_cfg()->endpt.use_compact_form     = PJ_TRUE;
+    pjmedia_add_rtpmap_for_static_pt        = PJ_FALSE;
+    pjmedia_add_bandwidth_tias_in_sdp       = PJ_FALSE;
+    pjmedia_endpt_set_flag(endpt, PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG, &no);
+    /* codec wise, we'll disable everything and allow only PCMU */
+    pjsua_codec_set_priority(&all,  PJMEDIA_CODEC_PRIO_DISABLED);
+    pjsua_codec_set_priority(&pcmu, PJMEDIA_CODEC_PRIO_HIGHEST);
+}
+
+/* Restore original settings, so other tests are not affected */
+static void restore_msg_size(const msg_size_saved *sv)
+{
+    pjmedia_endpt *endpt = pjsua_get_pjmedia_endpt();
+    unsigned i;
+    pjsip_cfg()->endpt.disable_tcp_switch   = sv->disable_tcp_switch;
+    pjsip_cfg()->endpt.use_compact_form     = sv->compact_form;
+    pjmedia_add_rtpmap_for_static_pt        = sv->rtpmap_static;
+    pjmedia_add_bandwidth_tias_in_sdp       = sv->bandw_tias;
+    pjmedia_endpt_set_flag(endpt, PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG,
+                           &sv->tel_event);
+    for (i = 0; i < sv->codec_count; ++i) {
+        pjsua_codec_set_priority(&sv->codecs[i].codec_id,
+                                 sv->codecs[i].priority);
+    }
+}
+
 /*****************************************************************************
  * Shared test state
  *****************************************************************************/
@@ -155,22 +227,29 @@ static void on_call_sdp_created(pjsua_call_id call_id,
  * Helpers
  *****************************************************************************/
 
-/* Pump the pjsua event loop until predicate() returns non-zero or the
- * timeout elapses. Returns PJ_TRUE if the predicate was satisfied.
- * Event-driven with a generous cap so it is robust on slow CI runners.
+/* Pump the pjsua event loop until predicate() returns non-zero or
+ * timeout_ms of wall-clock time has elapsed. Returns PJ_TRUE if the
+ * predicate was satisfied. A NULL predicate simply pumps for the whole
+ * timeout. Elapsed time is measured (not derived from the poll timeout,
+ * which is only an upper bound), so the wait is robust on slow CI
+ * runners and in busy periods where polls return early.
  */
 static pj_bool_t wait_until(pj_bool_t (*predicate)(pjsua_call_id),
                             pjsua_call_id call_id, unsigned timeout_ms)
 {
-    unsigned elapsed = 0;
+    pj_time_val t0, now;
 
-    while (elapsed < timeout_ms) {
-        if (predicate(call_id))
+    pj_gettimeofday(&t0);
+    for (;;) {
+        if (predicate && predicate(call_id))
             return PJ_TRUE;
+        pj_gettimeofday(&now);
+        PJ_TIME_VAL_SUB(now, t0);
+        if ((unsigned)PJ_TIME_VAL_MSEC(now) >= timeout_ms)
+            break;
         pjsua_handle_events(50);
-        elapsed += 50;
     }
-    return predicate(call_id);
+    return predicate ? predicate(call_id) : PJ_FALSE;
 }
 
 static pj_bool_t call_is_confirmed(pjsua_call_id call_id)
@@ -195,6 +274,15 @@ static void drain_all_calls(void)
         pjsua_call_hangup_all();
         pjsua_handle_events(50);
     }
+
+    /* Closed media sockets keep their ioqueue slot for
+     * PJ_IOQUEUE_KEY_FREE_DELAY msec (safe unregistration), and a max-media
+     * loopback call uses 2 legs x PJSUA_MAX_CALL_MEDIA x 2 (RTP+RTCP) sockets
+     * which equal the media ioqueue's whole capacity (PJ_IOQUEUE_MAX_HANDLES).
+     * Wait out the delay so the slots are
+     * recycled before the next sub-test creates new media sockets.
+     */
+    wait_until(NULL, PJSUA_INVALID_ID, PJ_IOQUEUE_KEY_FREE_DELAY + 200);
 }
 
 
@@ -426,17 +514,19 @@ static int test_reinit_bounds_untyped_mline(void)
 int pjsua_call_test(void)
 {
     extern pjsip_endpoint *endpt;       /* test framework endpoint */
-    extern pj_caching_pool caching_pool;
-    pjsua_config         ua_cfg;
-    pjsua_logging_config log_cfg;
-    pjsua_media_config   media_cfg;
-    pjsua_transport_config tp_cfg;
-    pjsua_transport_id   tp_id;
-    pj_uint16_t          port;
-    pj_status_t          status;
+    extern pj_caching_pool  caching_pool;
+    msg_size_saved          lib_settings;
+    pjsua_config            ua_cfg;
+    pjsua_logging_config    log_cfg;
+    pjsua_media_config      media_cfg;
+    pjsua_transport_config  tp_cfg;
+    pjsua_transport_id      tp_id;
+    pj_uint16_t             port;
+    pj_status_t             status;
     int rc = 0;
 
     PJ_LOG(3, (THIS_FILE, "pjsua call media-count bounds test"));
+    pj_bzero(&lib_settings, sizeof(lib_settings));
 
     /* pjsua creates its own endpoint and registers the (singleton) tsx layer
      * module; destroy the framework endpoint first to avoid the duplicate
@@ -460,12 +550,18 @@ int pjsua_call_test(void)
      * run here too and no locking races arise in the test itself. */
     ua_cfg.thread_cnt = 0;
 
+    /* Make sure PRACK, session timer and don't bother with SRTP */
+    ua_cfg.require_100rel   = PJSUA_100REL_NOT_USED;
+    ua_cfg.use_timer        = PJSUA_SIP_TIMER_INACTIVE;
+    ua_cfg.use_srtp         = PJMEDIA_SRTP_DISABLED;
+
     pjsua_logging_config_default(&log_cfg);
     log_cfg.level         = 3;
     log_cfg.console_level = 3;
 
     pjsua_media_config_default(&media_cfg);
-    media_cfg.no_vad = PJ_TRUE;
+    media_cfg.no_vad        = PJ_TRUE;
+    media_cfg.enable_ice    = PJ_FALSE;
 
     status = pjsua_init(&ua_cfg, &log_cfg, &media_cfg);
     if (status != PJ_SUCCESS) {
@@ -515,6 +611,9 @@ int pjsua_call_test(void)
     pj_ansi_snprintf(g_ctx.self_uri, sizeof(g_ctx.self_uri),
                      "sip:%s@127.0.0.1:%u", TEST_USER, (unsigned)port);
 
+    /* Before starting the tests; adjust library settings to bring to the payload size */
+    minimize_msg_size(&lib_settings);
+
     /* ---- Run sub-tests ---- */
     rc = test_make_call_bounds();
     if (rc != 0) goto on_return;
@@ -527,6 +626,7 @@ int pjsua_call_test(void)
 
 on_return:
     drain_all_calls();
+    restore_msg_size(&lib_settings);
     pjsua_destroy2(PJSUA_DESTROY_NO_RX_MSG);
 
 on_restore:
