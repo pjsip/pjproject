@@ -1241,7 +1241,8 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
                      PJ_EINVAL);
-    PJ_ASSERT_RETURN(cfg->proxy_cnt <= PJSUA_ACC_MAX_PROXIES, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg && cfg->proxy_cnt <= PJSUA_ACC_MAX_PROXIES,
+                     PJ_EINVAL);
 
 #if !PJ_HAS_IPV6
     PJ_ASSERT_RETURN(cfg->ipv6_sip_use == PJSUA_IPV6_DISABLED, PJ_EINVAL);
