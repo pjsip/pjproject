@@ -408,9 +408,19 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
      * (see RTP FAQ).
      */
     if (seq_st.diff == 1 && rtp_ts != sess->rtp_last_ts) {
-        /* Get arrival time and convert timestamp to samples */
+        /* Get arrival time and convert timestamp to samples.
+         *
+         * ts.u64 (raw high-res timestamp, e.g. nanoseconds since boot) grows
+         * with uptime, so "ts.u64 * clock_rate" can overflow 64-bit on
+         * long-running endpoints (e.g. seldom-rebooted mobiles), corrupting
+         * the arrival time and producing spurious huge jitter. Split the
+         * whole-second and fractional parts to keep the products within
+         * 64-bit; the result is identical when it does not overflow.
+         */
         pj_get_timestamp(&ts);
-        ts.u64 = ts.u64 * sess->clock_rate / sess->ts_freq.u64;
+        ts.u64 = (ts.u64 / sess->ts_freq.u64) * sess->clock_rate +
+                 (ts.u64 % sess->ts_freq.u64) * sess->clock_rate /
+                 sess->ts_freq.u64;
         arrival = ts.u32.lo;
 
         transit = arrival - rtp_ts;
