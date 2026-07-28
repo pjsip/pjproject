@@ -602,7 +602,7 @@ int pjsua_call_test(void)
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "  set_null_snd_dev failed (%d)", status));
         pjsua_destroy();
-        rc = -2007;
+        rc = -2005;
         goto on_restore;
     }
 
@@ -611,7 +611,7 @@ int pjsua_call_test(void)
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "  acc_add_local failed (%d)", status));
         pjsua_destroy();
-        rc = -2005;
+        rc = -2006;
         goto on_restore;
     }
 
@@ -621,7 +621,7 @@ int pjsua_call_test(void)
         if (status != PJ_SUCCESS) {
             PJ_LOG(1, (THIS_FILE, "  transport_get_info failed (%d)", status));
             pjsua_destroy();
-            rc = -2006;
+            rc = -2007;
             goto on_restore;
         }
         port = pj_sockaddr_get_port(&ti.local_addr);
