@@ -899,6 +899,7 @@ static pj_status_t send_text_locked(pjmedia_txt_stream *stream,
             int tx_size = size + sizeof(pjmedia_rtp_hdr);
             pj_memcpy(tx_pkt, channel->buf, tx_size);
 
+            stream->tx_last_ts = now;
             pj_mutex_unlock(c_strm->jb_mutex);
             status =
                 pjmedia_transport_send_rtp(c_strm->transport, tx_pkt, tx_size);
