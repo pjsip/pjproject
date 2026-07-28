@@ -1,6 +1,7 @@
 /* 
  * Copyright (C) 2024 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2024 Green and Silver Leaves. (https://github.com/BSVN)
+ * Copyright (C) 2026 Soroosh Mohammadi. (https://github.com/sorooshm78)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
