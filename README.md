@@ -66,4 +66,3 @@ Table of contents:
   - [PJNATH](https://docs.pjsip.org/en/latest/api/pjnath/index.html) - NAT traversal helper
   - [PJLIB-UTIL](https://docs.pjsip.org/en/latest/api/pjlib-util/index.html) - utilities
   - [PJLIB](https://docs.pjsip.org/en/latest/api/pjlib/index.html) - portable library
-

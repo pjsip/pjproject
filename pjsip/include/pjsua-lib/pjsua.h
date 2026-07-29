@@ -2665,6 +2665,22 @@ typedef struct pjsua_config
     pjsua_sip_siprec_use use_siprec;
 
     /**
+     * Specify whether SIPREC label attributes ('a=label') are required
+     * in incoming INVITE requests.
+     *
+     * When set to PJ_TRUE, SIPREC INVITEs without the label attribute in
+     * all media streams will be rejected with 400 Bad Request. This enforces
+     * RFC 7866 compliance for proper metadata correlation.
+     *
+     * When set to PJ_FALSE (default), the SRS will accept SIPREC INVITEs
+     * even without labels for better interoperability. Missing labels will
+     * be logged as warnings for debugging purposes.
+     *
+     * Default: PJ_FALSE (allow for interoperability)
+     */
+    pj_bool_t       siprec_require_label;
+
+    /**
      * Handle unsolicited NOTIFY requests containing message waiting 
      * indication (MWI) info. Unsolicited MWI is incoming NOTIFY requests 
      * which are not requested by client with SUBSCRIBE request. 
@@ -4481,7 +4497,24 @@ typedef struct pjsua_acc_config
     pjsua_sip_siprec_use use_siprec;
 
     /**
-     * Specify Session Timer settings, see #pjsip_timer_setting. 
+     * Specify whether SIPREC label attributes ('a=label') are required
+     * in incoming INVITE requests.
+     *
+     * When set to PJ_TRUE, SIPREC INVITEs without the label attribute in
+     * all media streams will be rejected with 400 Bad Request. This enforces
+     * RFC 7866 compliance for proper metadata correlation.
+     *
+     * When set to PJ_FALSE (default), the SRS will accept SIPREC INVITEs
+     * even without labels for better interoperability. Missing labels will
+     * be logged as warnings for debugging purposes.
+     *
+     * Default: The default value is taken from siprec_require_label in
+     *          pjsua_config (PJ_FALSE).
+     */
+    pj_bool_t       siprec_require_label;
+
+    /**
+     * Specify Session Timer settings, see #pjsip_timer_setting.
      */
     pjsip_timer_setting timer_setting;
 
