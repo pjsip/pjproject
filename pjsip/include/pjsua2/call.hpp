@@ -1010,6 +1010,11 @@ struct OnCallRxTextParam
      */
     string              text;
 
+    /**
+     * The index of the text media stream that received the text.
+     */
+    unsigned            medIdx;
+
 public:
     /**
      * Convert from pjsip

@@ -435,6 +435,7 @@ void OnCallRxTextParam::fromPj(const pjsua_txt_stream_data &prm)
     seq = prm.seq;
     ts = prm.ts;
     text = pj2Str(prm.text);
+    medIdx = prm.med_idx;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
