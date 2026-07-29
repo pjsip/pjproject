@@ -1692,7 +1692,8 @@ void Endpoint::on_dtmf_digit(pjsua_call_id call_id, int digit)
     char buf[10];
     pj_ansi_snprintf(buf, sizeof(buf), "%c", digit);
     job->prm.digit = string(buf);
-    
+    job->prm.medIdx = -1;
+
     Endpoint::instance().utilAddPendingJob(job);
 }
 
@@ -1711,7 +1712,8 @@ void Endpoint::on_dtmf_digit2(pjsua_call_id call_id,
     job->prm.digit = string(buf);
     job->prm.method = info->method;
     job->prm.duration = info->duration;
-    
+    job->prm.medIdx = info->med_idx;
+
     Endpoint::instance().utilAddPendingJob(job);
 }
 
@@ -1743,6 +1745,7 @@ struct PendingOnDtmfEventCallback : public PendingJob
             prmBasic.method = prm.method;
             prmBasic.digit = prm.digit;
             prmBasic.duration = PJSUA_UNKNOWN_DTMF_DURATION;
+            prmBasic.medIdx = prm.medIdx;
             call->onDtmfDigit(prmBasic);
         }
     }
@@ -1765,6 +1768,7 @@ void Endpoint::on_dtmf_event(pjsua_call_id call_id,
     job->prm.digit = string(buf);
     job->prm.duration = event->duration;
     job->prm.flags = event->flags;
+    job->prm.medIdx = event->med_idx;
 
     Endpoint::instance().utilAddPendingJob(job);
 }
