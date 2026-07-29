@@ -317,6 +317,7 @@ if(BUILD_TESTING)
     src/test/inv_offer_answer_test.c
     src/test/auth_async_test.c
     src/test/pjsua_auth_test.c
+    src/test/pjsua_call_test.c
     src/test/${PJ_TEST_MAIN}
   )
 

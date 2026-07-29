@@ -1,6 +1,7 @@
 /* 
  * Copyright (C) 2024 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2024 Green and Silver Leaves. (https://github.com/BSVN)
+ * Contributed by Soroosh Mohammadi (https://github.com/sorooshm78)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,36 +72,42 @@ pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
  * Verifies that the incoming request has the siprec value
  * in the Require header and "+sip.src" parameter exist in the Contact header.
  * If both conditions are met, according to RFC 7866,
- * the INVITE request is a siprec. Otherwise, 
- * no changes are made to the request. if INVITE request is a siprec 
- * must have media attribute label exist in the SDP
+ * the INVITE request is a siprec. Otherwise,
+ * no changes are made to the request. If INVITE request is a siprec,
+ * the SDP label attribute checking behavior depends on require_label.
  *
  * @param rdata         The incoming request to be verified.
  * @param metadata      The siprec metadata information
  * @param sdp_offer     The SDP media.
- * @param options       The options argument is bitmask combination of SIP 
+ * @param options       The options argument is bitmask combination of SIP
  *                      features in pjsip_inv_option enumeration
  * @param dlg           The dialog instance.
  * @param endpt         Media endpoint instance.
  * @param p_tdata       Upon error, it will be filled with the final response
  *                      to be sent to the request sender.
- * 
+ * @param require_label Controls SIPREC SDP label attribute enforcement:
+ *                      - PJ_TRUE: Require labels, reject SIPREC if any media
+ *                        lacks label attribute (strict RFC 7866 compliance)
+ *                      - PJ_FALSE: Accept without labels, but log warnings for
+ *                        unlabeled media (better interoperability)
+ *
  * @return   The function returns the following:
  *             - If the request includes the value siprec in the Require header
  *               and also includes "+sip.src" in the Contact header.
  *               PJ_SUCCESS and set PJSIP_INV_REQUIRE_SIPREC to options
  *             - Upon error condition (as described by RFC 7866), the
- *               function returns non-PJ_SUCCESS, and \a p_tdata 
+ *               function returns non-PJ_SUCCESS, and \a p_tdata
  *               parameter SHOULD be set with a final response message
  *               to be sent to the sender of the request.
  */
 PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
-                                                pj_str_t *metadata,    
+                                                pj_str_t *metadata,
                                                 pjmedia_sdp_session *sdp_offer,
                                                 unsigned *options,
                                                 pjsip_dialog *dlg,
                                                 pjsip_endpoint *endpt,
-                                                pjsip_tx_data **p_tdata);
+                                                pjsip_tx_data **p_tdata,
+                                                pj_bool_t require_label);
 
 
 /**
