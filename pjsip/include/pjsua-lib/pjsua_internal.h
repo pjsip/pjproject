@@ -123,6 +123,25 @@ struct pjsua_call_media
  */
 #define PJSUA_MAX_CALL_MEDIA            PJMEDIA_MAX_SDP_MEDIA
 
+/**
+ * Immutable (call, media) slot identity, filled once in
+ * pjsua_call_subsys_init() and constant afterwards, so media threads
+ * can read it without locking, e.g. as stream callback user data.
+ *
+ * Do not move this into pjsua_call or pjsua_call_media: those are
+ * zeroed by reset_call() and bulk-copied during media reprovisioning
+ * while stream callbacks may still be running (stream destroy does
+ * not wait for in-flight rx callbacks on all transports).
+ */
+typedef struct pjsua_call_med_ctx
+{
+    pjsua_call_id        call_id;   /**< Call index.                        */
+    unsigned             med_idx;   /**< Media index in parent call.        */
+} pjsua_call_med_ctx;
+
+/** One row of the per-media context table: all contexts of one call. */
+typedef pjsua_call_med_ctx pjsua_call_med_ctx_row[PJSUA_MAX_CALL_MEDIA];
+
  /**
   * Maximum number of streams from an avi player.
   */
@@ -627,6 +646,8 @@ struct pjsua_data
     pjsua_config         ua_cfg;                /**< UA config.         */
     unsigned             call_cnt;              /**< Call counter.      */
     pjsua_call          *calls;                 /**< Calls array.       */
+    pjsua_call_med_ctx_row *med_ctx;            /**< Per-media callback
+                                                     context, [call][med]*/
     pjsua_call_id        next_call_id;          /**< Next call id to use*/
 
     /* Buddy; */

@@ -91,13 +91,12 @@ on_return:
 static void rx_text_cb(pjmedia_txt_stream *strm, void *user_data,
                        const pjmedia_txt_stream_data *data)
 {
-    pjsua_call_id call_id;
+    const pjsua_call_med_ctx *ctx = (const pjsua_call_med_ctx *)user_data;
     pjsua_txt_stream_data txt;
 
     PJ_UNUSED_ARG(strm);
 
-    call_id = (pjsua_call_id)(pj_ssize_t)user_data;
-    if (pjsua_var.calls[call_id].hanging_up)
+    if (pjsua_var.calls[ctx->call_id].hanging_up)
         return;
 
     pj_log_push_indent();
@@ -106,7 +105,8 @@ static void rx_text_cb(pjmedia_txt_stream *strm, void *user_data,
         txt.seq = data->seq;
         txt.ts = data->ts;
         txt.text = data->text;
-        (*pjsua_var.ua_cfg.cb.on_call_rx_text)(call_id, &txt);
+        txt.med_idx = ctx->med_idx;
+        (*pjsua_var.ua_cfg.cb.on_call_rx_text)(ctx->call_id, &txt);
     }
 
     pj_log_pop_indent();
@@ -250,7 +250,7 @@ pj_status_t pjsua_txt_channel_update(pjsua_call_media *call_med,
         if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_rx_text) {
             pjmedia_txt_stream_set_rx_callback(
                 call_med->strm.t.stream, &rx_text_cb,
-                (void *)(pj_ssize_t)(call->index), 0);
+                &pjsua_var.med_ctx[call->index][strm_idx], 0);
         }
     }
 

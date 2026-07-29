@@ -234,6 +234,22 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     for (i = 0U; i < pjsua_var.ua_cfg.max_calls; ++i)
         reset_call(i);
 
+    /* Init per-media callback contexts, immutable from here on. */
+    pjsua_var.med_ctx = (pjsua_call_med_ctx_row *)
+                        pj_pool_zalloc(pjsua_var.pool,
+                                       sizeof(*pjsua_var.med_ctx) *
+                                       pjsua_var.ua_cfg.max_calls);
+    if (!pjsua_var.med_ctx)
+        return PJ_ENOMEM;
+
+    for (i = 0U; i < pjsua_var.ua_cfg.max_calls; ++i) {
+        unsigned j;
+        for (j = 0U; j < PJSUA_MAX_CALL_MEDIA; ++j) {
+            pjsua_var.med_ctx[i][j].call_id = i;
+            pjsua_var.med_ctx[i][j].med_idx = j;
+        }
+    }
+
     /* Check the route URI's and force loose route if required */
     for (i=0; i<pjsua_var.ua_cfg.outbound_proxy_cnt; ++i) {
         status = normalize_route_uri(pjsua_var.pool,
