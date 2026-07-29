@@ -747,8 +747,9 @@ static void call_on_dtmf_callback2(pjsua_call_id call_id,
                          info->duration);
         break;
     };    
-    PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c%s, using %s method", 
-           call_id, info->digit, duration, method));
+    PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c%s, using %s method, "
+           "stream %d", call_id, info->digit, duration, method,
+           info->med_idx));
 }
 
 /* Incoming text stream callback. */
