@@ -583,12 +583,11 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 static void dtmf_callback(pjmedia_stream *strm, void *user_data,
                           int digit)
 {
-    pjsua_call_id call_id;
+    const pjsua_call_med_ctx *ctx = (const pjsua_call_med_ctx *)user_data;
 
     PJ_UNUSED_ARG(strm);
 
-    call_id = (pjsua_call_id)(pj_ssize_t)user_data;
-    if (pjsua_var.calls[call_id].hanging_up)
+    if (pjsua_var.calls[ctx->call_id].hanging_up)
         return;
 
     pj_log_push_indent();
@@ -599,13 +598,14 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
         info.method = PJSUA_DTMF_METHOD_RFC2833;
         info.digit = digit;
         info.duration = PJSUA_UNKNOWN_DTMF_DURATION;
-        (*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call_id, &info);
+        info.med_idx = (int)ctx->med_idx;
+        (*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(ctx->call_id, &info);
     } else if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
         /* For discussions about call mutex protection related to this
          * callback, please see ticket #460:
          *      https://github.com/pjsip/pjproject/issues/460#comment:4
-         */    
-        (*pjsua_var.ua_cfg.cb.on_dtmf_digit)(call_id, digit);
+         */
+        (*pjsua_var.ua_cfg.cb.on_dtmf_digit)(ctx->call_id, digit);
     }
 
     pj_log_pop_indent();
@@ -617,13 +617,12 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
                                 const pjmedia_stream_dtmf_event *event)
 {
-    pjsua_call_id call_id;
+    const pjsua_call_med_ctx *ctx = (const pjsua_call_med_ctx *)user_data;
     pjsua_dtmf_event evt;
 
     PJ_UNUSED_ARG(strm);
 
-    call_id = (pjsua_call_id)(pj_ssize_t)user_data;
-    if (pjsua_var.calls[call_id].hanging_up)
+    if (pjsua_var.calls[ctx->call_id].hanging_up)
         return;
 
     pj_log_push_indent();
@@ -634,7 +633,8 @@ static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
         evt.digit = event->digit;
         evt.duration = event->duration;
         evt.flags = event->flags;
-        (*pjsua_var.ua_cfg.cb.on_dtmf_event)(call_id, &evt);
+        evt.med_idx = (int)ctx->med_idx;
+        (*pjsua_var.ua_cfg.cb.on_dtmf_event)(ctx->call_id, &evt);
     }
 
     pj_log_pop_indent();
@@ -750,16 +750,18 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
          * callback to the session.
          */
         if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_dtmf_event) {
-            pjmedia_stream_set_dtmf_event_callback(call_med->strm.a.stream,
-                                              &dtmf_event_callback,
-                                              (void*)(pj_ssize_t)(call->index));
+            pjmedia_stream_set_dtmf_event_callback(
+                                 call_med->strm.a.stream,
+                                 &dtmf_event_callback,
+                                 &pjsua_var.med_ctx[call->index][strm_idx]);
         } else if (!call->hanging_up &&
-                   (pjsua_var.ua_cfg.cb.on_dtmf_digit || 
+                   (pjsua_var.ua_cfg.cb.on_dtmf_digit ||
                     pjsua_var.ua_cfg.cb.on_dtmf_digit2))
         {
-            pjmedia_stream_set_dtmf_callback(call_med->strm.a.stream,
-                                             &dtmf_callback,
-                                             (void*)(pj_ssize_t)(call->index));
+            pjmedia_stream_set_dtmf_callback(
+                                 call_med->strm.a.stream,
+                                 &dtmf_callback,
+                                 &pjsua_var.med_ctx[call->index][strm_idx]);
         }
 
         /* Get the port interface of the first stream in the session.
