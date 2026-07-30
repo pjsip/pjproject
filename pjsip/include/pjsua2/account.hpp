@@ -1177,6 +1177,18 @@ struct AccountMediaConfig : public PersistentObject
     bool                rtcpMuxEnabled;
 
     /**
+     * Preserve the call's conference bridge slot (and its connections, mute,
+     * and level settings) across media renegotiation. When enabled, if a
+     * re-INVITE/UPDATE recreates the audio stream but keeps it as active
+     * audio, the conference slot is re-used instead of being removed and
+     * re-added, so the slot id and all its state survive. Media that is
+     * removed, deactivated, or changes type is still removed normally.
+     *
+     * Default: false
+     */
+    bool                preserveConfSlot;
+
+    /**
      * RTCP Feedback settings.
      */
     RtcpFbConfig        rtcpFbConfig;
@@ -1217,6 +1229,7 @@ public:
       srtpSecureSignaling(PJSUA_DEFAULT_SRTP_SECURE_SIGNALING),
       ipv6Use(PJSUA_IPV6_ENABLED_PREFER_IPV4),
       rtcpMuxEnabled(false),
+      preserveConfSlot(false),
       rtcpXrEnabled(PJMEDIA_STREAM_ENABLE_XR),
       useLoopMedTp(false),
       enableLoopback(false)

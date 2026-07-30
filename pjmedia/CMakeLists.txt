@@ -904,6 +904,7 @@ target_link_libraries(pjmedia-videodev
 if(BUILD_TESTING)
   add_executable(pjmedia-test
     src/test/codec_vectors.c
+    src/test/conf_test.c
     src/test/jbuf_test.c
     src/test/main.c
     src/test/mips_test.c

@@ -108,6 +108,7 @@ int test_main(int argc, char *argv[])
 #if HAS_JBUF_TEST
     UT_ADD_TEST(&test_app.ut_app, jbuf_test, 0);
 #endif
+    UT_ADD_TEST(&test_app.ut_app, conf_test, 0);
 #if HAS_TONE_DETECTOR_TEST
     UT_ADD_TEST(&test_app.ut_app, tone_detector_test, 0);
 #endif

@@ -1826,6 +1826,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.ipv6_media_use = PJ_HAS_IPV6? cfg->ipv6_media_use :
                                            PJSUA_IPV6_DISABLED;
     acc->cfg.enable_rtcp_mux = cfg->enable_rtcp_mux;
+    acc->cfg.preserve_conf_slot = cfg->preserve_conf_slot;
     acc->cfg.lock_codec = cfg->lock_codec;
     acc->cfg.enable_rtcp_xr = cfg->enable_rtcp_xr;
 
