@@ -988,7 +988,11 @@ PJ_DEF(pj_status_t) pj_timer_heap_earliest_time( pj_timer_heap_t * ht,
     if (ht->cur_size == 0) {
         status = PJ_ENOTFOUND;
     } else {
+#if PJ_TIMER_USE_LINKED_LIST
+        *timeval = ht->head_list.next->_timer_value;
+#else
         *timeval = ht->heap[0]->_timer_value;
+#endif
         status = PJ_SUCCESS;
     }
 
