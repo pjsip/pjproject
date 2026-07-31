@@ -1860,6 +1860,51 @@
 
 
 /**
+ * Maximum sender-side pacing delay for the video send rate control in
+ * PJMEDIA_VID_STREAM_RC_SEND_THREAD mode, in milliseconds. The RC scheduler
+ * paces outgoing RTP to the (auto-derived or configured) bandwidth budget.
+ * If the encoder outpaces that budget - for example after the codec bitrate
+ * is raised mid-call via pjmedia_vid_stream_modify_codec_param() - the
+ * cumulative packet schedule would otherwise drift ahead of real time
+ * without bound. This macro caps that drift so sender latency stays bounded;
+ * the pacing baseline is re-anchored to real time once the cap is hit.
+ *
+ * Default: 1000
+ */
+#ifndef PJMEDIA_VID_STREAM_RC_MAX_DELAY_MSEC
+#   define PJMEDIA_VID_STREAM_RC_MAX_DELAY_MSEC             1000
+#endif
+
+
+/**
+ * Overhead margin, in percent, added to the auto-derived video send rate
+ * control budget (i.e. when pjmedia_vid_stream_rc_config.bandwidth is left at
+ * zero). The budget then becomes codec_max_bps * (100 + this) / 100. The
+ * margin is pacing headroom to absorb RTP/UDP/IP overhead and encoder
+ * burstiness so the pacer does not fall behind a compliant encoder; it is NOT
+ * a media bitrate increase (the encoder still runs at the codec/SDP bitrate).
+ * An application-pinned bandwidth is used as-is, without this margin.
+ *
+ * Default: 25
+ */
+#ifndef PJMEDIA_VID_STREAM_RC_OVERHEAD_PCT
+#   define PJMEDIA_VID_STREAM_RC_OVERHEAD_PCT               25
+#endif
+
+
+/**
+ * Minimum video send rate control bandwidth budget, in bps. This is a floor
+ * to guard against a zero budget (e.g. when a codec reports a zero maximum
+ * bitrate), which would otherwise cause a division by zero in the pacer.
+ *
+ * Default: 32000
+ */
+#ifndef PJMEDIA_VID_STREAM_RC_MIN_BANDWIDTH
+#   define PJMEDIA_VID_STREAM_RC_MIN_BANDWIDTH             32000
+#endif
+
+
+/**
  * Perform RTP payload type checking in the video stream. Normally the peer
  * MUST send RTP with payload type as we specified in our SDP. Certain
  * agents may not be able to follow this hence the only way to have
