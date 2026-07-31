@@ -2225,6 +2225,15 @@ static pj_status_t op_replace_port(pjmedia_conf *conf,
             cport->buf_pool[1] = pj_pool_create(cport->pool->factory,
                                                 "confbuf", 512, 512, NULL);
             if (!cport->buf_pool[0] || !cport->buf_pool[1]) {
+                /* Release any partially-created pair and leave both NULL so a
+                 * later retry re-runs this initialization instead of resetting
+                 * a NULL pool. */
+                if (cport->buf_pool[0])
+                    pj_pool_release(cport->buf_pool[0]);
+                if (cport->buf_pool[1])
+                    pj_pool_release(cport->buf_pool[1]);
+                cport->buf_pool[0] = NULL;
+                cport->buf_pool[1] = NULL;
                 status = PJ_ENOMEM;
                 goto on_error;
             }
@@ -2381,7 +2390,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_detach_port( pjmedia_conf *conf,
 
     pj_mutex_lock(conf->mutex);
 
-    if (conf->ports[slot] == NULL) {
+    if (conf->ports[slot] == NULL || conf->ports[slot]->removing) {
         pj_mutex_unlock(conf->mutex);
         return PJ_EINVAL;
     }
@@ -2440,7 +2449,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
 
     pj_mutex_lock(conf->mutex);
 
-    if (conf->ports[slot] == NULL) {
+    if (conf->ports[slot] == NULL || conf->ports[slot]->removing) {
         pj_mutex_unlock(conf->mutex);
         return PJ_EINVAL;
     }
