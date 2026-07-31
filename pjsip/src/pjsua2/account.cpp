@@ -555,10 +555,12 @@ void AccountMediaConfig::readObject(const ContainerNode &node)
     NODE_READ_NUM_T   ( this_node, pjsua_ipv6_use, ipv6Use);
     NODE_READ_OBJ     ( this_node, transportConfig);
     NODE_READ_BOOL    ( this_node, rtcpMuxEnabled);
-    NODE_READ_BOOL_OPT( this_node, preserveConfSlot);
     NODE_READ_BOOL    ( this_node, useLoopMedTp);
     NODE_READ_BOOL    ( this_node, enableLoopback);
     NODE_READ_BOOL    ( this_node, rtcpXrEnabled);
+    /* Append new fields at the end and use the _OPT variant so older config
+     * files (and older readers) remain compatible - see persistent.hpp. */
+    NODE_READ_BOOL_OPT( this_node, preserveConfSlot);
 }
 
 void AccountMediaConfig::writeObject(ContainerNode &node) const
@@ -574,10 +576,11 @@ void AccountMediaConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_NUM_T   ( this_node, pjsua_ipv6_use, ipv6Use);
     NODE_WRITE_OBJ     ( this_node, transportConfig);
     NODE_WRITE_BOOL    ( this_node, rtcpMuxEnabled);
-    NODE_WRITE_BOOL    ( this_node, preserveConfSlot);
     NODE_WRITE_BOOL    ( this_node, useLoopMedTp);
     NODE_WRITE_BOOL    ( this_node, enableLoopback);
     NODE_WRITE_BOOL    ( this_node, rtcpXrEnabled);
+    /* Keep appended last to match readObject() and the append-only convention. */
+    NODE_WRITE_BOOL    ( this_node, preserveConfSlot);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

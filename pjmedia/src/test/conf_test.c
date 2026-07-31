@@ -17,6 +17,7 @@
  */
 #include "test.h"
 #include <pjmedia/conference.h>
+#include <pjmedia/config.h>
 #include <pjmedia/null_port.h>
 #include <pjmedia/errno.h>
 #include <pj/pool.h>
@@ -29,9 +30,18 @@
 #define SPF         (CLOCK_RATE/100)   /* 10ms */
 #define BPS         16
 
-/* A different clock rate to exercise the resampler/buffer rebuild path. */
+/* A different clock rate to exercise the resampler/buffer rebuild path.
+ * A cross-rate replace needs sample-rate conversion, so those steps only run
+ * when a resample implementation is compiled in.
+ */
 #define ALT_RATE    8000
 #define ALT_SPF     (ALT_RATE/100)
+
+#if PJMEDIA_RESAMPLE_IMP != PJMEDIA_RESAMPLE_NONE
+#  define HAS_RESAMPLE  1
+#else
+#  define HAS_RESAMPLE  0
+#endif
 
 /* Distinctive level and mute settings applied to the replaced slot, to verify
  * per-slot state survives detach/replace. */
@@ -57,9 +67,12 @@ static pj_status_t pump(pjmedia_port *master, unsigned n)
     return PJ_SUCCESS;
 }
 
-/* Assert slot1 still transmits to slot2, and slot2 kept its rx level + tx mute. */
+/* Assert slot1 still transmits to slot2, slot2 kept its rx level + tx mute,
+ * and the port attached to slot2 has the expected clock rate (0 = don't check,
+ * e.g. right after a detach when no port is attached).
+ */
 static int check_state(pjmedia_conf *conf, unsigned slot1, unsigned slot2,
-                       const char *stage)
+                       unsigned exp_rate, const char *stage)
 {
     pjmedia_conf_port_info info;
     pj_status_t status;
@@ -82,6 +95,11 @@ static int check_state(pjmedia_conf *conf, unsigned slot1, unsigned slot2,
         PJ_LOG(1,(THIS_FILE, "   %s: tx mute not preserved", stage));
         return -6;
     }
+    if (exp_rate && info.clock_rate != exp_rate) {
+        PJ_LOG(1,(THIS_FILE, "   %s: attached port rate %d != expected %d",
+                  stage, info.clock_rate, exp_rate));
+        return -7;
+    }
     return 0;
 }
 
@@ -97,7 +115,7 @@ static int detach_replace_test(void)
 {
     pj_pool_t *pool = NULL;
     pjmedia_conf *conf = NULL;
-    pjmedia_port *master, *p1 = NULL, *p2 = NULL, *p2b = NULL, *p2c = NULL;
+    pjmedia_port *master, *p1 = NULL, *p2 = NULL, *p2b = NULL;
     unsigned slot1 = 0, slot2 = 0;
     int rc = 0;
     pj_status_t status;
@@ -147,7 +165,7 @@ static int detach_replace_test(void)
     pump(master, 2);
 
     /* Connection to a detached slot must survive. */
-    if ((rc = check_state(conf, slot1, slot2, "after-detach")) != 0)
+    if ((rc = check_state(conf, slot1, slot2, 0, "after-detach")) != 0)
         goto on_return;
 
     /* Replace with the same format (pure pointer-swap path). */
@@ -156,22 +174,28 @@ static int detach_replace_test(void)
     status = pjmedia_conf_replace_port(conf, pool, slot2, p2b);
     if (status != PJ_SUCCESS) { rc = -71; goto on_return; }
     pump(master, 3);
-    if ((rc = check_state(conf, slot1, slot2, "after-replace-same-fmt")) != 0)
+    if ((rc = check_state(conf, slot1, slot2, CLOCK_RATE, "after-replace-same-fmt")) != 0)
         goto on_return;
 
+#if HAS_RESAMPLE
     /* Replace with a DIFFERENT clock rate to exercise the resampler/buffer
-     * rebuild path. */
-    status = pjmedia_conf_detach_port(conf, slot2);
-    if (status != PJ_SUCCESS) { rc = -75; goto on_return; }
-    pump(master, 2);
-    status = pjmedia_null_port_create(pool, ALT_RATE, CHANNELS, ALT_SPF, BPS,
-                                      &p2c);
-    if (status != PJ_SUCCESS) { rc = -76; goto on_return; }
-    status = pjmedia_conf_replace_port(conf, pool, slot2, p2c);
-    if (status != PJ_SUCCESS) { rc = -77; goto on_return; }
-    pump(master, 5);
-    if ((rc = check_state(conf, slot1, slot2, "after-replace-diff-fmt")) != 0)
-        goto on_return;
+     * rebuild path. Needs sample-rate conversion, so resample-capable only. */
+    {
+        pjmedia_port *p2c = NULL;
+
+        status = pjmedia_conf_detach_port(conf, slot2);
+        if (status != PJ_SUCCESS) { rc = -75; goto on_return; }
+        pump(master, 2);
+        status = pjmedia_null_port_create(pool, ALT_RATE, CHANNELS, ALT_SPF,
+                                          BPS, &p2c);
+        if (status != PJ_SUCCESS) { rc = -76; goto on_return; }
+        status = pjmedia_conf_replace_port(conf, pool, slot2, p2c);
+        if (status != PJ_SUCCESS) { rc = -77; goto on_return; }
+        pump(master, 5);
+        if ((rc = check_state(conf, slot1, slot2, ALT_RATE,
+                              "after-replace-diff-fmt")) != 0)
+            goto on_return;
+    }
 
     /* Repeatedly replace with alternating rates to exercise the switchable
      * buffer-pool reset path (which reclaims a generation only from the third
@@ -192,34 +216,80 @@ static int detach_replace_test(void)
             status = pjmedia_conf_replace_port(conf, pool, slot2, pn);
             if (status != PJ_SUCCESS) { rc = -82; goto on_return; }
             pump(master, 5);
-            if ((rc = check_state(conf, slot1, slot2, "after-replace-loop"))!=0)
+            if ((rc = check_state(conf, slot1, slot2, r, "after-replace-loop"))!=0)
                 goto on_return;
         }
+        /* The last iteration (i=5) leaves slot2 attached at CLOCK_RATE, ready
+         * for the rate-independent tests below. */
     }
+#endif  /* HAS_RESAMPLE */
 
     /* Replace an ATTACHED (non-NULL) port directly, without a preceding
-     * detach: op_replace_port() must detach the current port itself. Cover
-     * both same-format (pointer swap) and different-format (rebuild). */
+     * detach: op_replace_port() must detach the current port itself. */
     {
-        pjmedia_port *pd1 = NULL, *pd2 = NULL;
+        pjmedia_port *pd1 = NULL;
 
-        /* same rate as the currently-attached port (CLOCK_RATE from loop). */
         status = pjmedia_null_port_create(pool, CLOCK_RATE, CHANNELS, SPF, BPS,
                                           &pd1);
         if (status != PJ_SUCCESS) { rc = -90; goto on_return; }
         status = pjmedia_conf_replace_port(conf, pool, slot2, pd1);
         if (status != PJ_SUCCESS) { rc = -91; goto on_return; }
         pump(master, 3);
-        if ((rc = check_state(conf, slot1, slot2, "direct-replace-same"))!=0)
+        if ((rc = check_state(conf, slot1, slot2, CLOCK_RATE, "direct-replace-same"))!=0)
             goto on_return;
 
-        status = pjmedia_null_port_create(pool, ALT_RATE, CHANNELS, ALT_SPF,
-                                          BPS, &pd2);
-        if (status != PJ_SUCCESS) { rc = -92; goto on_return; }
-        status = pjmedia_conf_replace_port(conf, pool, slot2, pd2);
-        if (status != PJ_SUCCESS) { rc = -93; goto on_return; }
-        pump(master, 5);
-        if ((rc = check_state(conf, slot1, slot2, "direct-replace-diff"))!=0)
+#if HAS_RESAMPLE
+        {
+            pjmedia_port *pd2 = NULL;
+
+            status = pjmedia_null_port_create(pool, ALT_RATE, CHANNELS, ALT_SPF,
+                                              BPS, &pd2);
+            if (status != PJ_SUCCESS) { rc = -92; goto on_return; }
+            status = pjmedia_conf_replace_port(conf, pool, slot2, pd2);
+            if (status != PJ_SUCCESS) { rc = -93; goto on_return; }
+            pump(master, 5);
+            if ((rc = check_state(conf, slot1, slot2, ALT_RATE,
+                                  "direct-replace-diff")) != 0)
+                goto on_return;
+
+            /* Restore base rate for the capability-change test below. */
+            status = pjmedia_null_port_create(pool, CLOCK_RATE, CHANNELS, SPF,
+                                              BPS, &pd1);
+            if (status != PJ_SUCCESS) { rc = -94; goto on_return; }
+            status = pjmedia_conf_replace_port(conf, pool, slot2, pd1);
+            if (status != PJ_SUCCESS) { rc = -95; goto on_return; }
+            pump(master, 3);
+        }
+#endif  /* HAS_RESAMPLE */
+    }
+
+    /* Capability-changing replace: swap slot2 for a source-only port (no
+     * put_frame), then back to a sink-capable port. On the parallel backend
+     * this exercises the active_listener reconciliation (remove then re-add);
+     * on the serial backend it is just two more replaces. State must survive
+     * and ASan must stay clean. */
+    {
+        pjmedia_port *psrc = NULL, *psink = NULL;
+
+        status = pjmedia_null_port_create(pool, CLOCK_RATE, CHANNELS, SPF, BPS,
+                                          &psrc);
+        if (status != PJ_SUCCESS) { rc = -100; goto on_return; }
+        psrc->put_frame = NULL;      /* make it source-only (player-like) */
+        status = pjmedia_conf_replace_port(conf, pool, slot2, psrc);
+        if (status != PJ_SUCCESS) { rc = -101; goto on_return; }
+        pump(master, 4);
+        if ((rc = check_state(conf, slot1, slot2, CLOCK_RATE,
+                              "replace-source-only")) != 0)
+            goto on_return;
+
+        status = pjmedia_null_port_create(pool, CLOCK_RATE, CHANNELS, SPF, BPS,
+                                          &psink);
+        if (status != PJ_SUCCESS) { rc = -102; goto on_return; }
+        status = pjmedia_conf_replace_port(conf, pool, slot2, psink);
+        if (status != PJ_SUCCESS) { rc = -103; goto on_return; }
+        pump(master, 4);
+        if ((rc = check_state(conf, slot1, slot2, CLOCK_RATE,
+                              "replace-sink-again")) != 0)
             goto on_return;
     }
 

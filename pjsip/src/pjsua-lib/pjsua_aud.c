@@ -595,6 +595,19 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
         call_med->strm.a.stream = NULL;
     }
 
+    /* A retained (detached) conference slot can be left behind if a media
+     * update failed to rebuild the stream: strm is NULL here, so the block
+     * above did not run to remove it. Unless we are preserving it for a pending
+     * replace, remove it now so it is not leaked for the call's lifetime.
+     */
+    if (!strm && !preserve_slot &&
+        call_med->strm.a.conf_slot != PJSUA_INVALID_ID)
+    {
+        if (pjsua_var.mconf)
+            pjsua_conf_remove_port(call_med->strm.a.conf_slot);
+        call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
+    }
+
     pjsua_check_snd_dev_idle();
 }
 
