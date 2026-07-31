@@ -227,6 +227,16 @@ struct conf_port
                                              data from/to.                  */
     pj_bool_t            removing;      /**< Port is being removed, avoid
                                              queuing connect/disconnect/etc. */
+
+    /* Two alternating pools holding the swappable per-format resources
+     * (resamplers and rx/tx conversion buffers). On a format-changing
+     * pjmedia_conf_replace_port() the new resources are built into the
+     * inactive pool; on the next replace the now-stale pool is reset. This
+     * bounds memory growth across repeated format-changing renegotiations,
+     * instead of letting the slot pool grow on every change.
+     */
+    pj_pool_t           *buf_pool[2];
+    unsigned             buf_pool_idx;
 };
 
 
@@ -405,6 +415,10 @@ static void handle_op_queue(pjmedia_conf *conf)
 static void conf_port_on_destroy(void *arg)
 {
     struct conf_port *conf_port = (struct conf_port*)arg;
+    if (conf_port->buf_pool[0])
+        pj_pool_safe_release(&conf_port->buf_pool[0]);
+    if (conf_port->buf_pool[1])
+        pj_pool_safe_release(&conf_port->buf_pool[1]);
     if (conf_port->pool)
         pj_pool_safe_release(&conf_port->pool);
 }
@@ -1872,6 +1886,17 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
             if (cancel_op) {
                 pjmedia_conf_op_info op_info = { 0 };
 
+                /* Release the reference held by a cancelled replace op on its
+                 * pending new port (see pjmedia_conf_replace_port()).
+                 */
+                if (cancel_op->type == PJMEDIA_CONF_OP_REPLACE_PORT &&
+                    cancel_op->param.replace_port.new_port &&
+                    cancel_op->param.replace_port.new_port->grp_lock)
+                {
+                    pj_grp_lock_dec_ref(
+                        cancel_op->param.replace_port.new_port->grp_lock);
+                }
+
                 op_info.op_type = cancel_op->type;
                 op_info.op_param = cancel_op->param;
 
@@ -2149,13 +2174,13 @@ static pj_status_t op_replace_port(pjmedia_conf *conf,
 
     if (!cport || !strm_port) {
         PJ_PERROR(3, (THIS_FILE, PJ_EINVAL, "Replace port failed"));
-        return PJ_EINVAL;
+        status = PJ_EINVAL;
+        goto on_error;
     }
 
-    /* Slot-lived resources are allocated from the slot's own pool so they
-     * survive across replacements. NOTE: on a format change this grows the
-     * slot pool; format-changing renegotiations are uncommon, but a dedicated
-     * resettable buffer pool would be a further improvement.
+    /* Fallback pool for the group lock init below. Per-format resources are
+     * allocated from the slot's switchable buffer pools instead (see below),
+     * so repeated format changes do not bloat the slot pool.
      */
     slot_pool = cport->pool ? cport->pool : prm->replace_port.pool;
 
@@ -2180,10 +2205,34 @@ static pj_status_t op_replace_port(pjmedia_conf *conf,
         pjmedia_resample *new_rx = NULL, *new_tx = NULL;
         pj_int16_t *new_rx_buf = NULL, *new_tx_buf = NULL;
         unsigned new_buf_cap = 0;
+        pj_pool_t *build_pool;
+        unsigned build_idx;
         pj_bool_t need_resample = (new_clock_rate != conf->clock_rate);
         pj_bool_t need_buffers = (new_clock_rate != conf->clock_rate ||
                                   new_channel_count != conf->channel_count ||
                                   new_spf != conf->samples_per_frame);
+
+        /* Pick the inactive switchable pool to build into, and reset it so the
+         * generation from two replaces ago is reclaimed - this bounds growth
+         * across repeated format changes. The pool pair is created lazily, so
+         * slots that are never format-changed pay nothing. Building into the
+         * INACTIVE pool keeps the slot's current (active) resources valid until
+         * we commit, preserving the build-then-commit semantics below.
+         */
+        if (!cport->buf_pool[0]) {
+            cport->buf_pool[0] = pj_pool_create(cport->pool->factory,
+                                                "confbuf", 512, 512, NULL);
+            cport->buf_pool[1] = pj_pool_create(cport->pool->factory,
+                                                "confbuf", 512, 512, NULL);
+            if (!cport->buf_pool[0] || !cport->buf_pool[1]) {
+                status = PJ_ENOMEM;
+                goto on_error;
+            }
+            cport->buf_pool_idx = 0;
+        }
+        build_idx = 1 - cport->buf_pool_idx;
+        pj_pool_reset(cport->buf_pool[build_idx]);
+        build_pool = cport->buf_pool[build_idx];
 
         /* Build ALL replacement resources into temporaries first, and commit
          * to the slot only after every step has succeeded. On failure the slot
@@ -2194,22 +2243,22 @@ static pj_status_t op_replace_port(pjmedia_conf *conf,
             pj_bool_t high_quality = ((conf->options & PJMEDIA_CONF_USE_LINEAR)==0);
             pj_bool_t large_filter = ((conf->options & PJMEDIA_CONF_SMALL_FILTER)==0);
 
-            status = pjmedia_resample_create(slot_pool, high_quality,
+            status = pjmedia_resample_create(build_pool, high_quality,
                                              large_filter, conf->channel_count,
                                              new_clock_rate, conf->clock_rate,
                                              conf->samples_per_frame *
                                                new_clock_rate / conf->clock_rate,
                                              &new_rx);
             if (status != PJ_SUCCESS)
-                return status;
+                goto on_error;
 
-            status = pjmedia_resample_create(slot_pool, high_quality,
+            status = pjmedia_resample_create(build_pool, high_quality,
                                              large_filter, conf->channel_count,
                                              conf->clock_rate, new_clock_rate,
                                              conf->samples_per_frame, &new_tx);
             if (status != PJ_SUCCESS) {
                 pjmedia_resample_destroy(new_rx);
-                return status;
+                goto on_error;
             }
         }
 
@@ -2227,7 +2276,8 @@ static pj_status_t op_replace_port(pjmedia_conf *conf,
                 if (new_tx) pjmedia_resample_destroy(new_tx);
                 PJ_LOG(3, (THIS_FILE, "Replace port %d: incompatible sample "
                            "rate/ptime", slot));
-                return PJMEDIA_ENOTCOMPATIBLE;
+                status = PJMEDIA_ENOTCOMPATIBLE;
+                goto on_error;
             }
 
             if (port_ptime > conf_ptime) {
@@ -2247,13 +2297,14 @@ static pj_status_t op_replace_port(pjmedia_conf *conf,
                 new_buf_cap *= conf->channel_count;
 
             new_rx_buf = (pj_int16_t*)
-                         pj_pool_alloc(slot_pool, new_buf_cap * sizeof(pj_int16_t));
+                         pj_pool_alloc(build_pool, new_buf_cap * sizeof(pj_int16_t));
             new_tx_buf = (pj_int16_t*)
-                         pj_pool_alloc(slot_pool, new_buf_cap * sizeof(pj_int16_t));
+                         pj_pool_alloc(build_pool, new_buf_cap * sizeof(pj_int16_t));
             if (!new_rx_buf || !new_tx_buf) {
                 if (new_rx) pjmedia_resample_destroy(new_rx);
                 if (new_tx) pjmedia_resample_destroy(new_tx);
-                return PJ_ENOMEM;
+                status = PJ_ENOMEM;
+                goto on_error;
             }
         }
 
@@ -2273,9 +2324,16 @@ static pj_status_t op_replace_port(pjmedia_conf *conf,
         cport->clock_rate = new_clock_rate;
         cport->samples_per_frame = new_spf;
         cport->channel_count = new_channel_count;
+
+        /* The freshly-built pool is now the active one. */
+        cport->buf_pool_idx = build_idx;
     }
 
-    /* Attach the new port and move slot pool ownership onto its group lock. */
+    /* Attach the new port and move slot pool ownership onto its group lock.
+     * The group lock and the queue reference were already set up by
+     * pjmedia_conf_replace_port(); here we add the ownership reference +
+     * on-destroy handler that keep the port alive while it is attached.
+     */
     if (!strm_port->grp_lock)
         pjmedia_port_init_grp_lock(strm_port, slot_pool, NULL);
     if (strm_port->grp_lock) {
@@ -2284,7 +2342,7 @@ static pj_status_t op_replace_port(pjmedia_conf *conf,
                                          &conf_port_on_destroy);
         if (status != PJ_SUCCESS) {
             pj_grp_lock_dec_ref(strm_port->grp_lock);
-            return status;
+            goto on_error;
         }
     }
 
@@ -2295,7 +2353,21 @@ static pj_status_t op_replace_port(pjmedia_conf *conf,
 
     PJ_LOG(4, (THIS_FILE, "Replaced port %d (%.*s), fmt_changed=%d", slot,
                (int)cport->name.slen, cport->name.ptr, fmt_changed));
+
+    /* Release the queue reference taken in pjmedia_conf_replace_port(); the
+     * ownership reference added above now keeps the port alive.
+     */
+    if (strm_port->grp_lock)
+        pj_grp_lock_dec_ref(strm_port->grp_lock);
     return PJ_SUCCESS;
+
+on_error:
+    /* The op did not complete: release the queue reference so the caller's
+     * port can be destroyed. The port was not attached to the slot.
+     */
+    if (strm_port && strm_port->grp_lock)
+        pj_grp_lock_dec_ref(strm_port->grp_lock);
+    return status;
 }
 
 
@@ -2310,6 +2382,15 @@ PJ_DEF(pj_status_t) pjmedia_conf_detach_port( pjmedia_conf *conf,
     pj_mutex_lock(conf->mutex);
 
     if (conf->ports[slot] == NULL) {
+        pj_mutex_unlock(conf->mutex);
+        return PJ_EINVAL;
+    }
+
+    /* The master (slot 0) and passive ports keep a delay buffer that the read
+     * path uses in place of the attached port, so detach/replace cannot work
+     * on them - a swapped-in port would be silently ignored. Reject them.
+     */
+    if (slot == 0 || conf->ports[slot]->delay_buf != NULL) {
         pj_mutex_unlock(conf->mutex);
         return PJ_EINVAL;
     }
@@ -2336,6 +2417,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
                                                pjmedia_port *strm_port )
 {
     op_entry *ope;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(conf && pool && strm_port && slot < conf->max_ports,
                      PJ_EINVAL);
@@ -2363,8 +2445,32 @@ PJ_DEF(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
         return PJ_EINVAL;
     }
 
+    /* Reject master/passive slots (see pjmedia_conf_detach_port()). */
+    if (slot == 0 || conf->ports[slot]->delay_buf != NULL) {
+        pj_mutex_unlock(conf->mutex);
+        return PJ_EINVAL;
+    }
+
+    /* Hold a reference on the new port so it stays valid until the queued op
+     * runs at the conference tick; the caller may destroy the port right after
+     * we return (mirrors pjmedia_conf_add_port(), which references the port
+     * before returning). The reference is released when the op runs, fails, or
+     * is cancelled. Use the slot's own pool for the group lock so its lifetime
+     * matches the slot, as create_conf_port() does.
+     */
+    if (!strm_port->grp_lock) {
+        status = pjmedia_port_init_grp_lock(strm_port,
+                                            conf->ports[slot]->pool, NULL);
+        if (status != PJ_SUCCESS) {
+            pj_mutex_unlock(conf->mutex);
+            return status;
+        }
+    }
+    pj_grp_lock_add_ref(strm_port->grp_lock);
+
     ope = get_free_op_entry(conf);
     if (!ope) {
+        pj_grp_lock_dec_ref(strm_port->grp_lock);
         pj_mutex_unlock(conf->mutex);
         return PJ_ENOMEM;
     }

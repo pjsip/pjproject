@@ -173,6 +173,56 @@ static int detach_replace_test(void)
     if ((rc = check_state(conf, slot1, slot2, "after-replace-diff-fmt")) != 0)
         goto on_return;
 
+    /* Repeatedly replace with alternating rates to exercise the switchable
+     * buffer-pool reset path (which reclaims a generation only from the third
+     * format change onward) and let ASan catch any leak/use-after-free. State
+     * must survive every cycle. */
+    {
+        unsigned i;
+        for (i = 0; i < 6; ++i) {
+            unsigned r = (i & 1) ? CLOCK_RATE : ALT_RATE;
+            unsigned spf = r / 100;
+            pjmedia_port *pn = NULL;
+
+            status = pjmedia_conf_detach_port(conf, slot2);
+            if (status != PJ_SUCCESS) { rc = -80; goto on_return; }
+            pump(master, 2);
+            status = pjmedia_null_port_create(pool, r, CHANNELS, spf, BPS, &pn);
+            if (status != PJ_SUCCESS) { rc = -81; goto on_return; }
+            status = pjmedia_conf_replace_port(conf, pool, slot2, pn);
+            if (status != PJ_SUCCESS) { rc = -82; goto on_return; }
+            pump(master, 5);
+            if ((rc = check_state(conf, slot1, slot2, "after-replace-loop"))!=0)
+                goto on_return;
+        }
+    }
+
+    /* Replace an ATTACHED (non-NULL) port directly, without a preceding
+     * detach: op_replace_port() must detach the current port itself. Cover
+     * both same-format (pointer swap) and different-format (rebuild). */
+    {
+        pjmedia_port *pd1 = NULL, *pd2 = NULL;
+
+        /* same rate as the currently-attached port (CLOCK_RATE from loop). */
+        status = pjmedia_null_port_create(pool, CLOCK_RATE, CHANNELS, SPF, BPS,
+                                          &pd1);
+        if (status != PJ_SUCCESS) { rc = -90; goto on_return; }
+        status = pjmedia_conf_replace_port(conf, pool, slot2, pd1);
+        if (status != PJ_SUCCESS) { rc = -91; goto on_return; }
+        pump(master, 3);
+        if ((rc = check_state(conf, slot1, slot2, "direct-replace-same"))!=0)
+            goto on_return;
+
+        status = pjmedia_null_port_create(pool, ALT_RATE, CHANNELS, ALT_SPF,
+                                          BPS, &pd2);
+        if (status != PJ_SUCCESS) { rc = -92; goto on_return; }
+        status = pjmedia_conf_replace_port(conf, pool, slot2, pd2);
+        if (status != PJ_SUCCESS) { rc = -93; goto on_return; }
+        pump(master, 5);
+        if ((rc = check_state(conf, slot1, slot2, "direct-replace-diff"))!=0)
+            goto on_return;
+    }
+
 on_return:
     if (conf)
         pjmedia_conf_destroy(conf);
