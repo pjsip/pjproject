@@ -2362,9 +2362,9 @@ static pj_status_t op_replace_port(pjmedia_conf *conf,
 
     /* ------ Phase 2: set up the new port's ownership group lock + on-destroy
      * handler. Still no commit; on failure the slot is untouched. ------
-     * The group lock is allocated from the conference pool (not the slot pool)
-     * so its lifetime is independent of the slot: a replace that is still
-     * queued when the slot is torn down cannot leave the lock storage dangling.
+     * pjmedia_conf_replace_port() already created the group lock at enqueue, so
+     * this init is only a defensive fallback (the pool is used solely for its
+     * factory - the lock owns a private pool released with itself).
      */
     if (!strm_port->grp_lock)
         pjmedia_port_init_grp_lock(strm_port, conf->pool, NULL);
@@ -2408,8 +2408,15 @@ static pj_status_t op_replace_port(pjmedia_conf *conf,
      * to the very end so a failure in Phase 1/2 leaves the old port working
      * (an atomic replacement). Keep the slot's existing tx/rx settings so any
      * app-configured enable/disable/mute is preserved across the swap.
+     *
+     * Detach unconditionally, even when replacing a slot with its own currently-
+     * attached port: Phase 2 already added a fresh ownership reference + handler
+     * that keep the port alive across detach_slot_port()'s dec_ref, and
+     * del_handler() removes only one of the two identical registrations, leaving
+     * exactly one ref + one handler. Skipping the detach here would instead leak
+     * a reference and a handler.
      */
-    if (cport->port && cport->port != strm_port)
+    if (cport->port)
         detach_slot_port(cport);
     cport->port = strm_port;
 
@@ -2504,12 +2511,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_replace_port( pjmedia_conf *conf,
      * runs at the conference tick; the caller may destroy the port right after
      * we return (mirrors pjmedia_conf_add_port(), which references the port
      * before returning). The reference is released when the op runs, fails, or
-     * is cancelled. Use the slot's own pool for the group lock so its lifetime
-     * matches the slot, as create_conf_port() does.
+     * is cancelled. The pool passed here is only used for its factory - the
+     * group lock creates and owns a private pool released with the lock itself
+     * - so any live pool works; use conf->pool for clarity.
      */
     if (!strm_port->grp_lock) {
-        status = pjmedia_port_init_grp_lock(strm_port,
-                                            conf->ports[slot]->pool, NULL);
+        status = pjmedia_port_init_grp_lock(strm_port, conf->pool, NULL);
         if (status != PJ_SUCCESS) {
             pj_mutex_unlock(conf->mutex);
             return status;

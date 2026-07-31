@@ -47,6 +47,12 @@
  * per-slot state survives detach/replace. */
 #define TEST_LEVEL  42
 
+/* Monotonic timestamp for the clock. The bridge uses the caller frame's
+ * timestamp as the tick timestamp, so it must advance every tick like a real
+ * clock source; a fixed timestamp makes the mixer treat successive ticks as
+ * the same one. Static so it stays monotonic across all pump() calls. */
+static pj_uint64_t g_pump_ts;
+
 /* Drive the conference clock so queued (async) operations are processed. */
 static pj_status_t pump(pjmedia_port *master, unsigned n)
 {
@@ -60,9 +66,11 @@ static pj_status_t pump(pjmedia_port *master, unsigned n)
         f.type = PJMEDIA_FRAME_TYPE_AUDIO;
         f.buf = buf;
         f.size = sizeof(buf);
+        f.timestamp.u64 = g_pump_ts;
         status = pjmedia_port_get_frame(master, &f);
         if (status != PJ_SUCCESS)
             return status;
+        g_pump_ts += SPF;
     }
     return PJ_SUCCESS;
 }
@@ -95,10 +103,29 @@ static int check_state(pjmedia_conf *conf, unsigned slot1, unsigned slot2,
         PJ_LOG(1,(THIS_FILE, "   %s: tx mute not preserved", stage));
         return -6;
     }
-    if (exp_rate && info.clock_rate != exp_rate) {
-        PJ_LOG(1,(THIS_FILE, "   %s: attached port rate %d != expected %d",
-                  stage, info.clock_rate, exp_rate));
-        return -7;
+    /* get_port_info() reports PJMEDIA_FORMAT_INVALID exactly when no port is
+     * attached, so the format id tells detached from attached regardless of
+     * clock rate (which is slot metadata that survives a detach). exp_rate==0
+     * means "expect detached"; otherwise a port must be attached at exp_rate.
+     * This catches a replace that silently left the slot detached - which the
+     * clock-rate check alone cannot, since a same-format swap does not change
+     * the metadata rate.
+     */
+    if (exp_rate == 0) {
+        if (info.format.id != PJMEDIA_FORMAT_INVALID) {
+            PJ_LOG(1,(THIS_FILE, "   %s: slot not detached", stage));
+            return -8;
+        }
+    } else {
+        if (info.format.id == PJMEDIA_FORMAT_INVALID) {
+            PJ_LOG(1,(THIS_FILE, "   %s: replace did not attach a port", stage));
+            return -9;
+        }
+        if (info.clock_rate != exp_rate) {
+            PJ_LOG(1,(THIS_FILE, "   %s: attached port rate %d != expected %d",
+                      stage, info.clock_rate, exp_rate));
+            return -7;
+        }
     }
     return 0;
 }
@@ -301,6 +328,159 @@ on_return:
     return rc;
 }
 
+/*
+ * An instrumented port that counts get_frame()/put_frame() calls, so the test
+ * can prove that frames actually reach the NEW port after a replace (metadata
+ * checks alone cannot tell a new attached port from a stale one).
+ */
+typedef struct test_port {
+    pjmedia_port  base;
+    unsigned      get_cnt;
+    unsigned      put_cnt;
+} test_port;
+
+static pj_status_t tp_get_frame(pjmedia_port *this_port, pjmedia_frame *frame)
+{
+    test_port *tp = (test_port*)this_port;
+    tp->get_cnt++;
+    /* Produce audio so the bridge has something to mix and deliver. */
+    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    if (frame->buf && frame->size)
+        pj_memset(frame->buf, 1, (pj_size_t)frame->size);
+    return PJ_SUCCESS;
+}
+
+static pj_status_t tp_put_frame(pjmedia_port *this_port, pjmedia_frame *frame)
+{
+    test_port *tp = (test_port*)this_port;
+    PJ_UNUSED_ARG(frame);
+    tp->put_cnt++;
+    return PJ_SUCCESS;
+}
+
+/* Create a counting port. has_put=PJ_FALSE makes it source-only (no put_frame),
+ * as a media player would be. */
+static test_port *create_test_port(pj_pool_t *pool, unsigned rate,
+                                    unsigned spf, pj_bool_t has_put)
+{
+    test_port *tp = PJ_POOL_ZALLOC_T(pool, test_port);
+    pj_str_t name = pj_str((char*)"tp");
+
+    if (!tp) return NULL;
+    pjmedia_port_info_init(&tp->base.info, &name,
+                           PJMEDIA_SIG_CLASS_PORT_AUD('t','p'),
+                           rate, CHANNELS, BPS, spf);
+    tp->base.get_frame = &tp_get_frame;
+    tp->base.put_frame = has_put ? &tp_put_frame : NULL;
+    return tp;
+}
+
+/*
+ * Verify that after a replace, frames are actually delivered to the NEW port
+ * (not the old one), and that the parallel backend's active_listener
+ * reconciliation restores delivery after a source-only -> sink swap.
+ *
+ * Returns 0 on success, 1 if unsupported (skipped), negative on failure.
+ */
+static int flow_test(void)
+{
+    pj_pool_t *pool = NULL;
+    pjmedia_conf *conf = NULL;
+    pjmedia_port *master;
+    test_port *src, *b1, *b2, *b3, *s;
+    unsigned slot_src = 0, slot_b = 0, base;
+    int rc = 0;
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, "  conf replace delivers frames to the new port"));
+
+    pool = pj_pool_create(mem, "conf_flow", 4000, 4000, NULL);
+    if (!pool) return -200;
+
+    status = pjmedia_conf_create(pool, 8, CLOCK_RATE, CHANNELS, SPF, BPS,
+                                 PJMEDIA_CONF_NO_DEVICE, &conf);
+    if (status != PJ_SUCCESS) { rc = -201; goto on_return; }
+    master = pjmedia_conf_get_master_port(conf);
+
+    /* src is a bidirectional port used as the transmitter (it just produces
+     * audio via get_frame); b1 is the sink whose put_frame we count. */
+    src = create_test_port(pool, CLOCK_RATE, SPF, PJ_TRUE);
+    b1  = create_test_port(pool, CLOCK_RATE, SPF, PJ_TRUE);
+    if (!src || !b1) { rc = -202; goto on_return; }
+
+    status = pjmedia_conf_add_port(conf, pool, &src->base, NULL, &slot_src);
+    if (status != PJ_SUCCESS) { rc = -203; goto on_return; }
+    status = pjmedia_conf_add_port(conf, pool, &b1->base, NULL, &slot_b);
+    if (status != PJ_SUCCESS) { rc = -204; goto on_return; }
+    status = pjmedia_conf_connect_port(conf, slot_src, slot_b, 0);
+    if (status != PJ_SUCCESS) { rc = -205; goto on_return; }
+    pump(master, 5);
+
+    /* Probe support (switchboard has none) before asserting anything. */
+    status = pjmedia_conf_detach_port(conf, slot_b);
+    if (status == PJ_ENOTSUP) { rc = 1; goto on_return; }
+    if (status != PJ_SUCCESS) { rc = -206; goto on_return; }
+    pump(master, 3);
+
+    /* Replace with a fresh sink; frames must reach the NEW port and stop
+     * reaching the old one. */
+    b2 = create_test_port(pool, CLOCK_RATE, SPF, PJ_TRUE);
+    if (!b2) { rc = -207; goto on_return; }
+    base = b1->put_cnt;
+    status = pjmedia_conf_replace_port(conf, pool, slot_b, &b2->base);
+    if (status != PJ_SUCCESS) { rc = -208; goto on_return; }
+    pump(master, 6);
+    if (b2->put_cnt == 0) {
+        PJ_LOG(1,(THIS_FILE, "   new port not receiving after replace"));
+        rc = -209; goto on_return;
+    }
+    if (b1->put_cnt != base) {
+        PJ_LOG(1,(THIS_FILE, "   old port still receiving after replace"));
+        rc = -210; goto on_return;
+    }
+
+    /* Self-replace (slot's own attached port): must not leak (ASan) and must
+     * keep delivering. */
+    base = b2->put_cnt;
+    status = pjmedia_conf_replace_port(conf, pool, slot_b, &b2->base);
+    if (status != PJ_SUCCESS) { rc = -211; goto on_return; }
+    pump(master, 6);
+    if (b2->put_cnt <= base) {
+        PJ_LOG(1,(THIS_FILE, "   self-replace stopped delivery"));
+        rc = -212; goto on_return;
+    }
+
+    /* Swap to a source-only port then back to a sink: on the parallel backend
+     * this removes then re-adds the slot in active_listener[]. Delivery to the
+     * final sink proves the re-add worked (the silent failure direction). */
+    s = create_test_port(pool, CLOCK_RATE, SPF, PJ_FALSE); /* no put_frame */
+    if (!s) { rc = -213; goto on_return; }
+    status = pjmedia_conf_replace_port(conf, pool, slot_b, &s->base);
+    if (status != PJ_SUCCESS) { rc = -214; goto on_return; }
+    pump(master, 4);
+    if (s->put_cnt != 0) {
+        PJ_LOG(1,(THIS_FILE, "   source-only port received a put_frame"));
+        rc = -215; goto on_return;
+    }
+
+    b3 = create_test_port(pool, CLOCK_RATE, SPF, PJ_TRUE);
+    if (!b3) { rc = -216; goto on_return; }
+    status = pjmedia_conf_replace_port(conf, pool, slot_b, &b3->base);
+    if (status != PJ_SUCCESS) { rc = -217; goto on_return; }
+    pump(master, 6);
+    if (b3->put_cnt == 0) {
+        PJ_LOG(1,(THIS_FILE, "   delivery not restored after sink re-attach"));
+        rc = -218; goto on_return;
+    }
+
+on_return:
+    if (conf)
+        pjmedia_conf_destroy(conf);
+    if (pool)
+        pj_pool_release(pool);
+    return rc;
+}
+
 int conf_test(void)
 {
     int rc;
@@ -312,6 +492,14 @@ int conf_test(void)
     }
     if (rc != 0) {
         PJ_LOG(1,(THIS_FILE, "  conf detach/replace test failed (rc=%d)", rc));
+        return rc;
+    }
+
+    rc = flow_test();
+    if (rc == 1)
+        return 0;   /* unsupported backend - skip */
+    if (rc != 0) {
+        PJ_LOG(1,(THIS_FILE, "  conf replace flow test failed (rc=%d)", rc));
         return rc;
     }
     return 0;
