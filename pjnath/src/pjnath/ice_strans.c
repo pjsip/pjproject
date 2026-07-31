@@ -1963,13 +1963,16 @@ static pj_status_t send_data(pj_ice_strans *ice_st,
         } else {
             const pj_sockaddr_t *dest_addr;
             unsigned dest_addr_len;
+            pj_stun_sock *stun_sock = comp->stun[tp_idx].sock;
 
             /* Same guard as the TURN branch above: pj_ice_strans_destroy()
              * may have destroyed the STUN sock while this send was in
              * flight, in which case the pointer is already NULL. Without
              * this, pj_stun_sock_sendto() aborts on its argument assertion.
+             * Read once into a local so the pointer checked here is the one
+             * passed to the send below.
              */
-            if (comp->stun[tp_idx].sock == NULL) {
+            if (stun_sock == NULL) {
                 status = PJ_EINVALIDOP;
                 goto on_return;
             }
@@ -1995,7 +1998,7 @@ static pj_status_t send_data(pj_ice_strans *ice_st,
                 dest_addr_len = dst_addr_len;
             }
 
-            status = pj_stun_sock_sendto(comp->stun[tp_idx].sock, NULL, buf,
+            status = pj_stun_sock_sendto(stun_sock, NULL, buf,
                                          (unsigned)data_len, 0, dest_addr,
                                          dest_addr_len);
             goto on_return;
@@ -2296,6 +2299,7 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
     } else if (tp_typ == TP_STUN) {
         const pj_sockaddr_t *dest_addr;
         unsigned dest_addr_len;
+        pj_stun_sock *stun_sock = comp->stun[tp_idx].sock;
 
         /* Mirrors the TP_TURN branch above: the component's STUN sock is
          * NULLed by pj_ice_strans_destroy() / pj_ice_strans_update_comp_cnt()
@@ -2303,9 +2307,11 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
          * outside that lock. A connectivity check or an RTP packet racing a
          * media teardown therefore arrives here with sock == NULL, and
          * pj_stun_sock_sendto()'s PJ_ASSERT_RETURN aborts the process on a
-         * PJ_DEBUG build instead of returning an error.
+         * PJ_DEBUG build instead of returning an error. Read once into a
+         * local so the pointer checked here is the one passed to the send
+         * below.
          */
-        if (comp->stun[tp_idx].sock == NULL) {
+        if (stun_sock == NULL) {
             status = PJ_EINVALIDOP;
             goto on_return;
         }
@@ -2330,7 +2336,7 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
             dest_addr_len = dst_addr_len;
         }
 
-        status = pj_stun_sock_sendto(comp->stun[tp_idx].sock, NULL,
+        status = pj_stun_sock_sendto(stun_sock, NULL,
                                      buf, (unsigned)size, 0,
                                      dest_addr, dest_addr_len);
     } else {
