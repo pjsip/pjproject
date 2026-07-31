@@ -168,6 +168,16 @@ typedef struct pjmedia_vid_stream_info
 
     pjmedia_vid_stream_sk_config sk_cfg;
                                     /**< Stream send keyframe settings.     */
+
+    /**
+     * Maximum outgoing bitrate negotiated with the remote in SDP, taken
+     * from the media-level "b=TIAS" (RFC 3890) or, as a fallback, "b=AS"
+     * (RFC 4566) line, in bps. Zero if the remote did not signal a limit.
+     * The stream will not transmit above this value even if the codec
+     * bitrate is later raised via #pjmedia_vid_stream_modify_codec_param();
+     * to legitimately use more, renegotiate with a higher "b=" line.
+     */
+    unsigned                     rem_max_bps;
 } pjmedia_vid_stream_info;
 
 
