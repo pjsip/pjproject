@@ -1964,6 +1964,16 @@ static pj_status_t send_data(pj_ice_strans *ice_st,
             const pj_sockaddr_t *dest_addr;
             unsigned dest_addr_len;
 
+            /* Same guard as the TURN branch above: pj_ice_strans_destroy()
+             * may have destroyed the STUN sock while this send was in
+             * flight, in which case the pointer is already NULL. Without
+             * this, pj_stun_sock_sendto() aborts on its argument assertion.
+             */
+            if (comp->stun[tp_idx].sock == NULL) {
+                status = PJ_EINVALIDOP;
+                goto on_return;
+            }
+
             if (comp->ipv4_mapped) {
                 if (comp->synth_addr_len == 0 ||
                     pj_sockaddr_cmp(&comp->dst_addr, dst_addr) != 0)
@@ -2286,6 +2296,19 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
     } else if (tp_typ == TP_STUN) {
         const pj_sockaddr_t *dest_addr;
         unsigned dest_addr_len;
+
+        /* Mirrors the TP_TURN branch above: the component's STUN sock is
+         * NULLed by pj_ice_strans_destroy() / pj_ice_strans_update_comp_cnt()
+         * under the ice_strans group lock, while this send path reads it
+         * outside that lock. A connectivity check or an RTP packet racing a
+         * media teardown therefore arrives here with sock == NULL, and
+         * pj_stun_sock_sendto()'s PJ_ASSERT_RETURN aborts the process on a
+         * PJ_DEBUG build instead of returning an error.
+         */
+        if (comp->stun[tp_idx].sock == NULL) {
+            status = PJ_EINVALIDOP;
+            goto on_return;
+        }
 
         if (comp->ipv4_mapped) {
             if (comp->synth_addr_len == 0 ||
