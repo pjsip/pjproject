@@ -2016,7 +2016,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      */
     status = pjsip_siprec_verify_request(rdata, &call->siprec_metadata, offer,
                                 &options, NULL, pjsua_var.endpt, &response,
-                                pjsua_var.acc[acc_id].cfg.siprec_require_label);
+                                pjsua_var.acc[acc_id].cfg.siprec_require_label,
+                                pjsua_var.acc[acc_id].cfg.siprec_require_metadata);
 
     if(status != PJ_SUCCESS){
         /*

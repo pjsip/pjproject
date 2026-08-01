@@ -90,6 +90,11 @@ pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
  *                        lacks label attribute (strict RFC 7866 compliance)
  *                      - PJ_FALSE: Accept without labels, but log warnings for
  *                        unlabeled media (better interoperability)
+ * @param require_metadata Controls SIPREC rs-metadata document enforcement:
+ *                      - PJ_TRUE: Require metadata, reject SIPREC if rs-metadata
+ *                        document is missing (strict RFC 7866 compliance)
+ *                      - PJ_FALSE: Accept without metadata, but log warnings
+ *                        when missing (better interoperability)
  *
  * @return   The function returns the following:
  *             - If the request includes the value siprec in the Require header
@@ -107,7 +112,8 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                                 pjsip_dialog *dlg,
                                                 pjsip_endpoint *endpt,
                                                 pjsip_tx_data **p_tdata,
-                                                pj_bool_t require_label);
+                                                pj_bool_t require_label,
+                                                pj_bool_t require_metadata);
 
 
 /**

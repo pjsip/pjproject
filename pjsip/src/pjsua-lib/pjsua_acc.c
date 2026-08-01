@@ -1546,6 +1546,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* SIPREC */
     acc->cfg.use_siprec = cfg->use_siprec;
     acc->cfg.siprec_require_label = cfg->siprec_require_label;
+    acc->cfg.siprec_require_metadata = cfg->siprec_require_metadata;
 
     /* Transport */
     if (acc->cfg.transport_id != cfg->transport_id) {

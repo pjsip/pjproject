@@ -136,7 +136,8 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                               pjsip_dialog *dlg,
                                               pjsip_endpoint *endpt,
                                               pjsip_tx_data **p_tdata,
-                                              pj_bool_t require_label)
+                                              pj_bool_t require_label,
+                                              pj_bool_t require_metadata)
 {
     int code = 200;
     pj_status_t status = PJ_SUCCESS;
@@ -211,19 +212,36 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         }
     }
 
+    /* Check that rs-metadata exists in the multipart body
+     * Behavior depends on require_metadata:
+     * - PJ_TRUE (require): Reject if metadata is missing
+     * - PJ_FALSE (optional): Accept, but log warning for missing metadata
+     */
     status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
                                         rdata->msg_info.msg->body,
                                         metadata);
-    
+
     if(status != PJ_SUCCESS) {
-        code = PJSIP_SC_BAD_REQUEST;
-        warn_text = "SIPREC INVITE must have a 'rs-metadata' Content-Type";
-        goto on_return;
+        if (require_metadata) {
+            /* Require metadata - reject if missing */
+            code = PJSIP_SC_BAD_REQUEST;
+            warn_text = "SIPREC INVITE must have a 'rs-metadata' Content-Type";
+            goto on_return;
+        } else {
+            /* Metadata is optional - log warning and continue */
+            PJ_LOG(3,(THIS_FILE,
+                      "SIPREC INVITE missing rs-metadata document. "
+                      "Recording session metadata will be limited. "
+                      "To require metadata, set siprec_require_metadata to PJ_TRUE."));
+            /* Initialize metadata to empty string to prevent crashes */
+            metadata->ptr = NULL;
+            metadata->slen = 0;
+        }
     }
 
     *options |= PJSIP_INV_REQUIRE_SIPREC;
 
-    return status;
+    return PJ_SUCCESS;
 
 on_return:
 
