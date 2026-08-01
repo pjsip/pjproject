@@ -308,8 +308,16 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
 {
     pjsip_media_type app_metadata;
     pjsip_multipart_part *metadata_part;
+    const pj_str_t STR_MULTIPART = {"multipart", 9};
 
     PJ_UNUSED_ARG(pool);
+
+    /* Check if body is multipart to avoid assertion failure
+     * when INVITE only contains SDP (not multipart/mixed) */
+    if (!body || pj_strnicmp2(&body->content_type.type, &STR_MULTIPART, 9) != 0) {
+        return PJ_ENOTFOUND;
+    }
+
     pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
     metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
 
