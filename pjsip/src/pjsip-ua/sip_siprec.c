@@ -314,7 +314,9 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
 
     /* Check if body is multipart to avoid assertion failure
      * when INVITE only contains SDP (not multipart/mixed) */
-    if (!body || pj_strnicmp2(&body->content_type.type, &STR_MULTIPART, 9) != 0) {
+    if (!body ||
+        pj_stricmp(&body->content_type.type, &STR_MULTIPART) != 0)
+    {
         return PJ_ENOTFOUND;
     }
 
