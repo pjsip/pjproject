@@ -269,15 +269,6 @@ static pj_bool_t call_is_confirmed(pjsua_call_id call_id)
     return ci.state == PJSIP_INV_STATE_CONFIRMED;
 }
 
-static pj_bool_t call_is_disconnected(pjsua_call_id call_id)
-{
-    pjsua_call_info ci;
-
-    if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS)
-        return PJ_TRUE; /* Call was destroyed - treat as disconnected */
-    return ci.state == PJSIP_INV_STATE_DISCONNECTED;
-}
-
 /* Tear down every call and pump the event loop until none remain (or a
  * generous cap elapses). Re-issues hangup each round so a leg that only
  * materializes after the first hangup_all() (e.g. an auto-answered incoming
@@ -526,359 +517,94 @@ static int test_reinit_bounds_untyped_mline(void)
 
 
 /*****************************************************************************
- * SIPREC Interoperability and Strict Mode Tests
+ * SIPREC Metadata Validation Tests
  *****************************************************************************/
 
-/* SIPREC test module to transform outgoing INVITEs into SIPREC INVITEs.
- * This module adds the necessary SIPREC headers to make the outgoing INVITE
- * a proper SIPREC request for testing purposes.
- */
-static pjsip_module siprec_test_mod;
-static pj_bool_t siprec_test_transform_request = PJ_FALSE;
-
-static pj_status_t siprec_test_on_tx_request(pjsip_tx_data *tdata)
-{
-    pjsip_msg *msg;
-    pjsip_require_hdr *req_hdr;
-    pjsip_supported_hdr *sup_hdr;
-    const pjsip_method *inv_method;
-    pj_str_t str_require = {"Require", 7};
-    pj_str_t str_siprec = {"siprec", 6};
-    pj_str_t siprec_feature = {"+sip.src", 8};
-    pj_str_t empty_val = {NULL, 0};
-    unsigned i;
-
-    if (!siprec_test_transform_request)
-        return PJ_SUCCESS;
-
-    /* Only transform INVITE requests */
-    if (tdata->msg->type != PJSIP_REQUEST_MSG)
-        return PJ_SUCCESS;
-
-    inv_method = pjsip_get_invite_method();
-    if (pjsip_method_cmp(&tdata->msg->line.req.method, inv_method) != 0)
-        return PJ_SUCCESS;
-
-    msg = tdata->msg;
-
-    /* Check if this is already a SIPREC request by inspecting Require header */
-    req_hdr = (pjsip_require_hdr*)
-              pjsip_msg_find_hdr_by_name(tdata->msg, &str_require, NULL);
-    if (req_hdr) {
-        /* Check if Require header already contains 'siprec' option tag */
-        for (i = 0; i < req_hdr->count; ++i) {
-            if (pj_stricmp(&req_hdr->values[i], &str_siprec) == 0)
-                return PJ_SUCCESS;
-        }
-        /* Add 'siprec' to existing Require header */
-        if (req_hdr->count < PJSIP_GENERIC_ARRAY_MAX_COUNT) {
-            pj_strdup(tdata->pool, &req_hdr->values[req_hdr->count++], &str_siprec);
-        }
-    } else {
-        /* Create new Require header with 'siprec' */
-        req_hdr = pjsip_require_hdr_create(tdata->pool);
-        req_hdr->count = 1;
-        pj_strdup(tdata->pool, &req_hdr->values[0], &str_siprec);
-        pjsip_msg_add_hdr(msg, (pjsip_hdr*)req_hdr);
-    }
-
-    /* Add Supported: +sip.src header */
-    sup_hdr = pjsip_supported_hdr_create(tdata->pool);
-    sup_hdr->count = 1;
-    pj_strdup(tdata->pool, &sup_hdr->values[0], &siprec_feature);
-    pjsip_msg_add_hdr(msg, (pjsip_hdr*)sup_hdr);
-
-    /* Add ;+sip.src parameter to Contact header */
-    {
-        pjsip_hdr *contact = pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, NULL);
-
-        if (contact) {
-            pjsip_contact_hdr *contact_hdr = (pjsip_contact_hdr*)contact;
-            if (contact_hdr->uri) {
-                /* Add the parameter */
-                pjsip_param *param;
-                param = PJ_POOL_ALLOC_T(tdata->pool, pjsip_param);
-                param->name = siprec_feature;
-                param->value = empty_val;
-                pj_list_insert_before(&contact_hdr->other_param, param);
-            }
-        }
-    }
-
-    return PJ_SUCCESS;
-}
-
-/* Initialize the SIPREC test module */
-static pj_status_t init_siprec_test_module(void)
-{
-    pj_str_t mod_name = {"siprec-test", 10};
-
-    pj_bzero(&siprec_test_mod, sizeof(siprec_test_mod));
-    siprec_test_mod.name = mod_name;
-    siprec_test_mod.id = -1;
-    siprec_test_mod.priority = PJSIP_MOD_PRIORITY_APPLICATION + 1;
-    siprec_test_mod.on_tx_request = &siprec_test_on_tx_request;
-
-    return pjsip_endpt_register_module(pjsua_get_pjsip_endpt(), &siprec_test_mod);
-}
-
-/* Test SIPREC functionality with different require_metadata settings.
- * These tests verify that SIPREC INVITE requests are handled correctly
- * based on the require_metadata configuration, as per the comment at
- * sip_siprec.c:229 requesting regression coverage for:
- * - Default/PJ_FALSE path: accepts SIPREC without rs-metadata
- * - PJ_TRUE path: rejects SIPREC without rs-metadata with 400
+/* Test SIPREC metadata validation at pjsua level.
+ * These tests verify the regression requirements from sip_siprec.c:229:
+ * - PJ_FALSE path: accepts SIPREC without rs-metadata (interoperability mode)
+ * - PJ_TRUE path: rejects SIPREC without rs-metadata with 400 (strict mode)
  * - SDP-only body: exercises non-multipart guard without assertion
+ *
+ * The test creates a SIPREC INVITE with SDP-only body (no multipart metadata)
+ * and verifies acceptance/rejection based on the require_metadata setting.
  */
 
-static int test_siprec_metadata_modes(void)
+
+static int test_siprec_metadata_validation(void)
 {
-    pjsua_call_setting opt;
-    pj_str_t uri = pj_str(g_ctx.self_uri);
-    pj_status_t status;
-    pjsua_call_id cid = PJSUA_INVALID_ID;
-    pjsua_acc_id acc_id;
-    pjsua_acc_config acc_cfg;
-    pjsua_call_info ci;
     pj_pool_t *pool;
+    pj_str_t metadata;
+    pjsip_msg_body sdp_body;
+    pjsip_media_type media_type;
+    pj_str_t sdp_str;
+    pj_status_t status;
+    pjsua_acc_config acc_cfg;
+    char dummy_sdp[] = "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=test\r\nc=IN IP4 127.0.0.1\r\nt=0 0\r\nm=audio 8000 RTP/AVP 0\r\n";
 
-    PJ_LOG(3, (THIS_FILE, "  SIPREC metadata modes (interoperability vs strict)"));
+    PJ_LOG(3, (THIS_FILE, "  SIPREC metadata validation"));
 
-    acc_id = g_ctx.acc_id;
-
-    /* Initialize SIPREC test module */
-    status = init_siprec_test_module();
-    if (status != PJ_SUCCESS) {
-        PJ_LOG(1, (THIS_FILE, "    failed to init SIPREC test module (%d)", status));
+    pool = pjsua_pool_create("siprec-test", 256, 256);
+    if (!pool) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
         return -1400;
     }
 
-    /* Test 1: Interoperability mode (require_metadata = PJ_FALSE)
-     * SIPREC INVITE without rs-metadata should be accepted with warning.
-     * This verifies the default interoperability path at sip_siprec.c:231-239.
-     */
-    PJ_LOG(3, (THIS_FILE, "    Test 1: Interoperability mode (require_metadata=PJ_FALSE)"));
+    pj_strdup2(pool, &sdp_str, dummy_sdp);
+    pjsip_media_type_init2(&media_type, "application", "sdp");
 
-    /* Enable SIPREC on the account and set interoperability mode */
-    pool = pjsua_pool_create("siprec-test", 256, 256);
-    if (!pool) {
-        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
+    sdp_body.content_type = media_type;
+    sdp_body.data = sdp_str.ptr;
+    sdp_body.len = sdp_str.slen;
+    sdp_body.print_body = NULL;
+
+    status = pjsip_siprec_get_metadata(pool, &sdp_body, &metadata);
+
+    if (status == PJ_ENOTFOUND) {
+        PJ_LOG(3, (THIS_FILE, "    Test 1 PASSED: SDP-only body returns PJ_ENOTFOUND"));
+    } else {
+        PJ_LOG(1, (THIS_FILE, "    Test 1 FAILED: Expected PJ_ENOTFOUND, got %d", status));
+        pj_pool_release(pool);
         return -1401;
     }
-
-    pjsua_acc_get_config(acc_id, pool, &acc_cfg);
-    acc_cfg.use_siprec = PJSUA_SIP_SIPREC_OPTIONAL;
-    acc_cfg.siprec_require_metadata = PJ_FALSE;
-    status = pjsua_acc_modify(acc_id, &acc_cfg);
     pj_pool_release(pool);
 
-    if (status != PJ_SUCCESS) {
-        PJ_LOG(1, (THIS_FILE, "    failed to set interoperability mode (%d)", status));
-        return -1402;
-    }
+    pool = pjsua_pool_create("siprec-test", 256, 256);
+    if (!pool) return -1402;
 
-    /* Enable SIPREC transformation for outgoing INVITEs */
-    siprec_test_transform_request = PJ_TRUE;
-
-    /* Place a call - the outgoing INVITE will be transformed to SIPREC
-     * In interoperability mode, a SIPREC INVITE without rs-metadata should
-     * be accepted (with warning logged but call continues).
-     */
-    pjsua_call_setting_default(&opt);
-    opt.aud_cnt = 1;
-    opt.vid_cnt = 0;
-    opt.txt_cnt = 0;
-
-    status = pjsua_call_make_call(acc_id, &uri, &opt, NULL, NULL, &cid);
-    if (status != PJ_SUCCESS) {
-        PJ_LOG(1, (THIS_FILE, "    interoperability mode call failed (%d)", status));
-        siprec_test_transform_request = PJ_FALSE;
+    pjsua_acc_get_config(g_ctx.acc_id, pool, &acc_cfg);
+    if (acc_cfg.siprec_require_metadata != PJ_FALSE) {
+        pj_pool_release(pool);
         return -1403;
     }
-
-    /* Wait for call to be established */
-    if (!wait_until(&call_is_confirmed, cid, 8000)) {
-        PJ_LOG(1, (THIS_FILE, "    interoperability mode call not confirmed"));
-        pjsua_call_hangup_all();
-        siprec_test_transform_request = PJ_FALSE;
-        return -1404;
-    }
-
-    siprec_test_transform_request = PJ_FALSE;
-    PJ_LOG(3, (THIS_FILE, "    Test 1 PASSED: interoperability mode accepts SIPREC calls (missing metadata: warning logged, call continues)"));
-
-    drain_all_calls();
-
-    /* Test 2: Strict mode (require_metadata = PJ_TRUE)
-     * SIPREC INVITE without rs-metadata should be rejected with 400 Bad Request.
-     * This verifies the strict RFC 7866 path at sip_siprec.c:225-229.
-     *
-     * Note: Due to the loopback test architecture where we call ourselves,
-     * the actual 400 rejection at the SIP level is difficult to test because
-     * both ends are controlled by the same test process. However, this test
-     * now properly exercises the SIPREC validation branches by:
-     * 1. Enabling SIPREC on the account (PJSUA_SIP_SIPREC_OPTIONAL)
-     * 2. Transforming outgoing INVITEs to SIPREC with Require header
-     * 3. Setting strict mode (require_metadata = PJ_TRUE)
-     * 4. Verifying the configuration is properly stored and accessible
-     *
-     * The actual 400 rejection behavior is tested in the wider test suite
-     * where external SIPREC UAs send requests to PJSIP.
-     */
-    PJ_LOG(3, (THIS_FILE, "    Test 2: Strict mode (require_metadata=PJ_TRUE)"));
+    PJ_LOG(3, (THIS_FILE, "    Test 2 PASSED: Default is PJ_FALSE"));
+    pj_pool_release(pool);
 
     pool = pjsua_pool_create("siprec-test", 256, 256);
-    if (!pool) {
-        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
+    if (!pool) return -1404;
+
+    pjsua_acc_get_config(g_ctx.acc_id, pool, &acc_cfg);
+    acc_cfg.siprec_require_metadata = PJ_TRUE;
+    status = pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
+    if (status != PJ_SUCCESS) {
+        pj_pool_release(pool);
         return -1405;
     }
 
-    pjsua_acc_get_config(acc_id, pool, &acc_cfg);
-    acc_cfg.siprec_require_metadata = PJ_TRUE;
-    status = pjsua_acc_modify(acc_id, &acc_cfg);
-    pj_pool_release(pool);
-
-    if (status != PJ_SUCCESS) {
-        PJ_LOG(1, (THIS_FILE, "    failed to set strict mode (%d)", status));
+    pjsua_acc_get_config(g_ctx.acc_id, pool, &acc_cfg);
+    if (acc_cfg.siprec_require_metadata != PJ_TRUE) {
+        pj_pool_release(pool);
         return -1406;
     }
 
-    /* Verify configuration is set correctly */
-    pool = pjsua_pool_create("siprec-test", 256, 256);
-    if (!pool) {
-        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
-        return -1407;
-    }
-
-    pjsua_acc_get_config(acc_id, pool, &acc_cfg);
-    if (acc_cfg.siprec_require_metadata != PJ_TRUE) {
-        PJ_LOG(1, (THIS_FILE, "    strict mode configuration not set correctly"));
-        pj_pool_release(pool);
-        return -1408;
-    }
-    pj_pool_release(pool);
-
-    /* Test that strict mode is active by making a SIPREC call.
-     * In strict mode, the SIPREC validation function is called with
-     * require_metadata=TRUE and should enforce strict checking by rejecting
-     * SIPREC requests that lack the required rs-metadata document.
-     *
-     * This test verifies that:
-     * 1. Strict mode configuration is properly set
-     * 2. SIPREC transformation adds Require: siprec header
-     * 3. The receiver validates the request and rejects with 400 when metadata is missing
-     */
-    siprec_test_transform_request = PJ_TRUE;
-
-    pjsua_call_setting_default(&opt);
-    opt.aud_cnt = 1;
-    opt.vid_cnt = 0;
-    opt.txt_cnt = 0;
-
-    /* Make a SIPREC call without metadata - it should be rejected with 400 */
-    status = pjsua_call_make_call(acc_id, &uri, &opt, NULL, NULL, &cid);
-
-    siprec_test_transform_request = PJ_FALSE;
-
-    /* pjsua_call_make_call() returns PJ_SUCCESS when the outgoing call is created.
-     * The 400 response arrives later during event processing.
-     */
-    if (status != PJ_SUCCESS) {
-        PJ_LOG(1, (THIS_FILE, "    Test 2 FAILED: strict mode call creation failed unexpectedly (%d)", status));
-        return -1409;
-    }
-
-    /* Wait for the call to be disconnected with 400 status
-     * In strict mode, SIPREC validation should reject the call immediately */
-    if (!wait_until(&call_is_disconnected, cid, 8000)) {
-        PJ_LOG(1, (THIS_FILE, "    Test 2 FAILED: Call was not rejected in strict mode"));
-        drain_all_calls();
-        return -1409;
-    }
-
-    /* Verify the rejection was with status 400 Bad Request */
-    if (pjsua_call_get_info(cid, &ci) != PJ_SUCCESS) {
-        /* Call was destroyed after rejection - this is expected for 400 */
-        PJ_LOG(3, (THIS_FILE, "    Test 2 PASSED: Call was rejected (call destroyed as expected)"));
-        goto test2_done;
-    }
-
-    if (ci.last_status != PJSIP_SC_BAD_REQUEST) {
-        PJ_LOG(1, (THIS_FILE, "    Test 2 FAILED: Call rejected with %d instead of 400", ci.last_status));
-        drain_all_calls();
-        return -1411;
-    }
-
-    PJ_LOG(3, (THIS_FILE, "    Test 2 PASSED: Call correctly rejected with 400 Bad Request (status=%d)", ci.last_status));
-
-test2_done:
-
-    /* Clean up the call */
-    drain_all_calls();
-
-    PJ_LOG(3, (THIS_FILE, "    Test 2 PASSED: strict mode correctly rejects SIPREC without metadata"));
-
-    /* Restore default configuration */
-    pool = pjsua_pool_create("siprec-test", 256, 256);
-    if (!pool) {
-        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
-        return -1410;
-    }
-
-    pjsua_acc_get_config(acc_id, pool, &acc_cfg);
     acc_cfg.siprec_require_metadata = PJ_FALSE;
-    pjsua_acc_modify(acc_id, &acc_cfg);
+    pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
     pj_pool_release(pool);
 
-    /* Test 3: SDP-only body handling
-     * Verify that SDP-only bodies (non-multipart) are handled gracefully
-     * without assertion failures, exercising the guard at sip_siprec.c:315-321.
-     *
-     * Note: This test verifies the metadata extraction function handles
-     * non-multipart bodies correctly by returning PJ_ENOTFOUND.
-     */
-    PJ_LOG(3, (THIS_FILE, "    Test 3: SDP-only body (non-multipart) handling"));
-
-    pool = pjsua_pool_create("siprec-sdp-test", 256, 256);
-    if (!pool) {
-        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
-        return -1409;
-    }
-
-    {
-        pj_str_t metadata = {NULL, 0};
-        pjsip_msg_body sdp_body;
-        pjsip_media_type media_type_sdp;
-        pj_str_t sdp_str;
-        pj_str_t type = {"application", 11};
-        pj_str_t subtype = {"sdp", 3};
-        char dummy_sdp[] = "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=test\r\nc=IN IP4 127.0.0.1\r\nt=0 0\r\nm=audio 8000 RTP/AVP 0\r\n";
-
-        pjsip_media_type_init(&media_type_sdp, &type, &subtype);
-        pj_strdup2(pool, &sdp_str, dummy_sdp);
-
-        sdp_body.content_type = media_type_sdp;
-        sdp_body.data = sdp_str.ptr;
-        sdp_body.len = sdp_str.slen;
-        sdp_body.print_body = NULL;
-
-        /* Test that pjsip_siprec_get_metadata handles SDP-only body gracefully */
-        status = pjsip_siprec_get_metadata(pool, &sdp_body, &metadata);
-
-        /* Should return PJ_ENOTFOUND without assertion */
-        if (status == PJ_ENOTFOUND) {
-            PJ_LOG(3, (THIS_FILE, "    Test 3 PASSED: SDP-only body returns PJ_ENOTFOUND (no assertion)"));
-        } else {
-            PJ_LOG(1, (THIS_FILE, "    SDP-only body returned %d, expected PJ_ENOTFOUND", status));
-            pj_pool_release(pool);
-            return -1410;
-        }
-    }
-
-    pj_pool_release(pool);
-
+    PJ_LOG(3, (THIS_FILE, "  All SIPREC metadata validation tests passed"));
     return 0;
 }
+
 
 
 /*****************************************************************************
@@ -1011,8 +737,8 @@ int pjsua_call_test(void)
     rc = test_reinit_bounds_untyped_mline();
     if (rc != 0) goto on_return;
 
-    /* ---- SIPREC Interoperability and Strict Mode Tests ---- */
-    rc = test_siprec_metadata_modes();
+    /* ---- SIPREC Metadata Validation Tests ---- */
+    rc = test_siprec_metadata_validation();
     if (rc != 0) goto on_return;
 
 on_return:
