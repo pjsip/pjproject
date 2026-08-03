@@ -795,6 +795,10 @@ static pj_status_t parse_args(int argc, char *argv[],
                           "in proxy argument", pj_optarg));
                 return PJ_EINVAL;
             }
+            if (cur_acc->proxy_cnt >= PJ_ARRAY_SIZE(cur_acc->proxy)) {
+                PJ_LOG(1,(THIS_FILE, "Error: too many proxies"));
+                return PJ_ETOOMANY;
+            }
             cur_acc->proxy[cur_acc->proxy_cnt++] = pj_str(pj_optarg);
             break;
 
@@ -805,7 +809,14 @@ static pj_status_t parse_args(int argc, char *argv[],
                           "in outbound proxy argument", pj_optarg));
                 return PJ_EINVAL;
             }
-            cfg->cfg.outbound_proxy[cfg->cfg.outbound_proxy_cnt++] = pj_str(pj_optarg);
+            if (cfg->cfg.outbound_proxy_cnt >=
+                PJ_ARRAY_SIZE(cfg->cfg.outbound_proxy))
+            {
+                PJ_LOG(1,(THIS_FILE, "Error: too many outbound proxies"));
+                return PJ_ETOOMANY;
+            }
+            cfg->cfg.outbound_proxy[cfg->cfg.outbound_proxy_cnt++] =
+                pj_str(pj_optarg);
             break;
 
         case OPT_REGISTRAR:   /* registrar */
