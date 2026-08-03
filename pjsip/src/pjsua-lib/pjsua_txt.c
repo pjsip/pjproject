@@ -92,7 +92,7 @@ static void rx_text_cb(pjmedia_txt_stream *strm, void *user_data,
                        const pjmedia_txt_stream_data *data)
 {
     const pjsua_call_id call_id = PJSUA_MED_UDATA_CALL_ID(user_data);
-    const int med_idx = (int)PJSUA_MED_UDATA_MED_IDX(user_data);
+    const int med_idx = PJSUA_MED_UDATA_MED_IDX(user_data);
     pjsua_txt_stream_data txt;
 
     PJ_UNUSED_ARG(strm);

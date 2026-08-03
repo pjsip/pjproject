@@ -131,7 +131,7 @@ struct pjsua_call_media
 #define PJSUA_MED_UDATA_CALL_ID(udata) \
             ((pjsua_call_id)((pj_size_t)(udata) & 0xFFFF))
 #define PJSUA_MED_UDATA_MED_IDX(udata) \
-            ((unsigned)(((pj_size_t)(udata) >> 16) & 0xFFFF))
+            ((int)(((pj_size_t)(udata) >> 16) & 0xFFFF))
 
  /**
   * Maximum number of streams from an avi player.

@@ -584,7 +584,7 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
                           int digit)
 {
     const pjsua_call_id call_id = PJSUA_MED_UDATA_CALL_ID(user_data);
-    const int med_idx = (int)PJSUA_MED_UDATA_MED_IDX(user_data);
+    const int med_idx = PJSUA_MED_UDATA_MED_IDX(user_data);
 
     PJ_UNUSED_ARG(strm);
 
@@ -619,7 +619,7 @@ static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
                                 const pjmedia_stream_dtmf_event *event)
 {
     const pjsua_call_id call_id = PJSUA_MED_UDATA_CALL_ID(user_data);
-    const int med_idx = (int)PJSUA_MED_UDATA_MED_IDX(user_data);
+    const int med_idx = PJSUA_MED_UDATA_MED_IDX(user_data);
     pjsua_dtmf_event evt;
 
     PJ_UNUSED_ARG(strm);
