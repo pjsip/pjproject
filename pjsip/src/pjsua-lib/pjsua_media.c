@@ -989,6 +989,14 @@ static void ice_init_complete_cb(void *user_data)
     if (call_med->call == NULL || call_med->tp_ready == PJ_SUCCESS)
         return;
 
+    /* Ignore a stale completion: the init this result belongs to has been
+     * superseded by a re-init or abandoned by a timed-out synchronous wait
+     * (see #5112). Acting on it could overwrite the current tp_ready or a
+     * subsequent initialization reusing the same call_med.
+     */
+    if (call_med->tp_result_gen != call_med->tp_init_gen)
+        return;
+
     /* No need to acquire_call() if we only change the tp_ready flag
      * (i.e. transport is being created synchronously). Otherwise
      * calling acquire_call() here may cause deadlock. See
@@ -1061,6 +1069,7 @@ static void on_ice_complete(pjmedia_transport *tp,
     switch (op) {
     case PJ_ICE_STRANS_OP_INIT:
         call_med->tp_result = result;
+        call_med->tp_result_gen = call_med->tp_init_gen;
         pjsua_schedule_timer2(&ice_init_complete_cb, call_med, 1);
         break;
     case PJ_ICE_STRANS_OP_NEGOTIATION:
@@ -1360,6 +1369,7 @@ static pj_status_t create_ice_media_transport(
     ice_cb.on_ice_complete = &on_ice_complete;
     pj_ansi_snprintf(name, sizeof(name), "icetp%02d", call_med->idx);
     call_med->tp_ready = trickle? PJ_SUCCESS : PJ_EPENDING;
+    ++call_med->tp_init_gen;
 
     comp_cnt = 1;
     if (PJMEDIA_ADVERTISE_RTCP && !acc_cfg->ice_cfg.ice_no_rtcp)
@@ -1397,17 +1407,21 @@ static pj_status_t create_ice_media_transport(
         }
         while (call_med->tp_ready == PJ_EPENDING) {
             pjsua_handle_events(100);
-            if (use_deadline) {
+            if (use_deadline && call_med->tp_ready == PJ_EPENDING) {
                 pj_time_val now;
                 pj_gettickcount(&now);
                 if (PJ_TIME_VAL_GTE(now, deadline)) {
                     /* ICE init callback has not arrived in time; give up so
                      * the calling thread does not block forever (#5112).
+                     * Bump the init generation to invalidate any completion
+                     * still queued by on_ice_complete() so it cannot later
+                     * overwrite this result once the transport is torn down.
                      */
                     PJ_LOG(1,(THIS_FILE,
                               "Timed out waiting for ICE media transport "
                               "initialization after %d ms",
                               PJSUA_ICE_TRANSPORT_INIT_TIMEOUT));
+                    ++call_med->tp_init_gen;
                     call_med->tp_ready = PJ_ETIMEDOUT;
                     break;
                 }
