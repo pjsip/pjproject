@@ -69,6 +69,15 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
         struct {
             pj_uint32_t mapped_addr;
             pj_uint32_t mapped_port;
+            /* Unique per-(socket,server) transaction ID (network byte
+             * order, as sent on the wire). Responses are matched against
+             * this full ID via pj_memcmp rather than trusting a plaintext
+             * sock/server index read from the response itself - mirroring
+             * how pjnath's pj_stun_session matches the full tsx_id.
+             * tsx_id[0] holds the RFC 5389 magic cookie instead of a
+             * random value when use_stun2 is requested.
+             */
+            pj_uint32_t tsx_id[4];
         } srv[2];
     } *rec;
     void       *out_msg;
@@ -106,12 +115,6 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
     if (status != PJ_SUCCESS)
         goto on_error;
 
-    /* Insert magic cookie (specified in RFC 5389) when requested to. */
-    if (opt->use_stun2) {
-        pjstun_msg_hdr *hdr = (pjstun_msg_hdr*)out_msg;
-        hdr->tsx[0] = pj_htonl(STUN_MAGIC);
-    }
-
     TRACE_((THIS_FILE, "  Binding request created."));
 
     /* Resolve servers. */
@@ -133,6 +136,23 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
     }
 
     TRACE_((THIS_FILE, "  Server initialized, using %d server(s)", srv_cnt));
+
+    /* Generate a unique transaction ID for every (socket, server) pair,
+     * stored in network byte order as it will appear on the wire. A
+     * response is matched to its request by comparing the full ID
+     * (pj_memcmp below), not by trusting a plaintext sock/server index
+     * carried in the response itself.
+     */
+    for (i=0; i<sock_cnt; ++i) {
+        unsigned j;
+        for (j=0; j<PJ_ARRAY_SIZE(rec[i].srv); ++j) {
+            rec[i].srv[j].tsx_id[0] = pj_htonl(opt->use_stun2 ? STUN_MAGIC :
+                                                pj_rand());
+            rec[i].srv[j].tsx_id[1] = pj_htonl(pj_rand());
+            rec[i].srv[j].tsx_id[2] = pj_htonl(pj_rand());
+            rec[i].srv[j].tsx_id[3] = pj_htonl(pj_rand());
+        }
+    }
 
     /* Init mapped addresses to zero */
     pj_memset(mapped_addr, 0, sock_cnt * sizeof(pj_sockaddr_in));
@@ -171,9 +191,11 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
                 if (rec[i].srv[j].mapped_port != 0)
                     continue;
 
-                /* Modify message so that we can distinguish response. */
-                msg_hdr->tsx[2] = pj_htonl(i);
-                msg_hdr->tsx[3] = pj_htonl(j);
+                /* Stamp this request with its unique per-(socket,server)
+                 * transaction ID so the response can be matched by full-ID
+                 * lookup on receipt. */
+                pj_memcpy(msg_hdr->tsx, rec[i].srv[j].tsx_id,
+                          sizeof(msg_hdr->tsx));
 
                 /* Send! */
                 sent_len = out_msg_len;
@@ -259,13 +281,30 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
                     continue;
                 }
 
-                sock_idx = pj_ntohl(msg.hdr->tsx[2]);
-                srv_idx = pj_ntohl(msg.hdr->tsx[3]);
-
-                if (sock_idx<0 || sock_idx>=sock_cnt || sock_idx!=i ||
-                        srv_idx<0 || srv_idx>=2)
+                /* The socket this arrived on is trusted (it's the local fd
+                 * we just recvfrom()'d), but which server it's a reply to
+                 * is not - a response is only accepted if its transaction
+                 * ID is an exact match (pj_memcmp) for one of the requests
+                 * we sent on this socket, the same way pjnath's
+                 * pj_stun_session matches the full tsx_id. This never
+                 * trusts anything read from the packet to select an array
+                 * index. */
+                sock_idx = i;
+                srv_idx = -1;
                 {
-                    status = PJLIB_UTIL_ESTUNININDEX;
+                    unsigned j;
+                    for (j=0; j<srv_cnt; ++j) {
+                        if (pj_memcmp(msg.hdr->tsx, rec[i].srv[j].tsx_id,
+                                      sizeof(rec[i].srv[j].tsx_id)) == 0)
+                        {
+                            srv_idx = (int)j;
+                            break;
+                        }
+                    }
+                }
+
+                if (srv_idx < 0) {
+                    status = PJLIB_UTIL_ESTUNINVALIDID;
                     continue;
                 }
 
