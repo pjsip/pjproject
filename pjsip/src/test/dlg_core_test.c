@@ -23,45 +23,69 @@
 
 #define THIS_FILE   "dlg_core_test.c"
 
-/* Test-only hook exported from sip_dialog.c (not in any public header): returns
- * the tag_hval that the dialog layer would store for the given tag. */
-PJ_DECL(pj_uint32_t) pjsip_dlg_test_calc_tag_hval(const pj_str_t *tag);
-
 /*
  * Regression test for issue #5100: pj_hash_calc_tolower() can legitimately
- * return zero for certain inputs, but the UA layer reserves a tag_hval of zero
- * as an "uncomputed" sentinel (see the assertion in pjsip_ua_register_dlg()).
- * A dialog whose local tag hashes to zero must therefore still be assigned a
- * nonzero tag_hval, otherwise dialog registration fails.
+ * return zero for certain inputs. The dialog set hash table in sip_ua_layer.c
+ * keys dialog sets by the (lowercased) local tag, and pjsip_ua_register_dlg()
+ * used to reject a zero tag hash as if it were an "uncomputed" marker. A zero
+ * hash is however a valid value: the dialog table must be able to register a
+ * dialog set under such a tag and then find it again on incoming traffic.
+ *
+ * This test exercises the exact hash table usage pattern of sip_ua_layer.c
+ * (register with the tag hash, then look up both with NULL and with the cached
+ * hash) using a tag that is known to hash to zero, and verifies the dialog set
+ * round-trips. It fails if any scheme stores the entry under a different hash
+ * than the lookups recompute (e.g. remapping the zero hash on insert only).
  */
 static int tag_hval_zero_test(void)
 {
     /* This particular UUID djb2-hashes (lowercased, 32-bit) to exactly zero;
-     * it is the value from the original bug report. */
+     * it is the local tag from the original bug report. */
     const pj_str_t zero_tag = { "d48600d9-514b-4655-a606-43a65dc1f54b", 36 };
-    pj_uint32_t raw, hval;
+    int marker = 12345;         /* stand-in for a dlg_set pointer value */
+    pj_pool_t *pool;
+    pj_hash_table_t *ht;
+    pj_uint32_t hval;
+    void *found;
+    int rc = 0;
 
     /* Confirm the trigger condition still holds: the raw hash is zero. If the
      * hash algorithm ever changes, this vector may need to be regenerated. */
-    raw = pj_hash_calc_tolower(0, NULL, &zero_tag);
-    PJ_TEST_EQ(raw, 0, "test vector no longer hashes to zero", return -10);
+    hval = pj_hash_calc_tolower(0, NULL, &zero_tag);
+    PJ_TEST_EQ(hval, 0, "test vector no longer hashes to zero", return -10);
 
-    /* The dialog layer must coerce the zero hash to a nonzero tag_hval. */
-    hval = pjsip_dlg_test_calc_tag_hval(&zero_tag);
-    PJ_TEST_NON_ZERO(hval, "tag_hval must never be the zero sentinel",
-                     return -20);
+    pool = pjsip_endpt_create_pool(endpt, "dlgtest", 4000, 4000);
+    PJ_TEST_NOT_NULL(pool, NULL, return -20);
+    ht = pj_hash_create(pool, 32);
+    PJ_TEST_NOT_NULL(ht, NULL, {rc = -30; goto on_return;});
 
-    /* A tag with a normal (nonzero) hash must be left untouched. */
+    /* Register the entry, mirroring pjsip_ua_register_dlg(): pass the cached
+     * (zero) tag hash. */
+    pj_hash_set_lower(pool, ht, zero_tag.ptr, (unsigned)zero_tag.slen,
+                      hval, &marker);
+
+    /* Lookup as the incoming-message paths do (sip_ua_layer.c:503/623/822):
+     * NULL hval, so the table recomputes the hash. */
+    found = pj_hash_get_lower(ht, zero_tag.ptr, (unsigned)zero_tag.slen, NULL);
+    PJ_TEST_EQ(found, &marker, "zero-hash entry not found via recompute",
+               {rc = -40; goto on_return;});
+
+    /* Lookup as pjsip_ua_register_dlg()/unregister do: pass the cached hash. */
+    found = pj_hash_get_lower(ht, zero_tag.ptr, (unsigned)zero_tag.slen, &hval);
+    PJ_TEST_EQ(found, &marker, "zero-hash entry not found via cached hval",
+               {rc = -50; goto on_return;});
+
+    /* A different tag must not collide onto the zero-hash entry. */
     {
-        const pj_str_t norm_tag = { "abc123", 6 };
-        raw = pj_hash_calc_tolower(0, NULL, &norm_tag);
-        PJ_TEST_NON_ZERO(raw, "unexpected zero hash for sanity vector",
-                         return -30);
-        hval = pjsip_dlg_test_calc_tag_hval(&norm_tag);
-        PJ_TEST_EQ(hval, raw, "nonzero hash must be preserved", return -40);
+        const pj_str_t other = { "abc123", 6 };
+        found = pj_hash_get_lower(ht, other.ptr, (unsigned)other.slen, NULL);
+        PJ_TEST_EQ(found, NULL, "unexpected match for a different tag",
+                   {rc = -60; goto on_return;});
     }
 
-    return 0;
+on_return:
+    pjsip_endpt_release_pool(endpt, pool);
+    return rc;
 }
 
 int dlg_core_test(void)

@@ -293,9 +293,15 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
     /* Sanity check. */
     PJ_ASSERT_RETURN(ua && dlg, PJ_EINVAL);
 
-    /* For all dialogs, local tag (inc hash) must has been initialized. */
-    PJ_ASSERT_RETURN(dlg->local.info && dlg->local.info->tag.slen &&
-                     dlg->local.tag_hval != 0, PJ_EBUG);
+    /* For all dialogs, local tag must have been initialized. Note that
+     * tag_hval is NOT checked against zero: pj_hash_calc_tolower() can
+     * legitimately return zero for certain tags (issue #5100), and a zero
+     * hash is handled consistently by the dialog hash table (both insert and
+     * lookup recompute and compare the same value), so it is a valid hash
+     * rather than an "uncomputed" marker here. The tag.slen check is what
+     * confirms the local tag has been initialized.
+     */
+    PJ_ASSERT_RETURN(dlg->local.info && dlg->local.info->tag.slen, PJ_EBUG);
 
     /* For UAS dialog, remote tag (inc hash) must have been initialized. */
     //PJ_ASSERT_RETURN(dlg->role==PJSIP_ROLE_UAC ||
