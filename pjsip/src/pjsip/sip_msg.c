@@ -590,7 +590,7 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 
         /* Print the message body itself. */
         len = (*msg->body->print_body)(msg->body, p, end-p);
-        if (len < 0) {
+        if (len < 0 || len > end - p) {
             return -1;
         }
         p += len;
