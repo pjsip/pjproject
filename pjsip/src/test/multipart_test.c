@@ -18,6 +18,7 @@
 #include "test.h"
 #include <pjsip.h>
 #include <pjlib.h>
+#include <stdlib.h>
 
 #define THIS_FILE       ""
 
@@ -475,11 +476,138 @@ static int parse_test(void)
     return 0;
 }
 
+/* Build a single-part multipart body of the given part body length and print
+ * it into buf. Returns the print_body() result.
+ */
+static int build_and_print(pj_pool_t *pool, unsigned body_len,
+                           char *buf, unsigned buf_size)
+{
+    pjsip_media_type ctype;
+    pjsip_msg_body *mp;
+    pjsip_multipart_part *part;
+    pj_str_t type, subtype, text;
+
+    init_media_type(&ctype, "multipart", "mixed", "12345");
+    mp = pjsip_multipart_create(pool, &ctype, NULL);
+
+    text.ptr = (char*)pj_pool_alloc(pool, body_len);
+    pj_memset(text.ptr, 'x', body_len);
+    text.slen = body_len;
+    type = pj_str("text");
+    subtype = pj_str("plain");
+
+    part = pjsip_multipart_create_part(pool);
+    part->body = pjsip_msg_body_create(pool, &type, &subtype, &text);
+    pjsip_multipart_add_part(pool, mp, part);
+
+    return mp->print_body(mp, buf, buf_size);
+}
+
+/* Regression for #5109: the auto-generated Content-Length must never be
+ * silently truncated. The reserved digit count scales with PJSIP_MAX_PKT_LEN,
+ * which bounds any single part body. Verify (a) a body that fits prints its
+ * full Content-Length, and (b) an over-large body fails cleanly (-1) instead
+ * of emitting a truncated length.
+ */
+static int print_large_body_test(void)
+{
+    pj_pool_t *pool;
+    pj_str_t haystack, needle, numstr;
+    char *buf, *clen, *valp, *eol;
+    unsigned body_len, buf_size;
+    long val;
+    int printed, rc = 0;
+    pj_status_t status;
+
+    /* (a) A part body that fits: expect the correct, non-truncated length. */
+    body_len = PJSIP_MAX_PKT_LEN - 200;
+    buf_size = PJSIP_MAX_PKT_LEN;
+    pool = pjsip_endpt_create_pool(endpt, NULL, PJSIP_MAX_PKT_LEN*2, 1000);
+    buf = (char*)pj_pool_alloc(pool, buf_size);
+
+    printed = build_and_print(pool, body_len, buf, buf_size);
+    if (printed < 0) {
+        PJ_LOG(3,(THIS_FILE, "   err: print_body failed rc=%d", printed));
+        rc = -500;
+        goto on_return;
+    }
+
+    /* Locate the auto-generated Content-Length header and check its value. */
+    haystack.ptr = buf;
+    haystack.slen = printed;
+    needle = pj_str("Content-Length: ");
+    clen = pj_strstr(&haystack, &needle);
+    if (!clen) {
+        PJ_LOG(3,(THIS_FILE, "   err: Content-Length header not found"));
+        rc = -510;
+        goto on_return;
+    }
+
+    valp = clen + needle.slen;
+    for (eol = valp; eol < buf + printed && *eol != '\r'; ++eol)
+        ;
+    numstr.ptr = valp;
+    numstr.slen = eol - valp;
+    pj_strtrim(&numstr);
+
+    status = pj_strtol2(&numstr, &val);
+    if (status != PJ_SUCCESS || val != (long)body_len) {
+        PJ_LOG(3,(THIS_FILE, "   err: Content-Length is %.*s, expected %u",
+                  (int)numstr.slen, numstr.ptr, body_len));
+        rc = -520;
+        goto on_return;
+    }
+    pj_pool_release(pool);
+
+    /* (b) A part body with more digits than PJSIP_MAX_PKT_LEN can represent
+     * must fail (-1) rather than emit a truncated Content-Length.
+     */
+    body_len = PJSIP_MAX_PKT_LEN * 10;
+    buf_size = body_len + 1000;
+    pool = pjsip_endpt_create_pool(endpt, NULL, buf_size + 2000, 1000);
+    buf = (char*)pj_pool_alloc(pool, buf_size);
+
+    printed = build_and_print(pool, body_len, buf, buf_size);
+    if (printed >= 0) {
+        PJ_LOG(3,(THIS_FILE, "   err: oversized body did not fail, rc=%d",
+                  printed));
+        rc = -530;
+    }
+    pj_pool_release(pool);
+
+    /* (c) Sweep tight output buffer sizes to catch any off-by-N overflow
+     * (e.g. the CRLF written after the Content-Length header). The output
+     * buffer is malloc'd so ASan guards the exact bounds; print_body() must
+     * either fail (-1) or stay within the supplied size, never write past it.
+     */
+    pool = pjsip_endpt_create_pool(endpt, NULL, 4000, 1000);
+    for (buf_size = 1; buf_size <= 200; ++buf_size) {
+        char *mbuf = (char*)malloc(buf_size);
+        printed = build_and_print(pool, 100, mbuf, buf_size);
+        if (printed > (int)buf_size) {
+            PJ_LOG(3,(THIS_FILE, "   err: printed %d > buf_size %u",
+                      printed, buf_size));
+            rc = -540;
+        }
+        free(mbuf);
+        if (rc)
+            break;
+    }
+
+on_return:
+    pj_pool_release(pool);
+    return rc;
+}
+
 int multipart_test(void)
 {
     int rc;
 
     rc = parse_test();
+    if (rc)
+        return rc;
+
+    rc = print_large_body_test();
     if (rc)
         return rc;
 
