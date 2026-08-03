@@ -38,6 +38,8 @@ struct tp_user
     void  (*rtcp_cb)(   void*,          /**< To report incoming RTCP.       */
                         void*,
                         pj_ssize_t);
+    pj_grp_lock_t      *cb_grp_lock;    /**< Callback owner's group lock,
+                                             ref'd across each rx callback. */
 };
 
 struct transport_loop
@@ -287,7 +289,8 @@ static pj_status_t tp_attach(   pjmedia_transport *tp,
                                        void (*rtp_cb2)(pjmedia_tp_cb_param*),
                                        void (*rtcp_cb)(void*,
                                                        void*,
-                                                       pj_ssize_t))
+                                                       pj_ssize_t),
+                                       pj_grp_lock_t *cb_grp_lock)
 {
     struct transport_loop *loop = (struct transport_loop*) tp;
     unsigned i;
@@ -313,6 +316,7 @@ static pj_status_t tp_attach(   pjmedia_transport *tp,
     loop->users[loop->user_cnt].rtp_cb2 = rtp_cb2;
     loop->users[loop->user_cnt].rtcp_cb = rtcp_cb;
     loop->users[loop->user_cnt].user_data = user_data;
+    loop->users[loop->user_cnt].cb_grp_lock = cb_grp_lock;
     loop->users[loop->user_cnt].rx_disabled = loop->disable_rx;
     ++loop->user_cnt;
 
@@ -332,18 +336,19 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
                                                        pj_ssize_t))
 {
     return tp_attach(tp, user_data, rem_addr, rem_rtcp, addr_len,
-                     rtp_cb, NULL, rtcp_cb);
+                     rtp_cb, NULL, rtcp_cb, NULL);
 }
 
 static pj_status_t transport_attach2(pjmedia_transport *tp,
                                      pjmedia_transport_attach_param *att_param)
 {
-    return tp_attach(tp, att_param->user_data, 
-                            (pj_sockaddr_t*)&att_param->rem_addr, 
-                            (pj_sockaddr_t*)&att_param->rem_rtcp, 
+    return tp_attach(tp, att_param->user_data,
+                            (pj_sockaddr_t*)&att_param->rem_addr,
+                            (pj_sockaddr_t*)&att_param->rem_rtcp,
                             att_param->addr_len, att_param->rtp_cb,
-                            att_param->rtp_cb2, 
-                            att_param->rtcp_cb);
+                            att_param->rtp_cb2,
+                            att_param->rtcp_cb,
+                            att_param->grp_lock);
 }
 
 
@@ -402,7 +407,10 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 
     /* Distribute to users */
     for (i=0; i<loop->user_cnt; ++i) {
+        pj_grp_lock_t *cb_grp_lock = loop->users[i].cb_grp_lock;
         if (loop->users[i].rx_disabled) continue;
+        if (cb_grp_lock)
+            pj_grp_lock_add_ref(cb_grp_lock);
         if (loop->users[i].rtp_cb2) {
             pjmedia_tp_cb_param param;
 
@@ -412,9 +420,11 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
             param.size = size;
             (*loop->users[i].rtp_cb2)(&param);
         } else if (loop->users[i].rtp_cb) {
-            (*loop->users[i].rtp_cb)(loop->users[i].user_data, (void*)pkt, 
+            (*loop->users[i].rtp_cb)(loop->users[i].user_data, (void*)pkt,
                                      size);
         }
+        if (cb_grp_lock)
+            pj_grp_lock_dec_ref(cb_grp_lock);
     }
 
     pj_grp_lock_dec_ref(tp->grp_lock);
@@ -448,9 +458,15 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 
     /* Distribute to users */
     for (i=0; i<loop->user_cnt; ++i) {
-        if (!loop->users[i].rx_disabled && loop->users[i].rtcp_cb)
-            (*loop->users[i].rtcp_cb)(loop->users[i].user_data, (void*)pkt,
-                                      size);
+        pj_grp_lock_t *cb_grp_lock = loop->users[i].cb_grp_lock;
+        if (loop->users[i].rx_disabled || !loop->users[i].rtcp_cb)
+            continue;
+        if (cb_grp_lock)
+            pj_grp_lock_add_ref(cb_grp_lock);
+        (*loop->users[i].rtcp_cb)(loop->users[i].user_data, (void*)pkt,
+                                  size);
+        if (cb_grp_lock)
+            pj_grp_lock_dec_ref(cb_grp_lock);
     }
 
     pj_grp_lock_dec_ref(tp->grp_lock);
