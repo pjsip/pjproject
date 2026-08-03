@@ -95,6 +95,13 @@ struct pjsua_call_media
     pjmedia_transport   *tp;        /**< Current media transport (can be 0) */
     pj_status_t          tp_ready;  /**< Media transport status.            */
     pj_status_t          tp_result; /**< Media transport creation result.   */
+    unsigned             tp_init_gen;/**< Media transport init generation,
+                                          bumped on each (re)init and when a
+                                          synchronous init wait is abandoned. */
+    unsigned             tp_result_gen;/**< Generation that tp_result belongs
+                                            to; a deferred completion whose
+                                            generation no longer matches
+                                            tp_init_gen is stale and ignored. */
     pjmedia_transport   *tp_orig;   /**< Original media transport           */
     pj_bool_t            tp_auto_del; /**< May delete media transport       */
     pjsua_med_tp_st      tp_st;     /**< Media transport state              */
