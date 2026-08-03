@@ -475,30 +475,23 @@ static int parse_test(void)
     return 0;
 }
 
-/* Regression for #5109: a part body >= 100000 bytes (6+ digits) must not
- * have its auto-generated Content-Length silently truncated.
+/* Build a single-part multipart body of the given part body length and print
+ * it into buf. Returns the print_body() result.
  */
-static int print_large_body_test(void)
+static int build_and_print(pj_pool_t *pool, unsigned body_len,
+                           char *buf, unsigned buf_size)
 {
-    enum { BODY_LEN = 100000, BUF_SIZE = BODY_LEN + 1000 };
-    pj_pool_t *pool;
     pjsip_media_type ctype;
     pjsip_msg_body *mp;
     pjsip_multipart_part *part;
-    pj_str_t type, subtype, text, haystack, needle, numstr;
-    char *buf, *clen, *valp, *eol;
-    long val;
-    int printed, rc = 0;
-    pj_status_t status;
-
-    pool = pjsip_endpt_create_pool(endpt, NULL, BUF_SIZE + 1000, 1000);
+    pj_str_t type, subtype, text;
 
     init_media_type(&ctype, "multipart", "mixed", "12345");
     mp = pjsip_multipart_create(pool, &ctype, NULL);
 
-    text.ptr = (char*)pj_pool_alloc(pool, BODY_LEN);
-    pj_memset(text.ptr, 'x', BODY_LEN);
-    text.slen = BODY_LEN;
+    text.ptr = (char*)pj_pool_alloc(pool, body_len);
+    pj_memset(text.ptr, 'x', body_len);
+    text.slen = body_len;
     type = pj_str("text");
     subtype = pj_str("plain");
 
@@ -506,8 +499,32 @@ static int print_large_body_test(void)
     part->body = pjsip_msg_body_create(pool, &type, &subtype, &text);
     pjsip_multipart_add_part(pool, mp, part);
 
-    buf = (char*)pj_pool_alloc(pool, BUF_SIZE);
-    printed = mp->print_body(mp, buf, BUF_SIZE);
+    return mp->print_body(mp, buf, buf_size);
+}
+
+/* Regression for #5109: the auto-generated Content-Length must never be
+ * silently truncated. The reserved digit count scales with PJSIP_MAX_PKT_LEN,
+ * which bounds any single part body. Verify (a) a body that fits prints its
+ * full Content-Length, and (b) an over-large body fails cleanly (-1) instead
+ * of emitting a truncated length.
+ */
+static int print_large_body_test(void)
+{
+    pj_pool_t *pool;
+    pj_str_t haystack, needle, numstr;
+    char *buf, *clen, *valp, *eol;
+    unsigned body_len, buf_size;
+    long val;
+    int printed, rc = 0;
+    pj_status_t status;
+
+    /* (a) A part body that fits: expect the correct, non-truncated length. */
+    body_len = PJSIP_MAX_PKT_LEN - 200;
+    buf_size = PJSIP_MAX_PKT_LEN;
+    pool = pjsip_endpt_create_pool(endpt, NULL, PJSIP_MAX_PKT_LEN*2, 1000);
+    buf = (char*)pj_pool_alloc(pool, buf_size);
+
+    printed = build_and_print(pool, body_len, buf, buf_size);
     if (printed < 0) {
         PJ_LOG(3,(THIS_FILE, "   err: print_body failed rc=%d", printed));
         rc = -500;
@@ -533,10 +550,27 @@ static int print_large_body_test(void)
     pj_strtrim(&numstr);
 
     status = pj_strtol2(&numstr, &val);
-    if (status != PJ_SUCCESS || val != BODY_LEN) {
-        PJ_LOG(3,(THIS_FILE, "   err: Content-Length is %.*s, expected %d",
-                  (int)numstr.slen, numstr.ptr, BODY_LEN));
+    if (status != PJ_SUCCESS || val != (long)body_len) {
+        PJ_LOG(3,(THIS_FILE, "   err: Content-Length is %.*s, expected %u",
+                  (int)numstr.slen, numstr.ptr, body_len));
         rc = -520;
+        goto on_return;
+    }
+    pj_pool_release(pool);
+
+    /* (b) A part body with more digits than PJSIP_MAX_PKT_LEN can represent
+     * must fail (-1) rather than emit a truncated Content-Length.
+     */
+    body_len = PJSIP_MAX_PKT_LEN * 10;
+    buf_size = body_len + 1000;
+    pool = pjsip_endpt_create_pool(endpt, NULL, buf_size + 2000, 1000);
+    buf = (char*)pj_pool_alloc(pool, buf_size);
+
+    printed = build_and_print(pool, body_len, buf, buf_size);
+    if (printed >= 0) {
+        PJ_LOG(3,(THIS_FILE, "   err: oversized body did not fail, rc=%d",
+                  printed));
+        rc = -530;
     }
 
 on_return:

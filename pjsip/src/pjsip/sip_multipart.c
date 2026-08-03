@@ -46,6 +46,19 @@ struct multipart_data
     pj_str_t              raw_data;
 };
 
+/* Number of decimal digits needed to hold value n (up to 10 digits). */
+#define NUM_DIGITS(n) \
+    ((n) < 10UL ? 1 : (n) < 100UL ? 2 : (n) < 1000UL ? 3 : \
+     (n) < 10000UL ? 4 : (n) < 100000UL ? 5 : (n) < 1000000UL ? 6 : \
+     (n) < 10000000UL ? 7 : (n) < 100000000UL ? 8 : \
+     (n) < 1000000000UL ? 9 : 10)
+
+/* Digits reserved for the auto-generated Content-Length value. A part body
+ * can never exceed the maximum SIP packet length, so bound the reserved
+ * space by PJSIP_MAX_PKT_LEN's digit count.
+ */
+#define CLEN_SPACE      NUM_DIGITS(PJSIP_MAX_PKT_LEN)
+
 
 static int multipart_print_body(struct pjsip_msg_body *msg_body,
                                 char *buf, pj_size_t size)
@@ -63,7 +76,6 @@ static int multipart_print_body(struct pjsip_msg_body *msg_body,
 
     part = m_data->part_head.next;
     while (part != &m_data->part_head) {
-        enum { CLEN_SPACE = 10 };
         char *clen_pos;
         const pjsip_hdr *hdr;
         pj_bool_t ctype_printed = PJ_FALSE;
@@ -119,7 +131,7 @@ static int multipart_print_body(struct pjsip_msg_body *msg_body,
             *p++ = '\n';
 
             /* Add Content-Length header. */
-            if ((end-p) < clen_hdr.slen + 12 + 2) {
+            if ((end-p) < clen_hdr.slen + CLEN_SPACE + 2) {
                 return -1;
             }
             pj_memcpy(p, clen_hdr.ptr, clen_hdr.slen);
