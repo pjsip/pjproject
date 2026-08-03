@@ -563,16 +563,19 @@ static pj_status_t siprec_test_on_tx_request(pjsip_tx_data *tdata)
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)sup_hdr);
 
     /* Add ;+sip.src parameter to Contact header */
-    pjsip_hdr *contact = pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, NULL);
-    if (contact) {
-        pjsip_contact_hdr *contact_hdr = (pjsip_contact_hdr*)contact;
-        if (contact_hdr->uri) {
-            /* Add the parameter */
-            pjsip_param *param;
-            param = PJ_POOL_ALLOC_T(tdata->pool, pjsip_param);
-            param->name = siprec_feature;
-            param->value = empty_val;
-            pj_list_insert_before(&contact_hdr->other_param, param);
+    {
+        pjsip_hdr *contact = pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, NULL);
+
+        if (contact) {
+            pjsip_contact_hdr *contact_hdr = (pjsip_contact_hdr*)contact;
+            if (contact_hdr->uri) {
+                /* Add the parameter */
+                pjsip_param *param;
+                param = PJ_POOL_ALLOC_T(tdata->pool, pjsip_param);
+                param->name = siprec_feature;
+                param->value = empty_val;
+                pj_list_insert_before(&contact_hdr->other_param, param);
+            }
         }
     }
 
