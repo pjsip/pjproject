@@ -974,6 +974,12 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     /* Allocate packet */
     tdata->max_len = PJ_STUN_MAX_PKT_LEN;
     tdata->pkt = pj_pool_zalloc(tdata->pool, tdata->max_len);
+    if (tdata->pkt == NULL) {
+        status = PJ_ENOMEM;
+        pj_stun_msg_destroy_tdata(sess, tdata);
+        LOG_ERR_(sess, "Error allocating packet buffer", status);
+        goto on_return;
+    }
 
     tdata->token = token;
     tdata->retransmit = retransmit;
