@@ -269,6 +269,15 @@ static pj_bool_t call_is_confirmed(pjsua_call_id call_id)
     return ci.state == PJSIP_INV_STATE_CONFIRMED;
 }
 
+static pj_bool_t call_is_disconnected(pjsua_call_id call_id)
+{
+    pjsua_call_info ci;
+
+    if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS)
+        return PJ_FALSE;
+    return ci.state == PJSIP_INV_STATE_DISCONNECTED;
+}
+
 /* Tear down every call and pump the event loop until none remain (or a
  * generous cap elapses). Re-issues hangup each round so a leg that only
  * materializes after the first hangup_all() (e.g. an auto-answered incoming
@@ -530,11 +539,8 @@ static pj_bool_t siprec_test_transform_request = PJ_FALSE;
 static pj_status_t siprec_test_on_tx_request(pjsip_tx_data *tdata)
 {
     pjsip_msg *msg;
-    pjsip_hdr *contact;
-    pjsip_contact_hdr *contact_hdr;
     pjsip_require_hdr *req_hdr;
     pjsip_supported_hdr *sup_hdr;
-    pjsip_param *param;
     const pjsip_method *inv_method;
     pj_str_t str_require = {"Require", 7};
     pj_str_t str_siprec = {"siprec", 6};
@@ -583,7 +589,6 @@ static pj_status_t siprec_test_on_tx_request(pjsip_tx_data *tdata)
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)sup_hdr);
 
     /* Add ;+sip.src parameter to Contact header */
-<<<<<<< HEAD
     {
         pjsip_hdr *contact = pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, NULL);
 
@@ -597,17 +602,6 @@ static pj_status_t siprec_test_on_tx_request(pjsip_tx_data *tdata)
                 param->value = empty_val;
                 pj_list_insert_before(&contact_hdr->other_param, param);
             }
-=======
-    contact = pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, NULL);
-    if (contact) {
-        contact_hdr = (pjsip_contact_hdr*)contact;
-        if (contact_hdr->uri) {
-            /* Add the parameter */
-            param = PJ_POOL_ALLOC_T(tdata->pool, pjsip_param);
-            param->name = siprec_feature;
-            param->value = empty_val;
-            pj_list_insert_before(&contact_hdr->other_param, param);
->>>>>>> ed0acdafe (fix SIPREC tests to exercise actual validation)
         }
     }
 
@@ -765,16 +759,13 @@ static int test_siprec_metadata_modes(void)
 
     /* Test that strict mode is active by making a SIPREC call.
      * In strict mode, the SIPREC validation function is called with
-     * require_metadata=TRUE and should enforce strict checking.
+     * require_metadata=TRUE and should enforce strict checking by rejecting
+     * SIPREC requests that lack the required rs-metadata document.
      *
-     * Note: Due to the loopback test architecture, we can't easily test the
-     * actual 400 rejection since both ends are controlled by the same test.
-     * Instead, we verify that:
+     * This test verifies that:
      * 1. Strict mode configuration is properly set
-     * 2. SIPREC transformation is working correctly
-     * 3. The SIPREC validation branches are exercised
-     *
-     * The actual 400 rejection is tested in the wider test suite with external UAs.
+     * 2. SIPREC transformation adds Require: siprec header
+     * 3. The receiver validates the request and rejects with 400 when metadata is missing
      */
     siprec_test_transform_request = PJ_TRUE;
 
@@ -783,29 +774,46 @@ static int test_siprec_metadata_modes(void)
     opt.vid_cnt = 0;
     opt.txt_cnt = 0;
 
-    /* Make a SIPREC call to verify strict mode is active.
-     * In loopback testing, the call will succeed since we control both ends,
-     * but the strict mode validation is still exercised.
-     */
+    /* Make a SIPREC call without metadata - it should be rejected with 400 */
     status = pjsua_call_make_call(acc_id, &uri, &opt, NULL, NULL, &cid);
 
     siprec_test_transform_request = PJ_FALSE;
 
+    /* pjsua_call_make_call() returns PJ_SUCCESS when the outgoing call is created.
+     * The 400 response arrives later during event processing.
+     */
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "    Test 2 FAILED: strict mode call creation failed unexpectedly (%d)", status));
         return -1409;
     }
 
-    /* Wait for call to be established or rejected */
-    if (!wait_until(&call_is_confirmed, cid, 8000)) {
-        /* Call might have been rejected or failed - this is acceptable in strict mode */
-        PJ_LOG(3, (THIS_FILE, "    Test 2: Call not confirmed (expected in strict mode for SIPREC without metadata)"));
+    /* Wait for the call to be disconnected with 400 status */
+    if (!wait_until(&call_is_disconnected, cid, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    Test 2 FAILED: Call was not rejected in strict mode"));
+        drain_all_calls();
+        return -1409;
     }
+
+    /* Verify the rejection was with status 400 Bad Request */
+    pjsua_call_info ci;
+    if (pjsua_call_get_info(cid, &ci) != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    Test 2 FAILED: Could not get call info"));
+        drain_all_calls();
+        return -1410;
+    }
+
+    if (ci.last_status != PJSIP_SC_BAD_REQUEST) {
+        PJ_LOG(1, (THIS_FILE, "    Test 2 FAILED: Call rejected with %d instead of 400", ci.last_status));
+        drain_all_calls();
+        return -1411;
+    }
+
+    PJ_LOG(3, (THIS_FILE, "    Call correctly rejected with 400 Bad Request (status=%d)", ci.last_status));
 
     /* Clean up the call */
     drain_all_calls();
 
-    PJ_LOG(3, (THIS_FILE, "    Test 2 PASSED: strict mode configuration verified and SIPREC validation branches exercised"));
+    PJ_LOG(3, (THIS_FILE, "    Test 2 PASSED: strict mode correctly rejects SIPREC without metadata"));
 
     /* Restore default configuration */
     pool = pjsua_pool_create("siprec-test", 256, 256);
