@@ -63,7 +63,7 @@ static int multipart_print_body(struct pjsip_msg_body *msg_body,
 
     part = m_data->part_head.next;
     while (part != &m_data->part_head) {
-        enum { CLEN_SPACE = 5 };
+        enum { CLEN_SPACE = 10 };
         char *clen_pos;
         const pjsip_hdr *hdr;
         pj_bool_t ctype_printed = PJ_FALSE;
@@ -155,7 +155,8 @@ static int multipart_print_body(struct pjsip_msg_body *msg_body,
                 int len;
 
                 len = pj_utoa(printed, tmp);
-                if (len > CLEN_SPACE) len = CLEN_SPACE;
+                if (len > CLEN_SPACE)
+                    return -1;
                 pj_memcpy(clen_pos+CLEN_SPACE-len, tmp, len);
             }
         }
