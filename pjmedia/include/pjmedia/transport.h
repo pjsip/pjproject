@@ -668,6 +668,16 @@ struct pjmedia_transport_attach_param
      */
     void (*rtp_cb2)(pjmedia_tp_cb_param *param);
 
+    /**
+     * Optional group lock of the entity owning the callbacks (e.g. the
+     * media stream). If set, the transport holds a reference on this group
+     * lock for the whole duration of each rtp_cb/rtp_cb2/rtcp_cb invocation,
+     * so the callback owner cannot be destroyed by another thread while an
+     * in-flight receive callback is still running on it. NULL (the default)
+     * keeps the previous behavior.
+     */
+    pj_grp_lock_t *grp_lock;
+
 };
 
 /**

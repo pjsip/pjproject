@@ -290,6 +290,10 @@ typedef struct transport_srtp
     void                (*rtcp_cb)(void *user_data,
                                    void *pkt,
                                    pj_ssize_t size);
+    pj_grp_lock_t       *cb_grp_lock; /**< Callback owner's group lock, ref'd
+                                           across each rx callback so the
+                                           owner (stream) cannot be destroyed
+                                           while a callback is in flight. */
 
     /* Transport information */
     pjmedia_transport   *member_tp; /**< Underlying transport.       */
@@ -1317,21 +1321,29 @@ static pj_status_t transport_attach2(pjmedia_transport *tp,
         srtp->rtp_cb2 = param->rtp_cb2;
         srtp->rtcp_cb = param->rtcp_cb;
         srtp->user_data = param->user_data;
+        srtp->cb_grp_lock = param->grp_lock;
     }
     pj_lock_release(srtp->mutex);
 
-    /* Attach self to member transport */
+    /* Attach self to member transport. The member reports to srtp_rtp_cb()/
+     * srtp_rtcp_cb() whose user_data is this SRTP transport (kept alive by
+     * the member's own group lock during the callback), so do not propagate
+     * the callback owner's group lock down — this SRTP layer is the one that
+     * holds it around the up-call to the owner.
+     */
     member_param = *param;
     member_param.user_data = srtp;
     member_param.rtp_cb = NULL;
     member_param.rtp_cb2 = &srtp_rtp_cb;
     member_param.rtcp_cb = &srtp_rtcp_cb;
+    member_param.grp_lock = NULL;
     status = pjmedia_transport_attach2(srtp->member_tp, &member_param);
     if (status != PJ_SUCCESS) {
         pj_lock_acquire(srtp->mutex);
         srtp->rtp_cb = NULL;
         srtp->rtcp_cb = NULL;
         srtp->user_data = NULL;
+        srtp->cb_grp_lock = NULL;
         pj_lock_release(srtp->mutex);
         return status;
     }
@@ -1361,6 +1373,7 @@ static void transport_detach(pjmedia_transport *tp, void *strm)
     srtp->rtp_cb2 = NULL;
     srtp->rtcp_cb = NULL;
     srtp->user_data = NULL;
+    srtp->cb_grp_lock = NULL;
     pj_lock_release(srtp->mutex);
     srtp->member_tp_attached = PJ_FALSE;
 }
@@ -1554,6 +1567,7 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
     void (*cb)(void*, void*, pj_ssize_t) = NULL;
     void (*cb2)(pjmedia_tp_cb_param*) = NULL;
     void *cb_data = NULL;
+    pj_grp_lock_t *cb_grp_lock = NULL;
 
     /* Guard against race with transport_detach()/destroy().
      * The underlying transport may invoke this callback after user_data
@@ -1563,14 +1577,32 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
         return;
 
     if (srtp->bypass_srtp) {
-        if (srtp->rtp_cb2) {
+        /* Snapshot the callbacks and hold a reference on the owner's group
+         * lock under the mutex. transport_detach() clears these under the
+         * same mutex before the owner (stream) drops its own group-lock
+         * reference, so a non-NULL cb here means the owner is still alive
+         * and safe to ref across the up-call below.
+         */
+        pj_lock_acquire(srtp->mutex);
+        cb = srtp->rtp_cb;
+        cb2 = srtp->rtp_cb2;
+        cb_data = srtp->user_data;
+        cb_grp_lock = srtp->cb_grp_lock;
+        if (cb_grp_lock)
+            pj_grp_lock_add_ref(cb_grp_lock);
+        pj_lock_release(srtp->mutex);
+
+        if (cb2) {
             pjmedia_tp_cb_param param2 = *param;
-            param2.user_data = srtp->user_data;
-            srtp->rtp_cb2(&param2);
+            param2.user_data = cb_data;
+            (*cb2)(&param2);
             param->rem_switch = param2.rem_switch;
-        } else if (srtp->rtp_cb) {
-            srtp->rtp_cb(srtp->user_data, pkt, size);
+        } else if (cb) {
+            (*cb)(cb_data, pkt, size);
         }
+
+        if (cb_grp_lock)
+            pj_grp_lock_dec_ref(cb_grp_lock);
         return;
     }
 
@@ -1741,6 +1773,9 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
         cb = srtp->rtp_cb;
         cb2 = srtp->rtp_cb2;
         cb_data = srtp->user_data;
+        cb_grp_lock = srtp->cb_grp_lock;
+        if (cb_grp_lock)
+            pj_grp_lock_add_ref(cb_grp_lock);
 
         /* Save SSRC after successful SRTP unprotect */
         srtp->rx_ssrc = rx_ssrc;
@@ -1758,6 +1793,9 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
     } else if (cb) {
         (*cb)(cb_data, pkt, len);
     }
+
+    if (cb_grp_lock)
+        pj_grp_lock_dec_ref(cb_grp_lock);
 }
 
 /*
@@ -1770,6 +1808,7 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
     srtp_err_status_t err;
     void (*cb)(void*, void*, pj_ssize_t) = NULL;
     void *cb_data = NULL;
+    pj_grp_lock_t *cb_grp_lock = NULL;
 
     /* Guard against race with transport_detach()/destroy().
      * See comment in srtp_rtp_cb().
@@ -1778,8 +1817,19 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
         return;
 
     if (srtp->bypass_srtp) {
-        if (srtp->rtcp_cb)
-            srtp->rtcp_cb(srtp->user_data, pkt, size);
+        pj_lock_acquire(srtp->mutex);
+        cb = srtp->rtcp_cb;
+        cb_data = srtp->user_data;
+        cb_grp_lock = srtp->cb_grp_lock;
+        if (cb_grp_lock)
+            pj_grp_lock_add_ref(cb_grp_lock);
+        pj_lock_release(srtp->mutex);
+
+        if (cb)
+            (*cb)(cb_data, pkt, size);
+
+        if (cb_grp_lock)
+            pj_grp_lock_dec_ref(cb_grp_lock);
         return;
     }
 
@@ -1824,6 +1874,9 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
     } else {
         cb = srtp->rtcp_cb;
         cb_data = srtp->user_data;
+        cb_grp_lock = srtp->cb_grp_lock;
+        if (cb_grp_lock)
+            pj_grp_lock_add_ref(cb_grp_lock);
     }
 
     pj_lock_release(srtp->mutex);
@@ -1831,6 +1884,9 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
     if (cb) {
         (*cb)(cb_data, pkt, len);
     }
+
+    if (cb_grp_lock)
+        pj_grp_lock_dec_ref(cb_grp_lock);
 }
 
 
