@@ -639,6 +639,7 @@ static int test_siprec_metadata_modes(void)
     pjsua_call_id cid = PJSUA_INVALID_ID;
     pjsua_acc_id acc_id;
     pjsua_acc_config acc_cfg;
+    pjsua_call_info ci;
     pj_pool_t *pool;
 
     PJ_LOG(3, (THIS_FILE, "  SIPREC metadata modes (interoperability vs strict)"));
@@ -796,7 +797,6 @@ static int test_siprec_metadata_modes(void)
     }
 
     /* Verify the rejection was with status 400 Bad Request */
-    pjsua_call_info ci;
     if (pjsua_call_get_info(cid, &ci) != PJ_SUCCESS) {
         /* Call was destroyed after rejection - this is expected for 400 */
         PJ_LOG(3, (THIS_FILE, "    Test 2 PASSED: Call was rejected (call destroyed as expected)"));
