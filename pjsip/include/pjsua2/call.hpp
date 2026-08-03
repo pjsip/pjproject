@@ -1025,7 +1025,7 @@ struct OnCallRxTextParam
     /**
      * The index of the text media stream that received the text.
      */
-    unsigned            medIdx;
+    int                 medIdx;
 
 public:
     /**

@@ -1138,7 +1138,7 @@ typedef struct pjsua_txt_stream_data {
     /**
      * The index of the text media stream that received the text.
      */
-    unsigned            med_idx;
+    int                 med_idx;
 
 } pjsua_txt_stream_data;
 

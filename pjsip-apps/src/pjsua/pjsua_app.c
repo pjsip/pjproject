@@ -757,10 +757,10 @@ static void call_on_rx_text(pjsua_call_id call_id,
                             const pjsua_txt_stream_data *data)
 {
     if (data->text.slen == 0) {
-        PJ_LOG(4, (THIS_FILE, "Received empty T140 block on stream %u "
+        PJ_LOG(4, (THIS_FILE, "Received empty T140 block on stream %d "
                               "with seq %d", data->med_idx, data->seq));
     } else {
-        PJ_LOG(3, (THIS_FILE, "Incoming text on call %d stream %u, "
+        PJ_LOG(3, (THIS_FILE, "Incoming text on call %d stream %d, "
                               "seq %d: %.*s (%d bytes)",
                               call_id, data->med_idx, data->seq,
                               (int)data->text.slen, data->text.ptr,
