@@ -45,6 +45,31 @@ pj_bool_t pjsip_include_allow_hdr_in_dlg = PJSIP_INCLUDE_ALLOW_HDR_IN_DLG;
 /* Contact header string */
 static const pj_str_t HCONTACT = { "Contact", 7 };
 
+/* Calculate the (lowercased) hash value of a dialog tag.
+ *
+ * A tag_hval of zero is reserved throughout the UA layer and hash table as an
+ * "uncomputed" sentinel (e.g. the assertion in pjsip_ua_register_dlg() and the
+ * get-then-set contract in pj_hash_get_lower()/pj_hash_set_np_lower()). The
+ * plain djb2 hash can however legitimately return zero for certain inputs
+ * (see issue #5100), so a genuine zero result is remapped to a stable nonzero
+ * value. The mapping is deterministic, so get and set stay consistent.
+ */
+static pj_uint32_t calc_tag_hval(const pj_str_t *tag)
+{
+    pj_uint32_t hval = pj_hash_calc_tolower(0, NULL, tag);
+    return hval ? hval : 1;
+}
+
+/* Unit-test hook (prototype lives only in the pjsip-test private header, not in
+ * any public header): expose the tag-hash coercion so tests can verify that a
+ * tag which djb2-hashes to zero still yields a nonzero tag_hval (issue #5100).
+ */
+PJ_DECL(pj_uint32_t) pjsip_dlg_test_calc_tag_hval(const pj_str_t *tag);
+PJ_DEF(pj_uint32_t) pjsip_dlg_test_calc_tag_hval(const pj_str_t *tag)
+{
+    return calc_tag_hval(tag);
+}
+
 
 PJ_DEF(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m)
 {
@@ -271,8 +296,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac2(
     pj_create_unique_string(dlg->pool, &dlg->local.info->tag);
 
     /* Calculate hash value of local tag. */
-    dlg->local.tag_hval = pj_hash_calc_tolower(0, NULL,
-                                               &dlg->local.info->tag);
+    dlg->local.tag_hval = calc_tag_hval(&dlg->local.info->tag);
 
     /* Randomize local CSeq. */
     dlg->local.first_cseq = pj_rand() & 0x7FFF;
@@ -437,7 +461,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     pj_strdup(dlg->pool, &dlg->local.info_str, &tmp);
 
     /* Calculate hash value of local tag. */
-    dlg->local.tag_hval = pj_hash_calc_tolower(0, NULL, &dlg->local.info->tag);
+    dlg->local.tag_hval = calc_tag_hval(&dlg->local.info->tag);
 
 
     /* Randomize local cseq */
@@ -613,7 +637,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     ++dlg->tsx_count;
 
     /* Calculate hash value of remote tag. */
-    dlg->remote.tag_hval = pj_hash_calc_tolower(0, NULL, &dlg->remote.info->tag);
+    dlg->remote.tag_hval = calc_tag_hval(&dlg->remote.info->tag);
 
     /* Update remote capabilities info */
     pjsip_dlg_update_remote_cap(dlg, rdata->msg_info.msg, PJ_TRUE);
