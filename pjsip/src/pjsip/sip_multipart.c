@@ -130,8 +130,10 @@ static int multipart_print_body(struct pjsip_msg_body *msg_body,
             *p++ = '\r';
             *p++ = '\n';
 
-            /* Add Content-Length header. */
-            if ((end-p) < clen_hdr.slen + CLEN_SPACE + 2) {
+            /* Add Content-Length header. Reserve space for both this line's
+             * CRLF and the empty CRLF written after the headers below.
+             */
+            if ((end-p) < clen_hdr.slen + CLEN_SPACE + 4) {
                 return -1;
             }
             pj_memcpy(p, clen_hdr.ptr, clen_hdr.slen);

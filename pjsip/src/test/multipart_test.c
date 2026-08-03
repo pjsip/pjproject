@@ -18,6 +18,7 @@
 #include "test.h"
 #include <pjsip.h>
 #include <pjlib.h>
+#include <stdlib.h>
 
 #define THIS_FILE       ""
 
@@ -571,6 +572,26 @@ static int print_large_body_test(void)
         PJ_LOG(3,(THIS_FILE, "   err: oversized body did not fail, rc=%d",
                   printed));
         rc = -530;
+    }
+    pj_pool_release(pool);
+
+    /* (c) Sweep tight output buffer sizes to catch any off-by-N overflow
+     * (e.g. the CRLF written after the Content-Length header). The output
+     * buffer is malloc'd so ASan guards the exact bounds; print_body() must
+     * either fail (-1) or stay within the supplied size, never write past it.
+     */
+    pool = pjsip_endpt_create_pool(endpt, NULL, 4000, 1000);
+    for (buf_size = 1; buf_size <= 200; ++buf_size) {
+        char *mbuf = (char*)malloc(buf_size);
+        printed = build_and_print(pool, 100, mbuf, buf_size);
+        if (printed > (int)buf_size) {
+            PJ_LOG(3,(THIS_FILE, "   err: printed %d > buf_size %u",
+                      printed, buf_size));
+            rc = -540;
+        }
+        free(mbuf);
+        if (rc)
+            break;
     }
 
 on_return:
