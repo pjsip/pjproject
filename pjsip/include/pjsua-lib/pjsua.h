@@ -440,6 +440,23 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #endif
 
 /**
+ * Maximum time (in milliseconds) to wait for synchronous ICE media transport
+ * initialization to complete. When ICE is created synchronously (i.e. neither
+ * asynchronous transport creation nor trickle ICE is active), pjsua will wait
+ * for the ICE initialization callback before proceeding. Normally the ICE
+ * stack reports back within its own STUN/TURN timeouts, but this setting acts
+ * as a safety net so the calling thread cannot block indefinitely if the
+ * callback never arrives (e.g. a candidate stuck pending forever).
+ *
+ * Set to zero to disable the timeout and wait indefinitely (legacy behavior).
+ *
+ * Default: 30000 ms (30 seconds)
+ */
+#ifndef PJSUA_ICE_TRANSPORT_INIT_TIMEOUT
+#   define PJSUA_ICE_TRANSPORT_INIT_TIMEOUT     30000
+#endif
+
+/**
  * Interval of checking for any new ICE candidate when trickle ICE is active.
  * Trickle ICE gathers local ICE candidates, such as STUN and TURN candidates,
  * in the background, while SDP offer/answer negotiation is being performed.
