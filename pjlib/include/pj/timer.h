@@ -338,16 +338,17 @@ PJ_DECL(int) pj_timer_heap_cancel_if_active(pj_timer_heap_t *ht,
 PJ_DECL(pj_size_t) pj_timer_heap_count( pj_timer_heap_t *ht );
 
 /**
- * Get the earliest time registered in the timer heap. The timer heap
- * MUST have at least one timer being scheduled (application should use
- * #pj_timer_heap_count() before calling this function).
+ * Get the earliest time registered in the timer heap. If no entry is
+ * currently scheduled (e.g. the heap is empty, or was emptied by a
+ * concurrent cancellation), PJ_ENOTFOUND is returned and \a timeval is
+ * left untouched.
  *
  * @param ht        The timer heap.
  * @param timeval   The time deadline of the earliest timer entry.
  *
  * @return          PJ_SUCCESS, or PJ_ENOTFOUND if no entry is scheduled.
  */
-PJ_DECL(pj_status_t) pj_timer_heap_earliest_time( pj_timer_heap_t *ht, 
+PJ_DECL(pj_status_t) pj_timer_heap_earliest_time( pj_timer_heap_t *ht,
                                                   pj_time_val *timeval);
 
 /**
