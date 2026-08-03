@@ -1379,6 +1379,13 @@ static pj_status_t create_ice_media_transport(
         pj_bool_t has_pjsua_lock = PJSUA_LOCK_IS_LOCKED();
         pjsip_dialog *dlg = call_med->call->inv ?
                                 call_med->call->inv->dlg : NULL;
+        pj_time_val deadline;
+        pj_bool_t use_deadline = (PJSUA_ICE_TRANSPORT_INIT_TIMEOUT > 0);
+        if (use_deadline) {
+            pj_gettickcount(&deadline);
+            deadline.msec += PJSUA_ICE_TRANSPORT_INIT_TIMEOUT;
+            pj_time_val_normalize(&deadline);
+        }
         if (has_pjsua_lock)
             PJSUA_UNLOCK();
         if (dlg) {
@@ -1390,6 +1397,21 @@ static pj_status_t create_ice_media_transport(
         }
         while (call_med->tp_ready == PJ_EPENDING) {
             pjsua_handle_events(100);
+            if (use_deadline) {
+                pj_time_val now;
+                pj_gettickcount(&now);
+                if (PJ_TIME_VAL_GTE(now, deadline)) {
+                    /* ICE init callback has not arrived in time; give up so
+                     * the calling thread does not block forever (#5112).
+                     */
+                    PJ_LOG(1,(THIS_FILE,
+                              "Timed out waiting for ICE media transport "
+                              "initialization after %d ms",
+                              PJSUA_ICE_TRANSPORT_INIT_TIMEOUT));
+                    call_med->tp_ready = PJ_ETIMEDOUT;
+                    break;
+                }
+            }
         }
         if (dlg) {
             pjsip_dlg_inc_lock(dlg);
