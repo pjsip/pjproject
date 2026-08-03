@@ -322,6 +322,8 @@ static void vid_handle_menu(char *menuin)
     argv[argc] = strtok(menuin, " \t\r\n");
     while (argv[argc] && *argv[argc]) {
         argc++;
+        if (argc >= (int)PJ_ARRAY_SIZE(argv))
+            break;
         argv[argc] = strtok(NULL, " \t\r\n");
     }
 
