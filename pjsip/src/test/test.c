@@ -312,6 +312,10 @@ int test_main(int argc, char *argv[])
     UT_ADD_TEST(&test_app.ut_app, txdata_test, 0);
 #endif
 
+#if INCLUDE_DLG_CORE_TEST
+    UT_ADD_TEST(&test_app.ut_app, dlg_core_test, 0);
+#endif
+
 #if INCLUDE_TSX_BENCH
     UT_ADD_TEST(&test_app.ut_app, tsx_bench, 0);
 #endif
