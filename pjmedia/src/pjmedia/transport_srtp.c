@@ -1341,6 +1341,7 @@ static pj_status_t transport_attach2(pjmedia_transport *tp,
     if (status != PJ_SUCCESS) {
         pj_lock_acquire(srtp->mutex);
         srtp->rtp_cb = NULL;
+        srtp->rtp_cb2 = NULL;
         srtp->rtcp_cb = NULL;
         srtp->user_data = NULL;
         srtp->cb_grp_lock = NULL;
