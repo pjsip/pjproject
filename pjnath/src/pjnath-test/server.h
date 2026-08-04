@@ -97,6 +97,12 @@ struct test_server
     pj_bool_t            turn_respond_allocate;
     pj_bool_t            turn_respond_refresh;
 
+    /* Append a ChannelData packet to the deallocation (Refresh with
+     * LIFETIME=0) response, so that a stream-oriented client receives both
+     * in a single read. See turn_sock_test.c dealloc_multi_pkt_test().
+     */
+    pj_bool_t            turn_append_data_on_dealloc;
+
     struct turn_stat {
         unsigned         rx_allocate_cnt;
         unsigned         rx_refresh_cnt;

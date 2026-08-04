@@ -1596,11 +1596,17 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
         } else if (conn->state == DATACONN_STATE_CONN_BINDING) {
             /* Waiting for ConnectionBind response */
             pj_bool_t is_stun;
+            unsigned pkt_len;
             pj_turn_session_on_rx_pkt_param prm;
 
             /* Ignore if this is not a STUN message */
             is_stun = ((((pj_uint8_t*)data)[0] & 0xC0) == 0);
             if (!is_stun)
+                goto on_return;
+
+            /* Wait for more data if we don't have a complete packet yet */
+            pkt_len = has_packet(turn_sock, data, *remainder);
+            if (pkt_len == 0)
                 goto on_return;
 
             /* Session may already be gone, see on_data_read() */
@@ -1614,9 +1620,11 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
             prm.src_addr_len = conn->peer_addr_len;
             pj_turn_session_on_rx_pkt2(turn_sock->sess, &prm);
 
-            /* Insufficient fragment, wait for more data */
+            /* parsed_len may be zero if we have parsing error, so use our
+             * previous calculation to exhaust the bad packet.
+             */
             if (prm.parsed_len == 0)
-                goto on_return;
+                prm.parsed_len = pkt_len;
 
             /* Got remainder? */
             if (prm.parsed_len < *remainder) {

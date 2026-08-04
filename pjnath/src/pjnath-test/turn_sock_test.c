@@ -534,6 +534,110 @@ static int destroy_test(pj_stun_config  *stun_cfg,
 
 /////////////////////////////////////////////////////////////////////
 
+/* Verify that a single read carrying the deallocation response followed by
+ * another packet does not crash. Processing the response destroys the TURN
+ * session synchronously and clears turn_sock->sess, so the next iteration of
+ * the packet loop in on_data_read() must not use it.
+ */
+static int dealloc_multi_pkt_test(pj_stun_config *stun_cfg,
+                                  pj_bool_t use_ipv6,
+                                  pj_turn_tp_type tp_type)
+{
+    struct test_session_cfg test_cfg =
+    {
+        {   /* Client cfg */
+            PJ_FALSE,       /* DNS SRV */
+            0xFFFF          /* Destroy on state */
+        },
+        {   /* Server cfg */
+            0xFFFFFFFF,     /* flags */
+            PJ_TRUE,        /* respond to allocate  */
+            PJ_TRUE         /* respond to refresh   */
+        }
+    };
+    enum { TIMEOUT = 60 };
+    pjlib_state pjlib_state;
+    pj_turn_session_info info;
+    struct test_session *sess;
+    pj_time_val tstart;
+    struct test_result result;
+    int rc;
+
+    PJ_LOG(3,("", "  deallocation with trailing packet test (%s) (%s)",
+              use_ipv6?"IPv6":"IPv4",
+              (tp_type==PJ_TURN_TP_TCP)?"TCP":"TLS"));
+
+    set_server_flag(&test_cfg, use_ipv6, tp_type);
+    capture_pjlib_state(stun_cfg, &pjlib_state);
+
+    rc = create_test_session(stun_cfg, &test_cfg, &sess);
+    if (rc != 0)
+        return rc;
+
+    /* Wait until state is READY */
+    pj_bzero(&info, sizeof(info));
+    pj_gettimeofday(&tstart);
+    while (sess->turn_sock) {
+        pj_time_val now;
+
+        poll_events(stun_cfg, 10, PJ_FALSE);
+        if (sess->turn_sock == NULL)
+            break;
+
+        if (pj_turn_sock_get_info(sess->turn_sock, &info) != PJ_SUCCESS)
+            break;
+
+        if (info.state >= PJ_TURN_STATE_READY)
+            break;
+
+        pj_gettimeofday(&now);
+        if (now.sec - tstart.sec > TIMEOUT)
+            break;
+    }
+
+    if (info.state != PJ_TURN_STATE_READY) {
+        PJ_LOG(3,("", "    error: state is not READY"));
+        destroy_session(sess);
+        return -200;
+    }
+
+    /* Make the server coalesce a ChannelData packet with the response to
+     * the Refresh with LIFETIME=0 that pj_turn_sock_destroy() triggers.
+     */
+    sess->test_srv->turn_append_data_on_dealloc = PJ_TRUE;
+
+    pj_turn_sock_destroy(sess->turn_sock);
+    poll_events(stun_cfg, 2000, PJ_FALSE);
+    sess->turn_sock = NULL;
+    pj_memcpy(&result, &sess->result, sizeof(result));
+    destroy_session(sess);
+
+    if ((result.state_called & (1<<PJ_TURN_STATE_DESTROYING)) == 0) {
+        PJ_LOG(3,("", "    error: PJ_TURN_STATE_DESTROYING is not called"));
+        return -210;
+    }
+
+    /* The trailing packet arrives after the session is gone, so it must be
+     * dropped rather than reported to the application.
+     */
+    if (result.rx_data_cnt != 0) {
+        PJ_LOG(3,("", "    error: trailing packet was not dropped"));
+        return -220;
+    }
+
+    poll_events(stun_cfg, 500, PJ_FALSE);
+    rc = check_pjlib_state(stun_cfg, &pjlib_state);
+    if (rc != 0) {
+        PJ_LOG(3,("", "    error: memory/timer-heap leak detected"));
+        return rc;
+    }
+
+    return 0;
+}
+
+
+/////////////////////////////////////////////////////////////////////
+
 int turn_sock_test(void *p)
 {
     unsigned n = (int)(intptr_t)p;
@@ -574,6 +678,13 @@ int turn_sock_test(void *p)
             if (rc != 0)
                 goto on_return;
         }
+    }
+
+    /* Only stream transports can deliver more than one packet in a read */
+    if (tp_type != PJ_TURN_TP_UDP) {
+        rc = dealloc_multi_pkt_test(&app_sess.stun_cfg, USE_IPV6, tp_type);
+        if (rc != 0)
+            goto on_return;
     }
 
 on_return:

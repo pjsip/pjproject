@@ -936,11 +936,32 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 send_pkt:
     if (resp) {
         pj_turn_tp_type tp_type = get_turn_tp_type(test_srv->flags);
+        pj_stun_lifetime_attr *lf_attr;
 
         status = pj_stun_msg_encode(resp, (pj_uint8_t*)data, MAX_STUN_PKT, 
                                     0, &auth_key, &size);
         if (status != PJ_SUCCESS)
             goto on_return;
+
+        lf_attr = (pj_stun_lifetime_attr*)
+                  pj_stun_msg_find_attr(resp, PJ_STUN_ATTR_LIFETIME, 0);
+
+        /* Append a ChannelData packet to the deallocation response, so that
+         * the client processes both in a single read.
+         */
+        if (test_srv->turn_append_data_on_dealloc && lf_attr &&
+            lf_attr->value == 0 && size + 8 <= MAX_STUN_PKT &&
+            PJ_STUN_IS_SUCCESS_RESPONSE(resp->hdr.type) &&
+            PJ_STUN_GET_METHOD(resp->hdr.type) == PJ_STUN_REFRESH_METHOD)
+        {
+            pj_uint8_t *p = (pj_uint8_t*)data + size;
+
+            /* ChannelData, channel number 0x4000, 4 bytes of payload */
+            p[0] = 0x40; p[1] = 0x00;
+            p[2] = 0x00; p[3] = 0x04;
+            p[4] = 't';  p[5] = 'e';  p[6] = 's';  p[7] = 't';
+            size += 8;
+        }
 
         len = size;
         switch (tp_type) {
