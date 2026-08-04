@@ -1376,6 +1376,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
     int o_red_level = 0;
     unsigned nclockrate = 0, clockrate[PJMEDIA_MAX_SDP_FMT];
     unsigned ntel_clockrate = 0, tel_clockrate[PJMEDIA_MAX_SDP_FMT];
+    pj_bool_t slave_used[PJMEDIA_MAX_SDP_FMT];
 
     /* A zero port normally disables an offered media section. RFC 9143
      * defines an exception for a valid bundle-only section, which must be
@@ -1405,6 +1406,11 @@ static pj_status_t match_offer(pj_pool_t *pool,
         master = preanswer;
         slave  = offer;
     }
+
+    /* Track which slave formats have been matched to prevent the same
+     * slave format from being consumed by multiple master formats.
+     */
+    pj_bzero(slave_used, sizeof(slave_used));
     
     /* With the addition of telephone-event and dodgy MS RTC SDP, 
      * the answer generation algorithm looks really shitty...
@@ -1438,9 +1444,12 @@ static pj_status_t match_offer(pj_pool_t *pool,
                 for (j=0; j<slave->desc.fmt_count; ++j) {
                     unsigned p;
                     p = pj_strtoul(&slave->desc.fmt[j]);
-                    if (p == pt && pj_isdigit(*slave->desc.fmt[j].ptr)) {
+                    if (p == pt && pj_isdigit(*slave->desc.fmt[j].ptr) &&
+                        !slave_used[j])
+                    {
                         unsigned k;
 
+                        slave_used[j] = PJ_TRUE;
                         found_matching_codec = 1;
                         pt_offer[pt_answer_count] = prefer_remote_codec_order?
                                                     master->desc.fmt[i]:
@@ -1494,6 +1503,8 @@ static pj_status_t match_offer(pj_pool_t *pool,
                  * encoding name and clock rate.
                  */
                 for (j=0; j<slave->desc.fmt_count; ++j) {
+                    if (slave_used[j])
+                        continue;
                     a = pjmedia_sdp_media_find_attr2(slave, "rtpmap", 
                                                      &slave->desc.fmt[j]);
                     if (a) {
@@ -1531,6 +1542,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                                 {
                                     continue;
                                 }
+
                                 found_matching_codec = 1;
 
                                 /* Take note of clock rate for tel-event */
@@ -1579,6 +1591,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
                                                 prefer_remote_codec_order? 
                                                 preanswer->desc.fmt[j]:
                                                 preanswer->desc.fmt[i];
+                            slave_used[j] = PJ_TRUE;
                             break;
                         }
                     }
@@ -1763,6 +1776,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
             if (!pj_strcmp(&answer->desc.fmt[j], &pt_answer[i]))
                 break;
         }
+
         pj_assert(j != answer->desc.fmt_count);
         str_swap(&answer->desc.fmt[i], &answer->desc.fmt[j]);
     }

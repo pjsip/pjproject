@@ -1452,7 +1452,7 @@ static struct test
             "s=SS VOIP\r\n"
             "c=IN IP4 10.186.98.37\r\n"
             "t=0 0\r\n"
-            "m=audio 4000 RTP/AVP 116 107 118 9 111 110\r\n"
+            "m=audio 4000 RTP/AVP 116 107 118 96 9 111 110\r\n"
             "b=AS:41\r\n"
             "b=RS:512\r\n"
             "b=RR:1537\r\n"
@@ -1462,10 +1462,8 @@ static struct test
             "a=fmtp:107 octet-align=1;mode-change-capability=2;max-red=220\r\n"
             "a=rtpmap:118 AMR/8000\r\n"
             "a=fmtp:118 octet-align=0;mode-change-capability=2;max-red=220\r\n"
-            /* For the following to work, pjmedia_codec_amr_match_sdp() must be registered first.
-               "a=rtpmap:96 AMR/8000\r\n"
-               "a=fmtp:96 octet-align=1;mode-change-capability=2;max-red=220\r\n"
-            */
+            "a=rtpmap:96 AMR/8000\r\n"
+            "a=fmtp:96 octet-align=1;mode-change-capability=2;max-red=220\r\n"
             "a=rtpmap:9 G722/8000\r\n"
             "a=rtpmap:111 telephone-event/16000\r\n"
             "a=fmtp:111 0-15\r\n"
