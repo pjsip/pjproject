@@ -891,25 +891,16 @@ static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
          */
         unsigned pkt_len;
 
-        /* Note that we must keep processing if destruction was already
-         * requested before this read, as it is the deallocation response
-         * that completes the teardown. Only a request made from one of the
-         * callbacks below stops us.
-         */
-        pj_bool_t shutdown_at_entry = turn_sock->is_shutting_down;
-
         //PJ_LOG(5,(turn_sock->pool->obj_name, 
         //        "Incoming data, %lu bytes total buffer", size));
 
         /* The session must be re-validated on every iteration, as processing
-         * a packet can tear it down on this same thread: an error or
+         * a packet can destroy it on this same thread: an error or
          * deallocation response drives it to DESTROYING and turn_on_state()
-         * clears turn_sock->sess, or the application destroys us from a
-         * callback. The group lock is re-entrant, so it does not prevent
-         * this.
+         * then clears turn_sock->sess. The group lock is re-entrant, so it
+         * does not prevent this.
          */
         while (turn_sock->sess &&
-               turn_sock->is_shutting_down == shutdown_at_entry &&
                (pkt_len=has_packet(turn_sock, data, size)) != 0)
         {
             pj_size_t parsed_len;
@@ -944,12 +935,9 @@ static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
             //        "Buffer size now %lu bytes", size));
         }
 
-        /* Nothing will ever consume the leftover once we are gone */
-        if (!turn_sock->sess ||
-            turn_sock->is_shutting_down != shutdown_at_entry)
-        {
+        /* Nothing will ever consume the leftover once the session is gone */
+        if (!turn_sock->sess)
             *remainder = 0;
-        }
     } else if (status != PJ_SUCCESS) {
         if (turn_sock->conn_type == PJ_TURN_TP_UDP)
             sess_fail(turn_sock, "UDP connection closed", status);
@@ -1180,8 +1168,12 @@ static void turn_on_rx_data(pj_turn_session *sess,
 {
     pj_turn_sock *turn_sock = (pj_turn_sock*) 
                            pj_turn_session_get_user_data(sess);
-    if (turn_sock == NULL || turn_sock->is_destroying) {
-        /* We've been destroyed */
+    if (turn_sock == NULL || turn_sock->is_shutting_down) {
+        /* We've been destroyed, or are about to be. Note that we may still
+         * be processing packets at this point, as the deallocation response
+         * is what completes a graceful teardown, but the application is no
+         * longer interested in data.
+         */
         return;
     }
 
@@ -1610,8 +1602,8 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
     *remainder = size;
     while (*remainder > 0) {
         if (conn->state == DATACONN_STATE_READY) {
-            /* Application data */
-            if (turn_sock->cb.on_rx_data) {
+            /* Application data, dropped once we are shutting down */
+            if (turn_sock->cb.on_rx_data && !turn_sock->is_shutting_down) {
                 (*turn_sock->cb.on_rx_data)(turn_sock, data, (unsigned)*remainder,
                                             &conn->peer_addr,
                                             conn->peer_addr_len);
