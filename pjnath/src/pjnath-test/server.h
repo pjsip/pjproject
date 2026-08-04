@@ -103,6 +103,12 @@ struct test_server
      */
     pj_bool_t            turn_append_data_on_dealloc;
 
+    /* Append two ChannelData packets to the ChannelBind response, so that a
+     * stream-oriented client processes both in the same read as the response
+     * that binds the channel. See turn_sock_test.c destroy_in_rx_data_test().
+     */
+    pj_bool_t            turn_append_data_on_chbind;
+
     struct turn_stat {
         unsigned         rx_allocate_cnt;
         unsigned         rx_refresh_cnt;

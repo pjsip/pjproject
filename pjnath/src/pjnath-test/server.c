@@ -963,6 +963,26 @@ send_pkt:
             size += 8;
         }
 
+        /* Append two ChannelData packets to the ChannelBind response, so
+         * that the client processes the binding and both packets in a
+         * single read.
+         */
+        if (test_srv->turn_append_data_on_chbind && size + 16 <= MAX_STUN_PKT &&
+            PJ_STUN_IS_SUCCESS_RESPONSE(resp->hdr.type) &&
+            PJ_STUN_GET_METHOD(resp->hdr.type) == PJ_STUN_CHANNEL_BIND_METHOD)
+        {
+            pj_uint8_t *p = (pj_uint8_t*)data + size;
+            unsigned j;
+
+            for (j=0; j<2; ++j) {
+                p[0] = 0x40; p[1] = 0x00;
+                p[2] = 0x00; p[3] = 0x04;
+                p[4] = 't';  p[5] = 'e';  p[6] = 's';  p[7] = 't';
+                p += 8;
+            }
+            size += 16;
+        }
+
         len = size;
         switch (tp_type) {
         case PJ_TURN_TP_TCP:

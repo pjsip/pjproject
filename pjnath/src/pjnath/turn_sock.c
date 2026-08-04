@@ -74,6 +74,13 @@ struct pj_turn_sock
     void                *user_data;
 
     pj_bool_t            is_destroying;
+
+    /* Set as soon as destruction is requested, which for a session that is
+     * still allocated happens well before is_destroying, since we first
+     * deallocate gracefully. Note that is_destroying cannot be set earlier
+     * instead, as that would stop us from sending the Refresh.
+     */
+    pj_bool_t            is_shutting_down;
     pj_grp_lock_t       *grp_lock;
 
     pj_turn_alloc_param  alloc_param;
@@ -399,6 +406,7 @@ static void destroy(pj_turn_sock *turn_sock)
     }
 
     turn_sock->is_destroying = PJ_TRUE;
+    turn_sock->is_shutting_down = PJ_TRUE;
     if (turn_sock->sess)
         pj_turn_session_shutdown(turn_sock->sess);
     if (turn_sock->active_sock)
@@ -425,6 +433,8 @@ static void turn_sock_destroy(pj_turn_sock *turn_sock,
         pj_grp_lock_release(turn_sock->grp_lock);
         return;
     }
+
+    turn_sock->is_shutting_down = PJ_TRUE;
 
     if (turn_sock->sess) {
         pj_turn_session_shutdown2(turn_sock->sess, last_err);
@@ -881,22 +891,29 @@ static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
          */
         unsigned pkt_len;
 
+        /* Note that we must keep processing if destruction was already
+         * requested before this read, as it is the deallocation response
+         * that completes the teardown. Only a request made from one of the
+         * callbacks below stops us.
+         */
+        pj_bool_t shutdown_at_entry = turn_sock->is_shutting_down;
+
         //PJ_LOG(5,(turn_sock->pool->obj_name, 
         //        "Incoming data, %lu bytes total buffer", size));
 
-        while ((pkt_len=has_packet(turn_sock, data, size)) != 0) {
+        /* The session must be re-validated on every iteration, as processing
+         * a packet can tear it down on this same thread: an error or
+         * deallocation response drives it to DESTROYING and turn_on_state()
+         * clears turn_sock->sess, or the application destroys us from a
+         * callback. The group lock is re-entrant, so it does not prevent
+         * this.
+         */
+        while (turn_sock->sess &&
+               turn_sock->is_shutting_down == shutdown_at_entry &&
+               (pkt_len=has_packet(turn_sock, data, size)) != 0)
+        {
             pj_size_t parsed_len;
             //const pj_uint8_t *pkt = (const pj_uint8_t*)data;
-
-            /* The previous iteration may have destroyed the session, e.g.
-             * an error or deallocation response drives it to DESTROYING and
-             * turn_on_state() clears turn_sock->sess. The group lock is
-             * re-entrant, so it does not prevent this.
-             */
-            if (!turn_sock->sess || turn_sock->is_destroying) {
-                *remainder = 0;
-                break;
-            }
 
             //PJ_LOG(5,(turn_sock->pool->obj_name, 
             //        "Packet start: %02X %02X %02X %02X", 
@@ -925,6 +942,13 @@ static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
 
             //PJ_LOG(5,(turn_sock->pool->obj_name, 
             //        "Buffer size now %lu bytes", size));
+        }
+
+        /* Nothing will ever consume the leftover once we are gone */
+        if (!turn_sock->sess ||
+            turn_sock->is_shutting_down != shutdown_at_entry)
+        {
+            *remainder = 0;
         }
     } else if (status != PJ_SUCCESS) {
         if (turn_sock->conn_type == PJ_TURN_TP_UDP)
