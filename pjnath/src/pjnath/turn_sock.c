@@ -845,6 +845,12 @@ static unsigned has_packet(pj_turn_sock *turn_sock, const void *buf, pj_size_t b
     if (turn_sock->conn_type == PJ_TURN_TP_UDP)
         return (unsigned)bufsize;
 
+    /* Both a STUN and a ChannelData header need at least 4 bytes, and the
+     * checks below read that many, so a smaller fragment must be kept as is.
+     */
+    if (bufsize < 4)
+        return 0;
+
     /* Quickly check if this is STUN message, by checking the first two bits and
      * size field which must be multiple of 4 bytes
      */
@@ -857,9 +863,6 @@ static unsigned has_packet(pj_turn_sock *turn_sock, const void *buf, pj_size_t b
     } else {
         /* This must be ChannelData. */
         pj_turn_channel_data cd;
-
-        if (bufsize < 4)
-            return 0;
 
         /* Decode ChannelData packet */
         pj_memcpy(&cd, buf, sizeof(pj_turn_channel_data));
