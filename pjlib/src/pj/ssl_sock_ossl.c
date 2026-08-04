@@ -621,7 +621,7 @@ static pj_bool_t sess_cache_store(const pj_str_t *name, SSL_SESSION *sess)
         nbuf[name->slen] = '\0';
 
         idx = sess_cache_find(nbuf);
-        if (idx >= 0) {
+        if (idx >= 0 && (unsigned)idx < ossl_sess_cache_cnt) {
             SSL_SESSION_free(ossl_sess_cache[idx].sess);
             for (n = (unsigned)idx; n + 1 < ossl_sess_cache_cnt; ++n)
                 ossl_sess_cache[n] = ossl_sess_cache[n + 1];
@@ -667,7 +667,7 @@ static SSL_SESSION *sess_cache_get(const pj_str_t *name)
 
     pj_lock_acquire(ossl_sess_cache_lock);
     idx = sess_cache_find(nbuf);
-    if (idx >= 0) {
+    if (idx >= 0 && (unsigned)idx < ossl_sess_cache_cnt) {
         unsigned n;
         ossl_sess_cache_entry e = ossl_sess_cache[idx];
 

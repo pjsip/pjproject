@@ -706,6 +706,7 @@ static void ui_make_new_call()
     input_result result;
     pj_str_t tmp;
     pj_bool_t loop = PJ_FALSE;
+    pj_status_t status;
 
     printf("(You currently have %d calls)\n", pjsua_call_get_count());
 
@@ -739,8 +740,10 @@ static void ui_make_new_call()
         if (app_config.enable_loam) {
             call_opt.flag |= PJSUA_CALL_NO_SDP_OFFER;
         }
-        pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
-                             &msg_data_, &current_call);
+        status = pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
+                                      &msg_data_, &current_call);
+        if (status != PJ_SUCCESS)
+            pjsua_perror(THIS_FILE, "Unable to make call", status);
 
         result.nb_result++;
     } while (loop);

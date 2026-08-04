@@ -557,8 +557,14 @@ int resolve_test(void)
     pj_status_t status;
 
     pool = pjsip_endpt_create_pool(endpt, NULL, 4000, 4000);
+    if (!pool)
+        return -5;
 
     status = pjsip_endpt_create_resolver(endpt, &resv);
+    if (status != PJ_SUCCESS) {
+        pjsip_endpt_release_pool(endpt, pool);
+        return -7;
+    }
 
     nameserver = pj_str("192.168.0.106");
     pj_dns_resolver_set_ns(resv, 1, &nameserver, &port);
