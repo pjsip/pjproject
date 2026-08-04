@@ -1920,6 +1920,7 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
     char out_str[128];
     pj_str_t tmp = pj_str(dest);
     pj_bool_t loop = PJ_FALSE;
+    pj_status_t status;
 
     pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(dest));
 
@@ -1958,8 +1959,10 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
 
         pjsua_msg_data_init(&msg_data);
         TEST_MULTIPART(&msg_data);
-        pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
-                             &msg_data, &current_call);
+        status = pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
+                                      &msg_data, &current_call);
+        if (status != PJ_SUCCESS)
+            pjsua_perror(THIS_FILE, "Unable to make call", status);
 
         result.nb_result++;
     } while (loop);
