@@ -1074,11 +1074,17 @@ int pjsua_call_test(void)
     rc = test_reinit_bounds_untyped_mline();
     if (rc != 0) goto on_return;
 
+#if PJSUA_HAS_SIPREC
+    /* SIPREC metadata validation tests. Only run when SIPREC is enabled
+     * at build time (PJSUA_HAS_SIPREC=1). Tests verify siprec_require_metadata
+     * parameter behavior for interoperability (PJ_FALSE) vs strict (PJ_TRUE) modes.
+     */
     rc = test_siprec_non_multipart_accepted();
     if (rc != 0) goto on_return;
 
     rc = test_siprec_no_metadata_rejected();
     if (rc != 0) goto on_return;
+#endif
 
 on_return:
     drain_all_calls();
