@@ -311,7 +311,10 @@ static pj_status_t tp_attach(   pjmedia_transport *tp,
 
     /* "Attach" the application: */
 
-    /* Save the new user */
+    /* Save the new user under the transport group lock so the append is
+     * serialized with the send-side snapshot and detach's erase.
+     */
+    pj_grp_lock_acquire(tp->grp_lock);
     loop->users[loop->user_cnt].rtp_cb = rtp_cb;
     loop->users[loop->user_cnt].rtp_cb2 = rtp_cb2;
     loop->users[loop->user_cnt].rtcp_cb = rtcp_cb;
@@ -319,6 +322,7 @@ static pj_status_t tp_attach(   pjmedia_transport *tp,
     loop->users[loop->user_cnt].cb_grp_lock = cb_grp_lock;
     loop->users[loop->user_cnt].rx_disabled = loop->disable_rx;
     ++loop->user_cnt;
+    pj_grp_lock_release(tp->grp_lock);
 
     return PJ_SUCCESS;
 }
@@ -361,6 +365,12 @@ static void transport_detach( pjmedia_transport *tp,
 
     pj_assert(tp);
 
+    /* Serialize the users[] mutation with the send-side snapshot below via
+     * the transport group lock, so a concurrent send cannot read/ref an
+     * entry (and its owner group lock) while it is being erased.
+     */
+    pj_grp_lock_acquire(tp->grp_lock);
+
     for (i=0; i<loop->user_cnt; ++i) {
         if (loop->users[i].user_data == user_data)
             break;
@@ -372,6 +382,8 @@ static void transport_detach( pjmedia_transport *tp,
                        loop->user_cnt, i);
         --loop->user_cnt;
     }
+
+    pj_grp_lock_release(tp->grp_lock);
 }
 
 
@@ -405,24 +417,46 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 
     pj_grp_lock_add_ref(tp->grp_lock);
 
-    /* Distribute to users */
-    for (i=0; i<loop->user_cnt; ++i) {
-        pj_grp_lock_t *cb_grp_lock = loop->users[i].cb_grp_lock;
-        if (loop->users[i].rx_disabled) continue;
-        if (cb_grp_lock)
-            pj_grp_lock_add_ref(cb_grp_lock);
-        if (loop->users[i].rtp_cb2) {
+    /* Distribute to users. Snapshot each entry (callbacks, user data and the
+     * owner group lock) under the transport group lock and take a reference
+     * on the owner lock before releasing it, so a concurrent detach cannot
+     * erase the entry and drop the owner's last reference between the read
+     * and the up-call. The group lock is released before the up-call to
+     * avoid holding it across application callbacks.
+     */
+    for (i=0; ; ++i) {
+        void (*rtp_cb)(void*, void*, pj_ssize_t) = NULL;
+        void (*rtp_cb2)(pjmedia_tp_cb_param*) = NULL;
+        void *user_data = NULL;
+        pj_grp_lock_t *cb_grp_lock = NULL;
+
+        pj_grp_lock_acquire(tp->grp_lock);
+        if (i >= loop->user_cnt) {
+            pj_grp_lock_release(tp->grp_lock);
+            break;
+        }
+        if (!loop->users[i].rx_disabled) {
+            rtp_cb = loop->users[i].rtp_cb;
+            rtp_cb2 = loop->users[i].rtp_cb2;
+            user_data = loop->users[i].user_data;
+            cb_grp_lock = loop->users[i].cb_grp_lock;
+            if (cb_grp_lock)
+                pj_grp_lock_add_ref(cb_grp_lock);
+        }
+        pj_grp_lock_release(tp->grp_lock);
+
+        if (rtp_cb2) {
             pjmedia_tp_cb_param param;
 
             pj_bzero(&param, sizeof(param));
-            param.user_data = loop->users[i].user_data;
+            param.user_data = user_data;
             param.pkt = (void *)pkt;
             param.size = size;
-            (*loop->users[i].rtp_cb2)(&param);
-        } else if (loop->users[i].rtp_cb) {
-            (*loop->users[i].rtp_cb)(loop->users[i].user_data, (void*)pkt,
-                                     size);
+            (*rtp_cb2)(&param);
+        } else if (rtp_cb) {
+            (*rtp_cb)(user_data, (void*)pkt, size);
         }
+
         if (cb_grp_lock)
             pj_grp_lock_dec_ref(cb_grp_lock);
     }
@@ -456,15 +490,32 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 
     pj_grp_lock_add_ref(tp->grp_lock);
 
-    /* Distribute to users */
-    for (i=0; i<loop->user_cnt; ++i) {
-        pj_grp_lock_t *cb_grp_lock = loop->users[i].cb_grp_lock;
-        if (loop->users[i].rx_disabled || !loop->users[i].rtcp_cb)
-            continue;
-        if (cb_grp_lock)
-            pj_grp_lock_add_ref(cb_grp_lock);
-        (*loop->users[i].rtcp_cb)(loop->users[i].user_data, (void*)pkt,
-                                  size);
+    /* Distribute to users. See transport_send_rtp() for why each entry is
+     * snapshotted and its owner group lock referenced under the transport
+     * group lock, then released before the up-call.
+     */
+    for (i=0; ; ++i) {
+        void (*rtcp_cb)(void*, void*, pj_ssize_t) = NULL;
+        void *user_data = NULL;
+        pj_grp_lock_t *cb_grp_lock = NULL;
+
+        pj_grp_lock_acquire(tp->grp_lock);
+        if (i >= loop->user_cnt) {
+            pj_grp_lock_release(tp->grp_lock);
+            break;
+        }
+        if (!loop->users[i].rx_disabled && loop->users[i].rtcp_cb) {
+            rtcp_cb = loop->users[i].rtcp_cb;
+            user_data = loop->users[i].user_data;
+            cb_grp_lock = loop->users[i].cb_grp_lock;
+            if (cb_grp_lock)
+                pj_grp_lock_add_ref(cb_grp_lock);
+        }
+        pj_grp_lock_release(tp->grp_lock);
+
+        if (rtcp_cb)
+            (*rtcp_cb)(user_data, (void*)pkt, size);
+
         if (cb_grp_lock)
             pj_grp_lock_dec_ref(cb_grp_lock);
     }
