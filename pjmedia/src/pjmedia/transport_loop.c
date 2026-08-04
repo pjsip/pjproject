@@ -225,15 +225,24 @@ PJ_DEF(pj_status_t) pjmedia_transport_loop_disable_rx( pjmedia_transport *tp,
 {
     struct transport_loop *loop = (struct transport_loop*) tp;
     unsigned i;
+    pj_status_t status = PJ_ENOTFOUND;
 
+    /* Serialize the users[] search/update with attach/detach and the
+     * send-side snapshot via the transport group lock.
+     */
+    pj_grp_lock_acquire(tp->grp_lock);
     for (i=0; i<loop->user_cnt; ++i) {
         if (loop->users[i].user_data == user) {
             loop->users[i].rx_disabled = disabled;
-            return PJ_SUCCESS;
+            status = PJ_SUCCESS;
+            break;
         }
     }
-    pj_assert(!"Invalid stream user");
-    return PJ_ENOTFOUND;
+    pj_grp_lock_release(tp->grp_lock);
+
+    if (status != PJ_SUCCESS)
+        pj_assert(!"Invalid stream user");
+    return status;
 }
 
 
@@ -299,20 +308,14 @@ static pj_status_t tp_attach(   pjmedia_transport *tp,
     /* Validate arguments */
     PJ_ASSERT_RETURN(tp && rem_addr && addr_len, PJ_EINVAL);
 
-    /* Must not be "attached" to same user */
-    for (i=0; i<loop->user_cnt; ++i) {
-        PJ_ASSERT_RETURN(loop->users[i].user_data != user_data,
-                         PJ_EINVALIDOP);
-    }
-    PJ_ASSERT_RETURN(loop->user_cnt != loop->max_attach_cnt, PJ_ETOOMANY);
-
     PJ_UNUSED_ARG(rem_rtcp);
     PJ_UNUSED_ARG(rtcp_addr);
 
-    /* "Attach" the application: */
-
-    /* Save the new user under the transport group lock so the append is
-     * serialized with the send-side snapshot and detach's erase.
+    /* "Attach" the application under the transport group lock. The
+     * duplicate-user and capacity checks run under the same lock as the
+     * append (and detach's erase / the send-side snapshot), so two
+     * concurrent attaches sharing the last free slot cannot both pass the
+     * capacity check and overrun users[].
      */
     pj_grp_lock_acquire(tp->grp_lock);
     for (i=0; i<loop->user_cnt; ++i) {
