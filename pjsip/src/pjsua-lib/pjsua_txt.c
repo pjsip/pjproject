@@ -91,8 +91,8 @@ on_return:
 static void rx_text_cb(pjmedia_txt_stream *strm, void *user_data,
                        const pjmedia_txt_stream_data *data)
 {
-    const pjsua_call_id call_id = PJSUA_MED_UDATA_CALL_ID(user_data);
-    const int med_idx = PJSUA_MED_UDATA_MED_IDX(user_data);
+    const pjsua_call_id call_id = pjsua_med_udata_call_id(user_data);
+    const int med_idx = pjsua_med_udata_med_idx(user_data);
     pjsua_txt_stream_data txt;
 
     PJ_UNUSED_ARG(strm);
@@ -251,7 +251,7 @@ pj_status_t pjsua_txt_channel_update(pjsua_call_media *call_med,
         if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_rx_text) {
             pjmedia_txt_stream_set_rx_callback(
                 call_med->strm.t.stream, &rx_text_cb,
-                PJSUA_MED_UDATA_PACK(call->index, strm_idx), 0);
+                pjsua_med_udata_pack(call->index, strm_idx), 0);
         }
     }
 

@@ -129,15 +129,23 @@ struct pjsua_call_media
  * values so that an invalid -1 escaping the assertion in release
  * builds still decodes as -1 rather than 65535.
  */
-#define PJSUA_MED_UDATA_PACK(call_id, med_idx) \
-            (pj_assert((call_id) >= 0 && (call_id) <= 0x7FFF && \
-                       (med_idx) >= 0 && (med_idx) <= 0x7FFF), \
-             (void*)(((pj_size_t)(pj_uint16_t)(med_idx) << 16) | \
-                     (pj_size_t)(pj_uint16_t)(call_id)))
-#define PJSUA_MED_UDATA_CALL_ID(udata) \
-            ((pjsua_call_id)(pj_int16_t)((pj_size_t)(udata) & 0xFFFF))
-#define PJSUA_MED_UDATA_MED_IDX(udata) \
-            ((int)(pj_int16_t)(((pj_size_t)(udata) >> 16) & 0xFFFF))
+PJ_INLINE(void*) pjsua_med_udata_pack(pjsua_call_id call_id, int med_idx)
+{
+    pj_assert(call_id >= 0 && call_id <= 0x7FFF &&
+              med_idx >= 0 && med_idx <= 0x7FFF);
+    return (void*)(((pj_size_t)(pj_uint16_t)med_idx << 16) |
+                   (pj_size_t)(pj_uint16_t)call_id);
+}
+
+PJ_INLINE(pjsua_call_id) pjsua_med_udata_call_id(const void *udata)
+{
+    return (pjsua_call_id)(pj_int16_t)((pj_size_t)udata & 0xFFFF);
+}
+
+PJ_INLINE(int) pjsua_med_udata_med_idx(const void *udata)
+{
+    return (int)(pj_int16_t)(((pj_size_t)udata >> 16) & 0xFFFF);
+}
 
  /**
   * Maximum number of streams from an avi player.

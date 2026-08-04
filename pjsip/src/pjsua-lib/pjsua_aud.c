@@ -583,8 +583,8 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 static void dtmf_callback(pjmedia_stream *strm, void *user_data,
                           int digit)
 {
-    const pjsua_call_id call_id = PJSUA_MED_UDATA_CALL_ID(user_data);
-    const int med_idx = PJSUA_MED_UDATA_MED_IDX(user_data);
+    const pjsua_call_id call_id = pjsua_med_udata_call_id(user_data);
+    const int med_idx = pjsua_med_udata_med_idx(user_data);
 
     PJ_UNUSED_ARG(strm);
 
@@ -618,8 +618,8 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
                                 const pjmedia_stream_dtmf_event *event)
 {
-    const pjsua_call_id call_id = PJSUA_MED_UDATA_CALL_ID(user_data);
-    const int med_idx = PJSUA_MED_UDATA_MED_IDX(user_data);
+    const pjsua_call_id call_id = pjsua_med_udata_call_id(user_data);
+    const int med_idx = pjsua_med_udata_med_idx(user_data);
     pjsua_dtmf_event evt;
 
     PJ_UNUSED_ARG(strm);
@@ -755,7 +755,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
             pjmedia_stream_set_dtmf_event_callback(
                                  call_med->strm.a.stream,
                                  &dtmf_event_callback,
-                                 PJSUA_MED_UDATA_PACK(call->index, strm_idx));
+                                 pjsua_med_udata_pack(call->index, strm_idx));
         } else if (!call->hanging_up &&
                    (pjsua_var.ua_cfg.cb.on_dtmf_digit ||
                     pjsua_var.ua_cfg.cb.on_dtmf_digit2))
@@ -763,7 +763,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
             pjmedia_stream_set_dtmf_callback(
                                  call_med->strm.a.stream,
                                  &dtmf_callback,
-                                 PJSUA_MED_UDATA_PACK(call->index, strm_idx));
+                                 pjsua_med_udata_pack(call->index, strm_idx));
         }
 
         /* Get the port interface of the first stream in the session.
