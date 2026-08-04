@@ -44,8 +44,6 @@
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
 #include <pjsip.h>
-#include <pjsip-ua/sip_siprec.h>
-#include <pjmedia.h>
 #include <pjlib.h>
 
 #define THIS_FILE   "pjsua_call_test.c"
@@ -147,6 +145,10 @@ static struct
      * local SDP offer, so the peer establishes a call holding a media slot
      * whose type is neither audio, video nor text. */
     pj_bool_t     inject_app_mline;
+    /* SIPREC test mode: 0=off, 1=non-multipart test, 2=no-metadata test. */
+    int           siprec_test_mode;
+    /* For SIPREC tests, record if the call was accepted. */
+    pj_bool_t     siprec_call_accepted;
 } g_ctx;
 
 
@@ -157,6 +159,8 @@ static struct
 /* Auto-answer incoming calls. First probe that an over-limit setting is
  * rejected by answer2() (recorded for the main flow to assert), then answer
  * with a valid single-audio setting to establish the call.
+ *
+ * For SIPREC tests, record whether the call was accepted or rejected.
  */
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                              pjsip_rx_data *rdata)
@@ -165,9 +169,24 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     pj_status_t status;
 
     PJ_UNUSED_ARG(acc_id);
-    PJ_UNUSED_ARG(rdata);
 
     g_ctx.incoming_call_id = call_id;
+
+    /* Check if this is a SIPREC INVITE for testing purposes. */
+    if (g_ctx.siprec_test_mode > 0 && rdata) {
+        const pj_str_t str_require = {"Require", 7};
+        pjsip_require_hdr *req_hdr;
+
+        req_hdr = (pjsip_require_hdr*)
+            pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_require, NULL);
+
+        if (req_hdr && pjsip_siprec_verify_require_hdr(req_hdr)) {
+            /* This is a SIPREC INVITE. Record whether it gets accepted. */
+            g_ctx.siprec_call_accepted = PJ_TRUE;
+            PJ_LOG(3,(THIS_FILE, "    SIPREC INVITE received for test mode %d",
+                     g_ctx.siprec_test_mode));
+        }
+    }
 
     /* Probe: over-limit audio count must be rejected. answer2() leaves
      * call->opt_inited FALSE on failure, so the valid answer below still
@@ -292,6 +311,12 @@ static void drain_all_calls(void)
      */
     wait_until(NULL, PJSUA_INVALID_ID, PJ_IOQUEUE_KEY_FREE_DELAY + 200);
 }
+
+/* State for SIPREC tests to track response code. */
+static struct {
+    pj_bool_t request_seen;
+    int        response_code;
+} g_siprec_test_ctx;
 
 
 /*****************************************************************************
@@ -516,95 +541,407 @@ static int test_reinit_bounds_untyped_mline(void)
 }
 
 
-/*****************************************************************************
- * SIPREC Metadata Validation Tests
- *****************************************************************************/
-
-/* Test SIPREC metadata validation at pjsua level.
- * These tests verify the regression requirements from sip_siprec.c:229:
- * - PJ_FALSE path: accepts SIPREC without rs-metadata (interoperability mode)
- * - PJ_TRUE path: rejects SIPREC without rs-metadata with 400 (strict mode)
- * - SDP-only body: exercises non-multipart guard without assertion
- *
- * The test creates a SIPREC INVITE with SDP-only body (no multipart metadata)
- * and verifies acceptance/rejection based on the require_metadata setting.
- */
-
-
-static int test_siprec_metadata_validation(void)
+/* Module to intercept outgoing INVITE requests and add SIPREC headers for testing. */
+static pj_bool_t siprec_test_tx_request(pjsip_tx_data *tdata)
 {
+    if (g_ctx.siprec_test_mode > 0 &&
+        tdata->msg->type == PJSIP_REQUEST_MSG &&
+        tdata->msg->line.req.method.id == PJSIP_INVITE_METHOD)
+    {
+        /* Add Require: siprec header. */
+        {
+            pj_str_t hname = pj_str("Require");
+            pj_str_t hvalue = pj_str("siprec");
+            pjsip_generic_string_hdr *req_hdr =
+                pjsip_generic_string_hdr_create(tdata->pool, &hname, &hvalue);
+            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)req_hdr);
+        }
+
+        /* Add Contact header with +sip.src parameter. */
+        {
+            pj_str_t src_str = pj_str("+sip.src");
+            pjsip_contact_hdr *contact_hdr =
+                (pjsip_contact_hdr*)pjsip_msg_find_hdr(tdata->msg,
+                                                        PJSIP_H_CONTACT, NULL);
+            if (contact_hdr && contact_hdr->uri) {
+                pjsip_param *new_param = PJ_POOL_ALLOC_T(tdata->pool, pjsip_param);
+                new_param->name = src_str;
+                new_param->value.slen = 0;
+                pj_list_push_back(&contact_hdr->other_param, new_param);
+            }
+        }
+
+        PJ_LOG(3,(THIS_FILE, "    Modified INVITE with SIPREC headers for test mode %d",
+                 g_ctx.siprec_test_mode));
+    }
+    return PJ_FALSE;
+}
+
+/* Module to handle transactions. */
+static void siprec_test_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
+{
+    PJ_UNUSED_ARG(tsx);
+    PJ_UNUSED_ARG(e);
+}
+
+static struct {
+    pjsip_module  mod;
+} g_siprec_test_mod = {
+    {
+        NULL, NULL,
+        { "mod-siprec-test", 17 },
+        -1,
+        PJSIP_MOD_PRIORITY_APPLICATION,
+        NULL, NULL, NULL, NULL,
+        NULL, NULL, &siprec_test_tx_request, NULL, &siprec_test_tsx_state
+    }
+};
+
+/* Helper to create SDP with label attribute. */
+static pjmedia_sdp_session *create_siprec_sdp(pj_pool_t *pool)
+{
+    pjmedia_sdp_session *sdp;
+    pjmedia_sdp_media *m;
+    pjmedia_sdp_attr *a;
+    pjmedia_sdp_conn *conn;
+
+    sdp = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_session);
+    pj_strdup2(pool, &sdp->origin.user, "-");
+    sdp->origin.version = 0;
+    sdp->origin.id = 0;
+    pj_strdup2(pool, &sdp->origin.net_type, "IN");
+    pj_strdup2(pool, &sdp->origin.addr_type, "IP4");
+    pj_strdup2(pool, &sdp->origin.addr, "127.0.0.1");
+    sdp->name = pj_str("SIPREC Test");
+
+    /* Add connection line at session level. */
+    conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+    pj_strdup2(pool, &conn->net_type, "IN");
+    pj_strdup2(pool, &conn->addr_type, "IP4");
+    pj_strdup2(pool, &conn->addr, "127.0.0.1");
+    sdp->conn = conn;
+
+    sdp->time.start = 0;
+    sdp->time.stop = 0;
+    sdp->media_count = 1;
+
+    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+    pj_strdup2(pool, &m->desc.media, "audio");
+    m->desc.port = 4000;
+    pj_strdup2(pool, &m->desc.transport, "RTP/AVP");
+    m->desc.fmt_count = 1;
+    pj_strdup2(pool, &m->desc.fmt[0], "0");
+
+    /* Add connection line at media level. */
+    conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+    pj_strdup2(pool, &conn->net_type, "IN");
+    pj_strdup2(pool, &conn->addr_type, "IP4");
+    pj_strdup2(pool, &conn->addr, "127.0.0.1");
+    m->conn = conn;
+
+    /* Add label attribute (required for SIPREC). */
+    {
+        pj_str_t label_str = pj_str("1");
+        a = pjmedia_sdp_attr_create(pool, "label", &label_str);
+    }
+    m->attr[m->attr_count++] = a;
+
+    sdp->media[0] = m;
+    return sdp;
+}
+
+/* Test 1: SIPREC INVITE with direct application/sdp body (non-multipart)
+ * using default (PJ_FALSE) config. Should be accepted.
+ */
+static int test_siprec_non_multipart_accepted(void)
+{
+    extern struct pjsua_data pjsua_var; /* From pjsua_internal.h */
+    pjsip_tx_data *tdata;
     pj_pool_t *pool;
-    pj_str_t metadata;
-    pjsip_msg_body sdp_body;
-    pjsip_media_type media_type;
-    pj_str_t sdp_str;
+    pjsip_uri *target;
+    pj_str_t target_str;
+    pjsip_contact_hdr *contact_hdr;
+    pj_str_t str_src = pj_str("+sip.src");
+    pjmedia_sdp_session *sdp;
     pj_status_t status;
-    pjsua_acc_config acc_cfg;
-    char dummy_sdp[] = "v=0\r\no=- 0 0 IN IP4 127.0.0.1\r\ns=test\r\nc=IN IP4 127.0.0.1\r\nt=0 0\r\nm=audio 8000 RTP/AVP 0\r\n";
+    pj_str_t sdp_str;
+    char sdp_buf[2048];
 
-    PJ_LOG(3, (THIS_FILE, "  SIPREC metadata validation"));
+    PJ_LOG(3, (THIS_FILE, "  SIPREC non-multipart (direct SDP) acceptance"));
 
-    pool = pjsua_pool_create("siprec-test", 256, 256);
+    /* Enable SIPREC support on the account. */
+    pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_OPTIONAL;
+
+    g_siprec_test_ctx.request_seen = PJ_FALSE;
+    g_siprec_test_ctx.response_code = 0;
+
+    pool = pjsua_pool_create("siprec-test1", 4096, 4096);
     if (!pool) {
         PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
         return -1400;
     }
 
-    pj_strdup2(pool, &sdp_str, dummy_sdp);
-    pjsip_media_type_init2(&media_type, "application", "sdp");
-
-    sdp_body.content_type = media_type;
-    sdp_body.data = sdp_str.ptr;
-    sdp_body.len = sdp_str.slen;
-    sdp_body.print_body = NULL;
-
-    status = pjsip_siprec_get_metadata(pool, &sdp_body, &metadata);
-
-    if (status == PJ_ENOTFOUND) {
-        PJ_LOG(3, (THIS_FILE, "    Test 1 PASSED: SDP-only body returns PJ_ENOTFOUND"));
-    } else {
-        PJ_LOG(1, (THIS_FILE, "    Test 1 FAILED: Expected PJ_ENOTFOUND, got %d", status));
+    /* Create target URI. */
+    target_str = pj_str(g_ctx.self_uri);
+    target = pjsip_parse_uri(pool, target_str.ptr, target_str.slen, 0);
+    if (!target) {
+        PJ_LOG(1, (THIS_FILE, "    failed to parse target URI"));
         pj_pool_release(pool);
         return -1401;
     }
-    pj_pool_release(pool);
 
-    pool = pjsua_pool_create("siprec-test", 256, 256);
-    if (!pool) return -1402;
+    /* Create INVITE request. */
+    status = pjsip_endpt_create_request(pjsua_var.endpt, &pjsip_invite_method,
+                                        &target_str, &target_str, &target_str,
+                                        &target_str, NULL, -1, NULL, &tdata);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create INVITE (%d)", status));
+        pj_pool_release(pool);
+        return -1402;
+    }
 
-    pjsua_acc_get_config(g_ctx.acc_id, pool, &acc_cfg);
-    if (acc_cfg.siprec_require_metadata != PJ_FALSE) {
+    /* Add Require: siprec header. */
+    {
+        pj_str_t hname = pj_str("Require");
+        pj_str_t hvalue = pj_str("siprec");
+        pjsip_generic_string_hdr *req_hdr =
+            pjsip_generic_string_hdr_create(tdata->pool, &hname, &hvalue);
+        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)req_hdr);
+    }
+
+    /* Add Contact header with +sip.src parameter. */
+    contact_hdr = pjsip_contact_hdr_create(tdata->pool);
+    contact_hdr->uri = pjsip_parse_uri(tdata->pool, g_ctx.self_uri,
+                                       pj_ansi_strlen(g_ctx.self_uri), 0);
+    if (contact_hdr->uri) {
+        pjsip_param *param = PJ_POOL_ALLOC_T(pool, pjsip_param);
+        param->name = str_src;
+        param->value.slen = 0;
+        pj_list_push_back(&contact_hdr->other_param, param);
+    }
+    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)contact_hdr);
+
+    /* Create SDP body with label attribute. */
+    sdp = create_siprec_sdp(pool);
+    status = pjmedia_sdp_print(sdp, sdp_buf, sizeof(sdp_buf));
+    if (status < 1) {
+        PJ_LOG(1, (THIS_FILE, "    failed to print SDP"));
+        pjsip_tx_data_dec_ref(tdata);
         pj_pool_release(pool);
         return -1403;
     }
-    PJ_LOG(3, (THIS_FILE, "    Test 2 PASSED: Default is PJ_FALSE"));
+
+    /* Set application/sdp content type (direct SDP, not multipart). */
+    pj_strdup2(pool, &sdp_str, sdp_buf);
+    sdp_str.slen = status;
+
+    pjsip_msg_body *body = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_msg_body);
+    pj_strdup2(tdata->pool, &body->content_type.type, "application");
+    pj_strdup2(tdata->pool, &body->content_type.subtype, "sdp");
+    body->data = sdp_str.ptr;
+    body->len = sdp_str.slen;
+    body->print_body = &pjsip_print_text_body;
+    tdata->msg->body = body;
+
+    /* Send the request. */
+    status = pjsip_endpt_send_request_stateless(pjsua_var.endpt, tdata, NULL, NULL);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    failed to send INVITE (%d)", status));
+        pj_pool_release(pool);
+        return -1404;
+    }
+
+    /* Wait for response. */
+    PJ_LOG(3,(THIS_FILE, "    Waiting for SIPREC response..."));
+    wait_until(NULL, PJSUA_INVALID_ID, 2000);
+
     pj_pool_release(pool);
 
-    pool = pjsua_pool_create("siprec-test", 256, 256);
-    if (!pool) return -1404;
+    /* Restore SIPREC setting. */
+    pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
 
-    pjsua_acc_get_config(g_ctx.acc_id, pool, &acc_cfg);
-    acc_cfg.siprec_require_metadata = PJ_TRUE;
-    status = pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
-    if (status != PJ_SUCCESS) {
-        pj_pool_release(pool);
+    /* Cleanup any auto-answered call. */
+    drain_all_calls();
+
+    if (!g_siprec_test_ctx.request_seen) {
+        PJ_LOG(1, (THIS_FILE, "    no response received"));
         return -1405;
     }
 
-    pjsua_acc_get_config(g_ctx.acc_id, pool, &acc_cfg);
-    if (acc_cfg.siprec_require_metadata != PJ_TRUE) {
-        pj_pool_release(pool);
+    if (g_siprec_test_ctx.response_code >= 400) {
+        PJ_LOG(1, (THIS_FILE, "    expected 2xx, got %d",
+                   g_siprec_test_ctx.response_code));
         return -1406;
     }
 
-    acc_cfg.siprec_require_metadata = PJ_FALSE;
-    pjsua_acc_modify(g_ctx.acc_id, &acc_cfg);
-    pj_pool_release(pool);
-
-    PJ_LOG(3, (THIS_FILE, "  All SIPREC metadata validation tests passed"));
     return 0;
 }
 
+/* Test 2: SIPREC INVITE without rs-metadata using PJ_TRUE config.
+ * Should be rejected with 400 Bad Request.
+ */
+static int test_siprec_no_metadata_rejected(void)
+{
+    extern struct pjsua_data pjsua_var;
+    pjsip_tx_data *tdata;
+    pj_pool_t *pool;
+    pjsip_uri *target;
+    pj_str_t target_str;
+    pj_str_t siprec_str = pj_str("siprec");
+    pj_str_t src_str = pj_str("+sip.src");
+    pjmedia_sdp_session *sdp;
+    pjsip_msg_body *sdp_body, *multipart_body;
+    pjsip_multipart_part *sdp_part;
+    pjsip_multipart_part *dummy_part;
+    pj_status_t status;
+    pj_bool_t restore_setting = PJ_FALSE;
+    char sdp_buf[2048];
+
+    PJ_LOG(3, (THIS_FILE, "  SIPREC without rs-metadata rejection (strict)"));
+
+    /* Enable SIPREC support on the account. */
+    pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_OPTIONAL;
+
+    /* Save and enable strict metadata requirement. */
+    if (!pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata) {
+        pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_TRUE;
+        restore_setting = PJ_TRUE;
+    }
+
+    g_siprec_test_ctx.request_seen = PJ_FALSE;
+    g_siprec_test_ctx.response_code = 0;
+
+    pool = pjsua_pool_create("siprec-test2", 4096, 4096);
+    if (!pool) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create pool"));
+        if (restore_setting)
+            pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+        return -1500;
+    }
+
+    /* Create target URI. */
+    target_str = pj_str(g_ctx.self_uri);
+    target = pjsip_parse_uri(pool, target_str.ptr, target_str.slen, 0);
+    if (!target) {
+        PJ_LOG(1, (THIS_FILE, "    failed to parse target URI"));
+        pj_pool_release(pool);
+        if (restore_setting)
+            pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+        return -1501;
+    }
+
+    /* Create INVITE request. */
+    status = pjsip_endpt_create_request(pjsua_var.endpt, &pjsip_invite_method,
+                                        &target_str, &target_str, &target_str,
+                                        &target_str, NULL, -1, NULL, &tdata);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    failed to create INVITE (%d)", status));
+        pj_pool_release(pool);
+        if (restore_setting)
+            pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+        return -1502;
+    }
+
+    /* Add Require: siprec header. */
+    {
+        pj_str_t hname = pj_str("Require");
+        pjsip_generic_string_hdr *req_hdr =
+            pjsip_generic_string_hdr_create(tdata->pool, &hname, &siprec_str);
+        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)req_hdr);
+    }
+
+    /* Add Contact header with +sip.src parameter. */
+    {
+        pjsip_contact_hdr *contact_hdr = pjsip_contact_hdr_create(tdata->pool);
+        contact_hdr->uri = pjsip_parse_uri(tdata->pool, g_ctx.self_uri,
+                                           pj_ansi_strlen(g_ctx.self_uri), 0);
+        if (contact_hdr->uri) {
+            pjsip_param *new_param = PJ_POOL_ALLOC_T(pool, pjsip_param);
+            new_param->name = src_str;
+            new_param->value.slen = 0;
+            pj_list_push_back(&contact_hdr->other_param, new_param);
+        }
+        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)contact_hdr);
+    }
+
+    /* Create multipart body with SDP but no rs-metadata. */
+    multipart_body = pjsip_multipart_create(tdata->pool, NULL, NULL);
+
+    /* Create SDP part. */
+    sdp = create_siprec_sdp(pool);
+    status = pjmedia_sdp_print(sdp, sdp_buf, sizeof(sdp_buf));
+    if (status < 1) {
+        PJ_LOG(1, (THIS_FILE, "    failed to print SDP"));
+        pjsip_tx_data_dec_ref(tdata);
+        pj_pool_release(pool);
+        if (restore_setting)
+            pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+        return -1503;
+    }
+
+    sdp_body = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_msg_body);
+    pj_strdup2(tdata->pool, &sdp_body->content_type.type, "application");
+    pj_strdup2(tdata->pool, &sdp_body->content_type.subtype, "sdp");
+    sdp_body->data = pj_pool_alloc(tdata->pool, status);
+    pj_memcpy(sdp_body->data, sdp_buf, status);
+    sdp_body->len = status;
+    sdp_body->print_body = &pjsip_print_text_body;
+
+    sdp_part = pjsip_multipart_create_part(tdata->pool);
+    sdp_part->body = sdp_body;
+    pjsip_multipart_add_part(tdata->pool, multipart_body, sdp_part);
+
+    /* Add a dummy text part (not rs-metadata). */
+    {
+        pjsip_msg_body *text_body = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_msg_body);
+        pj_strdup2(tdata->pool, &text_body->content_type.type, "text");
+        pj_strdup2(tdata->pool, &text_body->content_type.subtype, "plain");
+        text_body->data = pj_pool_alloc(tdata->pool, 5);
+        pj_memcpy(text_body->data, "dummy", 5);
+        text_body->len = 5;
+        text_body->print_body = &pjsip_print_text_body;
+
+        dummy_part = pjsip_multipart_create_part(tdata->pool);
+        dummy_part->body = text_body;
+        pjsip_multipart_add_part(tdata->pool, multipart_body, dummy_part);
+    }
+
+    tdata->msg->body = multipart_body;
+
+    /* Send the request. */
+    status = pjsip_endpt_send_request_stateless(pjsua_var.endpt, tdata, NULL, NULL);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    failed to send INVITE (%d)", status));
+        pj_pool_release(pool);
+        if (restore_setting)
+            pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+        return -1504;
+    }
+
+    /* Wait for response. */
+    PJ_LOG(3,(THIS_FILE, "    Waiting for SIPREC response..."));
+    wait_until(NULL, PJSUA_INVALID_ID, 2000);
+
+    pj_pool_release(pool);
+
+    /* Restore original settings. */
+    pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
+    if (restore_setting)
+        pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+
+    if (!g_siprec_test_ctx.request_seen) {
+        PJ_LOG(1, (THIS_FILE, "    no response received"));
+        return -1505;
+    }
+
+    if (g_siprec_test_ctx.response_code != 400) {
+        PJ_LOG(1, (THIS_FILE, "    expected 400 Bad Request, got %d",
+                   g_siprec_test_ctx.response_code));
+        return -1506;
+    }
+
+    return 0;
+}
 
 
 /*****************************************************************************
@@ -737,8 +1074,10 @@ int pjsua_call_test(void)
     rc = test_reinit_bounds_untyped_mline();
     if (rc != 0) goto on_return;
 
-    /* ---- SIPREC Metadata Validation Tests ---- */
-    rc = test_siprec_metadata_validation();
+    rc = test_siprec_non_multipart_accepted();
+    if (rc != 0) goto on_return;
+
+    rc = test_siprec_no_metadata_rejected();
     if (rc != 0) goto on_return;
 
 on_return:
