@@ -87,8 +87,8 @@ typedef struct msg_size_saved
 /* Tweak library settings in order to bring down payload size */
 static void minimize_msg_size(msg_size_saved *sv)
 {
-    pjmedia_endpt *endpt = pjsua_get_pjmedia_endpt();
-    pj_bool_t no = PJ_FALSE;
+    pjmedia_endpt *pjendpt = pjsua_get_pjmedia_endpt();
+    const pj_bool_t no = PJ_FALSE;
     const pj_str_t all = pj_str("*");
     const pj_str_t pcmu = pj_str("PCMU/8000");
 
@@ -97,7 +97,7 @@ static void minimize_msg_size(msg_size_saved *sv)
     sv->compact_form        = pjsip_cfg()->endpt.use_compact_form;
     sv->rtpmap_static       = pjmedia_add_rtpmap_for_static_pt;
     sv->bandw_tias          = pjmedia_add_bandwidth_tias_in_sdp;
-    pjmedia_endpt_get_flag(endpt, PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG,
+    pjmedia_endpt_get_flag(pjendpt, PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG,
                            &sv->tel_event);
     sv->codec_count = PJ_ARRAY_SIZE(sv->codecs);
     if (pjsua_enum_codecs(sv->codecs, &sv->codec_count) != PJ_SUCCESS)
@@ -108,7 +108,7 @@ static void minimize_msg_size(msg_size_saved *sv)
     pjsip_cfg()->endpt.use_compact_form     = PJ_TRUE;
     pjmedia_add_rtpmap_for_static_pt        = PJ_FALSE;
     pjmedia_add_bandwidth_tias_in_sdp       = PJ_FALSE;
-    pjmedia_endpt_set_flag(endpt, PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG, &no);
+    pjmedia_endpt_set_flag(pjendpt, PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG, &no);
     /* codec wise, we'll disable everything and allow only PCMU */
     pjsua_codec_set_priority(&all,  PJMEDIA_CODEC_PRIO_DISABLED);
     pjsua_codec_set_priority(&pcmu, PJMEDIA_CODEC_PRIO_HIGHEST);
@@ -117,13 +117,13 @@ static void minimize_msg_size(msg_size_saved *sv)
 /* Restore original settings, so other tests are not affected */
 static void restore_msg_size(const msg_size_saved *sv)
 {
-    pjmedia_endpt *endpt = pjsua_get_pjmedia_endpt();
+    pjmedia_endpt *pjendpt = pjsua_get_pjmedia_endpt();
     unsigned i;
     pjsip_cfg()->endpt.disable_tcp_switch   = sv->disable_tcp_switch;
     pjsip_cfg()->endpt.use_compact_form     = sv->compact_form;
     pjmedia_add_rtpmap_for_static_pt        = sv->rtpmap_static;
     pjmedia_add_bandwidth_tias_in_sdp       = sv->bandw_tias;
-    pjmedia_endpt_set_flag(endpt, PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG,
+    pjmedia_endpt_set_flag(pjendpt, PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG,
                            &sv->tel_event);
     for (i = 0; i < sv->codec_count; ++i) {
         pjsua_codec_set_priority(&sv->codecs[i].codec_id,
