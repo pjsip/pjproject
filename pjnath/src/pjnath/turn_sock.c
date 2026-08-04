@@ -1603,18 +1603,29 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
             if (!is_stun)
                 goto on_return;
 
+            /* Session may already be gone, see on_data_read() */
+            if (!turn_sock->sess || turn_sock->is_destroying)
+                goto on_return;
+
             pj_bzero(&prm, sizeof(prm));
             prm.pkt = data;
             prm.pkt_len = *remainder;
             prm.src_addr = &conn->peer_addr;
             prm.src_addr_len = conn->peer_addr_len;
-            pj_turn_session_on_rx_pkt2(conn->turn_sock->sess, &prm);
+            pj_turn_session_on_rx_pkt2(turn_sock->sess, &prm);
+
+            /* Insufficient fragment, wait for more data */
+            if (prm.parsed_len == 0)
+                goto on_return;
+
             /* Got remainder? */
-            if (prm.parsed_len < *remainder && prm.parsed_len > 0) {
+            if (prm.parsed_len < *remainder) {
+                *remainder -= prm.parsed_len;
                 pj_memmove(data, (pj_uint8_t*)data + prm.parsed_len,
                            *remainder);
+            } else {
+                *remainder = 0;
             }
-            *remainder -= prm.parsed_len;
         } else
             goto on_return;
     }
