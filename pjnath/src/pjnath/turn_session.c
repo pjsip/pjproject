@@ -1285,6 +1285,8 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt2(
     pj_status_t status;
     pj_bool_t is_datagram;
 
+    PJ_ASSERT_RETURN(sess && prm, PJ_EINVAL);
+
     /* Packet could be ChannelData or STUN message (response or
      * indication).
      */

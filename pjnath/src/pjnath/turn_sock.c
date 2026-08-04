@@ -888,6 +888,16 @@ static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
             pj_size_t parsed_len;
             //const pj_uint8_t *pkt = (const pj_uint8_t*)data;
 
+            /* The previous iteration may have destroyed the session, e.g.
+             * an error or deallocation response drives it to DESTROYING and
+             * turn_on_state() clears turn_sock->sess. The group lock is
+             * re-entrant, so it does not prevent this.
+             */
+            if (!turn_sock->sess || turn_sock->is_destroying) {
+                *remainder = 0;
+                break;
+            }
+
             //PJ_LOG(5,(turn_sock->pool->obj_name, 
             //        "Packet start: %02X %02X %02X %02X", 
             //        pkt[0], pkt[1], pkt[2], pkt[3]));
