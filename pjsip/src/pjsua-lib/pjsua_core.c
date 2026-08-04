@@ -1099,6 +1099,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
         media_cfg = &default_media_cfg;
     }
 
+    PJ_ASSERT_ON_FAIL(ua_cfg->outbound_proxy_cnt <=
+                      PJ_ARRAY_SIZE(ua_cfg->outbound_proxy),
+                      { status = PJ_EINVAL; goto on_error; });
+
     /* Initialize logging first so that info/errors can be captured */
     if (log_cfg) {
         status = pjsua_reconfigure_logging(log_cfg);
@@ -3586,11 +3590,28 @@ static void timer_cb( pj_timer_heap_t *th,
                       pj_timer_entry *entry)
 {
     pjsua_timer_list *tmr = (pjsua_timer_list *)entry->user_data;
-    void (*cb)(void *user_data) = tmr->cb;
-    void *user_data = tmr->user_data;
+    void (*cb)(void *user_data);
+    void *user_data;
 
     PJ_UNUSED_ARG(th);
 
+    /* The tmr fields are guarded by timer_mutex (they are assigned in
+     * pjsua_schedule_timer2() with the mutex held), so fetch them under
+     * the mutex.
+     */
+    pj_mutex_lock(pjsua_var.timer_mutex);
+    cb = tmr->cb;
+    user_data = tmr->user_data;
+    pj_mutex_unlock(pjsua_var.timer_mutex);
+
+    /* Invoke the callback without holding timer_mutex, since the callback
+     * may acquire it too (e.g. call_med_event_cb()) or acquire other locks,
+     * such as PJSUA_LOCK, which must not be nested under timer_mutex.
+     *
+     * Note that the entry deliberately stays in the active timer list until
+     * the callback returns: pjsua_vid.c scans that list to find out whether
+     * a pending media event callback has completed.
+     */
     if (cb)
         (*cb)(user_data);
 

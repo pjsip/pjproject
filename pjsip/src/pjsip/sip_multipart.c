@@ -72,7 +72,17 @@ static int multipart_print_body(struct pjsip_msg_body *msg_body,
 
     m_data = (const struct multipart_data*)msg_body->data;
 
-    PJ_ASSERT_RETURN(m_data && !pj_list_empty(&m_data->part_head), PJ_EINVAL);
+    PJ_ASSERT_RETURN(m_data, -1);
+
+    /* Refuse to print a multipart body that has no parts. This is
+     * reachable from a received message whose multipart body contains
+     * only the closing delimiter. Return a negative value (printer
+     * error) rather than the positive PJ_EINVAL, so the caller in
+     * pjsip_msg_print() does not mistake it for an encoded length and
+     * over-advance the output buffer.
+     */
+    if (pj_list_empty(&m_data->part_head))
+        return -1;
 
     part = m_data->part_head.next;
     while (part != &m_data->part_head) {
