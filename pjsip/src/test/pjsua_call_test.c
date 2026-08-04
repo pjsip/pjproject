@@ -618,62 +618,6 @@ static int test_reinit_bounds_untyped_mline(void)
 }
 
 
-/* Module to intercept outgoing INVITE requests and add SIPREC headers for testing. */
-static pj_bool_t siprec_test_tx_request(pjsip_tx_data *tdata)
-{
-    if (g_ctx.siprec_test_mode > 0 &&
-        tdata->msg->type == PJSIP_REQUEST_MSG &&
-        tdata->msg->line.req.method.id == PJSIP_INVITE_METHOD)
-    {
-        /* Add Require: siprec header. */
-        {
-            pj_str_t hname = pj_str("Require");
-            pj_str_t hvalue = pj_str("siprec");
-            pjsip_generic_string_hdr *req_hdr =
-                pjsip_generic_string_hdr_create(tdata->pool, &hname, &hvalue);
-            pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)req_hdr);
-        }
-
-        /* Add Contact header with +sip.src parameter. */
-        {
-            pj_str_t src_str = pj_str("+sip.src");
-            pjsip_contact_hdr *contact_hdr =
-                (pjsip_contact_hdr*)pjsip_msg_find_hdr(tdata->msg,
-                                                        PJSIP_H_CONTACT, NULL);
-            if (contact_hdr && contact_hdr->uri) {
-                pjsip_param *new_param = PJ_POOL_ALLOC_T(tdata->pool, pjsip_param);
-                new_param->name = src_str;
-                new_param->value.slen = 0;
-                pj_list_push_back(&contact_hdr->other_param, new_param);
-            }
-        }
-
-        PJ_LOG(3,(THIS_FILE, "    Modified INVITE with SIPREC headers for test mode %d",
-                 g_ctx.siprec_test_mode));
-    }
-    return PJ_FALSE;
-}
-
-/* Module to handle transactions. */
-static void siprec_test_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
-{
-    PJ_UNUSED_ARG(tsx);
-    PJ_UNUSED_ARG(e);
-}
-
-static struct {
-    pjsip_module  mod;
-} g_siprec_test_mod = {
-    {
-        NULL, NULL,
-        { "mod-siprec-test", 17 },
-        -1,
-        PJSIP_MOD_PRIORITY_APPLICATION,
-        NULL, NULL, NULL, NULL,
-        NULL, NULL, &siprec_test_tx_request, NULL, &siprec_test_tsx_state
-    }
-};
-
 /* Helper to create SDP with label attribute. */
 static pjmedia_sdp_session *create_siprec_sdp(pj_pool_t *pool)
 {
@@ -743,6 +687,7 @@ static int test_siprec_non_multipart_accepted(void)
     pj_status_t status;
     pj_str_t sdp_str;
     char sdp_buf[2048];
+    pjsip_msg_body *body;
 
     PJ_LOG(3, (THIS_FILE, "  SIPREC non-multipart (direct SDP) acceptance"));
 
@@ -812,7 +757,7 @@ static int test_siprec_non_multipart_accepted(void)
     pj_strdup2(pool, &sdp_str, sdp_buf);
     sdp_str.slen = status;
 
-    pjsip_msg_body *body = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_msg_body);
+    body = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_msg_body);
     pj_strdup2(tdata->pool, &body->content_type.type, "application");
     pj_strdup2(tdata->pool, &body->content_type.subtype, "sdp");
     body->data = sdp_str.ptr;
