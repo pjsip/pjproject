@@ -2313,8 +2313,10 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
         call_opt.vid_cnt = app_config.vid.vid_cnt;
         call_opt.txt_cnt = app_config.txt_cnt;
 
-        pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL, 
-                             NULL, NULL);
+        status = pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL,
+                                      NULL, NULL);
+        if (status != PJ_SUCCESS)
+            pjsua_perror(THIS_FILE, "Unable to make call", status);
     }   
 
     app_running = PJ_TRUE;
