@@ -19,7 +19,8 @@
 /*
  * pjsua-level regression tests for the call media-count bounds checks that
  * prevent overflowing the fixed-size per-call media arrays
- * (pjsua_call.media[PJSUA_MAX_CALL_MEDIA]).
+ * (pjsua_call.media[PJSUA_MAX_CALL_MEDIA]), plus RFC2543 call hold on an SDP
+ * that carries no connection line.
  *
  * Scenarios covered:
  *   1. Outgoing pjsua_call_make_call() rejects a call setting whose media
@@ -33,6 +34,10 @@
  *      resulting count would overflow, even though the requested setting
  *      alone is within the limit (apply_call_setting() accepts it). This is
  *      the reinit/reoffer path in pjsua_media_channel_init().
+ *   4. RFC2543 call hold (PJSUA_CALL_HOLD_TYPE_RFC2543) of a call whose local
+ *      SDP has neither a session-level nor a media-level connection line:
+ *      modify_sdp_of_call_hold() must create one to hold the 0.0.0.0 address
+ *      instead of dereferencing NULL.
  *
  * The over-limit settings are rejected before any media is instantiated, so
  * the tests use text media (txt_cnt) as the "second" media type: this keeps
@@ -149,6 +154,17 @@ static struct
     int           siprec_test_mode;
     /* For SIPREC tests, record if the call was accepted. */
     pj_bool_t     siprec_call_accepted;
+    /* When set, on_call_sdp_created removes every connection line (session
+     * and media level) from the local offer created for strip_conn_call_id,
+     * so the call-hold SDP modification runs on an SDP with no c= line. */
+    pj_bool_t     strip_conn_in_offer;
+    pjsua_call_id strip_conn_call_id;
+    /* Recorded by on_call_rx_offer while expect_hold_offer is set: whether
+     * the offer received by the peer leg was seen at all, and whether every
+     * m= line in it resolves to a connection line holding 0.0.0.0. */
+    pj_bool_t     expect_hold_offer;
+    pj_bool_t     hold_offer_seen;
+    pj_bool_t     hold_offer_conn_ok;
 } g_ctx;
 
 
@@ -224,7 +240,20 @@ static void on_call_sdp_created(pjsua_call_id call_id,
 {
     pjmedia_sdp_media *m;
 
-    PJ_UNUSED_ARG(call_id);
+    /* Strip all connection lines from the offer of the designated call, so
+     * modify_sdp_of_call_hold() finds neither a media- nor a session-level
+     * c= line. Only offers are touched (rem_sdp == NULL).
+     */
+    if (g_ctx.strip_conn_in_offer && rem_sdp == NULL &&
+        call_id == g_ctx.strip_conn_call_id)
+    {
+        unsigned i;
+
+        sdp->conn = NULL;
+        for (i = 0; i < sdp->media_count; ++i)
+            sdp->media[i]->conn = NULL;
+        return;
+    }
 
     if (!g_ctx.inject_app_mline || rem_sdp != NULL)
         return;
@@ -247,6 +276,48 @@ static void on_call_sdp_created(pjsua_call_id call_id,
         m->conn = pjmedia_sdp_conn_clone(pool, sdp->conn);
 
     sdp->media[sdp->media_count++] = m;
+}
+
+/* Inspect the offer received by the peer leg of a hold re-INVITE. Records
+ * whether every m= line resolves to a connection line carrying the RFC2543
+ * hold address, which is what the SDP created by modify_sdp_of_call_hold()
+ * must look like on the wire. The offer is always accepted (code is left at
+ * 200) so the hold negotiation completes.
+ */
+static void on_call_rx_offer(pjsua_call_id call_id,
+                             const pjmedia_sdp_session *offer,
+                             void *reserved,
+                             pjsip_status_code *code,
+                             pjsua_call_setting *opt)
+{
+    unsigned i;
+    pj_bool_t ok;
+
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(reserved);
+    PJ_UNUSED_ARG(code);
+    PJ_UNUSED_ARG(opt);
+
+    if (!g_ctx.expect_hold_offer)
+        return;
+
+    ok = (offer->media_count > 0);
+    for (i = 0; i < offer->media_count; ++i) {
+        const pjmedia_sdp_conn *conn = offer->media[i]->conn;
+
+        if (!conn)
+            conn = offer->conn;
+        if (!conn || pj_strcmp2(&conn->net_type, "IN") != 0 ||
+            pj_strcmp2(&conn->addr_type, "IP4") != 0 ||
+            pj_strcmp2(&conn->addr, "0.0.0.0") != 0)
+        {
+            ok = PJ_FALSE;
+            break;
+        }
+    }
+
+    g_ctx.hold_offer_conn_ok = ok;
+    g_ctx.hold_offer_seen = PJ_TRUE;
 }
 
 
@@ -277,6 +348,12 @@ static pj_bool_t wait_until(pj_bool_t (*predicate)(pjsua_call_id),
         pjsua_handle_events(50);
     }
     return predicate ? predicate(call_id) : PJ_FALSE;
+}
+
+static pj_bool_t hold_offer_processed(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return g_ctx.hold_offer_seen;
 }
 
 static pj_bool_t call_is_confirmed(pjsua_call_id call_id)
@@ -943,6 +1020,106 @@ static int test_siprec_no_metadata_rejected(void)
     return 0;
 }
 
+/* RFC2543 call hold of a call whose local SDP has no connection line at all.
+ *
+ * With PJSUA_CALL_HOLD_TYPE_RFC2543, modify_sdp_of_call_hold() puts the hold
+ * address into the media-level c= line, falling back to the session-level one.
+ * Both can be missing, in which case the address used to be written through a
+ * NULL pointer; a connection line has to be created instead.
+ *
+ * The conn-less SDP is produced through the public on_call_sdp_created()
+ * callback, which is invoked by pjsua_media_channel_create_sdp() before
+ * create_sdp_of_call_hold() applies the hold modification. The assertions are
+ * end-to-end rather than on internals: pjsua_call_set_hold() must succeed
+ * (an SDP whose m= line resolves to no c= line at all fails
+ * pjmedia_sdp_validate() with PJMEDIA_SDP_EMISSINGCONN, so a re-INVITE that
+ * merely skipped the missing line would be rejected here), and the offer that
+ * reaches the peer must carry the 0.0.0.0 hold address.
+ */
+static int test_rfc2543_hold_without_conn(void)
+{
+    pjsua_call_setting opt;
+    pj_str_t uri = pj_str(g_ctx.self_uri);
+    pjsua_call_hold_type saved_hold_type;
+    pj_status_t status;
+    pjsua_call_id cid = PJSUA_INVALID_ID;
+    pjsua_call_info ci;
+    int rc = 0;
+
+    PJ_LOG(3, (THIS_FILE, "  RFC2543 hold with no c= line in the local SDP"));
+
+    /* pjsua_call.call_hold_type is captured from the account when the call is
+     * created, so switch the account over before placing the call.
+     */
+    saved_hold_type = pjsua_var.acc[g_ctx.acc_id].cfg.call_hold_type;
+    pjsua_var.acc[g_ctx.acc_id].cfg.call_hold_type =
+                                            PJSUA_CALL_HOLD_TYPE_RFC2543;
+
+    pjsua_call_setting_default(&opt);
+    opt.aud_cnt = 1;
+    opt.vid_cnt = 0;
+    opt.txt_cnt = 0;
+    status = pjsua_call_make_call(g_ctx.acc_id, &uri, &opt, NULL, NULL, &cid);
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    make_call failed (%d)", status));
+        rc = -1400;
+        goto on_return;
+    }
+
+    if (!wait_until(&call_is_confirmed, cid, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    call did not reach CONFIRMED in time"));
+        rc = -1401;
+        goto on_return;
+    }
+
+    /* Hold, with every c= line removed from the hold offer. */
+    g_ctx.strip_conn_call_id = cid;
+    g_ctx.strip_conn_in_offer = PJ_TRUE;
+    g_ctx.expect_hold_offer = PJ_TRUE;
+    g_ctx.hold_offer_seen = PJ_FALSE;
+    g_ctx.hold_offer_conn_ok = PJ_FALSE;
+
+    /* The hold SDP is created synchronously here, so the stripping only
+     * applies to this one offer.
+     */
+    status = pjsua_call_set_hold(cid, NULL);
+    g_ctx.strip_conn_in_offer = PJ_FALSE;
+    if (status != PJ_SUCCESS) {
+        PJ_LOG(1, (THIS_FILE, "    set_hold failed (%d)", status));
+        rc = -1402;
+        goto on_return;
+    }
+
+    if (!wait_until(&hold_offer_processed, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    peer never received the hold offer"));
+        rc = -1403;
+        goto on_return;
+    }
+
+    if (!g_ctx.hold_offer_conn_ok) {
+        PJ_LOG(1, (THIS_FILE, "    hold offer has no c= line with 0.0.0.0"));
+        rc = -1404;
+        goto on_return;
+    }
+
+    /* The call must survive the hold. */
+    if (pjsua_call_get_info(cid, &ci) != PJ_SUCCESS ||
+        ci.state != PJSIP_INV_STATE_CONFIRMED)
+    {
+        PJ_LOG(1, (THIS_FILE, "    call not alive after hold"));
+        rc = -1405;
+        goto on_return;
+    }
+
+on_return:
+    g_ctx.strip_conn_in_offer = PJ_FALSE;
+    g_ctx.expect_hold_offer = PJ_FALSE;
+    pjsua_var.acc[g_ctx.acc_id].cfg.call_hold_type = saved_hold_type;
+    drain_all_calls();
+
+    return rc;
+}
+
 
 /*****************************************************************************
  * Main entry point
@@ -982,6 +1159,7 @@ int pjsua_call_test(void)
     pjsua_config_default(&ua_cfg);
     ua_cfg.cb.on_incoming_call = &on_incoming_call;
     ua_cfg.cb.on_call_sdp_created = &on_call_sdp_created;
+    ua_cfg.cb.on_call_rx_offer = &on_call_rx_offer;
     /* Single-threaded: event pumping happens on this thread, so callbacks
      * run here too and no locking races arise in the test itself. */
     ua_cfg.thread_cnt = 0;
@@ -1085,6 +1263,9 @@ int pjsua_call_test(void)
     rc = test_siprec_no_metadata_rejected();
     if (rc != 0) goto on_return;
 #endif
+
+    rc = test_rfc2543_hold_without_conn();
+    if (rc != 0) goto on_return;
 
 on_return:
     drain_all_calls();

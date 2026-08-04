@@ -29,6 +29,19 @@
 #include <pj/math.h>
 #include <pjlib-util/string.h>
 
+/* Number of decimal digits needed to hold value n (up to 10 digits). */
+#define NUM_DIGITS(n) \
+    ((n) < 10UL ? 1 : (n) < 100UL ? 2 : (n) < 1000UL ? 3 : \
+     (n) < 10000UL ? 4 : (n) < 100000UL ? 5 : (n) < 1000000UL ? 6 : \
+     (n) < 10000000UL ? 7 : (n) < 100000000UL ? 8 : \
+     (n) < 1000000000UL ? 9 : 10)
+
+/* Digits reserved for the auto-generated Content-Length value. A message
+ * body can never exceed the maximum SIP packet length, so bound the reserved
+ * space by PJSIP_MAX_PKT_LEN's digit count.
+ */
+#define CLEN_SPACE      NUM_DIGITS(PJSIP_MAX_PKT_LEN)
+
 PJ_DEF_DATA(const pjsip_method) pjsip_invite_method =
         { PJSIP_INVITE_METHOD, { "INVITE",6 }};
 
@@ -523,7 +536,6 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 
     /* Process message body. */
     if (msg->body) {
-        enum { CLEN_SPACE = 5 };
         char *clen_pos = NULL;
 
         /* Automaticly adds Content-Type and Content-Length headers, only
@@ -552,13 +564,15 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
             *p++ = '\r';
             *p++ = '\n';
 
-            /* Add Content-Length header. */
-            if ((end-p) < clen_hdr.slen + 12 + 2) {
+            /* Add Content-Length header. Reserve space for both this line's
+             * CRLF and the blank CRLF written after the headers below.
+             */
+            if ((end-p) < clen_hdr.slen + CLEN_SPACE + 4) {
                 return -1;
             }
             pj_memcpy(p, clen_hdr.ptr, clen_hdr.slen);
             p += clen_hdr.slen;
-            
+
             /* Print blanks after "Content-Length:", this is where we'll put
              * the content length value after we know the length of the
              * body.
@@ -576,7 +590,7 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 
         /* Print the message body itself. */
         len = (*msg->body->print_body)(msg->body, p, end-p);
-        if (len < 0) {
+        if (len < 0 || len > end - p) {
             return -1;
         }
         p += len;
@@ -587,7 +601,8 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
         if (clen_pos) {
             char tmp[16];
             len = pj_utoa((unsigned long)len, tmp);
-            if (len > CLEN_SPACE) len = CLEN_SPACE;
+            if (len > CLEN_SPACE)
+                return -1;
             pj_memcpy(clen_pos+CLEN_SPACE-len, tmp, len);
         }
 

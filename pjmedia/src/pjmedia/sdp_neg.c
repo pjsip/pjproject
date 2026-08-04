@@ -1641,10 +1641,13 @@ static pj_status_t match_offer(pj_pool_t *pool,
             unsigned pt;
             pj_status_t status;
 
-            /* Get the rtpmap. */
+            /* Get the rtpmap. Static payload types (e.g. PCMU/PCMA) may not
+             * have an rtpmap attribute and can never be RED, so skip them.
+             */
             a = pjmedia_sdp_media_find_attr2(preanswer, "rtpmap",
                                              &preanswer->desc.fmt[i]);
-            pj_assert(a);
+            if (!a)
+                continue;
             pjmedia_sdp_attr_get_rtpmap(a, &r);
 
             /* Only care for redundancy format */
@@ -1666,10 +1669,11 @@ static pj_status_t match_offer(pj_pool_t *pool,
                                                  &preanswer->desc.fmt[i]);
                 if (a) {
                     int lvl = 0;
-                    for (i = 0; i < (unsigned)a->value.slen; i++) {
-                        if (*(a->value.ptr + i) == '/') {
+                    unsigned j;
+                    for (j = 0; j < (unsigned)a->value.slen; j++) {
+                        if (*(a->value.ptr + j) == '/') {
                             if (lvl++ >= o_red_level) {
-                                a->value.slen = i;
+                                a->value.slen = j;
                                 break;
                             }
                         }
@@ -1699,10 +1703,16 @@ static pj_status_t match_offer(pj_pool_t *pool,
                 continue;
             }
 
-            /* Get the rtpmap for format. */
+            /* Get the rtpmap for format. A dynamic PT without an rtpmap
+             * attribute can never be telephone-event, so skip it instead of
+             * dereferencing NULL (pj_assert() is a no-op in release builds).
+             */
             a = pjmedia_sdp_media_find_attr2(preanswer, "rtpmap",
                                              &pt_answer[i]);
-            pj_assert(a);
+            if (!a) {
+                ++i;
+                continue;
+            }
             pjmedia_sdp_attr_get_rtpmap(a, &r);
 
             /* Only care for telephone-event format */

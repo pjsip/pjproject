@@ -5788,6 +5788,17 @@ static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
             if (!conn)
                 conn = sdp->conn;
 
+            /* The SDP may have no connection line at all (neither media nor
+             * session level), so create a media level one to hold the
+             * call-hold address.
+             */
+            if (!conn) {
+                conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+                conn->net_type = pj_str("IN");
+                conn->addr_type = pj_str("IP4");
+                m->conn = conn;
+            }
+
             /* Modify address */
             conn->addr = pj_str("0.0.0.0");
 
