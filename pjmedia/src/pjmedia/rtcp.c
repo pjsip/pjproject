@@ -549,6 +549,7 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
     const pjmedia_rtcp_rr *rr = NULL;
     const pjmedia_rtcp_sr *sr = NULL;
     pj_uint32_t last_loss, jitter_samp, jitter;
+    pj_int32_t tx_loss;
 
     /* Parse RTCP */
     if (common->pt == RTCP_SR) {
@@ -605,12 +606,22 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
 
     last_loss = sess->stat.tx.loss;
 
-    /* Get packet loss */
-    sess->stat.tx.loss = (rr->total_lost_2 << 16) +
-                         (rr->total_lost_1 << 8) +
-                          rr->total_lost_0;
+    /* Get packet loss. RFC 3550 6.4.1 defines cumulative number of packets
+     * lost as a signed 24-bit value; it may be negative when duplicate or
+     * late packets make received exceed expected. Sign-extend from bit 23.
+     */
+    tx_loss = (rr->total_lost_2 << 16) +
+              (rr->total_lost_1 << 8) +
+               rr->total_lost_0;
+    if (tx_loss & 0x800000)
+        tx_loss -= 0x1000000;
 
-    TRACE_((sess->name, "Rx RTCP RR: total_lost_2=%x, 1=%x, 0=%x, lost=%d", 
+    /* stat.tx.loss is unsigned, so clamp a negative cumulative loss (net
+     * gain from duplicates) to zero.
+     */
+    sess->stat.tx.loss = (tx_loss < 0) ? 0 : (pj_uint32_t)tx_loss;
+
+    TRACE_((sess->name, "Rx RTCP RR: total_lost_2=%x, 1=%x, 0=%x, lost=%d",
             (int)rr->total_lost_2,
             (int)rr->total_lost_1,
             (int)rr->total_lost_0,
