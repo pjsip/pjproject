@@ -315,6 +315,16 @@ static pj_status_t tp_attach(   pjmedia_transport *tp,
      * serialized with the send-side snapshot and detach's erase.
      */
     pj_grp_lock_acquire(tp->grp_lock);
+    for (i=0; i<loop->user_cnt; ++i) {
+        if (loop->users[i].user_data == user_data) {
+            pj_grp_lock_release(tp->grp_lock);
+            return PJ_EINVALIDOP;
+        }
+    }
+    if (loop->user_cnt >= loop->max_attach_cnt) {
+        pj_grp_lock_release(tp->grp_lock);
+        return PJ_ETOOMANY;
+    }
     loop->users[loop->user_cnt].rtp_cb = rtp_cb;
     loop->users[loop->user_cnt].rtp_cb2 = rtp_cb2;
     loop->users[loop->user_cnt].rtcp_cb = rtcp_cb;
