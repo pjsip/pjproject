@@ -19,6 +19,7 @@
 #include <pjmedia/types.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/log.h>
 #include <pj/string.h>
 
 
@@ -214,10 +215,18 @@ PJ_DEF(pj_status_t) pjmedia_h263_unpacketize (pjmedia_h263_packetizer *pktz,
         return PJ_EINVAL;
     }
 
-    /* Validate bitstream length */
-    if (bits_size < *pos + payload_len + 2) {
+    /* Validate bitstream length.
+     * Note: besides the payload itself, the writing below may also emit
+     * up to PLEN bytes of extra picture header plus two 2-octet zero
+     * markers (PSC), so the check must account for "+ PLEN + 4", not
+     * just "+ 2".
+     */
+    if (bits_size < *pos + payload_len + PLEN + 4) {
         /* Insufficient bistream buffer, discard this payload */
-        pj_assert(!"Insufficient H.263 bitstream buffer");
+        PJ_LOG(2,(THIS_FILE,
+                  "Insufficient H.263 bitstream buffer (required=%u, size=%u)",
+                  (unsigned)(*pos + payload_len + PLEN + 4),
+                  (unsigned)bits_size));
         pktz->unpack_prev_lost = PJ_TRUE;
         return PJ_ETOOSMALL;
     }
