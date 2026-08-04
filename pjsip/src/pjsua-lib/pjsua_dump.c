@@ -519,7 +519,7 @@ static void dump_media_session(const char *indent,
             pj_ansi_snprintf(s, sizeof(s), "%d", v)
 
 #   define VALIDATE_PRINT_BUF() \
-        if (len < 1 || len >= end-p) { *p = '\0'; return; } \
+        if (len < 1 || len >= (end-p)-1) { *p = '\0'; return; } \
         p += len; *p++ = '\n'; *p = '\0'
 
 
