@@ -1007,9 +1007,10 @@ send_pkt:
         }
 
         /* Send the second ChannelData on its own. It needs its own buffer and
-         * operation key, as the send above may still be pending.
+         * operation key, as the send above may still be pending, which is why
+         * PJ_EPENDING counts as sent here too.
          */
-        if (status == PJ_SUCCESS && send_extra) {
+        if ((status == PJ_SUCCESS || status == PJ_EPENDING) && send_extra) {
             pj_uint8_t *cd = test_srv->extra_data;
             pj_ssize_t cd_len = sizeof(test_srv->extra_data);
 
