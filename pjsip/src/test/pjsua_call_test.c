@@ -181,6 +181,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     pj_status_t status;
 
     PJ_UNUSED_ARG(acc_id);
+    PJ_UNUSED_ARG(rdata);
 
     g_ctx.incoming_call_id = call_id;
 
@@ -368,12 +369,6 @@ static void drain_all_calls(void)
      */
     wait_until(NULL, PJSUA_INVALID_ID, PJ_IOQUEUE_KEY_FREE_DELAY + 200);
 }
-
-/* State for SIPREC tests to track response code. */
-static struct {
-    pj_bool_t request_seen;
-    int        response_code;
-} g_siprec_test_ctx;
 
 /*****************************************************************************
  * Sub-tests
@@ -596,7 +591,7 @@ static int test_reinit_bounds_untyped_mline(void)
     return 0;
 }
 
-
+#if PJSUA_HAS_SIPREC
 /* Helper to create SDP with label attribute. */
 static pjmedia_sdp_session *create_siprec_sdp(pj_pool_t *pool)
 {
@@ -650,7 +645,12 @@ static pjmedia_sdp_session *create_siprec_sdp(pj_pool_t *pool)
     return sdp;
 }
 
-#if PJSUA_HAS_SIPREC
+/* State for SIPREC tests to track response code. */
+static struct {
+    pj_bool_t request_seen;
+    int        response_code;
+} g_siprec_test_ctx;
+
 /* Predicate to check if SIPREC response has been received */
 static pj_bool_t siprec_response_seen(pjsua_call_id call_id)
 {
