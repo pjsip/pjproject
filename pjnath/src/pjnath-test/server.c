@@ -116,6 +116,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
     test_srv->passwd = pj_str(TURN_PASSWD);
 
     pj_ioqueue_op_key_init(&test_srv->send_key, sizeof(test_srv->send_key));
+    pj_ioqueue_op_key_init(&test_srv->send_key2, sizeof(test_srv->send_key2));
 
     if (flags & CREATE_DNS_SERVER) {
         status = pj_dns_server_create(stun_cfg->pf, test_srv->stun_cfg->ioqueue,
@@ -937,6 +938,7 @@ send_pkt:
     if (resp) {
         pj_turn_tp_type tp_type = get_turn_tp_type(test_srv->flags);
         pj_stun_lifetime_attr *lf_attr;
+        pj_bool_t send_extra = PJ_FALSE;
 
         status = pj_stun_msg_encode(resp, (pj_uint8_t*)data, MAX_STUN_PKT, 
                                     0, &auth_key, &size);
@@ -964,23 +966,26 @@ send_pkt:
         }
 
         /* Append two ChannelData packets to the ChannelBind response, so
-         * that the client processes the binding and both packets in a
-         * single read.
+         * that the client processes the binding and both packets in a single
+         * read. In split mode only the first one is appended, and the second
+         * is sent on its own below.
          */
         if (test_srv->turn_append_data_on_chbind && size + 16 <= MAX_STUN_PKT &&
             PJ_STUN_IS_SUCCESS_RESPONSE(resp->hdr.type) &&
             PJ_STUN_GET_METHOD(resp->hdr.type) == PJ_STUN_CHANNEL_BIND_METHOD)
         {
+            unsigned cnt = test_srv->turn_split_data_on_chbind? 1 : 2;
             pj_uint8_t *p = (pj_uint8_t*)data + size;
             unsigned j;
 
-            for (j=0; j<2; ++j) {
+            for (j=0; j<cnt; ++j) {
                 p[0] = 0x40; p[1] = 0x00;
                 p[2] = 0x00; p[3] = 0x04;
                 p[4] = 't';  p[5] = 'e';  p[6] = 's';  p[7] = 't';
                 p += 8;
             }
-            size += 16;
+            size += cnt * 8;
+            send_extra = test_srv->turn_split_data_on_chbind;
         }
 
         len = size;
@@ -999,6 +1004,29 @@ send_pkt:
             status = pj_activesock_sendto(test_srv->turn_sock, 
                                           &test_srv->send_key, data, 
                                           &len, 0, src_addr, addr_len);     
+        }
+
+        /* Send the second ChannelData on its own. It needs its own buffer and
+         * operation key, as the send above may still be pending.
+         */
+        if (status == PJ_SUCCESS && send_extra) {
+            pj_uint8_t *cd = test_srv->extra_data;
+            pj_ssize_t cd_len = sizeof(test_srv->extra_data);
+
+            cd[0] = 0x40; cd[1] = 0x00;
+            cd[2] = 0x00; cd[3] = 0x04;
+            cd[4] = 't';  cd[5] = 'e';  cd[6] = 's';  cd[7] = 't';
+
+            if (tp_type == PJ_TURN_TP_TCP) {
+                pj_activesock_send(test_srv->cl_turn_sock,
+                                   &test_srv->send_key2, cd, &cd_len, 0);
+            }
+#if USE_TLS
+            else if (tp_type == PJ_TURN_TP_TLS) {
+                pj_ssl_sock_send(test_srv->ssl_cl_sock,
+                                 &test_srv->send_key2, cd, &cd_len, 0);
+            }
+#endif
         }
     }
 

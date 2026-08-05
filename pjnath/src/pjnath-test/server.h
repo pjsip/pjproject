@@ -109,6 +109,14 @@ struct test_server
      */
     pj_bool_t            turn_append_data_on_chbind;
 
+    /* Append only the first of the two ChannelData packets above, and send
+     * the second one separately, so that it is likely to arrive in a later
+     * read than the one that bound the channel.
+     */
+    pj_bool_t            turn_split_data_on_chbind;
+    pj_ioqueue_op_key_t  send_key2;
+    pj_uint8_t           extra_data[8];
+
     struct turn_stat {
         unsigned         rx_allocate_cnt;
         unsigned         rx_refresh_cnt;

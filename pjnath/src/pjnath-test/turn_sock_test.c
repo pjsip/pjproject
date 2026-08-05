@@ -671,7 +671,8 @@ static int dealloc_multi_pkt_test(pj_stun_config *stun_cfg,
  */
 static int destroy_in_rx_data_test(pj_stun_config *stun_cfg,
                                    pj_bool_t use_ipv6,
-                                   pj_turn_tp_type tp_type)
+                                   pj_turn_tp_type tp_type,
+                                   pj_bool_t split)
 {
     struct test_session_cfg test_cfg =
     {
@@ -694,7 +695,8 @@ static int destroy_in_rx_data_test(pj_stun_config *stun_cfg,
     struct test_result result;
     int rc;
 
-    PJ_LOG(3,("", "  destroy in on_rx_data test (%s) (%s)",
+    PJ_LOG(3,("", "  destroy in on_rx_data test, %s (%s) (%s)",
+              split? "split send" : "single send",
               use_ipv6?"IPv6":"IPv4",
               (tp_type==PJ_TURN_TP_TCP)?"TCP":"TLS"));
 
@@ -732,11 +734,14 @@ static int destroy_in_rx_data_test(pj_stun_config *stun_cfg,
         return -230;
     }
 
-    /* The server will coalesce two ChannelData packets with the ChannelBind
-     * response, and we destroy the socket while handling the first one.
+    /* The server sends two ChannelData packets along with the ChannelBind
+     * response, and we destroy the socket while handling the first one. In
+     * split mode the second one is sent separately, so that it is likely to
+     * arrive in a later read, which the delivery check must cover too.
      */
     sess->destroy_on_rx_data = PJ_TRUE;
     sess->test_srv->turn_append_data_on_chbind = PJ_TRUE;
+    sess->test_srv->turn_split_data_on_chbind = split;
 
     pj_sockaddr_init(GET_AF(use_ipv6), &peer_addr, NULL, 1234);
     if (use_ipv6)
@@ -833,9 +838,12 @@ int turn_sock_test(void *p)
         if (rc != 0)
             goto on_return;
 
-        rc = destroy_in_rx_data_test(&app_sess.stun_cfg, USE_IPV6, tp_type);
-        if (rc != 0)
-            goto on_return;
+        for (i=0; i<=1; ++i) {
+            rc = destroy_in_rx_data_test(&app_sess.stun_cfg, USE_IPV6,
+                                         tp_type, i);
+            if (rc != 0)
+                goto on_return;
+        }
     }
 
 on_return:
