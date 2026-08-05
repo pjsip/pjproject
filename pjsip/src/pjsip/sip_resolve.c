@@ -215,22 +215,33 @@ static pj_bool_t can_report_result(struct query *query)
 
 /*
  * Internal:
+ *  get the status of the resolution, which is a failure if no address has
+ *  been resolved. Note that the queries may all have succeeded without
+ *  yielding any usable address, e.g. when a DNS A response only contains
+ *  records of another type, in which case no error has been recorded.
+ */
+static pj_status_t get_result_status(struct query *query)
+{
+    if (query->server.count > 0)
+        return PJ_SUCCESS;
+
+    return query->last_error != PJ_SUCCESS? query->last_error:
+                                            PJLIB_UTIL_EDNSNOANSWERREC;
+}
+
+
+/*
+ * Internal:
  *  report the result of the resolution to the caller. The query state must
  *  not be accessed anymore after this, since the caller may release the pool
  *  containing it.
  */
 static void report_result(struct query *query)
 {
-    if (query->server.count > 0) {
-        (*query->cb)(PJ_SUCCESS, query->token, &query->server);
-    } else {
-        pj_status_t status = query->last_error;
+    pj_status_t status = get_result_status(query);
 
-        if (status == PJ_SUCCESS)
-            status = PJLIB_UTIL_EDNSNOANSWERREC;
-
-        (*query->cb)(status, query->token, NULL);
-    }
+    (*query->cb)(status, query->token,
+                 status == PJ_SUCCESS? &query->server: NULL);
 }
 #endif  /* PJSIP_HAS_RESOLVER */
 
@@ -616,22 +627,24 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
      * in another thread.
      */
     report = can_report_result(query);
+
+    if (!report && status != PJ_SUCCESS) {
+        /* Note that this must be logged before releasing the group lock: the
+         * outstanding query may complete as soon as it is released, and the
+         * caller may then release the pool which contains both the query
+         * state and the target host name.
+         */
+        PJ_PERROR(4,(THIS_FILE, status,
+                     "Failed to start DNS query for '%.*s', waiting for the "
+                     "outstanding query to complete",
+                     (int)target->addr.host.slen,
+                     target->addr.host.ptr));
+    }
+
     pj_grp_lock_release(query->grp_lock);
 
-    if (!report) {
-        /* Note that the query state must not be accessed here, since the
-         * outstanding query may have completed in another thread as soon as
-         * the group lock above was released.
-         */
-        if (status != PJ_SUCCESS) {
-            PJ_PERROR(4,(THIS_FILE, status,
-                         "Failed to start DNS query for '%.*s', waiting for "
-                         "the outstanding query to complete",
-                         (int)target->addr.host.slen,
-                         target->addr.host.ptr));
-        }
+    if (!report)
         return;
-    }
 
     /* All queries have completed, i.e. either the responses were available in
      * the cache, or no query could be started at all. Note that the failure
@@ -640,7 +653,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
      * failed to start.
      */
     if (query->server.count == 0) {
-        PJ_PERROR(4,(THIS_FILE, query->last_error,
+        PJ_PERROR(4,(THIS_FILE, get_result_status(query),
                      "Failed to resolve '%.*s'",
                      (int)target->addr.host.slen,
                      target->addr.host.ptr));
