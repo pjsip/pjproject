@@ -2346,6 +2346,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Only attach transport when stream is ready. */
     c_strm->transport = tp;
+    /* Let the transport hold a reference on the stream's group lock for the
+     * duration of each rx callback, so the stream cannot be destroyed by
+     * another thread while an in-flight RTP/RTCP callback is running on it.
+     */
+    att_param.grp_lock = c_strm->grp_lock;
     status = pjmedia_transport_attach2(tp, &att_param);
     if (status != PJ_SUCCESS)
         goto err_cleanup;

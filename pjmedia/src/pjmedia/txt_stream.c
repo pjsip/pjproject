@@ -357,6 +357,11 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
     c_strm->port.grp_lock = c_strm->grp_lock;
 
     /* Only attach transport when stream is ready. */
+    /* Let the transport hold a reference on the stream's group lock across
+     * each rx callback, so the stream cannot be destroyed while an in-flight
+     * RTP/RTCP callback is running on it.
+     */
+    att_param.grp_lock = c_strm->grp_lock;
     status = pjmedia_transport_attach2(tp, &att_param);
     if (status != PJ_SUCCESS)
         goto err_cleanup;

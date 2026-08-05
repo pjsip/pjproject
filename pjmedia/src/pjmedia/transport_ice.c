@@ -101,6 +101,10 @@ struct transport_ice
     void               (*rtcp_cb)(void*,
                                   void*,
                                   pj_ssize_t);
+    pj_grp_lock_t       *cb_grp_lock;   /**< Callback owner's group lock, ref'd
+                                             across each rx callback so the
+                                             owner (stream) cannot be destroyed
+                                             while a callback is in flight. */
 };
 
 
@@ -2434,6 +2438,7 @@ static pj_status_t transport_attach2  (pjmedia_transport *tp,
     tp_ice->rtp_cb = att_param->rtp_cb;
     tp_ice->rtp_cb2 = att_param->rtp_cb2;
     tp_ice->rtcp_cb = att_param->rtcp_cb;
+    tp_ice->cb_grp_lock = att_param->grp_lock;
 
     if (tp->grp_lock)
         pj_grp_lock_release(tp->grp_lock);
@@ -2470,6 +2475,7 @@ static void transport_detach(pjmedia_transport *tp,
     tp_ice->rtp_cb2 = NULL;
     tp_ice->rtcp_cb = NULL;
     tp_ice->stream = NULL;
+    tp_ice->cb_grp_lock = NULL;
 
     if (tp->grp_lock)
         pj_grp_lock_release(tp->grp_lock);
@@ -2558,6 +2564,7 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
     void (*rtp_cb2)(pjmedia_tp_cb_param*);
     void (*rtcp_cb)(void*, void*, pj_ssize_t);
     void *stream;
+    pj_grp_lock_t *cb_grp_lock;
 
     tp_ice = (struct transport_ice*) pj_ice_strans_get_user_data(ice_st);
     if (!tp_ice) {
@@ -2566,7 +2573,10 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
     }
 
     /* Snapshot callback pointers under lock to avoid race with
-     * transport_detach() clearing them.
+     * transport_detach() clearing them, and hold a reference on the callback
+     * owner's group lock across the up-call: transport_detach() clears these
+     * under the same lock before the owner (stream) drops its own reference,
+     * so a non-NULL cb here means the owner is still alive and safe to ref.
      */
     if (tp_ice->base.grp_lock)
         pj_grp_lock_acquire(tp_ice->base.grp_lock);
@@ -2575,6 +2585,9 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
     rtp_cb2 = tp_ice->rtp_cb2;
     rtcp_cb = tp_ice->rtcp_cb;
     stream = tp_ice->stream;
+    cb_grp_lock = tp_ice->cb_grp_lock;
+    if (cb_grp_lock)
+        pj_grp_lock_add_ref(cb_grp_lock);
 
     if (tp_ice->base.grp_lock)
         pj_grp_lock_release(tp_ice->base.grp_lock);
@@ -2595,6 +2608,8 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
                 PJ_LOG(5,(tp_ice->base.name,
                           "RX RTP packet dropped because of pkt lost "
                           "simulation"));
+                if (cb_grp_lock)
+                    pj_grp_lock_dec_ref(cb_grp_lock);
                 return;
             }
         }
@@ -2698,6 +2713,9 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
         if (!discard)
             (*rtcp_cb)(stream, pkt, size);
     }
+
+    if (cb_grp_lock)
+        pj_grp_lock_dec_ref(cb_grp_lock);
 
     PJ_UNUSED_ARG(src_addr_len);
 }
