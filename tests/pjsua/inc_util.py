@@ -30,6 +30,62 @@ def has_ssl_sock(exe):
    # the TLS/SIPS tests.
    return True
 
+def has_video(exe):
+   """Return True if the pjsua build under test has video support with at
+   least one usable video codec.
+
+   A video call test cannot negotiate a video stream otherwise -- either
+   the build has PJMEDIA_HAS_VIDEO=0 (only enabled in some CI jobs), or it
+   was built without any video codec library (VPX/OpenH264). Unlike
+   PJ_HAS_SSL_SOCK, video capability is not reported by pj_dump_config(),
+   so we probe the running binary: start it with --video and ask the
+   legacy console to list video codecs. A video-enabled build with a
+   codec prints "Found N video codecs" with N>=1.
+
+   --local-port 0 makes this auxiliary pjsua bind an ephemeral SIP port
+   instead of the default 5060, so the probe can't fail to start because
+   5060 (or a concurrently running pjsua) already holds that port.
+
+   A probe that could not run cleanly (couldn't launch, timed out, or
+   exited non-zero, e.g. pjsua crashed at startup) is distinct from a
+   build that ran fine but has no video. The former fails open (returns
+   True, like has_ssl_sock()) so the real test runs and surfaces the
+   problem rather than being silently skipped; only a probe that exits
+   cleanly yet reports no codec returns False. This is safe to gate on the
+   exit code because --video is not compiled out on a non-video build
+   (only the "vid" console commands are), so a non-video pjsua still
+   accepts --video and exits 0 -- it simply never prints "Found N".
+   """
+   # Use Popen().communicate(), not subprocess.run(): run() is Python 3.5+
+   # but this harness (see load_module_from_file() below) still supports
+   # 3.x < 3.5, and has_video() runs at config-load time, so a missing
+   # subprocess.run would raise before the test could even be skipped.
+   try:
+      proc = subprocess.Popen(exe + " --video --null-audio --local-port 0"
+                              " --max-calls=1",
+                              shell=True, stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT,
+                              universal_newlines=True)
+   except OSError:
+      # Couldn't launch at all -- not the same as "video disabled".
+      return True
+
+   try:
+      out, _ = proc.communicate(input="vid codec list\nq\n", timeout=30)
+   except (OSError, subprocess.SubprocessError):
+      # Includes TimeoutExpired. Probe couldn't complete: fail open.
+      proc.kill()
+      proc.wait()
+      return True
+
+   if proc.returncode != 0:
+      # pjsua didn't start/exit cleanly: probe unreliable, fail open.
+      return True
+
+   m = re.search(r'Found\s+(\d+)\s+video codecs', out or "")
+   return bool(m) and int(m.group(1)) > 0
+
 def load_module_from_file(module_name, module_path):
    if sys.version_info[0] == 3 and sys.version_info[1] >= 5:
       import importlib.util

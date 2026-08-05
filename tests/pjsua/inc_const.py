@@ -32,6 +32,14 @@ MEDIA_HOLD = "Call [0-9]+ media [0-9]+ .*, status is .* hold"
 # Media call is active
 MEDIA_ACTIVE = "Call [0-9]+ media [0-9]+ .*, status is Active"
 #MEDIA_ACTIVE = "Media for call [0-9]+ is active"
+# Same as above but restricted to the video stream (type=video), for
+# asserting on video media specifically in a video call. The directional
+# variants distinguish the hold initiator (Local hold) from the peer that
+# received the hold (Remote hold); VID_MEDIA_HOLD matches either.
+VID_MEDIA_ACTIVE = r"Call [0-9]+ media [0-9]+ \[type=video\], status is Active"
+VID_MEDIA_HOLD = r"Call [0-9]+ media [0-9]+ \[type=video\], status is .* hold"
+VID_MEDIA_LOCAL_HOLD = r"Call [0-9]+ media [0-9]+ \[type=video\], status is Local hold"
+VID_MEDIA_REMOTE_HOLD = r"Call [0-9]+ media [0-9]+ \[type=video\], status is Remote hold"
 # RX_DTMF
 RX_DTMF = "Incoming DTMF on call [0-9]+: "
 # Suffix logged after the digit when DTMF is received via SIP INFO
