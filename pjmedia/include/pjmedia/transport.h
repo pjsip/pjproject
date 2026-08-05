@@ -676,6 +676,13 @@ struct pjmedia_transport_attach_param
      * in-flight receive callback is still running on it. NULL (the default)
      * keeps the previous behavior.
      *
+     * The transport only references this lock transiently, while dispatching
+     * a callback; it does not hold a reference between attach and detach.
+     * The caller therefore must keep its own reference on the lock alive
+     * until #pjmedia_transport_detach() returns, otherwise a receive that
+     * arrives after the last reference is dropped would reference a freed
+     * lock.
+     *
      * Honoring this requires the transport to implement the attach2() op;
      * the legacy attach() op cannot carry it. #pjmedia_transport_attach2()
      * therefore rejects a non-NULL grp_lock with #PJ_ENOTSUP when the
@@ -775,7 +782,12 @@ PJ_INLINE(pjmedia_transport*) pjmedia_transport_info_get_transport(
  * callback-owner lifetime guarantee that a non-NULL \a grp_lock requests.
  * To avoid silently downgrading a caller that relies on that guarantee,
  * this wrapper returns #PJ_ENOTSUP when \a grp_lock is set but the transport
- * only implements the legacy <tt>attach()</tt> op.
+ * only implements the legacy <tt>attach()</tt> op. This does not regress a
+ * working configuration: the media streams request the receive callback via
+ * \a rtp_cb2, which the legacy <tt>attach()</tt> op also cannot carry, so a
+ * stream could never receive RTP through an attach()-only transport in the
+ * first place. Callers that do not set \a grp_lock keep using the legacy
+ * path unchanged.
  *
  * @param tp        The media transport.
  * @param att_param The transport attach param.
