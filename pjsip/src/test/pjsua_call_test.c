@@ -389,11 +389,19 @@ static void drain_all_calls(void)
     wait_until(NULL, PJSUA_INVALID_ID, PJ_IOQUEUE_KEY_FREE_DELAY + 200);
 }
 
+#if PJSUA_HAS_SIPREC
 /* State for SIPREC tests to track response code. */
 static struct {
     pj_bool_t request_seen;
     int        response_code;
 } g_siprec_test_ctx;
+
+/* Predicate to check if SIPREC response has been received */
+static pj_bool_t siprec_response_seen(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return g_siprec_test_ctx.request_seen;
+}
 
 /* Callback for SIPREC test stateful requests to capture response status */
 static void siprec_test_request_cb(void *token, pjsip_event *e)
@@ -793,7 +801,13 @@ static int test_siprec_non_multipart_accepted(void)
 
     /* Wait for response. */
     PJ_LOG(3,(THIS_FILE, "    Waiting for SIPREC response..."));
-    wait_until(NULL, PJSUA_INVALID_ID, 2000);
+    if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    timeout waiting for SIPREC response"));
+        pj_pool_release(pool);
+        pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
+        drain_all_calls();
+        return -1405;
+    }
 
     pj_pool_release(pool);
 
@@ -803,12 +817,8 @@ static int test_siprec_non_multipart_accepted(void)
     /* Cleanup any auto-answered call. */
     drain_all_calls();
 
-    if (!g_siprec_test_ctx.request_seen) {
-        PJ_LOG(1, (THIS_FILE, "    no response received"));
-        return -1405;
-    }
-
-    if (g_siprec_test_ctx.response_code >= 400) {
+    if (g_siprec_test_ctx.response_code < 200 ||
+        g_siprec_test_ctx.response_code >= 300) {
         PJ_LOG(1, (THIS_FILE, "    expected 2xx, got %d",
                    g_siprec_test_ctx.response_code));
         return -1406;
@@ -961,7 +971,14 @@ static int test_siprec_no_metadata_rejected(void)
 
     /* Wait for response. */
     PJ_LOG(3,(THIS_FILE, "    Waiting for SIPREC response..."));
-    wait_until(NULL, PJSUA_INVALID_ID, 2000);
+    if (!wait_until(&siprec_response_seen, PJSUA_INVALID_ID, 8000)) {
+        PJ_LOG(1, (THIS_FILE, "    timeout waiting for SIPREC response"));
+        pj_pool_release(pool);
+        pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
+        if (restore_setting)
+            pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
+        return -1505;
+    }
 
     pj_pool_release(pool);
 
@@ -969,11 +986,6 @@ static int test_siprec_no_metadata_rejected(void)
     pjsua_var.acc[g_ctx.acc_id].cfg.use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
     if (restore_setting)
         pjsua_var.acc[g_ctx.acc_id].cfg.siprec_require_metadata = PJ_FALSE;
-
-    if (!g_siprec_test_ctx.request_seen) {
-        PJ_LOG(1, (THIS_FILE, "    no response received"));
-        return -1505;
-    }
 
     if (g_siprec_test_ctx.response_code != 400) {
         PJ_LOG(1, (THIS_FILE, "    expected 400 Bad Request, got %d",
@@ -983,6 +995,7 @@ static int test_siprec_no_metadata_rejected(void)
 
     return 0;
 }
+#endif
 
 /* RFC2543 call hold of a call whose local SDP has no connection line at all.
  *
