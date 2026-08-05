@@ -27,15 +27,9 @@
 #include <pj/string.h>
 
 
-/* Upper bound on the number of simultaneously attached users, so the receive
- * fan-out can take a stable stack snapshot of the recipient list. A
- * max_attach_cnt above this is rejected at create time (fail-fast, not
- * silently clamped). Exposed publicly as PJMEDIA_LOOP_TP_MAX_ATTACH_CNT. */
-#define LOOP_MAX_USERS  PJMEDIA_LOOP_TP_MAX_ATTACH_CNT
-
-
 struct tp_user
 {
+    pj_bool_t           active;         /**< Slot is in use?                */
     pj_bool_t           rx_disabled;    /**< Doesn't want to receive pkt?   */
     void               *user_data;      /**< Only valid when attached       */
     void  (*rtp_cb)(    void*,          /**< To report incoming RTP.        */
@@ -55,8 +49,7 @@ struct transport_loop
 
     pj_pool_t          *pool;           /**< Memory pool                    */
     unsigned            max_attach_cnt; /**< Max number of attachments      */
-    unsigned            user_cnt;       /**< Number of attachments          */
-    struct tp_user     *users;          /**< Array of users.                */
+    struct tp_user     *users;          /**< Array of users (stable slots). */
     pj_bool_t           disable_rx;     /**< Disable RX.                    */
 
     pjmedia_loop_tp_setting setting;    /**< Setting.                       */
@@ -180,13 +173,6 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
     /* Sanity check */
     PJ_ASSERT_RETURN(endpt && p_tp, PJ_EINVAL);
 
-    /* The receive fan-out snapshots recipients into a fixed-size buffer, so
-     * reject an over-limit attach count up front rather than clamping it and
-     * surprising the caller with PJ_ETOOMANY at a later attach.
-     */
-    PJ_ASSERT_RETURN(!opt || opt->max_attach_cnt <= PJMEDIA_LOOP_TP_MAX_ATTACH_CNT,
-                     PJ_ETOOMANY);
-
     /* Create transport structure */
     pool = pjmedia_endpt_create_pool(endpt, "tploop", 512, 512);
     if (!pool)
@@ -221,7 +207,7 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
     if (tp->setting.port == 0)
         tp->setting.port = 4000;
 
-    /* alloc users array (count validated <= LOOP_MAX_USERS above) */
+    /* alloc users array (fixed slots; detach marks a slot free in place) */
     tp->max_attach_cnt = tp->setting.max_attach_cnt;
     if (tp->max_attach_cnt == 0)
         tp->max_attach_cnt = 1;
@@ -245,8 +231,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_loop_disable_rx( pjmedia_transport *tp,
      * send-side snapshot via the transport group lock.
      */
     pj_grp_lock_acquire(tp->grp_lock);
-    for (i=0; i<loop->user_cnt; ++i) {
-        if (loop->users[i].user_data == user) {
+    for (i=0; i<loop->max_attach_cnt; ++i) {
+        if (loop->users[i].active && loop->users[i].user_data == user) {
             loop->users[i].rx_disabled = disabled;
             status = PJ_SUCCESS;
             break;
@@ -316,7 +302,7 @@ static pj_status_t tp_attach(   pjmedia_transport *tp,
                                        pj_grp_lock_t *cb_grp_lock)
 {
     struct transport_loop *loop = (struct transport_loop*) tp;
-    unsigned i;
+    unsigned i, slot;
     const pj_sockaddr *rtcp_addr;
 
     /* Validate arguments */
@@ -325,30 +311,37 @@ static pj_status_t tp_attach(   pjmedia_transport *tp,
     PJ_UNUSED_ARG(rem_rtcp);
     PJ_UNUSED_ARG(rtcp_addr);
 
-    /* "Attach" the application under the transport group lock. The
-     * duplicate-user and capacity checks run under the same lock as the
-     * append (and detach's erase / the send-side snapshot), so two
-     * concurrent attaches sharing the last free slot cannot both pass the
-     * capacity check and overrun users[].
+    /* "Attach" the application under the transport group lock, so the
+     * duplicate-user check and the slot claim are atomic with respect to a
+     * concurrent attach/detach and the send-side snapshot. Slots are never
+     * shifted: a detached slot is left in place (marked inactive) and reused
+     * here, so the send fan-out can iterate by index without a concurrent
+     * detach skipping a still-attached recipient.
      */
     pj_grp_lock_acquire(tp->grp_lock);
-    for (i=0; i<loop->user_cnt; ++i) {
+    slot = loop->max_attach_cnt;
+    for (i=0; i<loop->max_attach_cnt; ++i) {
+        if (!loop->users[i].active) {
+            if (slot == loop->max_attach_cnt)
+                slot = i;
+            continue;
+        }
         if (loop->users[i].user_data == user_data) {
             pj_grp_lock_release(tp->grp_lock);
             return PJ_EINVALIDOP;
         }
     }
-    if (loop->user_cnt >= loop->max_attach_cnt) {
+    if (slot == loop->max_attach_cnt) {
         pj_grp_lock_release(tp->grp_lock);
         return PJ_ETOOMANY;
     }
-    loop->users[loop->user_cnt].rtp_cb = rtp_cb;
-    loop->users[loop->user_cnt].rtp_cb2 = rtp_cb2;
-    loop->users[loop->user_cnt].rtcp_cb = rtcp_cb;
-    loop->users[loop->user_cnt].user_data = user_data;
-    loop->users[loop->user_cnt].cb_grp_lock = cb_grp_lock;
-    loop->users[loop->user_cnt].rx_disabled = loop->disable_rx;
-    ++loop->user_cnt;
+    loop->users[slot].rtp_cb = rtp_cb;
+    loop->users[slot].rtp_cb2 = rtp_cb2;
+    loop->users[slot].rtcp_cb = rtcp_cb;
+    loop->users[slot].user_data = user_data;
+    loop->users[slot].cb_grp_lock = cb_grp_lock;
+    loop->users[slot].rx_disabled = loop->disable_rx;
+    loop->users[slot].active = PJ_TRUE;
     pj_grp_lock_release(tp->grp_lock);
 
     return PJ_SUCCESS;
@@ -393,67 +386,20 @@ static void transport_detach( pjmedia_transport *tp,
     pj_assert(tp);
 
     /* Serialize the users[] mutation with the send-side snapshot below via
-     * the transport group lock, so a concurrent send cannot read/ref an
-     * entry (and its owner group lock) while it is being erased.
+     * the transport group lock. Mark the slot inactive in place rather than
+     * compacting the array, so a concurrent send iterating by index does not
+     * have a still-attached recipient shifted past its cursor and skipped.
      */
     pj_grp_lock_acquire(tp->grp_lock);
 
-    for (i=0; i<loop->user_cnt; ++i) {
-        if (loop->users[i].user_data == user_data)
+    for (i=0; i<loop->max_attach_cnt; ++i) {
+        if (loop->users[i].active && loop->users[i].user_data == user_data) {
+            pj_bzero(&loop->users[i], sizeof(loop->users[i]));
             break;
-    }
-
-    /* Remove this user */
-    if (i != loop->user_cnt) {
-        pj_array_erase(loop->users, sizeof(loop->users[0]),
-                       loop->user_cnt, i);
-        --loop->user_cnt;
+        }
     }
 
     pj_grp_lock_release(tp->grp_lock);
-}
-
-
-/* A stable snapshot of one receiving user, taken under the transport group
- * lock so the fan-out below can invoke callbacks without holding the lock and
- * without a concurrent detach shifting users[] under the iteration. */
-struct loop_rcpt {
-    void  (*rtp_cb)(void*, void*, pj_ssize_t);
-    void  (*rtp_cb2)(pjmedia_tp_cb_param*);
-    void  (*rtcp_cb)(void*, void*, pj_ssize_t);
-    void   *user_data;
-    pj_grp_lock_t *cb_grp_lock;
-};
-
-/* Snapshot all rx-enabled users into rcpt[] (capacity LOOP_MAX_USERS, which
- * bounds loop->max_attach_cnt) under the group lock, add_ref'ing each user's
- * owner group lock. Returns the count. Each returned entry's cb_grp_lock (if
- * any) must be dec_ref'd by the caller after the callback. Because the whole
- * recipient set is captured under a single lock hold, a detach that erases
- * (and left-shifts) an entry during the subsequent callbacks cannot cause a
- * still-attached user to be skipped, and the owner ref keeps each callback
- * target alive across its up-call.
- */
-static unsigned loop_snapshot_users(struct transport_loop *loop,
-                                    struct loop_rcpt *rcpt)
-{
-    unsigned i, n = 0;
-
-    pj_grp_lock_acquire(loop->base.grp_lock);
-    for (i=0; i<loop->user_cnt && n<LOOP_MAX_USERS; ++i) {
-        if (loop->users[i].rx_disabled)
-            continue;
-        rcpt[n].rtp_cb = loop->users[i].rtp_cb;
-        rcpt[n].rtp_cb2 = loop->users[i].rtp_cb2;
-        rcpt[n].rtcp_cb = loop->users[i].rtcp_cb;
-        rcpt[n].user_data = loop->users[i].user_data;
-        rcpt[n].cb_grp_lock = loop->users[i].cb_grp_lock;
-        if (rcpt[n].cb_grp_lock)
-            pj_grp_lock_add_ref(rcpt[n].cb_grp_lock);
-        ++n;
-    }
-    pj_grp_lock_release(loop->base.grp_lock);
-    return n;
 }
 
 
@@ -463,8 +409,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
                                        pj_size_t size)
 {
     struct transport_loop *loop = (struct transport_loop*)tp;
-    struct loop_rcpt rcpt[LOOP_MAX_USERS];
-    unsigned i, n;
+    unsigned i;
 
     /* Simulate packet lost on TX direction */
     if (loop->tx_drop_pct) {
@@ -488,25 +433,44 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 
     pj_grp_lock_add_ref(tp->grp_lock);
 
-    /* Distribute to a stable snapshot of the recipients (see
-     * loop_snapshot_users()); the group lock is not held across the up-calls.
+    /* Distribute to users. Slots are stable indices (detach marks a slot
+     * inactive without shifting), so iterating by index cannot skip a
+     * still-attached recipient. Each slot's callbacks and owner group lock
+     * are snapshotted under the group lock (add_ref'ing the owner), which is
+     * then released before the up-call so it is never held across an
+     * application callback; the owner ref keeps the target alive meanwhile.
      */
-    n = loop_snapshot_users(loop, rcpt);
-    for (i=0; i<n; ++i) {
-        if (rcpt[i].rtp_cb2) {
+    for (i=0; i<loop->max_attach_cnt; ++i) {
+        void (*rtp_cb)(void*, void*, pj_ssize_t) = NULL;
+        void (*rtp_cb2)(pjmedia_tp_cb_param*) = NULL;
+        void *user_data = NULL;
+        pj_grp_lock_t *cb_grp_lock = NULL;
+
+        pj_grp_lock_acquire(tp->grp_lock);
+        if (loop->users[i].active && !loop->users[i].rx_disabled) {
+            rtp_cb = loop->users[i].rtp_cb;
+            rtp_cb2 = loop->users[i].rtp_cb2;
+            user_data = loop->users[i].user_data;
+            cb_grp_lock = loop->users[i].cb_grp_lock;
+            if (cb_grp_lock)
+                pj_grp_lock_add_ref(cb_grp_lock);
+        }
+        pj_grp_lock_release(tp->grp_lock);
+
+        if (rtp_cb2) {
             pjmedia_tp_cb_param param;
 
             pj_bzero(&param, sizeof(param));
-            param.user_data = rcpt[i].user_data;
+            param.user_data = user_data;
             param.pkt = (void *)pkt;
             param.size = size;
-            (*rcpt[i].rtp_cb2)(&param);
-        } else if (rcpt[i].rtp_cb) {
-            (*rcpt[i].rtp_cb)(rcpt[i].user_data, (void*)pkt, size);
+            (*rtp_cb2)(&param);
+        } else if (rtp_cb) {
+            (*rtp_cb)(user_data, (void*)pkt, size);
         }
 
-        if (rcpt[i].cb_grp_lock)
-            pj_grp_lock_dec_ref(rcpt[i].cb_grp_lock);
+        if (cb_grp_lock)
+            pj_grp_lock_dec_ref(cb_grp_lock);
     }
 
     pj_grp_lock_dec_ref(tp->grp_lock);
@@ -531,24 +495,39 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
                                         pj_size_t size)
 {
     struct transport_loop *loop = (struct transport_loop*)tp;
-    struct loop_rcpt rcpt[LOOP_MAX_USERS];
-    unsigned i, n;
+    unsigned i;
 
     PJ_UNUSED_ARG(addr_len);
     PJ_UNUSED_ARG(addr);
 
     pj_grp_lock_add_ref(tp->grp_lock);
 
-    /* Distribute to a stable snapshot of the recipients (see
-     * loop_snapshot_users()); the group lock is not held across the up-calls.
+    /* Distribute to users. See transport_send_rtp() for why each stable slot
+     * is snapshotted and its owner group lock referenced under the group
+     * lock, then released before the up-call.
      */
-    n = loop_snapshot_users(loop, rcpt);
-    for (i=0; i<n; ++i) {
-        if (rcpt[i].rtcp_cb)
-            (*rcpt[i].rtcp_cb)(rcpt[i].user_data, (void*)pkt, size);
+    for (i=0; i<loop->max_attach_cnt; ++i) {
+        void (*rtcp_cb)(void*, void*, pj_ssize_t) = NULL;
+        void *user_data = NULL;
+        pj_grp_lock_t *cb_grp_lock = NULL;
 
-        if (rcpt[i].cb_grp_lock)
-            pj_grp_lock_dec_ref(rcpt[i].cb_grp_lock);
+        pj_grp_lock_acquire(tp->grp_lock);
+        if (loop->users[i].active && !loop->users[i].rx_disabled &&
+            loop->users[i].rtcp_cb)
+        {
+            rtcp_cb = loop->users[i].rtcp_cb;
+            user_data = loop->users[i].user_data;
+            cb_grp_lock = loop->users[i].cb_grp_lock;
+            if (cb_grp_lock)
+                pj_grp_lock_add_ref(cb_grp_lock);
+        }
+        pj_grp_lock_release(tp->grp_lock);
+
+        if (rtcp_cb)
+            (*rtcp_cb)(user_data, (void*)pkt, size);
+
+        if (cb_grp_lock)
+            pj_grp_lock_dec_ref(cb_grp_lock);
     }
 
     pj_grp_lock_dec_ref(tp->grp_lock);
