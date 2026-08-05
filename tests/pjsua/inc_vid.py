@@ -1,0 +1,89 @@
+# Shared helpers for pjsua video call tests.
+#
+# Every video call test needs the same headless setup: run each instance
+# with --video and drive it onto software video devices -- the colorbar
+# generator for capture and the null renderer for output -- so no real
+# camera or display is touched. See the individual helpers below.
+import re
+import inc_const as const
+
+# Default pjsua args for a video-capable instance. --video makes pjsua set
+# vid_cnt=1, in_auto_show and out_auto_transmit, so a call between two such
+# instances negotiates an active, bidirectional video stream automatically
+# (no per-call "video enable" is needed).
+#
+# --no-tcp restricts each instance to a single (UDP) account. Without it,
+# --local-port creates both a UDP and a TCP account and leaves TCP as the
+# current one, while calls travel over UDP -- so the "video acc cap_id/
+# ren_id" pins below (which target the current account) might not apply to
+# the account the call actually uses, leaving it on the default camera/
+# renderer. One account keeps the headless device pinning deterministic.
+VIDEO_ARGS = "--null-audio --max-calls=1 --no-tcp --video"
+
+
+# Look up the ID of a software video device by name from the
+# "video device list" output.
+#
+# IDs can't be hardcoded: the colorbar and null devices register after the
+# platform's real devices, so their IDs differ across platforms (e.g.
+# macOS with a camera vs. a headless Linux CI runner). Hence the runtime
+# lookup. 'ua' is a run.py Expect instance; expect() returns the matched
+# line, from which we parse the leading device ID.
+def find_vid_dev(ua, name):
+    ua.send("video device list")
+    # Match only a non-negative device ID. The list first prints the
+    # default-alias rows ("-2 <name> (default ...)", "-1 <name>"), and on a
+    # headless build those aliases ARE the colorbar/null devices -- so an
+    # unanchored [0-9]+ would grab the "1"/"2" from "-1"/"-2" and select
+    # the wrong device (e.g. Null capture instead of Null renderer).
+    # Requiring whitespace -- not the '-' sign -- immediately before the
+    # digits skips the alias rows and selects the real positive device
+    # row. The same pattern is reused for the ID extraction.
+    pat = r"\s(\d+)\s+" + name
+    line = ua.expect(pat)
+    return re.search(pat, line).group(1)
+
+
+# Pin 'ua' onto headless-safe video devices: the colorbar generator for
+# capture and the null renderer for output. Call this on each instance
+# before it places or answers a video call, so the call runs without a
+# real camera or display.
+def setup_video_devices(ua):
+    cap = find_vid_dev(ua, "Colorbar generator")
+    ren = find_vid_dev(ua, "Null renderer")
+    ua.send("video acc cap_id " + cap)
+    ua.send("video acc ren_id " + ren)
+    ua.sync_stdout()
+
+
+# Establish a confirmed video call from 'caller' to 'callee' and verify
+# the video stream is Active on both ends. Pins headless video devices on
+# both instances first. 'callee_uri' is the SIP URI the caller dials
+# (normally t.inst_params[0].uri). Leaves both instances in a confirmed
+# call with an active bidirectional video stream, ready for the
+# scenario-specific action (hold, re-INVITE, DTMF, ...).
+def make_video_call(caller, callee, callee_uri):
+    setup_video_devices(caller)
+    setup_video_devices(callee)
+
+    caller.send("call new " + callee_uri)
+    caller.expect(const.STATE_CALLING)
+
+    callee.expect(const.EVENT_INCOMING_CALL)
+    callee.send("call answer 200")
+
+    # The media-active log is emitted just before the call-state-changed-
+    # to-CONFIRMED log. Wait for the video stream to go Active first (this
+    # proves video negotiated), then for CONFIRMED -- which is still ahead
+    # in the stream, so expect() finds it. Both are required: we must not
+    # return before the dialog is CONFIRMED, otherwise a caller that
+    # immediately holds would race the CONFIRMED transition and
+    # pjsua_call_set_hold2() would reject the hold with PJSIP_ESESSIONSTATE
+    # (telnet-mode sync_stdout() is a no-op, so it can't cover the gap).
+    caller.expect(const.VID_MEDIA_ACTIVE)
+    callee.expect(const.VID_MEDIA_ACTIVE)
+    caller.expect(const.STATE_CONFIRMED)
+    callee.expect(const.STATE_CONFIRMED)
+
+    caller.sync_stdout()
+    callee.sync_stdout()
