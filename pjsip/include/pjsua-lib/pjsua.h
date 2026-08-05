@@ -1068,6 +1068,12 @@ typedef struct pjsua_dtmf_info {
      */
     unsigned duration;
 
+    /**
+     * The media index of the audio stream that received the DTMF, or -1
+     * if the DTMF was not received via a media stream (e.g. SIP INFO).
+     */
+    int med_idx;
+
 } pjsua_dtmf_info;
 
 
@@ -1117,6 +1123,12 @@ typedef struct pjsua_dtmf_event {
      * an event with PJMEDIA_STREAM_DTMF_IS_END for every event.
      */
     unsigned flags;
+
+    /**
+     * The media index of the audio stream that received the DTMF, or -1
+     * if the DTMF was not received via a media stream (e.g. SIP INFO).
+     */
+    int med_idx;
 } pjsua_dtmf_event;
 
 
@@ -1139,6 +1151,11 @@ typedef struct pjsua_txt_stream_data {
      * Note that the text can be empty.
      */
     pj_str_t            text;
+
+    /**
+     * The index of the text media stream that received the text.
+     */
+    int                 med_idx;
 
 } pjsua_txt_stream_data;
 
@@ -1575,7 +1592,7 @@ typedef struct pjsua_callback
     void (*on_dtmf_digit)(pjsua_call_id call_id, int digit);
 
     /**
-     * Notify application upon incoming DTMF digits using the method specified 
+     * Notify application upon incoming DTMF digits using the method specified
      * in \a pjsua_dtmf_method. This callback will not be called if app
      * implements \a on_dtmf_event().
      *
@@ -1585,7 +1602,7 @@ typedef struct pjsua_callback
     void (*on_dtmf_digit2)(pjsua_call_id call_id, const pjsua_dtmf_info *info);
 
     /**
-     * Notify application upon incoming DTMF digits using the method specified 
+     * Notify application upon incoming DTMF digits using the method specified
      * in \a pjsua_dtmf_method. Includes additional information about events
      * received via RTP.
      *

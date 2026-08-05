@@ -747,8 +747,9 @@ static void call_on_dtmf_callback2(pjsua_call_id call_id,
                          info->duration);
         break;
     };    
-    PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c%s, using %s method", 
-           call_id, info->digit, duration, method));
+    PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c%s, using %s method, "
+           "stream %d", call_id, info->digit, duration, method,
+           info->med_idx));
 }
 
 /* Incoming text stream callback. */
@@ -756,11 +757,12 @@ static void call_on_rx_text(pjsua_call_id call_id,
                             const pjsua_txt_stream_data *data)
 {
     if (data->text.slen == 0) {
-        PJ_LOG(4, (THIS_FILE, "Received empty T140 block with seq %d",
-                              data->seq));
+        PJ_LOG(4, (THIS_FILE, "Received empty T140 block on stream %d "
+                              "with seq %d", data->med_idx, data->seq));
     } else {
-        PJ_LOG(3, (THIS_FILE, "Incoming text on call %d, seq %d: %.*s "
-                              "(%d bytes)", call_id, data->seq,
+        PJ_LOG(3, (THIS_FILE, "Incoming text on call %d stream %d, "
+                              "seq %d: %.*s (%d bytes)",
+                              call_id, data->med_idx, data->seq,
                               (int)data->text.slen, data->text.ptr,
                               (int)data->text.slen));
     }
