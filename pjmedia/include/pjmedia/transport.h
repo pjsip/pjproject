@@ -617,6 +617,14 @@ typedef struct pjmedia_tp_cb_param
 /**
  * This structure describes the data passed when calling
  * #pjmedia_transport_attach2().
+ *
+ * The caller MUST zero-initialize this structure (e.g. with pj_bzero())
+ * before setting the members it needs. Optional members that are left zero
+ * take their documented default ("not set"), and new optional members added
+ * over time are always defined so that an all-zero value preserves the prior
+ * behavior. In particular \a grp_lock is dereferenced by the transport only
+ * when non-NULL, so zeroing keeps a caller written against an older revision
+ * of this structure safe after a rebuild.
  */
 struct pjmedia_transport_attach_param
 {

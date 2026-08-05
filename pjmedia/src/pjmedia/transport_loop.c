@@ -27,13 +27,11 @@
 #include <pj/string.h>
 
 
-#define THIS_FILE   "transport_loop.c"
-
 /* Upper bound on the number of simultaneously attached users, so the receive
- * fan-out can take a stable stack snapshot of the recipient list. This is a
- * loopback transport used only by tests, which attach a small handful of
- * streams; max_attach_cnt is clamped to this at create time. */
-#define LOOP_MAX_USERS  32
+ * fan-out can take a stable stack snapshot of the recipient list. A
+ * max_attach_cnt above this is rejected at create time (fail-fast, not
+ * silently clamped). Exposed publicly as PJMEDIA_LOOP_TP_MAX_ATTACH_CNT. */
+#define LOOP_MAX_USERS  PJMEDIA_LOOP_TP_MAX_ATTACH_CNT
 
 
 struct tp_user
@@ -182,6 +180,13 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
     /* Sanity check */
     PJ_ASSERT_RETURN(endpt && p_tp, PJ_EINVAL);
 
+    /* The receive fan-out snapshots recipients into a fixed-size buffer, so
+     * reject an over-limit attach count up front rather than clamping it and
+     * surprising the caller with PJ_ETOOMANY at a later attach.
+     */
+    PJ_ASSERT_RETURN(!opt || opt->max_attach_cnt <= PJMEDIA_LOOP_TP_MAX_ATTACH_CNT,
+                     PJ_ETOOMANY);
+
     /* Create transport structure */
     pool = pjmedia_endpt_create_pool(endpt, "tploop", 512, 512);
     if (!pool)
@@ -216,15 +221,10 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
     if (tp->setting.port == 0)
         tp->setting.port = 4000;
 
-    /* alloc users array */
+    /* alloc users array (count validated <= LOOP_MAX_USERS above) */
     tp->max_attach_cnt = tp->setting.max_attach_cnt;
     if (tp->max_attach_cnt == 0)
         tp->max_attach_cnt = 1;
-    if (tp->max_attach_cnt > LOOP_MAX_USERS) {
-        PJ_LOG(3,(THIS_FILE, "Loop transport max_attach_cnt %u clamped to %u",
-                  tp->max_attach_cnt, (unsigned)LOOP_MAX_USERS));
-        tp->max_attach_cnt = LOOP_MAX_USERS;
-    }
     tp->users = (struct tp_user *)pj_pool_calloc(pool, tp->max_attach_cnt, sizeof(struct tp_user));
 
     /* Done */

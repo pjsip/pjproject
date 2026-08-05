@@ -88,11 +88,23 @@ typedef struct pjmedia_loop_tp_setting
     pj_bool_t   disable_rx;
 
     /*
-     * Max number of attachments
+     * Max number of attachments. Must not exceed
+     * #PJMEDIA_LOOP_TP_MAX_ATTACH_CNT; a larger value is rejected at
+     * create time with PJ_ETOOMANY. Default is 4.
      */
     unsigned max_attach_cnt;
 
 } pjmedia_loop_tp_setting;
+
+/**
+ * The maximum number of streams that may attach to a single loop transport.
+ * The receive fan-out captures a stable stack snapshot of the recipients
+ * bounded by this value, so it is a hard, fail-fast upper bound rather than
+ * a silently clamped one.
+ */
+#ifndef PJMEDIA_LOOP_TP_MAX_ATTACH_CNT
+#   define PJMEDIA_LOOP_TP_MAX_ATTACH_CNT   32
+#endif
 
 
 /**
