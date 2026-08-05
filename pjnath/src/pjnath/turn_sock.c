@@ -74,6 +74,13 @@ struct pj_turn_sock
     void                *user_data;
 
     pj_bool_t            is_destroying;
+
+    /* Set as soon as destruction is requested, which for a session that is
+     * still allocated happens well before is_destroying, since we first
+     * deallocate gracefully. Note that is_destroying cannot be set earlier
+     * instead, as that would stop us from sending the Refresh.
+     */
+    pj_bool_t            is_shutting_down;
     pj_grp_lock_t       *grp_lock;
 
     pj_turn_alloc_param  alloc_param;
@@ -399,6 +406,7 @@ static void destroy(pj_turn_sock *turn_sock)
     }
 
     turn_sock->is_destroying = PJ_TRUE;
+    turn_sock->is_shutting_down = PJ_TRUE;
     if (turn_sock->sess)
         pj_turn_session_shutdown(turn_sock->sess);
     if (turn_sock->active_sock)
@@ -425,6 +433,8 @@ static void turn_sock_destroy(pj_turn_sock *turn_sock,
         pj_grp_lock_release(turn_sock->grp_lock);
         return;
     }
+
+    turn_sock->is_shutting_down = PJ_TRUE;
 
     if (turn_sock->sess) {
         pj_turn_session_shutdown2(turn_sock->sess, last_err);
@@ -835,6 +845,12 @@ static unsigned has_packet(pj_turn_sock *turn_sock, const void *buf, pj_size_t b
     if (turn_sock->conn_type == PJ_TURN_TP_UDP)
         return (unsigned)bufsize;
 
+    /* Both a STUN and a ChannelData header need at least 4 bytes, and the
+     * checks below read that many, so a smaller fragment must be kept as is.
+     */
+    if (bufsize < 4)
+        return 0;
+
     /* Quickly check if this is STUN message, by checking the first two bits and
      * size field which must be multiple of 4 bytes
      */
@@ -847,9 +863,6 @@ static unsigned has_packet(pj_turn_sock *turn_sock, const void *buf, pj_size_t b
     } else {
         /* This must be ChannelData. */
         pj_turn_channel_data cd;
-
-        if (bufsize < 4)
-            return 0;
 
         /* Decode ChannelData packet */
         pj_memcpy(&cd, buf, sizeof(pj_turn_channel_data));
@@ -884,7 +897,15 @@ static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
         //PJ_LOG(5,(turn_sock->pool->obj_name, 
         //        "Incoming data, %lu bytes total buffer", size));
 
-        while ((pkt_len=has_packet(turn_sock, data, size)) != 0) {
+        /* The session must be re-validated on every iteration, as processing
+         * a packet can destroy it on this same thread: an error or
+         * deallocation response drives it to DESTROYING and turn_on_state()
+         * then clears turn_sock->sess. The group lock is re-entrant, so it
+         * does not prevent this.
+         */
+        while (turn_sock->sess &&
+               (pkt_len=has_packet(turn_sock, data, size)) != 0)
+        {
             pj_size_t parsed_len;
             //const pj_uint8_t *pkt = (const pj_uint8_t*)data;
 
@@ -916,6 +937,10 @@ static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
             //PJ_LOG(5,(turn_sock->pool->obj_name, 
             //        "Buffer size now %lu bytes", size));
         }
+
+        /* Nothing will ever consume the leftover once the session is gone */
+        if (!turn_sock->sess)
+            *remainder = 0;
     } else if (status != PJ_SUCCESS) {
         if (turn_sock->conn_type == PJ_TURN_TP_UDP)
             sess_fail(turn_sock, "UDP connection closed", status);
@@ -1146,8 +1171,12 @@ static void turn_on_rx_data(pj_turn_session *sess,
 {
     pj_turn_sock *turn_sock = (pj_turn_sock*) 
                            pj_turn_session_get_user_data(sess);
-    if (turn_sock == NULL || turn_sock->is_destroying) {
-        /* We've been destroyed */
+    if (turn_sock == NULL || turn_sock->is_shutting_down) {
+        /* We've been destroyed, or are about to be. Note that we may still
+         * be processing packets at this point, as the deallocation response
+         * is what completes a graceful teardown, but the application is no
+         * longer interested in data.
+         */
         return;
     }
 
@@ -1576,8 +1605,8 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
     *remainder = size;
     while (*remainder > 0) {
         if (conn->state == DATACONN_STATE_READY) {
-            /* Application data */
-            if (turn_sock->cb.on_rx_data) {
+            /* Application data, dropped once we are shutting down */
+            if (turn_sock->cb.on_rx_data && !turn_sock->is_shutting_down) {
                 (*turn_sock->cb.on_rx_data)(turn_sock, data, (unsigned)*remainder,
                                             &conn->peer_addr,
                                             conn->peer_addr_len);
@@ -1586,6 +1615,7 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
         } else if (conn->state == DATACONN_STATE_CONN_BINDING) {
             /* Waiting for ConnectionBind response */
             pj_bool_t is_stun;
+            unsigned pkt_len;
             pj_turn_session_on_rx_pkt_param prm;
 
             /* Ignore if this is not a STUN message */
@@ -1593,18 +1623,79 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
             if (!is_stun)
                 goto on_return;
 
+            /* Frame it using its own header. has_packet() cannot be used
+             * here: it only classifies a message as STUN when the encoded
+             * length is a multiple of 4, so a malformed one is framed as
+             * ChannelData instead, and we would consume just a part of it
+             * and leave the rest at the front of the stream forever.
+             */
+            if (*remainder < sizeof(pj_stun_msg_hdr))
+                goto on_return;
+
+            pkt_len = GETVAL16H((const pj_uint8_t*)data, 2) +
+                      (unsigned)sizeof(pj_stun_msg_hdr);
+
+            /* A length we can never receive would stall this connection for
+             * good, as we would keep waiting while the read buffer fills up,
+             * so give up on it instead.
+             */
+            if (pkt_len > turn_sock->setting.max_pkt_size) {
+                pj_uint32_t conn_id = conn->id;
+                unsigned peer_addr_len = conn->peer_addr_len;
+                pj_sockaddr peer_addr;
+
+                PJ_LOG(4,(turn_sock->pool->obj_name,
+                          "Dropping data connection, ConnectionBind response "
+                          "declares %u bytes but we can only receive %u",
+                          pkt_len, turn_sock->setting.max_pkt_size));
+
+                pj_sockaddr_cp(&peer_addr, &conn->peer_addr);
+                dataconn_cleanup(conn);
+                --turn_sock->data_conn_cnt;
+                pj_grp_lock_release(turn_sock->grp_lock);
+
+                /* Once the connection is gone the pending ConnectionBind can
+                 * only end up as a stray event, so report the failure here to
+                 * avoid leaving the application waiting forever.
+                 */
+                if (turn_sock->cb.on_connection_status) {
+                    (*turn_sock->cb.on_connection_status)(turn_sock,
+                                                          PJ_ETOOBIG,
+                                                          conn_id, &peer_addr,
+                                                          peer_addr_len);
+                }
+                return PJ_FALSE;
+            }
+
+            /* Wait for more data if we don't have a complete packet yet */
+            if (pkt_len > *remainder)
+                goto on_return;
+
+            /* Session may already be gone, see on_data_read() */
+            if (!turn_sock->sess || turn_sock->is_destroying)
+                goto on_return;
+
             pj_bzero(&prm, sizeof(prm));
             prm.pkt = data;
             prm.pkt_len = *remainder;
             prm.src_addr = &conn->peer_addr;
             prm.src_addr_len = conn->peer_addr_len;
-            pj_turn_session_on_rx_pkt2(conn->turn_sock->sess, &prm);
+            pj_turn_session_on_rx_pkt2(turn_sock->sess, &prm);
+
+            /* parsed_len may be zero if we have parsing error, so use our
+             * previous calculation to exhaust the bad packet.
+             */
+            if (prm.parsed_len == 0)
+                prm.parsed_len = pkt_len;
+
             /* Got remainder? */
-            if (prm.parsed_len < *remainder && prm.parsed_len > 0) {
+            if (prm.parsed_len < *remainder) {
+                *remainder -= prm.parsed_len;
                 pj_memmove(data, (pj_uint8_t*)data + prm.parsed_len,
                            *remainder);
+            } else {
+                *remainder = 0;
             }
-            *remainder -= prm.parsed_len;
         } else
             goto on_return;
     }
