@@ -3164,17 +3164,30 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         acc->cfg.use_rfc5626 && !acc->outbound_rejected)
     {
         PJ_LOG(3,(THIS_FILE, "Acc %d: first hop lacks outbound support, "
-                             "retrying registration without SIP outbound",
+                             "will re-register without SIP outbound",
                              acc->index));
         acc->outbound_rejected = PJ_TRUE;
 
-        /* Note this is a no-op when reg_retry_interval is 0, i.e. the
+        /* Recording the rejection is always right; driving a retry ourselves
+         * is not. An un-REGISTER also carries the outbound Contact params and
+         * can therefore be answered with 439, but retrying it as a REGISTER
+         * would bring an account the application asked to take offline back
+         * online. During an IP change the IP-change state machine owns
+         * registration, which is why the generic auto-retry below excludes
+         * that case too. The flag is set either way, so whoever registers
+         * next omits outbound.
+         *
+         * This is also a no-op when reg_retry_interval is 0, i.e. the
          * application has asked not to be retried on its behalf. The account
-         * is no longer stuck either way: the flag is set, so the
-         * application's own pjsua_acc_set_registration() now rebuilds the
-         * REGISTER without outbound and succeeds.
+         * is no longer stuck either way: the application's own
+         * pjsua_acc_set_registration() now rebuilds the REGISTER without
+         * outbound and succeeds.
          */
-        schedule_reregistration(acc);
+        if (!param->is_unreg &&
+            acc->ip_change_op != PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT)
+        {
+            schedule_reregistration(acc);
+        }
     }
 
     /* Check if we need to auto retry registration. Basically, registration
@@ -4618,6 +4631,14 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     int secure;
     const char *beginquote, *endquote;
     char transport_param[32];
+    /* RFC 5626 section 2.1: in a Contact header field value the "ob" URI
+     * parameter indicates that the UA would like other requests in the same
+     * dialog to be routed over the same flow. This Contact is used for every
+     * outgoing UAC request of the account, not just REGISTER, so suppressing
+     * it after a 439 also drops it from dialog-forming requests -- which is
+     * the intent: a first hop that does not implement SIP outbound cannot
+     * honour the flow reuse "ob" asks for.
+     */
     const char *ob = ";ob";
 
     
