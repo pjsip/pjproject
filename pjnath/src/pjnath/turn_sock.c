@@ -1623,9 +1623,20 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
             if (!is_stun)
                 goto on_return;
 
+            /* Frame it using its own header. has_packet() cannot be used
+             * here: it only classifies a message as STUN when the encoded
+             * length is a multiple of 4, so a malformed one is framed as
+             * ChannelData instead, and we would consume just a part of it
+             * and leave the rest at the front of the stream forever.
+             */
+            if (*remainder < sizeof(pj_stun_msg_hdr))
+                goto on_return;
+
+            pkt_len = GETVAL16H((const pj_uint8_t*)data, 2) +
+                      (unsigned)sizeof(pj_stun_msg_hdr);
+
             /* Wait for more data if we don't have a complete packet yet */
-            pkt_len = has_packet(turn_sock, data, *remainder);
-            if (pkt_len == 0)
+            if (pkt_len > *remainder)
                 goto on_return;
 
             /* Session may already be gone, see on_data_read() */
