@@ -1635,6 +1635,21 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
             pkt_len = GETVAL16H((const pj_uint8_t*)data, 2) +
                       (unsigned)sizeof(pj_stun_msg_hdr);
 
+            /* A length we can never receive would stall this connection for
+             * good, as we would keep waiting while the read buffer fills up,
+             * so give up on it instead.
+             */
+            if (pkt_len > turn_sock->setting.max_pkt_size) {
+                PJ_LOG(4,(turn_sock->pool->obj_name,
+                          "Dropping data connection, ConnectionBind response "
+                          "declares %u bytes but we can only receive %u",
+                          pkt_len, turn_sock->setting.max_pkt_size));
+                dataconn_cleanup(conn);
+                --turn_sock->data_conn_cnt;
+                pj_grp_lock_release(turn_sock->grp_lock);
+                return PJ_FALSE;
+            }
+
             /* Wait for more data if we don't have a complete packet yet */
             if (pkt_len > *remainder)
                 goto on_return;
