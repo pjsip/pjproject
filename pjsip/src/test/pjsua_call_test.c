@@ -395,6 +395,23 @@ static struct {
     int        response_code;
 } g_siprec_test_ctx;
 
+/* Callback for SIPREC test stateful requests to capture response status */
+static void siprec_test_request_cb(void *token, pjsip_event *e)
+{
+    PJ_UNUSED_ARG(token);
+
+    if (e->type == PJSIP_EVENT_TSX_STATE) {
+        pjsip_transaction *tsx = e->body.tsx_state.tsx;
+
+        if (tsx && tsx->status_code > 0) {
+            g_siprec_test_ctx.request_seen = PJ_TRUE;
+            g_siprec_test_ctx.response_code = tsx->status_code;
+            PJ_LOG(3,(THIS_FILE, "    SIPREC test response received: %d",
+                     tsx->status_code));
+        }
+    }
+}
+
 
 /*****************************************************************************
  * Sub-tests
@@ -715,7 +732,7 @@ static int test_siprec_non_multipart_accepted(void)
     /* Create INVITE request. */
     status = pjsip_endpt_create_request(pjsua_var.endpt, &pjsip_invite_method,
                                         &target_str, &target_str, &target_str,
-                                        &target_str, NULL, -1, NULL, &tdata);
+                                        NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "    failed to create INVITE (%d)", status));
         pj_pool_release(pool);
@@ -766,7 +783,8 @@ static int test_siprec_non_multipart_accepted(void)
     tdata->msg->body = body;
 
     /* Send the request. */
-    status = pjsip_endpt_send_request_stateless(pjsua_var.endpt, tdata, NULL, NULL);
+    status = pjsip_endpt_send_request(pjsua_var.endpt, tdata, -1,
+                                       NULL, &siprec_test_request_cb);
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "    failed to send INVITE (%d)", status));
         pj_pool_release(pool);
@@ -855,7 +873,7 @@ static int test_siprec_no_metadata_rejected(void)
     /* Create INVITE request. */
     status = pjsip_endpt_create_request(pjsua_var.endpt, &pjsip_invite_method,
                                         &target_str, &target_str, &target_str,
-                                        &target_str, NULL, -1, NULL, &tdata);
+                                        NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "    failed to create INVITE (%d)", status));
         pj_pool_release(pool);
@@ -931,7 +949,8 @@ static int test_siprec_no_metadata_rejected(void)
     tdata->msg->body = multipart_body;
 
     /* Send the request. */
-    status = pjsip_endpt_send_request_stateless(pjsua_var.endpt, tdata, NULL, NULL);
+    status = pjsip_endpt_send_request(pjsua_var.endpt, tdata, -1,
+                                       NULL, &siprec_test_request_cb);
     if (status != PJ_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "    failed to send INVITE (%d)", status));
         pj_pool_release(pool);
