@@ -130,6 +130,30 @@ struct pjsua_call_media
  */
 #define PJSUA_MAX_CALL_MEDIA            PJMEDIA_MAX_SDP_MEDIA
 
+/* Pack/extract call id (lower 16 bits) and media index (upper 16 bits)
+ * in media stream callback user data. Valid input is [0, 0x7FFF] and
+ * asserted in debug builds. The fields are stored as signed 16-bit
+ * values so that an invalid -1 escaping the assertion in release
+ * builds still decodes as -1 rather than 65535.
+ */
+PJ_INLINE(void*) pjsua_med_udata_pack(pjsua_call_id call_id, int med_idx)
+{
+    pj_assert(call_id >= 0 && call_id <= 0x7FFF &&
+              med_idx >= 0 && med_idx <= 0x7FFF);
+    return (void*)(((pj_size_t)(pj_uint16_t)med_idx << 16) |
+                   (pj_size_t)(pj_uint16_t)call_id);
+}
+
+PJ_INLINE(pjsua_call_id) pjsua_med_udata_call_id(const void *udata)
+{
+    return (pjsua_call_id)(pj_int16_t)((pj_size_t)udata & 0xFFFF);
+}
+
+PJ_INLINE(int) pjsua_med_udata_med_idx(const void *udata)
+{
+    return (int)(pj_int16_t)(((pj_size_t)udata >> 16) & 0xFFFF);
+}
+
  /**
   * Maximum number of streams from an avi player.
   */

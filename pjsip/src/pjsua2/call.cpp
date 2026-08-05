@@ -435,6 +435,7 @@ void OnCallRxTextParam::fromPj(const pjsua_txt_stream_data &prm)
     seq = prm.seq;
     ts = prm.ts;
     text = pj2Str(prm.text);
+    medIdx = prm.med_idx;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -866,6 +867,7 @@ void Call::sendText(const CallSendTextParam &param) PJSUA2_THROW(Error)
     pjsua_call_send_text_param pj_param;
 
     pjsua_call_send_text_param_default(&pj_param);
+    pj_param.med_idx = param.medIdx;
     pj_param.text = str2Pj(param.text);
 
     PJSUA2_CHECK_EXPR(pjsua_call_send_text(id, &pj_param));

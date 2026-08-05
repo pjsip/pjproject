@@ -936,6 +936,12 @@ struct OnDtmfDigitParam
      * PJSUA_UNKNOWN_DTMF_DURATION.
      */
     unsigned            duration;
+
+    /**
+     * The media index of the audio stream that received the DTMF, or -1
+     * if the DTMF was not received via a media stream (e.g. SIP INFO).
+     */
+    int                 medIdx;
 };
 
 /**
@@ -986,6 +992,12 @@ struct OnDtmfEventParam
      * an event with PJMEDIA_STREAM_DTMF_IS_END for every event.
      */
     unsigned            flags;
+
+    /**
+     * The media index of the audio stream that received the DTMF, or -1
+     * if the DTMF was not received via a media stream (e.g. SIP INFO).
+     */
+    int                 medIdx;
 };
 
 /**
@@ -1009,6 +1021,11 @@ struct OnCallRxTextParam
      * Note that the text can be empty.
      */
     string              text;
+
+    /**
+     * The index of the text media stream that received the text.
+     */
+    int                 medIdx;
 
 public:
     /**

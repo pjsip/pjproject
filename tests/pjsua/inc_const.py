@@ -35,9 +35,11 @@ MEDIA_ACTIVE = "Call [0-9]+ media [0-9]+ .*, status is Active"
 # RX_DTMF
 RX_DTMF = "Incoming DTMF on call [0-9]+: "
 # Suffix logged after the digit when DTMF is received via SIP INFO
-# (as opposed to RFC 2833). Append after RX_DTMF + digit to assert the
+# (as opposed to RFC 2833), including the stream index,
+# which is -1 as SIP INFO is not stream-specific.
+# Append after RX_DTMF + digit to assert the
 # transport method, e.g. RX_DTMF + "1" + RX_DTMF_INFO_METHOD.
-RX_DTMF_INFO_METHOD = ".*using SIP INFO method"
+RX_DTMF_INFO_METHOD = ".*using SIP INFO method, stream -1"
 
 ##########################
 # MEDIA

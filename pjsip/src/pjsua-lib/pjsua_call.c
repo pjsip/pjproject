@@ -6951,6 +6951,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
                         if (is_handled) {
                             info.method = PJSUA_DTMF_METHOD_SIP_INFO;
+                            info.med_idx = -1;
                             if (pjsua_var.ua_cfg.cb.on_dtmf_event) {
                                 pjsua_dtmf_event evt;
                                 pj_timestamp begin_of_time, timestamp;
@@ -6968,6 +6969,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                                  * duration of the digit.
                                  */
                                 evt.flags = PJMEDIA_STREAM_DTMF_IS_END;
+                                evt.med_idx = -1;
                                 (*pjsua_var.ua_cfg.cb.on_dtmf_event)(call->index,
                                                                      &evt);
                             } else {
