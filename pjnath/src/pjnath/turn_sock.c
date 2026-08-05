@@ -1640,13 +1640,30 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
              * so give up on it instead.
              */
             if (pkt_len > turn_sock->setting.max_pkt_size) {
+                pj_uint32_t conn_id = conn->id;
+                unsigned peer_addr_len = conn->peer_addr_len;
+                pj_sockaddr peer_addr;
+
                 PJ_LOG(4,(turn_sock->pool->obj_name,
                           "Dropping data connection, ConnectionBind response "
                           "declares %u bytes but we can only receive %u",
                           pkt_len, turn_sock->setting.max_pkt_size));
+
+                pj_sockaddr_cp(&peer_addr, &conn->peer_addr);
                 dataconn_cleanup(conn);
                 --turn_sock->data_conn_cnt;
                 pj_grp_lock_release(turn_sock->grp_lock);
+
+                /* Once the connection is gone the pending ConnectionBind can
+                 * only end up as a stray event, so report the failure here to
+                 * avoid leaving the application waiting forever.
+                 */
+                if (turn_sock->cb.on_connection_status) {
+                    (*turn_sock->cb.on_connection_status)(turn_sock,
+                                                          PJ_ETOOBIG,
+                                                          conn_id, &peer_addr,
+                                                          peer_addr_len);
+                }
                 return PJ_FALSE;
             }
 
