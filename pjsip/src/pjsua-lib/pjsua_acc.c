@@ -536,6 +536,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
     }
 
     acc->ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
+    acc->outbound_rejected = PJ_FALSE;
 
     return PJ_SUCCESS;
 }
@@ -1775,6 +1776,11 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         if (acc->cfg.use_rfc5626 != cfg->use_rfc5626)
             acc->cfg.use_rfc5626 = cfg->use_rfc5626;
 
+        /* Outbound settings changed, so any previous 439 no longer
+         * describes what we would be sending. Try outbound again.
+         */
+        acc->outbound_rejected = PJ_FALSE;
+
         if (pj_strcmp(&acc->cfg.rfc5626_instance_id, 
                       &cfg->rfc5626_instance_id)) 
         {
@@ -2107,6 +2113,10 @@ static void update_regc_contact(pjsua_acc *acc)
     const pj_str_t tls_param = pj_str(";transport=tls");
 
     if (!acc_cfg->use_rfc5626)
+        goto done;
+
+    /* The first hop answered 439 to outbound, so don't ask again. */
+    if (acc->outbound_rejected)
         goto done;
 
     /* Check if outbound has been requested and rejected */
@@ -2503,7 +2513,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
                                transport_param,
                                (int)acc->cfg.contact_uri_params.slen,
                                acc->cfg.contact_uri_params.ptr,
-                               (acc->cfg.use_rfc5626? ob: ""),
+                               ((acc->cfg.use_rfc5626 &&
+                                 !acc->outbound_rejected)? ob: ""),
                                (int)acc->cfg.contact_params.slen,
                                acc->cfg.contact_params.ptr);
         if (len < 1 || len >= PJSIP_MAX_URL_SIZE) {
@@ -3133,6 +3144,38 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
     /* Reaching this point means no contact rewrite, so reset the flag */
     acc->contact_rewritten = PJ_FALSE;
+
+    /* A 439 (PJSIP_SC_FIRST_HOP_LACKS_OUTBOUND_SUPPORT) means the first hop
+     * does not support SIP outbound (RFC 5626 section 6). Since use_rfc5626
+     * is enabled by default, resending the same REGISTER would only draw
+     * another 439 and the account would never register at all. Remember the
+     * rejection and re-register without outbound, as permitted by RFC 5626
+     * section 4.2.1.
+     *
+     * This needs its own flag rather than rfc5626_status: the failure path
+     * above has already called destroy_regc(), which resets rfc5626_status,
+     * and update_regc_contact() recomputes it from the Contact transport on
+     * every rebuild -- so a rejection recorded there cannot survive to the
+     * next registration. cfg.use_rfc5626 is deliberately left untouched, so
+     * the account's configured intent is preserved and outbound is tried
+     * again once the path may have changed (see the resets of this flag).
+     */
+    if (param->code == PJSIP_SC_FIRST_HOP_LACKS_OUTBOUND_SUPPORT &&
+        acc->cfg.use_rfc5626 && !acc->outbound_rejected)
+    {
+        PJ_LOG(3,(THIS_FILE, "Acc %d: first hop lacks outbound support, "
+                             "retrying registration without SIP outbound",
+                             acc->index));
+        acc->outbound_rejected = PJ_TRUE;
+
+        /* Note this is a no-op when reg_retry_interval is 0, i.e. the
+         * application has asked not to be retried on its behalf. The account
+         * is no longer stuck either way: the flag is set, so the
+         * application's own pjsua_acc_set_registration() now rebuilds the
+         * REGISTER without outbound and succeeds.
+         */
+        schedule_reregistration(acc);
+    }
 
     /* Check if we need to auto retry registration. Basically, registration
      * failure codes triggering auto-retry are those of temporal failures
@@ -4630,7 +4673,8 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
                                      transport_param,
                                      (int)acc->cfg.contact_uri_params.slen,
                                      acc->cfg.contact_uri_params.ptr,
-                                     (acc->cfg.use_rfc5626? ob: ""),
+                                     ((acc->cfg.use_rfc5626 &&
+                                       !acc->outbound_rejected)? ob: ""),
                                      (int)acc->cfg.contact_params.slen,
                                      acc->cfg.contact_params.ptr);
     if (contact->slen < 1 || contact->slen >= (int)PJSIP_MAX_URL_SIZE)
@@ -5332,6 +5376,10 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
             if (acc->rfc5626_status == OUTBOUND_ACTIVE) {
                 acc->rfc5626_status = OUTBOUND_WANTED;
             }
+            /* New transport means a possibly different first hop, so a
+             * previous 439 no longer applies.
+             */
+            acc->outbound_rejected = PJ_FALSE;
 
             if (pjsua_var.acc[i].ip_change_op ==
                                             PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP)
@@ -5385,6 +5433,11 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
 
     /* Prepare for contact rewrite */
     acc->contact_rewritten = PJ_FALSE;
+
+    /* The IP change may have put us behind a different first hop, so give
+     * SIP outbound another chance.
+     */
+    acc->outbound_rejected = PJ_FALSE;
 
     status = pjsua_acc_set_registration(acc->index, !need_unreg);
     if ((status != PJ_SUCCESS)
