@@ -117,9 +117,10 @@ static void dns_callback(void *user_data,
  * time is still not protected: another thread may complete the resolution,
  * and the application may then release the query job, while the queries are
  * being started here. That is not specific to the deferral though, the query
- * job has no locking at all, so it is up to the application to serialize the
- * completion against its use of the query job, as the SIP resolver does with
- * its own group lock.
+ * job has no locking at all, so its fields are updated from the DNS callbacks
+ * without any synchronization anyway. Protecting it would require mutual
+ * exclusion between the completion and the functions starting the queries,
+ * which the deferral cannot provide by itself.
  */
 static void complete_query(pj_dns_srv_async_query *query_job,
                            pj_status_t status)
