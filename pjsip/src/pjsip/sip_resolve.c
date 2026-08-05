@@ -538,8 +538,13 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
      * cache, and that the callback of a query which has just been started
      * may already be running in another thread, e.g. when the query has
      * been merged into an outstanding query which completes at that very
-     * moment. The group lock is recursive, so it may be held while calling
-     * the DNS resolver.
+     * moment.
+     *
+     * Note that this is the lock of the SIP resolver, not the one of the DNS
+     * resolver, so holding it while starting the queries below doesn't invert
+     * any lock order: the DNS resolver always releases its own group lock
+     * before invoking the callbacks. And since the lock is recursive, the
+     * callbacks may also acquire it in this very thread.
      */
     pj_grp_lock_acquire(query->grp_lock);
     query->starting = PJ_TRUE;

@@ -112,6 +112,14 @@ static void dns_callback(void *user_data,
  * starting the queries, so that the deferred state is only ever accessed by
  * that thread, i.e. a completion reported by another thread can never get
  * lost in the handoff.
+ *
+ * It does mean that a query job which is used by several threads at the same
+ * time is still not protected: another thread may complete the resolution,
+ * and the application may then release the query job, while the queries are
+ * being started here. That is not specific to the deferral though, the query
+ * job has no locking at all, so it is up to the application to serialize the
+ * completion against its use of the query job, as the SIP resolver does with
+ * its own group lock.
  */
 static void complete_query(pj_dns_srv_async_query *query_job,
                            pj_status_t status)
@@ -201,8 +209,7 @@ static void set_busy(pj_dns_srv_async_query *query_job)
  */
 static void unset_busy(pj_dns_srv_async_query *query_job)
 {
-    pj_assert(query_job->busy > 0 &&
-              query_job->busy_thread == pj_thread_this());
+    pj_assert(query_job->busy > 0);
 
     if (--query_job->busy == 0) {
         query_job->busy_thread = NULL;
