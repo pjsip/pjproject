@@ -150,10 +150,6 @@ static struct
      * local SDP offer, so the peer establishes a call holding a media slot
      * whose type is neither audio, video nor text. */
     pj_bool_t     inject_app_mline;
-    /* SIPREC test mode: 0=off, 1=non-multipart test, 2=no-metadata test. */
-    int           siprec_test_mode;
-    /* For SIPREC tests, record if the call was accepted. */
-    pj_bool_t     siprec_call_accepted;
     /* When set, on_call_sdp_created removes every connection line (session
      * and media level) from the local offer created for strip_conn_call_id,
      * so the call-hold SDP modification runs on an SDP with no c= line. */
@@ -187,22 +183,6 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     PJ_UNUSED_ARG(acc_id);
 
     g_ctx.incoming_call_id = call_id;
-
-    /* Check if this is a SIPREC INVITE for testing purposes. */
-    if (g_ctx.siprec_test_mode > 0 && rdata) {
-        const pj_str_t str_require = {"Require", 7};
-        pjsip_require_hdr *req_hdr;
-
-        req_hdr = (pjsip_require_hdr*)
-            pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_require, NULL);
-
-        if (req_hdr && pjsip_siprec_verify_require_hdr(req_hdr)) {
-            /* This is a SIPREC INVITE. Record whether it gets accepted. */
-            g_ctx.siprec_call_accepted = PJ_TRUE;
-            PJ_LOG(3,(THIS_FILE, "    SIPREC INVITE received for test mode %d",
-                     g_ctx.siprec_test_mode));
-        }
-    }
 
     /* Probe: over-limit audio count must be rejected. answer2() leaves
      * call->opt_inited FALSE on failure, so the valid answer below still
@@ -389,37 +369,11 @@ static void drain_all_calls(void)
     wait_until(NULL, PJSUA_INVALID_ID, PJ_IOQUEUE_KEY_FREE_DELAY + 200);
 }
 
-#if PJSUA_HAS_SIPREC
 /* State for SIPREC tests to track response code. */
 static struct {
     pj_bool_t request_seen;
     int        response_code;
 } g_siprec_test_ctx;
-
-/* Predicate to check if SIPREC response has been received */
-static pj_bool_t siprec_response_seen(pjsua_call_id call_id)
-{
-    PJ_UNUSED_ARG(call_id);
-    return g_siprec_test_ctx.request_seen;
-}
-
-/* Callback for SIPREC test stateful requests to capture response status */
-static void siprec_test_request_cb(void *token, pjsip_event *e)
-{
-    PJ_UNUSED_ARG(token);
-
-    if (e->type == PJSIP_EVENT_TSX_STATE) {
-        pjsip_transaction *tsx = e->body.tsx_state.tsx;
-
-        if (tsx && tsx->status_code > 0) {
-            g_siprec_test_ctx.request_seen = PJ_TRUE;
-            g_siprec_test_ctx.response_code = tsx->status_code;
-            PJ_LOG(3,(THIS_FILE, "    SIPREC test response received: %d",
-                     tsx->status_code));
-        }
-    }
-}
-
 
 /*****************************************************************************
  * Sub-tests
@@ -696,6 +650,31 @@ static pjmedia_sdp_session *create_siprec_sdp(pj_pool_t *pool)
     return sdp;
 }
 
+#if PJSUA_HAS_SIPREC
+/* Predicate to check if SIPREC response has been received */
+static pj_bool_t siprec_response_seen(pjsua_call_id call_id)
+{
+    PJ_UNUSED_ARG(call_id);
+    return g_siprec_test_ctx.request_seen;
+}
+
+/* Callback for SIPREC test stateful requests to capture response status */
+static void siprec_test_request_cb(void *token, pjsip_event *e)
+{
+    PJ_UNUSED_ARG(token);
+
+    if (e->type == PJSIP_EVENT_TSX_STATE) {
+        pjsip_transaction *tsx = e->body.tsx_state.tsx;
+
+        if (tsx && tsx->status_code > 0) {
+            g_siprec_test_ctx.request_seen = PJ_TRUE;
+            g_siprec_test_ctx.response_code = tsx->status_code;
+            PJ_LOG(3,(THIS_FILE, "    SIPREC test response received: %d",
+                     tsx->status_code));
+        }
+    }
+}
+
 /* Test 1: SIPREC INVITE with direct application/sdp body (non-multipart)
  * using default (PJ_FALSE) config. Should be accepted.
  */
@@ -779,7 +758,8 @@ static int test_siprec_non_multipart_accepted(void)
     }
 
     /* Set application/sdp content type (direct SDP, not multipart). */
-    pj_strdup2(pool, &sdp_str, sdp_buf);
+    sdp_str.ptr = (char*)pj_pool_alloc(pool, status);
+    pj_memcpy(sdp_str.ptr, sdp_buf, status);
     sdp_str.slen = status;
 
     body = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_msg_body);
