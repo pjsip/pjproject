@@ -663,10 +663,11 @@ static int dealloc_multi_pkt_test(pj_stun_config *stun_cfg,
 
 /////////////////////////////////////////////////////////////////////
 
-/* Verify that destroying the socket from on_rx_data() stops the packet loop.
- * Destruction of an allocated session is graceful, so turn_sock->sess stays
- * set and the deallocation is still in progress when we return, hence the
- * loop cannot rely on the session alone here.
+/* Verify that destroying the socket from on_rx_data() stops any further data
+ * from being reported to the application. Destroying an allocated session is
+ * graceful, so turn_sock->sess stays set and packets keep being parsed until
+ * the deallocation completes, which means the session alone cannot tell us
+ * whether the application still wants the data.
  */
 static int destroy_in_rx_data_test(pj_stun_config *stun_cfg,
                                    pj_bool_t use_ipv6,
