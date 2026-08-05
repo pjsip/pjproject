@@ -1916,6 +1916,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     att_param.addr_len = pj_sockaddr_get_len(&info->rem_addr);
     att_param.rtp_cb2 = &on_rx_rtp;
     att_param.rtcp_cb = &on_rx_rtcp;
+    /* Let the transport hold a reference on the stream's group lock across
+     * each rx callback, so the stream cannot be destroyed while an in-flight
+     * RTP/RTCP callback is running on it.
+     */
+    att_param.grp_lock = c_strm->grp_lock;
 
     /* Only attach transport when stream is ready. */
     status = pjmedia_transport_attach2(tp, &att_param);

@@ -617,6 +617,14 @@ typedef struct pjmedia_tp_cb_param
 /**
  * This structure describes the data passed when calling
  * #pjmedia_transport_attach2().
+ *
+ * The caller MUST zero-initialize this structure (e.g. with pj_bzero())
+ * before setting the members it needs. Optional members that are left zero
+ * take their documented default ("not set"), and new optional members added
+ * over time are always defined so that an all-zero value preserves the prior
+ * behavior. In particular \a grp_lock is dereferenced by the transport only
+ * when non-NULL, so zeroing keeps a caller written against an older revision
+ * of this structure safe after a rebuild.
  */
 struct pjmedia_transport_attach_param
 {
@@ -667,6 +675,28 @@ struct pjmedia_transport_attach_param
      * Callback to be called when RTP packet is received on the transport.
      */
     void (*rtp_cb2)(pjmedia_tp_cb_param *param);
+
+    /**
+     * Optional group lock of the entity owning the callbacks (e.g. the
+     * media stream). If set, the transport holds a reference on this group
+     * lock for the whole duration of each rtp_cb/rtp_cb2/rtcp_cb invocation,
+     * so the callback owner cannot be destroyed by another thread while an
+     * in-flight receive callback is still running on it. NULL (the default)
+     * keeps the previous behavior.
+     *
+     * The transport only references this lock transiently, while dispatching
+     * a callback; it does not hold a reference between attach and detach.
+     * The caller therefore must keep its own reference on the lock alive
+     * until #pjmedia_transport_detach() returns, otherwise a receive that
+     * arrives after the last reference is dropped would reference a freed
+     * lock.
+     *
+     * Honoring this requires the transport to implement the attach2() op;
+     * the legacy attach() op cannot carry it. #pjmedia_transport_attach2()
+     * therefore rejects a non-NULL grp_lock with #PJ_ENOTSUP when the
+     * transport only provides attach().
+     */
+    pj_grp_lock_t *grp_lock;
 
 };
 
@@ -755,10 +785,24 @@ PJ_INLINE(pjmedia_transport*) pjmedia_transport_info_get_transport(
  * the transport if it is implemented, otherwise it calls <tt>attach()</tt>
  * member of the transport.
  *
+ * Note that the legacy <tt>attach()</tt> op cannot carry
+ * \a att_param->grp_lock (nor \a rtp_cb2), so it cannot honor the
+ * callback-owner lifetime guarantee that a non-NULL \a grp_lock requests.
+ * To avoid silently downgrading a caller that relies on that guarantee,
+ * this wrapper returns #PJ_ENOTSUP when \a grp_lock is set but the transport
+ * only implements the legacy <tt>attach()</tt> op. This does not regress a
+ * working configuration: the media streams request the receive callback via
+ * \a rtp_cb2, which the legacy <tt>attach()</tt> op also cannot carry, so a
+ * stream could never receive RTP through an attach()-only transport in the
+ * first place. Callers that do not set \a grp_lock keep using the legacy
+ * path unchanged.
+ *
  * @param tp        The media transport.
  * @param att_param The transport attach param.
  *
- * @return          PJ_SUCCESS on success, or the appropriate error code.
+ * @return          PJ_SUCCESS on success, PJ_ENOTSUP if att_param->grp_lock
+ *                  is set but the transport has no attach2() op, or the
+ *                  appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_attach2(pjmedia_transport *tp,
                                   pjmedia_transport_attach_param *att_param)
@@ -766,10 +810,12 @@ PJ_INLINE(pj_status_t) pjmedia_transport_attach2(pjmedia_transport *tp,
     if (tp->op->attach2) {
         return (*tp->op->attach2)(tp, att_param);
     } else {
-        return (*tp->op->attach)(tp, att_param->user_data, 
-                                 (pj_sockaddr_t*)&att_param->rem_addr, 
-                                 (pj_sockaddr_t*)&att_param->rem_rtcp, 
-                                 att_param->addr_len, att_param->rtp_cb, 
+        if (att_param->grp_lock)
+            return PJ_ENOTSUP;
+        return (*tp->op->attach)(tp, att_param->user_data,
+                                 (pj_sockaddr_t*)&att_param->rem_addr,
+                                 (pj_sockaddr_t*)&att_param->rem_rtcp,
+                                 att_param->addr_len, att_param->rtp_cb,
                                  att_param->rtcp_cb);
     }
 }

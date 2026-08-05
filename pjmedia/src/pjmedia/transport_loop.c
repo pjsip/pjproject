@@ -29,6 +29,7 @@
 
 struct tp_user
 {
+    pj_bool_t           active;         /**< Slot is in use?                */
     pj_bool_t           rx_disabled;    /**< Doesn't want to receive pkt?   */
     void               *user_data;      /**< Only valid when attached       */
     void  (*rtp_cb)(    void*,          /**< To report incoming RTP.        */
@@ -38,6 +39,8 @@ struct tp_user
     void  (*rtcp_cb)(   void*,          /**< To report incoming RTCP.       */
                         void*,
                         pj_ssize_t);
+    pj_grp_lock_t      *cb_grp_lock;    /**< Callback owner's group lock,
+                                             ref'd across each rx callback. */
 };
 
 struct transport_loop
@@ -46,8 +49,7 @@ struct transport_loop
 
     pj_pool_t          *pool;           /**< Memory pool                    */
     unsigned            max_attach_cnt; /**< Max number of attachments      */
-    unsigned            user_cnt;       /**< Number of attachments          */
-    struct tp_user     *users;          /**< Array of users.                */
+    struct tp_user     *users;          /**< Array of users (stable slots). */
     pj_bool_t           disable_rx;     /**< Disable RX.                    */
 
     pjmedia_loop_tp_setting setting;    /**< Setting.                       */
@@ -205,7 +207,7 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
     if (tp->setting.port == 0)
         tp->setting.port = 4000;
 
-    /* alloc users array */
+    /* alloc users array (fixed slots; detach marks a slot free in place) */
     tp->max_attach_cnt = tp->setting.max_attach_cnt;
     if (tp->max_attach_cnt == 0)
         tp->max_attach_cnt = 1;
@@ -223,15 +225,24 @@ PJ_DEF(pj_status_t) pjmedia_transport_loop_disable_rx( pjmedia_transport *tp,
 {
     struct transport_loop *loop = (struct transport_loop*) tp;
     unsigned i;
+    pj_status_t status = PJ_ENOTFOUND;
 
-    for (i=0; i<loop->user_cnt; ++i) {
-        if (loop->users[i].user_data == user) {
+    /* Serialize the users[] search/update with attach/detach and the
+     * send-side snapshot via the transport group lock.
+     */
+    pj_grp_lock_acquire(tp->grp_lock);
+    for (i=0; i<loop->max_attach_cnt; ++i) {
+        if (loop->users[i].active && loop->users[i].user_data == user) {
             loop->users[i].rx_disabled = disabled;
-            return PJ_SUCCESS;
+            status = PJ_SUCCESS;
+            break;
         }
     }
-    pj_assert(!"Invalid stream user");
-    return PJ_ENOTFOUND;
+    pj_grp_lock_release(tp->grp_lock);
+
+    if (status != PJ_SUCCESS)
+        pj_assert(!"Invalid stream user");
+    return status;
 }
 
 
@@ -287,34 +298,51 @@ static pj_status_t tp_attach(   pjmedia_transport *tp,
                                        void (*rtp_cb2)(pjmedia_tp_cb_param*),
                                        void (*rtcp_cb)(void*,
                                                        void*,
-                                                       pj_ssize_t))
+                                                       pj_ssize_t),
+                                       pj_grp_lock_t *cb_grp_lock)
 {
     struct transport_loop *loop = (struct transport_loop*) tp;
-    unsigned i;
+    unsigned i, slot;
     const pj_sockaddr *rtcp_addr;
 
     /* Validate arguments */
     PJ_ASSERT_RETURN(tp && rem_addr && addr_len, PJ_EINVAL);
 
-    /* Must not be "attached" to same user */
-    for (i=0; i<loop->user_cnt; ++i) {
-        PJ_ASSERT_RETURN(loop->users[i].user_data != user_data,
-                         PJ_EINVALIDOP);
-    }
-    PJ_ASSERT_RETURN(loop->user_cnt != loop->max_attach_cnt, PJ_ETOOMANY);
-
     PJ_UNUSED_ARG(rem_rtcp);
     PJ_UNUSED_ARG(rtcp_addr);
 
-    /* "Attach" the application: */
-
-    /* Save the new user */
-    loop->users[loop->user_cnt].rtp_cb = rtp_cb;
-    loop->users[loop->user_cnt].rtp_cb2 = rtp_cb2;
-    loop->users[loop->user_cnt].rtcp_cb = rtcp_cb;
-    loop->users[loop->user_cnt].user_data = user_data;
-    loop->users[loop->user_cnt].rx_disabled = loop->disable_rx;
-    ++loop->user_cnt;
+    /* "Attach" the application under the transport group lock, so the
+     * duplicate-user check and the slot claim are atomic with respect to a
+     * concurrent attach/detach and the send-side snapshot. Slots are never
+     * shifted: a detached slot is left in place (marked inactive) and reused
+     * here, so the send fan-out can iterate by index without a concurrent
+     * detach skipping a still-attached recipient.
+     */
+    pj_grp_lock_acquire(tp->grp_lock);
+    slot = loop->max_attach_cnt;
+    for (i=0; i<loop->max_attach_cnt; ++i) {
+        if (!loop->users[i].active) {
+            if (slot == loop->max_attach_cnt)
+                slot = i;
+            continue;
+        }
+        if (loop->users[i].user_data == user_data) {
+            pj_grp_lock_release(tp->grp_lock);
+            return PJ_EINVALIDOP;
+        }
+    }
+    if (slot == loop->max_attach_cnt) {
+        pj_grp_lock_release(tp->grp_lock);
+        return PJ_ETOOMANY;
+    }
+    loop->users[slot].rtp_cb = rtp_cb;
+    loop->users[slot].rtp_cb2 = rtp_cb2;
+    loop->users[slot].rtcp_cb = rtcp_cb;
+    loop->users[slot].user_data = user_data;
+    loop->users[slot].cb_grp_lock = cb_grp_lock;
+    loop->users[slot].rx_disabled = loop->disable_rx;
+    loop->users[slot].active = PJ_TRUE;
+    pj_grp_lock_release(tp->grp_lock);
 
     return PJ_SUCCESS;
 }
@@ -332,18 +360,19 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
                                                        pj_ssize_t))
 {
     return tp_attach(tp, user_data, rem_addr, rem_rtcp, addr_len,
-                     rtp_cb, NULL, rtcp_cb);
+                     rtp_cb, NULL, rtcp_cb, NULL);
 }
 
 static pj_status_t transport_attach2(pjmedia_transport *tp,
                                      pjmedia_transport_attach_param *att_param)
 {
-    return tp_attach(tp, att_param->user_data, 
-                            (pj_sockaddr_t*)&att_param->rem_addr, 
-                            (pj_sockaddr_t*)&att_param->rem_rtcp, 
+    return tp_attach(tp, att_param->user_data,
+                            (pj_sockaddr_t*)&att_param->rem_addr,
+                            (pj_sockaddr_t*)&att_param->rem_rtcp,
                             att_param->addr_len, att_param->rtp_cb,
-                            att_param->rtp_cb2, 
-                            att_param->rtcp_cb);
+                            att_param->rtp_cb2,
+                            att_param->rtcp_cb,
+                            att_param->grp_lock);
 }
 
 
@@ -356,17 +385,21 @@ static void transport_detach( pjmedia_transport *tp,
 
     pj_assert(tp);
 
-    for (i=0; i<loop->user_cnt; ++i) {
-        if (loop->users[i].user_data == user_data)
+    /* Serialize the users[] mutation with the send-side snapshot below via
+     * the transport group lock. Mark the slot inactive in place rather than
+     * compacting the array, so a concurrent send iterating by index does not
+     * have a still-attached recipient shifted past its cursor and skipped.
+     */
+    pj_grp_lock_acquire(tp->grp_lock);
+
+    for (i=0; i<loop->max_attach_cnt; ++i) {
+        if (loop->users[i].active && loop->users[i].user_data == user_data) {
+            pj_bzero(&loop->users[i], sizeof(loop->users[i]));
             break;
+        }
     }
 
-    /* Remove this user */
-    if (i != loop->user_cnt) {
-        pj_array_erase(loop->users, sizeof(loop->users[0]),
-                       loop->user_cnt, i);
-        --loop->user_cnt;
-    }
+    pj_grp_lock_release(tp->grp_lock);
 }
 
 
@@ -381,7 +414,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     /* Simulate packet lost on TX direction */
     if (loop->tx_drop_pct) {
         if ((pj_rand() % 100) <= (int)loop->tx_drop_pct) {
-            PJ_LOG(5,(loop->base.name, 
+            PJ_LOG(5,(loop->base.name,
                       "TX RTP packet dropped because of pkt lost "
                       "simulation"));
             return PJ_SUCCESS;
@@ -391,7 +424,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     /* Simulate packet lost on RX direction */
     if (loop->rx_drop_pct) {
         if ((pj_rand() % 100) <= (int)loop->rx_drop_pct) {
-            PJ_LOG(5,(loop->base.name, 
+            PJ_LOG(5,(loop->base.name,
                       "RX RTP packet dropped because of pkt lost "
                       "simulation"));
             return PJ_SUCCESS;
@@ -400,21 +433,44 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 
     pj_grp_lock_add_ref(tp->grp_lock);
 
-    /* Distribute to users */
-    for (i=0; i<loop->user_cnt; ++i) {
-        if (loop->users[i].rx_disabled) continue;
-        if (loop->users[i].rtp_cb2) {
+    /* Distribute to users. Slots are stable indices (detach marks a slot
+     * inactive without shifting), so iterating by index cannot skip a
+     * still-attached recipient. Each slot's callbacks and owner group lock
+     * are snapshotted under the group lock (add_ref'ing the owner), which is
+     * then released before the up-call so it is never held across an
+     * application callback; the owner ref keeps the target alive meanwhile.
+     */
+    for (i=0; i<loop->max_attach_cnt; ++i) {
+        void (*rtp_cb)(void*, void*, pj_ssize_t) = NULL;
+        void (*rtp_cb2)(pjmedia_tp_cb_param*) = NULL;
+        void *user_data = NULL;
+        pj_grp_lock_t *cb_grp_lock = NULL;
+
+        pj_grp_lock_acquire(tp->grp_lock);
+        if (loop->users[i].active && !loop->users[i].rx_disabled) {
+            rtp_cb = loop->users[i].rtp_cb;
+            rtp_cb2 = loop->users[i].rtp_cb2;
+            user_data = loop->users[i].user_data;
+            cb_grp_lock = loop->users[i].cb_grp_lock;
+            if (cb_grp_lock)
+                pj_grp_lock_add_ref(cb_grp_lock);
+        }
+        pj_grp_lock_release(tp->grp_lock);
+
+        if (rtp_cb2) {
             pjmedia_tp_cb_param param;
 
             pj_bzero(&param, sizeof(param));
-            param.user_data = loop->users[i].user_data;
+            param.user_data = user_data;
             param.pkt = (void *)pkt;
             param.size = size;
-            (*loop->users[i].rtp_cb2)(&param);
-        } else if (loop->users[i].rtp_cb) {
-            (*loop->users[i].rtp_cb)(loop->users[i].user_data, (void*)pkt, 
-                                     size);
+            (*rtp_cb2)(&param);
+        } else if (rtp_cb) {
+            (*rtp_cb)(user_data, (void*)pkt, size);
         }
+
+        if (cb_grp_lock)
+            pj_grp_lock_dec_ref(cb_grp_lock);
     }
 
     pj_grp_lock_dec_ref(tp->grp_lock);
@@ -446,11 +502,32 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 
     pj_grp_lock_add_ref(tp->grp_lock);
 
-    /* Distribute to users */
-    for (i=0; i<loop->user_cnt; ++i) {
-        if (!loop->users[i].rx_disabled && loop->users[i].rtcp_cb)
-            (*loop->users[i].rtcp_cb)(loop->users[i].user_data, (void*)pkt,
-                                      size);
+    /* Distribute to users. See transport_send_rtp() for why each stable slot
+     * is snapshotted and its owner group lock referenced under the group
+     * lock, then released before the up-call.
+     */
+    for (i=0; i<loop->max_attach_cnt; ++i) {
+        void (*rtcp_cb)(void*, void*, pj_ssize_t) = NULL;
+        void *user_data = NULL;
+        pj_grp_lock_t *cb_grp_lock = NULL;
+
+        pj_grp_lock_acquire(tp->grp_lock);
+        if (loop->users[i].active && !loop->users[i].rx_disabled &&
+            loop->users[i].rtcp_cb)
+        {
+            rtcp_cb = loop->users[i].rtcp_cb;
+            user_data = loop->users[i].user_data;
+            cb_grp_lock = loop->users[i].cb_grp_lock;
+            if (cb_grp_lock)
+                pj_grp_lock_add_ref(cb_grp_lock);
+        }
+        pj_grp_lock_release(tp->grp_lock);
+
+        if (rtcp_cb)
+            (*rtcp_cb)(user_data, (void*)pkt, size);
+
+        if (cb_grp_lock)
+            pj_grp_lock_dec_ref(cb_grp_lock);
     }
 
     pj_grp_lock_dec_ref(tp->grp_lock);

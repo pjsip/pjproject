@@ -36,6 +36,11 @@
  * pjlib/include/pj/config_site_stress.h.
  */
 
+/* For REG_RIP in <ucontext.h> on glibc; must precede any libc include. */
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+#  define _GNU_SOURCE 1
+#endif
+
 #include <pjsua-lib/pjsua.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,6 +51,15 @@
 #  include <signal.h>
 #  include <unistd.h>
 #  define PJSUA_STRESS_HAS_BACKTRACE 1
+#endif
+
+/* ucontext gives the faulting PC; only wired up for Linux (the CI target),
+ * where <ucontext.h> needs no extra feature macro beyond _GNU_SOURCE above.
+ * macOS's copy requires _XOPEN_SOURCE and its plain backtrace already
+ * captures the crash site, so it is left on the fallback path. */
+#if defined(__linux__)
+#  include <ucontext.h>
+#  define PJSUA_STRESS_HAS_FAULT_PC 1
 #endif
 
 #define THIS_FILE  "pjsua_stress"
@@ -930,17 +944,48 @@ bad:
  *==========================================================================*/
 
 #ifdef PJSUA_STRESS_HAS_BACKTRACE
+/* Extract the faulting instruction pointer from the signal ucontext.
+ * Returns NULL if unavailable on this platform. Under TSan, backtrace()
+ * from the signal handler often unwinds only the signal-delivery frames
+ * (libtsan + this handler) and misses the interrupted thread, so the crash
+ * site never appears. The ucontext PC is the crash site regardless, so we
+ * prepend it to the dumped frames for addr2line to resolve. */
+static void *crash_fault_pc(void *uctx)
+{
+#if defined(PJSUA_STRESS_HAS_FAULT_PC) && defined(__x86_64__)
+    return (void*)((ucontext_t*)uctx)->uc_mcontext.gregs[REG_RIP];
+#elif defined(PJSUA_STRESS_HAS_FAULT_PC) && defined(__aarch64__)
+    return (void*)((ucontext_t*)uctx)->uc_mcontext.pc;
+#else
+    (void)uctx;
+    return NULL;
+#endif
+}
+
 /* Async-signal-safe handler: dumps a native backtrace, then re-raises
  * the signal with the default disposition so the process still dies
  * with the original status (e.g. 134 for SIGABRT). The build links
  * with -rdynamic so non-static symbols resolve to names. */
-static void crash_signal_handler(int sig)
+static void crash_signal_handler(int sig, siginfo_t *info, void *uctx)
 {
     static const char header[] = "\n=== pjsua_stress backtrace ===\n";
+    static const char pchdr[] = "faulting frame:\n";
     void *frames[64];
+    void *pc;
     int n;
 
+    PJ_UNUSED_ARG(info);
+
     (void)!write(STDERR_FILENO, header, sizeof(header) - 1);
+
+    /* Dump the faulting PC first; it is the crash site even when the
+     * backtrace below only captures the signal-delivery frames. */
+    pc = crash_fault_pc(uctx);
+    if (pc) {
+        (void)!write(STDERR_FILENO, pchdr, sizeof(pchdr) - 1);
+        backtrace_symbols_fd(&pc, 1, STDERR_FILENO);
+    }
+
     n = backtrace(frames, (int)(sizeof(frames) / sizeof(frames[0])));
     backtrace_symbols_fd(frames, n, STDERR_FILENO);
 
@@ -951,12 +996,18 @@ static void crash_signal_handler(int sig)
 
 static void install_crash_handler(void)
 {
+    struct sigaction sa;
     void *dummy[1];
     /* Prime the libgcc unwinder so backtrace() inside the handler
      * doesn't take the slow first-call path that may allocate. */
     backtrace(dummy, 1);
-    signal(SIGABRT, crash_signal_handler);
-    signal(SIGSEGV, crash_signal_handler);
+
+    pj_bzero(&sa, sizeof(sa));
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_SIGINFO;
+    sa.sa_sigaction = &crash_signal_handler;
+    sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGSEGV, &sa, NULL);
 }
 #else
 static void install_crash_handler(void) {}
