@@ -66,6 +66,13 @@ struct query
 
     /* Query result */
     pjsip_server_addresses   server;
+
+    /* Buffers to keep the names in 'server' above. The names in the DNS
+     * address records are only valid inside the DNS callbacks, while the
+     * server addresses may only be reported to the application later, i.e.
+     * when the other DNS query completes.
+     */
+    char                     name_buf[2][PJ_MAX_HOSTNAME];
 };
 
 
@@ -177,6 +184,33 @@ PJ_DEF(void) pjsip_resolver_destroy(pjsip_resolver_t *resolver)
         resolver->grp_lock = NULL;
     }
 }
+
+#if PJSIP_HAS_RESOLVER
+/*
+ * Internal:
+ *  cancel any DNS query which is still outstanding.
+ *
+ * The query state is allocated from the caller's pool, and the caller is
+ * free to release that pool as soon as our callback has been invoked, so
+ * no DNS callback must be invoked on this query state after that.
+ */
+static void cancel_queries(struct query *query)
+{
+    if (query->object) {
+        pj_dns_resolver_cancel_query(query->object, PJ_FALSE);
+        query->object = NULL;
+    }
+
+    if (query->object6) {
+        /* Check if it is a dummy query. */
+        if (query->object6 != (pj_dns_async_query*)0x1)
+            pj_dns_resolver_cancel_query(query->object6, PJ_FALSE);
+
+        query->object6 = NULL;
+    }
+}
+#endif  /* PJSIP_HAS_RESOLVER */
+
 
 /*
  * Internal:
@@ -522,8 +556,29 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
         status = PJ_EBUG;
     }
 
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        /* One of the queries failed to start. Cancel the query which has
+         * been started, if any, otherwise its callback may be invoked long
+         * after we have reported the failure below, at which time the query
+         * state may have been freed along with the caller's pool.
+         */
+        cancel_queries(query);
+
+        /* If some addresses have already been resolved, e.g. the DNS A
+         * record was available in the cache, report them instead of failing.
+         */
+        if (query->server.count > 0) {
+            PJ_PERROR(4,(query->objname, status,
+                         "Ignoring failure in starting DNS query, %d "
+                         "address(es) have been resolved",
+                         query->server.count));
+
+            (*cb)(PJ_SUCCESS, token, &query->server);
+            return;
+        }
+
         goto on_error;
+    }
 
     return;
 
@@ -562,11 +617,18 @@ static void dns_a_callback(void *user_data,
 
     if (status == PJ_SUCCESS) {
         pj_dns_addr_record rec;
+        pj_str_t name;
         unsigned i;
 
         /* Parse the response */
         rec.addr_count = 0;
         status = pj_dns_parse_addr_response(pkt, &rec);
+
+        /* Keep a copy of the name, since the DNS record is only valid
+         * inside this callback.
+         */
+        name.ptr = query->name_buf[0];
+        pj_strncpy(&name, &rec.name, sizeof(query->name_buf[0]));
 
         /* Build server addresses and call callback */
         for (i = 0; i < rec.addr_count &&
@@ -576,7 +638,7 @@ static void dns_a_callback(void *user_data,
             if (rec.addr[i].af != pj_AF_INET())
                 continue;
 
-            srv->entry[srv->count].name = rec.name;
+            srv->entry[srv->count].name = name;
             srv->entry[srv->count].type = query->naptr[0].type;
             srv->entry[srv->count].priority = 0;
             srv->entry[srv->count].weight = 0;
@@ -625,11 +687,18 @@ static void dns_aaaa_callback(void *user_data,
 
     if (status == PJ_SUCCESS) {
         pj_dns_addr_record rec;
+        pj_str_t name;
         unsigned i;
 
         /* Parse the response */
         rec.addr_count = 0;
         status = pj_dns_parse_addr_response(pkt, &rec);
+
+        /* Keep a copy of the name, since the DNS record is only valid
+         * inside this callback.
+         */
+        name.ptr = query->name_buf[1];
+        pj_strncpy(&name, &rec.name, sizeof(query->name_buf[1]));
 
         /* Build server addresses and call callback */
         for (i = 0; i < rec.addr_count &&
@@ -639,7 +708,7 @@ static void dns_aaaa_callback(void *user_data,
             if (rec.addr[i].af != pj_AF_INET6())
                 continue;
 
-            srv->entry[srv->count].name = rec.name;
+            srv->entry[srv->count].name = name;
             srv->entry[srv->count].type = query->naptr[0].type |
                                           PJSIP_TRANSPORT_IPV6;
             srv->entry[srv->count].priority = 0;

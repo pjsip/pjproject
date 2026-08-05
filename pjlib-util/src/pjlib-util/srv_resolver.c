@@ -80,6 +80,10 @@ struct pj_dns_srv_async_query
     /* Number of hosts in SRV records that the IP address has been resolved */
     unsigned                 host_resolved;
 
+    /* Deferred completion, see complete_query() */
+    unsigned                 busy;          /**< Query job is being used.   */
+    pj_bool_t                deferred_cb;   /**< Callback is deferred.      */
+    pj_status_t              deferred_status;/**< Status of deferred cb.    */
 };
 
 
@@ -88,6 +92,115 @@ static void dns_callback(void *user_data,
                          pj_status_t status,
                          pj_dns_parsed_packet *pkt);
 
+
+/* Complete the query job by invoking the application callback.
+ *
+ * The query job is normally allocated from a pool owned by the application,
+ * which the application is free to release once this callback has been
+ * invoked, hence the query job must not be accessed anymore after this
+ * function returns.
+ *
+ * If the query job is currently being used by one of the functions starting
+ * the DNS queries (i.e. it is 'busy'), the invocation is deferred to that
+ * function, otherwise that function would access the query job after the
+ * application callback has released it. This happens when a DNS response is
+ * available in the cache, in which case the DNS callback is invoked
+ * synchronously by pj_dns_resolver_start_query().
+ */
+static void complete_query(pj_dns_srv_async_query *query_job,
+                           pj_status_t status)
+{
+    pj_dns_srv_record srv_rec;
+    unsigned i;
+
+    if (query_job->busy) {
+        /* Only a single completion can ever be deferred, since any pending
+         * query is cancelled on failure and the successful completion is
+         * only reported once all queries have completed.
+         */
+        query_job->deferred_cb = PJ_TRUE;
+        query_job->deferred_status = status;
+        return;
+    }
+
+    if (status != PJ_SUCCESS) {
+        /* Cancel any pending query */
+        pj_dns_srv_cancel_query(query_job, PJ_FALSE);
+
+        (*query_job->cb)(query_job->token, status, NULL);
+        return;
+    }
+
+    /* Build server addresses and call callback */
+    srv_rec.count = 0;
+    for (i=0; i<query_job->srv_cnt; ++i) {
+        unsigned j;
+        struct srv_target *srv2 = &query_job->srv[i];
+        pj_dns_addr_record *s = &srv_rec.entry[srv_rec.count].server;
+
+        srv_rec.entry[srv_rec.count].priority = srv2->priority;
+        srv_rec.entry[srv_rec.count].weight = srv2->weight;
+        srv_rec.entry[srv_rec.count].port = (pj_uint16_t)srv2->port ;
+
+        srv_rec.entry[srv_rec.count].server.name = srv2->target_name;
+        srv_rec.entry[srv_rec.count].server.alias = srv2->cname;
+        srv_rec.entry[srv_rec.count].server.addr_count = 0;
+
+        pj_assert(srv2->addr_cnt <= PJ_DNS_MAX_IP_IN_A_REC);
+
+        for (j=0; j<srv2->addr_cnt; ++j) {
+            s->addr[j].af = srv2->addr[j].addr.sa_family;
+            if (s->addr[j].af == pj_AF_INET())
+                s->addr[j].ip.v4 = srv2->addr[j].ipv4.sin_addr;
+            else
+                s->addr[j].ip.v6 = srv2->addr[j].ipv6.sin6_addr;
+            ++s->addr_count;
+        }
+
+        if (srv2->addr_cnt > 0) {
+            ++srv_rec.count;
+            if (srv_rec.count == PJ_DNS_SRV_MAX_ADDR)
+                break;
+        }
+    }
+
+    PJ_LOG(5,(query_job->objname,
+              "Server resolution complete, %d server entry(s) found",
+              srv_rec.count));
+
+    if (srv_rec.count == 0) {
+        status = query_job->last_error;
+        if (status == PJ_SUCCESS)
+            status = PJLIB_UTIL_EDNSNOANSWERREC;
+    }
+
+    (*query_job->cb)(query_job->token, status, &srv_rec);
+}
+
+
+/* Mark the query job as being used, so that the application callback won't
+ * be invoked (and the query job won't be released with it) while we are
+ * still using the query job.
+ */
+static void set_busy(pj_dns_srv_async_query *query_job)
+{
+    ++query_job->busy;
+}
+
+
+/* The counterpart of set_busy(), which will invoke the application callback
+ * if its invocation has been deferred. Note that the query job must not be
+ * accessed anymore after this function returns.
+ */
+static void unset_busy(pj_dns_srv_async_query *query_job)
+{
+    pj_assert(query_job->busy > 0);
+
+    if (--query_job->busy == 0 && query_job->deferred_cb) {
+        query_job->deferred_cb = PJ_FALSE;
+        complete_query(query_job, query_job->deferred_status);
+    }
+}
 
 
 /*
@@ -150,17 +263,36 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
                (int)target_name.slen, target_name.ptr,
                def_port));
 
-    status = pj_dns_resolver_start_query(resolver, &target_name, 
-                                         query_job->dns_state, 0, 
+    /* The DNS callback may be invoked synchronously, i.e. when the response
+     * is available in the cache, in which case the whole resolution may be
+     * completed before pj_dns_resolver_start_query() returns. Defer the
+     * completion until we are done using the query job below.
+     */
+    set_busy(query_job);
+
+    status = pj_dns_resolver_start_query(resolver, &target_name,
+                                         query_job->dns_state, 0,
                                          &dns_callback,
                                          query_job, &query_job->q_srv);
+    if (status != PJ_SUCCESS) {
+        /* Failed to start the query, so no callback can have been invoked
+         * and there is nothing to complete.
+         */
+        pj_assert(!query_job->deferred_cb);
+        --query_job->busy;
+        return status;
+    }
+
     if (query_job->q_srv)
         p_q = query_job;
 
-    if (status==PJ_SUCCESS && p_query)
+    if (p_query)
         *p_query = p_q;
 
-    return status;
+    /* Note that the query job may be released by the callback here. */
+    unset_busy(query_job);
+
+    return PJ_SUCCESS;
 }
 
 
@@ -485,6 +617,13 @@ static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
 
     query_job->dns_state = PJ_DNS_TYPE_A;
 
+    /* The DNS callbacks may be invoked synchronously, i.e. when the responses
+     * are available in the cache, in which case the whole resolution may be
+     * completed before we are done starting the queries below. Defer the
+     * completion until then.
+     */
+    set_busy(query_job);
+
     for (i=0; i<query_job->srv_cnt; ++i) {
         struct srv_target *srv = &query_job->srv[i];
 
@@ -545,13 +684,55 @@ static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
          * returning false error, so don't use that variable for counting errors.
          */
         if (status != PJ_SUCCESS) {
-            query_job->host_resolved++;
-            err_cnt++;
-            err = status;
+            /* Only count this server as resolved if it has no outstanding
+             * query, e.g. when only the DNS AAAA query failed to start, the
+             * pending DNS A query will count it once it completes. Otherwise
+             * the application callback may be invoked while a query is still
+             * outstanding, and the late callback of that query would then
+             * access an already released query job.
+             */
+            if (srv->q_a == NULL &&
+                (srv->q_aaaa == NULL ||
+                 srv->q_aaaa == (pj_dns_async_query*)0x1))
+            {
+                srv->q_aaaa = NULL;
+                query_job->host_resolved++;
+
+                /* Only treat this as an error if this server has no address
+                 * at all, e.g. the DNS A record may have been available in
+                 * the cache while only the DNS AAAA query failed to start.
+                 */
+                if (srv->addr_cnt == 0) {
+                    err_cnt++;
+                    err = status;
+                }
+            }
         }
     }
-    
-    return (err_cnt == query_job->srv_cnt) ? err : PJ_SUCCESS;
+
+    if (err_cnt == query_job->srv_cnt) {
+        /* All queries failed to start. Let the caller report the error, no
+         * callback can have been invoked so the query job is still alive.
+         */
+        --query_job->busy;
+        return err;
+    }
+
+    /* All hostnames may already have been resolved here, e.g. when the only
+     * remaining query failed to start, in which case the completion has not
+     * been reported by any DNS callback yet.
+     */
+    if (!query_job->deferred_cb &&
+        query_job->host_resolved == query_job->srv_cnt)
+    {
+        query_job->deferred_cb = PJ_TRUE;
+        query_job->deferred_status = PJ_SUCCESS;
+    }
+
+    /* Note that the query job may be released by the callback here. */
+    unset_busy(query_job);
+
+    return PJ_SUCCESS;
 }
 
 /* 
@@ -800,56 +981,10 @@ static void dns_callback(void *user_data,
 
     /* Check if all hosts have been resolved */
     if (query_job->host_resolved == query_job->srv_cnt) {
-        /* Got all answers, build server addresses */
-        pj_dns_srv_record srv_rec;
-
-        srv_rec.count = 0;
-        for (i=0; i<query_job->srv_cnt; ++i) {
-            unsigned j;
-            struct srv_target *srv2 = &query_job->srv[i];
-            pj_dns_addr_record *s = &srv_rec.entry[srv_rec.count].server;
-
-            srv_rec.entry[srv_rec.count].priority = srv2->priority;
-            srv_rec.entry[srv_rec.count].weight = srv2->weight;
-            srv_rec.entry[srv_rec.count].port = (pj_uint16_t)srv2->port ;
-
-            srv_rec.entry[srv_rec.count].server.name = srv2->target_name;
-            srv_rec.entry[srv_rec.count].server.alias = srv2->cname;
-            srv_rec.entry[srv_rec.count].server.addr_count = 0;
-
-            pj_assert(srv2->addr_cnt <= PJ_DNS_MAX_IP_IN_A_REC);
-
-            for (j=0; j<srv2->addr_cnt; ++j) {          
-                s->addr[j].af = srv2->addr[j].addr.sa_family;
-                if (s->addr[j].af == pj_AF_INET())
-                    s->addr[j].ip.v4 = srv2->addr[j].ipv4.sin_addr;
-                else
-                    s->addr[j].ip.v6 = srv2->addr[j].ipv6.sin6_addr;
-                ++s->addr_count;
-            }
-
-            if (srv2->addr_cnt > 0) {
-                ++srv_rec.count;
-                if (srv_rec.count == PJ_DNS_SRV_MAX_ADDR)
-                    break;
-            }
-        }
-
-        PJ_LOG(5,(query_job->objname, 
-                  "Server resolution complete, %d server entry(s) found",
-                  srv_rec.count));
-
-
-        if (srv_rec.count > 0)
-            status = PJ_SUCCESS;
-        else {
-            status = query_job->last_error;
-            if (status == PJ_SUCCESS)
-                status = PJLIB_UTIL_EDNSNOANSWERREC;
-        }
-
-        /* Call the callback */
-        (*query_job->cb)(query_job->token, status, &srv_rec);
+        /* Got all answers, report them to the application. Note that the
+         * query job may be released by the callback.
+         */
+        complete_query(query_job, PJ_SUCCESS);
     }
 
 
@@ -864,10 +999,10 @@ on_error:
                      (int)query_job->domain_part.slen,
                      query_job->domain_part.ptr));
 
-        /* Cancel any pending query */
-        pj_dns_srv_cancel_query(query_job, PJ_FALSE);
-
-        (*query_job->cb)(query_job->token, status, NULL);
+        /* Cancel any pending query and report the error. Note that the query
+         * job may be released by the callback.
+         */
+        complete_query(query_job, status);
         return;
     }
 }
