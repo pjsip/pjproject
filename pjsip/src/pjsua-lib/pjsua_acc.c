@@ -2141,17 +2141,20 @@ done:
         if (len > acc->contact.slen) {
             reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, len);
 
-            pj_strcpy(&reg_contact, &acc->contact);
-        
+            /* Must be NULL terminated: the buffer is parsed below and by
+             * pjsip_regc, and the parser requires a NULL terminated input.
+             */
+            pj_strncpy_with_null(&reg_contact, &acc->contact, len);
+
             /* Contact URI params */
             if (acc->cfg.reg_contact_uri_params.slen) {
                 pj_pool_t *pool;
                 pjsip_contact_hdr *contact_hdr;
-                pjsip_sip_uri *uri;
+                pjsip_sip_uri *uri = NULL;
                 pj_str_t uri_param = acc->cfg.reg_contact_uri_params;
                 const pj_str_t STR_CONTACT = { "Contact", 7 };
                 char tmp_uri[PJSIP_MAX_URL_SIZE];
-                pj_ssize_t tmp_len;
+                pj_ssize_t tmp_len = -1;
 
                 /* Get the URI string */
                 pool = pjsua_pool_create("tmp", 512, 512);
@@ -2159,25 +2162,41 @@ done:
                               pjsip_parse_hdr(pool, &STR_CONTACT,
                                               reg_contact.ptr,
                                               reg_contact.slen, NULL);
-                pj_assert(contact_hdr != NULL);
-                uri = (pjsip_sip_uri*) contact_hdr->uri;
-                pj_assert(uri != NULL);
-                uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
-                tmp_len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
-                                          uri, tmp_uri,
-                                          sizeof(tmp_uri));
-                pj_assert(tmp_len > 0);
+                if (contact_hdr && contact_hdr->uri)
+                    uri = (pjsip_sip_uri*)pjsip_uri_get_uri(contact_hdr->uri);
+                if (uri) {
+                    tmp_len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
+                                              uri, tmp_uri,
+                                              sizeof(tmp_uri));
+                }
                 pj_pool_release(pool);
 
-                /* Regenerate Contact */
-                reg_contact.slen = pj_ansi_snprintf(
+                if (tmp_len > 0) {
+                    pj_ssize_t new_len;
+
+                    /* Regenerate Contact */
+                    new_len = pj_ansi_snprintf(
                                             reg_contact.ptr, len,
                                             "<%.*s%.*s>%.*s",
                                             (int)tmp_len, tmp_uri,
                                             (int)uri_param.slen, uri_param.ptr,
                                             (int)acc->cfg.contact_params.slen,
                                             acc->cfg.contact_params.ptr);
-                pj_assert(reg_contact.slen > 0);
+                    if (new_len > 0 && new_len < len)
+                        reg_contact.slen = new_len;
+                    else
+                        tmp_len = -1;
+                }
+
+                if (tmp_len <= 0) {
+                    /* Leave reg_contact as the plain copy of acc->contact */
+                    PJ_LOG(1,(THIS_FILE,
+                              "Unable to apply registration Contact URI "
+                              "params of acc %d to Contact '%.*s'",
+                              acc->index, (int)acc->contact.slen,
+                              acc->contact.ptr));
+                    pj_strncpy_with_null(&reg_contact, &acc->contact, len);
+                }
             }
 
             /* Outbound */
@@ -2195,7 +2214,14 @@ done:
 
             /* Contact params */
             pj_strcat(&reg_contact, &acc->cfg.reg_contact_params);
-            
+
+            /* pj_strcat() does not NULL terminate, and the buffer is later
+             * parsed by pjsip_regc. The 'len' allowance guarantees room.
+             */
+            pj_assert(reg_contact.slen < len);
+            if (reg_contact.slen < len)
+                reg_contact.ptr[reg_contact.slen] = '\0';
+
             acc->reg_contact = reg_contact;
 
             PJ_LOG(4,(THIS_FILE,
@@ -2357,12 +2383,23 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     /* Compare received and rport with the URI in our registration */
     pool = pjsua_pool_create("tmp", 512, 512);
     contact_hdr = (pjsip_contact_hdr*)
-                  pjsip_parse_hdr(pool, &STR_CONTACT, acc->contact.ptr, 
+                  pjsip_parse_hdr(pool, &STR_CONTACT, acc->contact.ptr,
                                   acc->contact.slen, NULL);
-    pj_assert(contact_hdr != NULL);
-    uri = (pjsip_sip_uri*) contact_hdr->uri;
-    pj_assert(uri != NULL);
-    uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
+    /* A "Contact: *" header parses fine but has no URI, and a non-SIP URI
+     * must not be cast to pjsip_sip_uri below.
+     */
+    if (contact_hdr == NULL || contact_hdr->uri == NULL ||
+        !(PJSIP_URI_SCHEME_IS_SIP(contact_hdr->uri) ||
+          PJSIP_URI_SCHEME_IS_SIPS(contact_hdr->uri)))
+    {
+        PJ_LOG(1,(THIS_FILE, "Unable to parse Contact of account %d ('%.*s'), "
+                             "skipping NAT address check",
+                             acc->index, (int)acc->contact.slen,
+                             acc->contact.ptr));
+        pj_pool_release(pool);
+        return PJ_FALSE;
+    }
+    uri = (pjsip_sip_uri*) pjsip_uri_get_uri(contact_hdr->uri);
 
     if (uri->port == 0) {
         pjsip_transport_type_e tp_type;
@@ -2448,12 +2485,6 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
               contact_rewrite_method == PJSUA_CONTACT_REWRITE_NO_UNREG ||
               contact_rewrite_method == PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE);
 
-    if (contact_rewrite_method == PJSUA_CONTACT_REWRITE_UNREGISTER) {
-        /* Unregister current contact */
-        pjsua_acc_set_registration(acc->index, PJ_FALSE);
-        destroy_regc(acc, PJ_TRUE);
-    }
-
     /*
      * Build new Contact header
      */
@@ -2464,12 +2495,18 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         char transport_param[32];
         int len;
         pj_bool_t secure;
+        pjsip_contact_hdr *new_hdr;
 
         secure = pjsip_transport_get_flag_from_type(tp->key.type) &
                  PJSIP_TRANSPORT_SECURE;
-        
-        /* Enclose IPv6 address in square brackets */
-        if ((tp->key.type & PJSIP_TRANSPORT_IPV6) && via_addr->ptr[0] != '[') {
+
+        /* Enclose IPv6 address in square brackets. Decide based on the
+         * address itself, not on the transport type: the Via "received"
+         * param is set by the registrar and may not match the transport.
+         */
+        if (via_addr->slen && pj_strchr(via_addr, ':') &&
+            via_addr->ptr[0] != '[')
+        {
             beginquote = "[";
             endquote = "]";
         } else {
@@ -2511,6 +2548,33 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
             pj_pool_release(pool);
             return PJ_FALSE;
         }
+
+        /* Make sure the new Contact is usable before committing it to the
+         * account. The Via "received" param it is built from is set by the
+         * registrar and may contain characters that are valid in a token
+         * but not in a SIP URI host, which would leave acc->contact
+         * permanently unparseable.
+         */
+        new_hdr = (pjsip_contact_hdr*)
+                  pjsip_parse_hdr(pool, &STR_CONTACT, tmp, len, NULL);
+        if (new_hdr == NULL || new_hdr->uri == NULL ||
+            !(PJSIP_URI_SCHEME_IS_SIP(new_hdr->uri) ||
+              PJSIP_URI_SCHEME_IS_SIPS(new_hdr->uri)))
+        {
+            PJ_LOG(1,(THIS_FILE, "Not rewriting Contact of account %d to "
+                                 "invalid value '%s'", acc->index, tmp));
+            pj_pool_release(pool);
+            return PJ_FALSE;
+        }
+
+        if (contact_rewrite_method == PJSUA_CONTACT_REWRITE_UNREGISTER) {
+            /* Unregister current contact. Must be done before acc->contact
+             * is replaced, as the unregister uses the old Contact.
+             */
+            pjsua_acc_set_registration(acc->index, PJ_FALSE);
+            destroy_regc(acc, PJ_TRUE);
+        }
+
         pj_strdup2_with_null(acc->pool, &acc->contact, tmp);
 
         update_regc_contact(acc);
