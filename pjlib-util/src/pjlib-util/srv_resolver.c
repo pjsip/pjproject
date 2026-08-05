@@ -82,6 +82,7 @@ struct pj_dns_srv_async_query
 
     /* Deferred completion, see complete_query() */
     unsigned                 busy;          /**< Query job is being used.   */
+    pj_thread_t             *busy_thread;   /**< Thread using the job.      */
     pj_bool_t                deferred_cb;   /**< Callback is deferred.      */
     pj_status_t              deferred_status;/**< Status of deferred cb.    */
 };
@@ -100,12 +101,17 @@ static void dns_callback(void *user_data,
  * invoked, hence the query job must not be accessed anymore after this
  * function returns.
  *
- * If the query job is currently being used by one of the functions starting
- * the DNS queries (i.e. it is 'busy'), the invocation is deferred to that
- * function, otherwise that function would access the query job after the
- * application callback has released it. This happens when a DNS response is
- * available in the cache, in which case the DNS callback is invoked
+ * If we are called by one of the functions starting the DNS queries (i.e.
+ * the query job is 'busy' in this very thread), the invocation is deferred
+ * to that function, otherwise that function would access the query job after
+ * the application callback has released it. This happens when a DNS response
+ * is available in the cache, in which case the DNS callback is invoked
  * synchronously by pj_dns_resolver_start_query().
+ *
+ * Note that the deferral is deliberately limited to the thread which is
+ * starting the queries, so that the deferred state is only ever accessed by
+ * that thread, i.e. a completion reported by another thread can never get
+ * lost in the handoff.
  */
 static void complete_query(pj_dns_srv_async_query *query_job,
                            pj_status_t status)
@@ -113,10 +119,10 @@ static void complete_query(pj_dns_srv_async_query *query_job,
     pj_dns_srv_record srv_rec;
     unsigned i;
 
-    if (query_job->busy) {
-        /* Only a single completion can ever be deferred, since any pending
-         * query is cancelled on failure and the successful completion is
-         * only reported once all queries have completed.
+    if (query_job->busy && query_job->busy_thread == pj_thread_this()) {
+        /* Only a single completion can ever be deferred, since a query job
+         * is only completed once, either successfully after all its queries
+         * have completed, or with an error.
          */
         query_job->deferred_cb = PJ_TRUE;
         query_job->deferred_status = status;
@@ -184,7 +190,8 @@ static void complete_query(pj_dns_srv_async_query *query_job,
  */
 static void set_busy(pj_dns_srv_async_query *query_job)
 {
-    ++query_job->busy;
+    if (query_job->busy++ == 0)
+        query_job->busy_thread = pj_thread_this();
 }
 
 
@@ -194,11 +201,16 @@ static void set_busy(pj_dns_srv_async_query *query_job)
  */
 static void unset_busy(pj_dns_srv_async_query *query_job)
 {
-    pj_assert(query_job->busy > 0);
+    pj_assert(query_job->busy > 0 &&
+              query_job->busy_thread == pj_thread_this());
 
-    if (--query_job->busy == 0 && query_job->deferred_cb) {
-        query_job->deferred_cb = PJ_FALSE;
-        complete_query(query_job, query_job->deferred_status);
+    if (--query_job->busy == 0) {
+        query_job->busy_thread = NULL;
+
+        if (query_job->deferred_cb) {
+            query_job->deferred_cb = PJ_FALSE;
+            complete_query(query_job, query_job->deferred_status);
+        }
     }
 }
 

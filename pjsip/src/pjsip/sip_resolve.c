@@ -185,33 +185,6 @@ PJ_DEF(void) pjsip_resolver_destroy(pjsip_resolver_t *resolver)
     }
 }
 
-#if PJSIP_HAS_RESOLVER
-/*
- * Internal:
- *  cancel any DNS query which is still outstanding.
- *
- * The query state is allocated from the caller's pool, and the caller is
- * free to release that pool as soon as our callback has been invoked, so
- * no DNS callback must be invoked on this query state after that.
- */
-static void cancel_queries(struct query *query)
-{
-    if (query->object) {
-        pj_dns_resolver_cancel_query(query->object, PJ_FALSE);
-        query->object = NULL;
-    }
-
-    if (query->object6) {
-        /* Check if it is a dummy query. */
-        if (query->object6 != (pj_dns_async_query*)0x1)
-            pj_dns_resolver_cancel_query(query->object6, PJ_FALSE);
-
-        query->object6 = NULL;
-    }
-}
-#endif  /* PJSIP_HAS_RESOLVER */
-
-
 /*
  * Internal:
  *  determine if an address is a valid IP address, and if it is,
@@ -557,12 +530,34 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     }
 
     if (status != PJ_SUCCESS) {
-        /* One of the queries failed to start. Cancel the query which has
-         * been started, if any, otherwise its callback may be invoked long
-         * after we have reported the failure below, at which time the query
-         * state may have been freed along with the caller's pool.
+        /* Clear the dummy DNS AAAA query, if any, otherwise the DNS A
+         * callback will never report the result of the resolution.
          */
-        cancel_queries(query);
+        if (query->object6 == (pj_dns_async_query*)0x1)
+            query->object6 = NULL;
+
+        /* If a query is still outstanding, e.g. only the DNS AAAA query
+         * failed to start, the callback of that query will report the result
+         * of the resolution later. The failure must not be reported here,
+         * since the caller may release the pool containing this query state
+         * as soon as it is notified, while the outstanding query still
+         * refers to this query state (see #5142).
+         *
+         * Note that cancelling the outstanding query instead would not be
+         * reliable, as the DNS resolver invokes the callbacks after having
+         * released its group lock, so its callback may already be running
+         * or about to run in another thread.
+         */
+        if (query->object || query->object6) {
+            PJ_PERROR(4,(query->objname, status,
+                         "Failed to start DNS query, waiting for the "
+                         "outstanding DNS %s query to complete",
+                         pj_dns_get_type_name(query->object? PJ_DNS_TYPE_A:
+                                                             PJ_DNS_TYPE_AAAA)));
+
+            query->last_error = status;
+            return;
+        }
 
         /* If some addresses have already been resolved, e.g. the DNS A
          * record was available in the cache, report them instead of failing.
