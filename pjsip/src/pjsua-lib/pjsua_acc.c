@@ -2940,6 +2940,8 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 {
 
     pjsua_acc *acc = (pjsua_acc*) param->token;
+    const pj_str_t tcp_param = pj_str(";transport=tcp");
+    const pj_str_t tls_param = pj_str(";transport=tls");
     pj_bool_t sent_outbound;
 
     PJSUA_LOCK();
@@ -2949,13 +2951,22 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         return;
     }
 
-    /* Whether the REGISTER this callback reports on advertised SIP outbound.
-     * Captured up front because the failure paths below call destroy_regc(),
-     * which resets rfc5626_status. Needed to tell a 439 that rejects our
-     * outbound from one returned for an unrelated reason.
+    /* Whether the REGISTER this callback reports on could have advertised SIP
+     * outbound. Captured up front because destroy_regc() below clears
+     * acc->contact. Used to tell a 439 that rejects our outbound from one
+     * returned for an unrelated reason.
+     *
+     * This mirrors the test update_regc_contact() uses to decide whether to
+     * emit outbound at all. rfc5626_status is not usable here even if read
+     * before destroy_regc() resets it: update_rfc5626_status() drops it to
+     * OUTBOUND_NA on a 200 that omits "Require: outbound" -- the normal reply
+     * from a registrar without outbound support -- while the regc goes on
+     * sending the reg-id Contact and option tag it was initialised with, so a
+     * later 439 would be missed and the account left unregistered.
      */
-    sent_outbound = (acc->rfc5626_status == OUTBOUND_WANTED ||
-                     acc->rfc5626_status == OUTBOUND_ACTIVE);
+    sent_outbound = acc->cfg.use_rfc5626 &&
+                    (pj_stristr(&acc->contact, &tcp_param) != NULL ||
+                     pj_stristr(&acc->contact, &tls_param) != NULL);
 
     pj_log_push_indent();
 
