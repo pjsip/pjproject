@@ -2150,7 +2150,12 @@ done:
             if (acc->cfg.reg_contact_uri_params.slen) {
                 pj_pool_t *pool;
                 pjsip_contact_hdr *contact_hdr;
-                pjsip_sip_uri *uri = NULL;
+                /* Only ever handed to pjsip_uri_print(), which dispatches
+                 * on the URI's own vptr, so this must not be narrowed to
+                 * pjsip_sip_uri*: a Contact may legitimately hold another
+                 * scheme and no SIP specific field is read here.
+                 */
+                pjsip_uri *uri = NULL;
                 pj_str_t uri_param = acc->cfg.reg_contact_uri_params;
                 const pj_str_t STR_CONTACT = { "Contact", 7 };
                 char tmp_uri[PJSIP_MAX_URL_SIZE];
@@ -2163,7 +2168,7 @@ done:
                                               reg_contact.ptr,
                                               reg_contact.slen, NULL);
                 if (contact_hdr && contact_hdr->uri)
-                    uri = (pjsip_sip_uri*)pjsip_uri_get_uri(contact_hdr->uri);
+                    uri = (pjsip_uri*)pjsip_uri_get_uri(contact_hdr->uri);
                 if (uri) {
                     tmp_len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
                                               uri, tmp_uri,

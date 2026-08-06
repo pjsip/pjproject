@@ -41,8 +41,11 @@
  *   6. Accepted rewrite with reg_contact_uri_params, which sends
  *      update_regc_contact() through its parse-and-regenerate path.
  *   7. force_contact "*", which parses to a Contact with no URI.
- *   8. force_contact with a non-SIP URI, which must not be cast to
- *      pjsip_sip_uri* and read as one.
+ *   8. force_contact with a non-SIP URI, with reg_contact_uri_params set
+ *      so both the acc_check_nat_addr() entry guard and the
+ *      update_regc_contact() regeneration path see a non-SIP URI.
+ *   9. A Contact that pjsip_regc refuses must leave the existing
+ *      registration binding alone rather than queue it for removal.
  */
 
 #include "test.h"
@@ -616,7 +619,7 @@ int pjsua_acc_test(void)
              * pjsip_sip_uri* and read as one.
              */
             { "force_contact non-SIP URI",
-              "1.2.3.4", NULL, "<tel:+15551234>", NULL, 0, -2480 },
+              "1.2.3.4", NULL, "<tel:+15551234>", ";acc-test=1", 0, -2480 },
 
             /* A Contact that pjsip_regc refuses must leave the existing
              * registration binding untouched, not queued for removal.
