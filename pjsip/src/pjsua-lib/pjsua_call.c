@@ -1739,6 +1739,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pj_str_t st_reason = pj_str("");
     int ret_st_code = 0;
     pj_status_t status;
+    pjsip_siprec_verify_setting siprec_setting;
 
     /* Don't want to handle anything but INVITE */
     if (msg->line.req.method.id != PJSIP_INVITE_METHOD)
@@ -2012,12 +2013,15 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Check if the INVITE request is a siprec
      * this function add PJSIP_INV_REQUIRE_SIPREC to options
-     * and returns the value PJ_SUCCESS 
+     * and returns the value PJ_SUCCESS
      */
+    pjsip_siprec_verify_setting_default(&siprec_setting);
+    siprec_setting.require_label = pjsua_var.acc[acc_id].cfg.siprec_require_label;
+    siprec_setting.require_metadata = pjsua_var.acc[acc_id].cfg.siprec_require_metadata;
+
     status = pjsip_siprec_verify_request(rdata, &call->siprec_metadata, offer,
                                 &options, NULL, pjsua_var.endpt, &response,
-                                pjsua_var.acc[acc_id].cfg.siprec_require_label,
-                                pjsua_var.acc[acc_id].cfg.siprec_require_metadata);
+                                &siprec_setting);
 
     if(status != PJ_SUCCESS){
         /*

@@ -112,7 +112,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
 
 /**
  * Check if the value of Require header is equal to siprec.
- */ 
+ */
 PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
 {
     unsigned i;
@@ -126,6 +126,16 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
     return PJ_FALSE;
 }
 
+
+/**
+ * Initialize SIPREC verification setting with default values.
+ */
+PJ_DEF(void) pjsip_siprec_verify_setting_default(
+                                pjsip_siprec_verify_setting *setting)
+{
+    pj_bzero(setting, sizeof(*setting));
+}
+
 /**
  * Verifies that the incoming request is a siprec request or not.
  */
@@ -136,20 +146,26 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                               pjsip_dialog *dlg,
                                               pjsip_endpoint *endpt,
                                               pjsip_tx_data **p_tdata,
-                                              pj_bool_t require_label,
-                                              pj_bool_t require_metadata)
+                                              const pjsip_siprec_verify_setting *setting)
 {
     int code = 200;
     pj_status_t status = PJ_SUCCESS;
     const char *warn_text = NULL;
     pjsip_hdr res_hdr_list;
     unsigned mi;
+    pjsip_siprec_verify_setting default_setting;
 
     /* Init return arguments. */
     if (p_tdata) *p_tdata = NULL;
 
     /* Init response header list */
     pj_list_init(&res_hdr_list);
+
+    /* Use default settings if not provided */
+    if (!setting) {
+        pjsip_siprec_verify_setting_default(&default_setting);
+        setting = &default_setting;
+    }
 
     /* Checks if The SIPREC request option is inactive */
     if (!(*options & PJSIP_INV_SUPPORT_SIPREC)){
@@ -158,13 +174,13 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
 
     /* Checks if the INVITE request is SIPREC */
     if (pjsip_siprec_check_request(rdata) == PJ_FALSE){
-        /* The SIPREC request option is mandatory */ 
+        /* The SIPREC request option is mandatory */
         if (*options & PJSIP_INV_REQUIRE_SIPREC){
             code = PJSIP_SC_BAD_REQUEST;
             warn_text = "The INVITE request must be SIPREC";
-            goto on_return;    
+            goto on_return;
         }else {
-            /* The SIPREC request option is optional */ 
+            /* The SIPREC request option is optional */
             return PJ_SUCCESS;
         }
     }
@@ -173,7 +189,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     if (!rdata->msg_info.msg->body) {
         code = PJSIP_SC_BAD_REQUEST;
         warn_text = "SIPREC INVITE must have a body";
-        goto on_return; 
+        goto on_return;
     }
 
     /* Currently, SIPREC INVITE requests without SDP are not supported. */
@@ -188,7 +204,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
      * - PJ_TRUE (require): Reject if any media lacks label
      * - PJ_FALSE (optional): Accept, but log warning for unlabeled media
      */
-    if (require_label) {
+    if (setting->require_label) {
         /* Require labels - reject if any media stream lacks one */
         for (mi=0; mi<sdp_offer->media_count; ++mi) {
             if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
@@ -222,7 +238,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                         metadata);
 
     if(status != PJ_SUCCESS) {
-        if (require_metadata) {
+        if (setting->require_metadata) {
             /* Require metadata - reject if missing */
             code = PJSIP_SC_BAD_REQUEST;
             warn_text = "SIPREC INVITE must have a 'rs-metadata' Content-Type";
@@ -251,10 +267,10 @@ on_return:
         const pjsip_hdr *h;
 
         if (dlg) {
-            status = pjsip_dlg_create_response(dlg, rdata, code, NULL, 
+            status = pjsip_dlg_create_response(dlg, rdata, code, NULL,
                                                &tdata);
         } else {
-            status = pjsip_endpt_create_response(endpt, rdata, code, NULL, 
+            status = pjsip_endpt_create_response(endpt, rdata, code, NULL,
                                                  &tdata);
         }
 
@@ -263,7 +279,7 @@ on_return:
 
         /* Add response headers. */
         h = res_hdr_list.next;
-        while (h != &res_hdr_list) {    
+        while (h != &res_hdr_list) {
             pjsip_hdr *cloned;
 
             cloned = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, h);
@@ -279,7 +295,7 @@ on_return:
             pjsip_warning_hdr *warn_hdr;
             pj_str_t warn_value = pj_str((char*)warn_text);
 
-            warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399, 
+            warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399,
                                                 pjsip_endpt_name(endpt),
                                                 &warn_value);
             pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);

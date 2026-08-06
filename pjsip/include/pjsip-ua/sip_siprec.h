@@ -59,13 +59,46 @@ PJ_DECL(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt);
 
 /**
  * Check if the value of Require header is equal to siprec.
- * 
+ *
  * @param req_hdr      Require header.
- * 
+ *
  * @return             PJ_TRUE if value of Require header is equal to siprec.
  */
 PJ_DECL(pj_status_t)
 pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
+
+
+/**
+ * SIPREC request verification setting.
+ */
+typedef struct pjsip_siprec_verify_setting
+{
+    /**
+     * Reject SIPREC INVITE if any media lacks the SDP label attribute
+     * (strict RFC 7866). If PJ_FALSE, accept and log a warning.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t   require_label;
+
+    /**
+     * Reject SIPREC INVITE if the rs-metadata document is missing
+     * (strict RFC 7866). If PJ_FALSE, accept and log a warning.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t   require_metadata;
+
+} pjsip_siprec_verify_setting;
+
+
+/**
+ * Initialize SIPREC verification setting with default values.
+ *
+ * @param setting     The verification setting to initialize.
+ */
+PJ_DECL(void) pjsip_siprec_verify_setting_default(
+                                    pjsip_siprec_verify_setting *setting);
 
 
 /**
@@ -85,16 +118,7 @@ pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
  * @param endpt         Media endpoint instance.
  * @param p_tdata       Upon error, it will be filled with the final response
  *                      to be sent to the request sender.
- * @param require_label Controls SIPREC SDP label attribute enforcement:
- *                      - PJ_TRUE: Require labels, reject SIPREC if any media
- *                        lacks label attribute (strict RFC 7866 compliance)
- *                      - PJ_FALSE: Accept without labels, but log warnings for
- *                        unlabeled media (better interoperability)
- * @param require_metadata Controls SIPREC rs-metadata document enforcement:
- *                      - PJ_TRUE: Require metadata, reject SIPREC if rs-metadata
- *                        document is missing (strict RFC 7866 compliance)
- *                      - PJ_FALSE: Accept without metadata, but log warnings
- *                        when missing (better interoperability)
+ * @param setting       Verification setting, or NULL to use defaults.
  *
  * @return   The function returns the following:
  *             - If the request includes the value siprec in the Require header
@@ -112,8 +136,7 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                                 pjsip_dialog *dlg,
                                                 pjsip_endpoint *endpt,
                                                 pjsip_tx_data **p_tdata,
-                                                pj_bool_t require_label,
-                                                pj_bool_t require_metadata);
+                                                const pjsip_siprec_verify_setting *setting);
 
 
 /**
