@@ -87,3 +87,14 @@ def make_video_call(caller, callee, callee_uri):
 
     caller.sync_stdout()
     callee.sync_stdout()
+
+
+# Hang up the call from 'hangup_by' and verify both endpoints disconnect
+# via BYE. 'other' is the peer. The peer receives the BYE before its own
+# disconnect log, so asserting it there confirms a BYE teardown (rather
+# than some other path that clears the call) without racing the disconnect.
+def hangup_call(hangup_by, other):
+    hangup_by.send("call hangup")
+    other.expect("BYE sips?:")
+    hangup_by.expect(const.STATE_DISCONNECTED)
+    other.expect(const.STATE_DISCONNECTED)
