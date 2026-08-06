@@ -282,6 +282,21 @@ static void init_outbound_setting(pjsua_acc *acc)
     acc->rfc5626_status = OUTBOUND_WANTED;
 }
 
+/* Forget a 439 recorded against a first hop we may no longer be talking to.
+ *
+ * Clearing the flag alone would not re-enable outbound: the fallback left
+ * rfc5626_status at OUTBOUND_NA, and update_regc_contact() short-circuits on
+ * that, so the next Contact would be rebuilt without outbound anyway. Put the
+ * status back to UNKNOWN so it is decided afresh from the new path.
+ */
+static void reset_outbound_rejection(pjsua_acc *acc)
+{
+    if (acc->outbound_rejected && acc->rfc5626_status == OUTBOUND_NA)
+        acc->rfc5626_status = OUTBOUND_UNKNOWN;
+
+    acc->outbound_rejected = PJ_FALSE;
+}
+
 /*
  * Destroy account's registration and deinit.
  */
@@ -1776,12 +1791,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         if (acc->cfg.use_rfc5626 != cfg->use_rfc5626)
             acc->cfg.use_rfc5626 = cfg->use_rfc5626;
 
-        /* Outbound settings changed, so any previous 439 no longer
-         * describes what we would be sending. Try outbound again.
-         */
-        acc->outbound_rejected = PJ_FALSE;
-
-        if (pj_strcmp(&acc->cfg.rfc5626_instance_id, 
+        if (pj_strcmp(&acc->cfg.rfc5626_instance_id,
                       &cfg->rfc5626_instance_id)) 
         {
             pj_strdup_with_null(acc->pool, &acc->cfg.rfc5626_instance_id,
@@ -1883,6 +1893,13 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* Unregister first */
     if (unreg_first) {
+        /* Something determining the first hop, or what we advertise to it,
+         * has changed -- registrar URI, proxy, transport or the outbound
+         * settings themselves. A 439 recorded against the old path says
+         * nothing about the new one.
+         */
+        reset_outbound_rejection(acc);
+
         if (acc->regc && !cfg->disable_reg_on_modify) {
             status = pjsua_acc_set_registration(acc->index, PJ_FALSE);
             if (status != PJ_SUCCESS) {
@@ -5432,7 +5449,7 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
             /* New transport means a possibly different first hop, so a
              * previous 439 no longer applies.
              */
-            acc->outbound_rejected = PJ_FALSE;
+            reset_outbound_rejection(acc);
 
             if (pjsua_var.acc[i].ip_change_op ==
                                             PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP)
@@ -5490,7 +5507,7 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
     /* The IP change may have put us behind a different first hop, so give
      * SIP outbound another chance.
      */
-    acc->outbound_rejected = PJ_FALSE;
+    reset_outbound_rejection(acc);
 
     status = pjsua_acc_set_registration(acc->index, !need_unreg);
     if ((status != PJ_SUCCESS)
