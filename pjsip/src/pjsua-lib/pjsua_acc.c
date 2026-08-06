@@ -3490,9 +3490,15 @@ static pj_status_t pjsua_regc_init(int acc_id)
         }
     }
 
-    /* If SIP outbound is used, add "Supported: outbound, path header" */
-    if (acc->rfc5626_status == OUTBOUND_WANTED ||
-        acc->rfc5626_status == OUTBOUND_ACTIVE)
+    /* If SIP outbound is used, add "Supported: outbound, path header".
+     * The outbound_rejected test is redundant while update_regc_contact()
+     * runs first and drives rfc5626_status to OUTBOUND_NA, but it keeps the
+     * option tag and the reg-id Contact param from ever disagreeing should
+     * that ordering change.
+     */
+    if ((acc->rfc5626_status == OUTBOUND_WANTED ||
+         acc->rfc5626_status == OUTBOUND_ACTIVE) &&
+        !acc->outbound_rejected)
     {
         pjsip_hdr hdr_list;
         pjsip_supported_hdr *hsup;
