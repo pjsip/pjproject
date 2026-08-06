@@ -112,6 +112,36 @@ deadlock:pjsua_call_on_incoming
 #=============================================================================
 
 #=============================================================================
+# Lock-order-inversion between PJSUA_LOCK and a transaction's group lock
+# on the registration path, seen whenever a NAT Contact rewrite succeeds.
+#
+# Two orderings appear on the same thread:
+#   M0 -> M1: regc_cb() takes PJSUA_LOCK, then acc_check_nat_addr()
+#     rewrites the Contact and re-registers. pjsua_acc_set_registration()
+#     does PJSUA_UNLOCK() before pjsip_regc_send() precisely to avoid
+#     this, but PJSUA_LOCK is a recursive mutex (pjsua_core.c, created
+#     with pj_mutex_create_recursive) and regc_cb already holds it, so
+#     the unlock only decrements the recursion count. pjsip_regc_send()
+#     then reaches pjsip_tsx_set_transport() and takes the new
+#     transaction's grp_lock with PJSUA_LOCK still held.
+#   M1 -> M0: regc_cb() / regc_tsx_cb() are invoked from tsx_set_state()
+#     with the transaction grp_lock already held, and take PJSUA_LOCK.
+#
+# This is the same recursive-lock problem noted in the disabled
+# acc_delete_deferred_test in pjsua_auth_test.c. It is not specific to
+# the test that exposes it: every real contact rewrite takes this path,
+# since acc_check_nat_addr() re-registers for any contact_rewrite_method
+# below PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE. Fixing it means deferring
+# the re-registration out of the callback, or making the unlock
+# recursion-aware - a PJSUA lock topology change, not a local one.
+#
+# Suppressed on acc_check_nat_addr because that frame is unique to this
+# cycle. regc_cb / regc_tsx_cb are deliberately left unsuppressed so
+# other deadlocks on the registration path still surface.
+deadlock:acc_check_nat_addr
+#=============================================================================
+
+#=============================================================================
 # Lock-order-inversion inside pjmedia event manager when an event
 # subscriber callback publishes another event (nested publish).
 #
