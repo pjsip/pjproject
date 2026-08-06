@@ -36,6 +36,13 @@
  *   3. "received" with a token character that is not valid in a host
  *      -> rewrite declined, previous Contact retained.
  *   4. Colon bearing non-address token        -> rewrite declined.
+ *   5. As 3, with PJSUA_CONTACT_REWRITE_UNREGISTER: the declined rewrite
+ *      must not unregister and tear down the regc on the way.
+ *   6. Accepted rewrite with reg_contact_uri_params, which sends
+ *      update_regc_contact() through its parse-and-regenerate path.
+ *   7. force_contact "*", which parses to a Contact with no URI.
+ *   8. force_contact with a non-SIP URI, which must not be cast to
+ *      pjsip_sip_uri* and read as one.
  */
 
 #include "test.h"
@@ -170,6 +177,35 @@ static int get_acc_contact_host(pjsua_acc_id acc_id, char *host,
     return rc;
 }
 
+/* Check the registration Contact that update_regc_contact() produced:
+ * it must be NULL terminated (the scanner requires it) and parse back as
+ * a Contact header. Returns 0 on success.
+ */
+static int check_acc_reg_contact(pjsua_acc_id acc_id, pj_bool_t require_uri)
+{
+    const pj_str_t STR_CONTACT = { "Contact", 7 };
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+    pjsip_contact_hdr *hdr;
+    pj_pool_t *pool;
+    int rc = -1;
+
+    if (acc->reg_contact.slen == 0 ||
+        acc->reg_contact.ptr[acc->reg_contact.slen] != '\0')
+    {
+        return -1;
+    }
+
+    pool = pjsua_pool_create("acctest", 512, 512);
+    hdr = (pjsip_contact_hdr*)
+          pjsip_parse_hdr(pool, &STR_CONTACT, acc->reg_contact.ptr,
+                          acc->reg_contact.slen, NULL);
+    if (hdr && (hdr->uri || !require_uri))
+        rc = 0;
+
+    pj_pool_release(pool);
+    return rc;
+}
+
 /* Pump the event loop until the pending registration completes. */
 static int wait_reg(unsigned max_ms)
 {
@@ -185,28 +221,38 @@ static int wait_reg(unsigned max_ms)
 
 /*****************************************************************************
  * Sub-test driver
- *
- * 'received'    : value forced into the response's Via received param.
- * 'expect_host' : Contact host expected afterwards, or NULL if the rewrite
- *                 must be declined and the original Contact retained.
  *****************************************************************************/
+
+typedef struct {
+    const char *title;
+    const char *received;       /* forced Via received param */
+    const char *expect_host;    /* Contact host expected afterwards, or
+                                 * NULL if the rewrite must be declined
+                                 * and the original Contact retained */
+    const char *force_contact;  /* acc_cfg.force_contact, or NULL */
+    const char *uri_params;     /* reg_contact_uri_params, or NULL */
+    int         rewrite_method; /* 0 = leave at the default */
+    int         err_base;
+    pj_bool_t   expect_reg_fail;/* Contact cannot be registered at all */
+} rewrite_case;
+
 static int rewrite_test(pjsua_transport_id tp_id, int port,
-                        const char *title, const char *received,
-                        const char *expect_host, int err_base)
+                        const rewrite_case *c)
 {
     pjsua_acc_config acc_cfg;
     pjsua_acc_id     acc_id;
     char             reg_uri[64];
     char             orig_contact[PJSIP_MAX_URL_SIZE];
     char             host[PJ_INET6_ADDRSTRLEN + 16];
+    const int        err_base = c->err_base;
     pj_status_t      status;
     unsigned         round;
     int              rc = 0;
 
-    PJ_LOG(3, (THIS_FILE, "  pjsua acc: %s", title));
+    PJ_LOG(3, (THIS_FILE, "  pjsua acc: %s", c->title));
 
     pj_bzero(&g_ctx, sizeof(g_ctx));
-    g_mock_reg.received  = received;
+    g_mock_reg.received  = c->received;
     g_mock_reg.req_count = 0;
 
     pj_ansi_snprintf(reg_uri, sizeof(reg_uri), "sip:127.0.0.1:%d", port);
@@ -222,6 +268,12 @@ static int rewrite_test(pjsua_transport_id tp_id, int port,
     acc_cfg.allow_contact_rewrite = 2;
     /* Keep the Via sent-by out of it; this test is about the Contact. */
     acc_cfg.allow_via_rewrite = PJ_FALSE;
+    if (c->rewrite_method)
+        acc_cfg.contact_rewrite_method = c->rewrite_method;
+    if (c->force_contact)
+        acc_cfg.force_contact = pj_str((char*)c->force_contact);
+    if (c->uri_params)
+        acc_cfg.reg_contact_uri_params = pj_str((char*)c->uri_params);
 
     status = pjsua_acc_add(&acc_cfg, PJ_FALSE, &acc_id);
     if (status != PJ_SUCCESS) {
@@ -234,6 +286,18 @@ static int rewrite_test(pjsua_transport_id tp_id, int port,
      */
     g_ctx.reg_done = PJ_FALSE;
     status = pjsua_acc_set_registration(acc_id, PJ_TRUE);
+    if (c->expect_reg_fail) {
+        /* The Contact cannot be registered at all. What matters is that
+         * building it did not dereference a NULL URI on the way, and that
+         * it is refused rather than half-registered.
+         */
+        if (status == PJ_SUCCESS) {
+            PJ_LOG(3, (THIS_FILE, "    error: registration unexpectedly "
+                       "accepted Contact '%s'", c->force_contact));
+            rc = err_base - 10;
+        }
+        goto on_return;
+    }
     if (status != PJ_SUCCESS) {
         PJ_LOG(3, (THIS_FILE, "    error: set_registration failed (%d)",
                    status));
@@ -272,21 +336,26 @@ static int rewrite_test(pjsua_transport_id tp_id, int port,
         goto on_return;
     }
 
-    /* The stored Contact must always be parseable, whether or not the
-     * rewrite was accepted.
+    /* A Contact we generated or rewrote must always parse back, which is
+     * the operation acc_check_nat_addr() performs on entry. A
+     * force_contact case deliberately starts from something that does
+     * not (e.g. "*"), and only has to survive being checked.
      */
-    if (get_acc_contact_host(acc_id, host, sizeof(host)) != 0) {
-        PJ_LOG(3, (THIS_FILE, "    error: account Contact is unparseable: "
-                   "'%.*s'", (int)pjsua_var.acc[acc_id].contact.slen,
-                   pjsua_var.acc[acc_id].contact.ptr));
-        rc = err_base - 5;
-        goto on_return;
+    if (!c->force_contact) {
+        if (get_acc_contact_host(acc_id, host, sizeof(host)) != 0) {
+            PJ_LOG(3, (THIS_FILE, "    error: account Contact is "
+                       "unparseable: '%.*s'",
+                       (int)pjsua_var.acc[acc_id].contact.slen,
+                       pjsua_var.acc[acc_id].contact.ptr));
+            rc = err_base - 5;
+            goto on_return;
+        }
     }
 
-    if (expect_host) {
-        if (pj_ansi_strcmp(host, expect_host) != 0) {
+    if (c->expect_host) {
+        if (pj_ansi_strcmp(host, c->expect_host) != 0) {
             PJ_LOG(3, (THIS_FILE, "    error: expected Contact host '%s', "
-                       "got '%s'", expect_host, host));
+                       "got '%s'", c->expect_host, host));
             rc = err_base - 6;
             goto on_return;
         }
@@ -300,6 +369,32 @@ static int rewrite_test(pjsua_transport_id tp_id, int port,
             rc = err_base - 7;
             goto on_return;
         }
+
+        /* A declined rewrite must not have unregistered and torn down
+         * the client registration on the way, which is why the
+         * PJSUA_CONTACT_REWRITE_UNREGISTER step runs after validation.
+         */
+        if (pjsua_var.acc[acc_id].regc == NULL) {
+            PJ_LOG(3, (THIS_FILE, "    error: regc was destroyed by a "
+                       "declined rewrite"));
+            rc = err_base - 8;
+            goto on_return;
+        }
+    }
+
+    /* The registration Contact derived from it must be well formed too.
+     * "Contact: *" has no URI by definition, so only require one when the
+     * account Contact was not forced to something exotic.
+     */
+    if (check_acc_reg_contact(acc_id, (pj_bool_t)(c->force_contact == NULL))
+        != 0)
+    {
+        PJ_LOG(3, (THIS_FILE, "    error: registration Contact is not NULL "
+                   "terminated or does not parse: '%.*s'",
+                   (int)pjsua_var.acc[acc_id].reg_contact.slen,
+                   pjsua_var.acc[acc_id].reg_contact.ptr));
+        rc = err_base - 9;
+        goto on_return;
     }
 
 on_return:
@@ -411,33 +506,66 @@ int pjsua_acc_test(void)
     }
 
     /* ---- Run sub-tests ---- */
+    {
+        static const rewrite_case cases[] = {
+            /* An IPv6 address seen by the registrar on a transport that
+             * is not typed IPv6 (dual stack SBC, NAT64). Must be
+             * bracketed, otherwise the stored Contact is
+             * <sip:user@2001:db8::1:PORT> and no longer parses.
+             */
+            { "IPv6 received over IPv4 transport",
+              "2001:db8::1", "2001:db8::1", NULL, NULL, 0, -2410 },
 
-    /* An IPv6 address seen by the registrar on a transport that is not
-     * typed IPv6 (dual stack SBC, NAT64). Must be bracketed, otherwise
-     * the stored Contact is <sip:user@2001:db8::1:PORT> and unparseable.
-     */
-    rc = rewrite_test(tp_id, (int)port, "IPv6 received over IPv4 transport",
-                      "2001:db8::1", "2001:db8::1", -2410);
-    if (rc != 0) goto on_return;
+            /* Plain IPv4: the ordinary rewrite must still happen. */
+            { "IPv4 received",
+              "1.2.3.4", "1.2.3.4", NULL, NULL, 0, -2420 },
 
-    /* Plain IPv4: the ordinary rewrite must still happen. */
-    rc = rewrite_test(tp_id, (int)port, "IPv4 received",
-                      "1.2.3.4", "1.2.3.4", -2420);
-    if (rc != 0) goto on_return;
+            /* '!' is accepted by the Via param scanner but not by the URI
+             * host scanner, so the rebuilt Contact would not parse back.
+             */
+            { "received with invalid host char",
+              "1.2.3.4!", NULL, NULL, NULL, 0, -2430 },
 
-    /* '!' is accepted by the Via param scanner but not by the URI host
-     * scanner, so the rebuilt Contact would not parse back.
-     */
-    rc = rewrite_test(tp_id, (int)port, "received with invalid host char",
-                      "1.2.3.4!", NULL, -2430);
-    if (rc != 0) goto on_return;
+            /* Colon bearing token that is not an IPv6 address: must not
+             * be bracketed into a Contact that parses but means nothing.
+             */
+            { "received with non-address colon",
+              "foo:bar", NULL, NULL, NULL, 0, -2440 },
 
-    /* Colon bearing token that is not an IPv6 address: must not be
-     * bracketed into a Contact that parses but means nothing.
-     */
-    rc = rewrite_test(tp_id, (int)port, "received with non-address colon",
-                      "foo:bar", NULL, -2440);
-    if (rc != 0) goto on_return;
+            /* Same rejection, but with PJSUA_CONTACT_REWRITE_UNREGISTER:
+             * the declined rewrite must leave the registration alone.
+             */
+            { "declined rewrite with UNREGISTER method",
+              "1.2.3.4!", NULL, NULL, NULL,
+              PJSUA_CONTACT_REWRITE_UNREGISTER, -2450 },
+
+            /* reg_contact_uri_params sends update_regc_contact() through
+             * its parse-and-regenerate path on the rewritten Contact.
+             */
+            { "accepted rewrite with reg_contact_uri_params",
+              "1.2.3.4", "1.2.3.4", NULL, ";acc-test=1", 0, -2460 },
+
+            /* "Contact: *" parses to a header with a NULL uri. Building
+             * the registration Contact from it must fall back instead of
+             * dereferencing it, and pjsip_regc must then refuse it rather
+             * than register a Contact it will later dereference.
+             */
+            { "force_contact star",
+              "1.2.3.4", NULL, "*", ";acc-test=1", 0, -2470, PJ_TRUE },
+
+            /* A non-SIP URI parses fine but must not be cast to
+             * pjsip_sip_uri* and read as one.
+             */
+            { "force_contact non-SIP URI",
+              "1.2.3.4", NULL, "<tel:+15551234>", NULL, 0, -2480 },
+        };
+        unsigned i;
+
+        for (i=0; i<PJ_ARRAY_SIZE(cases); ++i) {
+            rc = rewrite_test(tp_id, (int)port, &cases[i]);
+            if (rc != 0) goto on_return;
+        }
+    }
 
 on_return:
     if (g_mock_reg.mod.id != -1)

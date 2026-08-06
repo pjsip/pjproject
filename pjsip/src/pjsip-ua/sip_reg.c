@@ -313,8 +313,14 @@ static pj_status_t set_contact( pjsip_regc *regc,
         pj_strdup_with_null(regc->pool, &tmp, &contact[i]);
         hdr = (pjsip_contact_hdr*)
               pjsip_parse_hdr(regc->pool, &CONTACT, tmp.ptr, tmp.slen, NULL);
-        if (hdr == NULL) {
-            PJ_LOG(4,(THIS_FILE, "Invalid Contact: \"%.*s\"", 
+        /* A "Contact: *" header parses fine but carries no URI, and the
+         * registration Contacts are dereferenced as URIs below and in
+         * calculate_response_expiration(). Unregister-all is built
+         * separately by pjsip_regc_unregister_all(), so a starred Contact
+         * has no business being registered here.
+         */
+        if (hdr == NULL || hdr->uri == NULL) {
+            PJ_LOG(4,(THIS_FILE, "Invalid Contact: \"%.*s\"",
                      (int)tmp.slen, tmp.ptr));
             return PJSIP_EINVALIDURI;
         }
