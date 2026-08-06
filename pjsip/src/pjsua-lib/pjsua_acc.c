@@ -3518,15 +3518,24 @@ static pj_status_t pjsua_regc_init(int acc_id)
         }
     }
 
-    /* If SIP outbound is used, add "Supported: outbound, path header".
-     * The outbound_rejected test is redundant while update_regc_contact()
-     * runs first and drives rfc5626_status to OUTBOUND_NA, but it keeps the
-     * option tag and the reg-id Contact param from ever disagreeing should
-     * that ordering change.
+    /* If SIP outbound is used, add "Supported: outbound, path" header.
+     *
+     * After a 439 only the "outbound" tag is withdrawn. "path" (RFC 3327) is
+     * a separate capability that the 439 says nothing about, and the edge
+     * proxy whose Path lacked an ";ob" parameter -- the very thing that
+     * provoked the 439 -- will keep inserting Path on the retry. RFC 3327
+     * section 5.3 recommends a registrar reject a REGISTER carrying Path from
+     * a UA that does not advertise "path" with 420 (Bad Extension), so
+     * dropping both tags together risks turning the 439 into a 420 with no
+     * further retry scheduled.
+     *
+     * Testing outbound_rejected rather than relying on rfc5626_status also
+     * keeps the option tag and the reg-id Contact parameter from disagreeing
+     * if the order in which they are decided ever changes.
      */
-    if ((acc->rfc5626_status == OUTBOUND_WANTED ||
-         acc->rfc5626_status == OUTBOUND_ACTIVE) &&
-        !acc->outbound_rejected)
+    if (acc->rfc5626_status == OUTBOUND_WANTED ||
+        acc->rfc5626_status == OUTBOUND_ACTIVE ||
+        acc->outbound_rejected)
     {
         pjsip_hdr hdr_list;
         pjsip_supported_hdr *hsup;
@@ -3535,9 +3544,14 @@ static pj_status_t pjsua_regc_init(int acc_id)
         hsup = pjsip_supported_hdr_create(pool);
         pj_list_push_back(&hdr_list, hsup);
 
-        hsup->count = 2;
-        hsup->values[0] = pj_str("outbound");
-        hsup->values[1] = pj_str("path");
+        if (acc->outbound_rejected) {
+            hsup->count = 1;
+            hsup->values[0] = pj_str("path");
+        } else {
+            hsup->count = 2;
+            hsup->values[0] = pj_str("outbound");
+            hsup->values[1] = pj_str("path");
+        }
 
         status = pjsip_regc_add_headers(acc->regc, &hdr_list);
         if (status != PJ_SUCCESS) {
