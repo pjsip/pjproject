@@ -257,11 +257,40 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_remove( unsigned *count,
 }
 
 
+/* Parse a decimal token into a 32 bit unsigned value.
+ *
+ * pj_strtoul() performs no overflow detection: it accumulates into an
+ * unsigned long, which silently wraps, and the result is then narrowed to
+ * the 32 bit field of the attribute. On LP64 platforms a clock rate of
+ * "4294975296" (2^32 + 8000) would end up stored as 8000. Reject values
+ * that don't fit rather than storing a wrapped one.
+ */
+static pj_status_t parse_uint32(const pj_str_t *str, pj_uint32_t *value)
+{
+    unsigned long ul;
+    pj_status_t status;
+
+    status = pj_strtoul3(str, &ul, 10);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    /* Note that unsigned long is 32 bit on some platforms, in which case
+     * pj_strtoul3() has already rejected the out of range values.
+     */
+    if (ul != (unsigned long)(pj_uint32_t)ul)
+        return PJ_ETOOBIG;
+
+    *value = (pj_uint32_t)ul;
+    return PJ_SUCCESS;
+}
+
+
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
                                                  pjmedia_sdp_rtpmap *rtpmap)
 {
     pj_scanner scanner;
     pj_str_t token;
+    pj_uint32_t uval;
     pj_status_t status = -1;
     char term = 0;
     PJ_USE_EXCEPTION;
@@ -321,7 +350,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 
         /* Get the clock rate. */
         pj_scan_get(&scanner, &cs_digit, &token);
-        rtpmap->clock_rate = pj_strtoul(&token);
+        if (parse_uint32(&token, &uval) != PJ_SUCCESS)
+            PJ_THROW(PJMEDIA_SDP_EINRTPMAP);
+        rtpmap->clock_rate = uval;
 
         /* Expecting either '/' or EOF */
         if (*scanner.curptr == '/') {
@@ -393,6 +424,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
 {
     pj_scanner scanner;
     pj_str_t token;
+    pj_uint32_t uval;
     pj_status_t status = -1;
     PJ_USE_EXCEPTION;
 
@@ -414,6 +446,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
                  PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
 
     /* Init */
+    rtcp->port = 0;
     rtcp->net_type.slen = rtcp->addr_type.slen = rtcp->addr.slen = 0;
 
     /* Parse */
@@ -421,9 +454,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
 
         /* Get the port */
         pj_scan_get(&scanner, &cs_digit, &token);
-        rtcp->port = pj_strtoul(&token);
-        if (rtcp->port > 0xFFFF)
+        if (parse_uint32(&token, &uval) != PJ_SUCCESS || uval > 0xFFFF)
             PJ_THROW(PJMEDIA_SDP_EINRTCP);
+        rtcp->port = uval;
 
         /* Have address? */
         if (!pj_scan_is_eof(&scanner)) {
@@ -524,7 +557,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_ssrc(const pjmedia_sdp_attr *attr,
 
         /* Get the ssrc */
         pj_scan_get(&scanner, &cs_digit, &token);
-        ssrc->ssrc = pj_strtoul(&token);
+        if (parse_uint32(&token, &ssrc->ssrc) != PJ_SUCCESS)
+            PJ_THROW(PJMEDIA_SDP_EINSSRC);
 
         pj_scan_get_char(&scanner);
         pj_scan_get(&scanner, &cs_token, &scan_attr);
