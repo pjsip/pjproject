@@ -446,6 +446,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
                  PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
 
     /* Init */
+    rtcp->port = 0;
     rtcp->net_type.slen = rtcp->addr_type.slen = rtcp->addr.slen = 0;
 
     /* Parse */
