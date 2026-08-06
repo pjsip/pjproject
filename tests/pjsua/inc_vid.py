@@ -87,3 +87,11 @@ def make_video_call(caller, callee, callee_uri):
 
     caller.sync_stdout()
     callee.sync_stdout()
+
+
+# Hang up the call from 'hangup_by' and verify both endpoints disconnect
+# (i.e. exercise BYE). 'other' is the peer.
+def hangup_call(hangup_by, other):
+    hangup_by.send("call hangup")
+    hangup_by.expect(const.STATE_DISCONNECTED)
+    other.expect(const.STATE_DISCONNECTED)
