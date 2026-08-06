@@ -22,8 +22,12 @@ def test_func(t):
     caller.sync_stdout()
     callee.sync_stdout()
 
-    # Resume via re-INVITE; the video stream goes back to Active on both.
+    # Resume via re-INVITE. Assert the outgoing and incoming INVITE first,
+    # so a regression that resumed via UPDATE instead would be caught, then
+    # the video stream goes back to Active on both.
     caller.send("call reinvite")
+    caller.expect("INVITE sips?:")
+    callee.expect("INVITE sips?:")
     caller.expect(const.VID_MEDIA_ACTIVE)
     callee.expect(const.VID_MEDIA_ACTIVE)
 

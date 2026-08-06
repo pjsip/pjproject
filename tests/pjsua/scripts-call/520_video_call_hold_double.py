@@ -22,11 +22,13 @@ def test_func(t):
     caller.sync_stdout()
     callee.sync_stdout()
 
-    # Callee also holds (double hold): it now has both a local hold and the
-    # caller's remote hold, so it reports Local hold.
+    # Callee also holds (double hold). Both sides now have their own local
+    # hold as well as the peer's remote hold; local hold takes precedence,
+    # so both report Local hold (asserting this catches a caller that
+    # wrongly flips to Remote hold).
     callee.send("call hold")
     callee.expect(const.VID_MEDIA_LOCAL_HOLD)
-    caller.expect(const.VID_MEDIA_HOLD)
+    caller.expect(const.VID_MEDIA_LOCAL_HOLD)
 
     caller.sync_stdout()
     callee.sync_stdout()

@@ -14,8 +14,12 @@ def test_func(t):
 
     vid.make_video_call(caller, callee, t.inst_params[0].uri)
 
-    # Caller sends UPDATE; both endpoints re-report the video stream Active.
+    # Caller sends UPDATE. Assert the outgoing and incoming UPDATE first,
+    # so a regression that used re-INVITE instead would be caught, then
+    # both endpoints re-report the video stream Active.
     caller.send("call update")
+    caller.expect("UPDATE sips?:")
+    callee.expect("UPDATE sips?:")
     caller.expect(const.VID_MEDIA_ACTIVE)
     callee.expect(const.VID_MEDIA_ACTIVE)
 
