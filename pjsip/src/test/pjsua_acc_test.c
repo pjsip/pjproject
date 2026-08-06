@@ -75,6 +75,7 @@ static struct {
     pjsip_module  mod;
     const char   *received;     /* forced Via received param, or NULL */
     unsigned      req_count;
+    char          last_contact[PJSIP_MAX_URL_SIZE];  /* as seen on the wire */
 } g_mock_reg = {
     {
         NULL, NULL,
@@ -99,6 +100,24 @@ static pj_bool_t mock_registrar_rx_request(pjsip_rx_data *rdata)
     }
 
     g_mock_reg.req_count++;
+
+    /* Record the whole Contact header as it arrived, so a test can tell
+     * whether a rejected pjsip_regc_update_contact() disturbed the
+     * binding. The header must be captured in full, not just the URI: a
+     * binding queued for removal is re-sent with the same URI and only
+     * ";expires=0" to distinguish it.
+     */
+    {
+        pjsip_contact_hdr *hc = (pjsip_contact_hdr*)
+                                pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT,
+                                                   NULL);
+        g_mock_reg.last_contact[0] = '\0';
+        if (hc) {
+            int len = pjsip_hdr_print_on(hc, g_mock_reg.last_contact,
+                                         sizeof(g_mock_reg.last_contact)-1);
+            g_mock_reg.last_contact[len > 0? len : 0] = '\0';
+        }
+    }
 
     if (g_mock_reg.received) {
         pj_strdup2(rdata->tp_info.pool, &rdata->msg_info.via->recvd_param,
@@ -234,6 +253,7 @@ typedef struct {
     int         rewrite_method; /* 0 = leave at the default */
     int         err_base;
     pj_bool_t   expect_reg_fail;/* Contact cannot be registered at all */
+    pj_bool_t   probe_bad_update;/* poke regc with an invalid Contact */
 } rewrite_case;
 
 static int rewrite_test(pjsua_transport_id tp_id, int port,
@@ -334,6 +354,45 @@ static int rewrite_test(pjsua_transport_id tp_id, int port,
                    g_mock_reg.req_count));
         rc = err_base - 4;
         goto on_return;
+    }
+
+    if (c->probe_bad_update) {
+        pj_str_t star = pj_str("*");
+        char contact_before[PJSIP_MAX_URL_SIZE];
+
+        pj_ansi_snprintf(contact_before, sizeof(contact_before), "%s",
+                         g_mock_reg.last_contact);
+
+        /* An invalid Contact must be refused without disturbing the
+         * registration already in place. set_contact() moves the current
+         * Contacts to the removed list with expires=0 before it can fail,
+         * so validating only partway would silently unregister them on
+         * the next REGISTER.
+         */
+        status = pjsip_regc_update_contact(pjsua_var.acc[acc_id].regc,
+                                           1, &star);
+        if (status != PJSIP_EINVALIDURI) {
+            PJ_LOG(3, (THIS_FILE, "    error: update_contact with '*' "
+                       "returned %d, expected PJSIP_EINVALIDURI", status));
+            rc = err_base - 11;
+            goto on_return;
+        }
+
+        g_ctx.reg_done = PJ_FALSE;
+        pjsua_acc_set_registration(acc_id, PJ_TRUE);
+        if (wait_reg(10000) != 0) {
+            PJ_LOG(3, (THIS_FILE, "    error: registration after a rejected "
+                       "update timed out, last code %d", g_ctx.reg_code));
+            rc = err_base - 12;
+            goto on_return;
+        }
+        if (pj_ansi_strcmp(g_mock_reg.last_contact, contact_before) != 0) {
+            PJ_LOG(3, (THIS_FILE, "    error: rejected update changed the "
+                       "registered Contact: '%s' -> '%s'",
+                       contact_before, g_mock_reg.last_contact));
+            rc = err_base - 13;
+            goto on_return;
+        }
     }
 
     /* A Contact we generated or rewrote must always parse back, which is
@@ -558,6 +617,13 @@ int pjsua_acc_test(void)
              */
             { "force_contact non-SIP URI",
               "1.2.3.4", NULL, "<tel:+15551234>", NULL, 0, -2480 },
+
+            /* A Contact that pjsip_regc refuses must leave the existing
+             * registration binding untouched, not queued for removal.
+             */
+            { "rejected update_contact keeps the binding",
+              "1.2.3.4", "1.2.3.4", NULL, NULL, 0, -2490,
+              PJ_FALSE, PJ_TRUE },
         };
         unsigned i;
 
