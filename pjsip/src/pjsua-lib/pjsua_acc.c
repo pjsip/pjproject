@@ -2940,6 +2940,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 {
 
     pjsua_acc *acc = (pjsua_acc*) param->token;
+    pj_bool_t sent_outbound;
 
     PJSUA_LOCK();
 
@@ -2947,6 +2948,14 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
         PJSUA_UNLOCK();
         return;
     }
+
+    /* Whether the REGISTER this callback reports on advertised SIP outbound.
+     * Captured up front because the failure paths below call destroy_regc(),
+     * which resets rfc5626_status. Needed to tell a 439 that rejects our
+     * outbound from one returned for an unrelated reason.
+     */
+    sent_outbound = (acc->rfc5626_status == OUTBOUND_WANTED ||
+                     acc->rfc5626_status == OUTBOUND_ACTIVE);
 
     pj_log_push_indent();
 
@@ -3159,9 +3168,15 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
      * next registration. cfg.use_rfc5626 is deliberately left untouched, so
      * the account's configured intent is preserved and outbound is tried
      * again once the path may have changed (see the resets of this flag).
+     *
+     * The sent_outbound check keeps this to requests that really did advertise
+     * outbound: use_rfc5626 may be enabled while update_regc_contact() still
+     * emits no reg-id, e.g. on a UDP account, and RFC 5626 section 6 permits
+     * a 439 only when reg-id and the outbound option tag were both present.
+     * A 439 to any other request is not ours to react to.
      */
     if (param->code == PJSIP_SC_FIRST_HOP_LACKS_OUTBOUND_SUPPORT &&
-        acc->cfg.use_rfc5626 && !acc->outbound_rejected)
+        acc->cfg.use_rfc5626 && !acc->outbound_rejected && sent_outbound)
     {
         PJ_LOG(3,(THIS_FILE, "Acc %d: first hop lacks outbound support, "
                              "will re-register without SIP outbound",
