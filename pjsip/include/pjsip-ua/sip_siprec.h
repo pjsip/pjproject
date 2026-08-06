@@ -59,9 +59,9 @@ PJ_DECL(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt);
 
 /**
  * Check if the value of Require header is equal to siprec.
- *
+ * 
  * @param req_hdr      Require header.
- *
+ * 
  * @return             PJ_TRUE if value of Require header is equal to siprec.
  */
 PJ_DECL(pj_status_t)

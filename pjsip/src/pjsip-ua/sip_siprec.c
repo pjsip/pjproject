@@ -112,7 +112,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_init_module(pjsip_endpoint *endpt)
 
 /**
  * Check if the value of Require header is equal to siprec.
- */
+ */ 
 PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
 {
     unsigned i;
@@ -174,13 +174,13 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
 
     /* Checks if the INVITE request is SIPREC */
     if (pjsip_siprec_check_request(rdata) == PJ_FALSE){
-        /* The SIPREC request option is mandatory */
+        /* The SIPREC request option is mandatory */ 
         if (*options & PJSIP_INV_REQUIRE_SIPREC){
             code = PJSIP_SC_BAD_REQUEST;
             warn_text = "The INVITE request must be SIPREC";
-            goto on_return;
+            goto on_return;    
         }else {
-            /* The SIPREC request option is optional */
+            /* The SIPREC request option is optional */ 
             return PJ_SUCCESS;
         }
     }
@@ -189,7 +189,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     if (!rdata->msg_info.msg->body) {
         code = PJSIP_SC_BAD_REQUEST;
         warn_text = "SIPREC INVITE must have a body";
-        goto on_return;
+        goto on_return; 
     }
 
     /* Currently, SIPREC INVITE requests without SDP are not supported. */
@@ -236,7 +236,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
     status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
                                         rdata->msg_info.msg->body,
                                         metadata);
-
+    
     if(status != PJ_SUCCESS) {
         if (setting->require_metadata) {
             /* Require metadata - reject if missing */
@@ -267,10 +267,10 @@ on_return:
         const pjsip_hdr *h;
 
         if (dlg) {
-            status = pjsip_dlg_create_response(dlg, rdata, code, NULL,
+            status = pjsip_dlg_create_response(dlg, rdata, code, NULL, 
                                                &tdata);
         } else {
-            status = pjsip_endpt_create_response(endpt, rdata, code, NULL,
+            status = pjsip_endpt_create_response(endpt, rdata, code, NULL, 
                                                  &tdata);
         }
 
@@ -279,7 +279,7 @@ on_return:
 
         /* Add response headers. */
         h = res_hdr_list.next;
-        while (h != &res_hdr_list) {
+        while (h != &res_hdr_list) {    
             pjsip_hdr *cloned;
 
             cloned = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, h);
@@ -295,7 +295,7 @@ on_return:
             pjsip_warning_hdr *warn_hdr;
             pj_str_t warn_value = pj_str((char*)warn_text);
 
-            warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399,
+            warn_hdr=pjsip_warning_hdr_create(tdata->pool, 399, 
                                                 pjsip_endpt_name(endpt),
                                                 &warn_value);
             pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)warn_hdr);
