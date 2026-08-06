@@ -155,21 +155,6 @@ PJ_DECL(pj_status_t) pjsip_register_hdr_parser( const char *hname,
                                                 pjsip_parse_hdr_func *fptr);
 
 /**
- * Unregister previously registered header parser handler.
- * All the arguments MUST exactly equal to the value specified upon 
- * registration of the handler.
- *
- * @param hname         The header name registered.
- * @param hshortname    The short header name registered, or NULL.
- * @param fptr          Previously registered function to parse the header.
- *
- * @return              zero if unregistration was successfull.
- */
-PJ_DECL(pj_status_t) pjsip_unregister_hdr_parser( const char *hname,
-                                                  const char *hshortname,
-                                                  pjsip_parse_hdr_func *fptr);
-
-/**
  * Register URI scheme parser handler.
  *
  * @param scheme        The URI scheme registered.
@@ -179,19 +164,6 @@ PJ_DECL(pj_status_t) pjsip_unregister_hdr_parser( const char *hname,
  */
 PJ_DECL(pj_status_t) pjsip_register_uri_parser( char *scheme,
                                                 pjsip_parse_uri_func *func);
-
-/**
- * Unregister URI scheme parser handler.
- * All the arguments MUST exactly equal to the value specified upon 
- * registration of the handler.
- *
- * @param scheme        The URI scheme as registered previously.
- * @param func          The function handler as registered previously.
- *
- * @return              zero if the registration was successfull.
- */
-PJ_DECL(pj_status_t) pjsip_unregister_uri_parser( const char *scheme,
-                                                  pjsip_parse_uri_func *func);
 
 /**
  * Parse an URI in the input and return the correct instance of URI.
