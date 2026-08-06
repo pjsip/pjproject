@@ -17,6 +17,11 @@ def test_func(t):
     caller.send("call new " + t.inst_params[0].uri)
     caller.expect(const.STATE_CALLING)
 
+    # Verify the callee actually received a video offer (enabled m=video
+    # with a non-zero port), so this exercises the video CANCEL case rather
+    # than passing for an audio-only INVITE.
+    callee.expect("m=video [1-9]")
+
     # Callee rings (180) but does not answer.
     callee.expect(const.EVENT_INCOMING_CALL)
     callee.send("call answer 180")
