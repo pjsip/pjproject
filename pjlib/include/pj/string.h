@@ -673,6 +673,25 @@ PJ_DECL(pj_status_t) pj_strtol2(const pj_str_t *str, long *value);
  * soon as non-digit character is found or all the characters have
  * been processed.
  *
+ * Note that this function performs no overflow detection: the digits are
+ * accumulated into an unsigned long, which silently wraps once the value
+ * exceeds ULONG_MAX. Prefer pj_strtoul3() for input that is not trusted,
+ * such as data taken from the network.
+ *
+ * Also note that pj_strtoul3() only detects overflow of unsigned long
+ * itself, which is 64 bit on most platforms. When the parsed value is to
+ * be stored in a narrower field, the caller must range check it as well,
+ * for example:
+ *
+ * \code
+    unsigned long ul;
+
+    if (pj_strtoul3(&str, &ul, 10) != PJ_SUCCESS || ul > 0xFFFFFFFFUL)
+        return PJ_EINVAL;
+
+    field32 = (pj_uint32_t)ul;
+ * \endcode
+ *
  * @param str   the string.
  *
  * @return the unsigned integer.
@@ -684,7 +703,11 @@ PJ_DECL(unsigned long) pj_strtoul(const pj_str_t *str);
  * This function stops reading the string input either when the number
  * of characters has exceeded the length of the input or it has read 
  * the first character it cannot recognize as part of a number, that is
- * a character greater than or equal to base. 
+ * a character greater than or equal to base.
+ *
+ * Like pj_strtoul(), this function performs no overflow detection and will
+ * silently wrap past ULONG_MAX. See pj_strtoul() for the recommended way to
+ * parse untrusted input.
  *
  * @param str       The input string.
  * @param endptr    Optional pointer to receive the remainder/unparsed
