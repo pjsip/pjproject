@@ -2496,6 +2496,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         int len;
         pj_bool_t secure;
         pjsip_contact_hdr *new_hdr;
+        pj_in6_addr v6_addr;
 
         secure = pjsip_transport_get_flag_from_type(tp->key.type) &
                  PJSIP_TRANSPORT_SECURE;
@@ -2503,9 +2504,14 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         /* Enclose IPv6 address in square brackets. Decide based on the
          * address itself, not on the transport type: the Via "received"
          * param is set by the registrar and may not match the transport.
+         * Only a genuine IPv6 literal is bracketed, so that any other
+         * colon bearing token (e.g. "foo:bar", which the Via param
+         * scanner accepts) stays unbracketed and is rejected by the
+         * validation below instead of being wrapped into a Contact that
+         * parses but is meaningless.
          */
-        if (via_addr->slen && pj_strchr(via_addr, ':') &&
-            via_addr->ptr[0] != '[')
+        if (via_addr->slen && via_addr->ptr[0] != '[' &&
+            pj_inet_pton(pj_AF_INET6(), via_addr, &v6_addr) == PJ_SUCCESS)
         {
             beginquote = "[";
             endquote = "]";

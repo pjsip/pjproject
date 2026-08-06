@@ -318,6 +318,7 @@ if(BUILD_TESTING)
     src/test/auth_async_test.c
     src/test/pjsua_auth_test.c
     src/test/pjsua_call_test.c
+    src/test/pjsua_acc_test.c
     src/test/${PJ_TEST_MAIN}
   )
 
