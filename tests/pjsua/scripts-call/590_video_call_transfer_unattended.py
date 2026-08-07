@@ -46,8 +46,11 @@ def test_func(t):
     a.sync_stdout()
     c.sync_stdout()
 
-    # Tear down the resulting A<->C call.
-    vid.hangup_call(a, c)
+    # Tear down from C, which holds exactly the one A<->C call: until A has
+    # processed B's BYE for the original A<->B leg it still has two calls,
+    # and (telnet-mode sync_stdout() being a no-op) hanging up A's current
+    # call could target the wrong one.
+    vid.hangup_call(c, a)
 
 
 test_param = TestParam(
