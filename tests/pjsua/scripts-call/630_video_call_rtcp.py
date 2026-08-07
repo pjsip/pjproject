@@ -5,15 +5,25 @@ import inc_const as const
 import inc_util as util
 from inc_cfg import *
 
-# Video call RTCP support: after the call is up, wait for at least one RTCP
-# reporting interval and then dump the call quality. For the video stream,
-# the TX statistics' "last update" must show a time "ago" (not "never"),
-# which means an RTCP report from the peer was received for that stream --
-# i.e. RTCP is flowing on the video media.
+# Video call RTCP support: once the call is up, the peer must send RTCP
+# reports for the video stream. We verify this via the call-quality dump:
+# the video stream's TX statistics' "last update" shows a time "ago" (not
+# "never") once an RTCP report from the peer has been received for that
+# stream.
 #
-# The default RTCP interval is 5s (PJMEDIA_RTCP_INTERVAL), and it is
-# wall-clock driven, so a fixed wait is reliable regardless of CPU load.
-RTCP_WAIT = 8
+# Video RTCP is emitted from video-frame processing (not an independent
+# wall-clock timer) and the interval is randomized up to ~5.5s, so how
+# soon the first report arrives can vary on a loaded runner. Poll the dump
+# with a bounded, generous budget rather than assuming a fixed delay.
+POLL_ATTEMPTS = 15
+POLL_INTERVAL = 2
+
+
+def video_rtcp_received(ua):
+    ua.send("call dump_q")
+    ua.expect(r"#[0-9]+ video")
+    line = ua.expect(r"TX .*last update:.*(ago|never)")
+    return "ago" in line
 
 
 def test_func(t):
@@ -22,13 +32,16 @@ def test_func(t):
 
     vid.make_video_call(caller, callee, t.inst_params[0].uri)
 
-    # Let RTCP reports be exchanged in both directions.
-    time.sleep(RTCP_WAIT)
-
-    # Dump call quality and assert the video stream received peer RTCP.
-    caller.send("call dump_q")
-    caller.expect(r"#[0-9]+ video")
-    caller.expect(r"TX .*last update:.*ago")
+    # Poll until the caller has received the peer's RTCP for the video
+    # stream (or fail if it never arrives within the budget).
+    got_rtcp = False
+    for attempt in range(POLL_ATTEMPTS):
+        if video_rtcp_received(caller):
+            got_rtcp = True
+            break
+        time.sleep(POLL_INTERVAL)
+    if not got_rtcp:
+        raise TestError("no RTCP received for the video stream")
 
     caller.sync_stdout()
     callee.sync_stdout()
