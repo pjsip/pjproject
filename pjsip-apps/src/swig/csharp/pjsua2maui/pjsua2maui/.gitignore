@@ -3,4 +3,6 @@
 .class
 .jar
 .so
+.a
+.cs
 /*/obj/
