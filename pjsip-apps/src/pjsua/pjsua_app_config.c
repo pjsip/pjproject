@@ -221,8 +221,8 @@ static void usage(void)
     puts  ("  --turn-user         TURN username");
     puts  ("  --turn-passwd       TURN password");
     puts  ("  --rtcp-mux          Enable RTP & RTCP multiplexing (default: no)");
-    puts  ("  --rtcp-xr           Enable RTCP XR, extended reports (default: no,");
-    puts  ("                      requires PJMEDIA_HAS_RTCP_XR build option)");
+    puts  ("  --rtcp-xr           Enable RTCP XR, extended reports");
+    puts  ("                      (requires PJMEDIA_HAS_RTCP_XR build option)");
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     puts  ("  --srtp-keying       SRTP keying method for outgoing SDP offer.");
     puts  ("                      0=SDES (default), 1=DTLS");
@@ -710,6 +710,12 @@ static pj_status_t parse_args(int argc, char *argv[],
             if (pj_log_get_level() < 3)
                 pj_log_set_level(3);
             pj_dump_config();
+            /* pj_dump_config() lives in pjlib and cannot report pjmedia
+             * build flags. Emit the ones the test suite probes for here so
+             * detection works regardless of static vs. shared linking
+             * (inc_util.has_rtcp_xr). */
+            PJ_LOG(3, (THIS_FILE, "PJMEDIA_HAS_RTCP_XR : %d",
+                       PJMEDIA_HAS_RTCP_XR));
             return PJ_EINVAL;
 
         case OPT_NULL_AUDIO:

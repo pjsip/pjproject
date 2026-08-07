@@ -6,19 +6,14 @@ def has_rtcp_xr(exe):
    """Return True if the pjsua build under test was compiled with RTCP XR
    (extended reports) support, i.e. PJMEDIA_HAS_RTCP_XR != 0.
 
-   RTCP XR is a compile-time option, off by default and -- unlike
-   PJ_HAS_SSL_SOCK -- not reported by pj_dump_config(), so "--version"
-   can't tell us. Instead we detect it structurally: the call-quality dump
-   prints an "Extended reports:" section, and that string literal is only
-   compiled into the binary when PJMEDIA_HAS_RTCP_XR is enabled. So scan
-   the pjsua executable for the marker.
-
-   'exe' is the executable path (inc_cfg.G_EXE). For a static build (the
-   default, and every CI build) the pjsua_dump.c object is linked into the
-   binary, so the marker -- if present -- is in the exe. A shared build
-   (--enable-shared) keeps it in libpjsua instead; there the scan won't
-   find it and the XR test is skipped rather than run. A read error fails
-   open (returns True) so a genuinely XR-enabled build still runs.
+   RTCP XR is a compile-time option, off by default. pj_dump_config()
+   (pjlib) can't report a pjmedia flag, so the pjsua app prints
+   "PJMEDIA_HAS_RTCP_XR : 0|1" in its "--version" output (alongside
+   pj_dump_config's own lines). We run "<exe> --version" and parse it --
+   the same approach as has_ssl_sock() below. Querying the running binary
+   works regardless of static vs. shared linking (the value is compiled
+   into the app itself), unlike scanning the executable for a string that
+   a shared build would keep in libpjsua.
 
    Note this only detects the build-time capability. XR must also be
    enabled per stream at run-time via pjsua_acc_config.enable_rtcp_xr,
@@ -27,10 +22,20 @@ def has_rtcp_xr(exe):
    explicitly with pjsua's --rtcp-xr option regardless of that default.
    """
    try:
-      with open(exe.strip(), "rb") as f:
-         return b"Extended reports:" in f.read()
-   except OSError:
-      return True
+      out = subprocess.check_output(exe + " --version", shell=True,
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True, timeout=10)
+   except (OSError, subprocess.CalledProcessError,
+           subprocess.TimeoutExpired) as e:
+      out = getattr(e, "output", "") or ""
+
+   m = re.search(r'PJMEDIA_HAS_RTCP_XR\s*:\s*(\d+)', out)
+   if m:
+      return m.group(1) != "0"
+   # No flag line (e.g. a pjsua too old to print it, or the probe couldn't
+   # run): RTCP XR is off in almost every build, so skip rather than run
+   # test 415 and have it fail spuriously on a build that lacks XR.
+   return False
 
 def has_ssl_sock(exe):
    """Return True if the pjsua build under test was configured with SSL
