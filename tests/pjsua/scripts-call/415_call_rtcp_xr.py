@@ -21,12 +21,18 @@ POLL_INTERVAL = 2
 def xr_reported(ua):
     ua.send("call dump_q")
     ua.expect(r"#[0-9]+ audio")
-    # The XR "Extended reports:" section follows the RX/TX stats within the
-    # same audio-stream block; it is printed only when RTCP XR is enabled
-    # on the stream. Absence just means "not yet / not enabled" -- don't
-    # raise, let the caller keep polling.
-    line = ua.expect(r"Extended reports:", raise_on_error=False, timeout=3)
-    return line is not None
+    # Two conditions must hold, in order, within the same audio-stream
+    # block. (1) The "Extended reports:" section is present -- printed only
+    # when RTCP XR is enabled on the stream. (2) The XR summary's "TX last
+    # update" shows a time "ago" (not "never"): the heading alone appears
+    # as soon as XR is enabled locally, so requiring the TX update proves a
+    # peer XR report was actually received, i.e. the XR exchange works.
+    # Absence of either just means "not yet" -- don't raise, keep polling.
+    if ua.expect(r"Extended reports:", raise_on_error=False, timeout=3) is None:
+        return False
+    line = ua.expect(r"TX last update: .*(ago|never)",
+                     raise_on_error=False, timeout=3)
+    return line is not None and "ago" in line
 
 
 def test_func(t):
@@ -46,7 +52,7 @@ def test_func(t):
     caller.sync_stdout()
     callee.sync_stdout()
 
-    # Poll until the caller's quality dump shows the RTCP XR section for
+    # Poll until the caller's quality dump shows a received XR report for
     # the audio stream.
     got_xr = False
     for attempt in range(POLL_ATTEMPTS):
@@ -55,7 +61,7 @@ def test_func(t):
             break
         time.sleep(POLL_INTERVAL)
     if not got_xr:
-        raise TestError("no RTCP XR extended reports for the audio stream "
+        raise TestError("no RTCP XR report received for the audio stream "
                         "(RTCP XR compiled in but not enabled at run-time? "
                         "see PJMEDIA_STREAM_ENABLE_XR)")
 

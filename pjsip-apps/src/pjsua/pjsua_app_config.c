@@ -1844,7 +1844,11 @@ static void default_config()
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->rtp_cfg.port = 4000;
     cfg->enable_rtcp_mux = PJ_FALSE;
-    cfg->enable_rtcp_xr = PJ_FALSE;
+    /* Match pjsua_acc_config_default()'s macro-derived default so that
+     * applying this app-level fallback to transport-created local accounts
+     * doesn't override RTCP XR on builds that enable it by default. The
+     * --rtcp-xr option force-enables it regardless. */
+    cfg->enable_rtcp_xr = (PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR);
     cfg->redir_op = PJSIP_REDIRECT_ACCEPT_REPLACE;
     cfg->duration = PJSUA_APP_NO_LIMIT_DURATION;
     cfg->wav_id = PJSUA_INVALID_ID;

@@ -21,10 +21,10 @@ def has_rtcp_xr(exe):
    open (returns True) so a genuinely XR-enabled build still runs.
 
    Note this only detects the build-time capability. XR must also be
-   enabled per stream at run-time (PJMEDIA_STREAM_ENABLE_XR, which pjsua
-   uses as the default for pjsua_media_config.enable_rtcp_xr); an XR build
-   normally sets both together. The test itself surfaces a clear error if
-   XR was compiled in but not enabled at run-time.
+   enabled per stream at run-time via pjsua_acc_config.enable_rtcp_xr,
+   whose default pjsua_acc_config_default() derives from the
+   PJMEDIA_STREAM_ENABLE_XR build setting; the 415 test enables it
+   explicitly with pjsua's --rtcp-xr option regardless of that default.
    """
    try:
       with open(exe.strip(), "rb") as f:
