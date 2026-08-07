@@ -2,6 +2,36 @@ import re
 import subprocess
 import sys
 
+def has_rtcp_xr(exe):
+   """Return True if the pjsua build under test was compiled with RTCP XR
+   (extended reports) support, i.e. PJMEDIA_HAS_RTCP_XR != 0.
+
+   RTCP XR is a compile-time option, off by default and -- unlike
+   PJ_HAS_SSL_SOCK -- not reported by pj_dump_config(), so "--version"
+   can't tell us. Instead we detect it structurally: the call-quality dump
+   prints an "Extended reports:" section, and that string literal is only
+   compiled into the binary when PJMEDIA_HAS_RTCP_XR is enabled. So scan
+   the pjsua executable for the marker.
+
+   'exe' is the executable path (inc_cfg.G_EXE). For a static build (the
+   default, and every CI build) the pjsua_dump.c object is linked into the
+   binary, so the marker -- if present -- is in the exe. A shared build
+   (--enable-shared) keeps it in libpjsua instead; there the scan won't
+   find it and the XR test is skipped rather than run. A read error fails
+   open (returns True) so a genuinely XR-enabled build still runs.
+
+   Note this only detects the build-time capability. XR must also be
+   enabled per stream at run-time (PJMEDIA_STREAM_ENABLE_XR, which pjsua
+   uses as the default for pjsua_media_config.enable_rtcp_xr); an XR build
+   normally sets both together. The test itself surfaces a clear error if
+   XR was compiled in but not enabled at run-time.
+   """
+   try:
+      with open(exe.strip(), "rb") as f:
+         return b"Extended reports:" in f.read()
+   except OSError:
+      return True
+
 def has_ssl_sock(exe):
    """Return True if the pjsua build under test was configured with SSL
    socket (TLS transport) support, i.e. PJ_HAS_SSL_SOCK is not 0.
