@@ -287,16 +287,46 @@ static pj_status_t set_contact( pjsip_regc *regc,
                                 const pj_str_t contact[] )
 {
     const pj_str_t CONTACT = { "Contact", 7 };
-    pjsip_contact_hdr *h;
+    pjsip_contact_hdr new_list;
+    pjsip_contact_hdr *h, *hdr;
     int i;
-    
+
+    /* Parse and validate every new Contact up front. Nothing below this
+     * point may fail, because from here on the current registration
+     * Contacts are moved to removed_contact_hdr_list with their
+     * expiration set to zero: bailing out midway would leave the
+     * registration with no active Contact and the old bindings queued
+     * for removal by the next REGISTER.
+     */
+    pj_list_init(&new_list);
+    for (i=0; i<contact_cnt; ++i) {
+        pj_str_t tmp;
+
+        pj_strdup_with_null(regc->pool, &tmp, &contact[i]);
+        hdr = (pjsip_contact_hdr*)
+              pjsip_parse_hdr(regc->pool, &CONTACT, tmp.ptr, tmp.slen, NULL);
+        /* A "Contact: *" header parses fine but carries no URI, and the
+         * registration Contacts are dereferenced as URIs below and in
+         * calculate_response_expiration(). Unregister-all is built
+         * separately by pjsip_regc_unregister_all(), so a starred Contact
+         * has no business being registered here.
+         */
+        if (hdr == NULL || hdr->uri == NULL) {
+            PJ_LOG(4,(THIS_FILE, "Invalid Contact: \"%.*s\"",
+                     (int)tmp.slen, tmp.ptr));
+            return PJSIP_EINVALIDURI;
+        }
+
+        pj_list_push_back(&new_list, hdr);
+    }
+
     /* Save existing contact list to removed_contact_hdr_list and
      * clear contact_hdr_list.
      */
-    pj_list_merge_last(&regc->removed_contact_hdr_list, 
+    pj_list_merge_last(&regc->removed_contact_hdr_list,
                        &regc->contact_hdr_list);
 
-    /* Set the expiration of Contacts in to removed_contact_hdr_list 
+    /* Set the expiration of Contacts in to removed_contact_hdr_list
      * zero.
      */
     h = regc->removed_contact_hdr_list.next;
@@ -306,18 +336,9 @@ static pj_status_t set_contact( pjsip_regc *regc,
     }
 
     /* Process new contacts */
-    for (i=0; i<contact_cnt; ++i) {
-        pjsip_contact_hdr *hdr;
-        pj_str_t tmp;
-
-        pj_strdup_with_null(regc->pool, &tmp, &contact[i]);
-        hdr = (pjsip_contact_hdr*)
-              pjsip_parse_hdr(regc->pool, &CONTACT, tmp.ptr, tmp.slen, NULL);
-        if (hdr == NULL) {
-            PJ_LOG(4,(THIS_FILE, "Invalid Contact: \"%.*s\"", 
-                     (int)tmp.slen, tmp.ptr));
-            return PJSIP_EINVALIDURI;
-        }
+    while (!pj_list_empty(&new_list)) {
+        hdr = new_list.next;
+        pj_list_erase(hdr);
 
         /* Find the new contact in old contact list. If found, remove
          * the old header from the old header list.
