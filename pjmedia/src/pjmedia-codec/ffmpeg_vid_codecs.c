@@ -2061,7 +2061,7 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 
         whole_frm.buf = ff->dec_buf;
         whole_frm.size = whole_len;
-        whole_frm.timestamp = output->timestamp = packets[i].timestamp;
+        whole_frm.timestamp = output->timestamp = packets[0].timestamp;
         whole_frm.bit_info = 0;
 
         return ffmpeg_codec_decode_whole(codec, &whole_frm, out_size, output);
