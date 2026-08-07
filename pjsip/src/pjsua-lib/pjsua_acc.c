@@ -5003,6 +5003,13 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
     if (acc->cfg.transport_id == tp_id)
         return PJ_SUCCESS;
 
+    /* Moving the account to another transport may put it behind a different
+     * first hop, so a 439 recorded against the old one no longer applies.
+     * Applications can call this directly, without going through
+     * pjsua_acc_modify().
+     */
+    reset_outbound_rejection(acc);
+
     acc->cfg.transport_id = tp_id;
 
     if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
