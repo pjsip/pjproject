@@ -36,8 +36,11 @@ def test_func(t):
     a.sync_stdout()
     c.sync_stdout()
 
-    # Tear down: the original A<->B call and the new A<->C call.
-    vid.hangup_call(a, c)
+    # Tear down from C, which has exactly one call (A<->C): with
+    # norefersub A may briefly still hold the original A<->B call, so
+    # hanging up from A's (ambiguous) current call would be unreliable.
+    vid.hangup_call(c, a)
+    # Best-effort cleanup of any residual leg on B.
     b.send("call hangup all")
 
 

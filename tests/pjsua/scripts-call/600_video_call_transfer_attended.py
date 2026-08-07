@@ -1,4 +1,5 @@
 #
+import socket
 import inc_vid as vid
 import inc_const as const
 import inc_util as util
@@ -15,13 +16,28 @@ from inc_cfg import *
 XFER_ARGS = vid.VIDEO_ARGS + " --max-calls=4"
 
 # The attended-transfer Refer-To is derived from the replaced dialog's
-# remote AOR (the peer's account id / From URI), which pjsua reports
-# without a port, NOT from its Contact. With no registrar in this loopback
-# test that portless AOR resolves to the default SIP port (5060), so the
-# transferee's INVITE-with-Replaces only reaches the replaced party if it
-# is listening there. A (process[0]) is that replaced party, so pin it to
-# 5060; B and C keep auto-assigned ports.
+# remote AOR (the peer's account id / From URI), which pjsua emits WITHOUT
+# a port -- even if the account --id carries one -- and NOT from its
+# Contact. With no registrar in this loopback test that portless AOR
+# resolves to the default SIP port (5060), so the transferee's
+# INVITE-with-Replaces only reaches the replaced party if it listens
+# there. A (process[0]) is that replaced party, so pin it to 5060; B and C
+# keep auto-assigned ports.
 SIP_PORT_DEFAULT = 5060
+
+
+# An explicitly supplied sip_port bypasses InstanceParam's free-port probe,
+# so 5060 being already in use would make the test fail at startup rather
+# than skip. Probe it here and skip the test if it isn't available.
+def _port_available(port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.bind(("0.0.0.0", port))
+        return True
+    except socket.error:
+        return False
+    finally:
+        s.close()
 
 
 def test_func(t):
@@ -87,5 +103,5 @@ test_param = TestParam(
         func=test_func
         )
 
-if not util.has_video(G_EXE):
+if not util.has_video(G_EXE) or not _port_available(SIP_PORT_DEFAULT):
     test_param.skip = True
