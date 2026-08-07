@@ -1245,6 +1245,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     pj_str_t acc_proxy[PJSUA_ACC_MAX_PROXIES];
     pj_bool_t update_reg = PJ_FALSE;
     pj_bool_t unreg_first = PJ_FALSE;
+    pj_bool_t first_hop_changed = PJ_FALSE;
     pj_bool_t update_mwi = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
     /* Server-affinity (#4964) snapshots: captured before config mutation
@@ -1427,6 +1428,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
+        first_hop_changed = PJ_TRUE;
     }
 
 
@@ -1572,6 +1574,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
+        first_hop_changed = PJ_TRUE;
     }
 
     /* Update keep-alive */
@@ -1640,6 +1643,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         acc->cfg.reg_use_proxy = cfg->reg_use_proxy;
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
+        first_hop_changed = PJ_TRUE;
     }
 
     /* Credential info */
@@ -1781,6 +1785,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         } 
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
+        first_hop_changed = PJ_TRUE;
     }
 
     /* SIP outbound setting */
@@ -1804,6 +1809,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         init_outbound_setting(acc);
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
+        first_hop_changed = PJ_TRUE;
     }
 
     /* Video settings */
@@ -1893,12 +1899,16 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* Unregister first */
     if (unreg_first) {
-        /* Something determining the first hop, or what we advertise to it,
-         * has changed -- registrar URI, proxy, transport or the outbound
-         * settings themselves. A 439 recorded against the old path says
-         * nothing about the new one.
+        /* Only forget a 439 when something determining the first hop, or
+         * what we advertise to it, actually changed: registrar URI, proxy,
+         * transport or the outbound settings. unreg_first is far broader --
+         * credentials, custom headers, Contact parameters and the account ID
+         * all set it -- and retrying outbound against a hop already known to
+         * reject it would draw another 439, leaving the account unregistered
+         * again where reg_retry_interval is 0.
          */
-        reset_outbound_rejection(acc);
+        if (first_hop_changed)
+            reset_outbound_rejection(acc);
 
         if (acc->regc && !cfg->disable_reg_on_modify) {
             status = pjsua_acc_set_registration(acc->index, PJ_FALSE);
