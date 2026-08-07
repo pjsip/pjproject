@@ -28,11 +28,14 @@ SIP_PORT_DEFAULT = 5060
 
 # An explicitly supplied sip_port bypasses InstanceParam's free-port probe,
 # so 5060 being already in use would make the test fail at startup rather
-# than skip. Probe it here and skip the test if it isn't available.
+# than skip. Probe it here and skip the test if it isn't available. The
+# probe binds the loopback interface only (the whole test runs over
+# 127.0.0.1) rather than 0.0.0.0, to avoid exposing a socket on all
+# interfaces.
 def _port_available(port):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        s.bind(("0.0.0.0", port))
+        s.bind(("127.0.0.1", port))
         return True
     except socket.error:
         return False
