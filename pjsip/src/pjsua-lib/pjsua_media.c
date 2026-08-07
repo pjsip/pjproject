@@ -31,7 +31,8 @@
 #   define PJSUA_RESET_SRTP_ROC_ON_REM_ADDRESS_CHANGE   0
 #endif
 
-static void stop_media_stream(pjsua_call *call, unsigned med_idx);
+static void stop_media_stream(pjsua_call *call, unsigned med_idx,
+                              pj_bool_t preserve_slot);
 
 char *pjsua_get_basename(const char* path, unsigned len)
 {
@@ -3450,10 +3451,11 @@ on_error:
 }
 
 
-static void stop_media_stream(pjsua_call *call, unsigned med_idx)
+static void stop_media_stream(pjsua_call *call, unsigned med_idx,
+                              pj_bool_t preserve_slot)
 {
     pjsua_call_media *call_med;
-    
+
     if (pjsua_call_media_is_changing(call)) {
         call_med = &call->media_prov[med_idx];
         if (med_idx >= call->med_prov_cnt)
@@ -3468,6 +3470,10 @@ static void stop_media_stream(pjsua_call *call, unsigned med_idx)
 
     call_med->prev_type = call_med->type;
     if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+        /* Pass the preserve-slot request via a transient flag rather than a
+         * new argument, so the alternate audio backend (alt_pjsua_aud.c) keeps
+         * the same pjsua_aud_stop_stream() signature. */
+        call_med->preserve_conf_slot = preserve_slot;
         pjsua_aud_stop_stream(call_med);
     }
 
@@ -3531,7 +3537,7 @@ static void stop_media_session(pjsua_call_id call_id)
     unsigned mi;
 
     for (mi=0; mi<call->med_cnt; ++mi) {
-        stop_media_stream(call, mi);
+        stop_media_stream(call, mi, PJ_FALSE);
     }
 }
 
@@ -4331,9 +4337,19 @@ static pj_status_t apply_med_update(pjsua_call_media *call_med,
     if (pjsua_var.media_cfg.no_smart_media_update ||
         is_media_changed(call, mi, &stream_info))
     {
+        /* Preserve the conference slot (detach + replace instead of
+         * remove + add) only when enabled, and only when the media stays
+         * active audio in the new answer. Removed/deactivated media
+         * (port 0) or a change to non-audio still uses remove.
+         */
+        pj_bool_t preserve_slot =
+            pjsua_var.acc[call->acc_id].cfg.preserve_conf_slot &&
+            local_sdp->media[mi]->desc.port != 0 &&
+            pj_stricmp2(&local_sdp->media[mi]->desc.media, "audio") == 0;
+
         media_changed = PJ_TRUE;
         /* Stop the media */
-        stop_media_stream(call, mi);
+        stop_media_stream(call, mi, preserve_slot);
     } else {
         PJ_LOG(4,(THIS_FILE, "Call %d: stream #%d (%s) unchanged.",
                   call_id, mi, pjmedia_type_name(call_med->type)));
@@ -4661,8 +4677,10 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
              * its re-offer.
              */
 
-            /* Stop stream */
-            stop_media_stream(call, mi);
+            /* Stop stream (media removed from the offer -> do not preserve
+             * the conference slot).
+             */
+            stop_media_stream(call, mi, PJ_FALSE);
 
             /* Close the media transport */
             if (call_med->tp) {
@@ -4713,8 +4731,8 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
 on_check_med_status:
         if (status != PJ_SUCCESS) {
-            /* Stop stream */
-            stop_media_stream(call, mi);
+            /* Stop stream (error path -> do not preserve the conf slot) */
+            stop_media_stream(call, mi, PJ_FALSE);
 
             /* Close the media transport */
             if (call_med->tp) {
