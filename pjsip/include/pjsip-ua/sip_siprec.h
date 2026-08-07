@@ -69,6 +69,39 @@ pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
 
 
 /**
+ * SIPREC request verification setting.
+ */
+typedef struct pjsip_siprec_verify_setting
+{
+    /**
+     * Reject SIPREC INVITE if any media lacks the SDP label attribute
+     * (strict RFC 7866). If PJ_FALSE, accept and log a warning.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t   require_label;
+
+    /**
+     * Reject SIPREC INVITE if the rs-metadata document is missing
+     * (strict RFC 7866). If PJ_FALSE, accept and log a warning.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t   require_metadata;
+
+} pjsip_siprec_verify_setting;
+
+
+/**
+ * Initialize SIPREC verification setting with default values.
+ *
+ * @param setting     The verification setting to initialize.
+ */
+PJ_DECL(void) pjsip_siprec_verify_setting_default(
+                                    pjsip_siprec_verify_setting *setting);
+
+
+/**
  * Verifies that the incoming request has the siprec value
  * in the Require header and "+sip.src" parameter exist in the Contact header.
  * If both conditions are met, according to RFC 7866,
@@ -85,11 +118,7 @@ pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr);
  * @param endpt         Media endpoint instance.
  * @param p_tdata       Upon error, it will be filled with the final response
  *                      to be sent to the request sender.
- * @param require_label Controls SIPREC SDP label attribute enforcement:
- *                      - PJ_TRUE: Require labels, reject SIPREC if any media
- *                        lacks label attribute (strict RFC 7866 compliance)
- *                      - PJ_FALSE: Accept without labels, but log warnings for
- *                        unlabeled media (better interoperability)
+ * @param setting       Verification setting, or NULL to use defaults.
  *
  * @return   The function returns the following:
  *             - If the request includes the value siprec in the Require header
@@ -107,7 +136,7 @@ PJ_DECL(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                                 pjsip_dialog *dlg,
                                                 pjsip_endpoint *endpt,
                                                 pjsip_tx_data **p_tdata,
-                                                pj_bool_t require_label);
+                                                const pjsip_siprec_verify_setting *setting);
 
 
 /**
