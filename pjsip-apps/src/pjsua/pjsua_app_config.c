@@ -221,6 +221,8 @@ static void usage(void)
     puts  ("  --turn-user         TURN username");
     puts  ("  --turn-passwd       TURN password");
     puts  ("  --rtcp-mux          Enable RTP & RTCP multiplexing (default: no)");
+    puts  ("  --rtcp-xr           Enable RTCP XR, extended reports");
+    puts  ("                      (requires PJMEDIA_HAS_RTCP_XR build option)");
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     puts  ("  --srtp-keying       SRTP keying method for outgoing SDP offer.");
     puts  ("                      0=SDES (default), 1=DTLS");
@@ -409,7 +411,7 @@ static pj_status_t parse_args(int argc, char *argv[],
            OPT_TURN_TLS_CA_FILE, OPT_TURN_TLS_CERT_FILE, 
            OPT_TURN_TLS_NEG_TIMEOUT, OPT_TURN_TLS_CIPHER,
            OPT_TURN_TLS_PRIV_FILE, OPT_TURN_TLS_PASSWORD,
-           OPT_RTCP_MUX, OPT_SRTP_KEYING,
+           OPT_RTCP_MUX, OPT_RTCP_XR, OPT_SRTP_KEYING,
            OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC,
            OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
            OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
@@ -526,6 +528,7 @@ static pj_status_t parse_args(int argc, char *argv[],
         { "turn-user",  1, 0, OPT_TURN_USER},
         { "turn-passwd",1, 0, OPT_TURN_PASSWD},
         { "rtcp-mux",   0, 0, OPT_RTCP_MUX},
+        { "rtcp-xr",    0, 0, OPT_RTCP_XR},
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
         { "use-srtp",   1, 0, OPT_USE_SRTP},
@@ -707,6 +710,12 @@ static pj_status_t parse_args(int argc, char *argv[],
             if (pj_log_get_level() < 3)
                 pj_log_set_level(3);
             pj_dump_config();
+            /* pj_dump_config() lives in pjlib and cannot report pjmedia
+             * build flags. Emit the ones the test suite probes for here so
+             * detection works regardless of static vs. shared linking
+             * (inc_util.has_rtcp_xr). */
+            PJ_LOG(3, (THIS_FILE, "PJMEDIA_HAS_RTCP_XR : %d",
+                       PJMEDIA_HAS_RTCP_XR));
             return PJ_EINVAL;
 
         case OPT_NULL_AUDIO:
@@ -1262,6 +1271,11 @@ static pj_status_t parse_args(int argc, char *argv[],
         case OPT_RTCP_MUX:
             cur_acc->enable_rtcp_mux = PJ_TRUE;
             cfg->enable_rtcp_mux = PJ_TRUE;
+            break;
+
+        case OPT_RTCP_XR:
+            cur_acc->enable_rtcp_xr = PJ_TRUE;
+            cfg->enable_rtcp_xr = PJ_TRUE;
             break;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -1836,6 +1850,11 @@ static void default_config()
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->rtp_cfg.port = 4000;
     cfg->enable_rtcp_mux = PJ_FALSE;
+    /* Match pjsua_acc_config_default()'s macro-derived default so that
+     * applying this app-level fallback to transport-created local accounts
+     * doesn't override RTCP XR on builds that enable it by default. The
+     * --rtcp-xr option force-enables it regardless. */
+    cfg->enable_rtcp_xr = (PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR);
     cfg->redir_op = PJSIP_REDIRECT_ACCEPT_REPLACE;
     cfg->duration = PJSUA_APP_NO_LIMIT_DURATION;
     cfg->wav_id = PJSUA_INVALID_ID;
@@ -2173,6 +2192,9 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 
     if (acc_cfg->enable_rtcp_mux)
         pj_strcat2(result, "--rtcp-mux\n");
+
+    if (acc_cfg->enable_rtcp_xr)
+        pj_strcat2(result, "--rtcp-xr\n");
 }
 
 /*
@@ -2249,6 +2271,9 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
      * write_account_settings(), so emit it here from the global flag. */
     if (config->acc_cnt == 0 && config->enable_rtcp_mux) {
         pj_strcat2(&cfg, "--rtcp-mux\n");
+    }
+    if (config->acc_cnt == 0 && config->enable_rtcp_xr) {
+        pj_strcat2(&cfg, "--rtcp-xr\n");
     }
 
     /* Message Composition Indication */
