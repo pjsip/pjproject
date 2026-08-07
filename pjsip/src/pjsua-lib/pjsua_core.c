@@ -125,6 +125,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->use_timer = PJSUA_SIP_TIMER_OPTIONAL;
     cfg->use_siprec = PJSUA_SIP_SIPREC_INACTIVE;
     cfg->siprec_require_label = PJ_FALSE;
+    cfg->siprec_require_metadata = PJ_FALSE;
     pjsip_timer_setting_default(&cfg->timer_setting);
     pjsua_srtp_opt_default(&cfg->srtp_opt);
     cfg->no_refer_sub = PJ_TRUE;
@@ -351,6 +352,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->timer_setting = pjsua_var.ua_cfg.timer_setting;
     cfg->use_siprec = pjsua_var.ua_cfg.use_siprec;
     cfg->siprec_require_label = pjsua_var.ua_cfg.siprec_require_label;
+    cfg->siprec_require_metadata = pjsua_var.ua_cfg.siprec_require_metadata;
     cfg->lock_codec = 1;
     cfg->ka_interval = 15;
     cfg->ka_data = pj_str("\r\n");

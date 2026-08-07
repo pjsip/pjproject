@@ -126,6 +126,16 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_require_hdr(pjsip_require_hdr *req_hdr)
     return PJ_FALSE;
 }
 
+
+/**
+ * Initialize SIPREC verification setting with default values.
+ */
+PJ_DEF(void) pjsip_siprec_verify_setting_default(
+                                pjsip_siprec_verify_setting *setting)
+{
+    pj_bzero(setting, sizeof(*setting));
+}
+
 /**
  * Verifies that the incoming request is a siprec request or not.
  */
@@ -136,19 +146,26 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
                                               pjsip_dialog *dlg,
                                               pjsip_endpoint *endpt,
                                               pjsip_tx_data **p_tdata,
-                                              pj_bool_t require_label)
+                                              const pjsip_siprec_verify_setting *setting)
 {
     int code = 200;
     pj_status_t status = PJ_SUCCESS;
     const char *warn_text = NULL;
     pjsip_hdr res_hdr_list;
     unsigned mi;
+    pjsip_siprec_verify_setting default_setting;
 
     /* Init return arguments. */
     if (p_tdata) *p_tdata = NULL;
 
     /* Init response header list */
     pj_list_init(&res_hdr_list);
+
+    /* Use default settings if not provided */
+    if (!setting) {
+        pjsip_siprec_verify_setting_default(&default_setting);
+        setting = &default_setting;
+    }
 
     /* Checks if The SIPREC request option is inactive */
     if (!(*options & PJSIP_INV_SUPPORT_SIPREC)){
@@ -187,7 +204,7 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
      * - PJ_TRUE (require): Reject if any media lacks label
      * - PJ_FALSE (optional): Accept, but log warning for unlabeled media
      */
-    if (require_label) {
+    if (setting->require_label) {
         /* Require labels - reject if any media stream lacks one */
         for (mi=0; mi<sdp_offer->media_count; ++mi) {
             if (!pjmedia_sdp_media_find_attr(sdp_offer->media[mi],
@@ -211,19 +228,36 @@ PJ_DEF(pj_status_t) pjsip_siprec_verify_request(pjsip_rx_data *rdata,
         }
     }
 
+    /* Check that rs-metadata exists in the multipart body
+     * Behavior depends on require_metadata:
+     * - PJ_TRUE (require): Reject if metadata is missing
+     * - PJ_FALSE (optional): Accept, but log warning for missing metadata
+     */
     status = pjsip_siprec_get_metadata(rdata->tp_info.pool,
                                         rdata->msg_info.msg->body,
                                         metadata);
     
     if(status != PJ_SUCCESS) {
-        code = PJSIP_SC_BAD_REQUEST;
-        warn_text = "SIPREC INVITE must have a 'rs-metadata' Content-Type";
-        goto on_return;
+        if (setting->require_metadata) {
+            /* Require metadata - reject if missing */
+            code = PJSIP_SC_BAD_REQUEST;
+            warn_text = "SIPREC INVITE must have a 'rs-metadata' Content-Type";
+            goto on_return;
+        } else {
+            /* Metadata is optional - log warning and continue */
+            PJ_LOG(3,(THIS_FILE,
+                      "SIPREC INVITE missing rs-metadata document. "
+                      "Recording session metadata will be limited. "
+                      "To require metadata, set siprec_require_metadata to PJ_TRUE."));
+            /* Initialize metadata to empty string to prevent crashes */
+            metadata->ptr = NULL;
+            metadata->slen = 0;
+        }
     }
 
     *options |= PJSIP_INV_REQUIRE_SIPREC;
 
-    return status;
+    return PJ_SUCCESS;
 
 on_return:
 
@@ -290,8 +324,18 @@ PJ_DEF(pj_status_t) pjsip_siprec_get_metadata(pj_pool_t *pool,
 {
     pjsip_media_type app_metadata;
     pjsip_multipart_part *metadata_part;
+    const pj_str_t STR_MULTIPART = {"multipart", 9};
 
     PJ_UNUSED_ARG(pool);
+
+    /* Check if body is multipart to avoid assertion failure
+     * when INVITE only contains SDP (not multipart/mixed) */
+    if (!body ||
+        pj_stricmp(&body->content_type.type, &STR_MULTIPART) != 0)
+    {
+        return PJ_ENOTFOUND;
+    }
+
     pjsip_media_type_init2(&app_metadata, "application", "rs-metadata");
     metadata_part = pjsip_multipart_find_part(body, &app_metadata, NULL);
 

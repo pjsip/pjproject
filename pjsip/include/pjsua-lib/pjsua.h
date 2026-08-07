@@ -2715,6 +2715,22 @@ typedef struct pjsua_config
     pj_bool_t       siprec_require_label;
 
     /**
+     * Specify whether SIPREC rs-metadata documents are required
+     * in incoming INVITE requests.
+     *
+     * When set to PJ_TRUE, SIPREC INVITEs without rs-metadata documents
+     * will be rejected with 400 Bad Request. This enforces strict RFC 7866
+     * compliance for complete recording session metadata.
+     *
+     * When set to PJ_FALSE (default), the SRS will accept SIPREC INVITEs
+     * even without rs-metadata for better interoperability. Missing metadata
+     * will be logged as warnings for debugging purposes.
+     *
+     * Default: PJ_FALSE (allow for interoperability)
+     */
+    pj_bool_t       siprec_require_metadata;
+
+    /**
      * Handle unsolicited NOTIFY requests containing message waiting 
      * indication (MWI) info. Unsolicited MWI is incoming NOTIFY requests 
      * which are not requested by client with SUBSCRIBE request. 
@@ -4546,6 +4562,23 @@ typedef struct pjsua_acc_config
      *          pjsua_config (PJ_FALSE).
      */
     pj_bool_t       siprec_require_label;
+
+    /**
+     * Specify whether SIPREC rs-metadata documents are required
+     * in incoming INVITE requests.
+     *
+     * When set to PJ_TRUE, SIPREC INVITEs without rs-metadata documents
+     * will be rejected with 400 Bad Request. This enforces strict RFC 7866
+     * compliance for complete recording session metadata.
+     *
+     * When set to PJ_FALSE (default), the SRS will accept SIPREC INVITEs
+     * even without rs-metadata for better interoperability. Missing metadata
+     * will be logged as warnings for debugging purposes.
+     *
+     * Default: The default value is taken from siprec_require_metadata in
+     *          pjsua_config (PJ_FALSE).
+     */
+    pj_bool_t       siprec_require_metadata;
 
     /**
      * Specify Session Timer settings, see #pjsip_timer_setting.
