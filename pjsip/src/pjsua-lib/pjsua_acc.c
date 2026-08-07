@@ -1897,19 +1897,19 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Call hold type */
     acc->cfg.call_hold_type = cfg->call_hold_type;
 
+    /* Only forget a 439 when something determining the first hop, or what we
+     * advertise to it, actually changed: registrar URI, proxy, transport or
+     * the outbound settings. unreg_first is far broader -- credentials,
+     * custom headers, Contact parameters and the account ID all set it -- and
+     * offering outbound again to a hop already known to reject it would draw
+     * another 439, leaving the account unregistered where reg_retry_interval
+     * is 0.
+     */
+    if (first_hop_changed)
+        reset_outbound_rejection(acc);
+
     /* Unregister first */
     if (unreg_first) {
-        /* Only forget a 439 when something determining the first hop, or
-         * what we advertise to it, actually changed: registrar URI, proxy,
-         * transport or the outbound settings. unreg_first is far broader --
-         * credentials, custom headers, Contact parameters and the account ID
-         * all set it -- and retrying outbound against a hop already known to
-         * reject it would draw another 439, leaving the account unregistered
-         * again where reg_retry_interval is 0.
-         */
-        if (first_hop_changed)
-            reset_outbound_rejection(acc);
-
         if (acc->regc && !cfg->disable_reg_on_modify) {
             status = pjsua_acc_set_registration(acc->index, PJ_FALSE);
             if (status != PJ_SUCCESS) {
