@@ -1883,23 +1883,20 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_restart(pjsip_tpfactory *factory,
        return PJ_SUCCESS;
     }
 
-    lis_close(listener);
+    /* Close the listener socket only; keep the factory registered so it
+     * stays usable for outgoing transports if the restart below fails.
+     */
+    pj_activesock_close(listener->asock);
+    listener->asock = NULL;
 
     status = pjsip_tcp_transport_lis_start(factory, local, a_name);
-    if (status != PJ_SUCCESS) { 
+    if (status != PJ_SUCCESS) {
         tcp_perror(listener->factory.obj_name,
                    "Unable to start listener after closing it", status);
 
-        return status;
-    }
-
-    status = pjsip_tpmgr_register_tpfactory(listener->tpmgr,
-                                            &listener->factory);
-    if (status != PJ_SUCCESS) {
-        tcp_perror(listener->factory.obj_name,
-                   "Unable to register the transport listener", status);
-    } else {
-        listener->is_registered = PJ_TRUE;
+        /* Update the published address anyway (client only) */
+        update_factory_addr(listener, a_name);
+        update_transport_info(listener);
     }
 
     return status;

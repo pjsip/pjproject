@@ -546,13 +546,16 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
                             &newsock_param);
 
     if (status == PJ_SUCCESS || status == PJ_EPENDING) {
-        pj_ssl_sock_info info;  
+        pj_ssl_sock_info info;
 
         /* Retrieve the bound address */
         status = pj_ssl_sock_get_info(listener->ssock, &info);
         if (status == PJ_SUCCESS)
             pj_sockaddr_cp(listener_addr, (pj_sockaddr_t*)&info.local_addr);
 
+    } else {
+        /* Don't let update_factory_addr() below overwrite the error */
+        return status;
     }
     status = update_factory_addr(listener, a_name);
     if (status != PJ_SUCCESS)
@@ -833,7 +836,11 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
        return PJ_SUCCESS;
     }
 
-    lis_close(listener);
+    /* Close the listener socket only; keep the factory registered so it
+     * stays usable for outgoing transports if the restart below fails.
+     */
+    pj_ssl_sock_close(listener->ssock);
+    listener->ssock = NULL;
 
     /* Update TLS settings if provided */
     if (opt) {
@@ -899,23 +906,14 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart2(pjsip_tpfactory *factory,
     }
 
     status = pjsip_tls_transport_lis_start(factory, local, a_name);
-    if (status != PJ_SUCCESS) { 
-        tls_perror(listener->factory.obj_name, 
-                   "Unable to start listener after closing it", status, NULL);
-
-        return status;
-    }
-    
-    status = pjsip_tpmgr_register_tpfactory(listener->tpmgr,
-                                            &listener->factory);
     if (status != PJ_SUCCESS) {
         tls_perror(listener->factory.obj_name,
-                    "Unable to register the transport listener", status, NULL);
+                   "Unable to start listener after closing it", status, NULL);
 
-        listener->is_registered = PJ_FALSE;     
-    } else {
-        listener->is_registered = PJ_TRUE;      
-    }    
+        /* Update the published address anyway (client only) */
+        update_factory_addr(listener, a_name);
+        update_transport_info(listener);
+    }
 
     return status;
 }
