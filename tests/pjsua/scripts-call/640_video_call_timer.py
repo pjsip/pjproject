@@ -25,8 +25,12 @@ def test_func(t):
     caller.send("call new " + t.inst_params[0].uri)
     caller.expect(const.STATE_CALLING)
 
-    # The incoming INVITE must carry the session-timer offer. These log
-    # lines (the received INVITE) precede the incoming-call notification.
+    # The incoming INVITE must carry the required session-timer offer:
+    # Require: timer (from --use-timer=2) followed by Session-Expires. Both
+    # are serialized in that order and precede the incoming-call
+    # notification. Asserting Require too ensures the timer is actually
+    # *required*, not merely that a Session-Expires slipped in.
+    callee.expect("Require: *timer")
     callee.expect("Session-Expires: *90")
     callee.expect(const.EVENT_INCOMING_CALL)
     callee.send("call answer 200")
