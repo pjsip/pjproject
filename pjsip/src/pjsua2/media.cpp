@@ -612,6 +612,8 @@ AudioMediaPlayer::~AudioMediaPlayer()
             else if (port->info.signature == PJMEDIA_SIG_PORT_WAV_PLAYLIST)
                 pjmedia_wav_playlist_set_eof_cb2(port, NULL, NULL);
         }
+        /* Let pjsua_player_destroy() remove the conference port */
+        id = PJSUA_INVALID_ID;
         PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjsua_player_destroy(playerId);
     }
@@ -755,6 +757,8 @@ AudioMediaRecorder::AudioMediaRecorder()
 AudioMediaRecorder::~AudioMediaRecorder()
 {
     if (recorderId != PJSUA_INVALID_ID) {
+        /* Let pjsua_recorder_destroy() remove the conference port */
+        id = PJSUA_INVALID_ID;
         PJSUA2_CATCH_IGNORE( unregisterMediaPort() );
         pjsua_recorder_destroy(recorderId);
     }
