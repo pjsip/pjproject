@@ -21,17 +21,21 @@ XFER_ARGS = vid.VIDEO_ARGS + " --max-calls=4"
 # Contact. With no registrar in this loopback test that portless AOR
 # resolves to the default SIP port (5060), so the transferee's
 # INVITE-with-Replaces only reaches the replaced party if it listens
-# there. A (process[0]) is that replaced party, so pin it to 5060; B and C
-# keep auto-assigned ports.
+# there. A (process[0]) is that replaced party, so pin it to 5060.
+#
+# A is also given --bound-addr=127.0.0.1 so its transport binds the
+# loopback interface only (not 0.0.0.0): this keeps the derived AOR on
+# 127.0.0.1 and makes A's actual listening socket match the loopback
+# free-port probe below (and avoids binding all interfaces). B and C keep
+# auto-assigned ports.
 SIP_PORT_DEFAULT = 5060
+A_ARGS = XFER_ARGS + " --bound-addr=127.0.0.1"
 
 
 # An explicitly supplied sip_port bypasses InstanceParam's free-port probe,
 # so 5060 being already in use would make the test fail at startup rather
-# than skip. Probe it here and skip the test if it isn't available. The
-# probe binds the loopback interface only (the whole test runs over
-# 127.0.0.1) rather than 0.0.0.0, to avoid exposing a socket on all
-# interfaces.
+# than skip. Probe it (on the same loopback interface A binds) and skip the
+# test if it isn't available.
 def _port_available(port):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -99,7 +103,7 @@ def test_func(t):
 test_param = TestParam(
         "Video call attended transfer",
         [
-            InstanceParam("A", XFER_ARGS, sip_port=SIP_PORT_DEFAULT),
+            InstanceParam("A", A_ARGS, sip_port=SIP_PORT_DEFAULT),
             InstanceParam("B", XFER_ARGS),
             InstanceParam("C", XFER_ARGS)
         ],

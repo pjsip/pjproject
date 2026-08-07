@@ -23,8 +23,14 @@ def test_func(t):
     # B transfers A to C; its REFER suppresses the subscription.
     b.send("call transfer " + t.inst_params[2].uri)
 
-    # A receives the REFER carrying Refer-Sub: false, then follows it to C.
+    # A receives the REFER carrying Refer-Sub: false...
     a.expect("Refer-Sub: *false")
+    # ...and B, seeing the suppression, terminates its transfer event
+    # subscription instead of keeping it for NOTIFYs. Asserting this proves
+    # the no-subscription behaviour, not merely that the header was sent.
+    b.expect("Xfer subscription suppressed")
+
+    # A follows the REFER to C.
     a.expect(const.STATE_CALLING)
     c.expect(const.EVENT_INCOMING_CALL)
     c.send("call answer 200")
