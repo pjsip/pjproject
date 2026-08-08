@@ -1843,18 +1843,26 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
                                   pjsip_endpt_get_ioqueue(listener->endpt),
                                   &listener_cb, listener,
                                   &listener->asock);
+    if (status != PJ_SUCCESS)
+        goto on_error;
 
     /* Start pending accept() operations */
     status = pj_activesock_start_accept(listener->asock,
                                         listener->factory.pool);
+    if (status != PJ_SUCCESS)
+        goto on_error;
 
     update_transport_info(listener);
 
-    return status;
+    return PJ_SUCCESS;
 
 on_error:
-    if (listener->asock == NULL && sock != PJ_INVALID_SOCKET)
+    if (listener->asock) {
+        pj_activesock_close(listener->asock);
+        listener->asock = NULL;
+    } else if (sock != PJ_INVALID_SOCKET) {
         pj_sock_close(sock);
+    }
 
     return status;
 }

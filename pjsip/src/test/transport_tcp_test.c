@@ -222,6 +222,30 @@ static int restart_failure_test(void)
     pjsip_transport_dec_ref(tcp);
     pjsip_transport_destroy(tcp);
 
+    /* The listener can be started again once the port is free. */
+    pj_sock_close(blocker);
+    blocker = PJ_INVALID_SOCKET;
+    status = pjsip_tcp_transport_lis_start(tpfactory, &restart_addr, NULL);
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to start listener after failed restart",
+                   status);
+        ret = -114;
+        goto on_return;
+    }
+
+    /* Verify the listener really accepts connections. */
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &blocker);
+    if (status == PJ_SUCCESS) {
+        pj_sockaddr_in_init(&rem_addr, &localhost,
+                            (pj_uint16_t)tpfactory->addr_name.port);
+        status = pj_sock_connect(blocker, &rem_addr, sizeof(rem_addr));
+    }
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: restarted listener does not accept", status);
+        ret = -115;
+        goto on_return;
+    }
+
 on_return:
     if (blocker != PJ_INVALID_SOCKET)
         pj_sock_close(blocker);

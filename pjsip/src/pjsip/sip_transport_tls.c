@@ -529,8 +529,11 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
     if (listener->cert) {
         status = pj_ssl_sock_set_certificate(listener->ssock, 
                                        listener->factory.pool, listener->cert);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+            pj_ssl_sock_close(listener->ssock);
+            listener->ssock = NULL;
             return status;
+        }
     }
 
     /* Start accepting incoming connections. Note that some TLS/SSL
@@ -554,7 +557,11 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
             pj_sockaddr_cp(listener_addr, (pj_sockaddr_t*)&info.local_addr);
 
     } else {
-        /* Don't let update_factory_addr() below overwrite the error */
+        /* Close the failed listener and report the error (don't let
+         * update_factory_addr() below overwrite it).
+         */
+        pj_ssl_sock_close(listener->ssock);
+        listener->ssock = NULL;
         return status;
     }
     status = update_factory_addr(listener, a_name);
