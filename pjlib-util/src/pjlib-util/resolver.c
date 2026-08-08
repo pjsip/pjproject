@@ -475,27 +475,38 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
     pj_hash_iterator_t it_buf, *it;
     PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
 
-    if (notify) {
-        /*
-         * Notify pending queries if requested.
-         */
-        it = pj_hash_first(resolver->hquerybyid, &it_buf);
-        while (it) {
-            pj_dns_async_query *q = (pj_dns_async_query *)
-                                    pj_hash_this(resolver->hquerybyid, it);
-            pj_dns_async_query *cq;
-            if (q->cb)
-                (*q->cb)(q->user_data, PJ_ECANCELLED, NULL);
+    /*
+     * Cancel the retransmission timer of any pending query. This must be
+     * done regardless of the notify flag: the timer lives in the (possibly
+     * shared) timer heap, so leaving it armed lets it fire after the socket
+     * is closed here, sending on a NULL udp_key. Notify the queries only if
+     * requested.
+     */
+    pj_grp_lock_acquire(resolver->grp_lock);
+    it = pj_hash_first(resolver->hquerybyid, &it_buf);
+    while (it) {
+        pj_dns_async_query *q = (pj_dns_async_query *)
+                                pj_hash_this(resolver->hquerybyid, it);
+        pj_dns_async_query *cq;
 
-            cq = q->child_head.next;
-            while (cq != (pj_dns_async_query*)&q->child_head) {
-                if (cq->cb)
-                    (*cq->cb)(cq->user_data, PJ_ECANCELLED, NULL);
-                cq = cq->next;
-            }
-            it = pj_hash_next(resolver->hquerybyid, it);
+        if (q->timer_entry.id == 1)
+            pj_timer_heap_cancel_if_active(resolver->timer,
+                                           &q->timer_entry, 0);
+
+        if (notify && q->cb)
+            (*q->cb)(q->user_data, PJ_ECANCELLED, NULL);
+        q->cb = NULL;
+
+        cq = q->child_head.next;
+        while (cq != (pj_dns_async_query*)&q->child_head) {
+            if (notify && cq->cb)
+                (*cq->cb)(cq->user_data, PJ_ECANCELLED, NULL);
+            cq->cb = NULL;
+            cq = cq->next;
         }
+        it = pj_hash_next(resolver->hquerybyid, it);
     }
+    pj_grp_lock_release(resolver->grp_lock);
 
     /* Destroy cached entries */
     it = pj_hash_first(resolver->hrescache, &it_buf);
