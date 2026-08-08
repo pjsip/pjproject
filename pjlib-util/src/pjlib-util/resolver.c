@@ -473,17 +473,53 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
                                              pj_bool_t notify)
 {
     pj_hash_iterator_t it_buf, *it;
+    pj_dns_async_query **qlist = NULL;
+    unsigned i, qcount = 0;
     PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
 
-    if (notify) {
-        /*
-         * Notify pending queries if requested.
-         */
+    /*
+     * Cancel and dequeue every pending query. This must be done regardless
+     * of the notify flag: a query's retransmit timer lives in the (possibly
+     * shared) timer heap, so a timer that is still armed -- or one that has
+     * already been dispatched and is blocked in on_timeout() on the group
+     * lock -- would otherwise fire after the socket is closed below and
+     * retransmit on a NULL udp_key. Removing the query from the hash tables
+     * makes an already-dispatched on_timeout() exit at its recheck instead.
+     * The queries are collected and notified after the lock is released, to
+     * avoid the lock inversion that on_timeout() also guards against (#1565).
+     */
+    pj_grp_lock_acquire(resolver->grp_lock);
+    qcount = pj_hash_count(resolver->hquerybyid);
+    if (qcount)
+        qlist = (pj_dns_async_query**)
+                pj_pool_calloc(resolver->pool, qcount, sizeof(qlist[0]));
+    i = 0;
+    it = pj_hash_first(resolver->hquerybyid, &it_buf);
+    while (it) {
+        pj_dns_async_query *q = (pj_dns_async_query *)
+                                pj_hash_this(resolver->hquerybyid, it);
+
+        if (q->timer_entry.id == 1)
+            pj_timer_heap_cancel_if_active(resolver->timer,
+                                           &q->timer_entry, 0);
+
+        pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key),
+                    0, NULL);
+        pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id),
+                    0, NULL);
+
+        if (qlist)
+            qlist[i++] = q;
+
         it = pj_hash_first(resolver->hquerybyid, &it_buf);
-        while (it) {
-            pj_dns_async_query *q = (pj_dns_async_query *)
-                                    pj_hash_this(resolver->hquerybyid, it);
+    }
+    pj_grp_lock_release(resolver->grp_lock);
+
+    if (notify && qlist) {
+        for (i = 0; i < qcount; ++i) {
+            pj_dns_async_query *q = qlist[i];
             pj_dns_async_query *cq;
+
             if (q->cb)
                 (*q->cb)(q->user_data, PJ_ECANCELLED, NULL);
 
@@ -493,7 +529,6 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
                     (*cq->cb)(cq->user_data, PJ_ECANCELLED, NULL);
                 cq = cq->next;
             }
-            it = pj_hash_next(resolver->hquerybyid, it);
         }
     }
 
