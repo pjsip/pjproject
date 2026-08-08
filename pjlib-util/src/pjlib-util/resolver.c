@@ -473,40 +473,64 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
                                              pj_bool_t notify)
 {
     pj_hash_iterator_t it_buf, *it;
+    pj_dns_async_query **qlist = NULL;
+    unsigned i, qcount = 0;
     PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
 
     /*
-     * Cancel the retransmission timer of any pending query. This must be
-     * done regardless of the notify flag: the timer lives in the (possibly
-     * shared) timer heap, so leaving it armed lets it fire after the socket
-     * is closed here, sending on a NULL udp_key. Notify the queries only if
-     * requested.
+     * Cancel and dequeue every pending query. This must be done regardless
+     * of the notify flag: a query's retransmit timer lives in the (possibly
+     * shared) timer heap, so a timer that is still armed -- or one that has
+     * already been dispatched and is blocked in on_timeout() on the group
+     * lock -- would otherwise fire after the socket is closed below and
+     * retransmit on a NULL udp_key. Removing the query from the hash tables
+     * makes an already-dispatched on_timeout() exit at its recheck instead.
+     * The queries are collected and notified after the lock is released, to
+     * avoid the lock inversion that on_timeout() also guards against (#1565).
      */
     pj_grp_lock_acquire(resolver->grp_lock);
+    qcount = pj_hash_count(resolver->hquerybyid);
+    if (qcount)
+        qlist = (pj_dns_async_query**)
+                pj_pool_calloc(resolver->pool, qcount, sizeof(qlist[0]));
+    i = 0;
     it = pj_hash_first(resolver->hquerybyid, &it_buf);
     while (it) {
         pj_dns_async_query *q = (pj_dns_async_query *)
                                 pj_hash_this(resolver->hquerybyid, it);
-        pj_dns_async_query *cq;
 
         if (q->timer_entry.id == 1)
             pj_timer_heap_cancel_if_active(resolver->timer,
                                            &q->timer_entry, 0);
 
-        if (notify && q->cb)
-            (*q->cb)(q->user_data, PJ_ECANCELLED, NULL);
-        q->cb = NULL;
+        pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key),
+                    0, NULL);
+        pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id),
+                    0, NULL);
 
-        cq = q->child_head.next;
-        while (cq != (pj_dns_async_query*)&q->child_head) {
-            if (notify && cq->cb)
-                (*cq->cb)(cq->user_data, PJ_ECANCELLED, NULL);
-            cq->cb = NULL;
-            cq = cq->next;
-        }
-        it = pj_hash_next(resolver->hquerybyid, it);
+        if (qlist)
+            qlist[i++] = q;
+
+        it = pj_hash_first(resolver->hquerybyid, &it_buf);
     }
     pj_grp_lock_release(resolver->grp_lock);
+
+    if (notify && qlist) {
+        for (i = 0; i < qcount; ++i) {
+            pj_dns_async_query *q = qlist[i];
+            pj_dns_async_query *cq;
+
+            if (q->cb)
+                (*q->cb)(q->user_data, PJ_ECANCELLED, NULL);
+
+            cq = q->child_head.next;
+            while (cq != (pj_dns_async_query*)&q->child_head) {
+                if (cq->cb)
+                    (*cq->cb)(cq->user_data, PJ_ECANCELLED, NULL);
+                cq = cq->next;
+            }
+        }
+    }
 
     /* Destroy cached entries */
     it = pj_hash_first(resolver->hrescache, &it_buf);
