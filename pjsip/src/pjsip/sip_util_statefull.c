@@ -114,8 +114,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request(  pjsip_endpoint *endpt,
 
     tsx->mod_data[mod_stateful_util.id] = tsx_data;
 
-    /* Prevent the transaction to get deleted before we have chance to
-     * terminate it in case sending fails.
+    /* Prevent the transaction from being deleted before we have a chance
+     * to terminate it if sending fails.
      */
     pj_grp_lock_add_ref(tsx->grp_lock);
 
@@ -185,8 +185,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond(  pjsip_endpoint *endpt,
         return status;
     }
 
-    /* Prevent the transaction to get deleted before we have chance to
-     * terminate it in case sending fails.
+    /* Prevent the transaction from being deleted before we have a chance
+     * to terminate it if sending fails.
      */
     pj_grp_lock_add_ref(tsx->grp_lock);
 
