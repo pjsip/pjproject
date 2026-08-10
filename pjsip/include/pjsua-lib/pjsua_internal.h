@@ -404,6 +404,12 @@ typedef struct pjsua_acc
     pj_str_t         rfc5626_instprm;/**< SIP outbound instance param.  */
     pj_str_t         rfc5626_regprm;/**< SIP outbound reg param.        */
     unsigned         rfc5626_flowtmr;/**< SIP outbound flow timer.      */
+    pj_bool_t        outbound_rejected;/**< First hop answered 439 to
+                                            outbound. Unlike
+                                            rfc5626_status this survives
+                                            destroy_regc(), so the
+                                            re-REGISTER is rebuilt
+                                            without outbound.           */
 
     unsigned         cred_cnt;      /**< Number of credentials.         */
     pjsip_cred_info  cred[PJSUA_ACC_MAX_PROXIES]; /**< Complete creds.  */
