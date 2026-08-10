@@ -4190,7 +4190,6 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
             return PJ_TRUE;
         }
     }
-
     else {
         /* Just return PJ_TRUE for other media type */
         return PJ_TRUE;
