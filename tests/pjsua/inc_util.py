@@ -2,6 +2,41 @@ import re
 import subprocess
 import sys
 
+def has_rtcp_xr(exe):
+   """Return True if the pjsua build under test was compiled with RTCP XR
+   (extended reports) support, i.e. PJMEDIA_HAS_RTCP_XR != 0.
+
+   RTCP XR is a compile-time option, off by default. pj_dump_config()
+   (pjlib) can't report a pjmedia flag, so the pjsua app prints
+   "PJMEDIA_HAS_RTCP_XR : 0|1" in its "--version" output (alongside
+   pj_dump_config's own lines). We run "<exe> --version" and parse it --
+   the same approach as has_ssl_sock() below. Querying the running binary
+   works regardless of static vs. shared linking (the value is compiled
+   into the app itself), unlike scanning the executable for a string that
+   a shared build would keep in libpjsua.
+
+   Note this only detects the build-time capability. XR must also be
+   enabled per stream at run-time via pjsua_acc_config.enable_rtcp_xr,
+   whose default pjsua_acc_config_default() derives from the
+   PJMEDIA_STREAM_ENABLE_XR build setting; the 415 test enables it
+   explicitly with pjsua's --rtcp-xr option regardless of that default.
+   """
+   try:
+      out = subprocess.check_output(exe + " --version", shell=True,
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True, timeout=10)
+   except (OSError, subprocess.CalledProcessError,
+           subprocess.TimeoutExpired) as e:
+      out = getattr(e, "output", "") or ""
+
+   m = re.search(r'PJMEDIA_HAS_RTCP_XR\s*:\s*(\d+)', out)
+   if m:
+      return m.group(1) != "0"
+   # No flag line (e.g. a pjsua too old to print it, or the probe couldn't
+   # run): RTCP XR is off in almost every build, so skip rather than run
+   # test 415 and have it fail spuriously on a build that lacks XR.
+   return False
+
 def has_ssl_sock(exe):
    """Return True if the pjsua build under test was configured with SSL
    socket (TLS transport) support, i.e. PJ_HAS_SSL_SOCK is not 0.

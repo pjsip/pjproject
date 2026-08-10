@@ -117,7 +117,13 @@ jobs:
     - name: install dependencies
       run: sudo apt-get update && sudo apt-get install -y swig sip-tester libopencore-amrnb-dev libopencore-amrwb-dev libvo-amrwbenc-dev
     - name: config site
-      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
+      # Enable RTCP XR so scripts-call/415_call_rtcp_xr.py runs instead of
+      # skipping (it skips unless PJMEDIA_HAS_RTCP_XR is compiled in; the
+      # test then activates XR per-call via pjsua's --rtcp-xr option).
+      run: |
+        cd pjlib/include/pj
+        cp config_site_test.h config_site.h
+        echo "#define PJMEDIA_HAS_RTCP_XR 1" >> config_site.h
     - name: configure
       run: CFLAGS="-g -fPIC -fsanitize=address" CXXFLAGS="-g -fPIC -fsanitize=address" LDFLAGS="-rdynamic -fsanitize=address" ./configure --enable-libwebrtc-aec3
     - name: make
