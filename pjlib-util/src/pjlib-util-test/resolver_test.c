@@ -69,8 +69,8 @@ static pj_ioqueue_t *ioqueue;
 static pj_thread_t *poll_thread;
 static pj_sem_t *sem;
 static pj_dns_settings set;
-static pj_bool_t destroy_done;
-static pj_bool_t cb_after_destroy;
+static volatile pj_bool_t destroy_done;
+static volatile pj_bool_t cb_after_destroy;
 
 #define MAX_LABEL   32
 

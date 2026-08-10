@@ -473,8 +473,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
                                              pj_bool_t notify)
 {
     pj_hash_iterator_t it_buf, *it;
-    pj_dns_async_query **qlist = NULL;
-    unsigned i, qcount = 0;
+    struct query_head cancel_list;
+    pj_dns_async_query *q;
     PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
 
     /*
@@ -485,19 +485,16 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
      * lock -- would otherwise fire after the socket is closed below and
      * retransmit on a NULL udp_key. Removing the query from the hash tables
      * makes an already-dispatched on_timeout() exit at its recheck instead.
-     * The queries are collected and notified after the lock is released, to
-     * avoid the lock inversion that on_timeout() also guards against (#1565).
+     * The dequeued queries are moved to a local list and notified after the
+     * lock is released, to avoid the lock inversion that on_timeout() also
+     * guards against (#1565).
      */
+    pj_list_init(&cancel_list);
+
     pj_grp_lock_acquire(resolver->grp_lock);
-    qcount = pj_hash_count(resolver->hquerybyid);
-    if (qcount)
-        qlist = (pj_dns_async_query**)
-                pj_pool_calloc(resolver->pool, qcount, sizeof(qlist[0]));
-    i = 0;
     it = pj_hash_first(resolver->hquerybyid, &it_buf);
     while (it) {
-        pj_dns_async_query *q = (pj_dns_async_query *)
-                                pj_hash_this(resolver->hquerybyid, it);
+        q = (pj_dns_async_query *)pj_hash_this(resolver->hquerybyid, it);
 
         if (q->timer_entry.id == 1)
             pj_timer_heap_cancel_if_active(resolver->timer,
@@ -508,28 +505,41 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
         pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id),
                     0, NULL);
 
-        if (qlist)
-            qlist[i++] = q;
+        /* A pending parent query is on no list, so its list links are free
+         * to move it onto the local cancel list. The queries are not returned
+         * to query_free_nodes here; the whole pool is released once the
+         * resolver's group lock reference count reaches zero.
+         */
+        pj_list_push_back(&cancel_list, q);
 
         it = pj_hash_first(resolver->hquerybyid, &it_buf);
     }
     pj_grp_lock_release(resolver->grp_lock);
 
-    if (notify && qlist) {
-        for (i = 0; i < qcount; ++i) {
-            pj_dns_async_query *q = qlist[i];
-            pj_dns_async_query *cq;
+    /* Notify outside the lock. Clear each callback before invoking it so a
+     * re-entrant pj_dns_resolver_cancel_query() cannot fire it a second time.
+     */
+    q = cancel_list.next;
+    while (q != (pj_dns_async_query*)&cancel_list) {
+        pj_dns_async_query *next_q = q->next;
+        pj_dns_async_query *cq;
+        pj_dns_callback *cb = q->cb;
 
-            if (q->cb)
-                (*q->cb)(q->user_data, PJ_ECANCELLED, NULL);
+        q->cb = NULL;
+        if (notify && cb)
+            (*cb)(q->user_data, PJ_ECANCELLED, NULL);
 
-            cq = q->child_head.next;
-            while (cq != (pj_dns_async_query*)&q->child_head) {
-                if (cq->cb)
-                    (*cq->cb)(cq->user_data, PJ_ECANCELLED, NULL);
-                cq = cq->next;
-            }
+        cq = q->child_head.next;
+        while (cq != (pj_dns_async_query*)&q->child_head) {
+            pj_dns_async_query *next_cq = cq->next;
+            pj_dns_callback *ccb = cq->cb;
+            cq->cb = NULL;
+            if (notify && ccb)
+                (*ccb)(cq->user_data, PJ_ECANCELLED, NULL);
+            cq = next_cq;
         }
+
+        q = next_q;
     }
 
     /* Destroy cached entries */
@@ -1075,7 +1085,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
     cb = query->cb;
     query->cb = NULL;
 
-    if (notify)
+    if (notify && cb)
         (*cb)(query->user_data, PJ_ECANCELLED, NULL);
 
     pj_grp_lock_release(query->resolver->grp_lock);
