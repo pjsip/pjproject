@@ -282,12 +282,18 @@ static void init_outbound_setting(pjsua_acc *acc)
     acc->rfc5626_status = OUTBOUND_WANTED;
 }
 
-/* Forget a 439 recorded against a first hop we may no longer be talking to.
+/* Forget a 439 recorded against a first hop we may no longer be talking to,
+ * so that outbound becomes eligible again.
  *
- * Clearing the flag alone would not re-enable outbound: the fallback left
- * rfc5626_status at OUTBOUND_NA, and update_regc_contact() short-circuits on
- * that, so the next Contact would be rebuilt without outbound anyway. Put the
- * status back to UNKNOWN so it is decided afresh from the new path.
+ * The status is put back to UNKNOWN as well: the fallback left it at
+ * OUTBOUND_NA, and update_regc_contact() short-circuits on that, so clearing
+ * the flag on its own would still rebuild the Contact without outbound.
+ *
+ * This only makes outbound eligible; it does not change anything already
+ * sent. A live regc keeps the Contact and the Supported header it was
+ * initialised with, so outbound is actually offered again at the next regc
+ * rebuild -- immediately where the caller destroys the regc, and otherwise
+ * whenever the next one is created.
  */
 static void reset_outbound_rejection(pjsua_acc *acc)
 {
@@ -1428,7 +1434,14 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
-        first_hop_changed = PJ_TRUE;
+
+        /* The account proxy only takes part in the REGISTER route set when
+         * PJSUA_REG_USE_ACC_PROXY is set, so changing it moves the first hop
+         * only in that case. A simultaneous reg_use_proxy change is caught by
+         * its own block below.
+         */
+        if (acc->cfg.reg_use_proxy & PJSUA_REG_USE_ACC_PROXY)
+            first_hop_changed = PJ_TRUE;
     }
 
 
@@ -3311,6 +3324,13 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
          * is no longer stuck either way: the application's own
          * pjsua_acc_set_registration() now rebuilds the REGISTER without
          * outbound and succeeds.
+         *
+         * The same applies during an IP change: the flow ends at
+         * pjsua_acc_end_ip_change() below without sending another REGISTER,
+         * so the account waits for the application rather than recovering by
+         * itself. Driving a registration from here would race the state
+         * machine that owns registration in that window, which is why the
+         * generic auto-retry below makes the same exclusion.
          */
         if (!param->is_unreg &&
             acc->ip_change_op != PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT)
@@ -5123,6 +5143,11 @@ PJ_DEF(pj_status_t) pjsua_acc_refresh_transport(pjsua_acc_id acc_id)
 
     clear_sa_pin(acc);
 
+    /* The next registration may resolve to a different next hop, so a 439
+     * recorded against the old one no longer applies.
+     */
+    reset_outbound_rejection(acc);
+
     PJSUA_UNLOCK();
     return PJ_SUCCESS;
 }
@@ -5260,6 +5285,11 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
             pjsua_init_tpselector(acc->index, &tp_sel);
             pjsip_regc_set_transport(acc->regc, &tp_sel);
         }
+        /* Pinned to a different next hop, so a 439 recorded against the
+         * previous one no longer applies.
+         */
+        reset_outbound_rejection(acc);
+
         PJ_LOG(3,(THIS_FILE,
                   "Account %d: server affinity explicitly pinned via API "
                   "to transport %s",
@@ -5611,8 +5641,11 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
     /* Prepare for contact rewrite */
     acc->contact_rewritten = PJ_FALSE;
 
-    /* The IP change may have put us behind a different first hop, so give
-     * SIP outbound another chance.
+    /* The IP change may have put us behind a different first hop, so make
+     * SIP outbound eligible again. Whether the REGISTER below actually
+     * carries it depends on need_unreg: with PJSUA_CONTACT_REWRITE_UNREGISTER
+     * the regc is rebuilt and outbound is offered again straight away,
+     * otherwise not until the next rebuild.
      */
     reset_outbound_rejection(acc);
 
