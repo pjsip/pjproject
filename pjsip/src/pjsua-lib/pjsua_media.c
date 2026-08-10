@@ -4131,6 +4131,66 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
 
 #endif
 
+    else if (call_med->type == PJMEDIA_TYPE_TEXT) {
+        pjmedia_txt_stream_info the_old_si;
+        const pjmedia_txt_stream_info *old_si = NULL;
+        const pjmedia_txt_stream_info *new_si = &new_si_->info.txt;
+        const pjmedia_codec_info *old_ci = NULL;
+        const pjmedia_codec_info *new_ci = &new_si->fmt;
+
+        /* Compare media direction */
+        if (call_med->dir != new_si->dir)
+            return PJ_TRUE;
+
+        /* Get current active stream info */
+        if (call_med->strm.t.stream) {
+            pjmedia_txt_stream_get_info(call_med->strm.t.stream, &the_old_si);
+            old_si = &the_old_si;
+            old_ci = &old_si->fmt;
+        } else {
+            /* The stream is inactive. */
+            return (new_si->dir != PJMEDIA_DIR_NONE);
+        }
+
+        if (old_si->rtcp_mux != new_si->rtcp_mux)
+            return PJ_TRUE;
+
+        /* Compare remote RTP address. If ICE is running, change in default
+         * address can happen after negotiation, this can be handled
+         * internally by ICE and does not need to cause media restart.
+         */
+        if (!is_ice_running(call_med->tp) &&
+            pj_sockaddr_cmp(&old_si->rem_addr, &new_si->rem_addr))
+        {
+            return PJ_TRUE;
+        }
+
+        /* Compare codec info */
+        if (pj_stricmp(&old_ci->encoding_name, &new_ci->encoding_name) ||
+            old_ci->clock_rate != new_ci->clock_rate ||
+            old_si->rx_pt != new_si->rx_pt ||
+            old_si->tx_pt != new_si->tx_pt)
+        {
+            return PJ_TRUE;
+        }
+
+        /* Compare redundancy (RFC 2198) settings */
+        if (old_si->rx_red_pt != new_si->rx_red_pt ||
+            old_si->tx_red_pt != new_si->tx_red_pt ||
+            old_si->rx_red_level != new_si->rx_red_level ||
+            old_si->tx_red_level != new_si->tx_red_level)
+        {
+            return PJ_TRUE;
+        }
+
+        /* Compare SDP fmtp for both directions */
+        if (!match_codec_fmtp(&old_si->dec_fmtp, &new_si->dec_fmtp) ||
+            !match_codec_fmtp(&old_si->enc_fmtp, &new_si->enc_fmtp))
+        {
+            return PJ_TRUE;
+        }
+    }
+
     else {
         /* Just return PJ_TRUE for other media type */
         return PJ_TRUE;
