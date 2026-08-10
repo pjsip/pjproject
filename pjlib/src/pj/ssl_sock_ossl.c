@@ -2812,9 +2812,24 @@ static void ssl_set_peer_name(pj_ssl_sock_t *ssock)
 #endif
         } else {
 #ifdef SSL_set_tlsext_host_name
-            /* Server name is null terminated already */
-            if (!SSL_set_tlsext_host_name(ossock->ossl_ssl,
-                                          ssock->param.server_name.ptr))
+            /* ssock->param.server_name is a pj_str_t (ptr+slen), NOT
+             * guaranteed null-terminated - it typically comes from
+             * tdata->dest_info.name, populated via plain pj_strdup()
+             * (sip_util.c), which does not append a '\0'.
+             * SSL_set_tlsext_host_name() is a macro over SSL_ctrl() that
+             * reads its argument as an ordinary strlen()-terminated C
+             * string, so passing server_name.ptr directly here can read
+             * past its pool allocation - confirmed live as a reliable
+             * SIGSEGV during the handshake when server_name is a
+             * hostname. Defensively copy+terminate into a local buffer
+             * first instead. */
+            char host_name[PJ_MAX_HOSTNAME];
+            pj_ssize_t len = PJ_MIN(ssock->param.server_name.slen,
+                                    (pj_ssize_t)sizeof(host_name) - 1);
+            pj_memcpy(host_name, ssock->param.server_name.ptr, len);
+            host_name[len] = '\0';
+
+            if (!SSL_set_tlsext_host_name(ossock->ossl_ssl, host_name))
             {
                 char err_str[PJ_ERR_MSG_SIZE];
 
