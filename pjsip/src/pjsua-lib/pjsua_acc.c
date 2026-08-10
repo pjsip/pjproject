@@ -1435,13 +1435,16 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
 
-        /* The account proxy only takes part in the REGISTER route set when
-         * PJSUA_REG_USE_ACC_PROXY is set, so changing it moves the first hop
-         * only in that case. A simultaneous reg_use_proxy change is caught by
-         * its own block below.
+        /* Deliberately not treated as a first-hop change. sa_build_reg_route_set()
+         * puts the affinity Route and the global outbound proxies ahead of the
+         * account proxies, so an account proxy leads only when neither is in
+         * play, and then only proxy[0] does. Deciding that here would mean
+         * duplicating that ordering and keeping the copy in step with it.
+         * Failing to forget a rejection only leaves outbound off until one of
+         * the unambiguous triggers fires; forgetting one wrongly re-offers
+         * outbound to a hop that already refused it, which is the failure this
+         * series removes.
          */
-        if (acc->cfg.reg_use_proxy & PJSUA_REG_USE_ACC_PROXY)
-            first_hop_changed = PJ_TRUE;
     }
 
 
@@ -5131,6 +5134,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
 PJ_DEF(pj_status_t) pjsua_acc_refresh_transport(pjsua_acc_id acc_id)
 {
     pjsua_acc *acc;
+    pj_bool_t had_pin;
 
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
 
@@ -5141,12 +5145,17 @@ PJ_DEF(pj_status_t) pjsua_acc_refresh_transport(pjsua_acc_id acc_id)
         return PJ_EINVAL;
     }
 
+    had_pin = (acc->sa_next_hop_tp != NULL);
+
     clear_sa_pin(acc);
 
-    /* The next registration may resolve to a different next hop, so a 439
-     * recorded against the old one no longer applies.
+    /* Only if something was actually pinned. Dropping a cached destination
+     * means the next registration re-resolves and may land elsewhere, so the
+     * old 439 no longer applies; with nothing cached this call changes
+     * nothing and the rejection still stands.
      */
-    reset_outbound_rejection(acc);
+    if (had_pin)
+        reset_outbound_rejection(acc);
 
     PJSUA_UNLOCK();
     return PJ_SUCCESS;
