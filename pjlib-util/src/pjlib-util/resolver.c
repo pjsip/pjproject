@@ -516,26 +516,37 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
     }
     pj_grp_lock_release(resolver->grp_lock);
 
-    /* Notify outside the lock. Clear each callback before invoking it so a
-     * re-entrant pj_dns_resolver_cancel_query() cannot fire it a second time.
+    /* Capture and clear each callback under the lock, but invoke it after
+     * releasing, so it neither runs under the lock nor races a concurrent
+     * cancel into a duplicate call.
      */
     q = cancel_list.next;
     while (q != (pj_dns_async_query*)&cancel_list) {
         pj_dns_async_query *next_q = q->next;
         pj_dns_async_query *cq;
-        pj_dns_callback *cb = q->cb;
+        pj_dns_callback *cb;
 
+        pj_grp_lock_acquire(resolver->grp_lock);
+        cb = q->cb;
         q->cb = NULL;
+        pj_grp_lock_release(resolver->grp_lock);
+
         if (notify && cb)
             (*cb)(q->user_data, PJ_ECANCELLED, NULL);
 
         cq = q->child_head.next;
         while (cq != (pj_dns_async_query*)&q->child_head) {
             pj_dns_async_query *next_cq = cq->next;
-            pj_dns_callback *ccb = cq->cb;
+            pj_dns_callback *ccb;
+
+            pj_grp_lock_acquire(resolver->grp_lock);
+            ccb = cq->cb;
             cq->cb = NULL;
+            pj_grp_lock_release(resolver->grp_lock);
+
             if (notify && ccb)
                 (*ccb)(cq->user_data, PJ_ECANCELLED, NULL);
+
             cq = next_cq;
         }
 
