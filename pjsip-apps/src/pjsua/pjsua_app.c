@@ -1968,6 +1968,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -2014,6 +2015,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
@@ -2051,6 +2053,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             pjsua_acc_modify(aid, &acc_cfg);
         }
 
@@ -2083,6 +2086,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
@@ -2124,6 +2128,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             pjsua_acc_modify(acc_id, &acc_cfg);
         }
 
@@ -2155,6 +2160,7 @@ static pj_status_t app_init(void)
             acc_cfg.txt_red_level = app_config.txt_red_level;
             acc_cfg.rtp_cfg = app_config.rtp_cfg;
             acc_cfg.enable_rtcp_mux = app_config.enable_rtcp_mux;
+            acc_cfg.enable_rtcp_xr = app_config.enable_rtcp_xr;
             // acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
             pjsua_acc_modify(aid, &acc_cfg);
         }
