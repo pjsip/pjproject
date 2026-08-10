@@ -5171,6 +5171,8 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
     pj_pool_t *tmp_pool = NULL;
     pjsip_tx_data dummy_tdata;
     pjsip_tx_data *tdata_ptr = NULL;
+    pj_bool_t had_pin;
+    pj_sockaddr prev_addr;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id) && addr, PJ_EINVAL);
@@ -5264,6 +5266,12 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
     }
 
     if (status == PJ_SUCCESS && tp != NULL) {
+        /* Remember what was pinned, to tell a genuine change of next hop
+         * from a caller re-pinning the address that is already in force.
+         */
+        had_pin = (acc->sa_next_hop_tp != NULL);
+        pj_memcpy(&prev_addr, &acc->sa_next_hop_addr, sizeof(prev_addr));
+
         /* Atomic swap: drop existing pin, install new pin.
          * acquire_transport already added a reference to tp.
          */
@@ -5285,10 +5293,12 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
             pjsua_init_tpselector(acc->index, &tp_sel);
             pjsip_regc_set_transport(acc->regc, &tp_sel);
         }
-        /* Pinned to a different next hop, so a 439 recorded against the
-         * previous one no longer applies.
+        /* Only when the next hop actually moved. Re-pinning the address
+         * already in force changes nothing, and forgetting the rejection
+         * there would offer outbound again to the hop that sent the 439.
          */
-        reset_outbound_rejection(acc);
+        if (!had_pin || pj_sockaddr_cmp(&prev_addr, addr) != 0)
+            reset_outbound_rejection(acc);
 
         PJ_LOG(3,(THIS_FILE,
                   "Account %d: server affinity explicitly pinned via API "
