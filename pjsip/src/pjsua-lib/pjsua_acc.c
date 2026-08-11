@@ -282,12 +282,18 @@ static void init_outbound_setting(pjsua_acc *acc)
     acc->rfc5626_status = OUTBOUND_WANTED;
 }
 
-/* Forget a 439 recorded against a first hop we may no longer be talking to.
+/* Forget a 439 recorded against a first hop we may no longer be talking to,
+ * so that outbound becomes eligible again.
  *
- * Clearing the flag alone would not re-enable outbound: the fallback left
- * rfc5626_status at OUTBOUND_NA, and update_regc_contact() short-circuits on
- * that, so the next Contact would be rebuilt without outbound anyway. Put the
- * status back to UNKNOWN so it is decided afresh from the new path.
+ * The status is put back to UNKNOWN as well: the fallback left it at
+ * OUTBOUND_NA, and update_regc_contact() short-circuits on that, so clearing
+ * the flag on its own would still rebuild the Contact without outbound.
+ *
+ * This only makes outbound eligible; it does not change anything already
+ * sent. A live regc keeps the Contact and the Supported header it was
+ * initialised with, so outbound is actually offered again at the next regc
+ * rebuild -- immediately where the caller destroys the regc, and otherwise
+ * whenever the next one is created.
  */
 static void reset_outbound_rejection(pjsua_acc *acc)
 {
@@ -1428,7 +1434,17 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
         update_reg = PJ_TRUE;
         unreg_first = PJ_TRUE;
-        first_hop_changed = PJ_TRUE;
+
+        /* Deliberately not treated as a first-hop change. sa_build_reg_route_set()
+         * puts the affinity Route and the global outbound proxies ahead of the
+         * account proxies, so an account proxy leads only when neither is in
+         * play, and then only proxy[0] does. Deciding that here would mean
+         * duplicating that ordering and keeping the copy in step with it.
+         * Failing to forget a rejection only leaves outbound off until one of
+         * the unambiguous triggers fires; forgetting one wrongly re-offers
+         * outbound to a hop that already refused it, which is the failure this
+         * series removes.
+         */
     }
 
 
@@ -3311,6 +3327,13 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
          * is no longer stuck either way: the application's own
          * pjsua_acc_set_registration() now rebuilds the REGISTER without
          * outbound and succeeds.
+         *
+         * The same applies during an IP change: the flow ends at
+         * pjsua_acc_end_ip_change() below without sending another REGISTER,
+         * so the account waits for the application rather than recovering by
+         * itself. Driving a registration from here would race the state
+         * machine that owns registration in that window, which is why the
+         * generic auto-retry below makes the same exclusion.
          */
         if (!param->is_unreg &&
             acc->ip_change_op != PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT)
@@ -5111,6 +5134,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
 PJ_DEF(pj_status_t) pjsua_acc_refresh_transport(pjsua_acc_id acc_id)
 {
     pjsua_acc *acc;
+    pj_bool_t had_pin;
 
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
 
@@ -5121,7 +5145,17 @@ PJ_DEF(pj_status_t) pjsua_acc_refresh_transport(pjsua_acc_id acc_id)
         return PJ_EINVAL;
     }
 
+    had_pin = (acc->sa_next_hop_tp != NULL);
+
     clear_sa_pin(acc);
+
+    /* Only if something was actually pinned. Dropping a cached destination
+     * means the next registration re-resolves and may land elsewhere, so the
+     * old 439 no longer applies; with nothing cached this call changes
+     * nothing and the rejection still stands.
+     */
+    if (had_pin)
+        reset_outbound_rejection(acc);
 
     PJSUA_UNLOCK();
     return PJ_SUCCESS;
@@ -5146,6 +5180,8 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
     pj_pool_t *tmp_pool = NULL;
     pjsip_tx_data dummy_tdata;
     pjsip_tx_data *tdata_ptr = NULL;
+    pj_bool_t had_pin;
+    pj_sockaddr prev_addr;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id) && addr, PJ_EINVAL);
@@ -5239,6 +5275,12 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
     }
 
     if (status == PJ_SUCCESS && tp != NULL) {
+        /* Remember what was pinned, to tell a genuine change of next hop
+         * from a caller re-pinning the address that is already in force.
+         */
+        had_pin = (acc->sa_next_hop_tp != NULL);
+        pj_memcpy(&prev_addr, &acc->sa_next_hop_addr, sizeof(prev_addr));
+
         /* Atomic swap: drop existing pin, install new pin.
          * acquire_transport already added a reference to tp.
          */
@@ -5260,6 +5302,13 @@ PJ_DEF(pj_status_t) pjsua_acc_set_affinity_addr(pjsua_acc_id acc_id,
             pjsua_init_tpselector(acc->index, &tp_sel);
             pjsip_regc_set_transport(acc->regc, &tp_sel);
         }
+        /* Only when the next hop actually moved. Re-pinning the address
+         * already in force changes nothing, and forgetting the rejection
+         * there would offer outbound again to the hop that sent the 439.
+         */
+        if (!had_pin || pj_sockaddr_cmp(&prev_addr, addr) != 0)
+            reset_outbound_rejection(acc);
+
         PJ_LOG(3,(THIS_FILE,
                   "Account %d: server affinity explicitly pinned via API "
                   "to transport %s",
@@ -5611,8 +5660,11 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
     /* Prepare for contact rewrite */
     acc->contact_rewritten = PJ_FALSE;
 
-    /* The IP change may have put us behind a different first hop, so give
-     * SIP outbound another chance.
+    /* The IP change may have put us behind a different first hop, so make
+     * SIP outbound eligible again. Whether the REGISTER below actually
+     * carries it depends on need_unreg: with PJSUA_CONTACT_REWRITE_UNREGISTER
+     * the regc is rebuilt and outbound is offered again straight away,
+     * otherwise not until the next rebuild.
      */
     reset_outbound_rejection(acc);
 
