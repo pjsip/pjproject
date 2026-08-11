@@ -23,14 +23,22 @@ def test_func(t):
     caller.send("video call disable 1")
     callee.expect("m=video 0")
 
-    # The media slot survives the removal, reported with status None.
+    # Only video goes away. Each endpoint re-reports its media in index
+    # order after the renegotiation, so audio is asserted first: still
+    # Active, having been carried through untouched. Without this a
+    # removal that tore down audio as well would go unnoticed -- the BYE
+    # below would still succeed, since that only says the dialog is up.
+    caller.expect(const.AUD_MEDIA_ACTIVE)
+    callee.expect(const.AUD_MEDIA_ACTIVE)
+
+    # The video media slot itself survives the removal, reported as None.
     caller.expect(const.VID_MEDIA_NONE)
     callee.expect(const.VID_MEDIA_NONE)
 
     caller.sync_stdout()
     callee.sync_stdout()
 
-    # The call itself is unaffected: it is still up and hangs up via BYE.
+    # And the dialog is unaffected: it is still up and hangs up via BYE.
     vid.hangup_call(caller, callee)
 
 
