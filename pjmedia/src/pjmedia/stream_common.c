@@ -655,9 +655,10 @@ pj_status_t pjmedia_stream_send_rtcp(pjmedia_stream_common *c_strm,
     if (c_strm->transport->grp_lock)
         pj_grp_lock_acquire(c_strm->transport->grp_lock);
 
-    /* Serialize against the RTP tx/rx paths updating the RTCP session.
-     * Held across the send too: when no SDES/BYE/XR/FB is appended, the
-     * packet sent below is the session's own SR/RR buffer.
+    /* Serialize the build against the RTP tx/rx paths updating the RTCP
+     * session. Released before the send below: the transport may deliver
+     * the packet synchronously (e.g. the loop transport) and re-enter this
+     * stream's rx callbacks, so the mutex must not be held across it.
      */
     pj_mutex_lock(c_strm->rtcp_mutex);
 
@@ -668,16 +669,12 @@ pj_status_t pjmedia_stream_send_rtcp(pjmedia_stream_common *c_strm,
     with_xr = PJ_FALSE;
 #endif
 
-    if (with_sdes || with_bye || with_xr || with_fb || with_fb_nack ||
-        with_fb_pli)
-    {
-        pkt = (pj_uint8_t*) c_strm->out_rtcp_pkt;
-        pj_memcpy(pkt, sr_rr_pkt, len);
-        max_len = c_strm->out_rtcp_pkt_size;
-    } else {
-        pkt = (pj_uint8_t*)sr_rr_pkt;
-        max_len = len;
-    }
+    /* Always copy to our own buffer: sr_rr_pkt points into the RTCP session,
+     * which is only valid while the mutex is held.
+     */
+    pkt = (pj_uint8_t*) c_strm->out_rtcp_pkt;
+    pj_memcpy(pkt, sr_rr_pkt, len);
+    max_len = c_strm->out_rtcp_pkt_size;
 
     /* Build RTCP SDES packet, forced if also send RTCP-FB */
     with_sdes = with_sdes || with_fb_pli || with_fb_nack;
@@ -795,6 +792,8 @@ pj_status_t pjmedia_stream_send_rtcp(pjmedia_stream_common *c_strm,
         }
     }
 
+    pj_mutex_unlock(c_strm->rtcp_mutex);
+
     /* Send! */
     status = pjmedia_transport_send_rtcp(c_strm->transport, pkt, len);
     if (status != PJ_SUCCESS) {
@@ -806,8 +805,6 @@ pj_status_t pjmedia_stream_send_rtcp(pjmedia_stream_common *c_strm,
             c_strm->rtcp_tx_err_cnt = 0;
         }
     }
-
-    pj_mutex_unlock(c_strm->rtcp_mutex);
 
     if (c_strm->transport->grp_lock)
         pj_grp_lock_release(c_strm->transport->grp_lock);

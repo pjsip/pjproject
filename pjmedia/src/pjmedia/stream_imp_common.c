@@ -385,11 +385,12 @@ static void on_rx_rtcp( void *data,
         return;
     }
 
-    pj_mutex_lock(c_strm->rtcp_mutex);
+    /* Not under rtcp_mutex: pjmedia_rtcp_rx_rtcp() publishes RTCP-FB events
+     * synchronously, and a subscriber may send RTCP from that callback.
+     */
     pjmedia_rtcp_rx_rtcp(&c_strm->rtcp, pkt, bytes_read);
     lsr_ntp = c_strm->rtcp.rx_lsr_ntp;
     lsr_ts = c_strm->rtcp.rx_lsr_ts;
-    pj_mutex_unlock(c_strm->rtcp_mutex);
 
     /* Update synchronizer with reference time from RTCP-SR */
     if (c_strm->av_sync_media && lsr_ts) {
