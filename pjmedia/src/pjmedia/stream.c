@@ -2358,8 +2358,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
      */
     att_param.grp_lock = c_strm->grp_lock;
     status = pjmedia_transport_attach2(tp, &att_param);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        /* Unpublish, so cleanup below won't send RTCP BYE nor detach from a
+         * transport we are not attached to.
+         */
+        c_strm->transport = NULL;
+        if (tp->grp_lock)
+            pj_grp_lock_dec_ref(tp->grp_lock);
         goto err_cleanup;
+    }
 
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
