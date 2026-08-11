@@ -1922,16 +1922,24 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
      */
     att_param.grp_lock = c_strm->grp_lock;
 
-    /* Only attach transport when stream is ready. */
-    status = pjmedia_transport_attach2(tp, &att_param);
-    if (status != PJ_SUCCESS)
-        goto err_cleanup;
-
+    /* Only attach transport when stream is ready. Publish the transport and
+     * ref its group lock before attaching: once attached, an rx callback may
+     * arrive immediately and dereference c_strm->transport.
+     */
     c_strm->transport = tp;
+    if (tp->grp_lock)
+        pj_grp_lock_add_ref(tp->grp_lock);
 
-    /* Also add ref the transport group lock */
-    if (c_strm->transport->grp_lock)
-        pj_grp_lock_add_ref(c_strm->transport->grp_lock);
+    status = pjmedia_transport_attach2(tp, &att_param);
+    if (status != PJ_SUCCESS) {
+        /* Unpublish, so cleanup below won't send RTCP BYE nor detach from a
+         * transport we are not attached to.
+         */
+        c_strm->transport = NULL;
+        if (tp->grp_lock)
+            pj_grp_lock_dec_ref(tp->grp_lock);
+        goto err_cleanup;
+    }
 
     /* Send RTCP SDES */
     if (!c_strm->rtcp_sdes_bye_disabled) {
