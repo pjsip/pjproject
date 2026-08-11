@@ -29,7 +29,13 @@ def test_func(t):
     # specific state. The caller keeps an Active -- now one-way --
     # stream, while for the callee a remote sendonly offer means its own
     # video is no longer wanted, which pjsua reports as Remote hold.
+    #
+    # The direction attribute is matched only after advancing to the
+    # m=video line: the audio section comes first in the re-offer and
+    # carries a direction of its own, so an unanchored pattern would read
+    # the audio stream's direction instead of the video stream's.
     caller.send("video call rx Off 1")
+    callee.expect("m=video [1-9]")
     callee.expect("a=sendonly")
     caller.expect(const.VID_MEDIA_ACTIVE)
     callee.expect(const.VID_MEDIA_REMOTE_HOLD)
@@ -40,6 +46,7 @@ def test_func(t):
     # Turn RX back on: the video line returns to sendrecv and the callee
     # resumes sending, so video is Active on both ends again.
     caller.send("video call rx On 1")
+    callee.expect("m=video [1-9]")
     callee.expect("a=sendrecv")
     caller.expect(const.VID_MEDIA_ACTIVE)
     callee.expect(const.VID_MEDIA_ACTIVE)
