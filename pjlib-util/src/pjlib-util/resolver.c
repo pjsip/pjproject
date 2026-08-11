@@ -218,6 +218,11 @@ struct pj_dns_resolver
 
     /* Query entries free list */
     struct query_head    query_free_nodes;
+
+    /* Set once pj_dns_resolver_destroy() has started, to reject new queries
+     * and cache updates that would otherwise miss the teardown.
+     */
+    pj_bool_t            shutting_down;
 };
 
 
@@ -492,6 +497,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
     pj_list_init(&cancel_list);
 
     pj_grp_lock_acquire(resolver->grp_lock);
+    resolver->shutting_down = PJ_TRUE;
     it = pj_hash_first(resolver->hquerybyid, &it_buf);
     while (it) {
         q = (pj_dns_async_query *)pj_hash_this(resolver->hquerybyid, it);
@@ -939,6 +945,17 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
 
     /* Start working with the resolver */
     pj_grp_lock_acquire(resolver->grp_lock);
+
+    /* Reject new queries once destroy has started: a query started after
+     * destroy collected the pending queries would arm a timer that survives
+     * the teardown.
+     */
+    if (resolver->shutting_down) {
+        if (p_query)
+            *p_query = NULL;
+        pj_grp_lock_release(resolver->grp_lock);
+        return PJ_EGONE;
+    }
 
     /* Get current time. */
     pj_gettimeofday(&now);
@@ -1833,8 +1850,11 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     /* Workaround for deadlock problem in #1108 */
     pj_grp_lock_acquire(resolver->grp_lock);
 
-    /* Truncated responses MUST NOT be saved (cached). */
-    if (PJ_DNS_GET_TC(dns_pkt->hdr.flags) == 0) {
+    /* Truncated responses MUST NOT be saved (cached). Skip caching as well
+     * once destroy has started: destroy sweeps the cache, so a late entry
+     * would never be freed.
+     */
+    if (PJ_DNS_GET_TC(dns_pkt->hdr.flags) == 0 && !resolver->shutting_down) {
         /* Save/update response cache. */
         update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);
     }
