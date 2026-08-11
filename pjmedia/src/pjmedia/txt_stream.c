@@ -183,6 +183,7 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
     pj_pool_t *own_pool = NULL;
     char *p;
     unsigned buf_size;
+    unsigned i;
     pj_status_t status;
     pjmedia_transport_attach_param att_param;
     pjmedia_clock_param cparam;
@@ -209,6 +210,19 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
                              &info->loc_rtcp_fb);
     pjmedia_rtcp_fb_info_dup(pool, &c_strm->si->rem_rtcp_fb,
                              &info->rem_rtcp_fb);
+
+    for (i = 0; i < stream->si.enc_fmtp.cnt; ++i) {
+        pj_strdup(pool, &stream->si.enc_fmtp.param[i].name,
+                  &info->enc_fmtp.param[i].name);
+        pj_strdup(pool, &stream->si.enc_fmtp.param[i].val,
+                  &info->enc_fmtp.param[i].val);
+    }
+    for (i = 0; i < stream->si.dec_fmtp.cnt; ++i) {
+        pj_strdup(pool, &stream->si.dec_fmtp.param[i].name,
+                  &info->dec_fmtp.param[i].name);
+        pj_strdup(pool, &stream->si.dec_fmtp.param[i].val,
+                  &info->dec_fmtp.param[i].val);
+    }
 
     /* Init stream/port name */
     name.ptr = (char *) pj_pool_alloc(pool, M);

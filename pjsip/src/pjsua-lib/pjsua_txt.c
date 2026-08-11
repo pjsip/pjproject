@@ -214,18 +214,18 @@ pj_status_t pjsua_txt_channel_update(pjsua_call_media *call_med,
             (*pjsua_var.ua_cfg.cb.on_stream_precreate)(call->index, &prm);
 
             /* Copy back only the fields which are allowed to be changed. */
-            si->jb_init = prm.stream_info.info.aud.jb_init;
-            si->jb_min_pre = prm.stream_info.info.aud.jb_min_pre;
-            si->jb_max_pre = prm.stream_info.info.aud.jb_max_pre;
-            si->jb_max = prm.stream_info.info.aud.jb_max;
-            si->jb_discard_algo = prm.stream_info.info.aud.jb_discard_algo;
+            si->jb_init = prm.stream_info.info.txt.jb_init;
+            si->jb_min_pre = prm.stream_info.info.txt.jb_min_pre;
+            si->jb_max_pre = prm.stream_info.info.txt.jb_max_pre;
+            si->jb_max = prm.stream_info.info.txt.jb_max;
+            si->jb_discard_algo = prm.stream_info.info.txt.jb_discard_algo;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
-            si->use_ka = prm.stream_info.info.aud.use_ka;
+            si->use_ka = prm.stream_info.info.txt.use_ka;
 
-            si->ka_cfg = prm.stream_info.info.aud.ka_cfg;
+            si->ka_cfg = prm.stream_info.info.txt.ka_cfg;
 #endif
             si->rtcp_sdes_bye_disabled =
-                prm.stream_info.info.aud.rtcp_sdes_bye_disabled;
+                prm.stream_info.info.txt.rtcp_sdes_bye_disabled;
         }
 
         /* Create session based on session info. */
