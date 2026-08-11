@@ -831,7 +831,11 @@ jobs:
     - name: run pjsua-stress
       run: |
         set -eo pipefail
-        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp halt_on_error=1"
+        # TEMPORARY - DO NOT MERGE: halt_on_error=0 so the run keeps going and
+        # logs every unique race instead of aborting on the first one, and a
+        # larger history_size so the second (racing) access stack is available.
+        # Restore halt_on_error=1 and drop history_size before merging.
+        export TSAN_OPTIONS="suppressions=$GITHUB_WORKSPACE/tests/sanitizers/tsan.supp halt_on_error=0 history_size=4"
         ARCH=$(make --no-print-directory -s infotarget)
         cd pjsip/bin
         # Run in the background (log streamed to the console by tail) so a

@@ -3,7 +3,11 @@
 #
 # Disable data race warnings as most are by design or harmless
 # Focus on deadlock reports only (e.g., lock-order-inversion)
-race:*
+#
+# TEMPORARY - DO NOT MERGE: disabled for one CI run to let TSan report the
+# race behind the recurring stress/tsan SIGSEGV in pjmedia_stream_send_rtcp().
+# Restore this line before merging.
+#race:*
 
 #=============================================================================
 # Lock-order-inversion between sip dialog and sip transaction
