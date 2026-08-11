@@ -2344,8 +2344,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pj_grp_lock_add_ref(c_strm->grp_lock);
     c_strm->port.grp_lock = c_strm->grp_lock;
 
-    /* Only attach transport when stream is ready. */
+    /* Only attach transport when stream is ready. Publish the transport and
+     * ref its group lock before attaching: once attached, an rx callback may
+     * arrive immediately and dereference c_strm->transport.
+     */
     c_strm->transport = tp;
+    if (tp->grp_lock)
+        pj_grp_lock_add_ref(tp->grp_lock);
+
     /* Let the transport hold a reference on the stream's group lock for the
      * duration of each rx callback, so the stream cannot be destroyed by
      * another thread while an in-flight RTP/RTCP callback is running on it.
@@ -2354,10 +2360,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     status = pjmedia_transport_attach2(tp, &att_param);
     if (status != PJ_SUCCESS)
         goto err_cleanup;
-
-    /* Also add ref the transport group lock */
-    if (c_strm->transport->grp_lock)
-        pj_grp_lock_add_ref(c_strm->transport->grp_lock);
 
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
