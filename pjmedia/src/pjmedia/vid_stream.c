@@ -841,8 +841,10 @@ static pj_status_t put_frame(pjmedia_port *port,
                                          NULL, NULL);
 
         /* Update RTCP stats with last RTP timestamp. */
+        pj_mutex_lock(c_strm->rtcp_mutex);
         c_strm->rtcp.stat.rtp_tx_last_ts =
                                         pj_ntohl(channel->rtp.out_hdr.ts);
+        pj_mutex_unlock(c_strm->rtcp_mutex);
         return PJ_SUCCESS;
     }
 
@@ -1064,10 +1066,12 @@ static pj_status_t put_frame(pjmedia_port *port,
 
     /* Update stat */
     if (pkt_cnt) {
+        pj_mutex_lock(c_strm->rtcp_mutex);
         c_strm->rtcp.stat.rtp_tx_last_ts =
                 pj_ntohl(c_strm->enc->rtp.out_hdr.ts);
         c_strm->rtcp.stat.rtp_tx_last_seq =
                 pj_ntohs(c_strm->enc->rtp.out_hdr.seq);
+        pj_mutex_unlock(c_strm->rtcp_mutex);
     }
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
@@ -2199,8 +2203,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_get_stat(
 {
     PJ_ASSERT_RETURN(stream && stat, PJ_EINVAL);
 
-    pj_memcpy(stat, &stream->base.rtcp.stat, sizeof(pjmedia_rtcp_stat));
-    return PJ_SUCCESS;
+    return pjmedia_stream_common_get_stat(&stream->base, stat);
 }
 
 
@@ -2211,9 +2214,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_reset_stat(pjmedia_vid_stream *stream)
 {
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
-    pjmedia_rtcp_init_stat(&stream->base.rtcp.stat);
-
-    return PJ_SUCCESS;
+    return pjmedia_stream_common_reset_stat(&stream->base);
 }
 
 

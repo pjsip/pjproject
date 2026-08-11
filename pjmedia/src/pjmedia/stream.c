@@ -2726,7 +2726,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_stat_xr( const pjmedia_stream *stream,
     PJ_ASSERT_RETURN(stream && stat, PJ_EINVAL);
 
     if (c_strm->rtcp.xr_enabled) {
+        pj_mutex_t *mutex = ((pjmedia_stream_common*)c_strm)->rtcp_mutex;
+        pj_mutex_lock(mutex);
         pj_memcpy(stat, &c_strm->rtcp.xr_session.stat, sizeof(pjmedia_rtcp_xr_stat));
+        pj_mutex_unlock(mutex);
         return PJ_SUCCESS;
     }
     return PJ_ENOTFOUND;
