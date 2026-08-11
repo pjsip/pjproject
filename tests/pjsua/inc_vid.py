@@ -6,6 +6,7 @@
 # camera or display is touched. See the individual helpers below.
 import re
 import inc_const as const
+from inc_cfg import TestError
 
 # Default pjsua args for a video-capable instance. --video makes pjsua set
 # vid_cnt=1, in_auto_show and out_auto_transmit, so a call between two such
@@ -56,13 +57,51 @@ def setup_video_devices(ua):
     ua.sync_stdout()
 
 
+# Assert that the m=video section of the next SDP body 'ua' logs carries
+# an attribute matching 'attr' (an unanchored regex, e.g. "a=sendrecv").
+# 'what' names it for the failure message.
+#
+# Scoping the match to that one section is the whole point of this helper.
+# expect() searches every line after the one it matched, with no notion of
+# where a media section -- or even the message -- ends, so expecting
+# "m=video" and then the attribute does NOT tie the two together: when the
+# video section lacks the attribute, the search simply runs on into the
+# next section, or into the following SIP message, and the audio section's
+# copy of the same attribute satisfies it. Every SDP here has an audio
+# section before the video one, and audio is the stream these tests leave
+# untouched, so that mistake reliably passes.
+#
+# Hence the second expect() matches either the attribute or the start of
+# the next media section, whichever comes first, and treats the latter as
+# a failure: the video section ended without the attribute.
+def expect_vid_sdp_attr(ua, attr, what):
+    ua.expect(r"^\s*m=video [1-9]")
+    line = ua.expect(r"^\s*m=|^\s*" + attr)
+    if re.match(r"\s*m=", line):
+        raise TestError(ua.name + ": no " + what + " in the m=video "
+                        "section, it ends at: " + line.strip())
+
+
 # Establish a confirmed video call from 'caller' to 'callee' and verify
 # the video stream is Active on both ends. Pins headless video devices on
 # both instances first. 'callee_uri' is the SIP URI the caller dials
 # (normally t.inst_params[0].uri). Leaves both instances in a confirmed
 # call with an active bidirectional video stream, ready for the
 # scenario-specific action (hold, re-INVITE, DTMF, ...).
-def make_video_call(caller, callee, callee_uri):
+#
+# 'codec' additionally asserts which video codec the two ends negotiated,
+# e.g. codec="H264". It has to be checked here rather than by the caller
+# of this helper: each endpoint logs the codec it started the stream with
+# just *before* its media-active log, so by the time this function
+# returns that line has already gone by.
+#
+# 'sync' flushes each instance's output before returning, so a test that
+# goes on to drive the call is not matched against output produced during
+# setup. Pass sync=False when the next thing to assert is not triggered by
+# the test but happens on its own after the call is up (ICE completing,
+# say): in non-telnet mode the flush consumes output up to an echoed
+# marker, which could swallow such a log before the test looks for it.
+def make_video_call(caller, callee, callee_uri, codec=None, sync=True):
     setup_video_devices(caller)
     setup_video_devices(callee)
 
@@ -71,6 +110,11 @@ def make_video_call(caller, callee, callee_uri):
 
     callee.expect(const.EVENT_INCOMING_CALL)
     callee.send("call answer 200")
+
+    if codec:
+        pat = r"video updated, stream #[0-9]+: " + codec + r" \(sendrecv\)"
+        caller.expect(pat)
+        callee.expect(pat)
 
     # The media-active log is emitted just before the call-state-changed-
     # to-CONFIRMED log. Wait for the video stream to go Active first (this
@@ -85,8 +129,9 @@ def make_video_call(caller, callee, callee_uri):
     caller.expect(const.STATE_CONFIRMED)
     callee.expect(const.STATE_CONFIRMED)
 
-    caller.sync_stdout()
-    callee.sync_stdout()
+    if sync:
+        caller.sync_stdout()
+        callee.sync_stdout()
 
 
 # Hang up the call from 'hangup_by' and verify both endpoints disconnect
