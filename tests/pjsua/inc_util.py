@@ -65,36 +65,39 @@ def has_ssl_sock(exe):
    # the TLS/SIPS tests.
    return True
 
-def has_video(exe):
-   """Return True if the pjsua build under test has video support with at
-   least one usable video codec.
+# Cache of vid_codec_list() results, keyed by executable path. The
+# video capability checks below run at config-load time, once per test
+# script, and a script that asks for both video and a specific codec
+# would otherwise pay for two pjsua launches.
+_vid_codec_list_cache = {}
 
-   A video call test cannot negotiate a video stream otherwise -- either
-   the build has PJMEDIA_HAS_VIDEO=0 (only enabled in some CI jobs), or it
-   was built without any video codec library (VPX/OpenH264). Unlike
-   PJ_HAS_SSL_SOCK, video capability is not reported by pj_dump_config(),
-   so we probe the running binary: start it with --video and ask the
-   legacy console to list video codecs. A video-enabled build with a
-   codec prints "Found N video codecs" with N>=1.
+def vid_codec_list(exe):
+   """Return the "vid codec list" output of the pjsua build under test,
+   or None if the probe could not be run to completion.
+
+   Video capability is not reported by pj_dump_config() (unlike
+   PJ_HAS_SSL_SOCK), so it has to be probed from the running binary:
+   start it with --video and ask the legacy console to list video
+   codecs. A video-enabled build with a codec prints "Found N video
+   codecs" with N>=1, followed by one row per codec.
 
    --local-port 0 makes this auxiliary pjsua bind an ephemeral SIP port
    instead of the default 5060, so the probe can't fail to start because
    5060 (or a concurrently running pjsua) already holds that port.
 
-   A probe that could not run cleanly (couldn't launch, timed out, or
-   exited non-zero, e.g. pjsua crashed at startup) is distinct from a
-   build that ran fine but has no video. The former fails open (returns
-   True, like has_ssl_sock()) so the real test runs and surfaces the
-   problem rather than being silently skipped; only a probe that exits
-   cleanly yet reports no codec returns False. This is safe to gate on the
-   exit code because --video is not compiled out on a non-video build
-   (only the "vid" console commands are), so a non-video pjsua still
-   accepts --video and exits 0 -- it simply never prints "Found N".
+   None means "couldn't tell" -- the probe couldn't launch, timed out,
+   or exited non-zero (e.g. pjsua crashed at startup) -- as opposed to a
+   probe that ran cleanly and simply reported no video. Callers must
+   treat the two differently: see has_video().
    """
+   if exe in _vid_codec_list_cache:
+      return _vid_codec_list_cache[exe]
+
    # Use Popen().communicate(), not subprocess.run(): run() is Python 3.5+
    # but this harness (see load_module_from_file() below) still supports
-   # 3.x < 3.5, and has_video() runs at config-load time, so a missing
+   # 3.x < 3.5, and these checks run at config-load time, so a missing
    # subprocess.run would raise before the test could even be skipped.
+   out = None
    try:
       proc = subprocess.Popen(exe + " --video --null-audio --local-port 0"
                               " --max-calls=1",
@@ -104,22 +107,69 @@ def has_video(exe):
                               universal_newlines=True)
    except OSError:
       # Couldn't launch at all -- not the same as "video disabled".
+      proc = None
+
+   if proc is not None:
+      try:
+         out, _ = proc.communicate(input="vid codec list\nq\n", timeout=30)
+      except (OSError, subprocess.SubprocessError):
+         # Includes TimeoutExpired. Probe couldn't complete.
+         proc.kill()
+         proc.wait()
+         out = None
+      else:
+         if proc.returncode != 0:
+            # pjsua didn't start/exit cleanly: probe unreliable.
+            out = None
+
+   _vid_codec_list_cache[exe] = out
+   return out
+
+def has_video(exe):
+   """Return True if the pjsua build under test has video support with at
+   least one usable video codec.
+
+   A video call test cannot negotiate a video stream otherwise -- either
+   the build has PJMEDIA_HAS_VIDEO=0 (only enabled in some CI jobs), or it
+   was built without any video codec library (VPX/OpenH264).
+
+   A probe that could not run cleanly fails open (returns True, like
+   has_ssl_sock()) so the real test runs and surfaces the problem rather
+   than being silently skipped; only a probe that exits cleanly yet
+   reports no codec returns False. This is safe to gate on the exit code
+   because --video is not compiled out on a non-video build (only the
+   "vid" console commands are), so a non-video pjsua still accepts
+   --video and exits 0 -- it simply never prints "Found N".
+   """
+   out = vid_codec_list(exe)
+   if out is None:
       return True
 
-   try:
-      out, _ = proc.communicate(input="vid codec list\nq\n", timeout=30)
-   except (OSError, subprocess.SubprocessError):
-      # Includes TimeoutExpired. Probe couldn't complete: fail open.
-      proc.kill()
-      proc.wait()
-      return True
-
-   if proc.returncode != 0:
-      # pjsua didn't start/exit cleanly: probe unreliable, fail open.
-      return True
-
-   m = re.search(r'Found\s+(\d+)\s+video codecs', out or "")
+   m = re.search(r'Found\s+(\d+)\s+video codecs', out)
    return bool(m) and int(m.group(1)) > 0
+
+def has_vid_codec(exe, codec_id):
+   """Return True if the pjsua build under test has the named video codec,
+   e.g. has_vid_codec(exe, "H264").
+
+   Which video codecs exist depends on the codec libraries the build was
+   configured with (OpenH264, VPX, ...), so a test pinned to one codec
+   has to check for that codec specifically -- has_video() only says
+   *some* codec is available.
+
+   The codec is looked for as a row of the "vid codec list" table, whose
+   first column is "<id>/<payload type>" followed by the priority and
+   frame rate columns. Matching the row shape rather than a bare name
+   keeps an unrelated startup log line that happens to mention the codec
+   from being read as a match. As in has_video(), an unusable probe
+   fails open.
+   """
+   out = vid_codec_list(exe)
+   if out is None:
+      return True
+
+   return re.search(re.escape(codec_id) + r'/\d+\s+\d+\s+\d+\.\d+',
+                    out) is not None
 
 def load_module_from_file(module_name, module_path):
    if sys.version_info[0] == 3 and sys.version_info[1] >= 5:

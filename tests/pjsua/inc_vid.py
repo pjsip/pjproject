@@ -62,7 +62,13 @@ def setup_video_devices(ua):
 # (normally t.inst_params[0].uri). Leaves both instances in a confirmed
 # call with an active bidirectional video stream, ready for the
 # scenario-specific action (hold, re-INVITE, DTMF, ...).
-def make_video_call(caller, callee, callee_uri):
+#
+# 'codec' additionally asserts which video codec the two ends negotiated,
+# e.g. codec="H264". It has to be checked here rather than by the caller
+# of this helper: each endpoint logs the codec it started the stream with
+# just *before* its media-active log, so by the time this function
+# returns that line has already gone by.
+def make_video_call(caller, callee, callee_uri, codec=None):
     setup_video_devices(caller)
     setup_video_devices(callee)
 
@@ -71,6 +77,11 @@ def make_video_call(caller, callee, callee_uri):
 
     callee.expect(const.EVENT_INCOMING_CALL)
     callee.send("call answer 200")
+
+    if codec:
+        pat = r"video updated, stream #[0-9]+: " + codec + r" \(sendrecv\)"
+        caller.expect(pat)
+        callee.expect(pat)
 
     # The media-active log is emitted just before the call-state-changed-
     # to-CONFIRMED log. Wait for the video stream to go Active first (this
