@@ -370,20 +370,29 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
     pj_grp_lock_add_ref(c_strm->grp_lock);
     c_strm->port.grp_lock = c_strm->grp_lock;
 
-    /* Only attach transport when stream is ready. */
+    /* Only attach transport when stream is ready. Publish the transport and
+     * ref its group lock before attaching: once attached, an rx callback may
+     * arrive immediately and dereference c_strm->transport.
+     */
+    c_strm->transport = tp;
+    if (tp->grp_lock)
+        pj_grp_lock_add_ref(tp->grp_lock);
+
     /* Let the transport hold a reference on the stream's group lock across
      * each rx callback, so the stream cannot be destroyed while an in-flight
      * RTP/RTCP callback is running on it.
      */
     att_param.grp_lock = c_strm->grp_lock;
     status = pjmedia_transport_attach2(tp, &att_param);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        /* Unpublish, so cleanup below won't send RTCP BYE nor detach from a
+         * transport we are not attached to.
+         */
+        c_strm->transport = NULL;
+        if (tp->grp_lock)
+            pj_grp_lock_dec_ref(tp->grp_lock);
         goto err_cleanup;
-
-    /* Also add ref the transport group lock */
-    c_strm->transport = tp;
-    if (c_strm->transport->grp_lock)
-        pj_grp_lock_add_ref(c_strm->transport->grp_lock);
+    }
 
     /* Send RTCP SDES */
     if (!c_strm->rtcp_sdes_bye_disabled) {
