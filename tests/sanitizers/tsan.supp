@@ -3,7 +3,10 @@
 #
 # Disable data race warnings as most are by design or harmless
 # Focus on deadlock reports only (e.g., lock-order-inversion)
-race:*
+#
+# TEMPORARY - DO NOT MERGE: disabled for one CI run to verify the RTCP
+# session race fixed by this PR no longer reports. Restore before merging.
+#race:*
 
 #=============================================================================
 # Lock-order-inversion between sip dialog and sip transaction
