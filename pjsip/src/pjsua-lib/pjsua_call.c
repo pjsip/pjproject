@@ -1739,7 +1739,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pj_str_t st_reason = pj_str("");
     int ret_st_code = 0;
     pj_status_t status;
+#if PJSUA_HAS_SIPREC
     pjsip_siprec_verify_setting siprec_setting;
+#endif
 
     /* Don't want to handle anything but INVITE */
     if (msg->line.req.method.id != PJSIP_INVITE_METHOD)
