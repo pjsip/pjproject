@@ -147,6 +147,114 @@ static pj_status_t multi_listener_test(pjsip_tpfactory *factory[],
     return PJ_SUCCESS;
 }
 
+/*
+ * Test that a failed listener restart does not unregister the factory
+ * from the transport manager: occupy a port with a plain listening
+ * socket, restart the listener to that port (the bind fails with
+ * "address in use"), then verify that the factory is still usable
+ * for creating outgoing transports.
+ */
+static int restart_failure_test(void)
+{
+    pjsip_tpfactory *tpfactory = NULL;
+    pjsip_transport *tcp = NULL;
+    pj_sock_t blocker = PJ_INVALID_SOCKET;
+    pj_sockaddr_in blocker_addr;
+    pj_sockaddr restart_addr;
+    pj_sockaddr_in rem_addr;
+    pj_str_t localhost = pj_str("127.0.0.1");
+    pjsip_tpselector tp_sel;
+    int addr_len = sizeof(blocker_addr);
+    pj_status_t status;
+    int ret = 0;
+
+    /* Start TCP listener on arbitrary port. */
+    status = pjsip_tcp_transport_start(endpt, NULL, 1, &tpfactory);
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to start TCP transport", status);
+        return -110;
+    }
+
+    /* Occupy a port with a plain listening socket. */
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &blocker);
+    if (status != PJ_SUCCESS) {
+        ret = -111;
+        goto on_return;
+    }
+    pj_sockaddr_in_init(&blocker_addr, &localhost, 0);
+    status = pj_sock_bind(blocker, &blocker_addr, sizeof(blocker_addr));
+    if (status == PJ_SUCCESS)
+        status = pj_sock_getsockname(blocker, &blocker_addr, &addr_len);
+    if (status == PJ_SUCCESS)
+        status = pj_sock_listen(blocker, 5);
+    if (status != PJ_SUCCESS) {
+        ret = -112;
+        goto on_return;
+    }
+
+    /* Restart the listener to the occupied port, this must fail. */
+    pj_sockaddr_init(pj_AF_INET(), &restart_addr, &localhost,
+                     pj_ntohs(blocker_addr.sin_port));
+    status = pjsip_tcp_transport_restart(tpfactory, &restart_addr, NULL);
+    if (status == PJ_SUCCESS) {
+        PJ_LOG(3,(THIS_FILE, "   restart to an occupied port unexpectedly "
+                             "succeeded, skipping"));
+        goto on_return;
+    }
+
+    /* The factory must still be registered to the transport manager and
+     * usable for outgoing transports; connect to the blocker socket.
+     */
+    pj_bzero(&tp_sel, sizeof(tp_sel));
+    tp_sel.type = PJSIP_TPSELECTOR_LISTENER;
+    tp_sel.u.listener = tpfactory;
+    pj_sockaddr_in_init(&rem_addr, &localhost,
+                        pj_ntohs(blocker_addr.sin_port));
+    status = pjsip_endpt_acquire_transport(endpt, PJSIP_TRANSPORT_TCP,
+                                           &rem_addr, sizeof(rem_addr),
+                                           &tp_sel, &tcp);
+    if (status != PJ_SUCCESS || tcp == NULL) {
+        app_perror("   Error: factory unusable after failed restart", status);
+        ret = -113;
+        goto on_return;
+    }
+
+    pjsip_transport_dec_ref(tcp);
+    pjsip_transport_destroy(tcp);
+
+    /* The listener can be started again once the port is free. */
+    pj_sock_close(blocker);
+    blocker = PJ_INVALID_SOCKET;
+    status = pjsip_tcp_transport_lis_start(tpfactory, &restart_addr, NULL);
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: unable to start listener after failed restart",
+                   status);
+        ret = -114;
+        goto on_return;
+    }
+
+    /* Verify the listener really accepts connections. */
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &blocker);
+    if (status == PJ_SUCCESS) {
+        pj_sockaddr_in_init(&rem_addr, &localhost,
+                            (pj_uint16_t)tpfactory->addr_name.port);
+        status = pj_sock_connect(blocker, &rem_addr, sizeof(rem_addr));
+    }
+    if (status != PJ_SUCCESS) {
+        app_perror("   Error: restarted listener does not accept", status);
+        ret = -115;
+        goto on_return;
+    }
+
+on_return:
+    if (blocker != PJ_INVALID_SOCKET)
+        pj_sock_close(blocker);
+    if (tpfactory)
+        (*tpfactory->destroy)(tpfactory);
+    flush_events(500);
+    return ret;
+}
+
 int transport_tcp_test(void)
 {
     enum { SEND_RECV_LOOP = 8 };
@@ -163,6 +271,10 @@ int transport_tcp_test(void)
     unsigned i;
     unsigned num_listener = NUM_LISTENER;
     unsigned num_tp = NUM_TP;
+
+    status = restart_failure_test();
+    if (status != 0)
+        return status;
 
     status = multi_listener_test(tpfactory, num_listener, tcp, &num_tp);
     if (status != PJ_SUCCESS)
