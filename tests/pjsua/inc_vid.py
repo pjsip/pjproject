@@ -6,6 +6,7 @@
 # camera or display is touched. See the individual helpers below.
 import re
 import inc_const as const
+from inc_cfg import TestError
 
 # Default pjsua args for a video-capable instance. --video makes pjsua set
 # vid_cnt=1, in_auto_show and out_auto_transmit, so a call between two such
@@ -54,6 +55,31 @@ def setup_video_devices(ua):
     ua.send("video acc cap_id " + cap)
     ua.send("video acc ren_id " + ren)
     ua.sync_stdout()
+
+
+# Assert that the m=video section of the next SDP body 'ua' logs carries
+# an attribute matching 'attr' (an unanchored regex, e.g. "a=sendrecv").
+# 'what' names it for the failure message.
+#
+# Scoping the match to that one section is the whole point of this helper.
+# expect() searches every line after the one it matched, with no notion of
+# where a media section -- or even the message -- ends, so expecting
+# "m=video" and then the attribute does NOT tie the two together: when the
+# video section lacks the attribute, the search simply runs on into the
+# next section, or into the following SIP message, and the audio section's
+# copy of the same attribute satisfies it. Every SDP here has an audio
+# section before the video one, and audio is the stream these tests leave
+# untouched, so that mistake reliably passes.
+#
+# Hence the second expect() matches either the attribute or the start of
+# the next media section, whichever comes first, and treats the latter as
+# a failure: the video section ended without the attribute.
+def expect_vid_sdp_attr(ua, attr, what):
+    ua.expect(r"^\s*m=video [1-9]")
+    line = ua.expect(r"^\s*m=|^\s*" + attr)
+    if re.match(r"\s*m=", line):
+        raise TestError(ua.name + ": no " + what + " in the m=video "
+                        "section, it ends at: " + line.strip())
 
 
 # Establish a confirmed video call from 'caller' to 'callee' and verify

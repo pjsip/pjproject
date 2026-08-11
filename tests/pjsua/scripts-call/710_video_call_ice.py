@@ -39,12 +39,12 @@ def test_func(t):
     caller.expect("sending (UPDATE|re-INVITE) for updating ICE transport "
                   "address")
 
-    # The video stream really is under ICE: its m=video line in that
-    # re-offer carries candidates of its own. Matching m=video first and
-    # a=candidate after it (expect() scans forward) picks the candidate
-    # out of the video section rather than the audio one above it.
-    callee.expect("m=video [1-9]")
-    callee.expect("a=candidate")
+    # The video stream really is under ICE: it carries candidates of its
+    # own in that re-offer, not just the audio stream above it. The check
+    # is scoped to the m=video section -- see expect_vid_sdp_attr() --
+    # since the audio section is full of candidates the video one would
+    # otherwise be credited with.
+    vid.expect_vid_sdp_attr(callee, "a=candidate", "ICE candidate")
 
     # And video survives the address update, still Active on both ends.
     caller.expect(const.VID_MEDIA_ACTIVE)

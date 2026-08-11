@@ -6,9 +6,14 @@ from inc_cfg import *
 
 # Video call pinned to H.264. Both ends raise H264 to the highest codec
 # priority before the call, so it heads the offer and is what the answer
-# selects, and the test then verifies H264 is what actually got
-# negotiated -- in the SDP on the wire and in the stream both endpoints
-# report starting.
+# selects, and the test then verifies H264 is the codec each endpoint
+# reports starting its video stream with.
+#
+# That report, not the SDP, is what is checked: it names the codec the
+# stream actually runs, whereas an m=video line lists every codec merely
+# offered. So a regression that negotiated something other than H264 --
+# or failed to apply the priority at all -- is caught, while one that
+# only reshuffles the offered payload types is not.
 
 
 def test_func(t):

@@ -30,26 +30,35 @@ def test_func(t):
     # stream, while for the callee a remote sendonly offer means its own
     # video is no longer wanted, which pjsua reports as Remote hold.
     #
-    # The direction attribute is matched only after advancing to the
-    # m=video line: the audio section comes first in the re-offer and
-    # carries a direction of its own, so an unanchored pattern would read
-    # the audio stream's direction instead of the video stream's.
+    # Each direction is read from within its own m=video section -- see
+    # expect_vid_sdp_attr(). Every SDP here also has an audio section,
+    # which keeps a=sendrecv throughout, so a check not scoped to the
+    # video section would just read the audio stream's direction.
+    #
+    # Both halves of the exchange are checked, in the order the callee
+    # logs them: the offer it receives, its own media state, then the
+    # answer it sends back. Asserting the answer matters -- it is what
+    # says the callee really stopped sending video rather than merely
+    # noting that the caller stopped wanting it -- and it also leaves the
+    # callee's output positioned past this exchange, so the next block
+    # reads the next offer instead of this answer.
     caller.send("video call rx Off 1")
-    callee.expect("m=video [1-9]")
-    callee.expect("a=sendonly")
+    vid.expect_vid_sdp_attr(callee, "a=sendonly", "sendonly direction")
     caller.expect(const.VID_MEDIA_ACTIVE)
     callee.expect(const.VID_MEDIA_REMOTE_HOLD)
+    vid.expect_vid_sdp_attr(callee, "a=recvonly", "recvonly direction")
 
     caller.sync_stdout()
     callee.sync_stdout()
 
-    # Turn RX back on: the video line returns to sendrecv and the callee
-    # resumes sending, so video is Active on both ends again.
+    # Turn RX back on: the video line returns to sendrecv on both sides
+    # of the exchange, the callee resumes sending, and video is Active on
+    # both ends again.
     caller.send("video call rx On 1")
-    callee.expect("m=video [1-9]")
-    callee.expect("a=sendrecv")
+    vid.expect_vid_sdp_attr(callee, "a=sendrecv", "sendrecv direction")
     caller.expect(const.VID_MEDIA_ACTIVE)
     callee.expect(const.VID_MEDIA_ACTIVE)
+    vid.expect_vid_sdp_attr(callee, "a=sendrecv", "sendrecv direction")
 
     caller.sync_stdout()
     callee.sync_stdout()
