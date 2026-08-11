@@ -29,6 +29,15 @@ def test_func(t):
     caller.send("call new " + t.inst_params[0].uri)
     caller.expect(const.STATE_CALLING)
 
+    # Verify the starting point really is an audio-only call, rather than
+    # assuming "video disable" worked: the callee summarises the offered
+    # media when it reports the incoming call, and it must count no video
+    # stream. Without this the test would still pass if the initial
+    # INVITE already carried video -- "video call add" would then simply
+    # add a second video stream and the checks below would not notice.
+    # This line precedes the answer prompt in the same log statement, so
+    # it has to be expected before EVENT_INCOMING_CALL.
+    callee.expect("Media count: 1 audio & 0 video")
     callee.expect(const.EVENT_INCOMING_CALL)
     callee.send("call answer 200")
 

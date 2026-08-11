@@ -21,7 +21,12 @@ def test_func(t):
     callee = t.process[0]
     caller = t.process[1]
 
-    vid.make_video_call(caller, callee, t.inst_params[0].uri)
+    # sync=False: everything asserted below happens on its own once ICE
+    # completes, rather than in response to something this test sends, so
+    # the helper must not flush output on the way out -- in non-telnet
+    # mode that flush reads ahead to an echoed marker and could consume
+    # the very logs checked here.
+    vid.make_video_call(caller, callee, t.inst_params[0].uri, sync=False)
 
     # Once ICE completes, the controlling agent (the caller) re-offers to
     # replace the addresses in the SDP with the selected candidate pairs.
@@ -29,8 +34,8 @@ def test_func(t):
     # success" logs: those race with the call-state transition the call
     # helper above already waited for -- on the callee they land before
     # CONFIRMED, on the caller after -- whereas the re-offer is always
-    # later than both. It also implies ICE did succeed, since it is only
-    # sent once every stream's session is running.
+    # later than both. It is scheduled on a timer once every stream's ICE
+    # session is running, so it also implies ICE did succeed.
     caller.expect("sending (UPDATE|re-INVITE) for updating ICE transport "
                   "address")
 

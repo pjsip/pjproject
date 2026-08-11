@@ -68,7 +68,14 @@ def setup_video_devices(ua):
 # of this helper: each endpoint logs the codec it started the stream with
 # just *before* its media-active log, so by the time this function
 # returns that line has already gone by.
-def make_video_call(caller, callee, callee_uri, codec=None):
+#
+# 'sync' flushes each instance's output before returning, so a test that
+# goes on to drive the call is not matched against output produced during
+# setup. Pass sync=False when the next thing to assert is not triggered by
+# the test but happens on its own after the call is up (ICE completing,
+# say): in non-telnet mode the flush consumes output up to an echoed
+# marker, which could swallow such a log before the test looks for it.
+def make_video_call(caller, callee, callee_uri, codec=None, sync=True):
     setup_video_devices(caller)
     setup_video_devices(callee)
 
@@ -96,8 +103,9 @@ def make_video_call(caller, callee, callee_uri, codec=None):
     caller.expect(const.STATE_CONFIRMED)
     callee.expect(const.STATE_CONFIRMED)
 
-    caller.sync_stdout()
-    callee.sync_stdout()
+    if sync:
+        caller.sync_stdout()
+        callee.sync_stdout()
 
 
 # Hang up the call from 'hangup_by' and verify both endpoints disconnect
