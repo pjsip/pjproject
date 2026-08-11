@@ -10,8 +10,9 @@ from inc_cfg import *
 # headless capture device, "Colorbar-active", with "video call cap".
 #
 # This is a purely local operation -- no re-INVITE, the stream keeps
-# running -- so it is verified through the capture window pjsua creates
-# for the new device, plus the fact that video stays Active afterwards.
+# running -- so it is verified through the video conference bridge
+# rewiring the stream's encoder onto the new capturer, plus the fact that
+# video stays Active afterwards.
 
 
 def test_func(t):
@@ -29,11 +30,27 @@ def test_func(t):
     # Switch the capturer of stream #1 (media 0 is audio, media 1 is the
     # video stream). Colorbar devices do not support the fast in-place
     # device switch, so pjsua takes the general path: it creates a new
-    # capture window for the target device and reconnects the encoder to
-    # it. Asserting on cap_dev=<id> in that log pins the switch to the
-    # device we actually asked for.
+    # capture window for the target device and reconnects the stream's
+    # encoder to it. Asserting on cap_dev=<id> in the window log pins the
+    # switch to the device we actually asked for.
     caller.send("video call cap 1 " + cap2)
     caller.expect(r"window id [0-9]+ created for cap_dev=" + cap2 + " ")
+
+    # That log alone would not prove the switch happened: it is emitted
+    # when the window is created, while starting it and connecting it to
+    # the encoder come after, and pjsua responds to either failing by
+    # destroying the new window and putting the old capturer back -- which
+    # the re-INVITE below would still report as Active.
+    #
+    # So require the end state instead: the video conference bridge
+    # feeding the stream's encoder port from the new device. The bridge
+    # logs that when it applies the connection, which is the last step
+    # that can fail (only bookkeeping follows), and it can only be applied
+    # after the connection was queued, which in turn happens after the
+    # window log above -- so the two are ordered even though the bridge
+    # applies its queue on another thread.
+    caller.expect(r"Port [0-9]+ \(Colorbar-active\) transmitting to port "
+                  r"[0-9]+ \(vstenc")
 
     caller.sync_stdout()
     callee.sync_stdout()
