@@ -2018,20 +2018,19 @@ static void write_account_settings(int acc_index, pj_str_t *result)
         pj_strcat2(result, line);
     }
 
-    /* REGISTER-only Contact header parameters */
+    /* Appended directly: line[] is shorter than the config reader's buffer
+     * and would truncate a long value such as a push token.
+     */
     if (acc_cfg->reg_contact_params.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--reg-contact-params %.*s\n",
-                        (int)acc_cfg->reg_contact_params.slen,
-                        acc_cfg->reg_contact_params.ptr);
-        pj_strcat2(result, line);
+        pj_strcat2(result, "--reg-contact-params ");
+        pj_strcat(result, &acc_cfg->reg_contact_params);
+        pj_strcat2(result, "\n");
     }
 
-    /* REGISTER-only Contact URI parameters */
     if (acc_cfg->reg_contact_uri_params.slen) {
-        pj_ansi_snprintf(line, sizeof(line), "--reg-contact-uri-params %.*s\n",
-                        (int)acc_cfg->reg_contact_uri_params.slen,
-                        acc_cfg->reg_contact_uri_params.ptr);
-        pj_strcat2(result, line);
+        pj_strcat2(result, "--reg-contact-uri-params ");
+        pj_strcat(result, &acc_cfg->reg_contact_uri_params);
+        pj_strcat2(result, "\n");
     }
 
     /*  */
