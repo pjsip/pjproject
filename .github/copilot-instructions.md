@@ -95,6 +95,7 @@ https://github.com/pjsip/pjproject_docs
 - **4 spaces** indentation (no tabs). ~80 char lines.
 - **K&R braces**: same line for control statements, next line for functions/structs.
 - **`/* */` comments** for C code, `/** */` for Doxygen on public APIs.
+- **Minimal comments**: avoid adding code comments unless necessary (i.e. only if the code itself is not self explanatory). When necessary, code comments must be as brief as possible to ensure readability and avoid overbloating.
 - **Module prefixes**: `pj_` (pjlib), `pjsip_` (sip), `pjmedia_` (media), `pjnath_` (nat)
 - **Constants**: ALL_CAPS with prefix (`PJSIP_MAX_URL_SIZE`, `PJ_TRUE`)
 
