@@ -322,6 +322,11 @@
     /* The CoreAudio backend has built-in echo canceller! */
     #define PJMEDIA_HAS_SPEEX_AEC    0
 
+    /* Duck other audio based on voice activity, instead of for the whole
+     * call (requires iOS 17).
+     */
+    #define PJMEDIA_AUDIO_DEV_COREAUDIO_ADVANCED_DUCKING 1
+
     /* Disable some codecs */
     #define PJMEDIA_HAS_L16_CODEC               0
     //#define PJMEDIA_HAS_G722_CODEC            0
