@@ -360,6 +360,11 @@ pjmedia_txt_stream_create(pjmedia_endpt *endpt, pj_pool_t *pool,
     att_param.rtp_cb2 = &on_rx_rtp;
     att_param.rtcp_cb = &on_rx_rtcp;
 
+    /* Create RTCP session mutex */
+    status = pj_mutex_create_simple(pool, NULL, &c_strm->rtcp_mutex);
+    if (status != PJ_SUCCESS)
+        goto err_cleanup;
+
     /* Create group lock & attach handler */
     status = pj_grp_lock_create_w_handler(pool, NULL, stream, &on_destroy,
                                           &c_strm->grp_lock);

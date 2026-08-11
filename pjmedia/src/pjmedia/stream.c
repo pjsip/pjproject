@@ -1305,9 +1305,11 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     }
 
     /* Update stat */
+    pj_mutex_lock(c_strm->rtcp_mutex);
     pjmedia_rtcp_tx_rtp(&c_strm->rtcp, (unsigned)frame_out.size);
     c_strm->rtcp.stat.rtp_tx_last_ts = pj_ntohl(c_strm->enc->rtp.out_hdr.ts);
     c_strm->rtcp.stat.rtp_tx_last_seq = pj_ntohs(c_strm->enc->rtp.out_hdr.seq);
+    pj_mutex_unlock(c_strm->rtcp_mutex);
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     /* Update time of last sending packet. */
@@ -2332,6 +2334,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     att_param.addr_len = pj_sockaddr_get_len(&info->rem_addr);
     att_param.rtp_cb2 = &on_rx_rtp;
     att_param.rtcp_cb = &on_rx_rtcp;
+
+    /* Create RTCP session mutex */
+    status = pj_mutex_create_simple(pool, NULL, &c_strm->rtcp_mutex);
+    if (status != PJ_SUCCESS)
+        goto err_cleanup;
 
     /* Create group lock & attach handler */
     status = pj_grp_lock_create_w_handler(pool, NULL, stream,

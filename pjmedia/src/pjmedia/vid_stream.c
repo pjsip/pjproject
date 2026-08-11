@@ -965,7 +965,9 @@ static pj_status_t put_frame(pjmedia_port *port,
                     }
                 }
             }
+            pj_mutex_lock(c_strm->rtcp_mutex);
             pjmedia_rtcp_tx_rtp(&c_strm->rtcp, (unsigned)frame_out.size);
+            pj_mutex_unlock(c_strm->rtcp_mutex);
             total_sent += frame_out.size;
             pkt_cnt++;
         }
@@ -1669,8 +1671,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
         c_strm->cname.slen = p - c_strm->cname.ptr;
     }
 
+    /* Create RTCP session mutex */
+    status = pj_mutex_create_simple(pool, NULL, &c_strm->rtcp_mutex);
+    if (status != PJ_SUCCESS)
+        goto err_cleanup;
+
     /* Create group lock */
-    status = pj_grp_lock_create_w_handler(pool, NULL, stream, 
+    status = pj_grp_lock_create_w_handler(pool, NULL, stream,
                                           &on_destroy,
                                           &c_strm->grp_lock);
     if (status != PJ_SUCCESS)

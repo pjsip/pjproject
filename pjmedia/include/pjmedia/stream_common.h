@@ -87,6 +87,10 @@ typedef struct pjmedia_stream_common
     unsigned                 jb_last_frm_cnt;/**< Last JB frame type counter*/
 
     pjmedia_rtcp_session     rtcp;          /**< RTCP for incoming RTP.     */
+    pj_mutex_t              *rtcp_mutex;    /**< Protects rtcp session, which
+                                                 is updated from the RTP tx,
+                                                 RTP/RTCP rx, and RTCP build
+                                                 paths concurrently.        */
 
     pj_uint32_t              rtcp_last_tx;  /**< RTCP tx time in timestamp  */
     pj_timestamp             rtcp_fb_last_tx;/**< Last RTCP-FB tx time.     */

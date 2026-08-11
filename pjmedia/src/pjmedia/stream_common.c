@@ -494,9 +494,14 @@ PJ_DEF(pj_status_t)
 pjmedia_stream_common_get_stat( const pjmedia_stream_common *c_strm,
                                 pjmedia_rtcp_stat *stat)
 {
+    pj_mutex_t *mutex;
+
     PJ_ASSERT_RETURN(c_strm && stat, PJ_EINVAL);
 
+    mutex = ((pjmedia_stream_common*)c_strm)->rtcp_mutex;
+    pj_mutex_lock(mutex);
     pj_memcpy(stat, &c_strm->rtcp.stat, sizeof(pjmedia_rtcp_stat));
+    pj_mutex_unlock(mutex);
     return PJ_SUCCESS;
 }
 
@@ -508,7 +513,9 @@ pjmedia_stream_common_reset_stat(pjmedia_stream_common *c_strm)
 {
     PJ_ASSERT_RETURN(c_strm, PJ_EINVAL);
 
+    pj_mutex_lock(c_strm->rtcp_mutex);
     pjmedia_rtcp_init_stat(&c_strm->rtcp.stat);
+    pj_mutex_unlock(c_strm->rtcp_mutex);
 
     return PJ_SUCCESS;
 }
@@ -647,6 +654,12 @@ pj_status_t pjmedia_stream_send_rtcp(pjmedia_stream_common *c_strm,
      */
     if (c_strm->transport->grp_lock)
         pj_grp_lock_acquire(c_strm->transport->grp_lock);
+
+    /* Serialize against the RTP tx/rx paths updating the RTCP session.
+     * Held across the send too: when no SDES/BYE/XR/FB is appended, the
+     * packet sent below is the session's own SR/RR buffer.
+     */
+    pj_mutex_lock(c_strm->rtcp_mutex);
 
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&c_strm->rtcp, &sr_rr_pkt, &len);
@@ -793,6 +806,8 @@ pj_status_t pjmedia_stream_send_rtcp(pjmedia_stream_common *c_strm,
             c_strm->rtcp_tx_err_cnt = 0;
         }
     }
+
+    pj_mutex_unlock(c_strm->rtcp_mutex);
 
     if (c_strm->transport->grp_lock)
         pj_grp_lock_release(c_strm->transport->grp_lock);

@@ -297,7 +297,9 @@ static void send_keep_alive_packet(pjmedia_stream_common *c_strm)
               PJ_FALSE, PJ_FALSE);
 
     /* Update stats in case the stream is paused */
+    pj_mutex_lock(c_strm->rtcp_mutex);
     c_strm->rtcp.stat.rtp_tx_last_seq = pj_ntohs(c_strm->enc->rtp.out_hdr.seq);
+    pj_mutex_unlock(c_strm->rtcp_mutex);
 
 #elif PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_USER
 
@@ -363,6 +365,8 @@ static void on_rx_rtcp( void *data,
 {
     pjmedia_stream_common *c_strm = (pjmedia_stream_common *)data;
     pj_status_t status;
+    pj_timestamp lsr_ntp = {0};
+    pj_uint32_t lsr_ts;
 
     /* Check for errors */
     if (bytes_read < 0) {
@@ -381,14 +385,17 @@ static void on_rx_rtcp( void *data,
         return;
     }
 
+    pj_mutex_lock(c_strm->rtcp_mutex);
     pjmedia_rtcp_rx_rtcp(&c_strm->rtcp, pkt, bytes_read);
+    lsr_ntp = c_strm->rtcp.rx_lsr_ntp;
+    lsr_ts = c_strm->rtcp.rx_lsr_ts;
+    pj_mutex_unlock(c_strm->rtcp_mutex);
 
     /* Update synchronizer with reference time from RTCP-SR */
-    if (c_strm->av_sync_media && c_strm->rtcp.rx_lsr_ts) {
-        pj_timestamp ntp = {0}, ts = {0};
-        ntp = c_strm->rtcp.rx_lsr_ntp;
-        ts.u32.lo = c_strm->rtcp.rx_lsr_ts;
-        pjmedia_av_sync_update_ref(c_strm->av_sync_media, &ntp, &ts);
+    if (c_strm->av_sync_media && lsr_ts) {
+        pj_timestamp ts = {0};
+        ts.u32.lo = lsr_ts;
+        pjmedia_av_sync_update_ref(c_strm->av_sync_media, &lsr_ntp, &ts);
     }
 }
 
@@ -413,6 +420,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     pj_bool_t check_pt;
     pj_status_t status;
     pj_bool_t pkt_discarded = PJ_FALSE;
+    unsigned rtcp_received = 0;
 
     /* Hold a reference to the stream for the entire callback so it cannot
      * be destroyed by another thread while we are reading and updating its
@@ -449,7 +457,9 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
                                     &hdr, &payload, &payloadlen);
     if (status != PJ_SUCCESS) {
         LOGERR_((c_strm->port.info.name.ptr, status, "RTP decode error"));
+        pj_mutex_lock(c_strm->rtcp_mutex);
         c_strm->rtcp.stat.rx.discard++;
+        pj_mutex_unlock(c_strm->rtcp_mutex);
         goto on_ret;
     }
 
@@ -516,7 +526,9 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
                 c_strm->rem_rtp_flag = badssrc? 2: 1;
 
                 /* Update RTCP peer ssrc */
+                pj_mutex_lock(c_strm->rtcp_mutex);
                 c_strm->rtcp.peer_ssrc = pj_ntohl(hdr->ssrc);
+                pj_mutex_unlock(c_strm->rtcp_mutex);
             }
         }
     }
@@ -566,7 +578,9 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
             PJ_LOG(4,(c_strm->port.info.name.ptr,
                       "Changed RTP peer SSRC %d (previously %d)",
                       channel->rtp.peer_ssrc, c_strm->rtcp.peer_ssrc));
+            pj_mutex_lock(c_strm->rtcp_mutex);
             c_strm->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
+            pj_mutex_unlock(c_strm->rtcp_mutex);
         }
 
 
@@ -592,15 +606,22 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
                      &pkt_discarded);
 
 on_return:
-    /* Update RTCP session */
+    /* Update RTCP session. Serialized against the RTP tx path and the RTCP
+     * build path (send_rtcp() below takes the same mutex), which otherwise
+     * read this session concurrently - notably the RTCP BYE built by
+     * pjmedia_stream_destroy() while this callback is still in flight.
+     */
+    pj_mutex_lock(c_strm->rtcp_mutex);
     if (c_strm->rtcp.peer_ssrc == 0)
         c_strm->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
 
     pjmedia_rtcp_rx_rtp2(&c_strm->rtcp, pj_ntohs(hdr->seq),
                          pj_ntohl(hdr->ts), payloadlen, pkt_discarded);
+    rtcp_received = c_strm->rtcp.received;
+    pj_mutex_unlock(c_strm->rtcp_mutex);
 
     /* RTCP-FB generic NACK */
-    if (c_strm->rtcp.received >= 10 && seq_st.diff > 1 &&
+    if (rtcp_received >= 10 && seq_st.diff > 1 &&
         c_strm->send_rtcp_fb_nack && pj_ntohs(hdr->seq) >= seq_st.diff)
     {
         pj_uint16_t nlost, first_seq;
@@ -628,7 +649,7 @@ on_return:
     }
 
     /* Send RTCP RR and SDES after we receive some RTP packets */
-    if (c_strm->rtcp.received >= 10 && !c_strm->initial_rr) {
+    if (rtcp_received >= 10 && !c_strm->initial_rr) {
         status = send_rtcp(c_strm, !c_strm->rtcp_sdes_bye_disabled,
                            PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_FALSE);
         if (status != PJ_SUCCESS) {
@@ -661,6 +682,11 @@ static void on_destroy(void *arg)
     if (c_strm->jb_mutex) {
         pj_mutex_destroy(c_strm->jb_mutex);
         c_strm->jb_mutex = NULL;
+    }
+
+    if (c_strm->rtcp_mutex) {
+        pj_mutex_destroy(c_strm->rtcp_mutex);
+        c_strm->rtcp_mutex = NULL;
     }
 
     /* Destroy jitter buffer */
