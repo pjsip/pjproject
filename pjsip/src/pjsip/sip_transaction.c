@@ -2177,8 +2177,12 @@ static void send_msg_callback( pjsip_send_state *send_state,
     /* Decrease pending send counter */
     pj_grp_lock_dec_ref(tsx->grp_lock);
 
-    /* Reset */
-    tdata->mod_data[mod_tsx_layer.mod.id] = NULL;
+    /* Reset. Only release the tdata if it is still ours, it may already have
+     * been taken over by another transaction, e.g. reused for an
+     * authentication retry (see #5176).
+     */
+    if (tdata->mod_data[mod_tsx_layer.mod.id] == tsx)
+        tdata->mod_data[mod_tsx_layer.mod.id] = NULL;
     tsx->pending_tx = NULL;
 
     if (sent > 0) {

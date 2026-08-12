@@ -1481,12 +1481,42 @@ typedef void (*pjsip_tp_send_callback)(void *token, pjsip_tx_data *tdata,
  *                  indicates immediate failure, and in this case the 
  *                  callback will not be called.
  */
-PJ_DECL(pj_status_t) pjsip_transport_send( pjsip_transport *tr, 
+PJ_DECL(pj_status_t) pjsip_transport_send( pjsip_transport *tr,
                                            pjsip_tx_data *tdata,
                                            const pj_sockaddr_t *addr,
                                            int addr_len,
                                            void *token,
                                            pjsip_tp_send_callback cb);
+
+
+/**
+ * Variant of #pjsip_transport_send() which also reports the number of bytes
+ * sent when the message is sent immediately.
+ *
+ * Callers must use this instead of inspecting the transmit data buffer after
+ * the send, since the message may already be answered by the peer, and the
+ * transmit data invalidated and reused by another thread, before this
+ * function returns.
+ *
+ * @param tr        The SIP transport to be used.
+ * @param tdata     Transmit data buffer containing SIP message.
+ * @param addr      Destination address.
+ * @param addr_len  Length of destination address.
+ * @param token     Arbitrary token to be returned back to callback.
+ * @param cb        Optional callback to be called to notify caller about
+ *                  the completion status of the pending send operation.
+ * @param sent      Optional pointer to receive the number of bytes sent.
+ *                  It is only set when this function returns PJ_SUCCESS.
+ *
+ * @return          See #pjsip_transport_send().
+ */
+PJ_DECL(pj_status_t) pjsip_transport_send2(pjsip_transport *tr,
+                                           pjsip_tx_data *tdata,
+                                           const pj_sockaddr_t *addr,
+                                           int addr_len,
+                                           void *token,
+                                           pjsip_tp_send_callback cb,
+                                           pj_ssize_t *sent);
 
 
 /**
