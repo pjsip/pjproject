@@ -69,6 +69,8 @@ static pj_ioqueue_t *ioqueue;
 static pj_thread_t *poll_thread;
 static pj_sem_t *sem;
 static pj_dns_settings set;
+static volatile pj_bool_t destroy_done;
+static volatile pj_bool_t cb_after_destroy;
 
 #define MAX_LABEL   32
 
@@ -1048,6 +1050,75 @@ static void dns_callback_1b(void *user_data,
 
 
 
+/* Callback for the destroy-with-pending-query test: flags any invocation
+ * that happens after the resolver has been destroyed.
+ */
+static void dns_callback_destroy(void *user_data,
+                                 pj_status_t status,
+                                 pj_dns_parsed_packet *resp)
+{
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(resp);
+
+    if (destroy_done)
+        cb_after_destroy = PJ_TRUE;
+}
+
+
+/* Destroy the resolver while a query is still pending and the timer heap is
+ * being polled by another thread. The query's retransmit timer must be
+ * cancelled by pj_dns_resolver_destroy(); otherwise it fires after the
+ * socket is closed and sends on a NULL udp_key (assert/abort), or, with
+ * asserts disabled, invokes the callback after a destroy(notify=PJ_FALSE).
+ */
+static int dns_destroy_pending_test(void)
+{
+    pj_str_t name = pj_str("name_destroy");
+    pj_str_t nameservers[2];
+    pj_uint16_t ports[2];
+    pj_dns_resolver *res;
+
+    PJ_LOG(3,(THIS_FILE, "  destroy with pending query test"));
+
+    destroy_done = PJ_FALSE;
+    cb_after_destroy = PJ_FALSE;
+
+    /* Servers ignore the query so it stays pending and keeps retransmitting. */
+    g_server[0].action = ACTION_IGNORE;
+    g_server[1].action = ACTION_IGNORE;
+
+    /* Use a dedicated resolver over the shared, polled timer heap and
+     * ioqueue, so destroying it does not disturb the test harness.
+     */
+    nameservers[0] = nameservers[1] = pj_str("127.0.0.1");
+    ports[0] = g_server[0].port;
+    ports[1] = g_server[1].port;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue,
+                                           &res),
+                    NULL, return -500);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(res, 2, nameservers, ports),
+                    NULL, return -505);
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        res, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_destroy, NULL, NULL),
+                    NULL, return -510);
+
+    /* Destroy while the poll thread is still running. */
+    destroy_done = PJ_TRUE;
+    pj_dns_resolver_destroy(res, PJ_FALSE);
+
+    /* Wait past the retransmit delay: a surviving timer would fire here. */
+    pj_thread_sleep((unsigned)(set.qretr_delay * 2));
+
+    PJ_TEST_EQ(cb_after_destroy, PJ_FALSE, NULL, return -520);
+
+    return 0;
+}
+
+
 /* DNS test */
 static int dns_test(void)
 {
@@ -1941,6 +2012,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "srv_resolver_many_test"));
     rc = srv_resolver_many_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_destroy_pending_test"));
+    rc = dns_destroy_pending_test();
     if (rc != 0)
         goto on_error;
 
