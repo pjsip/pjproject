@@ -406,9 +406,13 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp_with_timestamp(
         /* Check that we've read all the packets */
         //PJ_ASSERT_RETURN(sz_read == rec_incl, PJ_EBUG);
 
-        /* Skip trailer */
+        /* Skip trailer, reading in chunks that fit tmp to avoid overflowing
+         * it when rec_incl exceeds the data already read.
+         */
         while (sz_read < rec_incl) {
             sz = rec_incl - sz_read;
+            if (sz > (pj_ssize_t)sizeof(tmp.eth))
+                sz = sizeof(tmp.eth);
             status = read_file(file, &tmp.eth, &sz);
             if (status != PJ_SUCCESS) {
                 TRACE_((file->obj_name, "Error reading trailer: %d", status));
