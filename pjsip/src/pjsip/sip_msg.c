@@ -1800,8 +1800,18 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
             const pj_str_t st_hide = {"hide", 4};
 
             if (pj_stricmp(&p->name, &st_hide) == 0) {
-                /* Check if param 'hide' is specified without 'lr'. */
-                pj_assert(sip_uri->lr_param != 0);
+                /* By design, the proprietary 'hide' param is always paired
+                 * with 'lr' when PJSIP generates the route itself. However,
+                 * this URI may come from external/malformed input, so
+                 * rather than asserting (which is a no-op in release builds
+                 * and could be used as a DoS vector), just auto-add the
+                 * missing 'lr' and log it.
+                 */
+                if (sip_uri->lr_param == 0) {
+                    PJ_LOG(4, ("sip_msg", "Route/Record-Route URI has 'hide' "
+                                          "param without 'lr', adding 'lr'"));
+                    sip_uri->lr_param = 1;
+                }
                 return 0;
             }
             p = p->next;
