@@ -989,6 +989,26 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
             const pjsip_sip_uri *url = (const pjsip_sip_uri*)
                 pjsip_uri_get_uri((const void*)topmost_route_uri);
             has_lr_param = url->lr_param;
+
+            /* By design, PJSIP's proprietary 'hide' param is always
+             * paired with 'lr'. This URI may come from external/
+             * malformed input though, so don't rely on that invariant:
+             * treat 'hide' as implying 'lr' here too, otherwise a
+             * hidden route would incorrectly be treated as a strict
+             * route (Request-URI rewritten to a URI that was meant to
+             * stay hidden).
+             */
+            if (!has_lr_param) {
+                const pj_str_t st_hide = {"hide", 4};
+                const pjsip_param *prm = url->other_param.next;
+
+                for (; prm != &url->other_param; prm = prm->next) {
+                    if (pj_stricmp(&prm->name, &st_hide) == 0) {
+                        has_lr_param = PJ_TRUE;
+                        break;
+                    }
+                }
+            }
         } else {
             has_lr_param = 0;
         }
