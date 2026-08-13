@@ -1318,6 +1318,9 @@ static void stateless_send_transport_cb( void *token,
                                         &stateless_send_transport_cb,
                                         &sent);
         if (status == PJ_SUCCESS) {
+            /* A sent message is never empty, don't derive this from tdata. */
+            pj_assert(sent > 0);
+
             /* Recursively call this function. */
             stateless_send_transport_cb( stateless_data, tdata, sent );
             return;
@@ -1914,6 +1917,9 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
                                     &send_response_transport_cb,
                                     &sent);
     if (status == PJ_SUCCESS) {
+        /* A sent message is never empty, don't derive this from tdata. */
+        pj_assert(sent > 0);
+
         send_response_transport_cb(send_state, send_state->tdata, sent);
 
     } else if (status == PJ_EPENDING) {
@@ -1957,6 +1963,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
                                         &send_response_transport_cb,
                                         &sent );
         if (status == PJ_SUCCESS) {
+            /* A sent message is never empty, don't derive this from tdata. */
+            pj_assert(sent > 0);
+
             send_response_transport_cb(send_state, tdata, sent);
             return PJ_SUCCESS;
         } else if (status == PJ_EPENDING) {

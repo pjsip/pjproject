@@ -2178,10 +2178,12 @@ static void send_msg_callback( pjsip_send_state *send_state,
     /* Decrease pending send counter */
     pj_grp_lock_dec_ref(tsx->grp_lock);
 
-    /* The tdata may already have been taken over by another transaction,
-     * e.g. reused for an authentication retry (see #5176). If so, it is
-     * neither ours to release nor to inspect or send again, since the other
-     * transaction may be updating it concurrently.
+    /* The tdata may already have been taken over by another transaction, e.g.
+     * reused for an authentication retry (see #5176). If so, it is neither
+     * ours to release nor to inspect or send again. The takeover is done
+     * under the other transaction's group lock, so this only narrows the
+     * window in general, but it is exact for the authentication retry, which
+     * takes over from within our own state callback, i.e. under this lock.
      */
     tdata_is_ours = (tdata->mod_data[mod_tsx_layer.mod.id] == tsx);
 
@@ -2291,8 +2293,11 @@ static void send_msg_callback( pjsip_send_state *send_state,
             /* Clear pending transport flag. */
             tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 
-            /* Mark that we have resolved the addresses. */
-            tsx->transport_flag |= TSX_HAS_RESOLVED_SERVER;
+            /* Mark that we have resolved the addresses, see the same
+             * assignment in the success branch above.
+             */
+            if (tdata_is_ours)
+                tsx->transport_flag |= TSX_HAS_RESOLVED_SERVER;
 
             /* Server resolution error is now mapped to 502 instead of 503,
              * since with 503 normally client should try again.

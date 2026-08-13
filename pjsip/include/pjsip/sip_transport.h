@@ -1463,7 +1463,13 @@ typedef void (*pjsip_tp_send_callback)(void *token, pjsip_tx_data *tdata,
 /**
  * This is a low-level function to send a SIP message using the specified
  * transport to the specified destination.
- * 
+ *
+ * Once this function returns, the message is already on the wire, so the peer
+ * may have answered it and the application may have reused the transmit data
+ * for the next request from another thread. No field of the transmit data may
+ * be assumed to be stable afterwards, in particular its buffer, which is why
+ * #pjsip_transport_send2() exists to report the number of bytes sent.
+ *
  * @param tr        The SIP transport to be used.
  * @param tdata     Transmit data buffer containing SIP message.
  * @param addr      Destination address.
