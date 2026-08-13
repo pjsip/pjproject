@@ -71,6 +71,9 @@ static pj_sem_t *sem;
 static pj_dns_settings set;
 static volatile pj_bool_t destroy_done;
 static volatile pj_bool_t cb_after_destroy;
+static pj_dns_resolver *start_during_destroy_res;
+static pj_status_t start_during_destroy_status;
+static pj_dns_async_query *start_during_destroy_query;
 
 #define MAX_LABEL   32
 
@@ -1119,6 +1122,91 @@ static int dns_destroy_pending_test(void)
 }
 
 
+/* Callback for the start-during-destroy test: starts a new query from
+ * inside the PJ_ECANCELLED notification delivered by
+ * pj_dns_resolver_destroy(), the way the SRV resolver's fallback does.
+ */
+static void dns_callback_start_during_destroy(void *user_data,
+                                              pj_status_t status,
+                                              pj_dns_parsed_packet *resp)
+{
+    pj_str_t name = pj_str("name_restart");
+
+    PJ_UNUSED_ARG(user_data);
+    PJ_UNUSED_ARG(resp);
+
+    if (status != PJ_ECANCELLED)
+        return;
+
+    /* Seed the out-pointer with a dummy, as the SRV resolver does, to
+     * verify that a rejected start still writes it.
+     */
+    start_during_destroy_query = (pj_dns_async_query*)0x1;
+    start_during_destroy_status =
+        pj_dns_resolver_start_query(start_during_destroy_res, &name,
+                                    PJ_DNS_TYPE_A, 0,
+                                    &dns_callback_destroy, NULL,
+                                    &start_during_destroy_query);
+}
+
+
+/* Start a query from inside destroy's cancel notification: the resolver
+ * must reject it with PJ_EGONE, write the out-pointer, and leave no timer
+ * armed past the teardown.
+ */
+static int dns_start_during_destroy_test(void)
+{
+    pj_str_t name = pj_str("name_sdd");
+    pj_str_t nameservers[2];
+    pj_uint16_t ports[2];
+
+    PJ_LOG(3,(THIS_FILE, "  start query during destroy test"));
+
+    destroy_done = PJ_FALSE;
+    cb_after_destroy = PJ_FALSE;
+    start_during_destroy_status = PJ_SUCCESS;
+    start_during_destroy_query = NULL;
+
+    /* Servers ignore the query so it stays pending. */
+    g_server[0].action = ACTION_IGNORE;
+    g_server[1].action = ACTION_IGNORE;
+
+    nameservers[0] = nameservers[1] = pj_str("127.0.0.1");
+    ports[0] = g_server[0].port;
+    ports[1] = g_server[1].port;
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_create(mem, NULL, 0, timer_heap, ioqueue,
+                                           &start_during_destroy_res),
+                    NULL, return -720);
+    PJ_TEST_SUCCESS(pj_dns_resolver_set_ns(start_during_destroy_res, 2,
+                                           nameservers, ports),
+                    NULL, return -725);
+
+    PJ_TEST_SUCCESS(pj_dns_resolver_start_query(
+                        start_during_destroy_res, &name, PJ_DNS_TYPE_A, 0,
+                        &dns_callback_start_during_destroy, NULL, NULL),
+                    NULL, return -730);
+
+    destroy_done = PJ_TRUE;
+    pj_dns_resolver_destroy(start_during_destroy_res, PJ_TRUE);
+
+    /* The cancel notification must have run and its re-entrant start must
+     * have been rejected with the out-pointer cleared.
+     */
+    PJ_TEST_EQ(start_during_destroy_status, PJ_EGONE, NULL, return -740);
+    PJ_TEST_TRUE(start_during_destroy_query == NULL, NULL, return -745);
+
+    /* Wait past the retransmit delay: a timer armed by the rejected start
+     * would fire here.
+     */
+    pj_thread_sleep((unsigned)(set.qretr_delay * 2));
+
+    PJ_TEST_EQ(cb_after_destroy, PJ_FALSE, NULL, return -750);
+
+    return 0;
+}
+
+
 /* DNS test */
 static int dns_test(void)
 {
@@ -2017,6 +2105,11 @@ int resolver_test(void)
 
     PJ_LOG(3,(THIS_FILE, "dns_destroy_pending_test"));
     rc = dns_destroy_pending_test();
+    if (rc != 0)
+        goto on_error;
+
+    PJ_LOG(3,(THIS_FILE, "dns_start_during_destroy_test"));
+    rc = dns_start_during_destroy_test();
     if (rc != 0)
         goto on_error;
 
