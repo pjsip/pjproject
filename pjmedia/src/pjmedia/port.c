@@ -105,6 +105,11 @@ PJ_DEF(pj_status_t) pjmedia_port_get_frame( pjmedia_port *port,
      * locking to stop the streaming while other threads (e.g. conf bridge
      * clock) may still be polling this port, so a plain check-then-call
      * could re-read it as NULL and call through it.
+     *
+     * Formally still a data race, but aligned pointer loads/stores do
+     * not tear on supported platforms, so the snapshot is either the old
+     * value or NULL, never garbage. Atomics or a lock here would cost a
+     * barrier on every media frame for a shutdown-only hazard.
      */
     get_frame = *(port_frame_op volatile *)&port->get_frame;
 
