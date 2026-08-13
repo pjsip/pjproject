@@ -2150,6 +2150,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 {
     pjsip_transaction *tsx = (pjsip_transaction*) send_state->token;
     pjsip_tx_data *tdata = send_state->tdata;
+    pj_bool_t tdata_is_ours;
 
     /* Check if transaction has cancelled itself from this transmit
      * notification (https://github.com/pjsip/pjproject/issues/1033).
@@ -2177,15 +2178,32 @@ static void send_msg_callback( pjsip_send_state *send_state,
     /* Decrease pending send counter */
     pj_grp_lock_dec_ref(tsx->grp_lock);
 
+    /* The tdata may already have been taken over by another transaction, e.g.
+     * reused for an authentication retry (see #5176). If so, it is neither
+     * ours to release nor to inspect or send again. The takeover is done
+     * under the other transaction's group lock, so this only narrows the
+     * window in general, but it is exact for the authentication retry, which
+     * takes over from within our own state callback, i.e. under this lock.
+     */
+    tdata_is_ours = (tdata->mod_data[mod_tsx_layer.mod.id] == tsx);
+
     /* Reset */
-    tdata->mod_data[mod_tsx_layer.mod.id] = NULL;
+    if (tdata_is_ours)
+        tdata->mod_data[mod_tsx_layer.mod.id] = NULL;
+    else
+        *cont = PJ_FALSE;
     tsx->pending_tx = NULL;
 
     if (sent > 0) {
         /* Successfully sent! */
         pj_assert(send_state->cur_transport != NULL);
 
-        if (tsx->transport != send_state->cur_transport) {
+        /* Adopt the transport and remote address only from a tdata which is
+         * still ours, the dest_info of a tdata taken over by another
+         * transaction may be updated concurrently. Leaving them untouched
+         * makes our next transmission resolve the destination again.
+         */
+        if (tdata_is_ours && tsx->transport != send_state->cur_transport) {
             /* Update transport. */
             tsx_update_transport(tsx, send_state->cur_transport);
 
@@ -2204,8 +2222,13 @@ static void send_msg_callback( pjsip_send_state *send_state,
         /* Clear pending transport flag. */
         tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 
-        /* Mark that we have resolved the addresses. */
-        tsx->transport_flag |= TSX_HAS_RESOLVED_SERVER;
+        /* Mark that we have resolved the addresses. Not when the tdata is no
+         * longer ours, since we then have no transport to go with it, and a
+         * UAC without transport but with resolved server is terminated by
+         * tsx_send_msg().
+         */
+        if (tdata_is_ours)
+            tsx->transport_flag |= TSX_HAS_RESOLVED_SERVER;
 
         /* Pending destroy? */
         if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY) {
@@ -2270,8 +2293,11 @@ static void send_msg_callback( pjsip_send_state *send_state,
             /* Clear pending transport flag. */
             tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 
-            /* Mark that we have resolved the addresses. */
-            tsx->transport_flag |= TSX_HAS_RESOLVED_SERVER;
+            /* Mark that we have resolved the addresses, see the same
+             * assignment in the success branch above.
+             */
+            if (tdata_is_ours)
+                tsx->transport_flag |= TSX_HAS_RESOLVED_SERVER;
 
             /* Server resolution error is now mapped to 502 instead of 503,
              * since with 503 normally client should try again.
@@ -2338,7 +2364,9 @@ static void send_msg_callback( pjsip_send_state *send_state,
                 unlock_timer(tsx);
             }
 
-            /* Put again pending tdata */
+            /* Put again pending tdata. The tdata is still ours here, a tdata
+             * taken over by another transaction has cleared *cont above.
+             */
             tdata->mod_data[mod_tsx_layer.mod.id] = tsx;
             tsx->pending_tx = tdata;
 
