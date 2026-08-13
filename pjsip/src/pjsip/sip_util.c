@@ -1330,15 +1330,18 @@ static void stateless_send_transport_cb( void *token,
         pjsip_tx_data_invalidate_msg(tdata);
 
         /* Send message using this transport. */
-        status = pjsip_transport_send( stateless_data->cur_transport,
-                                       tdata,
-                                       cur_addr,
-                                       cur_addr_len,
-                                       stateless_data,
-                                       &stateless_send_transport_cb);
+        status = pjsip_transport_send2( stateless_data->cur_transport,
+                                        tdata,
+                                        cur_addr,
+                                        cur_addr_len,
+                                        stateless_data,
+                                        &stateless_send_transport_cb,
+                                        &sent);
         if (status == PJ_SUCCESS) {
+            /* A sent message is never empty, don't derive this from tdata. */
+            pj_assert(sent > 0);
+
             /* Recursively call this function. */
-            sent = tdata->buf.cur - tdata->buf.start;
             stateless_send_transport_cb( stateless_data, tdata, sent );
             return;
         } else if (status == PJ_EPENDING) {
@@ -1886,6 +1889,7 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
                                        const pjsip_server_addresses *addr )
 {
     pjsip_send_state *send_state = (pjsip_send_state*) token;
+    pj_ssize_t sent;
     unsigned i;
 
     if (status != PJ_SUCCESS) {
@@ -1925,15 +1929,17 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
     }
 
     /* Send response using the transoprt. */
-    status = pjsip_transport_send( send_state->cur_transport, 
-                                   send_state->tdata,
-                                   &addr->entry[0].addr,
-                                   addr->entry[0].addr_len,
-                                   send_state,
-                                   &send_response_transport_cb);
+    status = pjsip_transport_send2( send_state->cur_transport,
+                                    send_state->tdata,
+                                    &addr->entry[0].addr,
+                                    addr->entry[0].addr_len,
+                                    send_state,
+                                    &send_response_transport_cb,
+                                    &sent);
     if (status == PJ_SUCCESS) {
-        pj_ssize_t sent = send_state->tdata->buf.cur - 
-                          send_state->tdata->buf.start;
+        /* A sent message is never empty, don't derive this from tdata. */
+        pj_assert(sent > 0);
+
         send_response_transport_cb(send_state, send_state->tdata, sent);
 
     } else if (status == PJ_EPENDING) {
@@ -1956,6 +1962,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
      * based on Section 18.2.2 of RFC 3261.
      */
     pjsip_send_state *send_state;
+    pj_ssize_t sent;
     pj_status_t status;
 
     /* Create structure to keep the sending state. */
@@ -1969,13 +1976,16 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
         send_state->cur_transport = res_addr->transport;
         pjsip_transport_add_ref(send_state->cur_transport);
 
-        status = pjsip_transport_send( send_state->cur_transport, tdata, 
-                                       &res_addr->addr,
-                                       res_addr->addr_len,
-                                       send_state,
-                                       &send_response_transport_cb );
+        status = pjsip_transport_send2( send_state->cur_transport, tdata,
+                                        &res_addr->addr,
+                                        res_addr->addr_len,
+                                        send_state,
+                                        &send_response_transport_cb,
+                                        &sent );
         if (status == PJ_SUCCESS) {
-            pj_ssize_t sent = tdata->buf.cur - tdata->buf.start;
+            /* A sent message is never empty, don't derive this from tdata. */
+            pj_assert(sent > 0);
+
             send_response_transport_cb(send_state, tdata, sent);
             return PJ_SUCCESS;
         } else if (status == PJ_EPENDING) {
